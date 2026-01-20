@@ -27,18 +27,23 @@ import (
 	testk8sclient "k8s.io/client-go/kubernetes/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kong-operator/api/configuration/v1beta1"
 	operatorv1alpha1 "github.com/kong/kong-operator/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
+	operatorv2beta1 "github.com/kong/kong-operator/api/gateway-operator/v2beta1"
 	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/modules/manager/metadata"
 	"github.com/kong/kong-operator/modules/manager/scheme"
+	"github.com/kong/kong-operator/pkg/vars"
 )
+
+type configOption func(*Config) *Config
 
 func createRESTMapper() meta.RESTMapper {
 	restMapper := meta.NewDefaultRESTMapper(nil)
@@ -127,6 +132,7 @@ func TestCreateManager(t *testing.T) {
 	testcases := []struct {
 		name                string
 		objects             []runtime.Object
+		configOptions       []configOption
 		expectedReportParts []string
 	}{
 		{
@@ -425,6 +431,172 @@ func TestCreateManager(t *testing.T) {
 				"controller_kongplugininstallation_enabled=false",
 			},
 		},
+		{
+			name: "3 gateways, 2 hybrid (1 programmed), 1 programmed",
+			configOptions: []configOption{
+				func(cfg *Config) *Config {
+					cfg.GatewayControllerEnabled = true
+					return cfg
+				},
+			},
+			objects: []runtime.Object{
+				&gatewayv1.Gateway{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "kong",
+						Name:      "hybrid-not-programmed",
+					},
+					Spec: gatewayv1.GatewaySpec{
+						GatewayClassName: "kong-hybrid",
+						Listeners: []gatewayv1.Listener{
+							{
+								Name:     gatewayv1.SectionName("http"),
+								Protocol: gatewayv1.HTTPProtocolType,
+							},
+						},
+					},
+				},
+				&gatewayv1.Gateway{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "kong",
+						Name:      "hybrid-programmed",
+					},
+					Spec: gatewayv1.GatewaySpec{
+						GatewayClassName: "kong-hybrid",
+						Listeners: []gatewayv1.Listener{
+							{
+								Name:     gatewayv1.SectionName("http"),
+								Protocol: gatewayv1.HTTPProtocolType,
+							},
+						},
+					},
+					Status: gatewayv1.GatewayStatus{
+						Conditions: []metav1.Condition{
+							{
+								Type:   "Programmed",
+								Status: metav1.ConditionTrue,
+							},
+						},
+						Listeners: []gatewayv1.ListenerStatus{
+							{
+								Name: gatewayv1.SectionName("http"),
+								SupportedKinds: []gatewayv1.RouteGroupKind{
+									{Kind: "HTTPRoute"},
+								},
+								AttachedRoutes: int32(2),
+								Conditions: []metav1.Condition{
+									{
+										Type:   "Programmed",
+										Status: metav1.ConditionTrue,
+									},
+								},
+							},
+						},
+					},
+				},
+				&gatewayv1.Gateway{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "kong",
+						Name:      "non-hybrid-programmed",
+					},
+					Spec: gatewayv1.GatewaySpec{
+						GatewayClassName: "kong-non-hybrid",
+						Listeners: []gatewayv1.Listener{
+							{
+								Name:     gatewayv1.SectionName("http"),
+								Protocol: gatewayv1.HTTPProtocolType,
+							},
+						},
+					},
+					Status: gatewayv1.GatewayStatus{
+						Conditions: []metav1.Condition{
+							{
+								Type:   "Programmed",
+								Status: metav1.ConditionTrue,
+							},
+						},
+						Listeners: []gatewayv1.ListenerStatus{
+							{
+								Name: gatewayv1.SectionName("http"),
+								SupportedKinds: []gatewayv1.RouteGroupKind{
+									{Kind: "HTTPRoute"},
+								},
+								AttachedRoutes: int32(1),
+								Conditions: []metav1.Condition{
+									{
+										Type:   "Programmed",
+										Status: metav1.ConditionTrue,
+									},
+								},
+							},
+						},
+					},
+				},
+				&gatewayv1.GatewayClass{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "kong-hybrid",
+					},
+					Spec: gatewayv1.GatewayClassSpec{
+						ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
+						ParametersRef: &gatewayv1.ParametersReference{
+							Group:     "gateway-operator.konghq.com",
+							Kind:      "GatewayConfiguration",
+							Namespace: lo.ToPtr(gatewayv1.Namespace("kong")),
+							Name:      "konnect-1",
+						},
+					},
+					Status: gatewayv1.GatewayClassStatus{
+						Conditions: []metav1.Condition{
+							{
+								Type:   "Accepted",
+								Status: metav1.ConditionTrue,
+							},
+						},
+					},
+				},
+				&gatewayv1.GatewayClass{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "kong-non-hybrid",
+					},
+					Spec: gatewayv1.GatewayClassSpec{
+						ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
+					},
+					Status: gatewayv1.GatewayClassStatus{
+						Conditions: []metav1.Condition{
+							{
+								Type:   "Accepted",
+								Status: metav1.ConditionTrue,
+							},
+						},
+					},
+				},
+				&operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "kong",
+						Name:      "konnect-1",
+					},
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						Konnect: &operatorv2beta1.KonnectOptions{
+							APIAuthConfigurationRef: &konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
+								Name: "konnect-api-auth-1",
+							},
+						},
+					},
+				},
+			},
+			expectedReportParts: []string{
+				"signal=test-signal",
+				"v=0.6.2",
+				"k8sv=v1.27.2",
+				"controller_gateway_enabled=true",
+				"controller_konnect_enabled=true",
+				"k8s_gateways_reconciled_count=3",
+				"k8s_gateways_programmed_count=2",
+				"k8s_gateways_attached_routes_count=3",
+				"konnect_hybrid_gateways_count=2",
+				"konnect_hybrid_gateways_programmed_count=1",
+				"konnect_hybrid_gateways_attached_routes_count=2",
+			},
+		},
 	}
 
 	for _, tc := range testcases {
@@ -453,13 +625,17 @@ func TestCreateManager(t *testing.T) {
 			meta := metadata.Info{
 				Release: "0.6.2",
 			}
-			cfg := Config{
+			cfg := &Config{
 				DataPlaneControllerEnabled: true,
 				KonnectControllerEnabled:   true,
 			}
 
+			for _, opt := range tc.configOptions {
+				cfg = opt(cfg)
+			}
+
 			m, err := createManager(
-				types.Signal(SignalPing), k8sclient, ctrlClient, dyn, meta, cfg,
+				types.Signal(SignalPing), k8sclient, ctrlClient, dyn, meta, *cfg,
 				logr.Discard(),
 				telemetry.OptManagerPeriod(time.Hour),
 			)

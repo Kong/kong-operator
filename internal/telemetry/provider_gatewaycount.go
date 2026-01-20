@@ -25,15 +25,15 @@ const (
 	// ReconciledGatewayCountKey is the key for count of gateways reconciled by the controller.
 	ReconciledGatewayCountKey = "k8s_gateways_reconciled_count"
 	// ProgrammedGatewayCountKey is the key for count of gateways successfully configured ("Programmed") by the controller.
-	ProgrammedGatewayCountKey = "k8s_gateway_programmed_count"
+	ProgrammedGatewayCountKey = "k8s_gateways_programmed_count"
 	// AttachedRouteCountKey is the key for the total count of attached routes to all programmed gateways.
-	AttachedRouteCountKey = "k8s_gateway_attached_route_count"
+	AttachedRouteCountKey = "k8s_gateways_attached_routes_count"
 	// HybridGatewayCountKey is the key for count of Konnect hybrid gateways.
-	HybridGatewayCountKey = "konnect_hybrid_gateway_count"
+	HybridGatewayCountKey = "konnect_hybrid_gateways_count"
 	// ProgrammedHybridGatewayCountKey is the key for count of programmed Konnect hybrid gateways.
-	ProgrammedHybridGatewayCountKey = "konnect_hybrid_gateway_programmed_count"
+	ProgrammedHybridGatewayCountKey = "konnect_hybrid_gateways_programmed_count"
 	// HybridGatewayAttachedRouteKey is the total count of attached routes to the programmed hybrid gateways.
-	HybridGatewayAttachedRouteKey = "konnect_hybrid_gateway_attached_route_count"
+	HybridGatewayAttachedRouteKey = "konnect_hybrid_gateways_attached_routes_count"
 
 	defaultPageSize = 1000
 )
@@ -93,6 +93,7 @@ func (p *gatewayCountProvider) Provide(ctx context.Context) (telemetrytypes.Prov
 			// Check if the gateway is reconciled and continue checking only when it is.
 			gwc, err := gatewayclass.Get(ctx, p.cl, string(gw.Spec.GatewayClassName))
 			if err != nil {
+				fmt.Println(err)
 				continue
 			}
 			reconciledGatewayCount++
@@ -114,6 +115,7 @@ func (p *gatewayCountProvider) Provide(ctx context.Context) (telemetrytypes.Prov
 				if err != nil {
 					continue
 				}
+
 				// Count the hybrid gateway if the GatewayConfiguration specifies a Konnect API auth config.
 				if gwConfig.Spec.Konnect != nil && gwConfig.Spec.Konnect.APIAuthConfigurationRef != nil {
 					hybridGatewayCount++
