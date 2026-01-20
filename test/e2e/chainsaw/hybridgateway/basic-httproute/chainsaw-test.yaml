@@ -173,7 +173,7 @@ spec:
     - name: Verify-HTTPS-traffic-from-host
       description: Verify that HTTPS traffic can be routed through the gateway to the echo service from the host.
       use:
-        template: ../common/_step_templates/verify-htpps-traffic-from-host.yaml
+        template: ../common/_step_templates/verify-https-traffic-from-host.yaml
       bindings:
         - name: route_path
           value: "/echo"
@@ -468,7 +468,7 @@ spec:
     - name: Verify-GET-HTTPS-traffic-from-host
       description: Verify that GET requests to /get work from the host via HTTPS.
       use:
-        template: ../common/_step_templates/verify-htpps-traffic-from-host.yaml
+        template: ../common/_step_templates/verify-https-traffic-from-host.yaml
       bindings:
         - name: route_path
           value: "/get"
@@ -481,7 +481,7 @@ spec:
     - name: Verify-POST-HTTPS-traffic-from-host
       description: Verify that POST requests to /post work from the host via HTTPS.
       use:
-        template: ../common/_step_templates/verify-htpps-traffic-from-host.yaml
+        template: ../common/_step_templates/verify-https-traffic-from-host.yaml
       bindings:
         - name: route_path
           value: "/post"
@@ -494,7 +494,7 @@ spec:
     - name: Verify-PUT-HTTPS-traffic-from-host
       description: Verify that PUT requests to /put work from the host via HTTPS.
       use:
-        template: ../common/_step_templates/verify-htpps-traffic-from-host.yaml
+        template: ../common/_step_templates/verify-https-traffic-from-host.yaml
       bindings:
         - name: route_path
           value: "/put"
@@ -507,7 +507,7 @@ spec:
     - name: Verify-PATCH-HTTPS-traffic-from-host
       description: Verify that PATCH requests to /patch work from the host via HTTPS.
       use:
-        template: ../common/_step_templates/verify-htpps-traffic-from-host.yaml
+        template: ../common/_step_templates/verify-https-traffic-from-host.yaml
       bindings:
         - name: route_path
           value: "/patch"
@@ -520,7 +520,7 @@ spec:
     - name: Verify-DELETE-HTTPS-traffic-from-host
       description: Verify that DELETE requests to /delete work from the host via HTTPS.
       use:
-        template: ../common/_step_templates/verify-htpps-traffic-from-host.yaml
+        template: ../common/_step_templates/verify-https-traffic-from-host.yaml
       bindings:
         - name: route_path
           value: "/delete"

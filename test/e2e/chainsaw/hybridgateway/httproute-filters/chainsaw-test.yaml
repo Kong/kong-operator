@@ -227,7 +227,7 @@ spec:
     - name: Verify-GET-HTTPS-traffic-from-host-request-header-modifier
       description: Verify that GET requests to /get work from the host via HTTPS (RequestHeaderModifier).
       use:
-        template: ../common/_step_templates/verify-htpps-traffic-from-host.yaml
+        template: ../common/_step_templates/verify-https-traffic-from-host.yaml
       bindings:
         - name: route_path
           value: "/get"
@@ -451,7 +451,7 @@ spec:
     - name: Verify-GET-HTTPS-traffic-from-host-response-header-modifier
       description: Verify that GET requests to /get work from the host via HTTPS (ResponseHeaderModifier).
       use:
-        template: ../common/_step_templates/verify-htpps-traffic-from-host.yaml
+        template: ../common/_step_templates/verify-https-traffic-from-host.yaml
       bindings:
         - name: http_route_name
           value: ($http_route_response_filter_name)
@@ -711,7 +711,7 @@ spec:
     - name: Verify-GET-HTTPS-traffic-from-host-combined-filters
       description: Verify that GET requests to /get work from the host via HTTPS (combined filters).
       use:
-        template: ../common/_step_templates/verify-htpps-traffic-from-host.yaml
+        template: ../common/_step_templates/verify-https-traffic-from-host.yaml
       bindings:
         - name: http_route_name
           value: ($http_route_combined_filters_name)

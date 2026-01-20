@@ -171,7 +171,7 @@ spec:
     - name: Verify-HTTPS-traffic-from-host
       description: Verify that HTTPS traffic can be routed through the gateway to the echo service from the host.
       use:
-        template: ../common/_step_templates/verify-htpps-traffic-from-host.yaml
+        template: ../common/_step_templates/verify-https-traffic-from-host.yaml
       bindings:
         - name: route_path
           value: "/echo"
@@ -208,7 +208,7 @@ spec:
     - name: Verify-HTTPS-traffic-from-host
       description: Verify that HTTPS traffic can be routed through the gateway to the echo service from the host.
       use:
-        template: ../common/_step_templates/verify-htpps-traffic-from-host.yaml
+        template: ../common/_step_templates/verify-https-traffic-from-host.yaml
       bindings:
         - name: route_path
           value: "/echo"
