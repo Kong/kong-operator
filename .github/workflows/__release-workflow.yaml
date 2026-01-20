@@ -37,7 +37,12 @@ on:
         default: 'main'
         required: false
       latest:
-        description: Whether to mark this release latest
+        description: |
+          Whether to mark this release latest.
+          Only set to true if this release is the current maximum version.
+          If a newer major or minor version has been released (e.g., 2.2 is released),
+          do NOT set this to true when releasing an older branch (e.g., 2.1.1),
+          otherwise the docs will be overwritten.
         type: boolean
         default: false
       release-type:
