@@ -26,10 +26,14 @@ const (
 	ReconciledGatewayCountKey = "k8s_gateways_reconciled_count"
 	// ProgrammedGatewayCountKey is the key for count of gateways successfully configured ("Programmed") by the controller.
 	ProgrammedGatewayCountKey = "k8s_gateway_programmed_count"
+	// AttachedRouteCountKey is the key for the total count of attached routes to all programmed gateways.
+	AttachedRouteCountKey = "k8s_gateway_attached_route_count"
 	// HybridGatewayCountKey is the key for count of Konnect hybrid gateways.
 	HybridGatewayCountKey = "konnect_hybrid_gateway_count"
 	// ProgrammedHybridGatewayCountKey is the key for count of programmed Konnect hybrid gateways.
 	ProgrammedHybridGatewayCountKey = "konnect_hybrid_gateway_programmed_count"
+	// HybridGatewayAttachedRouteKey is the total count of attached routes to the programmed hybrid gateways.
+	HybridGatewayAttachedRouteKey = "konnect_hybrid_gateway_attached_route_count"
 
 	defaultPageSize = 1000
 )
@@ -56,15 +60,19 @@ func (p *gatewayCountProvider) Kind() telemetryprovider.Kind {
 // Provide provides the telemetry data when anonymous reports are enabled on the reconciler, including:
 // - Number of reconciled Gateways
 // - Number of programmed Gateways
+// - Sum of attached routes to all programmed gateways
 // - Number of reconciled Konnect hybrid gateways
 // - Number of programmed Konnect hybrid gateways
+// - Sum of attached routes to all Konnect hybrid gateways
 func (p *gatewayCountProvider) Provide(ctx context.Context) (telemetrytypes.ProviderReport, error) {
 
 	var (
-		reconciledGatewayCount       int
-		programmedGatewayCount       int
-		hybridGatewayCount           int
-		programmedHybridGatewayCount int
+		reconciledGatewayCount          int
+		programmedGatewayCount          int
+		attachedRouteCount              int
+		hybridGatewayCount              int
+		programmedHybridGatewayCount    int
+		hybridGatewayAttachedRouteCount int
 
 		continueToken string
 	)
@@ -89,12 +97,16 @@ func (p *gatewayCountProvider) Provide(ctx context.Context) (telemetrytypes.Prov
 			}
 			reconciledGatewayCount++
 			// Check if the Gateway is programmed.
+			var attachedRoutesOnGateway int
 			programmed := lo.ContainsBy(gw.Status.Conditions, func(condition metav1.Condition) bool {
 				return condition.Type == "Programmed" && condition.Status == metav1.ConditionTrue
 			})
 			if programmed {
 				programmedGatewayCount++
-				// TODO: count the number of attached routes on each "programmed" listener.
+				attachedRoutesOnGateway = lo.SumBy(gw.Status.Listeners, func(l gatewayv1.ListenerStatus) int {
+					return int(l.AttachedRoutes)
+				})
+				attachedRouteCount += attachedRoutesOnGateway
 			}
 			// Check if the gateway is Konnect hybrid gateway only when Konnect controller is enabled.
 			if p.konnectEnabled {
@@ -107,6 +119,7 @@ func (p *gatewayCountProvider) Provide(ctx context.Context) (telemetrytypes.Prov
 					hybridGatewayCount++
 					if programmed {
 						programmedHybridGatewayCount++
+						hybridGatewayAttachedRouteCount += attachedRoutesOnGateway
 					}
 				}
 			}
@@ -120,10 +133,12 @@ func (p *gatewayCountProvider) Provide(ctx context.Context) (telemetrytypes.Prov
 	report := telemetrytypes.ProviderReport{
 		ReconciledGatewayCountKey: reconciledGatewayCount,
 		ProgrammedGatewayCountKey: programmedGatewayCount,
+		AttachedRouteCountKey:     attachedRouteCount,
 	}
 	if p.konnectEnabled {
 		report[HybridGatewayCountKey] = hybridGatewayCount
 		report[ProgrammedHybridGatewayCountKey] = programmedHybridGatewayCount
+		report[HybridGatewayAttachedRouteKey] = hybridGatewayAttachedRouteCount
 	}
 	return report, nil
 }
