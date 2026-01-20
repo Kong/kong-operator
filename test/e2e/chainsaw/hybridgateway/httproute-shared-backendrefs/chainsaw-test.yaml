@@ -143,7 +143,7 @@ spec:
       description: Create 3 HTTPRoutes sharing the same backendRefs set
       try:
         - apply:
-            file: 02-httproutes.yaml
+            file: 01-httproutes.yaml
         - assert:
             file: 02-assert-httproutes.yaml
 
@@ -251,7 +251,7 @@ spec:
       description: Update route three to use a different backendRefs set
       try:
         - apply:
-            file: 04-update-httproute.yaml
+            file: 03-update-httproute.yaml
         - assert:
             file: 04-assert-updated-httproute.yaml
 
