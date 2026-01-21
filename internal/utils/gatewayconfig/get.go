@@ -21,7 +21,7 @@ import (
 // When the group/kind does not match, or the referenced GatewayConfiguration not found, it returns an error.
 func GetFromParametersRef(
 	ctx context.Context,
-	cl client.Client,
+	reader client.Reader,
 	parametersRef *gatewayv1.ParametersReference,
 ) (*gwtypes.GatewayConfiguration, error) {
 	// No parametersRef means using default configuration.
@@ -68,7 +68,7 @@ func GetFromParametersRef(
 		}
 	)
 
-	if err := cl.Get(ctx, nn, &gatewayConfig); err != nil {
+	if err := reader.Get(ctx, nn, &gatewayConfig); err != nil {
 		return nil, err
 	}
 	return &gatewayConfig, nil

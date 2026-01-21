@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"net/http"
 	"strconv"
 	"strings"
 
@@ -356,7 +355,7 @@ func (r *Reconciler) getOrCreateGatewayConfiguration(
 	gatewayClass *gatewayv1.GatewayClass,
 	gateway *gatewayv1.Gateway,
 ) (*GatewayConfiguration, error) {
-	gatewayConfig, err := gwconfigutils.GetFromParametersRef(ctx, r.Client, gatewayClass.Spec.ParametersRef)
+	gatewayConfig, err := gwconfigutils.GetFromParametersRef(ctx, r, gatewayClass.Spec.ParametersRef)
 	if err != nil {
 		return nil, fmt.Errorf("GatewayClass (%s): %w", gatewayClass.Name, err)
 	}
@@ -375,7 +374,7 @@ func (r *Reconciler) getOrCreateGatewayConfiguration(
 		namespace := gatewayv1.Namespace(gateway.Namespace)
 		localParametersRef.Namespace = &namespace
 
-		localGatewayConfig, err := gwconfigutils.GetFromParametersRef(ctx, r.Client, localParametersRef)
+		localGatewayConfig, err := gwconfigutils.GetFromParametersRef(ctx, r, localParametersRef)
 		if err != nil {
 			return nil, fmt.Errorf("Gateway (%s): spec.instrastructure %w", gateway.Name, err)
 		}
@@ -390,58 +389,6 @@ func (r *Reconciler) getOrCreateGatewayConfiguration(
 	}
 
 	return gatewayConfig, nil
-}
-
-func (r *Reconciler) getGatewayConfigForParametersRef(
-	ctx context.Context,
-	parametersRef *gatewayv1.ParametersReference,
-) (*GatewayConfiguration, error) {
-	// No parametersRef means using default configuration.
-	// Return an empty GatewayConfiguration object.
-	if parametersRef == nil {
-		return new(GatewayConfiguration), nil
-	}
-
-	if string(parametersRef.Group) != operatorv1beta1.SchemeGroupVersion.Group ||
-		string(parametersRef.Kind) != "GatewayConfiguration" {
-		return nil, &k8serrors.StatusError{
-			ErrStatus: metav1.Status{
-				Status: metav1.StatusFailure,
-				Code:   http.StatusBadRequest,
-				Reason: metav1.StatusReasonInvalid,
-				Details: &metav1.StatusDetails{
-					Kind: string(parametersRef.Kind),
-					Causes: []metav1.StatusCause{{
-						Type: metav1.CauseTypeFieldValueNotSupported,
-						Message: fmt.Sprintf("controller only supports %s %s resources for GatewayClass parametersRef",
-							operatorv1beta1.SchemeGroupVersion.Group, "GatewayConfiguration"),
-					}},
-				},
-			},
-		}
-	}
-
-	if parametersRef.Namespace == nil ||
-		*parametersRef.Namespace == "" {
-		return nil, fmt.Errorf("ParametersRef: namespace must be provided")
-	}
-
-	if parametersRef.Name == "" {
-		return nil, fmt.Errorf("ParametersRef: name must be provided")
-	}
-
-	var (
-		gatewayConfig GatewayConfiguration
-		nn            = types.NamespacedName{
-			Namespace: string(*parametersRef.Namespace),
-			Name:      parametersRef.Name,
-		}
-	)
-
-	if err := r.Get(ctx, nn, &gatewayConfig); err != nil {
-		return nil, err
-	}
-	return &gatewayConfig, nil
 }
 
 func (r *Reconciler) ensureDataPlaneHasNetworkPolicy(

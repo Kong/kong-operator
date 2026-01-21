@@ -1,110 +1,164 @@
 package gatewayconfig
 
 import (
+	"errors"
 	"fmt"
+	"net/http"
 	"testing"
 
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
-	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	operatorv2beta1 "github.com/kong/kong-operator/api/gateway-operator/v2beta1"
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
+	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/modules/manager/scheme"
 )
 
-func TestGetFromParamertersRef(t *testing.T) {
+func TestGetFromParametersRef(t *testing.T) {
 	type testCase struct {
-		name                string
-		objects             []client.Object
-		parametersRef       *gatewayv1.ParametersReference
-		expectErrorContains *string
+		name                   string
+		parametersRef          *gwtypes.ParametersReference
+		existingGatewayConfigs []client.Object
+		expectedGatewayConfig  *operatorv2beta1.GatewayConfiguration
+		expectedError          error
 	}
 
 	tests := []testCase{
 		{
-			name:          "nil parametersRef should return a default GatewayConfiguration",
+			name:          "parameters ref is nil",
 			parametersRef: nil,
-		},
-		{
-			name: "Reference to existing GatewayConfiguration",
-			objects: []client.Object{
+			existingGatewayConfigs: []client.Object{
 				&operatorv2beta1.GatewayConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test",
-						Name:      "test",
+						Name:      "gateway-config-1",
+						Namespace: "default",
 					},
 				},
 			},
-			parametersRef: &gatewayv1.ParametersReference{
-				Group:     gatewayv1.Group(operatorv2beta1.SchemeGroupVersion.Group),
-				Kind:      "GatewayConfiguration",
-				Name:      "test",
-				Namespace: lo.ToPtr(gatewayv1.Namespace("test")),
+			expectedGatewayConfig: new(operatorv2beta1.GatewayConfiguration),
+			expectedError:         nil,
+		},
+		{
+			name: "gateway config exists for parameters ref",
+			parametersRef: &gwtypes.ParametersReference{
+				Group:     "gateway-operator.konghq.com",
+				Kind:      gwtypes.Kind("GatewayConfiguration"),
+				Name:      "gateway-config-1",
+				Namespace: lo.ToPtr(gwtypes.Namespace("default")),
+			},
+			existingGatewayConfigs: []client.Object{
+				&operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            "gateway-config-1",
+						Namespace:       "default",
+						ResourceVersion: "123",
+					},
+				},
+			},
+			expectedGatewayConfig: &operatorv2beta1.GatewayConfiguration{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            "gateway-config-1",
+					Namespace:       "default",
+					ResourceVersion: "123",
+				},
+			},
+			expectedError: nil,
+		},
+		{
+			name: "parameters ref group not match",
+			parametersRef: &gwtypes.ParametersReference{
+				Group:     "another.group.com",
+				Kind:      gwtypes.Kind("GatewayConfiguration"),
+				Name:      "gateway-config-1",
+				Namespace: lo.ToPtr(gwtypes.Namespace("default")),
+			},
+			expectedGatewayConfig: nil,
+			expectedError: &k8serrors.StatusError{
+				ErrStatus: metav1.Status{
+					Status: metav1.StatusFailure,
+					Code:   http.StatusBadRequest,
+					Reason: metav1.StatusReasonInvalid,
+					Message: fmt.Sprintf("controller only supports %s/%s resources for GatewayClass parametersRef",
+						operatorv2beta1.SchemeGroupVersion.Group, "GatewayConfiguration"),
+					Details: &metav1.StatusDetails{
+						Kind: "GatewayConfiguration",
+						Causes: []metav1.StatusCause{{
+							Type: metav1.CauseTypeFieldValueNotSupported,
+							Message: fmt.Sprintf("controller only supports %s/%s resources for GatewayClass parametersRef",
+								operatorv2beta1.SchemeGroupVersion.Group, "GatewayConfiguration"),
+						}},
+					},
+				},
 			},
 		},
 		{
-			name: "Group is not supported",
-			parametersRef: &gatewayv1.ParametersReference{
-				Group:     gatewayv1.Group("other.group"),
-				Kind:      "GatewayConfiguration",
-				Name:      "test",
-				Namespace: lo.ToPtr(gatewayv1.Namespace("test")),
+			name: "gateway config does not exist for parameters ref",
+			parametersRef: &gwtypes.ParametersReference{
+				Group:     "gateway-operator.konghq.com",
+				Kind:      gwtypes.Kind("GatewayConfiguration"),
+				Name:      "non-existing-gateway-config",
+				Namespace: lo.ToPtr(gwtypes.Namespace("default")),
 			},
-			expectErrorContains: lo.ToPtr(
-				fmt.Sprintf("controller only supports %s/%s resources for GatewayClass parametersRef",
-					operatorv2beta1.SchemeGroupVersion.Group, "GatewayConfiguration"),
-			),
-		},
-		{
-			name: "Namespace is missing",
-			parametersRef: &gatewayv1.ParametersReference{
-				Group: gatewayv1.Group(operatorv2beta1.SchemeGroupVersion.Group),
-				Kind:  "GatewayConfiguration",
-				Name:  "test",
+			existingGatewayConfigs: []client.Object{
+				&operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            "gateway-config-1",
+						Namespace:       "default",
+						ResourceVersion: "123",
+					},
+				},
 			},
-			expectErrorContains: lo.ToPtr("ParametersRef: namespace must be provided"),
-		},
-		{
-			name: "Name is missing",
-			parametersRef: &gatewayv1.ParametersReference{
-				Group:     gatewayv1.Group(operatorv2beta1.SchemeGroupVersion.Group),
-				Kind:      "GatewayConfiguration",
-				Name:      "",
-				Namespace: lo.ToPtr(gatewayv1.Namespace("test")),
+			expectedGatewayConfig: nil,
+			expectedError: &k8serrors.StatusError{
+				ErrStatus: metav1.Status{
+					Status:  metav1.StatusFailure,
+					Code:    http.StatusNotFound,
+					Reason:  metav1.StatusReasonNotFound,
+					Message: "GatewayConfiguration.gateway-operator.konghq.com \"non-existing-gateway-config\" not found",
+				},
 			},
-			expectErrorContains: lo.ToPtr("ParametersRef: name must be provided"),
-		},
-		{
-			name: "referenced GatewayConfiguration not found",
-			parametersRef: &gatewayv1.ParametersReference{
-				Group:     gatewayv1.Group(operatorv2beta1.SchemeGroupVersion.Group),
-				Kind:      "GatewayConfiguration",
-				Name:      "test",
-				Namespace: lo.ToPtr(gatewayv1.Namespace("test")),
-			},
-			expectErrorContains: lo.ToPtr("gatewayconfigurations.gateway-operator.konghq.com \"test\" not found"),
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			cl := fakectrlruntimeclient.NewClientBuilder().
-				WithScheme(scheme.Get()).WithObjects(tc.objects...).Build()
-			GetFromParametersRef(t.Context(), cl, tc.parametersRef)
+			cl := fakectrlruntimeclient.
+				NewClientBuilder().
+				WithScheme(scheme.Get()).
+				WithObjects(tc.existingGatewayConfigs...).
+				Build()
 
-			_, err := GetFromParametersRef(t.Context(), cl, tc.parametersRef)
-			if tc.expectErrorContains == nil {
-				require.NoError(t, err)
+			ctx := t.Context()
+			gatewayConfig, err := GetFromParametersRef(ctx, cl, tc.parametersRef)
+			// Check error matching
+			if tc.expectedError != nil {
+				assert.Error(t, err)
+				// For NotFound errors, check specific fields
+				statusErr := &k8serrors.StatusError{}
+				if errors.As(tc.expectedError, &statusErr) {
+					actualStatusErr := &k8serrors.StatusError{}
+					isActualStatusErr := errors.As(err, &actualStatusErr)
+					if isActualStatusErr {
+						assert.Equal(t, statusErr.Status().Reason, actualStatusErr.Status().Reason)
+					} else {
+						t.Errorf("Expected StatusError, got %T", err)
+					}
+				} else {
+					assert.Equal(t, tc.expectedError.Error(), err.Error())
+				}
 			} else {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), *tc.expectErrorContains, "Error message should contain expected content")
+				assert.NoError(t, err)
 			}
+
+			// Check returned gateway config
+			assert.Equal(t, tc.expectedGatewayConfig, gatewayConfig)
 		})
 	}
 }
