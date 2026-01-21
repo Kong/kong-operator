@@ -1,46 +1,26 @@
-package envtest
+package validatingwebhook
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
-	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
-	"github.com/kong/kong-operator/ingress-controller/test/internal/testenv"
+	"github.com/kong/kong-operator/internal/annotations"
+	"github.com/kong/kong-operator/test/integration"
 )
 
 func TestAdmissionWebhook_KongCustomEntities(t *testing.T) {
-	t.Skip("skipping until https://github.com/Kong/kong-operator/issues/2176 is resolved")
-	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
-
-	var (
-		scheme           = Scheme(t, WithKong)
-		envcfg           = Setup(t, scheme)
-		ctrlClientGlobal = NewControllerClient(t, scheme, envcfg)
-		ns               = CreateNamespace(ctx, t, ctrlClientGlobal)
-		ctrlClient       = client.NewNamespacedClient(ctrlClientGlobal, ns.Name)
-
-		kongContainer = runKongEnterprise(ctx, t)
+	ctx := t.Context()
+	_, cleaner, ingressClass, ctrlClient := bootstrapGateway(
+		ctx, t, integration.GetEnv(), integration.GetClients().MgrClient,
 	)
-
-	logs := RunManager(ctx, t, envcfg,
-		AdminAPIOptFns(),
-		WithPublishService(ns.Name),
-		WithKongAdminURLs(kongContainer.AdminURL(ctx, t)),
-	)
-	WaitForManagerStart(t, logs)
 
 	testCases := []struct {
-		name                     string
-		requireEnterpriseLicense bool
-		entity                   *configurationv1alpha1.KongCustomEntity
-		valid                    bool
+		name   string
+		entity *configurationv1alpha1.KongCustomEntity
 
 		errContains string
 	}{
@@ -52,13 +32,12 @@ func TestAdmissionWebhook_KongCustomEntities(t *testing.T) {
 				},
 				Spec: configurationv1alpha1.KongCustomEntitySpec{
 					EntityType:     "invalid_entity",
-					ControllerName: annotations.DefaultIngressClass,
+					ControllerName: ingressClass,
 					Fields: apiextensionsv1.JSON{
 						Raw: []byte(`{"key":"value"}`),
 					},
 				},
 			},
-			valid:       false,
 			errContains: "failed to get schema of Kong entity type 'invalid_entity'",
 		},
 		{
@@ -67,7 +46,7 @@ func TestAdmissionWebhook_KongCustomEntities(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "session-1",
 					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
+						annotations.IngressClassKey: ingressClass,
 					},
 				},
 				Spec: configurationv1alpha1.KongCustomEntitySpec{
@@ -77,7 +56,6 @@ func TestAdmissionWebhook_KongCustomEntities(t *testing.T) {
 					},
 				},
 			},
-			valid: true,
 		},
 		{
 			name: "invalid session entity",
@@ -85,7 +63,7 @@ func TestAdmissionWebhook_KongCustomEntities(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "session-1",
 					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
+						annotations.IngressClassKey: ingressClass,
 					},
 				},
 				Spec: configurationv1alpha1.KongCustomEntitySpec{
@@ -95,7 +73,7 @@ func TestAdmissionWebhook_KongCustomEntities(t *testing.T) {
 					},
 				},
 			},
-			valid: false,
+			errContains: "schema violation (foo: unknown field)",
 		},
 		{
 			name: "valid degraphql_route entity",
@@ -105,14 +83,12 @@ func TestAdmissionWebhook_KongCustomEntities(t *testing.T) {
 				},
 				Spec: configurationv1alpha1.KongCustomEntitySpec{
 					EntityType:     "degraphql_routes",
-					ControllerName: annotations.DefaultIngressClass,
+					ControllerName: ingressClass,
 					Fields: apiextensionsv1.JSON{
 						Raw: []byte(`{"uri":"/me","query":"query{ viewer { login}}"}`),
 					},
 				},
 			},
-			requireEnterpriseLicense: true,
-			valid:                    true,
 		},
 		{
 			name: "invalid degraphql_route entity",
@@ -122,14 +98,13 @@ func TestAdmissionWebhook_KongCustomEntities(t *testing.T) {
 				},
 				Spec: configurationv1alpha1.KongCustomEntitySpec{
 					EntityType:     "degraphql_routes",
-					ControllerName: annotations.DefaultIngressClass,
+					ControllerName: ingressClass,
 					Fields: apiextensionsv1.JSON{
 						Raw: []byte(`{"uri":"/me","query":"query{ viewer { login}}","foo":"bar"}`),
 					},
 				},
 			},
-			requireEnterpriseLicense: true,
-			valid:                    false,
+			errContains: "schema violation (foo: unknown field)",
 		},
 		{
 			name: "KongCustomEntity not controlled by the current controller",
@@ -144,18 +119,15 @@ func TestAdmissionWebhook_KongCustomEntities(t *testing.T) {
 					},
 				},
 			},
-			valid: true,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			if tc.requireEnterpriseLicense && !testenv.KongEnterpriseEnabled() {
-				t.Skip("Skipped because Kong enterprise is not enabled")
-			}
 			err := ctrlClient.Create(ctx, tc.entity)
-			if tc.valid {
+			if tc.errContains == "" {
 				require.NoError(t, err)
+				cleaner.Add(tc.entity)
 			} else {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), tc.errContains)
