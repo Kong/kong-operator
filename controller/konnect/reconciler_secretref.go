@@ -48,6 +48,7 @@ func handleSecretRef[T constraints.SupportedKonnectEntityType, TEnt constraints.
 	ent TEnt,
 ) (ctrl.Result, bool, error) {
 	var entityHasCrossNamespaceRefs bool
+	deleting := !ent.GetDeletionTimestamp().IsZero()
 
 	secretRefs := getSecretRefs(ent)
 	for _, secretRef := range secretRefs {
@@ -64,6 +65,9 @@ func handleSecretRef[T constraints.SupportedKonnectEntityType, TEnt constraints.
 		}
 		secret := corev1.Secret{}
 		if err := cl.Get(ctx, nn, &secret); err != nil {
+			if deleting {
+				continue
+			}
 			if res, errStatus := patch.StatusWithCondition(
 				ctx, cl, ent,
 				konnectv1alpha1.SecretRefValidConditionType,
@@ -90,6 +94,9 @@ func handleSecretRef[T constraints.SupportedKonnectEntityType, TEnt constraints.
 				metav1.GroupVersionKind(corev1.SchemeGroupVersion.WithKind("Secret")),
 			)
 			if err != nil {
+				if deleting {
+					continue
+				}
 				if crossnamespace.IsReferenceNotGranted(err) {
 					if res, errStatus := patch.StatusWithCondition(
 						ctx, cl, ent,
@@ -108,7 +115,7 @@ func handleSecretRef[T constraints.SupportedKonnectEntityType, TEnt constraints.
 		}
 	}
 
-	if entityHasCrossNamespaceRefs {
+	if entityHasCrossNamespaceRefs && !deleting {
 		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, ent,
 			consts.ConditionType(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs),
