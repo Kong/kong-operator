@@ -71,7 +71,7 @@ func TestAdoptMatchDataPlaneGroupConfigurationSuccess(t *testing.T) {
 		Return(&sdkkonnectops.GetConfigurationResponse{
 			ConfigurationManifest: &sdkkonnectcomp.ConfigurationManifest{
 				ID:             "cfg-1",
-				Version:        "3.5.0.0",
+				Version:        lo.ToPtr("3.5.0.0"),
 				APIAccess:      lo.ToPtr(sdkkonnectcomp.APIAccessPrivatePlusPublic),
 				ControlPlaneID: controlPlaneID,
 				DataplaneGroups: []sdkkonnectcomp.ConfigurationDataPlaneGroup{
@@ -79,13 +79,13 @@ func TestAdoptMatchDataPlaneGroupConfigurationSuccess(t *testing.T) {
 						ID:                    "dpg-1",
 						Provider:              sdkkonnectcomp.ProviderNameAws,
 						Region:                "us-east-1",
-						CloudGatewayNetworkID: networkID,
-						Autoscale: sdkkonnectcomp.CreateConfigurationDataPlaneGroupAutoscaleConfigurationDataPlaneGroupAutoscaleAutopilot(
+						CloudGatewayNetworkID: lo.ToPtr(networkID),
+						Autoscale: lo.ToPtr(sdkkonnectcomp.CreateConfigurationDataPlaneGroupAutoscaleConfigurationDataPlaneGroupAutoscaleAutopilot(
 							sdkkonnectcomp.ConfigurationDataPlaneGroupAutoscaleAutopilot{
 								BaseRps: 100,
 								MaxRps:  &maxRps,
 							},
-						),
+						)),
 						Environment: []sdkkonnectcomp.ConfigurationDataPlaneGroupEnvironmentField{
 							{Name: "KONG_CLUSTER_CERT", Value: "cert"},
 						},
@@ -153,7 +153,7 @@ func TestAdoptMatchDataPlaneGroupConfigurationMismatch(t *testing.T) {
 		Return(&sdkkonnectops.GetConfigurationResponse{
 			ConfigurationManifest: &sdkkonnectcomp.ConfigurationManifest{
 				ID:             "cfg-2",
-				Version:        "4.0.0.0", // mismatch on purpose
+				Version:        lo.ToPtr("4.0.0.0"), // mismatch on purpose
 				APIAccess:      lo.ToPtr(sdkkonnectcomp.APIAccessPrivatePlusPublic),
 				ControlPlaneID: controlPlaneID,
 				DataplaneGroups: []sdkkonnectcomp.ConfigurationDataPlaneGroup{
@@ -161,13 +161,13 @@ func TestAdoptMatchDataPlaneGroupConfigurationMismatch(t *testing.T) {
 						ID:                    "dpg-1",
 						Provider:              sdkkonnectcomp.ProviderNameAws,
 						Region:                "us-east-1",
-						CloudGatewayNetworkID: networkID,
-						Autoscale: sdkkonnectcomp.CreateConfigurationDataPlaneGroupAutoscaleConfigurationDataPlaneGroupAutoscaleAutopilot(
+						CloudGatewayNetworkID: lo.ToPtr(networkID),
+						Autoscale: lo.ToPtr(sdkkonnectcomp.CreateConfigurationDataPlaneGroupAutoscaleConfigurationDataPlaneGroupAutoscaleAutopilot(
 							sdkkonnectcomp.ConfigurationDataPlaneGroupAutoscaleAutopilot{
 								BaseRps: 100,
 								MaxRps:  &maxRps,
 							},
-						),
+						)),
 						Environment: []sdkkonnectcomp.ConfigurationDataPlaneGroupEnvironmentField{
 							{Name: "KONG_CLUSTER_CERT", Value: "cert"},
 						},
