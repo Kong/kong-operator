@@ -156,4 +156,104 @@ func TestKongConsumer(t *testing.T) {
 		}.
 			RunWithConfig(t, cfg, scheme)
 	})
+
+	t.Run("username and custom_id validation", func(t *testing.T) {
+		common.TestCasesGroup[*configurationv1.KongConsumer]{
+			{
+				Name: "valid username",
+				TestObject: &configurationv1.KongConsumer{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1.KongConsumerSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+					},
+					Username: "user.name-1",
+				},
+			},
+			{
+				Name: "invalid username format",
+				TestObject: &configurationv1.KongConsumer{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1.KongConsumerSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+					},
+					Username: "user:name",
+				},
+				ExpectedErrorMessage: lo.ToPtr("username: Invalid value"),
+			},
+			{
+				Name: "username too long",
+				TestObject: &configurationv1.KongConsumer{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1.KongConsumerSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+					},
+					Username: lo.RandomString(129, lo.AlphanumericCharset),
+				},
+				ExpectedErrorMessage: lo.ToPtr("Too long: may not be "),
+			},
+			{
+				Name: "valid custom_id",
+				TestObject: &configurationv1.KongConsumer{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1.KongConsumerSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+					},
+					CustomID: "custom-id_1",
+				},
+			},
+			{
+				Name: "invalid custom_id format",
+				TestObject: &configurationv1.KongConsumer{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1.KongConsumerSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+					},
+					CustomID: "custom:id",
+				},
+				ExpectedErrorMessage: lo.ToPtr("custom_id: Invalid value"),
+			},
+			{
+				Name: "custom_id too long",
+				TestObject: &configurationv1.KongConsumer{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1.KongConsumerSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+					},
+					CustomID: lo.RandomString(129, lo.AlphanumericCharset),
+				},
+				ExpectedErrorMessage: lo.ToPtr("Too long: may not be "),
+			},
+		}.
+			RunWithConfig(t, cfg, scheme)
+	})
 }
