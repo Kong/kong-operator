@@ -9449,7 +9449,6 @@ spec:
                   licensing:
                     default:
                       state: disabled
-                      storageState: disabled
                     description: Licensing defines the configuration for Konnect licensing.
                     properties:
                       initialPollingPeriod:
@@ -9469,7 +9468,7 @@ spec:
                         - disabled
                         type: string
                       storageState:
-                        default: disabled
+                        default: enabled
                         description: |-
                           StorageState indicates whether to store licenses fetched from Konnect
                           to Secrets locally to use them later when connection to Konnect is broken.
