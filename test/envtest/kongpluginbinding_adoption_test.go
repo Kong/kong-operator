@@ -85,7 +85,7 @@ func TestKongPluginBindingAdoption(t *testing.T) {
 		proxyCacheKongPlugin := deploy.ProxyCachePlugin(t, ctx, clientNamespaced)
 		kpbGlobal := deploy.KongPluginBinding(t, ctx, clientNamespaced, konnect.NewKongPluginBindingBuilder().
 			WithControlPlaneRefKonnectNamespaced(cp.Name).
-			WithPluginRef(proxyCacheKongPlugin.Name).
+			WithPluginRefName(proxyCacheKongPlugin.Name).
 			WithScope(configurationv1alpha1.KongPluginBindingScopeGlobalInControlPlane).
 			Build(),
 			deploy.WithKonnectAdoptOptions[*configurationv1alpha1.KongPluginBinding](commonv1alpha1.AdoptModeOverride, pluginID),
@@ -143,7 +143,7 @@ func TestKongPluginBindingAdoption(t *testing.T) {
 		proxyCacheKongPlugin := deploy.ProxyCachePlugin(t, ctx, clientNamespaced)
 		kpbService := deploy.KongPluginBinding(t, ctx, clientNamespaced, konnect.NewKongPluginBindingBuilder().
 			WithControlPlaneRefKonnectNamespaced(cp.Name).
-			WithPluginRef(proxyCacheKongPlugin.Name).
+			WithPluginRefName(proxyCacheKongPlugin.Name).
 			WithServiceTarget(kongService.Name).
 			Build(),
 			deploy.WithKonnectAdoptOptions[*configurationv1alpha1.KongPluginBinding](commonv1alpha1.AdoptModeOverride, pluginID),
@@ -187,7 +187,7 @@ func TestKongPluginBindingAdoption(t *testing.T) {
 		t.Log("Creating a KongPluginBinding without the KongPlugin to adopt the plugin")
 		kpbGlobal := deploy.KongPluginBinding(t, ctx, clientNamespaced, konnect.NewKongPluginBindingBuilder().
 			WithControlPlaneRefKonnectNamespaced(cp.Name).
-			WithPluginRef("non-exist-plugin").
+			WithPluginRefName("non-exist-plugin").
 			WithScope(configurationv1alpha1.KongPluginBindingScopeGlobalInControlPlane).
 			Build(),
 			deploy.WithKonnectAdoptOptions[*configurationv1alpha1.KongPluginBinding](commonv1alpha1.AdoptModeOverride, pluginID),
