@@ -34,21 +34,31 @@ spec:
       value: (join('-', [($test_name), 'gateway-class']))
     - name: gateway_image
       value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.12')
+    - name: sni_hostname
+      value: (join('.', ['*', ($test_name), 'example.com']))
+    - name: cert_secret_name
+      value: test-tls-secret
+    - name: cert_secret_namespace
+      value: ($namespace)
+    - name: listener_https_port
+      value: 443
     - name: listener_http_port
       value: 80
     - name: http_route_name
       value: (join('-', [($test_name), 'echo-route']))
     - name: http_route_namespace
-      value: ($gateway_namespace)
-    - name: echo_service_name
+      value: ($namespace)
+    - name: echo_deployment_name
       value: (join('-', [($test_name), 'echo']))
+    - name: echo_deployment_namespace
+      value: ($namespace)
 
   steps:
   # Step 1: Create a namespace other than the chainsaw test namespace for KonnectAPIAuthConfiguration 
     - name: create-konnect-api-auth-configuration-namespace
       description: Create a namespace other than the test namespace for KonnectAPIAuthConfiguration
       bindings:
-        - name: namespace
+        - name: namespace_name
           value: ($konnect_api_auth_namespace)
       use:
         template: ../common/_step_templates/apply-assert-namespace.yaml
@@ -99,7 +109,7 @@ spec:
     - name: Create-gateway
       description: Create Gateway in the namespace of GatewayConfiguration for the test.
       use:
-        template: ../common/_step_templates/apply-assert-gateway-only-http-listener.yaml
+        template: ../common/_step_templates/apply-assert-gateway.yaml
     
     # Step 7: Verify that the KonnectGatewayControlPlane is created and synchronized with Konnect.
     - name: Assert-konnect-gateway-control-plane
@@ -192,6 +202,18 @@ spec:
   # Global catch block - runs on any step failure to help debug.
   catch:
     - describe:
+        apiVersion: "v1"
+        kind: Namespace
+        name: ($namespace)
+        showEvents: true
+
+    - describe:
+        apiVersion: "v1"
+        kind: Namespace
+        name: ($konnect_api_auth_namespace)
+        showEvents: true
+    
+    - describe:
         apiVersion: gateway.networking.k8s.io/v1
         kind: GatewayClass
         name: (join('-', [($test_name), 'gateway-class']))
@@ -264,10 +286,22 @@ spec:
         kind: KongTarget
         namespace: ($gateway_namespace)
         showEvents: true
+
+    - describe:
+        apiVersion: konnect.konghq.com/v1alpha2
+        kind: KonnectExtension
+        namespace: ($gateway_namespace)
+        showEvents: true
     
     - describe:
         apiVersion: v1
         kind: Service
-        name: ($echo_service_name)
+        name: ($echo_deployment_name)
+        namespace: ($gateway_namespace)
+        showEvents: true
+    
+    - describe:
+        apiVersion: v1
+        kind: Secret
         namespace: ($gateway_namespace)
         showEvents: true
