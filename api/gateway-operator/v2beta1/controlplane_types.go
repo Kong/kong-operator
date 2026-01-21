@@ -532,7 +532,7 @@ type ControlPlaneKonnectOptions struct {
 	// Licensing defines the configuration for Konnect licensing.
 	//
 	// +optional
-	// +kubebuilder:default={state: "disabled", storageState: "disabled"}
+	// +kubebuilder:default={state: "disabled"}
 	Licensing *ControlPlaneKonnectLicensing `json:"licensing,omitempty"`
 
 	// NodeRefreshPeriod is the period for refreshing the node information in Konnect.
@@ -585,7 +585,7 @@ type ControlPlaneKonnectLicensing struct {
 	// Only effective when State is set to enabled.
 	//
 	// +optional
-	// +kubebuilder:default=disabled
+	// +kubebuilder:default=enabled
 	// +kubebuilder:validation:Enum=enabled;disabled
 	StorageState *ControlPlaneKonnectLicensingState `json:"storageState,omitempty"`
 }

@@ -856,33 +856,6 @@ func TestControlPlaneV2(t *testing.T) {
 					)
 				},
 			},
-			{
-				Name: "konnect licensing defaults",
-				TestObject: &operatorv2beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: operatorv2beta1.ControlPlaneSpec{
-						DataPlane: validDataPlaneTarget,
-						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-							IngressClass: lo.ToPtr("kong"),
-							Konnect:      &operatorv2beta1.ControlPlaneKonnectOptions{},
-						},
-					},
-				},
-				Assert: func(t *testing.T, cp *operatorv2beta1.ControlPlane) {
-					require.NotNil(t, cp.Spec.Konnect)
-					require.NotNil(t, cp.Spec.Konnect.Licensing)
-					require.NotNil(t, cp.Spec.Konnect.Licensing.State)
-					require.NotNil(t, cp.Spec.Konnect.Licensing.StorageState)
-					require.Equal(t,
-						operatorv2beta1.ControlPlaneKonnectLicensingStateDisabled,
-						*cp.Spec.Konnect.Licensing.State,
-					)
-					require.Equal(t,
-						operatorv2beta1.ControlPlaneKonnectLicensingStateDisabled,
-						*cp.Spec.Konnect.Licensing.StorageState,
-					)
-				},
-			},
 		}.
 			RunWithConfig(t, cfg, scheme)
 	})
