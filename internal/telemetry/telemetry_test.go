@@ -432,7 +432,7 @@ func TestCreateManager(t *testing.T) {
 			},
 		},
 		{
-			name: "3 gateways, 2 hybrid (1 programmed), 1 programmed",
+			name: "4 gateways, 2 hybrid (1 programmed), 1 programmed, 1 of other gateway class",
 			configOptions: []configOption{
 				func(cfg *Config) *Config {
 					cfg.GatewayControllerEnabled = true
@@ -446,7 +446,14 @@ func TestCreateManager(t *testing.T) {
 						Name:      "hybrid-not-programmed",
 					},
 					Spec: gatewayv1.GatewaySpec{
-						GatewayClassName: "kong-hybrid",
+						GatewayClassName: "kong-non-hybrid",
+						Infrastructure: &gatewayv1.GatewayInfrastructure{
+							ParametersRef: &gatewayv1.LocalParametersReference{
+								Group: gatewayv1.Group(operatorv2beta1.SchemeGroupVersion.Group),
+								Kind:  "GatewayConfiguration",
+								Name:  "konnect-1",
+							},
+						},
 						Listeners: []gatewayv1.Listener{
 							{
 								Name:     gatewayv1.SectionName("http"),
@@ -531,6 +538,21 @@ func TestCreateManager(t *testing.T) {
 						},
 					},
 				},
+				&gatewayv1.Gateway{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "other",
+						Name:      "other",
+					},
+					Spec: gatewayv1.GatewaySpec{
+						GatewayClassName: "not-kong",
+						Listeners: []gatewayv1.Listener{
+							{
+								Name:     gatewayv1.SectionName("http"),
+								Protocol: gatewayv1.HTTPProtocolType,
+							},
+						},
+					},
+				},
 				&gatewayv1.GatewayClass{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "kong-hybrid",
@@ -569,6 +591,14 @@ func TestCreateManager(t *testing.T) {
 						},
 					},
 				},
+				&gatewayv1.GatewayClass{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "not-kong",
+					},
+					Spec: gatewayv1.GatewayClassSpec{
+						ControllerName: gatewayv1.GatewayController("another-controller"),
+					},
+				},
 				&operatorv2beta1.GatewayConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "kong",
@@ -589,6 +619,7 @@ func TestCreateManager(t *testing.T) {
 				"k8sv=v1.27.2",
 				"controller_gateway_enabled=true",
 				"controller_konnect_enabled=true",
+				"k8s_gateways_count=4",
 				"k8s_gateways_reconciled_count=3",
 				"k8s_gateways_programmed_count=2",
 				"k8s_gateways_attached_routes_count=3",

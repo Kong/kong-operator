@@ -21,7 +21,7 @@ const (
 	GatewayCountProviderKind = telemetryprovider.Kind("gateway_count")
 
 	// GatewayCountKey is the key for count of all gateways regardless of the controller.
-	GatewayCountKey = "k8s_gateway_count"
+	GatewayCountKey = "k8s_gateways_count"
 	// ReconciledGatewayCountKey is the key for count of gateways reconciled by the controller.
 	ReconciledGatewayCountKey = "k8s_gateways_reconciled_count"
 	// ProgrammedGatewayCountKey is the key for count of gateways successfully configured ("Programmed") by the controller.
@@ -38,7 +38,23 @@ const (
 	defaultPageSize = 1000
 )
 
-// gatewayCountProvider is the provider to provide telemetry data of count of reconciled and programmed Gateways.
+// gatewayCountProvider is the provider to provide telemetry data of count of reconciled and programmed Gateways,
+// and sum of attached routes to the reconciled gateways.
+// The data for the Konnect hybrid gateways are collected in the reports separately.
+// Examplar reports could be:
+//
+//	{
+//	    "k8s_gateway_count":4,
+//	    "k8s_gateways_reconciled_count": 3,
+//	    "k8s_gateways_programmed_count": 2,
+//	    "k8s_gateways_attached_routes_count": 5,
+//	    "konnect_hybrid_gateways_count": 2,
+//	    "konnect_hybrid_gateways_programmed_count": 1,
+//	    "konnect_hybrid_gateways_attached_routes_count": 3
+//	}
+//
+// The Konnect hybrid gateways are a subset of reconciled gateways, so the number of reconciled/programmed gateways
+// and attached routes are always smaller or equal to the metics without "konnect_hybrid" mark.
 type gatewayCountProvider struct {
 	konnectEnabled bool
 
@@ -58,6 +74,7 @@ func (p *gatewayCountProvider) Kind() telemetryprovider.Kind {
 }
 
 // Provide provides the telemetry data when anonymous reports are enabled on the reconciler, including:
+// - Number of total Gateways
 // - Number of reconciled Gateways
 // - Number of programmed Gateways
 // - Sum of attached routes to all programmed gateways
