@@ -95,12 +95,12 @@ spec:
                   x-kubernetes-validations:
                   - message: Only KongConsumer, KongConsumerGroup, KongCertificate,
                       KongCACertificate, KongDataPlaneClientCertificate, KongService,
-                      KongUpstream, KongKey, KongKeySet, and KongVault kinds are supported
-                      for 'configuration.konghq.com' group
+                      KongUpstream, KongKey, KongKeySet, KongVault and KongPluginBinding
+                      kinds are supported for 'configuration.konghq.com' group
                     rule: self.group != 'configuration.konghq.com' || self.kind in
                       [ 'KongConsumer', 'KongConsumerGroup', 'KongService', 'KongCertificate',
                       'KongCACertificate', 'KongDataPlaneClientCertificate', 'KongUpstream',
-                      'KongKey', 'KongKeySet', 'KongVault']
+                      'KongKey', 'KongKeySet', 'KongVault', 'KongPluginBinding']
                   - message: namespace must be empty for KongVault and non-empty for
                       other kinds
                     rule: 'self.kind == ''KongVault'' ? self.__namespace__ == "" :
@@ -153,6 +153,10 @@ spec:
                       kinds are supported for 'konnect.konghq.com' group
                     rule: .self.group != 'konnect.konghq.com' || .self.kind in ['KonnectGatewayControlPlane',
                       'KonnectAPIAuthConfiguration']
+                  - message: Only 'KongPlugin' kind is supported for 'configuration.konghq.com'
+                      group
+                    rule: .self.group != 'configuration.konghq.com' || .self.kind
+                      in ['KongPlugin']
                 maxItems: 16
                 minItems: 1
                 type: array

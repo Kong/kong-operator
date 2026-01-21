@@ -12,13 +12,17 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/samber/lo"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kong/kong-operator/api/common/consts"
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kong-operator/api/configuration/v1beta1"
 	"github.com/kong/kong-operator/controller/konnect/constraints"
+	"github.com/kong/kong-operator/controller/pkg/patch"
+	"github.com/kong/kong-operator/internal/utils/crossnamespace"
 	"github.com/kong/kong-operator/pkg/metadata"
 )
 
@@ -295,11 +299,67 @@ func getPluginBindingTargets(
 }
 
 // getReferencedPlugin returns the KongPlugin referenced by the KongPluginBinding.spec.pluginRef field.
-func getReferencedPlugin(ctx context.Context, cl client.Client, pluginBinding *configurationv1alpha1.KongPluginBinding) (*configurationv1.KongPlugin, error) {
+func getReferencedPlugin(
+	ctx context.Context,
+	cl client.Client,
+	pluginBinding *configurationv1alpha1.KongPluginBinding,
+) (*configurationv1.KongPlugin, error) {
 	// TODO(mlavacca): add support for KongClusterPlugin
-	plugin := configurationv1.KongPlugin{}
-	plugin.SetName(pluginBinding.Spec.PluginReference.Name)
-	plugin.SetNamespace(pluginBinding.GetNamespace())
+
+	var (
+		plugin    configurationv1.KongPlugin
+		pluginGVK = metav1.GroupVersionKind{
+			Group: configurationv1.SchemeGroupVersion.Group,
+			Kind:  "KongPlugin",
+		}
+		pluginRef = pluginBinding.Spec.PluginReference
+	)
+	plugin.SetName(pluginRef.Name)
+	if ns := pluginRef.Namespace; ns != "" && ns != pluginBinding.GetNamespace() {
+
+		err := crossnamespace.CheckKongReferenceGrantForResource(
+			ctx,
+			cl,
+			pluginBinding.Namespace,
+			ns,
+			pluginRef.Name,
+			metav1.GroupVersionKind(pluginBinding.GetObjectKind().GroupVersionKind()),
+			pluginGVK,
+		)
+		if err != nil {
+			msg := err.Error()
+			if crossnamespace.IsReferenceNotGranted(err) {
+				msg = fmt.Sprintf("KongReferenceGrants do not allow access to KongPlugin %s/%s", ns, pluginRef.Name)
+			}
+
+			if res, errStatus := patch.StatusWithCondition(
+				ctx, cl, pluginBinding,
+				consts.ConditionType(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs),
+				metav1.ConditionFalse,
+				configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted,
+				msg,
+			); errStatus != nil || !res.IsZero() {
+				return nil, errStatus
+			}
+			return nil, err
+		}
+
+		// Grant allows access.
+		if res, errStatus := patch.StatusWithCondition(
+			ctx, cl, pluginBinding,
+			consts.ConditionType(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs),
+			metav1.ConditionTrue,
+			configurationv1alpha1.KongReferenceGrantReasonResolvedRefs,
+			fmt.Sprintf("KongReferenceGrants allow access to KongPlugin %s/%s", ns, pluginRef.Name),
+		); errStatus != nil || !res.IsZero() {
+			return nil, errStatus
+		}
+
+		plugin.SetNamespace(pluginRef.Namespace)
+
+	} else {
+		plugin.SetNamespace(pluginBinding.GetNamespace())
+	}
 
 	if err := cl.Get(ctx, client.ObjectKeyFromObject(&plugin), &plugin); err != nil {
 		return nil, err
