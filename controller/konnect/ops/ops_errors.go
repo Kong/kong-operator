@@ -160,6 +160,11 @@ func ErrorIsForbiddenError(err error) bool {
 	return errSDK.StatusCode == 403
 }
 
+const (
+	// errorTypeReference is the error type for reference errors.
+	errorTypeReference = "ERROR_TYPE_REFERENCE"
+)
+
 // ErrorIsSDKError400 returns true if the provided error is a 400 BadRequestError.
 // This can happen when the requested entity fails the validation.
 //
@@ -191,7 +196,7 @@ func ErrorIsSDKError400(err error) bool {
 	allErrorReferenceErrors := true
 	for _, detail := range sdkErrBody.Details {
 		switch detail.Type {
-		case "ERROR_TYPE_REFERENCE":
+		case errorTypeReference:
 			seenErrorReferenceError = true
 		default:
 			allErrorReferenceErrors = false
