@@ -209,6 +209,15 @@ func createManager(
 			}
 		}
 
+		if cfg.GatewayControllerEnabled {
+			// Add gateway counter provider to monitor number of reconciled gateways, including Konnect hybrid gateways.
+			p := &gatewayCountProvider{
+				konnectEnabled: cfg.KonnectControllerEnabled,
+				cl:             cl,
+			}
+			w.AddProvider(p)
+		}
+
 		if cfg.KonnectControllerEnabled {
 			{
 				group, version := configurationv1.GroupVersion.Group, configurationv1.GroupVersion.Version

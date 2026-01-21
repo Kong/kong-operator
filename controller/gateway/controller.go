@@ -44,6 +44,7 @@ import (
 	operatorerrors "github.com/kong/kong-operator/internal/errors"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/internal/utils/gatewayclass"
+	gwconfigutils "github.com/kong/kong-operator/internal/utils/gatewayconfig"
 	"github.com/kong/kong-operator/modules/manager/logging"
 	"github.com/kong/kong-operator/pkg/consts"
 	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
@@ -245,7 +246,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	var konnectExtension *konnectv1alpha2.KonnectExtension
-	isHybridGateway := isGatewayHybrid(gatewayConfig)
+	isHybridGateway := gwconfigutils.IsGatewayHybrid(gatewayConfig)
 	if isHybridGateway {
 		log.Trace(logger, "Hybrid Gateway provisioning")
 		konnectControlPlane, cpReady := r.provisionKonnectGatewayControlPlane(ctx, logger, &gateway, gatewayConfig)
@@ -598,7 +599,9 @@ func (r *Reconciler) provisionDataPlane(
 
 	expectedDataPlaneOptions.Extensions = extensions.MergeExtensionsForDataPlane(gatewayConfig.Spec.Extensions, konnectExtension)
 
-	if !dataPlaneSpecDeepEqual(&dataplane.Spec.DataPlaneOptions, expectedDataPlaneOptions, isGatewayHybrid(gatewayConfig)) {
+	if !dataPlaneSpecDeepEqual(
+		&dataplane.Spec.DataPlaneOptions, expectedDataPlaneOptions, gwconfigutils.IsGatewayHybrid(gatewayConfig),
+	) {
 		log.Trace(logger, "dataplane config is out of date")
 		oldDataPlane := dataplane.DeepCopy()
 		dataplane.Spec.DataPlaneOptions = *expectedDataPlaneOptions
