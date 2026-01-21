@@ -9378,6 +9378,9 @@ spec:
                     - issuer
                     type: object
                   services:
+                    default:
+                      ingress:
+                        type: LoadBalancer
                     description: |-
                       Services indicates the configuration of Kubernetes Services needed for
                       the topology of various forms of traffic (including ingress, e.t.c.) to

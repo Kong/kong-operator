@@ -605,6 +605,9 @@ spec:
                     type: string
                 type: object
               configDump:
+                default:
+                  dumpSensitive: disabled
+                  state: disabled
                 description: ConfigDump defines the options for dumping generated Kong configuration from a diagnostics server.
                 properties:
                   dumpSensitive:
@@ -686,6 +689,8 @@ spec:
                 - message: Ref cannot be provided when type is set to managedByOwner
                   rule: self.type != 'managedByOwner' || !has(self.ref)
               dataplaneSync:
+                default:
+                  reverseSync: disabled
                 description: DataPlaneSync defines the configuration for syncing Kong configuration to the DataPlane.
                 properties:
                   interval:
@@ -806,6 +811,9 @@ spec:
                     - disabled
                     type: string
                   licensing:
+                    default:
+                      state: disabled
+                      storageState: disabled
                     description: Licensing defines the configuration for Konnect licensing.
                     properties:
                       initialPollingPeriod:
@@ -822,7 +830,7 @@ spec:
                         - disabled
                         type: string
                       storageState:
-                        default: enabled
+                        default: disabled
                         description: |-
                           StorageState indicates whether to store licenses fetched from Konnect
                           to Secrets locally to use them later when connection to Konnect is broken.
@@ -908,6 +916,8 @@ spec:
                     - disabled
                     type: string
                   fallbackConfiguration:
+                    default:
+                      useLastValidConfig: enabled
                     description: FallbackConfiguration defines the fallback configuration options for the ControlPlane.
                     properties:
                       useLastValidConfig:
@@ -10122,6 +10132,9 @@ spec:
                     - issuer
                     type: object
                   services:
+                    default:
+                      ingress:
+                        type: LoadBalancer
                     description: |-
                       Services indicates the configuration of Kubernetes Services needed for
                       the topology of various forms of traffic (including ingress, e.t.c.) to
@@ -10713,6 +10726,9 @@ spec:
                         type: string
                     type: object
                   configDump:
+                    default:
+                      dumpSensitive: disabled
+                      state: disabled
                     description: ConfigDump defines the options for dumping generated Kong configuration from a diagnostics server.
                     properties:
                       dumpSensitive:
@@ -10762,6 +10778,8 @@ spec:
                     - name
                     x-kubernetes-list-type: map
                   dataplaneSync:
+                    default:
+                      reverseSync: disabled
                     description: DataPlaneSync defines the configuration for syncing Kong configuration to the DataPlane.
                     properties:
                       interval:
@@ -10839,6 +10857,9 @@ spec:
                         - disabled
                         type: string
                       licensing:
+                        default:
+                          state: disabled
+                          storageState: disabled
                         description: Licensing defines the configuration for Konnect licensing.
                         properties:
                           initialPollingPeriod:
@@ -10855,7 +10876,7 @@ spec:
                             - disabled
                             type: string
                           storageState:
-                            default: enabled
+                            default: disabled
                             description: |-
                               StorageState indicates whether to store licenses fetched from Konnect
                               to Secrets locally to use them later when connection to Konnect is broken.
@@ -10941,6 +10962,8 @@ spec:
                         - disabled
                         type: string
                       fallbackConfiguration:
+                        default:
+                          useLastValidConfig: enabled
                         description: FallbackConfiguration defines the fallback configuration options for the ControlPlane.
                         properties:
                           useLastValidConfig:
@@ -19736,6 +19759,9 @@ spec:
                     description: GatewayConfigDataPlaneNetworkOptions defines network related options for a DataPlane.
                     properties:
                       services:
+                        default:
+                          ingress:
+                            type: LoadBalancer
                         description: |-
                           Services indicates the configuration of Kubernetes Services needed for
                           the topology of various forms of traffic (including ingress, etc.) to

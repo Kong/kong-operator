@@ -795,6 +795,98 @@ func TestControlPlaneV2(t *testing.T) {
 		})
 	})
 
+	t.Run("defaults", func(t *testing.T) {
+		common.TestCasesGroup[*operatorv2beta1.ControlPlane]{
+			{
+				Name: "dataplaneSync defaults",
+				TestObject: &operatorv2beta1.ControlPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv2beta1.ControlPlaneSpec{
+						DataPlane: validDataPlaneTarget,
+						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+							IngressClass: lo.ToPtr("kong"),
+						},
+					},
+				},
+				Assert: func(t *testing.T, cp *operatorv2beta1.ControlPlane) {
+					require.NotNil(t, cp.Spec.DataPlaneSync)
+					require.NotNil(t, cp.Spec.DataPlaneSync.ReverseSync)
+					require.Equal(t,
+						operatorv2beta1.ControlPlaneReverseSyncStateDisabled,
+						*cp.Spec.DataPlaneSync.ReverseSync,
+					)
+				},
+			},
+			{
+				Name: "configDump defaults",
+				TestObject: &operatorv2beta1.ControlPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv2beta1.ControlPlaneSpec{
+						DataPlane: validDataPlaneTarget,
+						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+							IngressClass: lo.ToPtr("kong"),
+						},
+					},
+				},
+				Assert: func(t *testing.T, cp *operatorv2beta1.ControlPlane) {
+					require.NotNil(t, cp.Spec.ConfigDump)
+					require.Equal(t, operatorv2beta1.ConfigDumpStateDisabled, cp.Spec.ConfigDump.State)
+					require.Equal(t, operatorv2beta1.ConfigDumpStateDisabled, cp.Spec.ConfigDump.DumpSensitive)
+				},
+			},
+			{
+				Name: "translation fallbackConfiguration defaults",
+				TestObject: &operatorv2beta1.ControlPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv2beta1.ControlPlaneSpec{
+						DataPlane: validDataPlaneTarget,
+						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+							IngressClass: lo.ToPtr("kong"),
+							Translation:  &operatorv2beta1.ControlPlaneTranslationOptions{},
+						},
+					},
+				},
+				Assert: func(t *testing.T, cp *operatorv2beta1.ControlPlane) {
+					require.NotNil(t, cp.Spec.Translation)
+					require.NotNil(t, cp.Spec.Translation.FallbackConfiguration)
+					require.NotNil(t, cp.Spec.Translation.FallbackConfiguration.UseLastValidConfig)
+					require.Equal(t,
+						operatorv2beta1.ControlPlaneFallbackConfigurationStateEnabled,
+						*cp.Spec.Translation.FallbackConfiguration.UseLastValidConfig,
+					)
+				},
+			},
+			{
+				Name: "konnect licensing defaults",
+				TestObject: &operatorv2beta1.ControlPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv2beta1.ControlPlaneSpec{
+						DataPlane: validDataPlaneTarget,
+						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+							IngressClass: lo.ToPtr("kong"),
+							Konnect:      &operatorv2beta1.ControlPlaneKonnectOptions{},
+						},
+					},
+				},
+				Assert: func(t *testing.T, cp *operatorv2beta1.ControlPlane) {
+					require.NotNil(t, cp.Spec.Konnect)
+					require.NotNil(t, cp.Spec.Konnect.Licensing)
+					require.NotNil(t, cp.Spec.Konnect.Licensing.State)
+					require.NotNil(t, cp.Spec.Konnect.Licensing.StorageState)
+					require.Equal(t,
+						operatorv2beta1.ControlPlaneKonnectLicensingStateDisabled,
+						*cp.Spec.Konnect.Licensing.State,
+					)
+					require.Equal(t,
+						operatorv2beta1.ControlPlaneKonnectLicensingStateDisabled,
+						*cp.Spec.Konnect.Licensing.StorageState,
+					)
+				},
+			},
+		}.
+			RunWithConfig(t, cfg, scheme)
+	})
+
 	t.Run("konnect", func(t *testing.T) {
 		t.Run("basic configuration", func(t *testing.T) {
 			common.TestCasesGroup[*operatorv2beta1.ControlPlane]{
