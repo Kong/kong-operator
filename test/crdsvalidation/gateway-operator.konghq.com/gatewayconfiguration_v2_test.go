@@ -3,6 +3,7 @@ package crdsvalidation_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -137,6 +138,23 @@ func TestGatewayConfigurationV2(t *testing.T) {
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						DataPlaneOptions: nil,
 					},
+				},
+			},
+			{
+				Name: "services ingress type defaults to LoadBalancer",
+				TestObject: &operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
+							Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{},
+						},
+					},
+				},
+				Assert: func(t *testing.T, gc *operatorv2beta1.GatewayConfiguration) {
+					require.NotNil(t, gc.Spec.DataPlaneOptions)
+					require.NotNil(t, gc.Spec.DataPlaneOptions.Network.Services)
+					require.NotNil(t, gc.Spec.DataPlaneOptions.Network.Services.Ingress)
+					require.Equal(t, corev1.ServiceTypeLoadBalancer, gc.Spec.DataPlaneOptions.Network.Services.Ingress.Type)
 				},
 			},
 			{

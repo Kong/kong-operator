@@ -131,6 +131,7 @@ type ControlPlaneOptions struct {
 	// DataPlaneSync defines the configuration for syncing Kong configuration to the DataPlane.
 	//
 	// +optional
+	// +kubebuilder:default={reverseSync: "disabled"}
 	DataPlaneSync *ControlPlaneDataPlaneSync `json:"dataplaneSync,omitempty"`
 
 	// Translation defines the configuration for translating Kong configuration.
@@ -142,6 +143,7 @@ type ControlPlaneOptions struct {
 	// ConfigDump defines the options for dumping generated Kong configuration from a diagnostics server.
 	//
 	// +optional
+	// +kubebuilder:default={state: "disabled", dumpSensitive: "disabled"}
 	ConfigDump *ControlPlaneConfigDump `json:"configDump,omitempty"`
 
 	// ObjectFilters defines the filters to limit watched objects by the controllers.
@@ -169,6 +171,7 @@ type ControlPlaneTranslationOptions struct {
 	// FallbackConfiguration defines the fallback configuration options for the ControlPlane.
 	//
 	// +optional
+	// +kubebuilder:default={useLastValidConfig: "enabled"}
 	FallbackConfiguration *ControlPlaneFallbackConfiguration `json:"fallbackConfiguration,omitempty"`
 
 	// DrainSupport defines the configuration for the ControlPlane to include
@@ -515,6 +518,7 @@ type ControlPlaneKonnectOptions struct {
 	// Licensing defines the configuration for Konnect licensing.
 	//
 	// +optional
+	// +kubebuilder:default={state: "disabled", storageState: "disabled"}
 	Licensing *ControlPlaneKonnectLicensing `json:"licensing,omitempty"`
 
 	// NodeRefreshPeriod is the period for refreshing the node information in Konnect.
