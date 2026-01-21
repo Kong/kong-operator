@@ -22,7 +22,6 @@ import (
 	kcfggateway "github.com/kong/kong-operator/api/gateway-operator/gateway"
 	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
 	operatorv2beta1 "github.com/kong/kong-operator/api/gateway-operator/v2beta1"
-	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/modules/manager/scheme"
 	"github.com/kong/kong-operator/pkg/consts"
@@ -1864,77 +1863,6 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 				assert.Equal(t, tc.ExpectedRoutes[i], routes, "#%d", i)
 				assert.Equal(t, tc.ExpectedError[i], err, "#%d", i)
 			}
-		})
-	}
-}
-
-func TestIsGatewayHybrid(t *testing.T) {
-	require.NoError(t, konnectv1alpha2.AddToScheme(scheme.Get()))
-
-	type testCase struct {
-		name         string
-		konnect      *operatorv2beta1.KonnectOptions
-		expectHybrid bool
-	}
-
-	tests := []testCase{
-		{
-			name:         "no konnect configuration",
-			konnect:      nil,
-			expectHybrid: false,
-		},
-		{
-			name: "konnect with source Origin and auth ref",
-			konnect: &operatorv2beta1.KonnectOptions{
-				Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
-				APIAuthConfigurationRef: &konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
-					Name: "test-auth",
-				},
-			},
-			expectHybrid: true,
-		},
-		{
-			name: "konnect with source Origin but no auth ref",
-			konnect: &operatorv2beta1.KonnectOptions{
-				Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
-			},
-			expectHybrid: false,
-		},
-		{
-			name: "konnect with source Mirror and auth ref",
-			konnect: &operatorv2beta1.KonnectOptions{
-				Source: lo.ToPtr(commonv1alpha1.EntitySourceMirror),
-				APIAuthConfigurationRef: &konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
-					Name: "test-auth",
-				},
-			},
-			expectHybrid: true,
-		},
-		{
-			name: "konnect with default source (Origin) and auth ref",
-			konnect: &operatorv2beta1.KonnectOptions{
-				APIAuthConfigurationRef: &konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
-					Name: "test-auth",
-				},
-			},
-			expectHybrid: true,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			gatewayConfig := &operatorv2beta1.GatewayConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway-config",
-					Namespace: "test-ns",
-				},
-				Spec: operatorv2beta1.GatewayConfigurationSpec{
-					Konnect: tc.konnect,
-				},
-			}
-
-			isHybrid := isGatewayHybrid(gatewayConfig)
-			assert.Equal(t, tc.expectHybrid, isHybrid)
 		})
 	}
 }

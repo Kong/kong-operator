@@ -2,8 +2,6 @@ package telemetry
 
 import (
 	"context"
-	"errors"
-	"fmt"
 
 	telemetryprovider "github.com/kong/kubernetes-telemetry/pkg/provider"
 	telemetrytypes "github.com/kong/kubernetes-telemetry/pkg/types"
@@ -12,8 +10,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	operatorv2beta1 "github.com/kong/kong-operator/api/gateway-operator/v2beta1"
 	"github.com/kong/kong-operator/internal/utils/gatewayclass"
+	gwconfigutils "github.com/kong/kong-operator/internal/utils/gatewayconfig"
 )
 
 const (
@@ -22,6 +20,8 @@ const (
 	// GatewayCountProviderKind is the kind of the gateway count provider.
 	GatewayCountProviderKind = telemetryprovider.Kind("gateway_count")
 
+	// GatewayCountKey is the key for count of all gateways regardless of the controller.
+	GatewayCountKey = "k8s_gateway_count"
 	// ReconciledGatewayCountKey is the key for count of gateways reconciled by the controller.
 	ReconciledGatewayCountKey = "k8s_gateways_reconciled_count"
 	// ProgrammedGatewayCountKey is the key for count of gateways successfully configured ("Programmed") by the controller.
@@ -67,6 +67,7 @@ func (p *gatewayCountProvider) Kind() telemetryprovider.Kind {
 func (p *gatewayCountProvider) Provide(ctx context.Context) (telemetrytypes.ProviderReport, error) {
 
 	var (
+		gatewayCount                    int
 		reconciledGatewayCount          int
 		programmedGatewayCount          int
 		attachedRouteCount              int
@@ -88,12 +89,16 @@ func (p *gatewayCountProvider) Provide(ctx context.Context) (telemetrytypes.Prov
 		if err != nil {
 			return nil, err
 		}
+		// Sum up the count of total gateways.
+		gatewayCount += len(gatewayList.Items)
 		// Check each Gateway and increase the count if the Gateway satisfies the conditions of counting.
 		for _, gw := range gatewayList.Items {
 			// Check if the gateway is reconciled and continue checking only when it is.
+			// The gatewayclass.Get returns error if the controllerName in gatewayclass.spec
+			// does not match the controller name of the operator.
+			// So when no error is returned, the gateways belonging to the gatewayclass are reconciled by the operator.
 			gwc, err := gatewayclass.Get(ctx, p.cl, string(gw.Spec.GatewayClassName))
 			if err != nil {
-				fmt.Println(err)
 				continue
 			}
 			reconciledGatewayCount++
@@ -110,19 +115,11 @@ func (p *gatewayCountProvider) Provide(ctx context.Context) (telemetrytypes.Prov
 				attachedRouteCount += attachedRoutesOnGateway
 			}
 			// Check if the gateway is Konnect hybrid gateway only when Konnect controller is enabled.
-			if p.konnectEnabled {
-				gwConfig, err := p.getGatewayConfigForGatewayClass(ctx, gwc.GatewayClass)
-				if err != nil {
-					continue
-				}
-
-				// Count the hybrid gateway if the GatewayConfiguration specifies a Konnect API auth config.
-				if gwConfig.Spec.Konnect != nil && gwConfig.Spec.Konnect.APIAuthConfigurationRef != nil {
-					hybridGatewayCount++
-					if programmed {
-						programmedHybridGatewayCount++
-						hybridGatewayAttachedRouteCount += attachedRoutesOnGateway
-					}
+			if p.konnectEnabled && p.isGatewayHybrid(ctx, &gw, gwc.GatewayClass) {
+				hybridGatewayCount++
+				if programmed {
+					programmedHybridGatewayCount++
+					hybridGatewayAttachedRouteCount += attachedRoutesOnGateway
 				}
 			}
 		}
@@ -133,6 +130,7 @@ func (p *gatewayCountProvider) Provide(ctx context.Context) (telemetrytypes.Prov
 	}
 	// Collect and return the report.
 	report := telemetrytypes.ProviderReport{
+		GatewayCountKey:           gatewayCount,
 		ReconciledGatewayCountKey: reconciledGatewayCount,
 		ProgrammedGatewayCountKey: programmedGatewayCount,
 		AttachedRouteCountKey:     attachedRouteCount,
@@ -145,35 +143,34 @@ func (p *gatewayCountProvider) Provide(ctx context.Context) (telemetrytypes.Prov
 	return report, nil
 }
 
-// getGatewayConfigForGatewayClass gets the GatewayConfiguration specified for the given GatewayClass.
-// If the spec.parametersRef is empty, it returns a default GatewayConfiguration.
-// If the kind in spec.parametersRef does not match, or namespace/name is not specified, it returns error.
-// TODO: DRY -- extract the getGatewayConfigForParametersRef in gateway reconciler elsewhere and reuse it.
-func (p *gatewayCountProvider) getGatewayConfigForGatewayClass(
-	ctx context.Context, gwc *gatewayv1.GatewayClass,
-) (operatorv2beta1.GatewayConfiguration, error) {
-	if gwc.Spec.ParametersRef == nil {
-		return operatorv2beta1.GatewayConfiguration{}, nil
+// isGatewayHybrid returns true if the gateway is Konnect hybrid gateway.
+// Either the GatewayConfiguration in spec.parametersRef of its gatewayclass
+// or in its own spec.infrastructure.parametersRef specifies the gateway to be managed by Konnect,
+// it returns true.
+func (p *gatewayCountProvider) isGatewayHybrid(
+	ctx context.Context, gw *gatewayv1.Gateway, gwc *gatewayv1.GatewayClass,
+) bool {
+	gwConfig, err := gwconfigutils.GetFromParametersRef(ctx, p.cl, gwc.Spec.ParametersRef)
+	if err != nil {
+		return false
 	}
-	parametersRef := gwc.Spec.ParametersRef
-	if parametersRef.Group != gatewayv1.Group(operatorv2beta1.SchemeGroupVersion.Group) ||
-		parametersRef.Kind != "GatewayConfiguration" {
-		return operatorv2beta1.GatewayConfiguration{},
-			fmt.Errorf("controller only supports %s %s resources for GatewayClass parametersRef",
-				operatorv2beta1.SchemeGroupVersion.Group, "GatewayConfiguration")
+	if gwconfigutils.IsGatewayHybrid(gwConfig) {
+		return true
 	}
-	if parametersRef.Namespace == nil {
-		return operatorv2beta1.GatewayConfiguration{}, errors.New("namespace must be specified")
+	if gw.Spec.Infrastructure != nil && gw.Spec.Infrastructure.ParametersRef != nil {
+		paramRef := &gatewayv1.ParametersReference{
+			Group:     gw.Spec.Infrastructure.ParametersRef.Group,
+			Kind:      gw.Spec.Infrastructure.ParametersRef.Kind,
+			Namespace: lo.ToPtr(gatewayv1.Namespace(gw.Namespace)),
+			Name:      gw.Spec.Infrastructure.ParametersRef.Name,
+		}
+		localConfig, err := gwconfigutils.GetFromParametersRef(ctx, p.cl, paramRef)
+		if err != nil {
+			return false
+		}
+		if gwconfigutils.IsGatewayHybrid(localConfig) {
+			return true
+		}
 	}
-	if parametersRef.Name == "" {
-		return operatorv2beta1.GatewayConfiguration{}, errors.New("name must be specified")
-	}
-
-	nn := client.ObjectKey{
-		Namespace: string(*parametersRef.Namespace),
-		Name:      parametersRef.Name,
-	}
-	gwConfig := operatorv2beta1.GatewayConfiguration{}
-	err := p.cl.Get(ctx, nn, &gwConfig)
-	return gwConfig, err
+	return false
 }

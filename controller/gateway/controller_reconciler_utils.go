@@ -36,6 +36,7 @@ import (
 	"github.com/kong/kong-operator/controller/pkg/secrets"
 	"github.com/kong/kong-operator/controller/pkg/secrets/ref"
 	gwtypes "github.com/kong/kong-operator/internal/types"
+	gwconfigutils "github.com/kong/kong-operator/internal/utils/gatewayconfig"
 	"github.com/kong/kong-operator/pkg/consts"
 	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
@@ -355,7 +356,7 @@ func (r *Reconciler) getOrCreateGatewayConfiguration(
 	gatewayClass *gatewayv1.GatewayClass,
 	gateway *gatewayv1.Gateway,
 ) (*GatewayConfiguration, error) {
-	gatewayConfig, err := r.getGatewayConfigForParametersRef(ctx, gatewayClass.Spec.ParametersRef)
+	gatewayConfig, err := gwconfigutils.GetFromParametersRef(ctx, r.Client, gatewayClass.Spec.ParametersRef)
 	if err != nil {
 		return nil, fmt.Errorf("GatewayClass (%s): %w", gatewayClass.Name, err)
 	}
@@ -374,7 +375,7 @@ func (r *Reconciler) getOrCreateGatewayConfiguration(
 		namespace := gatewayv1.Namespace(gateway.Namespace)
 		localParametersRef.Namespace = &namespace
 
-		localGatewayConfig, err := r.getGatewayConfigForParametersRef(ctx, localParametersRef)
+		localGatewayConfig, err := gwconfigutils.GetFromParametersRef(ctx, r.Client, localParametersRef)
 		if err != nil {
 			return nil, fmt.Errorf("Gateway (%s): spec.instrastructure %w", gateway.Name, err)
 		}
@@ -686,11 +687,6 @@ func (r *Reconciler) ensureOwnedNetworkPoliciesDeleted(ctx context.Context, gate
 	}
 
 	return deleted, errors.Join(errs...)
-}
-
-// isGatewayHybrid checks if the given GatewayConfiguration is in konnect mode by inspecting its fields.
-func isGatewayHybrid(gatewayConfiguration *GatewayConfiguration) bool {
-	return gatewayConfiguration.Spec.Konnect != nil && gatewayConfiguration.Spec.Konnect.APIAuthConfigurationRef != nil
 }
 
 // -----------------------------------------------------------------------------
