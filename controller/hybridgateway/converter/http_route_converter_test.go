@@ -190,8 +190,8 @@ func TestHTTPRouteConverter_GetHybridGatewayParents(t *testing.T) {
 
 func TestHTTPRouteConverter_Translate(t *testing.T) {
 	t.Run("translates route with plugins and targets", func(t *testing.T) {
-		route := newHTTPRouteForTranslation("default", []string{"api.example.com"}, []gwtypes.HTTPBackendRef{
-			newBackendRef("backend-service", "", 80),
+		route := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{
+			newBackendRef(""),
 		}, []gwtypes.HTTPRouteFilter{
 			newRequestHeaderFilter("x-test", "true"),
 			newExtensionRefFilter("ext-plugin"),
@@ -199,8 +199,8 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 		gateway := newGatewayWithListenerHostnames("api.example.com")
 		gateway.UID = types.UID("gateway-uid")
 		objects := append(newKonnectGatewayStandardObjects(gateway),
-			newNamespace("default"),
-			newService("backend-service", "default", 80, 8080),
+			newNamespace(),
+			newService("default"),
 			newEndpointSlice("backend-service", "default", 8080, []string{"10.0.0.1"}),
 			&configurationv1.KongPlugin{
 				ObjectMeta: metav1.ObjectMeta{
@@ -253,8 +253,8 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 	})
 
 	t.Run("returns error when filter translation fails", func(t *testing.T) {
-		route := newHTTPRouteForTranslation("default", []string{"api.example.com"}, []gwtypes.HTTPBackendRef{
-			newBackendRef("backend-service", "", 80),
+		route := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{
+			newBackendRef(""),
 		}, []gwtypes.HTTPRouteFilter{
 			{
 				Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
@@ -263,8 +263,8 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 		gateway := newGatewayWithListenerHostnames("api.example.com")
 		gateway.UID = types.UID("gateway-uid")
 		objects := append(newKonnectGatewayStandardObjects(gateway),
-			newNamespace("default"),
-			newService("backend-service", "default", 80, 8080),
+			newNamespace(),
+			newService("default"),
 			newEndpointSlice("backend-service", "default", 8080, []string{"10.0.0.1"}),
 		)
 
@@ -322,15 +322,15 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 
 func TestHTTPRouteConverter_UpdateRootObjectStatus(t *testing.T) {
 	t.Run("updates accepted and resolved refs conditions", func(t *testing.T) {
-		route := newHTTPRouteForTranslation("default", []string{"api.example.com"}, []gwtypes.HTTPBackendRef{
-			newBackendRef("backend-service", "", 80),
+		route := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{
+			newBackendRef(""),
 		}, nil)
 		gateway := newGatewayWithListenerHostnames("api.example.com")
 		gateway.UID = types.UID("gateway-uid")
 
 		objects := append(newKonnectGatewayStandardObjects(gateway),
-			newNamespace("default"),
-			newService("backend-service", "default", 80, 8080),
+			newNamespace(),
+			newService("default"),
 			route,
 		)
 
@@ -353,15 +353,15 @@ func TestHTTPRouteConverter_UpdateRootObjectStatus(t *testing.T) {
 	})
 
 	t.Run("resolved refs false sets stop", func(t *testing.T) {
-		route := newHTTPRouteForTranslation("default", []string{"api.example.com"}, []gwtypes.HTTPBackendRef{
-			newBackendRef("backend-service", "backend", 80),
+		route := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{
+			newBackendRef("backend"),
 		}, nil)
 		gateway := newGatewayWithListenerHostnames("api.example.com")
 		gateway.UID = types.UID("gateway-uid")
 
 		objects := append(newKonnectGatewayStandardObjects(gateway),
-			newNamespace("default"),
-			newService("backend-service", "backend", 80, 8080),
+			newNamespace(),
+			newService("backend"),
 			route,
 		)
 
@@ -383,8 +383,8 @@ func TestHTTPRouteConverter_UpdateRootObjectStatus(t *testing.T) {
 	})
 
 	t.Run("resolved refs true with reference grant", func(t *testing.T) {
-		route := newHTTPRouteForTranslation("default", []string{"api.example.com"}, []gwtypes.HTTPBackendRef{
-			newBackendRef("backend-service", "backend", 80),
+		route := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{
+			newBackendRef("backend"),
 		}, nil)
 		gateway := newGatewayWithListenerHostnames("api.example.com")
 		gateway.UID = types.UID("gateway-uid")
@@ -413,8 +413,8 @@ func TestHTTPRouteConverter_UpdateRootObjectStatus(t *testing.T) {
 		}
 
 		objects := append(newKonnectGatewayStandardObjects(gateway),
-			newNamespace("default"),
-			newService("backend-service", "backend", 80, 8080),
+			newNamespace(),
+			newService("backend"),
 			referenceGrant,
 			route,
 		)
@@ -437,15 +437,15 @@ func TestHTTPRouteConverter_UpdateRootObjectStatus(t *testing.T) {
 	})
 
 	t.Run("status update failure returns error", func(t *testing.T) {
-		route := newHTTPRouteForTranslation("default", []string{"api.example.com"}, []gwtypes.HTTPBackendRef{
-			newBackendRef("backend-service", "", 80),
+		route := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{
+			newBackendRef(""),
 		}, nil)
 		gateway := newGatewayWithListenerHostnames("api.example.com")
 		gateway.UID = types.UID("gateway-uid")
 
 		objects := append(newKonnectGatewayStandardObjects(gateway),
-			newNamespace("default"),
-			newService("backend-service", "default", 80, 8080),
+			newNamespace(),
+			newService("default"),
 			route,
 		)
 
@@ -464,10 +464,10 @@ func TestHTTPRouteConverter_UpdateRootObjectStatus(t *testing.T) {
 }
 
 func TestHTTPRouteConverter_HandleOrphanedResource(t *testing.T) {
-	route := newHTTPRouteForTranslation("default", []string{"api.example.com"}, nil, nil)
+	route := newHTTPRouteForTranslation([]string{"api.example.com"}, nil, nil)
 
 	t.Run("skips resource without route annotation", func(t *testing.T) {
-		resource := newUnstructuredResource("orphaned", "default", "")
+		resource := newUnstructuredResource("")
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(resource).Build()
 		converter := newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
 
@@ -478,7 +478,7 @@ func TestHTTPRouteConverter_HandleOrphanedResource(t *testing.T) {
 
 	t.Run("updates annotation when other routes remain", func(t *testing.T) {
 		routeKey := client.ObjectKeyFromObject(route).String()
-		resource := newUnstructuredResource("orphaned", "default", routeKey+",other-ns/other-route")
+		resource := newUnstructuredResource(routeKey + ",other-ns/other-route")
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(resource).Build()
 		converter := newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
 
@@ -490,7 +490,7 @@ func TestHTTPRouteConverter_HandleOrphanedResource(t *testing.T) {
 
 	t.Run("allows deletion when only route remains", func(t *testing.T) {
 		routeKey := client.ObjectKeyFromObject(route).String()
-		resource := newUnstructuredResource("orphaned", "default", routeKey)
+		resource := newUnstructuredResource(routeKey)
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(resource).Build()
 		converter := newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
 
@@ -503,7 +503,7 @@ func TestHTTPRouteConverter_HandleOrphanedResource(t *testing.T) {
 
 	t.Run("returns error when patch fails", func(t *testing.T) {
 		routeKey := client.ObjectKeyFromObject(route).String()
-		resource := newUnstructuredResource("orphaned", "default", routeKey+",other-ns/other-route")
+		resource := newUnstructuredResource(routeKey + ",other-ns/other-route")
 		fakeClient := fake.NewClientBuilder().
 			WithScheme(scheme.Get()).
 			WithObjects(resource).
@@ -600,7 +600,7 @@ func assertConditionStatus(t *testing.T, conditions []metav1.Condition, conditio
 	t.Fatalf("condition %s not found", conditionType)
 }
 
-func newHTTPRouteForTranslation(namespace string, hostnames []string, backendRefs []gwtypes.HTTPBackendRef, filters []gwtypes.HTTPRouteFilter) *gwtypes.HTTPRoute {
+func newHTTPRouteForTranslation(hostnames []string, backendRefs []gwtypes.HTTPBackendRef, filters []gwtypes.HTTPRouteFilter) *gwtypes.HTTPRoute {
 	var gwHostnames []gatewayv1.Hostname
 	for _, hostname := range hostnames {
 		gwHostnames = append(gwHostnames, gatewayv1.Hostname(hostname))
@@ -609,7 +609,7 @@ func newHTTPRouteForTranslation(namespace string, hostnames []string, backendRef
 	return &gwtypes.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-route",
-			Namespace: namespace,
+			Namespace: "default",
 		},
 		Spec: gwtypes.HTTPRouteSpec{
 			Hostnames: gwHostnames,
@@ -640,16 +640,16 @@ func newHTTPRouteForTranslation(namespace string, hostnames []string, backendRef
 	}
 }
 
-func newBackendRef(name, namespace string, port int32) gwtypes.HTTPBackendRef {
+func newBackendRef(namespace string) gwtypes.HTTPBackendRef {
 	serviceKind := gwtypes.Kind("Service")
 	serviceGroup := gwtypes.Group("")
 	ref := gwtypes.HTTPBackendRef{
 		BackendRef: gwtypes.BackendRef{
 			BackendObjectReference: gwtypes.BackendObjectReference{
-				Name:  gwtypes.ObjectName(name),
+				Name:  "backend-service",
 				Kind:  &serviceKind,
 				Group: &serviceGroup,
-				Port:  lo.ToPtr(gwtypes.PortNumber(port)),
+				Port:  lo.ToPtr(gwtypes.PortNumber(80)),
 			},
 		},
 	}
@@ -687,10 +687,10 @@ func newExtensionRefFilter(name string) gwtypes.HTTPRouteFilter {
 	}
 }
 
-func newService(name, namespace string, port, targetPort int32) *corev1.Service {
+func newService(namespace string) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      "backend-service",
 			Namespace: namespace,
 		},
 		Spec: corev1.ServiceSpec{
@@ -698,9 +698,9 @@ func newService(name, namespace string, port, targetPort int32) *corev1.Service 
 			Ports: []corev1.ServicePort{
 				{
 					Name:       "http",
-					Port:       port,
+					Port:       80,
 					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt(int(targetPort)),
+					TargetPort: intstr.FromInt(8080),
 				},
 			},
 		},
@@ -734,19 +734,19 @@ func newEndpointSlice(serviceName, namespace string, port int32, addresses []str
 	}
 }
 
-func newNamespace(name string) *corev1.Namespace {
+func newNamespace() *corev1.Namespace {
 	return &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
+			Name: "default",
 		},
 	}
 }
 
-func newUnstructuredResource(name, namespace, routesAnnotation string) *unstructured.Unstructured {
+func newUnstructuredResource(routesAnnotation string) *unstructured.Unstructured {
 	resource := &unstructured.Unstructured{}
 	resource.SetGroupVersionKind(configurationv1alpha1.GroupVersion.WithKind("KongService"))
-	resource.SetName(name)
-	resource.SetNamespace(namespace)
+	resource.SetName("orphaned")
+	resource.SetNamespace("default")
 	if routesAnnotation != "" {
 		resource.SetAnnotations(map[string]string{
 			consts.GatewayOperatorHybridRoutesAnnotation: routesAnnotation,
