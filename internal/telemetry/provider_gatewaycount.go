@@ -44,7 +44,7 @@ const (
 // Examplar reports could be:
 //
 //	{
-//	    "k8s_gateway_count":4,
+//	    "k8s_gateways_count":4,
 //	    "k8s_gateways_reconciled_count": 3,
 //	    "k8s_gateways_programmed_count": 2,
 //	    "k8s_gateways_attached_routes_count": 5,
