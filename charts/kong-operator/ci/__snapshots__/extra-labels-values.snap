@@ -9164,8 +9164,6 @@ spec:
                     - disabled
                     type: string
                   licensing:
-                    default:
-                      state: disabled
                     description: Licensing defines the configuration for Konnect licensing.
                     properties:
                       initialPollingPeriod:
@@ -36542,8 +36540,6 @@ spec:
                         - disabled
                         type: string
                       licensing:
-                        default:
-                          state: disabled
                         description: Licensing defines the configuration for Konnect licensing.
                         properties:
                           initialPollingPeriod:
