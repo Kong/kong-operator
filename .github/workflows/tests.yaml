@@ -413,11 +413,6 @@ jobs:
     - check-docs-only
     - matrix_k8s_node_versions
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
-    strategy:
-      matrix:
-        directory:
-          - ingress-controller
-          - .
     steps:
     - name: Harden Runner
       uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
@@ -443,7 +438,7 @@ jobs:
     - name: run envtest tests
       env:
         KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
-        GOTESTSUM_JUNITFILE: "${{ matrix.directory }}/envtest-tests.xml"
+        GOTESTSUM_JUNITFILE: envtest-tests.xml
       run: |
         VERSION="${{ needs.matrix_k8s_node_versions.outputs.latest }}"
         # Remove leading 'v'
@@ -451,20 +446,20 @@ jobs:
         # Remove patch number as envtest releases are not provided for every patch version
         VERSION="${VERSION%.*}"
         echo "Cluster version: $VERSION"
-        make test.envtest CLUSTER_VERSION=${VERSION} TEST_DIR=${{ matrix.directory }}
+        make test.envtest CLUSTER_VERSION=${VERSION}
 
     - name: collect test coverage
       uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
-        name: ${{ matrix.directory == '.' && 'ko' || matrix.directory }}-coverage-envtest-tests
-        path: ${{ matrix.directory }}/coverage.envtest.out
+        name: coverage-envtest-tests
+        path: coverage.envtest.out
 
     - name: collect test report
       if: ${{ always() }}
       uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
-        name: ${{ matrix.directory == '.' && 'ko' || matrix.directory }}-tests-report-envtest-tests
-        path: ${{ matrix.directory }}/envtest-tests.xml
+        name: tests-report-envtest-tests
+        path: envtest-tests.xml
   
   kongintegration-tests:
     needs: [check-docs-only]
