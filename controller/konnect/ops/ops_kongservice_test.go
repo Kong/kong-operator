@@ -73,7 +73,7 @@ func TestCreateKongService(t *testing.T) {
 			},
 		},
 		{
-			name: "existing service by UID is reused when name is missing",
+			name: "upsert service using UID when name is missing",
 			mockServicePair: func(t *testing.T) (*mocks.MockServicesSDK, *configurationv1alpha1.KongService) {
 				sdk := mocks.NewMockServicesSDK(t)
 				svc := &configurationv1alpha1.KongService{
@@ -96,15 +96,13 @@ func TestCreateKongService(t *testing.T) {
 
 				sdk.
 					EXPECT().
-					ListService(ctx, mock.MatchedBy(func(req sdkkonnectops.ListServiceRequest) bool {
-						return req.ControlPlaneID == "123456789" && req.Tags != nil && *req.Tags == UIDLabelForObject(svc)
+					UpsertService(ctx, mock.MatchedBy(func(req sdkkonnectops.UpsertServiceRequest) bool {
+						return req.ControlPlaneID == "123456789" && req.ServiceID == string(svc.UID)
 					})).
 					Return(
-						&sdkkonnectops.ListServiceResponse{
-							Object: &sdkkonnectops.ListServiceResponseBody{
-								Data: []sdkkonnectcomp.ServiceOutput{
-									{ID: lo.ToPtr("existing-123")},
-								},
+						&sdkkonnectops.UpsertServiceResponse{
+							Service: &sdkkonnectcomp.ServiceOutput{
+								ID: lo.ToPtr("abcd-1234"),
 							},
 						},
 						nil,
@@ -113,7 +111,7 @@ func TestCreateKongService(t *testing.T) {
 				return sdk, svc
 			},
 			assertions: func(t *testing.T, svc *configurationv1alpha1.KongService) {
-				assert.Equal(t, "existing-123", svc.GetKonnectStatus().GetKonnectID())
+				assert.Equal(t, "abcd-1234", svc.GetKonnectStatus().GetKonnectID())
 			},
 		},
 		{
