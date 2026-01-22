@@ -19,7 +19,7 @@ import (
 // -----------------------------------------------------------------------------
 
 var dependencyFilePath = func() string {
-	_, b, _, _ := runtime.Caller(0) //nolint:dogsled
+	_, b, _, _ := runtime.Caller(0)
 	return filepath.Join(filepath.Dir(b), "..", "..", "test_dependencies.yaml")
 }()
 

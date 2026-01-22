@@ -179,19 +179,6 @@ func installGatewayCRDs(t *testing.T, scheme *k8sruntime.Scheme, cfg *rest.Confi
 	require.NoError(t, err, "failed installing Gateway API CRDs")
 }
 
-func installKongCRDs(t *testing.T, scheme *k8sruntime.Scheme, cfg *rest.Config) {
-	t.Helper()
-	_, err := envtest.InstallCRDs(cfg, envtest.CRDInstallOptions{
-		Scheme: scheme,
-		Paths: []string{
-			kcfg.KongOperatorCRDsPath(),
-			kcfg.IngressControllerIncubatorCRDsPath(),
-		},
-		ErrorIfPathMissing: true,
-	})
-	require.NoError(t, err)
-}
-
 func deployIngressClass(ctx context.Context, t *testing.T, name string, client client.Client) {
 	t.Helper()
 

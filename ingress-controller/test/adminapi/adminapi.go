@@ -1,8 +1,9 @@
 package adminapi
 
 import (
-	internal "github.com/kong/kong-operator/ingress-controller/internal/adminapi"
 	"k8s.io/apimachinery/pkg/util/sets"
+
+	internal "github.com/kong/kong-operator/ingress-controller/internal/adminapi"
 )
 
 type Discoverer = internal.Discoverer

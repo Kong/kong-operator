@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -21,6 +20,7 @@ import (
 	ctrlconsts "github.com/kong/kong-operator/controller/consts"
 	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/ingress-controller/internal/logging"
+	mgrconsts "github.com/kong/kong-operator/ingress-controller/internal/manager/consts"
 	"github.com/kong/kong-operator/ingress-controller/internal/util"
 )
 
@@ -28,27 +28,11 @@ import (
 // GatewayClass Controller - Vars & Consts
 // -----------------------------------------------------------------------------
 
-var (
-	// _controllerName is the unique identifier for this controller and is used
-	// within GatewayClass resources to indicate that this controller should
-	// support connected Gateway resources.
-	_controllerName gatewayapi.GatewayController = "konghq.com/kic-gateway-controller"
+// SetControllerName is an alias for mgrconsts.SetControllerName.
+var SetControllerName = mgrconsts.SetControllerName
 
-	// _controllerNameLock guards access to _controllerName.
-	_controllerNameLock sync.RWMutex
-)
-
-func SetControllerName(name gatewayapi.GatewayController) {
-	_controllerNameLock.Lock()
-	defer _controllerNameLock.Unlock()
-	_controllerName = name
-}
-
-func GetControllerName() gatewayapi.GatewayController {
-	_controllerNameLock.RLock()
-	defer _controllerNameLock.RUnlock()
-	return _controllerName
-}
+// GetControllerName is an alias for mgrconsts.GetControllerName.
+var GetControllerName = mgrconsts.GetControllerName
 
 // -----------------------------------------------------------------------------
 // GatewayClass Controller - Reconciler
