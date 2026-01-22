@@ -73,6 +73,50 @@ func TestCreateKongService(t *testing.T) {
 			},
 		},
 		{
+			name: "existing service by UID is reused when name is missing",
+			mockServicePair: func(t *testing.T) (*mocks.MockServicesSDK, *configurationv1alpha1.KongService) {
+				sdk := mocks.NewMockServicesSDK(t)
+				svc := &configurationv1alpha1.KongService{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "svc-1",
+						Namespace: "default",
+						UID:       k8stypes.UID("abcd-1234"),
+					},
+					Spec: configurationv1alpha1.KongServiceSpec{
+						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
+							Host: "example.com",
+						},
+					},
+					Status: configurationv1alpha1.KongServiceStatus{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+							ControlPlaneID: "123456789",
+						},
+					},
+				}
+
+				sdk.
+					EXPECT().
+					ListService(ctx, mock.MatchedBy(func(req sdkkonnectops.ListServiceRequest) bool {
+						return req.ControlPlaneID == "123456789" && req.Tags != nil && *req.Tags == UIDLabelForObject(svc)
+					})).
+					Return(
+						&sdkkonnectops.ListServiceResponse{
+							Object: &sdkkonnectops.ListServiceResponseBody{
+								Data: []sdkkonnectcomp.ServiceOutput{
+									{ID: lo.ToPtr("existing-123")},
+								},
+							},
+						},
+						nil,
+					)
+
+				return sdk, svc
+			},
+			assertions: func(t *testing.T, svc *configurationv1alpha1.KongService) {
+				assert.Equal(t, "existing-123", svc.GetKonnectStatus().GetKonnectID())
+			},
+		},
+		{
 			name: "fail - no control plane ID in status returns an error and does not create the Service in Konnect",
 			mockServicePair: func(t *testing.T) (*mocks.MockServicesSDK, *configurationv1alpha1.KongService) {
 				sdk := mocks.NewMockServicesSDK(t)

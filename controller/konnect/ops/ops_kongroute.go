@@ -23,6 +23,18 @@ func createRoute(
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: route, Op: CreateOp}
 	}
 
+	if route.Spec.Name == nil || *route.Spec.Name == "" {
+		existingID, err := getKongRouteForUID(ctx, sdk, route)
+		if err == nil {
+			route.SetKonnectID(existingID)
+			return nil
+		}
+		var notFound EntityWithMatchingUIDNotFoundError
+		if !errors.As(err, &notFound) {
+			return err
+		}
+	}
+
 	resp, err := sdk.CreateRoute(ctx, route.Status.Konnect.ControlPlaneID, kongRouteToSDKRouteInput(route))
 
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, route); errWrap != nil {

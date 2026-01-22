@@ -25,6 +25,18 @@ func createService(
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: svc, Op: CreateOp}
 	}
 
+	if svc.Spec.Name == nil || *svc.Spec.Name == "" {
+		existingID, err := getKongServiceForUID(ctx, sdk, svc)
+		if err == nil {
+			svc.SetKonnectID(existingID)
+			return nil
+		}
+		var notFound EntityWithMatchingUIDNotFoundError
+		if !errors.As(err, &notFound) {
+			return err
+		}
+	}
+
 	resp, err := sdk.CreateService(ctx,
 		svc.Status.Konnect.ControlPlaneID,
 		kongServiceToSDKServiceInput(svc),

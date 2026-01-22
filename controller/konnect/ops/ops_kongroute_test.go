@@ -73,6 +73,53 @@ func TestKongRouteToSDKRouteInput_Tags(t *testing.T) {
 	require.ElementsMatch(t, expectedTags, output.RouteJSON.Tags)
 }
 
+func TestCreateKongRoute(t *testing.T) {
+	ctx := t.Context()
+
+	t.Run("existing route by UID is reused when name is missing", func(t *testing.T) {
+		sdk := mocks.NewMockRoutesSDK(t)
+		route := &configurationv1alpha1.KongRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "route-1",
+				Namespace: "default",
+				UID:       k8stypes.UID("abcd-1234"),
+			},
+			Spec: configurationv1alpha1.KongRouteSpec{
+				KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
+					Hosts: []string{"example.com"},
+				},
+			},
+			Status: configurationv1alpha1.KongRouteStatus{
+				Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndServiceRefs{
+					ControlPlaneID: "123456789",
+				},
+			},
+		}
+
+		sdk.
+			EXPECT().
+			ListRoute(ctx, mock.MatchedBy(func(req sdkkonnectops.ListRouteRequest) bool {
+				return req.ControlPlaneID == "123456789" && req.Tags != nil && *req.Tags == UIDLabelForObject(route)
+			})).
+			Return(
+				&sdkkonnectops.ListRouteResponse{
+					Object: &sdkkonnectops.ListRouteResponseBody{
+						Data: []sdkkonnectcomp.Route{
+							sdkkonnectcomp.CreateRouteRouteJSON(sdkkonnectcomp.RouteJSON{
+								ID: lo.ToPtr("route-123"),
+							}),
+						},
+					},
+				},
+				nil,
+			)
+
+		err := createRoute(ctx, sdk, route)
+		require.NoError(t, err)
+		assert.Equal(t, "route-123", route.GetKonnectStatus().GetKonnectID())
+	})
+}
+
 func TestAdoptRoute(t *testing.T) {
 	ctx := t.Context()
 	testCases := []struct {
