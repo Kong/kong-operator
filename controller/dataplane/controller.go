@@ -9,7 +9,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -38,7 +38,7 @@ type Reconciler struct {
 
 	ControllerOptions controller.Options
 
-	eventRecorder            record.EventRecorder
+	eventRecorder            events.EventRecorder
 	ClusterCASecretName      string
 	ClusterCASecretNamespace string
 	ClusterCAKeyConfig       secrets.KeyConfig
@@ -55,7 +55,7 @@ type Reconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
-	r.eventRecorder = mgr.GetEventRecorderFor("dataplane")
+	r.eventRecorder = mgr.GetEventRecorder("dataplane")
 
 	return DataPlaneWatchBuilder(mgr, r.KonnectEnabled).
 		WithOptions(r.ControllerOptions).
