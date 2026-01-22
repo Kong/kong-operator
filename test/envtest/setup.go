@@ -10,8 +10,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/discovery"
@@ -23,14 +25,44 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/conversion"
 
+	"github.com/kong/kong-operator/ingress-controller/test/controllers/gateway"
+	"github.com/kong/kong-operator/ingress-controller/test/gatewayapi"
+	"github.com/kong/kong-operator/ingress-controller/test/store"
+	"github.com/kong/kong-operator/ingress-controller/test/util/builder"
 	testutil "github.com/kong/kong-operator/pkg/utils/test"
 	"github.com/kong/kong-operator/test/helpers/kcfg"
 )
 
+type Options struct {
+	InstallGatewayCRDs bool
+	InstallKongCRDs    bool
+}
+
+var DefaultEnvTestOpts = Options{
+	InstallGatewayCRDs: true,
+	InstallKongCRDs:    true,
+}
+
+type OptionModifier func(Options) Options
+
+func WithInstallKongCRDs(install bool) OptionModifier {
+	return func(opts Options) Options {
+		opts.InstallKongCRDs = install
+		return opts
+	}
+}
+
+func WithInstallGatewayCRDs(install bool) OptionModifier {
+	return func(opts Options) Options {
+		opts.InstallGatewayCRDs = install
+		return opts
+	}
+}
+
 var once sync.Once = sync.Once{}
 
 // Setup sets up a test k8s API server environment and returned the configuration.
-func Setup(t *testing.T, ctx context.Context, scheme *k8sruntime.Scheme) (*rest.Config, *corev1.Namespace) {
+func Setup(t *testing.T, ctx context.Context, scheme *k8sruntime.Scheme, optModifiers ...OptionModifier) (*rest.Config, *corev1.Namespace) {
 	once.Do(func() {
 		f, err := testutil.SetupControllerLogger("stdout")
 		require.NoError(t, err)
@@ -41,18 +73,33 @@ func Setup(t *testing.T, ctx context.Context, scheme *k8sruntime.Scheme) (*rest.
 
 	t.Helper()
 
+	opts := DefaultEnvTestOpts
+	for _, mod := range optModifiers {
+		opts = mod(opts)
+	}
+
+	crdPaths := make([]string, 0, 3)
+	if opts.InstallGatewayCRDs {
+		crdPaths = append(crdPaths, kcfg.GatewayAPIExperimentalCRDsPath())
+	}
+	if opts.InstallKongCRDs {
+		crdPaths = append(crdPaths,
+			kcfg.KongOperatorCRDsPath(),
+			kcfg.IngressControllerIncubatorCRDsPath(),
+		)
+	}
+
 	testEnv := &envtest.Environment{
 		ControlPlaneStopTimeout: time.Second * 60,
 		Scheme:                  scheme,
-		CRDInstallOptions: envtest.CRDInstallOptions{
-			Paths: []string{
-				kcfg.GatewayAPIExperimentalCRDsPath(),
-				kcfg.KongOperatorCRDsPath(),
-			},
+	}
+	if len(crdPaths) > 0 {
+		testEnv.CRDInstallOptions = envtest.CRDInstallOptions{
+			Paths:              crdPaths,
 			Scheme:             scheme,
 			ErrorIfPathMissing: true,
 			MaxTime:            30 * time.Second,
-		},
+		}
 	}
 
 	t.Logf("starting envtest environment for test %s...", t.Name())
@@ -120,6 +167,106 @@ func Setup(t *testing.T, ctx context.Context, scheme *k8sruntime.Scheme) (*rest.
 	})
 
 	return cfg, ns
+}
+
+func installGatewayCRDs(t *testing.T, scheme *k8sruntime.Scheme, cfg *rest.Config) {
+	t.Helper()
+	_, err := envtest.InstallCRDs(cfg, envtest.CRDInstallOptions{
+		Scheme:             scheme,
+		Paths:              []string{kcfg.GatewayAPIExperimentalCRDsPath()},
+		ErrorIfPathMissing: true,
+	})
+	require.NoError(t, err, "failed installing Gateway API CRDs")
+}
+
+func installKongCRDs(t *testing.T, scheme *k8sruntime.Scheme, cfg *rest.Config) {
+	t.Helper()
+	_, err := envtest.InstallCRDs(cfg, envtest.CRDInstallOptions{
+		Scheme: scheme,
+		Paths: []string{
+			kcfg.KongOperatorCRDsPath(),
+			kcfg.IngressControllerIncubatorCRDsPath(),
+		},
+		ErrorIfPathMissing: true,
+	})
+	require.NoError(t, err)
+}
+
+func deployIngressClass(ctx context.Context, t *testing.T, name string, client client.Client) {
+	t.Helper()
+
+	ingress := &netv1.IngressClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: netv1.IngressClassSpec{
+			Controller: store.IngressClassKongController,
+		},
+	}
+	require.NoError(t, client.Create(ctx, ingress))
+}
+
+// deployGateway deploys a Gateway, GatewayClass, and ingress service for use in tests.
+func deployGatewayUsingGatewayClass(ctx context.Context, t *testing.T, client client.Client, gwc gatewayapi.GatewayClass) gatewayapi.Gateway {
+	ns := CreateNamespace(ctx, t, client)
+
+	publishSvc := corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ns.Name,
+			Name:      PublishServiceName,
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: builder.NewServicePort().
+				WithName("http").
+				WithProtocol(corev1.ProtocolTCP).
+				WithPort(8000).
+				IntoSlice(),
+		},
+	}
+	require.NoError(t, client.Create(ctx, &publishSvc))
+	t.Cleanup(func() { _ = client.Delete(ctx, &publishSvc) })
+
+	gw := gatewayapi.Gateway{
+		Spec: gatewayapi.GatewaySpec{
+			GatewayClassName: gatewayapi.ObjectName(gwc.Name),
+			Listeners: []gatewayapi.Listener{
+				{
+					Name:          "http",
+					Protocol:      gatewayapi.HTTPProtocolType,
+					Port:          gatewayapi.PortNumber(8000),
+					AllowedRoutes: builder.NewAllowedRoutesFromAllNamespaces(),
+				},
+			},
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ns.Name,
+			Name:      uuid.NewString(),
+		},
+	}
+	require.NoError(t, client.Create(ctx, &gw))
+	t.Cleanup(func() { _ = client.Delete(ctx, &gw) })
+
+	return gw
+}
+
+func deployGateway(ctx context.Context, t *testing.T, client client.Client) (gatewayapi.Gateway, gatewayapi.GatewayClass) {
+	gwc := gatewayapi.GatewayClass{
+		Spec: gatewayapi.GatewayClassSpec{
+			ControllerName: gateway.GetControllerName(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: uuid.NewString(),
+			Annotations: map[string]string{
+				"konghq.com/gatewayclass-unmanaged": "placeholder",
+			},
+		},
+	}
+	require.NoError(t, client.Create(ctx, &gwc))
+	t.Cleanup(func() { _ = client.Delete(ctx, &gwc) })
+
+	gw := deployGatewayUsingGatewayClass(ctx, t, client, gwc)
+
+	return gw, gwc
 }
 
 // NameFromT returns a name suitable for use in Kubernetes resources for a given test.
