@@ -146,7 +146,7 @@ type KongPluginBindingTargets struct {
 
 // PluginRef is a reference to a KongPlugin or KongClusterPlugin resource.
 // +apireference:kgo:include
-// +kubebuilder:validation:XValidation:rule="self.kind == 'KongPlugin' || !has(self.namespace)", message="Namespace can be set only when kind is 'KongPlugin'"
+// +kubebuilder:validation:XValidation:rule="self.kind == 'KongPlugin' || !has(self.__namespace__)", message="Namespace can be set only when kind is 'KongPlugin'"
 type PluginRef struct {
 	// Name is the name of the KongPlugin or KongClusterPlugin resource.
 	// +required

@@ -24620,7 +24620,7 @@ spec:
                 - message: pluginRef name must be set
                   rule: self.name != ''
                 - message: Namespace can be set only when kind is 'KongPlugin'
-                  rule: self.kind == 'KongPlugin' || !has(self.namespace)
+                  rule: self.kind == 'KongPlugin' || !has(self.__namespace__)
               scope:
                 default: OnlyTargets
                 description: Scope defines the scope of the plugin binding.
