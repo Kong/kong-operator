@@ -64,7 +64,7 @@ func Setup(t *testing.T, ctx context.Context, scheme *k8sruntime.Scheme) (*rest.
 		Host:    testEnv.WebhookInstallOptions.LocalServingHost,
 		CertDir: testEnv.WebhookInstallOptions.LocalServingCertDir,
 	})
-	ws.Register("/convert", conversion.NewWebhookHandler(scheme))
+	ws.Register("/convert", conversion.NewWebhookHandler(scheme, conversion.NewRegistry()))
 	go func() {
 		require.NoError(t, ws.Start(ctx))
 	}()
