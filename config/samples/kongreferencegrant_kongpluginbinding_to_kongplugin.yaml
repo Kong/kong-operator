@@ -74,4 +74,5 @@ spec:
   to:
     - group: configuration.konghq.com
       kind: KongPlugin
-      # name: my-tls-secret
+      # Optionally specify the name.
+      # name: rate-limit-5-min
