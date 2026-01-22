@@ -5,7 +5,7 @@ go 1.25.5
 require (
 	cloud.google.com/go/container v1.45.0
 	dario.cat/mergo v1.0.2
-	github.com/Kong/sdk-konnect-go v0.18.2
+	github.com/Kong/sdk-konnect-go v0.19.0
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/avast/retry-go/v4 v4.7.0
 	github.com/blang/semver/v4 v4.0.0
@@ -22,7 +22,7 @@ require (
 	github.com/gohugoio/hashstructure v0.6.0
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-containerregistry v0.20.7
-	github.com/google/pprof v0.0.0-20241210010833-40e02aabc2ad
+	github.com/google/pprof v0.0.0-20250403155104-27863c87afa6
 	github.com/google/uuid v1.6.0
 	github.com/gruntwork-io/terratest v0.55.0
 	github.com/hashicorp/go-cleanhttp v0.5.2
@@ -30,7 +30,7 @@ require (
 	github.com/jpillora/backoff v1.0.0
 	github.com/kong/go-database-reconciler v1.31.1
 	github.com/kong/go-kong v0.71.0
-	github.com/kong/kubernetes-telemetry v0.1.10
+	github.com/kong/kubernetes-telemetry v0.1.11
 	github.com/kong/kubernetes-testing-framework v0.48.1-0.20260114143846-8c0e96b5bf82
 	github.com/kong/semver/v4 v4.0.1
 	github.com/kr/pretty v0.3.1
@@ -67,7 +67,7 @@ require (
 	k8s.io/kubernetes v1.34.3
 	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4
 	oras.land/oras-go/v2 v2.6.0
-	sigs.k8s.io/controller-runtime v0.22.4
+	sigs.k8s.io/controller-runtime v0.23.0
 	sigs.k8s.io/controller-tools v0.20.0
 	sigs.k8s.io/e2e-framework v0.6.0
 	sigs.k8s.io/gateway-api v1.4.1
@@ -89,7 +89,7 @@ require (
 	github.com/Kong/gojsondiff v1.3.2 // indirect
 	github.com/MakeNowJust/heredoc v1.0.0 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
-	github.com/Masterminds/semver/v3 v3.3.0 // indirect
+	github.com/Masterminds/semver/v3 v3.4.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/adrg/strutil v0.3.0 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
@@ -252,7 +252,7 @@ require (
 	github.com/shirou/gopsutil/v4 v4.25.6 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
-	github.com/sirupsen/logrus v1.9.3 // indirect
+	github.com/sirupsen/logrus v1.9.4 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/spf13/cobra v1.10.2 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect

@@ -83,7 +83,7 @@ func (r *BlueGreenReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Man
 	if !ok {
 		return fmt.Errorf("incorrect delegate controller type: %T", r.DataPlaneController)
 	}
-	delegate.eventRecorder = mgr.GetEventRecorderFor("dataplane")
+	delegate.eventRecorder = mgr.GetEventRecorder("dataplane")
 	return DataPlaneWatchBuilder(mgr, r.KonnectEnabled).
 		WithOptions(r.ControllerOptions).
 		Complete(r)
