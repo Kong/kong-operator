@@ -332,26 +332,26 @@ func getReferencedPlugin(
 				msg = fmt.Sprintf("KongReferenceGrants do not allow access to KongPlugin %s/%s", ns, pluginRef.Name)
 			}
 
-			if res, errStatus := patch.StatusWithCondition(
+			if _, errStatus := patch.StatusWithCondition(
 				ctx, cl, pluginBinding,
 				consts.ConditionType(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs),
 				metav1.ConditionFalse,
 				configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted,
 				msg,
-			); errStatus != nil || !res.IsZero() {
+			); errStatus != nil {
 				return nil, errStatus
 			}
 			return nil, err
 		}
 
 		// Grant allows access.
-		if res, errStatus := patch.StatusWithCondition(
+		if _, errStatus := patch.StatusWithCondition(
 			ctx, cl, pluginBinding,
 			consts.ConditionType(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs),
 			metav1.ConditionTrue,
 			configurationv1alpha1.KongReferenceGrantReasonResolvedRefs,
 			fmt.Sprintf("KongReferenceGrants allow access to KongPlugin %s/%s", ns, pluginRef.Name),
-		); errStatus != nil || !res.IsZero() {
+		); errStatus != nil {
 			return nil, errStatus
 		}
 
