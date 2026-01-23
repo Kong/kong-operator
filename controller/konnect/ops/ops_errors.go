@@ -19,6 +19,7 @@ import (
 
 	"github.com/kong/kong-operator/controller/konnect/constraints"
 	"github.com/kong/kong-operator/controller/pkg/log"
+	"github.com/kong/kong-operator/internal/utils/crossnamespace"
 )
 
 // ErrNilResponse is an error indicating that a Konnect operation returned an empty response.
@@ -458,6 +459,18 @@ func IgnoreUnrecoverableAPIErr(err error, logger logr.Logger) error {
 		}
 	}
 
+	return err
+}
+
+// IgnoreAlreadyHandledErr ignores errors that have already been handled
+// by setting the appropriate conditions in the object's status.
+// For now, it only handles cross-namespace reference errors: those should not
+// be logged, retried or reported to controller runtime's error handling.
+func IgnoreAlreadyHandledErr(err error, logger logr.Logger) error {
+	if crossnamespace.IsReferenceNotGranted(err) {
+		log.Info(logger, "cross-namespace reference error, consult object's status for details", "err", err)
+		return nil
+	}
 	return err
 }
 

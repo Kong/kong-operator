@@ -252,7 +252,7 @@ func KonnectEntitiesTestCase(t *testing.T, params konnectEntitiesTestCaseParams)
 	kpb := deploy.KongPluginBinding(t, ctx, params.client,
 		konnect.NewKongPluginBindingBuilder().
 			WithServiceTarget(ks.Name).
-			WithPluginRef(kp.Name).
+			WithPluginRefName(kp.Name).
 			WithControlPlaneRefKonnectNamespaced(params.cp.Name).
 			Build(),
 		deploy.WithTestIDLabel(params.testID),
@@ -264,7 +264,7 @@ func KonnectEntitiesTestCase(t *testing.T, params konnectEntitiesTestCaseParams)
 
 	globalKPB := deploy.KongPluginBinding(t, ctx, params.client,
 		konnect.NewKongPluginBindingBuilder().
-			WithPluginRef(kp.Name).
+			WithPluginRefName(kp.Name).
 			WithControlPlaneRefKonnectNamespaced(params.cp.Name).
 			WithScope(configurationv1alpha1.KongPluginBindingScopeGlobalInControlPlane).
 			Build(),
