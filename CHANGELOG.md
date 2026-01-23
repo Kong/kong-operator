@@ -67,6 +67,9 @@
 - Removed the `KonnectID` type of control plane reference in CRDs for Konnect
   entities as it is not supported.
   [#2966](https://github.com/Kong/kong-operator/pull/2966)
+- HybridGateway: Include readable backend context in generated KongService and
+  KongUpstream names (with stable hashes) to improve UX in Konnect.
+  [#3121](https://github.com/Kong/kong-operator/pull/3121)
 
 ## [v2.1.0-beta.0]
 
