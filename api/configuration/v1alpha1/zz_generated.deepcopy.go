@@ -3097,8 +3097,8 @@ func (in *ServiceRef) DeepCopyInto(out *ServiceRef) {
 	*out = *in
 	if in.NamespacedRef != nil {
 		in, out := &in.NamespacedRef, &out.NamespacedRef
-		*out = new(commonv1alpha1.NameRef)
-		**out = **in
+		*out = new(commonv1alpha1.NamespacedRef)
+		(*in).DeepCopyInto(*out)
 	}
 }
 

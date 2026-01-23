@@ -403,4 +403,145 @@ func TestKongRoute(t *testing.T) {
 		}, "KongRoute didn't get ResolvedRefs status condition set to True")
 		eventuallyAssertSDKExpectations(t, factory.SDK.RoutesSDK, waitTime, tickTime)
 	})
+
+	t.Run("Cross namespace ref KongRoute -> KongService yields ResolvedRefs=False without KongReferenceGrant", func(t *testing.T) {
+		w := setupWatch[configurationv1alpha1.KongRouteList](t, ctx, cl2, client.InNamespace(ns2.Name))
+
+		t.Log("Don't set SDK expectations on KongRoute creation as we do not expect any operations to be made upstream")
+
+		t.Log("Creating a KongRoute with cross-namespace ServiceRef without KongReferenceGrant")
+		createdRoute := deploy.KongRoute(t, ctx, clientNamespaced2,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp, ns.Name),
+			func(obj client.Object) {
+				r := obj.(*configurationv1alpha1.KongRoute)
+				r.Spec.ServiceRef = &configurationv1alpha1.ServiceRef{
+					Type: configurationv1alpha1.ServiceRefNamespacedRef,
+					NamespacedRef: &commonv1alpha1.NamespacedRef{
+						Name:      svc.GetName(),
+						Namespace: lo.ToPtr(ns.Name),
+					},
+				}
+			},
+		)
+
+		t.Log("Waiting for Route to get ResolvedRefs condition with status=False")
+		watchFor(t, ctx, w, apiwatch.Modified, func(kr *configurationv1alpha1.KongRoute) bool {
+			if kr.GetName() != createdRoute.GetName() {
+				return false
+			}
+
+			svcRef := kr.Spec.ServiceRef
+			if svcRef == nil || svcRef.NamespacedRef == nil {
+				return false
+			}
+
+			if svcRef.Type != configurationv1alpha1.ServiceRefNamespacedRef ||
+				svcRef.NamespacedRef.Name != svc.GetName() ||
+				svcRef.NamespacedRef.Namespace == nil ||
+				*svcRef.NamespacedRef.Namespace != ns.Name {
+				return false
+			}
+			return k8sutils.HasConditionFalse(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs, kr)
+		}, "KongRoute didn't get ResolvedRefs status condition set to False")
+	})
+
+	t.Run("Cross namespace ref KongRoute -> KongService yields ResolvedRefs=True with valid KongReferenceGrant", func(t *testing.T) {
+		t.SkipNow()
+		const routeID = "route-cross-ns-svc-12345"
+
+		var paths = []string{"/cross-ns-path"}
+
+		w := setupWatch[configurationv1alpha1.KongRouteList](t, ctx, cl2, client.InNamespace(ns2.Name))
+
+		t.Log("Setting up SDK expectations on Route creation")
+		sdk.RoutesSDK.EXPECT().
+			CreateRoute(
+				mock.Anything,
+				cp.GetKonnectID(),
+				mock.MatchedBy(func(req sdkkonnectcomp.Route) bool {
+					return slices.Equal(req.RouteJSON.Paths, paths)
+				}),
+			).
+			Return(
+				&sdkkonnectops.CreateRouteResponse{
+					Route: &sdkkonnectcomp.Route{
+						RouteJSON: &sdkkonnectcomp.RouteJSON{
+							ID: lo.ToPtr(routeID),
+						},
+					},
+				},
+				nil,
+			)
+
+		t.Log("Creating KongReferenceGrant to allow cross-namespace reference from KongRoute to KonnectGatewayControlPlane")
+		krgCP := deploy.KongReferenceGrant(t, ctx, clientNamespaced,
+			deploy.KongReferenceGrantFroms(configurationv1alpha1.ReferenceGrantFrom{
+				Group:     configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+				Kind:      "KongRoute",
+				Namespace: configurationv1alpha1.Namespace(ns2.Name),
+			}),
+			deploy.KongReferenceGrantTos(configurationv1alpha1.ReferenceGrantTo{
+				Group: configurationv1alpha1.Group(konnectv1alpha1.GroupVersion.Group),
+				Kind:  "KonnectGatewayControlPlane",
+			}),
+		)
+		t.Cleanup(func() {
+			require.NoError(t, client.IgnoreNotFound(clientNamespaced.Delete(ctx, krgCP)))
+		})
+
+		t.Log("Creating KongReferenceGrant to allow cross-namespace reference from KongRoute to KongService")
+		krgSvc := deploy.KongReferenceGrant(t, ctx, clientNamespaced,
+			deploy.KongReferenceGrantFroms(configurationv1alpha1.ReferenceGrantFrom{
+				Group:     configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+				Kind:      "KongRoute",
+				Namespace: configurationv1alpha1.Namespace(ns2.Name),
+			}),
+			deploy.KongReferenceGrantTos(configurationv1alpha1.ReferenceGrantTo{
+				Group: configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+				Kind:  "KongService",
+			}),
+		)
+		t.Cleanup(func() {
+			require.NoError(t, client.IgnoreNotFound(clientNamespaced.Delete(ctx, krgSvc)))
+		})
+
+		t.Log("Creating a KongRoute with cross-namespace ServiceRef")
+		createdRoute := deploy.KongRoute(t, ctx, clientNamespaced2,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp, ns.Name),
+			func(obj client.Object) {
+				r := obj.(*configurationv1alpha1.KongRoute)
+				r.Spec.Paths = paths
+				r.Spec.ServiceRef = &configurationv1alpha1.ServiceRef{
+					Type: configurationv1alpha1.ServiceRefNamespacedRef,
+					NamespacedRef: &commonv1alpha1.NamespacedRef{
+						Name:      svc.GetName(),
+						Namespace: lo.ToPtr(ns.Name),
+					},
+				}
+			},
+		)
+
+		t.Log("Waiting for Route to get ResolvedRefs condition with status=True and be Programmed")
+		watchFor(t, ctx, w, apiwatch.Modified, func(kr *configurationv1alpha1.KongRoute) bool {
+			if kr.GetName() != createdRoute.GetName() {
+				return false
+			}
+
+			svcRef := kr.Spec.ServiceRef
+			if svcRef == nil || svcRef.NamespacedRef == nil {
+				return false
+			}
+
+			if svcRef.Type != configurationv1alpha1.ServiceRefNamespacedRef ||
+				svcRef.NamespacedRef.Name != svc.GetName() ||
+				svcRef.NamespacedRef.Namespace == nil ||
+				*svcRef.NamespacedRef.Namespace != ns.Name {
+				return false
+			}
+			return k8sutils.HasConditionTrue(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs, kr) &&
+				kr.GetKonnectID() == routeID && k8sutils.IsProgrammed(kr)
+		}, "KongRoute didn't get ResolvedRefs status condition set to True or wasn't Programmed")
+
+		eventuallyAssertSDKExpectations(t, factory.SDK.RoutesSDK, waitTime, tickTime)
+	})
 }

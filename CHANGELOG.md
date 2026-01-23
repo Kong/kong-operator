@@ -52,9 +52,13 @@
 - Support cross namespace references from `KongPluginBinding` to `KongPlugin`.
   For this reference to be allowed, a `KongReferenceGrant` resource must be created
   in the namespace of the `KongPlugin`, allowing access for the `KongPluginBinding`.
-  [#31038](https://github.com/Kong/kong-operator/pull/3108)
+  [#3108](https://github.com/Kong/kong-operator/pull/3108)
 - HybridGateway: Added support to PathPrefixMatch for the `RequestRedirect` `HTTPRoute` filter.
   [#3065](https://github.com/Kong/kong-operator/pull/3065)
+- Support cross namespace references from `KongRoute` to `KongService`.
+  For this reference to be allowed, a `KongReferenceGrant` resource must be created
+  in the namespace of the `KongService`, allowing access for the `KongRoute`.
+  [#3125](https://github.com/Kong/kong-operator/pull/3125)
 
 ### Fixes
 

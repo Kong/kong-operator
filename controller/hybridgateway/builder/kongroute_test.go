@@ -255,7 +255,7 @@ func TestKongRouteBuilder_WithKongService(t *testing.T) {
 			service: "test-service",
 			expected: &configurationv1alpha1.ServiceRef{
 				Type: configurationv1alpha1.ServiceRefNamespacedRef,
-				NamespacedRef: &commonv1alpha1.NameRef{
+				NamespacedRef: &commonv1alpha1.NamespacedRef{
 					Name: "test-service",
 				},
 			},
