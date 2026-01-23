@@ -5,3 +5,5 @@ package konnect
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnectapiauthconfigurations/status,verbs=update;patch
 
 //+kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch
+
+//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=referencegrants,verbs=get;list;watch
