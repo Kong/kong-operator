@@ -17,7 +17,7 @@ const (
 	httpProcolPrefix = "http"
 
 	// backendRefDisplayLimit is the maximum number of backend references to render.
-	backendRefDisplayLimit = 2
+	backendRefDisplayLimit = 1
 
 	// defaultCPPrefix is the prefix used when including a control-plane identifier.
 	defaultCPPrefix = "cp"

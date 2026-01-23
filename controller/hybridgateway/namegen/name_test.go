@@ -132,7 +132,7 @@ func TestNewKongUpstreamName(t *testing.T) {
 					},
 				},
 			},
-			expectedReadable: "http.default-service1-8080.default-service2-9090",
+			expectedReadable: "http.default-service1-8080.more-1",
 		},
 	}
 
@@ -277,7 +277,7 @@ func TestNewKongServiceName_BackendDisplayLimit(t *testing.T) {
 				backendRef("svc-a", nil, port(8080)),
 				backendRef("svc-c", nil, port(8080)),
 			},
-			readable: "http.default-svc-a-8080.default-svc-b-8080.more-1",
+			readable: "http.default-svc-a-8080.more-2",
 		},
 		{
 			name: "three long service names",
@@ -298,7 +298,7 @@ func TestNewKongServiceName_BackendDisplayLimit(t *testing.T) {
 				backendRef(strings.Repeat("b", 63), nil, port(8080)),
 				backendRef(strings.Repeat("c", 63), nil, port(8080)),
 			},
-			readable: "http.default-" + strings.Repeat("a", 63) + "-8080.default-" + strings.Repeat("b", 63) + "-8080.more-1",
+			readable: "http.default-" + strings.Repeat("a", 63) + "-8080.more-2",
 		},
 		{
 			name: "two long namespaces",
@@ -315,10 +315,10 @@ func TestNewKongServiceName_BackendDisplayLimit(t *testing.T) {
 				},
 			},
 			backends: []gatewayv1.HTTPBackendRef{
-				backendRef("service-a", func() *gatewayv1.Namespace { ns := gatewayv1.Namespace(strings.Repeat("n", 180)); return &ns }(), port(8080)),
-				backendRef("service-b", func() *gatewayv1.Namespace { ns := gatewayv1.Namespace(strings.Repeat("n", 180)); return &ns }(), port(8080)),
+				backendRef("service-a", func() *gatewayv1.Namespace { ns := gatewayv1.Namespace(strings.Repeat("n", 220)); return &ns }(), port(8080)),
+				backendRef("service-b", func() *gatewayv1.Namespace { ns := gatewayv1.Namespace(strings.Repeat("n", 220)); return &ns }(), port(8080)),
 			},
-			readable: "http." + strings.Repeat("n", 180) + "-service-a-8080." + strings.Repeat("n", 180) + "-service-b-8080",
+			readable: "http." + strings.Repeat("n", 220) + "-service-a-8080.more-1",
 		},
 	}
 
