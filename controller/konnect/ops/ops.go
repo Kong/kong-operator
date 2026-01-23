@@ -26,6 +26,7 @@ import (
 	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/controller/pkg/log"
 	"github.com/kong/kong-operator/internal/metrics"
+	"github.com/kong/kong-operator/internal/utils/crossnamespace"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 )
 
@@ -209,6 +210,20 @@ func Create[
 		SetKonnectEntityProgrammedConditionTrue(e)
 	}
 
+	// For mirrorable entities, we need to check if the source type is mirror
+	// and set the mirrored condition accordingly.
+	if isMirrorableEntity(e) {
+		if isMirrorEntity(e) {
+			if err == nil {
+				SetKonnectEntityMirroredConditionTrue(e)
+			} else {
+				SetKonnectEntityMirroredConditionFalse(e, err)
+			}
+		}
+	}
+
+	logOpComplete(ctx, start, CreateOp, e, err)
+
 	if err != nil {
 		metricRecorder.RecordKonnectEntityOperationFailure(
 			sdk.GetServerURL(),
@@ -226,21 +241,11 @@ func Create[
 		)
 	}
 
-	// For mirrorable entities, we need to check if the source type is mirror
-	// and set the mirrored condition accordingly.
-	if isMirrorableEntity(e) {
-		if isMirrorEntity(e) {
-			if err == nil {
-				SetKonnectEntityMirroredConditionTrue(e)
-			} else {
-				SetKonnectEntityMirroredConditionFalse(e, err)
-			}
-		}
-	}
+	logger := loggerForEntity(ctx, e, CreateOp)
+	err = IgnoreUnrecoverableAPIErr(err, logger)
+	err = IgnoreAlreadyHandledErr(err, logger)
 
-	logOpComplete(ctx, start, CreateOp, e, err)
-
-	return e, IgnoreUnrecoverableAPIErr(err, loggerForEntity(ctx, e, CreateOp))
+	return e, err
 }
 
 // Delete deletes a Konnect entity.
@@ -492,6 +497,20 @@ func Update[
 		SetKonnectEntityProgrammedConditionTrue(e)
 	}
 
+	// For mirrorable entities, we need to check if the source type is mirror
+	// and set the mirrored condition accordingly.
+	if isMirrorableEntity(e) {
+		if isMirrorEntity(e) {
+			if err == nil {
+				SetKonnectEntityMirroredConditionTrue(e)
+			} else {
+				SetKonnectEntityMirroredConditionFalse(e, err)
+			}
+		}
+	}
+
+	logOpComplete(ctx, start, UpdateOp, e, err)
+
 	if err != nil {
 		metricRecorder.RecordKonnectEntityOperationFailure(
 			sdk.GetServerURL(),
@@ -509,21 +528,11 @@ func Update[
 		)
 	}
 
-	// For mirrorable entities, we need to check if the source type is mirror
-	// and set the mirrored condition accordingly.
-	if isMirrorableEntity(e) {
-		if isMirrorEntity(e) {
-			if err == nil {
-				SetKonnectEntityMirroredConditionTrue(e)
-			} else {
-				SetKonnectEntityMirroredConditionFalse(e, err)
-			}
-		}
-	}
+	logger := loggerForEntity(ctx, e, UpdateOp)
+	err = IgnoreUnrecoverableAPIErr(err, logger)
+	err = IgnoreAlreadyHandledErr(err, logger)
 
-	logOpComplete(ctx, start, UpdateOp, e, err)
-
-	return ctrl.Result{}, IgnoreUnrecoverableAPIErr(err, loggerForEntity(ctx, e, UpdateOp))
+	return ctrl.Result{}, err
 }
 
 // Adopt adopts an exiting entity in Konnect and take over the management of the entity.
@@ -678,6 +687,12 @@ func logOpComplete[
 		if isMirrorEntity(e) {
 			return
 		}
+	}
+
+	if crossnamespace.IsReferenceNotGranted(err) {
+		// Don't log errors due to missing KongReferenceGrant,
+		// as they are expected until the user creates the required resource.
+		return
 	}
 
 	logger := loggerForEntity(ctx, e, op).

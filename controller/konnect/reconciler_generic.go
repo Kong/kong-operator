@@ -500,7 +500,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// Regardless of the error reported from Create(), if the Konnect ID has been
 		// set then:
 		// - add the finalizer so that the resource can be cleaned up from Konnect on deletion...
-		if status != nil && status.ID != "" {
+		if status := ent.GetKonnectStatus(); status != nil && status.ID != "" {
 			if _, res, err := patch.WithFinalizer(ctx, r.Client, ent, KonnectCleanupFinalizer); err != nil || !res.IsZero() {
 				return res, err
 			}

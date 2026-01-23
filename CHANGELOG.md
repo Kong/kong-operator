@@ -47,6 +47,12 @@
   [#3015](https://github.com/Kong/kong-operator/issues/3015)
 - HybridGateway: Added support to PathPrefixMatch for the `URLRewrite` `HTTPRoute` filter.
   [#3039](https://github.com/Kong/kong-operator/pull/3039)
+- HybridGateway: Added comprehensive HTTPRoute converter tests to improve translation stability.
+  [#3111](https://github.com/Kong/kong-operator/pull/3111)
+- Support cross namespace references from `KongPluginBinding` to `KongPlugin`.
+  For this reference to be allowed, a `KongReferenceGrant` resource must be created
+  in the namespace of the `KongPlugin`, allowing access for the `KongPluginBinding`.
+  [#31038](https://github.com/Kong/kong-operator/pull/3108)
 
 ### Fixes
 
