@@ -1,7 +1,6 @@
 package namegen
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
@@ -11,6 +10,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
+	"github.com/kong/kong-operator/controller/hybridgateway/utils"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )
 
@@ -64,12 +64,20 @@ func TestNewName(t *testing.T) {
 
 func TestNewKongUpstreamName(t *testing.T) {
 	tests := []struct {
-		name string
-		cp   *commonv1alpha1.ControlPlaneRef
-		rule gatewayv1.HTTPRouteRule
+		name             string
+		route            *gwtypes.HTTPRoute
+		cp               *commonv1alpha1.ControlPlaneRef
+		rule             gatewayv1.HTTPRouteRule
+		expectedReadable string
 	}{
 		{
 			name: "basic upstream name generation",
+			route: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-route",
+					Namespace: "default",
+				},
+			},
 			cp: &commonv1alpha1.ControlPlaneRef{
 				Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 				KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
@@ -88,9 +96,16 @@ func TestNewKongUpstreamName(t *testing.T) {
 					},
 				},
 			},
+			expectedReadable: "http.default-service1-8080",
 		},
 		{
 			name: "multiple backend refs",
+			route: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-route",
+					Namespace: "default",
+				},
+			},
 			cp: &commonv1alpha1.ControlPlaneRef{
 				Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 				KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
@@ -117,28 +132,35 @@ func TestNewKongUpstreamName(t *testing.T) {
 					},
 				},
 			},
+			expectedReadable: "http.default-service1-8080.default-service2-9090",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := NewKongUpstreamName(tt.cp, tt.rule)
-			assert.NotEmpty(t, result)
-			parts := strings.Split(result, ".")
-			assert.GreaterOrEqual(t, len(parts), 2)
-			assert.True(t, strings.HasPrefix(parts[0], "cp"))
+			result := NewKongUpstreamName(tt.route, tt.cp, tt.rule)
+			expected := tt.expectedReadable + ".cp" + utils.Hash32(tt.cp) + "." + utils.Hash32(tt.rule.BackendRefs)
+			assert.Equal(t, expected, result)
 		})
 	}
 }
 
 func TestNewKongServiceName(t *testing.T) {
 	tests := []struct {
-		name string
-		cp   *commonv1alpha1.ControlPlaneRef
-		rule gatewayv1.HTTPRouteRule
+		name             string
+		route            *gwtypes.HTTPRoute
+		cp               *commonv1alpha1.ControlPlaneRef
+		rule             gatewayv1.HTTPRouteRule
+		expectedReadable string
 	}{
 		{
 			name: "basic service name generation",
+			route: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-route",
+					Namespace: "default",
+				},
+			},
 			cp: &commonv1alpha1.ControlPlaneRef{
 				Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 				KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
@@ -157,9 +179,16 @@ func TestNewKongServiceName(t *testing.T) {
 					},
 				},
 			},
+			expectedReadable: "http.default-service1-8080",
 		},
 		{
 			name: "service with namespace",
+			route: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-route",
+					Namespace: "default",
+				},
+			},
 			cp: &commonv1alpha1.ControlPlaneRef{
 				Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 				KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
@@ -179,19 +208,66 @@ func TestNewKongServiceName(t *testing.T) {
 					},
 				},
 			},
+			expectedReadable: "http.backend-ns-backend-service",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := NewKongServiceName(tt.cp, tt.rule)
-			assert.NotEmpty(t, result)
-			parts := strings.Split(result, ".")
-			assert.GreaterOrEqual(t, len(parts), 3, fmt.Sprintf("should have at least 3 parts: %q, cp hash, and backend refs hash", httpProcolPrefix))
-			assert.Equal(t, httpProcolPrefix, parts[0], fmt.Sprintf("first part should be %q", httpProcolPrefix))
-			assert.True(t, strings.HasPrefix(parts[1], defaultCPPrefix), fmt.Sprintf("second part should start with %q", defaultCPPrefix))
+			result := NewKongServiceName(tt.route, tt.cp, tt.rule)
+			expected := tt.expectedReadable + ".cp" + utils.Hash32(tt.cp) + "." + utils.Hash32(tt.rule.BackendRefs)
+			assert.Equal(t, expected, result)
 		})
 	}
+}
+
+func TestNewKongServiceName_BackendDisplayLimit(t *testing.T) {
+	route := &gwtypes.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-route",
+			Namespace: "default",
+		},
+	}
+	cp := &commonv1alpha1.ControlPlaneRef{
+		Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+			Name: "test-cp",
+		},
+	}
+	rule := gatewayv1.HTTPRouteRule{
+		BackendRefs: []gatewayv1.HTTPBackendRef{
+			{
+				BackendRef: gatewayv1.BackendRef{
+					BackendObjectReference: gatewayv1.BackendObjectReference{
+						Name: "svc-b",
+						Port: func() *gatewayv1.PortNumber { p := gatewayv1.PortNumber(8080); return &p }(),
+					},
+				},
+			},
+			{
+				BackendRef: gatewayv1.BackendRef{
+					BackendObjectReference: gatewayv1.BackendObjectReference{
+						Name: "svc-a",
+						Port: func() *gatewayv1.PortNumber { p := gatewayv1.PortNumber(8080); return &p }(),
+					},
+				},
+			},
+			{
+				BackendRef: gatewayv1.BackendRef{
+					BackendObjectReference: gatewayv1.BackendObjectReference{
+						Name: "svc-c",
+						Port: func() *gatewayv1.PortNumber { p := gatewayv1.PortNumber(8080); return &p }(),
+					},
+				},
+			},
+		},
+	}
+
+	result := NewKongServiceName(route, cp, rule)
+	backendHash := utils.Hash32(rule.BackendRefs)
+	cpHash := utils.Hash32(cp)
+	expected := "http.default-svc-a-8080.default-svc-b-8080.more-1.cp" + cpHash + "." + backendHash
+	assert.Equal(t, expected, result)
 }
 
 func TestNewKongRouteName(t *testing.T) {
@@ -268,16 +344,10 @@ func TestNewKongRouteName(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := NewKongRouteName(tt.route, tt.cp, tt.rule)
-			assert.NotEmpty(t, result)
-			// Result should be: http.<namespace>-<name>.cp<hash>.<matches_hash>
-			assert.Contains(t, result, tt.route.Namespace)
-			assert.Contains(t, result, tt.route.Name)
-			// Result should have multiple parts (namespace.name.cp<hash>.<matches_hash>)
-			parts := strings.Split(result, ".")
-			assert.GreaterOrEqual(t, len(parts), 4, fmt.Sprintf("should have at least 4 parts: %q, namespace-name, cp hash, and matches hash", httpProcolPrefix))
-			assert.Equal(t, httpProcolPrefix, parts[0], fmt.Sprintf("first part should be %q", httpProcolPrefix))
-			assert.Equal(t, tt.route.Namespace+"-"+tt.route.Name, parts[1], "second part should be route <namespace>-<name>")
-			assert.True(t, strings.HasPrefix(parts[2], defaultCPPrefix), fmt.Sprintf("third part should start with %q", defaultCPPrefix))
+			cpHash := utils.Hash32(tt.cp)
+			matchesHash := utils.Hash32(tt.rule.Matches)
+			expected := "http." + tt.route.Namespace + "-" + tt.route.Name + ".cp" + cpHash + "." + matchesHash
+			assert.Equal(t, expected, result)
 		})
 	}
 }
@@ -481,14 +551,14 @@ func TestNameGenerationConsistency(t *testing.T) {
 	}
 
 	t.Run("upstream name consistency", func(t *testing.T) {
-		result1 := NewKongUpstreamName(cp, rule)
-		result2 := NewKongUpstreamName(cp, rule)
+		result1 := NewKongUpstreamName(route, cp, rule)
+		result2 := NewKongUpstreamName(route, cp, rule)
 		assert.Equal(t, result1, result2)
 	})
 
 	t.Run("service name consistency", func(t *testing.T) {
-		result1 := NewKongServiceName(cp, rule)
-		result2 := NewKongServiceName(cp, rule)
+		result1 := NewKongServiceName(route, cp, rule)
+		result2 := NewKongServiceName(route, cp, rule)
 		assert.Equal(t, result1, result2)
 	})
 
