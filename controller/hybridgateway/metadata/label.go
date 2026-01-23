@@ -24,19 +24,8 @@ func buildManagedByLabels(obj client.Object, pRef *gwtypes.ParentReference) map[
 		}
 	}
 
-	gwObjKey := client.ObjectKey{
-		Name: string(pRef.Name),
-	}
-	if pRef.Namespace != nil && *pRef.Namespace != "" {
-		gwObjKey.Namespace = string(*pRef.Namespace)
-	} else {
-		gwObjKey.Namespace = obj.GetNamespace()
-	}
-
 	return map[string]string{
-		consts.GatewayOperatorManagedByLabel:               obj.GetObjectKind().GroupVersionKind().Kind,
-		consts.GatewayOperatorHybridGatewaysNameLabel:      gwObjKey.Name,
-		consts.GatewayOperatorHybridGatewaysNamespaceLabel: gwObjKey.Namespace,
+		consts.GatewayOperatorManagedByLabel: obj.GetObjectKind().GroupVersionKind().Kind,
 	}
 }
 
