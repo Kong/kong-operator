@@ -222,52 +222,114 @@ func TestNewKongServiceName(t *testing.T) {
 }
 
 func TestNewKongServiceName_BackendDisplayLimit(t *testing.T) {
-	route := &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "default",
-		},
+	port := func(value gatewayv1.PortNumber) *gatewayv1.PortNumber { return &value }
+	backendRef := func(name string, namespace *gatewayv1.Namespace, portNumber *gatewayv1.PortNumber) gatewayv1.HTTPBackendRef {
+		return gatewayv1.HTTPBackendRef{
+			BackendRef: gatewayv1.BackendRef{
+				BackendObjectReference: gatewayv1.BackendObjectReference{
+					Name:      gatewayv1.ObjectName(name),
+					Namespace: namespace,
+					Port:      portNumber,
+				},
+			},
+		}
 	}
-	cp := &commonv1alpha1.ControlPlaneRef{
-		Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
-			Name: "test-cp",
-		},
+	buildExpected := func(readable string, cp *commonv1alpha1.ControlPlaneRef, backends []gatewayv1.HTTPBackendRef) string {
+		hashPart := "cp" + utils.Hash32(cp) + "." + utils.Hash32(backends)
+		name := readable + "." + hashPart
+		if len(name) <= maxLen {
+			return name
+		}
+		remaining := maxLen - len(hashPart) - 1
+		if remaining <= 0 {
+			return hashPart
+		}
+		readable = strings.TrimRight(readable[:remaining], ".-")
+		if readable == "" {
+			return hashPart
+		}
+		return readable + "." + hashPart
 	}
-	rule := gatewayv1.HTTPRouteRule{
-		BackendRefs: []gatewayv1.HTTPBackendRef{
-			{
-				BackendRef: gatewayv1.BackendRef{
-					BackendObjectReference: gatewayv1.BackendObjectReference{
-						Name: "svc-b",
-						Port: func() *gatewayv1.PortNumber { p := gatewayv1.PortNumber(8080); return &p }(),
-					},
+
+	tests := []struct {
+		name     string
+		route    *gwtypes.HTTPRoute
+		cp       *commonv1alpha1.ControlPlaneRef
+		backends []gatewayv1.HTTPBackendRef
+		readable string
+	}{
+		{
+			name: "short backend names",
+			route: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-route",
+					Namespace: "default",
 				},
 			},
-			{
-				BackendRef: gatewayv1.BackendRef{
-					BackendObjectReference: gatewayv1.BackendObjectReference{
-						Name: "svc-a",
-						Port: func() *gatewayv1.PortNumber { p := gatewayv1.PortNumber(8080); return &p }(),
-					},
+			cp: &commonv1alpha1.ControlPlaneRef{
+				Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+					Name: "test-cp",
 				},
 			},
-			{
-				BackendRef: gatewayv1.BackendRef{
-					BackendObjectReference: gatewayv1.BackendObjectReference{
-						Name: "svc-c",
-						Port: func() *gatewayv1.PortNumber { p := gatewayv1.PortNumber(8080); return &p }(),
-					},
+			backends: []gatewayv1.HTTPBackendRef{
+				backendRef("svc-b", nil, port(8080)),
+				backendRef("svc-a", nil, port(8080)),
+				backendRef("svc-c", nil, port(8080)),
+			},
+			readable: "http.default-svc-a-8080.default-svc-b-8080.more-1",
+		},
+		{
+			name: "three long service names",
+			route: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-route",
+					Namespace: "default",
 				},
 			},
+			cp: &commonv1alpha1.ControlPlaneRef{
+				Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+					Name: "test-cp",
+				},
+			},
+			backends: []gatewayv1.HTTPBackendRef{
+				backendRef(strings.Repeat("a", 63), nil, port(8080)),
+				backendRef(strings.Repeat("b", 63), nil, port(8080)),
+				backendRef(strings.Repeat("c", 63), nil, port(8080)),
+			},
+			readable: "http.default-" + strings.Repeat("a", 63) + "-8080.default-" + strings.Repeat("b", 63) + "-8080.more-1",
+		},
+		{
+			name: "two long namespaces",
+			route: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-route",
+					Namespace: "default",
+				},
+			},
+			cp: &commonv1alpha1.ControlPlaneRef{
+				Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+					Name: "test-cp",
+				},
+			},
+			backends: []gatewayv1.HTTPBackendRef{
+				backendRef("service-a", func() *gatewayv1.Namespace { ns := gatewayv1.Namespace(strings.Repeat("n", 180)); return &ns }(), port(8080)),
+				backendRef("service-b", func() *gatewayv1.Namespace { ns := gatewayv1.Namespace(strings.Repeat("n", 180)); return &ns }(), port(8080)),
+			},
+			readable: "http." + strings.Repeat("n", 180) + "-service-a-8080." + strings.Repeat("n", 180) + "-service-b-8080",
 		},
 	}
 
-	result := NewKongServiceName(route, cp, rule)
-	backendHash := utils.Hash32(rule.BackendRefs)
-	cpHash := utils.Hash32(cp)
-	expected := "http.default-svc-a-8080.default-svc-b-8080.more-1.cp" + cpHash + "." + backendHash
-	assert.Equal(t, expected, result)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rule := gatewayv1.HTTPRouteRule{BackendRefs: tt.backends}
+			result := NewKongServiceName(tt.route, tt.cp, rule)
+			expected := buildExpected(tt.readable, tt.cp, tt.backends)
+			assert.Equal(t, expected, result)
+		})
+	}
 }
 
 func TestNewKongRouteName(t *testing.T) {
