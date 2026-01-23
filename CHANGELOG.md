@@ -53,6 +53,8 @@
   For this reference to be allowed, a `KongReferenceGrant` resource must be created
   in the namespace of the `KongPlugin`, allowing access for the `KongPluginBinding`.
   [#31038](https://github.com/Kong/kong-operator/pull/3108)
+- HybridGateway: Added support to PathPrefixMatch for the `RequestRedirect` `HTTPRoute` filter.
+  [#3065](https://github.com/Kong/kong-operator/pull/3065)
 
 ### Fixes
 
