@@ -12,8 +12,6 @@ import (
 	"github.com/kong/kong-operator/test/integration"
 )
 
-const ingressClass = "kong"
-
 type testCaseIngressValidation struct {
 	Name                   string
 	Ingress                *netv1.Ingress
@@ -24,7 +22,7 @@ func TestAdmissionWebhook_Ingress(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
-	ns, _, _, _ := bootstrapGateway(ctx, t, integration.GetEnv(), integration.GetClients().MgrClient) //nolint:dogsled
+	ns, _, ingressClass, _ := bootstrapGateway(ctx, t, integration.GetEnv(), integration.GetClients().MgrClient)
 
 	k8sClient := integration.GetEnv().Cluster().Client()
 
