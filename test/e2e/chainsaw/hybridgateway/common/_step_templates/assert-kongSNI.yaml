@@ -6,16 +6,18 @@ spec:
   try:
     - script:
         env:
+          - name: RESOURCE_TYPE
+            value: ($resource_type)
           - name: GATEWAY_NAME
             value: ($gateway_name)
           - name: GATEWAY_NAMESPACE
             value: ($gateway_namespace)
         # Reusing your script to get the dynamic ControlPlane name
         content: |
-          bash ../common/scripts/kongCertificate_name.sh
+          bash ../common/scripts/kongResource_name.sh
         outputs:
           - name: certificate_name
-            value: (json_parse($stdout).certificate_name)
+            value: (json_parse($stdout).name)
     - assert:
         resource:
           apiVersion: configuration.konghq.com/v1alpha1

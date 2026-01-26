@@ -9,8 +9,8 @@ set -o pipefail
 #   RESOURCE_TYPE: The full resource type, e.g. kongservices.configuration.konghq.com.
 #   GATEWAY_NAME: The name of the gateway.
 #   GATEWAY_NAMESPACE: The namespace of the gateway.
-#   HTTP_ROUTE_NAME: The name of the HTTPRoute.
-#   HTTP_ROUTE_NAMESPACE: The namespace of the HTTPRoute.
+#   HTTP_ROUTE_NAME: (Optional) The name of the HTTPRoute.
+#   HTTP_ROUTE_NAMESPACE: (Optional) The namespace of the HTTPRoute.
 #   RETRY_COUNT: (Optional) Number of retries. Default: 30
 #   RETRY_DELAY: (Optional) Delay between retries in seconds. Default: 2
 
@@ -18,13 +18,16 @@ NAMESPACE="${NAMESPACE}"
 RESOURCE_TYPE="${RESOURCE_TYPE}"
 GATEWAY_NAME="${GATEWAY_NAME}"
 GATEWAY_NAMESPACE="${GATEWAY_NAMESPACE}"
-HTTP_ROUTE_NAME="${HTTP_ROUTE_NAME}"
-HTTP_ROUTE_NAMESPACE="${HTTP_ROUTE_NAMESPACE}"
+HTTP_ROUTE_NAME="${HTTP_ROUTE_NAME:-}"
+HTTP_ROUTE_NAMESPACE="${HTTP_ROUTE_NAMESPACE:-}"
 RETRY_COUNT="${RETRY_COUNT:-30}"
 RETRY_DELAY="${RETRY_DELAY:-2}"
 
 EXPECTED_GW="${GATEWAY_NAMESPACE}/${GATEWAY_NAME}"
-EXPECTED_RT="${HTTP_ROUTE_NAMESPACE}/${HTTP_ROUTE_NAME}"
+EXPECTED_RT=""
+if [[ -n "$HTTP_ROUTE_NAME" && -n "$HTTP_ROUTE_NAMESPACE" ]]; then
+  EXPECTED_RT="${HTTP_ROUTE_NAMESPACE}/${HTTP_ROUTE_NAME}"
+fi
 
 ATTEMPT=0
 RESOURCE_NAME=""
@@ -67,12 +70,22 @@ EOF
   fi
 
   # Find resource that matches annotations
-  RESOURCE_INFO=$(echo "$KUBECTL_OUTPUT" | jq -r --arg gw "$EXPECTED_GW" --arg rt "$EXPECTED_RT" '
-    .items[] | 
-    select(
-      (.metadata.annotations["gateway-operator.konghq.com/hybrid-gateways"] // "" | split(",") | contains([$gw])) and
-      (.metadata.annotations["gateway-operator.konghq.com/hybrid-routes"] // "" | split(",") | contains([$rt]))
-    ) | {name: .metadata.name, kind: .kind, namespace: .metadata.namespace} | @json' | head -n 1)
+  # If route is specified, require both gateway and route annotations
+  # If route is not specified, only require gateway annotation
+  if [[ -n "$EXPECTED_RT" ]]; then
+    RESOURCE_INFO=$(echo "$KUBECTL_OUTPUT" | jq -r --arg gw "$EXPECTED_GW" --arg rt "$EXPECTED_RT" '
+      .items[] | 
+      select(
+        (.metadata.annotations["gateway-operator.konghq.com/hybrid-gateways"] // "" | split(",") | contains([$gw])) and
+        (.metadata.annotations["gateway-operator.konghq.com/hybrid-routes"] // "" | split(",") | contains([$rt]))
+      ) | {name: .metadata.name, kind: .kind, namespace: .metadata.namespace} | @json' | head -n 1)
+  else
+    RESOURCE_INFO=$(echo "$KUBECTL_OUTPUT" | jq -r --arg gw "$EXPECTED_GW" '
+      .items[] | 
+      select(
+        .metadata.annotations["gateway-operator.konghq.com/hybrid-gateways"] // "" | split(",") | contains([$gw])
+      ) | {name: .metadata.name, kind: .kind, namespace: .metadata.namespace} | @json' | head -n 1)
+  fi
 
   # If resource found, we're done
   if [[ -n "$RESOURCE_INFO" && "$RESOURCE_INFO" != "null" ]]; then
@@ -92,7 +105,8 @@ EOF
 
   # If this is the last attempt, provide detailed diagnostics
   if [[ $ATTEMPT -eq $RETRY_COUNT ]]; then
-    cat <<EOF
+    if [[ -n "$EXPECTED_RT" ]]; then
+      cat <<EOF
 {
   "error": "No matching resource found after $RETRY_COUNT attempts",
   "resource_type": "$RESOURCE_TYPE",
@@ -102,6 +116,17 @@ EOF
   "available_resources": $(echo "$KUBECTL_OUTPUT" | jq -c '[.items[] | {name: .metadata.name, annotations: .metadata.annotations}]')
 }
 EOF
+    else
+      cat <<EOF
+{
+  "error": "No matching resource found after $RETRY_COUNT attempts",
+  "resource_type": "$RESOURCE_TYPE",
+  "namespace": "$NAMESPACE",
+  "expected_gateway": "$EXPECTED_GW",
+  "available_resources": $(echo "$KUBECTL_OUTPUT" | jq -c '[.items[] | {name: .metadata.name, annotations: .metadata.annotations}]')
+}
+EOF
+    fi
     exit 1
   fi
 
