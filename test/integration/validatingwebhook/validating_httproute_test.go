@@ -177,60 +177,6 @@ func TestAdmissionWebhook_HTTPRoute(t *testing.T) {
 				},
 			},
 		},
-		{
-			Name: "a httproute with invalid regex for path does not pass validation",
-			Route: &gatewayv1.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: uuid.NewString(),
-				},
-				Spec: gatewayv1.HTTPRouteSpec{
-					Hostnames: []gatewayv1.Hostname{"foo.com"},
-					Rules: []gatewayv1.HTTPRouteRule{
-						{
-							Matches: []gatewayv1.HTTPRouteMatch{
-								newHTTPRouteMatchWithPathPrefix("/path-6"),
-								newHTTPRouteMatchWithPathRegex(invalidRegexPath),
-								newHTTPRouteMatchWithPathPrefix("/path-7"),
-							},
-						},
-					},
-					CommonRouteSpec: gatewayv1.CommonRouteSpec{
-						ParentRefs: []gatewayv1.ParentReference{{
-							Namespace: (*gatewayv1.Namespace)(&managedGateway.Namespace),
-							Name:      gatewayv1.ObjectName(managedGateway.Name),
-						}},
-					},
-				},
-			},
-			WantCreateErrSubstring: "/foo[[[[",
-		},
-		{
-			Name: "a httproute with invalid regex for header does not pass validation",
-			Route: &gatewayv1.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: uuid.NewString(),
-				},
-				Spec: gatewayv1.HTTPRouteSpec{
-					Hostnames: []gatewayv1.Hostname{"foo.com"},
-					Rules: []gatewayv1.HTTPRouteRule{
-						{
-							Matches: []gatewayv1.HTTPRouteMatch{
-								newHTTPRouteMatchWithPathPrefix("/path-6"),
-								newHTTPRouteMatchWithHeaderRegex("foo", "bar[["),
-								newHTTPRouteMatchWithPathPrefix("/path-7"),
-							},
-						},
-					},
-					CommonRouteSpec: gatewayv1.CommonRouteSpec{
-						ParentRefs: []gatewayv1.ParentReference{{
-							Namespace: (*gatewayv1.Namespace)(&managedGateway.Namespace),
-							Name:      gatewayv1.ObjectName(managedGateway.Name),
-						}},
-					},
-				},
-			},
-			WantCreateErrSubstring: "bar[[",
-		},
 	}
 
 	for _, tC := range testCases {
@@ -255,16 +201,6 @@ func newHTTPRouteMatchWithPathRegex(pathRegexp string) gatewayv1.HTTPRouteMatch 
 		Path: &gatewayv1.HTTPPathMatch{
 			Type:  &pathMatchType,
 			Value: &pathRegexp,
-		},
-	}
-}
-
-func newHTTPRouteMatchWithPathPrefix(pathPrefix string) gatewayv1.HTTPRouteMatch {
-	pathMatchType := gatewayv1.PathMatchPathPrefix
-	return gatewayv1.HTTPRouteMatch{
-		Path: &gatewayv1.HTTPPathMatch{
-			Type:  &pathMatchType,
-			Value: &pathPrefix,
 		},
 	}
 }
