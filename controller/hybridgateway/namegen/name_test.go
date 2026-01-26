@@ -96,7 +96,7 @@ func TestNewKongUpstreamName(t *testing.T) {
 					},
 				},
 			},
-			expectedReadable: "http.default-service1-8080",
+			expectedReadable: "http.default-service1-8080.1",
 		},
 		{
 			name: "multiple backend refs",
@@ -132,7 +132,7 @@ func TestNewKongUpstreamName(t *testing.T) {
 					},
 				},
 			},
-			expectedReadable: "http.default-service1-8080.more-1",
+			expectedReadable: "http.default-service1-8080.2",
 		},
 	}
 
@@ -179,7 +179,7 @@ func TestNewKongServiceName(t *testing.T) {
 					},
 				},
 			},
-			expectedReadable: "http.default-service1-8080",
+			expectedReadable: "http.default-service1-8080.1",
 		},
 		{
 			name: "service with namespace",
@@ -208,7 +208,7 @@ func TestNewKongServiceName(t *testing.T) {
 					},
 				},
 			},
-			expectedReadable: "http.backend-ns-backend-service",
+			expectedReadable: "http.backend-ns-backend-service.1",
 		},
 	}
 
@@ -277,7 +277,7 @@ func TestNewKongServiceName_BackendDisplayLimit(t *testing.T) {
 				backendRef("svc-a", nil, port(8080)),
 				backendRef("svc-c", nil, port(8080)),
 			},
-			readable: "http.default-svc-a-8080.more-2",
+			readable: "http.default-svc-a-8080.3",
 		},
 		{
 			name: "three long service names",
@@ -298,7 +298,7 @@ func TestNewKongServiceName_BackendDisplayLimit(t *testing.T) {
 				backendRef(strings.Repeat("b", 63), nil, port(8080)),
 				backendRef(strings.Repeat("c", 63), nil, port(8080)),
 			},
-			readable: "http.default-" + strings.Repeat("a", 63) + "-8080.more-2",
+			readable: "http.default-" + strings.Repeat("a", 63) + "-8080.3",
 		},
 		{
 			name: "two long namespaces",
@@ -318,7 +318,7 @@ func TestNewKongServiceName_BackendDisplayLimit(t *testing.T) {
 				backendRef("service-a", func() *gatewayv1.Namespace { ns := gatewayv1.Namespace(strings.Repeat("n", 220)); return &ns }(), port(8080)),
 				backendRef("service-b", func() *gatewayv1.Namespace { ns := gatewayv1.Namespace(strings.Repeat("n", 220)); return &ns }(), port(8080)),
 			},
-			readable: "http." + strings.Repeat("n", 220) + "-service-a-8080.more-1",
+			readable: "http." + strings.Repeat("n", 220) + "-service-a-8080.2",
 		},
 	}
 

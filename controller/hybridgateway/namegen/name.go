@@ -16,9 +16,6 @@ const (
 	// httpProcolPrefix is the prefix used for HTTP-related resources.
 	httpProcolPrefix = "http"
 
-	// backendRefDisplayLimit is the maximum number of backend references to render.
-	backendRefDisplayLimit = 1
-
 	// defaultCPPrefix is the prefix used when including a control-plane identifier.
 	defaultCPPrefix = "cp"
 
@@ -167,12 +164,8 @@ func backendRefDisplayNames(routeNamespace string, refs []gatewayv1.HTTPBackendR
 	}
 
 	sort.Strings(names)
-	if len(names) <= backendRefDisplayLimit {
-		return names
-	}
-
-	remaining := len(names) - backendRefDisplayLimit
-	return append(names[:backendRefDisplayLimit], fmt.Sprintf("more-%d", remaining))
+	count := fmt.Sprintf("%d", len(refs))
+	return []string{names[0], count}
 }
 
 func backendRefDisplayName(routeNamespace string, ref gatewayv1.HTTPBackendRef) string {
