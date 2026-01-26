@@ -25,7 +25,8 @@ func init() {
 
 	for _, c := range collectors {
 		if err := metrics.Registry.Register(c); err != nil {
-			if !errors.As(err, &prometheus.AlreadyRegisteredError{}) {
+			_, ok := errors.AsType[prometheus.AlreadyRegisteredError](err)
+			if !ok {
 				panic(err)
 			}
 		}

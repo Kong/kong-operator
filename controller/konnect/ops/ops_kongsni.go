@@ -103,8 +103,7 @@ func deleteSNI(
 
 	if errWrapped := wrapErrIfKonnectOpFailed(err, DeleteOp, sni); errWrapped != nil {
 		// Service delete operation returns an SDKError instead of a NotFoundError.
-		var sdkError *sdkkonnecterrs.SDKError
-		if errors.As(errWrapped, &sdkError) {
+		if sdkError, ok := errors.AsType[*sdkkonnecterrs.SDKError](errWrapped); ok {
 			if sdkError.StatusCode == http.StatusNotFound {
 				ctrllog.FromContext(ctx).
 					Info("entity not found in Konnect, skipping delete",
