@@ -111,3 +111,48 @@ func TestCRDChecker(t *testing.T) {
 		})
 	}
 }
+
+// BenchmarkCRDExists benchmarks the CRDExists method to measure the impact
+// of using errors.AsType vs errors.As for error type checking.
+func BenchmarkCRDExists(b *testing.B) {
+	b.Run("CRD_found", func(b *testing.B) {
+		restMapper := meta.NewDefaultRESTMapper(nil)
+		restMapper.Add(schema.GroupVersionKind{
+			Group:   operatorv1beta1.SchemeGroupVersion.Group,
+			Version: operatorv1beta1.SchemeGroupVersion.Version,
+			Kind:    "DataPlane",
+		}, meta.RESTScopeNamespace)
+
+		fakeClient := fakectrlruntimeclient.
+			NewClientBuilder().
+			WithRESTMapper(restMapper).
+			Build()
+
+		checker := CRDChecker{Client: fakeClient}
+		gvr := operatorv1beta1.DataPlaneGVR()
+
+		b.ReportAllocs()
+		b.ResetTimer()
+		for b.Loop() {
+			_, _ = checker.CRDExists(gvr)
+		}
+	})
+
+	b.Run("CRD_not_found", func(b *testing.B) {
+		restMapper := meta.NewDefaultRESTMapper(nil)
+
+		fakeClient := fakectrlruntimeclient.
+			NewClientBuilder().
+			WithRESTMapper(restMapper).
+			Build()
+
+		checker := CRDChecker{Client: fakeClient}
+		gvr := operatorv1beta1.DataPlaneGVR()
+
+		b.ReportAllocs()
+		b.ResetTimer()
+		for b.Loop() {
+			_, _ = checker.CRDExists(gvr)
+		}
+	})
+}
