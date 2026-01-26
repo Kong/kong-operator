@@ -14,7 +14,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
+	apiconsts "github.com/kong/kong-operator/api/common/consts"
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/controller/konnect/constraints"
@@ -194,6 +196,19 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 				}
 			}
 			return ctrl.Result{}, nil
+
+		case crossnamespace.IsReferenceNotGranted(err):
+			if res, errStatus := patch.StatusWithCondition(
+				ctx, r.Client, ent,
+				apiconsts.ConditionType(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs),
+				metav1.ConditionFalse,
+				configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted,
+				err.Error(),
+			); errStatus != nil || !res.IsZero() {
+				return res, errStatus
+			}
+			return ctrl.Result{}, err
+
 		default:
 			log.Error(logger, err, "error handling KongService ref")
 			return ctrl.Result{}, err

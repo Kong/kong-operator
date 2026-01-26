@@ -192,7 +192,7 @@ func KonnectEntitiesTestCase(t *testing.T, params konnectEntitiesTestCaseParams)
 		require.NoError(t, err)
 		kr.Spec.ServiceRef = &configurationv1alpha1.ServiceRef{
 			Type: configurationv1alpha1.ServiceRefNamespacedRef,
-			NamespacedRef: &commonv1alpha1.NameRef{
+			NamespacedRef: &commonv1alpha1.NamespacedRef{
 				Name: ks.Name,
 			},
 		}

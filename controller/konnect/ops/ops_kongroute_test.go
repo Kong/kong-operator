@@ -40,7 +40,7 @@ func TestKongRouteToSDKRouteInput_Tags(t *testing.T) {
 		Spec: configurationv1alpha1.KongRouteSpec{
 			ServiceRef: &configurationv1alpha1.ServiceRef{
 				Type: configurationv1alpha1.ServiceRefNamespacedRef,
-				NamespacedRef: &commonv1alpha1.NameRef{
+				NamespacedRef: &commonv1alpha1.NamespacedRef{
 					Name: "service-1",
 				},
 			},
@@ -147,7 +147,7 @@ func TestAdoptRoute(t *testing.T) {
 						},
 						ServiceRef: &configurationv1alpha1.ServiceRef{
 							Type:          "namespacedRef",
-							NamespacedRef: &commonv1alpha1.NameRef{Name: "svc-1"},
+							NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "svc-1"},
 						},
 						KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
 							Paths: []string{"/test-1"},
@@ -297,7 +297,7 @@ func TestAdoptRoute(t *testing.T) {
 						},
 						ServiceRef: &configurationv1alpha1.ServiceRef{
 							Type:          "namespacedRef",
-							NamespacedRef: &commonv1alpha1.NameRef{Name: "svc-1"},
+							NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "svc-1"},
 						},
 						KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
 							Paths: []string{"/test-1"},
