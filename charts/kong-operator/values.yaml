@@ -145,19 +145,20 @@ global:
       # which will be consumed by the ControlPlane(s).
       enabled: true
   certificateAuthority:
-    # Name of the Secret containing the CA certificate and key.
-    # If not set, certificateAuthority.secretName defaults to "kong-operator-ca"
-    # and is created by the chart (RSA 2048 bits).
-    # In case of an existing Secret with that name, it will be used instead of
-    # creating a new one.
-    # If you set this to a custom value, make sure the Secret exists.
-    # Type of the Secret must be "kubernetes.io/tls" and labels must contain
-    # "konghq.com/secret: internal", fields "tls.crt" and "tls.key" must be present.
-    # Based on the type of this certificate (ECDSA or RSA, along with its key size),
-    # all other certificates created will follow the same configuration.
-    secretName: ""
-    # Namespace of the Secret containing the CA certificate and key.
-    # If not set, defaults to the operator's installation namespace.
-    # I can be set only when certificateAuthority.secretName
-    # is set to a custom value, otherwise returns error.
-    secretNamespace: ""
+    secret:
+      # Name of the Secret containing the CA certificate and key.
+      # If not set, it defaults to "kong-operator-ca" and it is created
+      # by the chart (RSA 2048 bits) with annotation "helm.sh/resource-policy: keep"
+      # to be preserved in case of upgrade or uninstall. In case of an existing Secret with
+      # that name, it will be used instead of creating a new one.
+      # If you set this to a custom value, make sure the Secret exists.
+      # Type of the Secret must be "kubernetes.io/tls" and labels must contain
+      # "konghq.com/secret: internal", fields "tls.crt" and "tls.key" must be present.
+      # Based on the type of this certificate (ECDSA or RSA, along with its key size),
+      # all other certificates created will follow the same configuration.
+      name: ""
+      # Namespace of the Secret containing the CA certificate and key.
+      # If not set, defaults to the operator's installation namespace.
+      # I can be set only when certificateAuthority.secret.name
+      # is set to a custom value, otherwise returns error.
+      namespace: ""

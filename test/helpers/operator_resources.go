@@ -40,7 +40,7 @@ func SetupControllerOperatorResources(
 			Name:      "kong-operator-ca",
 			Namespace: namespace,
 			Labels: map[string]string{
-				"konghq.com/secret": "true",
+				"konghq.com/secret": "internal",
 			},
 		},
 		Data: map[string][]byte{

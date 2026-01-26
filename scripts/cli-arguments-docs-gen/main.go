@@ -90,7 +90,7 @@ func getTypeForHuman(f *flag.Flag) string {
 	switch typ := f.Value.(type) {
 	case boolvalue:
 		return "bool"
-	case stringvalue, *manager.MetricsAccessFilter:
+	case stringvalue, *manager.MetricsAccessFilter, *cli.DiscardFlagValue:
 		return "string"
 	case zapFlag:
 		if f.Name == "bool" {

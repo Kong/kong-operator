@@ -18,6 +18,8 @@ import (
 	"github.com/kong/kong-operator/pkg/consts"
 )
 
+const deprecationPrefix = "WARN: DEPRECATED (it has no effect): "
+
 // New returns a new CLI.
 func New(m metadata.Info) *CLI {
 	flagSet := flag.NewFlagSet("", flag.ExitOnError)
@@ -90,6 +92,10 @@ func New(m metadata.Info) *CLI {
 	flagSet.BoolVar(&cfg.ConversionWebhookEnabled, "enable-conversion-webhook", true, "Enable the conversion webhook.")
 	flagSet.BoolVar(&cfg.ValidatingWebhookEnabled, "enable-validating-webhook", true, "Enable the validating webhook.")
 
+	// Deprecated flags retained for printing warning messages.
+	flagSet.Var(&DiscardFlagValue{}, "cluster-ca-key-type", deprecationPrefix+"Type of the key used for the cluster CA certificate (possible values: ecdsa, rsa). Default: ecdsa.")
+	flagSet.IntVar(new(int), "cluster-ca-key-size", mgrconfig.DefaultClusterCAKeySize, deprecationPrefix+"Size (in bits) of the key used for the cluster CA certificate. Only used for RSA keys.")
+
 	loggerOpts := lo.ToPtr(*manager.DefaultConfig().LoggerOpts)
 	loggerOpts.BindFlags(flagSet)
 
@@ -100,6 +106,19 @@ func New(m metadata.Info) *CLI {
 		deferFlagValues: &deferCfg,
 		metadata:        m,
 	}
+}
+
+// DiscardFlagValue is a [flag.Value] implementation that discards any value set to it.
+// Use for deprecated flags that are deprecated.
+type DiscardFlagValue struct{}
+
+// Set fulfill interface.
+func (DiscardFlagValue) Set(_ string) error {
+	return nil
+}
+
+func (DiscardFlagValue) String() string {
+	return ""
 }
 
 // CLI represents command line interface for the operator.
@@ -133,16 +152,17 @@ func setFlagFromEnvVar(f *flag.Flag) {
 
 	envKey := envVarFlagPrefix + envVarFlagName
 	deprecatedEnvKey := envDeprecatedVarFlagPrefix + envVarFlagName
-	if envValue, envSet := os.LookupEnv(deprecatedEnvKey); envSet {
-		fmt.Printf("WARN: %q env variable is deprecated, please use %q instead\n", deprecatedEnvKey, envKey)
-		if err := f.Value.Set(envValue); err != nil {
-			panic(fmt.Errorf("environment binding failed for variable %s: %w", deprecatedEnvKey, err))
-		}
-	}
-
-	if envValue, envSet := os.LookupEnv(envKey); envSet {
-		if err := f.Value.Set(envValue); err != nil {
-			panic(fmt.Errorf("environment binding failed for variable %s: %w", envKey, err))
+	for _, k := range []string{deprecatedEnvKey, envKey} {
+		if envValue, envSet := os.LookupEnv(k); envSet {
+			if envVarFlagName == "CLUSTER_CA_KEY_TYPE" || envVarFlagName == "CLUSTER_CA_KEY_SIZE" {
+				fmt.Printf(deprecationPrefix+"environment variable %s", k)
+			}
+			if strings.HasPrefix(f.Usage, envDeprecatedVarFlagPrefix) {
+				fmt.Printf("WARN: %q env variable is deprecated, please use %q instead\n", deprecatedEnvKey, envKey)
+			}
+			if err := f.Value.Set(envValue); err != nil {
+				panic(fmt.Errorf("environment binding failed for variable %s: %w", envKey, err))
+			}
 		}
 	}
 }

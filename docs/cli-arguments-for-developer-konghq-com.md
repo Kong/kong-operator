@@ -76,6 +76,14 @@ rows:
     type: '`string`'
     description: "Sets the time limit for syncing controller caches. Defaults to the controller-runtime value if set to `0`."
     default: '`0s`'
+  - flag: '`--cluster-ca-key-size`'
+    type: '`int`'
+    description: "WARN: DEPRECATED (it has no effect): Size (in bits) of the key used for the cluster CA certificate. Only used for RSA keys."
+    default: '`4096`'
+  - flag: '`--cluster-ca-key-type`'
+    type: '`string`'
+    description: "WARN: DEPRECATED (it has no effect): Type of the key used for the cluster CA certificate (possible values: ecdsa, rsa). Default: ecdsa."
+    default: ""
   - flag: '`--cluster-ca-secret`'
     type: '`string`'
     description: "Specifies the Secret name that contains the cluster CA certificate."

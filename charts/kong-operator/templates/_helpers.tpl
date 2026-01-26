@@ -146,16 +146,16 @@ The dict maps raw env variable key to the suggested variable path.
 # to reuse existing secret in case of upgrades. Ensure that namespace is configured
 # only when secretNamespace is set.
 {{- define "kong.caSecretName" -}}
-{{- if .Values.global.certificateAuthority.secretNamespace -}}
-  {{- if not .Values.global.certificateAuthority.secretName -}}
-    {{- fail "global.certificateAuthority.secretName must be set when global.certificateAuthority.secretNamespace is configured" -}}
+{{- if .Values.global.certificateAuthority.secret.namespace -}}
+  {{- if not .Values.global.certificateAuthority.secret.name -}}
+    {{- fail "global.certificateAuthority.secret.name must be set when global.certificateAuthority.secret.namespace is configured" -}}
   {{- end -}}
 {{- end -}}
-{{- default "kong-operator-ca" .Values.global.certificateAuthority.secretName -}}
+{{- default "kong-operator-ca" .Values.global.certificateAuthority.secret.name -}}
 {{- end -}}
 
 {{- define "kong.caSecretNamespace" -}}
-{{- .Values.global.certificateAuthority.secretNamespace | default .Release.Namespace -}}
+{{- .Values.global.certificateAuthority.secret.namespace | default .Release.Namespace -}}
 {{- end -}}
 
 

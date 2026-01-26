@@ -40,6 +40,8 @@ metadata:
   namespace: default
   labels:
     konghq.com/secret: internal
+  annotations:
+    helm.sh/resource-policy: keep
 type: kubernetes.io/tls
 data:
   tls.crt: '###DYNAMIC_FIELD###'
