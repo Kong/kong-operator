@@ -3,6 +3,8 @@ package testenv
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"runtime"
 	"time"
 
 	"github.com/tidwall/gjson"
@@ -16,7 +18,10 @@ import (
 // Dependency manifest reader
 // -----------------------------------------------------------------------------
 
-const dependencyFilePath = "../test_dependencies.yaml"
+var dependencyFilePath = func() string {
+	_, b, _, _ := runtime.Caller(0)
+	return filepath.Join(filepath.Dir(b), "..", "..", "test_dependencies.yaml")
+}()
 
 // GetDependencyVersion returns the version of a dependency specified by the dependency tracker file given a YAML path.
 func GetDependencyVersion(path string) (string, error) {

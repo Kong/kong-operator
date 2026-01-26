@@ -824,7 +824,7 @@ func TestControlPlaneV2(t *testing.T) {
 										State:                lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingStateEnabled),
 										InitialPollingPeriod: lo.ToPtr(metav1.Duration{Duration: 30 * time.Second}),
 										PollingPeriod:        lo.ToPtr(metav1.Duration{Duration: 300 * time.Second}),
-										StorageState:         lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingStateEnabled),
+										StorageState:         lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicenseStorageStateEnabled),
 									},
 									NodeRefreshPeriod:  lo.ToPtr(metav1.Duration{Duration: 60 * time.Second}),
 									ConfigUploadPeriod: lo.ToPtr(metav1.Duration{Duration: 30 * time.Second}),
@@ -919,7 +919,7 @@ func TestControlPlaneV2(t *testing.T) {
 								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
 									Licensing: &operatorv2beta1.ControlPlaneKonnectLicensing{
 										State:        lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingStateDisabled),
-										StorageState: lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingStateDisabled),
+										StorageState: lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicenseStorageStateDisabled),
 									},
 								},
 							},
@@ -939,7 +939,7 @@ func TestControlPlaneV2(t *testing.T) {
 										State:                lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingStateEnabled),
 										InitialPollingPeriod: lo.ToPtr(metav1.Duration{Duration: 30 * time.Second}),
 										PollingPeriod:        lo.ToPtr(metav1.Duration{Duration: 300 * time.Second}),
-										StorageState:         lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingStateEnabled),
+										StorageState:         lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicenseStorageStateEnabled),
 									},
 								},
 							},
@@ -959,7 +959,7 @@ func TestControlPlaneV2(t *testing.T) {
 										State:                lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingStateEnabled),
 										InitialPollingPeriod: lo.ToPtr(metav1.Duration{Duration: 30 * time.Second}),
 										PollingPeriod:        lo.ToPtr(metav1.Duration{Duration: 300 * time.Second}),
-										StorageState:         lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingStateDisabled),
+										StorageState:         lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicenseStorageStateDisabled),
 									},
 								},
 							},
@@ -977,7 +977,7 @@ func TestControlPlaneV2(t *testing.T) {
 								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
 									Licensing: &operatorv2beta1.ControlPlaneKonnectLicensing{
 										State:        lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingStateEnabled),
-										StorageState: lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingState("invalid")),
+										StorageState: lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicenseStorageState("invalid")),
 									},
 								},
 							},
@@ -996,7 +996,7 @@ func TestControlPlaneV2(t *testing.T) {
 								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
 									Licensing: &operatorv2beta1.ControlPlaneKonnectLicensing{
 										State:        lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingStateDisabled),
-										StorageState: lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingStateEnabled),
+										StorageState: lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicenseStorageStateEnabled),
 									},
 								},
 							},

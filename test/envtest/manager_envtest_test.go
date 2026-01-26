@@ -1,0 +1,137 @@
+//go:build envtest
+
+package envtest
+
+import (
+	"context"
+	"fmt"
+	"net/url"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/go-logr/logr/testr"
+	"github.com/samber/lo"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/goleak"
+	"go.uber.org/zap/zaptest/observer"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
+
+	"github.com/kong/kong-operator/ingress-controller/pkg/manager"
+	testhelpers "github.com/kong/kong-operator/ingress-controller/test/helpers"
+	"github.com/kong/kong-operator/ingress-controller/test/manager/consts"
+)
+
+// TestManagerDoesntStartUntilKubernetesAPIReachable ensures that the manager and its Runnables are not start until the
+// Kubernetes API server is reachable.
+func TestManagerDoesntStartUntilKubernetesAPIReachable(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	scheme := Scheme(t, WithKong)
+	envcfg, _ := Setup(t, ctx, scheme)
+
+	t.Log("Setting up a proxy for Kubernetes API server so that we can interrupt it")
+	u, err := url.Parse(envcfg.Host)
+	require.NoError(t, err)
+	apiServerProxy, err := testhelpers.NewTCPProxy(u.Host)
+	require.NoError(t, err)
+	go func() {
+		err := apiServerProxy.Run(ctx)
+		assert.NoError(t, err)
+	}()
+	apiServerProxy.StopHandlingConnections()
+
+	t.Log("Replacing Kubernetes API server address with the proxy address")
+	envcfg.Host = fmt.Sprintf("https://%s", apiServerProxy.Address())
+
+	loggerHook := RunManager(ctx, t, envcfg, AdminAPIOptFns())
+	hasLog := func(expectedLog string) bool {
+		return lo.ContainsBy(loggerHook.All(), func(entry observer.LoggedEntry) bool {
+			return strings.Contains(entry.Message, expectedLog)
+		})
+	}
+
+	t.Log("Ensuring manager is waiting for Kubernetes API to be ready")
+	const expectedKubernetesAPICheckErrorLog = "Retrying Kubernetes API readiness check after error"
+	require.Eventually(t, func() bool { return hasLog(expectedKubernetesAPICheckErrorLog) }, time.Minute, time.Millisecond)
+
+	t.Log("Ensure manager hasn't been started yet and no config sync has happened")
+	const configurationSyncedToKongLog = "Successfully synced configuration to Kong"
+	const startingManagerLog = "Starting manager"
+	require.False(t, hasLog(configurationSyncedToKongLog))
+	require.False(t, hasLog(startingManagerLog))
+
+	t.Log("Starting accepting connections in Kubernetes API proxy so that manager can start")
+	apiServerProxy.StartHandlingConnections()
+
+	t.Log("Ensuring manager has been started and config sync has happened")
+	require.Eventually(t, func() bool {
+		return hasLog(startingManagerLog) &&
+			hasLog(configurationSyncedToKongLog)
+	}, time.Minute, time.Millisecond)
+}
+
+func TestManager_NoLeakedGoroutinesAfterContextCancellation(t *testing.T) {
+	ts := NewTelemetryServer(t)
+	ts.Start(t.Context(), t)
+
+	// Not using t.Parallel() because goleak.VerifyNone(t) does not work with parallel tests.
+	t.Cleanup(func() {
+		ts.Stop(t)
+		t.Logf("Checking for goroutine leaks")
+		// Ignore leaks in controller-runtime/manager before the issue fixed:
+		// https://github.com/kubernetes-sigs/controller-runtime/issues/3218
+		ignoreManagerReconcile := goleak.IgnoreTopFunction("sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile.func1")
+		ignoreManagerEnagageProcedure := goleak.IgnoreAnyFunction("sigs.k8s.io/controller-runtime/pkg/manager.(*controllerManager).engageStopProcedure.func3.(*runnableGroup).StopAndWait.3.2")
+		goleak.VerifyNone(t, ignoreManagerReconcile, ignoreManagerEnagageProcedure)
+	})
+
+	scheme := Scheme(t, WithKong)
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	envcfg, _ := Setup(t, ctx, scheme)
+
+	diagnosticsServerPort := testhelpers.GetFreePort(t)
+
+	ctx = ctrllog.IntoContext(ctx, testr.New(t))
+	t.Log("Running the manager")
+	m := SetupManager(ctx, t, manager.NewRandomID(), envcfg, AdminAPIOptFns(),
+		WithDefaultEnvTestsConfig(envcfg),
+		WithDiagnosticsServer(diagnosticsServerPort),
+		WithTelemetry(ts.Endpoint(), 100*time.Millisecond),
+	)
+	go func() {
+		err := m.Run(ctx)
+		require.NoError(t, err)
+	}()
+
+	t.Log("Waiting for the manager to become ready")
+	require.EventuallyWithT(t, func(t *assert.CollectT) {
+		require.NoError(t, m.IsReady())
+	}, time.Minute, time.Millisecond)
+
+	const (
+		waitTime = 3 * time.Second
+		tickTime = 10 * time.Millisecond
+	)
+	t.Log("Waiting for the anonymous reports to become ready")
+	require.Eventuallyf(t, func() bool {
+		select {
+		case <-ts.ReportChan():
+			return true
+		case <-time.After(tickTime):
+			return false
+		}
+	}, waitTime, tickTime, "telemetry report never matched expected value")
+
+	t.Log("Cancelling context")
+	cancel()
+
+	t.Logf("Waiting for the manager to stop gracefully, this should happen within %f seconds",
+		consts.DefaultGracefulShutdownTimeout.Seconds(),
+	)
+	<-time.After(consts.DefaultGracefulShutdownTimeout)
+}

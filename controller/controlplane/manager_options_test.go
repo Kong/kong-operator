@@ -1127,8 +1127,8 @@ func TestWithKonnectOptions(t *testing.T) {
 					}(),
 					InitialPollingPeriod: &metav1.Duration{Duration: 5 * time.Minute},
 					PollingPeriod:        &metav1.Duration{Duration: 10 * time.Minute},
-					StorageState: func() *operatorv2beta1.ControlPlaneKonnectLicensingState {
-						state := operatorv2beta1.ControlPlaneKonnectLicensingStateEnabled
+					StorageState: func() *operatorv2beta1.ControlPlaneKonnectLicenseStorageState {
+						state := operatorv2beta1.ControlPlaneKonnectLicenseStorageStateEnabled
 						return &state
 					}(),
 				},

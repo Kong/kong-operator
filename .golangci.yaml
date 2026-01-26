@@ -252,11 +252,11 @@ linters:
         text: symbol should have a godoc
       - linters:
           - godoclint
-        path: ingress-controller/test/(consts\.go|envtest|mocks|internal|helpers|integration/isolated|kongintegration)
+        path: ingress-controller/test/
         text: symbol should have a godoc
       - linters:
           - godoclint
-        path: test/(mocks|helpers|integration/utils.go)
+        path: test/(mocks|helpers|integration/utils.go|envtest)
         text: symbol should have a godoc
       - linters:
           - godoclint

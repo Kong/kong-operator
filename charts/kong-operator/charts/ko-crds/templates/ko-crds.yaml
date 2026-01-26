@@ -9456,6 +9456,7 @@ spec:
                   properties:
                     name:
                       description: Name is the name of the controller.
+                      maxLength: 63
                       minLength: 1
                       type: string
                     state:
@@ -9487,6 +9488,7 @@ spec:
                     properties:
                       name:
                         description: Ref is the name of the DataPlane to configure.
+                        maxLength: 63
                         minLength: 1
                         type: string
                     required:
@@ -9519,6 +9521,9 @@ spec:
                     description: |-
                       ReverseSync sends configuration to DataPlane (Kong Gateway) even if
                       the configuration checksum has not changed since previous update.
+                    enum:
+                    - enabled
+                    - disabled
                     type: string
                   timeout:
                     description: Timeout is the timeout of a single run of syncing
@@ -9580,6 +9585,7 @@ spec:
                   properties:
                     name:
                       description: Name is the name of the feature gate.
+                      maxLength: 63
                       minLength: 1
                       type: string
                     state:
@@ -9620,6 +9626,7 @@ spec:
                   which Ingress resources this ControlPlane should be responsible for.
 
                   If omitted, Ingress resources will not be supported by the ControlPlane.
+                maxLength: 63
                 type: string
               konnect:
                 description: Konnect defines the Konnect-related configuration options
@@ -9775,7 +9782,9 @@ spec:
                       List is a list of namespaces to watch for resources.
                       Only used when Type is set to List.
                     items:
+                      maxLength: 64
                       type: string
+                    maxItems: 64
                     type: array
                   type:
                     description: |-
@@ -9881,6 +9890,7 @@ spec:
                   properties:
                     name:
                       description: Name is the name of the controller.
+                      maxLength: 63
                       minLength: 1
                       type: string
                     state:
@@ -9906,6 +9916,7 @@ spec:
                 properties:
                   name:
                     description: Name is the name of the DataPlane.
+                    maxLength: 63
                     minLength: 1
                     type: string
                 required:
@@ -9921,6 +9932,7 @@ spec:
                   properties:
                     name:
                       description: Name is the name of the feature gate.
+                      maxLength: 63
                       minLength: 1
                       type: string
                     state:
@@ -38679,6 +38691,7 @@ spec:
                       properties:
                         name:
                           description: Name is the name of the controller.
+                          maxLength: 63
                           minLength: 1
                           type: string
                         state:
@@ -38710,6 +38723,9 @@ spec:
                         description: |-
                           ReverseSync sends configuration to DataPlane (Kong Gateway) even if
                           the configuration checksum has not changed since previous update.
+                        enum:
+                        - enabled
+                        - disabled
                         type: string
                       timeout:
                         description: Timeout is the timeout of a single run of syncing
@@ -38726,6 +38742,7 @@ spec:
                       properties:
                         name:
                           description: Name is the name of the feature gate.
+                          maxLength: 63
                           minLength: 1
                           type: string
                         state:
@@ -38766,6 +38783,7 @@ spec:
                       which Ingress resources this ControlPlane should be responsible for.
 
                       If omitted, Ingress resources will not be supported by the ControlPlane.
+                    maxLength: 63
                     type: string
                   konnect:
                     description: Konnect defines the Konnect-related configuration
@@ -38924,7 +38942,9 @@ spec:
                           List is a list of namespaces to watch for resources.
                           Only used when Type is set to List.
                         items:
+                          maxLength: 64
                           type: string
+                        maxItems: 64
                         type: array
                       type:
                         description: |-
@@ -48280,6 +48300,7 @@ spec:
                                   required:
                                   - type
                                   type: object
+                                maxItems: 8
                                 type: array
                                 x-kubernetes-list-type: atomic
                               minReplicas:
@@ -48353,6 +48374,7 @@ spec:
                                 description: |-
                                   Name defines the name of the service.
                                   If Name is empty, the controller will generate a service name from the owning object.
+                                maxLength: 63
                                 type: string
                               type:
                                 default: LoadBalancer
@@ -48396,14 +48418,17 @@ spec:
                       properties:
                         name:
                           description: Name is the name of the resource.
+                          maxLength: 63
                           minLength: 1
                           type: string
                         namespace:
                           description: Namespace is the namespace of the resource.
+                          maxLength: 63
                           type: string
                       required:
                       - name
                       type: object
+                    maxItems: 32
                     type: array
                   resources:
                     description: |-
@@ -54255,14 +54280,14 @@ spec:
                   - namespace
                   type: object
                   x-kubernetes-validations:
-                  - message: Only KongConsumer, KongConsumerGroup, KongCertificate,
+                  - message: Only KongConsumer, KongConsumerGroup, KongRoute, KongCertificate,
                       KongCACertificate, KongDataPlaneClientCertificate, KongService,
                       KongUpstream, KongKey, KongKeySet, KongVault and KongPluginBinding
                       kinds are supported for 'configuration.konghq.com' group
                     rule: self.group != 'configuration.konghq.com' || self.kind in
-                      [ 'KongConsumer', 'KongConsumerGroup', 'KongService', 'KongCertificate',
-                      'KongCACertificate', 'KongDataPlaneClientCertificate', 'KongUpstream',
-                      'KongKey', 'KongKeySet', 'KongVault', 'KongPluginBinding']
+                      [ 'KongConsumer', 'KongConsumerGroup', 'KongRoute', 'KongService',
+                      'KongCertificate', 'KongCACertificate', 'KongDataPlaneClientCertificate',
+                      'KongUpstream', 'KongKey', 'KongKeySet', 'KongVault', 'KongPluginBinding']
                   - message: namespace must be empty for KongVault and non-empty for
                       other kinds
                     rule: 'self.kind == ''KongVault'' ? self.__namespace__ == "" :
@@ -54315,10 +54340,10 @@ spec:
                       kinds are supported for 'konnect.konghq.com' group
                     rule: .self.group != 'konnect.konghq.com' || .self.kind in ['KonnectGatewayControlPlane',
                       'KonnectAPIAuthConfiguration']
-                  - message: Only 'KongPlugin' kind is supported for 'configuration.konghq.com'
-                      group
+                  - message: Only 'KongPlugin' and 'KongService' kinds are supported
+                      for 'configuration.konghq.com' group
                     rule: .self.group != 'configuration.konghq.com' || .self.kind
-                      in ['KongPlugin']
+                      in ['KongPlugin', 'KongService']
                 maxItems: 16
                 minItems: 1
                 type: array
@@ -54611,12 +54636,28 @@ spec:
                   specify a ServiceRef and be associated with a Service.
                 properties:
                   namespacedRef:
-                    description: NamespacedRef is a reference to a KongService.
+                    description: |-
+                      NamespacedRef is a reference to a KongService.
+                      If namespace is not specified, the KongService in the same namespace
+                      as the referencing entity.
+                      Namespace can be specified to reference a KongService in a different namespace
+                      but this requires a KongReferenceGrant in the target namespace allowing
+                      the reference.
                     properties:
                       name:
-                        description: Name is the name of the entity.
+                        description: Name is the name of the referred resource.
                         maxLength: 253
                         minLength: 1
+                        type: string
+                      namespace:
+                        description: |-
+                          Namespace is the namespace of the referred resource.
+
+                          For namespace-scoped resources if no Namespace is provided then the
+                          namespace of the parent object MUST be used.
+
+                          This field MUST not be set when referring to cluster-scoped resources.
+                        maxLength: 253
                         type: string
                     required:
                     - name

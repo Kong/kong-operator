@@ -1965,7 +1965,7 @@ ServiceRef is a reference to a KongService.
 | Field | Description |
 | --- | --- |
 | `type` _string_ | Type can be one of: - namespacedRef |
-| `namespacedRef` _[NameRef](#common-konghq-com-v1alpha1-types-nameref)_ | NamespacedRef is a reference to a KongService. |
+| `namespacedRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | NamespacedRef is a reference to a KongService. If namespace is not specified, the KongService in the same namespace as the referencing entity. Namespace can be specified to reference a KongService in a different namespace but this requires a KongReferenceGrant in the target namespace allowing the reference. |
 
 _Appears in:_
 
@@ -4049,6 +4049,26 @@ Allowed values:
 | `enabled` | ControlPlaneKonnectConsumersSyncStateEnabled indicates that consumer synchronization is enabled.<br /> |
 | `disabled` | ControlPlaneKonnectConsumersSyncStateDisabled indicates that consumer synchronization is disabled.<br /> |
 
+#### ControlPlaneKonnectLicenseStorageState
+
+_Underlying type:_ `string`
+
+ControlPlaneKonnectLicenseStorageState defines the state of Konnect licensing.
+
+
+
+
+_Appears in:_
+
+- [ControlPlaneKonnectLicensing](#gateway-operator-konghq-com-v2beta1-types-controlplanekonnectlicensing)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `enabled` | ControlPlaneKonnectLicenseStorageStateEnabled indicates that Konnect license storage is enabled.<br /> |
+| `disabled` | ControlPlaneKonnectLicenseStorageStateDisabled indicates that Konnect license storage is disabled.<br /> |
+
 #### ControlPlaneKonnectLicensing
 
 
@@ -4061,7 +4081,7 @@ ControlPlaneKonnectLicensing defines the configuration for Konnect licensing.
 | `state` _[ControlPlaneKonnectLicensingState](#gateway-operator-konghq-com-v2beta1-types-controlplanekonnectlicensingstate)_ | State indicates whether Konnect licensing is enabled. |
 | `initialPollingPeriod` _*k8s.io/apimachinery/pkg/apis/meta/v1.Duration_ | InitialPollingPeriod is the initial polling period for license checks. |
 | `pollingPeriod` _*k8s.io/apimachinery/pkg/apis/meta/v1.Duration_ | PollingPeriod is the polling period for license checks. |
-| `storageState` _[ControlPlaneKonnectLicensingState](#gateway-operator-konghq-com-v2beta1-types-controlplanekonnectlicensingstate)_ | StorageState indicates whether to store licenses fetched from Konnect to Secrets locally to use them later when connection to Konnect is broken. Only effective when State is set to enabled. |
+| `storageState` _[ControlPlaneKonnectLicenseStorageState](#gateway-operator-konghq-com-v2beta1-types-controlplanekonnectlicensestoragestate)_ | StorageState indicates whether to store licenses fetched from Konnect to Secrets locally to use them later when connection to Konnect is broken. Only effective when State is set to enabled. |
 
 _Appears in:_
 
