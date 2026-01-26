@@ -591,7 +591,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			}
 
 			if err := r.Create(ctx, &dpCert); err != nil {
-				if errS := (&apierrors.StatusError{}); errors.As(err, &errS) {
+				if errS, ok := errors.AsType[*apierrors.StatusError](err); ok {
 					if errS.ErrStatus.Reason == metav1.StatusReasonAlreadyExists {
 						log.Debug(logger, "DataPlane client certificate already exists", "name", dpCert.Name, "namespace", dpCert.Namespace)
 					}
@@ -652,7 +652,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			}
 
 			if err := r.Create(ctx, &dpCert); err != nil {
-				if errS := (&apierrors.StatusError{}); errors.As(err, &errS) {
+				if errS, ok := errors.AsType[*apierrors.StatusError](err); ok {
 					if errS.ErrStatus.Reason == metav1.StatusReasonAlreadyExists {
 						log.Debug(logger, "DataPlane client certificate already exists", "name", dpCert.Name, "namespace", dpCert.Namespace)
 					}

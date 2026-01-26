@@ -157,12 +157,11 @@ func ParseSDKErrorBody(body string) (sdkErrorBody, error) {
 //		]
 //	}
 func ErrorIsForbiddenError(err error) bool {
-	var errForbidden *sdkkonnecterrs.ForbiddenError
-	if errors.As(err, &errForbidden) {
+	if _, ok := errors.AsType[*sdkkonnecterrs.ForbiddenError](err); ok {
 		return true
 	}
-	var errSDK *sdkkonnecterrs.SDKError
-	if !errors.As(err, &errSDK) {
+	errSDK, ok := errors.AsType[*sdkkonnecterrs.SDKError](err)
+	if !ok {
 		return false
 	}
 
@@ -183,8 +182,8 @@ const (
 //
 // If the provided SDK error's details are empty or cannot be parsed, it returns true.
 func ErrorIsSDKError400(err error) bool {
-	var errSDK *sdkkonnecterrs.SDKError
-	if !errors.As(err, &errSDK) {
+	errSDK, ok := errors.AsType[*sdkkonnecterrs.SDKError](err)
+	if !ok {
 		return false
 	}
 
@@ -221,13 +220,11 @@ func ErrorIsSDKError400(err error) bool {
 // ErrorIsRateLimited returns true if the provided error is a 429 Too Many Requests error.
 // This can happen when the Konnect API rate limit is exhausted.
 func ErrorIsRateLimited(err error) bool {
-	var errRateLimited *sdkkonnecterrs.RateLimited
-	if errors.As(err, &errRateLimited) {
+	if _, ok := errors.AsType[*sdkkonnecterrs.RateLimited](err); ok {
 		return true
 	}
 
-	var errSDK *sdkkonnecterrs.SDKError
-	if errors.As(err, &errSDK) {
+	if errSDK, ok := errors.AsType[*sdkkonnecterrs.SDKError](err); ok {
 		return errSDK.StatusCode == http.StatusTooManyRequests
 	}
 
@@ -249,8 +246,7 @@ func GetRetryAfterFromRateLimitError(err error) (time.Duration, bool) {
 		return 0, false
 	}
 
-	var errSDK *sdkkonnecterrs.SDKError
-	if errors.As(err, &errSDK) && errSDK.RawResponse != nil {
+	if errSDK, ok := errors.AsType[*sdkkonnecterrs.SDKError](err); ok && errSDK.RawResponse != nil {
 		if retryAfter := errSDK.RawResponse.Header.Get("Retry-After"); retryAfter != "" {
 			// Try parsing as seconds (integer)
 			if seconds, parseErr := strconv.ParseInt(retryAfter, 10, 64); parseErr == nil && seconds > 0 {
@@ -282,8 +278,8 @@ func GetRetryAfterFromRateLimitError(err error) (time.Duration, bool) {
 //		"detail": "Key (org_id, name)=(8a6e97b1-1111-1111-1111-111111111111, test1) already exists."
 //	}
 func ErrorIsConflictError(err error) bool {
-	var errConflict *sdkkonnecterrs.ConflictError
-	if !errors.As(err, &errConflict) {
+	errConflict, ok := errors.AsType[*sdkkonnecterrs.ConflictError](err)
+	if !ok {
 		return false
 	}
 
@@ -305,8 +301,8 @@ func errConflictHasStatusCode(err *sdkkonnecterrs.ConflictError, n int) bool {
 
 // ErrorIsSDKBadRequestError returns true if the provided error is a BadRequestError.
 func ErrorIsSDKBadRequestError(err error) bool {
-	var errSDK *sdkkonnecterrs.BadRequestError
-	return errors.As(err, &errSDK)
+	_, ok := errors.AsType[*sdkkonnecterrs.BadRequestError](err)
+	return ok
 }
 
 // ErrorIsCreateConflict returns true if the provided error is a Konnect conflict error.
@@ -315,14 +311,10 @@ func ErrorIsSDKBadRequestError(err error) bool {
 // return 409 conflict for already existing entities and return ConflictError.
 // APIs that are shared with Kong Admin API return 400 for conflicts and return SDKError.
 func ErrorIsCreateConflict(err error) bool {
-	var (
-		errConflict *sdkkonnecterrs.ConflictError
-		sdkError    *sdkkonnecterrs.SDKError
-	)
-	if errors.As(err, &errConflict) {
+	if _, ok := errors.AsType[*sdkkonnecterrs.ConflictError](err); ok {
 		return true
 	}
-	if errors.As(err, &sdkError) {
+	if sdkError, ok := errors.AsType[*sdkkonnecterrs.SDKError](err); ok {
 		return SDKErrorIsConflict(sdkError)
 	}
 	return false
@@ -378,16 +370,17 @@ func SDKErrorIsConflict(sdkError *sdkkonnecterrs.SDKError) bool {
 
 // ErrIsNotFound returns true if the provided error indicates that the entity was not found on Konnect.
 func ErrIsNotFound(err error) bool {
-	var (
-		notFoundError  *sdkkonnecterrs.NotFoundError
-		sdkError       *sdkkonnecterrs.SDKError
-		sdkLegacyError *sdkkonnecterrs.KonnectCPLegacyNotFoundError
-	)
-
-	return errors.As(err, &notFoundError) ||
-		(errors.As(err, &sdkError) && sdkError.StatusCode == http.StatusNotFound) ||
-		// Returned by e.g. ListKongDataPlaneClientCertificates(...) for non-existing Control Plane ID.
-		errors.As(err, &sdkLegacyError)
+	if _, ok := errors.AsType[*sdkkonnecterrs.NotFoundError](err); ok {
+		return true
+	}
+	if sdkError, ok := errors.AsType[*sdkkonnecterrs.SDKError](err); ok && sdkError.StatusCode == http.StatusNotFound {
+		return true
+	}
+	// Returned by e.g. ListKongDataPlaneClientCertificates(...) for non-existing Control Plane ID.
+	if _, ok := errors.AsType[*sdkkonnecterrs.KonnectCPLegacyNotFoundError](err); ok {
+		return true
+	}
+	return false
 }
 
 // handleUpdateError handles errors that occur during an update operation.
@@ -483,8 +476,8 @@ func IgnoreAlreadyHandledErr(err error, logger logr.Logger) error {
 }
 
 func errorIsDataPlaneGroupConflictProposedConfigIsTheSame(err error) bool {
-	var errConflict *sdkkonnecterrs.ConflictError
-	if !errors.As(err, &errConflict) {
+	errConflict, ok := errors.AsType[*sdkkonnecterrs.ConflictError](err)
+	if !ok {
 		return false
 	}
 
@@ -504,8 +497,8 @@ func errorIsDataPlaneGroupConflictProposedConfigIsTheSame(err error) bool {
 }
 
 func errorIsDataPlaneGroupBadRequestPreviousConfigNotFinishedProvisioning(err error) bool {
-	var errBadRequest *sdkkonnecterrs.BadRequestError
-	if !errors.As(err, &errBadRequest) {
+	errBadRequest, ok := errors.AsType[*sdkkonnecterrs.BadRequestError](err)
+	if !ok {
 		return false
 	}
 

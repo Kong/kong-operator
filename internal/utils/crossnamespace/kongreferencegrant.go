@@ -39,8 +39,8 @@ func (e *ReferenceNotGrantedError) Error() string {
 // reference was attempted without the proper ReferenceGrant permissions.
 // It returns true if the error matches this type, false otherwise.
 func IsReferenceNotGranted(err error) bool {
-	var target *ReferenceNotGrantedError
-	return errors.As(err, &target)
+	_, ok := errors.AsType[*ReferenceNotGrantedError](err)
+	return ok
 }
 
 // CheckKongReferenceGrantForResource verifies that a cross-namespace reference is permitted by checking

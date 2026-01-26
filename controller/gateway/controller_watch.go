@@ -51,8 +51,9 @@ func (r *Reconciler) gatewayHasMatchingGatewayClass(obj client.Object) bool {
 		// class as well. If we fail here it's most likely because of some failure
 		// of the Kubernetes API and it's technically better to enqueue the object
 		// than to drop it for eventual consistency during cluster outages.
-		return !errors.As(err, &operatorerrors.UnsupportedGatewayClassError{}) &&
-			!errors.As(err, &operatorerrors.NotAcceptedGatewayClassError{})
+		_, isUnsupported := errors.AsType[operatorerrors.UnsupportedGatewayClassError](err)
+		_, isNotAccepted := errors.AsType[operatorerrors.NotAcceptedGatewayClassError](err)
+		return !isUnsupported && !isNotAccepted
 	}
 
 	return true
@@ -361,10 +362,12 @@ func (r *Reconciler) listManagedGatewaysInNamespace(ctx context.Context, obj cli
 		objKey := client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}
 
 		if _, err := gatewayclass.Get(ctx, r.Client, string(gateway.Spec.GatewayClassName)); err != nil {
+			_, isUnsupported := errors.AsType[*operatorerrors.UnsupportedGatewayClassError](err)
+			_, isNotAccepted := errors.AsType[*operatorerrors.NotAcceptedGatewayClassError](err)
 			switch {
-			case errors.As(err, &operatorerrors.UnsupportedGatewayClassError{}):
+			case isUnsupported:
 				log.Debug(logger, "gateway class not supported, ignoring")
-			case errors.As(err, &operatorerrors.NotAcceptedGatewayClassError{}):
+			case isNotAccepted:
 				log.Debug(logger, "gateway class not accepted, ignoring")
 			default:
 				log.Error(logger, err, "failed to get Gateway's GatewayClass",
