@@ -146,13 +146,16 @@ type KongPluginBindingTargets struct {
 
 // PluginRef is a reference to a KongPlugin or KongClusterPlugin resource.
 // +apireference:kgo:include
+// +kubebuilder:validation:XValidation:rule="self.kind == 'KongPlugin' || !has(self.__namespace__)", message="Namespace can be set only when kind is 'KongPlugin'"
 type PluginRef struct {
-	// TODO(mattia): cross-namespace references are not supported yet.
-	// https://github.com/Kong/kubernetes-configuration/issues/9
-
 	// Name is the name of the KongPlugin or KongClusterPlugin resource.
 	// +required
 	Name string `json:"name"`
+
+	// Namespace is the namespace of the referenced KongPlugin resource.
+	// Can only be set when Kind is KongPlugin.
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
 
 	// Kind can be KongPlugin or KongClusterPlugin. If not set, it is assumed to be KongPlugin.
 	// +kubebuilder:validation:Enum=KongPlugin;KongClusterPlugin

@@ -21,14 +21,32 @@ func createService(
 	sdk sdkkonnectgo.ServicesSDK,
 	svc *configurationv1alpha1.KongService,
 ) error {
-	if svc.GetControlPlaneID() == "" {
+	cpID := svc.GetControlPlaneID()
+	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: svc, Op: CreateOp}
 	}
 
-	resp, err := sdk.CreateService(ctx,
-		svc.Status.Konnect.ControlPlaneID,
-		kongServiceToSDKServiceInput(svc),
-	)
+	if svc.Spec.Name == nil || *svc.Spec.Name == "" {
+		serviceID := string(svc.GetUID())
+		resp, err := sdk.UpsertService(ctx, sdkkonnectops.UpsertServiceRequest{
+			ControlPlaneID: cpID,
+			ServiceID:      serviceID,
+			Service:        kongServiceToSDKServiceInput(svc),
+		})
+
+		if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, svc); errWrap != nil {
+			return errWrap
+		}
+
+		if resp == nil || resp.Service == nil || resp.Service.ID == nil {
+			return fmt.Errorf("failed creating %s: %w", svc.GetTypeName(), ErrNilResponse)
+		}
+
+		svc.SetKonnectID(*resp.Service.ID)
+		return nil
+	}
+
+	resp, err := sdk.CreateService(ctx, cpID, kongServiceToSDKServiceInput(svc))
 
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, svc); errWrap != nil {
 		return errWrap

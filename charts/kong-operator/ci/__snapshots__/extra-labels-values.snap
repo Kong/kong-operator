@@ -50265,12 +50265,19 @@ spec:
                   name:
                     description: Name is the name of the KongPlugin or KongClusterPlugin resource.
                     type: string
+                  namespace:
+                    description: |-
+                      Namespace is the namespace of the referenced KongPlugin resource.
+                      Can only be set when Kind is KongPlugin.
+                    type: string
                 required:
                 - name
                 type: object
                 x-kubernetes-validations:
                 - message: pluginRef name must be set
                   rule: self.name != ''
+                - message: Namespace can be set only when kind is 'KongPlugin'
+                  rule: self.kind == 'KongPlugin' || !has(self.__namespace__)
               scope:
                 default: OnlyTargets
                 description: Scope defines the scope of the plugin binding.
@@ -51084,8 +51091,8 @@ spec:
                   - namespace
                   type: object
                   x-kubernetes-validations:
-                  - message: Only KongConsumer, KongConsumerGroup, KongCertificate, KongCACertificate, KongDataPlaneClientCertificate, KongService, KongUpstream, KongKey, KongKeySet, and KongVault kinds are supported for 'configuration.konghq.com' group
-                    rule: self.group != 'configuration.konghq.com' || self.kind in [ 'KongConsumer', 'KongConsumerGroup', 'KongService', 'KongCertificate', 'KongCACertificate', 'KongDataPlaneClientCertificate', 'KongUpstream', 'KongKey', 'KongKeySet', 'KongVault']
+                  - message: Only KongConsumer, KongConsumerGroup, KongRoute, KongCertificate, KongCACertificate, KongDataPlaneClientCertificate, KongService, KongUpstream, KongKey, KongKeySet, KongVault and KongPluginBinding kinds are supported for 'configuration.konghq.com' group
+                    rule: self.group != 'configuration.konghq.com' || self.kind in [ 'KongConsumer', 'KongConsumerGroup', 'KongRoute', 'KongService', 'KongCertificate', 'KongCACertificate', 'KongDataPlaneClientCertificate', 'KongUpstream', 'KongKey', 'KongKeySet', 'KongVault', 'KongPluginBinding']
                   - message: namespace must be empty for KongVault and non-empty for other kinds
                     rule: 'self.kind == ''KongVault'' ? self.__namespace__ == "" : self.__namespace__ != ""'
                 maxItems: 16
@@ -51134,6 +51141,8 @@ spec:
                     rule: .self.group != 'core' || .self.kind == 'Secret'
                   - message: Only 'KonnectGatewayControlPlane' and 'KonnectAPIAuthConfiguration' kinds are supported for 'konnect.konghq.com' group
                     rule: .self.group != 'konnect.konghq.com' || .self.kind in ['KonnectGatewayControlPlane', 'KonnectAPIAuthConfiguration']
+                  - message: Only 'KongPlugin' and 'KongService' kinds are supported for 'configuration.konghq.com' group
+                    rule: .self.group != 'configuration.konghq.com' || .self.kind in ['KongPlugin', 'KongService']
                 maxItems: 16
                 minItems: 1
                 type: array
@@ -51385,12 +51394,28 @@ spec:
                   specify a ServiceRef and be associated with a Service.
                 properties:
                   namespacedRef:
-                    description: NamespacedRef is a reference to a KongService.
+                    description: |-
+                      NamespacedRef is a reference to a KongService.
+                      If namespace is not specified, the KongService in the same namespace
+                      as the referencing entity.
+                      Namespace can be specified to reference a KongService in a different namespace
+                      but this requires a KongReferenceGrant in the target namespace allowing
+                      the reference.
                     properties:
                       name:
-                        description: Name is the name of the entity.
+                        description: Name is the name of the referred resource.
                         maxLength: 253
                         minLength: 1
+                        type: string
+                      namespace:
+                        description: |-
+                          Namespace is the namespace of the referred resource.
+
+                          For namespace-scoped resources if no Namespace is provided then the
+                          namespace of the parent object MUST be used.
+
+                          This field MUST not be set when referring to cluster-scoped resources.
+                        maxLength: 253
                         type: string
                     required:
                     - name

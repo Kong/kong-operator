@@ -19,6 +19,7 @@ import (
 
 	"github.com/kong/kong-operator/controller/konnect/constraints"
 	"github.com/kong/kong-operator/controller/pkg/log"
+	"github.com/kong/kong-operator/internal/utils/crossnamespace"
 )
 
 // ErrNilResponse is an error indicating that a Konnect operation returned an empty response.
@@ -160,15 +161,53 @@ func ErrorIsForbiddenError(err error) bool {
 	return errSDK.StatusCode == 403
 }
 
+const (
+	// errorTypeReference is the error type for reference errors.
+	errorTypeReference = "ERROR_TYPE_REFERENCE"
+)
+
 // ErrorIsSDKError400 returns true if the provided error is a 400 BadRequestError.
 // This can happen when the requested entity fails the validation.
+//
+// It returns false when the error can be parsed as SDK error and all sub errors
+// are of type ERROR_TYPE_REFERENCE since those depend on
+// other entities that can be independently created/deleted in Konnect.
+//
+// If the provided SDK error's details are empty or cannot be parsed, it returns true.
 func ErrorIsSDKError400(err error) bool {
 	var errSDK *sdkkonnecterrs.SDKError
 	if !errors.As(err, &errSDK) {
 		return false
 	}
 
-	return errSDK.StatusCode == 400
+	if errSDK.StatusCode != 400 {
+		return false
+	}
+
+	// Parse the body to check for ERROR_TYPE_REFERENCE errors.
+	// These are recoverable because they depend on other entities that can be
+	// independently created/deleted in Konnect.
+	sdkErrBody, parseErr := ParseSDKErrorBody(errSDK.Body)
+	if parseErr != nil {
+		// If we can't parse the body, treat it as a 400 error.
+		return true
+	}
+
+	seenErrorReferenceError := false
+	allErrorReferenceErrors := true
+	for _, detail := range sdkErrBody.Details {
+		switch detail.Type {
+		case errorTypeReference:
+			seenErrorReferenceError = true
+		default:
+			allErrorReferenceErrors = false
+		}
+	}
+	if seenErrorReferenceError && allErrorReferenceErrors {
+		return false
+	}
+
+	return true
 }
 
 // ErrorIsRateLimited returns true if the provided error is a 429 Too Many Requests error.
@@ -420,6 +459,18 @@ func IgnoreUnrecoverableAPIErr(err error, logger logr.Logger) error {
 		}
 	}
 
+	return err
+}
+
+// IgnoreAlreadyHandledErr ignores errors that have already been handled
+// by setting the appropriate conditions in the object's status.
+// For now, it only handles cross-namespace reference errors: those should not
+// be logged, retried or reported to controller runtime's error handling.
+func IgnoreAlreadyHandledErr(err error, logger logr.Logger) error {
+	if crossnamespace.IsReferenceNotGranted(err) {
+		log.Info(logger, "cross-namespace reference error, consult object's status for details", "err", err)
+		return nil
+	}
 	return err
 }
 

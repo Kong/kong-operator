@@ -292,6 +292,37 @@ func enqueueObjectsForKonnectAPIAuthConfiguration[
 	}
 }
 
+// WatchableEntityType is a constraint that represents all Konnect-related
+// entity types that can be watched.
+type WatchableEntityType interface {
+	konnectv1alpha2.KonnectGatewayControlPlane |
+		konnectv1alpha1.KonnectCloudGatewayNetwork |
+		konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration |
+		konnectv1alpha1.KonnectCloudGatewayTransitGateway |
+		configurationv1alpha1.KongService |
+		configurationv1alpha1.KongRoute |
+		configurationv1.KongConsumer |
+		configurationv1beta1.KongConsumerGroup |
+		configurationv1alpha1.KongPluginBinding |
+		configurationv1alpha1.KongCredentialBasicAuth |
+		configurationv1alpha1.KongCredentialAPIKey |
+		configurationv1alpha1.KongCredentialACL |
+		configurationv1alpha1.KongCredentialJWT |
+		configurationv1alpha1.KongCredentialHMAC |
+		configurationv1alpha1.KongUpstream |
+		configurationv1alpha1.KongCACertificate |
+		configurationv1alpha1.KongCertificate |
+		configurationv1alpha1.KongTarget |
+		configurationv1alpha1.KongVault |
+		configurationv1alpha1.KongKey |
+		configurationv1alpha1.KongKeySet |
+		configurationv1alpha1.KongSNI |
+		configurationv1alpha1.KongDataPlaneClientCertificate |
+		konnectv1alpha1.KonnectAPIAuthConfiguration
+
+	GetTypeName() string
+}
+
 // enqueueObjectsForKongReferenceGrant returns a function that enqueues
 // reconcile.Requests for objects that are allowed by the KongReferenceGrant.
 // This is useful for situations where a KongReferenceGrant is created/updated/deleted
@@ -305,8 +336,12 @@ func enqueueObjectsForKongReferenceGrant[
 		client.ObjectList
 		GetItems() []T
 	},
-	T constraints.SupportedKonnectEntityType,
-	TT constraints.EntityType[T],
+	T WatchableEntityType,
+	TT interface {
+		*T
+		GetNamespace() string
+		GetName() string
+	},
 ](
 	cl client.Client,
 ) func(ctx context.Context, obj client.Object) []reconcile.Request {

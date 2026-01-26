@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/samber/lo"
@@ -288,6 +289,438 @@ func TestTranslateRequestRedirectHostname(t *testing.T) {
 	}
 }
 
+func TestTranslateRequestRedirectPreFunction(t *testing.T) {
+	tests := []struct {
+		name          string
+		filter        gwtypes.HTTPRouteFilter
+		rule          gwtypes.HTTPRouteRule
+		expectedError string
+		validateFunc  func(t *testing.T, config accessPreFunctionConfig)
+	}{
+		{
+			name: "missing RequestRedirect config",
+			filter: gwtypes.HTTPRouteFilter{
+				Type:            gatewayv1.HTTPRouteFilterRequestRedirect,
+				RequestRedirect: nil,
+			},
+			rule:          gwtypes.HTTPRouteRule{},
+			expectedError: "RequestRedirect filter config is missing",
+		},
+		{
+			name: "missing RequestRedirect ReplacePrefixMatch modifier",
+			filter: gwtypes.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
+				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
+					Path: &gatewayv1.HTTPPathModifier{
+						Type:               gatewayv1.PrefixMatchHTTPPathModifier,
+						ReplacePrefixMatch: nil,
+					},
+				},
+			},
+			rule: gwtypes.HTTPRouteRule{
+				Matches: []gatewayv1.HTTPRouteMatch{
+					{
+						Path: &gatewayv1.HTTPPathMatch{
+							Type:  lo.ToPtr(gatewayv1.PathMatchPathPrefix),
+							Value: lo.ToPtr("/api"),
+						},
+					},
+				},
+			},
+			validateFunc: func(t *testing.T, config accessPreFunctionConfig) {
+				require.Len(t, config.Access, 1)
+				luaCode := config.Access[0]
+				// When ReplacePrefixMatch is nil, it should use empty string
+				assert.Contains(t, luaCode, `local custom_prefix = [[]]`)
+				assert.Contains(t, luaCode, `local match_prefix = [[/api]]`)
+			},
+		},
+		{
+			name: "basic prefix match redirect with defaults",
+			filter: gwtypes.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
+				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
+					Path: &gatewayv1.HTTPPathModifier{
+						Type:               gatewayv1.PrefixMatchHTTPPathModifier,
+						ReplacePrefixMatch: lo.ToPtr("/new-api"),
+					},
+				},
+			},
+			rule: gwtypes.HTTPRouteRule{
+				Matches: []gatewayv1.HTTPRouteMatch{
+					{
+						Path: &gatewayv1.HTTPPathMatch{
+							Type:  lo.ToPtr(gatewayv1.PathMatchPathPrefix),
+							Value: lo.ToPtr("/api"),
+						},
+					},
+				},
+			},
+			validateFunc: func(t *testing.T, config accessPreFunctionConfig) {
+				require.Len(t, config.Access, 1)
+				luaCode := config.Access[0]
+				assert.Contains(t, luaCode, `local match_prefix = [[/api]]`)
+				assert.Contains(t, luaCode, `local custom_prefix = [[/new-api]]`)
+				assert.Contains(t, luaCode, `local custom_host = [[]]`)
+				assert.Contains(t, luaCode, `local custom_scheme = [[]]`)
+				assert.Contains(t, luaCode, `local code = 302`)
+				assert.Contains(t, luaCode, `kong.response.exit(code`)
+			},
+		},
+		{
+			name: "prefix match with custom scheme",
+			filter: gwtypes.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
+				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
+					Scheme: lo.ToPtr("https"),
+					Path: &gatewayv1.HTTPPathModifier{
+						Type:               gatewayv1.PrefixMatchHTTPPathModifier,
+						ReplacePrefixMatch: lo.ToPtr("/secure"),
+					},
+				},
+			},
+			rule: gwtypes.HTTPRouteRule{
+				Matches: []gatewayv1.HTTPRouteMatch{
+					{
+						Path: &gatewayv1.HTTPPathMatch{
+							Type:  lo.ToPtr(gatewayv1.PathMatchPathPrefix),
+							Value: lo.ToPtr("/old"),
+						},
+					},
+				},
+			},
+			validateFunc: func(t *testing.T, config accessPreFunctionConfig) {
+				require.Len(t, config.Access, 1)
+				luaCode := config.Access[0]
+				assert.Contains(t, luaCode, `local custom_scheme = [[https]]`)
+			},
+		},
+		{
+			name: "prefix match with custom host and port",
+			filter: gwtypes.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
+				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
+					Hostname: lo.ToPtr(gatewayv1.PreciseHostname("new.example.com")),
+					Port:     lo.ToPtr(gatewayv1.PortNumber(8443)),
+					Path: &gatewayv1.HTTPPathModifier{
+						Type:               gatewayv1.PrefixMatchHTTPPathModifier,
+						ReplacePrefixMatch: lo.ToPtr("/v2"),
+					},
+				},
+			},
+			rule: gwtypes.HTTPRouteRule{
+				Matches: []gatewayv1.HTTPRouteMatch{
+					{
+						Path: &gatewayv1.HTTPPathMatch{
+							Type:  lo.ToPtr(gatewayv1.PathMatchPathPrefix),
+							Value: lo.ToPtr("/v1"),
+						},
+					},
+				},
+			},
+			validateFunc: func(t *testing.T, config accessPreFunctionConfig) {
+				require.Len(t, config.Access, 1)
+				luaCode := config.Access[0]
+				assert.Contains(t, luaCode, `local custom_host = [[new.example.com]]`)
+			},
+		},
+		{
+			name: "prefix match with custom status code",
+			filter: gwtypes.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
+				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
+					StatusCode: lo.ToPtr(301),
+					Path: &gatewayv1.HTTPPathModifier{
+						Type:               gatewayv1.PrefixMatchHTTPPathModifier,
+						ReplacePrefixMatch: lo.ToPtr("/permanent"),
+					},
+				},
+			},
+			rule: gwtypes.HTTPRouteRule{
+				Matches: []gatewayv1.HTTPRouteMatch{
+					{
+						Path: &gatewayv1.HTTPPathMatch{
+							Type:  lo.ToPtr(gatewayv1.PathMatchPathPrefix),
+							Value: lo.ToPtr("/temp"),
+						},
+					},
+				},
+			},
+			validateFunc: func(t *testing.T, config accessPreFunctionConfig) {
+				require.Len(t, config.Access, 1)
+				luaCode := config.Access[0]
+				assert.Contains(t, luaCode, `local code = 301`)
+			},
+		},
+		{
+			name: "prefix match with all options",
+			filter: gwtypes.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
+				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
+					Scheme:     lo.ToPtr("https"),
+					Hostname:   lo.ToPtr(gatewayv1.PreciseHostname("secure.example.com")),
+					Port:       lo.ToPtr(gatewayv1.PortNumber(443)),
+					StatusCode: lo.ToPtr(308),
+					Path: &gatewayv1.HTTPPathModifier{
+						Type:               gatewayv1.PrefixMatchHTTPPathModifier,
+						ReplacePrefixMatch: lo.ToPtr("/api/v2"),
+					},
+				},
+			},
+			rule: gwtypes.HTTPRouteRule{
+				Matches: []gatewayv1.HTTPRouteMatch{
+					{
+						Path: &gatewayv1.HTTPPathMatch{
+							Type:  lo.ToPtr(gatewayv1.PathMatchPathPrefix),
+							Value: lo.ToPtr("/api/v1"),
+						},
+					},
+				},
+			},
+			validateFunc: func(t *testing.T, config accessPreFunctionConfig) {
+				require.Len(t, config.Access, 1)
+				luaCode := config.Access[0]
+				assert.Contains(t, luaCode, `local match_prefix = [[/api/v1]]`)
+				assert.Contains(t, luaCode, `local custom_prefix = [[/api/v2]]`)
+				assert.Contains(t, luaCode, `local custom_host = [[secure.example.com]]`)
+				assert.Contains(t, luaCode, `local custom_scheme = [[https]]`)
+				assert.Contains(t, luaCode, `local code = 308`)
+			},
+		},
+		{
+			name: "prefix match with special characters in path",
+			filter: gwtypes.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
+				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
+					Path: &gatewayv1.HTTPPathModifier{
+						Type:               gatewayv1.PrefixMatchHTTPPathModifier,
+						ReplacePrefixMatch: lo.ToPtr("/new-path/with-dashes_and_underscores"),
+					},
+				},
+			},
+			rule: gwtypes.HTTPRouteRule{
+				Matches: []gatewayv1.HTTPRouteMatch{
+					{
+						Path: &gatewayv1.HTTPPathMatch{
+							Type:  lo.ToPtr(gatewayv1.PathMatchPathPrefix),
+							Value: lo.ToPtr("/old-path"),
+						},
+					},
+				},
+			},
+			validateFunc: func(t *testing.T, config accessPreFunctionConfig) {
+				require.Len(t, config.Access, 1)
+				luaCode := config.Access[0]
+				assert.Contains(t, luaCode, `[[/new-path/with-dashes_and_underscores]]`)
+			},
+		},
+		{
+			name: "prefix match with empty replacement prefix",
+			filter: gwtypes.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
+				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
+					Path: &gatewayv1.HTTPPathModifier{
+						Type:               gatewayv1.PrefixMatchHTTPPathModifier,
+						ReplacePrefixMatch: lo.ToPtr(""),
+					},
+				},
+			},
+			rule: gwtypes.HTTPRouteRule{
+				Matches: []gatewayv1.HTTPRouteMatch{
+					{
+						Path: &gatewayv1.HTTPPathMatch{
+							Type:  lo.ToPtr(gatewayv1.PathMatchPathPrefix),
+							Value: lo.ToPtr("/remove-prefix"),
+						},
+					},
+				},
+			},
+			validateFunc: func(t *testing.T, config accessPreFunctionConfig) {
+				require.Len(t, config.Access, 1)
+				luaCode := config.Access[0]
+				assert.Contains(t, luaCode, `local custom_prefix = [[]]`)
+				assert.Contains(t, luaCode, `local match_prefix = [[/remove-prefix]]`)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := translateRequestRedirectPreFunction(tt.filter, tt.rule)
+
+			if tt.expectedError != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedError)
+			} else {
+				require.NoError(t, err)
+				if tt.validateFunc != nil {
+					tt.validateFunc(t, result)
+				}
+			}
+		})
+	}
+}
+
+func TestTranslateRequestRedirectGenerateFunctionBody(t *testing.T) {
+	tests := []struct {
+		name         string
+		sourcePrefix string
+		targetPrefix string
+		targetHost   string
+		customScheme string
+		customCode   int
+		validate     func(t *testing.T, luaCode string)
+	}{
+		{
+			name:         "all custom parameters",
+			sourcePrefix: "/api/v1",
+			targetPrefix: "/api/v2",
+			targetHost:   "https://api.example.com:443",
+			customScheme: "https",
+			customCode:   307,
+			validate: func(t *testing.T, luaCode string) {
+				assert.Contains(t, luaCode, `local match_prefix = [[/api/v1]]`)
+				assert.Contains(t, luaCode, `local custom_prefix = [[/api/v2]]`)
+				assert.Contains(t, luaCode, `local custom_host = [[https://api.example.com:443]]`)
+				assert.Contains(t, luaCode, `local custom_scheme = [[https]]`)
+				assert.Contains(t, luaCode, `local code = 307`)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := translateRequestRedirectGenerateFunctionBody(
+				tt.sourcePrefix,
+				tt.targetPrefix,
+				tt.targetHost,
+				tt.customScheme,
+				tt.customCode,
+			)
+
+			assert.NotEmpty(t, result)
+			if tt.validate != nil {
+				tt.validate(t, result)
+			}
+
+			// Verify it's valid Lua structure (basic syntax check)
+			assert.Contains(t, result, "-- Inputs")
+			assert.Contains(t, result, "local match_prefix")
+			assert.Contains(t, result, "local custom_prefix")
+			assert.Contains(t, result, "local custom_host")
+			assert.Contains(t, result, "local custom_scheme")
+			assert.Contains(t, result, "local code")
+		})
+	}
+}
+
+func TestTranslateFromFilterWithPrefixMatchRedirect(t *testing.T) {
+	tests := []struct {
+		name          string
+		rule          gwtypes.HTTPRouteRule
+		filter        gwtypes.HTTPRouteFilter
+		expectedError string
+		validate      func(t *testing.T, configs []kongPluginConfig)
+	}{
+		{
+			name: "RequestRedirect with PrefixMatch uses pre-function plugin",
+			rule: gwtypes.HTTPRouteRule{
+				Matches: []gatewayv1.HTTPRouteMatch{
+					{
+						Path: &gatewayv1.HTTPPathMatch{
+							Type:  lo.ToPtr(gatewayv1.PathMatchPathPrefix),
+							Value: lo.ToPtr("/api/v1"),
+						},
+					},
+				},
+			},
+			filter: gwtypes.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
+				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
+					Path: &gatewayv1.HTTPPathModifier{
+						Type:               gatewayv1.PrefixMatchHTTPPathModifier,
+						ReplacePrefixMatch: lo.ToPtr("/api/v2"),
+					},
+				},
+			},
+			validate: func(t *testing.T, configs []kongPluginConfig) {
+				require.Len(t, configs, 1)
+				assert.Equal(t, "pre-function", configs[0].name)
+				assert.NotEmpty(t, configs[0].config)
+
+				// Verify it's valid JSON for accessPreFunctionConfig
+				var preFuncConfig accessPreFunctionConfig
+				err := json.Unmarshal(configs[0].config, &preFuncConfig)
+				require.NoError(t, err)
+				require.Len(t, preFuncConfig.Access, 1)
+				assert.Contains(t, preFuncConfig.Access[0], `local match_prefix = [[/api/v1]]`)
+			},
+		},
+		{
+			name: "RequestRedirect with FullPath uses redirect plugin",
+			rule: gwtypes.HTTPRouteRule{},
+			filter: gwtypes.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
+				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
+					Hostname: lo.ToPtr(gatewayv1.PreciseHostname("example.com")),
+					Path: &gatewayv1.HTTPPathModifier{
+						Type:            gatewayv1.FullPathHTTPPathModifier,
+						ReplaceFullPath: lo.ToPtr("/new-path"),
+					},
+				},
+			},
+			validate: func(t *testing.T, configs []kongPluginConfig) {
+				require.Len(t, configs, 1)
+				assert.Equal(t, "redirect", configs[0].name)
+				assert.NotEmpty(t, configs[0].config)
+
+				// Verify it's valid JSON for requestRedirectConfig
+				var redirectConfig requestRedirectConfig
+				err := json.Unmarshal(configs[0].config, &redirectConfig)
+				require.NoError(t, err)
+				assert.Equal(t, "http://example.com/new-path", redirectConfig.Location)
+			},
+		},
+		{
+			name: "RequestRedirect without path uses redirect plugin",
+			rule: gwtypes.HTTPRouteRule{},
+			filter: gwtypes.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
+				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
+					Hostname: lo.ToPtr(gatewayv1.PreciseHostname("example.com")),
+				},
+			},
+			validate: func(t *testing.T, configs []kongPluginConfig) {
+				require.Len(t, configs, 1)
+				assert.Equal(t, "redirect", configs[0].name)
+				assert.NotEmpty(t, configs[0].config)
+
+				// Verify it's valid JSON for requestRedirectConfig
+				var redirectConfig requestRedirectConfig
+				err := json.Unmarshal(configs[0].config, &redirectConfig)
+				require.NoError(t, err)
+				assert.Equal(t, "http://example.com/", redirectConfig.Location)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := translateFromFilter(tt.rule, tt.filter)
+
+			if tt.expectedError != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedError)
+			} else {
+				require.NoError(t, err)
+				if tt.validate != nil {
+					tt.validate(t, result)
+				}
+			}
+		})
+	}
+}
+
 func TestTranslateRequestRedirectPath(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -338,7 +771,7 @@ func TestTranslateRequestRedirectPath(t *testing.T) {
 					ReplacePrefixMatch: lo.ToPtr("/api"),
 				},
 			},
-			expected: "/",
+			expected: "",
 		},
 		{
 			name: "unsupported path modifier type",

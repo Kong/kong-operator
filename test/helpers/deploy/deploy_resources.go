@@ -145,7 +145,7 @@ func WithNamespacedKongServiceRef(svc *configurationv1alpha1.KongService) ObjOpt
 
 		svcRef := &configurationv1alpha1.ServiceRef{
 			Type: string(commonv1alpha1.ObjectRefTypeNamespacedRef),
-			NamespacedRef: &commonv1alpha1.NameRef{
+			NamespacedRef: &commonv1alpha1.NamespacedRef{
 				Name: svc.GetName(),
 			},
 		}

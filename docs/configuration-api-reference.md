@@ -1907,6 +1907,7 @@ PluginRef is a reference to a KongPlugin or KongClusterPlugin resource.
 | Field | Description |
 | --- | --- |
 | `name` _string_ | Name is the name of the KongPlugin or KongClusterPlugin resource. |
+| `namespace` _string_ | Namespace is the namespace of the referenced KongPlugin resource. Can only be set when Kind is KongPlugin. |
 | `kind` _*string_ | Kind can be KongPlugin or KongClusterPlugin. If not set, it is assumed to be KongPlugin. |
 
 _Appears in:_
@@ -1958,7 +1959,7 @@ ServiceRef is a reference to a KongService.
 | Field | Description |
 | --- | --- |
 | `type` _string_ | Type can be one of: - namespacedRef |
-| `namespacedRef` _[NameRef](#common-konghq-com-v1alpha1-types-nameref)_ | NamespacedRef is a reference to a KongService. |
+| `namespacedRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | NamespacedRef is a reference to a KongService. If namespace is not specified, the KongService in the same namespace as the referencing entity. Namespace can be specified to reference a KongService in a different namespace but this requires a KongReferenceGrant in the target namespace allowing the reference. |
 
 _Appears in:_
 
