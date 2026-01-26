@@ -482,7 +482,7 @@ func TestControlPlane_RoundTrip(t *testing.T) {
 							State:                lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingStateEnabled),
 							InitialPollingPeriod: &metav1.Duration{Duration: 10 * time.Second},
 							PollingPeriod:        &metav1.Duration{Duration: 60 * time.Second},
-							StorageState:         lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingStateDisabled),
+							StorageState:         lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicenseStorageStateDisabled),
 						},
 						NodeRefreshPeriod:  &metav1.Duration{Duration: 30 * time.Second},
 						ConfigUploadPeriod: &metav1.Duration{Duration: 10 * time.Second},

@@ -71,8 +71,10 @@ type HorizontalScaling struct {
 	// increased, and vice-versa.  See the individual metric source types for
 	// more information about how each type of metric must respond.
 	// If not set, the default metric will be set to 80% average CPU utilization.
+	//
 	// +listType=atomic
 	// +optional
+	// +kubebuilder:validation:MaxItems=8
 	Metrics []autoscalingv2.MetricSpec `json:"metrics,omitempty" protobuf:"bytes,4,rep,name=metrics"`
 
 	// behavior configures the scaling behavior of the target
@@ -250,11 +252,13 @@ type NamespacedName struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=63
 	Name string `json:"name"`
 
 	// Namespace is the namespace of the resource.
 	//
 	// +optional
+	// +kubebuilder:validation:MaxLength=63
 	Namespace string `json:"namespace"`
 }
 
@@ -288,6 +292,7 @@ type ServiceOptions struct {
 	// If Name is empty, the controller will generate a service name from the owning object.
 	//
 	// +optional
+	// +kubebuilder:validation:MaxLength=63
 	Name *string `json:"name,omitempty"`
 
 	// Annotations is an unstructured key value map stored with a resource that may be
