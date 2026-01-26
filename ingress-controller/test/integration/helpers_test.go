@@ -23,9 +23,6 @@ const (
 	defaultGatewayName = helpers.DefaultGatewayName
 	// unmanagedGatewayClassName is the name of the default GatewayClass created during the test environment setup.
 	unmanagedGatewayClassName = "kong-unmanaged"
-	// unsupportedControllerName is the name of the controller used for those gateways that are not supported
-	// by an actual controller (i.e., they won't be scheduled).
-	unsupportedControllerName gatewayapi.GatewayController = "example.com/unsupported-gateway-controller"
 	// kongRouterFlavorExpressions is the value used in router_flavor of kong configuration
 	// to enable expression based router of kong.
 	kongRouterFlavorExpressions = "expressions"
