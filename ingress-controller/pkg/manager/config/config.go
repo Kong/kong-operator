@@ -86,7 +86,7 @@ func NewConfig(opts ...Opt) Config {
 		LeaderElectionNamespace:  "",
 		LeaderElectionForce:      "",
 		FilterTags:               []string{"managed-by-ingress-controller"},
-		Concurrency:              10,
+		Concurrency:              1,
 		WatchNamespaces:          nil,
 		EmitKubernetesEvents:     true,
 		ClusterDomain:            DefaultClusterDomain,
