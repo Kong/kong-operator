@@ -22,10 +22,9 @@ import (
 
 	configurationv1beta1 "github.com/kong/kong-operator/api/configuration/v1beta1"
 	incubatorv1alpha1 "github.com/kong/kong-operator/api/incubator/v1alpha1"
-	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
-	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/ingress-controller/test"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers"
+	"github.com/kong/kong-operator/ingress-controller/test/annotations"
+	"github.com/kong/kong-operator/ingress-controller/test/gatewayapi"
 	"github.com/kong/kong-operator/ingress-controller/test/testlabels"
 	"github.com/kong/kong-operator/pkg/clientset"
 )
@@ -35,7 +34,7 @@ func TestKongUpstreamPolicyStatus(t *testing.T) {
 		New("essentials").
 		WithLabel(testlabels.Kind, testlabels.KindKongUpstreamPolicy).
 		WithSetup("deploy kong addon into cluster", featureSetup(
-			withControllerManagerOpts(helpers.ControllerManagerOptAdditionalWatchNamespace("default")),
+			withControllerManagerOpts(ControllerManagerOptAdditionalWatchNamespace("default")),
 		)).
 		WithSetup("prepare clients", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			cluster := GetClusterFromCtx(ctx)
@@ -188,12 +187,12 @@ func TestKongUpstreamPolicyStatus(t *testing.T) {
 
 			t.Log("creating IngressClass")
 			gatewayClassName := uuid.NewString()
-			gwc, err := helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+			gwc, err := DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
 			require.NoError(t, err)
 			cleaner.Add(gwc)
 
 			t.Log("creating Gateway")
-			gw, err := helpers.DeployGateway(ctx, gatewayClient, namespace, gatewayClassName)
+			gw, err := DeployGateway(ctx, gatewayClient, namespace, gatewayClassName)
 			require.NoError(t, err)
 			cleaner.Add(gw)
 

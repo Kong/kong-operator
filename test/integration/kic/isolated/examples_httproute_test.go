@@ -23,15 +23,14 @@ import (
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
-	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane"
-	"github.com/kong/kong-operator/ingress-controller/internal/diagnostics"
-	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
-	"github.com/kong/kong-operator/test/integration/kic/consts"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers"
+	"github.com/kong/kong-operator/ingress-controller/test/annotations"
+	"github.com/kong/kong-operator/ingress-controller/test/dataplane"
+	"github.com/kong/kong-operator/ingress-controller/test/diagnostics"
+	"github.com/kong/kong-operator/ingress-controller/test/gatewayapi"
 	"github.com/kong/kong-operator/ingress-controller/test/testlabels"
 	"github.com/kong/kong-operator/pkg/clientset"
+	"github.com/kong/kong-operator/test/integration/kic/consts"
 )
 
 func TestHTTPRouteExample(t *testing.T) {
@@ -43,7 +42,7 @@ func TestHTTPRouteExample(t *testing.T) {
 		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyGatewayAPI).
 		WithLabel(testlabels.Kind, testlabels.KindHTTPRoute).
 		WithSetup("deploy kong addon into cluster", featureSetup(
-			withControllerManagerOpts(helpers.ControllerManagerOptAdditionalWatchNamespace("default")),
+			withControllerManagerOpts(ControllerManagerOptAdditionalWatchNamespace("default")),
 		)).
 		Assess("deploying to cluster works and HTTP requests are routed properly",
 			runHTTPRouteExampleTestScenario(httprouteExampleManifest),
@@ -63,7 +62,7 @@ func TestHTTPRouteWithBrokenPluginFallback(t *testing.T) {
 		WithLabel(testlabels.Kind, testlabels.KindHTTPRoute).
 		WithSetup("deploy kong addon into cluster", featureSetup(
 			withControllerManagerOpts(
-				helpers.ControllerManagerOptAdditionalWatchNamespace("default"),
+				ControllerManagerOptAdditionalWatchNamespace("default"),
 			),
 			withControllerManagerFeatureGates(map[string]string{managercfg.FallbackConfigurationFeature: "true"}),
 		)).
@@ -74,7 +73,7 @@ func TestHTTPRouteWithBrokenPluginFallback(t *testing.T) {
 			proxyURL := GetHTTPURLFromCtx(ctx)
 			t.Logf("verifying that Kong gateway response in returned instead of desired site")
 
-			helpers.EventuallyGETPath(
+			EventuallyGETPath(
 				t,
 				proxyURL,
 				proxyURL.Host,
@@ -92,8 +91,8 @@ func TestHTTPRouteWithBrokenPluginFallback(t *testing.T) {
 			diagURL := GetDiagURLFromCtx(ctx)
 			t.Logf("verifying diag available")
 			require.EventuallyWithT(t, func(c *assert.CollectT) {
-				cl := helpers.DefaultHTTPClient()
-				resp, err := cl.Do(helpers.MustHTTPRequest(t, http.MethodGet, diagURL.Host, "/debug/config/fallback", nil))
+				cl := DefaultHTTPClient()
+				resp, err := cl.Do(MustHTTPRequest(t, http.MethodGet, diagURL.Host, "/debug/config/fallback", nil))
 				if !assert.NoError(c, err) {
 					return
 				}
@@ -136,7 +135,7 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 	testAdditionalRoute := func(t *testing.T, proxyURL *url.URL) {
 		t.Helper()
 		t.Log("verifying that routing to additional route works and header added by plugin is returned")
-		helpers.EventuallyGETPath(
+		EventuallyGETPath(
 			t,
 			proxyURL,
 			proxyURL.Host,
@@ -163,8 +162,8 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 		WithLabel(testlabels.Kind, testlabels.KindHTTPRoute).
 		WithSetup("deploy kong addon into cluster", featureSetup(
 			withControllerManagerOpts(
-				helpers.ControllerManagerOptAdditionalWatchNamespace(namespace),
-				helpers.ControllerManagerOptFlagUseLastValidConfigForFallback(),
+				ControllerManagerOptAdditionalWatchNamespace(namespace),
+				ControllerManagerOptFlagUseLastValidConfigForFallback(),
 			),
 			withControllerManagerFeatureGates(map[string]string{managercfg.FallbackConfigurationFeature: "true"}),
 		)).
@@ -294,7 +293,7 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 
 			const newRoute = "/new-route"
 			t.Logf("verifying that /httproute-testing is no longer operational")
-			helpers.EventuallyGETPath(
+			EventuallyGETPath(
 				t,
 				proxyURL,
 				proxyURL.Host,
@@ -308,7 +307,7 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 			)
 
 			t.Logf("verifying that /new-route is operational and loadbalanced")
-			helpers.EventuallyGETPath(
+			EventuallyGETPath(
 				t,
 				proxyURL,
 				proxyURL.Host,
@@ -320,7 +319,7 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 				consts.IngressWait,
 				consts.WaitTick,
 			)
-			helpers.EventuallyGETPath(
+			EventuallyGETPath(
 				t,
 				proxyURL,
 				proxyURL.Host,
@@ -355,7 +354,7 @@ func runHTTPRouteExampleTestScenario(manifestToUse string) func(ctx context.Cont
 		t.Logf("verifying that traffic is routed properly")
 
 		t.Logf("verifying that the HTTPRoute becomes routable")
-		helpers.EventuallyGETPath(
+		EventuallyGETPath(
 			t,
 			proxyURL,
 			proxyURL.Host,
@@ -369,7 +368,7 @@ func runHTTPRouteExampleTestScenario(manifestToUse string) func(ctx context.Cont
 		)
 
 		t.Logf("verifying that the backendRefs are being loadbalanced")
-		helpers.EventuallyGETPath(
+		EventuallyGETPath(
 			t,
 			proxyURL,
 			proxyURL.Host,

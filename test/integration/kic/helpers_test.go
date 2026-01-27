@@ -13,14 +13,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
-	"github.com/kong/kong-operator/ingress-controller/internal/util"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers"
+	"github.com/kong/kong-operator/ingress-controller/test/gatewayapi"
+	"github.com/kong/kong-operator/ingress-controller/test/util"
 )
 
 const (
 	// defaultGatewayName is the default name for the Gateways created during tests.
-	defaultGatewayName = helpers.DefaultGatewayName
+	defaultGatewayName = DefaultGatewayName
 	// unmanagedGatewayClassName is the name of the default GatewayClass created during the test environment setup.
 	unmanagedGatewayClassName = "kong-unmanaged"
 	// unsupportedControllerName is the name of the controller used for those gateways that are not supported
@@ -52,7 +51,7 @@ func gatewayHealthCheck(ctx context.Context, client *gatewayclient.Clientset, ga
 			tick = nil
 			ch <- func() bool {
 				gw, err := client.GatewayV1().Gateways(namespace).Get(ctx, gatewayName, metav1.GetOptions{})
-				helpers.ExitOnErr(ctx, err)
+				ExitOnErr(ctx, err)
 				ok := util.CheckCondition(
 					gw.Status.Conditions,
 					util.ConditionType(gatewayapi.GatewayConditionProgrammed),

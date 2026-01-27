@@ -11,9 +11,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
-	"github.com/kong/kong-operator/ingress-controller/internal/util/builder"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers"
+	"github.com/kong/kong-operator/ingress-controller/test/gatewayapi"
+	"github.com/kong/kong-operator/ingress-controller/test/util/builder"
 )
 
 const invalidRegexPath = "/foo[[[["
@@ -209,7 +208,7 @@ func setUpEnvForTestingHTTPRouteValidationWebhook(ctx context.Context, t *testin
 	managedGateway *gatewayapi.Gateway,
 	unmanagedGateway *gatewayapi.Gateway,
 ) {
-	ns, cleaner := helpers.Setup(ctx, t, env)
+	ns, cleaner := Setup(ctx, t, env)
 	namespace = ns.Name
 
 	t.Log("creating a gateway client")
@@ -217,7 +216,7 @@ func setUpEnvForTestingHTTPRouteValidationWebhook(ctx context.Context, t *testin
 	require.NoError(t, err)
 
 	t.Log("creating a managed gateway")
-	managedGateway, err = helpers.DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName, func(g *gatewayapi.Gateway) {
+	managedGateway, err = DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName, func(g *gatewayapi.Gateway) {
 		g.Name = uuid.NewString()
 	})
 	require.NoError(t, err)
@@ -225,7 +224,7 @@ func setUpEnvForTestingHTTPRouteValidationWebhook(ctx context.Context, t *testin
 	t.Logf("created managed gateway: %q", managedGateway.Name)
 
 	t.Logf("creating an unmanaged gatewayclass")
-	unmanagedGatewayClass, err := helpers.DeployGatewayClass(ctx, gatewayClient, uuid.NewString(), func(gc *gatewayapi.GatewayClass) {
+	unmanagedGatewayClass, err := DeployGatewayClass(ctx, gatewayClient, uuid.NewString(), func(gc *gatewayapi.GatewayClass) {
 		gc.Spec.ControllerName = unsupportedControllerName
 	})
 	require.NoError(t, err)
@@ -233,7 +232,7 @@ func setUpEnvForTestingHTTPRouteValidationWebhook(ctx context.Context, t *testin
 	t.Logf("created unmanaged gatewayclass: %q", unmanagedGatewayClass.Name)
 
 	t.Log("creating an unmanaged gateway")
-	unmanagedGateway, err = helpers.DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClass.Name, func(g *gatewayapi.Gateway) {
+	unmanagedGateway, err = DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClass.Name, func(g *gatewayapi.Gateway) {
 		g.Name = uuid.NewString()
 	})
 	require.NoError(t, err)
