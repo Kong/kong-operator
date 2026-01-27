@@ -17,6 +17,9 @@ type testCaseHTTPRouteValidation struct {
 	Name                   string
 	Route                  *gatewayv1.HTTPRoute
 	WantCreateErrSubstring string
+	// ExpressionsRouterOnly indicates that the test case only applies to expressions router mode.
+	// If true and not in expressions router mode, the WantCreateErrSubstring is ignored (expect success).
+	ExpressionsRouterOnly bool
 }
 
 func TestAdmissionWebhook_HTTPRoute(t *testing.T) {
@@ -177,14 +180,66 @@ func TestAdmissionWebhook_HTTPRoute(t *testing.T) {
 				},
 			},
 		},
+		{
+			Name: "a httproute with an invalid path regex fails validation",
+			Route: &gatewayv1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: uuid.NewString(),
+				},
+				Spec: gatewayv1.HTTPRouteSpec{
+					Rules: []gatewayv1.HTTPRouteRule{{
+						Matches: []gatewayv1.HTTPRouteMatch{
+							newHTTPRouteMatchWithPathRegex(invalidRegexPath),
+						},
+					}},
+					CommonRouteSpec: gatewayv1.CommonRouteSpec{
+						ParentRefs: []gatewayv1.ParentReference{{
+							Namespace: (*gatewayv1.Namespace)(&managedGateway.Namespace),
+							Name:      gatewayv1.ObjectName(managedGateway.Name),
+						}},
+					},
+				},
+			},
+			WantCreateErrSubstring: "could not validate HTTPRoute schema",
+			ExpressionsRouterOnly:  true,
+		},
+		{
+			Name: "a httproute with an invalid header regex fails validation",
+			Route: &gatewayv1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: uuid.NewString(),
+				},
+				Spec: gatewayv1.HTTPRouteSpec{
+					Rules: []gatewayv1.HTTPRouteRule{{
+						Matches: []gatewayv1.HTTPRouteMatch{
+							newHTTPRouteMatchWithHeaderRegex("foo", "[[[invalid-regex[[[["),
+						},
+					}},
+					CommonRouteSpec: gatewayv1.CommonRouteSpec{
+						ParentRefs: []gatewayv1.ParentReference{{
+							Namespace: (*gatewayv1.Namespace)(&managedGateway.Namespace),
+							Name:      gatewayv1.ObjectName(managedGateway.Name),
+						}},
+					},
+				},
+			},
+			WantCreateErrSubstring: "could not validate HTTPRoute schema",
+			ExpressionsRouterOnly:  true,
+		},
 	}
 
 	for _, tC := range testCases {
 		t.Run(tC.Name, func(t *testing.T) {
 			_, err := gatewayClient.GatewayV1().HTTPRoutes(ns.Name).Create(ctx, tC.Route, metav1.CreateOptions{})
-			if tC.WantCreateErrSubstring != "" {
+
+			wantErr := tC.WantCreateErrSubstring
+			if tC.ExpressionsRouterOnly && !isExpressionsRouterMode() {
+				wantErr = ""
+			}
+
+			if wantErr != "" {
 				require.Error(t, err)
-				require.Contains(t, err.Error(), tC.WantCreateErrSubstring)
+				require.Contains(t, err.Error(), wantErr)
 			} else {
 				require.NoError(t, err)
 				t.Cleanup(func() {
