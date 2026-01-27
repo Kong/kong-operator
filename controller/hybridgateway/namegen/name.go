@@ -47,24 +47,26 @@ func newNameWithHashSuffix(readableElements []string, hashElements []string) str
 	if len(name) <= maxLen {
 		return name
 	}
-
-	hashPart := strings.Join(hashElements, ".")
-	if hashPart == "" {
+	if len(hashElements) == 0 {
 		return namegenPrefix + utils.Hash64(allElements)
 	}
+
+	hashPart := strings.Join(hashElements, ".")
 	if len(hashPart) > maxLen {
 		return namegenPrefix + utils.Hash64(allElements)
 	}
-
-	readablePart := strings.Join(readableElements, ".")
 	remaining := maxLen - len(hashPart) - 1
 	if remaining <= 0 {
 		return hashPart
 	}
+	if len(readableElements) == 0 {
+		return hashPart
+	}
+	readablePart := strings.Join(readableElements, ".")
 	if len(readablePart) > remaining {
 		readablePart = strings.TrimRight(readablePart[:remaining], ".-")
 	}
-	if readablePart == "" {
+	if len(readablePart) == 0 {
 		return hashPart
 	}
 
