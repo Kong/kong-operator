@@ -200,8 +200,7 @@ func TestAdmissionWebhook_HTTPRoute(t *testing.T) {
 					},
 				},
 			},
-			WantCreateErrSubstring: "could not validate HTTPRoute schema",
-			ExpressionsRouterOnly:  true,
+			WantCreateErrSubstring: "HTTPRoute failed schema validation",
 		},
 		{
 			Name: "a httproute with an invalid header regex fails validation",
@@ -223,8 +222,7 @@ func TestAdmissionWebhook_HTTPRoute(t *testing.T) {
 					},
 				},
 			},
-			WantCreateErrSubstring: "could not validate HTTPRoute schema",
-			ExpressionsRouterOnly:  true,
+			WantCreateErrSubstring: "HTTPRoute failed schema validation",
 		},
 	}
 
