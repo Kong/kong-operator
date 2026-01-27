@@ -18,7 +18,6 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
-	"github.com/kong/kong-operator/ingress-controller/test/helpers"
 	"github.com/kong/kong-operator/ingress-controller/test/testlabels"
 )
 
@@ -29,7 +28,7 @@ func TestKongServiceFacadeExample(t *testing.T) {
 		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyIngress).
 		WithLabel(testlabels.Kind, testlabels.KindKongServiceFacade).
 		WithSetup("deploy kong addon into cluster", featureSetup(
-			withControllerManagerOpts(helpers.ControllerManagerOptAdditionalWatchNamespace("default")),
+			withControllerManagerOpts(ControllerManagerOptAdditionalWatchNamespace("default")),
 		)).
 		WithSetup("deploy example manifest", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			manifestPath := examplesManifestPath("kong-service-facade.yaml")
@@ -62,7 +61,7 @@ func TestKongServiceFacadeExample(t *testing.T) {
 			})
 
 			t.Log("waiting for httpbin deployment to be ready")
-			helpers.WaitForDeploymentRollout(ctx, t, cluster, "default", "httpbin-deployment")
+			WaitForDeploymentRollout(ctx, t, cluster, "default", "httpbin-deployment")
 			return ctx
 		}).
 		Assess("basic-auth and key-auth plugins are applied to KongServiceFacades as expected", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
@@ -77,7 +76,7 @@ func TestKongServiceFacadeExample(t *testing.T) {
 				basicAuthValidPassword   = "bob-password"
 			)
 
-			httpClient := helpers.DefaultHTTPClient()
+			httpClient := DefaultHTTPClient()
 			respondsWithExpectedStatusCode := func(t *testing.T, req *http.Request, expectedStatusCode int) {
 				require.Eventually(t, func() bool {
 					res, err := httpClient.Do(req)

@@ -24,10 +24,9 @@ import (
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager/scheme"
 	"github.com/kong/kong-operator/ingress-controller/test"
-	"github.com/kong/kong-operator/ingress-controller/test/consts"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers"
 	"github.com/kong/kong-operator/ingress-controller/test/testenv"
 	testutils "github.com/kong/kong-operator/ingress-controller/test/util"
+	"github.com/kong/kong-operator/test/integration/kic/consts"
 )
 
 // -----------------------------------------------------------------------------
@@ -50,23 +49,23 @@ func TestMain(m *testing.M) {
 	// The logger cannot be configured after that point.
 	logger, logOutput, err := testutils.SetupLoggers("trace", "text")
 	if err != nil {
-		helpers.ExitOnErrWithCode(ctx, fmt.Errorf("failed to setup loggers: %w", err), consts.ExitCodeCantCreateLogger)
+		ExitOnErrWithCode(ctx, fmt.Errorf("failed to setup loggers: %w", err), consts.ExitCodeCantCreateLogger)
 	}
 	if logOutput != "" {
 		fmt.Printf("INFO: writing manager logs to %s\n", logOutput)
 	}
 
 	fmt.Println("INFO: setting up test environment")
-	kongbuilder, _, err := helpers.GenerateKongBuilder(ctx)
-	helpers.ExitOnErrWithCode(ctx, err, consts.ExitCodeEnvSetupFailed)
+	kongbuilder, _, err := GenerateKongBuilder(ctx)
+	ExitOnErrWithCode(ctx, err, consts.ExitCodeEnvSetupFailed)
 	if testenv.KongImage() != "" && testenv.KongTag() != "" {
 		fmt.Printf("INFO: custom kong image specified via env: %s:%s\n", testenv.KongImage(), testenv.KongTag())
 	}
 	// add env for vaults.
-	kongbuilder.WithProxyEnvVar("vault_test_add_header_1", "h1:v1")
+	KongWithProxyEnvVar(kongbuilder, "vault_test_add_header_1", "h1:v1")
 
 	// Pin the Helm chart version.
-	kongbuilder.WithHelmChartVersion(testenv.KongHelmChartVersion())
+	KongWithHelmChartVersion(kongbuilder, testenv.KongHelmChartVersion())
 
 	kongAddon := kongbuilder.Build()
 	builder := environments.NewBuilder().WithAddons(kongAddon)
@@ -74,11 +73,11 @@ func TestMain(m *testing.M) {
 	fmt.Println("INFO: configuring cluster for testing environment")
 	if existingCluster := testenv.ExistingClusterName(); existingCluster != "" {
 		if testenv.ClusterVersion() != "" {
-			helpers.ExitOnErrWithCode(ctx, fmt.Errorf("can't flag cluster version & provide an existing cluster at the same time"), consts.ExitCodeIncompatibleOptions)
+			ExitOnErrWithCode(ctx, fmt.Errorf("can't flag cluster version & provide an existing cluster at the same time"), consts.ExitCodeIncompatibleOptions)
 		}
 		clusterParts := strings.Split(existingCluster, ":")
 		if len(clusterParts) != 2 {
-			helpers.ExitOnErrWithCode(ctx, fmt.Errorf("existing cluster in wrong format (%s): format is <TYPE>:<NAME> (e.g. kind:test-cluster)", existingCluster), consts.ExitCodeCantUseExistingCluster)
+			ExitOnErrWithCode(ctx, fmt.Errorf("existing cluster in wrong format (%s): format is <TYPE>:<NAME> (e.g. kind:test-cluster)", existingCluster), consts.ExitCodeCantUseExistingCluster)
 		}
 		clusterType, clusterName := clusterParts[0], clusterParts[1]
 
@@ -86,15 +85,15 @@ func TestMain(m *testing.M) {
 		switch clusterType {
 		case string(kind.KindClusterType):
 			cluster, err := kind.NewFromExisting(clusterName)
-			helpers.ExitOnErr(ctx, err)
+			ExitOnErr(ctx, err)
 			builder.WithExistingCluster(cluster)
 			builder.WithAddons(metallb.New())
 		case string(gke.GKEClusterType):
 			cluster, err := gke.NewFromExistingWithEnv(ctx, clusterName)
-			helpers.ExitOnErr(ctx, err)
+			ExitOnErr(ctx, err)
 			builder.WithExistingCluster(cluster)
 		default:
-			helpers.ExitOnErrWithCode(ctx, fmt.Errorf("unknown cluster type: %s", clusterType), consts.ExitCodeCantUseExistingCluster)
+			ExitOnErrWithCode(ctx, fmt.Errorf("unknown cluster type: %s", clusterType), consts.ExitCodeCantUseExistingCluster)
 		}
 	} else {
 		fmt.Println("INFO: no existing cluster found, deploying using Kubernetes In Docker (KIND)")
@@ -103,7 +102,7 @@ func TestMain(m *testing.M) {
 
 		if testenv.ClusterVersion() != "" {
 			clusterVersion, err := semver.Parse(strings.TrimPrefix(testenv.ClusterVersion(), "v"))
-			helpers.ExitOnErr(ctx, err)
+			ExitOnErr(ctx, err)
 
 			fmt.Printf("INFO: build a new KIND cluster with version %s\n", clusterVersion.String())
 			builder.WithKubernetesVersion(clusterVersion)
@@ -112,7 +111,7 @@ func TestMain(m *testing.M) {
 
 	fmt.Println("INFO: building test environment")
 	env, err = builder.Build(ctx)
-	helpers.ExitOnErr(ctx, err)
+	ExitOnErr(ctx, err)
 
 	cleaner := clusters.NewCleaner(env.Cluster(), scheme.Get())
 	defer func() {
@@ -124,29 +123,29 @@ func TestMain(m *testing.M) {
 	fmt.Printf("INFO: waiting for cluster %s and all addons to become ready\n", env.Cluster().Name())
 	envReadyCtx, envReadyCancel := context.WithTimeout(ctx, testenv.EnvironmentReadyTimeout())
 	defer envReadyCancel()
-	helpers.ExitOnErr(ctx, <-env.WaitForReady(envReadyCtx))
+	ExitOnErr(ctx, <-env.WaitForReady(envReadyCtx))
 
 	fmt.Println("INFO: collecting urls from the kong proxy deployment")
 	proxyHTTPURL, err = kongAddon.ProxyHTTPURL(ctx, env.Cluster())
-	helpers.ExitOnErr(ctx, err)
+	ExitOnErr(ctx, err)
 	proxyHTTPSURL, err = kongAddon.ProxyHTTPSURL(ctx, env.Cluster())
-	helpers.ExitOnErr(ctx, err)
+	ExitOnErr(ctx, err)
 	proxyAdminURL, err = kongAddon.ProxyAdminURL(ctx, env.Cluster())
-	helpers.ExitOnErr(ctx, err)
+	ExitOnErr(ctx, err)
 	proxyTCPURL, err = kongAddon.ProxyTCPURL(ctx, env.Cluster())
-	helpers.ExitOnErr(ctx, err)
+	ExitOnErr(ctx, err)
 	proxyTLSURL, err = kongAddon.ProxyTLSURL(ctx, env.Cluster())
-	helpers.ExitOnErr(ctx, err)
+	ExitOnErr(ctx, err)
 	proxyUDPURL, err = kongAddon.ProxyUDPURL(ctx, env.Cluster())
-	helpers.ExitOnErr(ctx, err)
+	ExitOnErr(ctx, err)
 
-	helpers.ExitOnErr(
+	ExitOnErr(
 		ctx,
 		retry.Do(
 			func() error {
 				reqCtx, cancel := context.WithTimeout(ctx, test.RequestTimeout)
 				defer cancel()
-				kongVersion, err := helpers.ValidateMinimalSupportedKongVersion(reqCtx, proxyAdminURL, consts.KongTestPassword)
+				kongVersion, err := ValidateMinimalSupportedKongVersion(reqCtx, proxyAdminURL, consts.KongTestPassword)
 				if err != nil {
 					return err
 				}
@@ -159,7 +158,7 @@ func TestMain(m *testing.M) {
 				},
 			),
 			retry.LastErrorOnly(true), retry.RetryIf(func(err error) bool {
-				return !errors.As(err, &helpers.TooOldKongGatewayError{})
+				return !errors.As(err, &TooOldKongGatewayError{})
 			}),
 		))
 
@@ -175,14 +174,14 @@ func TestMain(m *testing.M) {
 			}
 			fgParts := strings.Split(fg, "=")
 			if len(fgParts) != 2 {
-				helpers.ExitOnErrWithCode(ctx, fmt.Errorf("feature gate %q not in key=value format", fg), consts.ExitCodeIncompatibleOptions)
+				ExitOnErrWithCode(ctx, fmt.Errorf("feature gate %q not in key=value format", fg), consts.ExitCodeIncompatibleOptions)
 			}
 			fgName, fgValue := fgParts[0], fgParts[1]
 			if _, ok := managercfg.GetFeatureGatesDefaults()[fgName]; !ok {
-				helpers.ExitOnErrWithCode(ctx, fmt.Errorf("unknown feature gate %q (see %s for available feature gates)", fgName, managercfg.DocsURL), consts.ExitCodeIncompatibleOptions)
+				ExitOnErrWithCode(ctx, fmt.Errorf("unknown feature gate %q (see %s for available feature gates)", fgName, managercfg.DocsURL), consts.ExitCodeIncompatibleOptions)
 			}
 			if fgValue != "true" && fgValue != "false" {
-				helpers.ExitOnErrWithCode(ctx, fmt.Errorf("feature gate %q must be true or false, got %q", fgName, fgValue), consts.ExitCodeIncompatibleOptions)
+				ExitOnErrWithCode(ctx, fmt.Errorf("feature gate %q must be true or false, got %q", fgName, fgValue), consts.ExitCodeIncompatibleOptions)
 			}
 			featureGates[fgName] = fgValue == "true"
 		}
@@ -190,7 +189,7 @@ func TestMain(m *testing.M) {
 		fmt.Printf("INFO: feature gates enabled: %v\n", featureGates)
 
 		fmt.Println("Preparing the environment to run the controller manager")
-		helpers.ExitOnErr(ctx, testutils.PrepareClusterForRunningControllerManager(ctx, env.Cluster()))
+		ExitOnErr(ctx, testutils.PrepareClusterForRunningControllerManager(ctx, env.Cluster()))
 
 		fmt.Println("INFO: starting the controller manager")
 		cancel, err := testutils.DeployControllerManagerForCluster(ctx, logger, env.Cluster(), kongAddon, func(c *managercfg.Config) {
@@ -214,19 +213,19 @@ func TestMain(m *testing.M) {
 			c.GatewayDiscoveryReadinessCheckInterval = 20 * time.Second
 		})
 		defer cancel()
-		helpers.ExitOnErr(ctx, err)
+		ExitOnErr(ctx, err)
 	}
 
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
-	helpers.ExitOnErr(ctx, err)
+	ExitOnErr(ctx, err)
 
 	fmt.Println("INFO: Deploying the default GatewayClass")
-	gwc, err := helpers.DeployGatewayClass(ctx, gatewayClient, unmanagedGatewayClassName)
-	helpers.ExitOnErr(ctx, err)
+	gwc, err := DeployGatewayClass(ctx, gatewayClient, unmanagedGatewayClassName)
+	ExitOnErr(ctx, err)
 	cleaner.Add(gwc)
 
 	fmt.Printf("INFO: Deploying the controller's IngressClass %q\n", consts.IngressClass)
-	helpers.ExitOnErr(ctx, helpers.CreateIngressClass(ctx, consts.IngressClass, env.Cluster().Client()))
+	ExitOnErr(ctx, CreateIngressClass(ctx, consts.IngressClass, env.Cluster().Client()))
 	defer func() {
 		// deleting this directly instead of adding it to the cleaner because
 		// the cleaner always gets a 404 on it for unknown reasons
@@ -240,7 +239,7 @@ func TestMain(m *testing.M) {
 	}
 
 	clusterVersion, err := env.Cluster().Version()
-	helpers.ExitOnErr(ctx, err)
+	ExitOnErr(ctx, err)
 
 	fmt.Printf("INFO: testing environment is ready KUBERNETES_VERSION=(%v): running tests\n", clusterVersion)
 	code = m.Run()
@@ -250,6 +249,6 @@ func TestMain(m *testing.M) {
 	} else {
 		ctx, cancel := context.WithTimeout(context.Background(), test.EnvironmentCleanupTimeout)
 		defer cancel()
-		helpers.ExitOnErr(ctx, helpers.RemoveCluster(ctx, env.Cluster()))
+		ExitOnErr(ctx, RemoveCluster(ctx, env.Cluster()))
 	}
 }

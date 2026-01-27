@@ -15,10 +15,9 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
-	"github.com/kong/kong-operator/ingress-controller/test/consts"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers"
 	"github.com/kong/kong-operator/ingress-controller/test/testlabels"
 	"github.com/kong/kong-operator/pkg/clientset"
+	"github.com/kong/kong-operator/test/integration/kic/consts"
 )
 
 func TestKongLicense(t *testing.T) {
@@ -32,7 +31,7 @@ func TestKongLicense(t *testing.T) {
 			func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 				adminURL := GetAdminURLFromCtx(ctx)
 				require.NotNil(t, adminURL, "Should get URL to access Kong gateway admin APIs from context")
-				licenses, err := helpers.GetKongLicenses(ctx, adminURL, consts.KongTestPassword)
+				licenses, err := GetKongLicenses(ctx, adminURL, consts.KongTestPassword)
 				require.NoError(t, err, "Expect No errors in listing all licenses in Kong gateway")
 				require.Len(t, licenses, 0, "Expect No licenses in Kong gateway now")
 
@@ -72,7 +71,7 @@ func TestKongLicense(t *testing.T) {
 
 			adminURL := GetAdminURLFromCtx(ctx)
 			require.Eventually(t, func() bool {
-				licenses, err := helpers.GetKongLicenses(ctx, adminURL, consts.KongTestPassword)
+				licenses, err := GetKongLicenses(ctx, adminURL, consts.KongTestPassword)
 				require.NoError(t, err, "Expect No errors in listing all licenses in Kong gateway")
 				return len(licenses) == 1
 			},

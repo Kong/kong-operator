@@ -12,11 +12,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	dpconf "github.com/kong/kong-operator/ingress-controller/internal/dataplane/config"
 	"github.com/kong/kong-operator/ingress-controller/test"
-	"github.com/kong/kong-operator/ingress-controller/test/consts"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers"
+	dpconf "github.com/kong/kong-operator/ingress-controller/test/dataplane/config"
 	"github.com/kong/kong-operator/ingress-controller/test/testenv"
+	"github.com/kong/kong-operator/test/integration/kic/consts"
 )
 
 func RunWhenKongVersion(t *testing.T, vRangeStr string, msg ...any) {
@@ -84,7 +83,7 @@ func eventuallyGetKongVersion(t *testing.T, adminURL *url.URL) kong.Version {
 	require.EventuallyWithT(t, func(c *assert.CollectT) {
 		ctx, cancel := context.WithTimeout(t.Context(), test.RequestTimeout)
 		defer cancel()
-		version, err = helpers.GetKongVersion(ctx, adminURL, consts.KongTestPassword)
+		version, err = GetKongVersion(ctx, adminURL, consts.KongTestPassword)
 		assert.NoError(c, err)
 	}, time.Minute, time.Second)
 	return version
@@ -101,7 +100,7 @@ func eventuallyGetKongDBMode(t *testing.T, adminURL *url.URL) dpconf.DBMode {
 	require.EventuallyWithT(t, func(c *assert.CollectT) {
 		ctx, cancel := context.WithTimeout(t.Context(), test.RequestTimeout)
 		defer cancel()
-		dbmode, err = helpers.GetKongDBMode(ctx, adminURL, consts.KongTestPassword)
+		dbmode, err = GetKongDBMode(ctx, adminURL, consts.KongTestPassword)
 		assert.NoError(c, err)
 	}, time.Minute, time.Second)
 	return dbmode
@@ -118,7 +117,7 @@ func eventuallyGetKongRouterFlavor(ctx context.Context, t *testing.T, adminURL *
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		ctx, cancel := context.WithTimeout(ctx, test.RequestTimeout)
 		defer cancel()
-		routerFlavor, err = helpers.GetKongRouterFlavor(ctx, adminURL, consts.KongTestPassword)
+		routerFlavor, err = GetKongRouterFlavor(ctx, adminURL, consts.KongTestPassword)
 		assert.NoError(t, err)
 	}, time.Minute, time.Second)
 	return routerFlavor

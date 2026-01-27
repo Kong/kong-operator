@@ -21,12 +21,11 @@ import (
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
-	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
-	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
-	"github.com/kong/kong-operator/ingress-controller/internal/util"
-	"github.com/kong/kong-operator/ingress-controller/internal/util/builder"
 	"github.com/kong/kong-operator/ingress-controller/test"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers"
+	"github.com/kong/kong-operator/ingress-controller/test/annotations"
+	"github.com/kong/kong-operator/ingress-controller/test/gatewayapi"
+	"github.com/kong/kong-operator/ingress-controller/test/util"
+	"github.com/kong/kong-operator/ingress-controller/test/util/builder"
 	"github.com/kong/kong-operator/pkg/clientset"
 )
 
@@ -35,7 +34,7 @@ var emptyHeaderSet = make(map[string]string)
 func TestHTTPRouteEssentials(t *testing.T) {
 	ctx := t.Context()
 
-	ns, cleaner := helpers.Setup(ctx, t, env)
+	ns, cleaner := Setup(ctx, t, env)
 
 	t.Log("getting a gateway client")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
@@ -43,13 +42,13 @@ func TestHTTPRouteEssentials(t *testing.T) {
 
 	t.Log("deploying a new gatewayClass")
 	gatewayClassName := uuid.NewString()
-	gwc, err := helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+	gwc, err := DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
 	require.NoError(t, err)
 	cleaner.Add(gwc)
 
 	t.Log("deploying a new gateway")
 	gatewayName := uuid.NewString()
-	gateway, err := helpers.DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
+	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
 		gw.Name = gatewayName
 		// add a UDP listener to check the HTTPRoute does not get attached to it.
 		gw.Spec.Listeners = append(gw.Spec.Listeners, gatewayapi.Listener{
@@ -146,25 +145,25 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	cleaner.Add(httpRoute)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback := helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
+	callback := GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 	t.Log("verifying that the httproute contains 'Programmed' condition")
 	require.Eventually(t,
-		helpers.GetVerifyProgrammedConditionCallback(t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name, metav1.ConditionTrue),
+		GetVerifyProgrammedConditionCallback(t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name, metav1.ConditionTrue),
 		ingressWait, waitTick,
 	)
 
 	t.Log("waiting for routes from HTTPRoute to become operational")
-	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/test-http-route-essentials", nil, http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
-	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/test-http-route-essentials/base64/wqt5b8q7ccK7IGRhbiBib3NocWEgYmlyIGphdm9iaW1peiB5b8q7cWRpci4K",
+	EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/test-http-route-essentials", nil, http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
+	EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/test-http-route-essentials/base64/wqt5b8q7ccK7IGRhbiBib3NocWEgYmlyIGphdm9iaW1peiB5b8q7cWRpci4K",
 		nil, http.StatusOK, "«yoʻq» dan boshqa bir javobimiz yoʻqdir.", emptyHeaderSet, ingressWait, waitTick)
-	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/2/test-http-route-essentials/regex/999", nil, http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
-	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/3/exact-test-http-route-essentials", nil, http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
-	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/3/exact-test-http-route-essentialsNO", nil, http.StatusNotFound, "no Route matched", emptyHeaderSet, ingressWait, waitTick)
+	EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/2/test-http-route-essentials/regex/999", nil, http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
+	EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/3/exact-test-http-route-essentials", nil, http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
+	EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/3/exact-test-http-route-essentialsNO", nil, http.StatusNotFound, "no Route matched", emptyHeaderSet, ingressWait, waitTick)
 
 	require.EventuallyWithT(t, func(c *assert.CollectT) {
-		req := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.Host, "/test-http-route-essentials", nil)
-		resp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(req)
+		req := MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.Host, "/test-http-route-essentials", nil)
+		resp, err := DefaultHTTPClient(WithResolveHostTo(proxyHTTPURL.Host)).Do(req)
 		if !assert.NoError(c, err) {
 			return
 		}
@@ -190,7 +189,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 		require.NoError(t, err)
 
 		t.Log("verifying HTTPRoute header match")
-		helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/", nil, http.StatusOK, "<title>httpbin.org</title>", map[string]string{"Content-Type": "audio/mp3"}, ingressWait, waitTick)
+		EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/", nil, http.StatusOK, "<title>httpbin.org</title>", map[string]string{"Content-Type": "audio/mp3"}, ingressWait, waitTick)
 	})
 
 	t.Run("HTTPRoute query param match", func(t *testing.T) {
@@ -212,7 +211,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 		require.NoError(t, err)
 
 		t.Log("verifying HTTPRoute query param match")
-		helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/?foo=bar", nil, http.StatusOK, "<title>httpbin.org</title>", nil, ingressWait, waitTick)
+		EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/?foo=bar", nil, http.StatusOK, "<title>httpbin.org</title>", nil, ingressWait, waitTick)
 	})
 
 	t.Log("verifying that the HTTPRoute has the Condition 'Accepted' set to 'True'")
@@ -238,11 +237,11 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	}, time.Minute, time.Second)
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = helpers.GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
+	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the HTTPRoute gets dropped with the parentRefs now removed")
-	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/test-http-route-essentials", nil, http.StatusNotFound, "", emptyHeaderSet, ingressWait, waitTick)
+	EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/test-http-route-essentials", nil, http.StatusNotFound, "", emptyHeaderSet, ingressWait, waitTick)
 
 	t.Log("putting the parentRefs back")
 	require.EventuallyWithT(t, func(c *assert.CollectT) {
@@ -256,75 +255,75 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	}, time.Minute, time.Second)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback = helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
+	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that putting the parentRefs back results in the routes becoming available again")
-	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/test-http-route-essentials", nil, http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
+	EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/test-http-route-essentials", nil, http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
 
 	t.Log("deleting the GatewayClass")
 	require.NoError(t, gatewayClient.GatewayV1().GatewayClasses().Delete(ctx, gatewayClassName, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = helpers.GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
+	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 	t.Log("verifying that the data-plane configuration from the HTTPRoute gets dropped with the GatewayClass now removed")
-	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/test-http-route-essentials", nil, http.StatusNotFound, "", emptyHeaderSet, ingressWait, waitTick)
+	EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/test-http-route-essentials", nil, http.StatusNotFound, "", emptyHeaderSet, ingressWait, waitTick)
 
 	t.Log("putting the GatewayClass back")
-	gwc, err = helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+	gwc, err = DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
 	require.NoError(t, err)
 	cleaner.Add(gwc)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback = helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
+	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that creating the GatewayClass again triggers reconciliation of HTTPRoutes and the route becomes available again")
-	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/test-http-route-essentials", nil, http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
+	EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/test-http-route-essentials", nil, http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
 
 	t.Log("deleting the Gateway")
 	require.NoError(t, gatewayClient.GatewayV1().Gateways(ns.Name).Delete(ctx, gatewayName, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = helpers.GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
+	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the HTTPRoute gets dropped with the Gateway now removed")
-	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/test-http-route-essentials", nil, http.StatusNotFound, "", emptyHeaderSet, ingressWait, waitTick)
+	EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/test-http-route-essentials", nil, http.StatusNotFound, "", emptyHeaderSet, ingressWait, waitTick)
 
 	t.Log("putting the Gateway back")
-	gateway, err = helpers.DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
+	gateway, err = DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
 		gw.Name = gatewayName
 	})
 	require.NoError(t, err)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback = helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
+	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that creating the Gateway again triggers reconciliation of HTTPRoutes and the route becomes available again")
-	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/test-http-route-essentials", nil, http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
+	EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/test-http-route-essentials", nil, http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
 
 	t.Log("deleting both GatewayClass and Gateway rapidly")
 	require.NoError(t, gatewayClient.GatewayV1().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{}))
 	require.NoError(t, gatewayClient.GatewayV1().Gateways(ns.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = helpers.GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
+	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the HTTPRoute does not get orphaned with the GatewayClass and Gateway gone")
-	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/test-http-route-essentials", nil, http.StatusNotFound, "", emptyHeaderSet, ingressWait, waitTick)
+	EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/test-http-route-essentials", nil, http.StatusNotFound, "", emptyHeaderSet, ingressWait, waitTick)
 
 	t.Log("testing port matching....")
 	t.Log("putting the Gateway back")
-	_, err = helpers.DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
+	_, err = DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
 		gw.Name = gatewayName
 	})
 	require.NoError(t, err)
 	t.Log("putting the GatewayClass back")
-	_, err = helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+	_, err = DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
 	require.NoError(t, err)
 
 	httpRrouteName := httpRoute.Name
@@ -347,7 +346,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 func TestHTTPRouteMultipleServices(t *testing.T) {
 	ctx := t.Context()
 
-	ns, cleaner := helpers.Setup(ctx, t, env)
+	ns, cleaner := Setup(ctx, t, env)
 
 	t.Log("getting a gateway client")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
@@ -355,13 +354,13 @@ func TestHTTPRouteMultipleServices(t *testing.T) {
 
 	t.Log("deploying a new gatewayClass")
 	gatewayClassName := uuid.NewString()
-	gwc, err := helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+	gwc, err := DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
 	require.NoError(t, err)
 	cleaner.Add(gwc)
 
 	t.Log("deploying a new gateway")
 	gatewayName := uuid.NewString()
-	gateway, err := helpers.DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
+	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
 		gw.Name = gatewayName
 	})
 	require.NoError(t, err)
@@ -494,8 +493,8 @@ func TestHTTPRouteMultipleServices(t *testing.T) {
 	t.Log("verifying that both backends are ready to receive traffic")
 	httpbinRespContent := "<title>httpbin.org</title>"
 	nginxRespContent := "<title>Welcome to nginx!</title>"
-	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/test-http-route-multiple-services", nil, http.StatusOK, httpbinRespContent, emptyHeaderSet, ingressWait, waitTick)
-	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/test-http-route-multiple-services", nil, http.StatusOK, nginxRespContent, emptyHeaderSet, ingressWait, waitTick)
+	EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/test-http-route-multiple-services", nil, http.StatusOK, httpbinRespContent, emptyHeaderSet, ingressWait, waitTick)
+	EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/test-http-route-multiple-services", nil, http.StatusOK, nginxRespContent, emptyHeaderSet, ingressWait, waitTick)
 
 	t.Log("verifying that both backends receive requests according to weighted distribution")
 	httpbinRespName := "httpbin-resp"
@@ -505,7 +504,7 @@ func TestHTTPRouteMultipleServices(t *testing.T) {
 		httpbinRespName: int(httpbinWeight),
 		nginxRespName:   int(nginxWeight),
 	}
-	weightedLoadBalancingTestConfig := helpers.CountHTTPResponsesConfig{
+	weightedLoadBalancingTestConfig := CountHTTPResponsesConfig{
 		Method:      http.MethodGet,
 		Host:        proxyHTTPURL.Host,
 		Path:        "test-http-route-multiple-services",
@@ -513,15 +512,15 @@ func TestHTTPRouteMultipleServices(t *testing.T) {
 		Duration:    5 * time.Second,
 		RequestTick: 50 * time.Millisecond,
 	}
-	respCounter := helpers.CountHTTPGetResponses(t,
+	respCounter := CountHTTPGetResponses(t,
 		proxyHTTPURL,
 		weightedLoadBalancingTestConfig,
-		helpers.MatchRespByStatusAndContent(httpbinRespName, http.StatusOK, httpbinRespContent),
-		helpers.MatchRespByStatusAndContent(nginxRespName, http.StatusOK, nginxRespContent),
+		MatchRespByStatusAndContent(httpbinRespName, http.StatusOK, httpbinRespContent),
+		MatchRespByStatusAndContent(nginxRespName, http.StatusOK, nginxRespContent),
 	)
 	assert.InDeltaMapValues(t,
-		helpers.DistributionOfMapValues(respCounter),
-		helpers.DistributionOfMapValues(expectedRespRatio),
+		DistributionOfMapValues(respCounter),
+		DistributionOfMapValues(expectedRespRatio),
 		toleranceDelta,
 		"Response distribution does not match expected distribution within %f%% delta,"+
 			" request-count=%v, expected-ratio=%v",
@@ -529,13 +528,13 @@ func TestHTTPRouteMultipleServices(t *testing.T) {
 	)
 
 	t.Log("verifying that misconfigured service rules are _not_ routed")
-	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/test-http-route-multiple-services-broken", nil, http.StatusNotFound, "", emptyHeaderSet, ingressWait, waitTick)
+	EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/test-http-route-multiple-services-broken", nil, http.StatusNotFound, "", emptyHeaderSet, ingressWait, waitTick)
 }
 
 func TestHTTPRouteFilterHosts(t *testing.T) {
 	ctx := t.Context()
 
-	ns, cleaner := helpers.Setup(ctx, t, env)
+	ns, cleaner := Setup(ctx, t, env)
 
 	listenerHostname := gatewayapi.Hostname("test.specific.io")
 
@@ -545,13 +544,13 @@ func TestHTTPRouteFilterHosts(t *testing.T) {
 
 	t.Log("deploying a new gatewayClass")
 	gatewayClassName := uuid.NewString()
-	gwc, err := helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+	gwc, err := DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
 	require.NoError(t, err)
 	cleaner.Add(gwc)
 
 	t.Log("deploying a new gateway with specified hostname")
 	gatewayName := uuid.NewString()
-	gateway, err := helpers.DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
+	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
 		gw.Name = gatewayName
 		for i := range gw.Spec.Listeners {
 			gw.Spec.Listeners[i].Hostname = &listenerHostname
@@ -608,8 +607,8 @@ func TestHTTPRouteFilterHosts(t *testing.T) {
 	// and returns true if 200 returned.
 	testGetByHost := func(t *testing.T, host string) error {
 		t.Helper()
-		req := helpers.MustHTTPRequest(t, http.MethodGet, host, "/test-http-route-filter-hosts", nil)
-		resp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(req)
+		req := MustHTTPRequest(t, http.MethodGet, host, "/test-http-route-filter-hosts", nil)
+		resp, err := DefaultHTTPClient(WithResolveHostTo(proxyHTTPURL.Host)).Do(req)
 		if err != nil {
 			return err
 		}

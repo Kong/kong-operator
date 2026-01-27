@@ -24,10 +24,9 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
-	"github.com/kong/kong-operator/test/integration/kic/consts"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers"
 	"github.com/kong/kong-operator/ingress-controller/test/testlabels"
 	"github.com/kong/kong-operator/pkg/clientset"
+	"github.com/kong/kong-operator/test/integration/kic/consts"
 )
 
 func TestCustomEntityExample(t *testing.T) {
@@ -39,7 +38,7 @@ func TestCustomEntityExample(t *testing.T) {
 		Setup(SkipIfEnterpriseNotEnabled).
 		Setup(SkipIfDBBacked).
 		WithSetup("deploy kong addon into cluster", featureSetup(
-			withControllerManagerOpts(helpers.ControllerManagerOptAdditionalWatchNamespace("default")),
+			withControllerManagerOpts(ControllerManagerOptAdditionalWatchNamespace("default")),
 		)).
 		WithSetup("deploy example manifest", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			manifestPath := examplesManifestPath("kong-custom-entity.yaml")
@@ -77,13 +76,13 @@ func TestCustomEntityExample(t *testing.T) {
 			})
 
 			t.Log("waiting for hasura deployment to be ready")
-			helpers.WaitForDeploymentRollout(ctx, t, cluster, "default", "hasura")
+			WaitForDeploymentRollout(ctx, t, cluster, "default", "hasura")
 			return ctx
 		}).
 		Assess("degraphql plugin works as expected", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			proxyURL := GetHTTPURLFromCtx(ctx)
 			t.Log("Waiting for graphQL service to be available")
-			helpers.EventuallyGETPath(t, proxyURL, proxyURL.Host, "/healthz", nil, http.StatusOK, "OK", nil, consts.IngressWait, consts.WaitTick)
+			EventuallyGETPath(t, proxyURL, proxyURL.Host, "/healthz", nil, http.StatusOK, "OK", nil, consts.IngressWait, consts.WaitTick)
 
 			t.Log("injecting data for graphQL service")
 			injectDataURL := proxyURL.String() + "/v2/query"
@@ -97,7 +96,7 @@ func TestCustomEntityExample(t *testing.T) {
 			require.NoError(t, err)
 			req.Header.Add("Content-Type", "application/json")
 			req.Header.Add("X-Hasura-Role", "admin")
-			resp, err := helpers.DefaultHTTPClient().Do(req)
+			resp, err := DefaultHTTPClient().Do(req)
 			require.NoError(t, err)
 			resp.Body.Close()
 			require.Equal(t, http.StatusOK, resp.StatusCode)
@@ -112,7 +111,7 @@ func TestCustomEntityExample(t *testing.T) {
 			require.NoError(t, err)
 			req.Header.Add("Content-Type", "application/json")
 			req.Header.Add("X-Hasura-Role", "admin")
-			resp, err = helpers.DefaultHTTPClient().Do(req)
+			resp, err = DefaultHTTPClient().Do(req)
 			require.NoError(t, err)
 			resp.Body.Close()
 			require.Equal(t, http.StatusOK, resp.StatusCode)
@@ -129,14 +128,14 @@ func TestCustomEntityExample(t *testing.T) {
 			require.NoError(t, err)
 			req.Header.Add("Content-Type", "application/json")
 			req.Header.Add("X-Hasura-Role", "admin")
-			resp, err = helpers.DefaultHTTPClient().Do(req)
+			resp, err = DefaultHTTPClient().Do(req)
 			require.NoError(t, err)
 			resp.Body.Close()
 			require.Equal(t, http.StatusOK, resp.StatusCode)
 
 			t.Log("verifying degraphQL plugin and degraphql_routes entity works")
 			// The ingress providing graphQL service has a different host, so we need to set the `Host` header.
-			helpers.EventuallyGETPath(t, proxyURL, "graphql.service.example", "/contacts", nil, http.StatusOK, `"name":"Alice"`, map[string]string{"Host": "graphql.service.example"}, consts.IngressWait, consts.WaitTick)
+			EventuallyGETPath(t, proxyURL, "graphql.service.example", "/contacts", nil, http.StatusOK, `"name":"Alice"`, map[string]string{"Host": "graphql.service.example"}, consts.IngressWait, consts.WaitTick)
 
 			return ctx
 		}).
@@ -195,7 +194,7 @@ func TestCustomEntityExample(t *testing.T) {
 
 			t.Log("verifying degraphQL plugin and degraphql_routes entity works")
 			proxyURL := GetHTTPURLFromCtx(ctx)
-			helpers.EventuallyGETPath(t, proxyURL, "alter-graphql.service.example", "/contacts", nil, http.StatusOK, `"name":"Alice"`, map[string]string{"Host": "graphql.service.example"}, consts.IngressWait, consts.WaitTick)
+			EventuallyGETPath(t, proxyURL, "alter-graphql.service.example", "/contacts", nil, http.StatusOK, `"name":"Alice"`, map[string]string{"Host": "graphql.service.example"}, consts.IngressWait, consts.WaitTick)
 
 			return ctx
 		}).
@@ -256,7 +255,7 @@ func TestCustomEntityExample(t *testing.T) {
 			t.Log("verifying degraphQL plugin was excluded from the configuration as it was failing schema validation")
 			proxyURL := GetHTTPURLFromCtx(ctx)
 			// The ingress providing graphQL service has a different host, so we need to set the `Host` header.
-			helpers.EventuallyGETPath(t, proxyURL, "graphql.service.example", "/contacts", nil, http.StatusNotFound, `{"message":"Not Found"}`, map[string]string{"Host": "graphql.service.example"}, consts.IngressWait, consts.WaitTick)
+			EventuallyGETPath(t, proxyURL, "graphql.service.example", "/contacts", nil, http.StatusNotFound, `{"message":"Not Found"}`, map[string]string{"Host": "graphql.service.example"}, consts.IngressWait, consts.WaitTick)
 
 			return ctx
 		}).

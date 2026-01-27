@@ -27,12 +27,11 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/features"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
-	"github.com/kong/kong-operator/ingress-controller/internal/util/builder"
 	"github.com/kong/kong-operator/ingress-controller/test"
-	"github.com/kong/kong-operator/test/integration/kic/consts"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers"
+	"github.com/kong/kong-operator/ingress-controller/test/gatewayapi"
 	"github.com/kong/kong-operator/ingress-controller/test/testlabels"
+	"github.com/kong/kong-operator/ingress-controller/test/util/builder"
+	"github.com/kong/kong-operator/test/integration/kic/consts"
 )
 
 func TestGRPCRouteEssentials(t *testing.T) {
@@ -58,12 +57,12 @@ func TestGRPCRouteEssentials(t *testing.T) {
 
 			t.Log("deploying a new gatewayClass")
 			gatewayClassName := uuid.NewString()
-			gwc, err := helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+			gwc, err := DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
 			assert.NoError(t, err)
 			cleaner.Add(gwc)
 
 			t.Log("deploying a new gateway")
-			gateway, err := helpers.DeployGateway(ctx, gatewayClient, namespace, gatewayClassName, func(gw *gatewayapi.Gateway) {
+			gateway, err := DeployGateway(ctx, gatewayClient, namespace, gatewayClassName, func(gw *gatewayapi.Gateway) {
 				gw.Spec.Listeners = builder.NewListener("grpc").
 					HTTP().
 					WithPort(ktfkong.DefaultProxyHTTPPort).
@@ -142,11 +141,11 @@ func TestGRPCRouteEssentials(t *testing.T) {
 			grpcRoute := GetFromCtxForT[*gatewayapi.GRPCRoute](ctx, t)
 
 			t.Log("verifying that the Gateway gets linked to the route via status")
-			callback := helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, namespace, grpcRoute.Name)
+			callback := GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, namespace, grpcRoute.Name)
 			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 			t.Log("verifying that the GRPCRoute contains 'Programmed' condition")
 			assert.Eventually(t,
-				helpers.GetVerifyProgrammedConditionCallback(t, gatewayClient, gatewayapi.HTTPProtocolType, namespace, grpcRoute.Name, metav1.ConditionTrue),
+				GetVerifyProgrammedConditionCallback(t, gatewayClient, gatewayapi.HTTPProtocolType, namespace, grpcRoute.Name, metav1.ConditionTrue),
 				consts.IngressWait, consts.WaitTick,
 			)
 

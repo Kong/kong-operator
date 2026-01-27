@@ -13,9 +13,8 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
-	"github.com/kong/kong-operator/test/integration/kic/consts"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers"
 	"github.com/kong/kong-operator/ingress-controller/test/testlabels"
+	"github.com/kong/kong-operator/test/integration/kic/consts"
 )
 
 func TestHTTPRouteRewriteExample(t *testing.T) {
@@ -27,7 +26,7 @@ func TestHTTPRouteRewriteExample(t *testing.T) {
 		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyGatewayAPI).
 		WithLabel(testlabels.Kind, testlabels.KindHTTPRoute).
 		WithSetup("deploy kong addon into cluster", featureSetup(
-			withControllerManagerOpts(helpers.ControllerManagerOptAdditionalWatchNamespace("default")),
+			withControllerManagerOpts(ControllerManagerOptAdditionalWatchNamespace("default")),
 		)).
 		Assess("deploying to cluster works and HTTP requests get properly rewritten URI",
 			func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
@@ -44,7 +43,7 @@ func TestHTTPRouteRewriteExample(t *testing.T) {
 				t.Logf("verifying that the HTTPRoute routes traffic properly")
 
 				t.Logf("asserting /full-path-prefix path is redirected to /echo?msg=hello from the manifest")
-				helpers.EventuallyGETPath(
+				EventuallyGETPath(
 					t,
 					proxyURL,
 					proxyURL.Host,
@@ -58,7 +57,7 @@ func TestHTTPRouteRewriteExample(t *testing.T) {
 				)
 
 				t.Logf("asserting /old-prefix?msg=hello path is redirected to /echo?msg=hello replacing the prefix")
-				helpers.EventuallyGETPath(
+				EventuallyGETPath(
 					t,
 					proxyURL,
 					proxyURL.Host,

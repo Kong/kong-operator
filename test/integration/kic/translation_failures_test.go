@@ -22,16 +22,15 @@ import (
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
-	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane"
-	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
-	"github.com/kong/kong-operator/ingress-controller/internal/util"
 	"github.com/kong/kong-operator/ingress-controller/test"
-	"github.com/kong/kong-operator/ingress-controller/test/consts"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers"
+	"github.com/kong/kong-operator/ingress-controller/test/annotations"
+	"github.com/kong/kong-operator/ingress-controller/test/dataplane"
+	"github.com/kong/kong-operator/ingress-controller/test/gatewayapi"
+	"github.com/kong/kong-operator/ingress-controller/test/util"
 	testutils "github.com/kong/kong-operator/ingress-controller/test/util"
 	"github.com/kong/kong-operator/pkg/clientset"
 	"github.com/kong/kong-operator/test/helpers/certificate"
+	"github.com/kong/kong-operator/test/integration/kic/consts"
 )
 
 const testTranslationFailuresObjectsPrefix = "translation-failures-"
@@ -124,12 +123,12 @@ func TestTranslationFailures(t *testing.T) {
 				require.NoError(t, err)
 
 				gatewayClassName := testutils.RandomName(testTranslationFailuresObjectsPrefix)
-				gwc, err := helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+				gwc, err := DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
 				require.NoError(t, err)
 				cleaner.Add(gwc)
 
 				gatewayName := testutils.RandomName(testTranslationFailuresObjectsPrefix)
-				gateway, err := helpers.DeployGateway(ctx, gatewayClient, ns, gatewayClassName, func(gw *gatewayapi.Gateway) {
+				gateway, err := DeployGateway(ctx, gatewayClient, ns, gatewayClassName, func(gw *gatewayapi.Gateway) {
 					gw.Name = gatewayName
 				})
 				require.NoError(t, err)
@@ -286,7 +285,7 @@ func TestTranslationFailures(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			ns, cleaner := helpers.Setup(ctx, t, env)
+			ns, cleaner := Setup(ctx, t, env)
 
 			expected := tt.translationFailureTrigger(t, cleaner, ns.GetName())
 

@@ -21,12 +21,11 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/features"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/ingress-controller/test"
-	"github.com/kong/kong-operator/test/integration/kic/consts"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers"
+	"github.com/kong/kong-operator/ingress-controller/test/gatewayapi"
 	"github.com/kong/kong-operator/ingress-controller/test/testlabels"
 	"github.com/kong/kong-operator/test/helpers/certificate"
+	"github.com/kong/kong-operator/test/integration/kic/consts"
 )
 
 func TestGatewayHTTPSMultipleCertificates(t *testing.T) {
@@ -46,7 +45,7 @@ func TestGatewayHTTPSMultipleCertificates(t *testing.T) {
 		WithLabel(testlabels.Kind, testlabels.KindHTTPRoute).
 		Setup(SkipIfRouterNotExpressions).
 		WithSetup("deploy kong addon into cluster", featureSetup(
-			withControllerManagerOpts(helpers.ControllerManagerOptAdditionalWatchNamespace("default")),
+			withControllerManagerOpts(ControllerManagerOptAdditionalWatchNamespace("default")),
 			withKongProxyEnvVars(map[string]string{
 				"PROXY_LISTEN": `0.0.0.0:8443 http2 ssl`, // Ensure that only HTTPS is available.
 			}),
@@ -96,7 +95,7 @@ func TestGatewayHTTPSMultipleCertificates(t *testing.T) {
 
 				t.Log("deploying a new gatewayClass")
 				gatewayClassName := uuid.NewString()
-				gwc, err := helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+				gwc, err := DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
 				require.NoError(t, err)
 				cleaner.Add(gwc)
 
@@ -120,7 +119,7 @@ func TestGatewayHTTPSMultipleCertificates(t *testing.T) {
 					}
 				}
 				gatewayName := uuid.NewString()
-				gateway, err := helpers.DeployGateway(ctx, gatewayClient, namespace, gatewayClassName, func(gw *gatewayapi.Gateway) {
+				gateway, err := DeployGateway(ctx, gatewayClient, namespace, gatewayClassName, func(gw *gatewayapi.Gateway) {
 					gw.Name = gatewayName
 					gw.Spec.Listeners = []gatewayapi.Listener{
 						createHTTPSListener(t, wildcardExample, nameWildcardExample),
@@ -188,7 +187,7 @@ func TestGatewayHTTPSMultipleCertificates(t *testing.T) {
 			"verifying that certs match and HTTPS traffic is routed to the service",
 			func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 				verifyEventuallyGet := func(url string) {
-					helpers.EventuallyGETPath(
+					EventuallyGETPath(
 						t,
 						GetHTTPSURLFromCtx(ctx),
 						url,

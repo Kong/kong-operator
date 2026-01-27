@@ -19,11 +19,10 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/diagnostics"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
-	"github.com/kong/kong-operator/test/integration/kic/consts"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers"
+	"github.com/kong/kong-operator/ingress-controller/test/diagnostics"
 	"github.com/kong/kong-operator/ingress-controller/test/testlabels"
+	"github.com/kong/kong-operator/test/integration/kic/consts"
 )
 
 func TestIngressWithBrokenPluginFallback(t *testing.T) {
@@ -40,7 +39,7 @@ func TestIngressWithBrokenPluginFallback(t *testing.T) {
 		WithLabel(testlabels.Kind, testlabels.KindIngress).
 		WithSetup("deploy kong addon into cluster", featureSetup(
 			withControllerManagerOpts(
-				helpers.ControllerManagerOptAdditionalWatchNamespace("default"),
+				ControllerManagerOptAdditionalWatchNamespace("default"),
 			),
 			withControllerManagerFeatureGates(map[string]string{managercfg.FallbackConfigurationFeature: "true"}),
 		)).
@@ -58,7 +57,7 @@ func TestIngressWithBrokenPluginFallback(t *testing.T) {
 				cleaner.AddManifest(manifest)
 
 				t.Logf("verifying that the Ingress routes traffic properly to the /ingress-testing path")
-				helpers.EventuallyGETPath(
+				EventuallyGETPath(
 					t,
 					proxyURL,
 					proxyURL.Host,
@@ -91,7 +90,7 @@ func TestIngressWithBrokenPluginFallback(t *testing.T) {
 			proxyURL := GetHTTPURLFromCtx(ctx)
 			t.Logf("verifying that Kong gateway response is returned instead of desired site")
 
-			helpers.EventuallyGETPath(
+			EventuallyGETPath(
 				t,
 				proxyURL,
 				proxyURL.Host,
@@ -123,8 +122,8 @@ func TestIngressWithBrokenPluginFallback(t *testing.T) {
 			diagURL := GetDiagURLFromCtx(ctx)
 			t.Logf("verifying diag available")
 			require.EventuallyWithT(t, func(c *assert.CollectT) {
-				cl := helpers.DefaultHTTPClient()
-				resp, err := cl.Do(helpers.MustHTTPRequest(t, http.MethodGet, diagURL.Host, "/debug/config/fallback", nil))
+				cl := DefaultHTTPClient()
+				resp, err := cl.Do(MustHTTPRequest(t, http.MethodGet, diagURL.Host, "/debug/config/fallback", nil))
 				if !assert.NoError(c, err) {
 					return
 				}
