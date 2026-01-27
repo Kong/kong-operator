@@ -2,6 +2,7 @@ package validatingwebhook
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 
@@ -10,7 +11,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
@@ -18,12 +19,13 @@ import (
 
 	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
 	operatorv2beta1 "github.com/kong/kong-operator/api/gateway-operator/v2beta1"
+	"github.com/kong/kong-operator/pkg/consts"
 	testutils "github.com/kong/kong-operator/pkg/utils/test"
 	"github.com/kong/kong-operator/test/helpers"
 )
 
 func bootstrapGateway(ctx context.Context, t *testing.T, env environments.Environment, mgrClient client.Client) (
-	namespace *v1.Namespace, cleaner *clusters.Cleaner, ingressClass string, ctrlClient client.Client,
+	namespace *corev1.Namespace, cleaner *clusters.Cleaner, ingressClass string, ctrlClient client.Client,
 ) {
 	namespace, cleaner = helpers.SetupTestEnv(t, ctx, env)
 
@@ -31,12 +33,21 @@ func bootstrapGateway(ctx context.Context, t *testing.T, env environments.Enviro
 
 	ingressClass = envconf.RandomName("ingressclass", 16)
 
+	routerFlavor := kongRouterFlavor(t)
+
 	gatewayConfig := helpers.GenerateGatewayConfiguration(namespace.Name, func(gc *operatorv2beta1.GatewayConfiguration) {
 		gc.Spec.ControlPlaneOptions = &operatorv2beta1.GatewayConfigControlPlaneOptions{
 			ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
 				IngressClass: lo.ToPtr(ingressClass),
 			},
 		}
+		gc.Spec.DataPlaneOptions.Deployment.PodTemplateSpec.Spec.Containers[0].Env = append(
+			gc.Spec.DataPlaneOptions.Deployment.PodTemplateSpec.Spec.Containers[0].Env,
+			corev1.EnvVar{
+				Name:  consts.RouterFlavorEnvKey,
+				Value: string(routerFlavor),
+			},
+		)
 	})
 	t.Logf("deploying GatewayConfiguration %s/%s", gatewayConfig.Namespace, gatewayConfig.Name)
 	require.NoError(t, ctrlClient.Create(ctx, gatewayConfig))
@@ -67,4 +78,28 @@ func bootstrapGateway(ctx context.Context, t *testing.T, env environments.Enviro
 	t.Log("Gateway is programmed, proceeding with the test cases")
 
 	return namespace, cleaner, ingressClass, ctrlClient
+}
+
+// kongRouterFlavor returns router mode of Kong in tests.
+// It reads from TEST_KONG_ROUTER_FLAVOR environment variable.
+func kongRouterFlavor(t *testing.T) consts.RouterFlavor {
+	t.Helper()
+
+	rf := os.Getenv("TEST_KONG_ROUTER_FLAVOR")
+	switch {
+	case rf == "":
+		return consts.RouterFlavorTraditionalCompatible
+	case rf == string(consts.RouterFlavorTraditionalCompatible):
+		return consts.RouterFlavorTraditionalCompatible
+	case rf == string(consts.RouterFlavorExpressions):
+		return consts.RouterFlavorExpressions
+	default:
+		t.Fatalf("unsupported Kong router flavor: %s", rf)
+		return ""
+	}
+}
+
+// isExpressionsRouterMode returns true if the current router flavor is expressions.
+func isExpressionsRouterMode() bool {
+	return os.Getenv("TEST_KONG_ROUTER_FLAVOR") == string(consts.RouterFlavorExpressions)
 }
