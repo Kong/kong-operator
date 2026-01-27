@@ -17,7 +17,7 @@ crd-ref-docs: "0.2.0"
 # renovate: datasource=github-releases depName=vektra/mockery
 mockery: "3.6.3"
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-runtime
-setup-envtest: "0.23.0"
+setup-envtest: "0.23.1"
 # renovate: datasource=github-releases depName=rhysd/actionlint
 actionlint: "1.7.10"
 # renovate: datasource=github-releases depName=koalaman/shellcheck
