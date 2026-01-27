@@ -278,6 +278,9 @@ func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger 
 	if updated {
 		log.Debug(logger, "Updating HTTPRoute status in cluster", "status", c.route.Status)
 		if err := c.Status().Update(ctx, c.route); err != nil {
+			if k8serrors.IsConflict(err) {
+				return false, true, err
+			}
 			log.Error(logger, err, "Failed to update HTTPRoute status in cluster")
 			return false, stop, fmt.Errorf("failed to update HTTPRoute status: %w", err)
 		}
