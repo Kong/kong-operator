@@ -28,7 +28,7 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/ingress-controller/internal/util"
 	"github.com/kong/kong-operator/ingress-controller/test"
-	"github.com/kong/kong-operator/ingress-controller/test/internal/helpers"
+	"github.com/kong/kong-operator/ingress-controller/test/helpers"
 )
 
 // deployGateway deploys a gateway with a new created gateway class and a fixed name `kong`.

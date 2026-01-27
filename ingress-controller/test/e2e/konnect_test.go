@@ -24,7 +24,7 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/internal/konnect"
 	"github.com/kong/kong-operator/ingress-controller/internal/konnect/nodes"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
-	testkonnect "github.com/kong/kong-operator/ingress-controller/test/internal/helpers/konnect"
+	testkonnect "github.com/kong/kong-operator/ingress-controller/test/helpers/konnect"
 )
 
 const (

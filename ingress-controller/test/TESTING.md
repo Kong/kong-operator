@@ -125,25 +125,25 @@ The typical approach is to run them in a dedicated, disposable Kubernetes namesp
 
 #### How to run
 
-Integration tests are located under `tests/integration/` and use `integration_tests`
+Integration tests are located under `test/integration/kic/` and use `integration_tests`
 [build tag][go_build_tag].
 
 You can run them using one of the dedicated Makefile targets:
 
-- `test.integration` run all integration tests with standard verbose output on stderr.
+- `test.integration-kic` run all integration tests with standard verbose output on stderr.
   This will run tests for dbless, postgres, enterprise and non enterprise.
 
-- `test.integration.dbless` run all dbless integration tests with standard
+- `test.integration-kic.dbless` run all dbless integration tests with standard
   verbose output on stderr. The output will also include controllers' logs.
 
-- `test.integration.postgres` run all postgres integration tests with standard
+- `test.integration-kic.postgres` run all postgres integration tests with standard
   verbose output on stderr. The output will also include controllers' logs.
 
 Through `GOTESTFLAGS` you can specify custom flags that will be passed to `go test`.
 This can allow you to run a subset of all the tests for faster feedback times, e.g.:
 
 ```
-make test.integration.dbless GOTESTFLAGS="-count 1 -run TestUDPRouteEssentials"
+make test.integration-kic.dbless GOTESTFLAGS="-count 1 -run TestUDPRouteEssentials"
 ```
 
 [ktf]: https://github.com/Kong/kubernetes-testing-framework
@@ -221,25 +221,26 @@ There are a couple of key differences between isolated and regular integration t
 
 #### How to run
 
-Tests are located under `tests/integration/isolated` and use `integration_tests`
+Tests are located under `test/integration/kic/isolated` and use `integration_tests`
 [build tag][go_build_tag].
 
-You can run them using one of the dedicated Makefile targets:
+You can run them directly with:
 
-- `test.integration.isolated.dbless` run all dbless isolated integration tests with standard
-  verbose output on stderr. The output will also include controllers' logs.
+```
+go test -tags=integration_tests ./test/integration/kic/isolated
+```
 
 Through `GOTESTFLAGS` you can specify custom flags that will be passed to `go test`.
 This can allow you to run a subset of all the tests for faster feedback times, e.g.:
 
 ```
-make test.integration.isolated.dbless GOTESTFLAGS="-count 1 -run TestUDPRouteEssentials"
+make test.integration-kic.dbless GOTESTFLAGS="-count 1 -run TestUDPRouteEssentials"
 ```
 
 You can also specify e2e-framework's flags e.g. to filter tests via [labels][github-e2e-framework-labels].
 
 ```
-make test.integration.isolated.dbless E2E_FRAMEWORK_FLAGS="-labels=kind=UDPRoute,example=true"
+make test.integration-kic.dbless E2E_FRAMEWORK_FLAGS="-labels=kind=UDPRoute,example=true"
 ```
 
 [github-e2e-framework]: https://github.com/kubernetes-sigs/e2e-framework
