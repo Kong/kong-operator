@@ -128,10 +128,16 @@ func listKonnectAPIAuthConfigurationsRefByEntity[T constraints.EntityWithKonnect
 			return nil
 		}
 
+		namespace := tEnt.GetNamespace()
+		if tEnt.GetKonnectAPIAuthConfigurationRef().Namespace != nil &&
+			*tEnt.GetKonnectAPIAuthConfigurationRef().Namespace != "" {
+			namespace = *tEnt.GetKonnectAPIAuthConfigurationRef().Namespace
+		}
+
 		ref := tEnt.GetKonnectAPIAuthConfigurationRef()
 		return []reconcile.Request{{
 			NamespacedName: types.NamespacedName{
-				Namespace: tEnt.GetNamespace(),
+				Namespace: namespace,
 				Name:      ref.Name,
 			},
 		}}

@@ -280,10 +280,8 @@ func enqueueObjectsForKonnectAPIAuthConfiguration[
 			lPtr TListPtr = &l
 		)
 		if err := cl.List(ctx, lPtr,
-			// TODO: change this when cross namespace refs are allowed.
-			client.InNamespace(auth.GetNamespace()),
 			client.MatchingFields{
-				indexName: auth.Name,
+				indexName: auth.Namespace + "/" + auth.Name,
 			},
 		); err != nil {
 			return nil
