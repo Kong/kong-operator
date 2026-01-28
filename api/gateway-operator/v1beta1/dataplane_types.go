@@ -180,6 +180,8 @@ type DataPlaneNetworkOptions struct {
 	// Services indicates the configuration of Kubernetes Services needed for
 	// the topology of various forms of traffic (including ingress, e.t.c.) to
 	// and from the DataPlane.
+	//
+	// +kubebuilder:default={ingress:{type: "LoadBalancer"}}
 	Services *DataPlaneServices `json:"services,omitempty"`
 
 	// KonnectCA is the certificate authority that the operator uses to provision client certificates the DataPlane
