@@ -103,6 +103,9 @@ spec:
       description: Assert that the KongSNI resource is created for the SNI hostname.
       use:
        template: ../common/_step_templates/assert-kongSNI.yaml
+      bindings:
+       - name: resource_type
+         value: "kongcertificates.configuration.konghq.com"
   
     # Step 9: Create namespace for backend service.
     - name: Create-backend-namespace

@@ -4,8 +4,6 @@ apiVersion: configuration.konghq.com/v1alpha1
 kind: KongRoute
 metadata:
   namespace: ($kong_namespace)
-  (labels."gateway-operator.konghq.com/hybrid-gateways-name" == ($gateway_name_2)): true
-  (labels."gateway-operator.konghq.com/hybrid-gateways-namespace" == ($kong_namespace)): true
   (labels."gateway-operator.konghq.com/managed-by" == 'HTTPRoute'): true
 status:
   (conditions[?type == 'Programmed']):
@@ -19,8 +17,6 @@ apiVersion: configuration.konghq.com/v1alpha1
 kind: KongService
 metadata:
   namespace: ($kong_namespace)
-  (labels."gateway-operator.konghq.com/hybrid-gateways-name" == ($gateway_name_2)): true
-  (labels."gateway-operator.konghq.com/hybrid-gateways-namespace" == ($kong_namespace)): true
   (labels."gateway-operator.konghq.com/managed-by" == 'HTTPRoute'): true
 status:
   (conditions[?type == 'Programmed']):
@@ -34,8 +30,6 @@ apiVersion: configuration.konghq.com/v1alpha1
 kind: KongUpstream
 metadata:
   namespace: ($kong_namespace)
-  (labels."gateway-operator.konghq.com/hybrid-gateways-name" == ($gateway_name_2)): true
-  (labels."gateway-operator.konghq.com/hybrid-gateways-namespace" == ($kong_namespace)): true
   (labels."gateway-operator.konghq.com/managed-by" == 'HTTPRoute'): true
 status:
   (conditions[?type == 'Programmed']):
@@ -49,8 +43,6 @@ apiVersion: configuration.konghq.com/v1alpha1
 kind: KongTarget
 metadata:
   namespace: ($kong_namespace)
-  (labels."gateway-operator.konghq.com/hybrid-gateways-name" == ($gateway_name_2)): true
-  (labels."gateway-operator.konghq.com/hybrid-gateways-namespace" == ($kong_namespace)): true
   (labels."gateway-operator.konghq.com/managed-by" == 'HTTPRoute'): true
 status:
   (conditions[?type == 'Programmed']):
