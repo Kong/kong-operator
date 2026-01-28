@@ -598,10 +598,16 @@ jobs:
 
   integration-tests-validating-webhook:
     runs-on: ubuntu-latest
+    name: integration-tests-validating-webhook-${{ matrix.router_flavor }}
     needs:
       - check-docs-only
       - matrix_k8s_node_versions
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
+    strategy:
+      matrix:
+        router_flavor:
+          - traditional_compatible
+          - expressions
     steps:
     - name: Harden Runner
       uses: step-security/harden-runner@e3f713f2d8f53843e71c69a996d56f51aa9adfb9 # v2.14.1
@@ -623,8 +629,9 @@ jobs:
       run: make test.integration_validatingwebhook
       env:
         KONG_CONTROLLER_OUT: stdout
-        GOTESTSUM_JUNITFILE: integration-tests.xml
+        GOTESTSUM_JUNITFILE: integration-tests-${{ matrix.router_flavor }}.xml
         KONG_CLUSTER_VERSION: ${{ needs.matrix_k8s_node_versions.outputs.latest }}
+        TEST_KONG_ROUTER_FLAVOR: ${{ matrix.router_flavor }}
         # This is needed for ktf to find latest releases of addons.
         # This could be changed so that ktf addons have their versions pinned
         # in the test Makefile instead.
@@ -634,22 +641,22 @@ jobs:
       if: always()
       uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
-        name: diagnostics-integration-validating-webhook
+        name: diagnostics-integration-validating-webhook-${{ matrix.router_flavor }}
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
 
     - name: collect test coverage
       uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
-        name: coverage-integration-validating-webhook
+        name: coverage-integration-validating-webhook-${{ matrix.router_flavor }}
         path: coverage.integration-validatingwebhook.out
 
     - name: collect test report
       if: always()
       uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
-        name: tests-report-integration-validating-webhook
-        path: integration-tests.xml
+        name: tests-report-integration-validating-webhook-${{ matrix.router_flavor }}
+        path: integration-tests-${{ matrix.router_flavor }}.xml
 
   integration-tests-bluegreen:
     runs-on: ubuntu-latest
