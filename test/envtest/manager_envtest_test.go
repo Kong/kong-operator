@@ -86,7 +86,8 @@ func TestManager_NoLeakedGoroutinesAfterContextCancellation(t *testing.T) {
 		// https://github.com/kubernetes-sigs/controller-runtime/issues/3218
 		ignoreManagerReconcile := goleak.IgnoreTopFunction("sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile.func1")
 		ignoreManagerEnagageProcedure := goleak.IgnoreAnyFunction("sigs.k8s.io/controller-runtime/pkg/manager.(*controllerManager).engageStopProcedure.func3.(*runnableGroup).StopAndWait.3.2")
-		goleak.VerifyNone(t, ignoreManagerReconcile, ignoreManagerEnagageProcedure)
+		ignorePriorityQueueHandleItems := goleak.IgnoreAnyFunction("sigs.k8s.io/controller-runtime/pkg/controller/priorityqueue.(*priorityqueue[...]).handleReadyItems")
+		goleak.VerifyNone(t, ignoreManagerReconcile, ignoreManagerEnagageProcedure, ignorePriorityQueueHandleItems)
 	})
 
 	scheme := Scheme(t, WithKong)
