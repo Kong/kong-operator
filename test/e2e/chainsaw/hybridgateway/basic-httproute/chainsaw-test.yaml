@@ -4,6 +4,7 @@ kind: Test
 metadata:
   name: basic-httproute
 spec:
+  concurrent: false
   description: |
     This test validates that the hybrid gateway controller correctly
     processes a basic HTTPRoute with a single service backend.
