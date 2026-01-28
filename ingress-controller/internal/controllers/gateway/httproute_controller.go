@@ -508,7 +508,7 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	// once the data-plane has accepted the HTTPRoute object, we're all set.
-	info(log, httproute, "HTTPRoute has been configured on the data-plane")
+	debug(log, httproute, "HTTPRoute has been configured on the data-plane")
 
 	return ctrl.Result{}, nil
 }

@@ -5,8 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/google/uuid"
 	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/mo"
@@ -18,7 +21,6 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/deckgen"
 	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/kongstate"
 	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/sendconfig"
-	"github.com/kong/kong-operator/ingress-controller/internal/logging"
 	"github.com/kong/kong-operator/ingress-controller/internal/metrics"
 	"github.com/kong/kong-operator/ingress-controller/internal/util"
 )
@@ -45,6 +47,8 @@ type ConfigSynchronizer struct {
 
 	targetKongState mo.Option[TargetKongState]
 	configLock      sync.RWMutex
+	synchronizerID  string
+	serialNumber    atomic.Uint32
 }
 
 // TargetKongState wraps the Kong state to be uploaded to Konnect and indicates whether the configuration is a fallback
@@ -74,11 +78,17 @@ type ConfigSynchronizerParams struct {
 	ConfigChangeDetector   sendconfig.ConfigurationChangeDetector
 	ConfigStatusNotifier   clients.ConfigStatusNotifier
 	MetricsRecorder        metrics.Recorder
+
+	SynchronizerID string
 }
 
 func NewConfigSynchronizer(p ConfigSynchronizerParams) *ConfigSynchronizer {
+	if p.SynchronizerID == "" {
+		p.SynchronizerID = uuid.NewString()
+	}
+
 	return &ConfigSynchronizer{
-		logger:                 p.Logger,
+		logger:                 p.Logger.WithValues("synchronizerID", p.SynchronizerID),
 		kongConfig:             p.KongConfig,
 		syncTicker:             p.ConfigUploadTicker,
 		konnectClientFactory:   p.KonnectClientFactory,
@@ -86,6 +96,8 @@ func NewConfigSynchronizer(p ConfigSynchronizerParams) *ConfigSynchronizer {
 		configChangeDetector:   p.ConfigChangeDetector,
 		configStatusNotifier:   p.ConfigStatusNotifier,
 		metricsRecorder:        p.MetricsRecorder,
+		synchronizerID:         p.SynchronizerID,
+		serialNumber:           atomic.Uint32{},
 	}
 }
 
@@ -199,29 +211,40 @@ func (s *ConfigSynchronizer) run(ctx context.Context) {
 }
 
 func (s *ConfigSynchronizer) handleConfigSynchronizationTick(ctx context.Context) {
-	s.logger.V(logging.DebugLevel).Info("Start uploading configuration to Konnect")
+	sn := s.serialNumber.Add(1)
+	logger := s.logger.WithValues("SerialNumber", sn)
+	logger.Info("Start uploading configuration to Konnect")
 
 	// Get the latest configuration copy to upload to Konnect. We don't want to hold the lock for a long time to prevent
 	// blocking the update of the configuration.
 	targetCfg, ok := s.currentContent(ctx)
 	if !ok {
-		s.logger.Info("No configuration received yet, skipping Konnect configuration synchronization")
+		logger.Info("No configuration received yet, skipping Konnect configuration synchronization")
 		return
 	}
 
 	// Upload the configuration to Konnect.
-	if err := s.uploadConfig(ctx, s.konnectAdminClient, targetCfg); err != nil {
-		s.logger.Error(err, "Failed to upload configuration to Konnect")
-		logKonnectErrors(s.logger, err)
+	if err := s.uploadConfig(ctx, logger, s.konnectAdminClient, targetCfg); err != nil {
+		logger.Error(err, "Failed to upload configuration to Konnect")
+		logKonnectErrors(logger, err)
 	}
 }
 
 // uploadConfig sends the given configuration to Konnect.
 func (s *ConfigSynchronizer) uploadConfig(
 	ctx context.Context,
+	logger logr.Logger,
 	client *adminapi.KonnectClient,
 	targetContent TargetContent,
 ) error {
+	sn := s.serialNumber.Load()
+	startTime := time.Now().Unix()
+	syncID := uuid.NewSHA1(uuid.Nil, []byte(fmt.Sprintf("%s:%d:%d", s.synchronizerID, sn, startTime)))
+	ctx = context.WithValue(ctx, "InstanceID", s.synchronizerID)
+	ctx = context.WithValue(ctx, "KonnectSyncSerialNumber", fmt.Sprintf("%d", sn))
+	ctx = context.WithValue(ctx, "KonnectSyncSerialNumber", fmt.Sprintf("%d", startTime))
+	ctx = context.WithValue(ctx, "KonnectSyncID", syncID)
+
 	// Remove consumers in target content if consumer sync is disabled.
 	if client.ConsumersSyncDisabled() {
 		targetContent.Consumers = []file.FConsumer{}
@@ -229,7 +252,7 @@ func (s *ConfigSynchronizer) uploadConfig(
 
 	newSHA, err := sendconfig.PerformUpdate(
 		ctx,
-		s.logger,
+		logger,
 		client,
 		s.kongConfig,
 		targetContent.Content,
