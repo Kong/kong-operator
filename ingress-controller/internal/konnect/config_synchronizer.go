@@ -198,6 +198,7 @@ func (s *ConfigSynchronizer) KonnectClientInitialized() bool {
 
 // run starts the loop uploading the current configuration to Konnect.
 func (s *ConfigSynchronizer) run(ctx context.Context) {
+	ctx = context.WithValue(ctx, "InstanceID", s.synchronizerID)
 	for {
 		select {
 		case <-ctx.Done():
@@ -211,8 +212,14 @@ func (s *ConfigSynchronizer) run(ctx context.Context) {
 }
 
 func (s *ConfigSynchronizer) handleConfigSynchronizationTick(ctx context.Context) {
-	sn := s.serialNumber.Add(1)
-	logger := s.logger.WithValues("SerialNumber", sn)
+
+	serialNumber := s.serialNumber.Add(1)
+	startTime := time.Now().Unix()
+	syncID := uuid.NewSHA1(uuid.Nil, []byte(fmt.Sprintf("%s:%d:%d", s.synchronizerID, serialNumber, startTime)))
+	ctx = context.WithValue(ctx, "KonnectSyncSerialNumber", fmt.Sprintf("%d", serialNumber))
+	ctx = context.WithValue(ctx, "KonnectSyncStartTimestamp", fmt.Sprintf("%d", startTime))
+	ctx = context.WithValue(ctx, "KonnectSyncID", syncID)
+	logger := s.logger.WithValues("serialNumber", serialNumber, "syncRoundID", syncID)
 	logger.Info("Start uploading configuration to Konnect")
 
 	// Get the latest configuration copy to upload to Konnect. We don't want to hold the lock for a long time to prevent
@@ -237,13 +244,6 @@ func (s *ConfigSynchronizer) uploadConfig(
 	client *adminapi.KonnectClient,
 	targetContent TargetContent,
 ) error {
-	sn := s.serialNumber.Load()
-	startTime := time.Now().Unix()
-	syncID := uuid.NewSHA1(uuid.Nil, []byte(fmt.Sprintf("%s:%d:%d", s.synchronizerID, sn, startTime)))
-	ctx = context.WithValue(ctx, "InstanceID", s.synchronizerID)
-	ctx = context.WithValue(ctx, "KonnectSyncSerialNumber", fmt.Sprintf("%d", sn))
-	ctx = context.WithValue(ctx, "KonnectSyncSerialNumber", fmt.Sprintf("%d", startTime))
-	ctx = context.WithValue(ctx, "KonnectSyncID", syncID)
 
 	// Remove consumers in target content if consumer sync is disabled.
 	if client.ConsumersSyncDisabled() {
