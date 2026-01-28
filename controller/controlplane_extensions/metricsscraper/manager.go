@@ -198,7 +198,7 @@ func (msm *Manager) getCASecretAndKey(ctx context.Context) (*x509.Certificate, c
 		return nil, nil, secrets.KeyConfig{}, fmt.Errorf("failed decoding %q data from secret %s", consts.TLSKey, caSecret.Name)
 	}
 
-	caKey, err := secrets.ParseKey(keyConfig.Type, caKeyBlock)
+	caKey, _, err := secrets.ParsePrivateKey(caKeyBlock)
 	return caCert, caKey, keyConfig, err
 }
 

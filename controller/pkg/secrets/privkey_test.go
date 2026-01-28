@@ -1,8 +1,6 @@
 package secrets
 
 import (
-	"crypto/ecdsa"
-	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
 	"testing"
@@ -73,92 +71,6 @@ func TestCreatePrivateKey(t *testing.T) {
 			p, rest := pem.Decode(pem.EncodeToMemory(pemBlock))
 			assert.Empty(t, rest)
 			assert.NotNil(t, p)
-		})
-	}
-}
-
-func TestParseKey(t *testing.T) {
-	t.Parallel()
-
-	const keySize = 1024
-
-	tests := []struct {
-		name      string
-		keyType   x509.PublicKeyAlgorithm
-		genKey    func() (*pem.Block, error)
-		expectErr bool
-	}{
-		{
-			name:    "Parse ECDSA key",
-			keyType: x509.ECDSA,
-			genKey: func() (*pem.Block, error) {
-				_, pemBlock, _, err := CreatePrivateKey(KeyConfig{Type: x509.ECDSA})
-				return pemBlock, err
-			},
-			expectErr: false,
-		},
-		{
-			name:    "Parse RSA key",
-			keyType: x509.RSA,
-			genKey: func() (*pem.Block, error) {
-				_, pemBlock, _, err := CreatePrivateKey(KeyConfig{Type: x509.RSA, Size: keySize})
-				return pemBlock, err
-			},
-			expectErr: false,
-		},
-		{
-			name:    "Unsupported key type",
-			keyType: x509.DSA,
-			genKey: func() (*pem.Block, error) {
-				_, pemBlock, _, err := CreatePrivateKey(KeyConfig{Type: x509.ECDSA})
-				return pemBlock, err
-			},
-			expectErr: true,
-		},
-		{
-			name:    "Mismatched key type (ECDSA provided, RSA expected)",
-			keyType: x509.RSA,
-			genKey: func() (*pem.Block, error) {
-				_, pemBlock, _, err := CreatePrivateKey(KeyConfig{Type: x509.ECDSA})
-				return pemBlock, err
-			},
-			expectErr: true,
-		},
-		{
-			name:    "Mismatched key type (RSA provided, ECDSA expected)",
-			keyType: x509.ECDSA,
-			genKey: func() (*pem.Block, error) {
-				_, pemBlock, _, err := CreatePrivateKey(KeyConfig{Type: x509.RSA, Size: keySize})
-				return pemBlock, err
-			},
-			expectErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			pemBlock, err := tt.genKey()
-			require.NoError(t, err)
-
-			key, err := ParseKey(tt.keyType, pemBlock)
-			if tt.expectErr {
-				require.Error(t, err)
-				assert.Nil(t, key)
-				return
-			}
-
-			require.NoError(t, err)
-			require.NotNil(t, key)
-
-			// Verify the key type matches what we expect
-			switch tt.keyType {
-			case x509.ECDSA:
-				assert.IsType(t, &ecdsa.PrivateKey{}, key)
-			case x509.RSA:
-				assert.IsType(t, &rsa.PrivateKey{}, key)
-			default:
-				t.Fatal("it should never happen, fix the test case")
-			}
 		})
 	}
 }
