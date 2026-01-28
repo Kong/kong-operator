@@ -32,10 +32,13 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/test"
 	"github.com/kong/kong-operator/ingress-controller/test/testenv"
 	testutils "github.com/kong/kong-operator/ingress-controller/test/util"
+	"github.com/kong/kong-operator/test/helpers"
 	"github.com/kong/kong-operator/test/integration/kic/consts"
 )
 
 var tenv env.Environment
+
+type ControllerManagerOpt = helpers.ControllerManagerOpt
 
 // -----------------------------------------------------------------------------
 // Testing Main
@@ -46,8 +49,16 @@ func TestMain(m *testing.M) {
 	defer cancel()
 
 	cfg, err := envconf.NewFromFlags()
-	ExitOnErrWithCode(ctx, err, consts.ExitCodeEnvSetupFailed)
-	cfg.WithKubeconfigFile(conf.ResolveKubeConfigFile())
+	helpers.ExitOnErrWithCode(ctx, err, consts.ExitCodeEnvSetupFailed)
+	kubeconfig := conf.ResolveKubeConfigFile()
+	cfg.WithKubeconfigFile(kubeconfig)
+	if _, err := cfg.NewClient(); err != nil {
+		helpers.ExitOnErrWithCode(ctx, err, consts.ExitCodeEnvSetupFailed)
+	}
+
+	if kubeconfig != "" {
+		_ = os.Setenv("KUBECONFIG", kubeconfig)
+	}
 	tenv = env.NewWithConfig(cfg)
 
 	var (
@@ -64,13 +75,13 @@ func TestMain(m *testing.M) {
 	fmt.Println("INFO: configuring cluster for testing environment")
 	if existingCluster := testenv.ExistingClusterName(); existingCluster != "" {
 		if cv := testenv.ClusterVersion(); cv != "" {
-			ExitOnErrWithCode(ctx,
+			helpers.ExitOnErrWithCode(ctx,
 				fmt.Errorf("can't flag cluster version (%s) & provide an existing cluster at the same time", cv),
 				consts.ExitCodeIncompatibleOptions)
 		}
 		clusterParts := strings.Split(existingCluster, ":")
 		if len(clusterParts) != 2 {
-			ExitOnErrWithCode(ctx, fmt.Errorf("existing cluster in wrong format (%s): format is <TYPE>:<NAME> (e.g. kind:test-cluster)", existingCluster), consts.ExitCodeCantUseExistingCluster)
+			helpers.ExitOnErrWithCode(ctx, fmt.Errorf("existing cluster in wrong format (%s): format is <TYPE>:<NAME> (e.g. kind:test-cluster)", existingCluster), consts.ExitCodeCantUseExistingCluster)
 		}
 		clusterType, clusterName := clusterParts[0], clusterParts[1]
 
@@ -78,11 +89,11 @@ func TestMain(m *testing.M) {
 		switch clusterType {
 		case string(kind.KindClusterType):
 			cluster, err := kind.NewFromExisting(clusterName)
-			ExitOnErr(ctx, err)
+			helpers.ExitOnErr(ctx, err)
 			builder.WithExistingCluster(cluster)
 			builder.WithAddons(metallb.New())
 		default:
-			ExitOnErrWithCode(ctx, fmt.Errorf("unknown cluster type: %s", clusterType), consts.ExitCodeCantUseExistingCluster)
+			helpers.ExitOnErrWithCode(ctx, fmt.Errorf("unknown cluster type: %s", clusterType), consts.ExitCodeCantUseExistingCluster)
 		}
 
 	} else {
@@ -92,7 +103,7 @@ func TestMain(m *testing.M) {
 
 		if testenv.ClusterVersion() != "" {
 			clusterVersion, err := semver.Parse(strings.TrimPrefix(testenv.ClusterVersion(), "v"))
-			ExitOnErr(ctx, err)
+			helpers.ExitOnErr(ctx, err)
 
 			fmt.Printf("INFO: build a new KIND cluster with version %s\n", clusterVersion.String())
 			builder.WithKubernetesVersion(clusterVersion)
@@ -101,15 +112,15 @@ func TestMain(m *testing.M) {
 
 	fmt.Println("INFO: building test environment")
 	env, err = builder.Build(ctx)
-	ExitOnErr(ctx, err)
+	helpers.ExitOnErr(ctx, err)
 
 	fmt.Printf("INFO: waiting for cluster %s and all addons to become ready\n", env.Cluster().Name())
 	envReadyCtx, envReadyCancel := context.WithTimeout(ctx, testenv.EnvironmentReadyTimeout())
 	defer envReadyCancel()
-	ExitOnErr(ctx, <-env.WaitForReady(envReadyCtx))
+	helpers.ExitOnErr(ctx, <-env.WaitForReady(envReadyCtx))
 
 	if err := testutils.PrepareClusterForRunningControllerManager(ctx, env.Cluster()); err != nil {
-		ExitOnErr(ctx, fmt.Errorf("failed to prepare cluster for running the controller manager: %w", err))
+		helpers.ExitOnErr(ctx, fmt.Errorf("failed to prepare cluster for running the controller manager: %w", err))
 	}
 
 	ctx = SetClusterInCtx(ctx, env.Cluster())
@@ -142,7 +153,7 @@ func TestMain(m *testing.M) {
 	} else {
 		ctx, cancel := context.WithTimeout(context.Background(), test.EnvironmentCleanupTimeout)
 		defer cancel()
-		ExitOnErr(ctx, RemoveCluster(ctx, env.Cluster()))
+		helpers.ExitOnErr(ctx, helpers.RemoveCluster(ctx, env.Cluster()))
 	}
 }
 
@@ -230,7 +241,7 @@ func setUpNamespaceAndCleaner(ctx context.Context, t *testing.T, cfg *envconf.Co
 	t.Log("Create a cluster cleaner")
 	cleaner := clusters.NewCleaner(cluster, scheme.Get())
 	t.Cleanup(func() {
-		DumpDiagnosticsIfFailed(ctx, t, cluster)
+		helpers.DumpDiagnosticsIfFailed(ctx, t, cluster)
 		t.Logf("Start cleanup for test %s", t.Name())
 		if err := cleaner.Cleanup(context.Background()); err != nil { //nolint:contextcheck
 			fmt.Printf("ERROR: failed cleaning up the cluster: %v\n", err)
@@ -271,13 +282,13 @@ func deployKongAddon(
 		// TODO: If we deploy KIC by KTF Kong Addon, we can only use `kong` ingress class.
 		// We need to support different ingress classes in KTF Kong addon:
 		// https://github.com/Kong/kubernetes-testing-framework/issues/1372
-		kongBuilder, err = GenerateKongBuilderWithController()
+		kongBuilder, err = helpers.GenerateKongBuilderWithController()
 		if !assert.NoError(t, err) {
 			return ctx
 		}
 		kongBuilder.WithControllerImage(kongAddonCfg.controllerImageRepository, kongAddonCfg.controllerImageTag)
 	} else {
-		kongBuilder, _, err = GenerateKongBuilder(ctx)
+		kongBuilder, _, err = helpers.GenerateKongBuilder(ctx)
 		if !assert.NoError(t, err) {
 			return ctx
 		}
@@ -365,7 +376,7 @@ func deployKongAddon(
 
 	if !assert.NoError(t, retry.Do(
 		func() error {
-			version, err := GetKongVersion(ctx, proxyAdminURL, consts.KongTestPassword)
+			version, err := helpers.GetKongVersion(ctx, proxyAdminURL, consts.KongTestPassword)
 			if err != nil {
 				return err
 			}
@@ -430,8 +441,8 @@ func startControllerManager(
 	t.Logf("feature gates enabled: %s", featureGates)
 
 	t.Logf("starting the controller manager")
-	metricsPort := GetFreePort(t)
-	healthProbePort := GetFreePort(t)
+	metricsPort := helpers.GetFreePort(t)
+	healthProbePort := helpers.GetFreePort(t)
 	ingressClass := setupCfg.ingressClassName
 	if ingressClass == "" {
 		ingressClass = envconf.RandomName("ingressclass", 16)
@@ -453,7 +464,7 @@ func startControllerManager(
 	}
 
 	t.Logf("deploying the controller's IngressClass %q", ingressClass)
-	if !assert.NoError(t, CreateIngressClass(ctx, ingressClass, cluster.Client()), "failed creating IngressClass") {
+	if !assert.NoError(t, helpers.CreateIngressClass(ctx, ingressClass, cluster.Client()), "failed creating IngressClass") {
 		return ctx
 	}
 	defer func() {

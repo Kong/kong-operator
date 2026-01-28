@@ -29,6 +29,7 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/test/annotations"
 	"github.com/kong/kong-operator/ingress-controller/test/testenv"
 	"github.com/kong/kong-operator/pkg/clientset"
+	"github.com/kong/kong-operator/test/helpers"
 	"github.com/kong/kong-operator/test/integration/kic/consts"
 )
 
@@ -45,7 +46,7 @@ func TestIngressEssentials(t *testing.T) {
 	})
 
 	ctx := t.Context()
-	ns, cleaner := Setup(ctx, t, env)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
@@ -80,7 +81,7 @@ func TestIngressEssentials(t *testing.T) {
 
 	t.Log("waiting for routes from Ingress to be operational")
 	require.Eventually(t, func() bool {
-		resp, err := DefaultHTTPClient().Get(fmt.Sprintf("%s/test_ingress_essentials", proxyHTTPURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_ingress_essentials", proxyHTTPURL))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false
@@ -113,7 +114,7 @@ func TestIngressEssentials(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Logf("verifying that removing .Spec.IngressClassName %q from ingress causes routes to disconnect", consts.IngressClass)
-	EventuallyExpectHTTP404WithNoRoute(t, proxyHTTPURL, proxyHTTPURL.Host, "/test_ingress_essentials", ingressWait, waitTick, nil)
+	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyHTTPURL, proxyHTTPURL.Host, "/test_ingress_essentials", ingressWait, waitTick, nil)
 
 	t.Logf("putting the .Spec.IngressClassName %q back on ingress", consts.IngressClass)
 	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
@@ -129,7 +130,7 @@ func TestIngressEssentials(t *testing.T) {
 
 	t.Log("waiting for routes from Ingress to be operational after reintroducing .Spec.IngressClassName")
 	require.Eventually(t, func() bool {
-		resp, err := DefaultHTTPClient().Get(fmt.Sprintf("%s/test_ingress_essentials", proxyHTTPURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_ingress_essentials", proxyHTTPURL))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false
@@ -149,12 +150,12 @@ func TestIngressEssentials(t *testing.T) {
 
 	t.Log("deleting Ingress and waiting for routes to be torn down")
 	require.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress))
-	EventuallyExpectHTTP404WithNoRoute(t, proxyHTTPURL, proxyHTTPURL.Host, "/test_ingress_essentials", ingressWait, waitTick, nil)
+	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyHTTPURL, proxyHTTPURL.Host, "/test_ingress_essentials", ingressWait, waitTick, nil)
 }
 
 func TestIngressDefaultBackend(t *testing.T) {
 	ctx := t.Context()
-	ns, cleaner := Setup(ctx, t, env)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
@@ -187,10 +188,10 @@ func TestIngressDefaultBackend(t *testing.T) {
 	cleaner.Add(ingress)
 
 	t.Log("matching path")
-	EventuallyGETPath(t, nil, proxyHTTPURL.String(), "/foo", nil, http.StatusOK, "<title>httpbin.org</title>", nil, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, nil, proxyHTTPURL.String(), "/foo", nil, http.StatusOK, "<title>httpbin.org</title>", nil, ingressWait, waitTick)
 
 	t.Log("non matching path - use default backend")
-	EventuallyGETPath(
+	helpers.EventuallyGETPath(
 		t, nil, proxyHTTPURL.String(), fmt.Sprintf("/status/%d", http.StatusTeapot), nil, http.StatusTeapot, "", nil, ingressWait, waitTick,
 	)
 }
@@ -205,7 +206,7 @@ func TestIngressClassNameSpec(t *testing.T) {
 	})
 
 	ctx := t.Context()
-	ns, cleaner := Setup(ctx, t, env)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes using the IngressClassName spec")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
@@ -233,7 +234,7 @@ func TestIngressClassNameSpec(t *testing.T) {
 	t.Log("waiting for routes from Ingress to be operational")
 	defer func() {
 		if t.Failed() {
-			resp, err := DefaultHTTPClient().Get(fmt.Sprintf("%s/test_ingressclassname_spec", proxyHTTPURL))
+			resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_ingressclassname_spec", proxyHTTPURL))
 			if err != nil {
 				t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			}
@@ -244,7 +245,7 @@ func TestIngressClassNameSpec(t *testing.T) {
 	}()
 
 	require.Eventually(t, func() bool {
-		resp, err := DefaultHTTPClient().Get(fmt.Sprintf("%s/test_ingressclassname_spec", proxyHTTPURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_ingressclassname_spec", proxyHTTPURL))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false
@@ -267,7 +268,7 @@ func TestIngressClassNameSpec(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Logf("verifying that removing the IngressClassName %q from ingress causes routes to disconnect", consts.IngressClass)
-	EventuallyExpectHTTP404WithNoRoute(t, proxyHTTPURL, proxyHTTPURL.Host, "/test_ingressclassname_spec", ingressWait, waitTick, nil)
+	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyHTTPURL, proxyHTTPURL.Host, "/test_ingressclassname_spec", ingressWait, waitTick, nil)
 
 	t.Logf("putting the IngressClassName %q back on ingress", consts.IngressClass)
 	err = setIngressClassNameWithRetry(ctx, ns.Name, ingress, kong.String(consts.IngressClass))
@@ -275,7 +276,7 @@ func TestIngressClassNameSpec(t *testing.T) {
 
 	t.Log("waiting for routes from Ingress to be operational after reintroducing ingress class annotation")
 	require.Eventually(t, func() bool {
-		resp, err := DefaultHTTPClient().Get(fmt.Sprintf("%s/test_ingressclassname_spec", proxyHTTPURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_ingressclassname_spec", proxyHTTPURL))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false
@@ -296,14 +297,14 @@ func TestIngressClassNameSpec(t *testing.T) {
 
 	t.Log("deleting Ingress and waiting for routes to be torn down")
 	require.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress))
-	EventuallyExpectHTTP404WithNoRoute(t, proxyHTTPURL, proxyHTTPURL.Host, "/test_ingressclassname_spec", ingressWait, waitTick, nil)
+	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyHTTPURL, proxyHTTPURL.Host, "/test_ingressclassname_spec", ingressWait, waitTick, nil)
 }
 
 func TestIngressServiceUpstream(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
-	ns, cleaner := Setup(ctx, t, env)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Logf("using testing namespace %s", ns.Name)
 
@@ -334,7 +335,7 @@ func TestIngressServiceUpstream(t *testing.T) {
 
 	t.Log("waiting for routes from Ingress to be operational")
 	require.Eventually(t, func() bool {
-		resp, err := DefaultHTTPClient().Get(fmt.Sprintf("%s/elsewhere", proxyHTTPURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/elsewhere", proxyHTTPURL))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false
@@ -357,7 +358,7 @@ func TestIngressStatusUpdatesExtended(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
-	ns, cleaner := Setup(ctx, t, env)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
@@ -490,7 +491,7 @@ func TestIngressClassRegexToggle(t *testing.T) {
 	})
 
 	ctx := t.Context()
-	ns, cleaner := Setup(ctx, t, env)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
@@ -587,7 +588,7 @@ func TestIngressClassRegexToggle(t *testing.T) {
 	// entirely, which would be bad for other tests.
 	t.Log("waiting for ingress path to become available")
 	require.Eventually(t, func() bool {
-		resp, err := DefaultHTTPClient().Get(fmt.Sprintf("%s/test_ingress_class_regex_toggle/999", proxyHTTPURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_ingress_class_regex_toggle/999", proxyHTTPURL))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false
@@ -606,7 +607,7 @@ func TestIngressClassRegexToggle(t *testing.T) {
 
 func TestIngressRegexPrefix(t *testing.T) {
 	ctx := t.Context()
-	ns, cleaner := Setup(ctx, t, env)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
@@ -714,7 +715,7 @@ func TestIngressRegexPrefix(t *testing.T) {
 
 	t.Log("waiting for ingress path to become available")
 	require.Eventually(t, func() bool {
-		resp, err := DefaultHTTPClient().Get(fmt.Sprintf("%s/test_ingress_regex_prefix/999", proxyHTTPURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_ingress_regex_prefix/999", proxyHTTPURL))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false
@@ -730,7 +731,7 @@ func TestIngressRegexPrefix(t *testing.T) {
 		return false
 	}, ingressWait, waitTick)
 	require.Eventually(t, func() bool {
-		resp, err := DefaultHTTPClient().Get(fmt.Sprintf("%s/test_ingress_regex_prefix_nonstandard/999", proxyHTTPURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_ingress_regex_prefix_nonstandard/999", proxyHTTPURL))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false
@@ -746,7 +747,7 @@ func TestIngressRegexPrefix(t *testing.T) {
 		return false
 	}, ingressWait, waitTick)
 	require.Eventually(t, func() bool {
-		resp, err := DefaultHTTPClient().Get(fmt.Sprintf("%s/~/test_ingress_regex_prefix_nonstandard_default", proxyHTTPURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/~/test_ingress_regex_prefix_nonstandard_default", proxyHTTPURL))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false
@@ -770,7 +771,7 @@ func TestIngressRecoverFromInvalidPath(t *testing.T) {
 	}
 
 	ctx := t.Context()
-	ns, cleaner := Setup(ctx, t, env)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
@@ -827,7 +828,7 @@ func TestIngressRecoverFromInvalidPath(t *testing.T) {
 
 	t.Log("waiting for ingress path to become available")
 	require.Eventually(t, func() bool {
-		resp, err := DefaultHTTPClient().Get(fmt.Sprintf("%s/foo/", proxyHTTPURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/foo/", proxyHTTPURL))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false
@@ -893,7 +894,7 @@ func TestIngressRecoverFromInvalidPath(t *testing.T) {
 	require.NoError(t, err)
 	t.Log("verifying new configuration is not applied to kong proxy")
 	require.Never(t, func() bool {
-		resp, err := DefaultHTTPClient().Get(fmt.Sprintf("%s/bar/", proxyHTTPURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/bar/", proxyHTTPURL))
 		require.NoError(t, err)
 		defer resp.Body.Close()
 		return resp.StatusCode == http.StatusOK
@@ -901,7 +902,7 @@ func TestIngressRecoverFromInvalidPath(t *testing.T) {
 
 	t.Log("verifying routes configured before invalid config is still available")
 	require.Eventually(t, func() bool {
-		resp, err := DefaultHTTPClient().Get(fmt.Sprintf("%s/foo/", proxyHTTPURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/foo/", proxyHTTPURL))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false
@@ -956,7 +957,7 @@ func TestIngressRecoverFromInvalidPath(t *testing.T) {
 
 	t.Log("waiting for ingress path to recover and new path available")
 	require.Eventually(t, func() bool {
-		resp, err := DefaultHTTPClient().Get(fmt.Sprintf("%s/bar/", proxyHTTPURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/bar/", proxyHTTPURL))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false
@@ -976,7 +977,7 @@ func TestIngressRecoverFromInvalidPath(t *testing.T) {
 func TestIngressMatchByHost(t *testing.T) {
 	ctx := t.Context()
 
-	ns, cleaner := Setup(ctx, t, env)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
@@ -1004,9 +1005,9 @@ func TestIngressMatchByHost(t *testing.T) {
 	cleaner.Add(ingress)
 
 	t.Log("try to access the ingress by matching host")
-	req := MustHTTPRequest(t, http.MethodGet, "test.example", "/", nil)
+	req := helpers.MustHTTPRequest(t, http.MethodGet, "test.example", "/", nil)
 	require.Eventually(t, func() bool {
-		resp, err := DefaultHTTPClient(WithResolveHostTo(proxyHTTPURL.Host)).Do(req)
+		resp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(req)
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false
@@ -1023,8 +1024,8 @@ func TestIngressMatchByHost(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("try to access the ingress by unmatching host, should return 404")
-	req = MustHTTPRequest(t, http.MethodGet, "foo.example", "/", nil)
-	resp, err := DefaultHTTPClient(WithResolveHostTo(proxyHTTPURL.Host)).Do(req)
+	req = helpers.MustHTTPRequest(t, http.MethodGet, "foo.example", "/", nil)
+	resp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	require.Equal(t, resp.StatusCode, http.StatusNotFound)
@@ -1047,9 +1048,9 @@ func TestIngressMatchByHost(t *testing.T) {
 
 	t.Log("try to access the ingress by matching host")
 
-	req = MustHTTPRequest(t, http.MethodGet, "test0.example", "/", nil)
+	req = helpers.MustHTTPRequest(t, http.MethodGet, "test0.example", "/", nil)
 	require.Eventually(t, func() bool {
-		resp, err := DefaultHTTPClient(WithResolveHostTo(proxyHTTPURL.Host)).Do(req)
+		resp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(req)
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false
@@ -1066,8 +1067,8 @@ func TestIngressMatchByHost(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("try to access the ingress by unmatching host, should return 404")
-	req = MustHTTPRequest(t, http.MethodGet, "test.another", "/", nil)
-	resp, err = DefaultHTTPClient(WithResolveHostTo(proxyHTTPURL.Host)).Do(req)
+	req = helpers.MustHTTPRequest(t, http.MethodGet, "test.another", "/", nil)
+	resp, err = helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	require.Equal(t, resp.StatusCode, http.StatusNotFound)
@@ -1080,7 +1081,7 @@ func TestIngressRewriteURI(t *testing.T) {
 		t.Skipf("rewrite uri feature is disabled")
 	}
 
-	ns, cleaner := Setup(ctx, t, env)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP Bin container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
@@ -1112,7 +1113,7 @@ func TestIngressRewriteURI(t *testing.T) {
 	// wait for first successful response. After it all subsequent must be successful too.
 	t.Log("wait for the Ingress direct to become available")
 	const path = "image/jpeg"
-	EventuallyGETPath(t, proxyHTTPURL, serviceDomainDirect, path, nil, http.StatusOK, consts.JPEGMagicNumber, nil, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyHTTPURL, serviceDomainDirect, path, nil, http.StatusOK, consts.JPEGMagicNumber, nil, ingressWait, waitTick)
 
 	waitForMainTestToFinish, cancelBackgroundTest := context.WithCancel(ctx)
 	backgroundTestError := make(chan error)
@@ -1139,7 +1140,7 @@ func TestIngressRewriteURI(t *testing.T) {
 			case <-time.After(50 * time.Millisecond):
 			}
 			cntAttempts++
-			resp, err := DefaultHTTPClient(WithResolveHostTo(proxyHTTPURL.Host)).Do(MustHTTPRequest(t, http.MethodGet, serviceDomainDirect, path, nil))
+			resp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(helpers.MustHTTPRequest(t, http.MethodGet, serviceDomainDirect, path, nil))
 			if err != nil {
 				t.Logf("WARNING: Ingress without rewrite - http request failed for GET %s/%s to %s: %v", serviceDomainDirect, path, proxyHTTPURL, err)
 				continue
@@ -1181,10 +1182,10 @@ func TestIngressRewriteURI(t *testing.T) {
 	cleaner.Add(ingressRewrite)
 
 	t.Log("try to access the ingress with valid capture group")
-	EventuallyGETPath(t, proxyHTTPURL, serviceDomainRewrite, "/foo/jpeg", nil, http.StatusOK, consts.JPEGMagicNumber, nil, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyHTTPURL, serviceDomainRewrite, "/foo/jpeg", nil, http.StatusOK, consts.JPEGMagicNumber, nil, ingressWait, waitTick)
 
 	t.Log("try to access the ingress with invalid capture group, should return 404")
-	EventuallyGETPath(t, proxyHTTPURL, serviceDomainRewrite, "/", nil, http.StatusNotFound, "", nil, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyHTTPURL, serviceDomainRewrite, "/", nil, http.StatusNotFound, "", nil, ingressWait, waitTick)
 
 	ingressRewrite, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Get(ctx, ingressRewrite.Name, metav1.GetOptions{})
 	require.NoError(t, err)
@@ -1197,7 +1198,7 @@ func TestIngressRewriteURI(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("try to access the ingress with new valid capture group")
-	EventuallyGETPath(t, proxyHTTPURL, serviceDomainRewrite, "/foo/jpeg", nil, http.StatusOK, consts.JPEGMagicNumber, nil, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyHTTPURL, serviceDomainRewrite, "/foo/jpeg", nil, http.StatusOK, consts.JPEGMagicNumber, nil, ingressWait, waitTick)
 
 	ingressRewrite, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Get(ctx, ingressRewrite.Name, metav1.GetOptions{})
 	require.NoError(t, err)
@@ -1208,7 +1209,7 @@ func TestIngressRewriteURI(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("try to access the ingress with new rewrite annotation")
-	EventuallyGETPath(t, proxyHTTPURL, serviceDomainRewrite, "/foo/test/png", nil, http.StatusOK, consts.PNGMagicNumber, nil, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyHTTPURL, serviceDomainRewrite, "/foo/test/png", nil, http.StatusOK, consts.PNGMagicNumber, nil, ingressWait, waitTick)
 
 	cancelBackgroundTest()
 	require.NoError(t, <-backgroundTestError, "for Ingress without rewrite run in background")

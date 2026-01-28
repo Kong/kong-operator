@@ -20,6 +20,7 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/test/gatewayapi"
 	"github.com/kong/kong-operator/ingress-controller/test/testlabels"
 	"github.com/kong/kong-operator/ingress-controller/test/util/builder"
+	"github.com/kong/kong-operator/test/helpers"
 	"github.com/kong/kong-operator/test/integration/kic/consts"
 )
 
@@ -41,12 +42,12 @@ func TestHTTPRouteFilterRequestRedirect(t *testing.T) {
 
 			t.Log("deploying a new gatewayClass")
 			gatewayClassName := uuid.NewString()
-			gwc, err := DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+			gwc, err := helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
 			assert.NoError(t, err)
 			cleaner.Add(gwc)
 
 			t.Log("deploying a new gateway")
-			gateway, err := DeployGateway(ctx, gatewayClient, namespace, gatewayClassName, func(gw *gatewayapi.Gateway) {
+			gateway, err := helpers.DeployGateway(ctx, gatewayClient, namespace, gatewayClassName, func(gw *gatewayapi.Gateway) {
 				gw.Spec.Listeners = builder.NewListener("http").
 					HTTP().
 					WithPort(ktfkong.DefaultProxyHTTPPort).
@@ -119,7 +120,7 @@ func TestHTTPRouteFilterRequestRedirect(t *testing.T) {
 
 			redirectPluginVersionRange, err := kong.NewRange(">=3.9.0")
 			assert.NoError(t, err)
-			kongVersion, err := GetKongVersion(ctx, proxyAdminURL, "password")
+			kongVersion, err := helpers.GetKongVersion(ctx, proxyAdminURL, "password")
 			assert.NoError(t, err)
 			supportRedirectPlugin := redirectPluginVersionRange(kongVersion)
 			if !supportRedirectPlugin {

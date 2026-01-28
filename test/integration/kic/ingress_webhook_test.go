@@ -13,6 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kong-operator/ingress-controller/test/util/builder"
+	"github.com/kong/kong-operator/test/helpers"
 	"github.com/kong/kong-operator/test/integration/kic/consts"
 )
 
@@ -82,7 +83,7 @@ func TestIngressValidationWebhookTraditionalRouter(t *testing.T) {
 	skipTestForRouterFlavors(t.Context(), t, expressions)
 
 	ctx := t.Context()
-	ns, _ := Setup(ctx, t, env)
+	ns, _ := helpers.Setup(ctx, t, env)
 
 	testCases := append(
 		commonIngressValidationTestCases(),
@@ -104,7 +105,7 @@ func TestIngressValidationWebhookExpressionsRouter(t *testing.T) {
 	skipTestForRouterFlavors(t.Context(), t, traditional, traditionalCompatible)
 
 	ctx := t.Context()
-	ns, _ := Setup(ctx, t, env)
+	ns, _ := helpers.Setup(ctx, t, env)
 
 	testCases := append(
 		commonIngressValidationTestCases(),
