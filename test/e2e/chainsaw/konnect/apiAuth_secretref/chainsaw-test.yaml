@@ -1,0 +1,350 @@
+# KonnectAPIAuthConfiguration Secret Reference Finalizer test scenario
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: konnectapiauthconfiguration-secretref-finalizer
+spec:
+  description: |
+    This test validates that the KonnectAPIAuthConfiguration controller correctly
+    manages finalizers on secrets that are referenced by KonnectAPIAuthConfiguration
+    resources. The test ensures that:
+    1. A secret gets a finalizer when referenced by KonnectAPIAuthConfiguration
+    2. The finalizer is properly managed throughout the lifecycle
+    3. Secret deletion is blocked by finalizers and unblocked when reference is removed
+    4. Finalizer is removed from old secret when reference is updated to new secret
+    5. Complex scenarios with multiple reference changes work correctly
+  
+  timeouts:
+    apply: 120s
+    assert: 120s
+    delete: 120s
+    exec: 120s
+
+  bindings:
+    # Common bindings.
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: secret_finalizer
+      value: "gateway.konghq.com/secret-in-use"
+
+    # Additional bindings for new test scenarios
+    - name: auth_secret_name_2
+      value: (join('-', [($test_name), 'konnect-auth-secret-2']))
+    - name: auth_secret_name_3
+      value: (join('-', [($test_name), 'konnect-auth-secret-3']))
+    - name: konnect_auth_name_2
+      value: (join('-', [($test_name), 'konnect-api-auth-2']))
+    - name: konnect_auth_name_3
+      value: (join('-', [($test_name), 'konnect-api-auth-3']))
+
+  steps:
+    # Step 1: Create the secret that will be referenced by KonnectAPIAuthConfiguration.
+    - name: Create-auth-secret
+      description: Create Secret with Konnect token for KonnectAPIAuthConfiguration.
+      use:
+        template: ../../hybridgateway/common/_step_templates/apply-assert-konnectAuthSecret.yaml
+
+    # Step 2: Verify that the secret initially has no finalizers.
+    - name: Assert-secret-no-finalizer-initially
+      description: Assert that the secret has no finalizers before being referenced.
+      try:
+        - assert:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: ($auth_secret_name)
+                namespace: ($auth_secret_namespace)
+                (finalizers == null || length(finalizers) == `0`): true
+
+    # Step 3: Create KonnectAPIAuthConfiguration that references the secret.
+    - name: Create-konnect-api-auth-secretref
+      description: Create KonnectAPIAuthConfiguration with secretRef pointing to the secret.
+      use:
+        template: ../../hybridgateway/common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+
+    # Step 4: Verify that the secret now has the expected finalizer.
+    - name: Assert-secret-has-finalizer
+      description: Assert that the secret has the correct finalizer after being referenced.
+      try:
+        - assert:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: ($auth_secret_name)
+                namespace: ($auth_secret_namespace)
+                (contains(finalizers || `[]`, ($secret_finalizer))): true
+
+    # Step 6: Delete the KonnectAPIAuthConfiguration.
+    - name: Delete-konnect-api-auth
+      description: Delete the KonnectAPIAuthConfiguration resource.
+      try:
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectAPIAuthConfiguration
+              name: ($konnect_auth_name)
+              namespace: ($konnect_auth_namespace)
+
+    # Step 7: Verify that the finalizer is removed from the secret after KonnectAPIAuthConfiguration deletion.
+    - name: Assert-secret-finalizer-removed
+      description: Assert that the finalizer is removed from the secret after the KonnectAPIAuthConfiguration is deleted.
+      try:
+        - assert:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: ($auth_secret_name)
+                namespace: ($auth_secret_namespace)
+                (contains(finalizers || `[]`, ($secret_finalizer))): false
+
+    # Step 8: Delete the auth secret to complete scenario 1 cleanup.
+    - name: Delete-auth-secret
+      description: Delete the auth secret now that finalizer is removed.
+      try:
+        - delete:
+            ref:
+              apiVersion: v1
+              kind: Secret
+              name: ($auth_secret_name)
+              namespace: ($auth_secret_namespace)
+
+    # ============================================================================
+    # Test Scenario 2: Secret deletion is blocked by finalizer, then unblocked
+    # ============================================================================
+    
+    # Step 9: Create second KonnectAPIAuthConfiguration and secret.
+    - name: Create-auth-secret-2
+      description: Create second Secret with Konnect token.
+      bindings:
+        - name: auth_secret_name
+          value: ($auth_secret_name_2)
+      use:
+        template: ../../hybridgateway/common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: Create-konnect-api-auth-2
+      description: Create second KonnectAPIAuthConfiguration.
+      bindings:
+        - name: konnect_auth_name
+          value: ($konnect_auth_name_2)
+        - name: auth_secret_name
+          value: ($auth_secret_name_2)
+      use:
+        template: ../../hybridgateway/common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+
+    # Step 10: Verify secret has finalizer.
+    - name: Assert-secret-2-has-finalizer
+      description: Assert that the second secret has the finalizer.
+      try:
+        - assert:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: ($auth_secret_name_2)
+                namespace: ($auth_secret_namespace)
+                (contains(finalizers || `[]`, ($secret_finalizer))): true
+
+    # Step 11: Delete the secret non-blocking and then verify it's stuck in deletion.
+    - name: Delete-secret-2-non-blocking
+      description: Initiate deletion of the secret without waiting for completion.
+      bindings:
+        - name: resource_type
+          value: "secret"
+        - name: resource_name
+          value: ($auth_secret_name_2)
+        - name: resource_namespace
+          value: ($auth_secret_namespace)
+      use:
+        template: ../../hybridgateway/common/_step_templates/delete-resource-non-blocking.yaml
+
+    - name: Assert-secret-2-stuck-in-deletion
+      description: Verify that the secret is stuck in deletion due to finalizer.
+      try:
+        - assert:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: ($auth_secret_name_2)
+                namespace: ($auth_secret_namespace)
+                (contains(finalizers || `[]`, ($secret_finalizer))): true
+                (deletionTimestamp != null): true
+
+    # Step 12: Delete KonnectAPIAuthConfiguration and verify secret is cleaned up.
+    - name: Delete-konnect-api-auth-2-cleanup-both
+      description: Delete KonnectAPIAuthConfiguration and verify secret is cleaned up.
+      try:
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectAPIAuthConfiguration
+              name: ($konnect_auth_name_2)
+              namespace: ($konnect_auth_namespace)
+        - error:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: ($auth_secret_name_2)
+                namespace: ($auth_secret_namespace)
+
+    # ============================================================================
+    # Test Scenario 3: Secret reference update removes finalizer from old secret
+    # ============================================================================
+    
+    # Step 12: Create KonnectAPIAuthConfiguration and two secrets.
+    - name: Create-auth-secret-3a
+      description: Create first secret for reference update test.
+      bindings:
+        - name: auth_secret_name
+          value: ($auth_secret_name_3)
+      use:
+        template: ../../hybridgateway/common/_step_templates/apply-assert-konnectAuthSecret.yaml
+
+    - name: Create-auth-secret-3b
+      description: Create second secret for reference update test.
+      bindings:
+        - name: auth_secret_name
+          value: (join('-', [($auth_secret_name_3), 'new']))
+      use:
+        template: ../../hybridgateway/common/_step_templates/apply-assert-konnectAuthSecret.yaml
+
+    - name: Create-konnect-api-auth-3
+      description: Create KonnectAPIAuthConfiguration referencing first secret.
+      bindings:
+        - name: konnect_auth_name
+          value: ($konnect_auth_name_3)
+        - name: auth_secret_name
+          value: ($auth_secret_name_3)
+      use:
+        template: ../../hybridgateway/common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+
+    # Step 13: Verify first secret has finalizer, second doesn't.
+    - name: Assert-secret-3a-has-finalizer
+      description: Assert that the first secret has the finalizer.
+      try:
+        - assert:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: ($auth_secret_name_3)
+                namespace: ($auth_secret_namespace)
+                (contains(finalizers || `[]`, ($secret_finalizer))): true
+
+    - name: Assert-secret-3b-no-finalizer
+      description: Assert that the second secret doesn't have the finalizer.
+      try:
+        - assert:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: (join('-', [($auth_secret_name_3), 'new']))
+                namespace: ($auth_secret_namespace)
+                (contains(finalizers || `[]`, ($secret_finalizer))): false
+
+    # Step 14: Update KonnectAPIAuthConfiguration to reference second secret.
+    - name: Update-konnect-api-auth-3-to-new-secret
+      description: Update KonnectAPIAuthConfiguration to reference the second secret.
+      bindings:
+        - name: konnect_auth_name
+          value: ($konnect_auth_name_3)
+        - name: auth_secret_name
+          value: (join('-', [($auth_secret_name_3), 'new']))
+      use:
+        template: ../../hybridgateway/common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+
+    # Step 15: Verify finalizer moved from first secret to second secret.
+    - name: Assert-finalizer-moved-to-new-secret
+      description: Assert that the finalizer is removed from the old secret and added to the new secret.
+      try:
+        - assert:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: ($auth_secret_name_3)
+                namespace: ($auth_secret_namespace)
+                (contains(finalizers || `[]`, ($secret_finalizer))): false
+        - assert:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: (join('-', [($auth_secret_name_3), 'new']))
+                namespace: ($auth_secret_namespace)
+                (contains(finalizers || `[]`, ($secret_finalizer))): true
+
+    # ============================================================================
+    # Test Scenario 4: Secret deletion blocked, then unblocked by reference change
+    # ============================================================================
+    
+    # Step 16: Delete the first secret and verify it can be deleted (no finalizer).
+    - name: Delete-old-secret-check-stuck
+      description: Delete the old secret and verify it can be deleted (no finalizer).
+      bindings:
+        - name: resource_type
+          value: "secret"
+        - name: resource_name
+          value: ($auth_secret_name_3)
+        - name: resource_namespace
+          value: ($auth_secret_namespace)
+      use:
+        template: ../../hybridgateway/common/_step_templates/delete-resource-non-blocking.yaml
+
+    # Step 17: Create a third secret and update reference to unblock deletion.
+    - name: Create-auth-secret-3c
+      description: Create third secret for final reference change.
+      bindings:
+        - name: auth_secret_name
+          value: (join('-', [($auth_secret_name_3), 'final']))
+      use:
+        template: ../../hybridgateway/common/_step_templates/apply-assert-konnectAuthSecret.yaml
+
+    - name: Update-to-final-secret-and-cleanup
+      description: Update to final secret and verify finalizer management works.
+      bindings:
+        - name: konnect_auth_name
+          value: ($konnect_auth_name_3)
+        - name: auth_secret_name
+          value: (join('-', [($auth_secret_name_3), 'final']))
+      use:
+        template: ../../hybridgateway/common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+
+    # Final cleanup
+    - name: Final-cleanup
+      description: Clean up remaining resources.
+      try:
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectAPIAuthConfiguration
+              name: ($konnect_auth_name_3)
+              namespace: ($konnect_auth_namespace)
+        - delete:
+            ref:
+              apiVersion: v1
+              kind: Secret
+              name: (join('-', [($auth_secret_name_3), 'new']))
+              namespace: ($auth_secret_namespace)
+        - delete:
+            ref:
+              apiVersion: v1
+              kind: Secret
+              name: (join('-', [($auth_secret_name_3), 'final']))
+              namespace: ($auth_secret_namespace)

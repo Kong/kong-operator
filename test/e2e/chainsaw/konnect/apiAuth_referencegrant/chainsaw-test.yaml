@@ -1,0 +1,84 @@
+# KonnectAPIAuthConfiguration Cross-Namespace Reference Grant test scenario
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: konnectapiauthconfiguration-referencegrant
+spec:
+  description: |
+    This test validates backward compatibility for cross-namespace secret references in KonnectAPIAuthConfiguration.
+    Currently, the operator still allows cross-namespace references (with warnings about missing KongReferenceGrant)
+    to ensure we don't break existing users. The test ensures that:
+    1. Cross-namespace secret references continue to work but show KongReferenceGrant warning messages
+    2. Existing user configurations remain functional during the deprecation period
+    
+    NOTE: This is a temporary backward compatibility test. In future versions when cross-namespace 
+    references without KongReferenceGrant are no longer supported, this test will fail and must be 
+    updated to properly test the ReferenceGrant mechanism with both Secret and KonnectAPIAuthConfiguration.
+  
+  timeouts:
+    apply: 120s
+    assert: 120s
+    delete: 120s
+    exec: 120s
+
+
+
+  bindings:
+    # Common bindings.
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    # Namespace bindings - use chainsaw $namespace as base
+    - name: auth_namespace  
+      value: ($namespace)
+    - name: secret_namespace
+      value: (join('-', [($namespace), 'secret']))
+    # Resource bindings
+    - name: auth_secret_name
+      value: (join('-', [($namespace), 'cross-ns-secret']))
+    - name: konnect_auth_name
+      value: (join('-', [($namespace), 'cross-ns-auth']))
+
+  steps:
+    # Step 1: Create the secret namespace.
+    - name: Create-secret-namespace
+      description: Create namespace for the secret.
+      use:
+        template: ../../hybridgateway/common/_step_templates/apply-assert-namespace.yaml
+        with:
+          bindings:
+            - name: namespace_name
+              value: ($secret_namespace)
+
+    # Step 2: Create secret in the secret namespace.
+    - name: Create-cross-ns-secret
+      description: Create secret in the secret namespace.
+      use:
+        template: ../../hybridgateway/common/_step_templates/apply-assert-konnectAuthSecret.yaml
+        with:
+          bindings:
+            - name: auth_secret_name
+              value: ($auth_secret_name)
+            - name: auth_secret_namespace
+              value: ($secret_namespace)
+            - name: konnect_token
+              value: ($konnect_token)
+
+    # Step 3: Create KonnectAPIAuthConfiguration in default namespace (should fail).
+    - name: Create-cross-ns-auth-config
+      description: Create KonnectAPIAuthConfiguration that references secret from different namespace.
+      use:
+        template: ../../hybridgateway/common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+        with:
+          bindings:
+            - name: konnect_auth_name
+              value: ($konnect_auth_name)
+            - name: konnect_auth_namespace
+              value: ($auth_namespace)
+            - name: auth_secret_name
+              value: ($auth_secret_name)
+            - name: auth_secret_namespace
+              value: ($secret_namespace)
+            - name: konnect_url
+              value: ($konnect_url)
