@@ -53,6 +53,8 @@ type KongConsumerGroup struct {
 // +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
 type KongConsumerGroupSpec struct {
 	// Name is the name of the ConsumerGroup in Kong.
+	// +kubebuilder:validation:MaxLength=128
+	// +kubebuilder:validation:Pattern=`^[\p{N}\p{L}.\-_~]*$`
 	Name string `json:"name,omitempty"`
 
 	// ControlPlaneRef is a reference to a ControlPlane this ConsumerGroup is associated with.

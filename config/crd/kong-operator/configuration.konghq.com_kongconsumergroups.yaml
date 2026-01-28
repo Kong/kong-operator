@@ -172,6 +172,8 @@ spec:
                   rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
               name:
                 description: Name is the name of the ConsumerGroup in Kong.
+                maxLength: 128
+                pattern: ^[\p{N}\p{L}.\-_~]*$
                 type: string
               tags:
                 description: Tags is an optional set of tags applied to the ConsumerGroup.
