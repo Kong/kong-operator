@@ -2,7 +2,6 @@ package namegen
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -66,9 +65,6 @@ func newNameWithHashSuffix(readableElements []string, hashElements []string) str
 		readablePart := strings.Join(readableElements, ".")
 		if len(readablePart) > remaining {
 			readablePart = strings.TrimRight(readablePart[:remaining], ".-")
-		}
-		if len(readablePart) == 0 {
-			return hashPart
 		}
 
 		return readablePart + "." + hashPart
@@ -156,22 +152,21 @@ func backendRefDisplayNames(routeNamespace string, refs []gatewayv1.HTTPBackendR
 		return nil
 	}
 
-	names := make([]string, 0, len(refs))
+	var name string
 	for _, ref := range refs {
 		displayName := backendRefDisplayName(routeNamespace, ref)
 		if displayName == "" {
 			continue
 		}
-		names = append(names, displayName)
+		if displayName < name || name == "" {
+			name = displayName
+		}
 	}
-
-	if len(names) == 0 {
+	if len(name) == 0 {
 		return nil
 	}
-
-	sort.Strings(names)
 	count := fmt.Sprintf("%d", len(refs))
-	return []string{names[0], count}
+	return []string{name, count}
 }
 
 func backendRefDisplayName(routeNamespace string, ref gatewayv1.HTTPBackendRef) string {
