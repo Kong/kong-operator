@@ -12,6 +12,7 @@ import (
 
 	"github.com/kong/kong-operator/controller/pkg/finalizer"
 	"github.com/kong/kong-operator/controller/pkg/log"
+	"github.com/kong/kong-operator/controller/pkg/patch"
 	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
 )
 
@@ -114,6 +115,17 @@ func (r *Reconciler) cleanup(
 			// Requeue to ensure that we continue reconciliation in case the patch
 			// was empty and didn't trigger a new reconcile.
 			return false, ctrl.Result{Requeue: true}, nil
+		}
+	}
+
+	konnectGatewayControlPlanes, err := gatewayutils.ListKonnectGatewayControlPlanesForGateway(ctx, r.Client, gateway)
+	if err != nil {
+		return false, ctrl.Result{}, err
+	}
+	for _, kgcp := range konnectGatewayControlPlanes {
+		patched, res, err := patch.WithoutFinalizer(ctx, r.Client, &kgcp, KonnectGatewayControlPlaneFinalizer)
+		if patched || err != nil || !res.IsZero() {
+			return false, res, err
 		}
 	}
 
