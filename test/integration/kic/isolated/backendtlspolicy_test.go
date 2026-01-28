@@ -27,6 +27,7 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/test/gatewayapi"
 	constsmgr "github.com/kong/kong-operator/ingress-controller/test/manager/consts"
 	"github.com/kong/kong-operator/ingress-controller/test/testlabels"
+	"github.com/kong/kong-operator/test/helpers"
 	"github.com/kong/kong-operator/test/helpers/certificate"
 	"github.com/kong/kong-operator/test/integration/kic/consts"
 )
@@ -151,13 +152,13 @@ func TestBackendTLSPolicy(t *testing.T) {
 
 			t.Log("Create GatewayClass")
 			gatewayClassName := uuid.NewString()
-			gatewayCLass, err := DeployGatewayClass(ctx, gwapiClient, gatewayClassName)
+			gatewayCLass, err := helpers.DeployGatewayClass(ctx, gwapiClient, gatewayClassName)
 			assert.NoError(t, err)
 			cleaner.Add(gatewayCLass)
 
 			t.Log("Create Gateway")
 			gatewayName := uuid.NewString()
-			gateway, err := DeployGateway(ctx, gwapiClient, ns, gatewayClassName, func(gw *gatewayapi.Gateway) {
+			gateway, err := helpers.DeployGateway(ctx, gwapiClient, ns, gatewayClassName, func(gw *gatewayapi.Gateway) {
 				gw.Name = gatewayName
 			})
 			assert.NoError(t, err)

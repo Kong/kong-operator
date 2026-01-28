@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
 	"github.com/kong/kong-operator/ingress-controller/test/testlabels"
+	"github.com/kong/kong-operator/test/helpers"
 	"github.com/kong/kong-operator/test/integration/kic/consts"
 )
 
@@ -50,7 +51,7 @@ func TestGRPCRouteExample(t *testing.T) {
 		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyGatewayAPI).
 		WithLabel(testlabels.Kind, testlabels.KindGRPCRoute).
 		WithSetup("deploy kong addon into cluster", featureSetup(
-			withControllerManagerOpts(ControllerManagerOptAdditionalWatchNamespace("default")),
+			withControllerManagerOpts(helpers.ControllerManagerOptAdditionalWatchNamespace("default")),
 			withKongProxyEnvVars(map[string]string{
 				"PROXY_LISTEN": `0.0.0.0:8000 http2\, 0.0.0.0:8443 http2 ssl`,
 			}),

@@ -26,9 +26,9 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/test/annotations"
 	"github.com/kong/kong-operator/ingress-controller/test/dataplane"
 	"github.com/kong/kong-operator/ingress-controller/test/gatewayapi"
-	"github.com/kong/kong-operator/ingress-controller/test/util"
 	testutils "github.com/kong/kong-operator/ingress-controller/test/util"
 	"github.com/kong/kong-operator/pkg/clientset"
+	"github.com/kong/kong-operator/test/helpers"
 	"github.com/kong/kong-operator/test/helpers/certificate"
 	"github.com/kong/kong-operator/test/integration/kic/consts"
 )
@@ -123,12 +123,12 @@ func TestTranslationFailures(t *testing.T) {
 				require.NoError(t, err)
 
 				gatewayClassName := testutils.RandomName(testTranslationFailuresObjectsPrefix)
-				gwc, err := DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+				gwc, err := helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
 				require.NoError(t, err)
 				cleaner.Add(gwc)
 
 				gatewayName := testutils.RandomName(testTranslationFailuresObjectsPrefix)
-				gateway, err := DeployGateway(ctx, gatewayClient, ns, gatewayClassName, func(gw *gatewayapi.Gateway) {
+				gateway, err := helpers.DeployGateway(ctx, gatewayClient, ns, gatewayClassName, func(gw *gatewayapi.Gateway) {
 					gw.Name = gatewayName
 				})
 				require.NoError(t, err)
@@ -285,7 +285,7 @@ func TestTranslationFailures(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			ns, cleaner := Setup(ctx, t, env)
+			ns, cleaner := helpers.Setup(ctx, t, env)
 
 			expected := tt.translationFailureTrigger(t, cleaner, ns.GetName())
 
@@ -451,7 +451,7 @@ func httpRouteWithBackends(gatewayName string, services ...*corev1.Service) *gat
 						BackendObjectReference: gatewayapi.BackendObjectReference{
 							Name: gatewayapi.ObjectName(service.Name),
 							Port: &httpPort,
-							Kind: util.StringToGatewayAPIKindPtr("Service"),
+							Kind: testutils.StringToGatewayAPIKindPtr("Service"),
 						},
 						Weight: &weight,
 					},

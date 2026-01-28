@@ -21,6 +21,7 @@ import (
 
 	"github.com/kong/kong-operator/ingress-controller/test"
 	"github.com/kong/kong-operator/ingress-controller/test/gatewayapi"
+	"github.com/kong/kong-operator/test/helpers"
 )
 
 var tcpMutex = sync.Mutex{}
@@ -35,7 +36,7 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 		tcpMutex.Unlock()
 	})
 
-	ns, cleaner := Setup(ctx, t, env)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	otherNs, err := clusters.GenerateNamespace(ctx, env.Cluster(), t.Name())
 	require.NoError(t, err)
@@ -45,7 +46,7 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 
 	t.Log("deploying a gatewayclass to the test cluster")
 	gatewayClassName := uuid.NewString()
-	gwc, err := DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+	gwc, err := helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
 	require.NoError(t, err)
 	cleaner.Add(gwc)
 
@@ -53,7 +54,7 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 
 	t.Log("deploying a gateway to the test cluster using unmanaged gateway mode")
 	gatewayName := uuid.NewString()
-	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
+	gateway, err := helpers.DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
 		gw.Name = gatewayName
 		gw.Spec.Listeners = []gatewayapi.Listener{{
 			Name:     gatewayTCPPortName,

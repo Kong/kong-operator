@@ -61,9 +61,8 @@ func deleteNSForTest(ctx context.Context, cfg *envconf.Config, t *testing.T, _ s
 	return ctx, cfg.Client().Resources().Delete(ctx, &nsObj)
 }
 
-type (
-	NamespaceCtxKey string
-)
+// NamespaceCtxKey is a context key for per-test namespaces.
+type NamespaceCtxKey string
 
 // getNamespaceKey returns the context key for a given test.
 func getNamespaceKey(t *testing.T) NamespaceCtxKey {
