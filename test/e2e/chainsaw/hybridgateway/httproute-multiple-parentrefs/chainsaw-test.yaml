@@ -1,4 +1,4 @@
-# HTTPRoute with Multiple ParentRefs test scenario
+# HTTPRoute with Multiple ParentRefs test scenario.
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: Test
 metadata:
@@ -9,400 +9,716 @@ spec:
     processes an HTTPRoute with multiple ParentRefs, creating Kong
     resources for each Gateway/ControlPlane.
 
-  # Define bindings for unique names to avoid conflicts
-  bindings:
-    - name: kong_namespace
-      value: (join('-', ['kong', 'multi-parentref', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
-    - name: konnect_api_auth_name
-      value: konnect-api-auth-dev-1
-    # Gateway 1 bindings
-    - name: gateway_class_name_1
-      value: (join('-', ['kong', 'gw1', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
-    - name: gateway_configuration_name_1
-      value: ($gateway_class_name_1)
-    - name: gateway_name_1
-      value: ($gateway_class_name_1)
-    # Gateway 2 bindings
-    - name: gateway_class_name_2
-      value: (join('-', ['kong', 'gw2', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
-    - name: gateway_configuration_name_2
-      value: ($gateway_class_name_2)
-    - name: gateway_name_2
-      value: ($gateway_class_name_2)
-    # HTTPRoute binding
-    - name: httproute_name
-      value: multi-gateway-route
-
   timeouts:
     apply: 120s
-    assert: 300s
-    cleanup: 120s
+    assert: 120s
     delete: 120s
+    exec: 120s
+
+  namespace: kong
+
+  bindings:
+    # Common bindings.
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: gateway_image
+      value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.12')
+    
+    # TLS configuration.
+    - name: sni_hostname_1
+      value: (join('.', ['*', 'gw1', ($test_name), 'example.com']))
+    - name: sni_hostname_2
+      value: (join('.', ['*', 'gw2', ($test_name), 'example.com']))
+    - name: cert_secret_name_1
+      value: test-tls-secret-1
+    - name: cert_secret_name_2
+      value: test-tls-secret-2
+    - name: cert_secret_namespace
+      value: ($namespace)
+    - name: listener_https_port
+      value: 443
+    - name: listener_http_port
+      value: 80
+    
+    # Gateway 1 bindings.
+    - name: gateway_name_1
+      value: (join('-', [($test_name), 'gateway-1']))
+    - name: gateway_namespace_1
+      value: ($namespace)
+    
+    # Gateway 2 bindings.
+    - name: gateway_name_2
+      value: (join('-', [($test_name), 'gateway-2']))
+    - name: gateway_namespace_2
+      value: ($namespace)
+    
+    # HTTPRoute bindings.
+    - name: fqdn
+      value: (join('.', ['httpbin', ($test_name), 'example.com']))
+    - name: fqdn_1
+      value: (join('.', ['httpbin', 'gw1', ($test_name), 'example.com']))
+    - name: fqdn_2
+      value: (join('.', ['httpbin', 'gw2', ($test_name), 'example.com']))
+    - name: http_route_name
+      value: (join('-', [($test_name), 'multi-parentref-route']))
+    - name: http_route_namespace
+      value: ($namespace)
+    - name: http_route_single_name
+      value: (join('-', [($test_name), 'single-parentref-route']))
+    - name: http_route_single_namespace
+      value: ($namespace)
+    - name: route_path
+      value: "/get"
+    - name: route_path_single
+      value: "/status/200"
+    - name: http_method
+      value: "GET"
+    
+    # Backend service bindings.
+    - name: httpbin_deployment_name
+      value: (join('-', [($test_name), 'httpbin']))
+    - name: httpbin_deployment_namespace
+      value: ($namespace)
 
   steps:
-    # Step 1: Create prerequisite resources (two Gateways with different ControlPlanes)
-    - name: create-prerequisites
-      description: Create two Gateways with different GatewayClasses/ControlPlanes and backend Service
+    # Step 1: Create TLS secret for Gateway 1.
+    - name: Create-tls-secret-1
+      description: Create TLS Secret for Gateway 1
+      use:
+        template: ../common/_step_templates/apply-assert-tlsSecret.yaml
+      bindings:
+        - name: sni_hostname
+          value: ($sni_hostname_1)
+        - name: cert_secret_name
+          value: ($cert_secret_name_1)
+
+    # Step 2: Create TLS secret for Gateway 2.
+    - name: Create-tls-secret-2
+      description: Create TLS Secret for Gateway 2
+      use:
+        template: ../common/_step_templates/apply-assert-tlsSecret.yaml
+      bindings:
+        - name: sni_hostname
+          value: ($sni_hostname_2)
+        - name: cert_secret_name
+          value: ($cert_secret_name_2)
+
+    # Step 3: Create the KonnectAPIAuthConfiguration.
+    - name: Create-konnect-api-auth
+      description: Create KonnectAPIAuthConfiguration for the test
+      use:
+        template: ../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+    # Step 4: Create GatewayConfiguration for Gateway 1.
+    - name: Create-gateway-configuration-1
+      description: Create GatewayConfiguration for Gateway 1
+      use:
+        template: ../common/_step_templates/apply-assert-gatewayConfiguration.yaml
+
+    # Step 5: Create GatewayClass for Gateway 1.
+    - name: Create-gateway-class-1
+      description: Create GatewayClass for Gateway 1
+      use:
+        template: ../common/_step_templates/apply-assert-gatewayClass.yaml
+
+    # Step 6: Create Gateway 1.
+    - name: Create-gateway-1
+      description: Create first Gateway with TLS listener
+      use:
+        template: ../common/_step_templates/apply-assert-gateway.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name_1)
+        - name: sni_hostname
+          value: ($sni_hostname_1)
+        - name: cert_secret_name
+          value: ($cert_secret_name_1)
+
+    # Step 7: Assert KonnectGatewayControlPlane for Gateway 1.
+    - name: Assert-konnect-gateway-control-plane-1
+      description: Assert KonnectGatewayControlPlane for Gateway 1
+      use:
+        template: ../common/_step_templates/assert-konnectGatewayControlPlane.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name_1)
+        - name: gateway_namespace
+          value: ($gateway_namespace_1)
+
+    # Step 8: Create Gateway 2 (uses same GatewayClass as Gateway 1).
+    - name: Create-gateway-2
+      description: Create second Gateway with TLS listener
+      use:
+        template: ../common/_step_templates/apply-assert-gateway.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name_2)
+        - name: sni_hostname
+          value: ($sni_hostname_2)
+        - name: cert_secret_name
+          value: ($cert_secret_name_2)
+
+    # Step 9: Assert KonnectGatewayControlPlane for Gateway 2.
+    - name: Assert-konnect-gateway-control-plane-2
+      description: Assert KonnectGatewayControlPlane for Gateway 2
+      use:
+        template: ../common/_step_templates/assert-konnectGatewayControlPlane.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name_2)
+        - name: gateway_namespace
+          value: ($gateway_namespace_2)
+
+    # Step 10: Assert KongCertificate for Gateway 1.
+    - name: Assert-kong-certificate-1
+      description: Assert KongCertificate for Gateway 1
+      use:
+        template: ../common/_step_templates/assert-kongCertificate.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name_1)
+        - name: gateway_namespace
+          value: ($gateway_namespace_1)
+        - name: cert_secret_name
+          value: ($cert_secret_name_1)
+
+    # Step 11: Assert KongSNI for Gateway 1.
+    - name: Assert-kong-sni-1
+      description: Assert KongSNI for Gateway 1
+      use:
+        template: ../common/_step_templates/assert-kongSNI.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name_1)
+        - name: gateway_namespace
+          value: ($gateway_namespace_1)
+        - name: sni_hostname
+          value: ($sni_hostname_1)
+        - name: resource_type
+          value: "kongcertificates.configuration.konghq.com"
+
+    # Step 12: Assert KongCertificate for Gateway 2.
+    - name: Assert-kong-certificate-2
+      description: Assert KongCertificate for Gateway 2
+      use:
+        template: ../common/_step_templates/assert-kongCertificate.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name_2)
+        - name: gateway_namespace
+          value: ($gateway_namespace_2)
+        - name: cert_secret_name
+          value: ($cert_secret_name_2)
+
+    # Step 13: Assert KongSNI for Gateway 2.
+    - name: Assert-kong-sni-2
+      description: Assert KongSNI for Gateway 2
+      use:
+        template: ../common/_step_templates/assert-kongSNI.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name_2)
+        - name: gateway_namespace
+          value: ($gateway_namespace_2)
+        - name: sni_hostname
+          value: ($sni_hostname_2)
+        - name: resource_type
+          value: "kongcertificates.configuration.konghq.com"
+
+    # Step 14: Create httpbin service.
+    - name: Create-httpbin-service
+      description: Create httpbin service as backend
+      use:
+        template: ../common/_step_templates/apply-assert-httpbinService.yaml
+
+    # Step 15: Create HTTPRoute with multiple ParentRefs.
+    - name: Create-httproute-multiple-parentrefs
+      description: Create HTTPRoute referencing both Gateways
       try:
         - apply:
-            file: 01-prerequisites.yaml
-        - apply:
-            file: 00-httpbin.yaml
-        # Assert httpbin is ready
+            file: 01-httpRoute-multiple-parentrefs.yaml
         - assert:
-            file: 00-assert-httpbin.yaml
-        # Assert prerequisites (two Gateways, two ControlPlanes)
-        - assert:
-            file: 01-assert-prerequisites.yaml
-      catch:
-        - description: Get Gateway 1 resource status
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: Gateway
-            namespace: ($kong_namespace)
-            name: ($gateway_name_1)
-        - description: Get Gateway 2 resource status
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: Gateway
-            namespace: ($kong_namespace)
-            name: ($gateway_name_2)
-        - description: Get DataPlane resources
-          get:
-            apiVersion: gateway-operator.konghq.com/v1beta1
-            kind: DataPlane
-            namespace: ($kong_namespace)
-        - description: Get ControlPlane resources
-          get:
-            apiVersion: gateway-operator.konghq.com/v1beta1
-            kind: ControlPlane
-            namespace: ($kong_namespace)
-        - description: Get KonnectGatewayControlPlane resources
-          get:
-            apiVersion: konnect.konghq.com/v1alpha2
-            kind: KonnectGatewayControlPlane
-            namespace: ($kong_namespace)
-        - description: Get Pods in kong namespace
-          get:
-            apiVersion: v1
-            kind: Pod
-            namespace: ($kong_namespace)
-        - description: Describe Gateway 1
-          describe:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: Gateway
-            name: ($gateway_name_1)
-            namespace: ($kong_namespace)
-            showEvents: true
-        - description: Describe Gateway 2
-          describe:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: Gateway
-            name: ($gateway_name_2)
-            namespace: ($kong_namespace)
-            showEvents: true
-        - description: Get events from kong namespace
-          events:
-            namespace: ($kong_namespace)
-        - description: Get operator logs
-          podLogs:
-            namespace: kong-system
-            selector: control-plane=controller-manager
-            tail: 100
+            file: 02-httpRoute-multiple-parentrefs-assert.yaml
 
-    # Step 2: Create HTTPRoute with single ParentRef (Gateway 1 only)
-    - name: create-httproute-single-parentref
-      description: Create HTTPRoute that references only Gateway 1
+    # Step 16: Assert KongRoute for Gateway 1.
+    - name: Assert-kong-route-gateway-1
+      description: Assert KongRoute created for Gateway 1
+      use:
+        template: ../common/_step_templates/assert-kongRoute.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name_1)
+        - name: gateway_namespace
+          value: ($gateway_namespace_1)
+        - name: route_paths
+          value:
+            - "~/get$"
+            - "/get/"
+        - name: strip_path
+          value: true
+        - name: resource_type
+          value: "kongservices.configuration.konghq.com"
+
+    # Step 17: Assert KongService for Gateway 1.
+    - name: Assert-kong-service-gateway-1
+      description: Assert KongService created for Gateway 1
+      use:
+        template: ../common/_step_templates/assert-kongService.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name_1)
+        - name: gateway_namespace
+          value: ($gateway_namespace_1)
+
+    # Step 18: Assert KongRoute for Gateway 2.
+    - name: Assert-kong-route-gateway-2
+      description: Assert KongRoute created for Gateway 2
+      use:
+        template: ../common/_step_templates/assert-kongRoute.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name_2)
+        - name: gateway_namespace
+          value: ($gateway_namespace_2)
+        - name: route_paths
+          value:
+            - "~/get$"
+            - "/get/"
+        - name: strip_path
+          value: true
+        - name: resource_type
+          value: "kongservices.configuration.konghq.com"
+
+    # Step 19: Assert KongService for Gateway 2.
+    - name: Assert-kong-service-gateway-2
+      description: Assert KongService created for Gateway 2
+      use:
+        template: ../common/_step_templates/assert-kongService.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name_2)
+        - name: gateway_namespace
+          value: ($gateway_namespace_2)
+
+    # Step 20: Assert KongUpstream for Gateway 1.
+    - name: Assert-kong-upstream-gateway-1
+      description: Assert KongUpstream created for Gateway 1
+      use:
+        template: ../common/_step_templates/assert-kongUstream.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name_1)
+        - name: gateway_namespace
+          value: ($gateway_namespace_1)
+
+    # Step 21: Assert KongTarget for Gateway 1.
+    - name: Assert-kong-target-gateway-1
+      description: Assert KongTarget created for Gateway 1
+      use:
+        template: ../common/_step_templates/assert-kongTarget.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name_1)
+        - name: gateway_namespace
+          value: ($gateway_namespace_1)
+        - name: resource_type
+          value: "kongupstreams.configuration.konghq.com"
+        - name: target_weight
+          value: 1
+
+    # Step 22: Assert KongUpstream for Gateway 2.
+    - name: Assert-kong-upstream-gateway-2
+      description: Assert KongUpstream created for Gateway 2
+      use:
+        template: ../common/_step_templates/assert-kongUstream.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name_2)
+        - name: gateway_namespace
+          value: ($gateway_namespace_2)
+
+    # Step 23: Assert KongTarget for Gateway 2.
+    - name: Assert-kong-target-gateway-2
+      description: Assert KongTarget created for Gateway 2
+      use:
+        template: ../common/_step_templates/assert-kongTarget.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name_2)
+        - name: gateway_namespace
+          value: ($gateway_namespace_2)
+        - name: resource_type
+          value: "kongupstreams.configuration.konghq.com"
+        - name: target_weight
+          value: 1
+
+    # Step 24: Verify HTTPS traffic from host through Gateway 1.
+    - name: Verify-HTTPS-traffic-from-host-gateway-1
+      description: Verify HTTPS traffic from host flows through Gateway 1
+      use:
+        template: ../common/_step_templates/verify-https-traffic-from-host.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name_1)
+        - name: gateway_namespace
+          value: ($gateway_namespace_1)
+        - name: fqdn
+          value: ($fqdn_1)
+        - name: route_path
+          value: ($route_path)
+        - name: http_method
+          value: ($http_method)
+        - name: insecure
+          value: "true"
+
+    # Step 25: Verify HTTPS traffic from cluster through Gateway 1.
+    - name: Verify-HTTPS-traffic-from-cluster-gateway-1
+      description: Verify HTTPS traffic from cluster flows through Gateway 1
+      use:
+        template: ../common/_step_templates/verify-https-traffic-from-cluster.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name_1)
+        - name: gateway_namespace
+          value: ($gateway_namespace_1)
+        - name: fqdn
+          value: ($fqdn_1)
+        - name: route_path
+          value: ($route_path)
+        - name: http_method
+          value: ($http_method)
+        - name: insecure
+          value: "true"
+
+    # Step 26: Verify HTTP traffic from host through Gateway 1.
+    - name: Verify-HTTP-traffic-from-host-gateway-1
+      description: Verify HTTP traffic from host flows through Gateway 1
+      use:
+        template: ../common/_step_templates/verify-http-traffic-from-host.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name_1)
+        - name: gateway_namespace
+          value: ($gateway_namespace_1)
+        - name: route_path
+          value: ($route_path)
+        - name: listener_http_port
+          value: "80"
+        - name: host_header
+          value: ($fqdn_1)
+
+    # Step 27: Verify HTTP traffic from cluster through Gateway 1.
+    - name: Verify-HTTP-traffic-from-cluster-gateway-1
+      description: Verify HTTP traffic from cluster flows through Gateway 1
+      use:
+        template: ../common/_step_templates/verify-http-traffic-from-cluster.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name_1)
+        - name: gateway_namespace
+          value: ($gateway_namespace_1)
+        - name: route_path
+          value: ($route_path)
+        - name: listener_http_port
+          value: "80"
+        - name: host_header
+          value: ($fqdn_1)
+
+    # Step 28: Verify HTTPS traffic from host through Gateway 2.
+    - name: Verify-HTTPS-traffic-from-host-gateway-2
+      description: Verify HTTPS traffic from host flows through Gateway 2
+      use:
+        template: ../common/_step_templates/verify-https-traffic-from-host.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name_2)
+        - name: gateway_namespace
+          value: ($gateway_namespace_2)
+        - name: fqdn
+          value: ($fqdn_2)
+        - name: route_path
+          value: ($route_path)
+        - name: http_method
+          value: ($http_method)
+        - name: insecure
+          value: "true"
+
+    # Step 29: Verify HTTPS traffic from cluster through Gateway 2.
+    - name: Verify-HTTPS-traffic-from-cluster-gateway-2
+      description: Verify HTTPS traffic from cluster flows through Gateway 2
+      use:
+        template: ../common/_step_templates/verify-https-traffic-from-cluster.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name_2)
+        - name: gateway_namespace
+          value: ($gateway_namespace_2)
+        - name: fqdn
+          value: ($fqdn_2)
+        - name: route_path
+          value: ($route_path)
+        - name: http_method
+          value: ($http_method)
+        - name: insecure
+          value: "true"
+
+    # Step 30: Verify HTTP traffic from host through Gateway 2.
+    - name: Verify-HTTP-traffic-from-host-gateway-2
+      description: Verify HTTP traffic from host flows through Gateway 2
+      use:
+        template: ../common/_step_templates/verify-http-traffic-from-host.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name_2)
+        - name: gateway_namespace
+          value: ($gateway_namespace_2)
+        - name: route_path
+          value: ($route_path)
+        - name: listener_http_port
+          value: "80"
+        - name: host_header
+          value: ($fqdn_2)
+
+    # Step 31: Verify HTTP traffic from cluster through Gateway 2.
+    - name: Verify-HTTP-traffic-from-cluster-gateway-2
+      description: Verify HTTP traffic from cluster flows through Gateway 2
+      use:
+        template: ../common/_step_templates/verify-http-traffic-from-cluster.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name_2)
+        - name: gateway_namespace
+          value: ($gateway_namespace_2)
+        - name: route_path
+          value: ($route_path)
+        - name: listener_http_port
+          value: "80"
+        - name: host_header
+          value: ($fqdn_2)
+
+    # Step 32: Create HTTPRoute with single ParentRef (Gateway 1 only).
+    - name: Create-httproute-single-parentref
+      description: Create HTTPRoute with single ParentRef to Gateway 1
       try:
         - apply:
-            file: 02-httproute-single-parentref.yaml
+            file: 03-httpRoute-single-parentref.yaml
         - assert:
-            file: 02-assert-httproute-single-parentref.yaml
-        # Wait for Kong resources to be programmed for Gateway 1
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl wait --for=condition=Programmed --timeout=120s kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute
-        # Assert Kong resources for Gateway 1
-        - assert:
-            file: 02-assert-kong-resources-gateway1.yaml
-      catch:
-        - description: Get HTTPRoute status
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: HTTPRoute
-            namespace: ($kong_namespace)
-            name: ($httproute_name)
-        - description: Get KongRoute resources
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongRoute
-            namespace: ($kong_namespace)
-        - description: Get KongService resources
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongService
-            namespace: ($kong_namespace)
-        - description: Get operator logs
-          podLogs:
-            namespace: kong-system
-            selector: control-plane=controller-manager
-            tail: 100
+            file: 04-httpRoute-single-parentref-assert.yaml
 
-    # Step 3: Verify traffic flows through Gateway 1
-    - name: verify-traffic-gateway1
-      description: Verify that traffic can flow through Gateway 1
-      try:
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name_1)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${KONG_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
-            outputs:
-              - name: proxy_ip_1
-                value: ($stdout)
-        - description: Test connectivity through Gateway 1
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip_1)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              POD_NAME="curl-test-$(date +%s)-$$"
-              kubectl run ${POD_NAME} --image=curlimages/curl:latest --rm -i --restart=Never -n ${KONG_NAMESPACE} -- \
-                curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w '%{http_code}' http://${PROXY_IP}/get
-            check:
-              (contains($stdout, '200')): true
+    # Step 33: Assert KongRoute for single-parent HTTPRoute.
+    - name: Assert-kong-route-single-parent
+      description: Assert KongRoute created for single-parent HTTPRoute
+      use:
+        template: ../common/_step_templates/assert-kongRoute.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name_1)
+        - name: gateway_namespace
+          value: ($gateway_namespace_1)
+        - name: http_route_name
+          value: ($http_route_single_name)
+        - name: route_paths
+          value:
+            - "~/status/200$"
+            - "/status/200/"
+        - name: strip_path
+          value: true
+        - name: resource_type
+          value: "kongservices.configuration.konghq.com"
 
-    # Step 4: Update HTTPRoute to reference multiple Gateways
-    - name: update-httproute-multiple-parentrefs
-      description: Update HTTPRoute to reference both Gateway 1 and Gateway 2
-      try:
-        - apply:
-            file: 03-httproute-multiple-parentrefs.yaml
-        - assert:
-            file: 03-assert-httproute-multiple-parentrefs.yaml
-        # Wait for Kong resources to be programmed for both Gateways
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-              - name: GATEWAY_NAME_1
-                value: ($gateway_name_1)
-            content: |
-              kubectl wait --for=condition=Programmed --timeout=120s kongroute -n ${KONG_NAMESPACE} \
-                -l gateway-operator.konghq.com/hybrid-gateways-name=${GATEWAY_NAME_1}
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-              - name: GATEWAY_NAME_2
-                value: ($gateway_name_2)
-            content: |
-              kubectl wait --for=condition=Programmed --timeout=120s kongroute -n ${KONG_NAMESPACE} \
-                -l gateway-operator.konghq.com/hybrid-gateways-name=${GATEWAY_NAME_2}
-        # Assert Kong resources exist for both Gateways
-        - assert:
-            file: 02-assert-kong-resources-gateway1.yaml
-        - assert:
-            file: 03-assert-kong-resources-gateway2.yaml
-      catch:
-        - description: Get HTTPRoute status
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: HTTPRoute
-            namespace: ($kong_namespace)
-            name: ($httproute_name)
-        - description: Get KongRoute resources
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongRoute
-            namespace: ($kong_namespace)
-        - description: Get KongService resources
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongService
-            namespace: ($kong_namespace)
-        - description: Get KongUpstream resources
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongUpstream
-            namespace: ($kong_namespace)
-        - description: Get KongTarget resources
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongTarget
-            namespace: ($kong_namespace)
-        - description: Get operator logs
-          podLogs:
-            namespace: kong-system
-            selector: control-plane=controller-manager
-            tail: 100
+    # Step 34: Assert KongService for single-parent HTTPRoute.
+    - name: Assert-kong-service-single-parent
+      description: Assert KongService created for single-parent HTTPRoute
+      use:
+        template: ../common/_step_templates/assert-kongService.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name_1)
+        - name: gateway_namespace
+          value: ($gateway_namespace_1)
+        - name: http_route_name
+          value: ($http_route_single_name)
 
-    # Step 5: Verify Kong resources are created for each ControlPlane
-    - name: verify-kong-resources-per-controlplane
-      description: Verify Kong resources have different ControlPlane IDs for each Gateway
-      try:
-        # Get ControlPlane ID for Gateway 1 (find by ownerReference)
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-              - name: GATEWAY_NAME_1
-                value: ($gateway_name_1)
-            content: |
-              kubectl get konnectgatewaycontrolplane -n ${KONG_NAMESPACE} -o json | \
-                jq -r --arg gw "${GATEWAY_NAME_1}" '.items[] | select(.metadata.ownerReferences[]?.name == $gw) | .status.id' | tr -d '\n'
-            outputs:
-              - name: controlplane_id_1
-                value: ($stdout)
-        # Get ControlPlane ID for Gateway 2 (find by ownerReference)
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-              - name: GATEWAY_NAME_2
-                value: ($gateway_name_2)
-            content: |
-              kubectl get konnectgatewaycontrolplane -n ${KONG_NAMESPACE} -o json | \
-                jq -r --arg gw "${GATEWAY_NAME_2}" '.items[] | select(.metadata.ownerReferences[]?.name == $gw) | .status.id' | tr -d '\n'
-            outputs:
-              - name: controlplane_id_2
-                value: ($stdout)
-        # Verify Gateway 1 KongRoute has Gateway 1's ControlPlane ID
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-              - name: GATEWAY_NAME_1
-                value: ($gateway_name_1)
-              - name: CONTROLPLANE_ID_1
-                value: ($controlplane_id_1)
-            content: |
-              ROUTE_CP_ID=$(kubectl get kongroute -n ${KONG_NAMESPACE} \
-                -l gateway-operator.konghq.com/hybrid-gateways-name=${GATEWAY_NAME_1} \
-                -o jsonpath='{.items[0].status.konnect.controlPlaneID}' | tr -d '\n')
-              if [ "$ROUTE_CP_ID" = "$CONTROLPLANE_ID_1" ]; then
-                echo "PASS: KongRoute for Gateway 1 has correct ControlPlane ID"
-              else
-                echo "FAIL: KongRoute ControlPlane ID ($ROUTE_CP_ID) does not match Gateway 1 ControlPlane ID ($CONTROLPLANE_ID_1)"
-                exit 1
-              fi
-        # Verify Gateway 2 KongRoute has Gateway 2's ControlPlane ID
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-              - name: GATEWAY_NAME_2
-                value: ($gateway_name_2)
-              - name: CONTROLPLANE_ID_2
-                value: ($controlplane_id_2)
-            content: |
-              ROUTE_CP_ID=$(kubectl get kongroute -n ${KONG_NAMESPACE} \
-                -l gateway-operator.konghq.com/hybrid-gateways-name=${GATEWAY_NAME_2} \
-                -o jsonpath='{.items[0].status.konnect.controlPlaneID}' | tr -d '\n')
-              if [ "$ROUTE_CP_ID" = "$CONTROLPLANE_ID_2" ]; then
-                echo "PASS: KongRoute for Gateway 2 has correct ControlPlane ID"
-              else
-                echo "FAIL: KongRoute ControlPlane ID ($ROUTE_CP_ID) does not match Gateway 2 ControlPlane ID ($CONTROLPLANE_ID_2)"
-                exit 1
-              fi
-        # Verify ControlPlane IDs are different
-        - script:
-            env:
-              - name: CONTROLPLANE_ID_1
-                value: ($controlplane_id_1)
-              - name: CONTROLPLANE_ID_2
-                value: ($controlplane_id_2)
-            content: |
-              if [ "$CONTROLPLANE_ID_1" != "$CONTROLPLANE_ID_2" ]; then
-                echo "PASS: Gateway 1 and Gateway 2 have different ControlPlane IDs"
-                echo "Gateway 1 ControlPlane ID: $CONTROLPLANE_ID_1"
-                echo "Gateway 2 ControlPlane ID: $CONTROLPLANE_ID_2"
-              else
-                echo "FAIL: Gateway 1 and Gateway 2 have the same ControlPlane ID ($CONTROLPLANE_ID_1)"
-                exit 1
-              fi
+    # Step 35: Assert KongUpstream for single-parent HTTPRoute.
+    - name: Assert-kong-upstream-single-parent
+      description: Assert KongUpstream created for single-parent HTTPRoute
+      use:
+        template: ../common/_step_templates/assert-kongUstream.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name_1)
+        - name: gateway_namespace
+          value: ($gateway_namespace_1)
+        - name: http_route_name
+          value: ($http_route_single_name)
 
-    # Step 6: Verify traffic flows through both Gateways
-    - name: verify-traffic-both-gateways
-      description: Verify that traffic can flow through both Gateway 1 and Gateway 2
-      try:
-        # Get Gateway 1 proxy IP
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name_1)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${KONG_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
-            outputs:
-              - name: proxy_ip_1
-                value: ($stdout)
-        # Get Gateway 2 proxy IP
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name_2)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${KONG_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
-            outputs:
-              - name: proxy_ip_2
-                value: ($stdout)
-        # Test connectivity through Gateway 1
-        - description: Test connectivity through Gateway 1
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip_1)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              POD_NAME="curl-test-gw1-$(date +%s)-$$"
-              kubectl run ${POD_NAME} --image=curlimages/curl:latest --rm -i --restart=Never -n ${KONG_NAMESPACE} -- \
-                curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w '%{http_code}' http://${PROXY_IP}/get
-            check:
-              (contains($stdout, '200')): true
-        # Test connectivity through Gateway 2
-        - description: Test connectivity through Gateway 2
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip_2)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              POD_NAME="curl-test-gw2-$(date +%s)-$$"
-              kubectl run ${POD_NAME} --image=curlimages/curl:latest --rm -i --restart=Never -n ${KONG_NAMESPACE} -- \
-                curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w '%{http_code}' http://${PROXY_IP}/get
-            check:
-              (contains($stdout, '200')): true
-        # Test from host through Gateway 1
-        - description: Test connectivity from host through Gateway 1
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip_1)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/get
-            check:
-              (contains($stdout, '200')): true
-        # Test from host through Gateway 2
-        - description: Test connectivity from host through Gateway 2
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip_2)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/get
-            check:
-              (contains($stdout, '200')): true
+    # Step 36: Assert KongTarget for single-parent HTTPRoute.
+    - name: Assert-kong-target-single-parent
+      description: Assert KongTarget created for single-parent HTTPRoute
+      use:
+        template: ../common/_step_templates/assert-kongTarget.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name_1)
+        - name: gateway_namespace
+          value: ($gateway_namespace_1)
+        - name: http_route_name
+          value: ($http_route_single_name)
+        - name: resource_type
+          value: "kongupstreams.configuration.konghq.com"
+        - name: target_weight
+          value: 1
+
+    # Step 37: Verify HTTPS traffic for single-parent route.
+    - name: Verify-HTTPS-traffic-single-parent
+      description: Verify HTTPS traffic for single-parent HTTPRoute through Gateway 1
+      use:
+        template: ../common/_step_templates/verify-https-traffic-from-host.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name_1)
+        - name: gateway_namespace
+          value: ($gateway_namespace_1)
+        - name: fqdn
+          value: ($fqdn_1)
+        - name: route_path
+          value: ($route_path_single)
+        - name: http_method
+          value: ($http_method)
+        - name: insecure
+          value: "true"
+
+    # Step 38: Verify HTTPS traffic from cluster for single-parent route.
+    - name: Verify-HTTPS-traffic-from-cluster-single-parent
+      description: Verify HTTPS traffic from cluster for single-parent HTTPRoute through Gateway 1
+      use:
+        template: ../common/_step_templates/verify-https-traffic-from-cluster.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name_1)
+        - name: gateway_namespace
+          value: ($gateway_namespace_1)
+        - name: fqdn
+          value: ($fqdn_1)
+        - name: route_path
+          value: ($route_path_single)
+        - name: http_method
+          value: ($http_method)
+        - name: insecure
+          value: "true"
+
+    # Step 39: Verify HTTP traffic from host for single-parent route.
+    - name: Verify-HTTP-traffic-from-host-single-parent
+      description: Verify HTTP traffic from host for single-parent HTTPRoute through Gateway 1
+      use:
+        template: ../common/_step_templates/verify-http-traffic-from-host.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name_1)
+        - name: gateway_namespace
+          value: ($gateway_namespace_1)
+        - name: route_path
+          value: ($route_path_single)
+        - name: listener_http_port
+          value: "80"
+        - name: host_header
+          value: ($fqdn_1)
+
+    # Step 40: Verify HTTP traffic from cluster for single-parent route.
+    - name: Verify-HTTP-traffic-from-cluster-single-parent
+      description: Verify HTTP traffic from cluster for single-parent HTTPRoute through Gateway 1
+      use:
+        template: ../common/_step_templates/verify-http-traffic-from-cluster.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name_1)
+        - name: gateway_namespace
+          value: ($gateway_namespace_1)
+        - name: route_path
+          value: ($route_path_single)
+        - name: listener_http_port
+          value: "80"
+        - name: host_header
+          value: ($fqdn_1)
+
+  catch:
+    - describe:
+        apiVersion: gateway.networking.k8s.io/v1
+        kind: Gateway
+        name: ($gateway_name_1)
+        namespace: ($namespace)
+    
+    - describe:
+        apiVersion: gateway.networking.k8s.io/v1
+        kind: Gateway
+        name: ($gateway_name_2)
+        namespace: ($namespace)
+    
+    - describe:
+        apiVersion: gateway.networking.k8s.io/v1
+        kind: HTTPRoute
+        namespace: ($namespace)
+    
+    - describe:
+        apiVersion: konnect.konghq.com/v1alpha2
+        kind: KonnectGatewayControlPlane
+        namespace: ($namespace)
+    
+    - describe:
+        apiVersion: configuration.konghq.com/v1alpha1
+        kind: KongService
+        namespace: ($namespace)
+    
+    - describe:
+        apiVersion: configuration.konghq.com/v1alpha1
+        kind: KongRoute
+        namespace: ($namespace)
+    
+    - describe:
+        apiVersion: configuration.konghq.com/v1beta1
+        kind: KongUpstream
+        namespace: ($namespace)
+    
+    - describe:
+        apiVersion: configuration.konghq.com/v1beta1
+        kind: KongTarget
+        namespace: ($namespace)
+    
+    - describe:
+        apiVersion: configuration.konghq.com/v1alpha1
+        kind: KongCertificate
+        namespace: ($namespace)
+    
+    - describe:
+        apiVersion: configuration.konghq.com/v1alpha1
+        kind: KongSNI
+        namespace: ($namespace)
+    
+    - describe:
+        apiVersion: v1
+        kind: Service
+        namespace: ($namespace)
+    
+    - describe:
+        apiVersion: v1
+        kind: Pod
+        namespace: ($namespace)
+    
+    - describe:
+        apiVersion: v1
+        kind: Secret
+        namespace: ($cert_secret_namespace)
+    
+    - description: Get events
+      events:
+        namespace: ($namespace)
+    
+    - description: Get operator logs
+      podLogs:
+        namespace: kong-system
+        selector: control-plane=controller-manager
+        tail: 200
