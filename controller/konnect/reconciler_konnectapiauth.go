@@ -345,9 +345,8 @@ func EnsureFinalizerOnKonnectAPIAuthConfiguration(
 		list := t.DeepCopyObject().(client.ObjectList)
 		err := cl.List(ctx,
 			list,
-			client.InNamespace(apiAuth.GetNamespace()),
 			client.MatchingFields{
-				i: apiAuth.Name,
+				i: apiAuth.Namespace + "/" + apiAuth.Name,
 			},
 		)
 		if err != nil {

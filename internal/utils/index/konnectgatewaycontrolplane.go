@@ -67,7 +67,12 @@ func konnectGatewayControlPlaneAPIAuthConfigurationRef(object client.Object) []s
 		return nil
 	}
 
-	return []string{cp.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name}
+	namespace := cp.GetNamespace()
+	if cp.Spec.KonnectConfiguration.APIAuthConfigurationRef.Namespace != nil {
+		namespace = *cp.Spec.KonnectConfiguration.APIAuthConfigurationRef.Namespace
+	}
+
+	return []string{namespace + "/" + cp.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name}
 }
 
 func konnectGatewayControlPlaneKonnectID(object client.Object) []string {
