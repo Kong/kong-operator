@@ -231,7 +231,6 @@ func (r *KonnectExtensionReconciler) ensureCertificateSecret(ctx context.Context
 			Name:      r.ClusterCASecretName,
 		},
 		usages,
-		r.ClusterCAKeyConfig,
 		r.Client,
 		matchingLabels,
 	)

@@ -38,7 +38,6 @@ import (
 	"github.com/kong/kong-operator/controller/konnect"
 	"github.com/kong/kong-operator/controller/konnect/constraints"
 	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
-	"github.com/kong/kong-operator/controller/pkg/secrets"
 	"github.com/kong/kong-operator/controller/specialized"
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager/multiinstance"
 	"github.com/kong/kong-operator/internal/metrics"
@@ -342,16 +341,6 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		}
 	}
 
-	keyType, err := KeyTypeToX509PublicKeyAlgorithm(c.ClusterCAKeyType)
-	if err != nil {
-		return nil, fmt.Errorf("unsupported cluster CA key type: %w", err)
-	}
-
-	clusterCAKeyConfig := secrets.KeyConfig{
-		Type: keyType,
-		Size: c.ClusterCAKeySize,
-	}
-
 	const (
 		// NOTE: This will be parametrized.
 		metricsScrapeInterval = 10 * time.Second
@@ -364,7 +353,6 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			Name:      c.ClusterCASecretName,
 			Namespace: c.ClusterCASecretNamespace,
 		},
-		clusterCAKeyConfig,
 	)
 	if err := mgr.Add(scrapersMgr); err != nil {
 		return nil, fmt.Errorf("failed to add scrapers manager to controller-runtime manager: %w", err)
@@ -417,7 +405,6 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				Client:                   mgr.GetClient(),
 				ClusterCASecretName:      c.ClusterCASecretName,
 				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
-				ClusterCAKeyConfig:       clusterCAKeyConfig,
 				SecretLabelSelector:      c.SecretLabelSelector,
 				ConfigMapLabelSelector:   c.ConfigMapLabelSelector,
 				KonnectEnabled:           c.KonnectControllersEnabled,
@@ -438,7 +425,6 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				Client:                   mgr.GetClient(),
 				ClusterCASecretName:      c.ClusterCASecretName,
 				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
-				ClusterCAKeyConfig:       clusterCAKeyConfig,
 				SecretLabelSelector:      c.SecretLabelSelector,
 				ConfigMapLabelSelector:   c.ConfigMapLabelSelector,
 				DefaultImage:             consts.DefaultDataPlaneImage,
@@ -457,14 +443,12 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				Client:                   mgr.GetClient(),
 				ClusterCASecretName:      c.ClusterCASecretName,
 				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
-				ClusterCAKeyConfig:       clusterCAKeyConfig,
 				SecretLabelSelector:      c.SecretLabelSelector,
 				DataPlaneController: &dataplane.Reconciler{
 					ControllerOptions:        controllerOptions(ctrlOpts, withMaxConcurrentReconciles(int(c.MaxConcurrentReconcilesDataPlane))),
 					Client:                   mgr.GetClient(),
 					ClusterCASecretName:      c.ClusterCASecretName,
 					ClusterCASecretNamespace: c.ClusterCASecretNamespace,
-					ClusterCAKeyConfig:       clusterCAKeyConfig,
 					SecretLabelSelector:      c.SecretLabelSelector,
 					ConfigMapLabelSelector:   c.ConfigMapLabelSelector,
 					DefaultImage:             consts.DefaultDataPlaneImage,
@@ -596,7 +580,6 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 					SyncPeriod:               c.KonnectSyncPeriod,
 					ClusterCASecretName:      c.ClusterCASecretName,
 					ClusterCASecretNamespace: c.ClusterCASecretNamespace,
-					ClusterCAKeyConfig:       clusterCAKeyConfig,
 					SecretLabelSelector:      c.SecretLabelSelector,
 				},
 			},
