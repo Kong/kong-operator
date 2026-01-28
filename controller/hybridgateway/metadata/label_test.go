@@ -50,9 +50,7 @@ func TestBuildLabels(t *testing.T) {
 				Name: "test-gateway",
 			},
 			expected: map[string]string{
-				consts.GatewayOperatorManagedByLabel:               "HTTPRoute",
-				consts.GatewayOperatorHybridGatewaysNameLabel:      "test-gateway",
-				consts.GatewayOperatorHybridGatewaysNamespaceLabel: "production",
+				consts.GatewayOperatorManagedByLabel: "HTTPRoute",
 			},
 			description: "should handle HTTPRoute with parentRef correctly",
 		},
