@@ -37,7 +37,7 @@ spec:
     - name: konnect_auth_namespace
       value: ($namespace)
     - name: secret_finalizer
-      value: "gateway.konghq.com/secret-in-use"
+      value: "gateway.konghq.com/secret-in-use-by-konnect-resource"
 
     # Additional bindings for new test scenarios
     - name: auth_secret_name_2

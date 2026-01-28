@@ -82,7 +82,7 @@ func (r *KonnectSecretReferenceController) Reconcile(
 
 		// Remove finalizer if not referenced.
 		if !isReferenced {
-			if removed, res, err := patch.WithoutFinalizer(ctx, r.client, &secret, consts.KonnectExtensionSecretInUseFinalizer); err != nil || !res.IsZero() {
+			if removed, res, err := patch.WithoutFinalizer(ctx, r.client, &secret, consts.KonnectSecretInUseFinalizer); err != nil || !res.IsZero() {
 				return res, err
 			} else if removed {
 				log.Debug(logger, "removed finalizer from secret as it's no longer referenced")
@@ -100,13 +100,13 @@ func (r *KonnectSecretReferenceController) Reconcile(
 
 	// Add finalizer if referenced, remove if not referenced.
 	if isReferenced {
-		if added, res, err := patch.WithFinalizer(ctx, r.client, &secret, consts.KonnectExtensionSecretInUseFinalizer); err != nil || !res.IsZero() {
+		if added, res, err := patch.WithFinalizer(ctx, r.client, &secret, consts.KonnectSecretInUseFinalizer); err != nil || !res.IsZero() {
 			return res, err
 		} else if added {
 			log.Debug(logger, "added finalizer to secret as it's referenced by Konnect resources")
 		}
 	} else {
-		if removed, res, err := patch.WithoutFinalizer(ctx, r.client, &secret, consts.KonnectExtensionSecretInUseFinalizer); err != nil || !res.IsZero() {
+		if removed, res, err := patch.WithoutFinalizer(ctx, r.client, &secret, consts.KonnectSecretInUseFinalizer); err != nil || !res.IsZero() {
 			return res, err
 		} else if removed {
 			log.Debug(logger, "removed finalizer from secret as it's not referenced")

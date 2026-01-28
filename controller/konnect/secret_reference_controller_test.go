@@ -221,7 +221,7 @@ func TestKonnectSecretReferenceController_Reconcile(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       "test-secret",
 					Namespace:  "test-ns",
-					Finalizers: []string{consts.KonnectExtensionSecretInUseFinalizer},
+					Finalizers: []string{consts.KonnectSecretInUseFinalizer},
 				},
 			},
 			existingObjs: []client.Object{
@@ -229,7 +229,7 @@ func TestKonnectSecretReferenceController_Reconcile(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "test-secret",
 						Namespace:  "test-ns",
-						Finalizers: []string{consts.KonnectExtensionSecretInUseFinalizer},
+						Finalizers: []string{consts.KonnectSecretInUseFinalizer},
 					},
 				},
 			},
@@ -245,7 +245,7 @@ func TestKonnectSecretReferenceController_Reconcile(t *testing.T) {
 					Name:              "test-secret",
 					Namespace:         "test-ns",
 					DeletionTimestamp: &futureTime,
-					Finalizers:        []string{consts.KonnectExtensionSecretInUseFinalizer},
+					Finalizers:        []string{consts.KonnectSecretInUseFinalizer},
 				},
 			},
 			existingObjs: []client.Object{
@@ -254,7 +254,7 @@ func TestKonnectSecretReferenceController_Reconcile(t *testing.T) {
 						Name:              "test-secret",
 						Namespace:         "test-ns",
 						DeletionTimestamp: &futureTime,
-						Finalizers:        []string{consts.KonnectExtensionSecretInUseFinalizer},
+						Finalizers:        []string{consts.KonnectSecretInUseFinalizer},
 					},
 				},
 			},
@@ -268,7 +268,7 @@ func TestKonnectSecretReferenceController_Reconcile(t *testing.T) {
 					Name:              "test-secret",
 					Namespace:         "test-ns",
 					DeletionTimestamp: &pastTime,
-					Finalizers:        []string{consts.KonnectExtensionSecretInUseFinalizer},
+					Finalizers:        []string{consts.KonnectSecretInUseFinalizer},
 				},
 			},
 			existingObjs: []client.Object{
@@ -277,7 +277,7 @@ func TestKonnectSecretReferenceController_Reconcile(t *testing.T) {
 						Name:              "test-secret",
 						Namespace:         "test-ns",
 						DeletionTimestamp: &pastTime,
-						Finalizers:        []string{consts.KonnectExtensionSecretInUseFinalizer},
+						Finalizers:        []string{consts.KonnectSecretInUseFinalizer},
 					},
 				},
 			},
@@ -294,7 +294,7 @@ func TestKonnectSecretReferenceController_Reconcile(t *testing.T) {
 					Name:              "test-secret",
 					Namespace:         "test-ns",
 					DeletionTimestamp: &pastTime,
-					Finalizers:        []string{consts.KonnectExtensionSecretInUseFinalizer},
+					Finalizers:        []string{consts.KonnectSecretInUseFinalizer},
 				},
 			},
 			existingObjs: []client.Object{
@@ -303,7 +303,7 @@ func TestKonnectSecretReferenceController_Reconcile(t *testing.T) {
 						Name:              "test-secret",
 						Namespace:         "test-ns",
 						DeletionTimestamp: &pastTime,
-						Finalizers:        []string{consts.KonnectExtensionSecretInUseFinalizer},
+						Finalizers:        []string{consts.KonnectSecretInUseFinalizer},
 					},
 				},
 				&konnectv1alpha1.KonnectAPIAuthConfiguration{
@@ -409,7 +409,7 @@ func TestKonnectSecretReferenceController_Reconcile(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       "test-secret",
 					Namespace:  "test-ns",
-					Finalizers: []string{consts.KonnectExtensionSecretInUseFinalizer},
+					Finalizers: []string{consts.KonnectSecretInUseFinalizer},
 				},
 			},
 			existingObjs: []client.Object{
@@ -417,7 +417,7 @@ func TestKonnectSecretReferenceController_Reconcile(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "test-secret",
 						Namespace:  "test-ns",
-						Finalizers: []string{consts.KonnectExtensionSecretInUseFinalizer},
+						Finalizers: []string{consts.KonnectSecretInUseFinalizer},
 					},
 				},
 			},
@@ -436,7 +436,7 @@ func TestKonnectSecretReferenceController_Reconcile(t *testing.T) {
 					Name:              "test-secret",
 					Namespace:         "test-ns",
 					DeletionTimestamp: &pastTime,
-					Finalizers:        []string{consts.KonnectExtensionSecretInUseFinalizer},
+					Finalizers:        []string{consts.KonnectSecretInUseFinalizer},
 				},
 			},
 			existingObjs: []client.Object{
@@ -445,7 +445,7 @@ func TestKonnectSecretReferenceController_Reconcile(t *testing.T) {
 						Name:              "test-secret",
 						Namespace:         "test-ns",
 						DeletionTimestamp: &pastTime,
-						Finalizers:        []string{consts.KonnectExtensionSecretInUseFinalizer},
+						Finalizers:        []string{consts.KonnectSecretInUseFinalizer},
 					},
 				},
 			},
@@ -464,7 +464,7 @@ func TestKonnectSecretReferenceController_Reconcile(t *testing.T) {
 					Name:              "test-secret",
 					Namespace:         "test-ns",
 					DeletionTimestamp: &pastTime,
-					Finalizers:        []string{consts.KonnectExtensionSecretInUseFinalizer},
+					Finalizers:        []string{consts.KonnectSecretInUseFinalizer},
 				},
 			},
 			existingObjs: []client.Object{
@@ -473,7 +473,7 @@ func TestKonnectSecretReferenceController_Reconcile(t *testing.T) {
 						Name:              "test-secret",
 						Namespace:         "test-ns",
 						DeletionTimestamp: &pastTime,
-						Finalizers:        []string{consts.KonnectExtensionSecretInUseFinalizer},
+						Finalizers:        []string{consts.KonnectSecretInUseFinalizer},
 					},
 				},
 			},
@@ -537,12 +537,12 @@ func TestKonnectSecretReferenceController_Reconcile(t *testing.T) {
 				err := fakeClient.Get(context.Background(), req.NamespacedName, &secret)
 				assert.NoError(t, err, "failed to get secret after reconcile")
 
-				hasFinalizer := slices.Contains(secret.Finalizers, consts.KonnectExtensionSecretInUseFinalizer)
+				hasFinalizer := slices.Contains(secret.Finalizers, consts.KonnectSecretInUseFinalizer)
 
 				if tc.shouldHaveFinalizer {
-					assert.True(t, hasFinalizer, "expected secret to have finalizer %s but it doesn't", consts.KonnectExtensionSecretInUseFinalizer)
+					assert.True(t, hasFinalizer, "expected secret to have finalizer %s but it doesn't", consts.KonnectSecretInUseFinalizer)
 				} else {
-					assert.False(t, hasFinalizer, "expected secret to not have finalizer %s but it does", consts.KonnectExtensionSecretInUseFinalizer)
+					assert.False(t, hasFinalizer, "expected secret to not have finalizer %s but it does", consts.KonnectSecretInUseFinalizer)
 				}
 			}
 		})
