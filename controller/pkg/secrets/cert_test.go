@@ -389,7 +389,7 @@ func TestMaybeCreateCertificateSecret(t *testing.T) {
 					require.True(t, ok, "generated secret does not contain 'tls.key'")
 					tlsKeyPemBlock, _ := pem.Decode(key)
 					require.NotNil(t, tlsKeyPemBlock)
-					_, algorithm, err := parsePrivateKey(tlsKeyPemBlock)
+					_, algorithm, err := ParsePrivateKey(tlsKeyPemBlock)
 					require.NoError(t, err)
 					require.Contains(t, strings.ToLower(algorithm.String()), keyType, "generated private key algorithm is not as expected")
 				})
@@ -399,7 +399,7 @@ func TestMaybeCreateCertificateSecret(t *testing.T) {
 
 }
 
-func Test_parsePrivateKey(t *testing.T) {
+func TestParsePrivateKey(t *testing.T) {
 	tests := []struct {
 		name             string
 		keyType          x509.PublicKeyAlgorithm
@@ -467,7 +467,7 @@ func Test_parsePrivateKey(t *testing.T) {
 				Bytes: privKeyBytes,
 			}
 
-			priv, alg, err := parsePrivateKey(pemBlock)
+			priv, alg, err := ParsePrivateKey(pemBlock)
 			if tt.expectedErrorMsg != "" {
 				require.Error(t, err)
 				assert.Equal(t, tt.expectedErrorMsg, err.Error())
