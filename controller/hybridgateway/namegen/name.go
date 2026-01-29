@@ -1,6 +1,7 @@
 package namegen
 
 import (
+	"fmt"
 	"strings"
 
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -39,31 +40,76 @@ func newName(elements ...string) string {
 	return namegenPrefix + utils.Hash64(elements)
 }
 
+func newNameWithHashSuffix(readableElements []string, hashElements []string) string {
+	allElements := append(append([]string{}, readableElements...), hashElements...)
+	name := strings.Join(allElements, ".")
+	// If the name is too long, truncate it.
+	if len(name) > maxLen {
+		// No hash elements: fall back to a deterministic hash of everything.
+		if len(hashElements) == 0 {
+			return namegenPrefix + utils.Hash64(allElements)
+		}
+
+		hashPart := strings.Join(hashElements, ".")
+		// If the hash part alone is too long, also fall back to hashing everything.
+		if len(hashPart) > maxLen {
+			return namegenPrefix + utils.Hash64(allElements)
+		}
+
+		remaining := maxLen - len(hashPart) - 1 // space for readable + "." + hashPart
+		// Not enough room for "<readable>." prefix or no readable elements: return just the hash part.
+		if remaining <= 0 || len(readableElements) == 0 {
+			return hashPart
+		}
+
+		readablePart := strings.Join(readableElements, ".")
+		if len(readablePart) > remaining {
+			readablePart = strings.TrimRight(readablePart[:remaining], ".-")
+		}
+
+		return readablePart + "." + hashPart
+	}
+
+	return name
+}
+
 // NewKongUpstreamName generates a KongUpstream name based on the ControlPlaneRef and HTTPRouteRule passed as arguments.
-func NewKongUpstreamName(cp *commonv1alpha1.ControlPlaneRef, rule gatewayv1.HTTPRouteRule) string {
-	return newName(
-		defaultCPPrefix+utils.Hash32(cp),
-		utils.Hash32(rule.BackendRefs),
+func NewKongUpstreamName(route *gwtypes.HTTPRoute, cp *commonv1alpha1.ControlPlaneRef, rule gatewayv1.HTTPRouteRule) string {
+	readableElements := append(
+		[]string{httpProcolPrefix},
+		backendRefDisplayNames(route.Namespace, rule.BackendRefs)...,
 	)
+	hashElements := []string{
+		defaultCPPrefix + utils.Hash32(cp),
+		utils.Hash32(rule.BackendRefs),
+	}
+	return newNameWithHashSuffix(readableElements, hashElements)
 }
 
 // NewKongServiceName generates a KongService name based on the ControlPlaneRef and HTTPRouteRule passed as arguments.
-func NewKongServiceName(cp *commonv1alpha1.ControlPlaneRef, rule gatewayv1.HTTPRouteRule) string {
-	return newName(
-		httpProcolPrefix,
-		defaultCPPrefix+utils.Hash32(cp),
-		utils.Hash32(rule.BackendRefs),
+func NewKongServiceName(route *gwtypes.HTTPRoute, cp *commonv1alpha1.ControlPlaneRef, rule gatewayv1.HTTPRouteRule) string {
+	readableElements := append(
+		[]string{httpProcolPrefix},
+		backendRefDisplayNames(route.Namespace, rule.BackendRefs)...,
 	)
+	hashElements := []string{
+		defaultCPPrefix + utils.Hash32(cp),
+		utils.Hash32(rule.BackendRefs),
+	}
+	return newNameWithHashSuffix(readableElements, hashElements)
 }
 
 // NewKongRouteName generates a KongRoute name based on the HTTPRoute, ControlPlaneRef, and HTTPRouteRule passed as arguments.
 func NewKongRouteName(route *gwtypes.HTTPRoute, cp *commonv1alpha1.ControlPlaneRef, rule gatewayv1.HTTPRouteRule) string {
-	return newName(
+	readableElements := []string{
 		httpProcolPrefix,
-		route.Namespace+"-"+route.Name,
-		defaultCPPrefix+utils.Hash32(cp),
+		route.Namespace + "-" + route.Name,
+	}
+	hashElements := []string{
+		defaultCPPrefix + utils.Hash32(cp),
 		utils.Hash32(rule.Matches),
-	)
+	}
+	return newNameWithHashSuffix(readableElements, hashElements)
 }
 
 // NewKongPluginName generates a KongPlugin name based on the HTTPRouteFilter passed as argument.
@@ -99,4 +145,55 @@ func NewKongCertificateName(gatewayName, listenerPort string) string {
 		gatewayName,
 		listenerPort,
 	)
+}
+
+func backendRefDisplayNames(routeNamespace string, refs []gatewayv1.HTTPBackendRef) []string {
+	if len(refs) == 0 {
+		return nil
+	}
+
+	var name string
+	for _, ref := range refs {
+		displayName := backendRefDisplayName(routeNamespace, ref)
+		if displayName == "" {
+			continue
+		}
+		if displayName < name || name == "" {
+			name = displayName
+		}
+	}
+	if len(name) == 0 {
+		return nil
+	}
+	count := fmt.Sprintf("%d", len(refs))
+	return []string{name, count}
+}
+
+func backendRefDisplayName(routeNamespace string, ref gatewayv1.HTTPBackendRef) string {
+	name := string(ref.Name)
+	if name == "" {
+		return ""
+	}
+
+	namespace := routeNamespace
+	if ref.Namespace != nil && string(*ref.Namespace) != "" {
+		namespace = string(*ref.Namespace)
+	}
+
+	parts := make([]string, 0, 4)
+	if ref.Kind != nil {
+		kind := strings.ToLower(string(*ref.Kind))
+		if kind != "" && kind != "service" {
+			parts = append(parts, kind)
+		}
+	}
+	if namespace != "" {
+		parts = append(parts, namespace)
+	}
+	parts = append(parts, name)
+	if ref.Port != nil {
+		parts = append(parts, fmt.Sprintf("%d", *ref.Port))
+	}
+
+	return strings.Join(parts, "-")
 }

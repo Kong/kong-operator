@@ -62,7 +62,7 @@ func TestServiceForRule(t *testing.T) {
 	}
 
 	upstreamName := "test-upstream"
-	serviceName := namegen.NewKongServiceName(cp, rule)
+	serviceName := namegen.NewKongServiceName(httpRoute, cp, rule)
 
 	tests := []struct {
 		name               string
