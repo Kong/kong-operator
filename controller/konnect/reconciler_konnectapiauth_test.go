@@ -381,7 +381,15 @@ func TestEnsureFinalizerOnKonnectAPIAuthConfiguration(t *testing.T) {
 				index.IndexFieldKonnectGatewayControlPlaneOnAPIAuthConfiguration,
 				func(obj client.Object) []string {
 					cp := obj.(*konnectv1alpha2.KonnectGatewayControlPlane)
-					return []string{cp.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name}
+					ns := cp.GetNamespace()
+					authRef := cp.Spec.KonnectConfiguration.APIAuthConfigurationRef
+					if authRef.Namespace != nil && *authRef.Namespace != "" {
+						ns = *authRef.Namespace
+					}
+					if authRef.Name != "" {
+						return []string{ns + "/" + authRef.Name}
+					}
+					return nil
 				},
 			)
 
@@ -390,7 +398,12 @@ func TestEnsureFinalizerOnKonnectAPIAuthConfiguration(t *testing.T) {
 				index.IndexFieldKonnectCloudGatewayNetworkOnAPIAuthConfiguration,
 				func(obj client.Object) []string {
 					cgn := obj.(*konnectv1alpha1.KonnectCloudGatewayNetwork)
-					return []string{cgn.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name}
+					ns := cgn.GetNamespace()
+					authRef := cgn.Spec.KonnectConfiguration.APIAuthConfigurationRef
+					if authRef.Name != "" {
+						return []string{ns + "/" + authRef.Name}
+					}
+					return nil
 				},
 			)
 
@@ -400,8 +413,12 @@ func TestEnsureFinalizerOnKonnectAPIAuthConfiguration(t *testing.T) {
 				func(obj client.Object) []string {
 					ext := obj.(*konnectv1alpha2.KonnectExtension)
 					authRef := ext.GetKonnectAPIAuthConfigurationRef()
+					ns := ext.GetNamespace()
+					if authRef.Namespace != nil && *authRef.Namespace != "" {
+						ns = *authRef.Namespace
+					}
 					if authRef.Name != "" {
-						return []string{authRef.Name}
+						return []string{ns + "/" + authRef.Name}
 					}
 					return nil
 				},

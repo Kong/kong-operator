@@ -41,9 +41,15 @@ func (b *KongPluginBindingBuilder) WithNamespace(namespace string) *KongPluginBi
 	return b
 }
 
-// WithPluginRef sets the plugin reference of the KongPluginBinding.
-func (b *KongPluginBindingBuilder) WithPluginRef(pluginName string) *KongPluginBindingBuilder {
+// WithPluginRefName sets the plugin reference of the KongPluginBinding.
+func (b *KongPluginBindingBuilder) WithPluginRefName(pluginName string) *KongPluginBindingBuilder {
 	b.binding.Spec.PluginReference.Name = pluginName
+	return b
+}
+
+// WithPluginRefNamespace sets the plugin reference namespace of the KongPluginBinding.
+func (b *KongPluginBindingBuilder) WithPluginRefNamespace(pluginNamespace string) *KongPluginBindingBuilder {
+	b.binding.Spec.PluginReference.Namespace = pluginNamespace
 	return b
 }
 

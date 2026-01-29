@@ -17,7 +17,7 @@ version_prefix = "kustomize/"
 
 [tools."github:telepresenceio/telepresence"]
 # renovate: datasource=github-releases depName=telepresenceio/telepresence
-version = "2.25.2"
+version = "2.26.1"
 [tools."github:telepresenceio/telepresence".platforms]
 linux-x64 = { asset_pattern = "telepresence-linux-amd64" }
 linux-arm64 = { asset_pattern = "telepresence-linux-arm64" }
@@ -26,7 +26,7 @@ macos-arm64 = { asset_pattern = "telepresence-darwin-arm64" }
 
 [tools."http:helm"]
 # renovate: datasource=github-releases depName=helm/helm
-version = "4.0.5"
+version = "4.1.0"
 
 [tools."http:helm".platforms]
 linux-x64 = { url = "https://get.helm.sh/helm-v{version}-linux-amd64.tar.gz" }
@@ -35,4 +35,4 @@ macos-arm64 = { url = "https://get.helm.sh/helm-v{version}-darwin-arm64.tar.gz" 
 
 [tools."go:sigs.k8s.io/kube-api-linter/cmd/golangci-lint-kube-api-linter"]
 # renovate: datasource=git-refs packageName=https://github.com/kubernetes-sigs/kube-api-linter.git
-version = "18147eee9c4990d4b87e32849f6d50be5d5a59d4"
+version = "470c3a315f3ae8281f873d979092ece824d3dcfd"

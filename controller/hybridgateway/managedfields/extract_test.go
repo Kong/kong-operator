@@ -48,7 +48,7 @@ func TestExtractAsUnstructured(t *testing.T) {
 						},
 						ServiceRef: &configurationv1alpha1.ServiceRef{
 							Type: "namespacedRef",
-							NamespacedRef: &commonv1alpha1.NameRef{
+							NamespacedRef: &commonv1alpha1.NamespacedRef{
 								Name: "svc-1",
 							},
 						},

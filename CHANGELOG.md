@@ -47,11 +47,25 @@
   [#3015](https://github.com/Kong/kong-operator/issues/3015)
 - HybridGateway: Added support to PathPrefixMatch for the `URLRewrite` `HTTPRoute` filter.
   [#3039](https://github.com/Kong/kong-operator/pull/3039)
+- HybridGateway: Added comprehensive HTTPRoute converter tests to improve translation stability.
+  [#3111](https://github.com/Kong/kong-operator/pull/3111)
+- Support cross namespace references from `KongPluginBinding` to `KongPlugin`.
+  For this reference to be allowed, a `KongReferenceGrant` resource must be created
+  in the namespace of the `KongPlugin`, allowing access for the `KongPluginBinding`.
+  [#3108](https://github.com/Kong/kong-operator/pull/3108)
+- HybridGateway: Added support to PathPrefixMatch for the `RequestRedirect` `HTTPRoute` filter.
+  [#3065](https://github.com/Kong/kong-operator/pull/3065)
+- Support cross namespace references from `KongRoute` to `KongService`.
+  For this reference to be allowed, a `KongReferenceGrant` resource must be created
+  in the namespace of the `KongService`, allowing access for the `KongRoute`.
+  [#3125](https://github.com/Kong/kong-operator/pull/3125)
 
 ### Fixes
 
 - Fix validation logic for dataplane ports in admission policy.
   [#3031](https://github.com/Kong/kong-operator/pull/3031)
+- Gateway: Sort Gateway/DataPlane status addresses deterministically with hostname-first priority.
+  [#196](https://github.com/Kong/kong-operator/issues/196)
 - HybridGateway: Fixed the logic of translating `HTTPRoute` path matches to
   paths in the generated `KongRoute`.
   [#2996](https://github.com/Kong/kong-operator/pull/2996)
@@ -67,6 +81,15 @@
 - Removed the `KonnectID` type of control plane reference in CRDs for Konnect
   entities as it is not supported.
   [#2966](https://github.com/Kong/kong-operator/pull/2966)
+- Move management of bootstrapping CA certificate (that is used for signing
+  certificates for ControlPlane - DataPlane communication) to Helm Chart,
+  deprecate flags `--cluster-ca-key-type` and  `--cluster-ca-key-size` now
+  those values are inferred automatically based on the CA certificate Secret.
+  Read more in Helm Chart release notes.
+  [#3084](https://github.com/Kong/kong-operator/pull/3084)
+- HybridGateway: Include readable backend context in generated KongService and
+  KongUpstream names (with stable hashes) to improve UX in Konnect.
+  [#3121](https://github.com/Kong/kong-operator/pull/3121)
 
 ## [v2.1.0-beta.0]
 

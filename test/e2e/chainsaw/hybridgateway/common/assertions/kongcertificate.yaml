@@ -12,8 +12,6 @@ apiVersion: configuration.konghq.com/v1alpha1
 kind: KongCertificate
 metadata:
   namespace: ($namespace)
-  (labels."gateway-operator.konghq.com/hybrid-gateways-name" == ($gateway_name)): true
-  (labels."gateway-operator.konghq.com/hybrid-gateways-namespace" == ($gateway_namespace)): true
   (labels."gateway-operator.konghq.com/managed-by" == 'Gateway'): true
   (annotations."gateway-operator.konghq.com/hybrid-gateways" == join('/', [($gateway_namespace), ($gateway_name)])): true
   ownerReferences:

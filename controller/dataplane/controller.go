@@ -9,7 +9,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -21,7 +21,6 @@ import (
 	extensionskonnect "github.com/kong/kong-operator/controller/pkg/extensions/konnect"
 	"github.com/kong/kong-operator/controller/pkg/log"
 	"github.com/kong/kong-operator/controller/pkg/op"
-	"github.com/kong/kong-operator/controller/pkg/secrets"
 	"github.com/kong/kong-operator/modules/manager/logging"
 	"github.com/kong/kong-operator/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
@@ -38,10 +37,9 @@ type Reconciler struct {
 
 	ControllerOptions controller.Options
 
-	eventRecorder            record.EventRecorder
+	eventRecorder            events.EventRecorder
 	ClusterCASecretName      string
 	ClusterCASecretNamespace string
-	ClusterCAKeyConfig       secrets.KeyConfig
 	SecretLabelSelector      string
 	// ConfigMapLabelSelector is the label selector configured at the oprator level.
 	// When not empty, it is used as the config map label selector of all reconcilers.
@@ -55,7 +53,7 @@ type Reconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
-	r.eventRecorder = mgr.GetEventRecorderFor("dataplane")
+	r.eventRecorder = mgr.GetEventRecorder("dataplane")
 
 	return DataPlaneWatchBuilder(mgr, r.KonnectEnabled).
 		WithOptions(r.ControllerOptions).
@@ -155,7 +153,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	log.Trace(logger, "ensuring mTLS certificate")
-	res, certSecret, err := ensureDataPlaneCertificate(ctx, r.Client, dataplane,
+	res, certSecret, err := ensureDataPlaneCertificate(
+		ctx,
+		r.Client,
+		dataplane,
 		types.NamespacedName{
 			Namespace: r.ClusterCASecretNamespace,
 			Name:      r.ClusterCASecretName,
@@ -165,7 +166,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			Name:      dataplaneAdminService.Name,
 		},
 		r.SecretLabelSelector,
-		r.ClusterCAKeyConfig,
 	)
 	if err != nil {
 		return ctrl.Result{}, err

@@ -32,7 +32,6 @@ import (
 	extensionskonnect "github.com/kong/kong-operator/controller/pkg/extensions/konnect"
 	"github.com/kong/kong-operator/controller/pkg/log"
 	"github.com/kong/kong-operator/controller/pkg/op"
-	"github.com/kong/kong-operator/controller/pkg/secrets"
 	"github.com/kong/kong-operator/modules/manager/logging"
 	"github.com/kong/kong-operator/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
@@ -63,7 +62,6 @@ type BlueGreenReconciler struct {
 	// certificate data which will be used when generating certificates for DataPlane's
 	// Deployment.
 	ClusterCASecretNamespace string
-	ClusterCAKeyConfig       secrets.KeyConfig
 
 	SecretLabelSelector string
 
@@ -83,7 +81,7 @@ func (r *BlueGreenReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Man
 	if !ok {
 		return fmt.Errorf("incorrect delegate controller type: %T", r.DataPlaneController)
 	}
-	delegate.eventRecorder = mgr.GetEventRecorderFor("dataplane")
+	delegate.eventRecorder = mgr.GetEventRecorder("dataplane")
 	return DataPlaneWatchBuilder(mgr, r.KonnectEnabled).
 		WithOptions(r.ControllerOptions).
 		Complete(r)
@@ -186,7 +184,6 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			Name:      dataplaneAdminService.Name,
 		},
 		r.SecretLabelSelector,
-		r.ClusterCAKeyConfig,
 	)
 	if err != nil {
 		return ctrl.Result{}, err

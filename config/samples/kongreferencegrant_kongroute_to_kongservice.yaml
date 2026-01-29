@@ -1,0 +1,76 @@
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth-dev-1
+  namespace: default
+spec:
+  type: token
+  token: kpat_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  serverURL: us.api.konghq.com
+---
+kind: KonnectGatewayControlPlane
+apiVersion: konnect.konghq.com/v1alpha2
+metadata:
+  name: test1
+  namespace: default
+spec:
+  createControlPlaneRequest:
+    name: test1
+    labels:
+      app: test1
+      key1: test1
+  konnect:
+    authRef:
+      name: konnect-api-auth-dev-1
+---
+kind: KongService
+apiVersion: configuration.konghq.com/v1alpha1
+metadata:
+  name: service-1
+  namespace: default
+spec:
+  name: service-1
+  host: example.com
+  controlPlaneRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
+      name: test1
+---
+# KongReferenceGrant that allows KongRoute in route-namespace
+# to reference any KongService in default namespace
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongReferenceGrant
+metadata:
+  name: allow-route-to-service
+  namespace: default
+spec:
+  from:
+    - group: configuration.konghq.com
+      kind: KongRoute
+      namespace: route-namespace
+  to:
+    - group: configuration.konghq.com
+      kind: KongService
+      # name is omitted to allow access to all KongServices in this namespace
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: route-namespace
+---
+kind: KongRoute
+apiVersion: configuration.konghq.com/v1alpha1
+metadata:
+  name: service-1
+  namespace: route-namespace
+spec:
+  name: route-1
+  protocols:
+  - http
+  hosts:
+  - example.com
+  serviceRef:
+    type: namespacedRef
+    namespacedRef:
+      name: service-1
+      namespace: default

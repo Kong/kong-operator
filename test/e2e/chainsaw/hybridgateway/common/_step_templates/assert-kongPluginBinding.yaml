@@ -44,8 +44,6 @@ spec:
     # 2. Get the konnect gateway control plane name.
     - script:
         env:
-         - name: NAMESPACE
-           value: ($namespace)
          - name: GATEWAY_NAME
            value: ($gateway_name)
          - name: GATEWAY_NAMESPACE
@@ -67,8 +65,6 @@ spec:
           kind: KongPluginBinding
           metadata:
             namespace: ($namespace)
-            (labels."gateway-operator.konghq.com/hybrid-gateways-name"): ($gateway_name)
-            (labels."gateway-operator.konghq.com/hybrid-gateways-namespace"): ($gateway_namespace)
             (labels."gateway-operator.konghq.com/managed-by"): 'HTTPRoute'
             (annotations."gateway-operator.konghq.com/hybrid-routes" | contains(@, join('/', [($http_route_namespace), ($http_route_name)]))): true
             (annotations."gateway-operator.konghq.com/hybrid-gateways"): (join('/', [($gateway_namespace), ($gateway_name)]))

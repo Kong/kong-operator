@@ -1,8 +1,11 @@
 package cli
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
+	"io"
+	"os"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -20,12 +23,15 @@ import (
 
 func TestSetFlagFromEnvVar(t *testing.T) {
 	testCases := []struct {
-		name        string
-		flagName    string
-		flagVal     int
-		expectedVal int
-		envVars     map[string]string
-		shouldFail  bool
+		name     string
+		flagName string
+
+		flagVal           int
+		expectedVal       int
+		envVars           map[string]string
+		shouldFail        bool
+		skipCheckingValue bool
+		expectedOutput    string
 	}{
 		{
 			name:     "set val from env var",
@@ -46,7 +52,7 @@ func TestSetFlagFromEnvVar(t *testing.T) {
 			expectedVal: 200,
 		},
 		{
-			name:     "ignore val from deprecated env var",
+			name:     "ignore val from deprecated env var when newer one exists",
 			flagName: "test-depenv-var-ignore",
 			flagVal:  100,
 			envVars: map[string]string{
@@ -71,7 +77,32 @@ func TestSetFlagFromEnvVar(t *testing.T) {
 			},
 			shouldFail: true,
 		},
+		{
+			name:        "no env var set keeps default value",
+			flagName:    "test-flag",
+			flagVal:     100,
+			expectedVal: 100,
+		},
+		{
+			name:              "deprecated CLUSTER_CA_KEY_SIZE with current prefix",
+			flagName:          "cluster-ca-key-size",
+			expectedOutput:    "WARN: DEPRECATED (it has no effect): environment variable KONG_OPERATOR_CLUSTER_CA_KEY_SIZE",
+			skipCheckingValue: true,
+			envVars: map[string]string{
+				"KONG_OPERATOR_CLUSTER_CA_KEY_SIZE": "2048",
+			},
+		},
+		{
+			name:              "deprecated CLUSTER_CA_KEY_SIZE with deprecated prefix",
+			flagName:          "cluster-ca-key-size",
+			expectedOutput:    "WARN: DEPRECATED (it has no effect): environment variable GATEWAY_OPERATOR_CLUSTER_CA_KEY_SIZE",
+			skipCheckingValue: true,
+			envVars: map[string]string{
+				"GATEWAY_OPERATOR_CLUSTER_CA_KEY_SIZE": "4096",
+			},
+		},
 	}
+
 	for _, tC := range testCases {
 		t.Run(tC.name, func(t *testing.T) {
 			for k, v := range tC.envVars {
@@ -86,11 +117,35 @@ func TestSetFlagFromEnvVar(t *testing.T) {
 			}()
 			fs := flag.NewFlagSet("test", flag.ContinueOnError)
 			val := fs.Int(tC.flagName, tC.flagVal, "")
-			setFlagFromEnvVar(fs.Lookup(tC.flagName))
+
+			oldStdout := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
+			var panicErr any
+			func() {
+				defer func() {
+					panicErr = recover()
+				}()
+				setFlagFromEnvVar(fs.Lookup(tC.flagName))
+			}()
+			w.Close()
+			os.Stdout = oldStdout
+			var buf bytes.Buffer
+			_, err := io.Copy(&buf, r)
+			require.NoError(t, err)
+			output := buf.String()
+
 			if tC.shouldFail {
-				require.FailNow(t, "test case should fail but it didn't")
+				require.NotNil(t, panicErr, "test case should have panicked but didn't")
+			} else {
+				require.Nil(t, panicErr, "test case should not have panicked: %v", panicErr)
 			}
-			require.Equal(t, tC.expectedVal, *val)
+
+			require.Equal(t, output, tC.expectedOutput)
+
+			if !tC.shouldFail && !tC.skipCheckingValue {
+				require.Equal(t, tC.expectedVal, *val)
+			}
 		})
 	}
 }
@@ -166,19 +221,6 @@ func TestParse(t *testing.T) {
 			expectedCfg: func() manager.Config {
 				cfg := expectedDefaultCfg()
 				cfg.MetricsAccessFilter = "rbac"
-				return cfg
-			},
-		},
-		{
-			name: "cluster CA key type argument is set",
-			args: []string{
-				"--cluster-ca-key-type=rsa",
-				"--cluster-ca-key-size=2048",
-			},
-			expectedCfg: func() manager.Config {
-				cfg := expectedDefaultCfg()
-				cfg.ClusterCAKeySize = 2048
-				cfg.ClusterCAKeyType = mgrconfig.RSA
 				return cfg
 			},
 		},
@@ -309,8 +351,6 @@ func expectedDefaultCfg() manager.Config {
 		ConfigMapLabelSelector:                   mgrconfig.DefaultConfigMapLabelSelector,
 		ClusterCASecretName:                      "kong-operator-ca",
 		ClusterCASecretNamespace:                 "kong-system",
-		ClusterCAKeyType:                         mgrconfig.ECDSA,
-		ClusterCAKeySize:                         mgrconfig.DefaultClusterCAKeySize,
 		GatewayControllerEnabled:                 true,
 		ControlPlaneControllerEnabled:            true,
 		DataPlaneControllerEnabled:               true,

@@ -87,7 +87,7 @@ func (b *KongRouteBuilder) WithKongService(name string) *KongRouteBuilder {
 	if name != "" {
 		b.route.Spec.ServiceRef = &configurationv1alpha1.ServiceRef{
 			Type: configurationv1alpha1.ServiceRefNamespacedRef,
-			NamespacedRef: &commonv1alpha1.NameRef{
+			NamespacedRef: &commonv1alpha1.NamespacedRef{
 				Name: name,
 			},
 		}

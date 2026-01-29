@@ -157,7 +157,7 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			builder := NewKongPluginBindingBuilder().
 				WithGenerateName(kongPlugin.Name + "-").
 				WithNamespace(kongPlugin.Namespace).
-				WithPluginRef(kongPlugin.Name).
+				WithPluginRefName(kongPlugin.Name).
 				WithControlPlaneRef(commonv1alpha1.ControlPlaneRef{
 					Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 					KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{

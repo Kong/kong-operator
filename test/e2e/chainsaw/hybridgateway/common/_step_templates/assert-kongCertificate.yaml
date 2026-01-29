@@ -5,6 +5,11 @@ metadata:
 spec:
   try:
     - script:
+        env:
+          - name: GATEWAY_NAME
+            value: ($gateway_name)
+          - name: GATEWAY_NAMESPACE
+            value: ($gateway_namespace)
         content: |
           bash ../common/scripts/konnecGatewayControlplane_name.sh
         outputs:
@@ -17,8 +22,6 @@ spec:
           metadata:
             namespace: ($namespace)
             # Dynamic label validation.
-            (labels."gateway-operator.konghq.com/hybrid-gateways-name"): ($gateway_name)
-            (labels."gateway-operator.konghq.com/hybrid-gateways-namespace"): ($gateway_namespace)
             (labels."gateway-operator.konghq.com/managed-by"): 'Gateway'
             (labels."gateway-operator.konghq.com/listener-port"): (to_string($listener_https_port))
             # Dynamic annotation validation.

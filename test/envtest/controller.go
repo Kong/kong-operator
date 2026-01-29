@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -13,6 +14,7 @@ import (
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -24,6 +26,12 @@ import (
 // Reconciler represents a reconciler.
 type Reconciler interface {
 	SetupWithManager(context.Context, ctrl.Manager) error
+}
+
+// IngressReconciler represents a reconciler that requires a logger.
+type IngressReconciler interface {
+	SetupWithManager(ctrl.Manager) error
+	SetLogger(logr.Logger)
 }
 
 // ManagerOption is a function that can be used to configure the manager.
@@ -100,4 +108,69 @@ func StartReconcilers(
 		wg.Wait()
 		DumpLogsIfTestFailed(t, logs)
 	})
+}
+
+// StartReconciler creates a controller manager and starts the provided reconciler
+// as its runnable.
+// It also adds a t.Cleanup which waits for the manager to exit so that the test
+// can be self contained and logs from different tests' managers don't mix up.
+func StartReconciler(
+	ctx context.Context, t *testing.T, scheme *runtime.Scheme, cfg *rest.Config, r IngressReconciler, opts ...func(*manager.Options),
+) {
+	t.Helper()
+
+	ctx, logger, logs := CreateTestLogger(ctx)
+
+	o := manager.Options{
+		Logger: logger,
+		Scheme: scheme,
+		Metrics: metricsserver.Options{
+			BindAddress: "0",
+		},
+		Controller: config.Controller{
+			// This is needed because controller-runtime keeps a global list of controller
+			// names and panics if there are duplicates.
+			// This is a workaround for that in tests.
+			// Ref: https://github.com/kubernetes-sigs/controller-runtime/pull/2902#issuecomment-2284194683
+			SkipNameValidation: lo.ToPtr(true),
+		},
+	}
+
+	for _, opt := range opts {
+		opt(&o)
+	}
+
+	mgr, err := ctrl.NewManager(cfg, o)
+	require.NoError(t, err)
+
+	r.SetLogger(mgr.GetLogger())
+	require.NoError(t, r.SetupWithManager(mgr))
+
+	// This wait group makes it so that we wait for manager to exit.
+	// This way we get clean test logs not mixing between tests.
+	wg := sync.WaitGroup{}
+	wg.Go(func() {
+		assert.NoError(t, mgr.Start(ctx))
+	})
+	t.Cleanup(func() {
+		wg.Wait()
+		DumpLogsIfTestFailed(t, logs)
+	})
+}
+
+// NewControllerClient returns a new controller-runtime Client for provided runtime.Scheme and rest.Config.
+func NewControllerClient(t *testing.T, scheme *runtime.Scheme, cfg *rest.Config) ctrlclient.Client {
+	client, err := ctrlclient.New(cfg, ctrlclient.Options{
+		Scheme: scheme,
+	})
+	require.NoError(t, err)
+	return client
+}
+
+func WithWatchNamespace(ns string) func(*manager.Options) {
+	return func(o *manager.Options) {
+		o.Cache.DefaultNamespaces = map[string]cache.Config{
+			ns: {},
+		}
+	}
 }
