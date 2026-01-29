@@ -200,16 +200,60 @@ func TestGatewayAddressesFromService(t *testing.T) {
 			},
 			addresses: []gwtypes.GatewayStatusAddress{
 				{
-					Value: "203.0.113.1",
-					Type:  lo.ToPtr(gatewayv1.IPAddressType),
-				},
-				{
 					Value: "one.example.net",
 					Type:  lo.ToPtr(gatewayv1.HostnameAddressType),
 				},
 				{
 					Value: "two.example.net",
 					Type:  lo.ToPtr(gatewayv1.HostnameAddressType),
+				},
+				{
+					Value: "203.0.113.1",
+					Type:  lo.ToPtr(gatewayv1.IPAddressType),
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "LoadBalancer with unsorted hostnames and IPs",
+			svc: corev1.Service{
+				Spec: corev1.ServiceSpec{
+					Type:      "LoadBalancer",
+					ClusterIP: "198.51.100.1",
+				},
+				Status: corev1.ServiceStatus{
+					LoadBalancer: corev1.LoadBalancerStatus{
+						Ingress: []corev1.LoadBalancerIngress{
+							{
+								IP: "203.0.113.3",
+							},
+							{
+								Hostname: "b.example.net",
+							},
+							{
+								IP:       "203.0.113.2",
+								Hostname: "a.example.net",
+							},
+						},
+					},
+				},
+			},
+			addresses: []gwtypes.GatewayStatusAddress{
+				{
+					Value: "a.example.net",
+					Type:  lo.ToPtr(gatewayv1.HostnameAddressType),
+				},
+				{
+					Value: "b.example.net",
+					Type:  lo.ToPtr(gatewayv1.HostnameAddressType),
+				},
+				{
+					Value: "203.0.113.2",
+					Type:  lo.ToPtr(gatewayv1.IPAddressType),
+				},
+				{
+					Value: "203.0.113.3",
+					Type:  lo.ToPtr(gatewayv1.IPAddressType),
 				},
 			},
 			wantErr: false,

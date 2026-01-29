@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -313,8 +314,32 @@ func gatewayAddressesFromService(svc corev1.Service) ([]gwtypes.GatewayStatusAdd
 			Type:  lo.ToPtr(gatewayv1.IPAddressType),
 		})
 	}
+	sort.SliceStable(addresses, func(i, j int) bool {
+		left := addresses[i]
+		right := addresses[j]
+		leftRank := addressTypeRank(left.Type)
+		rightRank := addressTypeRank(right.Type)
+		if leftRank != rightRank {
+			return leftRank < rightRank
+		}
+		return left.Value < right.Value
+	})
 
 	return addresses, nil
+}
+
+func addressTypeRank(addrType *gatewayv1.AddressType) int {
+	if addrType == nil {
+		return 2
+	}
+	switch *addrType {
+	case gatewayv1.HostnameAddressType:
+		return 0
+	case gatewayv1.IPAddressType:
+		return 1
+	default:
+		return 2
+	}
 }
 
 // mergeGatewayConfigurations merges two GatewayConfiguration objects.
