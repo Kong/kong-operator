@@ -80,7 +80,7 @@ func TestCreateManager(t *testing.T) {
 		WithRuntimeObjects(objs...).
 		Build()
 
-	k8sClient := testk8sclient.NewSimpleClientset(objs...)
+	k8sClient := testk8sclient.NewClientset(objs...)
 
 	d, ok := k8sClient.Discovery().(*fakediscovery.FakeDiscovery)
 	require.True(t, ok)
@@ -176,7 +176,7 @@ func TestCreateManager_GatewayDiscoverySpecifics(t *testing.T) {
 	scheme := prepareScheme(t)
 	dyn := testdynclient.NewSimpleDynamicClient(scheme)
 	ctrlClient := fakeclient.NewClientBuilder().Build()
-	k8sclient := testk8sclient.NewSimpleClientset()
+	k8sclient := testk8sclient.NewClientset()
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {

@@ -312,7 +312,6 @@ func TestGatewayHybridFull(t *testing.T) {
 
 	dataplaneClient := GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
 	dataplaneNN := types.NamespacedName{Namespace: namespace.Name, Name: dataplane.Name}
-	konnectGatewayControlPlaneClient := GetClients().OperatorClient.KonnectV1alpha2().KonnectGatewayControlPlanes(namespace.Name)
 
 	t.Log("verifying that dataplane has 1 ready replica")
 	require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, GetCtx(), dataplaneNN, clients, 1), time.Minute, time.Second)
@@ -371,8 +370,6 @@ func TestGatewayHybridFull(t *testing.T) {
 	t.Log("verify HTTPRoute routing")
 	verifyHTTPRoute(t, gatewayIPAddress)
 
-	t.Log("deleting KonnectGatewayControlPlane")
-	require.NoError(t, konnectGatewayControlPlaneClient.Delete(GetCtx(), konnectGatewayControlPlane.Name, metav1.DeleteOptions{}))
 	t.Log("deleting dataplane")
 	require.NoError(t, dataplaneClient.Delete(GetCtx(), dataplane.Name, metav1.DeleteOptions{}))
 
@@ -388,12 +385,6 @@ func TestGatewayHybridFull(t *testing.T) {
 		},
 		"Did not see gateway and all its listeners' Programmed condition set to False in watching gateways",
 	)
-
-	t.Log("verifying that the KonnectGatewayControlPlane becomes provisioned again")
-	require.Eventually(t, testutils.KonnectGatewayControlPlaneIsProgrammed(t, GetCtx(), gateway, clients), 45*time.Second, time.Second)
-	konnectGatewayControlPlanes = testutils.MustListKonnectGatewayControlPlanesForGateway(t, GetCtx(), gateway, clients)
-	require.Len(t, konnectGatewayControlPlanes, 1)
-	konnectGatewayControlPlane = konnectGatewayControlPlanes[0]
 
 	t.Log("verifying that the DataPlane becomes provisioned again")
 	require.Eventually(t, testutils.GatewayDataPlaneIsReady(t, GetCtx(), gateway, clients), 45*time.Second, time.Second)

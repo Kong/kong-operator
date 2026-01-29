@@ -70,9 +70,14 @@ func konnectExtensionAPIAuthConfigurationRef(obj client.Object) []string {
 		return nil
 	}
 
+	namespace := ext.GetNamespace()
+	if ext.GetKonnectAPIAuthConfigurationRef().Namespace != nil &&
+		*ext.GetKonnectAPIAuthConfigurationRef().Namespace != "" {
+		namespace = *ext.GetKonnectAPIAuthConfigurationRef().Namespace
+	}
 	if ext.GetKonnectAPIAuthConfigurationRef().Name == "" {
 		return nil
 	}
 
-	return []string{ext.GetKonnectAPIAuthConfigurationRef().Name}
+	return []string{namespace + "/" + ext.GetKonnectAPIAuthConfigurationRef().Name}
 }

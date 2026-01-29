@@ -363,6 +363,67 @@ func TestHandleSecretRef(t *testing.T) {
 			expectCondition:     metav1.ConditionFalse,
 			expectReason:        configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted,
 		},
+		{
+			name: "secret missing during deletion does not block cleanup",
+			certificate: func() *configurationv1alpha1.KongCertificate {
+				now := metav1.Now()
+				return &configurationv1alpha1.KongCertificate{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "test-cert",
+						Namespace:         "default",
+						DeletionTimestamp: &now,
+						Finalizers:        []string{KonnectCleanupFinalizer},
+					},
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: configurationv1alpha1.GroupVersion.String(),
+						Kind:       "KongCertificate",
+					},
+					Spec: configurationv1alpha1.KongCertificateSpec{
+						SecretRef: &commonv1alpha1.NamespacedRef{
+							Name: "missing-secret",
+						},
+					},
+				}
+			}(),
+			secrets:      []corev1.Secret{},
+			expectResult: false,
+			expectError:  false,
+		},
+		{
+			name: "cross-namespace ref without grant during deletion does not block cleanup",
+			certificate: func() *configurationv1alpha1.KongCertificate {
+				now := metav1.Now()
+				return &configurationv1alpha1.KongCertificate{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "test-cert",
+						Namespace:         "cert-ns",
+						DeletionTimestamp: &now,
+						Finalizers:        []string{KonnectCleanupFinalizer},
+					},
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: configurationv1alpha1.GroupVersion.String(),
+						Kind:       "KongCertificate",
+					},
+					Spec: configurationv1alpha1.KongCertificateSpec{
+						SecretRef: &commonv1alpha1.NamespacedRef{
+							Name:      "test-secret",
+							Namespace: lo.ToPtr("secret-ns"),
+						},
+					},
+				}
+			}(),
+			secrets: []corev1.Secret{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-secret",
+						Namespace: "secret-ns",
+					},
+				},
+			},
+			grants:       []configurationv1alpha1.KongReferenceGrant{},
+			expectResult: false,
+			expectError:  false,
+		},
 	}
 
 	for _, tc := range testCases {

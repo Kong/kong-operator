@@ -1,6 +1,6 @@
 module github.com/kong/kong-operator
 
-go 1.25.5
+go 1.25.6
 
 require (
 	cloud.google.com/go/container v1.45.0
@@ -64,7 +64,7 @@ require (
 	k8s.io/cli-runtime v0.35.0
 	k8s.io/client-go v0.35.0
 	k8s.io/kubectl v0.35.0
-	k8s.io/kubernetes v1.34.3
+	k8s.io/kubernetes v1.35.0
 	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4
 	oras.land/oras-go/v2 v2.6.0
 	sigs.k8s.io/controller-runtime v0.23.0
@@ -165,7 +165,6 @@ require (
 	github.com/go-openapi/swag/jsonname v0.25.1 // indirect
 	github.com/go-sql-driver/mysql v1.8.1 // indirect
 	github.com/gobuffalo/flect v1.0.3 // indirect
-	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/gonvenience/bunt v1.3.5 // indirect
 	github.com/gonvenience/neat v1.3.12 // indirect
@@ -245,6 +244,7 @@ require (
 	github.com/pquerna/otp v1.4.0 // indirect
 	github.com/prometheus/procfs v0.17.0 // indirect
 	github.com/puzpuzpuz/xsync/v2 v2.5.1 // indirect
+	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sergi/go-diff v1.4.0 // indirect
@@ -324,36 +324,36 @@ require (
 // They can be updated with `./hack/update-k8sio-gomod-replace.sh` script.
 // This is a workaround for https://github.com/kong/kong-operator/issues/1384.
 replace (
-	k8s.io/api => k8s.io/api v0.34.3
-	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.34.3
-	k8s.io/apimachinery => k8s.io/apimachinery v0.34.3
-	k8s.io/apiserver => k8s.io/apiserver v0.34.3
-	k8s.io/cli-runtime => k8s.io/cli-runtime v0.34.3
-	k8s.io/client-go => k8s.io/client-go v0.34.3
-	k8s.io/cloud-provider => k8s.io/cloud-provider v0.34.3
-	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.34.3
-	k8s.io/code-generator => k8s.io/code-generator v0.34.3
-	k8s.io/component-base => k8s.io/component-base v0.34.3
-	k8s.io/component-helpers => k8s.io/component-helpers v0.34.3
-	k8s.io/controller-manager => k8s.io/controller-manager v0.34.3
-	k8s.io/cri-api => k8s.io/cri-api v0.34.3
-	k8s.io/cri-client => k8s.io/cri-client v0.34.3
-	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.34.3
-	k8s.io/dynamic-resource-allocation => k8s.io/dynamic-resource-allocation v0.34.3
-	k8s.io/endpointslice => k8s.io/endpointslice v0.34.3
-	k8s.io/externaljwt => k8s.io/externaljwt v0.34.3
-	k8s.io/kms => k8s.io/kms v0.34.3
-	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.34.3
-	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.34.3
-	k8s.io/kube-proxy => k8s.io/kube-proxy v0.34.3
-	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.34.3
-	k8s.io/kubectl => k8s.io/kubectl v0.34.3
-	k8s.io/kubelet => k8s.io/kubelet v0.34.3
+	k8s.io/api => k8s.io/api v0.35.0
+	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.35.0
+	k8s.io/apimachinery => k8s.io/apimachinery v0.35.0
+	k8s.io/apiserver => k8s.io/apiserver v0.35.0
+	k8s.io/cli-runtime => k8s.io/cli-runtime v0.35.0
+	k8s.io/client-go => k8s.io/client-go v0.35.0
+	k8s.io/cloud-provider => k8s.io/cloud-provider v0.35.0
+	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.35.0
+	k8s.io/code-generator => k8s.io/code-generator v0.35.0
+	k8s.io/component-base => k8s.io/component-base v0.35.0
+	k8s.io/component-helpers => k8s.io/component-helpers v0.35.0
+	k8s.io/controller-manager => k8s.io/controller-manager v0.35.0
+	k8s.io/cri-api => k8s.io/cri-api v0.35.0
+	k8s.io/cri-client => k8s.io/cri-client v0.35.0
+	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.35.0
+	k8s.io/dynamic-resource-allocation => k8s.io/dynamic-resource-allocation v0.35.0
+	k8s.io/endpointslice => k8s.io/endpointslice v0.35.0
+	k8s.io/externaljwt => k8s.io/externaljwt v0.35.0
+	k8s.io/kms => k8s.io/kms v0.35.0
+	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.35.0
+	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.35.0
+	k8s.io/kube-proxy => k8s.io/kube-proxy v0.35.0
+	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.35.0
+	k8s.io/kubectl => k8s.io/kubectl v0.35.0
+	k8s.io/kubelet => k8s.io/kubelet v0.35.0
 	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.30.3
-	k8s.io/metrics => k8s.io/metrics v0.34.3
-	k8s.io/mount-utils => k8s.io/mount-utils v0.34.3
-	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.34.3
-	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.34.3
-	k8s.io/sample-cli-plugin => k8s.io/sample-cli-plugin v0.34.3
-	k8s.io/sample-controller => k8s.io/sample-controller v0.34.3
+	k8s.io/metrics => k8s.io/metrics v0.35.0
+	k8s.io/mount-utils => k8s.io/mount-utils v0.35.0
+	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.35.0
+	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.35.0
+	k8s.io/sample-cli-plugin => k8s.io/sample-cli-plugin v0.35.0
+	k8s.io/sample-controller => k8s.io/sample-controller v0.35.0
 )

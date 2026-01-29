@@ -147,9 +147,15 @@ type fakeDataplaneClient struct {
 func (c *fakeDataplaneClient) DBMode() dpconf.DBMode {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
-	if c.clientCallBlockDuration > 0 {
-		c.t.Logf("DBMode() blocking for %s", c.clientCallBlockDuration)
-		time.Sleep(c.clientCallBlockDuration)
+	if c.t == nil {
+		return c.dbmode
+	}
+
+	ch := time.After(c.clientCallBlockDuration)
+	select {
+	case <-c.t.Context().Done():
+		return c.dbmode
+	case <-ch:
 	}
 	return c.dbmode
 }
@@ -160,15 +166,10 @@ func (c *fakeDataplaneClient) Update(ctx context.Context) error {
 	defer c.lock.RUnlock()
 	if c.clientCallBlockDuration > 0 {
 		ch := time.After(c.clientCallBlockDuration)
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-			c.t.Logf("Update() blocking for %s", c.clientCallBlockDuration)
-		}
 
 		select {
-
+		case <-c.t.Context().Done():
+			return c.t.Context().Err()
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-ch:
