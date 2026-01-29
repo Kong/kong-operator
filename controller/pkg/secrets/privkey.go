@@ -76,30 +76,3 @@ func CreatePrivateKey(
 		return nil, nil, x509.UnknownSignatureAlgorithm, fmt.Errorf("unsupported key type: %s", keyConfig.Type)
 	}
 }
-
-// ParseKey parses a private key from a PEM block based on the provided keyType.
-func ParseKey(
-	keyType x509.PublicKeyAlgorithm,
-	pemBlock *pem.Block,
-) (crypto.Signer, error) {
-	switch keyType {
-	case x509.ECDSA:
-		return x509.ParseECPrivateKey(pemBlock.Bytes)
-	case x509.RSA:
-		// RSA can be in PKCS1 or PKCS8 format so let's try both.
-		key, err := x509.ParsePKCS1PrivateKey(pemBlock.Bytes)
-		if err == nil {
-			return key, nil
-		}
-		pkcs8Key, err := x509.ParsePKCS8PrivateKey(pemBlock.Bytes)
-		if err != nil {
-			return nil, err
-		}
-		if rsaKey, ok := pkcs8Key.(*rsa.PrivateKey); ok {
-			return rsaKey, nil
-		}
-		return nil, fmt.Errorf("parsed PKCS8 key is not an RSA private key")
-	default:
-		return nil, fmt.Errorf("unsupported key type: %v", keyType)
-	}
-}
