@@ -175,6 +175,22 @@ func TestKongConsumer(t *testing.T) {
 				},
 			},
 			{
+				Name: "empty username allowed",
+				TestObject: &configurationv1.KongConsumer{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1.KongConsumerSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+					},
+					Username: "",
+					CustomID: "custom-id-1",
+				},
+			},
+			{
 				Name: "invalid username format",
 				TestObject: &configurationv1.KongConsumer{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
@@ -219,6 +235,22 @@ func TestKongConsumer(t *testing.T) {
 						},
 					},
 					CustomID: "custom-id_1",
+				},
+			},
+			{
+				Name: "empty custom_id allowed",
+				TestObject: &configurationv1.KongConsumer{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1.KongConsumerSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+					},
+					CustomID: "",
+					Username: "username-1",
 				},
 			},
 			{
