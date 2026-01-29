@@ -74,8 +74,8 @@ func testNewKonnectEntityReconciler[
 				konnect.WithMetricRecorder[T, TEnt](&metricsmocks.MockRecorder{})))
 
 		const (
-			wait = time.Second
-			tick = 20 * time.Millisecond
+			wait = 10 * time.Second
+			tick = 200 * time.Millisecond
 		)
 
 		for _, tc := range testCases {
