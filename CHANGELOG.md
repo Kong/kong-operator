@@ -67,7 +67,7 @@
 - Add maxLength and pattern validations for `KongConsumer` and `KongConsumerGroup` fields.
   [#3109](https://github.com/Kong/kong-operator/pull/3109)
 - Gateway: Sort Gateway/DataPlane status addresses deterministically with hostname-first priority.
-  [#196](https://github.com/Kong/kong-operator/issues/196)
+  [#3110](https://github.com/Kong/kong-operator/pull/3110)
 - HybridGateway: Fixed the logic of translating `HTTPRoute` path matches to
   paths in the generated `KongRoute`.
   [#2996](https://github.com/Kong/kong-operator/pull/2996)
