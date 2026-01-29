@@ -1,0 +1,21 @@
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongSNI
+metadata:
+  namespace: ($gateway_namespace)
+  (labels."gateway-operator.konghq.com/hybrid-gateways-name"): ($gateway_name)
+  (labels."gateway-operator.konghq.com/hybrid-gateways-namespace"): ($gateway_namespace)
+  (labels."gateway-operator.konghq.com/managed-by"): 'Gateway'
+  (labels."gateway-operator.konghq.com/listener-port"): (to_string($listener_https_port))
+  (annotations."gateway-operator.konghq.com/hybrid-gateways"): (join('/', [($gateway_namespace), ($gateway_name)]))
+  ownerReferences:
+    - apiVersion: gateway.networking.k8s.io/v1
+      kind: Gateway
+      name: ($gateway_name)
+      controller: true
+spec:
+  name: ($sni_hostname)
+  certificateRef:
+    name: ($certificate_name)
+status:
+  (conditions[?type == 'Programmed']):
+    - status: 'False'
