@@ -5,6 +5,11 @@ metadata:
 spec:
   try:
     - script:
+        env:
+          - name: GATEWAY_NAME
+            value: ($gateway_name)
+          - name: GATEWAY_NAMESPACE
+            value: ($gateway_namespace)
         content: |
           bash ../common/scripts/konnecGatewayControlplane_name.sh
         outputs:

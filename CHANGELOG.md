@@ -64,6 +64,8 @@
 
 - Fix validation logic for dataplane ports in admission policy.
   [#3031](https://github.com/Kong/kong-operator/pull/3031)
+- Gateway: Sort Gateway/DataPlane status addresses deterministically with hostname-first priority.
+  [#196](https://github.com/Kong/kong-operator/issues/196)
 - HybridGateway: Fixed the logic of translating `HTTPRoute` path matches to
   paths in the generated `KongRoute`.
   [#2996](https://github.com/Kong/kong-operator/pull/2996)
@@ -85,6 +87,9 @@
   those values are inferred automatically based on the CA certificate Secret.
   Read more in Helm Chart release notes.
   [#3084](https://github.com/Kong/kong-operator/pull/3084)
+- HybridGateway: Include readable backend context in generated KongService and
+  KongUpstream names (with stable hashes) to improve UX in Konnect.
+  [#3121](https://github.com/Kong/kong-operator/pull/3121)
 
 ## [v2.1.0-beta.0]
 

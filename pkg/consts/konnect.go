@@ -28,6 +28,11 @@ const (
 	// referenced by KonnectExtension to ensure that the secret is not deleted
 	// when in use by an active KonnectExtension.
 	KonnectExtensionSecretInUseFinalizer = "gateway.konghq.com/secret-in-use"
+
+	// KonnectSecretInUseFinalizer is the finalizer added to the secret
+	// referenced by Konnect resources to ensure that the secret is not deleted
+	// when in use by an active Konnect resource.
+	KonnectSecretInUseFinalizer = "gateway.konghq.com/secret-in-use-by-konnect-resource"
 )
 
 // -----------------------------------------------------------------------------

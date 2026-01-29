@@ -52,7 +52,7 @@ func ServiceForRule(
 	cp *commonv1alpha1.ControlPlaneRef,
 	upstreamName string,
 ) (kongService *configurationv1alpha1.KongService, err error) {
-	serviceName := namegen.NewKongServiceName(cp, rule)
+	serviceName := namegen.NewKongServiceName(httpRoute, cp, rule)
 	logger = logger.WithValues("kongservice", serviceName)
 	log.Debug(logger, "Generating KongService for HTTPRoute rule")
 
