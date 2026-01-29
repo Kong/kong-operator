@@ -1,0 +1,22 @@
+# Template for deleting a resource without waiting for completion (non-blocking).
+#
+# Required bindings:
+#   - resource_type: The Kubernetes resource type (e.g., "secret", "configmap").
+#   - resource_name: The name of the resource to delete.
+#   - resource_namespace: The namespace where the resource is located.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: delete-resource-non-blocking
+spec:
+  try:
+    - script:
+        env:
+          - name: RESOURCE_TYPE
+            value: ($resource_type)
+          - name: RESOURCE_NAME
+            value: ($resource_name)
+          - name: RESOURCE_NAMESPACE
+            value: ($resource_namespace)
+        content: |
+          bash ../../hybridgateway/common/scripts/delete_resource_non_blocking.sh

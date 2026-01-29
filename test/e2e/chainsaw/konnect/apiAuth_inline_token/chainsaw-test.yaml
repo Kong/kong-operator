@@ -1,0 +1,38 @@
+# KonnectAPIAuthConfiguration Inline Token test scenario
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: konnectapiauthconfiguration-inline-token
+spec:
+  description: |
+    This test validates that the KonnectAPIAuthConfiguration controller correctly
+    handles inline token configuration. The test ensures that:
+    1. KonnectAPIAuthConfiguration with inline token is properly created and ready
+  
+  timeouts:
+    apply: 120s
+    assert: 120s
+    delete: 120s
+    exec: 120s
+
+  namespace: kong
+
+  bindings:
+    # Common bindings.
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth-inline']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+
+  steps:
+    # Step 1: Create KonnectAPIAuthConfiguration with inline token.
+    - name: Create-konnect-api-auth-inline
+      description: Create KonnectAPIAuthConfiguration with inline token and verify it's ready.
+      use:
+        template: ../../hybridgateway/common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml

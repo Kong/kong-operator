@@ -124,6 +124,7 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 			index.OptionsForKongCertificate(cl),
 			index.OptionsForKongCACertificate(cl),
 			index.OptionsForKonnectGatewayControlPlane(),
+			index.OptionsForKonnectAPIAuthConfiguration(),
 			index.OptionsForKonnectCloudGatewayNetwork(),
 			index.OptionsForKonnectExtension(),
 			index.OptionsForKonnectCloudGatewayDataPlaneGroupConfiguration(cl),
@@ -567,6 +568,15 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 					c.LoggingMode,
 					mgr.GetClient(),
 					mgr.GetScheme(),
+				),
+			},
+			// KonnectSecretReference controller
+			ControllerDef{
+				Enabled: c.KonnectControllersEnabled,
+				Controller: konnect.NewKonnectSecretReferenceController(
+					mgr.GetClient(),
+					ctrlOpts,
+					c.LoggingMode,
 				),
 			},
 			// KonnectExtension controller
