@@ -64,6 +64,7 @@ spec:
               CustomID is a Kong cluster-unique existing ID for the consumer - useful for mapping
               Kong with users in your existing database.
             maxLength: 128
+            minLength: 1
             pattern: '^[0-9a-zA-Z.\-_~\(\)#%@|+\[\]]+(?: [0-9a-zA-Z.\-_~\\(\)#%@|+\\[\\]]+)*$'
             type: string
           kind:
@@ -316,6 +317,7 @@ spec:
           username:
             description: Username is a Kong cluster-unique username of the consumer.
             maxLength: 128
+            minLength: 1
             pattern: '^[\p{L}\p{N}.\-_~+@/\[\]]+(?: [\p{L}\p{N}.\-_~+@/\[\]]+)*$'
             type: string
         type: object
