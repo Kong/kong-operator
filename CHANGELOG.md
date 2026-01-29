@@ -87,6 +87,9 @@
   those values are inferred automatically based on the CA certificate Secret.
   Read more in Helm Chart release notes.
   [#3084](https://github.com/Kong/kong-operator/pull/3084)
+- HybridGateway: Include readable backend context in generated KongService and
+  KongUpstream names (with stable hashes) to improve UX in Konnect.
+  [#3121](https://github.com/Kong/kong-operator/pull/3121)
 
 ## [v2.1.0-beta.0]
 

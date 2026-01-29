@@ -47,7 +47,7 @@ func UpstreamForRule(
 	pRef *gwtypes.ParentReference,
 	cp *commonv1alpha1.ControlPlaneRef,
 ) (kongUpstream *configurationv1alpha1.KongUpstream, err error) {
-	upstreamName := namegen.NewKongUpstreamName(cp, rule)
+	upstreamName := namegen.NewKongUpstreamName(httpRoute, cp, rule)
 	logger = logger.WithValues("kongupstream", upstreamName)
 	log.Debug(logger, "Creating KongUpstream for HTTPRoute rule")
 
