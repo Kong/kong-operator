@@ -44,16 +44,14 @@ type KongConsumer struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// Username is a Kong cluster-unique username of the consumer.
-	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=128
-	// +kubebuilder:validation:Pattern=`^[\p{L}\p{N}.\-_~+@/\[\]]+(?: [\p{L}\p{N}.\-_~+@/\[\]]+)*$`
+	// +kubebuilder:validation:Pattern=`^[\p{L}\p{N}.\-_~+@/\[\]]*(?: [\p{L}\p{N}.\-_~+@/\[\]]+)*$`
 	Username string `json:"username,omitempty"`
 
 	// CustomID is a Kong cluster-unique existing ID for the consumer - useful for mapping
 	// Kong with users in your existing database.
-	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=128
-	// +kubebuilder:validation:Pattern=`^[0-9a-zA-Z.\-_~\(\)#%@|+\[\]]+(?: [0-9a-zA-Z.\-_~\\(\)#%@|+\\[\\]]+)*$`
+	// +kubebuilder:validation:Pattern=`^[0-9a-zA-Z.\-_~\(\)#%@|+\[\]]*(?: [0-9a-zA-Z.\-_~\\(\)#%@|+\\[\\]]+)*$`
 	CustomID string `json:"custom_id,omitempty"`
 
 	// Credentials are references to secrets containing a credential to be
