@@ -57,7 +57,6 @@ type Manager struct {
 	pipelinesLock            sync.RWMutex
 	pipelines                map[types.UID]MetricsScrapePipeline
 	cpNNToDpUID              map[types.NamespacedName]types.UID
-	clusterCAKeyConfig       secrets.KeyConfig
 }
 
 // NewManager creates new MetricsScrapeManager.
@@ -66,7 +65,6 @@ func NewManager(
 	interval time.Duration,
 	cl client.Client,
 	caSecretNN types.NamespacedName,
-	clusterCAKeyConfig secrets.KeyConfig,
 ) *Manager {
 	return &Manager{
 		logger:                   logger,
@@ -76,7 +74,6 @@ func NewManager(
 		pipelinesNotificationsCh: make(chan scrapeUpdateNotification),
 		pipelines:                make(map[types.UID]MetricsScrapePipeline),
 		cpNNToDpUID:              make(map[types.NamespacedName]types.UID),
-		clusterCAKeyConfig:       clusterCAKeyConfig,
 	}
 }
 
@@ -86,13 +83,15 @@ func NewManager(
 func (msm *Manager) initMTLSCerts(ctx context.Context) error {
 	msm.logger.Info("getting CA cluster secret to generate certs for MTLs communication with Kong Gateway", "secret", msm.caSecretNN)
 	var (
-		caCert *x509.Certificate
-		caKey  crypto.Signer
+		caCert    *x509.Certificate
+		caKey     crypto.Signer
+		keyConfig secrets.KeyConfig
 	)
+
 	if err := retry.Do(
 		func() error {
 			var err error
-			caCert, caKey, err = msm.getCASecretAndKey(ctx)
+			caCert, caKey, keyConfig, err = msm.getCASecretAndKey(ctx)
 			return err
 		},
 		retry.Context(ctx),
@@ -110,7 +109,7 @@ func (msm *Manager) initMTLSCerts(ctx context.Context) error {
 		return err
 	}
 
-	signingAlgorithm := secrets.SignatureAlgorithmForKeyType(msm.clusterCAKeyConfig.Type)
+	signingAlgorithm := secrets.SignatureAlgorithmForKeyType(keyConfig.Type)
 	template := x509.CertificateRequest{
 		Subject: pkix.Name{
 			CommonName:   "localhost",
@@ -121,7 +120,7 @@ func (msm *Manager) initMTLSCerts(ctx context.Context) error {
 		DNSNames:           []string{"localhost"},
 	}
 
-	csrKey, _, signingAlgorithm, err := secrets.CreatePrivateKey(msm.clusterCAKeyConfig)
+	csrKey, _, signingAlgorithm, err := secrets.CreatePrivateKey(keyConfig)
 	if err != nil {
 		return err
 	}
@@ -165,37 +164,42 @@ func (msm *Manager) initMTLSCerts(ctx context.Context) error {
 	return nil
 }
 
-func (msm *Manager) getCASecretAndKey(ctx context.Context) (*x509.Certificate, crypto.Signer, error) {
+func (msm *Manager) getCASecretAndKey(ctx context.Context) (*x509.Certificate, crypto.Signer, secrets.KeyConfig, error) {
 	var caSecret corev1.Secret
 	err := msm.client.Get(ctx, msm.caSecretNN, &caSecret)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get CA secret %s: %w", msm.caSecretNN, err)
+		return nil, nil, secrets.KeyConfig{}, fmt.Errorf("failed to get CA secret %s: %w", msm.caSecretNN, err)
 	}
 
 	ca, ok := caSecret.Data[consts.TLSCRT]
 	if !ok {
-		return nil, nil, fmt.Errorf(consts.TLSCRT + " field not found")
+		return nil, nil, secrets.KeyConfig{}, fmt.Errorf(consts.TLSCRT + " field not found")
 	}
+	keyConfig, err := secrets.DetectCertType(ca)
+	if err != nil {
+		return nil, nil, secrets.KeyConfig{}, fmt.Errorf("failed to detect cert type: %w", err)
+	}
+
 	caCertBlock, _ := pem.Decode(ca)
 	if caCertBlock == nil {
-		return nil, nil, fmt.Errorf("failed decoding %q data from secret %s", consts.TLSCRT, caSecret.Name)
+		return nil, nil, secrets.KeyConfig{}, fmt.Errorf("failed decoding %q data from secret", consts.TLSCRT)
 	}
 	caCert, err := x509.ParseCertificate(caCertBlock.Bytes)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, secrets.KeyConfig{}, fmt.Errorf("failed parsing CA certificate %w", err)
 	}
 
 	key, ok := caSecret.Data[consts.TLSKey]
 	if !ok {
-		return nil, nil, fmt.Errorf(consts.TLSKey + " field not found")
+		return nil, nil, secrets.KeyConfig{}, fmt.Errorf(consts.TLSKey + " field not found")
 	}
 	caKeyBlock, _ := pem.Decode(key)
 	if caKeyBlock == nil {
-		return nil, nil, fmt.Errorf("failed decoding %q data from secret %s", consts.TLSKey, caSecret.Name)
+		return nil, nil, secrets.KeyConfig{}, fmt.Errorf("failed decoding %q data from secret %s", consts.TLSKey, caSecret.Name)
 	}
 
-	caKey, err := secrets.ParseKey(msm.clusterCAKeyConfig.Type, caKeyBlock)
-	return caCert, caKey, err
+	caKey, _, err := secrets.ParsePrivateKey(caKeyBlock)
+	return caCert, caKey, keyConfig, err
 }
 
 // Start starts the metrics scraping loop.

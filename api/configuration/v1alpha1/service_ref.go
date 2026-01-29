@@ -19,5 +19,12 @@ type ServiceRef struct {
 	Type string `json:"type,omitempty"`
 
 	// NamespacedRef is a reference to a KongService.
-	NamespacedRef *commonv1alpha1.NameRef `json:"namespacedRef,omitempty"`
+	// If namespace is not specified, the KongService in the same namespace
+	// as the referencing entity.
+	// Namespace can be specified to reference a KongService in a different namespace
+	// but this requires a KongReferenceGrant in the target namespace allowing
+	// the reference.
+	//
+	// +optional
+	NamespacedRef *commonv1alpha1.NamespacedRef `json:"namespacedRef,omitempty"`
 }

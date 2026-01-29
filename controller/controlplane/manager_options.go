@@ -588,7 +588,7 @@ func WithKonnectOptions(konnectOptions *operatorv2beta1.ControlPlaneKonnectOptio
 				c.Konnect.LicensePollingPeriod = licensing.PollingPeriod.Duration
 			}
 			if licensing.StorageState != nil {
-				c.Konnect.LicenseStorageEnabled = (*licensing.StorageState == operatorv2beta1.ControlPlaneKonnectLicensingStateEnabled)
+				c.Konnect.LicenseStorageEnabled = (*licensing.StorageState == operatorv2beta1.ControlPlaneKonnectLicenseStorageStateEnabled)
 			}
 		}
 

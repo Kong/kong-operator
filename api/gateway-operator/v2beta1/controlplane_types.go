@@ -101,6 +101,7 @@ type ControlPlaneOptions struct {
 	// If omitted, Ingress resources will not be supported by the ControlPlane.
 	//
 	// +optional
+	// +kubebuilder:validation:MaxLength=63
 	IngressClass *string `json:"ingressClass,omitempty"`
 
 	// WatchNamespaces indicates the namespaces to watch for resources.
@@ -253,6 +254,8 @@ type ControlPlaneDataPlaneSync struct {
 }
 
 // ControlPlaneReverseSyncState defines the state of the reverse sync feature.
+//
+// +kubebuilder:validation:Enum=enabled;disabled
 type ControlPlaneReverseSyncState string
 
 const (
@@ -304,6 +307,7 @@ type ControlPlaneDataPlaneTargetRef struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=63
 	Name string `json:"name"`
 }
 
@@ -415,6 +419,7 @@ type ControlPlaneController struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=63
 	Name string `json:"name"`
 
 	// State indicates whether the feature gate is enabled or disabled.
@@ -425,6 +430,8 @@ type ControlPlaneController struct {
 }
 
 // FeatureGateState defines the state of a feature gate.
+//
+// +kubebuilder:validation:Enum=enabled;disabled
 type FeatureGateState string
 
 const (
@@ -443,12 +450,12 @@ type ControlPlaneFeatureGate struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=63
 	Name string `json:"name"`
 
 	// State indicates whether the feature gate is enabled or disabled.
 	//
 	// +required
-	// +kubebuilder:validation:Enum=enabled;disabled
 	State FeatureGateState `json:"state"`
 }
 
@@ -497,6 +504,7 @@ type ControlPlaneDataPlaneStatus struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=63
 	Name string `json:"name"`
 }
 
@@ -523,7 +531,6 @@ type ControlPlaneKonnectOptions struct {
 	//
 	// +optional
 	// +kubebuilder:default=enabled
-	// +kubebuilder:validation:Enum=enabled;disabled
 	ConsumersSync *ControlPlaneKonnectConsumersSyncState `json:"consumersSync,omitempty"`
 
 	// Licensing defines the configuration for Konnect licensing.
@@ -543,6 +550,8 @@ type ControlPlaneKonnectOptions struct {
 }
 
 // ControlPlaneKonnectConsumersSyncState defines the state of consumer synchronization with Konnect.
+//
+// +kubebuilder:validation:Enum=enabled;disabled
 type ControlPlaneKonnectConsumersSyncState string
 
 const (
@@ -563,7 +572,6 @@ type ControlPlaneKonnectLicensing struct {
 	//
 	// +optional
 	// +kubebuilder:default=disabled
-	// +kubebuilder:validation:Enum=enabled;disabled
 	State *ControlPlaneKonnectLicensingState `json:"state,omitempty"`
 
 	// InitialPollingPeriod is the initial polling period for license checks.
@@ -582,11 +590,24 @@ type ControlPlaneKonnectLicensing struct {
 	//
 	// +optional
 	// +kubebuilder:default=enabled
-	// +kubebuilder:validation:Enum=enabled;disabled
-	StorageState *ControlPlaneKonnectLicensingState `json:"storageState,omitempty"`
+	StorageState *ControlPlaneKonnectLicenseStorageState `json:"storageState,omitempty"`
 }
 
+// ControlPlaneKonnectLicenseStorageState defines the state of Konnect licensing.
+//
+// +kubebuilder:validation:Enum=enabled;disabled
+type ControlPlaneKonnectLicenseStorageState string
+
+const (
+	// ControlPlaneKonnectLicenseStorageStateEnabled indicates that Konnect license storage is enabled.
+	ControlPlaneKonnectLicenseStorageStateEnabled ControlPlaneKonnectLicenseStorageState = "enabled"
+	// ControlPlaneKonnectLicenseStorageStateDisabled indicates that Konnect license storage is disabled.
+	ControlPlaneKonnectLicenseStorageStateDisabled ControlPlaneKonnectLicenseStorageState = "disabled"
+)
+
 // ControlPlaneKonnectLicensingState defines the state of Konnect licensing.
+//
+// +kubebuilder:validation:Enum=enabled;disabled
 type ControlPlaneKonnectLicensingState string
 
 const (

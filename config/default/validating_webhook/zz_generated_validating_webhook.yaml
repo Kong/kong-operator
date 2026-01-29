@@ -36,6 +36,7 @@ webhooks:
     - kongclusterplugins
     - kongingresses
     - kongvaults
+    - kongcustomentities
     scope: '*'
   - apiGroups:
     - networking.k8s.io

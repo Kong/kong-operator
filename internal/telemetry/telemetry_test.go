@@ -633,7 +633,7 @@ func TestCreateManager(t *testing.T) {
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			scheme := scheme.Get()
-			k8sclient := testk8sclient.NewSimpleClientset()
+			k8sclient := testk8sclient.NewClientset()
 
 			ctrlClient := prepareControllerClient(scheme, tc.objects...)
 
@@ -802,7 +802,7 @@ func TestTelemetryUpdates(t *testing.T) {
 				tc.objects...,
 			)
 
-			k8sclient := testk8sclient.NewSimpleClientset()
+			k8sclient := testk8sclient.NewClientset()
 			ctrlClient := prepareControllerClient(scheme)
 
 			dClient := k8sclient.Discovery()

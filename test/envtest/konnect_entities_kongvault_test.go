@@ -154,7 +154,7 @@ func TestKongVault(t *testing.T) {
 		vaultToPatch.Spec.Description = vaultDespription
 		require.NoError(t, clientNamespaced.Patch(ctx, vaultToPatch, client.MergeFrom(vault)))
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.VaultSDK, waitTime, tickTime)
 
 		t.Log("Setting up mock SDK for vault deletion")
 		sdk.VaultSDK.EXPECT().DeleteVault(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), vaultID).

@@ -252,11 +252,11 @@ linters:
         text: symbol should have a godoc
       - linters:
           - godoclint
-        path: ingress-controller/test/(consts\.go|envtest|mocks|internal|helpers|integration/isolated|kongintegration)
+        path: ingress-controller/test/
         text: symbol should have a godoc
       - linters:
           - godoclint
-        path: test/(mocks|helpers|integration/utils.go)
+        path: test/(mocks|helpers|integration/utils.go|envtest)
         text: symbol should have a godoc
       - linters:
           - godoclint
@@ -270,6 +270,10 @@ linters:
           - godoclint
         text: symbol should have a godoc
         path: api/configuration/v1alpha1/zz_generated_funcs.go
+      # TODO: https://github.com/kubernetes-sigs/controller-runtime/issues/2141#issuecomment-3783800430
+      - linters:
+          - staticcheck
+        text: "mgr.GetEventRecorderFor is deprecated: this uses the old events API and will be removed in a future release. Please use GetEventRecorder instead."
     paths:
       - pkg/clientset
       - config/

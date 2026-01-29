@@ -11,8 +11,8 @@ import (
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
-	"github.com/kong/kong-operator/ingress-controller/internal/controllers/gateway"
 	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
+	mgrconsts "github.com/kong/kong-operator/ingress-controller/internal/manager/consts"
 )
 
 const (
@@ -31,7 +31,7 @@ func DeployGatewayClass(ctx context.Context, client *gatewayclient.Clientset, ga
 			},
 		},
 		Spec: gatewayapi.GatewayClassSpec{
-			ControllerName: gateway.GetControllerName(),
+			ControllerName: mgrconsts.GetControllerName(),
 		},
 	}
 
@@ -123,11 +123,11 @@ func gatewayLinkStatusMatches(
 		} else {
 			if err == nil {
 				return newRouteParentsStatus(route.Status.Parents).
-					check(verifyLinked, string(gateway.GetControllerName()))
+					check(verifyLinked, string(mgrconsts.GetControllerName()))
 			}
 			if gerr == nil {
 				return newRouteParentsStatus(groute.Status.Parents).
-					check(verifyLinked, string(gateway.GetControllerName()))
+					check(verifyLinked, string(mgrconsts.GetControllerName()))
 			}
 		}
 	case gatewayapi.TCPProtocolType:
@@ -136,7 +136,7 @@ func gatewayLinkStatusMatches(
 			t.Logf("error getting tcp route: %v", err)
 		} else {
 			return newRouteParentsStatus(route.Status.Parents).
-				check(verifyLinked, string(gateway.GetControllerName()))
+				check(verifyLinked, string(mgrconsts.GetControllerName()))
 		}
 	case gatewayapi.UDPProtocolType:
 		route, err := c.GatewayV1alpha2().UDPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
@@ -144,7 +144,7 @@ func gatewayLinkStatusMatches(
 			t.Logf("error getting udp route: %v", err)
 		} else {
 			return newRouteParentsStatus(route.Status.Parents).
-				check(verifyLinked, string(gateway.GetControllerName()))
+				check(verifyLinked, string(mgrconsts.GetControllerName()))
 		}
 	case gatewayapi.TLSProtocolType:
 		route, err := c.GatewayV1alpha2().TLSRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
@@ -152,7 +152,7 @@ func gatewayLinkStatusMatches(
 			t.Logf("error getting tls route: %v", err)
 		} else {
 			return newRouteParentsStatus(route.Status.Parents).
-				check(verifyLinked, string(gateway.GetControllerName()))
+				check(verifyLinked, string(mgrconsts.GetControllerName()))
 		}
 	case gatewayapi.HTTPSProtocolType:
 		t.Fatalf("protocol %s not supported", protocolType)
@@ -217,10 +217,10 @@ func verifyProgrammedConditionStatus(t *testing.T,
 			t.Logf("error getting grpc route: %v", err)
 		} else {
 			if err == nil {
-				return parentStatusContainsProgrammedCondition(route.Status.Parents, gateway.GetControllerName(), expectedStatus)
+				return parentStatusContainsProgrammedCondition(route.Status.Parents, mgrconsts.GetControllerName(), expectedStatus)
 			}
 			if gerr == nil {
-				return parentStatusContainsProgrammedCondition(groute.Status.Parents, gateway.GetControllerName(), expectedStatus)
+				return parentStatusContainsProgrammedCondition(groute.Status.Parents, mgrconsts.GetControllerName(), expectedStatus)
 			}
 		}
 	case gatewayapi.TCPProtocolType:
@@ -228,21 +228,21 @@ func verifyProgrammedConditionStatus(t *testing.T,
 		if err != nil {
 			t.Logf("error getting tcp route: %v", err)
 		} else {
-			return parentStatusContainsProgrammedCondition(route.Status.Parents, gateway.GetControllerName(), expectedStatus)
+			return parentStatusContainsProgrammedCondition(route.Status.Parents, mgrconsts.GetControllerName(), expectedStatus)
 		}
 	case gatewayapi.TLSProtocolType:
 		route, err := c.GatewayV1alpha2().TLSRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			t.Logf("error getting tls route: %v", err)
 		} else {
-			return parentStatusContainsProgrammedCondition(route.Status.Parents, gateway.GetControllerName(), expectedStatus)
+			return parentStatusContainsProgrammedCondition(route.Status.Parents, mgrconsts.GetControllerName(), expectedStatus)
 		}
 	case gatewayapi.UDPProtocolType:
 		route, err := c.GatewayV1alpha2().UDPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			t.Logf("error getting udp route: %v", err)
 		} else {
-			return parentStatusContainsProgrammedCondition(route.Status.Parents, gateway.GetControllerName(), expectedStatus)
+			return parentStatusContainsProgrammedCondition(route.Status.Parents, mgrconsts.GetControllerName(), expectedStatus)
 		}
 	case gatewayapi.HTTPSProtocolType:
 		t.Fatalf("protocol %s not supported", string(protocolType))

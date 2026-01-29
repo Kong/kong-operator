@@ -19,11 +19,13 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
 	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/controller/konnect/server"
 	"github.com/kong/kong-operator/controller/pkg/log"
 	"github.com/kong/kong-operator/controller/pkg/patch"
+	"github.com/kong/kong-operator/internal/utils/crossnamespace"
 	"github.com/kong/kong-operator/modules/manager/logging"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 )
@@ -91,6 +93,12 @@ func (r *KonnectAPIAuthConfigurationReconciler) SetupWithManager(ctx context.Con
 				listKonnectAPIAuthConfigurationsReferencingSecret(mgr.GetClient()),
 			),
 			builder.WithPredicates(secretLabelPredicate),
+		).
+		Watches(
+			&configurationv1alpha1.KongReferenceGrant{},
+			handler.EnqueueRequestsFromMapFunc(
+				enqueueObjectsForKongReferenceGrant[konnectv1alpha1.KonnectAPIAuthConfigurationList](mgr.GetClient()),
+			),
 		)
 
 	setKonnectAPIAuthConfigurationRefWatches(b)
@@ -275,6 +283,22 @@ func getTokenFromKonnectAPIAuthConfiguration(
 			nn.Namespace = apiAuth.Namespace
 		}
 
+		if nn.Namespace != apiAuth.Namespace {
+			gvkAPIAuth := metav1.GroupVersionKind(apiAuth.GetObjectKind().GroupVersionKind())
+			gvkSecret := metav1.GroupVersionKind(corev1.SchemeGroupVersion.WithKind("Secret"))
+			err := crossnamespace.CheckKongReferenceGrantForResource(ctx, cl, apiAuth.Namespace, nn.Namespace, nn.Name, gvkAPIAuth, gvkSecret)
+			if err != nil {
+				ctrllog.FromContext(ctx).
+					Error(
+						fmt.Errorf("missing KongReferenceGrant from KonnectAPIAuthConfiguration %s to Secret %s",
+							client.ObjectKeyFromObject(apiAuth), nn,
+						),
+						"WARNING: referencing Secret in a different namespace. "+
+							"This will require a KongReferenceGrant in Secret's namespace in future versions.",
+					)
+			}
+		}
+
 		var secret corev1.Secret
 		if err := cl.Get(ctx, nn, &secret); err != nil {
 			return "", fmt.Errorf("failed to get Secret %s: %w", nn, err)
@@ -321,9 +345,8 @@ func EnsureFinalizerOnKonnectAPIAuthConfiguration(
 		list := t.DeepCopyObject().(client.ObjectList)
 		err := cl.List(ctx,
 			list,
-			client.InNamespace(apiAuth.GetNamespace()),
 			client.MatchingFields{
-				i: apiAuth.Name,
+				i: apiAuth.Namespace + "/" + apiAuth.Name,
 			},
 		)
 		if err != nil {

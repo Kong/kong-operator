@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	"github.com/samber/lo"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -163,13 +164,17 @@ func cloudGatewayDataPlaneGroupConfigurationInit(
 	// forward-compatible with future server regions that are not yet defined in the Konnect SDK.
 	cpGeo := sdkkonnectcomp.ControlPlaneGeo(serverRegion.String())
 
-	return sdkkonnectcomp.CreateConfigurationRequest{
+	req := sdkkonnectcomp.CreateConfigurationRequest{
 		ControlPlaneID:  cpID,
-		Version:         spec.Version,
 		APIAccess:       spec.APIAccess,
 		ControlPlaneGeo: cpGeo,
 		DataplaneGroups: []sdkkonnectcomp.CreateConfigurationDataPlaneGroup{},
 	}
+	if spec.Version != "" {
+		req.Version = lo.ToPtr(spec.Version)
+	}
+
+	return req
 }
 
 func cloudGatewayDataPlaneGroupConfigurationToAPIRequest(
@@ -243,8 +248,8 @@ func konnectConfigurationDataPlaneGroupToAPIRequest(
 			}
 			return ret
 		}(),
-		CloudGatewayNetworkID: networkID,
-		Autoscale:             autoscaleConf,
+		CloudGatewayNetworkID: lo.ToPtr(networkID),
+		Autoscale:             lo.ToPtr(autoscaleConf),
 	}, nil
 }
 
@@ -282,18 +287,19 @@ func dataPlaneGroupsResponseToStatus(
 ) []konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationStatusGroup {
 	ret := make([]konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationStatusGroup, 0, len(r))
 	for _, g := range r {
-		ret = append(
-			ret,
-			konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationStatusGroup{
-				ID:                    g.ID,
-				State:                 string(g.State),
-				CloudGatewayNetworkID: g.CloudGatewayNetworkID,
-				PrivateIPAddresses:    g.PrivateIPAddresses,
-				EgressIPAddresses:     g.EgressIPAddresses,
-				Provider:              g.Provider,
-				Region:                g.Region,
-			},
-		)
+		sg := konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationStatusGroup{
+			ID:                 g.ID,
+			State:              string(g.State),
+			PrivateIPAddresses: g.PrivateIPAddresses,
+			EgressIPAddresses:  g.EgressIPAddresses,
+			Provider:           g.Provider,
+			Region:             g.Region,
+		}
+		if g.CloudGatewayNetworkID != nil {
+			sg.CloudGatewayNetworkID = *g.CloudGatewayNetworkID
+		}
+
+		ret = append(ret, sg)
 	}
 	return ret
 }
@@ -369,8 +375,8 @@ func compareDataPlaneGroupConfigurationSpec(
 		), nil
 	}
 
-	if cfg.Spec.Version != manifest.GetVersion() {
-		return fmt.Sprintf("version mismatch spec=%q konnect=%q", cfg.Spec.Version, manifest.GetVersion()), nil
+	if v := manifest.GetVersion(); v != nil && cfg.Spec.Version != *v {
+		return fmt.Sprintf("version mismatch spec=%q konnect=%q", cfg.Spec.Version, *v), nil
 	}
 
 	specGroups, err := normalizeSpecDataplaneGroups(ctx, cl, cfg)
@@ -428,15 +434,17 @@ func normalizeKonnectDataplaneGroups(groups []sdkkonnectcomp.ConfigurationDataPl
 		norm := normalizedDPGroup{
 			Provider:    string(group.GetProvider()),
 			Region:      group.GetRegion(),
-			NetworkID:   group.GetCloudGatewayNetworkID(),
+			NetworkID:   lo.FromPtr(group.GetCloudGatewayNetworkID()),
 			Environment: normalizeKonnectEnvironment(group.GetEnvironment()),
 		}
 
-		autoNorm, err := normalizeKonnectAutoscale(group.GetAutoscale())
-		if err != nil {
-			return nil, err
+		if autoscale := group.GetAutoscale(); autoscale != nil {
+			autoNorm, err := normalizeKonnectAutoscale(*autoscale)
+			if err != nil {
+				return nil, err
+			}
+			norm.Autoscale = autoNorm
 		}
-		norm.Autoscale = autoNorm
 		result = append(result, norm)
 	}
 	return sortNormalizedDPGroups(result)

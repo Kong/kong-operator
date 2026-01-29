@@ -192,7 +192,7 @@ func KonnectEntitiesTestCase(t *testing.T, params konnectEntitiesTestCaseParams)
 		require.NoError(t, err)
 		kr.Spec.ServiceRef = &configurationv1alpha1.ServiceRef{
 			Type: configurationv1alpha1.ServiceRefNamespacedRef,
-			NamespacedRef: &commonv1alpha1.NameRef{
+			NamespacedRef: &commonv1alpha1.NamespacedRef{
 				Name: ks.Name,
 			},
 		}
@@ -252,7 +252,7 @@ func KonnectEntitiesTestCase(t *testing.T, params konnectEntitiesTestCaseParams)
 	kpb := deploy.KongPluginBinding(t, ctx, params.client,
 		konnect.NewKongPluginBindingBuilder().
 			WithServiceTarget(ks.Name).
-			WithPluginRef(kp.Name).
+			WithPluginRefName(kp.Name).
 			WithControlPlaneRefKonnectNamespaced(params.cp.Name).
 			Build(),
 		deploy.WithTestIDLabel(params.testID),
@@ -264,7 +264,7 @@ func KonnectEntitiesTestCase(t *testing.T, params konnectEntitiesTestCaseParams)
 
 	globalKPB := deploy.KongPluginBinding(t, ctx, params.client,
 		konnect.NewKongPluginBindingBuilder().
-			WithPluginRef(kp.Name).
+			WithPluginRefName(kp.Name).
 			WithControlPlaneRefKonnectNamespaced(params.cp.Name).
 			WithScope(configurationv1alpha1.KongPluginBindingScopeGlobalInControlPlane).
 			Build(),

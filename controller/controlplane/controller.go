@@ -41,7 +41,6 @@ import (
 	"github.com/kong/kong-operator/controller/pkg/finalizer"
 	"github.com/kong/kong-operator/controller/pkg/log"
 	"github.com/kong/kong-operator/controller/pkg/op"
-	"github.com/kong/kong-operator/controller/pkg/secrets"
 	ingresserrors "github.com/kong/kong-operator/ingress-controller/pkg/errors"
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
@@ -66,7 +65,6 @@ type Reconciler struct {
 	CacheSyncPeriod          time.Duration
 	ClusterCASecretName      string
 	ClusterCASecretNamespace string
-	ClusterCAKeyConfig       secrets.KeyConfig
 
 	RestConfig              *rest.Config
 	KubeConfigPath          string
@@ -415,6 +413,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 			return r.initStatusToWaitingToBecomeReady(ctx, logger, cp)
 		}
+
+		// Ensure the status reflects the current config even when the hash matches.
+		// This handles cases where the status was not yet updated (e.g., after an update
+		// to the spec that changed controllers/feature gates).
+		r.ensureControlPlaneStatus(cp, mgrCfg)
 	}
 
 	markAsProvisioned(cp)

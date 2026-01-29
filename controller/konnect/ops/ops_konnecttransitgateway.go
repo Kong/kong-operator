@@ -209,6 +209,9 @@ func extractKonnectIDFromTransitGatewayResponse(resp *sdkkonnectcomp.TransitGate
 		// AWS VPC peering gateway is not supported yet.
 		// It is not valid in the KonnectCloudGatewayTransitGateway's spec.type.
 		return ""
+	case sdkkonnectcomp.TransitGatewayResponseTypeAzureVhubPeeringGatewayResponse:
+		// Peering not supported yet.
+		return ""
 	}
 	return ""
 }
@@ -226,6 +229,9 @@ func extractStateFromTransitGatewayResponse(resp *sdkkonnectcomp.TransitGatewayR
 	case sdkkonnectcomp.TransitGatewayResponseTypeAwsVpcPeeringGatewayResponse:
 		// AWS VPC peering gateway is not supported yet.
 		// It is not valid in the KonnectCloudGatewayTransitGateway's spec.type.
+		return sdkkonnectcomp.TransitGatewayState("")
+	case sdkkonnectcomp.TransitGatewayResponseTypeAzureVhubPeeringGatewayResponse:
+		// Peering not supported yet.
 		return sdkkonnectcomp.TransitGatewayState("")
 	}
 	return sdkkonnectcomp.TransitGatewayState("")

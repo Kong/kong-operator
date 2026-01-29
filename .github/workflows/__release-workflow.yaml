@@ -37,7 +37,12 @@ on:
         default: 'main'
         required: false
       latest:
-        description: Whether to mark this release latest
+        description: |
+          Whether to mark this release latest.
+          Only set to true if this release is the current maximum version.
+          If a newer major or minor version has been released (e.g., 2.2 is released),
+          do NOT set this to true when releasing an older branch (e.g., 2.1.1),
+          otherwise the docs will be overwritten.
         type: boolean
         default: false
       release-type:
@@ -84,7 +89,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
+        uses: step-security/harden-runner@e3f713f2d8f53843e71c69a996d56f51aa9adfb9 # v2.14.1
         with:
           egress-policy: audit
       - uses: mukunku/tag-exists-action@5c39604fe8aef7e65acb6fbcf96ec580f7680313 # v1.7.0
@@ -100,7 +105,7 @@ jobs:
         run: exit 1
 
       - name: Checkout repository
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
 
@@ -135,11 +140,11 @@ jobs:
     name: "test-integration-current-kubernetes"
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
+        uses: step-security/harden-runner@e3f713f2d8f53843e71c69a996d56f51aa9adfb9 # v2.14.1
         with:
           egress-policy: audit
       - name: Checkout repository
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
 
@@ -151,7 +156,7 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - uses: jdx/mise-action@146a28175021df8ca24f8ee1828cc2a60f980bd5 # v3.5.1
+      - uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8 # v3.6.1
         with:
           install: false
 
@@ -196,11 +201,11 @@ jobs:
       - build-push-images
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
+        uses: step-security/harden-runner@e3f713f2d8f53843e71c69a996d56f51aa9adfb9 # v2.14.1
         with:
           egress-policy: audit
       - name: Checkout repository
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
 
@@ -212,7 +217,7 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - uses: jdx/mise-action@146a28175021df8ca24f8ee1828cc2a60f980bd5 # v3.5.1
+      - uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8 # v3.6.1
         with:
           install: false
 
@@ -262,7 +267,7 @@ jobs:
       - test-e2e-current-kubernetes
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
+        uses: step-security/harden-runner@e3f713f2d8f53843e71c69a996d56f51aa9adfb9 # v2.14.1
         with:
           egress-policy: audit
       - name: Check if we're not trying to trigger a major/minor release from non main
@@ -282,7 +287,7 @@ jobs:
       # Use the branch set via inputs as a base for the release.
       # If anything needs to be fixed before the release, it should be done on the base branch
       # before the release workflow is triggered.
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
           ref: ${{ inputs.base }}
@@ -301,7 +306,7 @@ jobs:
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
           echo ${VERSION} > VERSION
 
-      - uses: jdx/mise-action@146a28175021df8ca24f8ee1828cc2a60f980bd5 # v3.5.1
+      - uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8 # v3.6.1
         with:
           install: false
 
@@ -362,21 +367,22 @@ jobs:
     env:
       DOCS_REPO: developer.konghq.com
       DOCS_REPO_PATH_CLI_ARGS_DOC: app/operator/reference/configuration-options.md
+      DOCS_REPO_PATH_CRD_DOC: app/operator/reference/custom-resources.md
     needs:
       - semver
       - create-release-pr
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
+        uses: step-security/harden-runner@e3f713f2d8f53843e71c69a996d56f51aa9adfb9 # v2.14.1
         with:
           egress-policy: audit
 
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
           ref: ${{ inputs.base }}
 
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: ${{ github.repository_owner }}/${{ env.DOCS_REPO }}
           path: ${{ env.DOCS_REPO }}
@@ -384,6 +390,14 @@ jobs:
       - name: update cli argument docs
         run: |
           cp ./docs/cli-arguments-for-developer-konghq-com.md ${{ env.DOCS_REPO }}/${{ env.DOCS_REPO_PATH_CLI_ARGS_DOC }}
+
+      - name: update CRD reference docs
+        run: |
+          mkdir -p "$(dirname "${{ env.DOCS_REPO }}/${{ env.DOCS_REPO_PATH_CRD_DOC }}")"
+          ./scripts/apidocs-gen/post-process-for-konghq.sh \
+            ./docs/gateway-operator-api-reference.md \
+            "${{ env.DOCS_REPO }}/${{ env.DOCS_REPO_PATH_CRD_DOC }}" \
+            "${{ env.DOCS_REPO }}"
 
       - name: Detect changes
         id: detect-changes

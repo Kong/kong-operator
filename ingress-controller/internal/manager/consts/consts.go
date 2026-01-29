@@ -1,6 +1,11 @@
 package consts
 
-import "time"
+import (
+	"sync"
+	"time"
+
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+)
 
 // -----------------------------------------------------------------------------
 // Controller Manager - Constants & Vars
@@ -41,3 +46,25 @@ const (
 	// subcomponents to wait for the resources to be cleaned up before shutting down.
 	DefaultGracefulShutdownTimeout = time.Second * 5
 )
+
+var (
+	// _controllerName is the unique identifier for this controller and is used
+	// within GatewayClass resources to indicate that this controller should
+	// support connected Gateway resources.
+	_controllerName gatewayv1.GatewayController = "konghq.com/kic-gateway-controller"
+
+	// _controllerNameLock guards access to _controllerName.
+	_controllerNameLock sync.RWMutex
+)
+
+func SetControllerName(name gatewayv1.GatewayController) {
+	_controllerNameLock.Lock()
+	defer _controllerNameLock.Unlock()
+	_controllerName = name
+}
+
+func GetControllerName() gatewayv1.GatewayController {
+	_controllerNameLock.RLock()
+	defer _controllerNameLock.RUnlock()
+	return _controllerName
+}

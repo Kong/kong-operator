@@ -19,11 +19,32 @@ func createRoute(
 	sdk sdkkonnectgo.RoutesSDK,
 	route *configurationv1alpha1.KongRoute,
 ) error {
-	if route.GetControlPlaneID() == "" {
+	cpID := route.GetControlPlaneID()
+	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: route, Op: CreateOp}
 	}
 
-	resp, err := sdk.CreateRoute(ctx, route.Status.Konnect.ControlPlaneID, kongRouteToSDKRouteInput(route))
+	if route.Spec.Name == nil || *route.Spec.Name == "" {
+		routeID := string(route.GetUID())
+		resp, err := sdk.UpsertRoute(ctx, sdkkonnectops.UpsertRouteRequest{
+			ControlPlaneID: cpID,
+			RouteID:        routeID,
+			Route:          kongRouteToSDKRouteInput(route),
+		})
+
+		if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, route); errWrap != nil {
+			return errWrap
+		}
+
+		if resp == nil || resp.Route == nil || resp.Route.RouteJSON == nil || resp.Route.RouteJSON.ID == nil {
+			return fmt.Errorf("failed creating %s: %w", route.GetTypeName(), ErrNilResponse)
+		}
+
+		route.SetKonnectID(*resp.Route.RouteJSON.ID)
+		return nil
+	}
+
+	resp, err := sdk.CreateRoute(ctx, cpID, kongRouteToSDKRouteInput(route))
 
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, route); errWrap != nil {
 		return errWrap

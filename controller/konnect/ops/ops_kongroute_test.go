@@ -40,7 +40,7 @@ func TestKongRouteToSDKRouteInput_Tags(t *testing.T) {
 		Spec: configurationv1alpha1.KongRouteSpec{
 			ServiceRef: &configurationv1alpha1.ServiceRef{
 				Type: configurationv1alpha1.ServiceRefNamespacedRef,
-				NamespacedRef: &commonv1alpha1.NameRef{
+				NamespacedRef: &commonv1alpha1.NamespacedRef{
 					Name: "service-1",
 				},
 			},
@@ -73,6 +73,51 @@ func TestKongRouteToSDKRouteInput_Tags(t *testing.T) {
 	require.ElementsMatch(t, expectedTags, output.RouteJSON.Tags)
 }
 
+func TestCreateKongRoute(t *testing.T) {
+	ctx := t.Context()
+
+	t.Run("upsert route using UID when name is missing", func(t *testing.T) {
+		sdk := mocks.NewMockRoutesSDK(t)
+		route := &configurationv1alpha1.KongRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "route-1",
+				Namespace: "default",
+				UID:       k8stypes.UID("abcd-1234"),
+			},
+			Spec: configurationv1alpha1.KongRouteSpec{
+				KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
+					Hosts: []string{"example.com"},
+				},
+			},
+			Status: configurationv1alpha1.KongRouteStatus{
+				Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndServiceRefs{
+					ControlPlaneID: "123456789",
+				},
+			},
+		}
+
+		sdk.
+			EXPECT().
+			UpsertRoute(ctx, mock.MatchedBy(func(req sdkkonnectops.UpsertRouteRequest) bool {
+				return req.ControlPlaneID == "123456789" && req.RouteID == string(route.UID)
+			})).
+			Return(
+				&sdkkonnectops.UpsertRouteResponse{
+					Route: &sdkkonnectcomp.Route{
+						RouteJSON: &sdkkonnectcomp.RouteJSON{
+							ID: lo.ToPtr("abcd-1234"),
+						},
+					},
+				},
+				nil,
+			)
+
+		err := createRoute(ctx, sdk, route)
+		require.NoError(t, err)
+		assert.Equal(t, "abcd-1234", route.GetKonnectStatus().GetKonnectID())
+	})
+}
+
 func TestAdoptRoute(t *testing.T) {
 	ctx := t.Context()
 	testCases := []struct {
@@ -102,7 +147,7 @@ func TestAdoptRoute(t *testing.T) {
 						},
 						ServiceRef: &configurationv1alpha1.ServiceRef{
 							Type:          "namespacedRef",
-							NamespacedRef: &commonv1alpha1.NameRef{Name: "svc-1"},
+							NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "svc-1"},
 						},
 						KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
 							Paths: []string{"/test-1"},
@@ -252,7 +297,7 @@ func TestAdoptRoute(t *testing.T) {
 						},
 						ServiceRef: &configurationv1alpha1.ServiceRef{
 							Type:          "namespacedRef",
-							NamespacedRef: &commonv1alpha1.NameRef{Name: "svc-1"},
+							NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "svc-1"},
 						},
 						KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
 							Paths: []string{"/test-1"},

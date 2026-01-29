@@ -7,7 +7,6 @@ import (
 
 	"github.com/kong/kong-operator/modules/cli"
 	"github.com/kong/kong-operator/modules/manager"
-	"github.com/kong/kong-operator/modules/manager/config"
 	"github.com/kong/kong-operator/modules/manager/metadata"
 )
 
@@ -91,7 +90,7 @@ func getTypeForHuman(f *flag.Flag) string {
 	switch typ := f.Value.(type) {
 	case boolvalue:
 		return "bool"
-	case stringvalue, *manager.MetricsAccessFilter, *config.KeyType:
+	case stringvalue, *manager.MetricsAccessFilter, *cli.DiscardFlagValue:
 		return "string"
 	case zapFlag:
 		if f.Name == "bool" {
