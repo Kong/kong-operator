@@ -343,7 +343,7 @@ jobs:
 
       # PRs will update the version file and manifests
       - name: Create a release PR
-        uses: peter-evans/create-pull-request@98357b18bf14b5342f975ff684046ec3b2a07725 # v7.0.6
+        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v7.0.6
         with:
           token: ${{ secrets.gh-pat }}
           path: .
@@ -410,7 +410,7 @@ jobs:
           fi
 
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@98357b18bf14b5342f975ff684046ec3b2a07725 # v7.0.6
+        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v7.0.6
         if: steps.detect-changes.outputs.has_changes
         with:
           path: ${{ env.DOCS_REPO }}
