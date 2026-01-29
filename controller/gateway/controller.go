@@ -250,6 +250,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if isHybridGateway {
 		log.Trace(logger, "Hybrid Gateway provisioning")
 		konnectControlPlane, cpReady := r.provisionKonnectGatewayControlPlane(ctx, logger, &gateway, gatewayConfig)
+		patched, res, err := patch.WithFinalizer(ctx, r.Client, konnectControlPlane, KonnectGatewayControlPlaneFinalizer)
+		if patched || err != nil || !res.IsZero() {
+			return res, err
+		}
+
 		// Set the KonnectGatewayControlPlaneProgrammedType Condition to False. This happens only if:
 		// * the new status is false and there was no KonnectGatewayControlPlaneProgrammedType condition in the gateway
 		// * the new status is false and the previous status was true

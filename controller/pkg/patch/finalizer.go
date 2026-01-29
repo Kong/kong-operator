@@ -11,7 +11,7 @@ import (
 )
 
 // WithFinalizer patches the provided object with the provided finalizer.
-// It returns a ctrl.Result and an error.
+// It returns a ctrl.Result, a bool, and an error.
 func WithFinalizer[
 	T client.Object,
 ](

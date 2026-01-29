@@ -233,7 +233,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		}
 
 		// if the certificate does not exist, or the cleanup in Konnect has been performed, we can remove the konnect-cleanup finalizer from the konnectExtension.
-		if !certExists || !controllerutil.ContainsFinalizer(certificateSecret, KonnectCleanupFinalizer) {
+		if !certExists || ext.Status.Konnect == nil || !controllerutil.ContainsFinalizer(certificateSecret, KonnectCleanupFinalizer) {
 			// remove the konnect-cleanup finalizer from the KonnectExtension.
 			updated = controllerutil.RemoveFinalizer(&ext, KonnectCleanupFinalizer)
 			if updated {
