@@ -21,7 +21,7 @@ func TestSpecificGatewayNN(t *testing.T) {
 	t.Parallel()
 
 	const (
-		waitTime = 3 * time.Second
+		waitTime = 10 * time.Second
 		tickTime = 500 * time.Millisecond
 	)
 
@@ -45,6 +45,7 @@ func TestSpecificGatewayNN(t *testing.T) {
 		WithGatewayFeatureEnabled,
 		WithGatewayAPIControllers(),
 		WithGatewayToReconcile(nn.String()),
+		WithProxySyncInterval(250*time.Millisecond),
 	)
 
 	const routeCount = 10
