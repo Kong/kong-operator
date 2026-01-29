@@ -1,0 +1,39 @@
+---
+# Assert HTTPRoute is accepted with multiple ParentRefs.
+#
+# Required bindings:
+#   - http_route_name: The name of the HTTPRoute.
+#   - http_route_namespace: The namespace of the HTTPRoute.
+#   - gateway_name_1: The name of the first gateway.
+#   - gateway_name_2: The name of the second gateway.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ($http_route_name)
+  namespace: ($http_route_namespace)
+status:
+  parents:
+    - parentRef:
+        name: ($gateway_name_1)
+        namespace: ($gateway_namespace_1)
+        group: gateway.networking.k8s.io
+        kind: Gateway
+      controllerName: konghq.com/gateway-operator
+      (conditions[?type == 'Accepted']):
+        - status: "True"
+          reason: Accepted
+      (conditions[?type == 'ResolvedRefs']):
+        - status: "True"
+          reason: ResolvedRefs
+    - parentRef:
+        name: ($gateway_name_2)
+        namespace: ($gateway_namespace_2)
+        group: gateway.networking.k8s.io
+        kind: Gateway
+      controllerName: konghq.com/gateway-operator
+      (conditions[?type == 'Accepted']):
+        - status: "True"
+          reason: Accepted
+      (conditions[?type == 'ResolvedRefs']):
+        - status: "True"
+          reason: ResolvedRefs

@@ -44,8 +44,6 @@ spec:
     # 2. Get the konnect gateway control plane name.
     - script:
         env:
-         - name: NAMESPACE
-           value: ($namespace)
          - name: GATEWAY_NAME
            value: ($gateway_name)
          - name: GATEWAY_NAMESPACE

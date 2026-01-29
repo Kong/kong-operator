@@ -14,8 +14,6 @@ spec:
   try:
     - script:
         env:
-         - name: NAMESPACE
-           value: ($namespace)
          - name: GATEWAY_NAME
            value: ($gateway_name)
          - name: GATEWAY_NAMESPACE
