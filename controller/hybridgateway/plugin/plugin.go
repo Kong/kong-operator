@@ -66,11 +66,11 @@ func PluginsForFilter(
 	if filter.Type == gatewayv1.HTTPRouteFilterExtensionRef {
 		log.Debug(logger, "Filter is an ExtensionRef, retrieving referenced KongPlugin")
 		plugin, err := getReferencedKongPlugin(ctx, cl, httpRoute.Namespace, filter)
-		pluginName := plugin.Name
 		if err != nil {
 			log.Error(logger, err, "Failed to retrieve referenced KongPlugin")
-			return nil, false, fmt.Errorf("failed to retrieve referenced KongPlugin %s: %w", pluginName, err)
+			return nil, false, fmt.Errorf("failed to retrieve referenced KongPlugin: %w", err)
 		}
+
 		log.Debug(logger, "Successfully retrieved referenced KongPlugin")
 		plugins = append(plugins, *plugin)
 		return plugins, true, nil
