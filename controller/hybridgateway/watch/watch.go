@@ -58,7 +58,7 @@ func Watches(obj client.Object, cl client.Client) []Watcher {
 			},
 			{
 				&configurationv1.KongPlugin{},
-				MapHTTPRouteForKongResource[*configurationv1.KongPlugin](cl),
+				MapHTTPRouteForKongPlugin(cl),
 			},
 			{
 				&configurationv1alpha1.KongPluginBinding{},

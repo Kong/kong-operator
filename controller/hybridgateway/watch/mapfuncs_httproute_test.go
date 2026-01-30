@@ -16,6 +16,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/internal/utils/index"
 )
@@ -952,4 +953,350 @@ func Test_MapHTTPRouteForReferenceGrant(t *testing.T) {
 		require.Equal(t, "route-1", requests[0].Name)
 		require.Equal(t, "source-ns", requests[0].Namespace)
 	})
+}
+
+func Test_MapHTTPRouteForKongPlugin(t *testing.T) {
+	const hybridRoutesAnnotation = "gateway-operator.konghq.com/hybrid-routes"
+
+	scheme := runtime.NewScheme()
+	scheme.AddKnownTypes(
+		schema.GroupVersion{Group: gatewayv1.GroupVersion.Group, Version: gatewayv1.GroupVersion.Version},
+		&gwtypes.HTTPRoute{},
+	)
+	scheme.AddKnownTypes(
+		schema.GroupVersion{Group: configurationv1.GroupVersion.Group, Version: configurationv1.GroupVersion.Version},
+		&configurationv1.KongPlugin{},
+	)
+	_ = gatewayv1.Install(scheme)
+	_ = configurationv1.AddToScheme(scheme)
+
+	testCases := []struct {
+		name          string
+		objects       []client.Object
+		inputObject   client.Object
+		client        client.Client
+		expectedCount int
+		expectedNames []string
+		expectNil     bool
+		expectEmpty   bool
+	}{
+		{
+			name: "wrong object type returns nil",
+			inputObject: &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test-ns",
+					Name:      "test-svc",
+				},
+			},
+			objects:   []client.Object{},
+			expectNil: true,
+		},
+		{
+			name: "plugin referenced via extensionRef filter",
+			objects: []client.Object{
+				&configurationv1.KongPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-ns",
+						Name:      "test-plugin",
+					},
+					PluginName: "rate-limiting",
+				},
+				&gwtypes.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-ns",
+						Name:      "route-with-filter",
+					},
+					Spec: gwtypes.HTTPRouteSpec{
+						Rules: []gwtypes.HTTPRouteRule{
+							{
+								Filters: []gwtypes.HTTPRouteFilter{
+									{
+										Type: gatewayv1.HTTPRouteFilterExtensionRef,
+										ExtensionRef: &gatewayv1.LocalObjectReference{
+											Group: gatewayv1.Group(configurationv1.GroupVersion.Group),
+											Kind:  "KongPlugin",
+											Name:  "test-plugin",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			inputObject: &configurationv1.KongPlugin{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test-ns",
+					Name:      "test-plugin",
+				},
+				PluginName: "rate-limiting",
+			},
+			expectedCount: 1,
+			expectedNames: []string{"route-with-filter"},
+		},
+		{
+			name: "plugin referenced via annotation",
+			objects: []client.Object{
+				&configurationv1.KongPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-ns",
+						Name:      "plugin-with-annotation",
+						Annotations: map[string]string{
+							hybridRoutesAnnotation: "test-ns/route-with-annotation",
+						},
+					},
+					PluginName: "rate-limiting",
+				},
+				&gwtypes.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-ns",
+						Name:      "route-with-annotation",
+					},
+				},
+			},
+			inputObject: &configurationv1.KongPlugin{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test-ns",
+					Name:      "plugin-with-annotation",
+					Annotations: map[string]string{
+						hybridRoutesAnnotation: "test-ns/route-with-annotation",
+					},
+				},
+				PluginName: "rate-limiting",
+			},
+			expectedCount: 1,
+			expectedNames: []string{"route-with-annotation"},
+		},
+		{
+			name: "plugin referenced via both filter and annotation",
+			objects: []client.Object{
+				&configurationv1.KongPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-ns",
+						Name:      "plugin-both",
+						Annotations: map[string]string{
+							hybridRoutesAnnotation: "test-ns/route-with-annotation",
+						},
+					},
+					PluginName: "rate-limiting",
+				},
+				&gwtypes.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-ns",
+						Name:      "route-with-filter",
+					},
+					Spec: gwtypes.HTTPRouteSpec{
+						Rules: []gwtypes.HTTPRouteRule{
+							{
+								Filters: []gwtypes.HTTPRouteFilter{
+									{
+										Type: gatewayv1.HTTPRouteFilterExtensionRef,
+										ExtensionRef: &gatewayv1.LocalObjectReference{
+											Group: gatewayv1.Group(configurationv1.GroupVersion.Group),
+											Kind:  "KongPlugin",
+											Name:  "plugin-both",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				&gwtypes.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-ns",
+						Name:      "route-with-annotation",
+					},
+				},
+			},
+			inputObject: &configurationv1.KongPlugin{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test-ns",
+					Name:      "plugin-both",
+					Annotations: map[string]string{
+						hybridRoutesAnnotation: "test-ns/route-with-annotation",
+					},
+				},
+				PluginName: "rate-limiting",
+			},
+			expectedCount: 2,
+			expectedNames: []string{"route-with-filter", "route-with-annotation"},
+		},
+		{
+			name: "multiple HTTPRoutes with filter referencing the same plugin",
+			objects: []client.Object{
+				&configurationv1.KongPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-ns",
+						Name:      "shared-plugin",
+					},
+					PluginName: "cors",
+				},
+				&gwtypes.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-ns",
+						Name:      "route-1",
+					},
+					Spec: gwtypes.HTTPRouteSpec{
+						Rules: []gwtypes.HTTPRouteRule{
+							{
+								Filters: []gwtypes.HTTPRouteFilter{
+									{
+										Type: gatewayv1.HTTPRouteFilterExtensionRef,
+										ExtensionRef: &gatewayv1.LocalObjectReference{
+											Group: gatewayv1.Group(configurationv1.GroupVersion.Group),
+											Kind:  "KongPlugin",
+											Name:  "shared-plugin",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				&gwtypes.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-ns",
+						Name:      "route-2",
+					},
+					Spec: gwtypes.HTTPRouteSpec{
+						Rules: []gwtypes.HTTPRouteRule{
+							{
+								Filters: []gwtypes.HTTPRouteFilter{
+									{
+										Type: gatewayv1.HTTPRouteFilterExtensionRef,
+										ExtensionRef: &gatewayv1.LocalObjectReference{
+											Group: gatewayv1.Group(configurationv1.GroupVersion.Group),
+											Kind:  "KongPlugin",
+											Name:  "shared-plugin",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			inputObject: &configurationv1.KongPlugin{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test-ns",
+					Name:      "shared-plugin",
+				},
+				PluginName: "cors",
+			},
+			expectedCount: 2,
+			expectedNames: []string{"route-1", "route-2"},
+		},
+		{
+			name: "no HTTPRoutes reference the plugin",
+			objects: []client.Object{
+				&configurationv1.KongPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-ns",
+						Name:      "test-plugin",
+					},
+					PluginName: "rate-limiting",
+				},
+			},
+			inputObject: &configurationv1.KongPlugin{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test-ns",
+					Name:      "test-plugin",
+				},
+				PluginName: "rate-limiting",
+			},
+			expectEmpty: true,
+		},
+		{
+			name: "list error returns nil",
+			inputObject: &configurationv1.KongPlugin{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test-ns",
+					Name:      "test-plugin",
+				},
+				PluginName: "rate-limiting",
+			},
+			client:    &fakeErrorClient{},
+			expectNil: true,
+		},
+		{
+			name: "multiple annotations with multiple routes",
+			objects: []client.Object{
+				&configurationv1.KongPlugin{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-ns",
+						Name:      "plugin-multi",
+						Annotations: map[string]string{
+							hybridRoutesAnnotation: "test-ns/route-1,test-ns/route-2",
+						},
+					},
+					PluginName: "rate-limiting",
+				},
+				&gwtypes.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-ns",
+						Name:      "route-1",
+					},
+				},
+				&gwtypes.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-ns",
+						Name:      "route-2",
+					},
+				},
+			},
+			inputObject: &configurationv1.KongPlugin{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test-ns",
+					Name:      "plugin-multi",
+					Annotations: map[string]string{
+						hybridRoutesAnnotation: "test-ns/route-1,test-ns/route-2",
+					},
+				},
+				PluginName: "rate-limiting",
+			},
+			expectedCount: 2,
+			expectedNames: []string{"route-1", "route-2"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var cl client.Client
+			if tc.client != nil {
+				cl = tc.client
+			} else {
+				cl = fake.NewClientBuilder().
+					WithScheme(scheme).
+					WithObjects(tc.objects...).
+					WithIndex(&gwtypes.HTTPRoute{}, index.KongPluginsOnHTTPRouteIndex, index.KongPluginsOnHTTPRoute).
+					Build()
+			}
+
+			mapFunc := MapHTTPRouteForKongPlugin(cl)
+			ctx := context.Background()
+			requests := mapFunc(ctx, tc.inputObject)
+
+			if tc.expectNil {
+				require.Nil(t, requests)
+				return
+			}
+
+			if tc.expectEmpty {
+				require.Empty(t, requests)
+				return
+			}
+
+			require.Len(t, requests, tc.expectedCount)
+			if len(tc.expectedNames) > 0 {
+				actualNames := make([]string, len(requests))
+				for i, req := range requests {
+					actualNames[i] = req.Name
+				}
+				for _, expectedName := range tc.expectedNames {
+					require.Contains(t, actualNames, expectedName)
+				}
+			}
+		})
+	}
 }

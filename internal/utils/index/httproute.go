@@ -3,7 +3,9 @@ package index
 import (
 	"github.com/samber/lo"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )
 
@@ -14,6 +16,9 @@ const (
 
 	// GatewayOnHTTPRouteIndex is the name of the index that maps Gateways to HTTPRoutes referencing them in their ParentRefs.
 	GatewayOnHTTPRouteIndex = "GatewayOnHTTPRoute"
+
+	// KongPluginsOnHTTPRouteIndex is the name of the index that maps KongPlugins to HTTPRoutes referencing them in their filters.
+	KongPluginsOnHTTPRouteIndex = "KongPluginsOnHTTPRoute"
 )
 
 // OptionsForHTTPRoute returns a slice of Option configured for indexing HTTPRoute objects.
@@ -29,6 +34,11 @@ func OptionsForHTTPRoute() []Option {
 			Object:         &gwtypes.HTTPRoute{},
 			Field:          GatewayOnHTTPRouteIndex,
 			ExtractValueFn: GatewaysOnHTTPRoute,
+		},
+		{
+			Object:         &gwtypes.HTTPRoute{},
+			Field:          KongPluginsOnHTTPRouteIndex,
+			ExtractValueFn: KongPluginsOnHTTPRoute,
 		},
 	}
 }
@@ -88,4 +98,28 @@ func GatewaysOnHTTPRoute(o client.Object) []string {
 		gateways = append(gateways, ns+"/"+string(parentRef.Name))
 	}
 	return lo.Uniq(gateways)
+}
+
+// KongPluginsOnHTTPRoute extracts and returns a list of unique KongPlugin references (in "namespace/name" format)
+// from the Filters of the given HTTPRoute object.
+func KongPluginsOnHTTPRoute(o client.Object) []string {
+	httpRoute, ok := o.(*gwtypes.HTTPRoute)
+	if !ok {
+		return nil
+	}
+
+	var plugins []string
+	for _, rule := range httpRoute.Spec.Rules {
+		for _, filter := range rule.Filters {
+			if filter.Type != gatewayv1.HTTPRouteFilterExtensionRef || filter.ExtensionRef == nil {
+				continue
+			}
+			if filter.ExtensionRef.Group != gatewayv1.Group(configurationv1.GroupVersion.Group) || filter.ExtensionRef.Kind != "KongPlugin" {
+				continue
+			}
+			ns := httpRoute.Namespace
+			plugins = append(plugins, ns+"/"+string(filter.ExtensionRef.Name))
+		}
+	}
+	return lo.Uniq(plugins)
 }

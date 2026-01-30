@@ -256,3 +256,43 @@ func MapHTTPRouteForKongResource[T kongResource](cl client.Client) handler.MapFu
 		return requests
 	}
 }
+
+// MapHTTPRouteForKongPlugin returns a handler.MapFunc that, given a KongPlugin object,
+// lists all HTTPRoutes that reference it. This includes both:
+// 1. HTTPRoutes that explicitly reference the KongPlugin via the konghq.com/plugins annotation
+// 2. HTTPRoutes that have generated KongPlugins from Gateway API extensionRef filters
+// It returns a slice of reconcile.Requests for each matching HTTPRoute, enabling efficient
+// event handling and reconciliation when a KongPlugin changes.
+func MapHTTPRouteForKongPlugin(cl client.Client) handler.MapFunc {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		_, ok := obj.(*configurationv1.KongPlugin)
+		if !ok {
+			return nil
+		}
+
+		// List all HTTPRoutes that reference this plugin using the index.
+		httpRoutes := &gwtypes.HTTPRouteList{}
+		plugin := obj.(*configurationv1.KongPlugin)
+		err := cl.List(ctx, httpRoutes, client.MatchingFields{
+			index.KongPluginsOnHTTPRouteIndex: plugin.Namespace + "/" + plugin.Name,
+		})
+		if err != nil {
+			return nil
+		}
+
+		// Add requests for HTTPRoutes found via the index.
+		indexRequests := make([]reconcile.Request, len(httpRoutes.Items))
+		for i, httpRoute := range httpRoutes.Items {
+			indexRequests[i] = reconcile.Request{
+				NamespacedName: client.ObjectKey{
+					Namespace: httpRoute.Namespace,
+					Name:      httpRoute.Name,
+				},
+			}
+		}
+
+		requests := MapHTTPRouteForKongResource[*configurationv1.KongPlugin](cl)(ctx, obj)
+		return append(requests, indexRequests...)
+	}
+
+}
