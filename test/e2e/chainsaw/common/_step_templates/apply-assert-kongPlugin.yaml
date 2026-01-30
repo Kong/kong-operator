@@ -1,0 +1,32 @@
+# Template for creating and asserting a custom KongPlugin resource.
+#
+# Required bindings:
+#   - kong_plugin_name: Name of the KongPlugin to create
+#   - kong_plugin_namespace: Namespace where the KongPlugin should be created
+#   - plugin_type: Type of the Kong plugin (e.g., 'rate-limiting', 'cors', 'request-transformer')
+#   - plugin_config: JSON string of the plugin configuration
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-kong-plugin
+spec:
+  try:
+    - apply:
+        resource:
+          # Create KongPlugin.
+          apiVersion: configuration.konghq.com/v1
+          kind: KongPlugin
+          metadata:
+            name: ($kong_plugin_name)
+            namespace: ($kong_plugin_namespace)
+          plugin: ($plugin_type)
+          config: (json_parse($plugin_config))
+    - assert:
+        resource:
+          # Assert KongPlugin exists with expected configuration.
+          apiVersion: configuration.konghq.com/v1
+          kind: KongPlugin
+          metadata:
+            name: ($kong_plugin_name)
+            namespace: ($kong_plugin_namespace)
+          plugin: ($plugin_type)

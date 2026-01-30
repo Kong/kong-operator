@@ -1,0 +1,33 @@
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-specific-service
+  namespace: ($xns_namespace)
+spec:
+  from:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    namespace: ($namespace)
+  to:
+  - group: ""
+    kind: Service
+    name: allowed-service-only
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute-cross-namespace-grant-not-permitted
+  namespace: ($namespace)
+spec:
+  parentRefs:
+    - name: ($gateway_name)
+      namespace: ($gateway_namespace)
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /cross-ns-grant-not-permitted
+      backendRefs:
+        - name: ($xns_echo_deployment_name)
+          namespace: ($xns_namespace)
+          port: 8080
