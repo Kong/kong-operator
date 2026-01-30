@@ -188,7 +188,7 @@ func TestPluginForFilter(t *testing.T) {
 				WithRuntimeObjects(objects...).
 				Build()
 
-			plugins, _, err := PluginsForFilter(ctx, logger, fakeClient, tt.httpRoute, tt.rule, tt.filter, tt.parentRef)
+			plugins, err := PluginsForFilter(ctx, logger, fakeClient, tt.httpRoute, tt.rule, tt.filter, tt.parentRef)
 
 			if tt.expectedError {
 				require.Error(t, err)
@@ -286,7 +286,7 @@ func TestGetReferencedKongPlugin(t *testing.T) {
 				},
 			},
 			namespace:     "default",
-			expectedError: "failed to get KongPlugin for ExtensionRef non-existent-plugin",
+			expectedError: "kongplugins.configuration.konghq.com \"non-existent-plugin\" not found",
 		},
 		{
 			name: "ExtensionRef with complex plugin configuration",
