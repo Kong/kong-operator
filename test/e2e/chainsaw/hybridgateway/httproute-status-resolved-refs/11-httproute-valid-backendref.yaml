@@ -1,0 +1,17 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute-valid-backendref
+  namespace: ($namespace)
+spec:
+  parentRefs:
+    - name: ($gateway_name)
+      namespace: ($gateway_namespace)
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /valid-backend
+      backendRefs:
+        - name: ($echo_deployment_name)
+          port: 8080

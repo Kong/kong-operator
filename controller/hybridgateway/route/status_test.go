@@ -16,9 +16,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )
 
@@ -1752,33 +1754,6 @@ func TestIsHTTPReferenceGranted(t *testing.T) {
 	}
 }
 
-// erroringClient wraps a fake client and returns errors for specific operations.
-type erroringClient struct {
-	client.Client
-	errorOnListReferenceGrants bool
-	errorOnGetService          bool
-}
-
-func (e *erroringClient) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
-	if e.errorOnListReferenceGrants {
-		// Check if this is a ReferenceGrantList by type assertion.
-		if _, ok := list.(*gwtypes.ReferenceGrantList); ok {
-			return fmt.Errorf("simulated list error for ReferenceGrants")
-		}
-	}
-	return e.Client.List(ctx, list, opts...)
-}
-
-func (e *erroringClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-	if e.errorOnGetService {
-		// Check if this is a Service by type assertion.
-		if _, ok := obj.(*corev1.Service); ok {
-			return fmt.Errorf("simulated get error for Service %s/%s", key.Namespace, key.Name)
-		}
-	}
-	return e.Client.Get(ctx, key, obj, opts...)
-}
-
 func TestBuildResolvedRefsCondition(t *testing.T) {
 	ctx := context.Background()
 	logger := logr.Discard()
@@ -1796,6 +1771,15 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			Namespace: "other-ns",
 			Name:      "test-svc",
 		},
+	}
+
+	// Create test KongPlugin
+	kongPlugin := &configurationv1.KongPlugin{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "test-plugin",
+		},
+		PluginName: "rate-limiting",
 	}
 
 	// Create base route
@@ -2040,14 +2024,285 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			wantReason:  string(gwtypes.RouteReasonResolvedRefs),
 			wantMsgPart: "All references resolved",
 		},
+		// ExtensionRef test cases
+		{
+			name:       "ExtensionRef resolved - KongPlugin exists",
+			clientObjs: []client.Object{kongPlugin},
+			route: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "route",
+				},
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{{
+						Filters: []gwtypes.HTTPRouteFilter{{
+							Type: gwtypes.HTTPRouteFilterExtensionRef,
+							ExtensionRef: &gwtypes.LocalObjectReference{
+								Group: "configuration.konghq.com",
+								Kind:  "KongPlugin",
+								Name:  "test-plugin",
+							},
+						}},
+					}},
+				},
+			},
+			wantStatus:  metav1.ConditionTrue,
+			wantReason:  string(gwtypes.RouteReasonResolvedRefs),
+			wantMsgPart: "All references resolved",
+		},
+		{
+			name:       "ExtensionRef unsupported group/kind",
+			clientObjs: []client.Object{},
+			route: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "route",
+				},
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{{
+						Filters: []gwtypes.HTTPRouteFilter{{
+							Type: gwtypes.HTTPRouteFilterExtensionRef,
+							ExtensionRef: &gwtypes.LocalObjectReference{
+								Group: "unsupported.example.com",
+								Kind:  "UnsupportedKind",
+								Name:  "test-plugin",
+							},
+						}},
+					}},
+				},
+			},
+			wantStatus:  metav1.ConditionFalse,
+			wantReason:  string(gwtypes.RouteReasonInvalidKind),
+			wantMsgPart: "Unsupported ExtensionRef",
+		},
+		{
+			name:       "ExtensionRef not found",
+			clientObjs: []client.Object{},
+			route: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "route",
+				},
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{{
+						Filters: []gwtypes.HTTPRouteFilter{{
+							Type: gwtypes.HTTPRouteFilterExtensionRef,
+							ExtensionRef: &gwtypes.LocalObjectReference{
+								Group: "configuration.konghq.com",
+								Kind:  "KongPlugin",
+								Name:  "nonexistent-plugin",
+							},
+						}},
+					}},
+				},
+			},
+			wantStatus:  metav1.ConditionFalse,
+			wantReason:  string(gwtypes.RouteReasonBackendNotFound),
+			wantMsgPart: "ExtensionRef default/nonexistent-plugin not found",
+		},
+		{
+			name:       "ExtensionRef nil but type is ExtensionRef - skips validation",
+			clientObjs: []client.Object{},
+			route: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "route",
+				},
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{{
+						Filters: []gwtypes.HTTPRouteFilter{{
+							Type:         gwtypes.HTTPRouteFilterExtensionRef,
+							ExtensionRef: nil,
+						}},
+					}},
+				},
+			},
+			wantStatus:  metav1.ConditionTrue,
+			wantReason:  string(gwtypes.RouteReasonResolvedRefs),
+			wantMsgPart: "All references resolved",
+		},
+		{
+			name:       "Multiple filters with ExtensionRef - first fails",
+			clientObjs: []client.Object{kongPlugin},
+			route: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "route",
+				},
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{{
+						Filters: []gwtypes.HTTPRouteFilter{
+							{
+								Type: gwtypes.HTTPRouteFilterExtensionRef,
+								ExtensionRef: &gwtypes.LocalObjectReference{
+									Group: "configuration.konghq.com",
+									Kind:  "KongPlugin",
+									Name:  "nonexistent",
+								},
+							},
+							{
+								Type: gwtypes.HTTPRouteFilterExtensionRef,
+								ExtensionRef: &gwtypes.LocalObjectReference{
+									Group: "configuration.konghq.com",
+									Kind:  "KongPlugin",
+									Name:  "test-plugin",
+								},
+							},
+						},
+					}},
+				},
+			},
+			wantStatus:  metav1.ConditionFalse,
+			wantReason:  string(gwtypes.RouteReasonBackendNotFound),
+			wantMsgPart: "ExtensionRef default/nonexistent not found",
+		},
+		{
+			name:       "Mixed BackendRef and ExtensionRef - BackendRef fails",
+			clientObjs: []client.Object{kongPlugin},
+			route: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "route",
+				},
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{{
+						BackendRefs: []gwtypes.HTTPBackendRef{{
+							BackendRef: gwtypes.BackendRef{
+								BackendObjectReference: gwtypes.BackendObjectReference{
+									Name:  gwtypes.ObjectName("nonexistent-svc"),
+									Kind:  kindPtr("Service"),
+									Group: groupPtr("core"),
+								},
+							},
+						}},
+						Filters: []gwtypes.HTTPRouteFilter{{
+							Type: gwtypes.HTTPRouteFilterExtensionRef,
+							ExtensionRef: &gwtypes.LocalObjectReference{
+								Group: "configuration.konghq.com",
+								Kind:  "KongPlugin",
+								Name:  "test-plugin",
+							},
+						}},
+					}},
+				},
+			},
+			wantStatus:  metav1.ConditionFalse,
+			wantReason:  string(gwtypes.RouteReasonBackendNotFound),
+			wantMsgPart: "BackendRef default/nonexistent-svc not found",
+		},
+		{
+			name: "Mixed BackendRef and ExtensionRef - ExtensionRef fails",
+			clientObjs: []client.Object{
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "test-svc",
+					},
+				},
+			},
+			route: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "route",
+				},
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{{
+						BackendRefs: []gwtypes.HTTPBackendRef{{
+							BackendRef: gwtypes.BackendRef{
+								BackendObjectReference: gwtypes.BackendObjectReference{
+									Name:  gwtypes.ObjectName("test-svc"),
+									Kind:  kindPtr("Service"),
+									Group: groupPtr("core"),
+								},
+							},
+						}},
+						Filters: []gwtypes.HTTPRouteFilter{{
+							Type: gwtypes.HTTPRouteFilterExtensionRef,
+							ExtensionRef: &gwtypes.LocalObjectReference{
+								Group: "configuration.konghq.com",
+								Kind:  "KongPlugin",
+								Name:  "nonexistent-plugin",
+							},
+						}},
+					}},
+				},
+			},
+			wantStatus:  metav1.ConditionFalse,
+			wantReason:  string(gwtypes.RouteReasonBackendNotFound),
+			wantMsgPart: "ExtensionRef default/nonexistent-plugin not found",
+		},
+		{
+			name: "Mixed BackendRef and ExtensionRef - both succeed",
+			clientObjs: []client.Object{
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "test-svc",
+					},
+				},
+				kongPlugin,
+			},
+			route: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "route",
+				},
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{{
+						BackendRefs: []gwtypes.HTTPBackendRef{{
+							BackendRef: gwtypes.BackendRef{
+								BackendObjectReference: gwtypes.BackendObjectReference{
+									Name:  gwtypes.ObjectName("test-svc"),
+									Kind:  kindPtr("Service"),
+									Group: groupPtr("core"),
+								},
+							},
+						}},
+						Filters: []gwtypes.HTTPRouteFilter{{
+							Type: gwtypes.HTTPRouteFilterExtensionRef,
+							ExtensionRef: &gwtypes.LocalObjectReference{
+								Group: "configuration.konghq.com",
+								Kind:  "KongPlugin",
+								Name:  "test-plugin",
+							},
+						}},
+					}},
+				},
+			},
+			wantStatus:  metav1.ConditionTrue,
+			wantReason:  string(gwtypes.RouteReasonResolvedRefs),
+			wantMsgPart: "All references resolved",
+		},
+		{
+			name:       "Non-ExtensionRef filter - should be ignored",
+			clientObjs: []client.Object{},
+			route: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "route",
+				},
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{{
+						Filters: []gwtypes.HTTPRouteFilter{{
+							Type: gwtypes.HTTPRouteFilterRequestHeaderModifier,
+							RequestHeaderModifier: &gwtypes.HTTPHeaderFilter{
+								Add: []gwtypes.HTTPHeader{{Name: "X-Test", Value: "test"}},
+							},
+						}},
+					}},
+				},
+			},
+			wantStatus:  metav1.ConditionTrue,
+			wantReason:  string(gwtypes.RouteReasonResolvedRefs),
+			wantMsgPart: "All references resolved",
+		},
 	}
 
-	// Test cases that expect errors need special handling.
 	errorTests := []struct {
 		name              string
 		clientObjs        []client.Object
 		route             *gwtypes.HTTPRoute
-		clientFactory     func([]client.Object) client.Client
+		interceptor       interceptor.Funcs
 		wantError         bool
 		wantErrorContains string
 	}{
@@ -2071,14 +2326,13 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 					}},
 				},
 			},
-			clientFactory: func(objs []client.Object) client.Client {
-				s := runtime.NewScheme()
-				_ = corev1.AddToScheme(s)
-				_ = gatewayv1beta1.Install(s)
-				return &erroringClient{
-					Client:                     fake.NewClientBuilder().WithScheme(s).WithObjects(objs...).Build(),
-					errorOnListReferenceGrants: true,
-				}
+			interceptor: interceptor.Funcs{
+				List: func(ctx context.Context, client client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+					if _, ok := list.(*gatewayv1beta1.ReferenceGrantList); ok {
+						return fmt.Errorf("failed to list ReferenceGrants")
+					}
+					return client.List(ctx, list, opts...)
+				},
 			},
 			wantError:         true,
 			wantErrorContains: "failed to list ReferenceGrants",
@@ -2102,17 +2356,45 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 					}},
 				},
 			},
-			clientFactory: func(objs []client.Object) client.Client {
-				s := runtime.NewScheme()
-				_ = corev1.AddToScheme(s)
-				_ = gatewayv1beta1.Install(s)
-				return &erroringClient{
-					Client:            fake.NewClientBuilder().WithScheme(s).WithObjects(objs...).Build(),
-					errorOnGetService: true,
-				}
+			interceptor: interceptor.Funcs{
+				Get: func(ctx context.Context, client client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					if _, ok := obj.(*corev1.Service); ok {
+						return fmt.Errorf("failed to get BackendRef")
+					}
+					return client.Get(ctx, key, obj, opts...)
+				},
 			},
 			wantError:         true,
 			wantErrorContains: "failed to get BackendRef",
+		},
+		{
+			name:       "error getting KongPlugin",
+			clientObjs: []client.Object{},
+			route: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{{
+						Filters: []gwtypes.HTTPRouteFilter{{
+							Type: gwtypes.HTTPRouteFilterExtensionRef,
+							ExtensionRef: &gwtypes.LocalObjectReference{
+								Group: "configuration.konghq.com",
+								Kind:  "KongPlugin",
+								Name:  "test-plugin",
+							},
+						}},
+					}},
+				},
+			},
+			interceptor: interceptor.Funcs{
+				Get: func(ctx context.Context, client client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					if _, ok := obj.(*configurationv1.KongPlugin); ok {
+						return fmt.Errorf("failed to get ExtensionRef")
+					}
+					return client.Get(ctx, key, obj, opts...)
+				},
+			},
+			wantError:         true,
+			wantErrorContains: "failed to get ExtensionRef",
 		},
 	}
 
@@ -2120,6 +2402,7 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s := runtime.NewScheme()
 			_ = corev1.AddToScheme(s)
+			_ = configurationv1.AddToScheme(s)
 			_ = gatewayv1beta1.Install(s)
 
 			// Create fake client
@@ -2149,8 +2432,13 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			s := runtime.NewScheme()
 			_ = corev1.AddToScheme(s)
 			_ = gatewayv1beta1.Install(s)
+			_ = configurationv1.AddToScheme(s)
 
-			cl := tt.clientFactory(tt.clientObjs)
+			cl := fake.NewClientBuilder().
+				WithScheme(s).
+				WithObjects(tt.clientObjs...).
+				WithInterceptorFuncs(tt.interceptor).
+				Build()
 
 			cond, err := BuildResolvedRefsCondition(ctx, logger, cl, tt.route)
 			if tt.wantError {
@@ -2508,10 +2796,17 @@ func TestCheckReferenceGrant(t *testing.T) {
 			_ = corev1.AddToScheme(s)
 			_ = gatewayv1beta1.Install(s)
 
-			cl := &erroringClient{
-				Client:                     fake.NewClientBuilder().WithScheme(s).Build(),
-				errorOnListReferenceGrants: true,
-			}
+			cl := fake.NewClientBuilder().
+				WithScheme(s).
+				WithInterceptorFuncs(interceptor.Funcs{
+					List: func(ctx context.Context, client client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+						if _, ok := list.(*gatewayv1beta1.ReferenceGrantList); ok {
+							return fmt.Errorf("failed to list ReferenceGrants in namespace target-ns")
+						}
+						return client.List(ctx, list, opts...)
+					},
+				}).
+				Build()
 
 			permitted, found, err := CheckReferenceGrant(ctx, cl, tt.bRef, tt.routeNamespace)
 
@@ -2522,6 +2817,55 @@ func TestCheckReferenceGrant(t *testing.T) {
 				require.False(t, found)
 			} else {
 				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestIsExtensionRefSupported(t *testing.T) {
+	tests := []struct {
+		name  string
+		group gwtypes.Group
+		kind  gwtypes.Kind
+		want  bool
+	}{
+		{
+			name:  "supported configuration.konghq.com KongPlugin",
+			group: "configuration.konghq.com",
+			kind:  "KongPlugin",
+			want:  true,
+		},
+		{
+			name:  "unsupported group",
+			group: "other.example.com",
+			kind:  "KongPlugin",
+			want:  false,
+		},
+		{
+			name:  "unsupported kind",
+			group: "configuration.konghq.com",
+			kind:  "OtherKind",
+			want:  false,
+		},
+		{
+			name:  "empty group",
+			group: "",
+			kind:  "KongPlugin",
+			want:  false,
+		},
+		{
+			name:  "empty kind",
+			group: "configuration.konghq.com",
+			kind:  "",
+			want:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := IsExtensionRefSupported(tt.group, tt.kind)
+			if got != tt.want {
+				t.Errorf("IsExtensionRefSupported(%v, %v) = %v, want %v", tt.group, tt.kind, got, tt.want)
 			}
 		})
 	}
