@@ -54,7 +54,7 @@ spec:
     - name: Create-auth-secret
       description: Create Secret with Konnect token for KonnectAPIAuthConfiguration.
       use:
-        template: ../../hybridgateway/common/_step_templates/apply-assert-konnectAuthSecret.yaml
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
 
     # Step 2: Verify that the secret initially has no finalizers.
     - name: Assert-secret-no-finalizer-initially
@@ -73,7 +73,7 @@ spec:
     - name: Create-konnect-api-auth-secretref
       description: Create KonnectAPIAuthConfiguration with secretRef pointing to the secret.
       use:
-        template: ../../hybridgateway/common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
 
     # Step 4: Verify that the secret now has the expected finalizer.
     - name: Assert-secret-has-finalizer
@@ -134,7 +134,7 @@ spec:
         - name: auth_secret_name
           value: ($auth_secret_name_2)
       use:
-        template: ../../hybridgateway/common/_step_templates/apply-assert-konnectAuthSecret.yaml
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
     - name: Create-konnect-api-auth-2
       description: Create second KonnectAPIAuthConfiguration.
       bindings:
@@ -143,7 +143,7 @@ spec:
         - name: auth_secret_name
           value: ($auth_secret_name_2)
       use:
-        template: ../../hybridgateway/common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
 
     # Step 10: Verify secret has finalizer.
     - name: Assert-secret-2-has-finalizer
@@ -169,7 +169,7 @@ spec:
         - name: resource_namespace
           value: ($auth_secret_namespace)
       use:
-        template: ../../hybridgateway/common/_step_templates/delete-resource-non-blocking.yaml
+        template: ../../common/_step_templates/delete-resource-non-blocking.yaml
 
     - name: Assert-secret-2-stuck-in-deletion
       description: Verify that the secret is stuck in deletion due to finalizer.
@@ -213,7 +213,7 @@ spec:
         - name: auth_secret_name
           value: ($auth_secret_name_3)
       use:
-        template: ../../hybridgateway/common/_step_templates/apply-assert-konnectAuthSecret.yaml
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
 
     - name: Create-auth-secret-3b
       description: Create second secret for reference update test.
@@ -221,7 +221,7 @@ spec:
         - name: auth_secret_name
           value: (join('-', [($auth_secret_name_3), 'new']))
       use:
-        template: ../../hybridgateway/common/_step_templates/apply-assert-konnectAuthSecret.yaml
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
 
     - name: Create-konnect-api-auth-3
       description: Create KonnectAPIAuthConfiguration referencing first secret.
@@ -231,7 +231,7 @@ spec:
         - name: auth_secret_name
           value: ($auth_secret_name_3)
       use:
-        template: ../../hybridgateway/common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
 
     # Step 13: Verify first secret has finalizer, second doesn't.
     - name: Assert-secret-3a-has-finalizer
@@ -267,7 +267,7 @@ spec:
         - name: auth_secret_name
           value: (join('-', [($auth_secret_name_3), 'new']))
       use:
-        template: ../../hybridgateway/common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
 
     # Step 15: Verify finalizer moved from first secret to second secret.
     - name: Assert-finalizer-moved-to-new-secret
@@ -305,7 +305,7 @@ spec:
         - name: resource_namespace
           value: ($auth_secret_namespace)
       use:
-        template: ../../hybridgateway/common/_step_templates/delete-resource-non-blocking.yaml
+        template: ../../common/_step_templates/delete-resource-non-blocking.yaml
 
     # Step 17: Create a third secret and update reference to unblock deletion.
     - name: Create-auth-secret-3c
@@ -314,7 +314,7 @@ spec:
         - name: auth_secret_name
           value: (join('-', [($auth_secret_name_3), 'final']))
       use:
-        template: ../../hybridgateway/common/_step_templates/apply-assert-konnectAuthSecret.yaml
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
 
     - name: Update-to-final-secret-and-cleanup
       description: Update to final secret and verify finalizer management works.
@@ -324,7 +324,7 @@ spec:
         - name: auth_secret_name
           value: (join('-', [($auth_secret_name_3), 'final']))
       use:
-        template: ../../hybridgateway/common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
 
     # Final cleanup
     - name: Final-cleanup

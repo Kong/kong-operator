@@ -59,49 +59,49 @@ spec:
     - name: Create-tls-secret
       description: Create TLS Secret for the Gateway TLS listener.
       use:
-        template: ../common/_step_templates/apply-assert-tlsSecret.yaml
+        template: ../../common/_step_templates/apply-assert-tlsSecret.yaml
 
     # Step 2: Create the KonnectAPIAuthConfiguration to authenticate with Konnect.
     - name: Create-konnect-api-auth
       description: Create KonnectAPIAuthConfiguration for the test.
       use:
-        template: ../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
 
     # Step 3: Create the GatewayConfiguration that defines the hybrid gateway setup.
     - name: Create-gateway-configuration
       description: Create GatewayConfiguration for the test.
       use:
-        template: ../common/_step_templates/apply-assert-gatewayConfiguration.yaml
+        template: ../../common/_step_templates/apply-assert-gatewayConfiguration.yaml
 
     # Step 4: Create the GatewayClass that will be used by the Gateway.
     - name: Create-gateway-class
       description: Create GatewayClass for the test.
       use:
-        template: ../common/_step_templates/apply-assert-gatewayClass.yaml
+        template: ../../common/_step_templates/apply-assert-gatewayClass.yaml
 
     # Step 5: Create the Gateway with a TLS listener that references the TLS secret.
     - name: Create-gateway
       description: Create Gateway with TLS listener for the test.
       use:
-        template: ../common/_step_templates/apply-assert-gateway.yaml
+        template: ../../common/_step_templates/apply-assert-gateway.yaml
 
     # Step 6: Verify that the KonnectGatewayControlPlane is created and synchronized with Konnect.
     - name: Assert-konnect-gateway-control-plane
       description: Assert that the KonnectGatewayControlplane resource is created and synchronized.
       use:
-        template: ../common/_step_templates/assert-konnectGatewayControlPlane.yaml
+        template: ../../common/_step_templates/assert-konnectGatewayControlPlane.yaml
 
     # Step 7: Verify that the KongCertificate resource is created from the TLS secret.
     - name: Assert-kong-certificate
       description: Assert that the KongCertificate resource is created for the TLS secret.
       use:
-       template: ../common/_step_templates/assert-kongCertificate.yaml
+       template: ../../common/_step_templates/assert-kongCertificate.yaml
   
     # Step 8: Verify that the KongSNI resource is created for the SNI hostname.
     - name: Assert-kong-sni
       description: Assert that the KongSNI resource is created for the SNI hostname.
       use:
-       template: ../common/_step_templates/assert-kongSNI.yaml
+       template: ../../common/_step_templates/assert-kongSNI.yaml
       bindings:
         - name: resource_type
           value: "kongcertificates.configuration.konghq.com"
@@ -110,7 +110,7 @@ spec:
     - name: Create-echo-service
       description: Create and assert an echo service to route traffic to.
       use:
-        template: ../common/_step_templates/apply-assert-echoService.yaml
+        template: ../../common/_step_templates/apply-assert-echoService.yaml
 
     # Step 10: Create HTTPRoute to route traffic to the echo service.
     # The HTTPRoute is not templated because it is specific to this test case.
@@ -130,7 +130,7 @@ spec:
     - name: Assert-kong-route
       description: Assert that the KongRoute resource is created for the HTTPRoute.
       use:
-        template: ../common/_step_templates/assert-kongRoute.yaml
+        template: ../../common/_step_templates/assert-kongRoute.yaml
       bindings:
         - name: route_paths
           value: 
@@ -145,19 +145,19 @@ spec:
     - name: Assert-kong-service
       description: Assert that the KongService resource is created for the HTTPRoute.
       use:
-        template: ../common/_step_templates/assert-kongService.yaml
+        template: ../../common/_step_templates/assert-kongService.yaml
 
     # Step 13: Verify that the HTTPRoute backend is translated into a KongUpstream resource.
     - name: Assert-kong-upstream
       description: Assert that the KongUpstream resource is created for the HTTPRoute.
       use:
-        template: ../common/_step_templates/assert-kongUstream.yaml
+        template: ../../common/_step_templates/assert-kongUpstream.yaml
     
     # Step 14: Verify that the KongUpstream has KongTarget resources created for it.
     - name: Assert-kong-target
       description: Assert that the KongTarget resource is created for the KongUpstream.
       use:
-        template: ../common/_step_templates/assert-kongTarget.yaml
+        template: ../../common/_step_templates/assert-kongTarget.yaml
       bindings:
         - name: resource_type
           value: "kongupstreams.configuration.konghq.com"
@@ -167,14 +167,14 @@ spec:
     - name: Verify-TLS-Fingerprint
       description: Verify that the TLS certificate deployed to the dataplane matches the TLS secret.
       use:
-        template: ../common/_step_templates/verify-gateway-tls-fingerprint.yaml
+        template: ../../common/_step_templates/verify-gateway-tls-fingerprint.yaml
 
     # Step 16: Verify that the dataplane is configured, traffic can be routed, and TLS certificates are working.
     # The verification is done by sending an HTTPS request to the gateway and checking the response from the host.
     - name: Verify-HTTPS-traffic-from-host
       description: Verify that HTTPS traffic can be routed through the gateway to the echo service from the host.
       use:
-        template: ../common/_step_templates/verify-https-traffic-from-host.yaml
+        template: ../../common/_step_templates/verify-https-traffic-from-host.yaml
       bindings:
         - name: route_path
           value: "/echo"
@@ -186,7 +186,7 @@ spec:
     - name: Verify-HTTPS-traffic-from-cluster
       description: Verify that HTTPS traffic can be routed through the gateway to the echo service from the cluster.
       use:
-        template: ../common/_step_templates/verify-https-traffic-from-cluster.yaml
+        template: ../../common/_step_templates/verify-https-traffic-from-cluster.yaml
       bindings:
         - name: route_path
           value: "/echo"
@@ -197,7 +197,7 @@ spec:
     - name: Verify-HTTP-traffic-from-host
       description: Verify that HTTP traffic can be routed through the gateway to the echo service from the host.
       use:
-        template: ../common/_step_templates/verify-http-traffic-from-host.yaml
+        template: ../../common/_step_templates/verify-http-traffic-from-host.yaml
       bindings:
         - name: route_path
           value: "/echo"
@@ -210,7 +210,7 @@ spec:
     - name: Verify-HTTP-traffic-from-cluster
       description: Verify that HTTP traffic can be routed through the gateway to the echo service from the cluster.
       use:
-        template: ../common/_step_templates/verify-http-traffic-from-cluster.yaml
+        template: ../../common/_step_templates/verify-http-traffic-from-cluster.yaml
       bindings:
         - name: route_path
           value: "/echo"
@@ -223,7 +223,7 @@ spec:
     - name: Create-httpbin-service
       description: Create and assert an httpbin service to route traffic to.
       use:
-        template: ../common/_step_templates/apply-assert-httpbinService.yaml
+        template: ../../common/_step_templates/apply-assert-httpbinService.yaml
     
     # Step 21: Get current Kong resources, update HTTPRoute, and verify old resources are deleted.
     - name: Update-httproute-and-verify-cleanup
@@ -244,7 +244,7 @@ spec:
               - name: RESOURCE_TYPES
                 value: "kongservices.configuration.konghq.com,kongroutes.configuration.konghq.com,kongupstreams.configuration.konghq.com,kongtargets.configuration.konghq.com"
             content: |
-              bash ../common/scripts/get_kong_resources.sh
+              bash ../../common/scripts/get_kong_resources.sh
             outputs:
               - name: old_resources
                 value: (json_parse($stdout))
@@ -257,7 +257,7 @@ spec:
               - name: TIMEOUT
                 value: "60"
             content: |
-              bash ../common/scripts/wait_for_kong_resources_deletion.sh
+              bash ../../common/scripts/wait_for_kong_resources_deletion.sh
         - assert:
             file: 04-assert-update-httpRoute.yaml
       bindings:
@@ -269,13 +269,13 @@ spec:
     - name: Assert-kong-service-httpbin
       description: Assert that the KongService resource is created for the httpbin backend.
       use:
-        template: ../common/_step_templates/assert-kongService.yaml
+        template: ../../common/_step_templates/assert-kongService.yaml
     
     # Step 23: Verify that the updated HTTPRoute is translated into a KongRoute resource.
     - name: Assert-kong-route-updated
       description: Assert that the KongRoute resource is updated for the HTTPRoute.
       use:
-        template: ../common/_step_templates/assert-kongRoute.yaml
+        template: ../../common/_step_templates/assert-kongRoute.yaml
       bindings:
         - name: route_paths
           value: 
@@ -302,13 +302,13 @@ spec:
     - name: Assert-kong-upstream-httpbin
       description: Assert that the KongUpstream resource is created for the httpbin backend.
       use:
-        template: ../common/_step_templates/assert-kongUstream.yaml
+        template: ../../common/_step_templates/assert-kongUpstream.yaml
     
     # Step 25: Verify that the KongUpstream has KongTarget resources created for httpbin.
     - name: Assert-kong-target-httpbin
       description: Assert that the KongTarget resource is created for the httpbin KongUpstream.
       use:
-        template: ../common/_step_templates/assert-kongTarget.yaml
+        template: ../../common/_step_templates/assert-kongTarget.yaml
       bindings:
         - name: resource_type
           value: "kongupstreams.configuration.konghq.com"
@@ -319,7 +319,7 @@ spec:
     - name: Verify-GET-traffic-from-host
       description: Verify that GET requests to /get work from the host.
       use:
-        template: ../common/_step_templates/verify-http-traffic-from-host.yaml
+        template: ../../common/_step_templates/verify-http-traffic-from-host.yaml
       bindings:
         - name: route_path
           value: "/get"
@@ -334,7 +334,7 @@ spec:
     - name: Verify-POST-traffic-from-host
       description: Verify that POST requests to /post work from the host.
       use:
-        template: ../common/_step_templates/verify-http-traffic-from-host.yaml
+        template: ../../common/_step_templates/verify-http-traffic-from-host.yaml
       bindings:
         - name: route_path
           value: "/post"
@@ -349,7 +349,7 @@ spec:
     - name: Verify-PUT-traffic-from-host
       description: Verify that PUT requests to /put work from the host.
       use:
-        template: ../common/_step_templates/verify-http-traffic-from-host.yaml
+        template: ../../common/_step_templates/verify-http-traffic-from-host.yaml
       bindings:
         - name: route_path
           value: "/put"
@@ -364,7 +364,7 @@ spec:
     - name: Verify-PATCH-traffic-from-host
       description: Verify that PATCH requests to /patch work from the host.
       use:
-        template: ../common/_step_templates/verify-http-traffic-from-host.yaml
+        template: ../../common/_step_templates/verify-http-traffic-from-host.yaml
       bindings:
         - name: route_path
           value: "/patch"
@@ -379,7 +379,7 @@ spec:
     - name: Verify-DELETE-traffic-from-host
       description: Verify that DELETE requests to /delete work from the host.
       use:
-        template: ../common/_step_templates/verify-http-traffic-from-host.yaml
+        template: ../../common/_step_templates/verify-http-traffic-from-host.yaml
       bindings:
         - name: route_path
           value: "/delete"
@@ -394,7 +394,7 @@ spec:
     - name: Verify-GET-traffic-from-cluster
       description: Verify that GET requests to /get work from within the cluster.
       use:
-        template: ../common/_step_templates/verify-http-traffic-from-cluster.yaml
+        template: ../../common/_step_templates/verify-http-traffic-from-cluster.yaml
       bindings:
         - name: route_path
           value: "/get"
@@ -409,7 +409,7 @@ spec:
     - name: Verify-POST-traffic-from-cluster
       description: Verify that POST requests to /post work from within the cluster.
       use:
-        template: ../common/_step_templates/verify-http-traffic-from-cluster.yaml
+        template: ../../common/_step_templates/verify-http-traffic-from-cluster.yaml
       bindings:
         - name: route_path
           value: "/post"
@@ -424,7 +424,7 @@ spec:
     - name: Verify-PUT-traffic-from-cluster
       description: Verify that PUT requests to /put work from within the cluster.
       use:
-        template: ../common/_step_templates/verify-http-traffic-from-cluster.yaml
+        template: ../../common/_step_templates/verify-http-traffic-from-cluster.yaml
       bindings:
         - name: route_path
           value: "/put"
@@ -439,7 +439,7 @@ spec:
     - name: Verify-PATCH-traffic-from-cluster
       description: Verify that PATCH requests to /patch work from within the cluster.
       use:
-        template: ../common/_step_templates/verify-http-traffic-from-cluster.yaml
+        template: ../../common/_step_templates/verify-http-traffic-from-cluster.yaml
       bindings:
         - name: route_path
           value: "/patch"
@@ -454,7 +454,7 @@ spec:
     - name: Verify-DELETE-traffic-from-cluster
       description: Verify that DELETE requests to /delete work from within the cluster.
       use:
-        template: ../common/_step_templates/verify-http-traffic-from-cluster.yaml
+        template: ../../common/_step_templates/verify-http-traffic-from-cluster.yaml
       bindings:
         - name: route_path
           value: "/delete"
@@ -469,7 +469,7 @@ spec:
     - name: Verify-GET-HTTPS-traffic-from-host
       description: Verify that GET requests to /get work from the host via HTTPS.
       use:
-        template: ../common/_step_templates/verify-https-traffic-from-host.yaml
+        template: ../../common/_step_templates/verify-https-traffic-from-host.yaml
       bindings:
         - name: route_path
           value: "/get"
@@ -482,7 +482,7 @@ spec:
     - name: Verify-POST-HTTPS-traffic-from-host
       description: Verify that POST requests to /post work from the host via HTTPS.
       use:
-        template: ../common/_step_templates/verify-https-traffic-from-host.yaml
+        template: ../../common/_step_templates/verify-https-traffic-from-host.yaml
       bindings:
         - name: route_path
           value: "/post"
@@ -495,7 +495,7 @@ spec:
     - name: Verify-PUT-HTTPS-traffic-from-host
       description: Verify that PUT requests to /put work from the host via HTTPS.
       use:
-        template: ../common/_step_templates/verify-https-traffic-from-host.yaml
+        template: ../../common/_step_templates/verify-https-traffic-from-host.yaml
       bindings:
         - name: route_path
           value: "/put"
@@ -508,7 +508,7 @@ spec:
     - name: Verify-PATCH-HTTPS-traffic-from-host
       description: Verify that PATCH requests to /patch work from the host via HTTPS.
       use:
-        template: ../common/_step_templates/verify-https-traffic-from-host.yaml
+        template: ../../common/_step_templates/verify-https-traffic-from-host.yaml
       bindings:
         - name: route_path
           value: "/patch"
@@ -521,7 +521,7 @@ spec:
     - name: Verify-DELETE-HTTPS-traffic-from-host
       description: Verify that DELETE requests to /delete work from the host via HTTPS.
       use:
-        template: ../common/_step_templates/verify-https-traffic-from-host.yaml
+        template: ../../common/_step_templates/verify-https-traffic-from-host.yaml
       bindings:
         - name: route_path
           value: "/delete"
@@ -534,7 +534,7 @@ spec:
     - name: Verify-GET-HTTPS-traffic-from-cluster
       description: Verify that GET requests to /get work from within the cluster via HTTPS.
       use:
-        template: ../common/_step_templates/verify-https-traffic-from-cluster.yaml
+        template: ../../common/_step_templates/verify-https-traffic-from-cluster.yaml
       bindings:
         - name: route_path
           value: "/get"
@@ -547,7 +547,7 @@ spec:
     - name: Verify-POST-HTTPS-traffic-from-cluster
       description: Verify that POST requests to /post work from within the cluster via HTTPS.
       use:
-        template: ../common/_step_templates/verify-https-traffic-from-cluster.yaml
+        template: ../../common/_step_templates/verify-https-traffic-from-cluster.yaml
       bindings:
         - name: route_path
           value: "/post"
@@ -560,7 +560,7 @@ spec:
     - name: Verify-PUT-HTTPS-traffic-from-cluster
       description: Verify that PUT requests to /put work from within the cluster via HTTPS.
       use:
-        template: ../common/_step_templates/verify-https-traffic-from-cluster.yaml
+        template: ../../common/_step_templates/verify-https-traffic-from-cluster.yaml
       bindings:
         - name: route_path
           value: "/put"
@@ -573,7 +573,7 @@ spec:
     - name: Verify-PATCH-HTTPS-traffic-from-cluster
       description: Verify that PATCH requests to /patch work from within the cluster via HTTPS.
       use:
-        template: ../common/_step_templates/verify-https-traffic-from-cluster.yaml
+        template: ../../common/_step_templates/verify-https-traffic-from-cluster.yaml
       bindings:
         - name: route_path
           value: "/patch"
@@ -586,7 +586,7 @@ spec:
     - name: Verify-DELETE-HTTPS-traffic-from-cluster
       description: Verify that DELETE requests to /delete work from within the cluster via HTTPS.
       use:
-        template: ../common/_step_templates/verify-https-traffic-from-cluster.yaml
+        template: ../../common/_step_templates/verify-https-traffic-from-cluster.yaml
       bindings:
         - name: route_path
           value: "/delete"

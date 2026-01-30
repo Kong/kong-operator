@@ -19,4 +19,4 @@ spec:
           - name: RESOURCE_NAMESPACE
             value: ($resource_namespace)
         content: |
-          bash ../../hybridgateway/common/scripts/delete_resource_non_blocking.sh
+          bash ../../common/scripts/delete_resource_non_blocking.sh
