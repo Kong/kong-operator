@@ -144,8 +144,6 @@ func enqueueKongPluginBindingForKongPlugin(cl client.Client) func(
 
 		pluginBindingList := configurationv1alpha1.KongPluginBindingList{}
 		err := cl.List(ctx, &pluginBindingList,
-			// Currently KongPlugin and KongPluginBinding must be in the same namespace to reference the plugin.
-			client.InNamespace(plugin.Namespace),
 			client.MatchingFields{
 				index.IndexFieldKongPluginBindingKongPluginReference: plugin.Namespace + "/" + plugin.Name,
 			},
