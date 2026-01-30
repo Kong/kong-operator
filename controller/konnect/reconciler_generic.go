@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"time"
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -450,6 +451,14 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 		if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 			if err := ops.Delete(ctx, sdk, r.Client, r.MetricRecorder, ent); err != nil {
+				// If the error was a network error, handle it here, there's no need to proceed,
+				// as no state has changed.
+				// Status conditions are updated in handleOpsErr.
+				var errUrl *url.Error
+				if errors.As(err, &errUrl) {
+					return r.handleOpsErr(ctx, ent, errUrl)
+				}
+
 				// If the error is a rate limit error, requeue after the retry-after duration
 				// instead of returning an error.
 				if retryAfter, isRateLimited := ops.GetRetryAfterFromRateLimitError(err); isRateLimited {
@@ -485,8 +494,17 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	// Handle type specific operations and stop reconciliation if needed.
 	// This can happen for instance when KongConsumer references credentials Secrets
 	// that do not exist or populate some Status fields based on Konnect API.
-	if stop, res, err := handleTypeSpecific(ctx, sdk, r.Client, ent); err != nil || !res.IsZero() || stop {
+	if stop, res, err := handleTypeSpecific(ctx, sdk, r.Client, ent); !res.IsZero() || stop {
 		return res, err
+	} else if err != nil {
+		// If the error was a network error, handle it here, there's no need to proceed,
+		// as no state has changed.
+		// Status conditions are updated in handleOpsErr.
+		var errUrl *url.Error
+		if errors.As(err, &errUrl) {
+			return r.handleOpsErr(ctx, ent, errUrl)
+		}
+		return ctrl.Result{}, err
 	}
 
 	// TODO: relying on status ID is OK but we need to rethink this because
@@ -546,6 +564,15 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			if errors.As(err, &rateLimitErr) {
 				return ctrl.Result{RequeueAfter: rateLimitErr.RetryAfter}, nil
 			}
+
+			// If the error was a network error, handle it here, there's no need to proceed,
+			// as no state has changed.
+			// Status conditions are updated in handleOpsErr.
+			var errUrl *url.Error
+			if errors.As(err, &errUrl) {
+				return r.handleOpsErr(ctx, ent, errUrl)
+			}
+
 			return ctrl.Result{}, ops.FailedKonnectOpError[T]{
 				Op:  ops.CreateOp,
 				Err: err,
@@ -557,6 +584,17 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	}
 
 	res, err = ops.Update(ctx, sdk, r.SyncPeriod, r.Client, r.MetricRecorder, ent)
+	// If the error was a network error, handle it here, there's no need to proceed,
+	// as no state has changed.
+
+	// If the error was a network error, handle it here, there's no need to proceed,
+	// as no state has changed.
+	// Status conditions are updated in handleOpsErr.
+	var errUrl *url.Error
+	if errors.As(err, &errUrl) {
+		return r.handleOpsErr(ctx, ent, errUrl)
+	}
+
 	// Set the server URL and org ID regardless of the error.
 	setStatusServerURLAndOrgID(ent, server, apiAuth.Status.OrganizationID)
 	// Update the status of the object regardless of the error.
