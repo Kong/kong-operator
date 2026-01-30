@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
 	"github.com/kong/kong-operator/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/controller/pkg/log"
@@ -414,11 +415,15 @@ func BuildProgrammedCondition(ctx context.Context, logger logr.Logger, cl client
 	return DeduplicateConditionsByType(conditions), nil
 }
 
-// BuildResolvedRefsCondition evaluates all BackendRefs in an HTTPRoute to determine if their references are valid and permitted.
+// BuildResolvedRefsCondition evaluates all BackendRefs and ExtensionRefs in an HTTPRoute to determine if their references are valid and permitted.
 // It checks that each BackendRef:
 //   - Has a supported group/kind
 //   - Exists in the target namespace
 //   - Is permitted by ReferenceGrant if referencing a different namespace
+//
+// It checks that each ExtensionRef (from filters):
+//   - Has a supported group/kind
+//   - Exists in the route's namespace (ExtensionRefs are always local to the route namespace)
 //
 // Returns a condition indicating whether all references are resolved, or details about the first failure encountered.
 //
@@ -426,7 +431,7 @@ func BuildProgrammedCondition(ctx context.Context, logger logr.Logger, cl client
 //   - ctx: Context for API calls
 //   - logger: Logger for debugging information
 //   - cl: Kubernetes client for resource operations
-//   - route: The HTTPRoute whose BackendRefs are being checked
+//   - route: The HTTPRoute whose BackendRefs and ExtensionRefs are being checked
 //
 // Returns:
 //   - *metav1.Condition: Condition indicating resolved refs status
@@ -508,6 +513,46 @@ func BuildResolvedRefsCondition(ctx context.Context, logger logr.Logger, cl clie
 		}
 		if conditionSet {
 			break
+		}
+
+		for _, filter := range rule.Filters {
+			// Only process filters of type ExtensionRef
+			if filter.Type != gwtypes.HTTPRouteFilterExtensionRef {
+				continue
+			}
+
+			if filter.ExtensionRef == nil {
+				log.Debug(logger, "ExtensionRef is nil in filter but type is ExtensionRef, skipping")
+				continue
+			}
+
+			// ExtensionRef is always in the same namespace as the route.
+			extRefNamespace := route.Namespace
+
+			// Check if the group kind is supported for the reference.
+			if !IsExtensionRefSupported(filter.ExtensionRef.Group, filter.ExtensionRef.Kind) {
+				log.Debug(logger, "Unsupported ExtensionRef group/kind", "group", filter.ExtensionRef.Group, "kind", filter.ExtensionRef.Kind)
+				cond.Reason = string(gwtypes.RouteReasonInvalidKind)
+				cond.Status = metav1.ConditionFalse
+				cond.Message = fmt.Sprintf("Unsupported ExtensionRef %s/%s group/kind: %s/%s", extRefNamespace, filter.ExtensionRef.Name, filter.ExtensionRef.Group, filter.ExtensionRef.Kind)
+				conditionSet = true
+				break
+			}
+
+			// Check if the referenced object exists.
+			kongPlugin := configurationv1.KongPlugin{}
+			err := cl.Get(ctx, client.ObjectKey{Namespace: extRefNamespace, Name: string(filter.ExtensionRef.Name)}, &kongPlugin)
+			if err != nil {
+				if k8serrors.IsNotFound(err) {
+					log.Debug(logger, "ExtensionRef not found", "namespace", extRefNamespace, "name", filter.ExtensionRef.Name)
+					cond.Reason = string(gwtypes.RouteReasonBackendNotFound)
+					cond.Status = metav1.ConditionFalse
+					cond.Message = fmt.Sprintf("ExtensionRef %s/%s not found", extRefNamespace, filter.ExtensionRef.Name)
+					conditionSet = true
+					break
+				}
+				return nil, fmt.Errorf("failed to get ExtensionRef %s/%s: %w", extRefNamespace, filter.ExtensionRef.Name, err)
+			}
 		}
 	}
 
@@ -888,6 +933,12 @@ func IsBackendRefSupported(group *gwtypes.Group, kind *gwtypes.Kind) bool {
 	}
 
 	return (g == "" || g == "core") && k == "Service"
+}
+
+// IsExtensionRefSupported returns true if the ExtensionRef group and kind are supported by the Kong Gateway API implementation.
+// Only "configuration.konghq.com/v1" group and "KongPlugin" kind are supported.
+func IsExtensionRefSupported(group gwtypes.Group, kind gwtypes.Kind) bool {
+	return group == "configuration.konghq.com" && kind == "KongPlugin"
 }
 
 // IsHTTPReferenceGranted checks if a ReferenceGrant permits an HTTPRoute to reference a backend in another namespace.
