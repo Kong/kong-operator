@@ -22,6 +22,7 @@ make tools              # Install all required development tools via mise
 make lint               # Run Go linters (modules, golangci-lint, modernize)
 make lint.all           # Full lint: Go + charts + GitHub Actions + markdown
 make lint.api           # Lint Kubernetes API types
+make lint.golangci-lint # Run golangci-lint linter for Go code
 ```
 
 CI runs `make lint` with `GOLANGCI_LINT_FLAGS="--fix=false"` (auto-fix is enabled locally but disabled in CI).
@@ -29,6 +30,7 @@ CI runs `make lint` with `GOLANGCI_LINT_FLAGS="--fix=false"` (auto-fix is enable
 ## Testing
 
 ### Unit Tests
+
 ```bash
 make test.unit          # Run unit tests with verbose output
 make test.unit.pretty   # Run unit tests with compact output
@@ -38,6 +40,7 @@ go test ./controller/dataplane/... -run TestDeploymentBuilder -v -race
 ```
 
 ### Envtest (Controller Tests with Simulated Kubernetes)
+
 ```bash
 make test.envtest       # Run envtest tests
 make test.envtest.pretty
@@ -153,6 +156,7 @@ make tools    # Install: controller-gen, kustomize, client-gen, golangci-lint, g
 2. Annotate with `+kubebuilder:` markers for CRD generation
 3. Run `make generate` to regenerate CRDs, deepcopy, docs
 4. Run `make test.charts.golden.update` if chart templates change
+5. Add type specific CRD validation tests in `test/crdsvalidation/`
 
 ## Development Workflow
 
