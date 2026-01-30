@@ -1,0 +1,291 @@
+# HTTPRoute ResolvedRefs condition test scenario.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: httproute-resolved-refs
+spec:
+  description: |
+    This test validates that the hybrid gateway controller correctly
+    sets the ResolvedRefs condition on HTTPRoute resources based on
+    BackendRef and ExtensionRef validation.
+    
+    Test scenarios:
+    - Valid BackendRef (service exists in same namespace)
+    - Invalid BackendRef (service not found)
+    - Valid ExtensionRef (KongPlugin exists)
+    - Invalid ExtensionRef (KongPlugin not found)
+    - Unsupported ExtensionRef (wrong group/kind)
+    - Cross-namespace BackendRef without ReferenceGrant
+    - Cross-namespace BackendRef with ReferenceGrant
+  
+  timeouts:
+    apply: 120s
+    assert: 120s
+    delete: 120s
+    exec: 120s
+
+  
+
+  bindings:
+  # Common bindings.
+  - name: test_name
+    value: ($namespace)
+  - name: konnect_token
+    value: (env('KONNECT_TOKEN'))
+  - name: sni_hostname
+    value: (join('.', ['*', ($test_name), 'example.com']))
+  - name: fqdn
+    value: (join('.', ['echo', ($test_name), 'example.com']))
+  - name: cert_secret_name
+    value: test-tls-secret
+  - name: cert_secret_namespace
+    value: ($namespace)
+  - name: listener_https_port
+    value: 443
+  - name: listener_http_port
+    value: 80
+  - name: konnect_url
+    value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+  - name: gateway_image
+    value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.12')
+  - name: gateway_name
+    value: (join('-', [($test_name), 'gateway']))
+  - name: gateway_namespace
+    value: ($namespace)
+  - name: http_route_name
+    value: (join('-', [($test_name), 'echo-route']))
+  - name: http_route_namespace
+    value: ($namespace)
+  - name: echo_deployment_name
+    value: (join('-', [($test_name), 'echo']))
+  - name: echo_deployment_namespace
+    value: ($namespace)
+  - name: http_method
+    value: "GET"
+  
+  # Cross-namespace testing bindings
+  - name: xns_namespace
+    value: (join('-', [($namespace), 'xns']))
+  - name: xns_echo_deployment_name
+    value: (join('-', [($test_name), 'xns-echo']))
+  - name: xns_echo_deployment_namespace
+    value: ($xns_namespace)
+
+  steps:
+    # Step 1: Create the TLS secret that will be referenced by the Gateway TLS listener.
+    - name: Create-tls-secret
+      description: Create TLS Secret for the Gateway TLS listener.
+      use:
+        template: ../../common/_step_templates/apply-assert-tlsSecret.yaml
+
+    # Step 2: Create the KonnectAPIAuthConfiguration to authenticate with Konnect.
+    - name: Create-konnect-api-auth
+      description: Create KonnectAPIAuthConfiguration for the test.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+    # Step 3: Create the GatewayConfiguration that defines the hybrid gateway setup.
+    - name: Create-gateway-configuration
+      description: Create GatewayConfiguration for the test.
+      use:
+        template: ../../common/_step_templates/apply-assert-gatewayConfiguration.yaml
+
+    # Step 4: Create the GatewayClass that will be used by the Gateway.
+    - name: Create-gateway-class
+      description: Create GatewayClass for the test.
+      use:
+        template: ../../common/_step_templates/apply-assert-gatewayClass.yaml
+
+    # Step 5: Create the Gateway with a TLS listener that references the TLS secret.
+    - name: Create-gateway
+      description: Create Gateway with TLS listener for the test.
+      use:
+        template: ../../common/_step_templates/apply-assert-gateway.yaml
+
+    # Step 6: Verify that the KonnectGatewayControlPlane is created and synchronized with Konnect.
+    - name: Assert-konnect-gateway-control-plane
+      description: Assert that the KonnectGatewayControlplane resource is created and synchronized.
+      use:
+        template: ../../common/_step_templates/assert-konnectGatewayControlPlane.yaml
+
+    # Step 7: Verify that the KongCertificate resource is created from the TLS secret.
+    - name: Assert-kong-certificate
+      description: Assert that the KongCertificate resource is created for the TLS secret.
+      use:
+       template: ../../common/_step_templates/assert-kongCertificate.yaml
+  
+    # Step 8: Verify that the KongSNI resource is created for the SNI hostname.
+    - name: Assert-kong-sni
+      description: Assert that the KongSNI resource is created for the SNI hostname.
+      use:
+       template: ../../common/_step_templates/assert-kongSNI.yaml
+      bindings:
+        - name: resource_type
+          value: "kongcertificates.configuration.konghq.com"
+  
+    # Step 9: Create the echo service that will receive the routed traffic.
+    - name: Create-echo-service
+      description: Create and assert an echo service to route traffic to.
+      use:
+        template: ../../common/_step_templates/apply-assert-echoService.yaml
+    
+    # Step 10: Create cross-namespace for testing cross-namespace references.
+    - name: Create-xns-namespace
+      description: Create namespace for cross-namespace reference testing.
+      use:
+        template: ../../common/_step_templates/apply-assert-namespace.yaml
+      bindings:
+        - name: namespace_name
+          value: ($xns_namespace)
+    
+    # Step 11: Create echo service in the cross-namespace for testing.
+    - name: Create-xns-echo-service
+      description: Create and assert an echo service in the cross-namespace.
+      use:
+        template: ../../common/_step_templates/apply-assert-echoService.yaml
+      bindings:
+        - name: echo_deployment_name
+          value: ($xns_echo_deployment_name)
+        - name: echo_deployment_namespace
+          value: ($xns_echo_deployment_namespace)
+    
+    # Step 12: Create a KongPlugin for ExtensionRef testing.
+    - name: Create-kong-plugin
+      description: Create and assert a KongPlugin for ExtensionRef validation.
+      use:
+        template: ../../common/_step_templates/apply-assert-kongPlugin.yaml
+      bindings:
+        - name: kong_plugin_name
+          value: rate-limit-5-min
+        - name: kong_plugin_namespace
+          value: ($namespace)
+        - name: plugin_type
+          value: rate-limiting
+        - name: plugin_config
+          value: '{"minute": 5, "policy": "local"}'
+    
+    # Test Case 1: Valid ExtensionRef - HTTPRoute with valid KongPlugin reference
+    - name: Test-valid-extensionref
+      description: Create HTTPRoute with valid ExtensionRef and verify ResolvedRefs=True.
+      try:
+        - apply:
+            file: 01-httproute-valid-extensionref.yaml
+        - assert:
+            file: 02-httproute-valid-extensionref-assert.yaml
+    
+    # Test Case 2: Invalid ExtensionRef - KongPlugin not found
+    - name: Test-extensionref-not-found
+      description: Create HTTPRoute with non-existent ExtensionRef and verify ResolvedRefs=False with BackendNotFound reason.
+      try:
+        - apply:
+            file: 03-httproute-extensionref-not-found.yaml
+        - assert:
+            file: 04-httproute-extensionref-not-found-assert.yaml
+    
+    # Test Case 3: Invalid ExtensionRef - Unsupported group/kind
+    - name: Test-unsupported-extensionref
+      description: Create HTTPRoute with unsupported ExtensionRef group/kind and verify ResolvedRefs=False with InvalidKind reason.
+      try:
+        - apply:
+            file: 05-httproute-unsupported-extensionref.yaml
+        - assert:
+            file: 06-httproute-unsupported-extensionref-assert.yaml
+    
+    # Test Case 4: Multiple ExtensionRef filters - first fails
+    - name: Test-multiple-extensionrefs-first-fails
+      description: Create HTTPRoute with multiple ExtensionRef filters where the first fails and verify ResolvedRefs=False.
+      try:
+        - apply:
+            file: 07-httproute-multiple-extensionrefs-first-fails.yaml
+        - assert:
+            file: 08-httproute-multiple-extensionrefs-first-fails-assert.yaml
+    
+    # Test Case 5: Non-ExtensionRef filter types - should be ignored
+    - name: Test-non-extensionref-filter
+      description: Create HTTPRoute with non-ExtensionRef filter types (RequestHeaderModifier, ResponseHeaderModifier) and verify they are ignored (ResolvedRefs=True).
+      try:
+        - apply:
+            file: 09-httproute-non-extensionref-filter.yaml
+        - assert:
+            file: 10-httproute-non-extensionref-filter-assert.yaml
+    
+    # Test Case 6: Valid BackendRef - same namespace
+    - name: Test-valid-backendref
+      description: Create HTTPRoute with valid BackendRef in same namespace and verify ResolvedRefs=True.
+      try:
+        - apply:
+            file: 11-httproute-valid-backendref.yaml
+        - assert:
+            file: 12-httproute-valid-backendref-assert.yaml
+    
+    # Test Case 7: BackendRef not found
+    - name: Test-backendref-not-found
+      description: Create HTTPRoute with non-existent BackendRef and verify ResolvedRefs=False with BackendNotFound reason.
+      try:
+        - apply:
+            file: 13-httproute-backendref-not-found.yaml
+        - assert:
+            file: 14-httproute-backendref-not-found-assert.yaml
+    
+    # Test Case 8: Unsupported BackendRef group/kind
+    - name: Test-unsupported-backendref
+      description: Create HTTPRoute with unsupported BackendRef group/kind and verify ResolvedRefs=False with InvalidKind reason.
+      try:
+        - apply:
+            file: 15-httproute-unsupported-backendref.yaml
+        - assert:
+            file: 16-httproute-unsupported-backendref-assert.yaml
+    
+    # Test Case 9: Cross-namespace BackendRef without ReferenceGrant
+    - name: Test-cross-namespace-no-grant
+      description: Create HTTPRoute with cross-namespace BackendRef without any ReferenceGrant and verify ResolvedRefs=False with RefNotPermitted reason.
+      try:
+        - apply:
+            file: 17-httproute-cross-namespace-no-grant.yaml
+        - assert:
+            file: 18-httproute-cross-namespace-no-grant-assert.yaml
+    
+    # Test Case 10: Cross-namespace BackendRef with ReferenceGrant that doesn't permit
+    - name: Test-cross-namespace-grant-not-permitted
+      description: Create ReferenceGrant that permits specific service and HTTPRoute that references a different service, verify ResolvedRefs=False with RefNotPermitted reason.
+      try:
+        - apply:
+            file: 19-httproute-cross-namespace-grant-not-permitted.yaml
+        - assert:
+            file: 20-httproute-cross-namespace-grant-not-permitted-assert.yaml
+    
+    # Test Case 11: Cross-namespace BackendRef with permissive ReferenceGrant
+    - name: Test-cross-namespace-with-grant
+      description: Create ReferenceGrant that permits all services and HTTPRoute with cross-namespace BackendRef, verify ResolvedRefs=True.
+      try:
+        - apply:
+            file: 21-httproute-cross-namespace-with-grant.yaml
+        - assert:
+            file: 22-httproute-cross-namespace-with-grant-assert.yaml
+    
+    # Test Case 12: Mixed - Both BackendRef and ExtensionRef valid
+    - name: Test-mixed-both-valid
+      description: Create HTTPRoute with both valid BackendRef and valid ExtensionRef and verify ResolvedRefs=True.
+      try:
+        - apply:
+            file: 23-httproute-mixed-both-valid.yaml
+        - assert:
+            file: 24-httproute-mixed-both-valid-assert.yaml
+    
+    # Test Case 13: Mixed - BackendRef fails, ExtensionRef valid
+    - name: Test-mixed-backendref-fails
+      description: Create HTTPRoute with invalid BackendRef and valid ExtensionRef and verify ResolvedRefs=False with BackendNotFound reason.
+      try:
+        - apply:
+            file: 25-httproute-mixed-backendref-fails.yaml
+        - assert:
+            file: 26-httproute-mixed-backendref-fails-assert.yaml
+    
+    # Test Case 14: Mixed - BackendRef valid, ExtensionRef fails
+    - name: Test-mixed-extensionref-fails
+      description: Create HTTPRoute with valid BackendRef and invalid ExtensionRef and verify ResolvedRefs=False with BackendNotFound reason.
+      try:
+        - apply:
+            file: 27-httproute-mixed-extensionref-fails.yaml
+        - assert:
+            file: 28-httproute-mixed-extensionref-fails-assert.yaml

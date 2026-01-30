@@ -1,0 +1,23 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute-mixed-backendref-fails
+  namespace: ($namespace)
+spec:
+  parentRefs:
+    - name: ($gateway_name)
+      namespace: ($gateway_namespace)
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /mixed-backendref-fails
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: configuration.konghq.com
+            kind: KongPlugin
+            name: rate-limit-5-min
+      backendRefs:
+        - name: nonexistent-service
+          port: 8080
