@@ -3,6 +3,7 @@ package envtest
 import (
 	"context"
 	"errors"
+	"net/url"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -18,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	kcfgkonnect "github.com/kong/kong-operator/api/konnect"
 	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/controller/konnect"
@@ -810,6 +812,52 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			assert.Equal(t, "https://telemetry-endpoint", cpGroup.Status.Endpoints.TelemetryEndpoint)
 		},
 	},
+	{
+		name: "network error sets Programmed condition to False",
+		objectOps: func(ctx context.Context, t *testing.T, cl client.Client, ns *corev1.Namespace) {
+			auth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, cl)
+			deploy.KonnectGatewayControlPlane(t, ctx, cl, auth,
+				func(obj client.Object) {
+					cp := obj.(*konnectv1alpha2.KonnectGatewayControlPlane)
+					cp.Name = "cp-no-connectivity"
+					cp.Spec.CreateControlPlaneRequest.Name = "cp-no-connectivity"
+				},
+			)
+		},
+		mockExpectations: func(t *testing.T, sdk *sdkmocks.MockSDKWrapper, cl client.Client, ns *corev1.Namespace) {
+			networkErr := &url.Error{
+				Op:  "Post",
+				URL: "https://us.api.konghq.com/v2/control-planes",
+				Err: errors.New("dial tcp: lookup us.api.konghq.com: no such host"),
+			}
+			sdk.ControlPlaneSDK.EXPECT().
+				CreateControlPlane(mock.Anything, mock.Anything).
+				Return(nil, networkErr)
+		},
+		eventuallyPredicate: func(ctx context.Context, t *assert.CollectT, cl client.Client, ns *corev1.Namespace) {
+			cp := &konnectv1alpha2.KonnectGatewayControlPlane{}
+			require.NoError(t,
+				cl.Get(ctx,
+					k8stypes.NamespacedName{
+						Namespace: ns.Name,
+						Name:      "cp-no-connectivity",
+					},
+					cp,
+				),
+			)
+
+			assert.True(t, conditionsContainProgrammedFalse(cp.Status.Conditions),
+				"Programmed condition should be set to False due to network error",
+			)
+			assert.True(t,
+				conditionsContainProgrammedWithReason(
+					cp.Status.Conditions,
+					string(kcfgkonnect.KonnectEntitiesFailedToCreateReason),
+				),
+				"Programmed condition reason should indicate failed to create",
+			)
+		},
+	},
 }
 
 func conditionsContainProgrammed(conds []metav1.Condition, status metav1.ConditionStatus) bool {
@@ -827,6 +875,18 @@ func conditionsContainProgrammedFalse(conds []metav1.Condition) bool {
 
 func conditionsContainProgrammedTrue(conds []metav1.Condition) bool {
 	return conditionsContainProgrammed(conds, metav1.ConditionTrue)
+}
+
+func conditionsContainProgrammedWithReason(
+	conds []metav1.Condition,
+	reason string,
+) bool {
+	return lo.ContainsBy(conds,
+		func(condition metav1.Condition) bool {
+			return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
+				condition.Reason == reason
+		},
+	)
 }
 
 func conditionsContainMembersRefResolved(conds []metav1.Condition, status metav1.ConditionStatus) bool {
