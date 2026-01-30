@@ -17,7 +17,7 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/translator/atc"
 	"github.com/kong/kong-operator/ingress-controller/internal/versions"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
-	"github.com/kong/kong-operator/ingress-controller/test/internal/helpers"
+	"github.com/kong/kong-operator/ingress-controller/test/helpers"
 	"github.com/kong/kong-operator/ingress-controller/test/kongintegration/containers"
 )
 
