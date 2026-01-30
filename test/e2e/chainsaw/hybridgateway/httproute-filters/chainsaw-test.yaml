@@ -69,49 +69,49 @@ spec:
     - name: Create-tls-secret
       description: Create TLS Secret for the Gateway TLS listener.
       use:
-        template: ../common/_step_templates/apply-assert-tlsSecret.yaml
+        template: ../../common/_step_templates/apply-assert-tlsSecret.yaml
 
     # Step 2: Create the KonnectAPIAuthConfiguration to authenticate with Konnect.
     - name: Create-konnect-api-auth
       description: Create KonnectAPIAuthConfiguration for the test.
       use:
-        template: ../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
 
     # Step 3: Create the GatewayConfiguration that defines the hybrid gateway setup.
     - name: Create-gateway-configuration
       description: Create GatewayConfiguration for the test.
       use:
-        template: ../common/_step_templates/apply-assert-gatewayConfiguration.yaml
+        template: ../../common/_step_templates/apply-assert-gatewayConfiguration.yaml
 
     # Step 4: Create the GatewayClass that will be used by the Gateway.
     - name: Create-gateway-class
       description: Create GatewayClass for the test.
       use:
-        template: ../common/_step_templates/apply-assert-gatewayClass.yaml
+        template: ../../common/_step_templates/apply-assert-gatewayClass.yaml
 
     # Step 5: Create the Gateway with a TLS listener that references the TLS secret.
     - name: Create-gateway
       description: Create Gateway with TLS listener for the test.
       use:
-        template: ../common/_step_templates/apply-assert-gateway.yaml
+        template: ../../common/_step_templates/apply-assert-gateway.yaml
 
     # Step 6: Verify that the KonnectGatewayControlPlane is created and synchronized with Konnect.
     - name: Assert-konnect-gateway-control-plane
       description: Assert that the KonnectGatewayControlplane resource is created and synchronized.
       use:
-        template: ../common/_step_templates/assert-konnectGatewayControlPlane.yaml
+        template: ../../common/_step_templates/assert-konnectGatewayControlPlane.yaml
 
     # Step 7: Verify that the KongCertificate resource is created from the TLS secret.
     - name: Assert-kong-certificate
       description: Assert that the KongCertificate resource is created for the TLS secret.
       use:
-       template: ../common/_step_templates/assert-kongCertificate.yaml
+       template: ../../common/_step_templates/assert-kongCertificate.yaml
   
     # Step 8: Verify that the KongSNI resource is created for the SNI hostname.
     - name: Assert-kong-sni
       description: Assert that the KongSNI resource is created for the SNI hostname.
       use:
-       template: ../common/_step_templates/assert-kongSNI.yaml
+       template: ../../common/_step_templates/assert-kongSNI.yaml
       bindings:
        - name: resource_type
          value: "kongcertificates.configuration.konghq.com"
@@ -120,7 +120,7 @@ spec:
     - name: Create-httpbin-service
       description: Create and assert the httpbin service to route traffic to.
       use:
-        template: ../common/_step_templates/apply-assert-httpbinService.yaml
+        template: ../../common/_step_templates/apply-assert-httpbinService.yaml
 
     # Step 10: Create the HTTPRoute with the RequestHeaderModifier filter.
     - name: Create-httproute-with-request-header-modifier
@@ -138,7 +138,7 @@ spec:
     - name: Assert-kong-route-request-header-modifier
       description: Assert that the KongRoute resource is created for the HTTPRoute with RequestHeaderModifier.
       use:
-        template: ../common/_step_templates/assert-kongRoute.yaml
+        template: ../../common/_step_templates/assert-kongRoute.yaml
       bindings:
         - name: route_hosts
           value: ($fqdn)
@@ -168,19 +168,19 @@ spec:
     - name: Assert-kong-service-request-header-modifier
       description: Assert that the KongService resource is created for the HTTPRoute with RequestHeaderModifier.
       use:
-        template: ../common/_step_templates/assert-kongService.yaml
+        template: ../../common/_step_templates/assert-kongService.yaml
 
     # Step 13: Assert that the HTTPRoute backend is translated into a KongUpstream resource (RequestHeaderModifier).
     - name: Assert-kong-upstream-request-header-modifier
       description: Assert that the KongUpstream resource is created for the HTTPRoute with RequestHeaderModifier.
       use:
-        template: ../common/_step_templates/assert-kongUstream.yaml
+        template: ../../common/_step_templates/assert-kongUpstream.yaml
     
     # Step 14: Assert that the KongUpstream has KongTarget resources created for it (RequestHeaderModifier).
     - name: Assert-kong-target-request-header-modifier
       description: Assert that the KongTarget resource is created for the KongUpstream (RequestHeaderModifier).
       use:
-        template: ../common/_step_templates/assert-kongTarget.yaml
+        template: ../../common/_step_templates/assert-kongTarget.yaml
       bindings:
         - name: resource_type
           value: "kongupstreams.configuration.konghq.com"
@@ -191,7 +191,7 @@ spec:
     - name: Assert-Request-Transformer-Plugin-for-RequestHeaderModifier
       description: Assert that the Request Transformer plugin is created with the expected configuration (RequestHeaderModifier).
       use:
-        template: ../common/_step_templates/assert-kongPlugin.yaml
+        template: ../../common/_step_templates/assert-kongPlugin.yaml
       bindings:
         - name: namespace
           value: ($namespace)
@@ -207,13 +207,13 @@ spec:
     - name: Assert-KongPluginBinding-for-Request-Transformer-Plugin-RequestHeaderModifier
       description: Assert that the KongPluginBinding resource is created to bind the request transformer plugin to the route (RequestHeaderModifier).
       use:
-        template: ../common/_step_templates/assert-kongPluginBinding.yaml
+        template: ../../common/_step_templates/assert-kongPluginBinding.yaml
   
     # Step 17: Test GET /get endpoint from the host (RequestHeaderModifier).
     - name: Verify-GET-traffic-from-host-request-header-modifier
       description: Verify that GET requests to /get work from the host (RequestHeaderModifier).
       use:
-        template: ../common/_step_templates/verify-http-traffic-from-host.yaml
+        template: ../../common/_step_templates/verify-http-traffic-from-host.yaml
       bindings:
         - name: route_path
           value: "/get"
@@ -228,7 +228,7 @@ spec:
     - name: Verify-GET-HTTPS-traffic-from-host-request-header-modifier
       description: Verify that GET requests to /get work from the host via HTTPS (RequestHeaderModifier).
       use:
-        template: ../common/_step_templates/verify-https-traffic-from-host.yaml
+        template: ../../common/_step_templates/verify-https-traffic-from-host.yaml
       bindings:
         - name: route_path
           value: "/get"
@@ -240,7 +240,7 @@ spec:
     - name: Verify-GET-traffic-from-cluster-request-header-modifier
       description: Verify that GET requests to /get work from within the cluster (RequestHeaderModifier).
       use:
-        template: ../common/_step_templates/verify-http-traffic-from-cluster.yaml
+        template: ../../common/_step_templates/verify-http-traffic-from-cluster.yaml
       bindings:
         - name: route_path
           value: "/get"
@@ -254,7 +254,7 @@ spec:
     - name: Verify-GET-HTTPS-traffic-from-cluster-request-header-modifier
       description: Verify that GET requests to /get work from within the cluster via HTTPS (RequestHeaderModifier).
       use:
-        template: ../common/_step_templates/verify-https-traffic-from-cluster.yaml
+        template: ../../common/_step_templates/verify-https-traffic-from-cluster.yaml
       bindings:
         - name: route_path
           value: "/get"
@@ -267,7 +267,7 @@ spec:
     - name: Verify-request-header-modifier-over-http
       description: Validate that the RequestHeaderModifier filter modifies headers correctly over HTTP.
       use:
-        template: ../common/_step_templates/verify-request-header-modifier.yaml
+        template: ../../common/_step_templates/verify-request-header-modifier.yaml
       bindings:
         - name: gateway_name
           value: ($gateway_name)
@@ -296,7 +296,7 @@ spec:
     - name: Verify-request-header-modifier-over-https
       description: Validate that the RequestHeaderModifier filter modifies headers correctly over HTTPS.
       use:
-        template: ../common/_step_templates/verify-request-header-modifier.yaml
+        template: ../../common/_step_templates/verify-request-header-modifier.yaml
       bindings:
         - name: gateway_name
           value: ($gateway_name)
@@ -341,7 +341,7 @@ spec:
     - name: Assert-kong-route-response-header-modifier
       description: Assert that the KongRoute resource is created for the HTTPRoute with ResponseHeaderModifier.
       use:
-        template: ../common/_step_templates/assert-kongRoute.yaml
+        template: ../../common/_step_templates/assert-kongRoute.yaml
       bindings:
         - name: http_route_name
           value: ($http_route_response_filter_name)
@@ -364,7 +364,7 @@ spec:
     - name: Assert-kong-service-response-header-modifier
       description: Assert that the KongService resource is created for the HTTPRoute with ResponseHeaderModifier.
       use:
-        template: ../common/_step_templates/assert-kongService.yaml
+        template: ../../common/_step_templates/assert-kongService.yaml
       bindings:
         - name: http_route_name
           value: ($http_route_response_filter_name)
@@ -375,7 +375,7 @@ spec:
     - name: Assert-kong-upstream-response-header-modifier
       description: Assert that the KongUpstream resource is created for the HTTPRoute with ResponseHeaderModifier.
       use:
-        template: ../common/_step_templates/assert-kongUstream.yaml
+        template: ../../common/_step_templates/assert-kongUpstream.yaml
       bindings:
         - name: http_route_name
           value: ($http_route_response_filter_name)
@@ -386,7 +386,7 @@ spec:
     - name: Assert-kong-target-response-header-modifier
       description: Assert that the KongTarget resource is created for the KongUpstream (ResponseHeaderModifier).
       use:
-        template: ../common/_step_templates/assert-kongTarget.yaml
+        template: ../../common/_step_templates/assert-kongTarget.yaml
       bindings:
         - name: http_route_name
           value: ($http_route_response_filter_name)
@@ -401,7 +401,7 @@ spec:
     - name: Assert-Response-Transformer-Plugin
       description: Assert that the Response Transformer plugin is created with the expected configuration (ResponseHeaderModifier).
       use:
-        template: ../common/_step_templates/assert-kongPlugin.yaml
+        template: ../../common/_step_templates/assert-kongPlugin.yaml
       bindings:
         - name: http_route_name
           value: ($http_route_response_filter_name)
@@ -421,7 +421,7 @@ spec:
     - name: Assert-KongPluginBinding-for-Response-Transformer-Plugin
       description: Assert that the KongPluginBinding resource is created to bind the response transformer plugin to the route (ResponseHeaderModifier).
       use:
-        template: ../common/_step_templates/assert-kongPluginBinding.yaml
+        template: ../../common/_step_templates/assert-kongPluginBinding.yaml
       bindings:
         - name: http_route_name
           value: ($http_route_response_filter_name)
@@ -433,7 +433,7 @@ spec:
     - name: Verify-GET-traffic-from-host-response-header-modifier
       description: Verify that GET requests to /get work from the host (ResponseHeaderModifier).
       use:
-        template: ../common/_step_templates/verify-http-traffic-from-host.yaml
+        template: ../../common/_step_templates/verify-http-traffic-from-host.yaml
       bindings:
         - name: http_route_name
           value: ($http_route_response_filter_name)
@@ -452,7 +452,7 @@ spec:
     - name: Verify-GET-HTTPS-traffic-from-host-response-header-modifier
       description: Verify that GET requests to /get work from the host via HTTPS (ResponseHeaderModifier).
       use:
-        template: ../common/_step_templates/verify-https-traffic-from-host.yaml
+        template: ../../common/_step_templates/verify-https-traffic-from-host.yaml
       bindings:
         - name: http_route_name
           value: ($http_route_response_filter_name)
@@ -471,7 +471,7 @@ spec:
     - name: Verify-GET-traffic-from-cluster-response-header-modifier
       description: Verify that GET requests to /get work from within the cluster (ResponseHeaderModifier).
       use:
-        template: ../common/_step_templates/verify-http-traffic-from-cluster.yaml
+        template: ../../common/_step_templates/verify-http-traffic-from-cluster.yaml
       bindings:
         - name: http_route_name
           value: ($http_route_response_filter_name)
@@ -490,7 +490,7 @@ spec:
     - name: Verify-GET-HTTPS-traffic-from-cluster-response-header-modifier
       description: Verify that GET requests to /get work from within the cluster via HTTPS (ResponseHeaderModifier).
       use:
-        template: ../common/_step_templates/verify-https-traffic-from-cluster.yaml
+        template: ../../common/_step_templates/verify-https-traffic-from-cluster.yaml
       bindings:
         - name: http_route_name
           value: ($http_route_response_filter_name)
@@ -509,7 +509,7 @@ spec:
     - name: Verify-response-header-modifier-over-http
       description: Validate that the ResponseHeaderModifier filter modifies headers correctly over HTTP.
       use:
-        template: ../common/_step_templates/verify-response-header-modifier.yaml
+        template: ../../common/_step_templates/verify-response-header-modifier.yaml
       bindings:
         - name: gateway_name
           value: ($gateway_name)
@@ -538,7 +538,7 @@ spec:
     - name: Verify-response-header-modifier-over-https
       description: Validate that the ResponseHeaderModifier filter modifies headers correctly over HTTPS.
       use:
-        template: ../common/_step_templates/verify-response-header-modifier.yaml
+        template: ../../common/_step_templates/verify-response-header-modifier.yaml
       bindings:
         - name: gateway_name
           value: ($gateway_name)
@@ -584,7 +584,7 @@ spec:
     - name: Assert-kong-route-combined-filters
       description: Assert that the KongRoute resource is created for the HTTPRoute with combined filters.
       use:
-        template: ../common/_step_templates/assert-kongRoute.yaml
+        template: ../../common/_step_templates/assert-kongRoute.yaml
       bindings:
         - name: http_route_name
           value: ($http_route_combined_filters_name)
@@ -607,7 +607,7 @@ spec:
     - name: Assert-kong-service-combined-filters
       description: Assert that the KongService resource is created for the HTTPRoute with combined filters.
       use:
-        template: ../common/_step_templates/assert-kongService.yaml
+        template: ../../common/_step_templates/assert-kongService.yaml
       bindings:
         - name: http_route_name
           value: ($http_route_combined_filters_name)
@@ -618,7 +618,7 @@ spec:
     - name: Assert-kong-upstream-combined-filters
       description: Assert that the KongUpstream resource is created for the HTTPRoute with combined filters.
       use:
-        template: ../common/_step_templates/assert-kongUstream.yaml
+        template: ../../common/_step_templates/assert-kongUpstream.yaml
       bindings:
         - name: http_route_name
           value: ($http_route_combined_filters_name)
@@ -629,7 +629,7 @@ spec:
     - name: Assert-kong-target-combined-filters
       description: Assert that the KongTarget resource is created for the KongUpstream (combined filters).
       use:
-        template: ../common/_step_templates/assert-kongTarget.yaml
+        template: ../../common/_step_templates/assert-kongTarget.yaml
       bindings:
         - name: http_route_name
           value: ($http_route_combined_filters_name)
@@ -644,7 +644,7 @@ spec:
     - name: Assert-Request-Transformer-Plugin-for-Combined-Filters
       description: Assert that the Request Transformer plugin is created with the expected configuration (combined filters).
       use:
-        template: ../common/_step_templates/assert-kongPlugin.yaml
+        template: ../../common/_step_templates/assert-kongPlugin.yaml
       bindings:
         - name: http_route_name
           value: ($http_route_combined_filters_name)
@@ -663,7 +663,7 @@ spec:
     - name: Assert-Response-Transformer-Plugin-for-Combined-Filters
       description: Assert that the Response Transformer plugin is created with the expected configuration (combined filters).
       use:
-        template: ../common/_step_templates/assert-kongPlugin.yaml
+        template: ../../common/_step_templates/assert-kongPlugin.yaml
       bindings:
         - name: http_route_name
           value: ($http_route_combined_filters_name)
@@ -682,7 +682,7 @@ spec:
     - name: Assert-KongPluginBinding-for-Combined-Filters
       description: Assert that the KongPluginBinding resources are created to bind both transformer plugins to the route (combined filters).
       use:
-        template: ../common/_step_templates/assert-kongPluginBinding.yaml
+        template: ../../common/_step_templates/assert-kongPluginBinding.yaml
       bindings:
         - name: http_route_name
           value: ($http_route_combined_filters_name)
@@ -693,7 +693,7 @@ spec:
     - name: Verify-GET-traffic-from-host-combined-filters
       description: Verify that GET requests to /get work from the host (combined filters).
       use:
-        template: ../common/_step_templates/verify-http-traffic-from-host.yaml
+        template: ../../common/_step_templates/verify-http-traffic-from-host.yaml
       bindings:
         - name: http_route_name
           value: ($http_route_combined_filters_name)
@@ -712,7 +712,7 @@ spec:
     - name: Verify-GET-HTTPS-traffic-from-host-combined-filters
       description: Verify that GET requests to /get work from the host via HTTPS (combined filters).
       use:
-        template: ../common/_step_templates/verify-https-traffic-from-host.yaml
+        template: ../../common/_step_templates/verify-https-traffic-from-host.yaml
       bindings:
         - name: http_route_name
           value: ($http_route_combined_filters_name)
@@ -731,7 +731,7 @@ spec:
     - name: Verify-request-header-modifier-combined-filters-over-http
       description: Validate that the RequestHeaderModifier filter modifies headers correctly in combined filters over HTTP.
       use:
-        template: ../common/_step_templates/verify-request-header-modifier.yaml
+        template: ../../common/_step_templates/verify-request-header-modifier.yaml
       bindings:
         - name: gateway_name
           value: ($gateway_name)
@@ -760,7 +760,7 @@ spec:
     - name: Verify-response-header-modifier-combined-filters-over-http
       description: Validate that the ResponseHeaderModifier filter modifies headers correctly in combined filters over HTTP.
       use:
-        template: ../common/_step_templates/verify-response-header-modifier.yaml
+        template: ../../common/_step_templates/verify-response-header-modifier.yaml
       bindings:
         - name: gateway_name
           value: ($gateway_name)
@@ -789,7 +789,7 @@ spec:
     - name: Verify-request-header-modifier-combined-filters-over-https
       description: Validate that the RequestHeaderModifier filter modifies headers correctly in combined filters over HTTPS.
       use:
-        template: ../common/_step_templates/verify-request-header-modifier.yaml
+        template: ../../common/_step_templates/verify-request-header-modifier.yaml
       bindings:
         - name: gateway_name
           value: ($gateway_name)
@@ -818,7 +818,7 @@ spec:
     - name: Verify-response-header-modifier-combined-filters-over-https
       description: Validate that the ResponseHeaderModifier filter modifies headers correctly in combined filters over HTTPS.
       use:
-        template: ../common/_step_templates/verify-response-header-modifier.yaml
+        template: ../../common/_step_templates/verify-response-header-modifier.yaml
       bindings:
         - name: gateway_name
           value: ($gateway_name)

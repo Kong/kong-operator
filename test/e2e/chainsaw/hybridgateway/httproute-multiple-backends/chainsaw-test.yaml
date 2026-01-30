@@ -45,17 +45,17 @@ spec:
             file: 00-backends.yaml
         # Assert common Konnect and Gateway resources
         - assert:
-            file: ../common/assertions/konnect-apiauth.yaml
+            file: ../../common/assertions/konnect-apiauth.yaml
         - assert:
-            file: ../common/assertions/gatewayclass.yaml
+            file: ../../common/assertions/gatewayclass.yaml
         - assert:
-            file: ../common/assertions/gatewayconfiguration.yaml
+            file: ../../common/assertions/gatewayconfiguration.yaml
         - assert:
-            file: ../common/assertions/gateway.yaml
+            file: ../../common/assertions/gateway.yaml
         - assert:
-            file: ../common/assertions/konnect-gateway-controlplane.yaml
+            file: ../../common/assertions/konnect-gateway-controlplane.yaml
         - assert:
-            file: ../common/assertions/konnect-extension.yaml
+            file: ../../common/assertions/konnect-extension.yaml
         # Assert test-specific resources
         - assert:
             file: 00-assert-backends.yaml
@@ -189,13 +189,13 @@ spec:
               ($stdout == '2'): true
         # Assert Kong resources
         - assert:
-            file: ../common/assertions/kongroute.yaml
+            file: ../../common/assertions/kongroute.yaml
         - assert:
-            file: ../common/assertions/kongservice.yaml
+            file: ../../common/assertions/kongservice.yaml
         - assert:
-            file: ../common/assertions/kongupstream.yaml
+            file: ../../common/assertions/kongupstream.yaml
         - assert:
-            file: ../common/assertions/kongtarget.yaml
+            file: ../../common/assertions/kongtarget.yaml
 
     # Step 4: Verify data plane traffic for equal weights
     - name: verify-data-plane-equal-weights

@@ -74,49 +74,49 @@ spec:
     - name: Create-tls-secret
       description: Create TLS Secret for the Gateway TLS listener.
       use:
-        template: ../common/_step_templates/apply-assert-tlsSecret.yaml
+        template: ../../common/_step_templates/apply-assert-tlsSecret.yaml
 
     # Step 2: Create the KonnectAPIAuthConfiguration to authenticate with Konnect.
     - name: Create-konnect-api-auth
       description: Create KonnectAPIAuthConfiguration for the test.
       use:
-        template: ../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
 
     # Step 3: Create the GatewayConfiguration that defines the hybrid gateway setup.
     - name: Create-gateway-configuration
       description: Create GatewayConfiguration for the test.
       use:
-        template: ../common/_step_templates/apply-assert-gatewayConfiguration.yaml
+        template: ../../common/_step_templates/apply-assert-gatewayConfiguration.yaml
 
     # Step 4: Create the GatewayClass that will be used by the Gateway.
     - name: Create-gateway-class
       description: Create GatewayClass for the test.
       use:
-        template: ../common/_step_templates/apply-assert-gatewayClass.yaml
+        template: ../../common/_step_templates/apply-assert-gatewayClass.yaml
 
     # Step 5: Create the Gateway with a TLS listener that references the TLS secret.
     - name: Create-gateway
       description: Create Gateway with TLS listener for the test.
       use:
-        template: ../common/_step_templates/apply-assert-gateway.yaml
+        template: ../../common/_step_templates/apply-assert-gateway.yaml
 
     # Step 6: Verify that the KonnectGatewayControlPlane is created and synchronized with Konnect.
     - name: Assert-konnect-gateway-control-plane
       description: Assert that the KonnectGatewayControlplane resource is created and synchronized.
       use:
-        template: ../common/_step_templates/assert-konnectGatewayControlPlane.yaml
+        template: ../../common/_step_templates/assert-konnectGatewayControlPlane.yaml
 
     # Step 7: Verify that the KongCertificate resource is created from the TLS secret.
     - name: Assert-kong-certificate
       description: Assert that the KongCertificate resource is created for the TLS secret.
       use:
-        template: ../common/_step_templates/assert-kongCertificate.yaml
+        template: ../../common/_step_templates/assert-kongCertificate.yaml
 
     # Step 8: Verify that the KongSNI resource is created for the SNI hostname.
     - name: Assert-kong-sni
       description: Assert that the KongSNI resource is created for the SNI hostname.
       use:
-        template: ../common/_step_templates/assert-kongSNI.yaml
+        template: ../../common/_step_templates/assert-kongSNI.yaml
       bindings:
       - name: resource_type
         value: "kongcertificates.configuration.konghq.com"
@@ -125,7 +125,7 @@ spec:
     - name: Create-echo-service
       description: Create and assert an echo service to route traffic to.
       use:
-        template: ../common/_step_templates/apply-assert-echoService.yaml
+        template: ../../common/_step_templates/apply-assert-echoService.yaml
         with:
           bindings:
             - name: echo_deployment_name
@@ -135,7 +135,7 @@ spec:
     - name: Create-echo-secondary-service
       description: Create and assert a secondary echo service.
       use:
-        template: ../common/_step_templates/apply-assert-echoService.yaml
+        template: ../../common/_step_templates/apply-assert-echoService.yaml
         with:
           bindings:
             - name: echo_deployment_name
@@ -154,7 +154,7 @@ spec:
     - name: assert-kongservice-route-one
       description: Assert KongService for route one
       use:
-        template: ../common/_step_templates/assert-kongService.yaml
+        template: ../../common/_step_templates/assert-kongService.yaml
       bindings:
         - name: http_route_name
           value: ($httproute_one_name)
@@ -165,7 +165,7 @@ spec:
     - name: assert-kongservice-route-two
       description: Assert KongService for route two
       use:
-        template: ../common/_step_templates/assert-kongService.yaml
+        template: ../../common/_step_templates/assert-kongService.yaml
       bindings:
         - name: http_route_name
           value: ($httproute_two_name)
@@ -176,7 +176,7 @@ spec:
     - name: assert-kongservice-route-three
       description: Assert KongService for route three
       use:
-        template: ../common/_step_templates/assert-kongService.yaml
+        template: ../../common/_step_templates/assert-kongService.yaml
       bindings:
         - name: http_route_name
           value: ($httproute_three_name)
@@ -187,7 +187,7 @@ spec:
     - name: verify-traffic-route-one
       description: Verify route one serves traffic
       use:
-        template: ../common/_step_templates/verify-http-traffic-from-host.yaml
+        template: ../../common/_step_templates/verify-http-traffic-from-host.yaml
       bindings:
         - name: route_path
           value: ($httproute_one_path)
@@ -198,7 +198,7 @@ spec:
     - name: verify-traffic-route-two
       description: Verify route two serves traffic
       use:
-        template: ../common/_step_templates/verify-http-traffic-from-host.yaml
+        template: ../../common/_step_templates/verify-http-traffic-from-host.yaml
       bindings:
         - name: route_path
           value: ($httproute_two_path)
@@ -209,7 +209,7 @@ spec:
     - name: verify-traffic-route-three
       description: Verify route three serves traffic
       use:
-        template: ../common/_step_templates/verify-http-traffic-from-host.yaml
+        template: ../../common/_step_templates/verify-http-traffic-from-host.yaml
       bindings:
         - name: route_path
           value: ($httproute_three_path)
@@ -231,7 +231,7 @@ spec:
     - name: verify-traffic-after-delete-route-one
       description: Verify route one still serves traffic after deletion
       use:
-        template: ../common/_step_templates/verify-http-traffic-from-host.yaml
+        template: ../../common/_step_templates/verify-http-traffic-from-host.yaml
       bindings:
         - name: route_path
           value: ($httproute_one_path)
@@ -242,7 +242,7 @@ spec:
     - name: verify-traffic-after-delete-route-three
       description: Verify route three still serves traffic after deletion
       use:
-        template: ../common/_step_templates/verify-http-traffic-from-host.yaml
+        template: ../../common/_step_templates/verify-http-traffic-from-host.yaml
       bindings:
         - name: route_path
           value: ($httproute_three_path)
@@ -262,7 +262,7 @@ spec:
     - name: assert-kongservice-route-one-after-update
       description: Assert KongService for route one after update
       use:
-        template: ../common/_step_templates/assert-kongService.yaml
+        template: ../../common/_step_templates/assert-kongService.yaml
       bindings:
         - name: http_route_name
           value: ($httproute_one_name)
@@ -273,7 +273,7 @@ spec:
     - name: assert-kongservice-route-three-after-update
       description: Assert KongService for route three after update
       use:
-        template: ../common/_step_templates/assert-kongService.yaml
+        template: ../../common/_step_templates/assert-kongService.yaml
       bindings:
         - name: http_route_name
           value: ($httproute_three_name)
@@ -284,7 +284,7 @@ spec:
     - name: verify-traffic-final-route-one
       description: Verify route one still serves traffic after update
       use:
-        template: ../common/_step_templates/verify-http-traffic-from-host.yaml
+        template: ../../common/_step_templates/verify-http-traffic-from-host.yaml
       bindings:
         - name: route_path
           value: ($httproute_one_path)
@@ -295,7 +295,7 @@ spec:
     - name: verify-traffic-final-route-three
       description: Verify route three still serves traffic after update
       use:
-        template: ../common/_step_templates/verify-http-traffic-from-host.yaml
+        template: ../../common/_step_templates/verify-http-traffic-from-host.yaml
       bindings:
         - name: route_path
           value: ($httproute_three_path)

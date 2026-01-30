@@ -12,7 +12,7 @@ spec:
           - name: GATEWAY_NAMESPACE
             value: ($gateway_namespace)
         content: |
-          bash ../common/scripts/proxy_ip_address.sh
+          bash ../../common/scripts/proxy_ip_address.sh
         outputs:
           - name: proxy_ip
             value: (json_parse($stdout).proxy_ip_address)
@@ -33,7 +33,7 @@ spec:
           - name: SECRET_NAMESPACE
             value: ($cert_secret_namespace)
         content: |
-          bash ../common/scripts/compare_tls_fingerprints.sh
+          bash ../../common/scripts/compare_tls_fingerprints.sh
         outputs:
           - name: fingerprint_status
             value: (json_parse($stdout).status)
