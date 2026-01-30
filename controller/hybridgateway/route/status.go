@@ -415,7 +415,8 @@ func BuildProgrammedCondition(ctx context.Context, logger logr.Logger, cl client
 	return DeduplicateConditionsByType(conditions), nil
 }
 
-// BuildResolvedRefsCondition evaluates all BackendRefs and ExtensionRefs in an HTTPRoute to determine if their references are valid and permitted.
+// BuildResolvedRefsCondition evaluates all BackendRefs and ExtensionRefs in an HTTPRoute to determine if their
+// references are valid and permitted.
 // It checks that each BackendRef:
 //   - Has a supported group/kind
 //   - Exists in the target namespace
