@@ -45,7 +45,7 @@ spec:
     - name: Create-secret-namespace
       description: Create namespace for the secret.
       use:
-        template: ../../hybridgateway/common/_step_templates/apply-assert-namespace.yaml
+        template: ../../common/_step_templates/apply-assert-namespace.yaml
         with:
           bindings:
             - name: namespace_name
@@ -55,7 +55,7 @@ spec:
     - name: Create-cross-ns-secret
       description: Create secret in the secret namespace.
       use:
-        template: ../../hybridgateway/common/_step_templates/apply-assert-konnectAuthSecret.yaml
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
         with:
           bindings:
             - name: auth_secret_name
@@ -69,7 +69,7 @@ spec:
     - name: Create-cross-ns-auth-config
       description: Create KonnectAPIAuthConfiguration that references secret from different namespace.
       use:
-        template: ../../hybridgateway/common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
         with:
           bindings:
             - name: konnect_auth_name

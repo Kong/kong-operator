@@ -19,7 +19,7 @@ spec:
          - name: HTTP_ROUTE_NAMESPACE
            value: ($http_route_namespace)
         content: |
-          bash ../common/scripts/kongResource_name.sh
+          bash ../../common/scripts/kongResource_name.sh
         outputs:
           - name: kong_service_name
             value: (json_parse($stdout).name)

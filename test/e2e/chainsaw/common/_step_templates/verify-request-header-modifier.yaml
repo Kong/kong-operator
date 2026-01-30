@@ -1,21 +1,21 @@
-# Template for verifying ResponseHeaderModifier filter functionality.
+# Template for verifying RequestHeaderModifier filter functionality.
 #
 # Required bindings:
 #   - gateway_name: Name of the Gateway.
 #   - gateway_namespace: Namespace of the Gateway.
-#   - route_path: HTTP path to test (e.g., /get for httpbin).
+#   - route_path: HTTP path to test (must be an endpoint that echoes headers, e.g., /get for httpbin).
 #   - namespace: Namespace where the test runs.
 #   - host_header: Host header to send with the request.
 #   - proxy_port: Port to connect to (e.g., 80 for HTTP, 443 for HTTPS).
 #   - headers_to_send: Headers to send with the request, format: 'Header1:value1,Header2:value2'.
-#   - expected_headers_present: Headers that must be present in the response, format: 'Header1:value1,Header2:value2'.
-#   - expected_headers_absent: Headers that must NOT be present in the response, format: 'Header1,Header2'.
+#   - expected_headers_present: Headers that must be present in the backend response, format: 'Header1:value1,Header2:value2'.
+#   - expected_headers_absent: Headers that must NOT be present in the backend response, format: 'Header1,Header2'.
 #   - protocol: Protocol to use: 'http' or 'https'.
 #   - insecure: Set to 'true' to use --insecure flag for HTTPS with self-signed certificates, 'false' otherwise.
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: StepTemplate
 metadata:
-  name: verify-response-header-modifier
+  name: verify-request-header-modifier
 spec:
   try:
     # 1. Dynamically discover the Gateway's Proxy IP.
@@ -26,7 +26,7 @@ spec:
           - name: GATEWAY_NAMESPACE
             value: ($gateway_namespace)
         content: |
-          bash ../common/scripts/proxy_ip_address.sh
+          bash ../../common/scripts/proxy_ip_address.sh
         outputs:
           - name: proxy_ip
             value: (json_parse($stdout).proxy_ip_address)
@@ -34,7 +34,7 @@ spec:
           (json_parse($stdout).proxy_ip_address != null): true
           (json_parse($stdout).proxy_ip_address != ''): true
 
-    # 2. Validate ResponseHeaderModifier filter by checking headers in HTTP response.
+    # 2. Validate RequestHeaderModifier filter by checking headers received by backend.
     - script:
         env:
           - name: PROXY_IP
@@ -56,6 +56,6 @@ spec:
           - name: INSECURE
             value: ($insecure)
         content: |
-          bash ../common/scripts/response_header_modifier_filter_test.sh
+          bash ../../common/scripts/request_header_modifier_filter_test.sh
         check:
           (json_parse($stdout).success): true

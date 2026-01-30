@@ -41,7 +41,7 @@ spec:
             file: 00-httpbin.yaml
         # Assert common Konnect and Gateway resources
         - assert:
-            file: ../common/assertions/konnect-apiauth.yaml
+            file: ../../common/assertions/konnect-apiauth.yaml
         - assert:
             file: 01-assert-prerequisites.yaml
         - assert:
