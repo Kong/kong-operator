@@ -21732,7 +21732,7 @@ spec:
               CustomID is a Kong cluster-unique existing ID for the consumer - useful for mapping
               Kong with users in your existing database.
             maxLength: 128
-            pattern: '^[0-9a-zA-Z.\-_~\(\)#%@|+\[\]]*(?: [0-9a-zA-Z.\-_~\\(\)#%@|+\\[\\]]+)*$'
+            pattern: '^[0-9a-zA-Z.\-_~\(\)#%@|+\[\]]*(?: [0-9a-zA-Z.\-_~\(\)#%@|+\[\]]+)*$'
             type: string
           kind:
             description: |-

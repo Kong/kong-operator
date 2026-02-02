@@ -51,7 +51,7 @@ type KongConsumer struct {
 	// CustomID is a Kong cluster-unique existing ID for the consumer - useful for mapping
 	// Kong with users in your existing database.
 	// +kubebuilder:validation:MaxLength=128
-	// +kubebuilder:validation:Pattern=`^[0-9a-zA-Z.\-_~\(\)#%@|+\[\]]*(?: [0-9a-zA-Z.\-_~\\(\)#%@|+\\[\\]]+)*$`
+	// +kubebuilder:validation:Pattern=`^[0-9a-zA-Z.\-_~\(\)#%@|+\[\]]*(?: [0-9a-zA-Z.\-_~\(\)#%@|+\[\]]+)*$`
 	CustomID string `json:"custom_id,omitempty"`
 
 	// Credentials are references to secrets containing a credential to be
