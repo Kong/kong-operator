@@ -1,10 +1,9 @@
 ---
-# Assert HTTPRoute is accepted and programmed
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: ($http_route_name)
-  namespace: ($http_route_namespace)
+  name: httproute-multiple-plugins
+  namespace: ($namespace)
 status:
   parents:
     - parentRef:
@@ -12,7 +11,6 @@ status:
         group: gateway.networking.k8s.io
         kind: Gateway
       controllerName: konghq.com/gateway-operator
-      # Filter conditions array to check for all required conditions
       (conditions[?type == 'Accepted']):
         - status: "True"
           reason: Accepted
@@ -31,3 +29,6 @@ status:
       (conditions[?type == 'KongTargetProgrammed']):
         - status: "True"
           reason: KongTargetProgrammed
+      (conditions[?type == 'KongPluginBindingProgrammed']):
+        - status: "True"
+          reason: KongPluginBindingProgrammed

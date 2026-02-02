@@ -1,9 +1,0 @@
-kind: KongPlugin
-apiVersion: configuration.konghq.com/v1
-metadata:
-  name: ($rate_limiting_plugin_name)
-  namespace: ($http_route_namespace)
-plugin: rate-limiting
-config:
- minute: 30
- policy: local

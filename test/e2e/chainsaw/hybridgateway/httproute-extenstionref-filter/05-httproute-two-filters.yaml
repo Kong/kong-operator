@@ -1,10 +1,33 @@
 ---
+kind: KongPlugin
+apiVersion: configuration.konghq.com/v1
+metadata:
+  name: ($rate_limiting_plugin_name)
+  namespace: ($namespace)
+plugin: rate-limiting
+config:
+  minute: 1000
+  policy: local
+---
+kind: KongPlugin
+apiVersion: configuration.konghq.com/v1
+metadata:
+  name: ($response_transformer_plugin_name)
+  namespace: ($namespace)
+plugin: response-transformer
+config:
+  add:
+    headers:
+      - "X-Cleanup:test"
+---
 kind: HTTPRoute
 apiVersion: gateway.networking.k8s.io/v1
 metadata:
   name: ($http_route_name)
-  namespace: ($http_route_namespace)
+  namespace: ($namespace)
 spec:
+  hostnames:
+    - ($fqdn)
   parentRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway
@@ -13,7 +36,7 @@ spec:
     - matches:
         - path:
             type: PathPrefix
-            value: ($route_path)
+            value: "/get"
       filters:
         - type: ExtensionRef
           extensionRef:
@@ -24,18 +47,7 @@ spec:
           extensionRef:
             group: configuration.konghq.com
             kind: KongPlugin
-            name: ($response_transformer_plugin_name)            
+            name: ($response_transformer_plugin_name)
       backendRefs:
-        - name: ($httpbin_service_name)
+        - name: ($httpbin_deployment_name)
           port: 80
---- 
-kind: KongPlugin
-apiVersion: configuration.konghq.com/v1
-metadata:
-  name: ($response_transformer_plugin_name)
-  namespace: ($http_route_namespace)
-plugin: response-transformer
-config:
-  add:
-    headers:
-     - "X-Add:foo"

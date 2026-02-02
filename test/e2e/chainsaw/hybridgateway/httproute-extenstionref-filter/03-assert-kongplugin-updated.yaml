@@ -1,0 +1,11 @@
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: response-transformer-update
+  namespace: ($namespace)
+plugin: response-transformer
+config:
+  add:
+    headers:
+      - "X-Test:updated"

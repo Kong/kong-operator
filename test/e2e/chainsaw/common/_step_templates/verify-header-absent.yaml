@@ -1,0 +1,47 @@
+# Template for verifying a header is NOT present in the response.
+#
+# Required bindings:
+#   - gateway_name: Name of the Gateway
+#   - gateway_namespace: Namespace of the Gateway
+#   - route_path: The HTTP path to test (e.g., "/get")
+#   - header_name: The header name that should NOT be present (e.g., "X-Cleanup")
+#   - listener_http_port: (optional) HTTP port to test. Default: 80.
+#   - host_header: (optional) Host header to send with the request
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: verify-header-absent
+spec:
+  try:
+    # Get proxy IP
+    - script:
+        env:
+          - name: GATEWAY_NAME
+            value: ($gateway_name)
+          - name: GATEWAY_NAMESPACE
+            value: ($gateway_namespace)
+        content: |
+          bash ../../common/scripts/proxy_ip_address.sh
+        outputs:
+          - name: proxy_ip
+            value: (json_parse($stdout).proxy_ip_address)
+        check:
+          (json_parse($stdout).proxy_ip_address != null): true
+
+    # Verify header is absent
+    - script:
+        env:
+          - name: PROXY_IP
+            value: ($proxy_ip)
+          - name: ROUTE_PATH
+            value: ($route_path)
+          - name: HEADER_NAME
+            value: ($header_name)
+          - name: PROXY_PORT
+            value: ($listener_http_port)
+          - name: HOST
+            value: ($host_header)
+        content: |
+          bash ../../common/scripts/verify_header_absent.sh
+        check:
+          (to_string(json_parse($stdout).success) == 'true'): true
