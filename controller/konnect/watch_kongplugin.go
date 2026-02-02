@@ -71,10 +71,16 @@ func (r *KongPluginReconciler) mapKongPluginBindings(ctx context.Context, obj cl
 		return []ctrl.Request{}
 	}
 
+	ns := kongPluginBinding.Namespace
+	pluginRef := kongPluginBinding.Spec.PluginReference
+	if pluginRef.Namespace != "" && pluginRef.Namespace != ns {
+		ns = pluginRef.Namespace
+	}
+
 	return []ctrl.Request{
 		{
 			NamespacedName: types.NamespacedName{
-				Namespace: kongPluginBinding.Namespace,
+				Namespace: ns,
 				Name:      kongPluginBinding.Spec.PluginReference.Name,
 			},
 		},
