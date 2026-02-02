@@ -31,7 +31,7 @@ spec:
           - name: RESOURCE_TYPES
             value: "kongplugins.configuration.konghq.com,kongroutes.configuration.konghq.com"
         content: |
-          bash ../common/scripts/get_kong_resources.sh
+          bash ../../common/scripts/get_kong_resources.sh
         outputs:
           - name: kong_resources
             value: (json_parse($stdout))
@@ -53,7 +53,7 @@ spec:
          - name: HTTP_ROUTE_NAMESPACE
            value: ($http_route_namespace)
         content: |
-          bash ../common/scripts/konnecGatewayControlplane_name.sh
+          bash ../../common/scripts/konnectGatewayControlplane_name.sh
         outputs:
           - name: konnectgatewaycontrolplane_name
             value: (json_parse($stdout).cp_name)
