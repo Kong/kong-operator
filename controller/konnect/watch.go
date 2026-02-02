@@ -132,11 +132,12 @@ func objectListToReconcileRequests[
 	}
 
 	ret := make([]ctrl.Request, 0, len(items))
+itemLoop:
 	for _, item := range items {
 		var e TPtr = &item
 		for _, filter := range filters {
 			if filter != nil && !filter(e) {
-				continue
+				continue itemLoop
 			}
 		}
 		ret = append(ret, ctrl.Request{

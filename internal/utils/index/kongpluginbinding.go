@@ -63,10 +63,16 @@ func kongPluginReferencesFromKongPluginBinding(obj client.Object) []string {
 	if !ok {
 		return nil
 	}
-	if binding.Spec.PluginReference.Kind != nil && *binding.Spec.PluginReference.Kind != "KongPlugin" {
+	pluginRef := binding.Spec.PluginReference
+
+	if pluginRef.Kind != nil && *pluginRef.Kind != "KongPlugin" {
 		return nil
 	}
-	return []string{binding.Namespace + "/" + binding.Spec.PluginReference.Name}
+	if pluginRef.Namespace != "" && pluginRef.Namespace != binding.Namespace {
+		return []string{pluginRef.Namespace + "/" + pluginRef.Name}
+	}
+
+	return []string{binding.Namespace + "/" + pluginRef.Name}
 }
 
 // kongServiceReferencesFromKongPluginBinding returns name of referenced KongService in KongPluginBinding spec.
