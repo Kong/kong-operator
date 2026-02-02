@@ -47401,6 +47401,8 @@ spec:
                   rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
               name:
                 description: Name is the name of the ConsumerGroup in Kong.
+                maxLength: 128
+                pattern: ^[\p{N}\p{L}.\-_~]*$
                 type: string
               tags:
                 description: Tags is an optional set of tags applied to the ConsumerGroup.
@@ -47588,6 +47590,8 @@ spec:
             description: |-
               CustomID is a Kong cluster-unique existing ID for the consumer - useful for mapping
               Kong with users in your existing database.
+            maxLength: 128
+            pattern: '^[0-9a-zA-Z.\-_~\(\)#%@|+\[\]]*(?: [0-9a-zA-Z.\-_~\(\)#%@|+\[\]]+)*$'
             type: string
           kind:
             description: |-
@@ -47825,6 +47829,8 @@ spec:
             type: object
           username:
             description: Username is a Kong cluster-unique username of the consumer.
+            maxLength: 128
+            pattern: '^[\p{L}\p{N}.\-_~+@/\[\]]*(?: [\p{L}\p{N}.\-_~+@/\[\]]+)*$'
             type: string
         type: object
         x-kubernetes-validations:
