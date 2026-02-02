@@ -50,6 +50,7 @@ make test.envtest CLUSTER_VERSION=1.30
 ```
 
 ### Integration Tests (Require Running Cluster)
+
 ```bash
 make test.integration-ko              # Kong Operator integration tests
 make test.integration_bluegreen       # DataPlane upgrade/blue-green tests
@@ -58,6 +59,7 @@ make test.crds-validation             # CRD validation tests
 ```
 
 ### Other Tests
+
 ```bash
 make test.conformance           # Gateway API conformance tests
 make test.kongintegration       # Kong integration tests (uses testcontainers)
@@ -138,13 +140,12 @@ import (
 ```
 
 ### Blocked Packages
-- Use `maps`/`slices`/`github.com/samber/lo` instead of `golang.org/x/exp`
-- Use `fmt`/`errors` instead of `github.com/pkg/errors`
-- Use `sigs.k8s.io/controller-runtime/pkg/log` instead of `logrus`
+
+See `.golangci.yaml` for the full list of blocked packages and their alternatives.
 
 ## Tool Management
 
-Uses **mise** for tool versions. Tool versions defined in `.tools_versions.yaml` and `.mise.toml`.
+Uses **mise** for tool versions. Tool versions defined in `.tools_versions.yaml` and `.mise.toml`. Tools are automatically downloaded as dependencies for each Makefile target that needs them.
 
 ```bash
 make tools    # Install: controller-gen, kustomize, client-gen, golangci-lint, gotestsum, skaffold, yq, crd-ref-docs
