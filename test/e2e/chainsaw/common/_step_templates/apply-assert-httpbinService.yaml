@@ -98,4 +98,4 @@ spec:
             namespace: ($httpbin_deployment_namespace)
           spec:
             selector:
-              app: (join('-', [($test_name), 'httpbin']))
+              app: ($httpbin_deployment_name)

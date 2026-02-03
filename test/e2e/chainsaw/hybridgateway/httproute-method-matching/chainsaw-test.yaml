@@ -1,4 +1,4 @@
-# HTTPRoute Method Matching test scenario
+# HTTPRoute Method Matching test scenario.
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: Test
 metadata:
@@ -11,858 +11,523 @@ spec:
     - Method matching combined with path matching
 
   bindings:
-    - name: kong_namespace
-      value: (join('-', ['kong', 'httproute-method-matching', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+    - name: test_name
+      value: ($namespace)
+    - name: namespace
+      value: ($namespace)
     - name: konnect_api_auth_name
       value: konnect-api-auth-dev-1
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
     - name: gateway_class_name
-      value: (join('-', ['kong', 'httproute-method-matching', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+      value: (join('-', [($test_name), 'gateway-class']))
     - name: gateway_configuration_name
-      value: ($gateway_class_name)
+      value: (join('-', [($test_name), 'gateway-configuration']))
     - name: gateway_name
-      value: ($gateway_class_name)
-    - name: httproute_name
-      value: method-matching
+      value: (join('-', [($test_name), 'gateway']))
+    - name: gateway_namespace
+      value: ($namespace)
+    - name: gateway_image
+      value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.12')
+    - name: httproute_name_get
+      value: method-matching-get
+    - name: httproute_name_post
+      value: method-matching-post
+    - name: httproute_name_put
+      value: method-matching-put
+    - name: httproute_name_delete
+      value: method-matching-delete
+    - name: httproute_name_patch
+      value: method-matching-patch
+    - name: httproute_name_multiple
+      value: method-matching-multiple
+    - name: httproute_name_combined
+      value: method-matching-combined
+    - name: httproute_name_update_test
+      value: method-matching-update-test
+    - name: http_route_namespace
+      value: ($namespace)
+    - name: httpbin_deployment_name
+      value: httpbin
+    - name: httpbin_deployment_namespace
+      value: ($namespace)
+    - name: httpbin_service_port
+      value: 80
+    - name: listener_http_port
+      value: 80
+    - name: http_method
+      value: "GET"
+    - name: host_header
+      value: ""
 
   timeouts:
     apply: 120s
-    assert: 300s
+    assert: 120s
     cleanup: 120s
     delete: 120s
 
   steps:
-    # Step 1: Create prerequisite resources
-    - name: create-prerequisites
-      description: Create GatewayClass, Gateway, and backend Service
-      try:
-        - apply:
-            file: 01-prerequisites.yaml
-        - apply:
-            file: 00-httpbin.yaml
-        # Assert common Konnect and Gateway resources
-        - assert:
-            file: ../../common/assertions/konnect-apiauth.yaml
-        - assert:
-            file: 01-assert-prerequisites.yaml
-        - assert:
-            file: 00-assert-httpbin.yaml
-      catch:
-        - description: Get Gateway resource status
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: Gateway
-            namespace: ($kong_namespace)
-        - description: Get Pods in kong namespace
-          get:
-            apiVersion: v1
-            kind: Pod
-            namespace: ($kong_namespace)
-        - description: Get operator logs
-          podLogs:
-            namespace: kong-system
-            selector: control-plane=controller-manager
-            tail: 100
+  # Step 2: Create KonnectAPIAuthConfiguration.
+  - name: create-konnect-api-auth
+    description: Create KonnectAPIAuthConfiguration for the test
+    use:
+      template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
 
-    # Step 2: Test GET method matching
-    - name: test-get-method-matching
-      description: Create HTTPRoute with GET method matching
-      try:
-        - apply:
-            file: 02-httproute-method-get.yaml
-        - assert:
-            file: 02-assert-httproute.yaml
-        # Wait for KongRoute to be programmed
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl wait --for=condition=Programmed --timeout=120s kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute
-        # Verify KongRoute has correct methods
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[0].spec.methods}'
-            check:
-              (contains($stdout, 'GET')): true
-        # Get the Gateway proxy IP
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: GATEWAY_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
-            outputs:
-              - name: proxy_ip
-                value: ($stdout)
-        # Test GET method - should return 200
-        - description: Test GET method returns 200
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X GET http://${PROXY_IP}/get
-            check:
-              (contains($stdout, '200')): true
-        # Test POST method on /get - should return 404 or 405 (method not allowed)
-        - description: Test POST method on GET route returns non-200
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X POST http://${PROXY_IP}/get)
-              echo $HTTP_CODE
-              # Should be 404 (no matching route) or 405 (method not allowed)
-              if [ "$HTTP_CODE" = "404" ] || [ "$HTTP_CODE" = "405" ]; then
-                echo "OK"
-              else
-                echo "FAIL"
-                exit 1
-              fi
-      catch:
-        - description: Get HTTPRoute status
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: HTTPRoute
-            namespace: ($kong_namespace)
-        - description: Get KongRoute resources
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongRoute
-            namespace: ($kong_namespace)
-        - description: Describe KongRoute
-          script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o yaml
+  # Step 3: Create GatewayConfiguration.
+  - name: create-gateway-configuration
+    description: Create GatewayConfiguration for the test
+    use:
+      template: ../../common/_step_templates/apply-assert-gatewayConfiguration.yaml
 
-    # Step 3: Test POST method matching
-    - name: test-post-method-matching
-      description: Update HTTPRoute to use POST method matching
-      try:
-        # Collect old KongRoute name before update
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[*].metadata.name}'
-            outputs:
-              - name: old_kongroute_names
-                value: ($stdout)
-        # Apply the update
-        - apply:
-            file: 03-httproute-method-post.yaml
-        - assert:
-            file: 02-assert-httproute.yaml
-        # Wait for old KongRoute to be deleted
-        - script:
-            env:
-              - name: OLD_NAMES
-                value: ($old_kongroute_names)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              if [ -n "$OLD_NAMES" ]; then
-                for name in $OLD_NAMES; do
-                  echo "Waiting for old KongRoute $name to be deleted..."
-                  kubectl wait --for=delete kongroute/$name -n ${KONG_NAMESPACE} --timeout=60s || true
-                done
-              fi
-        # Wait for new KongRoute to be programmed
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl wait --for=condition=Programmed --timeout=120s kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute
-        # Verify KongRoute has correct methods
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[0].spec.methods}'
-            check:
-              (contains($stdout, 'POST')): true
-        # Get the Gateway proxy IP
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: GATEWAY_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
-            outputs:
-              - name: proxy_ip
-                value: ($stdout)
-        # Test POST method - should return 200
-        - description: Test POST method returns 200
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X POST http://${PROXY_IP}/post
-            check:
-              (contains($stdout, '200')): true
-        # Test GET method on /post - should return 404 or 405
-        - description: Test GET method on POST route returns non-200
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X GET http://${PROXY_IP}/post)
-              echo $HTTP_CODE
-              if [ "$HTTP_CODE" = "404" ] || [ "$HTTP_CODE" = "405" ]; then
-                echo "OK"
-              else
-                echo "FAIL"
-                exit 1
-              fi
-      catch:
-        - description: Get HTTPRoute status
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: HTTPRoute
-            namespace: ($kong_namespace)
-        - description: Get KongRoute resources
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongRoute
-            namespace: ($kong_namespace)
-        - description: Describe KongRoute
-          script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o yaml
-        - description: Get httpbin pod logs
-          script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              echo "=== httpbin pod logs ==="
-              kubectl logs -n ${KONG_NAMESPACE} -l app=httpbin --tail=50 || echo "No httpbin logs"
-        - description: Get Kong data plane pod logs
-          script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              echo "=== Kong data plane pod logs ==="
-              kubectl logs -n ${KONG_NAMESPACE} -l app=proxy --tail=100 || echo "No proxy logs"
-        - description: Debug curl with verbose output
-          script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              PROXY_IP=$(kubectl get gateway ${GATEWAY_NAME} -n ${KONG_NAMESPACE} -o jsonpath='{.status.addresses[0].value}')
-              echo "=== Verbose curl to POST /post ==="
-              curl -v -X POST http://${PROXY_IP}/post 2>&1 || true
+  # Step 4: Create GatewayClass.
+  - name: create-gateway-class
+    description: Create GatewayClass for the test
+    use:
+      template: ../../common/_step_templates/apply-assert-gatewayClass.yaml
 
-    # Step 4: Test PUT method matching
-    - name: test-put-method-matching
-      description: Update HTTPRoute to use PUT method matching
-      try:
-        # Collect old KongRoute name before update
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[*].metadata.name}'
-            outputs:
-              - name: old_kongroute_names
-                value: ($stdout)
-        # Apply the update
-        - apply:
-            file: 04-httproute-method-put.yaml
-        - assert:
-            file: 02-assert-httproute.yaml
-        # Wait for old KongRoute to be deleted
-        - script:
-            env:
-              - name: OLD_NAMES
-                value: ($old_kongroute_names)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              if [ -n "$OLD_NAMES" ]; then
-                for name in $OLD_NAMES; do
-                  echo "Waiting for old KongRoute $name to be deleted..."
-                  kubectl wait --for=delete kongroute/$name -n ${KONG_NAMESPACE} --timeout=60s || true
-                done
-              fi
-        # Wait for new KongRoute to be programmed
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl wait --for=condition=Programmed --timeout=120s kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute
-        # Verify KongRoute has correct methods
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[0].spec.methods}'
-            check:
-              (contains($stdout, 'PUT')): true
-        # Get the Gateway proxy IP
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: GATEWAY_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
-            outputs:
-              - name: proxy_ip
-                value: ($stdout)
-        # Test PUT method - should return 200
-        - description: Test PUT method returns 200
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X PUT http://${PROXY_IP}/put
-            check:
-              (contains($stdout, '200')): true
-        # Test GET method on /put - should return 404 or 405
-        - description: Test GET method on PUT route returns non-200
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X GET http://${PROXY_IP}/put)
-              echo $HTTP_CODE
-              if [ "$HTTP_CODE" = "404" ] || [ "$HTTP_CODE" = "405" ]; then
-                echo "OK"
-              else
-                echo "FAIL"
-                exit 1
-              fi
-      catch:
-        - description: Get HTTPRoute status
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: HTTPRoute
-            namespace: ($kong_namespace)
-        - description: Get KongRoute resources
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongRoute
-            namespace: ($kong_namespace)
-        - description: Describe KongRoute
-          script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o yaml
+  # Step 5: Create Gateway (HTTP-only, no TLS).
+  - name: create-gateway
+    description: Create Gateway with HTTP listener
+    use:
+      template: ../../common/_step_templates/apply-assert-gateway-http-only.yaml
 
-    # Step 5: Test DELETE method matching
-    - name: test-delete-method-matching
-      description: Update HTTPRoute to use DELETE method matching
-      try:
-        # Collect old KongRoute name before update
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[*].metadata.name}'
-            outputs:
-              - name: old_kongroute_names
-                value: ($stdout)
-        # Apply the update
-        - apply:
-            file: 05-httproute-method-delete.yaml
-        - assert:
-            file: 02-assert-httproute.yaml
-        # Wait for old KongRoute to be deleted
-        - script:
-            env:
-              - name: OLD_NAMES
-                value: ($old_kongroute_names)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              if [ -n "$OLD_NAMES" ]; then
-                for name in $OLD_NAMES; do
-                  echo "Waiting for old KongRoute $name to be deleted..."
-                  kubectl wait --for=delete kongroute/$name -n ${KONG_NAMESPACE} --timeout=60s || true
-                done
-              fi
-        # Wait for new KongRoute to be programmed
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl wait --for=condition=Programmed --timeout=120s kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute
-        # Verify KongRoute has correct methods
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[0].spec.methods}'
-            check:
-              (contains($stdout, 'DELETE')): true
-        # Get the Gateway proxy IP
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: GATEWAY_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
-            outputs:
-              - name: proxy_ip
-                value: ($stdout)
-        # Test DELETE method - should return 200
-        - description: Test DELETE method returns 200
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X DELETE http://${PROXY_IP}/delete
-            check:
-              (contains($stdout, '200')): true
-        # Test GET method on /delete - should return 404 or 405
-        - description: Test GET method on DELETE route returns non-200
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X GET http://${PROXY_IP}/delete)
-              echo $HTTP_CODE
-              if [ "$HTTP_CODE" = "404" ] || [ "$HTTP_CODE" = "405" ]; then
-                echo "OK"
-              else
-                echo "FAIL"
-                exit 1
-              fi
-      catch:
-        - description: Get HTTPRoute status
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: HTTPRoute
-            namespace: ($kong_namespace)
-        - description: Get KongRoute resources
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongRoute
-            namespace: ($kong_namespace)
-        - description: Describe KongRoute
-          script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o yaml
+  # Step 6: Create httpbin service.
+  - name: create-httpbin-service
+    description: Create and assert httpbin service to route traffic to
+    use:
+      template: ../../common/_step_templates/apply-assert-httpbinService.yaml
 
-    # Step 6: Test PATCH method matching
-    - name: test-patch-method-matching
-      description: Update HTTPRoute to use PATCH method matching
-      try:
-        # Collect old KongRoute name before update
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[*].metadata.name}'
-            outputs:
-              - name: old_kongroute_names
-                value: ($stdout)
-        # Apply the update
-        - apply:
-            file: 06-httproute-method-patch.yaml
-        - assert:
-            file: 02-assert-httproute.yaml
-        # Wait for old KongRoute to be deleted
-        - script:
-            env:
-              - name: OLD_NAMES
-                value: ($old_kongroute_names)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              if [ -n "$OLD_NAMES" ]; then
-                for name in $OLD_NAMES; do
-                  echo "Waiting for old KongRoute $name to be deleted..."
-                  kubectl wait --for=delete kongroute/$name -n ${KONG_NAMESPACE} --timeout=60s || true
-                done
-              fi
-        # Wait for new KongRoute to be programmed
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl wait --for=condition=Programmed --timeout=120s kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute
-        # Verify KongRoute has correct methods
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[0].spec.methods}'
-            check:
-              (contains($stdout, 'PATCH')): true
-        # Get the Gateway proxy IP
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: GATEWAY_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
-            outputs:
-              - name: proxy_ip
-                value: ($stdout)
-        # Test PATCH method - should return 200
-        - description: Test PATCH method returns 200
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X PATCH http://${PROXY_IP}/patch
-            check:
-              (contains($stdout, '200')): true
-        # Test GET method on /patch - should return 404 or 405
-        - description: Test GET method on PATCH route returns non-200
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X GET http://${PROXY_IP}/patch)
-              echo $HTTP_CODE
-              if [ "$HTTP_CODE" = "404" ] || [ "$HTTP_CODE" = "405" ]; then
-                echo "OK"
-              else
-                echo "FAIL"
-                exit 1
-              fi
-      catch:
-        - description: Get HTTPRoute status
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: HTTPRoute
-            namespace: ($kong_namespace)
-        - description: Get KongRoute resources
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongRoute
-            namespace: ($kong_namespace)
-        - description: Describe KongRoute
-          script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o yaml
+  # Step 7a: Test GET method matching.
+  - name: step-7a-create-httproute-get-method-match
+    description: Create HTTPRoute with GET method matching
+    try:
+      - apply:
+          file: 07-httproute-method-get.yaml
+      - assert:
+          file: 07-assert-httproute-method-get.yaml
+    bindings:
+      - name: httproute_name
+        value: ($httproute_name_get)
 
-    # Step 7: Test multiple HTTP methods in single rule
-    - name: test-multiple-methods-single-rule
-      description: Update HTTPRoute to use multiple HTTP methods (GET, POST, PUT) in a single rule
-      try:
-        # Collect old KongRoute name before update
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[*].metadata.name}'
-            outputs:
-              - name: old_kongroute_names
-                value: ($stdout)
-        # Apply the update
-        - apply:
-            file: 07-httproute-multiple-methods.yaml
-        - assert:
-            file: 02-assert-httproute.yaml
-        # Wait for old KongRoute to be deleted
-        - script:
-            env:
-              - name: OLD_NAMES
-                value: ($old_kongroute_names)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              if [ -n "$OLD_NAMES" ]; then
-                for name in $OLD_NAMES; do
-                  echo "Waiting for old KongRoute $name to be deleted..."
-                  kubectl wait --for=delete kongroute/$name -n ${KONG_NAMESPACE} --timeout=60s || true
-                done
-              fi
-        # Wait for new KongRoute to be programmed
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl wait --for=condition=Programmed --timeout=120s kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute
-        # Verify KongRoute has multiple methods
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              METHODS=$(kubectl get kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[0].spec.methods}')
-              echo "Methods: $METHODS"
-              echo "$METHODS" | grep -q "GET" && echo "$METHODS" | grep -q "POST" && echo "$METHODS" | grep -q "PUT"
-        # Get the Gateway proxy IP
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: GATEWAY_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
-            outputs:
-              - name: proxy_ip
-                value: ($stdout)
-        # Test GET method on /anything - should return 200
-        - description: Test GET method on /anything returns 200
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X GET http://${PROXY_IP}/anything
-            check:
-              (contains($stdout, '200')): true
-        # Test POST method on /anything - should return 200
-        - description: Test POST method on /anything returns 200
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X POST http://${PROXY_IP}/anything
-            check:
-              (contains($stdout, '200')): true
-        # Test PUT method on /anything - should return 200
-        - description: Test PUT method on /anything returns 200
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X PUT http://${PROXY_IP}/anything
-            check:
-              (contains($stdout, '200')): true
-        # Test DELETE method on /anything - should return 404 or 405 (not in allowed methods)
-        - description: Test DELETE method on /anything returns non-200
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X DELETE http://${PROXY_IP}/anything)
-              echo $HTTP_CODE
-              if [ "$HTTP_CODE" = "404" ] || [ "$HTTP_CODE" = "405" ]; then
-                echo "OK"
-              else
-                echo "FAIL"
-                exit 1
-              fi
-      catch:
-        - description: Get HTTPRoute status
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: HTTPRoute
-            namespace: ($kong_namespace)
-        - description: Get KongRoute resources
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongRoute
-            namespace: ($kong_namespace)
-        - description: Describe KongRoute
-          script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o yaml
+  # Step 7b: Verify GET method returns 200.
+  - name: step-7b-verify-get-method-returns-200
+    description: Verify GET method on /get returns 200
+    use:
+      template: ../../common/_step_templates/verify-method-match-routing.yaml
+    bindings:
+      - name: http_method
+        value: "GET"
+      - name: route_path
+        value: "/get"
+      - name: expected_status
+        value: "200"
 
-    # Step 8: Test method matching combined with path matching
-    - name: test-method-path-combined
-      description: Update HTTPRoute to use method matching combined with different path matching
-      try:
-        # Collect old KongRoute name before update
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[*].metadata.name}'
-            outputs:
-              - name: old_kongroute_names
-                value: ($stdout)
-        # Apply the update
-        - apply:
-            file: 08-httproute-method-path-combined.yaml
-        - assert:
-            file: 02-assert-httproute.yaml
-        # Wait for old KongRoute to be deleted
-        - script:
-            env:
-              - name: OLD_NAMES
-                value: ($old_kongroute_names)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              if [ -n "$OLD_NAMES" ]; then
-                for name in $OLD_NAMES; do
-                  echo "Waiting for old KongRoute $name to be deleted..."
-                  kubectl wait --for=delete kongroute/$name -n ${KONG_NAMESPACE} --timeout=60s || true
-                done
-              fi
-        # Wait for new KongRoutes to be programmed (multiple rules = multiple KongRoutes)
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl wait --for=condition=Programmed --timeout=120s kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute
-        # Get the Gateway proxy IP
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: GATEWAY_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
-            outputs:
-              - name: proxy_ip
-                value: ($stdout)
-        # Test GET /get - should return 200
-        - description: Test GET /get returns 200
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X GET http://${PROXY_IP}/get
-            check:
-              (contains($stdout, '200')): true
-        # Test POST /get - should return 404 or 405 (wrong method for /get path)
-        - description: Test POST /get returns non-200
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X POST http://${PROXY_IP}/get)
-              echo $HTTP_CODE
-              if [ "$HTTP_CODE" = "404" ] || [ "$HTTP_CODE" = "405" ]; then
-                echo "OK"
-              else
-                echo "FAIL"
-                exit 1
-              fi
-        # Test POST /post - should return 200
-        - description: Test POST /post returns 200
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X POST http://${PROXY_IP}/post
-            check:
-              (contains($stdout, '200')): true
-        # Test GET /post - should return 404 or 405 (wrong method for /post path)
-        - description: Test GET /post returns non-200
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X GET http://${PROXY_IP}/post)
-              echo $HTTP_CODE
-              if [ "$HTTP_CODE" = "404" ] || [ "$HTTP_CODE" = "405" ]; then
-                echo "OK"
-              else
-                echo "FAIL"
-                exit 1
-              fi
-        # Test GET /anything - should return 200 (any method allowed on /anything)
-        - description: Test GET /anything returns 200
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X GET http://${PROXY_IP}/anything
-            check:
-              (contains($stdout, '200')): true
-        # Test POST /anything - should return 200 (any method allowed on /anything)
-        - description: Test POST /anything returns 200
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X POST http://${PROXY_IP}/anything
-            check:
-              (contains($stdout, '200')): true
-        # Test DELETE /anything - should return 200 (any method allowed on /anything)
-        - description: Test DELETE /anything returns 200
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X DELETE http://${PROXY_IP}/anything
-            check:
-              (contains($stdout, '200')): true
-      catch:
-        - description: Get HTTPRoute status
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: HTTPRoute
-            namespace: ($kong_namespace)
-        - description: Get KongRoute resources
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongRoute
-            namespace: ($kong_namespace)
-        - description: Describe KongRoute
-          script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o yaml
+  # Step 7c: Verify POST method on GET route returns 404.
+  - name: step-7c-verify-post-on-get-route-returns-404
+    description: Verify POST method on GET route returns 404
+    use:
+      template: ../../common/_step_templates/verify-method-match-routing.yaml
+    bindings:
+      - name: http_method
+        value: "POST"
+      - name: route_path
+        value: "/get"
+      - name: expected_status
+        value: "404"
+
+  # Step 8a: Create HTTPRoute for POST method matching.
+  - name: step-8a-create-httproute-post-method-match
+    description: Create HTTPRoute with POST method matching
+    try:
+      - apply:
+          file: 08-httproute-method-post.yaml
+      - assert:
+          file: 08-assert-httproute-method-post.yaml
+    bindings:
+      - name: httproute_name
+        value: ($httproute_name_post)
+
+  # Step 8b: Verify POST method returns 200.
+  - name: step-8b-verify-post-method-returns-200
+    description: Verify POST method on /post returns 200
+    use:
+      template: ../../common/_step_templates/verify-method-match-routing.yaml
+    bindings:
+      - name: http_method
+        value: "POST"
+      - name: route_path
+        value: "/post"
+      - name: expected_status
+        value: "200"
+
+  # Step 8c: Verify GET method on POST route returns 404.
+  - name: step-8c-verify-get-on-post-route-returns-404
+    description: Verify GET method on POST route returns 404
+    use:
+      template: ../../common/_step_templates/verify-method-match-routing.yaml
+    bindings:
+      - name: http_method
+        value: "GET"
+      - name: route_path
+        value: "/post"
+      - name: expected_status
+        value: "404"
+
+  # Step 9a: Create HTTPRoute for PUT method matching.
+  - name: step-9a-create-httproute-put-method-match
+    description: Create HTTPRoute with PUT method matching
+    try:
+      - apply:
+          file: 09-httproute-method-put.yaml
+      - assert:
+          file: 09-assert-httproute-method-put.yaml
+    bindings:
+      - name: httproute_name
+        value: ($httproute_name_put)
+
+  # Step 9b: Verify PUT method returns 200.
+  - name: step-9b-verify-put-method-returns-200
+    description: Verify PUT method on /put returns 200
+    use:
+      template: ../../common/_step_templates/verify-method-match-routing.yaml
+    bindings:
+      - name: http_method
+        value: "PUT"
+      - name: route_path
+        value: "/put"
+      - name: expected_status
+        value: "200"
+
+  # Step 9c: Verify GET method on PUT route returns 404.
+  - name: step-9c-verify-get-on-put-route-returns-404
+    description: Verify GET method on PUT route returns 404
+    use:
+      template: ../../common/_step_templates/verify-method-match-routing.yaml
+    bindings:
+      - name: http_method
+        value: "GET"
+      - name: route_path
+        value: "/put"
+      - name: expected_status
+        value: "404"
+
+  # Step 10a: Create HTTPRoute for DELETE method matching.
+  - name: step-10a-create-httproute-delete-method-match
+    description: Create HTTPRoute with DELETE method matching
+    try:
+      - apply:
+          file: 10-httproute-method-delete.yaml
+      - assert:
+          file: 10-assert-httproute-method-delete.yaml
+    bindings:
+      - name: httproute_name
+        value: ($httproute_name_delete)
+
+  # Step 10b: Verify DELETE method returns 200.
+  - name: step-10b-verify-delete-method-returns-200
+    description: Verify DELETE method on /delete returns 200
+    use:
+      template: ../../common/_step_templates/verify-method-match-routing.yaml
+    bindings:
+      - name: http_method
+        value: "DELETE"
+      - name: route_path
+        value: "/delete"
+      - name: expected_status
+        value: "200"
+
+  # Step 10c: Verify GET method on DELETE route returns 404.
+  - name: step-10c-verify-get-on-delete-route-returns-404
+    description: Verify GET method on DELETE route returns 404
+    use:
+      template: ../../common/_step_templates/verify-method-match-routing.yaml
+    bindings:
+      - name: http_method
+        value: "GET"
+      - name: route_path
+        value: "/delete"
+      - name: expected_status
+        value: "404"
+
+  # Step 11a: Create HTTPRoute for PATCH method matching.
+  - name: step-11a-create-httproute-patch-method-match
+    description: Create HTTPRoute with PATCH method matching
+    try:
+      - apply:
+          file: 11-httproute-method-patch.yaml
+      - assert:
+          file: 11-assert-httproute-method-patch.yaml
+    bindings:
+      - name: httproute_name
+        value: ($httproute_name_patch)
+
+  # Step 11b: Verify PATCH method returns 200.
+  - name: step-11b-verify-patch-method-returns-200
+    description: Verify PATCH method on /patch returns 200
+    use:
+      template: ../../common/_step_templates/verify-method-match-routing.yaml
+    bindings:
+      - name: http_method
+        value: "PATCH"
+      - name: route_path
+        value: "/patch"
+      - name: expected_status
+        value: "200"
+
+  # Step 11c: Verify GET method on PATCH route returns 404.
+  - name: step-11c-verify-get-on-patch-route-returns-404
+    description: Verify GET method on PATCH route returns 404
+    use:
+      template: ../../common/_step_templates/verify-method-match-routing.yaml
+    bindings:
+      - name: http_method
+        value: "GET"
+      - name: route_path
+        value: "/patch"
+      - name: expected_status
+        value: "404"
+
+  # Step 12a: Create HTTPRoute with multiple HTTP methods.
+  - name: step-12a-create-httproute-multiple-methods
+    description: Create HTTPRoute with multiple HTTP methods (GET, POST, PUT) in a single rule
+    try:
+      - apply:
+          file: 12-httproute-multiple-methods.yaml
+      - assert:
+          file: 12-assert-httproute-multiple-methods.yaml
+    bindings:
+      - name: httproute_name
+        value: ($httproute_name_multiple)
+
+  # Step 12b: Verify GET method on /anything returns 200.
+  - name: step-12b-verify-get-on-anything-returns-200
+    description: Verify GET method on /anything returns 200
+    use:
+      template: ../../common/_step_templates/verify-method-match-routing.yaml
+    bindings:
+      - name: http_method
+        value: "GET"
+      - name: route_path
+        value: "/anything"
+      - name: expected_status
+        value: "200"
+
+  # Step 12c: Verify POST method on /anything returns 200.
+  - name: step-12c-verify-post-on-anything-returns-200
+    description: Verify POST method on /anything returns 200
+    use:
+      template: ../../common/_step_templates/verify-method-match-routing.yaml
+    bindings:
+      - name: http_method
+        value: "POST"
+      - name: route_path
+        value: "/anything"
+      - name: expected_status
+        value: "200"
+
+  # Step 12d: Verify PUT method on /anything returns 200.
+  - name: step-12d-verify-put-on-anything-returns-200
+    description: Verify PUT method on /anything returns 200
+    use:
+      template: ../../common/_step_templates/verify-method-match-routing.yaml
+    bindings:
+      - name: http_method
+        value: "PUT"
+      - name: route_path
+        value: "/anything"
+      - name: expected_status
+        value: "200"
+
+  # Step 12e: Verify DELETE method on /anything returns 404 (not in allowed methods).
+  - name: step-12e-verify-delete-on-anything-returns-404
+    description: Verify DELETE method on /anything returns 404
+    use:
+      template: ../../common/_step_templates/verify-method-match-routing.yaml
+    bindings:
+      - name: http_method
+        value: "DELETE"
+      - name: route_path
+        value: "/anything"
+      - name: expected_status
+        value: "404"
+
+  # Step 13a: Create HTTPRoute with method matching combined with path matching.
+  - name: step-13a-create-httproute-method-path-combined
+    description: Create HTTPRoute with method matching combined with different path matching
+    try:
+      - apply:
+          file: 13-httproute-method-path-combined.yaml
+      - assert:
+          file: 13-assert-httproute-method-path-combined.yaml
+    bindings:
+      - name: httproute_name
+        value: ($httproute_name_combined)
+
+  # Step 13b: Verify GET /get returns 200.
+  - name: step-13b-verify-get-on-get-path-returns-200
+    description: Verify GET method on /get returns 200
+    use:
+      template: ../../common/_step_templates/verify-method-match-routing.yaml
+    bindings:
+      - name: http_method
+        value: "GET"
+      - name: route_path
+        value: "/get"
+      - name: expected_status
+        value: "200"
+
+  # Step 13c: Verify POST /get returns 404 (wrong method for /get path).
+  - name: step-13c-verify-post-on-get-path-returns-404
+    description: Verify POST method on /get returns 404
+    use:
+      template: ../../common/_step_templates/verify-method-match-routing.yaml
+    bindings:
+      - name: http_method
+        value: "POST"
+      - name: route_path
+        value: "/get"
+      - name: expected_status
+        value: "404"
+
+  # Step 13d: Verify POST /post returns 200.
+  - name: step-13d-verify-post-on-post-path-returns-200
+    description: Verify POST method on /post returns 200
+    use:
+      template: ../../common/_step_templates/verify-method-match-routing.yaml
+    bindings:
+      - name: http_method
+        value: "POST"
+      - name: route_path
+        value: "/post"
+      - name: expected_status
+        value: "200"
+
+  # Step 13e: Verify GET /post returns 404 (wrong method for /post path).
+  - name: step-13e-verify-get-on-post-path-returns-404
+    description: Verify GET method on /post returns 404
+    use:
+      template: ../../common/_step_templates/verify-method-match-routing.yaml
+    bindings:
+      - name: http_method
+        value: "GET"
+      - name: route_path
+        value: "/post"
+      - name: expected_status
+        value: "404"
+
+  # Step 13f: Verify GET /anything returns 200 (any method allowed).
+  - name: step-13f-verify-get-on-anything-path-returns-200
+    description: Verify GET method on /anything returns 200
+    use:
+      template: ../../common/_step_templates/verify-method-match-routing.yaml
+    bindings:
+      - name: http_method
+        value: "GET"
+      - name: route_path
+        value: "/anything"
+      - name: expected_status
+        value: "200"
+
+  # Step 13g: Verify POST /anything returns 200 (any method allowed).
+  - name: step-13g-verify-post-on-anything-path-returns-200
+    description: Verify POST method on /anything returns 200
+    use:
+      template: ../../common/_step_templates/verify-method-match-routing.yaml
+    bindings:
+      - name: http_method
+        value: "POST"
+      - name: route_path
+        value: "/anything"
+      - name: expected_status
+        value: "200"
+
+  # Step 13h: Verify DELETE /anything returns 200 (any method allowed).
+  - name: step-13h-verify-delete-on-anything-path-returns-200
+    description: Verify DELETE method on /anything returns 200
+    use:
+      template: ../../common/_step_templates/verify-method-match-routing.yaml
+    bindings:
+      - name: http_method
+        value: "DELETE"
+      - name: route_path
+        value: "/anything"
+      - name: expected_status
+        value: "200"
+
+  # Step 14a: Create HTTPRoute for update test (initially GET only).
+  - name: step-14a-create-httproute-update-test-initial
+    description: Create HTTPRoute with GET method only for update test
+    try:
+      - apply:
+          file: 14-httproute-update-test-initial.yaml
+      - assert:
+          file: 14-assert-httproute-update-test-initial.yaml
+    bindings:
+      - name: httproute_name
+        value: ($httproute_name_update_test)
+
+  # Step 14b: Verify GET method on initial route returns 200.
+  - name: step-14b-verify-get-on-update-test-initial-returns-200
+    description: Verify GET method on /status/200 returns 200
+    use:
+      template: ../../common/_step_templates/verify-method-match-routing.yaml
+    bindings:
+      - name: http_method
+        value: "GET"
+      - name: route_path
+        value: "/status/200"
+      - name: expected_status
+        value: "200"
+
+  # Step 14c: Verify POST method on initial route returns 404.
+  - name: step-14c-verify-post-on-update-test-initial-returns-404
+    description: Verify POST method on /status/200 returns 404 before update
+    use:
+      template: ../../common/_step_templates/verify-method-match-routing.yaml
+    bindings:
+      - name: http_method
+        value: "POST"
+      - name: route_path
+        value: "/status/200"
+      - name: expected_status
+        value: "404"
+
+  # Step 14d: Update HTTPRoute to accept both GET and POST.
+  - name: step-14d-update-httproute-update-test
+    description: Update HTTPRoute to accept both GET and POST methods
+    try:
+      - apply:
+          file: 14-httproute-update-test-updated.yaml
+      - assert:
+          file: 14-assert-httproute-update-test-updated.yaml
+    bindings:
+      - name: httproute_name
+        value: ($httproute_name_update_test)
+
+  # Step 14e: Verify GET method still works after update.
+  - name: step-14e-verify-get-on-update-test-updated-returns-200
+    description: Verify GET method on /update-test still returns 200 after update
+    use:
+      template: ../../common/_step_templates/verify-method-match-routing.yaml
+    bindings:
+      - name: http_method
+        value: "GET"
+      - name: route_path
+        value: "/status/200"
+      - name: expected_status
+        value: "200"
+
+  # Step 14f: Verify POST method now works after update.
+  - name: step-14f-verify-post-on-update-test-updated-returns-200
+    description: Verify POST method on /status/200 returns 200 after update
+    use:
+      template: ../../common/_step_templates/verify-method-match-routing.yaml
+    bindings:
+      - name: http_method
+        value: "POST"
+      - name: route_path
+        value: "/status/200"
+      - name: expected_status
+        value: "200"

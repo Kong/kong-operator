@@ -3,7 +3,7 @@ kind: HTTPRoute
 apiVersion: gateway.networking.k8s.io/v1
 metadata:
   name: ($httproute_name)
-  namespace: ($kong_namespace)
+  namespace: ($namespace)
   annotations:
     konghq.com/strip-path: "false"
 spec:
@@ -13,10 +13,10 @@ spec:
       name: ($gateway_name)
   rules:
     - matches:
-        - method: GET
+        - method: DELETE
           path:
             type: Exact
-            value: /get
+            value: /delete
       backendRefs:
-        - name: httpbin
-          port: 80
+        - name: ($httpbin_deployment_name)
+          port: ($httpbin_service_port)
