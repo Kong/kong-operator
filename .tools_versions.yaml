@@ -13,7 +13,7 @@ dlv: "1.26.0"
 # renovate: datasource=github-releases depName=gotestyourself/gotestsum
 gotestsum: "1.13.0"
 # renovate: datasource=github-releases depName=elastic/crd-ref-docs
-crd-ref-docs: "0.2.0"
+crd-ref-docs: "0.3.0"
 # renovate: datasource=github-releases depName=vektra/mockery
 mockery: "3.6.3"
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-runtime
