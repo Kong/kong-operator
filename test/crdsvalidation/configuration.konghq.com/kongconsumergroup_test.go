@@ -214,4 +214,57 @@ func TestKongConsumerGroup(t *testing.T) {
 		}.
 			RunWithConfig(t, cfg, scheme)
 	})
+
+	t.Run("name validation", func(t *testing.T) {
+		common.TestCasesGroup[*configurationv1beta1.KongConsumerGroup]{
+			{
+				Name: "valid name",
+				TestObject: &configurationv1beta1.KongConsumerGroup{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1beta1.KongConsumerGroupSpec{
+						Name: "group-1",
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "invalid name format",
+				TestObject: &configurationv1beta1.KongConsumerGroup{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1beta1.KongConsumerGroupSpec{
+						Name: "group name",
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("spec.name: Invalid value"),
+			},
+			{
+				Name: "name too long",
+				TestObject: &configurationv1beta1.KongConsumerGroup{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1beta1.KongConsumerGroupSpec{
+						Name: lo.RandomString(129, lo.AlphanumericCharset),
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("Too long: may not be "),
+			},
+		}.
+			RunWithConfig(t, cfg, scheme)
+	})
 }
