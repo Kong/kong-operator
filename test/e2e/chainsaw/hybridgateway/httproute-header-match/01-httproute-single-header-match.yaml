@@ -3,6 +3,8 @@ apiVersion: gateway.networking.k8s.io/v1
 metadata:
   name: ($http_route_name)
   namespace: ($http_route_namespace)
+  labels:
+    chainsaw/test: httproute-header-match
 spec:
   parentRefs:
     - group: gateway.networking.k8s.io

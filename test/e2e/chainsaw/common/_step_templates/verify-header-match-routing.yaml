@@ -1,0 +1,56 @@
+# Template for verifying HTTP routing based on header matches.
+#
+# Required bindings:
+#   - gateway_name: Name of the Gateway.
+#   - gateway_namespace: Namespace of the Gateway.
+#   - expected_status: Expected HTTP status code (e.g., "200", "404").
+#   - route_path: (optional) HTTP path to test. Default: "/".
+#   - http_method: (optional) HTTP method to use. Default: "GET".
+#   - listener_http_port: (optional) HTTP port to test. Default: "80".
+#   - host_header: (optional) Host header to send with the request. Default: "".
+#   - request_headers: (optional) Custom headers to send, format: 'Header1:value1,Header2:value2'. Default: "".
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: verify-header-match-routing
+spec:
+  try:
+    # 1. Dynamically discover the Gateway's Proxy IP.
+    - script:
+        env:
+          - name: GATEWAY_NAME
+            value: ($gateway_name)
+          - name: GATEWAY_NAMESPACE
+            value: ($gateway_namespace)
+        content: |
+          bash ../../common/scripts/proxy_ip_address.sh
+        outputs:
+          - name: proxy_ip
+            value: (json_parse($stdout).proxy_ip_address)
+        check:
+          (json_parse($stdout).proxy_ip_address != null): true
+          (json_parse($stdout).proxy_ip_address != ''): true
+
+    # 2. Perform the HTTP connectivity check with header matching.
+    - script:
+        env:
+          - name: PROXY_IP
+            value: ($proxy_ip)
+          - name: ROUTE_PATH
+            value: ($route_path)
+          - name: PROXY_PORT
+            value: (to_string($listener_http_port))
+          - name: HOST
+            value: ($host_header)
+          - name: METHOD
+            value: ($http_method)
+          - name: REQUEST_HEADERS
+            value: ($request_headers)
+          - name: EXPECTED_STATUS
+            value: ($expected_status)
+        content: |
+          bash ../../common/scripts/header_match_connectivity_test.sh
+        check:
+          (json_parse($stdout).success): true
+          (to_string(json_parse($stdout).http_status) == ($expected_status)): true
+          (to_string(json_parse($stdout).expected_status) == ($expected_status)): true
