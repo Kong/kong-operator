@@ -1,4 +1,4 @@
-# HTTPRoute extenstionRef filter test scenario
+# HTTPRoute ExtensionRef filter test scenario
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: Test
 metadata:
@@ -6,396 +6,542 @@ metadata:
 spec:
   description: |
     This test validates that the hybrid gateway controller correctly
-    processes the `extensionRef` filter to attach plugins by `KongPlugin`
+    processes the `extensionRef` filter to attach plugins via `KongPlugin`
     to HTTPRoutes.
-
-  bindings:
-    - name: kong_namespace
-      value: (join('-', ['kong', 'httproute-extensionref-filter', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
-    - name: gateway_class_name
-      value:  (join('-', ['kong', 'httproute-extensionref-filter', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
-    - name: gateway_name
-      value: ($gateway_class_name)
-    - name: gateway_configuration_name
-      value: ($gateway_class_name)
-    - name: gateway_namespace
-      value: ($kong_namespace)
-    - name: http_route_namespace
-      value: ($kong_namespace)
-    - name: httpbin_service_name
-      value: httpbin
-    - name: httpbin_service_namespace
-      value: ($kong_namespace)
-    - name: gateway_dataplane_image
-      value: "kong/kong-gateway:3.12"
-    - name: operator_namespace
-      value: kong-system
 
   timeouts:
     apply: 120s
-    assert: 300s
-    cleanup: 300s
+    assert: 120s
     delete: 120s
+    exec: 120s
+
+  bindings:
+    # Test identification using chainsaw namespace.
+    - name: test_name
+      value: ($namespace)
+
+    # Konnect configuration.
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+
+    # TLS configuration.
+    - name: sni_hostname
+      value: (join('.', ['*', ($test_name), 'example.com']))
+    - name: fqdn
+      value: (join('.', ['test', ($test_name), 'example.com']))
+    - name: cert_secret_name
+      value: test-tls-secret
+    - name: cert_secret_namespace
+      value: ($namespace)
+    - name: listener_https_port
+      value: 443
+    - name: listener_http_port
+      value: 80
+
+    # Gateway configuration.
+    - name: gateway_image
+      value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.12')
+    - name: gateway_name
+      value: (join('-', [($test_name), 'gateway']))
+    - name: gateway_namespace
+      value: ($namespace)
+
+    # Backend service.
+    - name: httpbin_deployment_name
+      value: (join('-', [($test_name), 'httpbin']))
+    - name: httpbin_deployment_namespace
+      value: ($namespace)
 
   steps:
-  # Step 1: Create prerequisite resources
-    - name: create-prerequisites
-      description: Create GatewayClass, Gateway, and backend Service
+    # Step 0: Create TLS Secret.
+    - name: 0-Create-tls-secret
+      description: Create TLS Secret for the Gateway TLS listener
+      use:
+        template: ../../common/_step_templates/apply-assert-tlsSecret.yaml
+
+    # Step 1: Create Konnect API Auth Configuration.
+    - name: 1-Create-konnect-api-auth
+      description: Create KonnectAPIAuthConfiguration for the test
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+    # Step 2: Create Gateway Configuration.
+    - name: 2-Create-gateway-configuration
+      description: Create GatewayConfiguration for the test
+      use:
+        template: ../../common/_step_templates/apply-assert-gatewayConfiguration.yaml
+
+    # Step 3: Create GatewayClass.
+    - name: 3-Create-gateway-class
+      description: Create GatewayClass for the test
+      use:
+        template: ../../common/_step_templates/apply-assert-gatewayClass.yaml
+
+    # Step 4: Create Gateway.
+    - name: 4-Create-gateway
+      description: Create Gateway for the test
+      use:
+        template: ../../common/_step_templates/apply-assert-gateway.yaml
+
+    # Step 5: Create httpbin backend service.
+    - name: 5-Create-httpbin-backend
+      description: Create httpbin backend service
+      use:
+        template: ../../common/_step_templates/apply-assert-httpbinService.yaml
+
+    # Step 6: Assert Konnect Gateway Control Plane.
+    - name: 6-Assert-konnect-gateway-control-plane
+      description: Assert KonnectGatewayControlPlane is synchronized
+      use:
+        template: ../../common/_step_templates/assert-konnectGatewayControlPlane.yaml
+
+    # Step 7a: Create HTTPRoute with single ExtensionRef filter.
+    - name: 7a-Create-single-extensionref-filter
+      description: Create an HTTPRoute with single ExtensionRef filter (rate-limiting plugin)
+      bindings:
+        - name: fqdn
+          value: (join('.', ['single', ($test_name), 'example.com']))
       try:
         - apply:
-            file: 01-prerequisites.yaml
-        - apply:
-            file: 00-httpbin.yaml
+            file: 01-httproute-single-plugin.yaml
         - assert:
-            file: 00-assert-httpbin.yaml
-        - assert:
-            file: 01-assert-prerequisites.yaml
-      catch:
-        - description: Get Gateway resource status
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: Gateway
-            namespace: ($gateway_namespace)
-        - description: Get Pods in gateway namespace
-          get:
-            apiVersion: v1
-            kind: Pod
-            namespace: ($gateway_namespace)
-        - description: Get operator logs
-          podLogs:
-            namespace: ($operator_namespace)
-            selector: control-plane=controller-manager
-            tail: 100
-    # Step 2: Create the HTTPRoute and attach the rate-limiting plugin to it
-    - name: create-httproute-with-rate-limiting-plugin
-      description: Create an HTTPRoute with ExtensionRef filter to attach a rate-limiting plugin
+            file: 01-assert-httproute.yaml
+
+    # Step 7b: Verify HTTP connectivity.
+    - name: 7b-Verify-http-connectivity
+      description: Verify HTTP connectivity to the route
       bindings:
-        - name: http_route_name
-          value: (join('-', ['httproute-extensionref-filter-single-plugin', env('TEST_ID') || 'local']))
         - name: route_path
-          value: "/extension-ref-with-single-plugin"
-        - name: rate_limiting_plugin_name
-          value: rate-limit-plugin-single-filter
-        - name: rate_limiting_plugin_namespace
-          value: ($http_route_namespace)
+          value: "/get"
+        - name: http_method
+          value: "GET"
+        - name: listener_http_port
+          value: "80"
+        - name: host_header
+          value: (join('.', ['single', ($test_name), 'example.com']))
+      use:
+        template: ../../common/_step_templates/verify-http-traffic-from-host.yaml
+
+    # Step 7c: Verify HTTPS connectivity.
+    - name: 7c-Verify-https-connectivity
+      description: Verify HTTPS connectivity to the route
+      bindings:
+        - name: fqdn
+          value: (join('.', ['single', ($test_name), 'example.com']))
+        - name: route_path
+          value: "/get"
+        - name: http_method
+          value: "GET"
+        - name: insecure
+          value: "true"
+      use:
+        template: ../../common/_step_templates/verify-https-traffic-from-host.yaml
+
+    # Step 7d: Verify single plugin functionality.
+    - name: 7d-Verify-single-plugin
+      description: Verify rate-limiting plugin functionality
+      bindings:
+        - name: route_path
+          value: "/get"
+        - name: expected_rate_limit
+          value: "1000"
+        - name: host_header
+          value: (join('.', ['single', ($test_name), 'example.com']))
+      use:
+        template: ../../common/_step_templates/verify-rate-limiting-plugin.yaml
+
+    # Step 8a: Create HTTPRoute with multiple ExtensionRef filters.
+    - name: 8a-Create-multiple-extensionref-filters
+      description: Create an HTTPRoute with 2 ExtensionRef filters (rate-limiting + response-transformer)
+      bindings:
+        - name: fqdn
+          value: (join('.', ['multiple', ($test_name), 'example.com']))
       try:
-        - apply: 
-            file: 02-httproute-extensionref-filter-single-plugin.yaml
+        - apply:
+            file: 02-httproute-multiple-plugins.yaml
         - assert:
-            file: 02-assert-httproute-extensionref-filter-single-plugin.yaml
-        # Get the Gateway proxy IP
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: GATEWAY_NAMESPACE
-                value: ($gateway_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
-            outputs:
-              - name: proxy_ip
-                value: ($stdout)
-        # Try accessing the path and check the header related to rate limiting
-        - description: Test connectivity from outside the cluster
-          script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: GATEWAY_NAMESPACE
-                value: ($gateway_namespace)
-              - name: PROXY_IP
-                value: ($proxy_ip)
-              - name: ROUTE_PATH
-                value: ($route_path)
-            content: |
-              echo "Accessing gateway ${GATEWAY_NAMESPACE}/${GATEWAY_NAME} at ${PROXY_IP}"
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s --include http://${PROXY_IP}${ROUTE_PATH}/status/200
-            check:
-              (contains($stdout, '200 OK')): true
-              "(contains($stdout, 'X-RateLimit-Limit-Minute: 20'))": true
-      catch:
-        # Dump HTTPRoute and related KongRoutes, KongPlugins and KongPluginBindings.
-        - description: Dump HTTPRoutes
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: HTTPRoute
-            namespace: ($http_route_namespace)
-            name: ($http_route_name)
-            format: yaml
-        - description: Dump KongRoutes
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongRoute
-            namespace: ($http_route_namespace)
-            format: yaml
-        - description: Dump KongPlugins
-          get:
-            apiVersion: configuration.konghq.com/v1
-            kind: KongPlugin
-            namespace: ($http_route_namespace)
-            format: yaml
-        - description: Dump KongPluginBindings
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongPluginBinding
-            namespace: ($http_route_namespace)
-      finally:
-        - delete:
-            ref:
-              apiVersion: gateway.networking.k8s.io/v1
-              kind: HTTPRoute
-              namespace: ($http_route_namespace)
-              name: ($http_route_name)
-    # Step 3: Create an HTTPRoute with multiple extentionRef filters with multiple plugins attached.
-    - name: create-httproute-with-multiple-plugins
-      description: Create an HTTPRoute with 2 ExtensionRef filters to attach a rate-limiting and a response-transformer plugins
+            file: 02-assert-httproute.yaml
+
+    # Step 8b: Verify HTTP connectivity.
+    - name: 8b-Verify-http-connectivity-multiple
+      description: Verify HTTP connectivity to the multiple plugins route
       bindings:
-        - name: http_route_name
-          value: (join('-', ['httproute-extensionref-filter-multiple-plugin', env('TEST_ID') || 'local']))
         - name: route_path
-          value: "/extension-ref-with-multiple-plugins"
+          value: "/get"
+        - name: http_method
+          value: "GET"
+        - name: listener_http_port
+          value: "80"
+        - name: host_header
+          value: (join('.', ['multiple', ($test_name), 'example.com']))
+      use:
+        template: ../../common/_step_templates/verify-http-traffic-from-host.yaml
+
+    # Step 8c: Verify HTTPS connectivity.
+    - name: 8c-Verify-https-connectivity-multiple
+      description: Verify HTTPS connectivity to the multiple plugins route
+      bindings:
+        - name: fqdn
+          value: (join('.', ['multiple', ($test_name), 'example.com']))
+        - name: route_path
+          value: "/get"
+        - name: http_method
+          value: "GET"
+        - name: insecure
+          value: "true"
+      use:
+        template: ../../common/_step_templates/verify-https-traffic-from-host.yaml
+
+    # Step 8d: Verify rate-limiting plugin.
+    - name: 8d-Verify-rate-limiting-plugin-multiple
+      description: Verify rate-limiting plugin functionality
+      bindings:
+        - name: route_path
+          value: "/get"
+        - name: expected_rate_limit
+          value: "1000"
+        - name: host_header
+          value: (join('.', ['multiple', ($test_name), 'example.com']))
+      use:
+        template: ../../common/_step_templates/verify-rate-limiting-plugin.yaml
+
+    # Step 8e: Verify response-transformer plugin.
+    - name: 8e-Verify-response-transformer-plugin-multiple
+      description: Verify response-transformer plugin functionality
+      bindings:
+        - name: route_path
+          value: "/get"
+        - name: expected_header
+          value: "X-Add: foo"
+        - name: host_header
+          value: (join('.', ['multiple', ($test_name), 'example.com']))
+      use:
+        template: ../../common/_step_templates/verify-response-transformer-plugin.yaml
+
+    # Step 9a: Apply HTTPRoute with initial KongPlugin config.
+    - name: 9a-Apply-httproute-plugin-update
+      description: Create HTTPRoute with response-transformer plugin
+      bindings:
+        - name: fqdn
+          value: (join('.', ['update', ($test_name), 'example.com']))
+      try:
+        - apply:
+            file: 03-httproute-plugin-update.yaml
+        - assert:
+            file: 03-assert-httproute-initial.yaml
+
+    # Step 9b: Verify HTTP connectivity.
+    - name: 9b-Verify-http-connectivity-plugin-update
+      description: Verify HTTP connectivity to the plugin update route
+      bindings:
+        - name: route_path
+          value: "/get"
+        - name: http_method
+          value: "GET"
+        - name: listener_http_port
+          value: "80"
+        - name: host_header
+          value: (join('.', ['update', ($test_name), 'example.com']))
+      use:
+        template: ../../common/_step_templates/verify-http-traffic-from-host.yaml
+
+    # Step 9c: Verify HTTPS connectivity.
+    - name: 9c-Verify-https-connectivity-plugin-update
+      description: Verify HTTPS connectivity to the plugin update route
+      bindings:
+        - name: fqdn
+          value: (join('.', ['update', ($test_name), 'example.com']))
+        - name: route_path
+          value: "/get"
+        - name: http_method
+          value: "GET"
+        - name: insecure
+          value: "true"
+      use:
+        template: ../../common/_step_templates/verify-https-traffic-from-host.yaml
+
+    # Step 9d: Verify initial response-transformer header.
+    - name: 9d-Verify-initial-response-transformer
+      description: Verify initial response-transformer plugin functionality (X-Test:initial)
+      bindings:
+        - name: route_path
+          value: "/get"
+        - name: expected_header
+          value: "X-Test: initial"
+        - name: host_header
+          value: (join('.', ['update', ($test_name), 'example.com']))
+      use:
+        template: ../../common/_step_templates/verify-response-transformer-plugin.yaml
+
+    # Step 9e: Update KongPlugin config.
+    - name: 9e-Update-kongplugin-config
+      description: Update KongPlugin config to X-Test:updated
+      try:
+        - apply:
+            file: 03-kongplugin-update-patch.yaml
+        - assert:
+            file: 03-assert-kongplugin-updated.yaml
+
+    # Step 9f: Verify updated response-transformer header.
+    - name: 9f-Verify-updated-response-transformer
+      description: Verify updated response-transformer plugin functionality (X-Test:updated)
+      bindings:
+        - name: route_path
+          value: "/get"
+        - name: expected_header
+          value: "X-Test: updated"
+        - name: host_header
+          value: (join('.', ['update', ($test_name), 'example.com']))
+      use:
+        template: ../../common/_step_templates/verify-response-transformer-plugin.yaml
+
+    # Step 10a: Apply HTTPRoute with single filter.
+    - name: 10a-Apply-httproute-single-filter
+      description: Create HTTPRoute with single rate-limiting filter
+      bindings:
+        - name: fqdn
+          value: (join('.', ['add', ($test_name), 'example.com']))
+        - name: http_route_name
+          value: httproute-add-filter
+        - name: route_path
+          value: "/get"
         - name: rate_limiting_plugin_name
-          value: rate-limit-multiple-filters
+          value: rate-limit-add
         - name: response_transformer_plugin_name
-          value: response-transformer-plugin-multiple-filters
+          value: response-transformer-add
       try:
         - apply:
-            file: 03-httproute-extensionref-multiple-plugins.yaml
-        # Get the Gateway proxy IP
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: GATEWAY_NAMESPACE
-                value: ($gateway_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
-            outputs:
-              - name: proxy_ip
-                value: ($stdout)
-        # Try accessing the path and check the header related to rate limiting
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: GATEWAY_NAMESPACE
-                value: ($gateway_namespace)
-              - name: PROXY_IP
-                value: ($proxy_ip)
-              - name: ROUTE_PATH
-                value: ($route_path)
-            content: |
-              echo "Accessing gateway ${GATEWAY_NAMESPACE}/${GATEWAY_NAME} at ${PROXY_IP}"
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s --include http://${PROXY_IP}${ROUTE_PATH}/status/200
-            check:
-              (contains($stdout, '200 OK')): true
-              "(contains($stdout, 'X-RateLimit-Limit-Minute: 20'))": true
-              "(contains($stdout, 'X-Add: foo'))": true
-      catch:
-        # Dump HTTPRoute and related KongRoutes, KongPlugins and KongPluginBindings.
-        - description: Dump HTTPRoutes
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: HTTPRoute
-            namespace: ($http_route_namespace)
-            name: ($http_route_name)
-            format: yaml
-        - description: Dump KongRoutes
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongRoute
-            namespace: ($http_route_namespace)
-            format: yaml
-        - description: Dump KongPlugins
-          get:
-            apiVersion: configuration.konghq.com/v1
-            kind: KongPlugin
-            namespace: ($http_route_namespace)
-            format: yaml
-        - description: Dump KongPluginBindings
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongPluginBinding
-            namespace: ($http_route_namespace)
-      finally:
-        - delete:
-            ref:
-              apiVersion: gateway.networking.k8s.io/v1
-              kind: HTTPRoute
-              namespace: ($http_route_namespace)
-              name: ($http_route_name)
-  # Step 4: Update the KongPlugin after HTTPRoute is programmed
-    - name: update-kongplugin-for-attached-httproute
-      description: Update KongPlugin which is attached to an HTTPRoute by extensionRef filter
+            file: 04-httproute-add-filter-base.yaml
+        - assert:
+            file: 04-assert-httproute-initial.yaml
+
+    # Step 10b: Verify HTTP connectivity.
+    - name: 10b-Verify-http-connectivity-add-filter
+      description: Verify HTTP connectivity to the add-filter route
       bindings:
-        - name: http_route_name
-          value: (join('-', ['httproute-extensionref-filter-update-kongplugin', env('TEST_ID') || 'local'])) 
         - name: route_path
-          value: "/httproute-extensionref-filter-update-kongplugin"
-        - name: rate_limiting_plugin_name
-          value: rate-limit-plugin-update-kongplugin
-        - name: rate_limiting_plugin_namespace
-          value: ($http_route_namespace)
-      try:
-        - apply: 
-            file: 04-httproute-extensionref-filter-update-kongplugin-base.yaml
-        # Get the Gateway proxy IP
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: GATEWAY_NAMESPACE
-                value: ($gateway_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
-            outputs:
-              - name: proxy_ip
-                value: ($stdout)
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: GATEWAY_NAMESPACE
-                value: ($gateway_namespace)
-              - name: PROXY_IP
-                value: ($proxy_ip)
-              - name: ROUTE_PATH
-                value: ($route_path)
-            content: |
-              echo "Accessing gateway ${GATEWAY_NAMESPACE}/${GATEWAY_NAME} at ${PROXY_IP}"
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s --include http://${PROXY_IP}${ROUTE_PATH}/status/200
-            check:
-              (contains($stdout, '200 OK')): true
-              "(contains($stdout, 'X-RateLimit-Limit-Minute: 20'))": true
-      # Update the KongPlugin.
-        - description: Update the KongPlugin
-          apply:
-            file: 04-httproute-extensionref-filter-update-kongplugin-patch.yaml
-      # Wait until the X-RateLimit-Limit-Minute header changes.
-        - script:
-            timeout: 90s
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-              - name: ROUTE_PATH
-                value: ($route_path)
-            content: |
-              RATELIMIT_LIMIT_MINUTE_HEADER=""
-              while [ "$RATELIMIT_LIMIT_MINUTE_HEADER" != "X-RateLimit-Limit-Minute: 30" ]; do
-                RATELIMIT_LIMIT_MINUTE_HEADER=$(curl -s --include http://${PROXY_IP}${ROUTE_PATH}/status/200 | grep "X-RateLimit-Limit-Minute")
-                TIME=$(date "+%H:%M:%S")
-                echo $TIME
-                echo $RATELIMIT_LIMIT_MINUTE_HEADER
-                if [ "$RATELIMIT_LIMIT_MINUTE_HEADER" = "X-RateLimit-Limit-Minute: 30" ]; then echo OK; exit 0; fi
-                sleep 5
-              done
-              echo "FAIL"; exit 1
-            check:
-              "(contains($stdout, 'X-RateLimit-Limit-Minute: 30'))": true
-      catch:
-        # Dump HTTPRoute and related KongRoutes, KongPlugins and KongPluginBindings.
-        - description: Dump HTTPRoutes
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: HTTPRoute
-            namespace: ($http_route_namespace)
-            name: ($http_route_name)
-            format: yaml
-        - description: Dump KongRoutes
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongRoute
-            namespace: ($http_route_namespace)
-            format: yaml
-        - description: Dump KongPlugins
-          get:
-            apiVersion: configuration.konghq.com/v1
-            kind: KongPlugin
-            namespace: ($http_route_namespace)
-            format: yaml
-        - description: Dump KongPluginBindings
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongPluginBinding
-            namespace: ($http_route_namespace)
-      finally:
-        - delete:
-            ref:
-              apiVersion: gateway.networking.k8s.io/v1
-              kind: HTTPRoute
-              namespace: ($http_route_namespace)
-              name: ($http_route_name)
-    # Step 5: Add extensionRef filter to an HTTPRoute with an existing extensionRef filter
-    - name: create-httproute-with-multiple-plugins
-      description: Create an HTTPRoute with 2 ExtensionRef filters to attach a rate-limiting and a response-transformer plugins
+          value: "/get"
+        - name: http_method
+          value: "GET"
+        - name: listener_http_port
+          value: "80"
+        - name: host_header
+          value: (join('.', ['add', ($test_name), 'example.com']))
+      use:
+        template: ../../common/_step_templates/verify-http-traffic-from-host.yaml
+
+    # Step 10c: Verify HTTPS connectivity.
+    - name: 10c-Verify-https-connectivity-add-filter
+      description: Verify HTTPS connectivity to the add-filter route
       bindings:
-        - name: http_route_name
-          value: (join('-', ['httproute-extensionref-filter-add-filter', env('TEST_ID') || 'local']))
+        - name: fqdn
+          value: (join('.', ['add', ($test_name), 'example.com']))
         - name: route_path
-          value: "/extension-ref-add-filter"
-        - name: rate_limiting_plugin_name
-          value: rate-limit-plugin-add-filter
+          value: "/get"
+        - name: http_method
+          value: "GET"
+        - name: insecure
+          value: "true"
+      use:
+        template: ../../common/_step_templates/verify-https-traffic-from-host.yaml
+
+    # Step 10d: Verify initial rate-limiting plugin (single filter).
+    - name: 10d-Verify-initial-rate-limiting
+      description: Verify only rate-limiting plugin is active initially
+      bindings:
+        - name: route_path
+          value: "/get"
+        - name: expected_rate_limit
+          value: "1000"
+        - name: host_header
+          value: (join('.', ['add', ($test_name), 'example.com']))
+      use:
+        template: ../../common/_step_templates/verify-rate-limiting-plugin.yaml
+
+    # Step 10e: Create response-transformer plugin.
+    - name: 10e-Create-response-transformer-plugin
+      description: Create response-transformer KongPlugin for adding second filter
+      bindings:
         - name: response_transformer_plugin_name
-          value: response-transformer-plugin-add-filter
+          value: response-transformer-add
       try:
         - apply:
-            file: 05-httproute-extensionref-add-filter-base.yaml
-        # Get the Gateway proxy IP
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: GATEWAY_NAMESPACE
-                value: ($gateway_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
-            outputs:
-              - name: proxy_ip
-                value: ($stdout)
-        # Try accessing the path and check the header related to rate limiting
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: GATEWAY_NAMESPACE
-                value: ($gateway_namespace)
-              - name: PROXY_IP
-                value: ($proxy_ip)
-              - name: ROUTE_PATH
-                value: ($route_path)
-            content: |
-              echo "Accessing gateway ${GATEWAY_NAMESPACE}/${GATEWAY_NAME} at ${PROXY_IP}"
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s --include http://${PROXY_IP}${ROUTE_PATH}/status/200
-            check:
-              (contains($stdout, '200 OK')): true
-              "(contains($stdout, 'X-RateLimit-Limit-Minute: 30'))": true
-        # Update the HTTPRoute to add an extensionRef
+            file: 04-kongplugin-add.yaml
+
+    # Step 10f: Add second filter to HTTPRoute.
+    - name: 10f-Add-second-filter
+      description: Patch HTTPRoute to add response-transformer filter
+      bindings:
+        - name: fqdn
+          value: (join('.', ['add', ($test_name), 'example.com']))
+        - name: http_route_name
+          value: httproute-add-filter
+        - name: route_path
+          value: "/get"
+        - name: rate_limiting_plugin_name
+          value: rate-limit-add
+        - name: response_transformer_plugin_name
+          value: response-transformer-add
+      try:
         - apply:
-            file: 05-httproute-extensionref-add-filter-patch.yaml
-        # Wait until the X-Add header appears.
-        - script:
-            timeout: 60s
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-              - name: ROUTE_PATH
-                value: ($route_path)
-            content: |
-              X_ADD_HEADER=""
-              while [ "$X_ADD_HEADER" != "X-Add: foo" ]; do
-                X_ADD_HEADER=$(curl -s --include http://${PROXY_IP}${ROUTE_PATH}/status/200 | grep "X-Add")
-                TIME=$(date "+%H:%M:%S")
-                echo $TIME
-                echo $X_ADD_HEADER
-                if [ "$X_ADD_HEADER" = "X-Add: foo" ]; then echo OK; exit 0; fi
-                sleep 5
-              done
-            check:
-              "(contains($stdout, 'X-Add: foo'))": true
-      finally:
+            file: 04-httproute-add-filter-patch.yaml
+        - assert:
+            file: 04-assert-httproute-updated.yaml
+      cleanup:
+        # Delete HTTPRoute to remove plugin reference before plugin cleanup
         - delete:
             ref:
               apiVersion: gateway.networking.k8s.io/v1
               kind: HTTPRoute
-              namespace: ($http_route_namespace)
               name: ($http_route_name)
+              namespace: ($namespace)
+
+    # Step 10g: Verify rate-limiting still present.
+    - name: 10g-Verify-rate-limiting-after-patch
+      description: Verify rate-limiting plugin still active after adding second filter
+      bindings:
+        - name: route_path
+          value: "/get"
+        - name: expected_rate_limit
+          value: "1000"
+        - name: host_header
+          value: (join('.', ['add', ($test_name), 'example.com']))
+      use:
+        template: ../../common/_step_templates/verify-rate-limiting-plugin.yaml
+
+    # Step 10h: Verify response-transformer now present.
+    - name: 10h-Verify-response-transformer-after-patch
+      description: Verify response-transformer plugin active after patch
+      bindings:
+        - name: route_path
+          value: "/get"
+        - name: expected_header
+          value: "X-Added: dynamically"
+        - name: host_header
+          value: (join('.', ['add', ($test_name), 'example.com']))
+      use:
+        template: ../../common/_step_templates/verify-response-transformer-plugin.yaml
+
+    # Step 11a: Apply HTTPRoute with two filters.
+    - name: 11a-Apply-httproute-two-filters
+      description: Create HTTPRoute with two filters for cleanup test
+      bindings:
+        - name: fqdn
+          value: (join('.', ['cleanup', ($test_name), 'example.com']))
+        - name: http_route_name
+          value: httproute-cleanup-test
+        - name: route_path
+          value: "/get"
+        - name: rate_limiting_plugin_name
+          value: rate-limit-cleanup
+        - name: response_transformer_plugin_name
+          value: response-transformer-cleanup
+      try:
+        - apply:
+            file: 05-httproute-two-filters.yaml
+        - assert:
+            file: 05-assert-httproute-initial.yaml
+
+    # Step 11b: Verify HTTP connectivity.
+    - name: 11b-Verify-http-connectivity-cleanup
+      description: Verify HTTP connectivity to the cleanup test route
+      bindings:
+        - name: route_path
+          value: "/get"
+        - name: http_method
+          value: "GET"
+        - name: listener_http_port
+          value: "80"
+        - name: host_header
+          value: (join('.', ['cleanup', ($test_name), 'example.com']))
+      use:
+        template: ../../common/_step_templates/verify-http-traffic-from-host.yaml
+
+    # Step 11c: Verify HTTPS connectivity.
+    - name: 11c-Verify-https-connectivity-cleanup
+      description: Verify HTTPS connectivity to the cleanup test route
+      bindings:
+        - name: fqdn
+          value: (join('.', ['cleanup', ($test_name), 'example.com']))
+        - name: route_path
+          value: "/get"
+        - name: http_method
+          value: "GET"
+        - name: insecure
+          value: "true"
+      use:
+        template: ../../common/_step_templates/verify-https-traffic-from-host.yaml
+
+    # Step 11d: Verify both plugins initially present.
+    - name: 11d-Verify-initial-rate-limiting-cleanup
+      description: Verify rate-limiting plugin active initially
+      bindings:
+        - name: route_path
+          value: "/get"
+        - name: expected_rate_limit
+          value: "1000"
+        - name: host_header
+          value: (join('.', ['cleanup', ($test_name), 'example.com']))
+      use:
+        template: ../../common/_step_templates/verify-rate-limiting-plugin.yaml
+
+    # Step 11e: Verify response-transformer initially present.
+    - name: 11e-Verify-initial-response-transformer-cleanup
+      description: Verify response-transformer plugin active initially
+      bindings:
+        - name: route_path
+          value: "/get"
+        - name: expected_header
+          value: "X-Cleanup: test"
+        - name: host_header
+          value: (join('.', ['cleanup', ($test_name), 'example.com']))
+      use:
+        template: ../../common/_step_templates/verify-response-transformer-plugin.yaml
+
+    # Step 11f: Remove response-transformer filter.
+    - name: 11f-Remove-filter
+      description: Patch HTTPRoute to remove response-transformer filter
+      bindings:
+        - name: fqdn
+          value: (join('.', ['cleanup', ($test_name), 'example.com']))
+        - name: http_route_name
+          value: httproute-cleanup-test
+        - name: route_path
+          value: "/get"
+        - name: rate_limiting_plugin_name
+          value: rate-limit-cleanup
+      try:
+        - apply:
+            file: 05-httproute-remove-filter-patch.yaml
+        - assert:
+            file: 05-assert-httproute-after-removal.yaml
+
+    # Step 11g: Verify rate-limiting still present after removal.
+    - name: 11g-Verify-rate-limiting-after-removal
+      description: Verify rate-limiting plugin still active after filter removal
+      bindings:
+        - name: route_path
+          value: "/get"
+        - name: expected_rate_limit
+          value: "1000"
+        - name: host_header
+          value: (join('.', ['cleanup', ($test_name), 'example.com']))
+      use:
+        template: ../../common/_step_templates/verify-rate-limiting-plugin.yaml
+
+    # Step 11h: Verify response-transformer header is gone.
+    - name: 11h-Verify-response-transformer-removed
+      description: Verify response-transformer header no longer present
+      bindings:
+        - name: route_path
+          value: "/get"
+        - name: header_name
+          value: "X-Cleanup"
+        - name: host_header
+          value: (join('.', ['cleanup', ($test_name), 'example.com']))
+        - name: listener_http_port
+          value: "80"
+      use:
+        template: ../../common/_step_templates/verify-header-absent.yaml

@@ -1,0 +1,11 @@
+---
+kind: KongPlugin
+apiVersion: configuration.konghq.com/v1
+metadata:
+  name: ($response_transformer_plugin_name)
+  namespace: ($namespace)
+plugin: response-transformer
+config:
+  add:
+    headers:
+      - "X-Added:dynamically"
