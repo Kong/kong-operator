@@ -1,0 +1,15 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute-cross-namespace-grant-not-permitted
+  namespace: ($namespace)
+status:
+  parents:
+    - parentRef:
+        name: ($gateway_name)
+        namespace: ($gateway_namespace)
+      (conditions[?type == 'ResolvedRefs'] | [0]):
+        type: ResolvedRefs
+        status: "False"
+        reason: RefNotPermitted
+        message: (join('', ['BackendRef ', ($xns_namespace), '/', ($xns_echo_deployment_name), ' not permitted by any ReferenceGrant']))

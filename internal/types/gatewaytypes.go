@@ -22,8 +22,11 @@ type (
 	GroupVersionKind       = gatewayv1.Group
 	Hostname               = gatewayv1.Hostname
 	HTTPBackendRef         = gatewayv1.HTTPBackendRef
+	HTTPHeader             = gatewayv1.HTTPHeader
+	HTTPHeaderFilter       = gatewayv1.HTTPHeaderFilter
 	HTTPRoute              = gatewayv1.HTTPRoute
 	HTTPRouteFilter        = gatewayv1.HTTPRouteFilter
+	HTTPRouteFilterType    = gatewayv1.HTTPRouteFilterType
 	HTTPRouteList          = gatewayv1.HTTPRouteList
 	HTTPRouteMatch         = gatewayv1.HTTPRouteMatch
 	HTTPRouteRule          = gatewayv1.HTTPRouteRule
@@ -31,6 +34,7 @@ type (
 	HTTPRouteStatus        = gatewayv1.HTTPRouteStatus
 	Kind                   = gatewayv1.Kind
 	Listener               = gatewayv1.Listener
+	LocalObjectReference   = gatewayv1.LocalObjectReference
 	Namespace              = gatewayv1.Namespace
 	ObjectName             = gatewayv1.ObjectName
 	ParametersReference    = gatewayv1.ParametersReference
@@ -51,6 +55,8 @@ const (
 	GroupName                             = gatewayv1.GroupName
 	HTTPProtocolType                      = gatewayv1.HTTPProtocolType
 	HTTPSProtocolType                     = gatewayv1.HTTPSProtocolType
+	HTTPRouteFilterExtensionRef           = gatewayv1.HTTPRouteFilterExtensionRef
+	HTTPRouteFilterRequestHeaderModifier  = gatewayv1.HTTPRouteFilterRequestHeaderModifier
 	ListenerConditionProgrammed           = gatewayv1.ListenerConditionProgrammed
 	NamespacesFromAll                     = gatewayv1.NamespacesFromAll
 	NamespacesFromSame                    = gatewayv1.NamespacesFromSame
