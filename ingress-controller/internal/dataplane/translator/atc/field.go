@@ -94,7 +94,7 @@ func (f HTTPQueryField) String() string {
 	return "http.queries." + f.QueryParamName
 }
 
-// HTTPPathSingleSegmentField represensts a single segment of HTTP path with 0 based index.
+// HTTPPathSingleSegmentField represents a single segment of HTTP path with 0 based index.
 type HTTPPathSingleSegmentField struct {
 	Index int
 }

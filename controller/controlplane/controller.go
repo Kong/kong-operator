@@ -546,7 +546,7 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 	if cp.Spec.ObjectFilters != nil && cp.Spec.ObjectFilters.Secrets != nil {
 		for k, v := range cp.Spec.ObjectFilters.Secrets.MatchLabels {
 			if k == r.SecretLabelSelector {
-				return nil, fmt.Errorf("ControlPlane's secret label selector conficts with operator's secret label selector: %s", k)
+				return nil, fmt.Errorf("ControlPlane's secret label selector conflicts with operator's secret label selector: %s", k)
 			}
 			cfgOpts = append(cfgOpts, WithSecretLabelSelectorMatchLabel(k, v))
 		}
@@ -558,7 +558,7 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 	if cp.Spec.ObjectFilters != nil && cp.Spec.ObjectFilters.ConfigMaps != nil {
 		for k, v := range cp.Spec.ObjectFilters.ConfigMaps.MatchLabels {
 			if k == r.ConfigMapLabelSelector {
-				return nil, fmt.Errorf("ControlPlane's configMap label selector conficts with operator's configMap label selector: %s", k)
+				return nil, fmt.Errorf("ControlPlane's configMap label selector conflicts with operator's configMap label selector: %s", k)
 			}
 			cfgOpts = append(cfgOpts, WithConfigMapLabelSelectorMatchLabel(k, v))
 		}

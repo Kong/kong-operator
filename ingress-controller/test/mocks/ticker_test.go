@@ -48,7 +48,7 @@ func TestTicker(t *testing.T) {
 		ticker := NewTicker()
 		ch := ticker.Channel()
 
-		t.Log("reseting ticker to 3 hour interval")
+		t.Log("resetting ticker to 3 hour interval")
 		ticker.Reset(3 * time.Hour)
 		t.Log("adding second should not tick when ticker has an interval of 3 hours")
 		ticker.Add(time.Second)

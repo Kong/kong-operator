@@ -5,14 +5,14 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: controller-manager
-  namespace: default
+  namespace: kong
 ---
 # Source: kong-operator/templates/kong-operator-ca.yaml
 apiVersion: v1
 kind: Secret
 metadata:
   name: kong-operator-ca
-  namespace: default
+  namespace: kong
   labels:
     konghq.com/secret: internal
   annotations:
@@ -560,7 +560,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     helm.sh/resource-policy: keep
-    cert-manager.io/inject-ca-from: default/chartsnap-kong-operator-webhook-serving-cert
+    cert-manager.io/inject-ca-from: kong/chartsnap-kong-operator-webhook-serving-cert
     kubernetes-configuration.konghq.com/channels: kong-operator
     kubernetes-configuration.konghq.com/version: v2.1.0-beta.0
   name: controlplanes.gateway-operator.konghq.com
@@ -571,7 +571,7 @@ spec:
       clientConfig:
         service:
           name: chartsnap-kong-operator-webhook
-          namespace: default
+          namespace: kong
           path: /convert
         caBundle: '###DYNAMIC_FIELD###'
       conversionReviewVersions:
@@ -19095,7 +19095,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     helm.sh/resource-policy: keep
-    cert-manager.io/inject-ca-from: default/chartsnap-kong-operator-webhook-serving-cert
+    cert-manager.io/inject-ca-from: kong/chartsnap-kong-operator-webhook-serving-cert
     kubernetes-configuration.konghq.com/channels: kong-operator
     kubernetes-configuration.konghq.com/version: v2.1.0-beta.0
   name: gatewayconfigurations.gateway-operator.konghq.com
@@ -19106,7 +19106,7 @@ spec:
       clientConfig:
         service:
           name: chartsnap-kong-operator-webhook
-          namespace: default
+          namespace: kong
           path: /convert
         caBundle: '###DYNAMIC_FIELD###'
       conversionReviewVersions:
@@ -50618,7 +50618,7 @@ spec:
                     type: object
                   routeRef:
                     description: |-
-                      RouteReference can be used to reference one of the following resouces:
+                      RouteReference can be used to reference one of the following resources:
                       - networking.k8s.io/Ingress
                       - gateway.networking.k8s.io/HTTPRoute
                       - gateway.networking.k8s.io/GRPCRoute
@@ -50654,7 +50654,7 @@ spec:
                       rule: (self.kind == 'KongRoute' && self.group == 'configuration.konghq.com') || (self.kind == 'Ingress' && self.group == 'networking.k8s.io') || (self.kind == 'HTTPRoute' && self.group == 'gateway.networking.k8s.io') || (self.kind == 'GRPCRoute' && self.group == 'gateway.networking.k8s.io')
                   serviceRef:
                     description: |-
-                      ServiceReference can be used to reference one of the following resouces:
+                      ServiceReference can be used to reference one of the following resources:
                       - core/Service or /Service
                       - configuration.konghq.com/KongService
                     properties:
@@ -56350,7 +56350,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     helm.sh/resource-policy: keep
-    cert-manager.io/inject-ca-from: default/chartsnap-kong-operator-webhook-serving-cert
+    cert-manager.io/inject-ca-from: kong/chartsnap-kong-operator-webhook-serving-cert
     kubernetes-configuration.konghq.com/channels: kong-operator
     kubernetes-configuration.konghq.com/version: v2.1.0-beta.0
   name: konnectgatewaycontrolplanes.konnect.konghq.com
@@ -56361,7 +56361,7 @@ spec:
       clientConfig:
         service:
           name: chartsnap-kong-operator-webhook
-          namespace: default
+          namespace: kong
           path: /convert
         caBundle: '###DYNAMIC_FIELD###'
       conversionReviewVersions:
@@ -57078,7 +57078,7 @@ spec:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: 'default-chartsnap-kong-operator-manager-role'
+  name: 'kong-chartsnap-kong-operator-manager-role'
 rules:
 - apiGroups:
   - ""
@@ -57595,7 +57595,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   creationTimestamp: null
-  name: default-chartsnap-kong-operator-kong-mtls-secret-role
+  name: kong-chartsnap-kong-operator-kong-mtls-secret-role
 rules:
 - apiGroups:
   - ""
@@ -57612,7 +57612,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: default-chartsnap-kong-operator-metrics-reader
+  name: kong-chartsnap-kong-operator-metrics-reader
 rules:
 - nonResourceURLs:
   - /metrics
@@ -57623,7 +57623,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: default-chartsnap-kong-operator-proxy-role
+  name: kong-chartsnap-kong-operator-proxy-role
 rules:
 - apiGroups:
   - authentication.k8s.io
@@ -57642,50 +57642,50 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: default-chartsnap-kong-operator-kong-mtls-secret-rolebinding
+  name: kong-chartsnap-kong-operator-kong-mtls-secret-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: default-chartsnap-kong-operator-kong-mtls-secret-role
+  name: kong-chartsnap-kong-operator-kong-mtls-secret-role
 subjects:
 - kind: ServiceAccount
   name: controller-manager
-  namespace: default
+  namespace: kong
 ---
 # Source: kong-operator/templates/rbac-resources.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: default-chartsnap-kong-operator-manager-rolebinding
+  name: kong-chartsnap-kong-operator-manager-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: default-chartsnap-kong-operator-manager-role
+  name: kong-chartsnap-kong-operator-manager-role
 subjects:
 - kind: ServiceAccount
   name: controller-manager
-  namespace: default
+  namespace: kong
 ---
 # Source: kong-operator/templates/rbac-resources.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: default-chartsnap-kong-operator-proxy-rolebinding
+  name: kong-chartsnap-kong-operator-proxy-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: default-chartsnap-kong-operator-proxy-role
+  name: kong-chartsnap-kong-operator-proxy-role
 subjects:
 - kind: ServiceAccount
   name: controller-manager
-  namespace: default
+  namespace: kong
 ---
 # Source: kong-operator/templates/rbac-resources.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: chartsnap-kong-operator-leader-election-role
-  namespace: default
+  namespace: kong
 rules:
 - apiGroups:
   - ""
@@ -57724,7 +57724,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: chartsnap-kong-operator-leader-election-rolebinding
-  namespace: default
+  namespace: kong
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -57732,7 +57732,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: controller-manager
-  namespace: default
+  namespace: kong
 ---
 # Source: kong-operator/templates/services.yaml
 apiVersion: v1
@@ -57741,7 +57741,7 @@ metadata:
   labels:
     app.kubernetes.io/component: ko
   name: chartsnap-kong-operator
-  namespace: default
+  namespace: kong
 spec:
   ports:
   - name: https
@@ -57758,7 +57758,7 @@ metadata:
   labels:
     app.kubernetes.io/component: ko
   name: chartsnap-kong-operator-webhook
-  namespace: default
+  namespace: kong
 spec:
   ports:
   - name: conversion
@@ -57780,7 +57780,7 @@ metadata:
     control-plane: controller-manager
     app.kubernetes.io/component: ko
   name: chartsnap-kong-operator-metrics-service
-  namespace: default
+  namespace: kong
 spec:
   ports:
   - name: http
@@ -57802,7 +57802,7 @@ metadata:
     app.kubernetes.io/version: "2.1.0-beta.0"
     app.kubernetes.io/component: ko
   name: chartsnap-kong-operator-controller-manager
-  namespace: default
+  namespace: kong
   annotations:
     # Env vars: KONG_OPERATOR_CLUSTER_CA_SECRET and KONG_OPERATOR_CLUSTER_CA_SECRET_NAMESPACE are set for this Deployment.
     # These env vars don't contain any sensitive data. They just reference the name and namespace of the Secret that holds
@@ -57842,7 +57842,7 @@ spec:
         - name: KONG_OPERATOR_CLUSTER_CA_SECRET
           value: "kong-operator-ca"
         - name: KONG_OPERATOR_CLUSTER_CA_SECRET_NAMESPACE
-          value: "default"
+          value: "kong"
         - name: KONG_OPERATOR_HEALTH_PROBE_BIND_ADDRESS
           value: ":8081"
         - name: KONG_OPERATOR_METRICS_BIND_ADDRESS
@@ -57931,7 +57931,7 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
   annotations:
-    cert-manager.io/inject-ca-from: default/chartsnap-kong-operator-webhook-validating-serving-cert
+    cert-manager.io/inject-ca-from: kong/chartsnap-kong-operator-webhook-validating-serving-cert
     cert-manager.io/secret-template: '{ "labels": { "konghq.com/secret" : "internal" } }'
   labels:
     app.kubernetes.io/name: kong-operator
@@ -57946,7 +57946,7 @@ webhooks:
   clientConfig:
     service:
       name: chartsnap-kong-operator-webhook
-      namespace: default
+      namespace: kong
       port: 5443
     caBundle: '###DYNAMIC_FIELD###'
   failurePolicy: Fail
@@ -57999,7 +57999,7 @@ webhooks:
   clientConfig:
     service:
       name: chartsnap-kong-operator-webhook
-      namespace: default
+      namespace: kong
       port: 5443
     caBundle: '###DYNAMIC_FIELD###'
   failurePolicy: Fail
@@ -58026,7 +58026,7 @@ webhooks:
   clientConfig:
     service:
       name: chartsnap-kong-operator-webhook
-      namespace: default
+      namespace: kong
       port: 5443
     caBundle: '###DYNAMIC_FIELD###'
   failurePolicy: Fail
@@ -58057,11 +58057,11 @@ metadata:
     app.kubernetes.io/version: "2.1.0-beta.0"
     app.kubernetes.io/component: ko
   name: chartsnap-kong-operator-webhook-serving-cert
-  namespace: default
+  namespace: kong
 spec:
   dnsNames:
-  - chartsnap-kong-operator-webhook.default.svc
-  - chartsnap-kong-operator-webhook.default.svc.cluster.local
+  - chartsnap-kong-operator-webhook.kong.svc
+  - chartsnap-kong-operator-webhook.kong.svc.cluster.local
   issuerRef:
     kind: Issuer
     name: chartsnap-kong-operator-webhook-selfsigned-issuer
@@ -58078,11 +58078,11 @@ metadata:
     app.kubernetes.io/version: "2.1.0-beta.0"
     app.kubernetes.io/component: ko
   name: chartsnap-kong-operator-webhook-validating-serving-cert
-  namespace: default
+  namespace: kong
 spec:
   dnsNames:
-  - chartsnap-kong-operator-webhook.default.svc
-  - chartsnap-kong-operator-webhook.default.svc.cluster.local
+  - chartsnap-kong-operator-webhook.kong.svc
+  - chartsnap-kong-operator-webhook.kong.svc.cluster.local
   issuerRef:
     kind: Issuer
     name: chartsnap-kong-operator-webhook-selfsigned-issuer
@@ -58099,7 +58099,7 @@ metadata:
     app.kubernetes.io/version: "2.1.0-beta.0"
     app.kubernetes.io/component: ko
   name: chartsnap-kong-operator-webhook-selfsigned-issuer
-  namespace: default
+  namespace: kong
 spec:
   selfSigned: {}
 ---

@@ -64,7 +64,7 @@ func TestSynchronizer(t *testing.T) {
 	t.Log("verifying that eventually the synchronizer reports as ready for a dbless dataplane")
 	assert.Eventually(t, func() bool { return sync.IsReady() }, testSynchronizerTick*3, testSynchronizerTick)
 
-	t.Log("verifying that the dataplane eventually receieves several successful updates from the synchronizer")
+	t.Log("verifying that the dataplane eventually receives several successful updates from the synchronizer")
 	assert.Eventually(t, func() bool {
 		return c.totalUpdates() >= 5
 	}, 10*testSynchronizerTick, testSynchronizerTick, "got %d updates, expected 5 or more", c.totalUpdates())

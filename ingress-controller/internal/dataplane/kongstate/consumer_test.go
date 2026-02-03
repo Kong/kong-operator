@@ -444,7 +444,7 @@ func TestConsumer_SetCredential(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "jwt with invald key type",
+			name: "jwt with invalid key type",
 			args: args{
 				credType:   "jwt",
 				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},

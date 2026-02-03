@@ -332,11 +332,11 @@ func findCustomEntityRelatedPlugin(logger logr.Logger, cacheStore store.Storer, 
 			Namespace: parentRefNamespace,
 			Name:      parentRef.Name,
 		}
-		paretRefNamespace, err := extractReferredPluginNamespaceIfAllowed(logger, cacheStore, k8sEntity, nn)
+		parentRefNamespace, err := extractReferredPluginNamespaceIfAllowed(logger, cacheStore, k8sEntity, nn)
 		if err != nil {
 			return "", false, err
 		}
-		namespace = paretRefNamespace
+		namespace = parentRefNamespace
 	}
 
 	var err error

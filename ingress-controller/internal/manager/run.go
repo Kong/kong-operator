@@ -99,8 +99,9 @@ func New(
 	}
 	diagnosticsClient := m.setupDiagnostics(ctx, c)
 	setupLog := logger.WithName("setup")
-	setupLog.Info("Starting controller manager", "release", metadata.Metadata().Release, "repo", metadata.Metadata().Repo, "commit", metadata.Metadata().Commit)
-	setupLog.Info("The ingress class name has been set", "value", c.IngressClassName)
+	setupLog.Info(
+		"Starting controller manager for ControlPlane", "instanceID", instanceID.String(), "ingressClassName", c.IngressClassName,
+	)
 
 	gateway.SetControllerName(gatewayapi.GatewayController(c.GatewayAPIControllerName))
 
