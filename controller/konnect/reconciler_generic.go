@@ -548,13 +548,11 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// Regardless of the error, patch the status as it can contain the Konnect ID,
 		// Org ID, Server URL and status conditions.
 		// Konnect ID will be needed for the finalizer to work.
-		if res, err := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, any(ent).(client.Object), obj); err != nil {
+		if _, err := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, any(ent).(client.Object), obj); err != nil {
 			if k8serrors.IsConflict(err) {
 				return ctrl.Result{Requeue: true}, nil
 			}
 			return ctrl.Result{}, fmt.Errorf("failed to update status after creating object: %w", err)
-		} else if res != op.Noop {
-			return ctrl.Result{}, nil
 		}
 
 		if err != nil {
