@@ -28,12 +28,14 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
 	"github.com/kong/kong-operator/ingress-controller/internal/controllers"
 	ctrlutils "github.com/kong/kong-operator/ingress-controller/internal/controllers/utils"
 	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/ingress-controller/internal/util"
 	k8sobj "github.com/kong/kong-operator/ingress-controller/internal/util/kubernetes/object"
 	"github.com/kong/kong-operator/ingress-controller/internal/util/kubernetes/object/status"
+	"github.com/kong/kong-operator/pkg/metadata"
 )
 
 // -----------------------------------------------------------------------------
@@ -74,6 +76,10 @@ func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Resource: "referencegrants",
 	})
 
+	if err := setupHTTPRouteIndices(mgr); err != nil {
+		return fmt.Errorf("failed to setup httproute indexers: %w", err)
+	}
+
 	blder := ctrl.NewControllerManagedBy(mgr).
 		// set the controller name
 		Named("httproute-controller").
@@ -103,6 +109,10 @@ func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&gatewayapi.Gateway{},
 			handler.EnqueueRequestsFromMapFunc(r.listHTTPRoutesForGateway),
 		)
+
+	blder.Watches(&configurationv1.KongPlugin{},
+		handler.EnqueueRequestsFromMapFunc(r.listHTTPRoutesForKongPlugin),
+	)
 
 	if r.enableReferenceGrant {
 		blder.Watches(&gatewayapi.ReferenceGrant{},
@@ -136,6 +146,58 @@ func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			),
 		).
 		Complete(r)
+}
+
+const httpRoutePluginRefIndexKey = "httproute-pluginref"
+
+func setupHTTPRouteIndices(mgr ctrl.Manager) error {
+	if err := mgr.GetCache().IndexField(
+		context.Background(),
+		&gatewayapi.HTTPRoute{},
+		httpRoutePluginRefIndexKey,
+		indexHTTPRouteOnPluginReferences,
+	); err != nil {
+		return err
+	}
+	return nil
+}
+
+func indexHTTPRouteOnPluginReferences(obj client.Object) []string {
+	httproute, ok := obj.(*gatewayapi.HTTPRoute)
+	if !ok {
+		return []string{}
+	}
+
+	refs := make(map[string]struct{})
+	for _, pluginRef := range metadata.ExtractPluginsNamespacedNames(httproute) {
+		namespace := pluginRef.Namespace
+		if namespace == "" {
+			namespace = httproute.Namespace
+		}
+		refs[namespace+"/"+pluginRef.Name] = struct{}{}
+	}
+
+	for _, rule := range httproute.Spec.Rules {
+		for _, filter := range rule.Filters {
+			if filter.Type != gatewayapi.HTTPRouteFilterExtensionRef || filter.ExtensionRef == nil {
+				continue
+			}
+			if filter.ExtensionRef.Group != "configuration.konghq.com" || filter.ExtensionRef.Kind != "KongPlugin" {
+				continue
+			}
+			refs[httproute.Namespace+"/"+string(filter.ExtensionRef.Name)] = struct{}{}
+		}
+	}
+
+	if len(refs) == 0 {
+		return []string{}
+	}
+
+	keys := make([]string, 0, len(refs))
+	for key := range refs {
+		keys = append(keys, key)
+	}
+	return keys
 }
 
 // -----------------------------------------------------------------------------
@@ -188,6 +250,29 @@ func referenceGrantHasHTTPRouteFrom(obj client.Object) bool {
 		}
 	}
 	return false
+}
+
+// listHTTPRoutesForKongPlugin returns the list of HTTPRoutes that reference the given KongPlugin.
+func (r *HTTPRouteReconciler) listHTTPRoutesForKongPlugin(ctx context.Context, obj client.Object) []reconcile.Request {
+	plugin, ok := obj.(*configurationv1.KongPlugin)
+	if !ok {
+		r.Log.Error(fmt.Errorf("invalid type"), "Found invalid type in event handlers", "expected", "KongPlugin", "found", reflect.TypeOf(obj))
+		return nil
+	}
+
+	httprouteList := gatewayapi.HTTPRouteList{}
+	if err := r.List(ctx, &httprouteList,
+		client.MatchingFields{httpRoutePluginRefIndexKey: plugin.Namespace + "/" + plugin.Name},
+	); err != nil {
+		r.Log.Error(err, "Failed to list httproute objects for KongPlugin", "kongplugin", plugin.Name)
+		return nil
+	}
+
+	recs := make([]reconcile.Request, 0, len(httprouteList.Items))
+	for _, httproute := range httprouteList.Items {
+		recs = append(recs, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(&httproute)})
+	}
+	return recs
 }
 
 // listHTTPRoutesForGatewayClass is a controller-runtime event.Handler which
@@ -337,6 +422,7 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForGateway(ctx context.Context, obj 
 // +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=httproutes,verbs=get;list;watch
 // +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=httproutes/status,verbs=get;update
 // +kubebuilder:rbac:groups="",resources=namespaces,verbs=list;watch;get
+// +kubebuilder:rbac:groups=configuration.konghq.com,resources=kongplugins,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -669,8 +755,140 @@ func (r *HTTPRouteReconciler) getHTTPRouteRuleReason(ctx context.Context, httpRo
 				}
 			}
 		}
+
+		for _, filter := range rule.Filters {
+			if filter.Type != gatewayapi.HTTPRouteFilterExtensionRef {
+				continue
+			}
+			if filter.ExtensionRef == nil {
+				continue
+			}
+
+			if filter.ExtensionRef.Group != "configuration.konghq.com" || filter.ExtensionRef.Kind != "KongPlugin" {
+				return gatewayapi.RouteReasonInvalidKind,
+					fmt.Sprintf("extensionRef %s/%s has unsupported type %s/%s",
+						httpRoute.Namespace,
+						filter.ExtensionRef.Name,
+						filter.ExtensionRef.Group,
+						filter.ExtensionRef.Kind,
+					),
+					nil
+			}
+
+			pluginKey := k8stypes.NamespacedName{
+				Namespace: httpRoute.Namespace,
+				Name:      string(filter.ExtensionRef.Name),
+			}
+			kongPlugin := &configurationv1.KongPlugin{}
+			if err := r.Get(ctx, pluginKey, kongPlugin); err != nil {
+				if !apierrors.IsNotFound(err) {
+					return "", "", err
+				}
+				return gatewayapi.RouteReasonBackendNotFound,
+					fmt.Sprintf("extensionRef %s/%s does not exist", pluginKey.Namespace, pluginKey.Name),
+					nil
+			}
+		}
+	}
+
+	if reason, msg, err := r.validateAnnotationPluginReferences(ctx, httpRoute); reason != gatewayapi.RouteReasonResolvedRefs || err != nil {
+		return reason, msg, err
 	}
 	return gatewayapi.RouteReasonResolvedRefs, "", nil
+}
+
+func (r *HTTPRouteReconciler) validateAnnotationPluginReferences(
+	ctx context.Context,
+	httpRoute gatewayapi.HTTPRoute,
+) (reason gatewayapi.RouteConditionReason, msg string, err error) {
+	pluginRefs := metadata.ExtractPluginsNamespacedNames(&httpRoute)
+	if len(pluginRefs) == 0 {
+		return gatewayapi.RouteReasonResolvedRefs, "", nil
+	}
+
+	var referenceGrants []*gatewayapi.ReferenceGrant
+	for _, pluginRef := range pluginRefs {
+		pluginNamespace := pluginRef.Namespace
+		if pluginNamespace == "" {
+			pluginNamespace = httpRoute.Namespace
+		}
+
+		if pluginNamespace != httpRoute.Namespace {
+			if !r.enableReferenceGrant {
+				return gatewayapi.RouteReasonRefNotPermitted,
+					fmt.Sprintf("%s/%s is in a different namespace than the HTTPRoute (namespace %s) install ReferenceGrant CRD and configure a proper grant",
+						pluginNamespace, pluginRef.Name, httpRoute.Namespace,
+					),
+					nil
+			}
+
+			if referenceGrants == nil {
+				grants, err := r.listReferenceGrants(ctx)
+				if err != nil {
+					return "", "", err
+				}
+				referenceGrants = grants
+			}
+
+			if !r.isPluginReferenceGranted(httpRoute, pluginNamespace, pluginRef.Name, referenceGrants) {
+				return gatewayapi.RouteReasonRefNotPermitted,
+					fmt.Sprintf("%s/%s is in a different namespace than the HTTPRoute (namespace %s) and no ReferenceGrant allowing reference is configured",
+						pluginNamespace, pluginRef.Name, httpRoute.Namespace,
+					),
+					nil
+			}
+		}
+
+		pluginKey := k8stypes.NamespacedName{
+			Namespace: pluginNamespace,
+			Name:      pluginRef.Name,
+		}
+		kongPlugin := &configurationv1.KongPlugin{}
+		if err := r.Get(ctx, pluginKey, kongPlugin); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return "", "", err
+			}
+			return gatewayapi.RouteReasonBackendNotFound,
+				fmt.Sprintf("referenced KongPlugin %s/%s does not exist", pluginNamespace, pluginRef.Name),
+				nil
+		}
+	}
+
+	return gatewayapi.RouteReasonResolvedRefs, "", nil
+}
+
+func (r *HTTPRouteReconciler) listReferenceGrants(ctx context.Context) ([]*gatewayapi.ReferenceGrant, error) {
+	referenceGrantList := &gatewayapi.ReferenceGrantList{}
+	if err := r.List(ctx, referenceGrantList); err != nil {
+		return nil, err
+	}
+	grants := make([]*gatewayapi.ReferenceGrant, 0, len(referenceGrantList.Items))
+	for i := range referenceGrantList.Items {
+		grants = append(grants, &referenceGrantList.Items[i])
+	}
+	return grants, nil
+}
+
+func (r *HTTPRouteReconciler) isPluginReferenceGranted(
+	httpRoute gatewayapi.HTTPRoute,
+	pluginNamespace string,
+	pluginName string,
+	referenceGrants []*gatewayapi.ReferenceGrant,
+) bool {
+	allowed := gatewayapi.GetPermittedForReferenceGrantFrom(
+		r.Log,
+		gatewayapi.ReferenceGrantFrom{
+			Group:     gatewayapi.Group(gatewayv1.GroupVersion.Group),
+			Kind:      gatewayapi.Kind("HTTPRoute"),
+			Namespace: gatewayapi.Namespace(httpRoute.Namespace),
+		},
+		referenceGrants,
+	)
+
+	return gatewayapi.NewRefCheckerForKongPlugin(r.Log, &httpRoute, gatewayapi.PluginLabelReference{
+		Namespace: &pluginNamespace,
+		Name:      pluginName,
+	}).IsRefAllowedByGrant(allowed)
 }
 
 // SetLogger sets the logger.
