@@ -3,6 +3,8 @@ apiVersion: gateway.networking.k8s.io/v1
 metadata:
   name: ($http_route_name)
   namespace: ($http_route_namespace)
+  labels:
+    chainsaw/test: httproute-header-match
 spec:
   parentRefs:
     - group: gateway.networking.k8s.io
@@ -11,9 +13,12 @@ spec:
   rules:
     - matches:
       - headers:
-        - name: regex-header-1
-          type: RegularExpression
-          value: "[a-z]+"
+        - name: multiple-header-1
+          type: Exact
+          value: v1
+        - name: multiple-header-2
+          type: Exact
+          value: v2
       backendRefs:
         - name: ($echo_deployment_name)
           port: 1027

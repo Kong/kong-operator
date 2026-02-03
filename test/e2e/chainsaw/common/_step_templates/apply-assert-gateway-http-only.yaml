@@ -1,0 +1,52 @@
+# Template for creating and asserting a Gateway with HTTP listener only (no TLS).
+#
+# Required bindings:
+#   - gateway_name: Name of the gateway to create.
+#   - test_name: Test name used to compose the gateway class name.
+#   - namespace: Namespace where the gateway will be created.
+#   - listener_http_port: HTTP listener port (e.g., "80").
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-gateway-http-only
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: gateway.networking.k8s.io/v1
+          kind: Gateway
+          metadata:
+            name: ($gateway_name)
+            namespace: ($namespace)
+          spec:
+            gatewayClassName: (join('-', [($test_name), 'gateway-class']))
+            listeners:
+            - name: http
+              protocol: HTTP
+              port: ($listener_http_port)
+    - assert:
+        resource:
+          apiVersion: gateway.networking.k8s.io/v1
+          kind: Gateway
+          metadata:
+            name: ($gateway_name)
+            namespace: ($namespace)
+          status:
+            (conditions[?type == 'Accepted']):
+              - status: 'True'
+                reason: Accepted
+            (conditions[?type == 'Programmed']):
+              - status: 'True'
+                reason: Programmed
+            (conditions[?type == 'DataPlaneReady']):
+              - status: 'True'
+                reason: Ready
+            (conditions[?type == 'KonnectGatewayControlPlaneProgrammed']):
+              - status: 'True'
+                reason: Programmed
+            (conditions[?type == 'KonnectExtensionReady']):
+              - status: 'True'
+                reason: Ready
+            (conditions[?type == 'GatewayService']):
+              - status: 'True'
+                reason: Ready
