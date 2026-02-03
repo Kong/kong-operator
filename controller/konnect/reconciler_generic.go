@@ -586,9 +586,6 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	res, err = ops.Update(ctx, sdk, r.SyncPeriod, r.Client, r.MetricRecorder, ent)
 	// If the error was a network error, handle it here, there's no need to proceed,
 	// as no state has changed.
-
-	// If the error was a network error, handle it here, there's no need to proceed,
-	// as no state has changed.
 	// Status conditions are updated in handleOpsErr.
 	var errUrl *url.Error
 	if errors.As(err, &errUrl) {
