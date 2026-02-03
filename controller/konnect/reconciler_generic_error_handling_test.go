@@ -17,6 +17,7 @@ import (
 
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
+	"github.com/kong/kong-operator/controller/consts"
 	"github.com/kong/kong-operator/modules/manager/scheme"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 )
@@ -44,7 +45,7 @@ func TestHandleOpsErr(t *testing.T) {
 				URL: "https://api.konghq.com",
 				Err: errors.New("connection refused"),
 			},
-			expectedResult:         ctrl.Result{},
+			expectedResult:         ctrl.Result{RequeueAfter: consts.RequeueWithoutBackoff},
 			expectedErr:            false,
 			expectConditionPatched: true,
 		},
@@ -82,7 +83,7 @@ func TestHandleOpsErr(t *testing.T) {
 				URL: "https://api.konghq.com",
 				Err: errors.New("no such host"),
 			},
-			expectedResult:         ctrl.Result{},
+			expectedResult:         ctrl.Result{RequeueAfter: consts.RequeueWithoutBackoff},
 			expectedErr:            false,
 			expectConditionPatched: true,
 		},

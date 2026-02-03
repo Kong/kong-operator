@@ -558,19 +558,21 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		}
 
 		if err != nil {
-			// If the error is a rate limit error, requeue after the retry-after duration
-			// instead of returning an error.
-			var rateLimitErr ops.RateLimitError
-			if errors.As(err, &rateLimitErr) {
-				return ctrl.Result{RequeueAfter: rateLimitErr.RetryAfter}, nil
-			}
-
+			var (
+				errUrl       *url.Error
+				rateLimitErr ops.RateLimitError
+			)
+			switch {
 			// If the error was a network error, handle it here, there's no need to proceed,
 			// as no state has changed.
 			// Status conditions are updated in handleOpsErr.
-			var errUrl *url.Error
-			if errors.As(err, &errUrl) {
+			case errors.As(err, &errUrl):
 				return r.handleOpsErr(ctx, ent, errUrl)
+
+			// If the error is a rate limit error, requeue after the retry-after duration
+			// instead of returning an error.
+			case errors.As(err, &rateLimitErr):
+				return ctrl.Result{RequeueAfter: rateLimitErr.RetryAfter}, nil
 			}
 
 			return ctrl.Result{}, ops.FailedKonnectOpError[T]{
@@ -584,13 +586,6 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	}
 
 	res, err = ops.Update(ctx, sdk, r.SyncPeriod, r.Client, r.MetricRecorder, ent)
-	// If the error was a network error, handle it here, there's no need to proceed,
-	// as no state has changed.
-	// Status conditions are updated in handleOpsErr.
-	var errUrl *url.Error
-	if errors.As(err, &errUrl) {
-		return r.handleOpsErr(ctx, ent, errUrl)
-	}
 
 	// Set the server URL and org ID regardless of the error.
 	setStatusServerURLAndOrgID(ent, server, apiAuth.Status.OrganizationID)
@@ -602,13 +597,25 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		return ctrl.Result{}, fmt.Errorf("failed to update in cluster resource after Konnect update: %w %w", errUpd, err)
 	}
 	if err != nil {
+		logger.Error(err, "failed to update")
+
+		var (
+			errUrl       *url.Error
+			rateLimitErr ops.RateLimitError
+		)
+		switch {
+		// If the error was a network error, handle it here, there's no need to proceed,
+		// as no state has changed.
+		// Status conditions are updated in handleOpsErr.
+		case errors.As(err, &errUrl):
+			return r.handleOpsErr(ctx, ent, errUrl)
+
 		// If the error is a rate limit error, requeue after the retry-after duration
 		// instead of returning an error.
-		var rateLimitErr ops.RateLimitError
-		if errors.As(err, &rateLimitErr) {
+		case errors.As(err, &rateLimitErr):
 			return ctrl.Result{RequeueAfter: rateLimitErr.RetryAfter}, nil
 		}
-		logger.Error(err, "failed to update")
+
 	} else if !res.IsZero() {
 		return res, nil
 	}

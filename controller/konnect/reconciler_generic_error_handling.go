@@ -8,6 +8,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
+	"github.com/kong/kong-operator/controller/consts"
 	"github.com/kong/kong-operator/controller/pkg/patch"
 )
 
@@ -30,5 +31,6 @@ func (r *KonnectEntityReconciler[T, TEnt]) handleOpsErr(
 		return res, err
 	}
 
-	return ctrl.Result{}, nil
+	// After patching the condition, requeue without backoff to retry the network operation.
+	return ctrl.Result{RequeueAfter: consts.RequeueWithoutBackoff}, nil
 }
