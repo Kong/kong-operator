@@ -888,7 +888,6 @@ func conditionsContainProgrammedWithReason(
 	conds []metav1.Condition,
 	reason string,
 ) bool {
-	fmt.Printf("Checking conditions for reason %s: %+v\n", reason, conds)
 	return lo.ContainsBy(conds,
 		func(condition metav1.Condition) bool {
 			return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
