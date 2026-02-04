@@ -349,7 +349,6 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					&sdkkonnectops.PutControlPlanesIDGroupMembershipsResponse{},
 					errors.New("some error"),
 				)
-			// t.Cleanup(func() { putMembers.Unset() })
 
 			sdk.ControlPlaneSDK.EXPECT().
 				ListControlPlanes(
