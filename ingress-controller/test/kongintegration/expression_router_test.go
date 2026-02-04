@@ -22,8 +22,6 @@ import (
 )
 
 func TestExpressionsRouterMatchers_GenerateValidExpressions(t *testing.T) {
-	t.Parallel()
-
 	const (
 		timeout = time.Second * 5
 		period  = time.Millisecond * 200

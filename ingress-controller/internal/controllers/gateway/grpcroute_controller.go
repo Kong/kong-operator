@@ -38,6 +38,8 @@ import (
 type GRPCRouteReconciler struct {
 	client.Client
 
+	APIReader client.Reader
+
 	Log             logr.Logger
 	Scheme          *runtime.Scheme
 	DataplaneClient controllers.DataPlane
@@ -55,6 +57,10 @@ type GRPCRouteReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *GRPCRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	if r.APIReader == nil {
+		r.APIReader = mgr.GetAPIReader()
+	}
+
 	blder := ctrl.NewControllerManagedBy(mgr).
 		// set the controller name
 		Named("grpcroute-controller").
@@ -106,7 +112,7 @@ func (r *GRPCRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return blder.
 		For(&gatewayapi.GRPCRoute{},
 			builder.WithPredicates(
-				IsRouteAttachedToReconciledGatewayPredicate[*gatewayapi.GRPCRoute](r.Client, mgr.GetLogger(), r.GatewayNN),
+				IsRouteAttachedToReconciledGatewayPredicate[*gatewayapi.GRPCRoute](mgr.GetAPIReader(), mgr.GetLogger(), r.GatewayNN),
 			),
 		).
 		Complete(r)
@@ -303,7 +309,11 @@ func (r *GRPCRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// we need to pull the Gateway parent objects for the grpcroute to verify
 	// routing behavior and ensure compatibility with Gateway configurations.
 	debug(log, grpcroute, "Retrieving GatewayClass and Gateway for route")
-	gateways, err := getSupportedGatewayForRoute(ctx, log, r.Client, grpcroute, r.GatewayNN)
+	reader := r.APIReader
+	if reader == nil {
+		reader = r.Client
+	}
+	gateways, err := getSupportedGatewayForRoute(ctx, log, reader, grpcroute, r.GatewayNN)
 	if err != nil {
 		if errors.Is(err, ErrNoSupportedGateway) {
 			// if there's no supported Gateway then this route could have been previously

@@ -27,8 +27,6 @@ import (
 // responsible for executing the configuration update logic - propagates the resources errors returned by the
 // Kong Admin API in the flattened errors response.
 func TestUpdateStrategyInMemory_PropagatesResourcesErrors(t *testing.T) {
-	t.Parallel()
-
 	const (
 		timeout = time.Second * 5
 		period  = time.Millisecond * 200

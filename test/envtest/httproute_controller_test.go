@@ -17,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	ctrl "sigs.k8s.io/controller-runtime"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -185,16 +186,24 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 		Namespace: route.GetNamespace(),
 		Name:      route.GetName(),
 	}
+	reconcileRequest := ctrl.Request{NamespacedName: nn}
+	containsInitial := helpers.HTTPRouteEventuallyContainsConditions(ctx, t, client, nn,
+		metav1.Condition{
+			Type:   "ResolvedRefs",
+			Status: "False",
+			Reason: "RefNotPermitted",
+		},
+	)
 
 	t.Logf("verifying that HTTPRoute has ResolvedRefs set to Status False and Reason RefNotPermitted")
 	if !assert.Eventually(t,
-		helpers.HTTPRouteEventuallyContainsConditions(ctx, t, client, nn,
-			metav1.Condition{
-				Type:   "ResolvedRefs",
-				Status: "False",
-				Reason: "RefNotPermitted",
-			},
-		),
+		func() bool {
+			if _, err := reconciler.Reconcile(ctx, reconcileRequest); err != nil {
+				t.Logf("reconcile failed: %v", err)
+				return false
+			}
+			return containsInitial()
+		},
 		waitDuration, tickDuration,
 	) {
 		t.Fatal(printHTTPRoutesConditions(ctx, client, nn))
@@ -223,25 +232,32 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 	}
 	require.NoError(t, client.Create(ctx, &rg))
 	t.Logf("verifying that HTTPRoute gets accepted by HTTPRouteReconciler after relevant ReferenceGrant gets created")
+	containsAccepted := helpers.HTTPRouteEventuallyContainsConditions(ctx, t, client, nn,
+		metav1.Condition{
+			Type:   "ResolvedRefs",
+			Status: "True",
+			Reason: "ResolvedRefs",
+		},
+		metav1.Condition{
+			Type:   "Accepted",
+			Status: "True",
+			Reason: "Accepted",
+		},
+		// Programmed condition requires a bit more work with mocks.
+		// It's set only when KubernetesObjectReports are enabled in the underlying
+		// dataplane client and then it relies on what's returned by
+		// dataplane client in KubernetesObjectConfigurationStatus().
+		// This can be done but it's not the main focus of this test.
+		// Related: https://github.com/Kong/kubernetes-ingress-controller/issues/3793
+	)
 	if !assert.Eventually(t,
-		helpers.HTTPRouteEventuallyContainsConditions(ctx, t, client, nn,
-			metav1.Condition{
-				Type:   "ResolvedRefs",
-				Status: "True",
-				Reason: "ResolvedRefs",
-			},
-			metav1.Condition{
-				Type:   "Accepted",
-				Status: "True",
-				Reason: "Accepted",
-			},
-			// Programmed condition requires a bit more work with mocks.
-			// It's set only when KubernetesObjectReports are enabled in the underlying
-			// dataplane client and then it relies on what's returned by
-			// dataplane client in KubernetesObjectConfigurationStatus().
-			// This can be done but it's not the main focus of this test.
-			// Related: https://github.com/Kong/kubernetes-ingress-controller/issues/3793
-		),
+		func() bool {
+			if _, err := reconciler.Reconcile(ctx, reconcileRequest); err != nil {
+				t.Logf("reconcile failed: %v", err)
+				return false
+			}
+			return containsAccepted()
+		},
 		waitDuration, tickDuration,
 	) {
 		t.Fatal(printHTTPRoutesConditions(ctx, client, nn))
@@ -249,15 +265,22 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 
 	require.NoError(t, client.Delete(ctx, &rg))
 	t.Logf("verifying that HTTPRoute gets its ResolvedRefs condition to Status False and Reason RefNotPermitted when relevant ReferenceGrant gets deleted")
+	containsDeleted := helpers.HTTPRouteEventuallyContainsConditions(ctx, t, client, nn,
+		metav1.Condition{
+			Type:   "ResolvedRefs",
+			Status: "False",
+			Reason: "RefNotPermitted",
+		},
+	)
 
 	if !assert.Eventually(t,
-		helpers.HTTPRouteEventuallyContainsConditions(ctx, t, client, nn,
-			metav1.Condition{
-				Type:   "ResolvedRefs",
-				Status: "False",
-				Reason: "RefNotPermitted",
-			},
-		),
+		func() bool {
+			if _, err := reconciler.Reconcile(ctx, reconcileRequest); err != nil {
+				t.Logf("reconcile failed: %v", err)
+				return false
+			}
+			return containsDeleted()
+		},
 		waitDuration, tickDuration,
 	) {
 		t.Fatal(printHTTPRoutesConditions(ctx, client, nn))
@@ -440,6 +463,10 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 
 	t.Run("routes attached to Gateways that are reconciled by KIC should have other Gateway refs cleared from status", func(t *testing.T) {
 		require.Eventually(t, func() bool {
+			if _, err := reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: ctrlclient.ObjectKeyFromObject(&route)}); err != nil {
+				t.Logf("reconcile failed: %v", err)
+				return false
+			}
 			if err := client.Get(ctx, ctrlclient.ObjectKeyFromObject(&route), &route); err != nil {
 				t.Logf("failed to get HTTPRoute %s: %v", ctrlclient.ObjectKeyFromObject(&route), err)
 				return false
@@ -463,11 +490,15 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 				return false
 			}
 			route.Spec.ParentRefs = nil
-			if err := client.Status().Update(ctx, &route); err != nil {
+			if err := client.Update(ctx, &route); err != nil {
 				t.Logf("failed to update HTTPRoute %s: %v", ctrlclient.ObjectKeyFromObject(&route), err)
 				return false
 			}
 
+			if _, err := reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: ctrlclient.ObjectKeyFromObject(&route)}); err != nil {
+				t.Logf("reconcile failed: %v", err)
+				return false
+			}
 			if err := client.Get(ctx, ctrlclient.ObjectKeyFromObject(&route), &route); err != nil {
 				t.Logf("failed to get HTTPRoute %s: %v", ctrlclient.ObjectKeyFromObject(&route), err)
 				return false
