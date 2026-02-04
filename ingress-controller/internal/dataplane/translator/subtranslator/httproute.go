@@ -195,7 +195,7 @@ func translateHTTPRouteRulesMetaToKongstateService(
 		Service: kong.Service{
 			Name:           kong.String(serviceName),
 			Host:           kong.String(serviceName),
-			Protocol:       kong.String(DefualtKongServiceProtocol),
+			Protocol:       kong.String(DefaultKongServiceProtocol),
 			ConnectTimeout: kong.Int(DefaultServiceTimeout),
 			ReadTimeout:    kong.Int(DefaultServiceTimeout),
 			WriteTimeout:   kong.Int(DefaultServiceTimeout),

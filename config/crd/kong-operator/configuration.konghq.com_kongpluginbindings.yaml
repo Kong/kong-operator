@@ -253,7 +253,7 @@ spec:
                     type: object
                   routeRef:
                     description: |-
-                      RouteReference can be used to reference one of the following resouces:
+                      RouteReference can be used to reference one of the following resources:
                       - networking.k8s.io/Ingress
                       - gateway.networking.k8s.io/HTTPRoute
                       - gateway.networking.k8s.io/GRPCRoute
@@ -292,7 +292,7 @@ spec:
                         || (self.kind == 'GRPCRoute' && self.group == 'gateway.networking.k8s.io')
                   serviceRef:
                     description: |-
-                      ServiceReference can be used to reference one of the following resouces:
+                      ServiceReference can be used to reference one of the following resources:
                       - core/Service or /Service
                       - configuration.konghq.com/KongService
                     properties:

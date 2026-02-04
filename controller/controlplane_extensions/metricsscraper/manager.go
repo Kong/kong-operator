@@ -81,7 +81,7 @@ func NewManager(
 // secure communication with DataPlane's AdminAPI endpoints.
 // When successful, it sets the certs on the manager.
 func (msm *Manager) initMTLSCerts(ctx context.Context) error {
-	msm.logger.Info("getting CA cluster secret to generate certs for MTLs communication with Kong Gateway", "secret", msm.caSecretNN)
+	msm.logger.Info("getting CA cluster secret to generate certs for mTLS communication with Kong Gateway", "secret", msm.caSecretNN)
 	var (
 		caCert    *x509.Certificate
 		caKey     crypto.Signer

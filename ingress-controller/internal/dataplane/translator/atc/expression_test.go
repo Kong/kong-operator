@@ -83,7 +83,7 @@ func TestGenerateExpression(t *testing.T) {
 			expression: `!(net.protocol == "http")`,
 		},
 		{
-			name: "multiple predicates connected by complex concatation of AND/OR",
+			name: "multiple predicates connected by complex concatenation of AND/OR",
 			matcher: And(
 				NewPrediacteHTTPHost(OpEqual, "test.konghq.com"),
 				Or(

@@ -3,6 +3,7 @@ package envtest
 import (
 	"context"
 	"errors"
+	"net/url"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -722,10 +723,10 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 		},
 	},
 	{
-		name: "control plane group members set are set to 0 members when no members are listed in the spec",
+		enabled: true,
+		name:    "control plane group members set are set to 0 members when no members are listed in the spec",
 		objectOps: func(ctx context.Context, t *testing.T, cl client.Client, ns *corev1.Namespace) {
 			auth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, cl)
-
 			deploy.KonnectGatewayControlPlane(t, ctx, cl, auth,
 				func(obj client.Object) {
 					cp := obj.(*konnectv1alpha2.KonnectGatewayControlPlane)
@@ -736,6 +737,30 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			)
 		},
 		mockExpectations: func(t *testing.T, sdk *sdkmocks.MockSDKWrapper, cl client.Client, ns *corev1.Namespace) {
+			sdk.ControlPlaneSDK.EXPECT().
+				ListControlPlanes(
+					mock.Anything,
+					mock.MatchedBy(func(r sdkkonnectops.ListControlPlanesRequest) bool {
+						return *r.Filter.ID.Eq == "cpg-id"
+					}),
+				).
+				Return(
+					&sdkkonnectops.ListControlPlanesResponse{
+						ListControlPlanesResponse: &sdkkonnectcomp.ListControlPlanesResponse{
+							Data: []sdkkonnectcomp.ControlPlane{
+								{
+									ID: "cpg-id",
+									Config: sdkkonnectcomp.ControlPlaneConfig{
+										ControlPlaneEndpoint: "https://control-plane-endpoint",
+										TelemetryEndpoint:    "https://telemetry-endpoint",
+									},
+								},
+							},
+						},
+					},
+					nil,
+				)
+
 			sdk.ControlPlaneSDK.EXPECT().
 				CreateControlPlane(
 					mock.Anything,
@@ -761,30 +786,6 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					},
 				).
 				Return(&sdkkonnectops.PutControlPlanesIDGroupMembershipsResponse{}, nil)
-
-			sdk.ControlPlaneSDK.EXPECT().
-				ListControlPlanes(
-					mock.Anything,
-					mock.MatchedBy(func(r sdkkonnectops.ListControlPlanesRequest) bool {
-						return *r.Filter.ID.Eq == "cpg-id"
-					}),
-				).
-				Return(
-					&sdkkonnectops.ListControlPlanesResponse{
-						ListControlPlanesResponse: &sdkkonnectcomp.ListControlPlanesResponse{
-							Data: []sdkkonnectcomp.ControlPlane{
-								{
-									ID: "cpg-id",
-									Config: sdkkonnectcomp.ControlPlaneConfig{
-										ControlPlaneEndpoint: "https://control-plane-endpoint",
-										TelemetryEndpoint:    "https://telemetry-endpoint",
-									},
-								},
-							},
-						},
-					},
-					nil,
-				)
 		},
 		eventuallyPredicate: func(ctx context.Context, t *assert.CollectT, cl client.Client, ns *corev1.Namespace) {
 			cpGroup := &konnectv1alpha2.KonnectGatewayControlPlane{}
@@ -810,6 +811,58 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			assert.Equal(t, "https://telemetry-endpoint", cpGroup.Status.Endpoints.TelemetryEndpoint)
 		},
 	},
+	{
+		enabled: true,
+		name:    "network error sets Programmed condition to False",
+		objectOps: func(ctx context.Context, t *testing.T, cl client.Client, ns *corev1.Namespace) {
+			auth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, cl)
+			deploy.KonnectGatewayControlPlane(t, ctx, cl, auth,
+				func(obj client.Object) {
+					cp := obj.(*konnectv1alpha2.KonnectGatewayControlPlane)
+					cp.Name = "cp-no-connectivity"
+					cp.Spec.CreateControlPlaneRequest.Name = "cp-no-connectivity"
+				},
+			)
+		},
+		mockExpectations: func(t *testing.T, sdk *sdkmocks.MockSDKWrapper, cl client.Client, ns *corev1.Namespace) {
+			networkErr := &url.Error{
+				Op:  "Post",
+				URL: "https://us.api.konghq.com/v2/control-planes",
+				Err: errors.New("dial tcp: lookup us.api.konghq.com: no such host"),
+			}
+			sdk.ControlPlaneSDK.EXPECT().
+				CreateControlPlane(
+					mock.Anything,
+					mock.MatchedBy(func(req sdkkonnectcomp.CreateControlPlaneRequest) bool {
+						return req.Name == "cp-no-connectivity"
+					}),
+				).
+				Return(nil, networkErr)
+		},
+		eventuallyPredicate: func(ctx context.Context, t *assert.CollectT, cl client.Client, ns *corev1.Namespace) {
+			cp := &konnectv1alpha2.KonnectGatewayControlPlane{}
+			require.NoError(t,
+				cl.Get(ctx,
+					k8stypes.NamespacedName{
+						Namespace: ns.Name,
+						Name:      "cp-no-connectivity",
+					},
+					cp,
+				),
+			)
+
+			assert.True(t, conditionsContainProgrammedFalse(cp.Status.Conditions),
+				"Programmed condition should be set to False due to network error",
+			)
+			assert.True(t,
+				conditionsContainProgrammedWithReason(
+					cp.Status.Conditions,
+					konnectv1alpha1.KonnectEntityProgrammedReasonKonnectAPIOpFailed,
+				),
+				"Programmed condition reason should indicate KonnectAPIOpFailed",
+			)
+		},
+	},
 }
 
 func conditionsContainProgrammed(conds []metav1.Condition, status metav1.ConditionStatus) bool {
@@ -827,6 +880,18 @@ func conditionsContainProgrammedFalse(conds []metav1.Condition) bool {
 
 func conditionsContainProgrammedTrue(conds []metav1.Condition) bool {
 	return conditionsContainProgrammed(conds, metav1.ConditionTrue)
+}
+
+func conditionsContainProgrammedWithReason(
+	conds []metav1.Condition,
+	reason string,
+) bool {
+	return lo.ContainsBy(conds,
+		func(condition metav1.Condition) bool {
+			return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
+				condition.Reason == reason
+		},
+	)
 }
 
 func conditionsContainMembersRefResolved(conds []metav1.Condition, status metav1.ConditionStatus) bool {

@@ -126,7 +126,7 @@ func (t *Translator) isTLSRoutePassthrough(tlsroute *gatewayapi.TLSRoute) (bool,
 				t.logger.Error(err, "Gateway not found for TLSRoute",
 					"gateway_namespace", gatewayNamespace,
 					"gateway_name", parentRef.Name,
-					"tlsroute_namesapce", tlsroute.Namespace,
+					"tlsroute_namespace", tlsroute.Namespace,
 					"tlsroute_name", tlsroute.Name)
 				continue
 			}

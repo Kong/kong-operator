@@ -30,6 +30,7 @@ func TestKonnectEntityReconcilers(t *testing.T) {
 }
 
 type konnectEntityReconcilerTestCase struct {
+	enabled             bool
 	name                string
 	objectOps           func(ctx context.Context, t *testing.T, cl client.Client, ns *corev1.Namespace)
 	mockExpectations    func(t *testing.T, sdk *sdkmocks.MockSDKWrapper, cl client.Client, ns *corev1.Namespace)
@@ -80,6 +81,9 @@ func testNewKonnectEntityReconciler[
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
+				if !tc.enabled {
+					t.Skip("test case disabled")
+				}
 				tc.mockExpectations(t, sdk, cl, ns)
 				tc.objectOps(ctx, t, cl, ns)
 				require.EventuallyWithT(t, func(collect *assert.CollectT) {

@@ -24,7 +24,7 @@ import (
 // HTTPRouteEventuallyContainsConditions returns a predicate function that can be
 // used with assert.Eventually or require.Eventually in order to check - via the
 // provided client - that the HTTPRoute with the NamespacedName as provided in
-// the arguments, does indeed contain the provied conditions in the status.
+// the arguments, does indeed contain the provided conditions in the status.
 func HTTPRouteEventuallyContainsConditions(ctx context.Context, t *testing.T, client ctrlclient.Client, nn k8stypes.NamespacedName, conds ...metav1.Condition) func() bool {
 	return func() bool {
 		t.Helper()

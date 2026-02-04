@@ -1053,7 +1053,7 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 		t.Run(strconv.Itoa(i)+"-"+tc.name, func(t *testing.T) {
 			splitMatchesWithPriorities := AssignRoutePriorityToSplitGRPCRouteMatches(logr.Discard(), tc.splitGRPCRouteMatches)
 			require.Lenf(t, splitMatchesWithPriorities, len(tc.priorities),
-				"should have expeceted number of results")
+				"should have expected number of results")
 			for _, m := range splitMatchesWithPriorities {
 				grpcRoute := m.Match.Source
 

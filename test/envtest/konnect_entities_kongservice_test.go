@@ -1,7 +1,9 @@
 package envtest
 
 import (
+	"errors"
 	"fmt"
+	"net/url"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -595,6 +597,140 @@ func TestKongService(t *testing.T) {
 			}
 			return k8sutils.HasConditionTrue(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs, ks)
 		}, "KongService didn't get ResolvedRefs status condition set to True")
+
+		eventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
+	})
+
+	t.Run("network error on create sets Programmed condition to False", func(t *testing.T) {
+		const host = "network-error-test.com"
+
+		w := setupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations to return a network error on Service creation")
+		networkErr := &url.Error{
+			Op:  "Post",
+			URL: "https://us.api.konghq.com/v2/control-planes/" + cp.GetKonnectID() + "/core-entities/services",
+			Err: errors.New("dial tcp: lookup us.api.konghq.com: no such host"),
+		}
+		sdk.ServicesSDK.EXPECT().
+			CreateService(
+				mock.Anything,
+				cp.GetKonnectID(),
+				mock.MatchedBy(func(req sdkkonnectcomp.Service) bool {
+					return req.Host == host
+				}),
+			).
+			Return(nil, networkErr)
+
+		t.Log("Creating a KongService")
+		createdService := deploy.KongService(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+			func(obj client.Object) {
+				s := obj.(*configurationv1alpha1.KongService)
+				s.Spec.Host = host
+			},
+		)
+
+		t.Log("Waiting for Service to get Programmed condition with status=False due to network error")
+		watchFor(t, ctx, w, apiwatch.Modified, func(ks *configurationv1alpha1.KongService) bool {
+			if ks.GetName() != createdService.GetName() {
+				return false
+			}
+
+			c, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, ks)
+			if !ok {
+				return false
+			}
+			return c.Status == metav1.ConditionFalse && c.Reason == "FailedToCreate"
+		}, "KongService should get the Programmed condition set to status=False due to network error")
+
+		eventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
+	})
+
+	t.Run("network error on update sets Programmed condition to False", func(t *testing.T) {
+		const (
+			serviceID = "service-network-update-test"
+			host      = "network-error-update-test.com"
+			newPort   = int64(9090)
+		)
+
+		w := setupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations on Service creation (success)")
+		sdk.ServicesSDK.EXPECT().
+			CreateService(
+				mock.Anything,
+				cp.GetKonnectID(),
+				mock.MatchedBy(func(req sdkkonnectcomp.Service) bool {
+					return req.Host == host
+				}),
+			).
+			Return(
+				&sdkkonnectops.CreateServiceResponse{
+					Service: &sdkkonnectcomp.ServiceOutput{
+						ID: lo.ToPtr(serviceID),
+					},
+				},
+				nil,
+			)
+
+		t.Log("Creating a KongService")
+		createdService := deploy.KongService(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+			func(obj client.Object) {
+				s := obj.(*configurationv1alpha1.KongService)
+				s.Spec.Host = host
+			},
+		)
+
+		t.Log("Waiting for Service to be programmed and get Konnect ID")
+		watchFor(t, ctx, w, apiwatch.Modified, func(ks *configurationv1alpha1.KongService) bool {
+			return ks.GetName() == createdService.GetName() &&
+				ks.GetKonnectID() == serviceID &&
+				k8sutils.IsProgrammed(ks)
+		}, "KongService didn't get Programmed status condition or didn't get the correct Konnect ID assigned")
+
+		eventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
+
+		t.Log("Setting up SDK expectations to return a network error on Service update")
+		networkErr := &url.Error{
+			Op:  "Put",
+			URL: "https://us.api.konghq.com/v2/control-planes/" + cp.GetKonnectID() + "/core-entities/services/" + serviceID,
+			Err: errors.New("dial tcp: lookup us.api.konghq.com: no such host"),
+		}
+		sdk.ServicesSDK.EXPECT().
+			UpsertService(
+				mock.Anything,
+				mock.MatchedBy(func(req sdkkonnectops.UpsertServiceRequest) bool {
+					return req.ServiceID == serviceID && req.Service.Port != nil && *req.Service.Port == newPort
+				}),
+			).
+			Return(nil, networkErr).
+			Maybe()
+
+		t.Log("Patching KongService to trigger an update")
+		serviceToPatch := createdService.DeepCopy()
+		serviceToPatch.Spec.Port = newPort
+		require.NoError(t, clientNamespaced.Patch(ctx, serviceToPatch, client.MergeFrom(createdService)))
+
+		t.Log("Waiting for Service to get Programmed condition with status=False due to network error on update")
+		watchFor(t, ctx, w, apiwatch.Modified, func(ks *configurationv1alpha1.KongService) bool {
+			if ks.GetName() != createdService.GetName() {
+				return false
+			}
+
+			c, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, ks)
+			if !ok {
+				return false
+			}
+			// After ops.Update sets the condition, the handleOpsErr in the reconciler
+			// patches the condition with KonnectAPIOpFailed reason, but then the reconciler
+			// continues and updates the status with FailedToUpdate. The final reason depends
+			// on which update wins. We check for ConditionFalse and that the message contains
+			// the network error.
+			return c.Status == metav1.ConditionFalse &&
+				c.Reason == konnectv1alpha1.KonnectEntityProgrammedReasonKonnectAPIOpFailed
+		}, "KongService should get the Programmed condition set to status=False due to network error on update")
 
 		eventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
 	})
