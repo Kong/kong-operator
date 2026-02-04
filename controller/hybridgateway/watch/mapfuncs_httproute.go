@@ -291,8 +291,8 @@ func MapHTTPRouteForKongPlugin(cl client.Client) handler.MapFunc {
 			}
 		}
 
+		// Add requests for Plugins referencing the HTTPRoute via annotation.
 		requests := MapHTTPRouteForKongResource[*configurationv1.KongPlugin](cl)(ctx, obj)
 		return append(requests, indexRequests...)
 	}
-
 }

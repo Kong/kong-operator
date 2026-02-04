@@ -71,7 +71,6 @@ func PluginsForFilter(
 				log.Debug(logger, "Referenced KongPlugin not found")
 				return plugins, nil
 			}
-			log.Error(logger, err, "Failed to retrieve referenced KongPlugin")
 			return nil, fmt.Errorf("failed to retrieve referenced KongPlugin: %w", err)
 		}
 		pluginName := plugin.Name
@@ -85,7 +84,6 @@ func PluginsForFilter(
 			WithAnnotations(httpRoute, pRef).
 			Build()
 		if err != nil {
-			log.Error(logger, err, "Failed to build KongPlugin resource")
 			return nil, fmt.Errorf("failed to build KongPlugin %s: %w", pluginName, err)
 		}
 		plugins = append(plugins, pluginCopy)
@@ -111,7 +109,6 @@ func PluginsForFilter(
 			WithAnnotations(httpRoute, pRef).
 			Build()
 		if err != nil {
-			log.Error(logger, err, "Failed to build KongPlugin resource")
 			return nil, fmt.Errorf("failed to build KongPlugin %s: %w", pluginName, err)
 		}
 

@@ -117,8 +117,7 @@ func KongPluginsOnHTTPRoute(o client.Object) []string {
 			if filter.ExtensionRef.Group != gatewayv1.Group(configurationv1.GroupVersion.Group) || filter.ExtensionRef.Kind != "KongPlugin" {
 				continue
 			}
-			ns := httpRoute.Namespace
-			plugins = append(plugins, ns+"/"+string(filter.ExtensionRef.Name))
+			plugins = append(plugins, httpRoute.Namespace+"/"+string(filter.ExtensionRef.Name))
 		}
 	}
 	return lo.Uniq(plugins)
