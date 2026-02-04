@@ -1427,8 +1427,8 @@ KongPluginBindingTargets contains the targets references.
 
 | Field | Description |
 | --- | --- |
-| `routeRef` _[TargetRefWithGroupKind](#configuration-konghq-com-v1alpha1-types-targetrefwithgroupkind)_ | RouteReference can be used to reference one of the following resouces: - networking.k8s.io/Ingress - gateway.networking.k8s.io/HTTPRoute - gateway.networking.k8s.io/GRPCRoute - configuration.konghq.com/KongRoute |
-| `serviceRef` _[TargetRefWithGroupKind](#configuration-konghq-com-v1alpha1-types-targetrefwithgroupkind)_ | ServiceReference can be used to reference one of the following resouces: - core/Service or /Service - configuration.konghq.com/KongService |
+| `routeRef` _[TargetRefWithGroupKind](#configuration-konghq-com-v1alpha1-types-targetrefwithgroupkind)_ | RouteReference can be used to reference one of the following resources: - networking.k8s.io/Ingress - gateway.networking.k8s.io/HTTPRoute - gateway.networking.k8s.io/GRPCRoute - configuration.konghq.com/KongRoute |
+| `serviceRef` _[TargetRefWithGroupKind](#configuration-konghq-com-v1alpha1-types-targetrefwithgroupkind)_ | ServiceReference can be used to reference one of the following resources: - core/Service or /Service - configuration.konghq.com/KongService |
 | `consumerRef` _[TargetRef](#configuration-konghq-com-v1alpha1-types-targetref)_ | ConsumerReference is used to reference a configuration.konghq.com/Consumer resource. The group/kind is fixed, therefore the reference is performed only by name. |
 | `consumerGroupRef` _[TargetRef](#configuration-konghq-com-v1alpha1-types-targetref)_ | ConsumerGroupReference is used to reference a configuration.konghq.com/ConsumerGroup resource. The group/kind is fixed, therefore the reference is performed only by name. |
 

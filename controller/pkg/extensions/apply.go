@@ -76,7 +76,7 @@ func ApplyExtensions[t ExtendableT](ctx context.Context, cl client.Client, o t, 
 	}
 
 	// in case the extensionsCondition is true, let's apply the extensions.
-	konnectExtensionApplied := k8sutils.NewConditionWithGeneration(kcfgkonnect.KonnectExtensionAppliedType, metav1.ConditionTrue, kcfgkonnect.KonnectExtensionAppliedReason, "The Konnect extension has been successsfully applied", o.GetGeneration())
+	konnectExtensionApplied := k8sutils.NewConditionWithGeneration(kcfgkonnect.KonnectExtensionAppliedType, metav1.ConditionTrue, kcfgkonnect.KonnectExtensionAppliedReason, "The Konnect extension has been successfully applied", o.GetGeneration())
 	if extensionsCondition.Status == metav1.ConditionTrue {
 		var (
 			extensionRefFound bool

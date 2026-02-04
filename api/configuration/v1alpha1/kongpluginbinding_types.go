@@ -117,7 +117,7 @@ type KongPluginBindingSpec struct {
 // KongPluginBindingTargets contains the targets references.
 // +apireference:kgo:include
 type KongPluginBindingTargets struct {
-	// RouteReference can be used to reference one of the following resouces:
+	// RouteReference can be used to reference one of the following resources:
 	// - networking.k8s.io/Ingress
 	// - gateway.networking.k8s.io/HTTPRoute
 	// - gateway.networking.k8s.io/GRPCRoute
@@ -127,7 +127,7 @@ type KongPluginBindingTargets struct {
 	// +kubebuilder:validation:XValidation:message="group/kind not allowed for the routeRef",rule="(self.kind == 'KongRoute' && self.group == 'configuration.konghq.com') || (self.kind == 'Ingress' && self.group == 'networking.k8s.io') || (self.kind == 'HTTPRoute' && self.group == 'gateway.networking.k8s.io') || (self.kind == 'GRPCRoute' && self.group == 'gateway.networking.k8s.io')"
 	RouteReference *TargetRefWithGroupKind `json:"routeRef,omitempty"`
 
-	// ServiceReference can be used to reference one of the following resouces:
+	// ServiceReference can be used to reference one of the following resources:
 	// - core/Service or /Service
 	// - configuration.konghq.com/KongService
 	//

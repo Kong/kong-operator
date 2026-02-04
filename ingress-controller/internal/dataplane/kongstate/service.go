@@ -16,7 +16,7 @@ import (
 )
 
 // Services is a list of kongstate.Service objects with sorting enabled based
-// on a lexographical comparison of the underlying kong.Service names which are
+// on a lexicographical comparison of the underlying kong.Service names which are
 // always expected to be unique.
 type Services []*Service
 

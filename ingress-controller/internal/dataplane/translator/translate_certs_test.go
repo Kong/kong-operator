@@ -47,7 +47,7 @@ func TestMergeCerts(t *testing.T) {
 			idToMergedID: certIDToMergedCertID{"certificate-1": "certificate-1"},
 		},
 		{
-			name: "multiple different certifcates",
+			name: "multiple different certificates",
 			certs: []certWrapper{
 				{
 					identifier: string(crt1) + string(key1),

@@ -180,7 +180,7 @@ func headerMatcherFromHeaders(headers map[string][]string) atc.Matcher {
 				regex := after
 				singleHeaderMatcher.Or(atc.NewPredicateHTTPHeader(headerName, atc.OpRegexMatch, regex))
 			} else {
-				// otherwise, genereate a predicate using exact match.
+				// otherwise, generate a predicate using exact match.
 				singleHeaderMatcher.Or(atc.NewPredicateHTTPHeader(headerName, atc.OpEqual, val))
 			}
 		}

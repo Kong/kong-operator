@@ -125,7 +125,7 @@ func methodMatcherFromGRPCMethodMatch(methodMatch *gatewayapi.GRPCMethodMatch) a
 // reference: https://gateway-api.sigs.k8s.io/geps/gep-1016/?h=#method-matchers
 func methodMatcherFromGRPCExactMethodMatch(service *string, method *string) atc.Matcher {
 	if service == nil && method == nil {
-		// should not happen, but we gernerate a catch-all matcher here.
+		// should not happen, but we generate a catch-all matcher here.
 		return atc.NewPredicateHTTPPath(atc.OpPrefixMatch, "/")
 	}
 	if service != nil && method == nil {

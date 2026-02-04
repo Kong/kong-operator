@@ -21,8 +21,8 @@ const (
 	// retried by default.
 	DefaultRetries = 5
 
-	// DefualtKongServiceProtocol is the default protocol in translated Kong service.
-	DefualtKongServiceProtocol = "http"
+	// DefaultKongServiceProtocol is the default protocol in translated Kong service.
+	DefaultKongServiceProtocol = "http"
 
 	// maxKongServiceNameLength is the maximum length of generated Kong service name allowed by Kong/Konnect.
 	// if the length of generated Kong service name exceeds the limit, the name will be trimmed.

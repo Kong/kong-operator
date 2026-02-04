@@ -189,7 +189,7 @@ func featureSetup(opts ...featureSetupOpt) func(ctx context.Context, t *testing.
 
 		kongAddon := GetFromCtxForT[*kong.Addon](ctx, t)
 
-		startControllManagerConfig := startControllerManagerConfig{
+		startControllerManagerConfig := startControllerManagerConfig{
 			controllerManagerFeatureGates: setupCfg.controllerManagerFeatureGates,
 			controllerManagerOpts:         setupCfg.controllerManagerOpts,
 		}
@@ -202,16 +202,16 @@ func featureSetup(opts ...featureSetupOpt) func(ctx context.Context, t *testing.
 			}
 		}
 		if len(extraControllerArgs) > 0 {
-			startControllManagerConfig.controllerManagerOpts = append(
-				startControllManagerConfig.controllerManagerOpts,
+			startControllerManagerConfig.controllerManagerOpts = append(
+				startControllerManagerConfig.controllerManagerOpts,
 				withExtraControllerArgs(extraControllerArgs))
 		}
 
-		return startControllerManager(ctx, t, startControllManagerConfig, kongAddon)
+		return startControllerManager(ctx, t, startControllerManagerConfig, kongAddon)
 	}
 }
 
-// setUpNamespaceAndCleaner creates the namespace to run the test and the cleaner to clean up created resouces.
+// setUpNamespaceAndCleaner creates the namespace to run the test and the cleaner to clean up created resources.
 func setUpNamespaceAndCleaner(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
 	// TODO: this is temporary to allow things like:
 	// clusters.ApplyManifestByYAML(ctx, cluster, s)

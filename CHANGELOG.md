@@ -110,7 +110,7 @@
   Secrets containing TLS certificate and key data, instead of embedding them inline.
   [#2802](https://github.com/Kong/kong-operator/pull/2802)  
 - `KongCACertificate`: Add support for sourcing CA certificates from Kubernetes Secrets.
-  This allows users to define KongCACertificates that references exsiting Kubernetes
+  This allows users to define KongCACertificates that references existing Kubernetes
   Secrets containing TLS CA certificate instead of embedding them inline
   [#2482](https://github.com/Kong/kong-operator/pull/2842)
 - `KongReferenceGrant` CRD has been added to allow cross-namespace references
@@ -119,7 +119,7 @@
   [#2855](https://github.com/Kong/kong-operator/pull/2855)
 - Hybrid Gateway: specify the protocol field of the generated `KongService` resources
   [#2872](https://github.com/Kong/kong-operator/pull/2872)
-- Hybdrid Gateway: the creation and deletion of the Kong resources derived from `HTTPRoute`s is now
+- Hybrid Gateway: the creation and deletion of the Kong resources derived from `HTTPRoute`s is now
   performed in multiple steps that account for dependencies among the generated resources.
   [#2857](https://github.com/Kong/kong-operator/pull/2857)
 - Added support for cross namespace references between the following Konnect
@@ -325,7 +325,7 @@
   [#2427](https://github.com/Kong/kong-operator/pull/2427)
 - Hybrid Gateway: attach KongService generation to BackendRefs and fix filter/plugin conversion.
   [#2456](https://github.com/Kong/kong-operator/pull/2456)
-- Translate `healtchchecks.threshold` in `KongUpstreamPolicy` to the
+- Translate `healthchecks.threshold` in `KongUpstreamPolicy` to the
   `healthchecks.threshold` field in Kong upstreams.
   [#2662](https://github.com/Kong/kong-operator/pull/2662)
 - Reject CA Secrets with multiple PEM certs.
@@ -920,7 +920,7 @@
   [#898](https://github.com/kong/kong-operator/pull/898)
 - Set 0 members on `KonnectGatewayControlPlane` which type is set to group.
   [#896](https://github.com/kong/kong-operator/pull/896)
-- Fixed a `panic` in `KonnectAPIAuthConfigurationReconciler` occuring when nil
+- Fixed a `panic` in `KonnectAPIAuthConfigurationReconciler` occurring when nil
   response was returned by Konnect API when fetching the organization information.
   [#901](https://github.com/kong/kong-operator/pull/901)
 - Bump sdk-konnect-go version to 0.1.10 to fix handling global API endpoints.
@@ -1004,7 +1004,7 @@
   - ACL [#661](https://github.com/kong/kong-operator/pull/661)
   - JWT [#678](https://github.com/kong/kong-operator/pull/678)
   - HMAC Auth [#687](https://github.com/kong/kong-operator/pull/687)
-- Add support for `KongRoute`s bound directly to `KonnectGatewayControlPlane`s (serviceless rotues).
+- Add support for `KongRoute`s bound directly to `KonnectGatewayControlPlane`s (serviceless routes).
   [#669](https://github.com/kong/kong-operator/pull/669)
 - Allow setting `KonnectGatewayControlPlane`s group membership
   [#697](https://github.com/kong/kong-operator/pull/697)
@@ -1459,7 +1459,7 @@ Due to [golang proxy caching modules indefinitely][goproxy] we needed to retract
   [kong/kong-operator-archive#1034](https://github.com/kong/kong-operator-archive/pull/1034)
 - Don't use `Provisioned` status condition type on `DataPlane`s.
   From now on `DataPlane`s are only expressing their status through `Ready` status
-  condtion.
+  condition.
   [kong/kong-operator-archive#1043](https://github.com/kong/kong-operator-archive/pull/1043)
 - Bump default `DataPlane` image to 3.4
   [kong/kong-operator-archive#1067](https://github.com/kong/kong-operator-archive/pull/1067)

@@ -7,7 +7,7 @@ import (
 	"github.com/kong/go-kong/kong"
 )
 
-// PluginSchemaStore retrives a schema of a Plugin from Kong.
+// PluginSchemaStore retrieves a schema of a Plugin from Kong.
 type PluginSchemaStore struct {
 	client  *kong.Client
 	schemas map[string]map[string]any
@@ -21,7 +21,7 @@ func NewPluginSchemaStore(client *kong.Client) *PluginSchemaStore {
 	}
 }
 
-// Schema retrives schema of a plugin.
+// Schema retrieves schema of a plugin.
 // A cache is used to save the responses and subsequent queries are served from
 // the cache.
 func (p *PluginSchemaStore) Schema(ctx context.Context, pluginName string) (map[string]any, error) {

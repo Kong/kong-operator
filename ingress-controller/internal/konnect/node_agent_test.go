@@ -398,19 +398,19 @@ func TestNodeAgent_ControllerNodeStatusGetsUpdatedOnStatusNotification(t *testin
 	runAgent(t, nodeAgent)
 
 	testCases := []struct {
-		expectedConfigStaus         clients.ConfigStatus
+		expectedConfigStatus        clients.ConfigStatus
 		notifiedGatewayConfigStatus clients.GatewayConfigApplyStatus
 		notifiedKonnectConfigStatus clients.KonnectConfigUploadStatus
 		expectedControllerState     nodes.IngressControllerState
 	}{
 		{
-			expectedConfigStaus:         clients.ConfigStatusOK,
+			expectedConfigStatus:        clients.ConfigStatusOK,
 			notifiedGatewayConfigStatus: clients.GatewayConfigApplyStatus{},
 			notifiedKonnectConfigStatus: clients.KonnectConfigUploadStatus{},
 			expectedControllerState:     nodes.IngressControllerStateOperational,
 		},
 		{
-			expectedConfigStaus: clients.ConfigStatusTranslationErrorHappened,
+			expectedConfigStatus: clients.ConfigStatusTranslationErrorHappened,
 			notifiedGatewayConfigStatus: clients.GatewayConfigApplyStatus{
 				TranslationFailuresOccurred: true,
 			},
@@ -418,7 +418,7 @@ func TestNodeAgent_ControllerNodeStatusGetsUpdatedOnStatusNotification(t *testin
 			expectedControllerState:     nodes.IngressControllerStatePartialConfigFail,
 		},
 		{
-			expectedConfigStaus: clients.ConfigStatusApplyFailed,
+			expectedConfigStatus: clients.ConfigStatusApplyFailed,
 			notifiedGatewayConfigStatus: clients.GatewayConfigApplyStatus{
 				ApplyConfigFailed: true,
 			},
@@ -426,7 +426,7 @@ func TestNodeAgent_ControllerNodeStatusGetsUpdatedOnStatusNotification(t *testin
 			expectedControllerState:     nodes.IngressControllerStateInoperable,
 		},
 		{
-			expectedConfigStaus:         clients.ConfigStatusOKKonnectApplyFailed,
+			expectedConfigStatus:        clients.ConfigStatusOKKonnectApplyFailed,
 			notifiedGatewayConfigStatus: clients.GatewayConfigApplyStatus{},
 			notifiedKonnectConfigStatus: clients.KonnectConfigUploadStatus{
 				Failed: true,
@@ -434,7 +434,7 @@ func TestNodeAgent_ControllerNodeStatusGetsUpdatedOnStatusNotification(t *testin
 			expectedControllerState: nodes.IngressControllerStateOperationalKonnectOutOfSync,
 		},
 		{
-			expectedConfigStaus: clients.ConfigStatusTranslationErrorHappenedKonnectApplyFailed,
+			expectedConfigStatus: clients.ConfigStatusTranslationErrorHappenedKonnectApplyFailed,
 			notifiedGatewayConfigStatus: clients.GatewayConfigApplyStatus{
 				TranslationFailuresOccurred: true,
 			},
@@ -444,7 +444,7 @@ func TestNodeAgent_ControllerNodeStatusGetsUpdatedOnStatusNotification(t *testin
 			expectedControllerState: nodes.IngressControllerStatePartialConfigFailKonnectOutOfSync,
 		},
 		{
-			expectedConfigStaus: clients.ConfigStatusApplyFailedKonnectApplyFailed,
+			expectedConfigStatus: clients.ConfigStatusApplyFailedKonnectApplyFailed,
 			notifiedGatewayConfigStatus: clients.GatewayConfigApplyStatus{
 				ApplyConfigFailed: true,
 			},
@@ -456,7 +456,7 @@ func TestNodeAgent_ControllerNodeStatusGetsUpdatedOnStatusNotification(t *testin
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprint(tc.expectedConfigStaus), func(t *testing.T) {
+		t.Run(fmt.Sprint(tc.expectedConfigStatus), func(t *testing.T) {
 			configStatusQueue.NotifyGatewayConfigStatus(tc.notifiedGatewayConfigStatus)
 			configStatusQueue.NotifyKonnectConfigStatus(tc.notifiedKonnectConfigStatus)
 

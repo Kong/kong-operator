@@ -311,7 +311,7 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "missing key of secret in cofigPatches",
+			name: "missing key of secret in configPatches",
 			args: args{
 				plugin: configurationv1.KongClusterPlugin{
 					ObjectMeta: metav1.ObjectMeta{

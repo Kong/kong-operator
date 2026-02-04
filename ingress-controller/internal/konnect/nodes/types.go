@@ -66,7 +66,7 @@ type CreateNodeRequest struct {
 	Type                string               `json:"type"`
 	LastPing            int64                `json:"last_ping"`
 	Version             string               `json:"version"`
-	CompatabilityStatus *CompatibilityStatus `json:"compatibility_status,omitempty"`
+	CompatibilityStatus *CompatibilityStatus `json:"compatibility_status,omitempty"`
 	Status              string               `json:"status,omitempty"`
 	ConfigHash          string               `json:"config_hash,omitempty"`
 }
