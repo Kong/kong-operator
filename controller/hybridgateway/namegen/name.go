@@ -113,8 +113,8 @@ func NewKongRouteName(route *gwtypes.HTTPRoute, cp *commonv1alpha1.ControlPlaneR
 }
 
 // NewKongPluginName generates a KongPlugin name based on the HTTPRouteFilter passed as argument.
-func NewKongPluginName(filter gatewayv1.HTTPRouteFilter, pluginName string) string {
-	return newName(pluginName, utils.Hash32(filter))
+func NewKongPluginName(filter gatewayv1.HTTPRouteFilter, namespace string, pluginName string) string {
+	return newName(namespace, pluginName, utils.Hash32(filter))
 }
 
 // NewKongPluginBindingName generates a KongPlugin name based on the KongRoute and the KongPlugin names.

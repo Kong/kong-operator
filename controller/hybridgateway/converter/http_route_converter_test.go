@@ -315,16 +315,16 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
 				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
 			},
-			wantCount: 7,
+			wantCount: 8,
 			wantOutputs: outputCount{
 				upstreams: 1,
 				services:  1,
 				routes:    1,
 				targets:   1,
 				bindings:  2,
-				plugins:   1,
+				plugins:   2,
 			},
-			wantStoreLen: 7,
+			wantStoreLen: 8,
 		},
 		{
 			name: "returns error when filter translation fails",
