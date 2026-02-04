@@ -371,6 +371,14 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 				return res, err
 			}
 
+			if !cleanup {
+				// ControlPlane not found and we're not in cleanup mode.
+				// The controlPlaneRefValid condition has already been set to false in getGatewayKonnectControlPlane.
+				// We've done the necessary cleanup above, now wait for the CP to be created or the reference to be corrected.
+				log.Debug(logger, "ControlPlane not found, waiting for it to be available")
+				return res, nil
+			}
+
 		default:
 			log.Debug(logger, "ControlPlane not ready yet")
 			return res, nil

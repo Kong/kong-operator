@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"time"
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -214,6 +215,11 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			return ctrl.Result{}, err
 		}
 	} else if !res.IsZero() {
+		// If the result is not zero (e.g., requeue), we still need to update the Programmed
+		// status condition based on other conditions.
+		if _, errStatus := patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent); errStatus != nil {
+			return ctrl.Result{}, errStatus
+		}
 		return res, nil
 	}
 	// If a type has a KongConsumer ref, handle it.
@@ -254,6 +260,11 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 		return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 	} else if !res.IsZero() {
+		// If the result is not zero (e.g., requeue), we still need to update the Programmed
+		// status condition based on other conditions.
+		if _, errStatus := patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent); errStatus != nil {
+			return ctrl.Result{}, errStatus
+		}
 		return res, nil
 	}
 
@@ -291,6 +302,11 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 		return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 	} else if !res.IsZero() {
+		// If the result is not zero (e.g., requeue), we still need to update the Programmed
+		// status condition based on other conditions.
+		if _, errStatus := patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent); errStatus != nil {
+			return ctrl.Result{}, errStatus
+		}
 		return res, nil
 	}
 
@@ -331,6 +347,13 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 		return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 	} else if !res.IsZero() {
+		// If the result is not zero (e.g., requeue), we still need to update the Programmed
+		// status condition based on other conditions (e.g., KongCertificateRefValid set to False
+		// when referenced KongCertificate is not programmed yet).
+		// We patch the status but still return the original requeue result.
+		if _, errStatus := patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent); errStatus != nil {
+			return ctrl.Result{}, errStatus
+		}
 		return res, nil
 	}
 
@@ -450,6 +473,14 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 		if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 			if err := ops.Delete(ctx, sdk, r.Client, r.MetricRecorder, ent); err != nil {
+				// If the error was a network error, handle it here, there's no need to proceed,
+				// as no state has changed.
+				// Status conditions are updated in handleOpsErr.
+				var errUrl *url.Error
+				if errors.As(err, &errUrl) {
+					return r.handleOpsErr(ctx, ent, errUrl)
+				}
+
 				// If the error is a rate limit error, requeue after the retry-after duration
 				// instead of returning an error.
 				if retryAfter, isRateLimited := ops.GetRetryAfterFromRateLimitError(err); isRateLimited {
@@ -485,7 +516,16 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	// Handle type specific operations and stop reconciliation if needed.
 	// This can happen for instance when KongConsumer references credentials Secrets
 	// that do not exist or populate some Status fields based on Konnect API.
-	if stop, res, err := handleTypeSpecific(ctx, sdk, r.Client, ent); err != nil || !res.IsZero() || stop {
+	if stop, res, err := handleTypeSpecific(ctx, sdk, r.Client, ent); err != nil {
+		// If the error was a network error, handle it here, there's no need to proceed,
+		// as no state has changed.
+		// Status conditions are updated in handleOpsErr.
+		var errUrl *url.Error
+		if errors.As(err, &errUrl) {
+			return r.handleOpsErr(ctx, ent, errUrl)
+		}
+		return ctrl.Result{}, err
+	} else if !res.IsZero() || stop {
 		return res, err
 	}
 
@@ -530,22 +570,31 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// Regardless of the error, patch the status as it can contain the Konnect ID,
 		// Org ID, Server URL and status conditions.
 		// Konnect ID will be needed for the finalizer to work.
-		if res, err := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, any(ent).(client.Object), obj); err != nil {
+		if _, err := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, any(ent).(client.Object), obj); err != nil {
 			if k8serrors.IsConflict(err) {
 				return ctrl.Result{Requeue: true}, nil
 			}
 			return ctrl.Result{}, fmt.Errorf("failed to update status after creating object: %w", err)
-		} else if res != op.Noop {
-			return ctrl.Result{}, nil
 		}
 
 		if err != nil {
+			var (
+				errUrl       *url.Error
+				rateLimitErr ops.RateLimitError
+			)
+			switch {
+			// If the error was a network error, handle it here, there's no need to proceed,
+			// as no state has changed.
+			// Status conditions are updated in handleOpsErr.
+			case errors.As(err, &errUrl):
+				return r.handleOpsErr(ctx, ent, errUrl)
+
 			// If the error is a rate limit error, requeue after the retry-after duration
 			// instead of returning an error.
-			var rateLimitErr ops.RateLimitError
-			if errors.As(err, &rateLimitErr) {
+			case errors.As(err, &rateLimitErr):
 				return ctrl.Result{RequeueAfter: rateLimitErr.RetryAfter}, nil
 			}
+
 			return ctrl.Result{}, ops.FailedKonnectOpError[T]{
 				Op:  ops.CreateOp,
 				Err: err,
@@ -557,6 +606,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	}
 
 	res, err = ops.Update(ctx, sdk, r.SyncPeriod, r.Client, r.MetricRecorder, ent)
+
 	// Set the server URL and org ID regardless of the error.
 	setStatusServerURLAndOrgID(ent, server, apiAuth.Status.OrganizationID)
 	// Update the status of the object regardless of the error.
@@ -567,13 +617,25 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		return ctrl.Result{}, fmt.Errorf("failed to update in cluster resource after Konnect update: %w %w", errUpd, err)
 	}
 	if err != nil {
+		logger.Error(err, "failed to update")
+
+		var (
+			errUrl       *url.Error
+			rateLimitErr ops.RateLimitError
+		)
+		switch {
+		// If the error was a network error, handle it here, there's no need to proceed,
+		// as no state has changed.
+		// Status conditions are updated in handleOpsErr.
+		case errors.As(err, &errUrl):
+			return r.handleOpsErr(ctx, ent, errUrl)
+
 		// If the error is a rate limit error, requeue after the retry-after duration
 		// instead of returning an error.
-		var rateLimitErr ops.RateLimitError
-		if errors.As(err, &rateLimitErr) {
+		case errors.As(err, &rateLimitErr):
 			return ctrl.Result{RequeueAfter: rateLimitErr.RetryAfter}, nil
 		}
-		logger.Error(err, "failed to update")
+
 	} else if !res.IsZero() {
 		return res, nil
 	}

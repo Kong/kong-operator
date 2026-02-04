@@ -3,13 +3,13 @@ module github.com/kong/kong-operator
 go 1.25.6
 
 require (
-	cloud.google.com/go/container v1.45.0
+	cloud.google.com/go/container v1.46.0
 	dario.cat/mergo v1.0.2
 	github.com/Kong/sdk-konnect-go v0.20.1
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/avast/retry-go/v4 v4.7.0
 	github.com/blang/semver/v4 v4.0.0
-	github.com/cert-manager/cert-manager v1.19.2
+	github.com/cert-manager/cert-manager v1.19.3
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/cnf/structhash v0.0.0-20250313080605-df4c6cc74a9a
 	github.com/docker/docker v28.5.2+incompatible
@@ -28,8 +28,8 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/jpillora/backoff v1.0.0
-	github.com/kong/go-database-reconciler v1.31.2
-	github.com/kong/go-kong v0.72.0
+	github.com/kong/go-database-reconciler v1.31.3
+	github.com/kong/go-kong v0.72.1
 	github.com/kong/kubernetes-telemetry v0.1.11
 	github.com/kong/kubernetes-testing-framework v0.48.1-0.20260114143846-8c0e96b5bf82
 	github.com/kong/semver/v4 v4.0.1
@@ -55,7 +55,7 @@ require (
 	go.uber.org/zap v1.27.1
 	golang.org/x/mod v0.32.0
 	golang.org/x/sync v0.19.0
-	google.golang.org/api v0.263.0
+	google.golang.org/api v0.264.0
 	google.golang.org/grpc v1.78.0
 	google.golang.org/protobuf v1.36.11
 	k8s.io/api v0.35.0
