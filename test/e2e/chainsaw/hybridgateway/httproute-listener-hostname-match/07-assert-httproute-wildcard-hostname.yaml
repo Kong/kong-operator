@@ -1,0 +1,31 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  namespace: ($http_route_namespace)
+  name: ($httproute_name)
+status:
+  parents:
+  - parentRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ($gateway_name)
+    controllerName: konghq.com/gateway-operator
+    (conditions[?type == 'Accepted']):
+    - status: "True"
+      reason: Accepted
+    (conditions[?type == 'ResolvedRefs']):
+    - status: "True"
+      reason: ResolvedRefs
+    (conditions[?type == 'KongRouteProgrammed']):
+    - status: "True"
+      reason: KongRouteProgrammed
+    (conditions[?type == 'KongServiceProgrammed']):
+    - status: "True"
+      reason: KongServiceProgrammed
+    (conditions[?type == 'KongUpstreamProgrammed']):
+    - status: "True"
+      reason: KongUpstreamProgrammed
+    (conditions[?type == 'KongTargetProgrammed']):
+    - status: "True"
+      reason: KongTargetProgrammed
