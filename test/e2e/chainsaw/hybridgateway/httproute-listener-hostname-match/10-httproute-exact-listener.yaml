@@ -1,0 +1,24 @@
+---
+# HTTPRoute attached to gateway with exact listener hostname
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  namespace: ($http_route_namespace)
+  name: ($httproute_name)
+spec:
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: ($gateway_name)
+  hostnames:
+  - "exact.http.httpbin-2.test"
+  - "exact.https.httpbin-2.test"
+  rules:
+  - matches:
+      - path:
+          type: PathPrefix
+          value: ($route_path)
+        method: PUT
+    backendRefs:
+      - name: ($httpbin_service_name)
+        port: ($httpbin_service_port)

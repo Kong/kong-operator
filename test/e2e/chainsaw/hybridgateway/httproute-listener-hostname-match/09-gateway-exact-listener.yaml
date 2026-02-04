@@ -1,0 +1,21 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: ($gateway_name_exact_listener)
+  namespace: ($namespace)
+spec:
+  gatewayClassName: (join('-', [($test_name), 'gateway-class']))
+  listeners:
+  - name: http
+    protocol: HTTP
+    port: ($listener_http_port)
+    hostname: ($listener_http_hostname_exact)
+  - name: https
+    protocol: HTTPS
+    port: ($listener_https_port)
+    hostname: ($listener_https_hostname_exact)
+    tls:
+      mode: Terminate
+      certificateRefs:
+      - name: ($cert_secret_name_exact)
+        namespace: ($namespace)

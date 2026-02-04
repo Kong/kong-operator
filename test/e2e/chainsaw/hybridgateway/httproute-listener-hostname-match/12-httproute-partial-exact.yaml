@@ -1,0 +1,25 @@
+---
+# HTTPRoute with partial hostname match (exact) - some hostnames match listener, some don't
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  namespace: ($http_route_namespace)
+  name: ($httproute_name)
+spec:
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: ($gateway_name)
+  hostnames:
+  - "exact.http.httpbin.test"
+  - "exact.https.httpbin.test"
+  - "exact.httpbin.example"
+  rules:
+  - matches:
+      - path:
+          type: PathPrefix
+          value: ($route_path)
+        method: PATCH
+    backendRefs:
+      - name: ($httpbin_service_name)
+        port: ($httpbin_service_port)
