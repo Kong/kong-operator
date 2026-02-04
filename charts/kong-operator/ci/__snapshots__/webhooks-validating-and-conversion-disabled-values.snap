@@ -5,14 +5,14 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: controller-manager
-  namespace: kong
+  namespace: default
 ---
 # Source: kong-operator/templates/kong-operator-ca.yaml
 apiVersion: v1
 kind: Secret
 metadata:
   name: kong-operator-ca
-  namespace: kong
+  namespace: default
   labels:
     konghq.com/secret: internal
   annotations:
@@ -30597,7 +30597,7 @@ spec:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: 'kong-chartsnap-kong-operator-manager-role'
+  name: 'default-chartsnap-kong-operator-manager-role'
 rules:
 - apiGroups:
   - ""
@@ -31114,7 +31114,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   creationTimestamp: null
-  name: kong-chartsnap-kong-operator-kong-mtls-secret-role
+  name: default-chartsnap-kong-operator-kong-mtls-secret-role
 rules:
 - apiGroups:
   - ""
@@ -31131,7 +31131,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: kong-chartsnap-kong-operator-metrics-reader
+  name: default-chartsnap-kong-operator-metrics-reader
 rules:
 - nonResourceURLs:
   - /metrics
@@ -31142,7 +31142,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: kong-chartsnap-kong-operator-proxy-role
+  name: default-chartsnap-kong-operator-proxy-role
 rules:
 - apiGroups:
   - authentication.k8s.io
@@ -31161,50 +31161,50 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: kong-chartsnap-kong-operator-kong-mtls-secret-rolebinding
+  name: default-chartsnap-kong-operator-kong-mtls-secret-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: kong-chartsnap-kong-operator-kong-mtls-secret-role
+  name: default-chartsnap-kong-operator-kong-mtls-secret-role
 subjects:
 - kind: ServiceAccount
   name: controller-manager
-  namespace: kong
+  namespace: default
 ---
 # Source: kong-operator/templates/rbac-resources.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: kong-chartsnap-kong-operator-manager-rolebinding
+  name: default-chartsnap-kong-operator-manager-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: kong-chartsnap-kong-operator-manager-role
+  name: default-chartsnap-kong-operator-manager-role
 subjects:
 - kind: ServiceAccount
   name: controller-manager
-  namespace: kong
+  namespace: default
 ---
 # Source: kong-operator/templates/rbac-resources.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: kong-chartsnap-kong-operator-proxy-rolebinding
+  name: default-chartsnap-kong-operator-proxy-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: kong-chartsnap-kong-operator-proxy-role
+  name: default-chartsnap-kong-operator-proxy-role
 subjects:
 - kind: ServiceAccount
   name: controller-manager
-  namespace: kong
+  namespace: default
 ---
 # Source: kong-operator/templates/rbac-resources.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: chartsnap-kong-operator-leader-election-role
-  namespace: kong
+  namespace: default
 rules:
 - apiGroups:
   - ""
@@ -31243,7 +31243,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: chartsnap-kong-operator-leader-election-rolebinding
-  namespace: kong
+  namespace: default
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -31251,7 +31251,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: controller-manager
-  namespace: kong
+  namespace: default
 ---
 # Source: kong-operator/templates/services.yaml
 apiVersion: v1
@@ -31260,7 +31260,7 @@ metadata:
   labels:
     app.kubernetes.io/component: ko
   name: chartsnap-kong-operator
-  namespace: kong
+  namespace: default
 spec:
   ports:
   - name: https
@@ -31278,7 +31278,7 @@ metadata:
     control-plane: controller-manager
     app.kubernetes.io/component: ko
   name: chartsnap-kong-operator-metrics-service
-  namespace: kong
+  namespace: default
 spec:
   ports:
   - name: http
@@ -31300,7 +31300,7 @@ metadata:
     app.kubernetes.io/version: "2.1.0-beta.0"
     app.kubernetes.io/component: ko
   name: chartsnap-kong-operator-controller-manager
-  namespace: kong
+  namespace: default
   annotations:
     # Env vars: KONG_OPERATOR_CLUSTER_CA_SECRET and KONG_OPERATOR_CLUSTER_CA_SECRET_NAMESPACE are set for this Deployment.
     # These env vars don't contain any sensitive data. They just reference the name and namespace of the Secret that holds
@@ -31340,7 +31340,7 @@ spec:
         - name: KONG_OPERATOR_CLUSTER_CA_SECRET
           value: "kong-operator-ca"
         - name: KONG_OPERATOR_CLUSTER_CA_SECRET_NAMESPACE
-          value: "kong"
+          value: "default"
         - name: KONG_OPERATOR_ENABLE_CONVERSION_WEBHOOK
           value: "false"
         - name: KONG_OPERATOR_ENABLE_VALIDATING_WEBHOOK
