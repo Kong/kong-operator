@@ -6,403 +6,313 @@ metadata:
 spec:
   description: |
     This test validates HTTPRoute path matching scenarios including PathPrefix,
-    PathExact, multiple path matches in single rule, and the strip-path annotation.
+    Exact, multiple path matches in a single rule, and the strip-path annotation.
 
   bindings:
-    - name: kong_namespace
-      value: (join('-', ['kong', 'httproute-path-matching', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+    - name: test_name
+      value: ($namespace)
+    - name: namespace
+      value: ($namespace)
     - name: konnect_api_auth_name
       value: konnect-api-auth-dev-1
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: gateway_image
+      value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.12')
     - name: gateway_class_name
-      value: (join('-', ['kong', 'httproute-path-matching', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+      value: (join('-', [($test_name), 'gateway-class']))
     - name: gateway_configuration_name
-      value: ($gateway_class_name)
+      value: (join('-', [($test_name), 'gateway-configuration']))
+    - name: gateway_namespace
+      value: ($namespace)
     - name: gateway_name
-      value: ($gateway_class_name)
-    - name: httproute_name
-      value: path-matching
+      value: (join('-', [($namespace), 'gateway']))
+    - name: http_route_namespace
+      value: ($namespace)
+    - name: httpbin_service_name
+      value: httpbin
+    - name: httpbin_service_namespace
+      value: ($namespace)
+    - name: httpbin_deployment_name
+      value: httpbin
+    - name: httpbin_deployment_namespace
+      value: ($namespace)
+    - name: httpbin_service_port
+      value: 80
+    - name: listener_http_port
+      value: 80
+    - name: request_headers
+      value: ""
+
+    # Unique HTTPRoute names for each test scenario
+    - name: httproute_name_pathprefix
+      value: (join('-', [($namespace), 'pathprefix']))
+    - name: httproute_name_pathexact
+      value: (join('-', [($namespace), 'pathexact']))
+    - name: httproute_name_multipaths
+      value: (join('-', [($namespace), 'multipaths']))
+    - name: httproute_name_strippath
+      value: (join('-', [($namespace), 'strippath']))
 
   timeouts:
     apply: 120s
-    assert: 300s
+    assert: 120s
     cleanup: 120s
     delete: 120s
 
   steps:
-    # Step 1: Create prerequisite resources
-    - name: create-prerequisites
-      description: Create GatewayClass, Gateway, and backend Service
-      try:
-        - apply:
-            file: 01-prerequisites.yaml
-        - apply:
-            file: 00-httpbin.yaml
-        # Assert common Konnect and Gateway resources
-        - assert:
-            file: ../../common/assertions/konnect-apiauth.yaml
-        - assert:
-            file: 01-assert-prerequisites.yaml
-        - assert:
-            file: 00-assert-httpbin.yaml
-      catch:
-        - description: Get Gateway resource status
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: Gateway
-            namespace: ($kong_namespace)
-        - description: Get Pods in kong namespace
-          get:
-            apiVersion: v1
-            kind: Pod
-            namespace: ($kong_namespace)
-        - description: Get operator logs
-          podLogs:
-            namespace: kong-system
-            selector: control-plane=controller-manager
-            tail: 100
+  # Step 1: Create test namespace
+  - name: 1-create-namespace
+    description: Create namespace for test resources
+    use:
+      template: ../../common/_step_templates/apply-assert-namespace.yaml
+    bindings:
+      - name: namespace_name
+        value: ($namespace)
 
-    # Step 2: Test PathPrefix matching
-    - name: test-pathprefix-matching
-      description: Create HTTPRoute with PathPrefix matching
-      try:
-        - apply:
-            file: 02-httproute-pathprefix.yaml
-        - assert:
-            file: 02-assert-httproute-pathprefix.yaml
-        # Get the Gateway proxy IP
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: GATEWAY_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
-            outputs:
-              - name: proxy_ip
-                value: ($stdout)
-        # Test PathPrefix matching - /prefix/anything should match
-        - description: Test PathPrefix matching from within cluster
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              POD_NAME="curl-test-$(date +%s)-$$"
-              kubectl run ${POD_NAME} --image=curlimages/curl:latest --rm -i --restart=Never -n ${KONG_NAMESPACE} -- \
-                curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w '%{http_code}' http://${PROXY_IP}/prefix/status/200
-            check:
-              (contains($stdout, '200')): true
-        - description: Test PathPrefix matching from host
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/prefix/status/200
-            check:
-              (contains($stdout, '200')): true
-      catch:
-        - description: Get HTTPRoute status
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: HTTPRoute
-            namespace: ($kong_namespace)
-        - description: Get KongRoute resources
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongRoute
-            namespace: ($kong_namespace)
+  # Step 2: Create KonnectAPIAuthConfiguration
+  - name: 2-create-konnect-api-auth
+    description: Create KonnectAPIAuthConfiguration for the test
+    use:
+      template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
 
-    # Step 3: Test PathExact matching
-    - name: test-pathexact-matching
-      description: Update HTTPRoute to use PathExact matching
-      try:
-        - apply:
-            file: 03-httproute-pathexact.yaml
-        - assert:
-            file: 03-assert-httproute-pathexact.yaml
-        # Wait for KongRoute to be reprogrammed
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl wait --for=condition=Programmed --timeout=60s kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute
-        # Get the Gateway proxy IP
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: GATEWAY_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
-            outputs:
-              - name: proxy_ip
-                value: ($stdout)
-        # Test PathExact matching - /get should match exactly
-        - description: Test PathExact matching - exact path should return 200
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/get
-            check:
-              (contains($stdout, '200')): true
-        # Test that subpath does NOT match with Exact
-        - description: Test PathExact matching - subpath should return 404
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/get/subpath)
-              echo $HTTP_CODE
-            check:
-              (contains($stdout, '404')): true
-      catch:
-        - description: Get HTTPRoute status
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: HTTPRoute
-            namespace: ($kong_namespace)
-        - description: Get KongRoute resources
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongRoute
-            namespace: ($kong_namespace)
+  # Step 3: Create GatewayConfiguration
+  - name: 3-create-gateway-configuration
+    description: Create GatewayConfiguration for the test
+    use:
+      template: ../../common/_step_templates/apply-assert-gatewayConfiguration.yaml
 
-    # Step 4: Test multiple path matches in single rule
-    - name: test-multiple-paths-single-rule
-      description: Update HTTPRoute to use multiple path matches (Exact and PathPrefix) in a single rule
-      try:
-        # Collect old KongRoute name before update
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[*].metadata.name}'
-            outputs:
-              - name: old_kongroute_names
-                value: ($stdout)
-        # Apply the update
-        - apply:
-            file: 04-httproute-multipaths.yaml
-        - assert:
-            file: 04-assert-httproute-multipaths.yaml
-        # Wait for old KongRoute to be deleted
-        - script:
-            env:
-              - name: OLD_NAMES
-                value: ($old_kongroute_names)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              if [ -n "$OLD_NAMES" ]; then
-                for name in $OLD_NAMES; do
-                  echo "Waiting for old KongRoute $name to be deleted..."
-                  kubectl wait --for=delete kongroute/$name -n ${KONG_NAMESPACE} --timeout=60s || true
-                done
-              fi
-        # Wait for new KongRoute to be programmed
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl wait --for=condition=Programmed --timeout=120s kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute
-        # Verify KongRoute has multiple paths
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              PATHS=$(kubectl get kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[0].spec.paths}')
-              echo "Paths: $PATHS"
-              echo "$PATHS" | grep -q "/get" && echo "$PATHS" | grep -q "/post" && echo "$PATHS" | grep -q "/status"
-        # Get the Gateway proxy IP
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: GATEWAY_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
-            outputs:
-              - name: proxy_ip
-                value: ($stdout)
-        # Test Exact path /get - should return 200
-        - description: Test Exact path /get returns 200
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X GET http://${PROXY_IP}/get
-            check:
-              (contains($stdout, '200')): true
-        # Test Exact path /post with POST method - should return 200
-        - description: Test Exact path /post with POST method returns 200
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X POST http://${PROXY_IP}/post
-            check:
-              (contains($stdout, '200')): true
-        # Test PathPrefix /status/200 - should return 200
-        - description: Test PathPrefix /status/200 returns 200
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/status/200
-            check:
-              (contains($stdout, '200')): true
-        # Test PathPrefix /status/201 - should return 201
-        - description: Test PathPrefix /status/201 returns 201
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/status/201
-            check:
-              (contains($stdout, '201')): true
-        # Test unmatched path /other - should return 404
-        - description: Test unmatched path /other returns 404
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/other)
-              echo $HTTP_CODE
-              if [ "$HTTP_CODE" = "404" ]; then
-                echo "OK"
-              else
-                echo "FAIL"
-                exit 1
-              fi
-      catch:
-        - description: Get HTTPRoute status
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: HTTPRoute
-            namespace: ($kong_namespace)
-        - description: Get KongRoute resources
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongRoute
-            namespace: ($kong_namespace)
-        - description: Describe KongRoute
-          script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o yaml
+  # Step 4: Create GatewayClass
+  - name: 4-create-gateway-class
+    description: Create GatewayClass for the test
+    use:
+      template: ../../common/_step_templates/apply-assert-gatewayClass.yaml
 
-    # Step 5: Test strip-path annotation
-    - name: test-strip-path-annotation
-      description: Update HTTPRoute with strip-path annotation
-      try:
-        # Collect old KongRoute name before update
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[*].metadata.name}'
-            outputs:
-              - name: old_kongroute_names
-                value: ($stdout)
-        - apply:
-            file: 05-httproute-strippath.yaml
-        - assert:
-            file: 05-assert-httproute-strippath.yaml
-        # Wait for old KongRoute to be deleted
-        - script:
-            env:
-              - name: OLD_NAMES
-                value: ($old_kongroute_names)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              if [ -n "$OLD_NAMES" ]; then
-                for name in $OLD_NAMES; do
-                  echo "Waiting for old KongRoute $name to be deleted..."
-                  kubectl wait --for=delete kongroute/$name -n ${KONG_NAMESPACE} --timeout=60s || true
-                done
-              fi
-        # Wait for new KongRoute to be programmed
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl wait --for=condition=Programmed --timeout=120s kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute
-        # Verify KongRoute has strip_path: true
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[0].spec.strip_path}'
-            check:
-              ($stdout == 'true'): true
-        # Get the Gateway proxy IP
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: GATEWAY_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
-            outputs:
-              - name: proxy_ip
-                value: ($stdout)
-        # Test strip-path: /api/get should route to /get on backend (path stripped)
-        - description: Test strip-path - /api/get routes to /get on backend
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/api/get
-            check:
-              (contains($stdout, '200')): true
-        - description: Test strip-path - /api/status/200 routes to /status/200 on backend
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/api/status/200
-            check:
-              (contains($stdout, '200')): true
-      catch:
-        - description: Get HTTPRoute status
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: HTTPRoute
-            namespace: ($kong_namespace)
-        - description: Get KongRoute resources
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongRoute
-            namespace: ($kong_namespace)
-        - description: Describe KongRoute
-          describe:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongRoute
-            namespace: ($kong_namespace)
+  # Step 5: Create httpbin service
+  - name: 5-create-httpbin-service
+    description: Create httpbin service for backend
+    use:
+      template: ../../common/_step_templates/apply-assert-httpbinService.yaml
+
+  # Step 6: Create Gateway
+  - name: 6-create-gateway
+    description: Create Gateway for HTTP traffic
+    use:
+      template: ../../common/_step_templates/apply-assert-gateway-http-only.yaml
+
+  # Step 7a: Create HTTPRoute with PathPrefix matching
+  - name: 7a-create-httproute-pathprefix
+    description: Create HTTPRoute with PathPrefix /status and GET method
+    bindings:
+      - name: httproute_name
+        value: ($httproute_name_pathprefix)
+      - name: gateway_name
+        value: ($gateway_name)
+      - name: route_path
+        value: "/status"
+    try:
+      - apply:
+          file: 06-httproute-pathprefix.yaml
+      - assert:
+          file: 06-assert-httproute-pathprefix.yaml
+
+  # Step 7b: Verify PathPrefix matching works
+  - name: 7b-verify-pathprefix-matching
+    description: Verify /status/200 matches PathPrefix and returns 200
+    use:
+      template: ../../common/_step_templates/verify-header-match-routing.yaml
+    bindings:
+      - name: gateway_name
+        value: ($gateway_name)
+      - name: route_path
+        value: "/status/200"
+      - name: http_method
+        value: "GET"
+      - name: host_header
+        value: ""
+      - name: expected_status
+        value: "200"
+
+  # Step 8a: Create HTTPRoute with Exact path matching
+  - name: 8a-create-httproute-pathexact
+    description: Create HTTPRoute with Exact path /post and POST method
+    bindings:
+      - name: httproute_name
+        value: ($httproute_name_pathexact)
+      - name: gateway_name
+        value: ($gateway_name)
+      - name: route_path
+        value: "/post"
+    try:
+      - apply:
+          file: 07-httproute-pathexact.yaml
+      - assert:
+          file: 07-assert-httproute-pathexact.yaml
+
+  # Step 8b: Verify Exact path matching works
+  - name: 8b-verify-pathexact-match
+    description: Verify /post matches Exact path and returns 200
+    use:
+      template: ../../common/_step_templates/verify-header-match-routing.yaml
+    bindings:
+      - name: gateway_name
+        value: ($gateway_name)
+      - name: route_path
+        value: "/post"
+      - name: http_method
+        value: "POST"
+      - name: host_header
+        value: ""
+      - name: expected_status
+        value: "200"
+
+  # Step 8c: Verify Exact path does NOT match subpaths
+  - name: 8c-verify-pathexact-no-subpath
+    description: Verify /post/subpath does NOT match Exact path and returns 404
+    use:
+      template: ../../common/_step_templates/verify-header-match-routing.yaml
+    bindings:
+      - name: gateway_name
+        value: ($gateway_name)
+      - name: route_path
+        value: "/post/subpath"
+      - name: http_method
+        value: "POST"
+      - name: host_header
+        value: ""
+      - name: expected_status
+        value: "404"
+
+  # Step 9a: Create HTTPRoute with multiple path matches in single rule
+  - name: 9a-create-httproute-multipaths
+    description: Create HTTPRoute with multiple path matches (Exact and PathPrefix) in one rule
+    bindings:
+      - name: httproute_name
+        value: ($httproute_name_multipaths)
+      - name: gateway_name
+        value: ($gateway_name)
+    try:
+      - apply:
+          file: 08-httproute-multipaths.yaml
+      - assert:
+          file: 08-assert-httproute-multipaths.yaml
+
+  # Step 9b: Verify Exact path match
+  - name: 9b-verify-multipaths-put
+    description: Verify /put matches (Exact path in multi-path rule)
+    use:
+      template: ../../common/_step_templates/verify-header-match-routing.yaml
+    bindings:
+      - name: gateway_name
+        value: ($gateway_name)
+      - name: route_path
+        value: "/put"
+      - name: http_method
+        value: "PUT"
+      - name: host_header
+        value: ""
+      - name: expected_status
+        value: "200"
+
+  # Step 9c: Verify PathPrefix match with /anything
+  - name: 9c-verify-multipaths-anything
+    description: Verify /anything matches (PathPrefix in multi-path rule)
+    use:
+      template: ../../common/_step_templates/verify-header-match-routing.yaml
+    bindings:
+      - name: gateway_name
+        value: ($gateway_name)
+      - name: route_path
+        value: "/anything"
+      - name: http_method
+        value: "PUT"
+      - name: host_header
+        value: ""
+      - name: expected_status
+        value: "200"
+
+  # Step 9d: Verify PathPrefix match with /anything/foo
+  - name: 9d-verify-multipaths-anything-foo
+    description: Verify /anything/foo matches (PathPrefix in multi-path rule)
+    use:
+      template: ../../common/_step_templates/verify-header-match-routing.yaml
+    bindings:
+      - name: gateway_name
+        value: ($gateway_name)
+      - name: route_path
+        value: "/anything/foo"
+      - name: http_method
+        value: "PUT"
+      - name: host_header
+        value: ""
+      - name: expected_status
+        value: "200"
+
+  # Step 9e: Verify unmatched path returns 404
+  - name: 9e-verify-multipaths-nomatch
+    description: Verify /headers does NOT match any path and returns 404
+    use:
+      template: ../../common/_step_templates/verify-header-match-routing.yaml
+    bindings:
+      - name: gateway_name
+        value: ($gateway_name)
+      - name: route_path
+        value: "/headers"
+      - name: http_method
+        value: "PUT"
+      - name: host_header
+        value: ""
+      - name: expected_status
+        value: "404"
+
+  # Step 10a: Create HTTPRoute with strip-path annotation
+  - name: 10a-create-httproute-strippath
+    description: Create HTTPRoute with PathPrefix /strip and strip-path annotation
+    bindings:
+      - name: httproute_name
+        value: ($httproute_name_strippath)
+      - name: gateway_name
+        value: ($gateway_name)
+      - name: route_path
+        value: "/strip"
+    try:
+      - apply:
+          file: 09-httproute-strippath.yaml
+      - assert:
+          file: 09-assert-httproute-strippath.yaml
+
+  # Step 10b: Verify strip-path with /delete
+  - name: 10b-verify-strippath-delete
+    description: Verify /strip/delete routes to /delete on backend (path stripped)
+    use:
+      template: ../../common/_step_templates/verify-header-match-routing.yaml
+    bindings:
+      - name: gateway_name
+        value: ($gateway_name)
+      - name: route_path
+        value: "/strip/delete"
+      - name: http_method
+        value: "DELETE"
+      - name: host_header
+        value: ""
+      - name: expected_status
+        value: "200"
+
+  # Step 10c: Verify strip-path with /anything
+  - name: 10c-verify-strippath-anything
+    description: Verify /strip/anything routes to /anything on backend (path stripped)
+    use:
+      template: ../../common/_step_templates/verify-header-match-routing.yaml
+    bindings:
+      - name: gateway_name
+        value: ($gateway_name)
+      - name: route_path
+        value: "/strip/anything"
+      - name: http_method
+        value: "DELETE"
+      - name: host_header
+        value: ""
+      - name: expected_status
+        value: "200"
