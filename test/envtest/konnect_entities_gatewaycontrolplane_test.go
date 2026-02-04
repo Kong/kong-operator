@@ -3,7 +3,6 @@ package envtest
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/url"
 	"testing"
 
