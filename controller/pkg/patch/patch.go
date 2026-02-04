@@ -66,6 +66,13 @@ func ApplyStatusPatchIfNotEmpty[
 ) (res op.Result, err error) {
 	// Check if the patch to be applied is empty.
 	patch := client.MergeFrom(oldExisting)
+
+	// NOTE: Code below is not 100% correct as it generates a diff for whole object,
+	// not only for status subresource. However, controller-runtime does not provide
+	// an easy way to do that, so for now we rely on the fact that only status is
+	// being modified before calling this function.
+	// In future we might want to implement a custom patcher that would only
+	// consider status field.
 	b, err := patch.Data(existing)
 	if err != nil {
 		return op.Noop, fmt.Errorf("failed to generate patch for %T %s: %w",

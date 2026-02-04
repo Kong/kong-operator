@@ -59,6 +59,11 @@
   For this reference to be allowed, a `KongReferenceGrant` resource must be created
   in the namespace of the `KongService`, allowing access for the `KongRoute`.
   [#3125](https://github.com/Kong/kong-operator/pull/3125)
+- Gracefully handle network errors when communicating with Konnect API.
+  When a network error occurs during Konnect API operations, the operator
+  will patch the resource status conditions to indicate the failure and
+  requeue the reconciliation for a later retry.
+  [#3184](https://github.com/Kong/kong-operator/pull/3184)
 
 ### Fixes
 
