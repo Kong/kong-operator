@@ -215,6 +215,11 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			return ctrl.Result{}, err
 		}
 	} else if !res.IsZero() {
+		// If the result is not zero (e.g., requeue), we still need to update the Programmed
+		// status condition based on other conditions.
+		if _, errStatus := patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent); errStatus != nil {
+			return ctrl.Result{}, errStatus
+		}
 		return res, nil
 	}
 	// If a type has a KongConsumer ref, handle it.
@@ -255,6 +260,11 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 		return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 	} else if !res.IsZero() {
+		// If the result is not zero (e.g., requeue), we still need to update the Programmed
+		// status condition based on other conditions.
+		if _, errStatus := patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent); errStatus != nil {
+			return ctrl.Result{}, errStatus
+		}
 		return res, nil
 	}
 
@@ -292,6 +302,11 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 		return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 	} else if !res.IsZero() {
+		// If the result is not zero (e.g., requeue), we still need to update the Programmed
+		// status condition based on other conditions.
+		if _, errStatus := patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent); errStatus != nil {
+			return ctrl.Result{}, errStatus
+		}
 		return res, nil
 	}
 
@@ -332,6 +347,13 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 		return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 	} else if !res.IsZero() {
+		// If the result is not zero (e.g., requeue), we still need to update the Programmed
+		// status condition based on other conditions (e.g., KongCertificateRefValid set to False
+		// when referenced KongCertificate is not programmed yet).
+		// We patch the status but still return the original requeue result.
+		if _, errStatus := patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent); errStatus != nil {
+			return ctrl.Result{}, errStatus
+		}
 		return res, nil
 	}
 
