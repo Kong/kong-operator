@@ -34,9 +34,7 @@ CI runs `make lint` with `GOLANGCI_LINT_FLAGS="--fix=false"` (auto-fix is enable
 ```bash
 make test.unit          # Run unit tests with verbose output
 make test.unit.pretty   # Run unit tests with compact output
-
-# Run specific test
-go test ./controller/dataplane/... -run TestDeploymentBuilder -v -race
+make test.unit.pretty GOTESTFLAGS="-run TestSpecificGatewayNN -count 1" # Run specific test
 ```
 
 ### Envtest (Controller Tests with Simulated Kubernetes)
