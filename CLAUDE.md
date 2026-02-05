@@ -40,11 +40,10 @@ make test.unit.pretty GOTESTFLAGS="-run TestSpecificGatewayNN -count 1" # Run sp
 ### Envtest (Controller Tests with Simulated Kubernetes)
 
 ```bash
-make test.envtest       # Run envtest tests
-make test.envtest.pretty
-
-# With specific Kubernetes version
-make test.envtest CLUSTER_VERSION=1.30
+make test.envtest                                                        # Run envtest tests with standard verbose output
+make test.envtest.pretty                                                 # Run envtest tests with compact output
+make test.envtest CLUSTER_VERSION=1.30                                   # Run envtest tests with specific Kubernetes (apiserver) version
+make test.unit.pretty GOTESTFLAGS="-run TestSpecificGatewayNN -count 1"  # Run specific test from envtest suite
 ```
 
 ### Integration Tests (Require Running Cluster)
