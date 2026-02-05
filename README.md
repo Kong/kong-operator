@@ -114,16 +114,16 @@ Whenever you add a new CRD:
 
 [community-operators]: https://github.com/k8s-operatorhub/community-operators/
 
-### Install the Nightly Build
+### Install the nightly build
 
 Every night a new container image is built from the main development branch.
 
 It can be installed using the helm chart from the main repo:
 
 ```console
-git clone https://github.com/kong/kong-operator && cd kong-operator
-
-helm upgrade --install kong-operator ./charts/kong-operator -n kong-system \
+helm upgrade --install kong-operator \
+  kong/kong-operator \
+  -n kong-system \
   --create-namespace \
   --set image.tag=nightly \
   --set image.repository=kong/nightly-kong-operator \
@@ -133,6 +133,20 @@ helm upgrade --install kong-operator ./charts/kong-operator -n kong-system \
 > [!NOTE]
 > When using the `nightly` tag the operator version assumed is the one of the `Chart.appversion`, which is set to the latest release.
 > If a specific version is required (e.g., to enable version-gated features) you can specify it by adding the `--set image.effectiveSemver=<DESIRED_VERSION>` argument.
+
+### Using the unreleased helm chart version
+
+If you want to use the unreleased version of the operator helm chart, you can use the OCI nightly build of the chart:
+
+```console
+helm upgrade --install kong-operator \
+  --devel \
+  oci://registry-1.docker.io/kong/nightly-kong-operator-chart \
+  -n kong-system \
+  --create-namespace \
+  --set image.tag=nightly \
+  --set image.repository=kong/nightly-kong-operator
+```
 
 ## Seeking Help
 
