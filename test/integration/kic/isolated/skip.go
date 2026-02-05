@@ -8,14 +8,14 @@ import (
 
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 
-	dpconf "github.com/kong/kong-operator/ingress-controller/internal/dataplane/config"
+	"github.com/kong/kong-operator/ingress-controller/test/dataplane/config"
 	"github.com/kong/kong-operator/ingress-controller/test/testenv"
 )
 
 // SkipIfRouterNotExpressions skips the test when the router flavor is not expressions.
 func SkipIfRouterNotExpressions(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 	flavor := testenv.KongRouterFlavor()
-	if flavor != dpconf.RouterFlavorExpressions {
+	if flavor != config.RouterFlavorExpressions {
 		t.Skipf("skipping, %q router flavor specified via TEST_KONG_ROUTER_FLAVOR env but %q is required", flavor, "expressions")
 	}
 	return ctx
