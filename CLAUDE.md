@@ -23,6 +23,7 @@ make lint               # Run Go linters (modules, golangci-lint, modernize)
 make lint.all           # Full lint: Go + charts + GitHub Actions + markdown
 make lint.api           # Lint Kubernetes API types
 make lint.golangci-lint # Run golangci-lint linter for Go code
+make lint.modernize     # Run modernize on the codebase to ensure you're not using old or deprecated Go constructs.
 ```
 
 CI runs `make lint` with `GOLANGCI_LINT_FLAGS="--fix=false"` (auto-fix is enabled locally but disabled in CI).
@@ -54,6 +55,12 @@ make test.integration_bluegreen       # DataPlane upgrade/blue-green tests
 make test.integration_validatingwebhook  # Webhook tests
 make test.crds-validation             # CRD validation tests
 ```
+
+### CRD Validation Tests
+
+```bash
+make test.crds-validation        # Run the CRD validation tests. This uses envtest to run tests against real Kubernetes API server.
+make test.crds-validation.pretty # Run the CRD validation tests with pretty output. This uses envtest to run tests against real Kubernetes API server.
 
 ### Other Tests
 
@@ -94,6 +101,8 @@ Requires a Kubernetes cluster configured in KUBECONFIG and telepresence installe
 
 ### API Types (`api/`)
 
+Kubernetes API definitions which are used to generate CRDs, deepcopy methods, clientsets, informers, listers, and documentation.
+
 - `api/gateway-operator/v1beta1/` - **DataPlane**, **ControlPlane**, **GatewayConfiguration**
 - `api/gateway-operator/v1alpha1/` - **AIGateway** (experimental), **DataPlaneMetricsExtension**
 - `api/konnect/v1alpha1/`, `v1alpha2/` - Konnect integration
@@ -116,9 +125,25 @@ Each implements `SetupWithManager(ctx, mgr)` and `Reconcile(ctx, req)`:
 - `cli/` - Command-line flag parsing
 - `admission/` - Validating/conversion webhooks
 
+### Documentation (`docs/`)
+
+Documentation generated from the API definitions and CLI args.
+
+### Configuration manifests (`config/`)
+
+Configuration files for deploying the operator (manifests, kustomize, etc).
+
+- `/config/samples`: Sample YAML manifests for deploying custom resources. These are tested in CI by applying against a real Kubernetes cluster.
+
 ### Embedded Ingress Controller (`ingress-controller/`)
 
 Contains the embedded Kong Kubernetes Ingress Controller code.
+
+### Helm chart (`charts/kong-operator/`)
+
+Helm chart for deploying the operator.
+
+### GitHub CI definitions (`.github/`)
 
 ## Code Conventions
 
@@ -159,11 +184,12 @@ make tools    # Install: controller-gen, kustomize, client-gen, golangci-lint, g
 2. **Run unit tests** - `make test.unit` for quick feedback
 3. **Run envtest** - `make test.envtest` for controller logic validation
 4. **Regenerate code if needed** - If you modified API types, CRDs, or anything that requires code generation:
-   
+
    ```bash
    make generate           # Regenerates all generated code
    make verify.generators  # Verify generated code is up-to-date (CI runs this)
    ```
+
 5. **Update CHANGELOG.md** - For significant changes, add release notes
 
 ### Verify Before Commit
@@ -186,7 +212,8 @@ make verify.manifests     # Verify manifests are consistent
 
 ## CI Workflow
 
-Main test workflow: `.github/workflows/tests.yaml`
+Main test workflow: `.github/workflows/tests.yaml`:
+
 - Runs on PRs to all branches and pushes to main/release branches
 - Jobs: lint, verify, unit-tests, envtest-tests, CRDs validation, conformance-tests, integration tests
 - Uses mise for tool management
