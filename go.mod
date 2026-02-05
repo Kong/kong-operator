@@ -28,7 +28,7 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/jpillora/backoff v1.0.0
-	github.com/kong/go-database-reconciler v1.31.3
+	github.com/kong/go-database-reconciler v1.31.4
 	github.com/kong/go-kong v0.72.1
 	github.com/kong/kubernetes-telemetry v0.1.11
 	github.com/kong/kubernetes-testing-framework v0.48.1-0.20260114143846-8c0e96b5bf82
