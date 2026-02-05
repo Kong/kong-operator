@@ -92,6 +92,7 @@ Requires a Kubernetes cluster configured in KUBECONFIG and telepresence installe
 `cmd/main.go` → `modules/cli.Parse()` → `modules/manager.Run()` → `SetupControllers()`
 
 ### API Types (`api/`)
+
 - `api/gateway-operator/v1beta1/` - **DataPlane**, **ControlPlane**, **GatewayConfiguration**
 - `api/gateway-operator/v1alpha1/` - **AIGateway** (experimental), **DataPlaneMetricsExtension**
 - `api/konnect/v1alpha1/`, `v1alpha2/` - Konnect integration
