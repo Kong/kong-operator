@@ -1,4 +1,4 @@
-# HTTPRoute Multiple Backend References test scenario
+# HTTPRoute Multiple Backend References test scenario.
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: Test
 metadata:
@@ -13,455 +13,436 @@ spec:
     - Cross-namespace backend reference with ReferenceGrant
 
   bindings:
-    - name: kong_namespace
-      value: (join('-', ['kong', 'multi-backends', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+    - name: test_name
+      value: ($namespace)
+    - name: namespace
+      value: ($namespace)
     - name: cross_namespace
-      value: (join('-', ['cross-ns', 'multi-backends', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+      value: (join('-', [($namespace), 'xns']))
+    - name: secondary_namespace
+      value: (join('-', [($namespace), 'xns']))
     - name: konnect_api_auth_name
       value: konnect-api-auth-dev-1
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: gateway_image
+      value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.12')
     - name: gateway_class_name
-      value: (join('-', ['kong', 'multi-backends', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+      value: (join('-', [($test_name), 'gateway-class']))
     - name: gateway_configuration_name
-      value: ($gateway_class_name)
+      value: (join('-', [($test_name), 'gateway-configuration']))
+    - name: gateway_namespace
+      value: ($namespace)
     - name: gateway_name
-      value: ($gateway_class_name)
+      value: (join('-', [($namespace), 'gateway']))
+    - name: http_route_namespace
+      value: ($namespace)
     - name: httproute_name
-      value: multi-backend-route
+      value: (join('-', [($namespace), 'multi-backend']))
+    - name: http_route_name
+      value: ($httproute_name)
+    - name: listener_http_port
+      value: "80"
+    - name: target_weight
+      value: ""
+    - name: host_header
+      value: ""
+
+    # Backend service bindings.
+    - name: httpbin_deployment_name
+      value: httpbin
+    - name: httpbin_deployment_namespace
+      value: ($namespace)
+    - name: echo_deployment_name
+      value: echo
+    - name: echo_deployment_namespace
+      value: ($namespace)
+    - name: echo_secondary_deployment_name
+      value: echo-secondary
+    - name: echo_secondary_deployment_namespace
+      value: ($cross_namespace)
+    - name: echo_cross_ns_deployment_name
+      value: echo-cross-ns
+    - name: echo_cross_ns_deployment_namespace
+      value: ($cross_namespace)
 
   timeouts:
     apply: 120s
-    assert: 300s
+    assert: 120s
     cleanup: 120s
     delete: 120s
 
   steps:
-    # Step 1: Create prerequisite resources
-    - name: create-prerequisites
-      description: Create GatewayClass, Gateway, and backend Services
-      try:
-        - apply:
-            file: 01-prerequisites.yaml
-        - apply:
-            file: 00-backends.yaml
-        # Assert common Konnect and Gateway resources
-        - assert:
-            file: ../../common/assertions/konnect-apiauth.yaml
-        - assert:
-            file: ../../common/assertions/gatewayclass.yaml
-        - assert:
-            file: ../../common/assertions/gatewayconfiguration.yaml
-        - assert:
-            file: ../../common/assertions/gateway.yaml
-        - assert:
-            file: ../../common/assertions/konnect-gateway-controlplane.yaml
-        - assert:
-            file: ../../common/assertions/konnect-extension.yaml
-        # Assert test-specific resources
-        - assert:
-            file: 00-assert-backends.yaml
-        - assert:
-            file: 01-assert-prerequisites.yaml
-      catch:
-        - description: Get Gateway resource status
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: Gateway
-            namespace: ($kong_namespace)
-        - description: Get DataPlane resources
-          get:
-            apiVersion: gateway-operator.konghq.com/v1beta1
-            kind: DataPlane
-            namespace: ($kong_namespace)
-        - description: Get ControlPlane resources
-          get:
-            apiVersion: gateway-operator.konghq.com/v1beta1
-            kind: ControlPlane
-            namespace: ($kong_namespace)
-        - description: Get Pods in kong namespace
-          get:
-            apiVersion: v1
-            kind: Pod
-            namespace: ($kong_namespace)
-        - description: Describe Gateway
-          describe:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: Gateway
-            namespace: ($kong_namespace)
-            showEvents: true
-        - description: Get operator logs
-          podLogs:
-            namespace: kong-system
-            selector: control-plane=controller-manager
-            tail: 100
+  # Step 1: Create KonnectAPIAuthConfiguration.
+  - name: 1-create-konnect-api-auth
+    description: Create KonnectAPIAuthConfiguration for the test
+    use:
+      template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
 
-    # Step 2: Create HTTPRoute with multiple backends (equal weights)
-    - name: create-httproute-equal-weights
-      description: Create HTTPRoute with two backends having equal weights
-      try:
-        - apply:
-            file: 02-httproute-equal-weights.yaml
-        - assert:
-            file: 02-assert-httproute-equal-weights.yaml
-      catch:
-        - description: Get HTTPRoute status
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
+  # Step 2: Create GatewayConfiguration.
+  - name: 2-create-gateway-configuration
+    description: Create GatewayConfiguration for the test
+    use:
+      template: ../../common/_step_templates/apply-assert-gatewayConfiguration.yaml
+
+  # Step 3: Create GatewayClass.
+  - name: 3-create-gateway-class
+    description: Create GatewayClass for the test
+    use:
+      template: ../../common/_step_templates/apply-assert-gatewayClass.yaml
+
+  # Step 4: Create Gateway.
+  - name: 4-create-gateway
+    description: Create Gateway for the test
+    use:
+      template: ../../common/_step_templates/apply-assert-gateway-http-only.yaml
+
+  # Step 5a: Create httpbin backend service.
+  - name: 5a-create-httpbin
+    description: Create httpbin deployment and service
+    use:
+      template: ../../common/_step_templates/apply-assert-httpbinService.yaml
+
+  # Step 5b: Create echo backend service.
+  - name: 5b-create-echo
+    description: Create echo deployment and service
+    use:
+      template: ../../common/_step_templates/apply-assert-echoService.yaml
+
+  # Step 5c: Create cross-namespace for backends.
+  - name: 5c-create-cross-namespace
+    description: Create namespace for cross-namespace backends
+    use:
+      template: ../../common/_step_templates/apply-assert-namespace.yaml
+    bindings:
+      - name: namespace_name
+        value: ($cross_namespace)
+
+  # Step 5d: Create ReferenceGrant for cross-namespace.
+  - name: 5d-create-cross-reference-grant
+    description: Create ReferenceGrant to allow HTTPRoute to reference cross-namespace backends
+    use:
+      template: ../../common/_step_templates/apply-assert-referencegrant.yaml
+    bindings:
+      - name: reference_grant_name
+        value: allow-httproute-backend-ref
+      - name: reference_grant_namespace
+        value: ($cross_namespace)
+      - name: from
+        value:
+          - group: gateway.networking.k8s.io
             kind: HTTPRoute
-            namespace: ($kong_namespace)
-        - description: Get operator logs
-          podLogs:
-            namespace: kong-system
-            selector: control-plane=controller-manager
-            tail: 100
+            namespace: ($namespace)
+      - name: to
+        value:
+          - group: ""
+            kind: Service
 
-    # Step 3: Verify Kong resources for equal weights
-    - name: verify-kong-resources-equal-weights
-      description: Verify KongRoute, KongService, KongUpstream, and multiple KongTargets are created
-      bindings:
-        - name: namespace
-          value: ($kong_namespace)
-        - name: hybrid_gateway_name
-          value: ($gateway_name)
-        - name: hybrid_gateway_namespace
-          value: ($kong_namespace)
-        - name: managedby_name
-          value: ($httproute_name)
-        - name: managedby_namespace
-          value: ($kong_namespace)
-        - name: strip_path
-          value: true
-        - name: weight
-          value: 1
-      try:
-        - script:
-            env:
-              - name: HTTPROUTE_NAME
-                value: ($httproute_name)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get httproute ${HTTPROUTE_NAME} -n ${KONG_NAMESPACE} -o jsonpath='{.spec.rules[*].matches[*].path.value}' | jq -Rsc 'split(" ")'
-            outputs:
-              - name: route_paths_json
-                value: ($stdout)
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get konnectgatewaycontrolplane -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=gateway -o jsonpath='{.items[0].metadata.name}'
-            outputs:
-              - name: konnectgatewaycontrolplane_name
-                value: ($stdout)
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get kongservice -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[0].metadata.name}'
-            outputs:
-              - name: kongservice_name
-                value: ($stdout)
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get kongupstream -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[0].metadata.name}'
-            outputs:
-              - name: kongupstream_name
-                value: ($stdout)
-        # Wait for KongRoute to be programmed
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl wait --for=condition=Programmed --timeout=120s kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute
-        # Verify there are exactly 2 KongTarget resources
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get kongtarget -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[*].metadata.name}' | wc -w | tr -d ' \n'
-            check:
-              ($stdout == '2'): true
-        # Assert Kong resources
-        - assert:
-            file: ../../common/assertions/kongroute.yaml
-        - assert:
-            file: ../../common/assertions/kongservice.yaml
-        - assert:
-            file: ../../common/assertions/kongupstream.yaml
-        - assert:
-            file: ../../common/assertions/kongtarget.yaml
+  # Step 5e: Create echo-secondary backend service.
+  - name: 5e-create-echo-secondary
+    description: Create echo-secondary deployment and service in cross-namespace
+    use:
+      template: ../../common/_step_templates/apply-assert-echoService.yaml
+    bindings:
+      - name: echo_deployment_name
+        value: ($echo_secondary_deployment_name)
+      - name: echo_deployment_namespace
+        value: ($echo_secondary_deployment_namespace)
 
-    # Step 4: Verify data plane traffic for equal weights
-    - name: verify-data-plane-equal-weights
-      description: Verify traffic can be routed to multiple backends
-      try:
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${KONG_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
-            outputs:
-              - name: proxy_ip
-                value: ($stdout)
-        - description: Test /echo endpoint
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/echo
-            check:
-              (contains($stdout, '200')): true
+  # Step 6: Create HTTPRoute with equal weights.
+  - name: 6-create-httproute-equal-weights
+    description: Create HTTPRoute with two backends having equal weights (1:1)
+    try:
+      - apply:
+          file: 06-httproute-equal-weights.yaml
+      - assert:
+          file: 06-assert-httproute-equal-weights.yaml
 
-    # Step 5: Update HTTPRoute with weighted distribution
-    - name: update-httproute-weighted
-      description: Update HTTPRoute with 80/20 weight distribution
-      try:
-        - apply:
-            file: 03-httproute-weighted.yaml
-        - assert:
-            file: 03-assert-httproute-weighted.yaml
-      catch:
-        - description: Get HTTPRoute status
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
+  # Step 7a-7d: Assert Kong resources using step templates.
+  - name: 7a-assert-kong-route
+    description: Assert KongRoute is created with correct configuration
+    bindings:
+      - name: resource_type
+        value: kongservices.configuration.konghq.com
+      - name: route_paths
+        value:
+          - ~/echo$
+          - /echo/
+      - name: strip_path
+        value: true
+    use:
+      template: ../../common/_step_templates/assert-kongRoute.yaml
+
+  - name: 7b-assert-kong-service
+    description: Assert KongService is created with correct configuration
+    use:
+      template: ../../common/_step_templates/assert-kongService.yaml
+
+  - name: 7c-assert-kong-upstream
+    description: Assert KongUpstream is created with correct configuration
+    use:
+      template: ../../common/_step_templates/assert-kongUpstream.yaml
+
+  - name: 7d-assert-kong-target
+    description: Assert KongTarget is created with correct configuration
+    bindings:
+      - name: resource_type
+        value: kongupstreams.configuration.konghq.com
+      - name: target_weight
+        value: 1
+    use:
+      template: ../../common/_step_templates/assert-kongTarget.yaml
+
+  - name: 7e-verify-kong-target-count
+    description: Verify exactly 2 KongTargets are created for equal weights
+    bindings:
+      - name: expected_kong_target_count
+        value: "2"
+    use:
+      template: ../../common/_step_templates/verify-kongTarget-count.yaml
+
+  # Step 8: Verify data plane traffic for equal weights.
+  - name: 8-verify-data-plane-equal-weights
+    description: Verify traffic can be routed to multiple backends
+    bindings:
+      - name: route_path
+        value: /echo
+      - name: http_method
+        value: GET
+    use:
+      template: ../../common/_step_templates/verify-http-traffic-from-cluster.yaml
+
+  # Step 9: Update HTTPRoute with weighted distribution.
+  - name: 9-update-httproute-weighted
+    description: Update HTTPRoute with 80/20 weight distribution
+    try:
+      - apply:
+          file: 07-httproute-weighted.yaml
+      - assert:
+          file: 07-assert-httproute-weighted.yaml
+
+  # Step 10: Verify Kong resources for weighted distribution (80/20 = 4/1 after GCD normalization).
+  - name: 10-verify-kong-target-weight-4
+    description: Verify 1 KongTarget with weight 4 (80% backend)
+    bindings:
+      - name: expected_kong_target_count
+        value: "1"
+      - name: target_weight
+        value: "4"
+    use:
+      template: ../../common/_step_templates/verify-kongTarget-count.yaml
+
+  - name: 10a-verify-kong-target-weight-1
+    description: Verify 1 KongTarget with weight 1 (20% backend)
+    bindings:
+      - name: expected_kong_target_count
+        value: "1"
+      - name: target_weight
+        value: "1"
+    use:
+      template: ../../common/_step_templates/verify-kongTarget-count.yaml
+
+  # Step 10b-10e: Assert Kong resources using step templates.
+  - name: 10b-assert-kong-route
+    description: Assert KongRoute is created with correct configuration for weighted backends
+    bindings:
+      - name: resource_type
+        value: kongservices.configuration.konghq.com
+      - name: route_paths
+        value:
+          - ~/echo$
+          - /echo/
+      - name: strip_path
+        value: true
+    use:
+      template: ../../common/_step_templates/assert-kongRoute.yaml
+
+  - name: 10c-assert-kong-service
+    description: Assert KongService is created with correct configuration for weighted backends
+    use:
+      template: ../../common/_step_templates/assert-kongService.yaml
+
+  - name: 10d-assert-kong-upstream
+    description: Assert KongUpstream is created with correct configuration for weighted backends
+    use:
+      template: ../../common/_step_templates/assert-kongUpstream.yaml
+
+  - name: 10e-verify-traffic-weighted
+    description: Verify traffic can be routed with weighted backends
+    bindings:
+      - name: route_path
+        value: /echo
+      - name: http_method
+        value: POST
+    use:
+      template: ../../common/_step_templates/verify-http-traffic-from-cluster.yaml
+
+  # Step 11: Update HTTPRoute with different ports.
+  - name: 11-update-httproute-different-ports
+    description: Update HTTPRoute to reference same service with different ports
+    try:
+      - apply:
+          file: 08-httproute-different-ports.yaml
+      - assert:
+          file: 08-assert-httproute-different-ports.yaml
+
+  # Step 12a-12d: Assert Kong resources using step templates.
+  - name: 12a-assert-kong-route
+    description: Assert KongRoute is created with correct configuration for different ports
+    bindings:
+      - name: resource_type
+        value: kongservices.configuration.konghq.com
+      - name: route_paths
+        value:
+          - ~/echo$
+          - /echo/
+      - name: strip_path
+        value: true
+    use:
+      template: ../../common/_step_templates/assert-kongRoute.yaml
+
+  - name: 12b-assert-kong-service
+    description: Assert KongService is created with correct configuration for different ports
+    use:
+      template: ../../common/_step_templates/assert-kongService.yaml
+
+  - name: 12c-assert-kong-upstream
+    description: Assert KongUpstream is created with correct configuration for different ports
+    use:
+      template: ../../common/_step_templates/assert-kongUpstream.yaml
+
+  - name: 12d-assert-kong-target
+    description: Assert KongTarget is created with correct configuration for different ports
+    bindings:
+      - name: resource_type
+        value: kongupstreams.configuration.konghq.com
+      - name: target_weight
+        value: 1
+    use:
+      template: ../../common/_step_templates/assert-kongTarget.yaml
+
+  - name: 12e-verify-kong-target-count
+    description: Verify exactly 2 KongTargets are created for different ports
+    bindings:
+      - name: expected_kong_target_count
+        value: "2"
+    use:
+      template: ../../common/_step_templates/verify-kongTarget-count.yaml
+
+  # Step 13a: Create cross-namespace namespace.
+  - name: 13a-create-cross-namespace
+    description: Create namespace for cross-namespace backend
+    use:
+      template: ../../common/_step_templates/apply-assert-namespace.yaml
+    bindings:
+      - name: namespace_name
+        value: ($cross_namespace)
+
+  # Step 13b: Create echo-cross-ns backend service.
+  - name: 13b-create-echo-cross-ns
+    description: Create echo service in cross-namespace
+    use:
+      template: ../../common/_step_templates/apply-assert-echoService.yaml
+    bindings:
+      - name: echo_deployment_name
+        value: ($echo_cross_ns_deployment_name)
+      - name: echo_deployment_namespace
+        value: ($echo_cross_ns_deployment_namespace)
+
+  # Step 13c: Create ReferenceGrant.
+  - name: 13c-create-reference-grant
+    description: Create ReferenceGrant to allow cross-namespace backend reference
+    use:
+      template: ../../common/_step_templates/apply-assert-referencegrant.yaml
+    bindings:
+      - name: reference_grant_name
+        value: allow-httproute-backend-ref
+      - name: reference_grant_namespace
+        value: ($cross_namespace)
+      - name: from
+        value:
+          - group: gateway.networking.k8s.io
             kind: HTTPRoute
-            namespace: ($kong_namespace)
+            namespace: ($namespace)
+      - name: to
+        value:
+          - group: ""
+            kind: Service
 
-    # Step 6: Verify Kong resources for weighted distribution
-    - name: verify-kong-resources-weighted
-      description: Verify KongTargets have correct weights
-      bindings:
-        - name: namespace
-          value: ($kong_namespace)
-        - name: hybrid_gateway_name
-          value: ($gateway_name)
-        - name: hybrid_gateway_namespace
-          value: ($kong_namespace)
-        - name: managedby_name
-          value: ($httproute_name)
-        - name: managedby_namespace
-          value: ($kong_namespace)
-      try:
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl wait --for=condition=Programmed --timeout=120s kongtarget -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute
-        # Verify weights preserve the expected 80/20 ratio (reduced form: 1/4)
-        - script:
-            timeout: 330s
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              gcd() {
-                a="$1"
-                b="$2"
-                while [ "$b" -ne 0 ]; do
-                  t=$((a % b))
-                  a="$b"
-                  b="$t"
-                done
-                echo "$a"
-              }
+  # Step 14: Update HTTPRoute with cross-namespace backend reference.
+  - name: 14-update-httproute-cross-namespace
+    description: Update HTTPRoute to reference backend in different namespace
+    try:
+      - apply:
+          file: 09-httproute-cross-namespace.yaml
+      - assert:
+          file: 09-assert-httproute-cross-namespace.yaml
 
-              i=0
-              while [ "$i" -lt 60 ]; do
-                weights_raw="$(kubectl get kongtarget -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[*].spec.weight}' 2>/dev/null || true)"
-                weights_unique="$(printf '%s' "${weights_raw}" | tr ' ' '\n' | sed '/^$/d' | sort -n | uniq)"
-                weights_unique_count="$(printf '%s\n' "${weights_unique}" | sed '/^$/d' | wc -l | tr -d ' \n')"
+  # Step 15: Verify Kong target counts for cross-namespace (1:9 weight ratio).
+  - name: 15-verify-kong-target-weight-1
+    description: Verify 1 KongTarget with weight 1 (in-namespace backend)
+    bindings:
+      - name: expected_kong_target_count
+        value: "1"
+      - name: target_weight
+        value: "1"
+    use:
+      template: ../../common/_step_templates/verify-kongTarget-count.yaml
 
-                if [ "${weights_unique_count}" = "2" ]; then
-                  w1="$(printf '%s\n' "${weights_unique}" | head -n1)"
-                  w2="$(printf '%s\n' "${weights_unique}" | tail -n1)"
-                  g="$(gcd "$w1" "$w2")"
-                  if [ "$g" -ne 0 ]; then
-                    r1=$((w1 / g))
-                    r2=$((w2 / g))
-                    if [ "$r1" = "1" ] && [ "$r2" = "4" ]; then
-                      echo "${r1} ${r2}"
-                      exit 0
-                    fi
-                  fi
-                fi
+  - name: 15a-verify-kong-target-weight-9
+    description: Verify 1 KongTarget with weight 9 (cross-namespace backend)
+    bindings:
+      - name: expected_kong_target_count
+        value: "1"
+      - name: target_weight
+        value: "9"
+    use:
+      template: ../../common/_step_templates/verify-kongTarget-count.yaml
 
-                i=$((i + 1))
-                sleep 5
-              done
+  # Step 15b: Verify traffic to cross-namespace backend.
+  - name: 15b-verify-traffic-cross-namespace
+    description: Test traffic to cross-namespace backend with DELETE method
+    bindings:
+      - name: route_path
+        value: /echo
+      - name: http_method
+        value: DELETE
+    use:
+      template: ../../common/_step_templates/verify-http-traffic-from-cluster.yaml
 
-              printf 'weights=%s\nunique=%s\n' "${weights_raw}" "${weights_unique}"
-              exit 1
-            check:
-              "(contains($stdout, '1 4'))": true
-        # Verify traffic still works
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${KONG_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
-            outputs:
-              - name: proxy_ip
-                value: ($stdout)
-        - description: Test /echo endpoint with weighted backends
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/echo
-            check:
-              (contains($stdout, '200')): true
+  # Step 15c-15f: Assert Kong resources using step templates.
+  - name: 15c-assert-kong-route
+    description: Assert KongRoute is created with correct configuration for cross-namespace
+    bindings:
+      - name: resource_type
+        value: kongservices.configuration.konghq.com
+      - name: route_paths
+        value:
+          - ~/echo$
+          - /echo/
+      - name: strip_path
+        value: true
+    use:
+      template: ../../common/_step_templates/assert-kongRoute.yaml
 
-    # Step 7: Update HTTPRoute with different ports
-    - name: update-httproute-different-ports
-      description: Update HTTPRoute to reference same service with different ports
-      try:
-        - apply:
-            file: 04-httproute-different-ports.yaml
-        - assert:
-            file: 04-assert-httproute-different-ports.yaml
-      catch:
-        - description: Get HTTPRoute status
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: HTTPRoute
-            namespace: ($kong_namespace)
+  - name: 15d-assert-kong-service
+    description: Assert KongService is created with correct configuration for cross-namespace
+    use:
+      template: ../../common/_step_templates/assert-kongService.yaml
 
-    # Step 8: Verify Kong resources for different ports
-    - name: verify-kong-resources-different-ports
-      description: Verify KongTargets reference different ports
-      bindings:
-        - name: namespace
-          value: ($kong_namespace)
-        - name: hybrid_gateway_name
-          value: ($gateway_name)
-        - name: hybrid_gateway_namespace
-          value: ($kong_namespace)
-        - name: managedby_name
-          value: ($httproute_name)
-        - name: managedby_namespace
-          value: ($kong_namespace)
-      try:
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl wait --for=condition=Programmed --timeout=120s kongtarget -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute
-        # Verify there are 2 KongTarget resources with different ports
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get kongtarget -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[*].metadata.name}' | wc -w | tr -d ' \n'
-            check:
-              ($stdout == '2'): true
+  - name: 15e-assert-kong-upstream
+    description: Assert KongUpstream is created with correct configuration for cross-namespace
+    use:
+      template: ../../common/_step_templates/assert-kongUpstream.yaml
 
-    # Step 9: Create cross-namespace backend with ReferenceGrant
-    - name: create-cross-namespace-backend
-      description: Create backend in different namespace with ReferenceGrant
-      try:
-        - apply:
-            file: 05-cross-namespace-backend.yaml
-        - assert:
-            file: 05-assert-cross-namespace-backend.yaml
-      catch:
-        - description: Get ReferenceGrant status
-          get:
-            apiVersion: gateway.networking.k8s.io/v1beta1
-            kind: ReferenceGrant
-            namespace: ($cross_namespace)
-
-    # Step 10: Update HTTPRoute with cross-namespace backend reference
-    - name: update-httproute-cross-namespace
-      description: Update HTTPRoute to reference backend in different namespace
-      try:
-        - apply:
-            file: 06-httproute-cross-namespace.yaml
-        - assert:
-            file: 06-assert-httproute-cross-namespace.yaml
-      catch:
-        - description: Get HTTPRoute status
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: HTTPRoute
-            namespace: ($kong_namespace)
-        - description: Get ReferenceGrant
-          get:
-            apiVersion: gateway.networking.k8s.io/v1beta1
-            kind: ReferenceGrant
-            namespace: ($cross_namespace)
-        - description: Get operator logs
-          podLogs:
-            namespace: kong-system
-            selector: control-plane=controller-manager
-            tail: 100
-
-    # Step 11: Verify Kong resources for cross-namespace
-    - name: verify-kong-resources-cross-namespace
-      description: Verify Kong resources are created for cross-namespace backends
-      bindings:
-        - name: namespace
-          value: ($kong_namespace)
-        - name: hybrid_gateway_name
-          value: ($gateway_name)
-        - name: hybrid_gateway_namespace
-          value: ($kong_namespace)
-        - name: managedby_name
-          value: ($httproute_name)
-        - name: managedby_namespace
-          value: ($kong_namespace)
-        - name: weight
-          value: 1
-      try:
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl wait --for=condition=Programmed --timeout=120s kongtarget -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute
-        # Verify there are 2 KongTarget resources
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get kongtarget -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[*].metadata.name}' | wc -w | tr -d ' \n'
-            check:
-              ($stdout == '2'): true
-        # Test traffic to cross-namespace backend
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${KONG_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
-            outputs:
-              - name: proxy_ip
-                value: ($stdout)
-        - description: Test /echo endpoint with cross-namespace backend
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/echo
-            check:
-              (contains($stdout, '200')): true
+  - name: 15f-assert-kong-target
+    description: Assert KongTarget is created with correct configuration for cross-namespace
+    bindings:
+      - name: resource_type
+        value: kongupstreams.configuration.konghq.com
+      - name: target_weight
+        value: 9
+    use:
+      template: ../../common/_step_templates/assert-kongTarget.yaml

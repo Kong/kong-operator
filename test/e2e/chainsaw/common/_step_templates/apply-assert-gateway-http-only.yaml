@@ -23,7 +23,7 @@ spec:
             listeners:
             - name: http
               protocol: HTTP
-              port: ($listener_http_port)
+              port: (to_number($listener_http_port))
     - assert:
         resource:
           apiVersion: gateway.networking.k8s.io/v1

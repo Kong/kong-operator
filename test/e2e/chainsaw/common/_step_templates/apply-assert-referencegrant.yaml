@@ -1,0 +1,30 @@
+# Template for creating and asserting a ReferenceGrant.
+#
+# Required bindings:
+#   - reference_grant_name: Name of the ReferenceGrant to create.
+#   - reference_grant_namespace: Namespace where the ReferenceGrant will be created.
+#   - from: Array of from entries defining what can reference (e.g., [{ group: "gateway.networking.k8s.io", kind: "HTTPRoute", namespace: "default" }]).
+#   - to: Array of to entries defining what can be referenced (e.g., [{ group: "", kind: "Service" }]).
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-referencegrant
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: gateway.networking.k8s.io/v1beta1
+          kind: ReferenceGrant
+          metadata:
+            name: ($reference_grant_name)
+            namespace: ($reference_grant_namespace)
+          spec:
+            from: ($from)
+            to: ($to)
+    - assert:
+        resource:
+          apiVersion: gateway.networking.k8s.io/v1beta1
+          kind: ReferenceGrant
+          metadata:
+            name: ($reference_grant_name)
+            namespace: ($reference_grant_namespace)
