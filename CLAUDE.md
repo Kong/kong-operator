@@ -127,19 +127,8 @@ Contains the embedded Kong Kubernetes Ingress Controller code.
 - For ControlPlane types, use `github.com/kong/kong-operator/internal/types` package (aliased as `gwtypes`)
 
 ### Required Import Aliases
-```go
-import (
-    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-    gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-    ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
-    k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
-    k8sresources "github.com/kong/kong-operator/pkg/utils/kubernetes/resources"
-    gwtypes "github.com/kong/kong-operator/internal/types"
-    sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
-    sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
-    sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
-)
-```
+
+See `.golangci.yaml` for the full list of required import aliases.
 
 ### Blocked Packages
 
