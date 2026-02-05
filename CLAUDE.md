@@ -116,6 +116,7 @@ Each implements `SetupWithManager(ctx, mgr)` and `Reconcile(ctx, req)`:
 - `admission/` - Validating/conversion webhooks
 
 ### Embedded Ingress Controller (`ingress-controller/`)
+
 Contains the embedded Kong Kubernetes Ingress Controller code.
 
 ## Code Conventions
