@@ -180,7 +180,7 @@ jobs:
           op-token: ${{ secrets.op-service-account-token }}
 
       - name: integration tests
-        run: make test.integration
+        run: make test.integration-ko
         env:
           KONG_LICENSE_DATA: ${{ steps.get-license.outputs.license || '' }} # The license is optional for OSS tests.
           KONG_TEST_KONNECT_ACCESS_TOKEN: ${{ secrets.konnect-pat }}
