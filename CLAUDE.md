@@ -67,6 +67,7 @@ make test.charts.golden.update  # Update chart golden files
 ```
 
 ### Test File Locations
+
 - Unit tests: `*_test.go` files next to source code (no build tags)
 - Envtest: `test/envtest/` (requires `// +build envtest` tag)
 - Integration: `test/integration/`
