@@ -186,6 +186,7 @@ make verify.generators    # Generated code is up-to-date
 ### If Modifying API Types
 
 When changing files in `api/`:
+
 ```bash
 make generate             # Regenerate CRDs, deepcopy, docs, manifests
 make test.charts.golden.update  # Update Helm chart golden files if CRDs changed
