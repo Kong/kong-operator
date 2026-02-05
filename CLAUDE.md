@@ -169,10 +169,10 @@ make tools    # Install: controller-gen, kustomize, client-gen, golangci-lint, g
 2. **Run unit tests** - `make test.unit` for quick feedback
 3. **Run envtest** - `make test.envtest` for controller logic validation
 4. **Regenerate code if needed** - If you modified API types, CRDs, or anything that requires code generation:
+   
    ```bash
    make generate           # Regenerates all generated code
    make verify.generators  # Verify generated code is up-to-date (CI runs this)
-   ```
 5. **Update CHANGELOG.md** - For significant changes, add release notes
 
 ### Verify Before Commit
