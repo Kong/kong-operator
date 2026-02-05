@@ -20,7 +20,6 @@ type testCaseHTTPRouteValidation struct {
 	// ExpressionsRouterOnly indicates that the test case only applies to expressions router mode.
 	// If true and not in expressions router mode, the WantCreateErrSubstring is ignored (expect success).
 	ExpressionsRouterOnly bool
-	SkipReason            string
 }
 
 func TestAdmissionWebhook_HTTPRoute(t *testing.T) {
@@ -202,7 +201,6 @@ func TestAdmissionWebhook_HTTPRoute(t *testing.T) {
 				},
 			},
 			WantCreateErrSubstring: "HTTPRoute failed schema validation",
-			SkipReason:             "This test case is flaky. See https://github.com/Kong/kong-operator/issues/3207 for details.",
 		},
 		{
 			Name: "a httproute with an invalid header regex fails validation",
@@ -225,16 +223,11 @@ func TestAdmissionWebhook_HTTPRoute(t *testing.T) {
 				},
 			},
 			WantCreateErrSubstring: "HTTPRoute failed schema validation",
-			SkipReason:             "This test case is flaky. See https://github.com/Kong/kong-operator/issues/3207 for details.",
 		},
 	}
 
 	for _, tC := range testCases {
 		t.Run(tC.Name, func(t *testing.T) {
-			if tC.SkipReason != "" {
-				t.Skip(tC.SkipReason)
-			}
-
 			_, err := gatewayClient.GatewayV1().HTTPRoutes(ns.Name).Create(ctx, tC.Route, metav1.CreateOptions{})
 
 			wantErr := tC.WantCreateErrSubstring
