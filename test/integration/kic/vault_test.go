@@ -24,6 +24,7 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/test/annotations"
 	dpconf "github.com/kong/kong-operator/ingress-controller/test/dataplane/config"
 	"github.com/kong/kong-operator/pkg/clientset"
+	"github.com/kong/kong-operator/test/helpers"
 	"github.com/kong/kong-operator/test/integration/kic/consts"
 )
 
@@ -35,7 +36,7 @@ func TestCustomVault(t *testing.T) {
 	RunWhenKongDBMode(t, dpconf.DBModeOff, "Skipping because DBMode cannot support env vault")
 
 	ctx := t.Context()
-	ns, cleaner := Setup(ctx, t, env)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
@@ -60,7 +61,7 @@ func TestCustomVault(t *testing.T) {
 
 	t.Log("waiting for routes from Ingress to be operational")
 	require.Eventually(t, func() bool {
-		resp, err := DefaultHTTPClient().Get(fmt.Sprintf("%s/test_custom_vault", proxyHTTPURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_custom_vault", proxyHTTPURL))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false
@@ -131,7 +132,7 @@ func TestCustomVault(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	require.Eventuallyf(t, func() bool {
-		resp, err := DefaultHTTPClient().Get(fmt.Sprintf("%s/test_custom_vault/headers", proxyHTTPURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_custom_vault/headers", proxyHTTPURL))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false

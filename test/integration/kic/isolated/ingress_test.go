@@ -28,9 +28,9 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/test/testlabels"
 	"github.com/kong/kong-operator/ingress-controller/test/util/builder"
 	"github.com/kong/kong-operator/pkg/clientset"
+	"github.com/kong/kong-operator/test/helpers"
 	"github.com/kong/kong-operator/test/helpers/certificate"
 	"github.com/kong/kong-operator/test/integration/kic/consts"
-	testconsts "github.com/kong/kong-operator/test/integration/kic/consts"
 )
 
 func TestIngressGRPC(t *testing.T) {
@@ -361,7 +361,7 @@ func TestIngress_KongServiceFacadeAsBackend(t *testing.T) {
 			proxyURL := GetHTTPURLFromCtx(ctx)
 			expectContent := func(path, expectedMagicNumber string) {
 				t.Logf("asserting %s path returns expected image", path)
-				EventuallyGETPath(
+				helpers.EventuallyGETPath(
 					t,
 					proxyURL,
 					proxyURL.Host,
@@ -375,8 +375,8 @@ func TestIngress_KongServiceFacadeAsBackend(t *testing.T) {
 				)
 			}
 
-			expectContent(jpegIngressPath, testconsts.JPEGMagicNumber)
-			expectContent(pngIngressPath, testconsts.PNGMagicNumber)
+			expectContent(jpegIngressPath, consts.JPEGMagicNumber)
+			expectContent(pngIngressPath, consts.PNGMagicNumber)
 
 			// This is testing that the default backend is used when no path matches. httpbin's /anything should return
 			// the used path in response.

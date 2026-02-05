@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
 	"github.com/kong/kong-operator/ingress-controller/test/testlabels"
+	"github.com/kong/kong-operator/test/helpers"
 )
 
 func TestExampleUDPRoute(t *testing.T) {
@@ -23,9 +24,9 @@ func TestExampleUDPRoute(t *testing.T) {
 		WithLabel(testlabels.Example, testlabels.ExampleTrue).
 		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyGatewayAPI).
 		WithLabel(testlabels.Kind, testlabels.KindUDPRoute).
-		Setup(SkipIfRouterNotExpressions).
+		WithSetup("skip if router not expressions", SkipIfRouterNotExpressions).
 		WithSetup("deploy kong addon into cluster", featureSetup(
-			withControllerManagerOpts(ControllerManagerOptAdditionalWatchNamespace("default")),
+			withControllerManagerOpts(helpers.ControllerManagerOptAdditionalWatchNamespace("default")),
 		)).
 		Assess("deploying to cluster works and udp traffic is routed to the service",
 			func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {

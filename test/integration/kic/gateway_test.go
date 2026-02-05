@@ -25,6 +25,7 @@ import (
 	gatewayapi "github.com/kong/kong-operator/ingress-controller/test/gatewayapi"
 	"github.com/kong/kong-operator/ingress-controller/test/util"
 	"github.com/kong/kong-operator/ingress-controller/test/util/builder"
+	"github.com/kong/kong-operator/test/helpers"
 	"github.com/kong/kong-operator/test/helpers/certificate"
 	"github.com/kong/kong-operator/test/integration/kic/consts"
 )
@@ -44,7 +45,7 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 
 	var gw *gatewayapi.Gateway
 
-	ns, cleaner := Setup(ctx, t, env)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("gathering test data and generating a gateway kubernetes client")
 	pubsvc, err := env.Cluster().Client().CoreV1().Services(consts.ControllerNamespace).Get(ctx, "ingress-controller-kong-proxy", metav1.GetOptions{})
@@ -55,7 +56,7 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("deploying a new gateway")
-	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName)
+	gateway, err := helpers.DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName)
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 	err = gatewayHealthCheck(ctx, gatewayClient, gateway.Name, ns.Name)
@@ -143,7 +144,7 @@ func TestGatewayListenerConflicts(t *testing.T) {
 
 	var gw *gatewayapi.Gateway
 
-	ns, cleaner := Setup(ctx, t, env)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("generating a gateway kubernetes client and gathering test data")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
@@ -167,7 +168,7 @@ func TestGatewayListenerConflicts(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("deploying a new Gateway using the default GatewayClass")
-	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName)
+	gateway, err := helpers.DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName)
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 	err = gatewayHealthCheck(ctx, gatewayClient, gateway.Name, ns.Name)
@@ -333,7 +334,7 @@ func TestGatewayListenerConflicts(t *testing.T) {
 func TestGatewayFilters(t *testing.T) {
 	ctx := t.Context()
 
-	ns, cleaner := Setup(ctx, t, env)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	other, err := clusters.GenerateNamespace(ctx, env.Cluster(), t.Name()+"other")
 	require.NoError(t, err)
@@ -346,7 +347,7 @@ func TestGatewayFilters(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("deploying a gateway that allows routes in all namespaces")
-	gateway, err := DeployGateway(ctx, gwClientSet, ns.Name, unmanagedGatewayClassName, func(gw *gatewayapi.Gateway) {
+	gateway, err := helpers.DeployGateway(ctx, gwClientSet, ns.Name, unmanagedGatewayClassName, func(gw *gatewayapi.Gateway) {
 		gw.Name = uuid.NewString()
 		gw.Spec.Listeners = []gatewayapi.Listener{
 			builder.NewListener("http").HTTP().WithPort(80).
@@ -421,13 +422,13 @@ func TestGatewayFilters(t *testing.T) {
 	cleaner.Add(otherRoute)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback := GetGatewayIsLinkedCallback(ctx, t, gwClientSet, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
+	callback := helpers.GetGatewayIsLinkedCallback(ctx, t, gwClientSet, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("waiting for routes from HTTPRoute to become operational")
-	EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "test_gateway_filters", nil, http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "test_gateway_filters", nil, http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
 	t.Log("waiting for routes from HTTPRoute in other namespace to become operational")
-	EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "other_test_gateway_filters", nil, http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "other_test_gateway_filters", nil, http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
 
 	t.Log("changing to the same namespace filter")
 	require.Eventually(t, func() bool {
@@ -450,9 +451,9 @@ func TestGatewayFilters(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("confirming other namespace route becomes inaccessible")
-	EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "other_test_gateway_filters", nil, http.StatusNotFound, "no Route matched", emptyHeaderSet, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "other_test_gateway_filters", nil, http.StatusNotFound, "no Route matched", emptyHeaderSet, ingressWait, waitTick)
 	t.Log("confirming same namespace route still operational")
-	EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "test_gateway_filters", nil, http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "test_gateway_filters", nil, http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
 
 	t.Log("changing to a selector filter")
 	require.Eventually(t, func() bool {
@@ -481,7 +482,7 @@ func TestGatewayFilters(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("confirming wrong selector namespace route becomes inaccessible")
-	EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "test_gateway_filters", nil, http.StatusNotFound, "no Route matched", emptyHeaderSet, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "test_gateway_filters", nil, http.StatusNotFound, "no Route matched", emptyHeaderSet, ingressWait, waitTick)
 	t.Log("confirming right selector namespace route becomes operational")
-	EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "other_test_gateway_filters", nil, http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "other_test_gateway_filters", nil, http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
 }

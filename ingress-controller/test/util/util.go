@@ -1,9 +1,10 @@
 package util
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	internalgatewayapi "github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
 	internal "github.com/kong/kong-operator/ingress-controller/internal/util"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type ConditionType = internal.ConditionType

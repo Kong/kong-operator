@@ -12,6 +12,7 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/test/testenv"
 )
 
+// SkipIfRouterNotExpressions skips the test when the router flavor is not expressions.
 func SkipIfRouterNotExpressions(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 	flavor := testenv.KongRouterFlavor()
 	if flavor != dpconf.RouterFlavorExpressions {
@@ -20,6 +21,7 @@ func SkipIfRouterNotExpressions(ctx context.Context, t *testing.T, _ *envconf.Co
 	return ctx
 }
 
+// SkipIfEnterpriseNotEnabled skips the test when Kong Enterprise is not enabled.
 func SkipIfEnterpriseNotEnabled(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 	if !testenv.KongEnterpriseEnabled() {
 		t.Skip("skipping, Kong enterprise is required")
@@ -27,6 +29,7 @@ func SkipIfEnterpriseNotEnabled(ctx context.Context, t *testing.T, _ *envconf.Co
 	return ctx
 }
 
+// SkipIfDBBacked skips the test when DB-backed mode is enabled.
 func SkipIfDBBacked(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 	if testenv.DBMode() != testenv.DBModeOff {
 		t.Skip("skipping, DBLess mode is required")

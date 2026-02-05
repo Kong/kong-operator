@@ -17,12 +17,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kong-operator/ingress-controller/test"
+	"github.com/kong/kong-operator/test/helpers"
 	"github.com/kong/kong-operator/test/integration/kic/consts"
 )
 
 func TestIngressRegexMatchPath(t *testing.T) {
 	ctx := t.Context()
-	ns, cleaner := Setup(ctx, t, env)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	pathRegexPrefix := "/~"
 	pathTypeImplementationSpecific := netv1.PathTypeImplementationSpecific
@@ -127,11 +128,11 @@ func TestIngressRegexMatchPath(t *testing.T) {
 
 			t.Log("testing paths expected to match")
 			for _, path := range tc.matchPaths {
-				EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, path, nil, http.StatusOK, "<title>httpbin.org</title>", nil, ingressWait, waitTick)
+				helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, path, nil, http.StatusOK, "<title>httpbin.org</title>", nil, ingressWait, waitTick)
 			}
 			t.Log("testing paths expected not to match")
 			for _, path := range tc.notMatchPaths {
-				EventuallyExpectHTTP404WithNoRoute(t, proxyHTTPURL, proxyHTTPURL.Host, path, ingressWait, waitTick, nil)
+				helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyHTTPURL, proxyHTTPURL.Host, path, ingressWait, waitTick, nil)
 			}
 		})
 	}
@@ -139,7 +140,7 @@ func TestIngressRegexMatchPath(t *testing.T) {
 
 func TestIngressRegexMatchHeader(t *testing.T) {
 	ctx := t.Context()
-	ns, cleaner := Setup(ctx, t, env)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	headerRegexPrefix := "~*"
 	matchHeaderKey := "X-Kic-Test-Match"
@@ -219,7 +220,7 @@ func TestIngressRegexMatchHeader(t *testing.T) {
 
 			t.Log("testing headers expected to match")
 			for _, header := range tc.matchHeaders {
-				EventuallyGETPath(
+				helpers.EventuallyGETPath(
 					t,
 					proxyHTTPURL,
 					proxyHTTPURL.Host,
@@ -235,7 +236,7 @@ func TestIngressRegexMatchHeader(t *testing.T) {
 
 			t.Log("testing headers expected not to match")
 			for _, header := range tc.notMatchHeaders {
-				EventuallyExpectHTTP404WithNoRoute(
+				helpers.EventuallyExpectHTTP404WithNoRoute(
 					t,
 					proxyHTTPURL,
 					proxyHTTPURL.Host,
