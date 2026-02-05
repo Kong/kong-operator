@@ -2,7 +2,7 @@
 
 ## Table of Contents
 
-- [v2.1.0-beta.0](#v210-beta0)
+- [v2.1.0](#v210)
 - [v2.0.5](#v205)
 - [v2.0.4](#v204)
 - [v2.0.3](#v203)
@@ -36,7 +36,7 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
-## Unreleased
+## [v2.1.0]
 
 ### Added
 
@@ -64,44 +64,6 @@
   will patch the resource status conditions to indicate the failure and
   requeue the reconciliation for a later retry.
   [#3184](https://github.com/Kong/kong-operator/pull/3184)
-
-### Fixes
-
-- Fix validation logic for dataplane ports in admission policy.
-  [#3031](https://github.com/Kong/kong-operator/pull/3031)
-- Add maxLength and pattern validations for `KongConsumer` and `KongConsumerGroup` fields.
-  [#3109](https://github.com/Kong/kong-operator/pull/3109)
-- Gateway: Sort Gateway/DataPlane status addresses deterministically with hostname-first priority.
-  [#3110](https://github.com/Kong/kong-operator/pull/3110)
-- HybridGateway: Fixed the logic of translating `HTTPRoute` path matches to
-  paths in the generated `KongRoute`.
-  [#2996](https://github.com/Kong/kong-operator/pull/2996)
-- HybridGateway: Add the `~*` prefix to mark the header should be matched by
-  regular expression in the translated `KongRoute` when the `HTTPRoute`'s header
-  match has the `RegularExpression` type.
-  [#2995](https://github.com/Kong/kong-operator/pull/2995)
-- Fixes a panic in KonnectExtension controller when Control Plane is not found.
-  [#3054](https://github.com/Kong/kong-operator/pull/3054)
-
-### Changed
-
-- Removed the `KonnectID` type of control plane reference in CRDs for Konnect
-  entities as it is not supported.
-  [#2966](https://github.com/Kong/kong-operator/pull/2966)
-- Move management of bootstrapping CA certificate (that is used for signing
-  certificates for ControlPlane - DataPlane communication) to Helm Chart,
-  deprecate flags `--cluster-ca-key-type` and  `--cluster-ca-key-size` now
-  those values are inferred automatically based on the CA certificate Secret.
-  Read more in Helm Chart release notes.
-  [#3084](https://github.com/Kong/kong-operator/pull/3084)
-- HybridGateway: Include readable backend context in generated KongService and
-  KongUpstream names (with stable hashes) to improve UX in Konnect.
-  [#3121](https://github.com/Kong/kong-operator/pull/3121)
-
-## [v2.1.0-beta.0]
-
-### Added
-
 - `DataPlane`: Enable incremental config sync by default when using Konnect as control plane.
   This improves performance of config syncs for large configurations.
   [#2759](https://github.com/Kong/kong-operator/pull/2759)
@@ -293,6 +255,18 @@
 
 ### Changed
 
+- Removed the `KonnectID` type of control plane reference in CRDs for Konnect
+  entities as it is not supported.
+  [#2966](https://github.com/Kong/kong-operator/pull/2966)
+- Move management of bootstrapping CA certificate (that is used for signing
+  certificates for ControlPlane - DataPlane communication) to Helm Chart,
+  deprecate flags `--cluster-ca-key-type` and  `--cluster-ca-key-size` now
+  those values are inferred automatically based on the CA certificate Secret.
+  Read more in Helm Chart release notes.
+  [#3084](https://github.com/Kong/kong-operator/pull/3084)
+- HybridGateway: Include readable backend context in generated KongService and
+  KongUpstream names (with stable hashes) to improve UX in Konnect.
+  [#3121](https://github.com/Kong/kong-operator/pull/3121)
 - kong/kong-gateway v3.12 is the default proxy image. [#2391](https://github.com/Kong/kong-operator/pull/2391)
 - For Hybrid `Gateway`s the operator does not run the `ControlPlane` anymore, as
   the `DataPlane` is configured to use `Koko` as Konnect control plane.
@@ -310,6 +284,21 @@
 
 ### Fixes
 
+- Fix validation logic for dataplane ports in admission policy.
+  [#3031](https://github.com/Kong/kong-operator/pull/3031)
+- Add maxLength and pattern validations for `KongConsumer` and `KongConsumerGroup` fields.
+  [#3109](https://github.com/Kong/kong-operator/pull/3109)
+- Gateway: Sort Gateway/DataPlane status addresses deterministically with hostname-first priority.
+  [#3110](https://github.com/Kong/kong-operator/pull/3110)
+- HybridGateway: Fixed the logic of translating `HTTPRoute` path matches to
+  paths in the generated `KongRoute`.
+  [#2996](https://github.com/Kong/kong-operator/pull/2996)
+- HybridGateway: Add the `~*` prefix to mark the header should be matched by
+  regular expression in the translated `KongRoute` when the `HTTPRoute`'s header
+  match has the `RegularExpression` type.
+  [#2995](https://github.com/Kong/kong-operator/pull/2995)
+- Fixes a panic in KonnectExtension controller when Control Plane is not found.
+  [#3054](https://github.com/Kong/kong-operator/pull/3054)
 - Fixed an issue where users could set the secret of configmap label selectors
   to empty when the other one was left non-empty.
   [#2810](https://github.com/Kong/kong-operator/pull/2810)
@@ -1697,7 +1686,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
-[v2.1.0-beta.0]: https://github.com/Kong/kong-operator/compare/v2.0.5..v2.1.0-beta.0
+[v2.1.0]: https://github.com/Kong/kong-operator/compare/v2.0.5..v2.1.0
 [v2.0.5]: https://github.com/Kong/kong-operator/compare/v2.0.4..v2.0.5
 [v2.0.4]: https://github.com/Kong/kong-operator/compare/v2.0.3..v2.0.4
 [v2.0.3]: https://github.com/Kong/kong-operator/compare/v2.0.2..v2.0.3
