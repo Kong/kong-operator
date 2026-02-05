@@ -110,6 +110,7 @@ Each implements `SetupWithManager(ctx, mgr)` and `Reconcile(ctx, req)`:
 - `specialized/` - AIGateway and other specialized controllers
 
 ### Core Modules (`modules/`)
+
 - `manager/` - Controller-runtime setup, controller registration (`controller_setup.go`)
 - `cli/` - Command-line flag parsing
 - `admission/` - Validating/conversion webhooks
