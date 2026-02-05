@@ -89,6 +89,7 @@ Requires a Kubernetes cluster configured in KUBECONFIG and telepresence installe
 ## Architecture
 
 ### Entry Point
+
 `cmd/main.go` → `modules/cli.Parse()` → `modules/manager.Run()` → `SetupControllers()`
 
 ### API Types (`api/`)
@@ -162,6 +163,7 @@ make tools    # Install: controller-gen, kustomize, client-gen, golangci-lint, g
    ```bash
    make generate           # Regenerates all generated code
    make verify.generators  # Verify generated code is up-to-date (CI runs this)
+   ```
 5. **Update CHANGELOG.md** - For significant changes, add release notes
 
 ### Verify Before Commit
