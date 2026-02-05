@@ -52,10 +52,6 @@ func TestMain(m *testing.M) {
 	helpers.ExitOnErrWithCode(ctx, err, consts.ExitCodeEnvSetupFailed)
 	kubeconfig := conf.ResolveKubeConfigFile()
 	cfg.WithKubeconfigFile(kubeconfig)
-	if _, err := cfg.NewClient(); err != nil {
-		helpers.ExitOnErrWithCode(ctx, err, consts.ExitCodeEnvSetupFailed)
-	}
-
 	if kubeconfig != "" {
 		_ = os.Setenv("KUBECONFIG", kubeconfig)
 	}
