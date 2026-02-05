@@ -99,6 +99,7 @@ Requires a Kubernetes cluster configured in KUBECONFIG and telepresence installe
 - `api/common/v1alpha1/` - Shared types (ControlPlaneRef, ObjectRef, KongTags)
 
 ### Controllers (`controller/`)
+
 Each implements `SetupWithManager(ctx, mgr)` and `Reconcile(ctx, req)`:
 - `dataplane/` - Manages Kong Gateway Deployments, Services, ConfigMaps
 - `controlplane/` - Manages Kong Ingress Controller deployments
