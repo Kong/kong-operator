@@ -25,6 +25,10 @@ func GetKongRootConfig(ctx context.Context, proxyAdminURL *url.URL, kongTestPass
 	return kc.Root(ctx)
 }
 
+func NewKongAdminClient(proxyAdminURL *url.URL, kongTestPassword string) (*kong.Client, error) {
+	return adminapi.NewKongAPIClient(proxyAdminURL.String(), managercfg.AdminAPIClientConfig{}, kongTestPassword)
+}
+
 // GetKongVersion returns kong version using the provided Admin API URL.
 func GetKongVersion(ctx context.Context, proxyAdminURL *url.URL, kongTestPassword string) (kong.Version, error) {
 	if override := os.Getenv("TEST_KONG_VERSION_OVERRIDE"); len(override) > 0 {

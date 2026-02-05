@@ -22,12 +22,11 @@ import (
 
 	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
 	configurationv1beta1 "github.com/kong/kong-operator/api/configuration/v1beta1"
-	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
-	"github.com/kong/kong-operator/ingress-controller/internal/labels"
 	"github.com/kong/kong-operator/ingress-controller/test"
-	"github.com/kong/kong-operator/ingress-controller/test/consts"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers"
+	"github.com/kong/kong-operator/ingress-controller/test/annotations"
+	"github.com/kong/kong-operator/ingress-controller/test/labels"
 	"github.com/kong/kong-operator/pkg/clientset"
+	"github.com/kong/kong-operator/test/integration/kic/consts"
 )
 
 func TestConsumerGroup(t *testing.T) {
@@ -36,7 +35,7 @@ func TestConsumerGroup(t *testing.T) {
 	RunWhenKongEnterprise(t)
 
 	ctx := t.Context()
-	ns, cleaner := helpers.Setup(ctx, t, env)
+	ns, cleaner := Setup(ctx, t, env)
 
 	// path is the basic path used for most of the test
 	path := "/test-consumer-group/basic"
@@ -146,10 +145,10 @@ func TestConsumerGroup(t *testing.T) {
 	t.Log("checking if consumer has plugin configured correctly based on consumer group membership")
 	for _, consumer := range consumers {
 		require.Eventually(t, func() bool {
-			req := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.Host, path, map[string]string{
+			req := MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.Host, path, map[string]string{
 				"apikey": consumer.Name,
 			})
-			resp, err := helpers.DefaultHTTPClient().Do(req)
+			resp, err := DefaultHTTPClient().Do(req)
 			if err != nil {
 				t.Logf("WARNING: consumer %q failed to make a request: %v", consumer.Name, err)
 				return false
@@ -191,10 +190,10 @@ func TestConsumerGroup(t *testing.T) {
 
 	require.EventuallyWithT(t, func(c *assert.CollectT) {
 		// this should see the header, it uses a consumer in the group on the associated route
-		req := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.Host, multiPath, map[string]string{
+		req := MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.Host, multiPath, map[string]string{
 			"apikey": four.Name,
 		})
-		resp, err := helpers.DefaultHTTPClient().Do(req)
+		resp, err := DefaultHTTPClient().Do(req)
 		if !assert.NoError(c, err) {
 			return
 		}
@@ -208,10 +207,10 @@ func TestConsumerGroup(t *testing.T) {
 		}
 
 		// this should not see the header, it uses a consumer in the group on another route
-		clearReq := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.Host, path, map[string]string{
+		clearReq := MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.Host, path, map[string]string{
 			"apikey": four.Name,
 		})
-		clearResp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(clearReq)
+		clearResp, err := DefaultHTTPClient(WithResolveHostTo(proxyHTTPURL.Host)).Do(clearReq)
 		if !assert.NoError(c, err) {
 			return
 		}
@@ -225,10 +224,10 @@ func TestConsumerGroup(t *testing.T) {
 		}
 
 		// this should not see the header, it uses a consumer outside the group on the associated route
-		empty := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.Host, multiPath, map[string]string{
+		empty := MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.Host, multiPath, map[string]string{
 			"apikey": "test-consumer-3",
 		})
-		emptyResp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(empty)
+		emptyResp, err := DefaultHTTPClient(WithResolveHostTo(proxyHTTPURL.Host)).Do(empty)
 		if !assert.NoError(c, err) {
 			return
 		}

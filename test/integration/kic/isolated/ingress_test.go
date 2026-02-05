@@ -23,15 +23,14 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
 	incubatorv1alpha1 "github.com/kong/kong-operator/api/incubator/v1alpha1"
-	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
-	"github.com/kong/kong-operator/ingress-controller/internal/util/builder"
 	"github.com/kong/kong-operator/ingress-controller/test"
-	testconsts "github.com/kong/kong-operator/ingress-controller/test/consts"
-	"github.com/kong/kong-operator/test/integration/kic/consts"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers"
+	"github.com/kong/kong-operator/ingress-controller/test/annotations"
 	"github.com/kong/kong-operator/ingress-controller/test/testlabels"
+	"github.com/kong/kong-operator/ingress-controller/test/util/builder"
 	"github.com/kong/kong-operator/pkg/clientset"
 	"github.com/kong/kong-operator/test/helpers/certificate"
+	"github.com/kong/kong-operator/test/integration/kic/consts"
+	testconsts "github.com/kong/kong-operator/test/integration/kic/consts"
 )
 
 func TestIngressGRPC(t *testing.T) {
@@ -362,7 +361,7 @@ func TestIngress_KongServiceFacadeAsBackend(t *testing.T) {
 			proxyURL := GetHTTPURLFromCtx(ctx)
 			expectContent := func(path, expectedMagicNumber string) {
 				t.Logf("asserting %s path returns expected image", path)
-				helpers.EventuallyGETPath(
+				EventuallyGETPath(
 					t,
 					proxyURL,
 					proxyURL.Host,

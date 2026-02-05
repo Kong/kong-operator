@@ -24,9 +24,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kong-operator/ingress-controller/test"
-	"github.com/kong/kong-operator/ingress-controller/test/consts"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers"
 	"github.com/kong/kong-operator/test/helpers/certificate"
+	"github.com/kong/kong-operator/test/integration/kic/consts"
 )
 
 func TestHTTPSRedirect(t *testing.T) {
@@ -34,7 +33,7 @@ func TestHTTPSRedirect(t *testing.T) {
 	ctx := t.Context()
 
 	t.Parallel()
-	ns, cleaner := helpers.Setup(ctx, t, env)
+	ns, cleaner := Setup(ctx, t, env)
 
 	t.Log("creating an HTTP container via deployment to test redirect functionality")
 	container := generators.NewContainer("alsohttpbin", test.HTTPBinImage, test.HTTPBinPort)
@@ -80,7 +79,7 @@ func TestHTTPSIngress(t *testing.T) {
 	ctx := t.Context()
 
 	t.Parallel()
-	ns, cleaner := helpers.Setup(ctx, t, env)
+	ns, cleaner := Setup(ctx, t, env)
 
 	certPool := x509.NewCertPool()
 	dialer := &net.Dialer{

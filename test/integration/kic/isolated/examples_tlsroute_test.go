@@ -15,9 +15,8 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
 	"github.com/kong/kong-operator/ingress-controller/test"
-	"github.com/kong/kong-operator/test/integration/kic/consts"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers"
 	"github.com/kong/kong-operator/ingress-controller/test/testlabels"
+	"github.com/kong/kong-operator/test/integration/kic/consts"
 )
 
 func TestExampleTLSRoute(t *testing.T) {
@@ -30,7 +29,7 @@ func TestExampleTLSRoute(t *testing.T) {
 		WithLabel(testlabels.Kind, testlabels.KindTLSRoute).
 		Setup(SkipIfRouterNotExpressions).
 		WithSetup("deploy kong addon into cluster", featureSetup(
-			withControllerManagerOpts(helpers.ControllerManagerOptAdditionalWatchNamespace("default")),
+			withControllerManagerOpts(ControllerManagerOptAdditionalWatchNamespace("default")),
 		)).
 		Assess("deploying to cluster works and tls traffic is routed to the service",
 			func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
