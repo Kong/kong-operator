@@ -766,7 +766,7 @@ _test.integration-kic: mise yq
 	-covermode=atomic \
 	-coverpkg=$(PKG_LIST_KIC) \
 	-coverprofile=$(COVERAGE_OUT) \
-	./test/integration/kic/...
+	./test/integration/kic
 
 .PHONY: test.integration-kic.dbless
 test.integration-kic.dbless:
