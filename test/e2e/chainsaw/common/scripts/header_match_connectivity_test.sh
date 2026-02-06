@@ -12,8 +12,8 @@ set -o pipefail
 #   HOST: (optional) The Host header to send with the request.
 #   REQUEST_HEADERS: (optional) Custom headers to send, format: 'Header1:value1,Header2:value2'.
 #   EXPECTED_STATUS: The expected HTTP status code (e.g., '200', '404').
-#   MAX_RETRIES: (optional) Maximum number of retry attempts. Default: '30'.
-#   RETRY_DELAY: (optional) Delay in seconds between retries. Default: '2'.
+#   MAX_RETRIES: (optional) Maximum number of retry attempts. Default: '180'.
+#   RETRY_DELAY: (optional) Delay in seconds between retries. Default: '1'.
 
 PROXY_IP="${PROXY_IP}"
 METHOD="${METHOD}"
@@ -23,10 +23,10 @@ HOST="${HOST:-}"
 REQUEST_HEADERS="${REQUEST_HEADERS:-}"
 EXPECTED_STATUS="${EXPECTED_STATUS}"
 
-# Retry configuration (configurable via environment variables)
-# Default: 30 retries with 2 second delay = up to 60 seconds total
-MAX_RETRIES="${MAX_RETRIES:-30}"
-RETRY_DELAY="${RETRY_DELAY:-2}"
+# Retry configuration (configurable via environment variables).
+# Default: 180 retries with 1 second delay = up to 180 seconds total.
+MAX_RETRIES="${MAX_RETRIES:-180}"
+RETRY_DELAY="${RETRY_DELAY:-1}"
 
 # Build curl command with optional Host header and HTTP method
 build_curl_cmd() {
@@ -76,6 +76,7 @@ for i in $(seq 1 $MAX_RETRIES); do
   "method": "$METHOD",
   "request_headers": "$REQUEST_HEADERS",
   "retry_attempt": $i,
+  "max_retries": $MAX_RETRIES,
   "curl_command": $(echo "$CURL_CMD" | jq -Rs .)
 }
 EOF

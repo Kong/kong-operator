@@ -11,12 +11,15 @@ set -o pipefail
 GATEWAY_NAME="${GATEWAY_NAME}"
 GATEWAY_NAMESPACE="${GATEWAY_NAMESPACE}"
 
+KUBECTL_CMD="kubectl get konnectgatewaycontrolplane -n $GATEWAY_NAMESPACE -o json"
+
 # Fetch values and store in shell variables.
 if ! KUBECTL_OUTPUT=$(kubectl get konnectgatewaycontrolplane -n "$GATEWAY_NAMESPACE" -o json 2>&1); then
   cat <<EOF
 {
   "error": "Failed to get KonnectGatewayControlPlane resource",
   "namespace": "$GATEWAY_NAMESPACE",
+  "kubectl_command": "$KUBECTL_CMD",
   "kubectl_output": $(echo "$KUBECTL_OUTPUT" | jq -Rs .)
 }
 EOF
@@ -38,6 +41,7 @@ if [ -z "$CP_NAME" ]; then
   "error": "No KonnectGatewayControlPlane found with Gateway owner reference",
   "namespace": "$GATEWAY_NAMESPACE",
   "gateway_name": "$GATEWAY_NAME",
+  "kubectl_command": "$KUBECTL_CMD",
   "available_resources": $(echo "$KUBECTL_OUTPUT" | jq -c '[.items[] | {name: .metadata.name, ownerReferences: .metadata.ownerReferences}]')
 }
 EOF
@@ -47,6 +51,7 @@ fi
 # Output the JSON block for Chainsaw to parse.
 cat <<EOF
 {
-  "cp_name": "$CP_NAME"
+  "cp_name": "$CP_NAME",
+  "kubectl_command": "$KUBECTL_CMD"
 }
 EOF
