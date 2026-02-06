@@ -172,10 +172,12 @@ jobs:
       - name: Install cert-manager
         run: make install.helm.cert-manager
 
+      - name: Install CRDs
+        run: make install.crds
+
       - name: Run chart-testing (install)
         run: |
           kubectl create ns kong-test
-          make install.helm.cert-manager
           make test.charts.ct.install CHART_NAME=${{ matrix.chart-name}}
           # No need to delete the ns the cluster is scrapped after the job anyway.
 
