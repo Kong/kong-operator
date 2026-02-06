@@ -136,10 +136,35 @@ spec:
 
   # Step 11: Update the HTTPRoute to match multiple headers.
   - name: update-httproute-multiple-header-match
-    description: Update the HTTPRoute to match multiple headers (ANDed)
+    description: Get current Kong resources, update the HTTPRoute to match multiple headers (ANDed), and verify old resources are deleted.
     try:
+      - script:
+          env:
+            - name: NAMESPACE
+              value: ($namespace)
+            - name: GATEWAY_NAME
+              value: ($gateway_name)
+            - name: GATEWAY_NAMESPACE
+              value: ($gateway_namespace)
+            - name: HTTP_ROUTE_NAME
+              value: ($http_route_name)
+            - name: HTTP_ROUTE_NAMESPACE
+              value: ($http_route_namespace)
+            - name: RESOURCE_TYPES
+              value: "kongroutes.configuration.konghq.com"
+          content: |
+            bash ../../common/scripts/get_kong_resources.sh
+          outputs:
+            - name: old_resources
+              value: (json_parse($stdout))
       - apply:
           file: 02-update-httproute-multiple-header-match.yaml
+      - script:
+          env:
+            - name: RESOURCES_JSON
+              value: (to_string($old_resources))
+          content: |
+            bash ../../common/scripts/wait_for_kong_resources_deletion.sh
       - assert:
           file: 02-assert-update-httproute-multiple-header-match.yaml
 
@@ -184,10 +209,35 @@ spec:
 
   # Step 15: Update the HTTPRoute to regex header matching.
   - name: update-httproute-regex-header-match
-    description: Update the HTTPRoute to match headers by regular expressions
+    description: Get current Kong resources, update the HTTPRoute to match headers by regular expressions, and verify old resources are deleted.
     try:
+      - script:
+          env:
+            - name: NAMESPACE
+              value: ($namespace)
+            - name: GATEWAY_NAME
+              value: ($gateway_name)
+            - name: GATEWAY_NAMESPACE
+              value: ($gateway_namespace)
+            - name: HTTP_ROUTE_NAME
+              value: ($http_route_name)
+            - name: HTTP_ROUTE_NAMESPACE
+              value: ($http_route_namespace)
+            - name: RESOURCE_TYPES
+              value: "kongroutes.configuration.konghq.com"
+          content: |
+            bash ../../common/scripts/get_kong_resources.sh
+          outputs:
+            - name: old_resources
+              value: (json_parse($stdout))
       - apply:
           file: 03-update-httproute-regex-header-match.yaml
+      - script:
+          env:
+            - name: RESOURCES_JSON
+              value: (to_string($old_resources))
+          content: |
+            bash ../../common/scripts/wait_for_kong_resources_deletion.sh
       - assert:
           file: 03-assert-update-httproute-regex-header-match.yaml
 

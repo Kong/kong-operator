@@ -249,8 +249,6 @@ spec:
             env:
               - name: RESOURCES_JSON
                 value: (to_string($old_resources))
-              - name: TIMEOUT
-                value: "60"
             content: |
               bash ../../common/scripts/wait_for_kong_resources_deletion.sh
         - assert:
