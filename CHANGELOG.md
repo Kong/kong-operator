@@ -38,7 +38,7 @@
 
 ## Unreleased
 
-### Fixed
+### Fixes
 
 - Admission webhook now validates HTTPRoute regex patterns before sending
   configuration to the Admin API.
