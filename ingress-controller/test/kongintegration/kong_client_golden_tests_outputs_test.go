@@ -106,8 +106,9 @@ func TestKongClientGoldenTestsOutputs_Konnect(t *testing.T) {
 
 	ctx := t.Context()
 
-	cpID := konnect.CreateTestControlPlane(ctx, t)
-	cert, key := konnect.CreateClientCertificate(ctx, t, cpID)
+	token := konnect.CreateTestPersonalAccessToken(ctx, t)
+	cpID := konnect.CreateTestControlPlane(ctx, t, token)
+	cert, key := konnect.CreateClientCertificate(ctx, t, cpID, token)
 	adminAPIClient := konnect.CreateKonnectAdminAPIClient(t, cpID, cert, key)
 	updateStrategy := sendconfig.NewUpdateStrategyDBModeKonnect(adminAPIClient.AdminAPIClient(), dump.Config{
 		SkipCACerts:         true,
@@ -120,8 +121,7 @@ func TestKongClientGoldenTestsOutputs_Konnect(t *testing.T) {
 			require.NoError(t, err)
 
 			content := &file.Content{}
-			err = yaml.Unmarshal(goldenTestOutput, content)
-			require.NoError(t, err)
+			require.NoError(t, yaml.Unmarshal(goldenTestOutput, content))
 
 			require.EventuallyWithT(t, func(t *assert.CollectT) {
 				configSize, err := updateStrategy.Update(ctx, sendconfig.ContentWithHash{Content: content})
