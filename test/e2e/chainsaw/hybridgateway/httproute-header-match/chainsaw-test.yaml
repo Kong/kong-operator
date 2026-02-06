@@ -45,12 +45,6 @@ spec:
     - name: listener_http_port
       value: 80
 
-  timeouts:
-    apply: 120s
-    assert: 300s
-    cleanup: 120s
-    delete: 120s
-
   steps:
   # Step 1: Create test namespace.
   - name: create-namespace

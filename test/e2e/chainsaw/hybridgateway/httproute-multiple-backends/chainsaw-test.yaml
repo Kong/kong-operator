@@ -68,12 +68,6 @@ spec:
     - name: echo_cross_ns_deployment_namespace
       value: ($cross_namespace)
 
-  timeouts:
-    apply: 120s
-    assert: 120s
-    cleanup: 120s
-    delete: 120s
-
   steps:
   # Step 1: Create KonnectAPIAuthConfiguration.
   - name: 1-create-konnect-api-auth

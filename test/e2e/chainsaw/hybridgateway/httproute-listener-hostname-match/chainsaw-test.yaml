@@ -111,12 +111,6 @@ spec:
     - name: test_hostname_exact_listener_https
       value: "exact.https.httpbin-2.test"
 
-  timeouts:
-    apply: 120s
-    assert: 120s
-    cleanup: 120s
-    delete: 120s
-
   steps:
   # Step 1: Create test namespace.
   - name: 1-create-namespace

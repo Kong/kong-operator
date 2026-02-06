@@ -49,12 +49,6 @@ spec:
     - name: reference_grant_namespace
       value: ($echo_deployment_namespace)
 
-  timeouts:
-    apply: 120s
-    assert: 120s
-    cleanup: 120s
-    delete: 120s
-
   steps:
     # Step 1: Create the TLS secret that will be referenced by the Gateway TLS listener.
     - name: Create-tls-secret

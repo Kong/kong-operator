@@ -9,12 +9,6 @@ spec:
     resources when multiple HTTPRoutes share the same backendRefs set and properly updates
     the gateway-operator.konghq.com/hybrid-routes annotation when routes are deleted or updated.
 
-  timeouts:
-    apply: 120s
-    assert: 300s
-    cleanup: 120s
-    delete: 120s
-
   bindings:
     # Common bindings - using chainsaw-provided $namespace.
     - name: test_name

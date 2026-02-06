@@ -56,12 +56,6 @@ spec:
     - name: httproute_name_strippath
       value: (join('-', [($namespace), 'strippath']))
 
-  timeouts:
-    apply: 120s
-    assert: 120s
-    cleanup: 120s
-    delete: 120s
-
   steps:
   # Step 1: Create test namespace
   - name: 1-create-namespace

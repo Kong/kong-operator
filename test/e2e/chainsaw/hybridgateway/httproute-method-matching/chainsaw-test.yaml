@@ -62,12 +62,6 @@ spec:
     - name: host_header
       value: ""
 
-  timeouts:
-    apply: 120s
-    assert: 120s
-    cleanup: 120s
-    delete: 120s
-
   steps:
   # Step 2: Create KonnectAPIAuthConfiguration.
   - name: create-konnect-api-auth

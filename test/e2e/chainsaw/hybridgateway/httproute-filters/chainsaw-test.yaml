@@ -9,12 +9,6 @@ spec:
     processes the currently supported filters in HTTPRoute, including:
     `RequestHeaderModifier`, `ResponseHeaderModifier`.
 
-  timeouts:
-    apply: 120s
-    assert: 120s
-    delete: 120s
-    exec: 120s
-
   bindings:
     # Common bindings.
     - name: test_name

@@ -52,12 +52,6 @@ spec:
     - name: httpbin_deployment_namespace
       value: ($namespace)
 
-  timeouts:
-    apply: 120s
-    assert: 300s
-    cleanup: 120s
-    delete: 120s
-
   steps:
   # Step 1: Create KonnectAPIAuthConfiguration.
   - name: 1-create-konnect-api-auth

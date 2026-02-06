@@ -7,11 +7,6 @@ spec:
   description: |
     This test validates that the hybrid gateway controller correctly
     processes a basic HTTPRoute with a single service backend.
-  timeouts:
-    apply: 120s
-    assert: 120s
-    delete: 120s
-    exec: 120s
 
   bindings:
     # Common bindings.

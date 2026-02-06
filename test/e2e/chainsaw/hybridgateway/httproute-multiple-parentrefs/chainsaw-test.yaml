@@ -9,12 +9,6 @@ spec:
     processes an HTTPRoute with multiple ParentRefs, creating Kong
     resources for each Gateway/ControlPlane.
 
-  timeouts:
-    apply: 120s
-    assert: 120s
-    delete: 120s
-    exec: 120s
-
   bindings:
     # Common bindings.
     - name: test_name
