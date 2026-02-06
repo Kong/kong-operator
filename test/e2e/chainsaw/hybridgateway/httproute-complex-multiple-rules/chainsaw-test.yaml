@@ -1,4 +1,4 @@
-# HTTPRoute Complex Multiple Rules test scenario
+# HTTPRoute Complex Multiple Rules test scenario.
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: Test
 metadata:
@@ -6,25 +6,51 @@ metadata:
 spec:
   description: |
     This test validates complex HTTPRoute scenarios that combine multiple matching types:
-    - Path matching (Exact and PathPrefix)
-    - Header matching (Exact and RegularExpression)
-    - Method matching (GET, POST, PUT, PATCH, DELETE)
-    - Multiple rules with different matching criteria in a single HTTPRoute
-    - Complex routing logic verification
+    - Path matching (Exact and PathPrefix).
+    - Header matching (Exact and RegularExpression).
+    - Method matching (GET, POST, PUT, PATCH, DELETE).
+    - Multiple rules with different matching criteria in a single HTTPRoute.
+    - Complex routing logic verification.
 
   bindings:
-    - name: kong_namespace
-      value: (join('-', ['kong', 'httproute-complex', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+    - name: test_name
+      value: ($namespace)
+    - name: namespace
+      value: ($namespace)
     - name: konnect_api_auth_name
       value: konnect-api-auth-dev-1
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: gateway_image
+      value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.12')
     - name: gateway_class_name
-      value: (join('-', ['kong', 'httproute-complex', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+      value: (join('-', [($test_name), 'gateway-class']))
     - name: gateway_configuration_name
-      value: ($gateway_class_name)
+      value: (join('-', [($test_name), 'gateway-configuration']))
+    - name: gateway_namespace
+      value: ($namespace)
     - name: gateway_name
-      value: ($gateway_class_name)
+      value: (join('-', [($namespace), 'gateway']))
+    - name: http_route_namespace
+      value: ($namespace)
     - name: httproute_name
       value: complex-multiple-rules
+    - name: http_route_name
+      value: ($httproute_name)
+    - name: listener_http_port
+      value: "80"
+    - name: host_header
+      value: ""
+    - name: request_headers
+      value: ""
+
+    # Backend service bindings.
+    - name: httpbin_deployment_name
+      value: httpbin
+    - name: httpbin_deployment_namespace
+      value: ($namespace)
 
   timeouts:
     apply: 120s
@@ -33,495 +59,347 @@ spec:
     delete: 120s
 
   steps:
-    # Step 1: Create prerequisite resources
-    - name: create-prerequisites
-      description: Create GatewayClass, Gateway, and backend Service
-      try:
-        - apply:
-            file: 01-prerequisites.yaml
-        - apply:
-            file: 00-httpbin.yaml
-        # Assert common Konnect and Gateway resources
-        - assert:
-            file: ../../common/assertions/konnect-apiauth.yaml
-        - assert:
-            file: 01-assert-prerequisites.yaml
-        - assert:
-            file: 00-assert-httpbin.yaml
-      catch:
-        - description: Get Gateway resource status
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: Gateway
-            namespace: ($kong_namespace)
-        - description: Get Pods in kong namespace
-          get:
-            apiVersion: v1
-            kind: Pod
-            namespace: ($kong_namespace)
-        - description: Get operator logs
-          podLogs:
-            namespace: kong-system
-            selector: control-plane=controller-manager
-            tail: 100
+  # Step 1: Create KonnectAPIAuthConfiguration.
+  - name: 1-create-konnect-api-auth
+    description: Create KonnectAPIAuthConfiguration for the test.
+    use:
+      template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
 
-    # Step 2: Create complex HTTPRoute with multiple rules
-    - name: create-complex-httproute
-      description: Create HTTPRoute with multiple rules combining path, header, and method matching
-      try:
-        - apply:
-            file: 02-httproute-complex.yaml
-        - assert:
-            file: 02-assert-httproute-complex.yaml
-        # Wait for KongRoutes to be programmed
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl wait --for=condition=Programmed --timeout=120s kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute
-        # Get the Gateway proxy IP
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: GATEWAY_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
-            outputs:
-              - name: proxy_ip
-                value: ($stdout)
-      catch:
-        - description: Get HTTPRoute status
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: HTTPRoute
-            namespace: ($kong_namespace)
-        - description: Get KongRoute resources
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongRoute
-            namespace: ($kong_namespace)
-        - description: Get operator logs
-          podLogs:
-            namespace: kong-system
-            selector: control-plane=controller-manager
-            tail: 100
+  # Step 2: Create GatewayConfiguration.
+  - name: 2-create-gateway-configuration
+    description: Create GatewayConfiguration for the test.
+    use:
+      template: ../../common/_step_templates/apply-assert-gatewayConfiguration.yaml
 
-    # Step 3: Test Rule 1 - GET /get with X-Api-Version header
-    - name: test-rule1-get-with-header
-      description: Test GET /get with X-Api-Version:v1 header returns 200
-      try:
-        # Get the Gateway proxy IP
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: GATEWAY_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
-            outputs:
-              - name: proxy_ip
-                value: ($stdout)
-        # Test GET /get with correct header - should return 200
-        - description: GET /get with X-Api-Version:v1 returns 200
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X GET -H "X-Api-Version: v1" http://${PROXY_IP}/get
-            check:
-              (contains($stdout, '200')): true
-        # Test GET /get without header - should return 404
-        - description: GET /get without header returns 404
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X GET http://${PROXY_IP}/get)
-              echo $HTTP_CODE
-              if [ "$HTTP_CODE" = "404" ]; then
-                echo "OK"
-              else
-                echo "FAIL"
-                exit 1
-              fi
-        # Test GET /get with wrong header value - should return 404
-        - description: GET /get with X-Api-Version:v2 returns 404
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X GET -H "X-Api-Version: v2" http://${PROXY_IP}/get)
-              echo $HTTP_CODE
-              if [ "$HTTP_CODE" = "404" ]; then
-                echo "OK"
-              else
-                echo "FAIL"
-                exit 1
-              fi
-        # Test POST /get with correct header - should return 404 (route requires GET method)
-        - description: POST /get with X-Api-Version:v1 returns 404
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              # Retry until we get stable 404 (route fully configured)
-              for i in $(seq 1 10); do
-                HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "X-Api-Version: v1" http://${PROXY_IP}/get)
-                if [ "$HTTP_CODE" = "404" ]; then
-                  echo "OK: got expected 404"
-                  exit 0
-                fi
-                echo "Attempt $i: got $HTTP_CODE, expected 404, retrying..."
-                sleep 2
-              done
-              echo "FAIL: expected 404, got $HTTP_CODE"
-              exit 1
-      catch:
-        - description: Get HTTPRoute status
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: HTTPRoute
-            namespace: ($kong_namespace)
-        - description: Get KongRoute resources
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongRoute
-            namespace: ($kong_namespace)
+  # Step 3: Create GatewayClass.
+  - name: 3-create-gateway-class
+    description: Create GatewayClass for the test.
+    use:
+      template: ../../common/_step_templates/apply-assert-gatewayClass.yaml
 
-    # Step 4: Test Rule 2 - POST /post (no header requirement)
-    - name: test-rule2-post-no-header
-      description: Test POST /post without header requirement
-      try:
-        # Get the Gateway proxy IP
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: GATEWAY_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
-            outputs:
-              - name: proxy_ip
-                value: ($stdout)
-        # Test POST /post - should return 200
-        - description: POST /post returns 200
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X POST http://${PROXY_IP}/post
-            check:
-              (contains($stdout, '200')): true
-        # Test GET /post - should return 404 (route requires POST method)
-        - description: GET /post returns 404
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              # Retry until we get stable 404 (route fully configured)
-              for i in $(seq 1 10); do
-                HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X GET http://${PROXY_IP}/post)
-                if [ "$HTTP_CODE" = "404" ]; then
-                  echo "OK: got expected 404"
-                  exit 0
-                fi
-                echo "Attempt $i: got $HTTP_CODE, expected 404, retrying..."
-                sleep 2
-              done
-              echo "FAIL: expected 404, got $HTTP_CODE"
-              exit 1
-      catch:
-        - description: Get HTTPRoute status
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: HTTPRoute
-            namespace: ($kong_namespace)
+  # Step 4: Create Gateway.
+  - name: 4-create-gateway
+    description: Create Gateway for the test.
+    use:
+      template: ../../common/_step_templates/apply-assert-gateway-http-only.yaml
 
-    # Step 5: Test Rule 3 - /headers prefix with X-Custom-Header
-    - name: test-rule3-headers-prefix-with-header
-      description: Test /headers prefix with X-Custom-Header:enabled
-      try:
-        # Get the Gateway proxy IP
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: GATEWAY_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
-            outputs:
-              - name: proxy_ip
-                value: ($stdout)
-        # Test GET /headers with correct header - should return 200
-        - description: GET /headers with X-Custom-Header:enabled returns 200
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X GET -H "X-Custom-Header: enabled" http://${PROXY_IP}/headers
-            check:
-              (contains($stdout, '200')): true
-        # Test POST /headers with correct header - should return 200 (httpbin /headers accepts any method)
-        - description: POST /headers with X-Custom-Header:enabled returns 200
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X POST -H "X-Custom-Header: enabled" http://${PROXY_IP}/headers
-            check:
-              (contains($stdout, '200')): true
-        # Test GET /headers without header - should return 404
-        - description: GET /headers without header returns 404
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X GET http://${PROXY_IP}/headers)
-              echo $HTTP_CODE
-              if [ "$HTTP_CODE" = "404" ]; then
-                echo "OK"
-              else
-                echo "FAIL"
-                exit 1
-              fi
-        # Test GET /headers with wrong header value - should return 404
-        - description: GET /headers with X-Custom-Header:disabled returns 404
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X GET -H "X-Custom-Header: disabled" http://${PROXY_IP}/headers)
-              echo $HTTP_CODE
-              if [ "$HTTP_CODE" = "404" ]; then
-                echo "OK"
-              else
-                echo "FAIL"
-                exit 1
-              fi
-      catch:
-        - description: Get HTTPRoute status
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: HTTPRoute
-            namespace: ($kong_namespace)
+  # Step 5: Create httpbin backend service.
+  - name: 5-create-httpbin
+    description: Create httpbin deployment and service.
+    use:
+      template: ../../common/_step_templates/apply-assert-httpbinService.yaml
 
-    # Step 6: Test Rule 4 - PUT or PATCH /anything
-    - name: test-rule4-put-patch-anything
-      description: Test PUT or PATCH methods on /anything path
-      try:
-        # Get the Gateway proxy IP
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: GATEWAY_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
-            outputs:
-              - name: proxy_ip
-                value: ($stdout)
-        # Test PUT /anything - should return 200
-        - description: PUT /anything returns 200
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X PUT http://${PROXY_IP}/anything
-            check:
-              (contains($stdout, '200')): true
-        # Test PATCH /anything - should return 200
-        - description: PATCH /anything returns 200
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X PATCH http://${PROXY_IP}/anything
-            check:
-              (contains($stdout, '200')): true
-        # Test PUT /anything/subpath - should return 200 (PathPrefix)
-        - description: PUT /anything/subpath returns 200
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X PUT http://${PROXY_IP}/anything/subpath
-            check:
-              (contains($stdout, '200')): true
-        # Test GET /anything - should return 404 or 405 (only PUT/PATCH allowed)
-        - description: GET /anything returns non-200
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X GET http://${PROXY_IP}/anything)
-              echo $HTTP_CODE
-              if [ "$HTTP_CODE" = "404" ] || [ "$HTTP_CODE" = "405" ]; then
-                echo "OK"
-              else
-                echo "FAIL"
-                exit 1
-              fi
-        # Test DELETE /anything - should return 404 or 405 (only PUT/PATCH allowed)
-        - description: DELETE /anything returns non-200
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X DELETE http://${PROXY_IP}/anything)
-              echo $HTTP_CODE
-              if [ "$HTTP_CODE" = "404" ] || [ "$HTTP_CODE" = "405" ]; then
-                echo "OK"
-              else
-                echo "FAIL"
-                exit 1
-              fi
-      catch:
-        - description: Get HTTPRoute status
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: HTTPRoute
-            namespace: ($kong_namespace)
-        - description: Get KongRoute resources
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongRoute
-            namespace: ($kong_namespace)
+  # Step 6: Create complex HTTPRoute with multiple rules.
+  - name: 6-create-complex-httproute
+    description: Create HTTPRoute with multiple rules combining path, header, and method matching.
+    try:
+      - apply:
+          file: 01-httproute-complex.yaml
+      - assert:
+          file: 01-assert-httproute-complex.yaml
 
-    # Step 7: Test Rule 5 - DELETE /delete with regex header
-    - name: test-rule5-delete-with-regex-header
-      description: Test DELETE /delete with regex header matching
-      try:
-        # Get the Gateway proxy IP
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: GATEWAY_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
-            outputs:
-              - name: proxy_ip
-                value: ($stdout)
-        # Test DELETE /delete with valid token format - should return 200
-        - description: DELETE /delete with X-Delete-Token:token-abc123 returns 200
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X DELETE -H "X-Delete-Token: token-abc123" http://${PROXY_IP}/delete
-            check:
-              (contains($stdout, '200')): true
-        # Test DELETE /delete with another valid token - should return 200
-        - description: DELETE /delete with X-Delete-Token:token-xyz789 returns 200
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X DELETE -H "X-Delete-Token: token-xyz789" http://${PROXY_IP}/delete
-            check:
-              (contains($stdout, '200')): true
-        # Test DELETE /delete without header - should return 404
-        - description: DELETE /delete without header returns 404
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X DELETE http://${PROXY_IP}/delete)
-              echo $HTTP_CODE
-              if [ "$HTTP_CODE" = "404" ]; then
-                echo "OK"
-              else
-                echo "FAIL"
-                exit 1
-              fi
-        # Test DELETE /delete with invalid token format - should return 404
-        - description: DELETE /delete with X-Delete-Token:invalid returns 404
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X DELETE -H "X-Delete-Token: invalid" http://${PROXY_IP}/delete)
-              echo $HTTP_CODE
-              if [ "$HTTP_CODE" = "404" ]; then
-                echo "OK"
-              else
-                echo "FAIL"
-                exit 1
-              fi
-        # Test DELETE /delete with token not starting with 'token-' - should return 404
-        # Note: Kong converts header values to lowercase before regex matching,
-        # so we cannot test case sensitivity. Instead, test a structurally invalid token.
-        - description: DELETE /delete with X-Delete-Token:notvalid-abc123 returns 404
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X DELETE -H "X-Delete-Token: notvalid-abc123" http://${PROXY_IP}/delete)
-              echo $HTTP_CODE
-              if [ "$HTTP_CODE" = "404" ]; then
-                echo "OK"
-              else
-                echo "FAIL"
-                exit 1
-              fi
-        # Test GET /delete with valid token - should return 404 or 405 (wrong method)
-        - description: GET /delete with valid token returns non-200
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X GET -H "X-Delete-Token: token-abc123" http://${PROXY_IP}/delete)
-              echo $HTTP_CODE
-              if [ "$HTTP_CODE" = "404" ] || [ "$HTTP_CODE" = "405" ]; then
-                echo "OK"
-              else
-                echo "FAIL"
-                exit 1
-              fi
-      catch:
-        - description: Get HTTPRoute status
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: HTTPRoute
-            namespace: ($kong_namespace)
-        - description: Get KongRoute resources
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongRoute
-            namespace: ($kong_namespace)
-        - description: Describe KongRoute
-          script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o yaml
+  # Step 7: Test Rule 1 - GET /get with X-Api-Version header.
+  # Test positive case: GET /get with X-Api-Version:v1 returns 200.
+  - name: 7a-test-rule1-get-with-header-success
+    description: Test GET /get with X-Api-Version:v1 returns 200.
+    bindings:
+      - name: http_method
+        value: GET
+      - name: route_path
+        value: /get
+      - name: request_headers
+        value: "X-Api-Version:v1"
+      - name: expected_status
+        value: "200"
+    use:
+      template: ../../common/_step_templates/verify-header-match-routing.yaml
+
+  # Test negative case: GET /get without header returns 404.
+  - name: 7b-test-rule1-get-without-header-fail
+    description: Test GET /get without header returns 404.
+    bindings:
+      - name: http_method
+        value: GET
+      - name: route_path
+        value: /get
+      - name: request_headers
+        value: ""
+      - name: expected_status
+        value: "404"
+    use:
+      template: ../../common/_step_templates/verify-header-match-routing.yaml
+
+  # Test negative case: GET /get with wrong header value returns 404.
+  - name: 7c-test-rule1-get-wrong-header-fail
+    description: Test GET /get with X-Api-Version:v2 returns 404.
+    bindings:
+      - name: http_method
+        value: GET
+      - name: route_path
+        value: /get
+      - name: request_headers
+        value: "X-Api-Version:v2"
+      - name: expected_status
+        value: "404"
+    use:
+      template: ../../common/_step_templates/verify-header-match-routing.yaml
+
+  # Test negative case: POST /get with correct header returns 404 (route requires GET method).
+  - name: 7d-test-rule1-post-wrong-method-fail
+    description: Test POST /get with X-Api-Version:v1 returns 404.
+    bindings:
+      - name: http_method
+        value: POST
+      - name: route_path
+        value: /get
+      - name: request_headers
+        value: "X-Api-Version:v1"
+      - name: expected_status
+        value: "404"
+    use:
+      template: ../../common/_step_templates/verify-header-match-routing.yaml
+
+  # Step 8: Test Rule 2 - POST /post (no header requirement).
+  # Test positive case: POST /post returns 200.
+  - name: 8a-test-rule2-post-success
+    description: Test POST /post returns 200.
+    bindings:
+      - name: http_method
+        value: POST
+      - name: route_path
+        value: /post
+      - name: expected_status
+        value: "200"
+    use:
+      template: ../../common/_step_templates/verify-method-match-routing.yaml
+
+  # Test negative case: GET /post returns 404 (route requires POST method).
+  - name: 8b-test-rule2-get-wrong-method-fail
+    description: Test GET /post returns 404.
+    bindings:
+      - name: http_method
+        value: GET
+      - name: route_path
+        value: /post
+      - name: expected_status
+        value: "404"
+    use:
+      template: ../../common/_step_templates/verify-method-match-routing.yaml
+
+  # Step 9: Test Rule 3 - /headers prefix with X-Custom-Header.
+  # Test positive case: GET /headers with X-Custom-Header:enabled returns 200.
+  - name: 9a-test-rule3-headers-with-header-success
+    description: Test GET /headers with X-Custom-Header:enabled returns 200.
+    bindings:
+      - name: http_method
+        value: GET
+      - name: route_path
+        value: /headers
+      - name: request_headers
+        value: "X-Custom-Header:enabled"
+      - name: expected_status
+        value: "200"
+    use:
+      template: ../../common/_step_templates/verify-header-match-routing.yaml
+
+  # Test positive case: POST /headers with X-Custom-Header:enabled returns 200.
+  - name: 9b-test-rule3-post-headers-with-header-success
+    description: Test POST /headers with X-Custom-Header:enabled returns 200.
+    bindings:
+      - name: http_method
+        value: POST
+      - name: route_path
+        value: /headers
+      - name: request_headers
+        value: "X-Custom-Header:enabled"
+      - name: expected_status
+        value: "200"
+    use:
+      template: ../../common/_step_templates/verify-header-match-routing.yaml
+
+  # Test negative case: GET /headers without header returns 404.
+  - name: 9c-test-rule3-headers-without-header-fail
+    description: Test GET /headers without header returns 404.
+    bindings:
+      - name: http_method
+        value: GET
+      - name: route_path
+        value: /headers
+      - name: request_headers
+        value: ""
+      - name: expected_status
+        value: "404"
+    use:
+      template: ../../common/_step_templates/verify-header-match-routing.yaml
+
+  # Test negative case: GET /headers with wrong header value returns 404.
+  - name: 9d-test-rule3-headers-wrong-header-fail
+    description: Test GET /headers with X-Custom-Header:disabled returns 404.
+    bindings:
+      - name: http_method
+        value: GET
+      - name: route_path
+        value: /headers
+      - name: request_headers
+        value: "X-Custom-Header:disabled"
+      - name: expected_status
+        value: "404"
+    use:
+      template: ../../common/_step_templates/verify-header-match-routing.yaml
+
+  # Step 10: Test Rule 4 - PUT or PATCH /anything.
+  # Test positive case: PUT /anything returns 200.
+  - name: 10a-test-rule4-put-success
+    description: Test PUT /anything returns 200.
+    bindings:
+      - name: http_method
+        value: PUT
+      - name: route_path
+        value: /anything
+      - name: expected_status
+        value: "200"
+    use:
+      template: ../../common/_step_templates/verify-method-match-routing.yaml
+
+  # Test positive case: PATCH /anything returns 200.
+  - name: 10b-test-rule4-patch-success
+    description: Test PATCH /anything returns 200.
+    bindings:
+      - name: http_method
+        value: PATCH
+      - name: route_path
+        value: /anything
+      - name: expected_status
+        value: "200"
+    use:
+      template: ../../common/_step_templates/verify-method-match-routing.yaml
+
+  # Test positive case: PUT /anything/subpath returns 200 (PathPrefix).
+  - name: 10c-test-rule4-put-subpath-success
+    description: Test PUT /anything/subpath returns 200.
+    bindings:
+      - name: http_method
+        value: PUT
+      - name: route_path
+        value: /anything/subpath
+      - name: expected_status
+        value: "200"
+    use:
+      template: ../../common/_step_templates/verify-method-match-routing.yaml
+
+  # Test negative case: GET /anything returns 404 (only PUT/PATCH allowed).
+  - name: 10d-test-rule4-get-wrong-method-fail
+    description: Test GET /anything returns 404.
+    bindings:
+      - name: http_method
+        value: GET
+      - name: route_path
+        value: /anything
+      - name: expected_status
+        value: "404"
+    use:
+      template: ../../common/_step_templates/verify-method-match-routing.yaml
+
+  # Test negative case: DELETE /anything returns 404 (only PUT/PATCH allowed).
+  - name: 10e-test-rule4-delete-wrong-method-fail
+    description: Test DELETE /anything returns 404.
+    bindings:
+      - name: http_method
+        value: DELETE
+      - name: route_path
+        value: /anything
+      - name: expected_status
+        value: "404"
+    use:
+      template: ../../common/_step_templates/verify-method-match-routing.yaml
+
+  # Step 11: Test Rule 5 - DELETE /delete with regex header.
+  # Test positive case: DELETE /delete with valid token returns 200.
+  - name: 11a-test-rule5-delete-with-token-success
+    description: Test DELETE /delete with X-Delete-Token:token-abc123 returns 200.
+    bindings:
+      - name: http_method
+        value: DELETE
+      - name: route_path
+        value: /delete
+      - name: request_headers
+        value: "X-Delete-Token:token-abc123"
+      - name: expected_status
+        value: "200"
+    use:
+      template: ../../common/_step_templates/verify-header-match-routing.yaml
+
+  # Test positive case: DELETE /delete with another valid token returns 200.
+  - name: 11b-test-rule5-delete-with-another-token-success
+    description: Test DELETE /delete with X-Delete-Token:token-xyz789 returns 200.
+    bindings:
+      - name: http_method
+        value: DELETE
+      - name: route_path
+        value: /delete
+      - name: request_headers
+        value: "X-Delete-Token:token-xyz789"
+      - name: expected_status
+        value: "200"
+    use:
+      template: ../../common/_step_templates/verify-header-match-routing.yaml
+
+  # Test negative case: DELETE /delete without header returns 404.
+  - name: 11c-test-rule5-delete-without-header-fail
+    description: Test DELETE /delete without header returns 404.
+    bindings:
+      - name: http_method
+        value: DELETE
+      - name: route_path
+        value: /delete
+      - name: request_headers
+        value: ""
+      - name: expected_status
+        value: "404"
+    use:
+      template: ../../common/_step_templates/verify-header-match-routing.yaml
+
+  # Test negative case: DELETE /delete with invalid token returns 404.
+  - name: 11d-test-rule5-delete-invalid-token-fail
+    description: Test DELETE /delete with X-Delete-Token:invalid returns 404.
+    bindings:
+      - name: http_method
+        value: DELETE
+      - name: route_path
+        value: /delete
+      - name: request_headers
+        value: "X-Delete-Token:invalid"
+      - name: expected_status
+        value: "404"
+    use:
+      template: ../../common/_step_templates/verify-header-match-routing.yaml
+
+  # Test negative case: DELETE /delete with token not starting with 'token-' returns 404.
+  - name: 11e-test-rule5-delete-wrong-prefix-fail
+    description: Test DELETE /delete with X-Delete-Token:notvalid-abc123 returns 404.
+    bindings:
+      - name: http_method
+        value: DELETE
+      - name: route_path
+        value: /delete
+      - name: request_headers
+        value: "X-Delete-Token:notvalid-abc123"
+      - name: expected_status
+        value: "404"
+    use:
+      template: ../../common/_step_templates/verify-header-match-routing.yaml
+
+  # Test negative case: GET /delete with valid token returns 404 (wrong method).
+  - name: 11f-test-rule5-get-wrong-method-fail
+    description: Test GET /delete with valid token returns 404.
+    bindings:
+      - name: http_method
+        value: GET
+      - name: route_path
+        value: /delete
+      - name: request_headers
+        value: "X-Delete-Token:token-abc123"
+      - name: expected_status
+        value: "404"
+    use:
+      template: ../../common/_step_templates/verify-header-match-routing.yaml
