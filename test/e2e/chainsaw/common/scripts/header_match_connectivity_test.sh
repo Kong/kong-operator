@@ -30,7 +30,8 @@ RETRY_DELAY="${RETRY_DELAY:-2}"
 
 # Build curl command with optional Host header and HTTP method
 build_curl_cmd() {
-  local CMD="curl -s -o /dev/null -w '%{http_code}' -X $METHOD "
+  local CMD="curl -s -v -w '\n%{http_code}' -X $METHOD "
+
   if [[ -n "$HOST" ]]; then
     CMD="$CMD -H 'Host: $HOST' "
   fi
