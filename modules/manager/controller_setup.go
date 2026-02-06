@@ -97,7 +97,11 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 	}
 
 	if cfg.GatewayControllerEnabled {
-		indexOptions = append(indexOptions, index.OptionsForGatewayClass()...)
+		indexOptions = slices.Concat(indexOptions,
+			index.OptionsForGatewayClass(),
+			index.OptionsForGateway(),
+			index.OptionsForHTTPRoute(),
+		)
 	}
 
 	if cfg.KonnectControllersEnabled {
@@ -128,8 +132,6 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 			index.OptionsForKonnectCloudGatewayNetwork(),
 			index.OptionsForKonnectExtension(),
 			index.OptionsForKonnectCloudGatewayDataPlaneGroupConfiguration(cl),
-			index.OptionsForHTTPRoute(),
-			index.OptionsForGateway(),
 		)
 	}
 

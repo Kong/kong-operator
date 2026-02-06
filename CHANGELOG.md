@@ -36,6 +36,13 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## Unreleased
+
+### Fixes
+
+- Fix setting up indices for HTTPRoute and Gateway when Konnect controllers are disabled.
+  [#3229](https://github.com/Kong/kong-operator/pull/3229)
+
 ## [v2.1.0]
 
 ### Added
