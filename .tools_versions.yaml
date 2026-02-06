@@ -34,8 +34,16 @@ shellcheck: "0.11.0"
 #  WARN: Attempting to use non-git url for git operations (repository=local)
 #        "url": "vuln"
 #
+# Renovate UI errors:
+# These problems occurred while renovating this repository.
+
+# ⚠️ Custom registries are not allowed for this datasource and will be ignored
+# ⚠️ Attempting to use non-git url for git operations
+# ⚠️ Package lookup failures
+#
 # TODO: Make this work.
-# renovate: datasource=git-tags depName=vuln registryUrl=https://go.googlesource.com
+#
+# todo: datasource=git-tags depName=vuln registryUrl=https://go.googlesource.com
 govulncheck: "1.1.4"
 # renovate: datasource=github-releases depName=jlandowner/helm-chartsnap
 chartsnap: "0.6.0"
