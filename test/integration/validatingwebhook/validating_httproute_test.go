@@ -26,23 +26,19 @@ func TestAdmissionWebhook_HTTPRoute(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
-	ns, _, _, ctrlClient := bootstrapGateway(ctx, t, integration.GetEnv(), integration.GetClients().MgrClient)
+	ns, _, _, ctrlClient, managedGatewayClass := bootstrapGateway(ctx, t, integration.GetEnv(), integration.GetClients().MgrClient)
 
 	t.Log("creating a gateway client")
 	gatewayClient := integration.GetClients().GatewayClient
 
 	t.Log("creating a managed gateway")
-	managedGatewayClass, err := gatewayClient.GatewayV1().GatewayClasses().List(ctx, metav1.ListOptions{})
-	require.NoError(t, err)
-	require.NotEmpty(t, managedGatewayClass.Items, "no GatewayClass found")
-
 	managedGateway := &gatewayv1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      uuid.NewString(),
 			Namespace: ns.Name,
 		},
 		Spec: gatewayv1.GatewaySpec{
-			GatewayClassName: gatewayv1.ObjectName(managedGatewayClass.Items[0].Name),
+			GatewayClassName: gatewayv1.ObjectName(managedGatewayClass.Name),
 			Listeners: []gatewayv1.Listener{
 				{
 					Name:     "http",
@@ -52,6 +48,7 @@ func TestAdmissionWebhook_HTTPRoute(t *testing.T) {
 			},
 		},
 	}
+	var err error
 	managedGateway, err = gatewayClient.GatewayV1().Gateways(ns.Name).Create(ctx, managedGateway, metav1.CreateOptions{})
 	require.NoError(t, err)
 	t.Cleanup(func() {

@@ -20,7 +20,7 @@ import (
 
 func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 	ctx := t.Context()
-	namespace, cleaner, ingressClass, ctrlClient := bootstrapGateway(
+	namespace, cleaner, ingressClass, ctrlClient, _ := bootstrapGateway(
 		ctx, t, integration.GetEnv(), integration.GetClients().MgrClient,
 	)
 
