@@ -22,7 +22,8 @@ jobs:
       matrix:
         branch:
         - main
-        - release/1.4.x
+        - release/2.0.x
+        - release/2.1.x
     with:
       ref: ${{ matrix.branch }}
     permissions:
