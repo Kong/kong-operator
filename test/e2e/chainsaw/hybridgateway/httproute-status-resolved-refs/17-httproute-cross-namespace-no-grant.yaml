@@ -15,4 +15,4 @@ spec:
       backendRefs:
         - name: ($xns_echo_deployment_name)
           namespace: ($xns_namespace)
-          port: 8080
+          port: 1027
