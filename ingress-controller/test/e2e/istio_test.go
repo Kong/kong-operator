@@ -29,8 +29,8 @@ import (
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/ingress-controller/test"
 	"github.com/kong/kong-operator/ingress-controller/test/consts"
-	"github.com/kong/kong-operator/ingress-controller/test/internal/helpers"
-	"github.com/kong/kong-operator/ingress-controller/test/internal/testenv"
+	"github.com/kong/kong-operator/ingress-controller/test/helpers"
+	"github.com/kong/kong-operator/ingress-controller/test/testenv"
 	testutils "github.com/kong/kong-operator/ingress-controller/test/util"
 	"github.com/kong/kong-operator/pkg/clientset"
 )

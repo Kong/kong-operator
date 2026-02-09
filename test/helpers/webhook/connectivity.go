@@ -1,6 +1,7 @@
 package webhook
 
 import (
+	"encoding/json"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -38,6 +39,8 @@ const (
 	hostTypeColima hostType = "colima"
 	hostTypeLima   hostType = "lima"
 	defaultDocker  hostType = "defaultDocker"
+
+	defaultDockerBridgeGateway = "172.17.0.1"
 )
 
 func getHostIPbyType(ht hostType) string {
@@ -49,10 +52,37 @@ func getHostIPbyType(ht hostType) string {
 	case hostTypeLima:
 		return "192.168.105.1"
 	case defaultDocker:
-		return "172.17.0.1"
+		return getDockerBridgeGateway()
 	default:
 		panic("unsupported host type")
 	}
+}
+
+// getDockerBridgeGateway dynamically retrieves the Docker bridge network gateway IP.
+// This is necessary because the default Docker bridge network may not always use 172.17.0.1
+// (e.g., some systems use 172.18.0.1 or other addresses).
+func getDockerBridgeGateway() string {
+	cmd := exec.Command("docker", "network", "inspect", "bridge", "--format", "{{json .IPAM.Config}}")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Printf("WARNING: failed to get Docker bridge gateway, falling back to %s: %v\n", defaultDockerBridgeGateway, err)
+		return defaultDockerBridgeGateway
+	}
+
+	var configs []struct {
+		Gateway string `json:"Gateway"`
+	}
+	if err := json.Unmarshal(out, &configs); err != nil {
+		fmt.Printf("WARNING: failed to parse Docker bridge config, falling back to %s: %v\n", defaultDockerBridgeGateway, err)
+		return defaultDockerBridgeGateway
+	}
+
+	if len(configs) > 0 && configs[0].Gateway != "" {
+		return configs[0].Gateway
+	}
+
+	fmt.Printf("WARNING: no gateway found in Docker bridge config, falling back to %s\n", defaultDockerBridgeGateway)
+	return defaultDockerBridgeGateway
 }
 
 func getHostType() hostType {

@@ -29,7 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/kong/kong-operator/ingress-controller/test/helpers"
-	"github.com/kong/kong-operator/ingress-controller/test/internal/testenv"
+	"github.com/kong/kong-operator/ingress-controller/test/testenv"
 )
 
 const (

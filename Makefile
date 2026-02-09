@@ -742,7 +742,7 @@ test.integration_validatingwebhook: download.telepresence
 	-coverprofile="coverage.integration-validatingwebhook.out" \
 	./test/integration/validatingwebhook/
 
-PKG_LIST_KIC = ./pkg/...,./internal/...
+PKG_LIST_KIC = ./ingress-controller/pkg/...,./ingress-controller/internal/...
 
 # Integration tests don't use gotestsum because there's a data race issue
 # when go toolchain is writing to os.Stderr which is being read in go-kong
@@ -753,7 +753,6 @@ PKG_LIST_KIC = ./pkg/...,./internal/...
 # Related issue: https://github.com/Kong/kubernetes-ingress-controller/issues/3754
 .PHONY: _test.integration-kic
 _test.integration-kic: mise yq
-	cd ingress-controller && \
 	TEST_KONG_HELM_CHART_VERSION="$(TEST_KONG_HELM_CHART_VERSION)" \
 	TEST_DATABASE_MODE="$(DBMODE)" \
 	GOFLAGS="-tags=integration_tests" \
@@ -767,7 +766,7 @@ _test.integration-kic: mise yq
 	-covermode=atomic \
 	-coverpkg=$(PKG_LIST_KIC) \
 	-coverprofile=$(COVERAGE_OUT) \
-	./test/integration
+	./test/integration/kic
 
 .PHONY: test.integration-kic.dbless
 test.integration-kic.dbless:
