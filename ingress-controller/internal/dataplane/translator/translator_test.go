@@ -1577,7 +1577,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 					Namespace: "default",
 					Annotations: map[string]string{
 						annotations.IngressClassKey: annotations.DefaultIngressClass,
-						"konghq.com/preserve-host":  "wiggle wiggle wiggle",
+						"konghq.com/preserve-host":  "wiggle ",
 					},
 				},
 				Spec: netv1.IngressSpec{

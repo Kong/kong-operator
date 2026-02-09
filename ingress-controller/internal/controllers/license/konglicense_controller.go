@@ -349,7 +349,7 @@ func (r *KongV1Alpha1KongLicenseReconciler) setChosenLicense(l *configurationv1a
 	r.chosenLicense = l.DeepCopy()
 }
 
-// getChosenLicense fetches the the chosen effective KongLicense in the cache.
+// getChosenLicense fetches the chosen effective KongLicense in the cache.
 func (r *KongV1Alpha1KongLicenseReconciler) getChosenLicense() *configurationv1alpha1.KongLicense {
 	r.chosenLicenseLock.RLock()
 	defer r.chosenLicenseLock.RUnlock()

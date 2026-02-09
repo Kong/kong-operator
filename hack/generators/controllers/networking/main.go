@@ -350,7 +350,7 @@ type typeNeeded struct {
 	// the "kubernetes.io/ingress.class" annotation to decide whether or not the object is supported.
 	AcceptsIngressClassNameAnnotation bool
 
-	// AcceptsIngressClassNameSpec indicates the the object indicates the ingress.class that should support it via
+	// AcceptsIngressClassNameSpec indicates the object indicates the ingress.class that should support it via
 	// an attribute in its specification named .IngressClassName
 	AcceptsIngressClassNameSpec bool
 

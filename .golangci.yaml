@@ -17,6 +17,7 @@ linters:
     - containedctx
     - copyloopvar
     - dogsled
+    - dupword
     - durationcheck
     - errorlint
     - exhaustive

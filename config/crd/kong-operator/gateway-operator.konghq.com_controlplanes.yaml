@@ -66,7 +66,7 @@ spec:
                 description: |-
                   ControlPlaneDeploymentOptions is a shared type used on objects to indicate that their
                   configuration results in a Deployment which is managed by the Operator and
-                  includes options for managing Deployments such as the the number of replicas
+                  includes options for managing Deployments such as the number of replicas
                   or pod options like container image and resource requirements.
                   version, as well as Env variable overrides.
                 properties:

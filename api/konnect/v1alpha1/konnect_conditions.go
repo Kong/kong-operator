@@ -187,19 +187,19 @@ const (
 	DataPlaneCertificateProvisionedReasonProvisioned = "Provisioned"
 	// DataPlaneCertificateProvisionedReasonRefNotFound is the reason
 	// used with the DataPlaneCertificateProvisioned condition type indicating that the
-	// the referenced DataPlane client certificate is not found.
+	// referenced DataPlane client certificate is not found.
 	DataPlaneCertificateProvisionedReasonRefNotFound = "RefNotFound"
 	// DataPlaneCertificateProvisionedReasonInvalidSecret is the reason
 	// used with the DataPlaneCertificateProvisioned condition type indicating that the
-	// the referenced DataPlane client certificate secret is invalid.
+	// referenced DataPlane client certificate secret is invalid.
 	DataPlaneCertificateProvisionedReasonInvalidSecret = "InvalidSecret"
 	// DataPlaneCertificateProvisionedReasonKonnectAPIOpFailed is the reason
 	// used with the DataPlaneCertificateProvisioned condition type indicating that the
-	// the DataPlane client certificate creation in Konnect has failed.
+	// DataPlane client certificate creation in Konnect has failed.
 	DataPlaneCertificateProvisionedReasonKonnectAPIOpFailed = "KonnectAPIOpFailed"
 	// DataPlaneCertificateProvisionedReasonProvisioning is the reason
 	// used with the DataPlaneCertificateProvisioned condition type indicating that the
-	// the DataPlane client certificate creation in Konnect is in progress.
+	// DataPlane client certificate creation in Konnect is in progress.
 	DataPlaneCertificateProvisionedReasonProvisioning = "Provisioning"
 )
 
