@@ -1038,3 +1038,152 @@ type mockRoutesValidator struct{}
 func (mockRoutesValidator) Validate(_ context.Context, _ *kong.Route) (bool, string, error) {
 	return true, "", nil
 }
+
+func TestValidateHTTPRouteRegexes(t *testing.T) {
+	testCases := []struct {
+		name          string
+		route         *gatewayapi.HTTPRoute
+		expectError   bool
+		errorContains string
+	}{
+		{
+			name: "valid path regex",
+			route: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-route",
+					Namespace: corev1.NamespaceDefault,
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					Rules: []gatewayapi.HTTPRouteRule{{
+						Matches: []gatewayapi.HTTPRouteMatch{{
+							Path: &gatewayapi.HTTPPathMatch{
+								Type:  lo.ToPtr(gatewayapi.PathMatchRegularExpression),
+								Value: lo.ToPtr("/path[1-8]"),
+							},
+						}},
+					}},
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "valid header regex",
+			route: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-route",
+					Namespace: corev1.NamespaceDefault,
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					Rules: []gatewayapi.HTTPRouteRule{{
+						Matches: []gatewayapi.HTTPRouteMatch{{
+							Headers: []gatewayapi.HTTPHeaderMatch{{
+								Name:  "foo",
+								Value: "bar[1-8]",
+								Type:  lo.ToPtr(gatewayapi.HeaderMatchRegularExpression),
+							}},
+						}},
+					}},
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "invalid path regex with unclosed bracket",
+			route: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-route",
+					Namespace: corev1.NamespaceDefault,
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					Rules: []gatewayapi.HTTPRouteRule{{
+						Matches: []gatewayapi.HTTPRouteMatch{{
+							Path: &gatewayapi.HTTPPathMatch{
+								Type:  lo.ToPtr(gatewayapi.PathMatchRegularExpression),
+								Value: lo.ToPtr("/foo[[[["),
+							},
+						}},
+					}},
+				},
+			},
+			expectError:   true,
+			errorContains: "invalid regex",
+		},
+		{
+			name: "invalid header regex with unclosed bracket",
+			route: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-route",
+					Namespace: corev1.NamespaceDefault,
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					Rules: []gatewayapi.HTTPRouteRule{{
+						Matches: []gatewayapi.HTTPRouteMatch{{
+							Headers: []gatewayapi.HTTPHeaderMatch{{
+								Name:  "foo",
+								Value: "[[[invalid-regex[[[[",
+								Type:  lo.ToPtr(gatewayapi.HeaderMatchRegularExpression),
+							}},
+						}},
+					}},
+				},
+			},
+			expectError:   true,
+			errorContains: "invalid regex",
+		},
+		{
+			name: "exact path match type is not validated as regex",
+			route: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-route",
+					Namespace: corev1.NamespaceDefault,
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					Rules: []gatewayapi.HTTPRouteRule{{
+						Matches: []gatewayapi.HTTPRouteMatch{{
+							Path: &gatewayapi.HTTPPathMatch{
+								Type:  lo.ToPtr(gatewayapi.PathMatchExact),
+								Value: lo.ToPtr("/foo[[[["),
+							},
+						}},
+					}},
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "exact header match type is not validated as regex",
+			route: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-route",
+					Namespace: corev1.NamespaceDefault,
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					Rules: []gatewayapi.HTTPRouteRule{{
+						Matches: []gatewayapi.HTTPRouteMatch{{
+							Headers: []gatewayapi.HTTPHeaderMatch{{
+								Name:  "foo",
+								Value: "[[[invalid-regex[[[[",
+								Type:  lo.ToPtr(gatewayapi.HeaderMatchExact),
+							}},
+						}},
+					}},
+				},
+			},
+			expectError: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateHTTPRouteRegexes(tc.route)
+			if tc.expectError {
+				assert.Error(t, err)
+				if tc.errorContains != "" {
+					assert.Contains(t, err.Error(), tc.errorContains)
+				}
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}

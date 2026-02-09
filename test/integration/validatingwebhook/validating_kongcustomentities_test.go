@@ -14,7 +14,7 @@ import (
 
 func TestAdmissionWebhook_KongCustomEntities(t *testing.T) {
 	ctx := t.Context()
-	_, cleaner, ingressClass, ctrlClient := bootstrapGateway(
+	_, cleaner, ingressClass, ctrlClient, _ := bootstrapGateway(
 		ctx, t, integration.GetEnv(), integration.GetClients().MgrClient,
 	)
 
