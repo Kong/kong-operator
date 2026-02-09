@@ -22,12 +22,6 @@ spec:
     - name: httproute_name
       value: path-matching
 
-  timeouts:
-    apply: 120s
-    assert: 300s
-    cleanup: 120s
-    delete: 120s
-
   steps:
     # Step 1: Create prerequisite resources
     - name: create-prerequisites

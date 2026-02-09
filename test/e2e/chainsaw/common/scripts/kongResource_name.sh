@@ -11,8 +11,8 @@ set -o pipefail
 #   GATEWAY_NAMESPACE: The namespace of the gateway.
 #   HTTP_ROUTE_NAME: (Optional) The name of the HTTPRoute.
 #   HTTP_ROUTE_NAMESPACE: (Optional) The namespace of the HTTPRoute.
-#   RETRY_COUNT: (Optional) Number of retries. Default: 30
-#   RETRY_DELAY: (Optional) Delay between retries in seconds. Default: 2
+#   RETRY_COUNT: (Optional) Number of retries. Default: 180.
+#   RETRY_DELAY: (Optional) Delay between retries in seconds. Default: 1.
 
 NAMESPACE="${NAMESPACE}"
 RESOURCE_TYPE="${RESOURCE_TYPE}"
@@ -20,8 +20,8 @@ GATEWAY_NAME="${GATEWAY_NAME}"
 GATEWAY_NAMESPACE="${GATEWAY_NAMESPACE}"
 HTTP_ROUTE_NAME="${HTTP_ROUTE_NAME:-}"
 HTTP_ROUTE_NAMESPACE="${HTTP_ROUTE_NAMESPACE:-}"
-RETRY_COUNT="${RETRY_COUNT:-30}"
-RETRY_DELAY="${RETRY_DELAY:-2}"
+RETRY_COUNT="${RETRY_COUNT:-180}"
+RETRY_DELAY="${RETRY_DELAY:-1}"
 
 EXPECTED_GW="${GATEWAY_NAMESPACE}/${GATEWAY_NAME}"
 EXPECTED_RT=""
@@ -36,6 +36,7 @@ while [[ $ATTEMPT -lt $RETRY_COUNT ]]; do
   ATTEMPT=$((ATTEMPT + 1))
   
   # Fetch all resources.
+  KUBECTL_CMD="kubectl get $RESOURCE_TYPE -n $NAMESPACE -o json"
   if ! KUBECTL_OUTPUT=$(kubectl get "$RESOURCE_TYPE" -n "$NAMESPACE" -o json 2>&1); then
     if [[ $ATTEMPT -eq $RETRY_COUNT ]]; then
       cat <<EOF
@@ -43,6 +44,7 @@ while [[ $ATTEMPT -lt $RETRY_COUNT ]]; do
   "error": "Failed to get resource after $RETRY_COUNT attempts",
   "resource_type": "$RESOURCE_TYPE",
   "namespace": "$NAMESPACE",
+  "kubectl_command": "$KUBECTL_CMD",
   "kubectl_output": $(echo "$KUBECTL_OUTPUT" | jq -Rs .)
 }
 EOF
@@ -60,7 +62,8 @@ EOF
 {
   "error": "No resources of type $RESOURCE_TYPE found in namespace $NAMESPACE after $RETRY_COUNT attempts",
   "resource_type": "$RESOURCE_TYPE",
-  "namespace": "$NAMESPACE"
+  "namespace": "$NAMESPACE",
+  "kubectl_command": "$KUBECTL_CMD"
 }
 EOF
       exit 1
@@ -97,7 +100,10 @@ EOF
   "success": true,
   "kind": "$RESOURCE_KIND",
   "name": "$RESOURCE_NAME",
-  "namespace": "$RESOURCE_NAMESPACE"
+  "namespace": "$RESOURCE_NAMESPACE",
+  "retry_attempt": $ATTEMPT,
+  "max_retries": $RETRY_COUNT,
+  "kubectl_command": "kubectl get $RESOURCE_TYPE -n $NAMESPACE -o json"
 }
 EOF
     exit 0
@@ -113,6 +119,7 @@ EOF
   "namespace": "$NAMESPACE",
   "expected_gateway": "$EXPECTED_GW",
   "expected_route": "$EXPECTED_RT",
+  "kubectl_command": "$KUBECTL_CMD",
   "available_resources": $(echo "$KUBECTL_OUTPUT" | jq -c '[.items[] | {name: .metadata.name, annotations: .metadata.annotations}]')
 }
 EOF
@@ -123,6 +130,7 @@ EOF
   "resource_type": "$RESOURCE_TYPE",
   "namespace": "$NAMESPACE",
   "expected_gateway": "$EXPECTED_GW",
+  "kubectl_command": "$KUBECTL_CMD",
   "available_resources": $(echo "$KUBECTL_OUTPUT" | jq -c '[.items[] | {name: .metadata.name, annotations: .metadata.annotations}]')
 }
 EOF

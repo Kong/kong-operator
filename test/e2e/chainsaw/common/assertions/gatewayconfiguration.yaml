@@ -1,5 +1,0 @@
-apiVersion: gateway-operator.konghq.com/v2beta1
-kind: GatewayConfiguration
-metadata:
-  name: ($gateway_configuration_name)
-  namespace: ($kong_namespace)

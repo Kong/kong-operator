@@ -9,12 +9,6 @@ spec:
     resources when multiple HTTPRoutes share the same backendRefs set and properly updates
     the gateway-operator.konghq.com/hybrid-routes annotation when routes are deleted or updated.
 
-  timeouts:
-    apply: 120s
-    assert: 300s
-    cleanup: 120s
-    delete: 120s
-
   bindings:
     # Common bindings - using chainsaw-provided $namespace.
     - name: test_name
@@ -301,62 +295,3 @@ spec:
           value: ($httproute_three_path)
         - name: listener_http_port
           value: "80"
-
-  catch:
-    # Capture and describe all relevant Kubernetes resources for debugging on test failure.
-    - describe:
-        apiVersion: gateway.networking.k8s.io/v1
-        kind: Gateway
-        name: ($gateway_name)
-        namespace: ($gateway_namespace)
-
-    - describe:
-        apiVersion: gateway.networking.k8s.io/v1
-        kind: HTTPRoute
-        namespace: ($kong_namespace)
-
-    - describe:
-        apiVersion: configuration.konghq.com/v1alpha1
-        kind: KonnectGatewayControlPlane
-        namespace: ($kong_namespace)
-
-    - describe:
-        apiVersion: configuration.konghq.com/v1alpha1
-        kind: KongService
-        namespace: ($kong_namespace)
-
-    - describe:
-        apiVersion: configuration.konghq.com/v1alpha1
-        kind: KongRoute
-        namespace: ($kong_namespace)
-
-    - describe:
-        apiVersion: configuration.konghq.com/v1beta1
-        kind: KongUpstream
-        namespace: ($kong_namespace)
-
-    - describe:
-        apiVersion: configuration.konghq.com/v1beta1
-        kind: KongTarget
-        namespace: ($kong_namespace)
-
-    - describe:
-        apiVersion: v1
-        kind: Service
-        namespace: ($kong_namespace)
-
-    - describe:
-        apiVersion: v1
-        kind: Pod
-        namespace: ($kong_namespace)
-
-    - describe:
-        apiVersion: v1
-        kind: Secret
-        name: ($cert_secret_name)
-        namespace: ($cert_secret_namespace)
-
-    - podLogs:
-        namespace: ($operator_namespace)
-        selector: control-plane=controller-manager
-        tail: 100

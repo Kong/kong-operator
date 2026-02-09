@@ -13,12 +13,6 @@ spec:
     3. Secret deletion is blocked by finalizers and unblocked when reference is removed
     4. Finalizer is removed from old secret when reference is updated to new secret
     5. Complex scenarios with multiple reference changes work correctly
-  
-  timeouts:
-    apply: 120s
-    assert: 120s
-    delete: 120s
-    exec: 120s
 
   bindings:
     # Common bindings.
