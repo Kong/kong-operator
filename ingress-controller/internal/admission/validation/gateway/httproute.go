@@ -3,6 +3,7 @@ package gateway
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -55,6 +56,13 @@ func ValidateHTTPRoute(
 	// Validate that no unsupported features are in use.
 	if err := validateHTTPRouteFeatures(httproute, translatorFeatures); err != nil {
 		return false, fmt.Sprintf("HTTPRoute spec did not pass validation: %s", err), nil
+	}
+
+	// Validate regex syntax for path and header matches.
+	// This validation is done locally before calling the Kong Admin API to ensure
+	// that invalid regex patterns are caught even when the Admin API is unavailable.
+	if err := validateHTTPRouteRegexes(httproute); err != nil {
+		return false, fmt.Sprintf("HTTPRoute failed schema validation: %s", err), nil
 	}
 
 	// Validate that the route uses only supported annotations.
@@ -179,6 +187,40 @@ func validateHTTPRouteFeatures(httproute *gatewayapi.HTTPRoute, translatorFeatur
 				if !translatorFeatures.ExpressionRoutes {
 					return fmt.Errorf("rules[%d].matches[%d]: queryparam matching is supported with expression router only",
 						ruleIndex, matchIndex)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// validateHTTPRouteRegexes validates regex patterns in HTTPRoute matches.
+// This validation is performed locally before calling Kong Admin API to ensure
+// that obviously invalid regex patterns are caught even when Admin API is unavailable.
+// Note: Kong uses PCRE (Perl Compatible Regular Expressions) while Go uses RE2.
+// This validation catches common syntax errors (e.g., unclosed brackets) but may
+// not catch all PCRE-specific issues.
+func validateHTTPRouteRegexes(httproute *gatewayapi.HTTPRoute) error {
+	for ruleIndex, rule := range httproute.Spec.Rules {
+		for matchIndex, match := range rule.Matches {
+			// Validate path regex
+			if match.Path != nil &&
+				match.Path.Type != nil &&
+				*match.Path.Type == gatewayapi.PathMatchRegularExpression &&
+				match.Path.Value != nil {
+				if _, err := regexp.Compile(*match.Path.Value); err != nil {
+					return fmt.Errorf("rules[%d].matches[%d].path has invalid regex %q: %w",
+						ruleIndex, matchIndex, *match.Path.Value, err)
+				}
+			}
+
+			// Validate header regex
+			for headerIndex, header := range match.Headers {
+				if header.Type != nil && *header.Type == gatewayapi.HeaderMatchRegularExpression {
+					if _, err := regexp.Compile(header.Value); err != nil {
+						return fmt.Errorf("rules[%d].matches[%d].headers[%d] has invalid regex %q: %w",
+							ruleIndex, matchIndex, headerIndex, header.Value, err)
+					}
 				}
 			}
 		}
