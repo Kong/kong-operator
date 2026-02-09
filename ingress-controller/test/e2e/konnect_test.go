@@ -40,8 +40,9 @@ func TestKonnectConfigPush(t *testing.T) {
 
 	ctx, env := setupE2ETest(t)
 
-	cpID := testkonnect.CreateTestControlPlane(ctx, t)
-	cert, key := testkonnect.CreateClientCertificate(ctx, t, cpID)
+	token := testkonnect.CreateTestPersonalAccessToken(ctx, t)
+	cpID := testkonnect.CreateTestControlPlane(ctx, t, token)
+	cert, key := testkonnect.CreateClientCertificate(ctx, t, cpID, token)
 	createKonnectClientSecretAndConfigMap(ctx, t, env, cert, key, cpID)
 
 	deployments := deployAllInOneKonnectManifest(ctx, t, env)
@@ -65,8 +66,9 @@ func TestKonnectLicenseActivation(t *testing.T) {
 
 	ctx, env := setupE2ETest(t)
 
-	rgID := testkonnect.CreateTestControlPlane(ctx, t)
-	cert, key := testkonnect.CreateClientCertificate(ctx, t, rgID)
+	token := testkonnect.CreateTestPersonalAccessToken(ctx, t)
+	rgID := testkonnect.CreateTestControlPlane(ctx, t, token)
+	cert, key := testkonnect.CreateClientCertificate(ctx, t, rgID, token)
 	createKonnectClientSecretAndConfigMap(ctx, t, env, cert, key, rgID)
 
 	const manifestFile = "manifests/all-in-one-dbless-konnect-enterprise.yaml"
@@ -130,8 +132,9 @@ func TestKonnectWhenMisconfiguredBasicIngressNotAffected(t *testing.T) {
 	testkonnect.SkipIfMissingRequiredKonnectEnvVariables(t)
 	ctx, env := setupE2ETest(t)
 
-	rgID := testkonnect.CreateTestControlPlane(ctx, t)
-	cert, key := testkonnect.CreateClientCertificate(ctx, t, rgID)
+	token := testkonnect.CreateTestPersonalAccessToken(ctx, t)
+	rgID := testkonnect.CreateTestControlPlane(ctx, t, token)
+	cert, key := testkonnect.CreateClientCertificate(ctx, t, rgID, token)
 
 	// create a Konnect client secret and config map with a non-existing control plane ID to simulate misconfiguration
 	notExistingRgID := "not-existing-cp-id"

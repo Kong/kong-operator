@@ -1,0 +1,93 @@
+package konnect
+
+import (
+	"context"
+	"fmt"
+	"io"
+	"net/http"
+	"testing"
+	"time"
+
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	"github.com/avast/retry-go/v4"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/kong/kong-operator/ingress-controller/internal/konnect/sdk"
+)
+
+// CreateTestPersonalAccessToken creates a personal access token for the user
+// associated with the provided token or default access token if no token provided,
+// and returns the created token string.
+// This token is time limited and will expire after 1 hour.
+// The created token will be automatically deleted after the test finishes.
+func CreateTestPersonalAccessToken(ctx context.Context, t *testing.T) string {
+	t.Helper()
+
+	s := sdk.New(accessToken(), serverURLOpt())
+
+	me, err := s.Me.GetUsersMe(ctx)
+	require.NoError(t, err)
+	require.NotNil(t, me)
+	require.NotNil(t, me.User)
+	require.NotNil(t, me.User.ID)
+
+	var (
+		tokenID      string
+		tokenCreated string
+		tokenName    = fmt.Sprintf("%s-%d", t.Name(), time.Now().UnixMilli())
+	)
+	createServiceAccountToken := retry.Do(func() error {
+		createResp, err := s.PersonalAccessTokens.
+			CreatePersonalAccessToken(ctx, *me.User.ID,
+				&sdkkonnectcomp.PersonalAccessTokenCreateRequest{
+					Name:      tokenName,
+					ExpiresAt: time.Now().Add(time.Hour),
+				},
+			)
+		if err != nil {
+			return err
+		}
+
+		if createResp == nil ||
+			createResp.PersonalAccessTokenCreateResponse == nil ||
+			createResp.PersonalAccessTokenCreateResponse.ID == "" ||
+			createResp.PersonalAccessTokenCreateResponse.KonnectToken == "" {
+			return fmt.Errorf(
+				"failed to create personal account access token: response is nil, status code %d, response: %v",
+				createResp.GetStatusCode(), createResp,
+			)
+		}
+
+		if createResp.GetStatusCode() != http.StatusCreated {
+			body, err := io.ReadAll(createResp.RawResponse.Body)
+			if err != nil {
+				body = []byte(err.Error())
+			}
+			return fmt.Errorf("failed to create personal access token: code %d, message %s", createResp.GetStatusCode(), body)
+		}
+
+		tokenID = createResp.PersonalAccessTokenCreateResponse.ID
+		tokenCreated = createResp.PersonalAccessTokenCreateResponse.KonnectToken
+		return nil
+	}, retry.Attempts(5), retry.Delay(time.Second))
+	require.NoError(t, createServiceAccountToken)
+
+	t.Cleanup(func() {
+		ctx = context.Background()
+		t.Logf("deleting test Konnect Personal Access Token: %q", tokenID)
+		err := retry.Do(
+			func() error { //nolint:contextcheck
+				_, err := s.PersonalAccessTokens.DeletePersonalAccessToken(ctx, *me.User.ID, tokenID)
+				return err
+			},
+			retry.Attempts(5), retry.Delay(time.Second),
+		)
+		assert.NoErrorf(t, err, "failed to cleanup a personal access token: %q", tokenID)
+
+		// Since Konnect authorization v2 supports cleanup of roles after control plane deleted, we do not need to delete them manually.
+	})
+
+	t.Logf("created test Konnect Personal Access Token: %q (ID:%q)", tokenName, tokenID)
+	return tokenCreated
+}

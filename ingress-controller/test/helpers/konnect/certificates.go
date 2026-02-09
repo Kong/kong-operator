@@ -18,24 +18,31 @@ import (
 
 // CreateClientCertificate creates a TLS client certificate and POSTs it to Konnect Control Plane configuration API
 // so that KIC can use the certificates to authenticate against Konnect Admin API.
-func CreateClientCertificate(ctx context.Context, t *testing.T, cpID string) (certPEM string, keyPEM string) {
+// It the token is provided, it will be used to create the client certificate.
+// Otherwise, the default access token will be used.
+func CreateClientCertificate(ctx context.Context, t *testing.T, cpID string, token ...string) (certPEM string, keyPEM string) {
 	t.Helper()
 
-	sdk := sdk.New(accessToken(), serverURLOpt(),
-		sdkkonnectgo.WithRetryConfig(retry.Config{
-			Backoff: &retry.BackoffStrategy{
-				InitialInterval: 100,
-				MaxInterval:     2000,
-				Exponent:        1.2,
-				MaxElapsedTime:  10000,
-			},
-		}),
-	)
+	retryConfig := sdkkonnectgo.WithRetryConfig(retry.Config{
+		Backoff: &retry.BackoffStrategy{
+			InitialInterval: 100,
+			MaxInterval:     2000,
+			Exponent:        1.2,
+			MaxElapsedTime:  10000,
+		},
+	})
+
+	var s *sdkkonnectgo.SDK
+	if len(token) == 0 {
+		s = sdk.New(accessToken(), serverURLOpt(), retryConfig)
+	} else {
+		s = sdk.New(token[0], serverURLOpt(), retryConfig)
+	}
 
 	cert, key := certificate.MustGenerateCertPEMFormat()
 
 	t.Log("creating client certificate in Konnect")
-	resp, err := sdk.DPCertificates.CreateDataplaneCertificate(ctx, cpID, &sdkkonnectcomp.DataPlaneClientCertificateRequest{
+	resp, err := s.DPCertificates.CreateDataplaneCertificate(ctx, cpID, &sdkkonnectcomp.DataPlaneClientCertificateRequest{
 		Cert: string(cert),
 	})
 	require.NoError(t, err)

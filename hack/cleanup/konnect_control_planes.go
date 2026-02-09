@@ -17,13 +17,13 @@ import (
 
 	"github.com/kong/kong-operator/controller/konnect/ops"
 	"github.com/kong/kong-operator/test"
+	"github.com/kong/kong-operator/test/helpers/deploy"
 )
 
 const (
 	konnectControlPlanesLimit     = int64(100)
 	timeUntilControlPlaneOrphaned = time.Hour
 
-	testIDLabel                       = "operator-test-id"
 	k8sKindKonnectGatewayControlPlane = "KonnectGatewayControlPlane"
 )
 
@@ -104,7 +104,7 @@ func findOrphanedControlPlanes(
 	// 1. Control planes created by integration tests (with `operator-test-id` label)
 	// 2. Control planes managed by KO (with `k8s-kind:KonnectGatewayControlPlane` label)
 	labelFilters := []string{
-		testIDLabel,
+		deploy.KonnectTestIDLabel,
 		fmt.Sprintf("%s:%s", ops.KubernetesKindLabelKey, k8sKindKonnectGatewayControlPlane),
 	}
 

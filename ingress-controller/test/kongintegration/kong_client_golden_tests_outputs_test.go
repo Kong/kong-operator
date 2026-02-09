@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -32,7 +33,7 @@ import (
 
 const (
 	timeout = 5 * time.Second
-	tick    = 100 * time.Millisecond
+	tick    = 250 * time.Millisecond
 )
 
 // TestKongClientGoldenTestsOutputs ensures that the KongClient's golden tests outputs are accepted by Kong.
@@ -94,13 +95,20 @@ func TestKongClientGoldenTestsOutputs(t *testing.T) {
 // TestKongClientGoldenTestsOutputs ensures that the KongClient's golden tests outputs are accepted by Konnect Control Plane
 // Admin API.
 func TestKongClientGoldenTestsOutputs_Konnect(t *testing.T) {
+	const (
+		// Use a longer timeout to account for potential Konnect Control Plane throttling
+		// and backoffs in case of too many requests.
+		timeout = 90 * time.Second
+	)
+
 	konnect.SkipIfMissingRequiredKonnectEnvVariables(t)
 	t.Parallel()
 
 	ctx := t.Context()
 
-	cpID := konnect.CreateTestControlPlane(ctx, t)
-	cert, key := konnect.CreateClientCertificate(ctx, t, cpID)
+	token := konnect.CreateTestPersonalAccessToken(ctx, t)
+	cpID := konnect.CreateTestControlPlane(ctx, t, token)
+	cert, key := konnect.CreateClientCertificate(ctx, t, cpID, token)
 	adminAPIClient := konnect.CreateKonnectAdminAPIClient(t, cpID, cert, key)
 	updateStrategy := sendconfig.NewUpdateStrategyDBModeKonnect(adminAPIClient.AdminAPIClient(), dump.Config{
 		SkipCACerts:         true,
@@ -113,11 +121,30 @@ func TestKongClientGoldenTestsOutputs_Konnect(t *testing.T) {
 			require.NoError(t, err)
 
 			content := &file.Content{}
-			err = yaml.Unmarshal(goldenTestOutput, content)
-			require.NoError(t, err)
+			require.NoError(t, yaml.Unmarshal(goldenTestOutput, content))
 
 			require.EventuallyWithT(t, func(t *assert.CollectT) {
 				configSize, err := updateStrategy.Update(ctx, sendconfig.ContentWithHash{Content: content})
+				if err != nil {
+					if apiErr := (&kong.APIError{}); errors.As(err, &apiErr) {
+						if apiErr.Code() == http.StatusTooManyRequests {
+							details, ok := apiErr.Details().(kong.ErrTooManyRequestsDetails)
+							if !ok {
+								t.Errorf("failed to extract details from 429 error: %v", err)
+								return
+							}
+							timer := time.NewTimer(details.RetryAfter)
+							select {
+							case <-timer.C:
+								return
+							case <-ctx.Done():
+								t.Errorf("context done while waiting to retry after 429: %v", ctx.Err())
+								return
+							}
+						}
+					}
+				}
+
 				if !assert.NoError(t, err) {
 					return
 				}

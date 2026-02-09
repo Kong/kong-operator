@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/avast/retry-go/v4"
 	"github.com/google/uuid"
@@ -21,23 +22,37 @@ import (
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/ingress-controller/test"
 	"github.com/kong/kong-operator/ingress-controller/test/testenv"
+	"github.com/kong/kong-operator/test/helpers/deploy"
 )
 
 // CreateTestControlPlane creates a control plane to be used in tests. It returns the created control plane's ID.
 // It also sets up a cleanup function for it to be deleted.
-func CreateTestControlPlane(ctx context.Context, t *testing.T) string {
+// If a token is provided, it will be used to create the control plane.
+// Otherwise, the default access token will be used.
+func CreateTestControlPlane(ctx context.Context, t *testing.T, token ...string) string {
 	t.Helper()
 
-	sdk := sdk.New(accessToken(), serverURLOpt())
+	var s *sdkkonnectgo.SDK
+	if len(token) == 0 {
+		s = sdk.New(accessToken(), serverURLOpt())
+	} else {
+		s = sdk.New(token[0], serverURLOpt())
+	}
+
+	// TODO: Refactor this so that all tests use a commong helper for assigning test ID.
+	testID := uuid.NewString()[:8]
 
 	var cpID string
 	createRgErr := retry.Do(func() error {
-		createResp, err := sdk.ControlPlanes.CreateControlPlane(ctx,
+		createResp, err := s.ControlPlanes.CreateControlPlane(ctx,
 			sdkkonnectcomp.CreateControlPlaneRequest{
 				Name:        uuid.NewString(),
 				Description: lo.ToPtr(generateTestKonnectControlPlaneDescription(t)),
 				Labels: map[string]string{
 					test.KonnectControlPlaneLabelCreatedInTests: "true",
+					// Add test ID label so that Konnect cleanup workflow can find
+					// and clean up the control plane after the test finishes.
+					deploy.KonnectTestIDLabel: testID,
 				},
 				ClusterType: sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeK8SIngressController.ToPointer(),
 			},
@@ -71,7 +86,7 @@ func CreateTestControlPlane(ctx context.Context, t *testing.T) string {
 		t.Logf("deleting test Konnect Control Plane: %q", cpID)
 		err := retry.Do(
 			func() error { //nolint:contextcheck
-				_, err := sdk.ControlPlanes.DeleteControlPlane(context.Background(), cpID)
+				_, err := s.ControlPlanes.DeleteControlPlane(context.Background(), cpID)
 				return err
 			},
 			retry.Attempts(5), retry.Delay(time.Second),
