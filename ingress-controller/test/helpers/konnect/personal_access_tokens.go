@@ -49,14 +49,8 @@ func CreateTestPersonalAccessToken(ctx context.Context, t *testing.T) string {
 			return err
 		}
 
-		if createResp == nil ||
-			createResp.PersonalAccessTokenCreateResponse == nil ||
-			createResp.PersonalAccessTokenCreateResponse.ID == "" ||
-			createResp.PersonalAccessTokenCreateResponse.KonnectToken == "" {
-			return fmt.Errorf(
-				"failed to create personal account access token: response is nil, status code %d, response: %v",
-				createResp.GetStatusCode(), createResp,
-			)
+		if createResp == nil {
+			return fmt.Errorf("failed to create personal access token: response is nil")
 		}
 
 		if createResp.GetStatusCode() != http.StatusCreated {
@@ -65,6 +59,15 @@ func CreateTestPersonalAccessToken(ctx context.Context, t *testing.T) string {
 				body = []byte(err.Error())
 			}
 			return fmt.Errorf("failed to create personal access token: code %d, message %s", createResp.GetStatusCode(), body)
+		}
+
+		if createResp.PersonalAccessTokenCreateResponse == nil ||
+			createResp.PersonalAccessTokenCreateResponse.ID == "" ||
+			createResp.PersonalAccessTokenCreateResponse.KonnectToken == "" {
+			return fmt.Errorf(
+				"failed to create personal access token: response fields are missing (status code %d)",
+				createResp.GetStatusCode(),
+			)
 		}
 
 		tokenID = createResp.PersonalAccessTokenCreateResponse.ID

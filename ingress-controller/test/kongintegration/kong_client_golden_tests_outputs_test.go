@@ -134,8 +134,10 @@ func TestKongClientGoldenTestsOutputs_Konnect(t *testing.T) {
 								return
 							}
 							timer := time.NewTimer(details.RetryAfter)
+							defer timer.Stop()
 							select {
 							case <-timer.C:
+								t.Errorf("rate limited (429), retrying after %s", details.RetryAfter)
 								return
 							case <-ctx.Done():
 								t.Errorf("context done while waiting to retry after 429: %v", ctx.Err())
