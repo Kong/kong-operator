@@ -40,6 +40,9 @@
 
 ### Fixes
 
+- Admission webhook now validates HTTPRoute regex patterns before sending
+  configuration to the Admin API.
+  [#3213](https://github.com/Kong/kong-operator/pull/3213)
 - Fix setting up indices for HTTPRoute and Gateway when Konnect controllers are disabled.
   [#3229](https://github.com/Kong/kong-operator/pull/3229)
 

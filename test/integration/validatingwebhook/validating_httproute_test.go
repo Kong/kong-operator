@@ -20,30 +20,25 @@ type testCaseHTTPRouteValidation struct {
 	// ExpressionsRouterOnly indicates that the test case only applies to expressions router mode.
 	// If true and not in expressions router mode, the WantCreateErrSubstring is ignored (expect success).
 	ExpressionsRouterOnly bool
-	SkipReason            string
 }
 
 func TestAdmissionWebhook_HTTPRoute(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
-	ns, _, _, ctrlClient := bootstrapGateway(ctx, t, integration.GetEnv(), integration.GetClients().MgrClient)
+	ns, _, _, ctrlClient, managedGatewayClass := bootstrapGateway(ctx, t, integration.GetEnv(), integration.GetClients().MgrClient)
 
 	t.Log("creating a gateway client")
 	gatewayClient := integration.GetClients().GatewayClient
 
 	t.Log("creating a managed gateway")
-	managedGatewayClass, err := gatewayClient.GatewayV1().GatewayClasses().List(ctx, metav1.ListOptions{})
-	require.NoError(t, err)
-	require.NotEmpty(t, managedGatewayClass.Items, "no GatewayClass found")
-
 	managedGateway := &gatewayv1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      uuid.NewString(),
 			Namespace: ns.Name,
 		},
 		Spec: gatewayv1.GatewaySpec{
-			GatewayClassName: gatewayv1.ObjectName(managedGatewayClass.Items[0].Name),
+			GatewayClassName: gatewayv1.ObjectName(managedGatewayClass.Name),
 			Listeners: []gatewayv1.Listener{
 				{
 					Name:     "http",
@@ -53,6 +48,7 @@ func TestAdmissionWebhook_HTTPRoute(t *testing.T) {
 			},
 		},
 	}
+	var err error
 	managedGateway, err = gatewayClient.GatewayV1().Gateways(ns.Name).Create(ctx, managedGateway, metav1.CreateOptions{})
 	require.NoError(t, err)
 	t.Cleanup(func() {
@@ -202,7 +198,6 @@ func TestAdmissionWebhook_HTTPRoute(t *testing.T) {
 				},
 			},
 			WantCreateErrSubstring: "HTTPRoute failed schema validation",
-			SkipReason:             "This test case is flaky. See https://github.com/Kong/kong-operator/issues/3207 for details.",
 		},
 		{
 			Name: "a httproute with an invalid header regex fails validation",
@@ -225,16 +220,11 @@ func TestAdmissionWebhook_HTTPRoute(t *testing.T) {
 				},
 			},
 			WantCreateErrSubstring: "HTTPRoute failed schema validation",
-			SkipReason:             "This test case is flaky. See https://github.com/Kong/kong-operator/issues/3207 for details.",
 		},
 	}
 
 	for _, tC := range testCases {
 		t.Run(tC.Name, func(t *testing.T) {
-			if tC.SkipReason != "" {
-				t.Skip(tC.SkipReason)
-			}
-
 			_, err := gatewayClient.GatewayV1().HTTPRoutes(ns.Name).Create(ctx, tC.Route, metav1.CreateOptions{})
 
 			wantErr := tC.WantCreateErrSubstring
