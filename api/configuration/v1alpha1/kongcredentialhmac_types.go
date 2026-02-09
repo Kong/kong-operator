@@ -54,6 +54,8 @@ type KongCredentialHMAC struct {
 // +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
 // +apireference:kgo:include
 type KongCredentialHMACSpec struct {
+	KongCredentialHMACAPISpec `json:",inline"`
+
 	// ConsumerRef is a reference to a Consumer this KongCredentialHMAC is associated with.
 	//
 	// +required
@@ -62,8 +64,6 @@ type KongCredentialHMACSpec struct {
 	// Adopt is the options for adopting a HMAC credential from an existing HMAC credential in Konnect.
 	// +optional
 	Adopt *commonv1alpha1.AdoptOptions `json:"adopt,omitempty"`
-
-	KongCredentialHMACAPISpec `json:",inline"`
 }
 
 // KongCredentialHMACAPISpec defines specification of an HMAC credential.
@@ -101,7 +101,8 @@ type KongCredentialHMACStatus struct {
 type KongCredentialHMACList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []KongCredentialHMAC `json:"items"`
+
+	Items []KongCredentialHMAC `json:"items"`
 }
 
 func init() {

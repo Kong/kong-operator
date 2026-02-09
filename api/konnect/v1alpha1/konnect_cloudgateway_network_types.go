@@ -99,6 +99,8 @@ type KonnectCloudGatewayNetworkSpec struct {
 // KonnectCloudGatewayNetworkStatus defines the observed state of KonnectCloudGatewayNetwork.
 // +apireference:kgo:include
 type KonnectCloudGatewayNetworkStatus struct {
+	konnectv1alpha2.KonnectEntityStatus `json:",inline"`
+
 	// Conditions describe the current conditions of the KonnectCloudGatewayNetwork.
 	//
 	// Known condition types are:
@@ -113,8 +115,6 @@ type KonnectCloudGatewayNetworkStatus struct {
 	// +patchStrategy=merge
 	// +patchMergeKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
-
-	konnectv1alpha2.KonnectEntityStatus `json:",inline"`
 
 	// State is the current state of the network. Can be e.g. initializing, ready, terminating.
 	//

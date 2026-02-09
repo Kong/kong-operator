@@ -49,6 +49,7 @@ func (f *fakePluginSvc) Validate(context.Context, *kong.Plugin) (bool, string, e
 
 type fakeConsumersSvc struct {
 	kong.AbstractConsumerService
+
 	consumer *kong.Consumer
 }
 
@@ -677,6 +678,7 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 
 type fakeConsumerGroupSvc struct {
 	kong.AbstractConsumerGroupService
+
 	err error
 }
 
@@ -689,6 +691,7 @@ func (f fakeConsumerGroupSvc) List(context.Context, *kong.ListOpt) ([]*kong.Cons
 
 type fakeInfoSvc struct {
 	kong.AbstractInfoService
+
 	version string
 }
 
@@ -1252,6 +1255,7 @@ func newHTTPIngressRule(backend netv1.IngressBackend) netv1.IngressRule {
 
 type fakeRouteSvc struct {
 	kong.AbstractRouteService
+
 	shouldFail bool
 }
 
@@ -1372,6 +1376,7 @@ func TestValidator_ValidateVault(t *testing.T) {
 
 type fakeVaultSvc struct {
 	kong.AbstractVaultService
+
 	shouldFail bool
 }
 

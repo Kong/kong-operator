@@ -50,6 +50,8 @@ type KongCACertificate struct {
 // +kubebuilder:validation:XValidation:rule="!(has(self.cert) && has(self.secretRef))", message="cert and secretRef cannot be set at the same time"
 // +apireference:kgo:include
 type KongCACertificateSpec struct {
+	KongCACertificateAPISpec `json:",inline"`
+
 	// Type indicates the source of the CA certificate data.
 	// Can be 'inline' or 'secretRef'.
 	// +kubebuilder:validation:Enum=inline;secretRef
@@ -72,8 +74,6 @@ type KongCACertificateSpec struct {
 	// The namespace field is optional, but will be restricted by validation until ReferenceGrant support is implemented.
 	// +optional
 	SecretRef *commonv1alpha1.NamespacedRef `json:"secretRef,omitempty"`
-
-	KongCACertificateAPISpec `json:",inline"`
 }
 
 // KongCACertificateAPISpec contains the API specification for the KongCACertificate.
@@ -111,7 +111,8 @@ type KongCACertificateStatus struct {
 type KongCACertificateList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []KongCACertificate `json:"items"`
+
+	Items []KongCACertificate `json:"items"`
 }
 
 func init() {

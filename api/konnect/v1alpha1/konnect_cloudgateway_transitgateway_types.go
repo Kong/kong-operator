@@ -49,6 +49,9 @@ type KonnectCloudGatewayTransitGateway struct {
 //
 // +kubebuilder:validation:XValidation:rule="self.networkRef.type == 'namespacedRef'", message = "only namespacedRef is supported currently"
 type KonnectCloudGatewayTransitGatewaySpec struct {
+	// KonnectTransitGatewayAPISpec is the configuration of the transit gateway on Konnect side.
+	KonnectTransitGatewayAPISpec `json:",inline"`
+
 	// NetworkRef is the schema for the NetworkRef type.
 	//
 	// +required
@@ -57,9 +60,6 @@ type KonnectCloudGatewayTransitGatewaySpec struct {
 	// Adopt is the options for adopting a cloud gateway transit gateway from an existing transit gateway in Konnect.
 	// +optional
 	Adopt *commonv1alpha1.AdoptOptions `json:"adopt,omitempty"`
-
-	// KonnectTransitGatewayAPISpec is the configuration of the transit gateway on Konnect side.
-	KonnectTransitGatewayAPISpec `json:",inline"`
 }
 
 // TransitGatewayType defines the type of Konnect transit gateway.
@@ -195,6 +195,8 @@ type AzureVNETPeeringAttachmentConfig struct {
 
 // KonnectCloudGatewayTransitGatewayStatus defines the current state of KonnectCloudGatewayTransitGateway.
 type KonnectCloudGatewayTransitGatewayStatus struct {
+	konnectv1alpha2.KonnectEntityStatusWithNetworkRef `json:",inline"`
+
 	// Conditions describe the current conditions of the KonnectCloudGatewayDataPlaneGroupConfiguration.
 	//
 	// Known condition types are:
@@ -209,8 +211,6 @@ type KonnectCloudGatewayTransitGatewayStatus struct {
 	// +patchMergeKey=type
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
-
-	konnectv1alpha2.KonnectEntityStatusWithNetworkRef `json:",inline"`
 
 	// State is the state of the transit gateway on Konnect side.
 	//

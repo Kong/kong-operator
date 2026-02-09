@@ -52,6 +52,8 @@ type KongUpstream struct {
 // +kubebuilder:validation:XValidation:rule="!has(self.controlPlaneRef) ? true : self.controlPlaneRef.type != 'kic'", message="KIC is not supported as control plane"
 // +apireference:kgo:include
 type KongUpstreamSpec struct {
+	KongUpstreamAPISpec `json:",inline"`
+
 	// ControlPlaneRef is a reference to a ControlPlane this KongUpstream is associated with.
 	// +kubebuilder:validation:XValidation:message="'konnectID' type is not supported", rule="self.type != 'konnectID'"
 	// +required
@@ -60,8 +62,6 @@ type KongUpstreamSpec struct {
 	// Adopt is the options for adopting an upstream from an existing upstream in Konnect.
 	// +optional
 	Adopt *commonv1alpha1.AdoptOptions `json:"adopt,omitempty"`
-
-	KongUpstreamAPISpec `json:",inline"`
 }
 
 // KongUpstreamAPISpec defines specification of a Kong Upstream.
@@ -143,7 +143,8 @@ type KongUpstreamStatus struct {
 type KongUpstreamList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []KongUpstream `json:"items"`
+
+	Items []KongUpstream `json:"items"`
 }
 
 func init() {

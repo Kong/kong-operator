@@ -52,6 +52,8 @@ type KongCertificate struct {
 // +kubebuilder:validation:XValidation:rule="!((has(self.cert_alt) || has(self.key_alt)) && (has(self.secretRef) || has(self.secretRefAlt)))", message="cert_alt/key_alt and secretRef/secretRefAlt cannot be set at the same time"
 // +apireference:kgo:include
 type KongCertificateSpec struct {
+	KongCertificateAPISpec `json:",inline"`
+
 	// Type indicates the source of the certificate data.
 	// Can be 'inline' or 'secretRef'.
 	// +kubebuilder:validation:Enum=inline;secretRef
@@ -83,8 +85,6 @@ type KongCertificateSpec struct {
 	// The namespace field is optional, but will be restricted by validation until ReferenceGrant support is implemented.
 	// +optional
 	SecretRefAlt *commonv1alpha1.NamespacedRef `json:"secretRefAlt,omitempty"`
-
-	KongCertificateAPISpec `json:",inline"`
 }
 
 // KongCertificateAPISpec contains the API specification for the KongCertificate.
@@ -140,7 +140,8 @@ type KongCertificateStatus struct {
 type KongCertificateList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []KongCertificate `json:"items"`
+
+	Items []KongCertificate `json:"items"`
 }
 
 func init() {

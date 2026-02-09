@@ -35,6 +35,7 @@ import (
 // ReferenceGrantReconciler reconciles a ReferenceGrant object.
 type ReferenceGrantReconciler struct {
 	client.Client
+
 	Log             logr.Logger
 	Scheme          *runtime.Scheme
 	DataplaneClient controllers.DataPlane

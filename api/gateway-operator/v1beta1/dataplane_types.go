@@ -59,7 +59,8 @@ type DataPlane struct {
 type DataPlaneList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []DataPlane `json:"items"`
+
+	Items []DataPlane `json:"items"`
 }
 
 // DataPlaneSpec defines the desired state of DataPlane
@@ -166,12 +167,12 @@ type PodDisruptionBudgetSpec struct {
 // resource "Deployment") which are created and managed for the DataPlane resource.
 // +apireference:kgo:include
 type DataPlaneDeploymentOptions struct {
+	DeploymentOptions `json:",inline"`
+
 	// Rollout describes a custom rollout strategy.
 	//
 	// +optional
 	Rollout *Rollout `json:"rollout,omitempty"`
-
-	DeploymentOptions `json:",inline"`
 }
 
 // DataPlaneNetworkOptions defines network related options for a DataPlane.
@@ -207,6 +208,10 @@ type DataPlaneServices struct {
 // +apireference:kgo:include
 // +kubebuilder:validation:XValidation:message="Cannot set NodePort when service type is not NodePort or LoadBalancer", rule="!has(self.ports) || !(self.ports.exists(p, has(p.nodePort))) ? true : has(self.type) && ['LoadBalancer', 'NodePort'].exists(t, t == self.type)"
 type DataPlaneServiceOptions struct {
+	// ServiceOptions is the struct containing service options shared with
+	// the GatewayConfiguration.
+	ServiceOptions `json:",inline"`
+
 	// Ports defines the list of ports that are exposed by the service.
 	// The ports field allows defining the name, port and targetPort of
 	// the underlying service ports, while the protocol is defaulted to TCP,
@@ -214,10 +219,6 @@ type DataPlaneServiceOptions struct {
 	//
 	// +kubebuilder:validation:MaxItems=64
 	Ports []DataPlaneServicePort `json:"ports,omitempty"`
-
-	// ServiceOptions is the struct containing service options shared with
-	// the GatewayConfiguration.
-	ServiceOptions `json:",inline"`
 }
 
 // DataPlaneServicePort contains information on service's port.

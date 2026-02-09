@@ -163,12 +163,12 @@ type GatewayConfigDataPlaneOptions struct {
 // resource "Deployment") which are created and managed for the DataPlane resource.
 // +apireference:kgo:include
 type DataPlaneDeploymentOptions struct {
+	DeploymentOptions `json:",inline"`
+
 	// Rollout describes a custom rollout strategy.
 	//
 	// +optional
 	Rollout *Rollout `json:"rollout,omitempty"`
-
-	DeploymentOptions `json:",inline"`
 }
 
 // GatewayConfigDataPlaneNetworkOptions defines network related options for a DataPlane.
@@ -336,7 +336,8 @@ type GatewayConfigurationStatus struct {
 type GatewayConfigurationList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []GatewayConfiguration `json:"items"`
+
+	Items []GatewayConfiguration `json:"items"`
 }
 
 // GetConditions retrieves the GatewayConfiguration Status Condition

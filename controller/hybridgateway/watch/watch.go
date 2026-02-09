@@ -15,8 +15,9 @@ import (
 // It is used to specify which objects should be watched and how events on those objects
 // should be mapped to reconciliation requests for the parent resource.
 type Watcher struct {
-	Object client.Object
 	handler.MapFunc
+
+	Object client.Object
 }
 
 // Watches returns a list of Watcher objects for the given resource type.
@@ -25,59 +26,59 @@ func Watches(obj client.Object, cl client.Client) []Watcher {
 	case *gwtypes.HTTPRoute:
 		return []Watcher{
 			{
-				&gwtypes.Gateway{},
 				MapHTTPRouteForGateway(cl),
+				&gwtypes.Gateway{},
 			},
 			{
-				&gwtypes.GatewayClass{},
 				MapHTTPRouteForGatewayClass(cl),
+				&gwtypes.GatewayClass{},
 			},
 			{
-				&corev1.Service{},
 				MapHTTPRouteForService(cl),
+				&corev1.Service{},
 			},
 			{
-				&discoveryv1.EndpointSlice{},
 				MapHTTPRouteForEndpointSlice(cl),
+				&discoveryv1.EndpointSlice{},
 			},
 			{
-				&configurationv1alpha1.KongUpstream{},
 				MapHTTPRouteForKongResource[*configurationv1alpha1.KongUpstream](cl),
+				&configurationv1alpha1.KongUpstream{},
 			},
 			{
-				&configurationv1alpha1.KongTarget{},
 				MapHTTPRouteForKongResource[*configurationv1alpha1.KongTarget](cl),
+				&configurationv1alpha1.KongTarget{},
 			},
 			{
-				&configurationv1alpha1.KongService{},
 				MapHTTPRouteForKongResource[*configurationv1alpha1.KongService](cl),
+				&configurationv1alpha1.KongService{},
 			},
 			{
-				&configurationv1alpha1.KongRoute{},
 				MapHTTPRouteForKongResource[*configurationv1alpha1.KongRoute](cl),
+				&configurationv1alpha1.KongRoute{},
 			},
 			{
-				&configurationv1.KongPlugin{},
 				MapHTTPRouteForKongPlugin(cl),
+				&configurationv1.KongPlugin{},
 			},
 			{
-				&configurationv1alpha1.KongPluginBinding{},
 				MapHTTPRouteForKongResource[*configurationv1alpha1.KongPluginBinding](cl),
+				&configurationv1alpha1.KongPluginBinding{},
 			},
 			{
-				&gwtypes.ReferenceGrant{},
 				MapHTTPRouteForReferenceGrant(cl),
+				&gwtypes.ReferenceGrant{},
 			},
 		}
 	case *gwtypes.Gateway:
 		return []Watcher{
 			{
-				&corev1.Secret{},
 				MapGatewayForTLSSecret(cl),
+				&corev1.Secret{},
 			},
 			{
-				&gwtypes.ReferenceGrant{},
 				MapGatewayForReferenceGrant(cl),
+				&gwtypes.ReferenceGrant{},
 			},
 		}
 	default:

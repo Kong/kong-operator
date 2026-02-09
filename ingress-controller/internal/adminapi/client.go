@@ -58,6 +58,7 @@ func NewTestClient(address string) (*Client, error) {
 
 type KonnectClient struct {
 	Client
+
 	consumersSyncDisabled bool
 	backoffStrategy       UpdateBackoffStrategy
 }

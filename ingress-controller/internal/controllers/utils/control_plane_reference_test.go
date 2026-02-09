@@ -13,6 +13,7 @@ import (
 
 type objectWithCPRefType struct {
 	client.Object
+
 	cpRef *commonv1alpha1.ControlPlaneRef
 }
 

@@ -205,6 +205,8 @@ type ConfigurationDataPlaneGroupAutoscaleStatic struct {
 // KonnectCloudGatewayDataPlaneGroupConfigurationStatus defines the observed state of KonnectCloudGatewayDataPlaneGroupConfiguration.
 // +apireference:kgo:include
 type KonnectCloudGatewayDataPlaneGroupConfigurationStatus struct {
+	konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef `json:",inline"`
+
 	// Conditions describe the current conditions of the KonnectCloudGatewayDataPlaneGroupConfiguration.
 	//
 	// Known condition types are:
@@ -219,8 +221,6 @@ type KonnectCloudGatewayDataPlaneGroupConfigurationStatus struct {
 	// +patchStrategy=merge
 	// +patchMergeKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
-
-	konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef `json:",inline"`
 
 	// DataPlaneGroups is a list of deployed data-plane groups.
 	//

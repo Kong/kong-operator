@@ -70,7 +70,8 @@ type KongUpstreamPolicy struct {
 type KongUpstreamPolicyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []KongUpstreamPolicy `json:"items"`
+
+	Items []KongUpstreamPolicy `json:"items"`
 }
 
 // KongUpstreamPolicySpec contains the specification for KongUpstreamPolicy.

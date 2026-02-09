@@ -41,6 +41,7 @@ func assertCollectObjectExistsAndHasKonnectID(
 // Ref: https://pkg.go.dev/github.com/stretchr/testify/mock#TestingT
 type MockTestingTAdapter struct {
 	*assert.CollectT
+
 	t *testing.T
 }
 

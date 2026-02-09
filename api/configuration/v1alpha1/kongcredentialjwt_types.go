@@ -55,6 +55,8 @@ type KongCredentialJWT struct {
 // +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
 // +apireference:kgo:include
 type KongCredentialJWTSpec struct {
+	KongCredentialJWTAPISpec `json:",inline"`
+
 	// ConsumerRef is a reference to a Consumer this KongCredentialJWT is associated with.
 	//
 	// +required
@@ -63,8 +65,6 @@ type KongCredentialJWTSpec struct {
 	// Adopt is the options for adopting a JWT credential from an existing JWT credential in Konnect.
 	// +optional
 	Adopt *commonv1alpha1.AdoptOptions `json:"adopt,omitempty"`
-
-	KongCredentialJWTAPISpec `json:",inline"`
 }
 
 // KongCredentialJWTAPISpec defines specification of an JWT credential.
@@ -107,7 +107,8 @@ type KongCredentialJWTStatus struct {
 type KongCredentialJWTList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []KongCredentialJWT `json:"items"`
+
+	Items []KongCredentialJWT `json:"items"`
 }
 
 func init() {

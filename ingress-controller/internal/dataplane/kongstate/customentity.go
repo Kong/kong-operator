@@ -137,6 +137,7 @@ type KongCustomEntityCollection struct {
 // CustomEntity saves content of a Kong custom entity with the pointer to the k8s resource translating to it.
 type CustomEntity struct {
 	custom.Object
+
 	// K8sKongCustomEntity refers to the KongCustomEntity resource that translate to it.
 	K8sKongCustomEntity *configurationv1alpha1.KongCustomEntity
 	// ForeignEntityIDs stores the IDs of the foreign Kong entities attached to the entity.

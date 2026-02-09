@@ -22,6 +22,7 @@ import (
 type KongLicense struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
+
 	// RawLicenseString is a string with the raw content of the license.
 	RawLicenseString string `json:"rawLicenseString"`
 	// Enabled is set to true to let controllers (like KIC or KGO) to reconcile it.
@@ -112,7 +113,8 @@ type ControllerReference struct {
 type KongLicenseList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []KongLicense `json:"items"`
+
+	Items []KongLicense `json:"items"`
 }
 
 func init() {

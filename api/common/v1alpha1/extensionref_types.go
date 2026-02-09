@@ -20,6 +20,9 @@ package v1alpha1
 // defines extended behavior for a resource (e.g. ControlPlane).
 // +apireference:kgo:include
 type ExtensionRef struct {
+	// NamespacedRef is a reference to the extension resource.
+	NamespacedRef `json:",inline"`
+
 	// Group is the group of the extension resource.
 	//
 	// +optional
@@ -33,7 +36,4 @@ type ExtensionRef struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	Kind string `json:"kind,omitempty"`
-
-	// NamespacedRef is a reference to the extension resource.
-	NamespacedRef `json:",inline"`
 }

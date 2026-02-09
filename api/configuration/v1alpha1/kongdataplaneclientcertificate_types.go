@@ -52,6 +52,9 @@ type KongDataPlaneClientCertificate struct {
 // +kubebuilder:validation:XValidation:rule="!has(self.controlPlaneRef) ? true : self.controlPlaneRef.type != 'kic'", message="KIC is not supported as control plane"
 // +apireference:kgo:include
 type KongDataPlaneClientCertificateSpec struct {
+	// KongDataPlaneClientCertificateAPISpec are the attributes of the KongDataPlaneClientCertificate itself.
+	KongDataPlaneClientCertificateAPISpec `json:",inline"`
+
 	// ControlPlaneRef is a reference to a Konnect ControlPlane this KongDataPlaneClientCertificate is associated with.
 	// +kubebuilder:validation:XValidation:message="'konnectID' type is not supported", rule="self.type != 'konnectID'"
 	// +required
@@ -61,9 +64,6 @@ type KongDataPlaneClientCertificateSpec struct {
 	// +kubebuilder:validation:XValidation:message="Only 'match' mode adoption is supported", rule="self.mode == 'match'"
 	// +optional
 	Adopt *commonv1alpha1.AdoptOptions `json:"adopt,omitempty"`
-
-	// KongDataPlaneClientCertificateAPISpec are the attributes of the KongDataPlaneClientCertificate itself.
-	KongDataPlaneClientCertificateAPISpec `json:",inline"`
 }
 
 // KongDataPlaneClientCertificateAPISpec defines the attributes of a Kong DP certificate.
@@ -95,7 +95,8 @@ type KongDataPlaneClientCertificateStatus struct {
 type KongDataPlaneClientCertificateList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []KongDataPlaneClientCertificate `json:"items"`
+
+	Items []KongDataPlaneClientCertificate `json:"items"`
 }
 
 func init() {

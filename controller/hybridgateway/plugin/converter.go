@@ -134,6 +134,7 @@ type transformerTargetSlice struct {
 
 type transformerTargetSliceReplace struct {
 	transformerTargetSlice
+
 	URI string `json:"uri,omitempty"`
 }
 

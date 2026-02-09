@@ -61,15 +61,15 @@ type KongSNIAPISpec struct {
 // KongSNISpec defines specification of a Kong SNI.
 // +apireference:kgo:include
 type KongSNISpec struct {
+	// KongSNIAPISpec are the attributes of the Kong SNI itself.
+	KongSNIAPISpec `json:",inline"`
+
 	// CertificateRef is the reference to the certificate to which the KongSNI is attached.
 	CertificateRef commonv1alpha1.NameRef `json:"certificateRef"`
 
 	// Adopt is the options for adopting an SNI from an existing SNI in Konnect.
 	// +optional
 	Adopt *commonv1alpha1.AdoptOptions `json:"adopt,omitempty"`
-
-	// KongSNIAPISpec are the attributes of the Kong SNI itself.
-	KongSNIAPISpec `json:",inline"`
 }
 
 // KongSNIStatus defines the status for a KongSNI.
@@ -93,7 +93,8 @@ type KongSNIStatus struct {
 type KongSNIList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []KongSNI `json:"items"`
+
+	Items []KongSNI `json:"items"`
 }
 
 func init() {

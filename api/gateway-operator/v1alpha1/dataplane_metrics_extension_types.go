@@ -61,7 +61,8 @@ type DataPlaneMetricsExtension struct {
 type DataPlaneMetricsExtensionList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []DataPlaneMetricsExtension `json:"items"`
+
+	Items []DataPlaneMetricsExtension `json:"items"`
 }
 
 // DataPlaneMetricsExtensionSpec defines the spec for the DataPlaneMetricsExtension.

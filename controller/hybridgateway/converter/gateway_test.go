@@ -1591,6 +1591,7 @@ func TestTranslate(t *testing.T) {
 // badObject is a fake client.Object that always fails conversion to unstructured.
 type badObject struct {
 	metav1.ObjectMeta
+
 	Name string
 }
 

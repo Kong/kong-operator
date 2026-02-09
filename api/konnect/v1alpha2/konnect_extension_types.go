@@ -69,7 +69,8 @@ type KonnectExtension struct {
 type KonnectExtensionList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []KonnectExtension `json:"items"`
+
+	Items []KonnectExtension `json:"items"`
 }
 
 // KonnectExtensionSpec defines the desired state of KonnectExtension.

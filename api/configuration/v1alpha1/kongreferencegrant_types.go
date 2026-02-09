@@ -60,7 +60,8 @@ type KongReferenceGrant struct {
 type KongReferenceGrantList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []KongReferenceGrant `json:"items"`
+
+	Items []KongReferenceGrant `json:"items"`
 }
 
 // KongReferenceGrantSpec identifies a cross namespace relationship that is trusted

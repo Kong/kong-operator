@@ -50,6 +50,7 @@ const (
 // RootObjectPtr interfaces, allowing flexible reconciliation logic for different resource types.
 type HybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjectPtr[t]] struct {
 	client.Client
+
 	// EventRecorder is used to record Kubernetes events with type-specific reasons.
 	eventRecorder *events.TypedEventRecorder
 	// FQDNMode indicates whether to use FQDN endpoints for service discovery.

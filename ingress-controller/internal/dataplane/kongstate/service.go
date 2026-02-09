@@ -46,6 +46,7 @@ func (s Services) Less(i, j int) bool {
 // service and other k8s metadata.
 type Service struct {
 	kong.Service
+
 	Namespace string
 	Routes    []Route
 	Plugins   []kong.Plugin

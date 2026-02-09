@@ -57,6 +57,8 @@ type KongRoute struct {
 // +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
 // +apireference:kgo:include
 type KongRouteSpec struct {
+	KongRouteAPISpec `json:",inline"`
+
 	// ControlPlaneRef is a reference to a ControlPlane this KongRoute is associated with.
 	// Route can either specify a ControlPlaneRef and be 'serviceless' route or
 	// specify a ServiceRef and be associated with a Service.
@@ -72,8 +74,6 @@ type KongRouteSpec struct {
 	// Adopt is the options for adopting a route from an existing route in Konnect.
 	// +optional
 	Adopt *commonv1alpha1.AdoptOptions `json:"adopt,omitempty"`
-
-	KongRouteAPISpec `json:",inline"`
 }
 
 // TODO: Support expressions routes: https://github.com/Kong/kong-operator/issues/2673
@@ -142,7 +142,8 @@ type KongRouteStatus struct {
 type KongRouteList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []KongRoute `json:"items"`
+
+	Items []KongRoute `json:"items"`
 }
 
 func init() {

@@ -24,6 +24,7 @@ import (
 // partialErrorClient simulates a client.Client that returns an error only when listing HTTPRoutes for a Gateway.
 type partialErrorClient struct {
 	client.Client
+
 	gateways *gwtypes.GatewayList
 }
 

@@ -137,6 +137,8 @@ type CreateControlPlaneRequest struct {
 // KonnectGatewayControlPlaneStatus defines the observed state of KonnectGatewayControlPlane.
 // +apireference:kgo:include
 type KonnectGatewayControlPlaneStatus struct {
+	konnectv1alpha2.KonnectEntityStatus `json:",inline"`
+
 	// Conditions describe the current conditions of the KonnectGatewayControlPlane.
 	//
 	// Known condition types are:
@@ -151,8 +153,6 @@ type KonnectGatewayControlPlaneStatus struct {
 	// +patchStrategy=merge
 	// +patchMergeKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
-
-	konnectv1alpha2.KonnectEntityStatus `json:",inline"`
 
 	// Endpoints defines the Konnect endpoints for the control plane.
 	// They are required by the DataPlane to be properly configured in
