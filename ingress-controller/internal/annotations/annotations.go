@@ -163,7 +163,7 @@ func ExtractClientCertificate(anns map[string]string) string {
 }
 
 // ExtractStripPath extracts the strip-path annotations containing the
-// the boolean string "true" or "false".
+// boolean string "true" or "false".
 func ExtractStripPath(anns map[string]string) string {
 	return anns[AnnotationPrefix+StripPathKey]
 }

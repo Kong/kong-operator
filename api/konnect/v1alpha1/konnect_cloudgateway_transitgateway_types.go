@@ -66,7 +66,7 @@ type KonnectCloudGatewayTransitGatewaySpec struct {
 type TransitGatewayType string
 
 const (
-	// TransitGatewayTypeAWSTransitGateway defines the the AWS transit gateway type.
+	// TransitGatewayTypeAWSTransitGateway defines the AWS transit gateway type.
 	TransitGatewayTypeAWSTransitGateway TransitGatewayType = "AWSTransitGateway"
 	// TransitGatewayTypeAzureTransitGateway defines the Azure transit gateway type.
 	TransitGatewayTypeAzureTransitGateway TransitGatewayType = "AzureTransitGateway"

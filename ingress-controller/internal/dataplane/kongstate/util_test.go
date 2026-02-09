@@ -53,7 +53,7 @@ func TestPrettyPrintServiceList(t *testing.T) {
 					},
 				},
 			},
-			expected: "default/test-service[0-9], default/test-service[0-9], default/test-service[0-9]",
+			expected: "default/test-service[0-9], default/test-service[0-9]",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

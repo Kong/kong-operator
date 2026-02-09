@@ -310,7 +310,7 @@ func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger 
 func (c *httpRouteConverter) HandleOrphanedResource(ctx context.Context, logger logr.Logger, resource *unstructured.Unstructured) (skipDelete bool, err error) {
 	am := metadata.NewAnnotationManager(logger)
 
-	// If the route is not present in the the hybrid-routes annotation of the Kong resource, don't touch it.
+	// If the route is not present in the hybrid-routes annotation of the Kong resource, don't touch it.
 	if !am.ContainsRoute(resource, c.route) {
 		log.Trace(logger, "Route annotation not found, skipping resource", "kind", resource.GetKind(), "obj", client.ObjectKeyFromObject(resource))
 		return true, nil

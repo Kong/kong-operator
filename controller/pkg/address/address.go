@@ -17,7 +17,7 @@ import (
 //     IPs are added first, then hostnames.
 //   - next, all service's ClusterIPs are added.
 //   - the result is not sorted, so the return value relies on the order in
-//     in which the addresses in the service were defined.
+//     which the addresses in the service were defined.
 //
 // If this ends up being the desired logic and aligns with what
 // has been agreed in https://github.com/kong/kong-operator/issues/281

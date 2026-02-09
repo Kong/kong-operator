@@ -129,7 +129,7 @@ func (d *DeploymentBuilder) BuildAndDeploy(
 	}
 
 	// TODO https://github.com/kong/kong-operator/issues/128
-	// This is a a workaround to avoid patches clobbering the wrong EnvVar. We want to find an improved patch mechanism
+	// This is a workaround to avoid patches clobbering the wrong EnvVar. We want to find an improved patch mechanism
 	// that doesn't clobber EnvVars (and other array fields) it shouldn't.
 	existingEnvVars := desiredDeployment.Spec.Template.Spec.Containers[0].Env
 	desiredDeployment.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{}

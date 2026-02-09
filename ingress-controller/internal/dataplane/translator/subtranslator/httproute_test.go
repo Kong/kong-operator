@@ -1153,7 +1153,7 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 			},
 		},
 		{
-			name: "multiple HTTPRoutes with the same same backends in the same namespace",
+			name: "multiple HTTPRoutes with the same backends in the same namespace",
 			k8sServices: []*corev1.Service{
 				{
 					TypeMeta: serviceTypeMeta,
@@ -1223,7 +1223,7 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 			},
 		},
 		{
-			name: "multiple HTTPRoutes with the same same backends in the same namespace with correct referenceGrant",
+			name: "multiple HTTPRoutes with the same backends in the same namespace with correct referenceGrant",
 			k8sServices: []*corev1.Service{
 				{
 					TypeMeta: serviceTypeMeta,
@@ -1317,7 +1317,7 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 			},
 		},
 		{
-			name: "multiple HTTPRoutes with the same same backends in the same namespace without referenceGrant",
+			name: "multiple HTTPRoutes with the same backends in the same namespace without referenceGrant",
 			k8sServices: []*corev1.Service{
 				{
 					TypeMeta: serviceTypeMeta,

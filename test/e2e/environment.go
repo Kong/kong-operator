@@ -230,7 +230,7 @@ func CreateEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption)
 			t.Logf("deploying additional configuration to test cluster via kustomize (%s)", AdditionalKustomizeDir)
 			require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), AdditionalKustomizeDir))
 		} else {
-			t.Log("no additional additional configuration provided")
+			t.Log("no additional configuration provided")
 		}
 
 		t.Log("waiting for operator deployment to complete")

@@ -14,7 +14,7 @@ import (
 )
 
 // Setup is a test helper function which:
-//   - creates a cluster cleaner which will be used to to clean up test resources
+//   - creates a cluster cleaner which will be used to clean up test resources
 //     automatically after the test finishes and creates a new namespace for the test
 //     to use.
 //   - creates a namespace for the provided test and adds it to the cleaner for

@@ -274,7 +274,7 @@ func TestDataplane(t *testing.T) {
 				},
 			},
 			{
-				Name: "can leave nodePort empty when when service type is not specified",
+				Name: "can leave nodePort empty when service type is not specified",
 				TestObject: &operatorv1beta1.DataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{

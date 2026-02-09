@@ -4,7 +4,7 @@ import (
 	"github.com/blang/semver/v4"
 )
 
-// KICv3VersionCutoff is the lowest version version of Kong Gateway supported by KIC >=v3.0.0.
+// KICv3VersionCutoff is the lowest version of Kong Gateway supported by KIC >=v3.0.0.
 var KICv3VersionCutoff = semver.Version{Major: 3, Minor: 4, Patch: 1}
 
 // KongRedirectPluginCutoff is the lowest version of Kong Gateway that supports `redirect` plugin.

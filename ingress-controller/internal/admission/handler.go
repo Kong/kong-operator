@@ -150,7 +150,7 @@ func (h *RequestHandler) RegisterValidator(id mgrID, validator KongValidator) {
 	h.validators[id.String()] = validator
 }
 
-// UnregisterValidator removes a validator from from the request handler.
+// UnregisterValidator removes a validator from the request handler.
 // An instance of validator is removed when a particular KIC instance
 // is removed from KO.
 func (h *RequestHandler) UnregisterValidator(id mgrID) {

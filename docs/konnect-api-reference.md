@@ -865,7 +865,7 @@ Allowed values:
 
 | Value | Description |
 | --- | --- |
-| `AWSTransitGateway` | TransitGatewayTypeAWSTransitGateway defines the the AWS transit gateway type.<br /> |
+| `AWSTransitGateway` | TransitGatewayTypeAWSTransitGateway defines the AWS transit gateway type.<br /> |
 | `AzureTransitGateway` | TransitGatewayTypeAzureTransitGateway defines the Azure transit gateway type.<br /> |
 
 ## konnect.konghq.com/v1alpha2

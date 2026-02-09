@@ -2281,7 +2281,7 @@ Package v1alpha1 contains API Schema definitions for the gateway-operator.konghq
 
 AIGateway is a network Gateway enabling access and management for AI &
 Machine Learning models such as Large Language Models (LLM).<br /><br />The underlying technology for the AIGateway is the Kong Gateway configured
-with a variety of plugins which provide the the AI featureset.<br /><br />This is a list of the plugins, which are available in Kong Gateway v3.6.x+:<br /><br />  - ai-proxy (https://github.com/kong/kong/tree/master/kong/plugins/ai-proxy)
+with a variety of plugins which provide the AI featureset.<br /><br />This is a list of the plugins, which are available in Kong Gateway v3.6.x+:<br /><br />  - ai-proxy (https://github.com/kong/kong/tree/master/kong/plugins/ai-proxy)
   - ai-request-transformer (https://github.com/kong/kong/tree/master/kong/plugins/ai-request-transformer)
   - ai-response-transformers (https://github.com/kong/kong/tree/master/kong/plugins/ai-response-transformer)
   - ai-prompt-template (https://github.com/kong/kong/tree/master/kong/plugins/ai-prompt-template)
@@ -2921,7 +2921,7 @@ _Appears in:_
 
 ControlPlaneDeploymentOptions is a shared type used on objects to indicate that their
 configuration results in a Deployment which is managed by the Operator and
-includes options for managing Deployments such as the the number of replicas
+includes options for managing Deployments such as the number of replicas
 or pod options like container image and resource requirements.
 version, as well as Env variable overrides.
 
@@ -5727,7 +5727,7 @@ Allowed values:
 
 | Value | Description |
 | --- | --- |
-| `AWSTransitGateway` | TransitGatewayTypeAWSTransitGateway defines the the AWS transit gateway type.<br /> |
+| `AWSTransitGateway` | TransitGatewayTypeAWSTransitGateway defines the AWS transit gateway type.<br /> |
 | `AzureTransitGateway` | TransitGatewayTypeAzureTransitGateway defines the Azure transit gateway type.<br /> |
 
 ## konnect.konghq.com/v1alpha2
