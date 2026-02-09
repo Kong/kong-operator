@@ -62,12 +62,6 @@ spec:
     - name: host_header
       value: ""
 
-  timeouts:
-    apply: 120s
-    assert: 120s
-    cleanup: 120s
-    delete: 120s
-
   steps:
   # Step 2: Create KonnectAPIAuthConfiguration.
   - name: create-konnect-api-auth
@@ -496,10 +490,35 @@ spec:
 
   # Step 14d: Update HTTPRoute to accept both GET and POST.
   - name: step-14d-update-httproute-update-test
-    description: Update HTTPRoute to accept both GET and POST methods
+    description: Get current Kong resources, update HTTPRoute to accept both GET and POST methods, and verify old resources are deleted.
     try:
+      - script:
+          env:
+            - name: NAMESPACE
+              value: ($namespace)
+            - name: GATEWAY_NAME
+              value: ($gateway_name)
+            - name: GATEWAY_NAMESPACE
+              value: ($gateway_namespace)
+            - name: HTTP_ROUTE_NAME
+              value: ($httproute_name_update_test)
+            - name: HTTP_ROUTE_NAMESPACE
+              value: ($http_route_namespace)
+            - name: RESOURCE_TYPES
+              value: "kongroutes.configuration.konghq.com"
+          content: |
+            bash ../../common/scripts/get_kong_resources.sh
+          outputs:
+            - name: old_resources
+              value: (json_parse($stdout))
       - apply:
           file: 14-httproute-update-test-updated.yaml
+      - script:
+          env:
+            - name: RESOURCES_JSON
+              value: (to_string($old_resources))
+          content: |
+            bash ../../common/scripts/wait_for_kong_resources_deletion.sh
       - assert:
           file: 14-assert-httproute-update-test-updated.yaml
     bindings:

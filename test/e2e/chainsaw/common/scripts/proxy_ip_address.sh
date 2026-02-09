@@ -11,6 +11,8 @@ set -o pipefail
 GATEWAY_NAME="${GATEWAY_NAME}"
 GATEWAY_NAMESPACE="${GATEWAY_NAMESPACE}"
 
+KUBECTL_CMD="kubectl get gateway $GATEWAY_NAME -n $GATEWAY_NAMESPACE -o json"
+
 # Capture kubectl output for debugging
 if ! KUBECTL_OUTPUT=$(kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o json 2>&1); then
   cat <<EOF
@@ -18,6 +20,7 @@ if ! KUBECTL_OUTPUT=$(kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE
   "error": "Failed to get gateway resource",
   "gateway_name": "$GATEWAY_NAME",
   "gateway_namespace": "$GATEWAY_NAMESPACE",
+  "kubectl_command": "$KUBECTL_CMD",
   "kubectl_output": $(echo "$KUBECTL_OUTPUT" | jq -Rs .)
 }
 EOF
@@ -32,10 +35,16 @@ if [[ -z "$PROXY_IP_ADDRESS" || "$PROXY_IP_ADDRESS" == "null" ]]; then
   "error": "No proxy IP address found in gateway status",
   "gateway_name": "$GATEWAY_NAME",
   "gateway_namespace": "$GATEWAY_NAMESPACE",
+  "kubectl_command": "$KUBECTL_CMD",
   "gateway_status": $(echo "$KUBECTL_OUTPUT" | jq -c '.status // {}')
 }
 EOF
   exit 1
 fi
 
-printf '{"proxy_ip_address":"%s"}\n' "$PROXY_IP_ADDRESS"
+cat <<EOF
+{
+  "proxy_ip_address": "$PROXY_IP_ADDRESS",
+  "kubectl_command": "$KUBECTL_CMD"
+}
+EOF

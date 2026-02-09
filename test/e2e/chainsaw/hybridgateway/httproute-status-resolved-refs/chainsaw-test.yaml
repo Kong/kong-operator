@@ -17,14 +17,6 @@ spec:
     - Unsupported ExtensionRef (wrong group/kind)
     - Cross-namespace BackendRef without ReferenceGrant
     - Cross-namespace BackendRef with ReferenceGrant
-  
-  timeouts:
-    apply: 120s
-    assert: 120s
-    delete: 120s
-    exec: 120s
-
-  
 
   bindings:
   # Common bindings.

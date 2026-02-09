@@ -6,10 +6,10 @@ set -o pipefail
 
 # Variables (from environment):
 #   RESOURCES_JSON: JSON string from get_kong_resources.sh containing resources to wait for deletion.
-#   TIMEOUT: (Optional) Timeout in seconds. Default: 60.
+#   TIMEOUT: (Optional) Timeout in seconds. Default: 180.
 
 RESOURCES_JSON="${RESOURCES_JSON}"
-TIMEOUT="${TIMEOUT:-60}"
+TIMEOUT="${TIMEOUT:-180}"
 
 # Parse the JSON to extract resource types and names.
 RESOURCE_COUNT=$(echo "$RESOURCES_JSON" | jq -r '.resources | length')

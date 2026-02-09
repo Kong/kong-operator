@@ -1,0 +1,29 @@
+# Global Chainsaw configuration file.
+# This file configures default timeouts and settings for all chainsaw e2e tests.
+# Individual tests can override these settings if needed.
+#
+# Note: Some settings like --quiet are CLI-only and configured in the Makefile.
+
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Configuration
+metadata:
+  name: kong-operator-e2e
+spec:
+  # Default timeouts for all operations.
+  # These are generous defaults to account for:
+  # - Slow CI environments
+  # - Gateway and DataPlane pod startup time
+  # - Konnect API synchronization delays
+  timeouts:
+    apply: 120s
+    assert: 300s
+    cleanup: 120s
+    delete: 120s
+    error: 120s
+    exec: 300s
+
+  # Test execution settings.
+  # Can be overridden via CLI: chainsaw test --parallel N
+  parallel: 4
+  failFast: false
+  fullName: true

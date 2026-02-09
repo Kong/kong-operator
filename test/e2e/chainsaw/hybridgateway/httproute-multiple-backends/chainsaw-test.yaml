@@ -68,12 +68,6 @@ spec:
     - name: echo_cross_ns_deployment_namespace
       value: ($cross_namespace)
 
-  timeouts:
-    apply: 120s
-    assert: 120s
-    cleanup: 120s
-    delete: 120s
-
   steps:
   # Step 1: Create KonnectAPIAuthConfiguration.
   - name: 1-create-konnect-api-auth
@@ -216,10 +210,35 @@ spec:
 
   # Step 9: Update HTTPRoute with weighted distribution.
   - name: 9-update-httproute-weighted
-    description: Update HTTPRoute with 80/20 weight distribution
+    description: Get current Kong resources, update HTTPRoute with 80/20 weight distribution, and verify old resources are deleted.
     try:
+      - script:
+          env:
+            - name: NAMESPACE
+              value: ($namespace)
+            - name: GATEWAY_NAME
+              value: ($gateway_name)
+            - name: GATEWAY_NAMESPACE
+              value: ($gateway_namespace)
+            - name: HTTP_ROUTE_NAME
+              value: ($http_route_name)
+            - name: HTTP_ROUTE_NAMESPACE
+              value: ($http_route_namespace)
+            - name: RESOURCE_TYPES
+              value: "kongservices.configuration.konghq.com,kongroutes.configuration.konghq.com,kongupstreams.configuration.konghq.com,kongtargets.configuration.konghq.com"
+          content: |
+            bash ../../common/scripts/get_kong_resources.sh
+          outputs:
+            - name: old_resources
+              value: (json_parse($stdout))
       - apply:
           file: 07-httproute-weighted.yaml
+      - script:
+          env:
+            - name: RESOURCES_JSON
+              value: (to_string($old_resources))
+          content: |
+            bash ../../common/scripts/wait_for_kong_resources_deletion.sh
       - assert:
           file: 07-assert-httproute-weighted.yaml
 
@@ -281,10 +300,35 @@ spec:
 
   # Step 11: Update HTTPRoute with different ports.
   - name: 11-update-httproute-different-ports
-    description: Update HTTPRoute to reference same service with different ports
+    description: Get current Kong resources, update HTTPRoute to reference same service with different ports, and verify old resources are deleted.
     try:
+      - script:
+          env:
+            - name: NAMESPACE
+              value: ($namespace)
+            - name: GATEWAY_NAME
+              value: ($gateway_name)
+            - name: GATEWAY_NAMESPACE
+              value: ($gateway_namespace)
+            - name: HTTP_ROUTE_NAME
+              value: ($http_route_name)
+            - name: HTTP_ROUTE_NAMESPACE
+              value: ($http_route_namespace)
+            - name: RESOURCE_TYPES
+              value: "kongservices.configuration.konghq.com,kongroutes.configuration.konghq.com,kongupstreams.configuration.konghq.com,kongtargets.configuration.konghq.com"
+          content: |
+            bash ../../common/scripts/get_kong_resources.sh
+          outputs:
+            - name: old_resources
+              value: (json_parse($stdout))
       - apply:
           file: 08-httproute-different-ports.yaml
+      - script:
+          env:
+            - name: RESOURCES_JSON
+              value: (to_string($old_resources))
+          content: |
+            bash ../../common/scripts/wait_for_kong_resources_deletion.sh
       - assert:
           file: 08-assert-httproute-different-ports.yaml
 
@@ -373,10 +417,35 @@ spec:
 
   # Step 14: Update HTTPRoute with cross-namespace backend reference.
   - name: 14-update-httproute-cross-namespace
-    description: Update HTTPRoute to reference backend in different namespace
+    description: Get current Kong resources, update HTTPRoute to reference backend in different namespace, and verify old resources are deleted.
     try:
+      - script:
+          env:
+            - name: NAMESPACE
+              value: ($namespace)
+            - name: GATEWAY_NAME
+              value: ($gateway_name)
+            - name: GATEWAY_NAMESPACE
+              value: ($gateway_namespace)
+            - name: HTTP_ROUTE_NAME
+              value: ($http_route_name)
+            - name: HTTP_ROUTE_NAMESPACE
+              value: ($http_route_namespace)
+            - name: RESOURCE_TYPES
+              value: "kongservices.configuration.konghq.com,kongroutes.configuration.konghq.com,kongupstreams.configuration.konghq.com,kongtargets.configuration.konghq.com"
+          content: |
+            bash ../../common/scripts/get_kong_resources.sh
+          outputs:
+            - name: old_resources
+              value: (json_parse($stdout))
       - apply:
           file: 09-httproute-cross-namespace.yaml
+      - script:
+          env:
+            - name: RESOURCES_JSON
+              value: (to_string($old_resources))
+          content: |
+            bash ../../common/scripts/wait_for_kong_resources_deletion.sh
       - assert:
           file: 09-assert-httproute-cross-namespace.yaml
 

@@ -20,4 +20,4 @@ spec:
             name: rate-limit-5-min
       backendRefs:
         - name: ($echo_deployment_name)
-          port: 8080
+          port: 1027
