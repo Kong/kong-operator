@@ -234,7 +234,7 @@ func isRouteActive(ctx context.Context, t *testing.T, client *http.Client, proxy
 	req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("%s/%s", proxyIP, path), nil)
 	require.NoError(t, err)
 	req.Host = fmt.Sprintf("example-%d.com", index)
-	req.Header.Set("apikey", fmt.Sprintf(consumerUsername, index))
+	req.Header.Set("Apikey", fmt.Sprintf(consumerUsername, index))
 
 	resp, err := client.Do(req)
 	if err != nil {

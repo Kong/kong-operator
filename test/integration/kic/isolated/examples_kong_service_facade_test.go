@@ -105,13 +105,13 @@ func TestKongServiceFacadeExample(t *testing.T) {
 			t.Run("key-auth endpoint responses", func(t *testing.T) {
 				t.Log("ensuring key-auth endpoint allows a valid key")
 				validKeyAuthReq := newRequest(keyAuthSecuredEndpoint, func(r *http.Request) {
-					r.Header.Set("key", keyAuthValidKey)
+					r.Header.Set("Key", keyAuthValidKey)
 				})
 				respondsWithExpectedStatusCode(t, validKeyAuthReq, http.StatusOK)
 
 				t.Log("ensuring key-auth endpoint doesn't allow an invalid key")
 				invalidKeyAuthReq := newRequest(keyAuthSecuredEndpoint, func(r *http.Request) {
-					r.Header.Set("key", "invalid-pass")
+					r.Header.Set("Key", "invalid-pass")
 				})
 				respondsWithExpectedStatusCode(t, invalidKeyAuthReq, http.StatusUnauthorized)
 
@@ -137,7 +137,7 @@ func TestKongServiceFacadeExample(t *testing.T) {
 
 				t.Log("ensuring basic-auth endpoint doesn't allow a valid key-auth key")
 				invalidBasicAuthUsingKeyAuthReq := newRequest(basicAuthSecuredEndpoint, func(r *http.Request) {
-					r.Header.Set("key", keyAuthValidKey)
+					r.Header.Set("Key", keyAuthValidKey)
 				})
 				respondsWithExpectedStatusCode(t, invalidBasicAuthUsingKeyAuthReq, http.StatusUnauthorized)
 			})

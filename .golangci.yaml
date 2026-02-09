@@ -9,8 +9,12 @@ run:
     - performance_tests
 linters:
   enable:
+    - asasalint
     - asciicheck
+    - bidichk
     - bodyclose
+    - canonicalheader
+    - containedctx
     - copyloopvar
     - dogsled
     - durationcheck
