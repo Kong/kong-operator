@@ -27,8 +27,8 @@ import (
 	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/controller/controlplane"
-	"github.com/kong/kong-operator/controller/controlplane_extensions"
-	"github.com/kong/kong-operator/controller/controlplane_extensions/metricsscraper"
+	"github.com/kong/kong-operator/controller/cpextensions"
+	"github.com/kong/kong-operator/controller/cpextensions/metricsscraper"
 	"github.com/kong/kong-operator/controller/dataplane"
 	"github.com/kong/kong-operator/controller/gateway"
 	"github.com/kong/kong-operator/controller/gatewayclass"
@@ -517,7 +517,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		// ControlPlaneExtensions controller
 		{
 			Enabled: c.ControlPlaneExtensionsControllerEnabled,
-			Controller: &controlplane_extensions.Reconciler{
+			Controller: &cpextensions.Reconciler{
 				ControllerOptions:               ctrlOpts,
 				Client:                          mgr.GetClient(),
 				LoggingMode:                     c.LoggingMode,

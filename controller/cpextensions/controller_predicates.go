@@ -1,4 +1,4 @@
-package controlplane_extensions
+package cpextensions
 
 import (
 	"github.com/google/go-cmp/cmp"

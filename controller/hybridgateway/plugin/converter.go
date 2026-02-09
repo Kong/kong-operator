@@ -134,7 +134,7 @@ type transformerTargetSlice struct {
 
 type transformerTargetSliceReplace struct {
 	transformerTargetSlice
-	Uri string `json:"uri,omitempty"`
+	URI string `json:"uri,omitempty"`
 }
 
 type transformerData struct {
@@ -389,9 +389,9 @@ func translateURLRewrite(filter gwtypes.HTTPRouteFilter, path string) (transform
 	if ur.Path != nil {
 		switch ur.Path.Type {
 		case gatewayv1.FullPathHTTPPathModifier:
-			pluginConf.Replace.Uri = translatePathReplaceFullPath(ur.Path.ReplaceFullPath)
+			pluginConf.Replace.URI = translatePathReplaceFullPath(ur.Path.ReplaceFullPath)
 		case gatewayv1.PrefixMatchHTTPPathModifier:
-			pluginConf.Replace.Uri = translatePathReplacePrefixMatch(
+			pluginConf.Replace.URI = translatePathReplacePrefixMatch(
 				normalizePath(ur.Path.ReplacePrefixMatch),
 				normalizePath(&path))
 		default:

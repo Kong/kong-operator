@@ -31,9 +31,9 @@ linters:
     - misspell
     - nakedret
     - nilerr
-    - nolintlint
     - predeclared
     - revive
+    - staticcheck
     # Uncomment or remove - TODO: https://github.com/Kong/kong-operator/issues/1847
     # - testifylint
     - unconvert
@@ -60,9 +60,6 @@ linters:
         # Incorrectly formatted error string.
         # https://staticcheck.dev/docs/checks/#ST1005
         - -ST1005
-        # Underscore in the name of a package.
-        # https://staticcheck.dev/docs/checks/#ST1003
-        - -ST1003
     exhaustive:
       default-signifies-exhaustive: true
     forbidigo:
@@ -275,10 +272,6 @@ linters:
           - godoclint
         text: symbol should have a godoc
         path: api/configuration/v1alpha1/zz_generated_funcs.go
-      # TODO: https://github.com/kubernetes-sigs/controller-runtime/issues/2141#issuecomment-3783800430
-      - linters:
-          - staticcheck
-        text: "mgr.GetEventRecorderFor is deprecated: this uses the old events API and will be removed in a future release. Please use GetEventRecorder instead."
     paths:
       - pkg/clientset
       - config/

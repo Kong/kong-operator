@@ -178,18 +178,18 @@ type KonnectEndpoints struct {
 }
 
 // GetKonnectLabels gets the Konnect Labels from object's spec.
-func (c *KonnectGatewayControlPlane) GetKonnectLabels() map[string]string {
-	return c.Spec.Labels
+func (kgcp *KonnectGatewayControlPlane) GetKonnectLabels() map[string]string {
+	return kgcp.Spec.Labels
 }
 
 // SetKonnectLabels sets the Konnect Labels in object's spec.
-func (c *KonnectGatewayControlPlane) SetKonnectLabels(labels map[string]string) {
-	c.Spec.Labels = labels
+func (kgcp *KonnectGatewayControlPlane) SetKonnectLabels(labels map[string]string) {
+	kgcp.Spec.Labels = labels
 }
 
 // GetKonnectAPIAuthConfigurationRef returns the Konnect API Auth Configuration Ref.
-func (c *KonnectGatewayControlPlane) GetKonnectAPIAuthConfigurationRef() konnectv1alpha2.KonnectAPIAuthConfigurationRef {
-	return c.Spec.KonnectConfiguration.APIAuthConfigurationRef
+func (kgcp *KonnectGatewayControlPlane) GetKonnectAPIAuthConfigurationRef() konnectv1alpha2.KonnectAPIAuthConfigurationRef {
+	return kgcp.Spec.KonnectConfiguration.APIAuthConfigurationRef
 }
 
 // KonnectGatewayControlPlaneList contains a list of KonnectGatewayControlPlane.

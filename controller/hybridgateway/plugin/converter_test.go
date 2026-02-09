@@ -850,7 +850,7 @@ func TestTranslateURLRewrite(t *testing.T) {
 			path: "/api",
 			expected: transformerData{
 				Replace: transformerTargetSliceReplace{
-					Uri: "/new-path",
+					URI: "/new-path",
 				},
 			},
 		},
@@ -868,7 +868,7 @@ func TestTranslateURLRewrite(t *testing.T) {
 			path: "/api",
 			expected: transformerData{
 				Replace: transformerTargetSliceReplace{
-					Uri: "/",
+					URI: "/",
 				},
 			},
 		},
@@ -886,7 +886,7 @@ func TestTranslateURLRewrite(t *testing.T) {
 			path: "/",
 			expected: transformerData{
 				Replace: transformerTargetSliceReplace{
-					Uri: `/api/v2$(uri_captures[1] == nil and "" or "/" .. uri_captures[1])`,
+					URI: `/api/v2$(uri_captures[1] == nil and "" or "/" .. uri_captures[1])`,
 				},
 			},
 		},
@@ -904,7 +904,7 @@ func TestTranslateURLRewrite(t *testing.T) {
 			path: "/api/v1",
 			expected: transformerData{
 				Replace: transformerTargetSliceReplace{
-					Uri: `/api/v2$(uri_captures[1])`,
+					URI: `/api/v2$(uri_captures[1])`,
 				},
 			},
 		},
@@ -922,7 +922,7 @@ func TestTranslateURLRewrite(t *testing.T) {
 			path: "/",
 			expected: transformerData{
 				Replace: transformerTargetSliceReplace{
-					Uri: `$(uri_captures[1] == nil and "/" or "/" .. uri_captures[1])`,
+					URI: `$(uri_captures[1] == nil and "/" or "/" .. uri_captures[1])`,
 				},
 			},
 		},
@@ -940,7 +940,7 @@ func TestTranslateURLRewrite(t *testing.T) {
 			path: "/api/v1",
 			expected: transformerData{
 				Replace: transformerTargetSliceReplace{
-					Uri: `$(uri_captures[1] == nil and "/" or uri_captures[1])`,
+					URI: `$(uri_captures[1] == nil and "/" or uri_captures[1])`,
 				},
 			},
 		},
@@ -958,7 +958,7 @@ func TestTranslateURLRewrite(t *testing.T) {
 			path: "/old/api/",
 			expected: transformerData{
 				Replace: transformerTargetSliceReplace{
-					Uri: `/new/api$(uri_captures[1])`,
+					URI: `/new/api$(uri_captures[1])`,
 				},
 			},
 		},
@@ -983,7 +983,7 @@ func TestTranslateURLRewrite(t *testing.T) {
 					transformerTargetSlice: transformerTargetSlice{
 						Headers: []string{"host:new-host.example.com"},
 					},
-					Uri: `/api/v2$(uri_captures[1])`,
+					URI: `/api/v2$(uri_captures[1])`,
 				},
 			},
 		},
@@ -1013,7 +1013,7 @@ func TestTranslateURLRewrite(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, tt.expected.Add.Headers, result.Add.Headers)
 				assert.Equal(t, tt.expected.Replace.Headers, result.Replace.Headers)
-				assert.Equal(t, tt.expected.Replace.Uri, result.Replace.Uri)
+				assert.Equal(t, tt.expected.Replace.URI, result.Replace.URI)
 			}
 		})
 	}

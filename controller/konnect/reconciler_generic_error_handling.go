@@ -16,9 +16,9 @@ import (
 // If the error is a network error, it patches the status condition
 // of the Konnect entity to reflect the failure to communicate with the Konnect API.
 func (r *KonnectEntityReconciler[T, TEnt]) handleOpsErr(
-	ctx context.Context, ent TEnt, errUrl *url.Error,
+	ctx context.Context, ent TEnt, errURL *url.Error,
 ) (ctrl.Result, error) {
-	if errUrl == nil {
+	if errURL == nil {
 		return ctrl.Result{}, nil
 	}
 
@@ -26,7 +26,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) handleOpsErr(
 		konnectv1alpha1.KonnectEntityProgrammedConditionType,
 		metav1.ConditionFalse,
 		konnectv1alpha1.KonnectEntityProgrammedReasonKonnectAPIOpFailed,
-		errUrl.Error(),
+		errURL.Error(),
 	); err != nil || !res.IsZero() {
 		return res, err
 	}

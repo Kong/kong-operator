@@ -45,14 +45,14 @@ func main() {
 
 	const chartCRDsFilePath = "charts/kong-operator/charts/ko-crds/templates/ko-crds.yaml"
 	fmt.Println("Generating", chartCRDsFilePath)
-	KUSTOMIZE_BIN := os.Getenv("KUSTOMIZE_BIN")
-	if KUSTOMIZE_BIN == "" {
+	kustomizeBinPath := os.Getenv("KUSTOMIZE_BIN")
+	if kustomizeBinPath == "" {
 		fmt.Println("KUSTOMIZE_BIN environment variable is not set")
 		os.Exit(1)
 	}
-	fmt.Println("KUSTOMIZE_BIN is set to:", KUSTOMIZE_BIN)
+	fmt.Println("KUSTOMIZE_BIN is set to:", kustomizeBinPath)
 
-	cmd := exec.Command(KUSTOMIZE_BIN, "build", "config/crd")
+	cmd := exec.Command(kustomizeBinPath, "build", "config/crd")
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	if err := cmd.Run(); err != nil {

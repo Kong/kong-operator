@@ -118,8 +118,8 @@ func NewKongPluginName(filter gatewayv1.HTTPRouteFilter, namespace string, plugi
 }
 
 // NewKongPluginBindingName generates a KongPlugin name based on the KongRoute and the KongPlugin names.
-func NewKongPluginBindingName(routeID, pluginId string) string {
-	return newName(routeID, pluginId)
+func NewKongPluginBindingName(routeID, pluginID string) string {
+	return newName(routeID, pluginID)
 }
 
 // NewKongTargetName generates a KongTarget name based on the KongUpstream name, the Service Endpoint ip,

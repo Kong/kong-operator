@@ -466,33 +466,33 @@ func TestNewKongPluginBindingName(t *testing.T) {
 	tests := []struct {
 		name     string
 		routeID  string
-		pluginId string
+		pluginID string
 		expected string
 	}{
 		{
 			name:     "basic plugin binding name",
 			routeID:  "default-test-route.cp12345678.ab123456",
-			pluginId: "pl87654321",
+			pluginID: "pl87654321",
 			expected: "default-test-route.cp12345678.ab123456..pl87654321",
 		},
 		{
 			name:     "empty route ID",
 			routeID:  "",
-			pluginId: "pl99887766",
+			pluginID: "pl99887766",
 			expected: "pl99887766",
 		},
 		{
 			name:     "long route ID",
 			routeID:  "very-long-namespace-name-very-long-route-name.cp12345678.ab123456",
-			pluginId: "pl11223344",
+			pluginID: "pl11223344",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := NewKongPluginBindingName(tt.routeID, tt.pluginId)
+			result := NewKongPluginBindingName(tt.routeID, tt.pluginID)
 			assert.NotEmpty(t, result)
-			assert.Contains(t, result, tt.pluginId)
+			assert.Contains(t, result, tt.pluginID)
 			if tt.routeID != "" {
 				assert.Contains(t, result, tt.routeID)
 			}

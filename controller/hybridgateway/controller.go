@@ -63,7 +63,7 @@ type HybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjectPt
 func NewHybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjectPtr[t]](mgr ctrl.Manager, fqdnMode bool, clusterDomain string) *HybridGatewayReconciler[t, tPtr] {
 	return &HybridGatewayReconciler[t, tPtr]{
 		Client:        mgr.GetClient(),
-		eventRecorder: events.NewTypedEventRecorder(mgr.GetEventRecorderFor(ControllerName)),
+		eventRecorder: events.NewTypedEventRecorder(mgr.GetEventRecorderFor(ControllerName)), //nolint:staticcheck // It should be replaced with GetEventRecorder in the future.
 		fqdnMode:      fqdnMode,
 		clusterDomain: clusterDomain,
 	}
