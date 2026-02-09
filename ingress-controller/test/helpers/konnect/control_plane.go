@@ -22,6 +22,7 @@ import (
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/ingress-controller/test"
 	"github.com/kong/kong-operator/ingress-controller/test/testenv"
+	"github.com/kong/kong-operator/test/helpers/deploy"
 )
 
 // CreateTestControlPlane creates a control plane to be used in tests. It returns the created control plane's ID.
@@ -38,6 +39,9 @@ func CreateTestControlPlane(ctx context.Context, t *testing.T, token ...string) 
 		s = sdk.New(token[0], serverURLOpt())
 	}
 
+	// TODO: Refactor this so that all tests use a commong helper for assigning test ID.
+	testID := uuid.NewString()[:8]
+
 	var cpID string
 	createRgErr := retry.Do(func() error {
 		createResp, err := s.ControlPlanes.CreateControlPlane(ctx,
@@ -46,6 +50,9 @@ func CreateTestControlPlane(ctx context.Context, t *testing.T, token ...string) 
 				Description: lo.ToPtr(generateTestKonnectControlPlaneDescription(t)),
 				Labels: map[string]string{
 					test.KonnectControlPlaneLabelCreatedInTests: "true",
+					// Add test ID label so that Konnect cleanup workflow can find
+					// and clean up the control plane after the test finishes.
+					deploy.KonnectTestIDLabel: testID,
 				},
 				ClusterType: sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeK8SIngressController.ToPointer(),
 			},
