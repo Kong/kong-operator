@@ -1,0 +1,73 @@
+version: "2"
+linters:
+  default: none
+  enable:
+    - kubeapilinter
+  settings:
+    custom:
+      kubeapilinter:
+        type: module
+        description: Kube API LInter lints Kube like APIs based on API conventions and best practices.
+        settings:
+          linters:
+            disable:
+              - "*"
+            enable:
+              - arrayofstruct
+              - conditions
+              - defaultorrequired
+              - duplicatemarkers
+              - integers
+              - jsontags
+              - maxlength
+              # NOTE: We disable nobools as we are directly generating CRDs from OAS
+              #       and those bools will be used directly in API calls to Konnect.
+              # - nobools
+              - nodurations
+              - nofloats
+              - nomaps
+              - nonullable
+              - nophase
+              - notimestamp
+              - optionalorrequired
+              - preferredmarkers
+              - requiredfields
+              - statusoptional
+              - statussubresource
+              - uniquemarkers
+          lintersConfig:
+            # https://github.com/kubernetes-sigs/kube-api-linter/issues/195
+            # requiredfields:
+            #   omitempty:
+            #     policy: Ignore
+            preferredmarkers:
+              markers:
+                - preferredIdentifier: "k8s:optional"
+                  equivalentIdentifiers:
+                    - identifier: "kubebuilder:validation:Optional"
+                - preferredIdentifier: "k8s:required"
+                  equivalentIdentifiers:
+                    - identifier: "kubebuilder:validation:Required"
+            conditions:
+              isFirstField: Warn
+              useProtobuf: Warn
+              usePatchStrategy: Warn
+            nomaps:
+              policy: AllowStringToStringMaps
+            # We allow underscores as that's what many Konnect related fields use.
+            jsonTags:
+              jsonTagRegex: "^[a-z][a-z0-9_]*(?:[A-Z][a-z0-9_]*)*$"
+            optionalOrRequired:
+              preferredOptionalMarker: optional
+              preferredRequiredMarker: required
+  exclusions:
+    rules:
+      - linters:
+          - kubeapilinter
+        path: .*
+        text: "(optionalorrequired: embedded field .*.metav1.ObjectMeta must be marked as optional or required)"
+      # NOTE: schema_types.go contains generated type aliases for referenced schemas
+      #       that need additional work to add proper markers.
+      - linters:
+          - kubeapilinter
+        path: "schema_types.go"
