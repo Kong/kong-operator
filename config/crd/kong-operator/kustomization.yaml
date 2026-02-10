@@ -35,9 +35,14 @@ resources:
   - gateway-operator.konghq.com_gatewayconfigurations.yaml
   - gateway-operator.konghq.com_kongplugininstallations.yaml
   - gateway-operator.konghq.com_watchnamespacegrants.yaml
+  - konnect.konghq.com_dcrproviders.yaml
+  - konnect.konghq.com_identityproviderrequests.yaml
   - konnect.konghq.com_konnectapiauthconfigurations.yaml
   - konnect.konghq.com_konnectcloudgatewaydataplanegroupconfigurations.yaml
   - konnect.konghq.com_konnectcloudgatewaynetworks.yaml
   - konnect.konghq.com_konnectcloudgatewaytransitgateways.yaml
   - konnect.konghq.com_konnectextensions.yaml
   - konnect.konghq.com_konnectgatewaycontrolplanes.yaml
+  - konnect.konghq.com_portalcustomdomains.yaml
+  - konnect.konghq.com_portals.yaml
+  - konnect.konghq.com_portalteams.yaml
