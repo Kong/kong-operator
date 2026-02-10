@@ -7,14 +7,12 @@ import (
 
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	operatorv2beta1 "github.com/kong/kong-operator/api/gateway-operator/v2beta1"
 	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
-	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	kogateway "github.com/kong/kong-operator/controller/gateway"
 	managerscheme "github.com/kong/kong-operator/modules/manager/scheme"
 	testutils "github.com/kong/kong-operator/pkg/utils/test"
@@ -46,60 +44,29 @@ func TestGatewayKonnectAPIAuthReferenceGrant(t *testing.T) {
 
 	// Create GatewayConfiguration in the gateway namespace that references
 	// a KonnectAPIAuthConfiguration in the auth namespace (cross-namespace).
-	gwConfig := &operatorv2beta1.GatewayConfiguration{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-gwconfig",
-			Namespace: gwNs.Name,
-		},
-		Spec: operatorv2beta1.GatewayConfigurationSpec{
-			Konnect: &operatorv2beta1.KonnectOptions{
-				APIAuthConfigurationRef: &konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
-					Name:      "my-auth",
-					Namespace: lo.ToPtr(authNs.Name),
-				},
-			},
-		},
-	}
-	require.NoError(t, c.Create(ctx, gwConfig))
+	gwConfig := deploy.GatewayConfiguration(t, ctx, c,
+		func(obj client.Object) { obj.SetName("test-gwconfig"); obj.SetNamespace(gwNs.Name) },
+		deploy.WithGatewayConfigKonnectAuthRef("my-auth", authNs.Name),
+	)
 	t.Cleanup(func() { _ = c.Delete(ctx, gwConfig) })
 
 	// Create a GatewayClass that references the GatewayConfiguration.
-	gc := &gatewayv1.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{Name: "test-gc-xns-auth"},
-		Spec: gatewayv1.GatewayClassSpec{
-			ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
-			ParametersRef: &gatewayv1.ParametersReference{
-				Group:     "gateway-operator.konghq.com",
-				Kind:      "GatewayConfiguration",
-				Name:      gwConfig.Name,
-				Namespace: lo.ToPtr(gatewayv1.Namespace(gwNs.Name)),
-			},
-		},
-	}
-	require.NoError(t, c.Create(ctx, gc))
+	gc := deploy.GatewayClass(t, ctx, c,
+		func(obj client.Object) { obj.SetName("test-gc-xns-auth") },
+		deploy.WithGatewayClassControllerName(vars.ControllerName()),
+		deploy.WithGatewayClassParametersRef("gateway-operator.konghq.com", "GatewayConfiguration", gwConfig.Name, gwNs.Name),
+	)
 	t.Cleanup(func() { _ = c.Delete(ctx, gc) })
 
 	t.Log("patching GatewayClass status to Accepted=True")
 	require.Eventually(t, testutils.GatewayClassAcceptedStatusUpdate(t, ctx, gc.Name, c), waitTime, tickTime)
 
 	// Create a Gateway that uses the GatewayClass.
-	gw := &gatewayv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-gw-xns-auth",
-			Namespace: gwNs.Name,
-		},
-		Spec: gatewayv1.GatewaySpec{
-			GatewayClassName: gatewayv1.ObjectName(gc.Name),
-			Listeners: []gatewayv1.Listener{
-				{
-					Name:     "http",
-					Protocol: gatewayv1.HTTPProtocolType,
-					Port:     80,
-				},
-			},
-		},
-	}
-	require.NoError(t, c.Create(ctx, gw))
+	gw := deploy.Gateway(t, ctx, c,
+		func(obj client.Object) { obj.SetName("test-gw-xns-auth"); obj.SetNamespace(gwNs.Name) },
+		deploy.WithGatewayClassName(gc.Name),
+		deploy.WithGatewayListeners(gatewayv1.Listener{Name: "http", Protocol: gatewayv1.HTTPProtocolType, Port: 80}),
+	)
 	t.Cleanup(func() { _ = c.Delete(ctx, gw) })
 
 	t.Run("no derived grant is created without user KongReferenceGrant", func(t *testing.T) {
@@ -267,36 +234,17 @@ func TestGatewayKonnectAPIAuthReferenceGrant_CleanupOnGatewayDeletion(t *testing
 	c := mgr.GetClient()
 	authNs := deploy.Namespace(t, ctx, c)
 
-	gwConfig := &operatorv2beta1.GatewayConfiguration{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-gwconfig-cleanup",
-			Namespace: gwNs.Name,
-		},
-		Spec: operatorv2beta1.GatewayConfigurationSpec{
-			Konnect: &operatorv2beta1.KonnectOptions{
-				APIAuthConfigurationRef: &konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
-					Name:      "my-auth-cleanup",
-					Namespace: lo.ToPtr(authNs.Name),
-				},
-			},
-		},
-	}
-	require.NoError(t, c.Create(ctx, gwConfig))
+	gwConfig := deploy.GatewayConfiguration(t, ctx, c,
+		func(obj client.Object) { obj.SetName("test-gwconfig-cleanup"); obj.SetNamespace(gwNs.Name) },
+		deploy.WithGatewayConfigKonnectAuthRef("my-auth-cleanup", authNs.Name),
+	)
 	t.Cleanup(func() { _ = c.Delete(ctx, gwConfig) })
 
-	gc := &gatewayv1.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{Name: "test-gc-xns-cleanup"},
-		Spec: gatewayv1.GatewayClassSpec{
-			ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
-			ParametersRef: &gatewayv1.ParametersReference{
-				Group:     "gateway-operator.konghq.com",
-				Kind:      "GatewayConfiguration",
-				Name:      gwConfig.Name,
-				Namespace: lo.ToPtr(gatewayv1.Namespace(gwNs.Name)),
-			},
-		},
-	}
-	require.NoError(t, c.Create(ctx, gc))
+	gc := deploy.GatewayClass(t, ctx, c,
+		func(obj client.Object) { obj.SetName("test-gc-xns-cleanup") },
+		deploy.WithGatewayClassControllerName(vars.ControllerName()),
+		deploy.WithGatewayClassParametersRef("gateway-operator.konghq.com", "GatewayConfiguration", gwConfig.Name, gwNs.Name),
+	)
 	t.Cleanup(func() { _ = c.Delete(ctx, gc) })
 
 	t.Log("patching GatewayClass status to Accepted=True")
@@ -320,23 +268,11 @@ func TestGatewayKonnectAPIAuthReferenceGrant_CleanupOnGatewayDeletion(t *testing
 	)
 	t.Cleanup(func() { _ = c.Delete(ctx, userGrant) })
 
-	gw := &gatewayv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-gw-xns-cleanup",
-			Namespace: gwNs.Name,
-		},
-		Spec: gatewayv1.GatewaySpec{
-			GatewayClassName: gatewayv1.ObjectName(gc.Name),
-			Listeners: []gatewayv1.Listener{
-				{
-					Name:     "http",
-					Protocol: gatewayv1.HTTPProtocolType,
-					Port:     80,
-				},
-			},
-		},
-	}
-	require.NoError(t, c.Create(ctx, gw))
+	gw := deploy.Gateway(t, ctx, c,
+		func(obj client.Object) { obj.SetName("test-gw-xns-cleanup"); obj.SetNamespace(gwNs.Name) },
+		deploy.WithGatewayClassName(gc.Name),
+		deploy.WithGatewayListeners(gatewayv1.Listener{Name: "http", Protocol: gatewayv1.HTTPProtocolType, Port: 80}),
+	)
 
 	t.Log("waiting for derived grant to appear")
 	require.Eventually(t, func() bool {

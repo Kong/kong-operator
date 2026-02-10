@@ -58,7 +58,7 @@ func (r *Reconciler) ensureKonnectAPIAuthReferenceGrant(
 		return err
 	}
 
-	if err := r.cleanupKonnectAPIAuthReferenceGrantsExcept(ctx, gateway, authNamespace, authRef.Name); err != nil {
+	if err := r.cleanupStaleKonnectAPIAuthReferenceGrants(ctx, gateway, authNamespace, authRef.Name); err != nil {
 		return err
 	}
 	return r.ensureDerivedKonnectAPIAuthReferenceGrant(ctx, gateway, authNamespace, authRef.Name)
@@ -112,7 +112,10 @@ func (r *Reconciler) cleanupKonnectAPIAuthReferenceGrants(ctx context.Context, g
 	return nil
 }
 
-func (r *Reconciler) cleanupKonnectAPIAuthReferenceGrantsExcept(
+// cleanupStaleKonnectAPIAuthReferenceGrants deletes any KonnectAPIAuthConfiguration reference grants
+// owned by this gateway that don't match the current desired auth target specified by authNamespace
+// and authName. This ensures only the current desired derived grant remains.
+func (r *Reconciler) cleanupStaleKonnectAPIAuthReferenceGrants(
 	ctx context.Context,
 	gateway *gwtypes.Gateway,
 	authNamespace string,
