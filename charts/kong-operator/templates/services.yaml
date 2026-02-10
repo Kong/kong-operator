@@ -58,7 +58,7 @@ spec:
     app.kubernetes.io/component: ko
 {{- end }}
 ---
-{{- $metricsServiceName := printf "%s-metrics" (include "kong.fullname" . | trunc 63 | trimSuffix "-") -}}
+{{- $metricsServiceName := printf "%s-metrics" (include "kong.fullname" . | trunc 63 | trimSuffix "-") }}
 apiVersion: v1
 kind: Service
 metadata:

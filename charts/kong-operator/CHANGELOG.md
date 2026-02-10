@@ -1,11 +1,14 @@
 # Changelog
 
-## 1.1.2
+## 1.2.0
 
 ### Fixes
 
 - Fix broken installations using `--generate-name` or provided too long release name,
-- which caused the generated metrics `Service` name to exceed the 63 character limit.
+  which caused the generated metrics `Service` name to exceed the 63 character limit.
+  If you rely on metrics `Service` name in your integrations (e.g., for ServiceMonitor),
+  please make sure to update it to match the new naming convention,
+  which is `<release-name>-metrics` truncated to 63 characters if needed.
   [#3261](https://github.com/Kong/kong-operator/pull/3261)
 
 ## 1.1.1
