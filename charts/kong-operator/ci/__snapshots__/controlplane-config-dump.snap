@@ -55,7 +55,7 @@ kind: Secret
 metadata:
   labels:
     app.kubernetes.io/name: kong-operator
-    helm.sh/chart: kong-operator-1.2.0
+    helm.sh/chart: kong-operator-1.1.1
     app.kubernetes.io/instance: "chartsnap"
     app.kubernetes.io/version: "2.1.0"
     app.kubernetes.io/component: ko
@@ -51433,6 +51433,8 @@ spec:
                   x-kubernetes-validations:
                   - message: Only KongConsumer, KongConsumerGroup, KongRoute, KongCertificate, KongCACertificate, KongDataPlaneClientCertificate, KongService, KongUpstream, KongKey, KongKeySet, KongVault and KongPluginBinding kinds are supported for 'configuration.konghq.com' group
                     rule: self.group != 'configuration.konghq.com' || self.kind in [ 'KongConsumer', 'KongConsumerGroup', 'KongRoute', 'KongService', 'KongCertificate', 'KongCACertificate', 'KongDataPlaneClientCertificate', 'KongUpstream', 'KongKey', 'KongKeySet', 'KongVault', 'KongPluginBinding']
+                  - message: Only GatewayConfiguration kind is supported for 'gateway-operator.konghq.com' group
+                    rule: self.group != 'gateway-operator.konghq.com' || self.kind in [ 'GatewayConfiguration' ]
                   - message: namespace must be empty for KongVault and non-empty for other kinds
                     rule: 'self.kind == ''KongVault'' ? self.__namespace__ == "" : self.__namespace__ != ""'
                 maxItems: 16
@@ -57268,7 +57270,6 @@ rules:
   - kongclusterplugins
   - kongcustomentities
   - konglicenses
-  - kongreferencegrants
   - kongupstreampolicies
   verbs:
   - get
@@ -57334,6 +57335,7 @@ rules:
   - kongdataplaneclientcertificates
   - kongpluginbindings
   - kongplugins
+  - kongreferencegrants
   - kongroutes
   - kongservices
   - kongsnis
@@ -57846,7 +57848,7 @@ metadata:
   labels:
     control-plane: controller-manager
     app.kubernetes.io/component: ko
-  name: chartsnap-kong-operator-metrics
+  name: chartsnap-kong-operator-metrics-service
   namespace: default
 spec:
   ports:
@@ -57864,7 +57866,7 @@ kind: Deployment
 metadata:
   labels:
     app.kubernetes.io/name: kong-operator
-    helm.sh/chart: kong-operator-1.2.0
+    helm.sh/chart: kong-operator-1.1.1
     app.kubernetes.io/instance: "chartsnap"
     app.kubernetes.io/version: "2.1.0"
     app.kubernetes.io/component: ko
@@ -57892,7 +57894,7 @@ spec:
       labels:
         control-plane: controller-manager
         app.kubernetes.io/name: kong-operator
-        helm.sh/chart: kong-operator-1.2.0
+        helm.sh/chart: kong-operator-1.1.1
         app.kubernetes.io/instance: "chartsnap"
         app.kubernetes.io/version: "2.1.0"
         app.kubernetes.io/component: ko
@@ -57998,126 +58000,6 @@ spec:
           - path: labels
             fieldRef:
               fieldPath: metadata.labels
----
-# Source: kong-operator/templates/validating-webhook.yaml
-apiVersion: admissionregistration.k8s.io/v1
-kind: ValidatingWebhookConfiguration
-metadata:
-  labels:
-    app.kubernetes.io/name: kong-operator
-    helm.sh/chart: kong-operator-1.2.0
-    app.kubernetes.io/instance: "chartsnap"
-    app.kubernetes.io/version: "2.1.0"
-    app.kubernetes.io/component: ko
-  name: controlplane-configuration-validations
-webhooks:
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    service:
-      name: chartsnap-kong-operator-webhook
-      namespace: default
-      port: 5443
-    caBundle: |-
-      ###DYNAMIC_FIELD###
-  failurePolicy: Fail
-  matchPolicy: Equivalent
-  name: validations.kong.konghq.com
-  rules:
-  - apiGroups:
-    - configuration.konghq.com
-    apiVersions:
-    - '*'
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - kongconsumers
-    - kongconsumergroups
-    - kongplugins
-    - kongclusterplugins
-    - kongingresses
-    - kongvaults
-    - kongcustomentities
-    scope: '*'
-  - apiGroups:
-    - networking.k8s.io
-    apiVersions:
-    - v1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - ingresses
-    scope: '*'
-  - apiGroups:
-    - gateway.networking.k8s.io
-    apiVersions:
-    - v1alpha2
-    - v1beta1
-    - v1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - gateways
-    - httproutes
-    scope: '*'
-  sideEffects: None
-  timeoutSeconds: 10
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    service:
-      name: chartsnap-kong-operator-webhook
-      namespace: default
-      port: 5443
-    caBundle: |-
-      ###DYNAMIC_FIELD###
-  failurePolicy: Fail
-  matchPolicy: Equivalent
-  name: secrets.validations.kong.konghq.com
-  objectSelector:
-    matchLabels:
-      konghq.com/secret: "true"
-  rules:
-  - apiGroups:
-    - ""
-    apiVersions:
-    - v1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - secrets
-    scope: '*'
-  sideEffects: None
-  timeoutSeconds: 10
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    service:
-      name: chartsnap-kong-operator-webhook
-      namespace: default
-      port: 5443
-    caBundle: |-
-      ###DYNAMIC_FIELD###
-  failurePolicy: Fail
-  matchPolicy: Equivalent
-  name: services.validations.kong.konghq.com
-  rules:
-  - apiGroups:
-    - ""
-    apiVersions:
-    - v1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - services
-    scope: '*'
-  sideEffects: None
-  timeoutSeconds: 10
 ---
 # Source: kong-operator/templates/validation-policy-dataplane.yaml
 # This file is auto-generated by KO's hack/generators/validating-policy/main.go generator.
@@ -58244,3 +58126,123 @@ metadata:
 spec:
   policyName: "autoscale.dataplanegroups.konnectclouddataplanegroupconfig.konnect.konghq.com"
   validationActions: [Warn, Audit]
+---
+# Source: kong-operator/templates/validating-webhook.yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  labels:
+    app.kubernetes.io/name: kong-operator
+    helm.sh/chart: kong-operator-1.1.1
+    app.kubernetes.io/instance: "chartsnap"
+    app.kubernetes.io/version: "2.1.0"
+    app.kubernetes.io/component: ko
+  name: controlplane-configuration-validations
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: chartsnap-kong-operator-webhook
+      namespace: default
+      port: 5443
+    caBundle: |-
+      ###DYNAMIC_FIELD###
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: validations.kong.konghq.com
+  rules:
+  - apiGroups:
+    - configuration.konghq.com
+    apiVersions:
+    - '*'
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - kongconsumers
+    - kongconsumergroups
+    - kongplugins
+    - kongclusterplugins
+    - kongingresses
+    - kongvaults
+    - kongcustomentities
+    scope: '*'
+  - apiGroups:
+    - networking.k8s.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - ingresses
+    scope: '*'
+  - apiGroups:
+    - gateway.networking.k8s.io
+    apiVersions:
+    - v1alpha2
+    - v1beta1
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - gateways
+    - httproutes
+    scope: '*'
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: chartsnap-kong-operator-webhook
+      namespace: default
+      port: 5443
+    caBundle: |-
+      ###DYNAMIC_FIELD###
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: secrets.validations.kong.konghq.com
+  objectSelector:
+    matchLabels:
+      konghq.com/secret: "true"
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - secrets
+    scope: '*'
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: chartsnap-kong-operator-webhook
+      namespace: default
+      port: 5443
+    caBundle: |-
+      ###DYNAMIC_FIELD###
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: services.validations.kong.konghq.com
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - services
+    scope: '*'
+  sideEffects: None
+  timeoutSeconds: 10

@@ -113,6 +113,47 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 			expected: true,
 		},
 		{
+			name: "grant allows reference from GatewayConfiguration to KonnectAPIAuthConfiguration",
+			grants: []configurationv1alpha1.KongReferenceGrant{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "allow-gatewayconfiguration-to-auth",
+						Namespace: "auth-ns",
+					},
+					Spec: configurationv1alpha1.KongReferenceGrantSpec{
+						From: []configurationv1alpha1.ReferenceGrantFrom{
+							{
+								Group:     "gateway-operator.konghq.com",
+								Kind:      "GatewayConfiguration",
+								Namespace: "gateway-ns",
+							},
+						},
+						To: []configurationv1alpha1.ReferenceGrantTo{
+							{
+								Group: "konnect.konghq.com",
+								Kind:  "KonnectAPIAuthConfiguration",
+								Name:  lo.ToPtr(configurationv1alpha1.ObjectName("my-auth")),
+							},
+						},
+					},
+				},
+			},
+			fromNamespace: "gateway-ns",
+			toNamespace:   "auth-ns",
+			toName:        "my-auth",
+			fromGVK: metav1.GroupVersionKind{
+				Group:   "gateway-operator.konghq.com",
+				Version: "v2beta1",
+				Kind:    "GatewayConfiguration",
+			},
+			toGVK: metav1.GroupVersionKind{
+				Group:   "konnect.konghq.com",
+				Version: "v1alpha1",
+				Kind:    "KonnectAPIAuthConfiguration",
+			},
+			expected: true,
+		},
+		{
 			name: "grant allows reference from cluster-scoped KongVault to KonnectGatewayControlPlane",
 			grants: []configurationv1alpha1.KongReferenceGrant{
 				{
