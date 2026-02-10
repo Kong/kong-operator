@@ -1,0 +1,67 @@
+################################################################################
+# Tools
+
+[tools."github:kubernetes-sigs/controller-tools"]
+# renovate: datasource=github-releases depName=kubernetes-sigs/controller-tools
+version = "0.20.0"
+
+[tools."github:golangci/golangci-lint"]
+# renovate: datasource=github-releases depName=golangci/golangci-lint
+version = "2.8.0"
+
+[tools."go:sigs.k8s.io/kube-api-linter/cmd/golangci-lint-kube-api-linter"]
+# renovate: datasource=git-refs packageName=https://github.com/kubernetes-sigs/kube-api-linter.git
+version = "39e3d06a2850e38a8e9e82918bab14ce84e608de"
+
+[tools."github:kubernetes-sigs/controller-runtime"]
+# renovate: datasource=github-releases depName=kubernetes-sigs/controller-runtime
+version = "0.23.1"
+[tools."github:kubernetes-sigs/controller-runtime".platforms]
+darwin-arm64 = { asset_pattern = "setup-envtest-darwin-arm64" }
+
+################################################################################
+# Tasks
+
+[tasks.build]
+description = "Build the manager binary"
+run = "go build -o bin/generate main.go"
+
+[tasks.clean]
+description = "Clean generated api/ directory"
+run = "rm -rf ./api/"
+
+[tasks.generate-api]
+description = "Generate Kubernetes Go API from OpenAPI spec"
+run = "go run ."
+depends = [ "clean" ]
+depends_post = [ "generate-deepcopy" ]
+[tasks.generate-api.env]
+INPUT_FILE = "openapi.yaml"
+OUTPUT_DIR = "api"
+API_VERSION = "v1alpha1"
+API_GROUP = "konnect.konghq.com"
+PATHS = "/v3/portals,/v3/portals/{portalId}/teams,/v3/portals/{portalId}/custom-domain,/v3/identity-providers,/v2/dcr-providers"
+CONFIG_FILE = "config.yaml"
+
+[tasks.generate-deepcopy]
+description = "Generate DeepCopy methods for the API types"
+run = "controller-gen object paths=./api/..."
+
+[tasks.lint]
+description = "Run golangci-lint"
+run = "golangci-lint run -v --config .golangci.yml"
+
+[tasks.lint-api]
+description = "Run golangci-lint"
+run = "golangci-lint-kube-api-linter run -v --config .golangci-kube-api.yml ./api/..."
+
+[tasks.test-unit]
+description = "Run unit tests"
+
+[tasks.test-crdsvalidation]
+description = "Run CRD validation tests"
+run = """
+export KUBEBUILDER_ASSETS=$(setup-envtest use -p path)
+go test ./test/crdsvalidation/...
+"""
+
