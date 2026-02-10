@@ -88,30 +88,9 @@ func (p *PrometheusMetricsScraper) Scrape(ctx context.Context) (Metrics, error) 
 	}
 
 	for _, u := range urls {
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, u+"/metrics", nil)
+		metricFamilies, err := p.scrapeURL(ctx, u)
 		if err != nil {
 			return Metrics{}, err
-		}
-
-		resp, err := p.httpClient.Do(req)
-		if err != nil {
-			return Metrics{}, fmt.Errorf("failed to scrape metrics from %s: %w", u, err)
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			b, _ := io.ReadAll(resp.Body)
-			return Metrics{}, fmt.Errorf("failed to scrape metrics from %s: %s: %s", u, resp.Status, string(b))
-		}
-
-		parser := prometheusexpfmt.NewTextParser(model.LegacyValidation)
-		metricFamilies, err := parser.TextToMetricFamilies(resp.Body)
-		if err != nil {
-			b, errBody := io.ReadAll(resp.Body)
-			if errBody != nil {
-				return Metrics{}, fmt.Errorf("failed to parse metrics (failed reading response body: %w) from %s: %s: %s", errBody, u, resp.Status, string(b))
-			}
-			return Metrics{}, fmt.Errorf("failed to parse metrics from %s: %s: %s", u, resp.Status, string(b))
 		}
 
 		adminAPIURL := adminAPIEndpointURL(u)
@@ -134,6 +113,36 @@ func (p *PrometheusMetricsScraper) Scrape(ctx context.Context) (Metrics, error) 
 	p.subscribersLock.RUnlock()
 
 	return metrics, nil
+}
+
+func (p *PrometheusMetricsScraper) scrapeURL(ctx context.Context, u string) (map[string]*prometheus.MetricFamily, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u+"/metrics", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := p.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to scrape metrics from %s: %w", u, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("failed to scrape metrics from %s: %s: %s", u, resp.Status, string(b))
+	}
+
+	parser := prometheusexpfmt.NewTextParser(model.LegacyValidation)
+	metricFamilies, err := parser.TextToMetricFamilies(resp.Body)
+	if err != nil {
+		b, errBody := io.ReadAll(resp.Body)
+		if errBody != nil {
+			return nil, fmt.Errorf("failed to parse metrics (failed reading response body: %w) from %s: %s: %s", errBody, u, resp.Status, string(b))
+		}
+		return nil, fmt.Errorf("failed to parse metrics from %s: %s: %s", u, resp.Status, string(b))
+	}
+
+	return metricFamilies, nil
 }
 
 // DataPlaneUID returns the UID of the DataPlane this scraper is scraping metrics for.
