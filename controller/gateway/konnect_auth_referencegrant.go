@@ -37,7 +37,7 @@ func (r *Reconciler) ensureKonnectAPIAuthReferenceGrant(
 	}
 
 	authRef := gatewayConfig.Spec.Konnect.APIAuthConfigurationRef
-	if authRef.Namespace == nil || *authRef.Namespace == "" || *authRef.Namespace == gatewayConfig.Namespace {
+	if authRef.Namespace == nil || *authRef.Namespace == "" || *authRef.Namespace == gateway.Namespace {
 		return r.cleanupKonnectAPIAuthReferenceGrants(ctx, gateway)
 	}
 	authNamespace := *authRef.Namespace
