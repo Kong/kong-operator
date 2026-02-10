@@ -476,9 +476,9 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 				// If the error was a network error, handle it here, there's no need to proceed,
 				// as no state has changed.
 				// Status conditions are updated in handleOpsErr.
-				var errUrl *url.Error
-				if errors.As(err, &errUrl) {
-					return r.handleOpsErr(ctx, ent, errUrl)
+				var errURL *url.Error
+				if errors.As(err, &errURL) {
+					return r.handleOpsErr(ctx, ent, errURL)
 				}
 
 				// If the error is a rate limit error, requeue after the retry-after duration
@@ -520,9 +520,9 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// If the error was a network error, handle it here, there's no need to proceed,
 		// as no state has changed.
 		// Status conditions are updated in handleOpsErr.
-		var errUrl *url.Error
-		if errors.As(err, &errUrl) {
-			return r.handleOpsErr(ctx, ent, errUrl)
+		var errURL *url.Error
+		if errors.As(err, &errURL) {
+			return r.handleOpsErr(ctx, ent, errURL)
 		}
 		return ctrl.Result{}, err
 	} else if !res.IsZero() || stop {
@@ -579,15 +579,15 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 		if err != nil {
 			var (
-				errUrl       *url.Error
+				errURL       *url.Error
 				rateLimitErr ops.RateLimitError
 			)
 			switch {
 			// If the error was a network error, handle it here, there's no need to proceed,
 			// as no state has changed.
 			// Status conditions are updated in handleOpsErr.
-			case errors.As(err, &errUrl):
-				return r.handleOpsErr(ctx, ent, errUrl)
+			case errors.As(err, &errURL):
+				return r.handleOpsErr(ctx, ent, errURL)
 
 			// If the error is a rate limit error, requeue after the retry-after duration
 			// instead of returning an error.
@@ -620,15 +620,15 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		logger.Error(err, "failed to update")
 
 		var (
-			errUrl       *url.Error
+			errURL       *url.Error
 			rateLimitErr ops.RateLimitError
 		)
 		switch {
 		// If the error was a network error, handle it here, there's no need to proceed,
 		// as no state has changed.
 		// Status conditions are updated in handleOpsErr.
-		case errors.As(err, &errUrl):
-			return r.handleOpsErr(ctx, ent, errUrl)
+		case errors.As(err, &errURL):
+			return r.handleOpsErr(ctx, ent, errURL)
 
 		// If the error is a rate limit error, requeue after the retry-after duration
 		// instead of returning an error.

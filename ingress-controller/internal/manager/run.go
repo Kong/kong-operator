@@ -190,7 +190,9 @@ func New(
 	var eventRecorder record.EventRecorder
 	if c.EmitKubernetesEvents {
 		setupLog.Info("Emitting Kubernetes events enabled, creating an event recorder for " + consts.KongClientEventRecorderComponentName)
-		eventRecorder = newEventRecorderForInstance(instanceID, mgr.GetEventRecorderFor(consts.KongClientEventRecorderComponentName))
+		eventRecorder = newEventRecorderForInstance(
+			instanceID, mgr.GetEventRecorderFor(consts.KongClientEventRecorderComponentName), //nolint:staticcheck // It should be replaced with GetEventRecorder in the future.
+		)
 	} else {
 		setupLog.Info("Emitting Kubernetes events disabled, discarding all events")
 		// Create an empty record.FakeRecorder with no Events channel to discard all events.

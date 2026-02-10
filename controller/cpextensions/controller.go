@@ -1,4 +1,4 @@
-package controlplane_extensions
+package cpextensions
 
 import (
 	"context"

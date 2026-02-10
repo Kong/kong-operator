@@ -1,4 +1,4 @@
-package controlplane_extensions
+package cpextensions
 
 //+kubebuilder:rbac:groups=gateway-operator.konghq.com,resources=dataplanemetricsextensions,verbs=get;list;watch
 //+kubebuilder:rbac:groups=core,resources=services,verbs=get;list;patch;watch

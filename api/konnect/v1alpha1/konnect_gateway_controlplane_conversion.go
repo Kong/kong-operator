@@ -16,33 +16,33 @@ const (
 )
 
 // ConvertTo converts this KonnectGatewayControlPlane (v1alpha1) to the Hub version (v1alpha2).
-func (src *KonnectGatewayControlPlane) ConvertTo(dstRaw conversion.Hub) error {
+func (kgcp *KonnectGatewayControlPlane) ConvertTo(dstRaw conversion.Hub) error {
 
 	dst, ok := dstRaw.(*konnectv1alpha2.KonnectGatewayControlPlane)
 	if !ok {
 		return fmt.Errorf(errWrongConvertToKonnectGatewayControlPlane, dstRaw)
 	}
 
-	dst.ObjectMeta = src.ObjectMeta
+	dst.ObjectMeta = kgcp.ObjectMeta
 
 	// Convert the changed fields between v1alpha1 and v1alpha2.
-	dst.Spec.CreateControlPlaneRequest = createControlPlaneRequestFromSpec(src.Spec)
+	dst.Spec.CreateControlPlaneRequest = createControlPlaneRequestFromSpec(kgcp.Spec)
 
-	if src.Spec.Mirror != nil {
+	if kgcp.Spec.Mirror != nil {
 		dst.Spec.Mirror = &konnectv1alpha2.MirrorSpec{
 			Konnect: konnectv1alpha2.MirrorKonnect{
-				ID: src.Spec.Mirror.Konnect.ID,
+				ID: kgcp.Spec.Mirror.Konnect.ID,
 			},
 		}
 	} else {
 		dst.Spec.Mirror = nil
 	}
-	dst.Spec.Source = src.Spec.Source
-	dst.Spec.Members = src.Spec.Members
+	dst.Spec.Source = kgcp.Spec.Source
+	dst.Spec.Members = kgcp.Spec.Members
 
 	dst.Spec.KonnectConfiguration = konnectv1alpha2.ControlPlaneKonnectConfiguration{
 		APIAuthConfigurationRef: konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
-			Name: src.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name,
+			Name: kgcp.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name,
 		},
 	}
 
@@ -50,29 +50,29 @@ func (src *KonnectGatewayControlPlane) ConvertTo(dstRaw conversion.Hub) error {
 }
 
 // ConvertFrom converts the Hub version (v1alpha2) to this KonnectGatewayControlPlane (v1alpha1).
-func (dst *KonnectGatewayControlPlane) ConvertFrom(srcRaw conversion.Hub) error { //nolint:staticcheck // ST1016 methods on the same type can have different receiver names
+func (kgcp *KonnectGatewayControlPlane) ConvertFrom(srcRaw conversion.Hub) error {
 
 	src, ok := srcRaw.(*konnectv1alpha2.KonnectGatewayControlPlane)
 	if !ok {
 		return fmt.Errorf(errWrongConvertFromKonnectGatewayControlPlane, srcRaw)
 	}
 
-	dst.ObjectMeta = src.ObjectMeta
+	kgcp.ObjectMeta = src.ObjectMeta
 
-	dst.Spec.CreateControlPlaneRequest = createInlineControlPlaneRequest(src.Spec.CreateControlPlaneRequest)
+	kgcp.Spec.CreateControlPlaneRequest = createInlineControlPlaneRequest(src.Spec.CreateControlPlaneRequest)
 	if src.Spec.Mirror != nil {
-		dst.Spec.Mirror = &MirrorSpec{
+		kgcp.Spec.Mirror = &MirrorSpec{
 			Konnect: MirrorKonnect{
 				ID: src.Spec.Mirror.Konnect.ID,
 			},
 		}
 	} else {
-		dst.Spec.Mirror = nil
+		kgcp.Spec.Mirror = nil
 	}
-	dst.Spec.Source = src.Spec.Source
-	dst.Spec.Members = src.Spec.Members
+	kgcp.Spec.Source = src.Spec.Source
+	kgcp.Spec.Members = src.Spec.Members
 
-	dst.Spec.KonnectConfiguration = konnectv1alpha2.KonnectConfiguration{
+	kgcp.Spec.KonnectConfiguration = konnectv1alpha2.KonnectConfiguration{
 		APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 			Name: src.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name,
 		},
