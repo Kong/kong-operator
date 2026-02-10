@@ -99,7 +99,6 @@ func init() {
 
 // Config represents a union type for config.
 // Only one of the fields should be set based on the Type.
-//
 type Config struct {
 	// Type designates the type of configuration.
 	//

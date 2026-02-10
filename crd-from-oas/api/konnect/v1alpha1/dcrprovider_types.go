@@ -78,7 +78,6 @@ func init() {
 
 // DcrProviderConfig represents a union type for DcrProviderConfig.
 // Only one of the fields should be set based on the Type.
-//
 type DcrProviderConfig struct {
 	// Type designates the type of configuration.
 	//
@@ -114,9 +113,9 @@ type DcrProviderConfigType string
 
 // DcrProviderConfigType values.
 const (
-	DcrProviderConfigTypeAuth0 DcrProviderConfigType = "Auth0"
+	DcrProviderConfigTypeAuth0   DcrProviderConfigType = "Auth0"
 	DcrProviderConfigTypeAzureAd DcrProviderConfigType = "AzureAd"
-	DcrProviderConfigTypeCurity DcrProviderConfigType = "Curity"
-	DcrProviderConfigTypeOkta DcrProviderConfigType = "Okta"
-	DcrProviderConfigTypeHttp DcrProviderConfigType = "Http"
+	DcrProviderConfigTypeCurity  DcrProviderConfigType = "Curity"
+	DcrProviderConfigTypeOkta    DcrProviderConfigType = "Okta"
+	DcrProviderConfigTypeHttp    DcrProviderConfigType = "Http"
 )

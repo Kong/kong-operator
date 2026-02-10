@@ -73,3 +73,11 @@ export KUBEBUILDER_ASSETS=$(setup-envtest use -p path)
 go test -v -count 1 ./test/crdsvalidation/...
 """
 
+[tasks.all]
+description = "Generate API, CRDs, and run all tests and linters"
+run = [
+	{ task = "generate-api" },
+	{ task = "lint" },
+	{ tasks = [ "generate-crds", "lint-api", "test-unit"] },
+	{ task = "test-crdsvalidation" },
+]

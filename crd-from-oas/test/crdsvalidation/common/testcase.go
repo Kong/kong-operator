@@ -6,13 +6,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kong/kong-operator/crd-from-oas/test/scheme"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
+
+	"github.com/kong/kong-operator/crd-from-oas/test/scheme"
 )
 
 // TestCasesGroup is a group of test cases related to CRD validation.

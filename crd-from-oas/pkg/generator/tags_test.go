@@ -3,9 +3,10 @@ package generator
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/kong/kong-operator/crd-from-oas/pkg/config"
 	"github.com/kong/kong-operator/crd-from-oas/pkg/parser"
-	"github.com/stretchr/testify/assert"
 )
 
 func ptr[T any](v T) *T {
