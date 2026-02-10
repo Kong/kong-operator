@@ -147,5 +147,5 @@ formatters:
       sections:
         - standard
         - default
-        - prefix(crd-from-oas)
+        - prefix(github.com/kong/kong-operator)
       custom-order: true
