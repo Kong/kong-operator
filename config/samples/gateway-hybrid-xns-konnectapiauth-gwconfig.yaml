@@ -64,15 +64,16 @@ spec:
 apiVersion: configuration.konghq.com/v1alpha1
 kind: KongReferenceGrant
 metadata:
-  name: allow-kong-cp-to-auth
+  name: allow-gatewayconfig-to-auth
   namespace: auth
 spec:
-  # We need to allow the KonnectGatewayControlPlane in the 'kong' namespace to reference
+  # Allow the GatewayConfiguration in the 'kong' namespace to reference
   # the KonnectAPIAuthConfiguration in the 'auth' namespace.
-  # The KonnectGatewayControlPlane is created by the Gateway Controller in the 'kong' namespace.
+  # The operator will automatically provision the underlying
+  # KonnectGatewayControlPlane -> KonnectAPIAuthConfiguration grant.
   from:
-    - group: konnect.konghq.com
-      kind: KonnectGatewayControlPlane
+    - group: gateway-operator.konghq.com
+      kind: GatewayConfiguration
       namespace: kong
   to:
     - group: konnect.konghq.com

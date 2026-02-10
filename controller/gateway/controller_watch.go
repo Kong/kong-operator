@@ -191,8 +191,7 @@ func (r *Reconciler) listGatewaysForGatewayConfig(ctx context.Context, obj clien
 			string(gatewayClass.Spec.ParametersRef.Group) == operatorv1beta1.SchemeGroupVersion.Group &&
 			string(gatewayClass.Spec.ParametersRef.Kind) == "GatewayConfiguration" &&
 			gatewayClass.Spec.ParametersRef.Name == gatewayConfig.Name &&
-			gatewayClass.Spec.ParametersRef.Namespace != nil &&
-			string(*gatewayClass.Spec.ParametersRef.Namespace) == gatewayConfig.Namespace {
+			string(lo.FromPtrOr(gatewayClass.Spec.ParametersRef.Namespace, "")) == gatewayConfig.Namespace {
 			matchingGatewayClasses[gatewayClass.Name] = struct{}{}
 		}
 	}
@@ -311,8 +310,8 @@ func (r *Reconciler) listGatewaysForKongReferenceGrant(ctx context.Context, obj 
 			}
 			authRef := gatewayConfig.Spec.Konnect.APIAuthConfigurationRef
 			authNamespace := gatewayConfig.Namespace
-			if authRef.Namespace != nil && *authRef.Namespace != "" {
-				authNamespace = *authRef.Namespace
+			if ns := lo.FromPtrOr(authRef.Namespace, ""); ns != "" {
+				authNamespace = ns
 			}
 			if authNamespace != grant.Namespace {
 				continue
