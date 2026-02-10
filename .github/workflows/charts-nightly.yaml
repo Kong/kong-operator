@@ -37,7 +37,11 @@ jobs:
           install: true
 
       - name: Install PyYAML
-        run: python -m pip install --upgrade "pyyaml>=6.0"
+        run: |
+          python -m pip install --require-hashes --no-deps \
+            'pyyaml==6.0.2' \
+            --hash=sha256:70b189594dbe54f75ab3a1acec5f1e3faa7e8cf2f1e08d9b561cb41b845f69d5 \
+            --hash=sha256:d584d9ec91ad65861cc08d42e834324ef890a082e591037abe114850ff7bbc3e
 
       - name: Compute nightly chart metadata
         id: metadata

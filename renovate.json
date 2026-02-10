@@ -89,6 +89,16 @@
       ]
     },
     {
+      "description": "Match go install commands in .github/workflows/* that are pinned by commit SHA with a version comment.",
+      "customType": "regex",
+      "fileMatch": [
+        "\\.github/workflows/.*\\.yaml$"
+      ],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\n\\s*go install \\S+@(?<currentDigest>[a-f0-9]{40})\\s+#\\s+(?<currentValue>v[0-9]\\S*)"
+      ]
+    },
+    {
       "description": "Match dependencies in .github/supported_k8s_node_versions.yaml that are properly annotated with `# renovate: datasource={} depName={}.`",
       "customType": "regex",
       "fileMatch": [
