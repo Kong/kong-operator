@@ -166,14 +166,14 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 				}
 				buf.WriteString("}\n\n")
 			} else {
-				// It's likely a simple type or a map - generate a type alias
+				// It's likely a simple type or a map - generate a type definition
 				buf.WriteString(comment)
-				buf.WriteString(fmt.Sprintf("type %s = map[string]string\n\n", refName))
+				buf.WriteString(fmt.Sprintf("type %s map[string]string\n\n", refName))
 			}
 		} else {
 			// Schema not found in parsed schemas, generate a placeholder
 			buf.WriteString(fmt.Sprintf("// %s is a referenced type (definition not found in spec)\n", refName))
-			buf.WriteString(fmt.Sprintf("type %s = map[string]string\n\n", refName))
+			buf.WriteString(fmt.Sprintf("type %s map[string]string\n\n", refName))
 		}
 	}
 
