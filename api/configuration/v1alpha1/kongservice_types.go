@@ -56,6 +56,8 @@ type KongService struct {
 // +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
 // +apireference:kgo:include
 type KongServiceSpec struct {
+	KongServiceAPISpec `json:",inline"`
+
 	// ControlPlaneRef is a reference to a ControlPlane this KongService is associated with.
 	// +kubebuilder:validation:XValidation:message="'konnectID' type is not supported", rule="self.type != 'konnectID'"
 	// +required
@@ -64,8 +66,6 @@ type KongServiceSpec struct {
 	// Adopt is the options for adopting a service from an existing service in Konnect.
 	// +optional
 	Adopt *commonv1alpha1.AdoptOptions `json:"adopt,omitempty"`
-
-	KongServiceAPISpec `json:",inline"`
 }
 
 // KongServiceAPISpec defines the specification of a Kong Service.
@@ -135,7 +135,8 @@ type KongServiceStatus struct {
 type KongServiceList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []KongService `json:"items"`
+
+	Items []KongService `json:"items"`
 }
 
 func init() {

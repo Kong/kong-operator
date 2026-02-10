@@ -54,6 +54,8 @@ type KongCredentialBasicAuth struct {
 // +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
 // +apireference:kgo:include
 type KongCredentialBasicAuthSpec struct {
+	KongCredentialBasicAuthAPISpec `json:",inline"`
+
 	// ConsumerRef is a reference to a Consumer this CredentialBasicAuth is associated with.
 	//
 	// +required
@@ -62,8 +64,6 @@ type KongCredentialBasicAuthSpec struct {
 	// Adopt is the options for adopting a BasicAuth credential from an existing BasicAuth credential in Konnect.
 	// +optional
 	Adopt *commonv1alpha1.AdoptOptions `json:"adopt,omitempty"`
-
-	KongCredentialBasicAuthAPISpec `json:",inline"`
 }
 
 // KongCredentialBasicAuthAPISpec defines specification of a BasicAuth credential.
@@ -104,7 +104,8 @@ type KongCredentialBasicAuthStatus struct {
 type KongCredentialBasicAuthList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []KongCredentialBasicAuth `json:"items"`
+
+	Items []KongCredentialBasicAuth `json:"items"`
 }
 
 func init() {

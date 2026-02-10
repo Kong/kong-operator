@@ -53,7 +53,8 @@ type KongPluginInstallation struct {
 type KongPluginInstallationList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []KongPluginInstallation `json:"items"`
+
+	Items []KongPluginInstallation `json:"items"`
 }
 
 // KongPluginInstallationSpec provides the information necessary to retrieve and install a Kong custom plugin.

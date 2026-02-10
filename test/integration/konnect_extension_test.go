@@ -387,6 +387,7 @@ func konnectExtensionTestCases(t *testing.T, params KonnectExtensionTestCasePara
 // KonnectExtensionTestBodyParams is a struct that holds the parameters for the test body function.
 type KonnectExtensionTestBodyParams struct {
 	KonnectExtensionTestCaseParams
+
 	konnectExtension    *konnectv1alpha2.KonnectExtension
 	secret              *corev1.Secret
 	authConfigName      string

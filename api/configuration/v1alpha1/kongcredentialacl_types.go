@@ -54,6 +54,8 @@ type KongCredentialACL struct {
 // +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
 // +apireference:kgo:include
 type KongCredentialACLSpec struct {
+	KongCredentialACLAPISpec `json:",inline"`
+
 	// ConsumerRef is a reference to a Consumer this KongCredentialACL is associated with.
 	//
 	// +required
@@ -62,8 +64,6 @@ type KongCredentialACLSpec struct {
 	// Adopt is the options for adopting an ACL from an existing ACL in Konnect.
 	// +optional
 	Adopt *commonv1alpha1.AdoptOptions `json:"adopt,omitempty"`
-
-	KongCredentialACLAPISpec `json:",inline"`
 }
 
 // KongCredentialACLAPISpec defines specification of an ACL credential.
@@ -99,7 +99,8 @@ type KongCredentialACLStatus struct {
 type KongCredentialACLList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []KongCredentialACL `json:"items"`
+
+	Items []KongCredentialACL `json:"items"`
 }
 
 func init() {

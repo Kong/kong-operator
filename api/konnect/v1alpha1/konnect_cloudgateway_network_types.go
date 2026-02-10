@@ -114,7 +114,7 @@ type KonnectCloudGatewayNetworkStatus struct {
 	// +patchMergeKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 
-	konnectv1alpha2.KonnectEntityStatus `json:",inline"`
+	konnectv1alpha2.KonnectEntityStatus `json:",inline"` //nolint:embeddedstructfieldcheck
 
 	// State is the current state of the network. Can be e.g. initializing, ready, terminating.
 	//

@@ -500,11 +500,11 @@ KonnectCloudGatewayTransitGatewaySpec defines the desired state of KonnectCloudG
 
 | Field | Description |
 | --- | --- |
-| `networkRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | NetworkRef is the schema for the NetworkRef type. |
-| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a cloud gateway transit gateway from an existing transit gateway in Konnect. |
 | `type` _[TransitGatewayType](#konnect-konghq-com-v1alpha1-types-transitgatewaytype)_ | Type is the type of the Konnect transit gateway. |
 | `awsTransitGateway` _[AWSTransitGateway](#konnect-konghq-com-v1alpha1-types-awstransitgateway)_ | AWSTransitGateway is the configuration of an AWS transit gateway. Used when type is "AWS Transit Gateway". |
 | `azureTransitGateway` _[AzureTransitGateway](#konnect-konghq-com-v1alpha1-types-azuretransitgateway)_ | AzureTransitGateway is the configuration of an Azure transit gateway. Used when type is "Azure Transit Gateway". |
+| `networkRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | NetworkRef is the schema for the NetworkRef type. |
+| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a cloud gateway transit gateway from an existing transit gateway in Konnect. |
 
 _Appears in:_
 

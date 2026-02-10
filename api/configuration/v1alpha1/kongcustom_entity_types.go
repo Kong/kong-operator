@@ -90,7 +90,8 @@ type KongCustomEntityStatus struct {
 type KongCustomEntityList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []KongCustomEntity `json:"items"`
+
+	Items []KongCustomEntity `json:"items"`
 }
 
 func init() {

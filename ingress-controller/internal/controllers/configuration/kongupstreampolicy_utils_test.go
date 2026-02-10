@@ -756,6 +756,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 
 type DataPlaneStatusClientMock struct {
 	controllers.DataPlane
+
 	ObjectsConfigured bool
 }
 

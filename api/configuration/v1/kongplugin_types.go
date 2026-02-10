@@ -112,7 +112,8 @@ type KongPlugin struct {
 type KongPluginList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []KongPlugin `json:"items"`
+
+	Items []KongPlugin `json:"items"`
 }
 
 // KongPluginStatus represents the current status of the KongPlugin resource.

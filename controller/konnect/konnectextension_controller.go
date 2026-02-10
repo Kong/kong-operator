@@ -49,6 +49,7 @@ import (
 // KonnectExtensionReconciler reconciles a KonnectExtension object.
 type KonnectExtensionReconciler struct {
 	client.Client
+
 	ControllerOptions        controller.Options
 	LoggingMode              logging.Mode
 	SdkFactory               sdkops.SDKFactory

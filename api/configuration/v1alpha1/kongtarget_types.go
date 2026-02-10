@@ -49,15 +49,15 @@ type KongTarget struct {
 // +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
 // +apireference:kgo:include
 type KongTargetSpec struct {
+	// KongTargetAPISpec are the attributes of the Kong Target itself.
+	KongTargetAPISpec `json:",inline"`
+
 	// UpstreamRef is a reference to a KongUpstream this KongTarget is attached to.
 	UpstreamRef commonv1alpha1.NameRef `json:"upstreamRef"`
 
 	// Adopt is the options for adopting a target from an existing target in Konnect.
 	// +optional
 	Adopt *commonv1alpha1.AdoptOptions `json:"adopt,omitempty"`
-
-	// KongTargetAPISpec are the attributes of the Kong Target itself.
-	KongTargetAPISpec `json:",inline"`
 }
 
 // KongTargetAPISpec are the attributes of the Kong Target itself.
@@ -95,7 +95,8 @@ type KongTargetStatus struct {
 type KongTargetList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []KongTarget `json:"items"`
+
+	Items []KongTarget `json:"items"`
 }
 
 func init() {

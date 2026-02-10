@@ -53,8 +53,9 @@ const (
 type KongVault struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              KongVaultSpec   `json:"spec"`
-	Status            KongVaultStatus `json:"status,omitempty"`
+
+	Spec   KongVaultSpec   `json:"spec"`
+	Status KongVaultStatus `json:"status,omitempty"`
 }
 
 // KongVaultSpec defines specification of a custom Kong vault.
@@ -114,7 +115,8 @@ type KongVaultStatus struct {
 type KongVaultList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []KongVault `json:"items"`
+
+	Items []KongVault `json:"items"`
 }
 
 func init() {

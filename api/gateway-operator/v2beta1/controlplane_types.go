@@ -62,7 +62,8 @@ type ControlPlane struct {
 type ControlPlaneList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ControlPlane `json:"items"`
+
+	Items []ControlPlane `json:"items"`
 }
 
 // ControlPlaneSpec defines the desired state of ControlPlane
@@ -70,6 +71,8 @@ type ControlPlaneList struct {
 // +apireference:kgo:include
 // +kubebuilder:validation:XValidation:message="When dataplane target is of type 'ref' the ingressClass must be set",rule="self.dataplane.type != 'ref' || has(self.ingressClass)"
 type ControlPlaneSpec struct {
+	ControlPlaneOptions `json:",inline"`
+
 	// DataPlane designates the target data plane to configure.
 	//
 	// It can be:
@@ -78,8 +81,6 @@ type ControlPlaneSpec struct {
 	//
 	// +required
 	DataPlane ControlPlaneDataPlaneTarget `json:"dataplane,omitzero"`
-
-	ControlPlaneOptions `json:",inline"`
 
 	// Extensions provide additional or replacement features for the ControlPlane
 	// resources to influence or enhance functionality.

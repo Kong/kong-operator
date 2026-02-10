@@ -75,7 +75,8 @@ type KongConsumerGroupSpec struct {
 type KongConsumerGroupList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []KongConsumerGroup `json:"items"`
+
+	Items []KongConsumerGroup `json:"items"`
 }
 
 // KongConsumerGroupStatus represents the current status of the KongConsumerGroup resource.

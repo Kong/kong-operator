@@ -70,6 +70,7 @@ func (c *Certificate) SanitizedCopy() Certificate {
 // Plugin represents a plugin Object in Kong.
 type Plugin struct {
 	kong.Plugin
+
 	K8sParent client.Object
 }
 

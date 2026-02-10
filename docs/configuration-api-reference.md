@@ -767,12 +767,12 @@ KongCACertificateSpec contains the specification for the KongCACertificate.
 
 | Field | Description |
 | --- | --- |
+| `cert` _string_ | Cert is the PEM-encoded CA certificate. This field is used when type is 'inline'. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of tags applied to the certificate. Tags will be applied when type is 'inline' or 'secretRef'. This field allows you to attach metadata to the certificate for identification or organization purposes. |
 | `type` _[KongCACertificateSourceType](#configuration-konghq-com-v1alpha1-types-kongcacertificatesourcetype)_ | Type indicates the source of the CA certificate data. Can be 'inline' or 'secretRef'. |
 | `controlPlaneRef` _[ControlPlaneRef](#common-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef references the Konnect Control Plane that this KongCACertificate should be created in. |
 | `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a CA certificate from an existing CA certificate in Konnect. |
 | `secretRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | SecretRef is a reference to a Kubernetes Secret containing the CA certificate. This field is used when type is 'secretRef'. The Secret must contain a key named 'ca.crt'. The namespace field is optional, but will be restricted by validation until ReferenceGrant support is implemented. |
-| `cert` _string_ | Cert is the PEM-encoded CA certificate. This field is used when type is 'inline'. |
-| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of tags applied to the certificate. Tags will be applied when type is 'inline' or 'secretRef'. This field allows you to attach metadata to the certificate for identification or organization purposes. |
 
 _Appears in:_
 
@@ -842,16 +842,16 @@ KongCertificateSpec contains the specification for the KongCertificate.
 
 | Field | Description |
 | --- | --- |
-| `type` _[KongCertificateSourceType](#configuration-konghq-com-v1alpha1-types-kongcertificatesourcetype)_ | Type indicates the source of the certificate data. Can be 'inline' or 'secretRef'. |
-| `controlPlaneRef` _[ControlPlaneRef](#common-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef references the Konnect Control Plane that this KongCertificate should be created in. |
-| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a certificate from an existing certificate in Konnect. |
-| `secretRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | SecretRef is a reference to a Kubernetes Secret containing the certificate and key. This field is used when type is 'secretRef'. The Secret must contain keys named 'tls.crt' and 'tls.key'. The namespace field is optional, but will be restricted by validation until ReferenceGrant support is implemented. |
-| `secretRefAlt` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | SecretRefAlt is a reference to a Kubernetes Secret containing the alternative certificate and key. This should only be set if you have both RSA and ECDSA types of certificate available and would like Kong to prefer serving using ECDSA certs when client advertises support for it. This field is used when type is 'secretRef'. The Secret must contain keys named 'tls.crt' and 'tls.key'. The namespace field is optional, but will be restricted by validation until ReferenceGrant support is implemented. |
 | `cert` _string_ | Cert is the PEM-encoded certificate. This field is used when type is 'inline'. |
 | `cert_alt` _string_ | CertAlt is the PEM-encoded certificate. This should only be set if you have both RSA and ECDSA types of certificate available and would like Kong to prefer serving using ECDSA certs when client advertises support for it. This field is used when type is 'inline'. |
 | `key` _string_ | Key is the PEM-encoded private key. This field is used when type is 'inline'. |
 | `key_alt` _string_ | KeyAlt is the PEM-encoded private key. This should only be set if you have both RSA and ECDSA types of certificate available and would like Kong to prefer serving using ECDSA certs when client advertises support for it. This field is used when type is 'inline'. |
 | `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of tags applied to the certificate. Tags will be applied when type is 'inline' or 'secretRef'. This field allows you to attach metadata to the certificate for identification or organization purposes. |
+| `type` _[KongCertificateSourceType](#configuration-konghq-com-v1alpha1-types-kongcertificatesourcetype)_ | Type indicates the source of the certificate data. Can be 'inline' or 'secretRef'. |
+| `controlPlaneRef` _[ControlPlaneRef](#common-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef references the Konnect Control Plane that this KongCertificate should be created in. |
+| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a certificate from an existing certificate in Konnect. |
+| `secretRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | SecretRef is a reference to a Kubernetes Secret containing the certificate and key. This field is used when type is 'secretRef'. The Secret must contain keys named 'tls.crt' and 'tls.key'. The namespace field is optional, but will be restricted by validation until ReferenceGrant support is implemented. |
+| `secretRefAlt` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | SecretRefAlt is a reference to a Kubernetes Secret containing the alternative certificate and key. This should only be set if you have both RSA and ECDSA types of certificate available and would like Kong to prefer serving using ECDSA certs when client advertises support for it. This field is used when type is 'secretRef'. The Secret must contain keys named 'tls.crt' and 'tls.key'. The namespace field is optional, but will be restricted by validation until ReferenceGrant support is implemented. |
 
 _Appears in:_
 
@@ -898,10 +898,10 @@ KongCredentialACLSpec defines specification of Kong ACL.
 
 | Field | Description |
 | --- | --- |
-| `consumerRef` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#localobjectreference-v1-core)_ | ConsumerRef is a reference to a Consumer this KongCredentialACL is associated with. |
-| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting an ACL from an existing ACL in Konnect. |
 | `group` _string_ | Group is the name for the ACL credential. |
 | `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is a list of tags for the ACL credential. |
+| `consumerRef` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#localobjectreference-v1-core)_ | ConsumerRef is a reference to a Consumer this KongCredentialACL is associated with. |
+| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting an ACL from an existing ACL in Konnect. |
 
 _Appears in:_
 
@@ -948,10 +948,10 @@ KongCredentialAPIKeySpec defines specification of a Kong API key credential.
 
 | Field | Description |
 | --- | --- |
-| `consumerRef` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#localobjectreference-v1-core)_ | ConsumerRef is a reference to a Consumer this KongCredentialAPIKey is associated with. |
-| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting an API key credential from an existing API key in Konnect. |
 | `key` _string_ | Key is the key for the API Key credential. |
 | `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is a list of tags for the API Key credential. |
+| `consumerRef` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#localobjectreference-v1-core)_ | ConsumerRef is a reference to a Consumer this KongCredentialAPIKey is associated with. |
+| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting an API key credential from an existing API key in Konnect. |
 
 _Appears in:_
 
@@ -999,11 +999,11 @@ KongCredentialBasicAuthSpec defines specification of a Kong BasicAuth credential
 
 | Field | Description |
 | --- | --- |
-| `consumerRef` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#localobjectreference-v1-core)_ | ConsumerRef is a reference to a Consumer this CredentialBasicAuth is associated with. |
-| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a BasicAuth credential from an existing BasicAuth credential in Konnect. |
 | `password` _string_ | Password is the password for the BasicAuth credential. |
 | `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is a list of tags for the BasicAuth credential. |
 | `username` _string_ | Username is the username for the BasicAuth credential. |
+| `consumerRef` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#localobjectreference-v1-core)_ | ConsumerRef is a reference to a Consumer this CredentialBasicAuth is associated with. |
+| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a BasicAuth credential from an existing BasicAuth credential in Konnect. |
 
 _Appears in:_
 
@@ -1052,12 +1052,12 @@ KongCredentialHMACSpec defines specification of a Kong HMAC credential.
 
 | Field | Description |
 | --- | --- |
-| `consumerRef` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#localobjectreference-v1-core)_ | ConsumerRef is a reference to a Consumer this KongCredentialHMAC is associated with. |
-| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a HMAC credential from an existing HMAC credential in Konnect. |
 | `id` _*string_ | ID is the unique identifier for the HMAC credential. |
 | `secret` _*string_ | Secret is the secret for the HMAC credential. |
 | `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is a list of tags for the HMAC credential. |
 | `username` _*string_ | Username is the username for the HMAC credential. |
+| `consumerRef` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#localobjectreference-v1-core)_ | ConsumerRef is a reference to a Consumer this KongCredentialHMAC is associated with. |
+| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a HMAC credential from an existing HMAC credential in Konnect. |
 
 _Appears in:_
 
@@ -1108,14 +1108,14 @@ KongCredentialJWTSpec defines specification of a Kong JWT credential.
 
 | Field | Description |
 | --- | --- |
-| `consumerRef` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#localobjectreference-v1-core)_ | ConsumerRef is a reference to a Consumer this KongCredentialJWT is associated with. |
-| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a JWT credential from an existing JWT credential in Konnect. |
 | `algorithm` _string_ | Algorithm is the algorithm used to sign the JWT token. |
 | `id` _*string_ | ID is the unique identifier for the JWT credential. |
 | `key` _*string_ | Key is the key for the JWT credential. |
 | `rsa_public_key` _*string_ | RSA PublicKey is the RSA public key for the JWT credential. |
 | `secret` _*string_ | Secret is the secret for the JWT credential. |
 | `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is a list of tags for the JWT credential. |
+| `consumerRef` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#localobjectreference-v1-core)_ | ConsumerRef is a reference to a Consumer this KongCredentialJWT is associated with. |
+| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a JWT credential from an existing JWT credential in Konnect. |
 
 _Appears in:_
 
@@ -1194,9 +1194,9 @@ KongDataPlaneClientCertificateSpec defines the spec for a KongDataPlaneClientCer
 
 | Field | Description |
 | --- | --- |
+| `cert` _string_ | Cert is the certificate in PEM format. Once the certificate gets programmed this field becomes immutable. |
 | `controlPlaneRef` _[ControlPlaneRef](#common-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef is a reference to a Konnect ControlPlane this KongDataPlaneClientCertificate is associated with. |
 | `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a key from an existing key in Konnect. |
-| `cert` _string_ | Cert is the certificate in PEM format. Once the certificate gets programmed this field becomes immutable. |
 
 _Appears in:_
 
@@ -1264,10 +1264,10 @@ KongKeySetSpec defines the spec for a KongKeySet.
 
 | Field | Description |
 | --- | --- |
-| `controlPlaneRef` _[ControlPlaneRef](#common-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef is a reference to a Konnect ControlPlane with which KongKeySet is associated. |
-| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a key set from an existing key set in Konnect. |
 | `name` _string_ | Name is a name of the KeySet. |
 | `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of strings associated with the KeySet for grouping and filtering. |
+| `controlPlaneRef` _[ControlPlaneRef](#common-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef is a reference to a Konnect ControlPlane with which KongKeySet is associated. |
+| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a key set from an existing key set in Konnect. |
 
 _Appears in:_
 
@@ -1298,14 +1298,14 @@ KongKeySpec defines the spec for a KongKey.
 
 | Field | Description |
 | --- | --- |
-| `controlPlaneRef` _[ControlPlaneRef](#common-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef is a reference to a Konnect ControlPlane this KongKey is associated with. |
-| `keySetRef` _[KeySetRef](#configuration-konghq-com-v1alpha1-types-keysetref)_ | KeySetRef is a reference to a KongKeySet this KongKey is attached to. ControlPlane referenced by a KongKeySet must be the same as the ControlPlane referenced by the KongKey. |
-| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a key from an existing key in Konnect. |
 | `kid` _string_ | KID is a unique identifier for a key. When JWK is provided, KID has to match the KID in the JWK. |
 | `name` _*string_ | Name is an optional name to associate with the given key. |
 | `jwk` _*string_ | JWK is a JSON Web Key represented as a string. The JWK must contain a KID field that matches the KID in the KongKey. Either JWK or PEM must be set. |
 | `pem` _[PEMKeyPair](#configuration-konghq-com-v1alpha1-types-pemkeypair)_ | PEM is a keypair in PEM format. Either JWK or PEM must be set. |
 | `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of strings associated with the Key for grouping and filtering. |
+| `controlPlaneRef` _[ControlPlaneRef](#common-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef is a reference to a Konnect ControlPlane this KongKey is associated with. |
+| `keySetRef` _[KeySetRef](#configuration-konghq-com-v1alpha1-types-keysetref)_ | KeySetRef is a reference to a KongKeySet this KongKey is attached to. ControlPlane referenced by a KongKeySet must be the same as the ControlPlane referenced by the KongKey. |
+| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a key from an existing key in Konnect. |
 
 _Appears in:_
 
@@ -1494,9 +1494,6 @@ KongRouteSpec defines spec of a Kong Route.
 
 | Field | Description |
 | --- | --- |
-| `controlPlaneRef` _[ControlPlaneRef](#common-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef is a reference to a ControlPlane this KongRoute is associated with. Route can either specify a ControlPlaneRef and be 'serviceless' route or specify a ServiceRef and be associated with a Service. |
-| `serviceRef` _[ServiceRef](#configuration-konghq-com-v1alpha1-types-serviceref)_ | ServiceRef is a reference to a Service this KongRoute is associated with. Route can either specify a ControlPlaneRef and be 'serviceless' route or specify a ServiceRef and be associated with a Service. |
-| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a route from an existing route in Konnect. |
 | `destinations` _[]github.com/Kong/sdk-konnect-go/models/components.Destinations_ | A list of IP destinations of incoming connections that match this Route when using stream routing. Each entry is an object with fields "ip" (optionally in CIDR range notation) and/or "port". |
 | `headers` _map[string][]string_ | One or more lists of values indexed by header name that will cause this Route to match if present in the request. The `Host` header cannot be used with this attribute: hosts should be specified using the `hosts` attribute. When `headers` contains only one value and that value starts with the special prefix `~*`, the value is interpreted as a regular expression. |
 | `hosts` _[]string_ | A list of domain names that match this Route. Note that the hosts value is case sensitive. |
@@ -1514,6 +1511,9 @@ KongRouteSpec defines spec of a Kong Route.
 | `sources` _[]github.com/Kong/sdk-konnect-go/models/components.Sources_ | A list of IP sources of incoming connections that match this Route when using stream routing. Each entry is an object with fields "ip" (optionally in CIDR range notation) and/or "port". |
 | `strip_path` _*bool_ | When matching a Route via one of the `paths`, strip the matching prefix from the upstream request URL. |
 | `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | An optional set of strings associated with the Route for grouping and filtering. |
+| `controlPlaneRef` _[ControlPlaneRef](#common-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef is a reference to a ControlPlane this KongRoute is associated with. Route can either specify a ControlPlaneRef and be 'serviceless' route or specify a ServiceRef and be associated with a Service. |
+| `serviceRef` _[ServiceRef](#configuration-konghq-com-v1alpha1-types-serviceref)_ | ServiceRef is a reference to a Service this KongRoute is associated with. Route can either specify a ControlPlaneRef and be 'serviceless' route or specify a ServiceRef and be associated with a Service. |
+| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a route from an existing route in Konnect. |
 
 _Appears in:_
 
@@ -1560,10 +1560,10 @@ KongSNISpec defines specification of a Kong SNI.
 
 | Field | Description |
 | --- | --- |
-| `certificateRef` _[NameRef](#common-konghq-com-v1alpha1-types-nameref)_ | CertificateRef is the reference to the certificate to which the KongSNI is attached. |
-| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting an SNI from an existing SNI in Konnect. |
 | `name` _string_ | Name is the name of the SNI. Required and must be a host or wildcard host. |
 | `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of strings associated with the SNI for grouping and filtering. |
+| `certificateRef` _[NameRef](#common-konghq-com-v1alpha1-types-nameref)_ | CertificateRef is the reference to the certificate to which the KongSNI is attached. |
+| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting an SNI from an existing SNI in Konnect. |
 
 _Appears in:_
 
@@ -1622,8 +1622,6 @@ KongServiceSpec defines specification of a Kong Service.
 
 | Field | Description |
 | --- | --- |
-| `controlPlaneRef` _[ControlPlaneRef](#common-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef is a reference to a ControlPlane this KongService is associated with. |
-| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a service from an existing service in Konnect. |
 | `url` _*string_ | Helper field to set `protocol`, `host`, `port` and `path` using a URL. This field is write-only and is not returned in responses. |
 | `connect_timeout` _*int64_ | The timeout in milliseconds for establishing a connection to the upstream server. |
 | `enabled` _*bool_ | Whether the Service is active. If set to `false`, the proxy behavior will be as if any routes attached to it do not exist (404). Default: `true`. |
@@ -1638,6 +1636,8 @@ KongServiceSpec defines specification of a Kong Service.
 | `tls_verify` _*bool_ | Whether to enable verification of upstream server TLS certificate. If set to `null`, then the Nginx default is respected. |
 | `tls_verify_depth` _*int64_ | Maximum depth of chain while verifying Upstream server's TLS certificate. If set to `null`, then the Nginx default is respected. |
 | `write_timeout` _*int64_ | The timeout in milliseconds between two successive write operations for transmitting a request to the upstream server. |
+| `controlPlaneRef` _[ControlPlaneRef](#common-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef is a reference to a ControlPlane this KongService is associated with. |
+| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a service from an existing service in Konnect. |
 
 _Appears in:_
 
@@ -1685,11 +1685,11 @@ KongTargetSpec defines the spec of KongTarget.
 
 | Field | Description |
 | --- | --- |
-| `upstreamRef` _[NameRef](#common-konghq-com-v1alpha1-types-nameref)_ | UpstreamRef is a reference to a KongUpstream this KongTarget is attached to. |
-| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a target from an existing target in Konnect. |
 | `target` _string_ | Target is the target address of the upstream. |
 | `weight` _int_ | Weight is the weight this target gets within the upstream loadbalancer. |
 | `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of strings associated with the Target for grouping and filtering. |
+| `upstreamRef` _[NameRef](#common-konghq-com-v1alpha1-types-nameref)_ | UpstreamRef is a reference to a KongUpstream this KongTarget is attached to. |
+| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a target from an existing target in Konnect. |
 
 _Appears in:_
 
@@ -1752,8 +1752,6 @@ KongUpstreamSpec defines the spec of Kong Upstream.
 
 | Field | Description |
 | --- | --- |
-| `controlPlaneRef` _[ControlPlaneRef](#common-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef is a reference to a ControlPlane this KongUpstream is associated with. |
-| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting an upstream from an existing upstream in Konnect. |
 | `algorithm` _*github.com/Kong/sdk-konnect-go/models/components.UpstreamAlgorithm_ | Which load balancing algorithm to use. |
 | `client_certificate` _*github.com/Kong/sdk-konnect-go/models/components.UpstreamClientCertificate_ | If set, the certificate to be used as client certificate while TLS handshaking to the upstream server. |
 | `hash_fallback` _*github.com/Kong/sdk-konnect-go/models/components.HashFallback_ | What to use as hashing input if the primary `hash_on` does not return a hash (eg. header is missing, or no Consumer identified). Not available if `hash_on` is set to `cookie`. |
@@ -1772,6 +1770,8 @@ KongUpstreamSpec defines the spec of Kong Upstream.
 | `slots` _*int64_ | The number of slots in the load balancer algorithm. If `algorithm` is set to `round-robin`, this setting determines the maximum number of slots. If `algorithm` is set to `consistent-hashing`, this setting determines the actual number of slots in the algorithm. Accepts an integer in the range `10`-`65536`. |
 | `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | An optional set of strings associated with the Upstream for grouping and filtering. |
 | `use_srv_name` _*bool_ | If set, the balancer will use SRV hostname(if DNS Answer has SRV record) as the proxy upstream `Host`. |
+| `controlPlaneRef` _[ControlPlaneRef](#common-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef is a reference to a ControlPlane this KongUpstream is associated with. |
+| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting an upstream from an existing upstream in Konnect. |
 
 _Appears in:_
 

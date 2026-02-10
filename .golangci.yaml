@@ -18,6 +18,7 @@ linters:
     - copyloopvar
     - dogsled
     - dupword
+    - embeddedstructfieldcheck
     - durationcheck
     - errorlint
     - exhaustive
@@ -42,6 +43,8 @@ linters:
     - usetesting
     - wastedassign
   settings:
+    embeddedstructfieldcheck:
+      forbid-mutex: true
     godoclint:
       default: all
       disable:

@@ -52,6 +52,9 @@ type KongKeySet struct {
 // +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
 // +apireference:kgo:include
 type KongKeySetSpec struct {
+	// KongKeySetAPISpec are the attributes of the KongKeySet itself.
+	KongKeySetAPISpec `json:",inline"`
+
 	// ControlPlaneRef is a reference to a Konnect ControlPlane with which KongKeySet is associated.
 	// +kubebuilder:validation:XValidation:message="'konnectID' type is not supported", rule="self.type != 'konnectID'"
 	// +required
@@ -60,9 +63,6 @@ type KongKeySetSpec struct {
 	// Adopt is the options for adopting a key set from an existing key set in Konnect.
 	// +optional
 	Adopt *commonv1alpha1.AdoptOptions `json:"adopt,omitempty"`
-
-	// KongKeySetAPISpec are the attributes of the KongKeySet itself.
-	KongKeySetAPISpec `json:",inline"`
 }
 
 // KongKeySetAPISpec defines the attributes of a Kong KeySet.
@@ -98,7 +98,8 @@ type KongKeySetStatus struct {
 type KongKeySetList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []KongKeySet `json:"items"`
+
+	Items []KongKeySet `json:"items"`
 }
 
 func init() {

@@ -206,7 +206,8 @@ type KongPluginBindingStatus struct {
 type KongPluginBindingList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []KongPluginBinding `json:"items"`
+
+	Items []KongPluginBinding `json:"items"`
 }
 
 func init() {

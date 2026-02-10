@@ -208,7 +208,8 @@ type GatewayConfigurationStatus struct {
 type GatewayConfigurationList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []GatewayConfiguration `json:"items"`
+
+	Items []GatewayConfiguration `json:"items"`
 }
 
 // GetConditions retrieves the GatewayConfiguration Status Condition

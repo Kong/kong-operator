@@ -27,6 +27,7 @@ import (
 // Test helpers for BuildProgrammedCondition
 type fakeListClient struct {
 	client.Client
+
 	fail  bool
 	items []*unstructured.Unstructured
 }

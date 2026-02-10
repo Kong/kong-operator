@@ -128,7 +128,7 @@ type KonnectGatewayControlPlaneStatus struct {
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 
-	KonnectEntityStatus `json:",inline"`
+	KonnectEntityStatus `json:",inline"` //nolint:embeddedstructfieldcheck
 
 	// ClusterType is the cluster type of the Konnect control plane.
 	// When the KonnectGatewayControlPlane is attached to a control plane in Konnect,

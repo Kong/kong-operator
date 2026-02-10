@@ -54,6 +54,8 @@ type KongCredentialAPIKey struct {
 // +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
 // +apireference:kgo:include
 type KongCredentialAPIKeySpec struct {
+	KongCredentialAPIKeyAPISpec `json:",inline"`
+
 	// ConsumerRef is a reference to a Consumer this KongCredentialAPIKey is associated with.
 	//
 	// +required
@@ -62,8 +64,6 @@ type KongCredentialAPIKeySpec struct {
 	// Adopt is the options for adopting an API key credential from an existing API key in Konnect.
 	// +optional
 	Adopt *commonv1alpha1.AdoptOptions `json:"adopt,omitempty"`
-
-	KongCredentialAPIKeyAPISpec `json:",inline"`
 }
 
 // KongCredentialAPIKeyAPISpec defines specification of an API Key credential.
@@ -99,7 +99,8 @@ type KongCredentialAPIKeyStatus struct {
 type KongCredentialAPIKeyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []KongCredentialAPIKey `json:"items"`
+
+	Items []KongCredentialAPIKey `json:"items"`
 }
 
 func init() {

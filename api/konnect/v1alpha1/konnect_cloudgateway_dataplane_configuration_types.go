@@ -220,7 +220,7 @@ type KonnectCloudGatewayDataPlaneGroupConfigurationStatus struct {
 	// +patchMergeKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 
-	konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef `json:",inline"`
+	konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef `json:",inline"` //nolint:embeddedstructfieldcheck
 
 	// DataPlaneGroups is a list of deployed data-plane groups.
 	//

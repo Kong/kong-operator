@@ -11,6 +11,7 @@ import (
 // Upstream is a wrapper around Upstream object in Kong.
 type Upstream struct {
 	kong.Upstream
+
 	Targets []Target
 	// Service this upstream is associated with.
 	Service Service

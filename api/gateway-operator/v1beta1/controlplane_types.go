@@ -56,7 +56,8 @@ type ControlPlane struct {
 type ControlPlaneList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ControlPlane `json:"items"`
+
+	Items []ControlPlane `json:"items"`
 }
 
 // ControlPlaneSpec defines the desired state of ControlPlane

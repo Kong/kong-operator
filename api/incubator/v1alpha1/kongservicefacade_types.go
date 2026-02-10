@@ -33,8 +33,9 @@ func init() {
 type KongServiceFacade struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              KongServiceFacadeSpec   `json:"spec"`
-	Status            KongServiceFacadeStatus `json:"status,omitempty"`
+
+	Spec   KongServiceFacadeSpec   `json:"spec"`
+	Status KongServiceFacadeStatus `json:"status,omitempty"`
 }
 
 // KongServiceFacadeList contains a list of KongServiceFacade.
@@ -43,7 +44,8 @@ type KongServiceFacade struct {
 type KongServiceFacadeList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []KongServiceFacade `json:"items"`
+
+	Items []KongServiceFacade `json:"items"`
 }
 
 // KongServiceFacadeSpec defines the desired state of KongServiceFacade.

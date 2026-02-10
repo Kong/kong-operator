@@ -41,6 +41,7 @@ var GetControllerName = mgrconsts.GetControllerName
 // GatewayClassReconciler reconciles a GatewayClass object.
 type GatewayClassReconciler struct {
 	client.Client
+
 	Log              logr.Logger
 	Scheme           *runtime.Scheme
 	CacheSyncTimeout time.Duration
