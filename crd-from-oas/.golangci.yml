@@ -1,0 +1,151 @@
+version: "2"
+run:
+  timeout: 8m
+  build-tags:
+    - integration_tests
+    - e2e_tests
+    - istio_tests
+    - envtest
+    - performance_tests
+linters:
+  enable:
+    - asciicheck
+    - bodyclose
+    - copyloopvar
+    - dogsled
+    - durationcheck
+    - errorlint
+    - exhaustive
+    - forbidigo
+    - gocritic
+    - gomodguard
+    - gosec
+    - importas
+    - loggercheck
+    - misspell
+    - nakedret
+    - nilerr
+    - nolintlint
+    - predeclared
+    - revive
+    # Uncomment or remove - TODO: https://github.com/Kong/kong-operator/issues/1847
+    # - testifylint
+    - unconvert
+    - unused
+    - unparam
+    - usetesting
+    - wastedassign
+  settings:
+    staticcheck:
+      checks:
+        - all
+        # Incorrect or missing package comment.
+        # https://staticcheck.dev/docs/checks/#ST1000
+        - -ST1000
+        # Incorrectly formatted error string.
+        # https://staticcheck.dev/docs/checks/#ST1005
+        - -ST1005
+        # Underscore in the name of a package.
+        # https://staticcheck.dev/docs/checks/#ST1003
+        - -ST1003
+    exhaustive:
+      default-signifies-exhaustive: true
+    gomodguard:
+      blocked:
+        modules:
+          - golang.org/x/exp:
+              recommendations:
+                - maps
+                - slices
+                - github.com/samber/lo
+          - github.com/pkg/errors:
+              recommendations:
+                - fmt
+                - errors
+          - github.com/sirupsen/logrus:
+              recommendations:
+                - sigs.k8s.io/controller-runtime/pkg/log
+                - go.uber.org/zap/zapcore
+    govet:
+      disable:
+        - fieldalignment
+        - shadow
+      enable-all: true
+    importas:
+      no-unaliased: true
+    revive:
+      rules:
+        - name: errorf
+          severity: warning
+          disabled: false
+        - name: error-strings
+          severity: warning
+          disabled: false
+        - name: error-naming
+          severity: warning
+          disabled: false
+        - name: duplicated-imports
+          severity: warning
+          disabled: false
+        - name: empty-block
+          severity: warning
+          disabled: false
+        - name: exported
+          arguments:
+            - checkPrivateReceivers
+            - disableStutteringCheck
+          severity: warning
+          disabled: false
+        - name: context-as-argument
+          disabled: true
+    testifylint:
+      enable-all: true
+      disable:
+        - error-is-as
+    usetesting:
+      os-temp-dir: true
+  exclusions:
+    generated: lax
+    presets:
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - revive
+        path: internal/|pkg/|test/
+        text: 'exported: exported'
+      - linters:
+          - gosec
+        path: .*_test\.go
+        text: Use of weak random number generator
+      - linters:
+          - gosec
+        path: .*_test\.go
+        text: Potential hardcoded credentials
+      - linters:
+          - gosec
+        path: .*_test\.go
+        text: Potential HTTP request made with variable url
+      - linters:
+          - gosec
+        text: integer overflow conversion
+    paths:
+      - pkg/clientset
+      - config/
+      - examples$
+issues:
+  max-same-issues: 0
+  fix: true
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - goimports
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(crd-from-oas)
+      custom-order: true
