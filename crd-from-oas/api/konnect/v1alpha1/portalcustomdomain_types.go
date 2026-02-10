@@ -100,6 +100,7 @@ func init() {
 
 // SSL represents a union type for ssl.
 // Only one of the fields should be set based on the Type.
+//
 type SSL struct {
 	// Type designates the type of configuration.
 	//
@@ -124,5 +125,5 @@ type SSLType string
 // SSLType values.
 const (
 	SSLTypeWithCustomCertificate SSLType = "WithCustomCertificate"
-	SSLTypeStandard              SSLType = "Standard"
+	SSLTypeStandard SSLType = "Standard"
 )
