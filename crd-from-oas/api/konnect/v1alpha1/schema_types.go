@@ -97,7 +97,7 @@ type CreateDcrProviderRequestOkta struct {
 }
 
 // CreatePortalCustomDomainSSL is a type alias.
-type CreatePortalCustomDomainSSL = map[string]string
+type CreatePortalCustomDomainSSL map[string]string
 
 // CreatePortalCustomDomainSSLStandard is a type alias.
 type CreatePortalCustomDomainSSLStandard struct {
@@ -116,70 +116,70 @@ type CreatePortalCustomDomainSSLWithCustomCertificate struct {
 // This is the URL that will be used to make the HTTP requests from Konnect to
 // the DCR provider.
 // This URL must be accessible from the Konnect service.
-type DcrBaseUrl = map[string]string
+type DcrBaseUrl map[string]string
 
 // DcrConfigPropertyApiKey This is the API Key that will be sent with each HTTP
 // request to the custom DCR server.
 // It can be
 // verified on the server to ensure that incoming requests are coming from
 // Konnect.
-type DcrConfigPropertyApiKey = map[string]string
+type DcrConfigPropertyApiKey map[string]string
 
 // DcrConfigPropertyDcrToken This secret should be copied from your identity
 // provider's settings after you create a client
 // and assign it as the management client for DCR for this developer portal
-type DcrConfigPropertyDcrToken = map[string]string
+type DcrConfigPropertyDcrToken map[string]string
 
 // DcrConfigPropertyDisableEventHooks This flag disables all the event-hooks on
 // the application flow for the DCR provider.
-type DcrConfigPropertyDisableEventHooks = map[string]string
+type DcrConfigPropertyDisableEventHooks map[string]string
 
 // DcrConfigPropertyDisableRefreshSecret This flag disable the refresh-secret
 // endpoint on the application flow for the DCR provider.
-type DcrConfigPropertyDisableRefreshSecret = map[string]string
+type DcrConfigPropertyDisableRefreshSecret map[string]string
 
 // DcrConfigPropertyInitialClientAudience This is the audience value used for
 // the initial client.
 // If using a custom domain on Auth0, this must be set as to the Auth0
 // Management API audience value.
 // If left blank, the issuer will be used instead.
-type DcrConfigPropertyInitialClientAudience = map[string]string
+type DcrConfigPropertyInitialClientAudience map[string]string
 
 // DcrConfigPropertyInitialClientId This ID should be copied from your identity
 // provider's settings after you create a client
 // and assign it as the management client for DCR for this developer portal
-type DcrConfigPropertyInitialClientId = map[string]string
+type DcrConfigPropertyInitialClientId map[string]string
 
 // DcrConfigPropertyInitialClientSecret This secret should be copied from your
 // identity provider's settings after you create a client
 // and assign it as the management client for DCR for this developer portal
-type DcrConfigPropertyInitialClientSecret = map[string]string
+type DcrConfigPropertyInitialClientSecret map[string]string
 
 // DcrProviderDisplayName The display name of the DCR provider.
 // This is used to identify the DCR provider in the Portal UI.
-type DcrProviderDisplayName = map[string]string
+type DcrProviderDisplayName map[string]string
 
 // DcrProviderName The name of the DCR provider.
 // This is used to identify the DCR provider in the Konnect UI.
-type DcrProviderName = map[string]string
+type DcrProviderName map[string]string
 
 // IdentityProviderEnabled Indicates whether the identity provider is enabled.
 // Only one identity provider can be active at a time, such as SAML or OIDC.
-type IdentityProviderEnabled = map[string]string
+type IdentityProviderEnabled map[string]string
 
 // IdentityProviderLoginPath The path used for initiating login requests with
 // the identity provider.
-type IdentityProviderLoginPath = map[string]string
+type IdentityProviderLoginPath map[string]string
 
 // IdentityProviderType Specifies the type of identity provider.
-type IdentityProviderType = map[string]string
+type IdentityProviderType map[string]string
 
 // Labels Labels store metadata of an entity that can be used for filtering an
 // entity list or for searching across entity types.
 //
 // Keys must be of length 1-63 characters, and cannot start with "kong",
 // "konnect", "mesh", "kic", or "_".
-type Labels = map[string]string
+type Labels map[string]string
 
 // LabelsUpdate Labels store metadata of an entity that can be used for
 // filtering an entity list or for searching across entity types.
@@ -188,7 +188,7 @@ type Labels = map[string]string
 //
 // Keys must be of length 1-63 characters, and cannot start with "kong",
 // "konnect", "mesh", "kic", or "_".
-type LabelsUpdate = map[string]string
+type LabelsUpdate map[string]string
 
 // OIDCIdentityProviderClaimMappings Defines the mappings between OpenID Connect
 // (OIDC) claims and local claims used by your application for
@@ -201,19 +201,19 @@ type OIDCIdentityProviderClaimMappings struct {
 
 // OIDCIdentityProviderClientId The client ID assigned to your application by
 // the identity provider.
-type OIDCIdentityProviderClientId = map[string]string
+type OIDCIdentityProviderClientId map[string]string
 
 // OIDCIdentityProviderClientSecret The Client Secret assigned to your
 // application by the identity provider.
-type OIDCIdentityProviderClientSecret = map[string]string
+type OIDCIdentityProviderClientSecret map[string]string
 
 // OIDCIdentityProviderIssuer The issuer URI of the identity provider.
 // This is the URL where the provider's metadata can be obtained.
-type OIDCIdentityProviderIssuer = map[string]string
+type OIDCIdentityProviderIssuer map[string]string
 
 // OIDCIdentityProviderScopes The scopes requested by your application when
 // authenticating with the identity provider.
-type OIDCIdentityProviderScopes = map[string]string
+type OIDCIdentityProviderScopes map[string]string
 
 // SAMLIdentityProviderConfig The identity provider that contains configuration
 // data for the SAML authentication integration.
@@ -225,8 +225,8 @@ type SAMLIdentityProviderConfig struct {
 // SAMLIdentityProviderMetadata The identity provider's SAML metadata.
 // If the identity provider supports a metadata URL, you can use the
 // `idp_metadata_url` field instead.
-type SAMLIdentityProviderMetadata = map[string]string
+type SAMLIdentityProviderMetadata map[string]string
 
 // SAMLIdentityProviderMetadataURL The identity provider's metadata URL where
 // the identity provider's metadata can be obtained.
-type SAMLIdentityProviderMetadataURL = map[string]string
+type SAMLIdentityProviderMetadataURL map[string]string
