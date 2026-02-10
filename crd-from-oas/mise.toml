@@ -43,6 +43,14 @@ API_GROUP = "konnect.konghq.com"
 PATHS = "/v3/portals,/v3/portals/{portalId}/teams,/v3/portals/{portalId}/custom-domain,/v3/identity-providers,/v2/dcr-providers"
 CONFIG_FILE = "config.yaml"
 
+[tasks.generate-crds]
+description = "Generate CRD manifests from the API types"
+dir = ".."
+run = """
+export VERSION=$(cat VERSION)
+go run ./scripts/crds-generator
+"""
+
 [tasks.generate-deepcopy]
 description = "Generate DeepCopy methods for the API types"
 run = "controller-gen object paths=./api/..."
@@ -62,6 +70,6 @@ description = "Run unit tests"
 description = "Run CRD validation tests"
 run = """
 export KUBEBUILDER_ASSETS=$(setup-envtest use -p path)
-go test ./test/crdsvalidation/...
+go test -v -count 1 ./test/crdsvalidation/...
 """
 

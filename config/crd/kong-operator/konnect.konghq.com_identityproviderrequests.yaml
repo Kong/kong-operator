@@ -1,0 +1,255 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    kubernetes-configuration.konghq.com/channels: kong-operator
+    kubernetes-configuration.konghq.com/version: v2.1.0
+  name: identityproviderrequests.konnect.konghq.com
+spec:
+  group: konnect.konghq.com
+  names:
+    kind: IdentityProviderRequest
+    listKind: IdentityProviderRequestList
+    plural: identityproviderrequests
+    singular: identityproviderrequest
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: Konnect ID
+      jsonPath: .status.id
+      name: ID
+      type: string
+    - description: The Resource is Programmed on Konnect
+      jsonPath: .status.conditions[?(@.type=='Programmed')].status
+      name: Programmed
+      type: string
+    - description: Konnect Organization ID this resource belongs to.
+      jsonPath: .status.organizationID
+      name: OrgID
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: IdentityProviderRequest is the Schema for the identityproviderrequests
+          API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: IdentityProviderRequestSpec defines the desired state of
+              IdentityProviderRequest.
+            properties:
+              config:
+                description: |-
+                  Config represents a union type for config.
+                  Only one of the fields should be set based on the Type.
+                properties:
+                  oidc:
+                    description: OIDC configuration.
+                    properties:
+                      claim_mappings:
+                        description: |-
+                          OIDCIdentityProviderClaimMappings Defines the mappings between OpenID Connect
+                          (OIDC) claims and local claims used by your application for
+                          authentication.
+                        properties:
+                          email:
+                            type: string
+                          groups:
+                            type: string
+                          name:
+                            type: string
+                        type: object
+                      client_id:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          OIDCIdentityProviderClientId The client ID assigned to your application by
+                          the identity provider.
+                        type: object
+                      client_secret:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          OIDCIdentityProviderClientSecret The Client Secret assigned to your
+                          application by the identity provider.
+                        type: object
+                      issuer_url:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          OIDCIdentityProviderIssuer The issuer URI of the identity provider.
+                          This is the URL where the provider's metadata can be obtained.
+                        type: object
+                      scopes:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          OIDCIdentityProviderScopes The scopes requested by your application when
+                          authenticating with the identity provider.
+                        type: object
+                    type: object
+                  saml:
+                    description: SAML configuration.
+                    properties:
+                      idp_metadata_url:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          SAMLIdentityProviderMetadataURL The identity provider's metadata URL where
+                          the identity provider's metadata can be obtained.
+                        type: object
+                      idp_metadata_xml:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          SAMLIdentityProviderMetadata The identity provider's SAML metadata.
+                          If the identity provider supports a metadata URL, you can use the
+                          `idp_metadata_url` field instead.
+                        type: object
+                    type: object
+                  type:
+                    description: Type designates the type of configuration.
+                    enum:
+                    - OIDC
+                    - SAML
+                    minLength: 1
+                    type: string
+                required:
+                - type
+                type: object
+              enabled:
+                additionalProperties:
+                  type: string
+                default: false
+                description: |-
+                  Indicates whether the identity provider is enabled.
+                  Only one identity provider can be active at a time, such as SAML or OIDC.
+                type: object
+              login_path:
+                additionalProperties:
+                  type: string
+                description: The path used for initiating login requests with the
+                  identity provider.
+                type: object
+              type:
+                additionalProperties:
+                  type: string
+                description: Specifies the type of identity provider.
+                enum:
+                - oidc
+                - saml
+                type: object
+            type: object
+          status:
+            description: IdentityProviderRequestStatus defines the observed state
+              of IdentityProviderRequest.
+            properties:
+              conditions:
+                description: Conditions represent the current state of the resource.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                maxItems: 8
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              id:
+                description: |-
+                  ID is the unique identifier of the Konnect entity as assigned by Konnect API.
+                  If it's unset (empty string), it means the Konnect entity hasn't been created yet.
+                maxLength: 256
+                type: string
+              observedGeneration:
+                description: ObservedGeneration is the most recent generation observed
+                format: int64
+                type: integer
+              organizationID:
+                description: OrgID is ID of Konnect Org that this entity has been
+                  created in.
+                maxLength: 256
+                type: string
+              serverURL:
+                description: ServerURL is the URL of the Konnect server in which the
+                  entity exists.
+                maxLength: 512
+                type: string
+            type: object
+        required:
+        - metadata
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
