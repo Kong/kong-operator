@@ -418,11 +418,11 @@ KonnectCloudGatewayDataPlaneGroupConfigurationStatus defines the observed state 
 
 | Field | Description |
 | --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the current conditions of the KonnectCloudGatewayDataPlaneGroupConfiguration.<br /><br />Known condition types are:<br /><br />* "Programmed" |
 | `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
 | `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
 | `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
 | `controlPlaneID` _string_ | ControlPlaneID is the Konnect ID of the ControlPlane this Route is associated with. |
-| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the current conditions of the KonnectCloudGatewayDataPlaneGroupConfiguration.<br /><br />Known condition types are:<br /><br />* "Programmed" |
 | `dataplane_groups` _[KonnectCloudGatewayDataPlaneGroupConfigurationStatusGroup](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaydataplanegroupconfigurationstatusgroup)_ | DataPlaneGroups is a list of deployed data-plane groups. |
 
 _Appears in:_
@@ -481,10 +481,10 @@ KonnectCloudGatewayNetworkStatus defines the observed state of KonnectCloudGatew
 
 | Field | Description |
 | --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the current conditions of the KonnectCloudGatewayNetwork.<br /><br />Known condition types are:<br /><br />* "Programmed" |
 | `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
 | `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
 | `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
-| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the current conditions of the KonnectCloudGatewayNetwork.<br /><br />Known condition types are:<br /><br />* "Programmed" |
 | `state` _string_ | State is the current state of the network. Can be e.g. initializing, ready, terminating. |
 
 _Appears in:_
@@ -519,11 +519,11 @@ KonnectCloudGatewayTransitGatewayStatus defines the current state of KonnectClou
 
 | Field | Description |
 | --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the current conditions of the KonnectCloudGatewayDataPlaneGroupConfiguration.<br /><br />Known condition types are:<br /><br />* "Programmed" |
 | `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
 | `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
 | `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
 | `networkID` _string_ | NetworkID is the Konnect ID of the Konnect cloud gateway network this entity is associated with. |
-| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the current conditions of the KonnectCloudGatewayDataPlaneGroupConfiguration.<br /><br />Known condition types are:<br /><br />* "Programmed" |
 | `state` _github.com/Kong/sdk-konnect-go/models/components.TransitGatewayState_ | State is the state of the transit gateway on Konnect side. |
 
 _Appears in:_
@@ -736,10 +736,10 @@ KonnectGatewayControlPlaneStatus defines the observed state of KonnectGatewayCon
 
 | Field | Description |
 | --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the current conditions of the KonnectGatewayControlPlane.<br /><br />Known condition types are:<br /><br />* "Programmed" |
 | `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
 | `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
 | `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
-| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the current conditions of the KonnectGatewayControlPlane.<br /><br />Known condition types are:<br /><br />* "Programmed" |
 | `konnectEndpoints` _[KonnectEndpoints](#konnect-konghq-com-v1alpha1-types-konnectendpoints)_ | Endpoints defines the Konnect endpoints for the control plane. They are required by the DataPlane to be properly configured in Konnect and connect to the control plane. |
 
 _Appears in:_
@@ -1276,10 +1276,10 @@ KonnectGatewayControlPlaneStatus defines the observed state of KonnectGatewayCon
 
 | Field | Description |
 | --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the current conditions of the KonnectGatewayControlPlane.<br /><br />Known condition types are:<br /><br />* "Programmed" |
 | `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
 | `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
 | `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
-| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the current conditions of the KonnectGatewayControlPlane.<br /><br />Known condition types are:<br /><br />* "Programmed" |
 | `clusterType` _github.com/Kong/sdk-konnect-go/models/components.ControlPlaneClusterType_ | ClusterType is the cluster type of the Konnect control plane. When the KonnectGatewayControlPlane is attached to a control plane in Konnect, ClusterType is filled with the cluster type of the control plane. |
 | `konnectEndpoints` _[KonnectEndpoints](#konnect-konghq-com-v1alpha2-types-konnectendpoints)_ | Endpoints defines the Konnect endpoints for the control plane. They are required by the DataPlane to be properly configured in Konnect and connect to the control plane. |
 

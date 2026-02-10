@@ -22,7 +22,7 @@ func TestSpecHash(t *testing.T) {
 		{
 			name:    "empty spec",
 			opts:    operatorv1beta1.DataPlaneSpec{},
-			want:    "1178898102b729b4",
+			want:    "8d5bc5bdc9155268",
 			wantErr: false,
 		},
 		{
@@ -45,7 +45,7 @@ func TestSpecHash(t *testing.T) {
 					},
 				},
 			},
-			want:    "14c4ebcbebe019c8",
+			want:    "c4f1a6df33361627",
 			wantErr: false,
 		},
 	}

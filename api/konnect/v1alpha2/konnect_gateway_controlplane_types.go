@@ -113,8 +113,6 @@ type MirrorKonnect struct {
 // KonnectGatewayControlPlaneStatus defines the observed state of KonnectGatewayControlPlane.
 // +apireference:kgo:include
 type KonnectGatewayControlPlaneStatus struct {
-	KonnectEntityStatus `json:",inline"`
-
 	// Conditions describe the current conditions of the KonnectGatewayControlPlane.
 	//
 	// Known condition types are:
@@ -129,6 +127,8 @@ type KonnectGatewayControlPlaneStatus struct {
 	// +kubebuilder:default={{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+
+	KonnectEntityStatus `json:",inline"` //nolint:embeddedstructfieldcheck
 
 	// ClusterType is the cluster type of the Konnect control plane.
 	// When the KonnectGatewayControlPlane is attached to a control plane in Konnect,

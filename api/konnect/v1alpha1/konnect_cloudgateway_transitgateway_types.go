@@ -195,8 +195,6 @@ type AzureVNETPeeringAttachmentConfig struct {
 
 // KonnectCloudGatewayTransitGatewayStatus defines the current state of KonnectCloudGatewayTransitGateway.
 type KonnectCloudGatewayTransitGatewayStatus struct {
-	konnectv1alpha2.KonnectEntityStatusWithNetworkRef `json:",inline"`
-
 	// Conditions describe the current conditions of the KonnectCloudGatewayDataPlaneGroupConfiguration.
 	//
 	// Known condition types are:
@@ -211,6 +209,8 @@ type KonnectCloudGatewayTransitGatewayStatus struct {
 	// +patchMergeKey=type
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+
+	konnectv1alpha2.KonnectEntityStatusWithNetworkRef `json:",inline"` //nolint:embeddedstructfieldcheck
 
 	// State is the state of the transit gateway on Konnect side.
 	//
