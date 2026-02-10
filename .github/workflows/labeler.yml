@@ -4,6 +4,8 @@ run-name: Pull Request Labeler, branch:${{ github.ref_name }}, triggered by @${{
 on:
 - pull_request
 
+permissions:
+  contents: read
 
 concurrency:
   # Run only for most recent commit in PRs but for all tags and commits on main
