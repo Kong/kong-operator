@@ -64,7 +64,7 @@ metadata:
   labels:
     control-plane: controller-manager
     app.kubernetes.io/component: ko
-  name: {{ template "kong.fullname" . }}-metrics-service
+  name: {{ template "kong.fullname" . }}-metrics
   namespace: {{ template "kong.namespace" . }}
 spec:
   ports:
