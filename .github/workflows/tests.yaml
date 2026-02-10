@@ -795,7 +795,8 @@ jobs:
 
     - name: Create k8s KinD Cluster with ktf
       run: |
-        go install github.com/kong/kubernetes-testing-framework/cmd/ktf@latest
+        # renovate: datasource=github-releases depName=kong/kubernetes-testing-framework
+        go install github.com/kong/kubernetes-testing-framework/cmd/ktf@83931d51792e99ec523aad1ccb69d2dbeb504465 # v0.48.0
         ktf environments create --name ${{ env.CLUSTER_NAME }} --addon metallb --addon cert-manager
 
     - name: Load image to kind cluster
