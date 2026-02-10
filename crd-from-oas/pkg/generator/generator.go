@@ -166,9 +166,10 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 				}
 				buf.WriteString("}\n\n")
 			} else {
-				// It's likely a simple type or a map - generate a type definition
+				// Generate based on the schema's actual type
 				buf.WriteString(comment)
-				buf.WriteString(fmt.Sprintf("type %s map[string]string\n\n", refName))
+				goType := schemaToGoType(schema)
+				buf.WriteString(fmt.Sprintf("type %s %s\n\n", refName, goType))
 			}
 		} else {
 			// Schema not found in parsed schemas, generate a placeholder
@@ -178,6 +179,38 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 	}
 
 	return buf.String()
+}
+
+// schemaToGoType converts a parsed Schema's type info to the appropriate Go type string.
+// This is used for referenced schemas that are simple types (not objects with properties).
+func schemaToGoType(schema *parser.Schema) string {
+	switch schema.Type {
+	case "string":
+		return "string"
+	case "boolean":
+		return "bool"
+	case "integer":
+		return "int"
+	case "number":
+		return "float64"
+	case "array":
+		if schema.Items != nil && schema.Items.Type != "" {
+			switch schema.Items.Type {
+			case "string":
+				return "[]string"
+			case "integer":
+				return "[]int"
+			case "boolean":
+				return "[]bool"
+			default:
+				return "[]any"
+			}
+		}
+		return "[]any"
+	default:
+		// For object types without properties or unknown types, default to map[string]string
+		return "map[string]string"
+	}
 }
 
 func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string, error) {

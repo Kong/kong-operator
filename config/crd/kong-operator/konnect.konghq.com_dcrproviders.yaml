@@ -64,41 +64,33 @@ spec:
                       Auth0 DCR provider.
                     properties:
                       initial_client_audience:
-                        additionalProperties:
-                          type: string
                         description: |-
                           DcrConfigPropertyInitialClientAudience This is the audience value used for
                           the initial client.
                           If using a custom domain on Auth0, this must be set as to the Auth0
                           Management API audience value.
                           If left blank, the issuer will be used instead.
-                        type: object
+                        type: string
                       initial_client_id:
-                        additionalProperties:
-                          type: string
                         description: |-
                           DcrConfigPropertyInitialClientId This ID should be copied from your identity
                           provider's settings after you create a client
                           and assign it as the management client for DCR for this developer portal
-                        type: object
+                        type: string
                       initial_client_secret:
-                        additionalProperties:
-                          type: string
                         description: |-
                           DcrConfigPropertyInitialClientSecret This secret should be copied from your
                           identity provider's settings after you create a client
                           and assign it as the management client for DCR for this developer portal
-                        type: object
+                        type: string
                       use_developer_managed_scopes:
                         type: boolean
                     type: object
                   display_name:
-                    additionalProperties:
-                      type: string
                     description: |-
                       DcrProviderDisplayName The display name of the DCR provider.
                       This is used to identify the DCR provider in the Portal UI.
-                    type: object
+                    type: string
                   issuer:
                     type: string
                   labels:
@@ -112,12 +104,10 @@ spec:
                       "konnect", "mesh", "kic", or "_".
                     type: object
                   name:
-                    additionalProperties:
-                      type: string
                     description: |-
                       DcrProviderName The name of the DCR provider.
                       This is used to identify the DCR provider in the Konnect UI.
-                    type: object
+                    type: string
                   provider_type:
                     type: string
                 type: object
@@ -129,29 +119,23 @@ spec:
                       an Azure AD DCR provider.
                     properties:
                       initial_client_id:
-                        additionalProperties:
-                          type: string
                         description: |-
                           DcrConfigPropertyInitialClientId This ID should be copied from your identity
                           provider's settings after you create a client
                           and assign it as the management client for DCR for this developer portal
-                        type: object
+                        type: string
                       initial_client_secret:
-                        additionalProperties:
-                          type: string
                         description: |-
                           DcrConfigPropertyInitialClientSecret This secret should be copied from your
                           identity provider's settings after you create a client
                           and assign it as the management client for DCR for this developer portal
-                        type: object
+                        type: string
                     type: object
                   display_name:
-                    additionalProperties:
-                      type: string
                     description: |-
                       DcrProviderDisplayName The display name of the DCR provider.
                       This is used to identify the DCR provider in the Portal UI.
-                    type: object
+                    type: string
                   issuer:
                     type: string
                   labels:
@@ -165,12 +149,10 @@ spec:
                       "konnect", "mesh", "kic", or "_".
                     type: object
                   name:
-                    additionalProperties:
-                      type: string
                     description: |-
                       DcrProviderName The name of the DCR provider.
                       This is used to identify the DCR provider in the Konnect UI.
-                    type: object
+                    type: string
                   provider_type:
                     type: string
                 type: object
@@ -182,29 +164,23 @@ spec:
                       a Curity DCR provider.
                     properties:
                       initial_client_id:
-                        additionalProperties:
-                          type: string
                         description: |-
                           DcrConfigPropertyInitialClientId This ID should be copied from your identity
                           provider's settings after you create a client
                           and assign it as the management client for DCR for this developer portal
-                        type: object
+                        type: string
                       initial_client_secret:
-                        additionalProperties:
-                          type: string
                         description: |-
                           DcrConfigPropertyInitialClientSecret This secret should be copied from your
                           identity provider's settings after you create a client
                           and assign it as the management client for DCR for this developer portal
-                        type: object
+                        type: string
                     type: object
                   display_name:
-                    additionalProperties:
-                      type: string
                     description: |-
                       DcrProviderDisplayName The display name of the DCR provider.
                       This is used to identify the DCR provider in the Portal UI.
-                    type: object
+                    type: string
                   issuer:
                     type: string
                   labels:
@@ -218,12 +194,10 @@ spec:
                       "konnect", "mesh", "kic", or "_".
                     type: object
                   name:
-                    additionalProperties:
-                      type: string
                     description: |-
                       DcrProviderName The name of the DCR provider.
                       This is used to identify the DCR provider in the Konnect UI.
-                    type: object
+                    type: string
                   provider_type:
                     type: string
                 type: object
@@ -235,46 +209,36 @@ spec:
                       HTTP DCR provider.
                     properties:
                       api_key:
-                        additionalProperties:
-                          type: string
                         description: |-
                           DcrConfigPropertyApiKey This is the API Key that will be sent with each HTTP
                           request to the custom DCR server.
                           It can be
                           verified on the server to ensure that incoming requests are coming from
                           Konnect.
-                        type: object
+                        type: string
                       dcr_base_url:
-                        additionalProperties:
-                          type: string
                         description: |-
                           DcrBaseUrl The base URL of the DCR server.
                           This is the URL that will be used to make the HTTP requests from Konnect to
                           the DCR provider.
                           This URL must be accessible from the Konnect service.
-                        type: object
+                        type: string
                       disable_event_hooks:
-                        additionalProperties:
-                          type: string
                         description: |-
                           DcrConfigPropertyDisableEventHooks This flag disables all the event-hooks on
                           the application flow for the DCR provider.
-                        type: object
+                        type: boolean
                       disable_refresh_secret:
-                        additionalProperties:
-                          type: string
                         description: |-
                           DcrConfigPropertyDisableRefreshSecret This flag disable the refresh-secret
                           endpoint on the application flow for the DCR provider.
-                        type: object
+                        type: boolean
                     type: object
                   display_name:
-                    additionalProperties:
-                      type: string
                     description: |-
                       DcrProviderDisplayName The display name of the DCR provider.
                       This is used to identify the DCR provider in the Portal UI.
-                    type: object
+                    type: string
                   issuer:
                     type: string
                   labels:
@@ -288,12 +252,10 @@ spec:
                       "konnect", "mesh", "kic", or "_".
                     type: object
                   name:
-                    additionalProperties:
-                      type: string
                     description: |-
                       DcrProviderName The name of the DCR provider.
                       This is used to identify the DCR provider in the Konnect UI.
-                    type: object
+                    type: string
                   provider_type:
                     type: string
                 type: object
@@ -305,21 +267,17 @@ spec:
                       Okta DCR provider.
                     properties:
                       dcr_token:
-                        additionalProperties:
-                          type: string
                         description: |-
                           DcrConfigPropertyDcrToken This secret should be copied from your identity
                           provider's settings after you create a client
                           and assign it as the management client for DCR for this developer portal
-                        type: object
+                        type: string
                     type: object
                   display_name:
-                    additionalProperties:
-                      type: string
                     description: |-
                       DcrProviderDisplayName The display name of the DCR provider.
                       This is used to identify the DCR provider in the Portal UI.
-                    type: object
+                    type: string
                   issuer:
                     type: string
                   labels:
@@ -333,12 +291,10 @@ spec:
                       "konnect", "mesh", "kic", or "_".
                     type: object
                   name:
-                    additionalProperties:
-                      type: string
                     description: |-
                       DcrProviderName The name of the DCR provider.
                       This is used to identify the DCR provider in the Konnect UI.
-                    type: object
+                    type: string
                   provider_type:
                     type: string
                 type: object

@@ -58,12 +58,15 @@ type Property struct {
 type Schema struct {
 	Name         string
 	Description  string
+	Type         string // The schema's type (string, boolean, integer, number, array, object)
+	Format       string // The schema's format (url, uri, uuid, etc.)
 	Properties   []*Property
 	Required     []string
 	IsEntity     bool // Has x-speakeasy-entity extension
 	EntityName   string
 	Dependencies []*Dependency // Parent resource dependencies from path parameters
 	OneOf        []*Property   // Root-level oneOf variants (for union type schemas)
+	Items        *Property     // For array-type schemas, the items type
 }
 
 // ParsedSpec contains all parsed schemas from an OpenAPI spec
@@ -286,8 +289,15 @@ func (p *Parser) parseSchema(name string, schemaValue *openapi3.Schema) *Schema 
 	schema := &Schema{
 		Name:        name,
 		Description: schemaValue.Description,
+		Type:        getSchemaType(schemaValue),
+		Format:      schemaValue.Format,
 		Required:    schemaValue.Required,
 		Properties:  make([]*Property, 0),
+	}
+
+	// Handle array items
+	if schema.Type == "array" && schemaValue.Items != nil {
+		schema.Items = ParseProperty("items", schemaValue.Items, 0, p.visited)
 	}
 
 	// Check for x-speakeasy-entity extension

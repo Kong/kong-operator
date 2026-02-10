@@ -80,52 +80,42 @@ spec:
                             type: string
                         type: object
                       client_id:
-                        additionalProperties:
-                          type: string
                         description: |-
                           OIDCIdentityProviderClientId The client ID assigned to your application by
                           the identity provider.
-                        type: object
+                        type: string
                       client_secret:
-                        additionalProperties:
-                          type: string
                         description: |-
                           OIDCIdentityProviderClientSecret The Client Secret assigned to your
                           application by the identity provider.
-                        type: object
+                        type: string
                       issuer_url:
-                        additionalProperties:
-                          type: string
                         description: |-
                           OIDCIdentityProviderIssuer The issuer URI of the identity provider.
                           This is the URL where the provider's metadata can be obtained.
-                        type: object
+                        type: string
                       scopes:
-                        additionalProperties:
-                          type: string
                         description: |-
                           OIDCIdentityProviderScopes The scopes requested by your application when
                           authenticating with the identity provider.
-                        type: object
+                        items:
+                          type: string
+                        type: array
                     type: object
                   saml:
                     description: SAML configuration.
                     properties:
                       idp_metadata_url:
-                        additionalProperties:
-                          type: string
                         description: |-
                           SAMLIdentityProviderMetadataURL The identity provider's metadata URL where
                           the identity provider's metadata can be obtained.
-                        type: object
+                        type: string
                       idp_metadata_xml:
-                        additionalProperties:
-                          type: string
                         description: |-
                           SAMLIdentityProviderMetadata The identity provider's SAML metadata.
                           If the identity provider supports a metadata URL, you can use the
                           `idp_metadata_url` field instead.
-                        type: object
+                        type: string
                     type: object
                   type:
                     description: Type designates the type of configuration.
@@ -138,27 +128,23 @@ spec:
                 - type
                 type: object
               enabled:
-                additionalProperties:
-                  type: string
                 default: false
                 description: |-
                   Indicates whether the identity provider is enabled.
                   Only one identity provider can be active at a time, such as SAML or OIDC.
-                type: object
+                type: boolean
               login_path:
-                additionalProperties:
-                  type: string
                 description: The path used for initiating login requests with the
                   identity provider.
-                type: object
+                maxLength: 256
+                type: string
               type:
-                additionalProperties:
-                  type: string
                 description: Specifies the type of identity provider.
                 enum:
                 - oidc
                 - saml
-                type: object
+                maxLength: 256
+                type: string
             type: object
           status:
             description: IdentityProviderRequestStatus defines the observed state
