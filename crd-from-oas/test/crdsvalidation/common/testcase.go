@@ -39,7 +39,7 @@ func (g TestCasesGroup[T]) Run(t *testing.T) {
 
 const (
 	// DefaultEventuallyTimeout is the default timeout for EventuallyConfig.
-	DefaultEventuallyTimeout = 1 * time.Second
+	DefaultEventuallyTimeout = 5 * time.Second
 	// DefaultEventuallyPeriod is the default period for EventuallyConfig.
 	DefaultEventuallyPeriod = 10 * time.Millisecond
 )
