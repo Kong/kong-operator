@@ -38,6 +38,12 @@
 
 ## Unreleased
 
+### Added
+
+- Allow cross-namespace reference for `KonnectAPIAuthConfiguration` from
+  `GatewayConfiguration` using `KongReferenceGrant`.
+  [#3258](https://github.com/Kong/kong-operator/pull/3258)
+
 ### Fixes
 
 - Admission webhook now validates HTTPRoute regex patterns before sending
