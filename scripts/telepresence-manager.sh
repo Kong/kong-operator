@@ -5,7 +5,7 @@
 set -e
 set -o pipefail
 
-readonly CONFIG="./.config/telepresence/config.yml"
+readonly CONFIG="./.config_telepresence.yaml"
 
 # Function to log messages with different levels.
 log() {

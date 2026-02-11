@@ -1,4 +1,0 @@
-timeouts:
-  helm: 60s
-logLevels:
-  userDaemon: debug
