@@ -5,6 +5,8 @@
 set -e
 set -o pipefail
 
+readonly CONFIG="./.config_telepresence.yaml"
+
 # Function to log messages with different levels.
 log() {
   local level="$1"
@@ -15,22 +17,22 @@ log() {
 # Function to handle telepresence installation and connection.
 install_telepresence() {
   TELEPRESENCE="$1"
-  if [ -z "$TELEPRESENCE" ]; then
+  if [ -z "${TELEPRESENCE}" ]; then
     TELEPRESENCE="telepresence"
     log "WARN" "TELEPRESENCE is not set, falling back to system-wide 'telepresence'"
   else
-    log "INFO" "Using TELEPRESENCE=$TELEPRESENCE"
+    log "INFO" "Using TELEPRESENCE=${TELEPRESENCE}"
   fi
 
-  "$TELEPRESENCE" version
+  "${TELEPRESENCE}" version
 
   log "INFO" "Checking telepresence status..."
-  if "$TELEPRESENCE" status 2>/dev/null | grep -q "Status *: *Connected"; then
+  if "${TELEPRESENCE}" status 2>/dev/null | grep -q "Status *: *Connected"; then
     log "INFO" "Telepresence is already connected to the cluster"
     exit 0
   else
     log "INFO" "Installing/upgrading telepresence traffic manager"
-    OUT=$("$TELEPRESENCE" helm install 2>&1 || true)
+    OUT=$("${TELEPRESENCE}" --config ${CONFIG} helm install 2>&1 || true)
     
     log "DEBUG" "Install command output: \"$OUT\""
     
@@ -50,7 +52,7 @@ install_telepresence() {
     # Only proceed with upgrade if necessary
     if echo "$OUT" | grep -q "use 'telepresence helm upgrade' instead to replace it"; then
       log "INFO" "Telepresence appears to be already installed, upgrading..."
-      OUT=$("$TELEPRESENCE" helm upgrade 2>&1 || true)
+      OUT=$("${TELEPRESENCE}" --config ${CONFIG} helm upgrade 2>&1 || true)
       
       # Debug output to see exactly what we're getting.
       log "DEBUG" "Upgrade command output: \"$OUT\""
@@ -68,7 +70,7 @@ install_telepresence() {
     log "INFO" "Connecting to the cluster with telepresence"
     
     # Run the connect command and capture output.
-    OUT=$(${TELEPRESENCE} connect 2>&1 || true)
+    OUT=$("${TELEPRESENCE}" --config ${CONFIG} connect 2>&1 || true)
     
     log "DEBUG" "Connect command output: \"$OUT\""
 
@@ -78,11 +80,11 @@ install_telepresence() {
     # Check for version mismatch and handle it.
     elif echo "$OUT" | grep -q -i "version mismatch"; then
       log "INFO" "Detected version mismatch during connect, attempting to quit telepresence daemon"
-      "$TELEPRESENCE" quit -s 2>&1 || true
+      "${TELEPRESENCE}" --config ${CONFIG} quit -s 2>&1 || true
       log "INFO" "Retrying connection after daemon restart"
       
       # Try connecting again after restarting the daemon.
-      OUT=$(${TELEPRESENCE} connect 2>&1 || true)
+      OUT=$("${TELEPRESENCE}" --config ${CONFIG} connect 2>&1 || true)
       log "DEBUG" "Connect retry command output: \"$OUT\""
       
       # Check if the retry was successful.
@@ -107,15 +109,15 @@ install_telepresence() {
 # Function to handle telepresence disconnection and uninstallation.
 uninstall_telepresence() {
   TELEPRESENCE="$1"
-  if [ -z "$TELEPRESENCE" ]; then
+  if [ -z "${TELEPRESENCE}" ]; then
     TELEPRESENCE="telepresence"
     log "WARN" "TELEPRESENCE is not set, falling back to system-wide 'telepresence'"
   else
-    log "INFO" "Using TELEPRESENCE=$TELEPRESENCE"
+    log "INFO" "Using TELEPRESENCE=${TELEPRESENCE}"
   fi
   
   log "INFO" "Disconnecting telepresence from cluster and stopping daemon"
-  OUT=$("$TELEPRESENCE" quit -s 2>&1 || true)
+  OUT=$("${TELEPRESENCE}" quit -s 2>&1 || true)
   
   # Debug output to see exactly what we're getting.
   log "DEBUG" "Quit command output: \"$OUT\""
@@ -129,7 +131,7 @@ uninstall_telepresence() {
   fi
   
   log "INFO" "Uninstalling telepresence traffic manager from cluster"
-  OUT=$("$TELEPRESENCE" helm uninstall 2>&1 || true)
+  OUT=$("${TELEPRESENCE}" --config ${CONFIG} helm uninstall 2>&1 || true)
   
   # Debug output to see exactly what we're getting.
   log "DEBUG" "Uninstall command output: \"$OUT\""
@@ -159,11 +161,11 @@ TELEPRESENCE_PATH="${2:-}"
 case "$ACTION" in
   install)
     log "INFO" "Setting up telepresence traffic manager in the cluster"
-    install_telepresence "$TELEPRESENCE_PATH"
+    install_telepresence "${TELEPRESENCE_PATH}"
     ;;
   uninstall)
     log "INFO" "Tearing down telepresence connection and traffic manager"
-    uninstall_telepresence "$TELEPRESENCE_PATH"
+    uninstall_telepresence "${TELEPRESENCE_PATH}"
     ;;
   *)
     log "ERROR" "Unknown action: $ACTION. Use 'install' or 'uninstall'"
