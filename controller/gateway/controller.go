@@ -115,7 +115,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 			&gatewayv1beta1.ReferenceGrant{},
 			handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForGateway),
 			builder.WithPredicates(ref.ReferenceGrantForSecretFrom(gatewayv1.GroupName, gatewayv1beta1.Kind("Gateway")))).
-		// watch for KongReferenceGrants to keep derived Konnect API auth grants in sync.
+		// watch for KongReferenceGrants to keep managed Konnect API auth grants in sync.
 		Watches(
 			&configurationv1alpha1.KongReferenceGrant{},
 			handler.EnqueueRequestsFromMapFunc(r.listGatewaysForKongReferenceGrant)).
@@ -250,6 +250,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 	if err := r.ensureKonnectAPIAuthReferenceGrant(ctx, &gateway, gatewayConfig); err != nil {
+		if k8serrors.IsConflict(err) {
+			return ctrl.Result{Requeue: true}, nil
+		}
 		return ctrl.Result{}, err
 	}
 

@@ -61,10 +61,20 @@ func (r *Reconciler) ensureKonnectAPIAuthReferenceGrant(
 	if err := r.cleanupStaleKonnectAPIAuthReferenceGrants(ctx, gateway, authNamespace, authRef.Name); err != nil {
 		return err
 	}
-	return r.ensureDerivedKonnectAPIAuthReferenceGrant(ctx, gateway, authNamespace, authRef.Name)
+	return r.ensureManagedKonnectAPIAuthReferenceGrant(ctx, gateway, authNamespace, authRef.Name)
 }
 
-func (r *Reconciler) ensureDerivedKonnectAPIAuthReferenceGrant(
+// ensureManagedKonnectAPIAuthReferenceGrant creates or updates a managed KongReferenceGrant
+// that allows the KonnectGatewayControlPlane to reference a KonnectAPIAuthConfiguration
+// in another namespace.
+//
+// When a GatewayConfiguration references a KonnectAPIAuthConfiguration in a different namespace,
+// the user must create a KongReferenceGrant to permit that cross-namespace reference. However,
+// the operator also creates a KonnectGatewayControlPlane that needs to reference the same
+// KonnectAPIAuthConfiguration. This function ensures a managed KongReferenceGrant exists that
+// mirrors the user's grant, allowing the operator-created KonnectGatewayControlPlane to access
+// the KonnectAPIAuthConfiguration.
+func (r *Reconciler) ensureManagedKonnectAPIAuthReferenceGrant(
 	ctx context.Context,
 	gateway *gwtypes.Gateway,
 	authNamespace string,
@@ -114,7 +124,7 @@ func (r *Reconciler) cleanupKonnectAPIAuthReferenceGrants(ctx context.Context, g
 
 // cleanupStaleKonnectAPIAuthReferenceGrants deletes any KonnectAPIAuthConfiguration reference grants
 // owned by this gateway that don't match the current desired auth target specified by authNamespace
-// and authName. This ensures only the current desired derived grant remains.
+// and authName. This ensures only the current desired managed grant remains.
 func (r *Reconciler) cleanupStaleKonnectAPIAuthReferenceGrants(
 	ctx context.Context,
 	gateway *gwtypes.Gateway,

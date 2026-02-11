@@ -84,7 +84,7 @@ func TestGatewayKonnectAPIAuthReferenceGrant(t *testing.T) {
 				}
 			}
 			return false
-		}, waitTime/2, tickTime, "derived KonnectGatewayControlPlane grant should not exist without user grant")
+		}, waitTime, tickTime, "derived KonnectGatewayControlPlane grant should not exist without user grant")
 	})
 
 	t.Run("derived grant is created after user creates KongReferenceGrant", func(t *testing.T) {
