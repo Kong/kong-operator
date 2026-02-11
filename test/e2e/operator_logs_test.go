@@ -23,15 +23,15 @@ import (
 )
 
 const (
-	// parallelGateways is the total number of gateways that are created and deleted one after the other
+	// parallelGateways is the total number of gateways that are created and deleted one after the other.
 	parallelGateways = 3
 	// concurrentGatewaysReadyTimeLimit is the maximum amount of time to wait for a
 	// supported Gateway to be fully provisioned and marked as Ready by the
-	// gateway controller. This applies in testing environment with many concurrent gateways to be reconciled
+	// gateway controller. This applies in testing environment with many concurrent gateways to be reconciled.
 	concurrentGatewaysReadyTimeLimit = time.Minute * 3
 )
 
-// structuredLogLine is the struct to be used for unmarshaling log lines
+// structuredLogLine is the struct to be used for unmarshaling log lines.
 type structuredLogLine struct {
 	Level  string  `json:"level"`
 	TS     float64 `json:"ts"`
@@ -42,12 +42,12 @@ type structuredLogLine struct {
 
 var (
 	// allowedErrorMsgs is the list of error messages that can happen without making the test fail
-	// these log lines have the failure reason in the Msg field of the log
+	// these log lines have the failure reason in the Msg field of the log.
 	allowedErrorMsgs = map[string]struct{}{
 		"failed setting up anonymous reports": {},
 	}
 	// allowedErrorMsgs is the list of the reconciler errors that can happen without making the test fail
-	// these log lines have the failure reason in the Error field of the log
+	// these log lines have the failure reason in the Error field of the log.
 	allowedReconcilerErrors = map[string]struct{}{
 		"number of deployments reduced":         {},
 		"number of serviceAccounts reduced":     {},

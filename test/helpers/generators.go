@@ -18,7 +18,7 @@ import (
 	"github.com/kong/kong-operator/pkg/vars"
 )
 
-// MustGenerateGatewayClass generates the default GatewayClass to be used in tests
+// MustGenerateGatewayClass generates the default GatewayClass to be used in tests.
 func MustGenerateGatewayClass(t *testing.T, parametersRefs ...gatewayv1.ParametersReference) *gatewayv1.GatewayClass {
 	t.Helper()
 
@@ -41,7 +41,7 @@ func MustGenerateGatewayClass(t *testing.T, parametersRefs ...gatewayv1.Paramete
 	return gatewayClass
 }
 
-// GenerateGateway generates a Gateway to be used in tests
+// GenerateGateway generates a Gateway to be used in tests.
 func GenerateGateway(gatewayNSN types.NamespacedName, gatewayClass *gatewayv1.GatewayClass, opts ...func(gateway *gatewayv1.Gateway)) *gwtypes.Gateway {
 	gateway := &gwtypes.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
@@ -67,7 +67,7 @@ func GenerateGateway(gatewayNSN types.NamespacedName, gatewayClass *gatewayv1.Ga
 
 type gatewayConfigurationOption func(*operatorv2beta1.GatewayConfiguration)
 
-// GenerateGatewayConfiguration generates a GatewayConfiguration to be used in tests
+// GenerateGatewayConfiguration generates a GatewayConfiguration to be used in tests.
 func GenerateGatewayConfiguration(namespace string, opts ...gatewayConfigurationOption) *operatorv2beta1.GatewayConfiguration {
 	gwc := &operatorv2beta1.GatewayConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
@@ -116,7 +116,7 @@ func GenerateGatewayConfiguration(namespace string, opts ...gatewayConfiguration
 	return gwc
 }
 
-// GenerateHTTPRoute generates an HTTPRoute to be used in tests
+// GenerateHTTPRoute generates an HTTPRoute to be used in tests.
 func GenerateHTTPRoute(namespace string, gatewayName, serviceName string, opts ...func(*gatewayv1.HTTPRoute)) *gatewayv1.HTTPRoute {
 	httpRoute := &gatewayv1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{

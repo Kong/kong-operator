@@ -5,7 +5,7 @@ package events
 // by the TypedEventRecorder to create specific event reasons.
 
 const (
-	// Base event reasons - these are prefixed with resource type by TypedEventRecorder
+	// Base event reasons - these are prefixed with resource type by TypedEventRecorder.
 
 	// EventReasonTranslationSucceeded is used when resource translation completes successfully.
 	EventReasonTranslationSucceeded = "TranslationSucceeded"

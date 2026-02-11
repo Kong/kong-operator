@@ -153,17 +153,17 @@ type ControlPlaneStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
-// GetConditions returns the ControlPlane Status Conditions
+// GetConditions returns the ControlPlane Status Conditions.
 func (c *ControlPlane) GetConditions() []metav1.Condition {
 	return c.Status.Conditions
 }
 
-// SetConditions sets the ControlPlane Status Conditions
+// SetConditions sets the ControlPlane Status Conditions.
 func (c *ControlPlane) SetConditions(conditions []metav1.Condition) {
 	c.Status.Conditions = conditions
 }
 
-// GetExtensions retrieves the ControlPlane Extensions
+// GetExtensions retrieves the ControlPlane Extensions.
 func (c *ControlPlane) GetExtensions() []commonv1alpha1.ExtensionRef {
 	return c.Spec.Extensions
 }

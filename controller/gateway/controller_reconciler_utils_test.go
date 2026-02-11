@@ -1911,7 +1911,7 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 	}
 }
 
-// test mergeGatewayConfigurations function
+// test mergeGatewayConfigurations function.
 func TestMergeGatewayConfigurations(t *testing.T) {
 	type testCase struct {
 		name           string
@@ -2147,7 +2147,7 @@ func TestMergeGatewayConfigurations(t *testing.T) {
 	}
 }
 
-// test getOrCreateGatewayConfiguration function
+// test getOrCreateGatewayConfiguration function.
 func TestGetOrCreateGatewayConfiguration(t *testing.T) {
 	type testCase struct {
 		name                  string

@@ -15,17 +15,17 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 )
 
-// Scope represents the scope of the object
+// Scope represents the scope of the object.
 type Scope byte
 
 const (
-	// ScopeCluster represents the cluster scope
+	// ScopeCluster represents the cluster scope.
 	ScopeCluster Scope = iota
-	// ScopeNamespace represents the namespace scope
+	// ScopeNamespace represents the namespace scope.
 	ScopeNamespace
 )
 
-// GetGroupKindScope returns the scope of the object
+// GetGroupKindScope returns the scope of the object.
 func getGroupKindScope(t *testing.T, cfg *rest.Config, obj client.Object) meta.RESTScopeName {
 	dc := discovery.NewDiscoveryClientForConfigOrDie(cfg)
 	groupResources, err := restmapper.GetAPIGroupResources(dc)
@@ -37,27 +37,27 @@ func getGroupKindScope(t *testing.T, cfg *rest.Config, obj client.Object) meta.R
 	return r.Scope.Name()
 }
 
-// SupportedByKicT is a type to specify whether an object is supported by KIC or not
+// SupportedByKicT is a type to specify whether an object is supported by KIC or not.
 type SupportedByKicT bool
 
 const (
-	// SupportedByKIC represents that the object is supported by KIC
+	// SupportedByKIC represents that the object is supported by KIC.
 	SupportedByKIC SupportedByKicT = true
-	// NotSupportedByKIC represents that the object is not supported by KIC
+	// NotSupportedByKIC represents that the object is not supported by KIC.
 	NotSupportedByKIC SupportedByKicT = false
 )
 
-// ControlPlaneRefRequiredT is a type to specify whether control plane ref is required or not
+// ControlPlaneRefRequiredT is a type to specify whether control plane ref is required or not.
 type ControlPlaneRefRequiredT bool
 
 const (
-	// ControlPlaneRefRequired represents that control plane ref is required
+	// ControlPlaneRefRequired represents that control plane ref is required.
 	ControlPlaneRefRequired ControlPlaneRefRequiredT = true
-	// ControlPlaneRefNotRequired represents that control plane ref is not required
+	// ControlPlaneRefNotRequired represents that control plane ref is not required.
 	ControlPlaneRefNotRequired ControlPlaneRefRequiredT = false
 )
 
-// NewCRDValidationTestCasesGroupCPRefChange creates a test cases group for control plane ref change
+// NewCRDValidationTestCasesGroupCPRefChange creates a test cases group for control plane ref change.
 func NewCRDValidationTestCasesGroupCPRefChange[
 	T ObjectWithControlPlaneRef[T],
 ](

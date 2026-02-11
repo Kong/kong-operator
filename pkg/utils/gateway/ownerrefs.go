@@ -219,7 +219,7 @@ func ListHTTPRoutesForGateway(
 }
 
 // GetDataPlaneServiceName is a helper function that retrieves the name of the service owned by provided dataplane.
-// It accepts a string as the last argument to specify which service to retrieve (proxy/admin)
+// It accepts a string as the last argument to specify which service to retrieve (proxy/admin).
 func GetDataPlaneServiceName(
 	ctx context.Context,
 	c client.Client,

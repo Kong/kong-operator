@@ -66,7 +66,7 @@ var (
 	// ProjectName is the name of the project.
 	projectName = "NOT_SET"
 
-	// Organization is the Kong organization
+	// Organization is the Kong organization.
 	organization = "Kong"
 )
 

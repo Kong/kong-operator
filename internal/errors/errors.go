@@ -25,12 +25,12 @@ type UnsupportedGatewayClassError struct {
 	reason string
 }
 
-// NewErrUnsupportedGateway creates a new ErrUnsupportedGatewayClass error
+// NewErrUnsupportedGateway creates a new ErrUnsupportedGatewayClass error.
 func NewErrUnsupportedGateway(reason string) UnsupportedGatewayClassError {
 	return UnsupportedGatewayClassError{reason: reason}
 }
 
-// Error returns the error message for the ErrUnsupportedGatewayClass error
+// Error returns the error message for the ErrUnsupportedGatewayClass error.
 func (e UnsupportedGatewayClassError) Error() string {
 	return fmt.Sprintf("unsupported gateway class: %s", e.reason)
 }
@@ -42,12 +42,12 @@ type NotAcceptedGatewayClassError struct {
 	condition    metav1.Condition
 }
 
-// NewErrNotAcceptedGatewayClass creates a new ErrNotAcceptedGatewayClass error
+// NewErrNotAcceptedGatewayClass creates a new ErrNotAcceptedGatewayClass error.
 func NewErrNotAcceptedGatewayClass(gatewayClass string, condition metav1.Condition) NotAcceptedGatewayClassError {
 	return NotAcceptedGatewayClassError{gatewayClass: gatewayClass, condition: condition}
 }
 
-// Error returns the error message for the ErrNotAcceptedGatewayClass error
+// Error returns the error message for the ErrNotAcceptedGatewayClass error.
 func (e NotAcceptedGatewayClassError) Error() string {
 	return fmt.Sprintf("gateway class %s not accepted; reason: %s, message: %s", e.gatewayClass, e.condition.Reason, e.condition.Message)
 }

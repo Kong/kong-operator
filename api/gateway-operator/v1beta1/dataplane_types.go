@@ -385,7 +385,7 @@ type DataPlaneRolloutStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
-// GetConditions retrieves the DataPlane Status Conditions
+// GetConditions retrieves the DataPlane Status Conditions.
 func (d *DataPlaneRolloutStatus) GetConditions() []metav1.Condition {
 	if d == nil {
 		return nil
@@ -393,7 +393,7 @@ func (d *DataPlaneRolloutStatus) GetConditions() []metav1.Condition {
 	return d.Conditions
 }
 
-// SetConditions sets the DataPlane Status Conditions
+// SetConditions sets the DataPlane Status Conditions.
 func (d *DataPlaneRolloutStatus) SetConditions(conditions []metav1.Condition) {
 	if d == nil {
 		return
@@ -520,17 +520,17 @@ const (
 	PrivateIPAddressSourceType AddressSourceType = "PrivateIP"
 )
 
-// GetConditions retrieves the DataPlane Status Conditions
+// GetConditions retrieves the DataPlane Status Conditions.
 func (d *DataPlane) GetConditions() []metav1.Condition {
 	return d.Status.Conditions
 }
 
-// SetConditions sets the DataPlane Status Conditions
+// SetConditions sets the DataPlane Status Conditions.
 func (d *DataPlane) SetConditions(conditions []metav1.Condition) {
 	d.Status.Conditions = conditions
 }
 
-// GetExtensions retrieves the DataPlane Extensions
+// GetExtensions retrieves the DataPlane Extensions.
 func (d *DataPlane) GetExtensions() []commonv1alpha1.ExtensionRef {
 	return d.Spec.Extensions
 }

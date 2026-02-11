@@ -63,7 +63,7 @@ func getAuthHeaderForInference(provider operatorv1alpha1.AICloudProvider) (map[s
 // ----------------------------------------------------------------------------
 
 // aiGatewayToGateway takes an accepted/validated v1alpha1.AIGateway struct and produces a v1.Gateway (k8sig resources)
-// and a v1beta1.GatewayConfiguration (kong extensions) that will host the Large Language Model deployments
+// and a v1beta1.GatewayConfiguration (kong extensions) that will host the Large Language Model deployments.
 func aiGatewayToGateway(
 	aigateway *operatorv1alpha1.AIGateway,
 ) *gatewayv1.Gateway {
@@ -95,7 +95,7 @@ func aiGatewayToGateway(
 }
 
 // aiCloudGatewayToDecoratorPlugin take an accepted/validated vXalphaY.CloudHostedLargeLanguageModel struct
-// and produces an ai-prompt-decorator vX.KongPlugin if required
+// and produces an ai-prompt-decorator vX.KongPlugin if required.
 func aiCloudGatewayToKongPromptDecoratorPlugin(
 	aiCloudGateway *operatorv1alpha1.CloudHostedLargeLanguageModel,
 	aigateway *operatorv1alpha1.AIGateway,
@@ -238,7 +238,7 @@ func aiCloudGatewayToHTTPRoute(
 }
 
 // aiCloudGatewayToKongPlugin takes an accepted/validated vXalphaY.CloudHostedLargeLanguageModel struct
-// and transforms it into a vX.KongPlugin from Kong Kubernetes-Ingress-Controller
+// and transforms it into a vX.KongPlugin from Kong Kubernetes-Ingress-Controller.
 func aiCloudGatewayToKongPlugin(
 	aiCloudLLM *operatorv1alpha1.CloudHostedLargeLanguageModel,
 	aigateway *operatorv1alpha1.AIGateway,

@@ -22,7 +22,7 @@ import (
 
 // handleTypeSpecific handles type-specific logic for Konnect entities.
 // These include e.g.:
-// - checking KongConsumer's credential secret refs
+// - checking KongConsumer's credential secret refs.
 func handleTypeSpecific[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],

@@ -24,7 +24,7 @@ import (
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )
 
-// Test helpers for BuildProgrammedCondition
+// Test helpers for BuildProgrammedCondition.
 type fakeListClient struct {
 	client.Client
 

@@ -5,7 +5,7 @@ package consts
 // -----------------------------------------------------------------------------
 
 const (
-	// DataPlanePrefix is used as a name prefix to generate dataplane-owned objects' name
+	// DataPlanePrefix is used as a name prefix to generate dataplane-owned objects' name.
 	DataPlanePrefix = "dataplane"
 )
 
@@ -110,10 +110,10 @@ const (
 	// service.
 	//
 	// Example:
-	// gateway-operator.konghq.com/service-selector-override: "key1=value,key2=value2"
+	// gateway-operator.konghq.com/service-selector-override: "key1=value,key2=value2".
 	ServiceSelectorOverrideAnnotation = "gateway-operator.konghq.com/service-selector-override"
 
-	// DataPlaneProxyContainerName is the name of the Kong proxy container
+	// DataPlaneProxyContainerName is the name of the Kong proxy container.
 	DataPlaneProxyContainerName = "proxy"
 
 	// DataPlaneStatusEndpoint is the endpoint to use for DataPlane readiness probe.
@@ -155,7 +155,7 @@ const (
 
 // -----------------------------------------------------------------------------
 // Consts - DataPlane Services parameters
-// -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------.
 const (
 	// DataPlaneAdminServicePortName is the port name of the DataPlane admin service.
 	DataPlaneAdminServicePortName = "admin"

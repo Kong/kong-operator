@@ -211,7 +211,7 @@ const (
 	// RolloutResourcePlanDeploymentDeleteOnPromotionRecreateOnRollout which makes the operator delete the
 	// Deployment the rollout is not initiated by a spec change and then to
 	// re-create it when the rollout is initiated (the owner resource like
-	// a DataPlane is patched or updated)
+	// a DataPlane is patched or updated).
 	RolloutResourcePlanDeploymentDeleteOnPromotionRecreateOnRollout RolloutResourcePlanDeployment = "DeleteOnPromotionRecreateOnRollout"
 )
 

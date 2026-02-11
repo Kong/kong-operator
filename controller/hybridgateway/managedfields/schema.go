@@ -31,7 +31,7 @@ func GetObjectType(obj runtime.Object) (typed.ParseableType, error) {
 	return typed.ParseableType{}, fmt.Errorf("schema type not found for %s (schema name: %s)", gvk, schemaName)
 }
 
-// deriveSchemaName converts a GroupVersionKind to the schema name format
+// deriveSchemaName converts a GroupVersionKind to the schema name format.
 func deriveSchemaName(gvk schema.GroupVersionKind) (string, error) {
 	// Extract the main group name from the full group
 	var groupName string
@@ -52,7 +52,7 @@ func deriveSchemaName(gvk schema.GroupVersionKind) (string, error) {
 		groupName, gvk.Version, gvk.Kind), nil
 }
 
-// getParseableTypeByName attempts to get a specific ParseableType by schema name
+// getParseableTypeByName attempts to get a specific ParseableType by schema name.
 func getParseableTypeByName(schemaName string) (typed.ParseableType, bool) {
 	parser := generated.Parser()
 
