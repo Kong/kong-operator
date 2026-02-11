@@ -432,7 +432,7 @@ func pluginUsingInvalidCACert(ns string) *configurationv1.KongPlugin {
 				annotations.IngressClassKey: consts.IngressClass,
 			},
 		},
-		Config:     apiextensionsv1.JSON{Raw: []byte(fmt.Sprintf(`{"ca_certificates": ["%s"]}`, invalidCASecretID))},
+		Config:     apiextensionsv1.JSON{Raw: fmt.Appendf(nil, `{"ca_certificates": ["%s"]}`, invalidCASecretID)},
 		PluginName: "mtls-auth",
 	}
 }

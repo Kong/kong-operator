@@ -338,12 +338,9 @@ func ensureAllProxyReplicasAreConfigured(ctx context.Context, t *testing.T, env 
 	require.NoError(t, err)
 
 	t.Logf("ensuring all %d proxy replicas are configured", len(pods))
-	wg := sync.WaitGroup{}
+	var wg sync.WaitGroup
 	for _, pod := range pods {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
+		wg.Go(func() {
 			forwardCtx, cancel := context.WithCancel(ctx)
 			defer cancel()
 			localPort := startPortForwarder(forwardCtx, t, env, proxyDeploymentNN.Namespace, pod.Name, "8444")
@@ -356,7 +353,7 @@ func ensureAllProxyReplicasAreConfigured(ctx context.Context, t *testing.T, env 
 
 			verifyIngressWithEchoBackendsInAdminAPI(ctx, t, kongClient, numberOfEchoBackends)
 			t.Logf("proxy pod %s/%s: got the config", pod.Namespace, pod.Name)
-		}()
+		})
 	}
 	wg.Wait()
 }

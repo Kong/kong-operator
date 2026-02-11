@@ -64,8 +64,8 @@ func deleteCluster(ctx context.Context, mgrc *container.ClusterManagerClient, pr
 	if err != nil {
 		return fmt.Errorf("failed to call delete cluster for %q: %w", name, err)
 	}
-	if op.Error != nil {
-		return fmt.Errorf("failed to remove cluster %q: %s", name, op.Error)
+	if op.GetError() != nil {
+		return fmt.Errorf("failed to remove cluster %q: %s", name, op.GetError())
 	}
 
 	return nil
@@ -81,22 +81,22 @@ func findOrphanedClusters(ctx context.Context, log logr.Logger, mgrc *container.
 	}
 
 	var orphanedClusterNames []string
-	for _, cluster := range clusterListResp.Clusters {
+	for _, cluster := range clusterListResp.GetClusters() {
 		if !e2e.IsGKETestCluster(cluster) {
-			log.Info("Non test cluster found and skipped", "name", cluster.Name, "built_at", cluster.GetCreateTime())
+			log.Info("Non test cluster found and skipped", "name", cluster.GetName(), "built_at", cluster.GetCreateTime())
 			continue
 		}
 
-		createdAt, err := time.Parse(time.RFC3339, cluster.CreateTime)
+		createdAt, err := time.Parse(time.RFC3339, cluster.GetCreateTime())
 		if err != nil {
 			return nil, err
 		}
 
 		orphanTime := createdAt.Add(timeUntilClusterOrphaned)
 		if time.Now().UTC().After(orphanTime) {
-			orphanedClusterNames = append(orphanedClusterNames, cluster.Name)
+			orphanedClusterNames = append(orphanedClusterNames, cluster.GetName())
 		} else {
-			log.Info("Cluster skipped", "name", cluster.Name, "build_in_last", timeUntilClusterOrphaned)
+			log.Info("Cluster skipped", "name", cluster.GetName(), "build_in_last", timeUntilClusterOrphaned)
 		}
 	}
 

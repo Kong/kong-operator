@@ -91,10 +91,10 @@ func (m *HistogramPassthroughMetric) Desc() *prometheus.Desc {
 // Write implements prometheus.Write.
 // Passed parameter dm is an output for metrics (target of write).
 func (m *HistogramPassthroughMetric) Write(dm *dto.Metric) error {
-	dm.Histogram = m.Metric.Histogram
-	dm.Label = m.Metric.Label
+	dm.Histogram = m.Metric.GetHistogram()
+	dm.Label = m.Metric.GetLabel()
 	dm.TimestampMs = m.Metric.TimestampMs
-	dm.Untyped = m.Metric.Untyped
+	dm.Untyped = m.Metric.GetUntyped()
 
 	return nil
 }

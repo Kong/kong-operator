@@ -208,7 +208,7 @@ func BenchmarkSanitizedCopy(b *testing.B) {
 func extractNotEmptyFieldNames(s KongState) []string {
 	var fields []string
 	typ := reflect.ValueOf(s).Type()
-	for i := 0; i < typ.NumField(); i++ {
+	for i := range typ.NumField() {
 		f := typ.Field(i)
 		v := reflect.ValueOf(s).Field(i)
 		if !f.Anonymous && f.IsExported() && v.IsValid() && !v.IsZero() {
@@ -223,7 +223,7 @@ func ensureAllKongStateFieldsAreCoveredInTest(t *testing.T, testedFields []strin
 	allKongStateFields := func() []string {
 		var fields []string
 		typ := reflect.ValueOf(KongState{}).Type()
-		for i := 0; i < typ.NumField(); i++ {
+		for i := range typ.NumField() {
 			fields = append(fields, typ.Field(i).Name)
 		}
 		return fields

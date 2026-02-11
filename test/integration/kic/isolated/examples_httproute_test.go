@@ -232,11 +232,10 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 				},
 				PluginName: "response-transformer",
 				Config: apiextensionsv1.JSON{
-					Raw: []byte(fmt.Sprintf(`
+					Raw: fmt.Appendf(nil, `
 						{
 							"add": {"headers": ["%s:%s"]}
 						}`, additionalHeaderKey, additionalHeaderValue),
-					),
 				},
 			}
 			_, err = client.ConfigurationV1().KongPlugins(namespace).Create(ctx, workingPlugin, metav1.CreateOptions{})

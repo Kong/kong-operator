@@ -82,8 +82,8 @@ func TestDiscoverer_GetAdminAPIsForServiceReturnsAllAddressesCorrectlyPagingThro
 			)
 			require.NoError(t, client.Create(ctx, &serviceObj))
 
-			for i := 0; i < tc.subnetC; i++ {
-				for j := 0; j < tc.subnetD; j++ {
+			for i := range tc.subnetC {
+				for j := range tc.subnetD {
 					es := discoveryv1.EndpointSlice{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      uuid.NewString(),
