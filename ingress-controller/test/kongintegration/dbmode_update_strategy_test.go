@@ -22,6 +22,7 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/sendconfig"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/ingress-controller/test/kongintegration/containers"
+	"github.com/kong/kong-operator/ingress-controller/test/testenv"
 )
 
 func TestUpdateStrategyDBMode(t *testing.T) {
@@ -43,13 +44,17 @@ func TestUpdateStrategyDBMode(t *testing.T) {
 	kongClient, err := adminapi.NewKongAPIClient(kongC.AdminURL(ctx, t), managercfg.AdminAPIClientConfig{}, "")
 	require.NoError(t, err)
 
+	gatewayTag, err := testenv.GetDependencyVersion("kongintegration.kong-ee")
+	require.NoError(t, err)
+	gatewayTag = trimEnterpriseTagToSemver(gatewayTag)
+
 	logbase, err := zap.NewDevelopment()
 	require.NoError(t, err)
 	logger := zapr.NewLogger(logbase)
 	sut := sendconfig.NewUpdateStrategyDBMode(
 		kongClient,
 		dump.Config{},
-		semver.MustParse("3.6.0"),
+		semver.MustParse(gatewayTag),
 		10,
 		logger,
 	)
