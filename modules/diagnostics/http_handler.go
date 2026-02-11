@@ -93,7 +93,11 @@ func (h *HTTPHandler) handleListControlPlanes(rw http.ResponseWriter, r *http.Re
 		}),
 	}
 	rw.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(rw).Encode(resp)
+	if err := json.NewEncoder(rw).Encode(resp); err != nil {
+		h.logger.Error(err, "failed to encode response")
+		rw.WriteHeader(http.StatusInternalServerError)
+		_, _ = rw.Write([]byte("failed to encode response"))
+	}
 }
 
 func (h *HTTPHandler) handleAllControlPlanes(rw http.ResponseWriter, r *http.Request) {

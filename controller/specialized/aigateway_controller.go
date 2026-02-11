@@ -78,14 +78,14 @@ func (r *AIGatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	gwc, err := gatewayclass.Get(ctx, r.Client, aigateway.Spec.GatewayClassName)
 	if err != nil {
 		switch {
-		case errors.As(err, &operatorerrors.ErrUnsupportedGatewayClass{}):
+		case errors.As(err, &operatorerrors.UnsupportedGatewayClassError{}):
 			log.Debug(logger, "resource not supported, ignoring",
 				"expectedGatewayClass", vars.ControllerName(),
 				"gatewayClass", aigateway.Spec.GatewayClassName,
 				"reason", err.Error(),
 			)
 			return ctrl.Result{}, nil
-		case errors.As(err, &operatorerrors.ErrNotAcceptedGatewayClass{}):
+		case errors.As(err, &operatorerrors.NotAcceptedGatewayClassError{}):
 			log.Debug(logger, "GatewayClass not accepted, ignoring",
 				"gatewayClass", aigateway.Spec.GatewayClassName,
 				"reason", err.Error(),

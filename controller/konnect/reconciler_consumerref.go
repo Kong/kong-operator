@@ -70,7 +70,7 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 			return res, errStatus
 		}
 
-		return ctrl.Result{}, ReferencedKongConsumerDoesNotExist{
+		return ctrl.Result{}, ReferencedKongConsumerDoesNotExistError{
 			Reference: nn,
 			Err:       err,
 		}
@@ -79,7 +79,7 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 	// If referenced KongConsumer is being deleted, return an error so that we
 	// can remove the entity from Konnect first.
 	if delTimestamp := consumer.GetDeletionTimestamp(); !delTimestamp.IsZero() {
-		return ctrl.Result{}, ReferencedKongConsumerIsBeingDeleted{
+		return ctrl.Result{}, ReferencedKongConsumerIsBeingDeletedError{
 			Reference:         nn,
 			DeletionTimestamp: delTimestamp.Time,
 		}

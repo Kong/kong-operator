@@ -11,9 +11,9 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 )
 
-// ErrReferenceNotGranted is an error type that indicates a cross-namespace
+// ReferenceNotGrantedError is an error type that indicates a cross-namespace
 // reference is not granted by any KongReferenceGrant.
-type ErrReferenceNotGranted struct {
+type ReferenceNotGrantedError struct {
 	FromNamespace string
 	FromGVK       metav1.GroupVersionKind
 	ToNamespace   string
@@ -23,7 +23,7 @@ type ErrReferenceNotGranted struct {
 
 // Error returns a formatted error message indicating that a cross-namespace reference
 // is not permitted.
-func (e *ErrReferenceNotGranted) Error() string {
+func (e *ReferenceNotGrantedError) Error() string {
 	return fmt.Sprintf("cross-namespace reference to %s %s in namespace %s from %s.%s in namespace %s is not granted by any KongReferenceGrant",
 		e.ToGVK.Kind,
 		e.ToName,
@@ -39,7 +39,7 @@ func (e *ErrReferenceNotGranted) Error() string {
 // reference was attempted without the proper ReferenceGrant permissions.
 // It returns true if the error matches this type, false otherwise.
 func IsReferenceNotGranted(err error) bool {
-	var target *ErrReferenceNotGranted
+	var target *ReferenceNotGrantedError
 	return errors.As(err, &target)
 }
 
@@ -90,7 +90,7 @@ func CheckKongReferenceGrantForResource(
 		)
 	}
 	if !granted {
-		return &ErrReferenceNotGranted{
+		return &ReferenceNotGrantedError{
 			FromNamespace: fromNamespace,
 			FromGVK:       fromGVK,
 			ToNamespace:   toNamespace,

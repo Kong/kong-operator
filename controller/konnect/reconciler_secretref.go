@@ -77,7 +77,7 @@ func handleSecretRef[T constraints.SupportedKonnectEntityType, TEnt constraints.
 			); errStatus != nil || !res.IsZero() {
 				return res, true, errStatus
 			}
-			return ctrl.Result{}, true, &ReferencedSecretDoesNotExist{
+			return ctrl.Result{}, true, &ReferencedSecretDoesNotExistError{
 				Reference: nn,
 				Err:       err,
 			}

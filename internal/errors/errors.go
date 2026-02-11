@@ -19,36 +19,36 @@ var ErrUnexpectedObject = errors.New("unexpected object type provided")
 // Gateway - Errors
 // -----------------------------------------------------------------------------
 
-// ErrUnsupportedGatewayClass is an error which indicates that a provided GatewayClass
+// UnsupportedGatewayClassError is an error which indicates that a provided GatewayClass
 // is not supported.
-type ErrUnsupportedGatewayClass struct {
+type UnsupportedGatewayClassError struct {
 	reason string
 }
 
 // NewErrUnsupportedGateway creates a new ErrUnsupportedGatewayClass error
-func NewErrUnsupportedGateway(reason string) ErrUnsupportedGatewayClass {
-	return ErrUnsupportedGatewayClass{reason: reason}
+func NewErrUnsupportedGateway(reason string) UnsupportedGatewayClassError {
+	return UnsupportedGatewayClassError{reason: reason}
 }
 
 // Error returns the error message for the ErrUnsupportedGatewayClass error
-func (e ErrUnsupportedGatewayClass) Error() string {
+func (e UnsupportedGatewayClassError) Error() string {
 	return fmt.Sprintf("unsupported gateway class: %s", e.reason)
 }
 
-// ErrNotAcceptedGatewayClass is an error which indicates that a provided GatewayClass
+// NotAcceptedGatewayClassError is an error which indicates that a provided GatewayClass
 // is not accepted.
-type ErrNotAcceptedGatewayClass struct {
+type NotAcceptedGatewayClassError struct {
 	gatewayClass string
 	condition    metav1.Condition
 }
 
 // NewErrNotAcceptedGatewayClass creates a new ErrNotAcceptedGatewayClass error
-func NewErrNotAcceptedGatewayClass(gatewayClass string, condition metav1.Condition) ErrNotAcceptedGatewayClass {
-	return ErrNotAcceptedGatewayClass{gatewayClass: gatewayClass, condition: condition}
+func NewErrNotAcceptedGatewayClass(gatewayClass string, condition metav1.Condition) NotAcceptedGatewayClassError {
+	return NotAcceptedGatewayClassError{gatewayClass: gatewayClass, condition: condition}
 }
 
 // Error returns the error message for the ErrNotAcceptedGatewayClass error
-func (e ErrNotAcceptedGatewayClass) Error() string {
+func (e NotAcceptedGatewayClassError) Error() string {
 	return fmt.Sprintf("gateway class %s not accepted; reason: %s, message: %s", e.gatewayClass, e.condition.Reason, e.condition.Message)
 }
 

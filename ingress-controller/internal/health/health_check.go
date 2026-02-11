@@ -2,6 +2,7 @@ package health
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -76,7 +77,7 @@ func (s *CheckServer) Start(ctx context.Context, addr string, logger logr.Logger
 	go func() {
 		err := server.ListenAndServe()
 		if err != nil {
-			if err == http.ErrServerClosed {
+			if errors.Is(err, http.ErrServerClosed) {
 				logger.Info("Healthz server closed")
 			} else {
 				logger.Error(err, "Healthz server failed")
