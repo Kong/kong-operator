@@ -53,17 +53,17 @@ func (obj *KongConsumerGroup) SetControlPlaneID(id string) {
 	obj.Status.Konnect.ControlPlaneID = id
 }
 
-// GetTypeName returns the KongConsumerGroup Kind name
+// GetTypeName returns the KongConsumerGroup Kind name.
 func (obj KongConsumerGroup) GetTypeName() string {
 	return "KongConsumerGroup"
 }
 
-// GetConditions returns the Status Conditions
+// GetConditions returns the Status Conditions.
 func (obj *KongConsumerGroup) GetConditions() []metav1.Condition {
 	return obj.Status.Conditions
 }
 
-// SetConditions sets the Status Conditions
+// SetConditions sets the Status Conditions.
 func (obj *KongConsumerGroup) SetConditions(conditions []metav1.Condition) {
 	obj.Status.Conditions = conditions
 }

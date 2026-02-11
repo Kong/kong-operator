@@ -28,7 +28,7 @@ import (
 // AIGatewayReconciler
 // ----------------------------------------------------------------------------
 
-// AIGatewayReconciler reconciles a AIGateway object
+// AIGatewayReconciler reconciles a AIGateway object.
 type AIGatewayReconciler struct {
 	client.Client
 

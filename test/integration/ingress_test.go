@@ -34,7 +34,7 @@ import (
 )
 
 const (
-	// ingressClass indicates the ingress class name which the tests will use for supported object reconciliation
+	// ingressClass indicates the ingress class name which the tests will use for supported object reconciliation.
 	ingressClass = "kong"
 )
 

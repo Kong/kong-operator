@@ -5,7 +5,7 @@ package consts
 // -----------------------------------------------------------------------------
 
 const (
-	// KonnectExtensionPrefix is used as a name prefix to generate KonnectExtension-owned objects' name
+	// KonnectExtensionPrefix is used as a name prefix to generate KonnectExtension-owned objects' name.
 	KonnectExtensionPrefix = "konnect-extension"
 )
 
@@ -60,6 +60,6 @@ const (
 	// associated with the secret resource. Since multiple Konnect Certificates can be
 	// created out of a single secret, this label is used to store the certificate ID
 	// of all the certificates created out of the secret, separated by commas.
-	// Example: konnect.konghq.com/certificate-ids: "xxxxxx,yyyyyy,zzzzzz"
+	// Example: konnect.konghq.com/certificate-ids: "xxxxxx,yyyyyy,zzzzzz".
 	DataPlaneCertificateIDAnnotationKey = "konnect.konghq.com/certificate-ids"
 )

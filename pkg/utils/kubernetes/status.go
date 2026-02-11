@@ -162,7 +162,7 @@ func SetReady(resource ConditionsAndGenerationAware) {
 	SetReadyWithGeneration(resource, resource.GetGeneration())
 }
 
-// SetProgrammed evaluates all the existing conditions and sets the Programmed status accordingly
+// SetProgrammed evaluates all the existing conditions and sets the Programmed status accordingly.
 func SetProgrammed(resource ConditionsAndGenerationAware) {
 	programmed := metav1.Condition{
 		Type:               string(gatewayv1.GatewayConditionProgrammed),
@@ -265,7 +265,7 @@ func IsProgrammed(resource ConditionsAware) bool {
 	return false
 }
 
-// NewCondition convenience method for creating conditions
+// NewCondition convenience method for creating conditions.
 func NewCondition(cType kcfgconsts.ConditionType, status metav1.ConditionStatus, reason kcfgconsts.ConditionReason, message string) metav1.Condition {
 	return metav1.Condition{
 		Type:               string(cType),

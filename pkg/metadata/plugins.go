@@ -11,7 +11,7 @@ import (
 // This function trims the whitespace from the plugin names.
 //
 // For example, for KongConsumer in namespace default, having the "konghq.com/plugins"
-// annotation set to "p1,p2" this will return []string{"default/p1", "default/p2"}
+// annotation set to "p1,p2" this will return []string{"default/p1", "default/p2"}.
 func ExtractPluginsWithNamespaces(obj ObjectWithAnnotationsAndNamespace) []string {
 	return extractPlugins(obj, nsOptWithNamespace)
 }
@@ -21,7 +21,7 @@ func ExtractPluginsWithNamespaces(obj ObjectWithAnnotationsAndNamespace) []strin
 // This function trims the whitespace from the plugin names.
 //
 // For example, for KongConsumer in namespace default, having the "konghq.com/plugins"
-// annotation set to "p1,p2" this will return []string{"p1", "p2"}
+// annotation set to "p1,p2" this will return []string{"p1", "p2"}.
 func ExtractPlugins(obj ObjectWithAnnotationsAndNamespace) []string {
 	return extractPlugins(obj, nsOptWithoutNamespace)
 }

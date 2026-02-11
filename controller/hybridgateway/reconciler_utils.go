@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	// FieldManager is the field manager name used for server-side apply operations
+	// FieldManager is the field manager name used for server-side apply operations.
 	FieldManager = "gateway-operator"
 )
 

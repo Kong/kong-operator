@@ -6,7 +6,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-// Recursively remove empty maps and slices from a map[string]interface{}
+// Recursively remove empty maps and slices from a map[string]interface{}.
 func pruneEmptyFields(m map[string]any) {
 	for k, v := range m {
 		switch val := v.(type) {

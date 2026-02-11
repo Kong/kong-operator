@@ -1292,7 +1292,7 @@ Allowed values:
 | Value | Description |
 | --- | --- |
 | `ScaleDownOnPromotionScaleUpOnRollout` | RolloutResourcePlanDeploymentScaleDownOnPromotionScaleUpOnRollout is a rollout<br />resource plan for Deployment which makes the operator scale down<br />the Deployment to 0 when the rollout is not initiated by a spec change<br />and then to scale it up when the rollout is initiated (the owner resource<br />like a DataPlane is patched or updated).<br /> |
-| `DeleteOnPromotionRecreateOnRollout` | RolloutResourcePlanDeploymentDeleteOnPromotionRecreateOnRollout which makes the operator delete the<br />Deployment the rollout is not initiated by a spec change and then to<br />re-create it when the rollout is initiated (the owner resource like<br />a DataPlane is patched or updated)<br /> |
+| `DeleteOnPromotionRecreateOnRollout` | RolloutResourcePlanDeploymentDeleteOnPromotionRecreateOnRollout which makes the operator delete the<br />Deployment the rollout is not initiated by a spec change and then to<br />re-create it when the rollout is initiated (the owner resource like<br />a DataPlane is patched or updated).<br /> |
 
 #### RolloutResources
 
@@ -2422,7 +2422,7 @@ Allowed values:
 | Value | Description |
 | --- | --- |
 | `ScaleDownOnPromotionScaleUpOnRollout` | RolloutResourcePlanDeploymentScaleDownOnPromotionScaleUpOnRollout is a rollout<br />resource plan for Deployment which makes the operator scale down<br />the Deployment to 0 when the rollout is not initiated by a spec change<br />and then to scale it up when the rollout is initiated (the owner resource<br />like a DataPlane is patched or updated).<br /> |
-| `DeleteOnPromotionRecreateOnRollout` | RolloutResourcePlanDeploymentDeleteOnPromotionRecreateOnRollout which makes the operator delete the<br />Deployment the rollout is not initiated by a spec change and then to<br />re-create it when the rollout is initiated (the owner resource like<br />a DataPlane is patched or updated)<br /> |
+| `DeleteOnPromotionRecreateOnRollout` | RolloutResourcePlanDeploymentDeleteOnPromotionRecreateOnRollout which makes the operator delete the<br />Deployment the rollout is not initiated by a spec change and then to<br />re-create it when the rollout is initiated (the owner resource like<br />a DataPlane is patched or updated).<br /> |
 
 #### RolloutResources
 

@@ -20,7 +20,7 @@ import (
 // Service generators
 // -----------------------------------------------------------------------------
 
-// GenerateNewIngressServiceForDataPlane is a helper to generate the dataplane ingress service
+// GenerateNewIngressServiceForDataPlane is a helper to generate the dataplane ingress service.
 func GenerateNewIngressServiceForDataPlane(dataplane *operatorv1beta1.DataPlane, opts ...ServiceOpt) (*corev1.Service, error) {
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -165,7 +165,7 @@ func ServicePortsFromDataPlaneIngressOpt(dataplane *operatorv1beta1.DataPlane) S
 	}
 }
 
-// GenerateNewAdminServiceForDataPlane is a helper to generate the headless dataplane admin service
+// GenerateNewAdminServiceForDataPlane is a helper to generate the headless dataplane admin service.
 func GenerateNewAdminServiceForDataPlane(dataplane *operatorv1beta1.DataPlane, opts ...ServiceOpt) (*corev1.Service, error) {
 	adminService := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{

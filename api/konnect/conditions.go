@@ -7,7 +7,7 @@ import "github.com/kong/kong-operator/api/common/consts"
 // -----------------------------------------------------------------------------
 
 const (
-	// KonnectExtensionAppliedType indicates that the KonnectExtension has been applied
+	// KonnectExtensionAppliedType indicates that the KonnectExtension has been applied.
 	KonnectExtensionAppliedType consts.ConditionType = "KonnectExtensionApplied"
 
 	// KonnectExtensionAppliedReason is a reason describing that the Konnect extension has been applied. It must be used when the KonnectExtensionApplied condition is set to True.
@@ -23,7 +23,7 @@ const (
 )
 
 const (
-	// AcceptedExtensionsType inditicates if the resource has all the dependent extensions accepted
+	// AcceptedExtensionsType inditicates if the resource has all the dependent extensions accepted.
 	AcceptedExtensionsType consts.ConditionType = "AcceptedExtensions"
 
 	// AcceptedExtensionsReason is a reason describing that the extensions are accepted. It must be used when the AcceptedExtensions condition is set to True.

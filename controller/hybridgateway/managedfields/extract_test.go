@@ -15,7 +15,7 @@ import (
 	"github.com/kong/kong-operator/pkg/generated"
 )
 
-// helper functions for pointer values
+// helper functions for pointer values.
 func ptrBool(b bool) *bool    { return &b }
 func ptrInt64(i int64) *int64 { return &i }
 func TestExtractAsUnstructured(t *testing.T) {

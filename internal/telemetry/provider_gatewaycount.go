@@ -80,7 +80,7 @@ func (p *gatewayCountProvider) Kind() telemetryprovider.Kind {
 // - Sum of attached routes to all programmed gateways
 // - Number of reconciled Konnect hybrid gateways
 // - Number of programmed Konnect hybrid gateways
-// - Sum of attached routes to all Konnect hybrid gateways
+// - Sum of attached routes to all Konnect hybrid gateways.
 func (p *gatewayCountProvider) Provide(ctx context.Context) (telemetrytypes.ProviderReport, error) {
 
 	var (

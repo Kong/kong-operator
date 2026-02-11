@@ -1045,7 +1045,7 @@ func KongKey(
 }
 
 // ProxyCachePlugin deploys the proxy-cache KongPlugin resource and returns the resource.
-// The provided client should be namespaced, i.e. created with `client.NewNamespacedClient(client, ns)`
+// The provided client should be namespaced, i.e. created with `client.NewNamespacedClient(client, ns)`.
 func ProxyCachePlugin(
 	t *testing.T,
 	ctx context.Context,
@@ -1068,7 +1068,7 @@ func ProxyCachePlugin(
 }
 
 // RateLimitingPlugin deploys the rate-limiting KongPlugin resource and returns the resource.
-// The provided client should be namespaced, i.e. created with `client.NewNamespacedClient(client, ns)`
+// The provided client should be namespaced, i.e. created with `client.NewNamespacedClient(client, ns)`.
 func RateLimitingPlugin(
 	t *testing.T,
 	ctx context.Context,
@@ -1091,7 +1091,7 @@ func RateLimitingPlugin(
 }
 
 // RequestTransformerPlugin deploys the request-transformer KongPlugin resource and returns the resource.
-// The provided client should be namespaced, i.e. created with `client.NewNamespacedClient(client, ns)`
+// The provided client should be namespaced, i.e. created with `client.NewNamespacedClient(client, ns)`.
 func RequestTransformerPlugin(
 	t *testing.T,
 	ctx context.Context,
@@ -1114,7 +1114,7 @@ func RequestTransformerPlugin(
 }
 
 // ResponseTransformerPlugin deploys the response-transformer KongPlugin resource and returns the resource.
-// The provided client should be namespaced, i.e. created with `client.NewNamespacedClient(client, ns)`
+// The provided client should be namespaced, i.e. created with `client.NewNamespacedClient(client, ns)`.
 func ResponseTransformerPlugin(t *testing.T,
 	ctx context.Context,
 	cl client.Client,

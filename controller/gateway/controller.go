@@ -974,7 +974,7 @@ func createKonnectGatewayControlPlaneCondition(status metav1.ConditionStatus, re
 	return k8sutils.NewConditionWithGeneration(kcfggateway.KonnectGatewayControlPlaneProgrammedType, status, reason, message, observedGeneration)
 }
 
-// patchStatus patches the resource status with the Merge strategy
+// patchStatus patches the resource status with the Merge strategy.
 func (r *Reconciler) patchStatus(ctx context.Context, gateway, oldGateway *gwtypes.Gateway) error {
 	return r.Client.Status().Patch(ctx, gateway, client.MergeFrom(oldGateway))
 }

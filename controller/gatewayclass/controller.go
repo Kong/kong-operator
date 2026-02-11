@@ -26,7 +26,7 @@ import (
 // GatewayClassReconciler
 // -----------------------------------------------------------------------------
 
-// Reconciler reconciles a Gateway object
+// Reconciler reconciles a Gateway object.
 type Reconciler struct {
 	client.Client
 

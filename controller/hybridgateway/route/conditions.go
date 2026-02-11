@@ -75,7 +75,7 @@ func DeduplicateConditionsByType(conditions []metav1.Condition) []metav1.Conditi
 }
 
 // conditionSeverity returns an integer representing the severity of a condition status.
-// False = 0 (most severe), Unknown = 1, True = 2 (least severe)
+// False = 0 (most severe), Unknown = 1, True = 2 (least severe).
 func conditionSeverity(status metav1.ConditionStatus) int {
 	switch status {
 	case metav1.ConditionFalse:

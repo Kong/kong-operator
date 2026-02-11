@@ -8,18 +8,18 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 )
 
-// EmptyControlPlaneRefAllowedT is a type to specify whether an empty control plane ref is allowed or not
+// EmptyControlPlaneRefAllowedT is a type to specify whether an empty control plane ref is allowed or not.
 type EmptyControlPlaneRefAllowedT bool
 
 const (
-	// EmptyControlPlaneRefAllowed is a value to specify that an empty control plane ref is allowed
+	// EmptyControlPlaneRefAllowed is a value to specify that an empty control plane ref is allowed.
 	EmptyControlPlaneRefAllowed EmptyControlPlaneRefAllowedT = true
-	// EmptyControlPlaneRefNotAllowed is a value to specify that an empty control plane ref is not allowed
+	// EmptyControlPlaneRefNotAllowed is a value to specify that an empty control plane ref is not allowed.
 	EmptyControlPlaneRefNotAllowed EmptyControlPlaneRefAllowedT = false
 )
 
 // NewCRDValidationTestCasesGroupCPRefChangeKICUnsupportedTypes returns a group
-// of test cases for testing control plane ref change to KIC unsupported types
+// of test cases for testing control plane ref change to KIC unsupported types.
 func NewCRDValidationTestCasesGroupCPRefChangeKICUnsupportedTypes[
 	T ObjectWithControlPlaneRef[T],
 ](

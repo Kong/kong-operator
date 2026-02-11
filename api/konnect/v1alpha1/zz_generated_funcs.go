@@ -34,17 +34,17 @@ func (obj *KonnectCloudGatewayDataPlaneGroupConfiguration) SetControlPlaneID(id 
 	obj.Status.ControlPlaneID = id
 }
 
-// GetTypeName returns the KonnectCloudGatewayDataPlaneGroupConfiguration Kind name
+// GetTypeName returns the KonnectCloudGatewayDataPlaneGroupConfiguration Kind name.
 func (obj KonnectCloudGatewayDataPlaneGroupConfiguration) GetTypeName() string {
 	return "KonnectCloudGatewayDataPlaneGroupConfiguration"
 }
 
-// GetConditions returns the Status Conditions
+// GetConditions returns the Status Conditions.
 func (obj *KonnectCloudGatewayDataPlaneGroupConfiguration) GetConditions() []metav1.Condition {
 	return obj.Status.Conditions
 }
 
-// SetConditions sets the Status Conditions
+// SetConditions sets the Status Conditions.
 func (obj *KonnectCloudGatewayDataPlaneGroupConfiguration) SetConditions(conditions []metav1.Condition) {
 	obj.Status.Conditions = conditions
 }

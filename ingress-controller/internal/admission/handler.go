@@ -62,7 +62,7 @@ func (h *RequestHandler) pickReferenceIndexers() (ctrlref.CacheIndexers, bool) {
 // - h.handleKongClusterPlugin -> ValidateClusterPlugin
 // - h.handleSecret -> ValidateCredential
 // - h.handleGateway -> ValidateGateway
-// - h.handleHTTPRoute -> ValidateHTTPRoute
+// - h.handleHTTPRoute -> ValidateHTTPRoute.
 func (h *RequestHandler) dispatchValidationNoMatcher() (KongValidator, bool) {
 	h.validatorsMut.RLock()
 	defer h.validatorsMut.RUnlock()
@@ -77,7 +77,7 @@ func (h *RequestHandler) dispatchValidationNoMatcher() (KongValidator, bool) {
 // On that matching below entities rely:
 // - h.handleKongConsumer -> ValidateConsumer
 // - h.handleKongConsumerGroup -> ValidateConsumerGroup
-// - h.handleKongVault -> ValidateVault
+// - h.handleKongVault -> ValidateVault.
 func (h *RequestHandler) dispatchValidationIngressClassMatcher(obj metav1.ObjectMeta) (KongValidator, bool) {
 	h.validatorsMut.RLock()
 	defer h.validatorsMut.RUnlock()
@@ -94,7 +94,7 @@ func (h *RequestHandler) dispatchValidationIngressClassMatcher(obj metav1.Object
 // first validator if exists. Existing of a reference indexers is not guaranteed, so the second return
 // boolean value indicates it.
 // On that matching below entities rely:
-// - h.handleIngress-> ValidateIngress
+// - h.handleIngress-> ValidateIngress.
 func (h *RequestHandler) dispatchValidationForIngress(ing netv1.Ingress) (KongValidator, bool) {
 	h.validatorsMut.RLock()
 	defer h.validatorsMut.RUnlock()
@@ -112,7 +112,7 @@ func (h *RequestHandler) dispatchValidationForIngress(ing netv1.Ingress) (KongVa
 // It returns the first validator if exists. Existing of a reference indexers is not guaranteed,
 // so the second return boolean value indicates it.
 // On that matching below entities rely:
-// - h.handleKongCustomEntity -> ValidateCustomEntity
+// - h.handleKongCustomEntity -> ValidateCustomEntity.
 func (h *RequestHandler) dispatchValidationForCustomEntity(entity configurationv1alpha1.KongCustomEntity) (KongValidator, bool) {
 	h.validatorsMut.RLock()
 	defer h.validatorsMut.RUnlock()

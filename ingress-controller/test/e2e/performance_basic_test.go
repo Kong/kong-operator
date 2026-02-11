@@ -29,7 +29,7 @@ import (
 var (
 	defaultResNum = 10000
 	// resourcesNumberString is the number of resource rules to be created
-	// if not set, defaultResNum will be used
+	// if not set, defaultResNum will be used.
 	resourcesNumberString = os.Getenv("PERF_RES_NUMBER")
 
 	consumerUsername = "consumer-key-auth-name-%d"
@@ -260,7 +260,7 @@ func applyResourceWithKubectl(ctx context.Context, kubeconfig, resourceYAML stri
 	return err
 }
 
-// we will store the result in the `/tmp/kic-perf/` directory
+// we will store the result in the `/tmp/kic-perf/` directory.
 func writeResultToTempFile(t *testing.T, filename string, resourceNum, time int) {
 	// create a file to /tmp/kic-perf/all_apply.txt
 	// if the file already exists, it will be overwritten

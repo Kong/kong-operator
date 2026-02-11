@@ -28,6 +28,7 @@ linters:
     - forbidigo
     - gocritic
     - godoclint
+    - godot
     - gomodguard
     - gosec
     - importas
