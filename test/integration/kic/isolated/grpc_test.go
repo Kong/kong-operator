@@ -212,8 +212,8 @@ func grpcEchoResponds(ctx context.Context, url, hostname, input string, certPool
 	if err != nil {
 		return fmt.Errorf("failed to send GRPC request: %w", err)
 	}
-	if resp.FString != input {
-		return fmt.Errorf("unexpected response from GRPC server: %s", resp.FString)
+	if resp.GetFString() != input {
+		return fmt.Errorf("unexpected response from GRPC server: %s", resp.GetFString())
 	}
 
 	return nil

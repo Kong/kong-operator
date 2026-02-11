@@ -111,7 +111,7 @@ func (me metricsEnricher) Consume(ctx context.Context, m Metrics) error {
 				// This has the name of the service in the Kong configuration.
 				serviceLabel, ok := lo.Find(m.GetLabel(),
 					func(p *dto.LabelPair) bool {
-						return *p.Name == "service"
+						return p.GetName() == "service"
 					},
 				)
 				if !ok || serviceLabel.Value == nil {
@@ -123,7 +123,7 @@ func (me metricsEnricher) Consume(ctx context.Context, m Metrics) error {
 					return s.Name != nil && serviceLabel.GetValue() == *s.Name
 				})
 				if !ok {
-					me.logger.Info("service not found in config", "service", *serviceLabel.Value)
+					me.logger.Info("service not found in config", "service", serviceLabel.GetValue())
 					continue
 				}
 

@@ -744,7 +744,7 @@ func tlsEchoResponds(
 	}
 	defer conn.Close()
 
-	header := []byte(fmt.Sprintf("Running on Pod %s.", podName))
+	header := fmt.Appendf(nil, "Running on Pod %s.", podName)
 	// If we are testing with passthrough, the go-echo service should return a message
 	// mentioning that it is listening in TLS mode.
 	if passthrough {

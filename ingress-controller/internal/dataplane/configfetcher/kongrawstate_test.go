@@ -360,7 +360,7 @@ func TestKongRawStateToKongState(t *testing.T) {
 func extractNotEmptyFieldNames(s kongstate.KongState) []string {
 	var fields []string
 	typ := reflect.ValueOf(s).Type()
-	for i := 0; i < typ.NumField(); i++ {
+	for i := range typ.NumField() {
 		f := typ.Field(i)
 		v := reflect.ValueOf(s).Field(i)
 		if !f.Anonymous && f.IsExported() && v.IsValid() && !v.IsZero() {
@@ -383,7 +383,7 @@ func ensureAllKongStateFieldsAreTested(t *testing.T, testedFields []string) {
 	allKongStateFields := func() []string {
 		var fields []string
 		typ := reflect.ValueOf(kongstate.KongState{}).Type()
-		for i := 0; i < typ.NumField(); i++ {
+		for i := range typ.NumField() {
 			name := typ.Field(i).Name
 			if !lo.Contains(exempt, name) {
 				fields = append(fields, name)

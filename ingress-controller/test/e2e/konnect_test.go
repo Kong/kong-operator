@@ -319,9 +319,7 @@ func requireAllProxyReplicasIDsConsistentWithKonnect(
 	t.Logf("ensuring all %d proxy replicas have consistent IDs assigned in Node API", len(pods))
 	wg := sync.WaitGroup{}
 	for _, pod := range pods {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			nodeIDInAdminAPI := getNodeIDFromAdminAPI(pod)
 
 			require.Eventually(t, func() bool {
@@ -335,7 +333,7 @@ func requireAllProxyReplicasIDsConsistentWithKonnect(
 			}, konnectNodeRegistrationTimeout, konnectNodeRegistrationCheck)
 
 			t.Logf("proxy pod %s/%s has consistent ID %s in Node API", pod.Namespace, pod.Name, nodeIDInAdminAPI)
-		}()
+		})
 	}
 
 	wg.Wait()

@@ -162,11 +162,11 @@ func TestResourceApplyAndUpdatePerf(t *testing.T) {
 	batchSize := 500
 	startTime := time.Now()
 	for i := 0; i < defaultResNum; i += batchSize {
-		resourceYaml := ""
+		var resourceYaml strings.Builder
 		for j := i; j < i+batchSize && j < defaultResNum; j++ {
-			resourceYaml += fmt.Sprintf(rulesTpl, j, j, j, j, base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf(consumerUsername, j))), j, j, fmt.Sprintf(consumerUsername, j), j)
+			resourceYaml.WriteString(fmt.Sprintf(rulesTpl, j, j, j, j, base64.StdEncoding.EncodeToString(fmt.Appendf(nil, consumerUsername, j)), j, j, fmt.Sprintf(consumerUsername, j), j))
 		}
-		err = applyResourceWithKubectl(ctx, kubeconfig, resourceYaml)
+		err = applyResourceWithKubectl(ctx, kubeconfig, resourceYaml.String())
 		require.NoError(t, err)
 	}
 	completionTime := time.Now()

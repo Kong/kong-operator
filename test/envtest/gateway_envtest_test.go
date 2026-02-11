@@ -139,7 +139,7 @@ func createHTTPRoutes(
 	t.Cleanup(func() { _ = ctrlClient.Delete(ctx, svc) })
 
 	routes := make([]*gatewayapi.HTTPRoute, 0, numOfRoutes)
-	for i := 0; i < numOfRoutes; i++ {
+	for range numOfRoutes {
 		httpPort := gatewayapi.PortNumber(80)
 		pathMatchPrefix := gatewayapi.PathMatchPathPrefix
 		httpRoute := &gatewayapi.HTTPRoute{
