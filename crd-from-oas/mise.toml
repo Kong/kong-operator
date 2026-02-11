@@ -7,7 +7,7 @@ version = "0.20.0"
 
 [tools."github:golangci/golangci-lint"]
 # renovate: datasource=github-releases depName=golangci/golangci-lint
-version = "2.8.0"
+version = "2.9.0"
 
 [tools."go:sigs.k8s.io/kube-api-linter/cmd/golangci-lint-kube-api-linter"]
 # renovate: datasource=git-refs packageName=https://github.com/kubernetes-sigs/kube-api-linter.git
