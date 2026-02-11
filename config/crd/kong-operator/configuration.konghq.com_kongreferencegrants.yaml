@@ -101,6 +101,10 @@ spec:
                       [ 'KongConsumer', 'KongConsumerGroup', 'KongRoute', 'KongService',
                       'KongCertificate', 'KongCACertificate', 'KongDataPlaneClientCertificate',
                       'KongUpstream', 'KongKey', 'KongKeySet', 'KongVault', 'KongPluginBinding']
+                  - message: Only GatewayConfiguration kind is supported for 'gateway-operator.konghq.com'
+                      group
+                    rule: self.group != 'gateway-operator.konghq.com' || self.kind
+                      in [ 'GatewayConfiguration' ]
                   - message: namespace must be empty for KongVault and non-empty for
                       other kinds
                     rule: 'self.kind == ''KongVault'' ? self.__namespace__ == "" :

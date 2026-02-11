@@ -16,8 +16,10 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
 	operatorv2beta1 "github.com/kong/kong-operator/api/gateway-operator/v2beta1"
+	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/controller/pkg/log"
 	"github.com/kong/kong-operator/controller/pkg/secrets/ref"
@@ -188,7 +190,8 @@ func (r *Reconciler) listGatewaysForGatewayConfig(ctx context.Context, obj clien
 		if gatewayClass.Spec.ParametersRef != nil &&
 			string(gatewayClass.Spec.ParametersRef.Group) == operatorv1beta1.SchemeGroupVersion.Group &&
 			string(gatewayClass.Spec.ParametersRef.Kind) == "GatewayConfiguration" &&
-			gatewayClass.Spec.ParametersRef.Name == gatewayConfig.Name {
+			gatewayClass.Spec.ParametersRef.Name == gatewayConfig.Name &&
+			string(lo.FromPtrOr(gatewayClass.Spec.ParametersRef.Namespace, "")) == gatewayConfig.Namespace {
 			matchingGatewayClasses[gatewayClass.Name] = struct{}{}
 		}
 	}
@@ -244,6 +247,91 @@ func (r *Reconciler) listReferenceGrantsForGateway(ctx context.Context, obj clie
 			})
 		}
 	}
+	return recs
+}
+
+// listGatewaysForKongReferenceGrant returns reconcile requests for Gateways that might be affected by
+// a KongReferenceGrant that allows GatewayConfiguration -> KonnectAPIAuthConfiguration references.
+func (r *Reconciler) listGatewaysForKongReferenceGrant(ctx context.Context, obj client.Object) []reconcile.Request {
+	logger := ctrllog.FromContext(ctx)
+
+	grant, ok := obj.(*configurationv1alpha1.KongReferenceGrant)
+	if !ok {
+		logger.Error(
+			fmt.Errorf("unexpected object type"),
+			"KongReferenceGrant watch predicate received unexpected object type",
+			"expected", "*configurationv1alpha1.KongReferenceGrant", "found", reflect.TypeOf(obj),
+		)
+		return nil
+	}
+
+	var fromNamespaces []string
+	for _, from := range grant.Spec.From {
+		if string(from.Group) == operatorv2beta1.SchemeGroupVersion.Group &&
+			string(from.Kind) == "GatewayConfiguration" {
+			fromNamespaces = append(fromNamespaces, string(from.Namespace))
+		}
+	}
+	if len(fromNamespaces) == 0 {
+		return nil
+	}
+
+	var (
+		allowAnyAuth bool
+		authNames    = map[string]struct{}{}
+	)
+	for _, to := range grant.Spec.To {
+		if string(to.Group) != konnectv1alpha1.GroupVersion.Group ||
+			string(to.Kind) != "KonnectAPIAuthConfiguration" {
+			continue
+		}
+		if to.Name == nil {
+			allowAnyAuth = true
+			break
+		}
+		authNames[string(*to.Name)] = struct{}{}
+	}
+	if !allowAnyAuth && len(authNames) == 0 {
+		return nil
+	}
+
+	recs := make([]reconcile.Request, 0)
+	seen := map[types.NamespacedName]struct{}{}
+	for _, ns := range fromNamespaces {
+		var gatewayConfigList operatorv2beta1.GatewayConfigurationList
+		if err := r.List(ctx, &gatewayConfigList, client.InNamespace(ns)); err != nil {
+			logger.Error(err, "failed to list GatewayConfigurations for KongReferenceGrant", "namespace", ns)
+			continue
+		}
+		for i := range gatewayConfigList.Items {
+			gatewayConfig := &gatewayConfigList.Items[i]
+			if gatewayConfig.Spec.Konnect == nil || gatewayConfig.Spec.Konnect.APIAuthConfigurationRef == nil {
+				continue
+			}
+			authRef := gatewayConfig.Spec.Konnect.APIAuthConfigurationRef
+			authNamespace := gatewayConfig.Namespace
+			if ns := lo.FromPtrOr(authRef.Namespace, ""); ns != "" {
+				authNamespace = ns
+			}
+			if authNamespace != grant.Namespace {
+				continue
+			}
+			if !allowAnyAuth {
+				if _, ok := authNames[authRef.Name]; !ok {
+					continue
+				}
+			}
+
+			for _, req := range r.listGatewaysForGatewayConfig(ctx, gatewayConfig) {
+				if _, ok := seen[req.NamespacedName]; ok {
+					continue
+				}
+				seen[req.NamespacedName] = struct{}{}
+				recs = append(recs, req)
+			}
+		}
+	}
+
 	return recs
 }
 
