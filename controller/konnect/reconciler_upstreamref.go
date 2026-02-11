@@ -66,7 +66,7 @@ func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 			return res, errStatus
 		}
 
-		return ctrl.Result{}, ReferencedKongUpstreamDoesNotExist{
+		return ctrl.Result{}, ReferencedKongUpstreamDoesNotExistError{
 			Reference: nn,
 			Err:       err,
 		}
@@ -75,7 +75,7 @@ func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 	// If referenced KongUpstream is being deleted, return an error so that we
 	// can remove the entity from Konnect first.
 	if delTimestamp := kongUpstream.GetDeletionTimestamp(); !delTimestamp.IsZero() {
-		return ctrl.Result{}, ReferencedKongUpstreamIsBeingDeleted{
+		return ctrl.Result{}, ReferencedKongUpstreamIsBeingDeletedError{
 			Reference:         nn,
 			DeletionTimestamp: delTimestamp.Time,
 		}

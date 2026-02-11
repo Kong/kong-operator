@@ -152,7 +152,10 @@ func (c *Client) ListAllNodes(ctx context.Context) ([]*NodeItem, error) {
 }
 
 func (c *Client) listNodes(ctx context.Context, nextCursor string) (*ListNodeResponse, error) {
-	url, _ := neturl.Parse(c.kicNodeAPIEndpoint())
+	url, err := neturl.Parse(c.kicNodeAPIEndpoint())
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse url %s: %w", c.kicNodeAPIEndpoint(), err)
+	}
 	if nextCursor != "" {
 		q := url.Query()
 		q.Set("page.next_cursor", nextCursor)

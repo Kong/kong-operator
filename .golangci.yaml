@@ -20,6 +20,9 @@ linters:
     - dupword
     - embeddedstructfieldcheck
     - durationcheck
+    - errcheck
+    - errchkjson
+    - errname
     - errorlint
     - exhaustive
     - forbidigo
