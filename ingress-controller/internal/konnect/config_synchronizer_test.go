@@ -353,6 +353,6 @@ func runSynchronizer(ctx context.Context, t *testing.T, s *konnect.ConfigSynchro
 	t.Log("Running Konnect config synchronizer")
 	go func() {
 		err := s.Start(ctx)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 	}()
 }

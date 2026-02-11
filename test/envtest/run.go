@@ -10,6 +10,7 @@ import (
 
 	"github.com/samber/lo"
 	"github.com/samber/mo"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest/observer"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -239,7 +240,7 @@ func SetupManager(
 
 	logger := ctrl.LoggerFrom(ctx)
 	mgr, err := manager.NewManager(ctx, mgrID, logger, cfg)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	if cfg.ProbeAddr != "" {
 		t.Log("Starting standalone health check server")
@@ -261,7 +262,7 @@ func RunManager(
 	modifyCfgFns ...managercfg.Opt,
 ) LogsObserver {
 	mgrID, err := manager.NewID(t.Name())
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	ctx, _, logs := CreateTestLogger(ctx)
 
@@ -270,7 +271,7 @@ func RunManager(
 	wg := sync.WaitGroup{}
 	wg.Go(func() {
 		mgr := SetupManager(ctx, t, mgrID, envcfg, adminAPIOpts, modifyCfgFns...)
-		require.NoError(t, mgr.Run(ctx))
+		assert.NoError(t, mgr.Run(ctx))
 	})
 	t.Cleanup(func() {
 		wg.Wait()

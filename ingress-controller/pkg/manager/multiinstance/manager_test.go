@@ -50,7 +50,7 @@ func TestManager_Scheduling(t *testing.T) {
 	t.Run("can run the manager", func(t *testing.T) {
 		go func() {
 			close(managerRunning)
-			require.NoError(t, multiManager.Start(ctx))
+			assert.NoError(t, multiManager.Start(ctx))
 		}()
 	})
 
@@ -101,7 +101,7 @@ func TestManager_WithDiagnosticsExposer(t *testing.T) {
 	multiManager := multiinstance.NewManager(testr.New(t), multiinstance.WithDiagnosticsExposer(diagnosticsExposer))
 
 	go func() {
-		require.NoError(t, multiManager.Start(ctx))
+		assert.NoError(t, multiManager.Start(ctx))
 	}()
 
 	instanceID1 := manager.NewRandomID()

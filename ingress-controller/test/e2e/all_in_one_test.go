@@ -113,7 +113,7 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 	}
 	podList, err := env.Cluster().Client().CoreV1().Pods(deployment.Namespace).List(ctx, forDeployment)
 	require.NoError(t, err)
-	require.Equal(t, 1, len(podList.Items))
+	require.Len(t, podList.Items, 1)
 	initialPod := podList.Items[0]
 
 	t.Log("adding a second replica to the Kong deployment")

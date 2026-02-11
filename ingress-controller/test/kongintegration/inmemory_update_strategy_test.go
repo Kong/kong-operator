@@ -2,7 +2,6 @@ package kongintegration
 
 import (
 	"encoding/json"
-	"errors"
 	"testing"
 	"time"
 
@@ -104,7 +103,7 @@ func TestUpdateStrategyInMemory_PropagatesResourcesErrors(t *testing.T) {
 			return
 		}
 		var updateError sendconfig.UpdateError
-		if !assert.True(t, errors.As(err, &updateError)) {
+		if !assert.ErrorAs(t, err, &updateError) {
 			return
 		}
 		if wrappedErr := updateError.Unwrap(); !assert.Error(t, wrappedErr) || !assert.IsType(t, &kong.APIError{}, wrappedErr) {
@@ -124,7 +123,7 @@ func TestUpdateStrategyInMemory_PropagatesResourcesErrors(t *testing.T) {
 		if !assert.Truef(t, found, "expected resource error for test-service, got: %+v", updateError.ResourceFailures()) {
 			return
 		}
-		if !assert.Equal(t, resourceErr.Message(), expectedMessage) {
+		if !assert.Equal(t, expectedMessage, resourceErr.Message()) {
 			return
 		}
 		if diff := cmp.Diff(expectedCausingObjects, resourceErr.CausingObjects()); !assert.Empty(t, diff) {

@@ -156,7 +156,7 @@ func TestDiagnosticsServer_Diffs(t *testing.T) {
 	_, err = b.ReadFrom(second.Body)
 	require.NoError(t, err)
 	require.NoError(t, json.Unmarshal(b.Bytes(), &got))
-	require.Equal(t, diffHistorySize, len(got.Available))
+	require.Len(t, got.Available, diffHistorySize)
 
 	// confirm that the by hash endpoints cannot retrieve the last diff sent, and get a 404 for the first (now discarded)
 	// diff sent
@@ -205,13 +205,13 @@ func setupTestServer(ctx context.Context, t *testing.T) (Client, int) {
 
 	go func() {
 		err := s.Listen(ctx)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 	}()
 	t.Log("Started diagnostics server")
 
 	go func() {
 		err := diagnosticsCollector.Start(ctx)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 	}()
 	t.Log("Started diagnostics collector")
 

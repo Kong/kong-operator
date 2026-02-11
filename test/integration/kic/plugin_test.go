@@ -76,7 +76,7 @@ func TestPluginEssentials(t *testing.T) {
 			b := new(bytes.Buffer)
 			n, err := b.ReadFrom(resp.Body)
 			require.NoError(t, err)
-			require.True(t, n > 0)
+			require.Positive(t, n)
 			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false
@@ -207,7 +207,7 @@ func TestPluginConfigPatch(t *testing.T) {
 			b := new(bytes.Buffer)
 			n, err := b.ReadFrom(resp.Body)
 			require.NoError(t, err)
-			require.True(t, n > 0)
+			require.Positive(t, n)
 			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false
@@ -531,7 +531,7 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 			b := new(bytes.Buffer)
 			_, err := b.ReadFrom(resp.Body)
 			assert.NoError(c, err)
-			assert.True(c, strings.Contains(b.String(), "<title>httpbin.org</title>"))
+			assert.Contains(c, b.String(), "<title>httpbin.org</title>")
 		}
 	}, ingressWait, waitTick)
 
@@ -714,7 +714,7 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 			return
 		}
 		defer resp.Body.Close()
-		assert.True(c, resp.StatusCode == http.StatusTeapot)
+		assert.Equal(c, http.StatusTeapot, resp.StatusCode)
 	}, ingressWait, waitTick)
 }
 
@@ -760,7 +760,7 @@ func TestPluginNullInConfig(t *testing.T) {
 			b := new(bytes.Buffer)
 			n, err := b.ReadFrom(resp.Body)
 			require.NoError(t, err)
-			require.True(t, n > 0)
+			require.Positive(t, n)
 			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false

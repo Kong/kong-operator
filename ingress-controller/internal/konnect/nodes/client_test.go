@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kong-operator/ingress-controller/internal/konnect/nodes"
@@ -23,7 +24,7 @@ func newMockNodesServer(t *testing.T) *mockNodesServer {
 }
 
 func (m *mockNodesServer) ServeHTTP(_ http.ResponseWriter, r *http.Request) {
-	require.Equal(m.t, metadata.Metadata().UserAgent(), r.Header.Get("User-Agent"))
+	assert.Equal(m.t, metadata.Metadata().UserAgent(), r.Header.Get("User-Agent"))
 }
 
 func TestNodesClientUserAgent(t *testing.T) {

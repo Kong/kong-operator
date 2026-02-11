@@ -463,7 +463,7 @@ func Test_MapHTTPRouteForService(t *testing.T) {
 		ctx := context.Background()
 		obj := otherSvc
 		requests := mapFuncDiffNS(ctx, obj)
-		require.Len(t, requests, 0)
+		require.Empty(t, requests)
 	})
 
 	t.Run("wrong type", func(t *testing.T) {
@@ -721,7 +721,7 @@ func Test_MapHTTPRouteForReferenceGrant(t *testing.T) {
 		mapFunc := MapHTTPRouteForReferenceGrant(cl)
 		ctx := context.Background()
 		requests := mapFunc(ctx, rgWithWrongKind)
-		require.Len(t, requests, 0)
+		require.Empty(t, requests)
 	})
 
 	t.Run("skip wrong group", func(t *testing.T) {
@@ -747,7 +747,7 @@ func Test_MapHTTPRouteForReferenceGrant(t *testing.T) {
 		mapFunc := MapHTTPRouteForReferenceGrant(cl)
 		ctx := context.Background()
 		requests := mapFunc(ctx, rgWithWrongGroup)
-		require.Len(t, requests, 0)
+		require.Empty(t, requests)
 	})
 
 	t.Run("accept empty group", func(t *testing.T) {
@@ -787,7 +787,7 @@ func Test_MapHTTPRouteForReferenceGrant(t *testing.T) {
 		mapFunc := MapHTTPRouteForReferenceGrant(cl)
 		ctx := context.Background()
 		requests := mapFunc(ctx, referenceGrant)
-		require.Len(t, requests, 0)
+		require.Empty(t, requests)
 	})
 
 	t.Run("error listing HTTPRoutes", func(t *testing.T) {
@@ -914,7 +914,7 @@ func Test_MapHTTPRouteForReferenceGrant(t *testing.T) {
 		mapFunc := MapHTTPRouteForReferenceGrant(cl)
 		ctx := context.Background()
 		requests := mapFunc(ctx, rgEmptyFrom)
-		require.Len(t, requests, 0)
+		require.Empty(t, requests)
 	})
 
 	t.Run("multiple routes in from namespace but only cross-namespace ref returned", func(t *testing.T) {

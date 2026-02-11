@@ -93,7 +93,7 @@ func TestIngressEssentials(t *testing.T) {
 			b := new(bytes.Buffer)
 			n, err := b.ReadFrom(resp.Body)
 			require.NoError(t, err)
-			require.True(t, n > 0)
+			require.Positive(t, n)
 			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false
@@ -142,7 +142,7 @@ func TestIngressEssentials(t *testing.T) {
 			b := new(bytes.Buffer)
 			n, err := b.ReadFrom(resp.Body)
 			require.NoError(t, err)
-			require.True(t, n > 0)
+			require.Positive(t, n)
 			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false
@@ -257,7 +257,7 @@ func TestIngressClassNameSpec(t *testing.T) {
 			b := new(bytes.Buffer)
 			n, err := b.ReadFrom(resp.Body)
 			require.NoError(t, err)
-			require.True(t, n > 0)
+			require.Positive(t, n)
 			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false
@@ -288,7 +288,7 @@ func TestIngressClassNameSpec(t *testing.T) {
 			b := new(bytes.Buffer)
 			n, err := b.ReadFrom(resp.Body)
 			require.NoError(t, err)
-			require.True(t, n > 0)
+			require.Positive(t, n)
 			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false
@@ -347,7 +347,7 @@ func TestIngressServiceUpstream(t *testing.T) {
 			b := new(bytes.Buffer)
 			n, err := b.ReadFrom(resp.Body)
 			require.NoError(t, err)
-			require.True(t, n > 0)
+			require.Positive(t, n)
 			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false
@@ -598,7 +598,7 @@ func TestIngressClassRegexToggle(t *testing.T) {
 			b := new(bytes.Buffer)
 			n, err := b.ReadFrom(resp.Body)
 			require.NoError(t, err)
-			require.True(t, n > 0)
+			require.Positive(t, n)
 			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false
@@ -725,7 +725,7 @@ func TestIngressRegexPrefix(t *testing.T) {
 			b := new(bytes.Buffer)
 			n, err := b.ReadFrom(resp.Body)
 			require.NoError(t, err)
-			require.True(t, n > 0)
+			require.Positive(t, n)
 			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false
@@ -741,7 +741,7 @@ func TestIngressRegexPrefix(t *testing.T) {
 			b := new(bytes.Buffer)
 			n, err := b.ReadFrom(resp.Body)
 			require.NoError(t, err)
-			require.True(t, n > 0)
+			require.Positive(t, n)
 			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false
@@ -757,7 +757,7 @@ func TestIngressRegexPrefix(t *testing.T) {
 			b := new(bytes.Buffer)
 			n, err := b.ReadFrom(resp.Body)
 			require.NoError(t, err)
-			require.True(t, n > 0)
+			require.Positive(t, n)
 			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false
@@ -838,7 +838,7 @@ func TestIngressRecoverFromInvalidPath(t *testing.T) {
 			b := new(bytes.Buffer)
 			n, err := b.ReadFrom(resp.Body)
 			require.NoError(t, err)
-			require.True(t, n > 0)
+			require.Positive(t, n)
 			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false
@@ -912,7 +912,7 @@ func TestIngressRecoverFromInvalidPath(t *testing.T) {
 			b := new(bytes.Buffer)
 			n, err := b.ReadFrom(resp.Body)
 			require.NoError(t, err)
-			require.True(t, n > 0)
+			require.Positive(t, n)
 			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false
@@ -967,7 +967,7 @@ func TestIngressRecoverFromInvalidPath(t *testing.T) {
 			b := new(bytes.Buffer)
 			n, err := b.ReadFrom(resp.Body)
 			require.NoError(t, err)
-			require.True(t, n > 0)
+			require.Positive(t, n)
 			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false
@@ -1017,7 +1017,7 @@ func TestIngressMatchByHost(t *testing.T) {
 			b := new(bytes.Buffer)
 			n, err := b.ReadFrom(resp.Body)
 			require.NoError(t, err)
-			require.True(t, n > 0)
+			require.Positive(t, n)
 			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false
@@ -1028,7 +1028,7 @@ func TestIngressMatchByHost(t *testing.T) {
 	resp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
-	require.Equal(t, resp.StatusCode, http.StatusNotFound)
+	require.Equal(t, http.StatusNotFound, resp.StatusCode)
 
 	t.Log("change the ingress to wildcard host")
 	require.EventuallyWithT(t, func(c *assert.CollectT) {
@@ -1060,7 +1060,7 @@ func TestIngressMatchByHost(t *testing.T) {
 			b := new(bytes.Buffer)
 			n, err := b.ReadFrom(resp.Body)
 			require.NoError(t, err)
-			require.True(t, n > 0)
+			require.Positive(t, n)
 			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false
@@ -1071,7 +1071,7 @@ func TestIngressMatchByHost(t *testing.T) {
 	resp, err = helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
-	require.Equal(t, resp.StatusCode, http.StatusNotFound)
+	require.Equal(t, http.StatusNotFound, resp.StatusCode)
 }
 
 func TestIngressRewriteURI(t *testing.T) {

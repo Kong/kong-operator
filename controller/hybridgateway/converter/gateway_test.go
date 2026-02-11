@@ -416,7 +416,7 @@ func TestProcessListenerCertificate(t *testing.T) {
 			},
 			expectError: false,
 			validateOutput: func(t *testing.T, objects []client.Object) {
-				require.Len(t, objects, 0, "should not create any resources for unsupported group")
+				require.Empty(t, objects, "should not create any resources for unsupported group")
 			},
 		},
 		{
@@ -446,7 +446,7 @@ func TestProcessListenerCertificate(t *testing.T) {
 			},
 			expectError: false,
 			validateOutput: func(t *testing.T, objects []client.Object) {
-				require.Len(t, objects, 0, "should not create any resources for unsupported kind")
+				require.Empty(t, objects, "should not create any resources for unsupported kind")
 			},
 		},
 		{
@@ -475,7 +475,7 @@ func TestProcessListenerCertificate(t *testing.T) {
 			},
 			expectError: false,
 			validateOutput: func(t *testing.T, objects []client.Object) {
-				require.Len(t, objects, 0, "should not create resources for non-existent secret")
+				require.Empty(t, objects, "should not create resources for non-existent secret")
 			},
 		},
 		{
@@ -515,7 +515,7 @@ func TestProcessListenerCertificate(t *testing.T) {
 			},
 			expectError: true,
 			validateOutput: func(t *testing.T, objects []client.Object) {
-				require.Len(t, objects, 0, "should not create resources for invalid secret")
+				require.Empty(t, objects, "should not create resources for invalid secret")
 			},
 		},
 		{
@@ -598,7 +598,7 @@ func TestProcessListenerCertificate(t *testing.T) {
 			},
 			expectError: false,
 			validateOutput: func(t *testing.T, objects []client.Object) {
-				require.Len(t, objects, 0, "should not create resources when cross-namespace reference not granted")
+				require.Empty(t, objects, "should not create resources when cross-namespace reference not granted")
 			},
 		},
 		{
@@ -635,7 +635,7 @@ func TestProcessListenerCertificate(t *testing.T) {
 			},
 			expectError: true,
 			validateOutput: func(t *testing.T, objects []client.Object) {
-				require.Len(t, objects, 0, "should not create resources when Get fails")
+				require.Empty(t, objects, "should not create resources when Get fails")
 			},
 		},
 		{
@@ -683,7 +683,7 @@ func TestProcessListenerCertificate(t *testing.T) {
 			},
 			expectError: true,
 			validateOutput: func(t *testing.T, objects []client.Object) {
-				require.Len(t, objects, 0, "should not create resources when ReferenceGrant check fails")
+				require.Empty(t, objects, "should not create resources when ReferenceGrant check fails")
 			},
 		},
 	}
@@ -1209,7 +1209,7 @@ func TestTranslate(t *testing.T) {
 			expectError:   false,
 			expectedCount: 0,
 			validateOutput: func(t *testing.T, objects []client.Object) {
-				require.Len(t, objects, 0, "should not create any resources when secrets are missing")
+				require.Empty(t, objects, "should not create any resources when secrets are missing")
 			},
 		},
 		{
@@ -1429,7 +1429,7 @@ func TestTranslate(t *testing.T) {
 			expectedCount: 0,
 			errorContains: "failed to process 2 listener(s)",
 			validateOutput: func(t *testing.T, objects []client.Object) {
-				require.Len(t, objects, 0, "should not create any resources when all secrets are invalid")
+				require.Empty(t, objects, "should not create any resources when all secrets are invalid")
 			},
 		},
 		{
@@ -1660,7 +1660,7 @@ func TestGatewayConverter_GetOutputStore(t *testing.T) {
 		converter.outputStore = []client.Object{badObj1, badObj2}
 		objs, err := converter.GetOutputStore(ctx, logger)
 		require.Error(t, err)
-		require.Len(t, objs, 0)
+		require.Empty(t, objs)
 		require.Contains(t, err.Error(), "output store conversion failed with 2 errors")
 		require.Contains(t, err.Error(), "failed to convert *converter.badObject bad1 to unstructured")
 		require.Contains(t, err.Error(), "failed to convert *converter.badObject bad2 to unstructured")

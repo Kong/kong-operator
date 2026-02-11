@@ -7,6 +7,7 @@ import (
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kong-operator/ingress-controller/internal/konnect/sdk"
@@ -26,12 +27,10 @@ func newMockControlPlanesServer(t *testing.T) *mockControlPlanesServer {
 func (m *mockControlPlanesServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
-		require.Equal(m.t, metadata.Metadata().UserAgent(), r.Header.Get("User-Agent"))
+		assert.Equal(m.t, metadata.Metadata().UserAgent(), r.Header.Get("User-Agent"))
 		w.WriteHeader(http.StatusCreated)
-
 	case http.MethodDelete:
-		require.Equal(m.t, metadata.Metadata().UserAgent(), r.Header.Get("User-Agent"))
-
+		assert.Equal(m.t, metadata.Metadata().UserAgent(), r.Header.Get("User-Agent"))
 	}
 }
 

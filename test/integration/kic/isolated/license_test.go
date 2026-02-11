@@ -34,7 +34,7 @@ func TestKongLicense(t *testing.T) {
 				require.NotNil(t, adminURL, "Should get URL to access Kong gateway admin APIs from context")
 				licenses, err := helpers.GetKongLicenses(ctx, adminURL, consts.KongTestPassword)
 				require.NoError(t, err, "Expect No errors in listing all licenses in Kong gateway")
-				require.Len(t, licenses, 0, "Expect No licenses in Kong gateway now")
+				require.Empty(t, licenses, "Expect No licenses in Kong gateway now")
 
 				return ctx
 			},

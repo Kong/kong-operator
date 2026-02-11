@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	konnectlicense "github.com/kong/kong-operator/ingress-controller/internal/konnect/license"
@@ -32,7 +33,7 @@ func newMockKonnectLicenseServer(t *testing.T, response []byte, statusCode int) 
 }
 
 func (m *mockKonnectLicenseServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	require.Equal(m.t, metadata.Metadata().UserAgent(), r.Header.Get("User-Agent"))
+	assert.Equal(m.t, metadata.Metadata().UserAgent(), r.Header.Get("User-Agent"))
 	w.WriteHeader(m.statusCode)
 	_, _ = w.Write(m.response)
 }

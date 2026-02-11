@@ -473,8 +473,8 @@ func TestCalculateEndpointWeights_EdgeCaseCombinations(t *testing.T) {
 		t.Logf("Overflow protection test results: overflow-1=%d, overflow-2=%d", weight1, weight2)
 
 		// Both weights should be non-zero and reasonable (not exceed uint32 max)
-		assert.Greater(t, weight1, uint32(0), "overflow-1 should have non-zero weight")
-		assert.Greater(t, weight2, uint32(0), "overflow-2 should have non-zero weight")
+		assert.Positive(t, weight1, "overflow-1 should have non-zero weight")
+		assert.Positive(t, weight2, "overflow-2 should have non-zero weight")
 		assert.LessOrEqual(t, weight1, uint32(1<<32-1), "overflow-1 should not exceed uint32 max")
 		assert.LessOrEqual(t, weight2, uint32(1<<32-1), "overflow-2 should not exceed uint32 max")
 	})
@@ -498,8 +498,8 @@ func TestCalculateEndpointWeights_EdgeCaseCombinations(t *testing.T) {
 
 		t.Logf("Multiplication overflow test: large-weight=%d, small=%d", largeWeight, smallWeight)
 
-		assert.Greater(t, largeWeight, uint32(0))
-		assert.Greater(t, smallWeight, uint32(0))
+		assert.Positive(t, largeWeight)
+		assert.Positive(t, smallWeight)
 		assert.LessOrEqual(t, largeWeight, uint32(1<<32-1))
 		assert.LessOrEqual(t, smallWeight, uint32(1<<32-1))
 
@@ -688,7 +688,7 @@ func TestCalculateEndpointWeights_WithKongLimits(t *testing.T) {
 			// Verify all non-zero weight backends have positive weights (participation preserved).
 			for _, backend := range tt.backends {
 				if backend.Weight > 0 && backend.Endpoints > 0 {
-					assert.Greater(t, result[backend.Name], uint32(0), "Backend %s should have non-zero weight", backend.Name)
+					assert.Positive(t, result[backend.Name], "Backend %s should have non-zero weight", backend.Name)
 				}
 			}
 
