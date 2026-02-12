@@ -81,8 +81,6 @@ linters:
         # Incorrectly formatted error string.
         # https://staticcheck.dev/docs/checks/#ST1005
         - -ST1005
-        - -SA4006
-
     exhaustive:
       default-signifies-exhaustive: true
     forbidigo:
