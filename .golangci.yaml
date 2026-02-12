@@ -64,7 +64,6 @@ linters:
       default: all
       disable:
         - require-pkg-doc
-        - start-with-name
       options:
         max-len:
           # Maximum line length for godocs, not including the `// `, or `/*` or `*/` tokens.
