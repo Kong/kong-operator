@@ -81,6 +81,8 @@ linters:
         # Incorrectly formatted error string.
         # https://staticcheck.dev/docs/checks/#ST1005
         - -ST1005
+        - -SA4006
+
     exhaustive:
       default-signifies-exhaustive: true
     forbidigo:
@@ -96,8 +98,8 @@ linters:
         - pattern: ^.*operatorv2alpha1.ControlPlane.*$
           msg: Please use the types package to refer to the type (through github.com/kong/kong-operator/internal/types)
         # NOTE: Don't enforce it just yet. Migrating all errors.As() calls is WIP.
-        # - pattern: ^errors.As$
-        #   msg: Please use errors.AsType instead
+        - pattern: ^errors.As$
+          msg: Please use errors.AsType instead
     gomodguard:
       blocked:
         modules:
@@ -297,6 +299,10 @@ linters:
           - godoclint
         text: symbol should have a godoc
         path: api/configuration/v1alpha1/zz_generated_funcs.go
+      - linters:
+          - forbidigo
+        text: use of `errors.As` forbidden because
+        path: ".*_test.go|test/.*|ingress-controller/.*"
     paths:
       - pkg/clientset
       - config/

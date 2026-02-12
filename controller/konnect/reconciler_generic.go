@@ -178,12 +178,15 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	// If a type has a KongService ref, handle it.
 	res, err = handleKongServiceRef(ctx, r.Client, ent)
 	if err != nil {
+		_, kongServiceIsBeingDeleted := errors.AsType[ReferencedKongServiceIsBeingDeletedError](err)
+		_, referencedObjectDoesNotExist := errors.AsType[ReferencedObjectDoesNotExistError](err)
+		_, referencedCPDoesNotExist := errors.AsType[controlplane.ReferencedControlPlaneDoesNotExistError](err)
 		switch {
 		// In case the referenced KongService is being deleted, disregard the error
 		// and continue.
-		case errors.As(err, &ReferencedKongServiceIsBeingDeletedError{}):
+		case kongServiceIsBeingDeleted:
 			log.Info(logger, "referenced KongService is being deleted, proceeding with reconciliation", "error", err.Error())
-		case errors.As(err, &ReferencedObjectDoesNotExistError{}), errors.As(err, &controlplane.ReferencedControlPlaneDoesNotExistError{}):
+		case referencedObjectDoesNotExist, referencedCPDoesNotExist:
 			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 				if err := r.Client.Update(ctx, ent); err != nil {
 					if apierrors.IsConflict(err) {
@@ -579,19 +582,19 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 		if err != nil {
 			var (
-				errURL       *url.Error
-				rateLimitErr ops.RateLimitError
+				errURL, okURL                = errors.AsType[*url.Error](err)
+				rateLimitErr, okRateLimitErr = errors.AsType[ops.RateLimitError](err)
 			)
 			switch {
 			// If the error was a network error, handle it here, there's no need to proceed,
 			// as no state has changed.
 			// Status conditions are updated in handleOpsErr.
-			case errors.As(err, &errURL):
+			case okURL:
 				return r.handleOpsErr(ctx, ent, errURL)
 
 			// If the error is a rate limit error, requeue after the retry-after duration
 			// instead of returning an error.
-			case errors.As(err, &rateLimitErr):
+			case okRateLimitErr:
 				return ctrl.Result{RequeueAfter: rateLimitErr.RetryAfter}, nil
 			}
 
@@ -620,19 +623,19 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		logger.Error(err, "failed to update")
 
 		var (
-			errURL       *url.Error
-			rateLimitErr ops.RateLimitError
+			errURL, okURL                = errors.AsType[*url.Error](err)
+			rateLimitErr, okRateLimitErr = errors.AsType[ops.RateLimitError](err)
 		)
 		switch {
 		// If the error was a network error, handle it here, there's no need to proceed,
 		// as no state has changed.
 		// Status conditions are updated in handleOpsErr.
-		case errors.As(err, &errURL):
+		case okURL:
 			return r.handleOpsErr(ctx, ent, errURL)
 
 		// If the error is a rate limit error, requeue after the retry-after duration
 		// instead of returning an error.
-		case errors.As(err, &rateLimitErr):
+		case okRateLimitErr:
 			return ctrl.Result{RequeueAfter: rateLimitErr.RetryAfter}, nil
 		}
 
