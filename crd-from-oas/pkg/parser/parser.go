@@ -69,9 +69,15 @@ type Schema struct {
 	Items        *Property     // For array-type schemas, the items type
 }
 
-// ParsedSpec contains all parsed schemas from an OpenAPI spec
+// ParsedSpec is the result of parsing an OpenAPI spec via ParsePaths.
 type ParsedSpec struct {
-	Schemas       map[string]*Schema
+	// Schemas holds component schemas that are transitively referenced ($ref) by
+	// the request body schemas. These are resolved from the spec's
+	// components/schemas section and keyed by their component name.
+	Schemas map[string]*Schema
+	// RequestBodies holds schemas extracted directly from POST request bodies of
+	// the target paths, keyed by schema name. Each schema includes parent resource
+	// dependencies inferred from path parameters (e.g. {portalId} → Portal dependency).
 	RequestBodies map[string]*Schema
 }
 
@@ -89,8 +95,11 @@ func NewParser(doc *openapi3.T) *Parser {
 	}
 }
 
-// ParsePaths parses the OpenAPI spec using paths to extract schemas and their dependencies
-// targetPaths is a list of API paths like "/v3/portals/{portalId}/teams"
+// ParsePaths parses the OpenAPI spec for each of the given API paths (e.g.
+// "/v3/portals/{portalId}/teams") and returns a ParsedSpec containing:
+//   - RequestBodies: the request body schema for each path's POST operation,
+//     with parent resource dependencies inferred from path parameters.
+//   - Schemas: any component schemas transitively referenced by the request bodies.
 func (p *Parser) ParsePaths(targetPaths []string) (*ParsedSpec, error) {
 	result := &ParsedSpec{
 		Schemas:       make(map[string]*Schema),
