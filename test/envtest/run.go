@@ -240,7 +240,7 @@ func SetupManager(
 
 	logger := ctrl.LoggerFrom(ctx)
 	mgr, err := manager.NewManager(ctx, mgrID, logger, cfg)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	if cfg.ProbeAddr != "" {
 		t.Log("Starting standalone health check server")
