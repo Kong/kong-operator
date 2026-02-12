@@ -300,6 +300,11 @@ linters:
           - forbidigo
         text: use of `errors.As` forbidden because
         path: ".*_test.go|test/.*|ingress-controller/.*"
+      # TODO: remove when https://github.com/golangci/golangci-lint/issues/6363
+      # is resolved and we can use new(expression) instead of ToPtr.
+      - linters:
+          - modernize
+        text: call of ToPtr\(x\) can be simplified to new\(x\)
     paths:
       - pkg/clientset
       - config/
