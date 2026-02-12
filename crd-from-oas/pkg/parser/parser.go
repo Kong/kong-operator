@@ -101,51 +101,12 @@ func (p *Parser) ParsePaths(targetPaths []string) (*ParsedSpec, error) {
 	referencedSchemas := make(map[string]bool)
 
 	for _, targetPath := range targetPaths {
-		// Find the path in the OpenAPI spec
-		pathItem := p.doc.Paths.Find(targetPath)
-		if pathItem == nil {
-			return nil, fmt.Errorf("path not found: %s", targetPath)
+		name, schema, err := p.parsePath(targetPath)
+		if err != nil {
+			return nil, err
 		}
-
-		// We're interested in POST operations (create operations)
-		if pathItem.Post == nil {
-			return nil, fmt.Errorf("path %s does not have a POST operation", targetPath)
-		}
-
-		// Extract path parameters as dependencies
-		dependencies := p.extractPathDependencies(targetPath)
-
-		// Get request body
-		if pathItem.Post.RequestBody == nil || pathItem.Post.RequestBody.Value == nil {
-			return nil, fmt.Errorf("path %s POST operation has no request body", targetPath)
-		}
-
-		reqBody := pathItem.Post.RequestBody.Value
-		if reqBody.Content == nil {
-			return nil, fmt.Errorf("path %s POST request body has no content", targetPath)
-		}
-
-		// Find the schema name from the request body reference
-		var schemaName string
-		if pathItem.Post.RequestBody.Ref != "" {
-			schemaName = extractRefName(pathItem.Post.RequestBody.Ref)
-		} else {
-			// Try to derive name from operation ID or path
-			schemaName = deriveSchemaNameFromPath(targetPath, pathItem.Post.OperationID)
-		}
-
-		for _, mediaTypeObj := range reqBody.Content {
-			if mediaTypeObj.Schema == nil || mediaTypeObj.Schema.Value == nil {
-				continue
-			}
-
-			schema := p.parseSchema(schemaName, mediaTypeObj.Schema.Value)
-			schema.Dependencies = dependencies
-			result.RequestBodies[schemaName] = schema
-
-			// Collect referenced schemas
-			p.collectReferencedSchemas(schema, referencedSchemas)
-		}
+		result.RequestBodies[name] = schema
+		p.collectReferencedSchemas(schema, referencedSchemas)
 	}
 
 	// Parse all referenced component schemas
@@ -157,6 +118,55 @@ func (p *Parser) ParsePaths(targetPaths []string) (*ParsedSpec, error) {
 	}
 
 	return result, nil
+}
+
+// parsePath processes a single API path, returning the schema name and parsed schema
+// for the POST operation's request body.
+func (p *Parser) parsePath(targetPath string) (string, *Schema, error) {
+	// Find the path in the OpenAPI spec
+	pathItem := p.doc.Paths.Find(targetPath)
+	if pathItem == nil {
+		return "", nil, fmt.Errorf("path not found: %s", targetPath)
+	}
+
+	// We're interested in POST operations (create operations)
+	if pathItem.Post == nil {
+		return "", nil, fmt.Errorf("path %s does not have a POST operation", targetPath)
+	}
+
+	// Get request body
+	if pathItem.Post.RequestBody == nil || pathItem.Post.RequestBody.Value == nil {
+		return "", nil, fmt.Errorf("path %s POST operation has no request body", targetPath)
+	}
+
+	reqBody := pathItem.Post.RequestBody.Value
+	if reqBody.Content == nil {
+		return "", nil, fmt.Errorf("path %s POST request body has no content", targetPath)
+	}
+
+	// Find the schema name from the request body reference
+	var schemaName string
+	if pathItem.Post.RequestBody.Ref != "" {
+		schemaName = extractRefName(pathItem.Post.RequestBody.Ref)
+	} else {
+		schemaName = deriveSchemaNameFromPath(targetPath, pathItem.Post.OperationID)
+	}
+
+	// Extract path parameters as dependencies
+	dependencies := p.extractPathDependencies(targetPath)
+
+	// Parse the first media type that has a valid schema
+	for _, mediaTypeObj := range reqBody.Content {
+		if mediaTypeObj.Schema == nil || mediaTypeObj.Schema.Value == nil {
+			continue
+		}
+
+		schema := p.parseSchema(schemaName, mediaTypeObj.Schema.Value)
+		schema.Dependencies = dependencies
+		return schemaName, schema, nil
+	}
+
+	return "", nil, fmt.Errorf("path %s POST request body has no valid schema", targetPath)
 }
 
 // extractPathDependencies extracts parent resource dependencies from path parameters
