@@ -106,7 +106,7 @@ func TestManager_NoLeakedGoroutinesAfterContextCancellation(t *testing.T) {
 	)
 	go func() {
 		err := m.Run(ctx)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 	}()
 
 	t.Log("Waiting for the manager to become ready")

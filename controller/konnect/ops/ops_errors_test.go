@@ -801,7 +801,7 @@ func TestGetRetryAfterFromRateLimitError(t *testing.T) {
 
 			gotDuration, gotIsRateLimited := GetRetryAfterFromRateLimitError(err)
 			require.True(t, gotIsRateLimited)
-			require.Equal(t, gotDuration, 60*time.Second)
+			require.Equal(t, 60*time.Second, gotDuration)
 		})
 	})
 }

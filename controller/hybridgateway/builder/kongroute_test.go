@@ -523,7 +523,7 @@ func TestKongRouteBuilder_Chaining(t *testing.T) {
 	assert.Equal(t, "test-route", route.Name)
 	assert.Equal(t, "test-namespace", route.Namespace)
 	assert.Equal(t, "test-spec", *route.Spec.Name)
-	assert.Equal(t, true, *route.Spec.StripPath)
+	assert.True(t, *route.Spec.StripPath)
 	assert.Equal(t, []string{"example.com"}, route.Spec.Hosts)
 	assert.Equal(t, []string{"~/api$", "/api/"}, route.Spec.Paths)
 	assert.Equal(t, []string{"GET"}, route.Spec.Methods)

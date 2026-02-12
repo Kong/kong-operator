@@ -1,7 +1,6 @@
 package kongintegration
 
 import (
-	"errors"
 	"testing"
 	"time"
 
@@ -97,7 +96,7 @@ func TestUpdateStrategyDBMode(t *testing.T) {
 			return
 		}
 		var updateError sendconfig.UpdateError
-		if !assert.True(t, errors.As(err, &updateError)) {
+		if !assert.ErrorAs(t, err, &updateError) {
 			return
 		}
 		if !assert.NotEmpty(t, updateError.ResourceFailures()) {

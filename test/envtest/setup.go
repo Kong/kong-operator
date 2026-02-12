@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -113,7 +114,7 @@ func Setup(t *testing.T, ctx context.Context, scheme *k8sruntime.Scheme, optModi
 	})
 	ws.Register("/convert", conversion.NewWebhookHandler(scheme, conversion.NewRegistry()))
 	go func() {
-		require.NoError(t, ws.Start(ctx))
+		assert.NoError(t, ws.Start(ctx))
 	}()
 
 	wg := sync.WaitGroup{}

@@ -225,7 +225,7 @@ func TestAdminAPIClientsManager_Clients_DBMode(t *testing.T) {
 
 	configureClients := m.GatewayClientsToConfigure()
 	require.Len(t, configureClients, 1, "Expecting 1 client to configure")
-	require.Truef(t, lo.ContainsBy(initialClients, func(c *adminapi.Client) bool {
+	require.True(t, lo.ContainsBy(initialClients, func(c *adminapi.Client) bool {
 		return c.BaseRootURL() == configureClients[0].BaseRootURL()
 	}), "Client's address %s should be in initial clients")
 

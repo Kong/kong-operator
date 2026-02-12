@@ -36,11 +36,11 @@ func TestMultiInstanceManagerDiagnostics(t *testing.T) {
 	t.Log("Starting the diagnostics server and the multi-instance manager")
 	diagServer := multiinstance.NewDiagnosticsServer(diagPort)
 	go func() {
-		require.ErrorIs(t, diagServer.Start(ctx), http.ErrServerClosed)
+		assert.ErrorIs(t, diagServer.Start(ctx), http.ErrServerClosed)
 	}()
 	multimgr := multiinstance.NewManager(testr.New(t), multiinstance.WithDiagnosticsExposer(diagServer))
 	go func() {
-		require.NoError(t, multimgr.Start(ctx))
+		assert.NoError(t, multimgr.Start(ctx))
 	}()
 
 	t.Log("Setting up two instances of the manager and scheduling them in the multi-instance manager")
@@ -86,11 +86,11 @@ func TestMultiInstanceManager_Profiling(t *testing.T) {
 	t.Log("Starting the diagnostics server and the multi-instance manager")
 	diagServer := multiinstance.NewDiagnosticsServer(diagPort, multiinstance.WithPprofHandler())
 	go func() {
-		require.ErrorIs(t, diagServer.Start(ctx), http.ErrServerClosed)
+		assert.ErrorIs(t, diagServer.Start(ctx), http.ErrServerClosed)
 	}()
 	multimgr := multiinstance.NewManager(testr.New(t), multiinstance.WithDiagnosticsExposer(diagServer))
 	go func() {
-		require.NoError(t, multimgr.Start(ctx))
+		assert.NoError(t, multimgr.Start(ctx))
 	}()
 
 	m1 := SetupManager(ctx, t, lo.Must(manager.NewID("cp-1")), envcfg, AdminAPIOptFns(), WithDiagnosticsWithoutServer())

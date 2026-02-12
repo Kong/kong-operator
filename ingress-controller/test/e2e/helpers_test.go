@@ -590,7 +590,7 @@ func verifyEnterprise(ctx context.Context, t *testing.T, env environments.Enviro
 	t.Log("finding the ip address for the admin API")
 	service, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, adminServiceName, metav1.GetOptions{})
 	require.NoError(t, err)
-	require.Equal(t, 1, len(service.Status.LoadBalancer.Ingress))
+	require.Len(t, service.Status.LoadBalancer.Ingress, 1)
 	adminIP := service.Status.LoadBalancer.Ingress[0].IP
 
 	t.Log("building a GET request to gather admin api information")
@@ -630,10 +630,10 @@ func verifyEnterprise(ctx context.Context, t *testing.T, env environments.Enviro
 	if string(adminOutput.Version[0]) == "3" {
 		// 3.x removed the "-enterprise-edition" string but provided no other indication that something is enterprise
 		require.Len(t, strings.Split(adminOutput.Version, "."), 4,
-			fmt.Sprintf("actual kong version: %s", adminOutput.Version))
+			"actual kong version: %s", adminOutput.Version)
 	} else {
 		require.Contains(t, adminOutput.Version, "enterprise-edition",
-			fmt.Sprintf("actual kong version: %s", adminOutput.Version))
+			"actual kong version: %s", adminOutput.Version)
 	}
 }
 
@@ -643,7 +643,7 @@ func verifyEnterpriseWithPostgres(ctx context.Context, t *testing.T, env environ
 	t.Log("finding the ip address for the admin API")
 	service, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, adminServiceName, metav1.GetOptions{})
 	require.NoError(t, err)
-	require.Equal(t, 1, len(service.Status.LoadBalancer.Ingress))
+	require.Len(t, service.Status.LoadBalancer.Ingress, 1)
 	adminIP := service.Status.LoadBalancer.Ingress[0].IP
 
 	t.Log("building a POST request to create a new kong workspace")
@@ -660,7 +660,7 @@ func verifyEnterpriseWithPostgres(ctx context.Context, t *testing.T, env environ
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
-	require.Equal(t, http.StatusCreated, resp.StatusCode, fmt.Sprintf("STATUS=(%s), BODY=(%s)", resp.Status, string(body)))
+	require.Equal(t, http.StatusCreated, resp.StatusCode, "STATUS=(%s), BODY=(%s)", resp.Status, string(body))
 }
 
 // licenseOutput is the license section of the admin API root response.

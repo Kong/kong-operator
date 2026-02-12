@@ -6,7 +6,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
@@ -58,7 +58,7 @@ func DumpLogsIfTestFailed(t *testing.T, logs LogsObserver) {
 	t.Logf("Test %s failed: dumping controller logs\n", t.Name())
 	for _, entry := range logs.All() {
 		b, err := encoder.EncodeEntry(entry.Entry, entry.Context)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 		t.Logf("%s", b.String())
 	}
 }

@@ -931,7 +931,7 @@ func TestWithClusterDomain(t *testing.T) {
 	cfg := &managercfg.Config{}
 	opt := WithClusterDomain("foo.bar")
 	opt(cfg)
-	assert.Equal(t, cfg.ClusterDomain, "foo.bar")
+	assert.Equal(t, "foo.bar", cfg.ClusterDomain)
 }
 
 func TestWithEmitKubernetesEvents(t *testing.T) {

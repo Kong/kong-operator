@@ -194,7 +194,7 @@ func TestKonnectGatewayControlPlane_ConvertFrom(t *testing.T) {
 				assert.Equal(t, tc.src.CreateControlPlaneRequest.ProxyUrls, obj.Spec.ProxyUrls)
 				assert.Equal(t, tc.src.CreateControlPlaneRequest.Labels, obj.Spec.Labels)
 			} else {
-				assert.Equal(t, obj.Spec.CreateControlPlaneRequest, v1alpha1.CreateControlPlaneRequest{})
+				assert.Equal(t, v1alpha1.CreateControlPlaneRequest{}, obj.Spec.CreateControlPlaneRequest)
 			}
 			if tc.mirror != nil {
 				require.NotNil(t, obj.Spec.Mirror)

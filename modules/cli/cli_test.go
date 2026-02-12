@@ -141,7 +141,7 @@ func TestSetFlagFromEnvVar(t *testing.T) {
 				require.Nil(t, panicErr, "test case should not have panicked: %v", panicErr)
 			}
 
-			require.Equal(t, output, tC.expectedOutput)
+			require.Equal(t, tC.expectedOutput, output)
 
 			if !tC.shouldFail && !tC.skipCheckingValue {
 				require.Equal(t, tC.expectedVal, *val)

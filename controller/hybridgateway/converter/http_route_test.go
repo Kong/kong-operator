@@ -123,11 +123,11 @@ func TestHostnamesIntersection(t *testing.T) {
 				kongRoutes = append(kongRoutes, kongroute)
 			}
 
-			require.Equal(t, len(tt.expectedOutput), len(kongRoutes), "KongRoute objects number different than expected")
+			require.Len(t, kongRoutes, len(tt.expectedOutput), "KongRoute objects number different than expected")
 
 			for _, expectedRoute := range tt.expectedOutput {
 				for _, actualRoute := range kongRoutes {
-					assert.Equal(t, len(expectedRoute.Spec.Hosts), len(actualRoute.Spec.Hosts), "KongRoute hosts length does not match the expected one")
+					assert.Len(t, actualRoute.Spec.Hosts, len(expectedRoute.Spec.Hosts), "KongRoute hosts length does not match the expected one")
 					for _, h := range expectedRoute.Spec.Hosts {
 						assert.Contains(t, actualRoute.Spec.Hosts, h, "KongRoute hosts does not contain expected hostname %s", h)
 					}
