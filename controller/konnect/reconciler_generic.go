@@ -478,8 +478,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 				// If the error was a network error, handle it here, there's no need to proceed,
 				// as no state has changed.
 				// Status conditions are updated in handleOpsErr.
-				var errURL *url.Error
-				if errors.As(err, &errURL) {
+				if errURL, ok := errors.AsType[*url.Error](err); ok {
 					return r.handleOpsErr(ctx, ent, errURL)
 				}
 
@@ -522,8 +521,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// If the error was a network error, handle it here, there's no need to proceed,
 		// as no state has changed.
 		// Status conditions are updated in handleOpsErr.
-		var errURL *url.Error
-		if errors.As(err, &errURL) {
+		if errURL, ok := errors.AsType[*url.Error](err); ok {
 			return r.handleOpsErr(ctx, ent, errURL)
 		}
 		return ctrl.Result{}, err

@@ -142,7 +142,8 @@ func NewKong(ctx context.Context, t *testing.T, opts ...KongOpt) Kong {
 				t.Logf("failed validating Kong version: %v", err)
 			}),
 			retry.RetryIf(func(err error) bool {
-				return !errors.As(err, &helpers.TooOldKongGatewayError{})
+				_, ok := errors.AsType[helpers.TooOldKongGatewayError](err)
+				return !ok
 			}),
 		),
 	)
