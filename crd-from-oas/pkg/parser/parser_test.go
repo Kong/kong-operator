@@ -904,11 +904,62 @@ func TestGetEntityNameFromType(t *testing.T) {
 		{"PortalCreateTeam", "PortalTeam"},
 		{"DeletePortal", "Portal"},
 		{"Portal", "Portal"},
+		{"AddDeveloperToTeam", "DeveloperToTeam"},
+		{"AddSomething", "Something"},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.input, func(t *testing.T) {
 			result := GetEntityNameFromType(tc.input)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+func TestExtractCRDName(t *testing.T) {
+	tests := []struct {
+		name     string
+		op       *openapi3.Operation
+		expected string
+	}{
+		{
+			name:     "nil operation",
+			op:       nil,
+			expected: "",
+		},
+		{
+			name:     "no extensions",
+			op:       &openapi3.Operation{},
+			expected: "",
+		},
+		{
+			name: "extension without crd-name",
+			op: &openapi3.Operation{
+				Extensions: map[string]any{
+					"x-speakeasy-entity-operation": map[string]any{
+						"terraform-resource": "PortalTeam#create",
+					},
+				},
+			},
+			expected: "",
+		},
+		{
+			name: "extension with crd-name",
+			op: &openapi3.Operation{
+				Extensions: map[string]any{
+					"x-speakeasy-entity-operation": map[string]any{
+						"terraform-resource": "PortalTeamDeveloper#create",
+						"crd-name":           "Developer",
+					},
+				},
+			},
+			expected: "Developer",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := extractCRDName(tc.op)
 			assert.Equal(t, tc.expected, result)
 		})
 	}

@@ -153,9 +153,11 @@ func (p *Parser) parsePath(targetPath string) (string, *Schema, error) {
 		return "", nil, fmt.Errorf("path %s POST request body has no content", targetPath)
 	}
 
-	// Find the schema name from the request body reference
+	// Find the schema name: prefer explicit crd-name annotation, then request body ref, then path derivation
 	var schemaName string
-	if pathItem.Post.RequestBody.Ref != "" {
+	if name := extractCRDName(pathItem.Post); name != "" {
+		schemaName = name
+	} else if pathItem.Post.RequestBody.Ref != "" {
 		schemaName = extractRefName(pathItem.Post.RequestBody.Ref)
 	} else {
 		schemaName = deriveSchemaNameFromPath(targetPath, pathItem.Post.OperationID)
@@ -376,6 +378,31 @@ func getSchemaType(schema *openapi3.Schema) string {
 	return types[0]
 }
 
+// extractCRDName extracts the CRD entity name from the x-speakeasy-entity-operation
+// extension on a POST operation, if the "crd-name" key is present.
+func extractCRDName(op *openapi3.Operation) string {
+	if op == nil || op.Extensions == nil {
+		return ""
+	}
+	ext, ok := op.Extensions["x-speakeasy-entity-operation"]
+	if !ok {
+		return ""
+	}
+	extMap, ok := ext.(map[string]any)
+	if !ok {
+		return ""
+	}
+	crdName, ok := extMap["crd-name"]
+	if !ok {
+		return ""
+	}
+	name, ok := crdName.(string)
+	if !ok {
+		return ""
+	}
+	return name
+}
+
 // extractRefName extracts the schema name from a $ref string
 func extractRefName(ref string) string {
 	// #/components/schemas/SomeSchema -> SomeSchema
@@ -400,7 +427,7 @@ func isReferenceProperty(name string, schema *openapi3.Schema) bool {
 func GetEntityNameFromType(name string) string {
 	// Remove common prefixes
 	result := name
-	for _, prefix := range []string{"Create", "Update", "Delete", "Get", "List"} {
+	for _, prefix := range []string{"Add", "Create", "Update", "Delete", "Get", "List"} {
 		result = strings.TrimPrefix(result, prefix)
 	}
 
