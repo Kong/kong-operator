@@ -1,0 +1,38 @@
+# Template for capturing debug snapshot when tests fail.
+#
+# This template should be used in STEP-LEVEL catch blocks of chainsaw tests.
+# For SPEC-LEVEL catch blocks, call the script directly (see DEBUG_SNAPSHOT.md).
+#
+# The captured information includes all resources in the test namespace(s),
+# events, operator logs, and resource descriptions.
+#
+# Required bindings:
+#   - test_name: Name of the test (for output directory naming).
+#   - namespace: The main test namespace to capture state from.
+#
+# Optional bindings:
+#   - additional_namespaces: Comma-separated list of additional namespaces
+#                            (e.g., for cross-namespace tests).
+#   - output_dir: Base directory for debug output (default: /tmp/chainsaw).
+#   - operator_namespace: Namespace where operator runs (default: kong-system).
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: debug-snapshot
+spec:
+  catch:
+    - description: Capture debug snapshot for failed test
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test_name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: ADDITIONAL_NAMESPACES
+            value: ($additional_namespaces || '')
+          - name: OUTPUT_DIR
+            value: ($output_dir || '/tmp/chainsaw')
+          - name: OPERATOR_NAMESPACE
+            value: ($operator_namespace || 'kong-system')
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

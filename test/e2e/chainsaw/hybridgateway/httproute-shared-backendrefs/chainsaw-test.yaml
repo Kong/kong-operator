@@ -295,3 +295,17 @@ spec:
           value: ($httproute_three_path)
         - name: listener_http_port
           value: "80"
+
+  catch:
+    # Capture debug snapshot on test failure for CI debugging.
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: hybridgateway-httproute-shared-backendrefs
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

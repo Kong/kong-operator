@@ -397,3 +397,17 @@ spec:
         value: "404"
     use:
       template: ../../common/_step_templates/verify-header-match-routing.yaml
+
+  catch:
+    # Capture debug snapshot on test failure for CI debugging.
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: hybridgateway-httproute-complex-multiple-rules
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

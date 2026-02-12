@@ -219,3 +219,19 @@ spec:
           value: "80"
         - name: host_header
           value: ($fqdn)
+
+  catch:
+    # Capture debug snapshot on test failure for CI debugging.
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: hybridgateway-httproute-backendref-cross-namespace-reference
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: ADDITIONAL_NAMESPACES
+            value: ($echo_deployment_namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
