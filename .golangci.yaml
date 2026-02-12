@@ -304,7 +304,10 @@ linters:
       # is resolved and we can use new(expression) instead of ToPtr.
       - linters:
           - modernize
-        text: call of ToPtr\(x\) can be simplified to new\(x\)
+        text: call of .+\(x\) can be simplified to new\(x\)
+      - linters:
+          - modernize
+        text: .+ can be an inlinable wrapper around new
     paths:
       - pkg/clientset
       - config/
