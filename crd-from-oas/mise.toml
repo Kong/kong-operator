@@ -40,7 +40,7 @@ INPUT_FILE = "openapi.yaml"
 OUTPUT_DIR = "api"
 API_VERSION = "v1alpha1"
 API_GROUP = "konnect.konghq.com"
-PATHS = "/v3/portals,/v3/portals/{portalId}/teams,/v3/portals/{portalId}/custom-domain,/v3/identity-providers,/v2/dcr-providers"
+PATHS = "/v3/portals,/v3/portals/{portalId}/teams,/v3/portals/{portalId}/custom-domain,/v3/identity-providers,/v2/dcr-providers,/v3/portals/{portalId}/teams/{teamId}/developers"
 CONFIG_FILE = "config.yaml"
 
 [tasks.generate-crds]
@@ -68,16 +68,17 @@ description = "Run unit tests"
 
 [tasks.test-crdsvalidation]
 description = "Run CRD validation tests"
-run = """
+# Update test paths below if more API groups are added
+run = '''
 export KUBEBUILDER_ASSETS=$(setup-envtest use -p path)
-go test -v -count 1 ./test/crdsvalidation/...
-"""
+go test -v -count 1./test/crdsvalidation/konnect.konghq.com/...
+'''
 
 [tasks.all]
 description = "Generate API, CRDs, and run all tests and linters"
 run = [
-	{ task = "generate-api" },
-	{ task = "lint" },
-	{ tasks = [ "generate-crds", "lint-api", "test-unit"] },
-	{ task = "test-crdsvalidation" },
+       { task = "generate-api" },
+       { task = "lint" },
+       { tasks = [ "generate-crds", "lint-api", "test-unit"] },
+       { task = "test-crdsvalidation" },
 ]
