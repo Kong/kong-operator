@@ -1,0 +1,33 @@
+# Template for asserting that no Kong resources of a specified type exist.
+#
+# This template verifies that no Kong resources matching the given Gateway
+# (and optionally HTTPRoute) exist in the specified namespace. It uses the
+# assert_no_kong_resource.sh script which checks gateway-operator annotations.
+#
+# Required bindings:
+#   - resource_type: The full resource type (e.g., kongcertificates.configuration.konghq.com)
+#   - gateway_name: Name of the gateway
+#   - gateway_namespace: Namespace of the gateway
+#   - namespace: Namespace to search for resources (typically same as gateway_namespace)
+#
+# Optional: For HTTPRoute-created resources, add these env vars at step level:
+#   - HTTP_ROUTE_NAME: Name of the HTTPRoute
+#   - HTTP_ROUTE_NAMESPACE: Namespace of the HTTPRoute
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: assert-no-kong-resource
+spec:
+  try:
+    - script:
+        env:
+          - name: RESOURCE_TYPE
+            value: ($resource_type)
+          - name: GATEWAY_NAME
+            value: ($gateway_name)
+          - name: GATEWAY_NAMESPACE
+            value: ($gateway_namespace)
+          - name: NAMESPACE
+            value: ($namespace)
+        content: |
+          bash ../../common/scripts/assert_no_kong_resource.sh

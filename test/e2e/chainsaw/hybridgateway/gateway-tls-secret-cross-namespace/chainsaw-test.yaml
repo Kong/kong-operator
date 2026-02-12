@@ -12,13 +12,6 @@ spec:
     KongCertificate/KongSNI exist but are not programmed until a KongReferenceGrant
     is added.
 
-  timeouts:
-    apply: 120s
-    assert: 120s
-    cleanup: 300s
-    delete: 300s
-    exec: 120s
-
   bindings:
     # Common bindings.
     - name: test_name
@@ -51,74 +44,75 @@ spec:
       value: ($secret_namespace)
     - name: kong_reference_grant_name
       value: (join('-', [($test_name), 'kong-secret-reference-grant']))
+    - name: kong_reference_grant_namespace
+      value: ($cert_secret_namespace)
 
   steps:
     # Step 1: Create the namespace for TLS secrets.
-    - name: Create-secret-namespace
-      description: Create the namespace that holds the TLS secret.
+    - name: 1-create-secret-namespace
+      description: Create the namespace that holds the TLS secret
       use:
-        template: ../common/_step_templates/apply-assert-namespace.yaml
+        template: ../../common/_step_templates/apply-assert-namespace.yaml
       bindings:
         - name: namespace_name
           value: ($secret_namespace)
 
     # Step 2: Create the TLS secret in the separate namespace.
-    - name: Create-tls-secret
-      description: Create TLS Secret in a different namespace for the Gateway TLS listener.
+    - name: 2-create-tls-secret
+      description: Create TLS Secret in a different namespace for the Gateway TLS listener
       use:
-        template: ../common/_step_templates/apply-assert-tlsSecret.yaml
+        template: ../../common/_step_templates/apply-assert-tlsSecret.yaml
 
     # Step 3: Create the KonnectAPIAuthConfiguration to authenticate with Konnect.
-    - name: Create-konnect-api-auth
-      description: Create KonnectAPIAuthConfiguration for the test.
+    - name: 3-create-konnect-api-auth
+      description: Create KonnectAPIAuthConfiguration for the test
       use:
-        template: ../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
 
     # Step 4: Create the GatewayConfiguration that defines the hybrid gateway setup.
-    - name: Create-gateway-configuration
-      description: Create GatewayConfiguration for the test.
+    - name: 4-create-gateway-configuration
+      description: Create GatewayConfiguration for the test
       use:
-        template: ../common/_step_templates/apply-assert-gatewayConfiguration.yaml
+        template: ../../common/_step_templates/apply-assert-gatewayConfiguration.yaml
 
     # Step 5: Create the GatewayClass that will be used by the Gateway.
-    - name: Create-gateway-class
-      description: Create GatewayClass for the test.
+    - name: 5-create-gateway-class
+      description: Create GatewayClass for the test
       use:
-        template: ../common/_step_templates/apply-assert-gatewayClass.yaml
+        template: ../../common/_step_templates/apply-assert-gatewayClass.yaml
 
     # Step 6: Create the Gateway with a cross-namespace TLS secret reference.
-    - name: Create-gateway
-      description: Create Gateway with TLS listener referencing a secret in another namespace.
+    - name: 6-create-gateway
+      description: Create Gateway with TLS listener referencing a secret in another namespace
       try:
         - apply:
             file: 01-gateway.yaml
 
     # Step 7: Assert Gateway listener ResolvedRefs is False without ReferenceGrant.
-    - name: Assert-gateway-resolvedrefs-false
-      description: Verify Gateway listener ResolvedRefs is False before ReferenceGrant.
+    - name: 7-assert-gateway-resolvedrefs-false
+      description: Verify Gateway listener ResolvedRefs is False before ReferenceGrant
       try:
         - assert:
             file: 02-assert-gateway-resolvedrefs-false.yaml
 
     # Step 8: Verify KongCertificate has not been created yet.
-    - name: Assert-no-kongcertificate
-      description: Verify no KongCertificate exists before ReferenceGrant.
-      try:
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: NAMESPACE
-                value: ($gateway_namespace)
-            content: |
-              bash ../common/scripts/kongCertificate_name.sh
-            check:
-              ($error != null): true
-              (contains($stdout, 'No KongCertificate found for Gateway')): true
+    - name: 8-assert-no-kongcertificate
+      description: Verify no KongCertificate exists before ReferenceGrant
+      use:
+        template: ../../common/_step_templates/assert-no-kong-resource.yaml
+      bindings:
+        - name: resource_type
+          value: kongcertificates.configuration.konghq.com
+        - name: gateway_name
+          value: ($gateway_name)
+        - name: gateway_namespace
+          value: ($gateway_namespace)
+        - name: namespace
+          value: ($gateway_namespace)
 
     # Step 9: Verify KongSNI has not been created yet.
-    - name: Assert-no-kongsni
-      description: Verify no KongSNI exists before ReferenceGrant.
+    - name: 9-assert-no-kongsni
+      description: Verify no KongSNI exists before ReferenceGrant
       try:
         - script:
             env:
@@ -127,149 +121,119 @@ spec:
               - name: GATEWAY_NAME
                 value: ($gateway_name)
             content: |
-              bash ../common/scripts/assert_no_kongsni.sh
+              bash ../../common/scripts/assert_no_kongsni.sh
 
     # Step 10: Create ReferenceGrant to allow Gateway -> Secret cross-namespace reference.
-    - name: Create-reference-grant
-      description: Create ReferenceGrant to allow the Gateway to reference the TLS secret.
-      try:
-        - apply:
-            file: 03-referencegrant.yaml
-
-    # Step 11: Assert Gateway is programmed after ReferenceGrant.
-    - name: Assert-gateway-programmed
-      description: Verify Gateway reaches programmed state after ReferenceGrant.
-      bindings:
-        - name: kong_namespace
-          value: ($gateway_namespace)
-      try:
-        - assert:
-            file: ../common/assertions/gateway.yaml
-
-    # Step 12: Assert Gateway listener ResolvedRefs is True after ReferenceGrant.
-    - name: Assert-gateway-resolvedrefs-true
-      description: Verify Gateway listener ResolvedRefs is True after ReferenceGrant.
-      try:
-        - assert:
-            file: 04-assert-gateway-resolvedrefs-true.yaml
-
-    # Step 13: Verify that the KonnectGatewayControlPlane is created and programmed.
-    - name: Assert-konnect-gateway-control-plane
-      description: Assert that the KonnectGatewayControlPlane resource is created and synchronized.
+    - name: 10-create-reference-grant
+      description: Create ReferenceGrant to allow the Gateway to reference the TLS secret
       use:
-        template: ../common/_step_templates/assert-konnectGatewayControlPlane.yaml
+        template: ../../common/_step_templates/apply-assert-referencegrant.yaml
+      bindings:
+        - name: reference_grant_name
+          value: ($reference_grant_name)
+        - name: reference_grant_namespace
+          value: ($reference_grant_namespace)
+        - name: from
+          value:
+            - group: gateway.networking.k8s.io
+              kind: Gateway
+              namespace: ($gateway_namespace)
+        - name: to
+          value:
+            - group: ""
+              kind: Secret
+              name: ($cert_secret_name)
 
-    # Step 14: Assert KongCertificate exists but is not programmed.
-    - name: Assert-kong-certificate-not-programmed
-      description: Verify KongCertificate exists but is not programmed before KongReferenceGrant.
+    # Step 11: Assert Gateway is programmed with ResolvedRefs after ReferenceGrant.
+    - name: 11-assert-gateway-programmed-with-resolvedrefs
+      description: Verify Gateway is programmed and listener ResolvedRefs is True after ReferenceGrant
+      try:
+        - assert:
+            file: 03-assert-gateway-programmed-with-resolvedrefs.yaml
+
+    # Step 12: Verify that the KonnectGatewayControlPlane is created and programmed.
+    - name: 12-assert-konnect-gateway-control-plane
+      description: Assert that the KonnectGatewayControlPlane resource is created and synchronized
+      use:
+        template: ../../common/_step_templates/assert-konnectGatewayControlPlane.yaml
+
+    # Step 13: Assert KongCertificate exists but is not programmed.
+    - name: 13-assert-kong-certificate-not-programmed
+      description: Verify KongCertificate exists but is not programmed before KongReferenceGrant
       try:
         - script:
             env:
-              - name: NAMESPACE
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
                 value: ($gateway_namespace)
             content: |
-              bash ../common/scripts/konnecGatewayControlplane_name.sh
+              bash ../../common/scripts/konnectGatewayControlplane_name.sh
             outputs:
               - name: konnectgatewaycontrolplane_name
                 value: (json_parse($stdout).cp_name)
         - assert:
-            file: 05-assert-kongcertificate-not-programmed.yaml
+            file: 04-assert-kongcertificate-not-programmed.yaml
 
-    # Step 15: Assert KongSNI exists but is not programmed.
-    - name: Assert-kong-sni-not-programmed
-      description: Verify KongSNI exists but is not programmed before KongReferenceGrant.
+    # Step 14: Assert KongSNI exists but is not programmed.
+    - name: 14-assert-kong-sni-not-programmed
+      description: Verify KongSNI exists but is not programmed before KongReferenceGrant
       try:
         - script:
             env:
               - name: GATEWAY_NAME
                 value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
               - name: NAMESPACE
                 value: ($gateway_namespace)
+              - name: RESOURCE_TYPE
+                value: kongcertificates.configuration.konghq.com
             content: |
-              bash ../common/scripts/kongCertificate_name.sh
+              bash ../../common/scripts/kongResource_name.sh
             outputs:
               - name: certificate_name
-                value: (json_parse($stdout).certificate_name)
+                value: (json_parse($stdout).resource_name)
         - assert:
-            file: 06-assert-kongsni-not-programmed.yaml
+            file: 05-assert-kongsni-not-programmed.yaml
 
-    # Step 16: Create KongReferenceGrant to allow KongCertificate -> Secret cross-namespace reference.
-    - name: Create-kong-reference-grant
-      description: Create KongReferenceGrant to allow KongCertificate to reference the TLS secret.
-      try:
-        - apply:
-            file: 07-kongreferencegrant.yaml
-
-    # Step 17: Verify that the KongCertificate is programmed after KongReferenceGrant.
-    - name: Assert-kong-certificate-programmed
-      description: Assert that the KongCertificate resource is programmed for the TLS secret.
+    # Step 15: Create KongReferenceGrant to allow KongCertificate -> Secret cross-namespace reference.
+    - name: 15-create-kong-reference-grant
+      description: Create KongReferenceGrant to allow KongCertificate to reference the TLS secret
       use:
-        template: ../common/_step_templates/assert-kongCertificate.yaml
+        template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+      bindings:
+        - name: kong_reference_grant_name
+          value: ($kong_reference_grant_name)
+        - name: kong_reference_grant_namespace
+          value: ($kong_reference_grant_namespace)
+        - name: from
+          value:
+            - group: configuration.konghq.com
+              kind: KongCertificate
+              namespace: ($gateway_namespace)
+        - name: to
+          value:
+            - group: core
+              kind: Secret
+              name: ($cert_secret_name)
+
+    # Step 16: Verify that the KongCertificate is programmed after KongReferenceGrant.
+    - name: 16-assert-kong-certificate-programmed
+      description: Assert that the KongCertificate resource is programmed for the TLS secret
+      use:
+        template: ../../common/_step_templates/assert-kongCertificate.yaml
       bindings:
         - name: namespace
           value: ($gateway_namespace)
 
-    # Step 18: Verify that the KongSNI is programmed after KongReferenceGrant.
-    - name: Assert-kong-sni-programmed
-      description: Assert that the KongSNI resource is programmed for the SNI hostname.
+    # Step 17: Verify that the KongSNI is programmed after KongReferenceGrant.
+    - name: 17-assert-kong-sni-programmed
+      description: Assert that the KongSNI resource is programmed for the SNI hostname
       use:
-        template: ../common/_step_templates/assert-kongSNI.yaml
+        template: ../../common/_step_templates/assert-kongSNI.yaml
       bindings:
         - name: namespace
           value: ($gateway_namespace)
-
-  catch:
-    - describe:
-        apiVersion: gateway.networking.k8s.io/v1
-        kind: Gateway
-        name: ($gateway_name)
-        namespace: ($gateway_namespace)
-
-    - describe:
-        apiVersion: gateway.networking.k8s.io/v1beta1
-        kind: ReferenceGrant
-        namespace: ($secret_namespace)
-
-    - describe:
-        apiVersion: configuration.konghq.com/v1alpha1
-        kind: KongReferenceGrant
-        namespace: ($secret_namespace)
-
-    - describe:
-        apiVersion: configuration.konghq.com/v1alpha1
-        kind: KonnectGatewayControlPlane
-        namespace: ($namespace)
-
-    - describe:
-        apiVersion: configuration.konghq.com/v1alpha1
-        kind: KongCertificate
-        namespace: ($gateway_namespace)
-
-    - describe:
-        apiVersion: configuration.konghq.com/v1alpha1
-        kind: KongSNI
-        namespace: ($gateway_namespace)
-
-    - describe:
-        apiVersion: v1
-        kind: Secret
-        name: ($cert_secret_name)
-        namespace: ($cert_secret_namespace)
-
-    - script:
-        content: |
-          echo "=== Gateway YAML (with finalizers) ==="
-          kubectl get gateway -n ${GATEWAY_NAMESPACE} ${GATEWAY_NAME} -o yaml || echo "Gateway not found"
-          echo "=== KonnectAPIAuthConfiguration YAML (with finalizers) ==="
-          kubectl get konnectapiAuthConfiguration -n ${NAMESPACE} -o yaml || echo "KonnectAPIAuthConfiguration not found"
-          echo "=== GatewayConfiguration YAML ==="
-          kubectl get gatewayconfiguration -n ${NAMESPACE} -o yaml || echo "GatewayConfiguration not found"
-          echo "=== KonnectGatewayControlPlane YAML ==="
-          kubectl get konnectgatewaycontrolplane -n ${NAMESPACE} -o yaml || echo "KonnectGatewayControlPlane not found"
-        env:
-          - name: GATEWAY_NAME
-            value: ($gateway_name)
-          - name: GATEWAY_NAMESPACE
-            value: ($gateway_namespace)
-          - name: NAMESPACE
-            value: ($namespace)
+        - name: resource_type
+          value: kongcertificates.configuration.konghq.com
