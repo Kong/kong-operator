@@ -181,9 +181,9 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		switch {
 		// In case the referenced KongService is being deleted, disregard the error
 		// and continue.
-		case errors.As(err, &ReferencedKongServiceIsBeingDeleted{}):
+		case errors.As(err, &ReferencedKongServiceIsBeingDeletedError{}):
 			log.Info(logger, "referenced KongService is being deleted, proceeding with reconciliation", "error", err.Error())
-		case errors.As(err, &ReferencedObjectDoesNotExist{}), errors.As(err, &controlplane.ReferencedControlPlaneDoesNotExistError{}):
+		case errors.As(err, &ReferencedObjectDoesNotExistError{}), errors.As(err, &controlplane.ReferencedControlPlaneDoesNotExistError{}):
 			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 				if err := r.Client.Update(ctx, ent); err != nil {
 					if k8serrors.IsConflict(err) {
@@ -228,7 +228,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// If the referenced KongConsumer is being deleted and the object
 		// is not being deleted yet then requeue until it will
 		// get the deletion timestamp set due to having the owner set to KongConsumer.
-		if errDel := (&ReferencedKongConsumerIsBeingDeleted{}); errors.As(err, errDel) &&
+		if errDel := (&ReferencedKongConsumerIsBeingDeletedError{}); errors.As(err, errDel) &&
 			ent.GetDeletionTimestamp().IsZero() {
 			return ctrl.Result{
 				RequeueAfter: time.Until(errDel.DeletionTimestamp),
@@ -239,7 +239,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// then remove the finalizer and let the deletion proceed without trying to delete the entity from Konnect
 		// as the KongConsumer deletion will (or already has - in case of the consumer being gone)
 		// take care of it on the Konnect side.
-		if errors.As(err, &ReferencedKongConsumerDoesNotExist{}) {
+		if errors.As(err, &ReferencedKongConsumerDoesNotExistError{}) {
 			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 				if err := r.Client.Update(ctx, ent); err != nil {
 					if k8serrors.IsConflict(err) {
@@ -274,7 +274,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// If the referenced KongUpstream is being deleted and the object
 		// is not being deleted yet then requeue until it will
 		// get the deletion timestamp set due to having the owner set to KongUpstream.
-		if errDel := (&ReferencedKongUpstreamIsBeingDeleted{}); errors.As(err, errDel) &&
+		if errDel := (&ReferencedKongUpstreamIsBeingDeletedError{}); errors.As(err, errDel) &&
 			ent.GetDeletionTimestamp().IsZero() {
 			return ctrl.Result{
 				RequeueAfter: time.Until(errDel.DeletionTimestamp),
@@ -286,7 +286,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// as the KongUpstream deletion will (or already has - in case of the upstream being gone)
 		// take care of it on the Konnect side.
 		// In case the ControlPlane referenced by the KongUpstream is not found, do the same.
-		if errors.As(err, &ReferencedKongUpstreamDoesNotExist{}) || errors.As(err, &controlplane.ReferencedControlPlaneDoesNotExistError{}) {
+		if errors.As(err, &ReferencedKongUpstreamDoesNotExistError{}) || errors.As(err, &controlplane.ReferencedControlPlaneDoesNotExistError{}) {
 			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 				if err := r.Client.Update(ctx, ent); err != nil {
 					if k8serrors.IsConflict(err) {
@@ -316,7 +316,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// If the referenced KongCertificate is being deleted and the object
 		// is not being deleted yet then requeue until it will
 		// get the deletion timestamp set due to having the owner set to KongCertificate.
-		if errDel := (&ReferencedKongCertificateIsBeingDeleted{}); errors.As(err, errDel) &&
+		if errDel := (&ReferencedKongCertificateIsBeingDeletedError{}); errors.As(err, errDel) &&
 			ent.GetDeletionTimestamp().IsZero() {
 			return ctrl.Result{
 				RequeueAfter: time.Until(errDel.DeletionTimestamp),
@@ -327,7 +327,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// and the object is being deleted, remove the finalizer and let the
 		// deletion proceed without trying to delete the entity from Konnect
 		// as the KongCertificate deletion will take care of it on the Konnect side.
-		if errors.As(err, &ReferencedKongCertificateDoesNotExist{}) {
+		if errors.As(err, &ReferencedKongCertificateDoesNotExistError{}) {
 			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 				if err := r.Client.Update(ctx, ent); err != nil {
 					if k8serrors.IsConflict(err) {
@@ -363,7 +363,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// If the referenced KongKeySet is being deleted and the object
 		// is not being deleted yet then requeue until it will
 		// get the deletion timestamp set due to having the owner set to KongKeySet.
-		if errDel := (&ReferencedKongKeySetIsBeingDeleted{}); errors.As(err, errDel) &&
+		if errDel := (&ReferencedKongKeySetIsBeingDeletedError{}); errors.As(err, errDel) &&
 			ent.GetDeletionTimestamp().IsZero() {
 			return ctrl.Result{
 				RequeueAfter: time.Until(errDel.DeletionTimestamp),
@@ -373,7 +373,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// If the referenced KongKeySet is not found, remove the finalizer and let the
 		// user delete the resource without trying to delete the entity from Konnect
 		// as the KongKeySet deletion will take care of it on the Konnect side.
-		if errors.As(err, &ReferencedKongKeySetDoesNotExist{}) {
+		if errors.As(err, &ReferencedKongKeySetDoesNotExistError{}) {
 			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 				if err := r.Client.Update(ctx, ent); err != nil {
 					if k8serrors.IsConflict(err) {
@@ -447,7 +447,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// is being deleted then allow the reconciliation to continue as we want to
 		// proceed with object's deletion.
 		// Otherwise, just return the error and requeue.
-		if errDel := (&ReferencedObjectIsBeingDeleted{}); !errors.As(err, errDel) ||
+		if errDel := (&ReferencedObjectIsBeingDeletedError{}); !errors.As(err, errDel) ||
 			ent.GetDeletionTimestamp().IsZero() {
 			log.Debug(logger, "error handling KonnectNetwork ref", "error", err)
 			return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)

@@ -275,7 +275,7 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 		},
 		PluginName: "rate-limiting",
 		Config: apiextensionsv1.JSON{
-			Raw: []byte(fmt.Sprintf(`{"hour":%d,"policy":"local"}`, perHourRateLimit)),
+			Raw: fmt.Appendf(nil, `{"hour":%d,"policy":"local"}`, perHourRateLimit),
 		},
 	}
 	rateLimiterPlugin, err = kongc.ConfigurationV1().KongPlugins(namespace.Name).Create(ctx, rateLimiterPlugin, metav1.CreateOptions{})

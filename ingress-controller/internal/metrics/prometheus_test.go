@@ -46,13 +46,13 @@ func TestGlobalCtrlRuntimeMetricsRecorder_AnyInstanceWritesToTheSameRegistry(t *
 	metricFamilies, err := ctrlRuntimeGlobalRegistry.Gather()
 	require.NoError(t, err)
 	metricFamily, ok := lo.Find(metricFamilies, func(family *prom.MetricFamily) bool {
-		return family.Name != nil && *family.Name == MetricNameConfigPushCount
+		return family.Name != nil && family.GetName() == MetricNameConfigPushCount
 	})
 	require.True(t, ok, "expected to find %q metric", MetricNameConfigPushCount)
 
 	assertMetricsContainHost := func(host string) {
-		assert.True(t, lo.ContainsBy(metricFamily.Metric, func(metric *prom.Metric) bool {
-			return lo.ContainsBy(metric.Label, func(label *prom.LabelPair) bool {
+		assert.True(t, lo.ContainsBy(metricFamily.GetMetric(), func(metric *prom.Metric) bool {
+			return lo.ContainsBy(metric.GetLabel(), func(label *prom.LabelPair) bool {
 				return label.GetName() == DataplaneKey && label.GetValue() == host
 			})
 		}), "expected to find %q metric with dataplane label %q", MetricNameConfigPushCount, host)

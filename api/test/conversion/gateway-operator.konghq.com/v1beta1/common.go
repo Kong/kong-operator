@@ -12,13 +12,13 @@ import (
 // dummyHub implements conversion.Hub but is not the expected type for conversion.
 type dummyHub struct{}
 
-// Hub implements conversion.Hub for dummyHub
+// Hub implements conversion.Hub for dummyHub.
 func (d *dummyHub) Hub() {}
 
-// GetObjectKind implements runtime.Object methods for dummyHub
+// GetObjectKind implements runtime.Object methods for dummyHub.
 func (d *dummyHub) GetObjectKind() schema.ObjectKind { return schema.EmptyObjectKind }
 
-// DeepCopyObject implements runtime.Object for dummyHub
+// DeepCopyObject implements runtime.Object for dummyHub.
 func (d *dummyHub) DeepCopyObject() runtime.Object { return &dummyHub{} }
 
 func testConversionError(t *testing.T, testFunc func() error, expectedMsgFormat string) {

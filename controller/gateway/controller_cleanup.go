@@ -57,6 +57,10 @@ func (r *Reconciler) cleanup(
 	}
 	log.Trace(logger, "gateway is marked for deletion for owned resources to be deleted")
 
+	if err := r.cleanupKonnectAPIAuthReferenceGrants(ctx, gateway); err != nil {
+		return false, ctrl.Result{}, err
+	}
+
 	// Delete owned controlplanes.
 	// Because controlplanes have finalizers, so we only remove the finalizer
 	// for cleaning up owned controlplanes when they disappeared.

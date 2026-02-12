@@ -56,7 +56,7 @@ import (
 // requeueAfterBoot gives the instance of ControlPlane controller in goroutine some time to start up.
 const requeueAfterBoot = time.Second
 
-// Reconciler reconciles a ControlPlane object
+// Reconciler reconciles a ControlPlane object.
 type Reconciler struct {
 	client.Client
 
@@ -445,7 +445,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	return ctrl.Result{}, nil
 }
 
-// patchStatus Patches the resource status only when there are changes in the Conditions
+// patchStatus Patches the resource status only when there are changes in the Conditions.
 func (r *Reconciler) patchStatus(ctx context.Context, logger logr.Logger, updated *ControlPlane) (ctrl.Result, error) {
 	current := &ControlPlane{}
 

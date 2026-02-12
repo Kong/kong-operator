@@ -85,7 +85,7 @@ func handleKongKeySetRef[T constraints.SupportedKonnectEntityType, TEnt constrai
 
 		// If the KongKeySet is not found, we don't want to requeue.
 		if k8serrors.IsNotFound(err) {
-			return ctrl.Result{}, ReferencedKongKeySetDoesNotExist{
+			return ctrl.Result{}, ReferencedKongKeySetDoesNotExistError{
 				Reference: nn,
 				Err:       err,
 			}
@@ -96,7 +96,7 @@ func handleKongKeySetRef[T constraints.SupportedKonnectEntityType, TEnt constrai
 
 	// If referenced KongKeySet is being deleted, return an error so that we can remove the entity from Konnect first.
 	if delTimestamp := keySet.GetDeletionTimestamp(); !delTimestamp.IsZero() {
-		return ctrl.Result{}, ReferencedKongKeySetIsBeingDeleted{
+		return ctrl.Result{}, ReferencedKongKeySetIsBeingDeletedError{
 			Reference:         nn,
 			DeletionTimestamp: delTimestamp.Time,
 		}

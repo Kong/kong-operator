@@ -209,7 +209,7 @@ func RemoveStatusForParentRef(logger logr.Logger, route *gwtypes.HTTPRoute, pRef
 	return removed
 }
 
-// parentRefKey generates a unique key for a ParentReference to enable comparison
+// parentRefKey generates a unique key for a ParentReference to enable comparison.
 func parentRefKey(pRef gwtypes.ParentReference) string {
 	var group, kind, namespace, sectionName string
 	var port string
@@ -233,7 +233,7 @@ func parentRefKey(pRef gwtypes.ParentReference) string {
 	return fmt.Sprintf("%s/%s/%s/%s/%s/%s", group, kind, namespace, string(pRef.Name), sectionName, port)
 }
 
-// isParentRefEqual compares two ParentReference objects for equality
+// isParentRefEqual compares two ParentReference objects for equality.
 func isParentRefEqual(a, b gwtypes.ParentReference) bool {
 	// Compare Group
 	if (a.Group == nil) != (b.Group == nil) {
@@ -285,7 +285,7 @@ func isParentRefEqual(a, b gwtypes.ParentReference) bool {
 }
 
 // isConditionEqual compares two conditions to see if they are functionally equivalent
-// (ignoring LastTransitionTime since that's updated automatically)
+// (ignoring LastTransitionTime since that's updated automatically).
 func isConditionEqual(a, b metav1.Condition) bool {
 	return a.Type == b.Type &&
 		a.Status == b.Status &&

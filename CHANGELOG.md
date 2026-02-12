@@ -38,6 +38,17 @@
 
 ## Unreleased
 
+### Added
+
+- Allow cross-namespace reference for `KonnectAPIAuthConfiguration` from
+  `GatewayConfiguration` using `KongReferenceGrant`. When a user creates a
+  `KongReferenceGrant` allowing `GatewayConfiguration` to reference a
+  `KonnectAPIAuthConfiguration` in another namespace, the Gateway controller
+  automatically creates a managed `KongReferenceGrant` for the corresponding
+  `KonnectGatewayControlPlane`. This managed grant is removed when the user
+  grant is deleted or the Gateway is deleted.
+  [#3258](https://github.com/Kong/kong-operator/pull/3258)
+
 ### Fixes
 
 - Admission webhook now validates HTTPRoute regex patterns before sending

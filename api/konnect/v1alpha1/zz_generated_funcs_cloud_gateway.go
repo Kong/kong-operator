@@ -23,17 +23,17 @@ func (obj *KonnectCloudGatewayTransitGateway) SetKonnectID(id string) {
 	obj.Status.ID = id
 }
 
-// GetTypeName returns the KonnectCloudGatewayTransitGateway Kind name
+// GetTypeName returns the KonnectCloudGatewayTransitGateway Kind name.
 func (obj KonnectCloudGatewayTransitGateway) GetTypeName() string {
 	return "KonnectCloudGatewayTransitGateway"
 }
 
-// GetConditions returns the Status Conditions
+// GetConditions returns the Status Conditions.
 func (obj *KonnectCloudGatewayTransitGateway) GetConditions() []metav1.Condition {
 	return obj.Status.Conditions
 }
 
-// SetConditions sets the Status Conditions
+// SetConditions sets the Status Conditions.
 func (obj *KonnectCloudGatewayTransitGateway) SetConditions(conditions []metav1.Condition) {
 	obj.Status.Conditions = conditions
 }

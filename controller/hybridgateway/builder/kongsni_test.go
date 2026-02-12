@@ -79,12 +79,9 @@ func TestKongSNIBuilder_ErrorAccumulation(t *testing.T) {
 
 func TestKongSNIBuilder_MustBuild_PanicsOnError(t *testing.T) {
 	b := NewKongSNI().WithOwner(nil)
-	defer func() {
-		r := recover()
-		require.NotNil(t, r)
-		require.Contains(t, r.(error).Error(), "failed to build KongSNI")
-	}()
-	_ = b.MustBuild()
+	require.PanicsWithError(t, "failed to build KongSNI: owner cannot be nil", func() {
+		_ = b.MustBuild()
+	})
 }
 
 func TestKongSNIBuilder_MustBuild_Success(t *testing.T) {

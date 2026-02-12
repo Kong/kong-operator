@@ -29,7 +29,7 @@ func FilterNone[T any](objs []T) []T {
 // filterSecrets filters out the Secret to be kept and returns all the Secrets
 // to be deleted.
 // The filtered-out Secret is decided as follows:
-// 1. creationTimestamp (older is better)
+// 1. creationTimestamp (older is better).
 func filterSecrets(secrets []corev1.Secret) []corev1.Secret {
 	if len(secrets) < 2 {
 		return []corev1.Secret{}
@@ -55,7 +55,7 @@ func filterSecrets(secrets []corev1.Secret) []corev1.Secret {
 // The filtered-out Deployment is decided as follows:
 // 1. number of availableReplicas (higher is better)
 // 2. number of readyReplicas (higher is better)
-// 3. creationTimestamp (older is better)
+// 3. creationTimestamp (older is better).
 func filterDeployments(deployments []appsv1.Deployment) []appsv1.Deployment {
 	if len(deployments) < 2 {
 		return []appsv1.Deployment{}
@@ -100,7 +100,7 @@ func filterDeployments(deployments []appsv1.Deployment) []appsv1.Deployment {
 // 1. amount of LoadBalancer Ingresses (higher is better)
 // 2. amount of endpointSlices allocated for the service (higher is better)
 // 3. amount of ready endpoints for the service (higher is better)
-// 4. creationTimestamp (older is better)
+// 4. creationTimestamp (older is better).
 func filterServices(services []corev1.Service, endpointSlices map[string][]discoveryv1.EndpointSlice) []corev1.Service {
 	if len(services) < 2 {
 		return []corev1.Service{}
@@ -162,7 +162,7 @@ func getReadyEndpointsCount(endpointSlices []discoveryv1.EndpointSlice) int {
 // filterNetworkPolicies filters out the NetworkPolicy to be kept and returns all the NetworkPolicies
 // to be deleted.
 // The filtered-out NetworkPolicy is decided as follows:
-// 1. creationTimestamp (older is better)
+// 1. creationTimestamp (older is better).
 func filterNetworkPolicies(networkPolicies []networkingv1.NetworkPolicy) []networkingv1.NetworkPolicy {
 	if len(networkPolicies) < 2 {
 		return []networkingv1.NetworkPolicy{}
@@ -185,7 +185,7 @@ func filterNetworkPolicies(networkPolicies []networkingv1.NetworkPolicy) []netwo
 // FilterHPAs filters out the HorizontalPodAutoscalers to be kept and returns all
 // the HorizontalPodAutoscalers to be deleted.
 // The filtered-out HorizontalPodAutoscalers is decided as follows:
-// 1. creationTimestamp (older is better)
+// 1. creationTimestamp (older is better).
 func FilterHPAs(hpas []autoscalingv2.HorizontalPodAutoscaler) []autoscalingv2.HorizontalPodAutoscaler {
 	if len(hpas) < 2 {
 		return []autoscalingv2.HorizontalPodAutoscaler{}
@@ -208,7 +208,7 @@ func FilterHPAs(hpas []autoscalingv2.HorizontalPodAutoscaler) []autoscalingv2.Ho
 // FilterPodDisruptionBudgets filters out the PodDisruptionBudgets to be kept and returns all
 // the PodDisruptionBudgets to be deleted.
 // The filtered-out PodDisruptionBudget is decided as follows:
-// 1. creationTimestamp (older is better)
+// 1. creationTimestamp (older is better).
 func FilterPodDisruptionBudgets(pdbs []policyv1.PodDisruptionBudget) []policyv1.PodDisruptionBudget {
 	if len(pdbs) < 2 {
 		return nil

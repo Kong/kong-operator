@@ -168,7 +168,7 @@ func TestMain(m *testing.M) {
 	} else {
 		fmt.Println("INFO: configuring feature gates")
 		featureGates := make(managercfg.FeatureGates)
-		for _, fg := range strings.Split(testenv.ControllerFeatureGates(), ",") {
+		for fg := range strings.SplitSeq(testenv.ControllerFeatureGates(), ",") {
 			fg = strings.TrimSpace(fg)
 			if fg == "" {
 				continue

@@ -212,17 +212,17 @@ type GatewayConfigurationList struct {
 	Items []GatewayConfiguration `json:"items"`
 }
 
-// GetConditions retrieves the GatewayConfiguration Status Condition
+// GetConditions retrieves the GatewayConfiguration Status Condition.
 func (g *GatewayConfiguration) GetConditions() []metav1.Condition {
 	return g.Status.Conditions
 }
 
-// SetConditions sets the GatewayConfiguration Status Condition
+// SetConditions sets the GatewayConfiguration Status Condition.
 func (g *GatewayConfiguration) SetConditions(conditions []metav1.Condition) {
 	g.Status.Conditions = conditions
 }
 
-// GetExtensions retrieves the GatewayConfiguration Extensions
+// GetExtensions retrieves the GatewayConfiguration Extensions.
 func (g *GatewayConfiguration) GetExtensions() []commonv1alpha1.ExtensionRef {
 	return g.Spec.Extensions
 }

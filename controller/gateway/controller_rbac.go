@@ -15,3 +15,4 @@ package gateway
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=create;get;update;patch;list;watch;delete
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnectgatewaycontrolplanes,verbs=create;get;list;watch;update;patch;delete
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnectextensions,verbs=create;get;list;watch;update;patch;delete
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongreferencegrants,verbs=create;get;list;watch;update;patch;delete

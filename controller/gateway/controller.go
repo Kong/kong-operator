@@ -29,6 +29,7 @@ import (
 	kcfgconsts "github.com/kong/kong-operator/api/common/consts"
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	kcfgdataplane "github.com/kong/kong-operator/api/gateway-operator/dataplane"
 	kcfggateway "github.com/kong/kong-operator/api/gateway-operator/gateway"
 	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
@@ -114,6 +115,10 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 			&gatewayv1beta1.ReferenceGrant{},
 			handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForGateway),
 			builder.WithPredicates(ref.ReferenceGrantForSecretFrom(gatewayv1.GroupName, gatewayv1beta1.Kind("Gateway")))).
+		// watch for KongReferenceGrants to keep managed Konnect API auth grants in sync.
+		Watches(
+			&configurationv1alpha1.KongReferenceGrant{},
+			handler.EnqueueRequestsFromMapFunc(r.listGatewaysForKongReferenceGrant)).
 		// watch HTTPRoutes so that Gateway listener status can be updated.
 		Watches(
 			&gatewayv1beta1.HTTPRoute{},
@@ -170,14 +175,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	gwc, err := gatewayclass.Get(ctx, r.Client, string(gateway.Spec.GatewayClassName))
 	if err != nil {
 		switch {
-		case errors.As(err, &operatorerrors.ErrUnsupportedGatewayClass{}):
+		case errors.As(err, &operatorerrors.UnsupportedGatewayClassError{}):
 			log.Debug(logger, "resource not supported, ignoring",
 				"expectedGatewayClass", vars.ControllerName(),
 				"gatewayClass", gateway.Spec.GatewayClassName,
 				"reason", err.Error(),
 			)
 			return ctrl.Result{}, nil
-		case errors.As(err, &operatorerrors.ErrNotAcceptedGatewayClass{}):
+		case errors.As(err, &operatorerrors.NotAcceptedGatewayClassError{}):
 			log.Debug(logger, "GatewayClass not accepted, ignoring",
 				"gatewayClass", gateway.Spec.GatewayClassName,
 				"reason", err.Error(),
@@ -242,6 +247,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	log.Trace(logger, "determining configuration")
 	gatewayConfig, err := r.getOrCreateGatewayConfiguration(ctx, gwc.GatewayClass, &gateway)
 	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if err := r.ensureKonnectAPIAuthReferenceGrant(ctx, &gateway, gatewayConfig); err != nil {
+		if k8serrors.IsConflict(err) {
+			return ctrl.Result{Requeue: true}, nil
+		}
 		return ctrl.Result{}, err
 	}
 
@@ -974,7 +985,7 @@ func createKonnectGatewayControlPlaneCondition(status metav1.ConditionStatus, re
 	return k8sutils.NewConditionWithGeneration(kcfggateway.KonnectGatewayControlPlaneProgrammedType, status, reason, message, observedGeneration)
 }
 
-// patchStatus patches the resource status with the Merge strategy
+// patchStatus patches the resource status with the Merge strategy.
 func (r *Reconciler) patchStatus(ctx context.Context, gateway, oldGateway *gwtypes.Gateway) error {
 	return r.Client.Status().Patch(ctx, gateway, client.MergeFrom(oldGateway))
 }

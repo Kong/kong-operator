@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	// Annotation constants matching those in the ingress controller
+	// Annotation constants matching those in the ingress controller.
 	annotationPrefix = "konghq.com"
 	stripPathKey     = "/strip-path"
 )

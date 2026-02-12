@@ -51,14 +51,14 @@ func GetCtx() context.Context {
 
 // GetEnv returns the environment used by the test suite.
 // It allows interaction in tests with environment bootstrapped
-// by TestMain
+// by TestMain.
 func GetEnv() environments.Environment {
 	return env
 }
 
 // GetClients returns the Kubernetes clients used by the test suite.
 // It allows interaction in tests with environment bootstrapped
-// by TestMain
+// by TestMain.
 func GetClients() testutils.K8sClients {
 	return clients
 }

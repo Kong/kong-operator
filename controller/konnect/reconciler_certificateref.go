@@ -63,7 +63,7 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 			return res, errStatus
 		}
 
-		return ctrl.Result{}, ReferencedKongCertificateDoesNotExist{
+		return ctrl.Result{}, ReferencedKongCertificateDoesNotExistError{
 			Reference: nn,
 			Err:       err,
 		}
@@ -72,7 +72,7 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 	// If referenced KongCertificate is being deleted, return an error so that we
 	// can remove the entity from Konnect first.
 	if delTimestamp := cert.GetDeletionTimestamp(); !delTimestamp.IsZero() {
-		return ctrl.Result{}, ReferencedKongCertificateIsBeingDeleted{
+		return ctrl.Result{}, ReferencedKongCertificateIsBeingDeletedError{
 			Reference:         nn,
 			DeletionTimestamp: delTimestamp.Time,
 		}

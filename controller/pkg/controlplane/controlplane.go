@@ -6,7 +6,7 @@ import (
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )
 
-// DefaultsArgs contains the parameters to pass to setControlPlaneDefaults
+// DefaultsArgs contains the parameters to pass to setControlPlaneDefaults.
 type DefaultsArgs struct {
 	Namespace                   string
 	ControlPlaneName            string

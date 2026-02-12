@@ -20,20 +20,33 @@ linters:
     - dupword
     - embeddedstructfieldcheck
     - durationcheck
+    - errcheck
+    - errchkjson
+    - errname
     - errorlint
     - exhaustive
     - forbidigo
     - gocritic
     - godoclint
+    - godot
     - gomodguard
     - gosec
     - importas
+    - ineffassign
+    - intrange
+    - iotamixing
     - loggercheck
+    - mirror
     - misspell
+    - modernize
     - nakedret
     - nilerr
     - predeclared
+    - promlinter
+    - protogetter
+    - reassign
     - revive
+    - sloglint
     - staticcheck
     # Uncomment or remove - TODO: https://github.com/Kong/kong-operator/issues/1847
     # - testifylint
@@ -43,6 +56,9 @@ linters:
     - usetesting
     - wastedassign
   settings:
+    grouper:
+      const-require-single-const: true
+      const-require-grouping: true
     embeddedstructfieldcheck:
       forbid-mutex: true
     godoclint:

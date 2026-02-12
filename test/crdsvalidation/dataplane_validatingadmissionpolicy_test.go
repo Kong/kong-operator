@@ -24,10 +24,10 @@ import (
 
 const (
 
-	// ValidationPolicyDataplane contains data plane validation policies path relative to the kong-operator chart
+	// ValidationPolicyDataplane contains data plane validation policies path relative to the kong-operator chart.
 	ValidationPolicyDataplane = "templates/validation-policy-dataplane.yaml"
 
-	// ValidationPolicyKonnect contains konnect validation policies path relative to the kong-operator chart
+	// ValidationPolicyKonnect contains konnect validation policies path relative to the kong-operator chart.
 	ValidationPolicyKonnect = "templates/validation-policy-konnect.yaml"
 )
 

@@ -39,8 +39,8 @@ func (r *AIGatewayReconciler) aiGatewayHasMatchingGatewayClass(obj client.Object
 		// class as well. If we fail here it's most likely because of some failure
 		// of the Kubernetes API and it's technically better to enqueue the object
 		// than to drop it for eventual consistency during cluster outages.
-		return !errors.As(err, &operatorerrors.ErrUnsupportedGatewayClass{}) &&
-			!errors.As(err, &operatorerrors.ErrNotAcceptedGatewayClass{})
+		return !errors.As(err, &operatorerrors.UnsupportedGatewayClassError{}) &&
+			!errors.As(err, &operatorerrors.NotAcceptedGatewayClassError{})
 	}
 
 	return true

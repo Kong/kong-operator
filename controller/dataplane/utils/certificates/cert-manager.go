@@ -77,7 +77,7 @@ type cmCertificateFilterer func(certs []certmanagerv1.Certificate) []certmanager
 // FilterCMCertificates filters out the Certificates to be kept and returns all
 // the Certificates to be deleted.
 // The filtered-out Certificates is decided as follows:
-// 1. creationTimestamp (older is better)
+// 1. creationTimestamp (older is better).
 func FilterCMCertificates(certs []certmanagerv1.Certificate) []certmanagerv1.Certificate {
 	if len(certs) < 2 {
 		return []certmanagerv1.Certificate{}

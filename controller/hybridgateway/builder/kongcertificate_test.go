@@ -96,12 +96,10 @@ func TestKongCertificateBuilder_ErrorAccumulation(t *testing.T) {
 
 func TestKongCertificateBuilder_MustBuild_PanicsOnError(t *testing.T) {
 	b := NewKongCertificate().WithOwner(nil)
-	defer func() {
-		r := recover()
-		require.NotNil(t, r)
-		require.Contains(t, r.(error).Error(), "failed to build KongCertificate")
-	}()
-	_ = b.MustBuild()
+
+	require.PanicsWithError(t, "failed to build KongCertificate: owner cannot be nil", func() {
+		_ = b.MustBuild()
+	})
 }
 
 func TestKongCertificateBuilder_MustBuild_Success(t *testing.T) {

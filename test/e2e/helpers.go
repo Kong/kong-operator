@@ -33,7 +33,7 @@ func (kcp KustomizeDir) CRD() string {
 	return filepath.Join(string(kcp), "crd")
 }
 
-// ManagerKustomizationYAML returns the path to the file manager/kustomization.yaml
+// ManagerKustomizationYAML returns the path to the file manager/kustomization.yaml.
 func (kcp KustomizeDir) ManagerKustomizationYAML() string {
 	return filepath.Join(string(kcp), "manager/kustomization.yaml")
 }

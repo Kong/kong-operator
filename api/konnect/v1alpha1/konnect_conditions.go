@@ -165,7 +165,7 @@ const (
 
 const (
 	// KongCertificateRefValidConditionType is the type of the condition that indicates
-	// whether the KongCertificate reference is valid and points to an existing KongCertificate
+	// whether the KongCertificate reference is valid and points to an existing KongCertificate.
 	KongCertificateRefValidConditionType = "KongCertificateRefValid"
 
 	// KongCertificateRefReasonValid is the reason used with the KongCertificateRefValid

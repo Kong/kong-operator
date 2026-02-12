@@ -115,7 +115,7 @@ func handleKongServiceRef[T constraints.SupportedKonnectEntityType, TEnt constra
 
 		// If the KongService is not found, we don't want to requeue.
 		if k8serrors.IsNotFound(err) {
-			return ctrl.Result{}, ReferencedObjectDoesNotExist{
+			return ctrl.Result{}, ReferencedObjectDoesNotExistError{
 				Reference: nn,
 				Err:       err,
 			}
@@ -142,7 +142,7 @@ func handleKongServiceRef[T constraints.SupportedKonnectEntityType, TEnt constra
 			}
 			return ctrl.Result{}, err
 		}
-		return ctrl.Result{}, ReferencedKongServiceIsBeingDeleted{
+		return ctrl.Result{}, ReferencedKongServiceIsBeingDeletedError{
 			Reference: nn,
 		}
 	}

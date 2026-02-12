@@ -25,12 +25,12 @@ func (e ReferencedControlPlaneDoesNotExistError) Unwrap() error {
 	return e.Err
 }
 
-// ReferencedKongGatewayControlPlaneIsUnsupported is an error type that is returned when a given CP reference type is not
+// ReferencedKongGatewayControlPlaneIsUnsupportedError is an error type that is returned when a given CP reference type is not
 // supported.
-type ReferencedKongGatewayControlPlaneIsUnsupported struct {
+type ReferencedKongGatewayControlPlaneIsUnsupportedError struct {
 	Reference commonv1alpha1.ControlPlaneRef
 }
 
-func (e ReferencedKongGatewayControlPlaneIsUnsupported) Error() string {
+func (e ReferencedKongGatewayControlPlaneIsUnsupportedError) Error() string {
 	return fmt.Sprintf("referenced ControlPlaneRef %s is unsupported", e.Reference.String())
 }

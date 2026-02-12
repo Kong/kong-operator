@@ -26,7 +26,7 @@ func GetCPForRef(
 	case commonv1alpha1.ControlPlaneRefKonnectNamespacedRef:
 		return getCPForNamespacedRef(ctx, cl, cpRef, namespace)
 	default:
-		return nil, ReferencedKongGatewayControlPlaneIsUnsupported{Reference: cpRef}
+		return nil, ReferencedKongGatewayControlPlaneIsUnsupportedError{Reference: cpRef}
 	}
 }
 

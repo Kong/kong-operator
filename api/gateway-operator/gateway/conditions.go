@@ -7,19 +7,19 @@ import "github.com/kong/kong-operator/api/common/consts"
 // -----------------------------------------------------------------------------
 
 const (
-	// GatewayServiceType the Gateway service condition type
+	// GatewayServiceType the Gateway service condition type.
 	GatewayServiceType consts.ConditionType = "GatewayService"
 
-	// ControlPlaneReadyType the ControlPlane is deployed and Ready
+	// ControlPlaneReadyType the ControlPlane is deployed and Ready.
 	ControlPlaneReadyType consts.ConditionType = "ControlPlaneReady"
 
-	// DataPlaneReadyType the DataPlane is deployed and Ready
+	// DataPlaneReadyType the DataPlane is deployed and Ready.
 	DataPlaneReadyType consts.ConditionType = "DataPlaneReady"
 
-	// KonnectExtensionReadyType the KonnectExtension is deployed and Ready
+	// KonnectExtensionReadyType the KonnectExtension is deployed and Ready.
 	KonnectExtensionReadyType consts.ConditionType = "KonnectExtensionReady"
 
-	// KonnectGatewayControlPlaneProgrammedType the ControlPlane is programmed in Konnect
+	// KonnectGatewayControlPlaneProgrammedType the ControlPlane is programmed in Konnect.
 	KonnectGatewayControlPlaneProgrammedType consts.ConditionType = "KonnectGatewayControlPlaneProgrammed"
 )
 

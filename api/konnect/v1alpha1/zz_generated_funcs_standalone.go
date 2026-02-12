@@ -23,32 +23,32 @@ func (obj *KonnectGatewayControlPlane) SetKonnectID(id string) {
 	obj.Status.ID = id
 }
 
-// GetTypeName returns the KonnectGatewayControlPlane Kind name
+// GetTypeName returns the KonnectGatewayControlPlane Kind name.
 func (obj KonnectGatewayControlPlane) GetTypeName() string {
 	return "KonnectGatewayControlPlane"
 }
 
-// GetConditions returns the Status Conditions
+// GetConditions returns the Status Conditions.
 func (obj *KonnectGatewayControlPlane) GetConditions() []metav1.Condition {
 	return obj.Status.Conditions
 }
 
-// SetConditions sets the Status Conditions
+// SetConditions sets the Status Conditions.
 func (obj *KonnectGatewayControlPlane) SetConditions(conditions []metav1.Condition) {
 	obj.Status.Conditions = conditions
 }
 
-// GetTypeName returns the KonnectAPIAuthConfiguration Kind name
+// GetTypeName returns the KonnectAPIAuthConfiguration Kind name.
 func (obj KonnectAPIAuthConfiguration) GetTypeName() string {
 	return "KonnectAPIAuthConfiguration"
 }
 
-// GetConditions returns the Status Conditions
+// GetConditions returns the Status Conditions.
 func (obj *KonnectAPIAuthConfiguration) GetConditions() []metav1.Condition {
 	return obj.Status.Conditions
 }
 
-// SetConditions sets the Status Conditions
+// SetConditions sets the Status Conditions.
 func (obj *KonnectAPIAuthConfiguration) SetConditions(conditions []metav1.Condition) {
 	obj.Status.Conditions = conditions
 }
@@ -68,17 +68,17 @@ func (obj *KonnectCloudGatewayNetwork) SetKonnectID(id string) {
 	obj.Status.ID = id
 }
 
-// GetTypeName returns the KonnectCloudGatewayNetwork Kind name
+// GetTypeName returns the KonnectCloudGatewayNetwork Kind name.
 func (obj KonnectCloudGatewayNetwork) GetTypeName() string {
 	return "KonnectCloudGatewayNetwork"
 }
 
-// GetConditions returns the Status Conditions
+// GetConditions returns the Status Conditions.
 func (obj *KonnectCloudGatewayNetwork) GetConditions() []metav1.Condition {
 	return obj.Status.Conditions
 }
 
-// SetConditions sets the Status Conditions
+// SetConditions sets the Status Conditions.
 func (obj *KonnectCloudGatewayNetwork) SetConditions(conditions []metav1.Condition) {
 	obj.Status.Conditions = conditions
 }

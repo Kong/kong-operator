@@ -168,7 +168,7 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 				// hence wrapping the Reconciler() method is impossible with current
 				// implementation.
 				// Related issue: https://github.com/Kong/kubernetes-ingress-controller/issues/4190
-				for i := 0; i < 100; i++ {
+				for range 100 {
 					var gateway gatewayapi.Gateway
 					nn := client.ObjectKeyFromObject(&gw)
 					err := cl.Get(ctx, nn, &gateway)

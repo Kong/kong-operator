@@ -9,7 +9,7 @@ import (
 
 // KongRouterFlavor returns router mode of Kong in tests. Currently supports:
 // - `traditional_compatible`
-// - `expressions`
+// - `expressions`.
 func KongRouterFlavor(t *testing.T) consts.RouterFlavor {
 	rf := os.Getenv("TEST_KONG_ROUTER_FLAVOR")
 	switch {

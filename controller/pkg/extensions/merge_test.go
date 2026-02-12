@@ -210,7 +210,7 @@ func TestMergeExtensionsForType(t *testing.T) {
 	}
 }
 
-// mockExtendable is a mock implementation of the extendable interface for testing
+// mockExtendable is a mock implementation of the extendable interface for testing.
 type mockExtendable struct {
 	extensions []commonv1alpha1.ExtensionRef
 }

@@ -22,7 +22,7 @@ type dummyHub struct{}
 
 func (d *dummyHub) Hub() {}
 
-// Implement runtime.Object methods for dummyHub
+// Implement runtime.Object methods for dummyHub.
 func (d *dummyHub) GetObjectKind() schema.ObjectKind { return schema.EmptyObjectKind }
 func (d *dummyHub) DeepCopyObject() runtime.Object   { return &dummyHub{} }
 

@@ -34,7 +34,7 @@ const (
 	ControlPlaneCondTick = 250 * time.Millisecond
 	// ControlPlaneSchedulingTimeLimit is the maximum amount of time to wait for
 	// a supported ControlPlane to be created after a Gateway resource is
-	// created
+	// created.
 	ControlPlaneSchedulingTimeLimit = time.Minute * 3
 
 	// DataPlaneCondDeadline is the default timeout for checking on dataplane resources.

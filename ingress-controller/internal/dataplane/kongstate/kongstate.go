@@ -251,7 +251,7 @@ func (ks *KongState) FillOverrides(
 	failuresCollector *failures.ResourceFailuresCollector,
 	kongVersion semver.Version,
 ) {
-	for i := 0; i < len(ks.Services); i++ {
+	for i := range len(ks.Services) {
 		// Services
 		if err := ks.Services[i].override(); err != nil {
 			servicesGroup := lo.Values(ks.Services[i].K8sServices)
@@ -259,7 +259,7 @@ func (ks *KongState) FillOverrides(
 		}
 
 		// Routes
-		for j := 0; j < len(ks.Services[i].Routes); j++ {
+		for j := range len(ks.Services[i].Routes) {
 			// Routes, opposed to Services, are not validated in their override method therefore we have no error check here.
 			// Routes nested under Services here do not include their original parent object info in kongstate. Translators
 			// convert this into a util.K8sObjectInfo, which includes name/namespace/GVK as strings. Unfortunately we can't
@@ -280,7 +280,7 @@ func (ks *KongState) FillUpstreamOverrides(
 	failuresCollector *failures.ResourceFailuresCollector,
 	kongVersion semver.Version,
 ) {
-	for i := 0; i < len(ks.Upstreams); i++ {
+	for i := range len(ks.Upstreams) {
 		servicesGroup := lo.Values(ks.Upstreams[i].Service.K8sServices)
 
 		for _, svc := range servicesGroup {

@@ -2,7 +2,7 @@ package consts
 
 import "time"
 
-// ServiceType is a re-typing of string to be used to distinguish between proxy and admin service
+// ServiceType is a re-typing of string to be used to distinguish between proxy and admin service.
 type ServiceType string
 
 // -----------------------------------------------------------------------------
@@ -10,10 +10,10 @@ type ServiceType string
 // -----------------------------------------------------------------------------
 
 const (
-	// OperatorLabelPrefix is the common label prefix used by the operator
+	// OperatorLabelPrefix is the common label prefix used by the operator.
 	OperatorLabelPrefix = "gateway-operator.konghq.com/"
 
-	// OperatorAnnotationPrefix is the common annotation prefix used by the operator
+	// OperatorAnnotationPrefix is the common annotation prefix used by the operator.
 	OperatorAnnotationPrefix = OperatorLabelPrefix
 
 	// GatewayOperatorManagedByLabel is the label that is used for objects which

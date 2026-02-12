@@ -3,7 +3,7 @@ package op
 // Result represents a result of an operation that can either:
 // - create a resource
 // - update a resource
-// - do nothing
+// - do nothing.
 type Result string
 
 const (

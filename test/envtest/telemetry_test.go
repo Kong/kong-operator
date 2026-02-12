@@ -94,7 +94,7 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 	)
 	require.NoError(t, err)
 
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		_, err = gcl.GatewayV1().GatewayClasses().Create(
 			ctx,
 			&gatewayapi.GatewayClass{

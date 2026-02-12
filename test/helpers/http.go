@@ -14,7 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// MustCreateHTTPClient creates an HTTP client with the given TLS secret and host
+// MustCreateHTTPClient creates an HTTP client with the given TLS secret and host.
 func MustCreateHTTPClient(t *testing.T, tlsSecret *corev1.Secret, host string) *http.Client {
 	t.Helper()
 
@@ -23,7 +23,7 @@ func MustCreateHTTPClient(t *testing.T, tlsSecret *corev1.Secret, host string) *
 	return httpClient
 }
 
-// CreateHTTPClient creates an HTTP client with the given TLS secret and host and returns an error if it fails
+// CreateHTTPClient creates an HTTP client with the given TLS secret and host and returns an error if it fails.
 func CreateHTTPClient(tlsSecret *corev1.Secret, host string) (*http.Client, error) {
 	return createHTTPClient(tlsSecret, host)
 }
@@ -77,7 +77,7 @@ func createTLSClientConfig(tlsSecret *corev1.Secret, server string) (*tls.Config
 	}, nil
 }
 
-// MustBuildRequest creates an HTTP request with the given method, URL, and host
+// MustBuildRequest creates an HTTP request with the given method, URL, and host.
 func MustBuildRequest(t *testing.T, ctx context.Context, method, url, host string) *http.Request {
 	t.Helper()
 

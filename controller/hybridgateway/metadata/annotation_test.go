@@ -628,7 +628,7 @@ func TestSetRoutes(t *testing.T) {
 	}
 }
 
-// TestGenericObjectTypes tests that the annotation manager works with different Kubernetes object types
+// TestGenericObjectTypes tests that the annotation manager works with different Kubernetes object types.
 func TestGenericObjectTypes(t *testing.T) {
 	logger := logr.Discard()
 	am := NewAnnotationManager(logger)

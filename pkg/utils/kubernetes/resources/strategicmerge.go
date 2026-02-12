@@ -13,7 +13,7 @@ import (
 )
 
 // StrategicMergePatchPodTemplateSpec adds patches to base using a strategic merge patch and
-// iterating by container name, failing on the first error
+// iterating by container name, failing on the first error.
 func StrategicMergePatchPodTemplateSpec(base, patch *corev1.PodTemplateSpec) (*corev1.PodTemplateSpec, error) {
 	if patch == nil {
 		return base, nil

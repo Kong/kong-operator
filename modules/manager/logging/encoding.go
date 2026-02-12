@@ -12,16 +12,16 @@ import (
 // -----------------------------------------------------------------------------
 
 const (
-	// the fields are separated by a dash
+	// the fields are separated by a dash.
 	defaultDevConsoleSeparator = " - "
 )
 
 var (
-	// ISO8601 time encoding (e.g., 2022-08-25T14:05:51.352+0200)\
+	// ISO8601 time encoding (e.g., 2022-08-25T14:05:51.352+0200)\.
 	defaultDevTimeEncoder = zapcore.ISO8601TimeEncoder
-	// debug, info, error placeholders are capitalized and colored
+	// debug, info, error placeholders are capitalized and colored.
 	defaultDevEncodeLevel = zapcore.CapitalColorLevelEncoder
-	// the logger name is capitalized
+	// the logger name is capitalized.
 	defaultDevEncodeName = func(loggerName string, enc zapcore.PrimitiveArrayEncoder) {
 		enc.AppendString(strings.ToUpper(loggerName))
 	}

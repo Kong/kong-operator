@@ -33,8 +33,7 @@ func TestGetFreePort(t *testing.T) {
 			wg := sync.WaitGroup{}
 			wg.Add(tt.count)
 			ch := make(chan struct{})
-			// p := GetFreePort(t)
-			for i := 0; i < tt.count; i++ {
+			for range tt.count {
 				go func() {
 					defer wg.Done()
 					<-ch

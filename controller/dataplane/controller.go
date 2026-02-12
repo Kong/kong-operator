@@ -31,7 +31,7 @@ import (
 // DataPlaneReconciler
 // -----------------------------------------------------------------------------
 
-// Reconciler reconciles a DataPlane object
+// Reconciler reconciles a DataPlane object.
 type Reconciler struct {
 	client.Client
 
