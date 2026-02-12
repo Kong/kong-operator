@@ -223,8 +223,8 @@ func ensureAllKongStateFieldsAreCoveredInTest(t *testing.T, testedFields []strin
 	allKongStateFields := func() []string {
 		var fields []string
 		typ := reflect.ValueOf(KongState{}).Type()
-		for i := range typ.NumField() {
-			fields = append(fields, typ.Field(i).Name)
+		for field := range typ.Fields() {
+			fields = append(fields, field.Name)
 		}
 		return fields
 	}()
