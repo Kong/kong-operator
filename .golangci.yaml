@@ -95,7 +95,6 @@ linters:
         # NOTE: When all references use the types package, this rule can use .* instead of listing types.
         - pattern: ^.*operatorv2alpha1.ControlPlane.*$
           msg: Please use the types package to refer to the type (through github.com/kong/kong-operator/internal/types)
-        # NOTE: Don't enforce it just yet. Migrating all errors.As() calls is WIP.
         - pattern: ^errors.As$
           msg: Please use errors.AsType instead
     gomodguard:
