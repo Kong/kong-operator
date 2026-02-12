@@ -160,7 +160,7 @@ const (
 	// DataPlaneAdminServicePortName is the port name of the DataPlane admin service.
 	DataPlaneAdminServicePortName = "admin"
 
-	// DataPlanePODDNSDiscoveryStrategy is DNS strategy to use when creating Gateway's Admin API addresses.
+	// DataPlaneServiceDNSDiscoveryStrategy is DNS strategy to use when creating Gateway's Admin API addresses.
 	DataPlaneServiceDNSDiscoveryStrategy = "service"
 )
 
