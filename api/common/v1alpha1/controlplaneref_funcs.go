@@ -5,7 +5,10 @@ import (
 )
 
 // String returns the string representation of the ControlPlaneRef.
-func (r ControlPlaneRef) String() string {
+func (r *ControlPlaneRef) String() string {
+	if r == nil {
+		return "<nil>"
+	}
 	switch r.Type {
 	case ControlPlaneRefKonnectNamespacedRef:
 		if r.KonnectNamespacedRef.Namespace == "" {
