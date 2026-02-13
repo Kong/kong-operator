@@ -43,7 +43,10 @@ type PortalCustomDomainSpec struct {
 	// +required
 	PortalRef ObjectRef `json:"portal_ref,omitzero"`
 
-	PortalCustomDomainAPISpec `json:",inline"`
+	// APISpec defines the desired state of the resource's API spec fields.
+	//
+	// +optional
+	APISpec PortalCustomDomainAPISpec `json:"apiSpec,omitzero"`
 }
 
 // PortalCustomDomainAPISpec defines the API spec fields for PortalCustomDomain.
