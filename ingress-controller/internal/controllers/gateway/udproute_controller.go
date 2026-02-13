@@ -38,8 +38,6 @@ import (
 type UDPRouteReconciler struct {
 	client.Client
 
-	APIReader client.Reader
-
 	Log              logr.Logger
 	Scheme           *runtime.Scheme
 	DataplaneClient  controllers.DataPlane
@@ -53,10 +51,6 @@ type UDPRouteReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *UDPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	if r.APIReader == nil {
-		r.APIReader = mgr.GetAPIReader()
-	}
-
 	blder := ctrl.NewControllerManagedBy(mgr).
 		Named("udproute-controller").
 		WithOptions(controller.Options{
@@ -107,7 +101,7 @@ func (r *UDPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return blder.
 		For(&gatewayapi.UDPRoute{},
 			builder.WithPredicates(
-				IsRouteAttachedToReconciledGatewayPredicate[*gatewayapi.UDPRoute](mgr.GetAPIReader(), mgr.GetLogger(), r.GatewayNN),
+				IsRouteAttachedToReconciledGatewayPredicate[*gatewayapi.UDPRoute](r.Client, mgr.GetLogger(), r.GatewayNN),
 			),
 		).
 		Complete(r)
@@ -304,11 +298,7 @@ func (r *UDPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// we need to pull the Gateway parent objects for the UDPRoute to verify
 	// routing behavior and ensure compatibility with Gateway configurations.
 	debug(log, udproute, "Retrieving GatewayClass and Gateway for route")
-	reader := r.APIReader
-	if reader == nil {
-		reader = r.Client
-	}
-	gateways, err := getSupportedGatewayForRoute(ctx, log, reader, udproute, r.GatewayNN)
+	gateways, err := getSupportedGatewayForRoute(ctx, log, r.Client, udproute, r.GatewayNN)
 	if err != nil {
 		if errors.Is(err, ErrNoSupportedGateway) {
 			// if there's no supported Gateway then this route could have been previously

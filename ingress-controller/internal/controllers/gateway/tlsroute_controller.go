@@ -38,8 +38,6 @@ import (
 type TLSRouteReconciler struct {
 	client.Client
 
-	APIReader client.Reader
-
 	Log              logr.Logger
 	Scheme           *runtime.Scheme
 	DataplaneClient  controllers.DataPlane
@@ -53,10 +51,6 @@ type TLSRouteReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *TLSRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	if r.APIReader == nil {
-		r.APIReader = mgr.GetAPIReader()
-	}
-
 	blder := ctrl.NewControllerManagedBy(mgr).
 		Named("tlsroute-controller").
 		WithOptions(controller.Options{
@@ -103,7 +97,7 @@ func (r *TLSRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return blder.
 		For(&gatewayapi.TLSRoute{},
 			builder.WithPredicates(
-				IsRouteAttachedToReconciledGatewayPredicate[*gatewayapi.TLSRoute](mgr.GetAPIReader(), mgr.GetLogger(), r.GatewayNN),
+				IsRouteAttachedToReconciledGatewayPredicate[*gatewayapi.TLSRoute](r.Client, mgr.GetLogger(), r.GatewayNN),
 			),
 		).
 		Complete(r)
@@ -300,11 +294,7 @@ func (r *TLSRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// we need to pull the Gateway parent objects for the TLSRoute to verify
 	// routing behavior and ensure compatibility with Gateway configurations.
 	debug(log, tlsroute, "Retrieving GatewayClass and Gateway for route")
-	reader := r.APIReader
-	if reader == nil {
-		reader = r.Client
-	}
-	gateways, err := getSupportedGatewayForRoute(ctx, log, reader, tlsroute, r.GatewayNN)
+	gateways, err := getSupportedGatewayForRoute(ctx, log, r.Client, tlsroute, r.GatewayNN)
 	if err != nil {
 		if errors.Is(err, ErrNoSupportedGateway) {
 			// if there's no supported Gateway then this route could have been previously

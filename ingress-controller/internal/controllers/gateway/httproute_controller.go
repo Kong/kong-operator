@@ -48,8 +48,6 @@ var errInvalidType = errors.New("invalid type")
 type HTTPRouteReconciler struct {
 	client.Client
 
-	APIReader client.Reader
-
 	Log              logr.Logger
 	Scheme           *runtime.Scheme
 	DataplaneClient  controllers.DataPlane
@@ -69,10 +67,6 @@ type HTTPRouteReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	if r.APIReader == nil {
-		r.APIReader = mgr.GetAPIReader()
-	}
-
 	// We're verifying whether ReferenceGrant CRD is installed at setup of the HTTPRouteReconciler
 	// to decide whether we should run additional ReferenceGrant watch and handle ReferenceGrants
 	// when reconciling HTTPRoutes.
@@ -150,7 +144,7 @@ func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return blder.
 		For(&gatewayapi.HTTPRoute{},
 			builder.WithPredicates(
-				IsRouteAttachedToReconciledGatewayPredicate[*gatewayapi.HTTPRoute](mgr.GetAPIReader(), mgr.GetLogger(), r.GatewayNN),
+				IsRouteAttachedToReconciledGatewayPredicate[*gatewayapi.HTTPRoute](r.Client, mgr.GetLogger(), r.GatewayNN),
 			),
 		).
 		Complete(r)
@@ -420,11 +414,7 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// we need to pull the Gateway parent objects for the HTTPRoute to verify
 	// routing behavior and ensure compatibility with Gateway configurations.
 	debug(log, httproute, "Retrieving GatewayClass and Gateway for route")
-	reader := r.APIReader
-	if reader == nil {
-		reader = r.Client
-	}
-	gateways, err := getSupportedGatewayForRoute(ctx, log, reader, httproute, r.GatewayNN)
+	gateways, err := getSupportedGatewayForRoute(ctx, log, r.Client, httproute, r.GatewayNN)
 	if err != nil {
 		if errors.Is(err, ErrNoSupportedGateway) {
 			// if there's no supported Gateway then this route could have been previously

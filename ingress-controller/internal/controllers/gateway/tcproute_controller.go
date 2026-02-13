@@ -38,8 +38,6 @@ import (
 type TCPRouteReconciler struct {
 	client.Client
 
-	APIReader client.Reader
-
 	Log              logr.Logger
 	Scheme           *runtime.Scheme
 	DataplaneClient  controllers.DataPlane
@@ -53,10 +51,6 @@ type TCPRouteReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *TCPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	if r.APIReader == nil {
-		r.APIReader = mgr.GetAPIReader()
-	}
-
 	blder := ctrl.NewControllerManagedBy(mgr).
 		Named("tcproute-controller").
 		WithOptions(controller.Options{
@@ -107,7 +101,7 @@ func (r *TCPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return blder.
 		For(&gatewayapi.TCPRoute{},
 			builder.WithPredicates(
-				IsRouteAttachedToReconciledGatewayPredicate[*gatewayapi.TCPRoute](mgr.GetAPIReader(), mgr.GetLogger(), r.GatewayNN),
+				IsRouteAttachedToReconciledGatewayPredicate[*gatewayapi.TCPRoute](r.Client, mgr.GetLogger(), r.GatewayNN),
 			),
 		).
 		Complete(r)
@@ -304,11 +298,7 @@ func (r *TCPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// we need to pull the Gateway parent objects for the TCPRoute to verify
 	// routing behavior and ensure compatibility with Gateway configurations.
 	debug(log, tcproute, "Retrieving GatewayClass and Gateway for route")
-	reader := r.APIReader
-	if reader == nil {
-		reader = r.Client
-	}
-	gateways, err := getSupportedGatewayForRoute(ctx, log, reader, tcproute, r.GatewayNN)
+	gateways, err := getSupportedGatewayForRoute(ctx, log, r.Client, tcproute, r.GatewayNN)
 	if err != nil {
 		if errors.Is(err, ErrNoSupportedGateway) {
 			// if there's no supported Gateway then this route could have been previously
