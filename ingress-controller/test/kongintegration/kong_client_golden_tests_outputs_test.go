@@ -135,31 +135,38 @@ func TestKongClientGoldenTestsOutputs_Konnect(t *testing.T) {
 
 			require.EventuallyWithT(t, func(t *assert.CollectT) {
 				configSize, err := updateStrategy.Update(ctx, sendconfig.ContentWithHash{Content: content})
-				if err != nil {
-					if apiErr := (&kong.APIError{}); errors.As(err, &apiErr) {
-						if apiErr.Code() == http.StatusTooManyRequests {
-							details, ok := apiErr.Details().(kong.ErrTooManyRequestsDetails)
-							if !ok {
-								t.Errorf("failed to extract details from 429 error: %v", err)
-								return
-							}
-							timer := time.NewTimer(details.RetryAfter)
-							defer timer.Stop()
-							select {
-							case <-timer.C:
-								t.Errorf("rate limited (429), retrying after %s", details.RetryAfter)
-								return
-							case <-ctx.Done():
-								t.Errorf("context done while waiting to retry after 429: %v", ctx.Err())
-								return
-							}
-						}
-					}
-				}
-
 				if !assert.NoError(t, err) {
 					return
 				}
+
+				var (
+					apiErr        = &kong.APIError{}
+					sendconfigErr = &sendconfig.UpdateError{}
+				)
+				switch {
+				case errors.As(err, &apiErr):
+					if apiErr.Code() == http.StatusTooManyRequests {
+						details, ok := apiErr.Details().(kong.ErrTooManyRequestsDetails)
+						if !ok {
+							t.Errorf("failed to extract details from 429 error: %v", err)
+							return
+						}
+						timer := time.NewTimer(details.RetryAfter)
+						defer timer.Stop()
+						select {
+						case <-timer.C:
+							t.Errorf("rate limited (429), retrying after %s", details.RetryAfter)
+							return
+						case <-ctx.Done():
+							t.Errorf("context done while waiting to retry after 429: %v", ctx.Err())
+							return
+						}
+					}
+				case errors.As(err, &sendconfigErr):
+					t.Errorf("sendconfig error: %v", sendconfigErr.Error())
+					t.Errorf("sendconfig error failures: %v", sendconfigErr.ResourceFailures())
+				}
+
 				assert.Equal(t, mo.None[int](), configSize)
 			}, timeout, tick)
 		})
