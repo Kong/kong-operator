@@ -699,7 +699,7 @@ _Appears in:_
 #### ControlPlaneSpec
 
 
-ControlPlaneSpec defines the desired state of ControlPlane
+ControlPlaneSpec defines the desired state of ControlPlane.
 
 
 
@@ -719,7 +719,7 @@ _Appears in:_
 #### ControlPlaneStatus
 
 
-ControlPlaneStatus defines the observed state of ControlPlane
+ControlPlaneStatus defines the observed state of ControlPlane.
 
 
 
@@ -911,7 +911,7 @@ _Appears in:_
 #### DataPlaneSpec
 
 
-DataPlaneSpec defines the desired state of DataPlane
+DataPlaneSpec defines the desired state of DataPlane.
 
 
 
@@ -930,7 +930,7 @@ _Appears in:_
 #### DataPlaneStatus
 
 
-DataPlaneStatus defines the observed state of DataPlane
+DataPlaneStatus defines the observed state of DataPlane.
 
 
 
@@ -1096,7 +1096,7 @@ _Appears in:_
 #### GatewayConfigurationStatus
 
 
-GatewayConfigurationStatus defines the observed state of GatewayConfiguration
+GatewayConfigurationStatus defines the observed state of GatewayConfiguration.
 
 
 
@@ -1961,7 +1961,7 @@ _Appears in:_
 #### ControlPlaneStatus
 
 
-ControlPlaneStatus defines the observed state of ControlPlane
+ControlPlaneStatus defines the observed state of ControlPlane.
 
 
 
@@ -2229,7 +2229,7 @@ _Appears in:_
 #### GatewayConfigurationStatus
 
 
-GatewayConfigurationStatus defines the observed state of GatewayConfiguration
+GatewayConfigurationStatus defines the observed state of GatewayConfiguration.
 
 
 
