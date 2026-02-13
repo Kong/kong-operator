@@ -571,7 +571,7 @@ KONG_CONTROLLER_FEATURE_GATES ?= GatewayAlpha=true
 .PHONY: test
 test: test.unit
 
-UNIT_TEST_PATHS := ./controller/... ./internal/... ./pkg/... ./modules/... ./ingress-controller/internal/... ./ingress-controller/pkg/...
+UNIT_TEST_PATHS := ./api/... ./controller/... ./internal/... ./pkg/... ./modules/... ./ingress-controller/internal/... ./ingress-controller/pkg/...
 
 .PHONY: _test.unit
 _test.unit: gotestsum

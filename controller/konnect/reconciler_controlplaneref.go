@@ -169,7 +169,7 @@ func ensureKongReferenceGrant[
 			consts.ConditionType(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs),
 			metav1.ConditionFalse,
 			configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted,
-			fmt.Sprintf("KongReferenceGrants do not allow access to KonnectGatewayControlPlane %s", cpRef),
+			fmt.Sprintf("KongReferenceGrants do not allow access to KonnectGatewayControlPlane %s", cpRef.String()),
 		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
 		}
@@ -181,7 +181,7 @@ func ensureKongReferenceGrant[
 		consts.ConditionType(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs),
 		metav1.ConditionTrue,
 		configurationv1alpha1.KongReferenceGrantReasonResolvedRefs,
-		fmt.Sprintf("KongReferenceGrants allow access to KonnectGatewayControlPlane %s", cpRef),
+		fmt.Sprintf("KongReferenceGrants allow access to KonnectGatewayControlPlane %s", cpRef.String()),
 	); errStatus != nil || !res.IsZero() {
 		return res, errStatus
 	}
