@@ -1040,9 +1040,13 @@ func TestGroupHTTPRouteMatchesWithPrioritiesByRule(t *testing.T) {
 						return actualMatches[i].Match.MatchIndex < actualMatches[j].Match.MatchIndex
 					})
 					for i, expectedMatch := range expectedMatches {
-						require.Equalf(t, expectedMatch.Match.Hostname, actualMatches[i].Match.Hostname, "Split match %d in rule %s, HTTPRoute %s/%s should have expected hostname",
+						require.Equalf(
+							t, expectedMatch.Match.Hostname, actualMatches[i].Match.Hostname,
+							"Split match %d in rule %s, HTTPRoute %s/%s should have expected hostname",
 							i, ruleIndex, route.Namespace, route.Name)
-						require.Equalf(t, expectedMatch.Match.Match, actualMatches[i].Match.Match, "Split match %d should have expected HTTPRoute match",
+						require.Equalf(
+							t, expectedMatch.Match.Match, actualMatches[i].Match.Match,
+							"Split match %d in rule %s, HTTPRoute %s/%s should have expected HTTPRoute match",
 							i, ruleIndex, route.Namespace, route.Name)
 					}
 				}

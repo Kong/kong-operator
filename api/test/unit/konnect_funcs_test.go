@@ -108,7 +108,7 @@ func TestKonnectFuncs(t *testing.T) {
 			require.Empty(t, obj.GetKonnectStatus().GetOrgID())
 			require.Empty(t, obj.GetKonnectStatus().GetServerURL())
 
-			require.Equal(t, "", obj.GetControlPlaneID())
+			require.Empty(t, obj.GetControlPlaneID())
 			obj.SetControlPlaneID("123")
 			require.Equal(t, "123", obj.GetControlPlaneID())
 

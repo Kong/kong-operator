@@ -442,7 +442,7 @@ func TestGatewayConfiguration_ConvertFrom(t *testing.T) {
 
 			require.Equal(t, src.ObjectMeta, obj.ObjectMeta)
 
-			require.EqualValues(t,
+			require.Equal(t,
 				tc.expectedControlPlane.Deployment.PodTemplateSpec.Spec.Containers[0].Env,
 				obj.Spec.ControlPlaneOptions.Deployment.PodTemplateSpec.Spec.Containers[0].Env)
 			require.Equal(t, tc.expectedControlPlane.Extensions, obj.Spec.ControlPlaneOptions.Extensions)

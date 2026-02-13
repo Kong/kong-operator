@@ -1,7 +1,6 @@
 package store
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/samber/lo"
@@ -189,7 +188,7 @@ func TestFakeStoreService(t *testing.T) {
 
 	service, err = store.GetService("default", "does-not-exists")
 	assert.Error(err)
-	assert.True(errors.As(err, &NotFoundError{}))
+	assert.ErrorAs(err, &NotFoundError{})
 	assert.Nil(service)
 }
 
@@ -274,7 +273,7 @@ func TestFakeStoreConsumer(t *testing.T) {
 	c, err = store.GetKongConsumer("default", "does-not-exist")
 	assert.Nil(c)
 	assert.Error(err)
-	assert.True(errors.As(err, &NotFoundError{}))
+	assert.ErrorAs(err, &NotFoundError{})
 }
 
 func TestFakeStoreConsumerGroup(t *testing.T) {
@@ -303,7 +302,7 @@ func TestFakeStoreConsumerGroup(t *testing.T) {
 	c, err = store.GetKongConsumerGroup("default", "does-not-exist")
 	assert.Nil(c)
 	assert.Error(err)
-	assert.True(errors.As(err, &NotFoundError{}))
+	assert.ErrorAs(err, &NotFoundError{})
 }
 
 func TestFakeStorePlugins(t *testing.T) {
@@ -399,7 +398,7 @@ func TestFakeStoreClusterPlugins(t *testing.T) {
 
 	plugin, err = store.GetKongClusterPlugin("does-not-exist")
 	assert.Error(err)
-	assert.True(errors.As(err, &NotFoundError{}))
+	assert.ErrorAs(err, &NotFoundError{})
 	assert.Nil(plugin)
 }
 
@@ -425,7 +424,7 @@ func TestFakeStoreSecret(t *testing.T) {
 	secret, err = store.GetSecret("default", "does-not-exist")
 	assert.Nil(secret)
 	assert.Error(err)
-	assert.True(errors.As(err, &NotFoundError{}))
+	assert.ErrorAs(err, &NotFoundError{})
 }
 
 func TestFakeStore_ListCACerts(t *testing.T) {

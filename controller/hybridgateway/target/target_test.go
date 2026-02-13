@@ -1810,7 +1810,7 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 
 			// Should succeed but return no valid backend refs since no ReferenceGrant exists.
 			require.NoError(t, err)
-			assert.Len(t, results, 0) // Cross-namespace access blocked without ReferenceGrant.
+			assert.Empty(t, results) // Cross-namespace access blocked without ReferenceGrant.
 		})
 
 		// Test case 2: ReferenceGrant exists but doesn't permit - should be blocked.
@@ -1861,7 +1861,7 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 
 			// Should succeed but return no valid backend refs since ReferenceGrant doesn't permit.
 			require.NoError(t, err)
-			assert.Len(t, results, 0) // Cross-namespace access blocked by non-permitting ReferenceGrant.
+			assert.Empty(t, results) // Cross-namespace access blocked by non-permitting ReferenceGrant.
 		})
 
 		// Test case 3: Error in CheckReferenceGrant - should return error.
@@ -1945,14 +1945,14 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 
 		// Should succeed but return no valid backend refs since no EndpointSlices found.
 		require.NoError(t, err)
-		assert.Len(t, results, 0) // Service skipped due to no EndpointSlices.
+		assert.Empty(t, results) // Service skipped due to no EndpointSlices.
 	})
 }
 
 // TestRecalculateWeightsAcrossBackendRefs tests the recalculateWeightsAcrossBackendRefs function.
 func TestRecalculateWeightsAcrossBackendRefs(t *testing.T) {
 	// Helper function to create test validBackendRef.
-	createTestvalidBackendRef := func(serviceName, namespace string, weight *int32, readyEndpoints []string) validBackendRef {
+	createTestValidBackendRef := func(serviceName, namespace string, weight *int32, readyEndpoints []string) validBackendRef {
 		serviceKind := gwtypes.Kind("Service")
 		return validBackendRef{
 			backendRef: &gwtypes.HTTPBackendRef{
@@ -1989,13 +1989,13 @@ func TestRecalculateWeightsAcrossBackendRefs(t *testing.T) {
 			name:  "Empty input should return empty output",
 			input: []validBackendRef{},
 			validateResult: func(t *testing.T, result []validBackendRef) {
-				assert.Len(t, result, 0)
+				assert.Empty(t, result)
 			},
 		},
 		{
 			name: "Single backend ref should get calculated weight",
 			input: []validBackendRef{
-				createTestvalidBackendRef("service1", "default", ptr.To[int32](100), []string{"10.0.1.1", "10.0.1.2"}),
+				createTestValidBackendRef("service1", "default", ptr.To[int32](100), []string{"10.0.1.1", "10.0.1.2"}),
 			},
 			validateResult: func(t *testing.T, result []validBackendRef) {
 				require.Len(t, result, 1)
@@ -2007,8 +2007,8 @@ func TestRecalculateWeightsAcrossBackendRefs(t *testing.T) {
 		{
 			name: "Multiple backend refs with equal weights",
 			input: []validBackendRef{
-				createTestvalidBackendRef("service1", "default", ptr.To[int32](50), []string{"10.0.1.1"}),
-				createTestvalidBackendRef("service2", "default", ptr.To[int32](50), []string{"10.0.2.1"}),
+				createTestValidBackendRef("service1", "default", ptr.To[int32](50), []string{"10.0.1.1"}),
+				createTestValidBackendRef("service2", "default", ptr.To[int32](50), []string{"10.0.2.1"}),
 			},
 			validateResult: func(t *testing.T, result []validBackendRef) {
 				require.Len(t, result, 2)
@@ -2020,8 +2020,8 @@ func TestRecalculateWeightsAcrossBackendRefs(t *testing.T) {
 		{
 			name: "Multiple backend refs with different weights",
 			input: []validBackendRef{
-				createTestvalidBackendRef("service1", "default", ptr.To[int32](80), []string{"10.0.1.1"}),
-				createTestvalidBackendRef("service2", "default", ptr.To[int32](20), []string{"10.0.2.1"}),
+				createTestValidBackendRef("service1", "default", ptr.To[int32](80), []string{"10.0.1.1"}),
+				createTestValidBackendRef("service2", "default", ptr.To[int32](20), []string{"10.0.2.1"}),
 			},
 			validateResult: func(t *testing.T, result []validBackendRef) {
 				require.Len(t, result, 2)
@@ -2033,8 +2033,8 @@ func TestRecalculateWeightsAcrossBackendRefs(t *testing.T) {
 		{
 			name: "Backend refs with different endpoint counts",
 			input: []validBackendRef{
-				createTestvalidBackendRef("service1", "default", ptr.To[int32](50), []string{"10.0.1.1", "10.0.1.2"}), // 2 endpoints.
-				createTestvalidBackendRef("service2", "default", ptr.To[int32](50), []string{"10.0.2.1"}),             // 1 endpoint.
+				createTestValidBackendRef("service1", "default", ptr.To[int32](50), []string{"10.0.1.1", "10.0.1.2"}), // 2 endpoints.
+				createTestValidBackendRef("service2", "default", ptr.To[int32](50), []string{"10.0.2.1"}),             // 1 endpoint.
 			},
 			validateResult: func(t *testing.T, result []validBackendRef) {
 				require.Len(t, result, 2)
@@ -2046,8 +2046,8 @@ func TestRecalculateWeightsAcrossBackendRefs(t *testing.T) {
 		{
 			name: "Backend refs with nil weights should default to 1",
 			input: []validBackendRef{
-				createTestvalidBackendRef("service1", "default", nil, []string{"10.0.1.1"}),              // No weight (defaults to 1).
-				createTestvalidBackendRef("service2", "default", ptr.To[int32](3), []string{"10.0.2.1"}), // Weight 3.
+				createTestValidBackendRef("service1", "default", nil, []string{"10.0.1.1"}),              // No weight (defaults to 1).
+				createTestValidBackendRef("service2", "default", ptr.To[int32](3), []string{"10.0.2.1"}), // Weight 3.
 			},
 			validateResult: func(t *testing.T, result []validBackendRef) {
 				require.Len(t, result, 2)
@@ -2059,13 +2059,13 @@ func TestRecalculateWeightsAcrossBackendRefs(t *testing.T) {
 		{
 			name: "Backend refs with no ready endpoints should get zero weight",
 			input: []validBackendRef{
-				createTestvalidBackendRef("service-with-endpoints", "default", ptr.To[int32](50), []string{"10.0.1.1"}),
-				createTestvalidBackendRef("service-no-endpoints", "default", ptr.To[int32](50), []string{}), // No endpoints.
+				createTestValidBackendRef("service-with-endpoints", "default", ptr.To[int32](50), []string{"10.0.1.1"}),
+				createTestValidBackendRef("service-no-endpoints", "default", ptr.To[int32](50), []string{}), // No endpoints.
 			},
 			validateResult: func(t *testing.T, result []validBackendRef) {
 				require.Len(t, result, 2)
 				// Service with endpoints should get positive weight.
-				assert.True(t, result[0].weight > 0, "service with endpoints should have positive weight")
+				assert.Positive(t, result[0].weight, "service with endpoints should have positive weight")
 				// Service with no endpoints should get zero weight.
 				assert.Equal(t, int32(0), result[1].weight, "service with no endpoints should have zero weight")
 			},
@@ -2073,13 +2073,13 @@ func TestRecalculateWeightsAcrossBackendRefs(t *testing.T) {
 		{
 			name: "Backend ref with zero weight should get zero weight regardless of endpoints",
 			input: []validBackendRef{
-				createTestvalidBackendRef("service-normal", "default", ptr.To[int32](50), []string{"10.0.1.1"}),
-				createTestvalidBackendRef("service-zero-weight", "default", ptr.To[int32](0), []string{"10.0.2.1"}), // Zero weight.
+				createTestValidBackendRef("service-normal", "default", ptr.To[int32](50), []string{"10.0.1.1"}),
+				createTestValidBackendRef("service-zero-weight", "default", ptr.To[int32](0), []string{"10.0.2.1"}), // Zero weight.
 			},
 			validateResult: func(t *testing.T, result []validBackendRef) {
 				require.Len(t, result, 2)
 				// Normal service should get positive weight.
-				assert.True(t, result[0].weight > 0, "normal service should have positive weight")
+				assert.Positive(t, result[0].weight, "normal service should have positive weight")
 				// Zero weight service should get zero weight.
 				assert.Equal(t, int32(0), result[1].weight, "zero weight service should have zero weight")
 			},
@@ -2087,17 +2087,17 @@ func TestRecalculateWeightsAcrossBackendRefs(t *testing.T) {
 		{
 			name: "Complex scenario with multiple services and varying endpoints",
 			input: []validBackendRef{
-				createTestvalidBackendRef("web", "frontend", ptr.To[int32](60), []string{"10.0.1.1", "10.0.1.2", "10.0.1.3"}), // 3 endpoints.
-				createTestvalidBackendRef("api", "backend", ptr.To[int32](30), []string{"10.0.2.1", "10.0.2.2"}),              // 2 endpoints.
-				createTestvalidBackendRef("cache", "backend", ptr.To[int32](10), []string{"10.0.3.1"}),                        // 1 endpoint.
+				createTestValidBackendRef("web", "frontend", ptr.To[int32](60), []string{"10.0.1.1", "10.0.1.2", "10.0.1.3"}), // 3 endpoints.
+				createTestValidBackendRef("api", "backend", ptr.To[int32](30), []string{"10.0.2.1", "10.0.2.2"}),              // 2 endpoints.
+				createTestValidBackendRef("cache", "backend", ptr.To[int32](10), []string{"10.0.3.1"}),                        // 1 endpoint.
 			},
 			validateResult: func(t *testing.T, result []validBackendRef) {
 				require.Len(t, result, 3)
 				// Complex weight calculation based on CalculateEndpointWeights logic.
 				// The exact values depend on the weight distribution algorithm.
-				assert.True(t, result[0].weight > 0, "web service should have positive weight")
-				assert.True(t, result[1].weight > 0, "api service should have positive weight")
-				assert.True(t, result[2].weight > 0, "cache service should have positive weight")
+				assert.Positive(t, result[0].weight, "web service should have positive weight")
+				assert.Positive(t, result[1].weight, "api service should have positive weight")
+				assert.Positive(t, result[2].weight, "cache service should have positive weight")
 				// Total weight should be reasonable.
 				totalWeight := result[0].weight + result[1].weight + result[2].weight
 				assert.True(t, totalWeight > 0 && totalWeight <= 200, "total weight should be reasonable")
@@ -2121,7 +2121,7 @@ func TestRecalculateWeightsAcrossBackendRefs(t *testing.T) {
 			// Verify that input structs are modified (weights updated).
 			for i, vbRef := range result {
 				// Weight should be >= 0 (can be 0 for backends with no endpoints or zero weight).
-				assert.True(t, vbRef.weight >= 0, "weight should be non-negative for backend %d", i)
+				assert.GreaterOrEqual(t, vbRef.weight, int32(0), "weight should be non-negative for backend %d", i)
 				// Verify that other fields are preserved.
 				assert.Equal(t, tt.input[i].backendRef, vbRef.backendRef, "backendRef should be preserved")
 				assert.Equal(t, tt.input[i].service, vbRef.service, "service should be preserved")
@@ -2626,7 +2626,7 @@ func TestTargetsForBackendRefs(t *testing.T) {
 				require.NotNil(t, service2Target, "service2 target should exist")
 
 				// Service1 should have higher weight than service2 (70 vs 30).
-				assert.True(t, service1Target.Spec.Weight > service2Target.Spec.Weight,
+				assert.Greater(t, service1Target.Spec.Weight, service2Target.Spec.Weight,
 					"service1 weight (%d) should be higher than service2 weight (%d)",
 					service1Target.Spec.Weight, service2Target.Spec.Weight)
 			},

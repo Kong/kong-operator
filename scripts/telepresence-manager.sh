@@ -7,6 +7,8 @@ set -o pipefail
 
 readonly CONFIG="./.config_telepresence.yaml"
 
+test -f "${CONFIG}" || { echo "ERROR: Configuration file ${CONFIG} not found!"; exit 1; }
+
 # Function to log messages with different levels.
 log() {
   local level="$1"

@@ -231,7 +231,7 @@ func TestHTTPSIngress(t *testing.T) {
 			b := new(bytes.Buffer)
 			n, err := b.ReadFrom(resp.Body)
 			require.NoError(t, err)
-			require.True(t, n > 0)
+			require.Positive(t, n)
 			return strings.Contains(b.String(), "<title>httpbin.org</title>") && resp.TLS.PeerCertificates[0].Subject.CommonName == "secure-foo-bar"
 		}
 		return false
@@ -249,7 +249,7 @@ func TestHTTPSIngress(t *testing.T) {
 			b := new(bytes.Buffer)
 			n, err := b.ReadFrom(resp.Body)
 			require.NoError(t, err)
-			require.True(t, n > 0)
+			require.Positive(t, n)
 			return strings.Contains(b.String(), "<title>httpbin.org</title>") && resp.TLS.PeerCertificates[0].Subject.CommonName == "foo.com"
 		}
 		return false
@@ -267,7 +267,7 @@ func TestHTTPSIngress(t *testing.T) {
 			b := new(bytes.Buffer)
 			n, err := b.ReadFrom(resp.Body)
 			require.NoError(t, err)
-			require.True(t, n > 0)
+			require.Positive(t, n)
 			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false
@@ -303,7 +303,7 @@ func TestHTTPSIngress(t *testing.T) {
 			b := new(bytes.Buffer)
 			n, err := b.ReadFrom(resp.Body)
 			require.NoError(t, err)
-			require.True(t, n > 0)
+			require.Positive(t, n)
 			return strings.Contains(b.String(), "<title>httpbin.org</title>")
 		}
 		return false

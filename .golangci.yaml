@@ -48,8 +48,7 @@ linters:
     - revive
     - sloglint
     - staticcheck
-    # Uncomment or remove - TODO: https://github.com/Kong/kong-operator/issues/1847
-    # - testifylint
+    - testifylint
     - unconvert
     - unused
     - unparam
@@ -65,7 +64,6 @@ linters:
       default: all
       disable:
         - require-pkg-doc
-        - start-with-name
       options:
         max-len:
           # Maximum line length for godocs, not including the `// `, or `/*` or `*/` tokens.
@@ -171,6 +169,7 @@ linters:
     testifylint:
       enable-all: true
       disable:
+        - require-error
         - error-is-as
     usetesting:
       os-temp-dir: true

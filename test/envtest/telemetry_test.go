@@ -49,12 +49,10 @@ func TestTelemetry(t *testing.T) {
 	createK8sObjectsForTelemetryTest(ctx, t, c)
 
 	t.Log("starting the controller manager")
-	go func() {
-		RunManager(ctx, t, envcfg, AdminAPIOptFns(),
-			WithDefaultEnvTestsConfig(envcfg),
-			WithTelemetry(ts.Endpoint(), 100*time.Millisecond),
-		)
-	}()
+	_ = RunManager(ctx, t, envcfg, AdminAPIOptFns(),
+		WithDefaultEnvTestsConfig(envcfg),
+		WithTelemetry(ts.Endpoint(), 100*time.Millisecond),
+	)
 
 	dcl, err := discoveryclient.NewDiscoveryClientForConfig(envcfg)
 	require.NoError(t, err)

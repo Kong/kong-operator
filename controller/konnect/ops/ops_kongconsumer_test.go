@@ -226,7 +226,7 @@ func TestAdoptKongConsumerMatchNotMatching(t *testing.T) {
 	err := adoptConsumer(ctx, sdk, cgSDK, cl, consumer, adoptOptions)
 	require.Error(t, err)
 	var notMatch KonnectEntityAdoptionNotMatchError
-	assert.True(t, errors.As(err, &notMatch))
+	assert.ErrorAs(t, err, &notMatch)
 }
 
 func TestAdoptKongConsumerFetchError(t *testing.T) {
@@ -261,5 +261,5 @@ func TestAdoptKongConsumerFetchError(t *testing.T) {
 	err := adoptConsumer(ctx, sdk, cgSDK, cl, consumer, adoptOptions)
 	require.Error(t, err)
 	var fetchErr KonnectEntityAdoptionFetchError
-	assert.True(t, errors.As(err, &fetchErr))
+	assert.ErrorAs(t, err, &fetchErr)
 }

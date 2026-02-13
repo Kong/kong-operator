@@ -221,7 +221,7 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *run
 				// If the expected update error message is defined, check if the error message contains the expected message
 				// and return. Otherwise, expect no error.
 				if tc.ExpectedUpdateErrorMessage != nil {
-					require.NotNil(c, err)
+					require.Error(c, err)
 					assert.Contains(c, err.Error(), *tc.ExpectedUpdateErrorMessage)
 					return
 				}

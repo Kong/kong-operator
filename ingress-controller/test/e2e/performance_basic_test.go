@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -187,7 +188,7 @@ func TestResourceApplyAndUpdatePerf(t *testing.T) {
 		go func(i int) {
 			defer wg.Done()
 
-			require.Eventually(t, func() bool {
+			assert.Eventually(t, func() bool {
 				return isRouteActive(ctx, t, helpers.DefaultHTTPClient(), proxyURLForDefaultIngress, "get", i)
 			}, ingressWait*10, time.Millisecond*500)
 		}(i)
@@ -247,7 +248,7 @@ func isRouteActive(ctx context.Context, t *testing.T, client *http.Client, proxy
 		b := new(bytes.Buffer)
 		n, err := b.ReadFrom(resp.Body)
 		require.NoError(t, err)
-		require.True(t, n > 0)
+		require.Positive(t, n)
 		return strings.Contains(b.String(), "origin")
 	}
 	return false

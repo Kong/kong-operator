@@ -340,7 +340,7 @@ func assertExpectedEvents(t *testing.T, predicatesToCheck []func(e corev1.Event)
 			break
 		}
 	}
-	if !assert.Equal(t, 0, len(collectedEvents), "expected all warning events to match test predicates, but some were left") {
+	if !assert.Empty(t, collectedEvents, "expected all warning events to match test predicates, but some were left") {
 		t.Logf("remaining events %d:", len(collectedEvents))
 		for _, e := range collectedEvents {
 			t.Logf("  - %s | %s | %s | %s | %s", e.Type, e.Reason, e.InvolvedObject.Kind, e.InvolvedObject.Name, e.Message)

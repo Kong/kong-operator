@@ -177,7 +177,7 @@ func TestAdoptKongConsumerGroupMatchNotMatching(t *testing.T) {
 	err := adoptConsumerGroup(ctx, sdk, group, adoptOptions)
 	require.Error(t, err)
 	var notMatch KonnectEntityAdoptionNotMatchError
-	assert.True(t, errors.As(err, &notMatch))
+	assert.ErrorAs(t, err, &notMatch)
 }
 
 func TestAdoptKongConsumerGroupUIDConflict(t *testing.T) {
@@ -220,7 +220,7 @@ func TestAdoptKongConsumerGroupUIDConflict(t *testing.T) {
 	err := adoptConsumerGroup(ctx, sdk, group, adoptOptions)
 	require.Error(t, err)
 	var uidConflict KonnectEntityAdoptionUIDTagConflictError
-	assert.True(t, errors.As(err, &uidConflict))
+	assert.ErrorAs(t, err, &uidConflict)
 }
 
 func TestAdoptKongConsumerGroupFetchError(t *testing.T) {
@@ -256,5 +256,5 @@ func TestAdoptKongConsumerGroupFetchError(t *testing.T) {
 	err := adoptConsumerGroup(ctx, sdk, group, adoptOptions)
 	require.Error(t, err)
 	var fetchErr KonnectEntityAdoptionFetchError
-	assert.True(t, errors.As(err, &fetchErr))
+	assert.ErrorAs(t, err, &fetchErr)
 }
