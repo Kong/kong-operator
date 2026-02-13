@@ -19,6 +19,8 @@ spec:
       value: (env('KONNECT_TOKEN'))
     - name: konnect_url
       value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: konnect_api_auth_namespace
+      value: ($namespace)
 
     # TLS configuration.
     - name: sni_hostname
