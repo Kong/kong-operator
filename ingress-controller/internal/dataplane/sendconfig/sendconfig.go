@@ -70,9 +70,9 @@ func PerformUpdate(
 		}
 		if !configurationChanged {
 			if client.IsKonnect() {
-				logger.V(logging.DebugLevel).Info("No configuration change, skipping sync to Konnect")
+				logger.V(logging.InfoLevel).Info("No configuration change, skipping sync to Konnect")
 			} else {
-				logger.V(logging.DebugLevel).Info("No configuration change, skipping sync to Kong")
+				logger.V(logging.InfoLevel).Info("No configuration change, skipping sync to Kong")
 			}
 			return oldSHA, nil
 		}

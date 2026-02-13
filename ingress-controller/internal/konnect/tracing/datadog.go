@@ -25,6 +25,19 @@ const (
 
 // DoRequest is a helper function that sends an HTTP request and logs the result with DataDog trace ID.
 func DoRequest(ctx context.Context, httpClient *http.Client, req *http.Request) (*http.Response, error) {
+	if instanceID, ok := ctx.Value("InstanceID").(string); ok {
+		req.Header.Add("X-Kic-Konnect-Instance-Id", instanceID)
+	}
+	if syncID, ok := ctx.Value("KonnectSyncID").(string); ok {
+		req.Header.Add("X-Kic-Konnect-Sync-Id", syncID)
+	}
+	if syncSN, ok := ctx.Value("KonnectSyncSerialNumber").(string); ok {
+		req.Header.Add("X-Kic-Konnect-Sync-Serial-Number", syncSN)
+	}
+	if syncStartTimestamp, ok := ctx.Value("KonnectSyncStartTimestamp").(string); ok {
+		req.Header.Add("X-Kic-Konnect-Sync-Start-Timestamp", syncStartTimestamp)
+	}
+
 	httpResp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, err
