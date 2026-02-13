@@ -95,6 +95,8 @@ func IsRouteAttachedToReconciledGateway[routeT gatewayapi.RouteT](
 			err := cl.Get(context.Background(), k8stypes.NamespacedName{Namespace: namespace, Name: string(parentRef.Name)}, &gateway)
 			if err != nil {
 				log.Error(err, "Failed to get Gateway in HTTPRoute watch")
+				// Return true to trigger reconciliation on lookup failure; the reconciler will handle the error.
+				// Returning false would silently skip the route.
 				return true
 			}
 
@@ -102,6 +104,8 @@ func IsRouteAttachedToReconciledGateway[routeT gatewayapi.RouteT](
 			err = cl.Get(context.Background(), k8stypes.NamespacedName{Name: string(gateway.Spec.GatewayClassName)}, &gatewayClass)
 			if err != nil {
 				log.Error(err, "Failed to get GatewayClass in HTTPRoute watch")
+				// Return true to trigger reconciliation on lookup failure; the reconciler will handle the error.
+				// Returning false would silently skip the route.
 				return true
 			}
 
@@ -125,6 +129,11 @@ func isOrWasRouteAttachedToReconciledGateway[routeT gatewayapi.RouteT](
 	return routeHasKongParentStatus[routeT](oldObj) || routeHasKongParentStatus[routeT](newObj)
 }
 
+// routeHasKongParentStatus checks if a route has a parent status set by our controller
+// (identified by our ControllerName). This is a fallback for cases where attachment changes
+// due to external object modifications (e.g., GatewayClass controller name changes) that cause
+// both old and new parentRef-based checks to return false. It ensures we still reconcile routes
+// we previously managed so we can clean up stale parent status and dataplane state.
 func routeHasKongParentStatus[routeT gatewayapi.RouteT](obj client.Object) bool {
 	route, ok := obj.(routeT)
 	if !ok {

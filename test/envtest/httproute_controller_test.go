@@ -186,7 +186,6 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 		Namespace: route.GetNamespace(),
 		Name:      route.GetName(),
 	}
-	reconcileRequest := ctrl.Request{NamespacedName: nn}
 	containsInitial := helpers.HTTPRouteEventuallyContainsConditions(ctx, t, client, nn,
 		metav1.Condition{
 			Type:   "ResolvedRefs",
@@ -197,13 +196,7 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 
 	t.Logf("verifying that HTTPRoute has ResolvedRefs set to Status False and Reason RefNotPermitted")
 	if !assert.Eventually(t,
-		func() bool {
-			if _, err := reconciler.Reconcile(ctx, reconcileRequest); err != nil {
-				t.Logf("reconcile failed: %v", err)
-				return false
-			}
-			return containsInitial()
-		},
+		containsInitial,
 		waitDuration, tickDuration,
 	) {
 		t.Fatal(printHTTPRoutesConditions(ctx, client, nn))
@@ -251,13 +244,7 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 		// Related: https://github.com/Kong/kubernetes-ingress-controller/issues/3793
 	)
 	if !assert.Eventually(t,
-		func() bool {
-			if _, err := reconciler.Reconcile(ctx, reconcileRequest); err != nil {
-				t.Logf("reconcile failed: %v", err)
-				return false
-			}
-			return containsAccepted()
-		},
+		containsAccepted,
 		waitDuration, tickDuration,
 	) {
 		t.Fatal(printHTTPRoutesConditions(ctx, client, nn))
@@ -274,13 +261,7 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 	)
 
 	if !assert.Eventually(t,
-		func() bool {
-			if _, err := reconciler.Reconcile(ctx, reconcileRequest); err != nil {
-				t.Logf("reconcile failed: %v", err)
-				return false
-			}
-			return containsDeleted()
-		},
+		containsDeleted,
 		waitDuration, tickDuration,
 	) {
 		t.Fatal(printHTTPRoutesConditions(ctx, client, nn))

@@ -160,7 +160,7 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForReferenceGrant(ctx context.Contex
 	grant, ok := obj.(*gatewayapi.ReferenceGrant)
 	if !ok {
 		r.Log.Error(
-			fmt.Errorf("unexpected object type"),
+			errInvalidType,
 			"Referencegrant watch predicate received unexpected object type",
 			"expected", "*gatewayapi.ReferenceGrant", "found", reflect.TypeOf(obj),
 		)
