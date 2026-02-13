@@ -16,7 +16,7 @@ import (
 )
 
 func IsRouteAttachedToReconciledGatewayPredicate[routeT gatewayapi.RouteT](
-	cl client.Client,
+	cl client.Reader,
 	logger logr.Logger,
 	gatewayNN controllers.OptionalNamespacedName,
 ) predicate.Predicate {
@@ -37,7 +37,7 @@ func IsRouteAttachedToReconciledGatewayPredicate[routeT gatewayapi.RouteT](
 }
 
 func IsRouteAttachedToReconciledGateway[routeT gatewayapi.RouteT](
-	cl client.Client, log logr.Logger, gatewayNN controllers.OptionalNamespacedName, obj client.Object,
+	cl client.Reader, log logr.Logger, gatewayNN controllers.OptionalNamespacedName, obj client.Object,
 ) bool {
 	route, ok := obj.(routeT)
 	if !ok {
@@ -81,12 +81,12 @@ func IsRouteAttachedToReconciledGateway[routeT gatewayapi.RouteT](
 		}
 
 		kind := gatewayapi.Kind("Gateway")
-		if parentRef.Kind != nil {
+		if parentRef.Kind != nil && *parentRef.Kind != "" {
 			kind = *parentRef.Kind
 		}
 
 		group := gatewayapi.GroupVersion.Group
-		if parentRef.Group != nil {
+		if parentRef.Group != nil && *parentRef.Group != "" {
 			group = string(*parentRef.Group)
 		}
 		// Check the parent gateway if the parentRef points to a gateway that is possible to be controlled by KIC.
@@ -95,14 +95,18 @@ func IsRouteAttachedToReconciledGateway[routeT gatewayapi.RouteT](
 			err := cl.Get(context.Background(), k8stypes.NamespacedName{Namespace: namespace, Name: string(parentRef.Name)}, &gateway)
 			if err != nil {
 				log.Error(err, "Failed to get Gateway in HTTPRoute watch")
-				return false
+				// Return true to trigger reconciliation on lookup failure; the reconciler will handle the error.
+				// Returning false would silently skip the route.
+				return true
 			}
 
 			var gatewayClass gatewayapi.GatewayClass
 			err = cl.Get(context.Background(), k8stypes.NamespacedName{Name: string(gateway.Spec.GatewayClassName)}, &gatewayClass)
 			if err != nil {
 				log.Error(err, "Failed to get GatewayClass in HTTPRoute watch")
-				return false
+				// Return true to trigger reconciliation on lookup failure; the reconciler will handle the error.
+				// Returning false would silently skip the route.
+				return true
 			}
 
 			if isGatewayClassControlled(&gatewayClass) {
@@ -115,9 +119,30 @@ func IsRouteAttachedToReconciledGateway[routeT gatewayapi.RouteT](
 }
 
 func isOrWasRouteAttachedToReconciledGateway[routeT gatewayapi.RouteT](
-	cl client.Client, log logr.Logger, gatewayNN controllers.OptionalNamespacedName, e event.UpdateEvent,
+	cl client.Reader, log logr.Logger, gatewayNN controllers.OptionalNamespacedName, e event.UpdateEvent,
 ) bool {
 	oldObj, newObj := e.ObjectOld, e.ObjectNew
-	return IsRouteAttachedToReconciledGateway[routeT](cl, log, gatewayNN, oldObj) ||
-		IsRouteAttachedToReconciledGateway[routeT](cl, log, gatewayNN, newObj)
+	if IsRouteAttachedToReconciledGateway[routeT](cl, log, gatewayNN, oldObj) ||
+		IsRouteAttachedToReconciledGateway[routeT](cl, log, gatewayNN, newObj) {
+		return true
+	}
+	return routeHasKongParentStatus[routeT](oldObj) || routeHasKongParentStatus[routeT](newObj)
+}
+
+// routeHasKongParentStatus checks if a route has a parent status set by our controller
+// (identified by our ControllerName). This is a fallback for cases where attachment changes
+// due to external object modifications (e.g., GatewayClass controller name changes) that cause
+// both old and new parentRef-based checks to return false. It ensures we still reconcile routes
+// we previously managed so we can clean up stale parent status and dataplane state.
+func routeHasKongParentStatus[routeT gatewayapi.RouteT](obj client.Object) bool {
+	route, ok := obj.(routeT)
+	if !ok {
+		return false
+	}
+	for _, parentStatus := range getRouteStatusParents(route) {
+		if parentStatus.ControllerName == GetControllerName() {
+			return true
+		}
+	}
+	return false
 }
