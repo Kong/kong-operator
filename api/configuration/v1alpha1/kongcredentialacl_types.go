@@ -35,7 +35,6 @@ import (
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
 // +kubebuilder:validation:XValidation:rule="(!self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.consumerRef == self.spec.consumerRef",message="spec.consumerRef is immutable when an entity is already Programmed"
-// +apireference:kgo:include
 // +kong:channels=kong-operator
 type KongCredentialACL struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -52,7 +51,6 @@ type KongCredentialACL struct {
 
 // KongCredentialACLSpec defines specification of Kong ACL.
 // +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
-// +apireference:kgo:include
 type KongCredentialACLSpec struct {
 	KongCredentialACLAPISpec `json:",inline"`
 
@@ -67,7 +65,6 @@ type KongCredentialACLSpec struct {
 }
 
 // KongCredentialACLAPISpec defines specification of an ACL credential.
-// +apireference:kgo:include
 type KongCredentialACLAPISpec struct {
 	// Group is the name for the ACL credential.
 	//
@@ -79,7 +76,6 @@ type KongCredentialACLAPISpec struct {
 }
 
 // KongCredentialACLStatus represents the current status of the ACL credential resource.
-// +apireference:kgo:include
 type KongCredentialACLStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
@@ -95,7 +91,6 @@ type KongCredentialACLStatus struct {
 
 // KongCredentialACLList contains a list of ACL credentials.
 // +kubebuilder:object:root=true
-// +apireference:kgo:include
 type KongCredentialACLList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

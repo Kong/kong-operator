@@ -5,11 +5,15 @@
 
 ## Packages
 {{ range $groupVersions }}
+{{- if index .Markers "apireference:kgo:include-all-types" }}
 - [{{ . }}](#{{ .Group | replace "." "-" }}-{{ .Version }})
+{{- end }}
 {{- end }}
 
 {{ range $groupVersions }}
+{{- if index .Markers "apireference:kgo:include-all-types" }}
 {{- template "gvDetails" . }}
 {{ end }}
+{{- end }}
 
 {{- end -}}

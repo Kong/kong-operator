@@ -6,7 +6,6 @@ package v1alpha1
 // +kubebuilder:validation:XValidation:rule="self.from == oldSelf.from",message="'from'(adopt source) is immutable"
 // +kubebuilder:validation:XValidation:rule="self.from == 'konnect' ? has(self.konnect) : true",message="Must specify Konnect options when from='konnect'"
 // +kubebuilder:validation:XValidation:rule="has(self.konnect) ? (self.konnect.id == oldSelf.konnect.id) : true",message="konnect.id is immutable"
-// +apireference:kgo:include
 type AdoptOptions struct {
 	// From is the source of the entity to adopt from.
 	// Now 'konnect' is supported.
@@ -73,7 +72,6 @@ const (
 
 // AdoptKonnectOptions specifies the options for adopting the entity from Konnect.
 // +kubebuilder:object:generate=true
-// +apireference:kgo:include
 type AdoptKonnectOptions struct {
 	// ID is the Konnect ID of the entity.
 	// +required

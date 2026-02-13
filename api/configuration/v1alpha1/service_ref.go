@@ -10,7 +10,6 @@ const (
 // ServiceRef is a reference to a KongService.
 //
 // +kubebuilder:validation:XValidation:rule="self.type == 'namespacedRef' ? has(self.namespacedRef) : true", message="when type is namespacedRef, namespacedRef must be set"
-// +apireference:kgo:include
 type ServiceRef struct {
 	// Type can be one of:
 	// - namespacedRef

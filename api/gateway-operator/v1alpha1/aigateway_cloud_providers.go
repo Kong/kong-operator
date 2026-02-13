@@ -6,7 +6,6 @@ package v1alpha1
 
 // AICloudProviderName indicates the unique name of a supported AI cloud
 // provider.
-// +apireference:kgo:include
 type AICloudProviderName string
 
 const (
@@ -37,7 +36,6 @@ const (
 
 // AICloudProvider is the organization that provides API access to Large Language
 // Models (LLMs).
-// +apireference:kgo:include
 type AICloudProvider struct {
 	// Name is the unique name of an LLM provider.
 	//
@@ -48,7 +46,6 @@ type AICloudProvider struct {
 
 // AICloudProviderAPITokenRef is an reference to another object which contains
 // the API token for an AI cloud provider.
-// +apireference:kgo:include
 type AICloudProviderAPITokenRef struct {
 	// Name is the name of the reference object.
 	//

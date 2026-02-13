@@ -1,7 +1,6 @@
 package v1alpha2
 
 // KonnectAPIAuthConfigurationRef is a reference to a KonnectAPIAuthConfiguration resource.
-// +apireference:kgo:include
 type KonnectAPIAuthConfigurationRef struct {
 	// Name is the name of the KonnectAPIAuthConfiguration resource.
 	//
@@ -12,7 +11,6 @@ type KonnectAPIAuthConfigurationRef struct {
 
 // ControlPlaneKonnectAPIAuthConfigurationRef is a reference to a KonnectAPIAuthConfiguration resource
 // in the control plane.
-// +apireference:kgo:include
 type ControlPlaneKonnectAPIAuthConfigurationRef struct {
 	// Name is the name of the KonnectAPIAuthConfiguration resource.
 	//

@@ -21,7 +21,6 @@ func init() {
 // +kubebuilder:object:generate=true
 // +kubebuilder:subresource:status
 // +kubebuilder:subresource:finalizer
-// +apireference:kgo:include
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
 // +kubebuilder:printcolumn:name="State",description="The state the transit gateway is in",type=string,JSONPath=`.status.state`
 // +kubebuilder:printcolumn:name="ID",description="Konnect ID",type=string,JSONPath=`.status.id`
@@ -220,7 +219,6 @@ type KonnectCloudGatewayTransitGatewayStatus struct {
 
 // KonnectCloudGatewayTransitGatewayList contains a list of KonnectCloudGatewayTransitGateway.
 // +kubebuilder:object:root=true
-// +apireference:kgo:include
 type KonnectCloudGatewayTransitGatewayList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

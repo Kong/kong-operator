@@ -1,7 +1,6 @@
 package v1alpha2
 
 // KonnectConfiguration is the Schema for the KonnectConfiguration API.
-// +apireference:kgo:include
 type KonnectConfiguration struct {
 	// APIAuthConfigurationRef is the reference to the API Auth Configuration
 	// that should be used for this Konnect Configuration.
@@ -15,7 +14,6 @@ type KonnectConfiguration struct {
 }
 
 // ControlPlaneKonnectConfiguration is the Schema for the KonnectConfiguration API in the control plane.
-// +apireference:kgo:include
 type ControlPlaneKonnectConfiguration struct {
 	// APIAuthConfigurationRef is the reference to the API Auth Configuration
 	// that should be used for this Konnect Configuration.

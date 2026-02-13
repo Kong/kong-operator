@@ -54,7 +54,6 @@ const (
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.spec.controlPlaneRef) || has(self.spec.controlPlaneRef)", message="controlPlaneRef is required once set"
 // +kubebuilder:validation:XValidation:rule="(!self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable when an entity is already Programmed"
 // +kubebuilder:validation:XValidation:rule="(!has(self.spec) || !has(self.spec.controlPlaneRef) || !has(self.spec.controlPlaneRef.konnectNamespacedRef)) ? true : !has(self.spec.controlPlaneRef.konnectNamespacedRef.__namespace__)", message="spec.controlPlaneRef cannot specify namespace for namespaced resource"
-// +apireference:kgo:include
 // +kong:channels=kong-operator
 type KongPluginBinding struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -71,7 +70,6 @@ type KongPluginBinding struct {
 // +kubebuilder:validation:XValidation:message="No targets must be set when scope is 'GlobalInControlPlane'",rule="self.scope == 'GlobalInControlPlane' ? !has(self.targets) : true"
 // +kubebuilder:validation:XValidation:rule="!has(self.adopt) ? true : (has(self.controlPlaneRef) && self.controlPlaneRef.type == 'konnectNamespacedRef')", message="spec.adopt is allowed only when controlPlaneRef is konnectNamespacedRef"
 // +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
-// +apireference:kgo:include
 type KongPluginBindingSpec struct {
 	// PluginReference is a reference to the KongPlugin or KongClusterPlugin resource.
 	// +kubebuilder:validation:XValidation:message="pluginRef name must be set",rule="self.name != ''"
@@ -115,7 +113,6 @@ type KongPluginBindingSpec struct {
 }
 
 // KongPluginBindingTargets contains the targets references.
-// +apireference:kgo:include
 type KongPluginBindingTargets struct {
 	// RouteReference can be used to reference one of the following resources:
 	// - networking.k8s.io/Ingress
@@ -145,7 +142,6 @@ type KongPluginBindingTargets struct {
 }
 
 // PluginRef is a reference to a KongPlugin or KongClusterPlugin resource.
-// +apireference:kgo:include
 // +kubebuilder:validation:XValidation:rule="self.kind == 'KongPlugin' || !has(self.__namespace__)", message="Namespace can be set only when kind is 'KongPlugin'"
 type PluginRef struct {
 	// Name is the name of the KongPlugin or KongClusterPlugin resource.
@@ -164,7 +160,6 @@ type PluginRef struct {
 }
 
 // TargetRef is a reference based on the object's name.
-// +apireference:kgo:include
 type TargetRef struct {
 	// Name is the name of the entity.
 	// +required
@@ -172,7 +167,6 @@ type TargetRef struct {
 }
 
 // TargetRefWithGroupKind is a reference based on the object's group, kind, and name.
-// +apireference:kgo:include
 type TargetRefWithGroupKind struct {
 	// Name is the name of the entity.
 	// +required
@@ -186,7 +180,6 @@ type TargetRefWithGroupKind struct {
 }
 
 // KongPluginBindingStatus represents the current status of the KongBinding resource.
-// +apireference:kgo:include
 type KongPluginBindingStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
@@ -202,7 +195,6 @@ type KongPluginBindingStatus struct {
 
 // KongPluginBindingList contains a list of KongPluginBindings.
 // +kubebuilder:object:root=true
-// +apireference:kgo:include
 type KongPluginBindingList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

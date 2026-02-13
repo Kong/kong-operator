@@ -35,7 +35,6 @@ import (
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
 // +kubebuilder:validation:XValidation:rule="(!self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.consumerRef == self.spec.consumerRef",message="spec.consumerRef is immutable when an entity is already Programmed"
-// +apireference:kgo:include
 // +kong:channels=kong-operator
 type KongCredentialAPIKey struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -52,7 +51,6 @@ type KongCredentialAPIKey struct {
 
 // KongCredentialAPIKeySpec defines specification of a Kong API key credential.
 // +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
-// +apireference:kgo:include
 type KongCredentialAPIKeySpec struct {
 	KongCredentialAPIKeyAPISpec `json:",inline"`
 
@@ -67,7 +65,6 @@ type KongCredentialAPIKeySpec struct {
 }
 
 // KongCredentialAPIKeyAPISpec defines specification of an API Key credential.
-// +apireference:kgo:include
 type KongCredentialAPIKeyAPISpec struct {
 	// Key is the key for the API Key credential.
 	//
@@ -79,7 +76,6 @@ type KongCredentialAPIKeyAPISpec struct {
 }
 
 // KongCredentialAPIKeyStatus represents the current status of the API Key credential resource.
-// +apireference:kgo:include
 type KongCredentialAPIKeyStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
@@ -95,7 +91,6 @@ type KongCredentialAPIKeyStatus struct {
 
 // KongCredentialAPIKeyList contains a list of API Key credentials.
 // +kubebuilder:object:root=true
-// +apireference:kgo:include
 type KongCredentialAPIKeyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

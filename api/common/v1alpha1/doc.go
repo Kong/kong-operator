@@ -16,4 +16,5 @@ limitations under the License.
 
 // Package v1alpha1 contains API Schema definitions for the common v1alpha1 API group.
 // +kubebuilder:object:generate=true
+// +apireference:kgo:include-all-types
 package v1alpha1

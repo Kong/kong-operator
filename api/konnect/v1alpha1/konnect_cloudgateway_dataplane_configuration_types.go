@@ -25,7 +25,6 @@ func init() {
 // +kubebuilder:printcolumn:name="ControlPlaneID",description="ControlPlane ID",type=string,JSONPath=`.status.controlPlaneID`
 // +kubebuilder:printcolumn:name="OrgID",description="Konnect Organization ID this resource belongs to.",type=string,JSONPath=`.status.organizationID`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
-// +apireference:kgo:include
 // +kong:channels=kong-operator
 type KonnectCloudGatewayDataPlaneGroupConfiguration struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -46,7 +45,6 @@ type KonnectCloudGatewayDataPlaneGroupConfiguration struct {
 //
 // +kubebuilder:validation:XValidation:rule="!has(self.adopt) ? true : (has(self.controlPlaneRef) && self.controlPlaneRef.type == 'konnectNamespacedRef')", message="spec.adopt is allowed only when controlPlaneRef is konnectNamespacedRef"
 // +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
-// +apireference:kgo:include
 type KonnectCloudGatewayDataPlaneGroupConfigurationSpec struct {
 	// Version specifies the desired Kong Gateway version.
 	//
@@ -203,7 +201,6 @@ type ConfigurationDataPlaneGroupAutoscaleStatic struct {
 }
 
 // KonnectCloudGatewayDataPlaneGroupConfigurationStatus defines the observed state of KonnectCloudGatewayDataPlaneGroupConfiguration.
-// +apireference:kgo:include
 type KonnectCloudGatewayDataPlaneGroupConfigurationStatus struct {
 	// Conditions describe the current conditions of the KonnectCloudGatewayDataPlaneGroupConfiguration.
 	//
@@ -268,7 +265,6 @@ type KonnectCloudGatewayDataPlaneGroupConfigurationStatusGroup struct {
 
 // KonnectCloudGatewayDataPlaneGroupConfigurationList contains a list of KonnectCloudGatewayDataPlaneGroupConfiguration.
 // +kubebuilder:object:root=true
-// +apireference:kgo:include
 type KonnectCloudGatewayDataPlaneGroupConfigurationList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
