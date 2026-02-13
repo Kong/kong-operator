@@ -14,7 +14,7 @@ import (
 	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -163,7 +163,7 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// Ensure "preview" Admin API service.
 	res, dataplaneAdminService, err := r.ensurePreviewAdminAPIService(ctx, logger, &dataplane)
 	if err != nil {
-		if k8serrors.IsConflict(err) {
+		if apierrors.IsConflict(err) {
 			return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 		}
 		cErr := r.ensureRolledOutCondition(ctx, logger, &dataplane, metav1.ConditionFalse, kcfgdataplane.DataPlaneConditionReasonRolloutFailed, "failed to ensure preview Admin API Service")
