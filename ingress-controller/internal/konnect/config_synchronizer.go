@@ -257,8 +257,7 @@ func (s *ConfigSynchronizer) uploadConfig(
 func logKonnectErrors(logger logr.Logger, err error) {
 	if crudActionErrors := deckerrors.ExtractCRUDActionErrors(err); len(crudActionErrors) > 0 {
 		for _, actionErr := range crudActionErrors {
-			apiErr := &kong.APIError{}
-			if errors.As(actionErr.Err, &apiErr) {
+			if apiErr, ok := errors.AsType[*kong.APIError](actionErr.Err); ok {
 				logger.Error(actionErr, "Failed to send request to Konnect",
 					"operation_type", actionErr.OperationType.String(),
 					"entity_kind", actionErr.Kind,
