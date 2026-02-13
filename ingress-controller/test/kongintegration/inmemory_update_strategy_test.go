@@ -2,6 +2,7 @@ package kongintegration
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
@@ -96,25 +97,31 @@ func TestUpdateStrategyInMemory_PropagatesResourcesErrors(t *testing.T) {
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		configSize, err := sut.Update(ctx, faultyConfig)
 		if !assert.Error(t, err) {
+			fmt.Printf("expected error from Update but got nil (configSize=%v)", configSize)
 			return
 		}
+		fmt.Printf("Update returned error: %v", err)
 		// Default value 0 to discard, since error has been returned.
 		if !assert.Zero(t, configSize) {
 			return
 		}
 		var updateError sendconfig.UpdateError
 		if !assert.ErrorAs(t, err, &updateError) {
+			fmt.Printf("error is not UpdateError, type: %T", err)
 			return
 		}
 		if wrappedErr := updateError.Unwrap(); !assert.Error(t, wrappedErr) || !assert.IsType(t, &kong.APIError{}, wrappedErr) {
+			fmt.Printf("wrapped error is not *kong.APIError, type: %T, err: %v", updateError.Unwrap(), updateError.Unwrap())
 			return
 		}
 		if !assert.NotEmpty(t, updateError.ResourceFailures()) {
+			fmt.Printf("resource failures are empty, raw response body: %s", string(updateError.RawResponseBody()))
 			return
 		}
 		if !assert.NotEmpty(t, updateError.RawResponseBody()) {
 			return
 		}
+		fmt.Printf("resource failures: %+v", updateError.ResourceFailures())
 		resourceErr, found := lo.Find(updateError.ResourceFailures(), func(r failures.ResourceFailure) bool {
 			return r.Message() == expectedMessage &&
 				lo.ContainsBy(r.CausingObjects(), func(obj client.Object) bool {
