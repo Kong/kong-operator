@@ -1,7 +1,10 @@
 package configuration_test
 
 import (
+	"strings"
 	"testing"
+
+	"github.com/samber/lo"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/crd-from-oas/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/crd-from-oas/test/crdsvalidation/common"
@@ -16,10 +19,70 @@ func TestPortalTeam(t *testing.T) {
 	scheme := testscheme.Get()
 	cfg, ns := envtest.Setup(t, ctx, scheme)
 
-	t.Run("type field validation", func(t *testing.T) {
+	validSpec := func() konnectv1alpha1.PortalTeamSpec {
+		return konnectv1alpha1.PortalTeamSpec{
+			PortalRef: konnectv1alpha1.ObjectRef{
+				Name: "test-portal",
+			},
+			PortalTeamAPISpec: konnectv1alpha1.PortalTeamAPISpec{
+				Name: "test-team",
+			},
+		}
+	}
+
+	t.Run("portal_ref field validation", func(t *testing.T) {
 		common.TestCasesGroup[*konnectv1alpha1.PortalTeam]{
 			{
-				Name: "basic spec passes validation",
+				Name: "portal_ref with valid name passes validation",
+				TestObject: &konnectv1alpha1.PortalTeam{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec:       validSpec(),
+				},
+			},
+			{
+				Name: "portal_ref name at max length (253) passes validation",
+				TestObject: &konnectv1alpha1.PortalTeam{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: konnectv1alpha1.PortalTeamSpec{
+						PortalRef: konnectv1alpha1.ObjectRef{
+							Name: strings.Repeat("a", 253),
+						},
+						PortalTeamAPISpec: konnectv1alpha1.PortalTeamAPISpec{
+							Name: "team-ref-max",
+						},
+					},
+				},
+			},
+			{
+				Name: "portal_ref name exceeding max length (254) fails validation",
+				TestObject: &konnectv1alpha1.PortalTeam{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: konnectv1alpha1.PortalTeamSpec{
+						PortalRef: konnectv1alpha1.ObjectRef{
+							Name: strings.Repeat("a", 254),
+						},
+						PortalTeamAPISpec: konnectv1alpha1.PortalTeamAPISpec{
+							Name: "team-ref-over",
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("spec.portal_ref.name: Too long: may not be more than 253"),
+			},
+		}.
+			RunWithConfig(t, cfg, scheme)
+	})
+
+	t.Run("name field validation", func(t *testing.T) {
+		common.TestCasesGroup[*konnectv1alpha1.PortalTeam]{
+			{
+				Name: "name with valid value passes validation",
+				TestObject: &konnectv1alpha1.PortalTeam{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec:       validSpec(),
+				},
+			},
+			{
+				Name: "name at max length (256) passes validation",
 				TestObject: &konnectv1alpha1.PortalTeam{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.PortalTeamSpec{
@@ -27,7 +90,95 @@ func TestPortalTeam(t *testing.T) {
 							Name: "test-portal",
 						},
 						PortalTeamAPISpec: konnectv1alpha1.PortalTeamAPISpec{
-							Name: "test-team",
+							Name: strings.Repeat("a", 256),
+						},
+					},
+				},
+			},
+			{
+				Name: "name exceeding max length (257) fails validation",
+				TestObject: &konnectv1alpha1.PortalTeam{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: konnectv1alpha1.PortalTeamSpec{
+						PortalRef: konnectv1alpha1.ObjectRef{
+							Name: "test-portal",
+						},
+						PortalTeamAPISpec: konnectv1alpha1.PortalTeamAPISpec{
+							Name: strings.Repeat("a", 257),
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("spec.name: Too long: may not be more than 256"),
+			},
+		}.
+			RunWithConfig(t, cfg, scheme)
+	})
+
+	t.Run("description field validation", func(t *testing.T) {
+		common.TestCasesGroup[*konnectv1alpha1.PortalTeam]{
+			{
+				Name: "description with valid value passes validation",
+				TestObject: &konnectv1alpha1.PortalTeam{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: konnectv1alpha1.PortalTeamSpec{
+						PortalRef: konnectv1alpha1.ObjectRef{
+							Name: "test-portal",
+						},
+						PortalTeamAPISpec: konnectv1alpha1.PortalTeamAPISpec{
+							Name:        "team-desc-valid",
+							Description: "A valid description",
+						},
+					},
+				},
+			},
+			{
+				Name: "description at max length (250) passes validation",
+				TestObject: &konnectv1alpha1.PortalTeam{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: konnectv1alpha1.PortalTeamSpec{
+						PortalRef: konnectv1alpha1.ObjectRef{
+							Name: "test-portal",
+						},
+						PortalTeamAPISpec: konnectv1alpha1.PortalTeamAPISpec{
+							Name:        "team-desc-max",
+							Description: strings.Repeat("d", 250),
+						},
+					},
+				},
+			},
+			{
+				Name: "description exceeding max length (251) fails validation",
+				TestObject: &konnectv1alpha1.PortalTeam{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: konnectv1alpha1.PortalTeamSpec{
+						PortalRef: konnectv1alpha1.ObjectRef{
+							Name: "test-portal",
+						},
+						PortalTeamAPISpec: konnectv1alpha1.PortalTeamAPISpec{
+							Name:        "team-desc-over",
+							Description: strings.Repeat("d", 251),
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("spec.description: Too long: may not be more than 250"),
+			},
+		}.
+			RunWithConfig(t, cfg, scheme)
+	})
+
+	t.Run("full spec with all fields passes validation", func(t *testing.T) {
+		common.TestCasesGroup[*konnectv1alpha1.PortalTeam]{
+			{
+				Name: "all fields populated passes validation",
+				TestObject: &konnectv1alpha1.PortalTeam{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: konnectv1alpha1.PortalTeamSpec{
+						PortalRef: konnectv1alpha1.ObjectRef{
+							Name: "test-portal",
+						},
+						PortalTeamAPISpec: konnectv1alpha1.PortalTeamAPISpec{
+							Name:        "full-spec-team",
+							Description: "A team with all fields",
 						},
 					},
 				},
