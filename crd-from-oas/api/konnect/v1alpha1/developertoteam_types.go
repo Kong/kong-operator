@@ -4,7 +4,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// AddDeveloperToTeam is the Schema for the adddevelopertoteams API.
+// DeveloperToTeam is the Schema for the developertoteams API.
 //
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
@@ -16,28 +16,28 @@ import (
 // +kubebuilder:storageversion
 // +apireference:kgo:include
 // +kong:channels=kong-operator
-type AddDeveloperToTeam struct {
+type DeveloperToTeam struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitzero"`
 
 	// +optional
-	Spec AddDeveloperToTeamSpec `json:"spec,omitzero"`
+	Spec DeveloperToTeamSpec `json:"spec,omitzero"`
 
 	// +optional
-	Status AddDeveloperToTeamStatus `json:"status,omitzero"`
+	Status DeveloperToTeamStatus `json:"status,omitzero"`
 }
 
-// AddDeveloperToTeamList contains a list of AddDeveloperToTeam.
+// DeveloperToTeamList contains a list of DeveloperToTeam.
 //
 // +kubebuilder:object:root=true
-type AddDeveloperToTeamList struct {
+type DeveloperToTeamList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitzero"`
-	Items           []AddDeveloperToTeam `json:"items"`
+	Items           []DeveloperToTeam `json:"items"`
 }
 
-// AddDeveloperToTeamSpec defines the desired state of AddDeveloperToTeam.
-type AddDeveloperToTeamSpec struct {
+// DeveloperToTeamSpec defines the desired state of DeveloperToTeam.
+type DeveloperToTeamSpec struct {
 	// PortalRef is the reference to the parent Portal object.
 	//
 	// +required
@@ -48,15 +48,18 @@ type AddDeveloperToTeamSpec struct {
 	// +required
 	TeamRef ObjectRef `json:"team_ref,omitzero"`
 
-	AddDeveloperToTeamAPISpec `json:",inline"`
+	// APISpec defines the desired state of the resource's API spec fields.
+	//
+	// +optional
+	APISpec DeveloperToTeamAPISpec `json:"apiSpec,omitzero"`
 }
 
-// AddDeveloperToTeamAPISpec defines the API spec fields for AddDeveloperToTeam.
-type AddDeveloperToTeamAPISpec struct {
+// DeveloperToTeamAPISpec defines the API spec fields for DeveloperToTeam.
+type DeveloperToTeamAPISpec struct {
 }
 
-// AddDeveloperToTeamStatus defines the observed state of AddDeveloperToTeam.
-type AddDeveloperToTeamStatus struct {
+// DeveloperToTeamStatus defines the observed state of DeveloperToTeam.
+type DeveloperToTeamStatus struct {
 	// Conditions represent the current state of the resource.
 	//
 	// +optional
@@ -89,5 +92,5 @@ type AddDeveloperToTeamStatus struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&AddDeveloperToTeam{}, &AddDeveloperToTeamList{})
+	SchemeBuilder.Register(&DeveloperToTeam{}, &DeveloperToTeamList{})
 }

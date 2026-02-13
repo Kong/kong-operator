@@ -38,7 +38,10 @@ type PortalList struct {
 
 // PortalSpec defines the desired state of Portal.
 type PortalSpec struct {
-	PortalAPISpec `json:",inline"`
+	// APISpec defines the desired state of the resource's API spec fields.
+	//
+	// +optional
+	APISpec PortalAPISpec `json:"apiSpec,omitzero"`
 }
 
 // PortalAPISpec defines the API spec fields for Portal.

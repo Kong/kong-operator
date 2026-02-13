@@ -49,7 +49,10 @@ type {{.EntityName}}Spec struct {
 	// +required
 	{{.FieldName}} ObjectRef ` + "`" + `json:"{{.JSONName}},omitzero"` + "`" + `
 {{end}}
-	{{.EntityName}}APISpec ` + "`" + `json:",inline"` + "`" + `
+	// APISpec defines the desired state of the resource's API spec fields.
+	//
+	// +optional
+	APISpec {{.EntityName}}APISpec ` + "`" + `json:"apiSpec,omitzero"` + "`" + `
 }
 
 // {{.EntityName}}APISpec defines the API spec fields for {{.EntityName}}.

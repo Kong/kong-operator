@@ -38,7 +38,10 @@ type DcrProviderList struct {
 
 // DcrProviderSpec defines the desired state of DcrProvider.
 type DcrProviderSpec struct {
-	DcrProviderAPISpec `json:",inline"`
+	// APISpec defines the desired state of the resource's API spec fields.
+	//
+	// +optional
+	APISpec DcrProviderAPISpec `json:"apiSpec,omitzero"`
 }
 
 // DcrProviderAPISpec defines the API spec fields for DcrProvider.

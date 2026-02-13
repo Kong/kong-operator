@@ -5,12 +5,12 @@ import (
 	"testing"
 
 	"github.com/samber/lo"
+	"k8s.io/utils/ptr"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/crd-from-oas/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/crd-from-oas/test/crdsvalidation/common"
 	testscheme "github.com/kong/kong-operator/crd-from-oas/test/scheme"
 	"github.com/kong/kong-operator/test/envtest"
-	"k8s.io/utils/ptr"
 )
 
 func TestPortalCustomDomain(t *testing.T) {
@@ -25,7 +25,7 @@ func TestPortalCustomDomain(t *testing.T) {
 			PortalRef: konnectv1alpha1.ObjectRef{
 				Name: "test-portal",
 			},
-			PortalCustomDomainAPISpec: konnectv1alpha1.PortalCustomDomainAPISpec{
+			APISpec: konnectv1alpha1.PortalCustomDomainAPISpec{
 				Enabled:  ptr.To(true),
 				Hostname: "custom.example.com",
 				SSL: konnectv1alpha1.CreatePortalCustomDomainSSL{
@@ -86,7 +86,7 @@ func TestPortalCustomDomain(t *testing.T) {
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: func() konnectv1alpha1.PortalCustomDomainSpec {
 						s := validSpec()
-						s.Hostname = strings.Repeat("h", 256)
+						s.APISpec.Hostname = strings.Repeat("h", 256)
 						return s
 					}(),
 				},
@@ -97,11 +97,11 @@ func TestPortalCustomDomain(t *testing.T) {
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: func() konnectv1alpha1.PortalCustomDomainSpec {
 						s := validSpec()
-						s.Hostname = strings.Repeat("h", 257)
+						s.APISpec.Hostname = strings.Repeat("h", 257)
 						return s
 					}(),
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.hostname: Too long: may not be more than 256"),
+				ExpectedErrorMessage: lo.ToPtr("spec.apiSpec.hostname: Too long: may not be more than 256"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -122,7 +122,7 @@ func TestPortalCustomDomain(t *testing.T) {
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: func() konnectv1alpha1.PortalCustomDomainSpec {
 						s := validSpec()
-						s.Enabled = ptr.To(false)
+						s.APISpec.Enabled = ptr.To(false)
 						return s
 					}(),
 				},
@@ -141,7 +141,7 @@ func TestPortalCustomDomain(t *testing.T) {
 						PortalRef: konnectv1alpha1.ObjectRef{
 							Name: "test-portal",
 						},
-						PortalCustomDomainAPISpec: konnectv1alpha1.PortalCustomDomainAPISpec{
+						APISpec: konnectv1alpha1.PortalCustomDomainAPISpec{
 							Enabled:  ptr.To(true),
 							Hostname: "portal.custom-domain.example.com",
 							SSL: konnectv1alpha1.CreatePortalCustomDomainSSL{

@@ -25,7 +25,7 @@ func TestDcrProvider(t *testing.T) {
 				TestObject: &konnectv1alpha1.DcrProvider{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.DcrProviderSpec{
-						DcrProviderAPISpec: konnectv1alpha1.DcrProviderAPISpec{
+						APISpec: konnectv1alpha1.DcrProviderAPISpec{
 							DcrProviderConfig: &konnectv1alpha1.DcrProviderConfig{
 								Type: konnectv1alpha1.DcrProviderConfigTypeAuth0,
 							},
@@ -38,7 +38,7 @@ func TestDcrProvider(t *testing.T) {
 				TestObject: &konnectv1alpha1.DcrProvider{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.DcrProviderSpec{
-						DcrProviderAPISpec: konnectv1alpha1.DcrProviderAPISpec{
+						APISpec: konnectv1alpha1.DcrProviderAPISpec{
 							DcrProviderConfig: &konnectv1alpha1.DcrProviderConfig{
 								Type: konnectv1alpha1.DcrProviderConfigTypeAzureAd,
 							},
@@ -51,7 +51,7 @@ func TestDcrProvider(t *testing.T) {
 				TestObject: &konnectv1alpha1.DcrProvider{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.DcrProviderSpec{
-						DcrProviderAPISpec: konnectv1alpha1.DcrProviderAPISpec{
+						APISpec: konnectv1alpha1.DcrProviderAPISpec{
 							DcrProviderConfig: &konnectv1alpha1.DcrProviderConfig{
 								Type: konnectv1alpha1.DcrProviderConfigTypeCurity,
 							},
@@ -64,7 +64,7 @@ func TestDcrProvider(t *testing.T) {
 				TestObject: &konnectv1alpha1.DcrProvider{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.DcrProviderSpec{
-						DcrProviderAPISpec: konnectv1alpha1.DcrProviderAPISpec{
+						APISpec: konnectv1alpha1.DcrProviderAPISpec{
 							DcrProviderConfig: &konnectv1alpha1.DcrProviderConfig{
 								Type: konnectv1alpha1.DcrProviderConfigTypeOkta,
 							},
@@ -77,7 +77,7 @@ func TestDcrProvider(t *testing.T) {
 				TestObject: &konnectv1alpha1.DcrProvider{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.DcrProviderSpec{
-						DcrProviderAPISpec: konnectv1alpha1.DcrProviderAPISpec{
+						APISpec: konnectv1alpha1.DcrProviderAPISpec{
 							DcrProviderConfig: &konnectv1alpha1.DcrProviderConfig{
 								Type: konnectv1alpha1.DcrProviderConfigTypeHttp,
 							},
@@ -90,14 +90,14 @@ func TestDcrProvider(t *testing.T) {
 				TestObject: &konnectv1alpha1.DcrProvider{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.DcrProviderSpec{
-						DcrProviderAPISpec: konnectv1alpha1.DcrProviderAPISpec{
+						APISpec: konnectv1alpha1.DcrProviderAPISpec{
 							DcrProviderConfig: &konnectv1alpha1.DcrProviderConfig{
 								Type: "InvalidType",
 							},
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr(`spec.type: Unsupported value: "InvalidType"`),
+				ExpectedErrorMessage: lo.ToPtr(`spec.apiSpec.type: Unsupported value: "InvalidType"`),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -110,7 +110,7 @@ func TestDcrProvider(t *testing.T) {
 				TestObject: &konnectv1alpha1.DcrProvider{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.DcrProviderSpec{
-						DcrProviderAPISpec: konnectv1alpha1.DcrProviderAPISpec{
+						APISpec: konnectv1alpha1.DcrProviderAPISpec{
 							DcrProviderConfig: &konnectv1alpha1.DcrProviderConfig{
 								Type: konnectv1alpha1.DcrProviderConfigTypeAuth0,
 								Auth0: &konnectv1alpha1.CreateDcrProviderRequestAuth0{
@@ -143,7 +143,7 @@ func TestDcrProvider(t *testing.T) {
 				TestObject: &konnectv1alpha1.DcrProvider{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.DcrProviderSpec{
-						DcrProviderAPISpec: konnectv1alpha1.DcrProviderAPISpec{
+						APISpec: konnectv1alpha1.DcrProviderAPISpec{
 							DcrProviderConfig: &konnectv1alpha1.DcrProviderConfig{
 								Type: konnectv1alpha1.DcrProviderConfigTypeOkta,
 								Okta: &konnectv1alpha1.CreateDcrProviderRequestOkta{
@@ -171,7 +171,7 @@ func TestDcrProvider(t *testing.T) {
 				TestObject: &konnectv1alpha1.DcrProvider{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.DcrProviderSpec{
-						DcrProviderAPISpec: konnectv1alpha1.DcrProviderAPISpec{
+						APISpec: konnectv1alpha1.DcrProviderAPISpec{
 							DcrProviderConfig: &konnectv1alpha1.DcrProviderConfig{
 								Type: konnectv1alpha1.DcrProviderConfigTypeHttp,
 								Http: &konnectv1alpha1.CreateDcrProviderRequestHttp{

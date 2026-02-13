@@ -43,7 +43,10 @@ type PortalTeamSpec struct {
 	// +required
 	PortalRef ObjectRef `json:"portal_ref,omitzero"`
 
-	PortalTeamAPISpec `json:",inline"`
+	// APISpec defines the desired state of the resource's API spec fields.
+	//
+	// +optional
+	APISpec PortalTeamAPISpec `json:"apiSpec,omitzero"`
 }
 
 // PortalTeamAPISpec defines the API spec fields for PortalTeam.

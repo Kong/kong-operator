@@ -38,7 +38,10 @@ type IdentityProviderRequestList struct {
 
 // IdentityProviderRequestSpec defines the desired state of IdentityProviderRequest.
 type IdentityProviderRequestSpec struct {
-	IdentityProviderRequestAPISpec `json:",inline"`
+	// APISpec defines the desired state of the resource's API spec fields.
+	//
+	// +optional
+	APISpec IdentityProviderRequestAPISpec `json:"apiSpec,omitzero"`
 }
 
 // IdentityProviderRequestAPISpec defines the API spec fields for IdentityProviderRequest.
