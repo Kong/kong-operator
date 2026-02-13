@@ -71,7 +71,7 @@ description = "Run CRD validation tests"
 # Update test paths below if more API groups are added
 run = '''
 export KUBEBUILDER_ASSETS=$(setup-envtest use -p path)
-go test -v -count 1./test/crdsvalidation/konnect.konghq.com/...
+go test -v -count 1 ${GOTESTFLAGS} ./test/crdsvalidation/konnect.konghq.com/...
 '''
 
 [tasks.all]
