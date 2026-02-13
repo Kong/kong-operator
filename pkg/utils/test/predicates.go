@@ -16,7 +16,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -670,7 +670,7 @@ func GatewayNotExist(t *testing.T, ctx context.Context, gatewayNSN types.Namespa
 		gateways := clients.GatewayClient.GatewayV1().Gateways(gatewayNSN.Namespace)
 		_, err := gateways.Get(ctx, gatewayNSN.Name, metav1.GetOptions{})
 		if err != nil {
-			return errors.IsNotFound(err)
+			return apierrors.IsNotFound(err)
 		}
 		return false
 	}

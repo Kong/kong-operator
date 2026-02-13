@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -213,7 +213,7 @@ func (r *KonnectEntityPluginBindingFinalizerReconciler[T, TEnt]) Reconcile(
 
 	if finalizersChangedAction != "" {
 		if err = r.Client.Update(ctx, ent); err != nil {
-			if k8serrors.IsConflict(err) {
+			if apierrors.IsConflict(err) {
 				return ctrl.Result{Requeue: true}, nil
 			}
 			return ctrl.Result{}, err

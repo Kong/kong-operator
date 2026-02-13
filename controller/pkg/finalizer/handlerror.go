@@ -2,7 +2,7 @@ package finalizer
 
 import (
 	"github.com/go-logr/logr"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 
@@ -18,7 +18,7 @@ func HandlePatchOrUpdateError(err error, logger logr.Logger) (ctrl.Result, error
 		return ctrl.Result{}, nil
 	}
 
-	if k8serrors.IsNotFound(err) {
+	if apierrors.IsNotFound(err) {
 		log.Debug(logger, "object not found when updating/patching")
 		return ctrl.Result{
 			RequeueAfter: ctrlconsts.RequeueWithoutBackoff,
@@ -26,7 +26,7 @@ func HandlePatchOrUpdateError(err error, logger logr.Logger) (ctrl.Result, error
 	}
 
 	// When there's a conflict when updating/patching, requeue without an error.
-	if k8serrors.IsConflict(err) {
+	if apierrors.IsConflict(err) {
 		log.Debug(logger, "conflict found when updating/patching, retrying")
 		return ctrl.Result{
 			RequeueAfter: ctrlconsts.RequeueWithoutBackoff,
@@ -37,7 +37,7 @@ func HandlePatchOrUpdateError(err error, logger logr.Logger) (ctrl.Result, error
 	// is in the API server and this causes:
 	// Forbidden: no new finalizers can be added if the object is being deleted, found new finalizers []string{...}
 	// Code below handles that gracefully to not show users the errors that are not actionable.
-	if cause, ok := k8serrors.StatusCause(err, metav1.CauseTypeForbidden); k8serrors.IsInvalid(err) && ok {
+	if cause, ok := apierrors.StatusCause(err, metav1.CauseTypeForbidden); apierrors.IsInvalid(err) && ok {
 		log.Debug(logger, "failed to delete a finalizer, requeueing request", "cause", cause)
 		return ctrl.Result{
 			RequeueAfter: ctrlconsts.RequeueWithoutBackoff,

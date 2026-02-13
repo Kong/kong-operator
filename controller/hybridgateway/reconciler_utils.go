@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -103,12 +103,12 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 		namespacedNameExisting := client.ObjectKeyFromObject(existing)
 
 		if err != nil {
-			if errors.IsNotFound(err) {
+			if apierrors.IsNotFound(err) {
 				// Object doesn't exist, create it using server-side apply.
 				log.Debug(logger, "Creating new object", "kind", desired.GetKind(), "obj", namespacedNameDesired)
 				// Set field manager for server-side apply
 				if err := cl.Apply(ctx, client.ApplyConfigurationFromUnstructured(&desired), client.FieldOwner(FieldManager), client.ForceOwnership); err != nil {
-					if errors.IsConflict(err) {
+					if apierrors.IsConflict(err) {
 						return false, fmt.Errorf("conflict during create of object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
 					}
 					return false, fmt.Errorf("failed to create object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
@@ -140,7 +140,7 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 			// No managed fields for our field manager, we should update.
 			log.Debug(logger, "No managed fields found for our field manager, will apply desired state", "kind", existing.GetKind(), "obj", namespacedNameExisting)
 			if err := cl.Apply(ctx, client.ApplyConfigurationFromUnstructured(&desired), client.FieldOwner(FieldManager), client.ForceOwnership); err != nil {
-				if errors.IsConflict(err) {
+				if apierrors.IsConflict(err) {
 					return false, fmt.Errorf("conflict during create of object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
 				}
 				return false, fmt.Errorf("failed to create object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
@@ -168,7 +168,7 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 			log.Info(logger, "Changes detected for obj, applying desired state", "kind", existing.GetKind(), "obj", namespacedNameExisting, "changes", compare.String())
 			// Changes detected, apply the desired state using server-side apply.
 			if err := cl.Apply(ctx, client.ApplyConfigurationFromUnstructured(&desired), client.FieldOwner(FieldManager), client.ForceOwnership); err != nil {
-				if errors.IsConflict(err) {
+				if apierrors.IsConflict(err) {
 					return false, fmt.Errorf("conflict during create of object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
 				}
 				return false, fmt.Errorf("failed to update object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
@@ -325,7 +325,7 @@ func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 			}
 
 			log.Info(logger, "Deleting orphaned resource", "kind", item.GetKind(), "obj", client.ObjectKeyFromObject(&item))
-			if err := cl.Delete(ctx, &item); err != nil && !errors.IsNotFound(err) {
+			if err := cl.Delete(ctx, &item); err != nil && !apierrors.IsNotFound(err) {
 				return false, fmt.Errorf("failed to delete orphaned resource kind %s obj %s: %w", item.GetKind(), client.ObjectKeyFromObject(&item), err)
 			}
 			orphansForGVK++
@@ -451,7 +451,7 @@ func removeFinalizerIfNotManaged[t converter.RootObject](ctx context.Context, cl
 
 	// Patch the object.
 	if err := cl.Patch(ctx, obj, patch); err != nil {
-		if errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			// Object was already deleted, this is fine.
 			log.Trace(logger, "Object already deleted, finalizer removal not needed")
 			return false, nil

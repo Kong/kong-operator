@@ -10,7 +10,7 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/samber/lo"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
@@ -271,7 +271,7 @@ func resolveConsumerGroupsKonnectIDs(
 	for _, cgName := range consumer.ConsumerGroups {
 		var cg configurationv1beta1.KongConsumerGroup
 		if err := cl.Get(ctx, client.ObjectKey{Name: cgName, Namespace: consumer.Namespace}, &cg); err != nil {
-			if k8serrors.IsNotFound(err) {
+			if apierrors.IsNotFound(err) {
 				invalidConsumerGroups = append(invalidConsumerGroups, invalidConsumerGroupRef{
 					Name:   cgName,
 					Reason: "NotFound",

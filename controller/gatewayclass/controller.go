@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -88,7 +88,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	if err := r.Client.Status().Patch(ctx, gwc.GatewayClass, client.MergeFrom(oldGwc)); err != nil {
-		if k8serrors.IsConflict(err) {
+		if apierrors.IsConflict(err) {
 			log.Debug(logger, "conflict found when updating GatewayClass, retrying")
 			return ctrl.Result{
 				Requeue:      true,

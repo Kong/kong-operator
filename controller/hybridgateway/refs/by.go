@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -181,7 +181,7 @@ func byKonnectExtension(ctx context.Context, cl client.Client, konnectExtension 
 		Name:      cpRef.KonnectNamespacedRef.Name,
 		Namespace: ns,
 	}, &konnectGatewayControlPlane)
-	if k8serrors.IsNotFound(err) {
+	if apierrors.IsNotFound(err) {
 		return nil, false, nil
 	}
 	if err != nil {

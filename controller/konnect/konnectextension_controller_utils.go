@@ -11,7 +11,7 @@ import (
 	"github.com/samber/lo"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -54,7 +54,7 @@ func (r *KonnectExtensionReconciler) getGatewayKonnectControlPlane(
 	kgcp := &konnectv1alpha2.KonnectGatewayControlPlane{}
 	// Set the controlPlaneRefValidCond to false in case the KonnectGatewayControlPlane is not found.
 	if err := r.Get(ctx, cpNN, kgcp); err != nil {
-		if k8serrors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			errGetFromK8s = err
 		} else {
 			return nil, ctrl.Result{}, err
@@ -178,7 +178,7 @@ func (r *KonnectExtensionReconciler) ensureExtendablesReferencesInStatus(
 	}
 
 	if err := r.Client.Status().Update(ctx, ext); err != nil {
-		if k8serrors.IsConflict(err) {
+		if apierrors.IsConflict(err) {
 			// Gracefully requeue in case of conflict.
 			return ctrl.Result{Requeue: true}, nil
 		}

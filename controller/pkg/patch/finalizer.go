@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -33,7 +33,7 @@ func WithFinalizer[
 	}
 
 	if errUpd := cl.Patch(ctx, objWithFinalizer, client.MergeFrom(ent)); errUpd != nil {
-		if k8serrors.IsConflict(errUpd) {
+		if apierrors.IsConflict(errUpd) {
 			return false, ctrl.Result{Requeue: true}, nil
 		}
 		return false, ctrl.Result{}, fmt.Errorf(
@@ -67,7 +67,7 @@ func WithoutFinalizer[
 	}
 
 	if errUpd := cl.Patch(ctx, objWithFinalizer, client.MergeFrom(ent)); errUpd != nil {
-		if k8serrors.IsConflict(errUpd) {
+		if apierrors.IsConflict(errUpd) {
 			return false, ctrl.Result{Requeue: true}, nil
 		}
 		return false, ctrl.Result{}, fmt.Errorf(

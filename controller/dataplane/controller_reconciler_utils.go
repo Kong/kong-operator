@@ -11,7 +11,7 @@ import (
 	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -195,7 +195,7 @@ func populateDedicatedConfigMapForKongPluginInstallation(
 			log.Trace(logger, fmt.Sprintf("Update existing ConfigMap %s for KongPluginInstallation", client.ObjectKeyFromObject(&cm)))
 			cm.Data = underlyingCM.Data
 			if err := c.Update(ctx, &cm); err != nil {
-				if k8serrors.IsConflict(err) {
+				if apierrors.IsConflict(err) {
 					return customPlugin{}, true, nil
 				}
 				return customPlugin{}, false, fmt.Errorf("could not update mapped: %w", err)
@@ -225,7 +225,7 @@ func verifyKPIReadinessForDataPlane(
 	// Report to user when KPI does not exist or it hasn't been fully reconciled yet.
 	// It can be fixed by the user or it's transient.
 	if err := c.Get(ctx, kpiNN, &kpi); err != nil {
-		if k8serrors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			msg := fmt.Sprintf("referenced KongPluginInstallation %s not found", kpiNN)
 			markErr := ensureDataPlaneIsMarkedNotReady(ctx, logger, c, dataplane, kcfgdataplane.DataPlaneConditionReferencedResourcesNotAvailable, msg)
 			return kpi, false, markErr

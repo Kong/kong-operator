@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/samber/mo"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -45,7 +45,7 @@ func handleKongKeySetRef[T constraints.SupportedKonnectEntityType, TEnt constrai
 
 				// Patch the status
 				if _, err := patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), ent, old); err != nil {
-					if k8serrors.IsConflict(err) {
+					if apierrors.IsConflict(err) {
 						return ctrl.Result{Requeue: true}, nil
 					}
 					return ctrl.Result{}, fmt.Errorf("failed to patch status: %w", err)
@@ -84,7 +84,7 @@ func handleKongKeySetRef[T constraints.SupportedKonnectEntityType, TEnt constrai
 		}
 
 		// If the KongKeySet is not found, we don't want to requeue.
-		if k8serrors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			return ctrl.Result{}, ReferencedKongKeySetDoesNotExistError{
 				Reference: nn,
 				Err:       err,
@@ -138,7 +138,7 @@ func handleKongKeySetRef[T constraints.SupportedKonnectEntityType, TEnt constrai
 
 	_, err := patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), ent, old)
 	if err != nil {
-		if k8serrors.IsConflict(err) {
+		if apierrors.IsConflict(err) {
 			return ctrl.Result{Requeue: true}, nil
 		}
 		return ctrl.Result{}, err

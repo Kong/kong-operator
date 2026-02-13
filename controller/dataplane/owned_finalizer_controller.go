@@ -8,7 +8,7 @@ import (
 	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -121,7 +121,7 @@ func (r *DataPlaneOwnedResourceFinalizerReconciler[T, PT]) SetupWithManager(
 func (r DataPlaneOwnedResourceFinalizerReconciler[T, PT]) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	obj := PT(new(T))
 	if err := r.Client.Get(ctx, req.NamespacedName, obj); err != nil {
-		if k8serrors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, fmt.Errorf("failed to get %s %s/%s: %w", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetNamespace(), obj.GetName(), err)
@@ -160,7 +160,7 @@ func (r DataPlaneOwnedResourceFinalizerReconciler[T, PT]) Reconcile(ctx context.
 			Name:      ownerRef.Name,
 		}, ownerDataPlane)
 		// If the DataPlane is not found or gone, or has been re-created (different UID), we consider it gone.
-		if k8serrors.IsNotFound(getOwnerErr) || k8serrors.IsGone(getOwnerErr) || ownerDataPlane.UID != ownerRef.UID {
+		if apierrors.IsNotFound(getOwnerErr) || apierrors.IsGone(getOwnerErr) || ownerDataPlane.UID != ownerRef.UID {
 			return true, nil
 		}
 		if getOwnerErr != nil {
@@ -188,7 +188,7 @@ func (r DataPlaneOwnedResourceFinalizerReconciler[T, PT]) Reconcile(ctx context.
 		return f == consts.DataPlaneOwnedWaitForOwnerFinalizer
 	}))
 	if err := r.Client.Patch(ctx, obj, client.MergeFrom(old)); err != nil {
-		if k8serrors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			// If the object is already gone, we don't need to do anything.
 			log.Debug(logger, "object is already gone")
 			return ctrl.Result{}, nil

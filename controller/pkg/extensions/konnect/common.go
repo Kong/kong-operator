@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
@@ -29,7 +29,7 @@ func getExtension(ctx context.Context, cl client.Client, objNamespace string, ex
 		Namespace: objNamespace,
 		Name:      extRef.Name,
 	}, &konnectExt); err != nil {
-		if k8serrors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			return nil, errors.Join(extensionserrors.ErrKonnectExtensionNotFound, fmt.Errorf("the extension %s/%s is not found", objNamespace, extRef.Name))
 		}
 		return nil, err

@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -101,7 +101,7 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		resource.SetControlPlaneID(cp.Status.ID)
 		_, err := patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), ent, old)
 		if err != nil {
-			if k8serrors.IsConflict(err) {
+			if apierrors.IsConflict(err) {
 				return ctrl.Result{Requeue: true}, nil
 			}
 			return ctrl.Result{}, err

@@ -27,7 +27,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/selection"
@@ -387,7 +387,7 @@ func checkExistenceOfCertificateAuthoritySecret(
 	)
 
 	if err := c.Get(ctx, certObjectKey, &ca); err != nil {
-		if k8serrors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			return fmt.Errorf("cluster CA certificate not found")
 		}
 

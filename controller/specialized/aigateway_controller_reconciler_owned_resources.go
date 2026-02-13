@@ -7,7 +7,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -37,7 +37,7 @@ func (r *AIGatewayReconciler) createOrUpdateHTTPRoute(
 		Namespace: httpRoute.Namespace,
 	}, found)
 	if err != nil {
-		if k8serrors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			log.Info(logger, "creating httproute for aigateway")
 			return true, r.Create(ctx, httpRoute)
 		}
@@ -67,7 +67,7 @@ func (r *AIGatewayReconciler) createOrUpdatePlugin(
 		Namespace: kongPlugin.Namespace,
 	}, found)
 	if err != nil {
-		if k8serrors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			log.Info(logger, "creating plugin for aigateway")
 			return true, r.Create(ctx, kongPlugin)
 		}
@@ -97,7 +97,7 @@ func (r *AIGatewayReconciler) createOrUpdateGateway(
 		Namespace: gateway.Namespace,
 	}, found)
 	if err != nil {
-		if k8serrors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			log.Info(logger, "creating gateway for aigateway")
 			return true, r.Create(ctx, gateway)
 		}
@@ -128,7 +128,7 @@ func (r *AIGatewayReconciler) createOrUpdateSvc(
 		Namespace: service.Namespace,
 	}, found)
 	if err != nil {
-		if k8serrors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			log.Info(logger, "creating service for aigateway")
 			return true, r.Create(ctx, service)
 		}
@@ -210,7 +210,7 @@ func (r *AIGatewayReconciler) configurePlugins(
 
 	credentialSecret := &corev1.Secret{}
 	if err := r.Get(ctx, types.NamespacedName{Namespace: credentialSecretNamespace, Name: credentialSecretName}, credentialSecret); err != nil {
-		if k8serrors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			return changes, nil
 		}
 		return changes, fmt.Errorf(

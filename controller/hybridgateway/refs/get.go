@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	hybridgatewayerrors "github.com/kong/kong-operator/controller/hybridgateway/errors"
@@ -48,7 +48,7 @@ func GetGatewaysByHTTPRoute(ctx context.Context, cl client.Client, r gwtypes.HTT
 // Returns an error if there's a problem accessing the GatewayClass.
 func IsGatewayInKonnect(ctx context.Context, cl client.Client, gateway *gwtypes.Gateway) (bool, error) {
 	_, found, err := byGateway(ctx, cl, *gateway)
-	if k8serrors.IsNotFound(err) {
+	if apierrors.IsNotFound(err) {
 		return false, nil
 	}
 	if err != nil {
@@ -110,7 +110,7 @@ func GetSupportedGatewayForParentRef(ctx context.Context, logger logr.Logger, cl
 	// Get the Gateway object.
 	gateway := gwtypes.Gateway{}
 	if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: string(pRef.Name)}, &gateway); err != nil {
-		if k8serrors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			// Gateway doesn't exist, not supported.
 			return nil, false, hybridgatewayerrors.ErrNoGatewayFound
 		}
@@ -118,7 +118,7 @@ func GetSupportedGatewayForParentRef(ctx context.Context, logger logr.Logger, cl
 	}
 
 	_, found, err := byGateway(ctx, cl, gateway)
-	if k8serrors.IsNotFound(err) {
+	if apierrors.IsNotFound(err) {
 		return nil, false, nil
 	}
 	if err != nil {

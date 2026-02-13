@@ -9,7 +9,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -1030,7 +1030,7 @@ func TestRemoveFinalizerIfNotManaged_HTTPRoute(t *testing.T) {
 			},
 			interceptorFuncs: &interceptor.Funcs{
 				Patch: func(ctx context.Context, client client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
-					return k8serrors.NewNotFound(schema.GroupResource{Group: "gateway.networking.k8s.io", Resource: "httproutes"}, "test-route")
+					return apierrors.NewNotFound(schema.GroupResource{Group: "gateway.networking.k8s.io", Resource: "httproutes"}, "test-route")
 				},
 			},
 			expectedRemoved: false,
@@ -1275,7 +1275,7 @@ func TestRemoveFinalizerIfNotManaged_Gateway(t *testing.T) {
 			},
 			interceptorFuncs: &interceptor.Funcs{
 				Patch: func(ctx context.Context, client client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
-					return k8serrors.NewNotFound(schema.GroupResource{Group: "gateway.networking.k8s.io", Resource: "gateways"}, "test-gateway")
+					return apierrors.NewNotFound(schema.GroupResource{Group: "gateway.networking.k8s.io", Resource: "gateways"}, "test-gateway")
 				},
 			},
 			expectedRemoved: false,

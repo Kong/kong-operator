@@ -12,7 +12,7 @@ import (
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -250,7 +250,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 	if err := r.ensureKonnectAPIAuthReferenceGrant(ctx, &gateway, gatewayConfig); err != nil {
-		if k8serrors.IsConflict(err) {
+		if apierrors.IsConflict(err) {
 			return ctrl.Result{Requeue: true}, nil
 		}
 		return ctrl.Result{}, err
@@ -902,7 +902,7 @@ func (r *Reconciler) provisionKonnectExtension(
 			return nil
 		}
 		for _, dp := range dataPlanes {
-			if err := r.Delete(ctx, &dp); err != nil && !k8serrors.IsNotFound(err) {
+			if err := r.Delete(ctx, &dp); err != nil && !apierrors.IsNotFound(err) {
 				log.Error(logger, err, "deleting dataplane failed", "dataplane", client.ObjectKeyFromObject(&dp))
 			}
 			log.Trace(logger, "deleted associated dataplane", "dataplane", client.ObjectKeyFromObject(&dp))

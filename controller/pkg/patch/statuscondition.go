@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -78,7 +78,7 @@ func StatusWithConditions[T interface {
 
 	if needsUpdate {
 		if err := cl.Status().Patch(ctx, ent, client.MergeFrom(old)); err != nil {
-			if k8serrors.IsConflict(err) {
+			if apierrors.IsConflict(err) {
 				return ctrl.Result{Requeue: true}, false, nil
 			}
 			return ctrl.Result{}, false, fmt.Errorf("failed to patch status with conditions %v: %w", conditions, err)
@@ -107,7 +107,7 @@ func StatusWithoutCondition[T interface {
 
 	old := ent.DeepCopyObject().(T)
 	if err := cl.Status().Patch(ctx, ent, client.MergeFrom(old)); err != nil {
-		if k8serrors.IsConflict(err) {
+		if apierrors.IsConflict(err) {
 			return ctrl.Result{Requeue: true}, nil
 		}
 		return ctrl.Result{}, fmt.Errorf("failed to patch status without condition %v: %w", conditionType, err)
@@ -141,7 +141,7 @@ func StatusWithCondition[T interface {
 	}
 
 	if err := cl.Status().Patch(ctx, ent, client.MergeFrom(old)); err != nil {
-		if k8serrors.IsConflict(err) {
+		if apierrors.IsConflict(err) {
 			return ctrl.Result{Requeue: true}, nil
 		}
 		return ctrl.Result{}, fmt.Errorf("failed to patch status with %s condition: %w", conditionType, err)

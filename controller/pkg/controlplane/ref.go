@@ -6,7 +6,7 @@ import (
 
 	"github.com/samber/lo"
 	"github.com/samber/mo"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -64,7 +64,7 @@ func getCPForNamespacedRef(
 
 	var cp konnectv1alpha2.KonnectGatewayControlPlane
 	if err := cl.Get(ctx, nn, &cp); err != nil {
-		if k8serrors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			return nil, ReferencedControlPlaneDoesNotExistError{
 				Reference: ref,
 				Err:       err,

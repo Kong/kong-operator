@@ -7,7 +7,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -278,7 +278,7 @@ func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger 
 	if updated {
 		log.Debug(logger, "Updating HTTPRoute status in cluster", "status", c.route.Status)
 		if err := c.Status().Update(ctx, c.route); err != nil {
-			if k8serrors.IsConflict(err) {
+			if apierrors.IsConflict(err) {
 				return false, true, err
 			}
 			log.Error(logger, err, "Failed to update HTTPRoute status in cluster")
@@ -322,7 +322,7 @@ func (c *httpRouteConverter) HandleOrphanedResource(ctx context.Context, logger 
 	// If other Routes are still present in the annotation, we just need to update the resource.
 	if len(am.GetRoutes(resource)) > 0 {
 		log.Debug(logger, "Updating hybrid-routes annotation", "kind", resource.GetKind(), "obj", client.ObjectKeyFromObject(resource))
-		if err := c.Patch(ctx, resource, client.MergeFrom(oldResource)); err != nil && !k8serrors.IsNotFound(err) {
+		if err := c.Patch(ctx, resource, client.MergeFrom(oldResource)); err != nil && !apierrors.IsNotFound(err) {
 			return true, fmt.Errorf("failed to update resource: %w", err)
 		}
 		return true, nil

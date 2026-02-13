@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/samber/mo"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -133,7 +133,7 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
 		}
-		if k8serrors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			return ctrl.Result{}, controlplane.ReferencedControlPlaneDoesNotExistError{
 				Reference: cpRef,
 				Err:       err,
@@ -162,7 +162,7 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 		resource.SetControlPlaneID(cp.Status.ID)
 		_, err := patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), ent, old)
 		if err != nil {
-			if k8serrors.IsConflict(err) {
+			if apierrors.IsConflict(err) {
 				return ctrl.Result{Requeue: true}, nil
 			}
 			return ctrl.Result{}, err

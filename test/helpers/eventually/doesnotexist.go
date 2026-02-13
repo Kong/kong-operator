@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -37,7 +37,7 @@ func WaitForObjectToNotExist(
 	return assert.EventuallyWithT(t,
 		func(c *assert.CollectT) {
 			err := cl.Get(ctx, nn, obj)
-			assert.True(c, err != nil && k8serrors.IsNotFound(err))
+			assert.True(c, err != nil && apierrors.IsNotFound(err))
 		},
 		waitTime, tickTime,
 		errMsg,

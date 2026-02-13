@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -128,7 +128,7 @@ func TestKongConsumerGroup(t *testing.T) {
 
 		require.EventuallyWithT(t,
 			func(c *assert.CollectT) {
-				assert.True(c, k8serrors.IsNotFound(
+				assert.True(c, apierrors.IsNotFound(
 					clientNamespaced.Get(ctx, client.ObjectKeyFromObject(cg), cg),
 				))
 			}, waitTime, tickTime,

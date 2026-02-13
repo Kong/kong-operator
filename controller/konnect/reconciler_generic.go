@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"time"
 
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -161,11 +161,11 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		if errors.As(err, &controlplane.ReferencedControlPlaneDoesNotExistError{}) {
 			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 				if err := r.Client.Update(ctx, ent); err != nil {
-					if k8serrors.IsConflict(err) {
+					if apierrors.IsConflict(err) {
 						return ctrl.Result{Requeue: true}, nil
 					}
 					// in case the finalizer removal fails because the resource does not exist, ignore the error.
-					if k8serrors.IsNotFound(err) {
+					if apierrors.IsNotFound(err) {
 						return ctrl.Result{}, nil
 					}
 					return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
@@ -186,11 +186,11 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		case errors.As(err, &ReferencedObjectDoesNotExistError{}), errors.As(err, &controlplane.ReferencedControlPlaneDoesNotExistError{}):
 			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 				if err := r.Client.Update(ctx, ent); err != nil {
-					if k8serrors.IsConflict(err) {
+					if apierrors.IsConflict(err) {
 						return ctrl.Result{RequeueAfter: time.Second}, nil
 					}
 					// in case the finalizer removal fails because the resource does not exist, ignore the error.
-					if k8serrors.IsNotFound(err) {
+					if apierrors.IsNotFound(err) {
 						return ctrl.Result{}, nil
 					}
 					return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
@@ -242,11 +242,11 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		if errors.As(err, &ReferencedKongConsumerDoesNotExistError{}) {
 			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 				if err := r.Client.Update(ctx, ent); err != nil {
-					if k8serrors.IsConflict(err) {
+					if apierrors.IsConflict(err) {
 						return ctrl.Result{Requeue: true}, nil
 					}
 					// in case the finalizer removal fails because the resource does not exist, ignore the error.
-					if k8serrors.IsNotFound(err) {
+					if apierrors.IsNotFound(err) {
 						return ctrl.Result{}, nil
 					}
 					return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
@@ -289,7 +289,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		if errors.As(err, &ReferencedKongUpstreamDoesNotExistError{}) || errors.As(err, &controlplane.ReferencedControlPlaneDoesNotExistError{}) {
 			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 				if err := r.Client.Update(ctx, ent); err != nil {
-					if k8serrors.IsConflict(err) {
+					if apierrors.IsConflict(err) {
 						return ctrl.Result{Requeue: true}, nil
 					}
 					return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
@@ -330,11 +330,11 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		if errors.As(err, &ReferencedKongCertificateDoesNotExistError{}) {
 			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 				if err := r.Client.Update(ctx, ent); err != nil {
-					if k8serrors.IsConflict(err) {
+					if apierrors.IsConflict(err) {
 						return ctrl.Result{Requeue: true}, nil
 					}
 					// in case the finalizer removal fails because the resource does not exist, ignore the error.
-					if k8serrors.IsNotFound(err) {
+					if apierrors.IsNotFound(err) {
 						return ctrl.Result{}, nil
 					}
 					return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
@@ -376,7 +376,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		if errors.As(err, &ReferencedKongKeySetDoesNotExistError{}) {
 			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 				if err := r.Client.Update(ctx, ent); err != nil {
-					if k8serrors.IsConflict(err) {
+					if apierrors.IsConflict(err) {
 						return ctrl.Result{Requeue: true}, nil
 					}
 					return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
@@ -499,11 +499,11 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 				return ctrl.Result{}, err
 			}
 			if err := r.Client.Update(ctx, ent); err != nil {
-				if k8serrors.IsConflict(err) {
+				if apierrors.IsConflict(err) {
 					return ctrl.Result{Requeue: true}, nil
 				}
 				// in case the finalizer removal fails because the resource does not exist, ignore the error.
-				if k8serrors.IsNotFound(err) {
+				if apierrors.IsNotFound(err) {
 					return ctrl.Result{}, nil
 				}
 				return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
@@ -571,7 +571,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// Org ID, Server URL and status conditions.
 		// Konnect ID will be needed for the finalizer to work.
 		if _, err := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, any(ent).(client.Object), obj); err != nil {
-			if k8serrors.IsConflict(err) {
+			if apierrors.IsConflict(err) {
 				return ctrl.Result{Requeue: true}, nil
 			}
 			return ctrl.Result{}, fmt.Errorf("failed to update status after creating object: %w", err)
@@ -611,7 +611,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	setStatusServerURLAndOrgID(ent, server, apiAuth.Status.OrganizationID)
 	// Update the status of the object regardless of the error.
 	if errUpd := r.Client.Status().Update(ctx, ent); errUpd != nil {
-		if k8serrors.IsConflict(errUpd) {
+		if apierrors.IsConflict(errUpd) {
 			return ctrl.Result{Requeue: true}, nil
 		}
 		return ctrl.Result{}, fmt.Errorf("failed to update in cluster resource after Konnect update: %w %w", errUpd, err)
@@ -700,7 +700,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) adoptFromExistingEntity(
 	// Org ID, Server URL and status conditions.
 	// Konnect ID will be needed for the finalizer to work.
 	if res, err := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, any(ent).(client.Object), obj); err != nil {
-		if k8serrors.IsConflict(err) {
+		if apierrors.IsConflict(err) {
 			return ctrl.Result{Requeue: true}, nil
 		}
 		return ctrl.Result{}, fmt.Errorf("failed to update status after creating object: %w", err)
