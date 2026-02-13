@@ -12,7 +12,6 @@ package v1alpha1
 // For example, you might want to provide a "system" role and tell the LLM
 // something like "you are a helpful assistant who responds in the style of
 // Sherlock Holmes".
-// +apireference:kgo:include
 type LLMPrompt struct {
 	// Content is the prompt text sent for inference.
 	//
@@ -37,7 +36,6 @@ type LLMPrompt struct {
 
 // LLMPromptParams contains parameters that can be used to control the behavior
 // of a large language model (LLM) when generating text based on a prompt.
-// +apireference:kgo:include
 type LLMPromptParams struct {
 	// Temperature controls the randomness of predictions by scaling the logits
 	// before applying softmax. A lower temperature (e.g., 0.0 to 0.7) makes
@@ -90,7 +88,6 @@ type LLMPromptParams struct {
 // -----------------------------------------------------------------------------
 
 // LLMPromptRole indicates the role of a prompt for a large language model (LLM).
-// +apireference:kgo:include
 type LLMPromptRole string
 
 const (
@@ -107,7 +104,6 @@ const (
 
 // LLMPromptType indicates the type of prompt to be used for a large
 // language model (LLM).
-// +apireference:kgo:include
 type LLMPromptType string
 
 const (

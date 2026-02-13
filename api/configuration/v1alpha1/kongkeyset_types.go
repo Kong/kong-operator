@@ -34,7 +34,6 @@ import (
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
 // +kubebuilder:validation:XValidation:rule="(!self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable when an entity is already Programmed"
-// +apireference:kgo:include
 // +kong:channels=kong-operator
 type KongKeySet struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -50,7 +49,6 @@ type KongKeySet struct {
 // +kubebuilder:validation:XValidation:rule="!has(self.controlPlaneRef) ? true : self.controlPlaneRef.type != 'kic'", message="KIC is not supported as control plane"
 // +kubebuilder:validation:XValidation:rule="!has(self.adopt) ? true : (has(self.controlPlaneRef) && self.controlPlaneRef.type == 'konnectNamespacedRef')", message="spec.adopt is allowed only when controlPlaneRef is konnectNamespacedRef"
 // +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
-// +apireference:kgo:include
 type KongKeySetSpec struct {
 	// KongKeySetAPISpec are the attributes of the KongKeySet itself.
 	KongKeySetAPISpec `json:",inline"`
@@ -66,7 +64,6 @@ type KongKeySetSpec struct {
 }
 
 // KongKeySetAPISpec defines the attributes of a Kong KeySet.
-// +apireference:kgo:include
 type KongKeySetAPISpec struct {
 	// Name is a name of the KeySet.
 	// +kubebuilder:validation:MinLength=1
@@ -78,7 +75,6 @@ type KongKeySetAPISpec struct {
 }
 
 // KongKeySetStatus defines the status for a KongKeySet.
-// +apireference:kgo:include
 type KongKeySetStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
@@ -94,7 +90,6 @@ type KongKeySetStatus struct {
 
 // KongKeySetList contains a list of Kong Keys.
 // +kubebuilder:object:root=true
-// +apireference:kgo:include
 type KongKeySetList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

@@ -38,7 +38,6 @@ import (
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.spec.controlPlaneRef) || has(self.spec.controlPlaneRef)", message="controlPlaneRef is required once set"
 // +kubebuilder:validation:XValidation:rule="(!has(self.spec.controlPlaneRef)) ? true : (!has(self.status) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable when an entity is already Programmed"
-// +apireference:kgo:include
 // +kong:channels=kong-operator
 type KongService struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -54,7 +53,6 @@ type KongService struct {
 // +kubebuilder:validation:XValidation:rule="!has(self.controlPlaneRef) ? true : self.controlPlaneRef.type != 'kic'", message="KIC is not supported as control plane"
 // +kubebuilder:validation:XValidation:rule="!has(self.adopt) ? true : (has(self.controlPlaneRef) && self.controlPlaneRef.type == 'konnectNamespacedRef')", message="spec.adopt is allowed only when controlPlaneRef is konnectNamespacedRef"
 // +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
-// +apireference:kgo:include
 type KongServiceSpec struct {
 	KongServiceAPISpec `json:",inline"`
 
@@ -69,7 +67,6 @@ type KongServiceSpec struct {
 }
 
 // KongServiceAPISpec defines the specification of a Kong Service.
-// +apireference:kgo:include
 type KongServiceAPISpec struct {
 	// TODO(pmalek): client certificate implement ref
 	// TODO(pmalek): ca_certificates implement ref
@@ -115,7 +112,6 @@ type KongServiceAPISpec struct {
 }
 
 // KongServiceStatus represents the current status of the Kong Service resource.
-// +apireference:kgo:include
 type KongServiceStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
@@ -131,7 +127,6 @@ type KongServiceStatus struct {
 
 // KongServiceList contains a list of Kong Services.
 // +kubebuilder:object:root=true
-// +apireference:kgo:include
 type KongServiceList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

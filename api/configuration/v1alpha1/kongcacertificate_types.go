@@ -29,7 +29,6 @@ const (
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.spec.controlPlaneRef) || has(self.spec.controlPlaneRef)", message="controlPlaneRef is required once set"
 // +kubebuilder:validation:XValidation:rule="(!self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable when an entity is already Programmed"
-// +apireference:kgo:include
 // +kong:channels=kong-operator
 type KongCACertificate struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -48,7 +47,6 @@ type KongCACertificate struct {
 // +kubebuilder:validation:XValidation:rule="self.type != 'inline' || (has(self.cert) && self.cert.size() != 0)", message="spec.cert is required when type is 'inline'"
 // +kubebuilder:validation:XValidation:rule="self.type != 'secretRef' || has(self.secretRef)", message="spec.secretRef is required when type is 'secretRef'"
 // +kubebuilder:validation:XValidation:rule="!(has(self.cert) && has(self.secretRef))", message="cert and secretRef cannot be set at the same time"
-// +apireference:kgo:include
 type KongCACertificateSpec struct {
 	KongCACertificateAPISpec `json:",inline"`
 
@@ -77,7 +75,6 @@ type KongCACertificateSpec struct {
 }
 
 // KongCACertificateAPISpec contains the API specification for the KongCACertificate.
-// +apireference:kgo:include
 type KongCACertificateAPISpec struct {
 	// Cert is the PEM-encoded CA certificate.
 	// This field is used when type is 'inline'.
@@ -91,7 +88,6 @@ type KongCACertificateAPISpec struct {
 }
 
 // KongCACertificateStatus defines the observed state of KongCACertificate.
-// +apireference:kgo:include
 type KongCACertificateStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
@@ -107,7 +103,6 @@ type KongCACertificateStatus struct {
 
 // KongCACertificateList contains a list of KongCACertificates.
 // +kubebuilder:object:root=true
-// +apireference:kgo:include
 type KongCACertificateList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

@@ -36,7 +36,6 @@ import (
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.spec.controlPlaneRef) || has(self.spec.controlPlaneRef)", message="controlPlaneRef is required once set"
 // +kubebuilder:validation:XValidation:rule="!has(self.spec.controlPlaneRef) ? true : (!self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable when an entity is already Programmed"
 // +kubebuilder:validation:XValidation:rule="(!self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.cert == self.spec.cert", message="spec.cert is immutable when an entity is already Programmed"
-// +apireference:kgo:include
 // +kong:channels=kong-operator
 type KongDataPlaneClientCertificate struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -50,7 +49,6 @@ type KongDataPlaneClientCertificate struct {
 
 // KongDataPlaneClientCertificateSpec defines the spec for a KongDataPlaneClientCertificate.
 // +kubebuilder:validation:XValidation:rule="!has(self.controlPlaneRef) ? true : self.controlPlaneRef.type != 'kic'", message="KIC is not supported as control plane"
-// +apireference:kgo:include
 type KongDataPlaneClientCertificateSpec struct {
 	// KongDataPlaneClientCertificateAPISpec are the attributes of the KongDataPlaneClientCertificate itself.
 	KongDataPlaneClientCertificateAPISpec `json:",inline"`
@@ -67,7 +65,6 @@ type KongDataPlaneClientCertificateSpec struct {
 }
 
 // KongDataPlaneClientCertificateAPISpec defines the attributes of a Kong DP certificate.
-// +apireference:kgo:include
 type KongDataPlaneClientCertificateAPISpec struct {
 	// Cert is the certificate in PEM format. Once the certificate gets programmed this field becomes immutable.
 	// +kubebuilder:validation:MinLength=1
@@ -75,7 +72,6 @@ type KongDataPlaneClientCertificateAPISpec struct {
 }
 
 // KongDataPlaneClientCertificateStatus defines the status for a KongDataPlaneClientCertificate.
-// +apireference:kgo:include
 type KongDataPlaneClientCertificateStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
@@ -91,7 +87,6 @@ type KongDataPlaneClientCertificateStatus struct {
 
 // KongDataPlaneClientCertificateList contains a list of KongDataPlaneClientCertificate.
 // +kubebuilder:object:root=true
-// +apireference:kgo:include
 type KongDataPlaneClientCertificateList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

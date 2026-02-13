@@ -51,7 +51,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: DataPlaneSpec defines the desired state of DataPlane
+            description: DataPlaneSpec defines the desired state of DataPlane.
             properties:
               deployment:
                 description: |-
@@ -9675,7 +9675,7 @@ spec:
                 || e.group == ''gateway-operator.konghq.com'') && e.kind == ''KonnectExtension'')
                 : true'
           status:
-            description: DataPlaneStatus defines the observed state of DataPlane
+            description: DataPlaneStatus defines the observed state of DataPlane.
             properties:
               addresses:
                 description: Addresses lists the addresses that have actually been

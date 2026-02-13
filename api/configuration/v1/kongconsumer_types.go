@@ -37,7 +37,6 @@ import (
 // +kubebuilder:validation:XValidation:rule="has(self.username) || has(self.custom_id)", message="Need to provide either username or custom_id"
 // +kubebuilder:validation:XValidation:rule="(!has(oldSelf.spec) || !has(oldSelf.spec.controlPlaneRef)) || has(self.spec.controlPlaneRef)", message="controlPlaneRef is required once set"
 // +kubebuilder:validation:XValidation:rule="(!has(self.spec) || !has(self.spec.controlPlaneRef)) ? true : (!has(self.status) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable when an entity is already Programmed"
-// +apireference:kgo:include
 // +kong:channels=kong-operator
 type KongConsumer struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -74,7 +73,6 @@ type KongConsumer struct {
 // KongConsumerSpec defines the specification of the KongConsumer.
 // +kubebuilder:validation:XValidation:rule="!has(self.adopt) ? true : (has(self.controlPlaneRef) && self.controlPlaneRef.type == 'konnectNamespacedRef')", message="spec.adopt is allowed only when controlPlaneRef is konnectNamespacedRef"
 // +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
-// +apireference:kgo:include
 type KongConsumerSpec struct {
 	// ControlPlaneRef is a reference to a ControlPlane this Consumer is associated with.
 	// +kubebuilder:validation:XValidation:message="'konnectID' type is not supported", rule="self.type != 'konnectID'"
@@ -91,7 +89,6 @@ type KongConsumerSpec struct {
 
 // KongConsumerList contains a list of KongConsumer.
 // +kubebuilder:object:root=true
-// +apireference:kgo:include
 type KongConsumerList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -100,7 +97,6 @@ type KongConsumerList struct {
 }
 
 // KongConsumerStatus represents the current status of the KongConsumer resource.
-// +apireference:kgo:include
 type KongConsumerStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional

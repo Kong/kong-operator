@@ -20,7 +20,6 @@ const (
 // +kubebuilder:validation:XValidation:rule="(has(self.type) && self.type == 'konnectNamespacedRef') ? has(self.konnectNamespacedRef) : true", message="when type is konnectNamespacedRef, konnectNamespacedRef must be set"
 // +kubebuilder:validation:XValidation:rule="(has(self.type) && self.type == 'kic') ? !has(self.konnectNamespacedRef) : true", message="when type is kic, konnectNamespacedRef must not be set"
 // +kubebuilder:validation:XValidation:rule="!has(self.type) ? !has(self.konnectNamespacedRef) : true", message="when type is unset, konnectNamespacedRef must not be set"
-// +apireference:kgo:include
 type ControlPlaneRef struct {
 	// Type indicates the type of the control plane being referenced. Allowed values:
 	// - konnectNamespacedRef
@@ -45,7 +44,6 @@ type ControlPlaneRef struct {
 //
 // +kubebuilder:object:generate=true
 // +kubebuilder:validation:XValidation:rule="(has(self.type) && self.type == 'konnectNamespacedRef') ? has(self.konnectNamespacedRef) : true", message="when type is konnectNamespacedRef, konnectNamespacedRef must be set"
-// +apireference:kgo:include
 type KonnectExtensionControlPlaneRef struct {
 	// Type indicates the type of the control plane being referenced. Allowed values:
 	// - konnectNamespacedRef
@@ -71,7 +69,6 @@ type KonnectIDType string
 // KonnectNamespacedRef is the schema for the KonnectNamespacedRef type.
 //
 // +kubebuilder:object:generate=true
-// +apireference:kgo:include
 type KonnectNamespacedRef struct {
 	// Name is the name of the Konnect Control Plane.
 	//

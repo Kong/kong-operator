@@ -36,7 +36,6 @@ func init() {
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:storageversion
-// +apireference:kgo:include
 // +kong:channels=kong-operator
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
@@ -60,7 +59,6 @@ type GatewayConfiguration struct {
 // GatewayConfigurationSpec defines the desired state of GatewayConfiguration
 //
 // +kubebuilder:validation:XValidation:message="Can only specify listener's NodePort when the type of service for dataplane to receive ingress traffic ('spec.dataPlaneOptions.network.services.ingress') is NodePort or LoadBalancer",rule="(has(self.dataPlaneOptions) && has(self.dataPlaneOptions.network) && has(self.dataPlaneOptions.network.services) &&  has(self.dataPlaneOptions.network.services.ingress) && (self.dataPlaneOptions.network.services.ingress.type == 'LoadBalancer' || self.dataPlaneOptions.network.services.ingress.type == 'NodePort')) ? true : (!has(self.listenersOptions) || self.listenersOptions.all(l,!has(l.nodePort)))"
-// +apireference:kgo:include
 type GatewayConfigurationSpec struct {
 	// DataPlaneOptions is the specification for configuration
 	// overrides for DataPlane resources that will be created for the Gateway.
@@ -107,7 +105,6 @@ type GatewayConfigurationSpec struct {
 //
 // +kubebuilder:validation:XValidation:message="mirror field must be set for type Mirror",rule="self.source == 'Mirror' ? has(self.mirror) : true"
 // +kubebuilder:validation:XValidation:message="mirror field cannot be set for type Origin",rule="self.source == 'Origin' ? !has(self.mirror) : true"
-// +apireference:kgo:include
 type KonnectOptions struct {
 	// APIAuthConfigurationRef contains the Konnect API authentication configuration.
 	// If this field is not set, the operator will not be able to connect
@@ -138,8 +135,6 @@ type GatewayConfigControlPlaneOptions struct {
 
 // GatewayConfigDataPlaneOptions indicates the specific information needed to
 // configure and deploy a DataPlane object.
-//
-// +apireference:kgo:include
 type GatewayConfigDataPlaneOptions struct {
 	// +optional
 	Deployment DataPlaneDeploymentOptions `json:"deployment"`
@@ -161,7 +156,6 @@ type GatewayConfigDataPlaneOptions struct {
 
 // DataPlaneDeploymentOptions specifies options for the Deployments (as in the Kubernetes
 // resource "Deployment") which are created and managed for the DataPlane resource.
-// +apireference:kgo:include
 type DataPlaneDeploymentOptions struct {
 	DeploymentOptions `json:",inline"`
 
@@ -172,8 +166,6 @@ type DataPlaneDeploymentOptions struct {
 }
 
 // GatewayConfigDataPlaneNetworkOptions defines network related options for a DataPlane.
-//
-// +apireference:kgo:include
 type GatewayConfigDataPlaneNetworkOptions struct {
 	// Services indicates the configuration of Kubernetes Services needed for
 	// the topology of various forms of traffic (including ingress, etc.) to
@@ -184,8 +176,6 @@ type GatewayConfigDataPlaneNetworkOptions struct {
 }
 
 // GatewayConfigDataPlaneServices contains Services related DataPlane configuration.
-//
-// +apireference:kgo:include
 type GatewayConfigDataPlaneServices struct {
 	// Ingress is the Kubernetes Service that will be used to expose ingress
 	// traffic for the DataPlane. Here you can determine whether the DataPlane
@@ -200,8 +190,6 @@ type GatewayConfigDataPlaneServices struct {
 
 // GatewayConfigDataPlaneResources defines the resources that will be
 // created and managed for Gateway's DataPlane.
-//
-// +apireference:kgo:include
 type GatewayConfigDataPlaneResources struct {
 	// PodDisruptionBudget is the configuration for the PodDisruptionBudget
 	// that will be created for the DataPlane.
@@ -211,8 +199,6 @@ type GatewayConfigDataPlaneResources struct {
 }
 
 // PodDisruptionBudget defines the configuration for the PodDisruptionBudget.
-//
-// +apireference:kgo:include
 type PodDisruptionBudget struct {
 	// Spec defines the specification of the PodDisruptionBudget.
 	// Selector is managed by the controller and cannot be set by the user.
@@ -224,7 +210,6 @@ type PodDisruptionBudget struct {
 // PodDisruptionBudgetSpec defines the specification of a PodDisruptionBudget.
 //
 // +kubebuilder:validation:XValidation:message="You can specify only one of maxUnavailable and minAvailable in a single PodDisruptionBudgetSpec.",rule="(has(self.minAvailable) && !has(self.maxUnavailable)) || (!has(self.minAvailable) && has(self.maxUnavailable))"
-// +apireference:kgo:include
 type PodDisruptionBudgetSpec struct {
 	// An eviction is allowed if at least "minAvailable" pods selected by
 	// "selector" will still be available after the eviction, i.e. even in the
@@ -274,8 +259,6 @@ type PodDisruptionBudgetSpec struct {
 
 // GatewayConfigServiceOptions is used to includes options to customize the ingress service,
 // such as the annotations.
-//
-// +apireference:kgo:include
 type GatewayConfigServiceOptions struct {
 	ServiceOptions `json:",inline"`
 }
@@ -286,8 +269,6 @@ type GatewayConfigServiceOptions struct {
 // For example, if the option for listener "http" specified the nodeport number to 30080,
 // The ingress service will expose the nodeport 30080 for the "http" listener of the Gateway.
 // For listeners without an item in listener options of GatewayConfiguration, default configuration is used for it.
-//
-// +apireference:kgo:include
 type GatewayConfigurationListenerOptions struct {
 	// Name is the name of the Listener.
 	//
@@ -314,9 +295,7 @@ type GatewayConfigurationListenerOptions struct {
 	NodePort int32 `json:"nodePort"`
 }
 
-// GatewayConfigurationStatus defines the observed state of GatewayConfiguration
-//
-// +apireference:kgo:include
+// GatewayConfigurationStatus defines the observed state of GatewayConfiguration.
 type GatewayConfigurationStatus struct {
 	// Conditions describe the current conditions of the GatewayConfigurationStatus.
 	//
@@ -331,7 +310,6 @@ type GatewayConfigurationStatus struct {
 
 // GatewayConfigurationList contains a list of GatewayConfiguration
 //
-// +apireference:kgo:include
 // +kubebuilder:object:root=true
 type GatewayConfigurationList struct {
 	metav1.TypeMeta `json:",inline"`

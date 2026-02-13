@@ -30,7 +30,6 @@ func init() {
 // +kubebuilder:validation:XValidation:rule="(!has(self.status) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.availability_zones == self.spec.availability_zones",message="spec.availability_zones is immutable when an entity is already Programmed"
 // +kubebuilder:validation:XValidation:rule="(!has(self.status) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.cidr_block == self.spec.cidr_block",message="spec.cidr_block is immutable when an entity is already Programmed"
 // +kubebuilder:validation:XValidation:rule="(!has(self.status) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : (!has(self.spec.state) && !has(oldSelf.spec.state)) || self.spec.state == oldSelf.spec.state",message="spec.state is immutable when an entity is already Programmed"
-// +apireference:kgo:include
 // +kong:channels=kong-operator
 type KonnectCloudGatewayNetwork struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -50,7 +49,6 @@ type KonnectCloudGatewayNetwork struct {
 // KonnectCloudGatewayNetworkSpec defines the desired state of KonnectCloudGatewayNetwork.
 //
 // +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
-// +apireference:kgo:include
 type KonnectCloudGatewayNetworkSpec struct {
 	// NOTE: These fields are extracted from sdkkonnectcomp.CreateNetworkRequest
 	// because for some reason when embedding the struct, the fields deserialization
@@ -97,7 +95,6 @@ type KonnectCloudGatewayNetworkSpec struct {
 }
 
 // KonnectCloudGatewayNetworkStatus defines the observed state of KonnectCloudGatewayNetwork.
-// +apireference:kgo:include
 type KonnectCloudGatewayNetworkStatus struct {
 	// Conditions describe the current conditions of the KonnectCloudGatewayNetwork.
 	//
@@ -131,7 +128,6 @@ func (c *KonnectCloudGatewayNetwork) GetKonnectAPIAuthConfigurationRef() konnect
 
 // KonnectCloudGatewayNetworkList contains a list of KonnectCloudGatewayNetwork.
 // +kubebuilder:object:root=true
-// +apireference:kgo:include
 type KonnectCloudGatewayNetworkList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

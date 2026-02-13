@@ -3,7 +3,6 @@ package v1alpha1
 // ObjectRefType is the enum type for the ObjectRef.
 //
 // +kubebuilder:validation:Enum=konnectID;namespacedRef
-// +apireference:kgo:include
 type ObjectRefType string
 
 const (
@@ -25,7 +24,6 @@ const (
 // +kubebuilder:validation:XValidation:rule="self.type == 'namespacedRef' ? !has(self.konnectID) : true", message="when type is namespacedRef, konnectID must not be set"
 // +kubebuilder:validation:XValidation:rule="self.type == 'konnectID' ? has(self.konnectID) : true", message="when type is konnectID, konnectID must be set"
 // +kubebuilder:validation:XValidation:rule="self.type == 'konnectID' ? !has(self.namespacedRef) : true", message="when type is konnectID, namespacedRef must not be set"
-// +apireference:kgo:include
 // +kong:channels=kong-operator
 type ObjectRef struct {
 	// Type defines type of the object which is referenced. It can be one of:
@@ -51,8 +49,6 @@ type ObjectRef struct {
 }
 
 // NamespacedRef is a reference to a namespaced resource.
-//
-// +apireference:kgo:include
 type NamespacedRef struct {
 	// Name is the name of the referred resource.
 	//

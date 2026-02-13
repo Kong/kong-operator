@@ -5,6 +5,11 @@ processor:
   # RE2 regular expressions describing type fields that should be excluded from the generated documentation.
   ignoreFields:
     - "TypeMeta$"
+  # Custom markers used to control API reference generation.
+  # The package-level marker includes all types from a package in the CRD reference.
+  customMarkers:
+    - name: "apireference:kgo:include-all-types"
+      target: package
 
 render:
   # Version of Kubernetes to use when generating links to Kubernetes API documentation.
