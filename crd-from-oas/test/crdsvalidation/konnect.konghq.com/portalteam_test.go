@@ -24,7 +24,7 @@ func TestPortalTeam(t *testing.T) {
 			PortalRef: konnectv1alpha1.ObjectRef{
 				Name: "test-portal",
 			},
-			PortalTeamAPISpec: konnectv1alpha1.PortalTeamAPISpec{
+			APISpec: konnectv1alpha1.PortalTeamAPISpec{
 				Name: "test-team",
 			},
 		}
@@ -47,7 +47,7 @@ func TestPortalTeam(t *testing.T) {
 						PortalRef: konnectv1alpha1.ObjectRef{
 							Name: strings.Repeat("a", 253),
 						},
-						PortalTeamAPISpec: konnectv1alpha1.PortalTeamAPISpec{
+						APISpec: konnectv1alpha1.PortalTeamAPISpec{
 							Name: "team-ref-max",
 						},
 					},
@@ -61,7 +61,7 @@ func TestPortalTeam(t *testing.T) {
 						PortalRef: konnectv1alpha1.ObjectRef{
 							Name: strings.Repeat("a", 254),
 						},
-						PortalTeamAPISpec: konnectv1alpha1.PortalTeamAPISpec{
+						APISpec: konnectv1alpha1.PortalTeamAPISpec{
 							Name: "team-ref-over",
 						},
 					},
@@ -89,7 +89,7 @@ func TestPortalTeam(t *testing.T) {
 						PortalRef: konnectv1alpha1.ObjectRef{
 							Name: "test-portal",
 						},
-						PortalTeamAPISpec: konnectv1alpha1.PortalTeamAPISpec{
+						APISpec: konnectv1alpha1.PortalTeamAPISpec{
 							Name: strings.Repeat("a", 256),
 						},
 					},
@@ -103,12 +103,12 @@ func TestPortalTeam(t *testing.T) {
 						PortalRef: konnectv1alpha1.ObjectRef{
 							Name: "test-portal",
 						},
-						PortalTeamAPISpec: konnectv1alpha1.PortalTeamAPISpec{
+						APISpec: konnectv1alpha1.PortalTeamAPISpec{
 							Name: strings.Repeat("a", 257),
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.name: Too long: may not be more than 256"),
+				ExpectedErrorMessage: lo.ToPtr("spec.apiSpec.name: Too long: may not be more than 256"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -124,7 +124,7 @@ func TestPortalTeam(t *testing.T) {
 						PortalRef: konnectv1alpha1.ObjectRef{
 							Name: "test-portal",
 						},
-						PortalTeamAPISpec: konnectv1alpha1.PortalTeamAPISpec{
+						APISpec: konnectv1alpha1.PortalTeamAPISpec{
 							Name:        "team-desc-valid",
 							Description: "A valid description",
 						},
@@ -139,7 +139,7 @@ func TestPortalTeam(t *testing.T) {
 						PortalRef: konnectv1alpha1.ObjectRef{
 							Name: "test-portal",
 						},
-						PortalTeamAPISpec: konnectv1alpha1.PortalTeamAPISpec{
+						APISpec: konnectv1alpha1.PortalTeamAPISpec{
 							Name:        "team-desc-max",
 							Description: strings.Repeat("d", 250),
 						},
@@ -154,13 +154,13 @@ func TestPortalTeam(t *testing.T) {
 						PortalRef: konnectv1alpha1.ObjectRef{
 							Name: "test-portal",
 						},
-						PortalTeamAPISpec: konnectv1alpha1.PortalTeamAPISpec{
+						APISpec: konnectv1alpha1.PortalTeamAPISpec{
 							Name:        "team-desc-over",
 							Description: strings.Repeat("d", 251),
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.description: Too long: may not be more than 250"),
+				ExpectedErrorMessage: lo.ToPtr("spec.apiSpec.description: Too long: may not be more than 250"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -176,7 +176,7 @@ func TestPortalTeam(t *testing.T) {
 						PortalRef: konnectv1alpha1.ObjectRef{
 							Name: "test-portal",
 						},
-						PortalTeamAPISpec: konnectv1alpha1.PortalTeamAPISpec{
+						APISpec: konnectv1alpha1.PortalTeamAPISpec{
 							Name:        "full-spec-team",
 							Description: "A team with all fields",
 						},

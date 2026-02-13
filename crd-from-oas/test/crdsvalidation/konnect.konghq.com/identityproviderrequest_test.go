@@ -26,7 +26,7 @@ func TestIdentityProviderRequest(t *testing.T) {
 				TestObject: &konnectv1alpha1.IdentityProviderRequest{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.IdentityProviderRequestSpec{
-						IdentityProviderRequestAPISpec: konnectv1alpha1.IdentityProviderRequestAPISpec{
+						APISpec: konnectv1alpha1.IdentityProviderRequestAPISpec{
 							Type: "oidc",
 						},
 					},
@@ -37,7 +37,7 @@ func TestIdentityProviderRequest(t *testing.T) {
 				TestObject: &konnectv1alpha1.IdentityProviderRequest{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.IdentityProviderRequestSpec{
-						IdentityProviderRequestAPISpec: konnectv1alpha1.IdentityProviderRequestAPISpec{
+						APISpec: konnectv1alpha1.IdentityProviderRequestAPISpec{
 							Type: "saml",
 						},
 					},
@@ -48,12 +48,12 @@ func TestIdentityProviderRequest(t *testing.T) {
 				TestObject: &konnectv1alpha1.IdentityProviderRequest{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.IdentityProviderRequestSpec{
-						IdentityProviderRequestAPISpec: konnectv1alpha1.IdentityProviderRequestAPISpec{
+						APISpec: konnectv1alpha1.IdentityProviderRequestAPISpec{
 							Type: "invalid",
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr(`spec.type: Unsupported value: "invalid"`),
+				ExpectedErrorMessage: lo.ToPtr(`spec.apiSpec.type: Unsupported value: "invalid"`),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -66,7 +66,7 @@ func TestIdentityProviderRequest(t *testing.T) {
 				TestObject: &konnectv1alpha1.IdentityProviderRequest{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.IdentityProviderRequestSpec{
-						IdentityProviderRequestAPISpec: konnectv1alpha1.IdentityProviderRequestAPISpec{
+						APISpec: konnectv1alpha1.IdentityProviderRequestAPISpec{
 							Type:      "oidc",
 							LoginPath: "/login",
 						},
@@ -78,7 +78,7 @@ func TestIdentityProviderRequest(t *testing.T) {
 				TestObject: &konnectv1alpha1.IdentityProviderRequest{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.IdentityProviderRequestSpec{
-						IdentityProviderRequestAPISpec: konnectv1alpha1.IdentityProviderRequestAPISpec{
+						APISpec: konnectv1alpha1.IdentityProviderRequestAPISpec{
 							Type:      "oidc",
 							LoginPath: konnectv1alpha1.IdentityProviderLoginPath(strings.Repeat("p", 256)),
 						},
@@ -90,13 +90,13 @@ func TestIdentityProviderRequest(t *testing.T) {
 				TestObject: &konnectv1alpha1.IdentityProviderRequest{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.IdentityProviderRequestSpec{
-						IdentityProviderRequestAPISpec: konnectv1alpha1.IdentityProviderRequestAPISpec{
+						APISpec: konnectv1alpha1.IdentityProviderRequestAPISpec{
 							Type:      "oidc",
 							LoginPath: konnectv1alpha1.IdentityProviderLoginPath(strings.Repeat("p", 257)),
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.login_path: Too long: may not be more than 256"),
+				ExpectedErrorMessage: lo.ToPtr("spec.apiSpec.login_path: Too long: may not be more than 256"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -109,7 +109,7 @@ func TestIdentityProviderRequest(t *testing.T) {
 				TestObject: &konnectv1alpha1.IdentityProviderRequest{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.IdentityProviderRequestSpec{
-						IdentityProviderRequestAPISpec: konnectv1alpha1.IdentityProviderRequestAPISpec{
+						APISpec: konnectv1alpha1.IdentityProviderRequestAPISpec{
 							Type: "oidc",
 							Config: &konnectv1alpha1.Config{
 								Type: konnectv1alpha1.ConfigTypeOIDC,
@@ -134,7 +134,7 @@ func TestIdentityProviderRequest(t *testing.T) {
 				TestObject: &konnectv1alpha1.IdentityProviderRequest{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.IdentityProviderRequestSpec{
-						IdentityProviderRequestAPISpec: konnectv1alpha1.IdentityProviderRequestAPISpec{
+						APISpec: konnectv1alpha1.IdentityProviderRequestAPISpec{
 							Type: "saml",
 							Config: &konnectv1alpha1.Config{
 								Type: konnectv1alpha1.ConfigTypeSAML,
@@ -152,14 +152,14 @@ func TestIdentityProviderRequest(t *testing.T) {
 				TestObject: &konnectv1alpha1.IdentityProviderRequest{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.IdentityProviderRequestSpec{
-						IdentityProviderRequestAPISpec: konnectv1alpha1.IdentityProviderRequestAPISpec{
+						APISpec: konnectv1alpha1.IdentityProviderRequestAPISpec{
 							Config: &konnectv1alpha1.Config{
 								Type: "InvalidConfigType",
 							},
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr(`spec.config.type: Unsupported value: "InvalidConfigType"`),
+				ExpectedErrorMessage: lo.ToPtr(`spec.apiSpec.config.type: Unsupported value: "InvalidConfigType"`),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -172,7 +172,7 @@ func TestIdentityProviderRequest(t *testing.T) {
 				TestObject: &konnectv1alpha1.IdentityProviderRequest{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.IdentityProviderRequestSpec{
-						IdentityProviderRequestAPISpec: konnectv1alpha1.IdentityProviderRequestAPISpec{
+						APISpec: konnectv1alpha1.IdentityProviderRequestAPISpec{
 							Type:      "oidc",
 							Enabled:   true,
 							LoginPath: "/sso/login",

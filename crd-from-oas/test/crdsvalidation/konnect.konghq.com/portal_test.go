@@ -26,7 +26,7 @@ func TestPortal(t *testing.T) {
 				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.PortalSpec{
-						PortalAPISpec: konnectv1alpha1.PortalAPISpec{
+						APISpec: konnectv1alpha1.PortalAPISpec{
 							Name: "test-portal",
 						},
 					},
@@ -37,7 +37,7 @@ func TestPortal(t *testing.T) {
 				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.PortalSpec{
-						PortalAPISpec: konnectv1alpha1.PortalAPISpec{
+						APISpec: konnectv1alpha1.PortalAPISpec{
 							Name: strings.Repeat("a", 255),
 						},
 					},
@@ -48,25 +48,25 @@ func TestPortal(t *testing.T) {
 				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.PortalSpec{
-						PortalAPISpec: konnectv1alpha1.PortalAPISpec{
+						APISpec: konnectv1alpha1.PortalAPISpec{
 							Name: strings.Repeat("a", 256),
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.name: Too long: may not be more than 255"),
+				ExpectedErrorMessage: lo.ToPtr("spec.apiSpec.name: Too long: may not be more than 255"),
 			},
 			{
 				Name: "name is immutable",
 				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.PortalSpec{
-						PortalAPISpec: konnectv1alpha1.PortalAPISpec{
+						APISpec: konnectv1alpha1.PortalAPISpec{
 							Name: "immutable-portal-name",
 						},
 					},
 				},
 				Update: func(p *konnectv1alpha1.Portal) {
-					p.Spec.Name = "changed-portal-name"
+					p.Spec.APISpec.Name = "changed-portal-name"
 				},
 				ExpectedUpdateErrorMessage: lo.ToPtr("name is immutable"),
 			},
@@ -81,7 +81,7 @@ func TestPortal(t *testing.T) {
 				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.PortalSpec{
-						PortalAPISpec: konnectv1alpha1.PortalAPISpec{
+						APISpec: konnectv1alpha1.PortalAPISpec{
 							Name:        "portal-display-name-valid",
 							DisplayName: "My Portal",
 						},
@@ -93,7 +93,7 @@ func TestPortal(t *testing.T) {
 				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.PortalSpec{
-						PortalAPISpec: konnectv1alpha1.PortalAPISpec{
+						APISpec: konnectv1alpha1.PortalAPISpec{
 							Name:        "portal-display-name-max",
 							DisplayName: strings.Repeat("d", 255),
 						},
@@ -105,13 +105,13 @@ func TestPortal(t *testing.T) {
 				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.PortalSpec{
-						PortalAPISpec: konnectv1alpha1.PortalAPISpec{
+						APISpec: konnectv1alpha1.PortalAPISpec{
 							Name:        "portal-display-name-over",
 							DisplayName: strings.Repeat("d", 256),
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.display_name: Too long: may not be more than 255"),
+				ExpectedErrorMessage: lo.ToPtr("spec.apiSpec.display_name: Too long: may not be more than 255"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -124,7 +124,7 @@ func TestPortal(t *testing.T) {
 				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.PortalSpec{
-						PortalAPISpec: konnectv1alpha1.PortalAPISpec{
+						APISpec: konnectv1alpha1.PortalAPISpec{
 							Name:        "portal-desc-max",
 							Description: lo.ToPtr(strings.Repeat("x", 512)),
 						},
@@ -136,13 +136,13 @@ func TestPortal(t *testing.T) {
 				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.PortalSpec{
-						PortalAPISpec: konnectv1alpha1.PortalAPISpec{
+						APISpec: konnectv1alpha1.PortalAPISpec{
 							Name:        "portal-desc-over",
 							Description: lo.ToPtr(strings.Repeat("x", 513)),
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.description: Too long: may not be more than 512"),
+				ExpectedErrorMessage: lo.ToPtr("spec.apiSpec.description: Too long: may not be more than 512"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -155,7 +155,7 @@ func TestPortal(t *testing.T) {
 				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.PortalSpec{
-						PortalAPISpec: konnectv1alpha1.PortalAPISpec{
+						APISpec: konnectv1alpha1.PortalAPISpec{
 							Name:                 "portal-vis-public",
 							DefaultAPIVisibility: "public",
 						},
@@ -167,7 +167,7 @@ func TestPortal(t *testing.T) {
 				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.PortalSpec{
-						PortalAPISpec: konnectv1alpha1.PortalAPISpec{
+						APISpec: konnectv1alpha1.PortalAPISpec{
 							Name:                 "portal-vis-private",
 							DefaultAPIVisibility: "private",
 						},
@@ -179,13 +179,13 @@ func TestPortal(t *testing.T) {
 				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.PortalSpec{
-						PortalAPISpec: konnectv1alpha1.PortalAPISpec{
+						APISpec: konnectv1alpha1.PortalAPISpec{
 							Name:                 "portal-vis-invalid",
 							DefaultAPIVisibility: "invalid",
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr(`spec.default_api_visibility: Unsupported value: "invalid"`),
+				ExpectedErrorMessage: lo.ToPtr(`spec.apiSpec.default_api_visibility: Unsupported value: "invalid"`),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -198,7 +198,7 @@ func TestPortal(t *testing.T) {
 				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.PortalSpec{
-						PortalAPISpec: konnectv1alpha1.PortalAPISpec{
+						APISpec: konnectv1alpha1.PortalAPISpec{
 							Name:                  "portal-page-vis-public",
 							DefaultPageVisibility: "public",
 						},
@@ -210,7 +210,7 @@ func TestPortal(t *testing.T) {
 				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.PortalSpec{
-						PortalAPISpec: konnectv1alpha1.PortalAPISpec{
+						APISpec: konnectv1alpha1.PortalAPISpec{
 							Name:                  "portal-page-vis-private",
 							DefaultPageVisibility: "private",
 						},
@@ -222,13 +222,13 @@ func TestPortal(t *testing.T) {
 				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.PortalSpec{
-						PortalAPISpec: konnectv1alpha1.PortalAPISpec{
+						APISpec: konnectv1alpha1.PortalAPISpec{
 							Name:                  "portal-page-vis-invalid",
 							DefaultPageVisibility: "invalid",
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr(`spec.default_page_visibility: Unsupported value: "invalid"`),
+				ExpectedErrorMessage: lo.ToPtr(`spec.apiSpec.default_page_visibility: Unsupported value: "invalid"`),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -241,7 +241,7 @@ func TestPortal(t *testing.T) {
 				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.PortalSpec{
-						PortalAPISpec: konnectv1alpha1.PortalAPISpec{
+						APISpec: konnectv1alpha1.PortalAPISpec{
 							Name:                    "portal-full-spec",
 							DisplayName:             "Full Spec Portal",
 							Description:             lo.ToPtr("A full spec portal"),
