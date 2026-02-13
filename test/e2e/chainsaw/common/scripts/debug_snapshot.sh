@@ -100,9 +100,27 @@ for ns in ${ALL_NAMESPACES}; do
   capture_resource_group "${RESOURCES_FILE}" "${ns}" "Kong Configuration Resources" \
     "kongcertificates.configuration.konghq.com,kongsnis.configuration.konghq.com,kongroutes.configuration.konghq.com,kongservices.configuration.konghq.com,kongupstreams.configuration.konghq.com,kongtargets.configuration.konghq.com,kongreferencegrants.configuration.konghq.com,kongplugins.configuration.konghq.com,kongclusterplugins.configuration.konghq.com,kongconsumers.configuration.konghq.com,kongconsumergroups.configuration.konghq.com"
 
-  # Konnect resources
+  # Konnect resources (excluding KonnectAPIAuthConfiguration - captured separately with redaction)
   capture_resource_group "${RESOURCES_FILE}" "${ns}" "Konnect Resources" \
-    "konnectgatewaycontrolplanes.konnect.konghq.com,konnectapiauthconfigurations.konnect.konghq.com,konnectextensions.konnect.konghq.com"
+    "konnectgatewaycontrolplanes.konnect.konghq.com,konnectextensions.konnect.konghq.com"
+
+  # KonnectAPIAuthConfiguration with token redaction
+  {
+    echo ""
+    echo "# ------------------------------------------"
+    echo "# Konnect API Auth Configurations (tokens redacted)"
+    echo "# ------------------------------------------"
+    echo ""
+  } >> "${RESOURCES_FILE}"
+
+  # Capture and redact tokens
+  if kubectl get konnectapiauthconfigurations.konnect.konghq.com -n "${ns}" -o yaml 2>/dev/null | \
+     sed 's/\(token: \).*/\1"[REDACTED]"/g' >> "${RESOURCES_FILE}" 2>&1; then
+    echo "" >> "${RESOURCES_FILE}"
+  else
+    echo "# No KonnectAPIAuthConfigurations found or error occurred" >> "${RESOURCES_FILE}"
+    echo "" >> "${RESOURCES_FILE}"
+  fi
 
   # Gateway Operator resources
   capture_resource_group "${RESOURCES_FILE}" "${ns}" "Gateway Operator Resources" \
@@ -159,7 +177,22 @@ for ns in ${ALL_NAMESPACES}; do
     echo ""
   } >> "${DESCRIBED_FILE}"
 
-  safe_kubectl "${DESCRIBED_FILE}" describe konnectgatewaycontrolplanes,konnectapiauthconfigurations,konnectextensions -n "${ns}"
+  safe_kubectl "${DESCRIBED_FILE}" describe konnectgatewaycontrolplanes,konnectextensions -n "${ns}"
+
+  # Describe KonnectAPIAuthConfigurations with token redaction
+  {
+    echo ""
+    echo "=== KonnectAPIAuthConfigurations (tokens redacted) in ${ns} ==="
+    echo ""
+  } >> "${DESCRIBED_FILE}"
+
+  if kubectl describe konnectapiauthconfigurations -n "${ns}" 2>/dev/null | \
+     sed 's/\(Token:\s*\).*/\1[REDACTED]/g' >> "${DESCRIBED_FILE}" 2>&1; then
+    echo "" >> "${DESCRIBED_FILE}"
+  else
+    echo "No KonnectAPIAuthConfigurations found or error occurred" >> "${DESCRIBED_FILE}"
+    echo "" >> "${DESCRIBED_FILE}"
+  fi
 
   {
     echo ""

@@ -20,6 +20,14 @@ spec:
       value: (env('KONNECT_TOKEN'))
     - name: konnect_url
       value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
     - name: gateway_class_name
       value: (join('-', [($test_name), 'gateway-class']))
     - name: gateway_configuration_name
@@ -55,11 +63,17 @@ spec:
       - name: namespace_name
         value: ($namespace)
 
-  # Step 2: Create KonnectAPIAuthConfiguration.
+  # Step 2a: Create the secret for Konnect authentication.
+  - name: Create-auth-secret
+    description: Create Secret with Konnect token for KonnectAPIAuthConfiguration.
+    use:
+      template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+
+  # Step 2b: Create KonnectAPIAuthConfiguration.
   - name: create-konnect-api-auth
     description: Create KonnectAPIAuthConfiguration for the test
     use:
-      template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+      template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
 
   # Step 3: Create GatewayConfiguration.
   - name: create-gateway-configuration
