@@ -16,6 +16,7 @@ import (
 
 	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
 	kcfgkonnect "github.com/kong/kong-operator/api/konnect"
+	ctrlconsts "github.com/kong/kong-operator/controller/consts"
 	"github.com/kong/kong-operator/controller/pkg/extensions"
 	extensionserrors "github.com/kong/kong-operator/controller/pkg/extensions/errors"
 	extensionskonnect "github.com/kong/kong-operator/controller/pkg/extensions/konnect"
@@ -112,6 +113,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		k8sresources.LabelSelectorFromDataPlaneStatusSelectorServiceOpt(dataplane),
 	)
 	if err != nil {
+		if apierrors.IsConflict(err) {
+			return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+		}
 		return ctrl.Result{}, err
 	}
 	switch res {

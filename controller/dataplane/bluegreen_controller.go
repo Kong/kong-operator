@@ -14,6 +14,7 @@ import (
 	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -25,6 +26,7 @@ import (
 	kcfgdataplane "github.com/kong/kong-operator/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
 	kcfgkonnect "github.com/kong/kong-operator/api/konnect"
+	ctrlconsts "github.com/kong/kong-operator/controller/consts"
 	"github.com/kong/kong-operator/controller/pkg/address"
 	"github.com/kong/kong-operator/controller/pkg/dataplane"
 	"github.com/kong/kong-operator/controller/pkg/extensions"
@@ -161,6 +163,9 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// Ensure "preview" Admin API service.
 	res, dataplaneAdminService, err := r.ensurePreviewAdminAPIService(ctx, logger, &dataplane)
 	if err != nil {
+		if k8serrors.IsConflict(err) {
+			return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+		}
 		cErr := r.ensureRolledOutCondition(ctx, logger, &dataplane, metav1.ConditionFalse, kcfgdataplane.DataPlaneConditionReasonRolloutFailed, "failed to ensure preview Admin API Service")
 		return ctrl.Result{}, fmt.Errorf("failed ensuring that preview Admin API Service exists for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, errors.Join(cErr, err))
 	} else if res == op.Created || res == op.Updated {
