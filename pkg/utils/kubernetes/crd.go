@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/url"
 
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
@@ -29,7 +29,7 @@ func (c CRDChecker) CRDExists(gvr schema.GroupVersionResource) (bool, error) {
 		for _, e := range errD.Groups {
 
 			// If this is an API StatusError:
-			if errS := (&k8serrors.StatusError{}); errors.As(e, &errS) {
+			if errS := (&apierrors.StatusError{}); errors.As(e, &errS) {
 				switch errS.ErrStatus.Code {
 				case 404:
 					// If it's a 404 status code then we're sure that it's just

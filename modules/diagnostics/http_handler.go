@@ -8,7 +8,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager"
@@ -144,7 +144,7 @@ func (h *HTTPHandler) handleControlPlaneConfigDump(rw http.ResponseWriter, r *ht
 		Namespace: namespace,
 		Name:      name,
 	}, cp); err != nil {
-		if k8serrors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			rw.WriteHeader(http.StatusNotFound)
 			_, _ = fmt.Fprintf(rw, "ControlPlane %s/%s not found", namespace, name)
 			return

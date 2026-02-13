@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/samber/lo"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -48,7 +48,7 @@ func getAcceptedCondition(ctx context.Context, cl client.Client, gwc *gatewayv1.
 			if client.IgnoreNotFound(err) != nil {
 				return nil, err
 			}
-			if k8serrors.IsNotFound(err) {
+			if apierrors.IsNotFound(err) {
 				reason = gatewayv1.GatewayClassReasonInvalidParameters
 				messages = append(messages, "The referenced GatewayConfiguration does not exist")
 			}

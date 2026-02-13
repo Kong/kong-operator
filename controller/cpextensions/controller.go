@@ -9,7 +9,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
@@ -139,7 +139,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	controlplane := new(gwtypes.ControlPlane)
 
 	if err := r.Get(ctx, req.NamespacedName, controlplane); err != nil {
-		if k8serrors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			r.DataPlaneScraperManagerNotifier.NotifyRemove(ctx, types.NamespacedName{
 				Name:      req.Name,
 				Namespace: req.Namespace,
@@ -342,7 +342,7 @@ func (r *Reconciler) ensurePrometheusPlugin(
 	pluginNN := client.ObjectKeyFromObject(generatedPlugin)
 	svcNN := client.ObjectKeyFromObject(svc)
 	if err = r.Get(ctx, pluginNN, &prometheusPluginActual); err != nil {
-		if !k8serrors.IsNotFound(err) {
+		if !apierrors.IsNotFound(err) {
 			return nil, fmt.Errorf("failed to get Prometheus KongPlugin %s for Service %s: %w", pluginNN, svcNN, err)
 		}
 

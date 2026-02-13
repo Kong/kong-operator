@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -181,7 +181,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 
 				svcToBeDeleted, svcToBeKept := &corev1.Service{}, &corev1.Service{}
 				err = reconciler.Get(ctx, types.NamespacedName{Namespace: "test-namespace", Name: "svc-proxy-to-delete"}, svcToBeDeleted)
-				require.True(t, k8serrors.IsNotFound(err))
+				require.True(t, apierrors.IsNotFound(err))
 				err = reconciler.Get(ctx, types.NamespacedName{Namespace: "test-namespace", Name: "svc-proxy-to-keep"}, svcToBeKept)
 				require.NoError(t, err)
 			},

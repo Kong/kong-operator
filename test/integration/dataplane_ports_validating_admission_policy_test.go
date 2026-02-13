@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
@@ -156,14 +156,14 @@ func TestDataPlanePortsValidatingAdmissionPolicy(t *testing.T) {
 					dpToUpdate, err = dataplaneClient.Get(GetCtx(), dpToUpdate.Name, metav1.GetOptions{})
 					tc.updateDataPlane(dpToUpdate)
 					_, err = dataplaneClient.Update(GetCtx(), dpToUpdate, metav1.UpdateOptions{})
-					return !k8serrors.IsConflict(err)
+					return !apierrors.IsConflict(err)
 				}, 10*time.Second, 100*time.Millisecond)
 
 			} else {
 				_, err = dataplaneClient.Create(GetCtx(), tc.dataPlane, metav1.CreateOptions{})
 			}
 			require.Error(t, err, "expected error when submitting DataPlane")
-			require.True(t, k8serrors.IsInvalid(err), "error should be of type Invalid, got: %v", err)
+			require.True(t, apierrors.IsInvalid(err), "error should be of type Invalid, got: %v", err)
 			require.Contains(t, err.Error(), tc.errorContains, "error message should contain expected substring")
 		})
 	}

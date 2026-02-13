@@ -6,7 +6,7 @@ import (
 
 	"github.com/samber/mo"
 	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -140,7 +140,7 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
 		}
-		if k8serrors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			return ctrl.Result{}, controlplane.ReferencedControlPlaneDoesNotExistError{
 				Reference: cpRef,
 				Err:       err,
@@ -169,7 +169,7 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		resource.SetControlPlaneID(cp.Status.ID)
 		_, err := patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), ent, old)
 		if err != nil {
-			if k8serrors.IsConflict(err) {
+			if apierrors.IsConflict(err) {
 				return ctrl.Result{Requeue: true}, nil
 			}
 			return ctrl.Result{}, err

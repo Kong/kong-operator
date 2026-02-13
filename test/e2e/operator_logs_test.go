@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -199,7 +199,7 @@ func TestOperatorLogs(t *testing.T) {
 		if len(dataplanes) != 0 {
 			assert.Eventually(t, func() bool {
 				_, err := clients.OperatorClient.GatewayOperatorV1beta1().DataPlanes(testNamespace.Name).Get(ctx, dataplanes[0].Name, metav1.GetOptions{})
-				return errors.IsNotFound(err)
+				return apierrors.IsNotFound(err)
 			}, time.Minute, time.Second)
 		}
 
@@ -207,7 +207,7 @@ func TestOperatorLogs(t *testing.T) {
 		if len(controlplanes) != 0 {
 			assert.Eventually(t, func() bool {
 				_, err := clients.OperatorClient.GatewayOperatorV2beta1().ControlPlanes(testNamespace.Name).Get(ctx, controlplanes[0].Name, metav1.GetOptions{})
-				return errors.IsNotFound(err)
+				return apierrors.IsNotFound(err)
 			}, time.Minute, time.Second)
 		}
 

@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -921,7 +921,7 @@ func TestResolveEndpointSliceEndpoints(t *testing.T) {
 				},
 			},
 			servicePort:        createTestServicePort(),
-			mockError:          k8serrors.NewNotFound(discoveryv1.Resource("endpointslices"), "notfound-service"),
+			mockError:          apierrors.NewNotFound(discoveryv1.Resource("endpointslices"), "notfound-service"),
 			expectedEndpoints:  nil,
 			expectedShouldSkip: true,
 			expectedError:      false,
@@ -1919,7 +1919,7 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 			List: func(ctx context.Context, client client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
 				if _, ok := list.(*discoveryv1.EndpointSliceList); ok {
 					// Return a NotFound error for EndpointSlices.
-					return &k8serrors.StatusError{
+					return &apierrors.StatusError{
 						ErrStatus: metav1.Status{
 							Status:  metav1.StatusFailure,
 							Code:    404,

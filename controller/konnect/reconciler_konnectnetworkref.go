@@ -7,7 +7,7 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/samber/lo"
 	"github.com/samber/mo"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -56,7 +56,7 @@ func handleKonnectNetworkRef[T constraints.SupportedKonnectEntityType, TEnt cons
 			err := cl.Get(ctx, nn, &network)
 			if err != nil {
 				setInvalidWithMsg(err.Error())
-				if k8serrors.IsNotFound(err) {
+				if apierrors.IsNotFound(err) {
 					return ctrl.Result{}, ReferencedObjectDoesNotExistError{
 						Reference: nn,
 						Err:       err,
@@ -132,7 +132,7 @@ func handleKonnectNetworkRef[T constraints.SupportedKonnectEntityType, TEnt cons
 		"Referenced KonnectCloudGatewayNetwork(s) are valid and programmed",
 	) {
 		if err := cl.Status().Patch(ctx, ent, client.MergeFrom(old)); err != nil {
-			if k8serrors.IsConflict(err) {
+			if apierrors.IsConflict(err) {
 				return ctrl.Result{Requeue: true}, nil
 			}
 			return ctrl.Result{}, fmt.Errorf("failed to patch status with network refs valid condition: %w", err)

@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/samber/lo"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -44,7 +44,7 @@ func GetAllDataPlaneMetricExtensionsForControlPlane(
 			nn.Namespace = *ext.Namespace
 		}
 		if err := cl.Get(ctx, nn, &metricsExt); err != nil {
-			if k8serrors.IsNotFound(err) {
+			if apierrors.IsNotFound(err) {
 				return nil, fmt.Errorf("failed to get %s %s", operatorv1alpha1.DataPlaneMetricsExtensionKind, nn)
 			}
 			return nil, err

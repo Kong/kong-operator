@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -216,7 +216,7 @@ func TestPatchStatusWithCondition(t *testing.T) {
 			},
 			interceptorFunc: interceptor.Funcs{
 				SubResourcePatch: func(ctx context.Context, client client.Client, subResourceName string, obj client.Object, patch client.Patch, opts ...client.SubResourcePatchOption) error {
-					return &k8serrors.StatusError{
+					return &apierrors.StatusError{
 						ErrStatus: metav1.Status{
 							Status: metav1.StatusFailure,
 							Reason: metav1.StatusReasonConflict,
@@ -241,7 +241,7 @@ func TestPatchStatusWithCondition(t *testing.T) {
 			expectedError:    true,
 			interceptorFunc: interceptor.Funcs{
 				SubResourcePatch: func(ctx context.Context, client client.Client, subResourceName string, obj client.Object, patch client.Patch, opts ...client.SubResourcePatchOption) error {
-					return &k8serrors.StatusError{
+					return &apierrors.StatusError{
 						ErrStatus: metav1.Status{
 							Status: metav1.StatusFailure,
 							Reason: metav1.StatusReason("unknown"),

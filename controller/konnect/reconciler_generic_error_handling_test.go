@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -67,7 +67,7 @@ func TestHandleOpsErr(t *testing.T) {
 					patch client.Patch,
 					opts ...client.SubResourcePatchOption,
 				) error {
-					return &k8serrors.StatusError{
+					return &apierrors.StatusError{
 						ErrStatus: metav1.Status{
 							Status: metav1.StatusFailure,
 							Reason: metav1.StatusReasonConflict,

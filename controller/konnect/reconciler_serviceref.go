@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/samber/mo"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -50,7 +50,7 @@ func handleKongServiceRef[T constraints.SupportedKonnectEntityType, TEnt constra
 
 				// Patch the status
 				if _, err := patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), ent, old); err != nil {
-					if k8serrors.IsConflict(err) {
+					if apierrors.IsConflict(err) {
 						return ctrl.Result{Requeue: true}, nil
 					}
 					return ctrl.Result{}, fmt.Errorf("failed to patch status: %w", err)
@@ -114,7 +114,7 @@ func handleKongServiceRef[T constraints.SupportedKonnectEntityType, TEnt constra
 		}
 
 		// If the KongService is not found, we don't want to requeue.
-		if k8serrors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			return ctrl.Result{}, ReferencedObjectDoesNotExistError{
 				Reference: nn,
 				Err:       err,
@@ -137,7 +137,7 @@ func handleKongServiceRef[T constraints.SupportedKonnectEntityType, TEnt constra
 		)
 		_, err := patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), ent, old)
 		if err != nil {
-			if k8serrors.IsConflict(err) {
+			if apierrors.IsConflict(err) {
 				return ctrl.Result{Requeue: true}, nil
 			}
 			return ctrl.Result{}, err
@@ -159,7 +159,7 @@ func handleKongServiceRef[T constraints.SupportedKonnectEntityType, TEnt constra
 
 		res, err := patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), ent, old)
 		if err != nil {
-			if k8serrors.IsConflict(err) {
+			if apierrors.IsConflict(err) {
 				return ctrl.Result{Requeue: true}, nil
 			}
 			return ctrl.Result{}, err
@@ -188,7 +188,7 @@ func handleKongServiceRef[T constraints.SupportedKonnectEntityType, TEnt constra
 
 	_, err := patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), ent, old)
 	if err != nil {
-		if k8serrors.IsConflict(err) {
+		if apierrors.IsConflict(err) {
 			return ctrl.Result{Requeue: true}, nil
 		}
 		return ctrl.Result{}, err
@@ -212,7 +212,7 @@ func handleKongServiceRef[T constraints.SupportedKonnectEntityType, TEnt constra
 		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
 		}
-		if k8serrors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			return ctrl.Result{}, controlplane.ReferencedControlPlaneDoesNotExistError{
 				Reference: kongSvcCPRef,
 				Err:       err,

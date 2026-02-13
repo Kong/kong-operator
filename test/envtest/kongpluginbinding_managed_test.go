@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -194,7 +194,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		)
 		assert.EventuallyWithT(t,
 			func(c *assert.CollectT) {
-				assert.True(c, k8serrors.IsNotFound(
+				assert.True(c, apierrors.IsNotFound(
 					clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kongPluginBinding), kongPluginBinding),
 				))
 			}, waitTime, tickTime,
@@ -300,7 +300,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		)
 		assert.EventuallyWithT(t,
 			func(c *assert.CollectT) {
-				assert.True(c, k8serrors.IsNotFound(
+				assert.True(c, apierrors.IsNotFound(
 					clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kongPluginBinding), kongPluginBinding),
 				))
 			}, waitTime, tickTime,
@@ -409,7 +409,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		require.NoError(t, clientNamespaced.Update(ctx, kongRoute))
 		assert.EventuallyWithT(t,
 			func(c *assert.CollectT) {
-				assert.True(c, k8serrors.IsNotFound(
+				assert.True(c, apierrors.IsNotFound(
 					clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kpbRoute), kpbRoute),
 				))
 			}, waitTime, tickTime,
@@ -427,7 +427,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 
 		assert.EventuallyWithT(t,
 			func(c *assert.CollectT) {
-				assert.True(c, k8serrors.IsNotFound(
+				assert.True(c, apierrors.IsNotFound(
 					clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kpbService), kpbService),
 				))
 			}, waitTime, tickTime,
@@ -585,7 +585,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 
 		assert.EventuallyWithT(t,
 			func(c *assert.CollectT) {
-				assert.True(c, k8serrors.IsNotFound(
+				assert.True(c, apierrors.IsNotFound(
 					clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kpbRoute), kpbRoute),
 				))
 			}, waitTime, tickTime,
@@ -799,7 +799,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 
 		assert.EventuallyWithT(t,
 			func(c *assert.CollectT) {
-				assert.True(c, k8serrors.IsNotFound(
+				assert.True(c, apierrors.IsNotFound(
 					clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kpbRoute), kpbRoute),
 				))
 			}, waitTime, tickTime,

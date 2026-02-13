@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -113,7 +113,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		)
 		require.NoError(t, clientNamespaced.Delete(ctx, kpb))
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, k8serrors.IsNotFound(
+			assert.True(c, apierrors.IsNotFound(
 				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kpb), kpb),
 			))
 		}, waitTime, tickTime, "KongPluginBinding did not get deleted but should have")
@@ -124,7 +124,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		)
 		require.NoError(t, clientNamespaced.Delete(ctx, kongService))
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, k8serrors.IsNotFound(
+			assert.True(c, apierrors.IsNotFound(
 				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kongService), kongService),
 			))
 		}, waitTime, tickTime)
@@ -189,7 +189,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		)
 		require.NoError(t, clientNamespaced.Delete(ctx, kpb))
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, k8serrors.IsNotFound(
+			assert.True(c, apierrors.IsNotFound(
 				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kpb), kpb),
 			))
 		}, waitTime, tickTime, "KongPluginBinding did not get deleted but should have")
@@ -200,7 +200,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		)
 		require.NoError(t, clientNamespaced.Delete(ctx, kongRoute))
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, k8serrors.IsNotFound(
+			assert.True(c, apierrors.IsNotFound(
 				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kongRoute), kongRoute),
 			))
 		}, waitTime, tickTime)
@@ -271,7 +271,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		)
 		require.NoError(t, clientNamespaced.Delete(ctx, kpb))
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, k8serrors.IsNotFound(
+			assert.True(c, apierrors.IsNotFound(
 				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kpb), kpb),
 			))
 		}, waitTime, tickTime, "KongPluginBinding did not get deleted but should have")
@@ -282,7 +282,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		)
 		require.NoError(t, clientNamespaced.Delete(ctx, kongRoute))
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, k8serrors.IsNotFound(
+			assert.True(c, apierrors.IsNotFound(
 				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kongRoute), kongRoute),
 			))
 		}, waitTime, tickTime)
@@ -362,7 +362,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		)
 		require.NoError(t, clientNamespaced.Delete(ctx, kpb))
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, k8serrors.IsNotFound(
+			assert.True(c, apierrors.IsNotFound(
 				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kpb), kpb),
 			))
 		}, waitTime, tickTime, "KongPluginBinding did not get deleted but should have")
@@ -373,7 +373,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		)
 		require.NoError(t, clientNamespaced.Delete(ctx, kongConsumer))
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, k8serrors.IsNotFound(
+			assert.True(c, apierrors.IsNotFound(
 				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kongConsumer), kongConsumer),
 			))
 		}, waitTime, tickTime)
@@ -446,7 +446,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		)
 		require.NoError(t, clientNamespaced.Delete(ctx, kpb))
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, k8serrors.IsNotFound(
+			assert.True(c, apierrors.IsNotFound(
 				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kpb), kpb),
 			))
 		}, waitTime, tickTime, "KongPluginBinding did not get deleted but should have")
@@ -457,7 +457,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		)
 		require.NoError(t, clientNamespaced.Delete(ctx, kongConsumerGroup))
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, k8serrors.IsNotFound(
+			assert.True(c, apierrors.IsNotFound(
 				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kongConsumerGroup), kongConsumerGroup),
 			))
 		}, waitTime, tickTime)
@@ -515,7 +515,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		)
 		require.NoError(t, clientNamespaced.Delete(ctx, kpb))
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, k8serrors.IsNotFound(
+			assert.True(c, apierrors.IsNotFound(
 				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kpb), kpb),
 			))
 		}, waitTime, tickTime, "KongPluginBinding did not get deleted but should have")
@@ -605,7 +605,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		)
 		require.NoError(t, clientNamespaced.Delete(ctx, kpb))
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, k8serrors.IsNotFound(
+			assert.True(c, apierrors.IsNotFound(
 				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kpb), kpb),
 			))
 		}, waitTime, tickTime, "KongPluginBinding did not get deleted but should have")
@@ -616,7 +616,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		)
 		require.NoError(t, clientNamespaced.Delete(ctx, kongService))
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, k8serrors.IsNotFound(
+			assert.True(c, apierrors.IsNotFound(
 				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kongService), kongService),
 			))
 		}, waitTime, tickTime)
@@ -662,7 +662,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		)
 		require.NoError(t, clientNamespaced.Delete(ctx, kpb))
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, k8serrors.IsNotFound(
+			assert.True(c, apierrors.IsNotFound(
 				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kpb), kpb),
 			))
 		}, waitTime, tickTime, "KongPluginBinding did not get deleted but should have")
@@ -673,7 +673,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		)
 		require.NoError(t, clientNamespaced.Delete(ctx, kongService))
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, k8serrors.IsNotFound(
+			assert.True(c, apierrors.IsNotFound(
 				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kongService), kongService),
 			))
 		}, waitTime, tickTime)

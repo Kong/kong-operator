@@ -7,7 +7,7 @@ import (
 
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -210,7 +210,7 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 
 			_, errUpdate := patch.ApplyStatusPatchIfNotEmpty(ctx, r.client, ctrllog.FromContext(ctx), &apiAuth, old)
 			if errUpdate != nil {
-				if k8serrors.IsConflict(errUpdate) {
+				if apierrors.IsConflict(errUpdate) {
 					return ctrl.Result{Requeue: true}, nil
 				}
 				return ctrl.Result{}, errUpdate
@@ -255,7 +255,7 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 
 		_, errUpdate := patch.ApplyStatusPatchIfNotEmpty(ctx, r.client, ctrllog.FromContext(ctx), &apiAuth, old)
 		if errUpdate != nil {
-			if k8serrors.IsConflict(errUpdate) {
+			if apierrors.IsConflict(errUpdate) {
 				return ctrl.Result{Requeue: true}, nil
 			}
 			return ctrl.Result{}, errUpdate

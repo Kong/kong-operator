@@ -6,7 +6,7 @@ import (
 
 	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
@@ -92,7 +92,7 @@ func (r *Reconciler) getControlPlanesFromDataPlaneDeployment(ctx context.Context
 		}
 	)
 	if err := r.Get(ctx, nn, &dataPlane); err != nil {
-		if !k8serrors.IsNotFound(err) {
+		if !apierrors.IsNotFound(err) {
 			ctrllog.FromContext(ctx).Error(err, "failed to map ControlPlane on DataPlane Deployment")
 		}
 		return nil

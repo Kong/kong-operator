@@ -6,7 +6,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -146,7 +146,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 
 	// Phase 1: Status Update.
 	statusChanged, stop, err := enforceStatus(ctx, logger, conv)
-	if err != nil && !k8serrors.IsConflict(err) {
+	if err != nil && !apierrors.IsConflict(err) {
 		// Record status update failure event.
 		r.eventRecorder.Event(
 			obj,
@@ -155,7 +155,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 			fmt.Sprintf("Status update failed: %v", err),
 		)
 		return ctrl.Result{}, err
-	} else if k8serrors.IsConflict(err) {
+	} else if apierrors.IsConflict(err) {
 		return ctrl.Result{Requeue: true}, nil
 	}
 	if stop {

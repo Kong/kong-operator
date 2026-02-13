@@ -15,7 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -460,7 +460,7 @@ func (r *Reconciler) patchStatus(ctx context.Context, logger logr.Logger, update
 
 	log.Debug(logger, "patching ControlPlane status", "status", updated.Status)
 	if err := r.Client.Status().Patch(ctx, updated, client.MergeFrom(current)); client.IgnoreNotFound(err) != nil {
-		if k8serrors.IsConflict(err) {
+		if apierrors.IsConflict(err) {
 			log.Debug(logger, "conflict found when updating ControlPlane, retrying")
 			return ctrl.Result{Requeue: true, RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 		}
@@ -850,7 +850,7 @@ func (r *Reconciler) cleanupOldManagedResources(ctx context.Context, cp *Control
 			}),
 		},
 	})
-	if err != nil && !k8serrors.IsNotFound(err) {
+	if err != nil && !apierrors.IsNotFound(err) {
 		return fmt.Errorf("failed to delete old ControlPlane deployment %w", err)
 	}
 
@@ -863,7 +863,7 @@ func (r *Reconciler) cleanupOldManagedResources(ctx context.Context, cp *Control
 			}),
 		},
 	})
-	if err != nil && !k8serrors.IsNotFound(err) {
+	if err != nil && !apierrors.IsNotFound(err) {
 		return fmt.Errorf("failed to delete old ControlPlane NetworkPolicy %w", err)
 	}
 
@@ -876,7 +876,7 @@ func (r *Reconciler) cleanupOldManagedResources(ctx context.Context, cp *Control
 			}),
 		},
 	})
-	if err != nil && !k8serrors.IsNotFound(err) {
+	if err != nil && !apierrors.IsNotFound(err) {
 		return fmt.Errorf("failed to delete old ControlPlane Service %w", err)
 	}
 
@@ -890,7 +890,7 @@ func (r *Reconciler) cleanupOldManagedResources(ctx context.Context, cp *Control
 			}),
 		},
 	})
-	if err != nil && !k8serrors.IsNotFound(err) {
+	if err != nil && !apierrors.IsNotFound(err) {
 		return fmt.Errorf("failed to delete old ControlPlane ValidatingWebhookConfiguration %w", err)
 	}
 
@@ -904,7 +904,7 @@ func (r *Reconciler) cleanupOldManagedResources(ctx context.Context, cp *Control
 			}),
 		},
 	})
-	if err != nil && !k8serrors.IsNotFound(err) {
+	if err != nil && !apierrors.IsNotFound(err) {
 		return fmt.Errorf("failed to delete old ControlPlane ClusterRole %w", err)
 	}
 
@@ -918,7 +918,7 @@ func (r *Reconciler) cleanupOldManagedResources(ctx context.Context, cp *Control
 			}),
 		},
 	})
-	if err != nil && !k8serrors.IsNotFound(err) {
+	if err != nil && !apierrors.IsNotFound(err) {
 		return fmt.Errorf("failed to delete old ControlPlane ClusterRoleBinding %w", err)
 	}
 

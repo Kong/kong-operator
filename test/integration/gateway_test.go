@@ -15,7 +15,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -186,13 +186,13 @@ func TestGatewayEssentials(t *testing.T) {
 	t.Log("verifying that DataPlane sub-resources are deleted")
 	assert.Eventually(t, func() bool {
 		_, err := GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name).Get(GetCtx(), dataplane.Name, metav1.GetOptions{})
-		return errors.IsNotFound(err)
+		return apierrors.IsNotFound(err)
 	}, time.Minute, time.Second)
 
 	t.Log("verifying that ControlPlane sub-resources are deleted")
 	assert.Eventually(t, func() bool {
 		_, err := GetClients().OperatorClient.GatewayOperatorV2beta1().ControlPlanes(namespace.Name).Get(GetCtx(), controlplane.Name, metav1.GetOptions{})
-		return errors.IsNotFound(err)
+		return apierrors.IsNotFound(err)
 	}, time.Minute, time.Second)
 
 	t.Run("checking NetworkPolicies", func(t *testing.T) {
@@ -435,13 +435,13 @@ func TestGatewayHybridFull(t *testing.T) {
 	t.Log("verifying that DataPlane sub-resources are deleted")
 	assert.Eventually(t, func() bool {
 		_, err := GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name).Get(GetCtx(), dataplane.Name, metav1.GetOptions{})
-		return errors.IsNotFound(err)
+		return apierrors.IsNotFound(err)
 	}, time.Minute, time.Second)
 
 	t.Log("verifying that KonnectGatewayControlPlane sub-resources are deleted")
 	assert.Eventually(t, func() bool {
 		_, err := GetClients().OperatorClient.KonnectV1alpha2().KonnectGatewayControlPlanes(namespace.Name).Get(GetCtx(), konnectGatewayControlPlane.Name, metav1.GetOptions{})
-		return errors.IsNotFound(err)
+		return apierrors.IsNotFound(err)
 	}, time.Minute, time.Second)
 
 	t.Run("checking NetworkPolicies", func(t *testing.T) {
@@ -618,21 +618,21 @@ func TestGatewayMultiple(t *testing.T) {
 	t.Log("verifying that DataPlane sub-resources are deleted")
 	assert.Eventually(t, func() bool {
 		_, err := GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name).Get(GetCtx(), dataplaneOne.Name, metav1.GetOptions{})
-		return errors.IsNotFound(err)
+		return apierrors.IsNotFound(err)
 	}, time.Minute, time.Second)
 	assert.Eventually(t, func() bool {
 		_, err := GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name).Get(GetCtx(), dataplaneTwo.Name, metav1.GetOptions{})
-		return errors.IsNotFound(err)
+		return apierrors.IsNotFound(err)
 	}, time.Minute, time.Second)
 
 	t.Log("verifying that ControlPlane sub-resources are deleted")
 	assert.Eventually(t, func() bool {
 		_, err := GetClients().OperatorClient.GatewayOperatorV2beta1().ControlPlanes(namespace.Name).Get(GetCtx(), controlplaneOne.Name, metav1.GetOptions{})
-		return errors.IsNotFound(err)
+		return apierrors.IsNotFound(err)
 	}, time.Minute, time.Second)
 	assert.Eventually(t, func() bool {
 		_, err := GetClients().OperatorClient.GatewayOperatorV2beta1().ControlPlanes(namespace.Name).Get(GetCtx(), controlplaneTwo.Name, metav1.GetOptions{})
-		return errors.IsNotFound(err)
+		return apierrors.IsNotFound(err)
 	}, time.Minute, time.Second)
 
 	t.Log("verifying that gateways are deleted")

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -42,7 +42,7 @@ func handleAPIAuthStatusCondition[T interface {
 
 	if err != nil {
 		resolvedRefCondition.Status = metav1.ConditionFalse
-		if k8serrors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			resolvedRefCondition.Reason = konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefReasonRefNotFound
 			resolvedRefCondition.Message = fmt.Sprintf("Referenced KonnectAPIAuthConfiguration %s not found", apiAuthNN)
 			if res, _, err := patch.StatusWithConditions(

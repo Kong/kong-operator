@@ -15,7 +15,7 @@ import (
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -1207,7 +1207,7 @@ func TestDataPlaneSpecifyingServiceName(t *testing.T) {
 	t.Logf("verifying that the old ingress service '%s' is deleted", oldServiceName)
 	require.Eventually(t, func() bool {
 		_, err := clients.K8sClient.CoreV1().Services(dataplane.Namespace).Get(GetCtx(), oldServiceName, metav1.GetOptions{})
-		return err != nil && k8serrors.IsNotFound(err)
+		return err != nil && apierrors.IsNotFound(err)
 	}, waitTime, tickTime)
 
 	t.Log("verifying dataplane services receive IP addresses after service name is updated")

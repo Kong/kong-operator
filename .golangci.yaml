@@ -140,6 +140,8 @@ linters:
           alias: k8sutils
         - pkg: github.com/kong/kong-operator/pkg/utils/kubernetes/resources
           alias: k8sresources
+        - pkg: k8s.io/apimachinery/pkg/api/errors
+          alias: apierrors
       no-unaliased: true
     revive:
       rules:

@@ -11,7 +11,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -194,11 +194,11 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 	if updated {
 		if err := r.Update(ctx, &ext); err != nil {
-			if k8serrors.IsConflict(err) {
+			if apierrors.IsConflict(err) {
 				return ctrl.Result{Requeue: true}, nil
 			}
 			// in case the finalizer removal fails because the resource does not exist, ignore the error.
-			if isFinalizerToBeRemoved && k8serrors.IsNotFound(err) {
+			if isFinalizerToBeRemoved && apierrors.IsNotFound(err) {
 				return ctrl.Result{}, nil
 			}
 			return ctrl.Result{}, err
@@ -224,7 +224,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			return ctrl.Result{}, nil
 		}
 
-		certExists := !k8serrors.IsNotFound(err)
+		certExists := !apierrors.IsNotFound(err)
 		// if the certificate exists and the cleanup in Konnect has been performed, we can remove the secret-in-use finalizer from the secret.
 		if certExists && !controllerutil.ContainsFinalizer(certificateSecret, KonnectCleanupFinalizer) {
 			// remove the secret-in-use finalizer from the secret.
@@ -239,11 +239,11 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			updated = controllerutil.RemoveFinalizer(&ext, KonnectCleanupFinalizer)
 			if updated {
 				if err := r.Update(ctx, &ext); err != nil {
-					if k8serrors.IsConflict(err) {
+					if apierrors.IsConflict(err) {
 						return ctrl.Result{Requeue: true}, nil
 					}
 					// in case the finalizer removal fails because the resource does not exist, ignore the error.
-					if k8serrors.IsNotFound(err) {
+					if apierrors.IsNotFound(err) {
 						return ctrl.Result{}, nil
 					}
 					return ctrl.Result{}, err
@@ -335,9 +335,9 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	cp, res, err := r.getGatewayKonnectControlPlane(ctx, ext)
 	if err != nil || !res.IsZero() {
 		switch {
-		case !k8serrors.IsNotFound(err) && !errors.Is(err, extensionserrors.ErrKonnectGatewayControlPlaneNotProgrammed):
+		case !apierrors.IsNotFound(err) && !errors.Is(err, extensionserrors.ErrKonnectGatewayControlPlaneNotProgrammed):
 			return res, err
-		case k8serrors.IsNotFound(err):
+		case apierrors.IsNotFound(err):
 			if cleanup {
 				log.Debug(logger, "ControlPlane not found, for KonnectExtension during deletion, proceeding with cleanup")
 			}
@@ -397,7 +397,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	apiAuthRef, err := getKonnectAPIAuthRefNN(cp, &ext)
 	if err != nil {
-		if !k8serrors.IsNotFound(err) {
+		if !apierrors.IsNotFound(err) {
 			return ctrl.Result{}, err
 		}
 		if cleanup {
@@ -591,7 +591,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			}
 
 			if err := r.Create(ctx, &dpCert); err != nil {
-				if errS := (&k8serrors.StatusError{}); errors.As(err, &errS) {
+				if errS := (&apierrors.StatusError{}); errors.As(err, &errS) {
 					if errS.ErrStatus.Reason == metav1.StatusReasonAlreadyExists {
 						log.Debug(logger, "DataPlane client certificate already exists", "name", dpCert.Name, "namespace", dpCert.Namespace)
 					}
@@ -652,7 +652,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			}
 
 			if err := r.Create(ctx, &dpCert); err != nil {
-				if errS := (&k8serrors.StatusError{}); errors.As(err, &errS) {
+				if errS := (&apierrors.StatusError{}); errors.As(err, &errS) {
 					if errS.ErrStatus.Reason == metav1.StatusReasonAlreadyExists {
 						log.Debug(logger, "DataPlane client certificate already exists", "name", dpCert.Name, "namespace", dpCert.Namespace)
 					}
@@ -774,11 +774,11 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			updated = controllerutil.RemoveFinalizer(certificateSecret, KonnectCleanupFinalizer)
 			if updated {
 				if err := r.Update(ctx, certificateSecret); err != nil {
-					if k8serrors.IsConflict(err) {
+					if apierrors.IsConflict(err) {
 						return ctrl.Result{Requeue: true}, nil
 					}
 					// in case the finalizer removal fails because the resource does not exist, ignore the error.
-					if k8serrors.IsNotFound(err) {
+					if apierrors.IsNotFound(err) {
 						return ctrl.Result{}, nil
 					}
 					return ctrl.Result{}, err
@@ -800,7 +800,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			}
 		)
 		if err = r.Get(ctx, dpCertNN, &dpCert); err != nil {
-			if !k8serrors.IsNotFound(err) {
+			if !apierrors.IsNotFound(err) {
 				log.Debug(logger, "DataPlane client certificate retrieval failed in cluster",
 					"namespace", dpCertNN.Namespace,
 					"name", dpCertNN.Name,
@@ -848,7 +848,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	if enforceKonnectExtensionStatus(cp, authRef, *certificateSecret, &ext) {
 		log.Debug(logger, "updating KonnectExtension status")
 		err := r.Client.Status().Update(ctx, &ext)
-		if k8serrors.IsConflict(err) {
+		if apierrors.IsConflict(err) {
 			// in case the err is of type conflict, don't return it and instead trigger
 			// another reconciliation.
 			// This is just to prevent spamming of conflict errors.
@@ -922,7 +922,7 @@ func enforceSecretInUseFinalizer(
 		return false, ctrl.Result{}, nil
 	}
 	if err := cl.Update(ctx, certificateSecret); err != nil {
-		if k8serrors.IsConflict(err) {
+		if apierrors.IsConflict(err) {
 			return true, ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 		}
 		return true, ctrl.Result{}, err

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -84,7 +84,7 @@ func (r *Reconciler) ensureManagedKonnectAPIAuthReferenceGrant(
 	key := client.ObjectKeyFromObject(desired)
 	existing := &configurationv1alpha1.KongReferenceGrant{}
 	if err := r.Get(ctx, key, existing); err != nil {
-		if k8serrors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			return r.Create(ctx, desired)
 		}
 		return err
@@ -115,7 +115,7 @@ func (r *Reconciler) cleanupKonnectAPIAuthReferenceGrants(ctx context.Context, g
 		if !isManagedKonnectAPIAuthGrant(grant, gateway) {
 			continue
 		}
-		if err := r.Delete(ctx, grant); err != nil && !k8serrors.IsNotFound(err) {
+		if err := r.Delete(ctx, grant); err != nil && !apierrors.IsNotFound(err) {
 			return err
 		}
 	}
@@ -144,7 +144,7 @@ func (r *Reconciler) cleanupStaleKonnectAPIAuthReferenceGrants(
 		if grant.Namespace == authNamespace && grant.Name == desiredName {
 			continue
 		}
-		if err := r.Delete(ctx, grant); err != nil && !k8serrors.IsNotFound(err) {
+		if err := r.Delete(ctx, grant); err != nil && !apierrors.IsNotFound(err) {
 			return err
 		}
 	}

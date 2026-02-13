@@ -6,7 +6,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
@@ -473,7 +473,7 @@ func BuildResolvedRefsCondition(ctx context.Context, logger logr.Logger, cl clie
 			service := &corev1.Service{}
 			err := cl.Get(ctx, client.ObjectKey{Namespace: bRefNamespace, Name: string(bRef.Name)}, service)
 			if err != nil {
-				if k8serrors.IsNotFound(err) {
+				if apierrors.IsNotFound(err) {
 					log.Debug(logger, "BackendRef not found", "namespace", bRefNamespace, "name", bRef.Name)
 					cond.Reason = string(gwtypes.RouteReasonBackendNotFound)
 					cond.Status = metav1.ConditionFalse
@@ -544,7 +544,7 @@ func BuildResolvedRefsCondition(ctx context.Context, logger logr.Logger, cl clie
 			kongPlugin := configurationv1.KongPlugin{}
 			err := cl.Get(ctx, client.ObjectKey{Namespace: extRefNamespace, Name: string(filter.ExtensionRef.Name)}, &kongPlugin)
 			if err != nil {
-				if k8serrors.IsNotFound(err) {
+				if apierrors.IsNotFound(err) {
 					log.Debug(logger, "ExtensionRef not found", "namespace", extRefNamespace, "name", filter.ExtensionRef.Name)
 					cond.Reason = string(gwtypes.RouteReasonBackendNotFound)
 					cond.Status = metav1.ConditionFalse

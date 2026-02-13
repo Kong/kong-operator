@@ -16,7 +16,7 @@ import (
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -875,7 +875,7 @@ func countAttachedRoutesForGatewayListener(ctx context.Context, g *gwtypes.Gatew
 		if err := cl.List(ctx, &nsList, &client.ListOptions{
 			LabelSelector: labelSelector,
 		}); err != nil {
-			if k8serrors.IsNotFound(err) {
+			if apierrors.IsNotFound(err) {
 				return 0, nil
 			}
 			return 0, fmt.Errorf("failed to list namespaces for gateway %s: %w", g.Name, err)
@@ -1136,7 +1136,7 @@ func getSupportedKindsWithResolvedRefsCondition(ctx context.Context, c client.Cl
 					Name:      string(certificateRef.Name),
 				}, certificateSecret)
 				if err != nil {
-					if !k8serrors.IsNotFound(err) {
+					if !apierrors.IsNotFound(err) {
 						return nil, metav1.Condition{}, fmt.Errorf("failed to get Secret: %w", err)
 					}
 					resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidCertificateRef)
