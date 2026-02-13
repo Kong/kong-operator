@@ -17,7 +17,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	ctrl "sigs.k8s.io/controller-runtime"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -39,7 +38,7 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 	// We use a deferred cancel to stop the manager and not wait for its timeout.
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
-	scheme := Scheme(t, WithGatewayAPI)
+	scheme := Scheme(t, WithGatewayAPI, WithKong)
 	cfg, _ := Setup(t, ctx, scheme)
 	client := NewControllerClient(t, scheme, cfg)
 
@@ -274,7 +273,7 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 	// We use a deferred cancel to stop the manager and not wait for its timeout.
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
-	scheme := Scheme(t, WithGatewayAPI)
+	scheme := Scheme(t, WithGatewayAPI, WithKong)
 	cfg, _ := Setup(t, ctx, scheme)
 	client := NewControllerClient(t, scheme, cfg)
 
@@ -444,10 +443,6 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 
 	t.Run("routes attached to Gateways that are reconciled by KIC should have other Gateway refs cleared from status", func(t *testing.T) {
 		require.Eventually(t, func() bool {
-			if _, err := reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: ctrlclient.ObjectKeyFromObject(&route)}); err != nil {
-				t.Logf("reconcile failed: %v", err)
-				return false
-			}
 			if err := client.Get(ctx, ctrlclient.ObjectKeyFromObject(&route), &route); err != nil {
 				t.Logf("failed to get HTTPRoute %s: %v", ctrlclient.ObjectKeyFromObject(&route), err)
 				return false
@@ -470,18 +465,12 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 				t.Logf("failed to get HTTPRoute %s: %v", ctrlclient.ObjectKeyFromObject(&route), err)
 				return false
 			}
-			route.Spec.ParentRefs = nil
-			if err := client.Update(ctx, &route); err != nil {
-				t.Logf("failed to update HTTPRoute %s: %v", ctrlclient.ObjectKeyFromObject(&route), err)
-				return false
-			}
-
-			if _, err := reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: ctrlclient.ObjectKeyFromObject(&route)}); err != nil {
-				t.Logf("reconcile failed: %v", err)
-				return false
-			}
-			if err := client.Get(ctx, ctrlclient.ObjectKeyFromObject(&route), &route); err != nil {
-				t.Logf("failed to get HTTPRoute %s: %v", ctrlclient.ObjectKeyFromObject(&route), err)
+			if route.Spec.ParentRefs != nil {
+				route.Spec.ParentRefs = nil
+				if err := client.Update(ctx, &route); err != nil {
+					t.Logf("failed to update HTTPRoute %s (will retry): %v", ctrlclient.ObjectKeyFromObject(&route), err)
+					return false
+				}
 				return false
 			}
 
