@@ -28,3 +28,17 @@ spec:
       description: Create KonnectAPIAuthConfiguration with inline token and verify it's ready.
       use:
         template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+  catch:
+    # Capture debug snapshot on test failure for CI debugging.
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: konnect-apiAuth_inline_token
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

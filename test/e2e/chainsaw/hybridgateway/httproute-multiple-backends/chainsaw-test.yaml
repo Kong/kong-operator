@@ -27,6 +27,14 @@ spec:
       value: (env('KONNECT_TOKEN'))
     - name: konnect_url
       value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
     - name: gateway_image
       value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.12')
     - name: gateway_class_name
@@ -69,11 +77,17 @@ spec:
       value: ($cross_namespace)
 
   steps:
-  # Step 1: Create KonnectAPIAuthConfiguration.
-  - name: 1-create-konnect-api-auth
+  # Step 1a: Create the secret for Konnect authentication.
+  - name: 1a-create-auth-secret
+    description: Create Secret with Konnect token for KonnectAPIAuthConfiguration
+    use:
+      template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+
+  # Step 1b: Create KonnectAPIAuthConfiguration.
+  - name: 1b-create-konnect-api-auth
     description: Create KonnectAPIAuthConfiguration for the test
     use:
-      template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+      template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
 
   # Step 2: Create GatewayConfiguration.
   - name: 2-create-gateway-configuration
@@ -515,3 +529,19 @@ spec:
         value: 9
     use:
       template: ../../common/_step_templates/assert-kongTarget.yaml
+
+  catch:
+    # Capture debug snapshot on test failure for CI debugging.
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: hybridgateway-httproute-multiple-backends
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: ADDITIONAL_NAMESPACES
+            value: ($cross_namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
