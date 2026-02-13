@@ -38,6 +38,8 @@ import (
 	"github.com/kong/kong-operator/pkg/metadata"
 )
 
+var errInvalidType = errors.New("invalid type")
+
 // -----------------------------------------------------------------------------
 // HTTPRoute Controller - HTTPRouteReconciler
 // -----------------------------------------------------------------------------
@@ -83,7 +85,7 @@ func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	})
 
 	if err := setupHTTPRouteIndices(mgr); err != nil {
-		return fmt.Errorf("failed to setup httproute indexers: %w", err)
+		return err
 	}
 
 	blder := ctrl.NewControllerManagedBy(mgr).
@@ -154,58 +156,6 @@ func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-const httpRoutePluginRefIndexKey = "httproute-pluginref"
-
-func setupHTTPRouteIndices(mgr ctrl.Manager) error {
-	if err := mgr.GetCache().IndexField(
-		context.Background(),
-		&gatewayapi.HTTPRoute{},
-		httpRoutePluginRefIndexKey,
-		indexHTTPRouteOnPluginReferences,
-	); err != nil {
-		return err
-	}
-	return nil
-}
-
-func indexHTTPRouteOnPluginReferences(obj client.Object) []string {
-	httproute, ok := obj.(*gatewayapi.HTTPRoute)
-	if !ok {
-		return []string{}
-	}
-
-	refs := make(map[string]struct{})
-	for _, pluginRef := range metadata.ExtractPluginsNamespacedNames(httproute) {
-		namespace := pluginRef.Namespace
-		if namespace == "" {
-			namespace = httproute.Namespace
-		}
-		refs[namespace+"/"+pluginRef.Name] = struct{}{}
-	}
-
-	for _, rule := range httproute.Spec.Rules {
-		for _, filter := range rule.Filters {
-			if filter.Type != gatewayapi.HTTPRouteFilterExtensionRef || filter.ExtensionRef == nil {
-				continue
-			}
-			if filter.ExtensionRef.Group != "configuration.konghq.com" || filter.ExtensionRef.Kind != "KongPlugin" {
-				continue
-			}
-			refs[httproute.Namespace+"/"+string(filter.ExtensionRef.Name)] = struct{}{}
-		}
-	}
-
-	if len(refs) == 0 {
-		return []string{}
-	}
-
-	keys := make([]string, 0, len(refs))
-	for key := range refs {
-		keys = append(keys, key)
-	}
-	return keys
-}
-
 // -----------------------------------------------------------------------------
 // HTTPRoute Controller - Event Handlers
 // -----------------------------------------------------------------------------
@@ -262,7 +212,7 @@ func referenceGrantHasHTTPRouteFrom(obj client.Object) bool {
 func (r *HTTPRouteReconciler) listHTTPRoutesForKongPlugin(ctx context.Context, obj client.Object) []reconcile.Request {
 	plugin, ok := obj.(*configurationv1.KongPlugin)
 	if !ok {
-		r.Log.Error(fmt.Errorf("invalid type"), "Found invalid type in event handlers", "expected", "KongPlugin", "found", reflect.TypeOf(obj))
+		r.Log.Error(errInvalidType, "Found invalid type in event handlers", "expected", "KongPlugin", "found", reflect.TypeOf(obj))
 		return nil
 	}
 
@@ -291,7 +241,7 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForGatewayClass(ctx context.Context,
 	// verify that the object is a GatewayClass
 	gwc, ok := obj.(*gatewayapi.GatewayClass)
 	if !ok {
-		r.Log.Error(fmt.Errorf("invalid type"), "Found invalid type in event handlers", "expected", "GatewayClass", "found", reflect.TypeOf(obj))
+		r.Log.Error(errInvalidType, "Found invalid type in event handlers", "expected", "GatewayClass", "found", reflect.TypeOf(obj))
 		return nil
 	}
 
@@ -382,7 +332,7 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForGateway(ctx context.Context, obj 
 	// verify that the object is a Gateway
 	gw, ok := obj.(*gatewayapi.Gateway)
 	if !ok {
-		r.Log.Error(fmt.Errorf("invalid type"), "Found invalid type in event handlers", "expected", "Gateway", "found", reflect.TypeOf(obj))
+		r.Log.Error(errInvalidType, "Found invalid type in event handlers", "expected", "Gateway", "found", reflect.TypeOf(obj))
 		return nil
 	}
 
@@ -816,7 +766,43 @@ func (r *HTTPRouteReconciler) validateAnnotationPluginReferences(
 		return gatewayapi.RouteReasonResolvedRefs, "", nil
 	}
 
+	// Pre-load reference grants from all unique cross-namespace plugin namespaces.
 	var referenceGrants []*gatewayapi.ReferenceGrant
+	crossNSNamespaces := make(map[string]struct{})
+	for _, pluginRef := range pluginRefs {
+		pluginNamespace := pluginRef.Namespace
+		if pluginNamespace == "" {
+			pluginNamespace = httpRoute.Namespace
+		}
+		if pluginNamespace != httpRoute.Namespace {
+			crossNSNamespaces[pluginNamespace] = struct{}{}
+		}
+	}
+	if len(crossNSNamespaces) > 0 {
+		if !r.enableReferenceGrant {
+			for _, pluginRef := range pluginRefs {
+				pluginNamespace := pluginRef.Namespace
+				if pluginNamespace == "" {
+					pluginNamespace = httpRoute.Namespace
+				}
+				if pluginNamespace != httpRoute.Namespace {
+					return gatewayapi.RouteReasonRefNotPermitted,
+						fmt.Sprintf("%s/%s is in a different namespace than the HTTPRoute (namespace %s) install ReferenceGrant CRD and configure a proper grant",
+							pluginNamespace, pluginRef.Name, httpRoute.Namespace,
+						),
+						nil
+				}
+			}
+		}
+		for ns := range crossNSNamespaces {
+			grants, err := r.listReferenceGrants(ctx, ns)
+			if err != nil {
+				return "", "", err
+			}
+			referenceGrants = append(referenceGrants, grants...)
+		}
+	}
+
 	for _, pluginRef := range pluginRefs {
 		pluginNamespace := pluginRef.Namespace
 		if pluginNamespace == "" {
@@ -824,22 +810,6 @@ func (r *HTTPRouteReconciler) validateAnnotationPluginReferences(
 		}
 
 		if pluginNamespace != httpRoute.Namespace {
-			if !r.enableReferenceGrant {
-				return gatewayapi.RouteReasonRefNotPermitted,
-					fmt.Sprintf("%s/%s is in a different namespace than the HTTPRoute (namespace %s) install ReferenceGrant CRD and configure a proper grant",
-						pluginNamespace, pluginRef.Name, httpRoute.Namespace,
-					),
-					nil
-			}
-
-			if referenceGrants == nil {
-				grants, err := r.listReferenceGrants(ctx)
-				if err != nil {
-					return "", "", err
-				}
-				referenceGrants = grants
-			}
-
 			if !r.isPluginReferenceGranted(httpRoute, pluginNamespace, pluginRef.Name, referenceGrants) {
 				return gatewayapi.RouteReasonRefNotPermitted,
 					fmt.Sprintf("%s/%s is in a different namespace than the HTTPRoute (namespace %s) and no ReferenceGrant allowing reference is configured",
@@ -867,9 +837,9 @@ func (r *HTTPRouteReconciler) validateAnnotationPluginReferences(
 	return gatewayapi.RouteReasonResolvedRefs, "", nil
 }
 
-func (r *HTTPRouteReconciler) listReferenceGrants(ctx context.Context) ([]*gatewayapi.ReferenceGrant, error) {
+func (r *HTTPRouteReconciler) listReferenceGrants(ctx context.Context, namespace string) ([]*gatewayapi.ReferenceGrant, error) {
 	referenceGrantList := &gatewayapi.ReferenceGrantList{}
-	if err := r.List(ctx, referenceGrantList); err != nil {
+	if err := r.List(ctx, referenceGrantList, client.InNamespace(namespace)); err != nil {
 		return nil, err
 	}
 	grants := make([]*gatewayapi.ReferenceGrant, 0, len(referenceGrantList.Items))

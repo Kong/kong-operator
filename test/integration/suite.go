@@ -75,20 +75,11 @@ func Suite(m *testing.M) {
 		os.Exit(code)
 	}()
 
-	kubeconfigPath, kubeconfigCleanup := ensureKubeconfig()
-	if kubeconfigCleanup != nil {
-		defer kubeconfigCleanup()
-	}
-
 	helpers.SetDefaultDataPlaneImage(consts.DefaultDataPlaneImage)
 	helpers.SetDefaultDataPlaneBaseImage(consts.DefaultDataPlaneBaseImage)
 
 	cfg := testutils.DefaultControllerConfigForTests(testutils.WithBlueGreenController(blueGreenController))
 	controllerNamespace := cfg.ControllerNamespace
-
-	if kubeconfigPath != "" {
-		fmt.Printf("INFO: using temporary KUBECONFIG at %s\n", kubeconfigPath)
-	}
 
 	var cancel context.CancelFunc
 	ctx, cancel = context.WithCancel(context.Background())
@@ -171,25 +162,6 @@ func Suite(m *testing.M) {
 	if !skipClusterCleanup && existingCluster == "" {
 		fmt.Println("INFO: cleaning up testing cluster and environment")
 		exitOnErr(GetEnv().Cleanup(GetCtx()))
-	}
-}
-
-func ensureKubeconfig() (string, func()) {
-	if existingCluster != "" || os.Getenv("KUBECONFIG") != "" {
-		return "", nil
-	}
-
-	file, err := os.CreateTemp("", "kong-operator-kubeconfig-*")
-	exitOnErr(err)
-	path := file.Name()
-	if err := file.Close(); err != nil {
-		exitOnErr(err)
-	}
-	exitOnErr(os.Setenv("KUBECONFIG", path))
-
-	return path, func() {
-		_ = os.Remove(path)
-		_ = os.Remove(path + ".lock")
 	}
 }
 
