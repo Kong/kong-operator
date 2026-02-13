@@ -54,7 +54,7 @@ func TestUpdateStrategyDBMode(t *testing.T) {
 		kongClient,
 		dump.Config{},
 		semver.MustParse(gatewayTag),
-		10,
+		concurrency,
 		logger,
 	)
 

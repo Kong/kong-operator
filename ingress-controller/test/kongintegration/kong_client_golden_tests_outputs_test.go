@@ -121,7 +121,7 @@ func TestKongClientGoldenTestsOutputs_Konnect(t *testing.T) {
 			KonnectControlPlane: cpID,
 		},
 		semver.MustParse(gatewayTag),
-		10,
+		concurrency,
 		logr.Discard(),
 	)
 
