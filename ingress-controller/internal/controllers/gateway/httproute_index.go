@@ -9,6 +9,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
 	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/pkg/metadata"
 )
@@ -47,7 +48,7 @@ func indexHTTPRouteOnPluginReferences(obj client.Object) []string {
 			if filter.Type != gatewayapi.HTTPRouteFilterExtensionRef || filter.ExtensionRef == nil {
 				continue
 			}
-			if filter.ExtensionRef.Group != "configuration.konghq.com" || filter.ExtensionRef.Kind != "KongPlugin" {
+			if string(filter.ExtensionRef.Group) != configurationv1.GroupVersion.Group || filter.ExtensionRef.Kind != "KongPlugin" {
 				continue
 			}
 			refs[httproute.Namespace+"/"+string(filter.ExtensionRef.Name)] = struct{}{}

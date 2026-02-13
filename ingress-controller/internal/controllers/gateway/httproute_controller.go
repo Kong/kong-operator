@@ -724,7 +724,7 @@ func (r *HTTPRouteReconciler) getHTTPRouteRuleReason(ctx context.Context, httpRo
 				continue
 			}
 
-			if filter.ExtensionRef.Group != "configuration.konghq.com" || filter.ExtensionRef.Kind != "KongPlugin" {
+			if string(filter.ExtensionRef.Group) != configurationv1.GroupVersion.Group || filter.ExtensionRef.Kind != "KongPlugin" {
 				return gatewayapi.RouteReasonInvalidKind,
 					fmt.Sprintf("extensionRef %s/%s has unsupported type %s/%s",
 						httpRoute.Namespace,
@@ -885,17 +885,16 @@ func ensureNoStaleParentStatus(httproute *gatewayapi.HTTPRoute) (wasAnyStatusRem
 		currentlyDefinedParentRefs[parentReferenceKey(httproute.Namespace, parentRef)] = struct{}{}
 	}
 
-	for parentIdx, parentStatus := range httproute.Status.Parents {
-		// Don't touch statuses from other controllers.
+	httproute.Status.Parents = slices.DeleteFunc(httproute.Status.Parents, func(parentStatus gatewayapi.RouteParentStatus) bool {
 		if parentStatus.ControllerName != GetControllerName() {
-			continue
+			return false
 		}
-		// Remove the status if the parentRef is no longer defined.
 		if _, ok := currentlyDefinedParentRefs[parentReferenceKey(httproute.Namespace, parentStatus.ParentRef)]; !ok {
-			httproute.Status.Parents = slices.Delete(httproute.Status.Parents, parentIdx, parentIdx+1)
 			wasAnyStatusRemoved = true
+			return true
 		}
-	}
+		return false
+	})
 	return wasAnyStatusRemoved
 }
 
