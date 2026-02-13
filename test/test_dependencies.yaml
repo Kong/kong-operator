@@ -1,15 +1,4 @@
 e2e:
-  kind:
-    # renovate: datasource=docker depName=kindest/node versioning=docker
-    - 'v1.33.7'
-    # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-    - 'v1.32.5'
-    # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-    - 'v1.31.14'
-    # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-    - 'v1.30.13'
-    # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-    - 'v1.29.14'
   gke:
     # renovate: datasource=custom.gke-rapid depName=gke versioning=semver
     - '1.33.1'
