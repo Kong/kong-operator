@@ -61,7 +61,7 @@ spec:
         - name: namespace_name
           value: ($konnect_api_auth_namespace)
       use:
-        template: ../common/_step_templates/apply-assert-namespace.yaml
+        template: ../../common/_step_templates/apply-assert-namespace.yaml
         
   # Step 2: Create KonnectAPIAuthConfiguration in a namespace
     - name: create-konnect-api-auth-confugration
@@ -70,7 +70,7 @@ spec:
         - name: namespace
           value: ($konnect_api_auth_namespace)
       use:
-        template: ../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
     # Step 3: Create a KongReferenceGrant to allow KonnectGatewayControlPlane in the other namespace to reference the KonnectAPIAuthConfiguration
     # TODO: Create a KongReferenceGrant to allow GatewayConfiguration -> KonnectAPIAuthConfiguration directly:
     # https://github.com/Kong/kong-operator/issues/2483
@@ -92,37 +92,37 @@ spec:
         - name: to_kind
           value: KonnectAPIAuthConfiguration
       use:
-        template: ../common/_step_templates/apply-assert-kong-reference-grant.yaml
+        template: ../../common/_step_templates/apply-assert-kong-reference-grant.yaml
     # Step 4: Create the GatewayConfiguration that defines the hybrid gateway setup  in the other namespace.
     - name: create-gateway-configuration
       description: Create GatewayConfiguration for the test.
       use:
-        template: ../common/_step_templates/apply-assert-gatewayConfiguration.yaml
+        template: ../../common/_step_templates/apply-assert-gatewayConfiguration.yaml
 
     # Step 5: Create the GatewayClass that will be used by the Gateway.
     - name: create-gateway-class
       description: Create GatewayClass for the test.
       use:
-        template: ../common/_step_templates/apply-assert-gatewayClass.yaml
+        template: ../../common/_step_templates/apply-assert-gatewayClass.yaml
     
     # Step 6: Create the Gateway in the namespace of GatewayConfiguration.
     - name: Create-gateway
       description: Create Gateway in the namespace of GatewayConfiguration for the test.
       use:
-        template: ../common/_step_templates/apply-assert-gateway.yaml
+        template: ../../common/_step_templates/apply-assert-gateway.yaml
     
     # Step 7: Verify that the KonnectGatewayControlPlane is created and synchronized with Konnect.
     - name: Assert-konnect-gateway-control-plane
       description: Assert that the KonnectGatewayControlplane resource is created and synchronized.
       use:
-        template: ../common/_step_templates/assert-konnectGatewayControlPlane.yaml
+        template: ../../common/_step_templates/assert-konnectGatewayControlPlane.yaml
 
     
     # Step 8: Create echo services and deployments as the backend of HTTPRoute.
     - name: Create-echo-service
       description: Create and assert an echo service to route traffic to.
       use:
-        template: ../common/_step_templates/apply-assert-echoService.yaml
+        template: ../../common/_step_templates/apply-assert-echoService.yaml
 
     # Step 9: Create HTTPRoute to route traffic to the echo service in the namespace of the Gateway.
     - name: Create-httproute-echo
@@ -149,13 +149,13 @@ spec:
     - name: Assert-kong-service
       description: Assert that the KongService resource is created for the HTTPRoute.
       use:
-        template: ../common/_step_templates/assert-kongService.yaml
+        template: ../../common/_step_templates/assert-kongService.yaml
 
     # Step 11: Verify that the HTTPRoute is translated into a KongRoute resource.
     - name: Assert-kong-route
       description: Assert that the KongRoute resource is created for the HTTPRoute.
       use:
-        template: ../common/_step_templates/assert-kongRoute.yaml
+        template: ../../common/_step_templates/assert-kongRoute.yaml
       bindings:
         - name: route_paths
           value: 
@@ -171,13 +171,13 @@ spec:
     - name: Assert-kong-upstream
       description: Assert that the KongUpstream resource is created for the HTTPRoute.
       use:
-        template: ../common/_step_templates/assert-kongUstream.yaml
+        template: ../../common/_step_templates/assert-kongUpstream.yaml
     
     # Step 12: Verify that the KongUpstream has KongTarget resources created for it.
     - name: Assert-kong-target
       description: Assert that the KongTarget resource is created for the KongUpstream.
       use:
-        template: ../common/_step_templates/assert-kongTarget.yaml
+        template: ../../common/_step_templates/assert-kongTarget.yaml
       bindings:
         - name: resource_type
           value: "kongupstreams.configuration.konghq.com"
@@ -188,7 +188,7 @@ spec:
     - name: Verify-HTTP-traffic-from-host
       description: Verify that HTTP traffic can be routed through the gateway to the echo service from the host.
       use:
-        template: ../common/_step_templates/verify-http-traffic-from-host.yaml
+        template: ../../common/_step_templates/verify-http-traffic-from-host.yaml
       bindings:
         - name: gateway_name
           value: (join('-', [($test_name), 'gateway']))
