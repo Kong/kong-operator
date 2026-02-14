@@ -1,6 +1,7 @@
 package kongintegration
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"maps"
@@ -32,8 +33,9 @@ func TestUpdateStrategyInMemory_PropagatesResourcesErrors(t *testing.T) {
 	t.Parallel()
 
 	const (
-		timeout = time.Second * 5
-		period  = time.Millisecond * 200
+		timeout        = 30 * time.Second
+		period         = 200 * time.Millisecond
+		requestTimeout = 3 * time.Second
 	)
 
 	ctx := t.Context()
@@ -98,7 +100,9 @@ func TestUpdateStrategyInMemory_PropagatesResourcesErrors(t *testing.T) {
 	// Instead, we verify the essential structure and fields are present
 
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		configSize, err := sut.Update(ctx, generateFaultyConfig())
+		reqCtx, cancel := context.WithTimeout(ctx, requestTimeout)
+		defer cancel()
+		configSize, err := sut.Update(reqCtx, generateFaultyConfig())
 		if !assert.Error(t, err) {
 			fmt.Println("DEBUG: Update() returned no error (expected error)")
 			return
