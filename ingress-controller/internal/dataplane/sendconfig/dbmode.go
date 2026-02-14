@@ -145,6 +145,9 @@ func (s *UpdateStrategyDBMode) HandleEvents(
 	hash string,
 ) {
 	s.resourceErrorLock.Lock()
+	// Reset resource errors from previous Update() calls to prevent stale errors
+	// from leaking into subsequent calls when the UpdateStrategy is reused.
+	s.resourceErrors = nil
 	diff := diagnostics.ConfigDiff{
 		Hash:     hash,
 		Entities: []diagnostics.EntityDiff{},
