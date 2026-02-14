@@ -130,41 +130,46 @@ func TestKongClientGoldenTestsOutputs_Konnect(t *testing.T) {
 			goldenTestOutput, err := os.ReadFile(goldenTestOutputPath)
 			require.NoError(t, err)
 
-			content := &file.Content{}
-			require.NoError(t, yaml.Unmarshal(goldenTestOutput, content))
-
 			require.EventuallyWithT(t, func(t *assert.CollectT) {
-				configSize, err := updateStrategy.Update(ctx, sendconfig.ContentWithHash{Content: content})
-				if !assert.NoError(t, err) {
+				// NOTE: Content must be re-parsed on each attempt because file.Get()
+				// in go-database-reconciler mutates it (sets Service references on
+				// service-scoped plugins). Reusing a mutated Content causes retries
+				// to fail with "nesting service under service-scoped plugin".
+				content := &file.Content{}
+				if !assert.NoError(t, yaml.Unmarshal(goldenTestOutput, content)) {
 					return
 				}
-
-				var (
-					apiErr        = &kong.APIError{}
-					sendconfigErr = &sendconfig.UpdateError{}
-				)
-				switch {
-				case errors.As(err, &apiErr):
-					if apiErr.Code() == http.StatusTooManyRequests {
-						details, ok := apiErr.Details().(kong.ErrTooManyRequestsDetails)
-						if !ok {
-							t.Errorf("failed to extract details from 429 error: %v", err)
-							return
+				configSize, err := updateStrategy.Update(ctx, sendconfig.ContentWithHash{Content: content})
+				if !assert.NoError(t, err) {
+					var (
+						apiErr        = &kong.APIError{}
+						sendconfigErr sendconfig.UpdateError
+					)
+					switch {
+					case errors.As(err, &apiErr):
+						if apiErr.Code() == http.StatusTooManyRequests {
+							details, ok := apiErr.Details().(kong.ErrTooManyRequestsDetails)
+							if !ok {
+								t.Errorf("failed to extract details from 429 error: %v", err)
+								return
+							}
+							timer := time.NewTimer(details.RetryAfter)
+							defer timer.Stop()
+							select {
+							case <-timer.C:
+								t.Errorf("rate limited (429), retrying after %s", details.RetryAfter)
+								return
+							case <-ctx.Done():
+								t.Errorf("context done while waiting to retry after 429: %v", ctx.Err())
+								return
+							}
 						}
-						timer := time.NewTimer(details.RetryAfter)
-						defer timer.Stop()
-						select {
-						case <-timer.C:
-							t.Errorf("rate limited (429), retrying after %s", details.RetryAfter)
-							return
-						case <-ctx.Done():
-							t.Errorf("context done while waiting to retry after 429: %v", ctx.Err())
-							return
-						}
+					case errors.As(err, &sendconfigErr):
+						t.Errorf("sendconfig error: %v", sendconfigErr.Error())
+						t.Errorf("sendconfig error failures: %v", sendconfigErr.ResourceFailures())
+						return
 					}
-				case errors.As(err, &sendconfigErr):
-					t.Errorf("sendconfig error: %v", sendconfigErr.Error())
-					t.Errorf("sendconfig error failures: %v", sendconfigErr.ResourceFailures())
+					return
 				}
 
 				assert.Equal(t, mo.None[int](), configSize)
