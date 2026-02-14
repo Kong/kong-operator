@@ -130,10 +130,15 @@ func TestKongClientGoldenTestsOutputs_Konnect(t *testing.T) {
 			goldenTestOutput, err := os.ReadFile(goldenTestOutputPath)
 			require.NoError(t, err)
 
-			content := &file.Content{}
-			require.NoError(t, yaml.Unmarshal(goldenTestOutput, content))
-
 			require.EventuallyWithT(t, func(t *assert.CollectT) {
+				// NOTE: Content must be re-parsed on each attempt because file.Get()
+				// in go-database-reconciler mutates it (sets Service references on
+				// service-scoped plugins). Reusing a mutated Content causes retries
+				// to fail with "nesting service under service-scoped plugin".
+				content := &file.Content{}
+				if !assert.NoError(t, yaml.Unmarshal(goldenTestOutput, content)) {
+					return
+				}
 				configSize, err := updateStrategy.Update(ctx, sendconfig.ContentWithHash{Content: content})
 				if !assert.NoError(t, err) {
 					var (
