@@ -2,6 +2,8 @@ package kongintegration
 
 import (
 	"encoding/json"
+	"fmt"
+	"maps"
 	"testing"
 	"time"
 
@@ -50,31 +52,33 @@ func TestUpdateStrategyInMemory_PropagatesResourcesErrors(t *testing.T) {
 	)
 
 	// This configuration is faulty and should return a resource error.
-	faultyConfig := sendconfig.ContentWithHash{
-		Content: &file.Content{
-			FormatVersion: "3.0",
-			Services: []file.FService{
-				{
-					Service: kong.Service{
-						Name:     kong.String("test-service"),
-						Host:     kong.String("konghq.com"),
-						Port:     kong.Int(80),
-						Protocol: kong.String("grpc"),
-						// Paths are not supported for gRPC services. This will trigger an error.
-						Path: kong.String("/test"),
-						Tags: []*string{
-							// Tags are used to identify the resource in the flattened errors response.
-							kong.String("k8s-name:test-service"),
-							kong.String("k8s-namespace:default"),
-							kong.String("k8s-kind:Service"),
-							kong.String("k8s-uid:a3b8afcc-9f19-42e4-aa8f-5866168c2ad3"),
-							kong.String("k8s-group:"),
-							kong.String("k8s-version:v1"),
+	generateFaultyConfig := func() sendconfig.ContentWithHash {
+		return sendconfig.ContentWithHash{
+			Content: &file.Content{
+				FormatVersion: "3.0",
+				Services: []file.FService{
+					{
+						Service: kong.Service{
+							Name:     kong.String("test-service"),
+							Host:     kong.String("konghq.com"),
+							Port:     kong.Int(80),
+							Protocol: kong.String("grpc"),
+							// Paths are not supported for gRPC services. This will trigger an error.
+							Path: kong.String("/test"),
+							Tags: []*string{
+								// Tags are used to identify the resource in the flattened errors response.
+								kong.String("k8s-name:test-service"),
+								kong.String("k8s-namespace:default"),
+								kong.String("k8s-kind:Service"),
+								kong.String("k8s-uid:a3b8afcc-9f19-42e4-aa8f-5866168c2ad3"),
+								kong.String("k8s-group:"),
+								kong.String("k8s-version:v1"),
+							},
 						},
 					},
 				},
 			},
-		},
+		}
 	}
 	expectedCausingObjects := []client.Object{
 		&metav1.PartialObjectMetadata{
@@ -94,26 +98,37 @@ func TestUpdateStrategyInMemory_PropagatesResourcesErrors(t *testing.T) {
 	// Instead, we verify the essential structure and fields are present
 
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		configSize, err := sut.Update(ctx, faultyConfig)
+		configSize, err := sut.Update(ctx, generateFaultyConfig())
 		if !assert.Error(t, err) {
+			fmt.Println("DEBUG: Update() returned no error (expected error)")
 			return
 		}
+		fmt.Printf("DEBUG: Update() returned error: %v\n", err)
 		// Default value 0 to discard, since error has been returned.
 		if !assert.Zero(t, configSize) {
+			fmt.Printf("DEBUG: configSize is not zero: %v\n", configSize)
 			return
 		}
 		var updateError sendconfig.UpdateError
 		if !assert.ErrorAs(t, err, &updateError) {
+			fmt.Printf("DEBUG: error is not UpdateError, actual type: %T, value: %v\n", err, err)
 			return
 		}
 		if wrappedErr := updateError.Unwrap(); !assert.Error(t, wrappedErr) || !assert.IsType(t, &kong.APIError{}, wrappedErr) {
+			fmt.Printf("DEBUG: unwrapped error is not *kong.APIError, type: %T, value: %v\n", wrappedErr, wrappedErr)
 			return
 		}
 		if !assert.NotEmpty(t, updateError.ResourceFailures()) {
+			fmt.Printf("DEBUG: ResourceFailures() is empty, raw response body: %s\n", string(updateError.RawResponseBody()))
 			return
 		}
 		if !assert.NotEmpty(t, updateError.RawResponseBody()) {
+			fmt.Println("DEBUG: RawResponseBody() is empty")
 			return
+		}
+		fmt.Printf("DEBUG: got %d resource failures\n", len(updateError.ResourceFailures()))
+		for i, rf := range updateError.ResourceFailures() {
+			fmt.Printf("DEBUG: resource failure [%d]: message=%q, causingObjects=%v\n", i, rf.Message(), rf.CausingObjects())
 		}
 		resourceErr, found := lo.Find(updateError.ResourceFailures(), func(r failures.ResourceFailure) bool {
 			return r.Message() == expectedMessage &&
@@ -125,32 +140,39 @@ func TestUpdateStrategyInMemory_PropagatesResourcesErrors(t *testing.T) {
 			return
 		}
 		if diff := cmp.Diff(expectedCausingObjects, resourceErr.CausingObjects()); !assert.Empty(t, diff) {
+			fmt.Printf("DEBUG: CausingObjects diff: %s\n", diff)
 			return
 		}
 		// Verify essential structure of the response body
 		actualBody := map[string]any{}
 		err = json.Unmarshal(updateError.RawResponseBody(), &actualBody)
 		if !assert.NoError(t, err) {
+			fmt.Printf("DEBUG: failed to unmarshal response body: %s\n", string(updateError.RawResponseBody()))
 			return
 		}
 
 		// Check for required fields in the error response
 		if !assert.Contains(t, actualBody, "code") {
+			fmt.Printf("DEBUG: response body missing 'code', keys: %v\n", maps.Keys(actualBody))
 			return
 		}
 		if !assert.Contains(t, actualBody, "name") {
+			fmt.Printf("DEBUG: response body missing 'name', keys: %v\n", maps.Keys(actualBody))
 			return
 		}
 		if !assert.Contains(t, actualBody, "flattened_errors") {
+			fmt.Printf("DEBUG: response body missing 'flattened_errors', keys: %v\n", maps.Keys(actualBody))
 			return
 		}
 
 		// Verify the flattened_errors contains our test service
 		flattenedErrors, ok := actualBody["flattened_errors"].([]any)
 		if !assert.True(t, ok) {
+			fmt.Printf("DEBUG: flattened_errors is not []any, type: %T, value: %v\n", actualBody["flattened_errors"], actualBody["flattened_errors"])
 			return
 		}
 		if !assert.NotEmpty(t, flattenedErrors) {
+			fmt.Println("DEBUG: flattened_errors is empty")
 			return
 		}
 
@@ -165,6 +187,7 @@ func TestUpdateStrategyInMemory_PropagatesResourcesErrors(t *testing.T) {
 			}
 		}
 		if !assert.True(t, foundServiceError, "Expected to find flattened error for test-service") {
+			fmt.Printf("DEBUG: no flattened error for test-service, flattenedErrors: %v\n", flattenedErrors)
 			return
 		}
 	}, timeout, period)
