@@ -25,9 +25,19 @@ import (
 )
 
 const (
-	testSendConfigPeriod           = 10 * time.Millisecond
-	testSendConfigAssertionTimeout = 10 * testSendConfigPeriod
-	testSendConfigAssertionTick    = testSendConfigPeriod
+	testSendConfigPeriod = 10 * time.Millisecond
+
+	// testSendConfigEventuallyTimeout is used with EventuallyWithT assertions that wait for async
+	// operations to complete. It's set generously to avoid flakiness on busy CI runners where
+	// goroutine scheduling and GC pauses can introduce delays.
+	testSendConfigEventuallyTimeout = 5 * time.Second
+
+	// testSendConfigNeverTimeout is used with Never assertions that verify something does NOT happen
+	// within a short window. Kept small since we only need to observe enough ticker cycles to be
+	// confident the condition won't be met.
+	testSendConfigNeverTimeout = 10 * testSendConfigPeriod
+
+	testSendConfigAssertionTick = testSendConfigPeriod
 )
 
 func TestConfigSynchronizer_UpdatesKongConfigAccordingly(t *testing.T) {
@@ -54,7 +64,7 @@ func TestConfigSynchronizer_UpdatesKongConfigAccordingly(t *testing.T) {
 	t.Logf("Verifying that no URL are updated when no configuration received")
 	require.Never(t, func() bool {
 		return len(resolver.GetUpdateCalledForURLs()) != 0
-	}, testSendConfigAssertionTimeout, testSendConfigAssertionTick, "Should not update any URL when no configuration received")
+	}, testSendConfigNeverTimeout, testSendConfigAssertionTick, "Should not update any URL when no configuration received")
 
 	t.Logf("Verifying that the new config updated when received")
 	expectedContent := &file.Content{
@@ -88,14 +98,14 @@ func TestConfigSynchronizer_UpdatesKongConfigAccordingly(t *testing.T) {
 		contentWithHash, ok := resolver.LastUpdatedContentForURL(url)
 		require.True(t, ok, "should have last updated content for the URL")
 		require.Empty(t, cmp.Diff(expectedContent, contentWithHash.Content), "should send expected configuration")
-	}, testSendConfigAssertionTimeout, testSendConfigAssertionTick)
+	}, testSendConfigEventuallyTimeout, testSendConfigAssertionTick)
 
 	t.Logf("Verifying that update is not called when config not changed")
 	l := len(resolver.GetUpdateCalledForURLs())
 	s.UpdateKongState(kongState(), false)
 	require.Never(t, func() bool {
 		return len(resolver.GetUpdateCalledForURLs()) != l
-	}, testSendConfigAssertionTimeout, testSendConfigAssertionTick)
+	}, testSendConfigNeverTimeout, testSendConfigAssertionTick)
 
 	t.Logf("Verifying that new config are not sent after context cancelled")
 	cancel()
@@ -124,7 +134,7 @@ func TestConfigSynchronizer_UpdatesKongConfigAccordingly(t *testing.T) {
 			return false
 		}
 		return assert.ObjectsAreEqual(expectedContent, contentWithHash.Content)
-	}, testSendConfigAssertionTimeout, testSendConfigAssertionTick, "Should not send new updates after context cancelled")
+	}, testSendConfigNeverTimeout, testSendConfigAssertionTick, "Should not send new updates after context cancelled")
 }
 
 func TestConfigSynchronizer_ConfigIsSanitizedWhenConfiguredSo(t *testing.T) {
@@ -174,7 +184,7 @@ func TestConfigSynchronizer_ConfigIsSanitizedWhenConfiguredSo(t *testing.T) {
 		cert := konnectContent.Content.Certificates[0]
 		require.NotNil(t, cert.Key, "expected certificate key")
 		require.Equal(t, "{vault://redacted-value}", *cert.Key, "expected redacted certificate key")
-	}, testSendConfigAssertionTimeout, testSendConfigAssertionTick)
+	}, testSendConfigEventuallyTimeout, testSendConfigAssertionTick)
 }
 
 func TestConfigSynchronizer_StatusNotificationIsSent(t *testing.T) {
@@ -243,7 +253,7 @@ func TestConfigSynchronizer_StatusNotificationIsSent(t *testing.T) {
 				status, ok := configStatusNotifier.FirstKonnectConfigStatus()
 				require.True(t, ok, "should have received Konnect config status")
 				require.Equal(t, tc.expectedStatus, status, "should have received expected Konnect config status")
-			}, testSendConfigAssertionTimeout, testSendConfigAssertionTick)
+			}, testSendConfigEventuallyTimeout, testSendConfigAssertionTick)
 		})
 	}
 }
@@ -323,7 +333,7 @@ func TestConfigSynchronizer_EnableReverseSync(t *testing.T) {
 					return
 				}
 				require.Greater(t, len(urls), 1, "should update Konnect URL after initial config more than once")
-			}, testSendConfigAssertionTimeout, testSendConfigAssertionTick)
+			}, testSendConfigEventuallyTimeout, testSendConfigAssertionTick)
 
 			initialUpdateCount := len(updateStrategyResolver.GetUpdateCalledForURLs())
 
@@ -336,12 +346,12 @@ func TestConfigSynchronizer_EnableReverseSync(t *testing.T) {
 					require.Greater(t, len(urls), initialUpdateCount,
 						"should update again when reverse sync is enabled, even with no config changes",
 					)
-				}, testSendConfigAssertionTimeout, testSendConfigAssertionTick)
+				}, testSendConfigEventuallyTimeout, testSendConfigAssertionTick)
 			} else {
 				require.Never(t, func() bool {
 					urls := updateStrategyResolver.GetUpdateCalledForURLs()
 					return len(urls) > initialUpdateCount
-				}, testSendConfigAssertionTimeout, testSendConfigAssertionTick,
+				}, testSendConfigNeverTimeout, testSendConfigAssertionTick,
 					"should not update when reverse sync is disabled and no config changes",
 				)
 			}
