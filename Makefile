@@ -111,6 +111,10 @@ GOLANGCI_LINT = $(PROJECT_DIR)/bin/installs/github-golangci-golangci-lint/$(GOLA
 golangci-lint: mise yq ## Download golangci-lint locally if necessary.
 	$(MAKE) mise-install DEP_VER=github:golangci/golangci-lint@$(GOLANGCI_LINT_VERSION)
 
+.PHONY: golangci-lint-cache-path
+golangci-lint-cache-path:
+	@$(GOLANGCI_LINT) cache status | awk '{ print $$2 }'
+
 MODERNIZE_VERSION = $(shell $(YQ) -r '.modernize' < $(TOOLS_VERSIONS_FILE))
 MODERNIZE = $(PROJECT_DIR)/bin/installs/go-golang-org-x-tools-gopls-internal-analysis-modernize-cmd-modernize/$(MODERNIZE_VERSION)/bin/modernize
 # Flags for modernize analyzer. Disable the "omitzero" category to avoid
