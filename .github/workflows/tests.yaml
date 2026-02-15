@@ -331,44 +331,10 @@ jobs:
       run: ./bin/manager -version | ./scripts/verify-version.sh ${{ github.repository }}
 
   unit-tests:
-    runs-on: ubuntu-latest
     needs: [check-docs-only]
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
-    steps:
-    - name: Harden Runner
-      uses: step-security/harden-runner@5ef0c079ce82195b2a36a210272d6b661572d83e # v2.14.2
-      with:
-        egress-policy: audit
-    - name: checkout repository
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-    - name: setup golang
-      uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
-      with:
-        go-version-file: go.mod
-
-    - uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8 # v3.6.1
-      with:
-        install: false
-
-    - name: run unit tests
-      run: make test.unit
-      env:
-        KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS: ${{ secrets.KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS }}
-        GOTESTSUM_JUNITFILE: "unit-tests.xml"
-
-    - name: collect test coverage
-      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-      with:
-        name: coverage-unit-tests
-        path: coverage.unit.out
-
-    - name: collect test report
-      if: ${{ always() }}
-      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-      with:
-        name: tests-report-unit-tests
-        path: unit-tests.xml
+    uses: ./.github/workflows/__unit_tests.yaml
+    secrets: inherit
 
   CRDs:
     runs-on: ubuntu-latest
