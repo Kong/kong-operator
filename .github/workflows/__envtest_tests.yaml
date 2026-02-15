@@ -1,0 +1,85 @@
+name: envtest tests
+run-name: "envtest tests ${{ format('{0}', inputs.cluster_version) }} "
+
+on:
+  workflow_call:
+    inputs:
+      cluster_version:
+        description: "The Kubernetes cluster version to use for envtest"
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  MISE_VERBOSE: 1
+  MISE_DEBUG: 1
+
+jobs:
+  envtest-tests:
+    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 60) }}
+    runs-on: ubuntu-latest
+    name: envtest tests ${{ format('{0}', inputs.cluster_version) }}
+    steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@5ef0c079ce82195b2a36a210272d6b661572d83e # v2.14.2
+      with:
+        egress-policy: audit
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+    - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
+      with:
+        go-version-file: go.mod
+        cache: false
+    - run: |
+        echo "GO_MOD_CACHE=$(go env GOMODCACHE)" >> $GITHUB_ENV
+        echo "GO_BUILD_CACHE=$(go env GOCACHE)" >> $GITHUB_ENV
+
+    - uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8 # v3.6.1
+      with:
+        install: false
+
+    - uses: Kong/kong-license@c4decf08584f84ff8fe8e7cd3c463e0192f6111b # master @ 20250107
+      id: license
+      with:
+        op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+
+    - run: echo "GO_CACHE_KEY=go-envtest-${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.mod') }}" >> $GITHUB_ENV
+    - run: echo "GO_CACHE_KEY_2=go-envtest-${{ runner.os }}-${{ runner.arch }}-go-" >> $GITHUB_ENV
+
+    - name: Go cache
+      uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+      with:
+        path: |
+          ${{ env.GO_MOD_CACHE }}
+          ${{ env.GO_BUILD_CACHE }}
+        key: ${{ env.GO_CACHE_KEY }}
+        restore-keys: |
+          ${{ env.GO_CACHE_KEY }}
+          ${{ env.GO_CACHE_KEY_2 }}
+
+    - name: run envtest tests
+      env:
+        KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
+        GOTESTSUM_JUNITFILE: envtest-tests.xml
+      run: |
+        VERSION="${{ inputs.cluster_version }}"
+        # Remove leading 'v'
+        VERSION="${VERSION#v}"
+        # Remove patch number as envtest releases are not provided for every patch version
+        VERSION="${VERSION%.*}"
+        echo "Cluster version: $VERSION"
+        make test.envtest CLUSTER_VERSION=${VERSION}
+
+    - name: collect test coverage
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+      with:
+        name: coverage-envtest-tests
+        path: coverage.envtest.out
+
+    - name: collect test report
+      if: ${{ always() }}
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+      with:
+        name: tests-report-envtest-tests
+        path: envtest-tests.xml
