@@ -1,4 +1,4 @@
-name: kong integration tests
+name: unit tests
 
 on:
   workflow_call: {}
