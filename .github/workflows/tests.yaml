@@ -341,6 +341,25 @@ jobs:
       uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
       with:
         go-version-file: go.mod
+        cache: false
+
+    - run: |
+        echo "GO_MOD_CACHE=$(go env GOMODCACHE)" >> $GITHUB_ENV
+        echo "GO_BUILD_CACHE=$(go env GOCACHE)" >> $GITHUB_ENV
+
+    - run: echo "GO_CACHE_KEY=go-build-${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.mod') }}" >> $GITHUB_ENV
+    - run: echo "GO_CACHE_KEY_2=go-build-${{ runner.os }}-${{ runner.arch }}-go-" >> $GITHUB_ENV
+
+    - name: Go cache
+      uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+      with:
+        path: |
+          ${{ env.GO_MOD_CACHE }}
+          ${{ env.GO_BUILD_CACHE }}
+        key: ${{ env.GO_CACHE_KEY }}
+        restore-keys: |
+          ${{ env.GO_CACHE_KEY }}
+          ${{ env.GO_CACHE_KEY_2 }}
 
     - run: make build.operator
 
