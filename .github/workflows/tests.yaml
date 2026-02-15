@@ -382,8 +382,8 @@ jobs:
         echo "GO_MOD_CACHE=$(go env GOMODCACHE)" >> $GITHUB_ENV
         echo "GO_BUILD_CACHE=$(go env GOCACHE)" >> $GITHUB_ENV
 
-    - run: echo "GO_CACHE_KEY=go-integrationtests-${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.mod') }}" >> $GITHUB_ENV
-    - run: echo "GO_CACHE_KEY_2=go-integrationtests-${{ runner.os }}-${{ runner.arch }}-go-" >> $GITHUB_ENV
+    - run: echo "GO_CACHE_KEY=go-crdsvalidationtests-${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.mod') }}" >> $GITHUB_ENV
+    - run: echo "GO_CACHE_KEY_2=go-crdsvalidationtests-${{ runner.os }}-${{ runner.arch }}-go-" >> $GITHUB_ENV
 
     - name: Go cache
       uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
