@@ -395,7 +395,7 @@ jobs:
         run: |
           mkdir -p "$(dirname "${{ env.DOCS_REPO }}/${{ env.DOCS_REPO_PATH_CRD_DOC }}")"
           ./scripts/apidocs-gen/post-process-for-konghq.sh \
-            ./docs/gateway-operator-api-reference.md \
+            ./docs/all-api-reference.md \
             "${{ env.DOCS_REPO }}/${{ env.DOCS_REPO_PATH_CRD_DOC }}" \
             "${{ env.DOCS_REPO }}"
 
