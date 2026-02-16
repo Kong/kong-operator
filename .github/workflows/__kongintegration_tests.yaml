@@ -59,8 +59,21 @@ jobs:
       - run: echo "GO_CACHE_KEY=go-kongintegration-${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.mod') }}" >> $GITHUB_ENV
       - run: echo "GO_CACHE_KEY_2=go-kongintegration-${{ runner.os }}-${{ runner.arch }}-go-" >> $GITHUB_ENV
 
-      - name: Go cache
+      - name: Go cache main branch
+        if: ${{ github.ref == 'refs/heads/main' }}
         uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+        with:
+          path: |
+            ${{ env.GO_MOD_CACHE }}
+            ${{ env.GO_BUILD_CACHE }}
+          key: ${{ env.GO_CACHE_KEY }}
+          restore-keys: |
+            ${{ env.GO_CACHE_KEY }}
+            ${{ env.GO_CACHE_KEY_2 }}
+
+      - name: Go cache (restore only for non-main branches)
+        if: ${{ github.ref != 'refs/heads/main' }}
+        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
         with:
           path: |
             ${{ env.GO_MOD_CACHE }}
