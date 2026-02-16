@@ -1,0 +1,109 @@
+name: Conformance tests
+
+on:
+  workflow_call: {}
+
+permissions:
+  contents: read
+
+env:
+  MISE_VERBOSE: 1
+  MISE_DEBUG: 1
+
+jobs:
+  conformance-tests:
+    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 60) }}
+    runs-on: ubuntu-latest
+    name: ${{ format('{0}', matrix.router-flavor) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        router-flavor: [traditional_compatible, expressions]
+        gateway-type: [standard, hybrid]
+    steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@a90bcbc6539c36a85cdfeb73f7e2f433735f215b # v2.15.0
+      with:
+        egress-policy: audit
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      with:
+        # Fetch all history so that we can get the correct commit hash for the conformance tests.
+        fetch-depth: 0
+
+    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
+      with:
+        go-version-file: go.mod
+        cache: false
+
+    - uses: jdx/mise-action@e79ddf65a11cec7b0e882bedced08d6e976efb2d # v3.6.2
+      with:
+        install: false
+
+    - run: echo "GO_MOD_CACHE=$(go env GOMODCACHE)" >> $GITHUB_ENV
+    - run: echo "GO_BUILD_CACHE=$(go env GOCACHE)" >> $GITHUB_ENV
+
+    - run: echo "GO_CACHE_KEY=go-conformancetests-${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.mod') }}" >> $GITHUB_ENV
+    - run: echo "GO_CACHE_KEY_2=go-conformancetests-${{ runner.os }}-${{ runner.arch }}-go-" >> $GITHUB_ENV
+
+    - name: Go cache main branch
+      if: ${{ github.ref == 'refs/heads/main' }}
+      uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+      with:
+        path: |
+          ${{ env.GO_MOD_CACHE }}
+          ${{ env.GO_BUILD_CACHE }}
+        key: ${{ env.GO_CACHE_KEY }}
+        restore-keys: |
+          ${{ env.GO_CACHE_KEY }}
+          ${{ env.GO_CACHE_KEY_2 }}
+
+    - name: Go cache (restore only for non-main branches)
+      if: ${{ github.ref != 'refs/heads/main' }}
+      uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+      with:
+        path: |
+          ${{ env.GO_MOD_CACHE }}
+          ${{ env.GO_BUILD_CACHE }}
+        key: ${{ env.GO_CACHE_KEY }}
+        restore-keys: |
+          ${{ env.GO_CACHE_KEY }}
+          ${{ env.GO_CACHE_KEY_2 }}
+
+    - name: run conformance tests
+      run: make test.conformance
+      env:
+        GOTESTSUM_JUNITFILE: conformance-tests-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}.xml
+        TEST_KONG_ROUTER_FLAVOR: ${{ matrix.router-flavor }}
+        KONG_TEST_CONFORMANCE_GATEWAY_TYPE: ${{ matrix.gateway-type }}
+        KONG_TEST_KONNECT_ACCESS_TOKEN: ${{ matrix.gateway-type == 'hybrid' && secrets.KONG_TEST_KONNECT_ACCESS_TOKEN || '' }}
+        KONG_TEST_KONNECT_SERVER_URL: ${{ matrix.gateway-type == 'hybrid' && 'us.api.konghq.tech' || '' }}
+        KONG_TEST_FORCE_CLEANUP: "true"
+
+    - name: upload diagnostics
+      if: ${{ always() }}
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      with:
+        name: diagnostics-conformance-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}
+        path: /tmp/ktf-diag*
+        if-no-files-found: ignore
+
+    - name: collect test report
+      if: ${{ always() }}
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      with:
+        name: tests-report-conformance-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}
+        path: conformance-tests-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}.xml
+
+    - name: collect conformance report
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      with:
+        name: conformance-report-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}
+        path: experimental-*-report.yaml
+
+    - name: upload controller logs
+      if: ${{ always() }}
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      with:
+        name: controller-logs-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}
+        path: /tmp/kong-operator-controller-logs*
+        if-no-files-found: error

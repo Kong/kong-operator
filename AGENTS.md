@@ -51,8 +51,8 @@ make test.unit.pretty GOTESTFLAGS="-run TestSpecificGatewayNN -count 1"  # Run s
 
 ```bash
 make test.integration-ko              # Kong Operator integration tests
-make test.integration_bluegreen       # DataPlane upgrade/blue-green tests
-make test.integration_validatingwebhook  # Webhook tests
+make test.integration-bluegreen       # DataPlane upgrade/blue-green tests
+make test.integration-validatingwebhook  # Webhook tests
 make test.crds-validation             # CRD validation tests
 ```
 

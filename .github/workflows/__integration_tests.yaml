@@ -1,0 +1,114 @@
+name: Integration tests
+
+on:
+  workflow_call:
+    inputs:
+      cluster_version:
+        description: "The Kubernetes cluster version to use for envtest"
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  MISE_VERBOSE: 1
+  MISE_DEBUG: 1
+
+jobs:
+  integration-tests:
+    runs-on: ubuntu-latest
+    name: ${{ format('{0} {1} {2}', matrix.suite, matrix.router_flavor, inputs.cluster_version) }}
+    strategy:
+      matrix:
+        include:
+          - suite: ko
+          - suite: kic
+          - suite: bluegreen
+          - suite: validatingwebhook
+            router_flavor: traditional_compatible
+          - suite: validatingwebhook
+            router_flavor: expressions
+    steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@a90bcbc6539c36a85cdfeb73f7e2f433735f215b # v2.15.0
+      with:
+        egress-policy: audit
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
+      with:
+        go-version-file: go.mod
+        cache: false
+
+    - uses: jdx/mise-action@e79ddf65a11cec7b0e882bedced08d6e976efb2d # v3.6.2
+      with:
+        install: false
+
+    - run: echo "GO_MOD_CACHE=$(go env GOMODCACHE)" >> $GITHUB_ENV
+    - run: echo "GO_BUILD_CACHE=$(go env GOCACHE)" >> $GITHUB_ENV
+
+    # Create cache keys just for the suite. Different e.g. flavors do not warrant
+    # a separate cache since they all use the same dependencies, so we can save some
+    # cache storage and increase hit rate by not including the router flavor in the key.
+    - run: echo "GO_CACHE_KEY=go-integrationtests-${{ matrix.suite }}-${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.mod') }}" >> $GITHUB_ENV
+    - run: echo "GO_CACHE_KEY_2=go-integrationtests-${{ matrix.suite }}-${{ runner.os }}-${{ runner.arch }}-go-" >> $GITHUB_ENV
+
+    - name: Go cache main branch
+      if: ${{ github.ref == 'refs/heads/main' }}
+      uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+      with:
+        path: |
+          ${{ env.GO_MOD_CACHE }}
+          ${{ env.GO_BUILD_CACHE }}
+        key: ${{ env.GO_CACHE_KEY }}
+        restore-keys: |
+          ${{ env.GO_CACHE_KEY }}
+          ${{ env.GO_CACHE_KEY_2 }}
+
+    - name: Go cache (restore only for non-main branches)
+      if: ${{ github.ref != 'refs/heads/main' }}
+      uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+      with:
+        path: |
+          ${{ env.GO_MOD_CACHE }}
+          ${{ env.GO_BUILD_CACHE }}
+        key: ${{ env.GO_CACHE_KEY }}
+        restore-keys: |
+          ${{ env.GO_CACHE_KEY }}
+          ${{ env.GO_CACHE_KEY_2 }}
+
+    - name: run integration tests
+      run: make test.integration-${{ matrix.suite }}
+      env:
+        KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS: ${{ secrets.KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS }}
+        KONG_CONTROLLER_OUT: stdout
+        GOTESTSUM_JUNITFILE: "integration-tests-${{ matrix.suite }}.xml"
+        KONG_TEST_KONNECT_ACCESS_TOKEN: ${{ secrets.KONG_TEST_KONNECT_ACCESS_TOKEN }}
+        KONG_TEST_KONNECT_SERVER_URL: us.api.konghq.tech
+        KONG_CLUSTER_VERSION: ${{ inputs.cluster_version }}
+        # This is needed for ktf to find latest releases of addons.
+        # This could be changed so that ktf addons have their versions pinned
+        # in the test Makefile instead.
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: upload diagnostics
+      if: always()
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      with:
+        name: diagnostics-integration-${{ matrix.suite }}
+        path: /tmp/ktf-diag*
+        if-no-files-found: ignore
+
+    - name: collect test coverage
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      with:
+        name: ${{ matrix.suite }}-coverage-integration
+        path: coverage.integration.${{ matrix.suite }}.out
+
+    - name: collect test report
+      if: ${{ always() }}
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      with:
+        name: ${{ matrix.suite }}-tests-report-integration
+        path: integration-tests-${{ matrix.suite }}.xml
