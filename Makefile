@@ -708,8 +708,8 @@ test.integration-ko:
 #   sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).Start.func1.gowrap2()
 #       /home/runner/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:173 +0x33
 
-.PHONY: test.integration_bluegreen
-test.integration_bluegreen: download.telepresence
+.PHONY: test.integration-bluegreen
+test.integration-bluegreen: download.telepresence
 	KUBECONFIG=$(KUBECONFIG) \
 	TELEPRESENCE_BIN=$(TELEPRESENCE) \
 	GOFLAGS=$(GOFLAGS) \
@@ -722,8 +722,8 @@ test.integration_bluegreen: download.telepresence
 	-coverprofile="coverage.integration-bluegreen.out" \
 	./test/integration/
 
-.PHONY: test.integration_validatingwebhook
-test.integration_validatingwebhook: download.telepresence
+.PHONY: test.integration-validatingwebhook
+test.integration-validatingwebhook: download.telepresence
 	KUBECONFIG=$(KUBECONFIG) \
 	TELEPRESENCE_BIN=$(TELEPRESENCE) \
 	GOFLAGS=$(GOFLAGS) \
