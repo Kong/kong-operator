@@ -1,11 +1,10 @@
-name: envtest tests
-run-name: "envtest tests ${{ format('{0}', inputs.cluster_version) }} "
+name: CRD validation tests
 
 on:
   workflow_call:
     inputs:
-      cluster_version:
-        description: "The Kubernetes cluster version to use for envtest"
+      cluster_versions:
+        description: "The Kubernetes cluster versions to use for envtest"
         type: string
         required: true
 
@@ -17,16 +16,20 @@ env:
   MISE_DEBUG: 1
 
 jobs:
-  envtest-tests:
+  crd-validation-tests:
     timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 60) }}
     runs-on: ubuntu-latest
-    name: ${{ format('{0}', inputs.cluster_version) }}
+    name: ${{ format('{0}', matrix.kubernetes-node-version) }}
+    strategy:
+      matrix:
+        kubernetes-node-version: ${{ fromJson(inputs.cluster_versions) }}
     steps:
     - name: Harden Runner
       uses: step-security/harden-runner@5ef0c079ce82195b2a36a210272d6b661572d83e # v2.14.2
       with:
         egress-policy: audit
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
     - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
       with:
         go-version-file: go.mod
@@ -38,13 +41,8 @@ jobs:
       with:
         install: false
 
-    - uses: Kong/kong-license@c4decf08584f84ff8fe8e7cd3c463e0192f6111b # master @ 20250107
-      id: license
-      with:
-        op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
-
-    - run: echo "GO_CACHE_KEY=go-envtest-${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.mod') }}" >> $GITHUB_ENV
-    - run: echo "GO_CACHE_KEY_2=go-envtest-${{ runner.os }}-${{ runner.arch }}-go-" >> $GITHUB_ENV
+    - run: echo "GO_CACHE_KEY=go-crdsvalidationtests-${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.mod') }}" >> $GITHUB_ENV
+    - run: echo "GO_CACHE_KEY_2=go-crdsvalidationtests-${{ runner.os }}-${{ runner.arch }}-go-" >> $GITHUB_ENV
 
     - name: Go cache main branch
       if: ${{ github.ref == 'refs/heads/main' }}
@@ -70,28 +68,15 @@ jobs:
           ${{ env.GO_CACHE_KEY }}
           ${{ env.GO_CACHE_KEY_2 }}
 
-    - name: run envtest tests
-      env:
-        KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
-        GOTESTSUM_JUNITFILE: envtest-tests.xml
+    - name: Run the crds validation tests
       run: |
-        VERSION="${{ inputs.cluster_version }}"
+        VERSION="${{ matrix.kubernetes-node-version }}"
         # Remove leading 'v'
         VERSION="${VERSION#v}"
         # Remove patch number as envtest releases are not provided for every patch version
         VERSION="${VERSION%.*}"
         echo "Cluster version: $VERSION"
-        make test.envtest CLUSTER_VERSION=${VERSION}
+        make test.crds-validation CLUSTER_VERSION=${VERSION}
 
-    - name: collect test coverage
-      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-      with:
-        name: coverage-envtest-tests
-        path: coverage.envtest.out
-
-    - name: collect test report
-      if: ${{ always() }}
-      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-      with:
-        name: tests-report-envtest-tests
-        path: envtest-tests.xml
+    - name: Run the API tests
+      run: make test.api
