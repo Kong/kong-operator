@@ -164,14 +164,6 @@ jobs:
       - name: Configure Git for private repositories (this is needed by repositories that include this workflow and have other private dependencies)
         run: git config --global url."https://${{ secrets.gh-pat }}@github.com".insteadOf "https://github.com"
 
-      - name: Cache Docker layers
-        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v4
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
-
       - name: Log in to the Container registry
         if: ${{ inputs.push }}
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
@@ -227,8 +219,8 @@ jobs:
           build-contexts: ${{ inputs.additional-build-contexts }}
           push: ${{ inputs.push }}
           file: ${{ inputs.file }}
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache
+          cache-from: type=gha,scope=${{ matrix.os }}-${{ matrix.arch }}
+          cache-to: type=gha,scope=${{ matrix.os }}-${{ matrix.arch }},mode=max
           target: ${{ inputs.target }}
           platforms: ${{ matrix.os }}/${{ matrix.arch }}
           build-args: |
