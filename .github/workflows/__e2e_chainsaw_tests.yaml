@@ -1,0 +1,82 @@
+name: E2E Chainsaw tests
+run-name: "E2E Chainsaw tests ${{ format('{0}', inputs.node_image_version) }} "
+
+on:
+  workflow_call:
+    inputs:
+      node_image_version:
+        description: "Kind node image version"
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  MISE_VERBOSE: 1
+  MISE_DEBUG: 1
+
+jobs:
+  e2e-tests-chainsaw:
+    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 60) }}
+    runs-on: ubuntu-latest
+    name: ${{ format('{0}', inputs.node_image_version) }}
+    env:
+      IMG: kong-operator
+      TAG: e2e-${{ github.sha }}
+      CLUSTER_NAME: e2e-chainsaw
+    steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@5ef0c079ce82195b2a36a210272d6b661572d83e # v2.14.2
+      with:
+        egress-policy: audit
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+    - name: build docker image
+      run: make docker.build
+
+    - uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8 # v3.6.1
+      with:
+        install_args: github:Kong/kubernetes-testing-framework http:helm
+
+    - name: Create k8s KinD Cluster with ktf
+      run: |
+        ktf environments create \
+          --name ${{ env.CLUSTER_NAME }} \
+          --addon metallb \
+          --addon cert-manager \
+          --kubernetes-version ${{ inputs.node_image_version }}
+
+    - name: Load image to kind cluster
+      run: kind load docker-image ${{ env.IMG }}:${{ env.TAG }} --name ${{ env.CLUSTER_NAME }}
+
+    - name: Deploy operator with Helm
+      run: |
+        helm install kong-operator charts/kong-operator \
+          --namespace kong-system \
+          --create-namespace \
+          --set image.repository=${{ env.IMG }} \
+          --set image.tag=${{ env.TAG }} \
+          --set env.enable_controller_konnect=true \
+          --wait
+
+    - name: run chainsaw e2e tests
+      id: chainsaw-tests
+      run: make test.e2e.chainsaw
+      env:
+        KONNECT_TOKEN: ${{ secrets.KONG_TEST_KONNECT_ACCESS_TOKEN }}
+        KONNECT_SERVER_URL: us.api.konghq.tech
+        TEST_ID: ${{ github.run_id }}
+
+    - name: Upload debug snapshots as artifacts
+      if: always() && steps.chainsaw-tests.outcome == 'failure'
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+      with:
+        name: chainsaw-debug-snapshots-${{ github.run_id }}
+        path: /tmp/chainsaw/
+        if-no-files-found: ignore
+        retention-days: 3
+
+    - name: Clean up debug snapshots
+      if: always() && steps.chainsaw-tests.outcome == 'failure'
+      run: rm -rf /tmp/chainsaw
