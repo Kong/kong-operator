@@ -40,6 +40,8 @@ spec:
       value: (join('-', [($test_name), 'konnect-api-auth']))
     - name: konnect_auth_namespace
       value: ($namespace)
+    - name: konnect_api_auth_namespace
+      value: ($namespace)
     - name: gateway_image
       value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.12')
     - name: gateway_name

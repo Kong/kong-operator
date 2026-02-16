@@ -14,6 +14,8 @@ spec:
       value: ($namespace)
     - name: konnect_token
       value: (env('KONNECT_TOKEN'))
+    - name: konnect_api_auth_namespace
+      value: ($namespace)
     - name: sni_hostname
       value: (join('.', ['*', ($test_name), 'example.com']))
     - name: fqdn

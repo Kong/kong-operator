@@ -27,6 +27,8 @@ spec:
       value: (join('-', [($test_name), 'konnect-api-auth']))
     - name: konnect_auth_namespace
       value: ($namespace)
+    - name: konnect_api_auth_namespace
+      value: ($namespace)
 
     # TLS configuration.
     - name: sni_hostname

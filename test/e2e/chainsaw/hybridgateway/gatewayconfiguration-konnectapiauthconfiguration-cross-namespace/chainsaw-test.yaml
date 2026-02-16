@@ -1,0 +1,177 @@
+# GatewayConfiguration -> KonnectAPIAuthConfiguration cross-namespace reference test scenario.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: gwconf-apiauthconf-cross-namespace
+spec:
+  description: |
+    This test validates that the hybrid gateway controller correctly
+    processes cross-namespace references from GatewayConfiguration to
+    KonnectAPIAuthConfiguration when a KongReferenceGrant grants the reference.
+    It verifies that the KonnectGatewayControlPlane is NOT programmed without
+    the grant, and becomes programmed after the grant is created.
+
+  bindings:
+    # Common bindings.
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_api_auth_namespace
+      value: (join('-', [($namespace), 'konnect-auth']))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($konnect_api_auth_namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($konnect_api_auth_namespace)
+    - name: gateway_image
+      value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.12')
+    - name: gateway_name
+      value: (join('-', [($test_name), 'gateway']))
+    - name: gateway_namespace
+      value: ($namespace)
+    - name: listener_http_port
+      value: 80
+
+  steps:
+    # Step 1: Create a separate namespace for KonnectAPIAuthConfiguration.
+    - name: 1-create-konnect-auth-namespace
+      description: Create a namespace for KonnectAPIAuthConfiguration separate from the test namespace
+      bindings:
+        - name: namespace_name
+          value: ($konnect_api_auth_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-namespace.yaml
+
+    # Step 2: Create the secret for Konnect authentication in the auth namespace.
+    - name: 2-create-auth-secret
+      description: Create Secret with Konnect token for KonnectAPIAuthConfiguration
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+
+    # Step 3: Create KonnectAPIAuthConfiguration in the auth namespace.
+    - name: 3-create-konnect-api-auth
+      description: Create KonnectAPIAuthConfiguration in the auth namespace
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+
+    # Step 4: Create the GatewayConfiguration that references the cross-namespace auth config.
+    - name: 4-create-gateway-configuration
+      description: Create GatewayConfiguration with cross-namespace authRef
+      use:
+        template: ../../common/_step_templates/apply-assert-gatewayConfiguration.yaml
+
+    # Step 5: Create the GatewayClass.
+    - name: 5-create-gateway-class
+      description: Create GatewayClass for the test
+      use:
+        template: ../../common/_step_templates/apply-assert-gatewayClass.yaml
+
+    # Step 6: Apply the Gateway (without asserting it's programmed yet).
+    - name: 6-apply-gateway
+      description: Apply Gateway with HTTP listener
+      try:
+        - apply:
+            file: 01-gateway.yaml
+
+    # Step 7: Assert KonnectGatewayControlPlane has APIAuthResolvedRef=False without KongReferenceGrant.
+    - name: 7-assert-konnectgwcp-auth-not-resolved
+      description: Verify KonnectGatewayControlPlane cannot resolve cross-namespace auth ref without KongReferenceGrant
+      try:
+        - assert:
+            file: 02-assert-konnectgwcp-auth-not-resolved.yaml
+
+    # Step 8: Assert Gateway KonnectGatewayControlPlaneProgrammed=False.
+    - name: 8-assert-gateway-konnectcp-not-programmed
+      description: Verify Gateway is not fully programmed because KonnectGatewayControlPlane auth ref is not resolved
+      try:
+        - assert:
+            file: 03-assert-gateway-konnectcp-not-programmed.yaml
+
+    # Step 9: Create KongReferenceGrant to allow KonnectGatewayControlPlane -> KonnectAPIAuthConfiguration.
+    - name: 9-create-kong-reference-grant
+      description: Create KongReferenceGrant to allow cross-namespace auth reference
+      bindings:
+        - name: kong_reference_grant_name
+          value: (join('-', [($test_name), 'kong-reference-grant']))
+        - name: kong_reference_grant_namespace
+          value: ($konnect_api_auth_namespace)
+        - name: from
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectGatewayControlPlane
+              namespace: ($gateway_namespace)
+        - name: to
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectAPIAuthConfiguration
+      use:
+        template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+
+    # Step 10: Assert KonnectGatewayControlPlane is now programmed.
+    - name: 10-assert-konnect-gateway-control-plane
+      description: Assert KonnectGatewayControlPlane is programmed after KongReferenceGrant
+      use:
+        template: ../../common/_step_templates/assert-konnectGatewayControlPlane.yaml
+
+    # Step 11: Assert Gateway is fully programmed.
+    - name: 11-assert-gateway-programmed
+      description: Assert Gateway is fully programmed after KongReferenceGrant
+      try:
+        - assert:
+            file: 04-assert-gateway-programmed.yaml
+
+    # Step 12: Delete Gateway and wait for all Konnect resources to be fully cleaned up
+    # while the KongReferenceGrant (and thus auth access) still exists.
+    # Without this, chainsaw's reverse cleanup deletes the grant first, which prevents
+    # the operator from authenticating to Konnect to remove finalizers from
+    # KonnectGatewayControlPlane and KonnectExtension. Those resources hold a reference
+    # to KonnectAPIAuthConfiguration (via the "konnectapiauth-in-use" finalizer),
+    # so KonnectAPIAuthConfiguration deletion would also hang.
+    - name: 12-delete-gateway-and-wait-for-konnect-cleanup
+      description: Delete Gateway and wait for KonnectGatewayControlPlane and KonnectExtension to be fully removed
+      timeouts:
+        delete: 120s
+        error: 120s
+      try:
+        - delete:
+            ref:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: Gateway
+              name: ($gateway_name)
+              namespace: ($gateway_namespace)
+        # Wait for KonnectGatewayControlPlane to be fully removed (Konnect API cleanup done).
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                namespace: ($gateway_namespace)
+        # Wait for KonnectExtension to be fully removed (Konnect API cleanup done).
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectExtension
+              metadata:
+                namespace: ($gateway_namespace)
+
+  catch:
+    # Capture debug snapshot on test failure for CI debugging.
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: hybridgateway-gwconf-apiauthconf-cross-namespace
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: ADDITIONAL_NAMESPACES
+            value: ($konnect_api_auth_namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
