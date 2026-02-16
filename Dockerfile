@@ -5,12 +5,12 @@
 FROM --platform=$BUILDPLATFORM golang:1.26.0@sha256:c83e68f3ebb6943a2904fa66348867d108119890a2c6a2e6f07b38d0eb6c25c5 AS builder
 
 WORKDIR /workspace
-ARG GOPATH
+ARG GOMODCACHE
 ARG GOCACHE
 # Use cache mounts to cache Go dependencies and bind mounts to avoid unnecessary
 # layers when using COPY instructions for go.mod and go.sum.
 # https://docs.docker.com/build/guide/mounts/
-RUN --mount=type=cache,target=$GOPATH/pkg/mod \
+RUN --mount=type=cache,target=$GOMODCACHE \
     --mount=type=cache,target=$GOCACHE \
     --mount=type=bind,source=go.sum,target=go.sum \
     --mount=type=bind,source=go.mod,target=go.mod \
@@ -42,7 +42,7 @@ RUN printf "Building for TARGETPLATFORM=${TARGETPLATFORM}" \
 # Use cache mounts to cache Go dependencies and bind mounts to avoid unnecessary
 # layers when using COPY instructions for go.mod and go.sum.
 # https://docs.docker.com/build/guide/mounts/
-RUN --mount=type=cache,target=$GOPATH/pkg/mod \
+RUN --mount=type=cache,target=$GOMODCACHE \
     --mount=type=cache,target=$GOCACHE \
     --mount=type=bind,source=go.sum,target=go.sum \
     --mount=type=bind,source=go.mod,target=go.mod \
