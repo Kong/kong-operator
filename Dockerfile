@@ -5,16 +5,9 @@
 FROM --platform=$BUILDPLATFORM golang:1.26.0@sha256:c83e68f3ebb6943a2904fa66348867d108119890a2c6a2e6f07b38d0eb6c25c5 AS builder
 
 WORKDIR /workspace
-ARG GOMODCACHE
-ARG GOCACHE
-# Use cache mounts to cache Go dependencies and bind mounts to avoid unnecessary
-# layers when using COPY instructions for go.mod and go.sum.
-# https://docs.docker.com/build/guide/mounts/
-RUN --mount=type=cache,target=$GOMODCACHE \
-    --mount=type=cache,target=$GOCACHE \
-    --mount=type=bind,source=go.sum,target=go.sum \
-    --mount=type=bind,source=go.mod,target=go.mod \
-    go mod download -x
+
+COPY go.mod go.sum ./
+RUN go mod download -x
 
 COPY ingress-controller/ ingress-controller/
 COPY cmd/main.go cmd/main.go
@@ -39,14 +32,7 @@ RUN printf "Building for TARGETPLATFORM=${TARGETPLATFORM}" \
     && printf ", TARGETVARIANT=${TARGETVARIANT} \n" \
     && printf "With 'uname -s': $(uname -s) and 'uname -m': $(uname -m)"
 
-# Use cache mounts to cache Go dependencies and bind mounts to avoid unnecessary
-# layers when using COPY instructions for go.mod and go.sum.
-# https://docs.docker.com/build/guide/mounts/
-RUN --mount=type=cache,target=$GOMODCACHE \
-    --mount=type=cache,target=$GOCACHE \
-    --mount=type=bind,source=go.sum,target=go.sum \
-    --mount=type=bind,source=go.mod,target=go.mod \
-    CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" \
+RUN CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" \
     TAG="${TAG}" COMMIT="${COMMIT}" REPO_INFO="${REPO_INFO}" \
     make build.operator
 
