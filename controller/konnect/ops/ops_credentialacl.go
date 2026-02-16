@@ -2,7 +2,6 @@ package ops
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
@@ -111,7 +110,7 @@ func adoptKongCredentialACL(
 ) error {
 	cpID := cred.GetControlPlaneID()
 	if cpID == "" {
-		return errors.New("No Control Plane ID")
+		return KonnectEntityAdoptionMissingControlPlaneIDError{}
 	}
 	if cred.Status.Konnect == nil || cred.Status.Konnect.GetConsumerID() == "" {
 		return fmt.Errorf("can't adopt %T %s without a Konnect Consumer ID", cred, client.ObjectKeyFromObject(cred))

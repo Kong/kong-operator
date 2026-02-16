@@ -118,8 +118,8 @@ func TestUpdateStrategyInMemory_PropagatesResourcesErrors(t *testing.T) {
 			fmt.Printf("DEBUG: error is not UpdateError, actual type: %T, value: %v\n", err, err)
 			return
 		}
-		if wrappedErr := updateError.Unwrap(); !assert.Error(t, wrappedErr) || !assert.IsType(t, &kong.APIError{}, wrappedErr) {
-			fmt.Printf("DEBUG: unwrapped error is not *kong.APIError, type: %T, value: %v\n", wrappedErr, wrappedErr)
+		var apiErr *kong.APIError
+		if !assert.ErrorAs(t, updateError, &apiErr) {
 			return
 		}
 		if !assert.NotEmpty(t, updateError.ResourceFailures()) {

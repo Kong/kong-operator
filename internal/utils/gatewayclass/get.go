@@ -24,7 +24,7 @@ func Get(ctx context.Context, cl client.Client, gatewayClassName string) (*Decor
 
 	gwc := NewDecorator()
 	if err := cl.Get(ctx, client.ObjectKey{Name: gatewayClassName}, gwc.GatewayClass); err != nil {
-		return nil, fmt.Errorf("error while fetching GatewayClass %q: %w", gatewayClassName, err)
+		return nil, operatorerrors.NewFetchingError(err)
 	}
 
 	if string(gwc.Spec.ControllerName) != vars.ControllerName() {

@@ -2,7 +2,6 @@ package ops
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
@@ -100,7 +99,7 @@ func adoptKeySet(
 ) error {
 	cpID := keySet.GetControlPlaneID()
 	if cpID == "" {
-		return errors.New("No Control Plane ID")
+		return KonnectEntityAdoptionMissingControlPlaneIDError{}
 	}
 
 	adoptOptions := keySet.Spec.Adopt

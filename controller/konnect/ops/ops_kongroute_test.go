@@ -1,7 +1,6 @@
 package ops
 
 import (
-	"fmt"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -121,11 +120,10 @@ func TestCreateKongRoute(t *testing.T) {
 func TestAdoptRoute(t *testing.T) {
 	ctx := t.Context()
 	testCases := []struct {
-		name                string
-		mockRoutePair       func(*testing.T) (*mocks.MockRoutesSDK, *configurationv1alpha1.KongRoute)
-		assertions          func(*testing.T, *configurationv1alpha1.KongRoute)
-		expectedErrContains string
-		expectedErrType     error
+		name          string
+		mockRoutePair func(*testing.T) (*mocks.MockRoutesSDK, *configurationv1alpha1.KongRoute)
+		assertions    func(*testing.T, *configurationv1alpha1.KongRoute)
+		expectedError error
 	}{
 		{
 			name: "success",
@@ -229,8 +227,9 @@ func TestAdoptRoute(t *testing.T) {
 
 				return sdk, route
 			},
-			expectedErrContains: "failed to fetch Konnect entity",
-			expectedErrType:     KonnectEntityAdoptionFetchError{},
+			expectedError: KonnectEntityAdoptionFetchError{
+				KonnectID: "1234",
+			},
 		},
 		{
 			name: "unsupported route type",
@@ -275,7 +274,10 @@ func TestAdoptRoute(t *testing.T) {
 
 				return sdk, route
 			},
-			expectedErrContains: fmt.Sprintf("route type %q not supported", sdkkonnectcomp.RouteTypeRouteExpression),
+			// expectedErrContains: fmt.Sprintf("route type %q not supported", sdkkonnectcomp.RouteTypeRouteExpression),
+			expectedError: KonnectEntityAdoptionRouteTypeNotSupportedError{
+				RouteType: sdkkonnectcomp.RouteTypeRouteExpression,
+			},
 		},
 		{
 			name: "service reference not match",
@@ -330,7 +332,7 @@ func TestAdoptRoute(t *testing.T) {
 
 				return sdk, route
 			},
-			expectedErrContains: "failed to adopt: reference service ID does not match",
+			expectedError: KonnectEntityAdoptionReferenceServiceIDMismatchError{},
 		},
 		{
 			name: "success in match mode",
@@ -442,8 +444,9 @@ func TestAdoptRoute(t *testing.T) {
 
 				return sdk, route
 			},
-			expectedErrContains: "Konnect entity (ID: 1234) does not match the spec of the object when adopting in match mode",
-			expectedErrType:     &KonnectEntityAdoptionNotMatchError{},
+			expectedError: KonnectEntityAdoptionNotMatchError{
+				KonnectID: "1234",
+			},
 		},
 	}
 
@@ -451,20 +454,11 @@ func TestAdoptRoute(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			sdk, route := tc.mockRoutePair(t)
 			err := adoptRoute(ctx, sdk, route)
+			require.ErrorIs(t, err, tc.expectedError)
 
 			if tc.assertions != nil {
 				tc.assertions(t, route)
 			}
-
-			if tc.expectedErrContains != "" {
-				assert.ErrorContains(t, err, tc.expectedErrContains)
-				if tc.expectedErrType != nil {
-					require.ErrorAs(t, err, &tc.expectedErrType)
-				}
-				return
-			}
-
-			require.NoError(t, err)
 		})
 	}
 }

@@ -36,3 +36,9 @@ func (e KongClientNotReadyError) Error() string {
 func (e KongClientNotReadyError) Unwrap() error {
 	return e.Err
 }
+
+// Is reports any error in err's tree matches target.
+func (e KongClientNotReadyError) Is(target error) bool {
+	_, ok := target.(KongClientNotReadyError)
+	return ok
+}

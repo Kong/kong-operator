@@ -36,12 +36,11 @@ func TestCreateControlPlane(t *testing.T) {
 	)
 	ctx := t.Context()
 	testCases := []struct {
-		name                string
-		mockCPTuple         func(*testing.T) (*mocks.MockControlPlanesSDK, *mocks.MockControlPlaneGroupsSDK, *konnectv1alpha2.KonnectGatewayControlPlane)
-		objects             []client.Object
-		expectedErrContains string
-		expectedErrType     error
-		expectedID          string
+		name          string
+		mockCPTuple   func(*testing.T) (*mocks.MockControlPlanesSDK, *mocks.MockControlPlaneGroupsSDK, *konnectv1alpha2.KonnectGatewayControlPlane)
+		objects       []client.Object
+		expectedError error
+		expectedID    string
 	}{
 		{
 			name: "success",
@@ -108,7 +107,15 @@ func TestCreateControlPlane(t *testing.T) {
 
 				return sdk, sdkGroups, cp
 			},
-			expectedErrContains: "failed to create KonnectGatewayControlPlane default/cp-1",
+			expectedError: KonnectOperationFailedError{
+				Op:         CreateOp,
+				EntityType: "KonnectGatewayControlPlane",
+				EntityKey:  "default/cp-1",
+				Err: &sdkkonnecterrs.BadRequestError{
+					Status: 400,
+					Detail: "bad request",
+				},
+			},
 		},
 		{
 			name: "cp membership creation success",
@@ -261,8 +268,10 @@ func TestCreateControlPlane(t *testing.T) {
 
 				return sdk, sdkGroups, cp
 			},
-			expectedErrContains: "failed to set members on control plane group default/cpg-1",
-			expectedErrType:     KonnectEntityCreatedButRelationsFailedError{},
+			expectedError: KonnectEntityCreatedButRelationsFailedError{
+				KonnectID: cpgID,
+				Reason:    konnectv1alpha1.KonnectGatewayControlPlaneProgrammedReasonFailedToSetControlPlaneGroupMembers,
+			},
 		},
 	}
 
@@ -275,15 +284,8 @@ func TestCreateControlPlane(t *testing.T) {
 				Build()
 
 			err := createControlPlane(ctx, sdk, sdkGroups, fakeClient, cp)
-			if tc.expectedErrContains != "" {
-				if tc.expectedErrType != nil {
-					require.ErrorAs(t, err, &tc.expectedErrType)
-				}
-				assert.ErrorContains(t, err, tc.expectedErrContains)
-				return
-			}
+			require.ErrorIs(t, err, tc.expectedError)
 
-			require.NoError(t, err)
 			if tc.expectedID != "" {
 				assert.Equal(t, tc.expectedID, cp.Status.ID)
 			}

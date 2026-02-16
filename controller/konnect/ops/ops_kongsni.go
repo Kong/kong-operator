@@ -133,7 +133,7 @@ func adoptSNI(
 ) error {
 	cpID := sni.GetControlPlaneID()
 	if cpID == "" {
-		return errors.New("No Control Plane ID")
+		return KonnectEntityAdoptionMissingControlPlaneIDError{}
 	}
 	if sni.Status.Konnect == nil || sni.Status.Konnect.CertificateID == "" {
 		return fmt.Errorf("can't adopt %T %s without a Konnect Certificate ID", sni, client.ObjectKeyFromObject(sni))

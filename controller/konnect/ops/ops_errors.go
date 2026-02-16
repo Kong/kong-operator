@@ -79,6 +79,17 @@ func (e CantPerformOperationWithoutControlPlaneIDError) Error() string {
 	)
 }
 
+// Is reports any error in err's tree matches target.
+func (e CantPerformOperationWithoutControlPlaneIDError) Is(target error) bool {
+	t, ok := target.(CantPerformOperationWithoutControlPlaneIDError)
+	if !ok {
+		return false
+	}
+	return e.Entity.GetTypeName() == t.Entity.GetTypeName() &&
+		client.ObjectKeyFromObject(e.Entity) == client.ObjectKeyFromObject(t.Entity) &&
+		e.Op == t.Op
+}
+
 // CantPerformOperationWithoutNetworkIDError is an error indicating that an
 // operation cannot be performed without a Konnect network ID.
 type CantPerformOperationWithoutNetworkIDError struct {

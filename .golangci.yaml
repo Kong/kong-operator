@@ -172,7 +172,6 @@ linters:
       enable-all: true
       disable:
         - require-error
-        - error-is-as
     usetesting:
       os-temp-dir: true
   exclusions:

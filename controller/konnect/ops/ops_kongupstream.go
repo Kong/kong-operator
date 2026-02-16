@@ -2,7 +2,6 @@ package ops
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
@@ -96,7 +95,7 @@ func adoptUpstream(
 	adoptOptions := upstream.Spec.Adopt
 	konnectID := adoptOptions.Konnect.ID
 	if cpID == "" {
-		return errors.New("No Control Plane ID")
+		return KonnectEntityAdoptionMissingControlPlaneIDError{}
 	}
 	resp, err := sdk.GetUpstream(ctx, konnectID, cpID)
 	if err != nil {
