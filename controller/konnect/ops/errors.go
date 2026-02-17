@@ -45,10 +45,8 @@ func (e KonnectEntityCreatedButRelationsFailedError) Error() string {
 
 // Is reports any error in err's tree matches target.
 func (e KonnectEntityCreatedButRelationsFailedError) Is(target error) bool {
-	if t, ok := target.(KonnectEntityCreatedButRelationsFailedError); ok {
-		return e.KonnectID == t.KonnectID && e.Reason == t.Reason
-	}
-	return false
+	t, ok := target.(KonnectEntityCreatedButRelationsFailedError)
+	return ok && e.KonnectID == t.KonnectID && e.Reason == t.Reason
 }
 
 // GetControlPlaneGroupMemberFailedError is an error type returned when
@@ -99,10 +97,8 @@ func (e KonnectEntityAdoptionFetchError) Unwrap() error {
 
 // Is reports any error in err's tree matches target.
 func (e KonnectEntityAdoptionFetchError) Is(target error) bool {
-	if t, ok := target.(KonnectEntityAdoptionFetchError); ok {
-		return e.KonnectID == t.KonnectID
-	}
-	return false
+	t, ok := target.(KonnectEntityAdoptionFetchError)
+	return ok && e.KonnectID == t.KonnectID
 }
 
 // KonnectEntityAdoptionReferenceServiceIDMismatchError is an error type returned when
@@ -133,10 +129,8 @@ func (e KonnectEntityAdoptionRouteTypeNotSupportedError) Error() string {
 
 // Is reports any error in err's tree matches target.
 func (e KonnectEntityAdoptionRouteTypeNotSupportedError) Is(target error) bool {
-	if t, ok := target.(KonnectEntityAdoptionRouteTypeNotSupportedError); ok {
-		return e.RouteType == t.RouteType
-	}
-	return false
+	t, ok := target.(KonnectEntityAdoptionRouteTypeNotSupportedError)
+	return ok && e.RouteType == t.RouteType
 }
 
 // KonnectEntityAdoptionUIDTagConflictError is an error type returned in adopting an existing entity
@@ -164,10 +158,8 @@ func (e KonnectEntityAdoptionNotMatchError) Error() string {
 
 // Is reports any error in err's tree matches target.
 func (e KonnectEntityAdoptionNotMatchError) Is(target error) bool {
-	if t, ok := target.(KonnectEntityAdoptionNotMatchError); ok {
-		return e.KonnectID == t.KonnectID
-	}
-	return false
+	t, ok := target.(KonnectEntityAdoptionNotMatchError)
+	return ok && e.KonnectID == t.KonnectID
 }
 
 // KonnectEntityAdoptionMissingControlPlaneIDError is an error type returned particular ControlPlane ID does not exist.
@@ -204,15 +196,13 @@ func (e KonnectOperationFailedError) Unwrap() error {
 
 // Is reports any error in err's tree matches target.
 func (e KonnectOperationFailedError) Is(target error) bool {
-	if t, ok := target.(KonnectOperationFailedError); ok {
-		return e.Op == t.Op &&
-			e.EntityType == t.EntityType &&
-			e.EntityKey == t.EntityKey &&
-			(e.Err != nil && t.Err != nil &&
-				e.Err.Error() == t.Err.Error() ||
-				e.Err == nil && t.Err == nil)
-	}
-	return false
+	t, ok := target.(KonnectOperationFailedError)
+	return ok && e.Op == t.Op &&
+		e.EntityType == t.EntityType &&
+		e.EntityKey == t.EntityKey &&
+		(e.Err != nil && t.Err != nil &&
+			e.Err.Error() == t.Err.Error() ||
+			e.Err == nil && t.Err == nil)
 }
 
 // RateLimitError is an error type returned when a Konnect API operation
