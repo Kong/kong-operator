@@ -116,14 +116,11 @@ golangci-lint-cache-path:
 	@$(GOLANGCI_LINT) cache status | awk '{ print $$2 }'
 
 MODERNIZE_VERSION = $(shell $(YQ) -r '.modernize' < $(TOOLS_VERSIONS_FILE))
-MODERNIZE = $(PROJECT_DIR)/bin/installs/go-golang-org-x-tools-gopls-internal-analysis-modernize-cmd-modernize/$(MODERNIZE_VERSION)/bin/modernize
-# Flags for modernize analyzer. Disable the "omitzero" category to avoid
-# warnings about `omitempty` on nested struct fields, which we intentionally
-# keep for compatibility with upstream expectations.
-MODERNIZE_FLAGS ?= -category=-omitzero
+MODERNIZE = $(PROJECT_DIR)/bin/installs/go-golang-org-x-tools-go-analysis-passes-modernize-cmd-modernize/$(MODERNIZE_VERSION)/bin/modernize
+MODERNIZE_FLAGS ?= -newexpr=false -mapsloop=false -any=false -test=false
 .PHONY: modernize
 modernize: yq
-	$(MAKE) mise-install DEP_VER=go:golang.org/x/tools/gopls/internal/analysis/modernize/cmd/modernize@$(MODERNIZE_VERSION)
+	$(MAKE) mise-install DEP_VER=go:golang.org/x/tools/go/analysis/passes/modernize/cmd/modernize@$(MODERNIZE_VERSION)
 
 GOTESTSUM_VERSION = $(shell $(YQ) -r '.gotestsum' < $(TOOLS_VERSIONS_FILE))
 GOTESTSUM = $(PROJECT_DIR)/bin/installs/github-gotestyourself-gotestsum/$(GOTESTSUM_VERSION)/gotestsum
@@ -265,7 +262,7 @@ govulncheck: download.govulncheck
 
 GOLANGCI_LINT_CONFIG ?= $(PROJECT_DIR)/.golangci.yaml
 .PHONY: lint
-lint: lint.modules lint.golangci-lint lint.modernize
+lint: lint.modules lint.golangci-lint lint.modernize lint.go.fix
 
 .PHONY: lint.modules
 lint.modules:
@@ -282,6 +279,10 @@ lint.modernize: modernize
 .PHONY: lint.charts
 lint.charts: download.kube-linter
 	$(KUBE_LINTER) lint charts/
+
+.PHONY: lint.go.fix
+lint.go.fix:
+	go fix -newexpr=false ./...
 
 .PHONY: lint.actions
 lint.actions: download.actionlint download.shellcheck
@@ -364,6 +365,7 @@ generate.apidocs: crd-ref-docs
 .PHONY: generate.lint-fix
 generate.lint-fix: golangci-lint
 	$(GOLANGCI_LINT) run -v --config $(GOLANGCI_LINT_CONFIG) --fix
+	$(MAKE) lint.go.fix
 
 # Ensure generated code matches linters' expectations (run modernize like in lint)
 .PHONY: generate.format
