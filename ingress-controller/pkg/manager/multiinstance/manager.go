@@ -58,12 +58,16 @@ type Manager struct {
 // ManagerOption is a functional option that can be used to configure a new multi-instance manager.
 type ManagerOption func(*Manager)
 
+// WithDiagnosticsExposer configures the multi-instance manager to
+// register diagnostics handlers of manager.Manager instances.
 func WithDiagnosticsExposer(exposer DiagnosticsExposer) ManagerOption {
 	return func(m *Manager) {
 		m.diagnosticsExposer = exposer
 	}
 }
 
+// WithValidator configures the multi-instance manager to register
+// KongHTTPValidators of manager.Manager instances.
 func WithValidator(admissionReqHandler *admission.RequestHandler) ManagerOption {
 	return func(m *Manager) {
 		m.admissionReqHandler = admissionReqHandler
@@ -163,6 +167,8 @@ func (m *Manager) IsInstanceReady(id manager.ID) error {
 	return in.IsReady()
 }
 
+// GetInstanceConfigHash returns the hash of the configuration of a manager.Manager instance with the given ID.
+// If no instance with the given ID exists, it returns a InstanceNotFoundError.
 func (m *Manager) GetInstanceConfigHash(id manager.ID) (string, error) {
 	m.instancesLock.RLock()
 	defer m.instancesLock.RUnlock()

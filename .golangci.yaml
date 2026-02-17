@@ -187,8 +187,7 @@ linters:
     rules:
       - linters:
           - revive
-        # pkg/|test/ has been added, see TODO: https://github.com/Kong/kong-operator/issues/1847
-        path: internal/|pkg/|test/
+        path: internal/|test/
         text: 'exported: exported'
       - linters:
           - revive

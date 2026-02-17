@@ -110,6 +110,7 @@ func (m *Manager) DiagnosticsHandler() http.Handler {
 	return m.manager.DiagnosticsHandler()
 }
 
+// KongValidator returns the Kong HTTP validator of the manager.
 func (m *Manager) KongValidator() admission.KongHTTPValidator {
 	return m.manager.KongValidator()
 }

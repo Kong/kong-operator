@@ -33,6 +33,7 @@ type DiagnosticsServer struct {
 // DiagnosticsServerOption is a functional option for configuring the DiagnosticsServer.
 type DiagnosticsServerOption func(*DiagnosticsServer)
 
+// WithPprofHandler is a functional option that enables pprof handlers for the DiagnosticsServer.
 func WithPprofHandler() DiagnosticsServerOption {
 	return func(s *DiagnosticsServer) {
 		s.pprofMux = http.NewServeMux()
@@ -44,6 +45,8 @@ func WithPprofHandler() DiagnosticsServerOption {
 	}
 }
 
+// NewDiagnosticsServer creates a new DiagnosticsServer with the given listener port and options.
+// It exposes diagnostics endpoints for each instance registered to it.
 func NewDiagnosticsServer(listenerPort int, opts ...DiagnosticsServerOption) *DiagnosticsServer {
 	s := &DiagnosticsServer{
 		listenerPort: listenerPort,

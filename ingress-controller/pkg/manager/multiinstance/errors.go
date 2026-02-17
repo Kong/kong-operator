@@ -7,6 +7,7 @@ type InstanceWithIDAlreadyScheduledError struct {
 	id manager.ID
 }
 
+// NewInstanceWithIDAlreadyScheduledError creates a new InstanceWithIDAlreadyScheduledError for the given ID.
 func NewInstanceWithIDAlreadyScheduledError(id manager.ID) InstanceWithIDAlreadyScheduledError {
 	return InstanceWithIDAlreadyScheduledError{id: id}
 }
@@ -21,6 +22,7 @@ type InstanceNotFoundError struct {
 	id manager.ID
 }
 
+// NewInstanceNotFoundError creates a new InstanceNotFoundError for the given ID.
 func NewInstanceNotFoundError(id manager.ID) InstanceNotFoundError {
 	return InstanceNotFoundError{id: id}
 }

@@ -10,17 +10,18 @@ import (
 	"github.com/kong/kubernetes-telemetry/pkg/types"
 )
 
-const GatewayDiscoveryWorkflowName = "gateway_discovery"
+const gatewayDiscoveryWorkflowName = "gateway_discovery"
 
 // DiscoveredGatewaysCounter is an interface that allows to count currently discovered Gateways.
 type DiscoveredGatewaysCounter interface {
 	GatewayClientsCount() int
 }
 
+// NewGatewayDiscoveryWorkflow creates a new telemetry workflow that reports the number of currently discovered Gateways.
 func NewGatewayDiscoveryWorkflow(gatewaysCounter DiscoveredGatewaysCounter) (telemetry.Workflow, error) {
-	w := telemetry.NewWorkflow(GatewayDiscoveryWorkflowName)
+	w := telemetry.NewWorkflow(gatewayDiscoveryWorkflowName)
 
-	discoveredGatewaysCountProvider, err := NewDiscoveredGatewaysCountProvider(gatewaysCounter)
+	discoveredGatewaysCountProvider, err := newDiscoveredGatewaysCountProvider(gatewaysCounter)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create discovered gateways count provider: %w", err)
 	}
@@ -29,35 +30,40 @@ func NewGatewayDiscoveryWorkflow(gatewaysCounter DiscoveredGatewaysCounter) (tel
 	return w, nil
 }
 
-// DiscoveredGatewaysCountProvider is a provider that reports the number of currently discovered Gateways.
-type DiscoveredGatewaysCountProvider struct {
+// discoveredGatewaysCountProvider is a provider that reports the number of currently discovered Gateways.
+type discoveredGatewaysCountProvider struct {
 	counter DiscoveredGatewaysCounter
 }
 
-func NewDiscoveredGatewaysCountProvider(counter DiscoveredGatewaysCounter) (*DiscoveredGatewaysCountProvider, error) {
+var _ provider.Provider = (*discoveredGatewaysCountProvider)(nil)
+
+func newDiscoveredGatewaysCountProvider(counter DiscoveredGatewaysCounter) (*discoveredGatewaysCountProvider, error) {
 	if counter == nil {
 		return nil, errors.New("discovered gateways counter is required")
 	}
 
-	return &DiscoveredGatewaysCountProvider{counter: counter}, nil
+	return &discoveredGatewaysCountProvider{counter: counter}, nil
 }
 
 const (
-	DiscoveredGatewaysCountProviderName = "discovered_gateways_count"
-	DiscoveredGatewaysCountProviderKind = provider.Kind(DiscoveredGatewaysCountProviderName)
-	DiscoveredGatewaysCountKey          = types.ProviderReportKey(DiscoveredGatewaysCountProviderName)
+	discoveredGatewaysCountProviderName = "discovered_gateways_count"
+	discoveredGatewaysCountProviderKind = provider.Kind(discoveredGatewaysCountProviderName)
+	discoveredGatewaysCountKey          = types.ProviderReportKey(discoveredGatewaysCountProviderName)
 )
 
-func (d *DiscoveredGatewaysCountProvider) Name() string {
-	return DiscoveredGatewaysCountProviderName
+// Name returns the name of the provider.
+func (d *discoveredGatewaysCountProvider) Name() string {
+	return discoveredGatewaysCountProviderName
 }
 
-func (d *DiscoveredGatewaysCountProvider) Kind() provider.Kind {
-	return DiscoveredGatewaysCountProviderKind
+// Kind returns the kind of the provider.
+func (d *discoveredGatewaysCountProvider) Kind() provider.Kind {
+	return discoveredGatewaysCountProviderKind
 }
 
-func (d *DiscoveredGatewaysCountProvider) Provide(context.Context) (types.ProviderReport, error) {
+// Provide returns the number of currently discovered Gateways as a provider report.
+func (d *discoveredGatewaysCountProvider) Provide(context.Context) (types.ProviderReport, error) {
 	return types.ProviderReport{
-		DiscoveredGatewaysCountKey: d.counter.GatewayClientsCount(),
+		discoveredGatewaysCountKey: d.counter.GatewayClientsCount(),
 	}, nil
 }
