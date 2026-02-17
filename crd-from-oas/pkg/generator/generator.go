@@ -139,7 +139,7 @@ func (g *Generator) collectRefsFromProperty(prop *parser.Property, refs map[stri
 // generateSchemaTypes generates Go type definitions for referenced schemas
 func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.ParsedSpec) string {
 	var buf strings.Builder
-	buf.WriteString(fmt.Sprintf("package %s\n\n", g.config.APIVersion))
+	fmt.Fprintf(&buf, "package %s\n\n", g.config.APIVersion)
 
 	// Sort keys to ensure deterministic output order
 	refNames := make([]string, 0, len(refs))
@@ -157,24 +157,24 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 			if len(schema.Properties) > 0 {
 				// It's an object type - generate a struct
 				buf.WriteString(comment)
-				buf.WriteString(fmt.Sprintf("type %s struct {\n", refName))
+				fmt.Fprintf(&buf, "type %s struct {\n", refName)
 				for _, prop := range schema.Properties {
 					if skipProperty(prop) {
 						continue
 					}
-					buf.WriteString(fmt.Sprintf("\t%s %s `json:\"%s\"`\n", goFieldName(prop.Name), g.goType(prop), jsonTag(prop)))
+					fmt.Fprintf(&buf, "\t%s %s `json:\"%s\"`\n", goFieldName(prop.Name), g.goType(prop), jsonTag(prop))
 				}
 				buf.WriteString("}\n\n")
 			} else {
 				// Generate based on the schema's actual type
 				buf.WriteString(comment)
 				goType := schemaToGoType(schema)
-				buf.WriteString(fmt.Sprintf("type %s %s\n\n", refName, goType))
+				fmt.Fprintf(&buf, "type %s %s\n\n", refName, goType)
 			}
 		} else {
 			// Schema not found in parsed schemas, generate a placeholder
-			buf.WriteString(fmt.Sprintf("// %s is a referenced type (definition not found in spec)\n", refName))
-			buf.WriteString(fmt.Sprintf("type %s map[string]string\n\n", refName))
+			fmt.Fprintf(&buf, "// %s is a referenced type (definition not found in spec)\n", refName)
+			fmt.Fprintf(&buf, "type %s map[string]string\n\n", refName)
 		}
 	}
 
@@ -341,18 +341,18 @@ func (g *Generator) generateUnionType(prop *parser.Property) string {
 	variantNames := extractVariantNames(rawVariantNames)
 
 	// Generate the union type comment
-	buf.WriteString(fmt.Sprintf("// %s represents a union type for %s.\n", typeName, prop.Name))
+	fmt.Fprintf(&buf, "// %s represents a union type for %s.\n", typeName, prop.Name)
 	buf.WriteString("// Only one of the fields should be set based on the Type.\n")
 	buf.WriteString("//\n")
-	buf.WriteString(fmt.Sprintf("type %s struct {\n", typeName))
+	fmt.Fprintf(&buf, "type %s struct {\n", typeName)
 
 	// Generate the Type discriminator field
 	buf.WriteString("\t// Type designates the type of configuration.\n")
 	buf.WriteString("\t//\n")
 	buf.WriteString("\t// +required\n")
 	buf.WriteString("\t// +kubebuilder:validation:MinLength=1\n")
-	buf.WriteString(fmt.Sprintf("\t// +kubebuilder:validation:Enum=%s\n", strings.Join(variantNames, ";")))
-	buf.WriteString(fmt.Sprintf("\tType %sType `json:\"type,omitempty\"`\n\n", typeName))
+	fmt.Fprintf(&buf, "\t// +kubebuilder:validation:Enum=%s\n", strings.Join(variantNames, ";"))
+	fmt.Fprintf(&buf, "\tType %sType `json:\"type,omitempty\"`\n\n", typeName)
 
 	// Generate a field for each variant
 	for i, variant := range prop.OneOf {
@@ -366,23 +366,23 @@ func (g *Generator) generateUnionType(prop *parser.Property) string {
 		// Generate JSON tag - convert to lowercase
 		jsonTag := strings.ToLower(fieldName)
 
-		buf.WriteString(fmt.Sprintf("\t// %s configuration.\n", fieldName))
+		fmt.Fprintf(&buf, "\t// %s configuration.\n", fieldName)
 		buf.WriteString("\t//\n")
 		buf.WriteString("\t// +optional\n")
-		buf.WriteString(fmt.Sprintf("\t%s *%s `json:\"%s,omitempty\"`\n", fieldName, refTypeName, jsonTag))
+		fmt.Fprintf(&buf, "\t%s *%s `json:\"%s,omitempty\"`\n", fieldName, refTypeName, jsonTag)
 	}
 
 	buf.WriteString("}\n\n")
 
 	// Generate the Type type alias with constants
-	buf.WriteString(fmt.Sprintf("// %sType represents the type of %s.\n", typeName, prop.Name))
-	buf.WriteString(fmt.Sprintf("type %sType string\n\n", typeName))
+	fmt.Fprintf(&buf, "// %sType represents the type of %s.\n", typeName, prop.Name)
+	fmt.Fprintf(&buf, "type %sType string\n\n", typeName)
 
-	buf.WriteString(fmt.Sprintf("// %sType values.\n", typeName))
+	fmt.Fprintf(&buf, "// %sType values.\n", typeName)
 	buf.WriteString("const (\n")
 	for _, variantName := range variantNames {
 		constName := fmt.Sprintf("%sType%s", typeName, variantName)
-		buf.WriteString(fmt.Sprintf("\t%s %sType = \"%s\"\n", constName, typeName, variantName))
+		fmt.Fprintf(&buf, "\t%s %sType = \"%s\"\n", constName, typeName, variantName)
 	}
 	buf.WriteString(")\n")
 
