@@ -158,7 +158,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// If the referenced ControlPlane is not found, remove the finalizer and update the status.
 		// There's no need to remove the entity on Konnect because the ControlPlane
 		// does not exist anymore.
-		if _, ok := errors.AsType[*controlplane.ReferencedControlPlaneDoesNotExistError](err); ok {
+		if _, ok := errors.AsType[controlplane.ReferencedControlPlaneDoesNotExistError](err); ok {
 			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 				if err := r.Client.Update(ctx, ent); err != nil {
 					if apierrors.IsConflict(err) {
@@ -238,11 +238,13 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			}, nil
 		}
 
+		_, referencedCPDoesNotExist := errors.AsType[controlplane.ReferencedControlPlaneDoesNotExistError](err)
+		_, referencedKongConsumerDoesNotExist := errors.AsType[ReferencedKongConsumerDoesNotExistError](err)
 		// If the referenced KongConsumer is not found or is being deleted
 		// then remove the finalizer and let the deletion proceed without trying to delete the entity from Konnect
 		// as the KongConsumer deletion will (or already has - in case of the consumer being gone)
 		// take care of it on the Konnect side.
-		if _, ok := errors.AsType[ReferencedKongConsumerDoesNotExistError](err); ok {
+		if referencedCPDoesNotExist || referencedKongConsumerDoesNotExist {
 			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 				if err := r.Client.Update(ctx, ent); err != nil {
 					if apierrors.IsConflict(err) {
@@ -290,7 +292,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// take care of it on the Konnect side.
 		// In case the ControlPlane referenced by the KongUpstream is not found, do the same.
 		_, upstreamNotExist := errors.AsType[ReferencedKongUpstreamDoesNotExistError](err)
-		_, cpNotExist := errors.AsType[*controlplane.ReferencedControlPlaneDoesNotExistError](err)
+		_, cpNotExist := errors.AsType[controlplane.ReferencedControlPlaneDoesNotExistError](err)
 		if upstreamNotExist || cpNotExist {
 			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 				if err := r.Client.Update(ctx, ent); err != nil {
@@ -328,11 +330,14 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			}, nil
 		}
 
+		_, referencedCPDoesNotExist := errors.AsType[controlplane.ReferencedControlPlaneDoesNotExistError](err)
+		_, referencedKongCertificateDoesNotExist := errors.AsType[ReferencedKongCertificateDoesNotExistError](err)
+
 		// If the referenced KongCertificate is not found or is being deleted
 		// and the object is being deleted, remove the finalizer and let the
 		// deletion proceed without trying to delete the entity from Konnect
 		// as the KongCertificate deletion will take care of it on the Konnect side.
-		if _, ok := errors.AsType[ReferencedKongCertificateDoesNotExistError](err); ok {
+		if referencedKongCertificateDoesNotExist || referencedCPDoesNotExist {
 			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 				if err := r.Client.Update(ctx, ent); err != nil {
 					if apierrors.IsConflict(err) {

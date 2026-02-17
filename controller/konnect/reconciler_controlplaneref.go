@@ -59,6 +59,12 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
 		}
+		if apierrors.IsNotFound(err) {
+			return ctrl.Result{}, controlplane.ReferencedControlPlaneDoesNotExistError{
+				Reference: cpRef,
+				Err:       err,
+			}
+		}
 
 		return ctrl.Result{}, err
 	}
