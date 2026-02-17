@@ -48,6 +48,11 @@
   `KonnectGatewayControlPlane`. This managed grant is removed when the user
   grant is deleted or the Gateway is deleted.
   [#3258](https://github.com/Kong/kong-operator/pull/3258)
+- Added leader election configuration through the following flags:
+  - `--leader-election-lease-duration`
+  - `--leader-election-renew-deadline`
+  - `--leader-election-retry-period`
+  [#3345](https://github.com/Kong/kong-operator/pull/3345)
 
 ### Fixes
 

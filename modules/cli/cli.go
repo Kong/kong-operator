@@ -47,6 +47,9 @@ func New(m metadata.Info) *CLI {
 	flagSet.StringVar(&cfg.ProbeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flagSet.BoolVar(&deferCfg.DisableLeaderElection, "no-leader-election", false,
 		"Disable leader election for controller manager. Disabling this will not ensure there is only one active controller manager.")
+	flagSet.DurationVar(&cfg.LeaderElectionLeaseDuration, "leader-election-lease-duration", mgrconfig.DefaultLeaderElectionLeaseDuration, "The duration that non-leader candidates will wait to force acquire leadership.")
+	flagSet.DurationVar(&cfg.LeaderElectionRenewDeadline, "leader-election-renew-deadline", mgrconfig.DefaultLeaderElectionRenewDeadline, "The duration that the acting leader will retry refreshing leadership before giving up.")
+	flagSet.DurationVar(&cfg.LeaderElectionRetryPeriod, "leader-election-retry-period", mgrconfig.DefaultLeaderElectionRetryPeriod, "The duration between retries of leader election actions.")
 	flagSet.BoolVar(&cfg.EnforceConfig, "enforce-config", true,
 		"Enforce the configuration on the generated cluster resources. If set to false, the operator will only enforce the configuration when the owner resource spec changes.")
 

@@ -57,11 +57,14 @@ import (
 
 // Config represents the configuration for the manager.
 type Config struct {
-	MetricsAddr             string
-	MetricsAccessFilter     MetricsAccessFilter
-	ProbeAddr               string
-	LeaderElection          bool
-	LeaderElectionNamespace string
+	MetricsAddr                 string
+	MetricsAccessFilter         MetricsAccessFilter
+	ProbeAddr                   string
+	LeaderElection              bool
+	LeaderElectionNamespace     string
+	LeaderElectionLeaseDuration time.Duration
+	LeaderElectionRenewDeadline time.Duration
+	LeaderElectionRetryPeriod   time.Duration
 
 	AnonymousReports bool
 	LoggingMode      logging.Mode
@@ -149,6 +152,9 @@ func DefaultConfig() Config {
 		ProbeAddr:                     ":8081",
 		LeaderElection:                true,
 		LeaderElectionNamespace:       defaultLeaderElectionNamespace,
+		LeaderElectionLeaseDuration:   mgrconfig.DefaultLeaderElectionLeaseDuration,
+		LeaderElectionRenewDeadline:   mgrconfig.DefaultLeaderElectionRenewDeadline,
+		LeaderElectionRetryPeriod:     mgrconfig.DefaultLeaderElectionRetryPeriod,
 		ClusterCASecretName:           "kong-operator-ca",
 		ClusterCASecretNamespace:      defaultNamespace,
 		ControllerNamespace:           defaultNamespace,
@@ -237,10 +243,25 @@ func Run(
 				}
 			}(),
 		},
-		HealthProbeBindAddress:  cfg.ProbeAddr,
-		LeaderElection:          cfg.LeaderElection,
+		HealthProbeBindAddress: cfg.ProbeAddr,
+		LeaderElection:         cfg.LeaderElection,
+		LeaderElectionLabels: func() map[string]string {
+			m := map[string]string{
+				"app": "kong-operator",
+			}
+			if name := os.Getenv("POD_NAME"); name != "" {
+				m["pod_name"] = name
+			}
+			if ns := os.Getenv("POD_NAMESPACE"); ns != "" {
+				m["pod_namespace"] = ns
+			}
+			return m
+		}(),
 		LeaderElectionNamespace: cfg.LeaderElectionNamespace,
 		LeaderElectionID:        "a7feedc84.konghq.com",
+		LeaseDuration:           &cfg.LeaderElectionLeaseDuration,
+		RenewDeadline:           &cfg.LeaderElectionRenewDeadline,
+		RetryPeriod:             &cfg.LeaderElectionRetryPeriod,
 		Cache:                   cacheOptions,
 	}
 
