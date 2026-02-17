@@ -23,10 +23,11 @@ import (
 
 const (
 	prefix      = "ko-ingress-controller"
-	SignalStart = prefix + "-start"
-	SignalPing  = prefix + "-ping"
+	signalStart = prefix + "-start"
+	signalPing  = prefix + "-ping"
 )
 
+// ReportValues holds values that are included in telemetry reports.
 type ReportValues struct {
 	FeatureGates                   map[string]bool
 	MeshDetection                  bool
@@ -86,7 +87,7 @@ func createManager(
 	opts ...telemetry.OptManager,
 ) (telemetry.Manager, error) {
 	m, err := telemetry.NewManager(
-		SignalPing,
+		signalPing,
 		opts...,
 	)
 	if err != nil {

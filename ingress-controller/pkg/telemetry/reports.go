@@ -27,6 +27,7 @@ const (
 	telemetryPeriod                  = time.Hour
 )
 
+// ReportConfig holds configuration for telemetry reports.
 type ReportConfig struct {
 	SplunkEndpoint                   string
 	SplunkEndpointInsecureSkipVerify bool
@@ -115,7 +116,7 @@ func SetupAnonymousReports(
 		return nil, fmt.Errorf("anonymous reports failed to start: %w", err)
 	}
 
-	if err := tMgr.TriggerExecute(ctx, SignalStart); err != nil {
+	if err := tMgr.TriggerExecute(ctx, signalStart); err != nil {
 		tMgr.Stop()
 		return nil, fmt.Errorf("failed to trigger telemetry report during start: %w", err)
 	}
