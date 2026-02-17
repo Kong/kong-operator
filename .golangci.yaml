@@ -55,6 +55,10 @@ linters:
     - usetesting
     - wastedassign
   settings:
+    modernize:
+      disable:
+        # Simplify code by using go1.26's new(expr).
+        - newexpr
     grouper:
       const-require-single-const: true
       const-require-grouping: true
