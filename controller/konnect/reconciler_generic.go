@@ -158,7 +158,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// If the referenced ControlPlane is not found, remove the finalizer and update the status.
 		// There's no need to remove the entity on Konnect because the ControlPlane
 		// does not exist anymore.
-		if errors.As(err, &controlplane.ReferencedControlPlaneDoesNotExistError{}) {
+		if _, ok := errors.AsType[controlplane.ReferencedControlPlaneDoesNotExistError](err); ok {
 			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 				if err := r.Client.Update(ctx, ent); err != nil {
 					if apierrors.IsConflict(err) {
@@ -178,12 +178,15 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	// If a type has a KongService ref, handle it.
 	res, err = handleKongServiceRef(ctx, r.Client, ent)
 	if err != nil {
+		_, kongServiceIsBeingDeleted := errors.AsType[ReferencedKongServiceIsBeingDeletedError](err)
+		_, referencedObjectDoesNotExist := errors.AsType[ReferencedObjectDoesNotExistError](err)
+		_, referencedCPDoesNotExist := errors.AsType[controlplane.ReferencedControlPlaneDoesNotExistError](err)
 		switch {
 		// In case the referenced KongService is being deleted, disregard the error
 		// and continue.
-		case errors.As(err, &ReferencedKongServiceIsBeingDeletedError{}):
+		case kongServiceIsBeingDeleted:
 			log.Info(logger, "referenced KongService is being deleted, proceeding with reconciliation", "error", err.Error())
-		case errors.As(err, &ReferencedObjectDoesNotExistError{}), errors.As(err, &controlplane.ReferencedControlPlaneDoesNotExistError{}):
+		case referencedObjectDoesNotExist, referencedCPDoesNotExist:
 			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 				if err := r.Client.Update(ctx, ent); err != nil {
 					if apierrors.IsConflict(err) {
@@ -228,18 +231,20 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// If the referenced KongConsumer is being deleted and the object
 		// is not being deleted yet then requeue until it will
 		// get the deletion timestamp set due to having the owner set to KongConsumer.
-		if errDel := (&ReferencedKongConsumerIsBeingDeletedError{}); errors.As(err, errDel) &&
+		if errDel, ok := errors.AsType[ReferencedKongConsumerIsBeingDeletedError](err); ok &&
 			ent.GetDeletionTimestamp().IsZero() {
 			return ctrl.Result{
 				RequeueAfter: time.Until(errDel.DeletionTimestamp),
 			}, nil
 		}
 
+		_, referencedCPDoesNotExist := errors.AsType[controlplane.ReferencedControlPlaneDoesNotExistError](err)
+		_, referencedKongConsumerDoesNotExist := errors.AsType[ReferencedKongConsumerDoesNotExistError](err)
 		// If the referenced KongConsumer is not found or is being deleted
 		// then remove the finalizer and let the deletion proceed without trying to delete the entity from Konnect
 		// as the KongConsumer deletion will (or already has - in case of the consumer being gone)
 		// take care of it on the Konnect side.
-		if errors.As(err, &ReferencedKongConsumerDoesNotExistError{}) {
+		if referencedCPDoesNotExist || referencedKongConsumerDoesNotExist {
 			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 				if err := r.Client.Update(ctx, ent); err != nil {
 					if apierrors.IsConflict(err) {
@@ -274,7 +279,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// If the referenced KongUpstream is being deleted and the object
 		// is not being deleted yet then requeue until it will
 		// get the deletion timestamp set due to having the owner set to KongUpstream.
-		if errDel := (&ReferencedKongUpstreamIsBeingDeletedError{}); errors.As(err, errDel) &&
+		if errDel, ok := errors.AsType[ReferencedKongUpstreamIsBeingDeletedError](err); ok &&
 			ent.GetDeletionTimestamp().IsZero() {
 			return ctrl.Result{
 				RequeueAfter: time.Until(errDel.DeletionTimestamp),
@@ -286,7 +291,9 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// as the KongUpstream deletion will (or already has - in case of the upstream being gone)
 		// take care of it on the Konnect side.
 		// In case the ControlPlane referenced by the KongUpstream is not found, do the same.
-		if errors.As(err, &ReferencedKongUpstreamDoesNotExistError{}) || errors.As(err, &controlplane.ReferencedControlPlaneDoesNotExistError{}) {
+		_, upstreamNotExist := errors.AsType[ReferencedKongUpstreamDoesNotExistError](err)
+		_, cpNotExist := errors.AsType[controlplane.ReferencedControlPlaneDoesNotExistError](err)
+		if upstreamNotExist || cpNotExist {
 			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 				if err := r.Client.Update(ctx, ent); err != nil {
 					if apierrors.IsConflict(err) {
@@ -316,18 +323,21 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// If the referenced KongCertificate is being deleted and the object
 		// is not being deleted yet then requeue until it will
 		// get the deletion timestamp set due to having the owner set to KongCertificate.
-		if errDel := (&ReferencedKongCertificateIsBeingDeletedError{}); errors.As(err, errDel) &&
+		if errDel, ok := errors.AsType[ReferencedKongCertificateIsBeingDeletedError](err); ok &&
 			ent.GetDeletionTimestamp().IsZero() {
 			return ctrl.Result{
 				RequeueAfter: time.Until(errDel.DeletionTimestamp),
 			}, nil
 		}
 
+		_, referencedCPDoesNotExist := errors.AsType[controlplane.ReferencedControlPlaneDoesNotExistError](err)
+		_, referencedKongCertificateDoesNotExist := errors.AsType[ReferencedKongCertificateDoesNotExistError](err)
+
 		// If the referenced KongCertificate is not found or is being deleted
 		// and the object is being deleted, remove the finalizer and let the
 		// deletion proceed without trying to delete the entity from Konnect
 		// as the KongCertificate deletion will take care of it on the Konnect side.
-		if errors.As(err, &ReferencedKongCertificateDoesNotExistError{}) {
+		if referencedKongCertificateDoesNotExist || referencedCPDoesNotExist {
 			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 				if err := r.Client.Update(ctx, ent); err != nil {
 					if apierrors.IsConflict(err) {
@@ -363,7 +373,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// If the referenced KongKeySet is being deleted and the object
 		// is not being deleted yet then requeue until it will
 		// get the deletion timestamp set due to having the owner set to KongKeySet.
-		if errDel := (&ReferencedKongKeySetIsBeingDeletedError{}); errors.As(err, errDel) &&
+		if errDel, ok := errors.AsType[ReferencedKongKeySetIsBeingDeletedError](err); ok &&
 			ent.GetDeletionTimestamp().IsZero() {
 			return ctrl.Result{
 				RequeueAfter: time.Until(errDel.DeletionTimestamp),
@@ -373,7 +383,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// If the referenced KongKeySet is not found, remove the finalizer and let the
 		// user delete the resource without trying to delete the entity from Konnect
 		// as the KongKeySet deletion will take care of it on the Konnect side.
-		if errors.As(err, &ReferencedKongKeySetDoesNotExistError{}) {
+		if _, ok := errors.AsType[ReferencedKongKeySetDoesNotExistError](err); ok {
 			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 				if err := r.Client.Update(ctx, ent); err != nil {
 					if apierrors.IsConflict(err) {
@@ -447,7 +457,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// is being deleted then allow the reconciliation to continue as we want to
 		// proceed with object's deletion.
 		// Otherwise, just return the error and requeue.
-		if errDel := (&ReferencedObjectIsBeingDeletedError{}); !errors.As(err, errDel) ||
+		if _, ok := errors.AsType[ReferencedObjectIsBeingDeletedError](err); !ok ||
 			ent.GetDeletionTimestamp().IsZero() {
 			log.Debug(logger, "error handling KonnectNetwork ref", "error", err)
 			return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
@@ -476,8 +486,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 				// If the error was a network error, handle it here, there's no need to proceed,
 				// as no state has changed.
 				// Status conditions are updated in handleOpsErr.
-				var errURL *url.Error
-				if errors.As(err, &errURL) {
+				if errURL, ok := errors.AsType[*url.Error](err); ok {
 					return r.handleOpsErr(ctx, ent, errURL)
 				}
 
@@ -520,8 +529,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// If the error was a network error, handle it here, there's no need to proceed,
 		// as no state has changed.
 		// Status conditions are updated in handleOpsErr.
-		var errURL *url.Error
-		if errors.As(err, &errURL) {
+		if errURL, ok := errors.AsType[*url.Error](err); ok {
 			return r.handleOpsErr(ctx, ent, errURL)
 		}
 		return ctrl.Result{}, err
@@ -579,19 +587,19 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 		if err != nil {
 			var (
-				errURL       *url.Error
-				rateLimitErr ops.RateLimitError
+				errURL, okURL                = errors.AsType[*url.Error](err)
+				rateLimitErr, okRateLimitErr = errors.AsType[ops.RateLimitError](err)
 			)
 			switch {
 			// If the error was a network error, handle it here, there's no need to proceed,
 			// as no state has changed.
 			// Status conditions are updated in handleOpsErr.
-			case errors.As(err, &errURL):
+			case okURL:
 				return r.handleOpsErr(ctx, ent, errURL)
 
 			// If the error is a rate limit error, requeue after the retry-after duration
 			// instead of returning an error.
-			case errors.As(err, &rateLimitErr):
+			case okRateLimitErr:
 				return ctrl.Result{RequeueAfter: rateLimitErr.RetryAfter}, nil
 			}
 
@@ -620,19 +628,19 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		logger.Error(err, "failed to update")
 
 		var (
-			errURL       *url.Error
-			rateLimitErr ops.RateLimitError
+			errURL, okURL                = errors.AsType[*url.Error](err)
+			rateLimitErr, okRateLimitErr = errors.AsType[ops.RateLimitError](err)
 		)
 		switch {
 		// If the error was a network error, handle it here, there's no need to proceed,
 		// as no state has changed.
 		// Status conditions are updated in handleOpsErr.
-		case errors.As(err, &errURL):
+		case okURL:
 			return r.handleOpsErr(ctx, ent, errURL)
 
 		// If the error is a rate limit error, requeue after the retry-after duration
 		// instead of returning an error.
-		case errors.As(err, &rateLimitErr):
+		case okRateLimitErr:
 			return ctrl.Result{RequeueAfter: rateLimitErr.RetryAfter}, nil
 		}
 
@@ -711,8 +719,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) adoptFromExistingEntity(
 	if retErr != nil {
 		// If the error is a rate limit error, requeue after the retry-after duration
 		// instead of returning an error.
-		var rateLimitErr ops.RateLimitError
-		if errors.As(retErr, &rateLimitErr) {
+		if rateLimitErr, ok := errors.AsType[ops.RateLimitError](retErr); ok {
 			return ctrl.Result{RequeueAfter: rateLimitErr.RetryAfter}, nil
 		}
 		return ctrl.Result{}, ops.FailedKonnectOpError[T]{

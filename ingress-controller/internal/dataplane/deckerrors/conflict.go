@@ -29,14 +29,17 @@ func (e ConfigConflictError) Unwrap() error {
 }
 
 func IsConflictErr(err error) bool {
-	var apiErr *kong.APIError
-	if errors.As(err, &apiErr) && apiErr.Code() == http.StatusConflict ||
-		errors.Is(err, ConfigConflictError{}) {
+	if apiErr, ok := errors.AsType[*kong.APIError](err); ok {
+		if apiErr.Code() == http.StatusConflict {
+			return true
+		}
+	}
+
+	if _, ok := errors.AsType[ConfigConflictError](err); ok {
 		return true
 	}
 
-	var deckErrArray deckutils.ErrArray
-	if errors.As(err, &deckErrArray) {
+	if deckErrArray, ok := errors.AsType[deckutils.ErrArray](err); ok {
 		if slices.ContainsFunc(deckErrArray.Errors, IsConflictErr) {
 			return true
 		}

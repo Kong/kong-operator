@@ -25,11 +25,11 @@ func (c CRDChecker) CRDExists(gvr schema.GroupVersionResource) (bool, error) {
 		return false, nil
 	}
 
-	if errD := (&discovery.ErrGroupDiscoveryFailed{}); errors.As(err, &errD) {
+	if errD, ok := errors.AsType[*discovery.ErrGroupDiscoveryFailed](err); ok {
 		for _, e := range errD.Groups {
 
 			// If this is an API StatusError:
-			if errS := (&apierrors.StatusError{}); errors.As(e, &errS) {
+			if errS, ok := errors.AsType[*apierrors.StatusError](e); ok {
 				switch errS.ErrStatus.Code {
 				case 404:
 					// If it's a 404 status code then we're sure that it's just
@@ -41,7 +41,7 @@ func (c CRDChecker) CRDExists(gvr schema.GroupVersionResource) (bool, error) {
 			}
 
 			// It is a network error.
-			if errU := (&url.Error{}); errors.As(e, &errU) {
+			if _, ok := errors.AsType[*url.Error](e); ok {
 				return false, fmt.Errorf("unexpected network error when looking up CRD (%v): %w", gvr, err)
 			}
 		}

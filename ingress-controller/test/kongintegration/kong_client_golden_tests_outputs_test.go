@@ -142,11 +142,11 @@ func TestKongClientGoldenTestsOutputs_Konnect(t *testing.T) {
 				configSize, err := updateStrategy.Update(ctx, sendconfig.ContentWithHash{Content: content})
 				if !assert.NoError(t, err) {
 					var (
-						apiErr        = &kong.APIError{}
-						sendconfigErr sendconfig.UpdateError
+						apiErr, okAPIErr               = errors.AsType[*kong.APIError](err)
+						sendconfigErr, okSendConfigErr = errors.AsType[sendconfig.UpdateError](err)
 					)
 					switch {
-					case errors.As(err, &apiErr):
+					case okAPIErr:
 						if apiErr.Code() == http.StatusTooManyRequests {
 							details, ok := apiErr.Details().(kong.ErrTooManyRequestsDetails)
 							if !ok {
@@ -164,12 +164,11 @@ func TestKongClientGoldenTestsOutputs_Konnect(t *testing.T) {
 								return
 							}
 						}
-					case errors.As(err, &sendconfigErr):
+					case okSendConfigErr:
 						t.Errorf("sendconfig error: %v", sendconfigErr.Error())
 						t.Errorf("sendconfig error failures: %v", sendconfigErr.ResourceFailures())
 						return
 					}
-					return
 				}
 
 				assert.Equal(t, mo.None[int](), configSize)
@@ -192,8 +191,7 @@ func ensureGoldenTestOutputIsAccepted(ctx context.Context, t *testing.T, goldenT
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		err := kongClient.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(cfgAsJSON), true, true)
 		if !assert.NoErrorf(t, err, "failed to reload declarative config") {
-			apiErr := &kong.APIError{}
-			if errors.As(err, &apiErr) {
+			if apiErr, ok := errors.AsType[*kong.APIError](err); ok {
 				t.Errorf("Kong Admin API response: %s", apiErr.Raw())
 			}
 		}

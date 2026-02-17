@@ -118,11 +118,7 @@ func Create[
 		return nil, fmt.Errorf("unsupported entity type %T", ent)
 	}
 
-	var (
-		errRelationsFailed KonnectEntityCreatedButRelationsFailedError
-		errSDK             *sdkkonnecterrs.SDKError
-		errGet             error
-	)
+	var errGet error
 	switch {
 	case ErrorIsCreateConflict(err):
 		// If there was a conflict on the create request, we can assume the entity already exists.
@@ -196,16 +192,17 @@ func Create[
 
 			SetKonnectEntityProgrammedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToCreateReason, err)
 		}
-
-	case errors.As(err, &errSDK):
-		statusCode = errSDK.StatusCode
-		SetKonnectEntityProgrammedConditionFalse(
-			e, kcfgkonnect.KonnectEntitiesFailedToCreateReason, errSDK)
-	case errors.As(err, &errRelationsFailed):
-		e.SetKonnectID(errRelationsFailed.KonnectID)
-		SetKonnectEntityProgrammedConditionFalse(e, errRelationsFailed.Reason, errRelationsFailed.Err)
 	case err != nil:
-		SetKonnectEntityProgrammedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToCreateReason, err)
+		if errSDK, ok := errors.AsType[*sdkkonnecterrs.SDKError](err); ok {
+			statusCode = errSDK.StatusCode
+			SetKonnectEntityProgrammedConditionFalse(
+				e, kcfgkonnect.KonnectEntitiesFailedToCreateReason, errSDK)
+		} else if errRelationsFailed, ok := errors.AsType[KonnectEntityCreatedButRelationsFailedError](err); ok {
+			e.SetKonnectID(errRelationsFailed.KonnectID)
+			SetKonnectEntityProgrammedConditionFalse(e, errRelationsFailed.Reason, errRelationsFailed.Err)
+		} else {
+			SetKonnectEntityProgrammedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToCreateReason, err)
+		}
 	default:
 		SetKonnectEntityProgrammedConditionTrue(e)
 	}
@@ -325,8 +322,7 @@ func Delete[
 	}
 
 	if err != nil {
-		var errSDK *sdkkonnecterrs.SDKError
-		if errors.As(err, &errSDK) {
+		if errSDK, ok := errors.AsType[*sdkkonnecterrs.SDKError](err); ok {
 			statusCode = errSDK.StatusCode
 		}
 		metricRecorder.RecordKonnectEntityOperationFailure(
@@ -479,16 +475,14 @@ func Update[
 		return ctrl.Result{}, fmt.Errorf("unsupported entity type %T", ent)
 	}
 
-	var (
-		errRelationsFailed KonnectEntityCreatedButRelationsFailedError
-		errSDK             *sdkkonnecterrs.SDKError
-	)
+	errSDK, isSDKErr := errors.AsType[*sdkkonnecterrs.SDKError](err)
+	errRelationsFailed, isRelationsFailed := errors.AsType[KonnectEntityCreatedButRelationsFailedError](err)
 
 	switch {
-	case errors.As(err, &errSDK):
+	case isSDKErr:
 		statusCode = errSDK.StatusCode
 		SetKonnectEntityProgrammedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToUpdateReason, errSDK)
-	case errors.As(err, &errRelationsFailed):
+	case isRelationsFailed:
 		e.SetKonnectID(errRelationsFailed.KonnectID)
 		SetKonnectEntityProgrammedConditionFalse(e, errRelationsFailed.Reason, err)
 	case err != nil:
@@ -607,28 +601,26 @@ func Adopt[
 	}
 
 	// Set "Adopted" and "Programmed" conditions of the object based on errors returned in the adopt operation.
-	var (
-		errSDK         *sdkkonnecterrs.SDKError
-		errFetch       KonnectEntityAdoptionFetchError
-		errUIDConflict KonnectEntityAdoptionUIDTagConflictError
-		errNotMatch    KonnectEntityAdoptionNotMatchError
-	)
+	errFetch, isFetchErr := errors.AsType[KonnectEntityAdoptionFetchError](err)
+	errUIDConflict, isUIDConflict := errors.AsType[KonnectEntityAdoptionUIDTagConflictError](err)
+	errNotMatch, isNotMatch := errors.AsType[KonnectEntityAdoptionNotMatchError](err)
+	errSDK, isSDKErr := errors.AsType[*sdkkonnecterrs.SDKError](err)
 
 	switch {
 	// If the adoption process failed to fetch the entity, we use the "FetchFailed" reason in the "adopted" condition.
-	case errors.As(err, &errFetch):
-		if errors.As(errFetch.Err, &errSDK) {
-			statusCode = errSDK.StatusCode
+	case isFetchErr:
+		if errSDKInner, ok := errors.AsType[*sdkkonnecterrs.SDKError](errFetch.Err); ok {
+			statusCode = errSDKInner.StatusCode
 		}
 		SetKonnectEntityAdoptedConditionFalse(e, konnectv1alpha1.KonnectEntityAdoptedReasonFetchFailed, err)
 		SetKonnectEntityProgrammedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToAdoptReason, err)
-	case errors.As(err, &errUIDConflict):
+	case isUIDConflict:
 		SetKonnectEntityAdoptedConditionFalse(e, konnectv1alpha1.KonnectEntityAdoptedReasonUIDConflict, errUIDConflict)
 		SetKonnectEntityProgrammedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToAdoptReason, errUIDConflict)
-	case errors.As(err, &errNotMatch):
+	case isNotMatch:
 		SetKonnectEntityAdoptedConditionFalse(e, konnectv1alpha1.KonnectEntityAdoptedReasonNotMatch, errNotMatch)
 		SetKonnectEntityProgrammedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToAdoptReason, errNotMatch)
-	case errors.As(err, &errSDK):
+	case isSDKErr:
 		statusCode = errSDK.StatusCode
 		SetKonnectEntityAdoptedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToAdoptReason, errSDK)
 		SetKonnectEntityProgrammedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToAdoptReason, errSDK)
@@ -714,8 +706,7 @@ func wrapErrIfKonnectOpFailed[
 	TEnt constraints.EntityType[T],
 ](err error, op Op, e TEnt) error {
 	if err != nil {
-		var errBadRequest *sdkkonnecterrs.BadRequestError
-		if errors.As(err, &errBadRequest) {
+		if errBadRequest, ok := errors.AsType[*sdkkonnecterrs.BadRequestError](err); ok {
 			errBadRequest.Instance = ""
 			err = errBadRequest
 		}
@@ -836,20 +827,17 @@ func getMatchingEntryFromListResponseData[
 // with each request and makes the reconciliation loop requeue the resource
 // instead of performing the backoff.
 func ClearInstanceFromError(err error) error {
-	var errBadRequest *sdkkonnecterrs.BadRequestError
-	if errors.As(err, &errBadRequest) {
+	if errBadRequest, ok := errors.AsType[*sdkkonnecterrs.BadRequestError](err); ok {
 		errBadRequest.Instance = ""
 		return errBadRequest
 	}
 
-	var errConflict *sdkkonnecterrs.ConflictError
-	if errors.As(err, &errConflict) {
+	if errConflict, ok := errors.AsType[*sdkkonnecterrs.ConflictError](err); ok {
 		errConflict.Instance = ""
 		return errConflict
 	}
 
-	var errNotFound *sdkkonnecterrs.NotFoundError
-	if errors.As(err, &errNotFound) {
+	if errNotFound, ok := errors.AsType[*sdkkonnecterrs.NotFoundError](err); ok {
 		errNotFound.Instance = ""
 		return errNotFound
 	}

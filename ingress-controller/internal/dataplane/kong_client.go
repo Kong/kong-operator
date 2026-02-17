@@ -596,10 +596,12 @@ func (c *KongClient) maybeTryRecoveringFromGatewaysSyncError(
 	gatewaysSyncErr error,
 ) error {
 	// If the error is not of the expected UpdateError type, we should log it and skip the recovery.
-	updateErr := sendconfig.UpdateError{}
-	if !errors.As(gatewaysSyncErr, &updateErr) {
-		c.logger.V(logging.DebugLevel).Info("Skipping recovery from gateways sync error - not enough details to recover",
-			"error", gatewaysSyncErr)
+	updateErr, ok := errors.AsType[sendconfig.UpdateError](gatewaysSyncErr)
+	if !ok {
+		c.logger.V(logging.DebugLevel).
+			Info("Skipping recovery from gateways sync error - not enough details to recover",
+				"error", gatewaysSyncErr,
+			)
 		return nil
 	}
 

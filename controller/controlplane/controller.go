@@ -162,7 +162,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 
 		if err := r.InstancesManager.StopInstance(mgrID); err != nil {
-			if errors.As(err, &multiinstance.InstanceNotFoundError{}) {
+			if _, ok := errors.AsType[multiinstance.InstanceNotFoundError](err); ok {
 				log.Debug(logger, "control plane instance not found, skipping cleanup")
 			} else {
 				return ctrl.Result{}, fmt.Errorf("failed to stop instance: %w", err)
@@ -356,8 +356,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if err := r.InstancesManager.IsInstanceReady(mgrID); err != nil {
 		log.Trace(logger, "control plane instance not ready yet", "error", err)
 
-		if errors.As(err, &multiinstance.InstanceNotFoundError{}) {
-
+		if _, ok := errors.AsType[multiinstance.InstanceNotFoundError](err); ok {
 			log.Debug(logger, "control plane instance not found, creating new instance")
 			cfgOpts, err := r.constructControlPlaneManagerConfigOptions(
 				logger, cp, &caSecret, mtlsSecret, dataplaneAdminServiceName, dataplaneIngressServiceName,
@@ -690,19 +689,15 @@ func (r *Reconciler) handleScheduleInstanceOutcome(
 	cp *ControlPlane,
 	err error,
 ) (ctrl.Result, error) {
-	var (
-		endpointsError   = &ingresserrors.NoAvailableEndpointsError{}
-		kongClientError  = &ingresserrors.KongClientNotReadyError{}
-		conditionMessage string
-	)
+	var conditionMessage string
 
 	// If the error is transient, we log it and requeue the resource. Such errors include:
 	// - NoAvailableEndpointsError: indicates that there are no available endpoints for the dataplane;
 	// - KongClientNotReadyError: indicates that the Kong client is not ready.
 	// These errors are considered transient and will be retried after a delay.
-	if errors.As(err, endpointsError) {
+	if endpointsError, ok := errors.AsType[ingresserrors.NoAvailableEndpointsError](err); ok {
 		conditionMessage = endpointsError.Error()
-	} else if errors.As(err, kongClientError) {
+	} else if kongClientError, ok := errors.AsType[ingresserrors.KongClientNotReadyError](err); ok {
 		conditionMessage = kongClientError.Error()
 	}
 	if conditionMessage != "" {

@@ -159,7 +159,8 @@ func TestMain(m *testing.M) {
 				},
 			),
 			retry.LastErrorOnly(true), retry.RetryIf(func(err error) bool {
-				return !errors.As(err, &helpers.TooOldKongGatewayError{})
+				_, ok := errors.AsType[helpers.TooOldKongGatewayError](err)
+				return !ok
 			}),
 		))
 

@@ -141,11 +141,8 @@ func TestGetFromParametersRef(t *testing.T) {
 			if tc.expectedError != nil {
 				assert.Error(t, err)
 				// For NotFound errors, check specific fields
-				statusErr := &k8serrors.StatusError{}
-				if errors.As(tc.expectedError, &statusErr) {
-					actualStatusErr := &k8serrors.StatusError{}
-					isActualStatusErr := errors.As(err, &actualStatusErr)
-					if isActualStatusErr {
+				if statusErr, ok := errors.AsType[*k8serrors.StatusError](tc.expectedError); ok {
+					if actualStatusErr, ok := errors.AsType[*k8serrors.StatusError](err); ok {
 						assert.Equal(t, statusErr.Status().Reason, actualStatusErr.Status().Reason)
 					} else {
 						t.Errorf("Expected StatusError, got %T", err)
