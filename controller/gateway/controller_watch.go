@@ -362,8 +362,8 @@ func (r *Reconciler) listManagedGatewaysInNamespace(ctx context.Context, obj cli
 		objKey := client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}
 
 		if _, err := gatewayclass.Get(ctx, r.Client, string(gateway.Spec.GatewayClassName)); err != nil {
-			_, isUnsupported := errors.AsType[*operatorerrors.UnsupportedGatewayClassError](err)
-			_, isNotAccepted := errors.AsType[*operatorerrors.NotAcceptedGatewayClassError](err)
+			_, isUnsupported := errors.AsType[operatorerrors.UnsupportedGatewayClassError](err)
+			_, isNotAccepted := errors.AsType[operatorerrors.NotAcceptedGatewayClassError](err)
 			switch {
 			case isUnsupported:
 				log.Debug(logger, "gateway class not supported, ignoring")

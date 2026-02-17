@@ -197,7 +197,7 @@ func Create[
 			statusCode = errSDK.StatusCode
 			SetKonnectEntityProgrammedConditionFalse(
 				e, kcfgkonnect.KonnectEntitiesFailedToCreateReason, errSDK)
-		} else if errRelationsFailed, ok := errors.AsType[*KonnectEntityCreatedButRelationsFailedError](err); ok {
+		} else if errRelationsFailed, ok := errors.AsType[KonnectEntityCreatedButRelationsFailedError](err); ok {
 			e.SetKonnectID(errRelationsFailed.KonnectID)
 			SetKonnectEntityProgrammedConditionFalse(e, errRelationsFailed.Reason, errRelationsFailed.Err)
 		} else {

@@ -719,7 +719,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) adoptFromExistingEntity(
 	if retErr != nil {
 		// If the error is a rate limit error, requeue after the retry-after duration
 		// instead of returning an error.
-		if rateLimitErr, ok := errors.AsType[*ops.RateLimitError](retErr); ok {
+		if rateLimitErr, ok := errors.AsType[ops.RateLimitError](retErr); ok {
 			return ctrl.Result{RequeueAfter: rateLimitErr.RetryAfter}, nil
 		}
 		return ctrl.Result{}, ops.FailedKonnectOpError[T]{
