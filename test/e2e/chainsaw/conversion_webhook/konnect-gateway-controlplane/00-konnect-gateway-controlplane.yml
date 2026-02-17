@@ -1,14 +1,9 @@
 ---
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: ($kong_namespace)
----
 apiVersion: konnect.konghq.com/v1alpha1
 kind: KonnectAPIAuthConfiguration
 metadata:
   name: ($konnect_api_auth_name)
-  namespace: ($kong_namespace)
+  namespace: ($namespace)
 spec:
   type: token
   token: (env('KONNECT_TOKEN'))
@@ -18,7 +13,7 @@ apiVersion: konnect.konghq.com/v1alpha1
 kind: KonnectGatewayControlPlane
 metadata:
   name: ($konnect_gateway_controlplane_name)
-  namespace: ($kong_namespace)
+  namespace: ($namespace)
 spec:
   name: ($konnect_gateway_controlplane_name)
   konnect:

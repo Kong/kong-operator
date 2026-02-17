@@ -8,20 +8,15 @@ spec:
     This test validates that the v1beta1 ControlPlane is converted to v2beta1.
 
   bindings:
-    - name: kong_namespace
-      value: (join('-', ['kong', 'controlplane', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+    - name: test_name
+      value: ($namespace)
     - name: dataplane_name
-      value: (join('-', ['kong', 'dataplane', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+      value: (join('-', [($test_name), 'dataplane']))
     - name: controlplane_name
-      value: (join('-', ['kong', 'controlplane', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+      value: (join('-', [($test_name), 'controlplane']))
     - name: gateway_class_name
       value: ($controlplane_name)
 
-  timeouts:
-    apply: 120s
-    assert: 300s
-    cleanup: 120s
-    delete: 120s
   steps:
     - name: create-resources
       description: Create ControlPlane v1beta1 (will be converted to v2beta1) and all other needed resources
@@ -30,3 +25,17 @@ spec:
             file: 00-controlplane.yml
         - assert:
             file: 00-assert-controlplane.yml
+
+  catch:
+    # Capture debug snapshot on test failure for CI debugging.
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: conversion-webhook-controlplane
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
