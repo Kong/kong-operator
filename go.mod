@@ -24,7 +24,7 @@ require (
 	github.com/google/go-containerregistry v0.20.7
 	github.com/google/pprof v0.0.0-20250403155104-27863c87afa6
 	github.com/google/uuid v1.6.0
-	github.com/gruntwork-io/terratest v0.55.0
+	github.com/gruntwork-io/terratest v0.56.0
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/jpillora/backoff v1.0.0
