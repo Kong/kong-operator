@@ -157,11 +157,10 @@ func TestKongKeyToKeyInput(t *testing.T) {
 func TestAdoptKongKeyOverride(t *testing.T) {
 	ctx := t.Context()
 	testCases := []struct {
-		name                string
-		mockPair            func(*testing.T) (*mocks.MockKeysSDK, *configurationv1alpha1.KongKey)
-		assertions          func(*testing.T, *configurationv1alpha1.KongKey)
-		expectedErrContains string
-		expectedErrType     error
+		name          string
+		mockPair      func(*testing.T) (*mocks.MockKeysSDK, *configurationv1alpha1.KongKey)
+		assertions    func(*testing.T, *configurationv1alpha1.KongKey)
+		expectedError error
 	}{
 		{
 			name: "success",
@@ -251,8 +250,9 @@ func TestAdoptKongKeyOverride(t *testing.T) {
 			assertions: func(t *testing.T, key *configurationv1alpha1.KongKey) {
 				assert.Empty(t, key.GetKonnectID())
 			},
-			expectedErrContains: "failed to fetch Konnect entity",
-			expectedErrType:     KonnectEntityAdoptionFetchError{},
+			expectedError: KonnectEntityAdoptionFetchError{
+				KonnectID: "konnect-key-id",
+			},
 		},
 		{
 			name: "uid conflict",
@@ -299,8 +299,10 @@ func TestAdoptKongKeyOverride(t *testing.T) {
 			assertions: func(t *testing.T, key *configurationv1alpha1.KongKey) {
 				assert.Empty(t, key.GetKonnectID())
 			},
-			expectedErrContains: "Konnect entity (ID: konnect-key-id) is managed by another k8s object",
-			expectedErrType:     KonnectEntityAdoptionUIDTagConflictError{},
+			expectedError: KonnectEntityAdoptionUIDTagConflictError{
+				KonnectID:    "konnect-key-id",
+				ActualUIDTag: "different",
+			},
 		},
 	}
 
@@ -309,20 +311,11 @@ func TestAdoptKongKeyOverride(t *testing.T) {
 			sdk, key := tc.mockPair(t)
 
 			err := adoptKey(ctx, sdk, key)
+			require.ErrorIs(t, err, tc.expectedError)
 
 			if tc.assertions != nil {
 				tc.assertions(t, key)
 			}
-
-			if tc.expectedErrContains != "" {
-				assert.ErrorContains(t, err, tc.expectedErrContains)
-				if tc.expectedErrType != nil {
-					require.ErrorAs(t, err, &tc.expectedErrType)
-				}
-				return
-			}
-
-			require.NoError(t, err)
 		})
 	}
 }
@@ -330,11 +323,10 @@ func TestAdoptKongKeyOverride(t *testing.T) {
 func TestAdoptKongKeyMatch(t *testing.T) {
 	ctx := t.Context()
 	testCases := []struct {
-		name                string
-		mockPair            func(*testing.T) (*mocks.MockKeysSDK, *configurationv1alpha1.KongKey)
-		assertions          func(*testing.T, *configurationv1alpha1.KongKey)
-		expectedErrContains string
-		expectedErrType     error
+		name          string
+		mockPair      func(*testing.T) (*mocks.MockKeysSDK, *configurationv1alpha1.KongKey)
+		assertions    func(*testing.T, *configurationv1alpha1.KongKey)
+		expectedError error
 	}{
 		{
 			name: "success",
@@ -440,8 +432,7 @@ func TestAdoptKongKeyMatch(t *testing.T) {
 			assertions: func(t *testing.T, key *configurationv1alpha1.KongKey) {
 				assert.Empty(t, key.GetKonnectID())
 			},
-			expectedErrContains: "does not match",
-			expectedErrType:     KonnectEntityAdoptionNotMatchError{},
+			expectedError: KonnectEntityAdoptionNotMatchError{KonnectID: "konnect-key-id"},
 		},
 		{
 			name: "key set mismatch",
@@ -498,8 +489,7 @@ func TestAdoptKongKeyMatch(t *testing.T) {
 			assertions: func(t *testing.T, key *configurationv1alpha1.KongKey) {
 				assert.Empty(t, key.GetKonnectID())
 			},
-			expectedErrContains: "does not match",
-			expectedErrType:     KonnectEntityAdoptionNotMatchError{},
+			expectedError: KonnectEntityAdoptionNotMatchError{KonnectID: "konnect-key-id"},
 		},
 	}
 
@@ -508,20 +498,11 @@ func TestAdoptKongKeyMatch(t *testing.T) {
 			sdk, key := tc.mockPair(t)
 
 			err := adoptKey(ctx, sdk, key)
+			require.ErrorIs(t, err, tc.expectedError)
 
 			if tc.assertions != nil {
 				tc.assertions(t, key)
 			}
-
-			if tc.expectedErrContains != "" {
-				assert.ErrorContains(t, err, tc.expectedErrContains)
-				if tc.expectedErrType != nil {
-					require.ErrorAs(t, err, &tc.expectedErrType)
-				}
-				return
-			}
-
-			require.NoError(t, err)
 		})
 	}
 }

@@ -84,10 +84,8 @@ func Test_versionFromImage(t *testing.T) {
 	for _, tc := range testcases {
 		t.Run(tc.Tag, func(t *testing.T) {
 			actual, err := FromImage(tc.Tag)
-
 			if tc.ExpectedError != nil {
-				require.Error(t, err)
-				require.ErrorAs(t, err, &tc.ExpectedError)
+				require.ErrorIs(t, err, tc.ExpectedError)
 			} else {
 				require.NoError(t, err)
 				expected := tc.Expected(t)

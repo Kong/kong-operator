@@ -2,7 +2,6 @@ package ops
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -119,7 +118,7 @@ func adoptCACertificate(
 ) error {
 	cpID := cert.GetControlPlaneID()
 	if cpID == "" {
-		return errors.New("No Control Plane ID")
+		return KonnectEntityAdoptionMissingControlPlaneIDError{}
 	}
 
 	adoptOptions := cert.Spec.Adopt

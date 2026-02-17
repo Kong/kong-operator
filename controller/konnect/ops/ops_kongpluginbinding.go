@@ -151,7 +151,7 @@ func adoptPluginBinding(
 	cpID := pluginBinding.GetControlPlaneID()
 	adoptOptions := pluginBinding.Spec.Adopt
 	if cpID == "" {
-		return errors.New("No Control Plane ID")
+		return KonnectEntityAdoptionMissingControlPlaneIDError{}
 	}
 	if adoptOptions == nil || adoptOptions.Konnect == nil {
 		return errors.New("Konnect adopt options must be provided")

@@ -210,9 +210,8 @@ func TestNewKongClientForWorkspace(t *testing.T) {
 				managercfg.AdminAPIClientConfig{},
 				"",
 			)
-
 			if tc.expectError != nil {
-				require.IsType(t, err, tc.expectError)
+				require.ErrorIs(t, err, tc.expectError)
 				return
 			}
 			require.NoError(t, err)

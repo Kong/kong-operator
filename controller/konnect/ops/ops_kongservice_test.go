@@ -24,11 +24,10 @@ import (
 func TestCreateKongService(t *testing.T) {
 	ctx := t.Context()
 	testCases := []struct {
-		name                string
-		mockServicePair     func(*testing.T) (*mocks.MockServicesSDK, *configurationv1alpha1.KongService)
-		assertions          func(*testing.T, *configurationv1alpha1.KongService)
-		expectedErrContains string
-		expectedErrType     error
+		name            string
+		mockServicePair func(*testing.T) (*mocks.MockServicesSDK, *configurationv1alpha1.KongService)
+		assertions      func(*testing.T, *configurationv1alpha1.KongService)
+		expectedError   error
 	}{
 		{
 			name: "success",
@@ -136,7 +135,15 @@ func TestCreateKongService(t *testing.T) {
 			assertions: func(t *testing.T, svc *configurationv1alpha1.KongService) {
 				assert.Empty(t, svc.GetKonnectStatus().GetKonnectID())
 			},
-			expectedErrContains: "can't create KongService default/svc-1 without a Konnect ControlPlane ID",
+			expectedError: CantPerformOperationWithoutControlPlaneIDError{
+				Entity: &configurationv1alpha1.KongService{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "svc-1",
+						Namespace: "default",
+					},
+				},
+				Op: CreateOp,
+			},
 		},
 		{
 			name: "fail",
@@ -176,7 +183,15 @@ func TestCreateKongService(t *testing.T) {
 			assertions: func(t *testing.T, svc *configurationv1alpha1.KongService) {
 				assert.Empty(t, svc.GetKonnectStatus().GetKonnectID())
 			},
-			expectedErrContains: "failed to create KongService default/svc-1: {\"status\":400,\"title\":\"\",\"instance\":\"\",\"detail\":\"bad request\",\"invalid_parameters\":null}",
+			expectedError: KonnectOperationFailedError{
+				Op:         CreateOp,
+				EntityType: "KongService",
+				EntityKey:  "default/svc-1",
+				Err: &sdkkonnecterrs.BadRequestError{
+					Status: 400,
+					Detail: "bad request",
+				},
+			},
 		},
 		{
 			name: "409 Conflict causes a list to find a matching (by UID) service and update it instead of creating a new one",
@@ -207,14 +222,21 @@ func TestCreateKongService(t *testing.T) {
 						nil,
 						&sdkkonnecterrs.ConflictError{
 							Status: 409,
-							Detail: "Conflict",
+							Detail: "conflict",
 						},
 					)
 
 				return sdk, svc
 			},
-			expectedErrType:     &sdkkonnecterrs.ConflictError{},
-			expectedErrContains: "failed to create KongService default/svc-1: {\"status\":409,\"title\":null,\"instance\":null,\"detail\":\"Conflict\"}",
+			expectedError: KonnectOperationFailedError{
+				Op:         CreateOp,
+				EntityType: "KongService",
+				EntityKey:  "default/svc-1",
+				Err: &sdkkonnecterrs.ConflictError{
+					Status: 409,
+					Detail: "conflict",
+				},
+			},
 		},
 	}
 
@@ -223,20 +245,11 @@ func TestCreateKongService(t *testing.T) {
 			sdk, svc := tc.mockServicePair(t)
 
 			err := createService(ctx, sdk, svc)
+			require.ErrorIs(t, err, tc.expectedError)
 
 			if tc.assertions != nil {
 				tc.assertions(t, svc)
 			}
-
-			if tc.expectedErrContains != "" {
-				assert.ErrorContains(t, err, tc.expectedErrContains)
-				if tc.expectedErrType != nil {
-					require.ErrorAs(t, err, &tc.expectedErrType)
-				}
-				return
-			}
-
-			require.NoError(t, err)
 		})
 	}
 }
@@ -543,7 +556,7 @@ func TestAdoptKongServiceOverride(t *testing.T) {
 		mockServicePair     func(*testing.T) (*mocks.MockServicesSDK, *configurationv1alpha1.KongService)
 		assertions          func(*testing.T, *configurationv1alpha1.KongService)
 		expectedErrContains string
-		expectedErrType     error
+		expectedError       error
 	}{
 		{
 			name: "success",
@@ -632,7 +645,9 @@ func TestAdoptKongServiceOverride(t *testing.T) {
 				assert.Empty(t, ks.GetKonnectID())
 			},
 			expectedErrContains: "failed to fetch Konnect entity",
-			expectedErrType:     KonnectEntityAdoptionFetchError{},
+			expectedError: KonnectEntityAdoptionFetchError{
+				KonnectID: "1234",
+			},
 		},
 		{
 			name: "uid conflict",
@@ -676,8 +691,10 @@ func TestAdoptKongServiceOverride(t *testing.T) {
 			assertions: func(t *testing.T, ks *configurationv1alpha1.KongService) {
 				assert.Empty(t, ks.GetKonnectID())
 			},
-			expectedErrContains: "Konnect entity (ID: 1234) is managed by another k8s object",
-			expectedErrType:     KonnectEntityAdoptionUIDTagConflictError{},
+			expectedError: KonnectEntityAdoptionUIDTagConflictError{
+				KonnectID:    "1234",
+				ActualUIDTag: "abcd-0000",
+			},
 		},
 	}
 
@@ -686,20 +703,11 @@ func TestAdoptKongServiceOverride(t *testing.T) {
 			sdk, svc := tc.mockServicePair(t)
 
 			err := adoptService(ctx, sdk, svc)
+			require.ErrorIs(t, err, tc.expectedError)
 
 			if tc.assertions != nil {
 				tc.assertions(t, svc)
 			}
-
-			if tc.expectedErrContains != "" {
-				assert.ErrorContains(t, err, tc.expectedErrContains)
-				if tc.expectedErrType != nil {
-					require.ErrorAs(t, err, &tc.expectedErrType)
-				}
-				return
-			}
-
-			require.NoError(t, err)
 		})
 	}
 }

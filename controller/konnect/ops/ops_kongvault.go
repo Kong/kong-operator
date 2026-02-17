@@ -3,7 +3,6 @@ package ops
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"reflect"
 
@@ -83,7 +82,7 @@ func deleteVault(ctx context.Context, sdk sdkops.VaultSDK, vault *configurationv
 func adoptVault(ctx context.Context, sdk sdkops.VaultSDK, vault *configurationv1alpha1.KongVault) error {
 	cpID := vault.GetControlPlaneID()
 	if cpID == "" {
-		return errors.New("No Control Plane ID")
+		return KonnectEntityAdoptionMissingControlPlaneIDError{}
 	}
 
 	adoptOptions := vault.Spec.Adopt

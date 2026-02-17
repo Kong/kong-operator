@@ -29,6 +29,11 @@ func (e KongGatewayUnsupportedVersionError) Error() string {
 	return fmt.Sprintf("Kong Gateway version is not supported: %s", e.msg)
 }
 
+func (e KongGatewayUnsupportedVersionError) Is(target error) bool {
+	_, ok := target.(KongGatewayUnsupportedVersionError)
+	return ok
+}
+
 // NewKongAPIClient returns a Kong API client for a given root API URL.
 // It ensures that proper User-Agent is set. Do not use kong.NewClient directly.
 func NewKongAPIClient(adminURL string, kongAdminAPIConfig managercfg.AdminAPIClientConfig, kongAdminToken string) (*kong.Client, error) {

@@ -2,7 +2,6 @@ package ops
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -116,7 +115,7 @@ func adoptService(
 	adoptOptions := svc.Spec.Adopt
 	konnectID := adoptOptions.Konnect.ID
 	if cpID == "" {
-		return errors.New("No Control Plane ID")
+		return KonnectEntityAdoptionMissingControlPlaneIDError{}
 	}
 	resp, err := sdk.GetService(ctx, konnectID, cpID)
 	if err != nil {

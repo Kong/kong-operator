@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+
 	kcfgconsts "github.com/kong/kong-operator/api/common/consts"
 	"github.com/kong/kong-operator/controller/konnect/constraints"
 )
@@ -39,6 +41,12 @@ type KonnectEntityCreatedButRelationsFailedError struct {
 // Error implements the error interface.
 func (e KonnectEntityCreatedButRelationsFailedError) Error() string {
 	return fmt.Sprintf("Konnect entity (ID: %s) created but relations failed: %s: %v", e.KonnectID, e.Reason, e.Err)
+}
+
+// Is reports any error in err's tree matches target.
+func (e KonnectEntityCreatedButRelationsFailedError) Is(target error) bool {
+	t, ok := target.(KonnectEntityCreatedButRelationsFailedError)
+	return ok && e.KonnectID == t.KonnectID && e.Reason == t.Reason
 }
 
 // GetControlPlaneGroupMemberFailedError is an error type returned when
@@ -87,6 +95,44 @@ func (e KonnectEntityAdoptionFetchError) Unwrap() error {
 	return e.Err
 }
 
+// Is reports any error in err's tree matches target.
+func (e KonnectEntityAdoptionFetchError) Is(target error) bool {
+	t, ok := target.(KonnectEntityAdoptionFetchError)
+	return ok && e.KonnectID == t.KonnectID
+}
+
+// KonnectEntityAdoptionReferenceServiceIDMismatchError is an error type returned when
+// adopting an existing entity but the reference service ID does not match.
+type KonnectEntityAdoptionReferenceServiceIDMismatchError struct{}
+
+// Error implements the error interface.
+func (e KonnectEntityAdoptionReferenceServiceIDMismatchError) Error() string {
+	return "failed to adopt: reference service ID does not match"
+}
+
+// Is reports any error in err's tree matches target.
+func (e KonnectEntityAdoptionReferenceServiceIDMismatchError) Is(target error) bool {
+	_, ok := target.(KonnectEntityAdoptionReferenceServiceIDMismatchError)
+	return ok
+}
+
+// KonnectEntityAdoptionRouteTypeNotSupportedError is an error type returned when
+// adopting an existing entity but the route type is not supported.
+type KonnectEntityAdoptionRouteTypeNotSupportedError struct {
+	RouteType sdkkonnectcomp.RouteType
+}
+
+// Error implements the error interface.
+func (e KonnectEntityAdoptionRouteTypeNotSupportedError) Error() string {
+	return fmt.Sprintf("failed to adopt: route type %q not supported", e.RouteType)
+}
+
+// Is reports any error in err's tree matches target.
+func (e KonnectEntityAdoptionRouteTypeNotSupportedError) Is(target error) bool {
+	t, ok := target.(KonnectEntityAdoptionRouteTypeNotSupportedError)
+	return ok && e.RouteType == t.RouteType
+}
+
 // KonnectEntityAdoptionUIDTagConflictError is an error type returned in adopting an existing entity
 // when the entity has a tag to note that the entity is managed by another object with a different UID.
 type KonnectEntityAdoptionUIDTagConflictError struct {
@@ -108,6 +154,55 @@ type KonnectEntityAdoptionNotMatchError struct {
 // Error implements the error interface.
 func (e KonnectEntityAdoptionNotMatchError) Error() string {
 	return fmt.Sprintf("Konnect entity (ID: %s) does not match the spec of the object when adopting in match mode", e.KonnectID)
+}
+
+// Is reports any error in err's tree matches target.
+func (e KonnectEntityAdoptionNotMatchError) Is(target error) bool {
+	t, ok := target.(KonnectEntityAdoptionNotMatchError)
+	return ok && e.KonnectID == t.KonnectID
+}
+
+// KonnectEntityAdoptionMissingControlPlaneIDError is an error type returned particular ControlPlane ID does not exist.
+type KonnectEntityAdoptionMissingControlPlaneIDError struct{}
+
+// Error implements the error interface.
+func (e KonnectEntityAdoptionMissingControlPlaneIDError) Error() string {
+	return "no Control Plane ID"
+}
+
+// Is reports any error in err's tree matches target.
+func (e KonnectEntityAdoptionMissingControlPlaneIDError) Is(target error) bool {
+	_, ok := target.(KonnectEntityAdoptionMissingControlPlaneIDError)
+	return ok
+}
+
+// KonnectOperationFailedError is an error type returned when a Konnect API operation fails.
+// It includes the operation type, entity type name, entity key, and underlying error.
+type KonnectOperationFailedError struct {
+	Op         Op
+	EntityType string
+	EntityKey  string
+	Err        error
+}
+
+// Error implements the error interface.
+func (e KonnectOperationFailedError) Error() string {
+	return fmt.Sprintf("failed to %s %s %s: %v", e.Op, e.EntityType, e.EntityKey, e.Err)
+}
+
+func (e KonnectOperationFailedError) Unwrap() error {
+	return e.Err
+}
+
+// Is reports any error in err's tree matches target.
+func (e KonnectOperationFailedError) Is(target error) bool {
+	t, ok := target.(KonnectOperationFailedError)
+	return ok && e.Op == t.Op &&
+		e.EntityType == t.EntityType &&
+		e.EntityKey == t.EntityKey &&
+		(e.Err != nil && t.Err != nil &&
+			e.Err.Error() == t.Err.Error() ||
+			e.Err == nil && t.Err == nil)
 }
 
 // RateLimitError is an error type returned when a Konnect API operation

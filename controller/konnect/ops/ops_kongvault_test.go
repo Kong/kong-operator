@@ -266,11 +266,10 @@ func TestUpdateKongVault(t *testing.T) {
 func TestAdoptKongVault(t *testing.T) {
 	ctx := t.Context()
 	testCases := []struct {
-		name                string
-		mockVaultPair       func(*testing.T) (*sdkmocks.MockVaultSDK, *configurationv1alpha1.KongVault)
-		assertions          func(*testing.T, *sdkmocks.MockVaultSDK, *configurationv1alpha1.KongVault)
-		expectedErrContains string
-		expectedErrType     error
+		name          string
+		mockVaultPair func(*testing.T) (*sdkmocks.MockVaultSDK, *configurationv1alpha1.KongVault)
+		assertions    func(*testing.T, *sdkmocks.MockVaultSDK, *configurationv1alpha1.KongVault)
+		expectedError error
 	}{
 		{
 			name: "override success",
@@ -410,8 +409,7 @@ func TestAdoptKongVault(t *testing.T) {
 			assertions: func(t *testing.T, _ *sdkmocks.MockVaultSDK, vault *configurationv1alpha1.KongVault) {
 				assert.Empty(t, vault.GetKonnectID())
 			},
-			expectedErrContains: "Konnect entity (ID: vault-789) does not match the spec of the object when adopting in match mode",
-			expectedErrType:     &KonnectEntityAdoptionNotMatchError{},
+			expectedError: KonnectEntityAdoptionNotMatchError{KonnectID: "vault-789"},
 		},
 		{
 			name: "fetch failure",
@@ -452,8 +450,9 @@ func TestAdoptKongVault(t *testing.T) {
 			assertions: func(t *testing.T, _ *sdkmocks.MockVaultSDK, vault *configurationv1alpha1.KongVault) {
 				assert.Empty(t, vault.GetKonnectID())
 			},
-			expectedErrContains: "failed to fetch Konnect entity (ID: vault-321) for adoption",
-			expectedErrType:     KonnectEntityAdoptionFetchError{},
+			expectedError: KonnectEntityAdoptionFetchError{
+				KonnectID: "vault-321",
+			},
 		},
 		{
 			name: "uid conflict",
@@ -499,8 +498,10 @@ func TestAdoptKongVault(t *testing.T) {
 			assertions: func(t *testing.T, _ *sdkmocks.MockVaultSDK, vault *configurationv1alpha1.KongVault) {
 				assert.Empty(t, vault.GetKonnectID())
 			},
-			expectedErrContains: "Konnect entity (ID: vault-654) is managed by another k8s object with UID other-uid",
-			expectedErrType:     KonnectEntityAdoptionUIDTagConflictError{},
+			expectedError: KonnectEntityAdoptionUIDTagConflictError{
+				KonnectID:    "vault-654",
+				ActualUIDTag: "other-uid",
+			},
 		},
 		{
 			name: "missing control plane id",
@@ -531,7 +532,7 @@ func TestAdoptKongVault(t *testing.T) {
 			assertions: func(t *testing.T, _ *sdkmocks.MockVaultSDK, vault *configurationv1alpha1.KongVault) {
 				assert.Empty(t, vault.GetKonnectID())
 			},
-			expectedErrContains: "No Control Plane ID",
+			expectedError: KonnectEntityAdoptionMissingControlPlaneIDError{},
 		},
 	}
 
@@ -539,20 +540,11 @@ func TestAdoptKongVault(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			sdk, vault := tc.mockVaultPair(t)
 			err := adoptVault(ctx, sdk, vault)
+			require.ErrorIs(t, err, tc.expectedError)
 
 			if tc.assertions != nil {
 				tc.assertions(t, sdk, vault)
 			}
-
-			if tc.expectedErrContains != "" {
-				assert.ErrorContains(t, err, tc.expectedErrContains)
-				if tc.expectedErrType != nil {
-					require.ErrorAs(t, err, &tc.expectedErrType)
-				}
-				return
-			}
-
-			require.NoError(t, err)
 		})
 	}
 }

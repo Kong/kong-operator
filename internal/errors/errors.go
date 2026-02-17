@@ -19,6 +19,28 @@ var ErrUnexpectedObject = errors.New("unexpected object type provided")
 // Gateway - Errors
 // -----------------------------------------------------------------------------
 
+// FetchingError is a custom error that must be used when an error occurs while
+// fetching a resource from the Kubernetes API.
+type FetchingError struct {
+	err error
+}
+
+// NewFetchingError creates a new FetchingError with the provided error.
+func NewFetchingError(err error) FetchingError {
+	return FetchingError{err: err}
+}
+
+// Error returns the error message for the FetchingError.
+func (e FetchingError) Error() string {
+	return fmt.Sprintf("error while fetching resource: %v", e.err)
+}
+
+// Is reports any error in err's tree matches target.
+func (e FetchingError) Is(target error) bool {
+	_, ok := target.(FetchingError)
+	return ok
+}
+
 // UnsupportedGatewayClassError is an error which indicates that a provided GatewayClass
 // is not supported.
 type UnsupportedGatewayClassError struct {

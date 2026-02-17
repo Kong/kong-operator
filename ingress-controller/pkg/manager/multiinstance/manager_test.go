@@ -42,8 +42,7 @@ func TestManager_Scheduling(t *testing.T) {
 
 	t.Run("scheduling an instance with the same ID should fail", func(t *testing.T) {
 		err := multiManager.ScheduleInstance(mockInstance1)
-		require.Error(t, err)
-		require.IsType(t, multiinstance.InstanceWithIDAlreadyScheduledError{}, err)
+		require.ErrorIs(t, err, multiinstance.NewInstanceWithIDAlreadyScheduledError(mockInstance1.ID()))
 	})
 
 	managerRunning := make(chan struct{})
@@ -85,8 +84,7 @@ func TestManager_Scheduling(t *testing.T) {
 		// because the information hasn't been sent on StopChannel yet.
 		require.EventuallyWithT(t, func(t *assert.CollectT) {
 			err := multiManager.IsInstanceReady(mockInstance1.ID())
-			require.Error(t, err)
-			require.IsType(t, multiinstance.InstanceNotFoundError{}, err)
+			require.ErrorIs(t, err, multiinstance.NewInstanceNotFoundError(mockInstance1.ID()))
 		}, waitTime, tickTime)
 	})
 }

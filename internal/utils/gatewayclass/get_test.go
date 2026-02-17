@@ -1,11 +1,10 @@
 package gatewayclass_test
 
 import (
-	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -28,8 +27,9 @@ func TestGet(t *testing.T) {
 			name:             "gateway class not found",
 			gatewayClassName: "non-existent-gateway-class",
 			objectsToAdd:     []client.Object{},
-			expectedError: fmt.Errorf(`error while fetching GatewayClass "non-existent-gateway-class": %w`,
-				errors.New(`gatewayclasses.gateway.networking.k8s.io "non-existent-gateway-class" not found`)),
+			expectedError: operatorerrors.NewFetchingError(
+				apierrors.NewNotFound(gatewayv1.Resource("gatewayclass"), "non-existent-gateway-class"),
+			),
 		},
 		{
 			name:             "gateway class not supported",
@@ -111,7 +111,6 @@ func TestGet(t *testing.T) {
 					},
 				},
 			},
-			expectedError: nil,
 		},
 	}
 
@@ -125,8 +124,7 @@ func TestGet(t *testing.T) {
 
 			gwc, err := gatewayclass.Get(t.Context(), fakeClient, tc.gatewayClassName)
 			if tc.expectedError != nil {
-				require.ErrorContains(t, err, tc.expectedError.Error())
-				require.IsType(t, tc.expectedError, err)
+				require.ErrorIs(t, err, tc.expectedError)
 				return
 			}
 

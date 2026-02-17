@@ -2,7 +2,6 @@ package ops
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
@@ -114,7 +113,7 @@ func adoptRoute(
 ) error {
 	cpID := route.GetControlPlaneID()
 	if cpID == "" {
-		return errors.New("No Control Plane ID")
+		return KonnectEntityAdoptionMissingControlPlaneIDError{}
 	}
 
 	adoptOptions := route.Spec.Adopt
@@ -129,7 +128,9 @@ func adoptRoute(
 	}
 	// KO only supports routes with "RouteJSON" type now.
 	if resp.Route.Type != sdkkonnectcomp.RouteTypeRouteJSON {
-		return fmt.Errorf("failed to adopt: route type %q not supported", resp.Route.Type)
+		return KonnectEntityAdoptionRouteTypeNotSupportedError{
+			RouteType: resp.Route.Type,
+		}
 	}
 	if resp.Route.RouteJSON == nil {
 		return fmt.Errorf("route content in RouteJSON is empty")
@@ -146,7 +147,7 @@ func adoptRoute(
 			return fmt.Errorf("failed to adopt: existing route does not have service reference")
 		}
 		if *resp.Route.RouteJSON.Service.ID != route.Status.Konnect.ServiceID {
-			return fmt.Errorf("failed to adopt: reference service ID does not match")
+			return KonnectEntityAdoptionReferenceServiceIDMismatchError{}
 		}
 	} else if resp.Route.RouteJSON.Service != nil {
 		// if the KongRoute does not have a service reference, the existing route should not have a reference service.

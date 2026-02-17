@@ -726,9 +726,12 @@ func wrapErrIfKonnectOpFailed[
 				op, entityTypeName, err,
 			)
 		}
-		return fmt.Errorf("failed to %s %s %s: %w",
-			op, entityTypeName, client.ObjectKeyFromObject(e), err,
-		)
+		return KonnectOperationFailedError{
+			Op:         op,
+			EntityType: entityTypeName,
+			EntityKey:  client.ObjectKeyFromObject(e).String(),
+			Err:        err,
+		}
 	}
 	return nil
 }
