@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/fallback"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/fallback"
 )
 
 func TestConfigGraph_SubgraphObjects(t *testing.T) {

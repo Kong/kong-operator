@@ -8,8 +8,8 @@ import (
 
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 
-	"github.com/kong/kong-operator/ingress-controller/test/dataplane/config"
-	"github.com/kong/kong-operator/ingress-controller/test/testenv"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/dataplane/config"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/testenv"
 )
 
 // SkipIfRouterNotExpressions skips the test when the router flavor is not expressions.

@@ -19,13 +19,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
-	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
-	finalizerconst "github.com/kong/kong-operator/controller/hybridgateway/const/finalizers"
-	"github.com/kong/kong-operator/controller/hybridgateway/metadata"
-	gwtypes "github.com/kong/kong-operator/internal/types"
-	"github.com/kong/kong-operator/modules/manager/scheme"
-	"github.com/kong/kong-operator/pkg/consts"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	finalizerconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/finalizers"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
 func newUnstructured(ns, name string, gvk schema.GroupVersionKind, labels map[string]string) unstructured.Unstructured {

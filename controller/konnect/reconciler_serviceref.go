@@ -12,16 +12,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/kong/kong-operator/api/common/consts"
-	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
-	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
-	"github.com/kong/kong-operator/controller/konnect/constraints"
-	"github.com/kong/kong-operator/controller/pkg/controlplane"
-	"github.com/kong/kong-operator/controller/pkg/op"
-	"github.com/kong/kong-operator/controller/pkg/patch"
-	"github.com/kong/kong-operator/internal/utils/crossnamespace"
-	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/v2/api/common/consts"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
+	"github.com/kong/kong-operator/v2/controller/pkg/controlplane"
+	"github.com/kong/kong-operator/v2/controller/pkg/op"
+	"github.com/kong/kong-operator/v2/controller/pkg/patch"
+	"github.com/kong/kong-operator/v2/internal/utils/crossnamespace"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 // handleKongServiceRef handles the ServiceRef for the given entity.

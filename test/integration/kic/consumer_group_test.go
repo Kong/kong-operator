@@ -20,14 +20,14 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
-	configurationv1beta1 "github.com/kong/kong-operator/api/configuration/v1beta1"
-	"github.com/kong/kong-operator/ingress-controller/test"
-	"github.com/kong/kong-operator/ingress-controller/test/annotations"
-	"github.com/kong/kong-operator/ingress-controller/test/labels"
-	"github.com/kong/kong-operator/pkg/clientset"
-	"github.com/kong/kong-operator/test/helpers"
-	"github.com/kong/kong-operator/test/integration/kic/consts"
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
+	"github.com/kong/kong-operator/v2/ingress-controller/test"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/annotations"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/labels"
+	"github.com/kong/kong-operator/v2/pkg/clientset"
+	"github.com/kong/kong-operator/v2/test/helpers"
+	"github.com/kong/kong-operator/v2/test/integration/kic/consts"
 )
 
 func TestConsumerGroup(t *testing.T) {

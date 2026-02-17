@@ -18,9 +18,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/controllers"
-	ctrlref "github.com/kong/kong-operator/ingress-controller/internal/controllers/reference"
-	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers"
+	ctrlref "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/reference"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 )
 
 // -----------------------------------------------------------------------------

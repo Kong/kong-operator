@@ -5,10 +5,10 @@ import (
 
 	"github.com/samber/lo"
 
-	configurationv1beta1 "github.com/kong/kong-operator/api/configuration/v1beta1"
-	"github.com/kong/kong-operator/modules/manager/scheme"
-	"github.com/kong/kong-operator/test/crdsvalidation/common"
-	"github.com/kong/kong-operator/test/envtest"
+	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
+	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/test/crdsvalidation/common"
+	"github.com/kong/kong-operator/v2/test/envtest"
 )
 
 func TestKongUpstreamPolicy(t *testing.T) {

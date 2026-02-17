@@ -22,11 +22,11 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"github.com/kong/kong-operator/controller/pkg/secrets"
-	"github.com/kong/kong-operator/modules/cli"
-	"github.com/kong/kong-operator/modules/manager"
-	"github.com/kong/kong-operator/modules/manager/metadata"
-	"github.com/kong/kong-operator/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/controller/pkg/secrets"
+	"github.com/kong/kong-operator/v2/modules/cli"
+	"github.com/kong/kong-operator/v2/modules/manager"
+	"github.com/kong/kong-operator/v2/modules/manager/metadata"
+	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
 func main() {

@@ -9,7 +9,7 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kong-operator/test/integration"
+	"github.com/kong/kong-operator/v2/test/integration"
 )
 
 type testCaseIngressValidation struct {

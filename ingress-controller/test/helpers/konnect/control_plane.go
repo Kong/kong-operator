@@ -17,12 +17,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/adminapi"
-	"github.com/kong/kong-operator/ingress-controller/internal/konnect/sdk"
-	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
-	"github.com/kong/kong-operator/ingress-controller/test"
-	"github.com/kong/kong-operator/ingress-controller/test/testenv"
-	"github.com/kong/kong-operator/test/helpers/deploy"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/adminapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/konnect/sdk"
+	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/v2/ingress-controller/test"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/testenv"
+	"github.com/kong/kong-operator/v2/test/helpers/deploy"
 )
 
 // CreateTestControlPlane creates a control plane to be used in tests. It returns the created control plane's ID.

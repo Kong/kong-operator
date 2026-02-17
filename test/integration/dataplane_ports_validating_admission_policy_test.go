@@ -10,9 +10,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
-	"github.com/kong/kong-operator/pkg/consts"
-	"github.com/kong/kong-operator/test/helpers"
+	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
+	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/test/helpers"
 )
 
 // TestDataPlanePortsValidatingAdmissionPolicy tests if the validating admission policy

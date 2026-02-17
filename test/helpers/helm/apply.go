@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/rest"
 
-	"github.com/kong/kong-operator/test/helpers/apply"
+	"github.com/kong/kong-operator/v2/test/helpers/apply"
 )
 
 // ApplyTemplate applies templated resources to the cluster using the given rest.Config.

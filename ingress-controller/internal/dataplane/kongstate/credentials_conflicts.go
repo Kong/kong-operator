@@ -5,7 +5,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 )
 
 // CredentialConflictsDetector registers all credentials and detects conflicts globally using indices.

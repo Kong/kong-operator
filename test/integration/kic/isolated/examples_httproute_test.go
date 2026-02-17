@@ -22,16 +22,16 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/features"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
-	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
-	"github.com/kong/kong-operator/ingress-controller/test/annotations"
-	"github.com/kong/kong-operator/ingress-controller/test/dataplane"
-	"github.com/kong/kong-operator/ingress-controller/test/diagnostics"
-	"github.com/kong/kong-operator/ingress-controller/test/gatewayapi"
-	"github.com/kong/kong-operator/ingress-controller/test/testlabels"
-	"github.com/kong/kong-operator/pkg/clientset"
-	"github.com/kong/kong-operator/test/helpers"
-	"github.com/kong/kong-operator/test/integration/kic/consts"
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/annotations"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/dataplane"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/diagnostics"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/testlabels"
+	"github.com/kong/kong-operator/v2/pkg/clientset"
+	"github.com/kong/kong-operator/v2/test/helpers"
+	"github.com/kong/kong-operator/v2/test/integration/kic/consts"
 )
 
 func TestHTTPRouteExample(t *testing.T) {

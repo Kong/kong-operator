@@ -7,8 +7,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgapisautoscalingv2 "k8s.io/kubernetes/pkg/apis/autoscaling/v2"
 
-	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
-	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 // GenerateHPAForDataPlane generate an HPA for the given DataPlane.

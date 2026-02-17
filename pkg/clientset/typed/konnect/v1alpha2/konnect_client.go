@@ -21,8 +21,8 @@ package v1alpha2
 import (
 	http "net/http"
 
-	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
-	scheme "github.com/kong/kong-operator/pkg/clientset/scheme"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	scheme "github.com/kong/kong-operator/v2/pkg/clientset/scheme"
 	rest "k8s.io/client-go/rest"
 )
 

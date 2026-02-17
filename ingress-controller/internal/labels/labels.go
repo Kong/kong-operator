@@ -1,6 +1,6 @@
 package labels
 
-import "github.com/kong/kong-operator/ingress-controller/internal/annotations"
+import "github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
 
 const (
 	// LabelPrefix is the string used at the beginning of KIC-specific labels.

@@ -6,7 +6,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/mitchellh/mapstructure"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/util"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
 )
 
 // redactedString is used to redact sensitive values in the KongState.

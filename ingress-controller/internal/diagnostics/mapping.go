@@ -4,7 +4,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/samber/mo"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/fallback"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/fallback"
 )
 
 // mapFallbackCacheMetadataIntoFallbackResponse maps the generated cache metadata into a FallbackResponse.

@@ -5,8 +5,8 @@ import (
 
 	"github.com/go-logr/logr"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/logging"
-	"github.com/kong/kong-operator/ingress-controller/internal/store"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/logging"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 )
 
 type CacheGraphProvider interface {

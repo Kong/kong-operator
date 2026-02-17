@@ -12,9 +12,9 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	gwtypes "github.com/kong/kong-operator/internal/types"
-	"github.com/kong/kong-operator/internal/utils/index"
-	"github.com/kong/kong-operator/modules/manager/scheme"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/internal/utils/index"
+	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
 func Test_MapGatewayForTLSSecret(t *testing.T) {

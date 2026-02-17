@@ -10,8 +10,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	operatorv2beta1 "github.com/kong/kong-operator/api/gateway-operator/v2beta1"
-	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
+	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 )
 
 // GatewayConfiguration deploys a GatewayConfiguration resource and returns it.

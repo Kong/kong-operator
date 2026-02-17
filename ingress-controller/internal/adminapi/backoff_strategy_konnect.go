@@ -13,7 +13,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/deckerrors"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/deckerrors"
 )
 
 const (

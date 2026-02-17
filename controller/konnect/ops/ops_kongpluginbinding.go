@@ -15,15 +15,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kong-operator/api/common/consts"
-	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
-	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
-	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
-	configurationv1beta1 "github.com/kong/kong-operator/api/configuration/v1beta1"
-	"github.com/kong/kong-operator/controller/konnect/constraints"
-	"github.com/kong/kong-operator/controller/pkg/patch"
-	"github.com/kong/kong-operator/internal/utils/crossnamespace"
-	"github.com/kong/kong-operator/pkg/metadata"
+	"github.com/kong/kong-operator/v2/api/common/consts"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
+	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
+	"github.com/kong/kong-operator/v2/controller/pkg/patch"
+	"github.com/kong/kong-operator/v2/internal/utils/crossnamespace"
+	"github.com/kong/kong-operator/v2/pkg/metadata"
 )
 
 // -----------------------------------------------------------------------------

@@ -7,7 +7,7 @@ import (
 	"github.com/samber/lo"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 
-	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 )
 
 const (

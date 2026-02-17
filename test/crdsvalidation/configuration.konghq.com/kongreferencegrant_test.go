@@ -6,10 +6,10 @@ import (
 	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
-	"github.com/kong/kong-operator/modules/manager/scheme"
-	"github.com/kong/kong-operator/test/crdsvalidation/common"
-	"github.com/kong/kong-operator/test/envtest"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/test/crdsvalidation/common"
+	"github.com/kong/kong-operator/v2/test/envtest"
 )
 
 func TestKongReferenceGrant(t *testing.T) {

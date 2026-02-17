@@ -27,12 +27,12 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	"github.com/kong/kong-operator/ingress-controller/test"
-	"github.com/kong/kong-operator/ingress-controller/test/gatewayapi"
-	"github.com/kong/kong-operator/ingress-controller/test/util"
-	"github.com/kong/kong-operator/ingress-controller/test/util/builder"
-	"github.com/kong/kong-operator/test/helpers"
-	"github.com/kong/kong-operator/test/helpers/certificate"
+	"github.com/kong/kong-operator/v2/ingress-controller/test"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/util"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/util/builder"
+	"github.com/kong/kong-operator/v2/test/helpers"
+	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 )
 
 var tlsMutex = sync.Mutex{}

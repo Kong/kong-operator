@@ -6,8 +6,8 @@ var supportedKonnectTypesWithControlPlaneRef = []supportedTypesT{
 	{
 		PackageVersion: "v1alpha1",
 		AdditionalImports: []string{
-			`commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"`,
-			`konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"`,
+			`commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"`,
+			`konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"`,
 		},
 		Types: []templateDataT{
 			{
@@ -23,7 +23,7 @@ var supportedKonnectTypesWithControlPlaneRef = []supportedTypesT{
 	{
 		PackageVersion: "v1alpha2",
 		AdditionalImports: []string{
-			`commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"`,
+			`commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"`,
 		},
 		Types: []templateDataT{
 			{
@@ -40,8 +40,8 @@ var supportedKonnectTypesWithControlPlaneConfig = []supportedTypesT{
 	{
 		PackageVersion: "v1",
 		AdditionalImports: []string{
-			`commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"`,
-			`konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"`,
+			`commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"`,
+			`konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"`,
 		},
 		Types: []templateDataT{
 			{
@@ -58,8 +58,8 @@ var supportedKonnectTypesWithControlPlaneConfig = []supportedTypesT{
 	{
 		PackageVersion: "v1beta1",
 		AdditionalImports: []string{
-			`commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"`,
-			`konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"`,
+			`commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"`,
+			`konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"`,
 		},
 		Types: []templateDataT{
 			{
@@ -73,8 +73,8 @@ var supportedKonnectTypesWithControlPlaneConfig = []supportedTypesT{
 	{
 		PackageVersion: "v1alpha1",
 		AdditionalImports: []string{
-			`commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"`,
-			`konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"`,
+			`commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"`,
+			`konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"`,
 		},
 		Types: []templateDataT{
 			{
@@ -186,7 +186,7 @@ var supportedKonnectTypesStandalone = []supportedTypesT{
 	{
 		PackageVersion: "v1alpha1",
 		AdditionalImports: []string{
-			`konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"`,
+			`konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"`,
 		},
 		Types: []templateDataT{
 			{
@@ -223,7 +223,7 @@ var supportedKonnectV1Alpha1TypesWithNetworkRef = []supportedTypesT{
 	{
 		PackageVersion: "v1alpha1",
 		AdditionalImports: []string{
-			`konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"`,
+			`konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"`,
 		},
 		Types: []templateDataT{
 			{

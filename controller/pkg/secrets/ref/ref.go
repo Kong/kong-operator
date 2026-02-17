@@ -13,7 +13,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 // ReferenceGrantForSecretFrom returns a predicate function that checks if the

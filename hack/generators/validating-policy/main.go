@@ -6,7 +6,7 @@ import (
 
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/kubectl"
 
-	"github.com/kong/kong-operator/test/helpers/kcfg"
+	"github.com/kong/kong-operator/v2/test/helpers/kcfg"
 )
 
 // Generates CRDs for Helm Chart charts/kong-operator/templates/validating-policy-dataplane.yaml.

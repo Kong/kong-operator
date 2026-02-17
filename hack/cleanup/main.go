@@ -31,7 +31,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
 	"go.uber.org/zap"
 
-	"github.com/kong/kong-operator/test"
+	"github.com/kong/kong-operator/v2/test"
 )
 
 const (

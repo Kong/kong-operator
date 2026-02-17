@@ -10,12 +10,12 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 
-	operatorv2beta1 "github.com/kong/kong-operator/api/gateway-operator/v2beta1"
-	"github.com/kong/kong-operator/controller/pkg/log"
-	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
-	telemetryTypes "github.com/kong/kong-operator/ingress-controller/pkg/telemetry/types"
-	gwtypes "github.com/kong/kong-operator/internal/types"
-	"github.com/kong/kong-operator/pkg/vars"
+	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
+	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
+	telemetryTypes "github.com/kong/kong-operator/v2/ingress-controller/pkg/telemetry/types"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/pkg/vars"
 )
 
 // WithRestConfig sets the REST configuration for the manager, but when a kubeConfigPath is provided,

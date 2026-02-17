@@ -15,13 +15,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned/typed/apis/v1"
 
-	"github.com/kong/kong-operator/modules/manager"
-	"github.com/kong/kong-operator/modules/manager/metadata"
-	"github.com/kong/kong-operator/modules/manager/scheme"
-	testutils "github.com/kong/kong-operator/pkg/utils/test"
-	"github.com/kong/kong-operator/test"
-	"github.com/kong/kong-operator/test/helpers"
-	"github.com/kong/kong-operator/test/helpers/kcfg"
+	"github.com/kong/kong-operator/v2/modules/manager"
+	"github.com/kong/kong-operator/v2/modules/manager/metadata"
+	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
+	"github.com/kong/kong-operator/v2/test"
+	"github.com/kong/kong-operator/v2/test/helpers"
+	"github.com/kong/kong-operator/v2/test/helpers/kcfg"
 )
 
 // -----------------------------------------------------------------------------

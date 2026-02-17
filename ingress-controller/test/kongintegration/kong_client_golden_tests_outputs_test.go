@@ -23,12 +23,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/yaml"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/adminapi"
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/sendconfig"
-	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers/konnect"
-	"github.com/kong/kong-operator/ingress-controller/test/kongintegration/containers"
-	"github.com/kong/kong-operator/ingress-controller/test/testenv"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/adminapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/sendconfig"
+	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/helpers/konnect"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/kongintegration/containers"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/testenv"
 )
 
 const (

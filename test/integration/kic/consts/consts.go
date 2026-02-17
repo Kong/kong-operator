@@ -3,7 +3,7 @@ package consts
 import (
 	"time"
 
-	testconsts "github.com/kong/kong-operator/ingress-controller/test/consts"
+	testconsts "github.com/kong/kong-operator/v2/ingress-controller/test/consts"
 )
 
 const (

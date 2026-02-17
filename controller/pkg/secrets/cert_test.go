@@ -25,11 +25,11 @@ import (
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	ctrlruntimelog "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
-	"github.com/kong/kong-operator/controller/pkg/log"
-	"github.com/kong/kong-operator/controller/pkg/op"
-	k8sresources "github.com/kong/kong-operator/pkg/utils/kubernetes/resources"
-	"github.com/kong/kong-operator/test/helpers/certificate"
+	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
+	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	"github.com/kong/kong-operator/v2/controller/pkg/op"
+	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
+	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 )
 
 func Test_ensureContainerImageUpdated(t *testing.T) {

@@ -10,10 +10,10 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
-	"github.com/kong/kong-operator/ingress-controller/internal/manager/consts"
-	"github.com/kong/kong-operator/ingress-controller/internal/util/kubernetes/object/status"
-	"github.com/kong/kong-operator/ingress-controller/pkg/telemetry/types"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/manager/consts"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/kubernetes/object/status"
+	"github.com/kong/kong-operator/v2/ingress-controller/pkg/telemetry/types"
 )
 
 // Hash computes a hash of the given config.

@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/konnect/nodes"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/konnect/nodes"
 )
 
 // mockNodeClient is a mock implementation of the NodeClient interface.

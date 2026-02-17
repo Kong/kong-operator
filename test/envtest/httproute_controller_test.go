@@ -20,11 +20,11 @@ import (
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/kong/kong-operator/ingress-controller/test/controllers/gateway"
-	"github.com/kong/kong-operator/ingress-controller/test/gatewayapi"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers"
-	"github.com/kong/kong-operator/ingress-controller/test/mocks"
-	"github.com/kong/kong-operator/ingress-controller/test/util/builder"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/controllers/gateway"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/helpers"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/mocks"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/util/builder"
 )
 
 const (

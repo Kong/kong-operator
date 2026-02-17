@@ -8,8 +8,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	ctrlref "github.com/kong/kong-operator/ingress-controller/internal/controllers/reference"
-	"github.com/kong/kong-operator/ingress-controller/internal/labels"
+	ctrlref "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/reference"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/labels"
 )
 
 func TestCoreV1SecretReconciler_shouldReconcileSecret(t *testing.T) {

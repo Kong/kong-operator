@@ -43,16 +43,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	"github.com/kong/kong-operator/controller/pkg/secrets"
-	"github.com/kong/kong-operator/ingress-controller/pkg/manager/multiinstance"
-	"github.com/kong/kong-operator/ingress-controller/pkg/validation"
-	"github.com/kong/kong-operator/internal/telemetry"
-	"github.com/kong/kong-operator/internal/webhook/conversion"
-	"github.com/kong/kong-operator/modules/diagnostics"
-	mgrconfig "github.com/kong/kong-operator/modules/manager/config"
-	"github.com/kong/kong-operator/modules/manager/logging"
-	"github.com/kong/kong-operator/modules/manager/metadata"
-	"github.com/kong/kong-operator/pkg/vars"
+	"github.com/kong/kong-operator/v2/controller/pkg/secrets"
+	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/multiinstance"
+	"github.com/kong/kong-operator/v2/ingress-controller/pkg/validation"
+	"github.com/kong/kong-operator/v2/internal/telemetry"
+	"github.com/kong/kong-operator/v2/internal/webhook/conversion"
+	"github.com/kong/kong-operator/v2/modules/diagnostics"
+	mgrconfig "github.com/kong/kong-operator/v2/modules/manager/config"
+	"github.com/kong/kong-operator/v2/modules/manager/logging"
+	"github.com/kong/kong-operator/v2/modules/manager/metadata"
+	"github.com/kong/kong-operator/v2/pkg/vars"
 )
 
 // Config represents the configuration for the manager.

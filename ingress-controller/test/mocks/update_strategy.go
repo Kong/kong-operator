@@ -5,8 +5,8 @@ import (
 
 	"github.com/samber/mo"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/sendconfig"
-	"github.com/kong/kong-operator/ingress-controller/internal/metrics"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/sendconfig"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/metrics"
 )
 
 // UpdateStrategy is a mock implementation of sendconfig.UpdateStrategy.

@@ -27,9 +27,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/config"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	"github.com/kong/kong-operator/ingress-controller/test/adminapi"
-	"github.com/kong/kong-operator/ingress-controller/test/controllers/configuration"
-	"github.com/kong/kong-operator/ingress-controller/test/util/builder"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/adminapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/controllers/configuration"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/util/builder"
 )
 
 type notifier struct {

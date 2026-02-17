@@ -7,7 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	routeconst "github.com/kong/kong-operator/controller/hybridgateway/const/route"
+	routeconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/route"
 )
 
 func TestGetProgrammedConditionForGVK(t *testing.T) {

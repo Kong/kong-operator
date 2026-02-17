@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kong-operator/ingress-controller/pkg/telemetry/types"
+	"github.com/kong/kong-operator/v2/ingress-controller/pkg/telemetry/types"
 )
 
 func Test_DefaultPayloadCustomizer_WithCustomHostnameRetriever(t *testing.T) {

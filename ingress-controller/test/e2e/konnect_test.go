@@ -20,11 +20,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/adminapi"
-	"github.com/kong/kong-operator/ingress-controller/internal/konnect"
-	"github.com/kong/kong-operator/ingress-controller/internal/konnect/nodes"
-	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
-	testkonnect "github.com/kong/kong-operator/ingress-controller/test/helpers/konnect"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/adminapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/konnect"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/konnect/nodes"
+	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
+	testkonnect "github.com/kong/kong-operator/v2/ingress-controller/test/helpers/konnect"
 )
 
 const (

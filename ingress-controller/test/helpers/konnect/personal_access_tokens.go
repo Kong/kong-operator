@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/konnect/sdk"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/konnect/sdk"
 )
 
 // CreateTestPersonalAccessToken creates a personal access token for the user

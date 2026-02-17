@@ -5,8 +5,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
-	gwtypes "github.com/kong/kong-operator/internal/types"
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 const (

@@ -13,13 +13,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	eventconst "github.com/kong/kong-operator/controller/hybridgateway/const/events"
-	finalizerconst "github.com/kong/kong-operator/controller/hybridgateway/const/finalizers"
-	"github.com/kong/kong-operator/controller/hybridgateway/converter"
-	"github.com/kong/kong-operator/controller/hybridgateway/events"
-	"github.com/kong/kong-operator/controller/hybridgateway/watch"
-	"github.com/kong/kong-operator/controller/pkg/finalizer"
-	"github.com/kong/kong-operator/controller/pkg/log"
+	eventconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/events"
+	finalizerconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/finalizers"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/converter"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/events"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/watch"
+	"github.com/kong/kong-operator/v2/controller/pkg/finalizer"
+	"github.com/kong/kong-operator/v2/controller/pkg/log"
 )
 
 const (

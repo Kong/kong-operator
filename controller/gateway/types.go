@@ -1,7 +1,7 @@
 package gateway
 
 import (
-	gwtypes "github.com/kong/kong-operator/internal/types"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // Aliases below allow to easily switch between different versions of the GatewayConfiguration API.

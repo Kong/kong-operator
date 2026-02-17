@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/kong/kong-operator/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
 // TODO https://github.com/Kong/kubernetes-testing-framework/issues/302

@@ -9,7 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	gwtypes "github.com/kong/kong-operator/internal/types"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func TestOptionsForGateway(t *testing.T) {

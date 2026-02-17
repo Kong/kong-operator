@@ -9,7 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kong-operator/test/helpers/certificate"
+	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 )
 
 // SetupControllerOperatorResources sets up the controller namespace and CA secret that are required

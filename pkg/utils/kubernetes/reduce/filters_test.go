@@ -13,7 +13,7 @@ import (
 	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 )
 
 func TestFilterSecrets(t *testing.T) {

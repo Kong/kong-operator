@@ -8,9 +8,9 @@ import (
 
 	"github.com/go-logr/logr"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/admission"
-	"github.com/kong/kong-operator/ingress-controller/pkg/manager"
-	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/admission"
+	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager"
+	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
 )
 
 const (

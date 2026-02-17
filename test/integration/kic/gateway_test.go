@@ -20,14 +20,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	"github.com/kong/kong-operator/ingress-controller/test"
-	"github.com/kong/kong-operator/ingress-controller/test/annotations"
-	gatewayapi "github.com/kong/kong-operator/ingress-controller/test/gatewayapi"
-	"github.com/kong/kong-operator/ingress-controller/test/util"
-	"github.com/kong/kong-operator/ingress-controller/test/util/builder"
-	"github.com/kong/kong-operator/test/helpers"
-	"github.com/kong/kong-operator/test/helpers/certificate"
-	"github.com/kong/kong-operator/test/integration/kic/consts"
+	"github.com/kong/kong-operator/v2/ingress-controller/test"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/annotations"
+	gatewayapi "github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/util"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/util/builder"
+	"github.com/kong/kong-operator/v2/test/helpers"
+	"github.com/kong/kong-operator/v2/test/helpers/certificate"
+	"github.com/kong/kong-operator/v2/test/integration/kic/consts"
 )
 
 const (

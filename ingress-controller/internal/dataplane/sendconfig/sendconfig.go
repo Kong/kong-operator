@@ -10,12 +10,12 @@ import (
 	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/kong/go-kong/kong"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/deckgen"
-	"github.com/kong/kong-operator/ingress-controller/internal/diagnostics"
-	"github.com/kong/kong-operator/ingress-controller/internal/logging"
-	"github.com/kong/kong-operator/ingress-controller/internal/metrics"
-	"github.com/kong/kong-operator/ingress-controller/internal/store"
-	"github.com/kong/kong-operator/ingress-controller/internal/util"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/deckgen"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/diagnostics"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/logging"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/metrics"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
 )
 
 // -----------------------------------------------------------------------------

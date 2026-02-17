@@ -19,12 +19,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
-	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
-	"github.com/kong/kong-operator/controller/konnect"
-	"github.com/kong/kong-operator/controller/konnect/ops"
-	"github.com/kong/kong-operator/test/helpers/deploy"
-	"github.com/kong/kong-operator/test/mocks/sdkmocks"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	"github.com/kong/kong-operator/v2/controller/konnect"
+	"github.com/kong/kong-operator/v2/controller/konnect/ops"
+	"github.com/kong/kong-operator/v2/test/helpers/deploy"
+	"github.com/kong/kong-operator/v2/test/mocks/sdkmocks"
 )
 
 var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{

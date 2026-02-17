@@ -12,10 +12,10 @@ import (
 
 	"github.com/samber/lo"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/konnect/tracing"
-	"github.com/kong/kong-operator/ingress-controller/internal/konnect/useragent"
-	tlsutil "github.com/kong/kong-operator/ingress-controller/internal/util/tls"
-	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/konnect/tracing"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/konnect/useragent"
+	tlsutil "github.com/kong/kong-operator/v2/ingress-controller/internal/util/tls"
+	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
 )
 
 // Client is used for sending requests to Konnect Node API.
