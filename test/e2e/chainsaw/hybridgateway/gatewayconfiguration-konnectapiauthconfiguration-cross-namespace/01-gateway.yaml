@@ -1,0 +1,21 @@
+---
+# Apply Gateway with HTTP listener only.
+# This test focuses on cross-namespace KonnectAPIAuthConfiguration references,
+# not TLS, so only an HTTP listener is needed.
+#
+# Required bindings:
+#   - gateway_name: Name of the Gateway.
+#   - namespace: Namespace where the Gateway will be created.
+#   - test_name: Test name used to compose the GatewayClass name.
+#   - listener_http_port: HTTP listener port.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: ($gateway_name)
+  namespace: ($namespace)
+spec:
+  gatewayClassName: (join('-', [($test_name), 'gateway-class']))
+  listeners:
+  - name: http
+    protocol: HTTP
+    port: ($listener_http_port)

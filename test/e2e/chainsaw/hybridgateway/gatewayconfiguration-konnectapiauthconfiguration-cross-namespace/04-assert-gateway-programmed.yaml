@@ -1,0 +1,30 @@
+---
+# Assert Gateway is fully programmed after KongReferenceGrant creation.
+#
+# Required bindings:
+#   - gateway_name: Name of the Gateway.
+#   - gateway_namespace: Namespace of the Gateway.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: ($gateway_name)
+  namespace: ($gateway_namespace)
+status:
+  (conditions[?type == 'Accepted']):
+    - status: 'True'
+      reason: Accepted
+  (conditions[?type == 'Programmed']):
+    - status: 'True'
+      reason: Programmed
+  (conditions[?type == 'DataPlaneReady']):
+    - status: 'True'
+      reason: Ready
+  (conditions[?type == 'KonnectGatewayControlPlaneProgrammed']):
+    - status: 'True'
+      reason: Programmed
+  (conditions[?type == 'KonnectExtensionReady']):
+    - status: 'True'
+      reason: Ready
+  (conditions[?type == 'GatewayService']):
+    - status: 'True'
+      reason: Ready

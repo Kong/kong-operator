@@ -17,6 +17,8 @@ spec:
       value: ($namespace)
     - name: konnect_api_auth_name
       value: konnect-api-auth-dev-1
+    - name: konnect_api_auth_namespace
+      value: ($namespace)
     - name: konnect_token
       value: (env('KONNECT_TOKEN'))
     - name: konnect_url
