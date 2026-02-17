@@ -55,6 +55,9 @@
   not reject admission if another gateway exposes the plugin. Avoids false rejections
   when plugin bundles differ across gateways.
   [#3754](https://github.com/Kong/kong-operator/pull/3754) [#3835](https://github.com/Kong/kong-operator/pull/3835)
+- Fix `ResolvedRefs` status condition on `HTTPRoute` not being updated when a
+  referenced `KongPlugin` is deleted in self-managed ControlPlane mode.
+  [#3206](https://github.com/Kong/kong-operator/pull/3206)
 
 ## [v2.1.3]
 

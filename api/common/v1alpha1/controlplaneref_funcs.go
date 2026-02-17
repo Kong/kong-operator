@@ -8,6 +8,9 @@ import (
 func (r ControlPlaneRef) String() string {
 	switch r.Type {
 	case ControlPlaneRefKonnectNamespacedRef:
+		if r.KonnectNamespacedRef == nil {
+			return fmt.Sprintf("<%s:nil>", r.Type)
+		}
 		if r.KonnectNamespacedRef.Namespace == "" {
 			return fmt.Sprintf("<%s:%s>", r.Type, r.KonnectNamespacedRef.Name)
 		}
