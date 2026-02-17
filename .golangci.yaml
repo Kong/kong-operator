@@ -85,9 +85,6 @@ linters:
       default-signifies-exhaustive: true
     forbidigo:
       forbid:
-        # Uncomment or remove - TODO: https://github.com/Kong/kong-operator/issues/1847
-        # - pattern: ^.*Dataplane[^G].*$
-        #   msg: Please use camel case 'DataPlane' instead of 'Dataplane'
         - pattern: ^.*Controlplane.*$
           msg: Please use camel case 'ControlPlane' instead of 'Controlplane'
         - pattern: ^.*operatorv1beta1.ControlPlane.*$
@@ -208,7 +205,6 @@ linters:
           - gosec
         path: .*_test\.go
         text: Use of weak random number generator
-      # Remove/adjust whole section - TODO: https://github.com/Kong/kong-operator/issues/1847
       - linters:
           - gosec
         path: .*_test\.go
