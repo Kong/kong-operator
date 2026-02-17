@@ -101,8 +101,16 @@ func parentRefsForRoute[T gatewayapi.RouteT](route T) ([]gatewayapi.ParentRefere
 		return nil, fmt.Errorf("can't determine parent Gateway for unsupported route type %s", reflect.TypeOf(route))
 	}
 	for _, ref := range refs {
-		if string(*ref.Group) != gatewayv1.GroupName || string(*ref.Kind) != "Gateway" {
-			return nil, fmt.Errorf("unsupported parent kind %s/%s", string(*ref.Group), string(*ref.Kind))
+		group := gatewayv1.GroupName
+		if ref.Group != nil && *ref.Group != "" {
+			group = string(*ref.Group)
+		}
+		kind := "Gateway"
+		if ref.Kind != nil && *ref.Kind != "" {
+			kind = string(*ref.Kind)
+		}
+		if group != gatewayv1.GroupName || kind != "Gateway" {
+			return nil, fmt.Errorf("unsupported parent kind %s/%s", group, kind)
 		}
 	}
 
@@ -129,7 +137,7 @@ func parentRefsForRoute[T gatewayapi.RouteT](route T) ([]gatewayapi.ParentRefere
 //
 // There is a parameter `specifiedGW` here, which is used to specific the gateway.
 func getSupportedGatewayForRoute[T gatewayapi.RouteT](
-	ctx context.Context, logger logr.Logger, mgrc client.Client, route T, specifiedGW controllers.OptionalNamespacedName,
+	ctx context.Context, logger logr.Logger, mgrc client.Reader, route T, specifiedGW controllers.OptionalNamespacedName,
 ) ([]supportedGatewayWithCondition, error) {
 	// gather the parentrefs for this route object
 	parentRefs, err := parentRefsForRoute(route)
@@ -430,7 +438,7 @@ func routeTypeMatchesListenerType[T gatewayapi.RouteT](route T, listener gateway
 // criteria defined in listener's AllowedRoutes field.
 func routeMatchesListenerAllowedRoutes[T gatewayapi.RouteT](
 	ctx context.Context,
-	mgrc client.Client,
+	mgrc client.Reader,
 	route T,
 	listener gatewayapi.Listener,
 	gatewayNamespace string,

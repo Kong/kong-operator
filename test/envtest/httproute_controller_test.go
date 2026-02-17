@@ -38,7 +38,7 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 	// We use a deferred cancel to stop the manager and not wait for its timeout.
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
-	scheme := Scheme(t, WithGatewayAPI)
+	scheme := Scheme(t, WithGatewayAPI, WithKong)
 	cfg, _ := Setup(t, ctx, scheme)
 	client := NewControllerClient(t, scheme, cfg)
 
@@ -185,16 +185,17 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 		Namespace: route.GetNamespace(),
 		Name:      route.GetName(),
 	}
+	containsInitial := helpers.HTTPRouteEventuallyContainsConditions(ctx, t, client, nn,
+		metav1.Condition{
+			Type:   "ResolvedRefs",
+			Status: "False",
+			Reason: "RefNotPermitted",
+		},
+	)
 
 	t.Logf("verifying that HTTPRoute has ResolvedRefs set to Status False and Reason RefNotPermitted")
 	if !assert.Eventually(t,
-		helpers.HTTPRouteEventuallyContainsConditions(ctx, t, client, nn,
-			metav1.Condition{
-				Type:   "ResolvedRefs",
-				Status: "False",
-				Reason: "RefNotPermitted",
-			},
-		),
+		containsInitial,
 		waitDuration, tickDuration,
 	) {
 		t.Fatal(printHTTPRoutesConditions(ctx, client, nn))
@@ -223,25 +224,26 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 	}
 	require.NoError(t, client.Create(ctx, &rg))
 	t.Logf("verifying that HTTPRoute gets accepted by HTTPRouteReconciler after relevant ReferenceGrant gets created")
+	containsAccepted := helpers.HTTPRouteEventuallyContainsConditions(ctx, t, client, nn,
+		metav1.Condition{
+			Type:   "ResolvedRefs",
+			Status: "True",
+			Reason: "ResolvedRefs",
+		},
+		metav1.Condition{
+			Type:   "Accepted",
+			Status: "True",
+			Reason: "Accepted",
+		},
+		// Programmed condition requires a bit more work with mocks.
+		// It's set only when KubernetesObjectReports are enabled in the underlying
+		// dataplane client and then it relies on what's returned by
+		// dataplane client in KubernetesObjectConfigurationStatus().
+		// This can be done but it's not the main focus of this test.
+		// Related: https://github.com/Kong/kubernetes-ingress-controller/issues/3793
+	)
 	if !assert.Eventually(t,
-		helpers.HTTPRouteEventuallyContainsConditions(ctx, t, client, nn,
-			metav1.Condition{
-				Type:   "ResolvedRefs",
-				Status: "True",
-				Reason: "ResolvedRefs",
-			},
-			metav1.Condition{
-				Type:   "Accepted",
-				Status: "True",
-				Reason: "Accepted",
-			},
-			// Programmed condition requires a bit more work with mocks.
-			// It's set only when KubernetesObjectReports are enabled in the underlying
-			// dataplane client and then it relies on what's returned by
-			// dataplane client in KubernetesObjectConfigurationStatus().
-			// This can be done but it's not the main focus of this test.
-			// Related: https://github.com/Kong/kubernetes-ingress-controller/issues/3793
-		),
+		containsAccepted,
 		waitDuration, tickDuration,
 	) {
 		t.Fatal(printHTTPRoutesConditions(ctx, client, nn))
@@ -249,15 +251,16 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 
 	require.NoError(t, client.Delete(ctx, &rg))
 	t.Logf("verifying that HTTPRoute gets its ResolvedRefs condition to Status False and Reason RefNotPermitted when relevant ReferenceGrant gets deleted")
+	containsDeleted := helpers.HTTPRouteEventuallyContainsConditions(ctx, t, client, nn,
+		metav1.Condition{
+			Type:   "ResolvedRefs",
+			Status: "False",
+			Reason: "RefNotPermitted",
+		},
+	)
 
 	if !assert.Eventually(t,
-		helpers.HTTPRouteEventuallyContainsConditions(ctx, t, client, nn,
-			metav1.Condition{
-				Type:   "ResolvedRefs",
-				Status: "False",
-				Reason: "RefNotPermitted",
-			},
-		),
+		containsDeleted,
 		waitDuration, tickDuration,
 	) {
 		t.Fatal(printHTTPRoutesConditions(ctx, client, nn))
@@ -270,7 +273,7 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 	// We use a deferred cancel to stop the manager and not wait for its timeout.
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
-	scheme := Scheme(t, WithGatewayAPI)
+	scheme := Scheme(t, WithGatewayAPI, WithKong)
 	cfg, _ := Setup(t, ctx, scheme)
 	client := NewControllerClient(t, scheme, cfg)
 
@@ -462,14 +465,12 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 				t.Logf("failed to get HTTPRoute %s: %v", ctrlclient.ObjectKeyFromObject(&route), err)
 				return false
 			}
-			route.Spec.ParentRefs = nil
-			if err := client.Status().Update(ctx, &route); err != nil {
-				t.Logf("failed to update HTTPRoute %s: %v", ctrlclient.ObjectKeyFromObject(&route), err)
-				return false
-			}
-
-			if err := client.Get(ctx, ctrlclient.ObjectKeyFromObject(&route), &route); err != nil {
-				t.Logf("failed to get HTTPRoute %s: %v", ctrlclient.ObjectKeyFromObject(&route), err)
+			if route.Spec.ParentRefs != nil {
+				route.Spec.ParentRefs = nil
+				if err := client.Update(ctx, &route); err != nil {
+					t.Logf("failed to update HTTPRoute %s (will retry): %v", ctrlclient.ObjectKeyFromObject(&route), err)
+					return false
+				}
 				return false
 			}
 
