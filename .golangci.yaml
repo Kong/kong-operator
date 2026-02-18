@@ -217,6 +217,26 @@ linters:
         text: Potential HTTP request made with variable url
       - linters:
           - gosec
+        path: .*_test\.go
+        text: SSRF via taint analysis
+      - linters:
+          - gosec
+        path: test/.*\.go|hack/.*\.go
+        text: Command injection via taint analysis
+      - linters:
+          - gosec
+        text: Exported struct field
+      - linters:
+          - gosec
+        text: SSRF via taint analysis
+      - linters:
+          - gosec
+        text: Path traversal via taint analysis
+      - linters:
+          - gosec
+        text: XSS via taint analysis
+      - linters:
+          - gosec
         text: integer overflow conversion
       - linters:
           - forbidigo
