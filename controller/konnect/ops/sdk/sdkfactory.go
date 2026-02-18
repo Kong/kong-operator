@@ -18,20 +18,20 @@ type SDKWrapper interface {
 	GetPluginSDK() sdkkonnectgo.PluginsSDK
 	GetUpstreamsSDK() sdkkonnectgo.UpstreamsSDK
 	GetTargetsSDK() sdkkonnectgo.TargetsSDK
-	GetVaultSDK() VaultSDK
-	GetMeSDK() MeSDK
+	GetVaultSDK() sdkkonnectgo.VaultsSDK
+	GetMeSDK() sdkkonnectgo.MeSDK
 	GetBasicAuthCredentialsSDK() sdkkonnectgo.BasicAuthCredentialsSDK
 	GetAPIKeyCredentialsSDK() sdkkonnectgo.APIKeysSDK
 	GetACLCredentialsSDK() sdkkonnectgo.ACLsSDK
 	GetJWTCredentialsSDK() sdkkonnectgo.JWTsSDK
 	GetHMACCredentialsSDK() sdkkonnectgo.HMACAuthCredentialsSDK
-	GetCACertificatesSDK() CACertificatesSDK
-	GetCertificatesSDK() CertificatesSDK
+	GetCACertificatesSDK() sdkkonnectgo.CACertificatesSDK
+	GetCertificatesSDK() sdkkonnectgo.CertificatesSDK
 	GetKeysSDK() sdkkonnectgo.KeysSDK
 	GetKeySetsSDK() sdkkonnectgo.KeySetsSDK
-	GetSNIsSDK() SNIsSDK
-	GetDataPlaneCertificatesSDK() DataPlaneClientCertificatesSDK
-	GetCloudGatewaysSDK() CloudGatewaysSDK
+	GetSNIsSDK() sdkkonnectgo.SNIsSDK
+	GetDataPlaneCertificatesSDK() sdkkonnectgo.DPCertificatesSDK
+	GetCloudGatewaysSDK() sdkkonnectgo.CloudGatewaysSDK
 
 	// GetServerURL returns the server URL for recording metrics.
 	GetServerURL() string
@@ -101,27 +101,27 @@ func (w sdkWrapper) GetTargetsSDK() sdkkonnectgo.TargetsSDK {
 }
 
 // GetVaultSDK returns the SDK to operate Vaults.
-func (w sdkWrapper) GetVaultSDK() VaultSDK {
+func (w sdkWrapper) GetVaultSDK() sdkkonnectgo.VaultsSDK {
 	return w.sdk.Vaults
 }
 
 // GetMeSDK returns the "me" SDK to get current organization.
-func (w sdkWrapper) GetMeSDK() MeSDK {
+func (w sdkWrapper) GetMeSDK() sdkkonnectgo.MeSDK {
 	return w.sdk.Me
 }
 
 // GetCACertificatesSDK returns the SDK to operate CA certificates.
-func (w sdkWrapper) GetCACertificatesSDK() CACertificatesSDK {
+func (w sdkWrapper) GetCACertificatesSDK() sdkkonnectgo.CACertificatesSDK {
 	return w.sdk.CACertificates
 }
 
 // GetCertificatesSDK returns the SDK to operate certificates.
-func (w sdkWrapper) GetCertificatesSDK() CertificatesSDK {
+func (w sdkWrapper) GetCertificatesSDK() sdkkonnectgo.CertificatesSDK {
 	return w.sdk.Certificates
 }
 
 // GetSNIsSDK returns the SDK to operate SNIs.
-func (w sdkWrapper) GetSNIsSDK() SNIsSDK {
+func (w sdkWrapper) GetSNIsSDK() sdkkonnectgo.SNIsSDK {
 	return w.sdk.SNIs
 }
 
@@ -161,12 +161,12 @@ func (w sdkWrapper) GetKeySetsSDK() sdkkonnectgo.KeySetsSDK {
 }
 
 // GetDataPlaneCertificatesSDK returns the SDK to operate data plane certificates.
-func (w sdkWrapper) GetDataPlaneCertificatesSDK() DataPlaneClientCertificatesSDK {
+func (w sdkWrapper) GetDataPlaneCertificatesSDK() sdkkonnectgo.DPCertificatesSDK {
 	return w.sdk.DPCertificates
 }
 
 // GetCloudGatewaysSDK returns the SDK to operate Konnect Dedicated Cloud Gateways SDK.
-func (w sdkWrapper) GetCloudGatewaysSDK() CloudGatewaysSDK {
+func (w sdkWrapper) GetCloudGatewaysSDK() sdkkonnectgo.CloudGatewaysSDK {
 	return w.sdk.CloudGateways
 }
 
