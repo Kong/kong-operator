@@ -10,7 +10,6 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/avast/retry-go/v4"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/konnect/sdk"
@@ -77,18 +76,20 @@ func CreateTestPersonalAccessToken(ctx context.Context, t *testing.T) string {
 	require.NoError(t, createServiceAccountToken)
 
 	t.Cleanup(func() {
-		ctx = context.Background()
-		t.Logf("deleting test Konnect Personal Access Token: %q", tokenID)
+		fmt.Printf("deleting test Konnect Personal Access Token: %q", tokenID)
 		err := retry.Do(
 			func() error { //nolint:contextcheck
 				_, err := s.PersonalAccessTokens.DeletePersonalAccessToken(ctx, *me.User.ID, tokenID)
 				return err
 			},
-			retry.Attempts(5), retry.Delay(time.Second),
+			retry.Attempts(5),
+			retry.Delay(time.Second),
 		)
-		assert.NoErrorf(t, err, "failed to cleanup a personal access token: %q", tokenID)
-
-		// Since Konnect authorization v2 supports cleanup of roles after control plane deleted, we do not need to delete them manually.
+		if err != nil {
+			// Don't fail the test if cleanup fails, just log the error.
+			// Cleanup job will eventually clean up konnect.
+			fmt.Printf("failed to delete test Konnect Personal Access Token %q: %v", tokenID, err)
+		}
 	})
 
 	t.Logf("created test Konnect Personal Access Token: %q (ID:%q)", tokenName, tokenID)

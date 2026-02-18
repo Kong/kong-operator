@@ -14,7 +14,6 @@ import (
 	"github.com/avast/retry-go/v4"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/adminapi"
@@ -82,18 +81,25 @@ func CreateTestControlPlane(ctx context.Context, t *testing.T, token ...string) 
 	require.NoError(t, createRgErr)
 
 	t.Cleanup(func() {
-		ctx = context.Background()
-		t.Logf("deleting test Konnect Control Plane: %q", cpID)
+		fmt.Printf("deleting test Konnect Control Plane: %q", cpID)
 		err := retry.Do(
-			func() error { //nolint:contextcheck
-				_, err := s.ControlPlanes.DeleteControlPlane(context.Background(), cpID)
+			func() error {
+				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+				defer cancel()
+				_, err := s.ControlPlanes.DeleteControlPlane(ctx, cpID)
 				return err
 			},
-			retry.Attempts(5), retry.Delay(time.Second),
+			retry.Attempts(5),
+			retry.Delay(time.Second),
 		)
-		assert.NoErrorf(t, err, "failed to cleanup a control plane: %q", cpID)
+		if err != nil {
+			// Don't fail the test if cleanup fails, just log the error.
+			// Cleanup job will eventually clean up the control plane.
+			fmt.Printf("failed to delete control plane %q: %v", cpID, err)
+		}
 
-		// Since Konnect authorization v2 supports cleanup of roles after control plane deleted, we do not need to delete them manually.
+		// Since Konnect authorization v2 supports cleanup of roles after control plane deleted,
+		// we do not need to delete them manually.
 	})
 
 	t.Logf("created test Konnect Control Plane: %q", cpID)
