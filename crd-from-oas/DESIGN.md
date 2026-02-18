@@ -38,30 +38,46 @@ OpenAPI Spec (YAML)
 
 ## Configuration
 
-The tool is configured entirely through environment variables:
+The tool uses a combination of environment variables and a YAML configuration file.
 
-| Variable      | Required                     | Description                                                                                          |
-|---------------|------------------------------|------------------------------------------------------------------------------------------------------|
-| `INPUT_FILE`  | No (default: `openapi.yaml`) | Path to the OpenAPI spec file.                                                                       |
-| `OUTPUT_DIR`  | No (default: `api/`)         | Base output directory for generated files.                                                           |
-| `API_GROUP`   | Yes                          | Kubernetes API group (e.g., `konnect.konghq.com`).                                                   |
-| `API_VERSION` | Yes                          | API version (e.g., `v1alpha1`).                                                                      |
-| `PATHS`       | Yes                          | Comma-separated list of OpenAPI paths to process (e.g., `/v3/portals,/v3/portals/{portalId}/teams`). |
-| `CONFIG_FILE` | No                           | Path to a YAML file with custom field validations.                                                   |
+### Environment Variables
 
-Files are written to `<OUTPUT_DIR>/<first part of API_GROUP>/<API_VERSION>/`.
+| Variable      | Required                     | Description                              |
+|---------------|------------------------------|------------------------------------------|
+| `INPUT_FILE`  | No (default: `openapi.yaml`) | Path to the OpenAPI spec file.           |
+| `OUTPUT_DIR`  | No (default: `api/`)         | Base output directory for generated files. |
+| `CONFIG_FILE` | Yes                          | Path to the YAML configuration file.     |
 
-### Custom Field Configuration
+### Configuration File
 
-An optional YAML config file allows injecting additional kubebuilder markers on
-specific fields. The config is validated against the parsed schema to catch typos.
+The YAML configuration file groups OpenAPI paths and entity configurations by API
+group-version. Each group-version key specifies which paths to process and optional
+per-entity field customizations.
+
+Files are written to `<OUTPUT_DIR>/<first part of API group>/<API version>/` for each
+group-version. The tool iterates over all configured group-versions, generating a
+complete set of CRD files for each.
 
 ```yaml
-Portal:
-  name:
-    _validations:
-      - "+kubebuilder:validation:XValidation:rule=\"self == oldSelf\",message=\"name is immutable\""
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    types:
+      - path: /v3/portals
+        cel:
+          name:
+            _validations:
+              - "+kubebuilder:validation:XValidation:rule=\"self == oldSelf\",message=\"name is immutable\""
+      - path: /v3/portals/{portalId}/teams
+  gateway.konghq.com/v1beta1:
+    types:
+      - path: /v3/gateways
 ```
+
+### Custom Field Validations
+
+Each type entry can include an optional `cel` section to inject additional kubebuilder
+markers on specific fields. The `cel` key maps field names to their `_validations`.
+The config is validated against the parsed schema to catch typos.
 
 ## Parsing Stage
 
