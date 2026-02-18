@@ -13,7 +13,7 @@ import (
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 
-	"github.com/kong/kong-operator/pkg/consts"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
 // AdminAPIAddressProvider is an interface for providing the admin API addresses for a DataPlane.

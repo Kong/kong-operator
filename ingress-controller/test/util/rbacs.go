@@ -6,7 +6,7 @@ import (
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 
-	"github.com/kong/kong-operator/ingress-controller/test/consts"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/consts"
 )
 
 func DeployRBACsForCluster(ctx context.Context, cluster clusters.Cluster) error {

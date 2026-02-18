@@ -1,6 +1,6 @@
 package consts
 
-import "github.com/kong/kong-operator/internal/versions"
+import "github.com/kong/kong-operator/v2/internal/versions"
 
 // -----------------------------------------------------------------------------
 // Consts - DataPlane Generic Parameters

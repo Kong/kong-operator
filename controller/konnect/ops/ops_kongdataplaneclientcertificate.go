@@ -7,7 +7,7 @@ import (
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 
-	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
+	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 )
 
 // CreateKongDataPlaneClientCertificate creates a KongDataPlaneClientCertificate in Konnect.

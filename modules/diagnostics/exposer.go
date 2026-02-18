@@ -7,8 +7,8 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
 
-	"github.com/kong/kong-operator/ingress-controller/pkg/manager"
-	"github.com/kong/kong-operator/ingress-controller/pkg/manager/multiinstance"
+	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager"
+	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/multiinstance"
 )
 
 var _ multiinstance.DiagnosticsExposer = &ControlPlaneDiagnosticsExposer{}

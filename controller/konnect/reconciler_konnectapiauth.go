@@ -19,12 +19,12 @@ import (
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
 
-	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
-	"github.com/kong/kong-operator/controller/konnect/server"
-	"github.com/kong/kong-operator/controller/pkg/log"
-	"github.com/kong/kong-operator/controller/pkg/patch"
-	"github.com/kong/kong-operator/modules/manager/logging"
-	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
+	"github.com/kong/kong-operator/v2/controller/konnect/server"
+	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	"github.com/kong/kong-operator/v2/controller/pkg/patch"
+	"github.com/kong/kong-operator/v2/modules/manager/logging"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 // KonnectAPIAuthConfigurationReconciler reconciles a KonnectAPIAuthConfiguration object.

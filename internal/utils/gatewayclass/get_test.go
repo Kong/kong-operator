@@ -11,10 +11,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	operatorerrors "github.com/kong/kong-operator/internal/errors"
-	"github.com/kong/kong-operator/internal/utils/gatewayclass"
-	"github.com/kong/kong-operator/modules/manager/scheme"
-	"github.com/kong/kong-operator/pkg/vars"
+	operatorerrors "github.com/kong/kong-operator/v2/internal/errors"
+	"github.com/kong/kong-operator/v2/internal/utils/gatewayclass"
+	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/pkg/vars"
 )
 
 func TestGet(t *testing.T) {

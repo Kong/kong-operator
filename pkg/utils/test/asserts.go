@@ -18,10 +18,10 @@ import (
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 
-	gwtypes "github.com/kong/kong-operator/internal/types"
-	"github.com/kong/kong-operator/pkg/consts"
-	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
-	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/pkg/consts"
+	gatewayutils "github.com/kong/kong-operator/v2/pkg/utils/gateway"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 // MustListControlPlaneDeployments is a helper function for tests that

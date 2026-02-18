@@ -13,7 +13,7 @@ import (
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 
-	"github.com/kong/kong-operator/internal/utils/index"
+	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
 // KongSNIReconciliationWatchOptions returns the watch options for

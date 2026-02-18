@@ -10,7 +10,7 @@ import (
 	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
 	kcfgcontrolplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/controlplane"
 
-	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 func TestMarkAsProvisioned(t *testing.T) {

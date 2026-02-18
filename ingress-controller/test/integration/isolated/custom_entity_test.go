@@ -26,9 +26,9 @@ import (
 
 	"github.com/kong/kubernetes-configuration/v2/pkg/clientset"
 
-	"github.com/kong/kong-operator/ingress-controller/test/integration/consts"
-	"github.com/kong/kong-operator/ingress-controller/test/internal/helpers"
-	"github.com/kong/kong-operator/ingress-controller/test/internal/testlabels"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/integration/consts"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/internal/helpers"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/internal/testlabels"
 )
 
 func TestCustomEntityExample(t *testing.T) {

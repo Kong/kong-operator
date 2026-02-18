@@ -7,7 +7,7 @@ import (
 
 	"github.com/go-logr/logr"
 
-	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
+	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
 )
 
 // instance represents a single manager.Manager instance in the multi-instance manager.

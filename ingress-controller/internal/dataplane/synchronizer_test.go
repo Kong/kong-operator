@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
-	dpconf "github.com/kong/kong-operator/ingress-controller/internal/dataplane/config"
+	dpconf "github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/config"
 )
 
 const testSynchronizerTick = time.Millisecond * 10

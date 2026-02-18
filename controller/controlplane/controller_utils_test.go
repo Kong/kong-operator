@@ -7,8 +7,8 @@ import (
 
 	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 
-	"github.com/kong/kong-operator/controller/pkg/controlplane"
-	gwtypes "github.com/kong/kong-operator/internal/types"
+	"github.com/kong/kong-operator/v2/controller/pkg/controlplane"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func TestControlPlaneSpecDeepEqual(t *testing.T) {

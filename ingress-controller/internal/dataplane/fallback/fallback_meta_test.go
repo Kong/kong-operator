@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/fallback"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/fallback"
 )
 
 func TestGeneratedCacheMetadataCollector(t *testing.T) {

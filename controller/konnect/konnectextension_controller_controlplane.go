@@ -9,7 +9,7 @@ import (
 
 	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
-	"github.com/kong/kong-operator/internal/utils/index"
+	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
 func enqueueKonnectExtensionsForKonnectGatewayControlPlane(cl client.Client) func(context.Context, client.Object) []reconcile.Request {

@@ -16,10 +16,10 @@ import (
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
 	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 
-	"github.com/kong/kong-operator/pkg/consts"
-	osstestutils "github.com/kong/kong-operator/pkg/utils/test"
-	"github.com/kong/kong-operator/pkg/vars"
-	osshelpers "github.com/kong/kong-operator/test/helpers"
+	"github.com/kong/kong-operator/v2/pkg/consts"
+	osstestutils "github.com/kong/kong-operator/v2/pkg/utils/test"
+	"github.com/kong/kong-operator/v2/pkg/vars"
+	osshelpers "github.com/kong/kong-operator/v2/test/helpers"
 )
 
 func TestControlPlaneExtensionsDataPlaneMetrics(t *testing.T) {

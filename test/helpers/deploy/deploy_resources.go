@@ -21,8 +21,8 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
-	"github.com/kong/kong-operator/pkg/consts"
-	"github.com/kong/kong-operator/test/mocks/sdkmocks"
+	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/test/mocks/sdkmocks"
 )
 
 const (

@@ -19,10 +19,10 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
-	extensionserrors "github.com/kong/kong-operator/controller/pkg/extensions/errors"
-	"github.com/kong/kong-operator/internal/utils/config"
-	"github.com/kong/kong-operator/pkg/consts"
-	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	extensionserrors "github.com/kong/kong-operator/v2/controller/pkg/extensions/errors"
+	"github.com/kong/kong-operator/v2/internal/utils/config"
+	"github.com/kong/kong-operator/v2/pkg/consts"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 func TestApplyDataPlaneKonnectExtension(t *testing.T) {

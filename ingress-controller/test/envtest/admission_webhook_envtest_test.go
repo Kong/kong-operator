@@ -24,12 +24,12 @@ import (
 	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
-	"github.com/kong/kong-operator/ingress-controller/internal/labels"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers/certificate"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers/webhook"
-	"github.com/kong/kong-operator/ingress-controller/test/internal/testenv"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/labels"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/helpers"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/helpers/certificate"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/helpers/webhook"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/internal/testenv"
 )
 
 func TestAdmissionWebhook_KongVault(t *testing.T) {

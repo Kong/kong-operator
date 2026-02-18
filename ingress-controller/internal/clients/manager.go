@@ -10,11 +10,11 @@ import (
 	"github.com/samber/lo"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/adminapi"
-	dpconf "github.com/kong/kong-operator/ingress-controller/internal/dataplane/config"
-	"github.com/kong/kong-operator/ingress-controller/internal/logging"
-	"github.com/kong/kong-operator/ingress-controller/internal/util/clock"
-	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/adminapi"
+	dpconf "github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/config"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/logging"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/clock"
+	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
 )
 
 // ClientFactory is responsible for creating Admin API clients.

@@ -9,7 +9,7 @@ import (
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
 
-	gwtypes "github.com/kong/kong-operator/internal/types"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // ControlPlaneDataPlanePluginsSpecChangedPredicate is a predicate that checks if the

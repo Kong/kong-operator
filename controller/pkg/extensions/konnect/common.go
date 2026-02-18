@@ -12,8 +12,8 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
-	extensionserrors "github.com/kong/kong-operator/controller/pkg/extensions/errors"
-	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	extensionserrors "github.com/kong/kong-operator/v2/controller/pkg/extensions/errors"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 func getExtension(ctx context.Context, cl client.Client, objNamespace string, extRef commonv1alpha1.ExtensionRef) (*konnectv1alpha2.KonnectExtension, error) {

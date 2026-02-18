@@ -8,7 +8,7 @@ import (
 	"github.com/go-logr/logr"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/logging"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/logging"
 )
 
 const (

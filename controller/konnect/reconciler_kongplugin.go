@@ -25,13 +25,13 @@ import (
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
 	"github.com/kong/kubernetes-configuration/v2/pkg/metadata"
 
-	"github.com/kong/kong-operator/controller/pkg/controlplane"
-	"github.com/kong/kong-operator/controller/pkg/log"
-	"github.com/kong/kong-operator/controller/pkg/patch"
-	"github.com/kong/kong-operator/internal/utils/index"
-	"github.com/kong/kong-operator/modules/manager/logging"
-	"github.com/kong/kong-operator/pkg/consts"
-	k8sreduce "github.com/kong/kong-operator/pkg/utils/kubernetes/reduce"
+	"github.com/kong/kong-operator/v2/controller/pkg/controlplane"
+	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	"github.com/kong/kong-operator/v2/controller/pkg/patch"
+	"github.com/kong/kong-operator/v2/internal/utils/index"
+	"github.com/kong/kong-operator/v2/modules/manager/logging"
+	"github.com/kong/kong-operator/v2/pkg/consts"
+	k8sreduce "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/reduce"
 )
 
 // KongPluginReconciler reconciles a KongPlugin object.

@@ -15,12 +15,12 @@ import (
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
 
-	"github.com/kong/kong-operator/controller/hybridgateway/refs"
-	"github.com/kong/kong-operator/controller/hybridgateway/route"
-	"github.com/kong/kong-operator/controller/hybridgateway/utils"
-	gwtypes "github.com/kong/kong-operator/internal/types"
-	"github.com/kong/kong-operator/internal/utils/index"
-	"github.com/kong/kong-operator/pkg/consts"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/refs"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/route"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/internal/utils/index"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
 var _ APIConverter[corev1.Service] = &serviceConverter{}

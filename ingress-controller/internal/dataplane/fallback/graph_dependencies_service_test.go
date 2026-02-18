@@ -9,7 +9,7 @@ import (
 
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
 )
 
 func TestResolveDependencies_Service(t *testing.T) {

@@ -27,14 +27,14 @@ import (
 	kcfgdataplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 
-	"github.com/kong/kong-operator/controller/pkg/builder"
-	"github.com/kong/kong-operator/controller/pkg/dataplane"
-	"github.com/kong/kong-operator/controller/pkg/op"
-	"github.com/kong/kong-operator/controller/pkg/secrets"
-	"github.com/kong/kong-operator/pkg/consts"
-	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
-	k8sresources "github.com/kong/kong-operator/pkg/utils/kubernetes/resources"
-	"github.com/kong/kong-operator/test/helpers"
+	"github.com/kong/kong-operator/v2/controller/pkg/builder"
+	"github.com/kong/kong-operator/v2/controller/pkg/dataplane"
+	"github.com/kong/kong-operator/v2/controller/pkg/op"
+	"github.com/kong/kong-operator/v2/controller/pkg/secrets"
+	"github.com/kong/kong-operator/v2/pkg/consts"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
+	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
+	"github.com/kong/kong-operator/v2/test/helpers"
 )
 
 func init() {

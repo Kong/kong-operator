@@ -10,7 +10,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kong-operator/config"
+	"github.com/kong/kong-operator/v2/config"
 )
 
 //go:embed config/tests/kustomization.yaml

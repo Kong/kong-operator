@@ -16,12 +16,12 @@ import (
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 
-	"github.com/kong/kong-operator/controller/hybridgateway/converter"
-	"github.com/kong/kong-operator/controller/hybridgateway/route"
-	"github.com/kong/kong-operator/controller/hybridgateway/utils"
-	"github.com/kong/kong-operator/modules/manager/scheme"
-	"github.com/kong/kong-operator/pkg/consts"
-	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/converter"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/route"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
+	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/pkg/consts"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 func TestGetOwnedResources(t *testing.T) {

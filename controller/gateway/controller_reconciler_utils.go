@@ -31,17 +31,17 @@ import (
 	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
-	"github.com/kong/kong-operator/controller/pkg/extensions"
-	"github.com/kong/kong-operator/controller/pkg/log"
-	"github.com/kong/kong-operator/controller/pkg/secrets"
-	"github.com/kong/kong-operator/controller/pkg/secrets/ref"
-	operatorerrors "github.com/kong/kong-operator/internal/errors"
-	gwtypes "github.com/kong/kong-operator/internal/types"
-	"github.com/kong/kong-operator/pkg/consts"
-	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
-	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
-	k8sreduce "github.com/kong/kong-operator/pkg/utils/kubernetes/reduce"
-	k8sresources "github.com/kong/kong-operator/pkg/utils/kubernetes/resources"
+	"github.com/kong/kong-operator/v2/controller/pkg/extensions"
+	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	"github.com/kong/kong-operator/v2/controller/pkg/secrets"
+	"github.com/kong/kong-operator/v2/controller/pkg/secrets/ref"
+	operatorerrors "github.com/kong/kong-operator/v2/internal/errors"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/pkg/consts"
+	gatewayutils "github.com/kong/kong-operator/v2/pkg/utils/gateway"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
+	k8sreduce "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/reduce"
+	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 )
 
 // -----------------------------------------------------------------------------

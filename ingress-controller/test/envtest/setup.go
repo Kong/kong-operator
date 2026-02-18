@@ -27,12 +27,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/controllers/gateway"
-	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
-	"github.com/kong/kong-operator/ingress-controller/internal/store"
-	"github.com/kong/kong-operator/ingress-controller/internal/util/builder"
-	"github.com/kong/kong-operator/ingress-controller/test/consts"
-	testutils "github.com/kong/kong-operator/ingress-controller/test/util"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/gateway"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/builder"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/consts"
+	testutils "github.com/kong/kong-operator/v2/ingress-controller/test/util"
 )
 
 type Options struct {

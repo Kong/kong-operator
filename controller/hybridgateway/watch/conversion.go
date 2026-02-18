@@ -7,9 +7,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kong-operator/controller/hybridgateway/refs"
-	gwtypes "github.com/kong/kong-operator/internal/types"
-	"github.com/kong/kong-operator/internal/utils/index"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/refs"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
 // FilterBy returns a predicate function for filtering client.Objects based on the type of the provided obj.

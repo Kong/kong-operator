@@ -4,7 +4,7 @@ import (
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/logging"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/logging"
 )
 
 // -----------------------------------------------------------------------------

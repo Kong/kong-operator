@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	dpconf "github.com/kong/kong-operator/ingress-controller/internal/dataplane/config"
+	dpconf "github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/config"
 )
 
 // -----------------------------------------------------------------------------

@@ -15,8 +15,8 @@ import (
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
 	"github.com/kong/kubernetes-configuration/v2/pkg/metadata"
 
-	"github.com/kong/kong-operator/controller/konnect/constraints"
-	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
+	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
+	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 )
 
 // -----------------------------------------------------------------------------

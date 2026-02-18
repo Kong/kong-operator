@@ -16,8 +16,8 @@ import (
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
-	operatorerrors "github.com/kong/kong-operator/internal/errors"
-	"github.com/kong/kong-operator/internal/utils/index"
+	operatorerrors "github.com/kong/kong-operator/v2/internal/errors"
+	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
 // TODO(pmalek): this can be extracted and used in reconciler.go

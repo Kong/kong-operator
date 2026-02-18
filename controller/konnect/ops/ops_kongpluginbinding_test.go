@@ -16,7 +16,7 @@ import (
 	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 	"github.com/kong/kubernetes-configuration/v2/pkg/metadata"
 
-	"github.com/kong/kong-operator/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
 func TestKongPluginBindingToSDKPluginInput_Tags(t *testing.T) {

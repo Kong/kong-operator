@@ -22,7 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 
-	testutil "github.com/kong/kong-operator/pkg/utils/test"
+	testutil "github.com/kong/kong-operator/v2/pkg/utils/test"
 )
 
 // Setup sets up a test k8s API server environment and returned the configuration.

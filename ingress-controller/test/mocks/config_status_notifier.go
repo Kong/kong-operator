@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/clients"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/clients"
 )
 
 // ConfigStatusNotifier is a mock implementation of clients.ConfigStatusNotifier.

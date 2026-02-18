@@ -8,9 +8,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kong-operator/controller/hybridgateway/route"
-	"github.com/kong/kong-operator/controller/hybridgateway/utils"
-	gwtypes "github.com/kong/kong-operator/internal/types"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/route"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // APIConverter defines an interface for converting and managing Kubernetes API objects

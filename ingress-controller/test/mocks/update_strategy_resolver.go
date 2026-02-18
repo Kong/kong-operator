@@ -11,8 +11,8 @@ import (
 	"github.com/samber/mo"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/sendconfig"
-	"github.com/kong/kong-operator/ingress-controller/internal/diagnostics"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/sendconfig"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/diagnostics"
 )
 
 const mockUpdateReturnedConfigSize = 22

@@ -8,7 +8,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/sendconfig"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/sendconfig"
 )
 
 func TestDBLessConfigMarshalToJSON(t *testing.T) {

@@ -18,13 +18,13 @@ import (
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 	gatewayclientv1 "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned/typed/apis/v1"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
-	"github.com/kong/kong-operator/ingress-controller/internal/controllers/gateway"
-	ctrlref "github.com/kong/kong-operator/ingress-controller/internal/controllers/reference"
-	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
-	"github.com/kong/kong-operator/ingress-controller/internal/util/builder"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers/conditions"
-	"github.com/kong/kong-operator/ingress-controller/test/mocks"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/gateway"
+	ctrlref "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/reference"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/builder"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/helpers/conditions"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/mocks"
 )
 
 func TestGatewayWithGatewayClassReconciliation(t *testing.T) {

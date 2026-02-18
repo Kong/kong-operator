@@ -20,13 +20,13 @@ import (
 	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
-	"github.com/kong/kong-operator/controller/pkg/log"
-	"github.com/kong/kong-operator/controller/pkg/secrets/ref"
-	operatorerrors "github.com/kong/kong-operator/internal/errors"
-	gwtypes "github.com/kong/kong-operator/internal/types"
-	"github.com/kong/kong-operator/internal/utils/gatewayclass"
-	"github.com/kong/kong-operator/internal/utils/index"
-	"github.com/kong/kong-operator/pkg/vars"
+	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	"github.com/kong/kong-operator/v2/controller/pkg/secrets/ref"
+	operatorerrors "github.com/kong/kong-operator/v2/internal/errors"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/internal/utils/gatewayclass"
+	"github.com/kong/kong-operator/v2/internal/utils/index"
+	"github.com/kong/kong-operator/v2/pkg/vars"
 )
 
 // -----------------------------------------------------------------------------

@@ -11,7 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/net"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 )
 
 // TODO: for now this can stay here but ideally we'd use a common package for this

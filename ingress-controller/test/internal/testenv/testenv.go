@@ -8,7 +8,7 @@ import (
 	"github.com/tidwall/gjson"
 	"sigs.k8s.io/yaml"
 
-	dpconf "github.com/kong/kong-operator/ingress-controller/internal/dataplane/config"
+	dpconf "github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/config"
 )
 
 // -----------------------------------------------------------------------------

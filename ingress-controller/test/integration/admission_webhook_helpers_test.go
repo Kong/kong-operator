@@ -17,12 +17,12 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/util/builder"
-	"github.com/kong/kong-operator/ingress-controller/test"
-	"github.com/kong/kong-operator/ingress-controller/test/consts"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers/certificate"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers/webhook"
-	testutils "github.com/kong/kong-operator/ingress-controller/test/util"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/builder"
+	"github.com/kong/kong-operator/v2/ingress-controller/test"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/consts"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/helpers/certificate"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/helpers/webhook"
+	testutils "github.com/kong/kong-operator/v2/ingress-controller/test/util"
 )
 
 // ensureAdmissionRegistration registers a validating webhook for the given configuration, it validates objects

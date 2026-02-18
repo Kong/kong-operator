@@ -13,7 +13,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	kongv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"

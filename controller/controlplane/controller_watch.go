@@ -15,9 +15,9 @@ import (
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 
-	operatorerrors "github.com/kong/kong-operator/internal/errors"
-	gwtypes "github.com/kong/kong-operator/internal/types"
-	"github.com/kong/kong-operator/internal/utils/index"
+	operatorerrors "github.com/kong/kong-operator/v2/internal/errors"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
 func (r *Reconciler) listControlPlanesForWatchNamespaceGrants(

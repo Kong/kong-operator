@@ -19,10 +19,10 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
 	"github.com/kong/kubernetes-configuration/v2/test/crdsvalidation/common"
 
-	"github.com/kong/kong-operator/modules/manager/scheme"
-	"github.com/kong/kong-operator/pkg/utils/test"
-	"github.com/kong/kong-operator/test/envtest"
-	"github.com/kong/kong-operator/test/helpers/helm"
+	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/pkg/utils/test"
+	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/helpers/helm"
 )
 
 const (

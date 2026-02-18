@@ -9,7 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/admission"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/admission"
 )
 
 func TestResponseBuilder(t *testing.T) {

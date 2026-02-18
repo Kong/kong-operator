@@ -4,7 +4,7 @@ import (
 	"crypto/x509"
 	"fmt"
 
-	mgrconfig "github.com/kong/kong-operator/modules/manager/config"
+	mgrconfig "github.com/kong/kong-operator/v2/modules/manager/config"
 )
 
 // KeyTypeToX509PublicKeyAlgorithm converts a KeyType to an x509.PublicKeyAlgorithm.

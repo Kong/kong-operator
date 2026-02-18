@@ -21,11 +21,11 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
-	"github.com/kong/kong-operator/controller/konnect/constraints"
-	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
-	"github.com/kong/kong-operator/controller/pkg/log"
-	"github.com/kong/kong-operator/internal/metrics"
-	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
+	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
+	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	"github.com/kong/kong-operator/v2/internal/metrics"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 // Op is the type for the operation type of a Konnect entity.

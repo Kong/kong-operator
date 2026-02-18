@@ -20,9 +20,9 @@ import (
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 
-	"github.com/kong/kong-operator/controller/pkg/secrets"
-	gwtypes "github.com/kong/kong-operator/internal/types"
-	"github.com/kong/kong-operator/test/mocks/metricsmocks"
+	"github.com/kong/kong-operator/v2/controller/pkg/secrets"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
 )
 
 type pair struct {

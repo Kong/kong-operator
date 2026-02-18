@@ -10,9 +10,9 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"github.com/kong/kong-operator/controller/hybridgateway/converter"
-	"github.com/kong/kong-operator/controller/hybridgateway/route"
-	"github.com/kong/kong-operator/controller/hybridgateway/watch"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/converter"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/route"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/watch"
 )
 
 // HybridGatewayReconciler is a generic reconciler for handling Gateway API resources

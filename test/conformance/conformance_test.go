@@ -22,12 +22,12 @@ import (
 
 	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 
-	gwtypes "github.com/kong/kong-operator/internal/types"
-	"github.com/kong/kong-operator/modules/manager/metadata"
-	"github.com/kong/kong-operator/pkg/consts"
-	gatewayapipkg "github.com/kong/kong-operator/pkg/gatewayapi"
-	testutils "github.com/kong/kong-operator/pkg/utils/test"
-	"github.com/kong/kong-operator/pkg/vars"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/modules/manager/metadata"
+	"github.com/kong/kong-operator/v2/pkg/consts"
+	gatewayapipkg "github.com/kong/kong-operator/v2/pkg/gatewayapi"
+	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
+	"github.com/kong/kong-operator/v2/pkg/vars"
 )
 
 var skippedTestsShared = []string{
