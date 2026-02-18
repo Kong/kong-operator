@@ -1,6 +1,6 @@
 module github.com/kong/kong-operator/v2
 
-go 1.25.5
+go 1.25.7
 
 require (
 	cloud.google.com/go/container v1.44.0
@@ -313,7 +313,6 @@ require (
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.7.0 // indirect
 )
-
 
 // The replace directives for `k8s.io/*` are required for making it possible to
 // use `k8s.io/kubernetes` as a library.
