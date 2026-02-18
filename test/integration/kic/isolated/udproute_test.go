@@ -151,7 +151,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 						BackendRefs: []gatewayapi.BackendRef{{
 							BackendObjectReference: gatewayapi.BackendObjectReference{
 								Name: gatewayapi.ObjectName(service1.Name),
-								Port: lo.ToPtr(gatewayapi.PortNumber(service1Port)),
+								Port: new(gatewayapi.PortNumber(service1Port)),
 							},
 						}},
 					}},
@@ -335,13 +335,13 @@ func TestUDPRouteEssentials(t *testing.T) {
 					{
 						BackendObjectReference: gatewayapi.BackendObjectReference{
 							Name: gatewayapi.ObjectName(service1Name),
-							Port: lo.ToPtr(gatewayapi.PortNumber(service1Port)),
+							Port: new(gatewayapi.PortNumber(service1Port)),
 						},
 					},
 					{
 						BackendObjectReference: gatewayapi.BackendObjectReference{
 							Name: gatewayapi.ObjectName(service2Name),
-							Port: lo.ToPtr(gatewayapi.PortNumber(service2Port)),
+							Port: new(gatewayapi.PortNumber(service2Port)),
 						},
 					},
 				}

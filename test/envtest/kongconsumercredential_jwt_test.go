@@ -9,7 +9,6 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -93,8 +92,8 @@ func TestKongConsumerCredential_JWT(t *testing.T) {
 				ControlPlaneID:              cp.GetKonnectStatus().GetKonnectID(),
 				ConsumerIDForNestedEntities: consumerID,
 				JWTWithoutParents: &sdkkonnectcomp.JWTWithoutParents{
-					Key:       lo.ToPtr("key"),
-					Algorithm: lo.ToPtr(sdkkonnectcomp.JWTWithoutParentsAlgorithmHs256),
+					Key:       new("key"),
+					Algorithm: new(sdkkonnectcomp.JWTWithoutParentsAlgorithmHs256),
 					Tags:      tags,
 				},
 			},
@@ -102,7 +101,7 @@ func TestKongConsumerCredential_JWT(t *testing.T) {
 		Return(
 			&sdkkonnectops.CreateJwtWithConsumerResponse{
 				Jwt: &sdkkonnectcomp.Jwt{
-					ID: lo.ToPtr(jwtID),
+					ID: new(jwtID),
 				},
 			},
 			nil,
@@ -112,7 +111,7 @@ func TestKongConsumerCredential_JWT(t *testing.T) {
 		Return(
 			&sdkkonnectops.UpsertJwtWithConsumerResponse{
 				Jwt: &sdkkonnectcomp.Jwt{
-					ID: lo.ToPtr(jwtID),
+					ID: new(jwtID),
 				},
 			},
 			nil,
@@ -202,7 +201,7 @@ func TestKongConsumerCredential_JWT(t *testing.T) {
 				Object: &sdkkonnectops.ListJwtResponseBody{
 					Data: []sdkkonnectcomp.Jwt{
 						{
-							ID: lo.ToPtr(jwtID),
+							ID: new(jwtID),
 						},
 					},
 				},

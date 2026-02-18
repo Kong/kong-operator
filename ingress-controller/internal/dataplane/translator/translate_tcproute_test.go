@@ -90,7 +90,7 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
-						Name: kong.String("tcproute.default.tcproute-1.0"),
+						Name: new("tcproute.default.tcproute-1.0"),
 					},
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service1").WithPortNumber(8080).MustBuild(),
@@ -101,9 +101,9 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 				"tcproute.default.tcproute-1.0": {
 					{
 						Route: kong.Route{
-							Name:         kong.String("tcproute.default.tcproute-1.0.0"),
-							Expression:   kong.String(`net.dst.port == 80`),
-							PreserveHost: kong.Bool(true),
+							Name:         new("tcproute.default.tcproute-1.0.0"),
+							Expression:   new(`net.dst.port == 80`),
+							PreserveHost: new(true),
 							Protocols:    kong.StringSlice("tcp"),
 						},
 						ExpressionRoutes: true,
@@ -145,7 +145,7 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 							ParentRefs: []gatewayapi.ParentReference{
 								{
 									Name:      "gateway-1",
-									Namespace: lo.ToPtr(gatewayapi.Namespace("test-1")),
+									Namespace: new(gatewayapi.Namespace("test-1")),
 								},
 							},
 						},
@@ -177,7 +177,7 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
-						Name: kong.String("tcproute.default.tcproute-1.0"),
+						Name: new("tcproute.default.tcproute-1.0"),
 					},
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service1").
@@ -191,9 +191,9 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 				"tcproute.default.tcproute-1.0": {
 					{
 						Route: kong.Route{
-							Name:         kong.String("tcproute.default.tcproute-1.0.0"),
-							Expression:   kong.String(`(net.dst.port == 80) || (net.dst.port == 443)`),
-							PreserveHost: kong.Bool(true),
+							Name:         new("tcproute.default.tcproute-1.0.0"),
+							Expression:   new(`(net.dst.port == 80) || (net.dst.port == 443)`),
+							PreserveHost: new(true),
 							Protocols:    kong.StringSlice("tcp"),
 						},
 						ExpressionRoutes: true,
@@ -247,11 +247,11 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 							ParentRefs: []gatewayapi.ParentReference{
 								{
 									Name:        "gateway-1",
-									SectionName: lo.ToPtr(gatewayapi.SectionName("tcp80")),
+									SectionName: new(gatewayapi.SectionName("tcp80")),
 								},
 								{
 									Name:        "gateway-1",
-									SectionName: lo.ToPtr(gatewayapi.SectionName("tcp443")),
+									SectionName: new(gatewayapi.SectionName("tcp443")),
 								},
 							},
 						},
@@ -277,11 +277,11 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 							ParentRefs: []gatewayapi.ParentReference{
 								{
 									Name:        "gateway-1",
-									SectionName: lo.ToPtr(gatewayapi.SectionName("tcp8080")),
+									SectionName: new(gatewayapi.SectionName("tcp8080")),
 								},
 								{
 									Name:        "gateway-1",
-									SectionName: lo.ToPtr(gatewayapi.SectionName("tcp8443")),
+									SectionName: new(gatewayapi.SectionName("tcp8443")),
 								},
 							},
 						},
@@ -326,7 +326,7 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
-						Name: kong.String("tcproute.default.tcproute-1.0"),
+						Name: new("tcproute.default.tcproute-1.0"),
 					},
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service1").
@@ -337,7 +337,7 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 				},
 				{
 					Service: kong.Service{
-						Name: kong.String("tcproute.default.tcproute-2.0"),
+						Name: new("tcproute.default.tcproute-2.0"),
 					},
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service3").WithPortNumber(8080).MustBuild(),
@@ -349,9 +349,9 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 				"tcproute.default.tcproute-1.0": {
 					{
 						Route: kong.Route{
-							Name:         kong.String("tcproute.default.tcproute-1.0.0"),
-							Expression:   kong.String(`(net.dst.port == 80) || (net.dst.port == 443)`),
-							PreserveHost: kong.Bool(true),
+							Name:         new("tcproute.default.tcproute-1.0.0"),
+							Expression:   new(`(net.dst.port == 80) || (net.dst.port == 443)`),
+							PreserveHost: new(true),
 							Protocols:    kong.StringSlice("tcp"),
 						},
 						ExpressionRoutes: true,
@@ -360,9 +360,9 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 				"tcproute.default.tcproute-2.0": {
 					{
 						Route: kong.Route{
-							Name:         kong.String("tcproute.default.tcproute-2.0.0"),
-							Expression:   kong.String(`(net.dst.port == 8080) || (net.dst.port == 8443)`),
-							PreserveHost: kong.Bool(true),
+							Name:         new("tcproute.default.tcproute-2.0.0"),
+							Expression:   new(`(net.dst.port == 8080) || (net.dst.port == 8443)`),
+							PreserveHost: new(true),
 							Protocols:    kong.StringSlice("tcp"),
 						},
 						ExpressionRoutes: true,

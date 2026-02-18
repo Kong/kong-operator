@@ -117,7 +117,7 @@ func (rc RefChecker[T]) IsRefAllowedByGrant(
 
 		//		return isRefAllowedByGrant(
 		//			rc.log,
-		//			lo.ToPtr(obj.GetNamespace()),
+		//			new(obj.GetNamespace()),
 		//			obj.GetName(),
 		//			obj.GetObjectKind().GroupVersionKind().Group,
 		//			obj.GetObjectKind().GroupVersionKind().Kind,

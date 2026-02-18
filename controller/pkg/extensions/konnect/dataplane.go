@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -88,7 +87,7 @@ func kongInKonnectClusterCertVolume(secretName string) corev1.Volume {
 		VolumeSource: corev1.VolumeSource{
 			Secret: &corev1.SecretVolumeSource{
 				SecretName:  secretName,
-				DefaultMode: lo.ToPtr(int32(420)),
+				DefaultMode: new(int32(420)),
 			},
 		},
 	}

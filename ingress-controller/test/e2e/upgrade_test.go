@@ -54,7 +54,7 @@ func postgresBeforeUpgradeHook(ctx context.Context, t *testing.T, env environmen
 	// Injecting a beforeUpgradeHook to delete the old migrations job before the upgrade. This is necessary because it's
 	// not allowed to modify the existing job's spec.
 	err := env.Cluster().Client().BatchV1().Jobs(namespace).Delete(ctx, migrationsJobName, metav1.DeleteOptions{
-		PropagationPolicy: lo.ToPtr(metav1.DeletePropagationBackground),
+		PropagationPolicy: new(metav1.DeletePropagationBackground),
 	})
 	require.NoError(t, err, "failed to delete old migrations job before upgrade")
 }

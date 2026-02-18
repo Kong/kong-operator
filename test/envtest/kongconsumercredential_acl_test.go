@@ -9,7 +9,6 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -101,7 +100,7 @@ func TestKongConsumerCredential_ACL(t *testing.T) {
 		Return(
 			&sdkkonnectops.CreateACLWithConsumerResponse{
 				ACL: &sdkkonnectcomp.ACL{
-					ID: lo.ToPtr(aclID),
+					ID: new(aclID),
 				},
 			},
 			nil,
@@ -111,7 +110,7 @@ func TestKongConsumerCredential_ACL(t *testing.T) {
 		Return(
 			&sdkkonnectops.UpsertACLWithConsumerResponse{
 				ACL: &sdkkonnectcomp.ACL{
-					ID: lo.ToPtr(aclID),
+					ID: new(aclID),
 				},
 			},
 			nil,
@@ -201,7 +200,7 @@ func TestKongConsumerCredential_ACL(t *testing.T) {
 				Object: &sdkkonnectops.ListACLResponseBody{
 					Data: []sdkkonnectcomp.ACL{
 						{
-							ID: lo.ToPtr(aclID),
+							ID: new(aclID),
 						},
 					},
 				},

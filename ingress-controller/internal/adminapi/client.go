@@ -9,7 +9,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
-	"github.com/samber/lo"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/logging"
@@ -48,7 +47,7 @@ func NewClient(c *kong.Client) *Client {
 
 // NewTestClient creates a client for test purposes.
 func NewTestClient(address string) (*Client, error) {
-	kongClient, err := kong.NewTestClient(lo.ToPtr(address), &http.Client{})
+	kongClient, err := kong.NewTestClient(new(address), &http.Client{})
 	if err != nil {
 		return nil, err
 	}

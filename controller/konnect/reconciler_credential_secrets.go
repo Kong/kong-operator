@@ -751,22 +751,22 @@ func setKongCredentialJWTSpec(
 	spec *configurationv1alpha1.KongCredentialJWTSpec, s *corev1.Secret,
 ) {
 	spec.Algorithm = string(s.Data[CredentialSecretKeyNameJwtAlgorithmKey])
-	spec.Key = lo.ToPtr(string(s.Data[CredentialSecretKeyNameJwtKeyKey]))
+	spec.Key = new(string(s.Data[CredentialSecretKeyNameJwtKeyKey]))
 
 	if rsaPublicKey, ok := s.Data[CredentialSecretKeyNameJwtRSAPublicKeyKey]; ok {
-		spec.RSAPublicKey = lo.ToPtr(string(rsaPublicKey))
+		spec.RSAPublicKey = new(string(rsaPublicKey))
 	}
 
 	if jwtSecret, ok := s.Data[CredentialSecretKeyNameJwtSecretKey]; ok {
-		spec.Secret = lo.ToPtr(string(jwtSecret))
+		spec.Secret = new(string(jwtSecret))
 	}
 }
 
 func setKongCredentialHMACSpec(
 	spec *configurationv1alpha1.KongCredentialHMACSpec, s *corev1.Secret,
 ) {
-	spec.Username = lo.ToPtr(string(s.Data[CredentialSecretKeyNameHMACUsername]))
-	spec.Secret = lo.ToPtr(string(s.Data[CredentialSecretKeyNameHMACSecret]))
+	spec.Username = new(string(s.Data[CredentialSecretKeyNameHMACUsername]))
+	spec.Secret = new(string(s.Data[CredentialSecretKeyNameHMACSecret]))
 }
 
 func (r KongCredentialSecretReconciler) handleConsumerUsingCredentialSecret(

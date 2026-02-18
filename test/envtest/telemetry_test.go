@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -210,9 +209,9 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 								BackendRefs: []gatewayapi.BackendRef{
 									{
 										BackendObjectReference: gatewayapi.BackendObjectReference{
-											Kind: lo.ToPtr(gatewayapi.Kind("Service")),
+											Kind: new(gatewayapi.Kind("Service")),
 											Name: gatewayapi.ObjectName("test"),
-											Port: lo.ToPtr(gatewayapi.PortNumber(443)),
+											Port: new(gatewayapi.PortNumber(443)),
 										},
 									},
 								},
@@ -234,9 +233,9 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 								BackendRefs: []gatewayapi.BackendRef{
 									{
 										BackendObjectReference: gatewayapi.BackendObjectReference{
-											Kind: lo.ToPtr(gatewayapi.Kind("Service")),
+											Kind: new(gatewayapi.Kind("Service")),
 											Name: gatewayapi.ObjectName("test"),
-											Port: lo.ToPtr(gatewayapi.PortNumber(443)),
+											Port: new(gatewayapi.PortNumber(443)),
 										},
 									},
 								},
@@ -258,9 +257,9 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 								BackendRefs: []gatewayapi.BackendRef{
 									{
 										BackendObjectReference: gatewayapi.BackendObjectReference{
-											Kind: lo.ToPtr(gatewayapi.Kind("Service")),
+											Kind: new(gatewayapi.Kind("Service")),
 											Name: gatewayapi.ObjectName("test"),
-											Port: lo.ToPtr(gatewayapi.PortNumber(443)),
+											Port: new(gatewayapi.PortNumber(443)),
 										},
 									},
 								},

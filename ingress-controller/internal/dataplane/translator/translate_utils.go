@@ -57,13 +57,13 @@ func generateKongServiceFromBackendRefWithName(
 	if !ok {
 		service = kongstate.Service{
 			Service: kong.Service{
-				Name:           kong.String(serviceName),
-				Host:           kong.String(serviceHost),
-				Protocol:       kong.String(protocol),
-				ConnectTimeout: kong.Int(DefaultServiceTimeout),
-				ReadTimeout:    kong.Int(DefaultServiceTimeout),
-				WriteTimeout:   kong.Int(DefaultServiceTimeout),
-				Retries:        kong.Int(DefaultRetries),
+				Name:           new(serviceName),
+				Host:           new(serviceHost),
+				Protocol:       new(protocol),
+				ConnectTimeout: new(DefaultServiceTimeout),
+				ReadTimeout:    new(DefaultServiceTimeout),
+				WriteTimeout:   new(DefaultServiceTimeout),
+				Retries:        new(DefaultRetries),
 			},
 			Namespace: route.GetNamespace(),
 			Backends:  backends,
@@ -80,7 +80,7 @@ func generateKongServiceFromBackendRefWithName(
 			service.Plugins = make([]kong.Plugin, 0)
 		}
 		service.Plugins = append(service.Plugins, kong.Plugin{
-			Name: kong.String("request-termination"),
+			Name: new("request-termination"),
 			Config: kong.Configuration{
 				"status_code": 500,
 				"message":     "no existing backendRef provided",

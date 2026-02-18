@@ -6,7 +6,6 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	apiwatch "k8s.io/apimachinery/pkg/watch"
@@ -70,7 +69,7 @@ func TestKongPluginBindingAdoption(t *testing.T) {
 			}).Return(
 			&sdkkonnectops.GetPluginResponse{
 				Plugin: &sdkkonnectcomp.Plugin{
-					ID:   lo.ToPtr(pluginID),
+					ID:   new(pluginID),
 					Name: "proxy-cache",
 				},
 			}, nil)
@@ -125,10 +124,10 @@ func TestKongPluginBindingAdoption(t *testing.T) {
 			}).Return(
 			&sdkkonnectops.GetPluginResponse{
 				Plugin: &sdkkonnectcomp.Plugin{
-					ID:   lo.ToPtr(pluginID),
+					ID:   new(pluginID),
 					Name: "proxy-cache",
 					Service: &sdkkonnectcomp.PluginService{
-						ID: lo.ToPtr(serviceID),
+						ID: new(serviceID),
 					},
 				},
 			}, nil)
@@ -179,7 +178,7 @@ func TestKongPluginBindingAdoption(t *testing.T) {
 			}).Return(
 			&sdkkonnectops.GetPluginResponse{
 				Plugin: &sdkkonnectcomp.Plugin{
-					ID:   lo.ToPtr(pluginID),
+					ID:   new(pluginID),
 					Name: "proxy-cache",
 				},
 			}, nil)

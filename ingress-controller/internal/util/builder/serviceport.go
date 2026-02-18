@@ -1,7 +1,6 @@
 package builder
 
 import (
-	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -38,7 +37,7 @@ func (b *ServicePortBuilder) WithPort(port int32) *ServicePortBuilder {
 
 // WithAppProtocol sets the app protocol on the service port.
 func (b *ServicePortBuilder) WithAppProtocol(appproto string) *ServicePortBuilder {
-	b.sp.AppProtocol = lo.ToPtr(appproto)
+	b.sp.AppProtocol = new(appproto)
 	return b
 }
 

@@ -11,7 +11,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -130,8 +129,8 @@ func TestKongPluginInstallationEssentials(t *testing.T) {
 		kpiPrivate, err = GetClients().OperatorClient.GatewayOperatorV1alpha1().KongPluginInstallations(kpiPrivateNN.Namespace).Get(GetCtx(), kpiPrivateNN.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		secretRef := gatewayv1.SecretObjectReference{
-			Kind:      lo.ToPtr(gatewayv1.Kind("Secret")),
-			Namespace: lo.ToPtr(gatewayv1.Namespace(namespaceForSecret)),
+			Kind:      new(gatewayv1.Kind("Secret")),
+			Namespace: new(gatewayv1.Namespace(namespaceForSecret)),
 			Name:      "kong-plugin-image-registry-credentials",
 		}
 		kpiPrivate.Spec.ImagePullSecretRef = &secretRef
@@ -157,7 +156,7 @@ func TestKongPluginInstallationEssentials(t *testing.T) {
 				To: []gatewayv1beta1.ReferenceGrantTo{
 					{
 						Kind: gatewayv1.Kind("Secret"),
-						Name: lo.ToPtr(secretRef.Name),
+						Name: new(secretRef.Name),
 					},
 				},
 				From: []gatewayv1beta1.ReferenceGrantFrom{

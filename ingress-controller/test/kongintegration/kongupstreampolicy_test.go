@@ -8,7 +8,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/kong/go-kong/kong"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -49,92 +48,92 @@ func TestKongUpstreamPolicyTranslation(t *testing.T) {
 		{
 			name: "KongUpstreamPolicySpec with no hash-on or hash-fallback",
 			policySpec: configurationv1beta1.KongUpstreamPolicySpec{
-				Algorithm: lo.ToPtr("least-connections"),
-				Slots:     lo.ToPtr(20),
+				Algorithm: new("least-connections"),
+				Slots:     new(20),
 			},
 			expectedUpstream: &kong.Upstream{
-				Algorithm: lo.ToPtr("least-connections"),
-				Slots:     lo.ToPtr(20),
+				Algorithm: new("least-connections"),
+				Slots:     new(20),
 			},
 		},
 		{
 			name: "KongUpstreamPolicySpec with hash-on header",
 			policySpec: configurationv1beta1.KongUpstreamPolicySpec{
-				Algorithm: lo.ToPtr("consistent-hashing"),
+				Algorithm: new("consistent-hashing"),
 				HashOn: &configurationv1beta1.KongUpstreamHash{
-					Header: lo.ToPtr("foo"),
+					Header: new("foo"),
 				},
 				HashOnFallback: &configurationv1beta1.KongUpstreamHash{
-					Header: lo.ToPtr("bar"),
+					Header: new("bar"),
 				},
 			},
 			expectedUpstream: &kong.Upstream{
-				Algorithm:          lo.ToPtr("consistent-hashing"),
-				HashOn:             lo.ToPtr("header"),
-				HashOnHeader:       lo.ToPtr("foo"),
-				HashFallback:       lo.ToPtr("header"),
-				HashFallbackHeader: lo.ToPtr("bar"),
+				Algorithm:          new("consistent-hashing"),
+				HashOn:             new("header"),
+				HashOnHeader:       new("foo"),
+				HashFallback:       new("header"),
+				HashFallbackHeader: new("bar"),
 			},
 		},
 		{
 			name: "KongUpstreamPolicySpec with hash-on cookie",
 			policySpec: configurationv1beta1.KongUpstreamPolicySpec{
-				Algorithm: lo.ToPtr("consistent-hashing"),
+				Algorithm: new("consistent-hashing"),
 				HashOn: &configurationv1beta1.KongUpstreamHash{
-					Cookie:     lo.ToPtr("foo"),
-					CookiePath: lo.ToPtr("/"),
+					Cookie:     new("foo"),
+					CookiePath: new("/"),
 				},
 			},
 			expectedUpstream: &kong.Upstream{
-				Algorithm:        lo.ToPtr("consistent-hashing"),
-				HashOn:           lo.ToPtr("cookie"),
-				HashOnCookie:     lo.ToPtr("foo"),
-				HashOnCookiePath: lo.ToPtr("/"),
+				Algorithm:        new("consistent-hashing"),
+				HashOn:           new("cookie"),
+				HashOnCookie:     new("foo"),
+				HashOnCookiePath: new("/"),
 			},
 		},
 		{
 			name: "KongUpstreamPolicySpec with hash-on query-arg",
 			policySpec: configurationv1beta1.KongUpstreamPolicySpec{
-				Algorithm: lo.ToPtr("consistent-hashing"),
+				Algorithm: new("consistent-hashing"),
 				HashOn: &configurationv1beta1.KongUpstreamHash{
-					QueryArg: lo.ToPtr("foo"),
+					QueryArg: new("foo"),
 				},
 			},
 			expectedUpstream: &kong.Upstream{
-				Algorithm:      lo.ToPtr("consistent-hashing"),
-				HashOn:         lo.ToPtr("query_arg"),
-				HashOnQueryArg: lo.ToPtr("foo"),
+				Algorithm:      new("consistent-hashing"),
+				HashOn:         new("query_arg"),
+				HashOnQueryArg: new("foo"),
 			},
 		},
 		{
 			name: "KongUpstreamPolicySpec with predefined hash input",
 			policySpec: configurationv1beta1.KongUpstreamPolicySpec{
-				Algorithm: lo.ToPtr("consistent-hashing"),
+				Algorithm: new("consistent-hashing"),
 				HashOn: &configurationv1beta1.KongUpstreamHash{
-					Input: lo.ToPtr(configurationv1beta1.HashInput("consumer")),
+					Input: new(configurationv1beta1.HashInput("consumer")),
 				},
 				HashOnFallback: &configurationv1beta1.KongUpstreamHash{
-					Input: lo.ToPtr(configurationv1beta1.HashInput("ip")),
+					Input: new(configurationv1beta1.HashInput("ip")),
 				},
 			},
 			expectedUpstream: &kong.Upstream{
-				Algorithm:    lo.ToPtr("consistent-hashing"),
-				HashOn:       lo.ToPtr("consumer"),
-				HashFallback: lo.ToPtr("ip"),
+				Algorithm:    new("consistent-hashing"),
+				HashOn:       new("consumer"),
+				HashFallback: new("ip"),
 			},
 		},
 		{
 			name: "KongUpstreamPolicySpec with hash-on uri-capture",
 			policySpec: configurationv1beta1.KongUpstreamPolicySpec{
-				Algorithm: lo.ToPtr("consistent-hashing"),
+				Algorithm: new("consistent-hashing"),
 				HashOn: &configurationv1beta1.KongUpstreamHash{
-					URICapture: lo.ToPtr("foo"),
+					URICapture: new("foo"),
 				},
 			},
 			expectedUpstream: &kong.Upstream{
-				Algorithm:        lo.ToPtr("consistent-hashing"),
-				HashOn:           lo.ToPtr("uri_capture"),
-				HashOnURICapture: lo.ToPtr("foo"),
+				Algorithm:        new("consistent-hashing"),
+				HashOn:           new("uri_capture"),
+				HashOnURICapture: new("foo"),
 			},
 		},
 		{
@@ -142,78 +141,78 @@ func TestKongUpstreamPolicyTranslation(t *testing.T) {
 			policySpec: configurationv1beta1.KongUpstreamPolicySpec{
 				Healthchecks: &configurationv1beta1.KongUpstreamHealthcheck{
 					Active: &configurationv1beta1.KongUpstreamActiveHealthcheck{
-						Type:        lo.ToPtr("http"),
-						Concurrency: lo.ToPtr(10),
+						Type:        new("http"),
+						Concurrency: new(10),
 						Healthy: &configurationv1beta1.KongUpstreamHealthcheckHealthy{
 							HTTPStatuses: []configurationv1beta1.HTTPStatus{200},
-							Interval:     lo.ToPtr(20),
-							Successes:    lo.ToPtr(30),
+							Interval:     new(20),
+							Successes:    new(30),
 						},
 						Unhealthy: &configurationv1beta1.KongUpstreamHealthcheckUnhealthy{
-							HTTPFailures: lo.ToPtr(40),
+							HTTPFailures: new(40),
 							HTTPStatuses: []configurationv1beta1.HTTPStatus{500},
-							TCPFailures:  lo.ToPtr(5),
-							Timeouts:     lo.ToPtr(60),
-							Interval:     lo.ToPtr(70),
+							TCPFailures:  new(5),
+							Timeouts:     new(60),
+							Interval:     new(70),
 						},
-						HTTPPath:               lo.ToPtr("/foo"),
-						HTTPSSNI:               lo.ToPtr("foo.com"),
-						HTTPSVerifyCertificate: lo.ToPtr(true),
-						Timeout:                lo.ToPtr(80),
+						HTTPPath:               new("/foo"),
+						HTTPSSNI:               new("foo.com"),
+						HTTPSVerifyCertificate: new(true),
+						Timeout:                new(80),
 						Headers:                map[string][]string{"foo": {"bar"}},
 					},
 					Passive: &configurationv1beta1.KongUpstreamPassiveHealthcheck{
-						Type: lo.ToPtr("tcp"),
+						Type: new("tcp"),
 						Healthy: &configurationv1beta1.KongUpstreamHealthcheckHealthy{
 							HTTPStatuses: []configurationv1beta1.HTTPStatus{200},
-							Successes:    lo.ToPtr(100),
+							Successes:    new(100),
 						},
 						Unhealthy: &configurationv1beta1.KongUpstreamHealthcheckUnhealthy{
 							HTTPStatuses: []configurationv1beta1.HTTPStatus{500},
-							TCPFailures:  lo.ToPtr(110),
-							Timeouts:     lo.ToPtr(120),
+							TCPFailures:  new(110),
+							Timeouts:     new(120),
 						},
 					},
-					Threshold: lo.ToPtr(15),
+					Threshold: new(15),
 				},
 			},
 			expectedUpstream: &kong.Upstream{
 				Healthchecks: &kong.Healthcheck{
 					Active: &kong.ActiveHealthcheck{
-						Type:        lo.ToPtr("http"),
-						Concurrency: lo.ToPtr(10),
+						Type:        new("http"),
+						Concurrency: new(10),
 						Healthy: &kong.Healthy{
 							HTTPStatuses: []int{200},
-							Interval:     lo.ToPtr(20),
-							Successes:    lo.ToPtr(30),
+							Interval:     new(20),
+							Successes:    new(30),
 						},
 						Unhealthy: &kong.Unhealthy{
-							HTTPFailures: lo.ToPtr(40),
+							HTTPFailures: new(40),
 							HTTPStatuses: []int{500},
-							TCPFailures:  lo.ToPtr(5),
-							Timeouts:     lo.ToPtr(60),
-							Interval:     lo.ToPtr(70),
+							TCPFailures:  new(5),
+							Timeouts:     new(60),
+							Interval:     new(70),
 						},
-						HTTPPath:               lo.ToPtr("/foo"),
-						HTTPSSni:               lo.ToPtr("foo.com"),
-						HTTPSVerifyCertificate: lo.ToPtr(true),
+						HTTPPath:               new("/foo"),
+						HTTPSSni:               new("foo.com"),
+						HTTPSVerifyCertificate: new(true),
 						Headers:                map[string][]string{"foo": {"bar"}},
-						Timeout:                lo.ToPtr(80),
+						Timeout:                new(80),
 					},
 					Passive: &kong.PassiveHealthcheck{
-						Type: lo.ToPtr("tcp"),
+						Type: new("tcp"),
 						Healthy: &kong.Healthy{
 							HTTPStatuses: []int{200},
-							Successes:    lo.ToPtr(100),
+							Successes:    new(100),
 						},
 						Unhealthy: &kong.Unhealthy{
-							HTTPFailures: lo.ToPtr(0),
+							HTTPFailures: new(0),
 							HTTPStatuses: []int{500},
-							TCPFailures:  lo.ToPtr(110),
-							Timeouts:     lo.ToPtr(120),
+							TCPFailures:  new(110),
+							Timeouts:     new(120),
 						},
 					},
-					Threshold: lo.ToPtr(15.0),
+					Threshold: new(15.0),
 				},
 			},
 		},
@@ -223,8 +222,8 @@ func TestKongUpstreamPolicyTranslation(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			translatedUpstream := kongstate.TranslateKongUpstreamPolicy(tc.policySpec)
 			const upstreamName = "test-upstream"
-			translatedUpstream.Name = lo.ToPtr(upstreamName)
-			tc.expectedUpstream.Name = lo.ToPtr(upstreamName)
+			translatedUpstream.Name = new(upstreamName)
+			tc.expectedUpstream.Name = new(upstreamName)
 
 			content := sendconfig.ContentWithHash{
 				Content: &file.Content{
@@ -245,7 +244,7 @@ func TestKongUpstreamPolicyTranslation(t *testing.T) {
 
 			// Wait for the Upstream to be created in Kong and assert it matches the expected Upstream.
 			require.EventuallyWithT(t, func(c *assert.CollectT) {
-				upstreamInKong, err := kongClient.Upstreams.Get(ctx, lo.ToPtr(upstreamName))
+				upstreamInKong, err := kongClient.Upstreams.Get(ctx, new(upstreamName))
 				if !assert.NoError(c, err, "getting upstream from Kong") {
 					return
 				}
@@ -280,38 +279,38 @@ func dropKongDefaults(upstream *kong.Upstream) *kong.Upstream {
 
 	defaultHealthcheck := &kong.Healthcheck{
 		Active: &kong.ActiveHealthcheck{
-			Concurrency: lo.ToPtr(10),
+			Concurrency: new(10),
 			Healthy: &kong.Healthy{
 				HTTPStatuses: []int{200, 302},
-				Successes:    lo.ToPtr(0),
-				Interval:     lo.ToPtr(0),
+				Successes:    new(0),
+				Interval:     new(0),
 			},
-			HTTPPath:               lo.ToPtr("/"),
-			HTTPSVerifyCertificate: lo.ToPtr(true),
-			Type:                   lo.ToPtr("http"),
-			Timeout:                lo.ToPtr(1),
+			HTTPPath:               new("/"),
+			HTTPSVerifyCertificate: new(true),
+			Type:                   new("http"),
+			Timeout:                new(1),
 			Unhealthy: &kong.Unhealthy{
-				HTTPFailures: lo.ToPtr(0),
+				HTTPFailures: new(0),
 				HTTPStatuses: []int{429, 404, 500, 501, 502, 503, 504, 505},
-				TCPFailures:  lo.ToPtr(0),
-				Timeouts:     lo.ToPtr(0),
-				Interval:     lo.ToPtr(0),
+				TCPFailures:  new(0),
+				Timeouts:     new(0),
+				Interval:     new(0),
 			},
 		},
 		Passive: &kong.PassiveHealthcheck{
 			Healthy: &kong.Healthy{
 				HTTPStatuses: []int{200, 201, 202, 203, 204, 205, 206, 207, 208, 226, 300, 301, 302, 303, 304, 305, 306, 307, 308},
-				Successes:    lo.ToPtr(0),
+				Successes:    new(0),
 			},
-			Type: lo.ToPtr("http"),
+			Type: new("http"),
 			Unhealthy: &kong.Unhealthy{
-				HTTPFailures: lo.ToPtr(0),
+				HTTPFailures: new(0),
 				HTTPStatuses: []int{429, 500, 503},
-				TCPFailures:  lo.ToPtr(0),
-				Timeouts:     lo.ToPtr(0),
+				TCPFailures:  new(0),
+				Timeouts:     new(0),
 			},
 		},
-		Threshold: lo.ToPtr(0.),
+		Threshold: new(0.),
 	}
 
 	if diff := cmp.Diff(upstream.Healthchecks, defaultHealthcheck); diff == "" {

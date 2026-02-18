@@ -7,7 +7,6 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -71,7 +70,7 @@ func TestKongSNI(t *testing.T) {
 			}),
 		).Return(&sdkkonnectops.CreateSniWithCertificateResponse{
 			Sni: &sdkkonnectcomp.Sni{
-				ID: lo.ToPtr("sni-12345"),
+				ID: new("sni-12345"),
 			},
 		}, nil)
 
@@ -147,10 +146,10 @@ func TestKongSNI(t *testing.T) {
 		).Return(&sdkkonnectops.GetSniWithCertificateResponse{
 			Sni: &sdkkonnectcomp.Sni{
 				Certificate: sdkkonnectcomp.SNICertificate{
-					ID: lo.ToPtr(certID),
+					ID: new(certID),
 				},
 				Name: sniName,
-				ID:   lo.ToPtr(sniID),
+				ID:   new(sniID),
 			},
 		}, nil)
 		sdk.SNIsSDK.EXPECT().UpsertSniWithCertificate(

@@ -3,8 +3,6 @@ package configuration_test
 import (
 	"testing"
 
-	"github.com/samber/lo"
-
 	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/test/crdsvalidation/common"
@@ -25,9 +23,9 @@ func TestKongUpstreamPolicy(t *testing.T) {
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("sticky-sessions"),
+						Algorithm: new("sticky-sessions"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
-							Input: lo.ToPtr(configurationv1beta1.HashInput("none")),
+							Input: new(configurationv1beta1.HashInput("none")),
 						},
 						StickySessions: &configurationv1beta1.KongUpstreamStickySessions{
 							Cookie: "session-cookie",
@@ -40,16 +38,16 @@ func TestKongUpstreamPolicy(t *testing.T) {
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("consistent-hashing"),
+						Algorithm: new("consistent-hashing"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
-							Input: lo.ToPtr(configurationv1beta1.HashInput("none")),
+							Input: new(configurationv1beta1.HashInput("none")),
 						},
 						StickySessions: &configurationv1beta1.KongUpstreamStickySessions{
 							Cookie: "session-cookie",
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.algorithm must be set to 'sticky-sessions' when spec.stickySessions is set."),
+				ExpectedErrorMessage: new("spec.algorithm must be set to 'sticky-sessions' when spec.stickySessions is set."),
 			},
 
 			{
@@ -62,146 +60,146 @@ func TestKongUpstreamPolicy(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("When spec.stickySessions is set, spec.hashOn.input must be set to 'none' (no other hash_on fields allowed)."),
+				ExpectedErrorMessage: new("When spec.stickySessions is set, spec.hashOn.input must be set to 'none' (no other hash_on fields allowed)."),
 			},
 			{
 				Name: "sticky sessions with hashOn but no input should fail",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("sticky-sessions"),
+						Algorithm: new("sticky-sessions"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
-							Header: lo.ToPtr("X-Custom-Header"),
+							Header: new("X-Custom-Header"),
 						},
 						StickySessions: &configurationv1beta1.KongUpstreamStickySessions{
 							Cookie: "session-cookie",
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("When spec.stickySessions is set, spec.hashOn.input must be set to 'none' (no other hash_on fields allowed)."),
+				ExpectedErrorMessage: new("When spec.stickySessions is set, spec.hashOn.input must be set to 'none' (no other hash_on fields allowed)."),
 			},
 			{
 				Name: "sticky sessions with hashOn.input not 'none' should fail",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("sticky-sessions"),
+						Algorithm: new("sticky-sessions"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
-							Input: lo.ToPtr(configurationv1beta1.HashInput("ip")),
+							Input: new(configurationv1beta1.HashInput("ip")),
 						},
 						StickySessions: &configurationv1beta1.KongUpstreamStickySessions{
 							Cookie: "session-cookie",
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("When spec.stickySessions is set, spec.hashOn.input must be set to 'none' (no other hash_on fields allowed)."),
+				ExpectedErrorMessage: new("When spec.stickySessions is set, spec.hashOn.input must be set to 'none' (no other hash_on fields allowed)."),
 			},
 			{
 				Name: "sticky sessions with hashOn.input=none but other hash fields should fail",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("sticky-sessions"),
+						Algorithm: new("sticky-sessions"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
-							Input:  lo.ToPtr(configurationv1beta1.HashInput("none")),
-							Header: lo.ToPtr("X-Custom-Header"),
+							Input:  new(configurationv1beta1.HashInput("none")),
+							Header: new("X-Custom-Header"),
 						},
 						StickySessions: &configurationv1beta1.KongUpstreamStickySessions{
 							Cookie: "session-cookie",
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("When spec.stickySessions is set, spec.hashOn.input must be set to 'none' (no other hash_on fields allowed)."),
+				ExpectedErrorMessage: new("When spec.stickySessions is set, spec.hashOn.input must be set to 'none' (no other hash_on fields allowed)."),
 			},
 			{
 				Name: "sticky sessions with hashOn.input=none but cookie field should fail",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("sticky-sessions"),
+						Algorithm: new("sticky-sessions"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
-							Input:  lo.ToPtr(configurationv1beta1.HashInput("none")),
-							Cookie: lo.ToPtr("hash-cookie"),
+							Input:  new(configurationv1beta1.HashInput("none")),
+							Cookie: new("hash-cookie"),
 						},
 						StickySessions: &configurationv1beta1.KongUpstreamStickySessions{
 							Cookie: "session-cookie",
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("When spec.stickySessions is set, spec.hashOn.input must be set to 'none' (no other hash_on fields allowed)."),
+				ExpectedErrorMessage: new("When spec.stickySessions is set, spec.hashOn.input must be set to 'none' (no other hash_on fields allowed)."),
 			},
 			{
 				Name: "sticky sessions with hashOn.input=none but cookiePath field should fail",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("sticky-sessions"),
+						Algorithm: new("sticky-sessions"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
-							Input:      lo.ToPtr(configurationv1beta1.HashInput("none")),
-							CookiePath: lo.ToPtr("/path"),
+							Input:      new(configurationv1beta1.HashInput("none")),
+							CookiePath: new("/path"),
 						},
 						StickySessions: &configurationv1beta1.KongUpstreamStickySessions{
 							Cookie: "session-cookie",
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("When spec.stickySessions is set, spec.hashOn.input must be set to 'none' (no other hash_on fields allowed)."),
+				ExpectedErrorMessage: new("When spec.stickySessions is set, spec.hashOn.input must be set to 'none' (no other hash_on fields allowed)."),
 			},
 			{
 				Name: "sticky sessions with hashOn.input=none but uriCapture field should fail",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("sticky-sessions"),
+						Algorithm: new("sticky-sessions"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
-							Input:      lo.ToPtr(configurationv1beta1.HashInput("none")),
-							URICapture: lo.ToPtr("capture"),
+							Input:      new(configurationv1beta1.HashInput("none")),
+							URICapture: new("capture"),
 						},
 						StickySessions: &configurationv1beta1.KongUpstreamStickySessions{
 							Cookie: "session-cookie",
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("When spec.stickySessions is set, spec.hashOn.input must be set to 'none' (no other hash_on fields allowed)."),
+				ExpectedErrorMessage: new("When spec.stickySessions is set, spec.hashOn.input must be set to 'none' (no other hash_on fields allowed)."),
 			},
 			{
 				Name: "sticky sessions with hashOn.input=none but queryArg field should fail",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("sticky-sessions"),
+						Algorithm: new("sticky-sessions"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
-							Input:    lo.ToPtr(configurationv1beta1.HashInput("none")),
-							QueryArg: lo.ToPtr("arg"),
+							Input:    new(configurationv1beta1.HashInput("none")),
+							QueryArg: new("arg"),
 						},
 						StickySessions: &configurationv1beta1.KongUpstreamStickySessions{
 							Cookie: "session-cookie",
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("When spec.stickySessions is set, spec.hashOn.input must be set to 'none' (no other hash_on fields allowed)."),
+				ExpectedErrorMessage: new("When spec.stickySessions is set, spec.hashOn.input must be set to 'none' (no other hash_on fields allowed)."),
 			},
 			{
 				Name: "sticky sessions without cookie should fail",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("sticky-sessions"),
+						Algorithm: new("sticky-sessions"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
-							Input: lo.ToPtr(configurationv1beta1.HashInput("none")),
+							Input: new(configurationv1beta1.HashInput("none")),
 						},
 						StickySessions: &configurationv1beta1.KongUpstreamStickySessions{},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.stickySessions.cookie in body should be at least 1 chars long"),
+				ExpectedErrorMessage: new("spec.stickySessions.cookie in body should be at least 1 chars long"),
 			},
 			{
 				Name: "valid configuration without sticky sessions",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("round-robin"),
-						Slots:     lo.ToPtr(100),
+						Algorithm: new("round-robin"),
+						Slots:     new(100),
 					},
 				},
 			},
@@ -210,9 +208,9 @@ func TestKongUpstreamPolicy(t *testing.T) {
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("sticky-sessions"),
+						Algorithm: new("sticky-sessions"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
-							Input: lo.ToPtr(configurationv1beta1.HashInput("ip")),
+							Input: new(configurationv1beta1.HashInput("ip")),
 						},
 					},
 				},
@@ -222,9 +220,9 @@ func TestKongUpstreamPolicy(t *testing.T) {
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("sticky-sessions"),
+						Algorithm: new("sticky-sessions"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
-							Input: lo.ToPtr(configurationv1beta1.HashInput("none")),
+							Input: new(configurationv1beta1.HashInput("none")),
 						},
 					},
 				},
@@ -234,39 +232,39 @@ func TestKongUpstreamPolicy(t *testing.T) {
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("round-robin"),
+						Algorithm: new("round-robin"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
-							Input: lo.ToPtr(configurationv1beta1.HashInput("ip")),
+							Input: new(configurationv1beta1.HashInput("ip")),
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.algorithm must be set to either 'consistent-hashing' or 'sticky-sessions' when spec.hashOn is set."),
+				ExpectedErrorMessage: new("spec.algorithm must be set to either 'consistent-hashing' or 'sticky-sessions' when spec.hashOn is set."),
 			},
 			{
 				Name: "invalid configuration with least-connections algorithm and hashOn should fail",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("least-connections"),
+						Algorithm: new("least-connections"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
-							Input: lo.ToPtr(configurationv1beta1.HashInput("ip")),
+							Input: new(configurationv1beta1.HashInput("ip")),
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.algorithm must be set to either 'consistent-hashing' or 'sticky-sessions' when spec.hashOn is set."),
+				ExpectedErrorMessage: new("spec.algorithm must be set to either 'consistent-hashing' or 'sticky-sessions' when spec.hashOn is set."),
 			},
 			{
 				Name: "invalid configuration with latency algorithm and hashOn should fail",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("latency"),
+						Algorithm: new("latency"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
-							Input: lo.ToPtr(configurationv1beta1.HashInput("ip")),
+							Input: new(configurationv1beta1.HashInput("ip")),
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.algorithm must be set to either 'consistent-hashing' or 'sticky-sessions' when spec.hashOn is set."),
+				ExpectedErrorMessage: new("spec.algorithm must be set to either 'consistent-hashing' or 'sticky-sessions' when spec.hashOn is set."),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -279,10 +277,10 @@ func TestKongUpstreamPolicy(t *testing.T) {
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("consistent-hashing"),
+						Algorithm: new("consistent-hashing"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
-							Cookie:     lo.ToPtr("session-cookie-name"),
-							CookiePath: lo.ToPtr("/cookie-path"),
+							Cookie:     new("session-cookie-name"),
+							CookiePath: new("/cookie-path"),
 						},
 					},
 				},
@@ -292,35 +290,35 @@ func TestKongUpstreamPolicy(t *testing.T) {
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("consistent-hashing"),
+						Algorithm: new("consistent-hashing"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
-							Cookie: lo.ToPtr("session-cookie-name"),
+							Cookie: new("session-cookie-name"),
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("When spec.hashOn.cookie is set, spec.hashOn.cookiePath is required."),
+				ExpectedErrorMessage: new("When spec.hashOn.cookie is set, spec.hashOn.cookiePath is required."),
 			},
 			{
 				Name: "hash on cookiePath requires cookie field to be set",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("consistent-hashing"),
+						Algorithm: new("consistent-hashing"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
-							CookiePath: lo.ToPtr("/cookie-path"),
+							CookiePath: new("/cookie-path"),
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("When spec.hashOn.cookiePath is set, spec.hashOn.cookie is required."),
+				ExpectedErrorMessage: new("When spec.hashOn.cookiePath is set, spec.hashOn.cookie is required."),
 			},
 			{
 				Name: "hash on header with valid input",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("consistent-hashing"),
+						Algorithm: new("consistent-hashing"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
-							Header: lo.ToPtr("X-Custom-Header"),
+							Header: new("X-Custom-Header"),
 						},
 					},
 				},
@@ -330,13 +328,13 @@ func TestKongUpstreamPolicy(t *testing.T) {
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("consistent-hashing"),
+						Algorithm: new("consistent-hashing"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
-							Header: lo.ToPtr("X-Custom-Header"),
+							Header: new("X-Custom-Header"),
 						},
 						HashOnFallback: &configurationv1beta1.KongUpstreamHash{
-							Cookie:     lo.ToPtr("fallback-cookie"),
-							CookiePath: lo.ToPtr("/fallback-cookie-path"),
+							Cookie:     new("fallback-cookie"),
+							CookiePath: new("/fallback-cookie-path"),
 						},
 					},
 				},
@@ -348,18 +346,18 @@ func TestKongUpstreamPolicy(t *testing.T) {
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("consistent-hashing"),
+						Algorithm: new("consistent-hashing"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
-							Cookie:     lo.ToPtr("cookie"),
-							CookiePath: lo.ToPtr("/cookie-path"),
+							Cookie:     new("cookie"),
+							CookiePath: new("/cookie-path"),
 						},
 						HashOnFallback: &configurationv1beta1.KongUpstreamHash{
-							Cookie:     lo.ToPtr("fallback-cookie"),
-							CookiePath: lo.ToPtr("/fallback-cookie-path"),
+							Cookie:     new("fallback-cookie"),
+							CookiePath: new("/fallback-cookie-path"),
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.hashOnFallback must not be set when spec.hashOn.cookie is set."),
+				ExpectedErrorMessage: new("spec.hashOnFallback must not be set when spec.hashOn.cookie is set."),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -372,34 +370,34 @@ func TestKongUpstreamPolicy(t *testing.T) {
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("consistent-hashing"),
+						Algorithm: new("consistent-hashing"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
-							Cookie:     lo.ToPtr("cookie"),
-							CookiePath: lo.ToPtr("/cookie-path"),
+							Cookie:     new("cookie"),
+							CookiePath: new("/cookie-path"),
 						},
 						Healthchecks: &configurationv1beta1.KongUpstreamHealthcheck{
-							Threshold: lo.ToPtr(-1),
+							Threshold: new(-1),
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Invalid value: -1: spec.healthchecks.threshold in body should be greater than or equal to 0"),
+				ExpectedErrorMessage: new("Invalid value: -1: spec.healthchecks.threshold in body should be greater than or equal to 0"),
 			},
 			{
 				Name: "healthchecks thresholds must be less than or equal to 100",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("consistent-hashing"),
+						Algorithm: new("consistent-hashing"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
-							Cookie:     lo.ToPtr("cookie"),
-							CookiePath: lo.ToPtr("/cookie-path"),
+							Cookie:     new("cookie"),
+							CookiePath: new("/cookie-path"),
 						},
 						Healthchecks: &configurationv1beta1.KongUpstreamHealthcheck{
-							Threshold: lo.ToPtr(101),
+							Threshold: new(101),
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Invalid value: 101: spec.healthchecks.threshold in body should be less than or equal to 100"),
+				ExpectedErrorMessage: new("Invalid value: 101: spec.healthchecks.threshold in body should be less than or equal to 100"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)

@@ -7,7 +7,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -59,7 +58,7 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 			},
 			expectedPlugins: []kong.Plugin{
 				{
-					Name: kong.String("request-transformer"),
+					Name: new("request-transformer"),
 					Config: kong.Configuration{
 						"add": TransformerPluginConfig{
 							Headers: []Header{
@@ -91,21 +90,21 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 				{
 					Type: gatewayapi.HTTPRouteFilterRequestRedirect,
 					RequestRedirect: &gatewayapi.HTTPRequestRedirectFilter{
-						Hostname:   (*gatewayapi.PreciseHostname)(lo.ToPtr("example.org")),
-						StatusCode: lo.ToPtr(302),
+						Hostname:   (*gatewayapi.PreciseHostname)(new("example.org")),
+						StatusCode: new(302),
 					},
 				},
 			},
 			path: "/test",
 			expectedPlugins: []kong.Plugin{
 				{
-					Name: kong.String("request-termination"),
+					Name: new("request-termination"),
 					Config: kong.Configuration{
-						"status_code": lo.ToPtr(302),
+						"status_code": new(302),
 					},
 				},
 				{
-					Name: kong.String("response-transformer"),
+					Name: new("response-transformer"),
 					Config: kong.Configuration{
 						"add": TransformerPluginConfig{
 							Headers: []Header{
@@ -140,7 +139,7 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 			},
 			expectedPlugins: []kong.Plugin{
 				{
-					Name: kong.String("response-transformer"),
+					Name: new("response-transformer"),
 					Config: kong.Configuration{
 						"add": TransformerPluginConfig{
 							Headers: []Header{
@@ -242,7 +241,7 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 					URLRewrite: &gatewayapi.HTTPURLRewriteFilter{
 						Path: &gatewayapi.HTTPPathModifier{
 							Type:               gatewayapi.PrefixMatchHTTPPathModifier,
-							ReplacePrefixMatch: lo.ToPtr("/new"),
+							ReplacePrefixMatch: new("/new"),
 						},
 					},
 				},
@@ -250,7 +249,7 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 			path: "/prefix",
 			expectedPlugins: []kong.Plugin{
 				{
-					Name: kong.String("request-transformer"),
+					Name: new("request-transformer"),
 					Config: kong.Configuration{
 						"add": TransformerPluginConfig{
 							Headers: []Header{
@@ -269,8 +268,8 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 			expectedRouteModifications: kongstate.Route{
 				Route: kong.Route{
 					Paths: []*string{
-						lo.ToPtr("~/prefix$"),
-						lo.ToPtr("~/prefix(/.*)"),
+						new("~/prefix$"),
+						new("~/prefix(/.*)"),
 					},
 				},
 			},
@@ -307,7 +306,7 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 			modifier: &gatewayapi.HTTPURLRewriteFilter{
 				Path: &gatewayapi.HTTPPathModifier{
 					Type:            gatewayapi.FullPathHTTPPathModifier,
-					ReplaceFullPath: lo.ToPtr("/new-path"),
+					ReplaceFullPath: new("/new-path"),
 				},
 			},
 			expected: []transformerPlugin{{
@@ -323,7 +322,7 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 			modifier: &gatewayapi.HTTPURLRewriteFilter{
 				Path: &gatewayapi.HTTPPathModifier{
 					Type:               gatewayapi.PrefixMatchHTTPPathModifier,
-					ReplacePrefixMatch: lo.ToPtr("/new"),
+					ReplacePrefixMatch: new("/new"),
 				},
 			},
 			firstMatchPath: "/prefix",
@@ -336,8 +335,8 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 			expectedKongRouteModification: kongstate.Route{
 				Route: kong.Route{
 					Paths: []*string{
-						lo.ToPtr("~/prefix$"),
-						lo.ToPtr("~/prefix(/.*)"),
+						new("~/prefix$"),
+						new("~/prefix(/.*)"),
 					},
 				},
 			},
@@ -347,7 +346,7 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 			modifier: &gatewayapi.HTTPURLRewriteFilter{
 				Path: &gatewayapi.HTTPPathModifier{
 					Type:               gatewayapi.PrefixMatchHTTPPathModifier,
-					ReplacePrefixMatch: lo.ToPtr(""),
+					ReplacePrefixMatch: new(""),
 				},
 			},
 			firstMatchPath: "/prefix",
@@ -360,8 +359,8 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 			expectedKongRouteModification: kongstate.Route{
 				Route: kong.Route{
 					Paths: []*string{
-						lo.ToPtr("~/prefix$"),
-						lo.ToPtr("~/prefix(/.*)"),
+						new("~/prefix$"),
+						new("~/prefix(/.*)"),
 					},
 				},
 			},
@@ -371,7 +370,7 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 			modifier: &gatewayapi.HTTPURLRewriteFilter{
 				Path: &gatewayapi.HTTPPathModifier{
 					Type:               gatewayapi.PrefixMatchHTTPPathModifier,
-					ReplacePrefixMatch: lo.ToPtr("/prefix"),
+					ReplacePrefixMatch: new("/prefix"),
 				},
 			},
 			firstMatchPath: "",
@@ -384,8 +383,8 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 			expectedKongRouteModification: kongstate.Route{
 				Route: kong.Route{
 					Paths: []*string{
-						lo.ToPtr("~/$"),
-						lo.ToPtr("~/(.*)"),
+						new("~/$"),
+						new("~/(.*)"),
 					},
 				},
 			},
@@ -395,7 +394,7 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 			modifier: &gatewayapi.HTTPURLRewriteFilter{
 				Path: &gatewayapi.HTTPPathModifier{
 					Type:               gatewayapi.PrefixMatchHTTPPathModifier,
-					ReplacePrefixMatch: lo.ToPtr("/"),
+					ReplacePrefixMatch: new("/"),
 				},
 			},
 			firstMatchPath: "/prefix",
@@ -408,8 +407,8 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 			expectedKongRouteModification: kongstate.Route{
 				Route: kong.Route{
 					Paths: []*string{
-						lo.ToPtr("~/prefix$"),
-						lo.ToPtr("~/prefix(/.*)"),
+						new("~/prefix$"),
+						new("~/prefix(/.*)"),
 					},
 				},
 			},
@@ -419,7 +418,7 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 			modifier: &gatewayapi.HTTPURLRewriteFilter{
 				Path: &gatewayapi.HTTPPathModifier{
 					Type:               gatewayapi.PrefixMatchHTTPPathModifier,
-					ReplacePrefixMatch: lo.ToPtr("/"),
+					ReplacePrefixMatch: new("/"),
 				},
 			},
 			firstMatchPath: "/",
@@ -432,8 +431,8 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 			expectedKongRouteModification: kongstate.Route{
 				Route: kong.Route{
 					Paths: []*string{
-						lo.ToPtr("~/$"),
-						lo.ToPtr("~/(.*)"),
+						new("~/$"),
+						new("~/(.*)"),
 					},
 				},
 			},
@@ -443,7 +442,7 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 			modifier: &gatewayapi.HTTPURLRewriteFilter{
 				Path: &gatewayapi.HTTPPathModifier{
 					Type:               gatewayapi.PrefixMatchHTTPPathModifier,
-					ReplacePrefixMatch: lo.ToPtr("/new-prefix"),
+					ReplacePrefixMatch: new("/new-prefix"),
 				},
 			},
 			firstMatchPath: "/",
@@ -456,8 +455,8 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 			expectedKongRouteModification: kongstate.Route{
 				Route: kong.Route{
 					Paths: []*string{
-						lo.ToPtr("~/$"),
-						lo.ToPtr("~/(.*)"),
+						new("~/$"),
+						new("~/(.*)"),
 					},
 				},
 			},
@@ -467,7 +466,7 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 			modifier: &gatewayapi.HTTPURLRewriteFilter{
 				Path: &gatewayapi.HTTPPathModifier{
 					Type:               gatewayapi.PrefixMatchHTTPPathModifier,
-					ReplacePrefixMatch: lo.ToPtr("/new-prefix"),
+					ReplacePrefixMatch: new("/new-prefix"),
 				},
 			},
 			firstMatchPath: "/prefix/",
@@ -480,8 +479,8 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 			expectedKongRouteModification: kongstate.Route{
 				Route: kong.Route{
 					Paths: []*string{
-						lo.ToPtr("~/prefix$"),
-						lo.ToPtr("~/prefix(/.*)"),
+						new("~/prefix$"),
+						new("~/prefix(/.*)"),
 					},
 				},
 			},
@@ -489,7 +488,7 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 		{
 			name: "URLRewriteFilter with hostname",
 			modifier: &gatewayapi.HTTPURLRewriteFilter{
-				Hostname: lo.ToPtr(gatewayapi.PreciseHostname("replaced.host")),
+				Hostname: new(gatewayapi.PreciseHostname("replaced.host")),
 			},
 			expected: []transformerPlugin{{
 				Type: transformerPluginTypeRequest,
@@ -510,9 +509,9 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 			modifier: &gatewayapi.HTTPURLRewriteFilter{
 				Path: &gatewayapi.HTTPPathModifier{
 					Type:               gatewayapi.PrefixMatchHTTPPathModifier,
-					ReplacePrefixMatch: lo.ToPtr("/new-prefix"),
+					ReplacePrefixMatch: new("/new-prefix"),
 				},
-				Hostname: lo.ToPtr(gatewayapi.PreciseHostname("replaced.host")),
+				Hostname: new(gatewayapi.PreciseHostname("replaced.host")),
 			},
 			firstMatchPath: "/prefix",
 			expected: []transformerPlugin{
@@ -540,8 +539,8 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 			expectedKongRouteModification: kongstate.Route{
 				Route: kong.Route{
 					Paths: []*string{
-						lo.ToPtr("~/prefix$"),
-						lo.ToPtr("~/prefix(/.*)"),
+						new("~/prefix$"),
+						new("~/prefix(/.*)"),
 					},
 				},
 			},
@@ -742,7 +741,7 @@ func TestConvertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 		{
 			msg: "regex header matches convert correctly",
 			input: []gatewayapi.HTTPHeaderMatch{{
-				Type:  lo.ToPtr(gatewayapi.HeaderMatchRegularExpression),
+				Type:  new(gatewayapi.HeaderMatchRegularExpression),
 				Name:  "Content-Type",
 				Value: "^audio/*",
 			}},
@@ -763,7 +762,7 @@ func TestConvertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 		{
 			msg: "a single exact header match with a single value converts properly",
 			input: []gatewayapi.HTTPHeaderMatch{{
-				Type:  lo.ToPtr(gatewayapi.HeaderMatchExact),
+				Type:  new(gatewayapi.HeaderMatchExact),
 				Name:  "Content-Type",
 				Value: "audio/vorbis",
 			}},
@@ -790,7 +789,7 @@ func TestConvertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 			msg: "multiple header matches convert properly",
 			input: []gatewayapi.HTTPHeaderMatch{
 				{
-					Type:  lo.ToPtr(gatewayapi.HeaderMatchExact),
+					Type:  new(gatewayapi.HeaderMatchExact),
 					Name:  "Content-Type",
 					Value: "audio/vorbis",
 				},
@@ -832,7 +831,7 @@ func TestGetKongServiceNameByBackendRefs(t *testing.T) {
 		// hashStr is the SHA256 sum of the original generated service name for the test case where a long service name is generated and trimmed.
 		hashStr = "d39c14b023c01526d6d7a9b4aaf61dbd8daf53eb7241f933daec622ea59e2da9"
 	)
-	kindService := lo.ToPtr(gatewayapi.Kind("Service"))
+	kindService := new(gatewayapi.Kind("Service"))
 	testCases := []struct {
 		name                string
 		ruleMeta            httpRouteRuleMeta
@@ -868,7 +867,7 @@ func TestGetKongServiceNameByBackendRefs(t *testing.T) {
 								BackendObjectReference: gatewayapi.BackendObjectReference{
 									Kind: kindService,
 									Name: gatewayapi.ObjectName("service-1"),
-									Port: lo.ToPtr(gatewayapi.PortNumber(80)),
+									Port: new(gatewayapi.PortNumber(80)),
 								},
 							},
 						},
@@ -877,7 +876,7 @@ func TestGetKongServiceNameByBackendRefs(t *testing.T) {
 								BackendObjectReference: gatewayapi.BackendObjectReference{
 									Kind: kindService,
 									Name: gatewayapi.ObjectName("service-2"),
-									Port: lo.ToPtr(gatewayapi.PortNumber(8080)),
+									Port: new(gatewayapi.PortNumber(8080)),
 								},
 							},
 						},
@@ -886,8 +885,8 @@ func TestGetKongServiceNameByBackendRefs(t *testing.T) {
 								BackendObjectReference: gatewayapi.BackendObjectReference{
 									Kind:      kindService,
 									Name:      gatewayapi.ObjectName("service-2"),
-									Namespace: lo.ToPtr(gatewayapi.Namespace("another-namespace")),
-									Port:      lo.ToPtr(gatewayapi.PortNumber(80)),
+									Namespace: new(gatewayapi.Namespace("another-namespace")),
+									Port:      new(gatewayapi.PortNumber(80)),
 								},
 							},
 						},
@@ -917,9 +916,9 @@ func TestGetKongServiceNameByBackendRefs(t *testing.T) {
 								BackendObjectReference: gatewayapi.BackendObjectReference{
 									Kind: kindService,
 									Name: gatewayapi.ObjectName("service-1"),
-									Port: lo.ToPtr(gatewayapi.PortNumber(80)),
+									Port: new(gatewayapi.PortNumber(80)),
 								},
-								Weight: lo.ToPtr(int32(75)),
+								Weight: new(int32(75)),
 							},
 						},
 						{
@@ -927,9 +926,9 @@ func TestGetKongServiceNameByBackendRefs(t *testing.T) {
 								BackendObjectReference: gatewayapi.BackendObjectReference{
 									Kind: kindService,
 									Name: gatewayapi.ObjectName("service-1"),
-									Port: lo.ToPtr(gatewayapi.PortNumber(1080)),
+									Port: new(gatewayapi.PortNumber(1080)),
 								},
-								Weight: lo.ToPtr(int32(25)),
+								Weight: new(int32(25)),
 							},
 						},
 					},
@@ -949,9 +948,9 @@ func TestGetKongServiceNameByBackendRefs(t *testing.T) {
 								BackendObjectReference: gatewayapi.BackendObjectReference{
 									Kind: kindService,
 									Name: gatewayapi.ObjectName(longServiceName),
-									Port: lo.ToPtr(gatewayapi.PortNumber(80)),
+									Port: new(gatewayapi.PortNumber(80)),
 								},
-								Weight: lo.ToPtr(int32(75)),
+								Weight: new(int32(75)),
 							},
 						},
 						{
@@ -959,9 +958,9 @@ func TestGetKongServiceNameByBackendRefs(t *testing.T) {
 								BackendObjectReference: gatewayapi.BackendObjectReference{
 									Kind: kindService,
 									Name: gatewayapi.ObjectName(longServiceName),
-									Port: lo.ToPtr(gatewayapi.PortNumber(8080)),
+									Port: new(gatewayapi.PortNumber(8080)),
 								},
-								Weight: lo.ToPtr(int32(25)),
+								Weight: new(int32(25)),
 							},
 						},
 					},
@@ -1059,8 +1058,8 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 			expectedServices: map[string]kongstate.Service{
 				"httproute.default.svc.default.service-1.80": {
 					Service: kong.Service{
-						Name: kong.String("httproute.default.svc.default.service-1.80"),
-						Host: kong.String("httproute.default.svc.default.service-1.80"),
+						Name: new("httproute.default.svc.default.service-1.80"),
+						Host: new("httproute.default.svc.default.service-1.80"),
 					},
 					Backends: []kongstate.ServiceBackend{
 						mustNewKongstateServiceBackend(
@@ -1120,8 +1119,8 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 			expectedServices: map[string]kongstate.Service{
 				"httproute.default.svc.default.service-1.80_default.service-2.80": {
 					Service: kong.Service{
-						Name: kong.String("httproute.default.svc.default.service-1.80_default.service-2.80"),
-						Host: kong.String("httproute.default.svc.default.service-1.80_default.service-2.80"),
+						Name: new("httproute.default.svc.default.service-1.80_default.service-2.80"),
+						Host: new("httproute.default.svc.default.service-1.80_default.service-2.80"),
 					},
 					Backends: []kongstate.ServiceBackend{
 						mustNewKongstateServiceBackend(
@@ -1202,8 +1201,8 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 			expectedServices: map[string]kongstate.Service{
 				"httproute.default.svc.default.service-1.80": {
 					Service: kong.Service{
-						Name: kong.String("httproute.default.svc.default.service-1.80"),
-						Host: kong.String("httproute.default.svc.default.service-1.80"),
+						Name: new("httproute.default.svc.default.service-1.80"),
+						Host: new("httproute.default.svc.default.service-1.80"),
 					},
 					Backends: []kongstate.ServiceBackend{
 						mustNewKongstateServiceBackend(
@@ -1296,8 +1295,8 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 			expectedServices: map[string]kongstate.Service{
 				"httproute.another-namespace.svc.default.service-1.80": {
 					Service: kong.Service{
-						Name: kong.String("httproute.another-namespace.svc.default.service-1.80"),
-						Host: kong.String("httproute.another-namespace.svc.default.service-1.80"),
+						Name: new("httproute.another-namespace.svc.default.service-1.80"),
+						Host: new("httproute.another-namespace.svc.default.service-1.80"),
 					},
 					Backends: []kongstate.ServiceBackend{
 						mustNewKongstateServiceBackend(
@@ -1366,8 +1365,8 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 			expectedServices: map[string]kongstate.Service{
 				"httproute.another-namespace.svc.default.service-1.80": {
 					Service: kong.Service{
-						Name: kong.String("httproute.another-namespace.svc.default.service-1.80"),
-						Host: kong.String("httproute.another-namespace.svc.default.service-1.80"),
+						Name: new("httproute.another-namespace.svc.default.service-1.80"),
+						Host: new("httproute.another-namespace.svc.default.service-1.80"),
 					},
 					Backends: []kongstate.ServiceBackend{},
 				},
@@ -1418,8 +1417,8 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 			expectedServices: map[string]kongstate.Service{
 				"httproute.default.svc.default.service-1.80": {
 					Service: kong.Service{
-						Name: kong.String("httproute.default.svc.default.service-1.80"),
-						Host: kong.String("httproute.default.svc.default.service-1.80"),
+						Name: new("httproute.default.svc.default.service-1.80"),
+						Host: new("httproute.default.svc.default.service-1.80"),
 					},
 					Backends: []kongstate.ServiceBackend{
 						mustNewKongstateServiceBackend(
@@ -1438,8 +1437,8 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 				},
 				"httproute.default.svc.default.service-2.80": {
 					Service: kong.Service{
-						Name: kong.String("httproute.default.svc.default.service-2.80"),
-						Host: kong.String("httproute.default.svc.default.service-2.80"),
+						Name: new("httproute.default.svc.default.service-2.80"),
+						Host: new("httproute.default.svc.default.service-2.80"),
 					},
 					Backends: []kongstate.ServiceBackend{
 						mustNewKongstateServiceBackend(
@@ -1532,8 +1531,8 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 			expectedServices: map[string]kongstate.Service{
 				"httproute.default.svc.default.service-1.80": {
 					Service: kong.Service{
-						Name: kong.String("httproute.default.svc.default.service-1.80"),
-						Host: kong.String("httproute.default.svc.default.service-1.80"),
+						Name: new("httproute.default.svc.default.service-1.80"),
+						Host: new("httproute.default.svc.default.service-1.80"),
 					},
 					Backends: []kongstate.ServiceBackend{
 						mustNewKongstateServiceBackend(
@@ -1552,8 +1551,8 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 				},
 				"httproute.another-namespace.svc.default.service-1.80": {
 					Service: kong.Service{
-						Name: kong.String("httproute.another-namespace.svc.default.service-1.80"),
-						Host: kong.String("httproute.another-namespace.svc.default.service-1.80"),
+						Name: new("httproute.another-namespace.svc.default.service-1.80"),
+						Host: new("httproute.another-namespace.svc.default.service-1.80"),
 					},
 					Backends: []kongstate.ServiceBackend{
 						mustNewKongstateServiceBackend(
@@ -1600,8 +1599,8 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 								Matches: []gatewayapi.HTTPRouteMatch{
 									{
 										Path: &gatewayapi.HTTPPathMatch{
-											Type:  lo.ToPtr(gatewayapi.PathMatchExact),
-											Value: lo.ToPtr("/foo"),
+											Type:  new(gatewayapi.PathMatchExact),
+											Value: new("/foo"),
 										},
 									},
 								},
@@ -1623,8 +1622,8 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 			expectedServices: map[string]kongstate.Service{
 				"httproute.default.svc.default.service-1.80": {
 					Service: kong.Service{
-						Name: kong.String("httproute.default.svc.default.service-1.80"),
-						Host: kong.String("httproute.default.svc.default.service-1.80"),
+						Name: new("httproute.default.svc.default.service-1.80"),
+						Host: new("httproute.default.svc.default.service-1.80"),
 					},
 					Backends: []kongstate.ServiceBackend{
 						mustNewKongstateServiceBackend(
@@ -1700,10 +1699,10 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutes(t *testing.T) {
 		{
 			BackendRef: gatewayapi.BackendRef{
 				BackendObjectReference: gatewayapi.BackendObjectReference{
-					Kind:      lo.ToPtr(gatewayapi.Kind("Service")),
+					Kind:      new(gatewayapi.Kind("Service")),
 					Name:      gatewayapi.ObjectName("service-1"),
-					Namespace: lo.ToPtr(gatewayapi.Namespace("default")),
-					Port:      lo.ToPtr(gatewayapi.PortNumber(80)),
+					Namespace: new(gatewayapi.Namespace("default")),
+					Port:      new(gatewayapi.PortNumber(80)),
 				},
 			},
 		},
@@ -1731,14 +1730,14 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutes(t *testing.T) {
 						Matches: []gatewayapi.HTTPRouteMatch{
 							{
 								Path: &gatewayapi.HTTPPathMatch{
-									Type:  lo.ToPtr(gatewayapi.PathMatchExact),
-									Value: lo.ToPtr("/foo"),
+									Type:  new(gatewayapi.PathMatchExact),
+									Value: new("/foo"),
 								},
 							},
 							{
 								Path: &gatewayapi.HTTPPathMatch{
-									Type:  lo.ToPtr(gatewayapi.PathMatchExact),
-									Value: lo.ToPtr("/bar"),
+									Type:  new(gatewayapi.PathMatchExact),
+									Value: new("/bar"),
 								},
 							},
 						},
@@ -1752,8 +1751,8 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutes(t *testing.T) {
 						Matches: []gatewayapi.HTTPRouteMatch{
 							{
 								Path: &gatewayapi.HTTPPathMatch{
-									Type:  lo.ToPtr(gatewayapi.PathMatchExact),
-									Value: lo.ToPtr("/baz"),
+									Type:  new(gatewayapi.PathMatchExact),
+									Value: new("/baz"),
 								},
 							},
 						},
@@ -1765,20 +1764,20 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutes(t *testing.T) {
 			expectedRoutes: []kongstate.Route{
 				{
 					Route: kong.Route{
-						Name:         kong.String("httproute.default.httproute-1.0.0"),
+						Name:         new("httproute.default.httproute-1.0.0"),
 						Paths:        kong.StringSlice("~/foo$", "~/bar$", "~/baz$"),
-						PreserveHost: kong.Bool(true),
-						StripPath:    kong.Bool(false),
+						PreserveHost: new(true),
+						StripPath:    new(false),
 						Protocols: []*string{
-							kong.String("http"),
-							kong.String("https"),
+							new("http"),
+							new("https"),
 						},
 						Tags: []*string{
-							kong.String("k8s-name:httproute-1"),
-							kong.String("k8s-namespace:default"),
-							kong.String("k8s-kind:HTTPRoute"),
-							kong.String("k8s-group:gateway.networking.k8s.io"),
-							kong.String("k8s-version:v1"),
+							new("k8s-name:httproute-1"),
+							new("k8s-namespace:default"),
+							new("k8s-kind:HTTPRoute"),
+							new("k8s-group:gateway.networking.k8s.io"),
+							new("k8s-version:v1"),
 						},
 					},
 					Ingress: util.FromK8sObject(httpRouteWithoutHost),
@@ -1818,9 +1817,9 @@ func TestSchemeHostPortFromHTTPPathModifier(t *testing.T) {
 		{
 			name: "Has scheme, host and port",
 			modifier: &gatewayapi.HTTPRequestRedirectFilter{
-				Scheme:   lo.ToPtr("https"),
-				Hostname: lo.ToPtr(gatewayapi.PreciseHostname("a.com")),
-				Port:     lo.ToPtr(gatewayapi.PortNumber(8443)),
+				Scheme:   new("https"),
+				Hostname: new(gatewayapi.PreciseHostname("a.com")),
+				Port:     new(gatewayapi.PortNumber(8443)),
 			},
 			expectedScheme:   "https",
 			expectedHostPort: "a.com:8443",
@@ -1828,7 +1827,7 @@ func TestSchemeHostPortFromHTTPPathModifier(t *testing.T) {
 		{
 			name: "no scheme, http scheme should be returned",
 			modifier: &gatewayapi.HTTPRequestRedirectFilter{
-				Hostname: lo.ToPtr(gatewayapi.PreciseHostname("a.com")),
+				Hostname: new(gatewayapi.PreciseHostname("a.com")),
 			},
 			expectedScheme:   "http",
 			expectedHostPort: "a.com",
@@ -1853,35 +1852,35 @@ func TestGenerateRequestRedirectUsingRedirectKongPlugin(t *testing.T) {
 		{
 			name: "full path replace",
 			modifier: &gatewayapi.HTTPRequestRedirectFilter{
-				StatusCode: lo.ToPtr(301),
-				Hostname:   lo.ToPtr(gatewayapi.PreciseHostname("a.com")),
+				StatusCode: new(301),
+				Hostname:   new(gatewayapi.PreciseHostname("a.com")),
 				Path: &gatewayapi.HTTPPathModifier{
 					Type:            gatewayapi.FullPathHTTPPathModifier,
-					ReplaceFullPath: lo.ToPtr("/foo"),
+					ReplaceFullPath: new("/foo"),
 				},
 			},
 			expectedKongPlugin: kong.Plugin{
-				Name: kong.String("redirect"),
+				Name: new("redirect"),
 				Config: kong.Configuration{
-					"status_code":        lo.ToPtr(301),
-					"location":           lo.ToPtr("http://a.com/foo"),
-					"keep_incoming_path": lo.ToPtr(false),
+					"status_code":        new(301),
+					"location":           new("http://a.com/foo"),
+					"keep_incoming_path": new(false),
 				},
 			},
 		},
 		{
 			name: "no path replace",
 			modifier: &gatewayapi.HTTPRequestRedirectFilter{
-				StatusCode: lo.ToPtr(301),
-				Hostname:   lo.ToPtr(gatewayapi.PreciseHostname("a.com")),
-				Scheme:     lo.ToPtr("http"),
+				StatusCode: new(301),
+				Hostname:   new(gatewayapi.PreciseHostname("a.com")),
+				Scheme:     new("http"),
 			},
 			expectedKongPlugin: kong.Plugin{
-				Name: kong.String("redirect"),
+				Name: new("redirect"),
 				Config: kong.Configuration{
-					"status_code":        lo.ToPtr(301),
-					"location":           lo.ToPtr("http://a.com"),
-					"keep_incoming_path": lo.ToPtr(true),
+					"status_code":        new(301),
+					"location":           new("http://a.com"),
+					"keep_incoming_path": new(true),
 				},
 			},
 		},

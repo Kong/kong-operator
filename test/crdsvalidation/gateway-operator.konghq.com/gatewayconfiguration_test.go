@@ -3,7 +3,6 @@ package crdsvalidation_test
 import (
 	"testing"
 
-	"github.com/samber/lo"
 	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
@@ -63,7 +62,7 @@ func TestGatewayConfiguration(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Extension not allowed for GatewayConfiguration"),
+				ExpectedErrorMessage: new("Extension not allowed for GatewayConfiguration"),
 			},
 			{
 				Name: "konnectExtension at the DataPlane level",
@@ -83,7 +82,7 @@ func TestGatewayConfiguration(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("KonnectExtension must be set at the Gateway level"),
+				ExpectedErrorMessage: new("KonnectExtension must be set at the Gateway level"),
 			},
 			{
 				Name: "konnectExtension at the ControlPlane level",
@@ -103,7 +102,7 @@ func TestGatewayConfiguration(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("KonnectExtension must be set at the Gateway level"),
+				ExpectedErrorMessage: new("KonnectExtension must be set at the Gateway level"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -128,14 +127,14 @@ func TestGatewayConfiguration(t *testing.T) {
 						DataPlaneOptions: &operatorv1beta1.GatewayConfigDataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 								DeploymentOptions: operatorv1beta1.DeploymentOptions{
-									Replicas: lo.ToPtr(int32(4)),
+									Replicas: new(int32(4)),
 								},
 							},
 							Resources: &operatorv1beta1.GatewayConfigDataPlaneResources{
 								PodDisruptionBudget: &operatorv1beta1.PodDisruptionBudget{
 									Spec: operatorv1beta1.PodDisruptionBudgetSpec{
-										MinAvailable:               lo.ToPtr(intstr.FromInt(1)),
-										UnhealthyPodEvictionPolicy: lo.ToPtr(policyv1.IfHealthyBudget),
+										MinAvailable:               new(intstr.FromInt(1)),
+										UnhealthyPodEvictionPolicy: new(policyv1.IfHealthyBudget),
 									},
 								},
 							},
@@ -151,21 +150,21 @@ func TestGatewayConfiguration(t *testing.T) {
 						DataPlaneOptions: &operatorv1beta1.GatewayConfigDataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 								DeploymentOptions: operatorv1beta1.DeploymentOptions{
-									Replicas: lo.ToPtr(int32(4)),
+									Replicas: new(int32(4)),
 								},
 							},
 							Resources: &operatorv1beta1.GatewayConfigDataPlaneResources{
 								PodDisruptionBudget: &operatorv1beta1.PodDisruptionBudget{
 									Spec: operatorv1beta1.PodDisruptionBudgetSpec{
-										MinAvailable:   lo.ToPtr(intstr.FromInt(1)),
-										MaxUnavailable: lo.ToPtr(intstr.FromInt(1)),
+										MinAvailable:   new(intstr.FromInt(1)),
+										MaxUnavailable: new(intstr.FromInt(1)),
 									},
 								},
 							},
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("You can specify only one of maxUnavailable and minAvailable in a single PodDisruptionBudgetSpec."),
+				ExpectedErrorMessage: new("You can specify only one of maxUnavailable and minAvailable in a single PodDisruptionBudgetSpec."),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)

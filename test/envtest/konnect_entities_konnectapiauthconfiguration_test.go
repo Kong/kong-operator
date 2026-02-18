@@ -6,7 +6,6 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -52,8 +51,8 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 			Return(
 				&sdkkonnectops.GetOrganizationsMeResponse{
 					MeOrganization: &sdkkonnectcomp.MeOrganization{
-						ID:   lo.ToPtr("12345"),
-						Name: lo.ToPtr("org-12345"),
+						ID:   new("12345"),
+						Name: new("org-12345"),
 					},
 				},
 				nil,

@@ -3,7 +3,6 @@ package envtest
 import (
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -73,7 +72,7 @@ func TestGatewaySecretWatch_UpdatesResolvedRefsOnSecretRotation(t *testing.T) {
 					Port:     443,
 					Protocol: gatewayv1.HTTPSProtocolType,
 					TLS: &gatewayv1.ListenerTLSConfig{
-						Mode: lo.ToPtr(gatewayv1.TLSModeTerminate),
+						Mode: new(gatewayv1.TLSModeTerminate),
 						CertificateRefs: []gatewayv1.SecretObjectReference{{
 							Name: gatewayv1.ObjectName(secretName),
 						}},

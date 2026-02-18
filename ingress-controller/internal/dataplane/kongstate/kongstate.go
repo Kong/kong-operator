@@ -103,10 +103,10 @@ func (ks *KongState) FillConsumersAndCredentials(
 			continue
 		}
 		if consumer.Username != "" {
-			c.Username = kong.String(consumer.Username)
+			c.Username = new(consumer.Username)
 		}
 		if consumer.CustomID != "" {
-			c.CustomID = kong.String(consumer.CustomID)
+			c.CustomID = new(consumer.CustomID)
 		}
 		c.K8sKongConsumer = *consumer
 		c.Tags = util.GenerateTagsForObject(consumer)
@@ -230,7 +230,7 @@ func (ks *KongState) FillConsumerGroups(_ logr.Logger, s store.Storer) {
 	for _, cg := range s.ListKongConsumerGroups() {
 		ks.ConsumerGroups = append(ks.ConsumerGroups, ConsumerGroup{
 			ConsumerGroup: kong.ConsumerGroup{
-				Name: kong.String(cg.Name),
+				Name: new(cg.Name),
 				Tags: util.GenerateTagsForObject(cg),
 			},
 			K8sKongConsumerGroup: *cg,
@@ -364,13 +364,13 @@ func (ks *KongState) FillVaults(
 			continue
 		}
 		kongVault := kong.Vault{
-			Name:   kong.String(vault.Spec.Backend),
-			Prefix: kong.String(vault.Spec.Prefix),
+			Name:   new(vault.Spec.Backend),
+			Prefix: new(vault.Spec.Prefix),
 			Config: config,
 			Tags:   util.GenerateTagsForObject(vault),
 		}
 		if len(vault.Spec.Description) > 0 {
-			kongVault.Description = kong.String(vault.Spec.Description)
+			kongVault.Description = new(vault.Spec.Description)
 		}
 		ks.Vaults = append(ks.Vaults, Vault{
 			Vault:        kongVault,
@@ -558,22 +558,22 @@ func buildPlugins(
 			// ID is populated because that is read by decK and in_memory translator too
 			if !rel.Service.IsEmpty() {
 				relSvc := rel.Service.Identifier
-				plugin.Service = &kong.Service{ID: kong.String(relSvc)}
+				plugin.Service = &kong.Service{ID: new(relSvc)}
 				toHash.WriteString("_service-" + relSvc)
 			}
 			if !rel.Route.IsEmpty() {
 				relRoute := rel.Route.Identifier
-				plugin.Route = &kong.Route{ID: kong.String(relRoute)}
+				plugin.Route = &kong.Route{ID: new(relRoute)}
 				toHash.WriteString("_route-" + relRoute)
 			}
 			if !rel.Consumer.IsEmpty() {
 				relConsumer := rel.Consumer.Identifier
-				plugin.Consumer = &kong.Consumer{ID: kong.String(relConsumer)}
+				plugin.Consumer = &kong.Consumer{ID: new(relConsumer)}
 				toHash.WriteString("_consumer-" + relConsumer)
 			}
 			if !rel.ConsumerGroup.IsEmpty() {
 				relConsumerGroup := rel.ConsumerGroup.Identifier
-				plugin.ConsumerGroup = &kong.ConsumerGroup{ID: kong.String(relConsumerGroup)}
+				plugin.ConsumerGroup = &kong.ConsumerGroup{ID: new(relConsumerGroup)}
 				toHash.WriteString("_group-" + relConsumerGroup)
 			}
 

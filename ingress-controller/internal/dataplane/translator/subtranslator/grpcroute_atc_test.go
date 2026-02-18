@@ -8,7 +8,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -34,7 +33,7 @@ func TestGenerateKongExpressionRoutesFromGRPCRouteRule(t *testing.T) {
 				Matches: []gatewayapi.GRPCRouteMatch{
 					{
 						Method: &gatewayapi.GRPCMethodMatch{
-							Service: lo.ToPtr("service0"),
+							Service: new("service0"),
 							Method:  nil,
 						},
 						Headers: []gatewayapi.GRPCHeaderMatch{
@@ -56,8 +55,8 @@ func TestGenerateKongExpressionRoutesFromGRPCRouteRule(t *testing.T) {
 					},
 					ExpressionRoutes: true,
 					Route: kong.Route{
-						Name:       kong.String("grpcroute.default.single-match.0.0"),
-						Expression: kong.String(`(http.path ^= "/service0/") && (http.headers.x_foo == "Bar")`),
+						Name:       new("grpcroute.default.single-match.0.0"),
+						Expression: new(`(http.path ^= "/service0/") && (http.headers.x_foo == "Bar")`),
 						Priority:   kong.Uint64(1),
 					},
 				},
@@ -72,8 +71,8 @@ func TestGenerateKongExpressionRoutesFromGRPCRouteRule(t *testing.T) {
 				Matches: []gatewayapi.GRPCRouteMatch{
 					{
 						Method: &gatewayapi.GRPCMethodMatch{
-							Service: lo.ToPtr("service0"),
-							Method:  lo.ToPtr("method0"),
+							Service: new("service0"),
+							Method:  new("method0"),
 						},
 					},
 				},
@@ -88,8 +87,8 @@ func TestGenerateKongExpressionRoutesFromGRPCRouteRule(t *testing.T) {
 					},
 					ExpressionRoutes: true,
 					Route: kong.Route{
-						Name:       kong.String("grpcroute.default.single-match-with-hostname.0.0"),
-						Expression: kong.String(`(http.path == "/service0/method0") && ((http.host == "foo.com") || (http.host =^ ".foo.com"))`),
+						Name:       new("grpcroute.default.single-match-with-hostname.0.0"),
+						Expression: new(`(http.path == "/service0/method0") && ((http.host == "foo.com") || (http.host =^ ".foo.com"))`),
 						Priority:   kong.Uint64(1),
 					},
 				},
@@ -103,7 +102,7 @@ func TestGenerateKongExpressionRoutesFromGRPCRouteRule(t *testing.T) {
 					{
 						Method: &gatewayapi.GRPCMethodMatch{
 							Service: nil,
-							Method:  lo.ToPtr("method0"),
+							Method:  new("method0"),
 						},
 						Headers: []gatewayapi.GRPCHeaderMatch{
 							{
@@ -118,8 +117,8 @@ func TestGenerateKongExpressionRoutesFromGRPCRouteRule(t *testing.T) {
 					},
 					{
 						Method: &gatewayapi.GRPCMethodMatch{
-							Type:    lo.ToPtr(gatewayapi.GRPCMethodMatchRegularExpression),
-							Service: lo.ToPtr("v[012]"),
+							Type:    new(gatewayapi.GRPCMethodMatchRegularExpression),
+							Service: new("v[012]"),
 						},
 					},
 				},
@@ -133,8 +132,8 @@ func TestGenerateKongExpressionRoutesFromGRPCRouteRule(t *testing.T) {
 					},
 					ExpressionRoutes: true,
 					Route: kong.Route{
-						Name:       kong.String("grpcroute.default.multiple-matches.0.0"),
-						Expression: kong.String(`(http.path =^ "/method0") && ((http.headers.client == "kong-test") && (http.headers.version == "2"))`),
+						Name:       new("grpcroute.default.multiple-matches.0.0"),
+						Expression: new(`(http.path =^ "/method0") && ((http.headers.client == "kong-test") && (http.headers.version == "2"))`),
 						Priority:   kong.Uint64(1),
 					},
 				},
@@ -146,8 +145,8 @@ func TestGenerateKongExpressionRoutesFromGRPCRouteRule(t *testing.T) {
 					},
 					ExpressionRoutes: true,
 					Route: kong.Route{
-						Name:       kong.String("grpcroute.default.multiple-matches.0.1"),
-						Expression: kong.String(`http.path ~ "^/v[012]/.+"`),
+						Name:       new("grpcroute.default.multiple-matches.0.1"),
+						Expression: new(`http.path ~ "^/v[012]/.+"`),
 						Priority:   kong.Uint64(1),
 					},
 				},
@@ -165,8 +164,8 @@ func TestGenerateKongExpressionRoutesFromGRPCRouteRule(t *testing.T) {
 				Matches: []gatewayapi.GRPCRouteMatch{
 					{
 						Method: &gatewayapi.GRPCMethodMatch{
-							Service: lo.ToPtr("service0"),
-							Method:  lo.ToPtr("method0"),
+							Service: new("service0"),
+							Method:  new("method0"),
 						},
 					},
 				},
@@ -185,8 +184,8 @@ func TestGenerateKongExpressionRoutesFromGRPCRouteRule(t *testing.T) {
 					},
 					ExpressionRoutes: true,
 					Route: kong.Route{
-						Name:       kong.String("grpcroute.default.single-match-with-annotations.0.0"),
-						Expression: kong.String(`(http.path == "/service0/method0") && (tls.sni == "kong.foo.com")`),
+						Name:       new("grpcroute.default.single-match-with-annotations.0.0"),
+						Expression: new(`(http.path == "/service0/method0") && (tls.sni == "kong.foo.com")`),
 						Priority:   kong.Uint64(1),
 					},
 				},
@@ -208,8 +207,8 @@ func TestGenerateKongExpressionRoutesFromGRPCRouteRule(t *testing.T) {
 					},
 					ExpressionRoutes: true,
 					Route: kong.Route{
-						Name:       kong.String("grpcroute.default.hostname-only.0.0"),
-						Expression: kong.String(`http.host == "foo.com"`),
+						Name:       new("grpcroute.default.hostname-only.0.0"),
+						Expression: new(`http.host == "foo.com"`),
 						Priority:   kong.Uint64(1),
 					},
 				},
@@ -235,33 +234,33 @@ func TestMethodMatcherFromGRPCMethodMatch(t *testing.T) {
 		{
 			name: "exact method match",
 			match: gatewayapi.GRPCMethodMatch{
-				Type:    lo.ToPtr(gatewayapi.GRPCMethodMatchExact),
-				Service: lo.ToPtr("service0"),
-				Method:  lo.ToPtr("method0"),
+				Type:    new(gatewayapi.GRPCMethodMatchExact),
+				Service: new("service0"),
+				Method:  new("method0"),
 			},
 			expression: `http.path == "/service0/method0"`,
 		},
 		{
 			name: "exact match with service unspecified",
 			match: gatewayapi.GRPCMethodMatch{
-				Type:   lo.ToPtr(gatewayapi.GRPCMethodMatchExact),
-				Method: lo.ToPtr("method0"),
+				Type:   new(gatewayapi.GRPCMethodMatchExact),
+				Method: new("method0"),
 			},
 			expression: `http.path =^ "/method0"`,
 		},
 		{
 			name: "regex method match",
 			match: gatewayapi.GRPCMethodMatch{
-				Type:    lo.ToPtr(gatewayapi.GRPCMethodMatchRegularExpression),
-				Service: lo.ToPtr("auth-v[012]"),
-				Method:  lo.ToPtr("[a-z]+"),
+				Type:    new(gatewayapi.GRPCMethodMatchRegularExpression),
+				Service: new("auth-v[012]"),
+				Method:  new("[a-z]+"),
 			},
 			expression: `http.path ~ "^/auth-v[012]/[a-z]+"`,
 		},
 		{
 			name: "empty regex match",
 			match: gatewayapi.GRPCMethodMatch{
-				Type: lo.ToPtr(gatewayapi.GRPCMethodMatchRegularExpression),
+				Type: new(gatewayapi.GRPCMethodMatchRegularExpression),
 			},
 			expression: `http.path ^= "/"`,
 		},
@@ -304,8 +303,8 @@ func TestSplitGRPCRoute(t *testing.T) {
 						Matches: []gatewayapi.GRPCRouteMatch{
 							{
 								Method: &gatewayapi.GRPCMethodMatch{
-									Service: lo.ToPtr("pets"),
-									Method:  lo.ToPtr("list"),
+									Service: new("pets"),
+									Method:  new("list"),
 								},
 							},
 						},
@@ -329,14 +328,14 @@ func TestSplitGRPCRoute(t *testing.T) {
 						Matches: []gatewayapi.GRPCRouteMatch{
 							{
 								Method: &gatewayapi.GRPCMethodMatch{
-									Service: lo.ToPtr("cats"),
-									Method:  lo.ToPtr("list"),
+									Service: new("cats"),
+									Method:  new("list"),
 								},
 							},
 							{
 								Method: &gatewayapi.GRPCMethodMatch{
-									Service: lo.ToPtr("dogs"),
-									Method:  lo.ToPtr("list"),
+									Service: new("dogs"),
+									Method:  new("list"),
 								},
 							},
 						},
@@ -346,14 +345,14 @@ func TestSplitGRPCRoute(t *testing.T) {
 						Matches: []gatewayapi.GRPCRouteMatch{
 							{
 								Method: &gatewayapi.GRPCMethodMatch{
-									Service: lo.ToPtr("cats"),
-									Method:  lo.ToPtr("create"),
+									Service: new("cats"),
+									Method:  new("create"),
 								},
 							},
 							{
 								Method: &gatewayapi.GRPCMethodMatch{
-									Service: lo.ToPtr("dogs"),
-									Method:  lo.ToPtr("create"),
+									Service: new("dogs"),
+									Method:  new("create"),
 								},
 							},
 						},
@@ -378,8 +377,8 @@ func TestSplitGRPCRoute(t *testing.T) {
 						Matches: []gatewayapi.GRPCRouteMatch{
 							{
 								Method: &gatewayapi.GRPCMethodMatch{
-									Service: lo.ToPtr("pets"),
-									Method:  lo.ToPtr("list"),
+									Service: new("pets"),
+									Method:  new("list"),
 								},
 							},
 						},
@@ -526,9 +525,9 @@ func TestCalculateSplitGRCPRoutePriorityTraits(t *testing.T) {
 				Hostname: "petstore.com",
 				Match: gatewayapi.GRPCRouteMatch{
 					Method: &gatewayapi.GRPCMethodMatch{
-						Type:    lo.ToPtr(gatewayapi.GRPCMethodMatchExact),
-						Service: lo.ToPtr("pets"),
-						Method:  lo.ToPtr("list"),
+						Type:    new(gatewayapi.GRPCMethodMatchExact),
+						Service: new("pets"),
+						Method:  new("list"),
 					},
 				},
 			},
@@ -546,8 +545,8 @@ func TestCalculateSplitGRCPRoutePriorityTraits(t *testing.T) {
 				Hostname: "*.petstore.com",
 				Match: gatewayapi.GRPCRouteMatch{
 					Method: &gatewayapi.GRPCMethodMatch{
-						Type:    lo.ToPtr(gatewayapi.GRPCMethodMatchExact),
-						Service: lo.ToPtr("pets"),
+						Type:    new(gatewayapi.GRPCMethodMatchExact),
+						Service: new("pets"),
 					},
 				},
 			},
@@ -565,12 +564,12 @@ func TestCalculateSplitGRCPRoutePriorityTraits(t *testing.T) {
 				Match: gatewayapi.GRPCRouteMatch{
 					Headers: []gatewayapi.GRPCHeaderMatch{
 						{
-							Type:  lo.ToPtr(gatewayapi.GRPCHeaderMatchExact),
+							Type:  new(gatewayapi.GRPCHeaderMatchExact),
 							Name:  gatewayapi.GRPCHeaderName("key1"),
 							Value: "value1",
 						},
 						{
-							Type:  lo.ToPtr(gatewayapi.GRPCHeaderMatchExact),
+							Type:  new(gatewayapi.GRPCHeaderMatchExact),
 							Name:  gatewayapi.GRPCHeaderName("key2"),
 							Value: "value2",
 						},
@@ -664,8 +663,8 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 									Matches: []gatewayapi.GRPCRouteMatch{
 										{
 											Method: &gatewayapi.GRPCMethodMatch{
-												Service: lo.ToPtr("pets"),
-												Method:  lo.ToPtr("list"),
+												Service: new("pets"),
+												Method:  new("list"),
 											},
 										},
 									},
@@ -676,8 +675,8 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 					Hostname: "foo.com",
 					Match: gatewayapi.GRPCRouteMatch{
 						Method: &gatewayapi.GRPCMethodMatch{
-							Service: lo.ToPtr("pets"),
-							Method:  lo.ToPtr("list"),
+							Service: new("pets"),
+							Method:  new("list"),
 						},
 					},
 					RuleIndex:  0,
@@ -697,8 +696,8 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 									Matches: []gatewayapi.GRPCRouteMatch{
 										{
 											Method: &gatewayapi.GRPCMethodMatch{
-												Service: lo.ToPtr("pets"),
-												Method:  lo.ToPtr("list"),
+												Service: new("pets"),
+												Method:  new("list"),
 											},
 										},
 									},
@@ -709,8 +708,8 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 					Hostname: "*.bar.com",
 					Match: gatewayapi.GRPCRouteMatch{
 						Method: &gatewayapi.GRPCMethodMatch{
-							Service: lo.ToPtr("pets"),
-							Method:  lo.ToPtr("list"),
+							Service: new("pets"),
+							Method:  new("list"),
 						},
 					},
 				},
@@ -759,8 +758,8 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 									Matches: []gatewayapi.GRPCRouteMatch{
 										{
 											Method: &gatewayapi.GRPCMethodMatch{
-												Service: lo.ToPtr("pets"),
-												Method:  lo.ToPtr("list"),
+												Service: new("pets"),
+												Method:  new("list"),
 											},
 										},
 									},
@@ -771,8 +770,8 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 					Hostname: "foo.com",
 					Match: gatewayapi.GRPCRouteMatch{
 						Method: &gatewayapi.GRPCMethodMatch{
-							Service: lo.ToPtr("pets"),
-							Method:  lo.ToPtr("list"),
+							Service: new("pets"),
+							Method:  new("list"),
 						},
 					},
 					RuleIndex:  0,
@@ -793,8 +792,8 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 									Matches: []gatewayapi.GRPCRouteMatch{
 										{
 											Method: &gatewayapi.GRPCMethodMatch{
-												Service: lo.ToPtr("pets"),
-												Method:  lo.ToPtr("list"),
+												Service: new("pets"),
+												Method:  new("list"),
 											},
 										},
 									},
@@ -805,8 +804,8 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 					Hostname: "bar.com",
 					Match: gatewayapi.GRPCRouteMatch{
 						Method: &gatewayapi.GRPCMethodMatch{
-							Service: lo.ToPtr("pets"),
-							Method:  lo.ToPtr("list"),
+							Service: new("pets"),
+							Method:  new("list"),
 						},
 					},
 					RuleIndex:  0,
@@ -857,8 +856,8 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 									Matches: []gatewayapi.GRPCRouteMatch{
 										{
 											Method: &gatewayapi.GRPCMethodMatch{
-												Service: lo.ToPtr("pets"),
-												Method:  lo.ToPtr("list"),
+												Service: new("pets"),
+												Method:  new("list"),
 											},
 										},
 									},
@@ -869,8 +868,8 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 					Hostname: "foo.com",
 					Match: gatewayapi.GRPCRouteMatch{
 						Method: &gatewayapi.GRPCMethodMatch{
-							Service: lo.ToPtr("pets"),
-							Method:  lo.ToPtr("list"),
+							Service: new("pets"),
+							Method:  new("list"),
 						},
 					},
 					RuleIndex:  0,
@@ -890,8 +889,8 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 									Matches: []gatewayapi.GRPCRouteMatch{
 										{
 											Method: &gatewayapi.GRPCMethodMatch{
-												Service: lo.ToPtr("pets"),
-												Method:  lo.ToPtr("list"),
+												Service: new("pets"),
+												Method:  new("list"),
 											},
 										},
 									},
@@ -902,8 +901,8 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 					Hostname: "bar.com",
 					Match: gatewayapi.GRPCRouteMatch{
 						Method: &gatewayapi.GRPCMethodMatch{
-							Service: lo.ToPtr("pets"),
-							Method:  lo.ToPtr("list"),
+							Service: new("pets"),
+							Method:  new("list"),
 						},
 					},
 					RuleIndex:  0,
@@ -954,14 +953,14 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 									Matches: []gatewayapi.GRPCRouteMatch{
 										{
 											Method: &gatewayapi.GRPCMethodMatch{
-												Service: lo.ToPtr("cats"),
-												Method:  lo.ToPtr("list"),
+												Service: new("cats"),
+												Method:  new("list"),
 											},
 										},
 										{
 											Method: &gatewayapi.GRPCMethodMatch{
-												Service: lo.ToPtr("dogs"),
-												Method:  lo.ToPtr("list"),
+												Service: new("dogs"),
+												Method:  new("list"),
 											},
 										},
 									},
@@ -972,8 +971,8 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 					Hostname: "foo.com",
 					Match: gatewayapi.GRPCRouteMatch{
 						Method: &gatewayapi.GRPCMethodMatch{
-							Service: lo.ToPtr("cats"),
-							Method:  lo.ToPtr("list"),
+							Service: new("cats"),
+							Method:  new("list"),
 						},
 					},
 					RuleIndex:  0,
@@ -994,14 +993,14 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 									Matches: []gatewayapi.GRPCRouteMatch{
 										{
 											Method: &gatewayapi.GRPCMethodMatch{
-												Service: lo.ToPtr("cats"),
-												Method:  lo.ToPtr("list"),
+												Service: new("cats"),
+												Method:  new("list"),
 											},
 										},
 										{
 											Method: &gatewayapi.GRPCMethodMatch{
-												Service: lo.ToPtr("dogs"),
-												Method:  lo.ToPtr("list"),
+												Service: new("dogs"),
+												Method:  new("list"),
 											},
 										},
 									},
@@ -1012,8 +1011,8 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 					Hostname: "foo.com",
 					Match: gatewayapi.GRPCRouteMatch{
 						Method: &gatewayapi.GRPCMethodMatch{
-							Service: lo.ToPtr("dogs"),
-							Method:  lo.ToPtr("list"),
+							Service: new("dogs"),
+							Method:  new("list"),
 						},
 					},
 					RuleIndex:  0,
@@ -1093,9 +1092,9 @@ func TestKongExpressionRouteFromSplitGRPCRouteWithPriority(t *testing.T) {
 									Matches: []gatewayapi.GRPCRouteMatch{
 										{
 											Method: &gatewayapi.GRPCMethodMatch{
-												Type:    lo.ToPtr(gatewayapi.GRPCMethodMatchExact),
-												Service: lo.ToPtr("pets"),
-												Method:  lo.ToPtr("list"),
+												Type:    new(gatewayapi.GRPCMethodMatchExact),
+												Service: new("pets"),
+												Method:  new("list"),
 											},
 										},
 									},
@@ -1105,9 +1104,9 @@ func TestKongExpressionRouteFromSplitGRPCRouteWithPriority(t *testing.T) {
 					},
 					Match: gatewayapi.GRPCRouteMatch{
 						Method: &gatewayapi.GRPCMethodMatch{
-							Type:    lo.ToPtr(gatewayapi.GRPCMethodMatchExact),
-							Service: lo.ToPtr("pets"),
-							Method:  lo.ToPtr("list"),
+							Type:    new(gatewayapi.GRPCMethodMatchExact),
+							Service: new("pets"),
+							Method:  new("list"),
 						},
 					},
 					RuleIndex:  0,
@@ -1117,9 +1116,9 @@ func TestKongExpressionRouteFromSplitGRPCRouteWithPriority(t *testing.T) {
 			},
 			expectedRoute: kongstate.Route{
 				Route: kong.Route{
-					Name:         kong.String("grpcroute.default.no-hostname-exact-method._.0.0"),
-					PreserveHost: kong.Bool(true),
-					Expression:   kong.String(`http.path == "/pets/list"`),
+					Name:         new("grpcroute.default.no-hostname-exact-method._.0.0"),
+					PreserveHost: new(true),
+					Expression:   new(`http.path == "/pets/list"`),
 					Priority:     kong.Uint64(1 << 14),
 				},
 				ExpressionRoutes: true,
@@ -1144,9 +1143,9 @@ func TestKongExpressionRouteFromSplitGRPCRouteWithPriority(t *testing.T) {
 									Matches: []gatewayapi.GRPCRouteMatch{
 										{
 											Method: &gatewayapi.GRPCMethodMatch{
-												Type:    lo.ToPtr(gatewayapi.GRPCMethodMatchRegularExpression),
-												Service: lo.ToPtr("name"),
-												Method:  lo.ToPtr("[a-z0-9]+"),
+												Type:    new(gatewayapi.GRPCMethodMatchRegularExpression),
+												Service: new("name"),
+												Method:  new("[a-z0-9]+"),
 											},
 										},
 									},
@@ -1157,9 +1156,9 @@ func TestKongExpressionRouteFromSplitGRPCRouteWithPriority(t *testing.T) {
 					Hostname: "foo.com",
 					Match: gatewayapi.GRPCRouteMatch{
 						Method: &gatewayapi.GRPCMethodMatch{
-							Type:    lo.ToPtr(gatewayapi.GRPCMethodMatchRegularExpression),
-							Service: lo.ToPtr("name"),
-							Method:  lo.ToPtr("[a-z0-9]+"),
+							Type:    new(gatewayapi.GRPCMethodMatchRegularExpression),
+							Service: new("name"),
+							Method:  new("[a-z0-9]+"),
 						},
 					},
 					RuleIndex:  0,
@@ -1169,9 +1168,9 @@ func TestKongExpressionRouteFromSplitGRPCRouteWithPriority(t *testing.T) {
 			},
 			expectedRoute: kongstate.Route{
 				Route: kong.Route{
-					Name:         kong.String("grpcroute.default.precise-hostname-regex-method.foo.com.0.0"),
-					Expression:   kong.String(`(http.path ~ "^/name/[a-z0-9]+") && (http.host == "foo.com")`),
-					PreserveHost: kong.Bool(true),
+					Name:         new("grpcroute.default.precise-hostname-regex-method.foo.com.0.0"),
+					Expression:   new(`(http.path ~ "^/name/[a-z0-9]+") && (http.host == "foo.com")`),
+					PreserveHost: new(true),
 					Priority:     kong.Uint64((1 << 31) + 1),
 				},
 				ExpressionRoutes: true,
@@ -1196,15 +1195,15 @@ func TestKongExpressionRouteFromSplitGRPCRouteWithPriority(t *testing.T) {
 									Matches: []gatewayapi.GRPCRouteMatch{
 										{
 											Method: &gatewayapi.GRPCMethodMatch{
-												Type:    lo.ToPtr(gatewayapi.GRPCMethodMatchExact),
-												Service: lo.ToPtr("names"),
-												Method:  lo.ToPtr("create"),
+												Type:    new(gatewayapi.GRPCMethodMatchExact),
+												Service: new("names"),
+												Method:  new("create"),
 											},
 										},
 										{
 											Method: &gatewayapi.GRPCMethodMatch{
-												Type:    lo.ToPtr(gatewayapi.GRPCMethodMatchExact),
-												Service: lo.ToPtr("name"),
+												Type:    new(gatewayapi.GRPCMethodMatchExact),
+												Service: new("name"),
 											},
 											Headers: []gatewayapi.GRPCHeaderMatch{
 												{
@@ -1221,8 +1220,8 @@ func TestKongExpressionRouteFromSplitGRPCRouteWithPriority(t *testing.T) {
 					Hostname: "*.foo.com",
 					Match: gatewayapi.GRPCRouteMatch{
 						Method: &gatewayapi.GRPCMethodMatch{
-							Type:    lo.ToPtr(gatewayapi.GRPCMethodMatchExact),
-							Service: lo.ToPtr("name"),
+							Type:    new(gatewayapi.GRPCMethodMatchExact),
+							Service: new("name"),
 						},
 						Headers: []gatewayapi.GRPCHeaderMatch{
 							{
@@ -1238,9 +1237,9 @@ func TestKongExpressionRouteFromSplitGRPCRouteWithPriority(t *testing.T) {
 			},
 			expectedRoute: kongstate.Route{
 				Route: kong.Route{
-					Name:         kong.String("grpcroute.default.wildcard-hostname-header-match._.foo.com.0.1"),
-					Expression:   kong.String(`(http.path ^= "/name/") && (http.headers.foo == "bar") && (http.host =^ ".foo.com")`),
-					PreserveHost: kong.Bool(true),
+					Name:         new("grpcroute.default.wildcard-hostname-header-match._.foo.com.0.1"),
+					Expression:   new(`(http.path ^= "/name/") && (http.headers.foo == "bar") && (http.host =^ ".foo.com")`),
+					PreserveHost: new(true),
 					Priority:     kong.Uint64((1 << 42) + 1),
 				},
 				ExpressionRoutes: true,

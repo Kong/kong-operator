@@ -20,24 +20,24 @@ func TestConsumerCmp(t *testing.T) {
 			input: []file.FConsumer{
 				{
 					Consumer: kong.Consumer{
-						Username: kong.String("b"),
+						Username: new("b"),
 					},
 				},
 				{
 					Consumer: kong.Consumer{
-						Username: kong.String("a"),
+						Username: new("a"),
 					},
 				},
 			},
 			expected: []file.FConsumer{
 				{
 					Consumer: kong.Consumer{
-						Username: kong.String("a"),
+						Username: new("a"),
 					},
 				},
 				{
 					Consumer: kong.Consumer{
-						Username: kong.String("b"),
+						Username: new("b"),
 					},
 				},
 			},
@@ -47,24 +47,24 @@ func TestConsumerCmp(t *testing.T) {
 			input: []file.FConsumer{
 				{
 					Consumer: kong.Consumer{
-						CustomID: kong.String("b"),
+						CustomID: new("b"),
 					},
 				},
 				{
 					Consumer: kong.Consumer{
-						CustomID: kong.String("a"),
+						CustomID: new("a"),
 					},
 				},
 			},
 			expected: []file.FConsumer{
 				{
 					Consumer: kong.Consumer{
-						CustomID: kong.String("a"),
+						CustomID: new("a"),
 					},
 				},
 				{
 					Consumer: kong.Consumer{
-						CustomID: kong.String("b"),
+						CustomID: new("b"),
 					},
 				},
 			},
@@ -74,28 +74,28 @@ func TestConsumerCmp(t *testing.T) {
 			input: []file.FConsumer{
 				{
 					Consumer: kong.Consumer{
-						Username: kong.String("b"),
-						CustomID: kong.String("b"),
+						Username: new("b"),
+						CustomID: new("b"),
 					},
 				},
 				{
 					Consumer: kong.Consumer{
-						Username: kong.String("a"),
-						CustomID: kong.String("a"),
+						Username: new("a"),
+						CustomID: new("a"),
 					},
 				},
 			},
 			expected: []file.FConsumer{
 				{
 					Consumer: kong.Consumer{
-						Username: kong.String("a"),
-						CustomID: kong.String("a"),
+						Username: new("a"),
+						CustomID: new("a"),
 					},
 				},
 				{
 					Consumer: kong.Consumer{
-						Username: kong.String("b"),
-						CustomID: kong.String("b"),
+						Username: new("b"),
+						CustomID: new("b"),
 					},
 				},
 			},

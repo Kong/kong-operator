@@ -212,7 +212,7 @@ func (ir *ingressRules) handleServiceClientCertificates(
 		// ensure that the cert is loaded into Kong
 		ir.SecretNameToSNIs.addUniqueParents(secretKey, k8sService)
 		service.ClientCertificate = &kong.Certificate{
-			ID: kong.String(string(secret.UID)),
+			ID: new(string(secret.UID)),
 		}
 	}
 }
@@ -267,7 +267,7 @@ func (ir *ingressRules) handleServiceCACertificates(
 			)
 			continue
 		}
-		k.CACertificates = append(k.CACertificates, lo.ToPtr(string(certID)))
+		k.CACertificates = append(k.CACertificates, new(string(certID)))
 	}
 
 	// Process each CA certificate from ConfigMap and add it to the Kong Service.
@@ -288,7 +288,7 @@ func (ir *ingressRules) handleServiceCACertificates(
 			)
 			continue
 		}
-		k.CACertificates = append(k.CACertificates, lo.ToPtr(certID))
+		k.CACertificates = append(k.CACertificates, new(certID))
 	}
 }
 

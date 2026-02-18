@@ -3,7 +3,6 @@ package address
 import (
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,7 +31,7 @@ func Test_AddressesFromService(t *testing.T) {
 			},
 			want: []operatorv1beta1.Address{
 				{
-					Type:       lo.ToPtr(operatorv1beta1.IPAddressType),
+					Type:       new(operatorv1beta1.IPAddressType),
 					Value:      "1.1.1.1",
 					SourceType: operatorv1beta1.PublicLoadBalancerAddressSourceType,
 				},
@@ -56,12 +55,12 @@ func Test_AddressesFromService(t *testing.T) {
 			},
 			want: []operatorv1beta1.Address{
 				{
-					Type:       lo.ToPtr(operatorv1beta1.IPAddressType),
+					Type:       new(operatorv1beta1.IPAddressType),
 					Value:      "1.1.1.1",
 					SourceType: operatorv1beta1.PublicLoadBalancerAddressSourceType,
 				},
 				{
-					Type:       lo.ToPtr(operatorv1beta1.HostnameAddressType),
+					Type:       new(operatorv1beta1.HostnameAddressType),
 					Value:      "myhostname.com",
 					SourceType: operatorv1beta1.PublicLoadBalancerAddressSourceType,
 				},
@@ -91,22 +90,22 @@ func Test_AddressesFromService(t *testing.T) {
 			},
 			want: []operatorv1beta1.Address{
 				{
-					Type:       lo.ToPtr(operatorv1beta1.IPAddressType),
+					Type:       new(operatorv1beta1.IPAddressType),
 					Value:      "1.1.1.1",
 					SourceType: operatorv1beta1.PublicLoadBalancerAddressSourceType,
 				},
 				{
-					Type:       lo.ToPtr(operatorv1beta1.HostnameAddressType),
+					Type:       new(operatorv1beta1.HostnameAddressType),
 					Value:      "myhostname.com",
 					SourceType: operatorv1beta1.PublicLoadBalancerAddressSourceType,
 				},
 				{
-					Type:       lo.ToPtr(operatorv1beta1.IPAddressType),
+					Type:       new(operatorv1beta1.IPAddressType),
 					Value:      "2.2.2.2",
 					SourceType: operatorv1beta1.PublicLoadBalancerAddressSourceType,
 				},
 				{
-					Type:       lo.ToPtr(operatorv1beta1.HostnameAddressType),
+					Type:       new(operatorv1beta1.HostnameAddressType),
 					Value:      "myhostname2.com",
 					SourceType: operatorv1beta1.PublicLoadBalancerAddressSourceType,
 				},
@@ -132,22 +131,22 @@ func Test_AddressesFromService(t *testing.T) {
 			},
 			want: []operatorv1beta1.Address{
 				{
-					Type:       lo.ToPtr(operatorv1beta1.IPAddressType),
+					Type:       new(operatorv1beta1.IPAddressType),
 					Value:      "1.1.1.1",
 					SourceType: operatorv1beta1.PublicLoadBalancerAddressSourceType,
 				},
 				{
-					Type:       lo.ToPtr(operatorv1beta1.HostnameAddressType),
+					Type:       new(operatorv1beta1.HostnameAddressType),
 					Value:      "myhostname.com",
 					SourceType: operatorv1beta1.PublicLoadBalancerAddressSourceType,
 				},
 				{
-					Type:       lo.ToPtr(operatorv1beta1.IPAddressType),
+					Type:       new(operatorv1beta1.IPAddressType),
 					Value:      "2.2.2.2",
 					SourceType: operatorv1beta1.PublicLoadBalancerAddressSourceType,
 				},
 				{
-					Type:       lo.ToPtr(operatorv1beta1.HostnameAddressType),
+					Type:       new(operatorv1beta1.HostnameAddressType),
 					Value:      "myhostname2.com",
 					SourceType: operatorv1beta1.PublicLoadBalancerAddressSourceType,
 				},
@@ -184,32 +183,32 @@ func Test_AddressesFromService(t *testing.T) {
 			},
 			want: []operatorv1beta1.Address{
 				{
-					Type:       lo.ToPtr(operatorv1beta1.IPAddressType),
+					Type:       new(operatorv1beta1.IPAddressType),
 					Value:      "1.1.1.1",
 					SourceType: operatorv1beta1.PublicLoadBalancerAddressSourceType,
 				},
 				{
-					Type:       lo.ToPtr(operatorv1beta1.HostnameAddressType),
+					Type:       new(operatorv1beta1.HostnameAddressType),
 					Value:      "myhostname.com",
 					SourceType: operatorv1beta1.PublicLoadBalancerAddressSourceType,
 				},
 				{
-					Type:       lo.ToPtr(operatorv1beta1.IPAddressType),
+					Type:       new(operatorv1beta1.IPAddressType),
 					Value:      "2.2.2.2",
 					SourceType: operatorv1beta1.PublicLoadBalancerAddressSourceType,
 				},
 				{
-					Type:       lo.ToPtr(operatorv1beta1.HostnameAddressType),
+					Type:       new(operatorv1beta1.HostnameAddressType),
 					Value:      "myhostname2.com",
 					SourceType: operatorv1beta1.PublicLoadBalancerAddressSourceType,
 				},
 				{
-					Type:       lo.ToPtr(operatorv1beta1.IPAddressType),
+					Type:       new(operatorv1beta1.IPAddressType),
 					Value:      "10.0.0.1",
 					SourceType: operatorv1beta1.PrivateIPAddressSourceType,
 				},
 				{
-					Type:       lo.ToPtr(operatorv1beta1.IPAddressType),
+					Type:       new(operatorv1beta1.IPAddressType),
 					Value:      "2001:0db8::1428:57ab",
 					SourceType: operatorv1beta1.PrivateIPAddressSourceType,
 				},
@@ -238,12 +237,12 @@ func Test_AddressesFromService(t *testing.T) {
 			},
 			want: []operatorv1beta1.Address{
 				{
-					Type:       lo.ToPtr(operatorv1beta1.HostnameAddressType),
+					Type:       new(operatorv1beta1.HostnameAddressType),
 					Value:      "qwerty.example.com",
 					SourceType: operatorv1beta1.PrivateLoadBalancerAddressSourceType,
 				},
 				{
-					Type:       lo.ToPtr(operatorv1beta1.IPAddressType),
+					Type:       new(operatorv1beta1.IPAddressType),
 					Value:      "192.168.1.1",
 					SourceType: operatorv1beta1.PrivateLoadBalancerAddressSourceType,
 				},
@@ -272,12 +271,12 @@ func Test_AddressesFromService(t *testing.T) {
 			},
 			want: []operatorv1beta1.Address{
 				{
-					Type:       lo.ToPtr(operatorv1beta1.HostnameAddressType),
+					Type:       new(operatorv1beta1.HostnameAddressType),
 					Value:      "qwerty.example.com",
 					SourceType: operatorv1beta1.PublicLoadBalancerAddressSourceType,
 				},
 				{
-					Type:       lo.ToPtr(operatorv1beta1.IPAddressType),
+					Type:       new(operatorv1beta1.IPAddressType),
 					Value:      "3.4.0.1",
 					SourceType: operatorv1beta1.PublicLoadBalancerAddressSourceType,
 				},

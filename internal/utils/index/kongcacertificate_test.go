@@ -3,7 +3,6 @@ package index
 import (
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,7 +34,7 @@ func TestSecretOnKongCACertificate(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Namespace: "default"},
 				Spec: configurationv1alpha1.KongCACertificateSpec{
 					SecretRef: &commonv1alpha1.NamespacedRef{
-						Namespace: lo.ToPtr("ns"),
+						Namespace: new("ns"),
 						Name:      "mysecret",
 					},
 				},
@@ -60,7 +59,7 @@ func TestSecretOnKongCACertificate(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Namespace: "default"},
 				Spec: configurationv1alpha1.KongCACertificateSpec{
 					SecretRef: &commonv1alpha1.NamespacedRef{
-						Namespace: lo.ToPtr(""),
+						Namespace: new(""),
 						Name:      "mysecret",
 					},
 				},

@@ -7,7 +7,6 @@ import (
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
-	"github.com/samber/lo"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -173,7 +172,7 @@ func kongCredentialAPIKeyToKeyAuthWithoutParents(
 ) *sdkkonnectcomp.KeyAuthWithoutParents {
 	return &sdkkonnectcomp.KeyAuthWithoutParents{
 		// Key is required in CRD so we don't need to check if it has been provided.
-		Key:  lo.ToPtr(cred.Spec.Key),
+		Key:  new(cred.Spec.Key),
 		Tags: GenerateTagsForObject(cred, cred.Spec.Tags...),
 	}
 }
@@ -191,7 +190,7 @@ func getKongCredentialAPIKeyForUID(
 		// Other fields like name might have changed in the meantime but that's OK.
 		// Those will be enforced via subsequent updates.
 		ControlPlaneID: cpID,
-		Tags:           lo.ToPtr(UIDLabelForObject(cred)),
+		Tags:           new(UIDLabelForObject(cred)),
 	}
 
 	resp, err := sdk.ListKeyAuth(ctx, req)

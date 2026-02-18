@@ -8,7 +8,6 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/Kong/sdk-konnect-go/test/mocks"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -60,7 +59,7 @@ func TestCreateKongVault(t *testing.T) {
 					Return(
 						&sdkkonnectops.CreateVaultResponse{
 							Vault: &sdkkonnectcomp.Vault{
-								ID:     lo.ToPtr("12345"),
+								ID:     new("12345"),
 								Name:   "aws",
 								Prefix: "aws-vault1",
 							},
@@ -191,10 +190,10 @@ func TestUpdateKongVault(t *testing.T) {
 					Return(
 						&sdkkonnectops.UpsertVaultResponse{
 							Vault: &sdkkonnectcomp.Vault{
-								ID:          lo.ToPtr("12345"),
+								ID:          new("12345"),
 								Name:        "aws",
 								Prefix:      "aws-vault1",
-								Description: lo.ToPtr("test vault"),
+								Description: new("test vault"),
 							},
 						},
 						nil,
@@ -303,7 +302,7 @@ func TestAdoptKongVault(t *testing.T) {
 				sdk.EXPECT().GetVault(mock.Anything, "vault-123", "123456789").
 					Return(&sdkkonnectops.GetVaultResponse{
 						Vault: &sdkkonnectcomp.Vault{
-							ID:     lo.ToPtr("vault-123"),
+							ID:     new("vault-123"),
 							Name:   "aws",
 							Prefix: "aws-vault1",
 							Config: map[string]any{"region": "us-east-1"},
@@ -352,7 +351,7 @@ func TestAdoptKongVault(t *testing.T) {
 				sdk.EXPECT().GetVault(mock.Anything, "vault-456", "123456789").
 					Return(&sdkkonnectops.GetVaultResponse{
 						Vault: &sdkkonnectcomp.Vault{
-							ID:     lo.ToPtr("vault-456"),
+							ID:     new("vault-456"),
 							Name:   "aws",
 							Prefix: "aws-vault1",
 							Config: map[string]any{"region": "us-east-1"},
@@ -398,7 +397,7 @@ func TestAdoptKongVault(t *testing.T) {
 				sdk.EXPECT().GetVault(mock.Anything, "vault-789", "123456789").
 					Return(&sdkkonnectops.GetVaultResponse{
 						Vault: &sdkkonnectcomp.Vault{
-							ID:     lo.ToPtr("vault-789"),
+							ID:     new("vault-789"),
 							Name:   "aws",
 							Prefix: "aws-vault1",
 							Config: map[string]any{"region": "us-west-2"},
@@ -486,7 +485,7 @@ func TestAdoptKongVault(t *testing.T) {
 				sdk.EXPECT().GetVault(mock.Anything, "vault-654", "123456789").
 					Return(&sdkkonnectops.GetVaultResponse{
 						Vault: &sdkkonnectcomp.Vault{
-							ID:     lo.ToPtr("vault-654"),
+							ID:     new("vault-654"),
 							Name:   "aws",
 							Prefix: "aws-vault1",
 							Config: map[string]any{"region": "us-east-1"},

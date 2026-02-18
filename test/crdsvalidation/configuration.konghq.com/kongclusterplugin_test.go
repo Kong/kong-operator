@@ -3,7 +3,6 @@ package configuration_test
 import (
 	"testing"
 
-	"github.com/samber/lo"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
@@ -37,7 +36,7 @@ func TestKongClusterPlugin(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Using both config and configFrom fields is not allowed."),
+				ExpectedErrorMessage: new("Using both config and configFrom fields is not allowed."),
 			},
 			{
 				Name: "using both configFrom and configPatches should fail",
@@ -64,7 +63,7 @@ func TestKongClusterPlugin(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Using both configFrom and configPatches fields is not allowed."),
+				ExpectedErrorMessage: new("Using both configFrom and configPatches fields is not allowed."),
 			},
 			{
 				Name: "using only config should succeed",
@@ -134,7 +133,7 @@ func TestKongClusterPlugin(t *testing.T) {
 				Update: func(obj *configurationv1.KongClusterPlugin) {
 					obj.PluginName = "cors"
 				},
-				ExpectedUpdateErrorMessage: lo.ToPtr("The plugin field is immutable"),
+				ExpectedUpdateErrorMessage: new("The plugin field is immutable"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)

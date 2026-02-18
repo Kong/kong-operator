@@ -12,7 +12,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
-	"github.com/samber/lo"
 	"github.com/samber/mo"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -636,10 +635,10 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 		for i, stringAddr := range combinedOverrideAddresses {
 			addr := gatewayapi.GatewayStatusAddress{
 				Value: stringAddr,
-				Type:  lo.ToPtr(gatewayapi.HostnameAddressType),
+				Type:  new(gatewayapi.HostnameAddressType),
 			}
 			if ip := net.ParseIP(stringAddr); ip != nil {
-				addr.Type = lo.ToPtr(gatewayapi.IPAddressType)
+				addr.Type = new(gatewayapi.IPAddressType)
 			}
 			overrides[i] = addr
 		}
@@ -762,8 +761,8 @@ func (r *GatewayReconciler) determineL4ListenersFromService(
 	addresses := make([]gatewayapi.GatewayStatusAddress, 0, len(svc.Spec.ClusterIPs))
 	listeners := make([]gatewayapi.Listener, 0, len(svc.Spec.Ports))
 	protocolToRouteGroupKind := map[corev1.Protocol]gatewayapi.RouteGroupKind{
-		corev1.ProtocolTCP: {Group: lo.ToPtr(gatewayapi.V1Group), Kind: gatewayapi.Kind("TCPRoute")},
-		corev1.ProtocolUDP: {Group: lo.ToPtr(gatewayapi.V1Group), Kind: gatewayapi.Kind("UDPRoute")},
+		corev1.ProtocolTCP: {Group: new(gatewayapi.V1Group), Kind: gatewayapi.Kind("TCPRoute")},
+		corev1.ProtocolUDP: {Group: new(gatewayapi.V1Group), Kind: gatewayapi.Kind("UDPRoute")},
 	}
 
 	for _, port := range svc.Spec.Ports {
@@ -858,7 +857,7 @@ func (r *GatewayReconciler) determineListenersFromDataPlane(
 				listener.Protocol = gatewayapi.TLSProtocolType
 				listener.AllowedRoutes = &gatewayapi.AllowedRoutes{
 					Kinds: []gatewayapi.RouteGroupKind{
-						{Group: lo.ToPtr(gatewayapi.V1Group), Kind: (gatewayapi.Kind)("TLSRoute")},
+						{Group: new(gatewayapi.V1Group), Kind: (gatewayapi.Kind)("TLSRoute")},
 					},
 				}
 			}
@@ -868,14 +867,14 @@ func (r *GatewayReconciler) determineListenersFromDataPlane(
 				listener.Protocol = gatewayapi.HTTPSProtocolType
 				listener.AllowedRoutes = &gatewayapi.AllowedRoutes{
 					Kinds: []gatewayapi.RouteGroupKind{
-						{Group: lo.ToPtr(gatewayapi.V1Group), Kind: (gatewayapi.Kind)("HTTPRoute")},
+						{Group: new(gatewayapi.V1Group), Kind: (gatewayapi.Kind)("HTTPRoute")},
 					},
 				}
 			} else {
 				listener.Protocol = gatewayapi.HTTPProtocolType
 				listener.AllowedRoutes = &gatewayapi.AllowedRoutes{
 					Kinds: []gatewayapi.RouteGroupKind{
-						{Group: lo.ToPtr(gatewayapi.V1Group), Kind: (gatewayapi.Kind)("HTTPRoute")},
+						{Group: new(gatewayapi.V1Group), Kind: (gatewayapi.Kind)("HTTPRoute")},
 					},
 				}
 			}

@@ -119,7 +119,7 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 				testcase.ExpectedErrorMessage = nil
 			} else {
 				testcase.Name = "cpRef (type=konnectNamespacedRef) cannot have namespace"
-				testcase.ExpectedErrorMessage = lo.ToPtr("spec.controlPlaneRef cannot specify namespace for namespaced resource")
+				testcase.ExpectedErrorMessage = new("spec.controlPlaneRef cannot specify namespace for namespaced resource")
 			}
 
 			ret = append(ret, testcase)
@@ -136,7 +136,7 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 		ret = append(ret, TestCase[T]{
 			Name:                 "providing konnectNamespaceRef when type is kic yields an error",
 			TestObject:           obj,
-			ExpectedErrorMessage: lo.ToPtr("when type is kic, konnectNamespacedRef must not be set"),
+			ExpectedErrorMessage: new("when type is kic, konnectNamespacedRef must not be set"),
 		})
 	}
 	{
@@ -170,7 +170,7 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 				cpRef.KonnectNamespacedRef.Name = "new-konnect-control-plane"
 				obj.SetControlPlaneRef(cpRef)
 			},
-			ExpectedUpdateErrorMessage: lo.ToPtr("spec.controlPlaneRef is immutable when an entity is already Programmed"),
+			ExpectedUpdateErrorMessage: new("spec.controlPlaneRef is immutable when an entity is already Programmed"),
 		})
 	}
 	{
@@ -217,7 +217,7 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 					}
 					obj.SetControlPlaneRef(cpRef)
 				},
-				ExpectedUpdateErrorMessage: lo.ToPtr("spec.controlPlaneRef is immutable when an entity is already Programmed"),
+				ExpectedUpdateErrorMessage: new("spec.controlPlaneRef is immutable when an entity is already Programmed"),
 			})
 		}
 	}
@@ -281,7 +281,7 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 					}
 					obj.SetControlPlaneRef(cpRef)
 				},
-				ExpectedUpdateErrorMessage: lo.ToPtr("spec.controlPlaneRef is immutable when an entity is already Programmed"),
+				ExpectedUpdateErrorMessage: new("spec.controlPlaneRef is immutable when an entity is already Programmed"),
 			})
 		}
 	}
@@ -292,7 +292,7 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 			ret = append(ret, TestCase[T]{
 				Name:                 "cpRef is required",
 				TestObject:           obj,
-				ExpectedErrorMessage: lo.ToPtr("spec.controlPlaneRef: Required value"),
+				ExpectedErrorMessage: new("spec.controlPlaneRef: Required value"),
 			})
 		}
 	}

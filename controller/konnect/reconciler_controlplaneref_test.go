@@ -61,7 +61,7 @@ func TestHandleControlPlaneRef(t *testing.T) {
 			},
 			Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 				CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
-					ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
+					ClusterType: new(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
 				},
 			},
 			Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
@@ -636,7 +636,7 @@ func TestKongReferenceGrantAllowsCPRef(t *testing.T) {
 							{
 								Group: configurationv1alpha1.Group(konnectv1alpha2.SchemeGroupVersion.Group),
 								Kind:  "KonnectGatewayControlPlane",
-								Name:  lo.ToPtr(configurationv1alpha1.ObjectName("different-name")),
+								Name:  new(configurationv1alpha1.ObjectName("different-name")),
 							},
 						},
 					},

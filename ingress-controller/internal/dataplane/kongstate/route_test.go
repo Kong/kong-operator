@@ -99,7 +99,7 @@ func TestOverrideRoute(t *testing.T) {
 			expectedRoute: Route{
 				Route: kong.Route{
 					Hosts:                   kong.StringSlice("foo.com", "bar.com"),
-					HTTPSRedirectStatusCode: kong.Int(302),
+					HTTPSRedirectStatusCode: new(302),
 				},
 			},
 		},
@@ -108,8 +108,8 @@ func TestOverrideRoute(t *testing.T) {
 			inRoute: Route{
 				Route: kong.Route{
 					Hosts:        kong.StringSlice("foo.com", "bar.com"),
-					PreserveHost: kong.Bool(true),
-					StripPath:    kong.Bool(true),
+					PreserveHost: new(true),
+					StripPath:    new(true),
 				},
 			},
 			inAnnotations: map[string]string{
@@ -122,9 +122,9 @@ func TestOverrideRoute(t *testing.T) {
 				Route: kong.Route{
 					Hosts:         kong.StringSlice("foo.com", "bar.com"),
 					Protocols:     kong.StringSlice("http"),
-					PreserveHost:  kong.Bool(false),
-					StripPath:     kong.Bool(false),
-					RegexPriority: kong.Int(10),
+					PreserveHost:  new(false),
+					StripPath:     new(false),
+					RegexPriority: new(10),
 				},
 			},
 		},
@@ -180,7 +180,7 @@ func TestOverrideRoute(t *testing.T) {
 			expectedRoute: Route{
 				Route: kong.Route{
 					Hosts:        kong.StringSlice("foo.com"),
-					PathHandling: kong.String("v1"),
+					PathHandling: new("v1"),
 				},
 			},
 		},
@@ -198,8 +198,8 @@ func TestOverrideRoute(t *testing.T) {
 			expectedRoute: Route{
 				Route: kong.Route{
 					Hosts:             kong.StringSlice("foo.com", "bar.com"),
-					RequestBuffering:  kong.Bool(true),
-					ResponseBuffering: kong.Bool(true),
+					RequestBuffering:  new(true),
+					ResponseBuffering: new(true),
 				},
 			},
 		},
@@ -234,8 +234,8 @@ func TestOverrideExpressionRoute(t *testing.T) {
 			name: "protocols should be overridden, but hosts, method, headers, snis should not",
 			inRoute: Route{
 				Route: kong.Route{
-					Name:       kong.String("expression-route-1"),
-					Expression: kong.String(`(http.host == "foo.com") && (http.path ^= "/v1/api")`),
+					Name:       new("expression-route-1"),
+					Expression: new(`(http.host == "foo.com") && (http.path ^= "/v1/api")`),
 				},
 				Ingress: util.K8sObjectInfo{
 					Annotations: map[string]string{
@@ -250,8 +250,8 @@ func TestOverrideExpressionRoute(t *testing.T) {
 			},
 			outRoute: Route{
 				Route: kong.Route{
-					Name:       kong.String("expression-route-1"),
-					Expression: kong.String(`(http.host == "foo.com") && (http.path ^= "/v1/api")`),
+					Name:       new("expression-route-1"),
+					Expression: new(`(http.host == "foo.com") && (http.path ^= "/v1/api")`),
 					Protocols:  kong.StringSlice("https"),
 				},
 				Ingress: util.K8sObjectInfo{
@@ -270,8 +270,8 @@ func TestOverrideExpressionRoute(t *testing.T) {
 			name: "request_buffering, response_buffering should be overridden, but regex_priority, path_handling should not",
 			inRoute: Route{
 				Route: kong.Route{
-					Name:       kong.String("expression-route-2"),
-					Expression: kong.String(`(http.host == "foo.com") && (http.path ^= "/v1/api")`),
+					Name:       new("expression-route-2"),
+					Expression: new(`(http.host == "foo.com") && (http.path ^= "/v1/api")`),
 				},
 				Ingress: util.K8sObjectInfo{
 					Annotations: map[string]string{
@@ -285,10 +285,10 @@ func TestOverrideExpressionRoute(t *testing.T) {
 			},
 			outRoute: Route{
 				Route: kong.Route{
-					Name:              kong.String("expression-route-2"),
-					Expression:        kong.String(`(http.host == "foo.com") && (http.path ^= "/v1/api")`),
-					RequestBuffering:  kong.Bool(true),
-					ResponseBuffering: kong.Bool(true),
+					Name:              new("expression-route-2"),
+					Expression:        new(`(http.host == "foo.com") && (http.path ^= "/v1/api")`),
+					RequestBuffering:  new(true),
+					ResponseBuffering: new(true),
 				},
 				Ingress: util.K8sObjectInfo{
 					Annotations: map[string]string{
@@ -460,7 +460,7 @@ func TestOverrideRouteStripPath(t *testing.T) {
 				},
 			},
 			want: kong.Route{
-				StripPath: kong.Bool(false),
+				StripPath: new(false),
 			},
 		},
 		{
@@ -474,7 +474,7 @@ func TestOverrideRouteStripPath(t *testing.T) {
 				},
 			},
 			want: kong.Route{
-				StripPath: kong.Bool(true),
+				StripPath: new(true),
 			},
 		},
 		{
@@ -482,7 +482,7 @@ func TestOverrideRouteStripPath(t *testing.T) {
 			args: args{
 				route: Route{
 					Route: kong.Route{
-						StripPath: kong.Bool(false),
+						StripPath: new(false),
 					},
 				},
 				anns: map[string]string{
@@ -490,7 +490,7 @@ func TestOverrideRouteStripPath(t *testing.T) {
 				},
 			},
 			want: kong.Route{
-				StripPath: kong.Bool(true),
+				StripPath: new(true),
 			},
 		},
 		{
@@ -498,7 +498,7 @@ func TestOverrideRouteStripPath(t *testing.T) {
 			args: args{
 				route: Route{
 					Route: kong.Route{
-						StripPath: kong.Bool(false),
+						StripPath: new(false),
 					},
 				},
 				anns: map[string]string{
@@ -506,7 +506,7 @@ func TestOverrideRouteStripPath(t *testing.T) {
 				},
 			},
 			want: kong.Route{
-				StripPath: kong.Bool(false),
+				StripPath: new(false),
 			},
 		},
 	}
@@ -540,7 +540,7 @@ func TestOverrideRouteHTTPSRedirectCode(t *testing.T) {
 			},
 			want: Route{
 				Route: kong.Route{
-					HTTPSRedirectStatusCode: kong.Int(301),
+					HTTPSRedirectStatusCode: new(301),
 				},
 			},
 		},
@@ -569,8 +569,8 @@ func TestOverrideRouteHTTPSRedirectCode(t *testing.T) {
 			},
 			want: Route{
 				Route: kong.Route{
-					HTTPSRedirectStatusCode: kong.Int(302),
-					Protocols:               []*string{kong.String("https")},
+					HTTPSRedirectStatusCode: new(302),
+					Protocols:               []*string{new("https")},
 				},
 			},
 		},
@@ -579,7 +579,7 @@ func TestOverrideRouteHTTPSRedirectCode(t *testing.T) {
 			args: args{
 				route: Route{
 					Route: kong.Route{
-						Protocols: []*string{kong.String("grpc")},
+						Protocols: []*string{new("grpc")},
 					},
 				},
 				anns: map[string]string{
@@ -589,8 +589,8 @@ func TestOverrideRouteHTTPSRedirectCode(t *testing.T) {
 			},
 			want: Route{
 				Route: kong.Route{
-					HTTPSRedirectStatusCode: kong.Int(302),
-					Protocols:               []*string{kong.String("grpcs")},
+					HTTPSRedirectStatusCode: new(302),
+					Protocols:               []*string{new("grpcs")},
 				},
 			},
 		},
@@ -612,8 +612,8 @@ func TestOverrideRouteHTTPSRedirectCode(t *testing.T) {
 			},
 			want: Route{
 				Route: kong.Route{
-					HTTPSRedirectStatusCode: kong.Int(307),
-					Protocols:               []*string{kong.String("https")},
+					HTTPSRedirectStatusCode: new(307),
+					Protocols:               []*string{new("https")},
 				},
 			},
 		},
@@ -648,7 +648,7 @@ func TestOverrideRoutePreserveHost(t *testing.T) {
 			},
 			want: Route{
 				Route: kong.Route{
-					PreserveHost: kong.Bool(true),
+					PreserveHost: new(true),
 				},
 			},
 		},
@@ -661,7 +661,7 @@ func TestOverrideRoutePreserveHost(t *testing.T) {
 			},
 			want: Route{
 				Route: kong.Route{
-					PreserveHost: kong.Bool(false),
+					PreserveHost: new(false),
 				},
 			},
 		},
@@ -712,7 +712,7 @@ func TestOverrideRouteRegexPriority(t *testing.T) {
 			},
 			want: Route{
 				Route: kong.Route{
-					RegexPriority: kong.Int(10),
+					RegexPriority: new(10),
 				},
 			},
 		},
@@ -725,7 +725,7 @@ func TestOverrideRouteRegexPriority(t *testing.T) {
 			},
 			want: Route{
 				Route: kong.Route{
-					RegexPriority: kong.Int(-10),
+					RegexPriority: new(-10),
 				},
 			},
 		},
@@ -879,7 +879,7 @@ func TestOverrideRequestBuffering(t *testing.T) {
 				},
 			},
 			want: kong.Route{
-				RequestBuffering: kong.Bool(false),
+				RequestBuffering: new(false),
 			},
 		},
 		{
@@ -893,7 +893,7 @@ func TestOverrideRequestBuffering(t *testing.T) {
 				},
 			},
 			want: kong.Route{
-				RequestBuffering: kong.Bool(true),
+				RequestBuffering: new(true),
 			},
 		},
 		{
@@ -901,7 +901,7 @@ func TestOverrideRequestBuffering(t *testing.T) {
 			args: args{
 				route: Route{
 					Route: kong.Route{
-						RequestBuffering: kong.Bool(false),
+						RequestBuffering: new(false),
 					},
 				},
 				anns: map[string]string{
@@ -909,7 +909,7 @@ func TestOverrideRequestBuffering(t *testing.T) {
 				},
 			},
 			want: kong.Route{
-				RequestBuffering: kong.Bool(true),
+				RequestBuffering: new(true),
 			},
 		},
 	}
@@ -952,7 +952,7 @@ func TestOverrideResponseBuffering(t *testing.T) {
 				},
 			},
 			want: kong.Route{
-				ResponseBuffering: kong.Bool(false),
+				ResponseBuffering: new(false),
 			},
 		},
 		{
@@ -966,7 +966,7 @@ func TestOverrideResponseBuffering(t *testing.T) {
 				},
 			},
 			want: kong.Route{
-				ResponseBuffering: kong.Bool(true),
+				ResponseBuffering: new(true),
 			},
 		},
 		{
@@ -974,7 +974,7 @@ func TestOverrideResponseBuffering(t *testing.T) {
 			args: args{
 				route: Route{
 					Route: kong.Route{
-						ResponseBuffering: kong.Bool(false),
+						ResponseBuffering: new(false),
 					},
 				},
 				anns: map[string]string{
@@ -982,7 +982,7 @@ func TestOverrideResponseBuffering(t *testing.T) {
 				},
 			},
 			want: kong.Route{
-				ResponseBuffering: kong.Bool(true),
+				ResponseBuffering: new(true),
 			},
 		},
 	}
@@ -1164,7 +1164,7 @@ func TestOverridePathHandling(t *testing.T) {
 			},
 			want: Route{
 				Route: kong.Route{
-					PathHandling: kong.String("v1"),
+					PathHandling: new("v1"),
 				},
 			},
 		},

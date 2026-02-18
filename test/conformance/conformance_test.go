@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -205,7 +204,7 @@ func createGatewayClass(ctx context.Context, t *testing.T, gwconf *operatorv2bet
 				Group:     "gateway-operator.konghq.com",
 				Kind:      "GatewayConfiguration",
 				Name:      gwconf.Name,
-				Namespace: lo.ToPtr(gwtypes.Namespace(gwconf.Namespace)),
+				Namespace: new(gwtypes.Namespace(gwconf.Namespace)),
 			},
 		},
 	}

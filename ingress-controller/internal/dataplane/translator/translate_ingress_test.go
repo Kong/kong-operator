@@ -113,7 +113,7 @@ func TestFromIngressV1(t *testing.T) {
 										Paths: []netv1.HTTPIngressPath{
 											{
 												Path:     "/foo",
-												PathType: lo.ToPtr(netv1.PathTypePrefix),
+												PathType: new(netv1.PathTypePrefix),
 												Backend: netv1.IngressBackend{
 													Service: &netv1.IngressServiceBackend{
 														Name: "svc",
@@ -185,7 +185,7 @@ func TestGetDefaultBackendService(t *testing.T) {
 			Spec: netv1.IngressSpec{
 				DefaultBackend: &netv1.IngressBackend{
 					Resource: &corev1.TypedLocalObjectReference{
-						APIGroup: lo.ToPtr(incubatorv1alpha1.GroupVersion.Group),
+						APIGroup: new(incubatorv1alpha1.GroupVersion.Group),
 						Kind:     incubatorv1alpha1.KongServiceFacadeKind,
 						Name:     serviceFacadeName,
 					},
@@ -332,7 +332,7 @@ func TestGetDefaultBackendService(t *testing.T) {
 				Spec: netv1.IngressSpec{
 					DefaultBackend: &netv1.IngressBackend{
 						Resource: &corev1.TypedLocalObjectReference{
-							APIGroup: lo.ToPtr("unknown.group.com"),
+							APIGroup: new("unknown.group.com"),
 							Kind:     "UnknownKind",
 						},
 					},
@@ -392,7 +392,7 @@ func TestRewriteURIAnnotation(t *testing.T) {
 								Paths: []netv1.HTTPIngressPath{
 									{
 										Path:     "/~/api/(.*)",
-										PathType: lo.ToPtr(netv1.PathTypePrefix),
+										PathType: new(netv1.PathTypePrefix),
 										Backend: netv1.IngressBackend{
 											Service: &netv1.IngressServiceBackend{
 												Name: name,
@@ -430,7 +430,7 @@ func TestRewriteURIAnnotation(t *testing.T) {
 			for _, route := range svc.Routes {
 				require.Equal(t, []kong.Plugin{
 					{
-						Name: kong.String("request-transformer"),
+						Name: new("request-transformer"),
 						Config: kong.Configuration{
 							"replace": map[string]string{
 								"uri": "/rewrite/$(uri_captures[1])/xx",

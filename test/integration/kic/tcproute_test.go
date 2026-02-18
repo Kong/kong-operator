@@ -11,7 +11,6 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -133,7 +132,7 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 			CommonRouteSpec: gatewayapi.CommonRouteSpec{
 				ParentRefs: []gatewayapi.ParentReference{{
 					Name:        gatewayapi.ObjectName(gatewayName),
-					SectionName: lo.ToPtr(gatewayapi.SectionName(gatewayTCPPortName)),
+					SectionName: new(gatewayapi.SectionName(gatewayTCPPortName)),
 				}},
 			},
 			Rules: []gatewayapi.TCPRouteRule{{
@@ -141,14 +140,14 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 					{
 						BackendObjectReference: gatewayapi.BackendObjectReference{
 							Name: gatewayapi.ObjectName(service1.Name),
-							Port: lo.ToPtr(gatewayapi.PortNumber(service1Port)),
+							Port: new(gatewayapi.PortNumber(service1Port)),
 						},
 					},
 					{
 						BackendObjectReference: gatewayapi.BackendObjectReference{
 							Name:      gatewayapi.ObjectName(service2.Name),
 							Namespace: &remoteNamespace,
-							Port:      lo.ToPtr(gatewayapi.PortNumber(service2Port)),
+							Port:      new(gatewayapi.PortNumber(service2Port)),
 						},
 					},
 				},

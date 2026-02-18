@@ -3,7 +3,6 @@ package builder
 import (
 	"fmt"
 
-	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
@@ -32,7 +31,7 @@ func (b *KongstateServiceBackendBuilder) WithNamespace(namespace string) *Kongst
 }
 
 func (b *KongstateServiceBackendBuilder) WithWeight(weight int) *KongstateServiceBackendBuilder {
-	b.weight = lo.ToPtr(int32(weight))
+	b.weight = new(int32(weight))
 	return b
 }
 

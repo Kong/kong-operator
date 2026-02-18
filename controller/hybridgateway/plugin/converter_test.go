@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -102,7 +101,7 @@ func TestTranslateRequestRedirect(t *testing.T) {
 			filter: gwtypes.HTTPRouteFilter{
 				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
 				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
-					Hostname: lo.ToPtr(gatewayv1.PreciseHostname("example.com")),
+					Hostname: new(gatewayv1.PreciseHostname("example.com")),
 				},
 			},
 			expected: requestRedirectConfig{
@@ -116,8 +115,8 @@ func TestTranslateRequestRedirect(t *testing.T) {
 			filter: gwtypes.HTTPRouteFilter{
 				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
 				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
-					StatusCode: lo.ToPtr(301),
-					Hostname:   lo.ToPtr(gatewayv1.PreciseHostname("example.com")),
+					StatusCode: new(301),
+					Hostname:   new(gatewayv1.PreciseHostname("example.com")),
 				},
 			},
 			expected: requestRedirectConfig{
@@ -131,8 +130,8 @@ func TestTranslateRequestRedirect(t *testing.T) {
 			filter: gwtypes.HTTPRouteFilter{
 				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
 				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
-					Scheme:   lo.ToPtr("https"),
-					Hostname: lo.ToPtr(gatewayv1.PreciseHostname("example.com")),
+					Scheme:   new("https"),
+					Hostname: new(gatewayv1.PreciseHostname("example.com")),
 				},
 			},
 			expected: requestRedirectConfig{
@@ -146,8 +145,8 @@ func TestTranslateRequestRedirect(t *testing.T) {
 			filter: gwtypes.HTTPRouteFilter{
 				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
 				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
-					Hostname: lo.ToPtr(gatewayv1.PreciseHostname("example.com")),
-					Port:     lo.ToPtr(gatewayv1.PortNumber(8080)),
+					Hostname: new(gatewayv1.PreciseHostname("example.com")),
+					Port:     new(gatewayv1.PortNumber(8080)),
 				},
 			},
 			expected: requestRedirectConfig{
@@ -161,10 +160,10 @@ func TestTranslateRequestRedirect(t *testing.T) {
 			filter: gwtypes.HTTPRouteFilter{
 				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
 				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
-					Hostname: lo.ToPtr(gatewayv1.PreciseHostname("example.com")),
+					Hostname: new(gatewayv1.PreciseHostname("example.com")),
 					Path: &gatewayv1.HTTPPathModifier{
 						Type:            gatewayv1.FullPathHTTPPathModifier,
-						ReplaceFullPath: lo.ToPtr("/new-path"),
+						ReplaceFullPath: new("/new-path"),
 					},
 				},
 			},
@@ -181,7 +180,7 @@ func TestTranslateRequestRedirect(t *testing.T) {
 				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
 					Path: &gatewayv1.HTTPPathModifier{
 						Type:            gatewayv1.FullPathHTTPPathModifier,
-						ReplaceFullPath: lo.ToPtr("/redirect-path"),
+						ReplaceFullPath: new("/redirect-path"),
 					},
 				},
 			},
@@ -196,13 +195,13 @@ func TestTranslateRequestRedirect(t *testing.T) {
 			filter: gwtypes.HTTPRouteFilter{
 				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
 				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
-					StatusCode: lo.ToPtr(307),
-					Scheme:     lo.ToPtr("https"),
-					Hostname:   lo.ToPtr(gatewayv1.PreciseHostname("secure.example.com")),
-					Port:       lo.ToPtr(gatewayv1.PortNumber(443)),
+					StatusCode: new(307),
+					Scheme:     new("https"),
+					Hostname:   new(gatewayv1.PreciseHostname("secure.example.com")),
+					Port:       new(gatewayv1.PortNumber(443)),
 					Path: &gatewayv1.HTTPPathModifier{
 						Type:            gatewayv1.FullPathHTTPPathModifier,
-						ReplaceFullPath: lo.ToPtr("/secure-path"),
+						ReplaceFullPath: new("/secure-path"),
 					},
 				},
 			},
@@ -243,39 +242,39 @@ func TestTranslateRequestRedirectHostname(t *testing.T) {
 		{
 			name: "empty hostname",
 			redirect: &gatewayv1.HTTPRequestRedirectFilter{
-				Hostname: lo.ToPtr(gatewayv1.PreciseHostname("")),
+				Hostname: new(gatewayv1.PreciseHostname("")),
 			},
 			expected: "",
 		},
 		{
 			name: "hostname only with default scheme",
 			redirect: &gatewayv1.HTTPRequestRedirectFilter{
-				Hostname: lo.ToPtr(gatewayv1.PreciseHostname("example.com")),
+				Hostname: new(gatewayv1.PreciseHostname("example.com")),
 			},
 			expected: "http://example.com",
 		},
 		{
 			name: "hostname with custom scheme",
 			redirect: &gatewayv1.HTTPRequestRedirectFilter{
-				Scheme:   lo.ToPtr("https"),
-				Hostname: lo.ToPtr(gatewayv1.PreciseHostname("example.com")),
+				Scheme:   new("https"),
+				Hostname: new(gatewayv1.PreciseHostname("example.com")),
 			},
 			expected: "https://example.com",
 		},
 		{
 			name: "hostname with port",
 			redirect: &gatewayv1.HTTPRequestRedirectFilter{
-				Hostname: lo.ToPtr(gatewayv1.PreciseHostname("example.com")),
-				Port:     lo.ToPtr(gatewayv1.PortNumber(8080)),
+				Hostname: new(gatewayv1.PreciseHostname("example.com")),
+				Port:     new(gatewayv1.PortNumber(8080)),
 			},
 			expected: "http://example.com:8080",
 		},
 		{
 			name: "complete hostname configuration",
 			redirect: &gatewayv1.HTTPRequestRedirectFilter{
-				Scheme:   lo.ToPtr("https"),
-				Hostname: lo.ToPtr(gatewayv1.PreciseHostname("api.example.com")),
-				Port:     lo.ToPtr(gatewayv1.PortNumber(443)),
+				Scheme:   new("https"),
+				Hostname: new(gatewayv1.PreciseHostname("api.example.com")),
+				Port:     new(gatewayv1.PortNumber(443)),
 			},
 			expected: "https://api.example.com:443",
 		},
@@ -321,8 +320,8 @@ func TestTranslateRequestRedirectPreFunction(t *testing.T) {
 				Matches: []gatewayv1.HTTPRouteMatch{
 					{
 						Path: &gatewayv1.HTTPPathMatch{
-							Type:  lo.ToPtr(gatewayv1.PathMatchPathPrefix),
-							Value: lo.ToPtr("/api"),
+							Type:  new(gatewayv1.PathMatchPathPrefix),
+							Value: new("/api"),
 						},
 					},
 				},
@@ -342,7 +341,7 @@ func TestTranslateRequestRedirectPreFunction(t *testing.T) {
 				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
 					Path: &gatewayv1.HTTPPathModifier{
 						Type:               gatewayv1.PrefixMatchHTTPPathModifier,
-						ReplacePrefixMatch: lo.ToPtr("/new-api"),
+						ReplacePrefixMatch: new("/new-api"),
 					},
 				},
 			},
@@ -350,8 +349,8 @@ func TestTranslateRequestRedirectPreFunction(t *testing.T) {
 				Matches: []gatewayv1.HTTPRouteMatch{
 					{
 						Path: &gatewayv1.HTTPPathMatch{
-							Type:  lo.ToPtr(gatewayv1.PathMatchPathPrefix),
-							Value: lo.ToPtr("/api"),
+							Type:  new(gatewayv1.PathMatchPathPrefix),
+							Value: new("/api"),
 						},
 					},
 				},
@@ -372,10 +371,10 @@ func TestTranslateRequestRedirectPreFunction(t *testing.T) {
 			filter: gwtypes.HTTPRouteFilter{
 				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
 				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
-					Scheme: lo.ToPtr("https"),
+					Scheme: new("https"),
 					Path: &gatewayv1.HTTPPathModifier{
 						Type:               gatewayv1.PrefixMatchHTTPPathModifier,
-						ReplacePrefixMatch: lo.ToPtr("/secure"),
+						ReplacePrefixMatch: new("/secure"),
 					},
 				},
 			},
@@ -383,8 +382,8 @@ func TestTranslateRequestRedirectPreFunction(t *testing.T) {
 				Matches: []gatewayv1.HTTPRouteMatch{
 					{
 						Path: &gatewayv1.HTTPPathMatch{
-							Type:  lo.ToPtr(gatewayv1.PathMatchPathPrefix),
-							Value: lo.ToPtr("/old"),
+							Type:  new(gatewayv1.PathMatchPathPrefix),
+							Value: new("/old"),
 						},
 					},
 				},
@@ -400,11 +399,11 @@ func TestTranslateRequestRedirectPreFunction(t *testing.T) {
 			filter: gwtypes.HTTPRouteFilter{
 				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
 				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
-					Hostname: lo.ToPtr(gatewayv1.PreciseHostname("new.example.com")),
-					Port:     lo.ToPtr(gatewayv1.PortNumber(8443)),
+					Hostname: new(gatewayv1.PreciseHostname("new.example.com")),
+					Port:     new(gatewayv1.PortNumber(8443)),
 					Path: &gatewayv1.HTTPPathModifier{
 						Type:               gatewayv1.PrefixMatchHTTPPathModifier,
-						ReplacePrefixMatch: lo.ToPtr("/v2"),
+						ReplacePrefixMatch: new("/v2"),
 					},
 				},
 			},
@@ -412,8 +411,8 @@ func TestTranslateRequestRedirectPreFunction(t *testing.T) {
 				Matches: []gatewayv1.HTTPRouteMatch{
 					{
 						Path: &gatewayv1.HTTPPathMatch{
-							Type:  lo.ToPtr(gatewayv1.PathMatchPathPrefix),
-							Value: lo.ToPtr("/v1"),
+							Type:  new(gatewayv1.PathMatchPathPrefix),
+							Value: new("/v1"),
 						},
 					},
 				},
@@ -429,10 +428,10 @@ func TestTranslateRequestRedirectPreFunction(t *testing.T) {
 			filter: gwtypes.HTTPRouteFilter{
 				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
 				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
-					StatusCode: lo.ToPtr(301),
+					StatusCode: new(301),
 					Path: &gatewayv1.HTTPPathModifier{
 						Type:               gatewayv1.PrefixMatchHTTPPathModifier,
-						ReplacePrefixMatch: lo.ToPtr("/permanent"),
+						ReplacePrefixMatch: new("/permanent"),
 					},
 				},
 			},
@@ -440,8 +439,8 @@ func TestTranslateRequestRedirectPreFunction(t *testing.T) {
 				Matches: []gatewayv1.HTTPRouteMatch{
 					{
 						Path: &gatewayv1.HTTPPathMatch{
-							Type:  lo.ToPtr(gatewayv1.PathMatchPathPrefix),
-							Value: lo.ToPtr("/temp"),
+							Type:  new(gatewayv1.PathMatchPathPrefix),
+							Value: new("/temp"),
 						},
 					},
 				},
@@ -457,13 +456,13 @@ func TestTranslateRequestRedirectPreFunction(t *testing.T) {
 			filter: gwtypes.HTTPRouteFilter{
 				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
 				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
-					Scheme:     lo.ToPtr("https"),
-					Hostname:   lo.ToPtr(gatewayv1.PreciseHostname("secure.example.com")),
-					Port:       lo.ToPtr(gatewayv1.PortNumber(443)),
-					StatusCode: lo.ToPtr(308),
+					Scheme:     new("https"),
+					Hostname:   new(gatewayv1.PreciseHostname("secure.example.com")),
+					Port:       new(gatewayv1.PortNumber(443)),
+					StatusCode: new(308),
 					Path: &gatewayv1.HTTPPathModifier{
 						Type:               gatewayv1.PrefixMatchHTTPPathModifier,
-						ReplacePrefixMatch: lo.ToPtr("/api/v2"),
+						ReplacePrefixMatch: new("/api/v2"),
 					},
 				},
 			},
@@ -471,8 +470,8 @@ func TestTranslateRequestRedirectPreFunction(t *testing.T) {
 				Matches: []gatewayv1.HTTPRouteMatch{
 					{
 						Path: &gatewayv1.HTTPPathMatch{
-							Type:  lo.ToPtr(gatewayv1.PathMatchPathPrefix),
-							Value: lo.ToPtr("/api/v1"),
+							Type:  new(gatewayv1.PathMatchPathPrefix),
+							Value: new("/api/v1"),
 						},
 					},
 				},
@@ -494,7 +493,7 @@ func TestTranslateRequestRedirectPreFunction(t *testing.T) {
 				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
 					Path: &gatewayv1.HTTPPathModifier{
 						Type:               gatewayv1.PrefixMatchHTTPPathModifier,
-						ReplacePrefixMatch: lo.ToPtr("/new-path/with-dashes_and_underscores"),
+						ReplacePrefixMatch: new("/new-path/with-dashes_and_underscores"),
 					},
 				},
 			},
@@ -502,8 +501,8 @@ func TestTranslateRequestRedirectPreFunction(t *testing.T) {
 				Matches: []gatewayv1.HTTPRouteMatch{
 					{
 						Path: &gatewayv1.HTTPPathMatch{
-							Type:  lo.ToPtr(gatewayv1.PathMatchPathPrefix),
-							Value: lo.ToPtr("/old-path"),
+							Type:  new(gatewayv1.PathMatchPathPrefix),
+							Value: new("/old-path"),
 						},
 					},
 				},
@@ -521,7 +520,7 @@ func TestTranslateRequestRedirectPreFunction(t *testing.T) {
 				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
 					Path: &gatewayv1.HTTPPathModifier{
 						Type:               gatewayv1.PrefixMatchHTTPPathModifier,
-						ReplacePrefixMatch: lo.ToPtr(""),
+						ReplacePrefixMatch: new(""),
 					},
 				},
 			},
@@ -529,8 +528,8 @@ func TestTranslateRequestRedirectPreFunction(t *testing.T) {
 				Matches: []gatewayv1.HTTPRouteMatch{
 					{
 						Path: &gatewayv1.HTTPPathMatch{
-							Type:  lo.ToPtr(gatewayv1.PathMatchPathPrefix),
-							Value: lo.ToPtr("/remove-prefix"),
+							Type:  new(gatewayv1.PathMatchPathPrefix),
+							Value: new("/remove-prefix"),
 						},
 					},
 				},
@@ -628,8 +627,8 @@ func TestTranslateFromFilterWithPrefixMatchRedirect(t *testing.T) {
 				Matches: []gatewayv1.HTTPRouteMatch{
 					{
 						Path: &gatewayv1.HTTPPathMatch{
-							Type:  lo.ToPtr(gatewayv1.PathMatchPathPrefix),
-							Value: lo.ToPtr("/api/v1"),
+							Type:  new(gatewayv1.PathMatchPathPrefix),
+							Value: new("/api/v1"),
 						},
 					},
 				},
@@ -639,7 +638,7 @@ func TestTranslateFromFilterWithPrefixMatchRedirect(t *testing.T) {
 				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
 					Path: &gatewayv1.HTTPPathModifier{
 						Type:               gatewayv1.PrefixMatchHTTPPathModifier,
-						ReplacePrefixMatch: lo.ToPtr("/api/v2"),
+						ReplacePrefixMatch: new("/api/v2"),
 					},
 				},
 			},
@@ -662,10 +661,10 @@ func TestTranslateFromFilterWithPrefixMatchRedirect(t *testing.T) {
 			filter: gwtypes.HTTPRouteFilter{
 				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
 				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
-					Hostname: lo.ToPtr(gatewayv1.PreciseHostname("example.com")),
+					Hostname: new(gatewayv1.PreciseHostname("example.com")),
 					Path: &gatewayv1.HTTPPathModifier{
 						Type:            gatewayv1.FullPathHTTPPathModifier,
-						ReplaceFullPath: lo.ToPtr("/new-path"),
+						ReplaceFullPath: new("/new-path"),
 					},
 				},
 			},
@@ -687,7 +686,7 @@ func TestTranslateFromFilterWithPrefixMatchRedirect(t *testing.T) {
 			filter: gwtypes.HTTPRouteFilter{
 				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
 				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
-					Hostname: lo.ToPtr(gatewayv1.PreciseHostname("example.com")),
+					Hostname: new(gatewayv1.PreciseHostname("example.com")),
 				},
 			},
 			validate: func(t *testing.T, configs []kongPluginConfig) {
@@ -738,7 +737,7 @@ func TestTranslateRequestRedirectPath(t *testing.T) {
 			redirect: &gatewayv1.HTTPRequestRedirectFilter{
 				Path: &gatewayv1.HTTPPathModifier{
 					Type:            gatewayv1.FullPathHTTPPathModifier,
-					ReplaceFullPath: lo.ToPtr("/new-path"),
+					ReplaceFullPath: new("/new-path"),
 				},
 			},
 			expected: "/new-path",
@@ -748,7 +747,7 @@ func TestTranslateRequestRedirectPath(t *testing.T) {
 			redirect: &gatewayv1.HTTPRequestRedirectFilter{
 				Path: &gatewayv1.HTTPPathModifier{
 					Type:            gatewayv1.FullPathHTTPPathModifier,
-					ReplaceFullPath: lo.ToPtr(""),
+					ReplaceFullPath: new(""),
 				},
 			},
 			expected: "/",
@@ -768,7 +767,7 @@ func TestTranslateRequestRedirectPath(t *testing.T) {
 			redirect: &gatewayv1.HTTPRequestRedirectFilter{
 				Path: &gatewayv1.HTTPPathModifier{
 					Type:               gatewayv1.PrefixMatchHTTPPathModifier,
-					ReplacePrefixMatch: lo.ToPtr("/api"),
+					ReplacePrefixMatch: new("/api"),
 				},
 			},
 			expected: "",
@@ -821,7 +820,7 @@ func TestTranslateURLRewrite(t *testing.T) {
 			filter: gwtypes.HTTPRouteFilter{
 				Type: gatewayv1.HTTPRouteFilterURLRewrite,
 				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
-					Hostname: lo.ToPtr(gatewayv1.PreciseHostname("new-host.example.com")),
+					Hostname: new(gatewayv1.PreciseHostname("new-host.example.com")),
 				},
 			},
 			path: "/api",
@@ -843,7 +842,7 @@ func TestTranslateURLRewrite(t *testing.T) {
 				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
 					Path: &gatewayv1.HTTPPathModifier{
 						Type:            gatewayv1.FullPathHTTPPathModifier,
-						ReplaceFullPath: lo.ToPtr("/new-path"),
+						ReplaceFullPath: new("/new-path"),
 					},
 				},
 			},
@@ -861,7 +860,7 @@ func TestTranslateURLRewrite(t *testing.T) {
 				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
 					Path: &gatewayv1.HTTPPathModifier{
 						Type:            gatewayv1.FullPathHTTPPathModifier,
-						ReplaceFullPath: lo.ToPtr(""),
+						ReplaceFullPath: new(""),
 					},
 				},
 			},
@@ -879,7 +878,7 @@ func TestTranslateURLRewrite(t *testing.T) {
 				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
 					Path: &gatewayv1.HTTPPathModifier{
 						Type:               gatewayv1.PrefixMatchHTTPPathModifier,
-						ReplacePrefixMatch: lo.ToPtr("/api/v2"),
+						ReplacePrefixMatch: new("/api/v2"),
 					},
 				},
 			},
@@ -897,7 +896,7 @@ func TestTranslateURLRewrite(t *testing.T) {
 				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
 					Path: &gatewayv1.HTTPPathModifier{
 						Type:               gatewayv1.PrefixMatchHTTPPathModifier,
-						ReplacePrefixMatch: lo.ToPtr("/api/v2"),
+						ReplacePrefixMatch: new("/api/v2"),
 					},
 				},
 			},
@@ -915,7 +914,7 @@ func TestTranslateURLRewrite(t *testing.T) {
 				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
 					Path: &gatewayv1.HTTPPathModifier{
 						Type:               gatewayv1.PrefixMatchHTTPPathModifier,
-						ReplacePrefixMatch: lo.ToPtr(""),
+						ReplacePrefixMatch: new(""),
 					},
 				},
 			},
@@ -933,7 +932,7 @@ func TestTranslateURLRewrite(t *testing.T) {
 				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
 					Path: &gatewayv1.HTTPPathModifier{
 						Type:               gatewayv1.PrefixMatchHTTPPathModifier,
-						ReplacePrefixMatch: lo.ToPtr(""),
+						ReplacePrefixMatch: new(""),
 					},
 				},
 			},
@@ -951,7 +950,7 @@ func TestTranslateURLRewrite(t *testing.T) {
 				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
 					Path: &gatewayv1.HTTPPathModifier{
 						Type:               gatewayv1.PrefixMatchHTTPPathModifier,
-						ReplacePrefixMatch: lo.ToPtr("/new/api/"),
+						ReplacePrefixMatch: new("/new/api/"),
 					},
 				},
 			},
@@ -967,10 +966,10 @@ func TestTranslateURLRewrite(t *testing.T) {
 			filter: gwtypes.HTTPRouteFilter{
 				Type: gatewayv1.HTTPRouteFilterURLRewrite,
 				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
-					Hostname: lo.ToPtr(gatewayv1.PreciseHostname("new-host.example.com")),
+					Hostname: new(gatewayv1.PreciseHostname("new-host.example.com")),
 					Path: &gatewayv1.HTTPPathModifier{
 						Type:               gatewayv1.PrefixMatchHTTPPathModifier,
-						ReplacePrefixMatch: lo.ToPtr("/api/v2"),
+						ReplacePrefixMatch: new("/api/v2"),
 					},
 				},
 			},

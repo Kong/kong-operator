@@ -8,7 +8,6 @@ import (
 	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	certmanagerv1client "github.com/cert-manager/cert-manager/pkg/client/clientset/versioned/typed/certmanager/v1"
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -610,7 +609,7 @@ func TestDataPlaneHorizontalScaling(t *testing.T) {
 			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1beta1.DeploymentOptions{
-						Replicas: lo.ToPtr(int32(2)),
+						Replicas: new(int32(2)),
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
@@ -653,7 +652,7 @@ func TestDataPlaneHorizontalScaling(t *testing.T) {
 
 	t.Log("changing replicas in dataplane spec to 1 should scale down the deployment back to 1")
 	require.Eventually(t,
-		testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) { dp.Spec.Deployment.Replicas = lo.ToPtr(int32(1)) }),
+		testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) { dp.Spec.Deployment.Replicas = new(int32(1)) }),
 		waitTime, tickTime)
 
 	t.Log("verifying that dataplane has indeed 1 ready replica after scaling down")
@@ -672,7 +671,7 @@ func TestDataPlaneHorizontalScaling(t *testing.T) {
 								Name: "cpu",
 								Target: autoscalingv2.MetricTarget{
 									Type:               autoscalingv2.UtilizationMetricType,
-									AverageUtilization: lo.ToPtr(int32(20)),
+									AverageUtilization: new(int32(20)),
 								},
 							},
 						},
@@ -698,7 +697,7 @@ func TestDataPlaneHorizontalScaling(t *testing.T) {
 	require.Eventuallyf(t,
 		testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
 			dp.Spec.Deployment.Scaling.HorizontalScaling.MaxReplicas = 5
-			dp.Spec.Deployment.Scaling.HorizontalScaling.Metrics[0].Resource.Target.AverageUtilization = lo.ToPtr(int32(50))
+			dp.Spec.Deployment.Scaling.HorizontalScaling.Metrics[0].Resource.Target.AverageUtilization = new(int32(50))
 			dp.Spec.Deployment.Replicas = nil
 		}),
 		time.Minute, time.Second, "failed to update dataplane %s", dataplane.Name)
@@ -930,13 +929,13 @@ func TestDataPlanePodDisruptionBudget(t *testing.T) {
 				Resources: operatorv1beta1.DataPlaneResources{
 					PodDisruptionBudget: &operatorv1beta1.PodDisruptionBudget{
 						Spec: operatorv1beta1.PodDisruptionBudgetSpec{
-							MinAvailable: lo.ToPtr(intstr.FromInt32(1)),
+							MinAvailable: new(intstr.FromInt32(1)),
 						},
 					},
 				},
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1beta1.DeploymentOptions{
-						Replicas: lo.ToPtr(int32(2)),
+						Replicas: new(int32(2)),
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
@@ -988,7 +987,7 @@ func TestDataPlanePodDisruptionBudget(t *testing.T) {
 
 	t.Log("changing the PodDisruptionBudget spec in DataPlane")
 	require.Eventually(t, testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
-		dp.Spec.Resources.PodDisruptionBudget.Spec.MinAvailable = lo.ToPtr(intstr.FromInt32(2))
+		dp.Spec.Resources.PodDisruptionBudget.Spec.MinAvailable = new(intstr.FromInt32(2))
 	}), waitTime, tickTime)
 
 	t.Log("verifying the PodDisruptionBudget status is updated accordingly")

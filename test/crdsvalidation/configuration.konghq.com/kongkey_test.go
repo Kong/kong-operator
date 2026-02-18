@@ -31,7 +31,7 @@ func TestKongKey(t *testing.T) {
 			Spec: configurationv1alpha1.KongKeySpec{
 				KongKeyAPISpec: configurationv1alpha1.KongKeyAPISpec{
 					KID: "1",
-					JWK: lo.ToPtr("jwk"),
+					JWK: new("jwk"),
 				},
 			},
 		}
@@ -70,7 +70,7 @@ func TestKongKey(t *testing.T) {
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongKeySpec{
 						KongKeyAPISpec: configurationv1alpha1.KongKeyAPISpec{
-							JWK: lo.ToPtr("{}"),
+							JWK: new("{}"),
 						},
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -80,7 +80,7 @@ func TestKongKey(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.kid in body should be at least 1 chars long"),
+				ExpectedErrorMessage: new("spec.kid in body should be at least 1 chars long"),
 			},
 			{
 				Name: "one of JWK or PEM must be set",
@@ -98,7 +98,7 @@ func TestKongKey(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Either 'jwk' or 'pem' must be set"),
+				ExpectedErrorMessage: new("Either 'jwk' or 'pem' must be set"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -116,11 +116,11 @@ func TestKongKey(t *testing.T) {
 						},
 						KongKeyAPISpec: configurationv1alpha1.KongKeyAPISpec{
 							KID: "1",
-							JWK: lo.ToPtr("{}"),
+							JWK: new("{}"),
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("when type is namespacedRef, namespacedRef must be set"),
+				ExpectedErrorMessage: new("when type is namespacedRef, namespacedRef must be set"),
 			},
 			{
 				Name: "'namespacedRef' type is accepted",
@@ -135,7 +135,7 @@ func TestKongKey(t *testing.T) {
 						},
 						KongKeyAPISpec: configurationv1alpha1.KongKeyAPISpec{
 							KID: "1",
-							JWK: lo.ToPtr("{}"),
+							JWK: new("{}"),
 						},
 					},
 				},
@@ -147,11 +147,11 @@ func TestKongKey(t *testing.T) {
 					Spec: configurationv1alpha1.KongKeySpec{
 						KeySetRef: &configurationv1alpha1.KeySetRef{
 							Type:      configurationv1alpha1.KeySetRefKonnectID,
-							KonnectID: lo.ToPtr("keyset-1"),
+							KonnectID: new("keyset-1"),
 						},
 						KongKeyAPISpec: configurationv1alpha1.KongKeyAPISpec{
 							KID: "1",
-							JWK: lo.ToPtr("{}"),
+							JWK: new("{}"),
 						},
 					},
 				},
@@ -166,11 +166,11 @@ func TestKongKey(t *testing.T) {
 						},
 						KongKeyAPISpec: configurationv1alpha1.KongKeyAPISpec{
 							KID: "1",
-							JWK: lo.ToPtr("{}"),
+							JWK: new("{}"),
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("when type is konnectID, konnectID must be set"),
+				ExpectedErrorMessage: new("when type is konnectID, konnectID must be set"),
 			},
 			{
 				Name: "unknown type is not accepted",
@@ -182,11 +182,11 @@ func TestKongKey(t *testing.T) {
 						},
 						KongKeyAPISpec: configurationv1alpha1.KongKeyAPISpec{
 							KID: "1",
-							JWK: lo.ToPtr("{}"),
+							JWK: new("{}"),
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr(`Unsupported value: "unknown": supported values: "konnectID", "namespacedRef"`),
+				ExpectedErrorMessage: new(`Unsupported value: "unknown": supported values: "konnectID", "namespacedRef"`),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -207,7 +207,7 @@ func TestKongKey(t *testing.T) {
 						},
 						KongKeyAPISpec: configurationv1alpha1.KongKeyAPISpec{
 							KID: "1",
-							JWK: lo.ToPtr("{}"),
+							JWK: new("{}"),
 							Tags: func() []string {
 								var tags []string
 								for i := range 20 {
@@ -232,7 +232,7 @@ func TestKongKey(t *testing.T) {
 						},
 						KongKeyAPISpec: configurationv1alpha1.KongKeyAPISpec{
 							KID: "1",
-							JWK: lo.ToPtr("{}"),
+							JWK: new("{}"),
 							Tags: func() []string {
 								var tags []string
 								for i := range 21 {
@@ -243,7 +243,7 @@ func TestKongKey(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.tags: Too many: 21: must have at most 20 items"),
+				ExpectedErrorMessage: new("spec.tags: Too many: 21: must have at most 20 items"),
 			},
 			{
 				Name: "tags entries must not be longer than 128 characters",
@@ -258,14 +258,14 @@ func TestKongKey(t *testing.T) {
 						},
 						KongKeyAPISpec: configurationv1alpha1.KongKeyAPISpec{
 							KID: "1",
-							JWK: lo.ToPtr("{}"),
+							JWK: new("{}"),
 							Tags: []string{
 								lo.RandomString(129, lo.AlphanumericCharset),
 							},
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("tags entries must not be longer than 128 characters"),
+				ExpectedErrorMessage: new("tags entries must not be longer than 128 characters"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)

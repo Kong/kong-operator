@@ -120,8 +120,8 @@ func toKongCACertificate(caCertBytes []byte, object client.Object, secretID stri
 	singlePEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: pemBlocks[0]})
 
 	return kong.CACertificate{
-		ID:   kong.String(secretID),
-		Cert: kong.String(string(singlePEM)),
+		ID:   new(secretID),
+		Cert: new(string(singlePEM)),
 		Tags: util.GenerateTagsForObject(object),
 	}, nil
 }

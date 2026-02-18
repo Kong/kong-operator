@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -51,7 +50,7 @@ func TestDataPlaneScaleSubresource(t *testing.T) {
 			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1beta1.DeploymentOptions{
-						Replicas: lo.ToPtr(int32(2)), // Set initial replica count to 2
+						Replicas: new(int32(2)), // Set initial replica count to 2
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{

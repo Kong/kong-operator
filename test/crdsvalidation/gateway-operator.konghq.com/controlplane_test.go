@@ -3,7 +3,6 @@ package crdsvalidation_test
 import (
 	"testing"
 
-	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -112,7 +111,7 @@ func TestControlPlane(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Extension not allowed for ControlPlane"),
+				ExpectedErrorMessage: new("Extension not allowed for ControlPlane"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -125,7 +124,7 @@ func TestControlPlane(t *testing.T) {
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec:       operatorv1beta1.ControlPlaneSpec{},
 				},
-				ExpectedErrorMessage: lo.ToPtr("ControlPlane requires an image to be set on controller container"),
+				ExpectedErrorMessage: new("ControlPlane requires an image to be set on controller container"),
 			},
 			{
 				Name: "with deploymentSpec",
@@ -137,7 +136,7 @@ func TestControlPlane(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("ControlPlane requires an image to be set on controller container"),
+				ExpectedErrorMessage: new("ControlPlane requires an image to be set on controller container"),
 			},
 			{
 				Name: "missing container",
@@ -159,7 +158,7 @@ func TestControlPlane(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("ControlPlane requires an image to be set on controller container"),
+				ExpectedErrorMessage: new("ControlPlane requires an image to be set on controller container"),
 			},
 			{
 				Name: "controller container, no image",
@@ -181,7 +180,7 @@ func TestControlPlane(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("ControlPlane requires an image to be set on controller container"),
+				ExpectedErrorMessage: new("ControlPlane requires an image to be set on controller container"),
 			},
 			{
 				Name: "controller container, image",
@@ -264,7 +263,7 @@ func TestControlPlane(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("list is required when type is 'list'"),
+				ExpectedErrorMessage: new("list is required when type is 'list'"),
 			},
 			{
 				Name: "watch namespaces own",
@@ -296,7 +295,7 @@ func TestControlPlane(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("list must not be specified when type is not 'list'"),
+				ExpectedErrorMessage: new("list must not be specified when type is not 'list'"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)

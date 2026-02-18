@@ -129,7 +129,7 @@ func TestKongVault(t *testing.T) {
 			return input.Name == vaultBackend && input.Prefix == vaultPrefix
 		})).Return(&sdkkonnectops.CreateVaultResponse{
 			Vault: &sdkkonnectcomp.Vault{
-				ID: lo.ToPtr(vaultID),
+				ID: new(vaultID),
 			},
 		}, nil)
 
@@ -205,7 +205,7 @@ func TestKongVault(t *testing.T) {
 			Object: &sdkkonnectops.ListVaultResponseBody{
 				Data: []sdkkonnectcomp.Vault{
 					{
-						ID: lo.ToPtr(vaultID),
+						ID: new(vaultID),
 					},
 				},
 			},
@@ -239,7 +239,7 @@ func TestKongVault(t *testing.T) {
 		).Return(
 			&sdkkonnectops.GetVaultResponse{
 				Vault: &sdkkonnectcomp.Vault{
-					ID:     lo.ToPtr(vaultID),
+					ID:     new(vaultID),
 					Name:   "test-vault",
 					Prefix: "prefix",
 					Config: map[string]any{},

@@ -1,8 +1,6 @@
 package builder
 
 import (
-	"github.com/samber/lo"
-
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 )
 
@@ -29,15 +27,15 @@ func (b *HTTPRouteMatchBuilder) ToSlice() []gatewayapi.HTTPRouteMatch {
 }
 
 func (b *HTTPRouteMatchBuilder) WithPathPrefix(pathPrefix string) *HTTPRouteMatchBuilder {
-	return b.WithPathType(&pathPrefix, lo.ToPtr(gatewayapi.PathMatchPathPrefix))
+	return b.WithPathType(&pathPrefix, new(gatewayapi.PathMatchPathPrefix))
 }
 
 func (b *HTTPRouteMatchBuilder) WithPathRegex(pathRegexp string) *HTTPRouteMatchBuilder {
-	return b.WithPathType(&pathRegexp, lo.ToPtr(gatewayapi.PathMatchRegularExpression))
+	return b.WithPathType(&pathRegexp, new(gatewayapi.PathMatchRegularExpression))
 }
 
 func (b *HTTPRouteMatchBuilder) WithPathExact(pathRegexp string) *HTTPRouteMatchBuilder {
-	return b.WithPathType(&pathRegexp, lo.ToPtr(gatewayapi.PathMatchExact))
+	return b.WithPathType(&pathRegexp, new(gatewayapi.PathMatchExact))
 }
 
 func (b *HTTPRouteMatchBuilder) WithPathType(pathValuePtr *string, pathTypePtr *gatewayapi.PathMatchType) *HTTPRouteMatchBuilder {
@@ -58,7 +56,7 @@ func (b *HTTPRouteMatchBuilder) WithQueryParam(name, value string) *HTTPRouteMat
 
 func (b *HTTPRouteMatchBuilder) WithQueryParamRegex(name, value string) *HTTPRouteMatchBuilder {
 	b.httpRouteMatch.QueryParams = append(b.httpRouteMatch.QueryParams, gatewayapi.HTTPQueryParamMatch{
-		Type:  lo.ToPtr(gatewayapi.QueryParamMatchRegularExpression),
+		Type:  new(gatewayapi.QueryParamMatchRegularExpression),
 		Name:  gatewayapi.HTTPHeaderName(name),
 		Value: value,
 	})
@@ -82,7 +80,7 @@ func (b *HTTPRouteMatchBuilder) WithHeaderRegex(name, value string) *HTTPRouteMa
 	b.httpRouteMatch.Headers = append(b.httpRouteMatch.Headers, gatewayapi.HTTPHeaderMatch{
 		Name:  gatewayapi.HTTPHeaderName(name),
 		Value: value,
-		Type:  lo.ToPtr(gatewayapi.HeaderMatchRegularExpression),
+		Type:  new(gatewayapi.HeaderMatchRegularExpression),
 	})
 	return b
 }

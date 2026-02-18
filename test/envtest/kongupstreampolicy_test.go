@@ -67,8 +67,8 @@ func TestKongUpstreamPolicyWithoutGatewayAPICRDs(t *testing.T) {
 			Namespace: ns.Name,
 		},
 		Spec: configurationv1beta1.KongUpstreamPolicySpec{
-			Algorithm: lo.ToPtr("round-robin"),
-			Slots:     lo.ToPtr(32),
+			Algorithm: new("round-robin"),
+			Slots:     new(32),
 		},
 	}
 	require.NoError(t, ctrlClient.Create(ctx, kup))
@@ -94,7 +94,7 @@ func TestKongUpstreamPolicyWithoutGatewayAPICRDs(t *testing.T) {
 			Namespace: ns.Name,
 		},
 		Spec: netv1.IngressSpec{
-			IngressClassName: lo.ToPtr(ingressClassName),
+			IngressClassName: new(ingressClassName),
 			Rules: []netv1.IngressRule{
 				{
 					IngressRuleValue: netv1.IngressRuleValue{
@@ -102,7 +102,7 @@ func TestKongUpstreamPolicyWithoutGatewayAPICRDs(t *testing.T) {
 							Paths: []netv1.HTTPIngressPath{
 								{
 									Path:     "/",
-									PathType: lo.ToPtr(netv1.PathTypePrefix),
+									PathType: new(netv1.PathTypePrefix),
 									Backend: netv1.IngressBackend{
 										Service: &netv1.IngressServiceBackend{
 											Name: service.Name,
@@ -190,8 +190,8 @@ func TestKongUpstreamPolicyWithHTTPRoute(t *testing.T) {
 			Namespace: ns.Name,
 		},
 		Spec: configurationv1beta1.KongUpstreamPolicySpec{
-			Algorithm: lo.ToPtr("round-robin"),
-			Slots:     lo.ToPtr(32),
+			Algorithm: new("round-robin"),
+			Slots:     new(32),
 		},
 	}
 	require.NoError(t, ctrlClient.Create(ctx, kup))
@@ -220,7 +220,7 @@ func TestKongUpstreamPolicyWithHTTPRoute(t *testing.T) {
 					Protocol: gatewayapi.HTTPProtocolType,
 					AllowedRoutes: &gatewayapi.AllowedRoutes{
 						Namespaces: &gatewayapi.RouteNamespaces{
-							From: lo.ToPtr(gatewayapi.NamespacesFromAll),
+							From: new(gatewayapi.NamespacesFromAll),
 						},
 					},
 				},
@@ -237,7 +237,7 @@ func TestKongUpstreamPolicyWithHTTPRoute(t *testing.T) {
 	gw.Status = gatewayapi.GatewayStatus{
 		Addresses: []gatewayapi.GatewayStatusAddress{
 			{
-				Type:  lo.ToPtr(gatewayapi.IPAddressType),
+				Type:  new(gatewayapi.IPAddressType),
 				Value: "10.0.0.1",
 			},
 		},
@@ -276,7 +276,7 @@ func TestKongUpstreamPolicyWithHTTPRoute(t *testing.T) {
 				},
 				SupportedKinds: []gatewayapi.RouteGroupKind{
 					{
-						Group: lo.ToPtr(gatewayapi.Group(gatewayv1.GroupVersion.Group)),
+						Group: new(gatewayapi.Group(gatewayv1.GroupVersion.Group)),
 						Kind:  "HTTPRoute",
 					},
 				},
@@ -313,7 +313,7 @@ func TestKongUpstreamPolicyWithHTTPRoute(t *testing.T) {
 			CommonRouteSpec: gatewayapi.CommonRouteSpec{
 				ParentRefs: []gatewayapi.ParentReference{{
 					Name:      gatewayapi.ObjectName(gw.Name),
-					Namespace: lo.ToPtr(gatewayapi.Namespace(ns.Name)),
+					Namespace: new(gatewayapi.Namespace(ns.Name)),
 				}},
 			},
 			Rules: []gatewayapi.HTTPRouteRule{{
@@ -371,8 +371,8 @@ func TestKongUpstreamPolicyNotReferencedInReconciledIngress(t *testing.T) {
 			Namespace: ns.Name,
 		},
 		Spec: configurationv1beta1.KongUpstreamPolicySpec{
-			Algorithm: lo.ToPtr("round-robin"),
-			Slots:     lo.ToPtr(32),
+			Algorithm: new("round-robin"),
+			Slots:     new(32),
 		},
 	}
 	require.NoError(t, ctrlClient.Create(ctx, kup))
@@ -396,7 +396,7 @@ func TestKongUpstreamPolicyNotReferencedInReconciledIngress(t *testing.T) {
 			Namespace: ns.Name,
 		},
 		Spec: netv1.IngressSpec{
-			IngressClassName: lo.ToPtr(alterIngressClassName),
+			IngressClassName: new(alterIngressClassName),
 			Rules: []netv1.IngressRule{
 				{
 					IngressRuleValue: netv1.IngressRuleValue{
@@ -404,7 +404,7 @@ func TestKongUpstreamPolicyNotReferencedInReconciledIngress(t *testing.T) {
 							Paths: []netv1.HTTPIngressPath{
 								{
 									Path:     "/",
-									PathType: lo.ToPtr(netv1.PathTypePrefix),
+									PathType: new(netv1.PathTypePrefix),
 									Backend: netv1.IngressBackend{
 										Service: &netv1.IngressServiceBackend{
 											Name: service.Name,
@@ -444,7 +444,7 @@ func TestKongUpstreamPolicyNotReferencedInReconciledIngress(t *testing.T) {
 			Namespace: ns.Name,
 		},
 		Spec: netv1.IngressSpec{
-			IngressClassName: lo.ToPtr(ingressClassName),
+			IngressClassName: new(ingressClassName),
 			Rules: []netv1.IngressRule{
 				{
 					IngressRuleValue: netv1.IngressRuleValue{
@@ -452,7 +452,7 @@ func TestKongUpstreamPolicyNotReferencedInReconciledIngress(t *testing.T) {
 							Paths: []netv1.HTTPIngressPath{
 								{
 									Path:     "/",
-									PathType: lo.ToPtr(netv1.PathTypePrefix),
+									PathType: new(netv1.PathTypePrefix),
 									Backend: netv1.IngressBackend{
 										Service: &netv1.IngressServiceBackend{
 											Name: service.Name,

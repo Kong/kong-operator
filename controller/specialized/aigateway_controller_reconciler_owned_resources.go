@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -199,7 +198,7 @@ func (r *AIGatewayReconciler) configurePlugins(
 	// check if referencing the credential secret is allowed by referencegrants.
 	msg, allowed, err := secretref.CheckReferenceGrantForSecret(ctx, r.Client, aiGateway, gatewayv1.SecretObjectReference{
 		Name:      gatewayv1.ObjectName(credentialSecretName),
-		Namespace: lo.ToPtr(gatewayv1.Namespace(credentialSecretNamespace)),
+		Namespace: new(gatewayv1.Namespace(credentialSecretNamespace)),
 	})
 	if err != nil {
 		return false, err

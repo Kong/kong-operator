@@ -93,7 +93,7 @@ func TestKongService(t *testing.T) {
 			Return(
 				&sdkkonnectops.CreateServiceResponse{
 					Service: &sdkkonnectcomp.ServiceOutput{
-						ID: lo.ToPtr(serviceID),
+						ID: new(serviceID),
 					},
 				},
 				nil,
@@ -259,7 +259,7 @@ func TestKongService(t *testing.T) {
 			Return(
 				&sdkkonnectops.CreateServiceResponse{
 					Service: &sdkkonnectcomp.ServiceOutput{
-						ID: lo.ToPtr(id),
+						ID: new(id),
 					},
 				},
 				nil,
@@ -312,7 +312,7 @@ func TestKongService(t *testing.T) {
 			Return(
 				&sdkkonnectops.CreateServiceResponse{
 					Service: &sdkkonnectcomp.ServiceOutput{
-						ID: lo.ToPtr(id),
+						ID: new(id),
 					},
 				},
 				nil,
@@ -350,7 +350,7 @@ func TestKongService(t *testing.T) {
 			})).
 			Return(&sdkkonnectops.UpsertServiceResponse{
 				Service: &sdkkonnectcomp.ServiceOutput{
-					ID: lo.ToPtr(id2),
+					ID: new(id2),
 				},
 			}, nil)
 
@@ -381,7 +381,7 @@ func TestKongService(t *testing.T) {
 		).Return(
 			&sdkkonnectops.GetServiceResponse{
 				Service: &sdkkonnectcomp.ServiceOutput{
-					ID:   lo.ToPtr(serviceKonnectID),
+					ID:   new(serviceKonnectID),
 					Host: "example.com",
 				},
 			}, nil,
@@ -465,7 +465,7 @@ func TestKongService(t *testing.T) {
 		).Return(
 			&sdkkonnectops.GetServiceResponse{
 				Service: &sdkkonnectcomp.ServiceOutput{
-					ID:   lo.ToPtr(serviceKonnectID),
+					ID:   new(serviceKonnectID),
 					Host: "example.com",
 					Tags: []string{
 						"k8s-group:configuration.konghq.com",
@@ -551,7 +551,7 @@ func TestKongService(t *testing.T) {
 			Return(
 				&sdkkonnectops.CreateServiceResponse{
 					Service: &sdkkonnectcomp.ServiceOutput{
-						ID: lo.ToPtr(id),
+						ID: new(id),
 					},
 				},
 				nil,
@@ -668,7 +668,7 @@ func TestKongService(t *testing.T) {
 			Return(
 				&sdkkonnectops.CreateServiceResponse{
 					Service: &sdkkonnectcomp.ServiceOutput{
-						ID: lo.ToPtr(serviceID),
+						ID: new(serviceID),
 					},
 				},
 				nil,

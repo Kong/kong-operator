@@ -1,8 +1,6 @@
 package builder
 
 import (
-	"github.com/samber/lo"
-
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
 )
@@ -40,7 +38,7 @@ func (b *BackendRefBuilder) WithPort(port int) *BackendRefBuilder {
 }
 
 func (b *BackendRefBuilder) WithWeight(weight int) *BackendRefBuilder {
-	b.backendRef.Weight = lo.ToPtr(int32(weight))
+	b.backendRef.Weight = new(int32(weight))
 	return b
 }
 

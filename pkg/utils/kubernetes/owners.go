@@ -3,7 +3,6 @@ package kubernetes
 import (
 	"fmt"
 
-	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -27,7 +26,7 @@ func GenerateOwnerReferenceForObject(obj client.Object) metav1.OwnerReference {
 		Kind:       obj.GetObjectKind().GroupVersionKind().Kind,
 		Name:       obj.GetName(),
 		UID:        obj.GetUID(),
-		Controller: lo.ToPtr(true),
+		Controller: new(true),
 	}
 }
 

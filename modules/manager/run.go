@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
@@ -226,7 +225,7 @@ func Run(
 			// This is needed because controller-runtime since v0.19.0 keeps a global list of controller
 			// names and panics if there are duplicates. This is a workaround for that in tests.
 			// Ref: https://github.com/kubernetes-sigs/controller-runtime/pull/2902#issuecomment-2284194683
-			SkipNameValidation: lo.ToPtr(true),
+			SkipNameValidation: new(true),
 		},
 		Scheme: scheme,
 		Metrics: server.Options{

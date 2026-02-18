@@ -1,8 +1,6 @@
 package builder
 
 import (
-	"github.com/samber/lo"
-
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 )
 
@@ -32,7 +30,7 @@ func (b *HTTPRouteFilterBuilder) WithRequestRedirectScheme(scheme string) *HTTPR
 		return b
 	}
 
-	b.httpRouteFilter.RequestRedirect.Scheme = lo.ToPtr(scheme)
+	b.httpRouteFilter.RequestRedirect.Scheme = new(scheme)
 	return b
 }
 
@@ -44,7 +42,7 @@ func (b *HTTPRouteFilterBuilder) WithRequestRedirectHost(host string) *HTTPRoute
 	}
 
 	preciseHost := (gatewayapi.PreciseHostname)(host)
-	b.httpRouteFilter.RequestRedirect.Hostname = lo.ToPtr(preciseHost)
+	b.httpRouteFilter.RequestRedirect.Hostname = new(preciseHost)
 	return b
 }
 
@@ -55,7 +53,7 @@ func (b *HTTPRouteFilterBuilder) WithRequestRedirectStatusCode(code int) *HTTPRo
 		return b
 	}
 
-	b.httpRouteFilter.RequestRedirect.StatusCode = lo.ToPtr(code)
+	b.httpRouteFilter.RequestRedirect.StatusCode = new(code)
 	return b
 }
 
@@ -67,13 +65,13 @@ func (b *HTTPRouteFilterBuilder) WithRequestRedirectPathModifier(modifierType ga
 	if modifierType == gatewayapi.FullPathHTTPPathModifier {
 		b.httpRouteFilter.RequestRedirect.Path = &gatewayapi.HTTPPathModifier{
 			Type:            gatewayapi.FullPathHTTPPathModifier,
-			ReplaceFullPath: lo.ToPtr(path),
+			ReplaceFullPath: new(path),
 		}
 	}
 	if modifierType == gatewayapi.PrefixMatchHTTPPathModifier {
 		b.httpRouteFilter.RequestRedirect.Path = &gatewayapi.HTTPPathModifier{
 			Type:               gatewayapi.PrefixMatchHTTPPathModifier,
-			ReplacePrefixMatch: lo.ToPtr(path),
+			ReplacePrefixMatch: new(path),
 		}
 	}
 	return b

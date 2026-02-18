@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -480,7 +479,7 @@ func TestControlPlaneKonnectExtensionProcessor_Process(t *testing.T) {
 			name: "error - cross-namespace reference",
 			object: func() *gwtypes.ControlPlane {
 				cp := createValidControlPlane()
-				cp.Spec.Extensions[0].Namespace = lo.ToPtr("different-namespace")
+				cp.Spec.Extensions[0].Namespace = new("different-namespace")
 				return cp
 			}(),
 			setupClient: func(t *testing.T) client.Client {

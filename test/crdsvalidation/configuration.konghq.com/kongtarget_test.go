@@ -36,7 +36,7 @@ func TestKongTarget(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.weight: Invalid value: 100000"),
+				ExpectedErrorMessage: new("spec.weight: Invalid value: 100000"),
 			},
 			{
 				Name: "weight must between 0 and 65535",
@@ -52,7 +52,7 @@ func TestKongTarget(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.weight: Invalid value: -1"),
+				ExpectedErrorMessage: new("spec.weight: Invalid value: -1"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -79,7 +79,7 @@ func TestKongTarget(t *testing.T) {
 						Name: "upstream-2",
 					}
 				},
-				ExpectedUpdateErrorMessage: lo.ToPtr("spec.upstreamRef is immutable"),
+				ExpectedUpdateErrorMessage: new("spec.upstreamRef is immutable"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -130,7 +130,7 @@ func TestKongTarget(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.tags: Too many: 21: must have at most 20 items"),
+				ExpectedErrorMessage: new("spec.tags: Too many: 21: must have at most 20 items"),
 			},
 			{
 				Name: "tags entries must not be longer than 128 characters",
@@ -149,7 +149,7 @@ func TestKongTarget(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("tags entries must not be longer than 128 characters"),
+				ExpectedErrorMessage: new("tags entries must not be longer than 128 characters"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)

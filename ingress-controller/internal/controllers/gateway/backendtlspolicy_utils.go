@@ -145,10 +145,10 @@ func (r *BackendTLSPolicyReconciler) setPolicyStatus(ctx context.Context, policy
 		}
 		ancestor := gatewayapi.PolicyAncestorStatus{
 			AncestorRef: gatewayapi.ParentReference{
-				Group:     lo.ToPtr(gatewayapi.V1Group),
-				Kind:      lo.ToPtr(gatewayapi.Kind("Gateway")),
+				Group:     new(gatewayapi.V1Group),
+				Kind:      new(gatewayapi.Kind("Gateway")),
 				Name:      gatewayapi.ObjectName(gateway.Name),
-				Namespace: lo.ToPtr(gatewayapi.Namespace(gateway.Namespace)),
+				Namespace: new(gatewayapi.Namespace(gateway.Namespace)),
 			},
 			ControllerName: GetControllerName(),
 			Conditions:     []metav1.Condition{*completeAcceptedCondition},

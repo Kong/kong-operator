@@ -115,7 +115,7 @@ func TestKongRoute(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.serviceRef.namespacedRef.name: Required value, <nil>: Invalid value:"),
+				ExpectedErrorMessage: new("spec.serviceRef.namespacedRef.name: Required value, <nil>: Invalid value:"),
 			},
 			{
 				Name: "NamespacedRef reference is invalid when name is not provided",
@@ -130,7 +130,7 @@ func TestKongRoute(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("when type is namespacedRef, namespacedRef must be set"),
+				ExpectedErrorMessage: new("when type is namespacedRef, namespacedRef must be set"),
 			},
 			{
 				Name: "not providing namespacedRef when type is namespacedRef yields an error",
@@ -145,7 +145,7 @@ func TestKongRoute(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("when type is namespacedRef, namespacedRef must be set"),
+				ExpectedErrorMessage: new("when type is namespacedRef, namespacedRef must be set"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -198,7 +198,7 @@ func TestKongRoute(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("If protocols has 'http', at least one of 'hosts', 'methods', 'paths' or 'headers' must be set"),
+				ExpectedErrorMessage: new("If protocols has 'http', at least one of 'hosts', 'methods', 'paths' or 'headers' must be set"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -251,7 +251,7 @@ func TestKongRoute(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.tags: Too many: 21: must have at most 20 items"),
+				ExpectedErrorMessage: new("spec.tags: Too many: 21: must have at most 20 items"),
 			},
 			{
 				Name: "tags entries must not be longer than 128 characters",
@@ -271,7 +271,7 @@ func TestKongRoute(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("tags entries must not be longer than 128 characters"),
+				ExpectedErrorMessage: new("tags entries must not be longer than 128 characters"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)

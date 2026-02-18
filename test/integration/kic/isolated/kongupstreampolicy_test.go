@@ -65,7 +65,7 @@ func TestKongUpstreamPolicyStatus(t *testing.T) {
 						Name: "upstream-policy-1",
 					},
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("round-robin"),
+						Algorithm: new("round-robin"),
 					},
 				},
 				{
@@ -73,7 +73,7 @@ func TestKongUpstreamPolicyStatus(t *testing.T) {
 						Name: "upstream-policy-2",
 					},
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("consistent-hashing"),
+						Algorithm: new("consistent-hashing"),
 					},
 				},
 			}
@@ -142,7 +142,7 @@ func TestKongUpstreamPolicyStatus(t *testing.T) {
 									Paths: []netv1.HTTPIngressPath{
 										{
 											Path:     "/s1",
-											PathType: lo.ToPtr(netv1.PathTypePrefix),
+											PathType: new(netv1.PathTypePrefix),
 											Backend: netv1.IngressBackend{
 												Service: &netv1.IngressServiceBackend{
 													Name: "service-1",
@@ -154,7 +154,7 @@ func TestKongUpstreamPolicyStatus(t *testing.T) {
 										},
 										{
 											Path:     "/s2",
-											PathType: lo.ToPtr(netv1.PathTypePrefix),
+											PathType: new(netv1.PathTypePrefix),
 											Backend: netv1.IngressBackend{
 												Service: &netv1.IngressServiceBackend{
 													Name: "service-2",
@@ -166,10 +166,10 @@ func TestKongUpstreamPolicyStatus(t *testing.T) {
 										},
 										{
 											Path:     "/sf",
-											PathType: lo.ToPtr(netv1.PathTypePrefix),
+											PathType: new(netv1.PathTypePrefix),
 											Backend: netv1.IngressBackend{
 												Resource: &corev1.TypedLocalObjectReference{
-													APIGroup: lo.ToPtr(incubatorv1alpha1.SchemeGroupVersion.Group),
+													APIGroup: new(incubatorv1alpha1.SchemeGroupVersion.Group),
 													Kind:     incubatorv1alpha1.KongServiceFacadeKind,
 													Name:     "service-facade",
 												},
@@ -209,9 +209,9 @@ func TestKongUpstreamPolicyStatus(t *testing.T) {
 								{
 									BackendRef: gatewayapi.BackendRef{
 										BackendObjectReference: gatewayapi.BackendObjectReference{
-											Kind: lo.ToPtr(gatewayapi.Kind("Service")),
+											Kind: new(gatewayapi.Kind("Service")),
 											Name: "service-1",
-											Port: lo.ToPtr(gatewayapi.PortNumber(80)),
+											Port: new(gatewayapi.PortNumber(80)),
 										},
 									},
 								},
@@ -288,18 +288,18 @@ func TestKongUpstreamPolicyStatus(t *testing.T) {
 				{
 					BackendRef: gatewayapi.BackendRef{
 						BackendObjectReference: gatewayapi.BackendObjectReference{
-							Kind: lo.ToPtr(gatewayapi.Kind("Service")),
+							Kind: new(gatewayapi.Kind("Service")),
 							Name: "service-1",
-							Port: lo.ToPtr(gatewayapi.PortNumber(80)),
+							Port: new(gatewayapi.PortNumber(80)),
 						},
 					},
 				},
 				{
 					BackendRef: gatewayapi.BackendRef{
 						BackendObjectReference: gatewayapi.BackendObjectReference{
-							Kind: lo.ToPtr(gatewayapi.Kind("Service")),
+							Kind: new(gatewayapi.Kind("Service")),
 							Name: "service-2",
-							Port: lo.ToPtr(gatewayapi.PortNumber(80)),
+							Port: new(gatewayapi.PortNumber(80)),
 						},
 					},
 				},

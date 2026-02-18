@@ -59,7 +59,7 @@ func TestDefaultCacheGraphProvider_CacheToGraph(t *testing.T) {
 						Namespace: "test-namespace",
 					},
 					Spec: netv1.IngressSpec{
-						IngressClassName: lo.ToPtr("test-ingress-class"),
+						IngressClassName: new("test-ingress-class"),
 						Rules: []netv1.IngressRule{
 							{
 								IngressRuleValue: netv1.IngressRuleValue{
@@ -77,7 +77,7 @@ func TestDefaultCacheGraphProvider_CacheToGraph(t *testing.T) {
 													Resource: &corev1.TypedLocalObjectReference{
 														Name:     "test-kong-service-facade",
 														Kind:     "KongServiceFacade",
-														APIGroup: lo.ToPtr(incubatorv1alpha1.GroupVersion.Group),
+														APIGroup: new(incubatorv1alpha1.GroupVersion.Group),
 													},
 												},
 											},
@@ -138,7 +138,7 @@ func TestDefaultCacheGraphProvider_CacheToGraph(t *testing.T) {
 										BackendRef: gatewayapi.BackendRef{
 											BackendObjectReference: gatewayapi.BackendObjectReference{
 												Name: "1",
-												Kind: lo.ToPtr(gatewayapi.Kind("Service")),
+												Kind: new(gatewayapi.Kind("Service")),
 											},
 										},
 									},
@@ -182,7 +182,7 @@ func TestDefaultCacheGraphProvider_CacheToGraph(t *testing.T) {
 									{
 										BackendObjectReference: gatewayapi.BackendObjectReference{
 											Name: "1",
-											Kind: lo.ToPtr(gatewayapi.Kind("Service")),
+											Kind: new(gatewayapi.Kind("Service")),
 										},
 									},
 								},
@@ -225,7 +225,7 @@ func TestDefaultCacheGraphProvider_CacheToGraph(t *testing.T) {
 									{
 										BackendObjectReference: gatewayapi.BackendObjectReference{
 											Name: "1",
-											Kind: lo.ToPtr(gatewayapi.Kind("Service")),
+											Kind: new(gatewayapi.Kind("Service")),
 										},
 									},
 								},
@@ -268,7 +268,7 @@ func TestDefaultCacheGraphProvider_CacheToGraph(t *testing.T) {
 									{
 										BackendObjectReference: gatewayapi.BackendObjectReference{
 											Name: "1",
-											Kind: lo.ToPtr(gatewayapi.Kind("Service")),
+											Kind: new(gatewayapi.Kind("Service")),
 										},
 									},
 								},
@@ -312,7 +312,7 @@ func TestDefaultCacheGraphProvider_CacheToGraph(t *testing.T) {
 										BackendRef: gatewayapi.BackendRef{
 											BackendObjectReference: gatewayapi.BackendObjectReference{
 												Name: "1",
-												Kind: lo.ToPtr(gatewayapi.Kind("Service")),
+												Kind: new(gatewayapi.Kind("Service")),
 											},
 										},
 									},
@@ -348,8 +348,8 @@ func TestDefaultCacheGraphProvider_CacheToGraph(t *testing.T) {
 					},
 					Spec: configurationv1alpha1.KongCustomEntitySpec{
 						ParentRef: &configurationv1alpha1.ObjectReference{
-							Kind:  lo.ToPtr("KongPlugin"),
-							Group: lo.ToPtr(configurationv1alpha1.GroupVersion.Group),
+							Kind:  new("KongPlugin"),
+							Group: new(configurationv1alpha1.GroupVersion.Group),
 							Name:  "test-plugin",
 						},
 					},
@@ -361,8 +361,8 @@ func TestDefaultCacheGraphProvider_CacheToGraph(t *testing.T) {
 					},
 					Spec: configurationv1alpha1.KongCustomEntitySpec{
 						ParentRef: &configurationv1alpha1.ObjectReference{
-							Kind:  lo.ToPtr("KongClusterPlugin"),
-							Group: lo.ToPtr(configurationv1alpha1.GroupVersion.Group),
+							Kind:  new("KongClusterPlugin"),
+							Group: new(configurationv1alpha1.GroupVersion.Group),
 							Name:  "test-cluster-plugin",
 						},
 					},

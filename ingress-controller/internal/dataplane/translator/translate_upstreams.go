@@ -73,7 +73,7 @@ func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]ko
 					)
 					continue
 				}
-				service.Port = lo.ToPtr(int(port.Port))
+				service.Port = new(int(port.Port))
 				serviceMap[serviceName] = service
 
 				// get the new targets for this backend service
@@ -135,7 +135,7 @@ func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]ko
 			// to load-balance traffic to.
 			upstream := kongstate.Upstream{
 				Upstream: kong.Upstream{
-					Name: kong.String(name),
+					Name: new(name),
 					Tags: service.Tags, // Populated by populateServices already.
 				},
 				Service: service,
@@ -412,14 +412,14 @@ func targetsForEndpoints(endpoints []util.Endpoint) []kongstate.Target {
 		}
 		target := kongstate.Target{
 			Target: kong.Target{
-				Target: kong.String(addr + ":" + endpoint.Port),
+				Target: new(addr + ":" + endpoint.Port),
 			},
 		}
 
 		// Set weight to 0 for terminating endpoints for drain support.
 		// This allows existing sessions to continue while preventing new traffic.
 		if endpoint.Terminating {
-			target.Weight = lo.ToPtr(0)
+			target.Weight = new(0)
 		}
 
 		targets = append(targets, target)

@@ -52,7 +52,7 @@ func TestKongCredentialBasicAuth(t *testing.T) {
 				Update: func(c *configurationv1alpha1.KongCredentialBasicAuth) {
 					c.Spec.ConsumerRef.Name = "new-consumer"
 				},
-				ExpectedUpdateErrorMessage: lo.ToPtr("spec.consumerRef is immutable when an entity is already Programmed"),
+				ExpectedUpdateErrorMessage: new("spec.consumerRef is immutable when an entity is already Programmed"),
 			},
 			{
 				Name: "consumerRef change is allowed when consumer is not Programmed=True nor APIAuthValid=True",
@@ -102,7 +102,7 @@ func TestKongCredentialBasicAuth(t *testing.T) {
 						},
 					},
 				},
-				ExpectedUpdateErrorMessage: lo.ToPtr("spec.consumerREf is immutable when an entity is already Programmed"),
+				ExpectedUpdateErrorMessage: new("spec.consumerREf is immutable when an entity is already Programmed"),
 			},
 			{
 				Name: "username is required",
@@ -117,7 +117,7 @@ func TestKongCredentialBasicAuth(t *testing.T) {
 						},
 					},
 				},
-				ExpectedUpdateErrorMessage: lo.ToPtr("spec.consumerREf is immutable when an entity is already Programmed"),
+				ExpectedUpdateErrorMessage: new("spec.consumerREf is immutable when an entity is already Programmed"),
 			},
 			{
 				Name: "password and username are required",
@@ -183,7 +183,7 @@ func TestKongCredentialBasicAuth(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.tags: Too many: 21: must have at most 20 items"),
+				ExpectedErrorMessage: new("spec.tags: Too many: 21: must have at most 20 items"),
 			},
 			{
 				Name: "tags entries must not be longer than 128 characters",
@@ -202,7 +202,7 @@ func TestKongCredentialBasicAuth(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("tags entries must not be longer than 128 characters"),
+				ExpectedErrorMessage: new("tags entries must not be longer than 128 characters"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)

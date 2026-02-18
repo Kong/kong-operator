@@ -3,7 +3,6 @@ package crdsvalidation
 import (
 	"testing"
 
-	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -71,7 +70,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectCloudGatewayTransitGatewaySpec{
 						NetworkRef: commonv1alpha1.ObjectRef{
 							Type:      commonv1alpha1.ObjectRefTypeKonnectID,
-							KonnectID: lo.ToPtr(generate.KonnectID(t)),
+							KonnectID: new(generate.KonnectID(t)),
 						},
 						KonnectTransitGatewayAPISpec: konnectv1alpha1.KonnectTransitGatewayAPISpec{
 							Type:              konnectv1alpha1.TransitGatewayTypeAWSTransitGateway,
@@ -79,7 +78,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("only namespacedRef is supported currently"),
+				ExpectedErrorMessage: new("only namespacedRef is supported currently"),
 			},
 			{
 				Name: "spec.type must in supported value",
@@ -93,7 +92,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.type: Unsupported value"),
+				ExpectedErrorMessage: new("spec.type: Unsupported value"),
 			},
 			{
 				Name: "spec.awsTransitGateway.name cannot be empty",
@@ -117,7 +116,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.awsTransitGateway.name: Invalid value"),
+				ExpectedErrorMessage: new("spec.awsTransitGateway.name: Invalid value"),
 			},
 			{
 				Name: "spec.awsTransitGateway.cidr_blocks is required",
@@ -138,7 +137,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.awsTransitGateway.cidr_blocks: Required value"),
+				ExpectedErrorMessage: new("spec.awsTransitGateway.cidr_blocks: Required value"),
 			},
 			{
 				Name: "spec.azureTransitGateway.name cannot be empty",
@@ -161,7 +160,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.azureTransitGateway.name: Invalid value"),
+				ExpectedErrorMessage: new("spec.azureTransitGateway.name: Invalid value"),
 			},
 
 			{
@@ -176,7 +175,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("must set spec.awsTransitGateway when spec.type is 'AWSTransitGateway'"),
+				ExpectedErrorMessage: new("must set spec.awsTransitGateway when spec.type is 'AWSTransitGateway'"),
 			},
 			{
 				Name: "Must not set awsTransitGateway when type != awsTransitConfig",
@@ -192,7 +191,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("must not set spec.awsTransitGateway when spec.type is not 'AWSTransitGateway'"),
+				ExpectedErrorMessage: new("must not set spec.awsTransitGateway when spec.type is not 'AWSTransitGateway'"),
 			},
 			{
 				Name: "Must set azureTransitGatway when spec.type = azureTransitGateway",
@@ -206,7 +205,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("must set spec.azureTransitGateway when spec.type is 'AzureTransitGateway'"),
+				ExpectedErrorMessage: new("must set spec.azureTransitGateway when spec.type is 'AzureTransitGateway'"),
 			},
 			{
 				Name: "Must not set azureTransitGateway when type != azureTransitGateway",
@@ -222,7 +221,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("must not set spec.azureTransitGateway when spec.type is not 'AzureTransitGateway'"),
+				ExpectedErrorMessage: new("must not set spec.azureTransitGateway when spec.type is not 'AzureTransitGateway'"),
 			},
 			{
 				Name: "spec.type is immutable",
@@ -242,7 +241,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 					ktg.Spec.AWSTransitGateway = nil
 					ktg.Spec.AzureTransitGateway = testAzureTransitGatewayConfig
 				},
-				ExpectedUpdateErrorMessage: lo.ToPtr("spec.type is immutable"),
+				ExpectedUpdateErrorMessage: new("spec.type is immutable"),
 			},
 			{
 				Name: "spec.awsTransitGateway.name is mutable when not programmed",
@@ -280,7 +279,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 				Update: func(ktg *konnectv1alpha1.KonnectCloudGatewayTransitGateway) {
 					ktg.Spec.AWSTransitGateway.Name = "yet-another-name"
 				},
-				ExpectedUpdateErrorMessage: lo.ToPtr("spec.awsTransitGateway.name is immutable when transit gateway is already Programmed"),
+				ExpectedUpdateErrorMessage: new("spec.awsTransitGateway.name is immutable when transit gateway is already Programmed"),
 			},
 			{
 				Name: "spec.azureTransitGateway.name is mutable when not programmed",
@@ -318,7 +317,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 				Update: func(ktg *konnectv1alpha1.KonnectCloudGatewayTransitGateway) {
 					ktg.Spec.AzureTransitGateway.Name = "yet-another-name"
 				},
-				ExpectedUpdateErrorMessage: lo.ToPtr("spec.azureTransitGateway.name is immutable when transit gateway is already Programmed"),
+				ExpectedUpdateErrorMessage: new("spec.azureTransitGateway.name is immutable when transit gateway is already Programmed"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)

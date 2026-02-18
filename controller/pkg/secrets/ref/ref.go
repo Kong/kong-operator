@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -51,7 +50,7 @@ func IsReferenceGrantForObj(referenceGrant *gatewayv1beta1.ReferenceGrant, obj c
 // If it is not set, it is set to referencerNamespace.
 func EnsureNamespaceInSecretRef(secretRef *gatewayv1.SecretObjectReference, referencerNamespace gatewayv1.Namespace) {
 	if secretRef.Namespace == nil || *secretRef.Namespace == "" {
-		secretRef.Namespace = lo.ToPtr(referencerNamespace)
+		secretRef.Namespace = new(referencerNamespace)
 	}
 }
 
@@ -95,7 +94,7 @@ func CheckReferenceGrantForSecret(
 		string(*secretRef.Namespace),
 		gatewayv1beta1.ReferenceGrantTo{
 			Kind: "Secret",
-			Name: lo.ToPtr(secretRef.Name),
+			Name: new(secretRef.Name),
 		},
 	)
 	if err != nil {

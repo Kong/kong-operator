@@ -3,7 +3,6 @@ package kubernetes
 import (
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -149,7 +148,7 @@ func TestAllowedByReferenceGrants(t *testing.T) {
 			to: gatewayv1beta1.ReferenceGrantTo{
 				Group: "another-group.k8s.io",
 				Kind:  "AnotherKind",
-				Name:  lo.ToPtr(gatewayv1beta1.ObjectName("some-name")),
+				Name:  new(gatewayv1beta1.ObjectName("some-name")),
 			},
 			targetNamespace: "target-namespace",
 			objs: []runtime.Object{
@@ -171,7 +170,7 @@ func TestAllowedByReferenceGrants(t *testing.T) {
 							{
 								Group: "another-group.k8s.io",
 								Kind:  "AnotherKind",
-								Name:  lo.ToPtr(gatewayv1beta1.ObjectName("some-name")),
+								Name:  new(gatewayv1beta1.ObjectName("some-name")),
 							},
 						},
 					},
@@ -189,7 +188,7 @@ func TestAllowedByReferenceGrants(t *testing.T) {
 			to: gatewayv1beta1.ReferenceGrantTo{
 				Group: "another-group.k8s.io",
 				Kind:  "AnotherKind",
-				Name:  lo.ToPtr(gatewayv1beta1.ObjectName("some-name")),
+				Name:  new(gatewayv1beta1.ObjectName("some-name")),
 			},
 			targetNamespace: "target-namespace",
 			objs: []runtime.Object{
@@ -211,7 +210,7 @@ func TestAllowedByReferenceGrants(t *testing.T) {
 							{
 								Group: "another-group.k8s.io",
 								Kind:  "AnotherKind",
-								Name:  lo.ToPtr(gatewayv1beta1.ObjectName("another-name")),
+								Name:  new(gatewayv1beta1.ObjectName("another-name")),
 							},
 						},
 					},
@@ -234,7 +233,7 @@ func TestAllowedByReferenceGrants(t *testing.T) {
 							{
 								Group: "another-group.k8s.io",
 								Kind:  "AnotherKind",
-								Name:  lo.ToPtr(gatewayv1beta1.ObjectName("some-name")),
+								Name:  new(gatewayv1beta1.ObjectName("some-name")),
 							},
 						},
 					},
@@ -252,7 +251,7 @@ func TestAllowedByReferenceGrants(t *testing.T) {
 			to: gatewayv1beta1.ReferenceGrantTo{
 				Group: "another-group.k8s.io",
 				Kind:  "AnotherKind",
-				Name:  lo.ToPtr(gatewayv1beta1.ObjectName("some-name")),
+				Name:  new(gatewayv1beta1.ObjectName("some-name")),
 			},
 			targetNamespace: "target-namespace",
 			objs: []runtime.Object{

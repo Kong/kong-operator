@@ -3,7 +3,6 @@ package fallback_test
 import (
 	"testing"
 
-	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -46,7 +45,7 @@ func TestResolveDependencies_HTTPRoute(t *testing.T) {
 									BackendRef: gatewayapi.BackendRef{
 										BackendObjectReference: gatewayapi.BackendObjectReference{
 											Name: "1",
-											Kind: lo.ToPtr(gatewayapi.Kind("Service")),
+											Kind: new(gatewayapi.Kind("Service")),
 										},
 									},
 								},
@@ -54,7 +53,7 @@ func TestResolveDependencies_HTTPRoute(t *testing.T) {
 									BackendRef: gatewayapi.BackendRef{
 										BackendObjectReference: gatewayapi.BackendObjectReference{
 											Name: "2",
-											Kind: lo.ToPtr(gatewayapi.Kind("Service")),
+											Kind: new(gatewayapi.Kind("Service")),
 										},
 									},
 								},
@@ -137,13 +136,13 @@ func TestResolveDependencies_TLSRoute(t *testing.T) {
 								{
 									BackendObjectReference: gatewayapi.BackendObjectReference{
 										Name: "1",
-										Kind: lo.ToPtr(gatewayapi.Kind("Service")),
+										Kind: new(gatewayapi.Kind("Service")),
 									},
 								},
 								{
 									BackendObjectReference: gatewayapi.BackendObjectReference{
 										Name: "2",
-										Kind: lo.ToPtr(gatewayapi.Kind("Service")),
+										Kind: new(gatewayapi.Kind("Service")),
 									},
 								},
 							},
@@ -225,13 +224,13 @@ func TestResolveDependencies_TCPRoute(t *testing.T) {
 								{
 									BackendObjectReference: gatewayapi.BackendObjectReference{
 										Name: "1",
-										Kind: lo.ToPtr(gatewayapi.Kind("Service")),
+										Kind: new(gatewayapi.Kind("Service")),
 									},
 								},
 								{
 									BackendObjectReference: gatewayapi.BackendObjectReference{
 										Name: "2",
-										Kind: lo.ToPtr(gatewayapi.Kind("Service")),
+										Kind: new(gatewayapi.Kind("Service")),
 									},
 								},
 							},
@@ -313,13 +312,13 @@ func TestResolveDependencies_UDPRoute(t *testing.T) {
 								{
 									BackendObjectReference: gatewayapi.BackendObjectReference{
 										Name: "1",
-										Kind: lo.ToPtr(gatewayapi.Kind("Service")),
+										Kind: new(gatewayapi.Kind("Service")),
 									},
 								},
 								{
 									BackendObjectReference: gatewayapi.BackendObjectReference{
 										Name: "2",
-										Kind: lo.ToPtr(gatewayapi.Kind("Service")),
+										Kind: new(gatewayapi.Kind("Service")),
 									},
 								},
 							},
@@ -402,7 +401,7 @@ func TestResolveDependencies_GRPCRoute(t *testing.T) {
 									BackendRef: gatewayapi.BackendRef{
 										BackendObjectReference: gatewayapi.BackendObjectReference{
 											Name: "1",
-											Kind: lo.ToPtr(gatewayapi.Kind("Service")),
+											Kind: new(gatewayapi.Kind("Service")),
 										},
 									},
 								},
@@ -410,7 +409,7 @@ func TestResolveDependencies_GRPCRoute(t *testing.T) {
 									BackendRef: gatewayapi.BackendRef{
 										BackendObjectReference: gatewayapi.BackendObjectReference{
 											Name: "2",
-											Kind: lo.ToPtr(gatewayapi.Kind("Service")),
+											Kind: new(gatewayapi.Kind("Service")),
 										},
 									},
 								},

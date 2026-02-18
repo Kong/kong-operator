@@ -45,7 +45,7 @@ func GenerateKongRoutesFromGRPCRouteRule(
 	}
 
 	routeName := func(namespace string, name string, ruleNumber int, matchNumber int) *string {
-		return kong.String(fmt.Sprintf(
+		return new(fmt.Sprintf(
 			"grpcroute.%s.%s.%d.%d",
 			namespace,
 			name,
@@ -115,7 +115,7 @@ func GenerateKongRoutesFromGRPCRouteRule(
 			} else {
 				service = *matchService
 			}
-			path := kong.String(KongPathRegexPrefix + fmt.Sprintf("/%s/%s", service, method))
+			path := new(KongPathRegexPrefix + fmt.Sprintf("/%s/%s", service, method))
 			r.Paths = append(r.Paths, path)
 		}
 
@@ -141,7 +141,7 @@ func GenerateKongRoutesFromGRPCRouteRule(
 func getGRPCRouteHostnamesAsSliceOfStringPointers(grpcroute *gatewayapi.GRPCRoute, storer store.Storer) []*string {
 	if len(grpcroute.Spec.Hostnames) > 0 {
 		return lo.Map(grpcroute.Spec.Hostnames, func(h gatewayapi.Hostname, _ int) *string {
-			return lo.ToPtr(string(h))
+			return new(string(h))
 		})
 	}
 
@@ -195,7 +195,7 @@ func getGRPCRouteHostnamesAsSliceOfStringPointers(grpcroute *gatewayapi.GRPCRout
 	}
 
 	return lo.Map(hostnames, func(h gatewayapi.Hostname, _ int) *string {
-		return lo.ToPtr(string(h))
+		return new(string(h))
 	})
 }
 

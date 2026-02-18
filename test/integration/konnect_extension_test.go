@@ -8,7 +8,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -406,8 +405,8 @@ func deployKonnectEntitiesForKonnectExtensionTest(
 			ks, ok := obj.(*configurationv1alpha1.KongService)
 			require.True(t, ok)
 			ks.Spec.KongServiceAPISpec = configurationv1alpha1.KongServiceAPISpec{
-				Name: lo.ToPtr("httpbin"),
-				URL:  lo.ToPtr(fmt.Sprintf("http://%s.%s.svc.cluster.local/", params.service.Name, params.namespace)),
+				Name: new("httpbin"),
+				URL:  new(fmt.Sprintf("http://%s.%s.svc.cluster.local/", params.service.Name, params.namespace)),
 				Host: fmt.Sprintf("%s.%s.svc.cluster.local", params.service.Name, params.namespace),
 			}
 		},
@@ -544,7 +543,7 @@ func setKonnectExtensionDPCertSecretRef(t *testing.T, s *corev1.Secret) deploy.O
 		require.True(t, ok)
 		ke.Spec.ClientAuth = &konnectv1alpha2.KonnectExtensionClientAuth{
 			CertificateSecret: konnectv1alpha2.CertificateSecret{
-				Provisioning: lo.ToPtr(konnectv1alpha2.ManualSecretProvisioning),
+				Provisioning: new(konnectv1alpha2.ManualSecretProvisioning),
 				CertificateSecretRef: &konnectv1alpha2.SecretRef{
 					Name: s.Name,
 				},

@@ -179,7 +179,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	// If the extension is marked for deletion and no object is using it, we can proceed with the cleanup.
 	if !ext.DeletionTimestamp.IsZero() &&
-		ext.DeletionTimestamp.Before(lo.ToPtr(metav1.Now())) &&
+		ext.DeletionTimestamp.Before(new(metav1.Now())) &&
 		len(dataPlaneList.Items)+len(controlPlaneList.Items) == 0 {
 		cleanup = true
 	}

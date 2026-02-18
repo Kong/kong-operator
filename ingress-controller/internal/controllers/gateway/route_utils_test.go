@@ -8,7 +8,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/samber/mo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -342,7 +341,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 						gw.Spec.Listeners = builder.
 							NewListener("http").WithPort(443).HTTPS().
 							WithTLSConfig(&gatewayapi.GatewayTLSConfig{
-								Mode: lo.ToPtr(gatewayapi.TLSModeTerminate),
+								Mode: new(gatewayapi.TLSModeTerminate),
 							}).
 							IntoSlice()
 						return gw
@@ -360,7 +359,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				name: "basic HTTPRoute specifying existing section name gets Accepted",
 				route: func() *gatewayapi.HTTPRoute {
 					r := basicHTTPRoute()
-					r.Spec.ParentRefs[0].SectionName = lo.ToPtr(gatewayapi.SectionName("http"))
+					r.Spec.ParentRefs[0].SectionName = new(gatewayapi.SectionName("http"))
 					return r
 				}(),
 				objects: []client.Object{
@@ -379,7 +378,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				name: "basic HTTPRoute specifying existing port gets Accepted",
 				route: func() *gatewayapi.HTTPRoute {
 					r := basicHTTPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(80))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(80))
 					return r
 				}(),
 				objects: []client.Object{
@@ -397,7 +396,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				name: "basic HTTPRoute specifying non-existing port does not get Accepted",
 				route: func() *gatewayapi.HTTPRoute {
 					r := basicHTTPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(80))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(80))
 					return r
 				}(),
 				objects: []client.Object{
@@ -517,7 +516,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 						gw.Spec.Listeners = builder.
 							NewListener("https").WithPort(443).HTTPS().
 							WithTLSConfig(&gatewayapi.GatewayTLSConfig{
-								Mode: lo.ToPtr(gatewayapi.TLSModePassthrough),
+								Mode: new(gatewayapi.TLSModePassthrough),
 							}).
 							IntoSlice()
 						gw.Status.Listeners[0].Name = "https"
@@ -687,7 +686,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				name: "TCPRoute specifying existing port gets Accepted",
 				route: func() *gatewayapi.TCPRoute {
 					r := basicTCPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(80))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(80))
 					r.Spec.Rules = []gatewayapi.TCPRouteRule{
 						{
 							BackendRefs: builder.NewBackendRef("fake-service").WithPort(80).ToSlice(),
@@ -708,7 +707,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				name: "TCPRoute specifying non existing port does not get Accepted",
 				route: func() *gatewayapi.TCPRoute {
 					r := basicTCPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(8000))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(8000))
 					r.Spec.Rules = []gatewayapi.TCPRouteRule{
 						{
 							BackendRefs: builder.NewBackendRef("fake-service").WithPort(80).ToSlice(),
@@ -729,8 +728,8 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				name: "TCPRoute specifying in sectionName existing listener gets Accepted",
 				route: func() *gatewayapi.TCPRoute {
 					r := basicTCPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(80))
-					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = lo.ToPtr(gatewayapi.SectionName("tcp"))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(80))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = new(gatewayapi.SectionName("tcp"))
 					r.Spec.Rules = []gatewayapi.TCPRouteRule{
 						{
 							BackendRefs: builder.NewBackendRef("fake-service").WithPort(80).ToSlice(),
@@ -752,8 +751,8 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				name: "TCPRoute specifying in sectionName non existing listener does not get Accepted",
 				route: func() *gatewayapi.TCPRoute {
 					r := basicTCPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(80))
-					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = lo.ToPtr(gatewayapi.SectionName("unknown-listener"))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(80))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = new(gatewayapi.SectionName("unknown-listener"))
 					r.Spec.Rules = []gatewayapi.TCPRouteRule{
 						{
 							BackendRefs: builder.NewBackendRef("fake-service").WithPort(80).ToSlice(),
@@ -775,8 +774,8 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				name: "TCPRoute specifying in sectionName existing listener with a matching port gets Accepted",
 				route: func() *gatewayapi.TCPRoute {
 					r := basicTCPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(80))
-					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = lo.ToPtr(gatewayapi.SectionName("tcp"))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(80))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = new(gatewayapi.SectionName("tcp"))
 					r.Spec.Rules = []gatewayapi.TCPRouteRule{
 						{
 							BackendRefs: builder.NewBackendRef("fake-service").WithPort(80).ToSlice(),
@@ -798,8 +797,8 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				name: "TCPRoute specifying in sectionName existing listener with a non-matching port does not gets Accepted",
 				route: func() *gatewayapi.TCPRoute {
 					r := basicTCPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(8080))
-					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = lo.ToPtr(gatewayapi.SectionName("tcp"))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(8080))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = new(gatewayapi.SectionName("tcp"))
 					r.Spec.Rules = []gatewayapi.TCPRouteRule{
 						{
 							BackendRefs: builder.NewBackendRef("fake-service").WithPort(80).ToSlice(),
@@ -821,8 +820,8 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				name: "TCPRoute specifying in sectionName non existing listener with an existing port does not gets Accepted",
 				route: func() *gatewayapi.TCPRoute {
 					r := basicTCPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(80))
-					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = lo.ToPtr(gatewayapi.SectionName("unknown-listener"))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(80))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = new(gatewayapi.SectionName("unknown-listener"))
 					r.Spec.Rules = []gatewayapi.TCPRouteRule{
 						{
 							BackendRefs: builder.NewBackendRef("fake-service").WithPort(80).ToSlice(),
@@ -956,7 +955,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				name: "UDPRoute specifying existing port gets Accepted",
 				route: func() *gatewayapi.UDPRoute {
 					r := basicUDPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(53))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(53))
 					return r
 				}(),
 				objects: []client.Object{
@@ -972,7 +971,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				name: "UDPRoute specifying non existing port does not get Accepted",
 				route: func() *gatewayapi.UDPRoute {
 					r := basicUDPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(8000))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(8000))
 					return r
 				}(),
 				objects: []client.Object{
@@ -988,8 +987,8 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				name: "UDPRoute specifying in sectionName existing listener gets Accepted",
 				route: func() *gatewayapi.UDPRoute {
 					r := basicUDPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(53))
-					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = lo.ToPtr(gatewayapi.SectionName("udp"))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(53))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = new(gatewayapi.SectionName("udp"))
 					return r
 				}(),
 				objects: []client.Object{
@@ -1006,8 +1005,8 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				name: "UDPRoute specifying in sectionName non existing listener does not get Accepted",
 				route: func() *gatewayapi.UDPRoute {
 					r := basicUDPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(53))
-					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = lo.ToPtr(gatewayapi.SectionName("unknown-listener"))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(53))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = new(gatewayapi.SectionName("unknown-listener"))
 					return r
 				}(),
 				objects: []client.Object{
@@ -1024,8 +1023,8 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				name: "UDPRoute specifying in sectionName existing listener with a matching port gets Accepted",
 				route: func() *gatewayapi.UDPRoute {
 					r := basicUDPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(53))
-					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = lo.ToPtr(gatewayapi.SectionName("udp"))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(53))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = new(gatewayapi.SectionName("udp"))
 					return r
 				}(),
 				objects: []client.Object{
@@ -1042,8 +1041,8 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				name: "UDPRoute specifying in sectionName existing listener with a non-matching port does not get Accepted",
 				route: func() *gatewayapi.UDPRoute {
 					r := basicUDPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(533))
-					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = lo.ToPtr(gatewayapi.SectionName("udp"))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(533))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = new(gatewayapi.SectionName("udp"))
 					return r
 				}(),
 				objects: []client.Object{
@@ -1060,8 +1059,8 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				name: "UDPRoute specifying in sectionName non existing listener with an existing port does not get Accepted",
 				route: func() *gatewayapi.UDPRoute {
 					r := basicUDPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(53))
-					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = lo.ToPtr(gatewayapi.SectionName("unknown-listener"))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(53))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = new(gatewayapi.SectionName("unknown-listener"))
 					return r
 				}(),
 				objects: []client.Object{
@@ -1132,7 +1131,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 						WithPort(443).
 						TLS().
 						WithTLSConfig(&gatewayapi.GatewayTLSConfig{
-							Mode: lo.ToPtr(gatewayapi.TLSModePassthrough),
+							Mode: new(gatewayapi.TLSModePassthrough),
 						}).IntoSlice(),
 				},
 				Status: gatewayapi.GatewayStatus{
@@ -1187,7 +1186,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 							WithPort(443).
 							TLS().
 							WithTLSConfig(&gatewayapi.GatewayTLSConfig{
-								Mode: lo.ToPtr(gatewayapi.TLSModeTerminate),
+								Mode: new(gatewayapi.TLSModeTerminate),
 							}).IntoSlice()
 						return gw
 					}(),
@@ -1222,7 +1221,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				name: "TLSRoute specifying existing port gets Accepted",
 				route: func() *gatewayapi.TLSRoute {
 					r := basicTLSRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(443))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(443))
 					return r
 				}(),
 				objects: []client.Object{
@@ -1240,7 +1239,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				name: "TLSRoute specifying non existing port does not get Accepted",
 				route: func() *gatewayapi.TLSRoute {
 					r := basicTLSRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(444))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(444))
 					return r
 				}(),
 				objects: []client.Object{
@@ -1258,8 +1257,8 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				name: "TLSRoute specifying in sectionName existing listener gets Accepted",
 				route: func() *gatewayapi.TLSRoute {
 					r := basicTLSRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(443))
-					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = lo.ToPtr(gatewayapi.SectionName("tls"))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(443))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = new(gatewayapi.SectionName("tls"))
 					return r
 				}(),
 				objects: []client.Object{
@@ -1279,8 +1278,8 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				name: "TLSRoute specifying in sectionName non existing listener does not get Accepted",
 				route: func() *gatewayapi.TLSRoute {
 					r := basicTLSRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(443))
-					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = lo.ToPtr(gatewayapi.SectionName("unknown-listener"))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(443))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = new(gatewayapi.SectionName("unknown-listener"))
 					return r
 				}(),
 				objects: []client.Object{
@@ -1544,8 +1543,8 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 							CommonRouteSpec: gatewayapi.CommonRouteSpec{
 								ParentRefs: []gatewayapi.ParentReference{
 									{
-										Group: lo.ToPtr(gatewayapi.Group(gatewayv1.GroupName)),
-										Kind:  lo.ToPtr(gatewayapi.Kind("Gateway")),
+										Group: new(gatewayapi.Group(gatewayv1.GroupName)),
+										Kind:  new(gatewayapi.Kind("Gateway")),
 										Name:  "test-gateway",
 									},
 								},
@@ -1563,8 +1562,8 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 								Parents: []gatewayapi.RouteParentStatus{
 									{
 										ParentRef: gatewayapi.ParentReference{
-											Kind:      lo.ToPtr(gatewayapi.Kind("Gateway")),
-											Group:     lo.ToPtr(gatewayapi.Group(gatewayv1.GroupName)),
+											Kind:      new(gatewayapi.Kind("Gateway")),
+											Group:     new(gatewayapi.Group(gatewayv1.GroupName)),
 											Name:      gatewayapi.ObjectName(gatewayNN1.Name),
 											Namespace: (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
 										},
@@ -1599,8 +1598,8 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 						Parents: []gatewayapi.RouteParentStatus{
 							{
 								ParentRef: gatewayapi.ParentReference{
-									Kind:      lo.ToPtr(gatewayapi.Kind("Gateway")),
-									Group:     lo.ToPtr(gatewayapi.Group(gatewayv1.GroupName)),
+									Kind:      new(gatewayapi.Kind("Gateway")),
+									Group:     new(gatewayapi.Group(gatewayv1.GroupName)),
 									Name:      gatewayapi.ObjectName(gatewayNN1.Name),
 									Namespace: (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
 								},
@@ -1647,8 +1646,8 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 							CommonRouteSpec: gatewayapi.CommonRouteSpec{
 								ParentRefs: []gatewayapi.ParentReference{
 									{
-										Group: lo.ToPtr(gatewayapi.Group(gatewayv1.GroupName)),
-										Kind:  lo.ToPtr(gatewayapi.Kind("Gateway")),
+										Group: new(gatewayapi.Group(gatewayv1.GroupName)),
+										Kind:  new(gatewayapi.Kind("Gateway")),
 										Name:  "test-gateway",
 									},
 								},
@@ -1666,8 +1665,8 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 								Parents: []gatewayapi.RouteParentStatus{
 									{
 										ParentRef: gatewayapi.ParentReference{
-											Kind:      lo.ToPtr(gatewayapi.Kind("Gateway")),
-											Group:     lo.ToPtr(gatewayapi.Group(gatewayv1.GroupName)),
+											Kind:      new(gatewayapi.Kind("Gateway")),
+											Group:     new(gatewayapi.Group(gatewayv1.GroupName)),
 											Name:      gatewayapi.ObjectName(gatewayNN1.Name),
 											Namespace: (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
 										},
@@ -1694,8 +1693,8 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 						Parents: []gatewayapi.RouteParentStatus{
 							{
 								ParentRef: gatewayapi.ParentReference{
-									Kind:      lo.ToPtr(gatewayapi.Kind("Gateway")),
-									Group:     lo.ToPtr(gatewayapi.Group(gatewayv1.GroupName)),
+									Kind:      new(gatewayapi.Kind("Gateway")),
+									Group:     new(gatewayapi.Group(gatewayv1.GroupName)),
 									Name:      gatewayapi.ObjectName(gatewayNN1.Name),
 									Namespace: (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
 								},
@@ -1742,10 +1741,10 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 							CommonRouteSpec: gatewayapi.CommonRouteSpec{
 								ParentRefs: []gatewayapi.ParentReference{
 									{
-										Group:       lo.ToPtr(gatewayapi.Group(gatewayv1.GroupName)),
-										Kind:        lo.ToPtr(gatewayapi.Kind("Gateway")),
+										Group:       new(gatewayapi.Group(gatewayv1.GroupName)),
+										Kind:        new(gatewayapi.Kind("Gateway")),
 										Name:        "test-gateway",
-										SectionName: lo.ToPtr(gatewayapi.SectionName("http-2")),
+										SectionName: new(gatewayapi.SectionName("http-2")),
 									},
 								},
 							},
@@ -1762,11 +1761,11 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 								Parents: []gatewayapi.RouteParentStatus{
 									{
 										ParentRef: gatewayapi.ParentReference{
-											Kind:        lo.ToPtr(gatewayapi.Kind("Gateway")),
-											Group:       lo.ToPtr(gatewayapi.Group(gatewayv1.GroupName)),
+											Kind:        new(gatewayapi.Kind("Gateway")),
+											Group:       new(gatewayapi.Group(gatewayv1.GroupName)),
 											Name:        gatewayapi.ObjectName(gatewayNN1.Name),
 											Namespace:   (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
-											SectionName: lo.ToPtr(gatewayapi.SectionName("http-2")),
+											SectionName: new(gatewayapi.SectionName("http-2")),
 										},
 										ControllerName: "konghq.com/kic-gateway-controller",
 										Conditions:     []metav1.Condition{},
@@ -1782,11 +1781,11 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 						Parents: []gatewayapi.RouteParentStatus{
 							{
 								ParentRef: gatewayapi.ParentReference{
-									Kind:        lo.ToPtr(gatewayapi.Kind("Gateway")),
-									Group:       lo.ToPtr(gatewayapi.Group(gatewayv1.GroupName)),
+									Kind:        new(gatewayapi.Kind("Gateway")),
+									Group:       new(gatewayapi.Group(gatewayv1.GroupName)),
 									Name:        gatewayapi.ObjectName(gatewayNN1.Name),
 									Namespace:   (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
-									SectionName: lo.ToPtr(gatewayapi.SectionName("http-2")),
+									SectionName: new(gatewayapi.SectionName("http-2")),
 								},
 								ControllerName: "konghq.com/kic-gateway-controller",
 								Conditions: []metav1.Condition{
@@ -1826,16 +1825,16 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 							CommonRouteSpec: gatewayapi.CommonRouteSpec{
 								ParentRefs: []gatewayapi.ParentReference{
 									{
-										Group:       lo.ToPtr(gatewayapi.Group(gatewayv1.GroupName)),
-										Kind:        lo.ToPtr(gatewayapi.Kind("Gateway")),
+										Group:       new(gatewayapi.Group(gatewayv1.GroupName)),
+										Kind:        new(gatewayapi.Kind("Gateway")),
 										Name:        gatewayapi.ObjectName(gateway1.Name),
-										SectionName: lo.ToPtr(gatewayapi.SectionName("http-2")),
+										SectionName: new(gatewayapi.SectionName("http-2")),
 									},
 									{
-										Group:       lo.ToPtr(gatewayapi.Group(gatewayv1.GroupName)),
-										Kind:        lo.ToPtr(gatewayapi.Kind("Gateway")),
+										Group:       new(gatewayapi.Group(gatewayv1.GroupName)),
+										Kind:        new(gatewayapi.Kind("Gateway")),
 										Name:        gatewayapi.ObjectName(gateway2.Name),
-										SectionName: lo.ToPtr(gatewayapi.SectionName("http-1")),
+										SectionName: new(gatewayapi.SectionName("http-1")),
 									},
 								},
 							},
@@ -1856,11 +1855,11 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 						Parents: []gatewayapi.RouteParentStatus{
 							{
 								ParentRef: gatewayapi.ParentReference{
-									Kind:        lo.ToPtr(gatewayapi.Kind("Gateway")),
-									Group:       lo.ToPtr(gatewayapi.Group(gatewayv1.GroupName)),
+									Kind:        new(gatewayapi.Kind("Gateway")),
+									Group:       new(gatewayapi.Group(gatewayv1.GroupName)),
 									Name:        gatewayapi.ObjectName(gatewayNN1.Name),
 									Namespace:   (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
-									SectionName: lo.ToPtr(gatewayapi.SectionName("http-2")),
+									SectionName: new(gatewayapi.SectionName("http-2")),
 								},
 								ControllerName: "konghq.com/kic-gateway-controller",
 								Conditions: []metav1.Condition{
@@ -1876,11 +1875,11 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 							},
 							{
 								ParentRef: gatewayapi.ParentReference{
-									Kind:        lo.ToPtr(gatewayapi.Kind("Gateway")),
-									Group:       lo.ToPtr(gatewayapi.Group(gatewayv1.GroupName)),
+									Kind:        new(gatewayapi.Kind("Gateway")),
+									Group:       new(gatewayapi.Group(gatewayv1.GroupName)),
 									Name:        gatewayapi.ObjectName(gatewayNN2.Name),
 									Namespace:   (*gatewayapi.Namespace)(&gatewayNN2.Namespace),
-									SectionName: lo.ToPtr(gatewayapi.SectionName("http-1")),
+									SectionName: new(gatewayapi.SectionName("http-1")),
 								},
 								ControllerName: "konghq.com/kic-gateway-controller",
 								Conditions: []metav1.Condition{
@@ -1924,8 +1923,8 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 							CommonRouteSpec: gatewayapi.CommonRouteSpec{
 								ParentRefs: []gatewayapi.ParentReference{
 									{
-										Group: lo.ToPtr(gatewayapi.Group(gatewayv1.GroupName)),
-										Kind:  lo.ToPtr(gatewayapi.Kind("Gateway")),
+										Group: new(gatewayapi.Group(gatewayv1.GroupName)),
+										Kind:  new(gatewayapi.Kind("Gateway")),
 										Name:  "test-gateway",
 									},
 								},
@@ -1946,8 +1945,8 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 						Parents: []gatewayapi.RouteParentStatus{
 							{
 								ParentRef: gatewayapi.ParentReference{
-									Kind:      lo.ToPtr(gatewayapi.Kind("Gateway")),
-									Group:     lo.ToPtr(gatewayapi.Group(gatewayv1.GroupName)),
+									Kind:      new(gatewayapi.Kind("Gateway")),
+									Group:     new(gatewayapi.Group(gatewayv1.GroupName)),
 									Name:      gatewayapi.ObjectName(gatewayNN1.Name),
 									Namespace: (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
 								},
@@ -1986,8 +1985,8 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 							CommonRouteSpec: gatewayapi.CommonRouteSpec{
 								ParentRefs: []gatewayapi.ParentReference{
 									{
-										Group: lo.ToPtr(gatewayapi.Group(gatewayv1.GroupName)),
-										Kind:  lo.ToPtr(gatewayapi.Kind("Gateway")),
+										Group: new(gatewayapi.Group(gatewayv1.GroupName)),
+										Kind:  new(gatewayapi.Kind("Gateway")),
 										Name:  "test-gateway",
 									},
 								},
@@ -2005,8 +2004,8 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 								Parents: []gatewayapi.RouteParentStatus{
 									{
 										ParentRef: gatewayapi.ParentReference{
-											Kind:      lo.ToPtr(gatewayapi.Kind("Gateway")),
-											Group:     lo.ToPtr(gatewayapi.Group(gatewayv1.GroupName)),
+											Kind:      new(gatewayapi.Kind("Gateway")),
+											Group:     new(gatewayapi.Group(gatewayv1.GroupName)),
 											Name:      gatewayapi.ObjectName(gatewayNN1.Name),
 											Namespace: (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
 										},
@@ -2099,7 +2098,7 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 						ParentRefs: []gatewayapi.ParentReference{
 							{
 								Name:        "gateway",
-								SectionName: lo.ToPtr(gatewayapi.SectionName("listener-1")),
+								SectionName: new(gatewayapi.SectionName("listener-1")),
 							},
 						},
 					},
@@ -2125,7 +2124,7 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 							Name: gatewayapi.SectionName("listener-1"),
 							SupportedKinds: []gatewayapi.RouteGroupKind{
 								{
-									Group: lo.ToPtr(gatewayapi.Group("gateway.networking.k8s.io")),
+									Group: new(gatewayapi.Group("gateway.networking.k8s.io")),
 									Kind:  "HTTPRoute",
 								},
 							},
@@ -2153,7 +2152,7 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 						ParentRefs: []gatewayapi.ParentReference{
 							{
 								Name:        "gateway",
-								SectionName: lo.ToPtr(gatewayapi.SectionName("listener-1")),
+								SectionName: new(gatewayapi.SectionName("listener-1")),
 							},
 						},
 					},
@@ -2183,7 +2182,7 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 							Name: gatewayapi.SectionName("listener-1"),
 							SupportedKinds: []gatewayapi.RouteGroupKind{
 								{
-									Group: lo.ToPtr(gatewayapi.Group("gateway.networking.k8s.io")),
+									Group: new(gatewayapi.Group("gateway.networking.k8s.io")),
 									Kind:  "HTTPRoute",
 								},
 							},
@@ -2211,7 +2210,7 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 						ParentRefs: []gatewayapi.ParentReference{
 							{
 								Name:        "gateway",
-								SectionName: lo.ToPtr(gatewayapi.SectionName("listener-1")),
+								SectionName: new(gatewayapi.SectionName("listener-1")),
 							},
 						},
 					},
@@ -2237,7 +2236,7 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 							Name: gatewayapi.SectionName("listener-1"),
 							SupportedKinds: []gatewayapi.RouteGroupKind{
 								{
-									Group: lo.ToPtr(gatewayapi.Group("gateway.networking.k8s.io")),
+									Group: new(gatewayapi.Group("gateway.networking.k8s.io")),
 									Kind:  "HTTPRoute",
 								},
 							},
@@ -2265,7 +2264,7 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 						ParentRefs: []gatewayapi.ParentReference{
 							{
 								Name:        "gateway",
-								SectionName: lo.ToPtr(gatewayapi.SectionName("listener-1")),
+								SectionName: new(gatewayapi.SectionName("listener-1")),
 							},
 						},
 					},
@@ -2291,7 +2290,7 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 							Name: gatewayapi.SectionName("listener-1"),
 							SupportedKinds: []gatewayapi.RouteGroupKind{
 								{
-									Group: lo.ToPtr(gatewayapi.Group("gateway.networking.k8s.io")),
+									Group: new(gatewayapi.Group("gateway.networking.k8s.io")),
 									Kind:  "GRPCRoute",
 								},
 							},
@@ -2319,7 +2318,7 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 						ParentRefs: []gatewayapi.ParentReference{
 							{
 								Name:        "gateway",
-								SectionName: lo.ToPtr(gatewayapi.SectionName("wrong-listener")),
+								SectionName: new(gatewayapi.SectionName("wrong-listener")),
 							},
 						},
 					},
@@ -2345,7 +2344,7 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 							Name: gatewayapi.SectionName("listener-1"),
 							SupportedKinds: []gatewayapi.RouteGroupKind{
 								{
-									Group: lo.ToPtr(gatewayapi.Group("gateway.networking.k8s.io")),
+									Group: new(gatewayapi.Group("gateway.networking.k8s.io")),
 									Kind:  "HTTPRoute",
 								},
 							},
@@ -2373,8 +2372,8 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 						ParentRefs: []gatewayapi.ParentReference{
 							{
 								Name:        "gateway",
-								SectionName: lo.ToPtr(gatewayapi.SectionName("listener-1")),
-								Port:        lo.ToPtr(gatewayapi.PortNumber(8080)),
+								SectionName: new(gatewayapi.SectionName("listener-1")),
+								Port:        new(gatewayapi.PortNumber(8080)),
 							},
 						},
 					},
@@ -2401,7 +2400,7 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 							Name: gatewayapi.SectionName("listener-1"),
 							SupportedKinds: []gatewayapi.RouteGroupKind{
 								{
-									Group: lo.ToPtr(gatewayapi.Group("gateway.networking.k8s.io")),
+									Group: new(gatewayapi.Group("gateway.networking.k8s.io")),
 									Kind:  "HTTPRoute",
 								},
 							},
@@ -2429,7 +2428,7 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 						ParentRefs: []gatewayapi.ParentReference{
 							{
 								Name:        "gateway",
-								SectionName: lo.ToPtr(gatewayapi.SectionName("listener-1")),
+								SectionName: new(gatewayapi.SectionName("listener-1")),
 							},
 						},
 					},
@@ -2455,7 +2454,7 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 							Name: gatewayapi.SectionName("listener-1"),
 							SupportedKinds: []gatewayapi.RouteGroupKind{
 								{
-									Group: lo.ToPtr(gatewayapi.Group("gateway.networking.k8s.io")),
+									Group: new(gatewayapi.Group("gateway.networking.k8s.io")),
 									Kind:  "HTTPRoute",
 								},
 							},
@@ -2483,7 +2482,7 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 						ParentRefs: []gatewayapi.ParentReference{
 							{
 								Name:        "gateway",
-								SectionName: lo.ToPtr(gatewayapi.SectionName("listener-1")),
+								SectionName: new(gatewayapi.SectionName("listener-1")),
 							},
 						},
 					},
@@ -2503,7 +2502,7 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 							Name:          "listener-1",
 							AllowedRoutes: builder.NewAllowedRoutesFromSameNamespaces(),
 							Protocol:      gatewayapi.HTTPProtocolType,
-							Hostname:      lo.ToPtr(gatewayapi.Hostname("foo.bar.com")),
+							Hostname:      new(gatewayapi.Hostname("foo.bar.com")),
 						},
 					},
 				},
@@ -2513,7 +2512,7 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 							Name: gatewayapi.SectionName("listener-1"),
 							SupportedKinds: []gatewayapi.RouteGroupKind{
 								{
-									Group: lo.ToPtr(gatewayapi.Group("gateway.networking.k8s.io")),
+									Group: new(gatewayapi.Group("gateway.networking.k8s.io")),
 									Kind:  "HTTPRoute",
 								},
 							},

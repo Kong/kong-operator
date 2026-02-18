@@ -9,7 +9,6 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -100,7 +99,7 @@ func TestKongConsumerCredential_HMAC(t *testing.T) {
 		Return(
 			&sdkkonnectops.CreateHmacAuthWithConsumerResponse{
 				HMACAuth: &sdkkonnectcomp.HMACAuth{
-					ID: lo.ToPtr(hmacID),
+					ID: new(hmacID),
 				},
 			},
 			nil,
@@ -110,7 +109,7 @@ func TestKongConsumerCredential_HMAC(t *testing.T) {
 		Return(
 			&sdkkonnectops.UpsertHmacAuthWithConsumerResponse{
 				HMACAuth: &sdkkonnectcomp.HMACAuth{
-					ID: lo.ToPtr(hmacID),
+					ID: new(hmacID),
 				},
 			},
 			nil,
@@ -199,7 +198,7 @@ func TestKongConsumerCredential_HMAC(t *testing.T) {
 				Object: &sdkkonnectops.ListHmacAuthResponseBody{
 					Data: []sdkkonnectcomp.HMACAuth{
 						{
-							ID: lo.ToPtr(hmacID),
+							ID: new(hmacID),
 						},
 					},
 				},

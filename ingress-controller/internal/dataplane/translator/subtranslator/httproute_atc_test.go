@@ -1146,7 +1146,7 @@ func TestKongExpressionRouteFromHTTPRouteMatchWithPriority(t *testing.T) {
 									URLRewrite: &gatewayapi.HTTPURLRewriteFilter{
 										Path: &gatewayapi.HTTPPathModifier{
 											Type:               gatewayapi.PrefixMatchHTTPPathModifier,
-											ReplacePrefixMatch: lo.ToPtr("/bar"),
+											ReplacePrefixMatch: new("/bar"),
 										},
 									},
 								},

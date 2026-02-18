@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/kong/go-kong/kong"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
@@ -22,11 +21,11 @@ func TestApplyExpressionToL4KongRoute(t *testing.T) {
 			route: kong.Route{
 				Destinations: []*kong.CIDRPort{
 					{
-						Port: lo.ToPtr(1234),
+						Port: new(1234),
 					},
 				},
 				Protocols: []*string{
-					lo.ToPtr("tcp"),
+					new("tcp"),
 				},
 			},
 		},
@@ -36,14 +35,14 @@ func TestApplyExpressionToL4KongRoute(t *testing.T) {
 			route: kong.Route{
 				Destinations: []*kong.CIDRPort{
 					{
-						Port: lo.ToPtr(1234),
+						Port: new(1234),
 					},
 					{
-						Port: lo.ToPtr(5678),
+						Port: new(5678),
 					},
 				},
 				Protocols: []*string{
-					lo.ToPtr("tcp"),
+					new("tcp"),
 				},
 			},
 		},
@@ -52,10 +51,10 @@ func TestApplyExpressionToL4KongRoute(t *testing.T) {
 			subExpr: "tls.sni == \"example.com\"",
 			route: kong.Route{
 				SNIs: []*string{
-					lo.ToPtr("example.com"),
+					new("example.com"),
 				},
 				Protocols: []*string{
-					lo.ToPtr("tcp"),
+					new("tcp"),
 				},
 			},
 		},
@@ -64,11 +63,11 @@ func TestApplyExpressionToL4KongRoute(t *testing.T) {
 			subExpr: "(tls.sni == \"example.com\") || (tls.sni == \"example.net\")",
 			route: kong.Route{
 				SNIs: []*string{
-					lo.ToPtr("example.com"),
-					lo.ToPtr("example.net"),
+					new("example.com"),
+					new("example.net"),
 				},
 				Protocols: []*string{
-					lo.ToPtr("tcp"),
+					new("tcp"),
 				},
 			},
 		},
@@ -78,17 +77,17 @@ func TestApplyExpressionToL4KongRoute(t *testing.T) {
 			route: kong.Route{
 				Destinations: []*kong.CIDRPort{
 					{
-						Port: lo.ToPtr(1234),
+						Port: new(1234),
 					},
 					{
-						Port: lo.ToPtr(5678),
+						Port: new(5678),
 					},
 				},
 				SNIs: []*string{
-					lo.ToPtr("example.com"),
+					new("example.com"),
 				},
 				Protocols: []*string{
-					lo.ToPtr("tcp"),
+					new("tcp"),
 				},
 			},
 		},

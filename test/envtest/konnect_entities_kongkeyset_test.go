@@ -71,7 +71,7 @@ func TestKongKeySet(t *testing.T) {
 			}),
 		).Return(&sdkkonnectops.CreateKeySetResponse{
 			KeySet: &sdkkonnectcomp.KeySet{
-				ID: lo.ToPtr(keySetID),
+				ID: new(keySetID),
 			},
 		}, nil)
 
@@ -159,7 +159,7 @@ func TestKongKeySet(t *testing.T) {
 			Object: &sdkkonnectops.ListKeySetResponseBody{
 				Data: []sdkkonnectcomp.KeySet{
 					{
-						ID: lo.ToPtr(keySetID),
+						ID: new(keySetID),
 					},
 				},
 			},
@@ -200,7 +200,7 @@ func TestKongKeySet(t *testing.T) {
 			Return(
 				&sdkkonnectops.CreateKeySetResponse{
 					KeySet: &sdkkonnectcomp.KeySet{
-						ID:   lo.ToPtr(id),
+						ID:   new(id),
 						Tags: []string{"test-1"},
 					},
 				},
@@ -241,8 +241,8 @@ func TestKongKeySet(t *testing.T) {
 		sdk.KeySetsSDK.EXPECT().GetKeySet(mock.Anything, keySetID, cp.GetKonnectID()).Return(
 			&sdkkonnectops.GetKeySetResponse{
 				KeySet: &sdkkonnectcomp.KeySet{
-					Name: lo.ToPtr(keySetName),
-					ID:   lo.ToPtr(keySetID),
+					Name: new(keySetName),
+					ID:   new(keySetID),
 				},
 			}, nil,
 		)

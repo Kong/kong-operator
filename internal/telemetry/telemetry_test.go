@@ -12,7 +12,6 @@ import (
 	"github.com/kong/kubernetes-telemetry/pkg/serializers"
 	"github.com/kong/kubernetes-telemetry/pkg/telemetry"
 	"github.com/kong/kubernetes-telemetry/pkg/types"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -298,7 +297,7 @@ func TestCreateManager(t *testing.T) {
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 								DeploymentOptions: operatorv1beta1.DeploymentOptions{
-									Replicas: lo.ToPtr[int32](10),
+									Replicas: new(int32(10)),
 								},
 							},
 						},
@@ -562,7 +561,7 @@ func TestCreateManager(t *testing.T) {
 						ParametersRef: &gatewayv1.ParametersReference{
 							Group:     "gateway-operator.konghq.com",
 							Kind:      "GatewayConfiguration",
-							Namespace: lo.ToPtr(gatewayv1.Namespace("kong")),
+							Namespace: new(gatewayv1.Namespace("kong")),
 							Name:      "konnect-1",
 						},
 					},

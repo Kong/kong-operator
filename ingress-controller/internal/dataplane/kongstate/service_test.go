@@ -23,20 +23,20 @@ func TestOverrideService(t *testing.T) {
 			name: "no overrides",
 			inService: Service{
 				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("http"),
-					Path:     kong.String("/"),
+					Host:     new("foo.com"),
+					Port:     new(80),
+					Name:     new("foo"),
+					Protocol: new("http"),
+					Path:     new("/"),
 				},
 			},
 			expectedService: Service{
 				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("http"),
-					Path:     kong.String("/"),
+					Host:     new("foo.com"),
+					Port:     new(80),
+					Name:     new("foo"),
+					Protocol: new("http"),
+					Path:     new("/"),
 				},
 			},
 			k8sServiceAnnotations: map[string]string{},
@@ -45,20 +45,20 @@ func TestOverrideService(t *testing.T) {
 			name: "override protocol to https",
 			inService: Service{
 				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("http"),
-					Path:     kong.String("/"),
+					Host:     new("foo.com"),
+					Port:     new(80),
+					Name:     new("foo"),
+					Protocol: new("http"),
+					Path:     new("/"),
 				},
 			},
 			expectedService: Service{
 				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("https"),
-					Path:     kong.String("/"),
+					Host:     new("foo.com"),
+					Port:     new(80),
+					Name:     new("foo"),
+					Protocol: new("https"),
+					Path:     new("/"),
 				},
 			},
 			k8sServiceAnnotations: map[string]string{
@@ -69,21 +69,21 @@ func TestOverrideService(t *testing.T) {
 			name: "override retries to 0",
 			inService: Service{
 				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("http"),
-					Path:     kong.String("/"),
+					Host:     new("foo.com"),
+					Port:     new(80),
+					Name:     new("foo"),
+					Protocol: new("http"),
+					Path:     new("/"),
 				},
 			},
 			expectedService: Service{
 				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("http"),
-					Path:     kong.String("/"),
-					Retries:  kong.Int(0),
+					Host:     new("foo.com"),
+					Port:     new(80),
+					Name:     new("foo"),
+					Protocol: new("http"),
+					Path:     new("/"),
+					Retries:  new(0),
 				},
 			},
 			k8sServiceAnnotations: map[string]string{
@@ -94,21 +94,21 @@ func TestOverrideService(t *testing.T) {
 			name: "override retries to 1",
 			inService: Service{
 				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("http"),
-					Path:     kong.String("/"),
+					Host:     new("foo.com"),
+					Port:     new(80),
+					Name:     new("foo"),
+					Protocol: new("http"),
+					Path:     new("/"),
 				},
 			},
 			expectedService: Service{
 				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("http"),
-					Path:     kong.String("/"),
-					Retries:  kong.Int(1),
+					Host:     new("foo.com"),
+					Port:     new(80),
+					Name:     new("foo"),
+					Protocol: new("http"),
+					Path:     new("/"),
+					Retries:  new(1),
 				},
 			},
 			k8sServiceAnnotations: map[string]string{
@@ -119,20 +119,20 @@ func TestOverrideService(t *testing.T) {
 			name: "override path",
 			inService: Service{
 				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("http"),
-					Path:     kong.String("/"),
+					Host:     new("foo.com"),
+					Port:     new(80),
+					Name:     new("foo"),
+					Protocol: new("http"),
+					Path:     new("/"),
 				},
 			},
 			expectedService: Service{
 				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("http"),
-					Path:     kong.String("/new-path"),
+					Host:     new("foo.com"),
+					Port:     new(80),
+					Name:     new("foo"),
+					Protocol: new("http"),
+					Path:     new("/new-path"),
 				},
 			},
 			k8sServiceAnnotations: map[string]string{
@@ -143,23 +143,23 @@ func TestOverrideService(t *testing.T) {
 			name: "override connect timeout, read timeout, write timeout",
 			inService: Service{
 				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("http"),
-					Path:     kong.String("/"),
+					Host:     new("foo.com"),
+					Port:     new(80),
+					Name:     new("foo"),
+					Protocol: new("http"),
+					Path:     new("/"),
 				},
 			},
 			expectedService: Service{
 				Service: kong.Service{
-					Host:           kong.String("foo.com"),
-					Port:           kong.Int(80),
-					Name:           kong.String("foo"),
-					Protocol:       kong.String("http"),
-					Path:           kong.String("/"),
-					ConnectTimeout: kong.Int(100),
-					ReadTimeout:    kong.Int(100),
-					WriteTimeout:   kong.Int(100),
+					Host:           new("foo.com"),
+					Port:           new(80),
+					Name:           new("foo"),
+					Protocol:       new("http"),
+					Path:           new("/"),
+					ConnectTimeout: new(100),
+					ReadTimeout:    new(100),
+					WriteTimeout:   new(100),
 				},
 			},
 			k8sServiceAnnotations: map[string]string{
@@ -172,7 +172,7 @@ func TestOverrideService(t *testing.T) {
 			name: "tls-verify override to false",
 			inService: Service{
 				Service: kong.Service{
-					Host: kong.String("foo.com"),
+					Host: new("foo.com"),
 				},
 			},
 			k8sServiceAnnotations: map[string]string{
@@ -180,8 +180,8 @@ func TestOverrideService(t *testing.T) {
 			},
 			expectedService: Service{
 				Service: kong.Service{
-					Host:      kong.String("foo.com"),
-					TLSVerify: kong.Bool(false),
+					Host:      new("foo.com"),
+					TLSVerify: new(false),
 				},
 			},
 		},
@@ -189,7 +189,7 @@ func TestOverrideService(t *testing.T) {
 			name: "tls-verify override to true",
 			inService: Service{
 				Service: kong.Service{
-					Host: kong.String("foo.com"),
+					Host: new("foo.com"),
 				},
 			},
 			k8sServiceAnnotations: map[string]string{
@@ -197,8 +197,8 @@ func TestOverrideService(t *testing.T) {
 			},
 			expectedService: Service{
 				Service: kong.Service{
-					Host:      kong.String("foo.com"),
-					TLSVerify: kong.Bool(true),
+					Host:      new("foo.com"),
+					TLSVerify: new(true),
 				},
 			},
 		},
@@ -206,7 +206,7 @@ func TestOverrideService(t *testing.T) {
 			name: "tls-verify override to unexpected value",
 			inService: Service{
 				Service: kong.Service{
-					Host: kong.String("foo.com"),
+					Host: new("foo.com"),
 				},
 			},
 			k8sServiceAnnotations: map[string]string{
@@ -214,7 +214,7 @@ func TestOverrideService(t *testing.T) {
 			},
 			expectedService: Service{
 				Service: kong.Service{
-					Host: kong.String("foo.com"),
+					Host: new("foo.com"),
 				},
 			},
 		},
@@ -222,7 +222,7 @@ func TestOverrideService(t *testing.T) {
 			name: "tls-verify-depth override",
 			inService: Service{
 				Service: kong.Service{
-					Host: kong.String("foo.com"),
+					Host: new("foo.com"),
 				},
 			},
 			k8sServiceAnnotations: map[string]string{
@@ -230,8 +230,8 @@ func TestOverrideService(t *testing.T) {
 			},
 			expectedService: Service{
 				Service: kong.Service{
-					Host:           kong.String("foo.com"),
-					TLSVerifyDepth: kong.Int(10),
+					Host:           new("foo.com"),
+					TLSVerifyDepth: new(10),
 				},
 			},
 		},
@@ -276,7 +276,7 @@ func TestOverrideServicePath(t *testing.T) {
 			},
 			want: Service{
 				Service: kong.Service{
-					Path: kong.String("/foo"),
+					Path: new("/foo"),
 				},
 			},
 		},
@@ -294,7 +294,7 @@ func TestOverrideServicePath(t *testing.T) {
 			args: args{
 				service: Service{
 					Service: kong.Service{
-						Path: kong.String("/foo"),
+						Path: new("/foo"),
 					},
 				},
 				anns: map[string]string{
@@ -303,7 +303,7 @@ func TestOverrideServicePath(t *testing.T) {
 			},
 			want: Service{
 				Service: kong.Service{
-					Path: kong.String("/bar"),
+					Path: new("/bar"),
 				},
 			},
 		},
@@ -337,7 +337,7 @@ func TestOverrideConnectTimeout(t *testing.T) {
 			},
 			want: Service{
 				Service: kong.Service{
-					ConnectTimeout: kong.Int(3000),
+					ConnectTimeout: new(3000),
 				},
 			},
 		},
@@ -355,7 +355,7 @@ func TestOverrideConnectTimeout(t *testing.T) {
 			args: args{
 				service: Service{
 					Service: kong.Service{
-						ConnectTimeout: kong.Int(2000),
+						ConnectTimeout: new(2000),
 					},
 				},
 				anns: map[string]string{
@@ -364,7 +364,7 @@ func TestOverrideConnectTimeout(t *testing.T) {
 			},
 			want: Service{
 				Service: kong.Service{
-					ConnectTimeout: kong.Int(3000),
+					ConnectTimeout: new(3000),
 				},
 			},
 		},
@@ -398,7 +398,7 @@ func TestOverrideWriteTimeout(t *testing.T) {
 			},
 			want: Service{
 				Service: kong.Service{
-					WriteTimeout: kong.Int(3000),
+					WriteTimeout: new(3000),
 				},
 			},
 		},
@@ -416,7 +416,7 @@ func TestOverrideWriteTimeout(t *testing.T) {
 			args: args{
 				service: Service{
 					Service: kong.Service{
-						WriteTimeout: kong.Int(2000),
+						WriteTimeout: new(2000),
 					},
 				},
 				anns: map[string]string{
@@ -425,7 +425,7 @@ func TestOverrideWriteTimeout(t *testing.T) {
 			},
 			want: Service{
 				Service: kong.Service{
-					WriteTimeout: kong.Int(3000),
+					WriteTimeout: new(3000),
 				},
 			},
 		},
@@ -459,7 +459,7 @@ func TestOverrideReadTimeout(t *testing.T) {
 			},
 			want: Service{
 				Service: kong.Service{
-					ReadTimeout: kong.Int(3000),
+					ReadTimeout: new(3000),
 				},
 			},
 		},
@@ -477,7 +477,7 @@ func TestOverrideReadTimeout(t *testing.T) {
 			args: args{
 				service: Service{
 					Service: kong.Service{
-						ReadTimeout: kong.Int(2000),
+						ReadTimeout: new(2000),
 					},
 				},
 				anns: map[string]string{
@@ -486,7 +486,7 @@ func TestOverrideReadTimeout(t *testing.T) {
 			},
 			want: Service{
 				Service: kong.Service{
-					ReadTimeout: kong.Int(3000),
+					ReadTimeout: new(3000),
 				},
 			},
 		},
@@ -520,7 +520,7 @@ func TestOverrideRetries(t *testing.T) {
 			},
 			want: Service{
 				Service: kong.Service{
-					Retries: kong.Int(3000),
+					Retries: new(3000),
 				},
 			},
 		},
@@ -538,7 +538,7 @@ func TestOverrideRetries(t *testing.T) {
 			args: args{
 				service: Service{
 					Service: kong.Service{
-						Retries: kong.Int(2000),
+						Retries: new(2000),
 					},
 				},
 				anns: map[string]string{
@@ -547,7 +547,7 @@ func TestOverrideRetries(t *testing.T) {
 			},
 			want: Service{
 				Service: kong.Service{
-					Retries: kong.Int(3000),
+					Retries: new(3000),
 				},
 			},
 		},

@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -51,7 +50,7 @@ func TestGetFromParametersRef(t *testing.T) {
 				Group:     "gateway-operator.konghq.com",
 				Kind:      gwtypes.Kind("GatewayConfiguration"),
 				Name:      "gateway-config-1",
-				Namespace: lo.ToPtr(gwtypes.Namespace("default")),
+				Namespace: new(gwtypes.Namespace("default")),
 			},
 			existingGatewayConfigs: []client.Object{
 				&operatorv2beta1.GatewayConfiguration{
@@ -77,7 +76,7 @@ func TestGetFromParametersRef(t *testing.T) {
 				Group:     "another.group.com",
 				Kind:      gwtypes.Kind("GatewayConfiguration"),
 				Name:      "gateway-config-1",
-				Namespace: lo.ToPtr(gwtypes.Namespace("default")),
+				Namespace: new(gwtypes.Namespace("default")),
 			},
 			expectedGatewayConfig: nil,
 			expectedError: &k8serrors.StatusError{
@@ -104,7 +103,7 @@ func TestGetFromParametersRef(t *testing.T) {
 				Group:     "gateway-operator.konghq.com",
 				Kind:      gwtypes.Kind("GatewayConfiguration"),
 				Name:      "non-existing-gateway-config",
-				Namespace: lo.ToPtr(gwtypes.Namespace("default")),
+				Namespace: new(gwtypes.Namespace("default")),
 			},
 			existingGatewayConfigs: []client.Object{
 				&operatorv2beta1.GatewayConfiguration{
@@ -178,7 +177,7 @@ func TestIsGatewayHybrid(t *testing.T) {
 		{
 			name: "konnect with source Origin and auth ref",
 			konnect: &operatorv2beta1.KonnectOptions{
-				Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+				Source: new(commonv1alpha1.EntitySourceOrigin),
 				APIAuthConfigurationRef: &konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
 					Name: "test-auth",
 				},
@@ -188,14 +187,14 @@ func TestIsGatewayHybrid(t *testing.T) {
 		{
 			name: "konnect with source Origin but no auth ref",
 			konnect: &operatorv2beta1.KonnectOptions{
-				Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+				Source: new(commonv1alpha1.EntitySourceOrigin),
 			},
 			expectHybrid: false,
 		},
 		{
 			name: "konnect with source Mirror and auth ref",
 			konnect: &operatorv2beta1.KonnectOptions{
-				Source: lo.ToPtr(commonv1alpha1.EntitySourceMirror),
+				Source: new(commonv1alpha1.EntitySourceMirror),
 				APIAuthConfigurationRef: &konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
 					Name: "test-auth",
 				},

@@ -3,7 +3,6 @@ package gatewayclass
 import (
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -48,7 +47,7 @@ func TestGetAcceptedCondition(t *testing.T) {
 					ParametersRef: &gatewayv1.ParametersReference{
 						Group:     "invalid.group",
 						Kind:      "InvalidKind",
-						Namespace: lo.ToPtr(gatewayv1.Namespace("default")),
+						Namespace: new(gatewayv1.Namespace("default")),
 						Name:      "invalid",
 					},
 				},
@@ -80,7 +79,7 @@ func TestGetAcceptedCondition(t *testing.T) {
 						Group:     gatewayv1.Group(operatorv1beta1.SchemeGroupVersion.Group),
 						Kind:      "GatewayConfiguration",
 						Name:      "nonexistent",
-						Namespace: lo.ToPtr(gatewayv1.Namespace("default")),
+						Namespace: new(gatewayv1.Namespace("default")),
 					},
 				},
 			},
@@ -96,7 +95,7 @@ func TestGetAcceptedCondition(t *testing.T) {
 						Group:     gatewayv1.Group(operatorv1beta1.SchemeGroupVersion.Group),
 						Kind:      "GatewayConfiguration",
 						Name:      "valid-config",
-						Namespace: lo.ToPtr(gatewayv1.Namespace("default")),
+						Namespace: new(gatewayv1.Namespace("default")),
 					},
 				},
 			},

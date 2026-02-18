@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -100,7 +99,7 @@ func TestHandleSecretRef(t *testing.T) {
 				Spec: configurationv1alpha1.KongCertificateSpec{
 					SecretRef: &commonv1alpha1.NamespacedRef{
 						Name:      "test-secret",
-						Namespace: lo.ToPtr("secret-ns"),
+						Namespace: new("secret-ns"),
 					},
 				},
 			},
@@ -130,7 +129,7 @@ func TestHandleSecretRef(t *testing.T) {
 							{
 								Group: "core",
 								Kind:  "Secret",
-								Name:  lo.ToPtr(configurationv1alpha1.ObjectName("test-secret")),
+								Name:  new(configurationv1alpha1.ObjectName("test-secret")),
 							},
 						},
 					},
@@ -156,7 +155,7 @@ func TestHandleSecretRef(t *testing.T) {
 				Spec: configurationv1alpha1.KongCertificateSpec{
 					SecretRef: &commonv1alpha1.NamespacedRef{
 						Name:      "test-secret",
-						Namespace: lo.ToPtr("secret-ns"),
+						Namespace: new("secret-ns"),
 					},
 				},
 			},
@@ -189,7 +188,7 @@ func TestHandleSecretRef(t *testing.T) {
 				Spec: configurationv1alpha1.KongCertificateSpec{
 					SecretRef: &commonv1alpha1.NamespacedRef{
 						Name:      "test-secret",
-						Namespace: lo.ToPtr("secret-ns"),
+						Namespace: new("secret-ns"),
 					},
 				},
 			},
@@ -219,7 +218,7 @@ func TestHandleSecretRef(t *testing.T) {
 							{
 								Group: "core",
 								Kind:  "Secret",
-								Name:  lo.ToPtr(configurationv1alpha1.ObjectName("test-secret")),
+								Name:  new(configurationv1alpha1.ObjectName("test-secret")),
 							},
 						},
 					},
@@ -245,11 +244,11 @@ func TestHandleSecretRef(t *testing.T) {
 				Spec: configurationv1alpha1.KongCertificateSpec{
 					SecretRef: &commonv1alpha1.NamespacedRef{
 						Name:      "test-secret",
-						Namespace: lo.ToPtr("secret-ns"),
+						Namespace: new("secret-ns"),
 					},
 					SecretRefAlt: &commonv1alpha1.NamespacedRef{
 						Name:      "test-secret-alt",
-						Namespace: lo.ToPtr("secret-ns"),
+						Namespace: new("secret-ns"),
 					},
 				},
 			},
@@ -311,11 +310,11 @@ func TestHandleSecretRef(t *testing.T) {
 				Spec: configurationv1alpha1.KongCertificateSpec{
 					SecretRef: &commonv1alpha1.NamespacedRef{
 						Name:      "test-secret",
-						Namespace: lo.ToPtr("secret-ns"),
+						Namespace: new("secret-ns"),
 					},
 					SecretRefAlt: &commonv1alpha1.NamespacedRef{
 						Name:      "test-secret-alt",
-						Namespace: lo.ToPtr("secret-ns"),
+						Namespace: new("secret-ns"),
 					},
 				},
 			},
@@ -351,7 +350,7 @@ func TestHandleSecretRef(t *testing.T) {
 							{
 								Group: "core",
 								Kind:  "Secret",
-								Name:  lo.ToPtr(configurationv1alpha1.ObjectName("test-secret")),
+								Name:  new(configurationv1alpha1.ObjectName("test-secret")),
 							},
 						},
 					},
@@ -407,7 +406,7 @@ func TestHandleSecretRef(t *testing.T) {
 					Spec: configurationv1alpha1.KongCertificateSpec{
 						SecretRef: &commonv1alpha1.NamespacedRef{
 							Name:      "test-secret",
-							Namespace: lo.ToPtr("secret-ns"),
+							Namespace: new("secret-ns"),
 						},
 					},
 				}

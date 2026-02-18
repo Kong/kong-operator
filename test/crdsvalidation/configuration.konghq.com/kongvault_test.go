@@ -48,7 +48,7 @@ func TestKongVault(t *testing.T) {
 						Prefix: "aws-vault",
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.backend: Invalid value"),
+				ExpectedErrorMessage: new("spec.backend: Invalid value"),
 			},
 			{
 				Name: "prefix must be non-empty",
@@ -58,7 +58,7 @@ func TestKongVault(t *testing.T) {
 						Backend: "aws",
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.prefix: Invalid value"),
+				ExpectedErrorMessage: new("spec.prefix: Invalid value"),
 			},
 			{
 				Name: "prefix is immutatble",
@@ -72,7 +72,7 @@ func TestKongVault(t *testing.T) {
 				Update: func(v *configurationv1alpha1.KongVault) {
 					v.Spec.Prefix += "-1"
 				},
-				ExpectedUpdateErrorMessage: lo.ToPtr("The spec.prefix field is immutable"),
+				ExpectedUpdateErrorMessage: new("The spec.prefix field is immutable"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -125,7 +125,7 @@ func TestKongVault(t *testing.T) {
 						}(),
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.tags: Too many: 21: must have at most 20 items"),
+				ExpectedErrorMessage: new("spec.tags: Too many: 21: must have at most 20 items"),
 			},
 			{
 				Name: "tags entries must not be longer than 128 characters",
@@ -145,7 +145,7 @@ func TestKongVault(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("tags entries must not be longer than 128 characters"),
+				ExpectedErrorMessage: new("tags entries must not be longer than 128 characters"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)

@@ -9,10 +9,6 @@ import (
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 )
 
-func int64Ptr(i int64) *int64 {
-	return &i
-}
-
 func TestConsumer_SanitizedCopy(t *testing.T) {
 	for _, tt := range []struct {
 		name string
@@ -23,100 +19,100 @@ func TestConsumer_SanitizedCopy(t *testing.T) {
 			name: "sanitizes all credentials and copies all other fields",
 			in: Consumer{
 				Consumer: kong.Consumer{
-					ID:        kong.String("1"),
-					CustomID:  kong.String("2"),
-					Username:  kong.String("3"),
-					CreatedAt: int64Ptr(4),
-					Tags:      []*string{kong.String("5.1"), kong.String("5.2")},
+					ID:        new("1"),
+					CustomID:  new("2"),
+					Username:  new("3"),
+					CreatedAt: new(int64(4)),
+					Tags:      []*string{new("5.1"), new("5.2")},
 				},
 				ConsumerGroups: []kong.ConsumerGroup{
-					{ID: kong.String("group-1")},
-					{ID: kong.String("group-2")},
+					{ID: new("group-1")},
+					{ID: new("group-2")},
 				},
-				Plugins: []kong.Plugin{{ID: kong.String("1")}},
+				Plugins: []kong.Plugin{{ID: new("1")}},
 				KeyAuths: []*KeyAuth{
 					{
-						KeyAuth: kong.KeyAuth{ID: kong.String("1"), Key: kong.String("secret")},
+						KeyAuth: kong.KeyAuth{ID: new("1"), Key: new("secret")},
 					},
 				},
 				HMACAuths: []*HMACAuth{
 					{
-						HMACAuth: kong.HMACAuth{ID: kong.String("1"), Secret: kong.String("secret")},
+						HMACAuth: kong.HMACAuth{ID: new("1"), Secret: new("secret")},
 					},
 				},
 				JWTAuths: []*JWTAuth{
 					{
-						JWTAuth: kong.JWTAuth{ID: kong.String("1"), Secret: kong.String("secret")},
+						JWTAuth: kong.JWTAuth{ID: new("1"), Secret: new("secret")},
 					},
 				},
 				BasicAuths: []*BasicAuth{
 					{
-						BasicAuth: kong.BasicAuth{ID: kong.String("1"), Password: kong.String("secret")},
+						BasicAuth: kong.BasicAuth{ID: new("1"), Password: new("secret")},
 					},
 				},
 				ACLGroups: []*ACLGroup{
 					{
-						ACLGroup: kong.ACLGroup{ID: kong.String("1")},
+						ACLGroup: kong.ACLGroup{ID: new("1")},
 					},
 				},
 				Oauth2Creds: []*Oauth2Credential{
 					{
-						Oauth2Credential: kong.Oauth2Credential{ID: kong.String("1"), ClientSecret: kong.String("secret")},
+						Oauth2Credential: kong.Oauth2Credential{ID: new("1"), ClientSecret: new("secret")},
 					},
 				},
 				MTLSAuths: []*MTLSAuth{
 					{
-						MTLSAuth: kong.MTLSAuth{ID: kong.String("1"), SubjectName: kong.String("foo@example.com")},
+						MTLSAuth: kong.MTLSAuth{ID: new("1"), SubjectName: new("foo@example.com")},
 					},
 				},
 				K8sKongConsumer: configurationv1.KongConsumer{Username: "foo"},
 			},
 			want: Consumer{
 				Consumer: kong.Consumer{
-					ID:        kong.String("1"),
-					CustomID:  kong.String("2"),
-					Username:  kong.String("3"),
-					CreatedAt: int64Ptr(4),
-					Tags:      []*string{kong.String("5.1"), kong.String("5.2")},
+					ID:        new("1"),
+					CustomID:  new("2"),
+					Username:  new("3"),
+					CreatedAt: new(int64(4)),
+					Tags:      []*string{new("5.1"), new("5.2")},
 				},
 				ConsumerGroups: []kong.ConsumerGroup{
-					{ID: kong.String("group-1")},
-					{ID: kong.String("group-2")},
+					{ID: new("group-1")},
+					{ID: new("group-2")},
 				},
-				Plugins: []kong.Plugin{{ID: kong.String("1")}},
+				Plugins: []kong.Plugin{{ID: new("1")}},
 				KeyAuths: []*KeyAuth{
 					{
-						KeyAuth: kong.KeyAuth{ID: kong.String("1"), Key: kong.String("{vault://52fdfc07-2182-454f-963f-5f0f9a621d72}")},
+						KeyAuth: kong.KeyAuth{ID: new("1"), Key: new("{vault://52fdfc07-2182-454f-963f-5f0f9a621d72}")},
 					},
 				},
 				HMACAuths: []*HMACAuth{
 					{
-						HMACAuth: kong.HMACAuth{ID: kong.String("1"), Secret: redactedString},
+						HMACAuth: kong.HMACAuth{ID: new("1"), Secret: redactedString},
 					},
 				},
 				JWTAuths: []*JWTAuth{
 					{
-						JWTAuth: kong.JWTAuth{ID: kong.String("1"), Secret: redactedString},
+						JWTAuth: kong.JWTAuth{ID: new("1"), Secret: redactedString},
 					},
 				},
 				BasicAuths: []*BasicAuth{
 					{
-						BasicAuth: kong.BasicAuth{ID: kong.String("1"), Password: redactedString},
+						BasicAuth: kong.BasicAuth{ID: new("1"), Password: redactedString},
 					},
 				},
 				ACLGroups: []*ACLGroup{
 					{
-						ACLGroup: kong.ACLGroup{ID: kong.String("1")},
+						ACLGroup: kong.ACLGroup{ID: new("1")},
 					},
 				},
 				Oauth2Creds: []*Oauth2Credential{
 					{
-						Oauth2Credential: kong.Oauth2Credential{ID: kong.String("1"), ClientSecret: redactedString},
+						Oauth2Credential: kong.Oauth2Credential{ID: new("1"), ClientSecret: redactedString},
 					},
 				},
 				MTLSAuths: []*MTLSAuth{
 					{
-						MTLSAuth: kong.MTLSAuth{ID: kong.String("1"), SubjectName: kong.String("foo@example.com")},
+						MTLSAuth: kong.MTLSAuth{ID: new("1"), SubjectName: new("foo@example.com")},
 					},
 				},
 				K8sKongConsumer: configurationv1.KongConsumer{Username: "foo"},
@@ -166,7 +162,7 @@ func TestConsumer_SetCredential(t *testing.T) {
 				KeyAuths: []*KeyAuth{
 					{
 						KeyAuth: kong.KeyAuth{
-							Key:  kong.String("foo"),
+							Key:  new("foo"),
 							Tags: []*string{},
 						},
 					},
@@ -205,7 +201,7 @@ func TestConsumer_SetCredential(t *testing.T) {
 				KeyAuths: []*KeyAuth{
 					{
 						KeyAuth: kong.KeyAuth{
-							Key:  kong.String("foo"),
+							Key:  new("foo"),
 							Tags: []*string{},
 						},
 					},
@@ -227,8 +223,8 @@ func TestConsumer_SetCredential(t *testing.T) {
 				BasicAuths: []*BasicAuth{
 					{
 						BasicAuth: kong.BasicAuth{
-							Username: kong.String("foo"),
-							Password: kong.String("bar"),
+							Username: new("foo"),
+							Password: new("bar"),
 							Tags:     []*string{},
 						},
 					},
@@ -270,8 +266,8 @@ func TestConsumer_SetCredential(t *testing.T) {
 				BasicAuths: []*BasicAuth{
 					{
 						BasicAuth: kong.BasicAuth{
-							Username: kong.String("foo"),
-							Password: kong.String("bar"),
+							Username: new("foo"),
+							Password: new("bar"),
 							Tags:     []*string{},
 						},
 					},
@@ -293,8 +289,8 @@ func TestConsumer_SetCredential(t *testing.T) {
 				HMACAuths: []*HMACAuth{
 					{
 						HMACAuth: kong.HMACAuth{
-							Username: kong.String("foo"),
-							Secret:   kong.String("bar"),
+							Username: new("foo"),
+							Secret:   new("bar"),
 							Tags:     []*string{},
 						},
 					},
@@ -336,8 +332,8 @@ func TestConsumer_SetCredential(t *testing.T) {
 				HMACAuths: []*HMACAuth{
 					{
 						HMACAuth: kong.HMACAuth{
-							Username: kong.String("foo"),
-							Secret:   kong.String("bar"),
+							Username: new("foo"),
+							Secret:   new("bar"),
 							Tags:     []*string{},
 						},
 					},
@@ -361,9 +357,9 @@ func TestConsumer_SetCredential(t *testing.T) {
 				Oauth2Creds: []*Oauth2Credential{
 					{
 						Oauth2Credential: kong.Oauth2Credential{
-							Name:         kong.String("foo"),
-							ClientID:     kong.String("bar"),
-							ClientSecret: kong.String("baz"),
+							Name:         new("foo"),
+							ClientID:     new("bar"),
+							ClientSecret: new("baz"),
 							RedirectURIs: kong.StringSlice("example.com"),
 							Tags:         []*string{},
 						},
@@ -421,11 +417,11 @@ func TestConsumer_SetCredential(t *testing.T) {
 				JWTAuths: []*JWTAuth{
 					{
 						JWTAuth: kong.JWTAuth{
-							Key:          kong.String("foo"),
-							RSAPublicKey: kong.String("bar"),
-							Secret:       kong.String("baz"),
+							Key:          new("foo"),
+							RSAPublicKey: new("bar"),
+							Secret:       new("baz"),
 							// set by default
-							Algorithm: kong.String("HS256"),
+							Algorithm: new("HS256"),
 							Tags:      []*string{},
 						},
 					},
@@ -468,11 +464,11 @@ func TestConsumer_SetCredential(t *testing.T) {
 				JWTAuths: []*JWTAuth{
 					{
 						JWTAuth: kong.JWTAuth{
-							Key:          kong.String("foo"),
-							RSAPublicKey: kong.String("bar"),
-							Secret:       kong.String("baz"),
+							Key:          new("foo"),
+							RSAPublicKey: new("bar"),
+							Secret:       new("baz"),
 							// set by default
-							Algorithm: kong.String("HS256"),
+							Algorithm: new("HS256"),
 							Tags:      []*string{},
 						},
 					},
@@ -491,7 +487,7 @@ func TestConsumer_SetCredential(t *testing.T) {
 				ACLGroups: []*ACLGroup{
 					{
 						ACLGroup: kong.ACLGroup{
-							Group: kong.String("group-foo"),
+							Group: new("group-foo"),
 							Tags:  []*string{},
 						},
 					},
@@ -544,7 +540,7 @@ func TestConsumer_SetCredential(t *testing.T) {
 				MTLSAuths: []*MTLSAuth{
 					{
 						MTLSAuth: kong.MTLSAuth{
-							SubjectName: kong.String("foo@example.com"),
+							SubjectName: new("foo@example.com"),
 							Tags:        []*string{},
 						},
 					},

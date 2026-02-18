@@ -3,7 +3,6 @@ package configuration_test
 import (
 	"testing"
 
-	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -65,7 +64,7 @@ func TestKongReferenceGrant(t *testing.T) {
 							{
 								Group: "core",
 								Kind:  "Secret",
-								Name:  lo.ToPtr(configurationv1alpha1.ObjectName("my-secret")),
+								Name:  new(configurationv1alpha1.ObjectName("my-secret")),
 							},
 						},
 					},
@@ -115,7 +114,7 @@ func TestKongReferenceGrant(t *testing.T) {
 							{
 								Group: "konnect.konghq.com",
 								Kind:  "KonnectGatewayControlPlane",
-								Name:  lo.ToPtr(configurationv1alpha1.ObjectName("my-cp")),
+								Name:  new(configurationv1alpha1.ObjectName("my-cp")),
 							},
 						},
 					},
@@ -165,7 +164,7 @@ func TestKongReferenceGrant(t *testing.T) {
 							{
 								Group: "configuration.konghq.com",
 								Kind:  "KongService",
-								Name:  lo.ToPtr(configurationv1alpha1.ObjectName("my-service")),
+								Name:  new(configurationv1alpha1.ObjectName("my-service")),
 							},
 						},
 					},
@@ -224,7 +223,7 @@ func TestKongReferenceGrant(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("namespace must be empty for KongVault and non-empty for other kinds"),
+				ExpectedErrorMessage: new("namespace must be empty for KongVault and non-empty for other kinds"),
 			},
 		}.RunWithConfig(t, cfg, scheme)
 	})
@@ -332,7 +331,7 @@ func kongReferenceGrantCase(
 	}
 
 	toWithName := to
-	toWithName.Name = lo.ToPtr(configurationv1alpha1.ObjectName("my-object"))
+	toWithName.Name = new(configurationv1alpha1.ObjectName("my-object"))
 
 	switch typ {
 	case withoutName:

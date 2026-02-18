@@ -19,7 +19,6 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -255,7 +254,7 @@ func TestTLSRoutePassthroughReferenceGrant(t *testing.T) {
 					{
 						BackendObjectReference: gatewayapi.BackendObjectReference{
 							Name: gatewayapi.ObjectName(service2.Name),
-							Port: lo.ToPtr(gatewayapi.PortNumber(service2Port)),
+							Port: new(gatewayapi.PortNumber(service2Port)),
 						},
 					},
 				},

@@ -3,7 +3,6 @@ package configuration_test
 import (
 	"testing"
 
-	"github.com/samber/lo"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -32,7 +31,7 @@ func TestKongCustomEntity(t *testing.T) {
 							),
 						},
 						ParentRef: &configurationv1alpha1.ObjectReference{
-							Kind: lo.ToPtr("KongPlugin"),
+							Kind: new("KongPlugin"),
 						},
 					},
 				},
@@ -43,7 +42,7 @@ func TestKongCustomEntity(t *testing.T) {
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec:       configurationv1alpha1.KongCustomEntitySpec{},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.fields: Required value"),
+				ExpectedErrorMessage: new("spec.fields: Required value"),
 			},
 			{
 				Name: "spec.type cannot be known Kong entity type - services",
@@ -58,7 +57,7 @@ func TestKongCustomEntity(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("The type field cannot be one of the known Kong entity types"),
+				ExpectedErrorMessage: new("The type field cannot be one of the known Kong entity types"),
 			},
 			{
 				Name: "spec.type cannot be known Kong entity type - routes",
@@ -73,7 +72,7 @@ func TestKongCustomEntity(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("The type field cannot be one of the known Kong entity types"),
+				ExpectedErrorMessage: new("The type field cannot be one of the known Kong entity types"),
 			},
 			{
 				Name: "spec.type cannot be known Kong entity type - upstreams",
@@ -88,7 +87,7 @@ func TestKongCustomEntity(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("The type field cannot be one of the known Kong entity types"),
+				ExpectedErrorMessage: new("The type field cannot be one of the known Kong entity types"),
 			},
 			{
 				Name: "spec.type cannot be known Kong entity type - targets",
@@ -103,7 +102,7 @@ func TestKongCustomEntity(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("The type field cannot be one of the known Kong entity types"),
+				ExpectedErrorMessage: new("The type field cannot be one of the known Kong entity types"),
 			},
 			{
 				Name: "spec.type cannot be known Kong entity type - plugins",
@@ -118,7 +117,7 @@ func TestKongCustomEntity(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("The type field cannot be one of the known Kong entity types"),
+				ExpectedErrorMessage: new("The type field cannot be one of the known Kong entity types"),
 			},
 			{
 				Name: "spec.type cannot be known Kong entity type - consumers",
@@ -133,7 +132,7 @@ func TestKongCustomEntity(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("The type field cannot be one of the known Kong entity types"),
+				ExpectedErrorMessage: new("The type field cannot be one of the known Kong entity types"),
 			},
 			{
 				Name: "spec.type cannot be known Kong entity type - consumer_groups",
@@ -148,7 +147,7 @@ func TestKongCustomEntity(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("The type field cannot be one of the known Kong entity types"),
+				ExpectedErrorMessage: new("The type field cannot be one of the known Kong entity types"),
 			},
 			{
 				Name: "spec.type can be set",
@@ -180,7 +179,7 @@ func TestKongCustomEntity(t *testing.T) {
 				Update: func(kce *configurationv1alpha1.KongCustomEntity) {
 					kce.Spec.EntityType = "new-dummy"
 				},
-				ExpectedUpdateErrorMessage: lo.ToPtr("The spec.type field is immutable"),
+				ExpectedUpdateErrorMessage: new("The spec.type field is immutable"),
 			},
 			{
 				Name: "spec.parentRef.kind KongPlugin is supported",
@@ -193,7 +192,7 @@ func TestKongCustomEntity(t *testing.T) {
 							),
 						},
 						ParentRef: &configurationv1alpha1.ObjectReference{
-							Kind: lo.ToPtr("KongPlugin"),
+							Kind: new("KongPlugin"),
 						},
 					},
 				},
@@ -209,7 +208,7 @@ func TestKongCustomEntity(t *testing.T) {
 							),
 						},
 						ParentRef: &configurationv1alpha1.ObjectReference{
-							Kind: lo.ToPtr("KongClusterPlugin"),
+							Kind: new("KongClusterPlugin"),
 						},
 					},
 				},
@@ -225,11 +224,11 @@ func TestKongCustomEntity(t *testing.T) {
 							),
 						},
 						ParentRef: &configurationv1alpha1.ObjectReference{
-							Kind: lo.ToPtr("CustomKind"),
+							Kind: new("CustomKind"),
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.parentRef.kind: Unsupported value: \"CustomKind\": supported values: \"KongPlugin\", \"KongClusterPlugin\""),
+				ExpectedErrorMessage: new("spec.parentRef.kind: Unsupported value: \"CustomKind\": supported values: \"KongPlugin\", \"KongClusterPlugin\""),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)

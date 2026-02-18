@@ -61,20 +61,20 @@ func TestUpdateStrategyInMemory_PropagatesResourcesErrors(t *testing.T) {
 				Services: []file.FService{
 					{
 						Service: kong.Service{
-							Name:     kong.String("test-service"),
-							Host:     kong.String("konghq.com"),
-							Port:     kong.Int(80),
-							Protocol: kong.String("grpc"),
+							Name:     new("test-service"),
+							Host:     new("konghq.com"),
+							Port:     new(80),
+							Protocol: new("grpc"),
 							// Paths are not supported for gRPC services. This will trigger an error.
-							Path: kong.String("/test"),
+							Path: new("/test"),
 							Tags: []*string{
 								// Tags are used to identify the resource in the flattened errors response.
-								kong.String("k8s-name:test-service"),
-								kong.String("k8s-namespace:default"),
-								kong.String("k8s-kind:Service"),
-								kong.String("k8s-uid:a3b8afcc-9f19-42e4-aa8f-5866168c2ad3"),
-								kong.String("k8s-group:"),
-								kong.String("k8s-version:v1"),
+								new("k8s-name:test-service"),
+								new("k8s-namespace:default"),
+								new("k8s-kind:Service"),
+								new("k8s-uid:a3b8afcc-9f19-42e4-aa8f-5866168c2ad3"),
+								new("k8s-group:"),
+								new("k8s-version:v1"),
 							},
 						},
 					},

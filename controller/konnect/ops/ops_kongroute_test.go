@@ -8,7 +8,6 @@ import (
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -104,7 +103,7 @@ func TestCreateKongRoute(t *testing.T) {
 				&sdkkonnectops.UpsertRouteResponse{
 					Route: &sdkkonnectcomp.Route{
 						RouteJSON: &sdkkonnectcomp.RouteJSON{
-							ID: lo.ToPtr("abcd-1234"),
+							ID: new("abcd-1234"),
 						},
 					},
 				},
@@ -168,7 +167,7 @@ func TestAdoptRoute(t *testing.T) {
 							Type: sdkkonnectcomp.RouteTypeRouteJSON,
 							RouteJSON: &sdkkonnectcomp.RouteJSON{
 								Service: &sdkkonnectcomp.RouteJSONService{
-									ID: lo.ToPtr("12345"),
+									ID: new("12345"),
 								},
 								Paths: []string{"/test"},
 							},
@@ -322,7 +321,7 @@ func TestAdoptRoute(t *testing.T) {
 							Type: sdkkonnectcomp.RouteTypeRouteJSON,
 							RouteJSON: &sdkkonnectcomp.RouteJSON{
 								Service: &sdkkonnectcomp.RouteJSONService{
-									ID: lo.ToPtr("123456"),
+									ID: new("123456"),
 								},
 								Paths: []string{"/test"},
 							},
@@ -378,7 +377,7 @@ func TestAdoptRoute(t *testing.T) {
 								Headers: map[string][]string{
 									"h1": {"v1"},
 								},
-								HTTPSRedirectStatusCode: lo.ToPtr(sdkkonnectcomp.HTTPSRedirectStatusCodeFourHundredAndTwentySix),
+								HTTPSRedirectStatusCode: new(sdkkonnectcomp.HTTPSRedirectStatusCodeFourHundredAndTwentySix),
 							},
 						},
 					}, nil,
@@ -436,7 +435,7 @@ func TestAdoptRoute(t *testing.T) {
 									"h1": {"v1"},
 								},
 								Methods:                 []string{"GET"},
-								HTTPSRedirectStatusCode: lo.ToPtr(sdkkonnectcomp.HTTPSRedirectStatusCodeFourHundredAndTwentySix),
+								HTTPSRedirectStatusCode: new(sdkkonnectcomp.HTTPSRedirectStatusCodeFourHundredAndTwentySix),
 							},
 						},
 					}, nil,

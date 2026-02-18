@@ -62,8 +62,8 @@ func TestConfigSynchronizer_UpdatesKongConfigAccordingly(t *testing.T) {
 		Services: []file.FService{
 			{
 				Service: kong.Service{
-					Name: kong.String("service1"),
-					Host: kong.String("example.com"),
+					Name: new("service1"),
+					Host: new("example.com"),
 				},
 			},
 		},
@@ -73,8 +73,8 @@ func TestConfigSynchronizer_UpdatesKongConfigAccordingly(t *testing.T) {
 			Services: []kongstate.Service{
 				{
 					Service: kong.Service{
-						Name: kong.String("service1"),
-						Host: kong.String("example.com"),
+						Name: new("service1"),
+						Host: new("example.com"),
 					},
 				},
 			},
@@ -103,8 +103,8 @@ func TestConfigSynchronizer_UpdatesKongConfigAccordingly(t *testing.T) {
 
 	// Modify the Kong state and expected content and update it again.
 	state := kongState()
-	state.Services[0].Host = kong.String("example.org")
-	expectedContent.Services[0].Host = kong.String("example.org")
+	state.Services[0].Host = new("example.org")
+	expectedContent.Services[0].Host = new("example.org")
 	s.UpdateKongState(state, false)
 
 	// The latest updated content should always be the content in the previous update
@@ -156,8 +156,8 @@ func TestConfigSynchronizer_ConfigIsSanitizedWhenConfiguredSo(t *testing.T) {
 		Certificates: []kongstate.Certificate{
 			{
 				Certificate: kong.Certificate{
-					ID:  kong.String("new_cert"),
-					Key: kong.String(`private-key-string`), // This should be redacted.
+					ID:  new("new_cert"),
+					Key: new(`private-key-string`), // This should be redacted.
 				},
 			},
 		},
@@ -230,8 +230,8 @@ func TestConfigSynchronizer_StatusNotificationIsSent(t *testing.T) {
 					Services: []kongstate.Service{
 						{
 							Service: kong.Service{
-								Name: kong.String("service1"),
-								Host: kong.String("example.com"),
+								Name: new("service1"),
+								Host: new("example.com"),
 							},
 						},
 					},
@@ -308,8 +308,8 @@ func TestConfigSynchronizer_EnableReverseSync(t *testing.T) {
 				Services: []kongstate.Service{
 					{
 						Service: kong.Service{
-							Name: kong.String("service1"),
-							Host: kong.String("example.com"),
+							Name: new("service1"),
+							Host: new("example.com"),
 						},
 					},
 				},

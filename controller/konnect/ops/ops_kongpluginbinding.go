@@ -129,7 +129,7 @@ func getPluginForUID(
 		// Other fields like name might have changed in the meantime but that's OK.
 		// Those will be enforced via subsequent updates.
 		ControlPlaneID: cpID,
-		Tags:           lo.ToPtr(UIDLabelForObject(pluginBinding)),
+		Tags:           new(UIDLabelForObject(pluginBinding)),
 	}
 	resp, err := sdk.ListPlugin(ctx, reqList)
 	if err != nil {
@@ -392,11 +392,11 @@ func kongPluginWithTargetsToKongPluginInput(binding *configurationv1alpha1.KongP
 	pluginInput := &sdkkonnectcomp.Plugin{
 		Name:    plugin.PluginName,
 		Config:  pluginConfig,
-		Enabled: lo.ToPtr(!plugin.Disabled),
+		Enabled: new(!plugin.Disabled),
 		Tags:    tags,
 	}
 	if plugin.InstanceName != "" {
-		pluginInput.InstanceName = lo.ToPtr(plugin.InstanceName)
+		pluginInput.InstanceName = new(plugin.InstanceName)
 	}
 	if len(plugin.Protocols) > 0 {
 		pluginInput.Protocols = lo.Map(
@@ -419,19 +419,19 @@ func kongPluginWithTargetsToKongPluginInput(binding *configurationv1alpha1.KongP
 		switch t := t.(type) {
 		case *configurationv1alpha1.KongService:
 			pluginInput.Service = &sdkkonnectcomp.PluginService{
-				ID: lo.ToPtr(id),
+				ID: new(id),
 			}
 		case *configurationv1alpha1.KongRoute:
 			pluginInput.Route = &sdkkonnectcomp.PluginRoute{
-				ID: lo.ToPtr(id),
+				ID: new(id),
 			}
 		case *configurationv1.KongConsumer:
 			pluginInput.Consumer = &sdkkonnectcomp.PluginConsumer{
-				ID: lo.ToPtr(id),
+				ID: new(id),
 			}
 		case *configurationv1beta1.KongConsumerGroup:
 			pluginInput.ConsumerGroup = &sdkkonnectcomp.PluginConsumerGroup{
-				ID: lo.ToPtr(id),
+				ID: new(id),
 			}
 		default:
 			return nil, fmt.Errorf("unsupported target type %T", t)

@@ -72,7 +72,7 @@ func TestKongCertificate(t *testing.T) {
 			).
 			Return(&sdkkonnectops.CreateCertificateResponse{
 				Certificate: &sdkkonnectcomp.Certificate{
-					ID: lo.ToPtr("cert-12345"),
+					ID: new("cert-12345"),
 				},
 			}, nil)
 
@@ -163,7 +163,7 @@ func TestKongCertificate(t *testing.T) {
 					Object: &sdkkonnectops.ListCertificateResponseBody{
 						Data: []sdkkonnectcomp.Certificate{
 							{
-								ID: lo.ToPtr(certID),
+								ID: new(certID),
 							},
 						},
 					},
@@ -219,7 +219,7 @@ func TestKongCertificate(t *testing.T) {
 			Return(
 				&sdkkonnectops.CreateCertificateResponse{
 					Certificate: &sdkkonnectcomp.Certificate{
-						ID: lo.ToPtr(id),
+						ID: new(id),
 					},
 				},
 				nil,
@@ -265,7 +265,7 @@ func TestKongCertificate(t *testing.T) {
 			Certificate: &sdkkonnectcomp.Certificate{
 				Cert: "test-cert",
 				Key:  "test-key",
-				ID:   lo.ToPtr(certID),
+				ID:   new(certID),
 			},
 		}, nil)
 		sdk.CertificatesSDK.EXPECT().UpsertCertificate(
@@ -335,7 +335,7 @@ func TestKongCertificate(t *testing.T) {
 				},
 				SecretRef: &commonv1alpha1.NamespacedRef{
 					Name:      secret.Name,
-					Namespace: lo.ToPtr(secretNS.Name),
+					Namespace: new(secretNS.Name),
 				},
 			},
 		}
@@ -366,7 +366,7 @@ func TestKongCertificate(t *testing.T) {
 			deploy.KongReferenceGrantTos(configurationv1alpha1.ReferenceGrantTo{
 				Group: "core",
 				Kind:  "Secret",
-				Name:  lo.ToPtr(configurationv1alpha1.ObjectName(secret.Name)),
+				Name:  new(configurationv1alpha1.ObjectName(secret.Name)),
 			}),
 		)
 
@@ -390,7 +390,7 @@ func TestKongCertificate(t *testing.T) {
 			).
 			Return(&sdkkonnectops.CreateCertificateResponse{
 				Certificate: &sdkkonnectcomp.Certificate{
-					ID: lo.ToPtr(certID),
+					ID: new(certID),
 				},
 			}, nil)
 
@@ -487,7 +487,7 @@ func TestKongCertificate(t *testing.T) {
 			).
 			Return(&sdkkonnectops.CreateCertificateResponse{
 				Certificate: &sdkkonnectcomp.Certificate{
-					ID: lo.ToPtr(certID),
+					ID: new(certID),
 				},
 			}, nil)
 
@@ -508,11 +508,11 @@ func TestKongCertificate(t *testing.T) {
 				},
 				SecretRef: &commonv1alpha1.NamespacedRef{
 					Name:      secret.Name,
-					Namespace: lo.ToPtr(secretNS.Name),
+					Namespace: new(secretNS.Name),
 				},
 				SecretRefAlt: &commonv1alpha1.NamespacedRef{
 					Name:      secretAlt.Name,
-					Namespace: lo.ToPtr(secretNS.Name),
+					Namespace: new(secretNS.Name),
 				},
 			},
 		}

@@ -3,7 +3,6 @@ package fallback_test
 import (
 	"testing"
 
-	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -57,7 +56,7 @@ func TestResolveDependencies_Ingress(t *testing.T) {
 					Namespace: "test-namespace",
 				},
 				Spec: netv1.IngressSpec{
-					IngressClassName: lo.ToPtr("1"),
+					IngressClassName: new("1"),
 				},
 			},
 			cache: cacheStoresFromObjs(t,
@@ -128,7 +127,7 @@ func TestResolveDependencies_Ingress(t *testing.T) {
 												Resource: &corev1.TypedLocalObjectReference{
 													Name:     "1",
 													Kind:     "KongServiceFacade",
-													APIGroup: lo.ToPtr(incubatorv1alpha1.SchemeGroupVersion.Group),
+													APIGroup: new(incubatorv1alpha1.SchemeGroupVersion.Group),
 												},
 											},
 										},
@@ -137,7 +136,7 @@ func TestResolveDependencies_Ingress(t *testing.T) {
 												Resource: &corev1.TypedLocalObjectReference{
 													Name:     "2",
 													Kind:     "KongServiceFacade",
-													APIGroup: lo.ToPtr(incubatorv1alpha1.SchemeGroupVersion.Group),
+													APIGroup: new(incubatorv1alpha1.SchemeGroupVersion.Group),
 												},
 											},
 										},
@@ -205,7 +204,7 @@ func TestResolveDependencies_Ingress(t *testing.T) {
 												Resource: &corev1.TypedLocalObjectReference{
 													Name:     "1",
 													Kind:     "KongServiceFacade",
-													APIGroup: lo.ToPtr(incubatorv1alpha1.SchemeGroupVersion.Group),
+													APIGroup: new(incubatorv1alpha1.SchemeGroupVersion.Group),
 												},
 											},
 										},

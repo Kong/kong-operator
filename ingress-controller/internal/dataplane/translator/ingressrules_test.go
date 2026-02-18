@@ -616,7 +616,7 @@ func TestPopulateServices(t *testing.T) {
 			serviceNamesToServices: map[string]kongstate.Service{
 				"service-to-skip": {
 					Service: kong.Service{
-						Name: lo.ToPtr("service-to-skip"),
+						Name: new("service-to-skip"),
 					},
 					Namespace: "test-namespace",
 					Backends: []kongstate.ServiceBackend{
@@ -628,7 +628,7 @@ func TestPopulateServices(t *testing.T) {
 				},
 				"service-to-keep": {
 					Service: kong.Service{
-						Name: lo.ToPtr("service-to-skip"),
+						Name: new("service-to-skip"),
 					},
 					Namespace: "test-namespace",
 					Backends: []kongstate.ServiceBackend{
@@ -690,8 +690,8 @@ func TestPopulateServices(t *testing.T) {
 			serviceNamesToServices: map[string]kongstate.Service{
 				"s-1": {
 					Service: kong.Service{
-						Name:      lo.ToPtr("s-1"),
-						TLSVerify: lo.ToPtr(true),
+						Name:      new("s-1"),
+						TLSVerify: new(true),
 					},
 					Namespace: "test-namespace",
 					Backends: []kongstate.ServiceBackend{
@@ -752,7 +752,7 @@ func TestPopulateServices(t *testing.T) {
 			serviceNamesToServices: map[string]kongstate.Service{
 				"s-1": {
 					Service: kong.Service{
-						Name: lo.ToPtr("s-1"),
+						Name: new("s-1"),
 					},
 					Namespace: "test-namespace",
 					Backends: []kongstate.ServiceBackend{
@@ -785,8 +785,8 @@ func TestPopulateServices(t *testing.T) {
 			serviceNamesToServices: map[string]kongstate.Service{
 				"s-1": {
 					Service: kong.Service{
-						Name:      lo.ToPtr("s-1"),
-						TLSVerify: lo.ToPtr(true),
+						Name:      new("s-1"),
+						TLSVerify: new(true),
 					},
 					Namespace: "test-namespace",
 					Backends: []kongstate.ServiceBackend{
@@ -831,8 +831,8 @@ func TestPopulateServices(t *testing.T) {
 			serviceNamesToServices: map[string]kongstate.Service{
 				"s-1": {
 					Service: kong.Service{
-						Name:      lo.ToPtr("s-1"),
-						TLSVerify: lo.ToPtr(true),
+						Name:      new("s-1"),
+						TLSVerify: new(true),
 					},
 					Namespace: "test-namespace",
 					Backends: []kongstate.ServiceBackend{
@@ -878,8 +878,8 @@ func TestPopulateServices(t *testing.T) {
 			serviceNamesToServices: map[string]kongstate.Service{
 				"s-1": {
 					Service: kong.Service{
-						Name:      lo.ToPtr("s-1"),
-						TLSVerify: lo.ToPtr(true),
+						Name:      new("s-1"),
+						TLSVerify: new(true),
 					},
 					Namespace: "test-namespace",
 					Backends: []kongstate.ServiceBackend{
@@ -924,8 +924,8 @@ func TestPopulateServices(t *testing.T) {
 			serviceNamesToServices: map[string]kongstate.Service{
 				"s-1": {
 					Service: kong.Service{
-						Name:      lo.ToPtr("s-1"),
-						TLSVerify: lo.ToPtr(true),
+						Name:      new("s-1"),
+						TLSVerify: new(true),
 					},
 					Namespace: "test-namespace",
 					Backends: []kongstate.ServiceBackend{

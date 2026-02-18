@@ -66,14 +66,14 @@ func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 			},
 		},
 		Spec: configurationv1beta1.KongUpstreamPolicySpec{
-			Algorithm: lo.ToPtr("sticky-sessions"),
-			Slots:     lo.ToPtr(100),
+			Algorithm: new("sticky-sessions"),
+			Slots:     new(100),
 			HashOn: &configurationv1beta1.KongUpstreamHash{
-				Input: lo.ToPtr(configurationv1beta1.HashInput("none")),
+				Input: new(configurationv1beta1.HashInput("none")),
 			},
 			StickySessions: &configurationv1beta1.KongUpstreamStickySessions{
 				Cookie:     "session-id",
-				CookiePath: lo.ToPtr("/"),
+				CookiePath: new("/"),
 			},
 		},
 	}
@@ -100,7 +100,7 @@ func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 		"konghq.com/methods":    "GET",
 		"konghq.com/plugins":    "baz",
 	}, service)
-	ingress.Spec.IngressClassName = lo.ToPtr(ingressClassName)
+	ingress.Spec.IngressClassName = new(ingressClassName)
 	ingress.Namespace = ns.Name
 	t.Logf("deploying ingress %s", ingress.Name)
 	require.NoError(t, ctrlClient.Create(ctx, ingress))
@@ -243,14 +243,14 @@ func TestStickySessionsNotSupportedEventGeneration(t *testing.T) {
 			},
 		},
 		Spec: configurationv1beta1.KongUpstreamPolicySpec{
-			Algorithm: lo.ToPtr("sticky-sessions"),
-			Slots:     lo.ToPtr(100),
+			Algorithm: new("sticky-sessions"),
+			Slots:     new(100),
 			HashOn: &configurationv1beta1.KongUpstreamHash{
-				Input: lo.ToPtr(configurationv1beta1.HashInput("none")),
+				Input: new(configurationv1beta1.HashInput("none")),
 			},
 			StickySessions: &configurationv1beta1.KongUpstreamStickySessions{
 				Cookie:     "session-id",
-				CookiePath: lo.ToPtr("/"),
+				CookiePath: new("/"),
 			},
 		},
 	}
@@ -266,7 +266,7 @@ func TestStickySessionsNotSupportedEventGeneration(t *testing.T) {
 
 	t.Logf("creating an ingress for service %s with invalid configuration", service.Name)
 	ingress := generators.NewIngressForService("/bar", nil, service)
-	ingress.Spec.IngressClassName = lo.ToPtr(ingressClassName)
+	ingress.Spec.IngressClassName = new(ingressClassName)
 	ingress.Namespace = ns.Name
 	t.Logf("deploying ingress %s", ingress.Name)
 	require.NoError(t, ctrlClient.Create(ctx, ingress))

@@ -121,8 +121,8 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 					Return(&sdkkonnectops.CreateDataplaneCertificateResponse{
 						DataPlaneClientCertificateResponse: &sdkkonnectcomp.DataPlaneClientCertificateResponse{
 							Item: &sdkkonnectcomp.DataPlaneClientCertificate{
-								ID:   lo.ToPtr(dpCertID),
-								Cert: lo.ToPtr(deploy.TestValidCACertPEM),
+								ID:   new(dpCertID),
+								Cert: new(deploy.TestValidCACertPEM),
 							},
 						},
 					}, nil)
@@ -319,8 +319,8 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 					Return(&sdkkonnectops.CreateDataplaneCertificateResponse{
 						DataPlaneClientCertificateResponse: &sdkkonnectcomp.DataPlaneClientCertificateResponse{
 							Item: &sdkkonnectcomp.DataPlaneClientCertificate{
-								ID:   lo.ToPtr(dpCertID),
-								Cert: lo.ToPtr(deploy.TestValidCACertPEM),
+								ID:   new(dpCertID),
+								Cert: new(deploy.TestValidCACertPEM),
 							},
 						},
 					}, nil)

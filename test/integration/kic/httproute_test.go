@@ -9,10 +9,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/kong/go-kong/kong"
 	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -113,19 +111,19 @@ func TestHTTPRouteEssentials(t *testing.T) {
 					{
 						Path: &gatewayapi.HTTPPathMatch{
 							Type:  &pathMatchPrefix,
-							Value: kong.String("/test-http-route-essentials"),
+							Value: new("/test-http-route-essentials"),
 						},
 					},
 					{
 						Path: &gatewayapi.HTTPPathMatch{
 							Type:  &pathMatchRegularExpression,
-							Value: kong.String(`/2/test-http-route-essentials/regex/\d{3}`),
+							Value: new(`/2/test-http-route-essentials/regex/\d{3}`),
 						},
 					},
 					{
 						Path: &gatewayapi.HTTPPathMatch{
 							Type:  &pathMatchExact,
-							Value: kong.String(`/3/exact-test-http-route-essentials`),
+							Value: new(`/3/exact-test-http-route-essentials`),
 						},
 					},
 				},
@@ -202,7 +200,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 		httpRoute.Spec.Rules[0].Matches = append(httpRoute.Spec.Rules[0].Matches, gatewayapi.HTTPRouteMatch{
 			QueryParams: []gatewayapi.HTTPQueryParamMatch{
 				{
-					Type:  lo.ToPtr(gatewayapi.QueryParamMatchExact),
+					Type:  new(gatewayapi.QueryParamMatchExact),
 					Name:  "foo",
 					Value: "bar",
 				},
@@ -335,7 +333,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 		if !assert.NoError(c, err) {
 			return
 		}
-		httpRoute.Spec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(81))
+		httpRoute.Spec.ParentRefs[0].Port = new(gatewayapi.PortNumber(81))
 		httpRoute, err = gatewayClient.GatewayV1().HTTPRoutes(ns.Name).Update(ctx, httpRoute, metav1.UpdateOptions{})
 		assert.NoError(c, err)
 	}, time.Minute, time.Second)
@@ -425,7 +423,7 @@ func TestHTTPRouteMultipleServices(t *testing.T) {
 						{
 							Path: &gatewayapi.HTTPPathMatch{
 								Type:  &pathMatchPrefix,
-								Value: kong.String("/test-http-route-multiple-services"),
+								Value: new("/test-http-route-multiple-services"),
 							},
 						},
 					},
@@ -457,7 +455,7 @@ func TestHTTPRouteMultipleServices(t *testing.T) {
 						{
 							Path: &gatewayapi.HTTPPathMatch{
 								Type:  &pathMatchPrefix,
-								Value: kong.String("/test-http-route-multiple-services-broken"),
+								Value: new("/test-http-route-multiple-services-broken"),
 							},
 						},
 					},

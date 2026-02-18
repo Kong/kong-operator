@@ -1727,8 +1727,10 @@ func TestGatewayConverter_GetOutputStore(t *testing.T) {
 }
 
 // Helper function to create pointer to value.
+//
+//go:fix inline
 func ptrTo[T any](v T) *T {
-	return &v
+	return new(v)
 }
 
 func TestHandleOrphanedResource(t *testing.T) {

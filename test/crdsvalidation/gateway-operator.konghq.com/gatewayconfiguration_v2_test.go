@@ -3,7 +3,6 @@ package crdsvalidation_test
 import (
 	"testing"
 
-	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -121,7 +120,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.extensions: Too many: 3: must have at most 2 items"),
+				ExpectedErrorMessage: new("spec.extensions: Too many: 3: must have at most 2 items"),
 			},
 			{
 				Name: "invalid konnectExtension",
@@ -139,7 +138,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Extension not allowed for GatewayConfiguration"),
+				ExpectedErrorMessage: new("Extension not allowed for GatewayConfiguration"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -164,14 +163,14 @@ func TestGatewayConfigurationV2(t *testing.T) {
 						DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
 							Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
 								DeploymentOptions: operatorv2beta1.DeploymentOptions{
-									Replicas: lo.ToPtr(int32(4)),
+									Replicas: new(int32(4)),
 								},
 							},
 							Resources: &operatorv2beta1.GatewayConfigDataPlaneResources{
 								PodDisruptionBudget: &operatorv2beta1.PodDisruptionBudget{
 									Spec: operatorv2beta1.PodDisruptionBudgetSpec{
-										MinAvailable:               lo.ToPtr(intstr.FromInt(1)),
-										UnhealthyPodEvictionPolicy: lo.ToPtr(policyv1.IfHealthyBudget),
+										MinAvailable:               new(intstr.FromInt(1)),
+										UnhealthyPodEvictionPolicy: new(policyv1.IfHealthyBudget),
 									},
 								},
 							},
@@ -187,21 +186,21 @@ func TestGatewayConfigurationV2(t *testing.T) {
 						DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
 							Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
 								DeploymentOptions: operatorv2beta1.DeploymentOptions{
-									Replicas: lo.ToPtr(int32(4)),
+									Replicas: new(int32(4)),
 								},
 							},
 							Resources: &operatorv2beta1.GatewayConfigDataPlaneResources{
 								PodDisruptionBudget: &operatorv2beta1.PodDisruptionBudget{
 									Spec: operatorv2beta1.PodDisruptionBudgetSpec{
-										MinAvailable:   lo.ToPtr(intstr.FromInt(1)),
-										MaxUnavailable: lo.ToPtr(intstr.FromInt(1)),
+										MinAvailable:   new(intstr.FromInt(1)),
+										MaxUnavailable: new(intstr.FromInt(1)),
 									},
 								},
 							},
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("You can specify only one of maxUnavailable and minAvailable in a single PodDisruptionBudgetSpec."),
+				ExpectedErrorMessage: new("You can specify only one of maxUnavailable and minAvailable in a single PodDisruptionBudgetSpec."),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -304,7 +303,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 							APIAuthConfigurationRef: &konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
 								Name: "my-konnect-auth-config",
 							},
-							Source: lo.ToPtr(commonv1alpha1.EntitySourceMirror),
+							Source: new(commonv1alpha1.EntitySourceMirror),
 							Mirror: &konnectv1alpha1.MirrorSpec{
 								Konnect: konnectv1alpha1.MirrorKonnect{
 									ID: commonv1alpha1.KonnectIDType("8ae65120-cdec-4310-84c1-4b19caf67967"),
@@ -323,7 +322,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 							APIAuthConfigurationRef: &konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
 								Name: "my-konnect-auth-config",
 							},
-							Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+							Source: new(commonv1alpha1.EntitySourceOrigin),
 						},
 					},
 				},
@@ -337,7 +336,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 							APIAuthConfigurationRef: &konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
 								Name: "my-konnect-auth-config",
 							},
-							Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+							Source: new(commonv1alpha1.EntitySourceOrigin),
 							Mirror: &konnectv1alpha1.MirrorSpec{
 								Konnect: konnectv1alpha1.MirrorKonnect{
 									ID: commonv1alpha1.KonnectIDType("8ae65120-cdec-4310-84c1-4b19caf67967"),
@@ -346,7 +345,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("mirror field cannot be set for type Origin"),
+				ExpectedErrorMessage: new("mirror field cannot be set for type Origin"),
 			},
 			{
 				Name: "it is invalid to have source set to Mirror without Mirror field",
@@ -357,11 +356,11 @@ func TestGatewayConfigurationV2(t *testing.T) {
 							APIAuthConfigurationRef: &konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
 								Name: "my-konnect-auth-config",
 							},
-							Source: lo.ToPtr(commonv1alpha1.EntitySourceMirror),
+							Source: new(commonv1alpha1.EntitySourceMirror),
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("mirror field must be set for type Mirror"),
+				ExpectedErrorMessage: new("mirror field must be set for type Mirror"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -418,7 +417,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.listenersOptions[0].nodePort in body should be greater than or equal to 1"),
+				ExpectedErrorMessage: new("spec.listenersOptions[0].nodePort in body should be greater than or equal to 1"),
 			},
 			{
 				Name: "Cannot specify nodeport for listeners with 'ClusterIP' dataplane ingress service",
@@ -444,7 +443,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Can only specify listener's NodePort when the type of service for dataplane to receive ingress traffic ('spec.dataPlaneOptions.network.services.ingress') is NodePort or LoadBalancer"),
+				ExpectedErrorMessage: new("Can only specify listener's NodePort when the type of service for dataplane to receive ingress traffic ('spec.dataPlaneOptions.network.services.ingress') is NodePort or LoadBalancer"),
 			},
 			{
 				Name: "Name must be unique in listener options",
@@ -463,7 +462,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Listener name must be unique within the Gateway"),
+				ExpectedErrorMessage: new("Listener name must be unique within the Gateway"),
 			},
 			{
 				Name: "Nodeport must be unique in listener options",
@@ -482,7 +481,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Nodeport must be unique within the Gateway if specified"),
+				ExpectedErrorMessage: new("Nodeport must be unique within the Gateway if specified"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)

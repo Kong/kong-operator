@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
@@ -105,8 +104,8 @@ func TestDiscoverer_GetAdminAPIsForServiceReturnsAllAddressesCorrectlyPagingThro
 							{
 								Addresses: []string{fmt.Sprintf("10.0.%d.%d", i, j)},
 								Conditions: discoveryv1.EndpointConditions{
-									Ready:       lo.ToPtr(true),
-									Terminating: lo.ToPtr(false),
+									Ready:       new(true),
+									Terminating: new(false),
 								},
 								TargetRef: testPodReference("pod-1", ns.Name),
 							},

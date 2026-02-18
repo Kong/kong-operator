@@ -63,13 +63,13 @@ func TestTranslateIngressATC(t *testing.T) {
 				"default.test-service.80": {
 					Namespace: corev1.NamespaceDefault,
 					Service: kong.Service{
-						Name:           kong.String("default.test-service.80"),
-						Host:           kong.String("test-service.default.80.svc"),
+						Name:           new("default.test-service.80"),
+						Host:           new("test-service.default.80.svc"),
 						ConnectTimeout: defaultServiceTimeoutInKongFormat(),
-						Path:           kong.String("/"),
-						Port:           kong.Int(80),
-						Protocol:       kong.String("http"),
-						Retries:        kong.Int(defaultRetries),
+						Path:           new("/"),
+						Port:           new(80),
+						Protocol:       new("http"),
+						Retries:        new(defaultRetries),
 						ReadTimeout:    defaultServiceTimeoutInKongFormat(),
 						WriteTimeout:   defaultServiceTimeoutInKongFormat(),
 					},
@@ -80,18 +80,18 @@ func TestTranslateIngressATC(t *testing.T) {
 							GroupVersionKind: ingressGVK,
 						},
 						Route: kong.Route{
-							Name:       kong.String("default.test-ingress.test-service.konghq.com.80"),
-							Expression: kong.String(`(http.host == "konghq.com") && ((http.path == "/api") || (http.path ^= "/api/"))`),
-							Priority: kong.Uint64(IngressRoutePriorityTraits{
+							Name:       new("default.test-ingress.test-service.konghq.com.80"),
+							Expression: new(`(http.host == "konghq.com") && ((http.path == "/api") || (http.path ^= "/api/"))`),
+							Priority: new(IngressRoutePriorityTraits{
 								MatchFields:   2,
 								PlainHostOnly: true,
 								MaxPathLength: 5,
 								HasRegexPath:  true,
 							}.EncodeToPriority()),
-							PreserveHost:      kong.Bool(true),
-							StripPath:         kong.Bool(false),
-							ResponseBuffering: kong.Bool(true),
-							RequestBuffering:  kong.Bool(true),
+							PreserveHost:      new(true),
+							StripPath:         new(false),
+							ResponseBuffering: new(true),
+							RequestBuffering:  new(true),
 							Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default", "k8s-kind:Ingress", "k8s-group:networking.k8s.io", "k8s-version:v1"),
 						},
 						ExpressionRoutes: true,
@@ -139,13 +139,13 @@ func TestTranslateIngressATC(t *testing.T) {
 				"default.test-service.80": {
 					Namespace: corev1.NamespaceDefault,
 					Service: kong.Service{
-						Name:           kong.String("default.test-service.80"),
-						Host:           kong.String("test-service.default.80.svc"),
+						Name:           new("default.test-service.80"),
+						Host:           new("test-service.default.80.svc"),
 						ConnectTimeout: defaultServiceTimeoutInKongFormat(),
-						Path:           kong.String("/"),
-						Port:           kong.Int(80),
-						Protocol:       kong.String("http"),
-						Retries:        kong.Int(defaultRetries),
+						Path:           new("/"),
+						Port:           new(80),
+						Protocol:       new("http"),
+						Retries:        new(defaultRetries),
 						ReadTimeout:    defaultServiceTimeoutInKongFormat(),
 						WriteTimeout:   defaultServiceTimeoutInKongFormat(),
 					},
@@ -156,18 +156,18 @@ func TestTranslateIngressATC(t *testing.T) {
 							GroupVersionKind: ingressGVK,
 						},
 						Route: kong.Route{
-							Name:       kong.String("default.test-ingress.test-service.konghq.com.80"),
-							Expression: kong.String(`(http.host == "konghq.com") && (http.path ^= "/api/")`),
-							Priority: kong.Uint64(IngressRoutePriorityTraits{
+							Name:       new("default.test-ingress.test-service.konghq.com.80"),
+							Expression: new(`(http.host == "konghq.com") && (http.path ^= "/api/")`),
+							Priority: new(IngressRoutePriorityTraits{
 								MatchFields:   2,
 								PlainHostOnly: true,
 								MaxPathLength: 5,
 								HasRegexPath:  false,
 							}.EncodeToPriority()),
-							PreserveHost:      kong.Bool(true),
-							StripPath:         kong.Bool(false),
-							ResponseBuffering: kong.Bool(true),
-							RequestBuffering:  kong.Bool(true),
+							PreserveHost:      new(true),
+							StripPath:         new(false),
+							ResponseBuffering: new(true),
+							RequestBuffering:  new(true),
 							Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default", "k8s-kind:Ingress", "k8s-group:networking.k8s.io", "k8s-version:v1"),
 						},
 						ExpressionRoutes: true,
@@ -220,13 +220,13 @@ func TestTranslateIngressATC(t *testing.T) {
 				"default.test-service.80": {
 					Namespace: corev1.NamespaceDefault,
 					Service: kong.Service{
-						Name:           kong.String("default.test-service.80"),
-						Host:           kong.String("test-service.default.80.svc"),
+						Name:           new("default.test-service.80"),
+						Host:           new("test-service.default.80.svc"),
 						ConnectTimeout: defaultServiceTimeoutInKongFormat(),
-						Path:           kong.String("/"),
-						Port:           kong.Int(80),
-						Protocol:       kong.String("http"),
-						Retries:        kong.Int(defaultRetries),
+						Path:           new("/"),
+						Port:           new(80),
+						Protocol:       new("http"),
+						Retries:        new(defaultRetries),
 						ReadTimeout:    defaultServiceTimeoutInKongFormat(),
 						WriteTimeout:   defaultServiceTimeoutInKongFormat(),
 					},
@@ -242,19 +242,19 @@ func TestTranslateIngressATC(t *testing.T) {
 							GroupVersionKind: ingressGVK,
 						},
 						Route: kong.Route{
-							Name:       kong.String("default.test-ingress-annotations.test-service.konghq.com.80"),
-							Expression: kong.String(`(http.host == "konghq.com") && (http.path ^= "/api/") && (http.headers.foo == "bar") && (http.method == "GET")`),
-							Priority: kong.Uint64(IngressRoutePriorityTraits{
+							Name:       new("default.test-ingress-annotations.test-service.konghq.com.80"),
+							Expression: new(`(http.host == "konghq.com") && (http.path ^= "/api/") && (http.headers.foo == "bar") && (http.method == "GET")`),
+							Priority: new(IngressRoutePriorityTraits{
 								MatchFields:   4,
 								PlainHostOnly: true,
 								MaxPathLength: 5,
 								HasRegexPath:  false,
 								HeaderCount:   1,
 							}.EncodeToPriority()),
-							PreserveHost:      kong.Bool(true),
-							StripPath:         kong.Bool(false),
-							ResponseBuffering: kong.Bool(true),
-							RequestBuffering:  kong.Bool(true),
+							PreserveHost:      new(true),
+							StripPath:         new(false),
+							ResponseBuffering: new(true),
+							RequestBuffering:  new(true),
 							Tags:              kong.StringSlice("k8s-name:test-ingress-annotations", "k8s-namespace:default", "k8s-kind:Ingress", "k8s-group:networking.k8s.io", "k8s-version:v1"),
 						},
 						ExpressionRoutes: true,
@@ -296,7 +296,7 @@ func TestTranslateIngressATC(t *testing.T) {
 									Path: "/api/",
 									Backend: netv1.IngressBackend{
 										Resource: &corev1.TypedLocalObjectReference{
-											APIGroup: lo.ToPtr(incubatorv1alpha1.GroupVersion.Group),
+											APIGroup: new(incubatorv1alpha1.GroupVersion.Group),
 											Kind:     incubatorv1alpha1.KongServiceFacadeKind,
 											Name:     "svc-facade",
 										},
@@ -329,13 +329,13 @@ func TestTranslateIngressATC(t *testing.T) {
 				"default.svc-facade.svc.facade": {
 					Namespace: corev1.NamespaceDefault,
 					Service: kong.Service{
-						Name:           kong.String("default.svc-facade.svc.facade"),
-						Host:           kong.String("default.svc-facade.svc.facade"),
+						Name:           new("default.svc-facade.svc.facade"),
+						Host:           new("default.svc-facade.svc.facade"),
 						ConnectTimeout: defaultServiceTimeoutInKongFormat(),
-						Path:           kong.String("/"),
-						Port:           kong.Int(80),
-						Protocol:       kong.String("http"),
-						Retries:        kong.Int(defaultRetries),
+						Path:           new("/"),
+						Port:           new(80),
+						Protocol:       new("http"),
+						Retries:        new(defaultRetries),
 						ReadTimeout:    defaultServiceTimeoutInKongFormat(),
 						WriteTimeout:   defaultServiceTimeoutInKongFormat(),
 					},
@@ -346,18 +346,18 @@ func TestTranslateIngressATC(t *testing.T) {
 							GroupVersionKind: ingressGVK,
 						},
 						Route: kong.Route{
-							Name:       kong.String("default.test-ingress.konghq.com.svc-facade.svc.facade"),
-							Expression: kong.String(`(http.host == "konghq.com") && (http.path ^= "/api/")`),
-							Priority: kong.Uint64(IngressRoutePriorityTraits{
+							Name:       new("default.test-ingress.konghq.com.svc-facade.svc.facade"),
+							Expression: new(`(http.host == "konghq.com") && (http.path ^= "/api/")`),
+							Priority: new(IngressRoutePriorityTraits{
 								MatchFields:   2,
 								PlainHostOnly: true,
 								MaxPathLength: 5,
 								HasRegexPath:  false,
 							}.EncodeToPriority()),
-							PreserveHost:      kong.Bool(true),
-							StripPath:         kong.Bool(false),
-							ResponseBuffering: kong.Bool(true),
-							RequestBuffering:  kong.Bool(true),
+							PreserveHost:      new(true),
+							StripPath:         new(false),
+							ResponseBuffering: new(true),
+							RequestBuffering:  new(true),
 							Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default", "k8s-kind:Ingress", "k8s-group:networking.k8s.io", "k8s-version:v1"),
 						},
 						ExpressionRoutes: true,
@@ -399,7 +399,7 @@ func TestTranslateIngressATC(t *testing.T) {
 									Path: "/api/",
 									Backend: netv1.IngressBackend{
 										Resource: &corev1.TypedLocalObjectReference{
-											APIGroup: lo.ToPtr(incubatorv1alpha1.GroupVersion.Group),
+											APIGroup: new(incubatorv1alpha1.GroupVersion.Group),
 											Kind:     incubatorv1alpha1.KongServiceFacadeKind,
 											Name:     "svc-facade",
 										},
@@ -466,7 +466,7 @@ func TestCalculateIngressRoutePriorityTraits(t *testing.T) {
 			paths: []netv1.HTTPIngressPath{
 				{
 					Path:     "/foo/",
-					PathType: lo.ToPtr(netv1.PathTypePrefix),
+					PathType: new(netv1.PathTypePrefix),
 				},
 			},
 			expectedTraits: IngressRoutePriorityTraits{
@@ -480,11 +480,11 @@ func TestCalculateIngressRoutePriorityTraits(t *testing.T) {
 			paths: []netv1.HTTPIngressPath{
 				{
 					Path:     "/foo/",
-					PathType: lo.ToPtr(netv1.PathTypePrefix),
+					PathType: new(netv1.PathTypePrefix),
 				},
 				{
 					Path:     "/foobar/",
-					PathType: lo.ToPtr(netv1.PathTypeExact),
+					PathType: new(netv1.PathTypeExact),
 				},
 			},
 			ingressHost: "example.com",
@@ -500,11 +500,11 @@ func TestCalculateIngressRoutePriorityTraits(t *testing.T) {
 			paths: []netv1.HTTPIngressPath{
 				{
 					Path:     "/foo/",
-					PathType: lo.ToPtr(netv1.PathTypePrefix),
+					PathType: new(netv1.PathTypePrefix),
 				},
 				{
 					Path:     "/foobar/",
-					PathType: lo.ToPtr(netv1.PathTypeExact),
+					PathType: new(netv1.PathTypeExact),
 				},
 			},
 			ingressHost: "example.com",
@@ -526,7 +526,7 @@ func TestCalculateIngressRoutePriorityTraits(t *testing.T) {
 			paths: []netv1.HTTPIngressPath{
 				{
 					Path:     "/~/[a-z0-9]{3}/",
-					PathType: lo.ToPtr(netv1.PathTypeImplementationSpecific),
+					PathType: new(netv1.PathTypeImplementationSpecific),
 				},
 			},
 			regexPathPrefix: "/~",
@@ -542,7 +542,7 @@ func TestCalculateIngressRoutePriorityTraits(t *testing.T) {
 			paths: []netv1.HTTPIngressPath{
 				{
 					Path:     "/abc/def",
-					PathType: lo.ToPtr(netv1.PathTypeImplementationSpecific),
+					PathType: new(netv1.PathTypeImplementationSpecific),
 				},
 			},
 			regexPathPrefix: "/~",

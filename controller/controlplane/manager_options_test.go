@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tonglil/buflogr"
@@ -755,12 +754,12 @@ func TestWithIngressClass(t *testing.T) {
 	}{
 		{
 			name:         "ingress class set to non-empty string",
-			ingressClass: lo.ToPtr("kong"),
+			ingressClass: new("kong"),
 			expected:     "kong",
 		},
 		{
 			name:         "ingress class set to empty string",
-			ingressClass: lo.ToPtr(""),
+			ingressClass: new(""),
 			expected:     "", // Should remain empty/default
 		},
 		{
@@ -988,9 +987,9 @@ func TestWithTranslationOptions(t *testing.T) {
 		{
 			name: "options with CombinedServicesFromDifferentHTTPRoutes enabled",
 			opts: &gwtypes.ControlPlaneTranslationOptions{
-				CombinedServicesFromDifferentHTTPRoutes: lo.ToPtr(gwtypes.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled),
+				CombinedServicesFromDifferentHTTPRoutes: new(gwtypes.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled),
 				FallbackConfiguration: &gwtypes.ControlPlaneFallbackConfiguration{
-					UseLastValidConfig: lo.ToPtr(gwtypes.ControlPlaneFallbackConfigurationStateEnabled),
+					UseLastValidConfig: new(gwtypes.ControlPlaneFallbackConfigurationStateEnabled),
 				},
 			},
 			assert: func(t *testing.T, cfg *managercfg.Config) {
@@ -1001,9 +1000,9 @@ func TestWithTranslationOptions(t *testing.T) {
 		{
 			name: "disabled options",
 			opts: &gwtypes.ControlPlaneTranslationOptions{
-				CombinedServicesFromDifferentHTTPRoutes: lo.ToPtr(gwtypes.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateDisabled),
+				CombinedServicesFromDifferentHTTPRoutes: new(gwtypes.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateDisabled),
 				FallbackConfiguration: &gwtypes.ControlPlaneFallbackConfiguration{
-					UseLastValidConfig: lo.ToPtr(gwtypes.ControlPlaneFallbackConfigurationStateDisabled),
+					UseLastValidConfig: new(gwtypes.ControlPlaneFallbackConfigurationStateDisabled),
 				},
 			},
 			assert: func(t *testing.T, cfg *managercfg.Config) {
@@ -1013,7 +1012,7 @@ func TestWithTranslationOptions(t *testing.T) {
 		{
 			name: "options with DrainSupport enabled",
 			opts: &gwtypes.ControlPlaneTranslationOptions{
-				DrainSupport: lo.ToPtr(gwtypes.ControlPlaneDrainSupportStateEnabled),
+				DrainSupport: new(gwtypes.ControlPlaneDrainSupportStateEnabled),
 			},
 			assert: func(t *testing.T, cfg *managercfg.Config) {
 				assert.True(t, cfg.EnableDrainSupport)
@@ -1023,7 +1022,7 @@ func TestWithTranslationOptions(t *testing.T) {
 		{
 			name: "options with DrainSupport disabled",
 			opts: &gwtypes.ControlPlaneTranslationOptions{
-				DrainSupport: lo.ToPtr(gwtypes.ControlPlaneDrainSupportStateDisabled),
+				DrainSupport: new(gwtypes.ControlPlaneDrainSupportStateDisabled),
 			},
 			assert: func(t *testing.T, cfg *managercfg.Config) {
 				assert.False(t, cfg.EnableDrainSupport)
@@ -1033,8 +1032,8 @@ func TestWithTranslationOptions(t *testing.T) {
 		{
 			name: "options with both CombinedServicesFromDifferentHTTPRoutes and DrainSupport enabled",
 			opts: &gwtypes.ControlPlaneTranslationOptions{
-				CombinedServicesFromDifferentHTTPRoutes: lo.ToPtr(gwtypes.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled),
-				DrainSupport:                            lo.ToPtr(gwtypes.ControlPlaneDrainSupportStateEnabled),
+				CombinedServicesFromDifferentHTTPRoutes: new(gwtypes.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled),
+				DrainSupport:                            new(gwtypes.ControlPlaneDrainSupportStateEnabled),
 			},
 			assert: func(t *testing.T, cfg *managercfg.Config) {
 				assert.True(t, cfg.CombinedServicesFromDifferentHTTPRoutes)

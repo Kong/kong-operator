@@ -93,7 +93,7 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 					Protocol: gatewayapi.HTTPProtocolType,
 					AllowedRoutes: &gatewayapi.AllowedRoutes{
 						Namespaces: &gatewayapi.RouteNamespaces{
-							From: lo.ToPtr(gatewayapi.NamespacesFromAll),
+							From: new(gatewayapi.NamespacesFromAll),
 						},
 					},
 				},
@@ -110,7 +110,7 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 	gw.Status = gatewayapi.GatewayStatus{
 		Addresses: []gatewayapi.GatewayStatusAddress{
 			{
-				Type:  lo.ToPtr(gatewayapi.IPAddressType),
+				Type:  new(gatewayapi.IPAddressType),
 				Value: "10.0.0.1",
 			},
 		},
@@ -149,7 +149,7 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 				},
 				SupportedKinds: []gatewayapi.RouteGroupKind{
 					{
-						Group: lo.ToPtr(gatewayapi.Group(gatewayv1.GroupVersion.Group)),
+						Group: new(gatewayapi.Group(gatewayv1.GroupVersion.Group)),
 						Kind:  "HTTPRoute",
 					},
 				},
@@ -171,7 +171,7 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 			CommonRouteSpec: gatewayapi.CommonRouteSpec{
 				ParentRefs: []gatewayapi.ParentReference{{
 					Name:      gatewayapi.ObjectName(gw.Name),
-					Namespace: lo.ToPtr(gatewayapi.Namespace(ns.Name)),
+					Namespace: new(gatewayapi.Namespace(ns.Name)),
 				}},
 			},
 			Rules: []gatewayapi.HTTPRouteRule{{
@@ -362,7 +362,7 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 			CommonRouteSpec: gatewayapi.CommonRouteSpec{
 				ParentRefs: []gatewayapi.ParentReference{{
 					Name:      gatewayapi.ObjectName(gw.Name),
-					Namespace: lo.ToPtr(gatewayapi.Namespace(ns.Name)),
+					Namespace: new(gatewayapi.Namespace(ns.Name)),
 				}},
 			},
 			Rules: []gatewayapi.HTTPRouteRule{{
@@ -408,7 +408,7 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 			CommonRouteSpec: gatewayapi.CommonRouteSpec{
 				ParentRefs: []gatewayapi.ParentReference{{
 					Name:      gatewayapi.ObjectName(gwNonKong.Name),
-					Namespace: lo.ToPtr(gatewayapi.Namespace(ns.Name)),
+					Namespace: new(gatewayapi.Namespace(ns.Name)),
 				}},
 			},
 			Rules: []gatewayapi.HTTPRouteRule{{

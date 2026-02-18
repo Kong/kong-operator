@@ -6,7 +6,6 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -43,7 +42,7 @@ func TestAdoptMatchDataPlaneGroupConfigurationSuccess(t *testing.T) {
 				{
 					Provider:   sdkkonnectcomp.ProviderNameAws,
 					Region:     "us-east-1",
-					NetworkRef: commonv1alpha1.ObjectRef{Type: commonv1alpha1.ObjectRefTypeKonnectID, KonnectID: lo.ToPtr(networkID)},
+					NetworkRef: commonv1alpha1.ObjectRef{Type: commonv1alpha1.ObjectRefTypeKonnectID, KonnectID: new(networkID)},
 					Autoscale: konnectv1alpha1.ConfigurationDataPlaneGroupAutoscale{
 						Type: konnectv1alpha1.ConfigurationDataPlaneGroupAutoscaleTypeAutopilot,
 						Autopilot: &konnectv1alpha1.ConfigurationDataPlaneGroupAutoscaleAutopilot{
@@ -71,16 +70,16 @@ func TestAdoptMatchDataPlaneGroupConfigurationSuccess(t *testing.T) {
 		Return(&sdkkonnectops.GetConfigurationResponse{
 			ConfigurationManifest: &sdkkonnectcomp.ConfigurationManifest{
 				ID:             "cfg-1",
-				Version:        lo.ToPtr("3.5.0.0"),
-				APIAccess:      lo.ToPtr(sdkkonnectcomp.APIAccessPrivatePlusPublic),
+				Version:        new("3.5.0.0"),
+				APIAccess:      new(sdkkonnectcomp.APIAccessPrivatePlusPublic),
 				ControlPlaneID: controlPlaneID,
 				DataplaneGroups: []sdkkonnectcomp.ConfigurationDataPlaneGroup{
 					{
 						ID:                    "dpg-1",
 						Provider:              sdkkonnectcomp.ProviderNameAws,
 						Region:                "us-east-1",
-						CloudGatewayNetworkID: lo.ToPtr(networkID),
-						Autoscale: lo.ToPtr(sdkkonnectcomp.CreateConfigurationDataPlaneGroupAutoscaleConfigurationDataPlaneGroupAutoscaleAutopilot(
+						CloudGatewayNetworkID: new(networkID),
+						Autoscale: new(sdkkonnectcomp.CreateConfigurationDataPlaneGroupAutoscaleConfigurationDataPlaneGroupAutoscaleAutopilot(
 							sdkkonnectcomp.ConfigurationDataPlaneGroupAutoscaleAutopilot{
 								BaseRps: 100,
 								MaxRps:  &maxRps,
@@ -125,7 +124,7 @@ func TestAdoptMatchDataPlaneGroupConfigurationMismatch(t *testing.T) {
 				{
 					Provider:   sdkkonnectcomp.ProviderNameAws,
 					Region:     "us-east-1",
-					NetworkRef: commonv1alpha1.ObjectRef{Type: commonv1alpha1.ObjectRefTypeKonnectID, KonnectID: lo.ToPtr(networkID)},
+					NetworkRef: commonv1alpha1.ObjectRef{Type: commonv1alpha1.ObjectRefTypeKonnectID, KonnectID: new(networkID)},
 					Autoscale: konnectv1alpha1.ConfigurationDataPlaneGroupAutoscale{
 						Type: konnectv1alpha1.ConfigurationDataPlaneGroupAutoscaleTypeAutopilot,
 						Autopilot: &konnectv1alpha1.ConfigurationDataPlaneGroupAutoscaleAutopilot{
@@ -153,16 +152,16 @@ func TestAdoptMatchDataPlaneGroupConfigurationMismatch(t *testing.T) {
 		Return(&sdkkonnectops.GetConfigurationResponse{
 			ConfigurationManifest: &sdkkonnectcomp.ConfigurationManifest{
 				ID:             "cfg-2",
-				Version:        lo.ToPtr("4.0.0.0"), // mismatch on purpose
-				APIAccess:      lo.ToPtr(sdkkonnectcomp.APIAccessPrivatePlusPublic),
+				Version:        new("4.0.0.0"), // mismatch on purpose
+				APIAccess:      new(sdkkonnectcomp.APIAccessPrivatePlusPublic),
 				ControlPlaneID: controlPlaneID,
 				DataplaneGroups: []sdkkonnectcomp.ConfigurationDataPlaneGroup{
 					{
 						ID:                    "dpg-1",
 						Provider:              sdkkonnectcomp.ProviderNameAws,
 						Region:                "us-east-1",
-						CloudGatewayNetworkID: lo.ToPtr(networkID),
-						Autoscale: lo.ToPtr(sdkkonnectcomp.CreateConfigurationDataPlaneGroupAutoscaleConfigurationDataPlaneGroupAutoscaleAutopilot(
+						CloudGatewayNetworkID: new(networkID),
+						Autoscale: new(sdkkonnectcomp.CreateConfigurationDataPlaneGroupAutoscaleConfigurationDataPlaneGroupAutoscaleAutopilot(
 							sdkkonnectcomp.ConfigurationDataPlaneGroupAutoscaleAutopilot{
 								BaseRps: 100,
 								MaxRps:  &maxRps,

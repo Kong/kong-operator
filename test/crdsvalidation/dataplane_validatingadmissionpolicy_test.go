@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/go-logr/zapr"
-	"github.com/samber/lo"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	corev1 "k8s.io/api/core/v1"
@@ -65,7 +64,7 @@ func TestKonnectValidationAdmissionPolicy(t *testing.T) {
 								Region:   "us-west-2",
 								NetworkRef: commonv1alpha1.ObjectRef{
 									Type:      commonv1alpha1.ObjectRefTypeKonnectID,
-									KonnectID: lo.ToPtr(generate.KonnectID(t)),
+									KonnectID: new(generate.KonnectID(t)),
 								},
 								Autoscale: konnectv1alpha1.ConfigurationDataPlaneGroupAutoscale{
 									Type: konnectv1alpha1.ConfigurationDataPlaneGroupAutoscaleTypeStatic,
@@ -79,7 +78,7 @@ func TestKonnectValidationAdmissionPolicy(t *testing.T) {
 				},
 				ExpectedErrorEventuallyConfig: common.SharedEventuallyConfig,
 				WarningCollector:              wc,
-				ExpectedWarningMessage:        lo.ToPtr("Value \"static\" in spec.dataplane_groups.autoscale.type is deprecated, use \"automatic\" instead."),
+				ExpectedWarningMessage:        new("Value \"static\" in spec.dataplane_groups.autoscale.type is deprecated, use \"automatic\" instead."),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -110,7 +109,7 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 					Spec:       operatorv1beta1.DataPlaneSpec{},
 				},
 				ExpectedErrorEventuallyConfig: common.SharedEventuallyConfig,
-				ExpectedErrorMessage:          lo.ToPtr("DataPlane requires an image to be set on proxy container"),
+				ExpectedErrorMessage:          new("DataPlane requires an image to be set on proxy container"),
 			},
 			{
 				Name: "providing correct ingress service ports and KONG_PORT_MAPS env succeeds",
@@ -218,7 +217,7 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 					},
 				},
 				ExpectedErrorEventuallyConfig: common.SharedEventuallyConfig,
-				ExpectedErrorMessage:          lo.ToPtr("is forbidden: ValidatingAdmissionPolicy 'ports.dataplane.gateway-operator.konghq.com' with binding 'binding-ports.dataplane.gateway-operator.konghq.com' denied request: Each port from spec.network.services.ingress.ports has to have an accompanying port in KONG_PORT_MAPS env"),
+				ExpectedErrorMessage:          new("is forbidden: ValidatingAdmissionPolicy 'ports.dataplane.gateway-operator.konghq.com' with binding 'binding-ports.dataplane.gateway-operator.konghq.com' denied request: Each port from spec.network.services.ingress.ports has to have an accompanying port in KONG_PORT_MAPS env"),
 			},
 			{
 				Name: "providing correct ingress service ports and KONG_PROXY_LISTEN env succeeds",
@@ -316,7 +315,7 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 					},
 				},
 				ExpectedErrorEventuallyConfig: common.SharedEventuallyConfig,
-				ExpectedErrorMessage:          lo.ToPtr("is forbidden: ValidatingAdmissionPolicy 'ports.dataplane.gateway-operator.konghq.com' with binding 'binding-ports.dataplane.gateway-operator.konghq.com' denied request: Each port from spec.network.services.ingress.ports has to have an accompanying port in KONG_PORT_MAPS env"),
+				ExpectedErrorMessage:          new("is forbidden: ValidatingAdmissionPolicy 'ports.dataplane.gateway-operator.konghq.com' with binding 'binding-ports.dataplane.gateway-operator.konghq.com' denied request: Each port from spec.network.services.ingress.ports has to have an accompanying port in KONG_PORT_MAPS env"),
 			},
 			{
 				Name: "providing network services ingress options without ports does not fail",

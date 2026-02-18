@@ -12,7 +12,7 @@ import (
 // redactedString is used to redact sensitive values in the KongState.
 // It uses a vault URI to pass Konnect Admin API validations (e.g. when a TLS key is expected, it's only possible
 // to pass a valid key or a vault URI).
-var redactedString = kong.String("{vault://redacted-value}")
+var redactedString = new("{vault://redacted-value}")
 
 // randRedactedString is used to redact sensitive values in the KongState when the value must be random to avoid
 // collisions.
@@ -101,7 +101,7 @@ func NewJWTAuth(config any) (*JWTAuth, error) {
 	// credential everytime it performs a sync operation, which
 	// leads to unnecessary cache invalidations in Kong.
 	if res.Algorithm == nil || *res.Algorithm == "" {
-		res.Algorithm = kong.String("HS256")
+		res.Algorithm = new("HS256")
 	}
 	if res.Key == nil {
 		return nil, fmt.Errorf("jwt-auth for is invalid: no key")

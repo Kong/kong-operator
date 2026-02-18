@@ -8,7 +8,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -128,9 +127,9 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 					// Order of ancestors should be svc-1 - svc-3 - svc-2 for the order of creationTimestamp.
 					{
 						AncestorRef: gatewayapi.ParentReference{
-							Group:     lo.ToPtr(gatewayapi.Group("core")),
-							Kind:      lo.ToPtr(gatewayapi.Kind("Service")),
-							Namespace: lo.ToPtr(gatewayapi.Namespace(testNamespace)),
+							Group:     new(gatewayapi.Group("core")),
+							Kind:      new(gatewayapi.Kind("Service")),
+							Namespace: new(gatewayapi.Namespace(testNamespace)),
 							Name:      gatewayapi.ObjectName("svc-1"),
 						},
 						ControllerName: gatewaycontroller.GetControllerName(),
@@ -149,9 +148,9 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 					},
 					{
 						AncestorRef: gatewayapi.ParentReference{
-							Group:     lo.ToPtr(gatewayapi.Group("core")),
-							Kind:      lo.ToPtr(gatewayapi.Kind("Service")),
-							Namespace: lo.ToPtr(gatewayapi.Namespace(testNamespace)),
+							Group:     new(gatewayapi.Group("core")),
+							Kind:      new(gatewayapi.Kind("Service")),
+							Namespace: new(gatewayapi.Namespace(testNamespace)),
 							Name:      gatewayapi.ObjectName("svc-3"),
 						},
 						ControllerName: gatewaycontroller.GetControllerName(),
@@ -170,9 +169,9 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 					},
 					{
 						AncestorRef: gatewayapi.ParentReference{
-							Group:     lo.ToPtr(gatewayapi.Group("core")),
-							Kind:      lo.ToPtr(gatewayapi.Kind("Service")),
-							Namespace: lo.ToPtr(gatewayapi.Namespace(testNamespace)),
+							Group:     new(gatewayapi.Group("core")),
+							Kind:      new(gatewayapi.Kind("Service")),
+							Namespace: new(gatewayapi.Namespace(testNamespace)),
 							Name:      gatewayapi.ObjectName("svc-2"),
 						},
 						ControllerName: gatewaycontroller.GetControllerName(),
@@ -204,9 +203,9 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 					Ancestors: []gatewayapi.PolicyAncestorStatus{
 						{
 							AncestorRef: gatewayapi.ParentReference{
-								Group:     lo.ToPtr(gatewayapi.Group("core")),
-								Kind:      lo.ToPtr(gatewayapi.Kind("Service")),
-								Namespace: lo.ToPtr(gatewayapi.Namespace(testNamespace)),
+								Group:     new(gatewayapi.Group("core")),
+								Kind:      new(gatewayapi.Kind("Service")),
+								Namespace: new(gatewayapi.Namespace(testNamespace)),
 								Name:      gatewayapi.ObjectName("svc-1"),
 							},
 							ControllerName: gatewaycontroller.GetControllerName(),
@@ -225,9 +224,9 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 						},
 						{
 							AncestorRef: gatewayapi.ParentReference{
-								Group:     lo.ToPtr(gatewayapi.Group("core")),
-								Kind:      lo.ToPtr(gatewayapi.Kind("Service")),
-								Namespace: lo.ToPtr(gatewayapi.Namespace(testNamespace)),
+								Group:     new(gatewayapi.Group("core")),
+								Kind:      new(gatewayapi.Kind("Service")),
+								Namespace: new(gatewayapi.Namespace(testNamespace)),
 								Name:      gatewayapi.ObjectName("svc-2"),
 							},
 							ControllerName: gatewaycontroller.GetControllerName(),
@@ -302,9 +301,9 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 				Ancestors: []gatewayapi.PolicyAncestorStatus{
 					{
 						AncestorRef: gatewayapi.ParentReference{
-							Group:     lo.ToPtr(gatewayapi.Group("core")),
-							Kind:      lo.ToPtr(gatewayapi.Kind("Service")),
-							Namespace: lo.ToPtr(gatewayapi.Namespace(testNamespace)),
+							Group:     new(gatewayapi.Group("core")),
+							Kind:      new(gatewayapi.Kind("Service")),
+							Namespace: new(gatewayapi.Namespace(testNamespace)),
 							Name:      gatewayapi.ObjectName("svc-1"),
 						},
 						ControllerName: gatewaycontroller.GetControllerName(),
@@ -323,9 +322,9 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 					},
 					{
 						AncestorRef: gatewayapi.ParentReference{
-							Group:     lo.ToPtr(gatewayapi.Group("core")),
-							Kind:      lo.ToPtr(gatewayapi.Kind("Service")),
-							Namespace: lo.ToPtr(gatewayapi.Namespace(testNamespace)),
+							Group:     new(gatewayapi.Group("core")),
+							Kind:      new(gatewayapi.Kind("Service")),
+							Namespace: new(gatewayapi.Namespace(testNamespace)),
 							Name:      gatewayapi.ObjectName("svc-2"),
 						},
 						ControllerName: gatewaycontroller.GetControllerName(),
@@ -411,9 +410,9 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 				Ancestors: []gatewayapi.PolicyAncestorStatus{
 					{
 						AncestorRef: gatewayapi.ParentReference{
-							Group:     lo.ToPtr(gatewayapi.Group("core")),
-							Kind:      lo.ToPtr(gatewayapi.Kind("Service")),
-							Namespace: lo.ToPtr(gatewayapi.Namespace(testNamespace)),
+							Group:     new(gatewayapi.Group("core")),
+							Kind:      new(gatewayapi.Kind("Service")),
+							Namespace: new(gatewayapi.Namespace(testNamespace)),
 							Name:      gatewayapi.ObjectName("svc-1"),
 						},
 						ControllerName: gatewaycontroller.GetControllerName(),
@@ -503,9 +502,9 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 				Ancestors: []gatewayapi.PolicyAncestorStatus{
 					{
 						AncestorRef: gatewayapi.ParentReference{
-							Group:     lo.ToPtr(gatewayapi.Group("core")),
-							Kind:      lo.ToPtr(gatewayapi.Kind("Service")),
-							Namespace: lo.ToPtr(gatewayapi.Namespace(testNamespace)),
+							Group:     new(gatewayapi.Group("core")),
+							Kind:      new(gatewayapi.Kind("Service")),
+							Namespace: new(gatewayapi.Namespace(testNamespace)),
 							Name:      gatewayapi.ObjectName("svc-1"),
 						},
 						ControllerName: gatewaycontroller.GetControllerName(),
@@ -578,9 +577,9 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 				Ancestors: []gatewayapi.PolicyAncestorStatus{
 					{
 						AncestorRef: gatewayapi.ParentReference{
-							Group:     lo.ToPtr(gatewayapi.Group("core")),
-							Kind:      lo.ToPtr(gatewayapi.Kind("Service")),
-							Namespace: lo.ToPtr(gatewayapi.Namespace(testNamespace)),
+							Group:     new(gatewayapi.Group("core")),
+							Kind:      new(gatewayapi.Kind("Service")),
+							Namespace: new(gatewayapi.Namespace(testNamespace)),
 							Name:      gatewayapi.ObjectName("svc-1"),
 						},
 						ControllerName: gatewaycontroller.GetControllerName(),
@@ -599,9 +598,9 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 					},
 					{
 						AncestorRef: gatewayapi.ParentReference{
-							Group:     lo.ToPtr(gatewayapi.Group(incubatorv1alpha1.GroupVersion.Group)),
-							Kind:      lo.ToPtr(gatewayapi.Kind(incubatorv1alpha1.KongServiceFacadeKind)),
-							Namespace: lo.ToPtr(gatewayapi.Namespace(testNamespace)),
+							Group:     new(gatewayapi.Group(incubatorv1alpha1.GroupVersion.Group)),
+							Kind:      new(gatewayapi.Kind(incubatorv1alpha1.KongServiceFacadeKind)),
+							Namespace: new(gatewayapi.Namespace(testNamespace)),
 							Name:      gatewayapi.ObjectName("svc-facade-1"),
 						},
 						ControllerName: gatewaycontroller.GetControllerName(),
@@ -674,9 +673,9 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 				Ancestors: []gatewayapi.PolicyAncestorStatus{
 					{
 						AncestorRef: gatewayapi.ParentReference{
-							Group:     lo.ToPtr(gatewayapi.Group("core")),
-							Kind:      lo.ToPtr(gatewayapi.Kind("Service")),
-							Namespace: lo.ToPtr(gatewayapi.Namespace(testNamespace)),
+							Group:     new(gatewayapi.Group("core")),
+							Kind:      new(gatewayapi.Kind("Service")),
+							Namespace: new(gatewayapi.Namespace(testNamespace)),
 							Name:      gatewayapi.ObjectName("svc-1"),
 						},
 						ControllerName: gatewaycontroller.GetControllerName(),
@@ -695,9 +694,9 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 					},
 					{
 						AncestorRef: gatewayapi.ParentReference{
-							Group:     lo.ToPtr(gatewayapi.Group(incubatorv1alpha1.GroupVersion.Group)),
-							Kind:      lo.ToPtr(gatewayapi.Kind(incubatorv1alpha1.KongServiceFacadeKind)),
-							Namespace: lo.ToPtr(gatewayapi.Namespace(testNamespace)),
+							Group:     new(gatewayapi.Group(incubatorv1alpha1.GroupVersion.Group)),
+							Kind:      new(gatewayapi.Kind(incubatorv1alpha1.KongServiceFacadeKind)),
+							Namespace: new(gatewayapi.Namespace(testNamespace)),
 							Name:      gatewayapi.ObjectName("svc-facade-1"),
 						},
 						ControllerName: gatewaycontroller.GetControllerName(),
@@ -941,9 +940,9 @@ func TestBuildPolicyStatus(t *testing.T) {
 	serviceExpectedPolicyAncestorStatus := func(name string) gatewayapi.PolicyAncestorStatus {
 		return gatewayapi.PolicyAncestorStatus{
 			AncestorRef: gatewayapi.ParentReference{
-				Group:     lo.ToPtr(gatewayapi.Group("core")),
-				Kind:      lo.ToPtr(gatewayapi.Kind("Service")),
-				Namespace: lo.ToPtr(gatewayapi.Namespace("default")),
+				Group:     new(gatewayapi.Group("core")),
+				Kind:      new(gatewayapi.Kind("Service")),
+				Namespace: new(gatewayapi.Namespace("default")),
 				Name:      gatewayapi.ObjectName(name),
 			},
 			ControllerName: gatewaycontroller.GetControllerName(),
@@ -956,9 +955,9 @@ func TestBuildPolicyStatus(t *testing.T) {
 	serviceFacadeExpectedPolicyAncestorStatus := func(name string) gatewayapi.PolicyAncestorStatus {
 		return gatewayapi.PolicyAncestorStatus{
 			AncestorRef: gatewayapi.ParentReference{
-				Group:     lo.ToPtr(gatewayapi.Group(incubatorv1alpha1.GroupVersion.Group)),
-				Kind:      lo.ToPtr(gatewayapi.Kind(incubatorv1alpha1.KongServiceFacadeKind)),
-				Namespace: lo.ToPtr(gatewayapi.Namespace("default")),
+				Group:     new(gatewayapi.Group(incubatorv1alpha1.GroupVersion.Group)),
+				Kind:      new(gatewayapi.Kind(incubatorv1alpha1.KongServiceFacadeKind)),
+				Namespace: new(gatewayapi.Namespace("default")),
 				Name:      gatewayapi.ObjectName(name),
 			},
 			ControllerName: gatewaycontroller.GetControllerName(),
@@ -1049,22 +1048,22 @@ func TestIsSupportedHTTPRouteBackendRef(t *testing.T) {
 		{
 			name: "core service backend ref",
 			backendRef: gatewayapi.BackendObjectReference{
-				Group: lo.ToPtr(gatewayapi.Group("core")),
-				Kind:  lo.ToPtr(gatewayapi.Kind("Service")),
+				Group: new(gatewayapi.Group("core")),
+				Kind:  new(gatewayapi.Kind("Service")),
 			},
 			expected: true,
 		},
 		{
 			name: "core service with nil group",
 			backendRef: gatewayapi.BackendObjectReference{
-				Kind: lo.ToPtr(gatewayapi.Kind("Service")),
+				Kind: new(gatewayapi.Kind("Service")),
 			},
 			expected: true,
 		},
 		{
 			name: "core service with nil kind",
 			backendRef: gatewayapi.BackendObjectReference{
-				Group: lo.ToPtr(gatewayapi.Group("core")),
+				Group: new(gatewayapi.Group("core")),
 			},
 			expected: true,
 		},
@@ -1076,45 +1075,45 @@ func TestIsSupportedHTTPRouteBackendRef(t *testing.T) {
 		{
 			name: "core group unsupported kind",
 			backendRef: gatewayapi.BackendObjectReference{
-				Group: lo.ToPtr(gatewayapi.Group("core")),
-				Kind:  lo.ToPtr(gatewayapi.Kind("UnsupportedKind")),
+				Group: new(gatewayapi.Group("core")),
+				Kind:  new(gatewayapi.Kind("UnsupportedKind")),
 			},
 			expected: false,
 		},
 		{
 			name: "service unsupported group",
 			backendRef: gatewayapi.BackendObjectReference{
-				Group: lo.ToPtr(gatewayapi.Group("unsupported")),
-				Kind:  lo.ToPtr(gatewayapi.Kind("Service")),
+				Group: new(gatewayapi.Group("unsupported")),
+				Kind:  new(gatewayapi.Kind("Service")),
 			},
 			expected: false,
 		},
 		{
 			name: "unsupported group",
 			backendRef: gatewayapi.BackendObjectReference{
-				Group: lo.ToPtr(gatewayapi.Group("unsupported")),
+				Group: new(gatewayapi.Group("unsupported")),
 			},
 			expected: false,
 		},
 		{
 			name: "unsupported kind",
 			backendRef: gatewayapi.BackendObjectReference{
-				Kind: lo.ToPtr(gatewayapi.Kind("UnsupportedKind")),
+				Kind: new(gatewayapi.Kind("UnsupportedKind")),
 			},
 			expected: false,
 		},
 		{
 			name: "empty group",
 			backendRef: gatewayapi.BackendObjectReference{
-				Group: lo.ToPtr(gatewayapi.Group("")),
-				Kind:  lo.ToPtr(gatewayapi.Kind("Service")),
+				Group: new(gatewayapi.Group("")),
+				Kind:  new(gatewayapi.Kind("Service")),
 			},
 			expected: true,
 		},
 		{
 			name: "empty group with nil kind",
 			backendRef: gatewayapi.BackendObjectReference{
-				Group: lo.ToPtr(gatewayapi.Group("")),
+				Group: new(gatewayapi.Group("")),
 			},
 			expected: true,
 		},

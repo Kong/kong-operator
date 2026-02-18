@@ -275,8 +275,8 @@ func (r *KongV1Alpha1KongLicenseReconciler) GetValidatedLicense() mo.Option[Lice
 	}
 	return mo.Some(License{
 		License: kong.License{
-			ID:      kong.String(uuid.NewSHA1(uuid.Nil, []byte("KongLicense:"+chosenLicense.Name)).String()),
-			Payload: kong.String(chosenLicense.RawLicenseString),
+			ID:      new(uuid.NewSHA1(uuid.Nil, []byte("KongLicense:"+chosenLicense.Name)).String()),
+			Payload: new(chosenLicense.RawLicenseString),
 		},
 		IsValid: isValid,
 	})

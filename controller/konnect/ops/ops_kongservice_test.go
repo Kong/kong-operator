@@ -8,7 +8,6 @@ import (
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -40,7 +39,7 @@ func TestCreateKongService(t *testing.T) {
 					},
 					Spec: configurationv1alpha1.KongServiceSpec{
 						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
-							Name: lo.ToPtr("svc-1"),
+							Name: new("svc-1"),
 							Host: "example.com",
 						},
 					},
@@ -57,9 +56,9 @@ func TestCreateKongService(t *testing.T) {
 					Return(
 						&sdkkonnectops.CreateServiceResponse{
 							Service: &sdkkonnectcomp.ServiceOutput{
-								ID:   lo.ToPtr("12345"),
+								ID:   new("12345"),
 								Host: "example.com",
-								Name: lo.ToPtr("svc-1"),
+								Name: new("svc-1"),
 							},
 						},
 						nil,
@@ -101,7 +100,7 @@ func TestCreateKongService(t *testing.T) {
 					Return(
 						&sdkkonnectops.UpsertServiceResponse{
 							Service: &sdkkonnectcomp.ServiceOutput{
-								ID: lo.ToPtr("abcd-1234"),
+								ID: new("abcd-1234"),
 							},
 						},
 						nil,
@@ -124,7 +123,7 @@ func TestCreateKongService(t *testing.T) {
 					},
 					Spec: configurationv1alpha1.KongServiceSpec{
 						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
-							Name: lo.ToPtr("svc-1"),
+							Name: new("svc-1"),
 							Host: "example.com",
 						},
 					},
@@ -156,7 +155,7 @@ func TestCreateKongService(t *testing.T) {
 					},
 					Spec: configurationv1alpha1.KongServiceSpec{
 						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
-							Name: lo.ToPtr("svc-1"),
+							Name: new("svc-1"),
 							Host: "example.com",
 						},
 					},
@@ -204,7 +203,7 @@ func TestCreateKongService(t *testing.T) {
 					},
 					Spec: configurationv1alpha1.KongServiceSpec{
 						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
-							Name: lo.ToPtr("svc-1"),
+							Name: new("svc-1"),
 							Host: "example.com",
 						},
 					},
@@ -269,7 +268,7 @@ func TestDeleteKongService(t *testing.T) {
 				svc := &configurationv1alpha1.KongService{
 					Spec: configurationv1alpha1.KongServiceSpec{
 						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
-							Name: lo.ToPtr("svc-1"),
+							Name: new("svc-1"),
 						},
 					},
 					Status: configurationv1alpha1.KongServiceStatus{
@@ -301,7 +300,7 @@ func TestDeleteKongService(t *testing.T) {
 				svc := &configurationv1alpha1.KongService{
 					Spec: configurationv1alpha1.KongServiceSpec{
 						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
-							Name: lo.ToPtr("svc-1"),
+							Name: new("svc-1"),
 						},
 					},
 					Status: configurationv1alpha1.KongServiceStatus{
@@ -335,7 +334,7 @@ func TestDeleteKongService(t *testing.T) {
 				svc := &configurationv1alpha1.KongService{
 					Spec: configurationv1alpha1.KongServiceSpec{
 						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
-							Name: lo.ToPtr("svc-1"),
+							Name: new("svc-1"),
 						},
 					},
 					Status: configurationv1alpha1.KongServiceStatus{
@@ -398,7 +397,7 @@ func TestUpdateKongService(t *testing.T) {
 				svc := &configurationv1alpha1.KongService{
 					Spec: configurationv1alpha1.KongServiceSpec{
 						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
-							Name: lo.ToPtr("svc-1"),
+							Name: new("svc-1"),
 						},
 					},
 					Status: configurationv1alpha1.KongServiceStatus{
@@ -423,8 +422,8 @@ func TestUpdateKongService(t *testing.T) {
 						&sdkkonnectops.UpsertServiceResponse{
 							StatusCode: 200,
 							Service: &sdkkonnectcomp.ServiceOutput{
-								ID:   lo.ToPtr("123456789"),
-								Name: lo.ToPtr("svc-1"),
+								ID:   new("123456789"),
+								Name: new("svc-1"),
 							},
 						},
 						nil,
@@ -447,7 +446,7 @@ func TestUpdateKongService(t *testing.T) {
 					},
 					Spec: configurationv1alpha1.KongServiceSpec{
 						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
-							Name: lo.ToPtr("svc-1"),
+							Name: new("svc-1"),
 						},
 					},
 					Status: configurationv1alpha1.KongServiceStatus{
@@ -588,7 +587,7 @@ func TestAdoptKongServiceOverride(t *testing.T) {
 							},
 						},
 						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
-							Name: lo.ToPtr("svc-1"),
+							Name: new("svc-1"),
 							Host: "example.com",
 						},
 					},
@@ -629,7 +628,7 @@ func TestAdoptKongServiceOverride(t *testing.T) {
 							},
 						},
 						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
-							Name: lo.ToPtr("svc-1"),
+							Name: new("svc-1"),
 							Host: "example.com",
 						},
 					},
@@ -676,7 +675,7 @@ func TestAdoptKongServiceOverride(t *testing.T) {
 							},
 						},
 						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
-							Name: lo.ToPtr("svc-1"),
+							Name: new("svc-1"),
 							Host: "example.com",
 						},
 					},

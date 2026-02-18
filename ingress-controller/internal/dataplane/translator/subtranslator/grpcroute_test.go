@@ -73,7 +73,7 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 				Matches: []gatewayapi.GRPCRouteMatch{
 					{
 						Method: &gatewayapi.GRPCMethodMatch{
-							Service: lo.ToPtr("service0"),
+							Service: new("service0"),
 							Method:  nil,
 						},
 						Headers: []gatewayapi.GRPCHeaderMatch{
@@ -94,7 +94,7 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 						GroupVersionKind: grpcRouteGVK,
 					},
 					Route: kong.Route{
-						Name:      kong.String("grpcroute.default.single-match.0.0"),
+						Name:      new("grpcroute.default.single-match.0.0"),
 						Protocols: kong.StringSlice("grpc", "grpcs"),
 						Paths:     kong.StringSlice("~/service0/"),
 						Headers: map[string][]string{
@@ -120,8 +120,8 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 				Matches: []gatewayapi.GRPCRouteMatch{
 					{
 						Method: &gatewayapi.GRPCMethodMatch{
-							Service: lo.ToPtr("service0"),
-							Method:  lo.ToPtr("method0"),
+							Service: new("service0"),
+							Method:  new("method0"),
 						},
 					},
 				},
@@ -136,7 +136,7 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 					},
 
 					Route: kong.Route{
-						Name:      kong.String("grpcroute.default.single-match-with-hostname.0.0"),
+						Name:      new("grpcroute.default.single-match-with-hostname.0.0"),
 						Protocols: kong.StringSlice("grpc", "grpcs"),
 						Paths:     kong.StringSlice("~/service0/method0"),
 						Hosts:     kong.StringSlice("foo.com", "*.foo.com"),
@@ -160,7 +160,7 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 					{
 						Method: &gatewayapi.GRPCMethodMatch{
 							Service: nil,
-							Method:  lo.ToPtr("method0"),
+							Method:  new("method0"),
 						},
 						Headers: []gatewayapi.GRPCHeaderMatch{
 							{
@@ -175,8 +175,8 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 					},
 					{
 						Method: &gatewayapi.GRPCMethodMatch{
-							Type:    lo.ToPtr(gatewayapi.GRPCMethodMatchRegularExpression),
-							Service: lo.ToPtr("v[012]"),
+							Type:    new(gatewayapi.GRPCMethodMatchRegularExpression),
+							Service: new("v[012]"),
 						},
 					},
 				},
@@ -189,7 +189,7 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 						GroupVersionKind: grpcRouteGVK,
 					},
 					Route: kong.Route{
-						Name:      kong.String("grpcroute.default.multiple-matches.0.0"),
+						Name:      new("grpcroute.default.multiple-matches.0.0"),
 						Protocols: kong.StringSlice("grpc", "grpcs"),
 						Paths:     kong.StringSlice("~/.+/method0"),
 						Headers: map[string][]string{
@@ -212,7 +212,7 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 						GroupVersionKind: grpcRouteGVK,
 					},
 					Route: kong.Route{
-						Name:      kong.String("grpcroute.default.multiple-matches.0.1"),
+						Name:      new("grpcroute.default.multiple-matches.0.1"),
 						Protocols: kong.StringSlice("grpc", "grpcs"),
 						Paths:     kong.StringSlice("~/v[012]/.+"),
 						Headers:   map[string][]string{},
@@ -242,7 +242,7 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 						GroupVersionKind: grpcRouteGVK,
 					},
 					Route: kong.Route{
-						Name:      kong.String("grpcroute.default.hostname-only.0.0"),
+						Name:      new("grpcroute.default.hostname-only.0.0"),
 						Protocols: kong.StringSlice("grpc", "grpcs"),
 						Hosts:     kong.StringSlice("foo.com"),
 						Tags: kong.StringSlice(
@@ -270,7 +270,7 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 						GroupVersionKind: grpcRouteGVK,
 					},
 					Route: kong.Route{
-						Name:      kong.String("grpcroute.default.catch-all.0.0"),
+						Name:      new("grpcroute.default.catch-all.0.0"),
 						Protocols: kong.StringSlice("grpc", "grpcs"),
 						Tags: kong.StringSlice(
 							"k8s-name:catch-all",
@@ -298,7 +298,7 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 						GroupVersionKind: grpcRouteGVK,
 					},
 					Route: kong.Route{
-						Name:      kong.String("grpcroute.default.hostname-from-gateway.0.0"),
+						Name:      new("grpcroute.default.hostname-from-gateway.0.0"),
 						Hosts:     kong.StringSlice("bar.com"),
 						Protocols: kong.StringSlice("grpc", "grpcs"),
 						Tags: kong.StringSlice(
@@ -314,8 +314,8 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 			parentRef: []gatewayapi.ParentReference{
 				{
 					Name:        "gateway",
-					Namespace:   lo.ToPtr(gatewayapi.Namespace("default")),
-					SectionName: lo.ToPtr(gatewayapi.SectionName("listener-1")),
+					Namespace:   new(gatewayapi.Namespace("default")),
+					SectionName: new(gatewayapi.SectionName("listener-1")),
 				},
 			},
 			storer: lo.Must(store.NewFakeStore(store.FakeObjects{
@@ -333,7 +333,7 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 							Listeners: []gatewayapi.Listener{
 								{
 									Name:     "listener-1",
-									Hostname: lo.ToPtr(gatewayapi.Hostname("bar.com")),
+									Hostname: new(gatewayapi.Hostname("bar.com")),
 								},
 							},
 						},
@@ -366,7 +366,7 @@ func TestGetGRPCRouteHostnamesAsSliceOfStringPointers(t *testing.T) {
 				},
 			},
 			expected: []*string{
-				lo.ToPtr("example.com"),
+				new("example.com"),
 			},
 		},
 		{
@@ -377,8 +377,8 @@ func TestGetGRPCRouteHostnamesAsSliceOfStringPointers(t *testing.T) {
 				},
 			},
 			expected: []*string{
-				lo.ToPtr("example.com"),
-				lo.ToPtr("api.example.com"),
+				new("example.com"),
+				new("api.example.com"),
 			},
 		},
 		{

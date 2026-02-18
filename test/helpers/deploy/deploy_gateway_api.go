@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -96,7 +95,7 @@ func WithGatewayConfigKonnectAuthRef(name, namespace string) ObjOption {
 		}
 		gwConfig.Spec.Konnect.APIAuthConfigurationRef = &konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
 			Name:      name,
-			Namespace: lo.ToPtr(namespace),
+			Namespace: new(namespace),
 		}
 	}
 }
@@ -125,7 +124,7 @@ func WithGatewayClassParametersRef(group, kind, name, namespace string) ObjOptio
 			Group:     gatewayv1.Group(group),
 			Kind:      gatewayv1.Kind(kind),
 			Name:      name,
-			Namespace: lo.ToPtr(gatewayv1.Namespace(namespace)),
+			Namespace: new(gatewayv1.Namespace(namespace)),
 		}
 	}
 }

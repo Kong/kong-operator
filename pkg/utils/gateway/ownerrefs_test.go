@@ -3,7 +3,6 @@ package gateway
 import (
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -34,8 +33,8 @@ func TestListHTTPRoutesForGateway(t *testing.T) {
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
 								{
-									Group: lo.ToPtr(gwtypes.Group(gwtypes.GroupVersion.Group)),
-									Kind:  lo.ToPtr(gwtypes.Kind("Gateway")),
+									Group: new(gwtypes.Group(gwtypes.GroupVersion.Group)),
+									Kind:  new(gwtypes.Kind("Gateway")),
 									Name:  gwtypes.ObjectName("gw-1"),
 								},
 							},
@@ -64,8 +63,8 @@ func TestListHTTPRoutesForGateway(t *testing.T) {
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
 								{
-									Group: lo.ToPtr(gwtypes.Group(gwtypes.GroupVersion.Group)),
-									Kind:  lo.ToPtr(gwtypes.Kind("Gateway")),
+									Group: new(gwtypes.Group(gwtypes.GroupVersion.Group)),
+									Kind:  new(gwtypes.Kind("Gateway")),
 									Name:  gwtypes.ObjectName("gw-1"),
 								},
 							},
@@ -111,10 +110,10 @@ func TestListHTTPRoutesForGateway(t *testing.T) {
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
 								{
-									Group:       lo.ToPtr(gwtypes.Group(gwtypes.GroupVersion.Group)),
-									Kind:        lo.ToPtr(gwtypes.Kind("Gateway")),
+									Group:       new(gwtypes.Group(gwtypes.GroupVersion.Group)),
+									Kind:        new(gwtypes.Kind("Gateway")),
 									Name:        gwtypes.ObjectName("gw-1"),
-									SectionName: lo.ToPtr(gwtypes.SectionName("http")),
+									SectionName: new(gwtypes.SectionName("http")),
 								},
 							},
 						},
@@ -150,10 +149,10 @@ func TestListHTTPRoutesForGateway(t *testing.T) {
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
 								{
-									Group:       lo.ToPtr(gwtypes.Group(gwtypes.GroupVersion.Group)),
-									Kind:        lo.ToPtr(gwtypes.Kind("Gateway")),
+									Group:       new(gwtypes.Group(gwtypes.GroupVersion.Group)),
+									Kind:        new(gwtypes.Kind("Gateway")),
 									Name:        gwtypes.ObjectName("gw-1"),
-									SectionName: lo.ToPtr(gwtypes.SectionName("http")),
+									SectionName: new(gwtypes.SectionName("http")),
 								},
 							},
 						},
@@ -174,10 +173,10 @@ func TestListHTTPRoutesForGateway(t *testing.T) {
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
 								{
-									Group:       lo.ToPtr(gwtypes.Group(gwtypes.GroupVersion.Group)),
-									Kind:        lo.ToPtr(gwtypes.Kind("Gateway")),
+									Group:       new(gwtypes.Group(gwtypes.GroupVersion.Group)),
+									Kind:        new(gwtypes.Kind("Gateway")),
 									Name:        gwtypes.ObjectName("gw-1"),
-									SectionName: lo.ToPtr(gwtypes.SectionName("http-1")),
+									SectionName: new(gwtypes.SectionName("http-1")),
 								},
 							},
 						},
@@ -217,11 +216,11 @@ func TestListHTTPRoutesForGateway(t *testing.T) {
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
 								{
-									Group:       lo.ToPtr(gwtypes.Group(gwtypes.GroupVersion.Group)),
-									Kind:        lo.ToPtr(gwtypes.Kind("Gateway")),
+									Group:       new(gwtypes.Group(gwtypes.GroupVersion.Group)),
+									Kind:        new(gwtypes.Kind("Gateway")),
 									Name:        gwtypes.ObjectName("gw-1"),
-									SectionName: lo.ToPtr(gwtypes.SectionName("http")),
-									Port:        lo.ToPtr(gwtypes.PortNumber(8080)),
+									SectionName: new(gwtypes.SectionName("http")),
+									Port:        new(gwtypes.PortNumber(8080)),
 								},
 							},
 						},

@@ -345,7 +345,7 @@ func (validator KongHTTPValidator) ValidatePlugin(
 	overrideSecrets []*corev1.Secret,
 ) (bool, string, error) {
 	var plugin kong.Plugin
-	plugin.Name = kong.String(k8sPlugin.PluginName)
+	plugin.Name = new(k8sPlugin.PluginName)
 	var err error
 
 	secretGetter := NewSecretGetterWithOverride(validator.SecretGetter, overrideSecrets)
@@ -367,7 +367,7 @@ func (validator KongHTTPValidator) ValidatePlugin(
 		plugin.Config = config
 	}
 	if k8sPlugin.RunOn != "" {
-		plugin.RunOn = kong.String(k8sPlugin.RunOn)
+		plugin.RunOn = new(k8sPlugin.RunOn)
 	}
 	plugin.Ordering = k8sPlugin.Ordering
 	plugin.Protocols = kong.StringSlice(configurationv1.KongProtocolsToStrings(k8sPlugin.Protocols)...)
@@ -392,7 +392,7 @@ func (validator KongHTTPValidator) ValidateClusterPlugin(
 	overrideSecrets []*corev1.Secret,
 ) (bool, string, error) {
 	var plugin kong.Plugin
-	plugin.Name = kong.String(k8sPlugin.PluginName)
+	plugin.Name = new(k8sPlugin.PluginName)
 	var err error
 
 	secretGetter := NewSecretGetterWithOverride(validator.SecretGetter, overrideSecrets)
@@ -413,7 +413,7 @@ func (validator KongHTTPValidator) ValidateClusterPlugin(
 		plugin.Config = config
 	}
 	if k8sPlugin.RunOn != "" {
-		plugin.RunOn = kong.String(k8sPlugin.RunOn)
+		plugin.RunOn = new(k8sPlugin.RunOn)
 	}
 
 	plugin.Ordering = k8sPlugin.Ordering
@@ -501,12 +501,12 @@ func (validator KongHTTPValidator) ValidateVault(ctx context.Context, k8sKongVau
 	}
 
 	kongVault := kong.Vault{
-		Name:   kong.String(k8sKongVault.Spec.Backend),
-		Prefix: kong.String(k8sKongVault.Spec.Prefix),
+		Name:   new(k8sKongVault.Spec.Backend),
+		Prefix: new(k8sKongVault.Spec.Prefix),
 		Config: config,
 	}
 	if len(k8sKongVault.Spec.Description) > 0 {
-		kongVault.Description = kong.String(k8sKongVault.Spec.Description)
+		kongVault.Description = new(k8sKongVault.Spec.Description)
 	}
 	errText, err := validator.validateVaultAgainstGatewaySchema(ctx, kongVault)
 	if err != nil || errText != "" {

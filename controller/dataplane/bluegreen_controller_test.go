@@ -9,7 +9,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -218,12 +217,12 @@ func TestDataPlaneBlueGreenReconciler_Reconcile(t *testing.T) {
 					// has been agreed in https://github.com/kong/kong-operator/issues/281
 					// then no action has to be taken. Otherwise this might need to be changed.
 					{
-						Type:       lo.ToPtr(operatorv1beta1.IPAddressType),
+						Type:       new(operatorv1beta1.IPAddressType),
 						Value:      "6.7.8.9",
 						SourceType: operatorv1beta1.PublicLoadBalancerAddressSourceType,
 					},
 					{
-						Type:       lo.ToPtr(operatorv1beta1.IPAddressType),
+						Type:       new(operatorv1beta1.IPAddressType),
 						Value:      "10.0.0.1",
 						SourceType: operatorv1beta1.PrivateIPAddressSourceType,
 					},

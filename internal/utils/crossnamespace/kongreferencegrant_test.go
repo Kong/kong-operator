@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -50,7 +49,7 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 							{
 								Group: "core",
 								Kind:  "Secret",
-								Name:  lo.ToPtr(configurationv1alpha1.ObjectName("my-secret")),
+								Name:  new(configurationv1alpha1.ObjectName("my-secret")),
 							},
 						},
 					},
@@ -91,7 +90,7 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 							{
 								Group: "konnect.konghq.com",
 								Kind:  "KonnectAPIAuthConfiguration",
-								Name:  lo.ToPtr(configurationv1alpha1.ObjectName("my-auth")),
+								Name:  new(configurationv1alpha1.ObjectName("my-auth")),
 							},
 						},
 					},
@@ -132,7 +131,7 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 							{
 								Group: "konnect.konghq.com",
 								Kind:  "KonnectAPIAuthConfiguration",
-								Name:  lo.ToPtr(configurationv1alpha1.ObjectName("my-auth")),
+								Name:  new(configurationv1alpha1.ObjectName("my-auth")),
 							},
 						},
 					},
@@ -173,7 +172,7 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 							{
 								Group: "konnect.konghq.com",
 								Kind:  "KonnectGatewayControlPlane",
-								Name:  lo.ToPtr(configurationv1alpha1.ObjectName("my-cp")),
+								Name:  new(configurationv1alpha1.ObjectName("my-cp")),
 							},
 						},
 					},
@@ -231,7 +230,7 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 							{
 								Group: "core",
 								Kind:  "Secret",
-								Name:  lo.ToPtr(configurationv1alpha1.ObjectName("my-secret")),
+								Name:  new(configurationv1alpha1.ObjectName("my-secret")),
 							},
 						},
 					},
@@ -272,7 +271,7 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 							{
 								Group: "core",
 								Kind:  "Secret",
-								Name:  lo.ToPtr(configurationv1alpha1.ObjectName("my-secret")),
+								Name:  new(configurationv1alpha1.ObjectName("my-secret")),
 							},
 						},
 					},
@@ -313,7 +312,7 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 							{
 								Group: "core",
 								Kind:  "Secret",
-								Name:  lo.ToPtr(configurationv1alpha1.ObjectName("my-secret")),
+								Name:  new(configurationv1alpha1.ObjectName("my-secret")),
 							},
 						},
 					},
@@ -354,7 +353,7 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 							{
 								Group: "core",
 								Kind:  "Secret",
-								Name:  lo.ToPtr(configurationv1alpha1.ObjectName("other-secret")),
+								Name:  new(configurationv1alpha1.ObjectName("other-secret")),
 							},
 						},
 					},
@@ -395,7 +394,7 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 							{
 								Group: "konnect.konghq.com",
 								Kind:  "KonnectAPIAuthConfiguration",
-								Name:  lo.ToPtr(configurationv1alpha1.ObjectName("my-secret")),
+								Name:  new(configurationv1alpha1.ObjectName("my-secret")),
 							},
 						},
 					},
@@ -436,7 +435,7 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 							{
 								Group: "konnect.konghq.com",
 								Kind:  "Secret",
-								Name:  lo.ToPtr(configurationv1alpha1.ObjectName("my-secret")),
+								Name:  new(configurationv1alpha1.ObjectName("my-secret")),
 							},
 						},
 					},
@@ -477,7 +476,7 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 							{
 								Group: "core",
 								Kind:  "Secret",
-								Name:  lo.ToPtr(configurationv1alpha1.ObjectName("my-secret")),
+								Name:  new(configurationv1alpha1.ObjectName("my-secret")),
 							},
 						},
 					},
@@ -499,7 +498,7 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 							{
 								Group: "core",
 								Kind:  "Secret",
-								Name:  lo.ToPtr(configurationv1alpha1.ObjectName("other-secret")),
+								Name:  new(configurationv1alpha1.ObjectName("other-secret")),
 							},
 						},
 					},
@@ -540,7 +539,7 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 							{
 								Group: "core",
 								Kind:  "Secret",
-								Name:  lo.ToPtr(configurationv1alpha1.ObjectName("other-secret")),
+								Name:  new(configurationv1alpha1.ObjectName("other-secret")),
 							},
 						},
 					},
@@ -562,7 +561,7 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 							{
 								Group: "core",
 								Kind:  "Secret",
-								Name:  lo.ToPtr(configurationv1alpha1.ObjectName("my-secret")),
+								Name:  new(configurationv1alpha1.ObjectName("my-secret")),
 							},
 						},
 					},
@@ -608,7 +607,7 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 							{
 								Group: "core",
 								Kind:  "Secret",
-								Name:  lo.ToPtr(configurationv1alpha1.ObjectName("my-secret")),
+								Name:  new(configurationv1alpha1.ObjectName("my-secret")),
 							},
 						},
 					},
@@ -649,12 +648,12 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 							{
 								Group: "core",
 								Kind:  "Secret",
-								Name:  lo.ToPtr(configurationv1alpha1.ObjectName("other-secret")),
+								Name:  new(configurationv1alpha1.ObjectName("other-secret")),
 							},
 							{
 								Group: "core",
 								Kind:  "Secret",
-								Name:  lo.ToPtr(configurationv1alpha1.ObjectName("my-secret")),
+								Name:  new(configurationv1alpha1.ObjectName("my-secret")),
 							},
 						},
 					},

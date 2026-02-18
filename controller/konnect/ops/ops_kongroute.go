@@ -215,7 +215,7 @@ func kongRouteToSDKRouteInput(
 	}
 	if route.Status.Konnect != nil && route.Status.Konnect.ServiceID != "" {
 		r.RouteJSON.Service = &sdkkonnectcomp.RouteJSONService{
-			ID: sdkkonnectgo.String(route.Status.Konnect.ServiceID),
+			ID: new(route.Status.Konnect.ServiceID),
 		}
 	}
 	return r
@@ -232,7 +232,7 @@ func getKongRouteForUID(
 		// NOTE: only filter on object's UID.
 		// Other fields like name might have changed in the meantime but that's OK.
 		// Those will be enforced via subsequent updates.
-		Tags:           lo.ToPtr(UIDLabelForObject(r)),
+		Tags:           new(UIDLabelForObject(r)),
 		ControlPlaneID: r.GetControlPlaneID(),
 	}
 

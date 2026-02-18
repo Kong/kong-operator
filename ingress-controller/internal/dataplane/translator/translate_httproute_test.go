@@ -203,13 +203,13 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 					ServiceNameToServices: map[string]kongstate.Service{
 						"httproute.default.basic-httproute.0": {
 							Service: kong.Service{ // only 1 service should be created
-								ConnectTimeout: kong.Int(60000),
-								Host:           kong.String("httproute.default.basic-httproute.0"),
-								Name:           kong.String("httproute.default.basic-httproute.0"),
-								Protocol:       kong.String("http"),
-								ReadTimeout:    kong.Int(60000),
-								Retries:        kong.Int(5),
-								WriteTimeout:   kong.Int(60000),
+								ConnectTimeout: new(60000),
+								Host:           new("httproute.default.basic-httproute.0"),
+								Name:           new("httproute.default.basic-httproute.0"),
+								Protocol:       new("http"),
+								ReadTimeout:    new(60000),
+								Retries:        new(5),
+								WriteTimeout:   new(60000),
 							},
 							Backends: kongstate.ServiceBackends{
 								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).MustBuild(),
@@ -217,22 +217,22 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 							Namespace: "default",
 							Routes: []kongstate.Route{{ // only 1 route should be created
 								Route: kong.Route{
-									Name:         kong.String("httproute.default.basic-httproute.0.0"),
-									PreserveHost: kong.Bool(true),
+									Name:         new("httproute.default.basic-httproute.0.0"),
+									PreserveHost: new(true),
 									Protocols: []*string{
-										kong.String("http"),
-										kong.String("https"),
+										new("http"),
+										new("https"),
 									},
 									Hosts: []*string{
-										kong.String("konghq.com"),
-										kong.String("www.konghq.com"),
+										new("konghq.com"),
+										new("www.konghq.com"),
 									},
 									Tags: []*string{
-										kong.String("k8s-name:basic-httproute"),
-										kong.String("k8s-namespace:default"),
-										kong.String("k8s-kind:HTTPRoute"),
-										kong.String("k8s-group:gateway.networking.k8s.io"),
-										kong.String("k8s-version:v1beta1"),
+										new("k8s-name:basic-httproute"),
+										new("k8s-namespace:default"),
+										new("k8s-kind:HTTPRoute"),
+										new("k8s-group:gateway.networking.k8s.io"),
+										new("k8s-version:v1beta1"),
 									},
 								},
 								Ingress: util.FromK8sObject(routes[0]),
@@ -280,13 +280,13 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 					ServiceNameToServices: map[string]kongstate.Service{
 						"httproute.default.basic-httproute.0": {
 							Service: kong.Service{ // only 1 service should be created
-								ConnectTimeout: kong.Int(60000),
-								Host:           kong.String("httproute.default.basic-httproute.0"),
-								Name:           kong.String("httproute.default.basic-httproute.0"),
-								Protocol:       kong.String("http"),
-								ReadTimeout:    kong.Int(60000),
-								Retries:        kong.Int(5),
-								WriteTimeout:   kong.Int(60000),
+								ConnectTimeout: new(60000),
+								Host:           new("httproute.default.basic-httproute.0"),
+								Name:           new("httproute.default.basic-httproute.0"),
+								Protocol:       new("http"),
+								ReadTimeout:    new(60000),
+								Retries:        new(5),
+								WriteTimeout:   new(60000),
 							},
 							Backends: kongstate.ServiceBackends{
 								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).MustBuild(),
@@ -294,18 +294,18 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 							Namespace: "default",
 							Routes: []kongstate.Route{{ // only 1 route should be created
 								Route: kong.Route{
-									Name:         kong.String("httproute.default.basic-httproute.0.0"),
-									PreserveHost: kong.Bool(true),
+									Name:         new("httproute.default.basic-httproute.0.0"),
+									PreserveHost: new(true),
 									Protocols: []*string{
-										kong.String("http"),
-										kong.String("https"),
+										new("http"),
+										new("https"),
 									},
 									Tags: []*string{
-										kong.String("k8s-name:basic-httproute"),
-										kong.String("k8s-namespace:default"),
-										kong.String("k8s-kind:HTTPRoute"),
-										kong.String("k8s-group:gateway.networking.k8s.io"),
-										kong.String("k8s-version:v1beta1"),
+										new("k8s-name:basic-httproute"),
+										new("k8s-namespace:default"),
+										new("k8s-kind:HTTPRoute"),
+										new("k8s-group:gateway.networking.k8s.io"),
+										new("k8s-version:v1beta1"),
 									},
 								},
 								Ingress: util.FromK8sObject(routes[0]),
@@ -354,13 +354,13 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 					ServiceNameToServices: map[string]kongstate.Service{
 						"httproute.default.basic-httproute.0": {
 							Service: kong.Service{ // only 1 service should be created
-								ConnectTimeout: kong.Int(60000),
-								Host:           kong.String("httproute.default.basic-httproute.0"),
-								Name:           kong.String("httproute.default.basic-httproute.0"),
-								Protocol:       kong.String("http"),
-								ReadTimeout:    kong.Int(60000),
-								Retries:        kong.Int(5),
-								WriteTimeout:   kong.Int(60000),
+								ConnectTimeout: new(60000),
+								Host:           new("httproute.default.basic-httproute.0"),
+								Name:           new("httproute.default.basic-httproute.0"),
+								Protocol:       new("http"),
+								ReadTimeout:    new(60000),
+								Retries:        new(5),
+								WriteTimeout:   new(60000),
 							},
 							Backends: kongstate.ServiceBackends{
 								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).MustBuild(),
@@ -368,23 +368,23 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 							Namespace: "default",
 							Routes: []kongstate.Route{{ // only 1 route should be created
 								Route: kong.Route{
-									Name: kong.String("httproute.default.basic-httproute.0.0"),
+									Name: new("httproute.default.basic-httproute.0.0"),
 									Paths: []*string{
-										kong.String("~/httpbin$"),
-										kong.String("/httpbin/"),
+										new("~/httpbin$"),
+										new("/httpbin/"),
 									},
-									PreserveHost: kong.Bool(true),
+									PreserveHost: new(true),
 									Protocols: []*string{
-										kong.String("http"),
-										kong.String("https"),
+										new("http"),
+										new("https"),
 									},
-									StripPath: lo.ToPtr(false),
+									StripPath: new(false),
 									Tags: []*string{
-										kong.String("k8s-name:basic-httproute"),
-										kong.String("k8s-namespace:default"),
-										kong.String("k8s-kind:HTTPRoute"),
-										kong.String("k8s-group:gateway.networking.k8s.io"),
-										kong.String("k8s-version:v1beta1"),
+										new("k8s-name:basic-httproute"),
+										new("k8s-namespace:default"),
+										new("k8s-kind:HTTPRoute"),
+										new("k8s-group:gateway.networking.k8s.io"),
+										new("k8s-version:v1beta1"),
 									},
 								},
 								Ingress: util.FromK8sObject(routes[0]),
@@ -433,13 +433,13 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 					ServiceNameToServices: map[string]kongstate.Service{
 						"httproute.default.basic-httproute.0": {
 							Service: kong.Service{ // only 1 service should be created
-								ConnectTimeout: kong.Int(60000),
-								Host:           kong.String("httproute.default.basic-httproute.0"),
-								Name:           kong.String("httproute.default.basic-httproute.0"),
-								Protocol:       kong.String("http"),
-								ReadTimeout:    kong.Int(60000),
-								Retries:        kong.Int(5),
-								WriteTimeout:   kong.Int(60000),
+								ConnectTimeout: new(60000),
+								Host:           new("httproute.default.basic-httproute.0"),
+								Name:           new("httproute.default.basic-httproute.0"),
+								Protocol:       new("http"),
+								ReadTimeout:    new(60000),
+								Retries:        new(5),
+								WriteTimeout:   new(60000),
 							},
 							Backends: kongstate.ServiceBackends{
 								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).MustBuild(),
@@ -447,22 +447,22 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 							Namespace: "default",
 							Routes: []kongstate.Route{{ // only 1 route should be created
 								Route: kong.Route{
-									Name: kong.String("httproute.default.basic-httproute.0.0"),
+									Name: new("httproute.default.basic-httproute.0.0"),
 									Paths: []*string{
-										kong.String("~/httpbin$"),
+										new("~/httpbin$"),
 									},
-									PreserveHost: kong.Bool(true),
+									PreserveHost: new(true),
 									Protocols: []*string{
-										kong.String("http"),
-										kong.String("https"),
+										new("http"),
+										new("https"),
 									},
-									StripPath: lo.ToPtr(false),
+									StripPath: new(false),
 									Tags: []*string{
-										kong.String("k8s-name:basic-httproute"),
-										kong.String("k8s-namespace:default"),
-										kong.String("k8s-kind:HTTPRoute"),
-										kong.String("k8s-group:gateway.networking.k8s.io"),
-										kong.String("k8s-version:v1beta1"),
+										new("k8s-name:basic-httproute"),
+										new("k8s-namespace:default"),
+										new("k8s-kind:HTTPRoute"),
+										new("k8s-group:gateway.networking.k8s.io"),
+										new("k8s-version:v1beta1"),
 									},
 								},
 								Ingress: util.FromK8sObject(routes[0]),
@@ -513,13 +513,13 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 					ServiceNameToServices: map[string]kongstate.Service{
 						"httproute.default.basic-httproute.0": {
 							Service: kong.Service{ // only 1 service should be created
-								ConnectTimeout: kong.Int(60000),
-								Host:           kong.String("httproute.default.basic-httproute.0"),
-								Name:           kong.String("httproute.default.basic-httproute.0"),
-								Protocol:       kong.String("http"),
-								ReadTimeout:    kong.Int(60000),
-								Retries:        kong.Int(5),
-								WriteTimeout:   kong.Int(60000),
+								ConnectTimeout: new(60000),
+								Host:           new("httproute.default.basic-httproute.0"),
+								Name:           new("httproute.default.basic-httproute.0"),
+								Protocol:       new("http"),
+								ReadTimeout:    new(60000),
+								Retries:        new(5),
+								WriteTimeout:   new(60000),
 							},
 							Backends: kongstate.ServiceBackends{
 								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).MustBuild(),
@@ -527,22 +527,22 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 							Namespace: "default",
 							Routes: []kongstate.Route{{ // only 1 route should be created
 								Route: kong.Route{
-									Name: kong.String("httproute.default.basic-httproute.0.0"),
+									Name: new("httproute.default.basic-httproute.0.0"),
 									Paths: []*string{
-										kong.String("~/httpbin$"),
+										new("~/httpbin$"),
 									},
-									PreserveHost: kong.Bool(true),
+									PreserveHost: new(true),
 									Protocols: []*string{
-										kong.String("http"),
-										kong.String("https"),
+										new("http"),
+										new("https"),
 									},
-									StripPath: lo.ToPtr(false),
+									StripPath: new(false),
 									Tags: []*string{
-										kong.String("k8s-name:basic-httproute"),
-										kong.String("k8s-namespace:default"),
-										kong.String("k8s-kind:HTTPRoute"),
-										kong.String("k8s-group:gateway.networking.k8s.io"),
-										kong.String("k8s-version:v1beta1"),
+										new("k8s-name:basic-httproute"),
+										new("k8s-namespace:default"),
+										new("k8s-kind:HTTPRoute"),
+										new("k8s-group:gateway.networking.k8s.io"),
+										new("k8s-version:v1beta1"),
 									},
 								},
 								Ingress: util.FromK8sObject(routes[0]),
@@ -598,13 +598,13 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 					ServiceNameToServices: map[string]kongstate.Service{
 						"httproute.default.basic-httproute.0": {
 							Service: kong.Service{ // only 1 service should be created
-								ConnectTimeout: kong.Int(60000),
-								Host:           kong.String("httproute.default.basic-httproute.0"),
-								Name:           kong.String("httproute.default.basic-httproute.0"),
-								Protocol:       kong.String("http"),
-								ReadTimeout:    kong.Int(60000),
-								Retries:        kong.Int(5),
-								WriteTimeout:   kong.Int(60000),
+								ConnectTimeout: new(60000),
+								Host:           new("httproute.default.basic-httproute.0"),
+								Name:           new("httproute.default.basic-httproute.0"),
+								Protocol:       new("http"),
+								ReadTimeout:    new(60000),
+								Retries:        new(5),
+								WriteTimeout:   new(60000),
 							},
 							Backends: kongstate.ServiceBackends{
 								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).MustBuild(),
@@ -614,25 +614,25 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 								// only 1 route with two paths should be created
 								{
 									Route: kong.Route{
-										Name: kong.String("httproute.default.basic-httproute.0.0"),
+										Name: new("httproute.default.basic-httproute.0.0"),
 										Paths: []*string{
-											kong.String("~/httpbin-1$"),
-											kong.String("/httpbin-1/"),
-											kong.String("~/httpbin-2$"),
-											kong.String("/httpbin-2/"),
+											new("~/httpbin-1$"),
+											new("/httpbin-1/"),
+											new("~/httpbin-2$"),
+											new("/httpbin-2/"),
 										},
-										PreserveHost: kong.Bool(true),
+										PreserveHost: new(true),
 										Protocols: []*string{
-											kong.String("http"),
-											kong.String("https"),
+											new("http"),
+											new("https"),
 										},
-										StripPath: lo.ToPtr(false),
+										StripPath: new(false),
 										Tags: []*string{
-											kong.String("k8s-name:basic-httproute"),
-											kong.String("k8s-namespace:default"),
-											kong.String("k8s-kind:HTTPRoute"),
-											kong.String("k8s-group:gateway.networking.k8s.io"),
-											kong.String("k8s-version:v1beta1"),
+											new("k8s-name:basic-httproute"),
+											new("k8s-namespace:default"),
+											new("k8s-kind:HTTPRoute"),
+											new("k8s-group:gateway.networking.k8s.io"),
+											new("k8s-version:v1beta1"),
 										},
 									},
 									Ingress: util.FromK8sObject(routes[0]),
@@ -696,13 +696,13 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 					ServiceNameToServices: map[string]kongstate.Service{
 						"httproute.default.basic-httproute.0": {
 							Service: kong.Service{ // 1 service per route should be created
-								ConnectTimeout: kong.Int(60000),
-								Host:           kong.String("httproute.default.basic-httproute.0"),
-								Name:           kong.String("httproute.default.basic-httproute.0"),
-								Protocol:       kong.String("http"),
-								ReadTimeout:    kong.Int(60000),
-								Retries:        kong.Int(5),
-								WriteTimeout:   kong.Int(60000),
+								ConnectTimeout: new(60000),
+								Host:           new("httproute.default.basic-httproute.0"),
+								Name:           new("httproute.default.basic-httproute.0"),
+								Protocol:       new("http"),
+								ReadTimeout:    new(60000),
+								Retries:        new(5),
+								WriteTimeout:   new(60000),
 							},
 							Backends: kongstate.ServiceBackends{
 								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).MustBuild(),
@@ -710,23 +710,23 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 							Namespace: "default",
 							Routes: []kongstate.Route{{ // only 1 route should be created for this service
 								Route: kong.Route{
-									Name: kong.String("httproute.default.basic-httproute.0.0"),
+									Name: new("httproute.default.basic-httproute.0.0"),
 									Paths: []*string{
-										kong.String("~/httpbin-1$"),
-										kong.String("/httpbin-1/"),
+										new("~/httpbin-1$"),
+										new("/httpbin-1/"),
 									},
-									PreserveHost: kong.Bool(true),
+									PreserveHost: new(true),
 									Protocols: []*string{
-										kong.String("http"),
-										kong.String("https"),
+										new("http"),
+										new("https"),
 									},
-									StripPath: lo.ToPtr(false),
+									StripPath: new(false),
 									Tags: []*string{
-										kong.String("k8s-name:basic-httproute"),
-										kong.String("k8s-namespace:default"),
-										kong.String("k8s-kind:HTTPRoute"),
-										kong.String("k8s-group:gateway.networking.k8s.io"),
-										kong.String("k8s-version:v1beta1"),
+										new("k8s-name:basic-httproute"),
+										new("k8s-namespace:default"),
+										new("k8s-kind:HTTPRoute"),
+										new("k8s-group:gateway.networking.k8s.io"),
+										new("k8s-version:v1beta1"),
 									},
 								},
 								Ingress: util.FromK8sObject(routes[0]),
@@ -736,13 +736,13 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 
 						"httproute.default.basic-httproute.1": {
 							Service: kong.Service{ // 1 service per route should be created
-								ConnectTimeout: kong.Int(60000),
-								Host:           kong.String("httproute.default.basic-httproute.1"),
-								Name:           kong.String("httproute.default.basic-httproute.1"),
-								Protocol:       kong.String("http"),
-								ReadTimeout:    kong.Int(60000),
-								Retries:        kong.Int(5),
-								WriteTimeout:   kong.Int(60000),
+								ConnectTimeout: new(60000),
+								Host:           new("httproute.default.basic-httproute.1"),
+								Name:           new("httproute.default.basic-httproute.1"),
+								Protocol:       new("http"),
+								ReadTimeout:    new(60000),
+								Retries:        new(5),
+								WriteTimeout:   new(60000),
 							},
 							Backends: kongstate.ServiceBackends{
 								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(8080).MustBuild(),
@@ -750,23 +750,23 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 							Namespace: "default",
 							Routes: []kongstate.Route{{
 								Route: kong.Route{
-									Name: kong.String("httproute.default.basic-httproute.1.0"),
+									Name: new("httproute.default.basic-httproute.1.0"),
 									Paths: []*string{
-										kong.String("~/httpbin-2$"),
-										kong.String("/httpbin-2/"),
+										new("~/httpbin-2$"),
+										new("/httpbin-2/"),
 									},
-									PreserveHost: kong.Bool(true),
+									PreserveHost: new(true),
 									Protocols: []*string{
-										kong.String("http"),
-										kong.String("https"),
+										new("http"),
+										new("https"),
 									},
-									StripPath: lo.ToPtr(false),
+									StripPath: new(false),
 									Tags: []*string{
-										kong.String("k8s-name:basic-httproute"),
-										kong.String("k8s-namespace:default"),
-										kong.String("k8s-kind:HTTPRoute"),
-										kong.String("k8s-group:gateway.networking.k8s.io"),
-										kong.String("k8s-version:v1beta1"),
+										new("k8s-name:basic-httproute"),
+										new("k8s-namespace:default"),
+										new("k8s-kind:HTTPRoute"),
+										new("k8s-group:gateway.networking.k8s.io"),
+										new("k8s-version:v1beta1"),
 									},
 								},
 								Ingress: util.FromK8sObject(routes[0]),
@@ -852,13 +852,13 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 					ServiceNameToServices: map[string]kongstate.Service{
 						"httproute.default.basic-httproute.0": {
 							Service: kong.Service{
-								ConnectTimeout: kong.Int(60000),
-								Host:           kong.String("httproute.default.basic-httproute.0"),
-								Name:           kong.String("httproute.default.basic-httproute.0"),
-								Protocol:       kong.String("http"),
-								ReadTimeout:    kong.Int(60000),
-								Retries:        kong.Int(5),
-								WriteTimeout:   kong.Int(60000),
+								ConnectTimeout: new(60000),
+								Host:           new("httproute.default.basic-httproute.0"),
+								Name:           new("httproute.default.basic-httproute.0"),
+								Protocol:       new("http"),
+								ReadTimeout:    new(60000),
+								Retries:        new(5),
+								WriteTimeout:   new(60000),
 							},
 							Backends: kongstate.ServiceBackends{
 								builder.NewKongstateServiceBackend("foo-v1").WithPortNumber(80).WithWeight(90).MustBuild(),
@@ -868,25 +868,25 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 							Routes: []kongstate.Route{
 								{
 									Route: kong.Route{
-										Name: kong.String("httproute.default.basic-httproute.0.0"),
+										Name: new("httproute.default.basic-httproute.0.0"),
 										Paths: []*string{
-											kong.String("~/httpbin-1$"),
-											kong.String("/httpbin-1/"),
-											kong.String("~/httpbin-2$"),
-											kong.String("/httpbin-2/"),
+											new("~/httpbin-1$"),
+											new("/httpbin-1/"),
+											new("~/httpbin-2$"),
+											new("/httpbin-2/"),
 										},
-										PreserveHost: kong.Bool(true),
+										PreserveHost: new(true),
 										Protocols: []*string{
-											kong.String("http"),
-											kong.String("https"),
+											new("http"),
+											new("https"),
 										},
-										StripPath: lo.ToPtr(false),
+										StripPath: new(false),
 										Tags: []*string{
-											kong.String("k8s-name:basic-httproute"),
-											kong.String("k8s-namespace:default"),
-											kong.String("k8s-kind:HTTPRoute"),
-											kong.String("k8s-group:gateway.networking.k8s.io"),
-											kong.String("k8s-version:v1beta1"),
+											new("k8s-name:basic-httproute"),
+											new("k8s-namespace:default"),
+											new("k8s-kind:HTTPRoute"),
+											new("k8s-group:gateway.networking.k8s.io"),
+											new("k8s-version:v1beta1"),
 										},
 									},
 									Ingress: util.FromK8sObject(routes[0]),
@@ -897,13 +897,13 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 
 						"httproute.default.basic-httproute.2": {
 							Service: kong.Service{
-								ConnectTimeout: kong.Int(60000),
-								Host:           kong.String("httproute.default.basic-httproute.2"),
-								Name:           kong.String("httproute.default.basic-httproute.2"),
-								Protocol:       kong.String("http"),
-								ReadTimeout:    kong.Int(60000),
-								Retries:        kong.Int(5),
-								WriteTimeout:   kong.Int(60000),
+								ConnectTimeout: new(60000),
+								Host:           new("httproute.default.basic-httproute.2"),
+								Name:           new("httproute.default.basic-httproute.2"),
+								Protocol:       new("http"),
+								ReadTimeout:    new(60000),
+								Retries:        new(5),
+								WriteTimeout:   new(60000),
 							},
 							Backends: kongstate.ServiceBackends{
 								builder.NewKongstateServiceBackend("foo-v1").WithPortNumber(8080).WithWeight(90).MustBuild(),
@@ -913,23 +913,23 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 							Routes: []kongstate.Route{
 								{
 									Route: kong.Route{
-										Name: kong.String("httproute.default.basic-httproute.2.0"),
+										Name: new("httproute.default.basic-httproute.2.0"),
 										Paths: []*string{
-											kong.String("~/httpbin-2$"),
-											kong.String("/httpbin-2/"),
+											new("~/httpbin-2$"),
+											new("/httpbin-2/"),
 										},
-										PreserveHost: kong.Bool(true),
+										PreserveHost: new(true),
 										Protocols: []*string{
-											kong.String("http"),
-											kong.String("https"),
+											new("http"),
+											new("https"),
 										},
-										StripPath: lo.ToPtr(false),
+										StripPath: new(false),
 										Tags: []*string{
-											kong.String("k8s-name:basic-httproute"),
-											kong.String("k8s-namespace:default"),
-											kong.String("k8s-kind:HTTPRoute"),
-											kong.String("k8s-group:gateway.networking.k8s.io"),
-											kong.String("k8s-version:v1beta1"),
+											new("k8s-name:basic-httproute"),
+											new("k8s-namespace:default"),
+											new("k8s-kind:HTTPRoute"),
+											new("k8s-group:gateway.networking.k8s.io"),
+											new("k8s-version:v1beta1"),
 										},
 									},
 									Ingress: util.FromK8sObject(routes[0]),
@@ -1011,13 +1011,13 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 					ServiceNameToServices: map[string]kongstate.Service{
 						"httproute.default.basic-httproute.0": {
 							Service: kong.Service{ // only 1 service should be created
-								ConnectTimeout: kong.Int(60000),
-								Host:           kong.String("httproute.default.basic-httproute.0"),
-								Name:           kong.String("httproute.default.basic-httproute.0"),
-								Protocol:       kong.String("http"),
-								ReadTimeout:    kong.Int(60000),
-								Retries:        kong.Int(5),
-								WriteTimeout:   kong.Int(60000),
+								ConnectTimeout: new(60000),
+								Host:           new("httproute.default.basic-httproute.0"),
+								Name:           new("httproute.default.basic-httproute.0"),
+								Protocol:       new("http"),
+								ReadTimeout:    new(60000),
+								Retries:        new(5),
+								WriteTimeout:   new(60000),
 							},
 							Backends: kongstate.ServiceBackends{
 								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).MustBuild(),
@@ -1027,80 +1027,80 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 								// two route  should be created, as the filters are different
 								{
 									Route: kong.Route{
-										Name: kong.String("httproute.default.basic-httproute.0.0"),
+										Name: new("httproute.default.basic-httproute.0.0"),
 										Paths: []*string{
-											kong.String("~/path-0$"),
-											kong.String("/path-0/"),
+											new("~/path-0$"),
+											new("/path-0/"),
 										},
-										PreserveHost: kong.Bool(true),
+										PreserveHost: new(true),
 										Protocols: []*string{
-											kong.String("http"),
-											kong.String("https"),
+											new("http"),
+											new("https"),
 										},
-										StripPath: lo.ToPtr(false),
+										StripPath: new(false),
 										Tags: []*string{
-											kong.String("k8s-name:basic-httproute"),
-											kong.String("k8s-namespace:default"),
-											kong.String("k8s-kind:HTTPRoute"),
-											kong.String("k8s-group:gateway.networking.k8s.io"),
-											kong.String("k8s-version:v1beta1"),
+											new("k8s-name:basic-httproute"),
+											new("k8s-namespace:default"),
+											new("k8s-kind:HTTPRoute"),
+											new("k8s-group:gateway.networking.k8s.io"),
+											new("k8s-version:v1beta1"),
 										},
 									},
 									Ingress: util.FromK8sObject(routes[0]),
 									Plugins: []kong.Plugin{
 										{
-											Name: kong.String("request-transformer"),
+											Name: new("request-transformer"),
 											Config: kong.Configuration{
 												"append": subtranslator.TransformerPluginConfig{
 													Headers: []subtranslator.Header{subtranslator.NewHeader("X-Test-Header-1", "test-value-1")},
 												},
 											},
 											Tags: []*string{
-												kong.String("k8s-name:basic-httproute"),
-												kong.String("k8s-namespace:default"),
-												kong.String("k8s-kind:HTTPRoute"),
-												kong.String("k8s-group:gateway.networking.k8s.io"),
-												kong.String("k8s-version:v1beta1"),
+												new("k8s-name:basic-httproute"),
+												new("k8s-namespace:default"),
+												new("k8s-kind:HTTPRoute"),
+												new("k8s-group:gateway.networking.k8s.io"),
+												new("k8s-version:v1beta1"),
 											},
 										},
 									},
 								},
 								{
 									Route: kong.Route{
-										Name: kong.String("httproute.default.basic-httproute.1.0"),
+										Name: new("httproute.default.basic-httproute.1.0"),
 										Paths: []*string{
-											kong.String("~/path-1$"),
-											kong.String("/path-1/"),
+											new("~/path-1$"),
+											new("/path-1/"),
 										},
-										PreserveHost: kong.Bool(true),
+										PreserveHost: new(true),
 										Protocols: []*string{
-											kong.String("http"),
-											kong.String("https"),
+											new("http"),
+											new("https"),
 										},
-										StripPath: lo.ToPtr(false),
+										StripPath: new(false),
 										Tags: []*string{
-											kong.String("k8s-name:basic-httproute"),
-											kong.String("k8s-namespace:default"),
-											kong.String("k8s-kind:HTTPRoute"),
-											kong.String("k8s-group:gateway.networking.k8s.io"),
-											kong.String("k8s-version:v1beta1"),
+											new("k8s-name:basic-httproute"),
+											new("k8s-namespace:default"),
+											new("k8s-kind:HTTPRoute"),
+											new("k8s-group:gateway.networking.k8s.io"),
+											new("k8s-version:v1beta1"),
 										},
 									},
 									Ingress: util.FromK8sObject(routes[0]),
 									Plugins: []kong.Plugin{
 										{
-											Name: kong.String("request-transformer"),
+											Name: new("request-transformer"),
 											Config: kong.Configuration{
 												"append": subtranslator.TransformerPluginConfig{
 													Headers: []subtranslator.Header{subtranslator.NewHeader("X-Test-Header-2", "test-value-2")},
 												},
 											},
 											Tags: []*string{
-												kong.String("k8s-name:basic-httproute"),
-												kong.String("k8s-namespace:default"),
-												kong.String("k8s-kind:HTTPRoute"),
-												kong.String("k8s-group:gateway.networking.k8s.io"),
-												kong.String("k8s-version:v1beta1"),
+												new("k8s-name:basic-httproute"),
+												new("k8s-namespace:default"),
+												new("k8s-kind:HTTPRoute"),
+												new("k8s-group:gateway.networking.k8s.io"),
+												new("k8s-version:v1beta1"),
 											},
 										},
 									},
@@ -1176,13 +1176,13 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 					ServiceNameToServices: map[string]kongstate.Service{
 						"httproute.default.basic-httproute.0": {
 							Service: kong.Service{
-								ConnectTimeout: kong.Int(60000),
-								Host:           kong.String("httproute.default.basic-httproute.0"),
-								Name:           kong.String("httproute.default.basic-httproute.0"),
-								Protocol:       kong.String("http"),
-								ReadTimeout:    kong.Int(60000),
-								Retries:        kong.Int(5),
-								WriteTimeout:   kong.Int(60000),
+								ConnectTimeout: new(60000),
+								Host:           new("httproute.default.basic-httproute.0"),
+								Name:           new("httproute.default.basic-httproute.0"),
+								Protocol:       new("http"),
+								ReadTimeout:    new(60000),
+								Retries:        new(5),
+								WriteTimeout:   new(60000),
 							},
 
 							Backends: kongstate.ServiceBackends{
@@ -1194,25 +1194,25 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 								// First two matches consolidated into a single route
 								{
 									Route: kong.Route{
-										Name: kong.String("httproute.default.basic-httproute.0.0"),
+										Name: new("httproute.default.basic-httproute.0.0"),
 										Paths: []*string{
-											kong.String("~/path-0$"),
-											kong.String("/path-0/"),
-											kong.String("~/path-1$"),
-											kong.String("/path-1/"),
+											new("~/path-0$"),
+											new("/path-0/"),
+											new("~/path-1$"),
+											new("/path-1/"),
 										},
-										PreserveHost: kong.Bool(true),
+										PreserveHost: new(true),
 										Protocols: []*string{
-											kong.String("http"),
-											kong.String("https"),
+											new("http"),
+											new("https"),
 										},
-										StripPath: lo.ToPtr(false),
+										StripPath: new(false),
 										Tags: []*string{
-											kong.String("k8s-name:basic-httproute"),
-											kong.String("k8s-namespace:default"),
-											kong.String("k8s-kind:HTTPRoute"),
-											kong.String("k8s-group:gateway.networking.k8s.io"),
-											kong.String("k8s-version:v1beta1"),
+											new("k8s-name:basic-httproute"),
+											new("k8s-namespace:default"),
+											new("k8s-kind:HTTPRoute"),
+											new("k8s-group:gateway.networking.k8s.io"),
+											new("k8s-version:v1beta1"),
 										},
 									},
 									Ingress: util.FromK8sObject(routes[0]),
@@ -1220,26 +1220,26 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 								// Second two matches consolidated into a single route
 								{
 									Route: kong.Route{
-										Name: kong.String("httproute.default.basic-httproute.0.2"),
+										Name: new("httproute.default.basic-httproute.0.2"),
 										Paths: []*string{
-											kong.String("~/path-2$"),
-											kong.String("/path-2/"),
-											kong.String("~/path-3$"),
-											kong.String("/path-3/"),
+											new("~/path-2$"),
+											new("/path-2/"),
+											new("~/path-3$"),
+											new("/path-3/"),
 										},
-										PreserveHost: kong.Bool(true),
+										PreserveHost: new(true),
 										Protocols: []*string{
-											kong.String("http"),
-											kong.String("https"),
+											new("http"),
+											new("https"),
 										},
-										StripPath: lo.ToPtr(false),
-										Methods:   []*string{kong.String("DELETE")},
+										StripPath: new(false),
+										Methods:   []*string{new("DELETE")},
 										Tags: []*string{
-											kong.String("k8s-name:basic-httproute"),
-											kong.String("k8s-namespace:default"),
-											kong.String("k8s-kind:HTTPRoute"),
-											kong.String("k8s-group:gateway.networking.k8s.io"),
-											kong.String("k8s-version:v1beta1"),
+											new("k8s-name:basic-httproute"),
+											new("k8s-namespace:default"),
+											new("k8s-kind:HTTPRoute"),
+											new("k8s-group:gateway.networking.k8s.io"),
+											new("k8s-version:v1beta1"),
 										},
 									},
 									Ingress: util.FromK8sObject(routes[0]),
@@ -1247,29 +1247,29 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 								// Third two matches consolidated into a single route
 								{
 									Route: kong.Route{
-										Name: kong.String("httproute.default.basic-httproute.0.4"),
+										Name: new("httproute.default.basic-httproute.0.4"),
 										Paths: []*string{
-											kong.String("~/path-4$"),
-											kong.String("/path-4/"),
-											kong.String("~/path-5$"),
-											kong.String("/path-5/"),
+											new("~/path-4$"),
+											new("/path-4/"),
+											new("~/path-5$"),
+											new("/path-5/"),
 										},
-										PreserveHost: kong.Bool(true),
+										PreserveHost: new(true),
 										Protocols: []*string{
-											kong.String("http"),
-											kong.String("https"),
+											new("http"),
+											new("https"),
 										},
-										StripPath: lo.ToPtr(false),
+										StripPath: new(false),
 										Headers: map[string][]string{
 											"x-header-1": {"x-value-1"},
 											"x-header-2": {"x-value-2"},
 										},
 										Tags: []*string{
-											kong.String("k8s-name:basic-httproute"),
-											kong.String("k8s-namespace:default"),
-											kong.String("k8s-kind:HTTPRoute"),
-											kong.String("k8s-group:gateway.networking.k8s.io"),
-											kong.String("k8s-version:v1beta1"),
+											new("k8s-name:basic-httproute"),
+											new("k8s-namespace:default"),
+											new("k8s-kind:HTTPRoute"),
+											new("k8s-group:gateway.networking.k8s.io"),
+											new("k8s-version:v1beta1"),
 										},
 									},
 									Ingress: util.FromK8sObject(routes[0]),
@@ -1374,13 +1374,13 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 					ServiceNameToServices: map[string]kongstate.Service{
 						"httproute.default.basic-httproute.0": {
 							Service: kong.Service{
-								ConnectTimeout: kong.Int(60000),
-								Host:           kong.String("httproute.default.basic-httproute.0"),
-								Name:           kong.String("httproute.default.basic-httproute.0"),
-								Protocol:       kong.String("http"),
-								ReadTimeout:    kong.Int(60000),
-								Retries:        kong.Int(5),
-								WriteTimeout:   kong.Int(60000),
+								ConnectTimeout: new(60000),
+								Host:           new("httproute.default.basic-httproute.0"),
+								Name:           new("httproute.default.basic-httproute.0"),
+								Protocol:       new("http"),
+								ReadTimeout:    new(60000),
+								Retries:        new(5),
+								WriteTimeout:   new(60000),
 							},
 							Backends: kongstate.ServiceBackends{
 								builder.NewKongstateServiceBackend("foo-v1").WithPortNumber(80).WithWeight(90).MustBuild(),
@@ -1391,29 +1391,29 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 								// First two matches from rule one and rule two consolidated into a single route
 								{
 									Route: kong.Route{
-										Name: kong.String("httproute.default.basic-httproute.0.0"),
+										Name: new("httproute.default.basic-httproute.0.0"),
 										Paths: []*string{
-											kong.String("~/path-0$"),
-											kong.String("/path-0/"),
-											kong.String("~/path-1$"),
-											kong.String("/path-1/"),
-											kong.String("~/path-4$"),
-											kong.String("/path-4/"),
-											kong.String("~/path-5$"),
-											kong.String("/path-5/"),
+											new("~/path-0$"),
+											new("/path-0/"),
+											new("~/path-1$"),
+											new("/path-1/"),
+											new("~/path-4$"),
+											new("/path-4/"),
+											new("~/path-5$"),
+											new("/path-5/"),
 										},
-										PreserveHost: kong.Bool(true),
+										PreserveHost: new(true),
 										Protocols: []*string{
-											kong.String("http"),
-											kong.String("https"),
+											new("http"),
+											new("https"),
 										},
-										StripPath: lo.ToPtr(false),
+										StripPath: new(false),
 										Tags: []*string{
-											kong.String("k8s-name:basic-httproute"),
-											kong.String("k8s-namespace:default"),
-											kong.String("k8s-kind:HTTPRoute"),
-											kong.String("k8s-group:gateway.networking.k8s.io"),
-											kong.String("k8s-version:v1beta1"),
+											new("k8s-name:basic-httproute"),
+											new("k8s-namespace:default"),
+											new("k8s-kind:HTTPRoute"),
+											new("k8s-group:gateway.networking.k8s.io"),
+											new("k8s-version:v1beta1"),
 										},
 									},
 									Ingress: util.FromK8sObject(routes[0]),
@@ -1421,26 +1421,26 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 								// Second two matches consolidated into a single route
 								{
 									Route: kong.Route{
-										Name: kong.String("httproute.default.basic-httproute.0.2"),
+										Name: new("httproute.default.basic-httproute.0.2"),
 										Paths: []*string{
-											kong.String("~/path-2$"),
-											kong.String("/path-2/"),
-											kong.String("~/path-3$"),
-											kong.String("/path-3/"),
+											new("~/path-2$"),
+											new("/path-2/"),
+											new("~/path-3$"),
+											new("/path-3/"),
 										},
-										PreserveHost: kong.Bool(true),
+										PreserveHost: new(true),
 										Protocols: []*string{
-											kong.String("http"),
-											kong.String("https"),
+											new("http"),
+											new("https"),
 										},
-										StripPath: lo.ToPtr(false),
-										Methods:   []*string{kong.String("DELETE")},
+										StripPath: new(false),
+										Methods:   []*string{new("DELETE")},
 										Tags: []*string{
-											kong.String("k8s-name:basic-httproute"),
-											kong.String("k8s-namespace:default"),
-											kong.String("k8s-kind:HTTPRoute"),
-											kong.String("k8s-group:gateway.networking.k8s.io"),
-											kong.String("k8s-version:v1beta1"),
+											new("k8s-name:basic-httproute"),
+											new("k8s-namespace:default"),
+											new("k8s-kind:HTTPRoute"),
+											new("k8s-group:gateway.networking.k8s.io"),
+											new("k8s-version:v1beta1"),
 										},
 									},
 									Ingress: util.FromK8sObject(routes[0]),
@@ -1449,42 +1449,42 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 								// Matches from rule 3, that has different filter, are not consolidated
 								{
 									Route: kong.Route{
-										Name: kong.String("httproute.default.basic-httproute.2.0"),
+										Name: new("httproute.default.basic-httproute.2.0"),
 										Paths: []*string{
-											kong.String("~/path-6$"),
-											kong.String("/path-6/"),
-											kong.String("~/path-7$"),
-											kong.String("/path-7/"),
+											new("~/path-6$"),
+											new("/path-6/"),
+											new("~/path-7$"),
+											new("/path-7/"),
 										},
-										PreserveHost: kong.Bool(true),
+										PreserveHost: new(true),
 										Protocols: []*string{
-											kong.String("http"),
-											kong.String("https"),
+											new("http"),
+											new("https"),
 										},
-										StripPath: lo.ToPtr(false),
+										StripPath: new(false),
 										Tags: []*string{
-											kong.String("k8s-name:basic-httproute"),
-											kong.String("k8s-namespace:default"),
-											kong.String("k8s-kind:HTTPRoute"),
-											kong.String("k8s-group:gateway.networking.k8s.io"),
-											kong.String("k8s-version:v1beta1"),
+											new("k8s-name:basic-httproute"),
+											new("k8s-namespace:default"),
+											new("k8s-kind:HTTPRoute"),
+											new("k8s-group:gateway.networking.k8s.io"),
+											new("k8s-version:v1beta1"),
 										},
 									},
 									Ingress: util.FromK8sObject(routes[0]),
 									Plugins: []kong.Plugin{
 										{
-											Name: kong.String("request-transformer"),
+											Name: new("request-transformer"),
 											Config: kong.Configuration{
 												"append": subtranslator.TransformerPluginConfig{
 													Headers: []subtranslator.Header{subtranslator.NewHeader("X-Test-Header-1", "test-value-1")},
 												},
 											},
 											Tags: []*string{
-												kong.String("k8s-name:basic-httproute"),
-												kong.String("k8s-namespace:default"),
-												kong.String("k8s-kind:HTTPRoute"),
-												kong.String("k8s-group:gateway.networking.k8s.io"),
-												kong.String("k8s-version:v1beta1"),
+												new("k8s-name:basic-httproute"),
+												new("k8s-namespace:default"),
+												new("k8s-kind:HTTPRoute"),
+												new("k8s-group:gateway.networking.k8s.io"),
+												new("k8s-version:v1beta1"),
 											},
 										},
 									},
@@ -1541,13 +1541,13 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 					ServiceNameToServices: map[string]kongstate.Service{
 						"httproute.default.basic-httproute.0": {
 							Service: kong.Service{ // only 1 service should be created
-								ConnectTimeout: kong.Int(500),
-								Host:           kong.String("httproute.default.basic-httproute.0"),
-								Name:           kong.String("httproute.default.basic-httproute.0"),
-								Protocol:       kong.String("http"),
-								ReadTimeout:    kong.Int(500),
-								Retries:        kong.Int(5),
-								WriteTimeout:   kong.Int(500),
+								ConnectTimeout: new(500),
+								Host:           new("httproute.default.basic-httproute.0"),
+								Name:           new("httproute.default.basic-httproute.0"),
+								Protocol:       new("http"),
+								ReadTimeout:    new(500),
+								Retries:        new(5),
+								WriteTimeout:   new(500),
 							},
 							Backends: kongstate.ServiceBackends{
 								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).MustBuild(),
@@ -1555,22 +1555,22 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 							Namespace: "default",
 							Routes: []kongstate.Route{{ // only 1 route should be created
 								Route: kong.Route{
-									Name:         kong.String("httproute.default.basic-httproute.0.0"),
-									PreserveHost: kong.Bool(true),
+									Name:         new("httproute.default.basic-httproute.0.0"),
+									PreserveHost: new(true),
 									Protocols: []*string{
-										kong.String("http"),
-										kong.String("https"),
+										new("http"),
+										new("https"),
 									},
 									Hosts: []*string{
-										kong.String("konghq.com"),
-										kong.String("www.konghq.com"),
+										new("konghq.com"),
+										new("www.konghq.com"),
 									},
 									Tags: []*string{
-										kong.String("k8s-name:basic-httproute"),
-										kong.String("k8s-namespace:default"),
-										kong.String("k8s-kind:HTTPRoute"),
-										kong.String("k8s-group:gateway.networking.k8s.io"),
-										kong.String("k8s-version:v1beta1"),
+										new("k8s-name:basic-httproute"),
+										new("k8s-namespace:default"),
+										new("k8s-kind:HTTPRoute"),
+										new("k8s-group:gateway.networking.k8s.io"),
+										new("k8s-version:v1beta1"),
 									},
 								},
 								Ingress: util.FromK8sObject(routes[0]),
@@ -1681,13 +1681,13 @@ func TestIngressRulesFromHTTPRoutesCombinedServicesAcrossHTTPRoutes(t *testing.T
 					ServiceNameToServices: map[string]kongstate.Service{
 						"httproute.default.svc.default.fake-service.80": {
 							Service: kong.Service{
-								Host:           kong.String("httproute.default.svc.default.fake-service.80"),
-								Name:           kong.String("httproute.default.svc.default.fake-service.80"),
-								ConnectTimeout: kong.Int(60000),
-								Protocol:       kong.String("http"),
-								ReadTimeout:    kong.Int(60000),
-								Retries:        kong.Int(5),
-								WriteTimeout:   kong.Int(60000),
+								Host:           new("httproute.default.svc.default.fake-service.80"),
+								Name:           new("httproute.default.svc.default.fake-service.80"),
+								ConnectTimeout: new(60000),
+								Protocol:       new("http"),
+								ReadTimeout:    new(60000),
+								Retries:        new(5),
+								WriteTimeout:   new(60000),
 							},
 							Backends: []kongstate.ServiceBackend{
 								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).MustBuild(),
@@ -1698,23 +1698,23 @@ func TestIngressRulesFromHTTPRoutesCombinedServicesAcrossHTTPRoutes(t *testing.T
 								// Only 1 route should be created.
 								{
 									Route: kong.Route{
-										Name:         kong.String("httproute.default.httproute-1.0.0"),
-										PreserveHost: kong.Bool(true),
+										Name:         new("httproute.default.httproute-1.0.0"),
+										PreserveHost: new(true),
 										Protocols: []*string{
-											kong.String("http"),
-											kong.String("https"),
+											new("http"),
+											new("https"),
 										},
 										Paths: kong.StringSlice(
 											"~/foo$",
 											"~/bar$",
 										),
-										StripPath: lo.ToPtr(false),
+										StripPath: new(false),
 										Tags: []*string{
-											kong.String("k8s-name:httproute-1"),
-											kong.String("k8s-namespace:default"),
-											kong.String("k8s-kind:HTTPRoute"),
-											kong.String("k8s-group:gateway.networking.k8s.io"),
-											kong.String("k8s-version:v1"),
+											new("k8s-name:httproute-1"),
+											new("k8s-namespace:default"),
+											new("k8s-kind:HTTPRoute"),
+											new("k8s-group:gateway.networking.k8s.io"),
+											new("k8s-version:v1"),
 										},
 									},
 									Ingress: util.FromK8sObject(routes[0]),
@@ -1781,13 +1781,13 @@ func TestIngressRulesFromHTTPRoutesCombinedServicesAcrossHTTPRoutes(t *testing.T
 					ServiceNameToServices: map[string]kongstate.Service{
 						"httproute.default.svc.default.fake-service.80": {
 							Service: kong.Service{
-								Host:           kong.String("httproute.default.svc.default.fake-service.80"),
-								Name:           kong.String("httproute.default.svc.default.fake-service.80"),
-								ConnectTimeout: kong.Int(60000),
-								Protocol:       kong.String("http"),
-								ReadTimeout:    kong.Int(60000),
-								Retries:        kong.Int(5),
-								WriteTimeout:   kong.Int(60000),
+								Host:           new("httproute.default.svc.default.fake-service.80"),
+								Name:           new("httproute.default.svc.default.fake-service.80"),
+								ConnectTimeout: new(60000),
+								Protocol:       new("http"),
+								ReadTimeout:    new(60000),
+								Retries:        new(5),
+								WriteTimeout:   new(60000),
 							},
 							Backends: []kongstate.ServiceBackend{
 								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).MustBuild(),
@@ -1798,44 +1798,44 @@ func TestIngressRulesFromHTTPRoutesCombinedServicesAcrossHTTPRoutes(t *testing.T
 								// 2 routes should be created for the 2 HTTPRoutes.
 								{
 									Route: kong.Route{
-										Name:         kong.String("httproute.default.httproute-1.0.0"),
-										PreserveHost: kong.Bool(true),
+										Name:         new("httproute.default.httproute-1.0.0"),
+										PreserveHost: new(true),
 										Protocols: []*string{
-											kong.String("http"),
-											kong.String("https"),
+											new("http"),
+											new("https"),
 										},
 										Paths: kong.StringSlice(
 											"~/foo$",
 										),
-										StripPath: lo.ToPtr(false),
+										StripPath: new(false),
 										Tags: []*string{
-											kong.String("k8s-name:httproute-1"),
-											kong.String("k8s-namespace:default"),
-											kong.String("k8s-kind:HTTPRoute"),
-											kong.String("k8s-group:gateway.networking.k8s.io"),
-											kong.String("k8s-version:v1"),
+											new("k8s-name:httproute-1"),
+											new("k8s-namespace:default"),
+											new("k8s-kind:HTTPRoute"),
+											new("k8s-group:gateway.networking.k8s.io"),
+											new("k8s-version:v1"),
 										},
 									},
 									Ingress: util.FromK8sObject(routes[0]),
 								},
 								{
 									Route: kong.Route{
-										Name:         kong.String("httproute.default.httproute-2.0.0"),
-										PreserveHost: kong.Bool(true),
+										Name:         new("httproute.default.httproute-2.0.0"),
+										PreserveHost: new(true),
 										Protocols: []*string{
-											kong.String("http"),
-											kong.String("https"),
+											new("http"),
+											new("https"),
 										},
 										Paths: kong.StringSlice(
 											"~/bar$",
 										),
-										StripPath: lo.ToPtr(false),
+										StripPath: new(false),
 										Tags: []*string{
-											kong.String("k8s-name:httproute-2"),
-											kong.String("k8s-namespace:default"),
-											kong.String("k8s-kind:HTTPRoute"),
-											kong.String("k8s-group:gateway.networking.k8s.io"),
-											kong.String("k8s-version:v1"),
+											new("k8s-name:httproute-2"),
+											new("k8s-namespace:default"),
+											new("k8s-kind:HTTPRoute"),
+											new("k8s-group:gateway.networking.k8s.io"),
+											new("k8s-version:v1"),
 										},
 									},
 									Ingress: util.FromK8sObject(routes[1]),
@@ -1926,13 +1926,13 @@ func TestIngressRulesFromHTTPRoutesCombinedServicesAcrossHTTPRoutes(t *testing.T
 					ServiceNameToServices: map[string]kongstate.Service{
 						"httproute.default.svc.default.fake-service.80": {
 							Service: kong.Service{
-								Host:           kong.String("httproute.default.svc.default.fake-service.80"),
-								Name:           kong.String("httproute.default.svc.default.fake-service.80"),
-								ConnectTimeout: kong.Int(60000),
-								Protocol:       kong.String("http"),
-								ReadTimeout:    kong.Int(60000),
-								Retries:        kong.Int(5),
-								WriteTimeout:   kong.Int(60000),
+								Host:           new("httproute.default.svc.default.fake-service.80"),
+								Name:           new("httproute.default.svc.default.fake-service.80"),
+								ConnectTimeout: new(60000),
+								Protocol:       new("http"),
+								ReadTimeout:    new(60000),
+								Retries:        new(5),
+								WriteTimeout:   new(60000),
 							},
 							Backends: []kongstate.ServiceBackend{
 								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).MustBuild(),
@@ -1942,22 +1942,22 @@ func TestIngressRulesFromHTTPRoutesCombinedServicesAcrossHTTPRoutes(t *testing.T
 							Routes: []kongstate.Route{
 								{
 									Route: kong.Route{
-										Name:         kong.String("httproute.default.httproute-1.0.0"),
-										PreserveHost: kong.Bool(true),
+										Name:         new("httproute.default.httproute-1.0.0"),
+										PreserveHost: new(true),
 										Protocols: []*string{
-											kong.String("http"),
-											kong.String("https"),
+											new("http"),
+											new("https"),
 										},
 										Paths: kong.StringSlice(
 											"~/foo$",
 										),
-										StripPath: lo.ToPtr(false),
+										StripPath: new(false),
 										Tags: []*string{
-											kong.String("k8s-name:httproute-1"),
-											kong.String("k8s-namespace:default"),
-											kong.String("k8s-kind:HTTPRoute"),
-											kong.String("k8s-group:gateway.networking.k8s.io"),
-											kong.String("k8s-version:v1"),
+											new("k8s-name:httproute-1"),
+											new("k8s-namespace:default"),
+											new("k8s-kind:HTTPRoute"),
+											new("k8s-group:gateway.networking.k8s.io"),
+											new("k8s-version:v1"),
 										},
 									},
 									Ingress: util.FromK8sObject(routes[0]),
@@ -1966,13 +1966,13 @@ func TestIngressRulesFromHTTPRoutesCombinedServicesAcrossHTTPRoutes(t *testing.T
 						},
 						"httproute.ns-alter.svc.default.fake-service.80": {
 							Service: kong.Service{
-								Host:           kong.String("httproute.ns-alter.svc.default.fake-service.80"),
-								Name:           kong.String("httproute.ns-alter.svc.default.fake-service.80"),
-								ConnectTimeout: kong.Int(60000),
-								Protocol:       kong.String("http"),
-								ReadTimeout:    kong.Int(60000),
-								Retries:        kong.Int(5),
-								WriteTimeout:   kong.Int(60000),
+								Host:           new("httproute.ns-alter.svc.default.fake-service.80"),
+								Name:           new("httproute.ns-alter.svc.default.fake-service.80"),
+								ConnectTimeout: new(60000),
+								Protocol:       new("http"),
+								ReadTimeout:    new(60000),
+								Retries:        new(5),
+								WriteTimeout:   new(60000),
 							},
 							Backends: []kongstate.ServiceBackend{
 								builder.NewKongstateServiceBackend("fake-service").WithNamespace("default").WithPortNumber(80).MustBuild(),
@@ -1982,22 +1982,22 @@ func TestIngressRulesFromHTTPRoutesCombinedServicesAcrossHTTPRoutes(t *testing.T
 							Routes: []kongstate.Route{
 								{
 									Route: kong.Route{
-										Name:         kong.String("httproute.ns-alter.httproute-2.0.0"),
-										PreserveHost: kong.Bool(true),
+										Name:         new("httproute.ns-alter.httproute-2.0.0"),
+										PreserveHost: new(true),
 										Protocols: []*string{
-											kong.String("http"),
-											kong.String("https"),
+											new("http"),
+											new("https"),
 										},
 										Paths: kong.StringSlice(
 											"~/bar$",
 										),
-										StripPath: lo.ToPtr(false),
+										StripPath: new(false),
 										Tags: []*string{
-											kong.String("k8s-name:httproute-2"),
-											kong.String("k8s-namespace:ns-alter"),
-											kong.String("k8s-kind:HTTPRoute"),
-											kong.String("k8s-group:gateway.networking.k8s.io"),
-											kong.String("k8s-version:v1"),
+											new("k8s-name:httproute-2"),
+											new("k8s-namespace:ns-alter"),
+											new("k8s-kind:HTTPRoute"),
+											new("k8s-group:gateway.networking.k8s.io"),
+											new("k8s-version:v1"),
 										},
 									},
 									Ingress: util.FromK8sObject(routes[1]),
@@ -2049,13 +2049,13 @@ func TestIngressRulesFromHTTPRoutesCombinedServicesAcrossHTTPRoutes(t *testing.T
 					ServiceNameToServices: map[string]kongstate.Service{
 						"httproute.default.svc._": {
 							Service: kong.Service{
-								Host:           kong.String("httproute.default.svc._"),
-								Name:           kong.String("httproute.default.svc._"),
-								ConnectTimeout: kong.Int(60000),
-								Protocol:       kong.String("http"),
-								ReadTimeout:    kong.Int(60000),
-								Retries:        kong.Int(5),
-								WriteTimeout:   kong.Int(60000),
+								Host:           new("httproute.default.svc._"),
+								Name:           new("httproute.default.svc._"),
+								ConnectTimeout: new(60000),
+								Protocol:       new("http"),
+								ReadTimeout:    new(60000),
+								Retries:        new(5),
+								WriteTimeout:   new(60000),
 							},
 							Backends:  []kongstate.ServiceBackend{},
 							Namespace: "default",
@@ -2064,41 +2064,41 @@ func TestIngressRulesFromHTTPRoutesCombinedServicesAcrossHTTPRoutes(t *testing.T
 								// 2 routes where one for each rule should be created because they have different filters.
 								{
 									Route: kong.Route{
-										Name:         kong.String("httproute.default.httproute-1.0.0"),
-										PreserveHost: kong.Bool(true),
+										Name:         new("httproute.default.httproute-1.0.0"),
+										PreserveHost: new(true),
 										Protocols: []*string{
-											kong.String("http"),
-											kong.String("https"),
+											new("http"),
+											new("https"),
 										},
 										Paths: kong.StringSlice(
 											"~/kong$",
 										),
-										StripPath: lo.ToPtr(false),
+										StripPath: new(false),
 										Tags: []*string{
-											kong.String("k8s-name:httproute-1"),
-											kong.String("k8s-namespace:default"),
-											kong.String("k8s-kind:HTTPRoute"),
-											kong.String("k8s-group:gateway.networking.k8s.io"),
-											kong.String("k8s-version:v1"),
+											new("k8s-name:httproute-1"),
+											new("k8s-namespace:default"),
+											new("k8s-kind:HTTPRoute"),
+											new("k8s-group:gateway.networking.k8s.io"),
+											new("k8s-version:v1"),
 										},
 									},
 									Ingress: util.FromK8sObject(routes[0]),
 									Plugins: []kong.Plugin{
 										{
-											Name: kong.String("request-termination"),
+											Name: new("request-termination"),
 											Config: kong.Configuration{
-												"status_code": kong.Int(301),
+												"status_code": new(301),
 											},
 											Tags: []*string{
-												kong.String("k8s-name:httproute-1"),
-												kong.String("k8s-namespace:default"),
-												kong.String("k8s-kind:HTTPRoute"),
-												kong.String("k8s-group:gateway.networking.k8s.io"),
-												kong.String("k8s-version:v1"),
+												new("k8s-name:httproute-1"),
+												new("k8s-namespace:default"),
+												new("k8s-kind:HTTPRoute"),
+												new("k8s-group:gateway.networking.k8s.io"),
+												new("k8s-version:v1"),
 											},
 										},
 										{
-											Name: kong.String("response-transformer"),
+											Name: new("response-transformer"),
 											Config: kong.Configuration{
 												"add": subtranslator.TransformerPluginConfig{
 													Headers: []subtranslator.Header{
@@ -2107,52 +2107,52 @@ func TestIngressRulesFromHTTPRoutesCombinedServicesAcrossHTTPRoutes(t *testing.T
 												},
 											},
 											Tags: []*string{
-												kong.String("k8s-name:httproute-1"),
-												kong.String("k8s-namespace:default"),
-												kong.String("k8s-kind:HTTPRoute"),
-												kong.String("k8s-group:gateway.networking.k8s.io"),
-												kong.String("k8s-version:v1"),
+												new("k8s-name:httproute-1"),
+												new("k8s-namespace:default"),
+												new("k8s-kind:HTTPRoute"),
+												new("k8s-group:gateway.networking.k8s.io"),
+												new("k8s-version:v1"),
 											},
 										},
 									},
 								},
 								{
 									Route: kong.Route{
-										Name:         kong.String("httproute.default.httproute-1.1.0"),
-										PreserveHost: kong.Bool(true),
+										Name:         new("httproute.default.httproute-1.1.0"),
+										PreserveHost: new(true),
 										Protocols: []*string{
-											kong.String("http"),
-											kong.String("https"),
+											new("http"),
+											new("https"),
 										},
 										Paths: kong.StringSlice(
 											"~/kuma$",
 										),
-										StripPath: lo.ToPtr(false),
+										StripPath: new(false),
 										Tags: []*string{
-											kong.String("k8s-name:httproute-1"),
-											kong.String("k8s-namespace:default"),
-											kong.String("k8s-kind:HTTPRoute"),
-											kong.String("k8s-group:gateway.networking.k8s.io"),
-											kong.String("k8s-version:v1"),
+											new("k8s-name:httproute-1"),
+											new("k8s-namespace:default"),
+											new("k8s-kind:HTTPRoute"),
+											new("k8s-group:gateway.networking.k8s.io"),
+											new("k8s-version:v1"),
 										},
 									},
 									Ingress: util.FromK8sObject(routes[0]),
 									Plugins: []kong.Plugin{
 										{
-											Name: kong.String("request-termination"),
+											Name: new("request-termination"),
 											Config: kong.Configuration{
-												"status_code": kong.Int(301),
+												"status_code": new(301),
 											},
 											Tags: []*string{
-												kong.String("k8s-name:httproute-1"),
-												kong.String("k8s-namespace:default"),
-												kong.String("k8s-kind:HTTPRoute"),
-												kong.String("k8s-group:gateway.networking.k8s.io"),
-												kong.String("k8s-version:v1"),
+												new("k8s-name:httproute-1"),
+												new("k8s-namespace:default"),
+												new("k8s-kind:HTTPRoute"),
+												new("k8s-group:gateway.networking.k8s.io"),
+												new("k8s-version:v1"),
 											},
 										},
 										{
-											Name: kong.String("response-transformer"),
+											Name: new("response-transformer"),
 											Config: kong.Configuration{
 												"add": subtranslator.TransformerPluginConfig{
 													Headers: []subtranslator.Header{
@@ -2161,11 +2161,11 @@ func TestIngressRulesFromHTTPRoutesCombinedServicesAcrossHTTPRoutes(t *testing.T
 												},
 											},
 											Tags: []*string{
-												kong.String("k8s-name:httproute-1"),
-												kong.String("k8s-namespace:default"),
-												kong.String("k8s-kind:HTTPRoute"),
-												kong.String("k8s-group:gateway.networking.k8s.io"),
-												kong.String("k8s-version:v1"),
+												new("k8s-name:httproute-1"),
+												new("k8s-namespace:default"),
+												new("k8s-kind:HTTPRoute"),
+												new("k8s-group:gateway.networking.k8s.io"),
+												new("k8s-version:v1"),
 											},
 										},
 									},
@@ -2214,7 +2214,7 @@ func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 							BackendRef: gatewayapi.BackendRef{
 								BackendObjectReference: gatewayapi.BackendObjectReference{
 									Name: gatewayapi.ObjectName("fake-service"),
-									Port: lo.ToPtr(gatewayapi.PortNumber(80)),
+									Port: new(gatewayapi.PortNumber(80)),
 									Kind: util.StringToGatewayAPIKindPtr("Service"),
 								},
 							},
@@ -2241,13 +2241,13 @@ func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 					ServiceNameToServices: map[string]kongstate.Service{
 						"httproute.default.basic-httproute.0": {
 							Service: kong.Service{ // only 1 service should be created
-								ConnectTimeout: kong.Int(60000),
-								Host:           kong.String("httproute.default.basic-httproute.0"),
-								Name:           kong.String("httproute.default.basic-httproute.0"),
-								Protocol:       kong.String("http"),
-								ReadTimeout:    kong.Int(60000),
-								Retries:        kong.Int(5),
-								WriteTimeout:   kong.Int(60000),
+								ConnectTimeout: new(60000),
+								Host:           new("httproute.default.basic-httproute.0"),
+								Name:           new("httproute.default.basic-httproute.0"),
+								Protocol:       new("http"),
+								ReadTimeout:    new(60000),
+								Retries:        new(5),
+								WriteTimeout:   new(60000),
 							},
 							Backends: kongstate.ServiceBackends{
 								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).MustBuild(),
@@ -2255,22 +2255,22 @@ func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 							Namespace: "default",
 							Routes: []kongstate.Route{{ // only 1 route should be created
 								Route: kong.Route{
-									Name: kong.String("httproute.default.basic-httproute.0.0"),
+									Name: new("httproute.default.basic-httproute.0.0"),
 									Paths: []*string{
-										kong.String("~/httpbin$"),
+										new("~/httpbin$"),
 									},
-									PreserveHost: kong.Bool(true),
+									PreserveHost: new(true),
 									Protocols: []*string{
-										kong.String("http"),
-										kong.String("https"),
+										new("http"),
+										new("https"),
 									},
-									StripPath: lo.ToPtr(false),
+									StripPath: new(false),
 									Tags: []*string{
-										kong.String("k8s-name:basic-httproute"),
-										kong.String("k8s-namespace:default"),
-										kong.String("k8s-kind:HTTPRoute"),
-										kong.String("k8s-group:gateway.networking.k8s.io"),
-										kong.String("k8s-version:v1beta1"),
+										new("k8s-name:basic-httproute"),
+										new("k8s-namespace:default"),
+										new("k8s-kind:HTTPRoute"),
+										new("k8s-group:gateway.networking.k8s.io"),
+										new("k8s-version:v1beta1"),
 									},
 								},
 								Ingress: util.FromK8sObject(routes[0]),
@@ -2356,7 +2356,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
-						Name: kong.String("httproute.default.httproute-1.0"),
+						Name: new("httproute.default.httproute-1.0"),
 					},
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service-1").
@@ -2370,17 +2370,17 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 				"httproute.default.httproute-1.0": {
 					{
 						Route: kong.Route{
-							Name:         kong.String("httproute.default.httproute-1._.0.0"),
-							Expression:   kong.String(`http.path == "/v1/foo"`),
-							PreserveHost: kong.Bool(true),
+							Name:         new("httproute.default.httproute-1._.0.0"),
+							Expression:   new(`http.path == "/v1/foo"`),
+							PreserveHost: new(true),
 						},
 						ExpressionRoutes: true,
 					},
 					{
 						Route: kong.Route{
-							Name:         kong.String("httproute.default.httproute-1._.0.1"),
-							Expression:   kong.String(`http.path == "/v1/barr"`),
-							PreserveHost: kong.Bool(true),
+							Name:         new("httproute.default.httproute-1._.0.1"),
+							Expression:   new(`http.path == "/v1/barr"`),
+							PreserveHost: new(true),
 						},
 						ExpressionRoutes: true,
 					},
@@ -2441,7 +2441,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
-						Name: kong.String("httproute.default.httproute-1.0"),
+						Name: new("httproute.default.httproute-1.0"),
 					},
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service-1").
@@ -2452,7 +2452,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 				},
 				{
 					Service: kong.Service{
-						Name: kong.String("httproute.default.httproute-1.1"),
+						Name: new("httproute.default.httproute-1.1"),
 					},
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service-2").
@@ -2466,17 +2466,17 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 				"httproute.default.httproute-1.0": {
 					{
 						Route: kong.Route{
-							Name:         kong.String("httproute.default.httproute-1.foo.com.0.0"),
-							Expression:   kong.String(`(http.host == "foo.com") && (http.path == "/v1/foo")`),
-							PreserveHost: kong.Bool(true),
+							Name:         new("httproute.default.httproute-1.foo.com.0.0"),
+							Expression:   new(`(http.host == "foo.com") && (http.path == "/v1/foo")`),
+							PreserveHost: new(true),
 						},
 						ExpressionRoutes: true,
 					},
 					{
 						Route: kong.Route{
-							Name:         kong.String("httproute.default.httproute-1._.bar.com.0.0"),
-							Expression:   kong.String(`(http.host =^ ".bar.com") && (http.path == "/v1/foo")`),
-							PreserveHost: kong.Bool(true),
+							Name:         new("httproute.default.httproute-1._.bar.com.0.0"),
+							Expression:   new(`(http.host =^ ".bar.com") && (http.path == "/v1/foo")`),
+							PreserveHost: new(true),
 						},
 						ExpressionRoutes: true,
 					},
@@ -2484,17 +2484,17 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 				"httproute.default.httproute-1.1": {
 					{
 						Route: kong.Route{
-							Name:         kong.String("httproute.default.httproute-1.foo.com.1.0"),
-							Expression:   kong.String(`(http.host == "foo.com") && (http.path == "/v1/barr")`),
-							PreserveHost: kong.Bool(true),
+							Name:         new("httproute.default.httproute-1.foo.com.1.0"),
+							Expression:   new(`(http.host == "foo.com") && (http.path == "/v1/barr")`),
+							PreserveHost: new(true),
 						},
 						ExpressionRoutes: true,
 					},
 					{
 						Route: kong.Route{
-							Name:         kong.String("httproute.default.httproute-1._.bar.com.1.0"),
-							Expression:   kong.String(`(http.host =^ ".bar.com") && (http.path == "/v1/barr")`),
-							PreserveHost: kong.Bool(true),
+							Name:         new("httproute.default.httproute-1._.bar.com.1.0"),
+							Expression:   new(`(http.host =^ ".bar.com") && (http.path == "/v1/barr")`),
+							PreserveHost: new(true),
 						},
 						ExpressionRoutes: true,
 					},
@@ -2544,7 +2544,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
-						Name: kong.String("httproute.default.httproute-1.0"),
+						Name: new("httproute.default.httproute-1.0"),
 					},
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service-1").
@@ -2558,9 +2558,9 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 				"httproute.default.httproute-1.0": {
 					{
 						Route: kong.Route{
-							Name:         kong.String("httproute.default.httproute-1.foo.com.0.0"),
-							Expression:   kong.String(`(http.host == "foo.com") && (tls.sni == "foo.com") && (http.path == "/v1/foo")`),
-							PreserveHost: kong.Bool(true),
+							Name:         new("httproute.default.httproute-1.foo.com.0.0"),
+							Expression:   new(`(http.host == "foo.com") && (tls.sni == "foo.com") && (http.path == "/v1/foo")`),
+							PreserveHost: new(true),
 						},
 						ExpressionRoutes: true,
 					},
@@ -2610,10 +2610,10 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
-						Name:           kong.String("httproute.default.httproute-1.0"),
-						ConnectTimeout: kong.Int(500),
-						ReadTimeout:    kong.Int(500),
-						WriteTimeout:   kong.Int(500),
+						Name:           new("httproute.default.httproute-1.0"),
+						ConnectTimeout: new(500),
+						ReadTimeout:    new(500),
+						WriteTimeout:   new(500),
 					},
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service-1").
@@ -2627,17 +2627,17 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 				"httproute.default.httproute-1.0": {
 					{
 						Route: kong.Route{
-							Name:         kong.String("httproute.default.httproute-1._.0.0"),
-							Expression:   kong.String(`http.path == "/v1/foo"`),
-							PreserveHost: kong.Bool(true),
+							Name:         new("httproute.default.httproute-1._.0.0"),
+							Expression:   new(`http.path == "/v1/foo"`),
+							PreserveHost: new(true),
 						},
 						ExpressionRoutes: true,
 					},
 					{
 						Route: kong.Route{
-							Name:         kong.String("httproute.default.httproute-1._.0.1"),
-							Expression:   kong.String(`http.path == "/v1/barr"`),
-							PreserveHost: kong.Bool(true),
+							Name:         new("httproute.default.httproute-1._.0.1"),
+							Expression:   new(`http.path == "/v1/barr"`),
+							PreserveHost: new(true),
 						},
 						ExpressionRoutes: true,
 					},
@@ -2747,7 +2747,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutesAndCombinedServices(t *t
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
-						Name: kong.String("httproute.default.svc.default.fake-service.80"),
+						Name: new("httproute.default.svc.default.fake-service.80"),
 					},
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("fake-service").
@@ -2761,17 +2761,17 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutesAndCombinedServices(t *t
 				"httproute.default.svc.default.fake-service.80": {
 					{
 						Route: kong.Route{
-							Name:         kong.String("httproute.default.httproute-1._.0.0"),
-							Expression:   kong.String(`http.path == "/v1/foo"`),
-							PreserveHost: kong.Bool(true),
+							Name:         new("httproute.default.httproute-1._.0.0"),
+							Expression:   new(`http.path == "/v1/foo"`),
+							PreserveHost: new(true),
 						},
 						ExpressionRoutes: true,
 					},
 					{
 						Route: kong.Route{
-							Name:         kong.String("httproute.default.httproute-1._.0.1"),
-							Expression:   kong.String(`http.path == "/v1/barr"`),
-							PreserveHost: kong.Bool(true),
+							Name:         new("httproute.default.httproute-1._.0.1"),
+							Expression:   new(`http.path == "/v1/barr"`),
+							PreserveHost: new(true),
 						},
 						ExpressionRoutes: true,
 					},
@@ -2810,7 +2810,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutesAndCombinedServices(t *t
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
-						Name: kong.String("httproute.default.svc.default.fake-service.80"),
+						Name: new("httproute.default.svc.default.fake-service.80"),
 					},
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("fake-service").
@@ -2824,17 +2824,17 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutesAndCombinedServices(t *t
 				"httproute.default.svc.default.fake-service.80": {
 					{
 						Route: kong.Route{
-							Name:         kong.String("httproute.default.httproute-1.foo.com.0.0"),
-							Expression:   kong.String(`http.host == "foo.com"`),
-							PreserveHost: kong.Bool(true),
+							Name:         new("httproute.default.httproute-1.foo.com.0.0"),
+							Expression:   new(`http.host == "foo.com"`),
+							PreserveHost: new(true),
 						},
 						ExpressionRoutes: true,
 					},
 					{
 						Route: kong.Route{
-							Name:         kong.String("httproute.default.httproute-1.bar.com.0.0"),
-							Expression:   kong.String(`http.host == "bar.com"`),
-							PreserveHost: kong.Bool(true),
+							Name:         new("httproute.default.httproute-1.bar.com.0.0"),
+							Expression:   new(`http.host == "bar.com"`),
+							PreserveHost: new(true),
 						},
 						ExpressionRoutes: true,
 					},
@@ -2874,7 +2874,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutesAndCombinedServices(t *t
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
-						Name: kong.String("httproute.default.svc.default.fake-service.80"),
+						Name: new("httproute.default.svc.default.fake-service.80"),
 					},
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("fake-service").
@@ -2888,17 +2888,17 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutesAndCombinedServices(t *t
 				"httproute.default.svc.default.fake-service.80": {
 					{
 						Route: kong.Route{
-							Name:         kong.String("httproute.default.httproute-1._.0.0"),
-							Expression:   kong.String(`http.path == "/v1/foo"`),
-							PreserveHost: kong.Bool(true),
+							Name:         new("httproute.default.httproute-1._.0.0"),
+							Expression:   new(`http.path == "/v1/foo"`),
+							PreserveHost: new(true),
 						},
 						ExpressionRoutes: true,
 					},
 					{
 						Route: kong.Route{
-							Name:         kong.String("httproute.default.httproute-1._.1.0"),
-							Expression:   kong.String(`http.path == "/v1/barr"`),
-							PreserveHost: kong.Bool(true),
+							Name:         new("httproute.default.httproute-1._.1.0"),
+							Expression:   new(`http.path == "/v1/barr"`),
+							PreserveHost: new(true),
 						},
 						ExpressionRoutes: true,
 					},
@@ -2960,7 +2960,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutesAndCombinedServices(t *t
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
-						Name: kong.String("httproute.default.svc.default.fake-service.80"),
+						Name: new("httproute.default.svc.default.fake-service.80"),
 					},
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("fake-service").
@@ -2971,7 +2971,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutesAndCombinedServices(t *t
 				},
 				{
 					Service: kong.Service{
-						Name: kong.String("httproute.default.svc.default.fake-service-2.80"),
+						Name: new("httproute.default.svc.default.fake-service-2.80"),
 					},
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("fake-service-2").
@@ -2985,17 +2985,17 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutesAndCombinedServices(t *t
 				"httproute.default.svc.default.fake-service.80": {
 					{
 						Route: kong.Route{
-							Name:         kong.String("httproute.default.httproute-1._.0.0"),
-							Expression:   kong.String(`http.path == "/v1/foo"`),
-							PreserveHost: kong.Bool(true),
+							Name:         new("httproute.default.httproute-1._.0.0"),
+							Expression:   new(`http.path == "/v1/foo"`),
+							PreserveHost: new(true),
 						},
 						ExpressionRoutes: true,
 					},
 					{
 						Route: kong.Route{
-							Name:         kong.String("httproute.default.httproute-2._.0.0"),
-							Expression:   kong.String(`http.path == "/v1/barr"`),
-							PreserveHost: kong.Bool(true),
+							Name:         new("httproute.default.httproute-2._.0.0"),
+							Expression:   new(`http.path == "/v1/barr"`),
+							PreserveHost: new(true),
 						},
 						ExpressionRoutes: true,
 					},
@@ -3003,17 +3003,17 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutesAndCombinedServices(t *t
 				"httproute.default.svc.default.fake-service-2.80": {
 					{
 						Route: kong.Route{
-							Name:         kong.String("httproute.default.httproute-1._.1.0"),
-							Expression:   kong.String(`http.path == "/v2/foo"`),
-							PreserveHost: kong.Bool(true),
+							Name:         new("httproute.default.httproute-1._.1.0"),
+							Expression:   new(`http.path == "/v2/foo"`),
+							PreserveHost: new(true),
 						},
 						ExpressionRoutes: true,
 					},
 					{
 						Route: kong.Route{
-							Name:         kong.String("httproute.default.httproute-2._.1.0"),
-							Expression:   kong.String(`http.path == "/v2/barr"`),
-							PreserveHost: kong.Bool(true),
+							Name:         new("httproute.default.httproute-2._.1.0"),
+							Expression:   new(`http.path == "/v2/barr"`),
+							PreserveHost: new(true),
 						},
 						ExpressionRoutes: true,
 					},

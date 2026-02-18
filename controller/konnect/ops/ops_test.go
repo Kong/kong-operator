@@ -8,7 +8,6 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -55,7 +54,7 @@ func TestCreate(t *testing.T) {
 							"label": "very-long-label-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 						},
 					},
-					Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+					Source: new(commonv1alpha1.EntitySourceOrigin),
 				},
 			},
 			sdkFunc: func(t *testing.T, sdk *sdkmocks.MockSDKWrapper) *sdkmocks.MockSDKWrapper {
@@ -116,7 +115,7 @@ func TestCreate(t *testing.T) {
 					CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 						Name: "test-cp",
 					},
-					Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+					Source: new(commonv1alpha1.EntitySourceOrigin),
 				},
 			},
 			sdkFunc: func(t *testing.T, sdk *sdkmocks.MockSDKWrapper) *sdkmocks.MockSDKWrapper {
@@ -183,7 +182,7 @@ func TestCreate(t *testing.T) {
 					CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 						Name: "test-cp",
 					},
-					Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+					Source: new(commonv1alpha1.EntitySourceOrigin),
 				},
 			},
 			sdkFunc: func(t *testing.T, sdk *sdkmocks.MockSDKWrapper) *sdkmocks.MockSDKWrapper {
@@ -291,7 +290,7 @@ func TestDelete(t *testing.T) {
 					CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 						Name: "test-cp",
 					},
-					Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+					Source: new(commonv1alpha1.EntitySourceOrigin),
 				},
 				Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
 					Conditions: []metav1.Condition{
@@ -314,7 +313,7 @@ func TestDelete(t *testing.T) {
 					CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 						Name: "test-cp",
 					},
-					Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+					Source: new(commonv1alpha1.EntitySourceOrigin),
 				},
 				Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
 					Conditions: []metav1.Condition{

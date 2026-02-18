@@ -7,7 +7,6 @@ import (
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
-	"github.com/samber/lo"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -165,8 +164,8 @@ func adoptTarget(
 
 func kongTargetToTargetWithoutParents(target *configurationv1alpha1.KongTarget) sdkkonnectcomp.TargetWithoutParents {
 	return sdkkonnectcomp.TargetWithoutParents{
-		Target: lo.ToPtr(target.Spec.Target),
-		Weight: lo.ToPtr(int64(target.Spec.Weight)),
+		Target: new(target.Spec.Target),
+		Weight: new(int64(target.Spec.Weight)),
 		Tags:   GenerateTagsForObject(target, target.Spec.Tags...),
 	}
 }
@@ -182,7 +181,7 @@ func getKongTargetForUID(
 		// NOTE: only filter on object's UID.
 		// Other fields like name might have changed in the meantime but that's OK.
 		// Those will be enforced via subsequent updates.
-		Tags:           lo.ToPtr(UIDLabelForObject(target)),
+		Tags:           new(UIDLabelForObject(target)),
 		ControlPlaneID: target.GetControlPlaneID(),
 	}
 
@@ -200,5 +199,5 @@ func getKongTargetForUID(
 
 func targetMatch(konnectTarget *sdkkonnectcomp.Target, target *configurationv1alpha1.KongTarget) bool {
 	return equalWithDefault(konnectTarget.Target, &target.Spec.Target, "") &&
-		equalWithDefault(konnectTarget.Weight, lo.ToPtr(int64(target.Spec.Weight)), 100)
+		equalWithDefault(konnectTarget.Weight, new(int64(target.Spec.Weight)), 100)
 }

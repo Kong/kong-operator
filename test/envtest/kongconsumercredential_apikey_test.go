@@ -9,7 +9,6 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -93,7 +92,7 @@ func TestKongConsumerCredential_APIKey(t *testing.T) {
 				ControlPlaneID:              cp.GetKonnectStatus().GetKonnectID(),
 				ConsumerIDForNestedEntities: consumerID,
 				KeyAuthWithoutParents: &sdkkonnectcomp.KeyAuthWithoutParents{
-					Key:  lo.ToPtr("key"),
+					Key:  new("key"),
 					Tags: tags,
 				},
 			},
@@ -101,7 +100,7 @@ func TestKongConsumerCredential_APIKey(t *testing.T) {
 		Return(
 			&sdkkonnectops.CreateKeyAuthWithConsumerResponse{
 				KeyAuth: &sdkkonnectcomp.KeyAuth{
-					ID: lo.ToPtr(keyID),
+					ID: new(keyID),
 				},
 			},
 			nil,
@@ -111,7 +110,7 @@ func TestKongConsumerCredential_APIKey(t *testing.T) {
 		Return(
 			&sdkkonnectops.UpsertKeyAuthWithConsumerResponse{
 				KeyAuth: &sdkkonnectcomp.KeyAuth{
-					ID: lo.ToPtr(keyID),
+					ID: new(keyID),
 				},
 			},
 			nil,
@@ -201,7 +200,7 @@ func TestKongConsumerCredential_APIKey(t *testing.T) {
 				Object: &sdkkonnectops.ListKeyAuthResponseBody{
 					Data: []sdkkonnectcomp.KeyAuth{
 						{
-							ID: lo.ToPtr(keyID),
+							ID: new(keyID),
 						},
 					},
 				},

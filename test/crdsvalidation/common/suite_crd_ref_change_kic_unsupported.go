@@ -3,8 +3,6 @@ package common
 import (
 	"testing"
 
-	"github.com/samber/lo"
-
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 )
 
@@ -37,7 +35,7 @@ func NewCRDValidationTestCasesGroupCPRefChangeKICUnsupportedTypes[
 		ret = append(ret, TestCase[T]{
 			Name:                 "kic control plane ref is not allowed",
 			TestObject:           obj,
-			ExpectedErrorMessage: lo.ToPtr("KIC is not supported as control plane"),
+			ExpectedErrorMessage: new("KIC is not supported as control plane"),
 		})
 	}
 	{
@@ -48,7 +46,7 @@ func NewCRDValidationTestCasesGroupCPRefChangeKICUnsupportedTypes[
 			ret = append(ret, TestCase[T]{
 				Name:                 "<unset> control plane ref is not allowed",
 				TestObject:           obj,
-				ExpectedErrorMessage: lo.ToPtr("controlPlaneRef"),
+				ExpectedErrorMessage: new("controlPlaneRef"),
 			})
 		case EmptyControlPlaneRefAllowed:
 			ret = append(ret, TestCase[T]{

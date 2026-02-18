@@ -12,7 +12,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -107,13 +106,13 @@ func TestGatewayHTTPSMultipleCertificates(t *testing.T) {
 						Name:     gatewayapi.SectionName(fmt.Sprintf("https-%s", certSecretName)),
 						Protocol: gatewayapi.HTTPSProtocolType,
 						Port:     gatewayapi.PortNumber(443),
-						Hostname: lo.ToPtr(gatewayapi.Hostname(domainName)),
+						Hostname: new(gatewayapi.Hostname(domainName)),
 						TLS: &gatewayapi.GatewayTLSConfig{
-							Mode: lo.ToPtr(gatewayapi.TLSModeTerminate),
+							Mode: new(gatewayapi.TLSModeTerminate),
 							CertificateRefs: []gatewayapi.SecretObjectReference{
 								{
 									Name: gatewayapi.ObjectName(certSecretName),
-									Kind: lo.ToPtr(gatewayapi.Kind("Secret")),
+									Kind: new(gatewayapi.Kind("Secret")),
 								},
 							},
 						},
@@ -168,8 +167,8 @@ func TestGatewayHTTPSMultipleCertificates(t *testing.T) {
 										BackendRef: gatewayapi.BackendRef{
 											BackendObjectReference: gatewayapi.BackendObjectReference{
 												Name: gatewayapi.ObjectName(service.Name),
-												Port: lo.ToPtr(gatewayapi.PortNumber(test.EchoHTTPPort)),
-												Kind: lo.ToPtr(gatewayapi.Kind("Service")),
+												Port: new(gatewayapi.PortNumber(test.EchoHTTPPort)),
+												Kind: new(gatewayapi.Kind("Service")),
 											},
 										},
 									},

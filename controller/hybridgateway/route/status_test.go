@@ -66,7 +66,7 @@ func Test_parentRefKey(t *testing.T) {
 				Namespace:   nsPtr("namespace"),
 				Name:        "name",
 				SectionName: sectionPtr("section"),
-				Port:        portPtr(8080),
+				Port:        new(int32(8080)),
 			},
 			want: "group/kind/namespace/name/section/8080",
 		},
@@ -93,7 +93,7 @@ func Test_parentRefKey(t *testing.T) {
 			name: "port set",
 			input: gwtypes.ParentReference{
 				Name: "name",
-				Port: portPtr(1234),
+				Port: new(int32(1234)),
 			},
 			want: "/" + "/" + "/" + "name" + "/" + "/" + "1234",
 		},
@@ -129,10 +129,10 @@ func Test_isParentRefEqual(t *testing.T) {
 		{
 			name: "all fields equal",
 			a: gwtypes.ParentReference{
-				Group: groupPtr("group"), Kind: kindPtr("kind"), Namespace: nsPtr("ns"), Name: name, SectionName: sectionPtr("section"), Port: portPtr(8080),
+				Group: groupPtr("group"), Kind: kindPtr("kind"), Namespace: nsPtr("ns"), Name: name, SectionName: sectionPtr("section"), Port: new(int32(8080)),
 			},
 			b: gwtypes.ParentReference{
-				Group: groupPtr("group"), Kind: kindPtr("kind"), Namespace: nsPtr("ns"), Name: name, SectionName: sectionPtr("section"), Port: portPtr(8080),
+				Group: groupPtr("group"), Kind: kindPtr("kind"), Namespace: nsPtr("ns"), Name: name, SectionName: sectionPtr("section"), Port: new(int32(8080)),
 			},
 			want: true,
 		},
@@ -174,8 +174,8 @@ func Test_isParentRefEqual(t *testing.T) {
 		},
 		{
 			name: "different port",
-			a:    gwtypes.ParentReference{Port: portPtr(8080), Name: name},
-			b:    gwtypes.ParentReference{Port: portPtr(9090), Name: name},
+			a:    gwtypes.ParentReference{Port: new(int32(8080)), Name: name},
+			b:    gwtypes.ParentReference{Port: new(int32(9090)), Name: name},
 			want: false,
 		},
 		{
@@ -186,7 +186,7 @@ func Test_isParentRefEqual(t *testing.T) {
 		},
 		{
 			name: "one port nil",
-			a:    gwtypes.ParentReference{Name: name, Port: portPtr(8080)},
+			a:    gwtypes.ParentReference{Name: name, Port: new(int32(8080))},
 			b:    gwtypes.ParentReference{Name: name},
 			want: false,
 		},
@@ -275,7 +275,7 @@ func Test_isParentRefEqual(t *testing.T) {
 			name: "Port nil vs set",
 			a: func() gwtypes.ParentReference {
 				r := gwtypes.ParentReference{Name: name}
-				r.Port = portPtr(1)
+				r.Port = new(int32(1))
 				return r
 			}(),
 			b:    gwtypes.ParentReference{Name: name},
@@ -286,7 +286,7 @@ func Test_isParentRefEqual(t *testing.T) {
 			a:    gwtypes.ParentReference{Name: name},
 			b: func() gwtypes.ParentReference {
 				r := gwtypes.ParentReference{Name: name}
-				r.Port = portPtr(1)
+				r.Port = new(int32(1))
 				return r
 			}(),
 			want: false,
@@ -604,7 +604,7 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 			pRef:    pRef,
 			client:  cl,
 			setup: func(gw *gwtypes.Gateway, r *gwtypes.HTTPRoute) {
-				gw.Spec.Listeners[0].AllowedRoutes = &gwtypes.AllowedRoutes{Namespaces: &gwtypes.RouteNamespaces{From: fromNamespacesPtr(gatewayv1.NamespacesFromSame)}}
+				gw.Spec.Listeners[0].AllowedRoutes = &gwtypes.AllowedRoutes{Namespaces: &gwtypes.RouteNamespaces{From: new(gatewayv1.NamespacesFromSame)}}
 				gw.Namespace = "other"
 			},
 			wantType:   string(gwtypes.RouteConditionAccepted),
@@ -617,7 +617,7 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw"},
 				Spec: gwtypes.GatewaySpec{
 					Listeners: []gatewayv1.Listener{
-						{Name: "listener1", Port: 80, Protocol: gatewayv1.HTTPProtocolType, AllowedRoutes: &gatewayv1.AllowedRoutes{Namespaces: &gatewayv1.RouteNamespaces{From: fromNamespacesPtr(gatewayv1.NamespacesFromAll)}}, Hostname: strPtr("example.com")},
+						{Name: "listener1", Port: 80, Protocol: gatewayv1.HTTPProtocolType, AllowedRoutes: &gatewayv1.AllowedRoutes{Namespaces: &gatewayv1.RouteNamespaces{From: new(gatewayv1.NamespacesFromAll)}}, Hostname: strPtr("example.com")},
 					},
 					GatewayClassName: "my-class",
 				},
@@ -643,7 +643,7 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw"},
 				Spec: gwtypes.GatewaySpec{
 					Listeners: []gatewayv1.Listener{
-						{Name: "listener1", Port: 80, Protocol: gatewayv1.HTTPProtocolType, AllowedRoutes: &gatewayv1.AllowedRoutes{Namespaces: &gatewayv1.RouteNamespaces{From: fromNamespacesPtr(gatewayv1.NamespacesFromAll)}}, Hostname: strPtr("example.com")},
+						{Name: "listener1", Port: 80, Protocol: gatewayv1.HTTPProtocolType, AllowedRoutes: &gatewayv1.AllowedRoutes{Namespaces: &gatewayv1.RouteNamespaces{From: new(gatewayv1.NamespacesFromAll)}}, Hostname: strPtr("example.com")},
 					},
 					GatewayClassName: "my-class",
 				},
@@ -697,7 +697,7 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 							Protocol: gwtypes.HTTPProtocolType,
 							AllowedRoutes: &gwtypes.AllowedRoutes{
 								Namespaces: &gwtypes.RouteNamespaces{
-									From: fromNamespacesPtr(gatewayv1.NamespacesFromSelector),
+									From: new(gatewayv1.NamespacesFromSelector),
 									Selector: &metav1.LabelSelector{
 										MatchExpressions: []metav1.LabelSelectorRequirement{{
 											Key:      "foo",
@@ -1144,7 +1144,7 @@ func Test_FilterMatchingListeners(t *testing.T) {
 		},
 		{
 			name:      "port mismatch",
-			pRef:      gwtypes.ParentReference{Name: "listener1", Port: portPtr(81)},
+			pRef:      gwtypes.ParentReference{Name: "listener1", Port: new(int32(81))},
 			listeners: []gwtypes.Listener{listenerReady},
 			wantLen:   0,
 			wantCond:  true,
@@ -1222,19 +1222,19 @@ func Test_FilterListenersByAllowedRoutes(t *testing.T) {
 	listenerKindMismatch.AllowedRoutes = &gwtypes.AllowedRoutes{Kinds: []gwtypes.RouteGroupKind{{Group: groupPtr("other"), Kind: "OtherRoute"}}}
 
 	listenerNSAll := listener
-	listenerNSAll.AllowedRoutes = &gwtypes.AllowedRoutes{Namespaces: &gwtypes.RouteNamespaces{From: fromNamespacesPtr(gwtypes.NamespacesFromAll)}}
+	listenerNSAll.AllowedRoutes = &gwtypes.AllowedRoutes{Namespaces: &gwtypes.RouteNamespaces{From: new(gwtypes.NamespacesFromAll)}}
 
 	listenerNSSame := listener
-	listenerNSSame.AllowedRoutes = &gwtypes.AllowedRoutes{Namespaces: &gwtypes.RouteNamespaces{From: fromNamespacesPtr(gwtypes.NamespacesFromSame)}}
+	listenerNSSame.AllowedRoutes = &gwtypes.AllowedRoutes{Namespaces: &gwtypes.RouteNamespaces{From: new(gwtypes.NamespacesFromSame)}}
 
 	listenerNSSelector := listener
-	listenerNSSelector.AllowedRoutes = &gwtypes.AllowedRoutes{Namespaces: &gwtypes.RouteNamespaces{From: fromNamespacesPtr(gwtypes.NamespacesFromSelector), Selector: selector}}
+	listenerNSSelector.AllowedRoutes = &gwtypes.AllowedRoutes{Namespaces: &gwtypes.RouteNamespaces{From: new(gwtypes.NamespacesFromSelector), Selector: selector}}
 
 	listenerNSSelectorNoMatch := listener
-	listenerNSSelectorNoMatch.AllowedRoutes = &gwtypes.AllowedRoutes{Namespaces: &gwtypes.RouteNamespaces{From: fromNamespacesPtr(gwtypes.NamespacesFromSelector), Selector: selector}}
+	listenerNSSelectorNoMatch.AllowedRoutes = &gwtypes.AllowedRoutes{Namespaces: &gwtypes.RouteNamespaces{From: new(gwtypes.NamespacesFromSelector), Selector: selector}}
 
 	listenerNSSelectorInvalid := listener
-	listenerNSSelectorInvalid.AllowedRoutes = &gwtypes.AllowedRoutes{Namespaces: &gwtypes.RouteNamespaces{From: fromNamespacesPtr(gwtypes.NamespacesFromSelector), Selector: invalidSelector}}
+	listenerNSSelectorInvalid.AllowedRoutes = &gwtypes.AllowedRoutes{Namespaces: &gwtypes.RouteNamespaces{From: new(gwtypes.NamespacesFromSelector), Selector: invalidSelector}}
 
 	unknownFrom := gwtypes.NamespacesFromAll
 	listenerNSUnknown := listener
@@ -1356,7 +1356,7 @@ func Test_FilterListenersByAllowedRoutes(t *testing.T) {
 					l := listener
 					l.AllowedRoutes = &gwtypes.AllowedRoutes{
 						Namespaces: &gwtypes.RouteNamespaces{
-							From:     fromNamespacesPtr(gwtypes.NamespacesFromSelector),
+							From:     new(gwtypes.NamespacesFromSelector),
 							Selector: nil,
 						},
 					}
@@ -2872,10 +2872,8 @@ func TestIsExtensionRefSupported(t *testing.T) {
 	}
 }
 
-func groupPtr(s string) *gatewayv1.Group                                     { g := gatewayv1.Group(s); return &g }
-func kindPtr(s string) *gatewayv1.Kind                                       { k := gatewayv1.Kind(s); return &k }
-func nsPtr(s string) *gatewayv1.Namespace                                    { n := gatewayv1.Namespace(s); return &n }
-func sectionPtr(s string) *gatewayv1.SectionName                             { sec := gatewayv1.SectionName(s); return &sec }
-func ptrObjName(s string) *gwtypes.ObjectName                                { n := gwtypes.ObjectName(s); return &n }
-func portPtr(i int32) *gatewayv1.PortNumber                                  { return &i }
-func fromNamespacesPtr(v gatewayv1.FromNamespaces) *gatewayv1.FromNamespaces { return &v }
+func groupPtr(s string) *gatewayv1.Group         { g := gatewayv1.Group(s); return &g }
+func kindPtr(s string) *gatewayv1.Kind           { k := gatewayv1.Kind(s); return &k }
+func nsPtr(s string) *gatewayv1.Namespace        { n := gatewayv1.Namespace(s); return &n }
+func sectionPtr(s string) *gatewayv1.SectionName { sec := gatewayv1.SectionName(s); return &sec }
+func ptrObjName(s string) *gwtypes.ObjectName    { n := gwtypes.ObjectName(s); return &n }

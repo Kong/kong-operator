@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -188,17 +187,17 @@ func BenchmarkCacheStores_TakeSnapshot(b *testing.B) {
 						Matches: []gatewayapi.HTTPRouteMatch{
 							{
 								Path: &gatewayapi.HTTPPathMatch{
-									Type:  lo.ToPtr(gatewayapi.PathMatchExact),
-									Value: lo.ToPtr("/test1"),
+									Type:  new(gatewayapi.PathMatchExact),
+									Value: new("/test1"),
 								},
-								Method: lo.ToPtr(gatewayapi.HTTPMethodGet),
+								Method: new(gatewayapi.HTTPMethodGet),
 							},
 							{
 								Path: &gatewayapi.HTTPPathMatch{
-									Type:  lo.ToPtr(gatewayapi.PathMatchExact),
-									Value: lo.ToPtr("/test2"),
+									Type:  new(gatewayapi.PathMatchExact),
+									Value: new("/test2"),
 								},
-								Method: lo.ToPtr(gatewayapi.HTTPMethodGet),
+								Method: new(gatewayapi.HTTPMethodGet),
 							},
 						},
 					},
@@ -250,7 +249,7 @@ func BenchmarkCacheStores_TakeSnapshot(b *testing.B) {
 								Paths: []netv1.HTTPIngressPath{
 									{
 										Path:     fmt.Sprintf("/path-%d", i),
-										PathType: lo.ToPtr(netv1.PathTypeExact),
+										PathType: new(netv1.PathTypeExact),
 									},
 								},
 							},

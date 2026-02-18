@@ -6,7 +6,6 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
-	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -230,7 +229,7 @@ func getKongCACertificateForUID(
 ) (string, error) {
 	resp, err := sdk.ListCaCertificate(ctx, sdkkonnectops.ListCaCertificateRequest{
 		ControlPlaneID: cert.GetControlPlaneID(),
-		Tags:           lo.ToPtr(UIDLabelForObject(cert)),
+		Tags:           new(UIDLabelForObject(cert)),
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to list %s: %w", cert.GetTypeName(), err)

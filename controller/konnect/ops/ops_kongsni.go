@@ -9,7 +9,6 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
-	"github.com/samber/lo"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -201,7 +200,7 @@ func kongSNIToSNIWithoutParents(sni *configurationv1alpha1.KongSNI) sdkkonnectco
 func getKongSNIForUID(ctx context.Context, sdk sdkops.SNIsSDK, sni *configurationv1alpha1.KongSNI) (string, error) {
 	resp, err := sdk.ListSni(ctx, sdkkonnectops.ListSniRequest{
 		ControlPlaneID: sni.GetControlPlaneID(),
-		Tags:           lo.ToPtr(UIDLabelForObject(sni)),
+		Tags:           new(UIDLabelForObject(sni)),
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed listing %s: %w", sni.GetTypeName(), err)

@@ -84,7 +84,7 @@ func TestKongRoute(t *testing.T) {
 				&sdkkonnectops.CreateRouteResponse{
 					Route: &sdkkonnectcomp.Route{
 						RouteJSON: &sdkkonnectcomp.RouteJSON{
-							ID: lo.ToPtr(routeID),
+							ID: new(routeID),
 						},
 					},
 				},
@@ -125,7 +125,7 @@ func TestKongRoute(t *testing.T) {
 
 		t.Log("Patching KongRoute")
 		routeToPatch := createdRoute.DeepCopy()
-		routeToPatch.Spec.PreserveHost = lo.ToPtr(true)
+		routeToPatch.Spec.PreserveHost = new(true)
 		require.NoError(t, clientNamespaced.Patch(ctx, routeToPatch, client.MergeFrom(createdRoute)))
 
 		t.Log("Waiting for Route to get the update")
@@ -175,7 +175,7 @@ func TestKongRoute(t *testing.T) {
 					Name:  &routeName,
 					Paths: []string{"/path"},
 					Service: &sdkkonnectcomp.RouteJSONService{
-						ID: lo.ToPtr(svc.GetKonnectID()),
+						ID: new(svc.GetKonnectID()),
 					},
 				},
 			},
@@ -274,7 +274,7 @@ func TestKongRoute(t *testing.T) {
 					Name:  &routeName,
 					Paths: []string{"/path"},
 					Service: &sdkkonnectcomp.RouteJSONService{
-						ID: lo.ToPtr("another-service-id"),
+						ID: new("another-service-id"),
 					},
 				},
 			},
@@ -354,7 +354,7 @@ func TestKongRoute(t *testing.T) {
 				&sdkkonnectops.CreateRouteResponse{
 					Route: &sdkkonnectcomp.Route{
 						RouteJSON: &sdkkonnectcomp.RouteJSON{
-							ID: lo.ToPtr(id),
+							ID: new(id),
 						},
 					},
 				},
@@ -418,7 +418,7 @@ func TestKongRoute(t *testing.T) {
 					Type: configurationv1alpha1.ServiceRefNamespacedRef,
 					NamespacedRef: &commonv1alpha1.NamespacedRef{
 						Name:      svc.GetName(),
-						Namespace: lo.ToPtr(ns.Name),
+						Namespace: new(ns.Name),
 					},
 				}
 			},
@@ -466,7 +466,7 @@ func TestKongRoute(t *testing.T) {
 				&sdkkonnectops.CreateRouteResponse{
 					Route: &sdkkonnectcomp.Route{
 						RouteJSON: &sdkkonnectcomp.RouteJSON{
-							ID: lo.ToPtr(routeID),
+							ID: new(routeID),
 						},
 					},
 				},
@@ -515,7 +515,7 @@ func TestKongRoute(t *testing.T) {
 					Type: configurationv1alpha1.ServiceRefNamespacedRef,
 					NamespacedRef: &commonv1alpha1.NamespacedRef{
 						Name:      svc.GetName(),
-						Namespace: lo.ToPtr(ns.Name),
+						Namespace: new(ns.Name),
 					},
 				}
 			},

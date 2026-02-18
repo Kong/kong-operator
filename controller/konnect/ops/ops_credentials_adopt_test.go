@@ -6,7 +6,6 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/Kong/sdk-konnect-go/test/mocks"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -79,7 +78,7 @@ func TestAdoptKongCredentialAPIKey(t *testing.T) {
 		sdk := mocks.NewMockAPIKeysSDK(t)
 		sdk.EXPECT().GetKeyAuthWithConsumer(mock.Anything, mock.Anything).Return(&sdkkonnectops.GetKeyAuthWithConsumerResponse{
 			KeyAuth: &sdkkonnectcomp.KeyAuth{
-				Key:  lo.ToPtr("key-value"),
+				Key:  new("key-value"),
 				Tags: []string{"k8s-uid:uid-1"},
 			},
 		}, nil)
@@ -239,9 +238,9 @@ func TestAdoptKongCredentialHMAC(t *testing.T) {
 		sdk := mocks.NewMockHMACAuthCredentialsSDK(t)
 		sdk.EXPECT().GetHmacAuthWithConsumer(mock.Anything, mock.Anything).Return(&sdkkonnectops.GetHmacAuthWithConsumerResponse{
 			HMACAuth: &sdkkonnectcomp.HMACAuth{
-				ID:       lo.ToPtr(id),
+				ID:       new(id),
 				Username: username,
-				Secret:   lo.ToPtr(secret),
+				Secret:   new(secret),
 				Tags:     []string{"k8s-uid:uid-4"},
 			},
 		}, nil)
@@ -292,10 +291,10 @@ func TestAdoptKongCredentialJWT(t *testing.T) {
 		alg := sdkkonnectcomp.JWTAlgorithmHs256
 		sdk.EXPECT().GetJwtWithConsumer(mock.Anything, mock.Anything).Return(&sdkkonnectops.GetJwtWithConsumerResponse{
 			Jwt: &sdkkonnectcomp.Jwt{
-				ID:           lo.ToPtr("jwt-1"),
-				Key:          lo.ToPtr(key),
-				Secret:       lo.ToPtr(secret),
-				RsaPublicKey: lo.ToPtr(rsa),
+				ID:           new("jwt-1"),
+				Key:          new(key),
+				Secret:       new(secret),
+				RsaPublicKey: new(rsa),
 				Algorithm:    alg.ToPointer(),
 				Tags:         []string{"k8s-uid:uid-5"},
 			},

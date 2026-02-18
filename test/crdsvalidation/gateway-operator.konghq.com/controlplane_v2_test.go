@@ -4,7 +4,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -38,7 +37,7 @@ func TestControlPlaneV2(t *testing.T) {
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-							IngressClass: lo.ToPtr("kong"),
+							IngressClass: new("kong"),
 						},
 					},
 				},
@@ -50,7 +49,7 @@ func TestControlPlaneV2(t *testing.T) {
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-							IngressClass: lo.ToPtr("kong"),
+							IngressClass: new("kong"),
 						},
 						Extensions: []commonv1alpha1.ExtensionRef{
 							{
@@ -71,7 +70,7 @@ func TestControlPlaneV2(t *testing.T) {
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-							IngressClass: lo.ToPtr("kong"),
+							IngressClass: new("kong"),
 						},
 						Extensions: []commonv1alpha1.ExtensionRef{
 							{
@@ -99,7 +98,7 @@ func TestControlPlaneV2(t *testing.T) {
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-							IngressClass: lo.ToPtr("kong"),
+							IngressClass: new("kong"),
 						},
 						Extensions: []commonv1alpha1.ExtensionRef{
 							{
@@ -112,7 +111,7 @@ func TestControlPlaneV2(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Extension not allowed for ControlPlane"),
+				ExpectedErrorMessage: new("Extension not allowed for ControlPlane"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -126,11 +125,11 @@ func TestControlPlaneV2(t *testing.T) {
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-							IngressClass: lo.ToPtr("kong"),
+							IngressClass: new("kong"),
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.dataplane: Required value, <nil>: Invalid value:"),
+				ExpectedErrorMessage: new("spec.dataplane: Required value, <nil>: Invalid value:"),
 			},
 			{
 				Name: "when dataplane.type is set to name, name must be specified",
@@ -141,11 +140,11 @@ func TestControlPlaneV2(t *testing.T) {
 							Type: operatorv2beta1.ControlPlaneDataPlaneTargetRefType,
 						},
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-							IngressClass: lo.ToPtr("kong"),
+							IngressClass: new("kong"),
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Ref has to be provided when type is set to ref"),
+				ExpectedErrorMessage: new("Ref has to be provided when type is set to ref"),
 			},
 			{
 				Name: "specifying dataplane ref name when type is ref passes",
@@ -159,7 +158,7 @@ func TestControlPlaneV2(t *testing.T) {
 							},
 						},
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-							IngressClass: lo.ToPtr("kong"),
+							IngressClass: new("kong"),
 						},
 					},
 				},
@@ -187,7 +186,7 @@ func TestControlPlaneV2(t *testing.T) {
 							Type: operatorv2beta1.ControlPlaneDataPlaneTargetManagedByType,
 						},
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-							IngressClass: lo.ToPtr("kong"),
+							IngressClass: new("kong"),
 						},
 					},
 				},
@@ -205,11 +204,11 @@ func TestControlPlaneV2(t *testing.T) {
 							},
 						},
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-							IngressClass: lo.ToPtr("kong"),
+							IngressClass: new("kong"),
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Ref cannot be provided when type is set to managedByOwner"),
+				ExpectedErrorMessage: new("Ref cannot be provided when type is set to managedByOwner"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -224,7 +223,7 @@ func TestControlPlaneV2(t *testing.T) {
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-							IngressClass: lo.ToPtr("kong"),
+							IngressClass: new("kong"),
 						},
 					},
 				},
@@ -236,7 +235,7 @@ func TestControlPlaneV2(t *testing.T) {
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-							IngressClass: lo.ToPtr("kong"),
+							IngressClass: new("kong"),
 							FeatureGates: []operatorv2beta1.ControlPlaneFeatureGate{
 								{
 									Name:  "KongCustomEntity",
@@ -254,7 +253,7 @@ func TestControlPlaneV2(t *testing.T) {
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-							IngressClass: lo.ToPtr("kong"),
+							IngressClass: new("kong"),
 							FeatureGates: []operatorv2beta1.ControlPlaneFeatureGate{
 								{
 									Name:  "KongCustomEntity",
@@ -272,7 +271,7 @@ func TestControlPlaneV2(t *testing.T) {
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-							IngressClass: lo.ToPtr("kong"),
+							IngressClass: new("kong"),
 							FeatureGates: []operatorv2beta1.ControlPlaneFeatureGate{
 								{
 									Name:  "KongCustomEntity",
@@ -284,7 +283,7 @@ func TestControlPlaneV2(t *testing.T) {
 				},
 				Update: func(cp *operatorv2beta1.ControlPlane) {
 					cp.Spec.ControlPlaneOptions = operatorv2beta1.ControlPlaneOptions{
-						IngressClass: lo.ToPtr("kong"),
+						IngressClass: new("kong"),
 					}
 				},
 			},
@@ -295,7 +294,7 @@ func TestControlPlaneV2(t *testing.T) {
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-							IngressClass: lo.ToPtr("kong"),
+							IngressClass: new("kong"),
 							FeatureGates: []operatorv2beta1.ControlPlaneFeatureGate{
 								{
 									Name: "KongCustomEntity",
@@ -304,7 +303,7 @@ func TestControlPlaneV2(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.featureGates[0].state: Unsupported value: \"\": supported values: \"enabled\", \"disabled\""),
+				ExpectedErrorMessage: new("spec.featureGates[0].state: Unsupported value: \"\": supported values: \"enabled\", \"disabled\""),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -319,7 +318,7 @@ func TestControlPlaneV2(t *testing.T) {
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-							IngressClass: lo.ToPtr("kong"),
+							IngressClass: new("kong"),
 						},
 					},
 				},
@@ -331,7 +330,7 @@ func TestControlPlaneV2(t *testing.T) {
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-							IngressClass: lo.ToPtr("kong"),
+							IngressClass: new("kong"),
 							Controllers: []operatorv2beta1.ControlPlaneController{
 								{
 									Name:  "KONG_PLUGIN",
@@ -349,7 +348,7 @@ func TestControlPlaneV2(t *testing.T) {
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-							IngressClass: lo.ToPtr("kong"),
+							IngressClass: new("kong"),
 							Controllers: []operatorv2beta1.ControlPlaneController{
 								{
 									Name:  "KONG_PLUGIN",
@@ -367,7 +366,7 @@ func TestControlPlaneV2(t *testing.T) {
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-							IngressClass: lo.ToPtr("kong"),
+							IngressClass: new("kong"),
 							Controllers: []operatorv2beta1.ControlPlaneController{
 								{
 									Name:  "KONG_PLUGIN",
@@ -379,7 +378,7 @@ func TestControlPlaneV2(t *testing.T) {
 				},
 				Update: func(cp *operatorv2beta1.ControlPlane) {
 					cp.Spec.ControlPlaneOptions = operatorv2beta1.ControlPlaneOptions{
-						IngressClass: lo.ToPtr("kong"),
+						IngressClass: new("kong"),
 					}
 				},
 			},
@@ -390,7 +389,7 @@ func TestControlPlaneV2(t *testing.T) {
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-							IngressClass: lo.ToPtr("kong"),
+							IngressClass: new("kong"),
 							Controllers: []operatorv2beta1.ControlPlaneController{
 								{
 									Name: "KONG_PLUGIN",
@@ -399,7 +398,7 @@ func TestControlPlaneV2(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.controllers[0].state: Unsupported value: \"\": supported values: \"enabled\", \"disabled\""),
+				ExpectedErrorMessage: new("spec.controllers[0].state: Unsupported value: \"\": supported values: \"enabled\", \"disabled\""),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -414,9 +413,9 @@ func TestControlPlaneV2(t *testing.T) {
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-							IngressClass: lo.ToPtr("kong"),
+							IngressClass: new("kong"),
 							Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
-								CombinedServicesFromDifferentHTTPRoutes: lo.ToPtr(operatorv2beta1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled),
+								CombinedServicesFromDifferentHTTPRoutes: new(operatorv2beta1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled),
 							},
 						},
 					},
@@ -429,7 +428,7 @@ func TestControlPlaneV2(t *testing.T) {
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-							IngressClass: lo.ToPtr("kong"),
+							IngressClass: new("kong"),
 						},
 					},
 				},
@@ -449,9 +448,9 @@ func TestControlPlaneV2(t *testing.T) {
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-							IngressClass: lo.ToPtr("kong"),
+							IngressClass: new("kong"),
 							Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
-								CombinedServicesFromDifferentHTTPRoutes: lo.ToPtr(operatorv2beta1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled),
+								CombinedServicesFromDifferentHTTPRoutes: new(operatorv2beta1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled),
 							},
 						},
 					},
@@ -464,14 +463,14 @@ func TestControlPlaneV2(t *testing.T) {
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-							IngressClass: lo.ToPtr("kong"),
+							IngressClass: new("kong"),
 							Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
-								CombinedServicesFromDifferentHTTPRoutes: lo.ToPtr(operatorv2beta1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesState("invalid")),
+								CombinedServicesFromDifferentHTTPRoutes: new(operatorv2beta1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesState("invalid")),
 							},
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.translation.combinedServicesFromDifferentHTTPRoutes: Unsupported value: \"invalid\": supported values: \"enabled\", \"disabled\""),
+				ExpectedErrorMessage: new("spec.translation.combinedServicesFromDifferentHTTPRoutes: Unsupported value: \"invalid\": supported values: \"enabled\", \"disabled\""),
 			},
 			{
 				Name: "drainSupport set to enabled",
@@ -480,9 +479,9 @@ func TestControlPlaneV2(t *testing.T) {
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-							IngressClass: lo.ToPtr("kong"),
+							IngressClass: new("kong"),
 							Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
-								DrainSupport: lo.ToPtr(operatorv2beta1.ControlPlaneDrainSupportStateEnabled),
+								DrainSupport: new(operatorv2beta1.ControlPlaneDrainSupportStateEnabled),
 							},
 						},
 					},
@@ -495,9 +494,9 @@ func TestControlPlaneV2(t *testing.T) {
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-							IngressClass: lo.ToPtr("kong"),
+							IngressClass: new("kong"),
 							Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
-								DrainSupport: lo.ToPtr(operatorv2beta1.ControlPlaneDrainSupportStateDisabled),
+								DrainSupport: new(operatorv2beta1.ControlPlaneDrainSupportStateDisabled),
 							},
 						},
 					},
@@ -510,14 +509,14 @@ func TestControlPlaneV2(t *testing.T) {
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-							IngressClass: lo.ToPtr("kong"),
+							IngressClass: new("kong"),
 							Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
-								DrainSupport: lo.ToPtr(operatorv2beta1.ControlPlaneDrainSupportState("invalid")),
+								DrainSupport: new(operatorv2beta1.ControlPlaneDrainSupportState("invalid")),
 							},
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.translation.drainSupport: Unsupported value: \"invalid\": supported values: \"enabled\", \"disabled\""),
+				ExpectedErrorMessage: new("spec.translation.drainSupport: Unsupported value: \"invalid\": supported values: \"enabled\", \"disabled\""),
 			},
 			{
 				Name: "both combinedServicesFromDifferentHTTPRoutes and drainSupport set",
@@ -526,10 +525,10 @@ func TestControlPlaneV2(t *testing.T) {
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-							IngressClass: lo.ToPtr("kong"),
+							IngressClass: new("kong"),
 							Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
-								CombinedServicesFromDifferentHTTPRoutes: lo.ToPtr(operatorv2beta1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled),
-								DrainSupport:                            lo.ToPtr(operatorv2beta1.ControlPlaneDrainSupportStateDisabled),
+								CombinedServicesFromDifferentHTTPRoutes: new(operatorv2beta1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled),
+								DrainSupport:                            new(operatorv2beta1.ControlPlaneDrainSupportStateDisabled),
 							},
 						},
 					},
@@ -547,10 +546,10 @@ func TestControlPlaneV2(t *testing.T) {
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-								IngressClass: lo.ToPtr("kong"),
+								IngressClass: new("kong"),
 								Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
 									FallbackConfiguration: &operatorv2beta1.ControlPlaneFallbackConfiguration{
-										UseLastValidConfig: lo.ToPtr(operatorv2beta1.ControlPlaneFallbackConfigurationStateEnabled),
+										UseLastValidConfig: new(operatorv2beta1.ControlPlaneFallbackConfigurationStateEnabled),
 									},
 								},
 							},
@@ -564,10 +563,10 @@ func TestControlPlaneV2(t *testing.T) {
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-								IngressClass: lo.ToPtr("kong"),
+								IngressClass: new("kong"),
 								Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
 									FallbackConfiguration: &operatorv2beta1.ControlPlaneFallbackConfiguration{
-										UseLastValidConfig: lo.ToPtr(operatorv2beta1.ControlPlaneFallbackConfigurationStateDisabled),
+										UseLastValidConfig: new(operatorv2beta1.ControlPlaneFallbackConfigurationStateDisabled),
 									},
 								},
 							},
@@ -581,16 +580,16 @@ func TestControlPlaneV2(t *testing.T) {
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-								IngressClass: lo.ToPtr("kong"),
+								IngressClass: new("kong"),
 								Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
 									FallbackConfiguration: &operatorv2beta1.ControlPlaneFallbackConfiguration{
-										UseLastValidConfig: lo.ToPtr(operatorv2beta1.ControlPlaneFallbackConfigurationState("invalid")),
+										UseLastValidConfig: new(operatorv2beta1.ControlPlaneFallbackConfigurationState("invalid")),
 									},
 								},
 							},
 						},
 					},
-					ExpectedErrorMessage: lo.ToPtr("spec.translation.fallbackConfiguration.useLastValidConfig: Unsupported value: \"invalid\": supported values: \"enabled\", \"disabled\""),
+					ExpectedErrorMessage: new("spec.translation.fallbackConfiguration.useLastValidConfig: Unsupported value: \"invalid\": supported values: \"enabled\", \"disabled\""),
 				},
 			}.
 				RunWithConfig(t, cfg, scheme)
@@ -605,7 +604,7 @@ func TestControlPlaneV2(t *testing.T) {
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-								IngressClass: lo.ToPtr("kong"),
+								IngressClass: new("kong"),
 								ConfigDump: &operatorv2beta1.ControlPlaneConfigDump{
 									State:         operatorv2beta1.ConfigDumpStateEnabled,
 									DumpSensitive: operatorv2beta1.ConfigDumpStateEnabled,
@@ -621,7 +620,7 @@ func TestControlPlaneV2(t *testing.T) {
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-								IngressClass: lo.ToPtr("kong"),
+								IngressClass: new("kong"),
 								ConfigDump: &operatorv2beta1.ControlPlaneConfigDump{
 									State:         operatorv2beta1.ConfigDumpStateDisabled,
 									DumpSensitive: operatorv2beta1.ConfigDumpStateDisabled,
@@ -637,7 +636,7 @@ func TestControlPlaneV2(t *testing.T) {
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-								IngressClass: lo.ToPtr("kong"),
+								IngressClass: new("kong"),
 								ConfigDump: &operatorv2beta1.ControlPlaneConfigDump{
 									State:         operatorv2beta1.ConfigDumpStateEnabled,
 									DumpSensitive: operatorv2beta1.ConfigDumpStateDisabled,
@@ -653,7 +652,7 @@ func TestControlPlaneV2(t *testing.T) {
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-								IngressClass: lo.ToPtr("kong"),
+								IngressClass: new("kong"),
 								ConfigDump: &operatorv2beta1.ControlPlaneConfigDump{
 									State:         operatorv2beta1.ConfigDumpStateDisabled,
 									DumpSensitive: operatorv2beta1.ConfigDumpStateEnabled,
@@ -661,7 +660,7 @@ func TestControlPlaneV2(t *testing.T) {
 							},
 						},
 					},
-					ExpectedErrorMessage: lo.ToPtr("Cannot enable dumpSensitive when state is disabled"),
+					ExpectedErrorMessage: new("Cannot enable dumpSensitive when state is disabled"),
 				},
 				{
 					Name: "configDump.state set to disallowed value",
@@ -670,7 +669,7 @@ func TestControlPlaneV2(t *testing.T) {
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-								IngressClass: lo.ToPtr("kong"),
+								IngressClass: new("kong"),
 								ConfigDump: &operatorv2beta1.ControlPlaneConfigDump{
 									State:         operatorv2beta1.ConfigDumpState("invalid"),
 									DumpSensitive: operatorv2beta1.ConfigDumpStateEnabled,
@@ -678,7 +677,7 @@ func TestControlPlaneV2(t *testing.T) {
 							},
 						},
 					},
-					ExpectedErrorMessage: lo.ToPtr(`spec.configDump.state: Unsupported value: "invalid": supported values: "enabled", "disabled"`),
+					ExpectedErrorMessage: new(`spec.configDump.state: Unsupported value: "invalid": supported values: "enabled", "disabled"`),
 				},
 				{
 					Name: "configDump.dumpSensitive is set to disallowed value",
@@ -687,7 +686,7 @@ func TestControlPlaneV2(t *testing.T) {
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-								IngressClass: lo.ToPtr("kong"),
+								IngressClass: new("kong"),
 								ConfigDump: &operatorv2beta1.ControlPlaneConfigDump{
 									State:         operatorv2beta1.ConfigDumpStateEnabled,
 									DumpSensitive: operatorv2beta1.ConfigDumpState("invalid"),
@@ -695,7 +694,7 @@ func TestControlPlaneV2(t *testing.T) {
 							},
 						},
 					},
-					ExpectedErrorMessage: lo.ToPtr(`spec.configDump.dumpSensitive: Unsupported value: "invalid": supported values: "enabled", "disabled"`),
+					ExpectedErrorMessage: new(`spec.configDump.dumpSensitive: Unsupported value: "invalid": supported values: "enabled", "disabled"`),
 				},
 			}.
 				RunWithConfig(t, cfg, scheme)
@@ -710,7 +709,7 @@ func TestControlPlaneV2(t *testing.T) {
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-								IngressClass: lo.ToPtr("kong"),
+								IngressClass: new("kong"),
 								ObjectFilters: &operatorv2beta1.ControlPlaneObjectFilters{
 									Secrets: &operatorv2beta1.ControlPlaneFilterForObjectType{
 										MatchLabels: map[string]string{"konghq.com/secret": "true"},
@@ -730,7 +729,7 @@ func TestControlPlaneV2(t *testing.T) {
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-								IngressClass: lo.ToPtr("kong"),
+								IngressClass: new("kong"),
 								ObjectFilters: &operatorv2beta1.ControlPlaneObjectFilters{
 									Secrets: &operatorv2beta1.ControlPlaneFilterForObjectType{
 										MatchLabels: map[string]string{
@@ -749,7 +748,7 @@ func TestControlPlaneV2(t *testing.T) {
 							},
 						},
 					},
-					ExpectedErrorMessage: lo.ToPtr("spec.objectFilters.secrets.matchLabels: Too many: 9: must have at most 8 items"),
+					ExpectedErrorMessage: new("spec.objectFilters.secrets.matchLabels: Too many: 9: must have at most 8 items"),
 				},
 				{
 					Name: "key of objectFilters.*.matchLabels must have minimum length 1",
@@ -758,7 +757,7 @@ func TestControlPlaneV2(t *testing.T) {
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-								IngressClass: lo.ToPtr("kong"),
+								IngressClass: new("kong"),
 								ObjectFilters: &operatorv2beta1.ControlPlaneObjectFilters{
 									Secrets: &operatorv2beta1.ControlPlaneFilterForObjectType{
 										MatchLabels: map[string]string{"konghq.com/secret": "true"},
@@ -770,7 +769,7 @@ func TestControlPlaneV2(t *testing.T) {
 							},
 						},
 					},
-					ExpectedErrorMessage: lo.ToPtr("Minimum length of key in matchLabels is 1"),
+					ExpectedErrorMessage: new("Minimum length of key in matchLabels is 1"),
 				},
 				{
 					Name: "value of objectFilters.*.matchLabels must have maximum length 63",
@@ -779,7 +778,7 @@ func TestControlPlaneV2(t *testing.T) {
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-								IngressClass: lo.ToPtr("kong"),
+								IngressClass: new("kong"),
 								ObjectFilters: &operatorv2beta1.ControlPlaneObjectFilters{
 									Secrets: &operatorv2beta1.ControlPlaneFilterForObjectType{
 										MatchLabels: map[string]string{"konghq.com/secret": "this-is-a-very-very-long-label-which-is-longer-than-63-characters"},
@@ -788,7 +787,7 @@ func TestControlPlaneV2(t *testing.T) {
 							},
 						},
 					},
-					ExpectedErrorMessage: lo.ToPtr("Maximum length of value in matchLabels is 63"),
+					ExpectedErrorMessage: new("Maximum length of value in matchLabels is 63"),
 				},
 			}.
 				RunWithConfig(t, cfg, scheme)
@@ -805,7 +804,7 @@ func TestControlPlaneV2(t *testing.T) {
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-								IngressClass: lo.ToPtr("kong"),
+								IngressClass: new("kong"),
 							},
 						},
 					},
@@ -817,17 +816,17 @@ func TestControlPlaneV2(t *testing.T) {
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-								IngressClass: lo.ToPtr("kong"),
+								IngressClass: new("kong"),
 								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
-									ConsumersSync: lo.ToPtr(operatorv2beta1.ControlPlaneKonnectConsumersSyncStateEnabled),
+									ConsumersSync: new(operatorv2beta1.ControlPlaneKonnectConsumersSyncStateEnabled),
 									Licensing: &operatorv2beta1.ControlPlaneKonnectLicensing{
-										State:                lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingStateEnabled),
-										InitialPollingPeriod: lo.ToPtr(metav1.Duration{Duration: 30 * time.Second}),
-										PollingPeriod:        lo.ToPtr(metav1.Duration{Duration: 300 * time.Second}),
-										StorageState:         lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicenseStorageStateEnabled),
+										State:                new(operatorv2beta1.ControlPlaneKonnectLicensingStateEnabled),
+										InitialPollingPeriod: new(metav1.Duration{Duration: 30 * time.Second}),
+										PollingPeriod:        new(metav1.Duration{Duration: 300 * time.Second}),
+										StorageState:         new(operatorv2beta1.ControlPlaneKonnectLicenseStorageStateEnabled),
 									},
-									NodeRefreshPeriod:  lo.ToPtr(metav1.Duration{Duration: 60 * time.Second}),
-									ConfigUploadPeriod: lo.ToPtr(metav1.Duration{Duration: 30 * time.Second}),
+									NodeRefreshPeriod:  new(metav1.Duration{Duration: 60 * time.Second}),
+									ConfigUploadPeriod: new(metav1.Duration{Duration: 30 * time.Second}),
 								},
 							},
 						},
@@ -846,9 +845,9 @@ func TestControlPlaneV2(t *testing.T) {
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-								IngressClass: lo.ToPtr("kong"),
+								IngressClass: new("kong"),
 								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
-									ConsumersSync: lo.ToPtr(operatorv2beta1.ControlPlaneKonnectConsumersSyncStateEnabled),
+									ConsumersSync: new(operatorv2beta1.ControlPlaneKonnectConsumersSyncStateEnabled),
 								},
 							},
 						},
@@ -861,9 +860,9 @@ func TestControlPlaneV2(t *testing.T) {
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-								IngressClass: lo.ToPtr("kong"),
+								IngressClass: new("kong"),
 								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
-									ConsumersSync: lo.ToPtr(operatorv2beta1.ControlPlaneKonnectConsumersSyncStateDisabled),
+									ConsumersSync: new(operatorv2beta1.ControlPlaneKonnectConsumersSyncStateDisabled),
 								},
 							},
 						},
@@ -876,14 +875,14 @@ func TestControlPlaneV2(t *testing.T) {
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-								IngressClass: lo.ToPtr("kong"),
+								IngressClass: new("kong"),
 								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
-									ConsumersSync: lo.ToPtr(operatorv2beta1.ControlPlaneKonnectConsumersSyncState("invalid")),
+									ConsumersSync: new(operatorv2beta1.ControlPlaneKonnectConsumersSyncState("invalid")),
 								},
 							},
 						},
 					},
-					ExpectedErrorMessage: lo.ToPtr("spec.konnect.consumersSync: Unsupported value: \"invalid\": supported values: \"enabled\", \"disabled\""),
+					ExpectedErrorMessage: new("spec.konnect.consumersSync: Unsupported value: \"invalid\": supported values: \"enabled\", \"disabled\""),
 				},
 			}.
 				RunWithConfig(t, cfg, scheme)
@@ -898,10 +897,10 @@ func TestControlPlaneV2(t *testing.T) {
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-								IngressClass: lo.ToPtr("kong"),
+								IngressClass: new("kong"),
 								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
 									Licensing: &operatorv2beta1.ControlPlaneKonnectLicensing{
-										State: lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingStateEnabled),
+										State: new(operatorv2beta1.ControlPlaneKonnectLicensingStateEnabled),
 									},
 								},
 							},
@@ -915,11 +914,11 @@ func TestControlPlaneV2(t *testing.T) {
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-								IngressClass: lo.ToPtr("kong"),
+								IngressClass: new("kong"),
 								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
 									Licensing: &operatorv2beta1.ControlPlaneKonnectLicensing{
-										State:        lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingStateDisabled),
-										StorageState: lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicenseStorageStateDisabled),
+										State:        new(operatorv2beta1.ControlPlaneKonnectLicensingStateDisabled),
+										StorageState: new(operatorv2beta1.ControlPlaneKonnectLicenseStorageStateDisabled),
 									},
 								},
 							},
@@ -933,13 +932,13 @@ func TestControlPlaneV2(t *testing.T) {
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-								IngressClass: lo.ToPtr("kong"),
+								IngressClass: new("kong"),
 								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
 									Licensing: &operatorv2beta1.ControlPlaneKonnectLicensing{
-										State:                lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingStateEnabled),
-										InitialPollingPeriod: lo.ToPtr(metav1.Duration{Duration: 30 * time.Second}),
-										PollingPeriod:        lo.ToPtr(metav1.Duration{Duration: 300 * time.Second}),
-										StorageState:         lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicenseStorageStateEnabled),
+										State:                new(operatorv2beta1.ControlPlaneKonnectLicensingStateEnabled),
+										InitialPollingPeriod: new(metav1.Duration{Duration: 30 * time.Second}),
+										PollingPeriod:        new(metav1.Duration{Duration: 300 * time.Second}),
+										StorageState:         new(operatorv2beta1.ControlPlaneKonnectLicenseStorageStateEnabled),
 									},
 								},
 							},
@@ -953,13 +952,13 @@ func TestControlPlaneV2(t *testing.T) {
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-								IngressClass: lo.ToPtr("kong"),
+								IngressClass: new("kong"),
 								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
 									Licensing: &operatorv2beta1.ControlPlaneKonnectLicensing{
-										State:                lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingStateEnabled),
-										InitialPollingPeriod: lo.ToPtr(metav1.Duration{Duration: 30 * time.Second}),
-										PollingPeriod:        lo.ToPtr(metav1.Duration{Duration: 300 * time.Second}),
-										StorageState:         lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicenseStorageStateDisabled),
+										State:                new(operatorv2beta1.ControlPlaneKonnectLicensingStateEnabled),
+										InitialPollingPeriod: new(metav1.Duration{Duration: 30 * time.Second}),
+										PollingPeriod:        new(metav1.Duration{Duration: 300 * time.Second}),
+										StorageState:         new(operatorv2beta1.ControlPlaneKonnectLicenseStorageStateDisabled),
 									},
 								},
 							},
@@ -973,17 +972,17 @@ func TestControlPlaneV2(t *testing.T) {
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-								IngressClass: lo.ToPtr("kong"),
+								IngressClass: new("kong"),
 								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
 									Licensing: &operatorv2beta1.ControlPlaneKonnectLicensing{
-										State:        lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingStateEnabled),
-										StorageState: lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicenseStorageState("invalid")),
+										State:        new(operatorv2beta1.ControlPlaneKonnectLicensingStateEnabled),
+										StorageState: new(operatorv2beta1.ControlPlaneKonnectLicenseStorageState("invalid")),
 									},
 								},
 							},
 						},
 					},
-					ExpectedErrorMessage: lo.ToPtr("spec.konnect.licensing.storageState: Unsupported value: \"invalid\": supported values: \"enabled\", \"disabled\""),
+					ExpectedErrorMessage: new("spec.konnect.licensing.storageState: Unsupported value: \"invalid\": supported values: \"enabled\", \"disabled\""),
 				},
 				{
 					Name: "storageState set when licensing is disabled",
@@ -992,17 +991,17 @@ func TestControlPlaneV2(t *testing.T) {
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-								IngressClass: lo.ToPtr("kong"),
+								IngressClass: new("kong"),
 								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
 									Licensing: &operatorv2beta1.ControlPlaneKonnectLicensing{
-										State:        lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingStateDisabled),
-										StorageState: lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicenseStorageStateEnabled),
+										State:        new(operatorv2beta1.ControlPlaneKonnectLicensingStateDisabled),
+										StorageState: new(operatorv2beta1.ControlPlaneKonnectLicenseStorageStateEnabled),
 									},
 								},
 							},
 						},
 					},
-					ExpectedErrorMessage: lo.ToPtr("storageState can only be set to enabled when licensing is enabled"),
+					ExpectedErrorMessage: new("storageState can only be set to enabled when licensing is enabled"),
 				},
 				{
 					Name: "licensing set to disabled with initialPollingPeriod",
@@ -1011,17 +1010,17 @@ func TestControlPlaneV2(t *testing.T) {
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-								IngressClass: lo.ToPtr("kong"),
+								IngressClass: new("kong"),
 								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
 									Licensing: &operatorv2beta1.ControlPlaneKonnectLicensing{
-										State:                lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingStateDisabled),
-										InitialPollingPeriod: lo.ToPtr(metav1.Duration{Duration: 30 * time.Second}),
+										State:                new(operatorv2beta1.ControlPlaneKonnectLicensingStateDisabled),
+										InitialPollingPeriod: new(metav1.Duration{Duration: 30 * time.Second}),
 									},
 								},
 							},
 						},
 					},
-					ExpectedErrorMessage: lo.ToPtr("initialPollingPeriod can only be set when licensing is enabled"),
+					ExpectedErrorMessage: new("initialPollingPeriod can only be set when licensing is enabled"),
 				},
 				{
 					Name: "licensing set to disabled with pollingPeriod",
@@ -1030,17 +1029,17 @@ func TestControlPlaneV2(t *testing.T) {
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-								IngressClass: lo.ToPtr("kong"),
+								IngressClass: new("kong"),
 								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
 									Licensing: &operatorv2beta1.ControlPlaneKonnectLicensing{
-										State:         lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingStateDisabled),
-										PollingPeriod: lo.ToPtr(metav1.Duration{Duration: 300 * time.Second}),
+										State:         new(operatorv2beta1.ControlPlaneKonnectLicensingStateDisabled),
+										PollingPeriod: new(metav1.Duration{Duration: 300 * time.Second}),
 									},
 								},
 							},
 						},
 					},
-					ExpectedErrorMessage: lo.ToPtr("pollingPeriod can only be set when licensing is enabled"),
+					ExpectedErrorMessage: new("pollingPeriod can only be set when licensing is enabled"),
 				},
 				{
 					Name: "licensing set to disallowed value",
@@ -1049,16 +1048,16 @@ func TestControlPlaneV2(t *testing.T) {
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-								IngressClass: lo.ToPtr("kong"),
+								IngressClass: new("kong"),
 								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
 									Licensing: &operatorv2beta1.ControlPlaneKonnectLicensing{
-										State: lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingState("invalid")),
+										State: new(operatorv2beta1.ControlPlaneKonnectLicensingState("invalid")),
 									},
 								},
 							},
 						},
 					},
-					ExpectedErrorMessage: lo.ToPtr("spec.konnect.licensing.state: Unsupported value: \"invalid\": supported values: \"enabled\", \"disabled\""),
+					ExpectedErrorMessage: new("spec.konnect.licensing.state: Unsupported value: \"invalid\": supported values: \"enabled\", \"disabled\""),
 				},
 			}.
 				RunWithConfig(t, cfg, scheme)
@@ -1073,9 +1072,9 @@ func TestControlPlaneV2(t *testing.T) {
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-								IngressClass: lo.ToPtr("kong"),
+								IngressClass: new("kong"),
 								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
-									NodeRefreshPeriod: lo.ToPtr(metav1.Duration{Duration: 60 * time.Second}),
+									NodeRefreshPeriod: new(metav1.Duration{Duration: 60 * time.Second}),
 								},
 							},
 						},
@@ -1088,9 +1087,9 @@ func TestControlPlaneV2(t *testing.T) {
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-								IngressClass: lo.ToPtr("kong"),
+								IngressClass: new("kong"),
 								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
-									ConfigUploadPeriod: lo.ToPtr(metav1.Duration{Duration: 30 * time.Second}),
+									ConfigUploadPeriod: new(metav1.Duration{Duration: 30 * time.Second}),
 								},
 							},
 						},
@@ -1103,10 +1102,10 @@ func TestControlPlaneV2(t *testing.T) {
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-								IngressClass: lo.ToPtr("kong"),
+								IngressClass: new("kong"),
 								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
-									NodeRefreshPeriod:  lo.ToPtr(metav1.Duration{Duration: 60 * time.Second}),
-									ConfigUploadPeriod: lo.ToPtr(metav1.Duration{Duration: 30 * time.Second}),
+									NodeRefreshPeriod:  new(metav1.Duration{Duration: 60 * time.Second}),
+									ConfigUploadPeriod: new(metav1.Duration{Duration: 30 * time.Second}),
 								},
 							},
 						},

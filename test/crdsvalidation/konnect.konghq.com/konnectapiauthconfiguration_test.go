@@ -3,7 +3,6 @@ package crdsvalidation_test
 import (
 	"testing"
 
-	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
@@ -53,7 +52,7 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 						ServerURL: "api.us.konghq.com",
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Konnect tokens have to start with spat_ or kpat_"),
+				ExpectedErrorMessage: new("Konnect tokens have to start with spat_ or kpat_"),
 			},
 			{
 				Name: "invalid token type - missing token",
@@ -64,7 +63,7 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 						ServerURL: "api.us.konghq.com",
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Konnect tokens have to start with spat_ or kpat_"),
+				ExpectedErrorMessage: new("Konnect tokens have to start with spat_ or kpat_"),
 			},
 			{
 				Name: "token is required once set",
@@ -79,7 +78,7 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 				Update: func(obj *konnectv1alpha1.KonnectAPIAuthConfiguration) {
 					obj.Spec.Token = ""
 				},
-				ExpectedUpdateErrorMessage: lo.ToPtr("Token is required once set"),
+				ExpectedUpdateErrorMessage: new("Token is required once set"),
 			},
 			{
 				Name: "valid secretRef type",
@@ -103,7 +102,7 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 						ServerURL: "api.us.konghq.com",
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.secretRef is required if auth type is set to secretRef"),
+				ExpectedErrorMessage: new("spec.secretRef is required if auth type is set to secretRef"),
 			},
 			{
 				Name: "server URL is required",
@@ -114,7 +113,7 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 						Token: "spat_token",
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Server URL is required"),
+				ExpectedErrorMessage: new("Server URL is required"),
 			},
 			{
 				Name: "server URL is immutable",
@@ -129,7 +128,7 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 				Update: func(obj *konnectv1alpha1.KonnectAPIAuthConfiguration) {
 					obj.Spec.ServerURL = "api.eu.konghq.com"
 				},
-				ExpectedUpdateErrorMessage: lo.ToPtr("Server URL is immutable"),
+				ExpectedUpdateErrorMessage: new("Server URL is immutable"),
 			},
 			{
 				Name: "server URL is valid when using HTTPs scheme",
@@ -152,7 +151,7 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 						ServerURL: "http://api.us.konghq.com",
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Server URL must use HTTPs if specifying scheme"),
+				ExpectedErrorMessage: new("Server URL must use HTTPs if specifying scheme"),
 			},
 			{
 				Name: "server URL must satisfy hostname (RFC 1123) regex if not a valid absolute URL",
@@ -164,7 +163,7 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 						ServerURL: "%%%invalid%%%hostname",
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Server URL must satisfy hostname (RFC 1123) regex if not a valid absolute URL"),
+				ExpectedErrorMessage: new("Server URL must satisfy hostname (RFC 1123) regex if not a valid absolute URL"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)

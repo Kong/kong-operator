@@ -7,7 +7,6 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/go-logr/logr"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -153,9 +152,9 @@ func newHTTPRouteWithHostnames(hostnames ...string) *gwtypes.HTTPRoute {
 				{
 					Matches: []gwtypes.HTTPRouteMatch{
 						{
-							Path: lo.ToPtr(gatewayv1.HTTPPathMatch{
-								Type:  lo.ToPtr(gatewayv1.PathMatchExact),
-								Value: lo.ToPtr("/"),
+							Path: new(gatewayv1.HTTPPathMatch{
+								Type:  new(gatewayv1.PathMatchExact),
+								Value: new("/"),
 							}),
 						},
 					},
@@ -164,7 +163,7 @@ func newHTTPRouteWithHostnames(hostnames ...string) *gwtypes.HTTPRoute {
 							BackendRef: gwtypes.BackendRef{
 								BackendObjectReference: gwtypes.BackendObjectReference{
 									Name: "test-service",
-									Port: lo.ToPtr(gwtypes.PortNumber(80)),
+									Port: new(gwtypes.PortNumber(80)),
 								},
 							},
 						},
@@ -175,8 +174,8 @@ func newHTTPRouteWithHostnames(hostnames ...string) *gwtypes.HTTPRoute {
 				ParentRefs: []gwtypes.ParentReference{
 					{
 						Name:  "test-gateway",
-						Kind:  lo.ToPtr(gwtypes.Kind("Gateway")),
-						Group: lo.ToPtr(gwtypes.Group(gwtypes.GroupName)),
+						Kind:  new(gwtypes.Kind("Gateway")),
+						Group: new(gwtypes.Group(gwtypes.GroupName)),
 					},
 				},
 			},
@@ -192,7 +191,7 @@ func newGatewayWithListenerHostnames(hostnames ...string) *gwtypes.Gateway {
 		listenerName := gwtypes.SectionName(fmt.Sprintf("listener-%d", i))
 		gwListeeners = append(gwListeeners, gwtypes.Listener{
 			Name:     listenerName,
-			Hostname: lo.ToPtr(gatewayv1.Hostname(h)),
+			Hostname: new(gatewayv1.Hostname(h)),
 			Protocol: gwtypes.HTTPProtocolType,
 			Port:     gwtypes.PortNumber(80),
 		})
@@ -296,7 +295,7 @@ func newKonnectGatewayStandardObjects(gateway *gwtypes.Gateway) []client.Object 
 					Group:     "gateway-operator.konghq.com",
 					Kind:      gwtypes.Kind("GatewayConfiguration"),
 					Name:      "test-gateway-config",
-					Namespace: lo.ToPtr(gatewayv1.Namespace("default")),
+					Namespace: new(gatewayv1.Namespace("default")),
 				},
 			},
 		},
@@ -316,7 +315,7 @@ func newKonnectGatewayStandardObjects(gateway *gwtypes.Gateway) []client.Object 
 						Kind:  "KonnectExtension",
 						NamespacedRef: commonv1alpha1.NamespacedRef{
 							Name:      "test-extension",
-							Namespace: lo.ToPtr("default"),
+							Namespace: new("default"),
 						},
 					},
 				},

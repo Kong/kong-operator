@@ -25,7 +25,7 @@ func (u *Upstream) overrideHostHeader(anns map[string]string) {
 	if host == "" {
 		return
 	}
-	u.HostHeader = kong.String(host)
+	u.HostHeader = new(host)
 }
 
 // overrideByAnnotation modifies the Kong upstream based on annotations

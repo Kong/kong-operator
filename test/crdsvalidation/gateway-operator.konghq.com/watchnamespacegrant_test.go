@@ -3,8 +3,6 @@ package crdsvalidation_test
 import (
 	"testing"
 
-	"github.com/samber/lo"
-
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
@@ -29,7 +27,7 @@ func TestWatchNamespaceGrant(t *testing.T) {
 						From: []operatorv1alpha1.WatchNamespaceGrantFrom{},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.from in body should have at least 1 items"),
+				ExpectedErrorMessage: new("spec.from in body should have at least 1 items"),
 			},
 			{
 				Name: "valid",
@@ -60,7 +58,7 @@ func TestWatchNamespaceGrant(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.from[0].group: Unsupported value: \"invalid.group\": supported values: \"gateway-operator.konghq.com\""),
+				ExpectedErrorMessage: new("spec.from[0].group: Unsupported value: \"invalid.group\": supported values: \"gateway-operator.konghq.com\""),
 			},
 			{
 				Name: "unsupported kind",
@@ -76,7 +74,7 @@ func TestWatchNamespaceGrant(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.from[0].kind: Unsupported value: \"invalid.kind\": supported values: \"ControlPlane\""),
+				ExpectedErrorMessage: new("spec.from[0].kind: Unsupported value: \"invalid.kind\": supported values: \"ControlPlane\""),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)

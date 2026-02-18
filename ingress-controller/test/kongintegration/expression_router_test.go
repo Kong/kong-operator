@@ -88,14 +88,14 @@ func TestExpressionsRouterMatchers_GenerateValidExpressions(t *testing.T) {
 	proxyParsedURL, err := url.Parse(kongC.ProxyURL(ctx, t))
 	require.NoError(t, err)
 	s := &kong.Service{
-		Host: kong.String(httpBinC.IP(ctx, t)),
-		Path: kong.String("/"),
+		Host: new(httpBinC.IP(ctx, t)),
+		Path: new("/"),
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			r := &kong.Route{
-				StripPath: kong.Bool(true),
+				StripPath: new(true),
 			}
 			atc.ApplyExpression(r, tc.matcher, 1)
 			req, err := kongClient.NewRequest(http.MethodPost, "/config", nil, marshalKongConfig(t, *s, *r))

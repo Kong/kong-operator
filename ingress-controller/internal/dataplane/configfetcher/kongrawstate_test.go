@@ -36,147 +36,147 @@ func TestKongRawStateToKongState(t *testing.T) {
 			kongRawState: &utils.KongRawState{
 				Services: []*kong.Service{
 					{
-						Name:      kong.String("service"),
-						ID:        kong.String("service"),
-						CreatedAt: kong.Int(100),
+						Name:      new("service"),
+						ID:        new("service"),
+						CreatedAt: new(100),
 					},
 				},
 				Routes: []*kong.Route{
 					{
-						Name:      kong.String("route"),
-						ID:        kong.String("route"),
-						CreatedAt: kong.Int(101),
+						Name:      new("route"),
+						ID:        new("route"),
+						CreatedAt: new(101),
 						Service: &kong.Service{
-							ID: kong.String("service"),
+							ID: new("service"),
 						},
 					},
 				},
 				Upstreams: []*kong.Upstream{
 					{
-						Name: kong.String("upstream"),
-						ID:   kong.String("upstream"),
+						Name: new("upstream"),
+						ID:   new("upstream"),
 					},
 				},
 				Targets: []*kong.Target{
 					{
-						ID:        kong.String("target"),
+						ID:        new("target"),
 						CreatedAt: kong.Float64(102),
-						Weight:    kong.Int(999),
+						Weight:    new(999),
 						Upstream: &kong.Upstream{
-							ID: kong.String("upstream"),
+							ID: new("upstream"),
 						},
 					},
 				},
 				Vaults: []*kong.Vault{
 					{
-						Name: kong.String("test-vault"), Prefix: kong.String("test-vault"),
+						Name: new("test-vault"), Prefix: new("test-vault"),
 					},
 				},
 				Plugins: []*kong.Plugin{
 					{
-						Name: kong.String("plugin1"),
-						ID:   kong.String("plugin1"),
+						Name: new("plugin1"),
+						ID:   new("plugin1"),
 						Service: &kong.Service{
-							ID: kong.String("service"),
+							ID: new("service"),
 						},
 					},
 					{
-						Name: kong.String("plugin2"),
-						ID:   kong.String("plugin2"),
+						Name: new("plugin2"),
+						ID:   new("plugin2"),
 						Route: &kong.Route{
-							ID: kong.String("route"),
+							ID: new("route"),
 						},
 					},
 				},
 				Certificates: []*kong.Certificate{
 					{
-						ID:   kong.String("certificate"),
-						Cert: kong.String("cert"),
+						ID:   new("certificate"),
+						Cert: new("cert"),
 					},
 				},
 				CACertificates: []*kong.CACertificate{
 					{
-						ID:   kong.String("CACertificate"),
-						Cert: kong.String("cert"),
+						ID:   new("CACertificate"),
+						Cert: new("cert"),
 					},
 				},
 				Consumers: []*kong.Consumer{
 					{
-						ID:       kong.String("consumer"),
-						CustomID: kong.String("customID"),
+						ID:       new("consumer"),
+						CustomID: new("customID"),
 					},
 				},
 				ConsumerGroups: []*kong.ConsumerGroupObject{
 					{
 						ConsumerGroup: &kong.ConsumerGroup{
-							ID:   kong.String("consumerGroup"),
-							Name: kong.String("consumerGroup"),
+							ID:   new("consumerGroup"),
+							Name: new("consumerGroup"),
 						},
 					},
 				},
 				KeyAuths: []*kong.KeyAuth{
 					{
-						ID:  kong.String("keyAuth"),
-						Key: kong.String("key"),
+						ID:  new("keyAuth"),
+						Key: new("key"),
 						Consumer: &kong.Consumer{
-							ID: kong.String("consumer"),
+							ID: new("consumer"),
 						},
 					},
 				},
 				HMACAuths: []*kong.HMACAuth{
 					{
-						ID: kong.String("hmacAuth"),
+						ID: new("hmacAuth"),
 						Consumer: &kong.Consumer{
-							ID: kong.String("consumer"),
+							ID: new("consumer"),
 						},
-						Username: kong.String("username"),
+						Username: new("username"),
 					},
 				},
 				JWTAuths: []*kong.JWTAuth{
 					{
-						ID: kong.String("jwtAuth"),
+						ID: new("jwtAuth"),
 						Consumer: &kong.Consumer{
-							ID: kong.String("consumer"),
+							ID: new("consumer"),
 						},
-						Key: kong.String("key"),
+						Key: new("key"),
 					},
 				},
 				BasicAuths: []*kong.BasicAuthOptions{
 					{
 						BasicAuth: kong.BasicAuth{
-							ID: kong.String("basicAuth"),
+							ID: new("basicAuth"),
 							Consumer: &kong.Consumer{
-								ID: kong.String("consumer"),
+								ID: new("consumer"),
 							},
-							Username: kong.String("username"),
+							Username: new("username"),
 						},
 					},
 				},
 				ACLGroups: []*kong.ACLGroup{
 					{
-						ID: kong.String("basicAuth"),
+						ID: new("basicAuth"),
 						Consumer: &kong.Consumer{
-							ID: kong.String("consumer"),
+							ID: new("consumer"),
 						},
-						Group: kong.String("group"),
+						Group: new("group"),
 					},
 				},
 				Oauth2Creds: []*kong.Oauth2Credential{
 					{
-						ID: kong.String("basicAuth"),
+						ID: new("basicAuth"),
 						Consumer: &kong.Consumer{
-							ID: kong.String("consumer"),
+							ID: new("consumer"),
 						},
-						Name: kong.String("name"),
+						Name: new("name"),
 					},
 				},
 				MTLSAuths: []*kong.MTLSAuth{
 					{
-						ID: kong.String("basicAuth"),
+						ID: new("basicAuth"),
 						Consumer: &kong.Consumer{
-							ID: kong.String("consumer"),
+							ID: new("consumer"),
 						},
-						SubjectName: kong.String("subjectName"),
+						SubjectName: new("subjectName"),
 					},
 				},
 				CustomEntities: []custom.Entity{
@@ -194,21 +194,21 @@ func TestKongRawStateToKongState(t *testing.T) {
 				Services: []kongstate.Service{
 					{
 						Service: kong.Service{
-							Name: kong.String("service"),
+							Name: new("service"),
 						},
 						Plugins: []kong.Plugin{
 							{
-								Name: kong.String("plugin1"),
+								Name: new("plugin1"),
 							},
 						},
 						Routes: []kongstate.Route{
 							{
 								Route: kong.Route{
-									Name: kong.String("route"),
+									Name: new("route"),
 								},
 								Plugins: []kong.Plugin{
 									{
-										Name: kong.String("plugin2"),
+										Name: new("plugin2"),
 									},
 								},
 							},
@@ -218,12 +218,12 @@ func TestKongRawStateToKongState(t *testing.T) {
 				Upstreams: []kongstate.Upstream{
 					{
 						Upstream: kong.Upstream{
-							Name: kong.String("upstream"),
+							Name: new("upstream"),
 						},
 						Targets: []kongstate.Target{
 							{
 								Target: kong.Target{
-									Weight: kong.Int(999),
+									Weight: new(999),
 								},
 							},
 						},
@@ -232,80 +232,80 @@ func TestKongRawStateToKongState(t *testing.T) {
 				Vaults: []kongstate.Vault{
 					{
 						Vault: kong.Vault{
-							Name: kong.String("test-vault"), Prefix: kong.String("test-vault"),
+							Name: new("test-vault"), Prefix: new("test-vault"),
 						},
 					},
 				},
 				Certificates: []kongstate.Certificate{
 					{
 						Certificate: kong.Certificate{
-							Cert: kong.String("cert"),
+							Cert: new("cert"),
 						},
 					},
 				},
 				CACertificates: []kong.CACertificate{
 					{
-						Cert: kong.String("cert"),
+						Cert: new("cert"),
 					},
 				},
 				ConsumerGroups: []kongstate.ConsumerGroup{
 					{
 						ConsumerGroup: kong.ConsumerGroup{
-							Name: kong.String("consumerGroup"),
+							Name: new("consumerGroup"),
 						},
 					},
 				},
 				Consumers: []kongstate.Consumer{
 					{
 						Consumer: kong.Consumer{
-							CustomID: kong.String("customID"),
+							CustomID: new("customID"),
 						},
 						KeyAuths: []*kongstate.KeyAuth{
 							{
 								KeyAuth: kong.KeyAuth{
-									Key: kong.String("key"),
+									Key: new("key"),
 								},
 							},
 						},
 						HMACAuths: []*kongstate.HMACAuth{
 							{
 								HMACAuth: kong.HMACAuth{
-									Username: kong.String("username"),
+									Username: new("username"),
 								},
 							},
 						},
 						JWTAuths: []*kongstate.JWTAuth{
 							{
 								JWTAuth: kong.JWTAuth{
-									Key: kong.String("key"),
+									Key: new("key"),
 								},
 							},
 						},
 						BasicAuths: []*kongstate.BasicAuth{
 							{
 								BasicAuth: kong.BasicAuth{
-									Username: kong.String("username"),
+									Username: new("username"),
 								},
 							},
 						},
 						ACLGroups: []*kongstate.ACLGroup{
 							{
 								ACLGroup: kong.ACLGroup{
-									Group: kong.String("group"),
+									Group: new("group"),
 								},
 							},
 						},
 						Oauth2Creds: []*kongstate.Oauth2Credential{
 							{
 								Oauth2Credential: kong.Oauth2Credential{
-									Name: kong.String("name"),
+									Name: new("name"),
 								},
 							},
 						},
 						MTLSAuths: []*kongstate.MTLSAuth{
 							{
 								MTLSAuth: kong.MTLSAuth{
-									SubjectName: kong.String("subjectName"),
+									SubjectName: new("subjectName"),
 								},
 							},
 						},

@@ -75,7 +75,7 @@ func TestIngressRulesFromTLSRoutesUsingExpressionRoutes(t *testing.T) {
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
-						Name: kong.String("tlsroute.default.tlsroute-1.0"),
+						Name: new("tlsroute.default.tlsroute-1.0"),
 					},
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service1").
@@ -89,9 +89,9 @@ func TestIngressRulesFromTLSRoutesUsingExpressionRoutes(t *testing.T) {
 				"tlsroute.default.tlsroute-1.0": {
 					{
 						Route: kong.Route{
-							Name:         kong.String("tlsroute.default.tlsroute-1.0.0"),
-							Expression:   kong.String(`(tls.sni == "foo.com") || (tls.sni == "bar.com")`),
-							PreserveHost: kong.Bool(true),
+							Name:         new("tlsroute.default.tlsroute-1.0.0"),
+							Expression:   new(`(tls.sni == "foo.com") || (tls.sni == "bar.com")`),
+							PreserveHost: new(true),
 							Protocols:    kong.StringSlice("tls"),
 						},
 						ExpressionRoutes: true,
@@ -162,7 +162,7 @@ func TestIngressRulesFromTLSRoutesUsingExpressionRoutes(t *testing.T) {
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
-						Name: kong.String("tlsroute.default.tlsroute-1.0"),
+						Name: new("tlsroute.default.tlsroute-1.0"),
 					},
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service1").
@@ -173,7 +173,7 @@ func TestIngressRulesFromTLSRoutesUsingExpressionRoutes(t *testing.T) {
 				},
 				{
 					Service: kong.Service{
-						Name: kong.String("tlsroute.default.tlsroute-1.1"),
+						Name: new("tlsroute.default.tlsroute-1.1"),
 					},
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service3").WithPortNumber(8080).MustBuild(),
@@ -185,9 +185,9 @@ func TestIngressRulesFromTLSRoutesUsingExpressionRoutes(t *testing.T) {
 				"tlsroute.default.tlsroute-1.0": {
 					{
 						Route: kong.Route{
-							Name:         kong.String("tlsroute.default.tlsroute-1.0.0"),
-							Expression:   kong.String(`(tls.sni == "foo.com") || (tls.sni == "bar.com")`),
-							PreserveHost: kong.Bool(true),
+							Name:         new("tlsroute.default.tlsroute-1.0.0"),
+							Expression:   new(`(tls.sni == "foo.com") || (tls.sni == "bar.com")`),
+							PreserveHost: new(true),
 							Protocols:    kong.StringSlice("tls"),
 						},
 						ExpressionRoutes: true,
@@ -196,9 +196,9 @@ func TestIngressRulesFromTLSRoutesUsingExpressionRoutes(t *testing.T) {
 				"tlsroute.default.tlsroute-1.1": {
 					{
 						Route: kong.Route{
-							Name:         kong.String("tlsroute.default.tlsroute-1.1.0"),
-							Expression:   kong.String(`(tls.sni == "foo.com") || (tls.sni == "bar.com")`),
-							PreserveHost: kong.Bool(true),
+							Name:         new("tlsroute.default.tlsroute-1.1.0"),
+							Expression:   new(`(tls.sni == "foo.com") || (tls.sni == "bar.com")`),
+							PreserveHost: new(true),
 							Protocols:    kong.StringSlice("tls"),
 						},
 						ExpressionRoutes: true,

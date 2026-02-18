@@ -200,8 +200,8 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 							Matches: []gatewayapi.HTTPRouteMatch{
 								{
 									Path: &gatewayapi.HTTPPathMatch{
-										Type:  lo.ToPtr(gatewayapi.PathMatchPathPrefix),
-										Value: lo.ToPtr(additionalRoutePath),
+										Type:  new(gatewayapi.PathMatchPathPrefix),
+										Value: new(additionalRoutePath),
 									},
 								},
 							},
@@ -209,9 +209,9 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 								{
 									BackendRef: gatewayapi.BackendRef{
 										BackendObjectReference: gatewayapi.BackendObjectReference{
-											Kind: lo.ToPtr(gatewayapi.Kind("Service")),
+											Kind: new(gatewayapi.Kind("Service")),
 											Name: additionalRouteServiceTarget,
-											Port: lo.ToPtr(gatewayapi.PortNumber(80)),
+											Port: new(gatewayapi.PortNumber(80)),
 										},
 									},
 								},
@@ -281,7 +281,7 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 			gatewayclient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
 			route, err := gatewayclient.GatewayV1().HTTPRoutes(namespace).Get(ctx, "httproute-testing", metav1.GetOptions{})
 			require.NoError(t, err)
-			route.Spec.Rules[0].Matches[0].Path.Value = lo.ToPtr("/new-route")
+			route.Spec.Rules[0].Matches[0].Path.Value = new("/new-route")
 			_, err = gatewayclient.GatewayV1().HTTPRoutes(namespace).Update(ctx, route, metav1.UpdateOptions{})
 			require.NoError(t, err)
 

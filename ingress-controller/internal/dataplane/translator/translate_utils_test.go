@@ -158,13 +158,13 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 			},
 			result: kongstate.Service{
 				Service: kong.Service{
-					Name:           kong.String("httproute.cholpon.tong-sirlari.999"),
-					Host:           kong.String("httproute.cholpon.tong-sirlari.999"),
-					Protocol:       kong.String(protocol),
-					ConnectTimeout: kong.Int(DefaultServiceTimeout),
-					ReadTimeout:    kong.Int(DefaultServiceTimeout),
-					WriteTimeout:   kong.Int(DefaultServiceTimeout),
-					Retries:        kong.Int(DefaultRetries),
+					Name:           new("httproute.cholpon.tong-sirlari.999"),
+					Host:           new("httproute.cholpon.tong-sirlari.999"),
+					Protocol:       new(protocol),
+					ConnectTimeout: new(DefaultServiceTimeout),
+					ReadTimeout:    new(DefaultServiceTimeout),
+					WriteTimeout:   new(DefaultServiceTimeout),
+					Retries:        new(DefaultRetries),
 				},
 				Namespace: "cholpon",
 				Backends: []kongstate.ServiceBackend{
@@ -223,13 +223,13 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 			},
 			result: kongstate.Service{
 				Service: kong.Service{
-					Name:           kong.String("udproute.behbudiy.padarkush.999"),
-					Host:           kong.String("udproute.behbudiy.padarkush.999"),
-					Protocol:       kong.String(protocol),
-					ConnectTimeout: kong.Int(DefaultServiceTimeout),
-					ReadTimeout:    kong.Int(DefaultServiceTimeout),
-					WriteTimeout:   kong.Int(DefaultServiceTimeout),
-					Retries:        kong.Int(DefaultRetries),
+					Name:           new("udproute.behbudiy.padarkush.999"),
+					Host:           new("udproute.behbudiy.padarkush.999"),
+					Protocol:       new(protocol),
+					ConnectTimeout: new(DefaultServiceTimeout),
+					ReadTimeout:    new(DefaultServiceTimeout),
+					WriteTimeout:   new(DefaultServiceTimeout),
+					Retries:        new(DefaultRetries),
 				},
 				Namespace: "behbudiy",
 				Backends: []kongstate.ServiceBackend{
@@ -280,19 +280,19 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 			},
 			result: kongstate.Service{
 				Service: kong.Service{
-					Name:           kong.String("tcproute.behbudiy.kitab-ul-atfol.999"),
-					Host:           kong.String("tcproute.behbudiy.kitab-ul-atfol.999"),
-					Protocol:       kong.String(protocol),
-					ConnectTimeout: kong.Int(DefaultServiceTimeout),
-					ReadTimeout:    kong.Int(DefaultServiceTimeout),
-					WriteTimeout:   kong.Int(DefaultServiceTimeout),
-					Retries:        kong.Int(DefaultRetries),
+					Name:           new("tcproute.behbudiy.kitab-ul-atfol.999"),
+					Host:           new("tcproute.behbudiy.kitab-ul-atfol.999"),
+					Protocol:       new(protocol),
+					ConnectTimeout: new(DefaultServiceTimeout),
+					ReadTimeout:    new(DefaultServiceTimeout),
+					WriteTimeout:   new(DefaultServiceTimeout),
+					Retries:        new(DefaultRetries),
 				},
 				Namespace: "behbudiy",
 				Backends:  []kongstate.ServiceBackend{},
 				Plugins: []kong.Plugin{
 					{
-						Name: kong.String("request-termination"),
+						Name: new("request-termination"),
 						Config: kong.Configuration{
 							"status_code": 500,
 							"message":     "no existing backendRef provided",
@@ -345,13 +345,13 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 			},
 			result: kongstate.Service{
 				Service: kong.Service{
-					Name:           kong.String("tcproute.behbudiy.muntaxabi-jugrofiyai-umumiy.999"),
-					Host:           kong.String("tcproute.behbudiy.muntaxabi-jugrofiyai-umumiy.999"),
-					Protocol:       kong.String(protocol),
-					ConnectTimeout: kong.Int(DefaultServiceTimeout),
-					ReadTimeout:    kong.Int(DefaultServiceTimeout),
-					WriteTimeout:   kong.Int(DefaultServiceTimeout),
-					Retries:        kong.Int(DefaultRetries),
+					Name:           new("tcproute.behbudiy.muntaxabi-jugrofiyai-umumiy.999"),
+					Host:           new("tcproute.behbudiy.muntaxabi-jugrofiyai-umumiy.999"),
+					Protocol:       new(protocol),
+					ConnectTimeout: new(DefaultServiceTimeout),
+					ReadTimeout:    new(DefaultServiceTimeout),
+					WriteTimeout:   new(DefaultServiceTimeout),
+					Retries:        new(DefaultRetries),
 				},
 				Namespace: "behbudiy",
 				Backends: []kongstate.ServiceBackend{

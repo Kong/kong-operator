@@ -37,7 +37,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					cp := obj.(*konnectv1alpha2.KonnectGatewayControlPlane)
 					cp.Name = "cp-1"
 					cp.SetKonnectName("cp-1")
-					cp.SetKonnectDescription(lo.ToPtr("test control plane 1"))
+					cp.SetKonnectDescription(new("test control plane 1"))
 				},
 			)
 		},
@@ -123,7 +123,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					cp := obj.(*konnectv1alpha2.KonnectGatewayControlPlane)
 					cp.Name = "cp-2"
 					cp.SetKonnectName("cp-2")
-					cp.SetKonnectClusterType(lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup))
+					cp.SetKonnectClusterType(new(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup))
 					cp.Spec.Members = []corev1.LocalObjectReference{
 						{
 							Name: "cp-groupmember-1",
@@ -289,7 +289,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					cp := obj.(*konnectv1alpha2.KonnectGatewayControlPlane)
 					cp.Name = "cp-3"
 					cp.SetKonnectName("cp-3")
-					cp.SetKonnectClusterType(lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup))
+					cp.SetKonnectClusterType(new(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup))
 					cp.Spec.Members = []corev1.LocalObjectReference{
 						{
 							Name: "cp-groupmember-2",
@@ -553,7 +553,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					cp := obj.(*konnectv1alpha2.KonnectGatewayControlPlane)
 					cp.Name = "cp-group-1"
 					cp.SetKonnectName("cp-group-1")
-					cp.SetKonnectClusterType(lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup))
+					cp.SetKonnectClusterType(new(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup))
 					cp.Spec.Members = []corev1.LocalObjectReference{
 						{Name: "cp-5"},
 					}
@@ -732,7 +732,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					cp := obj.(*konnectv1alpha2.KonnectGatewayControlPlane)
 					cp.Name = "cp-group-no-members"
 					cp.SetKonnectName("cp-group-no-members")
-					cp.SetKonnectClusterType(lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup))
+					cp.SetKonnectClusterType(new(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup))
 				},
 			)
 		},

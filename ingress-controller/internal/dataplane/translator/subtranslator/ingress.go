@@ -9,7 +9,6 @@ import (
 	"unicode"
 
 	"github.com/kong/go-kong/kong"
-	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -87,7 +86,7 @@ const (
 // in version 0 of the ingress controller.
 func defaultServiceTimeoutInKongFormat() *int {
 	const defaultServiceTimeout = time.Second * 60
-	return kong.Int(int(defaultServiceTimeout.Milliseconds()))
+	return new(int(defaultServiceTimeout.Milliseconds()))
 }
 
 // -----------------------------------------------------------------------------
@@ -346,15 +345,15 @@ func (m *ingressTranslationMeta) translateIntoKongStateService(
 		return kongstate.Service{
 			Namespace: m.parentIngress.GetNamespace(),
 			Service: kong.Service{
-				Name:           kong.String(kongServiceName),
-				Host:           kong.String(fmt.Sprintf("%s.%s.svc.facade", m.parentIngress.GetNamespace(), m.backend.name)),
-				Port:           kong.Int(defaultHTTPPort),
-				Protocol:       kong.String("http"),
-				Path:           kong.String("/"),
+				Name:           new(kongServiceName),
+				Host:           new(fmt.Sprintf("%s.%s.svc.facade", m.parentIngress.GetNamespace(), m.backend.name)),
+				Port:           new(defaultHTTPPort),
+				Protocol:       new("http"),
+				Path:           new("/"),
 				ConnectTimeout: defaultServiceTimeoutInKongFormat(),
 				ReadTimeout:    defaultServiceTimeoutInKongFormat(),
 				WriteTimeout:   defaultServiceTimeoutInKongFormat(),
-				Retries:        kong.Int(defaultRetries),
+				Retries:        new(defaultRetries),
 			},
 			Backends: []kongstate.ServiceBackend{serviceBackend},
 			Parent:   m.backend.parentKongServiceFacade,
@@ -376,15 +375,15 @@ func (m *ingressTranslationMeta) translateIntoKongStateService(
 	return kongstate.Service{
 		Namespace: m.parentIngress.GetNamespace(),
 		Service: kong.Service{
-			Name:           kong.String(kongServiceName),
-			Host:           kong.String(fmt.Sprintf("%s.%s.%s.svc", m.backend.name, m.parentIngress.GetNamespace(), portDef.CanonicalString())),
-			Port:           kong.Int(defaultHTTPPort),
-			Protocol:       kong.String("http"),
-			Path:           kong.String("/"),
+			Name:           new(kongServiceName),
+			Host:           new(fmt.Sprintf("%s.%s.%s.svc", m.backend.name, m.parentIngress.GetNamespace(), portDef.CanonicalString())),
+			Port:           new(defaultHTTPPort),
+			Protocol:       new("http"),
+			Path:           new("/"),
 			ConnectTimeout: defaultServiceTimeoutInKongFormat(),
 			ReadTimeout:    defaultServiceTimeoutInKongFormat(),
 			WriteTimeout:   defaultServiceTimeoutInKongFormat(),
-			Retries:        kong.Int(defaultRetries),
+			Retries:        new(defaultRetries),
 		},
 		Backends: []kongstate.ServiceBackend{serviceBackend},
 		Parent:   m.parentIngress,
@@ -419,19 +418,19 @@ func (m *ingressTranslationMeta) translateIntoKongRoute() *kongstate.Route {
 	route := &kongstate.Route{
 		Ingress: util.FromK8sObject(m.parentIngress),
 		Route: kong.Route{
-			Name:              kong.String(routeName),
-			StripPath:         kong.Bool(false),
-			PreserveHost:      kong.Bool(true),
+			Name:              new(routeName),
+			StripPath:         new(false),
+			PreserveHost:      new(true),
 			Protocols:         kong.StringSlice("http", "https"),
-			RegexPriority:     kong.Int(0),
-			RequestBuffering:  kong.Bool(true),
-			ResponseBuffering: kong.Bool(true),
+			RegexPriority:     new(0),
+			RequestBuffering:  new(true),
+			ResponseBuffering: new(true),
 			Tags:              m.ingressTags,
 		},
 	}
 
 	if m.ingressHost != "" {
-		route.Hosts = append(route.Hosts, kong.String(m.ingressHost))
+		route.Hosts = append(route.Hosts, new(m.ingressHost))
 	}
 
 	for _, httpIngressPath := range m.paths {
@@ -538,7 +537,7 @@ func MaybePrependRegexPrefixForIngressV1Fn(ingress *netv1.Ingress, applyLegacyHe
 	}
 
 	return func(path string) *string {
-		return lo.ToPtr(MaybePrependRegexPrefix(path, regexPrefix, applyLegacyHeuristic))
+		return new(MaybePrependRegexPrefix(path, regexPrefix, applyLegacyHeuristic))
 	}
 }
 
@@ -646,7 +645,7 @@ func MaybeRewriteURI(service *kongstate.Service, rewriteURIEnable bool) error {
 			return err
 		}
 		route.Plugins = append(route.Plugins, kong.Plugin{
-			Name: kong.String("request-transformer"),
+			Name: new("request-transformer"),
 			Config: kong.Configuration{
 				"replace": map[string]string{
 					"uri": config,

@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/kong/go-kong/kong"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -89,8 +88,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{
 							{
-								Kind:      lo.ToPtr(gatewayapi.Kind("Service")),
-								Namespace: lo.ToPtr(gatewayapi.Namespace(corev1.NamespaceDefault)),
+								Kind:      new(gatewayapi.Kind("Service")),
+								Namespace: new(gatewayapi.Namespace(corev1.NamespaceDefault)),
 								Name:      gatewayapi.ObjectName("kuma-cp"),
 							},
 						},
@@ -616,7 +615,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 							},
 						},
 						Timeouts: &gatewayapi.HTTPRouteTimeouts{
-							BackendRequest: lo.ToPtr(gatewayapi.Duration("1s")),
+							BackendRequest: new(gatewayapi.Duration("1s")),
 						},
 					}, {
 						Matches: []gatewayapi.HTTPRouteMatch{{
@@ -635,7 +634,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 							},
 						},
 						Timeouts: &gatewayapi.HTTPRouteTimeouts{
-							BackendRequest: lo.ToPtr(gatewayapi.Duration("1s")),
+							BackendRequest: new(gatewayapi.Duration("1s")),
 						},
 					}},
 				},
@@ -694,7 +693,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 							},
 						},
 						Timeouts: &gatewayapi.HTTPRouteTimeouts{
-							BackendRequest: lo.ToPtr(gatewayapi.Duration("1s")),
+							BackendRequest: new(gatewayapi.Duration("1s")),
 						},
 					}, {
 						Matches: []gatewayapi.HTTPRouteMatch{{
@@ -713,7 +712,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 							},
 						},
 						Timeouts: &gatewayapi.HTTPRouteTimeouts{
-							BackendRequest: lo.ToPtr(gatewayapi.Duration("5s")),
+							BackendRequest: new(gatewayapi.Duration("5s")),
 						},
 					}},
 				},
@@ -873,7 +872,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 									URLRewrite: &gatewayapi.HTTPURLRewriteFilter{
 										Path: &gatewayapi.HTTPPathModifier{
 											Type:            gatewayapi.FullPathHTTPPathModifier,
-											ReplaceFullPath: lo.ToPtr("/new-path"),
+											ReplaceFullPath: new("/new-path"),
 										},
 									},
 								},
@@ -926,7 +925,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 								{
 									Type: gatewayapi.HTTPRouteFilterURLRewrite,
 									URLRewrite: &gatewayapi.HTTPURLRewriteFilter{
-										Hostname: lo.ToPtr(gatewayapi.PreciseHostname("example.com")),
+										Hostname: new(gatewayapi.PreciseHostname("example.com")),
 									},
 								},
 							},
@@ -980,7 +979,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 									URLRewrite: &gatewayapi.HTTPURLRewriteFilter{
 										Path: &gatewayapi.HTTPPathModifier{
 											Type:               gatewayapi.PrefixMatchHTTPPathModifier,
-											ReplacePrefixMatch: lo.ToPtr("/new"),
+											ReplacePrefixMatch: new("/new"),
 										},
 									},
 								},
@@ -1057,8 +1056,8 @@ func TestValidateHTTPRouteRegexes(t *testing.T) {
 					Rules: []gatewayapi.HTTPRouteRule{{
 						Matches: []gatewayapi.HTTPRouteMatch{{
 							Path: &gatewayapi.HTTPPathMatch{
-								Type:  lo.ToPtr(gatewayapi.PathMatchRegularExpression),
-								Value: lo.ToPtr("/path[1-8]"),
+								Type:  new(gatewayapi.PathMatchRegularExpression),
+								Value: new("/path[1-8]"),
 							},
 						}},
 					}},
@@ -1079,7 +1078,7 @@ func TestValidateHTTPRouteRegexes(t *testing.T) {
 							Headers: []gatewayapi.HTTPHeaderMatch{{
 								Name:  "foo",
 								Value: "bar[1-8]",
-								Type:  lo.ToPtr(gatewayapi.HeaderMatchRegularExpression),
+								Type:  new(gatewayapi.HeaderMatchRegularExpression),
 							}},
 						}},
 					}},
@@ -1098,8 +1097,8 @@ func TestValidateHTTPRouteRegexes(t *testing.T) {
 					Rules: []gatewayapi.HTTPRouteRule{{
 						Matches: []gatewayapi.HTTPRouteMatch{{
 							Path: &gatewayapi.HTTPPathMatch{
-								Type:  lo.ToPtr(gatewayapi.PathMatchRegularExpression),
-								Value: lo.ToPtr("/foo[[[["),
+								Type:  new(gatewayapi.PathMatchRegularExpression),
+								Value: new("/foo[[[["),
 							},
 						}},
 					}},
@@ -1121,7 +1120,7 @@ func TestValidateHTTPRouteRegexes(t *testing.T) {
 							Headers: []gatewayapi.HTTPHeaderMatch{{
 								Name:  "foo",
 								Value: "[[[invalid-regex[[[[",
-								Type:  lo.ToPtr(gatewayapi.HeaderMatchRegularExpression),
+								Type:  new(gatewayapi.HeaderMatchRegularExpression),
 							}},
 						}},
 					}},
@@ -1141,8 +1140,8 @@ func TestValidateHTTPRouteRegexes(t *testing.T) {
 					Rules: []gatewayapi.HTTPRouteRule{{
 						Matches: []gatewayapi.HTTPRouteMatch{{
 							Path: &gatewayapi.HTTPPathMatch{
-								Type:  lo.ToPtr(gatewayapi.PathMatchExact),
-								Value: lo.ToPtr("/foo[[[["),
+								Type:  new(gatewayapi.PathMatchExact),
+								Value: new("/foo[[[["),
 							},
 						}},
 					}},
@@ -1163,7 +1162,7 @@ func TestValidateHTTPRouteRegexes(t *testing.T) {
 							Headers: []gatewayapi.HTTPHeaderMatch{{
 								Name:  "foo",
 								Value: "[[[invalid-regex[[[[",
-								Type:  lo.ToPtr(gatewayapi.HeaderMatchExact),
+								Type:  new(gatewayapi.HeaderMatchExact),
 							}},
 						}},
 					}},

@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -29,7 +28,7 @@ func TestEnqueueKongCACertificateForSecret(t *testing.T) {
 	cert := &configurationv1alpha1.KongCACertificate{
 		ObjectMeta: metav1.ObjectMeta{Name: "cacert1", Namespace: "ns"},
 		Spec: configurationv1alpha1.KongCACertificateSpec{
-			SecretRef: &commonv1alpha1.NamespacedRef{Name: "mysecret", Namespace: lo.ToPtr("ns")},
+			SecretRef: &commonv1alpha1.NamespacedRef{Name: "mysecret", Namespace: new("ns")},
 		},
 	}
 

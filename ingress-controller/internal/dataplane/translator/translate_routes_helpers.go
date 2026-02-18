@@ -82,7 +82,7 @@ func routeToKongRoute[TRoute tTCPorUDPorTLSRoute](
 ) kong.Route {
 	destinations := lo.Map(gwPorts, func(p gatewayapi.PortNumber, _ int) *kong.CIDRPort {
 		return &kong.CIDRPort{
-			Port: kong.Int(int(p)),
+			Port: new(int(p)),
 		}
 	})
 
@@ -112,7 +112,7 @@ func udpRouteToKongRoute(
 		util.AdditionalTagsK8sNamedRouteRule(ruleName)...,
 	)
 	return kong.Route{
-		Name: kong.String(
+		Name: new(
 			generateRouteName(udpRouteType, r.Namespace, r.Name, ruleNumber),
 		),
 		Protocols:    kong.StringSlice("udp"),
@@ -135,7 +135,7 @@ func tcpRouteToKongRoute(
 		util.AdditionalTagsK8sNamedRouteRule(ruleName)...,
 	)
 	return kong.Route{
-		Name: kong.String(
+		Name: new(
 			generateRouteName(tcpRouteType, r.Namespace, r.Name, ruleNumber),
 		),
 		Protocols:    kong.StringSlice("tcp"),
@@ -147,7 +147,7 @@ func tcpRouteToKongRoute(
 func tlsRouteToKongRoute(r *gatewayapi.TLSRoute, ruleNumber int) kong.Route {
 	hostnames := make([]*string, 0, len(r.Spec.Hostnames))
 	for _, hostname := range r.Spec.Hostnames {
-		hostnames = append(hostnames, kong.String(string(hostname)))
+		hostnames = append(hostnames, new(string(hostname)))
 	}
 	var ruleName string
 	if ruleNumber < len(r.Spec.Rules) {
@@ -158,7 +158,7 @@ func tlsRouteToKongRoute(r *gatewayapi.TLSRoute, ruleNumber int) kong.Route {
 		util.AdditionalTagsK8sNamedRouteRule(ruleName)...,
 	)
 	return kong.Route{
-		Name: kong.String(
+		Name: new(
 			generateRouteName(tlsRouteType, r.Namespace, r.Name, ruleNumber)),
 		Protocols: kong.StringSlice("tls"),
 		SNIs:      hostnames,

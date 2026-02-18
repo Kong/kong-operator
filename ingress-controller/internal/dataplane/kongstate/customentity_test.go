@@ -242,35 +242,35 @@ func TestFindCustomEntityForeignFields(t *testing.T) {
 				Raw: []byte(`{"uri":"/api/me"}`),
 			},
 			ParentRef: &configurationv1alpha1.ObjectReference{
-				Group: kong.String(configurationv1.GroupVersion.Group),
-				Kind:  kong.String("KongPlugin"),
+				Group: new(configurationv1.GroupVersion.Group),
+				Kind:  new("KongPlugin"),
 				Name:  "fake-plugin",
 			},
 		},
 	}
 	kongService1 := kong.Service{
-		Name: kong.String("service1"),
-		ID:   kong.String("service1"),
+		Name: new("service1"),
+		ID:   new("service1"),
 	}
 	kongService2 := kong.Service{
-		Name: kong.String("service2"),
-		ID:   kong.String("service2"),
+		Name: new("service2"),
+		ID:   new("service2"),
 	}
 	kongRoute1 := kong.Route{
-		Name: kong.String("route1"),
-		ID:   kong.String("route1"),
+		Name: new("route1"),
+		ID:   new("route1"),
 	}
 	kongRoute2 := kong.Route{
-		Name: kong.String("route2"),
-		ID:   kong.String("route2"),
+		Name: new("route2"),
+		ID:   new("route2"),
 	}
 	kongConsumer1 := kong.Consumer{
-		Username: kong.String("consumer1"),
-		ID:       kong.String("consumer1"),
+		Username: new("consumer1"),
+		ID:       new("consumer1"),
 	}
 	kongConsumer2 := kong.Consumer{
-		Username: kong.String("consumer2"),
-		ID:       kong.String("consumer2"),
+		Username: new("consumer2"),
+		ID:       new("consumer2"),
 	}
 	testCases := []struct {
 		name                     string
@@ -389,7 +389,7 @@ func TestFindCustomEntityForeignFields(t *testing.T) {
 			name: "attached to foreign plugin with reference grant allowed",
 			customEntity: func() *configurationv1alpha1.KongCustomEntity {
 				e := testCustomEntity.DeepCopy()
-				e.Spec.ParentRef.Namespace = lo.ToPtr("another-namespace")
+				e.Spec.ParentRef.Namespace = new("another-namespace")
 				return e
 			}(),
 			schema: EntitySchema{
@@ -456,7 +456,7 @@ func TestFindCustomEntityForeignFields(t *testing.T) {
 			name: "attached to foreign plugin without reference grant allowed should fail",
 			customEntity: func() *configurationv1alpha1.KongCustomEntity {
 				e := testCustomEntity.DeepCopy()
-				e.Spec.ParentRef.Namespace = lo.ToPtr("another-namespace")
+				e.Spec.ParentRef.Namespace = new("another-namespace")
 				return e
 			}(),
 			schema: EntitySchema{
@@ -485,7 +485,7 @@ func TestFindCustomEntityForeignFields(t *testing.T) {
 			name: "attached to foreign plugin with misconfigured reference grant should fail",
 			customEntity: func() *configurationv1alpha1.KongCustomEntity {
 				e := testCustomEntity.DeepCopy()
-				e.Spec.ParentRef.Namespace = lo.ToPtr("another-namespace")
+				e.Spec.ParentRef.Namespace = new("another-namespace")
 				return e
 			}(),
 			schema: EntitySchema{
@@ -570,12 +570,12 @@ func TestFindCustomEntityForeignFields(t *testing.T) {
 
 func TestKongState_FillCustomEntities(t *testing.T) {
 	kongService1 := kong.Service{
-		Name: kong.String("service1"),
-		ID:   kong.String("service1"),
+		Name: new("service1"),
+		ID:   new("service1"),
 	}
 	kongService2 := kong.Service{
-		Name: kong.String("service2"),
-		ID:   kong.String("service2"),
+		Name: new("service2"),
+		ID:   new("service2"),
 	}
 	ksService1 := Service{
 		Service: kongService1,
@@ -776,8 +776,8 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 							Raw: []byte(`{"uri":"/api/me"}`),
 						},
 						ParentRef: &configurationv1alpha1.ObjectReference{
-							Group: kong.String(configurationv1.GroupVersion.Group),
-							Kind:  kong.String("KongPlugin"),
+							Group: new(configurationv1.GroupVersion.Group),
+							Kind:  new("KongPlugin"),
 							Name:  "degraphql-1",
 						},
 					},
@@ -844,8 +844,8 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 							Raw: []byte(`{"uri":"/api/me"}`),
 						},
 						ParentRef: &configurationv1alpha1.ObjectReference{
-							Group: kong.String(configurationv1.GroupVersion.Group),
-							Kind:  kong.String("KongPlugin"),
+							Group: new(configurationv1.GroupVersion.Group),
+							Kind:  new("KongPlugin"),
 							Name:  "degraphql-1",
 						},
 					},
@@ -906,8 +906,8 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 						Routes: []Route{
 							{
 								Route: kong.Route{
-									Name: kong.String("route1"),
-									ID:   kong.String("route1"),
+									Name: new("route1"),
+									ID:   new("route1"),
 								},
 								Ingress: util.K8sObjectInfo{
 									Name:      "ingerss1",
@@ -935,8 +935,8 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 							Raw: []byte(`{"uri":"/api/me"}`),
 						},
 						ParentRef: &configurationv1alpha1.ObjectReference{
-							Group: kong.String(configurationv1.GroupVersion.Group),
-							Kind:  kong.String("KongPlugin"),
+							Group: new(configurationv1.GroupVersion.Group),
+							Kind:  new("KongPlugin"),
 							Name:  "degraphql-1",
 						},
 					},
@@ -991,8 +991,8 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 				Consumers: []Consumer{
 					{
 						Consumer: kong.Consumer{
-							ID:       kong.String("consumer1"),
-							Username: kong.String("consumer1"),
+							ID:       new("consumer1"),
+							Username: new("consumer1"),
 						},
 						K8sKongConsumer: configurationv1.KongConsumer{
 							ObjectMeta: metav1.ObjectMeta{
@@ -1020,8 +1020,8 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 							Raw: []byte(`{"foo":"bar"}`),
 						},
 						ParentRef: &configurationv1alpha1.ObjectReference{
-							Group: kong.String(configurationv1.GroupVersion.Group),
-							Kind:  kong.String("KongPlugin"),
+							Group: new(configurationv1.GroupVersion.Group),
+							Kind:  new("KongPlugin"),
 							Name:  "degraphql-1",
 						},
 					},
@@ -1153,10 +1153,10 @@ func TestFindCustomEntityRelatedPlugin(t *testing.T) {
 						Raw: []byte(`{"name":"session1"}`),
 					},
 					ParentRef: &configurationv1alpha1.ObjectReference{
-						Group:     lo.ToPtr(configurationv1.GroupVersion.Group),
-						Kind:      lo.ToPtr("KongPlugin"),
+						Group:     new(configurationv1.GroupVersion.Group),
+						Kind:      new("KongPlugin"),
 						Name:      "ratelimiting-1",
-						Namespace: lo.ToPtr("default"),
+						Namespace: new("default"),
 					},
 				},
 			},
@@ -1186,10 +1186,10 @@ func TestFindCustomEntityRelatedPlugin(t *testing.T) {
 						Raw: []byte(`{"name":"session1"}`),
 					},
 					ParentRef: &configurationv1alpha1.ObjectReference{
-						Group:     lo.ToPtr(configurationv1.GroupVersion.Group),
-						Kind:      lo.ToPtr("KongPlugin"),
+						Group:     new(configurationv1.GroupVersion.Group),
+						Kind:      new("KongPlugin"),
 						Name:      "ratelimiting-1",
-						Namespace: lo.ToPtr("default"),
+						Namespace: new("default"),
 					},
 				},
 			},
@@ -1220,10 +1220,10 @@ func TestFindCustomEntityRelatedPlugin(t *testing.T) {
 						Raw: []byte(`{"name":"session1"}`),
 					},
 					ParentRef: &configurationv1alpha1.ObjectReference{
-						Group:     lo.ToPtr(configurationv1.GroupVersion.Group),
-						Kind:      lo.ToPtr("KongPlugin"),
+						Group:     new(configurationv1.GroupVersion.Group),
+						Kind:      new("KongPlugin"),
 						Name:      "ratelimiting-1",
-						Namespace: lo.ToPtr("different-ns"),
+						Namespace: new("different-ns"),
 					},
 				},
 			},
@@ -1276,10 +1276,10 @@ func TestFindCustomEntityRelatedPlugin(t *testing.T) {
 						Raw: []byte(`{"name":"session1"}`),
 					},
 					ParentRef: &configurationv1alpha1.ObjectReference{
-						Group:     lo.ToPtr(configurationv1.GroupVersion.Group),
-						Kind:      lo.ToPtr("KongPlugin"),
+						Group:     new(configurationv1.GroupVersion.Group),
+						Kind:      new("KongPlugin"),
 						Name:      "ratelimiting-1",
-						Namespace: lo.ToPtr("different-ns"),
+						Namespace: new("different-ns"),
 					},
 				},
 			},

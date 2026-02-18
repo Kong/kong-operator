@@ -88,10 +88,10 @@ func getParentRef(parentStatus gatewayapi.RouteParentStatus) parentRef {
 		ref         = parentStatus.ParentRef
 	)
 	if ref.SectionName != nil {
-		sectionName = lo.ToPtr(string(*ref.SectionName))
+		sectionName = new(string(*ref.SectionName))
 	}
 	if ref.Namespace != nil {
-		namespace = lo.ToPtr(string(*ref.Namespace))
+		namespace = new(string(*ref.Namespace))
 	}
 	return parentRef{
 		Namespace:   namespace,

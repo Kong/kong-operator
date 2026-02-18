@@ -35,13 +35,13 @@ func GenerateSHA(targetContent *file.Content, customEntities map[string][]custom
 func GetFCertificateFromKongCert(kongCert kong.Certificate) file.FCertificate {
 	var res file.FCertificate
 	if kongCert.ID != nil {
-		res.ID = kong.String(*kongCert.ID)
+		res.ID = new(*kongCert.ID)
 	}
 	if kongCert.Key != nil {
-		res.Key = kong.String(*kongCert.Key)
+		res.Key = new(*kongCert.Key)
 	}
 	if kongCert.Cert != nil {
-		res.Cert = kong.String(*kongCert.Cert)
+		res.Cert = new(*kongCert.Cert)
 	}
 	res.SNIs = getCertsSNIs(kongCert)
 	return res

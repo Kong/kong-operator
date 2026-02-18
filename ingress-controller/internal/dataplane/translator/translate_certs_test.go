@@ -27,9 +27,9 @@ func TestMergeCerts(t *testing.T) {
 				{
 					identifier: string(crt1) + string(key1),
 					cert: kong.Certificate{
-						ID:   kong.String("certificate-1"),
-						Cert: kong.String(string(crt1)),
-						Key:  kong.String(string(key1)),
+						ID:   new("certificate-1"),
+						Cert: new(string(crt1)),
+						Key:  new(string(key1)),
 					},
 					snis: []string{"foo.com"},
 				},
@@ -37,9 +37,9 @@ func TestMergeCerts(t *testing.T) {
 			mergedCerts: []kongstate.Certificate{
 				{
 					Certificate: kong.Certificate{
-						ID:   kong.String("certificate-1"),
-						Cert: kong.String(string(crt1)),
-						Key:  kong.String(string(key1)),
+						ID:   new("certificate-1"),
+						Cert: new(string(crt1)),
+						Key:  new(string(key1)),
 						SNIs: kong.StringSlice("foo.com"),
 					},
 				},
@@ -52,18 +52,18 @@ func TestMergeCerts(t *testing.T) {
 				{
 					identifier: string(crt1) + string(key1),
 					cert: kong.Certificate{
-						ID:   kong.String("certificate-1"),
-						Cert: kong.String(string(crt1)),
-						Key:  kong.String(string(key1)),
+						ID:   new("certificate-1"),
+						Cert: new(string(crt1)),
+						Key:  new(string(key1)),
 					},
 					snis: []string{"foo.com"},
 				},
 				{
 					identifier: string(crt2) + string(key2),
 					cert: kong.Certificate{
-						ID:   kong.String("certificate-2"),
-						Cert: kong.String(string(crt2)),
-						Key:  kong.String(string(key2)),
+						ID:   new("certificate-2"),
+						Cert: new(string(crt2)),
+						Key:  new(string(key2)),
 					},
 					snis: []string{"bar.com"},
 				},
@@ -71,17 +71,17 @@ func TestMergeCerts(t *testing.T) {
 			mergedCerts: []kongstate.Certificate{
 				{
 					Certificate: kong.Certificate{
-						ID:   kong.String("certificate-1"),
-						Cert: kong.String(string(crt1)),
-						Key:  kong.String(string(key1)),
+						ID:   new("certificate-1"),
+						Cert: new(string(crt1)),
+						Key:  new(string(key1)),
 						SNIs: kong.StringSlice("foo.com"),
 					},
 				},
 				{
 					Certificate: kong.Certificate{
-						ID:   kong.String("certificate-2"),
-						Cert: kong.String(string(crt2)),
-						Key:  kong.String(string(key2)),
+						ID:   new("certificate-2"),
+						Cert: new(string(crt2)),
+						Key:  new(string(key2)),
 						SNIs: kong.StringSlice("bar.com"),
 					},
 				},
@@ -97,18 +97,18 @@ func TestMergeCerts(t *testing.T) {
 				{
 					identifier: string(crt1) + string(key1),
 					cert: kong.Certificate{
-						ID:   kong.String("certificate-1"),
-						Cert: kong.String(string(crt1)),
-						Key:  kong.String(string(key1)),
+						ID:   new("certificate-1"),
+						Cert: new(string(crt1)),
+						Key:  new(string(key1)),
 					},
 					snis: []string{"foo.com"},
 				},
 				{
 					identifier: string(crt1) + string(key1),
 					cert: kong.Certificate{
-						ID:   kong.String("certificate-1-1"),
-						Cert: kong.String(string(crt1)),
-						Key:  kong.String(string(key1)),
+						ID:   new("certificate-1-1"),
+						Cert: new(string(crt1)),
+						Key:  new(string(key1)),
 					},
 					snis: []string{"baz.com"},
 				},
@@ -116,9 +116,9 @@ func TestMergeCerts(t *testing.T) {
 			mergedCerts: []kongstate.Certificate{
 				{
 					Certificate: kong.Certificate{
-						ID:   kong.String("certificate-1"),
-						Cert: kong.String(string(crt1)),
-						Key:  kong.String(string(key1)),
+						ID:   new("certificate-1"),
+						Cert: new(string(crt1)),
+						Key:  new(string(key1)),
 						// SNIs should be sorted
 						SNIs: kong.StringSlice("baz.com", "foo.com"),
 					},

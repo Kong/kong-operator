@@ -211,7 +211,7 @@ func gatewayConfigDataPlaneOptionsV1ToV2(o *GatewayConfigDataPlaneOptions) *oper
 			Strategy: operatorv2beta1.RolloutStrategy{
 				BlueGreen: operatorv2beta1.BlueGreenStrategy{
 					Promotion: &operatorv2beta1.Promotion{
-						Strategy: lo.ToPtr(operatorv2beta1.PromotionStrategy(o.Deployment.Rollout.Strategy.BlueGreen.Promotion.Strategy)),
+						Strategy: new(operatorv2beta1.PromotionStrategy(o.Deployment.Rollout.Strategy.BlueGreen.Promotion.Strategy)),
 					},
 					Resources: &operatorv2beta1.RolloutResources{
 						Plan: operatorv2beta1.RolloutResourcePlan{
