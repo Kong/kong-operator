@@ -2,13 +2,16 @@ package konnect
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"testing"
+	"time"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
-	"github.com/Kong/sdk-konnect-go/retry"
+	sdkretry "github.com/Kong/sdk-konnect-go/retry"
+	"github.com/avast/retry-go/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -23,8 +26,8 @@ import (
 func CreateClientCertificate(ctx context.Context, t *testing.T, cpID string, token ...string) (certPEM string, keyPEM string) {
 	t.Helper()
 
-	retryConfig := sdkkonnectgo.WithRetryConfig(retry.Config{
-		Backoff: &retry.BackoffStrategy{
+	retryConfig := sdkkonnectgo.WithRetryConfig(sdkretry.Config{
+		Backoff: &sdkretry.BackoffStrategy{
 			InitialInterval: 100,
 			MaxInterval:     2000,
 			Exponent:        1.2,
@@ -55,6 +58,34 @@ func CreateClientCertificate(ctx context.Context, t *testing.T, cpID string, tok
 		require.Failf(t, "failed creating client certificate", "body %s", body)
 		return "", ""
 	}
+
+	if resp.DataPlaneClientCertificateResponse == nil ||
+		resp.DataPlaneClientCertificateResponse.Item == nil ||
+		resp.DataPlaneClientCertificateResponse.Item.ID == nil {
+		require.Fail(t, "failed creating client certificate: response is nil")
+		return "", ""
+	}
+
+	certID := *resp.DataPlaneClientCertificateResponse.Item.ID
+
+	t.Cleanup(func() {
+		fmt.Printf("deleting DP client certificate: %q", certID)
+		err := retry.Do(
+			func() error {
+				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+				defer cancel()
+				_, err := s.DPCertificates.DeleteDataplaneCertificate(ctx, cpID, certID)
+				return err
+			},
+			retry.Attempts(5),
+			retry.Delay(time.Second),
+		)
+		if err != nil {
+			// Don't fail the test if cleanup fails, just log the error.
+			// Cleanup job will eventually clean up konnect.
+			fmt.Printf("failed to delete DP client certificate %q: %v", certID, err)
+		}
+	})
 
 	return string(cert), string(key)
 }
