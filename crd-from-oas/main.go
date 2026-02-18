@@ -10,9 +10,9 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/samber/lo"
 
-	"github.com/kong/kong-operator/crd-from-oas/pkg/config"
-	"github.com/kong/kong-operator/crd-from-oas/pkg/generator"
-	"github.com/kong/kong-operator/crd-from-oas/pkg/parser"
+	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/config"
+	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/generator"
+	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/parser"
 )
 
 type EnvConfig struct {

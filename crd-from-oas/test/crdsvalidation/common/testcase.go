@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
-	"github.com/kong/kong-operator/crd-from-oas/test/scheme"
+	"github.com/kong/kong-operator/v2/crd-from-oas/test/scheme"
 )
 
 // TestCasesGroup is a group of test cases related to CRD validation.

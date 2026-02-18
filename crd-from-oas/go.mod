@@ -1,11 +1,11 @@
-module github.com/kong/kong-operator/crd-from-oas
+module github.com/kong/kong-operator/v2/crd-from-oas
 
 go 1.26.0
 
 require (
 	github.com/caarlos0/env/v11 v11.3.1
 	github.com/getkin/kin-openapi v0.133.0
-	github.com/kong/kong-operator v0.0.0-20251002143259-bc988d571ff4
+	github.com/kong/kong-operator/v2 v2.0.0-00000000000000-000000000000
 	github.com/samber/lo v1.52.0
 	github.com/stretchr/testify v1.11.1
 	gopkg.in/yaml.v3 v3.0.1
@@ -25,7 +25,7 @@ require (
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/Kong/go-diff v1.2.2 // indirect
 	github.com/Kong/gojsondiff v1.3.2 // indirect
-	github.com/Kong/sdk-konnect-go v0.21.1 // indirect
+	github.com/Kong/sdk-konnect-go v0.22.1 // indirect
 	github.com/MakeNowJust/heredoc v1.0.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/adrg/strutil v0.3.0 // indirect
@@ -239,7 +239,7 @@ require (
 )
 
 replace (
-	github.com/kong/kong-operator => ..
+	github.com/kong/kong-operator/v2 => ..
 	k8s.io/api => k8s.io/api v0.35.0
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.35.0
 	k8s.io/apimachinery => k8s.io/apimachinery v0.35.0
