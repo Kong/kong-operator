@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilrand "k8s.io/apimachinery/pkg/util/rand"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -93,4 +94,23 @@ func TrimGenerateName(name string) string {
 		name += "-"
 	}
 	return name
+}
+
+// GenerateName generates a name for the object by concatenating the provided base string with a random string of 5 characters.
+// It's implementation is based on the Kubernetes GenerateName field ([source]), argument base does not require calling
+// TrimGenerateName before, as the function calls it internally.
+//
+// [source]: https://github.com/kubernetes/kubernetes/blob/d820c046f5c520aab51ec850b263524b1fa5a4e9/staging/src/k8s.io/apiserver/pkg/storage/names/generate.go
+func GenerateName(base string) string {
+	base = TrimGenerateName(base)
+
+	const (
+		maxNameLength          = 63
+		randomLength           = 5
+		maxGeneratedNameLength = maxNameLength - randomLength
+	)
+	if len(base) > maxGeneratedNameLength {
+		base = base[:maxGeneratedNameLength]
+	}
+	return fmt.Sprintf("%s%s", base, utilrand.String(randomLength))
 }
