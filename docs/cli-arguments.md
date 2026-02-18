@@ -145,6 +145,18 @@ rows:
     type: '`string`'
     description: "Path to the kubeconfig file."
     default: ""
+  - flag: '`--leader-election-lease-duration`'
+    type: '`duration`'
+    description: "The duration that non-leader candidates will wait to force acquire leadership."
+    default: '`15s`'
+  - flag: '`--leader-election-renew-deadline`'
+    type: '`duration`'
+    description: "The duration that the acting leader will retry refreshing leadership before giving up."
+    default: '`10s`'
+  - flag: '`--leader-election-retry-period`'
+    type: '`duration`'
+    description: "The duration between retries of leader election actions."
+    default: '`2s`'
   - flag: '`--logging-mode`'
     type: '`string`'
     description: "Logging mode to use. Possible values: production, development."

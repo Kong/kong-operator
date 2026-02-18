@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -250,7 +251,7 @@ func TestParse(t *testing.T) {
 			name: "deprecated env vars are honored",
 			envVars: map[string]string{
 				"GATEWAY_OPERATOR_ANONYMOUS_REPORTS":         "false",
-				`GATEWAY_OPERATOR_HEALTH_PROBE_BIND_ADDRESS`: ":8090",
+				"GATEWAY_OPERATOR_HEALTH_PROBE_BIND_ADDRESS": ":8090",
 				"GATEWAY_OPERATOR_APISERVER_BURST":           "500",
 			},
 			expectedCfg: func() manager.Config {
@@ -311,6 +312,21 @@ func TestParse(t *testing.T) {
 				return cfg
 			},
 		},
+		{
+			name: "leader election env vars are set",
+			envVars: map[string]string{
+				"KONG_OPERATOR_LEADER_ELECTION_LEASE_DURATION": "20s",
+				"KONG_OPERATOR_LEADER_ELECTION_RENEW_DEADLINE": "15s",
+				"KONG_OPERATOR_LEADER_ELECTION_RETRY_PERIOD":   "5s",
+			},
+			expectedCfg: func() manager.Config {
+				cfg := expectedDefaultCfg()
+				cfg.LeaderElectionLeaseDuration = 20 * time.Second
+				cfg.LeaderElectionRenewDeadline = 15 * time.Second
+				cfg.LeaderElectionRetryPeriod = 5 * time.Second
+				return cfg
+			},
+		},
 	}
 
 	for _, tC := range testCases {
@@ -337,6 +353,9 @@ func expectedDefaultCfg() manager.Config {
 		ProbeAddr:                                ":8081",
 		LeaderElection:                           true,
 		LeaderElectionNamespace:                  "kong-system",
+		LeaderElectionLeaseDuration:              mgrconfig.DefaultLeaderElectionLeaseDuration,
+		LeaderElectionRenewDeadline:              mgrconfig.DefaultLeaderElectionRenewDeadline,
+		LeaderElectionRetryPeriod:                mgrconfig.DefaultLeaderElectionRetryPeriod,
 		LoggingMode:                              logging.ProductionMode,
 		ValidateImages:                           true,
 		EnforceConfig:                            true,

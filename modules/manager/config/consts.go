@@ -1,7 +1,21 @@
 package config
 
+import "time"
+
 // DefaultClusterCAKeySize is the default size of the cluster CA key.
 const DefaultClusterCAKeySize = 4096
+
+const (
+	// DefaultLeaderElectionLeaseDuration is the default duration that non-leader
+	// candidates will wait to force acquire leadership.
+	DefaultLeaderElectionLeaseDuration = 15 * time.Second
+	// DefaultLeaderElectionRenewDeadline is the default duration that the acting
+	// leader will retry refreshing leadership before giving up.
+	DefaultLeaderElectionRenewDeadline = 10 * time.Second
+	// DefaultLeaderElectionRetryPeriod is the default duration between retries
+	// of leader election actions.
+	DefaultLeaderElectionRetryPeriod = 2 * time.Second
+)
 
 const (
 	// DefaultSecretLabelSelector is the default label selector to filter reconciled `Secret`s.
