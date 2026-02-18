@@ -17,26 +17,54 @@ const (
 	// Annotation constants matching those in the ingress controller.
 	annotationPrefix = "konghq.com"
 	stripPathKey     = "/strip-path"
+	preserveHostKey  = "/preserve-host"
+)
+
+// Defaults for the annotations when not specified that match the behavior of on-prem.
+const (
+	// defaultStripPath is the default value for the strip-path annotation when not specified.
+	defaultStripPath = false
+
+	// defaultPreserveHost is the default value for the preserve-host annotation when not specified.
+	defaultPreserveHost = true
 )
 
 // ExtractStripPath extracts the strip-path annotation value and returns a boolean.
-// Returns true by default if the annotation is not present or cannot be parsed.
+// Returns false by default if the annotation is not present or cannot be parsed.
 func ExtractStripPath(anns map[string]string) bool {
+	parseStripPath, ok := parseAnnotationBool(anns, stripPathKey)
+	if !ok {
+		return defaultStripPath
+	}
+	return parseStripPath
+}
+
+// ExtractPreserveHost extracts the preserve-host annotation value and returns a boolean.
+// Returns true by default if the annotation is not present or cannot be parsed.
+func ExtractPreserveHost(anns map[string]string) bool {
+	parsePreserveHost, ok := parseAnnotationBool(anns, preserveHostKey)
+	if !ok {
+		return defaultPreserveHost
+	}
+	return parsePreserveHost
+}
+
+func parseAnnotationBool(anns map[string]string, key string) (enabled bool, ok bool) {
 	if anns == nil {
-		return true
+		return false, false
 	}
 
-	val := anns[annotationPrefix+stripPathKey]
+	val := anns[annotationPrefix+key]
 	if val == "" {
-		return true // Default to true when not specified
+		return false, false // Annotation not present.
 	}
 
-	stripPath, err := strconv.ParseBool(val)
+	parsedVal, err := strconv.ParseBool(val)
 	if err != nil {
-		return true // Default to true when invalid value
+		return false, false // Invalid value.
 	}
 
-	return stripPath
+	return parsedVal, true
 }
 
 // BuildAnnotations creates the standard annotations map for Kong resources managed by Gateway API objects.

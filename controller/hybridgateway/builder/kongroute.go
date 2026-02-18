@@ -107,6 +107,12 @@ func (b *KongRouteBuilder) WithStripPath(stripPath bool) *KongRouteBuilder {
 	return b
 }
 
+// WithPreserveHost sets the preserve host option for the KongRoute.
+func (b *KongRouteBuilder) WithPreserveHost(preserveHost bool) *KongRouteBuilder {
+	b.route.Spec.PreserveHost = &preserveHost
+	return b
+}
+
 // WithOwner sets the owner reference for the KongRoute to the given HTTPRoute.
 func (b *KongRouteBuilder) WithOwner(owner *gwtypes.HTTPRoute) *KongRouteBuilder {
 	if owner == nil {

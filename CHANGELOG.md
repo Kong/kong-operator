@@ -64,10 +64,6 @@
 - Fix `ResolvedRefs` status condition on `HTTPRoute` not being updated when a
   referenced `KongPlugin` is deleted in self-managed ControlPlane mode.
   [#3206](https://github.com/Kong/kong-operator/pull/3206)
-- Name of Konnect Gateway Control Plane resource created in Konnect matches
-  the name of the corresponding `KonnectGatewayControlPlane` resource in Kubernetes
-  (the same random suffix is added). It prevents collisions in Konnect.
-  [#3357](https://github.com/Kong/kong-operator/pull/3357)
 
 ## [v2.1.1]
 
@@ -81,6 +77,13 @@
   [#3353](https://github.com/Kong/kong-operator/pull/3353)
 - Bump Go to 1.25.7
   [#3235](https://github.com/Kong/kong-operator/pull/3235)
+- Name of Konnect Gateway Control Plane resource created in Konnect matches
+  the name of the corresponding `KonnectGatewayControlPlane` resource in Kubernetes
+  (the same random suffix is added). It prevents collisions in Konnect.
+  [#3357](https://github.com/Kong/kong-operator/pull/3357)
+- Use the same defaults for `preserve_host` and `strip_path` in for Konnect Gateway Control Plane
+  as in self-managed.
+  [#3366](https://github.com/Kong/kong-operator/pull/3366)
 
 ## [v2.1.0]
 

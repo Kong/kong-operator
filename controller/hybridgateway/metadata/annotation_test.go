@@ -24,12 +24,12 @@ func TestExtractStripPath(t *testing.T) {
 		{
 			name:        "nil annotations",
 			annotations: nil,
-			expected:    true,
+			expected:    false,
 		},
 		{
 			name:        "empty annotations",
 			annotations: map[string]string{},
-			expected:    true,
+			expected:    false,
 		},
 		{
 			name: "strip-path true",
@@ -50,14 +50,14 @@ func TestExtractStripPath(t *testing.T) {
 			annotations: map[string]string{
 				"konghq.com/strip-path": "invalid",
 			},
-			expected: true,
+			expected: false,
 		},
 		{
 			name: "strip-path empty value",
 			annotations: map[string]string{
 				"konghq.com/strip-path": "",
 			},
-			expected: true,
+			expected: false,
 		},
 		{
 			name: "other annotations present",
@@ -72,6 +72,68 @@ func TestExtractStripPath(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := ExtractStripPath(tt.annotations)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestExtractPreserveHost(t *testing.T) {
+	tests := []struct {
+		name        string
+		annotations map[string]string
+		expected    bool
+	}{
+		{
+			name:        "nil annotations",
+			annotations: nil,
+			expected:    true,
+		},
+		{
+			name:        "empty annotations",
+			annotations: map[string]string{},
+			expected:    true,
+		},
+		{
+			name: "preserve-host true",
+			annotations: map[string]string{
+				"konghq.com/preserve-host": "true",
+			},
+			expected: true,
+		},
+		{
+			name: "preserve-host false",
+			annotations: map[string]string{
+				"konghq.com/preserve-host": "false",
+			},
+			expected: false,
+		},
+		{
+			name: "preserve-host invalid value",
+			annotations: map[string]string{
+				"konghq.com/preserve-host": "invalid",
+			},
+			expected: true,
+		},
+		{
+			name: "preserve-host empty value",
+			annotations: map[string]string{
+				"konghq.com/preserve-host": "",
+			},
+			expected: true,
+		},
+		{
+			name: "other annotations present",
+			annotations: map[string]string{
+				"other-annotation":         "value",
+				"konghq.com/preserve-host": "false",
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ExtractPreserveHost(tt.annotations)
 			assert.Equal(t, tt.expected, result)
 		})
 	}

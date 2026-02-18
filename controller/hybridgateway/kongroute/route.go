@@ -64,6 +64,7 @@ func RouteForRule(
 		WithSpecName(routeName).
 		WithHosts(hostnames).
 		WithStripPath(metadata.ExtractStripPath(httpRoute.Annotations)).
+		WithPreserveHost(metadata.ExtractPreserveHost(httpRoute.Annotations)).
 		WithKongService(serviceName)
 
 	// Check if the rule contains a URLRewrite or RequestRedirect filter with ReplacePrefixMatch:
