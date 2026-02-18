@@ -100,5 +100,5 @@ func IsCI() bool {
 // either because it's running in a CI environment or because the user has
 // explicitly requested to keep the test cluster.
 func SkipCleanup() bool {
-	return IsCI() || !KeepTestCluster()
+	return IsCI() || KeepTestCluster()
 }
