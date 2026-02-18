@@ -22,13 +22,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
-	configurationv1beta1 "github.com/kong/kong-operator/api/configuration/v1beta1"
-	"github.com/kong/kong-operator/ingress-controller/test"
-	"github.com/kong/kong-operator/ingress-controller/test/annotations"
-	"github.com/kong/kong-operator/ingress-controller/test/dataplane"
-	"github.com/kong/kong-operator/ingress-controller/test/manager/consts"
-	"github.com/kong/kong-operator/ingress-controller/test/mocks"
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
+	"github.com/kong/kong-operator/v2/ingress-controller/test"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/annotations"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/dataplane"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/manager/consts"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/mocks"
 )
 
 func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {

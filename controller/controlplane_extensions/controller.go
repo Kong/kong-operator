@@ -23,14 +23,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
-	operatorv1alpha1 "github.com/kong/kong-operator/api/gateway-operator/v1alpha1"
-	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
-	"github.com/kong/kong-operator/controller/pkg/extensions"
-	"github.com/kong/kong-operator/controller/pkg/log"
-	gwtypes "github.com/kong/kong-operator/internal/types"
-	osslogging "github.com/kong/kong-operator/modules/manager/logging"
-	"github.com/kong/kong-operator/pkg/consts"
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
+	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
+	"github.com/kong/kong-operator/v2/controller/pkg/extensions"
+	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	osslogging "github.com/kong/kong-operator/v2/modules/manager/logging"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
 const (

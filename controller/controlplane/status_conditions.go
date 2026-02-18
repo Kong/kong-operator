@@ -3,8 +3,8 @@ package controlplane
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	kcfgcontrolplane "github.com/kong/kong-operator/api/gateway-operator/controlplane"
-	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	kcfgcontrolplane "github.com/kong/kong-operator/v2/api/gateway-operator/controlplane"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 // markAsProvisioned marks the provided resource as ready by the means of Provisioned

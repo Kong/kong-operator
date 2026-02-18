@@ -11,12 +11,12 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/clients"
-	"github.com/kong/kong-operator/ingress-controller/internal/konnect"
-	"github.com/kong/kong-operator/ingress-controller/internal/konnect/nodes"
-	"github.com/kong/kong-operator/ingress-controller/internal/versions"
-	"github.com/kong/kong-operator/ingress-controller/test/mocks"
-	"github.com/kong/kong-operator/modules/manager/metadata"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/clients"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/konnect"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/konnect/nodes"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/versions"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/mocks"
+	"github.com/kong/kong-operator/v2/modules/manager/metadata"
 )
 
 const (

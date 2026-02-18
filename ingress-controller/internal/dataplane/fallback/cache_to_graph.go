@@ -7,7 +7,7 @@ import (
 	"github.com/dominikbraun/graph"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/store"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 )
 
 // DefaultCacheGraphProvider is a default implementation of the CacheGraphProvider interface.

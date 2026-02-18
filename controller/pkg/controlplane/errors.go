@@ -3,7 +3,7 @@ package controlplane
 import (
 	"fmt"
 
-	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 )
 
 // ReferencedControlPlaneDoesNotExistError is an error type that is returned when

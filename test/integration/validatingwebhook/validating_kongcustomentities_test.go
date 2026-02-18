@@ -7,9 +7,9 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
-	"github.com/kong/kong-operator/internal/annotations"
-	"github.com/kong/kong-operator/test/integration"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	"github.com/kong/kong-operator/v2/internal/annotations"
+	"github.com/kong/kong-operator/v2/test/integration"
 )
 
 func TestAdmissionWebhook_KongCustomEntities(t *testing.T) {

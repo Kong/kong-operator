@@ -8,9 +8,9 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	hybridgatewayerrors "github.com/kong/kong-operator/controller/hybridgateway/errors"
-	"github.com/kong/kong-operator/controller/pkg/log"
-	gwtypes "github.com/kong/kong-operator/internal/types"
+	hybridgatewayerrors "github.com/kong/kong-operator/v2/controller/hybridgateway/errors"
+	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // GetGatewaysByHTTPRoute returns Gateways referenced by the given HTTPRoute.

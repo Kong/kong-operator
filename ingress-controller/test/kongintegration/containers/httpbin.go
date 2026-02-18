@@ -11,7 +11,7 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 
-	"github.com/kong/kong-operator/ingress-controller/test"
+	"github.com/kong/kong-operator/v2/ingress-controller/test"
 )
 
 // HTTPBin represents a docker container running the `kong/httpbin`.

@@ -9,10 +9,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
-	"github.com/kong/kong-operator/controller/pkg/patch"
-	"github.com/kong/kong-operator/internal/utils/crossnamespace"
-	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	"github.com/kong/kong-operator/v2/controller/pkg/patch"
+	"github.com/kong/kong-operator/v2/internal/utils/crossnamespace"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 // handleAPIAuthStatusCondition handles the status conditions for the APIAuthConfiguration reference.

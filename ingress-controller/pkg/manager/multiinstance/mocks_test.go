@@ -8,10 +8,10 @@ import (
 
 	"github.com/samber/lo"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/admission"
-	"github.com/kong/kong-operator/ingress-controller/pkg/manager"
-	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
-	"github.com/kong/kong-operator/ingress-controller/pkg/manager/multiinstance"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/admission"
+	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager"
+	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/multiinstance"
 )
 
 // mockInstance is a mock implementation of multiinstance.ManagerInstance.

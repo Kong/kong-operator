@@ -13,8 +13,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	mgrconsts "github.com/kong/kong-operator/ingress-controller/internal/manager/consts"
-	"github.com/kong/kong-operator/ingress-controller/pkg/validation/consts"
+	mgrconsts "github.com/kong/kong-operator/v2/ingress-controller/internal/manager/consts"
+	"github.com/kong/kong-operator/v2/ingress-controller/pkg/validation/consts"
 )
 
 var (

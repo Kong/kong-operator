@@ -21,8 +21,8 @@ package v2beta1
 import (
 	http "net/http"
 
-	gatewayoperatorv2beta1 "github.com/kong/kong-operator/api/gateway-operator/v2beta1"
-	scheme "github.com/kong/kong-operator/pkg/clientset/scheme"
+	gatewayoperatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
+	scheme "github.com/kong/kong-operator/v2/pkg/clientset/scheme"
 	rest "k8s.io/client-go/rest"
 )
 

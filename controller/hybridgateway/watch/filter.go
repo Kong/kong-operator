@@ -8,8 +8,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"github.com/kong/kong-operator/controller/hybridgateway/refs"
-	gwtypes "github.com/kong/kong-operator/internal/types"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/refs"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // FilterBy returns a predicate function for filtering client.Objects based on the type of the provided obj.

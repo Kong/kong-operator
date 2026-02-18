@@ -29,13 +29,13 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kong-operator/controller/pkg/builder"
-	"github.com/kong/kong-operator/internal/annotations"
-	gwtypes "github.com/kong/kong-operator/internal/types"
-	"github.com/kong/kong-operator/pkg/consts"
-	k8sresources "github.com/kong/kong-operator/pkg/utils/kubernetes/resources"
-	testutils "github.com/kong/kong-operator/pkg/utils/test"
-	"github.com/kong/kong-operator/test/helpers"
+	"github.com/kong/kong-operator/v2/controller/pkg/builder"
+	"github.com/kong/kong-operator/v2/internal/annotations"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/pkg/consts"
+	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
+	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
+	"github.com/kong/kong-operator/v2/test/helpers"
 )
 
 func TestControlPlaneDrainSupport(t *testing.T) {

@@ -7,7 +7,7 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/util"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
 )
 
 // TypeMetaSettingClient decorates client.Client so that it populates the TypeMeta field of the

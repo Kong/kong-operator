@@ -10,7 +10,7 @@ import (
 	"github.com/tonglil/buflogr"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/konnect/tracing"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/konnect/tracing"
 )
 
 func TestDoRequest(t *testing.T) {

@@ -14,9 +14,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
-	"github.com/kong/kong-operator/ingress-controller/test/annotations"
-	"github.com/kong/kong-operator/ingress-controller/test/labels"
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/annotations"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/labels"
 )
 
 func TestKongStateFillConsumersAndCredentialsFailure(t *testing.T) {

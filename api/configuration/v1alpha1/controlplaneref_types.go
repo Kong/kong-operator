@@ -1,7 +1,7 @@
 package v1alpha1
 
 import (
-	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 )
 
 // NOTE: ControlPlaneRef is not a type alias because that doesn't work with crd-ref-docs.

@@ -20,11 +20,11 @@ import (
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/kong/kong-operator/ingress-controller/test/controllers/gateway"
-	"github.com/kong/kong-operator/ingress-controller/test/gatewayapi"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers"
-	"github.com/kong/kong-operator/ingress-controller/test/mocks"
-	"github.com/kong/kong-operator/ingress-controller/test/util/builder"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/controllers/gateway"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/helpers"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/mocks"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/util/builder"
 )
 
 const (
@@ -508,12 +508,12 @@ func printHTTPRoutesConditions(ctx context.Context, client ctrlclient.Client, nn
 	}
 
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("HTTPRoute %s/%s has the following Parents in Status:", nn.Namespace, nn.Name))
+	fmt.Fprintf(&sb, "HTTPRoute %s/%s has the following Parents in Status:", nn.Namespace, nn.Name)
 	for _, p := range route.Status.Parents {
 		if p.ParentRef.Namespace != nil {
-			_, _ = sb.WriteString(fmt.Sprintf("\nParent %s/%s: ", *p.ParentRef.Namespace, string(p.ParentRef.Name)))
+			_, _ = fmt.Fprintf(&sb, "\nParent %s/%s: ", *p.ParentRef.Namespace, string(p.ParentRef.Name))
 		} else {
-			_, _ = sb.WriteString(fmt.Sprintf("\nParent %s: ", string(p.ParentRef.Name)))
+			_, _ = fmt.Fprintf(&sb, "\nParent %s: ", string(p.ParentRef.Name))
 		}
 		for _, c := range p.Conditions {
 			s := fmt.Sprintf(

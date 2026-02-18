@@ -17,8 +17,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
-	testhelpers "github.com/kong/kong-operator/ingress-controller/test/helpers"
+	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
+	testhelpers "github.com/kong/kong-operator/v2/ingress-controller/test/helpers"
 )
 
 // TestDiagnosticsServer_ConfigDumps tests that the diagnostics server can receive and serve config dumps.

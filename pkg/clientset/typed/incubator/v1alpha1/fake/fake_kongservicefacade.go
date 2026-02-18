@@ -19,8 +19,8 @@ limitations under the License.
 package fake
 
 import (
-	v1alpha1 "github.com/kong/kong-operator/api/incubator/v1alpha1"
-	incubatorv1alpha1 "github.com/kong/kong-operator/pkg/clientset/typed/incubator/v1alpha1"
+	v1alpha1 "github.com/kong/kong-operator/v2/api/incubator/v1alpha1"
+	incubatorv1alpha1 "github.com/kong/kong-operator/v2/pkg/clientset/typed/incubator/v1alpha1"
 	gentype "k8s.io/client-go/gentype"
 )
 

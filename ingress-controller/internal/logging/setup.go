@@ -9,7 +9,7 @@ import (
 	kongdbreconciler "github.com/kong/go-database-reconciler/pkg/cprint"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
+	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
 )
 
 // SetupLoggers sets up the loggers for the controller manager.

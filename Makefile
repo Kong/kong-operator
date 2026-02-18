@@ -8,6 +8,8 @@ REPO_NAME ?= $(shell echo $(REPO) | cut -d / -f 3)
 REPO_INFO ?= $(shell git config --get remote.origin.url)
 TAG ?= $(shell git describe --tags)
 VERSION ?= $(shell cat VERSION)
+GO_MODULE_MAJOR_VERSION := $(shell go list -m -f '{{.Path}}' | awk -F'/v' '{print (NF>1) ? $$NF : "1"}')
+GO_METADATA_PACKAGE = $(REPO)/v$(GO_MODULE_MAJOR_VERSION)/modules/manager/metadata
 
 ifndef COMMIT
   COMMIT := $(shell git rev-parse --short HEAD)
@@ -29,11 +31,11 @@ LDFLAGS_COMMON ?= -extldflags=-Wl,-ld_classic
 endif
 
 LDFLAGS_METADATA ?= \
-	-X $(REPO)/modules/manager/metadata.projectName=$(REPO_NAME) \
-	-X $(REPO)/modules/manager/metadata.release=$(TAG) \
-	-X $(REPO)/modules/manager/metadata.commit=$(COMMIT) \
-	-X $(REPO)/modules/manager/metadata.repo=$(REPO_INFO) \
-	-X $(REPO)/modules/manager/metadata.repoURL=$(REPO_URL)
+	-X $(GO_METADATA_PACKAGE).projectName=$(REPO_NAME) \
+	-X $(GO_METADATA_PACKAGE).release=$(TAG) \
+	-X $(GO_METADATA_PACKAGE).commit=$(COMMIT) \
+	-X $(GO_METADATA_PACKAGE).repo=$(REPO_INFO) \
+	-X $(GO_METADATA_PACKAGE).repoURL=$(REPO_URL)
 
 # ------------------------------------------------------------------------------
 # Configuration - Tooling

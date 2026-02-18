@@ -12,8 +12,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	konnectlicense "github.com/kong/kong-operator/ingress-controller/internal/konnect/license"
-	"github.com/kong/kong-operator/ingress-controller/internal/license"
+	konnectlicense "github.com/kong/kong-operator/v2/ingress-controller/internal/konnect/license"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/license"
 )
 
 func TestSecretLicenseStore_Store(t *testing.T) {

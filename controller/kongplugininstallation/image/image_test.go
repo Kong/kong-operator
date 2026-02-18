@@ -6,8 +6,8 @@ import (
 	"github.com/stretchr/testify/require"
 	orascreds "oras.land/oras-go/v2/registry/remote/credentials"
 
-	"github.com/kong/kong-operator/controller/kongplugininstallation/image"
-	"github.com/kong/kong-operator/test/integration"
+	"github.com/kong/kong-operator/v2/controller/kongplugininstallation/image"
+	"github.com/kong/kong-operator/v2/test/integration"
 )
 
 func TestFetchPluginContent(t *testing.T) {

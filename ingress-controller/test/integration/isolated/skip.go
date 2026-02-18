@@ -8,8 +8,8 @@ import (
 
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 
-	dpconf "github.com/kong/kong-operator/ingress-controller/internal/dataplane/config"
-	"github.com/kong/kong-operator/ingress-controller/test/internal/testenv"
+	dpconf "github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/config"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/internal/testenv"
 )
 
 func SkipIfRouterNotExpressions(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {

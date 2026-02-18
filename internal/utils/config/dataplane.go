@@ -7,9 +7,9 @@ import (
 
 	"github.com/samber/lo"
 
-	"github.com/kong/kong-operator/pkg/consts"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 
-	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 )
 
 // KongDefaults are the baseline Kong proxy configuration options needed for

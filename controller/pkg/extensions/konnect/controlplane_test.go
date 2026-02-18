@@ -12,13 +12,13 @@ import (
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
-	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
-	extensionserrors "github.com/kong/kong-operator/controller/pkg/extensions/errors"
-	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
-	gwtypes "github.com/kong/kong-operator/internal/types"
-	"github.com/kong/kong-operator/modules/manager/scheme"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	extensionserrors "github.com/kong/kong-operator/v2/controller/pkg/extensions/errors"
+	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
 func TestBuildKonnectAddress(t *testing.T) {

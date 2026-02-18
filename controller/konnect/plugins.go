@@ -7,7 +7,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"github.com/kong/kong-operator/pkg/metadata"
+	"github.com/kong/kong-operator/v2/pkg/metadata"
 )
 
 var kongPluginsAnnotationChangedPredicate = predicate.Funcs{

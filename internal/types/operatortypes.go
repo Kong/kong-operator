@@ -3,7 +3,7 @@ package types
 import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	operatorv2beta1 "github.com/kong/kong-operator/api/gateway-operator/v2beta1"
+	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
 )
 
 // Aliases below allow to easily switch between different versions of the ControlPlane API

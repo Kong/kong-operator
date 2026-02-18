@@ -14,12 +14,12 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	configurationv1beta1 "github.com/kong/kong-operator/api/configuration/v1beta1"
-	incubatorv1alpha1 "github.com/kong/kong-operator/api/incubator/v1alpha1"
-	"github.com/kong/kong-operator/ingress-controller/internal/controllers"
-	gatewaycontroller "github.com/kong/kong-operator/ingress-controller/internal/controllers/gateway"
-	"github.com/kong/kong-operator/ingress-controller/internal/controllers/utils"
-	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
+	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
+	incubatorv1alpha1 "github.com/kong/kong-operator/v2/api/incubator/v1alpha1"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers"
+	gatewaycontroller "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/gateway"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/utils"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 )
 
 // maxNAncestors is the maximum number of ancestors that can be stored in the KongUpstreamPolicy status.

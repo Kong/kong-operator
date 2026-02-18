@@ -300,7 +300,7 @@ func (obj {{ .Type }}List) GetItems() []{{ .Type }} {
 	getAdoptFuncTemplate    = `package {{ .PackageVersion }}
 
 import (
-	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 {{- range .AdditionalImports }}
 	{{ . }}
 {{- end }}
