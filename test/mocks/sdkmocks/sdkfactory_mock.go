@@ -15,7 +15,7 @@ import (
 
 type MockSDKWrapper struct {
 	ControlPlaneSDK             *mocks.MockControlPlanesSDK
-	CloudGatewaysSDK            *MockCloudGatewaysSDK
+	CloudGatewaysSDK            *mocks.MockCloudGatewaysSDK
 	ControlPlaneGroupSDK        *mocks.MockControlPlaneGroupsSDK
 	ServicesSDK                 *mocks.MockServicesSDK
 	RoutesSDK                   *mocks.MockRoutesSDK
@@ -24,19 +24,19 @@ type MockSDKWrapper struct {
 	PluginSDK                   *mocks.MockPluginsSDK
 	UpstreamsSDK                *mocks.MockUpstreamsSDK
 	TargetsSDK                  *mocks.MockTargetsSDK
-	MeSDK                       *MockMeSDK
+	MeSDK                       *mocks.MockMeSDK
 	KongCredentialsBasicAuthSDK *mocks.MockBasicAuthCredentialsSDK
 	KongCredentialsAPIKeySDK    *mocks.MockAPIKeysSDK
 	KongCredentialsACLSDK       *mocks.MockACLsSDK
 	KongCredentialsJWTSDK       *mocks.MockJWTsSDK
 	KongCredentialsHMACSDK      *mocks.MockHMACAuthCredentialsSDK
-	CACertificatesSDK           *MockCACertificatesSDK
-	CertificatesSDK             *MockCertificatesSDK
-	VaultSDK                    *MockVaultSDK
+	CACertificatesSDK           *mocks.MockCACertificatesSDK
+	CertificatesSDK             *mocks.MockCertificatesSDK
+	VaultSDK                    *mocks.MockVaultsSDK
 	KeysSDK                     *mocks.MockKeysSDK
 	KeySetsSDK                  *mocks.MockKeySetsSDK
-	SNIsSDK                     *MockSNIsSDK
-	DataPlaneCertificatesSDK    *MockDataPlaneClientCertificatesSDK
+	SNIsSDK                     *mocks.MockSNIsSDK
+	DataPlaneCertificatesSDK    *mocks.MockDPCertificatesSDK
 	server                      server.Server
 }
 
@@ -46,7 +46,7 @@ func NewMockSDKWrapperWithT(t *testing.T) *MockSDKWrapper {
 	return &MockSDKWrapper{
 		ControlPlaneSDK:             mocks.NewMockControlPlanesSDK(t),
 		ControlPlaneGroupSDK:        mocks.NewMockControlPlaneGroupsSDK(t),
-		CloudGatewaysSDK:            NewMockCloudGatewaysSDK(t),
+		CloudGatewaysSDK:            mocks.NewMockCloudGatewaysSDK(t),
 		ServicesSDK:                 mocks.NewMockServicesSDK(t),
 		RoutesSDK:                   mocks.NewMockRoutesSDK(t),
 		ConsumersSDK:                mocks.NewMockConsumersSDK(t),
@@ -54,19 +54,19 @@ func NewMockSDKWrapperWithT(t *testing.T) *MockSDKWrapper {
 		PluginSDK:                   mocks.NewMockPluginsSDK(t),
 		UpstreamsSDK:                mocks.NewMockUpstreamsSDK(t),
 		TargetsSDK:                  mocks.NewMockTargetsSDK(t),
-		MeSDK:                       NewMockMeSDK(t),
+		MeSDK:                       mocks.NewMockMeSDK(t),
 		KongCredentialsBasicAuthSDK: mocks.NewMockBasicAuthCredentialsSDK(t),
 		KongCredentialsAPIKeySDK:    mocks.NewMockAPIKeysSDK(t),
 		KongCredentialsACLSDK:       mocks.NewMockACLsSDK(t),
 		KongCredentialsJWTSDK:       mocks.NewMockJWTsSDK(t),
 		KongCredentialsHMACSDK:      mocks.NewMockHMACAuthCredentialsSDK(t),
-		CACertificatesSDK:           NewMockCACertificatesSDK(t),
-		CertificatesSDK:             NewMockCertificatesSDK(t),
-		VaultSDK:                    NewMockVaultSDK(t),
+		CACertificatesSDK:           mocks.NewMockCACertificatesSDK(t),
+		CertificatesSDK:             mocks.NewMockCertificatesSDK(t),
+		VaultSDK:                    mocks.NewMockVaultsSDK(t),
 		KeysSDK:                     mocks.NewMockKeysSDK(t),
 		KeySetsSDK:                  mocks.NewMockKeySetsSDK(t),
-		SNIsSDK:                     NewMockSNIsSDK(t),
-		DataPlaneCertificatesSDK:    NewMockDataPlaneClientCertificatesSDK(t),
+		SNIsSDK:                     mocks.NewMockSNIsSDK(t),
+		DataPlaneCertificatesSDK:    mocks.NewMockDPCertificatesSDK(t),
 
 		server: lo.Must(server.NewServer[*gwtypes.ControlPlane](SDKServerURL)),
 	}
@@ -141,19 +141,19 @@ func (m MockSDKWrapper) GetTargetsSDK() sdkkonnectgo.TargetsSDK {
 	return m.TargetsSDK
 }
 
-func (m MockSDKWrapper) GetVaultSDK() sdkops.VaultSDK {
+func (m MockSDKWrapper) GetVaultSDK() sdkkonnectgo.VaultsSDK {
 	return m.VaultSDK
 }
 
-func (m MockSDKWrapper) GetMeSDK() sdkops.MeSDK {
+func (m MockSDKWrapper) GetMeSDK() sdkkonnectgo.MeSDK {
 	return m.MeSDK
 }
 
-func (m MockSDKWrapper) GetCACertificatesSDK() sdkops.CACertificatesSDK {
+func (m MockSDKWrapper) GetCACertificatesSDK() sdkkonnectgo.CACertificatesSDK {
 	return m.CACertificatesSDK
 }
 
-func (m MockSDKWrapper) GetCertificatesSDK() sdkops.CertificatesSDK {
+func (m MockSDKWrapper) GetCertificatesSDK() sdkkonnectgo.CertificatesSDK {
 	return m.CertificatesSDK
 }
 
@@ -165,15 +165,15 @@ func (m MockSDKWrapper) GetKeySetsSDK() sdkkonnectgo.KeySetsSDK {
 	return m.KeySetsSDK
 }
 
-func (m MockSDKWrapper) GetSNIsSDK() sdkops.SNIsSDK {
+func (m MockSDKWrapper) GetSNIsSDK() sdkkonnectgo.SNIsSDK {
 	return m.SNIsSDK
 }
 
-func (m MockSDKWrapper) GetDataPlaneCertificatesSDK() sdkops.DataPlaneClientCertificatesSDK {
+func (m MockSDKWrapper) GetDataPlaneCertificatesSDK() sdkkonnectgo.DPCertificatesSDK {
 	return m.DataPlaneCertificatesSDK
 }
 
-func (m MockSDKWrapper) GetCloudGatewaysSDK() sdkops.CloudGatewaysSDK {
+func (m MockSDKWrapper) GetCloudGatewaysSDK() sdkkonnectgo.CloudGatewaysSDK {
 	return m.CloudGatewaysSDK
 }
 

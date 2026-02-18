@@ -1,12 +1,12 @@
 package ops
 
 import (
-	"context"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
@@ -23,11 +23,10 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/modules/manager/scheme"
 	"github.com/kong/kong-operator/pkg/metadata"
-	sdkmocks "github.com/kong/kong-operator/test/mocks/sdkmocks"
 )
 
 func TestKongCACertificateToCACertificateInput_Tags(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
 
 	cert := &configurationv1alpha1.KongCACertificate{
@@ -71,9 +70,9 @@ func TestKongCACertificateToCACertificateInput_Tags(t *testing.T) {
 }
 
 func TestAdoptKongCACertificateOverride(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
-	sdk := sdkmocks.NewMockCACertificatesSDK(t)
+	sdk := mocks.NewMockCACertificatesSDK(t)
 	sdk.EXPECT().GetCaCertificate(mock.Anything, "konnect-ca-id", "cp-1").Return(
 		&sdkkonnectops.GetCaCertificateResponse{
 			CACertificate: &sdkkonnectcomp.CACertificate{
@@ -118,9 +117,9 @@ func TestAdoptKongCACertificateOverride(t *testing.T) {
 }
 
 func TestAdoptKongCACertificateMatchSuccess(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
-	sdk := sdkmocks.NewMockCACertificatesSDK(t)
+	sdk := mocks.NewMockCACertificatesSDK(t)
 	sdk.EXPECT().GetCaCertificate(mock.Anything, "konnect-ca-id", "cp-1").Return(
 		&sdkkonnectops.GetCaCertificateResponse{
 			CACertificate: &sdkkonnectcomp.CACertificate{
@@ -160,9 +159,9 @@ func TestAdoptKongCACertificateMatchSuccess(t *testing.T) {
 }
 
 func TestAdoptKongCACertificateMatchMismatch(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
-	sdk := sdkmocks.NewMockCACertificatesSDK(t)
+	sdk := mocks.NewMockCACertificatesSDK(t)
 	sdk.EXPECT().GetCaCertificate(mock.Anything, "konnect-ca-id", "cp-1").Return(
 		&sdkkonnectops.GetCaCertificateResponse{
 			CACertificate: &sdkkonnectcomp.CACertificate{
@@ -204,9 +203,9 @@ func TestAdoptKongCACertificateMatchMismatch(t *testing.T) {
 }
 
 func TestAdoptKongCACertificateUIDConflict(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
-	sdk := sdkmocks.NewMockCACertificatesSDK(t)
+	sdk := mocks.NewMockCACertificatesSDK(t)
 	sdk.EXPECT().GetCaCertificate(mock.Anything, "konnect-ca-id", "cp-1").Return(
 		&sdkkonnectops.GetCaCertificateResponse{
 			CACertificate: &sdkkonnectcomp.CACertificate{
@@ -249,9 +248,9 @@ func TestAdoptKongCACertificateUIDConflict(t *testing.T) {
 }
 
 func TestAdoptKongCACertificateFetchFailure(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
-	sdk := sdkmocks.NewMockCACertificatesSDK(t)
+	sdk := mocks.NewMockCACertificatesSDK(t)
 	sdk.EXPECT().GetCaCertificate(mock.Anything, "konnect-ca-id", "cp-1").Return(
 		(*sdkkonnectops.GetCaCertificateResponse)(nil),
 		&sdkkonnecterrs.NotFoundError{},
@@ -289,7 +288,7 @@ func TestAdoptKongCACertificateFetchFailure(t *testing.T) {
 }
 
 func TestFetchCACertDataFromSecret(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	tests := []struct {
 		name            string
@@ -474,7 +473,7 @@ func TestFetchCACertDataFromSecret(t *testing.T) {
 }
 
 func TestKongCACertificateToCACertificateInput(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	t.Run("inline type uses cert from spec", func(t *testing.T) {
 		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
@@ -586,13 +585,13 @@ func TestKongCACertificateToCACertificateInput(t *testing.T) {
 }
 
 func TestCreateCACertificate(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	tests := []struct {
 		name       string
 		cert       *configurationv1alpha1.KongCACertificate
 		clientObjs []client.Object
-		setupMock  func(*sdkmocks.MockCACertificatesSDK)
+		setupMock  func(*mocks.MockCACertificatesSDK)
 		wantErr    string
 		wantID     string
 	}{
@@ -622,7 +621,7 @@ func TestCreateCACertificate(t *testing.T) {
 				},
 			},
 			clientObjs: []client.Object{},
-			setupMock: func(sdk *sdkmocks.MockCACertificatesSDK) {
+			setupMock: func(sdk *mocks.MockCACertificatesSDK) {
 				sdk.EXPECT().CreateCaCertificate(mock.Anything, "cp-1", mock.MatchedBy(func(cert sdkkonnectcomp.CACertificate) bool {
 					return cert.Cert == "ca-cert-data"
 				})).Return(&sdkkonnectops.CreateCaCertificateResponse{
@@ -664,7 +663,7 @@ func TestCreateCACertificate(t *testing.T) {
 					},
 				},
 			},
-			setupMock: func(sdk *sdkmocks.MockCACertificatesSDK) {
+			setupMock: func(sdk *mocks.MockCACertificatesSDK) {
 				sdk.EXPECT().CreateCaCertificate(mock.Anything, "cp-1", mock.MatchedBy(func(cert sdkkonnectcomp.CACertificate) bool {
 					return cert.Cert == "secret-ca-cert-data"
 				})).Return(&sdkkonnectops.CreateCaCertificateResponse{
@@ -693,7 +692,7 @@ func TestCreateCACertificate(t *testing.T) {
 				},
 			},
 			clientObjs: []client.Object{},
-			setupMock:  func(sdk *sdkmocks.MockCACertificatesSDK) {},
+			setupMock:  func(sdk *mocks.MockCACertificatesSDK) {},
 			wantErr:    "can't create KongCACertificate",
 		},
 		{
@@ -714,7 +713,7 @@ func TestCreateCACertificate(t *testing.T) {
 				},
 			},
 			clientObjs: []client.Object{},
-			setupMock:  func(sdk *sdkmocks.MockCACertificatesSDK) {},
+			setupMock:  func(sdk *mocks.MockCACertificatesSDK) {},
 			wantErr:    "failed to fetch Secret",
 		},
 		{
@@ -737,7 +736,7 @@ func TestCreateCACertificate(t *testing.T) {
 				},
 			},
 			clientObjs: []client.Object{},
-			setupMock: func(sdk *sdkmocks.MockCACertificatesSDK) {
+			setupMock: func(sdk *mocks.MockCACertificatesSDK) {
 				sdk.EXPECT().CreateCaCertificate(mock.Anything, "cp-1", mock.Anything).Return(
 					nil,
 					&sdkkonnecterrs.SDKError{Message: "API error", StatusCode: 500},
@@ -765,7 +764,7 @@ func TestCreateCACertificate(t *testing.T) {
 				},
 			},
 			clientObjs: []client.Object{},
-			setupMock: func(sdk *sdkmocks.MockCACertificatesSDK) {
+			setupMock: func(sdk *mocks.MockCACertificatesSDK) {
 				sdk.EXPECT().CreateCaCertificate(mock.Anything, "cp-1", mock.Anything).Return(nil, nil)
 			},
 			wantErr: "failed creating KongCACertificate",
@@ -790,7 +789,7 @@ func TestCreateCACertificate(t *testing.T) {
 				},
 			},
 			clientObjs: []client.Object{},
-			setupMock: func(sdk *sdkmocks.MockCACertificatesSDK) {
+			setupMock: func(sdk *mocks.MockCACertificatesSDK) {
 				sdk.EXPECT().CreateCaCertificate(mock.Anything, "cp-1", mock.Anything).Return(
 					&sdkkonnectops.CreateCaCertificateResponse{
 						CACertificate: &sdkkonnectcomp.CACertificate{
@@ -811,7 +810,7 @@ func TestCreateCACertificate(t *testing.T) {
 				WithObjects(tt.clientObjs...).
 				Build()
 
-			sdk := sdkmocks.NewMockCACertificatesSDK(t)
+			sdk := mocks.NewMockCACertificatesSDK(t)
 			tt.setupMock(sdk)
 
 			err := createCACertificate(ctx, cl, sdk, tt.cert)
@@ -829,13 +828,13 @@ func TestCreateCACertificate(t *testing.T) {
 }
 
 func TestUpdateCACertificate(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	tests := []struct {
 		name       string
 		cert       *configurationv1alpha1.KongCACertificate
 		clientObjs []client.Object
-		setupMock  func(*sdkmocks.MockCACertificatesSDK)
+		setupMock  func(*mocks.MockCACertificatesSDK)
 		wantErr    string
 	}{
 		{
@@ -867,7 +866,7 @@ func TestUpdateCACertificate(t *testing.T) {
 				},
 			},
 			clientObjs: []client.Object{},
-			setupMock: func(sdk *sdkmocks.MockCACertificatesSDK) {
+			setupMock: func(sdk *mocks.MockCACertificatesSDK) {
 				sdk.EXPECT().UpsertCaCertificate(mock.Anything, mock.MatchedBy(func(req sdkkonnectops.UpsertCaCertificateRequest) bool {
 					return req.ControlPlaneID == "cp-1" &&
 						req.CACertificateID == "konnect-ca-id" &&
@@ -909,7 +908,7 @@ func TestUpdateCACertificate(t *testing.T) {
 					},
 				},
 			},
-			setupMock: func(sdk *sdkmocks.MockCACertificatesSDK) {
+			setupMock: func(sdk *mocks.MockCACertificatesSDK) {
 				sdk.EXPECT().UpsertCaCertificate(mock.Anything, mock.MatchedBy(func(req sdkkonnectops.UpsertCaCertificateRequest) bool {
 					return req.ControlPlaneID == "cp-1" &&
 						req.CACertificateID == "konnect-ca-id" &&
@@ -935,7 +934,7 @@ func TestUpdateCACertificate(t *testing.T) {
 				},
 			},
 			clientObjs: []client.Object{},
-			setupMock:  func(sdk *sdkmocks.MockCACertificatesSDK) {},
+			setupMock:  func(sdk *mocks.MockCACertificatesSDK) {},
 			wantErr:    "can't update KongCACertificate",
 		},
 		{
@@ -959,7 +958,7 @@ func TestUpdateCACertificate(t *testing.T) {
 				},
 			},
 			clientObjs: []client.Object{},
-			setupMock:  func(sdk *sdkmocks.MockCACertificatesSDK) {},
+			setupMock:  func(sdk *mocks.MockCACertificatesSDK) {},
 			wantErr:    "failed to fetch Secret",
 		},
 		{
@@ -985,7 +984,7 @@ func TestUpdateCACertificate(t *testing.T) {
 				},
 			},
 			clientObjs: []client.Object{},
-			setupMock: func(sdk *sdkmocks.MockCACertificatesSDK) {
+			setupMock: func(sdk *mocks.MockCACertificatesSDK) {
 				sdk.EXPECT().UpsertCaCertificate(mock.Anything, mock.Anything).Return(
 					nil,
 					&sdkkonnecterrs.SDKError{Message: "API error", StatusCode: 500},
@@ -1002,7 +1001,7 @@ func TestUpdateCACertificate(t *testing.T) {
 				WithObjects(tt.clientObjs...).
 				Build()
 
-			sdk := sdkmocks.NewMockCACertificatesSDK(t)
+			sdk := mocks.NewMockCACertificatesSDK(t)
 			tt.setupMock(sdk)
 
 			err := updateCACertificate(ctx, cl, sdk, tt.cert)

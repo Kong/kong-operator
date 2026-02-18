@@ -1,13 +1,13 @@
 package ops
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -22,7 +22,6 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/pkg/metadata"
-	sdkmocks "github.com/kong/kong-operator/test/mocks/sdkmocks"
 )
 
 func TestKongCertificateToCertificateInput(t *testing.T) {
@@ -30,7 +29,7 @@ func TestKongCertificateToCertificateInput(t *testing.T) {
 	_ = configurationv1alpha1.AddToScheme(scheme)
 	_ = corev1.AddToScheme(scheme)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	tests := []struct {
 		name        string
@@ -355,7 +354,7 @@ func TestFetchTLSDataFromSecret(t *testing.T) {
 	scheme := runtime.NewScheme()
 	_ = corev1.AddToScheme(scheme)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	tests := []struct {
 		name            string
@@ -576,13 +575,13 @@ func TestUpdateCertificate(t *testing.T) {
 	_ = configurationv1alpha1.AddToScheme(scheme)
 	_ = corev1.AddToScheme(scheme)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	tests := []struct {
 		name       string
 		cert       *configurationv1alpha1.KongCertificate
 		clientObjs []client.Object
-		setupMock  func(*sdkmocks.MockCertificatesSDK)
+		setupMock  func(*mocks.MockCertificatesSDK)
 		wantErr    string
 	}{
 		{
@@ -615,7 +614,7 @@ func TestUpdateCertificate(t *testing.T) {
 				},
 			},
 			clientObjs: []client.Object{},
-			setupMock: func(sdk *sdkmocks.MockCertificatesSDK) {
+			setupMock: func(sdk *mocks.MockCertificatesSDK) {
 				sdk.EXPECT().UpsertCertificate(mock.Anything, mock.MatchedBy(func(req sdkkonnectops.UpsertCertificateRequest) bool {
 					return req.ControlPlaneID == "cp-1" &&
 						req.CertificateID == "konnect-cert-id" &&
@@ -659,7 +658,7 @@ func TestUpdateCertificate(t *testing.T) {
 					},
 				},
 			},
-			setupMock: func(sdk *sdkmocks.MockCertificatesSDK) {
+			setupMock: func(sdk *mocks.MockCertificatesSDK) {
 				sdk.EXPECT().UpsertCertificate(mock.Anything, mock.MatchedBy(func(req sdkkonnectops.UpsertCertificateRequest) bool {
 					return req.ControlPlaneID == "cp-1" &&
 						req.CertificateID == "konnect-cert-id" &&
@@ -687,7 +686,7 @@ func TestUpdateCertificate(t *testing.T) {
 				},
 			},
 			clientObjs: []client.Object{},
-			setupMock:  func(sdk *sdkmocks.MockCertificatesSDK) {},
+			setupMock:  func(sdk *mocks.MockCertificatesSDK) {},
 			wantErr:    "can't update KongCertificate",
 		},
 		{
@@ -711,7 +710,7 @@ func TestUpdateCertificate(t *testing.T) {
 				},
 			},
 			clientObjs: []client.Object{},
-			setupMock:  func(sdk *sdkmocks.MockCertificatesSDK) {},
+			setupMock:  func(sdk *mocks.MockCertificatesSDK) {},
 			wantErr:    "failed to fetch Secret default/missing-secret",
 		},
 		{
@@ -744,7 +743,7 @@ func TestUpdateCertificate(t *testing.T) {
 				},
 			},
 			clientObjs: []client.Object{},
-			setupMock: func(sdk *sdkmocks.MockCertificatesSDK) {
+			setupMock: func(sdk *mocks.MockCertificatesSDK) {
 				sdk.EXPECT().UpsertCertificate(mock.Anything, mock.Anything).Return(
 					nil,
 					fmt.Errorf("konnect API error"),
@@ -757,7 +756,7 @@ func TestUpdateCertificate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tt.clientObjs...).Build()
-			sdk := sdkmocks.NewMockCertificatesSDK(t)
+			sdk := mocks.NewMockCertificatesSDK(t)
 			tt.setupMock(sdk)
 
 			err := updateCertificate(ctx, cl, sdk, tt.cert)
@@ -778,13 +777,13 @@ func TestCreateCertificate(t *testing.T) {
 	_ = configurationv1alpha1.AddToScheme(scheme)
 	_ = corev1.AddToScheme(scheme)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	tests := []struct {
 		name       string
 		cert       *configurationv1alpha1.KongCertificate
 		clientObjs []client.Object
-		setupMock  func(*sdkmocks.MockCertificatesSDK)
+		setupMock  func(*mocks.MockCertificatesSDK)
 		wantErr    string
 		wantID     string
 	}{
@@ -815,7 +814,7 @@ func TestCreateCertificate(t *testing.T) {
 				},
 			},
 			clientObjs: []client.Object{},
-			setupMock: func(sdk *sdkmocks.MockCertificatesSDK) {
+			setupMock: func(sdk *mocks.MockCertificatesSDK) {
 				sdk.EXPECT().ListCertificate(mock.Anything, mock.Anything).Return(
 					&sdkkonnectops.ListCertificateResponse{
 						Object: &sdkkonnectops.ListCertificateResponseBody{
@@ -866,7 +865,7 @@ func TestCreateCertificate(t *testing.T) {
 					},
 				},
 			},
-			setupMock: func(sdk *sdkmocks.MockCertificatesSDK) {
+			setupMock: func(sdk *mocks.MockCertificatesSDK) {
 				sdk.EXPECT().ListCertificate(mock.Anything, mock.Anything).Return(
 					&sdkkonnectops.ListCertificateResponse{
 						Object: &sdkkonnectops.ListCertificateResponseBody{
@@ -912,7 +911,7 @@ func TestCreateCertificate(t *testing.T) {
 				},
 			},
 			clientObjs: []client.Object{},
-			setupMock: func(sdk *sdkmocks.MockCertificatesSDK) {
+			setupMock: func(sdk *mocks.MockCertificatesSDK) {
 				sdk.EXPECT().ListCertificate(mock.Anything, mock.Anything).Return(
 					&sdkkonnectops.ListCertificateResponse{
 						Object: &sdkkonnectops.ListCertificateResponseBody{
@@ -947,7 +946,7 @@ func TestCreateCertificate(t *testing.T) {
 				},
 			},
 			clientObjs: []client.Object{},
-			setupMock:  func(sdk *sdkmocks.MockCertificatesSDK) {},
+			setupMock:  func(sdk *mocks.MockCertificatesSDK) {},
 			wantErr:    "can't create KongCertificate",
 		},
 		{
@@ -971,7 +970,7 @@ func TestCreateCertificate(t *testing.T) {
 				},
 			},
 			clientObjs: []client.Object{},
-			setupMock: func(sdk *sdkmocks.MockCertificatesSDK) {
+			setupMock: func(sdk *mocks.MockCertificatesSDK) {
 				sdk.EXPECT().ListCertificate(mock.Anything, mock.Anything).Return(
 					nil,
 					fmt.Errorf("konnect list error"),
@@ -1000,7 +999,7 @@ func TestCreateCertificate(t *testing.T) {
 				},
 			},
 			clientObjs: []client.Object{},
-			setupMock: func(sdk *sdkmocks.MockCertificatesSDK) {
+			setupMock: func(sdk *mocks.MockCertificatesSDK) {
 				sdk.EXPECT().ListCertificate(mock.Anything, mock.Anything).Return(
 					&sdkkonnectops.ListCertificateResponse{
 						Object: &sdkkonnectops.ListCertificateResponseBody{
@@ -1034,7 +1033,7 @@ func TestCreateCertificate(t *testing.T) {
 				},
 			},
 			clientObjs: []client.Object{},
-			setupMock: func(sdk *sdkmocks.MockCertificatesSDK) {
+			setupMock: func(sdk *mocks.MockCertificatesSDK) {
 				sdk.EXPECT().ListCertificate(mock.Anything, mock.Anything).Return(
 					&sdkkonnectops.ListCertificateResponse{
 						Object: &sdkkonnectops.ListCertificateResponseBody{
@@ -1073,7 +1072,7 @@ func TestCreateCertificate(t *testing.T) {
 				},
 			},
 			clientObjs: []client.Object{},
-			setupMock: func(sdk *sdkmocks.MockCertificatesSDK) {
+			setupMock: func(sdk *mocks.MockCertificatesSDK) {
 				sdk.EXPECT().ListCertificate(mock.Anything, mock.Anything).Return(
 					&sdkkonnectops.ListCertificateResponse{
 						Object: &sdkkonnectops.ListCertificateResponseBody{
@@ -1116,7 +1115,7 @@ func TestCreateCertificate(t *testing.T) {
 				},
 			},
 			clientObjs: []client.Object{},
-			setupMock: func(sdk *sdkmocks.MockCertificatesSDK) {
+			setupMock: func(sdk *mocks.MockCertificatesSDK) {
 				sdk.EXPECT().ListCertificate(mock.Anything, mock.Anything).Return(
 					&sdkkonnectops.ListCertificateResponse{
 						Object: &sdkkonnectops.ListCertificateResponseBody{
@@ -1139,7 +1138,7 @@ func TestCreateCertificate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tt.clientObjs...).Build()
-			sdk := sdkmocks.NewMockCertificatesSDK(t)
+			sdk := mocks.NewMockCertificatesSDK(t)
 			tt.setupMock(sdk)
 
 			err := createCertificate(ctx, cl, sdk, tt.cert)
@@ -1157,8 +1156,8 @@ func TestCreateCertificate(t *testing.T) {
 }
 
 func TestAdoptKongCertificateOverride(t *testing.T) {
-	ctx := context.Background()
-	sdk := sdkmocks.NewMockCertificatesSDK(t)
+	ctx := t.Context()
+	sdk := mocks.NewMockCertificatesSDK(t)
 	sdk.EXPECT().GetCertificate(mock.Anything, "konnect-cert-id", "cp-1").Return(
 		&sdkkonnectops.GetCertificateResponse{
 			Certificate: &sdkkonnectcomp.Certificate{
@@ -1210,10 +1209,10 @@ func TestAdoptKongCertificateOverride(t *testing.T) {
 }
 
 func TestAdoptKongCertificateMatchSuccess(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	certAlt := "alt-cert"
 	keyAlt := "alt-key"
-	sdk := sdkmocks.NewMockCertificatesSDK(t)
+	sdk := mocks.NewMockCertificatesSDK(t)
 	sdk.EXPECT().GetCertificate(mock.Anything, "konnect-cert-id", "cp-1").Return(
 		&sdkkonnectops.GetCertificateResponse{
 			Certificate: &sdkkonnectcomp.Certificate{
@@ -1263,8 +1262,8 @@ func TestAdoptKongCertificateMatchSuccess(t *testing.T) {
 }
 
 func TestAdoptKongCertificateMatchMismatch(t *testing.T) {
-	ctx := context.Background()
-	sdk := sdkmocks.NewMockCertificatesSDK(t)
+	ctx := t.Context()
+	sdk := mocks.NewMockCertificatesSDK(t)
 	sdk.EXPECT().GetCertificate(mock.Anything, "konnect-cert-id", "cp-1").Return(
 		&sdkkonnectops.GetCertificateResponse{
 			Certificate: &sdkkonnectcomp.Certificate{
@@ -1312,8 +1311,8 @@ func TestAdoptKongCertificateMatchMismatch(t *testing.T) {
 }
 
 func TestAdoptKongCertificateUIDConflict(t *testing.T) {
-	ctx := context.Background()
-	sdk := sdkmocks.NewMockCertificatesSDK(t)
+	ctx := t.Context()
+	sdk := mocks.NewMockCertificatesSDK(t)
 	sdk.EXPECT().GetCertificate(mock.Anything, "konnect-cert-id", "cp-1").Return(
 		&sdkkonnectops.GetCertificateResponse{
 			Certificate: &sdkkonnectcomp.Certificate{
@@ -1362,8 +1361,8 @@ func TestAdoptKongCertificateUIDConflict(t *testing.T) {
 }
 
 func TestAdoptKongCertificateFetchFailure(t *testing.T) {
-	ctx := context.Background()
-	sdk := sdkmocks.NewMockCertificatesSDK(t)
+	ctx := t.Context()
+	sdk := mocks.NewMockCertificatesSDK(t)
 	sdk.EXPECT().GetCertificate(mock.Anything, "konnect-cert-id", "cp-1").Return(
 		(*sdkkonnectops.GetCertificateResponse)(nil),
 		&sdkkonnecterrs.NotFoundError{},

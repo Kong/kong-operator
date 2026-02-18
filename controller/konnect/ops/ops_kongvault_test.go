@@ -7,6 +7,7 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -18,7 +19,6 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
-	"github.com/kong/kong-operator/test/mocks/sdkmocks"
 )
 
 func mustConvertKongVaultToVaultInput(t *testing.T, vault *configurationv1alpha1.KongVault) sdkkonnectcomp.Vault {
@@ -31,14 +31,14 @@ func mustConvertKongVaultToVaultInput(t *testing.T, vault *configurationv1alpha1
 func TestCreateKongVault(t *testing.T) {
 	testCases := []struct {
 		name          string
-		mockVaultPair func(*testing.T) (*sdkmocks.MockVaultSDK, *configurationv1alpha1.KongVault)
+		mockVaultPair func(*testing.T) (*mocks.MockVaultsSDK, *configurationv1alpha1.KongVault)
 		expectedErr   bool
 		assertions    func(*testing.T, *configurationv1alpha1.KongVault)
 	}{
 		{
 			name: "success",
-			mockVaultPair: func(t *testing.T) (*sdkmocks.MockVaultSDK, *configurationv1alpha1.KongVault) {
-				sdk := sdkmocks.NewMockVaultSDK(t)
+			mockVaultPair: func(t *testing.T) (*mocks.MockVaultsSDK, *configurationv1alpha1.KongVault) {
+				sdk := mocks.NewMockVaultsSDK(t)
 				vault := &configurationv1alpha1.KongVault{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "vault-1",
@@ -75,7 +75,7 @@ func TestCreateKongVault(t *testing.T) {
 		},
 		{
 			name: "failed - no control plane ID in Konnect status",
-			mockVaultPair: func(t *testing.T) (*sdkmocks.MockVaultSDK, *configurationv1alpha1.KongVault) {
+			mockVaultPair: func(t *testing.T) (*mocks.MockVaultsSDK, *configurationv1alpha1.KongVault) {
 				vault := &configurationv1alpha1.KongVault{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "vault-no-cpid",
@@ -89,7 +89,7 @@ func TestCreateKongVault(t *testing.T) {
 					},
 					Status: configurationv1alpha1.KongVaultStatus{},
 				}
-				return sdkmocks.NewMockVaultSDK(t), vault
+				return mocks.NewMockVaultsSDK(t), vault
 			},
 			expectedErr: true,
 			assertions: func(t *testing.T, vault *configurationv1alpha1.KongVault) {
@@ -98,8 +98,8 @@ func TestCreateKongVault(t *testing.T) {
 		},
 		{
 			name: "fail - upstream returns non-OK response",
-			mockVaultPair: func(t *testing.T) (*sdkmocks.MockVaultSDK, *configurationv1alpha1.KongVault) {
-				sdk := sdkmocks.NewMockVaultSDK(t)
+			mockVaultPair: func(t *testing.T) (*mocks.MockVaultsSDK, *configurationv1alpha1.KongVault) {
+				sdk := mocks.NewMockVaultsSDK(t)
 				vault := &configurationv1alpha1.KongVault{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "vault-1",
@@ -154,14 +154,14 @@ func TestCreateKongVault(t *testing.T) {
 func TestUpdateKongVault(t *testing.T) {
 	testCases := []struct {
 		name          string
-		mockVaultPair func(*testing.T) (*sdkmocks.MockVaultSDK, *configurationv1alpha1.KongVault)
+		mockVaultPair func(*testing.T) (*mocks.MockVaultsSDK, *configurationv1alpha1.KongVault)
 		expectedErr   bool
 		assertions    func(*testing.T, *configurationv1alpha1.KongVault)
 	}{
 		{
 			name: "success",
-			mockVaultPair: func(t *testing.T) (*sdkmocks.MockVaultSDK, *configurationv1alpha1.KongVault) {
-				sdk := sdkmocks.NewMockVaultSDK(t)
+			mockVaultPair: func(t *testing.T) (*mocks.MockVaultsSDK, *configurationv1alpha1.KongVault) {
+				sdk := mocks.NewMockVaultsSDK(t)
 				vault := &configurationv1alpha1.KongVault{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "vault-1",
@@ -207,8 +207,8 @@ func TestUpdateKongVault(t *testing.T) {
 		},
 		{
 			name: "fail - upstream returns non-OK response",
-			mockVaultPair: func(t *testing.T) (*sdkmocks.MockVaultSDK, *configurationv1alpha1.KongVault) {
-				sdk := sdkmocks.NewMockVaultSDK(t)
+			mockVaultPair: func(t *testing.T) (*mocks.MockVaultsSDK, *configurationv1alpha1.KongVault) {
+				sdk := mocks.NewMockVaultsSDK(t)
 				vault := &configurationv1alpha1.KongVault{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "vault-1",
@@ -267,14 +267,14 @@ func TestAdoptKongVault(t *testing.T) {
 	ctx := t.Context()
 	testCases := []struct {
 		name          string
-		mockVaultPair func(*testing.T) (*sdkmocks.MockVaultSDK, *configurationv1alpha1.KongVault)
-		assertions    func(*testing.T, *sdkmocks.MockVaultSDK, *configurationv1alpha1.KongVault)
+		mockVaultPair func(*testing.T) (*mocks.MockVaultsSDK, *configurationv1alpha1.KongVault)
+		assertions    func(*testing.T, *mocks.MockVaultsSDK, *configurationv1alpha1.KongVault)
 		expectedError error
 	}{
 		{
 			name: "override success",
-			mockVaultPair: func(t *testing.T) (*sdkmocks.MockVaultSDK, *configurationv1alpha1.KongVault) {
-				sdk := sdkmocks.NewMockVaultSDK(t)
+			mockVaultPair: func(t *testing.T) (*mocks.MockVaultsSDK, *configurationv1alpha1.KongVault) {
+				sdk := mocks.NewMockVaultsSDK(t)
 				vault := &configurationv1alpha1.KongVault{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "vault-override",
@@ -316,14 +316,14 @@ func TestAdoptKongVault(t *testing.T) {
 				}).Return(&sdkkonnectops.UpsertVaultResponse{}, nil)
 				return sdk, vault
 			},
-			assertions: func(t *testing.T, _ *sdkmocks.MockVaultSDK, vault *configurationv1alpha1.KongVault) {
+			assertions: func(t *testing.T, _ *mocks.MockVaultsSDK, vault *configurationv1alpha1.KongVault) {
 				assert.Equal(t, "vault-123", vault.GetKonnectID())
 			},
 		},
 		{
 			name: "match success",
-			mockVaultPair: func(t *testing.T) (*sdkmocks.MockVaultSDK, *configurationv1alpha1.KongVault) {
-				sdk := sdkmocks.NewMockVaultSDK(t)
+			mockVaultPair: func(t *testing.T) (*mocks.MockVaultsSDK, *configurationv1alpha1.KongVault) {
+				sdk := mocks.NewMockVaultsSDK(t)
 				vault := &configurationv1alpha1.KongVault{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "vault-match",
@@ -361,15 +361,15 @@ func TestAdoptKongVault(t *testing.T) {
 					}, nil)
 				return sdk, vault
 			},
-			assertions: func(t *testing.T, sdk *sdkmocks.MockVaultSDK, vault *configurationv1alpha1.KongVault) {
+			assertions: func(t *testing.T, sdk *mocks.MockVaultsSDK, vault *configurationv1alpha1.KongVault) {
 				assert.Equal(t, "vault-456", vault.GetKonnectID())
 				sdk.AssertNotCalled(t, "UpsertVault", mock.Anything, mock.Anything)
 			},
 		},
 		{
 			name: "match mismatch",
-			mockVaultPair: func(t *testing.T) (*sdkmocks.MockVaultSDK, *configurationv1alpha1.KongVault) {
-				sdk := sdkmocks.NewMockVaultSDK(t)
+			mockVaultPair: func(t *testing.T) (*mocks.MockVaultsSDK, *configurationv1alpha1.KongVault) {
+				sdk := mocks.NewMockVaultsSDK(t)
 				vault := &configurationv1alpha1.KongVault{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "vault-mismatch",
@@ -406,15 +406,15 @@ func TestAdoptKongVault(t *testing.T) {
 					}, nil)
 				return sdk, vault
 			},
-			assertions: func(t *testing.T, _ *sdkmocks.MockVaultSDK, vault *configurationv1alpha1.KongVault) {
+			assertions: func(t *testing.T, _ *mocks.MockVaultsSDK, vault *configurationv1alpha1.KongVault) {
 				assert.Empty(t, vault.GetKonnectID())
 			},
 			expectedError: KonnectEntityAdoptionNotMatchError{KonnectID: "vault-789"},
 		},
 		{
 			name: "fetch failure",
-			mockVaultPair: func(t *testing.T) (*sdkmocks.MockVaultSDK, *configurationv1alpha1.KongVault) {
-				sdk := sdkmocks.NewMockVaultSDK(t)
+			mockVaultPair: func(t *testing.T) (*mocks.MockVaultsSDK, *configurationv1alpha1.KongVault) {
+				sdk := mocks.NewMockVaultsSDK(t)
 				vault := &configurationv1alpha1.KongVault{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "vault-fetch-fail",
@@ -447,7 +447,7 @@ func TestAdoptKongVault(t *testing.T) {
 					})
 				return sdk, vault
 			},
-			assertions: func(t *testing.T, _ *sdkmocks.MockVaultSDK, vault *configurationv1alpha1.KongVault) {
+			assertions: func(t *testing.T, _ *mocks.MockVaultsSDK, vault *configurationv1alpha1.KongVault) {
 				assert.Empty(t, vault.GetKonnectID())
 			},
 			expectedError: KonnectEntityAdoptionFetchError{
@@ -456,8 +456,8 @@ func TestAdoptKongVault(t *testing.T) {
 		},
 		{
 			name: "uid conflict",
-			mockVaultPair: func(t *testing.T) (*sdkmocks.MockVaultSDK, *configurationv1alpha1.KongVault) {
-				sdk := sdkmocks.NewMockVaultSDK(t)
+			mockVaultPair: func(t *testing.T) (*mocks.MockVaultsSDK, *configurationv1alpha1.KongVault) {
+				sdk := mocks.NewMockVaultsSDK(t)
 				vault := &configurationv1alpha1.KongVault{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "vault-uid-conflict",
@@ -495,7 +495,7 @@ func TestAdoptKongVault(t *testing.T) {
 					}, nil)
 				return sdk, vault
 			},
-			assertions: func(t *testing.T, _ *sdkmocks.MockVaultSDK, vault *configurationv1alpha1.KongVault) {
+			assertions: func(t *testing.T, _ *mocks.MockVaultsSDK, vault *configurationv1alpha1.KongVault) {
 				assert.Empty(t, vault.GetKonnectID())
 			},
 			expectedError: KonnectEntityAdoptionUIDTagConflictError{
@@ -505,8 +505,8 @@ func TestAdoptKongVault(t *testing.T) {
 		},
 		{
 			name: "missing control plane id",
-			mockVaultPair: func(t *testing.T) (*sdkmocks.MockVaultSDK, *configurationv1alpha1.KongVault) {
-				sdk := sdkmocks.NewMockVaultSDK(t)
+			mockVaultPair: func(t *testing.T) (*mocks.MockVaultsSDK, *configurationv1alpha1.KongVault) {
+				sdk := mocks.NewMockVaultsSDK(t)
 				vault := &configurationv1alpha1.KongVault{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "vault-no-cp",
@@ -529,7 +529,7 @@ func TestAdoptKongVault(t *testing.T) {
 				}
 				return sdk, vault
 			},
-			assertions: func(t *testing.T, _ *sdkmocks.MockVaultSDK, vault *configurationv1alpha1.KongVault) {
+			assertions: func(t *testing.T, _ *mocks.MockVaultsSDK, vault *configurationv1alpha1.KongVault) {
 				assert.Empty(t, vault.GetKonnectID())
 			},
 			expectedError: KonnectEntityAdoptionMissingControlPlaneIDError{},
@@ -552,13 +552,13 @@ func TestAdoptKongVault(t *testing.T) {
 func TestDeleteKongVault(t *testing.T) {
 	testCases := []struct {
 		name          string
-		mockVaultPair func(*testing.T) (*sdkmocks.MockVaultSDK, *configurationv1alpha1.KongVault)
+		mockVaultPair func(*testing.T) (*mocks.MockVaultsSDK, *configurationv1alpha1.KongVault)
 		expectedErr   bool
 	}{
 		{
 			name: "success",
-			mockVaultPair: func(t *testing.T) (*sdkmocks.MockVaultSDK, *configurationv1alpha1.KongVault) {
-				sdk := sdkmocks.NewMockVaultSDK(t)
+			mockVaultPair: func(t *testing.T) (*mocks.MockVaultsSDK, *configurationv1alpha1.KongVault) {
+				sdk := mocks.NewMockVaultsSDK(t)
 				vault := &configurationv1alpha1.KongVault{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "vault-1",
@@ -581,8 +581,8 @@ func TestDeleteKongVault(t *testing.T) {
 		},
 		{
 			name: "fail",
-			mockVaultPair: func(t *testing.T) (*sdkmocks.MockVaultSDK, *configurationv1alpha1.KongVault) {
-				sdk := sdkmocks.NewMockVaultSDK(t)
+			mockVaultPair: func(t *testing.T) (*mocks.MockVaultsSDK, *configurationv1alpha1.KongVault) {
+				sdk := mocks.NewMockVaultsSDK(t)
 				vault := &configurationv1alpha1.KongVault{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "vault-1",
@@ -608,8 +608,8 @@ func TestDeleteKongVault(t *testing.T) {
 		},
 		{
 			name: "not found error treated as successful delete",
-			mockVaultPair: func(t *testing.T) (*sdkmocks.MockVaultSDK, *configurationv1alpha1.KongVault) {
-				sdk := sdkmocks.NewMockVaultSDK(t)
+			mockVaultPair: func(t *testing.T) (*mocks.MockVaultsSDK, *configurationv1alpha1.KongVault) {
+				sdk := mocks.NewMockVaultsSDK(t)
 				vault := &configurationv1alpha1.KongVault{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "vault-1",

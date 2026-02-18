@@ -1,12 +1,12 @@
 package ops
 
 import (
-	"context"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -16,12 +16,11 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
-	sdkmocks "github.com/kong/kong-operator/test/mocks/sdkmocks"
 )
 
 func TestAdoptKongSNIOverride(t *testing.T) {
-	ctx := context.Background()
-	sdk := sdkmocks.NewMockSNIsSDK(t)
+	ctx := t.Context()
+	sdk := mocks.NewMockSNIsSDK(t)
 	sdk.EXPECT().GetSniWithCertificate(mock.Anything, mock.MatchedBy(func(req sdkkonnectops.GetSniWithCertificateRequest) bool {
 		return req.ControlPlaneID == "cp-1" &&
 			req.CertificateID == "cert-1" &&
@@ -76,8 +75,8 @@ func TestAdoptKongSNIOverride(t *testing.T) {
 }
 
 func TestAdoptKongSNIMatchSuccess(t *testing.T) {
-	ctx := context.Background()
-	sdk := sdkmocks.NewMockSNIsSDK(t)
+	ctx := t.Context()
+	sdk := mocks.NewMockSNIsSDK(t)
 	sdk.EXPECT().GetSniWithCertificate(mock.Anything, mock.Anything).Return(
 		&sdkkonnectops.GetSniWithCertificateResponse{
 			Sni: &sdkkonnectcomp.Sni{
@@ -122,8 +121,8 @@ func TestAdoptKongSNIMatchSuccess(t *testing.T) {
 }
 
 func TestAdoptKongSNIMatchMismatch(t *testing.T) {
-	ctx := context.Background()
-	sdk := sdkmocks.NewMockSNIsSDK(t)
+	ctx := t.Context()
+	sdk := mocks.NewMockSNIsSDK(t)
 	sdk.EXPECT().GetSniWithCertificate(mock.Anything, mock.Anything).Return(
 		&sdkkonnectops.GetSniWithCertificateResponse{
 			Sni: &sdkkonnectcomp.Sni{
@@ -170,8 +169,8 @@ func TestAdoptKongSNIMatchMismatch(t *testing.T) {
 }
 
 func TestAdoptKongSNIUIDConflict(t *testing.T) {
-	ctx := context.Background()
-	sdk := sdkmocks.NewMockSNIsSDK(t)
+	ctx := t.Context()
+	sdk := mocks.NewMockSNIsSDK(t)
 	sdk.EXPECT().GetSniWithCertificate(mock.Anything, mock.Anything).Return(
 		&sdkkonnectops.GetSniWithCertificateResponse{
 			Sni: &sdkkonnectcomp.Sni{
@@ -219,8 +218,8 @@ func TestAdoptKongSNIUIDConflict(t *testing.T) {
 }
 
 func TestAdoptKongSNIFetchFailure(t *testing.T) {
-	ctx := context.Background()
-	sdk := sdkmocks.NewMockSNIsSDK(t)
+	ctx := t.Context()
+	sdk := mocks.NewMockSNIsSDK(t)
 	sdk.EXPECT().GetSniWithCertificate(mock.Anything, mock.Anything).Return(
 		(*sdkkonnectops.GetSniWithCertificateResponse)(nil),
 		&sdkkonnecterrs.NotFoundError{},
@@ -260,8 +259,8 @@ func TestAdoptKongSNIFetchFailure(t *testing.T) {
 }
 
 func TestAdoptKongSNIMissingCertificateID(t *testing.T) {
-	ctx := context.Background()
-	sdk := sdkmocks.NewMockSNIsSDK(t)
+	ctx := t.Context()
+	sdk := mocks.NewMockSNIsSDK(t)
 
 	sni := &configurationv1alpha1.KongSNI{
 		ObjectMeta: metav1.ObjectMeta{
