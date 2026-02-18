@@ -79,14 +79,14 @@ func (r *Route) useSSLProtocol() {
 	}
 
 	if grpc {
-		prots = append(prots, kong.String("grpcs"))
+		prots = append(prots, new("grpcs"))
 	}
 	if http {
-		prots = append(prots, kong.String("https"))
+		prots = append(prots, new("https"))
 	}
 
 	if !grpc && !http {
-		prots = append(prots, kong.String("https"))
+		prots = append(prots, new("https"))
 	}
 
 	r.Protocols = prots
@@ -104,9 +104,9 @@ func (r *Route) overrideStripPath(anns map[string]string) {
 	stripPathValue = strings.ToLower(stripPathValue)
 	switch stripPathValue {
 	case "true":
-		r.StripPath = kong.Bool(true)
+		r.StripPath = new(true)
 	case "false":
-		r.StripPath = kong.Bool(false)
+		r.StripPath = new(false)
 	default:
 		return
 	}
@@ -122,7 +122,7 @@ func (r *Route) overrideProtocols(anns map[string]string) {
 		if !util.ValidateProtocol(prot) {
 			return
 		}
-		prots = append(prots, kong.String(prot))
+		prots = append(prots, new(prot))
 	}
 
 	r.Protocols = prots
@@ -130,7 +130,7 @@ func (r *Route) overrideProtocols(anns map[string]string) {
 
 func (r *Route) overrideHTTPSRedirectCode(anns map[string]string) {
 	if annotations.HasForceSSLRedirectAnnotation(anns) {
-		r.HTTPSRedirectStatusCode = kong.Int(302)
+		r.HTTPSRedirectStatusCode = new(302)
 		r.useSSLProtocol()
 	}
 
@@ -150,7 +150,7 @@ func (r *Route) overrideHTTPSRedirectCode(anns map[string]string) {
 		return
 	}
 
-	r.HTTPSRedirectStatusCode = kong.Int(statusCode)
+	r.HTTPSRedirectStatusCode = new(statusCode)
 }
 
 func (r *Route) overridePreserveHost(anns map[string]string) {
@@ -161,9 +161,9 @@ func (r *Route) overridePreserveHost(anns map[string]string) {
 	preserveHostValue = strings.ToLower(preserveHostValue)
 	switch preserveHostValue {
 	case "true":
-		r.PreserveHost = kong.Bool(true)
+		r.PreserveHost = new(true)
 	case "false":
-		r.PreserveHost = kong.Bool(false)
+		r.PreserveHost = new(false)
 	default:
 		return
 	}
@@ -179,7 +179,7 @@ func (r *Route) overrideRegexPriority(anns map[string]string) {
 		return
 	}
 
-	r.RegexPriority = kong.Int(regexPriority)
+	r.RegexPriority = new(regexPriority)
 }
 
 func (r *Route) overrideMethods(logger logr.Logger, anns map[string]string) {
@@ -190,7 +190,7 @@ func (r *Route) overrideMethods(logger logr.Logger, anns map[string]string) {
 	var methods []*string
 	for _, method := range annMethods {
 		if validMethods.MatchString(method) {
-			methods = append(methods, kong.String(method))
+			methods = append(methods, new(method))
 		} else {
 			// if any method is invalid (not an uppercase alpha string),
 			// discard everything
@@ -214,7 +214,7 @@ func (r *Route) overrideSNIs(logger logr.Logger, anns map[string]string) {
 	var snis []*string
 	for _, sni := range annSNIs {
 		if validSNIs.MatchString(sni) {
-			snis = append(snis, kong.String(sni))
+			snis = append(snis, new(sni))
 		} else {
 			// SNI is not a valid hostname
 			logger.Error(nil, "Invalid SNI", "route_name", r.Name, "sni", sni)
@@ -270,7 +270,7 @@ func (r *Route) overrideRequestBuffering(logger logr.Logger, anns map[string]str
 		return
 	}
 
-	r.RequestBuffering = kong.Bool(isEnabled)
+	r.RequestBuffering = new(isEnabled)
 }
 
 // overrideResponseBuffering ensures defaults for the response_buffering option.
@@ -288,7 +288,7 @@ func (r *Route) overrideResponseBuffering(logger logr.Logger, anns map[string]st
 		return
 	}
 
-	r.ResponseBuffering = kong.Bool(isEnabled)
+	r.ResponseBuffering = new(isEnabled)
 }
 
 // overrideHosts appends Host-Aliases to Hosts.
@@ -309,7 +309,7 @@ func (r *Route) overrideHosts(logger logr.Logger, anns map[string]string) {
 				return hosts
 			}
 		}
-		return append(hosts, kong.String(host))
+		return append(hosts, new(host))
 	}
 
 	// Merge hosts and host-aliases
@@ -346,5 +346,5 @@ func (r *Route) overridePathHandling(logger logr.Logger, anns map[string]string)
 		return
 	}
 
-	r.PathHandling = kong.String(val)
+	r.PathHandling = new(val)
 }

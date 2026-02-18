@@ -62,26 +62,26 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 		{
 			name: "sanitizes all consumers and certificates and copies all other fields",
 			in: KongState{
-				Services:       []Service{{Service: kong.Service{ID: kong.String("1")}}},
-				Upstreams:      []Upstream{{Upstream: kong.Upstream{ID: kong.String("1")}}},
-				Certificates:   []Certificate{{Certificate: kong.Certificate{ID: kong.String("1"), Key: kong.String("secret")}}},
-				CACertificates: []kong.CACertificate{{ID: kong.String("1")}},
-				Plugins:        []Plugin{{Plugin: kong.Plugin{ID: kong.String("1"), Config: map[string]any{"key": "secret"}}}},
+				Services:       []Service{{Service: kong.Service{ID: new("1")}}},
+				Upstreams:      []Upstream{{Upstream: kong.Upstream{ID: new("1")}}},
+				Certificates:   []Certificate{{Certificate: kong.Certificate{ID: new("1"), Key: new("secret")}}},
+				CACertificates: []kong.CACertificate{{ID: new("1")}},
+				Plugins:        []Plugin{{Plugin: kong.Plugin{ID: new("1"), Config: map[string]any{"key": "secret"}}}},
 				Consumers: []Consumer{{
 					KeyAuths: []*KeyAuth{
 						{
-							KeyAuth: kong.KeyAuth{ID: kong.String("1"), Key: kong.String("secret")},
+							KeyAuth: kong.KeyAuth{ID: new("1"), Key: new("secret")},
 						},
 					},
 				}},
-				Licenses: []License{{kong.License{ID: kong.String("1"), Payload: kong.String("secret")}}},
+				Licenses: []License{{kong.License{ID: new("1"), Payload: new("secret")}}},
 				ConsumerGroups: []ConsumerGroup{{
-					ConsumerGroup: kong.ConsumerGroup{ID: kong.String("1"), Name: kong.String("consumer-group")},
+					ConsumerGroup: kong.ConsumerGroup{ID: new("1"), Name: new("consumer-group")},
 				}},
 				Vaults: []Vault{
 					{
 						Vault: kong.Vault{
-							Name: kong.String("test-vault"), Prefix: kong.String("test-vault"),
+							Name: new("test-vault"), Prefix: new("test-vault"),
 						},
 					},
 				},
@@ -106,28 +106,28 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 				},
 			},
 			want: KongState{
-				Services:       []Service{{Service: kong.Service{ID: kong.String("1")}}},
-				Upstreams:      []Upstream{{Upstream: kong.Upstream{ID: kong.String("1")}}},
-				Certificates:   []Certificate{{Certificate: kong.Certificate{ID: kong.String("1"), Key: redactedString}}},
-				CACertificates: []kong.CACertificate{{ID: kong.String("1")}},
-				Plugins:        []Plugin{{Plugin: kong.Plugin{ID: kong.String("1"), Config: map[string]any{"key": "secret"}}}}, // We don't redact plugins' config.
+				Services:       []Service{{Service: kong.Service{ID: new("1")}}},
+				Upstreams:      []Upstream{{Upstream: kong.Upstream{ID: new("1")}}},
+				Certificates:   []Certificate{{Certificate: kong.Certificate{ID: new("1"), Key: redactedString}}},
+				CACertificates: []kong.CACertificate{{ID: new("1")}},
+				Plugins:        []Plugin{{Plugin: kong.Plugin{ID: new("1"), Config: map[string]any{"key": "secret"}}}}, // We don't redact plugins' config.
 				Consumers: []Consumer{
 					{
 						KeyAuths: []*KeyAuth{
 							{
-								KeyAuth: kong.KeyAuth{ID: kong.String("1"), Key: kong.String("{vault://52fdfc07-2182-454f-963f-5f0f9a621d72}")},
+								KeyAuth: kong.KeyAuth{ID: new("1"), Key: new("{vault://52fdfc07-2182-454f-963f-5f0f9a621d72}")},
 							},
 						},
 					},
 				},
-				Licenses: []License{{kong.License{ID: kong.String("1"), Payload: redactedString}}},
+				Licenses: []License{{kong.License{ID: new("1"), Payload: redactedString}}},
 				ConsumerGroups: []ConsumerGroup{{
-					ConsumerGroup: kong.ConsumerGroup{ID: kong.String("1"), Name: kong.String("consumer-group")},
+					ConsumerGroup: kong.ConsumerGroup{ID: new("1"), Name: new("consumer-group")},
 				}},
 				Vaults: []Vault{
 					{
 						Vault: kong.Vault{
-							Name: kong.String("test-vault"), Prefix: kong.String("test-vault"),
+							Name: new("test-vault"), Prefix: new("test-vault"),
 						},
 					},
 				},
@@ -170,7 +170,7 @@ func BenchmarkSanitizedCopy(b *testing.B) {
 			certificates := make([]Certificate, 0, count)
 			for i := range count {
 				certificates = append(certificates,
-					Certificate{kong.Certificate{ID: kong.String(strconv.Itoa(i)), Key: kong.String("secret")}},
+					Certificate{kong.Certificate{ID: new(strconv.Itoa(i)), Key: new("secret")}},
 				)
 			}
 			return certificates
@@ -180,7 +180,7 @@ func BenchmarkSanitizedCopy(b *testing.B) {
 			for i := range count {
 				consumers = append(consumers,
 					Consumer{
-						Consumer: kong.Consumer{ID: kong.String(strconv.Itoa(i))},
+						Consumer: kong.Consumer{ID: new(strconv.Itoa(i))},
 					},
 				)
 			}
@@ -190,7 +190,7 @@ func BenchmarkSanitizedCopy(b *testing.B) {
 			licenses := make([]License, 0, count)
 			for i := range count {
 				licenses = append(licenses,
-					License{kong.License{ID: kong.String(strconv.Itoa(i)), Payload: kong.String("secret")}},
+					License{kong.License{ID: new(strconv.Itoa(i)), Payload: new("secret")}},
 				)
 			}
 			return licenses
@@ -268,7 +268,7 @@ func TestGetPluginRelations(t *testing.T) {
 						Consumers: []Consumer{
 							{
 								Consumer: kong.Consumer{
-									Username: kong.String("foo-consumer"),
+									Username: new("foo-consumer"),
 								},
 								K8sKongConsumer: k8sKongConsumer,
 							},
@@ -298,7 +298,7 @@ func TestGetPluginRelations(t *testing.T) {
 						ConsumerGroups: []ConsumerGroup{
 							{
 								ConsumerGroup: kong.ConsumerGroup{
-									Name: kong.String("foo-consumer-group"),
+									Name: new("foo-consumer-group"),
 								},
 								K8sKongConsumerGroup: k8sKongConsumerGroup,
 							},
@@ -328,7 +328,7 @@ func TestGetPluginRelations(t *testing.T) {
 						Services: []Service{
 							{
 								Service: kong.Service{
-									Name: kong.String("foo-service"),
+									Name: new("foo-service"),
 								},
 								K8sServices: map[string]*corev1.Service{
 									"foo-service": k8sService,
@@ -358,12 +358,12 @@ func TestGetPluginRelations(t *testing.T) {
 						Services: []Service{
 							{
 								Service: kong.Service{
-									Name: kong.String("foo-service"),
+									Name: new("foo-service"),
 								},
 								Routes: []Route{
 									{
 										Route: kong.Route{
-											Name: kong.String("foo-route"),
+											Name: new("foo-route"),
 										},
 										Ingress: util.K8sObjectInfo{
 											Name:      k8sIngress.Name,
@@ -399,12 +399,12 @@ func TestGetPluginRelations(t *testing.T) {
 						Services: []Service{
 							{
 								Service: kong.Service{
-									Name: kong.String("foo-service"),
+									Name: new("foo-service"),
 								},
 								Routes: []Route{
 									{
 										Route: kong.Route{
-											Name: kong.String("foo-route"),
+											Name: new("foo-route"),
 										},
 										Ingress: util.K8sObjectInfo{
 											Name:      k8sIngress.Name,
@@ -416,7 +416,7 @@ func TestGetPluginRelations(t *testing.T) {
 									},
 									{
 										Route: kong.Route{
-											Name: kong.String("bar-route"),
+											Name: new("bar-route"),
 										},
 										Ingress: util.K8sObjectInfo{
 											Name:      k8sIngress.Name,
@@ -514,19 +514,19 @@ func TestGetPluginRelations(t *testing.T) {
 						Consumers: []Consumer{
 							{
 								Consumer: kong.Consumer{
-									Username: kong.String("foo-consumer"),
+									Username: new("foo-consumer"),
 								},
 								K8sKongConsumer: k8sKongConsumer1FooBar,
 							},
 							{
 								Consumer: kong.Consumer{
-									Username: kong.String("foo-consumer"),
+									Username: new("foo-consumer"),
 								},
 								K8sKongConsumer: k8sKongConsumer2FooBar,
 							},
 							{
 								Consumer: kong.Consumer{
-									Username: kong.String("bar-consumer"),
+									Username: new("bar-consumer"),
 								},
 								K8sKongConsumer: k8sKongConsumer1Foobar,
 							},
@@ -534,19 +534,19 @@ func TestGetPluginRelations(t *testing.T) {
 						ConsumerGroups: []ConsumerGroup{
 							{
 								ConsumerGroup: kong.ConsumerGroup{
-									Name: kong.String("foo-consumer-group"),
+									Name: new("foo-consumer-group"),
 								},
 								K8sKongConsumerGroup: k8sKongConsumerGroup1FooBar,
 							},
 							{
 								ConsumerGroup: kong.ConsumerGroup{
-									Name: kong.String("foo-consumer-group"),
+									Name: new("foo-consumer-group"),
 								},
 								K8sKongConsumerGroup: k8sKongConsumerGroup2FooBar,
 							},
 							{
 								ConsumerGroup: kong.ConsumerGroup{
-									Name: kong.String("bar-consumer-group"),
+									Name: new("bar-consumer-group"),
 								},
 								K8sKongConsumerGroup: k8sKongConsumerGroup2BarBaz,
 							},
@@ -554,7 +554,7 @@ func TestGetPluginRelations(t *testing.T) {
 						Services: []Service{
 							{
 								Service: kong.Service{
-									Name: kong.String("foo-service"),
+									Name: new("foo-service"),
 								},
 								K8sServices: map[string]*corev1.Service{
 									"foo-service": k8sService,
@@ -562,7 +562,7 @@ func TestGetPluginRelations(t *testing.T) {
 								Routes: []Route{
 									{
 										Route: kong.Route{
-											Name: kong.String("foo-route"),
+											Name: new("foo-route"),
 										},
 										Ingress: util.K8sObjectInfo{
 											Name:      "some-ingress",
@@ -574,7 +574,7 @@ func TestGetPluginRelations(t *testing.T) {
 									},
 									{
 										Route: kong.Route{
-											Name: kong.String("bar-route"),
+											Name: new("bar-route"),
 										},
 										Ingress: util.K8sObjectInfo{
 											Name:      "some-ingress",
@@ -637,7 +637,7 @@ func TestGetPluginRelations(t *testing.T) {
 						Consumers: []Consumer{
 							{
 								Consumer: kong.Consumer{
-									CustomID: kong.String("1234-1234"),
+									CustomID: new("1234-1234"),
 								},
 								K8sKongConsumer: k8sKongConsumer,
 							},
@@ -645,7 +645,7 @@ func TestGetPluginRelations(t *testing.T) {
 						Plugins: []Plugin{
 							{
 								Plugin: kong.Plugin{
-									Name: kong.String("rate-limiting"),
+									Name: new("rate-limiting"),
 								},
 								K8sParent: &configurationv1.KongPlugin{
 									ObjectMeta: metav1.ObjectMeta{
@@ -657,7 +657,7 @@ func TestGetPluginRelations(t *testing.T) {
 							},
 							{
 								Plugin: kong.Plugin{
-									Name: kong.String("basic-auth"),
+									Name: new("basic-auth"),
 								},
 								K8sParent: &configurationv1.KongPlugin{
 									ObjectMeta: metav1.ObjectMeta{
@@ -693,7 +693,7 @@ func BenchmarkGetPluginRelations(b *testing.B) {
 		Consumers: []Consumer{
 			{
 				Consumer: kong.Consumer{
-					Username: kong.String("foo-consumer"),
+					Username: new("foo-consumer"),
 				},
 				K8sKongConsumer: configurationv1.KongConsumer{
 					ObjectMeta: metav1.ObjectMeta{
@@ -706,7 +706,7 @@ func BenchmarkGetPluginRelations(b *testing.B) {
 			},
 			{
 				Consumer: kong.Consumer{
-					Username: kong.String("foo-consumer"),
+					Username: new("foo-consumer"),
 				},
 				K8sKongConsumer: configurationv1.KongConsumer{
 					ObjectMeta: metav1.ObjectMeta{
@@ -719,7 +719,7 @@ func BenchmarkGetPluginRelations(b *testing.B) {
 			},
 			{
 				Consumer: kong.Consumer{
-					Username: kong.String("bar-consumer"),
+					Username: new("bar-consumer"),
 				},
 				K8sKongConsumer: configurationv1.KongConsumer{
 					ObjectMeta: metav1.ObjectMeta{
@@ -734,7 +734,7 @@ func BenchmarkGetPluginRelations(b *testing.B) {
 		ConsumerGroups: []ConsumerGroup{
 			{
 				ConsumerGroup: kong.ConsumerGroup{
-					Name: kong.String("foo-consumer-group"),
+					Name: new("foo-consumer-group"),
 				},
 				K8sKongConsumerGroup: configurationv1beta1.KongConsumerGroup{
 					ObjectMeta: metav1.ObjectMeta{
@@ -747,7 +747,7 @@ func BenchmarkGetPluginRelations(b *testing.B) {
 			},
 			{
 				ConsumerGroup: kong.ConsumerGroup{
-					Name: kong.String("foo-consumer-group"),
+					Name: new("foo-consumer-group"),
 				},
 				K8sKongConsumerGroup: configurationv1beta1.KongConsumerGroup{
 					ObjectMeta: metav1.ObjectMeta{
@@ -760,7 +760,7 @@ func BenchmarkGetPluginRelations(b *testing.B) {
 			},
 			{
 				ConsumerGroup: kong.ConsumerGroup{
-					Name: kong.String("bar-consumer-group"),
+					Name: new("bar-consumer-group"),
 				},
 				K8sKongConsumerGroup: configurationv1beta1.KongConsumerGroup{
 					ObjectMeta: metav1.ObjectMeta{
@@ -775,7 +775,7 @@ func BenchmarkGetPluginRelations(b *testing.B) {
 		Services: []Service{
 			{
 				Service: kong.Service{
-					Name: kong.String("foo-service"),
+					Name: new("foo-service"),
 				},
 				K8sServices: map[string]*corev1.Service{
 					"foo-service": {
@@ -790,7 +790,7 @@ func BenchmarkGetPluginRelations(b *testing.B) {
 				Routes: []Route{
 					{
 						Route: kong.Route{
-							Name: kong.String("foo-route"),
+							Name: new("foo-route"),
 						},
 						Ingress: util.K8sObjectInfo{
 							Name:      "some-ingress",
@@ -802,7 +802,7 @@ func BenchmarkGetPluginRelations(b *testing.B) {
 					},
 					{
 						Route: kong.Route{
-							Name: kong.String("bar-route"),
+							Name: new("bar-route"),
 						},
 						Ingress: util.K8sObjectInfo{
 							Name:      "some-ingress",
@@ -959,14 +959,14 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 			expectedKongStateConsumers: []Consumer{
 				{
 					Consumer: kong.Consumer{
-						Username: kong.String("foo"),
-						CustomID: kong.String("foo"),
+						Username: new("foo"),
+						CustomID: new("foo"),
 					},
 					KeyAuths: []*KeyAuth{
 						{
 							KeyAuth: kong.KeyAuth{
-								Key: kong.String("whatever"),
-								TTL: kong.Int(1024),
+								Key: new("whatever"),
+								TTL: new(1024),
 								Tags: util.GenerateTagsForObject(&corev1.Secret{
 									TypeMeta:   secretTypeMeta,
 									ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "fooCredSecret"},
@@ -977,11 +977,11 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 					Oauth2Creds: []*Oauth2Credential{
 						{
 							Oauth2Credential: kong.Oauth2Credential{
-								Name:         kong.String("whatever"),
-								ClientID:     kong.String("whatever"),
-								ClientSecret: kong.String("whatever"),
-								HashSecret:   kong.Bool(true),
-								RedirectURIs: []*string{kong.String("http://example.com")},
+								Name:         new("whatever"),
+								ClientID:     new("whatever"),
+								ClientSecret: new("whatever"),
+								HashSecret:   new(true),
+								RedirectURIs: []*string{new("http://example.com")},
 								Tags: util.GenerateTagsForObject(&corev1.Secret{
 									TypeMeta:   secretTypeMeta,
 									ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "barCredSecret"},
@@ -1035,7 +1035,7 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 			expectedKongStateConsumers: []Consumer{
 				{
 					Consumer: kong.Consumer{
-						Username: kong.String("foo"),
+						Username: new("foo"),
 					},
 				},
 			},
@@ -1064,7 +1064,7 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 			expectedKongStateConsumers: []Consumer{
 				{
 					Consumer: kong.Consumer{
-						Username: kong.String("foo"),
+						Username: new("foo"),
 					},
 				},
 			},
@@ -1093,7 +1093,7 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 			expectedKongStateConsumers: []Consumer{
 				{
 					Consumer: kong.Consumer{
-						Username: kong.String("foo"),
+						Username: new("foo"),
 					},
 				},
 			},
@@ -1123,13 +1123,13 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 			expectedKongStateConsumers: []Consumer{
 				{
 					Consumer: kong.Consumer{
-						Username: kong.String("foo"),
-						CustomID: kong.String("foo"),
+						Username: new("foo"),
+						CustomID: new("foo"),
 					},
 					KeyAuths: []*KeyAuth{
 						{
 							KeyAuth: kong.KeyAuth{
-								Key: kong.String("little-rabbits-be-good"),
+								Key: new("little-rabbits-be-good"),
 								Tags: util.GenerateTagsForObject(&corev1.Secret{
 									TypeMeta: secretTypeMeta,
 									ObjectMeta: metav1.ObjectMeta{
@@ -1191,8 +1191,8 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 			expectedKongStateConsumers: []Consumer{
 				{
 					Consumer: kong.Consumer{
-						Username: kong.String("baz"),
-						CustomID: kong.String("baz"),
+						Username: new("baz"),
+						CustomID: new("baz"),
 					},
 				},
 			},
@@ -1267,12 +1267,12 @@ func TestKongState_FillIDs(t *testing.T) {
 				Services: []Service{
 					{
 						Service: kong.Service{
-							Name: kong.String("service.foo"),
+							Name: new("service.foo"),
 						},
 					},
 					{
 						Service: kong.Service{
-							Name: kong.String("service.bar"),
+							Name: new("service.bar"),
 						},
 					},
 				},
@@ -1288,17 +1288,17 @@ func TestKongState_FillIDs(t *testing.T) {
 				Services: []Service{
 					{
 						Service: kong.Service{
-							Name: kong.String("service.foo"),
+							Name: new("service.foo"),
 						},
 						Routes: []Route{
 							{
 								Route: kong.Route{
-									Name: kong.String("route.foo"),
+									Name: new("route.foo"),
 								},
 							},
 							{
 								Route: kong.Route{
-									Name: kong.String("route.bar"),
+									Name: new("route.bar"),
 								},
 							},
 						},
@@ -1317,12 +1317,12 @@ func TestKongState_FillIDs(t *testing.T) {
 				Consumers: []Consumer{
 					{
 						Consumer: kong.Consumer{
-							Username: kong.String("user.foo"),
+							Username: new("user.foo"),
 						},
 					},
 					{
 						Consumer: kong.Consumer{
-							Username: kong.String("user.bar"),
+							Username: new("user.bar"),
 						},
 					},
 				},
@@ -1338,12 +1338,12 @@ func TestKongState_FillIDs(t *testing.T) {
 				Services: []Service{
 					{
 						Service: kong.Service{
-							Name: kong.String("service.foo"),
+							Name: new("service.foo"),
 						},
 						Routes: []Route{
 							{
 								Route: kong.Route{
-									Name: kong.String("route.bar"),
+									Name: new("route.bar"),
 								},
 							},
 						},
@@ -1352,7 +1352,7 @@ func TestKongState_FillIDs(t *testing.T) {
 				Consumers: []Consumer{
 					{
 						Consumer: kong.Consumer{
-							Username: kong.String("user.baz"),
+							Username: new("user.baz"),
 						},
 					},
 				},
@@ -1369,21 +1369,21 @@ func TestKongState_FillIDs(t *testing.T) {
 				Consumers: []Consumer{
 					{
 						Consumer: kong.Consumer{
-							Username: kong.String("user.0"),
+							Username: new("user.0"),
 						},
 					},
 				},
 				ConsumerGroups: []ConsumerGroup{
 					{
 						ConsumerGroup: kong.ConsumerGroup{
-							Name: kong.String("cg.0"),
+							Name: new("cg.0"),
 						},
 					},
 				},
 				Vaults: []Vault{
 					{
 						Vault: kong.Vault{
-							Prefix: kong.String("vault.0"),
+							Prefix: new("vault.0"),
 						},
 					},
 				},
@@ -1556,11 +1556,11 @@ func TestKongState_FillUpstreamOverrides(t *testing.T) {
 			kongVersion: defaultTestKongVersion,
 			upstream: Upstream{
 				Upstream: kong.Upstream{
-					Name: kong.String("foo-upstream"),
+					Name: new("foo-upstream"),
 				},
 			},
 			expectedUpstream: kong.Upstream{
-				Name: kong.String("foo-upstream"),
+				Name: new("foo-upstream"),
 			},
 		},
 		{
@@ -1568,7 +1568,7 @@ func TestKongState_FillUpstreamOverrides(t *testing.T) {
 			kongVersion: defaultTestKongVersion,
 			upstream: Upstream{
 				Upstream: kong.Upstream{
-					Name: kong.String("foo-upstream"),
+					Name: new("foo-upstream"),
 				},
 				Service: Service{
 					K8sServices: map[string]*corev1.Service{"": serviceAnnotatedWithKongUpstreamPolicy()},
@@ -1581,13 +1581,13 @@ func TestKongState_FillUpstreamOverrides(t *testing.T) {
 						Namespace: "default",
 					},
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("least-connections"),
+						Algorithm: new("least-connections"),
 					},
 				},
 			},
 			expectedUpstream: kong.Upstream{
-				Name:      kong.String("foo-upstream"),
-				Algorithm: kong.String("least-connections"),
+				Name:      new("foo-upstream"),
+				Algorithm: new("least-connections"),
 			},
 		},
 		{
@@ -1595,14 +1595,14 @@ func TestKongState_FillUpstreamOverrides(t *testing.T) {
 			kongVersion: defaultTestKongVersion,
 			upstream: Upstream{
 				Upstream: kong.Upstream{
-					Name: kong.String("foo-upstream"),
+					Name: new("foo-upstream"),
 				},
 				Service: Service{
 					K8sServices: map[string]*corev1.Service{"": serviceAnnotatedWithKongUpstreamPolicy()},
 				},
 			},
 			expectedUpstream: kong.Upstream{
-				Name: kong.String("foo-upstream"),
+				Name: new("foo-upstream"),
 			},
 			expectedFailures: []failures.ResourceFailure{
 				lo.Must(failures.NewResourceFailure(
@@ -1616,7 +1616,7 @@ func TestKongState_FillUpstreamOverrides(t *testing.T) {
 			kongVersion: defaultTestKongVersion,
 			upstream: Upstream{
 				Upstream: kong.Upstream{
-					Name: kong.String("foo-upstream"),
+					Name: new("foo-upstream"),
 				},
 				Service: Service{
 					K8sServices: map[string]*corev1.Service{"": serviceAnnotatedWithKongUpstreamPolicy()},
@@ -1629,12 +1629,12 @@ func TestKongState_FillUpstreamOverrides(t *testing.T) {
 						Namespace: "default",
 					},
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("sticky-sessions"),
+						Algorithm: new("sticky-sessions"),
 					},
 				},
 			},
 			expectedUpstream: kong.Upstream{
-				Name: kong.String("foo-upstream"),
+				Name: new("foo-upstream"),
 			},
 			expectedFailures: []failures.ResourceFailure{
 				lo.Must(failures.NewResourceFailure(
@@ -1648,7 +1648,7 @@ func TestKongState_FillUpstreamOverrides(t *testing.T) {
 			kongVersion: versions.KongStickySessionsCutoff,
 			upstream: Upstream{
 				Upstream: kong.Upstream{
-					Name: kong.String("foo-upstream"),
+					Name: new("foo-upstream"),
 				},
 				Service: Service{
 					K8sServices: map[string]*corev1.Service{"": serviceAnnotatedWithKongUpstreamPolicy()},
@@ -1661,13 +1661,13 @@ func TestKongState_FillUpstreamOverrides(t *testing.T) {
 						Namespace: "default",
 					},
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("sticky-sessions"),
+						Algorithm: new("sticky-sessions"),
 					},
 				},
 			},
 			expectedUpstream: kong.Upstream{
-				Name:      kong.String("foo-upstream"),
-				Algorithm: kong.String("sticky-sessions"),
+				Name:      new("foo-upstream"),
+				Algorithm: new("sticky-sessions"),
 			},
 		},
 	}
@@ -1722,8 +1722,8 @@ func TestFillVaults(t *testing.T) {
 			expectedTranslatedVaults: []Vault{
 				{
 					Vault: kong.Vault{
-						Name:   kong.String("env"),
-						Prefix: kong.String("env-1"),
+						Name:   new("env"),
+						Prefix: new("env-1"),
 					},
 					K8sKongVault: &configurationv1alpha1.KongVault{
 						ObjectMeta: metav1.ObjectMeta{
@@ -1766,8 +1766,8 @@ func TestFillVaults(t *testing.T) {
 			expectedTranslatedVaults: []Vault{
 				{
 					Vault: kong.Vault{
-						Name:   kong.String("env"),
-						Prefix: kong.String("env-1"),
+						Name:   new("env"),
+						Prefix: new("env-1"),
 					},
 					K8sKongVault: &configurationv1alpha1.KongVault{
 						ObjectMeta: metav1.ObjectMeta{
@@ -1850,8 +1850,8 @@ func TestFillVaults(t *testing.T) {
 			expectedTranslatedVaults: []Vault{
 				{
 					Vault: kong.Vault{
-						Name:   kong.String("env"),
-						Prefix: kong.String("env-1"),
+						Name:   new("env"),
+						Prefix: new("env-1"),
 					},
 					K8sKongVault: &configurationv1alpha1.KongVault{
 						ObjectMeta: metav1.ObjectMeta{
@@ -1935,7 +1935,7 @@ func TestFillOverrides_ServiceFailures(t *testing.T) {
 			},
 			want: Service{
 				Service: kong.Service{
-					Protocol: kong.String("wss"),
+					Protocol: new("wss"),
 				},
 			},
 		},
@@ -1962,7 +1962,7 @@ func TestFillOverrides_ServiceFailures(t *testing.T) {
 			},
 			want: Service{
 				Service: kong.Service{
-					Protocol: kong.String("http"),
+					Protocol: new("http"),
 				},
 			},
 			expectedTranslationFailureMessages: map[k8stypes.NamespacedName]string{

@@ -6,7 +6,6 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -281,7 +280,7 @@ func KonnectEntitiesTestCase(t *testing.T, params konnectEntitiesTestCaseParams)
 		func(obj client.Object) {
 			kup := obj.(*configurationv1alpha1.KongUpstream)
 			kup.Spec.Name = ks.Spec.Host
-			kup.Spec.Slots = lo.ToPtr(int64(16384))
+			kup.Spec.Slots = new(int64(16384))
 			kup.Spec.Algorithm = sdkkonnectcomp.UpstreamAlgorithmConsistentHashing.ToPointer()
 		},
 	)

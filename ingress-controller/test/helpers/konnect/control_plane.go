@@ -13,7 +13,6 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/avast/retry-go/v4"
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/adminapi"
@@ -38,7 +37,7 @@ func CreateTestControlPlane(ctx context.Context, t *testing.T, token ...string) 
 		s = sdk.New(token[0], serverURLOpt())
 	}
 
-	// TODO: Refactor this so that all tests use a commong helper for assigning test ID.
+	// TODO: Refactor this so that all tests use a common helper for assigning test ID.
 	testID := uuid.NewString()[:8]
 
 	var cpID string
@@ -46,7 +45,7 @@ func CreateTestControlPlane(ctx context.Context, t *testing.T, token ...string) 
 		createResp, err := s.ControlPlanes.CreateControlPlane(ctx,
 			sdkkonnectcomp.CreateControlPlaneRequest{
 				Name:        uuid.NewString(),
-				Description: lo.ToPtr(generateTestKonnectControlPlaneDescription(t)),
+				Description: new(generateTestKonnectControlPlaneDescription(t)),
 				Labels: map[string]string{
 					test.KonnectControlPlaneLabelCreatedInTests: "true",
 					// Add test ID label so that Konnect cleanup workflow can find

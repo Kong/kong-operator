@@ -45,7 +45,7 @@ var testKongUpstreamOK = &configurationv1alpha1.KongUpstream{
 			},
 		},
 		KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
-			Slots: lo.ToPtr(int64(12345)),
+			Slots: new(int64(12345)),
 		},
 	},
 	Status: configurationv1alpha1.KongUpstreamStatus{
@@ -116,7 +116,7 @@ var testKongUpstreamControlPlaneRefNotFound = &configurationv1alpha1.KongUpstrea
 			},
 		},
 		KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
-			Slots: lo.ToPtr(int64(12345)),
+			Slots: new(int64(12345)),
 		},
 	},
 	Status: configurationv1alpha1.KongUpstreamStatus{
@@ -148,7 +148,7 @@ var testKongUpstreamControlPlaneRefNotProgrammed = &configurationv1alpha1.KongUp
 			},
 		},
 		KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
-			Slots: lo.ToPtr(int64(12345)),
+			Slots: new(int64(12345)),
 		},
 	},
 	Status: configurationv1alpha1.KongUpstreamStatus{

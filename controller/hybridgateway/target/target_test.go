@@ -46,9 +46,9 @@ func createTestEndpointSlice(name string, ports []discoveryv1.EndpointPort, endp
 
 func createTestEndpointPort(name string, port int32, protocol corev1.Protocol) discoveryv1.EndpointPort {
 	return discoveryv1.EndpointPort{
-		Name:     ptr.To(name),
-		Port:     ptr.To(port),
-		Protocol: ptr.To(protocol),
+		Name:     new(name),
+		Port:     new(port),
+		Protocol: new(protocol),
 	}
 }
 
@@ -56,7 +56,7 @@ func createTestEndpoint(addresses []string, ready bool) discoveryv1.Endpoint {
 	return discoveryv1.Endpoint{
 		Addresses: addresses,
 		Conditions: discoveryv1.EndpointConditions{
-			Ready: ptr.To(ready),
+			Ready: new(ready),
 		},
 	}
 }
@@ -436,7 +436,7 @@ func TestExtractReadyEndpointAddresses(t *testing.T) {
 				createTestEndpointSlice("test-slice-1",
 					[]discoveryv1.EndpointPort{
 						{
-							Name:     ptr.To("http"),
+							Name:     new("http"),
 							Port:     nil, // Nil port should be skipped.
 							Protocol: ptr.To(corev1.ProtocolTCP),
 						},
@@ -1450,12 +1450,12 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 						Labels:    map[string]string{discoveryv1.LabelServiceName: "test-service"},
 					},
 					Ports: []discoveryv1.EndpointPort{
-						{Name: ptr.To("http"), Port: ptr.To[int32](8080), Protocol: ptr.To(corev1.ProtocolTCP)},
+						{Name: new("http"), Port: ptr.To[int32](8080), Protocol: ptr.To(corev1.ProtocolTCP)},
 					},
 					Endpoints: []discoveryv1.Endpoint{
 						{
 							Addresses:  []string{"10.0.1.1"},
-							Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
+							Conditions: discoveryv1.EndpointConditions{Ready: new(true)},
 						},
 					},
 				},
@@ -1526,12 +1526,12 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 						Labels:    map[string]string{discoveryv1.LabelServiceName: "headless-service"},
 					},
 					Ports: []discoveryv1.EndpointPort{
-						{Name: ptr.To("http"), Port: ptr.To[int32](8080), Protocol: ptr.To(corev1.ProtocolTCP)},
+						{Name: new("http"), Port: ptr.To[int32](8080), Protocol: ptr.To(corev1.ProtocolTCP)},
 					},
 					Endpoints: []discoveryv1.Endpoint{
 						{
 							Addresses:  []string{"10.0.1.1", "10.0.1.2"},
-							Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
+							Conditions: discoveryv1.EndpointConditions{Ready: new(true)},
 						},
 					},
 				},
@@ -1587,12 +1587,12 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 						Labels:    map[string]string{discoveryv1.LabelServiceName: "no-endpoints-service"},
 					},
 					Ports: []discoveryv1.EndpointPort{
-						{Name: ptr.To("http"), Port: ptr.To[int32](8080), Protocol: ptr.To(corev1.ProtocolTCP)},
+						{Name: new("http"), Port: ptr.To[int32](8080), Protocol: ptr.To(corev1.ProtocolTCP)},
 					},
 					Endpoints: []discoveryv1.Endpoint{
 						{
 							Addresses:  []string{"10.0.1.1"},
-							Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(false)}, // Not ready.
+							Conditions: discoveryv1.EndpointConditions{Ready: new(false)}, // Not ready.
 						},
 					},
 				},
@@ -1635,12 +1635,12 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 						Labels:    map[string]string{discoveryv1.LabelServiceName: "valid-service"},
 					},
 					Ports: []discoveryv1.EndpointPort{
-						{Name: ptr.To("http"), Port: ptr.To[int32](8080), Protocol: ptr.To(corev1.ProtocolTCP)},
+						{Name: new("http"), Port: ptr.To[int32](8080), Protocol: ptr.To(corev1.ProtocolTCP)},
 					},
 					Endpoints: []discoveryv1.Endpoint{
 						{
 							Addresses:  []string{"10.0.1.1"},
-							Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
+							Conditions: discoveryv1.EndpointConditions{Ready: new(true)},
 						},
 					},
 				},
@@ -1775,12 +1775,12 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 					Labels:    map[string]string{discoveryv1.LabelServiceName: "cross-ns-service"},
 				},
 				Ports: []discoveryv1.EndpointPort{
-					{Name: ptr.To("http"), Port: ptr.To[int32](8080), Protocol: ptr.To(corev1.ProtocolTCP)},
+					{Name: new("http"), Port: ptr.To[int32](8080), Protocol: ptr.To(corev1.ProtocolTCP)},
 				},
 				Endpoints: []discoveryv1.Endpoint{
 					{
 						Addresses:  []string{"10.0.1.1"},
-						Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
+						Conditions: discoveryv1.EndpointConditions{Ready: new(true)},
 					},
 				},
 			},
@@ -1801,7 +1801,7 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 
 			httpRoute := createTestHTTPRoute("test-route", "default")
 			backendRefs := []gwtypes.HTTPBackendRef{
-				createTestHTTPBackendRef("cross-ns-service", ptr.To("other-namespace"), ptr.To[int32](80)),
+				createTestHTTPBackendRef("cross-ns-service", new("other-namespace"), ptr.To[int32](80)),
 			}
 
 			// Call the function with ReferenceGrant enabled.
@@ -1852,7 +1852,7 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 
 			httpRoute := createTestHTTPRoute("test-route", "default")
 			backendRefs := []gwtypes.HTTPBackendRef{
-				createTestHTTPBackendRef("cross-ns-service", ptr.To("other-namespace"), ptr.To[int32](80)),
+				createTestHTTPBackendRef("cross-ns-service", new("other-namespace"), ptr.To[int32](80)),
 			}
 
 			// Call the function with ReferenceGrant enabled.
@@ -1886,7 +1886,7 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 
 			httpRoute := createTestHTTPRoute("test-route", "default")
 			backendRefs := []gwtypes.HTTPBackendRef{
-				createTestHTTPBackendRef("cross-ns-service", ptr.To("other-namespace"), ptr.To[int32](80)),
+				createTestHTTPBackendRef("cross-ns-service", new("other-namespace"), ptr.To[int32](80)),
 			}
 
 			// Call the function with ReferenceGrant enabled.

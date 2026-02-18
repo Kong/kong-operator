@@ -7,7 +7,6 @@ import (
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
-	"github.com/samber/lo"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
@@ -178,7 +177,7 @@ func getKongConsumerGroupForUID(
 		// Other fields like name might have changed in the meantime but that's OK.
 		// Those will be enforced via subsequent updates.
 		ControlPlaneID: cpID,
-		Tags:           lo.ToPtr(UIDLabelForObject(cg)),
+		Tags:           new(UIDLabelForObject(cg)),
 	}
 
 	resp, err := sdk.ListConsumerGroup(ctx, reqList)

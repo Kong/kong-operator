@@ -33,8 +33,8 @@ func TestKongCredentialHMAC(t *testing.T) {
 							Name: "test-kong-consumer",
 						},
 						KongCredentialHMACAPISpec: configurationv1alpha1.KongCredentialHMACAPISpec{
-							Secret:   lo.ToPtr("secret"),
-							Username: lo.ToPtr("test-username"),
+							Secret:   new("secret"),
+							Username: new("test-username"),
 						},
 					},
 					Status: configurationv1alpha1.KongCredentialHMACStatus{
@@ -52,7 +52,7 @@ func TestKongCredentialHMAC(t *testing.T) {
 				Update: func(c *configurationv1alpha1.KongCredentialHMAC) {
 					c.Spec.ConsumerRef.Name = "new-consumer"
 				},
-				ExpectedUpdateErrorMessage: lo.ToPtr("spec.consumerRef is immutable when an entity is already Programmed"),
+				ExpectedUpdateErrorMessage: new("spec.consumerRef is immutable when an entity is already Programmed"),
 			},
 			{
 				Name: "consumerRef change is allowed when consumer is not Programmed=True nor APIAuthValid=True",
@@ -63,8 +63,8 @@ func TestKongCredentialHMAC(t *testing.T) {
 							Name: "test-kong-consumer",
 						},
 						KongCredentialHMACAPISpec: configurationv1alpha1.KongCredentialHMACAPISpec{
-							Secret:   lo.ToPtr("secret"),
-							Username: lo.ToPtr("test-username"),
+							Secret:   new("secret"),
+							Username: new("test-username"),
 						},
 					},
 					Status: configurationv1alpha1.KongCredentialHMACStatus{
@@ -98,11 +98,11 @@ func TestKongCredentialHMAC(t *testing.T) {
 							Name: "test-kong-consumer",
 						},
 						KongCredentialHMACAPISpec: configurationv1alpha1.KongCredentialHMACAPISpec{
-							Secret: lo.ToPtr("secret"),
+							Secret: new("secret"),
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.username: Required value"),
+				ExpectedErrorMessage: new("spec.username: Required value"),
 			},
 			{
 				Name: "username is required and no error is expected when it is set",
@@ -113,8 +113,8 @@ func TestKongCredentialHMAC(t *testing.T) {
 							Name: "test-kong-consumer",
 						},
 						KongCredentialHMACAPISpec: configurationv1alpha1.KongCredentialHMACAPISpec{
-							Secret:   lo.ToPtr("secret"),
-							Username: lo.ToPtr("test-username"),
+							Secret:   new("secret"),
+							Username: new("test-username"),
 						},
 					},
 				},
@@ -134,7 +134,7 @@ func TestKongCredentialHMAC(t *testing.T) {
 							Name: "test-kong-consumer",
 						},
 						KongCredentialHMACAPISpec: configurationv1alpha1.KongCredentialHMACAPISpec{
-							Username: lo.ToPtr("user"),
+							Username: new("user"),
 							Tags: func() []string {
 								var tags []string
 								for i := range 20 {
@@ -155,7 +155,7 @@ func TestKongCredentialHMAC(t *testing.T) {
 							Name: "test-kong-consumer",
 						},
 						KongCredentialHMACAPISpec: configurationv1alpha1.KongCredentialHMACAPISpec{
-							Username: lo.ToPtr("user"),
+							Username: new("user"),
 							Tags: func() []string {
 								var tags []string
 								for i := range 21 {
@@ -166,7 +166,7 @@ func TestKongCredentialHMAC(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.tags: Too many: 21: must have at most 20 items"),
+				ExpectedErrorMessage: new("spec.tags: Too many: 21: must have at most 20 items"),
 			},
 			{
 				Name: "tags entries must not be longer than 128 characters",
@@ -177,14 +177,14 @@ func TestKongCredentialHMAC(t *testing.T) {
 							Name: "test-kong-consumer",
 						},
 						KongCredentialHMACAPISpec: configurationv1alpha1.KongCredentialHMACAPISpec{
-							Username: lo.ToPtr("user"),
+							Username: new("user"),
 							Tags: []string{
 								lo.RandomString(129, lo.AlphanumericCharset),
 							},
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("tags entries must not be longer than 128 characters"),
+				ExpectedErrorMessage: new("tags entries must not be longer than 128 characters"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)

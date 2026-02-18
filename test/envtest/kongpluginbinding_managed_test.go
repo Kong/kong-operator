@@ -7,7 +7,6 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -102,7 +101,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			Return(
 				&sdkkonnectops.CreatePluginResponse{
 					Plugin: &sdkkonnectcomp.Plugin{
-						ID: lo.ToPtr(pluginID),
+						ID: new(pluginID),
 					},
 				},
 				nil,
@@ -448,7 +447,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			Return(
 				&sdkkonnectops.CreatePluginResponse{
 					Plugin: &sdkkonnectcomp.Plugin{
-						ID: lo.ToPtr(uuid.NewString()),
+						ID: new(uuid.NewString()),
 					},
 				},
 				nil,
@@ -662,7 +661,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			Return(
 				&sdkkonnectops.CreatePluginResponse{
 					Plugin: &sdkkonnectcomp.Plugin{
-						ID: lo.ToPtr(uuid.NewString()),
+						ID: new(uuid.NewString()),
 					},
 				},
 				nil,

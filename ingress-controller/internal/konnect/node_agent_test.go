@@ -119,7 +119,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 			name: "create kic node",
 			// no existing nodes
 			initialNodesInNodeAPI: nil,
-			gatewayConfigStatus:   lo.ToPtr(clients.GatewayConfigApplyStatus{}),
+			gatewayConfigStatus:   new(clients.GatewayConfigApplyStatus{}),
 			containNodes: []*nodes.NodeItem{
 				{
 					Hostname: testHostname,
@@ -142,7 +142,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 					Version:  testKOUserAgent,
 				},
 			},
-			gatewayConfigStatus: lo.ToPtr(clients.GatewayConfigApplyStatus{TranslationFailuresOccurred: true}),
+			gatewayConfigStatus: new(clients.GatewayConfigApplyStatus{TranslationFailuresOccurred: true}),
 			containNodes: []*nodes.NodeItem{
 				{
 					Hostname: testHostname,

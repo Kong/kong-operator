@@ -91,8 +91,8 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
-						Name:     kong.String("udproute.default.single-rule.0"),
-						Protocol: kong.String("udp"),
+						Name:     new("udproute.default.single-rule.0"),
+						Protocol: new("udp"),
 					},
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service1").
@@ -106,9 +106,9 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 				"udproute.default.single-rule.0": {
 					{
 						Route: kong.Route{
-							Name: kong.String("udproute.default.single-rule.0.0"),
+							Name: new("udproute.default.single-rule.0.0"),
 							Destinations: []*kong.CIDRPort{
-								{Port: kong.Int(80)},
+								{Port: new(80)},
 							},
 							Protocols: kong.StringSlice("udp"),
 						},
@@ -150,7 +150,7 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 							ParentRefs: []gatewayapi.ParentReference{
 								{
 									Name:        "gateway-1",
-									SectionName: lo.ToPtr(gatewayapi.SectionName("udp80")),
+									SectionName: new(gatewayapi.SectionName("udp80")),
 								},
 							},
 						},
@@ -174,7 +174,7 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 							ParentRefs: []gatewayapi.ParentReference{
 								{
 									Name:        "gateway-1",
-									SectionName: lo.ToPtr(gatewayapi.SectionName("udp81")),
+									SectionName: new(gatewayapi.SectionName("udp81")),
 								},
 							},
 						},
@@ -205,8 +205,8 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
-						Name:     kong.String("udproute.default.rule-1.0"),
-						Protocol: kong.String("udp"),
+						Name:     new("udproute.default.rule-1.0"),
+						Protocol: new("udp"),
 					},
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service1").
@@ -217,8 +217,8 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 				},
 				{
 					Service: kong.Service{
-						Name:     kong.String("udproute.default.rule-2.0"),
-						Protocol: kong.String("udp"),
+						Name:     new("udproute.default.rule-2.0"),
+						Protocol: new("udp"),
 					},
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service2").WithPortNumber(81).MustBuild(),
@@ -229,9 +229,9 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 				"udproute.default.rule-1.0": {
 					{
 						Route: kong.Route{
-							Name: kong.String("udproute.default.rule-1.0.0"),
+							Name: new("udproute.default.rule-1.0.0"),
 							Destinations: []*kong.CIDRPort{
-								{Port: kong.Int(80)},
+								{Port: new(80)},
 							},
 							Protocols: kong.StringSlice("udp"),
 						},
@@ -240,9 +240,9 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 				"udproute.default.rule-2.0": {
 					{
 						Route: kong.Route{
-							Name: kong.String("udproute.default.rule-2.0.0"),
+							Name: new("udproute.default.rule-2.0.0"),
 							Destinations: []*kong.CIDRPort{
-								{Port: kong.Int(81)},
+								{Port: new(81)},
 							},
 							Protocols: kong.StringSlice("udp"),
 						},
@@ -284,7 +284,7 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 							ParentRefs: []gatewayapi.ParentReference{
 								{
 									Name:      "gateway-1",
-									Namespace: lo.ToPtr(gatewayapi.Namespace("test-1")),
+									Namespace: new(gatewayapi.Namespace("test-1")),
 								},
 							},
 						},
@@ -310,8 +310,8 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
-						Name:     kong.String("udproute.default.multiple-backends.0"),
-						Protocol: kong.String("udp"),
+						Name:     new("udproute.default.multiple-backends.0"),
+						Protocol: new("udp"),
 					},
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service1").
@@ -329,10 +329,10 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 				"udproute.default.multiple-backends.0": {
 					{
 						Route: kong.Route{
-							Name: kong.String("udproute.default.multiple-backends.0.0"),
+							Name: new("udproute.default.multiple-backends.0.0"),
 							Destinations: []*kong.CIDRPort{
-								{Port: kong.Int(80)},
-								{Port: kong.Int(81)},
+								{Port: new(80)},
+								{Port: new(81)},
 							},
 							Protocols: kong.StringSlice("udp"),
 						},
@@ -371,7 +371,7 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 							ParentRefs: []gatewayapi.ParentReference{
 								{
 									Name:        "gateway-1",
-									SectionName: lo.ToPtr(gatewayapi.SectionName("udp80")),
+									SectionName: new(gatewayapi.SectionName("udp80")),
 								},
 							},
 						},
@@ -392,7 +392,7 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 							ParentRefs: []gatewayapi.ParentReference{
 								{
 									Name:        "gateway-1",
-									SectionName: lo.ToPtr(gatewayapi.SectionName("udp8080")),
+									SectionName: new(gatewayapi.SectionName("udp8080")),
 								},
 							},
 						},
@@ -428,8 +428,8 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
-						Name:     kong.String("udproute.default.single-rule.0"),
-						Protocol: kong.String("udp"),
+						Name:     new("udproute.default.single-rule.0"),
+						Protocol: new("udp"),
 					},
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service1").
@@ -440,8 +440,8 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 				},
 				{
 					Service: kong.Service{
-						Name:     kong.String("udproute.default.single-rule-2.0"),
-						Protocol: kong.String("udp"),
+						Name:     new("udproute.default.single-rule-2.0"),
+						Protocol: new("udp"),
 					},
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service2").WithPortNumber(8080).MustBuild(),
@@ -452,9 +452,9 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 				"udproute.default.single-rule.0": {
 					{
 						Route: kong.Route{
-							Name: kong.String("udproute.default.single-rule.0.0"),
+							Name: new("udproute.default.single-rule.0.0"),
 							Destinations: []*kong.CIDRPort{
-								{Port: kong.Int(80)},
+								{Port: new(80)},
 							},
 							Protocols: kong.StringSlice("udp"),
 						},
@@ -463,9 +463,9 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 				"udproute.default.single-rule-2.0": {
 					{
 						Route: kong.Route{
-							Name: kong.String("udproute.default.single-rule-2.0.0"),
+							Name: new("udproute.default.single-rule-2.0.0"),
 							Destinations: []*kong.CIDRPort{
-								{Port: kong.Int(8080)},
+								{Port: new(8080)},
 							},
 							Protocols: kong.StringSlice("udp"),
 						},
@@ -604,8 +604,8 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
-						Name:     kong.String("udproute.default.single-rule.0"),
-						Protocol: kong.String("udp"),
+						Name:     new("udproute.default.single-rule.0"),
+						Protocol: new("udp"),
 					},
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service1").
@@ -619,8 +619,8 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 				"udproute.default.single-rule.0": {
 					{
 						Route: kong.Route{
-							Name:       kong.String("udproute.default.single-rule.0.0"),
-							Expression: kong.String("net.dst.port == 80"),
+							Name:       new("udproute.default.single-rule.0.0"),
+							Expression: new("net.dst.port == 80"),
 							Protocols:  kong.StringSlice("udp"),
 						},
 					},
@@ -661,8 +661,8 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 							ParentRefs: []gatewayapi.ParentReference{
 								{
 									Name:        "gateway-1",
-									Namespace:   lo.ToPtr(gatewayapi.Namespace("test-1")),
-									SectionName: lo.ToPtr(gatewayapi.SectionName("udp80")),
+									Namespace:   new(gatewayapi.Namespace("test-1")),
+									SectionName: new(gatewayapi.SectionName("udp80")),
 								},
 							},
 						},
@@ -686,8 +686,8 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 							ParentRefs: []gatewayapi.ParentReference{
 								{
 									Name:        "gateway-1",
-									Namespace:   lo.ToPtr(gatewayapi.Namespace("test-1")),
-									SectionName: lo.ToPtr(gatewayapi.SectionName("udp81")),
+									Namespace:   new(gatewayapi.Namespace("test-1")),
+									SectionName: new(gatewayapi.SectionName("udp81")),
 								},
 							},
 						},
@@ -718,8 +718,8 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
-						Name:     kong.String("udproute.default.rule-1.0"),
-						Protocol: kong.String("udp"),
+						Name:     new("udproute.default.rule-1.0"),
+						Protocol: new("udp"),
 					},
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service1").WithPortNumber(8080).MustBuild(),
@@ -727,8 +727,8 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 				},
 				{
 					Service: kong.Service{
-						Name:     kong.String("udproute.default.rule-2.0"),
-						Protocol: kong.String("udp"),
+						Name:     new("udproute.default.rule-2.0"),
+						Protocol: new("udp"),
 					},
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service2").WithPortNumber(8181).MustBuild(),
@@ -739,8 +739,8 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 				"udproute.default.rule-1.0": {
 					{
 						Route: kong.Route{
-							Name:       kong.String("udproute.default.rule-1.0.0"),
-							Expression: kong.String("net.dst.port == 80"),
+							Name:       new("udproute.default.rule-1.0.0"),
+							Expression: new("net.dst.port == 80"),
 							Protocols:  kong.StringSlice("udp"),
 						},
 					},
@@ -748,8 +748,8 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 				"udproute.default.rule-2.0": {
 					{
 						Route: kong.Route{
-							Name:       kong.String("udproute.default.rule-2.0.0"),
-							Expression: kong.String("net.dst.port == 81"),
+							Name:       new("udproute.default.rule-2.0.0"),
+							Expression: new("net.dst.port == 81"),
 							Protocols:  kong.StringSlice("udp"),
 						},
 					},
@@ -821,8 +821,8 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
-						Name:     kong.String("udproute.default.multiple-backends.0"),
-						Protocol: kong.String("udp"),
+						Name:     new("udproute.default.multiple-backends.0"),
+						Protocol: new("udp"),
 					},
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service1").
@@ -840,8 +840,8 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 				"udproute.default.multiple-backends.0": {
 					{
 						Route: kong.Route{
-							Name:       kong.String("udproute.default.multiple-backends.0.0"),
-							Expression: kong.String("(net.dst.port == 80) || (net.dst.port == 81)"),
+							Name:       new("udproute.default.multiple-backends.0.0"),
+							Expression: new("(net.dst.port == 80) || (net.dst.port == 81)"),
 							Protocols:  kong.StringSlice("udp"),
 						},
 					},
@@ -879,7 +879,7 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 							ParentRefs: []gatewayapi.ParentReference{
 								{
 									Name:        "gateway-1",
-									SectionName: lo.ToPtr(gatewayapi.SectionName("udp80")),
+									SectionName: new(gatewayapi.SectionName("udp80")),
 								},
 							},
 						},
@@ -900,7 +900,7 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 							ParentRefs: []gatewayapi.ParentReference{
 								{
 									Name:        "gateway-1",
-									SectionName: lo.ToPtr(gatewayapi.SectionName("udp8080")),
+									SectionName: new(gatewayapi.SectionName("udp8080")),
 								},
 							},
 						},
@@ -936,8 +936,8 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
-						Name:     kong.String("udproute.default.single-rule.0"),
-						Protocol: kong.String("udp"),
+						Name:     new("udproute.default.single-rule.0"),
+						Protocol: new("udp"),
 					},
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service1").
@@ -948,8 +948,8 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 				},
 				{
 					Service: kong.Service{
-						Name:     kong.String("udproute.default.single-rule-2.0"),
-						Protocol: kong.String("udp"),
+						Name:     new("udproute.default.single-rule-2.0"),
+						Protocol: new("udp"),
 					},
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service2").WithPortNumber(8080).MustBuild(),
@@ -960,8 +960,8 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 				"udproute.default.single-rule.0": {
 					{
 						Route: kong.Route{
-							Name:       kong.String("udproute.default.single-rule.0.0"),
-							Expression: kong.String("net.dst.port == 80"),
+							Name:       new("udproute.default.single-rule.0.0"),
+							Expression: new("net.dst.port == 80"),
 							Protocols:  kong.StringSlice("udp"),
 						},
 					},
@@ -969,8 +969,8 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 				"udproute.default.single-rule-2.0": {
 					{
 						Route: kong.Route{
-							Name:       kong.String("udproute.default.single-rule-2.0.0"),
-							Expression: kong.String("net.dst.port == 8080"),
+							Name:       new("udproute.default.single-rule-2.0.0"),
+							Expression: new("net.dst.port == 8080"),
 							Protocols:  kong.StringSlice("udp"),
 						},
 					},

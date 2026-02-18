@@ -3,7 +3,6 @@ package resources
 import (
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -111,7 +110,7 @@ func TestGenerateNewIngressServiceForDataPlane(t *testing.T) {
 							Kind:       "DataPlane",
 							Name:       "dp-1",
 							UID:        "1234",
-							Controller: lo.ToPtr(true),
+							Controller: new(true),
 						},
 					},
 					Finalizers: []string{
@@ -183,7 +182,7 @@ func TestGenerateNewIngressServiceForDataPlane(t *testing.T) {
 							Kind:       "DataPlane",
 							Name:       "dp-1",
 							UID:        "1234",
-							Controller: lo.ToPtr(true),
+							Controller: new(true),
 						},
 					},
 					Finalizers: []string{
@@ -256,7 +255,7 @@ func TestGenerateNewIngressServiceForDataPlane(t *testing.T) {
 							Kind:       "DataPlane",
 							Name:       "dp-1",
 							UID:        "1234",
-							Controller: lo.ToPtr(true),
+							Controller: new(true),
 						},
 					},
 					Finalizers: []string{

@@ -195,7 +195,7 @@ func reconcileConsumerGroupsWithKonnect(
 			ControlPlaneID:  cpID,
 			ConsumerGroupID: cgID,
 			RequestBody: &sdkkonnectops.AddConsumerToGroupRequestBody{
-				ConsumerID: lo.ToPtr(consumer.GetKonnectStatus().GetKonnectID()),
+				ConsumerID: new(consumer.GetKonnectStatus().GetKonnectID()),
 			},
 		})
 		if err != nil {
@@ -431,9 +431,9 @@ func kongConsumerToSDKConsumerInput(
 	consumer *configurationv1.KongConsumer,
 ) sdkkonnectcomp.Consumer {
 	return sdkkonnectcomp.Consumer{
-		CustomID: lo.ToPtr(consumer.CustomID),
+		CustomID: new(consumer.CustomID),
 		Tags:     GenerateTagsForObject(consumer, consumer.Spec.Tags...),
-		Username: lo.ToPtr(consumer.Username),
+		Username: new(consumer.Username),
 	}
 }
 
@@ -449,7 +449,7 @@ func getKongConsumerForUID(
 		// Other fields like name might have changed in the meantime but that's OK.
 		// Those will be enforced via subsequent updates.
 		ControlPlaneID: cpID,
-		Tags:           lo.ToPtr(UIDLabelForObject(consumer)),
+		Tags:           new(UIDLabelForObject(consumer)),
 	}
 
 	resp, err := sdk.ListConsumer(ctx, reqList)

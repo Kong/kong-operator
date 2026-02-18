@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/netip"
 
-	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
@@ -52,7 +51,7 @@ func AddressesFromService(service *corev1.Service) ([]operatorv1beta1.Address, e
 
 			addresses = append(addresses,
 				operatorv1beta1.Address{
-					Type:       lo.ToPtr(operatorv1beta1.IPAddressType),
+					Type:       new(operatorv1beta1.IPAddressType),
 					Value:      ingress.IP,
 					SourceType: sourceType,
 				},
@@ -61,7 +60,7 @@ func AddressesFromService(service *corev1.Service) ([]operatorv1beta1.Address, e
 		if ingress.Hostname != "" {
 			addresses = append(addresses,
 				operatorv1beta1.Address{
-					Type:       lo.ToPtr(operatorv1beta1.HostnameAddressType),
+					Type:       new(operatorv1beta1.HostnameAddressType),
 					Value:      ingress.Hostname,
 					SourceType: deduceAddressSourceTypeFromService(service),
 				},
@@ -72,7 +71,7 @@ func AddressesFromService(service *corev1.Service) ([]operatorv1beta1.Address, e
 	for _, address := range service.Spec.ClusterIPs {
 		addresses = append(addresses,
 			operatorv1beta1.Address{
-				Type:       lo.ToPtr(operatorv1beta1.IPAddressType),
+				Type:       new(operatorv1beta1.IPAddressType),
 				Value:      address,
 				SourceType: operatorv1beta1.PrivateIPAddressSourceType,
 			},

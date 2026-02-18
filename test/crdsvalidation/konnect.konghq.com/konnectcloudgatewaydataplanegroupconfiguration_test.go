@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
-	"github.com/samber/lo"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -30,7 +29,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 	}
 	networkRefKonnectID := commonv1alpha1.ObjectRef{
 		Type:      "konnectID",
-		KonnectID: lo.ToPtr(generate.KonnectID(t)),
+		KonnectID: new(generate.KonnectID(t)),
 	}
 	autoscaleConfiguration := konnectv1alpha1.ConfigurationDataPlaneGroupAutoscale{
 		Type: konnectv1alpha1.ConfigurationDataPlaneGroupAutoscaleTypeStatic,
@@ -49,7 +48,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
 						ControlPlaneRef: cpRef,
 						Version:         "3.9",
-						APIAccess:       lo.ToPtr(sdkkonnectcomp.APIAccessPrivatePlusPublic),
+						APIAccess:       new(sdkkonnectcomp.APIAccessPrivatePlusPublic),
 						DataplaneGroups: []konnectv1alpha1.KonnectConfigurationDataPlaneGroup{
 							{
 								Provider:   sdkkonnectcomp.ProviderNameAws,
@@ -74,7 +73,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
 						ControlPlaneRef: cpRef,
 						Version:         "3.9",
-						APIAccess:       lo.ToPtr(sdkkonnectcomp.APIAccessPrivatePlusPublic),
+						APIAccess:       new(sdkkonnectcomp.APIAccessPrivatePlusPublic),
 						DataplaneGroups: []konnectv1alpha1.KonnectConfigurationDataPlaneGroup{
 							{
 								Provider:   sdkkonnectcomp.ProviderNameAws,
@@ -90,7 +89,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("static is required when type is static"),
+				ExpectedErrorMessage: new("static is required when type is static"),
 			},
 			{
 				Name: "autopilot: providing static configuration when type is autopilot should fail",
@@ -99,7 +98,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
 						ControlPlaneRef: cpRef,
 						Version:         "3.9",
-						APIAccess:       lo.ToPtr(sdkkonnectcomp.APIAccessPrivatePlusPublic),
+						APIAccess:       new(sdkkonnectcomp.APIAccessPrivatePlusPublic),
 						DataplaneGroups: []konnectv1alpha1.KonnectConfigurationDataPlaneGroup{
 							{
 								Provider:   sdkkonnectcomp.ProviderNameAws,
@@ -116,7 +115,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("autopilot is required when type is autopilot"),
+				ExpectedErrorMessage: new("autopilot is required when type is autopilot"),
 			},
 			{
 				Name: "can't provide both autopilot and static configuration",
@@ -125,7 +124,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
 						ControlPlaneRef: cpRef,
 						Version:         "3.9",
-						APIAccess:       lo.ToPtr(sdkkonnectcomp.APIAccessPrivatePlusPublic),
+						APIAccess:       new(sdkkonnectcomp.APIAccessPrivatePlusPublic),
 						DataplaneGroups: []konnectv1alpha1.KonnectConfigurationDataPlaneGroup{
 							{
 								Provider:   sdkkonnectcomp.ProviderNameAws,
@@ -145,7 +144,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("can't provide both autopilot and static configuration"),
+				ExpectedErrorMessage: new("can't provide both autopilot and static configuration"),
 			},
 			{
 				Name: "envs have to start with KONG_",
@@ -154,7 +153,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
 						ControlPlaneRef: cpRef,
 						Version:         "3.9",
-						APIAccess:       lo.ToPtr(sdkkonnectcomp.APIAccessPrivatePlusPublic),
+						APIAccess:       new(sdkkonnectcomp.APIAccessPrivatePlusPublic),
 						DataplaneGroups: []konnectv1alpha1.KonnectConfigurationDataPlaneGroup{
 							{
 								Provider:   sdkkonnectcomp.ProviderNameAws,
@@ -185,7 +184,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
 						ControlPlaneRef: cpRef,
 						Version:         "3.9",
-						APIAccess:       lo.ToPtr(sdkkonnectcomp.APIAccessPrivatePlusPublic),
+						APIAccess:       new(sdkkonnectcomp.APIAccessPrivatePlusPublic),
 						DataplaneGroups: []konnectv1alpha1.KonnectConfigurationDataPlaneGroup{
 							{
 								Provider:   sdkkonnectcomp.ProviderNameAws,
@@ -208,7 +207,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Invalid value: \"RANDOM_ENV\": spec.dataplane_groups[0].environment[0].name in body should match '^KONG_."),
+				ExpectedErrorMessage: new("Invalid value: \"RANDOM_ENV\": spec.dataplane_groups[0].environment[0].name in body should match '^KONG_."),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -223,14 +222,14 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
 						ControlPlaneRef: cpRef,
 						Version:         "3.9",
-						APIAccess:       lo.ToPtr(sdkkonnectcomp.APIAccessPrivatePlusPublic),
+						APIAccess:       new(sdkkonnectcomp.APIAccessPrivatePlusPublic),
 						DataplaneGroups: []konnectv1alpha1.KonnectConfigurationDataPlaneGroup{
 							{
 								Provider: sdkkonnectcomp.ProviderNameAws,
 								Region:   "us-west-2",
 								NetworkRef: commonv1alpha1.ObjectRef{
 									Type:      "konnectID",
-									KonnectID: lo.ToPtr(generate.KonnectID(t)),
+									KonnectID: new(generate.KonnectID(t)),
 								},
 								Autoscale: autoscaleConfiguration,
 							},
@@ -245,7 +244,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
 						ControlPlaneRef: cpRef,
 						Version:         "3.9",
-						APIAccess:       lo.ToPtr(sdkkonnectcomp.APIAccessPrivatePlusPublic),
+						APIAccess:       new(sdkkonnectcomp.APIAccessPrivatePlusPublic),
 						DataplaneGroups: []konnectv1alpha1.KonnectConfigurationDataPlaneGroup{
 							{
 								Provider: sdkkonnectcomp.ProviderNameAws,
@@ -261,7 +260,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("when type is konnectID, konnectID must be set"),
+				ExpectedErrorMessage: new("when type is konnectID, konnectID must be set"),
 			},
 			{
 				Name: "networkRef namespacedRef is supported",
@@ -270,7 +269,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
 						ControlPlaneRef: cpRef,
 						Version:         "3.9",
-						APIAccess:       lo.ToPtr(sdkkonnectcomp.APIAccessPrivatePlusPublic),
+						APIAccess:       new(sdkkonnectcomp.APIAccessPrivatePlusPublic),
 						DataplaneGroups: []konnectv1alpha1.KonnectConfigurationDataPlaneGroup{
 							{
 								Provider: sdkkonnectcomp.ProviderNameAws,
@@ -294,21 +293,21 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
 						ControlPlaneRef: cpRef,
 						Version:         "3.9",
-						APIAccess:       lo.ToPtr(sdkkonnectcomp.APIAccessPrivatePlusPublic),
+						APIAccess:       new(sdkkonnectcomp.APIAccessPrivatePlusPublic),
 						DataplaneGroups: []konnectv1alpha1.KonnectConfigurationDataPlaneGroup{
 							{
 								Provider: sdkkonnectcomp.ProviderNameAws,
 								Region:   "us-west-2",
 								NetworkRef: commonv1alpha1.ObjectRef{
 									Type:      "namespacedRef",
-									KonnectID: lo.ToPtr(generate.KonnectID(t)),
+									KonnectID: new(generate.KonnectID(t)),
 								},
 								Autoscale: autoscaleConfiguration,
 							},
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("when type is namespacedRef, namespacedRef must be set"),
+				ExpectedErrorMessage: new("when type is namespacedRef, namespacedRef must be set"),
 			},
 			{
 				Name: "networkRef namespacedRef cannot specify namespace",
@@ -320,7 +319,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
 						ControlPlaneRef: cpRef,
 						Version:         "3.9",
-						APIAccess:       lo.ToPtr(sdkkonnectcomp.APIAccessPrivatePlusPublic),
+						APIAccess:       new(sdkkonnectcomp.APIAccessPrivatePlusPublic),
 						DataplaneGroups: []konnectv1alpha1.KonnectConfigurationDataPlaneGroup{
 							{
 								Provider: sdkkonnectcomp.ProviderNameAws,
@@ -329,7 +328,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 									Type: "namespacedRef",
 									NamespacedRef: &commonv1alpha1.NamespacedRef{
 										Name:      "network-1",
-										Namespace: lo.ToPtr("ns-1"),
+										Namespace: new("ns-1"),
 									},
 								},
 								Autoscale: autoscaleConfiguration,
@@ -337,7 +336,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("cross namespace references are not supported for networkRef of type namespacedRef"),
+				ExpectedErrorMessage: new("cross namespace references are not supported for networkRef of type namespacedRef"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)

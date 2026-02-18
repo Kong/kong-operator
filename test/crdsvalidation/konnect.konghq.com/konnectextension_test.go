@@ -3,8 +3,6 @@ package crdsvalidation_test
 import (
 	"testing"
 
-	"github.com/samber/lo"
-
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
@@ -39,7 +37,7 @@ func TestKonnectExtension(t *testing.T) {
 						},
 						ClientAuth: &konnectv1alpha2.KonnectExtensionClientAuth{
 							CertificateSecret: konnectv1alpha2.CertificateSecret{
-								Provisioning: lo.ToPtr(konnectv1alpha2.ManualSecretProvisioning),
+								Provisioning: new(konnectv1alpha2.ManualSecretProvisioning),
 								CertificateSecretRef: &konnectv1alpha2.SecretRef{
 									Name: "test-secret",
 								},
@@ -65,7 +63,7 @@ func TestKonnectExtension(t *testing.T) {
 						},
 						ClientAuth: &konnectv1alpha2.KonnectExtensionClientAuth{
 							CertificateSecret: konnectv1alpha2.CertificateSecret{
-								Provisioning: lo.ToPtr(konnectv1alpha2.ManualSecretProvisioning),
+								Provisioning: new(konnectv1alpha2.ManualSecretProvisioning),
 								CertificateSecretRef: &konnectv1alpha2.SecretRef{
 									Name: "test-secret",
 								},
@@ -91,12 +89,12 @@ func TestKonnectExtension(t *testing.T) {
 						},
 						ClientAuth: &konnectv1alpha2.KonnectExtensionClientAuth{
 							CertificateSecret: konnectv1alpha2.CertificateSecret{
-								Provisioning: lo.ToPtr(konnectv1alpha2.ManualSecretProvisioning),
+								Provisioning: new(konnectv1alpha2.ManualSecretProvisioning),
 							},
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("secretRef must be set when provisioning is set to Manual."),
+				ExpectedErrorMessage: new("secretRef must be set when provisioning is set to Manual."),
 			},
 			{
 				Name: "konnect controlplane, automatic provisioning, secret",
@@ -115,7 +113,7 @@ func TestKonnectExtension(t *testing.T) {
 						},
 						ClientAuth: &konnectv1alpha2.KonnectExtensionClientAuth{
 							CertificateSecret: konnectv1alpha2.CertificateSecret{
-								Provisioning: lo.ToPtr(konnectv1alpha2.AutomaticSecretProvisioning),
+								Provisioning: new(konnectv1alpha2.AutomaticSecretProvisioning),
 								CertificateSecretRef: &konnectv1alpha2.SecretRef{
 									Name: "test-secret",
 								},
@@ -123,7 +121,7 @@ func TestKonnectExtension(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("secretRef must not be set when provisioning is set to Automatic."),
+				ExpectedErrorMessage: new("secretRef must not be set when provisioning is set to Automatic."),
 			},
 			{
 				Name: "kic controlplane",
@@ -139,7 +137,7 @@ func TestKonnectExtension(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr(`Unsupported value: "kic"`),
+				ExpectedErrorMessage: new(`Unsupported value: "kic"`),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -191,7 +189,7 @@ func TestKonnectExtension(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("'^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$'"),
+				ExpectedErrorMessage: new("'^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$'"),
 			},
 			{
 				Name: "invalid label value 2",
@@ -215,7 +213,7 @@ func TestKonnectExtension(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("'^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$'"),
+				ExpectedErrorMessage: new("'^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$'"),
 			},
 			{
 				Name: "invalid label value 3",
@@ -239,7 +237,7 @@ func TestKonnectExtension(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("'^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$'"),
+				ExpectedErrorMessage: new("'^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$'"),
 			},
 			{
 				Name: "invalid label value 4",
@@ -269,7 +267,7 @@ func TestKonnectExtension(t *testing.T) {
 				// In 1.32+ it is:
 				// "Too long: may not be more than 63 bytes"
 				// We're using here the common part of the error message to avoid breaking the test when upgrading Kubernetes.
-				ExpectedErrorMessage: lo.ToPtr("Too long: may not be "),
+				ExpectedErrorMessage: new("Too long: may not be "),
 			},
 			{
 				Name: "invalid label key 1",
@@ -293,7 +291,7 @@ func TestKonnectExtension(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("'^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$'"),
+				ExpectedErrorMessage: new("'^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$'"),
 			},
 			{
 				Name: "invalid label value 2",
@@ -317,7 +315,7 @@ func TestKonnectExtension(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("'^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$'"),
+				ExpectedErrorMessage: new("'^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$'"),
 			},
 			{
 				Name: "invalid label value 3",
@@ -341,7 +339,7 @@ func TestKonnectExtension(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("'^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$'"),
+				ExpectedErrorMessage: new("'^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$'"),
 			},
 			{
 				Name: "invalid label value 4",
@@ -365,7 +363,7 @@ func TestKonnectExtension(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Too long: may not be more than 63 bytes"),
+				ExpectedErrorMessage: new("Too long: may not be more than 63 bytes"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)

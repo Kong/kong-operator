@@ -290,7 +290,7 @@ func TestFilterServices(t *testing.T) {
 						Endpoints: []discoveryv1.Endpoint{
 							{
 								Conditions: discoveryv1.EndpointConditions{
-									Ready: lo.ToPtr(true),
+									Ready: new(true),
 								},
 							},
 						},

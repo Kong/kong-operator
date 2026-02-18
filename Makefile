@@ -117,6 +117,10 @@ golangci-lint: mise yq ## Download golangci-lint locally if necessary.
 golangci-lint-cache-path:
 	@$(GOLANGCI_LINT) cache status | awk '{ print $$2 }'
 
+.PHONY: go-fix
+go-fix:
+	GOFLAGS="-tags=integration_tests,envtest,e2e_tests,istio_tests,performance_tests" go fix ./...
+
 MODERNIZE_VERSION = $(shell $(YQ) -r '.modernize' < $(TOOLS_VERSIONS_FILE))
 MODERNIZE = $(PROJECT_DIR)/bin/installs/go-golang-org-x-tools-gopls-internal-analysis-modernize-cmd-modernize/$(MODERNIZE_VERSION)/bin/modernize
 # Flags for modernize analyzer. Disable the "omitzero" category to avoid
@@ -305,7 +309,7 @@ lint.markdownlint: download.markdownlint-cli2
 lint.all: lint lint.charts lint.actions lint.markdownlint
 
 .PHONY: verify
-verify: verify.manifests verify.generators
+verify: verify.go-fix verify.manifests verify.generators
 
 .PHONY: verify.diff
 verify.diff:
@@ -320,6 +324,9 @@ verify.manifests: verify.repo manifests verify.diff
 
 .PHONY: verify.generators
 verify.generators: verify.repo generate verify.diff
+
+.PHONY: verify.go-fix
+verify.go-fix: go-fix verify.diff
 
 # ------------------------------------------------------------------------------
 # Build - Generators

@@ -1,8 +1,6 @@
 package builder
 
 import (
-	"github.com/samber/lo"
-
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 )
 
@@ -62,7 +60,7 @@ func (b *ListenerBuilder) UDP() *ListenerBuilder {
 }
 
 func (b *ListenerBuilder) WithHostname(hostname string) *ListenerBuilder {
-	b.listener.Hostname = lo.ToPtr(gatewayapi.Hostname(hostname))
+	b.listener.Hostname = new(gatewayapi.Hostname(hostname))
 	return b
 }
 

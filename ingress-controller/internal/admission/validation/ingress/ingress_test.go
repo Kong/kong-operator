@@ -60,7 +60,7 @@ func TestValidateIngress(t *testing.T) {
 									Paths: []netv1.HTTPIngressPath{
 										{
 											Path:     "/",
-											PathType: lo.ToPtr(netv1.PathTypePrefix),
+											PathType: new(netv1.PathTypePrefix),
 											Backend: netv1.IngressBackend{
 												Service: &netv1.IngressServiceBackend{
 													Name: "httpbin",

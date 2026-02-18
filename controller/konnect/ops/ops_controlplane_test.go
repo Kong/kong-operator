@@ -4,7 +4,6 @@ import (
 	"errors"
 	"testing"
 
-	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
@@ -49,7 +48,7 @@ func TestCreateControlPlane(t *testing.T) {
 				sdkGroups := mocks.NewMockControlPlaneGroupsSDK(t)
 				cp := &konnectv1alpha2.KonnectGatewayControlPlane{
 					Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
-						Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+						Source: new(commonv1alpha1.EntitySourceOrigin),
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
 						},
@@ -85,7 +84,7 @@ func TestCreateControlPlane(t *testing.T) {
 						Namespace: "default",
 					},
 					Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
-						Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+						Source: new(commonv1alpha1.EntitySourceOrigin),
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
 						},
@@ -126,7 +125,7 @@ func TestCreateControlPlane(t *testing.T) {
 						Namespace: "default",
 					},
 					Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
-						Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+						Source: new(commonv1alpha1.EntitySourceOrigin),
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
 						},
@@ -154,10 +153,10 @@ func TestCreateControlPlane(t *testing.T) {
 					},
 					Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
-							ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
+							ClusterType: new(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
 							Name:        "cpg-1",
 						},
-						Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+						Source: new(commonv1alpha1.EntitySourceOrigin),
 						Members: []corev1.LocalObjectReference{
 							{
 								Name: "cp-1",
@@ -202,7 +201,7 @@ func TestCreateControlPlane(t *testing.T) {
 						Namespace: "default",
 					},
 					Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
-						Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+						Source: new(commonv1alpha1.EntitySourceOrigin),
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
 						},
@@ -230,10 +229,10 @@ func TestCreateControlPlane(t *testing.T) {
 					},
 					Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
-							ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
+							ClusterType: new(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
 							Name:        "cpg-1",
 						},
-						Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+						Source: new(commonv1alpha1.EntitySourceOrigin),
 						Members: []corev1.LocalObjectReference{
 							{
 								Name: "cp-1",
@@ -310,7 +309,7 @@ func TestDeleteControlPlane(t *testing.T) {
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
 						},
-						Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+						Source: new(commonv1alpha1.EntitySourceOrigin),
 					},
 					Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
 						KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
@@ -344,7 +343,7 @@ func TestDeleteControlPlane(t *testing.T) {
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
 						},
-						Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+						Source: new(commonv1alpha1.EntitySourceOrigin),
 					},
 					Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
 						KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
@@ -380,7 +379,7 @@ func TestDeleteControlPlane(t *testing.T) {
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
 						},
-						Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+						Source: new(commonv1alpha1.EntitySourceOrigin),
 					},
 					Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
 						KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
@@ -442,7 +441,7 @@ func TestUpdateControlPlane(t *testing.T) {
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
 						},
-						Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+						Source: new(commonv1alpha1.EntitySourceOrigin),
 					},
 					Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
 						KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
@@ -454,7 +453,7 @@ func TestUpdateControlPlane(t *testing.T) {
 					EXPECT().
 					UpdateControlPlane(ctx, "12345",
 						sdkkonnectcomp.UpdateControlPlaneRequest{
-							Name:        sdkkonnectgo.String(cp.GetKonnectName()),
+							Name:        new(cp.GetKonnectName()),
 							Description: cp.GetKonnectDescription(),
 							AuthType:    (*sdkkonnectcomp.UpdateControlPlaneRequestAuthType)(cp.GetKonnectAuthType()),
 							ProxyUrls:   cp.GetKonnectProxyURLs(),
@@ -488,7 +487,7 @@ func TestUpdateControlPlane(t *testing.T) {
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
 						},
-						Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+						Source: new(commonv1alpha1.EntitySourceOrigin),
 					},
 					Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
 						KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
@@ -501,7 +500,7 @@ func TestUpdateControlPlane(t *testing.T) {
 					EXPECT().
 					UpdateControlPlane(ctx, "12345",
 						sdkkonnectcomp.UpdateControlPlaneRequest{
-							Name:        sdkkonnectgo.String(cp.GetKonnectName()),
+							Name:        new(cp.GetKonnectName()),
 							Description: cp.GetKonnectDescription(),
 							AuthType:    (*sdkkonnectcomp.UpdateControlPlaneRequestAuthType)(cp.GetKonnectAuthType()),
 							ProxyUrls:   cp.GetKonnectProxyURLs(),
@@ -534,7 +533,7 @@ func TestUpdateControlPlane(t *testing.T) {
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
 						},
-						Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+						Source: new(commonv1alpha1.EntitySourceOrigin),
 					},
 					Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
 						KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
@@ -547,7 +546,7 @@ func TestUpdateControlPlane(t *testing.T) {
 					EXPECT().
 					UpdateControlPlane(ctx, "12345",
 						sdkkonnectcomp.UpdateControlPlaneRequest{
-							Name:        sdkkonnectgo.String(cp.GetKonnectName()),
+							Name:        new(cp.GetKonnectName()),
 							Description: cp.GetKonnectDescription(),
 							AuthType:    (*sdkkonnectcomp.UpdateControlPlaneRequestAuthType)(cp.GetKonnectAuthType()),
 							ProxyUrls:   cp.GetKonnectProxyURLs(),
@@ -620,7 +619,7 @@ func TestCreateAndUpdateControlPlane_KubernetesMetadataConsistency(t *testing.T)
 				CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 					Name: "cp-1",
 				},
-				Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+				Source: new(commonv1alpha1.EntitySourceOrigin),
 			},
 		}
 		sdk              = sdkmocks.NewMockSDKFactory(t)
@@ -654,7 +653,7 @@ func TestCreateAndUpdateControlPlane_KubernetesMetadataConsistency(t *testing.T)
 	t.Log("Triggering UpdateControlPlane with expected labels")
 	sdkControlPlanes.EXPECT().
 		UpdateControlPlane(ctx, "12345", sdkkonnectcomp.UpdateControlPlaneRequest{
-			Name:   lo.ToPtr("cp-1"),
+			Name:   new("cp-1"),
 			Labels: expectedLabels,
 		}).
 		Return(&sdkkonnectops.UpdateControlPlaneResponse{
@@ -685,10 +684,10 @@ func TestSetGroupMembers(t *testing.T) {
 				},
 				Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 					CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
-						ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
+						ClusterType: new(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
 						Name:        "cp-group",
 					},
-					Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+					Source: new(commonv1alpha1.EntitySourceOrigin),
 				},
 			},
 			sdk: func(t *testing.T) *mocks.MockControlPlaneGroupsSDK {
@@ -716,10 +715,10 @@ func TestSetGroupMembers(t *testing.T) {
 				},
 				Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 					CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
-						ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
+						ClusterType: new(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
 						Name:        "cp-group",
 					},
-					Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+					Source: new(commonv1alpha1.EntitySourceOrigin),
 					Members: []corev1.LocalObjectReference{
 						{
 							Name: "cp-1",
@@ -737,7 +736,7 @@ func TestSetGroupMembers(t *testing.T) {
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
 						},
-						Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+						Source: new(commonv1alpha1.EntitySourceOrigin),
 					},
 					Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
 						KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
@@ -778,10 +777,10 @@ func TestSetGroupMembers(t *testing.T) {
 				},
 				Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 					CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
-						ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
+						ClusterType: new(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
 						Name:        "cp-group",
 					},
-					Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+					Source: new(commonv1alpha1.EntitySourceOrigin),
 					Members: []corev1.LocalObjectReference{
 						{
 							Name: "cp-1",
@@ -799,7 +798,7 @@ func TestSetGroupMembers(t *testing.T) {
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
 						},
-						Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+						Source: new(commonv1alpha1.EntitySourceOrigin),
 					},
 					Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{},
 				},
@@ -821,10 +820,10 @@ func TestSetGroupMembers(t *testing.T) {
 				},
 				Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 					CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
-						ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
+						ClusterType: new(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
 						Name:        "cp-group",
 					},
-					Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+					Source: new(commonv1alpha1.EntitySourceOrigin),
 					Members: []corev1.LocalObjectReference{
 						{
 							Name: "cp-1",
@@ -845,7 +844,7 @@ func TestSetGroupMembers(t *testing.T) {
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
 						},
-						Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+						Source: new(commonv1alpha1.EntitySourceOrigin),
 					},
 					Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
 						KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
@@ -862,7 +861,7 @@ func TestSetGroupMembers(t *testing.T) {
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-2",
 						},
-						Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+						Source: new(commonv1alpha1.EntitySourceOrigin),
 					},
 					Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
 						KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
@@ -906,10 +905,10 @@ func TestSetGroupMembers(t *testing.T) {
 				},
 				Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 					CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
-						ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
+						ClusterType: new(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
 						Name:        "cp-group",
 					},
-					Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+					Source: new(commonv1alpha1.EntitySourceOrigin),
 					Members: []corev1.LocalObjectReference{
 						{
 							Name: "cp-1",
@@ -930,7 +929,7 @@ func TestSetGroupMembers(t *testing.T) {
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
 						},
-						Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+						Source: new(commonv1alpha1.EntitySourceOrigin),
 					},
 					Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
 						KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
@@ -947,7 +946,7 @@ func TestSetGroupMembers(t *testing.T) {
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-2",
 						},
-						Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+						Source: new(commonv1alpha1.EntitySourceOrigin),
 					},
 				},
 			},

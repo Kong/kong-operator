@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -38,7 +37,7 @@ func bootstrapGateway(ctx context.Context, t *testing.T, env environments.Enviro
 	gatewayConfig := helpers.GenerateGatewayConfiguration(namespace.Name, func(gc *operatorv2beta1.GatewayConfiguration) {
 		gc.Spec.ControlPlaneOptions = &operatorv2beta1.GatewayConfigControlPlaneOptions{
 			ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-				IngressClass: lo.ToPtr(ingressClass),
+				IngressClass: new(ingressClass),
 			},
 		}
 		gc.Spec.DataPlaneOptions.Deployment.PodTemplateSpec.Spec.Containers[0].Env = append(

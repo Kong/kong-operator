@@ -36,8 +36,8 @@ func TestDefaultConfigurationChangeDetector_HasConfigurationChanged(t *testing.T
 			Services: []file.FService{
 				{
 					Service: kong.Service{
-						ID:   kong.String("id"),
-						Name: kong.String("name"),
+						ID:   new("id"),
+						Name: new("name"),
 					},
 				},
 			},

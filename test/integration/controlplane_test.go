@@ -5,7 +5,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -93,7 +92,7 @@ func TestControlPlaneEssentials(t *testing.T) {
 		},
 		Spec: gwtypes.ControlPlaneSpec{
 			ControlPlaneOptions: gwtypes.ControlPlaneOptions{
-				IngressClass: lo.ToPtr(ingressClass),
+				IngressClass: new(ingressClass),
 			},
 			DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
 				Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
@@ -171,7 +170,7 @@ func TestControlPlaneWatchNamespaces(t *testing.T) {
 				},
 			},
 			ControlPlaneOptions: gwtypes.ControlPlaneOptions{
-				IngressClass: lo.ToPtr(ingressClass),
+				IngressClass: new(ingressClass),
 				WatchNamespaces: &gov2beta1.WatchNamespaces{
 					Type: gov2beta1.WatchNamespacesTypeList,
 					List: []string{
@@ -312,7 +311,7 @@ func TestControlPlaneUpdate(t *testing.T) {
 		},
 		Spec: gwtypes.ControlPlaneSpec{
 			ControlPlaneOptions: gwtypes.ControlPlaneOptions{
-				IngressClass: lo.ToPtr(ingressClass),
+				IngressClass: new(ingressClass),
 			},
 			DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
 				Type: gwtypes.ControlPlaneDataPlaneTargetRefType,

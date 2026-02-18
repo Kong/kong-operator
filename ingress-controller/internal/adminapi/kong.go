@@ -42,7 +42,7 @@ func NewKongAPIClient(adminURL string, kongAdminAPIConfig managercfg.AdminAPICli
 		return nil, err
 	}
 
-	client, err := kong.NewClient(kong.String(adminURL), httpClient)
+	client, err := kong.NewClient(new(adminURL), httpClient)
 	if err != nil {
 		return nil, fmt.Errorf("creating Kong client: %w", err)
 	}
@@ -72,7 +72,7 @@ func NewKongClientForWorkspace(
 		}
 	} else {
 		// If a workspace was provided, verify whether or not it exists.
-		exists, err := client.Workspaces.ExistsByName(ctx, kong.String(wsName))
+		exists, err := client.Workspaces.ExistsByName(ctx, new(wsName))
 		if err != nil {
 			return nil, fmt.Errorf("looking up workspace: %w", err)
 		}
@@ -80,7 +80,7 @@ func NewKongClientForWorkspace(
 		// If the provided workspace does not exist, for convenience we create it.
 		if !exists {
 			workspace := kong.Workspace{
-				Name: kong.String(wsName),
+				Name: new(wsName),
 			}
 			if _, err := client.Workspaces.Create(ctx, &workspace); err != nil {
 				return nil, fmt.Errorf("creating workspace: %w", err)

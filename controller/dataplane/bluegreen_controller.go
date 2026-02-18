@@ -515,7 +515,7 @@ func (r *BlueGreenReconciler) ensureDeploymentForDataPlane(
 		dPlan := dataplane.Spec.Deployment.Rollout.Strategy.BlueGreen.Resources.Plan.Deployment
 		if dPlan == operatorv1beta1.RolloutResourcePlanDeploymentScaleDownOnPromotionScaleUpOnRollout {
 			deploymentOpts = append(deploymentOpts, func(d *appsv1.Deployment) {
-				d.Spec.Replicas = lo.ToPtr(int32(0))
+				d.Spec.Replicas = new(int32(0))
 			})
 		}
 		// TODO: implement DeleteOnPromotionRecreateOnRollout

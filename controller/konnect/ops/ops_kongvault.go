@@ -8,7 +8,6 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
-	"github.com/samber/lo"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -151,7 +150,7 @@ func kongVaultToVaultInput(vault *configurationv1alpha1.KongVault) (sdkkonnectco
 		Tags:   GenerateTagsForObject(vault, vault.Spec.Tags...),
 	}
 	if vault.Spec.Description != "" {
-		input.Description = lo.ToPtr(vault.Spec.Description)
+		input.Description = new(vault.Spec.Description)
 	}
 	return input, nil
 }
@@ -186,7 +185,7 @@ func getKongVaultForUID(
 ) (string, error) {
 	resp, err := sdk.ListVault(ctx, sdkkonnectops.ListVaultRequest{
 		ControlPlaneID: vault.GetControlPlaneID(),
-		Tags:           lo.ToPtr(UIDLabelForObject(vault)),
+		Tags:           new(UIDLabelForObject(vault)),
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to list KongVaults: %w", err)

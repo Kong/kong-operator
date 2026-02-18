@@ -3,7 +3,6 @@ package kubernetes
 import (
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -26,7 +25,7 @@ func TestEnsureObjectMetaIsUpdated(t *testing.T) {
 				OwnerReferences: []metav1.OwnerReference{
 					{
 						Name:       "ownRef test",
-						Controller: lo.ToPtr(true),
+						Controller: new(true),
 					},
 				},
 			},
@@ -37,7 +36,7 @@ func TestEnsureObjectMetaIsUpdated(t *testing.T) {
 				OwnerReferences: []metav1.OwnerReference{
 					{
 						Name:       "ownRef test",
-						Controller: lo.ToPtr(true),
+						Controller: new(true),
 					},
 				},
 			},
@@ -49,7 +48,7 @@ func TestEnsureObjectMetaIsUpdated(t *testing.T) {
 				OwnerReferences: []metav1.OwnerReference{
 					{
 						Name:       "ownRef test",
-						Controller: lo.ToPtr(true),
+						Controller: new(true),
 					},
 				},
 			},
@@ -122,7 +121,7 @@ func TestEnsureObjectMetaIsUpdated(t *testing.T) {
 				OwnerReferences: []metav1.OwnerReference{
 					{
 						Name:       "ownRef test",
-						Controller: lo.ToPtr(false),
+						Controller: new(false),
 					},
 				},
 			},
@@ -133,7 +132,7 @@ func TestEnsureObjectMetaIsUpdated(t *testing.T) {
 				OwnerReferences: []metav1.OwnerReference{
 					{
 						Name:       "ownRef test",
-						Controller: lo.ToPtr(true),
+						Controller: new(true),
 					},
 				},
 			},
@@ -145,7 +144,7 @@ func TestEnsureObjectMetaIsUpdated(t *testing.T) {
 				OwnerReferences: []metav1.OwnerReference{
 					{
 						Name:       "ownRef test",
-						Controller: lo.ToPtr(true),
+						Controller: new(true),
 					},
 				},
 			},

@@ -10,12 +10,10 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	pb "github.com/moul/pb/grpcbin/go-grpc"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -102,8 +100,8 @@ func TestGRPCRouteEssentials(t *testing.T) {
 							{
 								// this will match only the DummyUnary method without any headers
 								Method: &gatewayapi.GRPCMethodMatch{
-									Service: kong.String("grpcbin.GRPCBin"),
-									Method:  kong.String("DummyUnary"),
+									Service: new("grpcbin.GRPCBin"),
+									Method:  new("DummyUnary"),
 								},
 							},
 							{
@@ -120,7 +118,7 @@ func TestGRPCRouteEssentials(t *testing.T) {
 							BackendRef: gatewayapi.BackendRef{
 								BackendObjectReference: gatewayapi.BackendObjectReference{
 									Name: gatewayapi.ObjectName(service.Name),
-									Port: lo.ToPtr(test.GRPCBinPort),
+									Port: new(test.GRPCBinPort),
 								},
 							},
 						}},

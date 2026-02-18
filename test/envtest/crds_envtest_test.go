@@ -126,7 +126,7 @@ func TestCRDValidations(t *testing.T) {
 					t.Run(fmt.Sprintf("invalidHashOn[%d]", i), func(t *testing.T) {
 						err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
 							HashOn:    &invalidHashOn,
-							Algorithm: lo.ToPtr("consistent-hashing"),
+							Algorithm: new("consistent-hashing"),
 						})
 						require.ErrorContains(t, err, "Only one of spec.hashOn.(input|cookie|header|uriCapture|queryArg) can be set.")
 					})
@@ -154,10 +154,10 @@ func TestCRDValidations(t *testing.T) {
 			name: "KongUpstreamPolicy - spec.hashOn.cookie and spec.hashOn.cookiePath are set",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
 				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
-					Algorithm: lo.ToPtr("consistent-hashing"),
+					Algorithm: new("consistent-hashing"),
 					HashOn: &configurationv1beta1.KongUpstreamHash{
-						Cookie:     lo.ToPtr("cookie-name"),
-						CookiePath: lo.ToPtr("/"),
+						Cookie:     new("cookie-name"),
+						CookiePath: new("/"),
 					},
 				})
 				require.NoError(t, err)
@@ -167,9 +167,9 @@ func TestCRDValidations(t *testing.T) {
 			name: "KongUpstreamPolicy - spec.hashOn.cookie is set, spec.hashOn.cookiePath is required",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
 				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
-					Algorithm: lo.ToPtr("consistent-hashing"),
+					Algorithm: new("consistent-hashing"),
 					HashOn: &configurationv1beta1.KongUpstreamHash{
-						Cookie: lo.ToPtr("cookie-name"),
+						Cookie: new("cookie-name"),
 					},
 				})
 				require.ErrorContains(t, err, "When spec.hashOn.cookie is set, spec.hashOn.cookiePath is required.")
@@ -179,9 +179,9 @@ func TestCRDValidations(t *testing.T) {
 			name: "KongUpstreamPolicy - spec.hashOn.cookiePath is set, spec.hashOn.cookie is required",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
 				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
-					Algorithm: lo.ToPtr("consistent-hashing"),
+					Algorithm: new("consistent-hashing"),
 					HashOn: &configurationv1beta1.KongUpstreamHash{
-						CookiePath: lo.ToPtr("/"),
+						CookiePath: new("/"),
 					},
 				})
 				require.ErrorContains(t, err, "When spec.hashOn.cookiePath is set, spec.hashOn.cookie is required.")
@@ -191,13 +191,13 @@ func TestCRDValidations(t *testing.T) {
 			name: "KongUpstreamPolicy - spec.hashOnFallback.cookie can be set when spec.hashOn uses header",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
 				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
-					Algorithm: lo.ToPtr("consistent-hashing"),
+					Algorithm: new("consistent-hashing"),
 					HashOn: &configurationv1beta1.KongUpstreamHash{
-						Header: lo.ToPtr("header-name"),
+						Header: new("header-name"),
 					},
 					HashOnFallback: &configurationv1beta1.KongUpstreamHash{
-						Cookie:     lo.ToPtr("cookie-name"),
-						CookiePath: lo.ToPtr("/"),
+						Cookie:     new("cookie-name"),
+						CookiePath: new("/"),
 					},
 				})
 				require.NoError(t, err)
@@ -207,13 +207,13 @@ func TestCRDValidations(t *testing.T) {
 			name: "KongUpstreamPolicy - spec.hashOnFallback.cookie can be set when spec.hashOn uses queryArg",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
 				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
-					Algorithm: lo.ToPtr("consistent-hashing"),
+					Algorithm: new("consistent-hashing"),
 					HashOn: &configurationv1beta1.KongUpstreamHash{
-						QueryArg: lo.ToPtr("query-arg-name"),
+						QueryArg: new("query-arg-name"),
 					},
 					HashOnFallback: &configurationv1beta1.KongUpstreamHash{
-						Cookie:     lo.ToPtr("cookie-name"),
-						CookiePath: lo.ToPtr("/"),
+						Cookie:     new("cookie-name"),
+						CookiePath: new("/"),
 					},
 				})
 				require.NoError(t, err)
@@ -223,13 +223,13 @@ func TestCRDValidations(t *testing.T) {
 			name: "KongUpstreamPolicy - spec.hashOnFallback.cookie can be set when spec.hashOn uses uriCapture",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
 				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
-					Algorithm: lo.ToPtr("consistent-hashing"),
+					Algorithm: new("consistent-hashing"),
 					HashOn: &configurationv1beta1.KongUpstreamHash{
-						URICapture: lo.ToPtr("uri-capture-name"),
+						URICapture: new("uri-capture-name"),
 					},
 					HashOnFallback: &configurationv1beta1.KongUpstreamHash{
-						Cookie:     lo.ToPtr("cookie-name"),
-						CookiePath: lo.ToPtr("/"),
+						Cookie:     new("cookie-name"),
+						CookiePath: new("/"),
 					},
 				})
 				require.NoError(t, err)
@@ -241,14 +241,14 @@ func TestCRDValidations(t *testing.T) {
 			name: "KongUpstreamPolicy - spec.hashOnFallback.cookie can't be set when spec.hashOn uses cookie",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
 				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
-					Algorithm: lo.ToPtr("consistent-hashing"),
+					Algorithm: new("consistent-hashing"),
 					HashOn: &configurationv1beta1.KongUpstreamHash{
-						Cookie:     lo.ToPtr("cookie-name"),
-						CookiePath: lo.ToPtr("/cookie"),
+						Cookie:     new("cookie-name"),
+						CookiePath: new("/cookie"),
 					},
 					HashOnFallback: &configurationv1beta1.KongUpstreamHash{
-						Cookie:     lo.ToPtr("cookie-name-2"),
-						CookiePath: lo.ToPtr("/cookie-2"),
+						Cookie:     new("cookie-name-2"),
+						CookiePath: new("/cookie-2"),
 					},
 				})
 				require.ErrorContains(t, err, "spec.hashOnFallback must not be set when spec.hashOn.cookie is set.")
@@ -258,12 +258,12 @@ func TestCRDValidations(t *testing.T) {
 			name: "KongUpstreamPolicy - spec.hashOn.uri_capture can be used with spec.hashOnFallback.header",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
 				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
-					Algorithm: lo.ToPtr("consistent-hashing"),
+					Algorithm: new("consistent-hashing"),
 					HashOn: &configurationv1beta1.KongUpstreamHash{
-						URICapture: lo.ToPtr("uri-capture-name"),
+						URICapture: new("uri-capture-name"),
 					},
 					HashOnFallback: &configurationv1beta1.KongUpstreamHash{
-						Header: lo.ToPtr("header-name"),
+						Header: new("header-name"),
 					},
 				})
 				require.NoError(t, err)
@@ -306,7 +306,7 @@ func TestCRDValidations(t *testing.T) {
 					Healthchecks: &configurationv1beta1.KongUpstreamHealthcheck{
 						Passive: &configurationv1beta1.KongUpstreamPassiveHealthcheck{
 							Healthy: &configurationv1beta1.KongUpstreamHealthcheckHealthy{
-								Interval: lo.ToPtr(10),
+								Interval: new(10),
 							},
 						},
 					},
@@ -321,7 +321,7 @@ func TestCRDValidations(t *testing.T) {
 					Healthchecks: &configurationv1beta1.KongUpstreamHealthcheck{
 						Passive: &configurationv1beta1.KongUpstreamPassiveHealthcheck{
 							Unhealthy: &configurationv1beta1.KongUpstreamHealthcheckUnhealthy{
-								Interval: lo.ToPtr(10),
+								Interval: new(10),
 							},
 						},
 					},
@@ -334,7 +334,7 @@ func TestCRDValidations(t *testing.T) {
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
 				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
 					HashOn: &configurationv1beta1.KongUpstreamHash{
-						Header: lo.ToPtr("header-name"), // Could be any of the hashOn fields.
+						Header: new("header-name"), // Could be any of the hashOn fields.
 					},
 				})
 				require.ErrorContains(t, err, `spec.algorithm must be set to either 'consistent-hashing' or 'sticky-sessions' when spec.hashOn is set.`)
@@ -345,7 +345,7 @@ func TestCRDValidations(t *testing.T) {
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
 				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
 					HashOnFallback: &configurationv1beta1.KongUpstreamHash{
-						Header: lo.ToPtr("header-name"), // Could be any of the hashOn fields.
+						Header: new("header-name"), // Could be any of the hashOn fields.
 					},
 				})
 				require.ErrorContains(t, err, `spec.algorithm must be set to "consistent-hashing" when spec.hashOnFallback is set.`)
@@ -358,12 +358,12 @@ func TestCRDValidations(t *testing.T) {
 				for _, validValue := range validValues {
 					t.Run(fmt.Sprintf("valid-value[%s]", validValue), func(t *testing.T) {
 						err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
-							Algorithm: lo.ToPtr("consistent-hashing"),
+							Algorithm: new("consistent-hashing"),
 							HashOn: &configurationv1beta1.KongUpstreamHash{
-								Input: lo.ToPtr(configurationv1beta1.HashInput(validValue)),
+								Input: new(configurationv1beta1.HashInput(validValue)),
 							},
 							HashOnFallback: &configurationv1beta1.KongUpstreamHash{
-								Input: lo.ToPtr(configurationv1beta1.HashInput(validValue)),
+								Input: new(configurationv1beta1.HashInput(validValue)),
 							},
 						})
 						require.NoError(t, err)
@@ -372,12 +372,12 @@ func TestCRDValidations(t *testing.T) {
 
 				t.Run("invalid value", func(t *testing.T) {
 					err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("consistent-hashing"),
+						Algorithm: new("consistent-hashing"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
-							Input: lo.ToPtr(configurationv1beta1.HashInput("unknown-input")),
+							Input: new(configurationv1beta1.HashInput("unknown-input")),
 						},
 						HashOnFallback: &configurationv1beta1.KongUpstreamHash{
-							Input: lo.ToPtr(configurationv1beta1.HashInput("unknown-input-fallback")),
+							Input: new(configurationv1beta1.HashInput("unknown-input-fallback")),
 						},
 					})
 					require.ErrorContains(t, err, `spec.hashOn.input: Unsupported value: "unknown-input": supported values: "ip", "consumer", "path"`)
@@ -392,7 +392,7 @@ func TestCRDValidations(t *testing.T) {
 				for _, validValue := range validValues {
 					t.Run(fmt.Sprintf("valid-value[%s]", validValue), func(t *testing.T) {
 						err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
-							Algorithm: lo.ToPtr(validValue),
+							Algorithm: new(validValue),
 						})
 						require.NoError(t, err)
 					})
@@ -400,7 +400,7 @@ func TestCRDValidations(t *testing.T) {
 
 				t.Run("invalid value", func(t *testing.T) {
 					err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("unknown-algorithm"),
+						Algorithm: new("unknown-algorithm"),
 					})
 					require.ErrorContains(t, err, `spec.algorithm: Unsupported value: "unknown-algorithm": supported values: "round-robin", "consistent-hashing", "least-connections", "latency", "sticky-sessions"`)
 				})
@@ -415,10 +415,10 @@ func TestCRDValidations(t *testing.T) {
 						err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
 							Healthchecks: &configurationv1beta1.KongUpstreamHealthcheck{
 								Active: &configurationv1beta1.KongUpstreamActiveHealthcheck{
-									Type: lo.ToPtr(validValue),
+									Type: new(validValue),
 								},
 								Passive: &configurationv1beta1.KongUpstreamPassiveHealthcheck{
-									Type: lo.ToPtr(validValue),
+									Type: new(validValue),
 								},
 							},
 						})
@@ -429,10 +429,10 @@ func TestCRDValidations(t *testing.T) {
 					err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
 						Healthchecks: &configurationv1beta1.KongUpstreamHealthcheck{
 							Active: &configurationv1beta1.KongUpstreamActiveHealthcheck{
-								Type: lo.ToPtr("unknown-type-active"),
+								Type: new("unknown-type-active"),
 							},
 							Passive: &configurationv1beta1.KongUpstreamPassiveHealthcheck{
-								Type: lo.ToPtr("unknown-type-passive"),
+								Type: new("unknown-type-passive"),
 							},
 						},
 					})
@@ -445,13 +445,13 @@ func TestCRDValidations(t *testing.T) {
 			name: "KongUpstreamPolicy - hashOnFallback must not be set when spec.hasOn.cookie is set",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
 				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
-					Algorithm: lo.ToPtr("consistent-hashing"),
+					Algorithm: new("consistent-hashing"),
 					HashOn: &configurationv1beta1.KongUpstreamHash{
-						Cookie:     lo.ToPtr("cookie-name"),
-						CookiePath: lo.ToPtr("/"),
+						Cookie:     new("cookie-name"),
+						CookiePath: new("/"),
 					},
 					HashOnFallback: &configurationv1beta1.KongUpstreamHash{
-						Header: lo.ToPtr("header-name"),
+						Header: new("header-name"),
 					},
 				})
 				require.ErrorContains(t, err, `spec.hashOnFallback must not be set when spec.hashOn.cookie is set.`)
@@ -819,20 +819,20 @@ func createKongUpstreamPolicy(ctx context.Context, client client.Client, ns stri
 func generateInvalidHashOns() []configurationv1beta1.KongUpstreamHash {
 	fieldSetFns := []func(h *configurationv1beta1.KongUpstreamHash){
 		func(h *configurationv1beta1.KongUpstreamHash) {
-			h.Input = lo.ToPtr(configurationv1beta1.HashInput("consumer"))
+			h.Input = new(configurationv1beta1.HashInput("consumer"))
 		},
 		func(h *configurationv1beta1.KongUpstreamHash) {
-			h.Cookie = lo.ToPtr("cookie-name")
-			h.CookiePath = lo.ToPtr("/")
+			h.Cookie = new("cookie-name")
+			h.CookiePath = new("/")
 		},
 		func(h *configurationv1beta1.KongUpstreamHash) {
-			h.Header = lo.ToPtr("header-name")
+			h.Header = new("header-name")
 		},
 		func(h *configurationv1beta1.KongUpstreamHash) {
-			h.URICapture = lo.ToPtr("uri-capture")
+			h.URICapture = new("uri-capture")
 		},
 		func(h *configurationv1beta1.KongUpstreamHash) {
-			h.QueryArg = lo.ToPtr("query-arg")
+			h.QueryArg = new("query-arg")
 		},
 	}
 

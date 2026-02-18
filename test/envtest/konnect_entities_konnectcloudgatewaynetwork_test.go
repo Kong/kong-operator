@@ -164,7 +164,7 @@ func TestKonnectCloudGatewayNetwork(t *testing.T) {
 					CidrBlock: "10.0.0.0/24",
 					State:     sdkkonnectcomp.NetworkStateInitializing,
 					ProviderMetadata: sdkkonnectcomp.NetworkProviderMetadata{
-						VpcID: lo.ToPtr("vpc-1234"),
+						VpcID: new("vpc-1234"),
 					},
 				},
 			}, nil,
@@ -225,7 +225,7 @@ func TestKonnectCloudGatewayNetwork(t *testing.T) {
 					CidrBlock: "10.0.0.0/24",
 					State:     sdkkonnectcomp.NetworkStateInitializing,
 					ProviderMetadata: sdkkonnectcomp.NetworkProviderMetadata{
-						VpcID: lo.ToPtr("vpc-1234"),
+						VpcID: new("vpc-1234"),
 					},
 				},
 			}, nil,

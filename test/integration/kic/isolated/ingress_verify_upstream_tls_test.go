@@ -14,7 +14,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -206,7 +205,7 @@ func TestIngressVerifyUpstreamTLS(t *testing.T) {
 
 			t.Logf("Exposing service %s via ingress", service.Name)
 			ingress := generators.NewIngressForService(echoRoute, map[string]string{}, service)
-			ingress.Spec.IngressClassName = lo.ToPtr(ingressClass)
+			ingress.Spec.IngressClassName = new(ingressClass)
 			ingress.Spec.Rules[0].Host = goEchoServerHostname
 			_, err = cluster.Client().NetworkingV1().Ingresses(ns).Create(ctx, ingress, metav1.CreateOptions{})
 			assert.NoError(t, err)

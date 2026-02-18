@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -312,7 +311,7 @@ func TestReconciler_listGatewaysForKongReferenceGrant(t *testing.T) {
 				Group:     gatewayv1.Group(operatorv1beta1.SchemeGroupVersion.Group),
 				Kind:      "GatewayConfiguration",
 				Name:      "test-gwconfig",
-				Namespace: lo.ToPtr(gatewayv1.Namespace("default")),
+				Namespace: new(gatewayv1.Namespace("default")),
 			},
 		},
 	}
@@ -344,7 +343,7 @@ func TestReconciler_listGatewaysForKongReferenceGrant(t *testing.T) {
 			Konnect: &operatorv2beta1.KonnectOptions{
 				APIAuthConfigurationRef: &konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
 					Name:      "my-auth",
-					Namespace: lo.ToPtr("auth-ns"),
+					Namespace: new("auth-ns"),
 				},
 			},
 		},
@@ -375,7 +374,7 @@ func TestReconciler_listGatewaysForKongReferenceGrant(t *testing.T) {
 						{
 							Group: configurationv1alpha1.Group(konnectv1alpha1.GroupVersion.Group),
 							Kind:  "KonnectAPIAuthConfiguration",
-							Name:  lo.ToPtr(configurationv1alpha1.ObjectName("my-auth")),
+							Name:  new(configurationv1alpha1.ObjectName("my-auth")),
 						},
 					},
 				},
@@ -408,7 +407,7 @@ func TestReconciler_listGatewaysForKongReferenceGrant(t *testing.T) {
 						{
 							Group: configurationv1alpha1.Group(konnectv1alpha1.GroupVersion.Group),
 							Kind:  "KonnectAPIAuthConfiguration",
-							Name:  lo.ToPtr(configurationv1alpha1.ObjectName("my-auth")),
+							Name:  new(configurationv1alpha1.ObjectName("my-auth")),
 						},
 					},
 				},
@@ -439,7 +438,7 @@ func TestReconciler_listGatewaysForKongReferenceGrant(t *testing.T) {
 						{
 							Group: configurationv1alpha1.Group(konnectv1alpha1.GroupVersion.Group),
 							Kind:  "WrongKind",
-							Name:  lo.ToPtr(configurationv1alpha1.ObjectName("my-auth")),
+							Name:  new(configurationv1alpha1.ObjectName("my-auth")),
 						},
 					},
 				},
@@ -503,7 +502,7 @@ func TestReconciler_listGatewaysForKongReferenceGrant(t *testing.T) {
 						{
 							Group: configurationv1alpha1.Group(konnectv1alpha1.GroupVersion.Group),
 							Kind:  "KonnectAPIAuthConfiguration",
-							Name:  lo.ToPtr(configurationv1alpha1.ObjectName("other-auth")),
+							Name:  new(configurationv1alpha1.ObjectName("other-auth")),
 						},
 					},
 				},

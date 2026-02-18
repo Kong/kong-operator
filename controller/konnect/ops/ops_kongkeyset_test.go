@@ -8,7 +8,6 @@ import (
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -77,8 +76,8 @@ func TestAdoptKongKeySetOverride(t *testing.T) {
 				sdk.EXPECT().GetKeySet(mock.Anything, "ks-1", "cp-1").Return(
 					&sdkkonnectops.GetKeySetResponse{
 						KeySet: &sdkkonnectcomp.KeySet{
-							ID:   lo.ToPtr("ks-1"),
-							Name: lo.ToPtr("name"),
+							ID:   new("ks-1"),
+							Name: new("name"),
 							Tags: []string{"tag1"},
 						},
 					},
@@ -166,8 +165,8 @@ func TestAdoptKongKeySetOverride(t *testing.T) {
 				sdk.EXPECT().GetKeySet(mock.Anything, "ks-1", "cp-1").Return(
 					&sdkkonnectops.GetKeySetResponse{
 						KeySet: &sdkkonnectcomp.KeySet{
-							ID:   lo.ToPtr("ks-1"),
-							Name: lo.ToPtr("name"),
+							ID:   new("ks-1"),
+							Name: new("name"),
 							Tags: []string{"k8s-uid:different"},
 						},
 					},
@@ -239,8 +238,8 @@ func TestAdoptKongKeySetMatch(t *testing.T) {
 				sdk.EXPECT().GetKeySet(mock.Anything, "ks-1", "cp-1").Return(
 					&sdkkonnectops.GetKeySetResponse{
 						KeySet: &sdkkonnectcomp.KeySet{
-							ID:   lo.ToPtr("ks-1"),
-							Name: lo.ToPtr("name"),
+							ID:   new("ks-1"),
+							Name: new("name"),
 							Tags: []string{"tag1", "tag2"},
 						},
 					},
@@ -285,8 +284,8 @@ func TestAdoptKongKeySetMatch(t *testing.T) {
 				sdk.EXPECT().GetKeySet(mock.Anything, "ks-1", "cp-1").Return(
 					&sdkkonnectops.GetKeySetResponse{
 						KeySet: &sdkkonnectcomp.KeySet{
-							ID:   lo.ToPtr("ks-1"),
-							Name: lo.ToPtr("different"),
+							ID:   new("ks-1"),
+							Name: new("different"),
 							Tags: []string{"tag1"},
 						},
 					},

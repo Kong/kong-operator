@@ -39,7 +39,7 @@ func GenerateKongExpressionRoutesFromGRPCRouteRule(grpcroute *gatewayapi.GRPCRou
 		r := kongstate.Route{
 			Ingress: ingressObjectInfo,
 			Route: kong.Route{
-				Name: kong.String(routeName),
+				Name: new(routeName),
 			},
 			ExpressionRoutes: true,
 		}
@@ -62,7 +62,7 @@ func GenerateKongExpressionRoutesFromGRPCRouteRule(grpcroute *gatewayapi.GRPCRou
 		r := kongstate.Route{
 			Ingress: ingressObjectInfo,
 			Route: kong.Route{
-				Name: kong.String(routeName),
+				Name: new(routeName),
 			},
 			ExpressionRoutes: true,
 		}
@@ -171,7 +171,7 @@ func headerMatcherFromGRPCHeaderMatches(headerMatches []gatewayapi.GRPCHeaderMat
 		// due too limitations of generics in Go converting seems to be the best option.
 		var hmt *gatewayapi.HeaderMatchType
 		if headerMatch.Type != nil {
-			hmt = lo.ToPtr(gatewayapi.HeaderMatchType(*headerMatch.Type))
+			hmt = new(gatewayapi.HeaderMatchType(*headerMatch.Type))
 		}
 		httpHeaderMatch := gatewayapi.HTTPHeaderMatch{
 			Type:  hmt,
@@ -474,8 +474,8 @@ func KongExpressionRouteFromSplitGRPCRouteMatchWithPriority(
 
 	r := kongstate.Route{
 		Route: kong.Route{
-			Name:         kong.String(routeName),
-			PreserveHost: kong.Bool(true),
+			Name:         new(routeName),
+			PreserveHost: new(true),
 			Tags:         tags,
 		},
 		Ingress:          util.FromK8sObject(grpcRoute),
@@ -490,7 +490,7 @@ func KongExpressionRouteFromSplitGRPCRouteMatchWithPriority(
 	)
 	atc.ApplyExpression(&r.Route, matcher, matchWithPriority.Priority)
 	if r.Expression == nil || len(*r.Expression) == 0 {
-		r.Expression = kong.String(CatchAllHTTPExpression)
+		r.Expression = new(CatchAllHTTPExpression)
 		r.Priority = &matchWithPriority.Priority
 	}
 

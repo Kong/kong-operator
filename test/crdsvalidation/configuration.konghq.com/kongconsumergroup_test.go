@@ -68,7 +68,7 @@ func TestKongConsumerGroup(t *testing.T) {
 				Update: func(c *configurationv1beta1.KongConsumerGroup) {
 					c.Spec.ControlPlaneRef.KonnectNamespacedRef.Name = "new-konnect-control-plane"
 				},
-				ExpectedUpdateErrorMessage: lo.ToPtr("spec.controlPlaneRef is immutable when an entity is already Programmed"),
+				ExpectedUpdateErrorMessage: new("spec.controlPlaneRef is immutable when an entity is already Programmed"),
 			},
 			{
 				Name: "cpRef change is allowed when cp is not Programmed=True nor APIAuthValid=True",
@@ -190,7 +190,7 @@ func TestKongConsumerGroup(t *testing.T) {
 						}(),
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.tags: Too many: 21: must have at most 20 items"),
+				ExpectedErrorMessage: new("spec.tags: Too many: 21: must have at most 20 items"),
 			},
 			{
 				Name: "tags entries must not be longer than 128 characters",
@@ -209,7 +209,7 @@ func TestKongConsumerGroup(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("tags entries must not be longer than 128 characters"),
+				ExpectedErrorMessage: new("tags entries must not be longer than 128 characters"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -246,7 +246,7 @@ func TestKongConsumerGroup(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.name: Invalid value"),
+				ExpectedErrorMessage: new("spec.name: Invalid value"),
 			},
 			{
 				Name: "name too long",
@@ -262,7 +262,7 @@ func TestKongConsumerGroup(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Too long: may not be "),
+				ExpectedErrorMessage: new("Too long: may not be "),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)

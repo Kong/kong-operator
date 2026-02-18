@@ -747,7 +747,7 @@ func TestKongClient_EmptyConfigUpdate(t *testing.T) {
 			Upstreams: []file.FUpstream{
 				{
 					Upstream: kong.Upstream{
-						Name: lo.ToPtr(deckgen.StubUpstreamName),
+						Name: new(deckgen.StubUpstreamName),
 					},
 				},
 			},
@@ -861,15 +861,15 @@ func TestKongClientUpdate_FetchStoreAndPushLastValidConfig(t *testing.T) {
 		lastKongRawState     = &utils.KongRawState{
 			Services: []*kong.Service{
 				{
-					Name: kong.String("last_service"),
-					ID:   kong.String("abc"),
+					Name: new("last_service"),
+					ID:   new("abc"),
 				},
 			},
 			Routes: []*kong.Route{
 				{
-					Name: kong.String("last_route"),
+					Name: new("last_route"),
 					Service: &kong.Service{
-						ID: kong.String("abc"),
+						ID: new("abc"),
 					},
 				},
 			},
@@ -879,13 +879,13 @@ func TestKongClientUpdate_FetchStoreAndPushLastValidConfig(t *testing.T) {
 			Services: []kongstate.Service{
 				{
 					Service: kong.Service{
-						Name: kong.String("new_service"),
+						Name: new("new_service"),
 					},
 					Namespace: "new_namespace",
 					Routes: []kongstate.Route{
 						{
 							Route: kong.Route{
-								Name: kong.String("new_route"),
+								Name: new("new_route"),
 							},
 						},
 					},
@@ -1054,7 +1054,7 @@ func TestKongClient_FallbackConfiguration_SuccessfulRecovery(t *testing.T) {
 				Consumers: []kongstate.Consumer{
 					{
 						Consumer: kong.Consumer{
-							Username: lo.ToPtr(validConsumer.Username),
+							Username: new(validConsumer.Username),
 						},
 					},
 				},
@@ -1466,7 +1466,7 @@ func TestKongClient_ConfigDumpSanitization(t *testing.T) {
 		Certificates: []kongstate.Certificate{
 			{
 				Certificate: kong.Certificate{
-					ID:  kong.String("new_cert"),
+					ID:  new("new_cert"),
 					Key: kong.String(testPrivateKey), // This should be redacted.
 				},
 			},
@@ -1607,7 +1607,7 @@ func TestKongClient_RecoveringFromGatewaySyncError(t *testing.T) {
 					Consumers: []kongstate.Consumer{
 						{
 							Consumer: kong.Consumer{
-								Username: lo.ToPtr("last-valid"),
+								Username: new("last-valid"),
 							},
 						},
 					},
@@ -1620,7 +1620,7 @@ func TestKongClient_RecoveringFromGatewaySyncError(t *testing.T) {
 				Consumers: []kongstate.Consumer{
 					{
 						Consumer: kong.Consumer{
-							Username: lo.ToPtr("fallback"),
+							Username: new("fallback"),
 						},
 					},
 				},
@@ -1664,7 +1664,7 @@ func TestKongClient_RecoveringFromGatewaySyncError(t *testing.T) {
 					Consumers: []file.FConsumer{
 						{
 							Consumer: kong.Consumer{
-								Username: lo.ToPtr(consumerUsername),
+								Username: new(consumerUsername),
 							},
 						},
 					},

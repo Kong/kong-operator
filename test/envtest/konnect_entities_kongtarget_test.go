@@ -7,7 +7,6 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	apiwatch "k8s.io/apimachinery/pkg/watch"
@@ -77,7 +76,7 @@ func TestKongTarget(t *testing.T) {
 			}),
 		).Return(&sdkkonnectops.CreateTargetWithUpstreamResponse{
 			Target: &sdkkonnectcomp.Target{
-				ID: lo.ToPtr(targetID),
+				ID: new(targetID),
 			},
 		}, nil)
 
@@ -150,7 +149,7 @@ func TestKongTarget(t *testing.T) {
 		).Return(&sdkkonnectops.GetTargetWithUpstreamResponse{
 			Target: &sdkkonnectcomp.Target{
 				ID:     &targetID,
-				Weight: lo.ToPtr(int64(targetWeight)),
+				Weight: new(int64(targetWeight)),
 				Target: &targetHost,
 			},
 		}, nil)

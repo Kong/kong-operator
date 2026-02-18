@@ -34,7 +34,7 @@ func TestKongCredentialJWT(t *testing.T) {
 							Name: "test-kong-consumer",
 						},
 						KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
-							Key: lo.ToPtr("key"),
+							Key: new("key"),
 						},
 					},
 					Status: configurationv1alpha1.KongCredentialJWTStatus{
@@ -52,7 +52,7 @@ func TestKongCredentialJWT(t *testing.T) {
 				Update: func(c *configurationv1alpha1.KongCredentialJWT) {
 					c.Spec.ConsumerRef.Name = "new-consumer"
 				},
-				ExpectedUpdateErrorMessage: lo.ToPtr("spec.consumerRef is immutable when an entity is already Programmed"),
+				ExpectedUpdateErrorMessage: new("spec.consumerRef is immutable when an entity is already Programmed"),
 			},
 			{
 				Name: "consumerRef change is allowed when consumer is not Programmed=True nor APIAuthValid=True",
@@ -63,7 +63,7 @@ func TestKongCredentialJWT(t *testing.T) {
 							Name: "test-kong-consumer",
 						},
 						KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
-							Key: lo.ToPtr("key"),
+							Key: new("key"),
 						},
 					},
 					Status: configurationv1alpha1.KongCredentialJWTStatus{
@@ -97,12 +97,12 @@ func TestKongCredentialJWT(t *testing.T) {
 							Name: "test-kong-consumer",
 						},
 						KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
-							Key:       lo.ToPtr("key"),
+							Key:       new("key"),
 							Algorithm: string(sdkkonnectcomp.JWTAlgorithmRs256),
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.rsa_public_key is required when algorithm is RS*, ES*, PS* or EdDSA*"),
+				ExpectedErrorMessage: new("spec.rsa_public_key is required when algorithm is RS*, ES*, PS* or EdDSA*"),
 			},
 			{
 				Name: "rsa_public_key is required when algorithm is RS384",
@@ -113,12 +113,12 @@ func TestKongCredentialJWT(t *testing.T) {
 							Name: "test-kong-consumer",
 						},
 						KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
-							Key:       lo.ToPtr("key"),
+							Key:       new("key"),
 							Algorithm: string(sdkkonnectcomp.JWTAlgorithmRs384),
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.rsa_public_key is required when algorithm is RS*, ES*, PS* or EdDSA*"),
+				ExpectedErrorMessage: new("spec.rsa_public_key is required when algorithm is RS*, ES*, PS* or EdDSA*"),
 			},
 			{
 				Name: "rsa_public_key is required when algorithm is RS512",
@@ -129,12 +129,12 @@ func TestKongCredentialJWT(t *testing.T) {
 							Name: "test-kong-consumer",
 						},
 						KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
-							Key:       lo.ToPtr("key"),
+							Key:       new("key"),
 							Algorithm: string(sdkkonnectcomp.JWTAlgorithmRs512),
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.rsa_public_key is required when algorithm is RS*, ES*, PS* or EdDSA*"),
+				ExpectedErrorMessage: new("spec.rsa_public_key is required when algorithm is RS*, ES*, PS* or EdDSA*"),
 			},
 			{
 				Name: "rsa_public_key is required when algorithm is PS256",
@@ -145,12 +145,12 @@ func TestKongCredentialJWT(t *testing.T) {
 							Name: "test-kong-consumer",
 						},
 						KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
-							Key:       lo.ToPtr("key"),
+							Key:       new("key"),
 							Algorithm: string(sdkkonnectcomp.JWTAlgorithmPs256),
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.rsa_public_key is required when algorithm is RS*, ES*, PS* or EdDSA*"),
+				ExpectedErrorMessage: new("spec.rsa_public_key is required when algorithm is RS*, ES*, PS* or EdDSA*"),
 			},
 			{
 				Name: "rsa_public_key is required when algorithm is PS384",
@@ -161,12 +161,12 @@ func TestKongCredentialJWT(t *testing.T) {
 							Name: "test-kong-consumer",
 						},
 						KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
-							Key:       lo.ToPtr("key"),
+							Key:       new("key"),
 							Algorithm: string(sdkkonnectcomp.JWTAlgorithmPs384),
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.rsa_public_key is required when algorithm is RS*, ES*, PS* or EdDSA*"),
+				ExpectedErrorMessage: new("spec.rsa_public_key is required when algorithm is RS*, ES*, PS* or EdDSA*"),
 			},
 			{
 				Name: "rsa_public_key is required when algorithm is PS512",
@@ -177,12 +177,12 @@ func TestKongCredentialJWT(t *testing.T) {
 							Name: "test-kong-consumer",
 						},
 						KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
-							Key:       lo.ToPtr("key"),
+							Key:       new("key"),
 							Algorithm: string(sdkkonnectcomp.JWTAlgorithmPs512),
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.rsa_public_key is required when algorithm is RS*, ES*, PS* or EdDSA*"),
+				ExpectedErrorMessage: new("spec.rsa_public_key is required when algorithm is RS*, ES*, PS* or EdDSA*"),
 			},
 			{
 				Name: "rsa_public_key is required when algorithm is ES256",
@@ -193,12 +193,12 @@ func TestKongCredentialJWT(t *testing.T) {
 							Name: "test-kong-consumer",
 						},
 						KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
-							Key:       lo.ToPtr("key"),
+							Key:       new("key"),
 							Algorithm: string(sdkkonnectcomp.JWTAlgorithmEs256),
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.rsa_public_key is required when algorithm is RS*, ES*, PS* or EdDSA*"),
+				ExpectedErrorMessage: new("spec.rsa_public_key is required when algorithm is RS*, ES*, PS* or EdDSA*"),
 			},
 			{
 				Name: "rsa_public_key is required when algorithm is ES384",
@@ -209,12 +209,12 @@ func TestKongCredentialJWT(t *testing.T) {
 							Name: "test-kong-consumer",
 						},
 						KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
-							Key:       lo.ToPtr("key"),
+							Key:       new("key"),
 							Algorithm: string(sdkkonnectcomp.JWTAlgorithmEs384),
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.rsa_public_key is required when algorithm is RS*, ES*, PS* or EdDSA*"),
+				ExpectedErrorMessage: new("spec.rsa_public_key is required when algorithm is RS*, ES*, PS* or EdDSA*"),
 			},
 			{
 				Name: "rsa_public_key is required when algorithm is ES512",
@@ -225,12 +225,12 @@ func TestKongCredentialJWT(t *testing.T) {
 							Name: "test-kong-consumer",
 						},
 						KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
-							Key:       lo.ToPtr("key"),
+							Key:       new("key"),
 							Algorithm: string(sdkkonnectcomp.JWTAlgorithmEs512),
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.rsa_public_key is required when algorithm is RS*, ES*, PS* or EdDSA*"),
+				ExpectedErrorMessage: new("spec.rsa_public_key is required when algorithm is RS*, ES*, PS* or EdDSA*"),
 			},
 			{
 				Name: "rsa_public_key is required when algorithm is EdDSA",
@@ -241,12 +241,12 @@ func TestKongCredentialJWT(t *testing.T) {
 							Name: "test-kong-consumer",
 						},
 						KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
-							Key:       lo.ToPtr("key"),
+							Key:       new("key"),
 							Algorithm: string(sdkkonnectcomp.JWTAlgorithmEdDsa),
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.rsa_public_key is required when algorithm is RS*, ES*, PS* or EdDSA*"),
+				ExpectedErrorMessage: new("spec.rsa_public_key is required when algorithm is RS*, ES*, PS* or EdDSA*"),
 			},
 			{
 				Name: "rsa_public_key is not required when algorithm is Hs256",
@@ -257,7 +257,7 @@ func TestKongCredentialJWT(t *testing.T) {
 							Name: "test-kong-consumer",
 						},
 						KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
-							Key:       lo.ToPtr("key"),
+							Key:       new("key"),
 							Algorithm: string(sdkkonnectcomp.JWTAlgorithmHs256),
 						},
 					},
@@ -272,7 +272,7 @@ func TestKongCredentialJWT(t *testing.T) {
 							Name: "test-kong-consumer",
 						},
 						KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
-							Key:       lo.ToPtr("key"),
+							Key:       new("key"),
 							Algorithm: string(sdkkonnectcomp.JWTAlgorithmHs384),
 						},
 					},
@@ -287,7 +287,7 @@ func TestKongCredentialJWT(t *testing.T) {
 							Name: "test-kong-consumer",
 						},
 						KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
-							Key:       lo.ToPtr("key"),
+							Key:       new("key"),
 							Algorithm: string(sdkkonnectcomp.JWTAlgorithmHs512),
 						},
 					},
@@ -308,7 +308,7 @@ func TestKongCredentialJWT(t *testing.T) {
 							Name: "test-kong-consumer",
 						},
 						KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
-							Key: lo.ToPtr("key"),
+							Key: new("key"),
 							Tags: func() []string {
 								var tags []string
 								for i := range 20 {
@@ -329,7 +329,7 @@ func TestKongCredentialJWT(t *testing.T) {
 							Name: "test-kong-consumer",
 						},
 						KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
-							Key: lo.ToPtr("key"),
+							Key: new("key"),
 							Tags: func() []string {
 								var tags []string
 								for i := range 21 {
@@ -340,7 +340,7 @@ func TestKongCredentialJWT(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.tags: Too many: 21: must have at most 20 items"),
+				ExpectedErrorMessage: new("spec.tags: Too many: 21: must have at most 20 items"),
 			},
 			{
 				Name: "tags entries must not be longer than 128 characters",
@@ -351,14 +351,14 @@ func TestKongCredentialJWT(t *testing.T) {
 							Name: "test-kong-consumer",
 						},
 						KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
-							Key: lo.ToPtr("key"),
+							Key: new("key"),
 							Tags: []string{
 								lo.RandomString(129, lo.AlphanumericCharset),
 							},
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("tags entries must not be longer than 128 characters"),
+				ExpectedErrorMessage: new("tags entries must not be longer than 128 characters"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)

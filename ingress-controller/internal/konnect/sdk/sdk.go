@@ -10,7 +10,7 @@ func New(token string, opts ...sdkkonnectgo.SDKOption) *sdkkonnectgo.SDK {
 	sdkOpts := []sdkkonnectgo.SDKOption{
 		sdkkonnectgo.WithSecurity(
 			sdkkonnectcomp.Security{
-				PersonalAccessToken: sdkkonnectgo.String(token),
+				PersonalAccessToken: new(token),
 			},
 		),
 	}

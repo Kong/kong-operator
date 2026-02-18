@@ -9,7 +9,6 @@ import (
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
-	"github.com/samber/lo"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -177,10 +176,10 @@ func kongServiceToSDKServiceInput(
 		WriteTimeout:   svc.Spec.WriteTimeout,
 	}
 	if svc.Spec.Port != 0 {
-		s.Port = lo.ToPtr(svc.Spec.Port)
+		s.Port = new(svc.Spec.Port)
 	}
 	if svc.Spec.Protocol != "" {
-		s.Protocol = lo.ToPtr(svc.Spec.Protocol)
+		s.Protocol = new(svc.Spec.Protocol)
 	}
 	return s
 }
@@ -196,7 +195,7 @@ func getKongServiceForUID(
 		// NOTE: only filter on object's UID.
 		// Other fields like name might have changed in the meantime but that's OK.
 		// Those will be enforced via subsequent updates.
-		Tags:           lo.ToPtr(UIDLabelForObject(svc)),
+		Tags:           new(UIDLabelForObject(svc)),
 		ControlPlaneID: svc.GetControlPlaneID(),
 	}
 
@@ -224,7 +223,7 @@ func serviceMatch(konnectService *sdkkonnectcomp.ServiceOutput, svc *configurati
 		spec.Protocol = sdkkonnectcomp.Protocol(parsedURL.Scheme)
 		spec.Host = parsedURL.Hostname()
 		spec.Port, _ = strconv.ParseInt(parsedURL.Port(), 10, 64)
-		spec.Path = lo.ToPtr(parsedURL.Path)
+		spec.Path = new(parsedURL.Path)
 	}
 	return equalWithDefault(konnectService.Name, spec.Name, "") &&
 		konnectService.Host == spec.Host &&

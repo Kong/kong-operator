@@ -3,7 +3,6 @@ package konnect
 import (
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -639,8 +638,8 @@ func TestEnsureExistingCredential(t *testing.T) {
 						},
 						KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
 							Algorithm:    "RS256",
-							Key:          lo.ToPtr("old-key"),
-							RSAPublicKey: lo.ToPtr("old-public-key"),
+							Key:          new("old-key"),
+							RSAPublicKey: new("old-public-key"),
 						},
 					},
 				},
@@ -683,8 +682,8 @@ func TestEnsureExistingCredential(t *testing.T) {
 						},
 						KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
 							Algorithm:    "RS256",
-							Key:          lo.ToPtr("new-key"),
-							RSAPublicKey: lo.ToPtr("new-public-key"),
+							Key:          new("new-key"),
+							RSAPublicKey: new("new-public-key"),
 						},
 					},
 				},
@@ -746,8 +745,8 @@ func TestEnsureExistingCredential(t *testing.T) {
 							Name: "consumer",
 						},
 						KongCredentialHMACAPISpec: configurationv1alpha1.KongCredentialHMACAPISpec{
-							Username: lo.ToPtr("old-hmac-username"),
-							Secret:   lo.ToPtr("old-hmac-secret"),
+							Username: new("old-hmac-username"),
+							Secret:   new("old-hmac-secret"),
 						},
 					},
 				},
@@ -769,8 +768,8 @@ func TestEnsureExistingCredential(t *testing.T) {
 				},
 				assert: func(t *testing.T, cred *configurationv1alpha1.KongCredentialHMAC) {
 					require.NotNil(t, cred)
-					require.Equal(t, lo.ToPtr("new-hmac-username"), cred.Spec.Username)
-					require.Equal(t, lo.ToPtr("new-hmac-secret"), cred.Spec.Secret)
+					require.Equal(t, new("new-hmac-username"), cred.Spec.Username)
+					require.Equal(t, new("new-hmac-secret"), cred.Spec.Secret)
 				},
 				wantError: false,
 			},
@@ -783,8 +782,8 @@ func TestEnsureExistingCredential(t *testing.T) {
 					},
 					Spec: configurationv1alpha1.KongCredentialHMACSpec{
 						KongCredentialHMACAPISpec: configurationv1alpha1.KongCredentialHMACAPISpec{
-							Username: lo.ToPtr("hmac-username"),
-							Secret:   lo.ToPtr("hmac-secret"),
+							Username: new("hmac-username"),
+							Secret:   new("hmac-secret"),
 						},
 						ConsumerRef: corev1.LocalObjectReference{
 							Name: "consumer",

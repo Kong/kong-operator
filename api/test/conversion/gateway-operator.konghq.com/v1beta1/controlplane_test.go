@@ -37,7 +37,7 @@ func TestControlPlane_ConvertTo(t *testing.T) {
 			name: "With DataPlane ref",
 			spec: operatorv1beta1.ControlPlaneSpec{
 				ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
-					DataPlane: lo.ToPtr("test-dataplane"),
+					DataPlane: new("test-dataplane"),
 					WatchNamespaces: &operatorv1beta1.WatchNamespaces{
 						Type: operatorv1beta1.WatchNamespacesTypeAll,
 					},
@@ -51,7 +51,7 @@ func TestControlPlane_ConvertTo(t *testing.T) {
 						},
 					},
 					Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
-						Replicas: lo.ToPtr(int32(2)),
+						Replicas: new(int32(2)),
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
@@ -79,7 +79,7 @@ func TestControlPlane_ConvertTo(t *testing.T) {
 					},
 				},
 			},
-			expectedIngressClass: lo.ToPtr("kong"),
+			expectedIngressClass: new("kong"),
 			expectsDataPlane:     true,
 			expectedFeatureGates: []operatorv2beta1.ControlPlaneFeatureGate{
 				{Name: "GatewayAlpha", State: operatorv2beta1.FeatureGateStateEnabled},
@@ -94,7 +94,7 @@ func TestControlPlane_ConvertTo(t *testing.T) {
 			name: "With EnvFrom and ValueFrom returns error",
 			spec: operatorv1beta1.ControlPlaneSpec{
 				ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
-					DataPlane: lo.ToPtr("test-dataplane"),
+					DataPlane: new("test-dataplane"),
 					Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
@@ -148,7 +148,7 @@ func TestControlPlane_ConvertTo(t *testing.T) {
 						},
 					},
 				},
-				IngressClass: lo.ToPtr("kong"),
+				IngressClass: new("kong"),
 			},
 			expectedError: errors.New("ControlPlane v1beta1 can't be converted, because environment variable: CONTROLLER_FEATURE_GATES is populated with EnvFrom, manual adjustment is needed"),
 		},
@@ -156,7 +156,7 @@ func TestControlPlane_ConvertTo(t *testing.T) {
 			name: "With EnvFrom on container level",
 			spec: operatorv1beta1.ControlPlaneSpec{
 				ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
-					DataPlane: lo.ToPtr("test-dataplane"),
+					DataPlane: new("test-dataplane"),
 					Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
@@ -179,7 +179,7 @@ func TestControlPlane_ConvertTo(t *testing.T) {
 						},
 					},
 				},
-				IngressClass: lo.ToPtr("kong"),
+				IngressClass: new("kong"),
 			},
 			expectedError: errors.New("ControlPlane v1beta1 can't be converted, because EnvFrom is used on container level (converter can't reason about values), manual adjustment is needed"),
 		},
@@ -192,16 +192,16 @@ func TestControlPlane_ConvertTo(t *testing.T) {
 						List: []string{"namespace1", "namespace2"},
 					},
 				},
-				IngressClass: lo.ToPtr("test"),
+				IngressClass: new("test"),
 			},
-			expectedIngressClass: lo.ToPtr("test"),
+			expectedIngressClass: new("test"),
 			expectsDataPlane:     false,
 		},
 		{
 			name: "With DataPlane ref but managed by Gateway",
 			spec: operatorv1beta1.ControlPlaneSpec{
 				ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
-					DataPlane: lo.ToPtr("test-dataplane"),
+					DataPlane: new("test-dataplane"),
 				},
 			},
 			objPatchFunc: func(obj *operatorv1beta1.ControlPlane) {
@@ -225,7 +225,7 @@ func TestControlPlane_ConvertTo(t *testing.T) {
 					},
 				},
 			},
-			expectedIngressClass: lo.ToPtr("kong"),
+			expectedIngressClass: new("kong"),
 			expectsDataPlane:     false,
 		},
 	}
@@ -320,7 +320,7 @@ func TestControlPlane_ConvertFrom(t *testing.T) {
 					},
 				},
 				ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-					IngressClass: lo.ToPtr("kong"),
+					IngressClass: new("kong"),
 					WatchNamespaces: &operatorv2beta1.WatchNamespaces{
 						Type: operatorv2beta1.WatchNamespacesTypeAll,
 					},
@@ -348,7 +348,7 @@ func TestControlPlane_ConvertFrom(t *testing.T) {
 					Type: operatorv2beta1.ControlPlaneDataPlaneTargetManagedByType,
 				},
 				ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-					IngressClass: lo.ToPtr("kong"),
+					IngressClass: new("kong"),
 					WatchNamespaces: &operatorv2beta1.WatchNamespaces{
 						Type: operatorv2beta1.WatchNamespacesTypeList,
 						List: []string{"namespace1", "namespace2"},
@@ -443,7 +443,7 @@ func TestControlPlane_RoundTrip(t *testing.T) {
 					},
 				},
 				ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-					IngressClass: lo.ToPtr("kong"),
+					IngressClass: new("kong"),
 					WatchNamespaces: &operatorv2beta1.WatchNamespaces{
 						Type: operatorv2beta1.WatchNamespacesTypeAll,
 					},
@@ -456,7 +456,7 @@ func TestControlPlane_RoundTrip(t *testing.T) {
 						{Name: "KONG_PLUGIN", State: operatorv2beta1.ControllerStateDisabled},
 					},
 					DataPlaneSync: &operatorv2beta1.ControlPlaneDataPlaneSync{
-						ReverseSync: lo.ToPtr(operatorv2beta1.ControlPlaneReverseSyncStateEnabled),
+						ReverseSync: new(operatorv2beta1.ControlPlaneReverseSyncStateEnabled),
 					},
 					GatewayDiscovery: &operatorv2beta1.ControlPlaneGatewayDiscovery{
 						ReadinessCheckInterval: &metav1.Duration{Duration: 30 * time.Second},
@@ -466,23 +466,23 @@ func TestControlPlane_RoundTrip(t *testing.T) {
 						InitSyncDuration: &metav1.Duration{Duration: 60 * time.Second},
 					},
 					Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
-						CombinedServicesFromDifferentHTTPRoutes: lo.ToPtr(operatorv2beta1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled),
+						CombinedServicesFromDifferentHTTPRoutes: new(operatorv2beta1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled),
 						FallbackConfiguration: &operatorv2beta1.ControlPlaneFallbackConfiguration{
-							UseLastValidConfig: lo.ToPtr(operatorv2beta1.ControlPlaneFallbackConfigurationStateDisabled),
+							UseLastValidConfig: new(operatorv2beta1.ControlPlaneFallbackConfigurationStateDisabled),
 						},
-						DrainSupport: lo.ToPtr(operatorv2beta1.ControlPlaneDrainSupportStateEnabled),
+						DrainSupport: new(operatorv2beta1.ControlPlaneDrainSupportStateEnabled),
 					},
 					ConfigDump: &operatorv2beta1.ControlPlaneConfigDump{
 						State:         operatorv2beta1.ConfigDumpStateEnabled,
 						DumpSensitive: operatorv2beta1.ConfigDumpStateDisabled,
 					},
 					Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
-						ConsumersSync: lo.ToPtr(operatorv2beta1.ControlPlaneKonnectConsumersSyncStateEnabled),
+						ConsumersSync: new(operatorv2beta1.ControlPlaneKonnectConsumersSyncStateEnabled),
 						Licensing: &operatorv2beta1.ControlPlaneKonnectLicensing{
-							State:                lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingStateEnabled),
+							State:                new(operatorv2beta1.ControlPlaneKonnectLicensingStateEnabled),
 							InitialPollingPeriod: &metav1.Duration{Duration: 10 * time.Second},
 							PollingPeriod:        &metav1.Duration{Duration: 60 * time.Second},
-							StorageState:         lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicenseStorageStateDisabled),
+							StorageState:         new(operatorv2beta1.ControlPlaneKonnectLicenseStorageStateDisabled),
 						},
 						NodeRefreshPeriod:  &metav1.Duration{Duration: 30 * time.Second},
 						ConfigUploadPeriod: &metav1.Duration{Duration: 10 * time.Second},
@@ -506,7 +506,7 @@ func TestControlPlane_RoundTrip(t *testing.T) {
 					Type: operatorv2beta1.ControlPlaneDataPlaneTargetManagedByType,
 				},
 				ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-					IngressClass: lo.ToPtr("kong"),
+					IngressClass: new("kong"),
 				},
 			},
 		},

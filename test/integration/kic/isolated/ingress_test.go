@@ -13,7 +13,6 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -118,7 +117,7 @@ func TestIngressGRPC(t *testing.T) {
 							Paths: []netv1.HTTPIngressPath{
 								{
 									Path:     "/",
-									PathType: lo.ToPtr(netv1.PathTypePrefix),
+									PathType: new(netv1.PathTypePrefix),
 									Backend: netv1.IngressBackend{
 										Service: &netv1.IngressServiceBackend{
 											Name: serviceGRPCS.Name,
@@ -138,7 +137,7 @@ func TestIngressGRPC(t *testing.T) {
 							Paths: []netv1.HTTPIngressPath{
 								{
 									Path:     "/",
-									PathType: lo.ToPtr(netv1.PathTypePrefix),
+									PathType: new(netv1.PathTypePrefix),
 									Backend: netv1.IngressBackend{
 										Service: &netv1.IngressServiceBackend{
 											Name: serviceGRPC.Name,
@@ -316,10 +315,10 @@ func TestIngress_KongServiceFacadeAsBackend(t *testing.T) {
 							Paths: []netv1.HTTPIngressPath{
 								{
 									Path:     jpegIngressPath,
-									PathType: lo.ToPtr(netv1.PathTypePrefix),
+									PathType: new(netv1.PathTypePrefix),
 									Backend: netv1.IngressBackend{
 										Resource: &corev1.TypedLocalObjectReference{
-											APIGroup: lo.ToPtr(incubatorv1alpha1.SchemeGroupVersion.Group),
+											APIGroup: new(incubatorv1alpha1.SchemeGroupVersion.Group),
 											Kind:     incubatorv1alpha1.KongServiceFacadeKind,
 											Name:     serviceFacades[0].Name,
 										},
@@ -327,10 +326,10 @@ func TestIngress_KongServiceFacadeAsBackend(t *testing.T) {
 								},
 								{
 									Path:     pngIngressPath,
-									PathType: lo.ToPtr(netv1.PathTypePrefix),
+									PathType: new(netv1.PathTypePrefix),
 									Backend: netv1.IngressBackend{
 										Resource: &corev1.TypedLocalObjectReference{
-											APIGroup: lo.ToPtr(incubatorv1alpha1.SchemeGroupVersion.Group),
+											APIGroup: new(incubatorv1alpha1.SchemeGroupVersion.Group),
 											Kind:     incubatorv1alpha1.KongServiceFacadeKind,
 											Name:     serviceFacades[1].Name,
 										},
@@ -345,7 +344,7 @@ func TestIngress_KongServiceFacadeAsBackend(t *testing.T) {
 				}).
 				WithDefaultBackend(&netv1.IngressBackend{
 					Resource: &corev1.TypedLocalObjectReference{
-						APIGroup: lo.ToPtr(incubatorv1alpha1.SchemeGroupVersion.Group),
+						APIGroup: new(incubatorv1alpha1.SchemeGroupVersion.Group),
 						Kind:     incubatorv1alpha1.KongServiceFacadeKind,
 						Name:     serviceFacades[2].Name,
 					},

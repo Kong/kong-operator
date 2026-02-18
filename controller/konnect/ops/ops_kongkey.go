@@ -171,14 +171,14 @@ func kongKeyToKeyInput(key *configurationv1alpha1.KongKey) sdkkonnectcomp.Key {
 	}
 	if key.Spec.PEM != nil {
 		k.Pem = &sdkkonnectcomp.Pem{
-			PrivateKey: lo.ToPtr(key.Spec.PEM.PrivateKey),
-			PublicKey:  lo.ToPtr(key.Spec.PEM.PublicKey),
+			PrivateKey: new(key.Spec.PEM.PrivateKey),
+			PublicKey:  new(key.Spec.PEM.PublicKey),
 		}
 	}
 	if konnectStatus := key.Status.Konnect; konnectStatus != nil {
 		if keySetID := konnectStatus.GetKeySetID(); keySetID != "" {
 			k.Set = &sdkkonnectcomp.Set{
-				ID: lo.ToPtr(konnectStatus.GetKeySetID()),
+				ID: new(konnectStatus.GetKeySetID()),
 			}
 		}
 	}
@@ -192,7 +192,7 @@ func getKongKeyForUID(
 ) (string, error) {
 	resp, err := sdk.ListKey(ctx, sdkkonnectops.ListKeyRequest{
 		ControlPlaneID: key.GetControlPlaneID(),
-		Tags:           lo.ToPtr(UIDLabelForObject(key)),
+		Tags:           new(UIDLabelForObject(key)),
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to list KongKeys: %w", err)

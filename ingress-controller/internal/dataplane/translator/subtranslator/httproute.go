@@ -165,10 +165,10 @@ func httpBackendRefsToBackendRefs(httpBackendRef []gatewayapi.HTTPBackendRef, pa
 	for _, hRef := range httpBackendRef {
 		backendRef := hRef.BackendRef
 		if backendRef.Group == nil {
-			backendRef.Group = lo.ToPtr(gatewayapi.Group(""))
+			backendRef.Group = new(gatewayapi.Group(""))
 		}
 		if backendRef.Namespace == nil {
-			backendRef.Namespace = lo.ToPtr(gatewayapi.Namespace(parentRoute.Namespace))
+			backendRef.Namespace = new(gatewayapi.Namespace(parentRoute.Namespace))
 		}
 		backendRefs = append(backendRefs, backendRef)
 	}
@@ -193,13 +193,13 @@ func translateHTTPRouteRulesMetaToKongstateService(
 	// Fill in the common fields of the kongstate.Service.
 	service := kongstate.Service{
 		Service: kong.Service{
-			Name:           kong.String(serviceName),
-			Host:           kong.String(serviceName),
-			Protocol:       kong.String(DefaultKongServiceProtocol),
-			ConnectTimeout: kong.Int(DefaultServiceTimeout),
-			ReadTimeout:    kong.Int(DefaultServiceTimeout),
-			WriteTimeout:   kong.Int(DefaultServiceTimeout),
-			Retries:        kong.Int(DefaultRetries),
+			Name:           new(serviceName),
+			Host:           new(serviceName),
+			Protocol:       new(DefaultKongServiceProtocol),
+			ConnectTimeout: new(DefaultServiceTimeout),
+			ReadTimeout:    new(DefaultServiceTimeout),
+			WriteTimeout:   new(DefaultServiceTimeout),
+			Retries:        new(DefaultRetries),
 		},
 	}
 
@@ -245,7 +245,7 @@ func translateHTTPRouteRulesMetaToKongstateService(
 			service.Plugins = make([]kong.Plugin, 0)
 		}
 		service.Plugins = append(service.Plugins, kong.Plugin{
-			Name: kong.String("request-termination"),
+			Name: new("request-termination"),
 			Config: kong.Configuration{
 				"status_code": 500,
 				"message":     "no existing backendRef provided",
@@ -295,9 +295,9 @@ func applyTimeoutToServiceFromHTTPRouteRule(svc *kongstate.Service, rule gateway
 	if backendRequestTimeout == DefaultServiceTimeout {
 		return
 	}
-	svc.ReadTimeout = kong.Int(backendRequestTimeout)
-	svc.ConnectTimeout = kong.Int(backendRequestTimeout)
-	svc.WriteTimeout = kong.Int(backendRequestTimeout)
+	svc.ReadTimeout = new(backendRequestTimeout)
+	svc.ConnectTimeout = new(backendRequestTimeout)
+	svc.WriteTimeout = new(backendRequestTimeout)
 }
 
 // getHTTPRouteHostnamesAsSliceOfStringPointers translates the hostnames defined
@@ -305,7 +305,7 @@ func applyTimeoutToServiceFromHTTPRouteRule(svc *kongstate.Service, rule gateway
 // by kong.Route{}.
 func getHTTPRouteHostnamesAsSliceOfStringPointers(httproute *gatewayapi.HTTPRoute) []*string {
 	return lo.Map(httproute.Spec.Hostnames, func(h gatewayapi.Hostname, _ int) *string {
-		return kong.String(string(h))
+		return new(string(h))
 	})
 }
 
@@ -707,9 +707,9 @@ func GenerateKongRoutesFromHTTPRouteMatches(
 		r := kongstate.Route{
 			Ingress: ingressObjectInfo,
 			Route: kong.Route{
-				Name:         kong.String(routeName),
+				Name:         new(routeName),
 				Protocols:    kong.StringSlice("http", "https"),
-				PreserveHost: kong.Bool(true),
+				PreserveHost: new(true),
 				Tags:         tags,
 			},
 		}
@@ -731,7 +731,7 @@ func GenerateKongRoutesFromHTTPRouteMatches(
 	}
 
 	// stripPath needs to be disabled by default to be conformant with the Gateway API
-	r.StripPath = kong.Bool(false)
+	r.StripPath = new(false)
 
 	// Check if the route has a RequestRedirect or URLRewrite with non-nil ReplacePrefixMatch - if it does, we need to
 	// generate a route for each match as the path is used to modify routes and generate plugins.
@@ -780,9 +780,9 @@ func generateKongstateHTTPRoute(routeName string, ingressObjectInfo util.K8sObje
 	r := kongstate.Route{
 		Ingress: ingressObjectInfo,
 		Route: kong.Route{
-			Name:         kong.String(routeName),
+			Name:         new(routeName),
 			Protocols:    kong.StringSlice("http", "https"),
-			PreserveHost: kong.Bool(true),
+			PreserveHost: new(true),
 			// metadata tags aren't added here, they're added by the caller
 		},
 	}
@@ -843,7 +843,7 @@ func getRoutesFromMatches(
 			if match.Path != nil {
 				paths := generateKongRoutePathFromHTTPRouteMatch(match)
 				for _, p := range paths {
-					matchRoute.Paths = append(matchRoute.Paths, kong.String(p))
+					matchRoute.Paths = append(matchRoute.Paths, new(p))
 				}
 			}
 
@@ -852,7 +852,7 @@ func getRoutesFromMatches(
 			if match.Method != nil {
 				method := string(*match.Method)
 				if _, ok := seenMethods[method]; !ok {
-					matchRoute.Methods = append(matchRoute.Methods, kong.String(string(*match.Method)))
+					matchRoute.Methods = append(matchRoute.Methods, new(string(*match.Method)))
 					seenMethods[method] = struct{}{}
 				}
 			}
@@ -878,14 +878,14 @@ func getRoutesFromMatches(
 			// For exact matches, we transform the path into a regular expression that terminates after the value.
 			if match.Path != nil {
 				for _, path := range generateKongRoutePathFromHTTPRouteMatch(match) {
-					route.Paths = append(route.Paths, kong.String(path))
+					route.Paths = append(route.Paths, new(path))
 				}
 			}
 
 			if match.Method != nil {
 				method := string(*match.Method)
 				if _, ok := seenMethods[method]; !ok {
-					route.Methods = append(route.Methods, kong.String(string(*match.Method)))
+					route.Methods = append(route.Methods, new(string(*match.Method)))
 					seenMethods[method] = struct{}{}
 				}
 			}
@@ -1081,7 +1081,7 @@ func transformerPluginsToKongPlugins(plugins []transformerPlugin) []kong.Plugin 
 
 func transformerPluginToKongPlugin(plugin transformerPlugin) kong.Plugin {
 	res := kong.Plugin{
-		Name:   kong.String(string(plugin.Type)),
+		Name:   new(string(plugin.Type)),
 		Config: kong.Configuration{},
 	}
 	if !cmp.Equal(plugin.Replace, TransformerPluginReplaceConfig{}) {
@@ -1139,7 +1139,7 @@ func schemeHostPortFromHTTPPathModifier(modifier *gatewayapi.HTTPRequestRedirect
 // of request redirect filter.
 func generateRequestRedirectKongPlugin(modifier *gatewayapi.HTTPRequestRedirectFilter, path string) (kong.Plugin, transformerPlugin) {
 	requestTerminationPlugin := kong.Plugin{
-		Name: kong.String("request-termination"),
+		Name: new("request-termination"),
 		Config: kong.Configuration{
 			"status_code": modifier.StatusCode,
 		},
@@ -1182,7 +1182,7 @@ func generateRequestRedirectUsingRedirectKongPlugin(
 	modifier *gatewayapi.HTTPRequestRedirectFilter,
 ) kong.Plugin {
 	redirectPlugin := kong.Plugin{
-		Name: kong.String("redirect"),
+		Name: new("redirect"),
 		Config: kong.Configuration{
 			"status_code": modifier.StatusCode,
 		},
@@ -1207,8 +1207,8 @@ func generateRequestRedirectUsingRedirectKongPlugin(
 	} else {
 		location = path
 	}
-	redirectPlugin.Config["location"] = kong.String(location)
-	redirectPlugin.Config["keep_incoming_path"] = kong.Bool(preservePath)
+	redirectPlugin.Config["location"] = new(location)
+	redirectPlugin.Config["keep_incoming_path"] = new(preservePath)
 
 	return redirectPlugin
 }
@@ -1497,16 +1497,16 @@ func generateKongRouteModifierForURLRewritePrefixMatch(path string, expressionsR
 	return func(route *kongstate.Route) {
 		paths := make([]*string, 0, 2)
 		// The first path matches the exact path.
-		paths = append(paths, lo.ToPtr(fmt.Sprintf("%s%s$", KongPathRegexPrefix, path)))
+		paths = append(paths, new(fmt.Sprintf("%s%s$", KongPathRegexPrefix, path)))
 		// The second path matches subpaths, including a single slash.
 		if pathIsRoot {
 			// If the path is "/", we don't capture the slash as Kong Route's path has to begin with a slash.
 			// If we captured the slash, we'd generate "(/.*)", and it'd be rejected by Kong.
-			paths = append(paths, lo.ToPtr(fmt.Sprintf("%s/(.*)", KongPathRegexPrefix)))
+			paths = append(paths, new(fmt.Sprintf("%s/(.*)", KongPathRegexPrefix)))
 		} else {
 			// If the path is not "/", i.e. it has a prefix, we capture the slash to make it possible to
 			// route "/prefix" to "/replacement" and "/prefix/" to "/replacement/" correctly.
-			paths = append(paths, lo.ToPtr(
+			paths = append(paths, new(
 				fmt.Sprintf("%s%s(/.*)", KongPathRegexPrefix, path)),
 			)
 		}

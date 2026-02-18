@@ -971,7 +971,7 @@ func setDataPlaneOptionsDefaults(opts *operatorv1beta1.DataPlaneOptions, default
 
 	// If no replicas are set, set it to default 1, but only if Scaling is not set as well.
 	if opts.Deployment.Replicas == nil && opts.Deployment.Scaling == nil {
-		opts.Deployment.Replicas = lo.ToPtr(int32(1))
+		opts.Deployment.Replicas = new(int32(1))
 	}
 }
 

@@ -3,7 +3,6 @@ package builder
 import (
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -101,7 +100,7 @@ func TestKongRouteBuilder_WithHTTPRouteMatch(t *testing.T) {
 			name: "with exact path",
 			match: gwtypes.HTTPRouteMatch{
 				Path: &gatewayv1.HTTPPathMatch{
-					Type:  lo.ToPtr(gatewayv1.PathMatchExact),
+					Type:  new(gatewayv1.PathMatchExact),
 					Value: &pathValue,
 				},
 			},
@@ -115,7 +114,7 @@ func TestKongRouteBuilder_WithHTTPRouteMatch(t *testing.T) {
 			name: "with regular expression path",
 			match: gwtypes.HTTPRouteMatch{
 				Path: &gatewayv1.HTTPPathMatch{
-					Type:  lo.ToPtr(gatewayv1.PathMatchRegularExpression),
+					Type:  new(gatewayv1.PathMatchRegularExpression),
 					Value: &pathValue,
 				},
 			},
@@ -141,7 +140,7 @@ func TestKongRouteBuilder_WithHTTPRouteMatch(t *testing.T) {
 			match: gwtypes.HTTPRouteMatch{
 				Headers: []gatewayv1.HTTPHeaderMatch{
 					{
-						Type:  lo.ToPtr(gatewayv1.HeaderMatchExact),
+						Type:  new(gatewayv1.HeaderMatchExact),
 						Name:  "Authorization",
 						Value: "Bearer token",
 					},
@@ -151,7 +150,7 @@ func TestKongRouteBuilder_WithHTTPRouteMatch(t *testing.T) {
 						Value: "application/json",
 					},
 					{
-						Type:  lo.ToPtr(gatewayv1.HeaderMatchRegularExpression),
+						Type:  new(gatewayv1.HeaderMatchRegularExpression),
 						Name:  "Foo",
 						Value: "(bar|baz)",
 					},
@@ -171,12 +170,12 @@ func TestKongRouteBuilder_WithHTTPRouteMatch(t *testing.T) {
 			match: gwtypes.HTTPRouteMatch{
 				Headers: []gatewayv1.HTTPHeaderMatch{
 					{
-						Type:  lo.ToPtr(gatewayv1.HeaderMatchExact),
+						Type:  new(gatewayv1.HeaderMatchExact),
 						Name:  "Accept",
 						Value: "application/json",
 					},
 					{
-						Type:  lo.ToPtr(gatewayv1.HeaderMatchExact),
+						Type:  new(gatewayv1.HeaderMatchExact),
 						Name:  "Accept",
 						Value: "text/plain",
 					},
@@ -197,7 +196,7 @@ func TestKongRouteBuilder_WithHTTPRouteMatch(t *testing.T) {
 				Method: &method,
 				Headers: []gatewayv1.HTTPHeaderMatch{
 					{
-						Type:  lo.ToPtr(gatewayv1.HeaderMatchExact),
+						Type:  new(gatewayv1.HeaderMatchExact),
 						Name:  "Authorization",
 						Value: "Bearer token",
 					},

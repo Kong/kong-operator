@@ -101,7 +101,7 @@ func TestGatewayKonnectAPIAuthReferenceGrant(t *testing.T) {
 			deploy.KongReferenceGrantTos(configurationv1alpha1.ReferenceGrantTo{
 				Group: configurationv1alpha1.Group(konnectv1alpha1.GroupVersion.Group),
 				Kind:  "KonnectAPIAuthConfiguration",
-				Name:  lo.ToPtr(configurationv1alpha1.ObjectName("my-auth")),
+				Name:  new(configurationv1alpha1.ObjectName("my-auth")),
 			}),
 		)
 
@@ -263,7 +263,7 @@ func TestGatewayKonnectAPIAuthReferenceGrant_CleanupOnGatewayDeletion(t *testing
 		deploy.KongReferenceGrantTos(configurationv1alpha1.ReferenceGrantTo{
 			Group: configurationv1alpha1.Group(konnectv1alpha1.GroupVersion.Group),
 			Kind:  "KonnectAPIAuthConfiguration",
-			Name:  lo.ToPtr(configurationv1alpha1.ObjectName("my-auth-cleanup")),
+			Name:  new(configurationv1alpha1.ObjectName("my-auth-cleanup")),
 		}),
 	)
 	t.Cleanup(func() { _ = c.Delete(ctx, userGrant) })

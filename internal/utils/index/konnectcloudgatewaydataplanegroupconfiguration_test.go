@@ -3,7 +3,6 @@ package index
 import (
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -77,7 +76,7 @@ func Test_konnectCloudGatewayNetworkDataPlaneGroupConfigurationRef(t *testing.T)
 						{
 							NetworkRef: commonv1alpha1.ObjectRef{
 								Type:      commonv1alpha1.ObjectRefTypeKonnectID,
-								KonnectID: lo.ToPtr(generate.KonnectID(t)),
+								KonnectID: new(generate.KonnectID(t)),
 							},
 						},
 					},

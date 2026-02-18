@@ -3,7 +3,6 @@ package configuration_test
 import (
 	"testing"
 
-	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -67,7 +66,7 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongDataPlaneClientCertificate{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.cert in body should be at least 1 chars long"),
+				ExpectedErrorMessage: new("spec.cert in body should be at least 1 chars long"),
 			},
 			{
 				Name: "cert can be altered before programmed",
@@ -128,7 +127,7 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 				Update: func(k *configurationv1alpha1.KongDataPlaneClientCertificate) {
 					k.Spec.Cert = "cert2"
 				},
-				ExpectedUpdateErrorMessage: lo.ToPtr("spec.cert is immutable when an entity is already Programmed"),
+				ExpectedUpdateErrorMessage: new("spec.cert is immutable when an entity is already Programmed"),
 			},
 			{
 				Name: "Can adopt in match mode",
@@ -177,7 +176,7 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Only 'match' mode adoption is supported"),
+				ExpectedErrorMessage: new("Only 'match' mode adoption is supported"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)

@@ -9,7 +9,6 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -104,7 +103,7 @@ func TestKongConsumerCredential_BasicAuth(t *testing.T) {
 		Return(
 			&sdkkonnectops.CreateBasicAuthWithConsumerResponse{
 				BasicAuth: &sdkkonnectcomp.BasicAuth{
-					ID: lo.ToPtr(basicAuthID),
+					ID: new(basicAuthID),
 				},
 			},
 			nil,
@@ -114,7 +113,7 @@ func TestKongConsumerCredential_BasicAuth(t *testing.T) {
 		Return(
 			&sdkkonnectops.UpsertBasicAuthWithConsumerResponse{
 				BasicAuth: &sdkkonnectcomp.BasicAuth{
-					ID: lo.ToPtr(basicAuthID),
+					ID: new(basicAuthID),
 				},
 			},
 			nil,
@@ -203,7 +202,7 @@ func TestKongConsumerCredential_BasicAuth(t *testing.T) {
 				Object: &sdkkonnectops.ListBasicAuthResponseBody{
 					Data: []sdkkonnectcomp.BasicAuth{
 						{
-							ID: lo.ToPtr(basicAuthID),
+							ID: new(basicAuthID),
 						},
 					},
 				},

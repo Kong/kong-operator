@@ -209,7 +209,7 @@ func TestParentReferenceKey(t *testing.T) {
 			name: "name with namespace",
 			ref: gatewayapi.ParentReference{
 				Name:      "foo",
-				Namespace: lo.ToPtr(gatewayapi.Namespace("bar")),
+				Namespace: new(gatewayapi.Namespace("bar")),
 			},
 			expected: "bar/foo//",
 		},
@@ -217,7 +217,7 @@ func TestParentReferenceKey(t *testing.T) {
 			name: "name with port number",
 			ref: gatewayapi.ParentReference{
 				Name: "foo",
-				Port: lo.ToPtr(gatewayapi.PortNumber(1234)),
+				Port: new(gatewayapi.PortNumber(1234)),
 			},
 			expected: "route-ns/foo//1234",
 		},
@@ -225,7 +225,7 @@ func TestParentReferenceKey(t *testing.T) {
 			name: "name with section name",
 			ref: gatewayapi.ParentReference{
 				Name:        "foo",
-				SectionName: lo.ToPtr(gatewayapi.SectionName("section")),
+				SectionName: new(gatewayapi.SectionName("section")),
 			},
 			expected: "route-ns/foo/section/",
 		},
@@ -233,9 +233,9 @@ func TestParentReferenceKey(t *testing.T) {
 			name: "all fields",
 			ref: gatewayapi.ParentReference{
 				Name:        "foo",
-				Namespace:   lo.ToPtr(gatewayapi.Namespace("bar")),
-				Port:        lo.ToPtr(gatewayapi.PortNumber(1234)),
-				SectionName: lo.ToPtr(gatewayapi.SectionName("section")),
+				Namespace:   new(gatewayapi.Namespace("bar")),
+				Port:        new(gatewayapi.PortNumber(1234)),
+				SectionName: new(gatewayapi.SectionName("section")),
 			},
 			expected: "bar/foo/section/1234",
 		},
@@ -243,8 +243,8 @@ func TestParentReferenceKey(t *testing.T) {
 			name: "group and kind are ignored",
 			ref: gatewayapi.ParentReference{
 				Name:  "foo",
-				Group: lo.ToPtr(gatewayapi.Group("group")),
-				Kind:  lo.ToPtr(gatewayapi.Kind("kind")),
+				Group: new(gatewayapi.Group("group")),
+				Kind:  new(gatewayapi.Kind("kind")),
 			},
 			expected: "route-ns/foo//",
 		},

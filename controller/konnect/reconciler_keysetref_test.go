@@ -95,7 +95,7 @@ func TestHandleKeySetRef(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:              "key-set-3",
 				Namespace:         "ns",
-				DeletionTimestamp: lo.ToPtr(metav1.Now()),
+				DeletionTimestamp: new(metav1.Now()),
 				Finalizers: []string{
 					KonnectCleanupFinalizer,
 				},

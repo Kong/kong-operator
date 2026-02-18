@@ -7,7 +7,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/samber/lo"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	ingressmgrconfig "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
@@ -99,7 +98,7 @@ func New(m metadata.Info) *CLI {
 	flagSet.Var(&DiscardFlagValue{}, "cluster-ca-key-type", deprecationPrefix+"Type of the key used for the cluster CA certificate (possible values: ecdsa, rsa). Default: ecdsa.")
 	flagSet.IntVar(new(int), "cluster-ca-key-size", mgrconfig.DefaultClusterCAKeySize, deprecationPrefix+"Size (in bits) of the key used for the cluster CA certificate. Only used for RSA keys.")
 
-	loggerOpts := lo.ToPtr(*manager.DefaultConfig().LoggerOpts)
+	loggerOpts := new(*manager.DefaultConfig().LoggerOpts)
 	loggerOpts.BindFlags(flagSet)
 
 	return &CLI{

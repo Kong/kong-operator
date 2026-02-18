@@ -94,7 +94,7 @@ func GenerateNewDeploymentForDataPlane(
 				Spec: corev1.PodSpec{
 					SecurityContext:               &corev1.PodSecurityContext{},
 					RestartPolicy:                 corev1.RestartPolicyAlways,
-					TerminationGracePeriodSeconds: lo.ToPtr(int64(corev1.DefaultTerminationGracePeriodSeconds)),
+					TerminationGracePeriodSeconds: new(int64(corev1.DefaultTerminationGracePeriodSeconds)),
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					SchedulerName:                 corev1.DefaultSchedulerName,
 					// NOTE: The base proxy container is generated without taking PodTemplateSpec
@@ -135,7 +135,7 @@ func GenerateNewDeploymentForDataPlane(
 	// would prevent us from being able to use CRD Validation Rules to enforce
 	// wither replicas or scaling sections specified.
 	case dpOpts.Replicas == nil && dpOpts.Scaling == nil:
-		deployment.Spec.Replicas = lo.ToPtr(int32(1))
+		deployment.Spec.Replicas = new(int32(1))
 	}
 
 	SetDefaultsPodTemplateSpec(&deployment.Spec.Template)

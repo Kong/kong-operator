@@ -11,7 +11,6 @@ import (
 
 	"github.com/go-logr/zapr"
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -66,7 +65,7 @@ func startKongAdminAPIServiceReconciler(ctx context.Context, t *testing.T, clien
 			// names and panics if there are duplicates.
 			// This is a workaround for that in tests.
 			// Ref: https://github.com/kubernetes-sigs/controller-runtime/pull/2902#issuecomment-2284194683
-			SkipNameValidation: lo.ToPtr(true),
+			SkipNameValidation: new(true),
 		},
 		Logger: zapr.NewLogger(zap.NewNop()),
 		Scheme: client.Scheme(),
@@ -74,7 +73,7 @@ func startKongAdminAPIServiceReconciler(ctx context.Context, t *testing.T, clien
 			BindAddress: "0",
 		},
 		Cache: cache.Options{
-			SyncPeriod: lo.ToPtr(2 * time.Second),
+			SyncPeriod: new(2 * time.Second),
 		},
 	})
 	require.NoError(t, err)
@@ -156,7 +155,7 @@ func TestKongAdminAPIController(t *testing.T) {
 				{
 					Addresses: []string{"10.0.0.1"},
 					Conditions: discoveryv1.EndpointConditions{
-						Ready: lo.ToPtr(true),
+						Ready: new(true),
 					},
 					TargetRef: &corev1.ObjectReference{
 						Kind:      "Pod",
@@ -167,7 +166,7 @@ func TestKongAdminAPIController(t *testing.T) {
 				{
 					Addresses: []string{"10.0.0.2"},
 					Conditions: discoveryv1.EndpointConditions{
-						Ready: lo.ToPtr(true),
+						Ready: new(true),
 					},
 					TargetRef: &corev1.ObjectReference{
 						Kind:      "Pod",
@@ -235,7 +234,7 @@ func TestKongAdminAPIController(t *testing.T) {
 				{
 					Addresses: []string{"10.0.0.1"},
 					Conditions: discoveryv1.EndpointConditions{
-						Terminating: lo.ToPtr(true),
+						Terminating: new(true),
 					},
 					TargetRef: &corev1.ObjectReference{
 						Kind:      "Pod",
@@ -246,7 +245,7 @@ func TestKongAdminAPIController(t *testing.T) {
 				{
 					Addresses: []string{"10.0.0.2"},
 					Conditions: discoveryv1.EndpointConditions{
-						Ready: lo.ToPtr(true),
+						Ready: new(true),
 					},
 					TargetRef: &corev1.ObjectReference{
 						Kind:      "Pod",
@@ -302,7 +301,7 @@ func TestKongAdminAPIController(t *testing.T) {
 				{
 					Addresses: []string{"10.0.0.1"},
 					Conditions: discoveryv1.EndpointConditions{
-						Ready: lo.ToPtr(true),
+						Ready: new(true),
 					},
 					TargetRef: &corev1.ObjectReference{
 						Kind:      "Pod",
@@ -313,7 +312,7 @@ func TestKongAdminAPIController(t *testing.T) {
 				{
 					Addresses: []string{"10.0.0.2"},
 					Conditions: discoveryv1.EndpointConditions{
-						Ready: lo.ToPtr(true),
+						Ready: new(true),
 					},
 					TargetRef: &corev1.ObjectReference{
 						Kind:      "Pod",
@@ -347,7 +346,7 @@ func TestKongAdminAPIController(t *testing.T) {
 				{
 					Addresses: []string{"10.0.0.10"},
 					Conditions: discoveryv1.EndpointConditions{
-						Ready: lo.ToPtr(true),
+						Ready: new(true),
 					},
 					TargetRef: &corev1.ObjectReference{
 						Kind:      "Pod",
@@ -358,7 +357,7 @@ func TestKongAdminAPIController(t *testing.T) {
 				{
 					Addresses: []string{"10.0.0.20"},
 					Conditions: discoveryv1.EndpointConditions{
-						Ready: lo.ToPtr(true),
+						Ready: new(true),
 					},
 					TargetRef: &corev1.ObjectReference{
 						Kind:      "Pod",
@@ -438,7 +437,7 @@ func TestKongAdminAPIController(t *testing.T) {
 				{
 					Addresses: []string{"10.0.0.1"},
 					Conditions: discoveryv1.EndpointConditions{
-						Ready: lo.ToPtr(true),
+						Ready: new(true),
 					},
 					TargetRef: &corev1.ObjectReference{
 						Kind:      "Pod",
@@ -449,7 +448,7 @@ func TestKongAdminAPIController(t *testing.T) {
 				{
 					Addresses: []string{"10.0.0.2"},
 					Conditions: discoveryv1.EndpointConditions{
-						Ready: lo.ToPtr(true),
+						Ready: new(true),
 					},
 					TargetRef: &corev1.ObjectReference{
 						Kind:      "Pod",
@@ -487,7 +486,7 @@ func TestKongAdminAPIController(t *testing.T) {
 
 		// Update all endpoints so that they are Terminating.
 		for i := range endpoints.Endpoints {
-			endpoints.Endpoints[i].Conditions.Terminating = lo.ToPtr(true)
+			endpoints.Endpoints[i].Conditions.Terminating = new(true)
 		}
 		require.NoError(t, client.Update(ctx, &endpoints, &ctrlclient.UpdateOptions{}))
 		require.NoError(t, client.Get(ctx, k8stypes.NamespacedName{Name: endpoints.Name, Namespace: endpoints.Namespace}, &endpoints, &ctrlclient.GetOptions{}))
@@ -542,7 +541,7 @@ func TestKongAdminAPIController(t *testing.T) {
 				{
 					Addresses: []string{"10.0.0.1"},
 					Conditions: discoveryv1.EndpointConditions{
-						Ready: lo.ToPtr(true),
+						Ready: new(true),
 					},
 					TargetRef: &corev1.ObjectReference{
 						Kind:      "Pod",
@@ -553,7 +552,7 @@ func TestKongAdminAPIController(t *testing.T) {
 				{
 					Addresses: []string{"10.0.0.2"},
 					Conditions: discoveryv1.EndpointConditions{
-						Ready: lo.ToPtr(true),
+						Ready: new(true),
 					},
 					TargetRef: &corev1.ObjectReference{
 						Kind:      "Pod",

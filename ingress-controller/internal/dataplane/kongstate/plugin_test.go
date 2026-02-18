@@ -54,12 +54,12 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 				},
 			},
 			want: kong.Plugin{
-				Name: kong.String("correlation-id"),
+				Name: new("correlation-id"),
 				Config: kong.Configuration{
 					"header_name": "foo",
 				},
 				Protocols:    kong.StringSlice("http"),
-				InstanceName: kong.String("example"),
+				InstanceName: new("example"),
 			},
 			wantErr: false,
 		},
@@ -79,7 +79,7 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 				},
 			},
 			want: kong.Plugin{
-				Name: kong.String("correlation-id"),
+				Name: new("correlation-id"),
 				Config: kong.Configuration{
 					"header_name": "foo",
 				},
@@ -164,7 +164,7 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 				},
 			},
 			want: kong.Plugin{
-				Name: kong.String("correlation-id"),
+				Name: new("correlation-id"),
 				Config: kong.Configuration{
 					"header_name": "foo",
 					"generator":   "uuid",
@@ -196,7 +196,7 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 				},
 			},
 			want: kong.Plugin{
-				Name: kong.String("response-transformer"),
+				Name: new("response-transformer"),
 				Config: kong.Configuration{
 					"replace": map[string]any{
 						"headers": []any{
@@ -245,7 +245,7 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 				},
 			},
 			want: kong.Plugin{
-				Name: kong.String("correlation-id"),
+				Name: new("correlation-id"),
 				Config: kong.Configuration{
 					"header_name": "foo",
 					"generator":   "uuid",
@@ -275,7 +275,7 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 				},
 			},
 			want: kong.Plugin{
-				Name: kong.String("correlation-id"),
+				Name: new("correlation-id"),
 				Config: kong.Configuration{
 					"header_name": "foo",
 				},
@@ -421,12 +421,12 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 				},
 			},
 			want: kong.Plugin{
-				Name: kong.String("correlation-id"),
+				Name: new("correlation-id"),
 				Config: kong.Configuration{
 					"header_name": "foo",
 				},
 				Protocols:    kong.StringSlice("http"),
-				InstanceName: kong.String("example"),
+				InstanceName: new("example"),
 			},
 			wantErr: false,
 		},
@@ -449,7 +449,7 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 				},
 			},
 			want: kong.Plugin{
-				Name: kong.String("correlation-id"),
+				Name: new("correlation-id"),
 				Config: kong.Configuration{
 					"header_name": "foo",
 				},
@@ -539,7 +539,7 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 				},
 			},
 			want: kong.Plugin{
-				Name: kong.String("correlation-id"),
+				Name: new("correlation-id"),
 				Config: kong.Configuration{
 					"header_name": "foo",
 					"generator":   "uuid",
@@ -574,7 +574,7 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 				},
 			},
 			want: kong.Plugin{
-				Name: kong.String("response-transformer"),
+				Name: new("response-transformer"),
 				Config: kong.Configuration{
 					"replace": map[string]any{
 						"headers": []any{
@@ -625,7 +625,7 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 				},
 			},
 			want: kong.Plugin{
-				Name: kong.String("correlation-id"),
+				Name: new("correlation-id"),
 				Config: kong.Configuration{
 					"header_name": "foo",
 					"generator":   "uuid",
@@ -658,7 +658,7 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 				},
 			},
 			want: kong.Plugin{
-				Name: kong.String("correlation-id"),
+				Name: new("correlation-id"),
 				Config: kong.Configuration{
 					"header_name": "foo",
 				},

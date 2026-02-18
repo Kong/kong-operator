@@ -20,7 +20,6 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -237,14 +236,14 @@ func TestGetPodDetails(t *testing.T) {
 
 func TestGenerateTagsForObject(t *testing.T) {
 	expectedTagSet := []*string{
-		lo.ToPtr(K8sNameTagPrefix + "yedigei"),
-		lo.ToPtr(K8sNamespaceTagPrefix + "aitmatov"),
-		lo.ToPtr(K8sKindTagPrefix + "HTTPRoute"),
-		lo.ToPtr(K8sUIDTagPrefix + "buryani"),
-		lo.ToPtr(K8sGroupTagPrefix + "gateway.networking.k8s.io"),
-		lo.ToPtr(K8sVersionTagPrefix + "v1"),
-		lo.ToPtr("temir-jol"),
-		lo.ToPtr("snaryad-soqqısı"),
+		new(K8sNameTagPrefix + "yedigei"),
+		new(K8sNamespaceTagPrefix + "aitmatov"),
+		new(K8sKindTagPrefix + "HTTPRoute"),
+		new(K8sUIDTagPrefix + "buryani"),
+		new(K8sGroupTagPrefix + "gateway.networking.k8s.io"),
+		new(K8sVersionTagPrefix + "v1"),
+		new("temir-jol"),
+		new("snaryad-soqqısı"),
 	}
 
 	// In memory kubernetes objects do not have GVK filled in.
@@ -273,8 +272,8 @@ func TestGenerateTagsForObject(t *testing.T) {
 		expectedTagSetWithAdditional := slices.Concat(
 			expectedTagSet,
 			[]*string{
-				lo.ToPtr(K8sNamedRouteRuleTagPrefix + "test"),
-				lo.ToPtr(K8sNamedRouteRuleTagPrefix + "echo"),
+				new(K8sNamedRouteRuleTagPrefix + "test"),
+				new(K8sNamedRouteRuleTagPrefix + "echo"),
 			},
 		)
 

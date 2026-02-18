@@ -39,7 +39,7 @@ func cleanupKonnectControlPlanes(ctx context.Context, log logr.Logger) error {
 	sdk := sdkkonnectgo.New(
 		sdkkonnectgo.WithSecurity(
 			sdkkonnectcomp.Security{
-				PersonalAccessToken: sdkkonnectgo.String(test.KonnectAccessToken()),
+				PersonalAccessToken: new(test.KonnectAccessToken()),
 			},
 		),
 		sdkkonnectgo.WithServerURL(serverURL),
@@ -113,8 +113,8 @@ func findOrphanedControlPlanes(
 
 	for _, labelFilter := range labelFilters {
 		response, err := c.ListControlPlanes(ctx, sdkkonnectops.ListControlPlanesRequest{
-			PageSize:     lo.ToPtr(konnectControlPlanesLimit),
-			FilterLabels: lo.ToPtr(labelFilter),
+			PageSize:     new(konnectControlPlanesLimit),
+			FilterLabels: new(labelFilter),
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to list control planes with label %s: %w", labelFilter, err)

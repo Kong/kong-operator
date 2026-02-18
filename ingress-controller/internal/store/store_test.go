@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -166,7 +165,7 @@ func TestStore_Getters(t *testing.T) {
 				Namespace: "default",
 			},
 			Spec: configurationv1beta1.KongUpstreamPolicySpec{
-				Algorithm: lo.ToPtr("least-connections"),
+				Algorithm: new("least-connections"),
 			},
 		}
 		err = cacheStores.Add(upstreamPolicy)
@@ -196,17 +195,17 @@ func benchmarkListHTTPRoutes(b *testing.B, count int) {
 						Matches: []gatewayapi.HTTPRouteMatch{
 							{
 								Path: &gatewayapi.HTTPPathMatch{
-									Type:  lo.ToPtr(gatewayapi.PathMatchExact),
-									Value: lo.ToPtr("/test1"),
+									Type:  new(gatewayapi.PathMatchExact),
+									Value: new("/test1"),
 								},
-								Method: lo.ToPtr(gatewayapi.HTTPMethodGet),
+								Method: new(gatewayapi.HTTPMethodGet),
 							},
 							{
 								Path: &gatewayapi.HTTPPathMatch{
-									Type:  lo.ToPtr(gatewayapi.PathMatchExact),
-									Value: lo.ToPtr("/test2"),
+									Type:  new(gatewayapi.PathMatchExact),
+									Value: new("/test2"),
 								},
-								Method: lo.ToPtr(gatewayapi.HTTPMethodGet),
+								Method: new(gatewayapi.HTTPMethodGet),
 							},
 						},
 					},

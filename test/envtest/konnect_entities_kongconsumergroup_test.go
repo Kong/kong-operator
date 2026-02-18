@@ -77,7 +77,7 @@ func TestKongConsumerGroup(t *testing.T) {
 				}),
 			).Return(&sdkkonnectops.CreateConsumerGroupResponse{
 			ConsumerGroup: &sdkkonnectcomp.ConsumerGroup{
-				ID: lo.ToPtr(cgID),
+				ID: new(cgID),
 			},
 		}, nil,
 		)
@@ -168,7 +168,7 @@ func TestKongConsumerGroup(t *testing.T) {
 				Object: &sdkkonnectops.ListConsumerGroupResponseBody{
 					Data: []sdkkonnectcomp.ConsumerGroup{
 						{
-							ID: lo.ToPtr(cgID),
+							ID: new(cgID),
 						},
 					},
 				},
@@ -217,7 +217,7 @@ func TestKongConsumerGroup(t *testing.T) {
 			Return(
 				&sdkkonnectops.CreateConsumerGroupResponse{
 					ConsumerGroup: &sdkkonnectcomp.ConsumerGroup{
-						ID:   lo.ToPtr(id),
+						ID:   new(id),
 						Name: name,
 					},
 				},
@@ -262,7 +262,7 @@ func TestKongConsumerGroup(t *testing.T) {
 			ConsumerGroupInsideWrapper: &sdkkonnectcomp.ConsumerGroupInsideWrapper{
 				ConsumerGroup: &sdkkonnectcomp.ConsumerGroup{
 					Name: cgName,
-					ID:   lo.ToPtr(cgID),
+					ID:   new(cgID),
 				},
 			},
 		}, nil)

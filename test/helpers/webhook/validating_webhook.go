@@ -10,7 +10,6 @@ import (
 
 	"github.com/avast/retry-go/v4"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/kubectl"
-	"github.com/samber/lo"
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
@@ -178,9 +177,9 @@ func ensureWebhookService(
 			},
 			Ports: []discoveryv1.EndpointPort{
 				{
-					Name:     lo.ToPtr("default"),
-					Port:     lo.ToPtr(int32(consts.WebhookPort)),
-					Protocol: lo.ToPtr(corev1.ProtocolTCP),
+					Name:     new("default"),
+					Port:     new(int32(consts.WebhookPort)),
+					Protocol: new(corev1.ProtocolTCP),
 				},
 			},
 		}, metav1.CreateOptions{})

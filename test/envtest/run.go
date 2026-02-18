@@ -57,7 +57,7 @@ func WithDefaultEnvTestsConfig(envcfg *rest.Config) func(cfg *managercfg.Config)
 		// Set the GracefulShutdownTimeout to 0 to prevent errors:
 		// failed waiting for all runnables to end within grace period of 30s: context deadline exceeded
 		// Ref: https://github.com/kubernetes-sigs/controller-runtime/blob/e59161ee/pkg/manager/internal.go#L543-L548
-		cfg.GracefulShutdownTimeout = lo.ToPtr(time.Duration(0))
+		cfg.GracefulShutdownTimeout = new(time.Duration(0))
 
 		// Disable Gateway API controllers, enable those only in tests that use them.
 		cfg.GatewayAPIGatewayController = false

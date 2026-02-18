@@ -479,7 +479,7 @@ func httpRouteWithBackends(gatewayName string, services ...*corev1.Service) *gat
 						{
 							Path: &gatewayapi.HTTPPathMatch{
 								Type:  &pathMatchPrefix,
-								Value: kong.String("/test"),
+								Value: new("/test"),
 							},
 						},
 					},

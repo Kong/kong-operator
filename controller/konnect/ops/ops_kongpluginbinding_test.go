@@ -8,7 +8,6 @@ import (
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -43,7 +42,7 @@ func TestKongPluginBindingToSDKPluginInput_Tags(t *testing.T) {
 		Spec: configurationv1alpha1.KongPluginBindingSpec{
 			PluginReference: configurationv1alpha1.PluginRef{
 				Name: "plugin-1",
-				Kind: lo.ToPtr("KongPlugin"),
+				Kind: new("KongPlugin"),
 			},
 			Targets: &configurationv1alpha1.KongPluginBindingTargets{
 				ServiceReference: &configurationv1alpha1.TargetRefWithGroupKind{
@@ -149,9 +148,9 @@ func TestKongPluginWithTargetsToKongPluginInput(t *testing.T) {
 			expected: &sdkkonnectcomp.Plugin{
 				Name:         "basic-auth",
 				Config:       map[string]any{},
-				Enabled:      lo.ToPtr(true),
+				Enabled:      new(true),
 				Tags:         []string{"tag1", "tag2"},
-				InstanceName: lo.ToPtr("my-plugin"),
+				InstanceName: new("my-plugin"),
 				Protocols:    []sdkkonnectcomp.Protocols{"http", "https"},
 			},
 		},
@@ -194,12 +193,12 @@ func TestKongPluginWithTargetsToKongPluginInput(t *testing.T) {
 			expected: &sdkkonnectcomp.Plugin{
 				Name:         "basic-auth",
 				Config:       map[string]any{},
-				Enabled:      lo.ToPtr(true),
+				Enabled:      new(true),
 				Tags:         []string{"tag1", "tag2"},
-				InstanceName: lo.ToPtr("my-plugin"),
+				InstanceName: new("my-plugin"),
 				Protocols:    []sdkkonnectcomp.Protocols{"http", "https"},
 				Service: &sdkkonnectcomp.PluginService{
-					ID: lo.ToPtr("service-id-123"),
+					ID: new("service-id-123"),
 				},
 			},
 		},
@@ -226,12 +225,12 @@ func TestKongPluginWithTargetsToKongPluginInput(t *testing.T) {
 			expected: &sdkkonnectcomp.Plugin{
 				Name:         "basic-auth",
 				Config:       map[string]any{},
-				Enabled:      lo.ToPtr(true),
+				Enabled:      new(true),
 				Tags:         []string{"tag1", "tag2"},
-				InstanceName: lo.ToPtr("my-plugin"),
+				InstanceName: new("my-plugin"),
 				Protocols:    []sdkkonnectcomp.Protocols{"http", "https"},
 				Route: &sdkkonnectcomp.PluginRoute{
-					ID: lo.ToPtr("route-id-123"),
+					ID: new("route-id-123"),
 				},
 			},
 		},
@@ -258,12 +257,12 @@ func TestKongPluginWithTargetsToKongPluginInput(t *testing.T) {
 			expected: &sdkkonnectcomp.Plugin{
 				Name:         "basic-auth",
 				Config:       map[string]any{},
-				Enabled:      lo.ToPtr(true),
+				Enabled:      new(true),
 				Tags:         []string{"tag1", "tag2"},
-				InstanceName: lo.ToPtr("my-plugin"),
+				InstanceName: new("my-plugin"),
 				Protocols:    []sdkkonnectcomp.Protocols{"http", "https"},
 				Consumer: &sdkkonnectcomp.PluginConsumer{
-					ID: lo.ToPtr("consumer-id-123"),
+					ID: new("consumer-id-123"),
 				},
 			},
 		},
@@ -293,15 +292,15 @@ func TestKongPluginWithTargetsToKongPluginInput(t *testing.T) {
 			expected: &sdkkonnectcomp.Plugin{
 				Name:         "basic-auth",
 				Config:       map[string]any{},
-				Enabled:      lo.ToPtr(true),
+				Enabled:      new(true),
 				Tags:         []string{"tag1", "tag2"},
-				InstanceName: lo.ToPtr("my-plugin"),
+				InstanceName: new("my-plugin"),
 				Protocols:    []sdkkonnectcomp.Protocols{"http", "https"},
 				Service: &sdkkonnectcomp.PluginService{
-					ID: lo.ToPtr("service-id-123"),
+					ID: new("service-id-123"),
 				},
 				Consumer: &sdkkonnectcomp.PluginConsumer{
-					ID: lo.ToPtr("consumer-id-123"),
+					ID: new("consumer-id-123"),
 				},
 			},
 		},
@@ -343,9 +342,9 @@ func TestKongPluginWithTargetsToKongPluginInput(t *testing.T) {
 			expected: &sdkkonnectcomp.Plugin{
 				Name:    "basic-auth",
 				Config:  map[string]any{},
-				Enabled: lo.ToPtr(true),
+				Enabled: new(true),
 				Service: &sdkkonnectcomp.PluginService{
-					ID: lo.ToPtr("service-id-123"),
+					ID: new("service-id-123"),
 				},
 			},
 		},
@@ -415,7 +414,7 @@ func TestAdoptKongPluginBindingOverride(t *testing.T) {
 		Spec: configurationv1alpha1.KongPluginBindingSpec{
 			PluginReference: configurationv1alpha1.PluginRef{
 				Name: plugin.Name,
-				Kind: lo.ToPtr("KongPlugin"),
+				Kind: new("KongPlugin"),
 			},
 			Targets: &configurationv1alpha1.KongPluginBindingTargets{
 				ServiceReference: &configurationv1alpha1.TargetRefWithGroupKind{
@@ -448,7 +447,7 @@ func TestAdoptKongPluginBindingOverride(t *testing.T) {
 		}).Return(
 		&sdkkonnectops.GetPluginResponse{
 			Plugin: &sdkkonnectcomp.Plugin{
-				ID: lo.ToPtr(pluginKonnectID),
+				ID: new(pluginKonnectID),
 			},
 		},
 		nil,
@@ -514,7 +513,7 @@ func TestAdoptKongPluginBindingMatch(t *testing.T) {
 		Spec: configurationv1alpha1.KongPluginBindingSpec{
 			PluginReference: configurationv1alpha1.PluginRef{
 				Name: plugin.Name,
-				Kind: lo.ToPtr("KongPlugin"),
+				Kind: new("KongPlugin"),
 			},
 			Targets: &configurationv1alpha1.KongPluginBindingTargets{
 				ServiceReference: &configurationv1alpha1.TargetRefWithGroupKind{
@@ -542,7 +541,7 @@ func TestAdoptKongPluginBindingMatch(t *testing.T) {
 	desiredPlugin, err := kongPluginBindingToSDKPluginInput(ctx, cl, binding)
 	require.NoError(t, err)
 	remotePlugin := *desiredPlugin
-	remotePlugin.ID = lo.ToPtr(pluginKonnectID)
+	remotePlugin.ID = new(pluginKonnectID)
 
 	sdk := mocks.NewMockPluginsSDK(t)
 	sdk.EXPECT().GetPlugin(mock.Anything,
@@ -591,7 +590,7 @@ func TestAdoptKongPluginBindingMatchMismatch(t *testing.T) {
 		Spec: configurationv1alpha1.KongPluginBindingSpec{
 			PluginReference: configurationv1alpha1.PluginRef{
 				Name: plugin.Name,
-				Kind: lo.ToPtr("KongPlugin"),
+				Kind: new("KongPlugin"),
 			},
 			Adopt: &commonv1alpha1.AdoptOptions{
 				From: commonv1alpha1.AdoptSourceKonnect,
@@ -618,7 +617,7 @@ func TestAdoptKongPluginBindingMatchMismatch(t *testing.T) {
 		}).Return(
 		&sdkkonnectops.GetPluginResponse{
 			Plugin: &sdkkonnectcomp.Plugin{
-				ID:     lo.ToPtr(pluginKonnectID),
+				ID:     new(pluginKonnectID),
 				Name:   "acl",
 				Config: map[string]any{"allow": []any{"group2"}},
 			},
@@ -659,7 +658,7 @@ func TestAdoptKongPluginBindingFetchError(t *testing.T) {
 		Spec: configurationv1alpha1.KongPluginBindingSpec{
 			PluginReference: configurationv1alpha1.PluginRef{
 				Name: plugin.Name,
-				Kind: lo.ToPtr("KongPlugin"),
+				Kind: new("KongPlugin"),
 			},
 			Adopt: &commonv1alpha1.AdoptOptions{
 				From: commonv1alpha1.AdoptSourceKonnect,
@@ -721,7 +720,7 @@ func TestAdoptKongPluginBindingUIDConflict(t *testing.T) {
 		Spec: configurationv1alpha1.KongPluginBindingSpec{
 			PluginReference: configurationv1alpha1.PluginRef{
 				Name: plugin.Name,
-				Kind: lo.ToPtr("KongPlugin"),
+				Kind: new("KongPlugin"),
 			},
 			Adopt: &commonv1alpha1.AdoptOptions{
 				From: commonv1alpha1.AdoptSourceKonnect,
@@ -748,7 +747,7 @@ func TestAdoptKongPluginBindingUIDConflict(t *testing.T) {
 		}).Return(
 		&sdkkonnectops.GetPluginResponse{
 			Plugin: &sdkkonnectcomp.Plugin{
-				ID:   lo.ToPtr(pluginKonnectID),
+				ID:   new(pluginKonnectID),
 				Name: "cors",
 				Tags: []string{"k8s-uid:other-uid"},
 			},

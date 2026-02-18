@@ -192,7 +192,7 @@ func (f sdkFactory) NewKonnectSDK(server server.Server, token SDKToken) SDKWrapp
 		sdk: sdkkonnectgo.New(
 			sdkkonnectgo.WithSecurity(
 				sdkkonnectcomp.Security{
-					PersonalAccessToken: sdkkonnectgo.String(string(token)),
+					PersonalAccessToken: new(string(token)),
 				},
 			),
 			sdkkonnectgo.WithServerURL(server.URL()),

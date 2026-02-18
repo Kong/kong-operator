@@ -17,7 +17,7 @@ func TestDBLessConfigMarshalToJSON(t *testing.T) {
 			Services: []file.FService{
 				{
 					Service: kong.Service{
-						Name: kong.String("service-id"),
+						Name: new("service-id"),
 					},
 				},
 			},
@@ -80,25 +80,25 @@ func TestDefaultContentToDBLessConfigConverter(t *testing.T) {
 				ConsumerGroups: []file.FConsumerGroupObject{
 					{
 						ConsumerGroup: kong.ConsumerGroup{
-							Name: kong.String("cg1"),
+							Name: new("cg1"),
 						},
-						Consumers: []*kong.Consumer{{Username: kong.String("c1")}},
-						Plugins:   []*kong.ConsumerGroupPlugin{{Name: kong.String("p1")}},
+						Consumers: []*kong.Consumer{{Username: new("c1")}},
+						Plugins:   []*kong.ConsumerGroupPlugin{{Name: new("p1")}},
 					},
 				},
 				Consumers: []file.FConsumer{
 					{
 						Consumer: kong.Consumer{
-							Username: kong.String("c1"),
+							Username: new("c1"),
 						},
-						Groups: []*kong.ConsumerGroup{{ID: kong.String("cg1"), Name: kong.String("cg1")}},
+						Groups: []*kong.ConsumerGroup{{ID: new("cg1"), Name: new("cg1")}},
 					},
 				},
 				Plugins: []file.FPlugin{
 					{
 						Plugin: kong.Plugin{
-							Name:          kong.String("p1"),
-							ConsumerGroup: &kong.ConsumerGroup{ID: kong.String("cg1"), Name: kong.String("cg1")},
+							Name:          new("p1"),
+							ConsumerGroup: &kong.ConsumerGroup{ID: new("cg1"), Name: new("cg1")},
 						},
 					},
 				},
@@ -108,24 +108,24 @@ func TestDefaultContentToDBLessConfigConverter(t *testing.T) {
 					ConsumerGroups: []file.FConsumerGroupObject{
 						{
 							ConsumerGroup: kong.ConsumerGroup{
-								Name: kong.String("cg1"),
+								Name: new("cg1"),
 							},
 						},
 					},
 					Consumers: []file.FConsumer{
 						{
 							Consumer: kong.Consumer{
-								Username: kong.String("c1"),
+								Username: new("c1"),
 							},
 						},
 					},
 					Plugins: []file.FPlugin{
 						{
 							Plugin: kong.Plugin{
-								Name: kong.String("p1"),
+								Name: new("p1"),
 								ConsumerGroup: &kong.ConsumerGroup{
-									Name: kong.String("cg1"),
-									ID:   kong.String("cg1"),
+									Name: new("cg1"),
+									ID:   new("cg1"),
 								},
 							},
 						},
@@ -145,25 +145,25 @@ func TestDefaultContentToDBLessConfigConverter(t *testing.T) {
 				ConsumerGroups: []file.FConsumerGroupObject{
 					{
 						ConsumerGroup: kong.ConsumerGroup{
-							Name: kong.String("cg1"),
+							Name: new("cg1"),
 						},
-						Consumers: []*kong.Consumer{{ID: kong.String("c1")}},
-						Plugins:   []*kong.ConsumerGroupPlugin{{ID: kong.String("p1")}},
+						Consumers: []*kong.Consumer{{ID: new("c1")}},
+						Plugins:   []*kong.ConsumerGroupPlugin{{ID: new("p1")}},
 					},
 				},
 				Consumers: []file.FConsumer{
 					{
 						Consumer: kong.Consumer{
-							ID: kong.String("c1"),
+							ID: new("c1"),
 						},
-						Groups: []*kong.ConsumerGroup{{ID: kong.String("cg1")}},
+						Groups: []*kong.ConsumerGroup{{ID: new("cg1")}},
 					},
 				},
 				Plugins: []file.FPlugin{
 					{
 						Plugin: kong.Plugin{
-							Name:          kong.String("p1"),
-							ConsumerGroup: &kong.ConsumerGroup{ID: kong.String("cg1")},
+							Name:          new("p1"),
+							ConsumerGroup: &kong.ConsumerGroup{ID: new("cg1")},
 						},
 					},
 				},
@@ -173,23 +173,23 @@ func TestDefaultContentToDBLessConfigConverter(t *testing.T) {
 					ConsumerGroups: []file.FConsumerGroupObject{
 						{
 							ConsumerGroup: kong.ConsumerGroup{
-								Name: kong.String("cg1"),
+								Name: new("cg1"),
 							},
 						},
 					},
 					Consumers: []file.FConsumer{
 						{
 							Consumer: kong.Consumer{
-								ID: kong.String("c1"),
+								ID: new("c1"),
 							},
 						},
 					},
 					Plugins: []file.FPlugin{
 						{
 							Plugin: kong.Plugin{
-								Name: kong.String("p1"),
+								Name: new("p1"),
 								ConsumerGroup: &kong.ConsumerGroup{
-									ID: kong.String("cg1"),
+									ID: new("cg1"),
 								},
 							},
 						},
@@ -209,7 +209,7 @@ func TestDefaultContentToDBLessConfigConverter(t *testing.T) {
 				Plugins: []file.FPlugin{
 					{
 						Plugin: kong.Plugin{
-							Name: kong.String("p1"),
+							Name: new("p1"),
 							Config: kong.Configuration{
 								"config1": nil,
 								"config2": "value2",
@@ -220,12 +220,12 @@ func TestDefaultContentToDBLessConfigConverter(t *testing.T) {
 				Consumers: []file.FConsumer{
 					{
 						Consumer: kong.Consumer{
-							Username: kong.String("c1"),
+							Username: new("c1"),
 						},
 						Plugins: []*file.FPlugin{
 							{
 								Plugin: kong.Plugin{
-									Name: kong.String("p1"),
+									Name: new("p1"),
 									Config: kong.Configuration{
 										"config1": nil,
 										"config2": "value2",
@@ -238,12 +238,12 @@ func TestDefaultContentToDBLessConfigConverter(t *testing.T) {
 				Routes: []file.FRoute{
 					{
 						Route: kong.Route{
-							Name: kong.String("r1"),
+							Name: new("r1"),
 						},
 						Plugins: []*file.FPlugin{
 							{
 								Plugin: kong.Plugin{
-									Name: kong.String("p1"),
+									Name: new("p1"),
 									Config: kong.Configuration{
 										"config1": nil,
 										"config2": "value2",
@@ -256,12 +256,12 @@ func TestDefaultContentToDBLessConfigConverter(t *testing.T) {
 				Services: []file.FService{
 					{
 						Service: kong.Service{
-							Name: kong.String("s1"),
+							Name: new("s1"),
 						},
 						Plugins: []*file.FPlugin{
 							{
 								Plugin: kong.Plugin{
-									Name: kong.String("p1"),
+									Name: new("p1"),
 									Config: kong.Configuration{
 										"config1": nil,
 										"config2": "value2",
@@ -277,7 +277,7 @@ func TestDefaultContentToDBLessConfigConverter(t *testing.T) {
 					Plugins: []file.FPlugin{
 						{
 							Plugin: kong.Plugin{
-								Name: kong.String("p1"),
+								Name: new("p1"),
 								Config: kong.Configuration{
 									"config1": nil,
 									"config2": "value2",
@@ -288,12 +288,12 @@ func TestDefaultContentToDBLessConfigConverter(t *testing.T) {
 					Consumers: []file.FConsumer{
 						{
 							Consumer: kong.Consumer{
-								Username: kong.String("c1"),
+								Username: new("c1"),
 							},
 							Plugins: []*file.FPlugin{
 								{
 									Plugin: kong.Plugin{
-										Name: kong.String("p1"),
+										Name: new("p1"),
 										Config: kong.Configuration{
 											"config1": nil,
 											"config2": "value2",
@@ -306,12 +306,12 @@ func TestDefaultContentToDBLessConfigConverter(t *testing.T) {
 					Routes: []file.FRoute{
 						{
 							Route: kong.Route{
-								Name: kong.String("r1"),
+								Name: new("r1"),
 							},
 							Plugins: []*file.FPlugin{
 								{
 									Plugin: kong.Plugin{
-										Name: kong.String("p1"),
+										Name: new("p1"),
 										Config: kong.Configuration{
 											"config1": nil,
 											"config2": "value2",
@@ -324,12 +324,12 @@ func TestDefaultContentToDBLessConfigConverter(t *testing.T) {
 					Services: []file.FService{
 						{
 							Service: kong.Service{
-								Name: kong.String("s1"),
+								Name: new("s1"),
 							},
 							Plugins: []*file.FPlugin{
 								{
 									Plugin: kong.Plugin{
-										Name: kong.String("p1"),
+										Name: new("p1"),
 										Config: kong.Configuration{
 											"config1": nil,
 											"config2": "value2",
@@ -360,39 +360,39 @@ func BenchmarkDefaultContentToDBLessConfigConverter_Convert(b *testing.B) {
 		ConsumerGroups: []file.FConsumerGroupObject{
 			{
 				ConsumerGroup: kong.ConsumerGroup{
-					Name: kong.String("cg1"),
+					Name: new("cg1"),
 				},
-				Consumers: []*kong.Consumer{{Username: kong.String("c1")}},
-				Plugins:   []*kong.ConsumerGroupPlugin{{Name: kong.String("p1")}},
+				Consumers: []*kong.Consumer{{Username: new("c1")}},
+				Plugins:   []*kong.ConsumerGroupPlugin{{Name: new("p1")}},
 			},
 		},
 		Consumers: []file.FConsumer{
 			{
 				Consumer: kong.Consumer{
-					Username: kong.String("c1"),
+					Username: new("c1"),
 				},
-				Groups: []*kong.ConsumerGroup{{Name: kong.String("cg1")}},
+				Groups: []*kong.ConsumerGroup{{Name: new("cg1")}},
 			},
 		},
 		Plugins: []file.FPlugin{
 			{
 				Plugin: kong.Plugin{
-					Name:          kong.String("p1"),
-					ConsumerGroup: &kong.ConsumerGroup{Name: kong.String("cg1")},
+					Name:          new("p1"),
+					ConsumerGroup: &kong.ConsumerGroup{Name: new("cg1")},
 					Config:        kong.Configuration{"config1": nil},
 				},
 			},
 			{
 				Plugin: kong.Plugin{
-					Name:          kong.String("p2"),
-					ConsumerGroup: &kong.ConsumerGroup{Name: kong.String("cg1")},
+					Name:          new("p2"),
+					ConsumerGroup: &kong.ConsumerGroup{Name: new("cg1")},
 					Config:        kong.Configuration{"config1": nil},
 				},
 			},
 			{
 				Plugin: kong.Plugin{
-					Name:          kong.String("p3"),
-					ConsumerGroup: &kong.ConsumerGroup{Name: kong.String("cg1")},
+					Name:          new("p3"),
+					ConsumerGroup: &kong.ConsumerGroup{Name: new("cg1")},
 					Config:        kong.Configuration{"config1": nil},
 				},
 			},

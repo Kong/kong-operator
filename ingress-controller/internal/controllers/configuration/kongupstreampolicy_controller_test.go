@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -156,8 +155,8 @@ func TestIndexRoutesOnBackendRefServiceFacadeName(t *testing.T) {
 								{
 									BackendRef: gatewayapi.BackendRef{
 										BackendObjectReference: gatewayapi.BackendObjectReference{
-											Group: lo.ToPtr(gatewayapi.Group("incubator.ingress-controller.konghq.com")),
-											Kind:  lo.ToPtr(gatewayapi.Kind("KongServiceFacade")),
+											Group: new(gatewayapi.Group("incubator.ingress-controller.konghq.com")),
+											Kind:  new(gatewayapi.Kind("KongServiceFacade")),
 											Name:  gatewayapi.ObjectName("service-facade-1"),
 										},
 									},
@@ -165,9 +164,9 @@ func TestIndexRoutesOnBackendRefServiceFacadeName(t *testing.T) {
 								{
 									BackendRef: gatewayapi.BackendRef{
 										BackendObjectReference: gatewayapi.BackendObjectReference{
-											Group:     lo.ToPtr(gatewayapi.Group("incubator.ingress-controller.konghq.com")),
-											Kind:      lo.ToPtr(gatewayapi.Kind("KongServiceFacade")),
-											Namespace: lo.ToPtr(gatewayapi.Namespace("another-ns")),
+											Group:     new(gatewayapi.Group("incubator.ingress-controller.konghq.com")),
+											Kind:      new(gatewayapi.Kind("KongServiceFacade")),
+											Namespace: new(gatewayapi.Namespace("another-ns")),
 											Name:      gatewayapi.ObjectName("service-facade-1"),
 										},
 									},

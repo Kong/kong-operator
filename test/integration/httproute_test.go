@@ -7,7 +7,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -171,7 +170,7 @@ func TestHTTPRouteWithTLS(t *testing.T) {
 			CertificateRefs: []gatewayv1.SecretObjectReference{
 				{
 					Name:      gatewayv1.ObjectName(secret.Name),
-					Namespace: lo.ToPtr(gatewayv1.Namespace(secret.Namespace)),
+					Namespace: new(gatewayv1.Namespace(secret.Namespace)),
 				},
 			},
 		}

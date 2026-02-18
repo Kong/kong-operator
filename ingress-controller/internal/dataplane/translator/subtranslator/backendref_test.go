@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -56,7 +55,7 @@ func TestBackendRefsToKongStateBackends(t *testing.T) {
 					{
 						Group: "",
 						Kind:  "Service",
-						Name:  lo.ToPtr(gatewayapi.ObjectName("fake-service")),
+						Name:  new(gatewayapi.ObjectName("fake-service")),
 					},
 				},
 			},
@@ -108,7 +107,7 @@ func TestBackendRefsToKongStateBackends(t *testing.T) {
 					{
 						Group: "",
 						Kind:  "ImaginaryKind",
-						Name:  lo.ToPtr(gatewayapi.ObjectName("fake-service")),
+						Name:  new(gatewayapi.ObjectName("fake-service")),
 					},
 				},
 			},
@@ -147,7 +146,7 @@ func TestBackendRefsToKongStateBackends(t *testing.T) {
 					{
 						Group: "",
 						Kind:  "Service",
-						Name:  lo.ToPtr(gatewayapi.ObjectName("fake-service")),
+						Name:  new(gatewayapi.ObjectName("fake-service")),
 					},
 				},
 			},

@@ -7,7 +7,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
-	"github.com/samber/lo"
 	"github.com/samber/mo"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/logging"
@@ -140,8 +139,8 @@ func (a *Agent) GetLicense() mo.Option[kong.License] {
 
 	if cachedLicense, ok := a.cachedLicense.Get(); ok {
 		return mo.Some(kong.License{
-			ID:      lo.ToPtr(cachedLicense.ID),
-			Payload: lo.ToPtr(cachedLicense.Payload),
+			ID:      new(cachedLicense.ID),
+			Payload: new(cachedLicense.Payload),
 		})
 	}
 

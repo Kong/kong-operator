@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -49,8 +48,8 @@ func TestRouteForRule(t *testing.T) {
 		Matches: []gatewayv1.HTTPRouteMatch{
 			{
 				Path: &gatewayv1.HTTPPathMatch{
-					Type:  (*gatewayv1.PathMatchType)(ptr.To("PathPrefix")),
-					Value: ptr.To("/test"),
+					Type:  (*gatewayv1.PathMatchType)(new("PathPrefix")),
+					Value: new("/test"),
 				},
 			},
 		},
@@ -59,7 +58,7 @@ func TestRouteForRule(t *testing.T) {
 	// Create test parent reference
 	pRef := &gwtypes.ParentReference{
 		Name:      "test-gateway",
-		Namespace: (*gatewayv1.Namespace)(ptr.To("test-namespace")),
+		Namespace: (*gatewayv1.Namespace)(new("test-namespace")),
 	}
 
 	// Create test control plane reference

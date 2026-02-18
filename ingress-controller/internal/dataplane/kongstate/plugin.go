@@ -323,22 +323,22 @@ type plugin struct {
 
 func (p plugin) toKongPlugin() kong.Plugin {
 	result := kong.Plugin{
-		Name:   kong.String(p.Name),
+		Name:   new(p.Name),
 		Config: p.Config.DeepCopy(),
 		Tags:   p.Tags,
 	}
 	if p.RunOn != "" {
-		result.RunOn = kong.String(p.RunOn)
+		result.RunOn = new(p.RunOn)
 	}
 	if p.Disabled {
-		result.Enabled = kong.Bool(false)
+		result.Enabled = new(false)
 	}
 	result.Ordering = p.Ordering
 	if len(p.Protocols) > 0 {
 		result.Protocols = kong.StringSlice(p.Protocols...)
 	}
 	if p.InstanceName != "" {
-		result.InstanceName = kong.String(p.InstanceName)
+		result.InstanceName = new(p.InstanceName)
 	}
 	return result
 }

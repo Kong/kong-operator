@@ -74,7 +74,7 @@ func TestKongKey(t *testing.T) {
 		}),
 	).Return(&sdkkonnectops.CreateKeyResponse{
 		Key: &sdkkonnectcomp.Key{
-			ID: lo.ToPtr(keyID),
+			ID: new(keyID),
 		},
 	}, nil)
 
@@ -136,7 +136,7 @@ func TestKongKey(t *testing.T) {
 			}),
 		).Return(&sdkkonnectops.CreateKeyResponse{
 			Key: &sdkkonnectcomp.Key{
-				ID: lo.ToPtr(keyID),
+				ID: new(keyID),
 			},
 		}, &sdkkonnecterrs.ConflictError{})
 
@@ -150,7 +150,7 @@ func TestKongKey(t *testing.T) {
 			Object: &sdkkonnectops.ListKeyResponseBody{
 				Data: []sdkkonnectcomp.Key{
 					{
-						ID: lo.ToPtr(keyID),
+						ID: new(keyID),
 					},
 				},
 			},
@@ -183,7 +183,7 @@ func TestKongKey(t *testing.T) {
 				key := obj.(*configurationv1alpha1.KongKey)
 				key.Spec.KeySetRef = &configurationv1alpha1.KeySetRef{
 					Type: configurationv1alpha1.KeySetRefNamespacedRef,
-					NamespacedRef: lo.ToPtr(commonv1alpha1.NameRef{
+					NamespacedRef: new(commonv1alpha1.NameRef{
 						Name: keySetName,
 					}),
 				}
@@ -210,7 +210,7 @@ func TestKongKey(t *testing.T) {
 			}),
 		).Return(&sdkkonnectops.CreateKeyResponse{
 			Key: &sdkkonnectcomp.Key{
-				ID: lo.ToPtr(keyID),
+				ID: new(keyID),
 			},
 		}, nil)
 
@@ -291,7 +291,7 @@ func TestKongKey(t *testing.T) {
 			Return(
 				&sdkkonnectops.CreateKeyResponse{
 					Key: &sdkkonnectcomp.Key{
-						ID:   lo.ToPtr(id),
+						ID:   new(id),
 						Tags: []string{"test-1"},
 					},
 				},
@@ -332,8 +332,8 @@ func TestKongKey(t *testing.T) {
 		sdk.KeysSDK.EXPECT().GetKey(mock.Anything, keyKonnectID, cp.GetKonnectID()).Return(
 			&sdkkonnectops.GetKeyResponse{
 				Key: &sdkkonnectcomp.Key{
-					Name: lo.ToPtr(keyName),
-					ID:   lo.ToPtr(keyKonnectID),
+					Name: new(keyName),
+					ID:   new(keyKonnectID),
 					Kid:  keyKID,
 				},
 			}, nil,

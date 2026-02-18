@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tidwall/pretty"
@@ -439,7 +438,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 					VolumeSource: corev1.VolumeSource{
 						HostPath: &corev1.HostPathVolumeSource{
 							Path: "/host/path",
-							Type: lo.ToPtr(corev1.HostPathUnset),
+							Type: new(corev1.HostPathUnset),
 						},
 					},
 				})
@@ -600,7 +599,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 						VolumeSource: corev1.VolumeSource{
 							HostPath: &corev1.HostPathVolumeSource{
 								Path: "/var/log",
-								Type: lo.ToPtr(corev1.HostPathUnset),
+								Type: new(corev1.HostPathUnset),
 							},
 						},
 					},
@@ -780,7 +779,7 @@ func TestSetDefaultsPodTemplateSpec(t *testing.T) {
 					RestartPolicy:                 corev1.RestartPolicyAlways,
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					SchedulerName:                 corev1.DefaultSchedulerName,
-					TerminationGracePeriodSeconds: lo.ToPtr(int64(30)),
+					TerminationGracePeriodSeconds: new(int64(30)),
 					SecurityContext:               &corev1.PodSecurityContext{},
 				},
 			},

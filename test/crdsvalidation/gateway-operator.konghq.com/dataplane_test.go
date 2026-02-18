@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -94,7 +93,7 @@ func TestDataplane(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Extension not allowed for DataPlane"),
+				ExpectedErrorMessage: new("Extension not allowed for DataPlane"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -107,7 +106,7 @@ func TestDataplane(t *testing.T) {
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec:       operatorv1beta1.DataPlaneSpec{},
 				},
-				ExpectedErrorMessage: lo.ToPtr("DataPlane requires an image to be set on proxy container"),
+				ExpectedErrorMessage: new("DataPlane requires an image to be set on proxy container"),
 			},
 			{
 				Name: "with deploymentSpec",
@@ -121,7 +120,7 @@ func TestDataplane(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("DataPlane requires an image to be set on proxy container"),
+				ExpectedErrorMessage: new("DataPlane requires an image to be set on proxy container"),
 			},
 			{
 				Name: "missing container",
@@ -145,7 +144,7 @@ func TestDataplane(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("DataPlane requires an image to be set on proxy container"),
+				ExpectedErrorMessage: new("DataPlane requires an image to be set on proxy container"),
 			},
 			{
 				Name: "proxy container, no image",
@@ -169,7 +168,7 @@ func TestDataplane(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("DataPlane requires an image to be set on proxy container"),
+				ExpectedErrorMessage: new("DataPlane requires an image to be set on proxy container"),
 			},
 			{
 				Name: "proxy container, image",
@@ -229,7 +228,7 @@ func TestDataplane(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("DataPlane supports only db mode 'off'"),
+				ExpectedErrorMessage: new("DataPlane supports only db mode 'off'"),
 			},
 			{
 				Name: "db mode off",
@@ -352,7 +351,7 @@ func TestDataplane(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Cannot set NodePort when service type is not NodePort or LoadBalancer"),
+				ExpectedErrorMessage: new("Cannot set NodePort when service type is not NodePort or LoadBalancer"),
 			},
 			{
 				Name: "can specify nodePort when service type is not set (default LoadBalancer)",
@@ -414,7 +413,7 @@ func TestDataplane(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.network.services.ingress.ports: Too many: 65: must have at most 64 items"),
+				ExpectedErrorMessage: new("spec.network.services.ingress.ports: Too many: 65: must have at most 64 items"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -500,7 +499,7 @@ func TestDataplane(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Unsupported value: \"ExternalName\""),
+				ExpectedErrorMessage: new("Unsupported value: \"ExternalName\""),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -533,7 +532,7 @@ func TestDataplane(t *testing.T) {
 				Update: func(d *operatorv1beta1.DataPlane) {
 					d.Spec.Deployment.PodTemplateSpec.Labels = map[string]string{"foo": "bar"}
 				},
-				ExpectedUpdateErrorMessage: lo.ToPtr("DataPlane spec cannot be updated when promotion is in progress"),
+				ExpectedUpdateErrorMessage: new("DataPlane spec cannot be updated when promotion is in progress"),
 			},
 			{
 				Name: "rollout status without conditions doesn't prevent spec updates",
@@ -551,7 +550,7 @@ func TestDataplane(t *testing.T) {
 									Name: "ingress",
 									Addresses: []operatorv1beta1.Address{
 										{
-											Type:       lo.ToPtr(operatorv1beta1.IPAddressType),
+											Type:       new(operatorv1beta1.IPAddressType),
 											Value:      "10.1.2.3",
 											SourceType: operatorv1beta1.PublicIPAddressSourceType,
 										},
@@ -618,7 +617,7 @@ func TestDataplane(t *testing.T) {
 					Spec:       operatorv1beta1.DataPlaneSpec{},
 				},
 				ExpectedErrorEventuallyConfig: common.SharedEventuallyConfig,
-				ExpectedErrorMessage:          lo.ToPtr("DataPlane requires an image to be set on proxy container"),
+				ExpectedErrorMessage:          new("DataPlane requires an image to be set on proxy container"),
 			},
 			{
 				Name: "providing image succeeds",
@@ -706,7 +705,7 @@ func TestDataplane(t *testing.T) {
 					},
 				},
 				ExpectedErrorEventuallyConfig: common.SharedEventuallyConfig,
-				ExpectedErrorMessage:          lo.ToPtr("DataPlane supports only db mode 'off'"),
+				ExpectedErrorMessage:          new("DataPlane supports only db mode 'off'"),
 			},
 			{
 				Name: "can't update DataPlane when rollout in progress",
@@ -753,7 +752,7 @@ func TestDataplane(t *testing.T) {
 					}
 				},
 				ExpectedErrorEventuallyConfig: common.SharedEventuallyConfig,
-				ExpectedUpdateErrorMessage:    lo.ToPtr("DataPlane spec cannot be updated when promotion is in progress"),
+				ExpectedUpdateErrorMessage:    new("DataPlane spec cannot be updated when promotion is in progress"),
 			},
 			{
 				Name: "can update DataPlane when rollout not in progress",
@@ -840,7 +839,7 @@ func TestDataplane(t *testing.T) {
 					},
 				},
 				ExpectedErrorEventuallyConfig: common.SharedEventuallyConfig,
-				ExpectedErrorMessage:          lo.ToPtr("Unsupported value: \"AutomaticPromotion\": supported values: \"BreakBeforePromotion\""),
+				ExpectedErrorMessage:          new("Unsupported value: \"AutomaticPromotion\": supported values: \"BreakBeforePromotion\""),
 			},
 			{
 				Name: "BlueGreen promotion strategy BreakBeforePromotion is supported",
@@ -914,7 +913,7 @@ func TestDataplane(t *testing.T) {
 					},
 				},
 				ExpectedErrorEventuallyConfig: common.SharedEventuallyConfig,
-				ExpectedErrorMessage:          lo.ToPtr("spec.deployment.rollout.strategy.blueGreen.resources.plan.deployment: Unsupported value: \"DeleteOnPromotionRecreateOnRollout\": supported values: \"ScaleDownOnPromotionScaleUpOnRollout\""),
+				ExpectedErrorMessage:          new("spec.deployment.rollout.strategy.blueGreen.resources.plan.deployment: Unsupported value: \"DeleteOnPromotionRecreateOnRollout\": supported values: \"ScaleDownOnPromotionScaleUpOnRollout\""),
 			},
 			{
 				Name: "BlueGreen rollout resource plan ScaleDownOnPromotionScaleUpOnRollout in supported",

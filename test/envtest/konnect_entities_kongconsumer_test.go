@@ -86,7 +86,7 @@ func TestKongConsumer(t *testing.T) {
 				}),
 			).Return(&sdkkonnectops.CreateConsumerResponse{
 			Consumer: &sdkkonnectcomp.Consumer{
-				ID: lo.ToPtr(consumerID),
+				ID: new(consumerID),
 			},
 		}, nil)
 
@@ -183,7 +183,7 @@ func TestKongConsumer(t *testing.T) {
 				}),
 			).Return(&sdkkonnectops.CreateConsumerResponse{
 			Consumer: &sdkkonnectcomp.Consumer{
-				ID: lo.ToPtr(consumerID),
+				ID: new(consumerID),
 			},
 		}, nil)
 
@@ -202,7 +202,7 @@ func TestKongConsumer(t *testing.T) {
 				}),
 			).Return(&sdkkonnectops.CreateConsumerGroupResponse{
 			ConsumerGroup: &sdkkonnectcomp.ConsumerGroup{
-				ID: lo.ToPtr(cgID),
+				ID: new(cgID),
 			},
 		}, nil)
 
@@ -221,7 +221,7 @@ func TestKongConsumer(t *testing.T) {
 				ConsumerGroupID: cgID,
 				ControlPlaneID:  cp.GetKonnectStatus().GetKonnectID(),
 				RequestBody: &sdkkonnectops.AddConsumerToGroupRequestBody{
-					ConsumerID: lo.ToPtr(consumerID),
+					ConsumerID: new(consumerID),
 				},
 			}).Return(&sdkkonnectops.AddConsumerToGroupResponse{}, nil)
 
@@ -283,12 +283,12 @@ func TestKongConsumer(t *testing.T) {
 					{
 						// Returning an ID that we haven't defined to be associated with the Consumer.
 						// Should trigger removal.
-						ID: lo.ToPtr("not-defined-in-crd"),
+						ID: new("not-defined-in-crd"),
 					},
 					{
 						// Returning the ID of the ConsumerGroup we have defined to be associated with the Consumer.
 						// Should not trigger any action as it's already associated.
-						ID: lo.ToPtr(cgID),
+						ID: new(cgID),
 					},
 				},
 			},
@@ -332,7 +332,7 @@ func TestKongConsumer(t *testing.T) {
 			Object: &sdkkonnectops.ListConsumerResponseBody{
 				Data: []sdkkonnectcomp.Consumer{
 					{
-						ID: lo.ToPtr(consumerID),
+						ID: new(consumerID),
 					},
 				},
 			},
@@ -373,8 +373,8 @@ func TestKongConsumer(t *testing.T) {
 			Return(
 				&sdkkonnectops.CreateConsumerResponse{
 					Consumer: &sdkkonnectcomp.Consumer{
-						ID:       lo.ToPtr(id),
-						Username: lo.ToPtr(name),
+						ID:       new(id),
+						Username: new(name),
 					},
 				},
 				nil,
@@ -435,8 +435,8 @@ func TestKongConsumer(t *testing.T) {
 			Return(
 				&sdkkonnectops.CreateConsumerResponse{
 					Consumer: &sdkkonnectcomp.Consumer{
-						ID:       lo.ToPtr(id),
-						Username: lo.ToPtr(name),
+						ID:       new(id),
+						Username: new(name),
 					},
 				},
 				nil,
@@ -481,7 +481,7 @@ func TestKongConsumer(t *testing.T) {
 			})).
 			Return(&sdkkonnectops.UpsertConsumerResponse{
 				Consumer: &sdkkonnectcomp.Consumer{
-					ID: lo.ToPtr(id2),
+					ID: new(id2),
 				},
 			}, nil)
 
@@ -571,7 +571,7 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 				}),
 			).Return(&sdkkonnectops.CreateConsumerResponse{
 			Consumer: &sdkkonnectcomp.Consumer{
-				ID: lo.ToPtr(consumerID),
+				ID: new(consumerID),
 			},
 		}, nil)
 
@@ -613,7 +613,7 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 			Return(
 				&sdkkonnectops.CreateBasicAuthWithConsumerResponse{
 					BasicAuth: &sdkkonnectcomp.BasicAuth{
-						ID: lo.ToPtr("basic-auth-id"),
+						ID: new("basic-auth-id"),
 					},
 				},
 				nil,
@@ -661,7 +661,7 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 				}),
 			).Return(&sdkkonnectops.CreateConsumerResponse{
 			Consumer: &sdkkonnectcomp.Consumer{
-				ID: lo.ToPtr(consumerID),
+				ID: new(consumerID),
 			},
 		}, nil)
 
@@ -701,7 +701,7 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 			Return(
 				&sdkkonnectops.CreateKeyAuthWithConsumerResponse{
 					KeyAuth: &sdkkonnectcomp.KeyAuth{
-						ID: lo.ToPtr("key-auth-id"),
+						ID: new("key-auth-id"),
 					},
 				},
 				nil,
@@ -749,7 +749,7 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 				}),
 			).Return(&sdkkonnectops.CreateConsumerResponse{
 			Consumer: &sdkkonnectcomp.Consumer{
-				ID: lo.ToPtr(consumerID),
+				ID: new(consumerID),
 			},
 		}, nil)
 
@@ -789,7 +789,7 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 			Return(
 				&sdkkonnectops.CreateACLWithConsumerResponse{
 					ACL: &sdkkonnectcomp.ACL{
-						ID: lo.ToPtr("acl-id"),
+						ID: new("acl-id"),
 					},
 				},
 				nil,
@@ -840,7 +840,7 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 				}),
 			).Return(&sdkkonnectops.CreateConsumerResponse{
 			Consumer: &sdkkonnectcomp.Consumer{
-				ID: lo.ToPtr(consumerID),
+				ID: new(consumerID),
 			},
 		}, nil)
 
@@ -884,7 +884,7 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 			Return(
 				&sdkkonnectops.CreateJwtWithConsumerResponse{
 					Jwt: &sdkkonnectcomp.Jwt{
-						ID: lo.ToPtr("jwt-id"),
+						ID: new("jwt-id"),
 					},
 				},
 				nil,
@@ -931,7 +931,7 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 				}),
 			).Return(&sdkkonnectops.CreateConsumerResponse{
 			Consumer: &sdkkonnectcomp.Consumer{
-				ID: lo.ToPtr(consumerID),
+				ID: new(consumerID),
 			},
 		}, nil)
 
@@ -973,7 +973,7 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 			Return(
 				&sdkkonnectops.CreateHmacAuthWithConsumerResponse{
 					HMACAuth: &sdkkonnectcomp.HMACAuth{
-						ID: lo.ToPtr("hmac-auth-id"),
+						ID: new("hmac-auth-id"),
 					},
 				},
 				nil,
@@ -1078,8 +1078,8 @@ func TestAdoptingConsumerAndCredentials(t *testing.T) {
 		cp.GetKonnectID(),
 	).Return(&sdkkonnectops.GetConsumerResponse{
 		Consumer: &sdkkonnectcomp.Consumer{
-			ID:       lo.ToPtr(consumerID),
-			Username: lo.ToPtr(userName),
+			ID:       new(consumerID),
+			Username: new(userName),
 		},
 	}, nil)
 	sdk.ConsumersSDK.EXPECT().UpsertConsumer(
@@ -1114,10 +1114,10 @@ func TestAdoptingConsumerAndCredentials(t *testing.T) {
 			}),
 		).Return(&sdkkonnectops.GetKeyAuthWithConsumerResponse{
 			KeyAuth: &sdkkonnectcomp.KeyAuth{
-				ID:  lo.ToPtr(keyAuthID),
-				Key: lo.ToPtr("key"),
+				ID:  new(keyAuthID),
+				Key: new("key"),
 				Consumer: &sdkkonnectcomp.KeyAuthConsumer{
-					ID: lo.ToPtr(consumerID),
+					ID: new(consumerID),
 				},
 			},
 		}, nil)
@@ -1171,10 +1171,10 @@ func TestAdoptingConsumerAndCredentials(t *testing.T) {
 			}),
 		).Return(&sdkkonnectops.GetBasicAuthWithConsumerResponse{
 			BasicAuth: &sdkkonnectcomp.BasicAuth{
-				ID:       lo.ToPtr(basicAuthID),
+				ID:       new(basicAuthID),
 				Username: "username",
 				Consumer: &sdkkonnectcomp.BasicAuthConsumer{
-					ID: lo.ToPtr(consumerID),
+					ID: new(consumerID),
 				},
 			},
 		}, nil)
@@ -1229,10 +1229,10 @@ func TestAdoptingConsumerAndCredentials(t *testing.T) {
 			}),
 		).Return(&sdkkonnectops.GetACLWithConsumerResponse{
 			ACL: &sdkkonnectcomp.ACL{
-				ID:    lo.ToPtr(aclID),
+				ID:    new(aclID),
 				Group: "acl-1",
 				Consumer: &sdkkonnectcomp.ACLConsumer{
-					ID: lo.ToPtr(consumerID),
+					ID: new(consumerID),
 				},
 			},
 		}, nil)
@@ -1287,11 +1287,11 @@ func TestAdoptingConsumerAndCredentials(t *testing.T) {
 			}),
 		).Return(&sdkkonnectops.GetHmacAuthWithConsumerResponse{
 			HMACAuth: &sdkkonnectcomp.HMACAuth{
-				ID:       lo.ToPtr(hmacID),
+				ID:       new(hmacID),
 				Username: "user",
-				Secret:   lo.ToPtr("secret"),
+				Secret:   new("secret"),
 				Consumer: &sdkkonnectcomp.HMACAuthConsumer{
-					ID: lo.ToPtr(consumerID),
+					ID: new(consumerID),
 				},
 			},
 		}, nil)
@@ -1319,8 +1319,8 @@ func TestAdoptingConsumerAndCredentials(t *testing.T) {
 					Name: createdConsumer.Name,
 				},
 				KongCredentialHMACAPISpec: configurationv1alpha1.KongCredentialHMACAPISpec{
-					Username: lo.ToPtr("user"),
-					Secret:   lo.ToPtr("secret"),
+					Username: new("user"),
+					Secret:   new("secret"),
 				},
 			},
 		}
@@ -1347,13 +1347,13 @@ func TestAdoptingConsumerAndCredentials(t *testing.T) {
 			}),
 		).Return(&sdkkonnectops.GetJwtWithConsumerResponse{
 			Jwt: &sdkkonnectcomp.Jwt{
-				ID: lo.ToPtr(jwtID),
+				ID: new(jwtID),
 				Consumer: &sdkkonnectcomp.JWTConsumer{
-					ID: lo.ToPtr(consumerID),
+					ID: new(consumerID),
 				},
-				Algorithm: lo.ToPtr(sdkkonnectcomp.JWTAlgorithmHs256),
-				Key:       lo.ToPtr("jwt-key"),
-				Secret:    lo.ToPtr("jwt-secret"),
+				Algorithm: new(sdkkonnectcomp.JWTAlgorithmHs256),
+				Key:       new("jwt-key"),
+				Secret:    new("jwt-secret"),
 			},
 		}, nil)
 		sdk.KongCredentialsJWTSDK.EXPECT().UpsertJwtWithConsumer(
@@ -1381,8 +1381,8 @@ func TestAdoptingConsumerAndCredentials(t *testing.T) {
 				},
 				KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
 					Algorithm: "HS256",
-					Key:       lo.ToPtr("jwt-key"),
-					Secret:    lo.ToPtr("jwt-secret"),
+					Key:       new("jwt-key"),
+					Secret:    new("jwt-secret"),
 				},
 			},
 		}

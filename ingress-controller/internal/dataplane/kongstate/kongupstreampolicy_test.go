@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/kong/go-kong/kong"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -167,86 +166,86 @@ func TestTranslateKongUpstreamPolicy(t *testing.T) {
 		{
 			name: "KongUpstreamPolicySpec with no hash-on or hash-fallback",
 			policySpec: configurationv1beta1.KongUpstreamPolicySpec{
-				Algorithm: lo.ToPtr("least-connections"),
-				Slots:     lo.ToPtr(10),
+				Algorithm: new("least-connections"),
+				Slots:     new(10),
 			},
 			expectedUpstream: &kong.Upstream{
-				Algorithm: lo.ToPtr("least-connections"),
-				Slots:     lo.ToPtr(10),
+				Algorithm: new("least-connections"),
+				Slots:     new(10),
 			},
 		},
 		{
 			name: "KongUpstreamPolicySpec with hash-on header",
 			policySpec: configurationv1beta1.KongUpstreamPolicySpec{
 				HashOn: &configurationv1beta1.KongUpstreamHash{
-					Header: lo.ToPtr("foo"),
+					Header: new("foo"),
 				},
 				HashOnFallback: &configurationv1beta1.KongUpstreamHash{
-					Header: lo.ToPtr("bar"),
+					Header: new("bar"),
 				},
 			},
 			expectedUpstream: &kong.Upstream{
-				HashOn:             lo.ToPtr("header"),
-				HashOnHeader:       lo.ToPtr("foo"),
-				HashFallback:       lo.ToPtr("header"),
-				HashFallbackHeader: lo.ToPtr("bar"),
+				HashOn:             new("header"),
+				HashOnHeader:       new("foo"),
+				HashFallback:       new("header"),
+				HashFallbackHeader: new("bar"),
 			},
 		},
 		{
 			name: "KongUpstreamPolicySpec with hash-on header and hash-on fallback cookie",
 			policySpec: configurationv1beta1.KongUpstreamPolicySpec{
 				HashOn: &configurationv1beta1.KongUpstreamHash{
-					Header: lo.ToPtr("foo"),
+					Header: new("foo"),
 				},
 				HashOnFallback: &configurationv1beta1.KongUpstreamHash{
-					Cookie:     lo.ToPtr("cookie-name"),
-					CookiePath: lo.ToPtr("/cookie-path"),
+					Cookie:     new("cookie-name"),
+					CookiePath: new("/cookie-path"),
 				},
 			},
 			expectedUpstream: &kong.Upstream{
-				HashOn:           lo.ToPtr("header"),
-				HashOnHeader:     lo.ToPtr("foo"),
-				HashFallback:     lo.ToPtr("cookie"),
-				HashOnCookie:     lo.ToPtr("cookie-name"),
-				HashOnCookiePath: lo.ToPtr("/cookie-path"),
+				HashOn:           new("header"),
+				HashOnHeader:     new("foo"),
+				HashFallback:     new("cookie"),
+				HashOnCookie:     new("cookie-name"),
+				HashOnCookiePath: new("/cookie-path"),
 			},
 		},
 		{
 			name: "KongUpstreamPolicySpec with hash-on query-arg and hash-on fallback cookie",
 			policySpec: configurationv1beta1.KongUpstreamPolicySpec{
 				HashOn: &configurationv1beta1.KongUpstreamHash{
-					QueryArg: lo.ToPtr("foo"),
+					QueryArg: new("foo"),
 				},
 				HashOnFallback: &configurationv1beta1.KongUpstreamHash{
-					Cookie:     lo.ToPtr("cookie-name"),
-					CookiePath: lo.ToPtr("/cookie-path"),
+					Cookie:     new("cookie-name"),
+					CookiePath: new("/cookie-path"),
 				},
 			},
 			expectedUpstream: &kong.Upstream{
-				HashOn:           lo.ToPtr("query_arg"),
-				HashOnQueryArg:   lo.ToPtr("foo"),
-				HashFallback:     lo.ToPtr("cookie"),
-				HashOnCookie:     lo.ToPtr("cookie-name"),
-				HashOnCookiePath: lo.ToPtr("/cookie-path"),
+				HashOn:           new("query_arg"),
+				HashOnQueryArg:   new("foo"),
+				HashFallback:     new("cookie"),
+				HashOnCookie:     new("cookie-name"),
+				HashOnCookiePath: new("/cookie-path"),
 			},
 		},
 		{
 			name: "KongUpstreamPolicySpec with hash-on uri-capture and hash-on fallback cookie",
 			policySpec: configurationv1beta1.KongUpstreamPolicySpec{
 				HashOn: &configurationv1beta1.KongUpstreamHash{
-					URICapture: lo.ToPtr("foo"),
+					URICapture: new("foo"),
 				},
 				HashOnFallback: &configurationv1beta1.KongUpstreamHash{
-					Cookie:     lo.ToPtr("cookie-name"),
-					CookiePath: lo.ToPtr("/cookie-path"),
+					Cookie:     new("cookie-name"),
+					CookiePath: new("/cookie-path"),
 				},
 			},
 			expectedUpstream: &kong.Upstream{
-				HashOn:           lo.ToPtr("uri_capture"),
-				HashOnURICapture: lo.ToPtr("foo"),
-				HashFallback:     lo.ToPtr("cookie"),
-				HashOnCookie:     lo.ToPtr("cookie-name"),
-				HashOnCookiePath: lo.ToPtr("/cookie-path"),
+				HashOn:           new("uri_capture"),
+				HashOnURICapture: new("foo"),
+				HashFallback:     new("cookie"),
+				HashOnCookie:     new("cookie-name"),
+				HashOnCookiePath: new("/cookie-path"),
 			},
 		},
 		{
@@ -257,19 +256,19 @@ func TestTranslateKongUpstreamPolicy(t *testing.T) {
 			name: "KongUpstreamPolicySpec with hash-on cookie and hash-on fallback cookie is incorrect and should not happen",
 			policySpec: configurationv1beta1.KongUpstreamPolicySpec{
 				HashOn: &configurationv1beta1.KongUpstreamHash{
-					Cookie:     lo.ToPtr("cookie-name"),
-					CookiePath: lo.ToPtr("/cookie-path"),
+					Cookie:     new("cookie-name"),
+					CookiePath: new("/cookie-path"),
 				},
 				HashOnFallback: &configurationv1beta1.KongUpstreamHash{
-					Cookie:     lo.ToPtr("cookie-name-2"),
-					CookiePath: lo.ToPtr("/cookie-path-2"),
+					Cookie:     new("cookie-name-2"),
+					CookiePath: new("/cookie-path-2"),
 				},
 			},
 			expectedUpstream: &kong.Upstream{
-				HashOn:           lo.ToPtr("cookie"),
-				HashOnCookie:     lo.ToPtr("cookie-name"),
-				HashOnCookiePath: lo.ToPtr("/cookie-path"),
-				HashFallback:     lo.ToPtr("cookie"),
+				HashOn:           new("cookie"),
+				HashOnCookie:     new("cookie-name"),
+				HashOnCookiePath: new("/cookie-path"),
+				HashFallback:     new("cookie"),
 			},
 		},
 		{
@@ -280,72 +279,72 @@ func TestTranslateKongUpstreamPolicy(t *testing.T) {
 			name: "KongUpstreamPolicySpec with hash-on cookie and hash-on fallback header is incorrect and should not happen",
 			policySpec: configurationv1beta1.KongUpstreamPolicySpec{
 				HashOn: &configurationv1beta1.KongUpstreamHash{
-					Cookie:     lo.ToPtr("cookie-name"),
-					CookiePath: lo.ToPtr("/cookie-path"),
+					Cookie:     new("cookie-name"),
+					CookiePath: new("/cookie-path"),
 				},
 				HashOnFallback: &configurationv1beta1.KongUpstreamHash{
-					Header: lo.ToPtr("header-name"),
+					Header: new("header-name"),
 				},
 			},
 			expectedUpstream: &kong.Upstream{
-				HashOn:             lo.ToPtr("cookie"),
-				HashOnCookie:       lo.ToPtr("cookie-name"),
-				HashOnCookiePath:   lo.ToPtr("/cookie-path"),
-				HashFallback:       lo.ToPtr("header"),
-				HashFallbackHeader: lo.ToPtr("header-name"),
+				HashOn:             new("cookie"),
+				HashOnCookie:       new("cookie-name"),
+				HashOnCookiePath:   new("/cookie-path"),
+				HashFallback:       new("header"),
+				HashFallbackHeader: new("header-name"),
 			},
 		},
 		{
 			name: "KongUpstreamPolicySpec with hash-on cookie",
 			policySpec: configurationv1beta1.KongUpstreamPolicySpec{
 				HashOn: &configurationv1beta1.KongUpstreamHash{
-					Cookie:     lo.ToPtr("foo"),
-					CookiePath: lo.ToPtr("/"),
+					Cookie:     new("foo"),
+					CookiePath: new("/"),
 				},
 			},
 			expectedUpstream: &kong.Upstream{
-				HashOn:           lo.ToPtr("cookie"),
-				HashOnCookie:     lo.ToPtr("foo"),
-				HashOnCookiePath: lo.ToPtr("/"),
+				HashOn:           new("cookie"),
+				HashOnCookie:     new("foo"),
+				HashOnCookiePath: new("/"),
 			},
 		},
 		{
 			name: "KongUpstreamPolicySpec with hash-on query-arg",
 			policySpec: configurationv1beta1.KongUpstreamPolicySpec{
 				HashOn: &configurationv1beta1.KongUpstreamHash{
-					QueryArg: lo.ToPtr("foo"),
+					QueryArg: new("foo"),
 				},
 			},
 			expectedUpstream: &kong.Upstream{
-				HashOn:         lo.ToPtr("query_arg"),
-				HashOnQueryArg: lo.ToPtr("foo"),
+				HashOn:         new("query_arg"),
+				HashOnQueryArg: new("foo"),
 			},
 		},
 		{
 			name: "KongUpstreamPolicySpec with hash-on uri-capture",
 			policySpec: configurationv1beta1.KongUpstreamPolicySpec{
 				HashOn: &configurationv1beta1.KongUpstreamHash{
-					URICapture: lo.ToPtr("foo"),
+					URICapture: new("foo"),
 				},
 			},
 			expectedUpstream: &kong.Upstream{
-				HashOn:           lo.ToPtr("uri_capture"),
-				HashOnURICapture: lo.ToPtr("foo"),
+				HashOn:           new("uri_capture"),
+				HashOnURICapture: new("foo"),
 			},
 		},
 		{
 			name: "KongUpstreamPolicySpec with predefined hash input",
 			policySpec: configurationv1beta1.KongUpstreamPolicySpec{
 				HashOn: &configurationv1beta1.KongUpstreamHash{
-					Input: lo.ToPtr(configurationv1beta1.HashInput("consumer")),
+					Input: new(configurationv1beta1.HashInput("consumer")),
 				},
 				HashOnFallback: &configurationv1beta1.KongUpstreamHash{
-					Input: lo.ToPtr(configurationv1beta1.HashInput("ip")),
+					Input: new(configurationv1beta1.HashInput("ip")),
 				},
 			},
 			expectedUpstream: &kong.Upstream{
-				HashOn:       lo.ToPtr("consumer"),
-				HashFallback: lo.ToPtr("ip"),
+				HashOn:       new("consumer"),
+				HashFallback: new("ip"),
 			},
 		},
 		{
@@ -353,71 +352,71 @@ func TestTranslateKongUpstreamPolicy(t *testing.T) {
 			policySpec: configurationv1beta1.KongUpstreamPolicySpec{
 				Healthchecks: &configurationv1beta1.KongUpstreamHealthcheck{
 					Active: &configurationv1beta1.KongUpstreamActiveHealthcheck{
-						Type:        lo.ToPtr("http"),
-						Concurrency: lo.ToPtr(10),
+						Type:        new("http"),
+						Concurrency: new(10),
 						Healthy: &configurationv1beta1.KongUpstreamHealthcheckHealthy{
 							HTTPStatuses: []configurationv1beta1.HTTPStatus{200},
-							Interval:     lo.ToPtr(20),
-							Successes:    lo.ToPtr(30),
+							Interval:     new(20),
+							Successes:    new(30),
 						},
 						Unhealthy: &configurationv1beta1.KongUpstreamHealthcheckUnhealthy{
-							HTTPFailures: lo.ToPtr(40),
+							HTTPFailures: new(40),
 							HTTPStatuses: []configurationv1beta1.HTTPStatus{500},
-							Timeouts:     lo.ToPtr(60),
-							Interval:     lo.ToPtr(70),
+							Timeouts:     new(60),
+							Interval:     new(70),
 						},
-						HTTPPath:               lo.ToPtr("/foo"),
-						HTTPSSNI:               lo.ToPtr("foo.com"),
-						HTTPSVerifyCertificate: lo.ToPtr(true),
-						Timeout:                lo.ToPtr(80),
+						HTTPPath:               new("/foo"),
+						HTTPSSNI:               new("foo.com"),
+						HTTPSVerifyCertificate: new(true),
+						Timeout:                new(80),
 						Headers:                map[string][]string{"foo": {"bar"}},
 					},
 					Passive: &configurationv1beta1.KongUpstreamPassiveHealthcheck{
-						Type: lo.ToPtr("tcp"),
+						Type: new("tcp"),
 						Healthy: &configurationv1beta1.KongUpstreamHealthcheckHealthy{
-							Successes: lo.ToPtr(100),
+							Successes: new(100),
 						},
 						Unhealthy: &configurationv1beta1.KongUpstreamHealthcheckUnhealthy{
-							TCPFailures: lo.ToPtr(110),
-							Timeouts:    lo.ToPtr(120),
+							TCPFailures: new(110),
+							Timeouts:    new(120),
 						},
 					},
-					Threshold: lo.ToPtr(10),
+					Threshold: new(10),
 				},
 			},
 			expectedUpstream: &kong.Upstream{
 				Healthchecks: &kong.Healthcheck{
 					Active: &kong.ActiveHealthcheck{
-						Type:        lo.ToPtr("http"),
-						Concurrency: lo.ToPtr(10),
+						Type:        new("http"),
+						Concurrency: new(10),
 						Healthy: &kong.Healthy{
 							HTTPStatuses: []int{200},
-							Interval:     lo.ToPtr(20),
-							Successes:    lo.ToPtr(30),
+							Interval:     new(20),
+							Successes:    new(30),
 						},
 						Unhealthy: &kong.Unhealthy{
-							HTTPFailures: lo.ToPtr(40),
+							HTTPFailures: new(40),
 							HTTPStatuses: []int{500},
-							Timeouts:     lo.ToPtr(60),
-							Interval:     lo.ToPtr(70),
+							Timeouts:     new(60),
+							Interval:     new(70),
 						},
-						HTTPPath:               lo.ToPtr("/foo"),
-						HTTPSSni:               lo.ToPtr("foo.com"),
-						HTTPSVerifyCertificate: lo.ToPtr(true),
+						HTTPPath:               new("/foo"),
+						HTTPSSni:               new("foo.com"),
+						HTTPSVerifyCertificate: new(true),
 						Headers:                map[string][]string{"foo": {"bar"}},
-						Timeout:                lo.ToPtr(80),
+						Timeout:                new(80),
 					},
 					Passive: &kong.PassiveHealthcheck{
-						Type: lo.ToPtr("tcp"),
+						Type: new("tcp"),
 						Healthy: &kong.Healthy{
-							Successes: lo.ToPtr(100),
+							Successes: new(100),
 						},
 						Unhealthy: &kong.Unhealthy{
-							TCPFailures: lo.ToPtr(110),
-							Timeouts:    lo.ToPtr(120),
+							TCPFailures: new(110),
+							Timeouts:    new(120),
 						},
 					},
-					Threshold: lo.ToPtr(float64(10.0)),
+					Threshold: new(float64(10.0)),
 				},
 			},
 		},

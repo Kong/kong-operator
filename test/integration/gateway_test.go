@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/kr/pretty"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -660,8 +659,8 @@ func createHTTPRoute(parentRef metav1.Object, svc metav1.Object, path string) *g
 					Matches: []gatewayv1.HTTPRouteMatch{
 						{
 							Path: &gatewayv1.HTTPPathMatch{
-								Type:  lo.ToPtr(gatewayv1.PathMatchPathPrefix),
-								Value: lo.ToPtr(path),
+								Type:  new(gatewayv1.PathMatchPathPrefix),
+								Value: new(path),
 							},
 						},
 					},
@@ -670,8 +669,8 @@ func createHTTPRoute(parentRef metav1.Object, svc metav1.Object, path string) *g
 							BackendRef: gatewayv1.BackendRef{
 								BackendObjectReference: gatewayv1.BackendObjectReference{
 									Name: gatewayv1.ObjectName(svc.GetName()),
-									Port: lo.ToPtr(gatewayv1.PortNumber(80)),
-									Kind: lo.ToPtr(gatewayv1.Kind("Service")),
+									Port: new(gatewayv1.PortNumber(80)),
+									Kind: new(gatewayv1.Kind("Service")),
 								},
 							},
 						},
@@ -796,28 +795,28 @@ func TestScalingDataPlaneThroughGatewayConfiguration(t *testing.T) {
 		{
 			name: "replicas=2",
 			dataplaneDeploymentOptions: operatorv1beta1.DeploymentOptions{
-				Replicas: lo.ToPtr[int32](2),
+				Replicas: new(int32(2)),
 			},
 			expectedReplicasCount: 2,
 		},
 		{
 			name: "replicas=0",
 			dataplaneDeploymentOptions: operatorv1beta1.DeploymentOptions{
-				Replicas: lo.ToPtr[int32](0),
+				Replicas: new(int32(0)),
 			},
 			expectedReplicasCount: 0,
 		},
 		{
 			name: "replicas=3",
 			dataplaneDeploymentOptions: operatorv1beta1.DeploymentOptions{
-				Replicas: lo.ToPtr[int32](3),
+				Replicas: new(int32(3)),
 			},
 			expectedReplicasCount: 3,
 		},
 		{
 			name: "replicas=1",
 			dataplaneDeploymentOptions: operatorv1beta1.DeploymentOptions{
-				Replicas: lo.ToPtr[int32](1),
+				Replicas: new(int32(1)),
 			},
 			expectedReplicasCount: 1,
 		},
@@ -826,7 +825,7 @@ func TestScalingDataPlaneThroughGatewayConfiguration(t *testing.T) {
 			dataplaneDeploymentOptions: operatorv1beta1.DeploymentOptions{
 				Scaling: &operatorv1beta1.Scaling{
 					HorizontalScaling: &operatorv1beta1.HorizontalScaling{
-						MinReplicas: lo.ToPtr[int32](2),
+						MinReplicas: new(int32(2)),
 						MaxReplicas: 4,
 					},
 				},

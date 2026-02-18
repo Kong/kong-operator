@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/kong/go-kong/kong"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -34,7 +33,7 @@ func TestGenerateKongRoutesFromRouteRule_TCP(t *testing.T) {
 				BackendRefs: []gatewayapi.BackendRef{
 					{
 						BackendObjectReference: gatewayapi.BackendObjectReference{
-							Port: lo.ToPtr(gatewayapi.PortNumber(1234)),
+							Port: new(gatewayapi.PortNumber(1234)),
 						},
 					},
 				},
@@ -46,18 +45,18 @@ func TestGenerateKongRoutesFromRouteRule_TCP(t *testing.T) {
 						Namespace: "mynamespace",
 					},
 					Route: kong.Route{
-						Name: lo.ToPtr("tcproute.mynamespace.mytcproute-name.0.0"),
+						Name: new("tcproute.mynamespace.mytcproute-name.0.0"),
 						Destinations: []*kong.CIDRPort{
 							{
-								Port: lo.ToPtr(8080),
+								Port: new(8080),
 							},
 						},
 						Protocols: []*string{
-							lo.ToPtr("tcp"),
+							new("tcp"),
 						},
 						Tags: []*string{
-							kong.String("k8s-name:mytcproute-name"),
-							kong.String("k8s-namespace:mynamespace"),
+							new("k8s-name:mytcproute-name"),
+							new("k8s-namespace:mynamespace"),
 						},
 					},
 				},
@@ -75,12 +74,12 @@ func TestGenerateKongRoutesFromRouteRule_TCP(t *testing.T) {
 				BackendRefs: []gatewayapi.BackendRef{
 					{
 						BackendObjectReference: gatewayapi.BackendObjectReference{
-							Port: lo.ToPtr(gatewayapi.PortNumber(1234)),
+							Port: new(gatewayapi.PortNumber(1234)),
 						},
 					},
 					{
 						BackendObjectReference: gatewayapi.BackendObjectReference{
-							Port: lo.ToPtr(gatewayapi.PortNumber(5678)),
+							Port: new(gatewayapi.PortNumber(5678)),
 						},
 					},
 				},
@@ -93,21 +92,21 @@ func TestGenerateKongRoutesFromRouteRule_TCP(t *testing.T) {
 						Namespace: "mynamespace",
 					},
 					Route: kong.Route{
-						Name: lo.ToPtr("tcproute.mynamespace.mytcproute-name.0.0"),
+						Name: new("tcproute.mynamespace.mytcproute-name.0.0"),
 						Destinations: []*kong.CIDRPort{
 							{
-								Port: lo.ToPtr(8080),
+								Port: new(8080),
 							},
 							{
-								Port: lo.ToPtr(8888),
+								Port: new(8888),
 							},
 						},
 						Protocols: []*string{
-							lo.ToPtr("tcp"),
+							new("tcp"),
 						},
 						Tags: []*string{
-							kong.String("k8s-name:mytcproute-name"),
-							kong.String("k8s-namespace:mynamespace"),
+							new("k8s-name:mytcproute-name"),
+							new("k8s-namespace:mynamespace"),
 						},
 					},
 				},
@@ -145,7 +144,7 @@ func TestGenerateKongRoutesFromRouteRule_UDP(t *testing.T) {
 				BackendRefs: []gatewayapi.BackendRef{
 					{
 						BackendObjectReference: gatewayapi.BackendObjectReference{
-							Port: lo.ToPtr(gatewayapi.PortNumber(1234)),
+							Port: new(gatewayapi.PortNumber(1234)),
 						},
 					},
 				},
@@ -158,18 +157,18 @@ func TestGenerateKongRoutesFromRouteRule_UDP(t *testing.T) {
 						Namespace: "mynamespace",
 					},
 					Route: kong.Route{
-						Name: lo.ToPtr("udproute.mynamespace.myudproute-name.0.0"),
+						Name: new("udproute.mynamespace.myudproute-name.0.0"),
 						Destinations: []*kong.CIDRPort{
 							{
-								Port: lo.ToPtr(8080),
+								Port: new(8080),
 							},
 						},
 						Protocols: []*string{
-							lo.ToPtr("udp"),
+							new("udp"),
 						},
 						Tags: []*string{
-							kong.String("k8s-name:myudproute-name"),
-							kong.String("k8s-namespace:mynamespace"),
+							new("k8s-name:myudproute-name"),
+							new("k8s-namespace:mynamespace"),
 						},
 					},
 				},
@@ -187,12 +186,12 @@ func TestGenerateKongRoutesFromRouteRule_UDP(t *testing.T) {
 				BackendRefs: []gatewayapi.BackendRef{
 					{
 						BackendObjectReference: gatewayapi.BackendObjectReference{
-							Port: lo.ToPtr(gatewayapi.PortNumber(1234)),
+							Port: new(gatewayapi.PortNumber(1234)),
 						},
 					},
 					{
 						BackendObjectReference: gatewayapi.BackendObjectReference{
-							Port: lo.ToPtr(gatewayapi.PortNumber(5678)),
+							Port: new(gatewayapi.PortNumber(5678)),
 						},
 					},
 				},
@@ -205,21 +204,21 @@ func TestGenerateKongRoutesFromRouteRule_UDP(t *testing.T) {
 						Namespace: "mynamespace",
 					},
 					Route: kong.Route{
-						Name: lo.ToPtr("udproute.mynamespace.myudproute-name.0.0"),
+						Name: new("udproute.mynamespace.myudproute-name.0.0"),
 						Destinations: []*kong.CIDRPort{
 							{
-								Port: lo.ToPtr(8080),
+								Port: new(8080),
 							},
 							{
-								Port: lo.ToPtr(8888),
+								Port: new(8888),
 							},
 						},
 						Protocols: []*string{
-							lo.ToPtr("udp"),
+							new("udp"),
 						},
 						Tags: []*string{
-							kong.String("k8s-name:myudproute-name"),
-							kong.String("k8s-namespace:mynamespace"),
+							new("k8s-name:myudproute-name"),
+							new("k8s-namespace:mynamespace"),
 						},
 					},
 				},
@@ -266,17 +265,17 @@ func TestGenerateKongRoutesFromRouteRule_TLS(t *testing.T) {
 						Namespace: "mynamespace",
 					},
 					Route: kong.Route{
-						Name: lo.ToPtr("tlsroute.mynamespace.mytlsroute-name.0.0"),
+						Name: new("tlsroute.mynamespace.mytlsroute-name.0.0"),
 						SNIs: []*string{
-							lo.ToPtr("hostname.com"),
-							lo.ToPtr("hostname2.com"),
+							new("hostname.com"),
+							new("hostname2.com"),
 						},
 						Protocols: []*string{
-							lo.ToPtr("tls"),
+							new("tls"),
 						},
 						Tags: []*string{
-							kong.String("k8s-name:mytlsroute-name"),
-							kong.String("k8s-namespace:mynamespace"),
+							new("k8s-name:mytlsroute-name"),
+							new("k8s-namespace:mynamespace"),
 						},
 					},
 				},
@@ -299,14 +298,14 @@ func TestGenerateKongRoutesFromRouteRule_TLS(t *testing.T) {
 						Namespace: "mynamespace",
 					},
 					Route: kong.Route{
-						Name: lo.ToPtr("tlsroute.mynamespace.mytlsroute-name.0.0"),
+						Name: new("tlsroute.mynamespace.mytlsroute-name.0.0"),
 						SNIs: []*string{},
 						Protocols: []*string{
-							lo.ToPtr("tls"),
+							new("tls"),
 						},
 						Tags: []*string{
-							kong.String("k8s-name:mytlsroute-name"),
-							kong.String("k8s-namespace:mynamespace"),
+							new("k8s-name:mytlsroute-name"),
+							new("k8s-namespace:mynamespace"),
 						},
 					},
 				},

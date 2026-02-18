@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -137,8 +136,8 @@ func GenerateHTTPRoute(namespace string, gatewayName, serviceName string, opts .
 					Matches: []gatewayv1.HTTPRouteMatch{
 						{
 							Path: &gatewayv1.HTTPPathMatch{
-								Type:  lo.ToPtr(gatewayv1.PathMatchPathPrefix),
-								Value: lo.ToPtr("/test"),
+								Type:  new(gatewayv1.PathMatchPathPrefix),
+								Value: new("/test"),
 							},
 						},
 					},
@@ -147,8 +146,8 @@ func GenerateHTTPRoute(namespace string, gatewayName, serviceName string, opts .
 							BackendRef: gatewayv1.BackendRef{
 								BackendObjectReference: gatewayv1.BackendObjectReference{
 									Name: gatewayv1.ObjectName(serviceName),
-									Port: lo.ToPtr(gatewayv1.PortNumber(80)),
-									Kind: lo.ToPtr(gatewayv1.Kind("Service")),
+									Port: new(gatewayv1.PortNumber(80)),
+									Kind: new(gatewayv1.Kind("Service")),
 								},
 							},
 						},

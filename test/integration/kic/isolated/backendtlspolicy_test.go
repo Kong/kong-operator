@@ -13,7 +13,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -228,7 +227,7 @@ func TestBackendTLSPolicy(t *testing.T) {
 									BackendRef: gatewayapi.BackendRef{
 										BackendObjectReference: gatewayapi.BackendObjectReference{
 											Name: gatewayapi.ObjectName(service.Name),
-											Port: lo.ToPtr(gatewayapi.PortNumber(1028)),
+											Port: new(gatewayapi.PortNumber(1028)),
 										},
 									},
 								},

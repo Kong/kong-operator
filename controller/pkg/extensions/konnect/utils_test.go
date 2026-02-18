@@ -3,7 +3,6 @@ package konnect
 import (
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -35,7 +34,7 @@ func TestKonnectExtensionToExtensionRef(t *testing.T) {
 				Kind:  konnectv1alpha2.KonnectExtensionKind,
 				NamespacedRef: commonv1alpha1.NamespacedRef{
 					Name:      "test-extension",
-					Namespace: lo.ToPtr("default"),
+					Namespace: new("default"),
 				},
 			},
 		},
@@ -61,7 +60,7 @@ func TestKonnectExtensionToExtensionRef(t *testing.T) {
 				Kind:  konnectv1alpha2.KonnectExtensionKind,
 				NamespacedRef: commonv1alpha1.NamespacedRef{
 					Name:      "complex-extension",
-					Namespace: lo.ToPtr("production"),
+					Namespace: new("production"),
 				},
 			},
 		},

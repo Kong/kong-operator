@@ -3,7 +3,6 @@ package metricsscraper
 import (
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
@@ -53,9 +52,9 @@ func TestAdminAPIAddressProvider_AdminAddressesFromDP(t *testing.T) {
 						AddressType: discoveryv1.AddressTypeIPv4,
 						Ports: []discoveryv1.EndpointPort{
 							{
-								Name:     lo.ToPtr("http"),
-								Protocol: lo.ToPtr(corev1.ProtocolTCP),
-								Port:     lo.ToPtr(int32(8001)),
+								Name:     new("http"),
+								Protocol: new(corev1.ProtocolTCP),
+								Port:     new(int32(8001)),
 							},
 						},
 						Endpoints: []discoveryv1.Endpoint{
@@ -106,9 +105,9 @@ func TestAdminAPIAddressProvider_AdminAddressesFromDP(t *testing.T) {
 						AddressType: discoveryv1.AddressTypeIPv6,
 						Ports: []discoveryv1.EndpointPort{
 							{
-								Name:     lo.ToPtr("http"),
-								Protocol: lo.ToPtr(corev1.ProtocolTCP),
-								Port:     lo.ToPtr(int32(8001)),
+								Name:     new("http"),
+								Protocol: new(corev1.ProtocolTCP),
+								Port:     new(int32(8001)),
 							},
 						},
 						Endpoints: []discoveryv1.Endpoint{
@@ -151,9 +150,9 @@ func TestAdminAPIAddressProvider_AdminAddressesFromDP(t *testing.T) {
 						AddressType: discoveryv1.AddressTypeIPv6,
 						Ports: []discoveryv1.EndpointPort{
 							{
-								Name:     lo.ToPtr("http"),
-								Protocol: lo.ToPtr(corev1.ProtocolTCP),
-								Port:     lo.ToPtr(int32(8001)),
+								Name:     new("http"),
+								Protocol: new(corev1.ProtocolTCP),
+								Port:     new(int32(8001)),
 							},
 						},
 						Endpoints: []discoveryv1.Endpoint{
@@ -183,9 +182,9 @@ func TestAdminAPIAddressProvider_AdminAddressesFromDP(t *testing.T) {
 						AddressType: discoveryv1.AddressTypeIPv4,
 						Ports: []discoveryv1.EndpointPort{
 							{
-								Name:     lo.ToPtr("http"),
-								Protocol: lo.ToPtr(corev1.ProtocolTCP),
-								Port:     lo.ToPtr(int32(8001)),
+								Name:     new("http"),
+								Protocol: new(corev1.ProtocolTCP),
+								Port:     new(int32(8001)),
 							},
 						},
 						Endpoints: []discoveryv1.Endpoint{
@@ -231,9 +230,9 @@ func TestAdminAPIAddressProvider_AdminAddressesFromDP(t *testing.T) {
 						AddressType: discoveryv1.AddressTypeIPv4,
 						Ports: []discoveryv1.EndpointPort{
 							{
-								Name:     lo.ToPtr("http"),
-								Protocol: lo.ToPtr(corev1.ProtocolTCP),
-								Port:     lo.ToPtr(int32(8001)),
+								Name:     new("http"),
+								Protocol: new(corev1.ProtocolTCP),
+								Port:     new(int32(8001)),
 							},
 						},
 						Endpoints: []discoveryv1.Endpoint{
@@ -259,9 +258,9 @@ func TestAdminAPIAddressProvider_AdminAddressesFromDP(t *testing.T) {
 						AddressType: discoveryv1.AddressTypeIPv4,
 						Ports: []discoveryv1.EndpointPort{
 							{
-								Name:     lo.ToPtr("http"),
-								Protocol: lo.ToPtr(corev1.ProtocolTCP),
-								Port:     lo.ToPtr(int32(8001)),
+								Name:     new("http"),
+								Protocol: new(corev1.ProtocolTCP),
+								Port:     new(int32(8001)),
 							},
 						},
 						Endpoints: []discoveryv1.Endpoint{
@@ -309,9 +308,9 @@ func TestAdminAPIAddressProvider_AdminAddressesFromDP(t *testing.T) {
 						AddressType: discoveryv1.AddressTypeIPv4,
 						Ports: []discoveryv1.EndpointPort{
 							{
-								Name:     lo.ToPtr("http"),
-								Protocol: lo.ToPtr(corev1.ProtocolTCP),
-								Port:     lo.ToPtr(int32(8001)),
+								Name:     new("http"),
+								Protocol: new(corev1.ProtocolTCP),
+								Port:     new(int32(8001)),
 							},
 						},
 						Endpoints: []discoveryv1.Endpoint{

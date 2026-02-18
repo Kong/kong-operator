@@ -566,7 +566,7 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 		validator := KongHTTPValidator{
 			SecretGetter: s,
 			AdminAPIServicesProvider: fakeServicesProvider{
-				consumerSvc: fakeConsumersSvc{consumer: &kong.Consumer{Username: lo.ToPtr("username")}},
+				consumerSvc: fakeConsumersSvc{consumer: &kong.Consumer{Username: new("username")}},
 			},
 			ingressClassMatcher: fakeClassMatcher,
 		}
@@ -1158,7 +1158,7 @@ func TestValidator_ValidateIngress(t *testing.T) {
 				WithRules(
 					newHTTPIngressRule(netv1.IngressBackend{
 						Resource: &corev1.TypedLocalObjectReference{
-							APIGroup: lo.ToPtr(incubatorv1alpha1.SchemeGroupVersion.Group),
+							APIGroup: new(incubatorv1alpha1.SchemeGroupVersion.Group),
 							Kind:     incubatorv1alpha1.KongServiceFacadeKind,
 							Name:     testSvcFacadeName,
 						},
@@ -1196,7 +1196,7 @@ func TestValidator_ValidateIngress(t *testing.T) {
 				WithRules(
 					newHTTPIngressRule(netv1.IngressBackend{
 						Resource: &corev1.TypedLocalObjectReference{
-							APIGroup: lo.ToPtr(incubatorv1alpha1.SchemeGroupVersion.Group),
+							APIGroup: new(incubatorv1alpha1.SchemeGroupVersion.Group),
 							Kind:     incubatorv1alpha1.KongServiceFacadeKind,
 							Name:     testSvcFacadeName,
 						},
@@ -1244,7 +1244,7 @@ func newHTTPIngressRule(backend netv1.IngressBackend) netv1.IngressRule {
 				Paths: []netv1.HTTPIngressPath{
 					{
 						Path:     "/",
-						PathType: lo.ToPtr(netv1.PathTypeImplementationSpecific),
+						PathType: new(netv1.PathTypeImplementationSpecific),
 						Backend:  backend,
 					},
 				},

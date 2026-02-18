@@ -7,7 +7,6 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
-	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -42,7 +41,7 @@ func createCertificate(
 
 	respList, err := sdk.ListCertificate(ctx, sdkkonnectops.ListCertificateRequest{
 		ControlPlaneID: cpID,
-		Tags:           lo.ToPtr(strings.Join(GenerateTagsForObject(cert, cert.Spec.Tags...), ",")),
+		Tags:           new(strings.Join(GenerateTagsForObject(cert, cert.Spec.Tags...), ",")),
 	})
 	if err != nil {
 		return fmt.Errorf("failed to list: %w", err)
@@ -264,10 +263,10 @@ func kongCertificateToCertificateInput(ctx context.Context, cl client.Client, ce
 		Tags: GenerateTagsForObject(cert, cert.Spec.Tags...),
 	}
 	if certAltData != "" {
-		input.CertAlt = lo.ToPtr(certAltData)
+		input.CertAlt = new(certAltData)
 	}
 	if keyAltData != "" {
-		input.KeyAlt = lo.ToPtr(keyAltData)
+		input.KeyAlt = new(keyAltData)
 	}
 
 	return input, nil
@@ -280,7 +279,7 @@ func getKongCertificateForUID(
 ) (string, error) {
 	resp, err := sdk.ListCertificate(ctx, sdkkonnectops.ListCertificateRequest{
 		ControlPlaneID: cert.GetControlPlaneID(),
-		Tags:           lo.ToPtr(UIDLabelForObject(cert)),
+		Tags:           new(UIDLabelForObject(cert)),
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to list %s: %w", cert.GetTypeName(), err)
@@ -311,5 +310,5 @@ func stringPtrOrNil(val string) *string {
 	if val == "" {
 		return nil
 	}
-	return lo.ToPtr(val)
+	return new(val)
 }

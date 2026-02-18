@@ -178,7 +178,7 @@ func (p *gatewayCountProvider) isGatewayHybrid(
 		paramRef := &gatewayv1.ParametersReference{
 			Group:     gw.Spec.Infrastructure.ParametersRef.Group,
 			Kind:      gw.Spec.Infrastructure.ParametersRef.Kind,
-			Namespace: lo.ToPtr(gatewayv1.Namespace(gw.Namespace)),
+			Namespace: new(gatewayv1.Namespace(gw.Namespace)),
 			Name:      gw.Spec.Infrastructure.ParametersRef.Name,
 		}
 		localConfig, err := gwconfigutils.GetFromParametersRef(ctx, p.cl, paramRef)

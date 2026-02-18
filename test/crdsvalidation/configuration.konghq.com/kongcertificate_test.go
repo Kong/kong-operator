@@ -92,7 +92,7 @@ func TestKongCertificate(t *testing.T) {
 							},
 						},
 					},
-					ExpectedErrorMessage: lo.ToPtr("spec.tags: Too many: 21: must have at most 20 items"),
+					ExpectedErrorMessage: new("spec.tags: Too many: 21: must have at most 20 items"),
 				},
 				{
 					Name: "tags entries must not be longer than 128 characters",
@@ -114,7 +114,7 @@ func TestKongCertificate(t *testing.T) {
 							},
 						},
 					},
-					ExpectedErrorMessage: lo.ToPtr("tags entries must not be longer than 128 characters"),
+					ExpectedErrorMessage: new("tags entries must not be longer than 128 characters"),
 				},
 			}.
 				RunWithConfig(t, cfg, scheme)
@@ -128,7 +128,7 @@ func TestKongCertificate(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongCertificate{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCertificateSpec{
-						Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeInline),
+						Type: new(configurationv1alpha1.KongCertificateSourceTypeInline),
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
@@ -147,7 +147,7 @@ func TestKongCertificate(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongCertificate{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCertificateSpec{
-						Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeInline),
+						Type: new(configurationv1alpha1.KongCertificateSourceTypeInline),
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
@@ -159,14 +159,14 @@ func TestKongCertificate(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.cert is required when type is 'inline'"),
+				ExpectedErrorMessage: new("spec.cert is required when type is 'inline'"),
 			},
 			{
 				Name: "type=inline with empty cert returns error",
 				TestObject: &configurationv1alpha1.KongCertificate{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCertificateSpec{
-						Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeInline),
+						Type: new(configurationv1alpha1.KongCertificateSourceTypeInline),
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
@@ -179,14 +179,14 @@ func TestKongCertificate(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.cert is required when type is 'inline'"),
+				ExpectedErrorMessage: new("spec.cert is required when type is 'inline'"),
 			},
 			{
 				Name: "type=inline with missing key returns error",
 				TestObject: &configurationv1alpha1.KongCertificate{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCertificateSpec{
-						Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeInline),
+						Type: new(configurationv1alpha1.KongCertificateSourceTypeInline),
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
@@ -198,14 +198,14 @@ func TestKongCertificate(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.key is required when type is 'inline'"),
+				ExpectedErrorMessage: new("spec.key is required when type is 'inline'"),
 			},
 			{
 				Name: "type=secretRef requires secretRef field",
 				TestObject: &configurationv1alpha1.KongCertificate{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCertificateSpec{
-						Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
+						Type: new(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
@@ -223,7 +223,7 @@ func TestKongCertificate(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongCertificate{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCertificateSpec{
-						Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
+						Type: new(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
@@ -232,7 +232,7 @@ func TestKongCertificate(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.secretRef is required when type is 'secretRef'"),
+				ExpectedErrorMessage: new("spec.secretRef is required when type is 'secretRef'"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -260,7 +260,7 @@ func TestKongCertificate(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("cert/key and secretRef/secretRefAlt cannot be set at the same time"),
+				ExpectedErrorMessage: new("cert/key and secretRef/secretRefAlt cannot be set at the same time"),
 			},
 			{
 				Name: "cert cannot be mixed with secretRefAlt",
@@ -282,7 +282,7 @@ func TestKongCertificate(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("cert/key and secretRef/secretRefAlt cannot be set at the same time"),
+				ExpectedErrorMessage: new("cert/key and secretRef/secretRefAlt cannot be set at the same time"),
 			},
 			{
 				Name: "key alone cannot be mixed with secretRef",
@@ -303,7 +303,7 @@ func TestKongCertificate(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("cert/key and secretRef/secretRefAlt cannot be set at the same time"),
+				ExpectedErrorMessage: new("cert/key and secretRef/secretRefAlt cannot be set at the same time"),
 			},
 			{
 				Name: "certAlt/keyAlt cannot be mixed with secretRef",
@@ -325,7 +325,7 @@ func TestKongCertificate(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("cert_alt/key_alt and secretRef/secretRefAlt cannot be set at the same time"),
+				ExpectedErrorMessage: new("cert_alt/key_alt and secretRef/secretRefAlt cannot be set at the same time"),
 			},
 			{
 				Name: "certAlt alone cannot be mixed with secretRefAlt",
@@ -346,14 +346,14 @@ func TestKongCertificate(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("cert_alt/key_alt and secretRef/secretRefAlt cannot be set at the same time"),
+				ExpectedErrorMessage: new("cert_alt/key_alt and secretRef/secretRefAlt cannot be set at the same time"),
 			},
 			{
 				Name: "valid: secretRef and secretRefAlt can be used together",
 				TestObject: &configurationv1alpha1.KongCertificate{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCertificateSpec{
-						Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
+						Type: new(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
@@ -374,7 +374,7 @@ func TestKongCertificate(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongCertificate{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCertificateSpec{
-						Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeInline),
+						Type: new(configurationv1alpha1.KongCertificateSourceTypeInline),
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
@@ -401,7 +401,7 @@ func TestKongCertificate(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongCertificate{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCertificateSpec{
-						Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
+						Type: new(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
@@ -410,7 +410,7 @@ func TestKongCertificate(t *testing.T) {
 						},
 						SecretRef: &commonv1alpha1.NamespacedRef{
 							Name:      "test-secret",
-							Namespace: lo.ToPtr("other-namespace"),
+							Namespace: new("other-namespace"),
 						},
 					},
 				},
@@ -420,7 +420,7 @@ func TestKongCertificate(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongCertificate{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCertificateSpec{
-						Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
+						Type: new(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
@@ -432,7 +432,7 @@ func TestKongCertificate(t *testing.T) {
 						},
 						SecretRefAlt: &commonv1alpha1.NamespacedRef{
 							Name:      "test-secret-alt",
-							Namespace: lo.ToPtr("other-namespace"),
+							Namespace: new("other-namespace"),
 						},
 					},
 				},
@@ -442,7 +442,7 @@ func TestKongCertificate(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongCertificate{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCertificateSpec{
-						Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
+						Type: new(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
@@ -460,7 +460,7 @@ func TestKongCertificate(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongCertificate{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCertificateSpec{
-						Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
+						Type: new(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
@@ -481,7 +481,7 @@ func TestKongCertificate(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongCertificate{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCertificateSpec{
-						Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
+						Type: new(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
@@ -490,11 +490,11 @@ func TestKongCertificate(t *testing.T) {
 						},
 						SecretRef: &commonv1alpha1.NamespacedRef{
 							Name:      "test-secret",
-							Namespace: lo.ToPtr("other-namespace"),
+							Namespace: new("other-namespace"),
 						},
 						SecretRefAlt: &commonv1alpha1.NamespacedRef{
 							Name:      "test-secret-alt",
-							Namespace: lo.ToPtr("other-namespace"),
+							Namespace: new("other-namespace"),
 						},
 					},
 				},

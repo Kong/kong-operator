@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -98,7 +97,7 @@ func TestGatewayAddressesFromService(t *testing.T) {
 			addresses: []gwtypes.GatewayStatusAddress{
 				{
 					Value: "198.51.100.1",
-					Type:  lo.ToPtr(gatewayv1.IPAddressType),
+					Type:  new(gatewayv1.IPAddressType),
 				},
 			},
 			wantErr: false,
@@ -136,11 +135,11 @@ func TestGatewayAddressesFromService(t *testing.T) {
 			addresses: []gwtypes.GatewayStatusAddress{
 				{
 					Value: "203.0.113.1",
-					Type:  lo.ToPtr(gatewayv1.IPAddressType),
+					Type:  new(gatewayv1.IPAddressType),
 				},
 				{
 					Value: "203.0.113.2",
-					Type:  lo.ToPtr(gatewayv1.IPAddressType),
+					Type:  new(gatewayv1.IPAddressType),
 				},
 			},
 			wantErr: false,
@@ -168,11 +167,11 @@ func TestGatewayAddressesFromService(t *testing.T) {
 			addresses: []gwtypes.GatewayStatusAddress{
 				{
 					Value: "one.example.net",
-					Type:  lo.ToPtr(gatewayv1.HostnameAddressType),
+					Type:  new(gatewayv1.HostnameAddressType),
 				},
 				{
 					Value: "two.example.net",
-					Type:  lo.ToPtr(gatewayv1.HostnameAddressType),
+					Type:  new(gatewayv1.HostnameAddressType),
 				},
 			},
 			wantErr: false,
@@ -201,15 +200,15 @@ func TestGatewayAddressesFromService(t *testing.T) {
 			addresses: []gwtypes.GatewayStatusAddress{
 				{
 					Value: "one.example.net",
-					Type:  lo.ToPtr(gatewayv1.HostnameAddressType),
+					Type:  new(gatewayv1.HostnameAddressType),
 				},
 				{
 					Value: "two.example.net",
-					Type:  lo.ToPtr(gatewayv1.HostnameAddressType),
+					Type:  new(gatewayv1.HostnameAddressType),
 				},
 				{
 					Value: "203.0.113.1",
-					Type:  lo.ToPtr(gatewayv1.IPAddressType),
+					Type:  new(gatewayv1.IPAddressType),
 				},
 			},
 			wantErr: false,
@@ -241,19 +240,19 @@ func TestGatewayAddressesFromService(t *testing.T) {
 			addresses: []gwtypes.GatewayStatusAddress{
 				{
 					Value: "a.example.net",
-					Type:  lo.ToPtr(gatewayv1.HostnameAddressType),
+					Type:  new(gatewayv1.HostnameAddressType),
 				},
 				{
 					Value: "b.example.net",
-					Type:  lo.ToPtr(gatewayv1.HostnameAddressType),
+					Type:  new(gatewayv1.HostnameAddressType),
 				},
 				{
 					Value: "203.0.113.2",
-					Type:  lo.ToPtr(gatewayv1.IPAddressType),
+					Type:  new(gatewayv1.IPAddressType),
 				},
 				{
 					Value: "203.0.113.3",
-					Type:  lo.ToPtr(gatewayv1.IPAddressType),
+					Type:  new(gatewayv1.IPAddressType),
 				},
 			},
 			wantErr: false,
@@ -918,7 +917,7 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 			listener: gwtypes.Listener{
 				Protocol: gatewayv1.HTTPSProtocolType,
 				TLS: &gatewayv1.ListenerTLSConfig{
-					Mode: lo.ToPtr(gatewayv1.TLSModeTerminate),
+					Mode: new(gatewayv1.TLSModeTerminate),
 					CertificateRefs: []gatewayv1.SecretObjectReference{
 						{
 							Name: "test-secret",
@@ -958,7 +957,7 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 			listener: gwtypes.Listener{
 				Protocol: gatewayv1.HTTPSProtocolType,
 				TLS: &gatewayv1.ListenerTLSConfig{
-					Mode: lo.ToPtr(gatewayv1.TLSModePassthrough),
+					Mode: new(gatewayv1.TLSModePassthrough),
 					CertificateRefs: []gatewayv1.SecretObjectReference{
 						{
 							Name: "test-secret",
@@ -998,7 +997,7 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 			listener: gwtypes.Listener{
 				Protocol: gatewayv1.HTTPSProtocolType,
 				TLS: &gatewayv1.ListenerTLSConfig{
-					Mode: lo.ToPtr(gatewayv1.TLSModeTerminate),
+					Mode: new(gatewayv1.TLSModeTerminate),
 					CertificateRefs: []gatewayv1.SecretObjectReference{
 						{
 							Name: "test-secret",
@@ -1029,7 +1028,7 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 			listener: gwtypes.Listener{
 				Protocol: gatewayv1.HTTPSProtocolType,
 				TLS: &gatewayv1.ListenerTLSConfig{
-					Mode: lo.ToPtr(gatewayv1.TLSModeTerminate),
+					Mode: new(gatewayv1.TLSModeTerminate),
 					CertificateRefs: []gatewayv1.SecretObjectReference{
 						{
 							Name: "test-secret",
@@ -1057,12 +1056,12 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 			listener: gwtypes.Listener{
 				Protocol: gatewayv1.HTTPSProtocolType,
 				TLS: &gatewayv1.ListenerTLSConfig{
-					Mode: lo.ToPtr(gatewayv1.TLSModeTerminate),
+					Mode: new(gatewayv1.TLSModeTerminate),
 					CertificateRefs: []gatewayv1.SecretObjectReference{
 						{
 							Name:  "test-secret",
-							Group: (*gwtypes.Group)(lo.ToPtr("bad-group")),
-							Kind:  (*gwtypes.Kind)(lo.ToPtr("bad-kind")),
+							Group: (*gwtypes.Group)(new("bad-group")),
+							Kind:  (*gwtypes.Kind)(new("bad-kind")),
 						},
 					},
 				},
@@ -1087,7 +1086,7 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 			listener: gwtypes.Listener{
 				Protocol: gatewayv1.HTTPSProtocolType,
 				TLS: &gatewayv1.ListenerTLSConfig{
-					Mode: lo.ToPtr(gatewayv1.TLSModeTerminate),
+					Mode: new(gatewayv1.TLSModeTerminate),
 					CertificateRefs: []gatewayv1.SecretObjectReference{
 						{
 							Name: "test-secret",
@@ -1127,11 +1126,11 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 			listener: gwtypes.Listener{
 				Protocol: gatewayv1.HTTPSProtocolType,
 				TLS: &gatewayv1.ListenerTLSConfig{
-					Mode: lo.ToPtr(gatewayv1.TLSModeTerminate),
+					Mode: new(gatewayv1.TLSModeTerminate),
 					CertificateRefs: []gatewayv1.SecretObjectReference{
 						{
 							Name:      "test-secret",
-							Namespace: (*gatewayv1.Namespace)(lo.ToPtr("other-namespace")),
+							Namespace: (*gatewayv1.Namespace)(new("other-namespace")),
 						},
 					},
 				},
@@ -1165,7 +1164,7 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 							{
 								Group: "",
 								Kind:  "Secret",
-								Name:  (lo.ToPtr(gwtypes.ObjectName("test-secret"))),
+								Name:  (new(gwtypes.ObjectName("test-secret"))),
 							},
 						},
 					},
@@ -1191,11 +1190,11 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 			listener: gwtypes.Listener{
 				Protocol: gatewayv1.HTTPSProtocolType,
 				TLS: &gatewayv1.ListenerTLSConfig{
-					Mode: lo.ToPtr(gatewayv1.TLSModeTerminate),
+					Mode: new(gatewayv1.TLSModeTerminate),
 					CertificateRefs: []gatewayv1.SecretObjectReference{
 						{
 							Name:      "test-secret",
-							Namespace: (*gatewayv1.Namespace)(lo.ToPtr("other-namespace")),
+							Namespace: (*gatewayv1.Namespace)(new("other-namespace")),
 						},
 					},
 				},
@@ -1410,7 +1409,7 @@ func TestGatewayConfigDataPlaneOptionsToDataPlaneOptions(t *testing.T) {
 					Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
 						Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
 							ServiceOptions: operatorv2beta1.ServiceOptions{
-								Name: lo.ToPtr("custom-ingress"),
+								Name: new("custom-ingress"),
 								Annotations: map[string]string{
 									"service.beta.kubernetes.io/aws-load-balancer-type": "nlb",
 								},
@@ -1424,7 +1423,7 @@ func TestGatewayConfigDataPlaneOptionsToDataPlaneOptions(t *testing.T) {
 					Services: &operatorv1beta1.DataPlaneServices{
 						Ingress: &operatorv1beta1.DataPlaneServiceOptions{
 							ServiceOptions: operatorv1beta1.ServiceOptions{
-								Name: lo.ToPtr("custom-ingress"),
+								Name: new("custom-ingress"),
 								Annotations: map[string]string{
 									"service.beta.kubernetes.io/aws-load-balancer-type": "nlb",
 								},
@@ -1441,7 +1440,7 @@ func TestGatewayConfigDataPlaneOptionsToDataPlaneOptions(t *testing.T) {
 				Resources: &operatorv2beta1.GatewayConfigDataPlaneResources{
 					PodDisruptionBudget: &operatorv2beta1.PodDisruptionBudget{
 						Spec: operatorv2beta1.PodDisruptionBudgetSpec{
-							MinAvailable: lo.ToPtr(intstr.FromInt(1)),
+							MinAvailable: new(intstr.FromInt(1)),
 						},
 					},
 				},
@@ -1459,7 +1458,7 @@ func TestGatewayConfigDataPlaneOptionsToDataPlaneOptions(t *testing.T) {
 				Resources: operatorv1beta1.DataPlaneResources{
 					PodDisruptionBudget: &operatorv1beta1.PodDisruptionBudget{
 						Spec: operatorv1beta1.PodDisruptionBudgetSpec{
-							MinAvailable: lo.ToPtr(intstr.FromInt(1)),
+							MinAvailable: new(intstr.FromInt(1)),
 						},
 					},
 				},
@@ -1499,7 +1498,7 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 						{
 							AllowedRoutes: &gwtypes.AllowedRoutes{
 								Namespaces: &gwtypes.RouteNamespaces{
-									From: lo.ToPtr(gwtypes.NamespacesFromSame),
+									From: new(gwtypes.NamespacesFromSame),
 								},
 							},
 						},
@@ -1527,7 +1526,7 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 							Protocol: gwtypes.HTTPProtocolType,
 							AllowedRoutes: &gwtypes.AllowedRoutes{
 								Namespaces: &gwtypes.RouteNamespaces{
-									From: lo.ToPtr(gwtypes.NamespacesFromSame),
+									From: new(gwtypes.NamespacesFromSame),
 								},
 							},
 						},
@@ -1546,7 +1545,7 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 								{
 									Name:  gwtypes.ObjectName("test-gw"),
 									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
-									Kind:  lo.ToPtr(gwtypes.Kind("Gateway")),
+									Kind:  new(gwtypes.Kind("Gateway")),
 								},
 							},
 						},
@@ -1574,7 +1573,7 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 							Protocol: gwtypes.HTTPProtocolType,
 							AllowedRoutes: &gwtypes.AllowedRoutes{
 								Namespaces: &gwtypes.RouteNamespaces{
-									From: lo.ToPtr(gwtypes.NamespacesFromSame),
+									From: new(gwtypes.NamespacesFromSame),
 								},
 							},
 						},
@@ -1593,7 +1592,7 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 								{
 									Name:  gwtypes.ObjectName("test-gw"),
 									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
-									Kind:  lo.ToPtr(gwtypes.Kind("Gateway")),
+									Kind:  new(gwtypes.Kind("Gateway")),
 								},
 							},
 						},
@@ -1621,7 +1620,7 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 							Protocol: gwtypes.HTTPProtocolType,
 							AllowedRoutes: &gwtypes.AllowedRoutes{
 								Namespaces: &gwtypes.RouteNamespaces{
-									From: lo.ToPtr(gwtypes.NamespacesFromAll),
+									From: new(gwtypes.NamespacesFromAll),
 								},
 							},
 						},
@@ -1640,7 +1639,7 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 								{
 									Name:  gwtypes.ObjectName("test-gw"),
 									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
-									Kind:  lo.ToPtr(gwtypes.Kind("Gateway")),
+									Kind:  new(gwtypes.Kind("Gateway")),
 								},
 							},
 						},
@@ -1668,7 +1667,7 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 							Protocol: gwtypes.HTTPProtocolType,
 							AllowedRoutes: &gwtypes.AllowedRoutes{
 								Namespaces: &gwtypes.RouteNamespaces{
-									From: lo.ToPtr(gwtypes.NamespacesFromSame),
+									From: new(gwtypes.NamespacesFromSame),
 								},
 							},
 						},
@@ -1687,7 +1686,7 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 								{
 									Name:  gwtypes.ObjectName("test-gw"),
 									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
-									Kind:  lo.ToPtr(gwtypes.Kind("Gateway")),
+									Kind:  new(gwtypes.Kind("Gateway")),
 								},
 							},
 						},
@@ -1704,7 +1703,7 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 								{
 									Name:  gwtypes.ObjectName("test-gw"),
 									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
-									Kind:  lo.ToPtr(gwtypes.Kind("Gateway")),
+									Kind:  new(gwtypes.Kind("Gateway")),
 								},
 							},
 						},
@@ -1732,7 +1731,7 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 							Protocol: gwtypes.HTTPProtocolType,
 							AllowedRoutes: &gwtypes.AllowedRoutes{
 								Namespaces: &gwtypes.RouteNamespaces{
-									From: lo.ToPtr(gwtypes.NamespacesFromAll),
+									From: new(gwtypes.NamespacesFromAll),
 								},
 							},
 						},
@@ -1751,7 +1750,7 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 								{
 									Name:  gwtypes.ObjectName("test-gw"),
 									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
-									Kind:  lo.ToPtr(gwtypes.Kind("Gateway")),
+									Kind:  new(gwtypes.Kind("Gateway")),
 								},
 							},
 						},
@@ -1768,7 +1767,7 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 								{
 									Name:  gwtypes.ObjectName("test-gw"),
 									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
-									Kind:  lo.ToPtr(gwtypes.Kind("Gateway")),
+									Kind:  new(gwtypes.Kind("Gateway")),
 								},
 							},
 						},
@@ -1796,7 +1795,7 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 							Protocol: gwtypes.HTTPProtocolType,
 							AllowedRoutes: &gwtypes.AllowedRoutes{
 								Namespaces: &gwtypes.RouteNamespaces{
-									From: lo.ToPtr(gwtypes.NamespacesFromSelector),
+									From: new(gwtypes.NamespacesFromSelector),
 									Selector: &metav1.LabelSelector{
 										MatchLabels: map[string]string{
 											"kubernetes.io/metadata.name": "test-namespace-non-existing",
@@ -1820,7 +1819,7 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 								{
 									Name:  gwtypes.ObjectName("test-gw"),
 									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
-									Kind:  lo.ToPtr(gwtypes.Kind("Gateway")),
+									Kind:  new(gwtypes.Kind("Gateway")),
 								},
 							},
 						},
@@ -1848,7 +1847,7 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 							Protocol: gwtypes.HTTPProtocolType,
 							AllowedRoutes: &gwtypes.AllowedRoutes{
 								Namespaces: &gwtypes.RouteNamespaces{
-									From: lo.ToPtr(gwtypes.NamespacesFromSelector),
+									From: new(gwtypes.NamespacesFromSelector),
 									Selector: &metav1.LabelSelector{
 										MatchLabels: map[string]string{
 											"kubernetes.io/metadata.name": "test-namespace-2",
@@ -1880,7 +1879,7 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 								{
 									Name:  gwtypes.ObjectName("test-gw"),
 									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
-									Kind:  lo.ToPtr(gwtypes.Kind("Gateway")),
+									Kind:  new(gwtypes.Kind("Gateway")),
 								},
 							},
 						},
@@ -1932,7 +1931,7 @@ func TestMergeGatewayConfigurations(t *testing.T) {
 					DataPlaneOptions: &GatewayConfigDataPlaneOptions{
 						Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
 							DeploymentOptions: operatorv2beta1.DeploymentOptions{
-								Replicas: lo.ToPtr[int32](3),
+								Replicas: new(int32(3)),
 							},
 						},
 					},
@@ -1966,7 +1965,7 @@ func TestMergeGatewayConfigurations(t *testing.T) {
 					DataPlaneOptions: &GatewayConfigDataPlaneOptions{
 						Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
 							DeploymentOptions: operatorv2beta1.DeploymentOptions{
-								Replicas: lo.ToPtr[int32](3),
+								Replicas: new(int32(3)),
 							},
 						},
 						Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
@@ -1993,7 +1992,7 @@ func TestMergeGatewayConfigurations(t *testing.T) {
 					DataPlaneOptions: &GatewayConfigDataPlaneOptions{
 						Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
 							DeploymentOptions: operatorv2beta1.DeploymentOptions{
-								Replicas: lo.ToPtr[int32](3),
+								Replicas: new(int32(3)),
 							},
 						},
 						Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
@@ -2017,7 +2016,7 @@ func TestMergeGatewayConfigurations(t *testing.T) {
 					DataPlaneOptions: &GatewayConfigDataPlaneOptions{
 						Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
 							DeploymentOptions: operatorv2beta1.DeploymentOptions{
-								Replicas: lo.ToPtr[int32](2),
+								Replicas: new(int32(2)),
 							},
 						},
 						Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
@@ -2041,7 +2040,7 @@ func TestMergeGatewayConfigurations(t *testing.T) {
 					DataPlaneOptions: &GatewayConfigDataPlaneOptions{
 						Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
 							DeploymentOptions: operatorv2beta1.DeploymentOptions{
-								Replicas: lo.ToPtr[int32](2),
+								Replicas: new(int32(2)),
 							},
 						},
 						Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
@@ -2166,12 +2165,12 @@ func TestGetOrCreateGatewayConfiguration(t *testing.T) {
 		},
 		Spec: GatewayConfigurationSpec{
 			Konnect: &operatorv2beta1.KonnectOptions{
-				Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+				Source: new(commonv1alpha1.EntitySourceOrigin),
 			},
 			DataPlaneOptions: &GatewayConfigDataPlaneOptions{
 				Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv2beta1.DeploymentOptions{
-						Replicas: lo.ToPtr[int32](3),
+						Replicas: new(int32(3)),
 					},
 				},
 			},
@@ -2208,7 +2207,7 @@ func TestGetOrCreateGatewayConfiguration(t *testing.T) {
 						Group:     "gateway-operator.konghq.com",
 						Kind:      gwtypes.Kind("GatewayConfiguration"),
 						Name:      "existing-gateway-config",
-						Namespace: lo.ToPtr(gwtypes.Namespace("default")),
+						Namespace: new(gwtypes.Namespace("default")),
 					},
 				},
 			},
@@ -2235,7 +2234,7 @@ func TestGetOrCreateGatewayConfiguration(t *testing.T) {
 						Group:     "gateway-operator.konghq.com",
 						Kind:      gwtypes.Kind("GatewayConfiguration"),
 						Name:      "non-existing-gateway-config",
-						Namespace: lo.ToPtr(gwtypes.Namespace("default")),
+						Namespace: new(gwtypes.Namespace("default")),
 					},
 				},
 			},
@@ -2267,7 +2266,7 @@ func TestGetOrCreateGatewayConfiguration(t *testing.T) {
 						Group:     "gateway-operator.konghq.com",
 						Kind:      gwtypes.Kind("GatewayConfiguration"),
 						Name:      "existing-gateway-config",
-						Namespace: lo.ToPtr(gwtypes.Namespace("default")),
+						Namespace: new(gwtypes.Namespace("default")),
 					},
 				},
 			},
@@ -2328,7 +2327,7 @@ func TestGetOrCreateGatewayConfiguration(t *testing.T) {
 						Group:     "gateway-operator.konghq.com",
 						Kind:      gwtypes.Kind("GatewayConfiguration"),
 						Name:      "existing-gateway-config",
-						Namespace: lo.ToPtr(gwtypes.Namespace("default")),
+						Namespace: new(gwtypes.Namespace("default")),
 					},
 				},
 			},
@@ -2360,7 +2359,7 @@ func TestGetOrCreateGatewayConfiguration(t *testing.T) {
 						DataPlaneOptions: &GatewayConfigDataPlaneOptions{
 							Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
 								DeploymentOptions: operatorv2beta1.DeploymentOptions{
-									Replicas: lo.ToPtr[int32](2),
+									Replicas: new(int32(2)),
 								},
 							},
 						},
@@ -2375,12 +2374,12 @@ func TestGetOrCreateGatewayConfiguration(t *testing.T) {
 				},
 				Spec: GatewayConfigurationSpec{
 					Konnect: &operatorv2beta1.KonnectOptions{
-						Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+						Source: new(commonv1alpha1.EntitySourceOrigin),
 					},
 					DataPlaneOptions: &GatewayConfigDataPlaneOptions{
 						Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
 							DeploymentOptions: operatorv2beta1.DeploymentOptions{
-								Replicas: lo.ToPtr[int32](2),
+								Replicas: new(int32(2)),
 							},
 						},
 					},

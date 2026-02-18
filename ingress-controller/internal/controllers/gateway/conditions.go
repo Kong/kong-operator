@@ -111,10 +111,10 @@ func ensureParentsProgrammedCondition[
 			// add a new parent if the parent is not found in status.
 			newParentStatus := gatewayapi.RouteParentStatus{
 				ParentRef: gatewayapi.ParentReference{
-					Namespace: lo.ToPtr(gatewayapi.Namespace(gateway.Namespace)),
+					Namespace: new(gatewayapi.Namespace(gateway.Namespace)),
 					Name:      gatewayapi.ObjectName(gateway.Name),
-					Kind:      lo.ToPtr(gatewayapi.Kind("Gateway")),
-					Group:     lo.ToPtr(gatewayapi.Group(gatewayv1.GroupName)),
+					Kind:      new(gatewayapi.Kind("Gateway")),
+					Group:     new(gatewayapi.Group(gatewayv1.GroupName)),
 					// We don't need to check whether the listener matches route's spec
 					// because that should already be done via getSupportedGatewayForRoute
 					// at this point.

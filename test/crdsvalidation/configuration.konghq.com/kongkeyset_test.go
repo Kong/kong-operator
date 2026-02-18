@@ -54,7 +54,7 @@ func TestKongKeySet(t *testing.T) {
 						KongKeySetAPISpec: configurationv1alpha1.KongKeySetAPISpec{},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.name in body should be at least 1 chars long"),
+				ExpectedErrorMessage: new("spec.name in body should be at least 1 chars long"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -109,7 +109,7 @@ func TestKongKeySet(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.tags: Too many: 21: must have at most 20 items"),
+				ExpectedErrorMessage: new("spec.tags: Too many: 21: must have at most 20 items"),
 			},
 			{
 				Name: "tags entries must not be longer than 128 characters",
@@ -130,7 +130,7 @@ func TestKongKeySet(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("tags entries must not be longer than 128 characters"),
+				ExpectedErrorMessage: new("tags entries must not be longer than 128 characters"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)

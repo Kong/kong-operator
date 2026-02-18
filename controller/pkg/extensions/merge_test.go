@@ -3,7 +3,6 @@ package extensions
 import (
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -264,7 +263,7 @@ func TestMergeExtensions(t *testing.T) {
 					Kind:  "kind1",
 					NamespacedRef: commonv1alpha1.NamespacedRef{
 						Name:      "default-name",
-						Namespace: lo.ToPtr("default-ns"),
+						Namespace: new("default-ns"),
 					},
 				},
 				{
@@ -282,7 +281,7 @@ func TestMergeExtensions(t *testing.T) {
 						Kind:  "kind1",
 						NamespacedRef: commonv1alpha1.NamespacedRef{
 							Name:      "user-name",
-							Namespace: lo.ToPtr("user-ns"),
+							Namespace: new("user-ns"),
 						},
 					},
 					{
@@ -307,7 +306,7 @@ func TestMergeExtensions(t *testing.T) {
 					Kind:  "kind1",
 					NamespacedRef: commonv1alpha1.NamespacedRef{
 						Name:      "user-name",
-						Namespace: lo.ToPtr("user-ns"),
+						Namespace: new("user-ns"),
 					},
 				},
 				{

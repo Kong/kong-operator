@@ -77,11 +77,11 @@ func TestGetListenerSupportedRouteKinds(t *testing.T) {
 				AllowedRoutes: &gatewayapi.AllowedRoutes{
 					Kinds: []gatewayapi.RouteGroupKind{
 						{
-							Group: lo.ToPtr(gatewayapi.Group("unknown.group.com")),
+							Group: new(gatewayapi.Group("unknown.group.com")),
 							Kind:  gatewayapi.Kind("UnknownKind"),
 						},
 						{
-							Group: lo.ToPtr(gatewayapi.V1Group),
+							Group: new(gatewayapi.V1Group),
 							Kind:  gatewayapi.Kind("HTTPRoute"),
 						},
 					},
@@ -89,7 +89,7 @@ func TestGetListenerSupportedRouteKinds(t *testing.T) {
 			},
 			expectedSupportedKinds: []gatewayapi.RouteGroupKind{
 				{
-					Group: lo.ToPtr(gatewayapi.V1Group),
+					Group: new(gatewayapi.V1Group),
 					Kind:  gatewayapi.Kind("HTTPRoute"),
 				},
 			},
@@ -302,7 +302,7 @@ func TestGetAttachedRoutesForListener(t *testing.T) {
 					Name: sectionName,
 					SupportedKinds: []gatewayapi.RouteGroupKind{
 						{
-							Group: lo.ToPtr(gatewayapi.V1Group),
+							Group: new(gatewayapi.V1Group),
 							Kind:  gatewayapi.Kind("HTTPRoute"),
 						},
 					},
@@ -484,7 +484,7 @@ func TestRouteAcceptedByGateways(t *testing.T) {
 								Name: "http",
 								SupportedKinds: []gatewayapi.RouteGroupKind{
 									{
-										Group: lo.ToPtr(gatewayapi.V1Group),
+										Group: new(gatewayapi.V1Group),
 										Kind:  gatewayapi.Kind("HTTPRoute"),
 									},
 								},
@@ -514,7 +514,7 @@ func TestRouteAcceptedByGateways(t *testing.T) {
 							{
 								ParentRef: gatewayapi.ParentReference{
 									Name:  "gateway-1",
-									Group: lo.ToPtr(gatewayapi.Group("wrong-group")),
+									Group: new(gatewayapi.Group("wrong-group")),
 								},
 								Conditions: []metav1.Condition{
 									{
@@ -526,7 +526,7 @@ func TestRouteAcceptedByGateways(t *testing.T) {
 							{
 								ParentRef: gatewayapi.ParentReference{
 									Name: "gateway-2",
-									Kind: lo.ToPtr(gatewayapi.Kind("wrong-kind")),
+									Kind: new(gatewayapi.Kind("wrong-kind")),
 								},
 								Conditions: []metav1.Condition{
 									{
@@ -580,7 +580,7 @@ func TestRouteAcceptedByGateways(t *testing.T) {
 								Name: "http",
 								SupportedKinds: []gatewayapi.RouteGroupKind{
 									{
-										Group: lo.ToPtr(gatewayapi.V1Group),
+										Group: new(gatewayapi.V1Group),
 										Kind:  gatewayapi.Kind("HTTPRoute"),
 									},
 								},
@@ -606,7 +606,7 @@ func TestRouteAcceptedByGateways(t *testing.T) {
 								Name: "http",
 								SupportedKinds: []gatewayapi.RouteGroupKind{
 									{
-										Group: lo.ToPtr(gatewayapi.V1Group),
+										Group: new(gatewayapi.V1Group),
 										Kind:  gatewayapi.Kind("HTTPRoute"),
 									},
 								},
@@ -628,7 +628,7 @@ func TestRouteAcceptedByGateways(t *testing.T) {
 								Name: "http",
 								SupportedKinds: []gatewayapi.RouteGroupKind{
 									{
-										Group: lo.ToPtr(gatewayapi.V1Group),
+										Group: new(gatewayapi.V1Group),
 										Kind:  gatewayapi.Kind("HTTPRoute"),
 									},
 								},
@@ -650,7 +650,7 @@ func TestRouteAcceptedByGateways(t *testing.T) {
 								Name: "http",
 								SupportedKinds: []gatewayapi.RouteGroupKind{
 									{
-										Group: lo.ToPtr(gatewayapi.V1Group),
+										Group: new(gatewayapi.V1Group),
 										Kind:  gatewayapi.Kind("HTTPRoute"),
 									},
 								},
@@ -697,7 +697,7 @@ func Test_isEqualListenersStatus(t *testing.T) {
 					Name: "http",
 					SupportedKinds: []gatewayapi.RouteGroupKind{
 						{
-							Group: lo.ToPtr(gatewayapi.V1Group),
+							Group: new(gatewayapi.V1Group),
 							Kind:  gatewayapi.Kind("HTTPRoute"),
 						},
 					},
@@ -706,7 +706,7 @@ func Test_isEqualListenersStatus(t *testing.T) {
 					Name: "https",
 					SupportedKinds: []gatewayapi.RouteGroupKind{
 						{
-							Group: lo.ToPtr(gatewayapi.V1Group),
+							Group: new(gatewayapi.V1Group),
 							Kind:  gatewayapi.Kind("HTTPRoute"),
 						},
 					},
@@ -724,7 +724,7 @@ func Test_isEqualListenersStatus(t *testing.T) {
 					Name: "https",
 					SupportedKinds: []gatewayapi.RouteGroupKind{
 						{
-							Group: lo.ToPtr(gatewayapi.V1Group),
+							Group: new(gatewayapi.V1Group),
 							Kind:  gatewayapi.Kind("HTTPRoute"),
 						},
 					},
@@ -740,7 +740,7 @@ func Test_isEqualListenersStatus(t *testing.T) {
 					Name: "http",
 					SupportedKinds: []gatewayapi.RouteGroupKind{
 						{
-							Group: lo.ToPtr(gatewayapi.V1Group),
+							Group: new(gatewayapi.V1Group),
 							Kind:  gatewayapi.Kind("HTTPRoute"),
 						},
 					},
@@ -755,7 +755,7 @@ func Test_isEqualListenersStatus(t *testing.T) {
 					Name: "http",
 					SupportedKinds: []gatewayapi.RouteGroupKind{
 						{
-							Group: lo.ToPtr(gatewayapi.V1Group),
+							Group: new(gatewayapi.V1Group),
 							Kind:  gatewayapi.Kind("HTTPRoute"),
 						},
 					},
@@ -772,7 +772,7 @@ func Test_isEqualListenersStatus(t *testing.T) {
 					Name: "http",
 					SupportedKinds: []gatewayapi.RouteGroupKind{
 						{
-							Group: lo.ToPtr(gatewayapi.V1Group),
+							Group: new(gatewayapi.V1Group),
 							Kind:  gatewayapi.Kind("HTTPRoute"),
 						},
 					},

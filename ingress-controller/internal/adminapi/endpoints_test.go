@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
@@ -58,8 +57,8 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 					{
 						Addresses: []string{"fe80::cae2:65ff:fe7b:2852", "fe80::cae2:65ff:fe7b:2853"},
 						Conditions: discoveryv1.EndpointConditions{
-							Ready:       lo.ToPtr(true),
-							Terminating: lo.ToPtr(false),
+							Ready:       new(true),
+							Terminating: new(false),
 						},
 						TargetRef: testPodReference(namespaceName, "pod-1"),
 					},
@@ -86,8 +85,8 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 					{
 						Addresses: []string{"10.0.0.1", "10.0.0.2"},
 						Conditions: discoveryv1.EndpointConditions{
-							Ready:       lo.ToPtr(true),
-							Terminating: lo.ToPtr(false),
+							Ready:       new(true),
+							Terminating: new(false),
 						},
 						TargetRef: testPodReference(namespaceName, "pod-1"),
 					},
@@ -115,8 +114,8 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 					{
 						Addresses: []string{"10.0.0.1", "10.0.0.2"},
 						Conditions: discoveryv1.EndpointConditions{
-							Ready:       lo.ToPtr(true),
-							Terminating: lo.ToPtr(false),
+							Ready:       new(true),
+							Terminating: new(false),
 						},
 						TargetRef: testPodReference(namespaceName, "pod-1"),
 					},
@@ -143,8 +142,8 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 					{
 						Addresses: []string{"10.0.0.1", "10.0.0.2", "10.0.0.3"},
 						Conditions: discoveryv1.EndpointConditions{
-							Ready:       lo.ToPtr(false),
-							Terminating: lo.ToPtr(false),
+							Ready:       new(false),
+							Terminating: new(false),
 						},
 						TargetRef: testPodReference(namespaceName, "pod-1"),
 					},
@@ -173,8 +172,8 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 					{
 						Addresses: []string{"10.0.0.1", "10.0.0.2", "10.0.0.3"},
 						Conditions: discoveryv1.EndpointConditions{
-							Ready:       lo.ToPtr(true),
-							Terminating: lo.ToPtr(true),
+							Ready:       new(true),
+							Terminating: new(true),
 						},
 						TargetRef: testPodReference(namespaceName, "pod-1"),
 					},
@@ -193,24 +192,24 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 					{
 						Addresses: []string{"10.0.0.1", "10.0.0.2", "10.0.0.3"},
 						Conditions: discoveryv1.EndpointConditions{
-							Ready:       lo.ToPtr(true),
-							Terminating: lo.ToPtr(false),
+							Ready:       new(true),
+							Terminating: new(false),
 						},
 						TargetRef: testPodReference(namespaceName, "pod-1"),
 					},
 					{
 						Addresses: []string{"10.0.1.1", "10.0.1.2"},
 						Conditions: discoveryv1.EndpointConditions{
-							Ready:       lo.ToPtr(true),
-							Terminating: lo.ToPtr(false),
+							Ready:       new(true),
+							Terminating: new(false),
 						},
 						TargetRef: testPodReference(namespaceName, "pod-2"),
 					},
 					{
 						Addresses: []string{"10.0.2.1"},
 						Conditions: discoveryv1.EndpointConditions{
-							Ready:       lo.ToPtr(false),
-							Terminating: lo.ToPtr(true),
+							Ready:       new(false),
+							Terminating: new(true),
 						},
 						TargetRef: testPodReference(namespaceName, "pod-3"),
 					},
@@ -229,24 +228,24 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 					{
 						Addresses: []string{"10.0.0.1", "10.0.0.2", "10.0.0.3"},
 						Conditions: discoveryv1.EndpointConditions{
-							Ready:       lo.ToPtr(true),
-							Terminating: lo.ToPtr(false),
+							Ready:       new(true),
+							Terminating: new(false),
 						},
 						TargetRef: testPodReference(namespaceName, "pod-1"),
 					},
 					{
 						Addresses: []string{"10.0.1.1", "10.0.1.2"},
 						Conditions: discoveryv1.EndpointConditions{
-							Ready:       lo.ToPtr(true),
-							Terminating: lo.ToPtr(false),
+							Ready:       new(true),
+							Terminating: new(false),
 						},
 						TargetRef: testPodReference(namespaceName, "pod-2"),
 					},
 					{
 						Addresses: []string{"10.0.2.1"},
 						Conditions: discoveryv1.EndpointConditions{
-							Ready:       lo.ToPtr(false),
-							Terminating: lo.ToPtr(true),
+							Ready:       new(false),
+							Terminating: new(true),
 						},
 						TargetRef: testPodReference(namespaceName, "pod-3"),
 					},
@@ -282,24 +281,24 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 					{
 						Addresses: []string{"10.0.0.1", "10.0.0.2", "10.0.0.3"},
 						Conditions: discoveryv1.EndpointConditions{
-							Ready:       lo.ToPtr(true),
-							Terminating: lo.ToPtr(false),
+							Ready:       new(true),
+							Terminating: new(false),
 						},
 						TargetRef: testPodReference(namespaceName, "pod-1"),
 					},
 					{
 						Addresses: []string{"10.0.1.1", "10.0.1.2"},
 						Conditions: discoveryv1.EndpointConditions{
-							Ready:       lo.ToPtr(true),
-							Terminating: lo.ToPtr(false),
+							Ready:       new(true),
+							Terminating: new(false),
 						},
 						TargetRef: testPodReference(namespaceName, "pod-2"),
 					},
 					{
 						Addresses: []string{"10.0.2.1"},
 						Conditions: discoveryv1.EndpointConditions{
-							Ready:       lo.ToPtr(false),
-							Terminating: lo.ToPtr(false),
+							Ready:       new(false),
+							Terminating: new(false),
 						},
 						TargetRef: testPodReference(namespaceName, "pod-3"),
 					},
@@ -318,8 +317,8 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 					{
 						Addresses: []string{"10.0.0.1", "10.0.0.2", "10.0.0.3"},
 						Conditions: discoveryv1.EndpointConditions{
-							Ready:       lo.ToPtr(true),
-							Terminating: lo.ToPtr(false),
+							Ready:       new(true),
+							Terminating: new(false),
 						},
 						TargetRef: testPodReference(namespaceName, "pod-1"),
 					},
@@ -338,8 +337,8 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 					{
 						Addresses: []string{"10.0.0.1", "10.0.0.2", "10.0.0.3"},
 						Conditions: discoveryv1.EndpointConditions{
-							Ready:       lo.ToPtr(true),
-							Terminating: lo.ToPtr(false),
+							Ready:       new(true),
+							Terminating: new(false),
 						},
 						TargetRef: testPodReference(namespaceName, "pod-1"),
 					},
@@ -378,8 +377,8 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 					{
 						Addresses: []string{"10.0.0.1"},
 						Conditions: discoveryv1.EndpointConditions{
-							Ready:       lo.ToPtr(true),
-							Terminating: lo.ToPtr(false),
+							Ready:       new(true),
+							Terminating: new(false),
 						},
 						TargetRef: nil,
 					},
@@ -398,8 +397,8 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 					{
 						Addresses: []string{"10.0.0.1"},
 						Conditions: discoveryv1.EndpointConditions{
-							Ready:       lo.ToPtr(true),
-							Terminating: lo.ToPtr(false),
+							Ready:       new(true),
+							Terminating: new(false),
 						},
 						TargetRef: &corev1.ObjectReference{Kind: "Node", Namespace: namespaceName, Name: "node-1"},
 					},
@@ -472,8 +471,8 @@ func TestDiscoverer_GetAdminAPIsForService(t *testing.T) {
 								{
 									Addresses: []string{"10.0.0.1", "10.0.0.2"},
 									Conditions: discoveryv1.EndpointConditions{
-										Ready:       lo.ToPtr(true),
-										Terminating: lo.ToPtr(false),
+										Ready:       new(true),
+										Terminating: new(false),
 									},
 									TargetRef: testPodReference(namespaceName, "pod-1"),
 								},
@@ -491,8 +490,8 @@ func TestDiscoverer_GetAdminAPIsForService(t *testing.T) {
 								{
 									Addresses: []string{"9.0.0.1"},
 									Conditions: discoveryv1.EndpointConditions{
-										Ready:       lo.ToPtr(true),
-										Terminating: lo.ToPtr(false),
+										Ready:       new(true),
+										Terminating: new(false),
 									},
 									TargetRef: testPodReference(namespaceName, "pod-2"),
 								},
@@ -510,8 +509,8 @@ func TestDiscoverer_GetAdminAPIsForService(t *testing.T) {
 								{
 									Addresses: []string{"8.0.0.1"},
 									Conditions: discoveryv1.EndpointConditions{
-										Ready:       lo.ToPtr(false),
-										Terminating: lo.ToPtr(true),
+										Ready:       new(false),
+										Terminating: new(true),
 									},
 									TargetRef: testPodReference(namespaceName, "pod-3"),
 								},
@@ -556,8 +555,8 @@ func TestDiscoverer_GetAdminAPIsForService(t *testing.T) {
 								{
 									Addresses: []string{"7.0.0.1"},
 									Conditions: discoveryv1.EndpointConditions{
-										Ready:       lo.ToPtr(true),
-										Terminating: lo.ToPtr(false),
+										Ready:       new(true),
+										Terminating: new(false),
 									},
 									TargetRef: testPodReference(namespaceName, "pod-1"),
 								},
@@ -585,8 +584,8 @@ func TestDiscoverer_GetAdminAPIsForService(t *testing.T) {
 								{
 									Addresses: []string{"7.0.0.1"},
 									Conditions: discoveryv1.EndpointConditions{
-										Ready:       lo.ToPtr(true),
-										Terminating: lo.ToPtr(false),
+										Ready:       new(true),
+										Terminating: new(false),
 									},
 								},
 							},
@@ -613,8 +612,8 @@ func TestDiscoverer_GetAdminAPIsForService(t *testing.T) {
 								{
 									Addresses: []string{"7.0.0.1"},
 									Conditions: discoveryv1.EndpointConditions{
-										Ready:       lo.ToPtr(false),
-										Terminating: lo.ToPtr(true),
+										Ready:       new(false),
+										Terminating: new(true),
 									},
 									TargetRef: testPodReference(namespaceName, "pod-1"),
 								},

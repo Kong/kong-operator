@@ -87,8 +87,8 @@ func TestKonnectEntityAdoption_ServiceAndRoute(t *testing.T) {
 	require.NotNil(t, sdk)
 
 	resp, err := sdk.GetServicesSDK().CreateService(GetCtx(), cpKonnectID, sdkkonnectcomp.Service{
-		Name: lo.ToPtr("test-adoption"),
-		URL:  lo.ToPtr("http://example.com"),
+		Name: new("test-adoption"),
+		URL:  new("http://example.com"),
 		Host: "example.com",
 	})
 	require.NoError(t, err, "Should create service in Konnect successfully")
@@ -110,7 +110,7 @@ func TestKonnectEntityAdoption_ServiceAndRoute(t *testing.T) {
 					ID: serviceKonnectID,
 				},
 			}
-			svc.Spec.Name = lo.ToPtr("test-adoption")
+			svc.Spec.Name = new("test-adoption")
 		})
 	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, kongService.DeepCopy()))
 
@@ -128,7 +128,7 @@ func TestKonnectEntityAdoption_ServiceAndRoute(t *testing.T) {
 
 	t.Log("Updating the KongService to set a new path in its URL")
 	oldKongService := kongService.DeepCopy()
-	kongService.Spec.URL = lo.ToPtr("http://example.com/example")
+	kongService.Spec.URL = new("http://example.com/example")
 	err = clientNamespaced.Patch(GetCtx(), kongService, client.MergeFrom(oldKongService))
 	require.NoError(t, err)
 
@@ -154,12 +154,12 @@ func TestKonnectEntityAdoption_ServiceAndRoute(t *testing.T) {
 	routeResp, err := sdk.GetRoutesSDK().CreateRoute(GetCtx(), cpKonnectID, sdkkonnectcomp.Route{
 		Type: sdkkonnectcomp.RouteTypeRouteJSON,
 		RouteJSON: &sdkkonnectcomp.RouteJSON{
-			Name: lo.ToPtr("route-test-adopt"),
+			Name: new("route-test-adopt"),
 			Paths: []string{
 				"/example",
 			},
 			Service: &sdkkonnectcomp.RouteJSONService{
-				ID: lo.ToPtr(serviceKonnectID),
+				ID: new(serviceKonnectID),
 			},
 		},
 	})
@@ -176,7 +176,7 @@ func TestKonnectEntityAdoption_ServiceAndRoute(t *testing.T) {
 		func(obj client.Object) {
 			kr, ok := obj.(*configurationv1alpha1.KongRoute)
 			require.True(t, ok)
-			kr.Spec.Name = lo.ToPtr("route-test-adopt")
+			kr.Spec.Name = new("route-test-adopt")
 			kr.Spec.Paths = []string{"/example-2"}
 			kr.Spec.Adopt = &commonv1alpha1.AdoptOptions{
 				From: commonv1alpha1.AdoptSourceKonnect,
@@ -342,7 +342,7 @@ func TestKonnectEntityAdoption_Plugin(t *testing.T) {
 				},
 			},
 			Service: &sdkkonnectcomp.PluginService{
-				ID: lo.ToPtr(serviceKonnectID),
+				ID: new(serviceKonnectID),
 			},
 		},
 	)
@@ -420,7 +420,7 @@ func TestKonnectEntityAdoption_ConsumerWithCredentials(t *testing.T) {
 
 	consumerUsername := "test-adoption-consumer-" + testID
 	consumerResp, err := sdk.GetConsumersSDK().CreateConsumer(GetCtx(), cpKonnectID, sdkkonnectcomp.Consumer{
-		Username: lo.ToPtr(consumerUsername),
+		Username: new(consumerUsername),
 	})
 	require.NoError(t, err, "Should create consumer in Konnect successfully")
 	consumerOutput := consumerResp.GetConsumer()
@@ -455,7 +455,7 @@ func TestKonnectEntityAdoption_ConsumerWithCredentials(t *testing.T) {
 			ControlPlaneID:              cpKonnectID,
 			ConsumerIDForNestedEntities: consumerKonnectID,
 			KeyAuthWithoutParents: &sdkkonnectcomp.KeyAuthWithoutParents{
-				Key: lo.ToPtr("api-key-" + testID),
+				Key: new("api-key-" + testID),
 			},
 		},
 	)

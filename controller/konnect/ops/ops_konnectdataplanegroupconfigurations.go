@@ -171,7 +171,7 @@ func cloudGatewayDataPlaneGroupConfigurationInit(
 		DataplaneGroups: []sdkkonnectcomp.CreateConfigurationDataPlaneGroup{},
 	}
 	if spec.Version != "" {
-		req.Version = lo.ToPtr(spec.Version)
+		req.Version = new(spec.Version)
 	}
 
 	return req
@@ -248,8 +248,8 @@ func konnectConfigurationDataPlaneGroupToAPIRequest(
 			}
 			return ret
 		}(),
-		CloudGatewayNetworkID: lo.ToPtr(networkID),
-		Autoscale:             lo.ToPtr(autoscaleConf),
+		CloudGatewayNetworkID: new(networkID),
+		Autoscale:             new(autoscaleConf),
 	}, nil
 }
 

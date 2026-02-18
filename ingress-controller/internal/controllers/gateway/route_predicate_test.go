@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
-	"github.com/samber/lo"
 	"github.com/samber/mo"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -80,9 +79,9 @@ func TestIsRouteAttachedToReconciledGateway(t *testing.T) {
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{
 							{
-								Group:     lo.ToPtr(gatewayapi.V1Group),
-								Kind:      lo.ToPtr(gatewayapi.Kind("Gateway")),
-								Namespace: lo.ToPtr(gatewayapi.Namespace("default")),
+								Group:     new(gatewayapi.V1Group),
+								Kind:      new(gatewayapi.Kind("Gateway")),
+								Namespace: new(gatewayapi.Namespace("default")),
 								Name:      gatewayapi.ObjectName("kong"),
 							},
 						},
@@ -106,9 +105,9 @@ func TestIsRouteAttachedToReconciledGateway(t *testing.T) {
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{
 							{
-								Group:     lo.ToPtr(gatewayapi.V1Group),
-								Kind:      lo.ToPtr(gatewayapi.Kind("Gateway")),
-								Namespace: lo.ToPtr(gatewayapi.Namespace("default")),
+								Group:     new(gatewayapi.V1Group),
+								Kind:      new(gatewayapi.Kind("Gateway")),
+								Namespace: new(gatewayapi.Namespace("default")),
 								Name:      gatewayapi.ObjectName("another"),
 							},
 						},
@@ -138,8 +137,8 @@ func TestIsRouteAttachedToReconciledGateway(t *testing.T) {
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{
 							{
-								Group: lo.ToPtr(gatewayapi.V1Group),
-								Kind:  lo.ToPtr(gatewayapi.Kind("Gateway")),
+								Group: new(gatewayapi.V1Group),
+								Kind:  new(gatewayapi.Kind("Gateway")),
 								Name:  gatewayapi.ObjectName("another"),
 							},
 						},
@@ -163,12 +162,12 @@ func TestIsRouteAttachedToReconciledGateway(t *testing.T) {
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{
 							{
-								Kind: lo.ToPtr(gatewayapi.Kind("Service")),
+								Kind: new(gatewayapi.Kind("Service")),
 								Name: gatewayapi.ObjectName("kuma"),
 							},
 							{
-								Group: lo.ToPtr(gatewayapi.V1Group),
-								Kind:  lo.ToPtr(gatewayapi.Kind("Gateway")),
+								Group: new(gatewayapi.V1Group),
+								Kind:  new(gatewayapi.Kind("Gateway")),
 								Name:  gatewayapi.ObjectName("kong"),
 							},
 						},
@@ -188,8 +187,8 @@ func TestIsRouteAttachedToReconciledGateway(t *testing.T) {
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{
 							{
-								Group: lo.ToPtr(gatewayapi.V1Group),
-								Kind:  lo.ToPtr(gatewayapi.Kind("Gateway")),
+								Group: new(gatewayapi.V1Group),
+								Kind:  new(gatewayapi.Kind("Gateway")),
 								Name:  gatewayapi.ObjectName("non-exist"),
 							},
 						},

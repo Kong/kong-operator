@@ -5,7 +5,6 @@ import (
 
 	"github.com/go-logr/zapr"
 	"github.com/kong/go-kong/kong"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -50,19 +49,19 @@ func TestTerminatingEndpointDrainSupport(t *testing.T) {
 		targets := []kongstate.Target{
 			{
 				Target: kong.Target{
-					Target: kong.String("10.0.0.1:80"),
+					Target: new("10.0.0.1:80"),
 					Weight: nil, // Normal target
 				},
 			},
 			{
 				Target: kong.Target{
-					Target: kong.String("10.0.0.2:80"),
-					Weight: lo.ToPtr(0), // Terminating target
+					Target: new("10.0.0.2:80"),
+					Weight: new(0), // Terminating target
 				},
 			},
 			{
 				Target: kong.Target{
-					Target: kong.String("10.0.0.3:80"),
+					Target: new("10.0.0.3:80"),
 					Weight: nil, // Normal target
 				},
 			},
@@ -106,21 +105,21 @@ func TestEndpointProcessingWithTerminatingCondition(t *testing.T) {
 				{
 					Addresses: []string{"10.0.0.1"},
 					Conditions: discoveryv1.EndpointConditions{
-						Ready: lo.ToPtr(true),
+						Ready: new(true),
 					},
 				},
 				{
 					Addresses: []string{"10.0.0.2"},
 					Conditions: discoveryv1.EndpointConditions{
-						Ready:       lo.ToPtr(false),
-						Terminating: lo.ToPtr(true),
+						Ready:       new(false),
+						Terminating: new(true),
 					},
 				},
 				{
 					Addresses: []string{"10.0.0.3"},
 					Conditions: discoveryv1.EndpointConditions{
-						Ready:       lo.ToPtr(false),
-						Terminating: lo.ToPtr(false),
+						Ready:       new(false),
+						Terminating: new(false),
 					},
 				},
 			},
@@ -165,22 +164,22 @@ func TestTerminatingEndpointsDrainSupport(t *testing.T) {
 					{
 						Addresses: []string{"10.0.0.1"},
 						Conditions: discoveryv1.EndpointConditions{
-							Ready: lo.ToPtr(true),
+							Ready: new(true),
 						},
 					},
 					{
 						Addresses: []string{"10.0.0.2"},
 						Conditions: discoveryv1.EndpointConditions{
-							Ready:       lo.ToPtr(false),
-							Terminating: lo.ToPtr(true),
+							Ready:       new(false),
+							Terminating: new(true),
 						},
 					},
 				},
 				Ports: []discoveryv1.EndpointPort{
 					{
-						Name:     lo.ToPtr("http"),
-						Port:     lo.ToPtr(int32(80)),
-						Protocol: lo.ToPtr(corev1.ProtocolTCP),
+						Name:     new("http"),
+						Port:     new(int32(80)),
+						Protocol: new(corev1.ProtocolTCP),
 					},
 				},
 			},
@@ -231,22 +230,22 @@ func TestTerminatingEndpointsDrainSupport(t *testing.T) {
 					{
 						Addresses: []string{"10.0.0.1"},
 						Conditions: discoveryv1.EndpointConditions{
-							Ready: lo.ToPtr(true),
+							Ready: new(true),
 						},
 					},
 					{
 						Addresses: []string{"10.0.0.2"},
 						Conditions: discoveryv1.EndpointConditions{
-							Ready:       lo.ToPtr(false),
-							Terminating: lo.ToPtr(true),
+							Ready:       new(false),
+							Terminating: new(true),
 						},
 					},
 				},
 				Ports: []discoveryv1.EndpointPort{
 					{
-						Name:     lo.ToPtr("http"),
-						Port:     lo.ToPtr(int32(80)),
-						Protocol: lo.ToPtr(corev1.ProtocolTCP),
+						Name:     new("http"),
+						Port:     new(int32(80)),
+						Protocol: new(corev1.ProtocolTCP),
 					},
 				},
 			},

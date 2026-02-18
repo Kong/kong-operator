@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -29,8 +28,8 @@ func TestRefChecker_IsRefAllowedByGrant(t *testing.T) {
 			},
 			backendRef: gatewayapi.BackendRef{
 				BackendObjectReference: gatewayapi.BackendObjectReference{
-					Kind:  lo.ToPtr(gatewayapi.Kind("example-kind")),
-					Group: lo.ToPtr(gatewayapi.Group("example-group")),
+					Kind:  new(gatewayapi.Kind("example-kind")),
+					Group: new(gatewayapi.Group("example-group")),
 					Name:  "example-name",
 				},
 			},
@@ -39,7 +38,7 @@ func TestRefChecker_IsRefAllowedByGrant(t *testing.T) {
 					{
 						Kind:  gatewayapi.Kind("example-kind"),
 						Group: gatewayapi.Group("example-group"),
-						Name:  lo.ToPtr(gatewayapi.ObjectName("example-name")),
+						Name:  new(gatewayapi.ObjectName("example-name")),
 					},
 				},
 			},
@@ -55,10 +54,10 @@ func TestRefChecker_IsRefAllowedByGrant(t *testing.T) {
 			},
 			backendRef: gatewayapi.BackendRef{
 				BackendObjectReference: gatewayapi.BackendObjectReference{
-					Kind:      lo.ToPtr(gatewayapi.Kind("example-kind")),
-					Group:     lo.ToPtr(gatewayapi.Group("example-group")),
+					Kind:      new(gatewayapi.Kind("example-kind")),
+					Group:     new(gatewayapi.Group("example-group")),
 					Name:      "example-name",
-					Namespace: lo.ToPtr(gatewayapi.Namespace("example-namespace")),
+					Namespace: new(gatewayapi.Namespace("example-namespace")),
 				},
 			},
 			allowedRefs: map[gatewayapi.Namespace][]gatewayapi.ReferenceGrantTo{
@@ -66,7 +65,7 @@ func TestRefChecker_IsRefAllowedByGrant(t *testing.T) {
 					{
 						Kind:  gatewayapi.Kind("example-kind"),
 						Group: gatewayapi.Group("example-group"),
-						Name:  lo.ToPtr(gatewayapi.ObjectName("example-name")),
+						Name:  new(gatewayapi.ObjectName("example-name")),
 					},
 				},
 			},
@@ -82,10 +81,10 @@ func TestRefChecker_IsRefAllowedByGrant(t *testing.T) {
 			},
 			backendRef: gatewayapi.BackendRef{
 				BackendObjectReference: gatewayapi.BackendObjectReference{
-					Kind:      lo.ToPtr(gatewayapi.Kind("example-kind")),
-					Group:     lo.ToPtr(gatewayapi.Group("example-group")),
+					Kind:      new(gatewayapi.Kind("example-kind")),
+					Group:     new(gatewayapi.Group("example-group")),
 					Name:      "example-name",
-					Namespace: lo.ToPtr(gatewayapi.Namespace("example-namespace")),
+					Namespace: new(gatewayapi.Namespace("example-namespace")),
 				},
 			},
 			expected: true,
@@ -100,10 +99,10 @@ func TestRefChecker_IsRefAllowedByGrant(t *testing.T) {
 			},
 			backendRef: gatewayapi.BackendRef{
 				BackendObjectReference: gatewayapi.BackendObjectReference{
-					Kind:      lo.ToPtr(gatewayapi.Kind("example-kind")),
-					Group:     lo.ToPtr(gatewayapi.Group("example-group")),
+					Kind:      new(gatewayapi.Kind("example-kind")),
+					Group:     new(gatewayapi.Group("example-group")),
 					Name:      "example-name",
-					Namespace: lo.ToPtr(gatewayapi.Namespace("example-namespace")),
+					Namespace: new(gatewayapi.Namespace("example-namespace")),
 				},
 			},
 			expected: false,

@@ -78,7 +78,7 @@ func (c *ControlPlane) ConvertTo(dstRaw conversion.Hub) error {
 	// thus fill with a default value to make it work without hassle.
 	class := c.Spec.IngressClass
 	if !isOwnedByGateway && class == nil {
-		class = lo.ToPtr("kong")
+		class = new("kong")
 	}
 
 	if err := c.Spec.convertTo(&dst.Spec.ControlPlaneOptions, class); err != nil {
@@ -240,7 +240,7 @@ func (c *ControlPlaneOptions) convertTo(dst *operatorv2beta1.ControlPlaneOptions
 	}
 
 	*dst = operatorv2beta1.ControlPlaneOptions{
-		WatchNamespaces: lo.ToPtr(operatorv2beta1.WatchNamespaces{
+		WatchNamespaces: new(operatorv2beta1.WatchNamespaces{
 			Type: operatorv2beta1.WatchNamespacesType(nn.Type),
 			List: nn.List,
 		}),
@@ -283,7 +283,7 @@ func (c *ControlPlaneOptions) convertFrom(src operatorv2beta1.ControlPlaneOption
 		return
 	}
 	if src.WatchNamespaces != nil {
-		c.WatchNamespaces = lo.ToPtr(WatchNamespaces{
+		c.WatchNamespaces = new(WatchNamespaces{
 			Type: WatchNamespacesType(src.WatchNamespaces.Type),
 			List: src.WatchNamespaces.List,
 		})
@@ -406,7 +406,7 @@ func ingressClassFormatFromEnvVars(envs []corev1.EnvVar) *string {
 	if !found {
 		return nil
 	}
-	return lo.ToPtr(ingressClassEnv.Value)
+	return new(ingressClassEnv.Value)
 }
 
 func cpControllersFormatFromEnvVars(envs []corev1.EnvVar) ([]operatorv2beta1.ControlPlaneController, error) {
@@ -463,9 +463,9 @@ func parseEnvForToggle[T ~string](key string, envVars []corev1.EnvVar) (value *T
 	}
 	switch strings.ToLower(v.Value) {
 	case envValueTrue, envValueOne:
-		return lo.ToPtr(T(stateEnabled)), nil
+		return new(T(stateEnabled)), nil
 	case envValueFalse, envValueZero:
-		return lo.ToPtr(T(stateDisabled)), nil
+		return new(T(stateDisabled)), nil
 	}
 	return nil, nil
 }

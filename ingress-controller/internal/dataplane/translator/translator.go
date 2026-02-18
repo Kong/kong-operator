@@ -269,7 +269,7 @@ func (t *Translator) BuildKongConfig() KongConfigBuildingResult {
 			certID := s.ClientCertificate.ID
 			mergedCertID := certIDsSeen[*certID]
 			result.Services[i].ClientCertificate = &kong.Certificate{
-				ID: kong.String(mergedCertID),
+				ID: new(mergedCertID),
 			}
 		}
 	}

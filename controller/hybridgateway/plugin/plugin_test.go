@@ -149,7 +149,7 @@ func TestPluginForFilter(t *testing.T) {
 					{
 						Path: &gatewayv1.HTTPPathMatch{
 							Type:  ptr.To(gatewayv1.PathMatchPathPrefix),
-							Value: ptr.To("/test"),
+							Value: new("/test"),
 						},
 					},
 				},

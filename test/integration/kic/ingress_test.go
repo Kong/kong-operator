@@ -15,7 +15,6 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -311,7 +310,7 @@ func TestIngressServiceUpstream(t *testing.T) {
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
 	deployment := generators.NewDeploymentForContainer(container)
-	deployment.Spec.Replicas = lo.ToPtr(int32(3))
+	deployment.Spec.Replicas = new(int32(3))
 	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(deployment)
@@ -1103,7 +1102,7 @@ func TestIngressRewriteURI(t *testing.T) {
 	ingressDirect.Spec.IngressClassName = kong.String(consts.IngressClass)
 	for i := range ingressDirect.Spec.Rules {
 		ingressDirect.Spec.Rules[i].Host = serviceDomainDirect
-		ingressDirect.Spec.Rules[i].HTTP.Paths[0].PathType = lo.ToPtr(netv1.PathTypePrefix)
+		ingressDirect.Spec.Rules[i].HTTP.Paths[0].PathType = new(netv1.PathTypePrefix)
 	}
 	ingressDirect, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Create(ctx, ingressDirect, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -1175,7 +1174,7 @@ func TestIngressRewriteURI(t *testing.T) {
 	ingressRewrite.Spec.IngressClassName = kong.String(consts.IngressClass)
 	for i := range ingressRewrite.Spec.Rules {
 		ingressRewrite.Spec.Rules[i].Host = serviceDomainRewrite
-		ingressRewrite.Spec.Rules[i].HTTP.Paths[0].PathType = lo.ToPtr(netv1.PathTypeImplementationSpecific)
+		ingressRewrite.Spec.Rules[i].HTTP.Paths[0].PathType = new(netv1.PathTypeImplementationSpecific)
 	}
 	ingressRewrite, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Create(ctx, ingressRewrite, metav1.CreateOptions{})
 	require.NoError(t, err)

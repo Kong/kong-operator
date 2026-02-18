@@ -3,7 +3,6 @@ package kongstate
 import (
 	"errors"
 
-	"github.com/samber/lo"
 	"github.com/samber/mo"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 )
@@ -71,7 +70,7 @@ func NewServiceBackendForServiceFacade(nn k8stypes.NamespacedName, portDef PortD
 
 // SetWeight sets the weight of the backend used for load-balancing.
 func (s *ServiceBackend) SetWeight(weight int32) {
-	s.weight = lo.ToPtr(int(weight))
+	s.weight = new(int(weight))
 }
 
 // Name returns the name of the backend resource (Service or KongServiceFacade).

@@ -29,7 +29,6 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -412,7 +411,7 @@ func deployIngressWithEchoBackends(ctx context.Context, t *testing.T, env enviro
 		},
 	})
 	deployment := generators.NewDeploymentForContainer(container)
-	deployment.Spec.Replicas = lo.ToPtr(int32(noReplicas))
+	deployment.Spec.Replicas = new(int32(noReplicas))
 	deployment, err := env.Cluster().Client().AppsV1().Deployments(corev1.NamespaceDefault).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
 	t.Cleanup(func() {
@@ -425,7 +424,7 @@ func deployIngressWithEchoBackends(ctx context.Context, t *testing.T, env enviro
 		// Set Service's appProtocol to http so that Kuma load-balances requests on HTTP-level instead of TCP.
 		// TCP load-balancing proved to cause issues with not distributing load evenly in short time spans like in this test.
 		// Ref: https://github.com/Kong/kubernetes-ingress-controller/issues/5498
-		service.Spec.Ports[i].AppProtocol = lo.ToPtr("http")
+		service.Spec.Ports[i].AppProtocol = new("http")
 	}
 
 	_, err = env.Cluster().Client().CoreV1().Services(corev1.NamespaceDefault).Create(ctx, service, metav1.CreateOptions{})
@@ -942,7 +941,7 @@ func dumpKongConfiguration(ctx context.Context, t *testing.T, cluster clusters.C
 			},
 		},
 	}
-	kongClient, err := kong.NewTestClient(lo.ToPtr("https://"+adminExposeServiceIP+":8444"), httpClient)
+	kongClient, err := kong.NewTestClient(new("https://"+adminExposeServiceIP+":8444"), httpClient)
 	require.NoError(t, err, "failed to create Kong client")
 	time.Sleep(5 * time.Second)
 	cfg, err := kongClient.Config(ctx)

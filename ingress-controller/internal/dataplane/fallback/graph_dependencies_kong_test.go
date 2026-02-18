@@ -3,7 +3,6 @@ package fallback_test
 import (
 	"testing"
 
-	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -531,8 +530,8 @@ func TestResolveDependencies_KongCustomEntity(t *testing.T) {
 					EntityType: "test-entity",
 					ParentRef: &configurationv1alpha1.ObjectReference{
 						Name:  "1",
-						Kind:  lo.ToPtr("KongPlugin"),
-						Group: lo.ToPtr(configurationv1alpha1.GroupVersion.Group),
+						Kind:  new("KongPlugin"),
+						Group: new(configurationv1alpha1.GroupVersion.Group),
 					},
 				},
 			},
@@ -555,8 +554,8 @@ func TestResolveDependencies_KongCustomEntity(t *testing.T) {
 					EntityType: "test-entity",
 					ParentRef: &configurationv1alpha1.ObjectReference{
 						Name:  "1",
-						Kind:  lo.ToPtr("KongClusterPlugin"),
-						Group: lo.ToPtr(configurationv1alpha1.GroupVersion.Group),
+						Kind:  new("KongClusterPlugin"),
+						Group: new(configurationv1alpha1.GroupVersion.Group),
 					},
 				},
 			},
@@ -579,9 +578,9 @@ func TestResolveDependencies_KongCustomEntity(t *testing.T) {
 					EntityType: "test-entity",
 					ParentRef: &configurationv1alpha1.ObjectReference{
 						Name:      "1",
-						Namespace: lo.ToPtr("other-namespace"),
-						Kind:      lo.ToPtr("KongPlugin"),
-						Group:     lo.ToPtr(configurationv1alpha1.GroupVersion.Group),
+						Namespace: new("other-namespace"),
+						Kind:      new("KongPlugin"),
+						Group:     new(configurationv1alpha1.GroupVersion.Group),
 					},
 				},
 			},

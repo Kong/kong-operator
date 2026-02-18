@@ -9,7 +9,6 @@ import (
 
 	"github.com/avast/retry-go/v4"
 	"github.com/go-logr/logr"
-	"github.com/samber/lo"
 	"github.com/samber/mo"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -86,7 +85,7 @@ func setupManagerOptions(ctx context.Context, logger logr.Logger, c *managercfg.
 			// names and panics if there are duplicates.
 			// This is a workaround for that in tests.
 			// Ref: https://github.com/kubernetes-sigs/controller-runtime/pull/2902#issuecomment-2284194683
-			SkipNameValidation: lo.ToPtr(true),
+			SkipNameValidation: new(true),
 		},
 		GracefulShutdownTimeout: c.GracefulShutdownTimeout,
 		Scheme:                  scheme.Get(),

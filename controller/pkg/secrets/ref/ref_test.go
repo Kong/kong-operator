@@ -49,7 +49,7 @@ func TestCheckReferenceGrantForSecret(t *testing.T) {
 					{
 						Group: "",
 						Kind:  "Secret",
-						Name:  lo.ToPtr(goodSecretName),
+						Name:  new(goodSecretName),
 					},
 				},
 			},
@@ -178,7 +178,7 @@ func TestCheckReferenceGrantForSecret(t *testing.T) {
 			forObj: objKPI,
 			referenceGrants: []gatewayv1beta1.ReferenceGrant{
 				customizeReferenceGrant(referenceGrantForObj(objKPI), func(rg *gatewayv1beta1.ReferenceGrant) {
-					rg.Spec.To[0].Name = lo.ToPtr(emptySecretName)
+					rg.Spec.To[0].Name = new(emptySecretName)
 				}),
 			},
 			isGranted: false,
@@ -188,7 +188,7 @@ func TestCheckReferenceGrantForSecret(t *testing.T) {
 			forObj: objGateway,
 			referenceGrants: []gatewayv1beta1.ReferenceGrant{
 				customizeReferenceGrant(referenceGrantForObj(objGateway), func(rg *gatewayv1beta1.ReferenceGrant) {
-					rg.Spec.To[0].Name = lo.ToPtr(badSecretName)
+					rg.Spec.To[0].Name = new(badSecretName)
 				}),
 			},
 			isGranted: false,
@@ -205,7 +205,7 @@ func TestCheckReferenceGrantForSecret(t *testing.T) {
 				t.Context(), cl,
 				tc.forObj,
 				gatewayv1.SecretObjectReference{
-					Namespace: lo.ToPtr(gatewayv1.Namespace("default")),
+					Namespace: new(gatewayv1.Namespace("default")),
 					Name:      "good-secret",
 				},
 			)

@@ -69,7 +69,7 @@ func TestKongCACertificate(t *testing.T) {
 		}),
 	).Return(&sdkkonnectops.CreateCaCertificateResponse{
 		CACertificate: &sdkkonnectcomp.CACertificate{
-			ID: lo.ToPtr("12345"),
+			ID: new("12345"),
 		},
 	}, nil)
 
@@ -153,7 +153,7 @@ func TestKongCACertificate(t *testing.T) {
 					Object: &sdkkonnectops.ListCaCertificateResponseBody{
 						Data: []sdkkonnectcomp.CACertificate{
 							{
-								ID: lo.ToPtr(certID),
+								ID: new(certID),
 							},
 						},
 					},
@@ -201,7 +201,7 @@ func TestKongCACertificate(t *testing.T) {
 			Return(
 				&sdkkonnectops.CreateCaCertificateResponse{
 					CACertificate: &sdkkonnectcomp.CACertificate{
-						ID: lo.ToPtr(id),
+						ID: new(id),
 					},
 				},
 				nil,
@@ -243,7 +243,7 @@ func TestKongCACertificate(t *testing.T) {
 		).Return(&sdkkonnectops.GetCaCertificateResponse{
 			CACertificate: &sdkkonnectcomp.CACertificate{
 				Cert: "test-cert",
-				ID:   lo.ToPtr(caCertID),
+				ID:   new(caCertID),
 			},
 		}, nil)
 		sdk.CACertificatesSDK.EXPECT().UpsertCaCertificate(

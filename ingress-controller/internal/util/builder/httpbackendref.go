@@ -1,8 +1,6 @@
 package builder
 
 import (
-	"github.com/samber/lo"
-
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
 )
@@ -21,7 +19,7 @@ func NewHTTPBackendRef(name string) *HTTPBackendRefBuilder {
 				BackendObjectReference: gatewayapi.BackendObjectReference{
 					Name: gatewayapi.ObjectName(name),
 					Kind: util.StringToGatewayAPIKindPtr("Service"), // default value
-					Port: lo.ToPtr(gatewayapi.PortNumber(80)),
+					Port: new(gatewayapi.PortNumber(80)),
 				},
 			},
 		},
@@ -43,7 +41,7 @@ func (b *HTTPBackendRefBuilder) WithPort(port int) *HTTPBackendRefBuilder {
 }
 
 func (b *HTTPBackendRefBuilder) WithWeight(weight int) *HTTPBackendRefBuilder {
-	b.httpBackendRef.Weight = lo.ToPtr(int32(weight))
+	b.httpBackendRef.Weight = new(int32(weight))
 	return b
 }
 

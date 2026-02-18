@@ -3,7 +3,6 @@ package gateway
 import (
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -404,7 +403,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 			certRef: gatewayapi.SecretObjectReference{
 				Kind:      util.StringToGatewayAPIKindPtr("Secret"),
 				Name:      "testSecret",
-				Namespace: lo.ToPtr(gatewayapi.Namespace("otherNamespace")),
+				Namespace: new(gatewayapi.Namespace("otherNamespace")),
 			},
 			referenceGrants: []gatewayapi.ReferenceGrant{
 				{
@@ -423,7 +422,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 							{
 								Group: "",
 								Kind:  "Secret",
-								Name:  lo.ToPtr(gatewayapi.ObjectName("anotherSecret")),
+								Name:  new(gatewayapi.ObjectName("anotherSecret")),
 							},
 						},
 					},
@@ -437,7 +436,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 			certRef: gatewayapi.SecretObjectReference{
 				Kind:      util.StringToGatewayAPIKindPtr("Secret"),
 				Name:      "testSecret",
-				Namespace: lo.ToPtr(gatewayapi.Namespace("otherNamespace")),
+				Namespace: new(gatewayapi.Namespace("otherNamespace")),
 			},
 			expectedReason: string(gatewayapi.ListenerReasonRefNotPermitted),
 		},
@@ -447,7 +446,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 			certRef: gatewayapi.SecretObjectReference{
 				Kind:      util.StringToGatewayAPIKindPtr("Secret"),
 				Name:      "testSecret",
-				Namespace: lo.ToPtr(gatewayapi.Namespace("otherNamespace")),
+				Namespace: new(gatewayapi.Namespace("otherNamespace")),
 			},
 			referenceGrants: []gatewayapi.ReferenceGrant{
 				{
@@ -486,7 +485,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 			certRef: gatewayapi.SecretObjectReference{
 				Kind:      util.StringToGatewayAPIKindPtr("Secret"),
 				Name:      "testSecret",
-				Namespace: lo.ToPtr(gatewayapi.Namespace("otherNamespace")),
+				Namespace: new(gatewayapi.Namespace("otherNamespace")),
 			},
 			referenceGrants: []gatewayapi.ReferenceGrant{
 				{
@@ -505,7 +504,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 							{
 								Group: "",
 								Kind:  "Secret",
-								Name:  lo.ToPtr(gatewayapi.ObjectName("testSecret")),
+								Name:  new(gatewayapi.ObjectName("testSecret")),
 							},
 						},
 					},

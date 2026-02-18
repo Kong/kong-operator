@@ -19,7 +19,6 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/e2e-framework/klient/conf"
@@ -453,7 +452,7 @@ func startControllerManager(
 		cfg.EnableConfigDumps = true
 		cfg.LogLevel = "trace"
 		cfg.AnonymousReports = false
-		cfg.GracefulShutdownTimeout = lo.ToPtr(time.Duration(-1))
+		cfg.GracefulShutdownTimeout = new(time.Duration(-1))
 	})
 	t.Cleanup(func() { cancel() })
 	if !assert.NoError(t, err, "failed deploying controller manager") {

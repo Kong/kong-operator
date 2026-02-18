@@ -8,7 +8,6 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	apiwatch "k8s.io/apimachinery/pkg/watch"
@@ -71,7 +70,7 @@ func TestKongUpstream(t *testing.T) {
 			Return(
 				&sdkkonnectops.CreateUpstreamResponse{
 					Upstream: &sdkkonnectcomp.Upstream{
-						ID: lo.ToPtr(upstreamID),
+						ID: new(upstreamID),
 					},
 				},
 				nil,
@@ -108,7 +107,7 @@ func TestKongUpstream(t *testing.T) {
 		t.Log("Patching KongUpstream")
 		upstreamToPatch := createdUpstream.DeepCopy()
 		upstreamToPatch.Spec.HashFallback = sdkkonnectcomp.HashFallbackHeader.ToPointer()
-		upstreamToPatch.Spec.HashFallbackHeader = lo.ToPtr("X-Hash-Header")
+		upstreamToPatch.Spec.HashFallbackHeader = new("X-Hash-Header")
 		require.NoError(t, clientNamespaced.Patch(ctx, upstreamToPatch, client.MergeFrom(createdUpstream)))
 
 		eventuallyAssertSDKExpectations(t, factory.SDK.UpstreamsSDK, waitTime, tickTime)
@@ -152,7 +151,7 @@ func TestKongUpstream(t *testing.T) {
 			Return(
 				&sdkkonnectops.CreateUpstreamResponse{
 					Upstream: &sdkkonnectcomp.Upstream{
-						ID: lo.ToPtr(id),
+						ID: new(id),
 					},
 				},
 				nil,

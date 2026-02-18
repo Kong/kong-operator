@@ -98,15 +98,15 @@ func translateHashOn(hashOn *configurationv1beta1.KongUpstreamHash) *string {
 
 	switch {
 	case hashOn.Input != nil:
-		return lo.ToPtr(string(*hashOn.Input))
+		return new(string(*hashOn.Input))
 	case hashOn.Header != nil:
-		return lo.ToPtr(KongHashOnTypeHeader)
+		return new(KongHashOnTypeHeader)
 	case hashOn.Cookie != nil:
-		return lo.ToPtr(KongHashOnTypeCookie)
+		return new(KongHashOnTypeCookie)
 	case hashOn.QueryArg != nil:
-		return lo.ToPtr(KongHashOnTypeQueryArg)
+		return new(KongHashOnTypeQueryArg)
 	case hashOn.URICapture != nil:
-		return lo.ToPtr(KongHashOnTypeURICapture)
+		return new(KongHashOnTypeURICapture)
 	default:
 		return nil
 	}
@@ -208,7 +208,7 @@ func translateThreshold(threshold *int) *float64 {
 	if threshold == nil {
 		return nil
 	}
-	return lo.ToPtr(float64(*threshold))
+	return new(float64(*threshold))
 }
 
 func translateHealthy(healthy *configurationv1beta1.KongUpstreamHealthcheckHealthy) *kong.Healthy {

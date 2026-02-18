@@ -7,7 +7,6 @@ import (
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
-	"github.com/samber/lo"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -194,7 +193,7 @@ func getKongCredentialJWTForUID(
 		// Other fields like name might have changed in the meantime but that's OK.
 		// Those will be enforced via subsequent updates.
 		ControlPlaneID: cpID,
-		Tags:           lo.ToPtr(UIDLabelForObject(cred)),
+		Tags:           new(UIDLabelForObject(cred)),
 	}
 
 	resp, err := sdk.ListJwt(ctx, req)

@@ -15,9 +15,6 @@ import (
 	"github.com/kong/kong-operator/v2/pkg/generated"
 )
 
-// helper functions for pointer values.
-func ptrBool(b bool) *bool    { return &b }
-func ptrInt64(i int64) *int64 { return &i }
 func TestExtractAsUnstructured(t *testing.T) {
 	testCases := []struct {
 		name        string
@@ -42,9 +39,9 @@ func TestExtractAsUnstructured(t *testing.T) {
 								sdkkonnectcomp.RouteJSONProtocols("http"),
 								sdkkonnectcomp.RouteJSONProtocols("https"),
 							},
-							StripPath:     ptrBool(true),
-							PreserveHost:  ptrBool(false),
-							RegexPriority: ptrInt64(10),
+							StripPath:     new(true),
+							PreserveHost:  new(false),
+							RegexPriority: new(int64(10)),
 						},
 						ServiceRef: &configurationv1alpha1.ServiceRef{
 							Type: "namespacedRef",

@@ -73,7 +73,7 @@ func (s *Service) overridePath(anns map[string]string) {
 	if !strings.HasPrefix(path, "/") {
 		return
 	}
-	s.Path = kong.String(path)
+	s.Path = new(path)
 }
 
 func (s *Service) overrideProtocol(anns map[string]string) {
@@ -84,7 +84,7 @@ func (s *Service) overrideProtocol(anns map[string]string) {
 	if protocol == "" || !util.ValidateProtocol(protocol) {
 		return
 	}
-	s.Protocol = kong.String(protocol)
+	s.Protocol = new(protocol)
 }
 
 func (s *Service) overrideConnectTimeout(anns map[string]string) {
@@ -99,7 +99,7 @@ func (s *Service) overrideConnectTimeout(anns map[string]string) {
 	if err != nil {
 		return
 	}
-	s.ConnectTimeout = kong.Int(val)
+	s.ConnectTimeout = new(val)
 }
 
 func (s *Service) overrideWriteTimeout(anns map[string]string) {
@@ -114,7 +114,7 @@ func (s *Service) overrideWriteTimeout(anns map[string]string) {
 	if err != nil {
 		return
 	}
-	s.WriteTimeout = kong.Int(val)
+	s.WriteTimeout = new(val)
 }
 
 func (s *Service) overrideReadTimeout(anns map[string]string) {
@@ -129,7 +129,7 @@ func (s *Service) overrideReadTimeout(anns map[string]string) {
 	if err != nil {
 		return
 	}
-	s.ReadTimeout = kong.Int(val)
+	s.ReadTimeout = new(val)
 }
 
 func (s *Service) overrideRetries(anns map[string]string) {
@@ -144,7 +144,7 @@ func (s *Service) overrideRetries(anns map[string]string) {
 	if err != nil {
 		return
 	}
-	s.Retries = kong.Int(val)
+	s.Retries = new(val)
 }
 
 func (s *Service) overrideTLSVerify(anns map[string]string) {
@@ -155,7 +155,7 @@ func (s *Service) overrideTLSVerify(anns map[string]string) {
 	if !exists {
 		return
 	}
-	s.TLSVerify = kong.Bool(tlsVerify)
+	s.TLSVerify = new(tlsVerify)
 }
 
 func (s *Service) overrideTLSVerifyDepth(anns map[string]string) {
@@ -166,7 +166,7 @@ func (s *Service) overrideTLSVerifyDepth(anns map[string]string) {
 	if !exists {
 		return
 	}
-	s.TLSVerifyDepth = kong.Int(tlsVerifyDepth)
+	s.TLSVerifyDepth = new(tlsVerifyDepth)
 }
 
 // overrideByAnnotation modifies the Kong service based on annotations

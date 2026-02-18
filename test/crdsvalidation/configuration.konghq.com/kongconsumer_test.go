@@ -81,7 +81,7 @@ func TestKongConsumer(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Need to provide either username or custom_id"),
+				ExpectedErrorMessage: new("Need to provide either username or custom_id"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -132,7 +132,7 @@ func TestKongConsumer(t *testing.T) {
 						}(),
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.tags: Too many: 21: must have at most 20 items"),
+				ExpectedErrorMessage: new("spec.tags: Too many: 21: must have at most 20 items"),
 			},
 			{
 				Name: "tags entries must not be longer than 128 characters",
@@ -151,7 +151,7 @@ func TestKongConsumer(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("tags entries must not be longer than 128 characters"),
+				ExpectedErrorMessage: new("tags entries must not be longer than 128 characters"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -219,7 +219,7 @@ func TestKongConsumer(t *testing.T) {
 					},
 					Username: "user:name",
 				},
-				ExpectedErrorMessage: lo.ToPtr("username: Invalid value"),
+				ExpectedErrorMessage: new("username: Invalid value"),
 			},
 			{
 				Name: "username too long",
@@ -235,7 +235,7 @@ func TestKongConsumer(t *testing.T) {
 					},
 					Username: lo.RandomString(129, lo.AlphanumericCharset),
 				},
-				ExpectedErrorMessage: lo.ToPtr("Too long: may not be "),
+				ExpectedErrorMessage: new("Too long: may not be "),
 			},
 			{
 				Name: "valid custom_id",
@@ -297,7 +297,7 @@ func TestKongConsumer(t *testing.T) {
 					},
 					CustomID: "custom:id",
 				},
-				ExpectedErrorMessage: lo.ToPtr("custom_id: Invalid value"),
+				ExpectedErrorMessage: new("custom_id: Invalid value"),
 			},
 			{
 				Name: "custom_id too long",
@@ -313,7 +313,7 @@ func TestKongConsumer(t *testing.T) {
 					},
 					CustomID: lo.RandomString(129, lo.AlphanumericCharset),
 				},
-				ExpectedErrorMessage: lo.ToPtr("Too long: may not be "),
+				ExpectedErrorMessage: new("Too long: may not be "),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)

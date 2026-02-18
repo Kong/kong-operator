@@ -7,7 +7,6 @@ import (
 	"github.com/go-logr/zapr"
 	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/kong/go-kong/kong"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
@@ -41,7 +40,7 @@ func TestToDeckContent(t *testing.T) {
 				Upstreams: []file.FUpstream{
 					{
 						Upstream: kong.Upstream{
-							Name: lo.ToPtr(StubUpstreamName),
+							Name: new(StubUpstreamName),
 						},
 					},
 				},
@@ -69,7 +68,7 @@ func TestFillPlugin(t *testing.T) {
 			name: "Required field provided for plugin",
 			plugin: &file.FPlugin{
 				Plugin: kong.Plugin{
-					Name: lo.ToPtr("plugin"),
+					Name: new("plugin"),
 					Config: kong.Configuration{
 						"endpoint": "https://example.com",
 					},
@@ -120,14 +119,14 @@ func TestFillPlugin(t *testing.T) {
 			},
 			expected: &file.FPlugin{
 				Plugin: kong.Plugin{
-					Name: lo.ToPtr("plugin"),
+					Name: new("plugin"),
 					Protocols: []*string{
-						lo.ToPtr("grpc"),
-						lo.ToPtr("grpcs"),
-						lo.ToPtr("http"),
-						lo.ToPtr("https"),
+						new("grpc"),
+						new("grpcs"),
+						new("http"),
+						new("https"),
 					},
-					Enabled: lo.ToPtr(true),
+					Enabled: new(true),
 					Config: kong.Configuration{
 						"endpoint": "https://example.com",
 					},
@@ -138,7 +137,7 @@ func TestFillPlugin(t *testing.T) {
 			name: "Required field not provided for plugin gets filled in with nil",
 			plugin: &file.FPlugin{
 				Plugin: kong.Plugin{
-					Name: lo.ToPtr("plugin"),
+					Name: new("plugin"),
 				},
 			},
 			schemas: &mockPluginSchemaStore{
@@ -186,14 +185,14 @@ func TestFillPlugin(t *testing.T) {
 			},
 			expected: &file.FPlugin{
 				Plugin: kong.Plugin{
-					Name: lo.ToPtr("plugin"),
+					Name: new("plugin"),
 					Protocols: []*string{
-						lo.ToPtr("grpc"),
-						lo.ToPtr("grpcs"),
-						lo.ToPtr("http"),
-						lo.ToPtr("https"),
+						new("grpc"),
+						new("grpcs"),
+						new("http"),
+						new("https"),
 					},
-					Enabled: lo.ToPtr(true),
+					Enabled: new(true),
 					Config: kong.Configuration{
 						"endpoint": nil,
 					},
@@ -205,7 +204,7 @@ func TestFillPlugin(t *testing.T) {
 			name: "OpenTelemetry plugin for Gateway 3.7.x",
 			plugin: &file.FPlugin{
 				Plugin: kong.Plugin{
-					Name: lo.ToPtr("opentelemetry"),
+					Name: new("opentelemetry"),
 				},
 			},
 			schemas: &mockPluginSchemaStore{
@@ -534,14 +533,14 @@ func TestFillPlugin(t *testing.T) {
 			},
 			expected: &file.FPlugin{
 				Plugin: kong.Plugin{
-					Name: lo.ToPtr("opentelemetry"),
+					Name: new("opentelemetry"),
 					Protocols: []*string{
-						lo.ToPtr("grpc"),
-						lo.ToPtr("grpcs"),
-						lo.ToPtr("http"),
-						lo.ToPtr("https"),
+						new("grpc"),
+						new("grpcs"),
+						new("http"),
+						new("https"),
 					},
-					Enabled: lo.ToPtr(true),
+					Enabled: new(true),
 					Config: kong.Configuration{
 						"endpoint":                         nil,
 						"batch_flush_delay":                nil,

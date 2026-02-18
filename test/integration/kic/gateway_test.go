@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
@@ -394,7 +393,7 @@ func TestGatewayFilters(t *testing.T) {
 				CommonRouteSpec: gatewayapi.CommonRouteSpec{
 					ParentRefs: []gatewayapi.ParentReference{{
 						Name:      gatewayapi.ObjectName(gateway.Name),
-						Namespace: lo.ToPtr(gatewayapi.Namespace(gateway.Namespace)),
+						Namespace: new(gatewayapi.Namespace(gateway.Namespace)),
 					}},
 				},
 				Rules: []gatewayapi.HTTPRouteRule{{
@@ -416,7 +415,7 @@ func TestGatewayFilters(t *testing.T) {
 	cleaner.Add(httpRoute)
 
 	otherRoute := HTTPRoute()
-	otherRoute.Spec.Rules[0].Matches[0].Path.Value = kong.String("/other_test_gateway_filters")
+	otherRoute.Spec.Rules[0].Matches[0].Path.Value = new("/other_test_gateway_filters")
 	otherRoute, err = gatewayClient.HTTPRoutes(other.Name).Create(ctx, otherRoute, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(otherRoute)

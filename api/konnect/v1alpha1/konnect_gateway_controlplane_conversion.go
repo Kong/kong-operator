@@ -106,7 +106,7 @@ func createInlineControlPlaneRequest(req *sdkkonnectcomp.CreateControlPlaneReque
 		return CreateControlPlaneRequest{}
 	}
 	return CreateControlPlaneRequest{
-		Name:         lo.ToPtr(req.Name),
+		Name:         new(req.Name),
 		Description:  req.Description,
 		ClusterType:  req.ClusterType,
 		AuthType:     req.AuthType,

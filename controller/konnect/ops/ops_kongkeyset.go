@@ -156,7 +156,7 @@ func adoptKeySet(
 
 func kongKeySetToKeySetInput(keySet *configurationv1alpha1.KongKeySet) *sdkkonnectcomp.KeySet {
 	return &sdkkonnectcomp.KeySet{
-		Name: lo.ToPtr(keySet.Spec.Name),
+		Name: new(keySet.Spec.Name),
 		Tags: GenerateTagsForObject(keySet, keySet.Spec.Tags...),
 	}
 }
@@ -168,7 +168,7 @@ func getKongKeySetForUID(
 ) (string, error) {
 	resp, err := sdk.ListKeySet(ctx, sdkkonnectops.ListKeySetRequest{
 		ControlPlaneID: keySet.GetControlPlaneID(),
-		Tags:           lo.ToPtr(UIDLabelForObject(keySet)),
+		Tags:           new(UIDLabelForObject(keySet)),
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to list KongKeySets: %w", err)
@@ -186,7 +186,7 @@ func keySetMatch(konnectKeySet *sdkkonnectcomp.KeySet, keySet *configurationv1al
 		return false
 	}
 
-	if !equalWithDefault(konnectKeySet.Name, lo.ToPtr(keySet.Spec.Name), "") {
+	if !equalWithDefault(konnectKeySet.Name, new(keySet.Spec.Name), "") {
 		return false
 	}
 

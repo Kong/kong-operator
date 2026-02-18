@@ -159,8 +159,8 @@ func TestAdoptKongConsumerMatch(t *testing.T) {
 		GetConsumer(ctx, "cons-2", "cp-1").
 		Return(&sdkkonnectops.GetConsumerResponse{
 			Consumer: &sdkkonnectcomp.Consumer{
-				Username: lo.ToPtr("user-1"),
-				CustomID: lo.ToPtr("custom-1"),
+				Username: new("user-1"),
+				CustomID: new("custom-1"),
 			},
 		}, nil)
 	sdk.EXPECT().
@@ -171,8 +171,8 @@ func TestAdoptKongConsumerMatch(t *testing.T) {
 		Return(&sdkkonnectops.ListConsumerGroupsForConsumerResponse{
 			Object: &sdkkonnectops.ListConsumerGroupsForConsumerResponseBody{
 				Data: []sdkkonnectcomp.ConsumerGroup{
-					{ID: lo.ToPtr("cg-id-a")},
-					{ID: lo.ToPtr("cg-id-b")},
+					{ID: new("cg-id-a")},
+					{ID: new("cg-id-b")},
 				},
 			},
 		}, nil)
@@ -219,7 +219,7 @@ func TestAdoptKongConsumerMatchNotMatching(t *testing.T) {
 		GetConsumer(ctx, "cons-3", "cp-1").
 		Return(&sdkkonnectops.GetConsumerResponse{
 			Consumer: &sdkkonnectcomp.Consumer{
-				Username: lo.ToPtr("actual"),
+				Username: new("actual"),
 			},
 		}, nil)
 

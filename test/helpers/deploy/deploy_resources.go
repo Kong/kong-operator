@@ -162,7 +162,7 @@ func WithMirrorSource(konnectID string) ObjOption {
 			// As it's only used in tests, we can panic here - it will mean test code is incorrect.
 			panic(fmt.Errorf("%T does not implement GetServiceRef/SetServiceRef method", obj))
 		}
-		cp.Spec.Source = lo.ToPtr(commonv1alpha1.EntitySourceMirror)
+		cp.Spec.Source = new(commonv1alpha1.EntitySourceMirror)
 		cp.Spec.Mirror = &konnectv1alpha2.MirrorSpec{
 			Konnect: konnectv1alpha2.MirrorKonnect{
 				ID: commonv1alpha1.KonnectIDType(konnectID),
@@ -284,7 +284,7 @@ func KonnectGatewayControlPlaneType(typ sdkkonnectcomp.CreateControlPlaneRequest
 		if !ok {
 			panic(fmt.Errorf("%T does not implement KonnectGatewayControlPlane", obj))
 		}
-		cp.SetKonnectClusterType(lo.ToPtr(typ))
+		cp.SetKonnectClusterType(new(typ))
 	}
 }
 
@@ -296,7 +296,7 @@ func KonnectGatewayControlPlaneTypeWithCloudGatewaysEnabled() ObjOption {
 		if !ok {
 			panic(fmt.Errorf("%T does not implement KonnectGatewayControlPlane", obj))
 		}
-		cp.SetKonnectCloudGateway(lo.ToPtr(true))
+		cp.SetKonnectCloudGateway(new(true))
 	}
 }
 
@@ -370,7 +370,7 @@ func KonnectCloudGatewayDataPlaneGroupConfiguration(
 		},
 		Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
 			Version:         consts.DefaultDataPlaneTag,
-			APIAccess:       lo.ToPtr(sdkkonnectcomp.APIAccessPrivatePlusPublic),
+			APIAccess:       new(sdkkonnectcomp.APIAccessPrivatePlusPublic),
 			DataplaneGroups: dataplaneGroups,
 		},
 	}
@@ -495,8 +495,8 @@ func KongService(
 		},
 		Spec: configurationv1alpha1.KongServiceSpec{
 			KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
-				Name: lo.ToPtr(name),
-				URL:  lo.ToPtr("http://example.com"),
+				Name: new(name),
+				URL:  new("http://example.com"),
 				Host: "example.com",
 			},
 		},
@@ -527,7 +527,7 @@ func KongRoute(
 		},
 		Spec: configurationv1alpha1.KongRouteSpec{
 			KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
-				Name: lo.ToPtr(name),
+				Name: new(name),
 			},
 		},
 	}
@@ -696,7 +696,7 @@ func KongCredentialHMAC(
 				Name: consumerName,
 			},
 			KongCredentialHMACAPISpec: configurationv1alpha1.KongCredentialHMACAPISpec{
-				Username: lo.ToPtr("username"),
+				Username: new("username"),
 			},
 		},
 	}
@@ -725,7 +725,7 @@ func KongCredentialJWT(
 				Name: consumerName,
 			},
 			KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
-				Key: lo.ToPtr("key"),
+				Key: new("key"),
 			},
 		},
 	}
@@ -1031,8 +1031,8 @@ func KongKey(
 		Spec: configurationv1alpha1.KongKeySpec{
 			KongKeyAPISpec: configurationv1alpha1.KongKeyAPISpec{
 				KID:  kid,
-				Name: lo.ToPtr(name),
-				JWK:  lo.ToPtr("{}"),
+				Name: new(name),
+				JWK:  new("{}"),
 			},
 		},
 	}

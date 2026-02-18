@@ -22,18 +22,18 @@ func TestRefillPluginIDs(t *testing.T) {
 			currentState: mustNewKongStateFromRawState(t, &deckutils.KongRawState{
 				Services: []*kong.Service{
 					{
-						Name: kong.String("service-1"),
-						ID:   kong.String("service-1"),
-						Host: kong.String("kong.test"),
+						Name: new("service-1"),
+						ID:   new("service-1"),
+						Host: new("kong.test"),
 					},
 				},
 				Plugins: []*kong.Plugin{
 					{
-						Name: kong.String("request-transformer"),
-						ID:   kong.String("plugin-1"),
+						Name: new("request-transformer"),
+						ID:   new("plugin-1"),
 						Service: &kong.Service{
-							Name: kong.String("service-1"),
-							ID:   kong.String("service-1"),
+							Name: new("service-1"),
+							ID:   new("service-1"),
 						},
 					},
 				},
@@ -41,18 +41,18 @@ func TestRefillPluginIDs(t *testing.T) {
 			targetState: mustNewKongStateFromRawState(t, &deckutils.KongRawState{
 				Services: []*kong.Service{
 					{
-						Name: kong.String("service-1"),
-						ID:   kong.String("service-1"),
-						Host: kong.String("kong.test"),
+						Name: new("service-1"),
+						ID:   new("service-1"),
+						Host: new("kong.test"),
 					},
 				},
 				Plugins: []*kong.Plugin{
 					{
-						Name: kong.String("request-transformer"),
-						ID:   kong.String("plugin-2"),
+						Name: new("request-transformer"),
+						ID:   new("plugin-2"),
 						Service: &kong.Service{
-							Name: kong.String("service-1"),
-							ID:   kong.String("service-1"),
+							Name: new("service-1"),
+							ID:   new("service-1"),
 						},
 					},
 				},
@@ -64,18 +64,18 @@ func TestRefillPluginIDs(t *testing.T) {
 			currentState: mustNewKongStateFromRawState(t, &deckutils.KongRawState{
 				Services: []*kong.Service{
 					{
-						Name: kong.String("service-1"),
-						ID:   kong.String("service-1"),
-						Host: kong.String("kong.test"),
+						Name: new("service-1"),
+						ID:   new("service-1"),
+						Host: new("kong.test"),
 					},
 				},
 				Plugins: []*kong.Plugin{
 					{
-						Name: kong.String("request-transformer"),
-						ID:   kong.String("plugin-1"),
+						Name: new("request-transformer"),
+						ID:   new("plugin-1"),
 						Service: &kong.Service{
-							Name: kong.String("service-1"),
-							ID:   kong.String("service-1"),
+							Name: new("service-1"),
+							ID:   new("service-1"),
 						},
 					},
 				},
@@ -83,18 +83,18 @@ func TestRefillPluginIDs(t *testing.T) {
 			targetState: mustNewKongStateFromRawState(t, &deckutils.KongRawState{
 				Services: []*kong.Service{
 					{
-						Name: kong.String("service-2"),
-						ID:   kong.String("service-2"),
-						Host: kong.String("kong.test"),
+						Name: new("service-2"),
+						ID:   new("service-2"),
+						Host: new("kong.test"),
 					},
 				},
 				Plugins: []*kong.Plugin{
 					{
-						Name: kong.String("request-transformer"),
-						ID:   kong.String("plugin-2"),
+						Name: new("request-transformer"),
+						ID:   new("plugin-2"),
 						Service: &kong.Service{
-							Name: kong.String("service-2"),
-							ID:   kong.String("service-2"),
+							Name: new("service-2"),
+							ID:   new("service-2"),
 						},
 					},
 				},
@@ -106,37 +106,37 @@ func TestRefillPluginIDs(t *testing.T) {
 			currentState: mustNewKongStateFromRawState(t, &deckutils.KongRawState{
 				Services: []*kong.Service{
 					{
-						Name: kong.String("service-1"),
-						ID:   kong.String("service-1"),
-						Host: kong.String("kong.test"),
+						Name: new("service-1"),
+						ID:   new("service-1"),
+						Host: new("kong.test"),
 					},
 				},
 				Routes: []*kong.Route{
 					{
-						Name:  kong.String("route-1"),
-						ID:    kong.String("route-1"),
-						Paths: []*string{kong.String("/")},
+						Name:  new("route-1"),
+						ID:    new("route-1"),
+						Paths: []*string{new("/")},
 						Service: &kong.Service{
-							Name: kong.String("service-1"),
-							ID:   kong.String("service-1"),
+							Name: new("service-1"),
+							ID:   new("service-1"),
 						},
 					},
 				},
 				Consumers: []*kong.Consumer{
 					{
-						Username: kong.String("consumer-1"),
-						ID:       kong.String("consumer-1"),
+						Username: new("consumer-1"),
+						ID:       new("consumer-1"),
 					},
 				},
 				Plugins: []*kong.Plugin{
 					{
-						Name: kong.String("request-transformer"),
-						ID:   kong.String("plugin-1"),
+						Name: new("request-transformer"),
+						ID:   new("plugin-1"),
 						Consumer: &kong.Consumer{
-							ID: kong.String("consumer-1"),
+							ID: new("consumer-1"),
 						},
 						Route: &kong.Route{
-							ID: kong.String("route-1"),
+							ID: new("route-1"),
 						},
 					},
 				},
@@ -144,37 +144,37 @@ func TestRefillPluginIDs(t *testing.T) {
 			targetState: mustNewKongStateFromRawState(t, &deckutils.KongRawState{
 				Services: []*kong.Service{
 					{
-						Name: kong.String("service-1"),
-						ID:   kong.String("service-1"),
-						Host: kong.String("kong.test"),
+						Name: new("service-1"),
+						ID:   new("service-1"),
+						Host: new("kong.test"),
 					},
 				},
 				Routes: []*kong.Route{
 					{
-						Name:  kong.String("route-1"),
-						ID:    kong.String("route-1"),
-						Paths: []*string{kong.String("/")},
+						Name:  new("route-1"),
+						ID:    new("route-1"),
+						Paths: []*string{new("/")},
 						Service: &kong.Service{
-							Name: kong.String("service-1"),
-							ID:   kong.String("service-1"),
+							Name: new("service-1"),
+							ID:   new("service-1"),
 						},
 					},
 				},
 				Consumers: []*kong.Consumer{
 					{
-						Username: kong.String("consumer-1"),
-						ID:       kong.String("consumer-1"),
+						Username: new("consumer-1"),
+						ID:       new("consumer-1"),
 					},
 				},
 				Plugins: []*kong.Plugin{
 					{
-						Name: kong.String("request-transformer"),
-						ID:   kong.String("plugin-2"),
+						Name: new("request-transformer"),
+						ID:   new("plugin-2"),
 						Consumer: &kong.Consumer{
-							ID: kong.String("consumer-1"),
+							ID: new("consumer-1"),
 						},
 						Route: &kong.Route{
-							ID: kong.String("route-1"),
+							ID: new("route-1"),
 						},
 					},
 				},
@@ -186,37 +186,37 @@ func TestRefillPluginIDs(t *testing.T) {
 			currentState: mustNewKongStateFromRawState(t, &deckutils.KongRawState{
 				Services: []*kong.Service{
 					{
-						Name: kong.String("service-1"),
-						ID:   kong.String("service-1"),
-						Host: kong.String("kong.test"),
+						Name: new("service-1"),
+						ID:   new("service-1"),
+						Host: new("kong.test"),
 					},
 				},
 				Routes: []*kong.Route{
 					{
-						Name:  kong.String("route-1"),
-						ID:    kong.String("route-1"),
-						Paths: []*string{kong.String("/")},
+						Name:  new("route-1"),
+						ID:    new("route-1"),
+						Paths: []*string{new("/")},
 						Service: &kong.Service{
-							Name: kong.String("service-1"),
-							ID:   kong.String("service-1"),
+							Name: new("service-1"),
+							ID:   new("service-1"),
 						},
 					},
 				},
 				Consumers: []*kong.Consumer{
 					{
-						Username: kong.String("consumer-1"),
-						ID:       kong.String("consumer-1"),
+						Username: new("consumer-1"),
+						ID:       new("consumer-1"),
 					},
 				},
 				Plugins: []*kong.Plugin{
 					{
-						Name: kong.String("request-transformer"),
-						ID:   kong.String("plugin-1"),
+						Name: new("request-transformer"),
+						ID:   new("plugin-1"),
 						Consumer: &kong.Consumer{
-							ID: kong.String("consumer-1"),
+							ID: new("consumer-1"),
 						},
 						Route: &kong.Route{
-							ID: kong.String("route-1"),
+							ID: new("route-1"),
 						},
 					},
 				},
@@ -224,37 +224,37 @@ func TestRefillPluginIDs(t *testing.T) {
 			targetState: mustNewKongStateFromRawState(t, &deckutils.KongRawState{
 				Services: []*kong.Service{
 					{
-						Name: kong.String("service-1"),
-						ID:   kong.String("service-1"),
-						Host: kong.String("kong.test"),
+						Name: new("service-1"),
+						ID:   new("service-1"),
+						Host: new("kong.test"),
 					},
 				},
 				Routes: []*kong.Route{
 					{
-						Name:  kong.String("route-1"),
-						ID:    kong.String("route-1"),
-						Paths: []*string{kong.String("/")},
+						Name:  new("route-1"),
+						ID:    new("route-1"),
+						Paths: []*string{new("/")},
 						Service: &kong.Service{
-							Name: kong.String("service-1"),
-							ID:   kong.String("service-1"),
+							Name: new("service-1"),
+							ID:   new("service-1"),
 						},
 					},
 				},
 				Consumers: []*kong.Consumer{
 					{
-						Username: kong.String("consumer-2"),
-						ID:       kong.String("consumer-2"),
+						Username: new("consumer-2"),
+						ID:       new("consumer-2"),
 					},
 				},
 				Plugins: []*kong.Plugin{
 					{
-						Name: kong.String("request-transformer"),
-						ID:   kong.String("plugin-2"),
+						Name: new("request-transformer"),
+						ID:   new("plugin-2"),
 						Consumer: &kong.Consumer{
-							ID: kong.String("consumer-2"),
+							ID: new("consumer-2"),
 						},
 						Route: &kong.Route{
-							ID: kong.String("route-1"),
+							ID: new("route-1"),
 						},
 					},
 				},

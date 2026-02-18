@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -756,7 +755,7 @@ func TestHTTPRouteConverter_UpdateRootObjectStatus(t *testing.T) {
 			setup: func() (*httpRouteConverter, *gwtypes.HTTPRoute) {
 				route := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{newBackendRef("")}, nil)
 				gateway := baseGateway()
-				orphanParent := gwtypes.ParentReference{Name: "orphan", Group: lo.ToPtr(gwtypes.Group(gwtypes.GroupName)), Kind: lo.ToPtr(gwtypes.Kind("Gateway"))}
+				orphanParent := gwtypes.ParentReference{Name: "orphan", Group: new(gwtypes.Group(gwtypes.GroupName)), Kind: new(gwtypes.Kind("Gateway"))}
 				route.Status.Parents = []gwtypes.RouteParentStatus{
 					{
 						ParentRef:      orphanParent,
@@ -924,8 +923,8 @@ func TestHTTPRouteConverter_GetHostnamesByParentRef(t *testing.T) {
 					Name:        "test-gateway",
 					SectionName: &sectionName,
 					Port:        &port,
-					Group:       lo.ToPtr(gwtypes.Group(gwtypes.GroupName)),
-					Kind:        lo.ToPtr(gwtypes.Kind("Gateway")),
+					Group:       new(gwtypes.Group(gwtypes.GroupName)),
+					Kind:        new(gwtypes.Kind("Gateway")),
 				}
 				return converter, pRef
 			},
@@ -946,8 +945,8 @@ func TestHTTPRouteConverter_GetHostnamesByParentRef(t *testing.T) {
 					Name:        "test-gateway",
 					SectionName: &sectionName,
 					Port:        &port,
-					Group:       lo.ToPtr(gwtypes.Group(gwtypes.GroupName)),
-					Kind:        lo.ToPtr(gwtypes.Kind("Gateway")),
+					Group:       new(gwtypes.Group(gwtypes.GroupName)),
+					Kind:        new(gwtypes.Kind("Gateway")),
 				}
 				return converter, pRef
 			},
@@ -968,8 +967,8 @@ func TestHTTPRouteConverter_GetHostnamesByParentRef(t *testing.T) {
 					Name:        "test-gateway",
 					SectionName: &sectionName,
 					Port:        &port,
-					Group:       lo.ToPtr(gwtypes.Group(gwtypes.GroupName)),
-					Kind:        lo.ToPtr(gwtypes.Kind("Gateway")),
+					Group:       new(gwtypes.Group(gwtypes.GroupName)),
+					Kind:        new(gwtypes.Kind("Gateway")),
 				}
 				return converter, pRef
 			},
@@ -988,8 +987,8 @@ func TestHTTPRouteConverter_GetHostnamesByParentRef(t *testing.T) {
 				pRef := gwtypes.ParentReference{
 					Name:  "test-gateway",
 					Port:  &port,
-					Group: lo.ToPtr(gwtypes.Group(gwtypes.GroupName)),
-					Kind:  lo.ToPtr(gwtypes.Kind("Gateway")),
+					Group: new(gwtypes.Group(gwtypes.GroupName)),
+					Kind:  new(gwtypes.Kind("Gateway")),
 				}
 				return converter, pRef
 			},
@@ -1008,8 +1007,8 @@ func TestHTTPRouteConverter_GetHostnamesByParentRef(t *testing.T) {
 				pRef := gwtypes.ParentReference{
 					Name:  "test-gateway",
 					Port:  &port,
-					Group: lo.ToPtr(gwtypes.Group(gwtypes.GroupName)),
-					Kind:  lo.ToPtr(gwtypes.Kind("Gateway")),
+					Group: new(gwtypes.Group(gwtypes.GroupName)),
+					Kind:  new(gwtypes.Kind("Gateway")),
 				}
 				return converter, pRef
 			},
@@ -1035,8 +1034,8 @@ func TestHTTPRouteConverter_GetHostnamesByParentRef(t *testing.T) {
 				pRef := gwtypes.ParentReference{
 					Name:  "test-gateway",
 					Port:  &port,
-					Group: lo.ToPtr(gwtypes.Group(gwtypes.GroupName)),
-					Kind:  lo.ToPtr(gwtypes.Kind("Gateway")),
+					Group: new(gwtypes.Group(gwtypes.GroupName)),
+					Kind:  new(gwtypes.Kind("Gateway")),
 				}
 				return converter, pRef
 			},
@@ -1118,8 +1117,8 @@ func newHTTPRouteForTranslation(hostnames []string, backendRefs []gwtypes.HTTPBa
 					Matches: []gwtypes.HTTPRouteMatch{
 						{
 							Path: &gatewayv1.HTTPPathMatch{
-								Type:  lo.ToPtr(gatewayv1.PathMatchPathPrefix),
-								Value: lo.ToPtr("/"),
+								Type:  new(gatewayv1.PathMatchPathPrefix),
+								Value: new("/"),
 							},
 						},
 					},
@@ -1131,8 +1130,8 @@ func newHTTPRouteForTranslation(hostnames []string, backendRefs []gwtypes.HTTPBa
 				ParentRefs: []gwtypes.ParentReference{
 					{
 						Name:  "test-gateway",
-						Kind:  lo.ToPtr(gwtypes.Kind("Gateway")),
-						Group: lo.ToPtr(gwtypes.Group(gwtypes.GroupName)),
+						Kind:  new(gwtypes.Kind("Gateway")),
+						Group: new(gwtypes.Group(gwtypes.GroupName)),
 					},
 				},
 			},
@@ -1149,7 +1148,7 @@ func newBackendRef(namespace string) gwtypes.HTTPBackendRef {
 				Name:  "backend-service",
 				Kind:  &serviceKind,
 				Group: &serviceGroup,
-				Port:  lo.ToPtr(gwtypes.PortNumber(80)),
+				Port:  new(gwtypes.PortNumber(80)),
 			},
 		},
 	}
@@ -1218,8 +1217,8 @@ func newEndpointSlice(serviceName, namespace string, port int32, addresses []str
 		},
 		Ports: []discoveryv1.EndpointPort{
 			{
-				Name:     ptr.To("http"),
-				Port:     ptr.To(port),
+				Name:     new("http"),
+				Port:     new(port),
 				Protocol: ptr.To(corev1.ProtocolTCP),
 			},
 		},
@@ -1227,7 +1226,7 @@ func newEndpointSlice(serviceName, namespace string, port int32, addresses []str
 			{
 				Addresses: addresses,
 				Conditions: discoveryv1.EndpointConditions{
-					Ready: ptr.To(true),
+					Ready: new(true),
 				},
 			},
 		},

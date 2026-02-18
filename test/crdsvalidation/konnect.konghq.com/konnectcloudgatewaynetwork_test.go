@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/samber/lo"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -144,7 +143,7 @@ func fieldMutabilityBasedOnProgrammedTest(
 				},
 			},
 			Update: update,
-			ExpectedUpdateErrorMessage: lo.ToPtr(
+			ExpectedUpdateErrorMessage: new(
 				fmt.Sprintf("spec.%s is immutable when an entity is already Programmed", field),
 			),
 		},

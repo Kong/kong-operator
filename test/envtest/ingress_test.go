@@ -15,7 +15,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
@@ -101,8 +100,8 @@ func TestIngressWorksWithServiceBackendsSpecifyingOnlyPortNames(t *testing.T) {
 			{
 				Addresses: []string{"10.0.0.1"},
 				Conditions: discoveryv1.EndpointConditions{
-					Ready:       lo.ToPtr(true),
-					Terminating: lo.ToPtr(false),
+					Ready:       new(true),
+					Terminating: new(false),
 				},
 				TargetRef: testPodReference("pod-1", ns.Name),
 			},
@@ -120,7 +119,7 @@ func TestIngressWorksWithServiceBackendsSpecifyingOnlyPortNames(t *testing.T) {
 			},
 		},
 		Spec: netv1.IngressSpec{
-			IngressClassName: lo.ToPtr(ingressClassName),
+			IngressClassName: new(ingressClassName),
 			Rules: []netv1.IngressRule{
 				{
 					IngressRuleValue: netv1.IngressRuleValue{
@@ -128,7 +127,7 @@ func TestIngressWorksWithServiceBackendsSpecifyingOnlyPortNames(t *testing.T) {
 							Paths: []netv1.HTTPIngressPath{
 								{
 									Path:     "/",
-									PathType: lo.ToPtr(netv1.PathTypePrefix),
+									PathType: new(netv1.PathTypePrefix),
 									Backend: netv1.IngressBackend{
 										Service: &netv1.IngressServiceBackend{
 											Name: service.Name,

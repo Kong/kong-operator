@@ -170,14 +170,14 @@ func translateIngressDefaultBackendResource(
 	serviceName := fmt.Sprintf("%s.%s.svc.facade", ingress.Namespace, resource.Name)
 	return kongstate.Service{
 		Service: kong.Service{
-			Name:           kong.String(serviceName),
-			Host:           kong.String(serviceName),
-			Port:           kong.Int(DefaultHTTPPort),
-			Protocol:       kong.String("http"),
-			ConnectTimeout: kong.Int(DefaultServiceTimeout),
-			ReadTimeout:    kong.Int(DefaultServiceTimeout),
-			WriteTimeout:   kong.Int(DefaultServiceTimeout),
-			Retries:        kong.Int(DefaultRetries),
+			Name:           new(serviceName),
+			Host:           new(serviceName),
+			Port:           new(DefaultHTTPPort),
+			Protocol:       new("http"),
+			ConnectTimeout: new(DefaultServiceTimeout),
+			ReadTimeout:    new(DefaultServiceTimeout),
+			WriteTimeout:   new(DefaultServiceTimeout),
+			Retries:        new(DefaultRetries),
 			// We do not populate Service's Tags field here because it would get overridden anyway later in the
 			// Translator pipeline (see ingressRules.generateKongServiceTags).
 		},
@@ -215,19 +215,19 @@ func translateIngressDefaultBackendService(
 
 	return kongstate.Service{
 		Service: kong.Service{
-			Name: kong.String(serviceName),
-			Host: kong.String(fmt.Sprintf(
+			Name: new(serviceName),
+			Host: new(fmt.Sprintf(
 				"%s.%s.%s.svc",
 				defaultBackend.Service.Name,
 				ingress.Namespace,
 				port.CanonicalString(),
 			)),
-			Port:           kong.Int(DefaultHTTPPort),
-			Protocol:       kong.String("http"),
-			ConnectTimeout: kong.Int(DefaultServiceTimeout),
-			ReadTimeout:    kong.Int(DefaultServiceTimeout),
-			WriteTimeout:   kong.Int(DefaultServiceTimeout),
-			Retries:        kong.Int(DefaultRetries),
+			Port:           new(DefaultHTTPPort),
+			Protocol:       new("http"),
+			ConnectTimeout: new(DefaultServiceTimeout),
+			ReadTimeout:    new(DefaultServiceTimeout),
+			WriteTimeout:   new(DefaultServiceTimeout),
+			Retries:        new(DefaultRetries),
 			// We do not populate Service's Tags field here because it would get overridden anyway later in the
 			// Translator pipeline (see ingressRules.generateKongServiceTags).
 		},
@@ -244,11 +244,11 @@ func translateIngressDefaultBackendRoute(ingress *netv1.Ingress, tags []*string,
 	r := &kongstate.Route{
 		Ingress: util.FromK8sObject(ingress),
 		Route: kong.Route{
-			Name:              kong.String(ingress.Namespace + "." + ingress.Name),
-			StripPath:         kong.Bool(false),
-			PreserveHost:      kong.Bool(true),
-			RequestBuffering:  kong.Bool(true),
-			ResponseBuffering: kong.Bool(true),
+			Name:              new(ingress.Namespace + "." + ingress.Name),
+			StripPath:         new(false),
+			PreserveHost:      new(true),
+			RequestBuffering:  new(true),
+			ResponseBuffering: new(true),
 			Tags:              tags,
 		},
 		ExpressionRoutes: expressionRoutes,
@@ -263,7 +263,7 @@ func translateIngressDefaultBackendRoute(ingress *netv1.Ingress, tags []*string,
 	} else {
 		r.Paths = kong.StringSlice("/")
 		r.Protocols = kong.StringSlice("http", "https")
-		r.RegexPriority = kong.Int(0)
+		r.RegexPriority = new(0)
 	}
 	return r
 }

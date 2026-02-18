@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -170,16 +169,16 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 						Namespace: ns.Name,
 					},
 					Spec: netv1.IngressSpec{
-						IngressClassName: lo.ToPtr(annotations.DefaultIngressClass),
+						IngressClassName: new(annotations.DefaultIngressClass),
 						Rules: []netv1.IngressRule{{
 							IngressRuleValue: netv1.IngressRuleValue{
 								HTTP: &netv1.HTTPIngressRuleValue{
 									Paths: []netv1.HTTPIngressPath{{
 										Path:     "/",
-										PathType: lo.ToPtr(netv1.PathTypeImplementationSpecific),
+										PathType: new(netv1.PathTypeImplementationSpecific),
 										Backend: netv1.IngressBackend{
 											Resource: &corev1.TypedLocalObjectReference{
-												APIGroup: lo.ToPtr(incubatorv1alpha1.SchemeGroupVersion.Group),
+												APIGroup: new(incubatorv1alpha1.SchemeGroupVersion.Group),
 												Kind:     incubatorv1alpha1.KongServiceFacadeKind,
 												Name:     "svc-facade",
 											},
@@ -229,16 +228,16 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 						Namespace: ns.Name,
 					},
 					Spec: netv1.IngressSpec{
-						IngressClassName: lo.ToPtr(annotations.DefaultIngressClass),
+						IngressClassName: new(annotations.DefaultIngressClass),
 						Rules: []netv1.IngressRule{{
 							IngressRuleValue: netv1.IngressRuleValue{
 								HTTP: &netv1.HTTPIngressRuleValue{
 									Paths: []netv1.HTTPIngressPath{{
 										Path:     "/",
-										PathType: lo.ToPtr(netv1.PathTypeImplementationSpecific),
+										PathType: new(netv1.PathTypeImplementationSpecific),
 										Backend: netv1.IngressBackend{
 											Resource: &corev1.TypedLocalObjectReference{
-												APIGroup: lo.ToPtr(incubatorv1alpha1.SchemeGroupVersion.Group),
+												APIGroup: new(incubatorv1alpha1.SchemeGroupVersion.Group),
 												Kind:     incubatorv1alpha1.KongServiceFacadeKind,
 												Name:     "svc-facade-with-non-existent-service",
 											},

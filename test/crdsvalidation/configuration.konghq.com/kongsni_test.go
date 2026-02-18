@@ -34,7 +34,7 @@ func TestKongSNI(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.certificateRef.name: Required value, <nil>: Invalid value:"),
+				ExpectedErrorMessage: new("spec.certificateRef.name: Required value, <nil>: Invalid value:"),
 			},
 			{
 				Name: "certificate ref can be changed before programmed",
@@ -84,7 +84,7 @@ func TestKongSNI(t *testing.T) {
 						Name: "cert-2",
 					}
 				},
-				ExpectedUpdateErrorMessage: lo.ToPtr("spec.certificateRef is immutable when programmed"),
+				ExpectedUpdateErrorMessage: new("spec.certificateRef is immutable when programmed"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -102,7 +102,7 @@ func TestKongSNI(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.name in body should be at least 1 chars long"),
+				ExpectedErrorMessage: new("spec.name in body should be at least 1 chars long"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -151,7 +151,7 @@ func TestKongSNI(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.tags: Too many: 21: must have at most 20 items"),
+				ExpectedErrorMessage: new("spec.tags: Too many: 21: must have at most 20 items"),
 			},
 			{
 				Name: "tags entries must not be longer than 128 characters",
@@ -169,7 +169,7 @@ func TestKongSNI(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("tags entries must not be longer than 128 characters"),
+				ExpectedErrorMessage: new("tags entries must not be longer than 128 characters"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)

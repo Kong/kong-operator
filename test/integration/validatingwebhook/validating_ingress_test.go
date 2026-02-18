@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -120,7 +119,7 @@ func constructIngressRuleWithPathsImplSpecific(host string, paths ...string) net
 			pathsToSet,
 			netv1.HTTPIngressPath{
 				Path:     path,
-				PathType: lo.ToPtr(netv1.PathTypeImplementationSpecific),
+				PathType: new(netv1.PathTypeImplementationSpecific),
 				Backend: netv1.IngressBackend{
 					Service: &netv1.IngressServiceBackend{
 						Name: "foo",

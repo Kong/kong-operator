@@ -69,8 +69,8 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 	).Return(&sdkkonnectops.CreateDataplaneCertificateResponse{
 		DataPlaneClientCertificateResponse: &sdkkonnectcomp.DataPlaneClientCertificateResponse{
 			Item: &sdkkonnectcomp.DataPlaneClientCertificate{
-				ID:   lo.ToPtr(dpCertID),
-				Cert: lo.ToPtr(deploy.TestValidCACertPEM),
+				ID:   new(dpCertID),
+				Cert: new(deploy.TestValidCACertPEM),
 			},
 		},
 	}, nil)
@@ -128,7 +128,7 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 				&sdkkonnectops.CreateDataplaneCertificateResponse{
 					DataPlaneClientCertificateResponse: &sdkkonnectcomp.DataPlaneClientCertificateResponse{
 						Item: &sdkkonnectcomp.DataPlaneClientCertificate{
-							ID: lo.ToPtr(id),
+							ID: new(id),
 						},
 					},
 				},
@@ -166,8 +166,8 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 		).Return(&sdkkonnectops.GetDataplaneCertificateResponse{
 			DataPlaneClientCertificateResponse: &sdkkonnectcomp.DataPlaneClientCertificateResponse{
 				Item: &sdkkonnectcomp.DataPlaneClientCertificate{
-					ID:   lo.ToPtr(dpCertID),
-					Cert: lo.ToPtr(deploy.TestValidCertPEM),
+					ID:   new(dpCertID),
+					Cert: new(deploy.TestValidCertPEM),
 				},
 			},
 		}, nil)
@@ -237,7 +237,7 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 				&sdkkonnectops.CreateDataplaneCertificateResponse{
 					DataPlaneClientCertificateResponse: &sdkkonnectcomp.DataPlaneClientCertificateResponse{
 						Item: &sdkkonnectcomp.DataPlaneClientCertificate{
-							ID: lo.ToPtr(id),
+							ID: new(id),
 						},
 					},
 				},

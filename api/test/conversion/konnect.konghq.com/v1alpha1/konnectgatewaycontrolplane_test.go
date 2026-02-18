@@ -38,18 +38,18 @@ func TestKonnectGatewayControlPlane_ConvertTo(t *testing.T) {
 			name: "Origin with all fields",
 			spec: v1alpha1.KonnectGatewayControlPlaneSpec{
 				CreateControlPlaneRequest: v1alpha1.CreateControlPlaneRequest{
-					Name:         lo.ToPtr("test-name"),
-					Description:  lo.ToPtr("desc"),
-					ClusterType:  lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane),
-					AuthType:     lo.ToPtr(sdkkonnectcomp.AuthTypePkiClientCerts),
-					CloudGateway: lo.ToPtr(true),
+					Name:         new("test-name"),
+					Description:  new("desc"),
+					ClusterType:  new(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane),
+					AuthType:     new(sdkkonnectcomp.AuthTypePkiClientCerts),
+					CloudGateway: new(true),
 					ProxyUrls: []sdkkonnectcomp.ProxyURL{
 						{Host: "host1", Port: 8080, Protocol: "http"},
 						{Host: "host2", Port: 8443, Protocol: "https"},
 					},
 					Labels: map[string]string{"foo": "bar"},
 				},
-				Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+				Source: new(commonv1alpha1.EntitySourceOrigin),
 				Members: []corev1.LocalObjectReference{
 					{Name: "member1"},
 					{Name: "member2"},
@@ -62,7 +62,7 @@ func TestKonnectGatewayControlPlane_ConvertTo(t *testing.T) {
 		{
 			name: "Mirror with MirrorSpec",
 			spec: v1alpha1.KonnectGatewayControlPlaneSpec{
-				Source: lo.ToPtr(commonv1alpha1.EntitySourceMirror),
+				Source: new(commonv1alpha1.EntitySourceMirror),
 			},
 			mirror:           &v1alpha1.MirrorSpec{Konnect: v1alpha1.MirrorKonnect{ID: commonv1alpha1.KonnectIDType("mirror-id")}},
 			expectsCreateReq: false,
@@ -148,7 +148,7 @@ func TestKonnectGatewayControlPlane_ConvertFrom(t *testing.T) {
 					ProxyUrls:    proxyUrls,
 					Labels:       labels,
 				},
-				Source:               lo.ToPtr(source),
+				Source:               new(source),
 				Members:              members,
 				KonnectConfiguration: konnectConfig,
 			},
@@ -158,7 +158,7 @@ func TestKonnectGatewayControlPlane_ConvertFrom(t *testing.T) {
 		{
 			name: "No CreateControlPlaneRequest, no Mirror",
 			src: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
-				Source: lo.ToPtr(source),
+				Source: new(source),
 			},
 			mirror:           nil,
 			expectsCreateReq: false,
@@ -186,7 +186,7 @@ func TestKonnectGatewayControlPlane_ConvertFrom(t *testing.T) {
 			require.NoError(t, obj.ConvertFrom(src))
 			if tc.expectsCreateReq {
 				require.NotNil(t, obj.Spec.CreateControlPlaneRequest)
-				assert.Equal(t, lo.ToPtr(tc.src.CreateControlPlaneRequest.Name), obj.Spec.Name)
+				assert.Equal(t, new(tc.src.CreateControlPlaneRequest.Name), obj.Spec.Name)
 				assert.Equal(t, tc.src.CreateControlPlaneRequest.Description, obj.Spec.Description)
 				assert.Equal(t, tc.src.CreateControlPlaneRequest.ClusterType, obj.Spec.ClusterType)
 				assert.Equal(t, tc.src.CreateControlPlaneRequest.AuthType, obj.Spec.AuthType)

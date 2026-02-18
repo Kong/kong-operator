@@ -22,7 +22,7 @@ func TestIsContentEmpty(t *testing.T) {
 				Upstreams: []file.FUpstream{
 					{
 						Upstream: kong.Upstream{
-							Name: kong.String("test"),
+							Name: new("test"),
 						},
 					},
 				},

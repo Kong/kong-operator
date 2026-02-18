@@ -4,7 +4,6 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -87,7 +86,7 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 								Kind:  konnectv1alpha2.KonnectExtensionKind,
 								NamespacedRef: commonv1alpha1.NamespacedRef{
 									Name:      "konnect-ext",
-									Namespace: lo.ToPtr("other"),
+									Namespace: new("other"),
 								},
 							},
 						},

@@ -119,9 +119,9 @@ func (t *Translator) getGatewayCerts() []certWrapper {
 					certs = append(certs, certWrapper{
 						identifier: cert + key,
 						cert: kong.Certificate{
-							ID:   kong.String(string(secret.UID)),
-							Cert: kong.String(cert),
-							Key:  kong.String(key),
+							ID:   new(string(secret.UID)),
+							Cert: new(cert),
+							Key:  new(key),
 							Tags: util.GenerateTagsForObject(secret),
 						},
 						CreationTimestamp: secret.CreationTimestamp,
@@ -153,9 +153,9 @@ func (t *Translator) getCerts(secretsToSNIs SecretNameToSNIs) []certWrapper {
 		certs = append(certs, certWrapper{
 			identifier: cert + key,
 			cert: kong.Certificate{
-				ID:   kong.String(string(secret.UID)),
-				Cert: kong.String(cert),
-				Key:  kong.String(key),
+				ID:   new(string(secret.UID)),
+				Cert: new(cert),
+				Key:  new(key),
 				Tags: util.GenerateTagsForObject(secret),
 			},
 			CreationTimestamp: secret.CreationTimestamp,
@@ -203,7 +203,7 @@ func mergeCerts(logger logr.Logger, certLists ...[]certWrapper) ([]kongstate.Cer
 			for _, sni := range cw.snis {
 				if seen, ok := snisSeen[sni]; !ok {
 					snisSeen[sni] = *current.cert.ID
-					current.cert.SNIs = append(current.cert.SNIs, kong.String(sni))
+					current.cert.SNIs = append(current.cert.SNIs, new(sni))
 				} else if seen != *current.cert.ID {
 					// TODO this should really log information about the requesting Listener or Ingress-like, which is
 					// what binds the SNI to a given Secret. Knowing the Secret ID isn't of great use beyond knowing

@@ -3,7 +3,6 @@ package store
 import (
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -701,7 +700,7 @@ func TestFakeStore_KongUpstreamPolicy(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: configurationv1beta1.KongUpstreamPolicySpec{
-					Algorithm: lo.ToPtr("least-connections"),
+					Algorithm: new("least-connections"),
 				},
 			},
 		},

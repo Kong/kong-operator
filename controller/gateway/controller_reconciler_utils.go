@@ -293,13 +293,13 @@ func gatewayAddressesFromService(svc corev1.Service) ([]gwtypes.GatewayStatusAdd
 			if serviceAddr.IP != "" {
 				addresses = append(addresses, gwtypes.GatewayStatusAddress{
 					Value: serviceAddr.IP,
-					Type:  lo.ToPtr(gatewayv1.IPAddressType),
+					Type:  new(gatewayv1.IPAddressType),
 				})
 			}
 			if serviceAddr.Hostname != "" {
 				addresses = append(addresses, gwtypes.GatewayStatusAddress{
 					Value: serviceAddr.Hostname,
-					Type:  lo.ToPtr(gatewayv1.HostnameAddressType),
+					Type:  new(gatewayv1.HostnameAddressType),
 				})
 			}
 		}
@@ -311,7 +311,7 @@ func gatewayAddressesFromService(svc corev1.Service) ([]gwtypes.GatewayStatusAdd
 		}
 		addresses = append(addresses, gwtypes.GatewayStatusAddress{
 			Value: svc.Spec.ClusterIP,
-			Type:  lo.ToPtr(gatewayv1.IPAddressType),
+			Type:  new(gatewayv1.IPAddressType),
 		})
 	}
 	sort.SliceStable(addresses, func(i, j int) bool {

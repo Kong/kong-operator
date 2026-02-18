@@ -7,7 +7,6 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/Kong/sdk-konnect-go/test/mocks"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -30,7 +29,7 @@ func TestAdoptKongSNIOverride(t *testing.T) {
 			Sni: &sdkkonnectcomp.Sni{
 				Name: "example.com",
 				Certificate: sdkkonnectcomp.SNICertificate{
-					ID: lo.ToPtr("cert-1"),
+					ID: new("cert-1"),
 				},
 			},
 		},
@@ -82,7 +81,7 @@ func TestAdoptKongSNIMatchSuccess(t *testing.T) {
 			Sni: &sdkkonnectcomp.Sni{
 				Name: "example.com",
 				Certificate: sdkkonnectcomp.SNICertificate{
-					ID: lo.ToPtr("cert-1"),
+					ID: new("cert-1"),
 				},
 			},
 		},
@@ -128,7 +127,7 @@ func TestAdoptKongSNIMatchMismatch(t *testing.T) {
 			Sni: &sdkkonnectcomp.Sni{
 				Name: "different.com",
 				Certificate: sdkkonnectcomp.SNICertificate{
-					ID: lo.ToPtr("cert-1"),
+					ID: new("cert-1"),
 				},
 			},
 		},
@@ -177,7 +176,7 @@ func TestAdoptKongSNIUIDConflict(t *testing.T) {
 				Name: "example.com",
 				Tags: []string{"k8s-uid:other-uid"},
 				Certificate: sdkkonnectcomp.SNICertificate{
-					ID: lo.ToPtr("cert-1"),
+					ID: new("cert-1"),
 				},
 			},
 		},

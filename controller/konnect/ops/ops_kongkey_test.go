@@ -8,7 +8,6 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/Kong/sdk-konnect-go/test/mocks"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -46,8 +45,8 @@ func TestKongKeyToKeyInput(t *testing.T) {
 				Spec: configurationv1alpha1.KongKeySpec{
 					KongKeyAPISpec: configurationv1alpha1.KongKeyAPISpec{
 						KID:  "kid",
-						Name: lo.ToPtr("name"),
-						JWK:  lo.ToPtr("jwk"),
+						Name: new("name"),
+						JWK:  new("jwk"),
 						PEM: &configurationv1alpha1.PEMKeyPair{
 							PublicKey:  "public",
 							PrivateKey: "private",
@@ -58,11 +57,11 @@ func TestKongKeyToKeyInput(t *testing.T) {
 			},
 			expectedOutput: sdkkonnectcomp.Key{
 				Kid:  "kid",
-				Name: lo.ToPtr("name"),
-				Jwk:  lo.ToPtr("jwk"),
+				Name: new("name"),
+				Jwk:  new("jwk"),
 				Pem: &sdkkonnectcomp.Pem{
-					PublicKey:  lo.ToPtr("public"),
-					PrivateKey: lo.ToPtr("private"),
+					PublicKey:  new("public"),
+					PrivateKey: new("private"),
 				},
 				Tags: []string{
 					"duplicate",
@@ -99,8 +98,8 @@ func TestKongKeyToKeyInput(t *testing.T) {
 				Spec: configurationv1alpha1.KongKeySpec{
 					KongKeyAPISpec: configurationv1alpha1.KongKeyAPISpec{
 						KID:  "kid",
-						Name: lo.ToPtr("name"),
-						JWK:  lo.ToPtr("jwk"),
+						Name: new("name"),
+						JWK:  new("jwk"),
 						PEM: &configurationv1alpha1.PEMKeyPair{
 							PublicKey:  "public",
 							PrivateKey: "private",
@@ -116,14 +115,14 @@ func TestKongKeyToKeyInput(t *testing.T) {
 			},
 			expectedOutput: sdkkonnectcomp.Key{
 				Kid:  "kid",
-				Name: lo.ToPtr("name"),
-				Jwk:  lo.ToPtr("jwk"),
+				Name: new("name"),
+				Jwk:  new("jwk"),
 				Pem: &sdkkonnectcomp.Pem{
-					PublicKey:  lo.ToPtr("public"),
-					PrivateKey: lo.ToPtr("private"),
+					PublicKey:  new("public"),
+					PrivateKey: new("private"),
 				},
 				Set: &sdkkonnectcomp.Set{
-					ID: lo.ToPtr("key-set-id"),
+					ID: new("key-set-id"),
 				},
 				Tags: []string{
 					"duplicate",
@@ -169,9 +168,9 @@ func TestAdoptKongKeyOverride(t *testing.T) {
 				sdk.EXPECT().GetKey(mock.Anything, "konnect-key-id", "cp-1").Return(
 					&sdkkonnectops.GetKeyResponse{
 						Key: &sdkkonnectcomp.Key{
-							ID:  lo.ToPtr("konnect-key-id"),
+							ID:  new("konnect-key-id"),
 							Kid: "kid-1",
-							Jwk: lo.ToPtr("jwk-data"),
+							Jwk: new("jwk-data"),
 						},
 					},
 					nil,
@@ -196,7 +195,7 @@ func TestAdoptKongKeyOverride(t *testing.T) {
 						},
 						KongKeyAPISpec: configurationv1alpha1.KongKeyAPISpec{
 							KID: "kid-1",
-							JWK: lo.ToPtr("jwk-data"),
+							JWK: new("jwk-data"),
 						},
 					},
 					Status: configurationv1alpha1.KongKeyStatus{
@@ -236,7 +235,7 @@ func TestAdoptKongKeyOverride(t *testing.T) {
 						},
 						KongKeyAPISpec: configurationv1alpha1.KongKeyAPISpec{
 							KID: "kid-1",
-							JWK: lo.ToPtr("jwk-data"),
+							JWK: new("jwk-data"),
 						},
 					},
 					Status: configurationv1alpha1.KongKeyStatus{
@@ -262,7 +261,7 @@ func TestAdoptKongKeyOverride(t *testing.T) {
 					&sdkkonnectops.GetKeyResponse{
 						Key: &sdkkonnectcomp.Key{
 							Kid:  "kid-1",
-							Jwk:  lo.ToPtr("jwk-data"),
+							Jwk:  new("jwk-data"),
 							Tags: []string{"k8s-uid:different"},
 						},
 					},
@@ -285,7 +284,7 @@ func TestAdoptKongKeyOverride(t *testing.T) {
 						},
 						KongKeyAPISpec: configurationv1alpha1.KongKeyAPISpec{
 							KID: "kid-1",
-							JWK: lo.ToPtr("jwk-data"),
+							JWK: new("jwk-data"),
 						},
 					},
 					Status: configurationv1alpha1.KongKeyStatus{
@@ -335,12 +334,12 @@ func TestAdoptKongKeyMatch(t *testing.T) {
 				sdk.EXPECT().GetKey(mock.Anything, "konnect-key-id", "cp-1").Return(
 					&sdkkonnectops.GetKeyResponse{
 						Key: &sdkkonnectcomp.Key{
-							ID:   lo.ToPtr("konnect-key-id"),
+							ID:   new("konnect-key-id"),
 							Kid:  "kid-1",
-							Name: lo.ToPtr("my-key"),
-							Jwk:  lo.ToPtr("jwk-data"),
+							Name: new("my-key"),
+							Jwk:  new("jwk-data"),
 							Set: &sdkkonnectcomp.Set{
-								ID: lo.ToPtr("ks-1"),
+								ID: new("ks-1"),
 							},
 						},
 					},
@@ -369,8 +368,8 @@ func TestAdoptKongKeyMatch(t *testing.T) {
 						},
 						KongKeyAPISpec: configurationv1alpha1.KongKeyAPISpec{
 							KID:  "kid-1",
-							Name: lo.ToPtr("my-key"),
-							JWK:  lo.ToPtr("jwk-data"),
+							Name: new("my-key"),
+							JWK:  new("jwk-data"),
 						},
 					},
 					Status: configurationv1alpha1.KongKeyStatus{
@@ -394,9 +393,9 @@ func TestAdoptKongKeyMatch(t *testing.T) {
 				sdk.EXPECT().GetKey(mock.Anything, "konnect-key-id", "cp-1").Return(
 					&sdkkonnectops.GetKeyResponse{
 						Key: &sdkkonnectcomp.Key{
-							ID:  lo.ToPtr("konnect-key-id"),
+							ID:  new("konnect-key-id"),
 							Kid: "kid-1",
-							Jwk: lo.ToPtr("different"),
+							Jwk: new("different"),
 						},
 					},
 					nil,
@@ -418,7 +417,7 @@ func TestAdoptKongKeyMatch(t *testing.T) {
 						},
 						KongKeyAPISpec: configurationv1alpha1.KongKeyAPISpec{
 							KID: "kid-1",
-							JWK: lo.ToPtr("jwk-data"),
+							JWK: new("jwk-data"),
 						},
 					},
 					Status: configurationv1alpha1.KongKeyStatus{
@@ -441,11 +440,11 @@ func TestAdoptKongKeyMatch(t *testing.T) {
 				sdk.EXPECT().GetKey(mock.Anything, "konnect-key-id", "cp-1").Return(
 					&sdkkonnectops.GetKeyResponse{
 						Key: &sdkkonnectcomp.Key{
-							ID:  lo.ToPtr("konnect-key-id"),
+							ID:  new("konnect-key-id"),
 							Kid: "kid-1",
-							Jwk: lo.ToPtr("jwk-data"),
+							Jwk: new("jwk-data"),
 							Set: &sdkkonnectcomp.Set{
-								ID: lo.ToPtr("ks-different"),
+								ID: new("ks-different"),
 							},
 						},
 					},
@@ -474,7 +473,7 @@ func TestAdoptKongKeyMatch(t *testing.T) {
 						},
 						KongKeyAPISpec: configurationv1alpha1.KongKeyAPISpec{
 							KID: "kid-1",
-							JWK: lo.ToPtr("jwk-data"),
+							JWK: new("jwk-data"),
 						},
 					},
 					Status: configurationv1alpha1.KongKeyStatus{

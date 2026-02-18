@@ -1,7 +1,6 @@
 package builder
 
 import (
-	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
@@ -24,17 +23,17 @@ func (b *RouteNamespacesBuilder) Build() *gatewayapi.RouteNamespaces {
 }
 
 func (b *RouteNamespacesBuilder) FromSame() *RouteNamespacesBuilder {
-	b.routeNamespaces.From = lo.ToPtr(gatewayapi.NamespacesFromSame)
+	b.routeNamespaces.From = new(gatewayapi.NamespacesFromSame)
 	return b
 }
 
 func (b *RouteNamespacesBuilder) FromAll() *RouteNamespacesBuilder {
-	b.routeNamespaces.From = lo.ToPtr(gatewayapi.NamespacesFromAll)
+	b.routeNamespaces.From = new(gatewayapi.NamespacesFromAll)
 	return b
 }
 
 func (b *RouteNamespacesBuilder) FromSelector(s *metav1.LabelSelector) *RouteNamespacesBuilder {
-	b.routeNamespaces.From = lo.ToPtr(gatewayapi.NamespacesFromSelector)
+	b.routeNamespaces.From = new(gatewayapi.NamespacesFromSelector)
 	b.routeNamespaces.Selector = s
 	return b
 }

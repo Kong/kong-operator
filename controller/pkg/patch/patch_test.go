@@ -5,7 +5,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
@@ -61,7 +60,7 @@ func TestApplyPatchIfNonEmpty(t *testing.T) {
 													Name: "cpu",
 													Target: autoscalingv2.MetricTarget{
 														Type:               autoscalingv2.UtilizationMetricType,
-														AverageUtilization: lo.ToPtr(int32(20)),
+														AverageUtilization: new(int32(20)),
 													},
 												},
 											},
@@ -121,7 +120,7 @@ func TestApplyPatchIfNonEmpty(t *testing.T) {
 													Name: "cpu",
 													Target: autoscalingv2.MetricTarget{
 														Type:               autoscalingv2.UtilizationMetricType,
-														AverageUtilization: lo.ToPtr(int32(20)),
+														AverageUtilization: new(int32(20)),
 													},
 												},
 											},
@@ -149,7 +148,7 @@ func TestApplyPatchIfNonEmpty(t *testing.T) {
 				return hpa
 			},
 			changeHPAFunc: func(t *testing.T, hpa *autoscalingv2.HorizontalPodAutoscaler) {
-				hpa.Spec.MinReplicas = lo.ToPtr(int32(2))
+				hpa.Spec.MinReplicas = new(int32(2))
 			},
 			assertHPAFunc: func(t *testing.T, hpa *autoscalingv2.HorizontalPodAutoscaler) {
 				require.Equal(t, int32(2), *hpa.Spec.MinReplicas)

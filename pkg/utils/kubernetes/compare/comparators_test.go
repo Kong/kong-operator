@@ -3,7 +3,6 @@ package compare
 import (
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
@@ -34,14 +33,14 @@ func TestDataPlaneResourceOptionsDeepEqual(t *testing.T) {
 			opts1: &operatorv1beta1.DataPlaneResources{
 				PodDisruptionBudget: &operatorv1beta1.PodDisruptionBudget{
 					Spec: operatorv1beta1.PodDisruptionBudgetSpec{
-						MinAvailable: lo.ToPtr(intstr.FromInt32(1)),
+						MinAvailable: new(intstr.FromInt32(1)),
 					},
 				},
 			},
 			opts2: &operatorv1beta1.DataPlaneResources{
 				PodDisruptionBudget: &operatorv1beta1.PodDisruptionBudget{
 					Spec: operatorv1beta1.PodDisruptionBudgetSpec{
-						MinAvailable: lo.ToPtr(intstr.FromInt32(2)),
+						MinAvailable: new(intstr.FromInt32(2)),
 					},
 				},
 			},
@@ -52,14 +51,14 @@ func TestDataPlaneResourceOptionsDeepEqual(t *testing.T) {
 			opts1: &operatorv1beta1.DataPlaneResources{
 				PodDisruptionBudget: &operatorv1beta1.PodDisruptionBudget{
 					Spec: operatorv1beta1.PodDisruptionBudgetSpec{
-						MaxUnavailable: lo.ToPtr(intstr.FromInt32(1)),
+						MaxUnavailable: new(intstr.FromInt32(1)),
 					},
 				},
 			},
 			opts2: &operatorv1beta1.DataPlaneResources{
 				PodDisruptionBudget: &operatorv1beta1.PodDisruptionBudget{
 					Spec: operatorv1beta1.PodDisruptionBudgetSpec{
-						MaxUnavailable: lo.ToPtr(intstr.FromInt32(2)),
+						MaxUnavailable: new(intstr.FromInt32(2)),
 					},
 				},
 			},
@@ -70,14 +69,14 @@ func TestDataPlaneResourceOptionsDeepEqual(t *testing.T) {
 			opts1: &operatorv1beta1.DataPlaneResources{
 				PodDisruptionBudget: &operatorv1beta1.PodDisruptionBudget{
 					Spec: operatorv1beta1.PodDisruptionBudgetSpec{
-						MinAvailable: lo.ToPtr(intstr.FromInt32(1)),
+						MinAvailable: new(intstr.FromInt32(1)),
 					},
 				},
 			},
 			opts2: &operatorv1beta1.DataPlaneResources{
 				PodDisruptionBudget: &operatorv1beta1.PodDisruptionBudget{
 					Spec: operatorv1beta1.PodDisruptionBudgetSpec{
-						MinAvailable: lo.ToPtr(intstr.FromInt32(1)),
+						MinAvailable: new(intstr.FromInt32(1)),
 					},
 				},
 			},
@@ -89,7 +88,7 @@ func TestDataPlaneResourceOptionsDeepEqual(t *testing.T) {
 			opts2: &operatorv1beta1.DataPlaneResources{
 				PodDisruptionBudget: &operatorv1beta1.PodDisruptionBudget{
 					Spec: operatorv1beta1.PodDisruptionBudgetSpec{
-						MinAvailable: lo.ToPtr(intstr.FromInt32(1)),
+						MinAvailable: new(intstr.FromInt32(1)),
 					},
 				},
 			},

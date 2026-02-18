@@ -3,7 +3,6 @@ package gateway
 import (
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -71,8 +70,8 @@ func TestGetBackendTLSPolicyAncestors(t *testing.T) {
 									{
 										BackendRef: gatewayapi.BackendRef{
 											BackendObjectReference: gatewayapi.BackendObjectReference{
-												Group: lo.ToPtr(gatewayapi.Group("core")),
-												Kind:  lo.ToPtr(gatewayapi.Kind("Service")),
+												Group: new(gatewayapi.Group("core")),
+												Kind:  new(gatewayapi.Kind("Service")),
 												Name:  "example-service",
 											},
 										},
@@ -83,8 +82,8 @@ func TestGetBackendTLSPolicyAncestors(t *testing.T) {
 						CommonRouteSpec: gatewayapi.CommonRouteSpec{
 							ParentRefs: []gatewayapi.ParentReference{
 								{
-									Group: lo.ToPtr(gatewayapi.Group("gateway.networking.k8s.io")),
-									Kind:  lo.ToPtr(gatewayapi.Kind("Gateway")),
+									Group: new(gatewayapi.Group("gateway.networking.k8s.io")),
+									Kind:  new(gatewayapi.Kind("Gateway")),
 									Name:  "example-gateway",
 								},
 							},
@@ -96,10 +95,10 @@ func TestGetBackendTLSPolicyAncestors(t *testing.T) {
 								{
 									ControllerName: GetControllerName(),
 									ParentRef: gatewayapi.ParentReference{
-										Group:     lo.ToPtr(gatewayapi.Group("gateway.networking.k8s.io")),
-										Kind:      lo.ToPtr(gatewayapi.Kind("Gateway")),
+										Group:     new(gatewayapi.Group("gateway.networking.k8s.io")),
+										Kind:      new(gatewayapi.Kind("Gateway")),
 										Name:      "example-gateway",
-										Namespace: lo.ToPtr(gatewayapi.Namespace("default")),
+										Namespace: new(gatewayapi.Namespace("default")),
 									},
 									Conditions: []metav1.Condition{
 										{
@@ -159,8 +158,8 @@ func TestGetBackendTLSPolicyAncestors(t *testing.T) {
 									{
 										BackendRef: gatewayapi.BackendRef{
 											BackendObjectReference: gatewayapi.BackendObjectReference{
-												Group: lo.ToPtr(gatewayapi.Group("core")),
-												Kind:  lo.ToPtr(gatewayapi.Kind("Service")),
+												Group: new(gatewayapi.Group("core")),
+												Kind:  new(gatewayapi.Kind("Service")),
 												Name:  "example-service",
 											},
 										},
@@ -171,8 +170,8 @@ func TestGetBackendTLSPolicyAncestors(t *testing.T) {
 						CommonRouteSpec: gatewayapi.CommonRouteSpec{
 							ParentRefs: []gatewayapi.ParentReference{
 								{
-									Group: lo.ToPtr(gatewayapi.Group("gateway.networking.k8s.io")),
-									Kind:  lo.ToPtr(gatewayapi.Kind("Gateway")),
+									Group: new(gatewayapi.Group("gateway.networking.k8s.io")),
+									Kind:  new(gatewayapi.Kind("Gateway")),
 									Name:  "example-gateway",
 								},
 							},
@@ -184,10 +183,10 @@ func TestGetBackendTLSPolicyAncestors(t *testing.T) {
 								{
 									ControllerName: GetControllerName(),
 									ParentRef: gatewayapi.ParentReference{
-										Group:     lo.ToPtr(gatewayapi.Group("gateway.networking.k8s.io")),
-										Kind:      lo.ToPtr(gatewayapi.Kind("Gateway")),
+										Group:     new(gatewayapi.Group("gateway.networking.k8s.io")),
+										Kind:      new(gatewayapi.Kind("Gateway")),
 										Name:      "example-gateway",
-										Namespace: lo.ToPtr(gatewayapi.Namespace("default")),
+										Namespace: new(gatewayapi.Namespace("default")),
 									},
 									Conditions: []metav1.Condition{
 										{
@@ -241,8 +240,8 @@ func TestGetBackendTLSPolicyAncestors(t *testing.T) {
 									{
 										BackendRef: gatewayapi.BackendRef{
 											BackendObjectReference: gatewayapi.BackendObjectReference{
-												Group: lo.ToPtr(gatewayapi.Group("core")),
-												Kind:  lo.ToPtr(gatewayapi.Kind("Service")),
+												Group: new(gatewayapi.Group("core")),
+												Kind:  new(gatewayapi.Kind("Service")),
 												Name:  "example-service",
 											},
 										},
@@ -253,13 +252,13 @@ func TestGetBackendTLSPolicyAncestors(t *testing.T) {
 						CommonRouteSpec: gatewayapi.CommonRouteSpec{
 							ParentRefs: []gatewayapi.ParentReference{
 								{
-									Group: lo.ToPtr(gatewayapi.Group("gateway.networking.k8s.io")),
-									Kind:  lo.ToPtr(gatewayapi.Kind("Gateway")),
+									Group: new(gatewayapi.Group("gateway.networking.k8s.io")),
+									Kind:  new(gatewayapi.Kind("Gateway")),
 									Name:  "other-gateway",
 								},
 								{
-									Group: lo.ToPtr(gatewayapi.Group("gateway.networking.k8s.io")),
-									Kind:  lo.ToPtr(gatewayapi.Kind("Gateway")),
+									Group: new(gatewayapi.Group("gateway.networking.k8s.io")),
+									Kind:  new(gatewayapi.Kind("Gateway")),
 									Name:  "example-gateway",
 								},
 							},
@@ -271,10 +270,10 @@ func TestGetBackendTLSPolicyAncestors(t *testing.T) {
 								{
 									ControllerName: GetControllerName(),
 									ParentRef: gatewayapi.ParentReference{
-										Group:     lo.ToPtr(gatewayapi.Group("gateway.networking.k8s.io")),
-										Kind:      lo.ToPtr(gatewayapi.Kind("Gateway")),
+										Group:     new(gatewayapi.Group("gateway.networking.k8s.io")),
+										Kind:      new(gatewayapi.Kind("Gateway")),
 										Name:      "example-gateway",
-										Namespace: lo.ToPtr(gatewayapi.Namespace("default")),
+										Namespace: new(gatewayapi.Namespace("default")),
 									},
 									Conditions: []metav1.Condition{
 										{
@@ -286,10 +285,10 @@ func TestGetBackendTLSPolicyAncestors(t *testing.T) {
 								{
 									ControllerName: "other-controller",
 									ParentRef: gatewayapi.ParentReference{
-										Group:     lo.ToPtr(gatewayapi.Group("gateway.networking.k8s.io")),
-										Kind:      lo.ToPtr(gatewayapi.Kind("Gateway")),
+										Group:     new(gatewayapi.Group("gateway.networking.k8s.io")),
+										Kind:      new(gatewayapi.Kind("Gateway")),
 										Name:      "other-gateway",
-										Namespace: lo.ToPtr(gatewayapi.Namespace("default")),
+										Namespace: new(gatewayapi.Namespace("default")),
 									},
 									Conditions: []metav1.Condition{
 										{
@@ -525,7 +524,7 @@ func TestSortGateways(t *testing.T) {
 			existingAncestors: []gatewayapi.PolicyAncestorStatus{
 				{
 					AncestorRef: gatewayapi.ParentReference{
-						Namespace: lo.ToPtr(gatewayapi.Namespace("namespace-2")),
+						Namespace: new(gatewayapi.Namespace("namespace-2")),
 						Name:      "gateway-2",
 					},
 				},
@@ -765,7 +764,7 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 						},
 					},
 					Validation: gatewayapi.BackendTLSPolicyValidation{
-						WellKnownCACertificates: lo.ToPtr(gatewayapi.WellKnownCACertificatesType("well-known-ca")),
+						WellKnownCACertificates: new(gatewayapi.WellKnownCACertificatesType("well-known-ca")),
 					},
 				},
 			},
@@ -800,7 +799,7 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 								Hostname: "example.com",
 							},
 						},
-						WellKnownCACertificates: lo.ToPtr(gatewayapi.WellKnownCACertificatesType("well-known-ca")),
+						WellKnownCACertificates: new(gatewayapi.WellKnownCACertificatesType("well-known-ca")),
 						CACertificateRefs: []gatewayapi.LocalObjectReference{
 							{
 								Group: "core",

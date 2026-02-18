@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -51,18 +50,18 @@ func NewManager(t *testing.T, ctx context.Context, cfg *rest.Config, s *runtime.
 			BindAddress: "0",
 		},
 		Cache: cache.Options{
-			SyncPeriod: lo.ToPtr(10 * time.Second),
+			SyncPeriod: new(10 * time.Second),
 		},
 		Controller: config.Controller{
 			// We don't want to hide panics in tests so expose them by failing the test run rather
 			// than silently ignoring them.
-			RecoverPanic: lo.ToPtr(false),
+			RecoverPanic: new(false),
 
 			// This is needed because controller-runtime keeps a global list of controller
 			// names and panics if there are duplicates.
 			// This is a workaround for that in tests.
 			// Ref: https://github.com/kubernetes-sigs/controller-runtime/pull/2902#issuecomment-2284194683
-			SkipNameValidation: lo.ToPtr(true),
+			SkipNameValidation: new(true),
 		},
 	}
 
@@ -132,7 +131,7 @@ func StartReconciler(
 			// names and panics if there are duplicates.
 			// This is a workaround for that in tests.
 			// Ref: https://github.com/kubernetes-sigs/controller-runtime/pull/2902#issuecomment-2284194683
-			SkipNameValidation: lo.ToPtr(true),
+			SkipNameValidation: new(true),
 		},
 	}
 

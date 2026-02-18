@@ -8,7 +8,6 @@ import (
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
-	"github.com/samber/lo"
 	"github.com/sourcegraph/conc/iter"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -130,7 +129,7 @@ func updateControlPlane(
 	}
 	id := cp.GetKonnectStatus().GetKonnectID()
 	req := sdkkonnectcomp.UpdateControlPlaneRequest{
-		Name:        sdkkonnectgo.String(cp.GetKonnectName()),
+		Name:        new(cp.GetKonnectName()),
 		Description: cp.GetKonnectDescription(),
 		AuthType:    (*sdkkonnectcomp.UpdateControlPlaneRequestAuthType)(cp.GetKonnectAuthType()),
 		ProxyUrls:   cp.GetKonnectProxyURLs(),
@@ -255,7 +254,7 @@ func getControlPlaneForUID(
 		// NOTE: only filter on object's UID.
 		// Other fields like name might have changed in the meantime but that's OK.
 		// Those will be enforced via subsequent updates.
-		FilterLabels: lo.ToPtr(UIDLabelForObject(cp)),
+		FilterLabels: new(UIDLabelForObject(cp)),
 	}
 
 	resp, err := sdk.ListControlPlanes(ctx, reqList)
@@ -294,7 +293,7 @@ func GetControlPlaneByID(
 	reqList := sdkkonnectops.ListControlPlanesRequest{
 		Filter: &sdkkonnectcomp.ControlPlaneFilterParameters{
 			ID: &sdkkonnectcomp.ID{
-				Eq: lo.ToPtr(id),
+				Eq: new(id),
 			},
 		},
 	}

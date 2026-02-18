@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -292,7 +291,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				require.Equal(t,
 					[]gwtypes.GatewayStatusAddress{
 						{
-							Type:  lo.ToPtr(gatewayv1.IPAddressType),
+							Type:  new(gatewayv1.IPAddressType),
 							Value: clusterIP,
 						},
 					},
@@ -326,11 +325,11 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				require.Equal(t,
 					[]gwtypes.GatewayStatusAddress{
 						{
-							Type:  lo.ToPtr(gatewayv1.IPAddressType),
+							Type:  new(gatewayv1.IPAddressType),
 							Value: loadBalancerIP,
 						},
 						{
-							Type:  lo.ToPtr(gatewayv1.IPAddressType),
+							Type:  new(gatewayv1.IPAddressType),
 							Value: otherBalancerIP,
 						},
 					},
@@ -358,7 +357,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				require.Equal(t, kcfgdataplane.ResourceReadyReason, kcfgconsts.ConditionReason(condition.Reason))
 				require.Equal(t, []gwtypes.GatewayStatusAddress{
 					{
-						Type:  lo.ToPtr(gatewayv1.HostnameAddressType),
+						Type:  new(gatewayv1.HostnameAddressType),
 						Value: exampleHostname,
 					},
 				}, currentGateway.Status.Addresses)
@@ -437,7 +436,7 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 			expected: operatorv1beta1.DataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1beta1.DeploymentOptions{
-						Replicas: lo.ToPtr(int32(1)),
+						Replicas: new(int32(1)),
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
@@ -458,14 +457,14 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 			input: operatorv1beta1.DataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1beta1.DeploymentOptions{
-						Replicas: lo.ToPtr(int32(10)),
+						Replicas: new(int32(10)),
 					},
 				},
 			},
 			expected: operatorv1beta1.DataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1beta1.DeploymentOptions{
-						Replicas: lo.ToPtr(int32(10)),
+						Replicas: new(int32(10)),
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
@@ -486,14 +485,14 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 			input: operatorv1beta1.DataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1beta1.DeploymentOptions{
-						Replicas: lo.ToPtr(int32(1)),
+						Replicas: new(int32(1)),
 					},
 				},
 			},
 			expected: operatorv1beta1.DataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1beta1.DeploymentOptions{
-						Replicas: lo.ToPtr(int32(1)),
+						Replicas: new(int32(1)),
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
@@ -514,7 +513,7 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 			input: operatorv1beta1.DataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1beta1.DeploymentOptions{
-						Replicas: lo.ToPtr(int32(10)),
+						Replicas: new(int32(10)),
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
@@ -531,7 +530,7 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 			expected: operatorv1beta1.DataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1beta1.DeploymentOptions{
-						Replicas: lo.ToPtr(int32(10)),
+						Replicas: new(int32(10)),
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
@@ -552,7 +551,7 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 			input: operatorv1beta1.DataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1beta1.DeploymentOptions{
-						Replicas: lo.ToPtr(int32(10)),
+						Replicas: new(int32(10)),
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
@@ -573,7 +572,7 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 			expected: operatorv1beta1.DataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1beta1.DeploymentOptions{
-						Replicas: lo.ToPtr(int32(10)),
+						Replicas: new(int32(10)),
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
@@ -643,7 +642,7 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 			expected: operatorv1beta1.DataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1beta1.DeploymentOptions{
-						Replicas: lo.ToPtr(int32(1)),
+						Replicas: new(int32(1)),
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
@@ -694,7 +693,7 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 			expected: operatorv1beta1.DataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1beta1.DeploymentOptions{
-						Replicas: lo.ToPtr(int32(1)),
+						Replicas: new(int32(1)),
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -265,7 +264,7 @@ func TestDataPlaneBlueGreenHorizontalScaling(t *testing.T) {
 
 	dataplane.Spec.Deployment.Scaling = &operatorv1beta1.Scaling{
 		HorizontalScaling: &operatorv1beta1.HorizontalScaling{
-			MinReplicas: lo.ToPtr(int32(2)),
+			MinReplicas: new(int32(2)),
 			MaxReplicas: 5,
 			Metrics: []autoscalingv2.MetricSpec{
 				{
@@ -274,7 +273,7 @@ func TestDataPlaneBlueGreenHorizontalScaling(t *testing.T) {
 						Name: "cpu",
 						Target: autoscalingv2.MetricTarget{
 							Type:               autoscalingv2.UtilizationMetricType,
-							AverageUtilization: lo.ToPtr(int32(20)),
+							AverageUtilization: new(int32(20)),
 						},
 					},
 				},

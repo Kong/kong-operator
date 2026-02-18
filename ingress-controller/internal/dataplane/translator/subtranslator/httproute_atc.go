@@ -498,10 +498,10 @@ func kongExpressionRouteFromHTTPRouteMatchWithPriority(
 
 	r := &kongstate.Route{
 		Route: kong.Route{
-			Name:         kong.String(routeName),
-			PreserveHost: kong.Bool(true),
+			Name:         new(routeName),
+			PreserveHost: new(true),
 			// stripPath needs to be disabled by default to be conformant with the Gateway API
-			StripPath: kong.Bool(false),
+			StripPath: new(false),
 			Tags:      tags,
 		},
 		Ingress:          util.FromK8sObject(httproute),
@@ -517,8 +517,8 @@ func kongExpressionRouteFromHTTPRouteMatchWithPriority(
 
 	// generate a "catch-all" route if the generated expression is empty.
 	if r.Expression == nil || len(*r.Expression) == 0 {
-		r.Expression = kong.String(CatchAllHTTPExpression)
-		r.Priority = kong.Uint64(httpRouteMatchWithPriority.Priority)
+		r.Expression = new(CatchAllHTTPExpression)
+		r.Priority = new(httpRouteMatchWithPriority.Priority)
 	}
 
 	// translate filters in the rule.

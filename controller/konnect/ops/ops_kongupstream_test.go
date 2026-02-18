@@ -8,7 +8,6 @@ import (
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -54,7 +53,7 @@ func TestCreateKongUpstream(t *testing.T) {
 					Return(
 						&sdkkonnectops.CreateUpstreamResponse{
 							Upstream: &sdkkonnectcomp.Upstream{
-								ID:   lo.ToPtr("12345"),
+								ID:   new("12345"),
 								Name: "svc-1",
 							},
 						},
@@ -319,7 +318,7 @@ func TestUpdateKongUpstream(t *testing.T) {
 						&sdkkonnectops.UpsertUpstreamResponse{
 							StatusCode: 200,
 							Upstream: &sdkkonnectcomp.Upstream{
-								ID:   lo.ToPtr("123456789"),
+								ID:   new("123456789"),
 								Name: "svc-1",
 							},
 						},

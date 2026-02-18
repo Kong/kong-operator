@@ -58,8 +58,8 @@ func TestPrometheusMetricsScraper_Scrape(t *testing.T) {
 					metrics: metricsMap{
 						adminAPIEndpointURL(serverAddr): {
 							"kong_upstream_latency_ms": {
-								Name: proto.String("kong_upstream_latency_ms"),
-								Help: proto.String("Latency added by upstream response for each service/route in Kong"),
+								Name: new("kong_upstream_latency_ms"),
+								Help: new("Latency added by upstream response for each service/route in Kong"),
 								Type: prometheus.MetricType_HISTOGRAM.Enum(),
 								Metric: []*prometheus.Metric{
 									{
@@ -85,18 +85,18 @@ func TestPrometheusMetricsScraper_Scrape(t *testing.T) {
 												},
 												{
 													CumulativeCount: proto.Uint64(610),
-													UpperBound:      proto.Float64(math.Inf(1)),
+													UpperBound:      new(math.Inf(1)),
 												},
 											},
 										},
 										Label: []*prometheus.LabelPair{
 											{
-												Name:  proto.String("service"),
-												Value: proto.String("httproute.default.httproute-echo.0"),
+												Name:  new("service"),
+												Value: new("httproute.default.httproute-echo.0"),
 											},
 											{
-												Name:  proto.String("route"),
-												Value: proto.String("httproute.default.httproute-echo.0.0"),
+												Name:  new("route"),
+												Value: new("httproute.default.httproute-echo.0.0"),
 											},
 										},
 									},

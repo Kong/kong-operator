@@ -468,16 +468,16 @@ func ancestorRef(nn k8stypes.NamespacedName, kind upstreamPolicyAncestorKind) (g
 	switch kind {
 	case upstreamPolicyAncestorKindService:
 		return gatewayapi.ParentReference{
-			Group:     lo.ToPtr(gatewayapi.Group("core")),
-			Kind:      lo.ToPtr(gatewayapi.Kind("Service")),
-			Namespace: lo.ToPtr(gatewayapi.Namespace(nn.Namespace)),
+			Group:     new(gatewayapi.Group("core")),
+			Kind:      new(gatewayapi.Kind("Service")),
+			Namespace: new(gatewayapi.Namespace(nn.Namespace)),
 			Name:      gatewayapi.ObjectName(nn.Name),
 		}, nil
 	case upstreamPolicyAncestorKindKongServiceFacade:
 		return gatewayapi.ParentReference{
-			Group:     lo.ToPtr(gatewayapi.Group(incubatorv1alpha1.GroupVersion.Group)),
-			Kind:      lo.ToPtr(gatewayapi.Kind(incubatorv1alpha1.KongServiceFacadeKind)),
-			Namespace: lo.ToPtr(gatewayapi.Namespace(nn.Namespace)),
+			Group:     new(gatewayapi.Group(incubatorv1alpha1.GroupVersion.Group)),
+			Kind:      new(gatewayapi.Kind(incubatorv1alpha1.KongServiceFacadeKind)),
+			Namespace: new(gatewayapi.Namespace(nn.Namespace)),
 			Name:      gatewayapi.ObjectName(nn.Name),
 		}, nil
 	}

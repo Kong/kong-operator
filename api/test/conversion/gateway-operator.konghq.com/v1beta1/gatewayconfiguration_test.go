@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,7 +41,7 @@ func TestGatewayConfiguration_ConvertTo(t *testing.T) {
 				DataPlaneOptions: &operatorv1beta1.GatewayConfigDataPlaneOptions{
 					Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 						DeploymentOptions: operatorv1beta1.DeploymentOptions{
-							Replicas: lo.ToPtr(int32(2)),
+							Replicas: new(int32(2)),
 						},
 					},
 				},
@@ -50,7 +49,7 @@ func TestGatewayConfiguration_ConvertTo(t *testing.T) {
 			expectedDataPlane: &operatorv2beta1.GatewayConfigDataPlaneOptions{
 				Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv2beta1.DeploymentOptions{
-						Replicas: lo.ToPtr(int32(2)),
+						Replicas: new(int32(2)),
 					},
 				},
 			},
@@ -81,7 +80,7 @@ func TestGatewayConfiguration_ConvertTo(t *testing.T) {
 			},
 			expectedControlPlane: &operatorv2beta1.GatewayConfigControlPlaneOptions{
 				ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-					IngressClass: lo.ToPtr("kong"),
+					IngressClass: new("kong"),
 				},
 			},
 		},
@@ -100,7 +99,7 @@ func TestGatewayConfiguration_ConvertTo(t *testing.T) {
 				DataPlaneOptions: &operatorv1beta1.GatewayConfigDataPlaneOptions{
 					Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 						DeploymentOptions: operatorv1beta1.DeploymentOptions{
-							Replicas: lo.ToPtr(int32(2)),
+							Replicas: new(int32(2)),
 						},
 					},
 					Extensions: []commonv1alpha1.ExtensionRef{
@@ -161,7 +160,7 @@ func TestGatewayConfiguration_ConvertTo(t *testing.T) {
 			expectedDataPlane: &operatorv2beta1.GatewayConfigDataPlaneOptions{
 				Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv2beta1.DeploymentOptions{
-						Replicas: lo.ToPtr(int32(2)),
+						Replicas: new(int32(2)),
 					},
 				},
 			},
@@ -217,12 +216,12 @@ func TestGatewayConfiguration_ConvertTo(t *testing.T) {
 				DataPlaneOptions: &operatorv1beta1.GatewayConfigDataPlaneOptions{
 					Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 						DeploymentOptions: operatorv1beta1.DeploymentOptions{
-							Replicas: lo.ToPtr(int32(2)),
+							Replicas: new(int32(2)),
 						},
 					},
 				},
 				ControlPlaneOptions: &operatorv1beta1.ControlPlaneOptions{
-					DataPlane: lo.ToPtr("test-data-plane"),
+					DataPlane: new("test-data-plane"),
 				},
 			},
 			expectedError: errors.New("GatewayConfiguration ConvertTo: ControlPlaneOptions.DataPlane is not supported"),
@@ -307,7 +306,7 @@ func TestGatewayConfiguration_ConvertFrom(t *testing.T) {
 			spec: operatorv2beta1.GatewayConfigurationSpec{
 				ControlPlaneOptions: &operatorv2beta1.GatewayConfigControlPlaneOptions{
 					ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-						IngressClass: lo.ToPtr("kong"),
+						IngressClass: new("kong"),
 						WatchNamespaces: &operatorv2beta1.WatchNamespaces{
 							Type: operatorv2beta1.WatchNamespacesTypeAll,
 						},
@@ -324,7 +323,7 @@ func TestGatewayConfiguration_ConvertFrom(t *testing.T) {
 				DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
 					Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
 						DeploymentOptions: operatorv2beta1.DeploymentOptions{
-							Replicas: lo.ToPtr(int32(2)),
+							Replicas: new(int32(2)),
 						},
 					},
 				},
@@ -354,7 +353,7 @@ func TestGatewayConfiguration_ConvertFrom(t *testing.T) {
 			expectedDataPlane: &operatorv1beta1.GatewayConfigDataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1beta1.DeploymentOptions{
-						Replicas: lo.ToPtr(int32(2)),
+						Replicas: new(int32(2)),
 					},
 				},
 			},
@@ -463,7 +462,7 @@ func TestGatewayConfiguration_RoundTrip(t *testing.T) {
 				Spec: operatorv2beta1.GatewayConfigurationSpec{
 					ControlPlaneOptions: &operatorv2beta1.GatewayConfigControlPlaneOptions{
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-							IngressClass: lo.ToPtr("kong"),
+							IngressClass: new("kong"),
 							WatchNamespaces: &operatorv2beta1.WatchNamespaces{
 								Type: operatorv2beta1.WatchNamespacesTypeAll,
 							},
@@ -476,7 +475,7 @@ func TestGatewayConfiguration_RoundTrip(t *testing.T) {
 								{Name: "KONG_PLUGIN", State: operatorv2beta1.ControllerStateDisabled},
 							},
 							DataPlaneSync: &operatorv2beta1.ControlPlaneDataPlaneSync{
-								ReverseSync: lo.ToPtr(operatorv2beta1.ControlPlaneReverseSyncStateEnabled),
+								ReverseSync: new(operatorv2beta1.ControlPlaneReverseSyncStateEnabled),
 							},
 							GatewayDiscovery: &operatorv2beta1.ControlPlaneGatewayDiscovery{
 								ReadinessCheckInterval: &metav1.Duration{Duration: 30 * time.Second},
@@ -486,23 +485,23 @@ func TestGatewayConfiguration_RoundTrip(t *testing.T) {
 								InitSyncDuration: &metav1.Duration{Duration: 60 * time.Second},
 							},
 							Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
-								CombinedServicesFromDifferentHTTPRoutes: lo.ToPtr(operatorv2beta1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled),
+								CombinedServicesFromDifferentHTTPRoutes: new(operatorv2beta1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled),
 								FallbackConfiguration: &operatorv2beta1.ControlPlaneFallbackConfiguration{
-									UseLastValidConfig: lo.ToPtr(operatorv2beta1.ControlPlaneFallbackConfigurationStateDisabled),
+									UseLastValidConfig: new(operatorv2beta1.ControlPlaneFallbackConfigurationStateDisabled),
 								},
-								DrainSupport: lo.ToPtr(operatorv2beta1.ControlPlaneDrainSupportStateEnabled),
+								DrainSupport: new(operatorv2beta1.ControlPlaneDrainSupportStateEnabled),
 							},
 							ConfigDump: &operatorv2beta1.ControlPlaneConfigDump{
 								State:         operatorv2beta1.ConfigDumpStateEnabled,
 								DumpSensitive: operatorv2beta1.ConfigDumpStateDisabled,
 							},
 							Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
-								ConsumersSync: lo.ToPtr(operatorv2beta1.ControlPlaneKonnectConsumersSyncStateEnabled),
+								ConsumersSync: new(operatorv2beta1.ControlPlaneKonnectConsumersSyncStateEnabled),
 								Licensing: &operatorv2beta1.ControlPlaneKonnectLicensing{
-									State:                lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingStateEnabled),
+									State:                new(operatorv2beta1.ControlPlaneKonnectLicensingStateEnabled),
 									InitialPollingPeriod: &metav1.Duration{Duration: 10 * time.Second},
 									PollingPeriod:        &metav1.Duration{Duration: 60 * time.Second},
-									StorageState:         lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicenseStorageStateDisabled),
+									StorageState:         new(operatorv2beta1.ControlPlaneKonnectLicenseStorageStateDisabled),
 								},
 								NodeRefreshPeriod:  &metav1.Duration{Duration: 30 * time.Second},
 								ConfigUploadPeriod: &metav1.Duration{Duration: 10 * time.Second},
@@ -512,7 +511,7 @@ func TestGatewayConfiguration_RoundTrip(t *testing.T) {
 					DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
 						Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
 							DeploymentOptions: operatorv2beta1.DeploymentOptions{
-								Replicas: lo.ToPtr(int32(2)),
+								Replicas: new(int32(2)),
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
 										Containers: []corev1.Container{

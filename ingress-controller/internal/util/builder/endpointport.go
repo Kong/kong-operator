@@ -1,7 +1,6 @@
 package builder
 
 import (
-	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 )
@@ -15,20 +14,20 @@ type EndpointPortBuilder struct {
 func NewEndpointPort(port int32) *EndpointPortBuilder {
 	return &EndpointPortBuilder{
 		ep: discoveryv1.EndpointPort{
-			Port: lo.ToPtr(port),
+			Port: new(port),
 		},
 	}
 }
 
 // WithProtocol sets the protocol on the endpoint port.
 func (b *EndpointPortBuilder) WithProtocol(proto corev1.Protocol) *EndpointPortBuilder {
-	b.ep.Protocol = lo.ToPtr(proto)
+	b.ep.Protocol = new(proto)
 	return b
 }
 
 // WithName sets the name on the endpoint port.
 func (b *EndpointPortBuilder) WithName(name string) *EndpointPortBuilder {
-	b.ep.Name = lo.ToPtr(name)
+	b.ep.Name = new(name)
 	return b
 }
 

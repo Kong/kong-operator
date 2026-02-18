@@ -8,7 +8,6 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/Kong/sdk-konnect-go/test/mocks"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -56,9 +55,9 @@ func TestKongCertificateToCertificateInput(t *testing.T) {
 					UID:        "uid-1",
 				},
 				Spec: configurationv1alpha1.KongCertificateSpec{
-					Type:         lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
-					SecretRef:    &commonv1alpha1.NamespacedRef{Name: "mysecret", Namespace: lo.ToPtr("ns")},
-					SecretRefAlt: &commonv1alpha1.NamespacedRef{Name: "mysecret-alt", Namespace: lo.ToPtr("ns")},
+					Type:         new(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
+					SecretRef:    &commonv1alpha1.NamespacedRef{Name: "mysecret", Namespace: new("ns")},
+					SecretRefAlt: &commonv1alpha1.NamespacedRef{Name: "mysecret-alt", Namespace: new("ns")},
 				},
 			},
 			clientObjs: []client.Object{
@@ -105,8 +104,8 @@ func TestKongCertificateToCertificateInput(t *testing.T) {
 					UID:        "uid-2",
 				},
 				Spec: configurationv1alpha1.KongCertificateSpec{
-					Type:      lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
-					SecretRef: &commonv1alpha1.NamespacedRef{Name: "mysecret2", Namespace: lo.ToPtr("ns")},
+					Type:      new(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
+					SecretRef: &commonv1alpha1.NamespacedRef{Name: "mysecret2", Namespace: new("ns")},
 				},
 			},
 			clientObjs: []client.Object{
@@ -147,7 +146,7 @@ func TestKongCertificateToCertificateInput(t *testing.T) {
 					},
 				},
 				Spec: configurationv1alpha1.KongCertificateSpec{
-					Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeInline),
+					Type: new(configurationv1alpha1.KongCertificateSourceTypeInline),
 					KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
 						Cert:    "direct-cert",
 						Key:     "direct-key",
@@ -182,7 +181,7 @@ func TestKongCertificateToCertificateInput(t *testing.T) {
 			cert: &configurationv1alpha1.KongCertificate{
 				ObjectMeta: metav1.ObjectMeta{Name: "cert3", Namespace: "ns"},
 				Spec: configurationv1alpha1.KongCertificateSpec{
-					Type:      lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
+					Type:      new(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
 					SecretRef: nil,
 				},
 			},
@@ -194,8 +193,8 @@ func TestKongCertificateToCertificateInput(t *testing.T) {
 			cert: &configurationv1alpha1.KongCertificate{
 				ObjectMeta: metav1.ObjectMeta{Name: "cert4", Namespace: "ns"},
 				Spec: configurationv1alpha1.KongCertificateSpec{
-					Type:      lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
-					SecretRef: &commonv1alpha1.NamespacedRef{Name: "notfound", Namespace: lo.ToPtr("ns")},
+					Type:      new(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
+					SecretRef: &commonv1alpha1.NamespacedRef{Name: "notfound", Namespace: new("ns")},
 				},
 			},
 			clientObjs: []client.Object{},
@@ -206,8 +205,8 @@ func TestKongCertificateToCertificateInput(t *testing.T) {
 			cert: &configurationv1alpha1.KongCertificate{
 				ObjectMeta: metav1.ObjectMeta{Name: "cert5", Namespace: "ns"},
 				Spec: configurationv1alpha1.KongCertificateSpec{
-					Type:      lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
-					SecretRef: &commonv1alpha1.NamespacedRef{Name: "badsecret", Namespace: lo.ToPtr("ns")},
+					Type:      new(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
+					SecretRef: &commonv1alpha1.NamespacedRef{Name: "badsecret", Namespace: new("ns")},
 				},
 			},
 			clientObjs: []client.Object{
@@ -223,8 +222,8 @@ func TestKongCertificateToCertificateInput(t *testing.T) {
 			cert: &configurationv1alpha1.KongCertificate{
 				ObjectMeta: metav1.ObjectMeta{Name: "cert6", Namespace: "ns"},
 				Spec: configurationv1alpha1.KongCertificateSpec{
-					Type:      lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
-					SecretRef: &commonv1alpha1.NamespacedRef{Name: "badsecret2", Namespace: lo.ToPtr("ns")},
+					Type:      new(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
+					SecretRef: &commonv1alpha1.NamespacedRef{Name: "badsecret2", Namespace: new("ns")},
 				},
 			},
 			clientObjs: []client.Object{
@@ -240,9 +239,9 @@ func TestKongCertificateToCertificateInput(t *testing.T) {
 			cert: &configurationv1alpha1.KongCertificate{
 				ObjectMeta: metav1.ObjectMeta{Name: "cert7", Namespace: "ns"},
 				Spec: configurationv1alpha1.KongCertificateSpec{
-					Type:         lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
-					SecretRef:    &commonv1alpha1.NamespacedRef{Name: "mysecret", Namespace: lo.ToPtr("ns")},
-					SecretRefAlt: &commonv1alpha1.NamespacedRef{Name: "notfound-alt", Namespace: lo.ToPtr("ns")},
+					Type:         new(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
+					SecretRef:    &commonv1alpha1.NamespacedRef{Name: "mysecret", Namespace: new("ns")},
+					SecretRefAlt: &commonv1alpha1.NamespacedRef{Name: "notfound-alt", Namespace: new("ns")},
 				},
 			},
 			clientObjs: []client.Object{
@@ -261,9 +260,9 @@ func TestKongCertificateToCertificateInput(t *testing.T) {
 			cert: &configurationv1alpha1.KongCertificate{
 				ObjectMeta: metav1.ObjectMeta{Name: "cert8", Namespace: "ns"},
 				Spec: configurationv1alpha1.KongCertificateSpec{
-					Type:         lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
-					SecretRef:    &commonv1alpha1.NamespacedRef{Name: "mysecret", Namespace: lo.ToPtr("ns")},
-					SecretRefAlt: &commonv1alpha1.NamespacedRef{Name: "bad-alt", Namespace: lo.ToPtr("ns")},
+					Type:         new(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
+					SecretRef:    &commonv1alpha1.NamespacedRef{Name: "mysecret", Namespace: new("ns")},
+					SecretRefAlt: &commonv1alpha1.NamespacedRef{Name: "bad-alt", Namespace: new("ns")},
 				},
 			},
 			clientObjs: []client.Object{
@@ -288,9 +287,9 @@ func TestKongCertificateToCertificateInput(t *testing.T) {
 			cert: &configurationv1alpha1.KongCertificate{
 				ObjectMeta: metav1.ObjectMeta{Name: "cert9", Namespace: "ns"},
 				Spec: configurationv1alpha1.KongCertificateSpec{
-					Type:         lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
-					SecretRef:    &commonv1alpha1.NamespacedRef{Name: "mysecret", Namespace: lo.ToPtr("ns")},
-					SecretRefAlt: &commonv1alpha1.NamespacedRef{Name: "bad-alt2", Namespace: lo.ToPtr("ns")},
+					Type:         new(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
+					SecretRef:    &commonv1alpha1.NamespacedRef{Name: "mysecret", Namespace: new("ns")},
+					SecretRefAlt: &commonv1alpha1.NamespacedRef{Name: "bad-alt2", Namespace: new("ns")},
 				},
 			},
 			clientObjs: []client.Object{
@@ -399,7 +398,7 @@ func TestFetchTLSDataFromSecret(t *testing.T) {
 			parentNamespace: "parent-ns",
 			secretRef: &commonv1alpha1.NamespacedRef{
 				Name:      "tls-secret",
-				Namespace: lo.ToPtr(""),
+				Namespace: new(""),
 			},
 			clientObjs: []client.Object{
 				&corev1.Secret{
@@ -421,7 +420,7 @@ func TestFetchTLSDataFromSecret(t *testing.T) {
 			parentNamespace: "default",
 			secretRef: &commonv1alpha1.NamespacedRef{
 				Name:      "tls-secret",
-				Namespace: lo.ToPtr("default"),
+				Namespace: new("default"),
 			},
 			clientObjs: []client.Object{
 				&corev1.Secret{
@@ -443,7 +442,7 @@ func TestFetchTLSDataFromSecret(t *testing.T) {
 			parentNamespace: "default",
 			secretRef: &commonv1alpha1.NamespacedRef{
 				Name:      "missing-secret",
-				Namespace: lo.ToPtr("default"),
+				Namespace: new("default"),
 			},
 			clientObjs: []client.Object{},
 			wantErr:    "failed to fetch Secret default/missing-secret",
@@ -453,7 +452,7 @@ func TestFetchTLSDataFromSecret(t *testing.T) {
 			parentNamespace: "default",
 			secretRef: &commonv1alpha1.NamespacedRef{
 				Name:      "incomplete-secret",
-				Namespace: lo.ToPtr("default"),
+				Namespace: new("default"),
 			},
 			clientObjs: []client.Object{
 				&corev1.Secret{
@@ -473,7 +472,7 @@ func TestFetchTLSDataFromSecret(t *testing.T) {
 			parentNamespace: "default",
 			secretRef: &commonv1alpha1.NamespacedRef{
 				Name:      "incomplete-secret2",
-				Namespace: lo.ToPtr("default"),
+				Namespace: new("default"),
 			},
 			clientObjs: []client.Object{
 				&corev1.Secret{
@@ -493,7 +492,7 @@ func TestFetchTLSDataFromSecret(t *testing.T) {
 			parentNamespace: "default",
 			secretRef: &commonv1alpha1.NamespacedRef{
 				Name:      "empty-secret",
-				Namespace: lo.ToPtr("default"),
+				Namespace: new("default"),
 			},
 			clientObjs: []client.Object{
 				&corev1.Secret{
@@ -511,7 +510,7 @@ func TestFetchTLSDataFromSecret(t *testing.T) {
 			parentNamespace: "default",
 			secretRef: &commonv1alpha1.NamespacedRef{
 				Name:      "empty-values",
-				Namespace: lo.ToPtr("test-ns"),
+				Namespace: new("test-ns"),
 			},
 			clientObjs: []client.Object{
 				&corev1.Secret{
@@ -533,7 +532,7 @@ func TestFetchTLSDataFromSecret(t *testing.T) {
 			parentNamespace: "default",
 			secretRef: &commonv1alpha1.NamespacedRef{
 				Name:      "cross-ns-secret",
-				Namespace: lo.ToPtr("other-namespace"),
+				Namespace: new("other-namespace"),
 			},
 			clientObjs: []client.Object{
 				&corev1.Secret{
@@ -598,7 +597,7 @@ func TestUpdateCertificate(t *testing.T) {
 					UID:        "test-uid",
 				},
 				Spec: configurationv1alpha1.KongCertificateSpec{
-					Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeInline),
+					Type: new(configurationv1alpha1.KongCertificateSourceTypeInline),
 					KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
 						Cert: "cert-data",
 						Key:  "key-data",
@@ -637,8 +636,8 @@ func TestUpdateCertificate(t *testing.T) {
 					UID:        "test-uid",
 				},
 				Spec: configurationv1alpha1.KongCertificateSpec{
-					Type:      lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
-					SecretRef: &commonv1alpha1.NamespacedRef{Name: "tls-secret", Namespace: lo.ToPtr("default")},
+					Type:      new(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
+					SecretRef: &commonv1alpha1.NamespacedRef{Name: "tls-secret", Namespace: new("default")},
 				},
 				Status: configurationv1alpha1.KongCertificateStatus{
 					Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
@@ -675,7 +674,7 @@ func TestUpdateCertificate(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: configurationv1alpha1.KongCertificateSpec{
-					Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeInline),
+					Type: new(configurationv1alpha1.KongCertificateSourceTypeInline),
 					KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
 						Cert: "cert-data",
 						Key:  "key-data",
@@ -697,8 +696,8 @@ func TestUpdateCertificate(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: configurationv1alpha1.KongCertificateSpec{
-					Type:      lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
-					SecretRef: &commonv1alpha1.NamespacedRef{Name: "missing-secret", Namespace: lo.ToPtr("default")},
+					Type:      new(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
+					SecretRef: &commonv1alpha1.NamespacedRef{Name: "missing-secret", Namespace: new("default")},
 				},
 				Status: configurationv1alpha1.KongCertificateStatus{
 					Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
@@ -727,7 +726,7 @@ func TestUpdateCertificate(t *testing.T) {
 					UID:        "test-uid",
 				},
 				Spec: configurationv1alpha1.KongCertificateSpec{
-					Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeInline),
+					Type: new(configurationv1alpha1.KongCertificateSourceTypeInline),
 					KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
 						Cert: "cert-data",
 						Key:  "key-data",
@@ -801,7 +800,7 @@ func TestCreateCertificate(t *testing.T) {
 					UID:        "test-uid",
 				},
 				Spec: configurationv1alpha1.KongCertificateSpec{
-					Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeInline),
+					Type: new(configurationv1alpha1.KongCertificateSourceTypeInline),
 					KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
 						Cert: "cert-data",
 						Key:  "key-data",
@@ -827,7 +826,7 @@ func TestCreateCertificate(t *testing.T) {
 					return cert.Cert == "cert-data" && cert.Key == "key-data"
 				})).Return(&sdkkonnectops.CreateCertificateResponse{
 					Certificate: &sdkkonnectcomp.Certificate{
-						ID: lo.ToPtr("new-cert-id"),
+						ID: new("new-cert-id"),
 					},
 				}, nil)
 			},
@@ -847,8 +846,8 @@ func TestCreateCertificate(t *testing.T) {
 					UID:        "test-uid",
 				},
 				Spec: configurationv1alpha1.KongCertificateSpec{
-					Type:      lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
-					SecretRef: &commonv1alpha1.NamespacedRef{Name: "tls-secret", Namespace: lo.ToPtr("default")},
+					Type:      new(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
+					SecretRef: &commonv1alpha1.NamespacedRef{Name: "tls-secret", Namespace: new("default")},
 				},
 				Status: configurationv1alpha1.KongCertificateStatus{
 					Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
@@ -878,7 +877,7 @@ func TestCreateCertificate(t *testing.T) {
 					return cert.Cert == "secret-cert-data" && cert.Key == "secret-key-data"
 				})).Return(&sdkkonnectops.CreateCertificateResponse{
 					Certificate: &sdkkonnectcomp.Certificate{
-						ID: lo.ToPtr("new-cert-id-from-secret"),
+						ID: new("new-cert-id-from-secret"),
 					},
 				}, nil)
 			},
@@ -898,7 +897,7 @@ func TestCreateCertificate(t *testing.T) {
 					UID:        "test-uid",
 				},
 				Spec: configurationv1alpha1.KongCertificateSpec{
-					Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeInline),
+					Type: new(configurationv1alpha1.KongCertificateSourceTypeInline),
 					KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
 						Cert: "cert-data",
 						Key:  "key-data",
@@ -917,7 +916,7 @@ func TestCreateCertificate(t *testing.T) {
 						Object: &sdkkonnectops.ListCertificateResponseBody{
 							Data: []sdkkonnectcomp.Certificate{
 								{
-									ID: lo.ToPtr("existing-cert-id"),
+									ID: new("existing-cert-id"),
 								},
 							},
 						},
@@ -935,7 +934,7 @@ func TestCreateCertificate(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: configurationv1alpha1.KongCertificateSpec{
-					Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeInline),
+					Type: new(configurationv1alpha1.KongCertificateSourceTypeInline),
 					KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
 						Cert: "cert-data",
 						Key:  "key-data",
@@ -957,7 +956,7 @@ func TestCreateCertificate(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: configurationv1alpha1.KongCertificateSpec{
-					Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeInline),
+					Type: new(configurationv1alpha1.KongCertificateSourceTypeInline),
 					KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
 						Cert: "cert-data",
 						Key:  "key-data",
@@ -986,7 +985,7 @@ func TestCreateCertificate(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: configurationv1alpha1.KongCertificateSpec{
-					Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeInline),
+					Type: new(configurationv1alpha1.KongCertificateSourceTypeInline),
 					KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
 						Cert: "cert-data",
 						Key:  "key-data",
@@ -1023,8 +1022,8 @@ func TestCreateCertificate(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: configurationv1alpha1.KongCertificateSpec{
-					Type:      lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
-					SecretRef: &commonv1alpha1.NamespacedRef{Name: "missing-secret", Namespace: lo.ToPtr("default")},
+					Type:      new(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
+					SecretRef: &commonv1alpha1.NamespacedRef{Name: "missing-secret", Namespace: new("default")},
 				},
 				Status: configurationv1alpha1.KongCertificateStatus{
 					Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
@@ -1059,7 +1058,7 @@ func TestCreateCertificate(t *testing.T) {
 					UID:        "test-uid",
 				},
 				Spec: configurationv1alpha1.KongCertificateSpec{
-					Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeInline),
+					Type: new(configurationv1alpha1.KongCertificateSourceTypeInline),
 					KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
 						Cert: "cert-data",
 						Key:  "key-data",
@@ -1102,7 +1101,7 @@ func TestCreateCertificate(t *testing.T) {
 					UID:        "test-uid",
 				},
 				Spec: configurationv1alpha1.KongCertificateSpec{
-					Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeInline),
+					Type: new(configurationv1alpha1.KongCertificateSourceTypeInline),
 					KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
 						Cert: "cert-data",
 						Key:  "key-data",

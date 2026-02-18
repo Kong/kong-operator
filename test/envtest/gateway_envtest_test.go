@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -158,7 +157,7 @@ func createHTTPRoutes(
 						{
 							Path: &gatewayapi.HTTPPathMatch{
 								Type:  &pathMatchPrefix,
-								Value: kong.String("/test-http-route"),
+								Value: new("/test-http-route"),
 							},
 						},
 					},

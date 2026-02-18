@@ -143,32 +143,32 @@ func (me metricsEnricher) Consume(ctx context.Context, m Metrics) error {
 				// Below labels have to match the ones in HistogramPassthroughMetric.Desc.
 				m.Label = []*dto.LabelPair{
 					{
-						Name:  lo.ToPtr("namespace"),
-						Value: lo.ToPtr(tagK8sNamespace),
+						Name:  new("namespace"),
+						Value: new(tagK8sNamespace),
 					},
 					{
-						Name:  lo.ToPtr("service"),
-						Value: lo.ToPtr(tagK8sName),
+						Name:  new("service"),
+						Value: new(tagK8sName),
 					},
 					{
-						Name:  lo.ToPtr("kubernetes_apiversion"),
-						Value: lo.ToPtr("v1"),
+						Name:  new("kubernetes_apiversion"),
+						Value: new("v1"),
 					},
 					{
-						Name:  lo.ToPtr("kubernetes_kind"),
-						Value: lo.ToPtr("service"),
+						Name:  new("kubernetes_kind"),
+						Value: new("service"),
 					},
 					{
-						Name:  lo.ToPtr("kubernetes_name"),
-						Value: lo.ToPtr(tagK8sName),
+						Name:  new("kubernetes_name"),
+						Value: new(tagK8sName),
 					},
 					{
-						Name:  lo.ToPtr("kubernetes_namespace"),
-						Value: lo.ToPtr(tagK8sNamespace),
+						Name:  new("kubernetes_namespace"),
+						Value: new(tagK8sNamespace),
 					},
 					{
-						Name:  lo.ToPtr("dataplane_url"),
-						Value: lo.ToPtr(string(dataplaneURL)),
+						Name:  new("dataplane_url"),
+						Value: new(string(dataplaneURL)),
 					},
 				}
 

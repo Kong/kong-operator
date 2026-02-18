@@ -19,7 +19,6 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	k8senvironments "github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -70,7 +69,7 @@ func TestControlPlaneDrainSupport(t *testing.T) {
 			},
 		}).
 		Build()
-	dataplane.Spec.Deployment.Replicas = lo.ToPtr(int32(1))
+	dataplane.Spec.Deployment.Replicas = new(int32(1))
 
 	t.Log("creating dataplane resource")
 	require.NoError(t, mgrClient.Create(ctx, dataplane))
@@ -94,9 +93,9 @@ func TestControlPlaneDrainSupport(t *testing.T) {
 		},
 		Spec: gwtypes.ControlPlaneSpec{
 			ControlPlaneOptions: gwtypes.ControlPlaneOptions{
-				IngressClass: lo.ToPtr(ingressClass),
+				IngressClass: new(ingressClass),
 				Translation: &gwtypes.ControlPlaneTranslationOptions{
-					DrainSupport: lo.ToPtr(gwtypes.ControlPlaneDrainSupportStateEnabled),
+					DrainSupport: new(gwtypes.ControlPlaneDrainSupportStateEnabled),
 				},
 			},
 			DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
@@ -221,12 +220,12 @@ func deployDrainSupportBackend(t *testing.T, ctx context.Context, namespace stri
 			GenerateName: "drain-backend-",
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: lo.ToPtr(int32(2)),
+			Replicas: new(int32(2)),
 			Selector: &metav1.LabelSelector{MatchLabels: labels},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{Labels: labels},
 				Spec: corev1.PodSpec{
-					TerminationGracePeriodSeconds: lo.ToPtr(int64(90)),
+					TerminationGracePeriodSeconds: new(int64(90)),
 					Containers:                    []corev1.Container{container},
 				},
 			},

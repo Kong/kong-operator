@@ -9,7 +9,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/kong/go-kong/kong"
-	"github.com/samber/lo"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/versions"
@@ -214,7 +213,7 @@ func ToDeckContent(
 	if params.AppendStubEntityWhenConfigEmpty && IsContentEmpty(&content) {
 		content.Upstreams = append(content.Upstreams, file.FUpstream{
 			Upstream: kong.Upstream{
-				Name: lo.ToPtr(StubUpstreamName),
+				Name: new(StubUpstreamName),
 			},
 		})
 	}
@@ -224,16 +223,16 @@ func ToDeckContent(
 
 func fillRoute(route *kong.Route, expressionRoutes bool) {
 	if route.HTTPSRedirectStatusCode == nil {
-		route.HTTPSRedirectStatusCode = kong.Int(426)
+		route.HTTPSRedirectStatusCode = new(426)
 	}
 	if route.PathHandling == nil && !expressionRoutes {
-		route.PathHandling = kong.String("v0")
+		route.PathHandling = new("v0")
 	}
 }
 
 func fillUpstream(upstream *kong.Upstream) {
 	if upstream.Algorithm == nil {
-		upstream.Algorithm = kong.String("round-robin")
+		upstream.Algorithm = new("round-robin")
 	}
 }
 
@@ -256,10 +255,10 @@ func fillPlugin(ctx context.Context, plugin *file.FPlugin, schemas PluginSchemaS
 		return fmt.Errorf("error filling in default for plugin %s: %w", *plugin.Name, err)
 	}
 	if plugin.RunOn == nil {
-		plugin.RunOn = kong.String("first")
+		plugin.RunOn = new("first")
 	}
 	if plugin.Enabled == nil {
-		plugin.Enabled = kong.Bool(true)
+		plugin.Enabled = new(true)
 	}
 	if len(plugin.Protocols) == 0 {
 		// TODO read this from the schema endpoint
