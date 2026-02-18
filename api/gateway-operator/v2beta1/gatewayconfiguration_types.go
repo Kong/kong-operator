@@ -180,6 +180,7 @@ type GatewayConfigDataPlaneNetworkOptions struct {
 	// and from the DataPlane.
 	//
 	// +optional
+	// +kubebuilder:default={ingress:{type: "LoadBalancer"}}
 	Services *GatewayConfigDataPlaneServices `json:"services,omitempty"`
 }
 
