@@ -12,10 +12,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	gwtypes "github.com/kong/kong-operator/internal/types"
-	"github.com/kong/kong-operator/internal/utils/index"
-	"github.com/kong/kong-operator/modules/manager/scheme"
-	"github.com/kong/kong-operator/pkg/vars"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/internal/utils/index"
+	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/pkg/vars"
 )
 
 func TestReconciler_listGatewayReconcileRequestsForSecret(t *testing.T) {

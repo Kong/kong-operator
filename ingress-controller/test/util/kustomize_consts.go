@@ -9,7 +9,7 @@ import (
 
 	"github.com/samber/lo"
 
-	"github.com/kong/kong-operator/ingress-controller/test/consts"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/consts"
 )
 
 const (

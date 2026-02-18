@@ -28,10 +28,10 @@ import (
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/controllers"
-	"github.com/kong/kong-operator/ingress-controller/internal/controllers/crds"
-	"github.com/kong/kong-operator/ingress-controller/internal/logging"
-	"github.com/kong/kong-operator/ingress-controller/internal/util/kubernetes/object/status"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/crds"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/logging"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/kubernetes/object/status"
 )
 
 // -----------------------------------------------------------------------------

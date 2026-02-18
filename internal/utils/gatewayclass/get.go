@@ -10,9 +10,9 @@ import (
 
 	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
 
-	operatorerrors "github.com/kong/kong-operator/internal/errors"
-	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
-	"github.com/kong/kong-operator/pkg/vars"
+	operatorerrors "github.com/kong/kong-operator/v2/internal/errors"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/v2/pkg/vars"
 )
 
 // Get returns a decorated GatewayClass object for the provided GatewayClass name. If the GatewayClass is

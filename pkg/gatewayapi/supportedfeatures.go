@@ -6,7 +6,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/gateway-api/pkg/features"
 
-	"github.com/kong/kong-operator/pkg/consts"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
 var (

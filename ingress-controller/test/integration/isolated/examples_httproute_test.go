@@ -25,14 +25,14 @@ import (
 	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
 	"github.com/kong/kubernetes-configuration/v2/pkg/clientset"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane"
-	"github.com/kong/kong-operator/ingress-controller/internal/diagnostics"
-	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
-	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
-	"github.com/kong/kong-operator/ingress-controller/test/integration/consts"
-	"github.com/kong/kong-operator/ingress-controller/test/internal/helpers"
-	"github.com/kong/kong-operator/ingress-controller/test/internal/testlabels"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/diagnostics"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/integration/consts"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/internal/helpers"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/internal/testlabels"
 )
 
 func TestHTTPRouteExample(t *testing.T) {

@@ -16,7 +16,7 @@ import (
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 
-	"github.com/kong/kong-operator/controller/pkg/log"
+	"github.com/kong/kong-operator/v2/controller/pkg/log"
 )
 
 // MetricsConsumer is an interface for consumers of metrics scraped by a MetricsScraper.

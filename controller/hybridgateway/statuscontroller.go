@@ -9,8 +9,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/kong/kong-operator/controller/hybridgateway/route"
-	"github.com/kong/kong-operator/controller/pkg/op"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/route"
+	"github.com/kong/kong-operator/v2/controller/pkg/op"
 )
 
 // RouteStatusReconciler is a generic reconciler for route objects, allowing creation of controllers for different route types by specifying type parameters.

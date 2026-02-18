@@ -14,8 +14,8 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	ctrlref "github.com/kong/kong-operator/ingress-controller/internal/controllers/reference"
-	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
+	ctrlref "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/reference"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 )
 
 // getBackendTLSPoliciesByHTTPRoute returns the list of BackendTLSPolicies that targets a service

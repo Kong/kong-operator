@@ -17,7 +17,7 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
-	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
+	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 )
 
 // ensureControlPlane ensures that the Konnect ControlPlane exists in Konnect. It is created

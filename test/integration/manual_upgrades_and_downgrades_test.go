@@ -16,13 +16,13 @@ import (
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 
-	gwtypes "github.com/kong/kong-operator/internal/types"
-	"github.com/kong/kong-operator/pkg/consts"
-	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
-	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
-	testutils "github.com/kong/kong-operator/pkg/utils/test"
-	"github.com/kong/kong-operator/pkg/vars"
-	"github.com/kong/kong-operator/test/helpers"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/pkg/consts"
+	gatewayutils "github.com/kong/kong-operator/v2/pkg/utils/gateway"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
+	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
+	"github.com/kong/kong-operator/v2/pkg/vars"
+	"github.com/kong/kong-operator/v2/test/helpers"
 )
 
 func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {

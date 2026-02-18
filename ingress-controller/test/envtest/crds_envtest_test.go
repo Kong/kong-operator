@@ -21,8 +21,8 @@ import (
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
 
-	"github.com/kong/kong-operator/ingress-controller/pkg/manager"
-	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager"
+	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
 )
 
 // TestGatewayAPIControllersMayBeDynamicallyStarted ensures that in case of missing CRDs installation in the

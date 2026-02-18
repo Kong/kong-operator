@@ -27,8 +27,8 @@ import (
 
 	operatorclient "github.com/kong/kubernetes-configuration/v2/pkg/clientset"
 
-	"github.com/kong/kong-operator/controller/pkg/secrets"
-	"github.com/kong/kong-operator/modules/manager"
+	"github.com/kong/kong-operator/v2/controller/pkg/secrets"
+	"github.com/kong/kong-operator/v2/modules/manager"
 )
 
 const (

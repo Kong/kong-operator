@@ -14,11 +14,11 @@ import (
 
 	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
-	gatewaycontroller "github.com/kong/kong-operator/ingress-controller/internal/controllers/gateway"
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/translator"
-	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
-	"github.com/kong/kong-operator/ingress-controller/pkg/manager/scheme"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
+	gatewaycontroller "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/gateway"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/translator"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/scheme"
 )
 
 func TestValidateHTTPRoute(t *testing.T) {

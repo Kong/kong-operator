@@ -27,13 +27,13 @@ import (
 
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
 
-	"github.com/kong/kong-operator/controller/kongplugininstallation/image"
-	"github.com/kong/kong-operator/controller/pkg/log"
-	"github.com/kong/kong-operator/controller/pkg/secrets/ref"
-	mgrconfig "github.com/kong/kong-operator/modules/manager/config"
-	"github.com/kong/kong-operator/modules/manager/logging"
-	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
-	k8sresources "github.com/kong/kong-operator/pkg/utils/kubernetes/resources"
+	"github.com/kong/kong-operator/v2/controller/kongplugininstallation/image"
+	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	"github.com/kong/kong-operator/v2/controller/pkg/secrets/ref"
+	mgrconfig "github.com/kong/kong-operator/v2/modules/manager/config"
+	"github.com/kong/kong-operator/v2/modules/manager/logging"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
+	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 )
 
 const kindKongPluginInstallation = gatewayv1.Kind("KongPluginInstallation")

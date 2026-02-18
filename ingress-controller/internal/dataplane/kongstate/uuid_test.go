@@ -1,6 +1,6 @@
 package kongstate
 
-import "github.com/kong/kong-operator/ingress-controller/internal/util"
+import "github.com/kong/kong-operator/v2/ingress-controller/internal/util"
 
 var _ = util.UUIDGenerator(&StaticUUIDGenerator{})
 

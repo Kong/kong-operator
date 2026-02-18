@@ -16,9 +16,9 @@ import (
 	"sigs.k8s.io/gateway-api/pkg/features"
 	"sigs.k8s.io/yaml"
 
-	dpconf "github.com/kong/kong-operator/ingress-controller/internal/dataplane/config"
-	"github.com/kong/kong-operator/ingress-controller/test/internal/testenv"
-	"github.com/kong/kong-operator/modules/manager/metadata"
+	dpconf "github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/config"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/internal/testenv"
+	"github.com/kong/kong-operator/v2/modules/manager/metadata"
 )
 
 var skippedTestsForTraditionalRoutes = []string{

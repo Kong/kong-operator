@@ -11,7 +11,7 @@ import (
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
 
-	"github.com/kong/kong-operator/controller/pkg/controlplane"
+	"github.com/kong/kong-operator/v2/controller/pkg/controlplane"
 )
 
 // ForeignRelations contains all the relations between Kong entities and KongPlugin.

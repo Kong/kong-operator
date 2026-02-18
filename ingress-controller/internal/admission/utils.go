@@ -9,7 +9,7 @@ import (
 
 	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
 
-	credsvalidation "github.com/kong/kong-operator/ingress-controller/internal/admission/validation/consumers/credentials"
+	credsvalidation "github.com/kong/kong-operator/v2/ingress-controller/internal/admission/validation/consumers/credentials"
 )
 
 // -----------------------------------------------------------------------------

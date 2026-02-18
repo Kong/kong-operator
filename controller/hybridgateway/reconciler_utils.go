@@ -10,10 +10,10 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kong-operator/controller/hybridgateway/converter"
-	"github.com/kong/kong-operator/controller/hybridgateway/utils"
-	"github.com/kong/kong-operator/pkg/consts"
-	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/converter"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
+	"github.com/kong/kong-operator/v2/pkg/consts"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 // ownedResourcesWithHits is a struct that holds an unstructured resource and the number of times it has been accessed.

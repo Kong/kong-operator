@@ -9,7 +9,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
 )
 
 func TestOverrideService(t *testing.T) {

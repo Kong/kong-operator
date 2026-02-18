@@ -25,13 +25,13 @@ import (
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 
-	"github.com/kong/kong-operator/pkg/consts"
-	"github.com/kong/kong-operator/pkg/gatewayapi"
-	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
-	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
-	testutils "github.com/kong/kong-operator/pkg/utils/test"
-	"github.com/kong/kong-operator/test/helpers"
-	"github.com/kong/kong-operator/test/helpers/envs"
+	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/pkg/gatewayapi"
+	gatewayutils "github.com/kong/kong-operator/v2/pkg/utils/gateway"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
+	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
+	"github.com/kong/kong-operator/v2/test/helpers"
+	"github.com/kong/kong-operator/v2/test/helpers/envs"
 )
 
 func TestGatewayEssentials(t *testing.T) {

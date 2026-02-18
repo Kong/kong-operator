@@ -5,7 +5,7 @@ import (
 
 	kcfgcontrolplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/controlplane"
 
-	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 // markAsProvisioned marks the provided resource as ready by the means of Provisioned

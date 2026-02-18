@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
-	"github.com/kong/kong-operator/ingress-controller/test/helpers"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/helpers"
 )
 
 func TestHealthCheckServer(t *testing.T) {

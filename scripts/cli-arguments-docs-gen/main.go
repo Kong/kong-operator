@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/kong/kong-operator/modules/cli"
-	"github.com/kong/kong-operator/modules/manager"
-	"github.com/kong/kong-operator/modules/manager/config"
-	"github.com/kong/kong-operator/modules/manager/metadata"
+	"github.com/kong/kong-operator/v2/modules/cli"
+	"github.com/kong/kong-operator/v2/modules/manager"
+	"github.com/kong/kong-operator/v2/modules/manager/config"
+	"github.com/kong/kong-operator/v2/modules/manager/metadata"
 )
 
 // This program generates markdown documentation for KGO executable's flags.

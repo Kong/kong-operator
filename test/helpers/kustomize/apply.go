@@ -10,8 +10,8 @@ import (
 	"sigs.k8s.io/kustomize/api/krusty"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
 
-	"github.com/kong/kong-operator/pkg/utils/test"
-	"github.com/kong/kong-operator/test/helpers/apply"
+	"github.com/kong/kong-operator/v2/pkg/utils/test"
+	"github.com/kong/kong-operator/v2/test/helpers/apply"
 )
 
 // Kustomization applies a kustomization to the cluster using the given rest.Config.

@@ -30,13 +30,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
-	"github.com/kong/kong-operator/ingress-controller/internal/controllers"
-	ctrlref "github.com/kong/kong-operator/ingress-controller/internal/controllers/reference"
-	ctrlutils "github.com/kong/kong-operator/ingress-controller/internal/controllers/utils"
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane"
-	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
-	"github.com/kong/kong-operator/ingress-controller/internal/logging"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers"
+	ctrlref "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/reference"
+	ctrlutils "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/utils"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/logging"
 )
 
 // -----------------------------------------------------------------------------

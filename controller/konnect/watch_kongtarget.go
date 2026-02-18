@@ -15,8 +15,8 @@ import (
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 
-	operatorerrors "github.com/kong/kong-operator/internal/errors"
-	"github.com/kong/kong-operator/internal/utils/index"
+	operatorerrors "github.com/kong/kong-operator/v2/internal/errors"
+	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
 // KongTargetReconciliationWatchOptions  returns the watch options for

@@ -8,9 +8,9 @@ import (
 	"github.com/stretchr/testify/require"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/adminapi"
-	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
-	"github.com/kong/kong-operator/ingress-controller/test/mocks"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/adminapi"
+	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/mocks"
 )
 
 func TestClientFactory_CreateAdminAPIClientAttachesPodReference(t *testing.T) {

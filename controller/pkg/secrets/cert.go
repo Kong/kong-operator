@@ -29,13 +29,13 @@ import (
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 
-	"github.com/kong/kong-operator/controller/pkg/dataplane"
-	"github.com/kong/kong-operator/controller/pkg/op"
-	"github.com/kong/kong-operator/modules/manager/logging"
-	"github.com/kong/kong-operator/pkg/consts"
-	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
-	k8sreduce "github.com/kong/kong-operator/pkg/utils/kubernetes/reduce"
-	k8sresources "github.com/kong/kong-operator/pkg/utils/kubernetes/resources"
+	"github.com/kong/kong-operator/v2/controller/pkg/dataplane"
+	"github.com/kong/kong-operator/v2/controller/pkg/op"
+	"github.com/kong/kong-operator/v2/modules/manager/logging"
+	"github.com/kong/kong-operator/v2/pkg/consts"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
+	k8sreduce "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/reduce"
+	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 )
 
 var caLoggerInit sync.Once

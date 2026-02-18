@@ -8,7 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/kong/kong-operator/controller/hybridgateway/utils"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 )
 
 func makeUnstructuredWithTimestamp(name string, t time.Time) unstructured.Unstructured {

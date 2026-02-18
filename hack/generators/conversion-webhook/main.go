@@ -10,7 +10,7 @@ import (
 	"github.com/samber/lo"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"github.com/kong/kong-operator/internal/webhook/conversion"
+	"github.com/kong/kong-operator/v2/internal/webhook/conversion"
 )
 
 // Updates the file config/crd/patches/zz_generated_conversion_webhook.yaml

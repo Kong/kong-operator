@@ -13,8 +13,8 @@ import (
 
 	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/store"
-	"github.com/kong/kong-operator/ingress-controller/internal/util"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
 )
 
 // getKongPluginOrKongClusterPlugin fetches a KongPlugin or KongClusterPlugin (as fallback) from the store.

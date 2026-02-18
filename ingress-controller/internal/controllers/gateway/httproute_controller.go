@@ -28,12 +28,12 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/controllers"
-	ctrlutils "github.com/kong/kong-operator/ingress-controller/internal/controllers/utils"
-	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
-	"github.com/kong/kong-operator/ingress-controller/internal/util"
-	k8sobj "github.com/kong/kong-operator/ingress-controller/internal/util/kubernetes/object"
-	"github.com/kong/kong-operator/ingress-controller/internal/util/kubernetes/object/status"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers"
+	ctrlutils "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/utils"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
+	k8sobj "github.com/kong/kong-operator/v2/ingress-controller/internal/util/kubernetes/object"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/kubernetes/object/status"
 )
 
 // -----------------------------------------------------------------------------

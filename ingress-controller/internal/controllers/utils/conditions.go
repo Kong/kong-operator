@@ -6,8 +6,8 @@ import (
 
 	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/util"
-	"github.com/kong/kong-operator/ingress-controller/internal/util/kubernetes/object"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/kubernetes/object"
 )
 
 const (

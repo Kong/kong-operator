@@ -5,7 +5,7 @@ import (
 
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/admission"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/admission"
 )
 
 // SetupAdmissionServer sets up the admission webhook server.

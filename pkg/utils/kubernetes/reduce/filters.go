@@ -14,7 +14,7 @@ import (
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
 
-	"github.com/kong/kong-operator/controller/konnect/constraints"
+	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 )
 
 // FilterNone filter nothing, that is it returns the same slice as provided.

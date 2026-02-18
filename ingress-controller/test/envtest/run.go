@@ -17,10 +17,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/health"
-	"github.com/kong/kong-operator/ingress-controller/pkg/manager"
-	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
-	"github.com/kong/kong-operator/ingress-controller/test/mocks"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/health"
+	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager"
+	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/mocks"
 )
 
 const (

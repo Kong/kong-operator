@@ -14,9 +14,9 @@ import (
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 
-	operatorerrors "github.com/kong/kong-operator/internal/errors"
-	"github.com/kong/kong-operator/internal/utils/gatewayclass"
-	"github.com/kong/kong-operator/internal/utils/index"
+	operatorerrors "github.com/kong/kong-operator/v2/internal/errors"
+	"github.com/kong/kong-operator/v2/internal/utils/gatewayclass"
+	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
 // -----------------------------------------------------------------------------

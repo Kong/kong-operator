@@ -14,9 +14,9 @@ import (
 
 	"github.com/kong/kubernetes-configuration/v2/pkg/clientset/scheme"
 
-	"github.com/kong/kong-operator/ingress-controller/pkg/manager"
-	"github.com/kong/kong-operator/ingress-controller/pkg/manager/multiinstance"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers"
+	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager"
+	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/multiinstance"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/helpers"
 )
 
 func TestMultiInstanceManagerDiagnostics(t *testing.T) {

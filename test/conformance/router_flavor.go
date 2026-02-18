@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/kong/kong-operator/pkg/consts"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
 // KongRouterFlavor returns router mode of Kong in tests. Currently supports:

@@ -21,15 +21,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/admission"
-	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
-	"github.com/kong/kong-operator/ingress-controller/pkg/manager/scheme"
-	"github.com/kong/kong-operator/ingress-controller/test"
-	"github.com/kong/kong-operator/ingress-controller/test/consts"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers/certificate"
-	"github.com/kong/kong-operator/ingress-controller/test/internal/helpers"
-	"github.com/kong/kong-operator/ingress-controller/test/internal/testenv"
-	testutils "github.com/kong/kong-operator/ingress-controller/test/util"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/admission"
+	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/scheme"
+	"github.com/kong/kong-operator/v2/ingress-controller/test"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/consts"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/helpers/certificate"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/internal/helpers"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/internal/testenv"
+	testutils "github.com/kong/kong-operator/v2/ingress-controller/test/util"
 )
 
 // -----------------------------------------------------------------------------

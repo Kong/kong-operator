@@ -9,7 +9,7 @@ import (
 	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/kong/go-kong/kong"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/deckgen"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/deckgen"
 )
 
 const (

@@ -33,11 +33,11 @@ import (
 
 	configurationclient "github.com/kong/kubernetes-configuration/v2/pkg/clientset"
 
-	"github.com/kong/kong-operator/internal/versions"
-	"github.com/kong/kong-operator/modules/manager/scheme"
-	testutils "github.com/kong/kong-operator/pkg/utils/test"
-	"github.com/kong/kong-operator/test"
-	"github.com/kong/kong-operator/test/helpers"
+	"github.com/kong/kong-operator/v2/internal/versions"
+	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
+	"github.com/kong/kong-operator/v2/test"
+	"github.com/kong/kong-operator/v2/test/helpers"
 )
 
 // -----------------------------------------------------------------------------

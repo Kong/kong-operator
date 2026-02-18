@@ -8,7 +8,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
 
-	"github.com/kong/kong-operator/pkg/consts"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
 // AnnotateConfigMapWithKongPluginInstallation ensures that annotation that maps

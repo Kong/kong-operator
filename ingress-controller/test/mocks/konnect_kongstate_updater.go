@@ -1,7 +1,7 @@
 package mocks
 
 import (
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/kongstate"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
 )
 
 // KonnectKongStateUpdater is a mock implementation of dataplane.KonnectKongStateUpdater.

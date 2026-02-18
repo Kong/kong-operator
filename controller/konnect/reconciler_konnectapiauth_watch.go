@@ -13,7 +13,7 @@ import (
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
 
-	operatorerrors "github.com/kong/kong-operator/internal/errors"
+	operatorerrors "github.com/kong/kong-operator/v2/internal/errors"
 )
 
 // listKonnectAPIAuthConfigurationsReferencingSecret returns a function that lists

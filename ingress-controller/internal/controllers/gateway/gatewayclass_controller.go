@@ -18,9 +18,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
-	"github.com/kong/kong-operator/ingress-controller/internal/logging"
-	"github.com/kong/kong-operator/ingress-controller/internal/util"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/logging"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
 )
 
 // -----------------------------------------------------------------------------

@@ -6,9 +6,9 @@ import (
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 
-	dpconf "github.com/kong/kong-operator/ingress-controller/internal/dataplane/config"
-	"github.com/kong/kong-operator/ingress-controller/test/consts"
-	"github.com/kong/kong-operator/ingress-controller/test/internal/testenv"
+	dpconf "github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/config"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/consts"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/internal/testenv"
 )
 
 // GenerateKongBuilder returns a Kong KTF addon builder, a string slice

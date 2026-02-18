@@ -15,7 +15,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
 
-	"github.com/kong/kong-operator/test"
+	"github.com/kong/kong-operator/v2/test"
 )
 
 const (

@@ -11,9 +11,9 @@ import (
 	"github.com/samber/mo"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/license"
-	"github.com/kong/kong-operator/ingress-controller/internal/util/clock"
-	"github.com/kong/kong-operator/ingress-controller/test/mocks"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/license"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/clock"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/mocks"
 )
 
 type mockKonnectClientClient struct {

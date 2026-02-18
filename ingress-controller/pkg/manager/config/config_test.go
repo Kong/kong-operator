@@ -9,15 +9,15 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/rest"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
-	"github.com/kong/kong-operator/ingress-controller/internal/controllers/gateway"
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane"
-	"github.com/kong/kong-operator/ingress-controller/internal/konnect"
-	"github.com/kong/kong-operator/ingress-controller/internal/license"
-	"github.com/kong/kong-operator/ingress-controller/internal/manager/consts"
-	"github.com/kong/kong-operator/ingress-controller/internal/util/kubernetes/object/status"
-	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
-	"github.com/kong/kong-operator/ingress-controller/pkg/telemetry/types"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/gateway"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/konnect"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/license"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/manager/consts"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/kubernetes/object/status"
+	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/v2/ingress-controller/pkg/telemetry/types"
 )
 
 func TestNewConfig(t *testing.T) {

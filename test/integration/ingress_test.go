@@ -25,13 +25,13 @@ import (
 	kcfgdataplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 
-	"github.com/kong/kong-operator/internal/annotations"
-	gwtypes "github.com/kong/kong-operator/internal/types"
-	"github.com/kong/kong-operator/pkg/consts"
-	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
-	testutils "github.com/kong/kong-operator/pkg/utils/test"
-	"github.com/kong/kong-operator/pkg/vars"
-	"github.com/kong/kong-operator/test/helpers"
+	"github.com/kong/kong-operator/v2/internal/annotations"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/pkg/consts"
+	gatewayutils "github.com/kong/kong-operator/v2/pkg/utils/gateway"
+	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
+	"github.com/kong/kong-operator/v2/pkg/vars"
+	"github.com/kong/kong-operator/v2/test/helpers"
 )
 
 const (

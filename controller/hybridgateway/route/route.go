@@ -7,8 +7,8 @@ import (
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kong-operator/controller/pkg/op"
-	gwtypes "github.com/kong/kong-operator/internal/types"
+	"github.com/kong/kong-operator/v2/controller/pkg/op"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // RouteStatusUpdater computes and enforces the status of a route object.

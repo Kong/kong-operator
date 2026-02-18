@@ -8,7 +8,7 @@ import (
 
 	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/util"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
 )
 
 // Consumer holds a Kong consumer and its plugins and credentials.

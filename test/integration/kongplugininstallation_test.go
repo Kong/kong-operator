@@ -28,9 +28,9 @@ import (
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 	"github.com/kong/kubernetes-configuration/v2/pkg/metadata"
 
-	"github.com/kong/kong-operator/modules/manager/config"
-	testutils "github.com/kong/kong-operator/pkg/utils/test"
-	"github.com/kong/kong-operator/test/helpers"
+	"github.com/kong/kong-operator/v2/modules/manager/config"
+	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
+	"github.com/kong/kong-operator/v2/test/helpers"
 )
 
 func TestKongPluginInstallationEssentials(t *testing.T) {

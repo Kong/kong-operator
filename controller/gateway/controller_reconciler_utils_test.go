@@ -24,11 +24,11 @@ import (
 	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
-	gwtypes "github.com/kong/kong-operator/internal/types"
-	"github.com/kong/kong-operator/modules/manager/scheme"
-	"github.com/kong/kong-operator/pkg/consts"
-	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
-	"github.com/kong/kong-operator/test/helpers"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/pkg/consts"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/v2/test/helpers"
 )
 
 func TestParseKongProxyListenEnv(t *testing.T) {

@@ -20,14 +20,14 @@ import (
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 
-	"github.com/kong/kong-operator/controller/pkg/op"
-	"github.com/kong/kong-operator/ingress-controller/pkg/manager/multiinstance"
-	gwtypes "github.com/kong/kong-operator/internal/types"
-	"github.com/kong/kong-operator/internal/utils/index"
-	"github.com/kong/kong-operator/modules/manager/scheme"
-	"github.com/kong/kong-operator/pkg/consts"
-	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
-	"github.com/kong/kong-operator/test/helpers"
+	"github.com/kong/kong-operator/v2/controller/pkg/op"
+	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/multiinstance"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/internal/utils/index"
+	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/pkg/consts"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/v2/test/helpers"
 )
 
 func TestReconciler_Reconcile(t *testing.T) {

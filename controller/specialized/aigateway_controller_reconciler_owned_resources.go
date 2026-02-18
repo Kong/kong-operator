@@ -14,8 +14,8 @@ import (
 	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
 
-	"github.com/kong/kong-operator/controller/pkg/log"
-	secretref "github.com/kong/kong-operator/controller/pkg/secrets/ref"
+	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	secretref "github.com/kong/kong-operator/v2/controller/pkg/secrets/ref"
 )
 
 // -----------------------------------------------------------------------------

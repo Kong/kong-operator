@@ -10,7 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 
-	"github.com/kong/kong-operator/ingress-controller/test/consts"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/consts"
 )
 
 // -----------------------------------------------------------------------------

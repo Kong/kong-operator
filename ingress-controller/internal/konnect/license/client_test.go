@@ -11,10 +11,10 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 
-	konnectlicense "github.com/kong/kong-operator/ingress-controller/internal/konnect/license"
-	"github.com/kong/kong-operator/ingress-controller/internal/license"
-	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
-	"github.com/kong/kong-operator/modules/manager/metadata"
+	konnectlicense "github.com/kong/kong-operator/v2/ingress-controller/internal/konnect/license"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/license"
+	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/v2/modules/manager/metadata"
 )
 
 type mockKonnectLicenseServer struct {

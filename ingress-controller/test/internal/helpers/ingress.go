@@ -9,7 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/store"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 )
 
 func CreateIngressClass(ctx context.Context, ingressClassName string, client *kubernetes.Clientset) error {

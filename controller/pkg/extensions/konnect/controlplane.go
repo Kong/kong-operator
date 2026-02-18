@@ -12,9 +12,9 @@ import (
 
 	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
-	"github.com/kong/kong-operator/controller/pkg/extensions"
-	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
-	gwtypes "github.com/kong/kong-operator/internal/types"
+	"github.com/kong/kong-operator/v2/controller/pkg/extensions"
+	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // KonnectExtensionConfig holds the configuration for a KIC instance based on a KonnectExtension resource.

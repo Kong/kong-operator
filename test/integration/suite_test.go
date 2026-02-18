@@ -15,14 +15,14 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 
-	"github.com/kong/kong-operator/config"
-	"github.com/kong/kong-operator/modules/manager"
-	"github.com/kong/kong-operator/modules/manager/metadata"
-	"github.com/kong/kong-operator/modules/manager/scheme"
-	"github.com/kong/kong-operator/pkg/consts"
-	testutils "github.com/kong/kong-operator/pkg/utils/test"
-	"github.com/kong/kong-operator/test"
-	"github.com/kong/kong-operator/test/helpers"
+	"github.com/kong/kong-operator/v2/config"
+	"github.com/kong/kong-operator/v2/modules/manager"
+	"github.com/kong/kong-operator/v2/modules/manager/metadata"
+	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/pkg/consts"
+	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
+	"github.com/kong/kong-operator/v2/test"
+	"github.com/kong/kong-operator/v2/test/helpers"
 )
 
 // -----------------------------------------------------------------------------

@@ -21,7 +21,7 @@ import (
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/credentials"
 
-	"github.com/kong/kong-operator/modules/manager/metadata"
+	"github.com/kong/kong-operator/v2/modules/manager/metadata"
 )
 
 // The target files' names expected in an image with a custom Kong plugin.

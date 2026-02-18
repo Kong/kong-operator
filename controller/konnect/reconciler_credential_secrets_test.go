@@ -12,7 +12,7 @@ import (
 	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 
-	"github.com/kong/kong-operator/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
 func TestValidateSecretForKongCredentialBasicAuth(t *testing.T) {

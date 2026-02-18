@@ -12,8 +12,8 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/konnect/sdk"
-	"github.com/kong/kong-operator/ingress-controller/test"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/konnect/sdk"
+	"github.com/kong/kong-operator/v2/ingress-controller/test"
 )
 
 const (

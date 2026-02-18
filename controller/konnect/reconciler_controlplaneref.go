@@ -14,10 +14,10 @@ import (
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
 
-	"github.com/kong/kong-operator/controller/konnect/constraints"
-	"github.com/kong/kong-operator/controller/pkg/controlplane"
-	"github.com/kong/kong-operator/controller/pkg/patch"
-	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
+	"github.com/kong/kong-operator/v2/controller/pkg/controlplane"
+	"github.com/kong/kong-operator/v2/controller/pkg/patch"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 // EntityWithControlPlaneRef is an interface for entities that have a ControlPlaneRef.

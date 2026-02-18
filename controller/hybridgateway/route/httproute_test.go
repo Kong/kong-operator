@@ -10,9 +10,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/kong/kong-operator/controller/pkg/op"
-	"github.com/kong/kong-operator/ingress-controller/pkg/manager/scheme"
-	gwtypes "github.com/kong/kong-operator/internal/types"
+	"github.com/kong/kong-operator/v2/controller/pkg/op"
+	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/scheme"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func TestHTTPRouteStatusUpdater(t *testing.T) {

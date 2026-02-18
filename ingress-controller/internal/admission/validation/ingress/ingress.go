@@ -11,11 +11,11 @@ import (
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/admission/validation"
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/failures"
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/translator"
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/translator/subtranslator"
-	"github.com/kong/kong-operator/ingress-controller/internal/store"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/admission/validation"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/failures"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/translator"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/translator/subtranslator"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 )
 
 type routeValidator interface {

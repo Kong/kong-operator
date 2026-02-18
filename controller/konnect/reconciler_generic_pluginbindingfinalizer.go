@@ -19,12 +19,12 @@ import (
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
 
-	"github.com/kong/kong-operator/controller/konnect/constraints"
-	"github.com/kong/kong-operator/controller/pkg/log"
-	"github.com/kong/kong-operator/internal/utils/index"
-	"github.com/kong/kong-operator/modules/manager/logging"
-	"github.com/kong/kong-operator/pkg/clientops"
-	"github.com/kong/kong-operator/pkg/consts"
+	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
+	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	"github.com/kong/kong-operator/v2/internal/utils/index"
+	"github.com/kong/kong-operator/v2/modules/manager/logging"
+	"github.com/kong/kong-operator/v2/pkg/clientops"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
 // KonnectEntityPluginBindingFinalizerReconciler reconciles Konnect entities that may be referenced by KongPluginBinding.

@@ -6,7 +6,7 @@ import (
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 
-	"github.com/kong/kong-operator/ingress-controller/test"
+	"github.com/kong/kong-operator/v2/ingress-controller/test"
 )
 
 // SkipIfMissingRequiredKonnectEnvVariables skips the test if the required Konnect environment variables are missing.

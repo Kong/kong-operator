@@ -11,9 +11,9 @@ import (
 
 	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
-	"github.com/kong/kong-operator/ingress-controller/internal/controllers"
-	ctrlref "github.com/kong/kong-operator/ingress-controller/internal/controllers/reference"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers"
+	ctrlref "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/reference"
 )
 
 // updateReferredObjects updates reference records where the referrer is the object in parameter obj.

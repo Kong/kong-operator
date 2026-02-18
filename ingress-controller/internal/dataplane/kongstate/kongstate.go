@@ -22,14 +22,14 @@ import (
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 	"github.com/kong/kubernetes-configuration/v2/pkg/metadata"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/admission/validation/consumers/credentials"
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/failures"
-	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
-	"github.com/kong/kong-operator/ingress-controller/internal/logging"
-	"github.com/kong/kong-operator/ingress-controller/internal/store"
-	"github.com/kong/kong-operator/ingress-controller/internal/util"
-	"github.com/kong/kong-operator/ingress-controller/internal/util/rels"
-	"github.com/kong/kong-operator/ingress-controller/internal/versions"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/admission/validation/consumers/credentials"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/failures"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/logging"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/rels"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/versions"
 )
 
 // KongState holds the configuration that should be applied to Kong.

@@ -3,8 +3,8 @@ package subtranslator
 import (
 	"github.com/samber/lo"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/kongstate"
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/translator/atc"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/translator/atc"
 )
 
 // ApplyExpressionToL4KongRoute convert route flavor from traditional to expressions

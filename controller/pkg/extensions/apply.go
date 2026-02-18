@@ -15,10 +15,10 @@ import (
 	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 	kcfgkonnect "github.com/kong/kubernetes-configuration/v2/api/konnect"
 
-	extensionserrors "github.com/kong/kong-operator/controller/pkg/extensions/errors"
-	"github.com/kong/kong-operator/controller/pkg/patch"
-	gwtypes "github.com/kong/kong-operator/internal/types"
-	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	extensionserrors "github.com/kong/kong-operator/v2/controller/pkg/extensions/errors"
+	"github.com/kong/kong-operator/v2/controller/pkg/patch"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 // ExtendableT is the interface implemented by the objects which implementation

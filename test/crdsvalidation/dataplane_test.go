@@ -11,8 +11,8 @@ import (
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 	"github.com/kong/kubernetes-configuration/v2/test/crdsvalidation/common"
 
-	"github.com/kong/kong-operator/modules/manager/scheme"
-	"github.com/kong/kong-operator/test/envtest"
+	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/test/envtest"
 )
 
 func TestDataPlane(t *testing.T) {
