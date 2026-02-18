@@ -21,8 +21,8 @@ package v1beta1
 import (
 	context "context"
 
-	gatewayoperatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
-	scheme "github.com/kong/kong-operator/pkg/clientset/scheme"
+	gatewayoperatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
+	scheme "github.com/kong/kong-operator/v2/pkg/clientset/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"

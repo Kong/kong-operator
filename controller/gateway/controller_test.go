@@ -16,17 +16,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	kcfgconsts "github.com/kong/kong-operator/api/common/consts"
-	kcfgdataplane "github.com/kong/kong-operator/api/gateway-operator/dataplane"
-	kcfggateway "github.com/kong/kong-operator/api/gateway-operator/gateway"
-	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
-	gwtypes "github.com/kong/kong-operator/internal/types"
-	"github.com/kong/kong-operator/modules/manager/scheme"
-	"github.com/kong/kong-operator/pkg/consts"
-	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
-	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
-	k8sresources "github.com/kong/kong-operator/pkg/utils/kubernetes/resources"
-	"github.com/kong/kong-operator/pkg/vars"
+	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
+	kcfgdataplane "github.com/kong/kong-operator/v2/api/gateway-operator/dataplane"
+	kcfggateway "github.com/kong/kong-operator/v2/api/gateway-operator/gateway"
+	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/pkg/consts"
+	gatewayutils "github.com/kong/kong-operator/v2/pkg/utils/gateway"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
+	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
+	"github.com/kong/kong-operator/v2/pkg/vars"
 )
 
 func TestGatewayReconciler_Reconcile(t *testing.T) {

@@ -3,7 +3,7 @@ package integration
 import (
 	"time"
 
-	"github.com/kong/kong-operator/ingress-controller/test/integration/consts"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/integration/consts"
 )
 
 // -----------------------------------------------------------------------------

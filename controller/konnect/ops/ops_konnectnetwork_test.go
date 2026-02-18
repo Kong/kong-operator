@@ -12,12 +12,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
-	kcfgkonnect "github.com/kong/kong-operator/api/konnect"
-	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
-	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
-	"github.com/kong/kong-operator/modules/manager/scheme"
-	"github.com/kong/kong-operator/test/mocks/sdkmocks"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	kcfgkonnect "github.com/kong/kong-operator/v2/api/konnect"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/test/mocks/sdkmocks"
 )
 
 func TestAdoptMatchNetworkSuccess(t *testing.T) {

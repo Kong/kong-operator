@@ -7,7 +7,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/kong/kong-operator/test"
+	"github.com/kong/kong-operator/v2/test"
 )
 
 // SetupTelepresence installs the telepresence traffic manager in the cluster and connects to it.

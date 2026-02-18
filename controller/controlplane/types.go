@@ -1,7 +1,7 @@
 package controlplane
 
 import (
-	gwtypes "github.com/kong/kong-operator/internal/types"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 type (

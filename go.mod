@@ -1,4 +1,4 @@
-module github.com/kong/kong-operator
+module github.com/kong/kong-operator/v2
 
 go 1.25.7
 

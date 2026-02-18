@@ -10,14 +10,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	finalizerconst "github.com/kong/kong-operator/controller/hybridgateway/const/finalizers"
-	"github.com/kong/kong-operator/controller/hybridgateway/converter"
-	"github.com/kong/kong-operator/controller/hybridgateway/managedfields"
-	"github.com/kong/kong-operator/controller/hybridgateway/metadata"
-	"github.com/kong/kong-operator/controller/hybridgateway/refs"
-	"github.com/kong/kong-operator/controller/hybridgateway/utils"
-	"github.com/kong/kong-operator/controller/pkg/log"
-	gwtypes "github.com/kong/kong-operator/internal/types"
+	finalizerconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/finalizers"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/converter"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/managedfields"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/refs"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
+	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 const (

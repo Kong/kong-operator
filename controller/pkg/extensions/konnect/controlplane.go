@@ -10,10 +10,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
-	"github.com/kong/kong-operator/controller/pkg/extensions/processor"
-	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
-	gwtypes "github.com/kong/kong-operator/internal/types"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	"github.com/kong/kong-operator/v2/controller/pkg/extensions/processor"
+	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // KonnectExtensionConfig holds the configuration for a KIC instance based on a KonnectExtension resource.

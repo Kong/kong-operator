@@ -13,12 +13,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	ingressmgrconfig "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
-	"github.com/kong/kong-operator/modules/manager"
-	mgrconfig "github.com/kong/kong-operator/modules/manager/config"
-	"github.com/kong/kong-operator/modules/manager/logging"
-	"github.com/kong/kong-operator/modules/manager/metadata"
-	"github.com/kong/kong-operator/pkg/consts"
+	ingressmgrconfig "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/v2/modules/manager"
+	mgrconfig "github.com/kong/kong-operator/v2/modules/manager/config"
+	"github.com/kong/kong-operator/v2/modules/manager/logging"
+	"github.com/kong/kong-operator/v2/modules/manager/metadata"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
 func TestSetFlagFromEnvVar(t *testing.T) {

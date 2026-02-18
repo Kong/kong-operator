@@ -7,11 +7,11 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
-	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
-	configurationv1beta1 "github.com/kong/kong-operator/api/configuration/v1beta1"
-	incubatorv1alpha1 "github.com/kong/kong-operator/api/incubator/v1alpha1"
-	"github.com/kong/kong-operator/ingress-controller/internal/store"
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
+	incubatorv1alpha1 "github.com/kong/kong-operator/v2/api/incubator/v1alpha1"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 )
 
 // resolveKongPluginDependencies resolves potential dependencies for a KongPlugin object:

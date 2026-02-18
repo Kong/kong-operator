@@ -14,8 +14,8 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/mo"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/logging"
-	"github.com/kong/kong-operator/ingress-controller/internal/metrics"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/logging"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/metrics"
 )
 
 type ConfigService interface {

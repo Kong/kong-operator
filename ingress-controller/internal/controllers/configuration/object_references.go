@@ -9,10 +9,10 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
-	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
-	"github.com/kong/kong-operator/ingress-controller/internal/controllers"
-	ctrlref "github.com/kong/kong-operator/ingress-controller/internal/controllers/reference"
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers"
+	ctrlref "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/reference"
 )
 
 // updateReferredObjects updates reference records where the referrer is the object in parameter obj.

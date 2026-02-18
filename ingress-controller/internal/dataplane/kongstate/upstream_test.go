@@ -7,7 +7,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
-	configurationv1beta1 "github.com/kong/kong-operator/api/configuration/v1beta1"
+	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
 )
 
 func TestUpstreamOverrideByKongUpstreamPolicy(t *testing.T) {

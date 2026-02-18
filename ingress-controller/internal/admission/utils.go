@@ -7,8 +7,8 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
-	credsvalidation "github.com/kong/kong-operator/ingress-controller/internal/admission/validation/consumers/credentials"
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	credsvalidation "github.com/kong/kong-operator/v2/ingress-controller/internal/admission/validation/consumers/credentials"
 )
 
 // -----------------------------------------------------------------------------

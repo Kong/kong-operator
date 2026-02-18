@@ -7,9 +7,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/konnect/nodes"
-	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
-	"github.com/kong/kong-operator/modules/manager/metadata"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/konnect/nodes"
+	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/v2/modules/manager/metadata"
 )
 
 type mockNodesServer struct {

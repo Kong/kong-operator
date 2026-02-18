@@ -4,7 +4,7 @@ import (
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 
-	"github.com/kong/kong-operator/controller/konnect/server"
+	"github.com/kong/kong-operator/v2/controller/konnect/server"
 )
 
 // SDKWrapper is a wrapper of Konnect SDK to allow using mock SDKs in tests.

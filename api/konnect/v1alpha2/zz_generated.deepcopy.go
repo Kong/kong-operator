@@ -22,7 +22,7 @@ package v1alpha2
 
 import (
 	"github.com/Kong/sdk-konnect-go/models/components"
-	"github.com/kong/kong-operator/api/common/v1alpha1"
+	"github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"

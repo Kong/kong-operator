@@ -3,11 +3,11 @@ package extensions
 import (
 	"github.com/samber/lo"
 
-	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
-	operatorv1alpha1 "github.com/kong/kong-operator/api/gateway-operator/v1alpha1"
-	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
-	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
-	konnectextensionpkg "github.com/kong/kong-operator/controller/pkg/extensions/konnect"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
+	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	konnectextensionpkg "github.com/kong/kong-operator/v2/controller/pkg/extensions/konnect"
 )
 
 // MergeExtensions merges the default extensions with the extensions from the

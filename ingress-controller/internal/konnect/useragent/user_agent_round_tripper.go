@@ -3,7 +3,7 @@ package useragent
 import (
 	"net/http"
 
-	"github.com/kong/kong-operator/modules/manager/metadata"
+	"github.com/kong/kong-operator/v2/modules/manager/metadata"
 )
 
 func NewTransport(underlyingTransport http.RoundTripper) http.RoundTripper {

@@ -11,9 +11,9 @@ import (
 	"github.com/Kong/sdk-konnect-go/retry"
 	"github.com/samber/lo"
 
-	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
-	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 )
 
 // createKonnectTransitGateway creates a transit gateway on the Konnect side.

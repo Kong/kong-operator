@@ -19,7 +19,7 @@ limitations under the License.
 package fake
 
 import (
-	v1alpha2 "github.com/kong/kong-operator/pkg/clientset/typed/konnect/v1alpha2"
+	v1alpha2 "github.com/kong/kong-operator/v2/pkg/clientset/typed/konnect/v1alpha2"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
 )

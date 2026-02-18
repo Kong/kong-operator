@@ -8,9 +8,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/kong-operator/internal/utils/config"
-	"github.com/kong/kong-operator/pkg/consts"
-	k8sresources "github.com/kong/kong-operator/pkg/utils/kubernetes/resources"
+	"github.com/kong/kong-operator/v2/internal/utils/config"
+	"github.com/kong/kong-operator/v2/pkg/consts"
+	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 )
 
 type customPlugin struct {

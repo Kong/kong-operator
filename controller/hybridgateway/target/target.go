@@ -12,14 +12,14 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
-	"github.com/kong/kong-operator/controller/hybridgateway/builder"
-	"github.com/kong/kong-operator/controller/hybridgateway/metadata"
-	"github.com/kong/kong-operator/controller/hybridgateway/namegen"
-	"github.com/kong/kong-operator/controller/hybridgateway/route"
-	"github.com/kong/kong-operator/controller/hybridgateway/translator"
-	"github.com/kong/kong-operator/controller/pkg/log"
-	gwtypes "github.com/kong/kong-operator/internal/types"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/builder"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/route"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/translator"
+	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // validBackendRef represents a BackendRef that has passed all validation checks.

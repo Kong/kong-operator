@@ -10,10 +10,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/kong/kong-operator/controller/pkg/finalizer"
-	"github.com/kong/kong-operator/controller/pkg/log"
-	"github.com/kong/kong-operator/controller/pkg/patch"
-	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
+	"github.com/kong/kong-operator/v2/controller/pkg/finalizer"
+	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	"github.com/kong/kong-operator/v2/controller/pkg/patch"
+	gatewayutils "github.com/kong/kong-operator/v2/pkg/utils/gateway"
 )
 
 // ----------------------------------------------------------------------------

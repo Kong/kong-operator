@@ -4,9 +4,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	kcfgconsts "github.com/kong/kong-operator/api/common/consts"
-	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
-	"github.com/kong/kong-operator/pkg/vars"
+	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/v2/pkg/vars"
 )
 
 // -----------------------------------------------------------------------------

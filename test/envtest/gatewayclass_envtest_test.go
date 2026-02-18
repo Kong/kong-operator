@@ -18,14 +18,14 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kong-operator/ingress-controller/test/annotations"
-	"github.com/kong/kong-operator/ingress-controller/test/controllers/gateway"
-	ctrlref "github.com/kong/kong-operator/ingress-controller/test/controllers/reference"
-	"github.com/kong/kong-operator/ingress-controller/test/gatewayapi"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers/conditions"
-	"github.com/kong/kong-operator/ingress-controller/test/mocks"
-	"github.com/kong/kong-operator/ingress-controller/test/util/builder"
-	"github.com/kong/kong-operator/test/helpers/asserts"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/annotations"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/controllers/gateway"
+	ctrlref "github.com/kong/kong-operator/v2/ingress-controller/test/controllers/reference"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/helpers/conditions"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/mocks"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/util/builder"
+	"github.com/kong/kong-operator/v2/test/helpers/asserts"
 )
 
 type testcaseGatewayWithGatewayClassReconciliation struct {

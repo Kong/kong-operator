@@ -21,9 +21,9 @@ limitations under the License.
 package v2beta1
 
 import (
-	"github.com/kong/kong-operator/api/common/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
-	"github.com/kong/kong-operator/api/konnect/v1alpha2"
+	"github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	"github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"

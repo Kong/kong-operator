@@ -4,7 +4,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
-	operatorv1alpha1 "github.com/kong/kong-operator/api/gateway-operator/v1alpha1"
+	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 )
 
 // Install is a callback from client-gen to add the scheme to the client

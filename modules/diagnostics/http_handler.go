@@ -11,8 +11,8 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kong-operator/ingress-controller/pkg/manager"
-	gwtypes "github.com/kong/kong-operator/internal/types"
+	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // HTTPHandler is a handler for the diagnostics HTTP endpoints.

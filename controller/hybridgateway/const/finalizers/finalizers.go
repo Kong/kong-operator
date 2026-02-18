@@ -1,8 +1,8 @@
 package finalizers
 
 import (
-	"github.com/kong/kong-operator/controller/hybridgateway/converter"
-	gwtypes "github.com/kong/kong-operator/internal/types"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/converter"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 const (

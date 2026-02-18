@@ -22,13 +22,13 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
-	"github.com/kong/kong-operator/ingress-controller/internal/controllers/configuration"
-	"github.com/kong/kong-operator/ingress-controller/test"
-	"github.com/kong/kong-operator/ingress-controller/test/integration/consts"
-	"github.com/kong/kong-operator/ingress-controller/test/internal/testlabels"
-	"github.com/kong/kong-operator/pkg/clientset"
-	"github.com/kong/kong-operator/test/helpers/certificate"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/configuration"
+	"github.com/kong/kong-operator/v2/ingress-controller/test"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/integration/consts"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/internal/testlabels"
+	"github.com/kong/kong-operator/v2/pkg/clientset"
+	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 )
 
 // TestIngressVerifyUpstreamTLS tests that user-provided annotations for TLS verification are respected accordingly.

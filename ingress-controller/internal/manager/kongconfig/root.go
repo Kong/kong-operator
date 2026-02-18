@@ -13,8 +13,8 @@ import (
 	"github.com/samber/lo"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/adminapi"
-	dpconf "github.com/kong/kong-operator/ingress-controller/internal/dataplane/config"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/adminapi"
+	dpconf "github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/config"
 )
 
 // KongStartUpOptions includes start up configurations of Kong that could change behavior of Kong Ingress Controller.

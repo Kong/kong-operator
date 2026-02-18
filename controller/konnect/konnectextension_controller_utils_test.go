@@ -9,7 +9,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 )
 
 func TestEnforceKonnectExtensionStatus(t *testing.T) {

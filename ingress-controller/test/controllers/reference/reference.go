@@ -3,7 +3,7 @@ package reference
 import (
 	"github.com/go-logr/logr"
 
-	internal "github.com/kong/kong-operator/ingress-controller/internal/controllers/reference"
+	internal "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/reference"
 )
 
 type CacheIndexers = internal.CacheIndexers

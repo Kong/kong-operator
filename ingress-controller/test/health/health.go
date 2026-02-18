@@ -3,7 +3,7 @@ package health
 import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
-	internal "github.com/kong/kong-operator/ingress-controller/internal/health"
+	internal "github.com/kong/kong-operator/v2/ingress-controller/internal/health"
 )
 
 type CheckServer = internal.CheckServer

@@ -8,8 +8,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
-	"github.com/kong/kong-operator/internal/utils/index"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
 // TODO(pmalek): this can be extracted and used in reconciler.go

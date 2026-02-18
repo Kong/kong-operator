@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	kcfgconsts "github.com/kong/kong-operator/api/common/consts"
-	"github.com/kong/kong-operator/controller/konnect/constraints"
+	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
+	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 )
 
 // FailedKonnectOpError is an error type that is returned when an operation against

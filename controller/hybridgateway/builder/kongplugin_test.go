@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
-	gwtypes "github.com/kong/kong-operator/internal/types"
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func TestNewKongPlugin(t *testing.T) {

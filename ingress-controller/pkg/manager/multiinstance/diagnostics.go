@@ -10,7 +10,7 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/kong/kong-operator/ingress-controller/pkg/manager"
+	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager"
 )
 
 const (

@@ -9,16 +9,16 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kcfgconsts "github.com/kong/kong-operator/api/common/consts"
-	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
-	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
-	operatorv2beta1 "github.com/kong/kong-operator/api/gateway-operator/v2beta1"
-	kcfgkonnect "github.com/kong/kong-operator/api/konnect"
-	extensionserrors "github.com/kong/kong-operator/controller/pkg/extensions/errors"
-	"github.com/kong/kong-operator/controller/pkg/extensions/processor"
-	"github.com/kong/kong-operator/controller/pkg/patch"
-	gwtypes "github.com/kong/kong-operator/internal/types"
-	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
+	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
+	kcfgkonnect "github.com/kong/kong-operator/v2/api/konnect"
+	extensionserrors "github.com/kong/kong-operator/v2/controller/pkg/extensions/errors"
+	"github.com/kong/kong-operator/v2/controller/pkg/extensions/processor"
+	"github.com/kong/kong-operator/v2/controller/pkg/patch"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 // ExtendableT is the interface implemented by the objects which implementation

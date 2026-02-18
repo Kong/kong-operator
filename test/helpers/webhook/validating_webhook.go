@@ -21,9 +21,9 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/yaml"
 
-	"github.com/kong/kong-operator/ingress-controller/pkg/validation/consts"
-	"github.com/kong/kong-operator/test/helpers/certificate"
-	"github.com/kong/kong-operator/test/helpers/kcfg"
+	"github.com/kong/kong-operator/v2/ingress-controller/pkg/validation/consts"
+	"github.com/kong/kong-operator/v2/test/helpers/certificate"
+	"github.com/kong/kong-operator/v2/test/helpers/kcfg"
 )
 
 // EnsureValidatingWebhookRegistration registers a validating webhook and configures connectivity for

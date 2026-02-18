@@ -14,10 +14,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
-	"github.com/kong/kong-operator/controller/pkg/op"
-	"github.com/kong/kong-operator/pkg/consts"
-	k8sresources "github.com/kong/kong-operator/pkg/utils/kubernetes/resources"
+	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
+	"github.com/kong/kong-operator/v2/controller/pkg/op"
+	"github.com/kong/kong-operator/v2/pkg/consts"
+	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 )
 
 func TestApplyPatchIfNonEmpty(t *testing.T) {

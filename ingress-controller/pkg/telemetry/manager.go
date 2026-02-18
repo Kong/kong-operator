@@ -16,9 +16,9 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/util"
-	"github.com/kong/kong-operator/ingress-controller/pkg/telemetry/types"
-	"github.com/kong/kong-operator/ingress-controller/pkg/telemetry/workflows"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
+	"github.com/kong/kong-operator/v2/ingress-controller/pkg/telemetry/types"
+	"github.com/kong/kong-operator/v2/ingress-controller/pkg/telemetry/workflows"
 )
 
 const (

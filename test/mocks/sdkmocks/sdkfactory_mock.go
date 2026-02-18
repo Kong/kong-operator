@@ -8,9 +8,9 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
-	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
-	"github.com/kong/kong-operator/controller/konnect/server"
-	gwtypes "github.com/kong/kong-operator/internal/types"
+	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
+	"github.com/kong/kong-operator/v2/controller/konnect/server"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 type MockSDKWrapper struct {
