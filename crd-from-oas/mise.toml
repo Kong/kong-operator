@@ -38,9 +38,6 @@ depends_post = [ "generate-deepcopy" ]
 [tasks.generate-api.env]
 INPUT_FILE = "openapi.yaml"
 OUTPUT_DIR = "api"
-API_VERSION = "v1alpha1"
-API_GROUP = "konnect.konghq.com"
-PATHS = "/v3/portals,/v3/portals/{portalId}/teams,/v3/portals/{portalId}/custom-domain,/v3/identity-providers,/v2/dcr-providers,/v3/portals/{portalId}/teams/{teamId}/developers"
 CONFIG_FILE = "config.yaml"
 
 [tasks.generate-crds]

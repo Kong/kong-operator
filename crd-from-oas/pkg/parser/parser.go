@@ -57,6 +57,7 @@ type Property struct {
 // Schema represents a parsed OpenAPI schema
 type Schema struct {
 	Name         string
+	SourcePath   string // The OpenAPI path this schema was extracted from
 	Description  string
 	Type         string // The schema's type (string, boolean, integer, number, array, object)
 	Format       string // The schema's format (url, uri, uuid, etc.)
@@ -171,6 +172,7 @@ func (p *Parser) parsePath(targetPath string) (string, *Schema, error) {
 		}
 
 		schema := p.parseSchema(schemaName, mediaTypeObj.Schema.Value)
+		schema.SourcePath = targetPath
 		schema.Dependencies = dependencies
 		return schemaName, schema, nil
 	}
@@ -318,7 +320,6 @@ func (p *Parser) parseSchema(name string, schemaValue *openapi3.Schema) *Schema 
 	if schema.Type == "array" && schemaValue.Items != nil {
 		schema.Items = ParseProperty("items", schemaValue.Items, 0, p.visited)
 	}
-
 
 	// Handle root-level oneOf (union type schemas)
 	if len(schemaValue.OneOf) > 0 {
