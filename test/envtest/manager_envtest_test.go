@@ -18,9 +18,9 @@ import (
 	"go.uber.org/zap/zaptest/observer"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/kong/kong-operator/ingress-controller/pkg/manager"
-	testhelpers "github.com/kong/kong-operator/ingress-controller/test/helpers"
-	"github.com/kong/kong-operator/ingress-controller/test/manager/consts"
+	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager"
+	testhelpers "github.com/kong/kong-operator/v2/ingress-controller/test/helpers"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/manager/consts"
 )
 
 // TestManagerDoesntStartUntilKubernetesAPIReachable ensures that the manager and its Runnables are not start until the

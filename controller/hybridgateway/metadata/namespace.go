@@ -5,7 +5,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	gwtypes "github.com/kong/kong-operator/internal/types"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // NamespaceFromParentRef returns the namespace for a given Route ParentReference.

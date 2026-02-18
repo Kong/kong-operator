@@ -11,12 +11,12 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	operatorv1alpha1 "github.com/kong/kong-operator/api/gateway-operator/v1alpha1"
-	operatorv2beta1 "github.com/kong/kong-operator/api/gateway-operator/v2beta1"
-	"github.com/kong/kong-operator/pkg/consts"
-	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
-	testutils "github.com/kong/kong-operator/pkg/utils/test"
-	"github.com/kong/kong-operator/test/helpers"
+	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
+	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
+	"github.com/kong/kong-operator/v2/pkg/consts"
+	gatewayutils "github.com/kong/kong-operator/v2/pkg/utils/gateway"
+	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
+	"github.com/kong/kong-operator/v2/test/helpers"
 )
 
 func TestAIGatewayCreation(t *testing.T) {

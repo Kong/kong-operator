@@ -5,7 +5,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/manager/consts"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/manager/consts"
 )
 
 // newEventRecorderForInstance creates a new event recorder that will annotate all events with the given instance ID.

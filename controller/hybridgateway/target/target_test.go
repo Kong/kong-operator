@@ -21,10 +21,10 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
-	_ "github.com/kong/kong-operator/controller/hybridgateway/builder" // Used by function under test.
-	_ "github.com/kong/kong-operator/controller/hybridgateway/utils"   // Used by function under test.
-	gwtypes "github.com/kong/kong-operator/internal/types"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	_ "github.com/kong/kong-operator/v2/controller/hybridgateway/builder" // Used by function under test.
+	_ "github.com/kong/kong-operator/v2/controller/hybridgateway/utils"   // Used by function under test.
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // Helper functions for creating test objects.

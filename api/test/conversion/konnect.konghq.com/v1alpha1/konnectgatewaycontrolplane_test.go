@@ -12,9 +12,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
-	v1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
-	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	v1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 )
 
 // dummyHub implements conversion.Hub but is not the expected type for conversion.

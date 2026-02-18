@@ -21,8 +21,8 @@ package v1
 import (
 	context "context"
 
-	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
-	scheme "github.com/kong/kong-operator/pkg/clientset/scheme"
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	scheme "github.com/kong/kong-operator/v2/pkg/clientset/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"

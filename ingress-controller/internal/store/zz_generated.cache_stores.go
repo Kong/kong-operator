@@ -13,11 +13,11 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kongv1 "github.com/kong/kong-operator/api/configuration/v1"
-	kongv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
-	kongv1beta1 "github.com/kong/kong-operator/api/configuration/v1beta1"
-	incubatorv1alpha1 "github.com/kong/kong-operator/api/incubator/v1alpha1"
-	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
+	kongv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	kongv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	kongv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
+	incubatorv1alpha1 "github.com/kong/kong-operator/v2/api/incubator/v1alpha1"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 )
 
 // CacheStores stores cache.Store for all Kinds of k8s objects that

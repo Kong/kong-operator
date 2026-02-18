@@ -23,16 +23,16 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/pkg/features"
 
-	kcfgcontrolplane "github.com/kong/kong-operator/api/gateway-operator/controlplane"
-	kcfgdataplane "github.com/kong/kong-operator/api/gateway-operator/dataplane"
-	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
-	operatorv2beta1 "github.com/kong/kong-operator/api/gateway-operator/v2beta1"
-	gwtypes "github.com/kong/kong-operator/internal/types"
-	"github.com/kong/kong-operator/internal/utils/gatewayclass"
-	"github.com/kong/kong-operator/pkg/clientset"
-	"github.com/kong/kong-operator/pkg/consts"
-	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
-	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	kcfgcontrolplane "github.com/kong/kong-operator/v2/api/gateway-operator/controlplane"
+	kcfgdataplane "github.com/kong/kong-operator/v2/api/gateway-operator/dataplane"
+	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
+	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/internal/utils/gatewayclass"
+	"github.com/kong/kong-operator/v2/pkg/clientset"
+	"github.com/kong/kong-operator/v2/pkg/consts"
+	gatewayutils "github.com/kong/kong-operator/v2/pkg/utils/gateway"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 // controlPlanePredicate is a helper function for tests that returns a function

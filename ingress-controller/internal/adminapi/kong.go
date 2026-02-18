@@ -14,11 +14,11 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 
-	tlsutil "github.com/kong/kong-operator/ingress-controller/internal/util/tls"
-	"github.com/kong/kong-operator/ingress-controller/internal/versions"
-	ingresserrors "github.com/kong/kong-operator/ingress-controller/pkg/errors"
-	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
-	"github.com/kong/kong-operator/modules/manager/metadata"
+	tlsutil "github.com/kong/kong-operator/v2/ingress-controller/internal/util/tls"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/versions"
+	ingresserrors "github.com/kong/kong-operator/v2/ingress-controller/pkg/errors"
+	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/v2/modules/manager/metadata"
 )
 
 type KongGatewayUnsupportedVersionError struct {

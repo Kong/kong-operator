@@ -19,11 +19,11 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
-	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
-	"github.com/kong/kong-operator/ingress-controller/test/diagnostics"
-	"github.com/kong/kong-operator/ingress-controller/test/testlabels"
-	"github.com/kong/kong-operator/test/helpers"
-	"github.com/kong/kong-operator/test/integration/kic/consts"
+	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/diagnostics"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/testlabels"
+	"github.com/kong/kong-operator/v2/test/helpers"
+	"github.com/kong/kong-operator/v2/test/integration/kic/consts"
 )
 
 func TestIngressWithBrokenPluginFallback(t *testing.T) {

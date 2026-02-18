@@ -28,8 +28,8 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	"github.com/kong/kong-operator/ingress-controller/test/helpers"
-	"github.com/kong/kong-operator/ingress-controller/test/testenv"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/helpers"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/testenv"
 )
 
 const (

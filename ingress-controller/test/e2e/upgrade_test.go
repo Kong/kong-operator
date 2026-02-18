@@ -20,8 +20,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kong-operator/ingress-controller/test/helpers"
-	"github.com/kong/kong-operator/ingress-controller/test/testenv"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/helpers"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/testenv"
 )
 
 const (

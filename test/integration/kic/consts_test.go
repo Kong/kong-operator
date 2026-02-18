@@ -3,7 +3,7 @@ package integration
 import (
 	"time"
 
-	"github.com/kong/kong-operator/test/integration/kic/consts"
+	"github.com/kong/kong-operator/v2/test/integration/kic/consts"
 )
 
 // -----------------------------------------------------------------------------

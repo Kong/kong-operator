@@ -22,8 +22,8 @@ package v1
 
 import (
 	"github.com/kong/go-kong/kong"
-	"github.com/kong/kong-operator/api/common/v1alpha1"
-	"github.com/kong/kong-operator/api/konnect/v1alpha2"
+	"github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	"github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )

@@ -8,8 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/kong/kong-operator/ingress-controller/test"
-	"github.com/kong/kong-operator/test/integration/kic/consts"
+	"github.com/kong/kong-operator/v2/ingress-controller/test"
+	"github.com/kong/kong-operator/v2/test/integration/kic/consts"
 )
 
 func assertEventuallyNoResponseUDP(t *testing.T, udpGatewayURL string) {

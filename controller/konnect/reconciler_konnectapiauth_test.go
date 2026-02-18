@@ -12,10 +12,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
-	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
-	"github.com/kong/kong-operator/internal/utils/index"
-	"github.com/kong/kong-operator/modules/manager/scheme"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	"github.com/kong/kong-operator/v2/internal/utils/index"
+	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
 func TestGetTokenFromKonnectAPIAuthConfiguration(t *testing.T) {

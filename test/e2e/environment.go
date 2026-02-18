@@ -30,11 +30,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	"github.com/kong/kong-operator/modules/manager/scheme"
-	configurationclient "github.com/kong/kong-operator/pkg/clientset"
-	testutils "github.com/kong/kong-operator/pkg/utils/test"
-	"github.com/kong/kong-operator/test"
-	"github.com/kong/kong-operator/test/helpers"
+	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	configurationclient "github.com/kong/kong-operator/v2/pkg/clientset"
+	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
+	"github.com/kong/kong-operator/v2/test"
+	"github.com/kong/kong-operator/v2/test/helpers"
 )
 
 // -----------------------------------------------------------------------------

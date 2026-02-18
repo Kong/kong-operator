@@ -11,7 +11,7 @@ import (
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kong-operator/test/helpers"
+	"github.com/kong/kong-operator/v2/test/helpers"
 )
 
 const (

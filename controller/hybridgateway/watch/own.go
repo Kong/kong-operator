@@ -3,9 +3,9 @@ package watch
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
-	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
-	gwtypes "github.com/kong/kong-operator/internal/types"
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // Owns returns a slice of client.Object types that are owned by the provided obj.

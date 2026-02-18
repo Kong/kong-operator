@@ -17,12 +17,12 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	incubatorv1alpha1 "github.com/kong/kong-operator/api/incubator/v1alpha1"
-	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/failures"
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/kongstate"
-	"github.com/kong/kong-operator/ingress-controller/internal/store"
-	"github.com/kong/kong-operator/ingress-controller/internal/util/builder"
+	incubatorv1alpha1 "github.com/kong/kong-operator/v2/api/incubator/v1alpha1"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/failures"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/builder"
 )
 
 type testSNIs struct {

@@ -13,12 +13,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/adminapi"
-	"github.com/kong/kong-operator/ingress-controller/internal/versions"
-	ingresserrors "github.com/kong/kong-operator/ingress-controller/pkg/errors"
-	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
-	"github.com/kong/kong-operator/ingress-controller/test/mocks"
-	"github.com/kong/kong-operator/test/helpers/certificate"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/adminapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/versions"
+	ingresserrors "github.com/kong/kong-operator/v2/ingress-controller/pkg/errors"
+	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/mocks"
+	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 )
 
 func TestAdminAPIClientWithTLSOpts(t *testing.T) {

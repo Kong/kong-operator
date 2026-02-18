@@ -3,7 +3,7 @@ package admission
 import (
 	"github.com/kong/go-kong/kong"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/adminapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/adminapi"
 )
 
 // GatewayClientsProvider returns the most recent set of Gateway Admin API clients.

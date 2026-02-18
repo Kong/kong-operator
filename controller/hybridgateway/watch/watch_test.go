@@ -9,9 +9,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
-	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
-	gwtypes "github.com/kong/kong-operator/internal/types"
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func TestWatches(t *testing.T) {

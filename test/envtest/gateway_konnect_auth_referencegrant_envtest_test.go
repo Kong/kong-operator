@@ -10,14 +10,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
-	operatorv2beta1 "github.com/kong/kong-operator/api/gateway-operator/v2beta1"
-	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
-	kogateway "github.com/kong/kong-operator/controller/gateway"
-	managerscheme "github.com/kong/kong-operator/modules/manager/scheme"
-	testutils "github.com/kong/kong-operator/pkg/utils/test"
-	"github.com/kong/kong-operator/pkg/vars"
-	"github.com/kong/kong-operator/test/helpers/deploy"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	kogateway "github.com/kong/kong-operator/v2/controller/gateway"
+	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
+	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
+	"github.com/kong/kong-operator/v2/pkg/vars"
+	"github.com/kong/kong-operator/v2/test/helpers/deploy"
 )
 
 func TestGatewayKonnectAPIAuthReferenceGrant(t *testing.T) {

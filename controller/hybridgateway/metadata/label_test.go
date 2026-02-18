@@ -6,8 +6,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	gwtypes "github.com/kong/kong-operator/internal/types"
-	"github.com/kong/kong-operator/pkg/consts"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
 func TestBuildLabels(t *testing.T) {

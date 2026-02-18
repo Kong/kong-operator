@@ -6,7 +6,7 @@ import (
 	"github.com/gohugoio/hashstructure"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kong-operator/pkg/consts"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
 // CalculateHash calculates the hash of the given object.

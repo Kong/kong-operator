@@ -13,9 +13,9 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
-	"github.com/kong/kong-operator/ingress-controller/test/testlabels"
-	"github.com/kong/kong-operator/test/helpers"
-	"github.com/kong/kong-operator/test/integration/kic/consts"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/testlabels"
+	"github.com/kong/kong-operator/v2/test/helpers"
+	"github.com/kong/kong-operator/v2/test/integration/kic/consts"
 )
 
 func TestHTTPRouteRewriteExample(t *testing.T) {

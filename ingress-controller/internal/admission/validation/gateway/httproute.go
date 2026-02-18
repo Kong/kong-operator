@@ -11,12 +11,12 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/admission/validation"
-	gatewaycontroller "github.com/kong/kong-operator/ingress-controller/internal/controllers/gateway"
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/translator"
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/translator/subtranslator"
-	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
-	"github.com/kong/kong-operator/ingress-controller/internal/store"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/admission/validation"
+	gatewaycontroller "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/gateway"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/translator"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/translator/subtranslator"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 )
 
 type routeValidator interface {

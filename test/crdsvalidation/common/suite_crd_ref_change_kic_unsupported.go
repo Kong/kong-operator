@@ -5,7 +5,7 @@ import (
 
 	"github.com/samber/lo"
 
-	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 )
 
 // EmptyControlPlaneRefAllowedT is a type to specify whether an empty control plane ref is allowed or not.

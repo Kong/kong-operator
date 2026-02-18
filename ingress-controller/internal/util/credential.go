@@ -5,7 +5,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/labels"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/labels"
 )
 
 // ExtractKongCredentialType returns the credential type of a Secret or an error if no credential type is present.

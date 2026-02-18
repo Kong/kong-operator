@@ -19,11 +19,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/adminapi"
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/failures"
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/sendconfig"
-	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
-	"github.com/kong/kong-operator/ingress-controller/test/kongintegration/containers"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/adminapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/failures"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/sendconfig"
+	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/kongintegration/containers"
 )
 
 // TestUpdateStrategyInMemory_PropagatesResourcesErrors ensures that sendconfig.UpdateStrategyInMemory -

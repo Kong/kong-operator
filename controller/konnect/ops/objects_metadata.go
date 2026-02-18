@@ -11,7 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kong-operator/pkg/metadata"
+	"github.com/kong/kong-operator/v2/pkg/metadata"
 )
 
 const (

@@ -7,8 +7,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	finalizerconst "github.com/kong/kong-operator/controller/hybridgateway/const/finalizers"
-	gwtypes "github.com/kong/kong-operator/internal/types"
+	finalizerconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/finalizers"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func TestFinalizerFunctionality(t *testing.T) {

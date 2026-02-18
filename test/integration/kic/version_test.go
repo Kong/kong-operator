@@ -12,11 +12,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kong-operator/ingress-controller/test"
-	dpconf "github.com/kong/kong-operator/ingress-controller/test/dataplane/config"
-	"github.com/kong/kong-operator/ingress-controller/test/testenv"
-	"github.com/kong/kong-operator/test/helpers"
-	"github.com/kong/kong-operator/test/integration/kic/consts"
+	"github.com/kong/kong-operator/v2/ingress-controller/test"
+	dpconf "github.com/kong/kong-operator/v2/ingress-controller/test/dataplane/config"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/testenv"
+	"github.com/kong/kong-operator/v2/test/helpers"
+	"github.com/kong/kong-operator/v2/test/integration/kic/consts"
 )
 
 func RunWhenKongVersion(t *testing.T, vRangeStr string, msg ...any) {

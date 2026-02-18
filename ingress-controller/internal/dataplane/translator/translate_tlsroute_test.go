@@ -12,11 +12,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/failures"
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/kongstate"
-	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
-	"github.com/kong/kong-operator/ingress-controller/internal/store"
-	"github.com/kong/kong-operator/ingress-controller/internal/util/builder"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/failures"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/builder"
 )
 
 func TestIngressRulesFromTLSRoutesUsingExpressionRoutes(t *testing.T) {

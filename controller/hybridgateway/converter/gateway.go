@@ -14,17 +14,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
-	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
-	"github.com/kong/kong-operator/controller/hybridgateway/builder"
-	"github.com/kong/kong-operator/controller/hybridgateway/namegen"
-	"github.com/kong/kong-operator/controller/hybridgateway/refs"
-	"github.com/kong/kong-operator/controller/hybridgateway/utils"
-	"github.com/kong/kong-operator/controller/pkg/log"
-	"github.com/kong/kong-operator/controller/pkg/secrets"
-	secretref "github.com/kong/kong-operator/controller/pkg/secrets/ref"
-	gwtypes "github.com/kong/kong-operator/internal/types"
-	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/builder"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/refs"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
+	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	"github.com/kong/kong-operator/v2/controller/pkg/secrets"
+	secretref "github.com/kong/kong-operator/v2/controller/pkg/secrets/ref"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 var _ APIConverter[gwtypes.Gateway] = &gatewayConverter{}

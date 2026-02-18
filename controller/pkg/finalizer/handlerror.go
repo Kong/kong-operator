@@ -6,8 +6,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	ctrlconsts "github.com/kong/kong-operator/controller/consts"
-	"github.com/kong/kong-operator/controller/pkg/log"
+	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
+	"github.com/kong/kong-operator/v2/controller/pkg/log"
 )
 
 // HandlePatchOrUpdateError handles errors returned from patch or update operations

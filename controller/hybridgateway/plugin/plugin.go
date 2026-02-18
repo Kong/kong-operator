@@ -11,13 +11,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
-	"github.com/kong/kong-operator/controller/hybridgateway/builder"
-	"github.com/kong/kong-operator/controller/hybridgateway/metadata"
-	"github.com/kong/kong-operator/controller/hybridgateway/namegen"
-	"github.com/kong/kong-operator/controller/hybridgateway/translator"
-	"github.com/kong/kong-operator/controller/pkg/log"
-	gwtypes "github.com/kong/kong-operator/internal/types"
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/builder"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/translator"
+	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // PluginsForFilter creates or retrieves KongPlugins for the given HTTPRoute filter.

@@ -3,7 +3,7 @@ package controlplane
 import (
 	"reflect"
 
-	gwtypes "github.com/kong/kong-operator/internal/types"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // DefaultsArgs contains the parameters to pass to setControlPlaneDefaults.

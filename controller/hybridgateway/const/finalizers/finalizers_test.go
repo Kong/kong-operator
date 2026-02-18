@@ -6,8 +6,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kong-operator/controller/hybridgateway/converter"
-	gwtypes "github.com/kong/kong-operator/internal/types"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/converter"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func TestFinalizerConstants(t *testing.T) {

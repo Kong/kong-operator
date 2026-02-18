@@ -3,8 +3,8 @@ package builder
 import (
 	"github.com/samber/lo"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
-	"github.com/kong/kong-operator/ingress-controller/internal/util"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
 )
 
 // HTTPBackendRefBuilder is a builder for gateway api HTTPBackendRef.

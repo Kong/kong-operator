@@ -1,6 +1,6 @@
 package config
 
-import internal "github.com/kong/kong-operator/ingress-controller/internal/dataplane/config"
+import internal "github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/config"
 
 type (
 	DBMode       = internal.DBMode

@@ -5,7 +5,7 @@ import (
 
 	"github.com/samber/mo"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/metrics"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/metrics"
 )
 
 // MetricsRecorder is a mock implementation of metrics.Recorder.

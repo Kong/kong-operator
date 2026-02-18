@@ -16,9 +16,9 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kong-operator/ingress-controller/test"
-	"github.com/kong/kong-operator/test/helpers"
-	"github.com/kong/kong-operator/test/integration/kic/consts"
+	"github.com/kong/kong-operator/v2/ingress-controller/test"
+	"github.com/kong/kong-operator/v2/test/helpers"
+	"github.com/kong/kong-operator/v2/test/integration/kic/consts"
 )
 
 func TestIngressRegexMatchPath(t *testing.T) {

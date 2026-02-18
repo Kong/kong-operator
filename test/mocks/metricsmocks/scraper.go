@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
-	"github.com/kong/kong-operator/internal/metrics"
+	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
+	"github.com/kong/kong-operator/v2/internal/metrics"
 )
 
 type MockAdminAPIAddressProvider struct {

@@ -6,8 +6,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	testutils "github.com/kong/kong-operator/pkg/utils/test"
-	"github.com/kong/kong-operator/test/helpers/eventually"
+	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
+	"github.com/kong/kong-operator/v2/test/helpers/eventually"
 )
 
 // deleteObjectAndWaitForDeletionFn returns a function that deletes the given object and waits for it to be gone.

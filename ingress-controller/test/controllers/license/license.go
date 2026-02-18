@@ -9,8 +9,8 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	internal "github.com/kong/kong-operator/ingress-controller/internal/controllers/license"
-	"github.com/kong/kong-operator/ingress-controller/internal/util/kubernetes/object/status"
+	internal "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/license"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/kubernetes/object/status"
 )
 
 type ValidatorFunc = internal.ValidatorFunc

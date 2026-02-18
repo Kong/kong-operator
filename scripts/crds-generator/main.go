@@ -58,24 +58,24 @@ func main() {
 		"k8s.io/apimachinery/pkg/runtime/schema",
 
 		// configuration.konghq.com
-		"github.com/kong/kong-operator/api/configuration/v1",
-		"github.com/kong/kong-operator/api/configuration/v1alpha1",
-		"github.com/kong/kong-operator/api/configuration/v1beta1",
+		"github.com/kong/kong-operator/v2/api/configuration/v1",
+		"github.com/kong/kong-operator/v2/api/configuration/v1alpha1",
+		"github.com/kong/kong-operator/v2/api/configuration/v1beta1",
 
 		// incubator.ingress-controller.konghq.com
-		"github.com/kong/kong-operator/api/incubator/v1alpha1",
+		"github.com/kong/kong-operator/v2/api/incubator/v1alpha1",
 
 		// konnect.konghq.com
-		"github.com/kong/kong-operator/api/konnect/v1alpha1",
-		"github.com/kong/kong-operator/api/konnect/v1alpha2",
+		"github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		"github.com/kong/kong-operator/v2/api/konnect/v1alpha2",
 
 		// gateway-operator.konghq.com
-		"github.com/kong/kong-operator/api/gateway-operator/v1alpha1",
-		"github.com/kong/kong-operator/api/gateway-operator/v1beta1",
-		"github.com/kong/kong-operator/api/gateway-operator/v2beta1",
+		"github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1",
+		"github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1",
+		"github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1",
 
 		// common types
-		"github.com/kong/kong-operator/api/common/v1alpha1",
+		"github.com/kong/kong-operator/v2/api/common/v1alpha1",
 	)
 	if err != nil {
 		log.Fatalf("failed to load package roots: %s", err)

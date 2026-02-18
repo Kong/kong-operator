@@ -17,9 +17,9 @@ import (
 	"k8s.io/client-go/kubernetes"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	dpconf "github.com/kong/kong-operator/ingress-controller/test/dataplane/config"
-	"github.com/kong/kong-operator/ingress-controller/test/gatewayapi"
-	ic "github.com/kong/kong-operator/ingress-controller/test/helpers"
+	dpconf "github.com/kong/kong-operator/v2/ingress-controller/test/dataplane/config"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
+	ic "github.com/kong/kong-operator/v2/ingress-controller/test/helpers"
 )
 
 type HTTPClientOption = ic.HTTPClientOption

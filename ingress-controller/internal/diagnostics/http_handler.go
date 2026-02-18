@@ -8,7 +8,7 @@ import (
 	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/samber/mo"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/fallback"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/fallback"
 )
 
 const (

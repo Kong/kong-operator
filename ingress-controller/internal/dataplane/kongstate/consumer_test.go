@@ -6,7 +6,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/assert"
 
-	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 )
 
 func int64Ptr(i int64) *int64 {

@@ -17,10 +17,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/controllers"
-	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
-	"github.com/kong/kong-operator/ingress-controller/internal/logging"
-	"github.com/kong/kong-operator/ingress-controller/internal/util"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/logging"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
 )
 
 // -----------------------------------------------------------------------------

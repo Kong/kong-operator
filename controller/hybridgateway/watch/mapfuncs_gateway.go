@@ -9,8 +9,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	gwtypes "github.com/kong/kong-operator/internal/types"
-	"github.com/kong/kong-operator/internal/utils/index"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
 // MapGatewayForTLSSecret returns a handler.MapFunc that, given a Secret object,

@@ -13,8 +13,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
-	gwtypes "github.com/kong/kong-operator/internal/types"
+	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 var (

@@ -4,7 +4,7 @@ import (
 	"github.com/kong/go-database-reconciler/pkg/utils"
 	"github.com/kong/go-kong/kong"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/kongstate"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
 )
 
 // -----------------------------------------------------------------------------

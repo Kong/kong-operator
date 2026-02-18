@@ -11,10 +11,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
-	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
-	"github.com/kong/kong-operator/internal/utils/index"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
 // TODO(pmalek): this can be extracted and used in reconciler.go

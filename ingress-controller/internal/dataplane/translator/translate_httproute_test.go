@@ -14,13 +14,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/failures"
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/kongstate"
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/translator/subtranslator"
-	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
-	"github.com/kong/kong-operator/ingress-controller/internal/store"
-	"github.com/kong/kong-operator/ingress-controller/internal/util"
-	"github.com/kong/kong-operator/ingress-controller/internal/util/builder"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/failures"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/translator/subtranslator"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/builder"
 )
 
 // httprouteGVK is the GVK for HTTPRoutes, needed in unit tests because

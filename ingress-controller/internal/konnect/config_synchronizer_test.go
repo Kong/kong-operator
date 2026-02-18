@@ -14,14 +14,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/adminapi"
-	"github.com/kong/kong-operator/ingress-controller/internal/clients"
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/kongstate"
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/sendconfig"
-	"github.com/kong/kong-operator/ingress-controller/internal/konnect"
-	"github.com/kong/kong-operator/ingress-controller/internal/util/clock"
-	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
-	"github.com/kong/kong-operator/ingress-controller/test/mocks"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/adminapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/clients"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/sendconfig"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/konnect"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/clock"
+	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/mocks"
 )
 
 const (

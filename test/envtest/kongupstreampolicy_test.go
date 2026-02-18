@@ -23,13 +23,13 @@ import (
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	configurationv1beta1 "github.com/kong/kong-operator/api/configuration/v1beta1"
-	"github.com/kong/kong-operator/ingress-controller/test"
-	"github.com/kong/kong-operator/ingress-controller/test/controllers/gateway"
-	"github.com/kong/kong-operator/ingress-controller/test/diagnostics"
-	"github.com/kong/kong-operator/ingress-controller/test/gatewayapi"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers"
-	"github.com/kong/kong-operator/ingress-controller/test/util/builder"
+	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
+	"github.com/kong/kong-operator/v2/ingress-controller/test"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/controllers/gateway"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/diagnostics"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/helpers"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/util/builder"
 )
 
 func TestKongUpstreamPolicyWithoutGatewayAPICRDs(t *testing.T) {

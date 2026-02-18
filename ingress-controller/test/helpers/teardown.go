@@ -9,7 +9,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/kong/kong-operator/ingress-controller/test/testenv"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/testenv"
 )
 
 // TeardownCluster dumps the diagnostics from the test cluster if the test failed

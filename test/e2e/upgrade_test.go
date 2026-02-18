@@ -12,7 +12,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	ktypes "sigs.k8s.io/kustomize/api/types"
 
-	"github.com/kong/kong-operator/test"
+	"github.com/kong/kong-operator/v2/test"
 )
 
 type upgradeTestParams struct {

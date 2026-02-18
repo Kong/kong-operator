@@ -11,11 +11,11 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
-	"github.com/kong/kong-operator/controller/konnect"
-	"github.com/kong/kong-operator/internal/annotations"
-	"github.com/kong/kong-operator/modules/manager/config"
-	"github.com/kong/kong-operator/test/integration"
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	"github.com/kong/kong-operator/v2/controller/konnect"
+	"github.com/kong/kong-operator/v2/internal/annotations"
+	"github.com/kong/kong-operator/v2/modules/manager/config"
+	"github.com/kong/kong-operator/v2/test/integration"
 )
 
 func TestAdmissionWebhook_KongConsumers(t *testing.T) {

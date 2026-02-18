@@ -7,8 +7,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
-	"github.com/kong/kong-operator/internal/utils/index"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
 func enqueueKonnectExtensionsForKonnectGatewayControlPlane(cl client.Client) func(context.Context, client.Object) []reconcile.Request {

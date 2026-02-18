@@ -1,7 +1,7 @@
 package specialized
 
 import (
-	operatorv1alpha1 "github.com/kong/kong-operator/api/gateway-operator/v1alpha1"
+	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 )
 
 // -----------------------------------------------------------------------------

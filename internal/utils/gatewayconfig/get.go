@@ -12,8 +12,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	operatorv2beta1 "github.com/kong/kong-operator/api/gateway-operator/v2beta1"
-	gwtypes "github.com/kong/kong-operator/internal/types"
+	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // GetFromParametersRef gets GatewayConfiguration from parametersRef.

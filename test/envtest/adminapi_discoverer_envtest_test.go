@@ -16,8 +16,8 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 
-	"github.com/kong/kong-operator/ingress-controller/test/adminapi"
-	"github.com/kong/kong-operator/ingress-controller/test/util/builder"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/adminapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/util/builder"
 )
 
 func TestDiscoverer_GetAdminAPIsForServiceReturnsAllAddressesCorrectlyPagingThroughResults(t *testing.T) {

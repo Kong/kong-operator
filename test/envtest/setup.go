@@ -26,12 +26,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/conversion"
 
-	"github.com/kong/kong-operator/ingress-controller/test/controllers/gateway"
-	"github.com/kong/kong-operator/ingress-controller/test/gatewayapi"
-	"github.com/kong/kong-operator/ingress-controller/test/store"
-	"github.com/kong/kong-operator/ingress-controller/test/util/builder"
-	testutil "github.com/kong/kong-operator/pkg/utils/test"
-	"github.com/kong/kong-operator/test/helpers/kcfg"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/controllers/gateway"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/store"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/util/builder"
+	testutil "github.com/kong/kong-operator/v2/pkg/utils/test"
+	"github.com/kong/kong-operator/v2/test/helpers/kcfg"
 )
 
 type Options struct {

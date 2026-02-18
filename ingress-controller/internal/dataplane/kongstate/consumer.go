@@ -6,8 +6,8 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 
-	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
-	"github.com/kong/kong-operator/ingress-controller/internal/util"
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
 )
 
 // Consumer holds a Kong consumer and its plugins and credentials.

@@ -18,10 +18,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
-	gwtypes "github.com/kong/kong-operator/internal/types"
-	"github.com/kong/kong-operator/test/helpers/certificate"
-	"github.com/kong/kong-operator/test/mocks/metricsmocks"
+	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/test/helpers/certificate"
+	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
 )
 
 type pair struct {

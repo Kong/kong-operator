@@ -11,10 +11,10 @@ import (
 	"github.com/tonglil/buflogr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	operatorv2beta1 "github.com/kong/kong-operator/api/gateway-operator/v2beta1"
-	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
-	"github.com/kong/kong-operator/internal/telemetry"
-	gwtypes "github.com/kong/kong-operator/internal/types"
+	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
+	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/v2/internal/telemetry"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func TestWithControllers(t *testing.T) {

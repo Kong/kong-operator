@@ -14,12 +14,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	operatorv2beta1 "github.com/kong/kong-operator/api/gateway-operator/v2beta1"
-	ctrlconsts "github.com/kong/kong-operator/controller/consts"
-	"github.com/kong/kong-operator/controller/pkg/log"
-	"github.com/kong/kong-operator/internal/utils/gatewayclass"
-	"github.com/kong/kong-operator/modules/manager/logging"
-	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
+	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
+	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	"github.com/kong/kong-operator/v2/internal/utils/gatewayclass"
+	"github.com/kong/kong-operator/v2/modules/manager/logging"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 // -----------------------------------------------------------------------------

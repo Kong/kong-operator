@@ -17,11 +17,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
-	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
-	configurationv1beta1 "github.com/kong/kong-operator/api/configuration/v1beta1"
-	"github.com/kong/kong-operator/ingress-controller/pkg/manager"
-	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
+	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager"
+	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
 )
 
 // TestGatewayAPIControllersMayBeDynamicallyStarted ensures that in case of missing CRDs installation in the

@@ -7,7 +7,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/kongstate"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
 )
 
 func TestApplyExpressionToL4KongRoute(t *testing.T) {

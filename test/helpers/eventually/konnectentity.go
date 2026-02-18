@@ -8,9 +8,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kong-operator/controller/konnect/constraints"
-	testutils "github.com/kong/kong-operator/pkg/utils/test"
-	"github.com/kong/kong-operator/test/helpers/conditions"
+	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
+	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
+	"github.com/kong/kong-operator/v2/test/helpers/conditions"
 )
 
 // KonnectEntityGetsProgrammed waits until the given Konnect entity gets

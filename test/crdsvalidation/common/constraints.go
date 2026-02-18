@@ -4,7 +4,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 )
 
 // ObjectWithControlPlaneRef is an interface for objects that have a ControlPlaneRef

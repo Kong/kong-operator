@@ -7,9 +7,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
-	"github.com/kong/kong-operator/test/helpers/generate"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	"github.com/kong/kong-operator/v2/test/helpers/generate"
 )
 
 func Test_konnectCloudGatewayNetworkDataPlaneGroupConfigurationRef(t *testing.T) {

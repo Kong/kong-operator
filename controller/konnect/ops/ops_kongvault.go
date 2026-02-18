@@ -10,9 +10,9 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/samber/lo"
 
-	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
-	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
-	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 )
 
 func createVault(ctx context.Context, sdk sdkops.VaultSDK, vault *configurationv1alpha1.KongVault) error {

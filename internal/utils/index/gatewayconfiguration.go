@@ -1,7 +1,7 @@
 package index
 
 import (
-	operatorv2beta1 "github.com/kong/kong-operator/api/gateway-operator/v2beta1"
+	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
 )
 
 // OptionsForGatewayConfiguration returns the options for GatewayConfiguration.

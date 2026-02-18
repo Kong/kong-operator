@@ -12,14 +12,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
-	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
-	configurationv1beta1 "github.com/kong/kong-operator/api/configuration/v1beta1"
-	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
-	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
-	"github.com/kong/kong-operator/controller/konnect/constraints"
-	"github.com/kong/kong-operator/controller/pkg/log"
-	"github.com/kong/kong-operator/internal/utils/index"
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
+	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
 // -----------------------------------------------------------------------------

@@ -22,12 +22,12 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
-	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
-	gwtypes "github.com/kong/kong-operator/internal/types"
-	"github.com/kong/kong-operator/modules/manager/scheme"
-	"github.com/kong/kong-operator/pkg/consts"
-	"github.com/kong/kong-operator/pkg/vars"
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/pkg/vars"
 )
 
 func TestHTTPRouteConverter_GetOutputStore(t *testing.T) {

@@ -7,8 +7,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/failures"
-	"github.com/kong/kong-operator/ingress-controller/internal/logging"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/failures"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/logging"
 )
 
 // resourceErrorsToResourceFailures translates a slice of ResourceError to a slice of failures.ResourceFailure.

@@ -12,10 +12,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
-	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
-	"github.com/kong/kong-operator/controller/hybridgateway/errors"
-	gwtypes "github.com/kong/kong-operator/internal/types"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/errors"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func newTestScheme() *runtime.Scheme {

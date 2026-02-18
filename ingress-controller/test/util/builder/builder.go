@@ -3,8 +3,8 @@ package builder
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	internalgatewayapi "github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
-	internal "github.com/kong/kong-operator/ingress-controller/internal/util/builder"
+	internalgatewayapi "github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	internal "github.com/kong/kong-operator/v2/ingress-controller/internal/util/builder"
 )
 
 type EndpointPortBuilder = internal.EndpointPortBuilder

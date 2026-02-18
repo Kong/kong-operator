@@ -8,10 +8,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
-	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
-	"github.com/kong/kong-operator/controller/konnect/constraints"
-	operatorerrors "github.com/kong/kong-operator/internal/errors"
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
+	operatorerrors "github.com/kong/kong-operator/v2/internal/errors"
 )
 
 // kongCredentialRefersToKonnectGatewayControlPlane returns a predicate function that

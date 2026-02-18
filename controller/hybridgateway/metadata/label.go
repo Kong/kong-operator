@@ -3,8 +3,8 @@ package metadata
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	gwtypes "github.com/kong/kong-operator/internal/types"
-	"github.com/kong/kong-operator/pkg/consts"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
 // BuildLabels creates the standard labels map for Kong resources managed by the given object and ParentReference.

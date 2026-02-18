@@ -25,7 +25,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/kong/kong-operator/ingress-controller/pkg/telemetry/types"
+	"github.com/kong/kong-operator/v2/ingress-controller/pkg/telemetry/types"
 )
 
 const (

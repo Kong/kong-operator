@@ -13,9 +13,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	"github.com/kong/kong-operator/ingress-controller/test/gatewayapi"
-	"github.com/kong/kong-operator/ingress-controller/test/util"
-	"github.com/kong/kong-operator/test/helpers"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/util"
+	"github.com/kong/kong-operator/v2/test/helpers"
 )
 
 const (

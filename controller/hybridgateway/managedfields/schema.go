@@ -7,7 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/structured-merge-diff/v4/typed"
 
-	"github.com/kong/kong-operator/pkg/generated"
+	"github.com/kong/kong-operator/v2/pkg/generated"
 )
 
 // GetObjectType creates a ParseableType for the given object using the generated schema.

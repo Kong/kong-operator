@@ -6,10 +6,10 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 
-	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
-	operatorv1alpha1 "github.com/kong/kong-operator/api/gateway-operator/v1alpha1"
-	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
-	gwtypes "github.com/kong/kong-operator/internal/types"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
+	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func TestMergeExtensionsForType(t *testing.T) {
