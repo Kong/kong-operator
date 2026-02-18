@@ -62,8 +62,6 @@ type Schema struct {
 	Format       string // The schema's format (url, uri, uuid, etc.)
 	Properties   []*Property
 	Required     []string
-	IsEntity     bool // Has x-speakeasy-entity extension
-	EntityName   string
 	Dependencies []*Dependency // Parent resource dependencies from path parameters
 	OneOf        []*Property   // Root-level oneOf variants (for union type schemas)
 	Items        *Property     // For array-type schemas, the items type
@@ -321,13 +319,6 @@ func (p *Parser) parseSchema(name string, schemaValue *openapi3.Schema) *Schema 
 		schema.Items = ParseProperty("items", schemaValue.Items, 0, p.visited)
 	}
 
-	// Check for x-speakeasy-entity extension
-	if entity, ok := schemaValue.Extensions["x-speakeasy-entity"]; ok {
-		schema.IsEntity = true
-		if entityStr, ok := entity.(string); ok {
-			schema.EntityName = entityStr
-		}
-	}
 
 	// Handle root-level oneOf (union type schemas)
 	if len(schemaValue.OneOf) > 0 {
