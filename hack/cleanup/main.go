@@ -13,11 +13,15 @@
 // 1. It has a label `created_in_tests` with value `true`.
 // 2. It was created more than 1h ago.
 //
+// A system account is considered orphaned when all conditions are satisfied:
+// 1. It is not managed by Konnect.
+// 2. It was created more than 1h ago.
+//
 // Usage: `go run ./hack/cleanup [mode]`
 // Where `mode` is one of:
 // - `all` (default): clean up both GKE clusters and Konnect control planes
 // - `gke`: clean up only GKE clusters
-// - `konnect`: clean up only Konnect control planes
+// - `konnect`: clean up only Konnect control planes and system accounts
 package main
 
 import (
@@ -103,11 +107,13 @@ func resolveCleanupFuncs(mode string) []func(context.Context, logr.Logger) error
 	case cleanupModeKonnect:
 		return []func(context.Context, logr.Logger) error{
 			cleanupKonnectControlPlanes,
+			cleanupKonnectSystemAccounts,
 		}
 	default:
 		return []func(context.Context, logr.Logger) error{
 			cleanupGKEClusters,
 			cleanupKonnectControlPlanes,
+			cleanupKonnectSystemAccounts,
 		}
 	}
 }

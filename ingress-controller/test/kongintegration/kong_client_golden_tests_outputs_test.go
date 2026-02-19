@@ -100,8 +100,14 @@ func TestKongClientGoldenTestsOutputs_Konnect(t *testing.T) {
 
 	ctx := t.Context()
 
-	cpID := konnect.CreateTestControlPlane(ctx, t)
-	cert, key := konnect.CreateClientCertificate(ctx, t, cpID)
+	gatewayTag, err := testenv.GetDependencyVersion("kongintegration.kong-ee")
+	require.NoError(t, err)
+	gatewayTag = trimEnterpriseTagToSemver(gatewayTag)
+
+	systemAccountID := konnect.CreateTestSystemAccount(ctx, t)
+	_, token := konnect.CreateTestSystemAccountToken(ctx, t, systemAccountID)
+	cpID := konnect.CreateTestControlPlane(ctx, t, token)
+	cert, key := konnect.CreateClientCertificate(ctx, t, cpID, token)
 	adminAPIClient := konnect.CreateKonnectAdminAPIClient(t, cpID, cert, key)
 	updateStrategy := sendconfig.NewUpdateStrategyDBModeKonnect(adminAPIClient.AdminAPIClient(), dump.Config{
 		SkipCACerts:         true,

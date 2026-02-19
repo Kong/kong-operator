@@ -18,3 +18,17 @@ func KonnectServerURL() string {
 	}
 	return konnectDefaultDevServerURL
 }
+
+func KonnectServerRegion() string {
+	serverURL := KonnectServerURL()
+	switch serverURL {
+	case "https://eu.api.konghq.tech", "https://eu.kic.api.konghq.tech":
+		return "eu"
+	case "https://ap.api.konghq.tech", "https://ap.kic.api.konghq.tech":
+		return "ap"
+	case "https://us.api.konghq.tech", "https://us.kic.api.konghq.tech":
+		return "us"
+	default:
+		return "us"
+	}
+}
