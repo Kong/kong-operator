@@ -59,6 +59,9 @@
   the name of the corresponding `KonnectGatewayControlPlane` resource in Kubernetes
   (the same random suffix is added). It prevents collisions in Konnect.
   [#3357](https://github.com/Kong/kong-operator/pull/3357)
+- Fix not resetting resource errors in ControlPlane's DB mode from previous `Update()`
+  calls to prevent stale errors from leaking into subsequent calls.
+  [#3369](https://github.com/Kong/kong-operator/pull/3369)
 
 ## [v2.1.0]
 
