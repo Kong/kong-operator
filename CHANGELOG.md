@@ -84,6 +84,9 @@
 - Use the same defaults for `preserve_host` and `strip_path` in for Konnect Gateway Control Plane
   as in self-managed.
   [#3366](https://github.com/Kong/kong-operator/pull/3366)
+- Fix not resetting resource errors in ControlPlane's DB mode from previous `Update()`
+  calls to prevent stale errors from leaking into subsequent calls.
+  [#3369](https://github.com/Kong/kong-operator/pull/3369)
 
 ## [v2.1.0]
 
