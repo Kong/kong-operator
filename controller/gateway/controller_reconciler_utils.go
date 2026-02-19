@@ -111,7 +111,7 @@ func (r *Reconciler) createKonnectGatewayControlPlane(
 	}
 
 	kgcp := &konnectv1alpha2.KonnectGatewayControlPlane{}
-	setObjectNamespaceName(gateway, kgcp)
+	kgcpName := setObjectNamespaceName(gateway, kgcp)
 
 	if gatewayConfig.Spec.Konnect.APIAuthConfigurationRef != nil {
 		kgcp.Spec.KonnectConfiguration.APIAuthConfigurationRef = *gatewayConfig.Spec.Konnect.APIAuthConfigurationRef
@@ -123,7 +123,7 @@ func (r *Reconciler) createKonnectGatewayControlPlane(
 
 	if gatewayConfig.Spec.Konnect.Mirror == nil {
 		kgcp.Spec.CreateControlPlaneRequest = &sdkkonnectcomp.CreateControlPlaneRequest{
-			Name: fmt.Sprintf("%s-%s", gateway.Namespace, gateway.Name),
+			Name: kgcpName,
 		}
 	} else {
 		kgcp.Spec.Mirror = &konnectv1alpha2.MirrorSpec{
@@ -1317,16 +1317,18 @@ func areConditionsEqual(cond1, cond2 metav1.Condition) bool {
 // For the name, there are two behaviors:
 //   - If the Gateway has the GatewayStaticNamingAnnotation set to "true", the object's
 //     name is set to exactly match the Gateway's name (static naming).
-//   - Otherwise, the object's generateName is set to "<gateway-name>-", allowing
-//     Kubernetes to append a random suffix (dynamic naming).
+//   - Otherwise, the object's generateName is set to "<gateway-name>-", where
+//     a random suffix is appended in the same manner as by Kubernetes for
+//     the GenerateName field (dynamic naming).
 //
 // This function is typically used to ensure that objects created for a Gateway follow
 // the appropriate naming convention based on the Gateway's annotations.
-func setObjectNamespaceName(gateway *gwtypes.Gateway, obj client.Object) {
+func setObjectNamespaceName(gateway *gwtypes.Gateway, obj client.Object) (generatedName string) {
 	obj.SetNamespace(gateway.Namespace)
 	if gateway.Annotations != nil && gateway.Annotations[consts.GatewayStaticNamingAnnotation] == "true" {
 		obj.SetName(gateway.Name)
 	} else {
-		obj.SetGenerateName(k8sutils.TrimGenerateName(fmt.Sprintf("%s-", gateway.Name)))
+		obj.SetName(k8sutils.GenerateName(fmt.Sprintf("%s-", gateway.Name)))
 	}
+	return obj.GetName()
 }

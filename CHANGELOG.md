@@ -43,6 +43,23 @@
 - Fix setting up indices for HTTPRoute and Gateway when Konnect controllers are disabled.
   [#3229](https://github.com/Kong/kong-operator/pull/3229)
 
+## [v2.1.1]
+
+> Release date: 2026-02-19
+
+### Fixes
+
+- Fix setting up indices for HTTPRoute and Gateway when Konnect controllers are disabled.
+  [#3234](https://github.com/Kong/kong-operator/pull/3234)
+- Fix v2 module
+  [#3353](https://github.com/Kong/kong-operator/pull/3353)
+- Bump Go to 1.25.7
+  [#3235](https://github.com/Kong/kong-operator/pull/3235)
+- Name of Konnect Gateway Control Plane resource created in Konnect matches
+  the name of the corresponding `KonnectGatewayControlPlane` resource in Kubernetes
+  (the same random suffix is added). It prevents collisions in Konnect.
+  [#3357](https://github.com/Kong/kong-operator/pull/3357)
+
 ## [v2.1.0]
 
 ### Added
