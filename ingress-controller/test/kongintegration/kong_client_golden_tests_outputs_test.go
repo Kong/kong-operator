@@ -110,7 +110,8 @@ func TestKongClientGoldenTestsOutputs_Konnect(t *testing.T) {
 	require.NoError(t, err)
 	gatewayTag = trimEnterpriseTagToSemver(gatewayTag)
 
-	token := konnect.CreateTestPersonalAccessToken(ctx, t)
+	systemAccountID := konnect.CreateTestSystemAccount(ctx, t)
+	_, token := konnect.CreateTestSystemAccountToken(ctx, t, systemAccountID)
 	cpID := konnect.CreateTestControlPlane(ctx, t, token)
 	cert, key := konnect.CreateClientCertificate(ctx, t, cpID, token)
 	adminAPIClient := konnect.CreateKonnectAdminAPIClient(t, cpID, cert, key)

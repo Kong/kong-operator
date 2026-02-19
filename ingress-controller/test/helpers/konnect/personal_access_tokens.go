@@ -76,9 +76,11 @@ func CreateTestPersonalAccessToken(ctx context.Context, t *testing.T) string {
 	require.NoError(t, createServiceAccountToken)
 
 	t.Cleanup(func() {
-		fmt.Printf("deleting test Konnect Personal Access Token: %q", tokenID)
+		fmt.Printf("deleting test Konnect Personal Access Token: %q\n", tokenID)
 		err := retry.Do(
 			func() error { //nolint:contextcheck
+				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+				defer cancel()
 				_, err := s.PersonalAccessTokens.DeletePersonalAccessToken(ctx, *me.User.ID, tokenID)
 				return err
 			},
@@ -88,7 +90,7 @@ func CreateTestPersonalAccessToken(ctx context.Context, t *testing.T) string {
 		if err != nil {
 			// Don't fail the test if cleanup fails, just log the error.
 			// Cleanup job will eventually clean up konnect.
-			fmt.Printf("failed to delete test Konnect Personal Access Token %q: %v", tokenID, err)
+			fmt.Printf("failed to delete test Konnect Personal Access Token %q: %v\n", tokenID, err)
 		}
 	})
 
