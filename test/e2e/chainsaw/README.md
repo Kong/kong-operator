@@ -42,6 +42,7 @@ Step templates in `common/_step_templates/` encapsulate common operations that a
 ```
 
 **Overriding bindings when needed:**
+
 ```yaml
 - name: Assert-kong-route
   use:

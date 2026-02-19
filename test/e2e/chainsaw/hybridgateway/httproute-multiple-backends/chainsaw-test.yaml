@@ -181,7 +181,7 @@ spec:
           - ~/echo$
           - /echo/
       - name: strip_path
-        value: true
+        value: false
     use:
       template: ../../common/_step_templates/assert-kongRoute.yaml
 
@@ -290,7 +290,7 @@ spec:
           - ~/echo$
           - /echo/
       - name: strip_path
-        value: true
+        value: false
     use:
       template: ../../common/_step_templates/assert-kongRoute.yaml
 
@@ -359,7 +359,7 @@ spec:
           - ~/echo$
           - /echo/
       - name: strip_path
-        value: true
+        value: false
     use:
       template: ../../common/_step_templates/assert-kongRoute.yaml
 
@@ -508,7 +508,7 @@ spec:
           - ~/echo$
           - /echo/
       - name: strip_path
-        value: true
+        value: false
     use:
       template: ../../common/_step_templates/assert-kongRoute.yaml
 

@@ -145,7 +145,7 @@ spec:
             - "~/echo$"
             - "/echo/"
         - name: strip_path
-          value: true
+          value: false
         - name: resource_type
           value: "kongservices.configuration.konghq.com"
     
