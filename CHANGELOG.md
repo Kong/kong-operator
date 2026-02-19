@@ -42,6 +42,9 @@
 
 - Fix setting up indices for HTTPRoute and Gateway when Konnect controllers are disabled.
   [#3229](https://github.com/Kong/kong-operator/pull/3229)
+- Fix `ResolvedRefs` status condition on `HTTPRoute` not being updated when a
+  referenced `KongPlugin` is deleted in self-managed ControlPlane mode.
+  [#3206](https://github.com/Kong/kong-operator/pull/3206)
 
 ## [v2.1.1]
 
@@ -62,6 +65,9 @@
 - Fix not resetting resource errors in ControlPlane's DB mode from previous `Update()`
   calls to prevent stale errors from leaking into subsequent calls.
   [#3369](https://github.com/Kong/kong-operator/pull/3369)
+- Use the same defaults for `preserve_host` and `strip_path` in for Konnect Gateway Control Plane
+  as in self-managed.
+  [#3366](https://github.com/Kong/kong-operator/pull/3366)
 
 ## [v2.1.0]
 
