@@ -50,7 +50,7 @@ chartsnap: "0.6.0"
 # renovate: datasource=github-releases depName=stackrox/kube-linter
 kube-linter: "0.8.1"
 # renovate: datasource=github-tags depName=DavidAnson/markdownlint-cli2
-markdownlint-cli2: "0.20.0"
+markdownlint-cli2: "0.21.0"
 # renovate: datasource=github-releases depName=cert-manager/cert-manager
 cert-manager: "1.19.3"
 # renovate: datasource=github-releases depName=kyverno/chainsaw
