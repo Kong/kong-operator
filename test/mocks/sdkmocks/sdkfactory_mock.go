@@ -89,7 +89,7 @@ func (m MockSDKWrapper) GetControlPlaneSDK() sdkkonnectgo.ControlPlanesSDK {
 	return m.ControlPlaneSDK
 }
 
-func (m MockSDKWrapper) GetControlPlaneGroupSDK() sdkops.ControlPlaneGroupSDK {
+func (m MockSDKWrapper) GetControlPlaneGroupSDK() sdkkonnectgo.ControlPlaneGroupsSDK {
 	return m.ControlPlaneGroupSDK
 }
 

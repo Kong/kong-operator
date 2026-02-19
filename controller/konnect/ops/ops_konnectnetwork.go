@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnectretry "github.com/Kong/sdk-konnect-go/retry"
@@ -11,13 +12,12 @@ import (
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
-	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 )
 
 // createKonnectNetwork creates the Konnect Network as specified in provided spec.
 func createKonnectNetwork(
 	ctx context.Context,
-	sdk sdkops.CloudGatewaysSDK,
+	sdk sdkkonnectgo.CloudGatewaysSDK,
 	n *konnectv1alpha1.KonnectCloudGatewayNetwork,
 ) error {
 	resp, err := sdk.CreateNetwork(ctx, cloudGatewayNetworkToCreateNetworkRequest(n.Spec))
@@ -44,7 +44,7 @@ func createKonnectNetwork(
 // It is assumed that the Konnect ControlPlane has a Konnect ID.
 func updateKonnectNetwork(
 	ctx context.Context,
-	sdk sdkops.CloudGatewaysSDK,
+	sdk sdkkonnectgo.CloudGatewaysSDK,
 	n *konnectv1alpha1.KonnectCloudGatewayNetwork,
 ) error {
 	id := n.GetKonnectStatus().GetKonnectID()
@@ -66,7 +66,7 @@ func updateKonnectNetwork(
 // It is assumed that the Konnect Network has a Konnect ID.
 func deleteKonnectNetwork(
 	ctx context.Context,
-	sdk sdkops.CloudGatewaysSDK,
+	sdk sdkkonnectgo.CloudGatewaysSDK,
 	n *konnectv1alpha1.KonnectCloudGatewayNetwork,
 ) error {
 	id := n.GetKonnectStatus().GetKonnectID()
@@ -83,7 +83,7 @@ func deleteKonnectNetwork(
 // that matches the name of the provided Konnect Network.
 func getKonnectNetworkMatchingSpecName(
 	ctx context.Context,
-	sdk sdkops.CloudGatewaysSDK,
+	sdk sdkkonnectgo.CloudGatewaysSDK,
 	n *konnectv1alpha1.KonnectCloudGatewayNetwork,
 ) (string, error) {
 	reqList := sdkkonnectops.ListNetworksRequest{
@@ -133,7 +133,7 @@ func cloudGatewayNetworkToCreateNetworkRequest(s konnectv1alpha1.KonnectCloudGat
 // Only match mode adoption is supported for Network resources.
 func adoptKonnectCloudGatewayNetwork(
 	ctx context.Context,
-	sdk sdkops.CloudGatewaysSDK,
+	sdk sdkkonnectgo.CloudGatewaysSDK,
 	n *konnectv1alpha1.KonnectCloudGatewayNetwork,
 	adoptOptions commonv1alpha1.AdoptOptions,
 ) error {

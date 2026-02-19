@@ -6,6 +6,7 @@ import (
 	"slices"
 	"sort"
 
+	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/samber/lo"
 	"k8s.io/apimachinery/pkg/types"
@@ -13,14 +14,13 @@ import (
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
-	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/v2/controller/konnect/server"
 )
 
 // createKonnectDataPlaneGroupConfiguration creates the Konnect DataPlane configuration as specified in provided spec.
 func createKonnectDataPlaneGroupConfiguration(
 	ctx context.Context,
-	sdk sdkops.CloudGatewaysSDK,
+	sdk sdkkonnectgo.CloudGatewaysSDK,
 	cl client.Client,
 	n *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration,
 	serverRegion server.Region,
@@ -56,7 +56,7 @@ func createKonnectDataPlaneGroupConfiguration(
 // updateKonnectDataPlaneGroupConfiguration updates a Konnect DataPlaneGroupConfiguration.
 func updateKonnectDataPlaneGroupConfiguration(
 	ctx context.Context,
-	sdk sdkops.CloudGatewaysSDK,
+	sdk sdkkonnectgo.CloudGatewaysSDK,
 	cl client.Client,
 	n *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration,
 	server server.Server,
@@ -130,7 +130,7 @@ func updateKonnectDataPlaneGroupConfiguration(
 // It is assumed that the Konnect DataPlaneGroupConfiguration has a Konnect ID.
 func deleteKonnectDataPlaneGroupConfiguration(
 	ctx context.Context,
-	sdk sdkops.CloudGatewaysSDK,
+	sdk sdkkonnectgo.CloudGatewaysSDK,
 	n *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration,
 	serverRegion server.Region,
 ) error {
@@ -306,7 +306,7 @@ func dataPlaneGroupsResponseToStatus(
 
 func adoptKonnectDataPlaneGroupConfiguration(
 	ctx context.Context,
-	sdk sdkops.CloudGatewaysSDK,
+	sdk sdkkonnectgo.CloudGatewaysSDK,
 	cl client.Client,
 	cfg *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration,
 	adoptOptions commonv1alpha1.AdoptOptions,

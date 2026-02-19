@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	corev1 "k8s.io/api/core/v1"
@@ -11,7 +12,6 @@ import (
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
-	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 )
 
 // createCACertificate creates a KongCACertificate in Konnect.
@@ -19,7 +19,7 @@ import (
 func createCACertificate(
 	ctx context.Context,
 	cl client.Client,
-	sdk sdkops.CACertificatesSDK,
+	sdk sdkkonnectgo.CACertificatesSDK,
 	cert *configurationv1alpha1.KongCACertificate,
 ) error {
 	cpID := cert.GetControlPlaneID()
@@ -62,7 +62,7 @@ func createCACertificate(
 func updateCACertificate(
 	ctx context.Context,
 	cl client.Client,
-	sdk sdkops.CACertificatesSDK,
+	sdk sdkkonnectgo.CACertificatesSDK,
 	cert *configurationv1alpha1.KongCACertificate,
 ) error {
 	cpID := cert.GetControlPlaneID()
@@ -97,7 +97,7 @@ func updateCACertificate(
 // It returns an error if the operation fails.
 func deleteCACertificate(
 	ctx context.Context,
-	sdk sdkops.CACertificatesSDK,
+	sdk sdkkonnectgo.CACertificatesSDK,
 	cert *configurationv1alpha1.KongCACertificate,
 ) error {
 	id := cert.Status.Konnect.GetKonnectID()
@@ -112,7 +112,7 @@ func deleteCACertificate(
 func adoptCACertificate(
 	ctx context.Context,
 	cl client.Client,
-	sdk sdkops.CACertificatesSDK,
+	sdk sdkkonnectgo.CACertificatesSDK,
 	cert *configurationv1alpha1.KongCACertificate,
 ) error {
 	cpID := cert.GetControlPlaneID()
@@ -224,7 +224,7 @@ func kongCACertificateToCACertificateInput(ctx context.Context, cl client.Client
 
 func getKongCACertificateForUID(
 	ctx context.Context,
-	sdk sdkops.CACertificatesSDK,
+	sdk sdkkonnectgo.CACertificatesSDK,
 	cert *configurationv1alpha1.KongCACertificate,
 ) (string, error) {
 	resp, err := sdk.ListCaCertificate(ctx, sdkkonnectops.ListCaCertificateRequest{

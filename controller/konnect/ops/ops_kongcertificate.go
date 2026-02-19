@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	corev1 "k8s.io/api/core/v1"
@@ -12,7 +13,6 @@ import (
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
-	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 )
 
 // createCertificate creates a KongCertificate in Konnect.
@@ -20,7 +20,7 @@ import (
 func createCertificate(
 	ctx context.Context,
 	cl client.Client,
-	sdk sdkops.CertificatesSDK,
+	sdk sdkkonnectgo.CertificatesSDK,
 	cert *configurationv1alpha1.KongCertificate,
 ) error {
 	cpID := cert.GetControlPlaneID()
@@ -90,7 +90,7 @@ func createCertificate(
 func updateCertificate(
 	ctx context.Context,
 	cl client.Client,
-	sdk sdkops.CertificatesSDK,
+	sdk sdkkonnectgo.CertificatesSDK,
 	cert *configurationv1alpha1.KongCertificate,
 ) error {
 	cpID := cert.GetControlPlaneID()
@@ -125,7 +125,7 @@ func updateCertificate(
 // It returns an error if the operation fails.
 func deleteCertificate(
 	ctx context.Context,
-	sdk sdkops.CertificatesSDK,
+	sdk sdkkonnectgo.CertificatesSDK,
 	cert *configurationv1alpha1.KongCertificate,
 ) error {
 	id := cert.Status.Konnect.GetKonnectID()
@@ -140,7 +140,7 @@ func deleteCertificate(
 func adoptCertificate(
 	ctx context.Context,
 	cl client.Client,
-	sdk sdkops.CertificatesSDK,
+	sdk sdkkonnectgo.CertificatesSDK,
 	cert *configurationv1alpha1.KongCertificate,
 ) error {
 	cpID := cert.GetControlPlaneID()
@@ -274,7 +274,7 @@ func kongCertificateToCertificateInput(ctx context.Context, cl client.Client, ce
 
 func getKongCertificateForUID(
 	ctx context.Context,
-	sdk sdkops.CertificatesSDK,
+	sdk sdkkonnectgo.CertificatesSDK,
 	cert *configurationv1alpha1.KongCertificate,
 ) (string, error) {
 	resp, err := sdk.ListCertificate(ctx, sdkkonnectops.ListCertificateRequest{
