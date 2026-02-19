@@ -149,12 +149,6 @@ SKAFFOLD = $(PROJECT_DIR)/bin/installs/github-google-container-tools-skaffold/$(
 skaffold: mise yq ## Download skaffold locally if necessary.
 	$(MAKE) mise-install DEP_VER=github:GoogleContainerTools/skaffold@$(SKAFFOLD_VERSION)
 
-MOCKERY_VERSION = $(shell $(YQ) -r '.mockery' < $(TOOLS_VERSIONS_FILE))
-MOCKERY = $(PROJECT_DIR)/bin/installs/github-vektra-mockery/$(MOCKERY_VERSION)/mockery
-.PHONY: mockery
-mockery: mise yq ## Download mockery locally if necessary.
-	$(MAKE) mise-install DEP_VER=github:vektra/mockery@$(MOCKERY_VERSION)
-
 SETUP_ENVTEST_VERSION = $(shell $(YQ) -r '.setup-envtest' < $(TOOLS_VERSIONS_FILE))
 SETUP_ENVTEST = $(PROJECT_DIR)/bin/installs/github-kubernetes-sigs-controller-runtime/$(SETUP_ENVTEST_VERSION)/setup-envtest
 .PHONY: setup-envtest
@@ -340,7 +334,7 @@ API_DIR ?= api
 #   make generate && make manifests && make test.charts.golden.update
 # into a single command: make generate
 # Note: manifests is placed near the end to preserve the prior ordering (docs are generated from CRDs first).
-generate: generate.crds generate.crd-kustomize generate.k8sio-gomod-replace generate.mocks generate.deepcopy generate.apitypes-funcs generate.docs generate.lint-fix generate.format manifests test.charts.golden.update generate.cli-arguments-docs
+generate: generate.crds generate.crd-kustomize generate.k8sio-gomod-replace generate.deepcopy generate.apitypes-funcs generate.docs generate.lint-fix generate.format manifests test.charts.golden.update generate.cli-arguments-docs
 
 .PHONY: generate.crds
 generate.crds: controller-gen ## Generate WebhookConfiguration and CustomResourceDefinition objects.
@@ -918,11 +912,6 @@ _chartsnap: download.chartsnap download.helm
 		--api-versions gateway.networking.k8s.io/v1 \
 		--api-versions admissionregistration.k8s.io/v1/ValidatingAdmissionPolicy \
 		--api-versions admissionregistration.k8s.io/v1/ValidatingAdmissionPolicyBinding
-
-# https://github.com/vektra/mockery/issues/803#issuecomment-2287198024
-.PHONY: generate.mocks
-generate.mocks: mockery
-	GODEBUG=gotypesalias=0 $(MOCKERY)
 
 # ------------------------------------------------------------------------------
 # Gateway API

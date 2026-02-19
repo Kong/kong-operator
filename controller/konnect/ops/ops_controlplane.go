@@ -15,7 +15,6 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
-	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 )
 
 // ensureControlPlane ensures that the Konnect ControlPlane exists in Konnect. It is created
@@ -24,7 +23,7 @@ import (
 func ensureControlPlane(
 	ctx context.Context,
 	sdk sdkkonnectgo.ControlPlanesSDK,
-	sdkGroups sdkops.ControlPlaneGroupSDK,
+	sdkGroups sdkkonnectgo.ControlPlaneGroupsSDK,
 	cl client.Client,
 	cp *konnectv1alpha2.KonnectGatewayControlPlane,
 ) error {
@@ -57,7 +56,7 @@ func ensureControlPlane(
 func createControlPlane(
 	ctx context.Context,
 	sdk sdkkonnectgo.ControlPlanesSDK,
-	sdkGroups sdkops.ControlPlaneGroupSDK,
+	sdkGroups sdkkonnectgo.ControlPlaneGroupsSDK,
 	cl client.Client,
 	cp *konnectv1alpha2.KonnectGatewayControlPlane,
 ) error {
@@ -119,7 +118,7 @@ func deleteControlPlane(
 func updateControlPlane(
 	ctx context.Context,
 	sdk sdkkonnectgo.ControlPlanesSDK,
-	sdkGroups sdkops.ControlPlaneGroupSDK,
+	sdkGroups sdkkonnectgo.ControlPlaneGroupsSDK,
 	cl client.Client,
 	cp *konnectv1alpha2.KonnectGatewayControlPlane,
 ) error {
@@ -166,7 +165,7 @@ func setGroupMembers(
 	cl client.Client,
 	cp *konnectv1alpha2.KonnectGatewayControlPlane,
 	id string,
-	sdkGroups sdkops.ControlPlaneGroupSDK,
+	sdkGroups sdkkonnectgo.ControlPlaneGroupsSDK,
 ) error {
 	// if the source type is Mirror, don't touch the Konnect entity.
 	if isMirrorEntity(cp) {
@@ -246,7 +245,7 @@ func (m membersByID) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }
 func getControlPlaneForUID(
 	ctx context.Context,
 	sdk sdkkonnectgo.ControlPlanesSDK,
-	sdkGroups sdkops.ControlPlaneGroupSDK,
+	sdkGroups sdkkonnectgo.ControlPlaneGroupsSDK,
 	cl client.Client,
 	cp *konnectv1alpha2.KonnectGatewayControlPlane,
 ) (string, error) {

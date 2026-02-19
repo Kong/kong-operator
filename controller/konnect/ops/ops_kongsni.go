@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
+	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
@@ -14,12 +15,11 @@ import (
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
-	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 )
 
 func createSNI(
 	ctx context.Context,
-	sdk sdkops.SNIsSDK,
+	sdk sdkkonnectgo.SNIsSDK,
 	sni *configurationv1alpha1.KongSNI,
 ) error {
 	cpID := sni.GetControlPlaneID()
@@ -51,7 +51,7 @@ func createSNI(
 
 func updateSNI(
 	ctx context.Context,
-	sdk sdkops.SNIsSDK,
+	sdk sdkkonnectgo.SNIsSDK,
 	sni *configurationv1alpha1.KongSNI,
 ) error {
 	cpID := sni.GetControlPlaneID()
@@ -82,7 +82,7 @@ func updateSNI(
 
 func deleteSNI(
 	ctx context.Context,
-	sdk sdkops.SNIsSDK,
+	sdk sdkkonnectgo.SNIsSDK,
 	sni *configurationv1alpha1.KongSNI,
 ) error {
 	cpID := sni.GetControlPlaneID()
@@ -126,7 +126,7 @@ func deleteSNI(
 
 func adoptSNI(
 	ctx context.Context,
-	sdk sdkops.SNIsSDK,
+	sdk sdkkonnectgo.SNIsSDK,
 	sni *configurationv1alpha1.KongSNI,
 ) error {
 	cpID := sni.GetControlPlaneID()
@@ -197,7 +197,7 @@ func kongSNIToSNIWithoutParents(sni *configurationv1alpha1.KongSNI) sdkkonnectco
 }
 
 // getKongSNIForUID returns the Konnect ID of the Konnect SNI that matches the UID of the provided SNI.
-func getKongSNIForUID(ctx context.Context, sdk sdkops.SNIsSDK, sni *configurationv1alpha1.KongSNI) (string, error) {
+func getKongSNIForUID(ctx context.Context, sdk sdkkonnectgo.SNIsSDK, sni *configurationv1alpha1.KongSNI) (string, error) {
 	resp, err := sdk.ListSni(ctx, sdkkonnectops.ListSniRequest{
 		ControlPlaneID: sni.GetControlPlaneID(),
 		Tags:           new(UIDLabelForObject(sni)),

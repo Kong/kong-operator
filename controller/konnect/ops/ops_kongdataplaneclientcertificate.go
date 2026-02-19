@@ -4,18 +4,18 @@ import (
 	"context"
 	"fmt"
 
+	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
-	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 )
 
 // CreateKongDataPlaneClientCertificate creates a KongDataPlaneClientCertificate in Konnect.
 // It sets the KonnectID in the KongDataPlaneClientCertificate status.
 func CreateKongDataPlaneClientCertificate(
 	ctx context.Context,
-	sdk sdkops.DataPlaneClientCertificatesSDK,
+	sdk sdkkonnectgo.DPCertificatesSDK,
 	cert *configurationv1alpha1.KongDataPlaneClientCertificate,
 ) error {
 	cpID := cert.GetControlPlaneID()
@@ -46,7 +46,7 @@ func CreateKongDataPlaneClientCertificate(
 // It returns an error if the operation fails.
 func ListKongDataPlaneClientCertificates(
 	ctx context.Context,
-	sdk sdkops.DataPlaneClientCertificatesSDK,
+	sdk sdkkonnectgo.DPCertificatesSDK,
 	cpID string,
 ) ([]sdkkonnectcomp.DataPlaneClientCertificate, error) {
 	resp, err := sdk.ListDpClientCertificates(ctx, cpID)
@@ -65,7 +65,7 @@ func ListKongDataPlaneClientCertificates(
 // It returns an error if the operation fails.
 func DeleteKongDataPlaneClientCertificate(
 	ctx context.Context,
-	sdk sdkops.DataPlaneClientCertificatesSDK,
+	sdk sdkkonnectgo.DPCertificatesSDK,
 	cert *configurationv1alpha1.KongDataPlaneClientCertificate,
 ) error {
 	id := cert.Status.Konnect.GetKonnectID()
@@ -80,7 +80,7 @@ func DeleteKongDataPlaneClientCertificate(
 // adoptKongDataPlaneCertificate adopts an existing datplane certificates in Konnect.
 func adoptKongDataPlaneCertificate(
 	ctx context.Context,
-	sdk sdkops.DataPlaneClientCertificatesSDK,
+	sdk sdkkonnectgo.DPCertificatesSDK,
 	cert *configurationv1alpha1.KongDataPlaneClientCertificate,
 ) error {
 	cpID := cert.GetControlPlaneID()

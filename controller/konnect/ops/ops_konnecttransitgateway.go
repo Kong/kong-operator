@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sort"
 
+	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/Kong/sdk-konnect-go/retry"
@@ -13,13 +14,12 @@ import (
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
-	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 )
 
 // createKonnectTransitGateway creates a transit gateway on the Konnect side.
 func createKonnectTransitGateway(
 	ctx context.Context,
-	sdk sdkops.CloudGatewaysSDK,
+	sdk sdkkonnectgo.CloudGatewaysSDK,
 	tg *konnectv1alpha1.KonnectCloudGatewayTransitGateway,
 ) error {
 	networkID := tg.GetNetworkID()
@@ -54,7 +54,7 @@ func createKonnectTransitGateway(
 // KonnectCloudGatewayTransitGateway resource based on the state of the transit gateway on the Konnect side.
 func updateKonnectTransitGateway(
 	ctx context.Context,
-	sdk sdkops.CloudGatewaysSDK,
+	sdk sdkkonnectgo.CloudGatewaysSDK,
 	tg *konnectv1alpha1.KonnectCloudGatewayTransitGateway,
 ) error {
 	networkID := tg.GetNetworkID()
@@ -81,7 +81,7 @@ func updateKonnectTransitGateway(
 // deleteKonnectTransitGateway deletes a Konnect transit gateway.
 func deleteKonnectTransitGateway(
 	ctx context.Context,
-	sdk sdkops.CloudGatewaysSDK,
+	sdk sdkkonnectgo.CloudGatewaysSDK,
 	tg *konnectv1alpha1.KonnectCloudGatewayTransitGateway,
 ) error {
 	networkID := tg.GetNetworkID()
@@ -109,7 +109,7 @@ func deleteKonnectTransitGateway(
 
 func getKonnectTransitGatewayMatchingSpecName(
 	ctx context.Context,
-	sdk sdkops.CloudGatewaysSDK,
+	sdk sdkkonnectgo.CloudGatewaysSDK,
 	tg *konnectv1alpha1.KonnectCloudGatewayTransitGateway,
 ) (string, error) {
 	networkID := tg.GetNetworkID()
@@ -255,7 +255,7 @@ func listTransitGatewayResponseDataToEntityWithIDSlice(resps []sdkkonnectcomp.Tr
 
 func adoptKonnectTransitGateway(
 	ctx context.Context,
-	sdk sdkops.CloudGatewaysSDK,
+	sdk sdkkonnectgo.CloudGatewaysSDK,
 	tg *konnectv1alpha1.KonnectCloudGatewayTransitGateway,
 	adoptOptions commonv1alpha1.AdoptOptions,
 ) error {

@@ -6,15 +6,15 @@ import (
 	"fmt"
 	"reflect"
 
+	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
-	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 )
 
-func createVault(ctx context.Context, sdk sdkops.VaultSDK, vault *configurationv1alpha1.KongVault) error {
+func createVault(ctx context.Context, sdk sdkkonnectgo.VaultsSDK, vault *configurationv1alpha1.KongVault) error {
 	cpID := vault.GetControlPlaneID()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: vault, Op: CreateOp}
@@ -38,7 +38,7 @@ func createVault(ctx context.Context, sdk sdkops.VaultSDK, vault *configurationv
 	return nil
 }
 
-func updateVault(ctx context.Context, sdk sdkops.VaultSDK, vault *configurationv1alpha1.KongVault) error {
+func updateVault(ctx context.Context, sdk sdkkonnectgo.VaultsSDK, vault *configurationv1alpha1.KongVault) error {
 	cpID := vault.GetControlPlaneID()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: vault, Op: UpdateOp}
@@ -63,7 +63,7 @@ func updateVault(ctx context.Context, sdk sdkops.VaultSDK, vault *configurationv
 	return nil
 }
 
-func deleteVault(ctx context.Context, sdk sdkops.VaultSDK, vault *configurationv1alpha1.KongVault) error {
+func deleteVault(ctx context.Context, sdk sdkkonnectgo.VaultsSDK, vault *configurationv1alpha1.KongVault) error {
 	cpID := vault.GetControlPlaneID()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: vault, Op: DeleteOp}
@@ -78,7 +78,7 @@ func deleteVault(ctx context.Context, sdk sdkops.VaultSDK, vault *configurationv
 	return nil
 }
 
-func adoptVault(ctx context.Context, sdk sdkops.VaultSDK, vault *configurationv1alpha1.KongVault) error {
+func adoptVault(ctx context.Context, sdk sdkkonnectgo.VaultsSDK, vault *configurationv1alpha1.KongVault) error {
 	cpID := vault.GetControlPlaneID()
 	if cpID == "" {
 		return KonnectEntityAdoptionMissingControlPlaneIDError{}
@@ -180,7 +180,7 @@ func vaultConfigMatch(a map[string]any, b map[string]any) bool {
 
 func getKongVaultForUID(
 	ctx context.Context,
-	sdk sdkops.VaultSDK,
+	sdk sdkkonnectgo.VaultsSDK,
 	vault *configurationv1alpha1.KongVault,
 ) (string, error) {
 	resp, err := sdk.ListVault(ctx, sdkkonnectops.ListVaultRequest{
