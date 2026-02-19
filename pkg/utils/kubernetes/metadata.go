@@ -104,13 +104,6 @@ func TrimGenerateName(name string) string {
 func GenerateName(base string) string {
 	base = TrimGenerateName(base)
 
-	const (
-		maxNameLength          = 63
-		randomLength           = 5
-		maxGeneratedNameLength = maxNameLength - randomLength
-	)
-	if len(base) > maxGeneratedNameLength {
-		base = base[:maxGeneratedNameLength]
-	}
+	const randomLength = 5
 	return fmt.Sprintf("%s%s", base, utilrand.String(randomLength))
 }
