@@ -76,11 +76,17 @@ func CreateTestControlPlane(ctx context.Context, t *testing.T, token ...string) 
 
 		cpID = createResp.ControlPlane.ID
 		return nil
-	}, retry.Attempts(5), retry.Delay(time.Second))
+	},
+		retry.Attempts(5),
+		retry.Delay(time.Second),
+		retry.OnRetry(func(_ uint, err error) {
+			t.Logf("failed to create control plane, retrying: %v", err)
+		}),
+	)
 	require.NoError(t, createRgErr)
 
 	t.Cleanup(func() {
-		fmt.Printf("deleting test Konnect Control Plane: %q", cpID)
+		fmt.Printf("deleting test Konnect Control Plane: %q\n", cpID)
 		err := retry.Do(
 			func() error {
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -94,7 +100,7 @@ func CreateTestControlPlane(ctx context.Context, t *testing.T, token ...string) 
 		if err != nil {
 			// Don't fail the test if cleanup fails, just log the error.
 			// Cleanup job will eventually clean up the control plane.
-			fmt.Printf("failed to delete control plane %q: %v", cpID, err)
+			fmt.Printf("failed to delete control plane %q: %v\n", cpID, err)
 		}
 
 		// Since Konnect authorization v2 supports cleanup of roles after control plane deleted,
