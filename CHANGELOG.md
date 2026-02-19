@@ -65,7 +65,22 @@
   referenced `KongPlugin` is deleted in self-managed ControlPlane mode.
   [#3206](https://github.com/Kong/kong-operator/pull/3206)
 
+## [v2.1.1]
+
+> Release date: 2026-02-19
+
+### Fixes
+
+- Fix setting up indices for HTTPRoute and Gateway when Konnect controllers are disabled.
+  [#3234](https://github.com/Kong/kong-operator/pull/3234)
+- Fix v2 module
+  [#3353](https://github.com/Kong/kong-operator/pull/3353)
+- Bump Go to 1.25.7
+  [#3235](https://github.com/Kong/kong-operator/pull/3235)
+
 ## [v2.1.0]
+
+> Release date: 2026-02-05
 
 ### Added
 
@@ -359,6 +374,40 @@
   `spec.listeners.tls.certificateRef`, ensuring Gateway status conditions
   are updated when referenced certificates change.
   [#2661](https://github.com/Kong/kong-operator/pull/2661)
+
+## [v2.0.7]
+
+> Release date: 2026-02-19
+
+### Fixed
+
+- Fixed an issue where users could set the secret of configmap label selectors
+  to empty when the other one was left non-empty.
+  [#2815](https://github.com/Kong/kong-operator/pull/2815)
+- Bump Go to 1.25.7 and fix v2 module
+  [#3355](https://github.com/Kong/kong-operator/pull/3355)
+
+## [v2.0.6]
+
+> Release date: 2025-12-01
+
+### Fixes
+
+- Translate `healtchchecks.thershold` in `KongUpstreamPolicy` to the
+  `healthchecks.thershold` field in Kong upstreams.
+  [#2662](https://github.com/Kong/kong-operator/pull/2662)
+- Fix random, unexpected and invalid validation error during validation of `HTTPRoute`s
+  for `Gateway`s configured in different namespaces with `GatewayConfiguration` that
+  has field `spec.controlPlaneOptions.watchNamespaces.type` set to `own`.
+  [#2717](https://github.com/Kong/kong-operator/pull/2717)
+- Reject CA Secrets with multiple PEM certs.
+  [#2671](https://github.com/Kong/kong-operator/pull/2671)
+- Gateway controllers now watch changes on Secrets referenced by
+  `spec.listeners.tls.certificateRef`, ensuring Gateway status conditions
+  are updated when referenced certificates change.
+  [#2661](https://github.com/Kong/kong-operator/pull/2661)
+- Trigger reconciliation events on `KongPlugin`s upon changes on `KongPluginBinding`.
+  [#2637](https://github.com/Kong/kong-operator/pull/2637)
 
 ## [v2.0.5]
 
