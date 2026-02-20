@@ -1,7 +1,12 @@
-name: unit tests
+name: CRD validation tests
 
 on:
-  workflow_call: {}
+  workflow_call:
+    inputs:
+      cluster_versions:
+        description: "The Kubernetes cluster versions to use for envtest"
+        type: string
+        required: true
 
 permissions:
   contents: read
@@ -11,9 +16,13 @@ env:
   MISE_DEBUG: 1
 
 jobs:
-  unit-tests:
+  crd-validation-tests:
     timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 60) }}
     runs-on: ubuntu-latest
+    name: ${{ format('{0}', matrix.kubernetes-node-version) }}
+    strategy:
+      matrix:
+        kubernetes-node-version: ${{ fromJson(inputs.cluster_versions) }}
     steps:
     - name: Harden Runner
       uses: step-security/harden-runner@5ef0c079ce82195b2a36a210272d6b661572d83e # v2.14.2
@@ -32,8 +41,8 @@ jobs:
       with:
         install: false
 
-    - run: echo "GO_CACHE_KEY=go-unittests-${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.mod') }}" >> $GITHUB_ENV
-    - run: echo "GO_CACHE_KEY_2=go-unittests-${{ runner.os }}-${{ runner.arch }}-go-" >> $GITHUB_ENV
+    - run: echo "GO_CACHE_KEY=go-crdsvalidationtests-${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.mod') }}" >> $GITHUB_ENV
+    - run: echo "GO_CACHE_KEY_2=go-crdsvalidationtests-${{ runner.os }}-${{ runner.arch }}-go-" >> $GITHUB_ENV
 
     - name: Go cache
       uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
@@ -46,21 +55,15 @@ jobs:
           ${{ env.GO_CACHE_KEY }}
           ${{ env.GO_CACHE_KEY_2 }}
 
-    - name: run unit tests
-      run: make test.unit
-      env:
-        KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS: ${{ secrets.KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS }}
-        GOTESTSUM_JUNITFILE: "unit-tests.xml"
+    - name: Run the crds validation tests
+      run: |
+        VERSION="${{ matrix.kubernetes-node-version }}"
+        # Remove leading 'v'
+        VERSION="${VERSION#v}"
+        # Remove patch number as envtest releases are not provided for every patch version
+        VERSION="${VERSION%.*}"
+        echo "Cluster version: $VERSION"
+        make test.crds-validation CLUSTER_VERSION=${VERSION}
 
-    - name: collect test coverage
-      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-      with:
-        name: coverage-unit-tests
-        path: coverage.unit.out
-
-    - name: collect test report
-      if: ${{ always() }}
-      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-      with:
-        name: tests-report-unit-tests
-        path: unit-tests.xml
+    - name: Run the API tests
+      run: make test.api
