@@ -21,8 +21,7 @@ update the CRDs manually since [Helm does not manage CRD updates][helm_crd_updat
 
 This can be done by running the following command:
 
-
-```
+```sh
 kustomize build github.com/kong/kong-operator/config/crd/gateway-operator | kubectl apply --server-side -f -
 ```
 

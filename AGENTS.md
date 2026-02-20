@@ -112,6 +112,7 @@ Kubernetes API definitions which are used to generate CRDs, deepcopy methods, cl
 ### Controllers (`controller/`)
 
 Each implements `SetupWithManager(ctx, mgr)` and `Reconcile(ctx, req)`:
+
 - `dataplane/` - Manages Kong Gateway Deployments, Services, ConfigMaps
 - `controlplane/` - Manages Kong Ingress Controller deployments
 - `gateway/` - Implements Gateway API, creates DataPlane/ControlPlane
@@ -148,6 +149,7 @@ Helm chart for deploying the operator.
 ## Code Conventions
 
 ### Naming (Enforced by Linter)
+
 - Use `DataPlane` not `Dataplane`
 - Use `ControlPlane` not `Controlplane`
 - For ControlPlane types, use `github.com/kong/kong-operator/internal/types` package (aliased as `gwtypes`)

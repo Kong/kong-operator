@@ -21,10 +21,10 @@ If the troubleshooting section does not contain the answer to the problem you en
 - [ ] Ensure GitHub PAT is still valid (see [GitHub PAT](#github-pat) below).
 - [ ] From [GitHub release action][release-action], start a new workflow run:
   - Set the `Use workflow from` to the release branch: e.g. `release/1.2.x`
-    - If you want to release a major version, set the `Use workflow from` to the `main` branch otherwise set it to the release branch.
+    - If you want to release a major or minor version, set the `Use workflow from` to the `main` branch otherwise set it to the release branch (e.g. `release/1.2.x`).
   - Set the `release` input set to the target version (e.g. `v1.2.0`).
 - [ ] Wait for the workflow to complete.
-- [ ] The CI should create a PR in the [Gateway Operator][kgo-prs] repo that bumps KGO version in `VERSION` file and manifests. Merge it.
+- [ ] The CI should create a PR in the [Kong Operator][ko-prs] repo that bumps KO version in `VERSION` file and manifests. Merge it.
 - [ ] After the PR is merged, [release-bot][release-bot-workflow] workflow will be triggered. It will create a new GH release, as well as a release branch (if not patch or prerelease):
   - [ ] Check the [releases][releases] page. The release has to be marked manually as `latest` if this is the case.
   - [ ] Check the `release/N.M.x` release branch exists.
@@ -41,9 +41,8 @@ Trigger for released version CI workflow [Generate Kubernetes Gateway API confor
 - [ ] When the release contains breaking changes which precludes an automated upgrade make sure this is documented in the release notes and the Helm chart's [UPGRADE.md][helm-chart-upgrade].
 - [ ] Schedule a retro meeting. Invite the team (team-kubernetes@konghq.com) and a Product Manager. Remember to link to [retro notes](https://docs.google.com/document/d/15gDtl425zyttbDwA8qQrh5yBgTD5OpnhjOquqfSJUx4/edit#heading=h.biunbyheelys) in the invite description
 
-
 [docs_repo]: https://github.com/Kong/developer.konghq.com/
-[helm_upgrade_test]: https://github.com/kong/kong-operator/blob/9f33d27ab875b91e50d7e750b45a293c1395da2d/test/e2e/test_upgrade.go
+[helm_upgrade_test]: https://github.com/Kong/kong-operator/blob/54c3badf91c4205029c1a247cba09ad55d984f3d/test/e2e/helm_install_upgrade_test.go
 [release-bot-workflow]: ../workflows/release-bot.yaml
 [helm-chart-upgrade]: ../../charts/kong-operator/UPGRADE.md
 
@@ -52,20 +51,22 @@ Trigger for released version CI workflow [Generate Kubernetes Gateway API confor
 > **NOTE**: These versions should be automatically updated via Renovate.
 > As part of the release workflow please verify that this is indeed the case and the automation still works.
 
-The packages [internal/consts][consts-pkg] and [pkg/versions][versions-pkg] contains a list of default versions for the operator.
-These versions should be updated to match the new release. The example consts to look for:
+The packages [pkg/consts][consts-pkg] contains a list of default versions for the operator.
+These versions should be up to date to match the new release.
+
+The example consts to look for:
 
 - `DefaultDataPlaneTag`
 
 ## GitHub PAT
 
 The release workflow uses @team-k8s-bot's GitHub PAT to create a GitHub release and PRs related to it.
-It's named `Github team k8s bot - PAT - Kong Gateway Operator CI` in 1password and is stored in `PAT_GITHUB`
+It's named `Github team k8s bot - PAT - Kong Operator CI` in 1password and is stored in `PAT_GITHUB`
 GitHub repository secret to give workflows access to it.
 It's always generated with 1-year expiration date.
 
 If you find it's expired, make sure to generate a new one and update the `PAT_GITHUB` secret as well as its 1Pass item
-`Github team k8s bot - PAT - Kong Gateway Operator CI` for redundancy.
+`Github team k8s bot - PAT - Kong Operator CI` for redundancy.
 
 ## Troubleshooting
 
@@ -90,5 +91,4 @@ Steps:
 [releases]: https://github.com/kong/kong-operator/releases
 [release-action]: https://github.com/kong/kong-operator/actions/workflows/release.yaml
 [consts-pkg]: https://github.com/kong/kong-operator/blob/main/pkg/consts/consts.go
-[versions-pkg]: https://github.com/kong/kong-operator/blob/main/internal/versions/
-[kgo-prs]: https://github.com/kong/kong-operator/pulls
+[ko-prs]: https://github.com/kong/kong-operator/pulls
