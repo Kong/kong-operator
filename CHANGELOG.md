@@ -796,7 +796,7 @@
   the [Kong documentation](https://developer.konghq.com/operator/konnect/reference/migrate-1.4-1.5/).
   [#1183](https://github.com/kong/kong-operator/pull/1183)
 - Migrate KGO CRDs conditions to the kubernetes-configuration repo.
-  With this migration process, we have moved all conditions from the KGO repo to [kubernetes-configuration](kubernetes-configuration).
+  With this migration process, we have moved all conditions from the KGO repo to [kubernetes-configuration][kubernetes-configuration].
   This is a breaking change which requires manual action for projects that use operator's Go conditions types.
   In order to migrate please use the import paths from the [kong/kubernetes-configuration][kubernetes-configuration] repo instead.
   [#1281](https://github.com/kong/kong-operator/pull/1281)

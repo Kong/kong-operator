@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # post-process-changelog-for-konghq.sh
 # Usage: ./scripts/post-process-changelog-for-konghq.sh <input-changelog> <output-file> [last-version]
-#   last-version: oldest version to include (default: 1.0.0). Entries older than this are omitted.
+#   last-version: oldest version to include (default: 1.3.0). Entries older than this are omitted.
 set -euo pipefail
 
 INPUT="${1:?input changelog file required}"
 OUTPUT="${2:?output file required}"
-LAST_VERSION="${3:-1.0.0}"
+LAST_VERSION="${3:-1.3.0}"
 
 cat > "$OUTPUT" <<'FRONTMATTER'
 ---
