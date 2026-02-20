@@ -368,6 +368,7 @@ jobs:
       DOCS_REPO: developer.konghq.com
       DOCS_REPO_PATH_CLI_ARGS_DOC: app/operator/reference/configuration-options.md
       DOCS_REPO_PATH_CRD_DOC: app/operator/reference/custom-resources.md
+      DOCS_REPO_PATH_CHANGELOG: app/operator/changelog.md
     needs:
       - semver
       - create-release-pr
@@ -398,6 +399,13 @@ jobs:
             ./docs/all-api-reference.md \
             "${{ env.DOCS_REPO }}/${{ env.DOCS_REPO_PATH_CRD_DOC }}" \
             "${{ env.DOCS_REPO }}"
+
+      - name: update changelog
+        run: |
+          mkdir -p "$(dirname "${{ env.DOCS_REPO }}/${{ env.DOCS_REPO_PATH_CHANGELOG }}")"
+          ./scripts/post-process-changelog-for-konghq.sh \
+            ./CHANGELOG.md \
+            "${{ env.DOCS_REPO }}/${{ env.DOCS_REPO_PATH_CHANGELOG }}"
 
       - name: Detect changes
         id: detect-changes
