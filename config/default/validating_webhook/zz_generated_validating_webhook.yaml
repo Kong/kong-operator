@@ -34,7 +34,6 @@ webhooks:
     - kongconsumergroups
     - kongplugins
     - kongclusterplugins
-    - kongingresses
     - kongvaults
     - kongcustomentities
     scope: '*'
@@ -77,17 +76,17 @@ webhooks:
   matchPolicy: Equivalent
   name: secrets.validations.kong.konghq.com
   rules:
-    # TODO: it tries to validate secret created by cert-manager, but KO is not ready to handle it.
-    - apiGroups:
-      - ""
-      apiVersions:
-      - v1
-      operations:
-      - CREATE
-      - UPDATE
-      resources:
-      - secrets
-      scope: '*'
+  # TODO: it tries to validate secret created by cert-manager, but KO is not ready to handle it.
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - secrets
+    scope: '*'
   objectSelector:
     matchLabels:
       # TODO: customize based on flags
@@ -108,15 +107,15 @@ webhooks:
   matchPolicy: Equivalent
   name: services.validations.kong.konghq.com
   rules:
-    - apiGroups:
-      - ""
-      apiVersions:
-      - v1
-      operations:
-      - CREATE
-      - UPDATE
-      resources:
-      - services
-      scope: '*'
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - services
+    scope: '*'
   sideEffects: None
   timeoutSeconds: 10
