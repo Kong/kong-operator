@@ -18,6 +18,8 @@ products:
   - operator
 breadcrumbs:
   - /operator/
+  - index: operator
+    section: Reference
 
 ---
 
