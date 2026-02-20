@@ -196,6 +196,9 @@ jobs:
       with:
         install: false
 
+    - name: Verify go fix
+      run: make verify.go-fix
+
     - name: Verify manifests consistency
       run: make verify.manifests
 

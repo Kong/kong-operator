@@ -438,7 +438,7 @@ func deployIngressWithEchoBackends(ctx context.Context, t *testing.T, env enviro
 		annotations.AnnotationPrefix + annotations.StripPathKey: "true",
 		annotations.AnnotationPrefix + annotations.MethodsKey:   http.MethodGet,
 	}, service)
-	ingress.Spec.IngressClassName = kong.String(ingressClass)
+	ingress.Spec.IngressClassName = new(ingressClass)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), corev1.NamespaceDefault, ingress))
 	t.Cleanup(func() {
 		assert.NoError(t, env.Cluster().Client().NetworkingV1().Ingresses(corev1.NamespaceDefault).Delete(ctx, ingress.Name, metav1.DeleteOptions{}))
