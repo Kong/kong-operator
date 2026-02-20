@@ -26,6 +26,20 @@ config:
     allowed_elements:
     - img
 
+  # MD052/reference-links-images : Reference links and images should use a label that is defined :
+  # https://github.com/DavidAnson/markdownlint/blob/v0.32.1/doc/md052.md
+  MD052:
+    # Include shortcut syntax to catch undefined [vX.Y.Z] references in headings
+    shortcut_syntax: true
+    # Ignore GitHub-flavored markdown callouts/admonitions
+    ignored_labels:
+    - "x"
+    - "!note"
+    - "!tip"
+    - "!important"
+    - "!warning"
+    - "!caution"
+
   # MD034/no-bare-urls : Bare URL used :
   # https://github.com/DavidAnson/markdownlint/blob/v0.32.1/doc/md034.md
   MD034: false
