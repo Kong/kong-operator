@@ -40,7 +40,7 @@ type Options struct {
 }
 
 var DefaultEnvTestOpts = Options{
-	InstallGatewayCRDs: true,
+	InstallGatewayCRDs: false,
 	InstallKongCRDs:    true,
 }
 

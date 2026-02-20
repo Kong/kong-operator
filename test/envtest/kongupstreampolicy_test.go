@@ -162,7 +162,7 @@ func TestKongUpstreamPolicyWithHTTPRoute(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	scheme := Scheme(t, WithKong, WithGatewayAPI)
-	envcfg, _ := Setup(t, ctx, scheme)
+	envcfg, _ := Setup(t, ctx, scheme, WithInstallGatewayCRDs(true))
 
 	ctrlClient := NewControllerClient(t, scheme, envcfg)
 	ingressClassName := "kongenvtest"

@@ -33,7 +33,7 @@ func TestKongCACertificate(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := Context(t, t.Context())
 	defer cancel()
-	cfg, ns := Setup(t, ctx, scheme.Get())
+	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
 	const (
 		tagName            = "tag1"
 		conflictingTagName = "xconflictx"

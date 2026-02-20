@@ -34,7 +34,7 @@ func TestKongCertificate(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := Context(t, t.Context())
 	defer cancel()
-	cfg, ns := Setup(t, ctx, scheme.Get())
+	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
 
 	t.Log("Setting up the manager with reconcilers")
 	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())

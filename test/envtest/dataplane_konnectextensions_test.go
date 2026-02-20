@@ -41,7 +41,7 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 
 	for _, keyType := range []certificate.KeyType{certificate.RSA, certificate.ECDSA} {
 		t.Run("for CA with key type "+string(keyType), func(t *testing.T) {
-			cfg, ns := Setup(t, t.Context(), scheme.Get())
+			cfg, ns := Setup(t, t.Context(), scheme.Get(), WithInstallGatewayCRDs(true))
 			ctx := t.Context()
 
 			mgr, logs := NewManager(t, ctx, cfg, scheme.Get())

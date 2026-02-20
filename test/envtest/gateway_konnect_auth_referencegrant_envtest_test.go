@@ -26,7 +26,7 @@ func TestGatewayKonnectAPIAuthReferenceGrant(t *testing.T) {
 	scheme := managerscheme.Get()
 	ctx := t.Context()
 
-	cfg, gwNs := Setup(t, ctx, scheme)
+	cfg, gwNs := Setup(t, ctx, scheme, WithInstallGatewayCRDs(true))
 	mgr, logs := NewManager(t, ctx, cfg, scheme)
 
 	r := &kogateway.Reconciler{
@@ -220,7 +220,7 @@ func TestGatewayKonnectAPIAuthReferenceGrant_CleanupOnGatewayDeletion(t *testing
 	scheme := managerscheme.Get()
 	ctx := t.Context()
 
-	cfg, gwNs := Setup(t, ctx, scheme)
+	cfg, gwNs := Setup(t, ctx, scheme, WithInstallGatewayCRDs(true))
 	mgr, logs := NewManager(t, ctx, cfg, scheme)
 
 	r := &kogateway.Reconciler{

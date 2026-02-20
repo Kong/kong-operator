@@ -24,7 +24,7 @@ func TestGatewaySecretWatch_UpdatesResolvedRefsOnSecretRotation(t *testing.T) {
 	scheme := managerscheme.Get()
 	ctx := t.Context()
 
-	cfg, ns := Setup(t, ctx, scheme)
+	cfg, ns := Setup(t, ctx, scheme, WithInstallGatewayCRDs(true))
 	mgr, logs := NewManager(t, ctx, cfg, scheme)
 
 	r := &kogateway.Reconciler{

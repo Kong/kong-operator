@@ -43,7 +43,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 	defer cancel()
 
 	// Setup up the envtest environment.
-	cfg, ns := Setup(t, ctx, scheme.Get())
+	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
 
 	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
 
