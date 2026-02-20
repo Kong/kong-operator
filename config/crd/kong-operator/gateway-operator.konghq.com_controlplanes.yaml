@@ -54,7 +54,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: ControlPlaneSpec defines the desired state of ControlPlane
+            description: ControlPlaneSpec defines the desired state of ControlPlane.
             properties:
               dataplane:
                 description: |-
@@ -8748,7 +8748,7 @@ spec:
                 && e.kind == ''KonnectExtension'') || (e.group == ''gateway-operator.konghq.com''
                 && e.kind == ''DataPlaneMetricsExtension'')) : true'
           status:
-            description: ControlPlaneStatus defines the observed state of ControlPlane
+            description: ControlPlaneStatus defines the observed state of ControlPlane.
             properties:
               conditions:
                 default:

@@ -14,7 +14,6 @@ func init() {
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
-// +apireference:kgo:include
 // +kong:channels=kong-operator
 type WatchNamespaceGrant struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -27,8 +26,6 @@ type WatchNamespaceGrant struct {
 }
 
 // WatchNamespaceGrantSpec defines the desired state of an WatchNamespaceGrant.
-//
-// +apireference:kgo:include
 type WatchNamespaceGrantSpec struct {
 	// From describes the trusted namespaces and kinds that can reference the
 	// namespace this grant exists in.
@@ -61,7 +58,6 @@ type WatchNamespaceGrantFrom struct {
 // WatchNamespaceGrantList contains a list of WatchNamespaceGrants.
 //
 // +kubebuilder:object:root=true
-// +apireference:kgo:include
 type WatchNamespaceGrantList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

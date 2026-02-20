@@ -35,7 +35,6 @@ import (
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.spec.controlPlaneRef) || has(self.spec.controlPlaneRef)", message="controlPlaneRef is required once set"
 // +kubebuilder:validation:XValidation:rule="(!self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable when an entity is already Programmed"
-// +apireference:kgo:include
 // +kong:channels=kong-operator
 type KongKey struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -51,7 +50,6 @@ type KongKey struct {
 // +kubebuilder:validation:XValidation:rule="!has(self.controlPlaneRef) ? true : self.controlPlaneRef.type != 'kic'", message="KIC is not supported as control plane"
 // +kubebuilder:validation:XValidation:rule="!has(self.adopt) ? true : (has(self.controlPlaneRef) && self.controlPlaneRef.type == 'konnectNamespacedRef')", message="spec.adopt is allowed only when controlPlaneRef is konnectNamespacedRef"
 // +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
-// +apireference:kgo:include
 type KongKeySpec struct {
 	// KongKeyAPISpec are the attributes of the KongKey itself.
 	KongKeyAPISpec `json:",inline"`
@@ -73,7 +71,6 @@ type KongKeySpec struct {
 
 // KongKeyAPISpec defines the attributes of a Kong Key.
 // +kubebuilder:validation:XValidation:rule="has(self.jwk) || has(self.pem)", message="Either 'jwk' or 'pem' must be set"
-// +apireference:kgo:include
 type KongKeyAPISpec struct {
 	// KID is a unique identifier for a key.
 	// When JWK is provided, KID has to match the KID in the JWK.
@@ -101,7 +98,6 @@ type KongKeyAPISpec struct {
 }
 
 // PEMKeyPair defines a keypair in PEM format.
-// +apireference:kgo:include
 type PEMKeyPair struct {
 	// The private key in PEM format.
 	// +kubebuilder:validation:MinLength=1
@@ -113,7 +109,6 @@ type PEMKeyPair struct {
 }
 
 // KongKeyStatus defines the status for a KongKey.
-// +apireference:kgo:include
 type KongKeyStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
@@ -129,7 +124,6 @@ type KongKeyStatus struct {
 
 // KongKeyList contains a list of Kong Keys.
 // +kubebuilder:object:root=true
-// +apireference:kgo:include
 type KongKeyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

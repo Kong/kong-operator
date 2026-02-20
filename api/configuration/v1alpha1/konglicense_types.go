@@ -16,7 +16,6 @@ import (
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 // +kubebuilder:printcolumn:name="Enabled",type=boolean,JSONPath=`.enabled`,description="Enabled to configure on Kong gateway instances"
 // +apireference:kic:include
-// +apireference:kgo:include
 // +apireference:kic:include
 // +kong:channels=kong-operator
 type KongLicense struct {
@@ -34,7 +33,6 @@ type KongLicense struct {
 }
 
 // KongLicenseStatus stores the status of the KongLicense being processed in each controller that reconciles it.
-// +apireference:kgo:include
 type KongLicenseStatus struct {
 	// +listType=map
 	// +listMapKey=controllerName
@@ -43,7 +41,6 @@ type KongLicenseStatus struct {
 
 // KongLicenseControllerStatus is the status of owning KongLicense being processed
 // identified by the controllerName field.
-// +apireference:kgo:include
 type KongLicenseControllerStatus struct {
 	// ControllerName is an identifier of the controller to reconcile this KongLicense.
 	// Should be unique in the list of controller statuses.
@@ -63,20 +60,17 @@ type KongLicenseControllerStatus struct {
 // RFC 1123 subdomain.
 // +kubebuilder:validation:MaxLength=253
 // +kubebuilder:validation:Pattern=`^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
-// +apireference:kgo:include
 type Group string
 
 // Kind refers to a Kubernetes kind.
 // +kubebuilder:validation:MinLength=1
 // +kubebuilder:validation:MaxLength=63
 // +kubebuilder:validation:Pattern=`^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$`
-// +apireference:kgo:include
 type Kind string
 
 // Namespace refers to a Kubernetes namespace. It must be a RFC 1123 label.
 // +kubebuilder:validation:Pattern=`^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
 // +kubebuilder:validation:MaxLength=63
-// +apireference:kgo:include
 type Namespace string
 
 // ObjectName refers to the name of a Kubernetes object.
@@ -85,12 +79,10 @@ type Namespace string
 //
 // +kubebuilder:validation:MinLength=1
 // +kubebuilder:validation:MaxLength=253
-// +apireference:kgo:include
 // +apireference:kic:include
 type ObjectName string
 
 // ControllerReference is a reference to a controller that reconciles the KongLicense.
-// +apireference:kgo:include
 // +apireference:kic:include
 type ControllerReference struct {
 	// Group is the group of referent.
@@ -108,7 +100,6 @@ type ControllerReference struct {
 
 // KongLicenseList contains a list of KongLicense.
 // +kubebuilder:object:root=true
-// +apireference:kgo:include
 // +apireference:kic:include
 type KongLicenseList struct {
 	metav1.TypeMeta `json:",inline"`

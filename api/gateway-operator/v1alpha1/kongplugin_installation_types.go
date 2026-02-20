@@ -36,7 +36,6 @@ func init() {
 // +kubebuilder:resource:shortName=kpi,categories=kong
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Accepted",description="The Resource is accepted",type=string,JSONPath=`.status.conditions[?(@.type=='Accepted')].status`
-// +apireference:kgo:include
 // +kong:channels=kong-operator
 type KongPluginInstallation struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -49,7 +48,6 @@ type KongPluginInstallation struct {
 // +kubebuilder:object:root=true
 
 // KongPluginInstallationList contains a list of KongPluginInstallation.
-// +apireference:kgo:include
 type KongPluginInstallationList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -58,7 +56,6 @@ type KongPluginInstallationList struct {
 }
 
 // KongPluginInstallationSpec provides the information necessary to retrieve and install a Kong custom plugin.
-// +apireference:kgo:include
 type KongPluginInstallationSpec struct {
 	// The image is an OCI image URL for a packaged custom Kong plugin.
 	//
@@ -74,7 +71,6 @@ type KongPluginInstallationSpec struct {
 }
 
 // KongPluginInstallationStatus defines the observed state of KongPluginInstallation.
-// +apireference:kgo:include
 type KongPluginInstallationStatus struct {
 	// Conditions describe the current conditions of this KongPluginInstallation.
 	//
@@ -95,11 +91,9 @@ type KongPluginInstallationStatus struct {
 
 // KongPluginInstallationConditionType is the type for Conditions in a KongPluginInstallation's
 // Status.Conditions array.
-// +apireference:kgo:include
 type KongPluginInstallationConditionType string
 
 // KongPluginInstallationConditionReason is a reason for the KongPluginInstallation condition's last transition.
-// +apireference:kgo:include
 type KongPluginInstallationConditionReason string
 
 const (

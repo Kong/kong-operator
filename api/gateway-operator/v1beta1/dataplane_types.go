@@ -33,7 +33,6 @@ func init() {
 //
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +apireference:kgo:include
 // +kong:channels=kong-operator
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
@@ -54,8 +53,7 @@ type DataPlane struct {
 
 // +kubebuilder:object:root=true
 
-// DataPlaneList contains a list of DataPlane
-// +apireference:kgo:include
+// DataPlaneList contains a list of DataPlane.
 type DataPlaneList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -63,15 +61,13 @@ type DataPlaneList struct {
 	Items []DataPlane `json:"items"`
 }
 
-// DataPlaneSpec defines the desired state of DataPlane
-// +apireference:kgo:include
+// DataPlaneSpec defines the desired state of DataPlane.
 type DataPlaneSpec struct {
 	DataPlaneOptions `json:",inline"`
 }
 
 // DataPlaneOptions defines the information specifically needed to
 // deploy the DataPlane.
-// +apireference:kgo:include
 // +kubebuilder:validation:XValidation:message="Extension not allowed for DataPlane",rule="has(self.extensions) ? self.extensions.all(e, (e.group == 'konnect.konghq.com' || e.group == 'gateway-operator.konghq.com') && e.kind == 'KonnectExtension') : true"
 type DataPlaneOptions struct {
 	// +optional
@@ -100,7 +96,6 @@ type DataPlaneOptions struct {
 
 // DataPlaneResources defines the resources that will be created and managed
 // for the DataPlane.
-// +apireference:kgo:include
 type DataPlaneResources struct {
 	// PodDisruptionBudget is the configuration for the PodDisruptionBudget
 	// that will be created for the DataPlane.
@@ -108,7 +103,6 @@ type DataPlaneResources struct {
 }
 
 // PodDisruptionBudget defines the configuration for the PodDisruptionBudget.
-// +apireference:kgo:include
 type PodDisruptionBudget struct {
 	// Spec defines the specification of the PodDisruptionBudget.
 	// Selector is managed by the controller and cannot be set by the user.
@@ -118,7 +112,6 @@ type PodDisruptionBudget struct {
 // PodDisruptionBudgetSpec defines the specification of a PodDisruptionBudget.
 //
 // +kubebuilder:validation:XValidation:message="You can specify only one of maxUnavailable and minAvailable in a single PodDisruptionBudgetSpec.",rule="(has(self.minAvailable) && !has(self.maxUnavailable)) || (!has(self.minAvailable) && has(self.maxUnavailable))"
-// +apireference:kgo:include
 type PodDisruptionBudgetSpec struct {
 	// An eviction is allowed if at least "minAvailable" pods selected by
 	// "selector" will still be available after the eviction, i.e. even in the
@@ -165,7 +158,6 @@ type PodDisruptionBudgetSpec struct {
 
 // DataPlaneDeploymentOptions specifies options for the Deployments (as in the Kubernetes
 // resource "Deployment") which are created and managed for the DataPlane resource.
-// +apireference:kgo:include
 type DataPlaneDeploymentOptions struct {
 	DeploymentOptions `json:",inline"`
 
@@ -176,7 +168,6 @@ type DataPlaneDeploymentOptions struct {
 }
 
 // DataPlaneNetworkOptions defines network related options for a DataPlane.
-// +apireference:kgo:include
 type DataPlaneNetworkOptions struct {
 	// Services indicates the configuration of Kubernetes Services needed for
 	// the topology of various forms of traffic (including ingress, e.t.c.) to
@@ -191,7 +182,6 @@ type DataPlaneNetworkOptions struct {
 }
 
 // DataPlaneServices contains Services related DataPlane configuration, shared with the GatewayConfiguration.
-// +apireference:kgo:include
 type DataPlaneServices struct {
 	// Ingress is the Kubernetes Service that will be used to expose ingress
 	// traffic for the DataPlane. Here you can determine whether the DataPlane
@@ -205,7 +195,6 @@ type DataPlaneServices struct {
 }
 
 // DataPlaneServiceOptions contains Services related DataPlane configuration.
-// +apireference:kgo:include
 // +kubebuilder:validation:XValidation:message="Cannot set NodePort when service type is not NodePort or LoadBalancer", rule="!has(self.ports) || !(self.ports.exists(p, has(p.nodePort))) ? true : has(self.type) && ['LoadBalancer', 'NodePort'].exists(t, t == self.type)"
 type DataPlaneServiceOptions struct {
 	// ServiceOptions is the struct containing service options shared with
@@ -222,7 +211,6 @@ type DataPlaneServiceOptions struct {
 }
 
 // DataPlaneServicePort contains information on service's port.
-// +apireference:kgo:include
 type DataPlaneServicePort struct {
 	// The name of this port within the service. This must be a DNS_LABEL.
 	// All ports within a ServiceSpec must have unique names. When considering
@@ -265,7 +253,6 @@ type DataPlaneServicePort struct {
 
 // ServiceOptions is used to includes options to customize the ingress service,
 // such as the annotations.
-// +apireference:kgo:include
 // +kubebuilder:validation:XValidation:message="Cannot set ExternalTrafficPolicy for ClusterIP service.", rule="has(self.type) && self.type == 'ClusterIP' ? !has(self.externalTrafficPolicy) : true"
 type ServiceOptions struct {
 	// Type determines how the Service is exposed.
@@ -323,8 +310,7 @@ type ServiceOptions struct {
 	ExternalTrafficPolicy corev1.ServiceExternalTrafficPolicy `json:"externalTrafficPolicy,omitempty"`
 }
 
-// DataPlaneStatus defines the observed state of DataPlane
-// +apireference:kgo:include
+// DataPlaneStatus defines the observed state of DataPlane.
 type DataPlaneStatus struct {
 	// Conditions describe the status of the DataPlane.
 	// +listType=map
@@ -367,7 +353,6 @@ type DataPlaneStatus struct {
 }
 
 // DataPlaneRolloutStatus describes the DataPlane rollout status.
-// +apireference:kgo:include
 type DataPlaneRolloutStatus struct {
 	// Services contain the information about the services which are available
 	// through which user can access the preview deployment.
@@ -403,7 +388,6 @@ func (d *DataPlaneRolloutStatus) SetConditions(conditions []metav1.Condition) {
 
 // DataPlaneRolloutStatusServices describes the status of the services during
 // DataPlane rollout.
-// +apireference:kgo:include
 type DataPlaneRolloutStatusServices struct {
 	// Ingress contains the name and the address of the preview service for ingress.
 	// Using this service users can send requests that will hit the preview deployment.
@@ -416,7 +400,6 @@ type DataPlaneRolloutStatusServices struct {
 
 // DataPlaneRolloutStatusDeployment is a rollout status field which contains
 // fields specific for Deployments during the rollout.
-// +apireference:kgo:include
 type DataPlaneRolloutStatusDeployment struct {
 	// Selector is a stable label selector value assigned to a DataPlane rollout
 	// status which is used throughout the rollout as a deterministic labels selector
@@ -429,7 +412,6 @@ type DataPlaneRolloutStatusDeployment struct {
 
 // RolloutStatusService is a struct which contains status information about
 // services that are exposed as part of the rollout.
-// +apireference:kgo:include
 type RolloutStatusService struct {
 	// Name indicates the name of the service.
 	Name string `json:"name"`
@@ -441,7 +423,6 @@ type RolloutStatusService struct {
 }
 
 // Address describes an address which can be either an IP address or a hostname.
-// +apireference:kgo:include
 type Address struct {
 	// Type of the address.
 	//
@@ -470,7 +451,6 @@ type Address struct {
 // * `Hostname`
 //
 // +kubebuilder:validation:Pattern=`^IPAddress|Hostname$`
-// +apireference:kgo:include
 type AddressType string
 
 const (
@@ -501,7 +481,6 @@ const (
 // * `PrivateIP`
 //
 // +kubebuilder:validation:Pattern=`^PublicLoadBalancer|PrivateLoadBalancer|PublicIP|PrivateIP$`
-// +apireference:kgo:include
 type AddressSourceType string
 
 const (

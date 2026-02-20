@@ -18,4 +18,5 @@ limitations under the License.
 // +kubebuilder:object:generate=true
 // +groupName=gateway-operator.konghq.com
 // +groupGoName=GatewayOperator
+// +apireference:kgo:include-all-types
 package v2beta1

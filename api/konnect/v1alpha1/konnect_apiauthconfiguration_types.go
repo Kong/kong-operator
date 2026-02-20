@@ -23,7 +23,6 @@ func init() {
 // +kubebuilder:printcolumn:name="ServerURL",description="Configured server URL.",type=string,JSONPath=`.status.serverURL`
 // +kubebuilder:validation:XValidation:rule="self.spec.type != 'token' || (self.spec.token.startsWith('spat_') || self.spec.token.startsWith('kpat_'))", message="Konnect tokens have to start with spat_ or kpat_"
 // +kubebuilder:validation:XValidation:rule="self.spec.type != 'token' || (!has(oldSelf.spec.token) || has(self.spec.token))", message="Token is required once set"
-// +apireference:kgo:include
 // +kong:channels=kong-operator
 type KonnectAPIAuthConfiguration struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -41,7 +40,6 @@ type KonnectAPIAuthConfiguration struct {
 }
 
 // KonnectAPIAuthType is the type of authentication used to authenticate with the Konnect API.
-// +apireference:kgo:include
 type KonnectAPIAuthType string
 
 const (
@@ -57,7 +55,6 @@ const (
 // +kubebuilder:validation:XValidation:rule="self.type == 'token' ? size(self.token) > 0 : true", message="spec.token is required if auth type is set to token"
 // +kubebuilder:validation:XValidation:rule="self.type == 'secretRef' ? has(self.secretRef) : true", message="spec.secretRef is required if auth type is set to secretRef"
 // +kubebuilder:validation:XValidation:rule="!(has(self.token) && has(self.secretRef))", message="spec.token and spec.secretRef cannot be set at the same time"
-// +apireference:kgo:include
 type KonnectAPIAuthConfigurationSpec struct {
 	// +required
 	// +kubebuilder:validation:Enum=token;secretRef
@@ -87,7 +84,6 @@ type KonnectAPIAuthConfigurationSpec struct {
 }
 
 // KonnectAPIAuthConfigurationStatus is the status of the KonnectAPIAuthConfiguration resource.
-// +apireference:kgo:include
 type KonnectAPIAuthConfigurationStatus struct {
 	// Conditions describe the status of the Konnect configuration.
 	// +listType=map
@@ -113,7 +109,6 @@ type KonnectAPIAuthConfigurationStatus struct {
 
 // KonnectAPIAuthConfigurationList contains a list of KonnectAPIAuthConfiguration resources.
 // +kubebuilder:object:root=true
-// +apireference:kgo:include
 type KonnectAPIAuthConfigurationList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

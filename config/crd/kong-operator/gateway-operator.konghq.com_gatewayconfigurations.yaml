@@ -18570,7 +18570,7 @@ spec:
                 ? true : (!has(self.listenersOptions) || self.listenersOptions.all(l,!has(l.nodePort)))'
           status:
             description: GatewayConfigurationStatus defines the observed state of
-              GatewayConfiguration
+              GatewayConfiguration.
             properties:
               conditions:
                 description: Conditions describe the current conditions of the GatewayConfigurationStatus.

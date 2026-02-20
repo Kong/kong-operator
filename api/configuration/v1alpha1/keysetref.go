@@ -4,7 +4,6 @@ import commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 
 // KeySetRefType is the enum type for the KeySetRef.
 // +kubebuilder:validation:Enum=konnectID;namespacedRef
-// +apireference:kgo:include
 type KeySetRefType string
 
 const (
@@ -22,7 +21,6 @@ const (
 // It is used to reference a KeySet entity.
 // +kubebuilder:validation:XValidation:rule="self.type == 'namespacedRef' ? has(self.namespacedRef) : true", message="when type is namespacedRef, namespacedRef must be set"
 // +kubebuilder:validation:XValidation:rule="self.type == 'konnectID' ? has(self.konnectID) : true", message="when type is konnectID, konnectID must be set"
-// +apireference:kgo:include
 // +kong:channels=kong-operator
 type KeySetRef struct {
 	// Type defines type of the KeySet object reference. It can be one of:

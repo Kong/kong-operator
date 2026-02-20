@@ -38,7 +38,6 @@ import (
 // +kubebuilder:validation:XValidation:rule="has(self.spec.protocols) && self.spec.protocols.exists(p, p == 'http') ? (has(self.spec.hosts) || has(self.spec.methods) || has(self.spec.paths) || has(self.spec.paths) || has(self.spec.paths) || has(self.spec.headers) ) : true", message="If protocols has 'http', at least one of 'hosts', 'methods', 'paths' or 'headers' must be set"
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.spec.controlPlaneRef) || has(self.spec.controlPlaneRef)", message="controlPlaneRef is required once set"
 // +kubebuilder:validation:XValidation:rule="(!has(self.spec) || !has(self.spec.controlPlaneRef)) ? true : (!has(self.status) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable when an entity is already Programmed"
-// +apireference:kgo:include
 // +kong:channels=kong-operator
 type KongRoute struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -55,7 +54,6 @@ type KongRoute struct {
 // +kubebuilder:validation:XValidation:rule="!has(self.controlPlaneRef) ? true : self.controlPlaneRef.type != 'kic'", message="KIC is not supported as control plane"
 // +kubebuilder:validation:XValidation:rule="!has(self.adopt) ? true : (has(self.serviceRef) || (has(self.controlPlaneRef) && self.controlPlaneRef.type == 'konnectNamespacedRef'))", message="spec.adopt is allowed only when serviceRef exists or controlPlaneRef is konnectNamespacedRef"
 // +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
-// +apireference:kgo:include
 type KongRouteSpec struct {
 	KongRouteAPISpec `json:",inline"`
 
@@ -80,8 +78,6 @@ type KongRouteSpec struct {
 
 // KongRouteAPISpec represents the configuration of a Route in Kong as defined by the Konnect API.
 // Currently, this only supports the JSON route fields.
-//
-// +apireference:kgo:include
 type KongRouteAPISpec struct {
 	// A list of IP destinations of incoming connections that match this Route when using stream routing. Each entry is an object with fields "ip" (optionally in CIDR range notation) and/or "port".
 	Destinations []sdkkonnectcomp.Destinations `json:"destinations,omitempty"`
@@ -120,8 +116,6 @@ type KongRouteAPISpec struct {
 }
 
 // KongRouteStatus represents the current status of the Kong Route resource.
-//
-// +apireference:kgo:include
 type KongRouteStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
@@ -138,7 +132,6 @@ type KongRouteStatus struct {
 // KongRouteList contains a list of Kong Routes.
 //
 // +kubebuilder:object:root=true
-// +apireference:kgo:include
 type KongRouteList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

@@ -18,7 +18,6 @@ package v1alpha1
 
 // ExtensionRef corresponds to another resource in the Kubernetes cluster which
 // defines extended behavior for a resource (e.g. ControlPlane).
-// +apireference:kgo:include
 type ExtensionRef struct {
 	// NamespacedRef is a reference to the extension resource.
 	NamespacedRef `json:",inline"`

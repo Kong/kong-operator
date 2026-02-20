@@ -30,7 +30,6 @@ func init() {
 // GatewayConfiguration is the Schema for the gatewayconfigurations API.
 //
 // +genclient
-// +apireference:kgo:include
 // +kong:channels=kong-operator
 // +kubebuilder:deprecatedversion:warning="GatewayConfiguration v1beta1 has been deprecated in favor of v2beta1 and it will be removed in future."
 // +kubebuilder:object:root=true
@@ -46,7 +45,6 @@ type GatewayConfiguration struct {
 }
 
 // GatewayConfigurationSpec defines the desired state of GatewayConfiguration
-// +apireference:kgo:include
 // +kubebuilder:validation:XValidation:message="KonnectExtension must be set at the Gateway level",rule="has(self.dataPlaneOptions) && has(self.dataPlaneOptions.extensions) ? self.dataPlaneOptions.extensions.all(e, (e.group != 'konnect.konghq.com' && e.group != 'gateway-operator.konghq.com') || e.kind != 'KonnectExtension') : true"
 // +kubebuilder:validation:XValidation:message="KonnectExtension must be set at the Gateway level",rule="has(self.controlPlaneOptions) && has(self.controlPlaneOptions.extensions) ? self.controlPlaneOptions.extensions.all(e, (e.group != 'konnect.konghq.com' && e.group != 'gateway-operator.konghq.com') || e.kind != 'KonnectExtension') : true"
 // +kubebuilder:validation:XValidation:message="Can only specify listener's NodePort when the type of service for dataplane to receive ingress traffic ('spec.dataPlaneOptions.network.services.ingress') is NodePort or LoadBalancer",rule="(has(self.dataPlaneOptions) && has(self.dataPlaneOptions.network) && has(self.dataPlaneOptions.network.services) &&  has(self.dataPlaneOptions.network.services.ingress) && (self.dataPlaneOptions.network.services.ingress.type == 'LoadBalancer' || self.dataPlaneOptions.network.services.ingress.type == 'NodePort')) ? true : (!has(self.listenersOptions) || self.listenersOptions.all(l,!has(l.nodePort)))"
@@ -87,7 +85,6 @@ type GatewayConfigurationSpec struct {
 
 // GatewayConfigDataPlaneOptions indicates the specific information needed to
 // configure and deploy a DataPlane object.
-// +apireference:kgo:include
 // +kubebuilder:validation:XValidation:message="Extension not allowed for DataPlane",rule="has(self.extensions) ? self.extensions.all(e, (e.group == 'konnect.konghq.com' || e.group == 'gateway-operator.konghq.com') && e.kind == 'KonnectExtension') : true"
 type GatewayConfigDataPlaneOptions struct {
 	// +optional
@@ -116,7 +113,6 @@ type GatewayConfigDataPlaneOptions struct {
 }
 
 // GatewayConfigDataPlaneNetworkOptions defines network related options for a DataPlane.
-// +apireference:kgo:include
 type GatewayConfigDataPlaneNetworkOptions struct {
 	// Services indicates the configuration of Kubernetes Services needed for
 	// the topology of various forms of traffic (including ingress, etc.) to
@@ -125,7 +121,6 @@ type GatewayConfigDataPlaneNetworkOptions struct {
 }
 
 // GatewayConfigDataPlaneServices contains Services related DataPlane configuration.
-// +apireference:kgo:include
 type GatewayConfigDataPlaneServices struct {
 	// Ingress is the Kubernetes Service that will be used to expose ingress
 	// traffic for the DataPlane. Here you can determine whether the DataPlane
@@ -140,7 +135,6 @@ type GatewayConfigDataPlaneServices struct {
 
 // GatewayConfigDataPlaneResources defines the resources that will be
 // created and managed for Gateway's DataPlane.
-// +apireference:kgo:include
 type GatewayConfigDataPlaneResources struct {
 	// PodDisruptionBudget is the configuration for the PodDisruptionBudget
 	// that will be created for the DataPlane.
@@ -151,7 +145,6 @@ type GatewayConfigDataPlaneResources struct {
 
 // GatewayConfigServiceOptions is used to includes options to customize the ingress service,
 // such as the annotations.
-// +apireference:kgo:include
 type GatewayConfigServiceOptions struct {
 	ServiceOptions `json:",inline"`
 }
@@ -162,7 +155,6 @@ type GatewayConfigServiceOptions struct {
 // For example, if the option for listener "http" specified the nodeport number to 30080,
 // The ingress service will expose the nodeport 30080 for the "http" listener of the Gateway.
 // For listeners without an item in listener options of GatewayConfiguration, default configuration is used for it.
-// +apireference:kgo:include
 type GatewayConfigurationListenerOptions struct {
 	// Name is the name of the Listener.
 	//
@@ -189,8 +181,7 @@ type GatewayConfigurationListenerOptions struct {
 	NodePort int32 `json:"nodePort"`
 }
 
-// GatewayConfigurationStatus defines the observed state of GatewayConfiguration
-// +apireference:kgo:include
+// GatewayConfigurationStatus defines the observed state of GatewayConfiguration.
 type GatewayConfigurationStatus struct {
 	// Conditions describe the current conditions of the GatewayConfigurationStatus.
 	//
@@ -203,8 +194,7 @@ type GatewayConfigurationStatus struct {
 
 // +kubebuilder:object:root=true
 
-// GatewayConfigurationList contains a list of GatewayConfiguration
-// +apireference:kgo:include
+// GatewayConfigurationList contains a list of GatewayConfiguration.
 type GatewayConfigurationList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
