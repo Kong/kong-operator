@@ -58019,7 +58019,6 @@ webhooks:
     - kongconsumergroups
     - kongplugins
     - kongclusterplugins
-    - kongingresses
     - kongvaults
     - kongcustomentities
     scope: '*'
