@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/blang/semver/v4"
-	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/istio"
 	kongaddon "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
@@ -151,7 +150,7 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	ingress := generators.NewIngressForService("/httpbin", map[string]string{
 		annotations.AnnotationPrefix + annotations.StripPathKey: "true",
 	}, service)
-	ingress.Spec.IngressClassName = kong.String(ingressClass)
+	ingress.Spec.IngressClassName = new(ingressClass)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), namespace.Name, ingress))
 
 	t.Log("retrieving the kong proxy URL")
