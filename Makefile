@@ -296,7 +296,10 @@ lint.markdownlint: download.markdownlint-cli2
 		CHANGELOG.md \
 		README.md \
 		FEATURES.md \
+		AGENTS.md \
+		.github/ISSUE_TEMPLATE/*.md \
 		charts/kong-operator/README.md \
+		charts/kong-operator/UPGRADE.md \
 		charts/kong-operator/CHANGELOG.md
 
 .PHONY: lint.all
