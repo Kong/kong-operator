@@ -22,11 +22,13 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/clock"
 	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/mocks"
+	"github.com/kong/kong-operator/v2/test/helpers/asserts"
 )
 
 const (
 	testSendConfigPeriod           = 10 * time.Millisecond
-	testSendConfigAssertionTimeout = 10 * testSendConfigPeriod
+	testSendConfigAssertionTimeout = 3 * time.Second
+	testSendConfigNeverTimeout     = 500 * time.Millisecond
 	testSendConfigAssertionTick    = testSendConfigPeriod
 )
 
@@ -52,9 +54,10 @@ func TestConfigSynchronizer_UpdatesKongConfigAccordingly(t *testing.T) {
 	runSynchronizer(ctx, t, s)
 
 	t.Logf("Verifying that no URL are updated when no configuration received")
-	require.Never(t, func() bool {
+	asserts.Never(t, func(_ context.Context) bool {
 		return len(resolver.GetUpdateCalledForURLs()) != 0
-	}, testSendConfigAssertionTimeout, testSendConfigAssertionTick, "Should not update any URL when no configuration received")
+	}, testSendConfigNeverTimeout, testSendConfigAssertionTick,
+		"Should not update any URL when no configuration received")
 
 	t.Logf("Verifying that the new config updated when received")
 	expectedContent := &file.Content{
@@ -93,9 +96,9 @@ func TestConfigSynchronizer_UpdatesKongConfigAccordingly(t *testing.T) {
 	t.Logf("Verifying that update is not called when config not changed")
 	l := len(resolver.GetUpdateCalledForURLs())
 	s.UpdateKongState(kongState(), false)
-	require.Never(t, func() bool {
+	asserts.Never(t, func(_ context.Context) bool {
 		return len(resolver.GetUpdateCalledForURLs()) != l
-	}, testSendConfigAssertionTimeout, testSendConfigAssertionTick)
+	}, testSendConfigNeverTimeout, testSendConfigAssertionTick)
 
 	t.Logf("Verifying that new config are not sent after context cancelled")
 	cancel()
@@ -109,7 +112,7 @@ func TestConfigSynchronizer_UpdatesKongConfigAccordingly(t *testing.T) {
 
 	// The latest updated content should always be the content in the previous update
 	// because it should not update new content after context cancelled.
-	require.Never(t, func() bool {
+	asserts.Never(t, func(_ context.Context) bool {
 		urls := resolver.GetUpdateCalledForURLs()
 		l := len(urls)
 		if l == 0 {
@@ -124,7 +127,8 @@ func TestConfigSynchronizer_UpdatesKongConfigAccordingly(t *testing.T) {
 			return false
 		}
 		return assert.ObjectsAreEqual(expectedContent, contentWithHash.Content)
-	}, testSendConfigAssertionTimeout, testSendConfigAssertionTick, "Should not send new updates after context cancelled")
+	}, testSendConfigNeverTimeout, testSendConfigAssertionTick,
+		"Should not send new updates after context cancelled")
 }
 
 func TestConfigSynchronizer_ConfigIsSanitizedWhenConfiguredSo(t *testing.T) {
@@ -338,10 +342,10 @@ func TestConfigSynchronizer_EnableReverseSync(t *testing.T) {
 					)
 				}, testSendConfigAssertionTimeout, testSendConfigAssertionTick)
 			} else {
-				require.Never(t, func() bool {
+				asserts.Never(t, func(_ context.Context) bool {
 					urls := updateStrategyResolver.GetUpdateCalledForURLs()
 					return len(urls) > initialUpdateCount
-				}, testSendConfigAssertionTimeout, testSendConfigAssertionTick,
+				}, testSendConfigNeverTimeout, testSendConfigAssertionTick,
 					"should not update when reverse sync is disabled and no config changes",
 				)
 			}
