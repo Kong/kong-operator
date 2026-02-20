@@ -28,7 +28,7 @@ func TestSpecificGatewayNN(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	scheme := Scheme(t, WithGatewayAPI, WithKong)
-	envcfg, _ := Setup(t, ctx, scheme)
+	envcfg, _ := Setup(t, ctx, scheme, WithInstallGatewayCRDs(true))
 	ctrlClient := NewControllerClient(t, scheme, envcfg)
 
 	var (

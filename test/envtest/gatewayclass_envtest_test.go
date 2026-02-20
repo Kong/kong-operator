@@ -56,7 +56,7 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 
 	ctx := t.Context()
 	scheme := Scheme(t, WithGatewayAPI)
-	cfg, _ := Setup(t, ctx, scheme)
+	cfg, _ := Setup(t, ctx, scheme, WithInstallGatewayCRDs(true))
 
 	testcases := []testcaseGatewayWithGatewayClassReconciliation{
 		{

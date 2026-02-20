@@ -38,7 +38,7 @@ func TestTelemetry(t *testing.T) {
 	ts.Start(ctx, t)
 
 	t.Log("configuring envtest and creating K8s objects for telemetry test")
-	envcfg, _ := Setup(t, ctx, scheme.Scheme)
+	envcfg, _ := Setup(t, ctx, scheme.Scheme, WithInstallGatewayCRDs(true))
 	// Let's have long duration due too rate limiter in K8s client.
 	cfg := managercfg.NewConfig(
 		WithDefaultEnvTestsConfig(envcfg),

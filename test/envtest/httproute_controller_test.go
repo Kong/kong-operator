@@ -39,7 +39,7 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	scheme := Scheme(t, WithGatewayAPI, WithKong)
-	cfg, _ := Setup(t, ctx, scheme)
+	cfg, _ := Setup(t, ctx, scheme, WithInstallGatewayCRDs(true))
 	client := NewControllerClient(t, scheme, cfg)
 
 	reconciler := &gateway.HTTPRouteReconciler{
@@ -274,7 +274,7 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	scheme := Scheme(t, WithGatewayAPI, WithKong)
-	cfg, _ := Setup(t, ctx, scheme)
+	cfg, _ := Setup(t, ctx, scheme, WithInstallGatewayCRDs(true))
 	client := NewControllerClient(t, scheme, cfg)
 
 	reconciler := &gateway.HTTPRouteReconciler{
