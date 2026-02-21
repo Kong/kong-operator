@@ -2,8 +2,10 @@ package main
 
 import (
 	"log/slog"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -51,11 +53,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Sort group-version keys for deterministic output
-	gvKeys := make([]string, 0, len(projectCfg.APIGroupVersions))
-	for k := range projectCfg.APIGroupVersions {
-		gvKeys = append(gvKeys, k)
-	}
+	gvKeys := slices.Collect(maps.Keys(projectCfg.APIGroupVersions))
 	sort.Strings(gvKeys)
 
 	for _, gvKey := range gvKeys {
