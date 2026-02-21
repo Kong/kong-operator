@@ -40,5 +40,5 @@ mise r test-unit        # Run unit tests with verbose output
   rather than building the project with `mise r build` to avoid unnecessary compilation of the manager binary.
 - To run the whole pipeline from generation, through linting and testing, use:
   ```
-  mise r generate-api ; mise r lint ::: lint-api ::: test-unit
+  mise r all
   ```
