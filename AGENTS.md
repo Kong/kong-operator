@@ -190,7 +190,7 @@ make tools    # Install: controller-gen, kustomize, client-gen, golangci-lint, g
    make verify.generators  # Verify generated code is up-to-date (CI runs this)
    ```
 
-5. **Update CHANGELOG.md** - For significant changes, add release notes
+5. **Update CHANGELOG.md** - For significant changes, add release note
 
 ### Verify Before Commit
 
