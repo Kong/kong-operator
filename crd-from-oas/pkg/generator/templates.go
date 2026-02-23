@@ -113,6 +113,53 @@ func init() {
 }
 `
 
+const sdkOpsTemplate = `package {{.APIVersion}}
+
+import (
+	"encoding/json"
+	"fmt"
+{{range .Imports}}
+	{{.Alias}} "{{.Path}}"
+{{- end}}
+)
+{{range .Methods}}
+// {{.MethodName}} converts the {{$.EntityName}}APISpec to the SDK type
+// {{.ImportAlias}}.{{.TypeName}} using JSON marshal/unmarshal.
+// Fields that exist in the CRD spec but not in the SDK type (e.g., Kubernetes
+// object references) are naturally excluded because they have different JSON names.
+func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeName}}, error) {
+	data, err := json.Marshal(s)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal {{$.EntityName}}APISpec: %w", err)
+	}
+	var target {{.ImportAlias}}.{{.TypeName}}
+	if err := json.Unmarshal(data, &target); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal into {{.TypeName}}: %w", err)
+	}
+	return &target, nil
+}
+{{end}}`
+
+const sdkOpsTestTemplate = `package {{.APIVersion}}
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
+{{range .Methods}}
+func Test{{$.EntityName}}APISpec_{{.MethodName}}(t *testing.T) {
+	spec := &{{$.EntityName}}APISpec{
+{{- range $.TestFields}}
+		{{.FieldName}}: {{.TestValue}},
+{{- end}}
+	}
+	result, err := spec.{{.MethodName}}()
+	require.NoError(t, err)
+	require.NotNil(t, result)
+}
+{{end}}`
+
 const registerTemplate = `package {{.APIVersion}}
 
 import (
