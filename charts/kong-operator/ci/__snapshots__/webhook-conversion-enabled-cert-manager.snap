@@ -18610,6 +18610,16 @@ spec:
                             - Cluster
                             - Local
                             type: string
+                          labels:
+                            additionalProperties:
+                              type: string
+                            description: |-
+                              Labels are an unstructured key value map that may be used to organize and
+                              categorize resources and that are propagated to the DataPlane's ingress Service
+                              by the operator.
+
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+                            type: object
                           name:
                             description: |-
                               Name defines the name of the service.
@@ -36270,6 +36280,16 @@ spec:
                                 - Cluster
                                 - Local
                                 type: string
+                              labels:
+                                additionalProperties:
+                                  type: string
+                                description: |-
+                                  Labels are an unstructured key value map that may be used to organize and
+                                  categorize resources and that are propagated to the DataPlane's ingress Service
+                                  by the operator.
+
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+                                type: object
                               name:
                                 description: |-
                                   Name defines the name of the service.
@@ -45747,6 +45767,16 @@ spec:
                                 - Cluster
                                 - Local
                                 type: string
+                              labels:
+                                additionalProperties:
+                                  type: string
+                                description: |-
+                                  Labels are an unstructured key value map that may be used to organize and
+                                  categorize resources and that are propagated to the DataPlane's ingress Service
+                                  by the operator.
+
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+                                type: object
                               name:
                                 description: |-
                                   Name defines the name of the service.
