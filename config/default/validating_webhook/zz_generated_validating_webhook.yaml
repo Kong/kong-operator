@@ -15,9 +15,6 @@ webhooks:
       namespace: kong-system
       name: gateway-operator-webhook-service
       port: 5443
-  # NOTE: By default Kong's helm charts use Ignore for the failurePolicy
-  # e.g. https://github.com/Kong/charts/blob/fd9deb6ee34d9b9ac4ab4be2188d4564d0b655e5/charts/kong/values.yaml#L586
-  # but setting this to Fail here allows devs to see the errors sooner, during development.
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: validations.kong.konghq.com
@@ -69,14 +66,10 @@ webhooks:
       namespace: kong-system
       name: gateway-operator-webhook-service
       port: 5443
-  # NOTE: By default Kong's helm charts use Ignore for the failurePolicy
-  # e.g. https://github.com/Kong/charts/blob/fd9deb6ee34d9b9ac4ab4be2188d4564d0b655e5/charts/kong/values.yaml#L586
-  # but setting this to Fail here allows devs to see the errors sooner, during development.
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: secrets.validations.kong.konghq.com
   rules:
-  # TODO: it tries to validate secret created by cert-manager, but KO is not ready to handle it.
   - apiGroups:
     - ""
     apiVersions:
@@ -89,10 +82,11 @@ webhooks:
     scope: '*'
   objectSelector:
     matchLabels:
-      # TODO: customize based on flags
       konghq.com/secret: "true"
   sideEffects: None
   timeoutSeconds: 10
+# TODO: remove below when https://github.com/Kong/kong-operator/issues/2544 is resolved,
+# because validation will be moved to admission policy.
 - admissionReviewVersions:
   - v1
   clientConfig:
@@ -100,9 +94,6 @@ webhooks:
       namespace: kong-system
       name: gateway-operator-webhook-service
       port: 5443
-  # NOTE: By default Kong's helm charts use Ignore for the failurePolicy
-  # e.g. https://github.com/Kong/charts/blob/fd9deb6ee34d9b9ac4ab4be2188d4564d0b655e5/charts/kong/values.yaml#L586
-  # but setting this to Fail here allows devs to see the errors sooner, during development.
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: services.validations.kong.konghq.com

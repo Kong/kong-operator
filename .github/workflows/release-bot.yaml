@@ -135,6 +135,8 @@ jobs:
     # For prereleases, we do not want to create a release branch.
     if: ${{ needs.look_for_release.outputs.release_found == 'true' && needs.semver.outputs.patch == '0' && needs.semver.outputs.prerelease == '' }}
     runs-on: ubuntu-latest
+    env:
+      RELEASE_BRANCH: "release/${{ needs.semver.outputs.major }}.${{ needs.semver.outputs.minor }}.x"
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@5ef0c079ce82195b2a36a210272d6b661572d83e # v2.14.2
@@ -146,8 +148,32 @@ jobs:
         with:
           # NOTE: using the full ref name because
           # https://github.com/peterjgrainger/action-create-branch?tab=readme-ov-file#branch
-          branch: "refs/heads/release/${{ needs.semver.outputs.major }}.${{ needs.semver.outputs.minor }}.x"
+          branch: "refs/heads/release/${{ env.RELEASE_BRANCH }}"
           sha: "${{ github.sha }}"
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+      - env:
+          CHARTS_SYNC_WORKFLOW_PATH: .github/workflows/charts-sync.yaml
+        run: |
+          git config --global user.name "Kong's Team k8s bot"
+          git config --global user.email "team-k8s+github-bot@konghq.com"
+          yq eval '.on.push.branches = [ "${{ env.RELEASE_BRANCH }}" ]' -i ${{ env.CHARTS_SYNC_WORKFLOW_PATH }}
+          git add ${{ env.CHARTS_SYNC_WORKFLOW_PATH }}
+          git commit -m "chore: update charts sync workflow to trigger on ${{ env.RELEASE_BRANCH }} branch"
+
+      - uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v7.0.6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ env.RELEASE_BRANCH }}
+          base: main
+          delete-branch: true
+          title: "chore: update charts sync workflow to trigger on ${{ env.RELEASE_BRANCH }} branch"
+          body: |
+            ### Why is this PR needed?
+
+            This PR updates the charts sync workflow to trigger on commit push events to the new release branch `${{ env.RELEASE_BRANCH }}`.
+
+            This allows development to happen on `main` branch while the release branch is used to sync with the charts repository and publish patch releases if needed.
 
   create-cherry-pick-branch-to-main:
     permissions:

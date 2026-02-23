@@ -1,11 +1,9 @@
 name: Sync charts to charts repo
-
 concurrency:
   # Run only for most recent commit in PRs but for all tags and commits on main
   # Ref: https://docs.github.com/en/actions/using-jobs/using-concurrency
   group: ${{ github.workflow }}-${{ github.head_ref || ( github.ref_type == 'tag' && github.ref_name || github.sha ) }}
   cancel-in-progress: true
-
 on:
   push:
     paths:
@@ -13,12 +11,10 @@ on:
       - .github/charts-sync.yaml
       - .github/workflows/charts-sync.yaml
     branches:
-      - main
+      - release/2.1.x
   workflow_dispatch:
-
 permissions:
   contents: read
-
 jobs:
   sync:
     runs-on: ubuntu-latest
