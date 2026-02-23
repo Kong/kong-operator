@@ -317,6 +317,7 @@ func ensureIngressServiceForDataPlane(
 		return op.Noop, nil, err
 	}
 	addAnnotationsForDataPlaneIngressService(generatedService, *dataPlane)
+	addLabelsForDataPlaneIngressService(generatedService, *dataPlane)
 	k8sutils.SetOwnerForObject(generatedService, dataPlane)
 
 	if count == 1 {
