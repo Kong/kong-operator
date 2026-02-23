@@ -1464,6 +1464,36 @@ func TestGatewayConfigDataPlaneOptionsToDataPlaneOptions(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:            "service labels",
+			gatewayConfigNS: "default",
+			opts: GatewayConfigDataPlaneOptions{
+				Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
+					Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
+						Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
+							ServiceOptions: operatorv2beta1.ServiceOptions{
+								Labels: map[string]string{
+									"my-label": "my-value",
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedDataPlaneOpts: &operatorv1beta1.DataPlaneOptions{
+				Network: operatorv1beta1.DataPlaneNetworkOptions{
+					Services: &operatorv1beta1.DataPlaneServices{
+						Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+							ServiceOptions: operatorv1beta1.ServiceOptions{
+								Labels: map[string]string{
+									"my-label": "my-value",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {

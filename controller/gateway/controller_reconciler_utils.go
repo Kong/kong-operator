@@ -263,6 +263,7 @@ func gatewayConfigDataPlaneOptionsToDataPlaneOptions(
 					ServiceOptions: operatorv1beta1.ServiceOptions{
 						Type:                  opts.Network.Services.Ingress.Type,
 						Annotations:           opts.Network.Services.Ingress.Annotations,
+						Labels:                opts.Network.Services.Ingress.Labels,
 						ExternalTrafficPolicy: opts.Network.Services.Ingress.ExternalTrafficPolicy,
 						Name:                  opts.Network.Services.Ingress.Name,
 					},
