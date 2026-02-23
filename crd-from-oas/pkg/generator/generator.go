@@ -20,6 +20,9 @@ type Config struct {
 	GenerateStatus bool
 	// FieldConfig holds additional field configurations from YAML
 	FieldConfig *config.Config
+	// OpsConfig maps entity names to SDK operation configurations.
+	// When set, conversion methods are generated on the entity's APISpec type.
+	OpsConfig map[string]*config.EntityOpsConfig
 }
 
 // Generator generates Go CRD types from parsed OpenAPI schemas
@@ -58,6 +61,29 @@ func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error)
 			Name:    fileName,
 			Content: content,
 		})
+
+		// Generate SDK ops conversion file if ops are configured for this entity
+		if g.config.OpsConfig != nil {
+			if opsConfig, ok := g.config.OpsConfig[entityName]; ok && opsConfig != nil && len(opsConfig.Ops) > 0 {
+				opsContent, err := g.generateSDKOps(entityName, opsConfig)
+				if err != nil {
+					return nil, fmt.Errorf("failed to generate SDK ops for %s: %w", entityName, err)
+				}
+				files = append(files, GeneratedFile{
+					Name:    strings.ToLower(entityName) + "_sdkops.go",
+					Content: opsContent,
+				})
+
+				opsTestContent, err := g.generateSDKOpsTest(entityName, schema, opsConfig)
+				if err != nil {
+					return nil, fmt.Errorf("failed to generate SDK ops test for %s: %w", entityName, err)
+				}
+				files = append(files, GeneratedFile{
+					Name:    strings.ToLower(entityName) + "_sdkops_test.go",
+					Content: opsTestContent,
+				})
+			}
+		}
 
 		// Collect referenced schemas
 		g.collectReferencedSchemas(schema, referencedSchemas)
@@ -629,6 +655,175 @@ type KonnectEntityRef struct {
 	ID string `+"`json:\"id,omitempty\"`"+`
 }
 `, g.config.APIVersion)
+}
+
+// sdkOpsImport represents a single import needed for SDK ops generation.
+type sdkOpsImport struct {
+	Alias string
+	Path  string
+}
+
+// sdkOpsMethod represents a single SDK conversion method to generate.
+type sdkOpsMethod struct {
+	MethodName  string
+	TypeName    string
+	ImportAlias string
+}
+
+// sdkOpsTestField represents a field to populate in the generated test.
+type sdkOpsTestField struct {
+	FieldName string
+	TestValue string
+}
+
+// generateSDKOps generates a file with conversion methods from {Entity}APISpec
+// to SDK request types using JSON marshal/unmarshal.
+func (g *Generator) generateSDKOps(entityName string, opsConfig *config.EntityOpsConfig) (string, error) {
+	imports, methods, err := g.buildSDKOpsMethods(opsConfig)
+	if err != nil {
+		return "", err
+	}
+
+	tmpl := template.Must(template.New("sdkops").Parse(sdkOpsTemplate))
+	var buf strings.Builder
+	data := struct {
+		APIVersion string
+		EntityName string
+		Imports    []*sdkOpsImport
+		Methods    []sdkOpsMethod
+	}{
+		APIVersion: g.config.APIVersion,
+		EntityName: entityName,
+		Imports:    imports,
+		Methods:    methods,
+	}
+
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
+// generateSDKOpsTest generates a test file for the SDK ops conversion methods.
+func (g *Generator) generateSDKOpsTest(entityName string, schema *parser.Schema, opsConfig *config.EntityOpsConfig) (string, error) {
+	_, methods, err := g.buildSDKOpsMethods(opsConfig)
+	if err != nil {
+		return "", err
+	}
+
+	// Build test fields from schema properties
+	var testFields []sdkOpsTestField
+	for _, prop := range schema.Properties {
+		if skipProperty(prop) || prop.IsReference {
+			continue
+		}
+		goType := g.goType(prop)
+		testValue := testValueForType(goType)
+		if testValue == "" {
+			continue
+		}
+		testFields = append(testFields, sdkOpsTestField{
+			FieldName: goFieldName(prop.Name),
+			TestValue: testValue,
+		})
+	}
+
+	tmpl := template.Must(template.New("sdkopstest").Parse(sdkOpsTestTemplate))
+	var buf strings.Builder
+	data := struct {
+		APIVersion string
+		EntityName string
+		Methods    []sdkOpsMethod
+		TestFields []sdkOpsTestField
+	}{
+		APIVersion: g.config.APIVersion,
+		EntityName: entityName,
+		Methods:    methods,
+		TestFields: testFields,
+	}
+
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
+// buildSDKOpsMethods parses the ops config and returns sorted imports and methods.
+func (g *Generator) buildSDKOpsMethods(opsConfig *config.EntityOpsConfig) ([]*sdkOpsImport, []sdkOpsMethod, error) {
+	imports := make(map[string]*sdkOpsImport)
+	var methods []sdkOpsMethod
+
+	opNames := make([]string, 0, len(opsConfig.Ops))
+	for opName := range opsConfig.Ops {
+		opNames = append(opNames, opName)
+	}
+	sort.Strings(opNames)
+
+	for _, opName := range opNames {
+		opCfg := opsConfig.Ops[opName]
+		importPath, typeName, err := config.ParseSDKTypePath(opCfg.Path)
+		if err != nil {
+			return nil, nil, fmt.Errorf("operation %q: %w", opName, err)
+		}
+
+		alias := sdkImportAlias(importPath)
+		imports[importPath] = &sdkOpsImport{
+			Alias: alias,
+			Path:  importPath,
+		}
+
+		methods = append(methods, sdkOpsMethod{
+			MethodName:  "To" + typeName,
+			TypeName:    typeName,
+			ImportAlias: alias,
+		})
+	}
+
+	importPaths := make([]string, 0, len(imports))
+	for p := range imports {
+		importPaths = append(importPaths, p)
+	}
+	sort.Strings(importPaths)
+	sortedImports := make([]*sdkOpsImport, 0, len(importPaths))
+	for _, p := range importPaths {
+		sortedImports = append(sortedImports, imports[p])
+	}
+
+	return sortedImports, methods, nil
+}
+
+// sdkImportAlias generates a deterministic import alias from an SDK import path.
+// For "github.com/Kong/sdk-konnect-go/models/components" it produces "sdkkonnectcomp".
+func sdkImportAlias(importPath string) string {
+	parts := strings.Split(importPath, "/")
+	lastSegment := parts[len(parts)-1]
+
+	short := lastSegment
+	if len(short) > 4 {
+		short = short[:4]
+	}
+
+	return "sdkkonnect" + short
+}
+
+// testValueForType returns a Go literal suitable for populating a test struct field.
+func testValueForType(goType string) string {
+	switch goType {
+	case "string":
+		return `"test-value"`
+	case "*string":
+		return `new("test-value")`
+	case "bool":
+		return "true"
+	case "*bool":
+		return `new(true)`
+	case "int", "int32", "int64":
+		return "1"
+	case "float32", "float64":
+		return "1.0"
+	}
+	// Skip complex types (maps, slices, structs, etc.) in generated tests
+	return ""
 }
 
 // goType converts OpenAPI type to Go type

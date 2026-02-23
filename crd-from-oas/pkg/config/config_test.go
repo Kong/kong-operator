@@ -20,6 +20,11 @@ apiGroupVersions:
           name:
             _validations:
               - "+kubebuilder:validation:MinLength=1"
+        ops:
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreatePortal
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdatePortal
       - path: /v3/portals/{portalId}/teams
   gateway.konghq.com/v1beta1:
     types:
@@ -38,8 +43,13 @@ apiGroupVersions:
 		assert.Equal(t, "/v3/portals", konnect.Types[0].Path)
 		require.NotNil(t, konnect.Types[0].CEL)
 		assert.Contains(t, konnect.Types[0].CEL, "name")
+		require.NotNil(t, konnect.Types[0].Ops)
+		assert.Len(t, konnect.Types[0].Ops, 2)
+		assert.Equal(t, "github.com/Kong/sdk-konnect-go/models/components.CreatePortal", konnect.Types[0].Ops["create"].Path)
+		assert.Equal(t, "github.com/Kong/sdk-konnect-go/models/components.UpdatePortal", konnect.Types[0].Ops["update"].Path)
 		assert.Equal(t, "/v3/portals/{portalId}/teams", konnect.Types[1].Path)
 		assert.Nil(t, konnect.Types[1].CEL)
+		assert.Nil(t, konnect.Types[1].Ops)
 
 		gateway := cfg.APIGroupVersions["gateway.konghq.com/v1beta1"]
 		require.NotNil(t, gateway)
@@ -121,6 +131,62 @@ func TestParseAPIGroupVersion(t *testing.T) {
 	}
 }
 
+func TestParseSDKTypePath(t *testing.T) {
+	tests := []struct {
+		name       string
+		input      string
+		wantImport string
+		wantType   string
+		wantErr    bool
+	}{
+		{
+			name:       "valid SDK type path",
+			input:      "github.com/Kong/sdk-konnect-go/models/components.CreatePortal",
+			wantImport: "github.com/Kong/sdk-konnect-go/models/components",
+			wantType:   "CreatePortal",
+		},
+		{
+			name:       "valid path with nested packages",
+			input:      "github.com/Kong/sdk-konnect-go/models/operations.ListPortals",
+			wantImport: "github.com/Kong/sdk-konnect-go/models/operations",
+			wantType:   "ListPortals",
+		},
+		{
+			name:    "no dot separator",
+			input:   "noDotAtAll",
+			wantErr: true,
+		},
+		{
+			name:    "leading dot",
+			input:   ".CreatePortal",
+			wantErr: true,
+		},
+		{
+			name:    "trailing dot",
+			input:   "github.com/Kong/sdk-konnect-go/models/components.",
+			wantErr: true,
+		},
+		{
+			name:    "empty string",
+			input:   "",
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			importPath, typeName, err := ParseSDKTypePath(tc.input)
+			if tc.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tc.wantImport, importPath)
+			assert.Equal(t, tc.wantType, typeName)
+		})
+	}
+}
+
 func TestAPIGroupVersionConfig_GetPaths(t *testing.T) {
 	agv := &APIGroupVersionConfig{
 		Types: []*TypeConfig{
@@ -176,5 +242,55 @@ func TestAPIGroupVersionConfig_FieldConfig(t *testing.T) {
 		fc := agv.FieldConfig(nil)
 		require.NotNil(t, fc)
 		assert.Empty(t, fc.Entities)
+	})
+}
+
+func TestAPIGroupVersionConfig_OpsConfig(t *testing.T) {
+	t.Run("with ops configured", func(t *testing.T) {
+		agv := &APIGroupVersionConfig{
+			Types: []*TypeConfig{
+				{
+					Path: "/v3/portals",
+					Ops: map[string]*OpConfig{
+						"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreatePortal"},
+						"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.UpdatePortal"},
+					},
+				},
+				{
+					Path: "/v3/portals/{portalId}/teams",
+				},
+			},
+		}
+
+		pathToEntity := map[string]string{
+			"/v3/portals":                  "Portal",
+			"/v3/portals/{portalId}/teams": "PortalTeam",
+		}
+
+		oc := agv.OpsConfig(pathToEntity)
+		require.Len(t, oc, 1)
+		require.Contains(t, oc, "Portal")
+		assert.Len(t, oc["Portal"].Ops, 2)
+		assert.Equal(t, "github.com/Kong/sdk-konnect-go/models/components.CreatePortal", oc["Portal"].Ops["create"].Path)
+		assert.Equal(t, "github.com/Kong/sdk-konnect-go/models/components.UpdatePortal", oc["Portal"].Ops["update"].Path)
+		assert.NotContains(t, oc, "PortalTeam")
+	})
+
+	t.Run("no ops configured", func(t *testing.T) {
+		agv := &APIGroupVersionConfig{
+			Types: []*TypeConfig{
+				{Path: "/v3/portals"},
+			},
+		}
+
+		oc := agv.OpsConfig(map[string]string{"/v3/portals": "Portal"})
+		assert.Empty(t, oc)
+	})
+
+	t.Run("nil types", func(t *testing.T) {
+		agv := &APIGroupVersionConfig{}
+
+		oc := agv.OpsConfig(nil)
+		assert.Empty(t, oc)
 	})
 }
