@@ -323,9 +323,20 @@ func ensureIngressServiceForDataPlane(
 		var updated bool
 		existingService := &services[0]
 		old := existingService.DeepCopy()
+		// Save the original last-applied-annotations before EnsureObjectMetaIsUpdated
+		// merges generated annotations into existing ones. EnsureObjectMetaIsUpdated
+		// overwrites AnnotationLastAppliedAnnotations with the new value before the
+		// option function runs, which prevents detecting removed annotations.
+		originalLastApplied := existingService.Annotations[consts.AnnotationLastAppliedAnnotations]
 		updated, existingService.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingService.ObjectMeta, generatedService.ObjectMeta,
 			// enforce all the annotations provided through the dataplane API
 			func(existingMeta metav1.ObjectMeta, generatedMeta metav1.ObjectMeta) (bool, metav1.ObjectMeta) {
+				// Restore the original last-applied-annotations so that
+				// ensureDataPlaneIngressServiceAnnotationsUpdated can correctly
+				// determine which annotations were removed from the DataPlane spec.
+				if existingMeta.Annotations != nil && originalLastApplied != "" {
+					existingMeta.Annotations[consts.AnnotationLastAppliedAnnotations] = originalLastApplied
+				}
 				metaToUpdate, updatedAnnotations, err := ensureDataPlaneIngressServiceAnnotationsUpdated(
 					dataPlane, existingMeta.Annotations, generatedMeta.Annotations,
 				)
