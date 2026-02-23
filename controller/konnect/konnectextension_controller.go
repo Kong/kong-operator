@@ -563,10 +563,8 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		})
 	}
 
-	secretCleanup := certificateSecret.DeletionTimestamp != nil &&
-		certificateSecret.DeletionTimestamp.Before(&metav1.Time{Time: time.Now()})
 	switch {
-	case !cleanup && !secretCleanup:
+	case !cleanup:
 
 		if !certFound && !certSDKFound {
 			log.Debug(logger, "Creating KongDataPlaneClientCertificate custom resource")
@@ -692,7 +690,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			log.Info(logger, "KonnectExtension finalizer added", "finalizer", KonnectCleanupFinalizer)
 			return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 		}
-	case cleanup || secretCleanup:
+	case cleanup:
 		// If there are no mapped IDs from KongDataPlaneClientCertificates in cluster,
 		// then let's use the SDK to query Konnect directly to find any existing certificates.
 		// This is just to make sure that users migrating from older versions of the operator
