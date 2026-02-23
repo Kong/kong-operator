@@ -57830,7 +57830,7 @@ metadata:
   labels:
     control-plane: controller-manager
     app.kubernetes.io/component: ko
-  name: chartsnap-kong-operator-metrics-service
+  name: chartsnap-kong-operator-metrics
   namespace: default
 spec:
   ports:
