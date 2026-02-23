@@ -26,6 +26,22 @@ type TypeConfig struct {
 	// CEL maps field names to their configurations, allowing additional
 	// kubebuilder validation markers to be attached to specific fields.
 	CEL map[string]*FieldConfig `yaml:"cel,omitempty"`
+	// Ops maps operation names (e.g. "create", "update") to SDK type configurations.
+	// When set, conversion methods are generated on the entity's APISpec type.
+	Ops map[string]*OpConfig `yaml:"ops,omitempty"`
+}
+
+// OpConfig holds configuration for a single SDK operation.
+type OpConfig struct {
+	// Path is the fully qualified Go type path in the form "importpath.TypeName",
+	// e.g. "github.com/Kong/sdk-konnect-go/models/components.CreatePortal".
+	Path string `yaml:"path"`
+}
+
+// EntityOpsConfig holds the operations configuration for a single entity type.
+type EntityOpsConfig struct {
+	// Ops maps operation names (e.g. "create", "update") to their SDK type configs.
+	Ops map[string]*OpConfig
 }
 
 // GetPaths returns the list of OpenAPI paths from the types configuration.
@@ -53,6 +69,34 @@ func (c *APIGroupVersionConfig) FieldConfig(pathToEntityName map[string]string) 
 		entities[entityName] = &EntityConfig{Fields: tc.CEL}
 	}
 	return &Config{Entities: entities}
+}
+
+// OpsConfig builds a mapping from entity name to operations config using the provided
+// pathToEntityName mapping (built after parsing the OpenAPI spec).
+func (c *APIGroupVersionConfig) OpsConfig(pathToEntityName map[string]string) map[string]*EntityOpsConfig {
+	result := make(map[string]*EntityOpsConfig)
+	for _, tc := range c.Types {
+		if tc.Ops == nil {
+			continue
+		}
+		entityName, ok := pathToEntityName[tc.Path]
+		if !ok {
+			continue
+		}
+		result[entityName] = &EntityOpsConfig{Ops: tc.Ops}
+	}
+	return result
+}
+
+// ParseSDKTypePath splits a fully qualified SDK type path like
+// "github.com/Kong/sdk-konnect-go/models/components.CreatePortal"
+// into its import path and type name by splitting on the last ".".
+func ParseSDKTypePath(path string) (importPath, typeName string, err error) {
+	lastDot := strings.LastIndex(path, ".")
+	if lastDot == -1 || lastDot == 0 || lastDot == len(path)-1 {
+		return "", "", fmt.Errorf("invalid SDK type path %q: must be in format 'importpath.TypeName'", path)
+	}
+	return path[:lastDot], path[lastDot+1:], nil
 }
 
 // LoadProjectConfig loads the project configuration from a YAML file.

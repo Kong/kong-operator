@@ -105,6 +105,7 @@ func main() {
 			APIVersion:     apiVersion,
 			GenerateStatus: true,
 			FieldConfig:    agvConfig.FieldConfig(pathToEntityName),
+			OpsConfig:      agvConfig.OpsConfig(pathToEntityName),
 		})
 
 		files, err := gen.Generate(parsed)
