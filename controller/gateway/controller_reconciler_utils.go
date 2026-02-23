@@ -61,6 +61,8 @@ func (r *Reconciler) createDataPlane(
 	if gatewayConfig.Spec.DataPlaneOptions != nil {
 		dataplane.Spec.DataPlaneOptions = *gatewayConfigDataPlaneOptionsToDataPlaneOptions(gatewayConfig.Namespace, *gatewayConfig.Spec.DataPlaneOptions)
 	}
+	// Merge Gateway.spec.infrastructure labels/annotations on top of GatewayConfig options.
+	mergeInfrastructureIntoDataPlane(&dataplane.Spec.DataPlaneOptions, gateway.Spec.Infrastructure)
 	setDataPlaneOptionsDefaults(&dataplane.Spec.DataPlaneOptions, r.DefaultDataPlaneImage)
 	if err := setDataPlaneIngressServicePorts(&dataplane.Spec.DataPlaneOptions, gateway.Spec.Listeners, gatewayConfig.Spec.ListenersOptions); err != nil {
 		return nil, err
