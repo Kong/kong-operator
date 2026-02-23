@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net"
 	"sort"
 	"strconv"
@@ -283,6 +284,74 @@ func gatewayConfigDataPlaneOptionsToDataPlaneOptions(
 	}
 
 	return dataPlaneOptions
+}
+
+// mergeInfrastructureIntoDataPlane merges labels and annotations from
+// Gateway.spec.infrastructure into the DataPlaneOptions spec. It is called
+// after GatewayConfiguration options have been applied, so infrastructure
+// values take precedence (last-write-wins).
+//
+// The merge rules are:
+//   - infrastructure.labels -> DataPlane ingress Service labels AND pod template labels
+//   - infrastructure.annotations -> DataPlane ingress Service annotations AND pod template annotations
+func mergeInfrastructureIntoDataPlane(
+	spec *operatorv1beta1.DataPlaneOptions,
+	infra *gatewayv1.GatewayInfrastructure,
+) {
+	if infra == nil {
+		return
+	}
+
+	// Convert GatewayInfrastructure maps to plain string maps.
+	infraLabels := make(map[string]string, len(infra.Labels))
+	for k, v := range infra.Labels {
+		infraLabels[string(k)] = string(v)
+	}
+	infraAnnotations := make(map[string]string, len(infra.Annotations))
+	for k, v := range infra.Annotations {
+		infraAnnotations[string(k)] = string(v)
+	}
+
+	// --- Service labels and annotations ---
+	if len(infraLabels) > 0 || len(infraAnnotations) > 0 {
+		if spec.Network.Services == nil {
+			spec.Network.Services = &operatorv1beta1.DataPlaneServices{}
+		}
+		if spec.Network.Services.Ingress == nil {
+			spec.Network.Services.Ingress = &operatorv1beta1.DataPlaneServiceOptions{}
+		}
+		if len(infraLabels) > 0 {
+			if spec.Network.Services.Ingress.Labels == nil {
+				spec.Network.Services.Ingress.Labels = make(map[string]string)
+			}
+			maps.Copy(spec.Network.Services.Ingress.Labels, infraLabels)
+		}
+		if len(infraAnnotations) > 0 {
+			if spec.Network.Services.Ingress.Annotations == nil {
+				spec.Network.Services.Ingress.Annotations = make(map[string]string)
+			}
+			maps.Copy(spec.Network.Services.Ingress.Annotations, infraAnnotations)
+		}
+	}
+
+	// --- Pod template labels and annotations ---
+	if len(infraLabels) > 0 || len(infraAnnotations) > 0 {
+		if spec.Deployment.PodTemplateSpec == nil {
+			spec.Deployment.PodTemplateSpec = &corev1.PodTemplateSpec{}
+		}
+		if len(infraLabels) > 0 {
+			if spec.Deployment.PodTemplateSpec.Labels == nil {
+				spec.Deployment.PodTemplateSpec.Labels = make(map[string]string)
+			}
+			maps.Copy(spec.Deployment.PodTemplateSpec.Labels, infraLabels)
+		}
+		if len(infraAnnotations) > 0 {
+			if spec.Deployment.PodTemplateSpec.Annotations == nil {
+				spec.Deployment.PodTemplateSpec.Annotations = make(map[string]string)
+			}
+			maps.Copy(spec.Deployment.PodTemplateSpec.Annotations, infraAnnotations)
+		}
+	}
 }
 
 func gatewayAddressesFromService(svc corev1.Service) ([]gwtypes.GatewayStatusAddress, error) {
