@@ -81,6 +81,9 @@ func New(m metadata.Info) *CLI {
 
 	// controllers for Konnect APIs
 	flagSet.BoolVar(&cfg.KonnectControllersEnabled, "enable-controller-konnect", false, "Enable the Konnect controllers.")
+
+	// feature gates
+	flagSet.Var(newValidatedValue(&cfg.FeatureGates, manager.NewFeatureGates, withDefault(manager.FeatureGates{})), "feature-gates", "Comma-separated list of feature gates to enable. Valid values: mcp-server.")
 	flagSet.DurationVar(&cfg.KonnectSyncPeriod, "konnect-sync-period", consts.DefaultKonnectSyncPeriod, "Sync period for Konnect entities. After a successful reconciliation of Konnect entities the controller will wait this duration before enforcing configuration on Konnect once again.")
 	flagSet.UintVar(&cfg.KonnectControllerMaxConcurrentReconciles, "konnect-controller-max-concurrent-reconciles", consts.DefaultMaxConcurrentReconcilesKonnect, "Deprecated: Please use '--max-concurrent-reconciles-konnect-controller' instead.")
 	flagSet.UintVar(&cfg.MaxConcurrentReconcilesKonnect, "max-concurrent-reconciles-konnect-controller", consts.DefaultMaxConcurrentReconcilesKonnect, "Maximum number of concurrent reconciles for Konnect controllers.")

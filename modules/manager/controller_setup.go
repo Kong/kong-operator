@@ -38,6 +38,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/konnect"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
+	"github.com/kong/kong-operator/v2/controller/mcpserver"
 	"github.com/kong/kong-operator/v2/controller/specialized"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/multiinstance"
 	"github.com/kong/kong-operator/v2/internal/metrics"
@@ -199,6 +200,16 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			Condition: c.AIGatewayControllerEnabled,
 			GVRs: []schema.GroupVersionResource{
 				operatorv1alpha1.AIGatewayGVR(),
+			},
+		},
+		{
+			Condition: c.FeatureGates.Enabled(FeatureGateMCPServer),
+			GVRs: []schema.GroupVersionResource{
+				{
+					Group:    konnectv1alpha1.SchemeGroupVersion.Group,
+					Version:  konnectv1alpha1.SchemeGroupVersion.Version,
+					Resource: "mcpservers",
+				},
 			},
 		},
 		{
@@ -526,6 +537,11 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		},
 	}
 
+	// MCPServer controllers
+	if c.FeatureGates.Enabled(FeatureGateMCPServer) {
+		controllers = append(controllers, newMCPServerControllers(mgr, c, ctrlOpts)...)
+	}
+
 	// Konnect controllers
 	if c.KonnectControllersEnabled {
 		sdkFactory := sdkops.NewSDKFactory()
@@ -689,6 +705,32 @@ func newGatewayAPIHybridController[t converter.RootObject, tPtr converter.RootOb
 	return ControllerDef{
 		Enabled:    true,
 		Controller: hybridgateway.NewHybridGatewayReconciler[t, tPtr](mgr, fqdnMode, clusterDomain),
+	}
+}
+
+func newMCPServerControllers(mgr manager.Manager, c *Config, ctrlOpts controller.Options) []ControllerDef {
+	sm := mcpserver.NewSignalManager(mgr.GetLogger().WithName("mcp-signal-manager"), mgr.GetClient(), mgr.GetScheme())
+	sdkFactory := sdkops.NewSDKFactory()
+	return []ControllerDef{
+		{
+			Enabled: true,
+			Controller: &mcpserver.MCPServerReconciler{
+				ControllerOptions: ctrlOpts,
+				Client:            mgr.GetClient(),
+				LoggingMode:       c.LoggingMode,
+				SignalManager:     sm,
+			},
+		},
+		{
+			Enabled: true,
+			Controller: &mcpserver.MCPServerCPReconciler{
+				ControllerOptions: ctrlOpts,
+				Client:            mgr.GetClient(),
+				LoggingMode:       c.LoggingMode,
+				SignalManager:     sm,
+				SdkFactory:        sdkFactory,
+			},
+		},
 	}
 }
 

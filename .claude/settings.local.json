@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls /Users/mattia.lavacca/projects/github.com/kong/sdk-konnect-go/*_i.go)",
+      "Bash(ls -la /Users/mattia.lavacca/projects/github.com/kong/kong-operator/api/konnect/v1alpha1/*.go)",
+      "Bash(ls /Users/mattia.lavacca/projects/github.com/kong/kong-operator/controller/konnect/*.go)",
+      "Bash(find /Users/mattia.lavacca/projects/github.com/kong/kong-operator -name \"*.go\" -type f -exec grep -l \"signal.*backoff\\\\|backoff.*signal\" {} ;)",
+      "Bash(make lint)",
+      "Bash(golangci-lint run ./controller/mcpserver/...)"
+    ]
+  }
+}

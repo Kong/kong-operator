@@ -378,6 +378,7 @@ func expectedDefaultCfg() manager.Config {
 		ControlPlaneConfigurationDumpAddr:        ":10256",
 		ControlPlaneExtensionsControllerEnabled:  true,
 		KonnectControllersEnabled:                false,
+		FeatureGates:                             manager.FeatureGates{},
 		KonnectSyncPeriod:                        consts.DefaultKonnectSyncPeriod,
 		KongPluginInstallationControllerEnabled:  false,
 		LoggerOpts:                               &zap.Options{},

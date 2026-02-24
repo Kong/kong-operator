@@ -359,3 +359,5 @@ replace (
 	k8s.io/sample-cli-plugin => k8s.io/sample-cli-plugin v0.35.1
 	k8s.io/sample-controller => k8s.io/sample-controller v0.35.1
 )
+
+replace github.com/Kong/sdk-konnect-go => /Users/mattia.lavacca/projects/github.com/kong/sdk-konnect-go
