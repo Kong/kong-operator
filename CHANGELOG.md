@@ -45,6 +45,8 @@
 - Fix `ResolvedRefs` status condition on `HTTPRoute` not being updated when a
   referenced `KongPlugin` is deleted in self-managed ControlPlane mode.
   [#3206](https://github.com/Kong/kong-operator/pull/3206)
+- Fix handling removal of annotations for DataPlane's Services
+  [#3402](https://github.com/Kong/kong-operator/pull/3402)
 
 ## [v2.1.1]
 
