@@ -720,6 +720,7 @@ func newMCPServerControllers(mgr manager.Manager, c *Config, ctrlOpts controller
 				Scheme:            mgr.GetScheme(),
 				LoggingMode:       c.LoggingMode,
 				SignalManager:     sm,
+				SdkFactory:        sdkFactory,
 			},
 		},
 		{

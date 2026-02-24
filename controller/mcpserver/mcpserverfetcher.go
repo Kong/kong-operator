@@ -154,7 +154,7 @@ func (f *MCPServersFetcher) syncMCPServers(ctx context.Context, servers []sdkkon
 			errs = append(errs, fmt.Errorf("failed to set owner reference on MCPServer %s/%s: %w", cpNamespace, server.ID, err))
 			continue
 		}
-		if err := f.client.Create(ctx, mcpServer); err != nil {
+		if err := f.client.Create(ctx, mcpServer); client.IgnoreAlreadyExists(err) != nil {
 			errs = append(errs, fmt.Errorf("failed to create MCPServer %s/%s: %w", cpNamespace, server.ID, err))
 			continue
 		}
