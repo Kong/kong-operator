@@ -2,6 +2,7 @@ package extensions
 
 import (
 	"github.com/samber/lo"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
@@ -60,10 +61,14 @@ func MergeExtensions[
 // MergeExtensionsForDataPlane is a wrapper around MergeExtensions for places where
 // we do not have an actual object to work on.
 func MergeExtensionsForDataPlane(
-	ns *string,
+	managingObject client.Object,
 	configExtensions []commonv1alpha1.ExtensionRef,
 	konnectExtension *konnectv1alpha2.KonnectExtension,
 ) []commonv1alpha1.ExtensionRef {
+	var ns *string
+	if objNs := managingObject.GetNamespace(); konnectExtension != nil && objNs != konnectExtension.GetNamespace() {
+		ns = new(objNs)
+	}
 
 	// Initialize the Konnect Extension by using the provided konnectExtension parameter.
 	// In case the GatewayConfiguration statically defines a KonnectExtension in its
