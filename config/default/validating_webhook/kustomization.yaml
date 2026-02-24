@@ -2,6 +2,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-# TODO: https://github.com/Kong/kong-operator/issues/2186
-# zz_generated_validating_webhook has to be generated based on kubebuilder code markers and not hardcoded.
-- zz_generated_validating_webhook.yaml
+- manifests.yaml
+
+patches:
+- path: validating_webhook_patch.yaml

@@ -58007,7 +58007,61 @@ webhooks:
       ###DYNAMIC_FIELD###
   failurePolicy: Fail
   matchPolicy: Equivalent
-  name: validations.kong.konghq.com
+  name: secrets.validations.kong.konghq.com
+  objectSelector:
+    matchLabels:
+      konghq.com/secret: "true"
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - secrets
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: chartsnap-kong-operator-webhook
+      namespace: default
+      port: 5443
+    caBundle: |-
+      ###DYNAMIC_FIELD###
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: gwapi.validations.kong.konghq.com
+  rules:
+  - apiGroups:
+    - gateway.networking.k8s.io
+    apiVersions:
+    - v1alpha2
+    - v1beta1
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - gateways
+    - httproutes
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: chartsnap-kong-operator-webhook
+      namespace: default
+      port: 5443
+    caBundle: |-
+      ###DYNAMIC_FIELD###
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: kong.validations.kong.konghq.com
   rules:
   - apiGroups:
     - configuration.konghq.com
@@ -58023,7 +58077,21 @@ webhooks:
     - kongclusterplugins
     - kongvaults
     - kongcustomentities
-    scope: '*'
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: chartsnap-kong-operator-webhook
+      namespace: default
+      port: 5443
+    caBundle: |-
+      ###DYNAMIC_FIELD###
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: networking.validations.kong.konghq.com
+  rules:
   - apiGroups:
     - networking.k8s.io
     apiVersions:
@@ -58033,73 +58101,6 @@ webhooks:
     - UPDATE
     resources:
     - ingresses
-    scope: '*'
-  - apiGroups:
-    - gateway.networking.k8s.io
-    apiVersions:
-    - v1alpha2
-    - v1beta1
-    - v1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - gateways
-    - httproutes
-    scope: '*'
-  sideEffects: None
-  timeoutSeconds: 10
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    service:
-      name: chartsnap-kong-operator-webhook
-      namespace: default
-      port: 5443
-    caBundle: |-
-      ###DYNAMIC_FIELD###
-  failurePolicy: Fail
-  matchPolicy: Equivalent
-  name: secrets.validations.kong.konghq.com
-  objectSelector:
-    matchLabels:
-      konghq.com/secret: "true"
-  rules:
-  - apiGroups:
-    - ""
-    apiVersions:
-    - v1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - secrets
-    scope: '*'
-  sideEffects: None
-  timeoutSeconds: 10
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    service:
-      name: chartsnap-kong-operator-webhook
-      namespace: default
-      port: 5443
-    caBundle: |-
-      ###DYNAMIC_FIELD###
-  failurePolicy: Fail
-  matchPolicy: Equivalent
-  name: services.validations.kong.konghq.com
-  rules:
-  - apiGroups:
-    - ""
-    apiVersions:
-    - v1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - services
-    scope: '*'
   sideEffects: None
   timeoutSeconds: 10
 ---
