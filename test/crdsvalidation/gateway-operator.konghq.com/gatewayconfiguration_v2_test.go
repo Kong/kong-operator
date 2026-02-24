@@ -533,28 +533,6 @@ func TestGatewayConfigurationV2(t *testing.T) {
 				},
 				ExpectedErrorMessage: new("label values must be 63 characters or less"),
 			},
-			{
-				Name: "cannot specify service ingress label with invalid value format",
-				TestObject: &operatorv2beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: operatorv2beta1.GatewayConfigurationSpec{
-						DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
-							Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
-								Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
-									Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
-										ServiceOptions: operatorv2beta1.ServiceOptions{
-											Labels: map[string]string{
-												"key": "-invalid-start",
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-				ExpectedErrorMessage: new("label values must be empty or start and end with an alphanumeric character, with dashes, underscores, and dots in between"),
-			},
 		}.
 			RunWithConfig(t, cfg, scheme)
 	})

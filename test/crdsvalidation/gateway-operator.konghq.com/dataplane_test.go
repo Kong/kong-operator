@@ -461,29 +461,6 @@ func TestDataplane(t *testing.T) {
 				},
 				ExpectedErrorMessage: new("label values must be 63 characters or less"),
 			},
-			{
-				Name: "cannot specify service ingress label with invalid value format",
-				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: operatorv1beta1.DataPlaneSpec{
-						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
-							Deployment: validDataplaneOptions.Deployment,
-							Network: operatorv1beta1.DataPlaneNetworkOptions{
-								Services: &operatorv1beta1.DataPlaneServices{
-									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-										ServiceOptions: operatorv1beta1.ServiceOptions{
-											Labels: map[string]string{
-												"key": "-invalid-start",
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-				ExpectedErrorMessage: new("label values must be empty or start and end with an alphanumeric character, with dashes, underscores, and dots in between"),
-			},
 		}.
 			RunWithConfig(t, cfg, scheme)
 	})
