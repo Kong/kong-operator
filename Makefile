@@ -872,20 +872,23 @@ test.charts.golden.update:
 
 .PHONY: test.charts.ct.install
 test.charts.ct.install:
-# NOTE: We add ko-crds.keep=false below because allowing the chart to manage CRDs
+# NOTE: We add ko-crds.enabled=false below to handle CRD management outside of ct.
+# This is to work around the flaky CRD uninstall behavior of ct.
+# Without this, CRDs created by one test helm release installation
+# would sometimes not get removed upon uninstalling the release,
 # and keep them around after helm uninstall would yield ownership issues.
 # Error: INSTALLATION FAILED: Unable to continue with install: CustomResourceDefinition "aigateways.gateway-operator.konghq.com" in namespace ""
 # exists and cannot be imported into the current release: invalid ownership metadata; annotation validation error: key "meta.helm.sh/release-name"
 # must equal "kong-operator-h39gau9scc": current value is "kong-operator-tiptva339m"
 #
-# NOTE: We add the --wait below to ensure that we wait for all objects to get removed
-# for each release. Without this, some objects like CRDs can still be around
-# when another test helm release is being installed and the above mentioned
-# ownership error will be returned.
+# This could potentially be solved by setting the --cascade foreground option
+# to helm uninstall command in ct, but ct does not currently support passing
+# extra args to helm uninstall.
+# There's an open PR for this: https://github.com/helm/chart-testing/pull/806
 
 	ct install --target-branch main \
 		--debug \
-		--helm-extra-set-args "--set=ko-crds.keep=false" \
+		--helm-extra-set-args "--set=ko-crds.enabled=false" \
 		--helm-extra-args "--wait" \
 		--helm-extra-args "--timeout=3m" \
 		--charts charts/$(CHART_NAME) \
@@ -1071,6 +1074,10 @@ uninstall.helm.cert-manager: download.helm
 # Install CRDs into the K8s cluster specified in ~/.kube/config.
 .PHONY: install
 install: install.helm.cert-manager manifests kustomize install.gateway-api-crds
+	$(MAKE) install.crds
+
+.PHONY: install.crds
+install.crds: kustomize
 	$(KUSTOMIZE) build config/crd | kubectl apply --server-side -f -
 
 # Install RBACs from config/rbac into the K8s cluster specified in ~/.kube/config.
@@ -1087,8 +1094,11 @@ install.all: install.helm.cert-manager manifests kustomize install.gateway-api-c
 # Call with ignore-not-found=true to ignore resource not found errors during deletion.
 .PHONY: uninstall
 uninstall: manifests kustomize uninstall.gateway-api-crds uninstall.helm.cert-manager
-	$(KUSTOMIZE) build config/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
+	$(MAKE) uninstall.crds
 
+.PHONY: uninstall.crds
+uninstall.crds: kustomize
+	$(KUSTOMIZE) build config/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
 # Uninstall standard and experimental CRDs from the K8s cluster specified in ~/.kube/config.
 # Call with ignore-not-found=true to ignore resource not found errors during deletion.
