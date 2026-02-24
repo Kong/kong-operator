@@ -56,6 +56,12 @@
   - `--leader-election-renew-deadline`
   - `--leader-election-retry-period`
   [#3345](https://github.com/Kong/kong-operator/pull/3345)
+- Support `Gateway.spec.infrastructure.labels` and `Gateway.spec.infrastructure.annotations`.
+  Labels and annotations set on a Gateway's infrastructure are now propagated to the
+  DataPlane's ingress `Service` metadata and `Deployment` pod template metadata.
+  When both a `GatewayConfiguration` and `Gateway.spec.infrastructure` specify the same
+  key, the infrastructure value takes precedence.
+  [#3412](https://github.com/Kong/kong-operator/pull/3412)
 
 ### Fixes
 

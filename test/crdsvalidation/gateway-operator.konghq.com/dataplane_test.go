@@ -415,6 +415,29 @@ func TestDataplane(t *testing.T) {
 				},
 				ExpectedErrorMessage: new("spec.network.services.ingress.ports: Too many: 65: must have at most 64 items"),
 			},
+			{
+				Name: "can specify service ingress labels",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: validDataplaneOptions.Deployment,
+							Network: operatorv1beta1.DataPlaneNetworkOptions{
+								Services: &operatorv1beta1.DataPlaneServices{
+									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+										ServiceOptions: operatorv1beta1.ServiceOptions{
+											Labels: map[string]string{
+												"environment": "production",
+												"team":        "platform",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		}.
 			RunWithConfig(t, cfg, scheme)
 	})
