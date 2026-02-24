@@ -617,7 +617,11 @@ func (r *Reconciler) provisionDataPlane(
 		return nil, errWrap
 	}
 
-	expectedDataPlaneOptions.Extensions = extensions.MergeExtensionsForDataPlane(gatewayConfig.Spec.Extensions, konnectExtension)
+	var ns *string
+	if gateway.GetNamespace() != konnectExtension.GetNamespace() {
+		ns = new(gateway.GetNamespace())
+	}
+	expectedDataPlaneOptions.Extensions = extensions.MergeExtensionsForDataPlane(ns, gatewayConfig.Spec.Extensions, konnectExtension)
 
 	if !dataPlaneSpecDeepEqual(
 		&dataplane.Spec.DataPlaneOptions, expectedDataPlaneOptions, gwconfigutils.IsGatewayHybrid(gatewayConfig),

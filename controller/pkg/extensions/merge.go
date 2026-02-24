@@ -60,14 +60,16 @@ func MergeExtensions[
 // MergeExtensionsForDataPlane is a wrapper around MergeExtensions for places where
 // we do not have an actual object to work on.
 func MergeExtensionsForDataPlane(
+	ns *string,
 	configExtensions []commonv1alpha1.ExtensionRef,
 	konnectExtension *konnectv1alpha2.KonnectExtension,
 ) []commonv1alpha1.ExtensionRef {
+
 	// Initialize the Konnect Extension by using the provided konnectExtension parameter.
 	// In case the GatewayConfiguration statically defines a KonnectExtension in its
 	// extensions list, the provided one will take precedence and be used.
 	extensionList := []commonv1alpha1.ExtensionRef{}
-	konnectExtensionRef := konnectextensionpkg.KonnectExtensionToExtensionRef(konnectExtension)
+	konnectExtensionRef := konnectextensionpkg.KonnectExtensionToExtensionRef(ns, konnectExtension)
 	if konnectExtensionRef != nil {
 		extensionList = append(extensionList, *konnectExtensionRef)
 	}
