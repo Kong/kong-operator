@@ -717,6 +717,7 @@ func newMCPServerControllers(mgr manager.Manager, c *Config, ctrlOpts controller
 			Controller: &mcpserver.MCPServerReconciler{
 				ControllerOptions: ctrlOpts,
 				Client:            mgr.GetClient(),
+				Scheme:            mgr.GetScheme(),
 				LoggingMode:       c.LoggingMode,
 				SignalManager:     sm,
 			},
