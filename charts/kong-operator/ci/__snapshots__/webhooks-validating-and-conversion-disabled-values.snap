@@ -10262,16 +10262,11 @@ spec:
                               by the operator.
 
                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+                            maxProperties: 64
                             type: object
                             x-kubernetes-validations:
-                            - message: label key name must be 63 characters or less
-                              rule: 'self.all(key, !key.contains(''/'') ? size(key) <= 63 : size(key.split(''/'')[1]) <= 63)'
-                            - message: label key must be a valid qualified name (an optional DNS subdomain prefix followed by '/' and a name, or just a name)
-                              rule: self.all(key, key.matches('^([a-zA-Z0-9]([a-zA-Z0-9.-]{0,251}[a-zA-Z0-9])?\/)?[a-zA-Z0-9]([-a-zA-Z0-9_.]*[a-zA-Z0-9])?$'))
                             - message: label values must be 63 characters or less
                               rule: self.all(key, size(self[key]) <= 63)
-                            - message: label values must be empty or start and end with an alphanumeric character, with dashes, underscores, and dots in between
-                              rule: self.all(key, size(self[key]) == 0 || self[key].matches('^[a-zA-Z0-9]([-a-zA-Z0-9_.]*[a-zA-Z0-9])?$'))
                           name:
                             description: |-
                               Name defines the name of the service.
@@ -19963,16 +19958,11 @@ spec:
                                   by the operator.
 
                                   More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+                                maxProperties: 64
                                 type: object
                                 x-kubernetes-validations:
-                                - message: label key name must be 63 characters or less
-                                  rule: 'self.all(key, !key.contains(''/'') ? size(key) <= 63 : size(key.split(''/'')[1]) <= 63)'
-                                - message: label key must be a valid qualified name (an optional DNS subdomain prefix followed by '/' and a name, or just a name)
-                                  rule: self.all(key, key.matches('^([a-zA-Z0-9]([a-zA-Z0-9.-]{0,251}[a-zA-Z0-9])?\/)?[a-zA-Z0-9]([-a-zA-Z0-9_.]*[a-zA-Z0-9])?$'))
                                 - message: label values must be 63 characters or less
                                   rule: self.all(key, size(self[key]) <= 63)
-                                - message: label values must be empty or start and end with an alphanumeric character, with dashes, underscores, and dots in between
-                                  rule: self.all(key, size(self[key]) == 0 || self[key].matches('^[a-zA-Z0-9]([-a-zA-Z0-9_.]*[a-zA-Z0-9])?$'))
                               name:
                                 description: |-
                                   Name defines the name of the service.

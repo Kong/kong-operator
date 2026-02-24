@@ -512,50 +512,6 @@ func TestGatewayConfigurationV2(t *testing.T) {
 				},
 			},
 			{
-				Name: "cannot specify service ingress label with key name exceeding 63 characters",
-				TestObject: &operatorv2beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: operatorv2beta1.GatewayConfigurationSpec{
-						DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
-							Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
-								Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
-									Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
-										ServiceOptions: operatorv2beta1.ServiceOptions{
-											Labels: map[string]string{
-												"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1": "value",
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-				ExpectedErrorMessage: new("label key name must be 63 characters or less"),
-			},
-			{
-				Name: "cannot specify service ingress label with invalid key format",
-				TestObject: &operatorv2beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: operatorv2beta1.GatewayConfigurationSpec{
-						DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
-							Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
-								Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
-									Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
-										ServiceOptions: operatorv2beta1.ServiceOptions{
-											Labels: map[string]string{
-												"invalid!key": "value",
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-				ExpectedErrorMessage: new("label key must be a valid qualified name (an optional DNS subdomain prefix followed by '/' and a name, or just a name)"),
-			},
-			{
 				Name: "cannot specify service ingress label with value exceeding 63 characters",
 				TestObject: &operatorv2beta1.GatewayConfiguration{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
