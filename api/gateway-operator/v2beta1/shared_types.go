@@ -311,6 +311,10 @@ type ServiceOptions struct {
 	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
 	//
 	// +optional
+	// +kubebuilder:validation:XValidation:message="label key name must be 63 characters or less",rule="self.all(key, !key.contains('/') ? size(key) <= 63 : size(key.split('/')[1]) <= 63)"
+	// +kubebuilder:validation:XValidation:message="label key must be a valid qualified name (an optional DNS subdomain prefix followed by '/' and a name, or just a name)",rule="self.all(key, key.matches('^([a-zA-Z0-9]([a-zA-Z0-9.-]{0,251}[a-zA-Z0-9])?\\/)?[a-zA-Z0-9]([-a-zA-Z0-9_.]*[a-zA-Z0-9])?$'))"
+	// +kubebuilder:validation:XValidation:message="label values must be 63 characters or less",rule="self.all(key, size(self[key]) <= 63)"
+	// +kubebuilder:validation:XValidation:message="label values must be empty or start and end with an alphanumeric character, with dashes, underscores, and dots in between",rule="self.all(key, size(self[key]) == 0 || self[key].matches('^[a-zA-Z0-9]([-a-zA-Z0-9_.]*[a-zA-Z0-9])?$'))"
 	Labels map[string]string `json:"labels,omitempty" protobuf:"bytes,13,rep,name=labels"`
 
 	// ExternalTrafficPolicy describes how nodes distribute service traffic they
