@@ -1,0 +1,17 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: controlplane-configuration-validations
+  annotations:
+    cert-manager.io/inject-ca-from: kong-system/gateway-operator-validating-serving-cert
+    cert-manager.io/secret-template: '{ "labels": { "konghq.com/secret" : "internal" } }'
+  labels:
+    app.kubernetes.io/component: ko
+# TODO: https://github.com/Kong/kong-operator/issues/3418
+# Replace with generated webhook configuration based on kubebuilder code markers, when
+# the PR https://github.com/kubernetes-sigs/controller-tools/pull/1339 will be merged and released.
+webhooks:
+  - name: secrets.validations.kong.konghq.com
+    objectSelector:
+      matchLabels:
+        konghq.com/secret: "true"
