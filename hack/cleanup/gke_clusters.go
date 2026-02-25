@@ -11,8 +11,6 @@ import (
 	"cloud.google.com/go/container/apiv1/containerpb"
 	"github.com/go-logr/logr"
 	"google.golang.org/api/option"
-
-	"github.com/kong/kong-operator/v2/ingress-controller/test/e2e"
 )
 
 const timeUntilClusterOrphaned = time.Hour
@@ -82,7 +80,7 @@ func findOrphanedClusters(ctx context.Context, log logr.Logger, mgrc *container.
 
 	var orphanedClusterNames []string
 	for _, cluster := range clusterListResp.GetClusters() {
-		if !e2e.IsGKETestCluster(cluster) {
+		if isGKETestCluster(cluster) {
 			log.Info("Non test cluster found and skipped", "name", cluster.GetName(), "built_at", cluster.GetCreateTime())
 			continue
 		}
@@ -101,4 +99,20 @@ func findOrphanedClusters(ctx context.Context, log logr.Logger, mgrc *container.
 	}
 
 	return orphanedClusterNames, nil
+}
+
+func isGKETestCluster(cluster *containerpb.Cluster) bool {
+	if cluster == nil {
+		return false
+	}
+
+	const (
+		gkeTestClusterLabel = "test-cluster"
+		gkeLabelValueTrue   = "true"
+	)
+	if labels := cluster.GetResourceLabels(); labels != nil {
+		return labels[gkeTestClusterLabel] == gkeLabelValueTrue
+	}
+
+	return false
 }
