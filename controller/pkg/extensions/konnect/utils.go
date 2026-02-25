@@ -6,7 +6,10 @@ import (
 )
 
 // KonnectExtensionToExtensionRef converts a KonnectExtension to the corresponding ExtensionRef.
-func KonnectExtensionToExtensionRef(extension *konnectv1alpha2.KonnectExtension) *commonv1alpha1.ExtensionRef {
+func KonnectExtensionToExtensionRef(
+	ns *string,
+	extension *konnectv1alpha2.KonnectExtension,
+) *commonv1alpha1.ExtensionRef {
 	if extension == nil {
 		return nil
 	}
@@ -15,7 +18,7 @@ func KonnectExtensionToExtensionRef(extension *konnectv1alpha2.KonnectExtension)
 		Kind:  konnectv1alpha2.KonnectExtensionKind,
 		NamespacedRef: commonv1alpha1.NamespacedRef{
 			Name:      extension.Name,
-			Namespace: new(extension.Namespace),
+			Namespace: ns,
 		},
 	}
 }
