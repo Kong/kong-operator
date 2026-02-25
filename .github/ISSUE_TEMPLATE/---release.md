@@ -29,7 +29,8 @@ If the troubleshooting section does not contain the answer to the problem you en
   - [ ] Check the [releases][releases] page. The release has to be marked manually as `latest` if this is the case.
   - [ ] Check the `release/N.M.x` release branch exists.
 - [ ] Update the official documentation at [https://github.com/Kong/developer.konghq.com/][docs_repo]
-  - **CLI configuration options** and **CRD reference**: Automatically synced by the release workflow. A PR will be created in the docs repo. Review and merge it when ready.
+  - [ ] **CLI configuration options** and **CRD reference**: Automatically synced by the release workflow. A PR will be created in the docs repo. Review and merge it when ready.
+  - [ ] Update supported releases table at <https://github.com/Kong/developer.konghq.com/blob/main/app/_data/products/operator.yml>
 
 ## Conformance tests report
 
