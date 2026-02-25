@@ -119,7 +119,7 @@ golangci-lint-cache-path:
 
 .PHONY: go-fix
 go-fix:
-	GOFLAGS="-tags=integration_tests,envtest,e2e_tests,istio_tests,performance_tests" go fix ./...
+	GOFLAGS="-tags=integration_tests,envtest" go fix ./...
 
 MODERNIZE_VERSION = $(shell $(YQ) -r '.modernize' < $(TOOLS_VERSIONS_FILE))
 MODERNIZE = $(PROJECT_DIR)/bin/installs/go-golang-org-x-tools-gopls-internal-analysis-modernize-cmd-modernize/$(MODERNIZE_VERSION)/bin/modernize
