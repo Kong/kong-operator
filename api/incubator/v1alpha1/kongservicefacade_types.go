@@ -29,7 +29,6 @@ func init() {
 // +kubebuilder:subresource:status
 // +kubebuilder:storageversion
 // +kong:channels=ingress-controller-incubator
-// +apireference:kic:include
 type KongServiceFacade struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -40,7 +39,6 @@ type KongServiceFacade struct {
 
 // KongServiceFacadeList contains a list of KongServiceFacade.
 // +kubebuilder:object:root=true
-// +apireference:kic:include
 type KongServiceFacadeList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -49,7 +47,6 @@ type KongServiceFacadeList struct {
 }
 
 // KongServiceFacadeSpec defines the desired state of KongServiceFacade.
-// +apireference:kic:include
 type KongServiceFacadeSpec struct {
 	// Backend is a reference to a Kubernetes Service that is used as a backend
 	// for this Kong Service Facade.
@@ -59,7 +56,6 @@ type KongServiceFacadeSpec struct {
 
 // KongServiceFacadeBackend is a reference to a Kubernetes Service
 // that is used as a backend for a Kong Service Facade.
-// +apireference:kic:include
 type KongServiceFacadeBackend struct {
 	// Name is the name of the referenced Kubernetes Service.
 	// +required
@@ -71,7 +67,6 @@ type KongServiceFacadeBackend struct {
 }
 
 // KongServiceFacadeStatus defines the observed state of KongServiceFacade.
-// +apireference:kic:include
 type KongServiceFacadeStatus struct {
 	// Conditions describe the current conditions of the KongServiceFacade.
 	//

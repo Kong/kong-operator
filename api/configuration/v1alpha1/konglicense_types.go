@@ -15,8 +15,6 @@ import (
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 // +kubebuilder:printcolumn:name="Enabled",type=boolean,JSONPath=`.enabled`,description="Enabled to configure on Kong gateway instances"
-// +apireference:kic:include
-// +apireference:kic:include
 // +kong:channels=kong-operator
 type KongLicense struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -79,11 +77,9 @@ type Namespace string
 //
 // +kubebuilder:validation:MinLength=1
 // +kubebuilder:validation:MaxLength=253
-// +apireference:kic:include
 type ObjectName string
 
 // ControllerReference is a reference to a controller that reconciles the KongLicense.
-// +apireference:kic:include
 type ControllerReference struct {
 	// Group is the group of referent.
 	// It should be empty if the referent is in "core" group (like pod).
@@ -100,7 +96,6 @@ type ControllerReference struct {
 
 // KongLicenseList contains a list of KongLicense.
 // +kubebuilder:object:root=true
-// +apireference:kic:include
 type KongLicenseList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

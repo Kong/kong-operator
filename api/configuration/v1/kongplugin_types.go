@@ -38,7 +38,6 @@ import (
 // +kubebuilder:validation:XValidation:rule="!(has(self.config) && has(self.configFrom))", message="Using both config and configFrom fields is not allowed."
 // +kubebuilder:validation:XValidation:rule="!(has(self.configFrom) && has(self.configPatches))", message="Using both configFrom and configPatches fields is not allowed."
 // +kubebuilder:validation:XValidation:rule="self.plugin == oldSelf.plugin", message="The plugin field is immutable"
-// +apireference:kic:include
 // +kong:channels=kong-operator
 type KongPlugin struct {
 	metav1.TypeMeta `json:",inline"`
@@ -108,7 +107,6 @@ type KongPlugin struct {
 
 // KongPluginList contains a list of KongPlugin.
 // +kubebuilder:object:root=true
-// +apireference:kic:include
 type KongPluginList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -117,7 +115,6 @@ type KongPluginList struct {
 }
 
 // KongPluginStatus represents the current status of the KongPlugin resource.
-// +apireference:kic:include
 type KongPluginStatus struct {
 	// Conditions describe the current conditions of the KongPluginStatus.
 	//

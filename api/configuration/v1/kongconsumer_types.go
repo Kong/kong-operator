@@ -100,7 +100,6 @@ type KongConsumerList struct {
 type KongConsumerStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
-	// +apireference:kic:exclude
 	Konnect *konnecv1alpha2.KonnectEntityStatusWithControlPlaneRef `json:"konnect,omitempty"`
 
 	// Conditions describe the current conditions of the KongConsumer.
