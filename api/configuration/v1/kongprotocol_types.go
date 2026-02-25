@@ -4,7 +4,6 @@ package v1
 // This alias is necessary to deal with https://github.com/kubernetes-sigs/controller-tools/issues/342
 // +kubebuilder:validation:Enum=http;https;grpc;grpcs;tcp;tls;udp
 // +kubebuilder:object:generate=true
-// +apireference:kic:include
 type KongProtocol string
 
 // KongProtocolsToStrings converts a slice of KongProtocol to plain strings.
