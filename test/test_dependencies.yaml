@@ -3,29 +3,6 @@ e2e:
     # renovate: datasource=custom.gke-rapid depName=gke versioning=semver
     - '1.33.1'
 
-  # For Istio, we define combinations of Kind and Istio versions that will be
-  # used directly in the test matrix `include` section.
-  istio:
-    - # renovate: datasource=docker depName=kindest/node versioning=docker
-      kind: 'v1.33.7'
-      # renovate: datasource=docker depName=istio/istioctl versioning=docker
-      istio: '1.26.8'
-    - # renovate: datasource=docker depName=kindest/node@only-patch versioning=docker
-      kind: 'v1.30.8'
-      # renovate: datasource=docker depName=istio/istioctl@only-patch versioning=docker
-      istio: '1.23.3'
-    - # renovate: datasource=docker depName=kindest/node@only-patch versioning=docker
-      kind: 'v1.30.8'
-      # renovate: datasource=docker depName=istio/istioctl@only-patch versioning=docker
-      istio: '1.22.3'
-    - # renovate: datasource=docker depName=kindest/node@only-patch versioning=docker
-      kind: 'v1.29.12'
-      # renovate: datasource=docker depName=istio/istioctl@only-patch versioning=docker
-      istio: '1.21.2'
-
-  # renovate: datasource=helm depName=kuma registryUrl=https://kumahq.github.io/charts versioning=helm
-  kuma: '2.13.2'
-
 integration:
   helm:
     # renovate: datasource=helm depName=kong registryUrl=https://charts.konghq.com versioning=helm
