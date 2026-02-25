@@ -119,7 +119,7 @@ golangci-lint-cache-path:
 
 .PHONY: go-fix
 go-fix:
-	GOFLAGS="-tags=integration_tests" go fix ./...
+	go fix ./...
 
 GOTESTSUM_VERSION = $(shell $(YQ) -r '.gotestsum' < $(TOOLS_VERSIONS_FILE))
 GOTESTSUM = $(PROJECT_DIR)/bin/installs/github-gotestyourself-gotestsum/$(GOTESTSUM_VERSION)/gotestsum
@@ -745,7 +745,6 @@ PKG_LIST_KIC = ./ingress-controller/pkg/...,./ingress-controller/internal/...
 _test.integration-kic: mise yq
 	TEST_KONG_HELM_CHART_VERSION="$(TEST_KONG_HELM_CHART_VERSION)" \
 	TEST_DATABASE_MODE="$(DBMODE)" \
-	GOFLAGS="-tags=integration_tests" \
 	KONG_CONTROLLER_FEATURE_GATES="$(KONG_CONTROLLER_FEATURE_GATES)" \
 	go test $(GOTESTFLAGS) \
 	-v \
