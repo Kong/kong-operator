@@ -24,6 +24,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
+	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager"
 	"github.com/kong/kong-operator/v2/ingress-controller/test"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/controllers/gateway"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/diagnostics"
@@ -46,7 +47,10 @@ func TestKongUpstreamPolicyWithoutGatewayAPICRDs(t *testing.T) {
 
 	diagPort := helpers.GetFreePort(t)
 	ns := CreateNamespace(ctx, t, ctrlClient)
-	RunManager(ctx, t, envcfg,
+
+	multimgr := setupMultiInstanceDiagnosticsManager(ctx, t, diagPort)
+
+	mgr := SetupManager(ctx, t, manager.NewRandomID(), envcfg,
 		AdminAPIOptFns(),
 		WithPublishService(ns.Name),
 		WithIngressClass(ingressClassName),
@@ -54,8 +58,9 @@ func TestKongUpstreamPolicyWithoutGatewayAPICRDs(t *testing.T) {
 		WithKongServiceFacadeFeatureEnabled(),
 		WithGatewayAPIControllers(),
 		WithProxySyncInterval(100*time.Millisecond),
-		WithDiagnosticsServer(diagPort),
+		WithDiagnosticsWithoutServer(),
 	)
+	require.NoError(t, multimgr.ScheduleInstance(mgr))
 
 	t.Log("verfying that KongUpstreamPolicy works without gateway APIs")
 
@@ -124,7 +129,7 @@ func TestKongUpstreamPolicyWithoutGatewayAPICRDs(t *testing.T) {
 
 	t.Logf("verify that upstream policy is configured in Kong gateway correctly")
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		resp, err := http.Get(fmt.Sprintf("http://localhost:%d/debug/config/successful", diagPort))
+		resp, err := http.Get(fmt.Sprintf("http://localhost:%d/%s/debug/config/successful", diagPort, mgr.ID()))
 		require.NoError(t, err, "failed to get successful config from debug endpoint")
 		defer resp.Body.Close()
 

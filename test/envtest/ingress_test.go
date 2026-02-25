@@ -21,6 +21,7 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager"
 	"github.com/kong/kong-operator/v2/ingress-controller/test"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/diagnostics"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/helpers"
@@ -47,13 +48,17 @@ func TestIngressWorksWithServiceBackendsSpecifyingOnlyPortNames(t *testing.T) {
 
 	diagPort := helpers.GetFreePort(t)
 	ns := CreateNamespace(ctx, t, ctrlClient)
-	RunManager(ctx, t, envcfg,
+
+	multimgr := setupMultiInstanceDiagnosticsManager(ctx, t, diagPort)
+
+	mgr := SetupManager(ctx, t, manager.NewRandomID(), envcfg,
 		AdminAPIOptFns(),
 		WithPublishService(ns.Name),
 		WithIngressClass(ingressClassName),
 		WithProxySyncInterval(10*time.Millisecond),
-		WithDiagnosticsServer(diagPort),
+		WithDiagnosticsWithoutServer(),
 	)
+	require.NoError(t, multimgr.ScheduleInstance(mgr))
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
@@ -148,7 +153,7 @@ func TestIngressWorksWithServiceBackendsSpecifyingOnlyPortNames(t *testing.T) {
 	require.NoError(t, ctrlClient.Create(ctx, ingress))
 
 	require.Eventually(t, func() bool {
-		resp, err := http.Get(fmt.Sprintf("http://localhost:%d/debug/config/successful", diagPort))
+		resp, err := http.Get(fmt.Sprintf("http://localhost:%d/%s/debug/config/successful", diagPort, mgr.ID()))
 		if err != nil {
 			t.Logf("WARNING: error while getting config: %v", err)
 			return false
