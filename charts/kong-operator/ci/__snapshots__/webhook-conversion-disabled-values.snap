@@ -1358,7 +1358,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: DataPlaneSpec defines the desired state of DataPlane
+            description: DataPlaneSpec defines the desired state of DataPlane.
             properties:
               deployment:
                 description: |-
@@ -10459,7 +10459,7 @@ spec:
             - message: Extension not allowed for DataPlane
               rule: 'has(self.extensions) ? self.extensions.all(e, (e.group == ''konnect.konghq.com'' || e.group == ''gateway-operator.konghq.com'') && e.kind == ''KonnectExtension'') : true'
           status:
-            description: DataPlaneStatus defines the observed state of DataPlane
+            description: DataPlaneStatus defines the observed state of DataPlane.
             properties:
               addresses:
                 description: Addresses lists the addresses that have actually been bound to the DataPlane.

@@ -39,7 +39,6 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 // +kubebuilder:storageversion
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 // +kong:channels=kong-operator
-// +apireference:kgo:include
 type KongReferenceGrant struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional

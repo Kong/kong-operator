@@ -34,7 +34,6 @@ import (
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
 // +kubebuilder:validation:XValidation:rule="oldSelf.spec.upstreamRef == self.spec.upstreamRef", message="spec.upstreamRef is immutable"
-// +apireference:kgo:include
 // +kong:channels=kong-operator
 type KongTarget struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -47,7 +46,6 @@ type KongTarget struct {
 
 // KongTargetSpec defines the spec of KongTarget.
 // +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
-// +apireference:kgo:include
 type KongTargetSpec struct {
 	// KongTargetAPISpec are the attributes of the Kong Target itself.
 	KongTargetAPISpec `json:",inline"`
@@ -61,7 +59,6 @@ type KongTargetSpec struct {
 }
 
 // KongTargetAPISpec are the attributes of the Kong Target itself.
-// +apireference:kgo:include
 type KongTargetAPISpec struct {
 	// Target is the target address of the upstream.
 	Target string `json:"target"`
@@ -75,7 +72,6 @@ type KongTargetAPISpec struct {
 }
 
 // KongTargetStatus defines the observed state of KongTarget.
-// +apireference:kgo:include
 type KongTargetStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
@@ -91,7 +87,6 @@ type KongTargetStatus struct {
 
 // KongTargetList contains a list of Kong Targets.
 // +kubebuilder:object:root=true
-// +apireference:kgo:include
 type KongTargetList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

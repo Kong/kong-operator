@@ -44,7 +44,6 @@ const (
 // +kubebuilder:printcolumn:name="Ready",description="The Resource is Ready to be used",type=string,JSONPath=`.status.conditions[?(@.type=='Ready')].status`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 // +kubebuilder:validation:XValidation:rule="oldSelf.spec.konnect.controlPlane.ref == self.spec.konnect.controlPlane.ref", message="spec.konnect.controlPlane.ref is immutable."
-// +apireference:kgo:include
 // +kong:channels=kong-operator
 type KonnectExtension struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -65,7 +64,6 @@ type KonnectExtension struct {
 // KonnectExtensionList contains a list of KonnectExtension.
 //
 // +kubebuilder:object:root=true
-// +apireference:kgo:include
 type KonnectExtensionList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

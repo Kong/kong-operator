@@ -27,7 +27,6 @@ func init() {
 // +kubebuilder:printcolumn:name="OrgID",description="Konnect Organization ID this resource belongs to.",type=string,JSONPath=`.status.organizationID`
 // +kubebuilder:validation:XValidation:message="spec.konnect.authRef is immutable when an entity is already Programmed", rule="!self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') ? true : self.spec.konnect.authRef == oldSelf.spec.konnect.authRef"
 // +kubebuilder:validation:XValidation:message="spec.konnect.authRef is immutable when an entity refers to a Valid API Auth Configuration", rule="!self.status.conditions.exists(c, c.type == 'APIAuthValid' && c.status == 'True') ? true : self.spec.konnect.authRef == oldSelf.spec.konnect.authRef"
-// +apireference:kgo:include
 // +kong:channels=kong-operator
 type KonnectGatewayControlPlane struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -59,7 +58,6 @@ type KonnectGatewayControlPlane struct {
 // +kubebuilder:validation:XValidation:message="mirror field must be set for type Mirror", rule="self.source == 'Mirror' ? has(self.mirror) : true"
 // +kubebuilder:validation:XValidation:message="mirror field cannot be set for type Origin", rule="self.source == 'Origin' ? !has(self.mirror) : true"
 // +kubebuilder:validation:XValidation:message="Name must be set for type Origin", rule="self.source == 'Origin' ? has(self.name) : true"
-// +apireference:kgo:include
 type KonnectGatewayControlPlaneSpec struct {
 	CreateControlPlaneRequest `json:",inline"`
 
@@ -135,7 +133,6 @@ type CreateControlPlaneRequest struct {
 }
 
 // KonnectGatewayControlPlaneStatus defines the observed state of KonnectGatewayControlPlane.
-// +apireference:kgo:include
 type KonnectGatewayControlPlaneStatus struct {
 	// Conditions describe the current conditions of the KonnectGatewayControlPlane.
 	//
@@ -194,7 +191,6 @@ func (kgcp *KonnectGatewayControlPlane) GetKonnectAPIAuthConfigurationRef() konn
 
 // KonnectGatewayControlPlaneList contains a list of KonnectGatewayControlPlane.
 // +kubebuilder:object:root=true
-// +apireference:kgo:include
 type KonnectGatewayControlPlaneList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

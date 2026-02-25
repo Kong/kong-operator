@@ -38,7 +38,6 @@ func init() {
 // +kubebuilder:resource:shortName=kocp,categories=kong
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 // +kubebuilder:printcolumn:name="Ready",description="The Resource is ready",type=string,JSONPath=`.status.conditions[?(@.type=='Ready')].status`
-// +apireference:kgo:include
 // +kong:channels=kong-operator
 type ControlPlane struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -58,7 +57,6 @@ type ControlPlane struct {
 // ControlPlaneList contains a list of ControlPlane
 //
 // +kubebuilder:object:root=true
-// +apireference:kgo:include
 type ControlPlaneList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -68,7 +66,6 @@ type ControlPlaneList struct {
 
 // ControlPlaneSpec defines the desired state of ControlPlane
 //
-// +apireference:kgo:include
 // +kubebuilder:validation:XValidation:message="When dataplane target is of type 'ref' the ingressClass must be set",rule="self.dataplane.type != 'ref' || has(self.ingressClass)"
 type ControlPlaneSpec struct {
 	ControlPlaneOptions `json:",inline"`
@@ -93,8 +90,6 @@ type ControlPlaneSpec struct {
 
 // ControlPlaneOptions indicates the specific information needed to
 // deploy and connect a ControlPlane to a DataPlane object.
-//
-// +apireference:kgo:include
 type ControlPlaneOptions struct {
 	// IngressClass enables support for the Ingress resources and indicates
 	// which Ingress resources this ControlPlane should be responsible for.
@@ -233,8 +228,6 @@ const (
 )
 
 // ControlPlaneDataPlaneSync defines the configuration for syncing Kong configuration to the DataPlane.
-//
-// +apireference:kgo:include
 type ControlPlaneDataPlaneSync struct {
 	// ReverseSync sends configuration to DataPlane (Kong Gateway) even if
 	// the configuration checksum has not changed since previous update.
@@ -331,8 +324,6 @@ type ControlPlaneGatewayDiscovery struct {
 
 // ControlPlaneK8sCache defines the configuration related to Kubernetes object caches
 // of the ControlPlane.
-//
-// +apireference:kgo:include
 type ControlPlaneK8sCache struct {
 	// InitSyncDuration defines the initial delay to wait for Kubernetes object caches to be synced before the initial configuration.
 	// If omitted, the default value (5s) is used.
@@ -353,7 +344,6 @@ const (
 
 // ControlPlaneConfigDump defines the options for dumping translated Kong configuration from a diagnostics server.
 //
-// +apireference:kgo:include
 // +kubebuilder:validation:XValidation:message="Cannot enable dumpSensitive when state is disabled",rule="self.state == 'enabled' || self.dumpSensitive == 'disabled'"
 type ControlPlaneConfigDump struct {
 	// When State is enabled, Operator will dump the translated Kong configuration by it from a diagnostics server.
@@ -413,8 +403,6 @@ const (
 
 // ControlPlaneController defines a controller state for the ControlPlane.
 // It overrides the default behavior as defined in the deployed operator version.
-//
-// +apireference:kgo:include
 type ControlPlaneController struct {
 	// Name is the name of the controller.
 	//
@@ -444,8 +432,6 @@ const (
 
 // ControlPlaneFeatureGate defines a feature gate state for the ControlPlane.
 // It overrides the default behavior as defined in the deployed operator version.
-//
-// +apireference:kgo:include
 type ControlPlaneFeatureGate struct {
 	// Name is the name of the feature gate.
 	//
@@ -460,9 +446,7 @@ type ControlPlaneFeatureGate struct {
 	State FeatureGateState `json:"state"`
 }
 
-// ControlPlaneStatus defines the observed state of ControlPlane
-//
-// +apireference:kgo:include
+// ControlPlaneStatus defines the observed state of ControlPlane.
 type ControlPlaneStatus struct {
 	// Conditions describe the current conditions of the Gateway.
 	//
@@ -525,8 +509,6 @@ func (c *ControlPlane) GetExtensions() []commonv1alpha1.ExtensionRef {
 }
 
 // ControlPlaneKonnectOptions defines the Konnect-related configuration options for the ControlPlane.
-//
-// +apireference:kgo:include
 type ControlPlaneKonnectOptions struct {
 	// ConsumersSync indicates whether consumer synchronization with Konnect is enabled.
 	//
@@ -564,7 +546,6 @@ const (
 
 // ControlPlaneKonnectLicensing defines the configuration for Konnect licensing.
 //
-// +apireference:kgo:include
 // +kubebuilder:validation:XValidation:message="initialPollingPeriod can only be set when licensing is enabled",rule="!has(self.initialPollingPeriod) || self.state == 'enabled'"
 // +kubebuilder:validation:XValidation:message="pollingPeriod can only be set when licensing is enabled",rule="!has(self.pollingPeriod) || self.state == 'enabled'"
 // +kubebuilder:validation:XValidation:message="storageState can only be set to enabled when licensing is enabled",rule="!has(self.storageState) || self.storageState == 'disabled' || self.state == 'enabled'"
