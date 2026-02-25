@@ -4,7 +4,6 @@ package v1beta1
 //
 // +kubebuilder:validation:XValidation:message="list is required when type is 'list'", rule="self.type == 'list' ? has(self.list) : true"
 // +kubebuilder:validation:XValidation:message="list must not be specified when type is not 'list'", rule="self.type != 'list' ? !has(self.list) : true"
-// +apireference:kgo:include
 type WatchNamespaces struct {
 	// Type indicates the type of namespace watching to be done.
 	// By default, all namespaces are watched.

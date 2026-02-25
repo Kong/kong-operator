@@ -95,6 +95,28 @@ func TestDataplane(t *testing.T) {
 				},
 				ExpectedErrorMessage: new("Extension not allowed for DataPlane"),
 			},
+			{
+				Name: "cross namespace extension reference is not allowed",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: validDataplaneOptions.Deployment,
+							Extensions: []commonv1alpha1.ExtensionRef{
+								{
+									Group: "konnect.konghq.com",
+									Kind:  "KonnectExtension",
+									NamespacedRef: commonv1alpha1.NamespacedRef{
+										Name:      "my-konnect-extension",
+										Namespace: new("namespace2"),
+									},
+								},
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: new("Cross namespace references not allowed for extension references"),
+			},
 		}.
 			RunWithConfig(t, cfg, scheme)
 	})

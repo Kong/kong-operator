@@ -17,4 +17,5 @@ limitations under the License.
 // Package v1alpha1 contains API Schema definitions for the configuration.konghq.com v1alpha1 API group.
 // +kubebuilder:object:generate=true
 // +groupName=configuration.konghq.com
+// +apireference:kgo:include-all-types
 package v1alpha1

@@ -4,10 +4,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
@@ -419,6 +421,218 @@ func TestMergeExtensions(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := MergeExtensions(tt.defaultExtensions, tt.extendable)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestMergeExtensionsForDataPlane(t *testing.T) {
+	tests := []struct {
+		name             string
+		managingObject   *operatorv1beta1.DataPlane
+		configExtensions []commonv1alpha1.ExtensionRef
+		konnectExtension *konnectv1alpha2.KonnectExtension
+		expected         []commonv1alpha1.ExtensionRef
+	}{
+		{
+			name: "nil konnect extension and no config extensions returns nil",
+			managingObject: &operatorv1beta1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+				},
+			},
+			configExtensions: nil,
+			konnectExtension: nil,
+			expected:         nil,
+		},
+		{
+			name: "nil konnect extension with config extensions returns config extensions",
+			managingObject: &operatorv1beta1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+				},
+			},
+			configExtensions: []commonv1alpha1.ExtensionRef{
+				{
+					Group: "group1",
+					Kind:  "kind1",
+					NamespacedRef: commonv1alpha1.NamespacedRef{
+						Name: "ext1",
+					},
+				},
+			},
+			konnectExtension: nil,
+			expected: []commonv1alpha1.ExtensionRef{
+				{
+					Group: "group1",
+					Kind:  "kind1",
+					NamespacedRef: commonv1alpha1.NamespacedRef{
+						Name: "ext1",
+					},
+				},
+			},
+		},
+		{
+			name: "konnect extension in same namespace as managing object has nil namespace in ref",
+			managingObject: &operatorv1beta1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+				},
+			},
+			configExtensions: nil,
+			konnectExtension: &konnectv1alpha2.KonnectExtension{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-konnect-ext",
+					Namespace: "default",
+				},
+			},
+			expected: []commonv1alpha1.ExtensionRef{
+				{
+					Group: konnectv1alpha2.SchemeGroupVersion.Group,
+					Kind:  konnectv1alpha2.KonnectExtensionKind,
+					NamespacedRef: commonv1alpha1.NamespacedRef{
+						Name:      "my-konnect-ext",
+						Namespace: nil,
+					},
+				},
+			},
+		},
+		{
+			name: "konnect extension in different namespace gets managing object namespace in ref",
+			managingObject: &operatorv1beta1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "dataplane-ns",
+				},
+			},
+			configExtensions: nil,
+			konnectExtension: &konnectv1alpha2.KonnectExtension{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-konnect-ext",
+					Namespace: "konnect-ns",
+				},
+			},
+			expected: []commonv1alpha1.ExtensionRef{
+				{
+					Group: konnectv1alpha2.SchemeGroupVersion.Group,
+					Kind:  konnectv1alpha2.KonnectExtensionKind,
+					NamespacedRef: commonv1alpha1.NamespacedRef{
+						Name:      "my-konnect-ext",
+						Namespace: new("dataplane-ns"),
+					},
+				},
+			},
+		},
+		{
+			name: "konnect extension takes precedence over config extension with same group and kind",
+			managingObject: &operatorv1beta1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+				},
+			},
+			configExtensions: []commonv1alpha1.ExtensionRef{
+				{
+					Group: konnectv1alpha2.SchemeGroupVersion.Group,
+					Kind:  konnectv1alpha2.KonnectExtensionKind,
+					NamespacedRef: commonv1alpha1.NamespacedRef{
+						Name: "config-konnect-ext",
+					},
+				},
+			},
+			konnectExtension: &konnectv1alpha2.KonnectExtension{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-konnect-ext",
+					Namespace: "default",
+				},
+			},
+			expected: []commonv1alpha1.ExtensionRef{
+				{
+					Group: konnectv1alpha2.SchemeGroupVersion.Group,
+					Kind:  konnectv1alpha2.KonnectExtensionKind,
+					NamespacedRef: commonv1alpha1.NamespacedRef{
+						Name:      "my-konnect-ext",
+						Namespace: nil,
+					},
+				},
+			},
+		},
+		{
+			name: "konnect extension merged with non-overlapping config extensions",
+			managingObject: &operatorv1beta1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+				},
+			},
+			configExtensions: []commonv1alpha1.ExtensionRef{
+				{
+					Group: "group1",
+					Kind:  "kind1",
+					NamespacedRef: commonv1alpha1.NamespacedRef{
+						Name: "config-ext",
+					},
+				},
+			},
+			konnectExtension: &konnectv1alpha2.KonnectExtension{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-konnect-ext",
+					Namespace: "default",
+				},
+			},
+			expected: []commonv1alpha1.ExtensionRef{
+				{
+					Group: "group1",
+					Kind:  "kind1",
+					NamespacedRef: commonv1alpha1.NamespacedRef{
+						Name: "config-ext",
+					},
+				},
+				{
+					Group: konnectv1alpha2.SchemeGroupVersion.Group,
+					Kind:  konnectv1alpha2.KonnectExtensionKind,
+					NamespacedRef: commonv1alpha1.NamespacedRef{
+						Name:      "my-konnect-ext",
+						Namespace: nil,
+					},
+				},
+			},
+		},
+		{
+			name: "DataPlaneMetricsExtension in config is filtered out for DataPlane",
+			managingObject: &operatorv1beta1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+				},
+			},
+			configExtensions: []commonv1alpha1.ExtensionRef{
+				{
+					Group: operatorv1alpha1.SchemeGroupVersion.Group,
+					Kind:  operatorv1alpha1.DataPlaneMetricsExtensionKind,
+					NamespacedRef: commonv1alpha1.NamespacedRef{
+						Name: "metrics-ext",
+					},
+				},
+			},
+			konnectExtension: &konnectv1alpha2.KonnectExtension{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-konnect-ext",
+					Namespace: "default",
+				},
+			},
+			expected: []commonv1alpha1.ExtensionRef{
+				{
+					Group: konnectv1alpha2.SchemeGroupVersion.Group,
+					Kind:  konnectv1alpha2.KonnectExtensionKind,
+					NamespacedRef: commonv1alpha1.NamespacedRef{
+						Name:      "my-konnect-ext",
+						Namespace: nil,
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := MergeExtensionsForDataPlane(tt.managingObject, tt.configExtensions, tt.konnectExtension)
 			assert.Equal(t, tt.expected, result)
 		})
 	}

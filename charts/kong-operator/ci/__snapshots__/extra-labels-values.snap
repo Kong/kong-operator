@@ -673,7 +673,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: ControlPlaneSpec defines the desired state of ControlPlane
+            description: ControlPlaneSpec defines the desired state of ControlPlane.
             properties:
               dataplane:
                 description: |-
@@ -8911,7 +8911,7 @@ spec:
             - message: Extension not allowed for ControlPlane
               rule: 'has(self.extensions) ? self.extensions.all(e, (e.group == ''konnect.konghq.com'' && e.kind == ''KonnectExtension'') || (e.group == ''gateway-operator.konghq.com'' && e.kind == ''DataPlaneMetricsExtension'')) : true'
           status:
-            description: ControlPlaneStatus defines the observed state of ControlPlane
+            description: ControlPlaneStatus defines the observed state of ControlPlane.
             properties:
               conditions:
                 default:
@@ -9741,7 +9741,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: DataPlaneSpec defines the desired state of DataPlane
+            description: DataPlaneSpec defines the desired state of DataPlane.
             properties:
               deployment:
                 description: |-
@@ -18856,7 +18856,7 @@ spec:
             - message: Extension not allowed for DataPlane
               rule: 'has(self.extensions) ? self.extensions.all(e, (e.group == ''konnect.konghq.com'' || e.group == ''gateway-operator.konghq.com'') && e.kind == ''KonnectExtension'') : true'
           status:
-            description: DataPlaneStatus defines the observed state of DataPlane
+            description: DataPlaneStatus defines the observed state of DataPlane.
             properties:
               addresses:
                 description: Addresses lists the addresses that have actually been bound to the DataPlane.
@@ -19145,6 +19145,8 @@ spec:
           rule: '!has(self.spec.deployment.podTemplateSpec) ? true : ( self.spec.deployment.podTemplateSpec.spec.containers.size() == 0 || self.spec.deployment.podTemplateSpec.spec.containers[0].name == ''proxy'' ? (!has(self.spec.deployment.podTemplateSpec.spec.containers[0].env) ? true : self.spec.deployment.podTemplateSpec.spec.containers[0].env.all(e, e.name != ''KONG_DATABASE'' || e.value == ''off'' || size(e.value)==0)) : true)'
         - message: DataPlane spec cannot be updated when promotion is in progress
           rule: '(self.spec != oldSelf.spec && has(self.status) && has(self.status.rollout) && has(self.status.rollout.conditions)) ? self.status.rollout.conditions.all(c, c.type != ''RolledOut'' || c.reason != ''PromotionInProgress'') : true'
+        - message: Cross namespace references not allowed for extension references
+          rule: '!has(self.spec.extensions) || self.spec.extensions.all(e, ( !has(e.__namespace__)))'
     served: true
     storage: true
     subresources:
@@ -36574,7 +36576,7 @@ spec:
             - message: Can only specify listener's NodePort when the type of service for dataplane to receive ingress traffic ('spec.dataPlaneOptions.network.services.ingress') is NodePort or LoadBalancer
               rule: '(has(self.dataPlaneOptions) && has(self.dataPlaneOptions.network) && has(self.dataPlaneOptions.network.services) &&  has(self.dataPlaneOptions.network.services.ingress) && (self.dataPlaneOptions.network.services.ingress.type == ''LoadBalancer'' || self.dataPlaneOptions.network.services.ingress.type == ''NodePort'')) ? true : (!has(self.listenersOptions) || self.listenersOptions.all(l,!has(l.nodePort)))'
           status:
-            description: GatewayConfigurationStatus defines the observed state of GatewayConfiguration
+            description: GatewayConfigurationStatus defines the observed state of GatewayConfiguration.
             properties:
               conditions:
                 description: Conditions describe the current conditions of the GatewayConfigurationStatus.

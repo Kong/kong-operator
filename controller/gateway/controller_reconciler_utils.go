@@ -68,7 +68,7 @@ func (r *Reconciler) createDataPlane(
 		return nil, err
 	}
 
-	dataplane.Spec.Extensions = extensions.MergeExtensionsForDataPlane(gatewayConfig.Spec.Extensions, konnectExtension)
+	dataplane.Spec.Extensions = extensions.MergeExtensionsForDataPlane(gateway, gatewayConfig.Spec.Extensions, konnectExtension)
 
 	k8sutils.SetOwnerForObject(dataplane, gateway)
 	gatewayutils.LabelObjectAsGatewayManaged(dataplane)
