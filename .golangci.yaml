@@ -3,7 +3,6 @@ run:
   timeout: 8m
   build-tags:
     - integration_tests
-    - envtest
 linters:
   enable:
     - asasalint

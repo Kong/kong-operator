@@ -119,7 +119,7 @@ golangci-lint-cache-path:
 
 .PHONY: go-fix
 go-fix:
-	GOFLAGS="-tags=integration_tests,envtest" go fix ./...
+	GOFLAGS="-tags=integration_tests" go fix ./...
 
 GOTESTSUM_VERSION = $(shell $(YQ) -r '.gotestsum' < $(TOOLS_VERSIONS_FILE))
 GOTESTSUM = $(PROJECT_DIR)/bin/installs/github-gotestyourself-gotestsum/$(GOTESTSUM_VERSION)/gotestsum
@@ -596,7 +596,6 @@ _test.envtest: gotestsum setup-envtest
 		$(GOTESTSUM) -- \
 		$(GOTESTFLAGS) \
 		-race \
-		-tags envtest \
 		-timeout $(ENVTEST_TIMEOUT) \
 		-covermode=atomic \
 		-coverpkg=$(PKG_LIST) \
