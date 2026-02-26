@@ -9,17 +9,13 @@ import (
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/crd-from-oas/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/crd-from-oas/test/crdsvalidation/common"
 	testscheme "github.com/kong/kong-operator/v2/crd-from-oas/test/scheme"
-	"github.com/kong/kong-operator/v2/test/envtest"
 )
 
 func TestPortalCustomDomain(t *testing.T) {
 	t.Parallel()
 
-	ctx := t.Context()
 	scheme := testscheme.Get()
-	cfg, ns := envtest.Setup(t, ctx, scheme,
-		envtest.WithInstallGatewayCRDs(false),
-	)
+	cfg, ns := common.Setup(t, scheme)
 
 	validSpec := func() konnectv1alpha1.PortalCustomDomainSpec {
 		return konnectv1alpha1.PortalCustomDomainSpec{

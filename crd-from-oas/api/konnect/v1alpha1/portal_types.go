@@ -86,7 +86,6 @@ type PortalAPISpec struct {
 	// unless set during publication.
 	//
 	// +optional
-	// +kubebuilder:validation:MaxLength=256
 	DefaultApplicationAuthStrategyIDRef *ObjectRef `json:"default_application_auth_strategy_id_ref,omitempty"`
 
 	// The default visibility of pages in the portal.
