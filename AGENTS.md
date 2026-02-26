@@ -19,11 +19,11 @@ make tools              # Install all required development tools via mise
 ## Linting
 
 ```bash
-make lint               # Run Go linters (modules, golangci-lint, modernize)
+make lint               # Run Go linters (modules, golangci-lint)
 make lint.all           # Full lint: Go + charts + GitHub Actions + markdown
 make lint.api           # Lint Kubernetes API types
 make lint.golangci-lint # Run golangci-lint linter for Go code
-make lint.modernize     # Run modernize on the codebase to ensure you're not using old or deprecated Go constructs.
+make go-fix             # Run go-fix on the codebase to ensure you're not using old or deprecated Go constructs.
 ```
 
 CI runs `make lint` with `GOLANGCI_LINT_FLAGS="--fix=false"` (auto-fix is enabled locally but disabled in CI).
