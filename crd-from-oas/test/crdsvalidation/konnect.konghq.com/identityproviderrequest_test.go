@@ -7,17 +7,13 @@ import (
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/crd-from-oas/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/crd-from-oas/test/crdsvalidation/common"
 	testscheme "github.com/kong/kong-operator/v2/crd-from-oas/test/scheme"
-	"github.com/kong/kong-operator/v2/test/envtest"
 )
 
 func TestIdentityProviderRequest(t *testing.T) {
 	t.Parallel()
 
-	ctx := t.Context()
 	scheme := testscheme.Get()
-	cfg, ns := envtest.Setup(t, ctx, scheme,
-		envtest.WithInstallGatewayCRDs(false),
-	)
+	cfg, ns := common.Setup(t, scheme)
 
 	t.Run("type field validation", func(t *testing.T) {
 		common.TestCasesGroup[*konnectv1alpha1.IdentityProviderRequest]{
