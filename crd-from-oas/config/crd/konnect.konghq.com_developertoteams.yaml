@@ -4,14 +4,14 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.20.1
-  name: portalcustomdomains.konnect.konghq.com
+  name: developertoteams.konnect.konghq.com
 spec:
   group: konnect.konghq.com
   names:
-    kind: PortalCustomDomain
-    listKind: PortalCustomDomainList
-    plural: portalcustomdomains
-    singular: portalcustomdomain
+    kind: DeveloperToTeam
+    listKind: DeveloperToTeamList
+    plural: developertoteams
+    singular: developertoteam
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
@@ -33,8 +33,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: PortalCustomDomain is the Schema for the portalcustomdomains
-          API.
+        description: DeveloperToTeam is the Schema for the developertoteams API.
         properties:
           apiVersion:
             description: |-
@@ -54,27 +53,11 @@ spec:
           metadata:
             type: object
           spec:
-            description: PortalCustomDomainSpec defines the desired state of PortalCustomDomain.
+            description: DeveloperToTeamSpec defines the desired state of DeveloperToTeam.
             properties:
               apiSpec:
                 description: APISpec defines the desired state of the resource's API
                   spec fields.
-                properties:
-                  enabled:
-                    type: boolean
-                  hostname:
-                    maxLength: 256
-                    minLength: 1
-                    type: string
-                  ssl:
-                    additionalProperties:
-                      type: string
-                    description: CreatePortalCustomDomainSSL is a type alias.
-                    type: object
-                required:
-                - enabled
-                - hostname
-                - ssl
                 type: object
               portal_ref:
                 description: PortalRef is the reference to the parent Portal object.
@@ -87,11 +70,23 @@ spec:
                 required:
                 - name
                 type: object
+              team_ref:
+                description: TeamRef is the reference to the parent Team object.
+                properties:
+                  name:
+                    description: Name is the name of the referenced object
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                required:
+                - name
+                type: object
             required:
             - portal_ref
+            - team_ref
             type: object
           status:
-            description: PortalCustomDomainStatus defines the observed state of PortalCustomDomain.
+            description: DeveloperToTeamStatus defines the observed state of DeveloperToTeam.
             properties:
               conditions:
                 description: Conditions represent the current state of the resource.
@@ -183,6 +178,15 @@ spec:
                   entity exists.
                 maxLength: 512
                 type: string
+              teamID:
+                description: TeamID is the Konnect ID of the parent Team.
+                properties:
+                  id:
+                    description: ID is the unique identifier of the Konnect entity
+                      as assigned by Konnect API.
+                    maxLength: 256
+                    type: string
+                type: object
             type: object
         required:
         - metadata
