@@ -4,7 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/samber/lo"
 	"k8s.io/utils/ptr"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/crd-from-oas/api/konnect/v1alpha1"
@@ -65,7 +64,7 @@ func TestPortalCustomDomain(t *testing.T) {
 						return s
 					}(),
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.portal_ref.name: Too long: may not be more than 253"),
+				ExpectedErrorMessage: new("spec.portal_ref.name: Too long: may not be more than 253"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -101,7 +100,7 @@ func TestPortalCustomDomain(t *testing.T) {
 						return s
 					}(),
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.apiSpec.hostname: Too long: may not be more than 256"),
+				ExpectedErrorMessage: new("spec.apiSpec.hostname: Too long: may not be more than 256"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
