@@ -3,8 +3,6 @@ package configuration_test
 import (
 	"testing"
 
-	"github.com/samber/lo"
-
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/crd-from-oas/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/crd-from-oas/test/crdsvalidation/common"
 	testscheme "github.com/kong/kong-operator/v2/crd-from-oas/test/scheme"
@@ -97,7 +95,7 @@ func TestDcrProvider(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr(`spec.apiSpec.type: Unsupported value: "InvalidType"`),
+				ExpectedErrorMessage: new(`spec.apiSpec.type: Unsupported value: "InvalidType"`),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
