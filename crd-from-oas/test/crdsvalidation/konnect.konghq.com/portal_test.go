@@ -15,7 +15,9 @@ func TestPortal(t *testing.T) {
 
 	ctx := t.Context()
 	scheme := testscheme.Get()
-	cfg, ns := envtest.Setup(t, ctx, scheme)
+	cfg, ns := envtest.Setup(t, ctx, scheme,
+		envtest.WithInstallGatewayCRDs(false),
+	)
 
 	t.Run("name field validation", func(t *testing.T) {
 		common.TestCasesGroup[*konnectv1alpha1.Portal]{

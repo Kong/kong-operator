@@ -67,7 +67,10 @@ run = 'go test -v -count 1 ${GOTESTFLAGS} ./pkg/... ./api/...'
 [tasks.test-crdsvalidation]
 description = "Run CRD validation tests"
 # Update test paths below if more API groups are added
+# TODO: copying to config/crd/kong-operator/ is a temporary workaround
+# to make the generated CRDs available in the CRD validation tests.
 run = '''
+cp config/crd/* ../config/crd/kong-operator/
 export KUBEBUILDER_ASSETS=$(setup-envtest use -p path)
 go test -v -count 1 ${GOTESTFLAGS} ./test/crdsvalidation/konnect.konghq.com/...
 '''
