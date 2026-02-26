@@ -121,16 +121,6 @@ golangci-lint-cache-path:
 go-fix:
 	GOFLAGS="-tags=integration_tests,envtest" go fix ./...
 
-MODERNIZE_VERSION = $(shell $(YQ) -r '.modernize' < $(TOOLS_VERSIONS_FILE))
-MODERNIZE = $(PROJECT_DIR)/bin/installs/go-golang-org-x-tools-gopls-internal-analysis-modernize-cmd-modernize/$(MODERNIZE_VERSION)/bin/modernize
-# Flags for modernize analyzer. Disable the "omitzero" category to avoid
-# warnings about `omitempty` on nested struct fields, which we intentionally
-# keep for compatibility with upstream expectations.
-MODERNIZE_FLAGS ?= -category=-omitzero
-.PHONY: modernize
-modernize: yq
-	$(MAKE) mise-install DEP_VER=go:golang.org/x/tools/gopls/internal/analysis/modernize/cmd/modernize@$(MODERNIZE_VERSION)
-
 GOTESTSUM_VERSION = $(shell $(YQ) -r '.gotestsum' < $(TOOLS_VERSIONS_FILE))
 GOTESTSUM = $(PROJECT_DIR)/bin/installs/github-gotestyourself-gotestsum/$(GOTESTSUM_VERSION)/gotestsum
 .PHONY: gotestsum
@@ -265,7 +255,7 @@ govulncheck: download.govulncheck
 
 GOLANGCI_LINT_CONFIG ?= $(PROJECT_DIR)/.golangci.yaml
 .PHONY: lint
-lint: lint.modules lint.golangci-lint lint.modernize
+lint: lint.modules lint.golangci-lint
 
 .PHONY: lint.modules
 lint.modules:
@@ -274,10 +264,6 @@ lint.modules:
 .PHONY: lint.golangci-lint
 lint.golangci-lint: golangci-lint
 	$(GOLANGCI_LINT) run -v --config $(GOLANGCI_LINT_CONFIG) $(GOLANGCI_LINT_FLAGS)
-
-.PHONY: lint.modernize
-lint.modernize: modernize
-	$(MODERNIZE) $(MODERNIZE_FLAGS) ./...
 
 .PHONY: lint.charts
 lint.charts: download.kube-linter
@@ -337,7 +323,7 @@ API_DIR ?= api
 #   make generate && make manifests && make test.charts.golden.update
 # into a single command: make generate
 # Note: manifests is placed near the end to preserve the prior ordering (docs are generated from CRDs first).
-generate: generate.crds generate.crd-kustomize generate.k8sio-gomod-replace generate.deepcopy generate.apitypes-funcs generate.docs generate.lint-fix generate.format manifests test.charts.golden.update generate.cli-arguments-docs
+generate: generate.crds generate.crd-kustomize generate.k8sio-gomod-replace generate.deepcopy generate.apitypes-funcs generate.docs generate.lint-fix manifests test.charts.golden.update generate.cli-arguments-docs
 
 .PHONY: generate.crds
 generate.crds: controller-gen ## Generate WebhookConfiguration and CustomResourceDefinition objects.
@@ -370,11 +356,6 @@ generate.apidocs: crd-ref-docs
 .PHONY: generate.lint-fix
 generate.lint-fix: golangci-lint
 	$(GOLANGCI_LINT) run -v --config $(GOLANGCI_LINT_CONFIG) --fix
-
-# Ensure generated code matches linters' expectations (run modernize like in lint)
-.PHONY: generate.format
-generate.format: modernize
-	$(MODERNIZE) $(MODERNIZE_FLAGS) ./...
 
 # this will generate the custom typed clients needed for end-users implementing logic in Go to use our API types.
 .PHONY: generate.clientsets

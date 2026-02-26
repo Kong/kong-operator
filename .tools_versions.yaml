@@ -4,8 +4,6 @@ code-generator: "0.35.1"
 controller-tools: "0.20.1"
 # renovate: datasource=github-releases depName=golangci/golangci-lint
 golangci-lint: "2.10.1"
-# TODO: Renovate comment is missing. This needs to be added at some point.
-modernize: "0.19.1"
 # renovate: datasource=github-releases depName=GoogleContainerTools/skaffold
 skaffold: "2.17.2"
 # renovate: datasource=github-releases depName=go-delve/delve
