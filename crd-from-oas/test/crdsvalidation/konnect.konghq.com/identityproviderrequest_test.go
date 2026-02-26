@@ -4,8 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/samber/lo"
-
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/crd-from-oas/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/crd-from-oas/test/crdsvalidation/common"
 	testscheme "github.com/kong/kong-operator/v2/crd-from-oas/test/scheme"
@@ -53,7 +51,7 @@ func TestIdentityProviderRequest(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr(`spec.apiSpec.type: Unsupported value: "invalid"`),
+				ExpectedErrorMessage: new(`spec.apiSpec.type: Unsupported value: "invalid"`),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -96,7 +94,7 @@ func TestIdentityProviderRequest(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.apiSpec.login_path: Too long: may not be more than 256"),
+				ExpectedErrorMessage: new("spec.apiSpec.login_path: Too long: may not be more than 256"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -159,7 +157,7 @@ func TestIdentityProviderRequest(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr(`spec.apiSpec.config.type: Unsupported value: "InvalidConfigType"`),
+				ExpectedErrorMessage: new(`spec.apiSpec.config.type: Unsupported value: "InvalidConfigType"`),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)

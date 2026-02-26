@@ -4,8 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/samber/lo"
-
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/crd-from-oas/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/crd-from-oas/test/crdsvalidation/common"
 	testscheme "github.com/kong/kong-operator/v2/crd-from-oas/test/scheme"
@@ -66,7 +64,7 @@ func TestPortalTeam(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.portal_ref.name: Too long: may not be more than 253"),
+				ExpectedErrorMessage: new("spec.portal_ref.name: Too long: may not be more than 253"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -108,7 +106,7 @@ func TestPortalTeam(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.apiSpec.name: Too long: may not be more than 256"),
+				ExpectedErrorMessage: new("spec.apiSpec.name: Too long: may not be more than 256"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -160,7 +158,7 @@ func TestPortalTeam(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.apiSpec.description: Too long: may not be more than 250"),
+				ExpectedErrorMessage: new("spec.apiSpec.description: Too long: may not be more than 250"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
