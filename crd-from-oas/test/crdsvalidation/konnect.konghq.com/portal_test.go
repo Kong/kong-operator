@@ -4,8 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/samber/lo"
-
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/crd-from-oas/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/crd-from-oas/test/crdsvalidation/common"
 	testscheme "github.com/kong/kong-operator/v2/crd-from-oas/test/scheme"
@@ -53,7 +51,7 @@ func TestPortal(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.apiSpec.name: Too long: may not be more than 255"),
+				ExpectedErrorMessage: new("spec.apiSpec.name: Too long: may not be more than 255"),
 			},
 			{
 				Name: "name is immutable",
@@ -68,7 +66,7 @@ func TestPortal(t *testing.T) {
 				Update: func(p *konnectv1alpha1.Portal) {
 					p.Spec.APISpec.Name = "changed-portal-name"
 				},
-				ExpectedUpdateErrorMessage: lo.ToPtr("name is immutable"),
+				ExpectedUpdateErrorMessage: new("name is immutable"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -111,7 +109,7 @@ func TestPortal(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.apiSpec.display_name: Too long: may not be more than 255"),
+				ExpectedErrorMessage: new("spec.apiSpec.display_name: Too long: may not be more than 255"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -126,7 +124,7 @@ func TestPortal(t *testing.T) {
 					Spec: konnectv1alpha1.PortalSpec{
 						APISpec: konnectv1alpha1.PortalAPISpec{
 							Name:        "portal-desc-max",
-							Description: lo.ToPtr(strings.Repeat("x", 512)),
+							Description: new(strings.Repeat("x", 512)),
 						},
 					},
 				},
@@ -138,11 +136,11 @@ func TestPortal(t *testing.T) {
 					Spec: konnectv1alpha1.PortalSpec{
 						APISpec: konnectv1alpha1.PortalAPISpec{
 							Name:        "portal-desc-over",
-							Description: lo.ToPtr(strings.Repeat("x", 513)),
+							Description: new(strings.Repeat("x", 513)),
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.apiSpec.description: Too long: may not be more than 512"),
+				ExpectedErrorMessage: new("spec.apiSpec.description: Too long: may not be more than 512"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -185,7 +183,7 @@ func TestPortal(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr(`spec.apiSpec.default_api_visibility: Unsupported value: "invalid"`),
+				ExpectedErrorMessage: new(`spec.apiSpec.default_api_visibility: Unsupported value: "invalid"`),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -228,7 +226,7 @@ func TestPortal(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr(`spec.apiSpec.default_page_visibility: Unsupported value: "invalid"`),
+				ExpectedErrorMessage: new(`spec.apiSpec.default_page_visibility: Unsupported value: "invalid"`),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -244,7 +242,7 @@ func TestPortal(t *testing.T) {
 						APISpec: konnectv1alpha1.PortalAPISpec{
 							Name:                    "portal-full-spec",
 							DisplayName:             "Full Spec Portal",
-							Description:             lo.ToPtr("A full spec portal"),
+							Description:             new("A full spec portal"),
 							AuthenticationEnabled:   true,
 							AutoApproveApplications: true,
 							AutoApproveDevelopers:   true,
