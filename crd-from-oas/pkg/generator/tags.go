@@ -20,8 +20,8 @@ func KubebuilderTags(prop *parser.Property, entityName string, fieldConfig *conf
 		tags = append(tags, markerOptional())
 	}
 
-	// String validations
-	if prop.Type == "string" {
+	// String validations (skip for reference properties which become ObjectRef)
+	if prop.Type == "string" && !prop.IsReference {
 		if prop.MinLength != nil {
 			tags = append(tags, markerValidationMinLength(int(*prop.MinLength)))
 		} else if prop.Required && !prop.Nullable {

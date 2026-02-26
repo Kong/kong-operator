@@ -17,7 +17,9 @@ func TestPortalCustomDomain(t *testing.T) {
 
 	ctx := t.Context()
 	scheme := testscheme.Get()
-	cfg, ns := envtest.Setup(t, ctx, scheme)
+	cfg, ns := envtest.Setup(t, ctx, scheme,
+		envtest.WithInstallGatewayCRDs(false),
+	)
 
 	validSpec := func() konnectv1alpha1.PortalCustomDomainSpec {
 		return konnectv1alpha1.PortalCustomDomainSpec{
