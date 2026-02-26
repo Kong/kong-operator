@@ -42,7 +42,6 @@ CONFIG_FILE = "config.yaml"
 
 [tasks.generate-crds]
 description = "Generate CRD manifests from the API types"
-dir = ".."
 # TODO: temporary.
 # This should be hooked into:
 # go run ./scripts/crds-generator
@@ -56,7 +55,7 @@ run = "controller-gen object paths=./api/..."
 
 [tasks.lint]
 description = "Run golangci-lint"
-run = "golangci-lint run -v --config .golangci.yml"
+run = "golangci-lint run -v --config .golangci.yml ./..."
 
 [tasks.lint-api]
 description = "Run golangci-lint"
