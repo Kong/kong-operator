@@ -16,6 +16,7 @@ With Kong Operator, users can:
 * Upgrade Data Planes using a [rolling restart][docs_upgrade_rolling] or [blue/green deployments][docs_upgrade_bg].
 * Configure [auto scaling on Data Planes][docs_autoscaling].
 
+
 [docs_sidecar]: https://developer.konghq.com/operator/dataplanes/how-to/deploy-sidecars/
 [docs_dataplane_image]: https://developer.konghq.com/operator/dataplanes/how-to/set-dataplane-image/
 [docs_podtemplatespec]: https://developer.konghq.com/operator/dataplanes/reference/podtemplatespec/
