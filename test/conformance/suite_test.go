@@ -12,6 +12,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned/typed/apis/v1"
@@ -191,6 +192,9 @@ func waitForConformanceGatewaysToCleanup(ctx context.Context, gw gwapiv1.Gateway
 			return fmt.Errorf("conformance cleanup failed (%d gateways remain): %w", gatewayRemaining, ctx.Err())
 		case <-ticker.C:
 			gws, err := gwClient.List(ctx, metav1.ListOptions{})
+			if apierrors.IsNotFound(err) {
+				return nil
+			}
 			for _, g := range gws.Items {
 				fmt.Printf(">>> INFO: Gateway %s has deletion timestamp %v and finalizers %v\n", g.Name, g.DeletionTimestamp, g.Finalizers)
 			}
@@ -219,6 +223,9 @@ func waitForConformanceKonnectGatewayControlPlanesToCleanup(ctx context.Context)
 		case <-ticker.C:
 			var controlPlaneList konnectv1alpha2.KonnectGatewayControlPlaneList
 			if err := clients.MgrClient.List(ctx, &controlPlaneList, client.InNamespace(conformanceInfraNamespace)); err != nil {
+				if apierrors.IsNotFound(err) {
+					return nil
+				}
 				return fmt.Errorf("failed to list KonnectGatewayControlPlanes in %s namespace during cleanup: %w", conformanceInfraNamespace, err)
 			}
 
