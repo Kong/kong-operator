@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -83,11 +84,23 @@ func TestGatewayConformance(t *testing.T) {
 
 	const looserTimeout = 180 * time.Second
 
+	cleanupResources := !test.SkipCleanup()
+	ensureConformanceNamespace(ctx, t)
+	if cleanupResources {
+		t.Cleanup(func() {
+			ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: conformanceInfraNamespace}}
+			err := clients.MgrClient.Delete(ctx, ns)
+			if err != nil && !apierrors.IsNotFound(err) {
+				require.NoError(t, err)
+			}
+		})
+	}
+
 	// Conformance tests are run for both available router flavours:
 	// traditional_compatible and expressions.
 	var (
 		kongRouterFlavor  consts.RouterFlavor
-		skippedTests      = skippedTestsShared
+		skippedTests      = append([]string{}, skippedTestsShared...)
 		supportedFeatures sets.Set[features.FeatureName]
 	)
 	switch rf := KongRouterFlavor(t); rf {
@@ -104,63 +117,83 @@ func TestGatewayConformance(t *testing.T) {
 	supportedFeatures, err := gatewayapipkg.GetSupportedFeatures(kongRouterFlavor)
 	require.NoError(t, err)
 
-	t.Logf("using the following Kong router flavor for the conformance tests: %s", kongRouterFlavor)
+	runConformance := func(t *testing.T, gatewayType gatewayType, skipped []string) {
+		t.Helper()
 
-	t.Log("creating GatewayConfiguration and GatewayClass for gateway conformance tests")
+		if cleanupResources {
+			t.Cleanup(func() {
+				require.NoError(t, waitForConformanceGatewaysToCleanup(ctx, clients.GatewayClient.GatewayV1()))
+				if gatewayType == hybridGateway {
+					require.NoError(t, waitForConformanceKonnectGatewayControlPlanesToCleanup(ctx))
+				}
+			})
+		}
 
-	gatewayType := standardGateway
+		t.Logf("using the following Kong router flavor for the conformance tests: %s", kongRouterFlavor)
+		t.Log("creating GatewayConfiguration and GatewayClass for gateway conformance tests")
+
+		gwconf := createGatewayConfiguration(ctx, t, kongRouterFlavor, gatewayType)
+		gwc := createGatewayClass(ctx, t, gwconf)
+
+		// There are no explicit conformance tests for GatewayClass, but we can
+		// still run the conformance test suite setup to ensure that the
+		// GatewayClass gets accepted.
+		t.Logf("configuring the Gateway API (%s) conformance test suite", gatewayType)
+		// Currently mode only relies on the KongRouterFlavor, but in the future
+		// we may want to add more modes.
+		mode := string(kongRouterFlavor)
+		metadata := metadata.Metadata()
+		reportFileName := fmt.Sprintf("experimental-%s-%s-%s-report.yaml", metadata.Release, mode, gatewayType)
+
+		// Set looser timeouts to avoid flakiness.
+		timeoutConfig := conformanceconfig.DefaultTimeoutConfig()
+		timeoutConfig.GatewayStatusMustHaveListeners = looserTimeout
+		timeoutConfig.GatewayListenersMustHaveConditions = looserTimeout
+		timeoutConfig.HTTPRouteMustHaveCondition = looserTimeout
+
+		opts := conformance.DefaultOptions(t)
+		// It takes default conformance suite configuration manifests from provided location.
+		opts.ManifestFS = kcfg.GatewayAPIConformanceTestsFilesystemsWithManifests()
+		opts.ReportOutputPath = "../../" + reportFileName
+		opts.Implementation = conformancev1.Implementation{
+			Organization: metadata.Organization,
+			Project:      metadata.ProjectName,
+			URL:          metadata.RepoURL,
+			Version:      metadata.Release,
+			Contact: []string{
+				metadata.RepoURL + "/issues/new/choose",
+			},
+		}
+		opts.Mode = mode
+		opts.ConformanceProfiles = sets.New(
+			suite.GatewayHTTPConformanceProfileName,
+			suite.GatewayGRPCConformanceProfileName,
+		)
+		opts.SupportedFeatures = supportedFeatures
+		opts.SkipTests = skipped
+		opts.CleanupBaseResources = cleanupResources
+		opts.GatewayClassName = gwc.Name
+		opts.Client = clients.MgrClient
+		opts.TimeoutConfig = timeoutConfig
+		opts.RestConfig.QPS = -1
+
+		t.Log("running the Gateway API conformance test suite")
+		conformance.RunConformanceWithOptions(t, opts)
+	}
+
+	t.Run("standard", func(t *testing.T) {
+		runConformance(t, standardGateway, append([]string{}, skippedTests...))
+	})
+
 	if test.KonnectAccessToken() != "" {
-		gatewayType = hybridGateway
-		skippedTests = append(skippedTests, skippedTestsForHybrid...)
+		t.Run("hybrid", func(t *testing.T) {
+			hybridSkipped := append([]string{}, skippedTests...)
+			hybridSkipped = append(hybridSkipped, skippedTestsForHybrid...)
+			runConformance(t, hybridGateway, hybridSkipped)
+		})
+	} else {
+		t.Log("no Konnect access token provided - skipping hybrid Gateway conformance")
 	}
-
-	gwconf := createGatewayConfiguration(ctx, t, kongRouterFlavor, gatewayType)
-	gwc := createGatewayClass(ctx, t, gwconf)
-
-	// There are no explicit conformance tests for GatewayClass, but we can
-	// still run the conformance test suite setup to ensure that the
-	// GatewayClass gets accepted.
-	t.Logf("configuring the Gateway API (%s) conformance test suite", gatewayType)
-	// Currently mode only relies on the KongRouterFlavor, but in the future
-	// we may want to add more modes.
-	mode := string(kongRouterFlavor)
-	metadata := metadata.Metadata()
-	reportFileName := fmt.Sprintf("experimental-%s-%s-%s-report.yaml", metadata.Release, mode, gatewayType)
-
-	// Set looser timeouts to avoid flakiness.
-	timeoutConfig := conformanceconfig.DefaultTimeoutConfig()
-	timeoutConfig.GatewayStatusMustHaveListeners = looserTimeout
-	timeoutConfig.GatewayListenersMustHaveConditions = looserTimeout
-	timeoutConfig.HTTPRouteMustHaveCondition = looserTimeout
-
-	opts := conformance.DefaultOptions(t)
-	// It takes default conformance suite configuration manifests from provided location.
-	opts.ManifestFS = kcfg.GatewayAPIConformanceTestsFilesystemsWithManifests()
-	opts.ReportOutputPath = "../../" + reportFileName
-	opts.Implementation = conformancev1.Implementation{
-		Organization: metadata.Organization,
-		Project:      metadata.ProjectName,
-		URL:          metadata.RepoURL,
-		Version:      metadata.Release,
-		Contact: []string{
-			metadata.RepoURL + "/issues/new/choose",
-		},
-	}
-	opts.Mode = mode
-	opts.ConformanceProfiles = sets.New(
-		suite.GatewayHTTPConformanceProfileName,
-		suite.GatewayGRPCConformanceProfileName,
-	)
-	opts.SupportedFeatures = supportedFeatures
-	opts.SkipTests = skippedTests
-	opts.CleanupBaseResources = !test.SkipCleanup()
-	opts.GatewayClassName = gwc.Name
-	opts.Client = clients.MgrClient
-	opts.TimeoutConfig = timeoutConfig
-	opts.RestConfig.QPS = -1
-
-	t.Log("running the Gateway API conformance test suite")
-	conformance.RunConformanceWithOptions(t, opts)
 }
 
 type gatewayType string
@@ -170,22 +203,27 @@ const (
 	hybridGateway   gatewayType = "hybrid"
 )
 
-func createGatewayConfiguration(
-	ctx context.Context, t *testing.T, kongRouterFlavor consts.RouterFlavor, gatewayType gatewayType,
-) *operatorv2beta1.GatewayConfiguration {
+func ensureConformanceNamespace(ctx context.Context, t *testing.T) {
+	t.Helper()
+
 	testNamespace := corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: conformanceInfraNamespace,
 		},
 	}
-	require.NoError(t, clients.MgrClient.Create(ctx, &testNamespace))
-	t.Cleanup(func() {
-		require.NoError(t, clients.MgrClient.Delete(ctx, &testNamespace))
-	})
+	err := clients.MgrClient.Create(ctx, &testNamespace)
+	if err != nil && !apierrors.IsAlreadyExists(err) {
+		require.NoError(t, err)
+	}
+}
+
+func createGatewayConfiguration(
+	ctx context.Context, t *testing.T, kongRouterFlavor consts.RouterFlavor, gatewayType gatewayType,
+) *operatorv2beta1.GatewayConfiguration {
 	gwconf := operatorv2beta1.GatewayConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "ko-gwconf-conformance-",
-			Namespace:    testNamespace.Name,
+			Namespace:    conformanceInfraNamespace,
 		},
 		Spec: operatorv2beta1.GatewayConfigurationSpec{
 			DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
@@ -237,7 +275,7 @@ func createGatewayConfiguration(
 		kapi := konnectv1alpha1.KonnectAPIAuthConfiguration{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "api-auth-config-",
-				Namespace:    testNamespace.Name,
+				Namespace:    conformanceInfraNamespace,
 			},
 			Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 				Type:      konnectv1alpha1.KonnectAPIAuthTypeToken,
