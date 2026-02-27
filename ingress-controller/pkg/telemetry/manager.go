@@ -11,8 +11,8 @@ import (
 	"github.com/kong/kubernetes-telemetry/pkg/serializers"
 	"github.com/kong/kubernetes-telemetry/pkg/telemetry"
 	k8stypes "k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/metadata"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -52,9 +52,13 @@ func CreateManager(
 	if err != nil {
 		return nil, fmt.Errorf("failed to create controller-runtime kubernetes client: %w", err)
 	}
-	dyn := dynamic.New(k.Discovery().RESTClient())
 
-	m, err := createManager(k, dyn, cl, gatewaysCounter, fixedPayload, reportCfg.ReportValues,
+	metadataClient, err := metadata.NewForConfig(restConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create client-go metadata client: %w", err)
+	}
+
+	m, err := createManager(k, metadataClient, cl, gatewaysCounter, fixedPayload, reportCfg.ReportValues,
 		telemetry.OptManagerPeriod(reportCfg.TelemetryPeriod),
 		telemetry.OptManagerLogger(logger),
 	)
@@ -79,7 +83,7 @@ func CreateManager(
 
 func createManager(
 	k kubernetes.Interface,
-	dyn dynamic.Interface,
+	metadataClient metadata.Interface,
 	cl client.Client,
 	gatewaysCounter workflows.DiscoveredGatewaysCounter,
 	fixedPayload types.Payload,
@@ -105,7 +109,7 @@ func createManager(
 
 	// Add cluster state workflow
 	{
-		w, err := telemetry.NewClusterStateWorkflow(dyn, cl.RESTMapper())
+		w, err := telemetry.NewClusterStateWorkflow(metadataClient, cl.RESTMapper())
 		if err != nil {
 			return nil, fmt.Errorf("failed to create cluster state workflow: %w", err)
 		}
