@@ -1,0 +1,107 @@
+name: Conformance tests
+
+on:
+  workflow_call: {}
+
+permissions:
+  contents: read
+
+env:
+  MISE_VERBOSE: 1
+  MISE_DEBUG: 1
+
+jobs:
+  conformance-tests:
+    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 60) }}
+    runs-on: ubuntu-latest
+    name: ${{ format('{0}', matrix.router-flavor) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - router-flavor: traditional_compatible
+        - router-flavor: expressions
+    steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@5ef0c079ce82195b2a36a210272d6b661572d83e # v2.14.2
+      with:
+        egress-policy: audit
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      with:
+        # Fetch all history so that we can get the correct commit hash for the conformance tests.
+        fetch-depth: 0
+
+    - name: setup golang
+      uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
+      with:
+        go-version-file: go.mod
+        cache: false
+
+    - uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8 # v3.6.1
+      with:
+        install: false
+
+    - run: echo "GO_MOD_CACHE=$(go env GOMODCACHE)" >> $GITHUB_ENV
+    - run: echo "GO_BUILD_CACHE=$(go env GOCACHE)" >> $GITHUB_ENV
+
+    - run: echo "GO_CACHE_KEY=go-conformancetests-${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.mod') }}" >> $GITHUB_ENV
+    - run: echo "GO_CACHE_KEY_2=go-conformancetests-${{ runner.os }}-${{ runner.arch }}-go-" >> $GITHUB_ENV
+
+    - name: Go cache main branch
+      if: ${{ github.ref == 'refs/heads/main' }}
+      uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+      with:
+        path: |
+          ${{ env.GO_MOD_CACHE }}
+          ${{ env.GO_BUILD_CACHE }}
+        key: ${{ env.GO_CACHE_KEY }}
+        restore-keys: |
+          ${{ env.GO_CACHE_KEY }}
+          ${{ env.GO_CACHE_KEY_2 }}
+
+    - name: Go cache (restore only for non-main branches)
+      if: ${{ github.ref != 'refs/heads/main' }}
+      uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+      with:
+        path: |
+          ${{ env.GO_MOD_CACHE }}
+          ${{ env.GO_BUILD_CACHE }}
+        key: ${{ env.GO_CACHE_KEY }}
+        restore-keys: |
+          ${{ env.GO_CACHE_KEY }}
+          ${{ env.GO_CACHE_KEY_2 }}
+
+    - name: run conformance tests
+      run: make test.conformance
+      env:
+        GOTESTSUM_JUNITFILE: conformance-tests-${{ matrix.router-flavor }}.xml
+        TEST_KONG_ROUTER_FLAVOR: ${{ matrix.router-flavor }}
+
+    - name: upload diagnostics
+      if: ${{ always() }}
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+      with:
+        name: diagnostics-conformance-${{ matrix.router-flavor }}
+        path: /tmp/ktf-diag*
+        if-no-files-found: ignore
+
+    - name: collect test report
+      if: ${{ always() }}
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+      with:
+        name: tests-report-conformance-${{ matrix.router-flavor }}
+        path: conformance-tests-${{ matrix.router-flavor }}.xml
+
+    - name: collect conformance report
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+      with:
+        name: conformance-report-${{ matrix.router-flavor }}
+        path: experimental-*-report.yaml
+
+    - name: upload controller logs
+      if: ${{ always() }}
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+      with:
+        name: controller-logs-${{ matrix.router-flavor }}
+        path: /tmp/kong-operator-controller-logs*
+        if-no-files-found: error

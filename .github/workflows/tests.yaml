@@ -84,61 +84,10 @@ jobs:
           make docker.run.openssf
 
   lint:
-    runs-on: ubuntu-latest
     needs: [check-docs-only]
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
-    steps:
-    - name: Harden Runner
-      uses: step-security/harden-runner@5ef0c079ce82195b2a36a210272d6b661572d83e # v2.14.2
-      with:
-        egress-policy: audit
-    - name: Checkout repository
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-    - name: Setup go
-      uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
-      with:
-        go-version-file: go.mod
-        cache: false
-
-    - uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8 # v3.6.1
-      with:
-        install: false
-
-    - run: make golangci-lint
-
-    - run: |
-        {
-          echo "GO_MOD_CACHE=$(go env GOMODCACHE)"
-          echo "GO_BUILD_CACHE=$(go env GOCACHE)"
-          echo "GOLANGCI_LINT_CACHE=$(make golangci-lint-cache-path)"
-          echo "GO_CACHE_KEY=go-lint-${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.mod') }}"
-          echo "GO_CACHE_KEY_2=go-lint-${{ runner.os }}-${{ runner.arch }}-go-"
-        } >> $GITHUB_ENV
-
-    - name: Go cache
-      uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
-      with:
-        path: |
-          ${{ env.GO_MOD_CACHE }}
-          ${{ env.GO_BUILD_CACHE }}
-          ${{ env.GOLANGCI_LINT_CACHE }}
-        key: ${{ env.GO_CACHE_KEY }}
-        restore-keys: |
-          ${{ env.GO_CACHE_KEY }}
-          ${{ env.GO_CACHE_KEY_2 }}
-
-    - name: run lint
-      env:
-        # Our .golangci.yaml has fix: true, but we don't want that in CI therefore the below override.
-        GOLANGCI_LINT_FLAGS: "--fix=false"
-      run: make lint
-
-    - name: run lint.api
-      run: make lint.api
-
-    - name: run lint.actions
-      run: make lint.actions
+    uses: ./.github/workflows/__lint.yaml
+    secrets: inherit
 
   lint-markdownlint:
     runs-on: ubuntu-latest
@@ -191,10 +140,28 @@ jobs:
       uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
       with:
         go-version-file: go.mod
+        cache: false
 
     - uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8 # v3.6.1
       with:
         install: false
+
+    - run: echo "GO_MOD_CACHE=$(go env GOMODCACHE)" >> $GITHUB_ENV
+    - run: echo "GO_BUILD_CACHE=$(go env GOCACHE)" >> $GITHUB_ENV
+
+    - run: echo "GO_CACHE_KEY=go-build-${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.mod') }}" >> $GITHUB_ENV
+    - run: echo "GO_CACHE_KEY_2=go-build-${{ runner.os }}-${{ runner.arch }}-go-" >> $GITHUB_ENV
+
+    - name: Go cache (restore only from build cache)
+      uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+      with:
+        path: |
+          ${{ env.GO_MOD_CACHE }}
+          ${{ env.GO_BUILD_CACHE }}
+        key: ${{ env.GO_CACHE_KEY }}
+        restore-keys: |
+          ${{ env.GO_CACHE_KEY }}
+          ${{ env.GO_CACHE_KEY_2 }}
 
     - name: Verify go fix
       run: make verify.go-fix
@@ -348,15 +315,27 @@ jobs:
         go-version-file: go.mod
         cache: false
 
-    - run: |
-        echo "GO_MOD_CACHE=$(go env GOMODCACHE)" >> $GITHUB_ENV
-        echo "GO_BUILD_CACHE=$(go env GOCACHE)" >> $GITHUB_ENV
+    - run: echo "GO_MOD_CACHE=$(go env GOMODCACHE)" >> $GITHUB_ENV
+    - run: echo "GO_BUILD_CACHE=$(go env GOCACHE)" >> $GITHUB_ENV
 
     - run: echo "GO_CACHE_KEY=go-build-${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.mod') }}" >> $GITHUB_ENV
     - run: echo "GO_CACHE_KEY_2=go-build-${{ runner.os }}-${{ runner.arch }}-go-" >> $GITHUB_ENV
 
-    - name: Go cache
+    - name: Go cache main branch
+      if: ${{ github.ref == 'refs/heads/main' }}
       uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+      with:
+        path: |
+          ${{ env.GO_MOD_CACHE }}
+          ${{ env.GO_BUILD_CACHE }}
+        key: ${{ env.GO_CACHE_KEY }}
+        restore-keys: |
+          ${{ env.GO_CACHE_KEY }}
+          ${{ env.GO_CACHE_KEY_2 }}
+
+    - name: Go cache (restore only for non-main branches)
+      if: ${{ github.ref != 'refs/heads/main' }}
+      uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
       with:
         path: |
           ${{ env.GO_MOD_CACHE }}
@@ -378,60 +357,14 @@ jobs:
     secrets: inherit
 
   CRDs:
-    runs-on: ubuntu-latest
     needs:
     - check-docs-only
     - matrix_k8s_node_versions
-    strategy:
-      matrix:
-        kubernetes-node-version: ${{ fromJson(needs.matrix_k8s_node_versions.outputs.matrix) }}
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
-    steps:
-    - name: Harden Runner
-      uses: step-security/harden-runner@5ef0c079ce82195b2a36a210272d6b661572d83e # v2.14.2
-      with:
-        egress-policy: audit
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-    - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
-      with:
-        go-version-file: go.mod
-        cache: false
-
-    - uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8 # v3.6.1
-      with:
-        install: false
-
-    - run: |
-        echo "GO_MOD_CACHE=$(go env GOMODCACHE)" >> $GITHUB_ENV
-        echo "GO_BUILD_CACHE=$(go env GOCACHE)" >> $GITHUB_ENV
-
-    - run: echo "GO_CACHE_KEY=go-crdsvalidationtests-${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.mod') }}" >> $GITHUB_ENV
-    - run: echo "GO_CACHE_KEY_2=go-crdsvalidationtests-${{ runner.os }}-${{ runner.arch }}-go-" >> $GITHUB_ENV
-
-    - name: Go cache
-      uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
-      with:
-        path: |
-          ${{ env.GO_MOD_CACHE }}
-          ${{ env.GO_BUILD_CACHE }}
-        key: ${{ env.GO_CACHE_KEY }}
-        restore-keys: |
-          ${{ env.GO_CACHE_KEY }}
-          ${{ env.GO_CACHE_KEY_2 }}
-
-    - name: Run the crds validation tests
-      run: |
-        VERSION="${{ matrix.kubernetes-node-version }}"
-        # Remove leading 'v'
-        VERSION="${VERSION#v}"
-        # Remove patch number as envtest releases are not provided for every patch version
-        VERSION="${VERSION%.*}"
-        echo "Cluster version: $VERSION"
-        make test.crds-validation CLUSTER_VERSION=${VERSION}
-
-    - name: Run the API tests
-      run: make test.api
+    uses: ./.github/workflows/__crdvalidation_tests.yaml
+    secrets: inherit
+    with:
+      cluster_versions: ${{ needs.matrix_k8s_node_versions.outputs.matrix }}  
 
   envtest-tests:
     needs:
@@ -446,175 +379,24 @@ jobs:
   kongintegration-tests:
     needs: [check-docs-only]
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
-    uses: ./.github/workflows/_kongintegration_tests.yaml
+    uses: ./.github/workflows/__kongintegration_tests.yaml
     secrets: inherit
 
   conformance-tests:
-    runs-on: ubuntu-latest
     needs: [check-docs-only]
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-        - router-flavor: traditional_compatible
-        - router-flavor: expressions
-    steps:
-    - name: Harden Runner
-      uses: step-security/harden-runner@5ef0c079ce82195b2a36a210272d6b661572d83e # v2.14.2
-      with:
-        egress-policy: audit
-    - name: checkout repository
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      with:
-        # Fetch all history so that we can get the correct commit hash for the conformance tests.
-        fetch-depth: 0
-
-    - name: setup golang
-      uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
-      with:
-        go-version-file: go.mod
-        cache: false
-
-    - uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8 # v3.6.1
-      with:
-        install: false
-
-    - run: |
-        echo "GO_MOD_CACHE=$(go env GOMODCACHE)" >> $GITHUB_ENV
-        echo "GO_BUILD_CACHE=$(go env GOCACHE)" >> $GITHUB_ENV
-
-    - run: echo "GO_CACHE_KEY=go-conformancetests-${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.mod') }}" >> $GITHUB_ENV
-    - run: echo "GO_CACHE_KEY_2=go-conformancetests-${{ runner.os }}-${{ runner.arch }}-go-" >> $GITHUB_ENV
-
-    - name: Go cache
-      uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
-      with:
-        path: |
-          ${{ env.GO_MOD_CACHE }}
-          ${{ env.GO_BUILD_CACHE }}
-        key: ${{ env.GO_CACHE_KEY }}
-        restore-keys: |
-          ${{ env.GO_CACHE_KEY }}
-          ${{ env.GO_CACHE_KEY_2 }}
-
-    - name: run conformance tests
-      run: make test.conformance
-      env:
-        GOTESTSUM_JUNITFILE: conformance-tests-${{ matrix.router-flavor }}.xml
-        TEST_KONG_ROUTER_FLAVOR: ${{ matrix.router-flavor }}
-
-    - name: upload diagnostics
-      if: ${{ always() }}
-      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-      with:
-        name: diagnostics-conformance-${{ matrix.router-flavor }}
-        path: /tmp/ktf-diag*
-        if-no-files-found: ignore
-
-    - name: collect test report
-      if: ${{ always() }}
-      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-      with:
-        name: tests-report-conformance-${{ matrix.router-flavor }}
-        path: conformance-tests-${{ matrix.router-flavor }}.xml
-
-    - name: collect conformance report
-      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-      with:
-        name: conformance-report-${{ matrix.router-flavor }}
-        path: experimental-*-report.yaml
-
-    - name: upload controller logs
-      if: ${{ always() }}
-      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-      with:
-        name: controller-logs-${{ matrix.router-flavor }}
-        path: /tmp/kong-operator-controller-logs*
-        if-no-files-found: error
+    uses: ./.github/workflows/__conformance_tests.yaml
+    secrets: inherit
 
   integration-tests:
-    runs-on: ubuntu-latest
-    name: integration-tests
     needs:
       - check-docs-only
       - matrix_k8s_node_versions
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
-    strategy:
-      matrix:
-        suite:
-          - ko
-          - kic
-    steps:
-    - name: Harden Runner
-      uses: step-security/harden-runner@5ef0c079ce82195b2a36a210272d6b661572d83e # v2.14.2
-      with:
-        egress-policy: audit
-    - name: checkout repository
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-    - name: setup golang
-      uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
-      with:
-        go-version-file: go.mod
-        cache: false
-
-    - uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8 # v3.6.1
-      with:
-        install: false
-
-    - run: |
-        echo "GO_MOD_CACHE=$(go env GOMODCACHE)" >> $GITHUB_ENV
-        echo "GO_BUILD_CACHE=$(go env GOCACHE)" >> $GITHUB_ENV
-
-    - run: echo "GO_CACHE_KEY=go-integrationtests-${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.mod') }}" >> $GITHUB_ENV
-    - run: echo "GO_CACHE_KEY_2=go-integrationtests-${{ runner.os }}-${{ runner.arch }}-go-" >> $GITHUB_ENV
-
-    - name: Go cache
-      uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
-      with:
-        path: |
-          ${{ env.GO_MOD_CACHE }}
-          ${{ env.GO_BUILD_CACHE }}
-        key: ${{ env.GO_CACHE_KEY }}
-        restore-keys: |
-          ${{ env.GO_CACHE_KEY }}
-          ${{ env.GO_CACHE_KEY_2 }}
-
-    - name: run integration tests
-      run: make test.integration-${{ matrix.suite }}
-      env:
-        KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS: ${{ secrets.KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS }}
-        KONG_CONTROLLER_OUT: stdout
-        GOTESTSUM_JUNITFILE: "integration-tests-${{ matrix.suite }}.xml"
-        KONG_TEST_KONNECT_ACCESS_TOKEN: ${{ secrets.KONG_TEST_KONNECT_ACCESS_TOKEN }}
-        KONG_TEST_KONNECT_SERVER_URL: us.api.konghq.tech
-        KONG_CLUSTER_VERSION: ${{ needs.matrix_k8s_node_versions.outputs.latest }}
-        # This is needed for ktf to find latest releases of addons.
-        # This could be changed so that ktf addons have their versions pinned
-        # in the test Makefile instead.
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: upload diagnostics
-      if: always()
-      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-      with:
-        name: diagnostics-integration-${{ matrix.suite }}
-        path: /tmp/ktf-diag*
-        if-no-files-found: ignore
-
-    - name: collect test coverage
-      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-      with:
-        name: ${{ matrix.suite }}-coverage-integration
-        path: coverage.integration.${{ matrix.suite }}.out
-
-    - name: collect test report
-      if: ${{ always() }}
-      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-      with:
-        name: ${{ matrix.suite }}-tests-report-integration
-        path: integration-tests-${{ matrix.suite }}.xml
+    uses: ./.github/workflows/__integration_tests.yaml
+    secrets: inherit
+    with:
+      cluster_version: ${{ needs.matrix_k8s_node_versions.outputs.latest }}
 
   integration-tests-validating-webhook:
     runs-on: ubuntu-latest
@@ -646,9 +428,8 @@ jobs:
       with:
         install: false
 
-    - run: |
-        echo "GO_MOD_CACHE=$(go env GOMODCACHE)" >> $GITHUB_ENV
-        echo "GO_BUILD_CACHE=$(go env GOCACHE)" >> $GITHUB_ENV
+    - run: echo "GO_MOD_CACHE=$(go env GOMODCACHE)" >> $GITHUB_ENV
+    - run: echo "GO_BUILD_CACHE=$(go env GOCACHE)" >> $GITHUB_ENV
 
     - run: echo "GO_CACHE_KEY=go-integrationtestsvalidatingwebhook-${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.mod') }}" >> $GITHUB_ENV
     - run: echo "GO_CACHE_KEY_2=go-integrationtestsvalidatingwebhook-${{ runner.os }}-${{ runner.arch }}-go-" >> $GITHUB_ENV
@@ -720,9 +501,8 @@ jobs:
       with:
         install: false
 
-    - run: |
-        echo "GO_MOD_CACHE=$(go env GOMODCACHE)" >> $GITHUB_ENV
-        echo "GO_BUILD_CACHE=$(go env GOCACHE)" >> $GITHUB_ENV
+    - run: echo "GO_MOD_CACHE=$(go env GOMODCACHE)" >> $GITHUB_ENV
+    - run: echo "GO_BUILD_CACHE=$(go env GOCACHE)" >> $GITHUB_ENV
 
     - run: echo "GO_CACHE_KEY=go-integrationtestsbluegreen-${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.mod') }}" >> $GITHUB_ENV
     - run: echo "GO_CACHE_KEY_2=go-integrationtestsbluegreen-${{ runner.os }}-${{ runner.arch }}-go-" >> $GITHUB_ENV
