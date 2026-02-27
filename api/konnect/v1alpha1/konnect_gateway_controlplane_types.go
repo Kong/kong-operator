@@ -25,8 +25,8 @@ func init() {
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
 // +kubebuilder:printcolumn:name="ID",description="Konnect ID",type=string,JSONPath=`.status.id`
 // +kubebuilder:printcolumn:name="OrgID",description="Konnect Organization ID this resource belongs to.",type=string,JSONPath=`.status.organizationID`
-// +kubebuilder:validation:XValidation:message="spec.konnect.authRef is immutable when an entity is already Programmed", rule="(!has(self.status) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : self.spec.konnect.authRef == oldSelf.spec.konnect.authRef"
-// +kubebuilder:validation:XValidation:message="spec.konnect.authRef is immutable when an entity refers to a Valid API Auth Configuration", rule="(!has(self.status) || !self.status.conditions.exists(c, c.type == 'APIAuthValid' && c.status == 'True')) ? true : self.spec.konnect.authRef == oldSelf.spec.konnect.authRef"
+// +kubebuilder:validation:XValidation:message="spec.konnect.authRef is immutable when an entity is already Programmed", rule="(!has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : self.spec.konnect.authRef == oldSelf.spec.konnect.authRef"
+// +kubebuilder:validation:XValidation:message="spec.konnect.authRef is immutable when an entity refers to a Valid API Auth Configuration", rule="(!has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'APIAuthValid' && c.status == 'True')) ? true : self.spec.konnect.authRef == oldSelf.spec.konnect.authRef"
 // +kong:channels=kong-operator
 type KonnectGatewayControlPlane struct {
 	metav1.TypeMeta   `json:",inline"`

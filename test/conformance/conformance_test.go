@@ -11,7 +11,9 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/wait"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance"
 	conformancev1 "sigs.k8s.io/gateway-api/conformance/apis/v1"
@@ -85,7 +87,6 @@ func TestGatewayConformance(t *testing.T) {
 	const looserTimeout = 180 * time.Second
 
 	cleanupResources := !test.SkipCleanup()
-	ensureConformanceNamespace(ctx, t)
 	if cleanupResources {
 		t.Cleanup(func() {
 			ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: conformanceInfraNamespace}}
@@ -119,6 +120,7 @@ func TestGatewayConformance(t *testing.T) {
 
 	runConformance := func(t *testing.T, gatewayType gatewayType, skipped []string) {
 		t.Helper()
+		ensureConformanceNamespace(ctx, t)
 
 		if cleanupResources {
 			t.Cleanup(func() {
@@ -206,12 +208,48 @@ const (
 func ensureConformanceNamespace(ctx context.Context, t *testing.T) {
 	t.Helper()
 
+	nsKey := types.NamespacedName{Name: conformanceInfraNamespace}
+	ns := &corev1.Namespace{}
+	err := clients.MgrClient.Get(ctx, nsKey, ns)
+	if err != nil && !apierrors.IsNotFound(err) {
+		require.NoError(t, err)
+	}
+	if apierrors.IsNotFound(err) {
+		testNamespace := corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: conformanceInfraNamespace,
+			},
+		}
+		err := clients.MgrClient.Create(ctx, &testNamespace)
+		if err != nil && !apierrors.IsAlreadyExists(err) {
+			require.NoError(t, err)
+		}
+		return
+	}
+
+	if ns.DeletionTimestamp == nil {
+		return
+	}
+
+	t.Logf("namespace %s is terminating, waiting for deletion", conformanceInfraNamespace)
+	err = wait.PollUntilContextTimeout(ctx, 2*time.Second, 2*time.Minute, true, func(ctx context.Context) (bool, error) {
+		err := clients.MgrClient.Get(ctx, nsKey, &corev1.Namespace{})
+		if apierrors.IsNotFound(err) {
+			return true, nil
+		}
+		if err != nil {
+			return false, err
+		}
+		return false, nil
+	})
+	require.NoError(t, err)
+
 	testNamespace := corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: conformanceInfraNamespace,
 		},
 	}
-	err := clients.MgrClient.Create(ctx, &testNamespace)
+	err = clients.MgrClient.Create(ctx, &testNamespace)
 	if err != nil && !apierrors.IsAlreadyExists(err) {
 		require.NoError(t, err)
 	}
