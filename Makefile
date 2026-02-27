@@ -89,11 +89,11 @@ YQ = $(PROJECT_DIR)/bin/installs/github-mikefarah-yq/$(YQ_VERSION)/yq_$(OS)_$(AR
 yq: mise # Download yq locally if necessary.
 	$(MAKE) mise-install DEP_VER=github:mikefarah/yq@$(YQ_VERSION)
 
-CONTROLLER_GEN_VERSION = $(shell $(YQ) -r '.controller-tools' < $(TOOLS_VERSIONS_FILE))
-CONTROLLER_GEN = $(PROJECT_DIR)/bin/installs/github-kubernetes-sigs-controller-tools/$(CONTROLLER_GEN_VERSION)/controller-gen
+CONTROLLER_GEN = controller-gen
 .PHONY: controller-gen
 controller-gen: mise yq ## Download controller-gen locally if necessary.
-	$(MAKE) mise-install DEP_VER=github:kubernetes-sigs/controller-tools@$(CONTROLLER_GEN_VERSION)
+	$(MAKE) mise-install DEP_VER=github:kubernetes-sigs/controller-tools
+	mise use github:kubernetes-sigs/controller-tools
 
 KUSTOMIZE_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["github:kubernetes-sigs/kustomize"].version' < $(MISE_FILE))
 KUSTOMIZE = $(PROJECT_DIR)/bin/installs/github-kubernetes-sigs-kustomize/$(KUSTOMIZE_VERSION)/kustomize
@@ -326,7 +326,7 @@ API_DIR ?= api
 generate: generate.crds generate.crd-kustomize generate.k8sio-gomod-replace generate.deepcopy generate.apitypes-funcs generate.docs generate.lint-fix manifests test.charts.golden.update generate.cli-arguments-docs
 
 .PHONY: generate.crds
-generate.crds: controller-gen ## Generate WebhookConfiguration and CustomResourceDefinition objects.
+generate.crds: ## Generate WebhookConfiguration and CustomResourceDefinition objects.
 	@echo "Generate CRDs in version $(VERSION)"
 	VERSION=$(VERSION) go run ./scripts/crds-generator
 
