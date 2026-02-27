@@ -1,6 +1,15 @@
 [settings.github]
 github_attestations = false
 
+[tools."github:kubernetes-sigs/controller-tools"]
+# renovate: datasource=github-releases depName=kubernetes-sigs/controller-tools
+version = "v0.20.1"
+bin = "controller-gen"
+[tools."github:kubernetes-sigs/controller-tools".platforms]
+linux-x64 = { asset_pattern = "controller-gen-linux-amd64" }
+linux-arm64 = { asset_pattern = "controller-gen-linux-arm64" }
+macos-arm64 = { asset_pattern = "controller-gen-darwin-arm64" }
+
 # NOTE: The reason for tool version being set here and not in .tools-versions.toml
 # is that mise requires the version to be specified when using version_prefix
 # and we need to set the latter for kustomize because its tags on GitHub are prefixed
