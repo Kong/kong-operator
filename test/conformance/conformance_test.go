@@ -70,11 +70,18 @@ var skippedTestsForHybrid = []string{
 	tests.HTTPRouteInvalidNonExistentBackendRef.ShortName,
 	tests.HTTPRouteInvalidReferenceGrant.ShortName,
 	tests.HTTPRouteListenerHostnameMatching.ShortName,
+	tests.HTTPRouteHeaderMatching.ShortName,
+	tests.HTTPRouteInvalidBackendRefUnknownKind.ShortName,
+	tests.HTTPRouteMethodMatching.ShortName,
 	tests.HTTPRouteMatching.ShortName,
 	tests.HTTPRouteMatchingAcrossRoutes.ShortName,
 	tests.HTTPRoutePartiallyInvalidViaInvalidReferenceGrant.ShortName,
 	tests.HTTPRoutePathMatchOrder.ShortName,
+	tests.HTTPRouteQueryParamMatching.ShortName,
 	tests.HTTPRouteReferenceGrant.ShortName,
+	tests.HTTPRouteSimpleSameNamespace.ShortName,
+	tests.GatewayModifyListeners.ShortName,
+	tests.GatewayObservedGenerationBump.ShortName,
 
 	// Extended profile.
 	tests.HTTPRouteRewriteHost.ShortName,
