@@ -131,9 +131,9 @@ func TestGatewayConformance(t *testing.T) {
 
 		if cleanupResources {
 			t.Cleanup(func() {
-				require.NoError(t, waitForConformanceGatewaysToCleanup(ctx, clients.GatewayClient.GatewayV1()))
+				require.NoError(t, waitForConformanceGatewaysToCleanup(ctx, clients.GatewayClient.GatewayV1(), t.Logf))
 				if gatewayType == hybridGateway {
-					require.NoError(t, waitForConformanceKonnectGatewayControlPlanesToCleanup(ctx))
+					require.NoError(t, waitForConformanceKonnectGatewayControlPlanesToCleanup(ctx, t.Logf))
 				}
 			})
 		}
@@ -339,7 +339,7 @@ func createGatewayConfiguration(
 			},
 		}
 	} else {
-		t.Log("no Konnect access token provided - deploying GatewayConfiguration as a traditional Gateway")
+		t.Log("deploying GatewayConfiguration as a standard (non-hybrid) Gateway")
 	}
 
 	require.NoError(t, clients.MgrClient.Create(ctx, &gwconf))
