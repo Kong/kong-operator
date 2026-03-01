@@ -27,6 +27,10 @@ import (
 	"github.com/kong/kong-operator/v2/test/helpers/kcfg"
 )
 
+// -----------------------------------------------------------------------------
+// Testing Vars - Environment Overridable
+// -----------------------------------------------------------------------------
+
 // conformanceInfraNamespace is the namespace where conformance
 // test suite creates its resources.
 const conformanceInfraNamespace = "gateway-conformance-infra"
@@ -130,8 +134,9 @@ func TestMain(m *testing.M) {
 	// If we don't do it then we'll be left with Gateways that have a deleted
 	// timestamp and finalizers set but no operator running which could handle those.
 	if cleanupResources {
-		exitOnErr(waitForConformanceGatewaysToCleanup(ctx, clients.GatewayClient.GatewayV1()))
-		exitOnErr(waitForConformanceKonnectGatewayControlPlanesToCleanup(ctx))
+		logf := func(format string, args ...any) { fmt.Printf(format+"\n", args...) }
+		exitOnErr(waitForConformanceGatewaysToCleanup(ctx, clients.GatewayClient.GatewayV1(), logf))
+		exitOnErr(waitForConformanceKonnectGatewayControlPlanesToCleanup(ctx, logf))
 	}
 
 	if existingCluster == "" && cleanupResources {
@@ -178,7 +183,7 @@ func startControllerManager(metadata metadata.Info) <-chan struct{} {
 	return startedChan
 }
 
-func waitForConformanceGatewaysToCleanup(ctx context.Context, gw gwapiv1.GatewayV1Interface) error {
+func waitForConformanceGatewaysToCleanup(ctx context.Context, gw gwapiv1.GatewayV1Interface, logf func(string, ...any)) error {
 	var (
 		gwClient         = gw.Gateways(conformanceInfraNamespace)
 		ticker           = time.NewTicker(100 * time.Millisecond)
@@ -195,11 +200,11 @@ func waitForConformanceGatewaysToCleanup(ctx context.Context, gw gwapiv1.Gateway
 			if apierrors.IsNotFound(err) {
 				return nil
 			}
-			for _, g := range gws.Items {
-				fmt.Printf(">>> INFO: Gateway %s has deletion timestamp %v and finalizers %v\n", g.Name, g.DeletionTimestamp, g.Finalizers)
-			}
 			if err != nil {
 				return fmt.Errorf("failed to list Gateways in %s namespace during cleanup: %w", conformanceInfraNamespace, err)
+			}
+			for _, g := range gws.Items {
+				logf("Gateway %s has deletion timestamp %v and finalizers %v", g.Name, g.DeletionTimestamp, g.Finalizers)
 			}
 			if len(gws.Items) == 0 {
 				return nil
@@ -209,7 +214,7 @@ func waitForConformanceGatewaysToCleanup(ctx context.Context, gw gwapiv1.Gateway
 	}
 }
 
-func waitForConformanceKonnectGatewayControlPlanesToCleanup(ctx context.Context) error {
+func waitForConformanceKonnectGatewayControlPlanesToCleanup(ctx context.Context, logf func(string, ...any)) error {
 	var (
 		ticker                 = time.NewTicker(100 * time.Millisecond)
 		controlPlanesRemaining = 0
@@ -230,11 +235,8 @@ func waitForConformanceKonnectGatewayControlPlanesToCleanup(ctx context.Context)
 			}
 
 			for _, cp := range controlPlaneList.Items {
-				fmt.Printf(
-					">>> INFO: KonnectGatewayControlPlane %s has deletion timestamp %v and finalizers %v\n",
-					cp.Name,
-					cp.DeletionTimestamp,
-					cp.Finalizers,
+				logf("KonnectGatewayControlPlane %s has deletion timestamp %v and finalizers %v",
+					cp.Name, cp.DeletionTimestamp, cp.Finalizers,
 				)
 			}
 
