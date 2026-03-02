@@ -37,7 +37,7 @@ depends = [ "clean" ]
 depends_post = [ "generate-deepcopy" ]
 [tasks.generate-api.env]
 INPUT_FILE = "openapi.yaml"
-OUTPUT_DIR = "api"
+OUTPUT_DIR = "api/"
 CONFIG_FILE = "config.yaml"
 
 [tasks.generate-crds]

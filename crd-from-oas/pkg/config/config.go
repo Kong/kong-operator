@@ -21,10 +21,14 @@ type APIGroupVersionConfig struct {
 	Types []*TypeConfig `yaml:"types"`
 }
 
+// CommonTypesConfig holds configuration for common types that can be shared
+// across multiple entities in the same API group-version.
 type CommonTypesConfig struct {
 	ObjectRef *ObjectRefConfig `yaml:"objectRef,omitempty"`
 }
 
+// ObjectRefConfig holds configuration for the common ObjectRef type, which
+// can be generated locally or imported from an existing package.
 type ObjectRefConfig struct {
 	// Generate indicates whether to generate a common ObjectRef type for
 	// referencing Kubernetes objects.
@@ -41,15 +45,6 @@ type ObjectRefConfig struct {
 	// ImportPath is the Go import path where the ObjectRef type is defined.
 	// Can't be set if Generate is true, and is required if Generate is false.
 	Import *ImportConfig `yaml:"import,omitempty"`
-}
-
-// ShouldGenerate returns true if ObjectRef should be generated locally.
-// Defaults to true when Generate is not explicitly set.
-func (c *ObjectRefConfig) ShouldGenerate() bool {
-	if c.Generate == nil {
-		return true
-	}
-	return *c.Generate
 }
 
 type ImportConfig struct {
@@ -128,47 +123,17 @@ func (c *APIGroupVersionConfig) OpsConfig(pathToEntityName map[string]string) ma
 	return result
 }
 
-// ParseSDKTypePath splits a fully qualified SDK type path like
-// "github.com/Kong/sdk-konnect-go/models/components.CreatePortal"
-// into its import path and type name by splitting on the last ".".
-func ParseSDKTypePath(path string) (importPath, typeName string, err error) {
-	lastDot := strings.LastIndex(path, ".")
-	if lastDot == -1 || lastDot == 0 || lastDot == len(path)-1 {
-		return "", "", fmt.Errorf("invalid SDK type path %q: must be in format 'importpath.TypeName'", path)
-	}
-	return path[:lastDot], path[lastDot+1:], nil
-}
-
-// LoadProjectConfig loads the project configuration from a YAML file.
-func LoadProjectConfig(path string) (*ProjectConfig, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read config file: %w", err)
-	}
-
-	var cfg ProjectConfig
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("failed to parse config file: %w", err)
-	}
-
-	if cfg.APIGroupVersions == nil {
-		return nil, fmt.Errorf("config file must contain apiGroupVersions")
-	}
-
-	for gv, agv := range cfg.APIGroupVersions {
-		if err := agv.validate(); err != nil {
-			return nil, fmt.Errorf("apiGroupVersion %q: %w", gv, err)
-		}
-	}
-
-	return &cfg, nil
-}
-
 func (c *APIGroupVersionConfig) validate() error {
 	if c.CommonTypes == nil || c.CommonTypes.ObjectRef == nil {
 		return nil
 	}
 	ref := c.CommonTypes.ObjectRef
+
+	// Default Generate to true when ObjectRef is present but Generate is not explicitly set.
+	if ref.Generate == nil && ref.Import == nil {
+		ref.Generate = new(true)
+	}
+
 	// Only flag mutual exclusion when generate is explicitly set to true.
 	if ref.Generate != nil && *ref.Generate && ref.Import != nil {
 		return fmt.Errorf("commonTypes.objectRef: generate and import are mutually exclusive")
