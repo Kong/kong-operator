@@ -6,6 +6,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/crd-from-oas/api/konnect/v1alpha1"
+	xkonnectv1alpha1 "github.com/kong/kong-operator/v2/crd-from-oas/api/x-konnect/v1alpha1"
 )
 
 // Get returns a scheme aware of all types the manager can interact with.
@@ -15,6 +16,7 @@ func Get() *runtime.Scheme {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(konnectv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(xkonnectv1alpha1.AddToScheme(scheme))
 
 	return scheme
 }

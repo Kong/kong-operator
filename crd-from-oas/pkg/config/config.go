@@ -16,7 +16,41 @@ type ProjectConfig struct {
 
 // APIGroupVersionConfig holds configuration for a single API group-version.
 type APIGroupVersionConfig struct {
+	CommonTypes *CommonTypesConfig `yaml:"commonTypes,omitempty"`
+
 	Types []*TypeConfig `yaml:"types"`
+}
+
+type CommonTypesConfig struct {
+	ObjectRef *ObjectRefConfig `yaml:"objectRef,omitempty"`
+}
+
+type ObjectRefConfig struct {
+	// Generate indicates whether to generate a common ObjectRef type for
+	// referencing Kubernetes objects.
+	// If false, the generator assumes that the designated API group version
+	// already defines an ObjectRef type.
+	// Defaults to true when not specified.
+	Generate *bool `yaml:"generate,omitempty"`
+	// ImportPath is the Go import path where the ObjectRef type is defined.
+	// Can't be set if Generate is true, and is required if Generate is false.
+	Import *ImportConfig `yaml:"import,omitempty"`
+}
+
+// ShouldGenerate returns true if ObjectRef should be generated locally.
+// Defaults to true when Generate is not explicitly set.
+func (c *ObjectRefConfig) ShouldGenerate() bool {
+	if c.Generate == nil {
+		return true
+	}
+	return *c.Generate
+}
+
+type ImportConfig struct {
+	// Path is the Go import path (e.g. "github.com/kong/kong-operator/v2/api/common/v1alpha1").
+	Path string `yaml:"path"`
+	// Alias is an optional alias to use for the imported package (e.g. "commonv1alpha1").
+	Alias string `yaml:"alias,omitempty"`
 }
 
 // TypeConfig holds configuration for a single CRD type (identified by its OpenAPI path).
@@ -115,7 +149,32 @@ func LoadProjectConfig(path string) (*ProjectConfig, error) {
 		return nil, fmt.Errorf("config file must contain apiGroupVersions")
 	}
 
+	for gv, agv := range cfg.APIGroupVersions {
+		if err := agv.validate(); err != nil {
+			return nil, fmt.Errorf("apiGroupVersion %q: %w", gv, err)
+		}
+	}
+
 	return &cfg, nil
+}
+
+func (c *APIGroupVersionConfig) validate() error {
+	if c.CommonTypes == nil || c.CommonTypes.ObjectRef == nil {
+		return nil
+	}
+	ref := c.CommonTypes.ObjectRef
+	// Only flag mutual exclusion when generate is explicitly set to true.
+	if ref.Generate != nil && *ref.Generate && ref.Import != nil {
+		return fmt.Errorf("commonTypes.objectRef: generate and import are mutually exclusive")
+	}
+	// Require import when generate is explicitly set to false.
+	if ref.Generate != nil && !*ref.Generate && ref.Import == nil {
+		return fmt.Errorf("commonTypes.objectRef: import is required when generate is false")
+	}
+	if ref.Import != nil && ref.Import.Path == "" {
+		return fmt.Errorf("commonTypes.objectRef.import: path is required")
+	}
+	return nil
 }
 
 // ParseAPIGroupVersion splits a "group/version" string into its group and version parts.

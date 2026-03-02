@@ -17,9 +17,7 @@ func TestPortalCustomDomain(t *testing.T) {
 
 	validSpec := func() konnectv1alpha1.PortalCustomDomainSpec {
 		return konnectv1alpha1.PortalCustomDomainSpec{
-			PortalRef: konnectv1alpha1.ObjectRef{
-				Name: "test-portal",
-			},
+			PortalRef: validPortalRef("test-portal"),
 			APISpec: konnectv1alpha1.PortalCustomDomainAPISpec{
 				Enabled:  new(true),
 				Hostname: "custom.example.com",
@@ -45,7 +43,7 @@ func TestPortalCustomDomain(t *testing.T) {
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: func() konnectv1alpha1.PortalCustomDomainSpec {
 						s := validSpec()
-						s.PortalRef.Name = strings.Repeat("a", 253)
+						s.PortalRef = validPortalRef(strings.Repeat("a", 253))
 						return s
 					}(),
 				},
@@ -56,11 +54,11 @@ func TestPortalCustomDomain(t *testing.T) {
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: func() konnectv1alpha1.PortalCustomDomainSpec {
 						s := validSpec()
-						s.PortalRef.Name = strings.Repeat("a", 254)
+						s.PortalRef = validPortalRef(strings.Repeat("a", 254))
 						return s
 					}(),
 				},
-				ExpectedErrorMessage: new("spec.portal_ref.name: Too long: may not be more than 253"),
+				ExpectedErrorMessage: new("spec.portal_ref.namespacedRef.name: Too long: may not be more than 253"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -133,9 +131,7 @@ func TestPortalCustomDomain(t *testing.T) {
 				TestObject: &konnectv1alpha1.PortalCustomDomain{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.PortalCustomDomainSpec{
-						PortalRef: konnectv1alpha1.ObjectRef{
-							Name: "test-portal",
-						},
+						PortalRef: validPortalRef("test-portal"),
 						APISpec: konnectv1alpha1.PortalCustomDomainAPISpec{
 							Enabled:  new(true),
 							Hostname: "portal.custom-domain.example.com",
