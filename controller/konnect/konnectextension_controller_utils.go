@@ -89,9 +89,10 @@ func (r *KonnectExtensionReconciler) getGatewayKonnectControlPlane(
 	}
 
 	// Set the controlPlaneRefValidCond to false in case the KonnectGatewayControlPlane is not programmed yet.
+	// Use NotProgrammed reason to differentiate from permanent Invalid (e.g., CP not found).
 	if !k8sutils.HasConditionTrue(konnectv1alpha1.KonnectEntityProgrammedConditionType, cp) {
 		controlPlaneRefValidCond.Status = metav1.ConditionFalse
-		controlPlaneRefValidCond.Reason = konnectv1alpha1.ControlPlaneRefReasonInvalid
+		controlPlaneRefValidCond.Reason = konnectv1alpha1.ControlPlaneRefReasonNotProgrammed
 		controlPlaneRefValidCond.Message = fmt.Sprintf("Konnect control plane %s/%s not programmed yet", cp.Name, cp.Namespace)
 		if res, _, errPatch := patch.StatusWithConditions(
 			ctx,

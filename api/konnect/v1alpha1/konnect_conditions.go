@@ -80,6 +80,11 @@ const (
 	// ControlPlaneRefReasonInvalid is the reason used with the ControlPlaneRefValid
 	// condition type indicating that the ControlPlane reference is invalid.
 	ControlPlaneRefReasonInvalid = "Invalid"
+	// ControlPlaneRefReasonNotProgrammed is the reason used with the ControlPlaneRefValid
+	// condition type indicating that the referenced ControlPlane exists but is not
+	// yet programmed in Konnect. This is typically a transient condition that resolves
+	// when the ControlPlane successfully syncs with the Konnect API.
+	ControlPlaneRefReasonNotProgrammed = "NotProgrammed"
 )
 
 const (
