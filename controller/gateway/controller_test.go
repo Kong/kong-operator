@@ -3,7 +3,9 @@ package gateway
 import (
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -16,9 +18,12 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	kcfgdataplane "github.com/kong/kong-operator/v2/api/gateway-operator/dataplane"
 	kcfggateway "github.com/kong/kong-operator/v2/api/gateway-operator/gateway"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
@@ -792,5 +797,190 @@ func BenchmarkGatewayReconciler_Reconcile(b *testing.B) {
 		if err != nil {
 			b.Error(err)
 		}
+	}
+}
+
+func TestProvisionKonnectExtension_ControlPlaneRefNotValid(t *testing.T) {
+	const (
+		testNamespace = "test-ns"
+		gatewayName   = "test-gateway"
+		cpName        = "test-cp"
+		extName       = "test-konnect-ext"
+		dpName        = "test-dataplane"
+	)
+
+	gateway := &gwtypes.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      gatewayName,
+			Namespace: testNamespace,
+			UID:       types.UID(uuid.NewString()),
+		},
+	}
+
+	konnectControlPlane := &konnectv1alpha2.KonnectGatewayControlPlane{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cpName,
+			Namespace: testNamespace,
+		},
+	}
+
+	testCases := []struct {
+		name string
+		// konnectExtension is the KonnectExtension to provision.
+		konnectExtension *konnectv1alpha2.KonnectExtension
+		// dataPlane is the DataPlane associated with the Gateway.
+		dataPlane *operatorv1beta1.DataPlane
+		// expectDataPlaneExists indicates whether the DataPlane should still exist after provisioning.
+		expectDataPlaneExists bool
+		// expectExtensionExists indicates whether the KonnectExtension should still exist after provisioning.
+		expectExtensionExists bool
+		// expectReturnNil indicates whether provisionKonnectExtension should return nil.
+		expectReturnNil bool
+	}{
+		{
+			name: "transient failure - CP ref matches current CP, DataPlane and extension preserved",
+			konnectExtension: &konnectv1alpha2.KonnectExtension{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      extName,
+					Namespace: testNamespace,
+					UID:       types.UID(uuid.NewString()),
+					Labels: map[string]string{
+						consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue,
+					},
+				},
+				Spec: konnectv1alpha2.KonnectExtensionSpec{
+					Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+						ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+							Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+								KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+									Name: cpName, // same as konnectControlPlane
+								},
+							},
+						},
+					},
+				},
+				Status: konnectv1alpha2.KonnectExtensionStatus{
+					Conditions: []metav1.Condition{
+						{
+							Type:   konnectv1alpha1.ControlPlaneRefValidConditionType,
+							Status: metav1.ConditionFalse,
+							Reason: konnectv1alpha1.ControlPlaneRefReasonNotProgrammed,
+						},
+					},
+				},
+			},
+			dataPlane: &operatorv1beta1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      dpName,
+					Namespace: testNamespace,
+					UID:       types.UID(uuid.NewString()),
+					Labels: map[string]string{
+						consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue,
+					},
+				},
+			},
+			expectDataPlaneExists: true,
+			expectExtensionExists: true,
+			expectReturnNil:       true,
+		},
+		{
+			name: "stale extension - CP ref differs from current CP, DataPlane preserved, extension deleted",
+			konnectExtension: &konnectv1alpha2.KonnectExtension{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      extName,
+					Namespace: testNamespace,
+					UID:       types.UID(uuid.NewString()),
+					Labels: map[string]string{
+						consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue,
+					},
+				},
+				Spec: konnectv1alpha2.KonnectExtensionSpec{
+					Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+						ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+							Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+								KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+									Name: "old-cp-name", // different from konnectControlPlane
+								},
+							},
+						},
+					},
+				},
+				Status: konnectv1alpha2.KonnectExtensionStatus{
+					Conditions: []metav1.Condition{
+						{
+							Type:   konnectv1alpha1.ControlPlaneRefValidConditionType,
+							Status: metav1.ConditionFalse,
+							Reason: konnectv1alpha1.ControlPlaneRefReasonInvalid,
+						},
+					},
+				},
+			},
+			dataPlane: &operatorv1beta1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      dpName,
+					Namespace: testNamespace,
+					UID:       types.UID(uuid.NewString()),
+					Labels: map[string]string{
+						consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue,
+					},
+				},
+			},
+			expectDataPlaneExists: true,
+			expectExtensionExists: false,
+			expectReturnNil:       true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := t.Context()
+			logger := logr.Discard()
+
+			// Set owner references so list functions can find the objects.
+			k8sutils.SetOwnerForObject(tc.konnectExtension, gateway)
+			k8sutils.SetOwnerForObject(tc.dataPlane, gateway)
+
+			objects := []controllerruntimeclient.Object{
+				gateway, konnectControlPlane.DeepCopy(),
+				tc.konnectExtension, tc.dataPlane,
+			}
+
+			fakeClient := fakectrlruntimeclient.
+				NewClientBuilder().
+				WithScheme(scheme.Get()).
+				WithObjects(objects...).
+				WithStatusSubresource(objects...).
+				Build()
+
+			reconciler := Reconciler{
+				Client: fakeClient,
+			}
+
+			result := reconciler.provisionKonnectExtension(ctx, logger, gateway, konnectControlPlane)
+
+			if tc.expectReturnNil {
+				assert.Nil(t, result, "provisionKonnectExtension should return nil")
+			} else {
+				assert.NotNil(t, result, "provisionKonnectExtension should return non-nil")
+			}
+
+			// Verify DataPlane existence.
+			dpList := &operatorv1beta1.DataPlaneList{}
+			require.NoError(t, fakeClient.List(ctx, dpList, controllerruntimeclient.InNamespace(testNamespace)))
+			if tc.expectDataPlaneExists {
+				assert.Len(t, dpList.Items, 1, "DataPlane should still exist")
+			} else {
+				assert.Empty(t, dpList.Items, "DataPlane should be deleted")
+			}
+
+			// Verify KonnectExtension existence.
+			extList := &konnectv1alpha2.KonnectExtensionList{}
+			require.NoError(t, fakeClient.List(ctx, extList, controllerruntimeclient.InNamespace(testNamespace)))
+			if tc.expectExtensionExists {
+				assert.Len(t, extList.Items, 1, "KonnectExtension should still exist")
+			} else {
+				assert.Empty(t, extList.Items, "KonnectExtension should be deleted")
+			}
+		})
 	}
 }
