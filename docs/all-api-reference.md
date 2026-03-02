@@ -4876,6 +4876,7 @@ Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1al
 - [KonnectCloudGatewayTransitGateway](#konnect-konghq-com-v1alpha1-konnectcloudgatewaytransitgateway)
 - [KonnectExtension](#konnect-konghq-com-v1alpha1-konnectextension)
 - [KonnectGatewayControlPlane](#konnect-konghq-com-v1alpha1-konnectgatewaycontrolplane)
+- [MCPServer](#konnect-konghq-com-v1alpha1-mcpserver)
 
 ### KonnectAPIAuthConfiguration
 
@@ -4969,6 +4970,20 @@ KonnectGatewayControlPlane is the Schema for the KonnectGatewayControlplanes API
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KonnectGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanespec)_ | Spec defines the desired state of KonnectGatewayControlPlane. |
 | `status` _[KonnectGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanestatus)_ | Status defines the observed state of KonnectGatewayControlPlane. |
+
+### MCPServer
+
+
+MCPServer is the Schema for the MCPServer API.
+
+<!-- mcp_server description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `MCPServer`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[MCPServerSpec](#konnect-konghq-com-v1alpha1-types-mcpserverspec)_ |  |
 
 ### Types
 
@@ -5625,6 +5640,22 @@ _Appears in:_
 
 - [KonnectCloudGatewayTransitGatewaySpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewayspec)
 
+#### MCPServerSpec
+
+
+MCPServerSpec is the specification of the MCPServer resource.
+
+
+
+| Field | Description |
+| --- | --- |
+| `mirror` _[MirrorSpec](#konnect-konghq-com-v1alpha1-types-mirrorspec)_ | Mirror is the Konnect Mirror configuration. It is only applicable for ControlPlanes that are created as Mirrors. |
+| `source` _[EntitySource](#common-konghq-com-v1alpha1-types-entitysource)_ | Source represents the source type of the Konnect entity. |
+
+_Appears in:_
+
+- [MCPServer](#konnect-konghq-com-v1alpha1-mcpserver)
+
 #### MirrorKonnect
 
 
@@ -5655,6 +5686,7 @@ _Appears in:_
 
 - [KonnectGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanespec)
 - [KonnectOptions](#gateway-operator-konghq-com-v2beta1-types-konnectoptions)
+- [MCPServerSpec](#konnect-konghq-com-v1alpha1-types-mcpserverspec)
 
 #### ProvisioningMethod
 

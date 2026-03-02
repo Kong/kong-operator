@@ -124,6 +124,9 @@ type Config struct {
 	// Controllers for Konnect APIs.
 	KonnectControllersEnabled bool
 
+	// FeatureGates holds the set of feature gates enabled via the --feature-gates flag.
+	FeatureGates FeatureGates
+
 	// Webhook options.
 	ConversionWebhookEnabled bool
 	ValidatingWebhookEnabled bool
