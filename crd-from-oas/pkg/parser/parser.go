@@ -38,8 +38,8 @@ type Property struct {
 	Minimum   *float64
 	Maximum   *float64
 	Pattern   string
-	Enum      []interface{}
-	Default   interface{}
+	Enum      []any
+	Default   any
 
 	// Reference info
 	RefName     string // If this is a $ref, the referenced schema name

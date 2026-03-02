@@ -29,7 +29,7 @@ func TestParsePaths_BasicPath(t *testing.T) {
 														Type:        &openapi3.Types{"string"},
 														Description: "Portal name",
 														MinLength:   1,
-														MaxLength:   openapi3.Ptr(uint64(100)),
+														MaxLength:   new(uint64(100)),
 													},
 												},
 												"is_public": &openapi3.SchemaRef{
@@ -352,7 +352,7 @@ func TestParsePaths_WithEnumValidation(t *testing.T) {
 													Value: &openapi3.Schema{
 														Type:        &openapi3.Types{"string"},
 														Description: "Portal visibility",
-														Enum:        []interface{}{"public", "private", "internal"},
+														Enum:        []any{"public", "private", "internal"},
 													},
 												},
 											},
@@ -381,7 +381,7 @@ func TestParsePaths_WithEnumValidation(t *testing.T) {
 
 	visibilityProp := schema.Properties[0]
 	assert.Equal(t, "visibility", visibilityProp.Name)
-	assert.Equal(t, []interface{}{"public", "private", "internal"}, visibilityProp.Enum)
+	assert.Equal(t, []any{"public", "private", "internal"}, visibilityProp.Enum)
 }
 
 func TestParsePaths_WithPatternValidation(t *testing.T) {
