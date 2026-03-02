@@ -181,15 +181,6 @@ type IdentityProviderType string
 // "konnect", "mesh", "kic", or "_".
 type Labels map[string]string
 
-// LabelsUpdate Labels store metadata of an entity that can be used for
-// filtering an entity list or for searching across entity types.
-//
-// Labels are intended to store **INTERNAL** metadata.
-//
-// Keys must be of length 1-63 characters, and cannot start with "kong",
-// "konnect", "mesh", "kic", or "_".
-type LabelsUpdate map[string]string
-
 // OIDCIdentityProviderClaimMappings Defines the mappings between OpenID Connect
 // (OIDC) claims and local claims used by your application for
 // authentication.

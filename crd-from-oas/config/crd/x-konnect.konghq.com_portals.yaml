@@ -4,9 +4,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.20.1
-  name: portals.konnect.konghq.com
+  name: portals.x-konnect.konghq.com
 spec:
-  group: konnect.konghq.com
+  group: x-konnect.konghq.com
   names:
     kind: Portal
     listKind: PortalList

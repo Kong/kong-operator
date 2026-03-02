@@ -13,6 +13,9 @@ import (
 {{- if .NeedsJSONImport}}
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 {{- end}}
+{{- if .ObjectRefImport}}
+	{{.ObjectRefImport.Alias}} "{{.ObjectRefImport.Path}}"
+{{- end}}
 )
 
 // {{.EntityName}} is the Schema for the {{.EntityName | lower}}s API.
@@ -53,7 +56,7 @@ type {{.EntityName}}Spec struct {
 	// {{.FieldName}} is the reference to the parent {{.EntityName}} object.
 	//
 	// +required
-	{{.FieldName}} ObjectRef ` + "`" + `json:"{{.JSONName}},omitzero"` + "`" + `
+	{{.FieldName}} {{objectRefTypeName}} ` + "`" + `json:"{{.JSONName}},omitzero"` + "`" + `
 {{end}}
 	// APISpec defines the desired state of the resource's API spec fields.
 	//

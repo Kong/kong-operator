@@ -23,6 +23,10 @@ type Config struct {
 	// OpsConfig maps entity names to SDK operation configurations.
 	// When set, conversion methods are generated on the entity's APISpec type.
 	OpsConfig map[string]*config.EntityOpsConfig
+	// CommonTypes holds configuration for shared types like ObjectRef.
+	// When ObjectRef has an Import config, it will be imported from an external
+	// package instead of being generated locally.
+	CommonTypes *config.CommonTypesConfig
 }
 
 // Generator generates Go CRD types from parsed OpenAPI schemas
@@ -267,16 +271,17 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 	}
 
 	funcMap := template.FuncMap{
-		"goType":          g.goType,
-		"goFieldName":     goFieldName,
-		"jsonTag":         jsonTag,
-		"kubebuilderTags": kubebuilderTagsWithConfig,
-		"isRefProperty":   isRefProperty,
-		"refEntityName":   parser.GetRefEntityName,
-		"skipProperty":    skipProperty,
-		"lower":           strings.ToLower,
-		"formatComment":   formatComment,
-		"hasRootOneOf":    hasRootOneOf,
+		"goType":            g.goType,
+		"goFieldName":       goFieldName,
+		"jsonTag":           jsonTag,
+		"kubebuilderTags":   kubebuilderTagsWithConfig,
+		"isRefProperty":     isRefProperty,
+		"refEntityName":     parser.GetRefEntityName,
+		"skipProperty":      skipProperty,
+		"lower":             strings.ToLower,
+		"formatComment":     formatComment,
+		"hasRootOneOf":      hasRootOneOf,
+		"objectRefTypeName": func() string { return g.objectRefTypeName() },
 	}
 
 	tmpl := template.Must(template.New("crd").Funcs(funcMap).Parse(crdTypeTemplate))
@@ -288,12 +293,14 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		APIGroup        string
 		APIVersion      string
 		NeedsJSONImport bool
+		ObjectRefImport *config.ImportConfig
 	}{
 		EntityName:      entityName,
 		Schema:          schema,
 		APIGroup:        g.config.APIGroup,
 		APIVersion:      g.config.APIVersion,
 		NeedsJSONImport: schemaUsesJSON(g, schema),
+		ObjectRefImport: g.objectRefImportIfNeeded(schema),
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
@@ -543,15 +550,66 @@ package %s
 }
 
 func (g *Generator) generateCommonTypes() string {
-	return fmt.Sprintf("package %s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n",
+	var types []string
+	if !g.objectRefImported() {
+		types = append(types, objectRefType, namespacedObjectRefType)
+	}
+	types = append(types, secretKeyRefType, configMapKeyRefType, konnectEntityStatusType, konnectEntityRefType)
+
+	return fmt.Sprintf("package %s\n\n%s\n",
 		g.config.APIVersion,
-		objectRefType,
-		namespacedObjectRefType,
-		secretKeyRefType,
-		configMapKeyRefType,
-		konnectEntityStatusType,
-		konnectEntityRefType,
+		strings.Join(types, "\n\n"),
 	)
+}
+
+// objectRefImported returns true if ObjectRef should be imported from an
+// external package rather than generated locally.
+func (g *Generator) objectRefImported() bool {
+	return g.config.CommonTypes != nil &&
+		g.config.CommonTypes.ObjectRef != nil &&
+		g.config.CommonTypes.ObjectRef.Import != nil
+}
+
+// objectRefImportIfNeeded returns the ImportConfig for ObjectRef only when the
+// schema actually uses ObjectRef (has dependencies or reference properties) and
+// ObjectRef is configured as an external import. Returns nil otherwise.
+func (g *Generator) objectRefImportIfNeeded(schema *parser.Schema) *config.ImportConfig {
+	if !g.objectRefImported() {
+		return nil
+	}
+	if schemaUsesObjectRef(schema) {
+		return g.config.CommonTypes.ObjectRef.Import
+	}
+	return nil
+}
+
+// schemaUsesObjectRef returns true if the schema has dependencies or reference
+// properties that will generate ObjectRef fields.
+func schemaUsesObjectRef(schema *parser.Schema) bool {
+	if len(schema.Dependencies) > 0 {
+		return true
+	}
+	for _, prop := range schema.Properties {
+		if !skipProperty(prop) && prop.IsReference {
+			return true
+		}
+	}
+	return false
+}
+
+// objectRefTypeName returns the Go type name for ObjectRef, qualified with the
+// import alias when ObjectRef is imported from an external package.
+func (g *Generator) objectRefTypeName() string {
+	if g.objectRefImported() {
+		imp := g.config.CommonTypes.ObjectRef.Import
+		if imp.Alias != "" {
+			return imp.Alias + ".ObjectRef"
+		}
+		// Fall back to last segment of the import path as the package name.
+		parts := strings.Split(imp.Path, "/")
+		return parts[len(parts)-1] + ".ObjectRef"
+	}
+	return "ObjectRef"
 }
 
 // sdkOpsImport represents a single import needed for SDK ops generation.
@@ -727,7 +785,7 @@ func testValueForType(goType string) string {
 func (g *Generator) goType(prop *parser.Property) string {
 	// Handle references to other entities - convert to ObjectRef
 	if prop.IsReference {
-		return "*ObjectRef"
+		return "*" + g.objectRefTypeName()
 	}
 
 	// Handle $ref

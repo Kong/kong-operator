@@ -1,5 +1,32 @@
 package v1alpha1
 
+// ObjectRef is a reference to a Kubernetes object in the same namespace
+type ObjectRef struct {
+	// Name is the name of the referenced object
+	//
+	// +required
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name,omitempty"`
+}
+
+// NamespacedObjectRef is a reference to a Kubernetes object, optionally in another namespace
+type NamespacedObjectRef struct {
+	// Name is the name of the referenced object
+	//
+	// +required
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name,omitempty"`
+
+	// Namespace is the namespace of the referenced object
+	// If empty, the same namespace as the referencing object is used
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=63
+	Namespace string `json:"namespace,omitempty"`
+}
+
 // SecretKeyRef is a reference to a key in a Secret
 type SecretKeyRef struct {
 	// Name is the name of the Secret
