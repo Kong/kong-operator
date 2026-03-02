@@ -19,13 +19,15 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/version"
 	fakediscovery "k8s.io/client-go/discovery/fake"
-	testdynclient "k8s.io/client-go/dynamic/fake"
 	testk8sclient "k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/metadata"
+	metadata_fake "k8s.io/client-go/metadata/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/scheme"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/telemetry/types"
+	"github.com/kong/kong-operator/v2/test/helpers/convert"
 )
 
 const (
@@ -67,10 +69,10 @@ func TestCreateManager(t *testing.T) {
 	hostname, err := os.Hostname()
 	require.NoError(t, err)
 
-	scheme := prepareScheme(t)
+	scheme := scheme.Get()
+	require.NoError(t, metav1.AddMetaToScheme(scheme))
 	objs := prepareObjects(pod)
 
-	dyn := testdynclient.NewSimpleDynamicClient(scheme, objs...)
 	ctrlClient := fakeclient.NewClientBuilder().
 		WithScheme(scheme).
 		// We need this for mesh detection which lists services.
@@ -107,7 +109,7 @@ func TestCreateManager(t *testing.T) {
 	runManagerTest(
 		t,
 		k8sClient,
-		dyn,
+		metadata_fake.NewSimpleMetadataClient(scheme, convert.ToPartialObjectMetadata(scheme, objs...)...),
 		ctrlClient,
 		mockGatewaysCounter(5),
 		payload,
@@ -173,10 +175,10 @@ func TestCreateManager_GatewayDiscoverySpecifics(t *testing.T) {
 		},
 	}
 
-	scheme := prepareScheme(t)
-	dyn := testdynclient.NewSimpleDynamicClient(scheme)
 	ctrlClient := fakeclient.NewClientBuilder().Build()
 	k8sclient := testk8sclient.NewClientset()
+	scheme := scheme.Get()
+	metadataClient := metadata_fake.NewSimpleMetadataClient(scheme)
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -185,7 +187,7 @@ func TestCreateManager_GatewayDiscoverySpecifics(t *testing.T) {
 			runManagerTest(
 				t,
 				k8sclient,
-				dyn,
+				metadataClient,
 				ctrlClient,
 				mockGatewaysCounter(5),
 				types.Payload{},
@@ -212,7 +214,7 @@ func runManagerTest(
 	// Following arguments map with the arguments of the createManager function, but instead of interfaces,
 	// concrete test types are used.
 	k8sclient *testk8sclient.Clientset,
-	dyn *testdynclient.FakeDynamicClient,
+	metadataClient metadata.Interface,
 	ctrlClient client.Client,
 	gatewaysCounter mockGatewaysCounter,
 	payload types.Payload,
@@ -224,7 +226,7 @@ func runManagerTest(
 	ctx := t.Context()
 	mgr, err := createManager(
 		k8sclient,
-		dyn,
+		metadataClient,
 		ctrlClient,
 		gatewaysCounter,
 		payload,
@@ -251,16 +253,6 @@ func runManagerTest(
 	case <-time.After(time.Second):
 		t.Fatal("we should get a report but we didn't")
 	}
-}
-
-func prepareScheme(t *testing.T) *runtime.Scheme {
-	scheme := runtime.NewScheme()
-	require.NoError(t, testk8sclient.AddToScheme(scheme))
-	// Note: this has no effect on the object listing because pluralising gateways
-	// does not work.
-	// Ref: https://github.com/kubernetes/kubernetes/pull/110053
-	require.NoError(t, gatewayv1beta1.Install(scheme))
-	return scheme
 }
 
 func prepareObjects(pod k8stypes.NamespacedName) []runtime.Object {
