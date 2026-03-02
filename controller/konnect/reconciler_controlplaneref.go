@@ -87,7 +87,7 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 			ctx, cl, ent,
 			konnectv1alpha1.ControlPlaneRefValidConditionType,
 			metav1.ConditionFalse,
-			konnectv1alpha1.ControlPlaneRefReasonInvalid,
+			konnectv1alpha1.ControlPlaneRefReasonNotProgrammed,
 			fmt.Sprintf("Referenced ControlPlane %s is not programmed yet", cpRef.String()),
 		); errStatus != nil || !res.IsZero() {
 			return res, errStatus

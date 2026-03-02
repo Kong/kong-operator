@@ -235,8 +235,10 @@ func TestHandleControlPlaneRef(t *testing.T) {
 			updatedEntAssertions: []func(svc *configurationv1alpha1.KongService) (ok bool, message string){
 				func(svc *configurationv1alpha1.KongService) (bool, string) {
 					return lo.ContainsBy(svc.Status.Conditions, func(c metav1.Condition) bool {
-						return c.Type == konnectv1alpha1.ControlPlaneRefValidConditionType && c.Status == metav1.ConditionFalse
-					}), "service should have ControlPlaneRefValid set to False"
+						return c.Type == konnectv1alpha1.ControlPlaneRefValidConditionType &&
+							c.Status == metav1.ConditionFalse &&
+							c.Reason == konnectv1alpha1.ControlPlaneRefReasonNotProgrammed
+					}), "service should have ControlPlaneRefValid set to False with NotProgrammed reason"
 				},
 			},
 		},
