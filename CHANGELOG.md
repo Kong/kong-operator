@@ -69,6 +69,12 @@
   [#3206](https://github.com/Kong/kong-operator/pull/3206)
 - Fix handling removal of annotations for DataPlane's Services
   [#3402](https://github.com/Kong/kong-operator/pull/3402)
+- Fix Gateway controller deleting all DataPlanes when KonnectExtension's
+  `ControlPlaneRefValid` condition is temporarily False due to transient Konnect
+  API failures. DataPlanes now continue serving traffic during Konnect
+  connectivity issues. Added `NotProgrammed` condition reason to differentiate
+  transient failures from permanent reference errors.
+  [#3463](https://github.com/Kong/kong-operator/pull/3463)
 
 ## [v2.1.1]
 
