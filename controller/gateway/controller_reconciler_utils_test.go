@@ -14,7 +14,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -1148,19 +1147,19 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 				},
 			},
 			referenceGrants: []client.Object{
-				&gatewayv1beta1.ReferenceGrant{
+				&gatewayv1.ReferenceGrant{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "other-namespace",
 					},
-					Spec: gatewayv1beta1.ReferenceGrantSpec{
-						From: []gatewayv1beta1.ReferenceGrantFrom{
+					Spec: gatewayv1.ReferenceGrantSpec{
+						From: []gatewayv1.ReferenceGrantFrom{
 							{
 								Group:     gatewayv1.GroupName,
 								Kind:      "Gateway",
 								Namespace: "default",
 							},
 						},
-						To: []gatewayv1beta1.ReferenceGrantTo{
+						To: []gatewayv1.ReferenceGrantTo{
 							{
 								Group: "",
 								Kind:  "Secret",

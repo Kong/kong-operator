@@ -14,7 +14,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
@@ -661,12 +660,12 @@ func Test_MapHTTPRouteForReferenceGrant(t *testing.T) {
 			Name:      "test-grant",
 		},
 		Spec: gwtypes.ReferenceGrantSpec{
-			From: []gatewayv1beta1.ReferenceGrantFrom{{
+			From: []gatewayv1.ReferenceGrantFrom{{
 				Group:     gwtypes.GroupName,
 				Kind:      "HTTPRoute",
 				Namespace: "source-ns",
 			}},
-			To: []gatewayv1beta1.ReferenceGrantTo{{
+			To: []gatewayv1.ReferenceGrantTo{{
 				Group: "",
 				Kind:  "Service",
 			}},
@@ -704,7 +703,7 @@ func Test_MapHTTPRouteForReferenceGrant(t *testing.T) {
 				Name:      "wrong-kind-grant",
 			},
 			Spec: gwtypes.ReferenceGrantSpec{
-				From: []gatewayv1beta1.ReferenceGrantFrom{{
+				From: []gatewayv1.ReferenceGrantFrom{{
 					Group: gwtypes.GroupName,
 					// Not HTTPRoute.
 					Kind:      "TCPRoute",
@@ -731,7 +730,7 @@ func Test_MapHTTPRouteForReferenceGrant(t *testing.T) {
 				Name:      "wrong-group-grant",
 			},
 			Spec: gwtypes.ReferenceGrantSpec{
-				From: []gatewayv1beta1.ReferenceGrantFrom{{
+				From: []gatewayv1.ReferenceGrantFrom{{
 					Group:     "some.other.group",
 					Kind:      "HTTPRoute",
 					Namespace: "source-ns",
@@ -757,7 +756,7 @@ func Test_MapHTTPRouteForReferenceGrant(t *testing.T) {
 				Name:      "empty-group-grant",
 			},
 			Spec: gwtypes.ReferenceGrantSpec{
-				From: []gatewayv1beta1.ReferenceGrantFrom{{
+				From: []gatewayv1.ReferenceGrantFrom{{
 					// Empty group should be accepted.
 					Group:     "",
 					Kind:      "HTTPRoute",
@@ -823,7 +822,7 @@ func Test_MapHTTPRouteForReferenceGrant(t *testing.T) {
 				Name:      "multi-grant",
 			},
 			Spec: gwtypes.ReferenceGrantSpec{
-				From: []gatewayv1beta1.ReferenceGrantFrom{
+				From: []gatewayv1.ReferenceGrantFrom{
 					{
 						Group:     gwtypes.GroupName,
 						Kind:      "HTTPRoute",
@@ -902,7 +901,7 @@ func Test_MapHTTPRouteForReferenceGrant(t *testing.T) {
 				Name:      "empty-from-grant",
 			},
 			Spec: gwtypes.ReferenceGrantSpec{
-				From: []gatewayv1beta1.ReferenceGrantFrom{},
+				From: []gatewayv1.ReferenceGrantFrom{},
 			},
 		}
 

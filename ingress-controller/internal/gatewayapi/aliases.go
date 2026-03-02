@@ -75,11 +75,11 @@ type (
 	PortNumber                                = gatewayv1.PortNumber
 	PreciseHostname                           = gatewayv1.PreciseHostname
 	ProtocolType                              = gatewayv1.ProtocolType
-	ReferenceGrant                            = gatewayv1beta1.ReferenceGrant
-	ReferenceGrantFrom                        = gatewayv1beta1.ReferenceGrantFrom
-	ReferenceGrantList                        = gatewayv1beta1.ReferenceGrantList
-	ReferenceGrantSpec                        = gatewayv1beta1.ReferenceGrantSpec
-	ReferenceGrantTo                          = gatewayv1beta1.ReferenceGrantTo
+	ReferenceGrant                            = gatewayv1.ReferenceGrant
+	ReferenceGrantFrom                        = gatewayv1.ReferenceGrantFrom
+	ReferenceGrantList                        = gatewayv1.ReferenceGrantList
+	ReferenceGrantSpec                        = gatewayv1.ReferenceGrantSpec
+	ReferenceGrantTo                          = gatewayv1.ReferenceGrantTo
 	RouteConditionReason                      = gatewayv1.RouteConditionReason
 	RouteGroupKind                            = gatewayv1.RouteGroupKind
 	RouteNamespaces                           = gatewayv1.RouteNamespaces

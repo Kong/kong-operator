@@ -12,7 +12,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
@@ -50,7 +49,7 @@ func (r *AIGatewayReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Man
 			builder.WithPredicates(predicate.NewPredicateFuncs(watch.GatewayClassMatchesController)),
 		).
 		Watches(
-			&gatewayv1beta1.ReferenceGrant{},
+			&gatewayv1.ReferenceGrant{},
 			handler.EnqueueRequestsFromMapFunc(r.listAIGatewaysForReferenceGrants),
 			builder.WithPredicates(predicate.NewPredicateFuncs(referenceGrantReferencesAIGateway)),
 		).

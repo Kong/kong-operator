@@ -10,7 +10,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
@@ -20,7 +19,7 @@ import (
 func ReferenceGrantForSecretFrom(group gatewayv1.Group, kind gatewayv1.Kind) predicate.TypedFuncs[client.Object] {
 	return predicate.NewPredicateFuncs(
 		func(obj client.Object) bool {
-			grant, ok := obj.(*gatewayv1beta1.ReferenceGrant)
+			grant, ok := obj.(*gatewayv1.ReferenceGrant)
 			if !ok {
 				return false
 			}
@@ -35,7 +34,7 @@ func ReferenceGrantForSecretFrom(group gatewayv1.Group, kind gatewayv1.Kind) pre
 }
 
 // IsReferenceGrantForObj checks if ReferenceGrant's from clause matches the provided object's Group, Kind and namespace.
-func IsReferenceGrantForObj(referenceGrant *gatewayv1beta1.ReferenceGrant, obj client.Object) bool {
+func IsReferenceGrantForObj(referenceGrant *gatewayv1.ReferenceGrant, obj client.Object) bool {
 	for _, from := range referenceGrant.Spec.From {
 		if string(from.Namespace) == obj.GetNamespace() &&
 			from.Kind == gatewayv1.Kind(obj.GetObjectKind().GroupVersionKind().Kind) &&
@@ -86,13 +85,13 @@ func CheckReferenceGrantForSecret(
 
 	allowed, err := k8sutils.AllowedByReferenceGrants(
 		ctx, c,
-		gatewayv1beta1.ReferenceGrantFrom{
+		gatewayv1.ReferenceGrantFrom{
 			Group:     gatewayv1.Group(fromObj.GetObjectKind().GroupVersionKind().Group),
 			Kind:      gatewayv1.Kind(fromObj.GetObjectKind().GroupVersionKind().Kind),
 			Namespace: gatewayv1.Namespace(fromObj.GetNamespace()),
 		},
 		string(*secretRef.Namespace),
-		gatewayv1beta1.ReferenceGrantTo{
+		gatewayv1.ReferenceGrantTo{
 			Kind: "Secret",
 			Name: new(secretRef.Name),
 		},

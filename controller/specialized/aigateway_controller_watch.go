@@ -85,7 +85,7 @@ func (r *AIGatewayReconciler) listAIGatewaysForGatewayClass(ctx context.Context,
 // listAIGatewaysForReferenceGrants lists AIGateways whose group, kind and namespace appeared in `spec.from` of ReferenceGrants.
 // The listed AIGateways in are allowed to reference the resources in the `spec.to` of the ReferenceGrant.
 func (r *AIGatewayReconciler) listAIGatewaysForReferenceGrants(ctx context.Context, obj client.Object) []reconcile.Request {
-	referenceGrant, ok := obj.(*gatewayv1beta1.ReferenceGrant)
+	referenceGrant, ok := obj.(*gatewayv1.ReferenceGrant)
 	if !ok {
 		ctrllog.FromContext(ctx).Error(
 			operatorerrors.ErrUnexpectedObject,
@@ -128,11 +128,11 @@ func (r *AIGatewayReconciler) listAIGatewaysForReferenceGrants(ctx context.Conte
 // referenceGrantReferencesAIGateway is the predicate function for watching ReferenceGrants.
 // It returns true if `AIGateway` type is included in the `spec.from`.
 func referenceGrantReferencesAIGateway(obj client.Object) bool {
-	referenceGrant, ok := obj.(*gatewayv1beta1.ReferenceGrant)
+	referenceGrant, ok := obj.(*gatewayv1.ReferenceGrant)
 	if !ok {
 		return false
 	}
-	return lo.ContainsBy(referenceGrant.Spec.From, func(from gatewayv1beta1.ReferenceGrantFrom) bool {
+	return lo.ContainsBy(referenceGrant.Spec.From, func(from gatewayv1.ReferenceGrantFrom) bool {
 		return from.Group == gatewayv1beta1.Group(operatorv1alpha1.SchemeGroupVersion.Group) && from.Kind == gatewayv1beta1.Kind("AIGateway")
 	})
 }

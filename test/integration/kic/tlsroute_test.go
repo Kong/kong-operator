@@ -173,7 +173,7 @@ func TestTLSRoutePassthroughReferenceGrant(t *testing.T) {
 		},
 	}
 
-	grant, err = gatewayClient.GatewayV1beta1().ReferenceGrants(otherNs.Name).Create(ctx, grant, metav1.CreateOptions{})
+	grant, err = gatewayClient.GatewayV1().ReferenceGrants(otherNs.Name).Create(ctx, grant, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(grant)
 
@@ -284,7 +284,7 @@ func TestTLSRoutePassthroughReferenceGrant(t *testing.T) {
 	t.Log("verifying that using the wrong name in the ReferenceGrant removes the related certificate")
 	badName := gatewayapi.ObjectName("garbage")
 	grant.Spec.To[0].Name = &badName
-	grant, err = gatewayClient.GatewayV1beta1().ReferenceGrants(otherNs.Name).Update(ctx, grant, metav1.UpdateOptions{})
+	grant, err = gatewayClient.GatewayV1().ReferenceGrants(otherNs.Name).Update(ctx, grant, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {
@@ -312,7 +312,7 @@ func TestTLSRoutePassthroughReferenceGrant(t *testing.T) {
 
 	t.Log("verifying the certificate returns when using a ReferenceGrant with no name restrictions")
 	grant.Spec.To[0].Name = nil
-	_, err = gatewayClient.GatewayV1beta1().ReferenceGrants(otherNs.Name).Update(ctx, grant, metav1.UpdateOptions{})
+	_, err = gatewayClient.GatewayV1().ReferenceGrants(otherNs.Name).Update(ctx, grant, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {
