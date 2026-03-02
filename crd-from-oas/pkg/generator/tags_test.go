@@ -9,10 +9,6 @@ import (
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/parser"
 )
 
-func ptr[T any](v T) *T {
-	return &v
-}
-
 func TestKubebuilderTags(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -66,8 +62,8 @@ func TestKubebuilderTags(t *testing.T) {
 				Name:      "code",
 				Type:      "string",
 				Required:  true,
-				MinLength: ptr(int64(3)),
-				MaxLength: ptr(int64(10)),
+				MinLength: new(int64(3)),
+				MaxLength: new(int64(10)),
 			},
 			expected: []string{
 				"+required",
@@ -96,7 +92,7 @@ func TestKubebuilderTags(t *testing.T) {
 				Name:     "status",
 				Type:     "string",
 				Required: true,
-				Enum:     []interface{}{"active", "inactive", "pending"},
+				Enum:     []any{"active", "inactive", "pending"},
 			},
 			expected: []string{
 				"+required",
@@ -111,8 +107,8 @@ func TestKubebuilderTags(t *testing.T) {
 				Name:     "port",
 				Type:     "integer",
 				Required: true,
-				Minimum:  ptr(float64(1)),
-				Maximum:  ptr(float64(65535)),
+				Minimum:  new(float64(1)),
+				Maximum:  new(float64(65535)),
 			},
 			expected: []string{
 				"+required",
@@ -126,7 +122,7 @@ func TestKubebuilderTags(t *testing.T) {
 				Name:     "retries",
 				Type:     "integer",
 				Required: false,
-				Minimum:  ptr(float64(0)),
+				Minimum:  new(float64(0)),
 			},
 			expected: []string{
 				"+optional",
@@ -212,7 +208,7 @@ func TestKubebuilderTags(t *testing.T) {
 				Name:     "priority",
 				Type:     "string",
 				Required: false,
-				Enum:     []interface{}{"low", 1, "high", nil, "medium"},
+				Enum:     []any{"low", 1, "high", nil, "medium"},
 			},
 			expected: []string{
 				"+optional",
@@ -226,7 +222,7 @@ func TestKubebuilderTags(t *testing.T) {
 				Name:     "level",
 				Type:     "integer",
 				Required: false,
-				Enum:     []interface{}{1, 2, 3},
+				Enum:     []any{1, 2, 3},
 			},
 			expected: []string{
 				"+optional",
