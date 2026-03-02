@@ -4,6 +4,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 )
 
 // PortalTeam is the Schema for the portalteams API.
@@ -43,7 +44,7 @@ type PortalTeamSpec struct {
 	// PortalRef is the reference to the parent Portal object.
 	//
 	// +required
-	PortalRef ObjectRef `json:"portal_ref,omitzero"`
+	PortalRef commonv1alpha1.ObjectRef `json:"portal_ref,omitzero"`
 
 	// APISpec defines the desired state of the resource's API spec fields.
 	//

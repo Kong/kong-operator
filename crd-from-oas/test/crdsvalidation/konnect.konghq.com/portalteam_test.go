@@ -4,10 +4,20 @@ import (
 	"strings"
 	"testing"
 
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/crd-from-oas/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/crd-from-oas/test/crdsvalidation/common"
 	testscheme "github.com/kong/kong-operator/v2/crd-from-oas/test/scheme"
 )
+
+func validPortalRef(name string) commonv1alpha1.ObjectRef {
+	return commonv1alpha1.ObjectRef{
+		Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+		NamespacedRef: &commonv1alpha1.NamespacedRef{
+			Name: name,
+		},
+	}
+}
 
 func TestPortalTeam(t *testing.T) {
 	t.Parallel()
@@ -17,9 +27,7 @@ func TestPortalTeam(t *testing.T) {
 
 	validSpec := func() konnectv1alpha1.PortalTeamSpec {
 		return konnectv1alpha1.PortalTeamSpec{
-			PortalRef: konnectv1alpha1.ObjectRef{
-				Name: "test-portal",
-			},
+			PortalRef: validPortalRef("test-portal"),
 			APISpec: konnectv1alpha1.PortalTeamAPISpec{
 				Name: "test-team",
 			},
@@ -40,9 +48,7 @@ func TestPortalTeam(t *testing.T) {
 				TestObject: &konnectv1alpha1.PortalTeam{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.PortalTeamSpec{
-						PortalRef: konnectv1alpha1.ObjectRef{
-							Name: strings.Repeat("a", 253),
-						},
+						PortalRef: validPortalRef(strings.Repeat("a", 253)),
 						APISpec: konnectv1alpha1.PortalTeamAPISpec{
 							Name: "team-ref-max",
 						},
@@ -54,15 +60,13 @@ func TestPortalTeam(t *testing.T) {
 				TestObject: &konnectv1alpha1.PortalTeam{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.PortalTeamSpec{
-						PortalRef: konnectv1alpha1.ObjectRef{
-							Name: strings.Repeat("a", 254),
-						},
+						PortalRef: validPortalRef(strings.Repeat("a", 254)),
 						APISpec: konnectv1alpha1.PortalTeamAPISpec{
 							Name: "team-ref-over",
 						},
 					},
 				},
-				ExpectedErrorMessage: new("spec.portal_ref.name: Too long: may not be more than 253"),
+				ExpectedErrorMessage: new("spec.portal_ref.namespacedRef.name: Too long: may not be more than 253"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -82,9 +86,7 @@ func TestPortalTeam(t *testing.T) {
 				TestObject: &konnectv1alpha1.PortalTeam{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.PortalTeamSpec{
-						PortalRef: konnectv1alpha1.ObjectRef{
-							Name: "test-portal",
-						},
+						PortalRef: validPortalRef("test-portal"),
 						APISpec: konnectv1alpha1.PortalTeamAPISpec{
 							Name: strings.Repeat("a", 256),
 						},
@@ -96,9 +98,7 @@ func TestPortalTeam(t *testing.T) {
 				TestObject: &konnectv1alpha1.PortalTeam{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.PortalTeamSpec{
-						PortalRef: konnectv1alpha1.ObjectRef{
-							Name: "test-portal",
-						},
+						PortalRef: validPortalRef("test-portal"),
 						APISpec: konnectv1alpha1.PortalTeamAPISpec{
 							Name: strings.Repeat("a", 257),
 						},
@@ -117,9 +117,7 @@ func TestPortalTeam(t *testing.T) {
 				TestObject: &konnectv1alpha1.PortalTeam{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.PortalTeamSpec{
-						PortalRef: konnectv1alpha1.ObjectRef{
-							Name: "test-portal",
-						},
+						PortalRef: validPortalRef("test-portal"),
 						APISpec: konnectv1alpha1.PortalTeamAPISpec{
 							Name:        "team-desc-valid",
 							Description: "A valid description",
@@ -132,9 +130,7 @@ func TestPortalTeam(t *testing.T) {
 				TestObject: &konnectv1alpha1.PortalTeam{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.PortalTeamSpec{
-						PortalRef: konnectv1alpha1.ObjectRef{
-							Name: "test-portal",
-						},
+						PortalRef: validPortalRef("test-portal"),
 						APISpec: konnectv1alpha1.PortalTeamAPISpec{
 							Name:        "team-desc-max",
 							Description: strings.Repeat("d", 250),
@@ -147,9 +143,7 @@ func TestPortalTeam(t *testing.T) {
 				TestObject: &konnectv1alpha1.PortalTeam{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.PortalTeamSpec{
-						PortalRef: konnectv1alpha1.ObjectRef{
-							Name: "test-portal",
-						},
+						PortalRef: validPortalRef("test-portal"),
 						APISpec: konnectv1alpha1.PortalTeamAPISpec{
 							Name:        "team-desc-over",
 							Description: strings.Repeat("d", 251),
@@ -169,9 +163,7 @@ func TestPortalTeam(t *testing.T) {
 				TestObject: &konnectv1alpha1.PortalTeam{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.PortalTeamSpec{
-						PortalRef: konnectv1alpha1.ObjectRef{
-							Name: "test-portal",
-						},
+						PortalRef: validPortalRef("test-portal"),
 						APISpec: konnectv1alpha1.PortalTeamAPISpec{
 							Name:        "full-spec-team",
 							Description: "A team with all fields",

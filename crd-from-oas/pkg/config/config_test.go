@@ -57,6 +57,148 @@ apiGroupVersions:
 		assert.Equal(t, "/v3/gateways", gateway.Types[0].Path)
 	})
 
+	t.Run("valid config with commonTypes import", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    commonTypes:
+      objectRef:
+        import:
+          path: github.com/kong/kong-operator/v2/api/common/v1alpha1
+          alias: commonv1alpha1
+    types:
+      - path: /v3/portals
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		cfg, err := LoadProjectConfig(path)
+		require.NoError(t, err)
+
+		konnect := cfg.APIGroupVersions["konnect.konghq.com/v1alpha1"]
+		require.NotNil(t, konnect)
+		require.NotNil(t, konnect.CommonTypes)
+		require.NotNil(t, konnect.CommonTypes.ObjectRef)
+		assert.Nil(t, konnect.CommonTypes.ObjectRef.Generate, "generate should be nil when not specified")
+		require.NotNil(t, konnect.CommonTypes.ObjectRef.Import)
+		assert.Equal(t, "github.com/kong/kong-operator/v2/api/common/v1alpha1", konnect.CommonTypes.ObjectRef.Import.Path)
+		assert.Equal(t, "commonv1alpha1", konnect.CommonTypes.ObjectRef.Import.Alias)
+	})
+
+	t.Run("valid config with commonTypes generate", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    commonTypes:
+      objectRef:
+        generate: true
+    types:
+      - path: /v3/portals
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		cfg, err := LoadProjectConfig(path)
+		require.NoError(t, err)
+
+		konnect := cfg.APIGroupVersions["konnect.konghq.com/v1alpha1"]
+		require.NotNil(t, konnect.CommonTypes)
+		require.NotNil(t, konnect.CommonTypes.ObjectRef)
+		assert.True(t, konnect.CommonTypes.ObjectRef.ShouldGenerate())
+		assert.Nil(t, konnect.CommonTypes.ObjectRef.Import)
+	})
+
+	t.Run("valid config without commonTypes", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    types:
+      - path: /v3/portals
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		cfg, err := LoadProjectConfig(path)
+		require.NoError(t, err)
+
+		konnect := cfg.APIGroupVersions["konnect.konghq.com/v1alpha1"]
+		assert.Nil(t, konnect.CommonTypes)
+	})
+
+	t.Run("invalid: generate and import both set", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    commonTypes:
+      objectRef:
+        generate: true
+        import:
+          path: github.com/kong/kong-operator/v2/api/common/v1alpha1
+    types:
+      - path: /v3/portals
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		_, err := LoadProjectConfig(path)
+		assert.ErrorContains(t, err, "generate and import are mutually exclusive")
+	})
+
+	t.Run("empty objectRef defaults to generate true", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    commonTypes:
+      objectRef: {}
+    types:
+      - path: /v3/portals
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		cfg, err := LoadProjectConfig(path)
+		require.NoError(t, err)
+
+		konnect := cfg.APIGroupVersions["konnect.konghq.com/v1alpha1"]
+		require.NotNil(t, konnect.CommonTypes.ObjectRef)
+		assert.True(t, konnect.CommonTypes.ObjectRef.ShouldGenerate())
+	})
+
+	t.Run("invalid: generate false without import", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    commonTypes:
+      objectRef:
+        generate: false
+    types:
+      - path: /v3/portals
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		_, err := LoadProjectConfig(path)
+		assert.ErrorContains(t, err, "import is required when generate is false")
+	})
+
+	t.Run("invalid: import with empty path", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    commonTypes:
+      objectRef:
+        import:
+          path: ""
+    types:
+      - path: /v3/portals
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		_, err := LoadProjectConfig(path)
+		assert.ErrorContains(t, err, "path is required")
+	})
+
 	t.Run("missing apiGroupVersions", func(t *testing.T) {
 		content := `
 someOtherKey: value
