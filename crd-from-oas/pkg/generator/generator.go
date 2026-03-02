@@ -111,7 +111,10 @@ func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error)
 	})
 
 	// Generate common types (ObjectRef, etc.) including referenced schemas
-	commonContent := g.generateCommonTypes()
+	commonContent, err := g.generateCommonTypes()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate common types: %w", err)
+	}
 	files = append(files, GeneratedFile{
 		Name:    "common_types.go",
 		Content: commonContent,
@@ -549,17 +552,22 @@ package %s
 `, g.config.APIGroup, g.config.APIVersion)
 }
 
-func (g *Generator) generateCommonTypes() string {
-	var types []string
-	if !g.objectRefImported() {
-		types = append(types, objectRefType, namespacedObjectRefType)
-	}
-	types = append(types, secretKeyRefType, configMapKeyRefType, konnectEntityStatusType, konnectEntityRefType)
+func (g *Generator) generateCommonTypes() (string, error) {
+	tmpl := template.Must(template.New("commonTypes").Parse(commonTypesTemplate))
 
-	return fmt.Sprintf("package %s\n\n%s\n",
-		g.config.APIVersion,
-		strings.Join(types, "\n\n"),
-	)
+	var buf strings.Builder
+	data := struct {
+		APIVersion        string
+		ObjectRefImported bool
+	}{
+		APIVersion:        g.config.APIVersion,
+		ObjectRefImported: g.objectRefImported(),
+	}
+
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
 }
 
 // objectRefImported returns true if ObjectRef should be imported from an

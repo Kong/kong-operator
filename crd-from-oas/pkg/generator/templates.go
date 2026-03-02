@@ -173,6 +173,25 @@ func Test{{$.EntityName}}APISpec_{{.MethodName}}(t *testing.T) {
 }
 {{end}}`
 
+const commonTypesTemplate = sharedGeneratedFilePreamble + `
+
+package {{.APIVersion}}
+{{- if not .ObjectRefImported}}
+
+` + objectRefType + `
+
+` + namespacedObjectRefType + `
+{{- end}}
+
+` + secretKeyRefType + `
+
+` + configMapKeyRefType + `
+
+` + konnectEntityStatusType + `
+
+` + konnectEntityRefType + `
+`
+
 const registerTemplate = sharedGeneratedFilePreamble + `
 
 package {{.APIVersion}}
