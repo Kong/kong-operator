@@ -249,6 +249,12 @@ var (
 	}
 )
 
+//+kubebuilder:webhookconfiguration:mutating=false,name=controlplane-configuration-validations
+//+kubebuilder:webhook:serviceName=gateway-operator-webhook-service,serviceNamespace=kong-system,servicePort=5443,admissionReviewVersions=v1,matchPolicy=equivalent,timeoutSeconds=10,verbs=create;update,path=/,mutating=false,failurePolicy=fail,sideEffects=None,groups=configuration.konghq.com,resources=kongconsumers;kongconsumergroups;kongplugins;kongclusterplugins;kongvaults;kongcustomentities,versions=*,name=kong.validations.kong.konghq.com
+//+kubebuilder:webhook:serviceName=gateway-operator-webhook-service,serviceNamespace=kong-system,servicePort=5443,admissionReviewVersions=v1,matchPolicy=equivalent,timeoutSeconds=10,verbs=create;update,path=/,mutating=false,failurePolicy=fail,sideEffects=None,groups=networking.k8s.io,resources=ingresses,versions=v1,name=networking.validations.kong.konghq.com
+//+kubebuilder:webhook:serviceName=gateway-operator-webhook-service,serviceNamespace=kong-system,servicePort=5443,admissionReviewVersions=v1,matchPolicy=equivalent,timeoutSeconds=10,verbs=create;update,path=/,mutating=false,failurePolicy=fail,sideEffects=None,groups=core,resources=secrets,versions=v1,name=secrets.validations.kong.konghq.com
+//+kubebuilder:webhook:serviceName=gateway-operator-webhook-service,serviceNamespace=kong-system,servicePort=5443,admissionReviewVersions=v1,matchPolicy=equivalent,timeoutSeconds=10,verbs=create;update,path=/,mutating=false,failurePolicy=fail,sideEffects=None,groups=gateway.networking.k8s.io,resources=gateways;httproutes,versions=v1alpha2;v1beta1;v1,name=gwapi.validations.kong.konghq.com
+
 func (h *RequestHandler) handleValidation(ctx context.Context, request admissionv1.AdmissionRequest) (
 	*admissionv1.AdmissionResponse, error,
 ) {
@@ -283,8 +289,6 @@ func (h *RequestHandler) handleValidation(ctx context.Context, request admission
 			request.Resource.Resource)
 	}
 }
-
-// +kubebuilder:webhook:verbs=create;update,groups=configuration.konghq.com,resources=kongconsumers,versions=v1,name=kongconsumers.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
 
 func (h *RequestHandler) handleKongConsumer(
 	ctx context.Context,
@@ -330,8 +334,6 @@ func (h *RequestHandler) handleKongConsumer(
 	}
 }
 
-// +kubebuilder:webhook:verbs=create;update,groups=configuration.konghq.com,resources=kongconsumergroups,versions=v1beta1,name=kongconsumergroups.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
-
 func (h *RequestHandler) handleKongConsumerGroup(
 	ctx context.Context,
 	request admissionv1.AdmissionRequest,
@@ -352,8 +354,6 @@ func (h *RequestHandler) handleKongConsumerGroup(
 
 	return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
 }
-
-// +kubebuilder:webhook:verbs=create;update,groups=configuration.konghq.com,resources=kongplugins,versions=v1,name=kongplugins.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
 
 func (h *RequestHandler) handleKongPlugin(
 	ctx context.Context,
@@ -378,8 +378,6 @@ func (h *RequestHandler) handleKongPlugin(
 	return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
 }
 
-// +kubebuilder:webhook:verbs=create;update,groups=configuration.konghq.com,resources=kongclusterplugins,versions=v1,name=kongclusterplugins.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
-
 func (h *RequestHandler) handleKongClusterPlugin(
 	ctx context.Context,
 	request admissionv1.AdmissionRequest,
@@ -402,11 +400,6 @@ func (h *RequestHandler) handleKongClusterPlugin(
 
 	return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
 }
-
-// NOTE this handler _does not_ use a kubebuilder directive, as our Secret handling requires webhook features
-// kubebuilder does not support (objectSelector). Instead, config/webhook/additional_secret_hooks.yaml includes
-// handwritten webhook rules that we patch into the webhook manifest.
-// See https://github.com/kubernetes-sigs/controller-tools/issues/553 for further info.
 
 func (h *RequestHandler) handleSecret(
 	ctx context.Context,
@@ -519,8 +512,6 @@ func (h *RequestHandler) checkReferrersOfSecret(ctx context.Context, secret *cor
 	return true, count, "", nil
 }
 
-// +kubebuilder:webhook:verbs=create;update,groups=gateway.networking.k8s.io,resources=gateways,versions=v1;v1beta1,name=gateways.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
-
 func (h *RequestHandler) handleGateway(
 	ctx context.Context,
 	request admissionv1.AdmissionRequest,
@@ -543,8 +534,6 @@ func (h *RequestHandler) handleGateway(
 
 	return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
 }
-
-// +kubebuilder:webhook:verbs=create;update,groups=gateway.networking.k8s.io,resources=httproutes,versions=v1;v1beta1,name=httproutes.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
 
 func (h *RequestHandler) handleHTTPRoute(
 	ctx context.Context,
@@ -572,8 +561,6 @@ const (
 		"for the 'proxy' section and %s with a KongUpstreamPolicy resource instead."
 )
 
-// +kubebuilder:webhook:verbs=create;update,groups=core,resources=services,versions=v1,name=services.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
-
 func (h *RequestHandler) handleService(request admissionv1.AdmissionRequest, responseBuilder *ResponseBuilder) (*admissionv1.AdmissionResponse, error) {
 	service := corev1.Service{}
 	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &service)
@@ -590,8 +577,6 @@ func (h *RequestHandler) handleService(request admissionv1.AdmissionRequest, res
 
 	return responseBuilder.Allowed(true).Build(), nil
 }
-
-// +kubebuilder:webhook:verbs=create;update,groups=networking.k8s.io,resources=ingresses,versions=v1,name=ingresses.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
 
 func (h *RequestHandler) handleIngress(ctx context.Context, request admissionv1.AdmissionRequest, responseBuilder *ResponseBuilder) (*admissionv1.AdmissionResponse, error) {
 	ingress := netv1.Ingress{}
@@ -611,8 +596,6 @@ func (h *RequestHandler) handleIngress(ctx context.Context, request admissionv1.
 	return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
 }
 
-// +kubebuilder:webhook:verbs=create;update,groups=configuration.konghq.com,resources=kongvaults,versions=v1alpha1,name=kongvaults.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
-
 func (h *RequestHandler) handleKongVault(ctx context.Context, request admissionv1.AdmissionRequest, responseBuilder *ResponseBuilder) (*admissionv1.AdmissionResponse, error) {
 	kongVault := configurationv1alpha1.KongVault{}
 	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &kongVault)
@@ -630,8 +613,6 @@ func (h *RequestHandler) handleKongVault(ctx context.Context, request admissionv
 
 	return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
 }
-
-// +kubebuilder:webhook:verbs=create;update,groups=configuration.konghq.com,resources=kongcustomentities,versions=v1alpha1,name=kongcustomentities.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
 
 func (h *RequestHandler) handleKongCustomEntity(ctx context.Context, request admissionv1.AdmissionRequest, responseBuilder *ResponseBuilder) (*admissionv1.AdmissionResponse, error) {
 	kongCustomEntity := configurationv1alpha1.KongCustomEntity{}

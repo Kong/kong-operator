@@ -409,7 +409,10 @@ manifests.conversion-webhook: kustomize
 	KUSTOMIZE_BIN=$(KUSTOMIZE) go run hack/generators/conversion-webhook/main.go
 
 .PHONY: manifests.validating-webhook
-manifests.validating-webhook: kustomize
+manifests.validating-webhook: controller-gen kustomize
+	$(CONTROLLER_GEN) \
+		webhook:headerFile="hack/generators/boilerplate_validating_webhook.yaml" paths="./ingress-controller/internal/admission/..." \
+		output:webhook:artifacts:config=config/default/validating_webhook/;
 	KUSTOMIZE_BIN=$(KUSTOMIZE) go run hack/generators/validating-webhook/main.go
 
 .PHONY: manifests.validating-policy
