@@ -57,6 +57,10 @@ run = "controller-gen object paths=./api/..."
 description = "Run golangci-lint"
 run = "golangci-lint run -v --config .golangci.yml ./..."
 
+[tasks.gofix]
+description = "Run go fix"
+run = "go fix ./..."
+
 [tasks.lint-api]
 description = "Run golangci-lint"
 run = "golangci-lint-kube-api-linter run -v --config .golangci-kube-api.yml ./api/..."
@@ -78,6 +82,6 @@ description = "Generate API, CRDs, and run all tests and linters"
 run = [
        { task = "generate-api" },
        { task = "lint" },
-       { tasks = [ "generate-crds", "lint-api", "test-unit"] },
+       { tasks = [ "generate-crds", "lint-api", "test-unit", "gofix"] },
        { task = "test-crdsvalidation" },
 ]

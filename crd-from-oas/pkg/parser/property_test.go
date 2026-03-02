@@ -30,7 +30,7 @@ func TestParseProperty_StringValidations(t *testing.T) {
 		Value: &openapi3.Schema{
 			Type:      &openapi3.Types{"string"},
 			MinLength: 5,
-			MaxLength: openapi3.Ptr(uint64(100)),
+			MaxLength: new(uint64(100)),
 			Pattern:   "^[a-z]+$",
 		},
 	}
@@ -49,8 +49,8 @@ func TestParseProperty_NumberValidations(t *testing.T) {
 	schemaRef := &openapi3.SchemaRef{
 		Value: &openapi3.Schema{
 			Type: &openapi3.Types{"number"},
-			Min:  openapi3.Ptr(float64(0.0)),
-			Max:  openapi3.Ptr(float64(100.0)),
+			Min:  new(float64(0.0)),
+			Max:  new(float64(100.0)),
 		},
 	}
 
@@ -95,14 +95,14 @@ func TestParseProperty_EnumValues(t *testing.T) {
 	schemaRef := &openapi3.SchemaRef{
 		Value: &openapi3.Schema{
 			Type: &openapi3.Types{"string"},
-			Enum: []interface{}{"active", "inactive", "pending"},
+			Enum: []any{"active", "inactive", "pending"},
 		},
 	}
 
 	prop := ParseProperty("status", schemaRef, 0, make(map[string]bool))
 
 	assert.Equal(t, "string", prop.Type)
-	assert.Equal(t, []interface{}{"active", "inactive", "pending"}, prop.Enum)
+	assert.Equal(t, []any{"active", "inactive", "pending"}, prop.Enum)
 }
 
 func TestParseProperty_DefaultValue(t *testing.T) {
@@ -450,14 +450,14 @@ func TestParseProperty_AllValidations(t *testing.T) {
 			Description: "Full validation test",
 			Format:      "custom",
 			MinLength:   5,
-			MaxLength:   openapi3.Ptr(uint64(50)),
+			MaxLength:   new(uint64(50)),
 			Pattern:     "^[a-z]+$",
-			Enum:        []interface{}{"a", "b", "c"},
+			Enum:        []any{"a", "b", "c"},
 			Default:     "a",
 			Nullable:    true,
 			ReadOnly:    true,
-			Min:         openapi3.Ptr(float64(1.0)),
-			Max:         openapi3.Ptr(float64(100.0)),
+			Min:         new(float64(1.0)),
+			Max:         new(float64(100.0)),
 		},
 	}
 
@@ -470,7 +470,7 @@ func TestParseProperty_AllValidations(t *testing.T) {
 	assert.Equal(t, int64(5), *prop.MinLength)
 	assert.Equal(t, int64(50), *prop.MaxLength)
 	assert.Equal(t, "^[a-z]+$", prop.Pattern)
-	assert.Equal(t, []interface{}{"a", "b", "c"}, prop.Enum)
+	assert.Equal(t, []any{"a", "b", "c"}, prop.Enum)
 	assert.Equal(t, "a", prop.Default)
 	assert.True(t, prop.Nullable)
 	assert.True(t, prop.ReadOnly)

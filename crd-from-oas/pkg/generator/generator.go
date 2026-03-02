@@ -465,10 +465,7 @@ func extractVariantNames(names []string) []string {
 
 // commonPrefix finds the longest common prefix of two strings
 func commonPrefix(a, b string) string {
-	minLen := len(a)
-	if len(b) < minLen {
-		minLen = len(b)
-	}
+	minLen := min(len(b), len(a))
 	i := 0
 	for i < minLen && a[i] == b[i] {
 		i++
@@ -478,10 +475,7 @@ func commonPrefix(a, b string) string {
 
 // commonSuffix finds the longest common suffix of two strings
 func commonSuffix(a, b string) string {
-	minLen := len(a)
-	if len(b) < minLen {
-		minLen = len(b)
-	}
+	minLen := min(len(b), len(a))
 	i := 0
 	for i < minLen && a[len(a)-1-i] == b[len(b)-1-i] {
 		i++
@@ -505,7 +499,7 @@ func cleanSingleVariantName(name string) string {
 func fixTrailingEmptyLines(s string) string {
 	lines := strings.Split(s, "\n")
 	var result []string
-	for i := 0; i < len(lines); i++ {
+	for i := range lines {
 		// Skip empty lines that are followed by a line containing only "}"
 		if strings.TrimSpace(lines[i]) == "" && i+1 < len(lines) && strings.TrimSpace(lines[i+1]) == "}" {
 			continue

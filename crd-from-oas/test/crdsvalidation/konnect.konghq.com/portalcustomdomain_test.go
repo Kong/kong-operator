@@ -4,8 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	"k8s.io/utils/ptr"
-
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/crd-from-oas/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/crd-from-oas/test/crdsvalidation/common"
 	testscheme "github.com/kong/kong-operator/v2/crd-from-oas/test/scheme"
@@ -23,7 +21,7 @@ func TestPortalCustomDomain(t *testing.T) {
 				Name: "test-portal",
 			},
 			APISpec: konnectv1alpha1.PortalCustomDomainAPISpec{
-				Enabled:  ptr.To(true),
+				Enabled:  new(true),
 				Hostname: "custom.example.com",
 				SSL: konnectv1alpha1.CreatePortalCustomDomainSSL{
 					"type": "standard",
@@ -119,7 +117,7 @@ func TestPortalCustomDomain(t *testing.T) {
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: func() konnectv1alpha1.PortalCustomDomainSpec {
 						s := validSpec()
-						s.APISpec.Enabled = ptr.To(false)
+						s.APISpec.Enabled = new(false)
 						return s
 					}(),
 				},
@@ -139,7 +137,7 @@ func TestPortalCustomDomain(t *testing.T) {
 							Name: "test-portal",
 						},
 						APISpec: konnectv1alpha1.PortalCustomDomainAPISpec{
-							Enabled:  ptr.To(true),
+							Enabled:  new(true),
 							Hostname: "portal.custom-domain.example.com",
 							SSL: konnectv1alpha1.CreatePortalCustomDomainSSL{
 								"type":                       "standard",
