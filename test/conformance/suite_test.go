@@ -12,9 +12,12 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned/typed/apis/v1"
 
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/modules/manager"
 	"github.com/kong/kong-operator/v2/modules/manager/metadata"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
@@ -27,6 +30,10 @@ import (
 // -----------------------------------------------------------------------------
 // Testing Vars - Environment Overridable
 // -----------------------------------------------------------------------------
+
+// conformanceInfraNamespace is the namespace where conformance
+// test suite creates its resources.
+const conformanceInfraNamespace = "gateway-conformance-infra"
 
 var (
 	existingCluster      = os.Getenv("KONG_TEST_CLUSTER")
@@ -127,7 +134,9 @@ func TestMain(m *testing.M) {
 	// If we don't do it then we'll be left with Gateways that have a deleted
 	// timestamp and finalizers set but no operator running which could handle those.
 	if cleanupResources {
-		exitOnErr(waitForConformanceGatewaysToCleanup(ctx, clients.GatewayClient.GatewayV1()))
+		logf := func(format string, args ...any) { fmt.Printf(format+"\n", args...) }
+		exitOnErr(waitForConformanceGatewaysToCleanup(ctx, clients.GatewayClient.GatewayV1(), logf))
+		exitOnErr(waitForConformanceKonnectGatewayControlPlanesToCleanup(ctx, logf))
 	}
 
 	if existingCluster == "" && cleanupResources {
@@ -174,9 +183,7 @@ func startControllerManager(metadata metadata.Info) <-chan struct{} {
 	return startedChan
 }
 
-func waitForConformanceGatewaysToCleanup(ctx context.Context, gw gwapiv1.GatewayV1Interface) error {
-	const conformanceInfraNamespace = "gateway-conformance-infra"
-
+func waitForConformanceGatewaysToCleanup(ctx context.Context, gw gwapiv1.GatewayV1Interface, logf func(string, ...any)) error {
 	var (
 		gwClient         = gw.Gateways(conformanceInfraNamespace)
 		ticker           = time.NewTicker(100 * time.Millisecond)
@@ -190,13 +197,53 @@ func waitForConformanceGatewaysToCleanup(ctx context.Context, gw gwapiv1.Gateway
 			return fmt.Errorf("conformance cleanup failed (%d gateways remain): %w", gatewayRemaining, ctx.Err())
 		case <-ticker.C:
 			gws, err := gwClient.List(ctx, metav1.ListOptions{})
+			if apierrors.IsNotFound(err) {
+				return nil
+			}
 			if err != nil {
 				return fmt.Errorf("failed to list Gateways in %s namespace during cleanup: %w", conformanceInfraNamespace, err)
+			}
+			for _, g := range gws.Items {
+				logf("Gateway %s has deletion timestamp %v and finalizers %v", g.Name, g.DeletionTimestamp, g.Finalizers)
 			}
 			if len(gws.Items) == 0 {
 				return nil
 			}
 			gatewayRemaining = len(gws.Items)
+		}
+	}
+}
+
+func waitForConformanceKonnectGatewayControlPlanesToCleanup(ctx context.Context, logf func(string, ...any)) error {
+	var (
+		ticker                 = time.NewTicker(100 * time.Millisecond)
+		controlPlanesRemaining = 0
+	)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("conformance cleanup failed (%d KonnectGatewayControlPlanes remain): %w", controlPlanesRemaining, ctx.Err())
+		case <-ticker.C:
+			var controlPlaneList konnectv1alpha2.KonnectGatewayControlPlaneList
+			if err := clients.MgrClient.List(ctx, &controlPlaneList, client.InNamespace(conformanceInfraNamespace)); err != nil {
+				if apierrors.IsNotFound(err) {
+					return nil
+				}
+				return fmt.Errorf("failed to list KonnectGatewayControlPlanes in %s namespace during cleanup: %w", conformanceInfraNamespace, err)
+			}
+
+			for _, cp := range controlPlaneList.Items {
+				logf("KonnectGatewayControlPlane %s has deletion timestamp %v and finalizers %v",
+					cp.Name, cp.DeletionTimestamp, cp.Finalizers,
+				)
+			}
+
+			if len(controlPlaneList.Items) == 0 {
+				return nil
+			}
+			controlPlanesRemaining = len(controlPlaneList.Items)
 		}
 	}
 }

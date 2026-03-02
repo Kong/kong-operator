@@ -100,5 +100,10 @@ func IsCI() bool {
 // either because it's running in a CI environment or because the user has
 // explicitly requested to keep the test cluster.
 func SkipCleanup() bool {
-	return IsCI() || !KeepTestCluster()
+	if strings.ToLower(os.Getenv("KONG_TEST_FORCE_CLEANUP")) == "true" ||
+		strings.ToLower(os.Getenv("KONG_TEST_FORCE_CLEANUP")) == "1" {
+		fmt.Println("INFO: test cleanup is forced by KONG_TEST_FORCE_CLEANUP")
+		return false
+	}
+	return IsCI() || KeepTestCluster()
 }
