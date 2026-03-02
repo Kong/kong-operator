@@ -9,13 +9,22 @@ import (
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	dpreconciler "github.com/kong/kong-operator/v2/controller/dataplane"
+	kogateway "github.com/kong/kong-operator/v2/controller/gateway"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/util"
+	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/pkg/consts"
+	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
+	"github.com/kong/kong-operator/v2/pkg/vars"
+	certhelper "github.com/kong/kong-operator/v2/test/helpers/certificate"
 )
 
 func TestGatewayAddressOverride(t *testing.T) {
@@ -177,4 +186,172 @@ func createHTTPRoutes(
 		routes = append(routes, httpRoute)
 	}
 	return routes
+}
+
+// TestGatewayInfrastructureLabels verifies that labels and annotations set in
+// Gateway.spec.infrastructure are propagated to the DataPlane ingress Service
+// labels/annotations and to the DataPlane Deployment pod template
+// labels/annotations.
+func TestGatewayInfrastructureLabels(t *testing.T) {
+	t.Parallel()
+
+	const (
+		infraLabel      = "e2e.test/infra-label"
+		infraLabelValue = "infra-label-value"
+		infraAnnotation = "e2e.test/infra-annotation"
+		infraAnnotValue = "infra-annotation-value"
+
+		waitTime = 30 * time.Second
+		pollTime = 500 * time.Millisecond
+	)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	scheme := managerscheme.Get()
+	envcfg, ns := Setup(t, ctx, scheme, WithInstallGatewayCRDs(true))
+	mgr, logs := NewManager(t, ctx, envcfg, scheme)
+	c := mgr.GetClient()
+
+	// Create the cluster CA secret required by the DataPlane reconciler.
+	cert, key := certhelper.MustGenerateCertPEMFormat(
+		certhelper.WithCommonName("kong-operator-cluster-ca"),
+		certhelper.WithCATrue(),
+	)
+	caSecretName := "cluster-ca-infra-labels-test"
+	caSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ns.Name,
+			Name:      caSecretName,
+			Labels:    map[string]string{"konghq.com/secret": "true"},
+		},
+		Type: corev1.SecretTypeTLS,
+		Data: map[string][]byte{
+			corev1.TLSCertKey:       cert,
+			corev1.TLSPrivateKeyKey: key,
+		},
+	}
+	require.NoError(t, c.Create(ctx, caSecret))
+	t.Cleanup(func() { _ = c.Delete(ctx, caSecret) })
+
+	// Start KO Gateway and DataPlane reconcilers.
+	StartReconcilers(ctx, t, mgr, logs,
+		&kogateway.Reconciler{
+			Client:                c,
+			Scheme:                scheme,
+			Namespace:             ns.Name,
+			DefaultDataPlaneImage: consts.DefaultDataPlaneImage,
+		},
+		&dpreconciler.Reconciler{
+			Client:                   c,
+			ClusterCASecretName:      caSecretName,
+			ClusterCASecretNamespace: ns.Name,
+			DefaultImage:             consts.DefaultDataPlaneImage,
+		},
+	)
+
+	// Create a GatewayClass accepted by the KO controller.
+	gc := &gatewayv1.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{Name: "gc-infra-labels"},
+		Spec: gatewayv1.GatewayClassSpec{
+			ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
+		},
+	}
+	require.NoError(t, c.Create(ctx, gc))
+	t.Cleanup(func() { _ = c.Delete(ctx, gc) })
+
+	t.Log("patching GatewayClass status to Accepted=True")
+	require.Eventually(t, testutils.GatewayClassAcceptedStatusUpdate(t, ctx, gc.Name, c), waitTime, pollTime)
+
+	// Create a Gateway referencing the GatewayClass.
+	gw := &gatewayv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ns.Name,
+			Name:      "gw-infra-labels",
+		},
+		Spec: gatewayv1.GatewaySpec{
+			GatewayClassName: gatewayv1.ObjectName(gc.Name),
+			Listeners: []gatewayv1.Listener{
+				{
+					Name:     "http",
+					Protocol: gatewayv1.HTTPProtocolType,
+					Port:     gatewayv1.PortNumber(80),
+				},
+			},
+		},
+	}
+	require.NoError(t, c.Create(ctx, gw))
+	t.Cleanup(func() { _ = c.Delete(ctx, gw) })
+
+	// Patch the Gateway to add infrastructure labels and annotations.
+	gwOld := gw.DeepCopy()
+	gw.Spec.Infrastructure = &gatewayv1.GatewayInfrastructure{
+		Labels: map[gatewayv1.LabelKey]gatewayv1.LabelValue{
+			infraLabel: infraLabelValue,
+		},
+		Annotations: map[gatewayv1.AnnotationKey]gatewayv1.AnnotationValue{
+			infraAnnotation: infraAnnotValue,
+		},
+	}
+	require.NoError(t, c.Patch(ctx, gw, ctrlclient.MergeFrom(gwOld)))
+
+	// Verify labels/annotations appear on the DataPlane ingress Service.
+	t.Log("verifying infrastructure labels and annotations appear on the ingress Service")
+	require.Eventually(t, func() bool {
+		var svcs corev1.ServiceList
+		if err := c.List(ctx, &svcs,
+			ctrlclient.InNamespace(ns.Name),
+			ctrlclient.MatchingLabels{
+				consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneIngressServiceLabelValue),
+			},
+		); err != nil {
+			t.Logf("failed listing ingress services: %v", err)
+			return false
+		}
+		if len(svcs.Items) == 0 {
+			t.Log("no ingress services found yet")
+			return false
+		}
+		svc := &svcs.Items[0]
+		if svc.Labels[infraLabel] != infraLabelValue {
+			t.Logf("ingress service label %q = %q, want %q", infraLabel, svc.Labels[infraLabel], infraLabelValue)
+			return false
+		}
+		if svc.Annotations[infraAnnotation] != infraAnnotValue {
+			t.Logf("ingress service annotation %q = %q, want %q", infraAnnotation, svc.Annotations[infraAnnotation], infraAnnotValue)
+			return false
+		}
+		return true
+	}, waitTime, pollTime, "infrastructure labels/annotations did not appear on ingress Service")
+
+	// Verify labels/annotations appear on the DataPlane Deployment pod template.
+	t.Log("verifying infrastructure labels and annotations appear on the Deployment pod template")
+	require.Eventually(t, func() bool {
+		var deps appsv1.DeploymentList
+		if err := c.List(ctx, &deps,
+			ctrlclient.InNamespace(ns.Name),
+			ctrlclient.MatchingLabels{
+				consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+			},
+		); err != nil {
+			t.Logf("failed listing deployments: %v", err)
+			return false
+		}
+		if len(deps.Items) == 0 {
+			t.Log("no deployments found yet")
+			return false
+		}
+		dep := &deps.Items[0]
+		podLabels := dep.Spec.Template.Labels
+		podAnnotations := dep.Spec.Template.Annotations
+		if podLabels[infraLabel] != infraLabelValue {
+			t.Logf("pod template label %q = %q, want %q", infraLabel, podLabels[infraLabel], infraLabelValue)
+			return false
+		}
+		if podAnnotations[infraAnnotation] != infraAnnotValue {
+			t.Logf("pod template annotation %q = %q, want %q", infraAnnotation, podAnnotations[infraAnnotation], infraAnnotValue)
+			return false
+		}
+		return true
+	}, waitTime, pollTime, "infrastructure labels/annotations did not appear on Deployment pod template")
 }

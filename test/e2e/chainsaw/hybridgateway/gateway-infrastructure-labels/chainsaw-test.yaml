@@ -1,0 +1,170 @@
+# Gateway infrastructure labels/annotations end-to-end test.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: gateway-infrastructure-labels
+spec:
+  description: |
+    Validates that labels and annotations from Gateway.spec.infrastructure
+    are propagated to the DataPlane's ingress Service and Deployment pod template.
+
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_api_auth_namespace
+      value: ($namespace)
+    - name: sni_hostname
+      value: (join('.', ['*', ($test_name), 'example.com']))
+    - name: fqdn
+      value: (join('.', ['echo', ($test_name), 'example.com']))
+    - name: cert_secret_name
+      value: test-tls-secret
+    - name: cert_secret_namespace
+      value: ($namespace)
+    - name: listener_https_port
+      value: 443
+    - name: listener_http_port
+      value: 80
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: gateway_image
+      value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.12')
+    - name: gateway_name
+      value: (join('-', [($test_name), 'gateway']))
+    - name: gateway_namespace
+      value: ($namespace)
+
+  steps:
+    - name: Create-tls-secret
+      description: Create TLS Secret for the Gateway TLS listener.
+      use:
+        template: ../../common/_step_templates/apply-assert-tlsSecret.yaml
+
+    - name: Create-auth-secret
+      description: Create Secret with Konnect token for KonnectAPIAuthConfiguration.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+
+    - name: Create-konnect-api-auth
+      description: Create KonnectAPIAuthConfiguration for the test.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+
+    - name: Create-gateway-configuration
+      description: Create GatewayConfiguration for the test.
+      use:
+        template: ../../common/_step_templates/apply-assert-gatewayConfiguration.yaml
+
+    - name: Create-gateway-class
+      description: Create GatewayClass for the test.
+      use:
+        template: ../../common/_step_templates/apply-assert-gatewayClass.yaml
+
+    # Step 6: Create Gateway with spec.infrastructure.labels and .annotations.
+    # Inline because the standard template does not include spec.infrastructure.
+    - name: Create-gateway-with-infrastructure-labels
+      description: Create Gateway with infrastructure labels and annotations to propagate to DataPlane resources.
+      try:
+        - apply:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: Gateway
+              metadata:
+                name: ($gateway_name)
+                namespace: ($namespace)
+              spec:
+                gatewayClassName: (join('-', [($test_name), 'gateway-class']))
+                infrastructure:
+                  labels:
+                    e2e.test/infra-label: infra-label-value
+                  annotations:
+                    e2e.test/infra-annotation: infra-annotation-value
+                listeners:
+                - name: http
+                  protocol: HTTP
+                  port: ($listener_http_port)
+                - name: https
+                  protocol: HTTPS
+                  port: ($listener_https_port)
+                  hostname: ($sni_hostname)
+                  tls:
+                    mode: Terminate
+                    certificateRefs:
+                    - name: ($cert_secret_name)
+                      namespace: ($cert_secret_namespace)
+        - assert:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: Gateway
+              metadata:
+                name: ($gateway_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Accepted']):
+                  - status: 'True'
+                    reason: Accepted
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'DataPlaneReady']):
+                  - status: 'True'
+                    reason: Ready
+
+    # Step 7: Assert that the DataPlane ingress Service received infrastructure labels and annotations.
+    - name: Assert-ingress-service-has-infrastructure-labels
+      description: Assert that the DataPlane ingress Service has labels and annotations from Gateway.spec.infrastructure.
+      try:
+        - assert:
+            resource:
+              apiVersion: v1
+              kind: Service
+              metadata:
+                namespace: ($namespace)
+                labels:
+                  gateway-operator.konghq.com/dataplane-service-type: ingress
+                  e2e.test/infra-label: infra-label-value
+                annotations:
+                  e2e.test/infra-annotation: infra-annotation-value
+
+    # Step 8: Assert that the DataPlane Deployment pod template received infrastructure labels and annotations.
+    - name: Assert-deployment-pod-template-has-infrastructure-labels
+      description: Assert that the DataPlane Deployment pod template has labels and annotations from Gateway.spec.infrastructure.
+      try:
+        - assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                namespace: ($namespace)
+                labels:
+                  gateway-operator.konghq.com/managed-by: dataplane
+              spec:
+                template:
+                  metadata:
+                    labels:
+                      e2e.test/infra-label: infra-label-value
+                    annotations:
+                      e2e.test/infra-annotation: infra-annotation-value
+
+  catch:
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: hybridgateway-gateway-infrastructure-labels
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

@@ -1,0 +1,57 @@
+# Gateway infrastructure labels and annotations
+# https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.GatewayInfrastructure
+#
+# This sample demonstrates how to propagate labels and annotations from
+# Gateway.spec.infrastructure to the DataPlane's ingress Service and
+# Deployment pod template using the Kong Gateway Operator.
+#
+# Labels and annotations defined in spec.infrastructure are merged on top
+# of any values set via GatewayConfiguration (last-write-wins).
+---
+kind: GatewayConfiguration
+apiVersion: gateway-operator.konghq.com/v2beta1
+metadata:
+  name: kong
+  namespace: default
+spec:
+  dataPlaneOptions:
+    deployment:
+      podTemplateSpec:
+        spec:
+          containers:
+            - name: proxy
+              # renovate: datasource=docker versioning=docker
+              image: kong/kong-gateway:3.13
+              readinessProbe:
+                initialDelaySeconds: 1
+                periodSeconds: 1
+---
+kind: GatewayClass
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: kong
+spec:
+  controllerName: konghq.com/gateway-operator
+  parametersRef:
+    group: gateway-operator.konghq.com
+    kind: GatewayConfiguration
+    name: kong
+    namespace: default
+---
+kind: Gateway
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: kong
+  namespace: default
+spec:
+  gatewayClassName: kong
+  infrastructure:
+    labels:
+      environment: production
+      team: platform
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-type: nlb
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80

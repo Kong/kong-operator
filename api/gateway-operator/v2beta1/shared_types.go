@@ -286,6 +286,17 @@ type ServiceOptions struct {
 	// +optional
 	Annotations map[string]string `json:"annotations,omitempty" protobuf:"bytes,12,rep,name=annotations"`
 
+	// Labels are an unstructured key value map that may be used to organize and
+	// categorize resources and that are propagated to the DataPlane's ingress Service
+	// by the operator.
+	//
+	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=64
+	// +kubebuilder:validation:XValidation:message="label values must be 63 characters or less",rule="self.all(key, size(self[key]) <= 63)"
+	Labels map[string]string `json:"labels,omitempty" protobuf:"bytes,13,rep,name=labels"`
+
 	// ExternalTrafficPolicy describes how nodes distribute service traffic they
 	// receive on one of the Service's "externally-facing" addresses (NodePorts,
 	// ExternalIPs, and LoadBalancer IPs). If set to "Local", the proxy will configure

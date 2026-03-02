@@ -86,6 +86,28 @@ func extractDataPlaneIngressServiceAnnotations(dataplane *operatorv1beta1.DataPl
 	return anns
 }
 
+func addLabelsForDataPlaneIngressService(obj client.Object, dataplane operatorv1beta1.DataPlane) {
+	specLabels := extractDataPlaneIngressServiceLabels(&dataplane)
+	if specLabels == nil {
+		return
+	}
+	lbls := obj.GetLabels()
+	if lbls == nil {
+		lbls = make(map[string]string)
+	}
+	maps.Copy(lbls, specLabels)
+	obj.SetLabels(lbls)
+}
+
+func extractDataPlaneIngressServiceLabels(dataplane *operatorv1beta1.DataPlane) map[string]string {
+	if dataplane.Spec.Network.Services == nil ||
+		dataplane.Spec.Network.Services.Ingress == nil ||
+		dataplane.Spec.Network.Services.Ingress.Labels == nil {
+		return nil
+	}
+	return dataplane.Spec.Network.Services.Ingress.Labels
+}
+
 // extractOutdatedDataPlaneIngressServiceAnnotations returns the last applied annotations
 // of ingress service from `DataPlane` spec but disappeared in current `DataPlane` spec.
 func extractOutdatedDataPlaneIngressServiceAnnotations(
