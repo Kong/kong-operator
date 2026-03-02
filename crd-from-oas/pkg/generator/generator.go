@@ -734,7 +734,7 @@ func (g *Generator) buildSDKOpsMethods(opsConfig *config.EntityOpsConfig) ([]*sd
 
 	for _, opName := range opNames {
 		opCfg := opsConfig.Ops[opName]
-		importPath, typeName, err := config.ParseSDKTypePath(opCfg.Path)
+		importPath, typeName, err := ParseSDKTypePath(opCfg.Path)
 		if err != nil {
 			return nil, nil, fmt.Errorf("operation %q: %w", opName, err)
 		}

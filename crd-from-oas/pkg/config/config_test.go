@@ -104,7 +104,8 @@ apiGroupVersions:
 		konnect := cfg.APIGroupVersions["konnect.konghq.com/v1alpha1"]
 		require.NotNil(t, konnect.CommonTypes)
 		require.NotNil(t, konnect.CommonTypes.ObjectRef)
-		assert.True(t, konnect.CommonTypes.ObjectRef.ShouldGenerate())
+		require.NotNil(t, konnect.CommonTypes.ObjectRef.Generate)
+		assert.True(t, bool(*konnect.CommonTypes.ObjectRef.Generate))
 		assert.Nil(t, konnect.CommonTypes.ObjectRef.Import)
 	})
 
@@ -161,7 +162,8 @@ apiGroupVersions:
 
 		konnect := cfg.APIGroupVersions["konnect.konghq.com/v1alpha1"]
 		require.NotNil(t, konnect.CommonTypes.ObjectRef)
-		assert.True(t, konnect.CommonTypes.ObjectRef.ShouldGenerate())
+		require.NotNil(t, konnect.CommonTypes.ObjectRef.Generate)
+		assert.True(t, bool(*konnect.CommonTypes.ObjectRef.Generate))
 	})
 
 	t.Run("invalid: generate false without import", func(t *testing.T) {
@@ -273,62 +275,6 @@ func TestParseAPIGroupVersion(t *testing.T) {
 	}
 }
 
-func TestParseSDKTypePath(t *testing.T) {
-	tests := []struct {
-		name       string
-		input      string
-		wantImport string
-		wantType   string
-		wantErr    bool
-	}{
-		{
-			name:       "valid SDK type path",
-			input:      "github.com/Kong/sdk-konnect-go/models/components.CreatePortal",
-			wantImport: "github.com/Kong/sdk-konnect-go/models/components",
-			wantType:   "CreatePortal",
-		},
-		{
-			name:       "valid path with nested packages",
-			input:      "github.com/Kong/sdk-konnect-go/models/operations.ListPortals",
-			wantImport: "github.com/Kong/sdk-konnect-go/models/operations",
-			wantType:   "ListPortals",
-		},
-		{
-			name:    "no dot separator",
-			input:   "noDotAtAll",
-			wantErr: true,
-		},
-		{
-			name:    "leading dot",
-			input:   ".CreatePortal",
-			wantErr: true,
-		},
-		{
-			name:    "trailing dot",
-			input:   "github.com/Kong/sdk-konnect-go/models/components.",
-			wantErr: true,
-		},
-		{
-			name:    "empty string",
-			input:   "",
-			wantErr: true,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			importPath, typeName, err := ParseSDKTypePath(tc.input)
-			if tc.wantErr {
-				assert.Error(t, err)
-				return
-			}
-			require.NoError(t, err)
-			assert.Equal(t, tc.wantImport, importPath)
-			assert.Equal(t, tc.wantType, typeName)
-		})
-	}
-}
-
 func TestAPIGroupVersionConfig_GetPaths(t *testing.T) {
 	agv := &APIGroupVersionConfig{
 		Types: []*TypeConfig{
@@ -356,8 +302,8 @@ func TestAPIGroupVersionConfig_FieldConfig(t *testing.T) {
 		}
 
 		pathToEntity := map[string]string{
-			"/v3/portals":                    "Portal",
-			"/v3/portals/{portalId}/teams":   "PortalTeam",
+			"/v3/portals":                  "Portal",
+			"/v3/portals/{portalId}/teams": "PortalTeam",
 		}
 
 		fc := agv.FieldConfig(pathToEntity)
