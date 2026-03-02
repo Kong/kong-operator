@@ -2,31 +2,47 @@
 
 package v1alpha1
 
-// ObjectRef is a reference to a Kubernetes object in the same namespace
+// ObjectRefType is the enum type for the ObjectRef.
+//
+// +kubebuilder:validation:Enum=namespacedRef
+type ObjectRefType string
+
+const (
+	// ObjectRefTypeNamespacedRef is the type for the namespaced ref.
+	// It is used to reference an entity inside the cluster
+	// using a namespaced reference.
+	ObjectRefTypeNamespacedRef ObjectRefType = "namespacedRef"
+)
+
+// ObjectRef is the schema for the ObjectRef type.
+// It is used to reference an entity inside the cluster
+// by its namespaced name.
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'namespacedRef' ? has(self.namespacedRef) : true", message="when type is namespacedRef, namespacedRef must be set"
+// +kong:channels=kong-operator
 type ObjectRef struct {
-	// Name is the name of the referenced object
+	// Type defines type of the object which is referenced. It can be one of:
+	//
+	// - namespacedRef
 	//
 	// +required
-	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:validation:MinLength=1
-	Name string `json:"name,omitempty"`
-}
+	Type ObjectRefType `json:"type,omitempty"`
 
-// NamespacedObjectRef is a reference to a Kubernetes object, optionally in another namespace
-type NamespacedObjectRef struct {
-	// Name is the name of the referenced object
-	//
-	// +required
-	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:validation:MinLength=1
-	Name string `json:"name,omitempty"`
-
-	// Namespace is the namespace of the referenced object
-	// If empty, the same namespace as the referencing object is used
+	// NamespacedRef is a reference to an entity inside the cluster.
+	// This field is required when the Type is namespacedRef.
 	//
 	// +optional
-	// +kubebuilder:validation:MaxLength=63
-	Namespace string `json:"namespace,omitempty"`
+	NamespacedRef *NamespacedRef `json:"namespacedRef,omitempty"`
+}
+
+// NamespacedRef is a reference to a namespaced resource.
+type NamespacedRef struct {
+	// Name is the name of the referred resource.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Name string `json:"name,omitempty"`
 }
 
 // SecretKeyRef is a reference to a key in a Secret

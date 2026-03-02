@@ -559,15 +559,25 @@ func (g *Generator) generateCommonTypes() (string, error) {
 	data := struct {
 		APIVersion        string
 		ObjectRefImported bool
+		Namespaced        bool
 	}{
 		APIVersion:        g.config.APIVersion,
 		ObjectRefImported: g.objectRefImported(),
+		Namespaced:        g.objectRefNamespaced(),
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
 		return "", err
 	}
 	return buf.String(), nil
+}
+
+// objectRefNamespaced returns true if the generated ObjectRef's NamespacedRef
+// should include a Namespace field.
+func (g *Generator) objectRefNamespaced() bool {
+	return g.config.CommonTypes != nil &&
+		g.config.CommonTypes.ObjectRef != nil &&
+		g.config.CommonTypes.ObjectRef.Namespaced
 }
 
 // objectRefImported returns true if ObjectRef should be imported from an
