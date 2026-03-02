@@ -52,16 +52,16 @@ func TestCRDChecker(t *testing.T) {
 				restMapper := meta.NewDefaultRESTMapper(nil)
 
 				restMapper.Add(schema.GroupVersionKind{
-					Group:   gatewayv1.SchemeGroupVersion.Group,
-					Version: gatewayv1.SchemeGroupVersion.Version,
+					Group:   gatewayv1.GroupVersion.Group,
+					Version: gatewayv1.GroupVersion.Version,
 					Kind:    "Gateway",
 				}, meta.RESTScopeNamespace)
 
 				return meta.NewDefaultRESTMapper(nil)
 			},
 			CRD: schema.GroupVersionResource{
-				Group:   gatewayv1.SchemeGroupVersion.Group,
-				Version: gatewayv1.SchemeGroupVersion.Version,
+				Group:   gatewayv1.GroupVersion.Group,
+				Version: gatewayv1.GroupVersion.Version,
 				// Note: pluralising gateways does not work hence we need this.
 				// Ref: https://github.com/kubernetes/client-go/issues/1082
 				Resource: "gatewaies",
@@ -75,8 +75,8 @@ func TestCRDChecker(t *testing.T) {
 				return meta.NewDefaultRESTMapper(nil)
 			},
 			CRD: schema.GroupVersionResource{
-				Group:   gatewayv1.SchemeGroupVersion.Group,
-				Version: gatewayv1.SchemeGroupVersion.Version,
+				Group:   gatewayv1.GroupVersion.Group,
+				Version: gatewayv1.GroupVersion.Version,
 				// Note: pluralising gateways does not work hence we need this.
 				// Ref: https://github.com/kubernetes/client-go/issues/1082
 				Resource: "gatewaies",

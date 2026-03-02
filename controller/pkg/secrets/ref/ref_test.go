@@ -59,7 +59,7 @@ func TestCheckReferenceGrantForSecret(t *testing.T) {
 		objGateway = &gatewayv1.Gateway{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Gateway",
-				APIVersion: gatewayv1.SchemeGroupVersion.String(),
+				APIVersion: gatewayv1.GroupVersion.Group,
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "goodNamespace",
