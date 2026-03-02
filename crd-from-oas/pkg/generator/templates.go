@@ -178,9 +178,11 @@ const commonTypesTemplate = sharedGeneratedFilePreamble + `
 package {{.APIVersion}}
 {{- if not .ObjectRefImported}}
 
+` + objectRefTypeEnum + `
+
 ` + objectRefType + `
 
-` + namespacedObjectRefType + `
+` + namespacedRefType + `
 {{- end}}
 
 ` + secretKeyRefType + `

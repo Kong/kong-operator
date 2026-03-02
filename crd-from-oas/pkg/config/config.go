@@ -32,6 +32,12 @@ type ObjectRefConfig struct {
 	// already defines an ObjectRef type.
 	// Defaults to true when not specified.
 	Generate *bool `yaml:"generate,omitempty"`
+
+	// Namespaced indicates whether the generated ObjectRef type should include a Namespace field.
+	// Defaults to false when not specified.
+	// Can only be set when Generate is true, and causes errors if set when Generate is false.
+	Namespaced bool `yaml:"namespaced,omitempty"`
+
 	// ImportPath is the Go import path where the ObjectRef type is defined.
 	// Can't be set if Generate is true, and is required if Generate is false.
 	Import *ImportConfig `yaml:"import,omitempty"`
