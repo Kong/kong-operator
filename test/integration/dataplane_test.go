@@ -279,7 +279,7 @@ func TestDataPlaneServiceTypes(t *testing.T) {
 
 		t.Logf("updating dataplane spec with proxy service type of %s", serviceType)
 		require.Eventually(t,
-			testutils.DataPlaneUpdateEventually(t, ctx, dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
+			testutils.DataPlaneUpdateEventually(t, ctx, dataplaneName, clients.MgrClient, func(dp *operatorv1beta1.DataPlane) {
 				dp.Spec.Network.Services.Ingress.Type = serviceType
 			}),
 			waitTime, tickTime)
@@ -400,7 +400,7 @@ func TestDataPlaneUpdate(t *testing.T) {
 
 	t.Logf("updating TEST_ENV in dataplane")
 	require.Eventually(t,
-		testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
+		testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients.MgrClient, func(dp *operatorv1beta1.DataPlane) {
 			container := k8sutils.GetPodContainerByName(&dp.Spec.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
 			require.NotNil(t, container)
 			container.Env = []corev1.EnvVar{
@@ -445,7 +445,7 @@ func TestDataPlaneUpdate(t *testing.T) {
 
 	t.Run("dataplane is not Ready when the underlying deployment changes state to not Ready", func(t *testing.T) {
 		require.Eventually(t,
-			testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
+			testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients.MgrClient, func(dp *operatorv1beta1.DataPlane) {
 				container := k8sutils.GetPodContainerByName(&dp.Spec.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
 				require.NotNil(t, container)
 				container.ReadinessProbe = &corev1.Probe{
@@ -483,7 +483,7 @@ func TestDataPlaneUpdate(t *testing.T) {
 	})
 	t.Run("dataplane gets Ready when the underlying deployment changes state to Ready", func(t *testing.T) {
 		require.Eventually(t,
-			testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
+			testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients.MgrClient, func(dp *operatorv1beta1.DataPlane) {
 				container := k8sutils.GetPodContainerByName(&dp.Spec.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
 				require.NotNil(t, container)
 				container.ReadinessProbe = &corev1.Probe{
@@ -522,7 +522,7 @@ func TestDataPlaneUpdate(t *testing.T) {
 
 	t.Run("dataplane Ready condition gets properly update with correct ObservedGeneration", func(t *testing.T) {
 		require.Eventually(t,
-			testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
+			testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients.MgrClient, func(dp *operatorv1beta1.DataPlane) {
 				container := k8sutils.GetPodContainerByName(&dp.Spec.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
 				require.NotNil(t, container)
 				container.StartupProbe = &corev1.Probe{
@@ -559,7 +559,7 @@ func TestDataPlaneUpdate(t *testing.T) {
 
 	t.Run("dataplane gets properly updated with a ReadinessProbe using port names instead of numbers", func(t *testing.T) {
 		require.Eventually(t,
-			testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
+			testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients.MgrClient, func(dp *operatorv1beta1.DataPlane) {
 				container := k8sutils.GetPodContainerByName(&dp.Spec.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
 				require.NotNil(t, container)
 				container.StartupProbe = &corev1.Probe{
@@ -652,7 +652,7 @@ func TestDataPlaneHorizontalScaling(t *testing.T) {
 
 	t.Log("changing replicas in dataplane spec to 1 should scale down the deployment back to 1")
 	require.Eventually(t,
-		testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) { dp.Spec.Deployment.Replicas = new(int32(1)) }),
+		testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients.MgrClient, func(dp *operatorv1beta1.DataPlane) { dp.Spec.Deployment.Replicas = new(int32(1)) }),
 		waitTime, tickTime)
 
 	t.Log("verifying that dataplane has indeed 1 ready replica after scaling down")
@@ -660,7 +660,7 @@ func TestDataPlaneHorizontalScaling(t *testing.T) {
 
 	t.Log("changing from replicas to using autoscaling should create an HPA targeting the dataplane deployment")
 	require.Eventually(t,
-		testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
+		testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients.MgrClient, func(dp *operatorv1beta1.DataPlane) {
 			dp.Spec.Deployment.Scaling = &operatorv1beta1.Scaling{
 				HorizontalScaling: &operatorv1beta1.HorizontalScaling{
 					MaxReplicas: 3,
@@ -695,7 +695,7 @@ func TestDataPlaneHorizontalScaling(t *testing.T) {
 
 	t.Log("updating the horizontal scaling spec should update the relevant HPA")
 	require.Eventuallyf(t,
-		testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
+		testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients.MgrClient, func(dp *operatorv1beta1.DataPlane) {
 			dp.Spec.Deployment.Scaling.HorizontalScaling.MaxReplicas = 5
 			dp.Spec.Deployment.Scaling.HorizontalScaling.Metrics[0].Resource.Target.AverageUtilization = new(int32(50))
 			dp.Spec.Deployment.Replicas = nil
@@ -723,7 +723,7 @@ func TestDataPlaneHorizontalScaling(t *testing.T) {
 
 	t.Log("removing the horizontal scaling spec should delete the relevant HPA")
 	require.Eventuallyf(t,
-		testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
+		testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients.MgrClient, func(dp *operatorv1beta1.DataPlane) {
 			dp.Spec.Deployment.Scaling = nil
 		}),
 		time.Minute, time.Second, "failed to update dataplane %s", dataplane.Name)
@@ -986,7 +986,7 @@ func TestDataPlanePodDisruptionBudget(t *testing.T) {
 	assert.EqualValues(t, 1, pdb.Status.DisruptionsAllowed)
 
 	t.Log("changing the PodDisruptionBudget spec in DataPlane")
-	require.Eventually(t, testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
+	require.Eventually(t, testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients.MgrClient, func(dp *operatorv1beta1.DataPlane) {
 		dp.Spec.Resources.PodDisruptionBudget.Spec.MinAvailable = new(intstr.FromInt32(2))
 	}), waitTime, tickTime)
 
@@ -998,7 +998,7 @@ func TestDataPlanePodDisruptionBudget(t *testing.T) {
 	}), waitTime, tickTime)
 
 	t.Log("removing the PodDisruptionBudget spec in DataPlane")
-	require.Eventually(t, testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
+	require.Eventually(t, testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients.MgrClient, func(dp *operatorv1beta1.DataPlane) {
 		dp.Spec.Resources.PodDisruptionBudget = nil
 	}), waitTime, tickTime)
 
@@ -1088,7 +1088,7 @@ func TestDataPlaneServiceExternalTrafficPolicy(t *testing.T) {
 	verifyEventuallyExternalTrafficPolicy(t, dataplaneName, corev1.ServiceExternalTrafficPolicyLocal)
 
 	t.Log("setting DataPlane Service ExternalTrafficPolicy to Cluster")
-	require.Eventually(t, testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients,
+	require.Eventually(t, testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients.MgrClient,
 		func(dp *operatorv1beta1.DataPlane) {
 			dp.Spec.Network.Services.Ingress.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyCluster
 		},
@@ -1098,7 +1098,7 @@ func TestDataPlaneServiceExternalTrafficPolicy(t *testing.T) {
 	verifyEventuallyExternalTrafficPolicy(t, dataplaneName, corev1.ServiceExternalTrafficPolicyCluster)
 
 	t.Log("changing in ExternalTrafficPolicy to Local")
-	require.Eventually(t, testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
+	require.Eventually(t, testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients.MgrClient, func(dp *operatorv1beta1.DataPlane) {
 		dp.Spec.Network.Services = &operatorv1beta1.DataPlaneServices{
 			Ingress: &operatorv1beta1.DataPlaneServiceOptions{
 				ServiceOptions: operatorv1beta1.ServiceOptions{
@@ -1190,7 +1190,7 @@ func TestDataPlaneSpecifyingServiceName(t *testing.T) {
 	serviceName = "ingress-service-" + uuid.NewString()
 	t.Logf("updating ingress service name from '%s' to '%s' in dataplane", oldServiceName, serviceName)
 	require.Eventually(t,
-		testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
+		testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients.MgrClient, func(dp *operatorv1beta1.DataPlane) {
 			dp.Spec.Network.Services.Ingress.Name = &serviceName
 		}),
 		time.Minute, time.Second,
