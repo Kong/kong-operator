@@ -15,6 +15,15 @@ github_attestations = false
 version = "v5.8.1"
 version_prefix = "kustomize/"
 
+[tools."kind"]
+# renovate: datasource=github-releases depName=kubernetes-sigs/kind
+version = "v0.31.0"
+bin = "kind"
+[tools."kind".platforms]
+linux-x64 = { asset_pattern = "kind-linux-amd64" }
+linux-arm64 = { asset_pattern = "kind-linux-arm64" }
+macos-arm64 = { asset_pattern = "kind-darwin-arm64" }
+
 [tools."github:Kong/kubernetes-testing-framework"]
 # renovate: datasource=github-releases depName=Kong/kubernetes-testing-framework
 version = "v0.48.0"
@@ -26,13 +35,11 @@ version = "2.26.2"
 [tools."github:telepresenceio/telepresence".platforms]
 linux-x64 = { asset_pattern = "telepresence-linux-amd64" }
 linux-arm64 = { asset_pattern = "telepresence-linux-arm64" }
-darwin-arm64 = { asset_pattern = "telepresence-darwin-arm64" }
 macos-arm64 = { asset_pattern = "telepresence-darwin-arm64" }
 
 [tools."http:helm"]
 # renovate: datasource=github-releases depName=helm/helm
 version = "4.1.1"
-
 [tools."http:helm".platforms]
 linux-x64 = { url = "https://get.helm.sh/helm-v{version}-linux-amd64.tar.gz" }
 linux-arm64 = { url = "https://get.helm.sh/helm-v{version}-linux-arm64.tar.gz" }

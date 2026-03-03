@@ -37,9 +37,6 @@ permissions:
 env:
   MISE_VERBOSE: 1
   MISE_DEBUG: 1
-  # Specify this here because these tests rely on ktf to run kind for cluster creation.
-  # renovate: datasource=github-releases depName=kubernetes-sigs/kind
-  KIND_VERSION: "0.31.0"
 
 jobs:
   check-docs-only:
@@ -145,7 +142,7 @@ jobs:
 
       - uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8 # v3.6.1
         with:
-          install: false
+          install_args: kind github:Kong/kubernetes-testing-framework http:helm
 
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
@@ -166,7 +163,6 @@ jobs:
       - name: setup testing environment (kind-cluster)
         env:
           KUBERNETES_VERSION: ${{ matrix.kubernetes-node-version }}
-          CHART_NAME: ${{ matrix.chart-name }}
         run: ./scripts/charts-test-env.sh
       
       - name: Install cert-manager
