@@ -304,9 +304,7 @@ jobs:
       uses: helm/kind-action@ef37e7f390d99f746eb8b610417061a60e82a6cc # v1.14.0
       with:
         cluster_name: ${{ env.CLUSTER_NAME }}
-        # NOTE: default is 0.29.0 https://github.com/helm/kind-action/blob/a1b0e391336a6ee6713a0583f8c6240d70863de3/kind.sh#L21
-        # so bump this manually
-        version: v0.30.0
+        ignore_failed_clean: true
         node_image: kindest/node:${{ needs.matrix_k8s_node_versions.outputs.latest }}
 
     - uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8 # v3.6.1
