@@ -42,6 +42,12 @@ func ensureControlPlane(
 		}
 		cp.SetKonnectID(string(cp.Spec.Mirror.Konnect.ID))
 		cp.Status.ClusterType = resp.Config.ClusterType
+		if resp.Config.ControlPlaneEndpoint != "" || resp.Config.TelemetryEndpoint != "" {
+			cp.Status.Endpoints = &konnectv1alpha2.KonnectEndpoints{
+				ControlPlaneEndpoint: resp.Config.ControlPlaneEndpoint,
+				TelemetryEndpoint:    resp.Config.TelemetryEndpoint,
+			}
+		}
 		return nil
 	default:
 		// This should never happen, as the source type is validated by CEL rules.
@@ -76,6 +82,12 @@ func createControlPlane(
 	id := resp.ControlPlane.ID
 	cp.SetKonnectID(id)
 	cp.Status.ClusterType = resp.ControlPlane.Config.ClusterType
+	if resp.ControlPlane.Config.ControlPlaneEndpoint != "" || resp.ControlPlane.Config.TelemetryEndpoint != "" {
+		cp.Status.Endpoints = &konnectv1alpha2.KonnectEndpoints{
+			ControlPlaneEndpoint: resp.ControlPlane.Config.ControlPlaneEndpoint,
+			TelemetryEndpoint:    resp.ControlPlane.Config.TelemetryEndpoint,
+		}
+	}
 
 	if err := setGroupMembers(ctx, cl, cp, id, sdkGroups); err != nil {
 		// If we failed to set group membership, we should return a specific error with a reason
