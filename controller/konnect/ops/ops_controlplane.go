@@ -11,10 +11,12 @@ import (
 	"github.com/sourcegraph/conc/iter"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	"github.com/kong/kong-operator/v2/controller/pkg/patch"
 )
 
 // ensureControlPlane ensures that the Konnect ControlPlane exists in Konnect. It is created
@@ -40,13 +42,11 @@ func ensureControlPlane(
 		if err != nil {
 			return err
 		}
+		old := cp.DeepCopy()
 		cp.SetKonnectID(string(cp.Spec.Mirror.Konnect.ID))
-		cp.Status.ClusterType = resp.Config.ClusterType
-		if resp.Config.ControlPlaneEndpoint != "" || resp.Config.TelemetryEndpoint != "" {
-			cp.Status.Endpoints = &konnectv1alpha2.KonnectEndpoints{
-				ControlPlaneEndpoint: resp.Config.ControlPlaneEndpoint,
-				TelemetryEndpoint:    resp.Config.TelemetryEndpoint,
-			}
+		if fillKonnectGatewayControlPlaneStatusFromResponse(cp, resp.Config) {
+			_, err = patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), cp, old)
+			return err
 		}
 		return nil
 	default:
@@ -80,12 +80,12 @@ func createControlPlane(
 
 	// At this point, the ControlPlane has been created in Konnect.
 	id := resp.ControlPlane.ID
+	old := cp.DeepCopy()
 	cp.SetKonnectID(id)
-	cp.Status.ClusterType = resp.ControlPlane.Config.ClusterType
-	if resp.ControlPlane.Config.ControlPlaneEndpoint != "" || resp.ControlPlane.Config.TelemetryEndpoint != "" {
-		cp.Status.Endpoints = &konnectv1alpha2.KonnectEndpoints{
-			ControlPlaneEndpoint: resp.ControlPlane.Config.ControlPlaneEndpoint,
-			TelemetryEndpoint:    resp.ControlPlane.Config.TelemetryEndpoint,
+	if fillKonnectGatewayControlPlaneStatusFromResponse(cp, resp.ControlPlane.Config) {
+		_, err = patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), cp, old)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -157,8 +157,16 @@ func updateControlPlane(
 	if resp == nil || resp.ControlPlane == nil {
 		return fmt.Errorf("failed updating ControlPlane: %w", ErrNilResponse)
 	}
-	id = resp.ControlPlane.ID
 
+	old := cp.DeepCopy()
+	if fillKonnectGatewayControlPlaneStatusFromResponse(cp, resp.ControlPlane.Config) {
+		_, err = patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), cp, old)
+		if err != nil {
+			return err
+		}
+	}
+
+	id = resp.ControlPlane.ID
 	if err := setGroupMembers(ctx, cl, cp, id, sdkGroups); err != nil {
 		// If we failed to set group membership, we should return a specific error with a reason
 		// so the downstream can handle it properly.
@@ -277,9 +285,17 @@ func getControlPlaneForUID(
 		return "", fmt.Errorf("failed listing %s: %w", cp.GetTypeName(), ErrNilResponse)
 	}
 
-	id, err := getMatchingEntryFromListResponseData(sliceToEntityWithIDSlice(resp.ListControlPlanesResponse.Data), cp)
+	entry, id, err := getMatchingEntryFromListResponseData(sliceToEntityWithIDSlice(resp.ListControlPlanesResponse.Data), cp)
 	if err != nil {
 		return "", err
+	}
+
+	old := cp.DeepCopy()
+	if fillKonnectGatewayControlPlaneStatusFromResponse(cp, entry.Config) {
+		_, err = patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), cp, old)
+		if err != nil {
+			return id, err
+		}
 	}
 
 	if err := setGroupMembers(ctx, cl, cp, id, sdkGroups); err != nil {
@@ -324,4 +340,31 @@ func GetControlPlaneByID(
 	}
 
 	return &resp.ListControlPlanesResponse.Data[0], nil
+}
+
+func fillKonnectGatewayControlPlaneStatusFromResponse(
+	cp *konnectv1alpha2.KonnectGatewayControlPlane,
+	respConfig sdkkonnectcomp.ControlPlaneConfig,
+) bool {
+	if cp == nil {
+		return false
+	}
+
+	var updated bool
+	if respConfig.ClusterType != "" {
+		cp.Status.ClusterType = respConfig.ClusterType
+		updated = true
+	}
+	if respConfig.ControlPlaneEndpoint != "" &&
+		(cp.Status.Endpoints == nil || respConfig.ControlPlaneEndpoint != cp.Status.Endpoints.ControlPlaneEndpoint) ||
+		respConfig.TelemetryEndpoint != "" &&
+			(cp.Status.Endpoints == nil || respConfig.TelemetryEndpoint != cp.Status.Endpoints.TelemetryEndpoint) {
+		cp.Status.Endpoints = &konnectv1alpha2.KonnectEndpoints{
+			ControlPlaneEndpoint: respConfig.ControlPlaneEndpoint,
+			TelemetryEndpoint:    respConfig.TelemetryEndpoint,
+		}
+		updated = true
+	}
+
+	return updated
 }

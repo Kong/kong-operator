@@ -3,7 +3,6 @@ package konnect
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,10 +12,7 @@ import (
 
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
-	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
-	"github.com/kong/kong-operator/v2/controller/konnect/ops"
-	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
 )
 
@@ -28,7 +24,6 @@ func handleTypeSpecific[
 	TEnt constraints.EntityType[T],
 ](
 	ctx context.Context,
-	sdk sdkops.SDKWrapper,
 	cl client.Client,
 	ent TEnt,
 ) (bool, ctrl.Result, error) {
@@ -41,11 +36,6 @@ func handleTypeSpecific[
 	switch e := any(ent).(type) {
 	case *configurationv1.KongConsumer:
 		updated, isProblem = handleKongConsumerSpecific(ctx, cl, e)
-	case *konnectv1alpha2.KonnectGatewayControlPlane:
-		updated, err = handleKonnectGatewayControlPlaneSpecific(ctx, sdk, e)
-		if err != nil {
-			return false, ctrl.Result{}, err
-		}
 	default:
 	}
 
@@ -54,29 +44,6 @@ func handleTypeSpecific[
 	}
 
 	return isProblem, res, err
-}
-
-func handleKonnectGatewayControlPlaneSpecific(
-	ctx context.Context,
-	sdk sdkops.SDKWrapper,
-	kgcp *konnectv1alpha2.KonnectGatewayControlPlane,
-) (updated bool, err error) {
-	// If it's not set it means that first time we are reconciling the KonnectGatewayControlPlane,
-	// in subsequent reconciliations it should be set. Otherwise it will be reported and everything
-	// in this helper is irrelevant.
-	kgcpID := kgcp.GetKonnectID()
-	if kgcpID == "" {
-		return false, nil
-	}
-	konnectCP, err := ops.GetControlPlaneByID(ctx, sdk.GetControlPlaneSDK(), kgcpID)
-	if err != nil {
-		return false, fmt.Errorf("can't read KonnectGatewayControlPlane with ID: %s from Konnect API: %w", kgcpID, err)
-	}
-	kgcp.Status.Endpoints = &konnectv1alpha2.KonnectEndpoints{
-		TelemetryEndpoint:    konnectCP.Config.TelemetryEndpoint,
-		ControlPlaneEndpoint: konnectCP.Config.ControlPlaneEndpoint,
-	}
-	return true, nil
 }
 
 func handleKongConsumerSpecific(

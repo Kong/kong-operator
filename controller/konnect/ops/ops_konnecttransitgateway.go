@@ -139,7 +139,8 @@ func getKonnectTransitGatewayMatchingSpecName(
 		return "", fmt.Errorf("failed listing %s: %w", tg.GetTypeName(), ErrNilResponse)
 	}
 
-	return getMatchingEntryFromListResponseData(listTransitGatewayResponseDataToEntityWithIDSlice(resp.ListTransitGatewaysResponse.Data), tg)
+	_, id, err := getMatchingEntryFromListResponseData(listTransitGatewayResponseDataToEntityWithIDSlice(resp.ListTransitGatewaysResponse.Data), tg)
+	return id, err
 }
 
 var transitGatewayTypeToSDKTransitGatewayType = map[konnectv1alpha1.TransitGatewayType]sdkkonnectcomp.CreateTransitGatewayRequestType{
