@@ -7,7 +7,7 @@ import (
 	"github.com/kong/kubernetes-telemetry/pkg/types"
 	"github.com/samber/lo"
 	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/metadata"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
@@ -45,23 +45,23 @@ const (
 )
 
 // NewDataPlaneCountProvider creates a provider for number of dataplanes in the cluster.
-func NewDataPlaneCountProvider(dyn dynamic.Interface, restMapper meta.RESTMapper) (provider.Provider, error) {
+func NewDataPlaneCountProvider(m metadata.Interface, restMapper meta.RESTMapper) (provider.Provider, error) {
 	return provider.NewK8sObjectCountProviderWithRESTMapper(
-		DataPlaneK8sResourceName, DataPlaneCountKind, dyn, operatorv1beta1.DataPlaneGVR(), restMapper,
+		DataPlaneK8sResourceName, DataPlaneCountKind, m, operatorv1beta1.DataPlaneGVR(), restMapper,
 	)
 }
 
 // NewControlPlaneCountProvider creates a provider for number of dataplanes in the cluster.
-func NewControlPlaneCountProvider(dyn dynamic.Interface, restMapper meta.RESTMapper) (provider.Provider, error) {
+func NewControlPlaneCountProvider(m metadata.Interface, restMapper meta.RESTMapper) (provider.Provider, error) {
 	return provider.NewK8sObjectCountProviderWithRESTMapper(
-		ControlPlaneK8sResourceName, ControlPlaneCountKind, dyn, gwtypes.ControlPlaneGVR(), restMapper,
+		ControlPlaneK8sResourceName, ControlPlaneCountKind, m, gwtypes.ControlPlaneGVR(), restMapper,
 	)
 }
 
 // NewAIgatewayCountProvider creates a provider for number of dataplanes in the cluster.
-func NewAIgatewayCountProvider(dyn dynamic.Interface, restMapper meta.RESTMapper) (provider.Provider, error) {
+func NewAIgatewayCountProvider(m metadata.Interface, restMapper meta.RESTMapper) (provider.Provider, error) {
 	return provider.NewK8sObjectCountProviderWithRESTMapper(
-		AIGatewayK8sResourceName, AIGatewayCountKind, dyn, operatorv1alpha1.AIGatewayGVR(), restMapper,
+		AIGatewayK8sResourceName, AIGatewayCountKind, m, operatorv1alpha1.AIGatewayGVR(), restMapper,
 	)
 }
 

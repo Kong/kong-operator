@@ -18,13 +18,13 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/version"
 	fakediscovery "k8s.io/client-go/discovery/fake"
-	testdynclient "k8s.io/client-go/dynamic/fake"
 	testk8sclient "k8s.io/client-go/kubernetes/fake"
+	metadata_fake "k8s.io/client-go/metadata/fake"
+	k8stesting "k8s.io/client-go/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -41,6 +41,7 @@ import (
 	"github.com/kong/kong-operator/v2/modules/manager/metadata"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/vars"
+	"github.com/kong/kong-operator/v2/test/helpers/convert"
 )
 
 type configOption func(*Config) *Config
@@ -633,6 +634,7 @@ func TestCreateManager(t *testing.T) {
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			scheme := scheme.Get()
+			require.NoError(t, metav1.AddMetaToScheme(scheme))
 			k8sclient := testk8sclient.NewClientset()
 
 			ctrlClient := prepareControllerClient(scheme, tc.objects...)
@@ -641,18 +643,6 @@ func TestCreateManager(t *testing.T) {
 			require.True(t, ok)
 			d.FakedServerVersion = versionInfo()
 
-			// We need the custom list kinds to prevent:
-			// panic: coding error: you must register resource to list kind for every resource you're going
-			// to LIST when creating the client.
-			// See NewSimpleDynamicClientWithCustomListKinds:
-			// https://pkg.go.dev/k8s.io/client-go/dynamic/fake#NewSimpleDynamicClientWithCustomListKinds
-			// or register the list into the scheme:
-			dyn := testdynclient.NewSimpleDynamicClientWithCustomListKinds(scheme,
-				map[schema.GroupVersionResource]string{
-					operatorv1alpha1.AIGatewayGVR(): "AIGatewayList",
-				},
-				tc.objects...,
-			)
 			meta := metadata.Info{
 				Release: "0.6.2",
 			}
@@ -665,8 +655,10 @@ func TestCreateManager(t *testing.T) {
 				cfg = opt(cfg)
 			}
 
+			metadataClient := metadata_fake.NewSimpleMetadataClient(scheme, convert.ToPartialObjectMetadata(scheme, tc.objects...)...)
+
 			m, err := createManager(
-				types.Signal(SignalPing), k8sclient, ctrlClient, dyn, meta, *cfg,
+				types.Signal(SignalPing), k8sclient, ctrlClient, metadataClient, meta, *cfg,
 				logr.Discard(),
 				telemetry.OptManagerPeriod(time.Hour),
 			)
@@ -695,7 +687,7 @@ func TestTelemetryUpdates(t *testing.T) {
 		name                           string
 		objects                        []runtime.Object
 		expectedReportParts            []string
-		action                         func(t *testing.T, ctx context.Context, dyn *testdynclient.FakeDynamicClient)
+		action                         func(t *testing.T, tracker k8stesting.ObjectTracker)
 		expectedReportPartsAfterAction []string
 	}{
 		{
@@ -720,10 +712,8 @@ func TestTelemetryUpdates(t *testing.T) {
 				"k8s_pods_count=0",
 				"k8s_dataplanes_count=1",
 			},
-			action: func(t *testing.T, ctx context.Context, dyn *testdynclient.FakeDynamicClient) {
-				require.NoError(t, dyn.Resource(operatorv1beta1.DataPlaneGVR()).
-					Namespace("kong").
-					Delete(ctx, "cloud-gateway-0", metav1.DeleteOptions{}))
+			action: func(t *testing.T, tracker k8stesting.ObjectTracker) {
+				require.NoError(t, tracker.Delete(operatorv1beta1.DataPlaneGVR(), "kong", "cloud-gateway-0"))
 			},
 			expectedReportPartsAfterAction: []string{
 				"signal=test-signal",
@@ -742,65 +732,41 @@ func TestTelemetryUpdates(t *testing.T) {
 				"k8s_pods_count=0",
 				"k8s_dataplanes_count=0",
 			},
-			action: func(t *testing.T, ctx context.Context, dyn *testdynclient.FakeDynamicClient) {
-				_, err := dyn.Resource(operatorv1beta1.DataPlaneGVR()).
-					Namespace("kong").
-					Create(ctx, &unstructured.Unstructured{
-						Object: map[string]any{
-							"apiVersion": "gateway-operator.konghq.com/v1beta1",
-							"kind":       "DataPlane",
-							"metadata": map[string]any{
-								"name":      "cloud-gateway-0",
-								"namespace": "kong",
-							},
-						},
-					}, metav1.CreateOptions{})
-				require.NoError(t, err)
-				_, err = dyn.Resource(operatorv1beta1.DataPlaneGVR()).
-					Namespace("kong").
-					Create(ctx, &unstructured.Unstructured{
-						Object: map[string]any{
-							"apiVersion": "gateway-operator.konghq.com/v1beta1",
-							"kind":       "DataPlane",
-							"metadata": map[string]any{
-								"name":      "cloud-gateway-1",
-								"namespace": "kong",
-							},
-						},
-					}, metav1.CreateOptions{})
-				require.NoError(t, err)
+			action: func(t *testing.T, tracker k8stesting.ObjectTracker) {
+				require.NoError(t, tracker.Create(operatorv1beta1.DataPlaneGVR(), &metav1.PartialObjectMetadata{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "gateway-operator.konghq.com/v1beta1",
+						Kind:       "DataPlane",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "cloud-gateway-0",
+						Namespace: "kong",
+					},
+				}, "kong"))
+				require.NoError(t, tracker.Create(operatorv1beta1.DataPlaneGVR(), &metav1.PartialObjectMetadata{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "gateway-operator.konghq.com/v1beta1",
+						Kind:       "DataPlane",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "cloud-gateway-1",
+						Namespace: "kong",
+					},
+				}, "kong"))
 			},
 			expectedReportPartsAfterAction: []string{
 				"signal=test-signal",
 				"v=0.6.2",
 				"k8s_nodes_count=0",
 				"k8s_pods_count=0",
-				// NOTE: For some reason deletions do not work in tests.
-				// When we add a custom mapping to NewSimpleDynamicClientWithCustomListKinds:
-				//   operatorv1beta1.DataPlaneGVR():  "DataPlaneList",
-				// then this works but the previous test case for deletion fails.
-				// Surprisingly, this part of the report is not reported here after
-				// the update (create actions).
-				// "k8s_dataplanes_count=0",
+				"k8s_dataplanes_count=2",
 			},
 		},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			scheme := scheme.Get()
-			// We need the custom list kinds to prevent:
-			// panic: coding error: you must register resource to list kind for every resource you're going
-			// to LIST when creating the client.
-			// See NewSimpleDynamicClientWithCustomListKinds:
-			// https://pkg.go.dev/k8s.io/client-go/dynamic/fake#NewSimpleDynamicClientWithCustomListKinds
-			// or register the list into the scheme:
-			dyn := testdynclient.NewSimpleDynamicClientWithCustomListKinds(
-				scheme,
-				map[schema.GroupVersionResource]string{
-					operatorv1alpha1.AIGatewayGVR(): "AIGatewayList",
-				},
-				tc.objects...,
-			)
+			require.NoError(t, metav1.AddMetaToScheme(scheme))
 
 			k8sclient := testk8sclient.NewClientset()
 			ctrlClient := prepareControllerClient(scheme)
@@ -817,8 +783,9 @@ func TestTelemetryUpdates(t *testing.T) {
 				DataPlaneControllerEnabled: true,
 			}
 
+			metadataClient := metadata_fake.NewSimpleMetadataClient(scheme, convert.ToPartialObjectMetadata(scheme, tc.objects...)...)
 			m, err := createManager(
-				types.Signal(SignalPing), k8sclient, ctrlClient, dyn, meta, cfg,
+				types.Signal(SignalPing), k8sclient, ctrlClient, metadataClient, meta, cfg,
 				testr.New(t),
 				telemetry.OptManagerPeriod(time.Hour),
 			)
@@ -839,7 +806,7 @@ func TestTelemetryUpdates(t *testing.T) {
 			t.Log("checking received report...")
 			requireReportContainsValuesEventually(t, ch, tc.expectedReportParts...)
 
-			tc.action(t, t.Context(), dyn)
+			tc.action(t, metadataClient.Tracker())
 
 			require.NoError(t, m.TriggerExecute(ctx, "test-signal"), "failed triggering signal execution")
 
