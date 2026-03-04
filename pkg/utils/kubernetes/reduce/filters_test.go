@@ -317,6 +317,31 @@ func TestFilterServices(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "service1 is older than service2",
+			services: []corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "service1",
+						CreationTimestamp: metav1.NewTime(time.Date(2024, time.January, 1, 0, 0, 0, 0, time.UTC)),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "service2",
+						CreationTimestamp: metav1.NewTime(time.Date(2024, time.January, 2, 0, 0, 0, 0, time.UTC)),
+					},
+				},
+			},
+			filteredServices: []corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "service2",
+						CreationTimestamp: metav1.NewTime(time.Date(2024, time.January, 2, 0, 0, 0, 0, time.UTC)),
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
