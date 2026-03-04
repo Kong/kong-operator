@@ -17,7 +17,6 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance"
 	conformancev1 "sigs.k8s.io/gateway-api/conformance/apis/v1"
-	"sigs.k8s.io/gateway-api/conformance/tests"
 	conformanceconfig "sigs.k8s.io/gateway-api/conformance/utils/config"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/pkg/features"
@@ -33,66 +32,6 @@ import (
 	"github.com/kong/kong-operator/v2/test"
 	"github.com/kong/kong-operator/v2/test/helpers/kcfg"
 )
-
-var skippedTestsShared = []string{
-	// TODO: https://github.com/Kong/kong-operator/issues/2215
-	// HTTPRouteWeight is flaky for some reason. 2215 tracks solving it.
-	tests.HTTPRouteWeight.ShortName,
-
-	// NOTE:
-	// Issue tracking all gRPC related conformance tests:
-	// https://github.com/Kong/kong-operator/issues/2345
-	// Tests GRPCRouteHeaderMatching, GRPCExactMethodMatching, GRPCRouteWeight are skipped
-	// because to proxy different gRPC services and route requests based on Header or Method,
-	// it is necessary to create separate catch-all routes for them.
-	// However, Kong does not define priority behavior in this situation unless priorities are manually added.
-	tests.GRPCRouteHeaderMatching.ShortName,
-	tests.GRPCExactMethodMatching.ShortName,
-	tests.GRPCRouteWeight.ShortName,
-	// When processing this scenario, the Kong's router requires `priority` to be specified for routes.
-	// We cannot provide that for routes that are part of the conformance suite.
-	tests.GRPCRouteListenerHostnameMatching.ShortName,
-}
-
-var skippedTestsForExpressionsRouter = []string{}
-
-var skippedTestsForTraditionalCompatibleRouter = []string{
-	// HTTPRoute
-	tests.HTTPRouteHeaderMatching.ShortName,
-	tests.HTTPRouteInvalidBackendRefUnknownKind.ShortName,
-}
-
-var skippedTestsForHybrid = []string{
-
-	// Core profile.
-	tests.HTTPRouteHTTPSListener.ShortName,
-	tests.HTTPRouteInvalidCrossNamespaceBackendRef.ShortName,
-	tests.HTTPRouteInvalidNonExistentBackendRef.ShortName,
-	tests.HTTPRouteInvalidReferenceGrant.ShortName,
-	tests.HTTPRouteListenerHostnameMatching.ShortName,
-	tests.HTTPRouteHeaderMatching.ShortName,
-	tests.HTTPRouteInvalidBackendRefUnknownKind.ShortName,
-	tests.HTTPRouteMethodMatching.ShortName,
-	tests.HTTPRouteMatching.ShortName,
-	tests.HTTPRouteMatchingAcrossRoutes.ShortName,
-	tests.HTTPRoutePartiallyInvalidViaInvalidReferenceGrant.ShortName,
-	tests.HTTPRoutePathMatchOrder.ShortName,
-	tests.HTTPRouteQueryParamMatching.ShortName,
-	tests.HTTPRouteReferenceGrant.ShortName,
-	tests.HTTPRouteSimpleSameNamespace.ShortName,
-	tests.HTTPRouteExactPathMatching.ShortName,
-	tests.HTTPRouteHostnameIntersection.ShortName,
-	tests.HTTPRouteCrossNamespace.ShortName,
-	tests.GatewayModifyListeners.ShortName,
-	tests.GatewayObservedGenerationBump.ShortName,
-	tests.GatewaySecretReferenceGrantAllInNamespace.ShortName,
-	tests.GatewaySecretReferenceGrantSpecific.ShortName,
-	tests.GatewayWithAttachedRoutes.ShortName,
-
-	// Extended profile.
-	tests.HTTPRouteRewriteHost.ShortName,
-	tests.HTTPRouteRewritePath.ShortName,
-}
 
 func TestGatewayConformance(t *testing.T) {
 	t.Parallel()
@@ -110,19 +49,11 @@ func TestGatewayConformance(t *testing.T) {
 
 	// Conformance tests are run for both available router flavours:
 	// traditional_compatible and expressions.
-	var (
-		kongRouterFlavor consts.RouterFlavor
-		skippedTests     = append([]string{}, skippedTestsShared...)
-	)
-	switch rf := KongRouterFlavor(t); rf {
-	case consts.RouterFlavorTraditionalCompatible:
-		skippedTests = append(skippedTests, skippedTestsForTraditionalCompatibleRouter...)
-		kongRouterFlavor = consts.RouterFlavorTraditionalCompatible
-	case consts.RouterFlavorExpressions:
-		skippedTests = append(skippedTests, skippedTestsForExpressionsRouter...)
-		kongRouterFlavor = consts.RouterFlavorExpressions
+	kongRouterFlavor := KongRouterFlavor(t)
+	switch kongRouterFlavor {
+	case consts.RouterFlavorTraditionalCompatible, consts.RouterFlavorExpressions:
 	default:
-		t.Fatalf("unsupported KongRouterFlavor: %s", rf)
+		t.Fatalf("unsupported KongRouterFlavor: %s", kongRouterFlavor)
 	}
 
 	supportedFeatures, err := gatewayapipkg.GetSupportedFeatures(kongRouterFlavor)
@@ -130,18 +61,17 @@ func TestGatewayConformance(t *testing.T) {
 
 	gwType := gatewayType(test.ConformanceGatewayType())
 	switch gwType {
-	case standardGateway:
-		runConformance(t, standardGateway, kongRouterFlavor, supportedFeatures, cleanupResources, append([]string{}, skippedTests...))
-	case hybridGateway:
-		if test.KonnectAccessToken() == "" {
-			t.Fatal("hybrid gateway type requires KONG_TEST_KONNECT_ACCESS_TOKEN to be set")
-		}
-		hybridSkipped := append([]string{}, skippedTests...)
-		hybridSkipped = append(hybridSkipped, skippedTestsForHybrid...)
-		runConformance(t, hybridGateway, kongRouterFlavor, supportedFeatures, cleanupResources, hybridSkipped)
+	case standardGateway, hybridGateway:
 	default:
 		t.Fatalf("unsupported KONG_TEST_CONFORMANCE_GATEWAY_TYPE: %s", gwType)
 	}
+
+	if gwType == hybridGateway && test.KonnectAccessToken() == "" {
+		t.Fatal("hybrid gateway type requires KONG_TEST_KONNECT_ACCESS_TOKEN to be set")
+	}
+
+	skippedTests := skippedTestsForConfig(kongRouterFlavor, gwType)
+	runConformance(t, gwType, kongRouterFlavor, supportedFeatures, cleanupResources, skippedTests)
 }
 
 const conformanceLooserTimeout = 180 * time.Second
