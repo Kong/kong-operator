@@ -16,6 +16,7 @@ import (
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
+	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
 )
 
 func TestDataPlaneBlueGreen(t *testing.T) {
@@ -121,12 +122,15 @@ func TestDataPlaneBlueGreen(t *testing.T) {
 		assert.Equal(ct, metav1.ConditionFalse, condition.Status)
 	}, waitTime, tickTime)
 
-	updated := &operatorv1beta1.DataPlane{}
-	require.NoError(t, mgr.GetClient().Get(ctx, client.ObjectKeyFromObject(dp), updated))
-	updated.Spec.Deployment.PodTemplateSpec.Spec.Containers = append(updated.Spec.Deployment.PodTemplateSpec.Spec.Containers,
-		corev1.Container{Name: "proxy-rollout-trigger", Image: consts.DefaultDataPlaneBaseImage + ":3.3"},
-	)
-	require.NoError(t, mgr.GetClient().Update(ctx, updated))
+	dataplaneName := client.ObjectKeyFromObject(dp)
+	require.Eventually(t,
+		testutils.DataPlaneUpdateEventually(t, ctx, dataplaneName, mgr.GetClient(), func(dp *operatorv1beta1.DataPlane) {
+			dp.Spec.Deployment.PodTemplateSpec.Spec.Containers = append(
+				dp.Spec.Deployment.PodTemplateSpec.Spec.Containers,
+				corev1.Container{Name: "proxy-rollout-trigger", Image: consts.DefaultDataPlaneBaseImage + ":3.3"},
+			)
+		}),
+		waitTime, tickTime)
 
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {
 		var previewDeployments appsv1.DeploymentList
