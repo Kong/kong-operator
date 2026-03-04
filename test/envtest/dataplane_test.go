@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -106,6 +107,16 @@ func TestDataPlane(t *testing.T) {
 					},
 				},
 			},
+		}
+
+		// NOTE: we need to wait a second because CreationTimestamp is the ultimate
+		// tie breaker for the reduction logic, and if the extra service is created
+		// with the same timestamp as the primary service, the reduction logic won't
+		// be deterministic and might not delete the extra service but instead the primary one.
+		select {
+		case <-time.After(time.Second):
+		case <-ctx.Done():
+			require.Fail(t, "context done before creating extra ingress service")
 		}
 		require.NoError(t, cl.Create(ctx, extraIngressService))
 
