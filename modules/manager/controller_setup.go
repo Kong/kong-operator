@@ -178,18 +178,18 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			Condition: c.GatewayControllerEnabled,
 			GVRs: []schema.GroupVersionResource{
 				{
-					Group:    gatewayv1.SchemeGroupVersion.Group,
-					Version:  gatewayv1.SchemeGroupVersion.Version,
+					Group:    gatewayv1.GroupVersion.Group,
+					Version:  gatewayv1.GroupVersion.Version,
 					Resource: "gatewayclasses",
 				},
 				{
-					Group:    gatewayv1.SchemeGroupVersion.Group,
-					Version:  gatewayv1.SchemeGroupVersion.Version,
+					Group:    gatewayv1.GroupVersion.Group,
+					Version:  gatewayv1.GroupVersion.Version,
 					Resource: "gateways",
 				},
 				{
-					Group:    gatewayv1beta1.SchemeGroupVersion.Group,
-					Version:  gatewayv1beta1.SchemeGroupVersion.Version,
+					Group:    gatewayv1beta1.GroupVersion.Group,
+					Version:  gatewayv1beta1.GroupVersion.Version,
 					Resource: "referencegrants",
 				},
 				operatorv1alpha1.KongPluginInstallationGVR(),

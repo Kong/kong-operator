@@ -5,7 +5,9 @@ import (
 
 	"github.com/samber/lo"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // AllowedByReferenceGrants checks if the reference from the input `from` to the object(s)
@@ -13,15 +15,15 @@ import (
 func AllowedByReferenceGrants(
 	ctx context.Context,
 	cl client.Client,
-	from gatewayv1beta1.ReferenceGrantFrom,
+	from gwtypes.ReferenceGrantFrom,
 	targetNamespace string,
-	to gatewayv1beta1.ReferenceGrantTo,
+	to gwtypes.ReferenceGrantTo,
 ) (bool, error) {
 	// Same namespace is always allowed.
-	if from.Namespace == gatewayv1beta1.Namespace(targetNamespace) {
+	if from.Namespace == gatewayv1.Namespace(targetNamespace) {
 		return true, nil
 	}
-	referenceGrantList := gatewayv1beta1.ReferenceGrantList{}
+	referenceGrantList := gwtypes.ReferenceGrantList{}
 	err := cl.List(
 		ctx,
 		&referenceGrantList,
@@ -34,7 +36,7 @@ func AllowedByReferenceGrants(
 	for _, referenceGrant := range referenceGrantList.Items {
 		// If the `spec.from` does not contain the input `from`, we skip the ReferenceGrant
 		// because it is impossible to grant the reference to the input `from`.
-		if !lo.ContainsBy(referenceGrant.Spec.From, func(refGrantFrom gatewayv1beta1.ReferenceGrantFrom) bool {
+		if !lo.ContainsBy(referenceGrant.Spec.From, func(refGrantFrom gwtypes.ReferenceGrantFrom) bool {
 			return isSameGroup(refGrantFrom.Group, from.Group) &&
 				refGrantFrom.Kind == from.Kind &&
 				refGrantFrom.Namespace == from.Namespace
@@ -43,7 +45,7 @@ func AllowedByReferenceGrants(
 		}
 		// If the ReferenceGrant contains the input `from` in `spec.from`, and contains the referenced target in `to`,
 		// we return true because it allows the reference.
-		if lo.ContainsBy(referenceGrant.Spec.To, func(refGrantTo gatewayv1beta1.ReferenceGrantTo) bool {
+		if lo.ContainsBy(referenceGrant.Spec.To, func(refGrantTo gwtypes.ReferenceGrantTo) bool {
 			return isSameGroup(refGrantTo.Group, to.Group) &&
 				refGrantTo.Kind == to.Kind &&
 				// check if the name matches: allow if `spec.to` has no name, or they both have name and equal.
@@ -57,12 +59,12 @@ func AllowedByReferenceGrants(
 }
 
 // isSameGroup returns true if the two `Group`s are the same. `core` and empty are equivalent.
-func isSameGroup(group1, group2 gatewayv1beta1.Group) bool {
-	if group1 == gatewayv1beta1.Group("core") {
-		group1 = gatewayv1beta1.Group("")
+func isSameGroup(group1, group2 gatewayv1.Group) bool {
+	if group1 == gatewayv1.Group("core") {
+		group1 = gatewayv1.Group("")
 	}
-	if group2 == gatewayv1beta1.Group("core") {
-		group2 = gatewayv1beta1.Group("")
+	if group2 == gatewayv1.Group("core") {
+		group2 = gatewayv1.Group("")
 	}
 	return group1 == group2
 }

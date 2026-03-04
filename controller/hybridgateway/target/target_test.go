@@ -19,7 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	_ "github.com/kong/kong-operator/v2/controller/hybridgateway/builder" // Used by function under test.
@@ -125,7 +125,7 @@ func createTestScheme() *runtime.Scheme {
 	scheme := runtime.NewScheme()
 	_ = corev1.AddToScheme(scheme)
 	_ = discoveryv1.AddToScheme(scheme)
-	_ = gatewayv1beta1.Install(scheme)
+	_ = gatewayv1.Install(scheme)
 	_ = configurationv1alpha1.AddToScheme(scheme)
 	return scheme
 }
@@ -1816,20 +1816,20 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 		// Test case 2: ReferenceGrant exists but doesn't permit - should be blocked.
 		t.Run("ReferenceGrant exists but doesn't permit", func(t *testing.T) {
 			// Create a ReferenceGrant that doesn't permit the reference.
-			nonPermittingGrant := &gatewayv1beta1.ReferenceGrant{
+			nonPermittingGrant := &gwtypes.ReferenceGrant{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "non-permitting-grant",
 					Namespace: "other-namespace",
 				},
-				Spec: gatewayv1beta1.ReferenceGrantSpec{
-					From: []gatewayv1beta1.ReferenceGrantFrom{
+				Spec: gwtypes.ReferenceGrantSpec{
+					From: []gwtypes.ReferenceGrantFrom{
 						{
 							Group:     gwtypes.GroupName,
 							Kind:      "HTTPRoute",
 							Namespace: "wrong-namespace", // Wrong source namespace.
 						},
 					},
-					To: []gatewayv1beta1.ReferenceGrantTo{
+					To: []gwtypes.ReferenceGrantTo{
 						{
 							Group: "",
 							Kind:  "Service",
@@ -1869,7 +1869,7 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 			// Create fake client with interceptor that simulates ReferenceGrant list error.
 			interceptorFunc := interceptor.Funcs{
 				List: func(ctx context.Context, client client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
-					if _, ok := list.(*gatewayv1beta1.ReferenceGrantList); ok {
+					if _, ok := list.(*gwtypes.ReferenceGrantList); ok {
 						return fmt.Errorf("simulated ReferenceGrant list error")
 					}
 					return client.List(ctx, list, opts...)
@@ -2433,7 +2433,7 @@ func TestTargetsForBackendRefs(t *testing.T) {
 		fqdn            bool
 		services        []corev1.Service
 		endpointSlices  []discoveryv1.EndpointSlice
-		referenceGrants []gatewayv1beta1.ReferenceGrant
+		referenceGrants []gwtypes.ReferenceGrant
 		expectedTargets int
 		expectedError   bool
 		clientErrors    map[string]error
@@ -2459,7 +2459,7 @@ func TestTargetsForBackendRefs(t *testing.T) {
 				},
 			},
 			endpointSlices:  []discoveryv1.EndpointSlice{},
-			referenceGrants: []gatewayv1beta1.ReferenceGrant{},
+			referenceGrants: []gwtypes.ReferenceGrant{},
 			clientErrors: map[string]error{
 				"list-referencegrant": fmt.Errorf("simulated ReferenceGrant list error"),
 			},
@@ -2487,7 +2487,7 @@ func TestTargetsForBackendRefs(t *testing.T) {
 				},
 			},
 			endpointSlices:  []discoveryv1.EndpointSlice{},
-			referenceGrants: []gatewayv1beta1.ReferenceGrant{},
+			referenceGrants: []gwtypes.ReferenceGrant{},
 			clientErrors: map[string]error{
 				"list-endpointslice": fmt.Errorf("simulated EndpointSlice list error"),
 			},
@@ -2503,7 +2503,7 @@ func TestTargetsForBackendRefs(t *testing.T) {
 			fqdn:            false,
 			services:        []corev1.Service{},
 			endpointSlices:  []discoveryv1.EndpointSlice{},
-			referenceGrants: []gatewayv1beta1.ReferenceGrant{},
+			referenceGrants: []gwtypes.ReferenceGrant{},
 			expectedTargets: 0,
 			expectedError:   false,
 		},
@@ -2545,7 +2545,7 @@ func TestTargetsForBackendRefs(t *testing.T) {
 					Endpoints: []discoveryv1.Endpoint{createTestEndpoint([]string{"10.0.0.1", "10.0.0.2"}, true)},
 				},
 			},
-			referenceGrants: []gatewayv1beta1.ReferenceGrant{},
+			referenceGrants: []gwtypes.ReferenceGrant{},
 			expectedTargets: 2, // 2 endpoints.
 			expectedError:   false,
 			validateResult: func(t *testing.T, targets []configurationv1alpha1.KongTarget) {
@@ -2612,7 +2612,7 @@ func TestTargetsForBackendRefs(t *testing.T) {
 					Endpoints: []discoveryv1.Endpoint{createTestEndpoint([]string{"10.0.2.1"}, true)},
 				},
 			},
-			referenceGrants: []gatewayv1beta1.ReferenceGrant{},
+			referenceGrants: []gwtypes.ReferenceGrant{},
 			expectedTargets: 2,
 			expectedError:   false,
 			validateResult: func(t *testing.T, targets []configurationv1alpha1.KongTarget) {
@@ -2664,14 +2664,14 @@ func TestTargetsForBackendRefs(t *testing.T) {
 					Endpoints: []discoveryv1.Endpoint{createTestEndpoint([]string{"10.0.3.1"}, true)},
 				},
 			},
-			referenceGrants: []gatewayv1beta1.ReferenceGrant{
+			referenceGrants: []gwtypes.ReferenceGrant{
 				{
 					ObjectMeta: metav1.ObjectMeta{Name: "allow-frontend-to-backend", Namespace: "backend-ns"},
-					Spec: gatewayv1beta1.ReferenceGrantSpec{
-						From: []gatewayv1beta1.ReferenceGrantFrom{
+					Spec: gwtypes.ReferenceGrantSpec{
+						From: []gwtypes.ReferenceGrantFrom{
 							{Group: gwtypes.GroupName, Kind: "HTTPRoute", Namespace: "frontend-ns"},
 						},
-						To: []gatewayv1beta1.ReferenceGrantTo{
+						To: []gwtypes.ReferenceGrantTo{
 							{Group: "", Kind: "Service"},
 						},
 					},
@@ -2701,9 +2701,9 @@ func TestTargetsForBackendRefs(t *testing.T) {
 				},
 			},
 			endpointSlices:  []discoveryv1.EndpointSlice{},
-			referenceGrants: []gatewayv1beta1.ReferenceGrant{}, // No ReferenceGrant.
-			expectedTargets: 0,                                 // Should have no valid targets due to missing ReferenceGrant.
-			expectedError:   false,                             // Should not error, just no targets.
+			referenceGrants: []gwtypes.ReferenceGrant{}, // No ReferenceGrant.
+			expectedTargets: 0,                          // Should have no valid targets due to missing ReferenceGrant.
+			expectedError:   false,                      // Should not error, just no targets.
 		},
 
 		{
@@ -2728,7 +2728,7 @@ func TestTargetsForBackendRefs(t *testing.T) {
 				},
 			},
 			endpointSlices:  []discoveryv1.EndpointSlice{}, // ExternalName services don't use EndpointSlices.
-			referenceGrants: []gatewayv1beta1.ReferenceGrant{},
+			referenceGrants: []gwtypes.ReferenceGrant{},
 			expectedTargets: 1,
 			expectedError:   false,
 			validateResult: func(t *testing.T, targets []configurationv1alpha1.KongTarget) {
@@ -2772,7 +2772,7 @@ func TestTargetsForBackendRefs(t *testing.T) {
 					List: func(ctx context.Context, client client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
 						// Handle ReferenceGrant list error.
 						if errorKey, exists := tt.clientErrors["list-referencegrant"]; exists {
-							if _, ok := list.(*gatewayv1beta1.ReferenceGrantList); ok {
+							if _, ok := list.(*gwtypes.ReferenceGrantList); ok {
 								return errorKey
 							}
 						}

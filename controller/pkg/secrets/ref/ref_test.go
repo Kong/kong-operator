@@ -11,14 +11,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func TestCheckReferenceGrantForSecret(t *testing.T) {
-	customizeReferenceGrant := func(rg gatewayv1beta1.ReferenceGrant, opts ...func(rg *gatewayv1beta1.ReferenceGrant)) gatewayv1beta1.ReferenceGrant {
+	customizeReferenceGrant := func(rg gwtypes.ReferenceGrant, opts ...func(rg *gwtypes.ReferenceGrant)) gwtypes.ReferenceGrant {
 		rg = *rg.DeepCopy()
 		for _, opt := range opts {
 			opt(&rg)
@@ -31,21 +30,21 @@ func TestCheckReferenceGrantForSecret(t *testing.T) {
 		emptySecretName = gwtypes.ObjectName("")
 		goodSecretName  = gwtypes.ObjectName("good-secret")
 	)
-	referenceGrantForObj := func(obj client.Object) gatewayv1beta1.ReferenceGrant {
-		return gatewayv1beta1.ReferenceGrant{
+	referenceGrantForObj := func(obj client.Object) gwtypes.ReferenceGrant {
+		return gwtypes.ReferenceGrant{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "ref-grant-gateway",
 				Namespace: "default",
 			},
-			Spec: gatewayv1beta1.ReferenceGrantSpec{
-				From: []gatewayv1beta1.ReferenceGrantFrom{
+			Spec: gwtypes.ReferenceGrantSpec{
+				From: []gwtypes.ReferenceGrantFrom{
 					{
 						Group:     gatewayv1.Group(obj.GetObjectKind().GroupVersionKind().Group),
 						Kind:      gatewayv1.Kind(obj.GetObjectKind().GroupVersionKind().Kind),
 						Namespace: gatewayv1.Namespace(obj.GetNamespace()),
 					},
 				},
-				To: []gatewayv1beta1.ReferenceGrantTo{
+				To: []gwtypes.ReferenceGrantTo{
 					{
 						Group: "",
 						Kind:  "Secret",
@@ -59,7 +58,7 @@ func TestCheckReferenceGrantForSecret(t *testing.T) {
 		objGateway = &gatewayv1.Gateway{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Gateway",
-				APIVersion: gatewayv1.SchemeGroupVersion.String(),
+				APIVersion: gatewayv1.GroupVersion.Group,
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "goodNamespace",
@@ -79,7 +78,7 @@ func TestCheckReferenceGrantForSecret(t *testing.T) {
 	testCases := []struct {
 		name            string
 		forObj          client.Object
-		referenceGrants []gatewayv1beta1.ReferenceGrant
+		referenceGrants []gwtypes.ReferenceGrant
 		isGranted       bool
 	}{
 		{
@@ -90,7 +89,7 @@ func TestCheckReferenceGrantForSecret(t *testing.T) {
 		{
 			name:   "granted for Gateway",
 			forObj: objGateway,
-			referenceGrants: []gatewayv1beta1.ReferenceGrant{
+			referenceGrants: []gwtypes.ReferenceGrant{
 				referenceGrantForObj(objGateway),
 			},
 			isGranted: true,
@@ -98,7 +97,7 @@ func TestCheckReferenceGrantForSecret(t *testing.T) {
 		{
 			name:   "granted for KPI",
 			forObj: objKPI,
-			referenceGrants: []gatewayv1beta1.ReferenceGrant{
+			referenceGrants: []gwtypes.ReferenceGrant{
 				referenceGrantForObj(objKPI),
 			},
 			isGranted: true,
@@ -106,7 +105,7 @@ func TestCheckReferenceGrantForSecret(t *testing.T) {
 		{
 			name:   "not granted, wrong Kind",
 			forObj: objGateway,
-			referenceGrants: []gatewayv1beta1.ReferenceGrant{
+			referenceGrants: []gwtypes.ReferenceGrant{
 				referenceGrantForObj(objKPI),
 			},
 			isGranted: false,
@@ -114,8 +113,8 @@ func TestCheckReferenceGrantForSecret(t *testing.T) {
 		{
 			name:   "not granted, bad 'from' group",
 			forObj: objGateway,
-			referenceGrants: []gatewayv1beta1.ReferenceGrant{
-				customizeReferenceGrant(referenceGrantForObj(objGateway), func(rg *gatewayv1beta1.ReferenceGrant) {
+			referenceGrants: []gwtypes.ReferenceGrant{
+				customizeReferenceGrant(referenceGrantForObj(objGateway), func(rg *gwtypes.ReferenceGrant) {
 					rg.Spec.From[0].Group = "wrong-group"
 				}),
 			},
@@ -124,8 +123,8 @@ func TestCheckReferenceGrantForSecret(t *testing.T) {
 		{
 			name:   "granted, for one Kind Gateway bad 'from' group, but it expects KPI that is properly granted",
 			forObj: objKPI,
-			referenceGrants: []gatewayv1beta1.ReferenceGrant{
-				customizeReferenceGrant(referenceGrantForObj(objGateway), func(rg *gatewayv1beta1.ReferenceGrant) {
+			referenceGrants: []gwtypes.ReferenceGrant{
+				customizeReferenceGrant(referenceGrantForObj(objGateway), func(rg *gwtypes.ReferenceGrant) {
 					rg.Name = "wrong-group"
 					rg.Spec.From[0].Group = "wrong-group"
 				}),
@@ -136,8 +135,8 @@ func TestCheckReferenceGrantForSecret(t *testing.T) {
 		{
 			name:   "not granted, bad 'to' group",
 			forObj: objKPI,
-			referenceGrants: []gatewayv1beta1.ReferenceGrant{
-				customizeReferenceGrant(referenceGrantForObj(objKPI), func(rg *gatewayv1beta1.ReferenceGrant) {
+			referenceGrants: []gwtypes.ReferenceGrant{
+				customizeReferenceGrant(referenceGrantForObj(objKPI), func(rg *gwtypes.ReferenceGrant) {
 					rg.Spec.To[0].Group = "wrong-group"
 				}),
 			},
@@ -146,8 +145,8 @@ func TestCheckReferenceGrantForSecret(t *testing.T) {
 		{
 			name:   "not granted, bad 'from' kind",
 			forObj: objGateway,
-			referenceGrants: []gatewayv1beta1.ReferenceGrant{
-				customizeReferenceGrant(referenceGrantForObj(objGateway), func(rg *gatewayv1beta1.ReferenceGrant) {
+			referenceGrants: []gwtypes.ReferenceGrant{
+				customizeReferenceGrant(referenceGrantForObj(objGateway), func(rg *gwtypes.ReferenceGrant) {
 					rg.Spec.From[0].Kind = "wrong-kind"
 				}),
 			},
@@ -156,8 +155,8 @@ func TestCheckReferenceGrantForSecret(t *testing.T) {
 		{
 			name:   "not granted, bad 'to' kind",
 			forObj: objKPI,
-			referenceGrants: []gatewayv1beta1.ReferenceGrant{
-				customizeReferenceGrant(referenceGrantForObj(objKPI), func(rg *gatewayv1beta1.ReferenceGrant) {
+			referenceGrants: []gwtypes.ReferenceGrant{
+				customizeReferenceGrant(referenceGrantForObj(objKPI), func(rg *gwtypes.ReferenceGrant) {
 					rg.Spec.To[0].Kind = "wrong-kind"
 				}),
 			},
@@ -166,8 +165,8 @@ func TestCheckReferenceGrantForSecret(t *testing.T) {
 		{
 			name:   "not granted, bad 'from' namespace",
 			forObj: objGateway,
-			referenceGrants: []gatewayv1beta1.ReferenceGrant{
-				customizeReferenceGrant(referenceGrantForObj(objGateway), func(rg *gatewayv1beta1.ReferenceGrant) {
+			referenceGrants: []gwtypes.ReferenceGrant{
+				customizeReferenceGrant(referenceGrantForObj(objGateway), func(rg *gwtypes.ReferenceGrant) {
 					rg.Spec.From[0].Namespace = "bad-namespace"
 				}),
 			},
@@ -176,8 +175,8 @@ func TestCheckReferenceGrantForSecret(t *testing.T) {
 		{
 			name:   "not granted, empty 'to' secret name",
 			forObj: objKPI,
-			referenceGrants: []gatewayv1beta1.ReferenceGrant{
-				customizeReferenceGrant(referenceGrantForObj(objKPI), func(rg *gatewayv1beta1.ReferenceGrant) {
+			referenceGrants: []gwtypes.ReferenceGrant{
+				customizeReferenceGrant(referenceGrantForObj(objKPI), func(rg *gwtypes.ReferenceGrant) {
 					rg.Spec.To[0].Name = new(emptySecretName)
 				}),
 			},
@@ -186,8 +185,8 @@ func TestCheckReferenceGrantForSecret(t *testing.T) {
 		{
 			name:   "not granted, bad 'to' secret name",
 			forObj: objGateway,
-			referenceGrants: []gatewayv1beta1.ReferenceGrant{
-				customizeReferenceGrant(referenceGrantForObj(objGateway), func(rg *gatewayv1beta1.ReferenceGrant) {
+			referenceGrants: []gwtypes.ReferenceGrant{
+				customizeReferenceGrant(referenceGrantForObj(objGateway), func(rg *gwtypes.ReferenceGrant) {
 					rg.Spec.To[0].Name = new(badSecretName)
 				}),
 			},
@@ -197,10 +196,10 @@ func TestCheckReferenceGrantForSecret(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			cl := fake.NewFakeClient(lo.Map(tc.referenceGrants, func(rg gatewayv1beta1.ReferenceGrant, _ int) runtime.Object {
+			cl := fake.NewFakeClient(lo.Map(tc.referenceGrants, func(rg gwtypes.ReferenceGrant, _ int) runtime.Object {
 				return &rg
 			})...)
-			require.NoError(t, gatewayv1beta1.Install(cl.Scheme()))
+			require.NoError(t, gatewayv1.Install(cl.Scheme()))
 			_, granted, err := CheckReferenceGrantForSecret(
 				t.Context(), cl,
 				tc.forObj,

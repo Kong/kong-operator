@@ -70,7 +70,7 @@ func aiGatewayToGateway(
 	gateway := &gatewayv1.Gateway{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Gateway",
-			APIVersion: gatewayv1.SchemeGroupVersion.String(),
+			APIVersion: gatewayv1.GroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      aigateway.Name,
