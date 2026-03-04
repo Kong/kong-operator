@@ -7,7 +7,7 @@ golangci-lint: "2.10.1"
 # renovate: datasource=github-releases depName=GoogleContainerTools/skaffold
 skaffold: "2.17.2"
 # renovate: datasource=github-releases depName=go-delve/delve
-dlv: "1.26.0"
+dlv: "1.26.1"
 # renovate: datasource=github-releases depName=gotestyourself/gotestsum
 gotestsum: "1.13.0"
 # renovate: datasource=github-releases depName=elastic/crd-ref-docs
