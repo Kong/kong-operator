@@ -97,8 +97,6 @@ var skippedTestsForHybrid = []string{
 func TestGatewayConformance(t *testing.T) {
 	t.Parallel()
 
-	const looserTimeout = 180 * time.Second
-
 	cleanupResources := !test.SkipCleanup()
 	if cleanupResources {
 		t.Cleanup(func() {
@@ -113,9 +111,8 @@ func TestGatewayConformance(t *testing.T) {
 	// Conformance tests are run for both available router flavours:
 	// traditional_compatible and expressions.
 	var (
-		kongRouterFlavor  consts.RouterFlavor
-		skippedTests      = append([]string{}, skippedTestsShared...)
-		supportedFeatures sets.Set[features.FeatureName]
+		kongRouterFlavor consts.RouterFlavor
+		skippedTests     = append([]string{}, skippedTestsShared...)
 	)
 	switch rf := KongRouterFlavor(t); rf {
 	case consts.RouterFlavorTraditionalCompatible:
@@ -131,84 +128,94 @@ func TestGatewayConformance(t *testing.T) {
 	supportedFeatures, err := gatewayapipkg.GetSupportedFeatures(kongRouterFlavor)
 	require.NoError(t, err)
 
-	runConformance := func(t *testing.T, gatewayType gatewayType, skipped []string) {
-		t.Helper()
-		ensureConformanceNamespace(ctx, t)
-
-		if cleanupResources {
-			t.Cleanup(func() {
-				require.NoError(t, waitForConformanceGatewaysToCleanup(ctx, clients.GatewayClient.GatewayV1(), t.Logf))
-				if gatewayType == hybridGateway {
-					require.NoError(t, waitForConformanceKonnectGatewayControlPlanesToCleanup(ctx, t.Logf))
-				}
-			})
+	gwType := gatewayType(test.ConformanceGatewayType())
+	switch gwType {
+	case standardGateway:
+		runConformance(t, standardGateway, kongRouterFlavor, supportedFeatures, cleanupResources, append([]string{}, skippedTests...))
+	case hybridGateway:
+		if test.KonnectAccessToken() == "" {
+			t.Fatal("hybrid gateway type requires KONG_TEST_KONNECT_ACCESS_TOKEN to be set")
 		}
-
-		t.Logf("using the following Kong router flavor for the conformance tests: %s", kongRouterFlavor)
-		t.Log("creating GatewayConfiguration and GatewayClass for gateway conformance tests")
-
-		gwconf := createGatewayConfiguration(ctx, t, kongRouterFlavor, gatewayType)
-		gwc := createGatewayClass(ctx, t, gwconf)
-
-		// There are no explicit conformance tests for GatewayClass, but we can
-		// still run the conformance test suite setup to ensure that the
-		// GatewayClass gets accepted.
-		t.Logf("configuring the Gateway API (%s) conformance test suite", gatewayType)
-		// Currently mode only relies on the KongRouterFlavor, but in the future
-		// we may want to add more modes.
-		mode := string(kongRouterFlavor)
-		metadata := metadata.Metadata()
-		reportFileName := fmt.Sprintf("experimental-%s-%s-%s-report.yaml", metadata.Release, mode, gatewayType)
-
-		// Set looser timeouts to avoid flakiness.
-		timeoutConfig := conformanceconfig.DefaultTimeoutConfig()
-		timeoutConfig.GatewayStatusMustHaveListeners = looserTimeout
-		timeoutConfig.GatewayListenersMustHaveConditions = looserTimeout
-		timeoutConfig.HTTPRouteMustHaveCondition = looserTimeout
-
-		opts := conformance.DefaultOptions(t)
-		// It takes default conformance suite configuration manifests from provided location.
-		opts.ManifestFS = kcfg.GatewayAPIConformanceTestsFilesystemsWithManifests()
-		opts.ReportOutputPath = "../../" + reportFileName
-		opts.Implementation = conformancev1.Implementation{
-			Organization: metadata.Organization,
-			Project:      metadata.ProjectName,
-			URL:          metadata.RepoURL,
-			Version:      metadata.Release,
-			Contact: []string{
-				metadata.RepoURL + "/issues/new/choose",
-			},
-		}
-		opts.Mode = mode
-		opts.ConformanceProfiles = sets.New(
-			suite.GatewayHTTPConformanceProfileName,
-			suite.GatewayGRPCConformanceProfileName,
-		)
-		opts.SupportedFeatures = supportedFeatures
-		opts.SkipTests = skipped
-		opts.CleanupBaseResources = cleanupResources
-		opts.GatewayClassName = gwc.Name
-		opts.Client = clients.MgrClient
-		opts.TimeoutConfig = timeoutConfig
-		opts.RestConfig.QPS = -1
-
-		t.Log("running the Gateway API conformance test suite")
-		conformance.RunConformanceWithOptions(t, opts)
+		hybridSkipped := append([]string{}, skippedTests...)
+		hybridSkipped = append(hybridSkipped, skippedTestsForHybrid...)
+		runConformance(t, hybridGateway, kongRouterFlavor, supportedFeatures, cleanupResources, hybridSkipped)
+	default:
+		t.Fatalf("unsupported KONG_TEST_CONFORMANCE_GATEWAY_TYPE: %s", gwType)
 	}
+}
 
-	t.Run("standard", func(t *testing.T) {
-		runConformance(t, standardGateway, append([]string{}, skippedTests...))
-	})
+const conformanceLooserTimeout = 180 * time.Second
 
-	if test.KonnectAccessToken() != "" {
-		t.Run("hybrid", func(t *testing.T) {
-			hybridSkipped := append([]string{}, skippedTests...)
-			hybridSkipped = append(hybridSkipped, skippedTestsForHybrid...)
-			runConformance(t, hybridGateway, hybridSkipped)
+func runConformance(
+	t *testing.T,
+	gwType gatewayType,
+	kongRouterFlavor consts.RouterFlavor,
+	supportedFeatures sets.Set[features.FeatureName],
+	cleanupResources bool,
+	skipped []string,
+) {
+	t.Helper()
+	ensureConformanceNamespace(ctx, t)
+
+	if cleanupResources {
+		t.Cleanup(func() {
+			require.NoError(t, waitForConformanceGatewaysToCleanup(ctx, clients.GatewayClient.GatewayV1(), t.Logf))
+			if gwType == hybridGateway {
+				require.NoError(t, waitForConformanceKonnectGatewayControlPlanesToCleanup(ctx, t.Logf))
+			}
 		})
-	} else {
-		t.Log("no Konnect access token provided - skipping hybrid Gateway conformance")
 	}
+
+	t.Logf("using the following Kong router flavor for the conformance tests: %s", kongRouterFlavor)
+	t.Log("creating GatewayConfiguration and GatewayClass for gateway conformance tests")
+
+	gwconf := createGatewayConfiguration(ctx, t, kongRouterFlavor, gwType)
+	gwc := createGatewayClass(ctx, t, gwconf)
+
+	// There are no explicit conformance tests for GatewayClass, but we can
+	// still run the conformance test suite setup to ensure that the
+	// GatewayClass gets accepted.
+	t.Logf("configuring the Gateway API (%s) conformance test suite", gwType)
+	// Currently mode only relies on the KongRouterFlavor, but in the future
+	// we may want to add more modes.
+	mode := string(kongRouterFlavor)
+	md := metadata.Metadata()
+	reportFileName := fmt.Sprintf("experimental-%s-%s-%s-report.yaml", md.Release, mode, gwType)
+
+	// Set looser timeouts to avoid flakiness.
+	timeoutConfig := conformanceconfig.DefaultTimeoutConfig()
+	timeoutConfig.GatewayStatusMustHaveListeners = conformanceLooserTimeout
+	timeoutConfig.GatewayListenersMustHaveConditions = conformanceLooserTimeout
+	timeoutConfig.HTTPRouteMustHaveCondition = conformanceLooserTimeout
+
+	opts := conformance.DefaultOptions(t)
+	// It takes default conformance suite configuration manifests from provided location.
+	opts.ManifestFS = kcfg.GatewayAPIConformanceTestsFilesystemsWithManifests()
+	opts.ReportOutputPath = "../../" + reportFileName
+	opts.Implementation = conformancev1.Implementation{
+		Organization: md.Organization,
+		Project:      md.ProjectName,
+		URL:          md.RepoURL,
+		Version:      md.Release,
+		Contact: []string{
+			md.RepoURL + "/issues/new/choose",
+		},
+	}
+	opts.Mode = mode
+	opts.ConformanceProfiles = sets.New(
+		suite.GatewayHTTPConformanceProfileName,
+		suite.GatewayGRPCConformanceProfileName,
+	)
+	opts.SupportedFeatures = supportedFeatures
+	opts.SkipTests = skipped
+	opts.CleanupBaseResources = cleanupResources
+	opts.GatewayClassName = gwc.Name
+	opts.Client = clients.MgrClient
+	opts.TimeoutConfig = timeoutConfig
+	opts.RestConfig.QPS = -1
+
+	t.Log("running the Gateway API conformance test suite")
+	conformance.RunConformanceWithOptions(t, opts)
 }
 
 type gatewayType string
