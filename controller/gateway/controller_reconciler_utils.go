@@ -737,7 +737,8 @@ func supportedRoutesByProtocol() map[gatewayv1.ProtocolType]map[gatewayv1.Kind]s
 // It also sets the listeners Programmed condition by setting the underlying
 // Listener Programmed status to false.
 func (g *gatewayConditionsAndListenersAwareT) initProgrammedAndListenersStatus() {
-	if !k8sutils.HasCondition(kcfgconsts.ConditionType(gatewayv1.GatewayConditionProgrammed), g) {
+	cond, ok := k8sutils.GetCondition(kcfgconsts.ConditionType(gatewayv1.GatewayConditionProgrammed), g)
+	if !ok || cond.ObservedGeneration != g.Generation {
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
 				kcfgconsts.ConditionType(gatewayv1.GatewayConditionProgrammed),
@@ -835,8 +836,8 @@ func countAttachedRoutesForGatewayListener(ctx context.Context, g *gwtypes.Gatew
 	}
 
 	var (
-		count int32
-		opts  []client.ListOption
+		count             int32
+		allowedNamespaces map[string]struct{}
 	)
 
 	namespaces := allowedRoutes.Namespaces
@@ -853,8 +854,9 @@ func countAttachedRoutesForGatewayListener(ctx context.Context, g *gwtypes.Gatew
 		// No namespaces are allowed, so no routes can be attached.
 		return 0, nil
 	case gatewayv1.NamespacesFromAll:
+		allowedNamespaces = nil
 	case gatewayv1.NamespacesFromSame:
-		opts = append(opts, client.InNamespace(g.Namespace))
+		allowedNamespaces = map[string]struct{}{g.Namespace: {}}
 	case gatewayv1.NamespacesFromSelector:
 		var nsList corev1.NamespaceList
 
@@ -888,9 +890,17 @@ func countAttachedRoutesForGatewayListener(ctx context.Context, g *gwtypes.Gatew
 			return 0, nil
 
 		default:
+			allowedNamespaces = make(map[string]struct{}, len(nsList.Items))
 			for _, ns := range nsList.Items {
-				opts = append(opts, client.InNamespace(ns.Name))
+				allowedNamespaces[ns.Name] = struct{}{}
 			}
+		}
+	}
+
+	listOpts := []client.ListOption{}
+	if len(allowedNamespaces) == 1 {
+		for namespace := range allowedNamespaces {
+			listOpts = append(listOpts, client.InNamespace(namespace))
 		}
 	}
 
@@ -903,14 +913,14 @@ func countAttachedRoutesForGatewayListener(ctx context.Context, g *gwtypes.Gatew
 
 				switch k {
 				case "HTTPRoute":
-					httpRoutes, err := gatewayutils.ListHTTPRoutesForGateway(ctx, cl, g, opts...)
+					httpRoutes, err := gatewayutils.ListHTTPRoutesForGateway(ctx, cl, g, listOpts...)
 					if err != nil {
 						return 0, fmt.Errorf(
 							"failed to list HTTPRoutes for Gateway %s when counting AttachedRoutes: %w",
 							client.ObjectKeyFromObject(g), err,
 						)
 					}
-					count += countAttachedHTTPRoutes(listener.Name, httpRoutes)
+					count += countAttachedHTTPRoutes(g, listener, httpRoutes, allowedNamespaces)
 				default:
 					return 0, fmt.Errorf("unsupported route kind: %T", k)
 				}
@@ -923,7 +933,7 @@ func countAttachedRoutesForGatewayListener(ctx context.Context, g *gwtypes.Gatew
 			}
 			return gvk.Group != nil && *gvk.Group == gatewayv1.Group(gatewayv1.GroupVersion.Group)
 		}) {
-			httpRoutes, err := gatewayutils.ListHTTPRoutesForGateway(ctx, cl, g, opts...)
+			httpRoutes, err := gatewayutils.ListHTTPRoutesForGateway(ctx, cl, g, listOpts...)
 			if err != nil {
 				return 0, fmt.Errorf(
 					"failed to list HTTPRoutes for Gateway %s when counting AttachedRoutes: %w",
@@ -931,7 +941,7 @@ func countAttachedRoutesForGatewayListener(ctx context.Context, g *gwtypes.Gatew
 				)
 			}
 
-			count += countAttachedHTTPRoutes(listener.Name, httpRoutes)
+			count += countAttachedHTTPRoutes(g, listener, httpRoutes, allowedNamespaces)
 		}
 	}
 
@@ -940,18 +950,116 @@ func countAttachedRoutesForGatewayListener(ctx context.Context, g *gwtypes.Gatew
 
 // countAttachedHTTPRoutes counts the number of attached HTTPRoutes for a given listener,
 // taking into account the ParentRefs' sectionName.
-func countAttachedHTTPRoutes(listenerName gatewayv1.SectionName, httpRoutes []gatewayv1.HTTPRoute) int32 {
+func countAttachedHTTPRoutes(
+	g *gwtypes.Gateway,
+	listener gwtypes.Listener,
+	httpRoutes []gatewayv1.HTTPRoute,
+	allowedNamespaces map[string]struct{},
+) int32 {
 	var count int32
 
 	for _, httpRoute := range httpRoutes {
+		if allowedNamespaces != nil {
+			if _, ok := allowedNamespaces[httpRoute.Namespace]; !ok {
+				continue
+			}
+		}
+
 		if lo.ContainsBy(httpRoute.Spec.ParentRefs, func(parentRef gatewayv1.ParentReference) bool {
-			return parentRef.SectionName == nil || *parentRef.SectionName == listenerName
-		}) {
+			return parentRefTargetsGatewayListener(parentRef, httpRoute.Namespace, g, listener)
+		}) && listenerHostnameIntersectsRouteHostnames(listener.Hostname, httpRoute.Spec.Hostnames) {
 			count++
 		}
 	}
 
 	return count
+}
+
+func parentRefTargetsGatewayListener(
+	parentRef gatewayv1.ParentReference,
+	routeNamespace string,
+	gateway *gwtypes.Gateway,
+	listener gwtypes.Listener,
+) bool {
+	gwGVK := gateway.GroupVersionKind()
+	if parentRef.Group != nil && string(*parentRef.Group) != gwGVK.Group {
+		return false
+	}
+	if parentRef.Kind != nil && string(*parentRef.Kind) != gwGVK.Kind {
+		return false
+	}
+	if string(parentRef.Name) != gateway.Name {
+		return false
+	}
+
+	targetNamespace := routeNamespace
+	if parentRef.Namespace != nil {
+		targetNamespace = string(*parentRef.Namespace)
+	}
+	if targetNamespace != gateway.Namespace {
+		return false
+	}
+
+	if parentRef.SectionName != nil && *parentRef.SectionName != listener.Name {
+		return false
+	}
+
+	if parentRef.Port != nil && *parentRef.Port != listener.Port {
+		return false
+	}
+
+	return true
+}
+
+func listenerHostnameIntersectsRouteHostnames(
+	listenerHostname *gatewayv1.Hostname,
+	routeHostnames []gatewayv1.Hostname,
+) bool {
+	if listenerHostname == nil || *listenerHostname == "" {
+		return true
+	}
+
+	if len(routeHostnames) == 0 {
+		return true
+	}
+
+	for _, routeHostname := range routeHostnames {
+		if hostnamesIntersect(*listenerHostname, routeHostname) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func hostnamesIntersect(a, b gatewayv1.Hostname) bool {
+	aLower := strings.ToLower(string(a))
+	bLower := strings.ToLower(string(b))
+
+	return hostnameMatchesPattern(aLower, bLower) || hostnameMatchesPattern(bLower, aLower)
+}
+
+func hostnameMatchesPattern(pattern, hostname string) bool {
+	if pattern == hostname {
+		return true
+	}
+
+	if !strings.HasPrefix(pattern, "*.") {
+		return false
+	}
+
+	suffix := pattern[2:]
+	suffixWithDot := "." + suffix
+	if !strings.HasSuffix(hostname, suffixWithDot) {
+		return false
+	}
+
+	label := strings.TrimSuffix(hostname, suffixWithDot)
+	if label == "" {
+		return false
+	}
+
+	return !strings.Contains(label, ".")
 }
 
 // setConflicted sets the gateway Conflicted condition according to the Gateway API specification.
