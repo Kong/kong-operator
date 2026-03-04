@@ -197,7 +197,7 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 		},
 	}
 
-	grant, err = gatewayClient.GatewayV1beta1().ReferenceGrants(otherNs.Name).Create(ctx, grant, metav1.CreateOptions{})
+	grant, err = gatewayClient.GatewayV1().ReferenceGrants(otherNs.Name).Create(ctx, grant, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	t.Log("verifying that requests reach both the local and remote namespace echo instances")
@@ -216,7 +216,7 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 		Name:  &serviceName,
 	}
 
-	grant, err = gatewayClient.GatewayV1beta1().ReferenceGrants(otherNs.Name).Update(ctx, grant, metav1.UpdateOptions{})
+	grant, err = gatewayClient.GatewayV1().ReferenceGrants(otherNs.Name).Update(ctx, grant, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {
@@ -226,7 +226,7 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 	t.Logf("testing incorrect name does not match")
 	blueguyName := gatewayapi.ObjectName("blueguy")
 	grant.Spec.To[1].Name = &blueguyName
-	_, err = gatewayClient.GatewayV1beta1().ReferenceGrants(otherNs.Name).Update(ctx, grant, metav1.UpdateOptions{})
+	_, err = gatewayClient.GatewayV1().ReferenceGrants(otherNs.Name).Update(ctx, grant, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {

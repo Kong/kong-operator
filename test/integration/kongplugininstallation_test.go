@@ -18,13 +18,13 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	kcfgdataplane "github.com/kong/kong-operator/v2/api/gateway-operator/dataplane"
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/modules/manager/config"
 	"github.com/kong/kong-operator/v2/pkg/metadata"
 	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
@@ -147,19 +147,19 @@ func TestKongPluginInstallationEssentials(t *testing.T) {
 		)
 
 		t.Log("add missing ReferenceGrant for the Secret with credentials")
-		refGrant := &gatewayv1beta1.ReferenceGrant{
+		refGrant := &gwtypes.ReferenceGrant{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "kong-plugin-image-registry-credentials",
 				Namespace: namespaceForSecret,
 			},
-			Spec: gatewayv1beta1.ReferenceGrantSpec{
-				To: []gatewayv1beta1.ReferenceGrantTo{
+			Spec: gwtypes.ReferenceGrantSpec{
+				To: []gwtypes.ReferenceGrantTo{
 					{
 						Kind: gatewayv1.Kind("Secret"),
 						Name: new(secretRef.Name),
 					},
 				},
-				From: []gatewayv1beta1.ReferenceGrantFrom{
+				From: []gwtypes.ReferenceGrantFrom{
 					{
 						Group:     gatewayv1.Group(operatorv1alpha1.SchemeGroupVersion.Group),
 						Kind:      gatewayv1.Kind("KongPluginInstallation"),
@@ -168,7 +168,7 @@ func TestKongPluginInstallationEssentials(t *testing.T) {
 				},
 			},
 		}
-		_, err = GetClients().GatewayClient.GatewayV1beta1().ReferenceGrants(namespaceForSecret).Create(GetCtx(), refGrant, metav1.CreateOptions{})
+		_, err = GetClients().GatewayClient.GatewayV1().ReferenceGrants(namespaceForSecret).Create(GetCtx(), refGrant, metav1.CreateOptions{})
 		require.NoError(t, err)
 
 		t.Log("waiting for the KongPluginInstallation resource to be reconciled and report missing Secret with credentials")

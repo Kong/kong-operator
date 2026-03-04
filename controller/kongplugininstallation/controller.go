@@ -22,12 +22,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/kongplugininstallation/image"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/secrets/ref"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	mgrconfig "github.com/kong/kong-operator/v2/modules/manager/config"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
@@ -81,7 +81,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 			),
 		).
 		Watches(
-			&gatewayv1beta1.ReferenceGrant{},
+			&gwtypes.ReferenceGrant{},
 			handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForKongPluginInstallation),
 			builder.WithPredicates(
 				ref.ReferenceGrantForSecretFrom(
@@ -236,7 +236,7 @@ func (r *Reconciler) listKongPluginInstallationsForSecret(ctx context.Context, o
 func (r *Reconciler) listReferenceGrantsForKongPluginInstallation(ctx context.Context, obj client.Object) []reconcile.Request {
 	logger := ctrllog.FromContext(ctx)
 
-	grant, ok := obj.(*gatewayv1beta1.ReferenceGrant)
+	grant, ok := obj.(*gwtypes.ReferenceGrant)
 	if !ok {
 		logger.Error(
 			fmt.Errorf("unexpected object type"),

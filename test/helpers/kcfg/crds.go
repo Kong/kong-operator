@@ -15,7 +15,10 @@ import (
 	"github.com/kong/kong-operator/v2/test/helpers"
 )
 
-const gatewayAPIModule = "sigs.k8s.io/gateway-api"
+const (
+	gatewayAPIModule            = "sigs.k8s.io/gateway-api"
+	gatewayAPIConformanceModule = "sigs.k8s.io/gateway-api/conformance"
+)
 
 var (
 	cfgPath = filepath.Join(helpers.ProjectRootPath(), "config")
@@ -29,6 +32,9 @@ var (
 
 	gatewayAPIPackageVersion = lo.Must(extractModuleVersion(gatewayAPIModule))
 	gatewayAPIModulePath     = constructModulePath(gatewayAPIModule, gatewayAPIPackageVersion)
+
+	gatewayAPIConformancePackageVersion = lo.Must(extractModuleVersion(gatewayAPIConformanceModule))
+	gatewayAPIConformanceModulePath     = constructModulePath(gatewayAPIConformanceModule, gatewayAPIConformancePackageVersion)
 )
 
 func ChartPath() string {
@@ -56,7 +62,7 @@ func GatewayAPIExperimentalCRDsPath() string {
 }
 
 func GatewayAPIConformanceTestsFilesystemsWithManifests() []fs.FS {
-	return []fs.FS{os.DirFS(filepath.Join(gatewayAPIModulePath, "conformance"))}
+	return []fs.FS{os.DirFS(gatewayAPIConformanceModulePath)}
 }
 
 // extractModuleVersion extracts version of an imported module in go.mod.

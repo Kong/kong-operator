@@ -226,7 +226,7 @@ func (r *Reconciler) listGatewaysForGatewayConfig(ctx context.Context, obj clien
 func (r *Reconciler) listReferenceGrantsForGateway(ctx context.Context, obj client.Object) []reconcile.Request {
 	logger := ctrllog.FromContext(ctx)
 
-	grant, ok := obj.(*gatewayv1beta1.ReferenceGrant)
+	grant, ok := obj.(*gwtypes.ReferenceGrant)
 	if !ok {
 		logger.Error(
 			fmt.Errorf("unexpected object type"),
