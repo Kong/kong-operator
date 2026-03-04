@@ -1778,6 +1778,73 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 			ExpectedError:  []error{nil},
 		},
 		{
+			Name: "2 HTTPRoutes, only one matching listener hostname intersection",
+			Gateway: gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: gatewayv1.GroupVersion.String(),
+					Kind:       "Gateway",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gw",
+					Namespace: "test-namespace",
+				},
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
+						{
+							Name:     gatewayv1.SectionName("http"),
+							Protocol: gwtypes.HTTPProtocolType,
+							Hostname: new(gatewayv1.Hostname("*.example.com")),
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Namespaces: &gwtypes.RouteNamespaces{
+									From: new(gwtypes.NamespacesFromSame),
+								},
+							},
+						},
+					},
+				},
+			},
+			Objects: []client.Object{
+				&gwtypes.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "route-1",
+						Namespace: "test-namespace",
+					},
+					Spec: gwtypes.HTTPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Name:  gwtypes.ObjectName("test-gw"),
+									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:  new(gwtypes.Kind("Gateway")),
+								},
+							},
+						},
+						Hostnames: []gatewayv1.Hostname{gatewayv1.Hostname("api.example.com")},
+					},
+				},
+				&gwtypes.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "route-2",
+						Namespace: "test-namespace",
+					},
+					Spec: gwtypes.HTTPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Name:  gwtypes.ObjectName("test-gw"),
+									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:  new(gwtypes.Kind("Gateway")),
+								},
+							},
+						},
+						Hostnames: []gatewayv1.Hostname{gatewayv1.Hostname("api.example.net")},
+					},
+				},
+			},
+			ExpectedRoutes: []int32{1},
+			ExpectedError:  []error{nil},
+		},
+		{
 			Name: "1 HTTPRoute, not matching due to namespace label selector not matching",
 			Gateway: gwtypes.Gateway{
 				TypeMeta: metav1.TypeMeta{
