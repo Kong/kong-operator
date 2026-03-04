@@ -62,6 +62,9 @@ func (r *Reconciler) createDataPlane(
 		dataplane.Spec.DataPlaneOptions = *gatewayConfigDataPlaneOptionsToDataPlaneOptions(gatewayConfig.Namespace, *gatewayConfig.Spec.DataPlaneOptions)
 	}
 	setDataPlaneOptionsDefaults(&dataplane.Spec.DataPlaneOptions, r.DefaultDataPlaneImage)
+	if err := setDataPlaneDeploymentListenPorts(&dataplane.Spec.DataPlaneOptions, gateway.Spec.Listeners); err != nil {
+		return nil, err
+	}
 	if err := setDataPlaneIngressServicePorts(&dataplane.Spec.DataPlaneOptions, gateway.Spec.Listeners, gatewayConfig.Spec.ListenersOptions); err != nil {
 		return nil, err
 	}
@@ -725,9 +728,8 @@ func supportedRoutesByProtocol() map[gatewayv1.ProtocolType]map[gatewayv1.Kind]s
 	return map[gatewayv1.ProtocolType]map[gatewayv1.Kind]struct{}{
 		gatewayv1.HTTPProtocolType:  {"HTTPRoute": {}},
 		gatewayv1.HTTPSProtocolType: {"HTTPRoute": {}},
-
-		// L4 routes not supported yet
-		// gatewayv1.TLSProtocolType:   {"TLSRoute": {}},
+		gatewayv1.TLSProtocolType:   {"TLSRoute": {}},
+		// TCPRoutes ad UDPRoutes are not supported yet
 		// gatewayv1.TCPProtocolType:   {"TCPRoute": {}},
 		// gatewayv1.UDPProtocolType:   {"UDPRoute": {}},
 	}
@@ -912,8 +914,11 @@ func countAttachedRoutesForGatewayListener(ctx context.Context, g *gwtypes.Gatew
 						)
 					}
 					count += countAttachedHTTPRoutes(listener, httpRoutes)
+				case "TLSRoute":
+					// TODO: implement ListTLSRoute
+					return 0, nil
 				default:
-					return 0, fmt.Errorf("unsupported route kind: %T", k)
+					return 0, fmt.Errorf("unsupported route kind: %q", k)
 				}
 			}
 		}
@@ -1048,6 +1053,43 @@ func (g *gatewayConditionsAndListenersAwareT) setListenersStatus(status metav1.C
 	}
 }
 
+// setDataPlaneListenPorts configures deploymentOptions of the generated DataPlane
+func setDataPlaneDeploymentListenPorts(
+	opts *operatorv1beta1.DataPlaneOptions,
+	listeners []gatewayv1.Listener,
+) error {
+	// Extract listeners with TLS ports.
+	tlsPorts := []int{}
+	for _, l := range listeners {
+		if l.Protocol == gatewayv1.TLSProtocolType {
+			// TODO: schedule Kong listened ports and ingress service ports since listeners can use the same port.
+			tlsPorts = append(tlsPorts, int(l.Port))
+		}
+	}
+	if opts.Deployment.PodTemplateSpec == nil {
+		return errors.New("PodTemplateSpec in DeploymentOptions not initialized")
+	}
+	container := k8sutils.GetPodContainerByName(&opts.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+	if container == nil {
+		return errors.New("DataPlane proxy container not initialized")
+	}
+	if len(tlsPorts) > 0 {
+		streamListenEnv := strings.Join(
+			lo.Map(tlsPorts, func(portNumber int, _ int) string {
+				return fmt.Sprintf("0.0.0.0:%d ssl reuseport", portNumber)
+			}), ",",
+		)
+		container.Env = append(
+			container.Env, corev1.EnvVar{
+				Name:  "KONG_STREAM_LISTEN",
+				Value: streamListenEnv,
+			},
+		)
+		// TODO: Configure env KONG_PORT_MAPS
+	}
+	return nil
+}
+
 func setDataPlaneIngressServicePorts(
 	opts *operatorv1beta1.DataPlaneOptions,
 	listeners []gatewayv1.Listener,
@@ -1094,6 +1136,8 @@ func setDataPlaneIngressServicePorts(
 			port.TargetPort = intstr.FromInt(consts.DataPlaneProxySSLPort)
 		case gatewayv1.HTTPProtocolType:
 			port.TargetPort = intstr.FromInt(consts.DataPlaneProxyPort)
+		case gatewayv1.TLSProtocolType:
+			port.TargetPort = intstr.FromInt(int(l.Port))
 		default:
 			errs = errors.Join(errs, fmt.Errorf("listener %d uses unsupported protocol %s", i, l.Protocol))
 			continue
