@@ -247,31 +247,29 @@ func ensureConformanceNamespace(ctx context.Context, t *testing.T) {
 		return
 	}
 
-	if ns.DeletionTimestamp == nil {
-		return
-	}
-
-	t.Logf("namespace %s is terminating, waiting for deletion", conformanceInfraNamespace)
-	err = wait.PollUntilContextTimeout(ctx, 2*time.Second, 2*time.Minute, true, func(ctx context.Context) (bool, error) {
-		err := clients.MgrClient.Get(ctx, nsKey, &corev1.Namespace{})
-		if apierrors.IsNotFound(err) {
-			return true, nil
-		}
-		if err != nil {
-			return false, err
-		}
-		return false, nil
-	})
-	require.NoError(t, err)
-
-	testNamespace := corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: conformanceInfraNamespace,
-		},
-	}
-	err = clients.MgrClient.Create(ctx, &testNamespace)
-	if err != nil && !apierrors.IsAlreadyExists(err) {
-		require.NoError(t, err)
+	if ns.DeletionTimestamp != nil {
+    	t.Logf("namespace %s is terminating, waiting for deletion", conformanceInfraNamespace)
+    	err = wait.PollUntilContextTimeout(ctx, 2*time.Second, 2*time.Minute, true, func(ctx context.Context) (bool, error) {
+    		err := clients.MgrClient.Get(ctx, nsKey, &corev1.Namespace{})
+    		if apierrors.IsNotFound(err) {
+    			return true, nil
+    		}
+    		if err != nil {
+    			return false, err
+    		}
+    		return false, nil
+    	})
+    	require.NoError(t, err)
+    
+    	testNamespace := corev1.Namespace{
+    		ObjectMeta: metav1.ObjectMeta{
+    			Name: conformanceInfraNamespace,
+    		},
+    	}
+    	err = clients.MgrClient.Create(ctx, &testNamespace)
+    	if err != nil && !apierrors.IsAlreadyExists(err) {
+    		require.NoError(t, err)
+    	}
 	}
 }
 
