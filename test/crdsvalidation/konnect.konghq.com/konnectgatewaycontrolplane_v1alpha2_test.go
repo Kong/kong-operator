@@ -221,6 +221,26 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 				},
 			},
 			{
+				Name: "konnect.authRef change is allowed when status is not set",
+				TestObject: &konnectv1alpha2.KonnectGatewayControlPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
+						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
+							Name:        "cp-1",
+							ClusterType: new(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane),
+						},
+						KonnectConfiguration: konnectv1alpha2.ControlPlaneKonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
+								Name: "name-1",
+							},
+						},
+					},
+				},
+				Update: func(kcp *konnectv1alpha2.KonnectGatewayControlPlane) {
+					kcp.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name = "name-2"
+				},
+			},
+			{
 				Name: "spec.createControlPlaneRequest.cluster_type change is not allowed",
 				TestObject: &konnectv1alpha2.KonnectGatewayControlPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
