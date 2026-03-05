@@ -130,7 +130,7 @@ helm upgrade --install kong-operator \
   --set env.ENABLE_CONTROLLER_KONNECT=true
 ```
 
-> [!NOTE]
+> **NOTE**
 > When using the `nightly` tag the operator version assumed is the one of the `Chart.appversion`, which is set to the latest release.
 > If a specific version is required (e.g., to enable version-gated features) you can specify it by adding the `--set image.effectiveSemver=<DESIRED_VERSION>` argument.
 
