@@ -55,7 +55,7 @@ spec:
       environment: production
       team: platform
     annotations:
-      enviroment: production
+      environment: production
   listeners:
     - name: http
       protocol: HTTP
