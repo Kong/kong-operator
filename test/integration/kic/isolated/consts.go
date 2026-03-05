@@ -1,5 +1,3 @@
-//go:build integration_tests
-
 package isolated
 
 import "fmt"

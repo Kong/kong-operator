@@ -1,5 +1,3 @@
-//go:build envtest
-
 package envtest
 
 import (

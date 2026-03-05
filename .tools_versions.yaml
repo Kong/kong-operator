@@ -1,15 +1,13 @@
 # renovate: datasource=github-tags depName=kubernetes/code-generator
-code-generator: "0.35.1"
+code-generator: "0.35.2"
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-tools
 controller-tools: "0.20.1"
 # renovate: datasource=github-releases depName=golangci/golangci-lint
 golangci-lint: "2.10.1"
-# TODO: Renovate comment is missing. This needs to be added at some point.
-modernize: "0.19.1"
 # renovate: datasource=github-releases depName=GoogleContainerTools/skaffold
 skaffold: "2.17.2"
 # renovate: datasource=github-releases depName=go-delve/delve
-dlv: "1.26.0"
+dlv: "1.26.1"
 # renovate: datasource=github-releases depName=gotestyourself/gotestsum
 gotestsum: "1.13.0"
 # renovate: datasource=github-releases depName=elastic/crd-ref-docs
@@ -50,6 +48,6 @@ kube-linter: "0.8.1"
 # renovate: datasource=github-tags depName=DavidAnson/markdownlint-cli2
 markdownlint-cli2: "0.21.0"
 # renovate: datasource=github-releases depName=cert-manager/cert-manager
-cert-manager: "1.19.3"
+cert-manager: "1.19.4"
 # renovate: datasource=github-releases depName=kyverno/chainsaw
 chainsaw: "v0.2.15-beta.1"

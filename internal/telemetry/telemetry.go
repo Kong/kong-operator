@@ -11,8 +11,8 @@ import (
 	"github.com/kong/kubernetes-telemetry/pkg/telemetry"
 	"github.com/kong/kubernetes-telemetry/pkg/types"
 	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/metadata"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -25,7 +25,7 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
-	"github.com/kong/kong-operator/v2/modules/manager/metadata"
+	mgrmetadata "github.com/kong/kong-operator/v2/modules/manager/metadata"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
@@ -52,7 +52,7 @@ type Config struct {
 }
 
 // CreateManager creates telemetry manager using the provided rest.Config.
-func CreateManager(signal string, restConfig *rest.Config, log logr.Logger, meta metadata.Info, cfg Config) (telemetry.Manager, error) {
+func CreateManager(signal string, restConfig *rest.Config, log logr.Logger, meta mgrmetadata.Info, cfg Config) (telemetry.Manager, error) {
 	k, err := kubernetes.NewForConfig(restConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create client-go kubernetes client: %w", err)
@@ -66,16 +66,16 @@ func CreateManager(signal string, restConfig *rest.Config, log logr.Logger, meta
 		return nil, fmt.Errorf("failed to create controller-runtime's client: %w", err)
 	}
 
-	dyn, err := dynamic.NewForConfig(restConfig)
+	metadataClient, err := metadata.NewForConfig(restConfig)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create dynamic kubernetes client: %w", err)
+		return nil, fmt.Errorf("failed to create metadata client: %w", err)
 	}
 
 	m, err := createManager(
 		types.Signal(SignalPing),
 		k,
 		cl,
-		dyn,
+		metadataClient,
 		meta,
 		cfg,
 		log,
@@ -106,8 +106,8 @@ func createManager(
 	signal types.Signal,
 	k kubernetes.Interface,
 	cl client.Client,
-	dyn dynamic.Interface,
-	meta metadata.Info,
+	metadataClient metadata.Interface,
+	meta mgrmetadata.Info,
 	cfg Config,
 	log logr.Logger,
 	opts ...telemetry.OptManager,
@@ -143,14 +143,14 @@ func createManager(
 			log.Info("failed to check if dataplane CRD exists", "error", err)
 		}
 
-		w, err := telemetry.NewClusterStateWorkflow(dyn, cl.RESTMapper())
+		w, err := telemetry.NewClusterStateWorkflow(metadataClient, cl.RESTMapper())
 		if err != nil {
 			return nil, fmt.Errorf("failed to create cluster state workflow: %w", err)
 		}
 
 		if dpExists {
 			// Add dataplane count provider to monitor number of dataplanes in the cluster.
-			p, err := NewDataPlaneCountProvider(dyn, cl.RESTMapper())
+			p, err := NewDataPlaneCountProvider(metadataClient, cl.RESTMapper())
 			if err != nil {
 				log.Info("failed to create dataplane count provider", "error", err)
 			} else {
@@ -160,7 +160,7 @@ func createManager(
 
 		if cpExists {
 			// Add controlplane count provider to monitor number of controlplanes in the cluster.
-			p, err := NewControlPlaneCountProvider(dyn, cl.RESTMapper())
+			p, err := NewControlPlaneCountProvider(metadataClient, cl.RESTMapper())
 			if err != nil {
 				log.Info("failed to create controlplane count provider", "error", err)
 			} else {
@@ -171,7 +171,7 @@ func createManager(
 		// AIGateway is optional so check if it exists before enabling the count provider.
 		if aiGatewayExists {
 			// Add aigateway count provider to monitor number of aigateways in the cluster.
-			p, err := NewAIgatewayCountProvider(dyn, cl.RESTMapper())
+			p, err := NewAIgatewayCountProvider(metadataClient, cl.RESTMapper())
 			if err != nil {
 				log.Info("failed to create aigateway count provider", "error", err)
 			} else {
@@ -221,35 +221,35 @@ func createManager(
 		if cfg.KonnectControllerEnabled {
 			{
 				group, version := configurationv1.GroupVersion.Group, configurationv1.GroupVersion.Version
-				AddObjectCountProviderOrLog[configurationv1.KongConsumer](w, dyn, cl.RESTMapper(), log, group, version)
+				AddObjectCountProviderOrLog[configurationv1.KongConsumer](w, metadataClient, cl.RESTMapper(), log, group, version)
 			}
 			{
 				group, version := configurationv1beta1.GroupVersion.Group, configurationv1beta1.GroupVersion.Version
-				AddObjectCountProviderOrLog[configurationv1beta1.KongConsumerGroup](w, dyn, cl.RESTMapper(), log, group, version)
+				AddObjectCountProviderOrLog[configurationv1beta1.KongConsumerGroup](w, metadataClient, cl.RESTMapper(), log, group, version)
 			}
 			{
 				group, version := configurationv1alpha1.GroupVersion.Group, configurationv1alpha1.GroupVersion.Version
-				AddObjectCountProviderOrLog[configurationv1alpha1.KongRoute](w, dyn, cl.RESTMapper(), log, group, version)
-				AddObjectCountProviderOrLog[configurationv1alpha1.KongService](w, dyn, cl.RESTMapper(), log, group, version)
-				AddObjectCountProviderOrLog[configurationv1alpha1.KongCredentialACL](w, dyn, cl.RESTMapper(), log, group, version)
-				AddObjectCountProviderOrLog[configurationv1alpha1.KongCredentialJWT](w, dyn, cl.RESTMapper(), log, group, version)
-				AddObjectCountProviderOrLog[configurationv1alpha1.KongCredentialHMAC](w, dyn, cl.RESTMapper(), log, group, version)
-				AddObjectCountProviderOrLog[configurationv1alpha1.KongCredentialAPIKey](w, dyn, cl.RESTMapper(), log, group, version)
-				AddObjectCountProviderOrLog[configurationv1alpha1.KongCredentialBasicAuth](w, dyn, cl.RESTMapper(), log, group, version)
-				AddObjectCountProviderOrLog[configurationv1alpha1.KongSNI](w, dyn, cl.RESTMapper(), log, group, version)
-				AddObjectCountProviderOrLog[configurationv1alpha1.KongVault](w, dyn, cl.RESTMapper(), log, group, version)
-				AddObjectCountProviderOrLog[configurationv1alpha1.KongCertificate](w, dyn, cl.RESTMapper(), log, group, version)
-				AddObjectCountProviderOrLog[configurationv1alpha1.KongCACertificate](w, dyn, cl.RESTMapper(), log, group, version)
-				AddObjectCountProviderOrLog[configurationv1alpha1.KongDataPlaneClientCertificate](w, dyn, cl.RESTMapper(), log, group, version)
-				AddObjectCountProviderOrLog[configurationv1alpha1.KongKey](w, dyn, cl.RESTMapper(), log, group, version)
-				AddObjectCountProviderOrLog[configurationv1alpha1.KongKeySet](w, dyn, cl.RESTMapper(), log, group, version)
-				AddObjectCountProviderOrLog[configurationv1alpha1.KongPluginBinding](w, dyn, cl.RESTMapper(), log, group, version)
-				AddObjectCountProviderOrLog[configurationv1alpha1.KongTarget](w, dyn, cl.RESTMapper(), log, group, version)
-				AddObjectCountProviderOrLog[configurationv1alpha1.KongUpstream](w, dyn, cl.RESTMapper(), log, group, version)
+				AddObjectCountProviderOrLog[configurationv1alpha1.KongRoute](w, metadataClient, cl.RESTMapper(), log, group, version)
+				AddObjectCountProviderOrLog[configurationv1alpha1.KongService](w, metadataClient, cl.RESTMapper(), log, group, version)
+				AddObjectCountProviderOrLog[configurationv1alpha1.KongCredentialACL](w, metadataClient, cl.RESTMapper(), log, group, version)
+				AddObjectCountProviderOrLog[configurationv1alpha1.KongCredentialJWT](w, metadataClient, cl.RESTMapper(), log, group, version)
+				AddObjectCountProviderOrLog[configurationv1alpha1.KongCredentialHMAC](w, metadataClient, cl.RESTMapper(), log, group, version)
+				AddObjectCountProviderOrLog[configurationv1alpha1.KongCredentialAPIKey](w, metadataClient, cl.RESTMapper(), log, group, version)
+				AddObjectCountProviderOrLog[configurationv1alpha1.KongCredentialBasicAuth](w, metadataClient, cl.RESTMapper(), log, group, version)
+				AddObjectCountProviderOrLog[configurationv1alpha1.KongSNI](w, metadataClient, cl.RESTMapper(), log, group, version)
+				AddObjectCountProviderOrLog[configurationv1alpha1.KongVault](w, metadataClient, cl.RESTMapper(), log, group, version)
+				AddObjectCountProviderOrLog[configurationv1alpha1.KongCertificate](w, metadataClient, cl.RESTMapper(), log, group, version)
+				AddObjectCountProviderOrLog[configurationv1alpha1.KongCACertificate](w, metadataClient, cl.RESTMapper(), log, group, version)
+				AddObjectCountProviderOrLog[configurationv1alpha1.KongDataPlaneClientCertificate](w, metadataClient, cl.RESTMapper(), log, group, version)
+				AddObjectCountProviderOrLog[configurationv1alpha1.KongKey](w, metadataClient, cl.RESTMapper(), log, group, version)
+				AddObjectCountProviderOrLog[configurationv1alpha1.KongKeySet](w, metadataClient, cl.RESTMapper(), log, group, version)
+				AddObjectCountProviderOrLog[configurationv1alpha1.KongPluginBinding](w, metadataClient, cl.RESTMapper(), log, group, version)
+				AddObjectCountProviderOrLog[configurationv1alpha1.KongTarget](w, metadataClient, cl.RESTMapper(), log, group, version)
+				AddObjectCountProviderOrLog[configurationv1alpha1.KongUpstream](w, metadataClient, cl.RESTMapper(), log, group, version)
 			}
 			{
 				group, version := konnectv1alpha1.GroupVersion.Group, konnectv1alpha1.GroupVersion.Version
-				AddObjectCountProviderOrLog[konnectv1alpha2.KonnectGatewayControlPlane](w, dyn, cl.RESTMapper(), log, group, version)
+				AddObjectCountProviderOrLog[konnectv1alpha2.KonnectGatewayControlPlane](w, metadataClient, cl.RESTMapper(), log, group, version)
 			}
 		}
 
@@ -294,13 +294,13 @@ func AddObjectCountProviderOrLog[
 	TEnt constraints.EntityType[T],
 ](
 	w telemetry.Workflow,
-	dyn dynamic.Interface,
+	metadataClient metadata.Interface,
 	restMapper meta.RESTMapper,
 	log logr.Logger,
 	group string,
 	version string,
 ) {
-	p, err := NewObjectCountProvider[T, TEnt](dyn, restMapper, group, version)
+	p, err := NewObjectCountProvider[T, TEnt](metadataClient, restMapper, group, version)
 	if err != nil {
 		log.Info("failed to create object provider", "error", err, "kind", constraints.EntityTypeName[T]())
 		return

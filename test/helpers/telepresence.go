@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 
 	"github.com/kong/kong-operator/v2/test"
 )
@@ -25,6 +26,13 @@ func SetupTelepresence(ctx context.Context) (func(), error) {
 		telepresenceExecutable = "telepresence"
 		fmt.Printf("WARN: environment variable %s is not set, try to fallback to a system wide 'telepresnce'", telepresenceBin)
 	} else {
+		_, err := os.Stat(telepresenceExecutable)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"error checking telepresence executable at %s specified by %s environment variable: %w",
+				telepresenceExecutable, telepresenceBin, err,
+			)
+		}
 		fmt.Printf("INFO: path to binary from %s environment variable is %s\n", telepresenceBin, telepresenceExecutable)
 	}
 
@@ -37,6 +45,7 @@ func SetupTelepresence(ctx context.Context) (func(), error) {
 	// rules which only allow traffic from kong-system namespace.
 	// See: https://github.com/Kong/kong-operator/issues/2074
 	commonHelmFlags := []string{
+		"--config", filepath.Join(ProjectRootPath(), ".config_telepresence.yaml"),
 		"--manager-namespace", "kong-system",
 		"--set", "podLabels.app\\.kubernetes\\.io/name=kong-operator",
 	}

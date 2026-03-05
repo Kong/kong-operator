@@ -18,7 +18,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
@@ -1590,12 +1589,12 @@ func TestIsHTTPReferenceGranted(t *testing.T) {
 		{
 			name: "granted when all fields match",
 			grantSpec: gwtypes.ReferenceGrantSpec{
-				From: []gatewayv1beta1.ReferenceGrantFrom{{
+				From: []gwtypes.ReferenceGrantFrom{{
 					Group:     gwtypes.GroupName,
 					Kind:      "HTTPRoute",
 					Namespace: gwtypes.Namespace("default"),
 				}},
-				To: []gatewayv1beta1.ReferenceGrantTo{{
+				To: []gwtypes.ReferenceGrantTo{{
 					Group: gwtypes.Group("core"),
 					Kind:  gwtypes.Kind("Service"),
 					Name:  ptrObjName("my-service"),
@@ -1616,12 +1615,12 @@ func TestIsHTTPReferenceGranted(t *testing.T) {
 		{
 			name: "not granted when group does not match",
 			grantSpec: gwtypes.ReferenceGrantSpec{
-				From: []gatewayv1beta1.ReferenceGrantFrom{{
+				From: []gwtypes.ReferenceGrantFrom{{
 					Group:     gwtypes.GroupName,
 					Kind:      "HTTPRoute",
 					Namespace: gwtypes.Namespace("default"),
 				}},
-				To: []gatewayv1beta1.ReferenceGrantTo{{
+				To: []gwtypes.ReferenceGrantTo{{
 					Group: gwtypes.Group("core"),
 					Kind:  gwtypes.Kind("Service"),
 					Name:  ptrObjName("my-service"),
@@ -1642,12 +1641,12 @@ func TestIsHTTPReferenceGranted(t *testing.T) {
 		{
 			name: "not granted when kind does not match",
 			grantSpec: gwtypes.ReferenceGrantSpec{
-				From: []gatewayv1beta1.ReferenceGrantFrom{{
+				From: []gwtypes.ReferenceGrantFrom{{
 					Group:     gwtypes.GroupName,
 					Kind:      "HTTPRoute",
 					Namespace: gwtypes.Namespace("default"),
 				}},
-				To: []gatewayv1beta1.ReferenceGrantTo{{
+				To: []gwtypes.ReferenceGrantTo{{
 					Group: gwtypes.Group("core"),
 					Kind:  gwtypes.Kind("Service"),
 					Name:  ptrObjName("my-service"),
@@ -1668,12 +1667,12 @@ func TestIsHTTPReferenceGranted(t *testing.T) {
 		{
 			name: "not granted when name does not match",
 			grantSpec: gwtypes.ReferenceGrantSpec{
-				From: []gatewayv1beta1.ReferenceGrantFrom{{
+				From: []gwtypes.ReferenceGrantFrom{{
 					Group:     gwtypes.GroupName,
 					Kind:      "HTTPRoute",
 					Namespace: gwtypes.Namespace("default"),
 				}},
-				To: []gatewayv1beta1.ReferenceGrantTo{{
+				To: []gwtypes.ReferenceGrantTo{{
 					Group: gwtypes.Group("core"),
 					Kind:  gwtypes.Kind("Service"),
 					Name:  ptrObjName("my-service"),
@@ -1694,12 +1693,12 @@ func TestIsHTTPReferenceGranted(t *testing.T) {
 		{
 			name: "granted when to.Name is nil (wildcard)",
 			grantSpec: gwtypes.ReferenceGrantSpec{
-				From: []gatewayv1beta1.ReferenceGrantFrom{{
+				From: []gwtypes.ReferenceGrantFrom{{
 					Group:     gwtypes.GroupName,
 					Kind:      "HTTPRoute",
 					Namespace: gwtypes.Namespace("default"),
 				}},
-				To: []gatewayv1beta1.ReferenceGrantTo{{
+				To: []gwtypes.ReferenceGrantTo{{
 					Group: gwtypes.Group("core"),
 					Kind:  gwtypes.Kind("Service"),
 					Name:  nil,
@@ -1720,12 +1719,12 @@ func TestIsHTTPReferenceGranted(t *testing.T) {
 		{
 			name: "not granted when from.Namespace does not match",
 			grantSpec: gwtypes.ReferenceGrantSpec{
-				From: []gatewayv1beta1.ReferenceGrantFrom{{
+				From: []gwtypes.ReferenceGrantFrom{{
 					Group:     gwtypes.GroupName,
 					Kind:      "HTTPRoute",
 					Namespace: gwtypes.Namespace("default"),
 				}},
-				To: []gatewayv1beta1.ReferenceGrantTo{{
+				To: []gwtypes.ReferenceGrantTo{{
 					Group: gwtypes.Group("core"),
 					Kind:  gwtypes.Kind("Service"),
 					Name:  ptrObjName("my-service"),
@@ -1884,18 +1883,18 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 						Name:      "other-svc",
 					},
 				},
-				&gatewayv1beta1.ReferenceGrant{
+				&gwtypes.ReferenceGrant{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "other-ns",
 						Name:      "grant",
 					},
-					Spec: gatewayv1beta1.ReferenceGrantSpec{
-						From: []gatewayv1beta1.ReferenceGrantFrom{{
+					Spec: gwtypes.ReferenceGrantSpec{
+						From: []gwtypes.ReferenceGrantFrom{{
 							Group:     gwtypes.GroupName,
 							Kind:      "HTTPRoute",
 							Namespace: gwtypes.Namespace("default"),
 						}},
-						To: []gatewayv1beta1.ReferenceGrantTo{{
+						To: []gwtypes.ReferenceGrantTo{{
 							Group: gwtypes.Group("core"),
 							Kind:  gwtypes.Kind("Service"),
 							Name:  ptrObjName("allowed-svc"),
@@ -1928,18 +1927,18 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			name: "cross-namespace, grant permits reference",
 			clientObjs: []client.Object{
 				serviceOtherNS,
-				&gatewayv1beta1.ReferenceGrant{
+				&gwtypes.ReferenceGrant{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "other-ns",
 						Name:      "grant",
 					},
-					Spec: gatewayv1beta1.ReferenceGrantSpec{
-						From: []gatewayv1beta1.ReferenceGrantFrom{{
+					Spec: gwtypes.ReferenceGrantSpec{
+						From: []gwtypes.ReferenceGrantFrom{{
 							Group:     gwtypes.GroupName,
 							Kind:      "HTTPRoute",
 							Namespace: gwtypes.Namespace("default"),
 						}},
-						To: []gatewayv1beta1.ReferenceGrantTo{{
+						To: []gwtypes.ReferenceGrantTo{{
 							Group: gwtypes.Group("core"),
 							Kind:  gwtypes.Kind("Service"),
 							Name:  ptrObjName("test-svc"),
@@ -2329,7 +2328,7 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			},
 			interceptor: interceptor.Funcs{
 				List: func(ctx context.Context, client client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
-					if _, ok := list.(*gatewayv1beta1.ReferenceGrantList); ok {
+					if _, ok := list.(*gwtypes.ReferenceGrantList); ok {
 						return fmt.Errorf("failed to list ReferenceGrants")
 					}
 					return client.List(ctx, list, opts...)
@@ -2404,7 +2403,7 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			s := runtime.NewScheme()
 			_ = corev1.AddToScheme(s)
 			_ = configurationv1.AddToScheme(s)
-			_ = gatewayv1beta1.Install(s)
+			_ = gatewayv1.Install(s)
 
 			// Create fake client
 			clientBuilder := fake.NewClientBuilder().WithScheme(s).WithObjects(tt.clientObjs...)
@@ -2432,7 +2431,7 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s := runtime.NewScheme()
 			_ = corev1.AddToScheme(s)
-			_ = gatewayv1beta1.Install(s)
+			_ = gatewayv1.Install(s)
 			_ = configurationv1.AddToScheme(s)
 
 			cl := fake.NewClientBuilder().
@@ -2530,20 +2529,20 @@ func TestCheckReferenceGrant(t *testing.T) {
 			},
 			routeNamespace: "source-ns",
 			clientObjs: []client.Object{
-				&gatewayv1beta1.ReferenceGrant{
+				&gwtypes.ReferenceGrant{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "grant-1",
 						Namespace: "target-ns",
 					},
-					Spec: gatewayv1beta1.ReferenceGrantSpec{
-						From: []gatewayv1beta1.ReferenceGrantFrom{
+					Spec: gwtypes.ReferenceGrantSpec{
+						From: []gwtypes.ReferenceGrantFrom{
 							{
 								Group:     gatewayv1.GroupName,
 								Kind:      gatewayv1.Kind("HTTPRoute"),
 								Namespace: gatewayv1.Namespace("different-ns"), // Different namespace.
 							},
 						},
-						To: []gatewayv1beta1.ReferenceGrantTo{
+						To: []gwtypes.ReferenceGrantTo{
 							{
 								Group: "",
 								Kind:  gatewayv1.Kind("Service"),
@@ -2570,20 +2569,20 @@ func TestCheckReferenceGrant(t *testing.T) {
 			},
 			routeNamespace: "source-ns",
 			clientObjs: []client.Object{
-				&gatewayv1beta1.ReferenceGrant{
+				&gwtypes.ReferenceGrant{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "grant-1",
 						Namespace: "target-ns",
 					},
-					Spec: gatewayv1beta1.ReferenceGrantSpec{
-						From: []gatewayv1beta1.ReferenceGrantFrom{
+					Spec: gwtypes.ReferenceGrantSpec{
+						From: []gwtypes.ReferenceGrantFrom{
 							{
 								Group:     gatewayv1.GroupName,
 								Kind:      gatewayv1.Kind("HTTPRoute"),
 								Namespace: gatewayv1.Namespace("source-ns"),
 							},
 						},
-						To: []gatewayv1beta1.ReferenceGrantTo{
+						To: []gwtypes.ReferenceGrantTo{
 							{
 								Group: "",
 								Kind:  gatewayv1.Kind("Service"),
@@ -2610,20 +2609,20 @@ func TestCheckReferenceGrant(t *testing.T) {
 			},
 			routeNamespace: "source-ns",
 			clientObjs: []client.Object{
-				&gatewayv1beta1.ReferenceGrant{
+				&gwtypes.ReferenceGrant{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "grant-1",
 						Namespace: "target-ns",
 					},
-					Spec: gatewayv1beta1.ReferenceGrantSpec{
-						From: []gatewayv1beta1.ReferenceGrantFrom{
+					Spec: gwtypes.ReferenceGrantSpec{
+						From: []gwtypes.ReferenceGrantFrom{
 							{
 								Group:     gatewayv1.GroupName,
 								Kind:      gatewayv1.Kind("HTTPRoute"),
 								Namespace: gatewayv1.Namespace("source-ns"),
 							},
 						},
-						To: []gatewayv1beta1.ReferenceGrantTo{
+						To: []gwtypes.ReferenceGrantTo{
 							{
 								Group: "",
 								Kind:  gatewayv1.Kind("Service"),
@@ -2650,20 +2649,20 @@ func TestCheckReferenceGrant(t *testing.T) {
 			},
 			routeNamespace: "source-ns",
 			clientObjs: []client.Object{
-				&gatewayv1beta1.ReferenceGrant{
+				&gwtypes.ReferenceGrant{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "grant-1",
 						Namespace: "target-ns",
 					},
-					Spec: gatewayv1beta1.ReferenceGrantSpec{
-						From: []gatewayv1beta1.ReferenceGrantFrom{
+					Spec: gwtypes.ReferenceGrantSpec{
+						From: []gwtypes.ReferenceGrantFrom{
 							{
 								Group:     gatewayv1.GroupName,
 								Kind:      gatewayv1.Kind("HTTPRoute"),
 								Namespace: gatewayv1.Namespace("wrong-ns"),
 							},
 						},
-						To: []gatewayv1beta1.ReferenceGrantTo{
+						To: []gwtypes.ReferenceGrantTo{
 							{
 								Group: "",
 								Kind:  gatewayv1.Kind("Service"),
@@ -2672,20 +2671,20 @@ func TestCheckReferenceGrant(t *testing.T) {
 						},
 					},
 				},
-				&gatewayv1beta1.ReferenceGrant{
+				&gwtypes.ReferenceGrant{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "grant-2",
 						Namespace: "target-ns",
 					},
-					Spec: gatewayv1beta1.ReferenceGrantSpec{
-						From: []gatewayv1beta1.ReferenceGrantFrom{
+					Spec: gwtypes.ReferenceGrantSpec{
+						From: []gwtypes.ReferenceGrantFrom{
 							{
 								Group:     gatewayv1.GroupName,
 								Kind:      gatewayv1.Kind("HTTPRoute"),
 								Namespace: gatewayv1.Namespace("source-ns"),
 							},
 						},
-						To: []gatewayv1beta1.ReferenceGrantTo{
+						To: []gwtypes.ReferenceGrantTo{
 							{
 								Group: "",
 								Kind:  gatewayv1.Kind("Service"),
@@ -2713,20 +2712,20 @@ func TestCheckReferenceGrant(t *testing.T) {
 			},
 			routeNamespace: "source-ns",
 			clientObjs: []client.Object{
-				&gatewayv1beta1.ReferenceGrant{
+				&gwtypes.ReferenceGrant{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "grant-1",
 						Namespace: "target-ns",
 					},
-					Spec: gatewayv1beta1.ReferenceGrantSpec{
-						From: []gatewayv1beta1.ReferenceGrantFrom{
+					Spec: gwtypes.ReferenceGrantSpec{
+						From: []gwtypes.ReferenceGrantFrom{
 							{
 								Group:     gatewayv1.GroupName,
 								Kind:      gatewayv1.Kind("HTTPRoute"),
 								Namespace: gatewayv1.Namespace("source-ns"),
 							},
 						},
-						To: []gatewayv1beta1.ReferenceGrantTo{
+						To: []gwtypes.ReferenceGrantTo{
 							{
 								Group: "core",
 								Kind:  gatewayv1.Kind("Service"),
@@ -2771,7 +2770,7 @@ func TestCheckReferenceGrant(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s := runtime.NewScheme()
 			_ = corev1.AddToScheme(s)
-			_ = gatewayv1beta1.Install(s)
+			_ = gatewayv1.Install(s)
 
 			cl := fake.NewClientBuilder().WithScheme(s).WithObjects(tt.clientObjs...).Build()
 
@@ -2795,13 +2794,13 @@ func TestCheckReferenceGrant(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s := runtime.NewScheme()
 			_ = corev1.AddToScheme(s)
-			_ = gatewayv1beta1.Install(s)
+			_ = gatewayv1.Install(s)
 
 			cl := fake.NewClientBuilder().
 				WithScheme(s).
 				WithInterceptorFuncs(interceptor.Funcs{
 					List: func(ctx context.Context, client client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
-						if _, ok := list.(*gatewayv1beta1.ReferenceGrantList); ok {
+						if _, ok := list.(*gwtypes.ReferenceGrantList); ok {
 							return fmt.Errorf("failed to list ReferenceGrants in namespace target-ns")
 						}
 						return client.List(ctx, list, opts...)

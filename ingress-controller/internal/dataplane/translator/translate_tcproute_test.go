@@ -21,7 +21,7 @@ import (
 )
 
 func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
-	tcpRouteTypeMeta := metav1.TypeMeta{Kind: "TCPRoute", APIVersion: gatewayv1alpha2.SchemeGroupVersion.String()}
+	tcpRouteTypeMeta := metav1.TypeMeta{Kind: "TCPRoute", APIVersion: gatewayv1alpha2.GroupVersion.String()}
 
 	testCases := []struct {
 		name                 string

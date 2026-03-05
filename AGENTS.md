@@ -19,11 +19,11 @@ make tools              # Install all required development tools via mise
 ## Linting
 
 ```bash
-make lint               # Run Go linters (modules, golangci-lint, modernize)
+make lint               # Run Go linters (modules, golangci-lint)
 make lint.all           # Full lint: Go + charts + GitHub Actions + markdown
 make lint.api           # Lint Kubernetes API types
 make lint.golangci-lint # Run golangci-lint linter for Go code
-make lint.modernize     # Run modernize on the codebase to ensure you're not using old or deprecated Go constructs.
+make go-fix             # Run go-fix on the codebase to ensure you're not using old or deprecated Go constructs.
 ```
 
 CI runs `make lint` with `GOLANGCI_LINT_FLAGS="--fix=false"` (auto-fix is enabled locally but disabled in CI).
@@ -75,8 +75,8 @@ make test.charts.golden.update  # Update chart golden files
 
 ### Test File Locations
 
-- Unit tests: `*_test.go` files next to source code (no build tags)
-- Envtest: `test/envtest/` (requires `// +build envtest` tag)
+- Unit tests: `*_test.go` files next to source code
+- Envtest: `test/envtest/`
 - Integration: `test/integration/`
 - Conformance: `test/conformance/`
 - CRD validation: `test/crdsvalidation/`

@@ -78,13 +78,10 @@ func ApplyExtensions[t ExtendableT](ctx context.Context, cl client.Client, o t, 
 	// in case the extensionsCondition is true, let's apply the extensions.
 	konnectExtensionApplied := k8sutils.NewConditionWithGeneration(kcfgkonnect.KonnectExtensionAppliedType, metav1.ConditionTrue, kcfgkonnect.KonnectExtensionAppliedReason, "The Konnect extension has been successfully applied", o.GetGeneration())
 	if extensionsCondition.Status == metav1.ConditionTrue {
-		var (
-			extensionRefFound bool
-			err               error
-		)
+		var err error
 
 		// Process the extensions using the provided processor.
-		extensionRefFound, err = processor.Process(ctx, cl, o)
+		_, err = processor.Process(ctx, cl, o)
 		if err != nil {
 			switch {
 			case errors.Is(err, extensionserrors.ErrCrossNamespaceReference):
@@ -106,9 +103,8 @@ func ApplyExtensions[t ExtendableT](ctx context.Context, cl client.Client, o t, 
 			default:
 				return true, ctrl.Result{}, err
 			}
-		}
-		if !extensionRefFound {
-			return false, ctrl.Result{}, nil
+			// Don't spam with errors, so return stop and nil error
+			return true, ctrl.Result{}, nil
 		}
 	}
 

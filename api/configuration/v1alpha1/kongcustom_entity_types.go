@@ -25,7 +25,6 @@ type KongEntityScope string
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 // +kubebuilder:printcolumn:name="Programmed",type=string,JSONPath=`.status.conditions[?(@.type=="Programmed")].status`
 // +kubebuilder:validation:XValidation:rule="self.spec.type == oldSelf.spec.type",message="The spec.type field is immutable"
-// +apireference:kic:include
 // +kong:channels=kong-operator
 type KongCustomEntity struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -39,7 +38,6 @@ type KongCustomEntity struct {
 
 // KongCustomEntitySpec defines the specification of the KongCustomEntity.
 // +kubebuilder:validation:XValidation:rule="!(self.type in ['services','routes','upstreams','targets','plugins','consumers','consumer_groups'])",message="The type field cannot be one of the known Kong entity types"
-// +apireference:kic:include
 type KongCustomEntitySpec struct {
 	// EntityType is the type of the Kong entity. The type is used in generating declarative configuration.
 	EntityType string `json:"type"`
@@ -55,7 +53,6 @@ type KongCustomEntitySpec struct {
 }
 
 // ObjectReference defines reference of a kubernetes object.
-// +apireference:kic:include
 type ObjectReference struct {
 	// Group defines the API group of the referred object.
 	Group *string `json:"group,omitempty"`
@@ -69,7 +66,6 @@ type ObjectReference struct {
 }
 
 // KongCustomEntityStatus defines the status of the KongCustomEntity.
-// +apireference:kic:include
 type KongCustomEntityStatus struct {
 	// Conditions describe the current conditions of the KongCustomEntityStatus.
 	//

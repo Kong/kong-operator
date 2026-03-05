@@ -1,5 +1,3 @@
-//go:build envtest
-
 package envtest
 
 import (
@@ -271,7 +269,7 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 			)
 			require.NoError(t, err)
 
-			_, err = gcl.GatewayV1beta1().ReferenceGrants(namespace).Create(
+			_, err = gcl.GatewayV1().ReferenceGrants(namespace).Create(
 				ctx,
 				&gatewayapi.ReferenceGrant{
 					ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("test-%d", i)},

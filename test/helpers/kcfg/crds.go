@@ -7,27 +7,34 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/samber/lo"
 	"golang.org/x/mod/modfile"
+
+	"github.com/kong/kong-operator/v2/test/helpers"
 )
 
-const gatewayAPIModule = "sigs.k8s.io/gateway-api"
+const (
+	gatewayAPIModule            = "sigs.k8s.io/gateway-api"
+	gatewayAPIConformanceModule = "sigs.k8s.io/gateway-api/conformance"
+)
 
 var (
-	cfgPath = filepath.Join(projectRootPath(), "config")
+	cfgPath = filepath.Join(helpers.ProjectRootPath(), "config")
 	crdPath = filepath.Join(cfgPath, "crd")
 
 	rbacBase           = filepath.Join(cfgPath, "rbac", "base")
 	rbacRole           = filepath.Join(cfgPath, "rbac", "role")
 	validatingPolicies = filepath.Join(cfgPath, "default", "validating_policies")
 
-	chartPath = path.Join(projectRootPath(), "charts/kong-operator")
+	chartPath = path.Join(helpers.ProjectRootPath(), "charts/kong-operator")
 
 	gatewayAPIPackageVersion = lo.Must(extractModuleVersion(gatewayAPIModule))
 	gatewayAPIModulePath     = constructModulePath(gatewayAPIModule, gatewayAPIPackageVersion)
+
+	gatewayAPIConformancePackageVersion = lo.Must(extractModuleVersion(gatewayAPIConformanceModule))
+	gatewayAPIConformanceModulePath     = constructModulePath(gatewayAPIConformanceModule, gatewayAPIConformancePackageVersion)
 )
 
 func ChartPath() string {
@@ -55,14 +62,14 @@ func GatewayAPIExperimentalCRDsPath() string {
 }
 
 func GatewayAPIConformanceTestsFilesystemsWithManifests() []fs.FS {
-	return []fs.FS{os.DirFS(filepath.Join(gatewayAPIModulePath, "conformance"))}
+	return []fs.FS{os.DirFS(gatewayAPIConformanceModulePath)}
 }
 
 // extractModuleVersion extracts version of an imported module in go.mod.
 // If the module is not found, or the module version can't be parsed, it returns an error.
 func extractModuleVersion(moduleName string) (string, error) {
 	const moduleFile = "go.mod"
-	content, err := os.ReadFile(filepath.Join(projectRootPath(), moduleFile))
+	content, err := os.ReadFile(filepath.Join(helpers.ProjectRootPath(), moduleFile))
 	if err != nil {
 		return "", err
 	}
@@ -86,13 +93,4 @@ func constructModulePath(moduleName, version string) string {
 	modulePath = filepath.Join(append([]string{modulePath}, strings.Split(moduleName, "/")...)...)
 	modulePath += "@" + version
 	return modulePath
-}
-
-// projectRootPath returns the root directory of this project.
-func projectRootPath() string {
-	_, b, _, _ := runtime.Caller(0) //nolint:dogsled
-
-	// Returns root directory of this project.
-	// NOTE: it depends on the path of this file itself. When the file is moved, the second param may need updating.
-	return filepath.Join(filepath.Dir(b), "../../..")
 }

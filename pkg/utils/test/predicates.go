@@ -464,19 +464,17 @@ func DataPlaneHasServiceAndAddressesInStatus(t *testing.T, ctx context.Context, 
 // DataPlaneUpdateEventually is a helper function for tests that returns a function
 // that can be used to update the DataPlane.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
-func DataPlaneUpdateEventually(t *testing.T, ctx context.Context, dataplaneNN types.NamespacedName, clients K8sClients, updateFunc func(*operatorv1beta1.DataPlane)) func() bool {
+func DataPlaneUpdateEventually(t *testing.T, ctx context.Context, dataplaneNN types.NamespacedName, cl client.Client, updateFunc func(*operatorv1beta1.DataPlane)) func() bool {
 	return func() bool {
-		cl := clients.OperatorClient.GatewayOperatorV1beta1().DataPlanes(dataplaneNN.Namespace)
-		dp, err := cl.Get(ctx, dataplaneNN.Name, metav1.GetOptions{})
-		if err != nil {
+		var dp operatorv1beta1.DataPlane
+		if err := cl.Get(ctx, dataplaneNN, &dp); err != nil {
 			t.Logf("error getting dataplane: %v", err)
 			return false
 		}
 
-		updateFunc(dp)
+		updateFunc(&dp)
 
-		_, err = cl.Update(ctx, dp, metav1.UpdateOptions{})
-		if err != nil {
+		if err := cl.Update(ctx, &dp); err != nil {
 			t.Logf("error updating dataplane: %v", err)
 			return false
 		}

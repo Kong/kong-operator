@@ -19,7 +19,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -608,15 +607,15 @@ func TestHTTPRouteConverter_UpdateRootObjectStatus(t *testing.T) {
 					newBackendRef("backend"),
 				}, nil)
 				gateway := baseGateway()
-				referenceGrant := &gatewayv1beta1.ReferenceGrant{
+				referenceGrant := &gwtypes.ReferenceGrant{
 					ObjectMeta: metav1.ObjectMeta{Name: "allow-backend", Namespace: "backend"},
-					Spec: gatewayv1beta1.ReferenceGrantSpec{
-						From: []gatewayv1beta1.ReferenceGrantFrom{{
+					Spec: gwtypes.ReferenceGrantSpec{
+						From: []gwtypes.ReferenceGrantFrom{{
 							Group:     gatewayv1.GroupName,
 							Kind:      gatewayv1.Kind("HTTPRoute"),
 							Namespace: gatewayv1.Namespace("default"),
 						}},
-						To: []gatewayv1beta1.ReferenceGrantTo{{
+						To: []gwtypes.ReferenceGrantTo{{
 							Group: "",
 							Kind:  gatewayv1.Kind("Service"),
 							Name:  ptr.To(gatewayv1.ObjectName("backend-service")),

@@ -763,21 +763,21 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 	// ----------------------------------------------------------------------------
 	// Kubernetes Gateway APIs
 	// ----------------------------------------------------------------------------
-	case gatewayv1.SchemeGroupVersion.WithKind("Gateway"):
+	case schema.GroupVersion(gatewayv1.GroupVersion).WithKind("Gateway"):
 		return &gatewayapi.Gateway{}, nil
-	case gatewayv1.SchemeGroupVersion.WithKind("HTTPRoute"):
+	case schema.GroupVersion(gatewayv1.GroupVersion).WithKind("HTTPRoute"):
 		return &gatewayapi.HTTPRoute{}, nil
-	case gatewayv1.SchemeGroupVersion.WithKind("GRPCRoute"):
+	case schema.GroupVersion(gatewayv1.GroupVersion).WithKind("GRPCRoute"):
 		return &gatewayapi.GRPCRoute{}, nil
-	case gatewayv1alpha2.SchemeGroupVersion.WithKind("TCPRoute"):
+	case schema.GroupVersion(gatewayv1alpha2.GroupVersion).WithKind("TCPRoute"):
 		return &gatewayapi.TCPRoute{}, nil
-	case gatewayv1alpha2.SchemeGroupVersion.WithKind("UDPRoute"):
+	case schema.GroupVersion(gatewayv1alpha2.GroupVersion).WithKind("UDPRoute"):
 		return &gatewayapi.UDPRoute{}, nil
-	case gatewayv1alpha2.SchemeGroupVersion.WithKind("TLSRoute"):
+	case schema.GroupVersion(gatewayv1alpha2.GroupVersion).WithKind("TLSRoute"):
 		return &gatewayapi.TLSRoute{}, nil
-	case gatewayv1beta1.SchemeGroupVersion.WithKind("ReferenceGrant"):
+	case schema.GroupVersion(gatewayv1beta1.GroupVersion).WithKind("ReferenceGrant"):
 		return &gatewayapi.ReferenceGrant{}, nil
-	case gatewayv1alpha3.SchemeGroupVersion.WithKind("BackendTLSPolicy"):
+	case schema.GroupVersion(gatewayv1alpha3.GroupVersion).WithKind("BackendTLSPolicy"):
 		return &gatewayapi.BackendTLSPolicy{}, nil
 	// ----------------------------------------------------------------------------
 	// Kong APIs

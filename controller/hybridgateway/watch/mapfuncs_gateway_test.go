@@ -421,15 +421,15 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 					Name:      "rg1",
 					Namespace: "ns2",
 				},
-				Spec: gatewayv1beta1.ReferenceGrantSpec{
-					From: []gatewayv1beta1.ReferenceGrantFrom{
+				Spec: gwtypes.ReferenceGrantSpec{
+					From: []gwtypes.ReferenceGrantFrom{
 						{
 							Group:     gwGroup,
 							Kind:      gatewayKind,
 							Namespace: ns1,
 						},
 					},
-					To: []gatewayv1beta1.ReferenceGrantTo{
+					To: []gwtypes.ReferenceGrantTo{
 						{
 							Kind: "Secret",
 						},
@@ -472,15 +472,15 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 					Name:      "rg1",
 					Namespace: "ns2",
 				},
-				Spec: gatewayv1beta1.ReferenceGrantSpec{
-					From: []gatewayv1beta1.ReferenceGrantFrom{
+				Spec: gwtypes.ReferenceGrantSpec{
+					From: []gwtypes.ReferenceGrantFrom{
 						{
 							Group:     gwGroup,
 							Kind:      gatewayKind,
 							Namespace: ns1,
 						},
 					},
-					To: []gatewayv1beta1.ReferenceGrantTo{
+					To: []gwtypes.ReferenceGrantTo{
 						{
 							Kind: "Service",
 						},
@@ -520,15 +520,15 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 					Name:      "rg1",
 					Namespace: "ns1",
 				},
-				Spec: gatewayv1beta1.ReferenceGrantSpec{
-					From: []gatewayv1beta1.ReferenceGrantFrom{
+				Spec: gwtypes.ReferenceGrantSpec{
+					From: []gwtypes.ReferenceGrantFrom{
 						{
 							Group:     gwGroup,
 							Kind:      gatewayKind,
 							Namespace: ns1,
 						},
 					},
-					To: []gatewayv1beta1.ReferenceGrantTo{
+					To: []gwtypes.ReferenceGrantTo{
 						{
 							Kind: "Secret",
 						},
@@ -567,15 +567,15 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 					Name:      "rg1",
 					Namespace: "ns3",
 				},
-				Spec: gatewayv1beta1.ReferenceGrantSpec{
-					From: []gatewayv1beta1.ReferenceGrantFrom{
+				Spec: gwtypes.ReferenceGrantSpec{
+					From: []gwtypes.ReferenceGrantFrom{
 						{
 							Group:     gwGroup,
 							Kind:      gatewayKind,
 							Namespace: ns1,
 						},
 					},
-					To: []gatewayv1beta1.ReferenceGrantTo{
+					To: []gwtypes.ReferenceGrantTo{
 						{
 							Kind: "Secret",
 						},
@@ -615,15 +615,15 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 					Name:      "rg1",
 					Namespace: "ns2",
 				},
-				Spec: gatewayv1beta1.ReferenceGrantSpec{
-					From: []gatewayv1beta1.ReferenceGrantFrom{
+				Spec: gwtypes.ReferenceGrantSpec{
+					From: []gwtypes.ReferenceGrantFrom{
 						{
 							Group:     gwGroup,
 							Kind:      gatewayKind,
 							Namespace: gatewayv1.Namespace("ns3"),
 						},
 					},
-					To: []gatewayv1beta1.ReferenceGrantTo{
+					To: []gwtypes.ReferenceGrantTo{
 						{
 							Kind: "Secret",
 						},
@@ -663,15 +663,15 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 					Name:      "rg1",
 					Namespace: "ns2",
 				},
-				Spec: gatewayv1beta1.ReferenceGrantSpec{
-					From: []gatewayv1beta1.ReferenceGrantFrom{
+				Spec: gwtypes.ReferenceGrantSpec{
+					From: []gwtypes.ReferenceGrantFrom{
 						{
 							Group:     gwGroup,
 							Kind:      "HTTPRoute",
 							Namespace: ns1,
 						},
 					},
-					To: []gatewayv1beta1.ReferenceGrantTo{
+					To: []gwtypes.ReferenceGrantTo{
 						{
 							Kind: "Secret",
 						},
@@ -711,15 +711,15 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 					Name:      "rg1",
 					Namespace: "ns2",
 				},
-				Spec: gatewayv1beta1.ReferenceGrantSpec{
-					From: []gatewayv1beta1.ReferenceGrantFrom{
+				Spec: gwtypes.ReferenceGrantSpec{
+					From: []gwtypes.ReferenceGrantFrom{
 						{
 							Group:     "wrong.group",
 							Kind:      gatewayKind,
 							Namespace: ns1,
 						},
 					},
-					To: []gatewayv1beta1.ReferenceGrantTo{
+					To: []gwtypes.ReferenceGrantTo{
 						{
 							Kind: "Secret",
 						},
@@ -759,15 +759,15 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 					Name:      "rg1",
 					Namespace: "ns2",
 				},
-				Spec: gatewayv1beta1.ReferenceGrantSpec{
-					From: []gatewayv1beta1.ReferenceGrantFrom{
+				Spec: gwtypes.ReferenceGrantSpec{
+					From: []gwtypes.ReferenceGrantFrom{
 						{
 							Group:     "",
 							Kind:      gatewayKind,
 							Namespace: ns1,
 						},
 					},
-					To: []gatewayv1beta1.ReferenceGrantTo{
+					To: []gwtypes.ReferenceGrantTo{
 						{
 							Kind: "Secret",
 						},
@@ -810,8 +810,8 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 					Name:      "rg1",
 					Namespace: "ns2",
 				},
-				Spec: gatewayv1beta1.ReferenceGrantSpec{
-					To: []gatewayv1beta1.ReferenceGrantTo{
+				Spec: gwtypes.ReferenceGrantSpec{
+					To: []gwtypes.ReferenceGrantTo{
 						{
 							Kind: "Secret",
 						},
@@ -828,8 +828,8 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 					Name:      "rg1",
 					Namespace: "ns2",
 				},
-				Spec: gatewayv1beta1.ReferenceGrantSpec{
-					To: []gatewayv1beta1.ReferenceGrantTo{
+				Spec: gwtypes.ReferenceGrantSpec{
+					To: []gwtypes.ReferenceGrantTo{
 						{
 							Kind: "Secret",
 						},
@@ -847,15 +847,15 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 					Name:      "rg1",
 					Namespace: "ns2",
 				},
-				Spec: gatewayv1beta1.ReferenceGrantSpec{
-					From: []gatewayv1beta1.ReferenceGrantFrom{
+				Spec: gwtypes.ReferenceGrantSpec{
+					From: []gwtypes.ReferenceGrantFrom{
 						{
 							Group:     gwGroup,
 							Kind:      gatewayKind,
 							Namespace: ns1,
 						},
 					},
-					To: []gatewayv1beta1.ReferenceGrantTo{
+					To: []gwtypes.ReferenceGrantTo{
 						{
 							Kind: "Secret",
 						},
@@ -886,15 +886,15 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 					Name:      "rg1",
 					Namespace: "ns2",
 				},
-				Spec: gatewayv1beta1.ReferenceGrantSpec{
-					From: []gatewayv1beta1.ReferenceGrantFrom{
+				Spec: gwtypes.ReferenceGrantSpec{
+					From: []gwtypes.ReferenceGrantFrom{
 						{
 							Group:     gwGroup,
 							Kind:      gatewayKind,
 							Namespace: ns1,
 						},
 					},
-					To: []gatewayv1beta1.ReferenceGrantTo{
+					To: []gwtypes.ReferenceGrantTo{
 						{
 							Kind: "Secret",
 						},
@@ -926,15 +926,15 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 					Name:      "rg1",
 					Namespace: "ns2",
 				},
-				Spec: gatewayv1beta1.ReferenceGrantSpec{
-					From: []gatewayv1beta1.ReferenceGrantFrom{
+				Spec: gwtypes.ReferenceGrantSpec{
+					From: []gwtypes.ReferenceGrantFrom{
 						{
 							Group:     gwGroup,
 							Kind:      gatewayKind,
 							Namespace: ns1,
 						},
 					},
-					To: []gatewayv1beta1.ReferenceGrantTo{
+					To: []gwtypes.ReferenceGrantTo{
 						{
 							Kind: "Secret",
 						},
@@ -1060,8 +1060,8 @@ func Test_hasMatchingCrossNamespaceSecretRef(t *testing.T) {
 					Name:      "rg1",
 					Namespace: "ns2",
 				},
-				Spec: gatewayv1beta1.ReferenceGrantSpec{
-					From: []gatewayv1beta1.ReferenceGrantFrom{
+				Spec: gwtypes.ReferenceGrantSpec{
+					From: []gwtypes.ReferenceGrantFrom{
 						{
 							Group:     gwGroup,
 							Kind:      gatewayKind,
@@ -1100,8 +1100,8 @@ func Test_hasMatchingCrossNamespaceSecretRef(t *testing.T) {
 					Name:      "rg1",
 					Namespace: "ns1",
 				},
-				Spec: gatewayv1beta1.ReferenceGrantSpec{
-					From: []gatewayv1beta1.ReferenceGrantFrom{
+				Spec: gwtypes.ReferenceGrantSpec{
+					From: []gwtypes.ReferenceGrantFrom{
 						{
 							Group:     gwGroup,
 							Kind:      gatewayKind,
@@ -1141,8 +1141,8 @@ func Test_hasMatchingCrossNamespaceSecretRef(t *testing.T) {
 					Name:      "rg1",
 					Namespace: "ns2",
 				},
-				Spec: gatewayv1beta1.ReferenceGrantSpec{
-					From: []gatewayv1beta1.ReferenceGrantFrom{
+				Spec: gwtypes.ReferenceGrantSpec{
+					From: []gwtypes.ReferenceGrantFrom{
 						{
 							Group:     gwGroup,
 							Kind:      gatewayKind,
@@ -1173,8 +1173,8 @@ func Test_hasMatchingCrossNamespaceSecretRef(t *testing.T) {
 					Name:      "rg1",
 					Namespace: "ns2",
 				},
-				Spec: gatewayv1beta1.ReferenceGrantSpec{
-					From: []gatewayv1beta1.ReferenceGrantFrom{
+				Spec: gwtypes.ReferenceGrantSpec{
+					From: []gwtypes.ReferenceGrantFrom{
 						{
 							Group:     gwGroup,
 							Kind:      gatewayKind,
@@ -1206,8 +1206,8 @@ func Test_hasMatchingCrossNamespaceSecretRef(t *testing.T) {
 					Name:      "rg1",
 					Namespace: "ns2",
 				},
-				Spec: gatewayv1beta1.ReferenceGrantSpec{
-					From: []gatewayv1beta1.ReferenceGrantFrom{
+				Spec: gwtypes.ReferenceGrantSpec{
+					From: []gwtypes.ReferenceGrantFrom{
 						{
 							Group:     gwGroup,
 							Kind:      gatewayKind,
@@ -1247,8 +1247,8 @@ func Test_hasMatchingCrossNamespaceSecretRef(t *testing.T) {
 					Name:      "rg1",
 					Namespace: "ns2",
 				},
-				Spec: gatewayv1beta1.ReferenceGrantSpec{
-					From: []gatewayv1beta1.ReferenceGrantFrom{
+				Spec: gwtypes.ReferenceGrantSpec{
+					From: []gwtypes.ReferenceGrantFrom{
 						{
 							Group:     gwGroup,
 							Kind:      gatewayKind,
@@ -1288,8 +1288,8 @@ func Test_hasMatchingCrossNamespaceSecretRef(t *testing.T) {
 					Name:      "rg1",
 					Namespace: "ns2",
 				},
-				Spec: gatewayv1beta1.ReferenceGrantSpec{
-					From: []gatewayv1beta1.ReferenceGrantFrom{
+				Spec: gwtypes.ReferenceGrantSpec{
+					From: []gwtypes.ReferenceGrantFrom{
 						{
 							Group:     gwGroup,
 							Kind:      "HTTPRoute",
@@ -1329,8 +1329,8 @@ func Test_hasMatchingCrossNamespaceSecretRef(t *testing.T) {
 					Name:      "rg1",
 					Namespace: "ns2",
 				},
-				Spec: gatewayv1beta1.ReferenceGrantSpec{
-					From: []gatewayv1beta1.ReferenceGrantFrom{
+				Spec: gwtypes.ReferenceGrantSpec{
+					From: []gwtypes.ReferenceGrantFrom{
 						{
 							Group:     "wrong.group",
 							Kind:      gatewayKind,
@@ -1370,8 +1370,8 @@ func Test_hasMatchingCrossNamespaceSecretRef(t *testing.T) {
 					Name:      "rg1",
 					Namespace: "ns2",
 				},
-				Spec: gatewayv1beta1.ReferenceGrantSpec{
-					From: []gatewayv1beta1.ReferenceGrantFrom{
+				Spec: gwtypes.ReferenceGrantSpec{
+					From: []gwtypes.ReferenceGrantFrom{
 						{
 							Group:     "",
 							Kind:      gatewayKind,

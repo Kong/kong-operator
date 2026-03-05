@@ -1,5 +1,3 @@
-//go:build integration_tests
-
 package integration
 
 import (
@@ -666,7 +664,7 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 		},
 	}
 	// Not the namespace as the plugin.
-	grant, err = gatewayClient.GatewayV1beta1().ReferenceGrants(remote.Name).Create(ctx, grant, metav1.CreateOptions{})
+	grant, err = gatewayClient.GatewayV1().ReferenceGrants(remote.Name).Create(ctx, grant, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(grant)
 
@@ -702,7 +700,7 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 			},
 		},
 	}
-	grant2, err = gatewayClient.GatewayV1beta1().ReferenceGrants(ns.Name).Create(ctx, grant2, metav1.CreateOptions{})
+	grant2, err = gatewayClient.GatewayV1().ReferenceGrants(ns.Name).Create(ctx, grant2, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(grant2)
 

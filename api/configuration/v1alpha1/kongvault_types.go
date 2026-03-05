@@ -90,7 +90,6 @@ type KongVaultSpec struct {
 type KongVaultStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
-	// +apireference:kic:exclude
 	Konnect *konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef `json:"konnect,omitempty"`
 
 	// Conditions describe the current conditions of the KongVaultStatus.

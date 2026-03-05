@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-logr/logr/testr"
 	"github.com/google/pprof/profile"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
@@ -32,24 +31,18 @@ func TestMultiInstanceManagerDiagnostics(t *testing.T) {
 
 	envcfg, _ := Setup(t, ctx, scheme.Scheme)
 	diagPort := helpers.GetFreePort(t)
+	healthPort1 := helpers.GetFreePort(t)
+	healthPort2 := helpers.GetFreePort(t)
 
-	t.Log("Starting the diagnostics server and the multi-instance manager")
-	diagServer := multiinstance.NewDiagnosticsServer(diagPort)
-	go func() {
-		assert.ErrorIs(t, diagServer.Start(ctx), http.ErrServerClosed)
-	}()
-	multimgr := multiinstance.NewManager(testr.New(t), multiinstance.WithDiagnosticsExposer(diagServer))
-	go func() {
-		assert.NoError(t, multimgr.Start(ctx))
-	}()
+	multimgr := setupMultiInstanceDiagnosticsManager(ctx, t, diagPort, multiinstance.WithPprofHandler())
 
 	t.Log("Setting up two instances of the manager and scheduling them in the multi-instance manager")
-	mgrInstance1 := SetupManager(ctx, t, manager.NewRandomID(), envcfg, AdminAPIOptFns(), WithDiagnosticsWithoutServer())
-	mgrInstance2 := SetupManager(ctx, t, manager.NewRandomID(), envcfg, AdminAPIOptFns(), WithDiagnosticsWithoutServer())
+	mgrInstance1 := SetupManager(ctx, t, manager.NewRandomID(), envcfg, AdminAPIOptFns(), WithDiagnosticsWithoutServer(), WithHealthProbePort(healthPort1))
+	mgrInstance2 := SetupManager(ctx, t, manager.NewRandomID(), envcfg, AdminAPIOptFns(), WithDiagnosticsWithoutServer(), WithHealthProbePort(healthPort2))
 	require.NoError(t, multimgr.ScheduleInstance(mgrInstance1))
 	require.NoError(t, multimgr.ScheduleInstance(mgrInstance2))
 
-	t.Log("Waiting for the diagnostics server to expose instances' diagnostics endpoints")
+	t.Log("Waiting for diagnostics and health endpoints to become available")
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		resp, err := http.Get(fmt.Sprintf("http://localhost:%d/%s/debug/config/successful", diagPort, mgrInstance1.ID()))
 		if assert.NoError(t, err) {
@@ -57,12 +50,54 @@ func TestMultiInstanceManagerDiagnostics(t *testing.T) {
 			assert.Equal(t, http.StatusOK, resp.StatusCode)
 		}
 
+		resp, err = http.Get(fmt.Sprintf("http://localhost:%d/%s/debug/config/failed", diagPort, mgrInstance1.ID()))
+		if assert.NoError(t, err) {
+			resp.Body.Close()
+			assert.Equal(t, http.StatusNoContent, resp.StatusCode)
+		}
+
 		resp, err = http.Get(fmt.Sprintf("http://localhost:%d/%s/debug/config/successful", diagPort, mgrInstance2.ID()))
 		if assert.NoError(t, err) {
 			resp.Body.Close()
 			assert.Equal(t, http.StatusOK, resp.StatusCode)
 		}
-	}, waitTime, tickTime, "diagnostics should be exposed under /{instanceID}/debug/config prefix for both instances")
+
+		resp, err = http.Get(fmt.Sprintf("http://localhost:%d/%s/debug/config/failed", diagPort, mgrInstance2.ID()))
+		if assert.NoError(t, err) {
+			resp.Body.Close()
+			assert.Equal(t, http.StatusNoContent, resp.StatusCode)
+		}
+
+		resp, err = http.Get(fmt.Sprintf("http://localhost:%d/debug/pprof/", diagPort))
+		if assert.NoError(t, err) {
+			resp.Body.Close()
+			assert.Equal(t, http.StatusOK, resp.StatusCode)
+		}
+
+		resp, err = http.Get(fmt.Sprintf("http://localhost:%d/healthz", healthPort1))
+		if assert.NoError(t, err) {
+			resp.Body.Close()
+			assert.Equal(t, http.StatusOK, resp.StatusCode)
+		}
+
+		resp, err = http.Get(fmt.Sprintf("http://localhost:%d/readyz", healthPort1))
+		if assert.NoError(t, err) {
+			resp.Body.Close()
+			assert.Equal(t, http.StatusOK, resp.StatusCode)
+		}
+
+		resp, err = http.Get(fmt.Sprintf("http://localhost:%d/healthz", healthPort2))
+		if assert.NoError(t, err) {
+			resp.Body.Close()
+			assert.Equal(t, http.StatusOK, resp.StatusCode)
+		}
+
+		resp, err = http.Get(fmt.Sprintf("http://localhost:%d/readyz", healthPort2))
+		if assert.NoError(t, err) {
+			resp.Body.Close()
+			assert.Equal(t, http.StatusOK, resp.StatusCode)
+		}
+	}, waitTime, tickTime, "diagnostics and health endpoints should be exposed for both instances")
 
 	t.Log("Stopping the first instance and waiting for its diagnostics endpoints to be removed from the server")
 	require.NoError(t, multimgr.StopInstance(mgrInstance1.ID()))
@@ -83,15 +118,7 @@ func TestMultiInstanceManager_Profiling(t *testing.T) {
 	diagPort := helpers.GetFreePort(t)
 	t.Logf("Diagnostics port: %d", diagPort)
 
-	t.Log("Starting the diagnostics server and the multi-instance manager")
-	diagServer := multiinstance.NewDiagnosticsServer(diagPort, multiinstance.WithPprofHandler())
-	go func() {
-		assert.ErrorIs(t, diagServer.Start(ctx), http.ErrServerClosed)
-	}()
-	multimgr := multiinstance.NewManager(testr.New(t), multiinstance.WithDiagnosticsExposer(diagServer))
-	go func() {
-		assert.NoError(t, multimgr.Start(ctx))
-	}()
+	multimgr := setupMultiInstanceDiagnosticsManager(ctx, t, diagPort, multiinstance.WithPprofHandler())
 
 	m1 := SetupManager(ctx, t, lo.Must(manager.NewID("cp-1")), envcfg, AdminAPIOptFns(), WithDiagnosticsWithoutServer())
 	m2 := SetupManager(ctx, t, lo.Must(manager.NewID("cp-2")), envcfg, AdminAPIOptFns(), WithDiagnosticsWithoutServer())
