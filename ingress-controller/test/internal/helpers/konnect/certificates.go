@@ -8,7 +8,7 @@ import (
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
-	"github.com/Kong/sdk-konnect-go/retry"
+	sdkretry "github.com/Kong/sdk-konnect-go/retry"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -18,24 +18,29 @@ import (
 
 // CreateClientCertificate creates a TLS client certificate and POSTs it to Konnect Control Plane configuration API
 // so that KIC can use the certificates to authenticate against Konnect Admin API.
-func CreateClientCertificate(ctx context.Context, t *testing.T, cpID string) (certPEM string, keyPEM string) {
+func CreateClientCertificate(ctx context.Context, t *testing.T, cpID string, token ...string) (certPEM string, keyPEM string) {
 	t.Helper()
 
-	sdk := sdk.New(accessToken(), serverURLOpt(),
-		sdkkonnectgo.WithRetryConfig(retry.Config{
-			Backoff: &retry.BackoffStrategy{
-				InitialInterval: 100,
-				MaxInterval:     2000,
-				Exponent:        1.2,
-				MaxElapsedTime:  10000,
-			},
-		}),
-	)
+	retryConfig := sdkkonnectgo.WithRetryConfig(sdkretry.Config{
+		Backoff: &sdkretry.BackoffStrategy{
+			InitialInterval: 100,
+			MaxInterval:     2000,
+			Exponent:        1.2,
+			MaxElapsedTime:  10000,
+		},
+	})
+
+	var s *sdkkonnectgo.SDK
+	if len(token) == 0 {
+		s = sdk.New(accessToken(), serverURLOpt(), retryConfig)
+	} else {
+		s = sdk.New(token[0], serverURLOpt(), retryConfig)
+	}
 
 	cert, key := certificate.MustGenerateCertPEMFormat()
 
 	t.Log("creating client certificate in Konnect")
-	resp, err := sdk.DPCertificates.CreateDataplaneCertificate(ctx, cpID, &sdkkonnectcomp.DataPlaneClientCertificateRequest{
+	resp, err := s.DPCertificates.CreateDataplaneCertificate(ctx, cpID, &sdkkonnectcomp.DataPlaneClientCertificateRequest{
 		Cert: string(cert),
 	})
 	require.NoError(t, err)

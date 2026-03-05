@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
+	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/avast/retry-go/v4"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/adminapi"
@@ -25,14 +25,18 @@ import (
 
 // CreateTestControlPlane creates a control plane to be used in tests. It returns the created control plane's ID.
 // It also sets up a cleanup function for it to be deleted.
-func CreateTestControlPlane(ctx context.Context, t *testing.T) string {
+func CreateTestControlPlane(ctx context.Context, t *testing.T, token ...string) string {
 	t.Helper()
 
-	sdk := sdk.New(accessToken(), serverURLOpt())
-
+	var s *sdkkonnectgo.SDK
+	if len(token) == 0 {
+		s = sdk.New(accessToken(), serverURLOpt())
+	} else {
+		s = sdk.New(token[0], serverURLOpt())
+	}
 	var cpID string
 	createRgErr := retry.Do(func() error {
-		createResp, err := sdk.ControlPlanes.CreateControlPlane(ctx,
+		createResp, err := s.ControlPlanes.CreateControlPlane(ctx,
 			sdkkonnectcomp.CreateControlPlaneRequest{
 				Name:        uuid.NewString(),
 				Description: lo.ToPtr(generateTestKonnectControlPlaneDescription(t)),
@@ -63,20 +67,29 @@ func CreateTestControlPlane(ctx context.Context, t *testing.T) string {
 
 		cpID = createResp.ControlPlane.ID
 		return nil
-	}, retry.Attempts(5), retry.Delay(time.Second))
+	},
+		retry.Attempts(5),
+		retry.Delay(time.Second),
+		retry.OnRetry(func(_ uint, err error) {
+			t.Logf("failed to create control plane, retrying: %v", err)
+		}),
+	)
 	require.NoError(t, createRgErr)
 
 	t.Cleanup(func() {
-		ctx = context.Background()
-		t.Logf("deleting test Konnect Control Plane: %q", cpID)
+		fmt.Printf("deleting test Konnect Control Plane: %q\n", cpID)
 		err := retry.Do(
 			func() error { //nolint:contextcheck
-				_, err := sdk.ControlPlanes.DeleteControlPlane(context.Background(), cpID)
+				_, err := s.ControlPlanes.DeleteControlPlane(context.Background(), cpID)
 				return err
 			},
 			retry.Attempts(5), retry.Delay(time.Second),
 		)
-		assert.NoErrorf(t, err, "failed to cleanup a control plane: %q", cpID)
+		if err != nil {
+			// Don't fail the test if cleanup fails, just log the error.
+			// Cleanup job will eventually clean up the control plane.
+			fmt.Printf("failed to delete control plane %q: %v\n", cpID, err)
+		}
 
 		// Since Konnect authorization v2 supports cleanup of roles after control plane deleted, we do not need to delete them manually.
 	})
