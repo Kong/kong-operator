@@ -100,5 +100,21 @@ func IsCI() bool {
 // either because it's running in a CI environment or because the user has
 // explicitly requested to keep the test cluster.
 func SkipCleanup() bool {
-	return IsCI() || !KeepTestCluster()
+	forceCleanup := strings.ToLower(os.Getenv("KONG_TEST_FORCE_CLEANUP"))
+	if forceCleanup == "true" || forceCleanup == "1" {
+		fmt.Println("INFO: test cleanup is forced by KONG_TEST_FORCE_CLEANUP")
+		return false
+	}
+	return IsCI() || KeepTestCluster()
+}
+
+// ConformanceGatewayType returns the gateway type to run in conformance tests.
+// It reads the KONG_TEST_CONFORMANCE_GATEWAY_TYPE environment variable.
+// Valid values are "standard", "hybrid". If not set, it defaults to "standard".
+func ConformanceGatewayType() string {
+	gt := strings.ToLower(os.Getenv("KONG_TEST_CONFORMANCE_GATEWAY_TYPE"))
+	if gt == "" {
+		return "standard"
+	}
+	return gt
 }
