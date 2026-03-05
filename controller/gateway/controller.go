@@ -12,7 +12,7 @@ import (
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -867,8 +867,14 @@ func (r *Reconciler) provisionKonnectExtension(
 	// If we continue, there is only one konnect extension.
 	konnectExtension := konnectExtensions[0].DeepCopy()
 
-	// It happens e.g. when someone manually deleted the KonnectGatewayControlPlane, so for a recreated one update the KonnectExtension reference.
-	// To recreate the KonnectExtension, firstly all DataPlanes associated with the Gateway must be deleted, as they reference the KonnectExtension.
+	// Handle KonnectExtension whose ControlPlaneRef is not valid.
+	// Two cases:
+	// 1. Transient: CP exists, matches, but not yet programmed (Konnect API temporarily down)
+	//    → wait for KonnectExtension controller to re-validate
+	// 2. Stale ref: CP ref points to different/old KGCP (e.g., manual deletion+recreation)
+	//    → delete only the KonnectExtension for recreation (ref is immutable per CEL rule)
+	// DataPlanes are NEVER deleted: they handle missing extensions gracefully
+	// (setting KonnectExtensionApplied=False while continuing to serve traffic).
 	log.Debug(logger, "ensuring KonnectExtension references valid KonnectGatewayControlPlane")
 	if cond, ok := k8sutils.GetCondition(konnectv1alpha1.ControlPlaneRefValidConditionType, konnectExtension); ok && cond.Status != metav1.ConditionTrue {
 		k8sutils.SetCondition(
@@ -881,24 +887,26 @@ func (r *Reconciler) provisionKonnectExtension(
 			),
 			gatewayConditionsAndListenersAware(gateway),
 		)
-		dataPlanes, err := gatewayutils.ListDataPlanesForGateway(
-			ctx,
-			r.Client,
-			gateway,
+
+		// If extension refs the current CP, the condition is transient — wait for reconciliation.
+		cpRef := konnectExtension.Spec.Konnect.ControlPlane.Ref.KonnectNamespacedRef
+		if cpRef != nil && konnectControlPlane != nil && cpRef.Name == konnectControlPlane.Name {
+			log.Debug(logger,
+				"KonnectExtension ControlPlaneRef matches current KonnectGatewayControlPlane, waiting for reconciliation",
+				"KonnectExtension", client.ObjectKeyFromObject(konnectExtension),
+				"KonnectGatewayControlPlane", client.ObjectKeyFromObject(konnectControlPlane),
+			)
+			return nil
+		}
+
+		// Extension refs a different/stale CP — delete extension only for recreation.
+		log.Debug(logger,
+			"KonnectExtension references stale KonnectGatewayControlPlane, deleting for recreation",
+			"KonnectExtension", client.ObjectKeyFromObject(konnectExtension),
 		)
-		if err != nil {
-			log.Error(logger, err, "listing DataPlanes failed, will be requeued")
-			return nil
-		}
-		for _, dp := range dataPlanes {
-			if err := r.Delete(ctx, &dp); err != nil && !k8serrors.IsNotFound(err) {
-				log.Error(logger, err, "deleting dataplane failed", "dataplane", client.ObjectKeyFromObject(&dp))
-			}
-			log.Trace(logger, "deleted associated dataplane", "dataplane", client.ObjectKeyFromObject(&dp))
-		}
-		if err := r.Delete(ctx, konnectExtension); err != nil {
-			log.Error(logger, err, "updating invalid KonnectExtension failed", "KonnectExtension", client.ObjectKeyFromObject(konnectExtension))
-			return nil
+		if err := r.Delete(ctx, konnectExtension); err != nil && !apierrors.IsNotFound(err) {
+			log.Error(logger, err, "deleting stale KonnectExtension failed",
+				"KonnectExtension", client.ObjectKeyFromObject(konnectExtension))
 		}
 		return nil
 	}
