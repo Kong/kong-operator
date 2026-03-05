@@ -58207,6 +58207,28 @@ spec:
   - expression: object.spec.dataplane_groups.all(d, d.autoscale.type != "static")
     message: '''Value "static" in spec.dataplane_groups.autoscale.type is deprecated, use "automatic" instead.'''
 ---
+# Source: kong-operator/templates/validation-policy-service-annotations.yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: "annotations.services.konghq.com"
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups:
+      - ""
+      apiVersions:
+      - "v1"
+      operations:
+      - "CREATE"
+      - "UPDATE"
+      resources:
+      - "services"
+  validations:
+  - expression: "!has(object.metadata.annotations) || !('konghq.com/override' in object.metadata.annotations)"
+    message: '''Annotation "konghq.com/override" is deprecated and will be removed in a future release. Use Service annotations for the "proxy" section and "konghq.com/upstream-policy" with a KongUpstreamPolicy resource instead.'''
+---
 # Source: kong-operator/templates/validation-policy-dataplane.yaml
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding
@@ -58225,3 +58247,13 @@ metadata:
 spec:
   policyName: "autoscale.dataplanegroups.konnectclouddataplanegroupconfig.konnect.konghq.com"
   validationActions: [Warn, Audit]
+---
+# Source: kong-operator/templates/validation-policy-service-annotations.yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: "biding-annotations.services.konghq.com"
+spec:
+  policyName: "annotations.services.konghq.com"
+  validationActions:
+  - Warn

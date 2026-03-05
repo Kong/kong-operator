@@ -1,0 +1,33 @@
+{{- if .Values.global.validatingPolicies.serviceAnnotations.enabled }}
+{{- if and (.Capabilities.APIVersions.Has "admissionregistration.k8s.io/v1/ValidatingAdmissionPolicy") (.Capabilities.APIVersions.Has "admissionregistration.k8s.io/v1/ValidatingAdmissionPolicyBinding") -}}
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: "annotations.services.konghq.com"
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups:
+        - ""
+      apiVersions:
+        - "v1"
+      operations:
+        - "CREATE"
+        - "UPDATE"
+      resources:
+        - "services"
+  validations:
+  - expression: "!has(object.metadata.annotations) || !('konghq.com/override' in object.metadata.annotations)"
+    message: '''Annotation "konghq.com/override" is deprecated and will be removed in a future release. Use Service annotations for the "proxy" section and "konghq.com/upstream-policy" with a KongUpstreamPolicy resource instead.'''
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: "biding-annotations.services.konghq.com"
+spec:
+  policyName: "annotations.services.konghq.com"
+  validationActions: 
+  - Warn
+{{- end -}}
+{{- end -}}
