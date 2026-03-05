@@ -481,7 +481,10 @@ func TestDataplane(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: new("Too long: may not be more than 63"),
+				// ExpectedErrorMessage: new("Too long: may not be more than 63"),
+				// Error message comparison relaxed to be compliant with kubernetes versions older than 1.32
+				// https://github.com/kubernetes/kubernetes/commit/4d0e1c8fd4c6577d90dfa1fca67113b8b0af739a#diff-a19c130ec933dd032483bf5a4713317d644cefbe48783ea76fa5592080bedf0eL238-L242
+				ExpectedErrorMessage: new("Too long: may not be"),
 			},
 			{
 				Name: "cannot specify service ingress label value starting with non-alphanumeric character",
