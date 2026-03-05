@@ -2,7 +2,6 @@ package types
 
 import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 type (
@@ -40,9 +39,11 @@ type (
 	ParametersReference    = gatewayv1.ParametersReference
 	ParentReference        = gatewayv1.ParentReference
 	PortNumber             = gatewayv1.PortNumber
-	ReferenceGrant         = gatewayv1beta1.ReferenceGrant
-	ReferenceGrantList     = gatewayv1beta1.ReferenceGrantList
-	ReferenceGrantSpec     = gatewayv1beta1.ReferenceGrantSpec
+	ReferenceGrant         = gatewayv1.ReferenceGrant
+	ReferenceGrantList     = gatewayv1.ReferenceGrantList
+	ReferenceGrantFrom     = gatewayv1.ReferenceGrantFrom
+	ReferenceGrantTo       = gatewayv1.ReferenceGrantTo
+	ReferenceGrantSpec     = gatewayv1.ReferenceGrantSpec
 	RouteGroupKind         = gatewayv1.RouteGroupKind
 	RouteNamespaces        = gatewayv1.RouteNamespaces
 	RouteParentStatus      = gatewayv1.RouteParentStatus
