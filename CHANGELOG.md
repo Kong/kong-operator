@@ -2,6 +2,8 @@
 
 ## Table of Contents
 
+- [v2.1.2](#v212)
+- [v2.1.1](#v211)
 - [v2.1.0](#v210)
 - [v2.0.5](#v205)
 - [v2.0.4](#v204)
@@ -36,12 +38,12 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
-## Unreleased
+## [v2.1.2]
+
+> Release date: 2026-03-05
 
 ### Fixes
 
-- Fix setting up indices for HTTPRoute and Gateway when Konnect controllers are disabled.
-  [#3229](https://github.com/Kong/kong-operator/pull/3229)
 - Fix `ResolvedRefs` status condition on `HTTPRoute` not being updated when a
   referenced `KongPlugin` is deleted in self-managed ControlPlane mode.
   [#3206](https://github.com/Kong/kong-operator/pull/3206)
@@ -1727,6 +1729,8 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.1.2]: https://github.com/Kong/kong-operator/compare/v2.1.1..v2.1.2
+[v2.1.1]: https://github.com/Kong/kong-operator/compare/v2.1.0..v2.1.1
 [v2.1.0]: https://github.com/Kong/kong-operator/compare/v2.0.5..v2.1.0
 [v2.0.5]: https://github.com/Kong/kong-operator/compare/v2.0.4..v2.0.5
 [v2.0.4]: https://github.com/Kong/kong-operator/compare/v2.0.3..v2.0.4
