@@ -25,6 +25,11 @@ spec:
               readinessProbe:
                 initialDelaySeconds: 1
                 periodSeconds: 1
+    network:
+      services:
+        ingress:
+          annotations:
+            service.beta.kubernetes.io/aws-load-balancer-type: nlb
 ---
 kind: GatewayClass
 apiVersion: gateway.networking.k8s.io/v1
@@ -50,7 +55,7 @@ spec:
       environment: production
       team: platform
     annotations:
-      service.beta.kubernetes.io/aws-load-balancer-type: nlb
+      enviroment: production
   listeners:
     - name: http
       protocol: HTTP
