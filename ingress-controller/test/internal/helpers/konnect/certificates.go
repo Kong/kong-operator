@@ -9,7 +9,6 @@ import (
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkretry "github.com/Kong/sdk-konnect-go/retry"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 

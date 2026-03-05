@@ -109,10 +109,16 @@ func TestKongClientGoldenTestsOutputs_Konnect(t *testing.T) {
 	cpID := konnect.CreateTestControlPlane(ctx, t, token)
 	cert, key := konnect.CreateClientCertificate(ctx, t, cpID, token)
 	adminAPIClient := konnect.CreateKonnectAdminAPIClient(t, cpID, cert, key)
-	updateStrategy := sendconfig.NewUpdateStrategyDBModeKonnect(adminAPIClient.AdminAPIClient(), dump.Config{
-		SkipCACerts:         true,
-		KonnectControlPlane: cpID,
-	}, semver.MustParse("3.5.0"), 10, logr.Discard())
+	updateStrategy := sendconfig.NewUpdateStrategyDBModeKonnect(
+		adminAPIClient.AdminAPIClient(),
+		dump.Config{
+			SkipCACerts:         true,
+			KonnectControlPlane: cpID,
+		},
+		semver.MustParse(gatewayTag),
+		concurrency,
+		logr.Discard(),
+	)
 
 	for _, goldenTestOutputPath := range allGoldenTestsOutputsPaths(t) {
 		t.Run(goldenTestOutputPath, func(t *testing.T) {
