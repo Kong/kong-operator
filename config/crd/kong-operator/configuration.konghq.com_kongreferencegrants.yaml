@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.1.1
+    kubernetes-configuration.konghq.com/version: v2.1.2
   name: kongreferencegrants.configuration.konghq.com
 spec:
   group: configuration.konghq.com
