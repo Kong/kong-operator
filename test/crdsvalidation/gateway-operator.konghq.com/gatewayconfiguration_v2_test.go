@@ -499,7 +499,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 								Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
 									Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
 										ServiceOptions: operatorv2beta1.ServiceOptions{
-											Labels: map[string]string{
+											Labels: map[operatorv2beta1.LabelName]operatorv2beta1.LabelValue{
 												"environment": "production",
 												"team":        "platform",
 											},
@@ -521,7 +521,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 								Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
 									Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
 										ServiceOptions: operatorv2beta1.ServiceOptions{
-											Labels: map[string]string{
+											Labels: map[operatorv2beta1.LabelName]operatorv2beta1.LabelValue{
 												"key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1",
 											},
 										},
@@ -531,7 +531,51 @@ func TestGatewayConfigurationV2(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: new("label values must be 63 characters or less"),
+				ExpectedErrorMessage: new("Too long: may not be more than 63"),
+			},
+			{
+				Name: "cannot specify service ingress label value starting with non-alphanumeric character",
+				TestObject: &operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
+							Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
+								Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
+									Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
+										ServiceOptions: operatorv2beta1.ServiceOptions{
+											Labels: map[operatorv2beta1.LabelName]operatorv2beta1.LabelValue{
+												"key": "-starts-with-dash",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: new("in body should match"),
+			},
+			{
+				Name: "cannot specify service ingress label value ending with non-alphanumeric character",
+				TestObject: &operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
+							Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
+								Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
+									Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
+										ServiceOptions: operatorv2beta1.ServiceOptions{
+											Labels: map[operatorv2beta1.LabelName]operatorv2beta1.LabelValue{
+												"key": "ends-with-dash-",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: new("in body should match"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)

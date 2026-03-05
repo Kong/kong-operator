@@ -261,13 +261,20 @@ func gatewayConfigDataPlaneOptionsToDataPlaneOptions(
 	}
 
 	if opts.Network.Services != nil && opts.Network.Services.Ingress != nil {
+		var ingressLabels map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue
+		if len(opts.Network.Services.Ingress.Labels) > 0 {
+			ingressLabels = make(map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue, len(opts.Network.Services.Ingress.Labels))
+			for k, v := range opts.Network.Services.Ingress.Labels {
+				ingressLabels[operatorv1beta1.LabelName(k)] = operatorv1beta1.LabelValue(v)
+			}
+		}
 		dataPlaneOptions.Network = operatorv1beta1.DataPlaneNetworkOptions{
 			Services: &operatorv1beta1.DataPlaneServices{
 				Ingress: &operatorv1beta1.DataPlaneServiceOptions{
 					ServiceOptions: operatorv1beta1.ServiceOptions{
 						Type:                  opts.Network.Services.Ingress.Type,
 						Annotations:           opts.Network.Services.Ingress.Annotations,
-						Labels:                opts.Network.Services.Ingress.Labels,
+						Labels:                ingressLabels,
 						ExternalTrafficPolicy: opts.Network.Services.Ingress.ExternalTrafficPolicy,
 						Name:                  opts.Network.Services.Ingress.Name,
 					},
@@ -325,9 +332,11 @@ func mergeInfrastructureIntoDataPlane(
 		}
 		if len(infraLabels) > 0 {
 			if spec.Network.Services.Ingress.Labels == nil {
-				spec.Network.Services.Ingress.Labels = make(map[string]string)
+				spec.Network.Services.Ingress.Labels = make(map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue, len(infraLabels))
 			}
-			maps.Copy(spec.Network.Services.Ingress.Labels, infraLabels)
+			for k, v := range infraLabels {
+				spec.Network.Services.Ingress.Labels[operatorv1beta1.LabelName(k)] = operatorv1beta1.LabelValue(v)
+			}
 		}
 		if len(infraAnnotations) > 0 {
 			if spec.Network.Services.Ingress.Annotations == nil {

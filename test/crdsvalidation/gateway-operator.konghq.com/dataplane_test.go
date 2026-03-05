@@ -448,7 +448,7 @@ func TestDataplane(t *testing.T) {
 								Services: &operatorv1beta1.DataPlaneServices{
 									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
 										ServiceOptions: operatorv1beta1.ServiceOptions{
-											Labels: map[string]string{
+											Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
 												"environment": "production",
 												"team":        "platform",
 											},
@@ -471,7 +471,7 @@ func TestDataplane(t *testing.T) {
 								Services: &operatorv1beta1.DataPlaneServices{
 									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
 										ServiceOptions: operatorv1beta1.ServiceOptions{
-											Labels: map[string]string{
+											Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
 												"key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1",
 											},
 										},
@@ -481,7 +481,53 @@ func TestDataplane(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: new("label values must be 63 characters or less"),
+				ExpectedErrorMessage: new("Too long: may not be more than 63"),
+			},
+			{
+				Name: "cannot specify service ingress label value starting with non-alphanumeric character",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: validDataplaneOptions.Deployment,
+							Network: operatorv1beta1.DataPlaneNetworkOptions{
+								Services: &operatorv1beta1.DataPlaneServices{
+									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+										ServiceOptions: operatorv1beta1.ServiceOptions{
+											Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
+												"key": "-starts-with-dash",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: new("in body should match"),
+			},
+			{
+				Name: "cannot specify service ingress label value ending with non-alphanumeric character",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: validDataplaneOptions.Deployment,
+							Network: operatorv1beta1.DataPlaneNetworkOptions{
+								Services: &operatorv1beta1.DataPlaneServices{
+									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+										ServiceOptions: operatorv1beta1.ServiceOptions{
+											Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
+												"key": "ends-with-dash-",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: new("in body should match"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)

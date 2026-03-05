@@ -1471,7 +1471,7 @@ func TestGatewayConfigDataPlaneOptionsToDataPlaneOptions(t *testing.T) {
 					Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
 						Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
 							ServiceOptions: operatorv2beta1.ServiceOptions{
-								Labels: map[string]string{
+								Labels: map[operatorv2beta1.LabelName]operatorv2beta1.LabelValue{
 									"my-label": "my-value",
 								},
 							},
@@ -1484,7 +1484,7 @@ func TestGatewayConfigDataPlaneOptionsToDataPlaneOptions(t *testing.T) {
 					Services: &operatorv1beta1.DataPlaneServices{
 						Ingress: &operatorv1beta1.DataPlaneServiceOptions{
 							ServiceOptions: operatorv1beta1.ServiceOptions{
-								Labels: map[string]string{
+								Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
 									"my-label": "my-value",
 								},
 							},
@@ -2553,7 +2553,7 @@ func TestMergeInfrastructureIntoDataPlane(t *testing.T) {
 					Services: &operatorv1beta1.DataPlaneServices{
 						Ingress: &operatorv1beta1.DataPlaneServiceOptions{
 							ServiceOptions: operatorv1beta1.ServiceOptions{
-								Labels: map[string]string{
+								Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
 									"infra-label": "infra-value",
 								},
 							},
@@ -2615,7 +2615,7 @@ func TestMergeInfrastructureIntoDataPlane(t *testing.T) {
 					Services: &operatorv1beta1.DataPlaneServices{
 						Ingress: &operatorv1beta1.DataPlaneServiceOptions{
 							ServiceOptions: operatorv1beta1.ServiceOptions{
-								Labels: map[string]string{
+								Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
 									"conflict-key": "gatewayconfig-value",
 									"other-key":    "other-value",
 								},
@@ -2645,7 +2645,7 @@ func TestMergeInfrastructureIntoDataPlane(t *testing.T) {
 					Services: &operatorv1beta1.DataPlaneServices{
 						Ingress: &operatorv1beta1.DataPlaneServiceOptions{
 							ServiceOptions: operatorv1beta1.ServiceOptions{
-								Labels: map[string]string{
+								Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
 									"conflict-key": "infra-wins",
 									"other-key":    "other-value",
 								},
@@ -2690,7 +2690,7 @@ func TestMergeInfrastructureIntoDataPlane(t *testing.T) {
 					Services: &operatorv1beta1.DataPlaneServices{
 						Ingress: &operatorv1beta1.DataPlaneServiceOptions{
 							ServiceOptions: operatorv1beta1.ServiceOptions{
-								Labels: map[string]string{
+								Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
 									"infra-pod-label": "pod-val",
 								},
 							},

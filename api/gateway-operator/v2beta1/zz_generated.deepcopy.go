@@ -1135,7 +1135,7 @@ func (in *ServiceOptions) DeepCopyInto(out *ServiceOptions) {
 	}
 	if in.Labels != nil {
 		in, out := &in.Labels, &out.Labels
-		*out = make(map[string]string, len(*in))
+		*out = make(map[LabelName]LabelValue, len(*in))
 		for key, val := range *in {
 			(*out)[key] = val
 		}

@@ -459,7 +459,7 @@ func TestExtractDataPlaneIngressServiceLabels(t *testing.T) {
 							Services: &operatorv1beta1.DataPlaneServices{
 								Ingress: &operatorv1beta1.DataPlaneServiceOptions{
 									ServiceOptions: operatorv1beta1.ServiceOptions{
-										Labels: map[string]string{
+										Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
 											"my-label": "my-value",
 										},
 									},
@@ -504,7 +504,7 @@ func TestAddLabelsForDataPlaneIngressService(t *testing.T) {
 							Services: &operatorv1beta1.DataPlaneServices{
 								Ingress: &operatorv1beta1.DataPlaneServiceOptions{
 									ServiceOptions: operatorv1beta1.ServiceOptions{
-										Labels: map[string]string{"new-label": "new-val"},
+										Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{"new-label": "new-val"},
 									},
 								},
 							},
@@ -527,7 +527,7 @@ func TestAddLabelsForDataPlaneIngressService(t *testing.T) {
 							Services: &operatorv1beta1.DataPlaneServices{
 								Ingress: &operatorv1beta1.DataPlaneServiceOptions{
 									ServiceOptions: operatorv1beta1.ServiceOptions{
-										Labels: map[string]string{"conflict": "new"},
+										Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{"conflict": "new"},
 									},
 								},
 							},
@@ -547,7 +547,7 @@ func TestAddLabelsForDataPlaneIngressService(t *testing.T) {
 							Services: &operatorv1beta1.DataPlaneServices{
 								Ingress: &operatorv1beta1.DataPlaneServiceOptions{
 									ServiceOptions: operatorv1beta1.ServiceOptions{
-										Labels: map[string]string{"k": "v"},
+										Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{"k": "v"},
 									},
 								},
 							},

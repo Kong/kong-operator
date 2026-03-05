@@ -105,7 +105,11 @@ func extractDataPlaneIngressServiceLabels(dataplane *operatorv1beta1.DataPlane) 
 		dataplane.Spec.Network.Services.Ingress.Labels == nil {
 		return nil
 	}
-	return dataplane.Spec.Network.Services.Ingress.Labels
+	result := make(map[string]string, len(dataplane.Spec.Network.Services.Ingress.Labels))
+	for k, v := range dataplane.Spec.Network.Services.Ingress.Labels {
+		result[string(k)] = string(v)
+	}
+	return result
 }
 
 // extractOutdatedDataPlaneIngressServiceAnnotations returns the last applied annotations
