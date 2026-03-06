@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strings"
+	"sync"
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -20,6 +22,7 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	"github.com/kong/kong-operator/v2/controller/konnect/ops"
 	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
@@ -52,6 +55,9 @@ type KonnectEntityReconciler[T constraints.SupportedKonnectEntityType, TEnt cons
 	SyncPeriod        time.Duration
 
 	MetricRecorder metrics.Recorder
+
+	konnectEntityStatusesLock sync.RWMutex
+	konnectEntityStatuses     map[client.ObjectKey]string
 }
 
 // KonnectEntityReconcilerOption is a functional option for the KonnectEntityReconciler.
@@ -95,15 +101,16 @@ func NewKonnectEntityReconciler[
 ](
 	sdkFactory sdkops.SDKFactory,
 	loggingMode logging.Mode,
-	client client.Client,
+	cl client.Client,
 	opts ...KonnectEntityReconcilerOption[T, TEnt],
 ) *KonnectEntityReconciler[T, TEnt] {
 	r := &KonnectEntityReconciler[T, TEnt]{
-		sdkFactory:     sdkFactory,
-		LoggingMode:    loggingMode,
-		Client:         client,
-		SyncPeriod:     consts.DefaultKonnectSyncPeriod,
-		MetricRecorder: nil,
+		sdkFactory:            sdkFactory,
+		LoggingMode:           loggingMode,
+		Client:                cl,
+		SyncPeriod:            consts.DefaultKonnectSyncPeriod,
+		MetricRecorder:        nil,
+		konnectEntityStatuses: make(map[client.ObjectKey]string),
 	}
 	for _, opt := range opts {
 		opt(r)
@@ -507,6 +514,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 				}
 				return ctrl.Result{}, err
 			}
+			r.setDeletedInKonnect(client.ObjectKeyFromObject(ent))
 			if err := r.Client.Update(ctx, ent); err != nil {
 				if apierrors.IsConflict(err) {
 					return ctrl.Result{Requeue: true}, nil
@@ -552,65 +560,74 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			}
 		}
 
-		obj := ent.DeepCopyObject().(client.Object)
+		if !r.isCreatedInKonnect(ent) {
+			obj := ent.DeepCopyObject().(client.Object)
+			_, err := ops.Create(ctx, sdk, r.Client, r.MetricRecorder, ent)
 
-		_, err := ops.Create(ctx, sdk, r.Client, r.MetricRecorder, ent)
+			// TODO: this is actually not 100% error prone because when status
+			// update fails we don't store the Konnect ID and hence the reconciler
+			// will try to create the resource again on next reconciliation.
 
-		// TODO: this is actually not 100% error prone because when status
-		// update fails we don't store the Konnect ID and hence the reconciler
-		// will try to create the resource again on next reconciliation.
+			// Regardless of the error reported from Create(), if the Konnect ID has been
+			// set then:
+			// - add the finalizer so that the resource can be cleaned up from Konnect on deletion...
+			if status := ent.GetKonnectStatus(); status != nil && status.ID != "" {
+				if _, res, err := patch.WithFinalizer(ctx, r.Client, ent, KonnectCleanupFinalizer); err != nil || !res.IsZero() {
+					return res, err
+				}
 
-		// Regardless of the error reported from Create(), if the Konnect ID has been
-		// set then:
-		// - add the finalizer so that the resource can be cleaned up from Konnect on deletion...
-		if status := ent.GetKonnectStatus(); status != nil && status.ID != "" {
-			if _, res, err := patch.WithFinalizer(ctx, r.Client, ent, KonnectCleanupFinalizer); err != nil || !res.IsZero() {
-				return res, err
+				// ...
+				// - add the Org ID and Server URL to the status so that the resource can be
+				//   cleaned up from Konnect on deletion and also so that the status can
+				//   indicate where the corresponding Konnect entity is located.
+				setStatusServerURLAndOrgID(ent, server, apiAuth.Status.OrganizationID)
 			}
 
-			// ...
-			// - add the Org ID and Server URL to the status so that the resource can be
-			//   cleaned up from Konnect on deletion and also so that the status can
-			//   indicate where the corresponding Konnect entity is located.
-			setStatusServerURLAndOrgID(ent, server, apiAuth.Status.OrganizationID)
+			// Regardless of the error, patch the status as it can contain the Konnect ID,
+			// Org ID, Server URL and status conditions.
+			// Konnect ID will be needed for the finalizer to work.
+			if _, err := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, any(ent).(client.Object), obj); err != nil {
+				if apierrors.IsConflict(err) {
+					return ctrl.Result{Requeue: true}, nil
+				}
+				return ctrl.Result{}, fmt.Errorf("failed to update status after creating object: %w", err)
+			}
+
+			// TODO(pmalek) is this the right place?
+			r.setCreatedInKonnect(ent)
+
+			if err != nil {
+				var (
+					errURL, okURL                = errors.AsType[*url.Error](err)
+					rateLimitErr, okRateLimitErr = errors.AsType[ops.RateLimitError](err)
+				)
+				switch {
+				// If the error was a network error, handle it here, there's no need to proceed,
+				// as no state has changed.
+				// Status conditions are updated in handleOpsErr.
+				case okURL:
+					return r.handleOpsErr(ctx, ent, errURL)
+
+				// If the error is a rate limit error, requeue after the retry-after duration
+				// instead of returning an error.
+				case okRateLimitErr:
+					return ctrl.Result{RequeueAfter: rateLimitErr.RetryAfter}, nil
+				}
+
+				return ctrl.Result{}, ops.FailedKonnectOpError[T]{
+					Op:  ops.CreateOp,
+					Err: err,
+				}
+			}
+
+			// NOTE: we don't need to requeue here because the object update will trigger another reconciliation.
+			return ctrl.Result{}, nil
+		} else {
+			// If the object is already created in Konnect but the status is not updated
+			// with the Konnect ID yet, requeue and wait for the next reconciliation
+			// to get the status updated.
+			return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 		}
-
-		// Regardless of the error, patch the status as it can contain the Konnect ID,
-		// Org ID, Server URL and status conditions.
-		// Konnect ID will be needed for the finalizer to work.
-		if _, err := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, any(ent).(client.Object), obj); err != nil {
-			if apierrors.IsConflict(err) {
-				return ctrl.Result{Requeue: true}, nil
-			}
-			return ctrl.Result{}, fmt.Errorf("failed to update status after creating object: %w", err)
-		}
-
-		if err != nil {
-			var (
-				errURL, okURL                = errors.AsType[*url.Error](err)
-				rateLimitErr, okRateLimitErr = errors.AsType[ops.RateLimitError](err)
-			)
-			switch {
-			// If the error was a network error, handle it here, there's no need to proceed,
-			// as no state has changed.
-			// Status conditions are updated in handleOpsErr.
-			case okURL:
-				return r.handleOpsErr(ctx, ent, errURL)
-
-			// If the error is a rate limit error, requeue after the retry-after duration
-			// instead of returning an error.
-			case okRateLimitErr:
-				return ctrl.Result{RequeueAfter: rateLimitErr.RetryAfter}, nil
-			}
-
-			return ctrl.Result{}, ops.FailedKonnectOpError[T]{
-				Op:  ops.CreateOp,
-				Err: err,
-			}
-		}
-
-		// NOTE: we don't need to requeue here because the object update will trigger another reconciliation.
-		return ctrl.Result{}, nil
 	}
 
 	res, err = ops.Update(ctx, sdk, r.SyncPeriod, r.Client, r.MetricRecorder, ent)
@@ -767,4 +784,35 @@ func patchWithProgrammedStatusConditionBasedOnOtherConditions[
 		return res, errStatus
 	}
 	return ctrl.Result{}, nil
+}
+
+// isCreatedInKonnect checks if the object has been created in Konnect
+// by comparing the resource version of the object with the one stored
+// in the konnectEntityStatuses map.
+// If the object is not in the map, it means that it has not been
+// created in Konnect yet, so we return true to allow the creation
+// to proceed.
+func (r *KonnectEntityReconciler[T, TEnt]) isCreatedInKonnect(
+	obj client.Object,
+) bool {
+	r.konnectEntityStatusesLock.RLock()
+	defer r.konnectEntityStatusesLock.RUnlock()
+	createdAtRV, exists := r.konnectEntityStatuses[client.ObjectKeyFromObject(obj)]
+	return exists && strings.Compare(obj.GetResourceVersion(), createdAtRV) >= 0
+}
+
+func (r *KonnectEntityReconciler[T, TEnt]) setCreatedInKonnect(
+	obj client.Object,
+) {
+	r.konnectEntityStatusesLock.Lock()
+	defer r.konnectEntityStatusesLock.Unlock()
+	r.konnectEntityStatuses[client.ObjectKeyFromObject(obj)] = obj.GetResourceVersion()
+}
+
+func (r *KonnectEntityReconciler[T, TEnt]) setDeletedInKonnect(
+	nn client.ObjectKey,
+) {
+	r.konnectEntityStatusesLock.Lock()
+	defer r.konnectEntityStatusesLock.Unlock()
+	delete(r.konnectEntityStatuses, nn)
 }
