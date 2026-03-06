@@ -20,7 +20,7 @@ require (
 	github.com/goccy/go-json v0.10.5
 	github.com/gohugoio/hashstructure v0.6.0
 	github.com/google/go-cmp v0.7.0
-	github.com/google/go-containerregistry v0.21.1
+	github.com/google/go-containerregistry v0.21.2
 	github.com/google/pprof v0.0.0-20260115054156-294ebfa9ad83
 	github.com/google/uuid v1.6.0
 	github.com/gruntwork-io/terratest v0.56.0
