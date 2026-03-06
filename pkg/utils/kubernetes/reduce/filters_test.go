@@ -59,6 +59,152 @@ func TestFilterSecrets(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "secret with in-use finalizer is kept over older secret without finalizer",
+			secrets: []corev1.Secret{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "newer-with-finalizer",
+						CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
+						Finalizers:        []string{"gateway.konghq.com/secret-in-use"},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "older-without-finalizer",
+						CreationTimestamp: metav1.Date(1990, time.June, 30, 0, 0, 0, 0, time.UTC),
+					},
+				},
+			},
+			filteredSecrets: []corev1.Secret{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "older-without-finalizer",
+						CreationTimestamp: metav1.Date(1990, time.June, 30, 0, 0, 0, 0, time.UTC),
+					},
+				},
+			},
+		},
+		{
+			name: "secret with konnect in-use finalizer is kept over older secret without finalizer",
+			secrets: []corev1.Secret{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "newer-with-konnect-finalizer",
+						CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
+						Finalizers:        []string{"gateway.konghq.com/secret-in-use-by-konnect-resource"},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "older-without-finalizer",
+						CreationTimestamp: metav1.Date(1990, time.June, 30, 0, 0, 0, 0, time.UTC),
+					},
+				},
+			},
+			filteredSecrets: []corev1.Secret{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "older-without-finalizer",
+						CreationTimestamp: metav1.Date(1990, time.June, 30, 0, 0, 0, 0, time.UTC),
+					},
+				},
+			},
+		},
+		{
+			name: "among secrets with finalizers the older one is kept",
+			secrets: []corev1.Secret{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "newer-with-finalizer",
+						CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
+						Finalizers:        []string{"gateway.konghq.com/secret-in-use"},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "older-with-finalizer",
+						CreationTimestamp: metav1.Date(1990, time.June, 30, 0, 0, 0, 0, time.UTC),
+						Finalizers:        []string{"gateway.konghq.com/secret-in-use-by-konnect-resource"},
+					},
+				},
+			},
+			filteredSecrets: []corev1.Secret{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "newer-with-finalizer",
+						CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
+						Finalizers:        []string{"gateway.konghq.com/secret-in-use"},
+					},
+				},
+			},
+		},
+		{
+			name: "secrets without finalizers are deleted first, finalized secret kept even if newer",
+			secrets: []corev1.Secret{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "oldest-no-finalizer",
+						CreationTimestamp: metav1.Date(1990, time.January, 1, 0, 0, 0, 0, time.UTC),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "middle-with-finalizer",
+						CreationTimestamp: metav1.Date(1995, time.June, 15, 0, 0, 0, 0, time.UTC),
+						Finalizers:        []string{"gateway.konghq.com/secret-in-use"},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "newest-no-finalizer",
+						CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
+					},
+				},
+			},
+			filteredSecrets: []corev1.Secret{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "oldest-no-finalizer",
+						CreationTimestamp: metav1.Date(1990, time.January, 1, 0, 0, 0, 0, time.UTC),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "newest-no-finalizer",
+						CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
+					},
+				},
+			},
+		},
+		{
+			name: "secrets with other finalizers are deleted first before those with gateway.konghq.com/secret-in-use finalizer",
+			secrets: []corev1.Secret{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "middle-with-finalizer",
+						CreationTimestamp: metav1.Date(1995, time.June, 15, 0, 0, 0, 0, time.UTC),
+						Finalizers:        []string{"gateway.konghq.com/secret-in-use"},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "x-finalizer",
+						CreationTimestamp: metav1.Date(1990, time.January, 1, 0, 0, 0, 0, time.UTC),
+						Finalizers:        []string{"gateway.konghq.com/x-finalizer"},
+					},
+				},
+			},
+			filteredSecrets: []corev1.Secret{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "x-finalizer",
+						CreationTimestamp: metav1.Date(1990, time.January, 1, 0, 0, 0, 0, time.UTC),
+						Finalizers:        []string{"gateway.konghq.com/x-finalizer"},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
