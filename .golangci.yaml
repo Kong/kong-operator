@@ -88,8 +88,10 @@ linters:
           msg: Please use the types package to refer to the type (through github.com/kong/kong-operator/internal/types)
         - pattern: ^errors.As$
           msg: Please use errors.AsType instead
-        - pattern: ^.*lo\.ToPtr\(.*\).*$
+        - pattern: ^lo\.ToPtr$
           msg: Please use built-in new() instead
+        - pattern: ^lo\.Contains$
+          msg: Please use slices.Contains() instead
     gomodguard:
       blocked:
         modules:
