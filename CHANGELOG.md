@@ -53,6 +53,8 @@
   `KongReferenceGrant`). Both `APIAuthResolvedRef` and `Programmed` conditions
   are now set to `False` atomically.
   [#3526](https://github.com/Kong/kong-operator/pull/3526)
+- Fix reducing `Secret`s with in use finalizers.
+  [#3506](https://github.com/Kong/kong-operator/pull/3506)
 
 ## [v2.1.2]
 
