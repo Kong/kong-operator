@@ -453,10 +453,18 @@ func BuildResolvedRefsCondition(ctx context.Context, logger logr.Logger, cl clie
 				bRefNamespace = string(*bRef.Namespace)
 			}
 
-			// BackendRef group kind.
-			bRefGK := string(*bRef.Kind)
-			if gr := string(*bRef.Group); gr != "" {
-				bRefGK = fmt.Sprintf("%s/%s", gr, bRefGK)
+			// BackendRef group/kind (default to core/Service when unset).
+			bRefKind := "Service"
+			if bRef.Kind != nil && *bRef.Kind != "" {
+				bRefKind = string(*bRef.Kind)
+			}
+			bRefGroup := ""
+			if bRef.Group != nil {
+				bRefGroup = string(*bRef.Group)
+			}
+			bRefGK := bRefKind
+			if bRefGroup != "" {
+				bRefGK = fmt.Sprintf("%s/%s", bRefGroup, bRefKind)
 			}
 
 			// Check if the group kind is supported for the reference.
@@ -921,14 +929,14 @@ func FilterOutGVKByKind(expectedGVKs []schema.GroupVersionKind, kindToFilter str
 // IsBackendRefSupported returns true if the BackendRef group and kind are supported by Gateway API.
 // Only core "Service" is supported.
 func IsBackendRefSupported(group *gwtypes.Group, kind *gwtypes.Kind) bool {
-	if kind == nil {
-		return false
+	// Default kind for HTTPRoute backendRefs is Service.
+	k := "Service"
+	if kind != nil && *kind != "" {
+		k = string(*kind)
 	}
 
-	k := string(*kind)
-
 	// Acceptable group values for Service: nil, "", "core".
-	var g string
+	g := ""
 	if group != nil {
 		g = string(*group)
 	}
@@ -963,6 +971,8 @@ func IsHTTPReferenceGranted(grantSpec gwtypes.ReferenceGrantSpec, backendRef gwt
 	}
 	if backendRef.Kind != nil {
 		backendRefKind = *backendRef.Kind
+	} else {
+		backendRefKind = "Service"
 	}
 
 	for _, from := range grantSpec.From {
