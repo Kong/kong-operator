@@ -63,6 +63,9 @@
   When both a `GatewayConfiguration` and `Gateway.spec.infrastructure` specify the same
   key, the infrastructure value takes precedence.
   [#3412](https://github.com/Kong/kong-operator/pull/3412)
+- Added `--konnect-request-timeout` flag to control Konnect API calls timeout.
+  Be default that is set to 15 seconds.
+  [#3513](https://github.com/Kong/kong-operator/pull/3513)
 
 ### Fixes
 

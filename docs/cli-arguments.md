@@ -137,6 +137,10 @@ rows:
     type: '`uint`'
     description: "Deprecated: Please use '--max-concurrent-reconciles-konnect-controller' instead."
     default: '`8`'
+  - flag: '`--konnect-request-timeout`'
+    type: '`duration`'
+    description: "Timeout for Konnect API requests."
+    default: '`10s`'
   - flag: '`--konnect-sync-period`'
     type: '`duration`'
     description: "Sync period for Konnect entities. After a successful reconciliation of Konnect entities the controller will wait this duration before enforcing configuration on Konnect once again."

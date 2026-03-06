@@ -3,6 +3,7 @@ package manager
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"reflect"
 	"slices"
 	"time"
@@ -528,7 +529,9 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 
 	// Konnect controllers
 	if c.KonnectControllersEnabled {
-		sdkFactory := sdkops.NewSDKFactory()
+		httpClient := *http.DefaultClient
+		httpClient.Timeout = c.KonnectRequestTimeout
+		sdkFactory := sdkops.NewSDKFactory(sdkops.WithHTTPClient(&httpClient))
 		ctrlOpts := controllerOptions(ctrlOpts, withMaxConcurrentReconciles(int(c.MaxConcurrentReconcilesKonnect)))
 
 		controllerFactory := konnectControllerFactory{
