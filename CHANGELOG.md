@@ -80,6 +80,12 @@
   [#3490](https://github.com/Kong/kong-operator/pull/3490)
 - Fix reducing `Secret`s with in use finalizers.
   [#3506](https://github.com/Kong/kong-operator/pull/3506)
+- Fix `ensureGatewayReferenceStatusRemoved` and `routeHasKongParentStatus` not
+  scoping to the specific Gateway when `GatewayNN` is set.
+  This could cause one ingress-controller instance to erroneously remove route
+  parent statuses set by another instance managing a different Gateway,
+  breaking cross-namespace HTTPRoute backend references via `ReferenceGrant`.
+  [#3524](https://github.com/Kong/kong-operator/pull/3524)
 
 ## [v2.1.2]
 
