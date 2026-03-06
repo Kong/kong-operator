@@ -1,7 +1,8 @@
 package utils
 
 import (
-	"github.com/samber/lo"
+	"slices"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
@@ -90,8 +91,8 @@ func EnsureProgrammedCondition(
 		return conditions, false
 	}
 
-	_, idx, ok := lo.FindIndexOf(conditions, func(c metav1.Condition) bool { return c.Type == string(configurationv1.ConditionProgrammed) })
-	if !ok {
+	idx := slices.IndexFunc(conditions, func(c metav1.Condition) bool { return c.Type == string(configurationv1.ConditionProgrammed) })
+	if idx < 0 {
 		conditions = append(conditions, desiredCondition)
 	} else {
 		// Do not update existing "Programmed" condition to Unknown to prevent races on updating status when new instance starts.

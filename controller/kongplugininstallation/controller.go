@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"slices"
 
-	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -278,10 +278,10 @@ func setStatusConditionForKongPluginInstallation(
 		Reason:             string(reason),
 		Message:            msg,
 	}
-	_, index, found := lo.FindIndexOf(kpi.Status.Conditions, func(c metav1.Condition) bool {
+	index := slices.IndexFunc(kpi.Status.Conditions, func(c metav1.Condition) bool {
 		return c.Type == string(operatorv1alpha1.KongPluginInstallationConditionStatusAccepted)
 	})
-	if found {
+	if index < 0 {
 		// Nothing changed, condition doesn't need to be updated.
 		if c := kpi.Status.Conditions[index]; c.Status == status.Status && c.Reason == status.Reason && c.Message == status.Message {
 			return nil

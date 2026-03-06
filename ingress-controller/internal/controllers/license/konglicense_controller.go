@@ -3,13 +3,13 @@ package license
 import (
 	"context"
 	"fmt"
+	"slices"
 	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	"github.com/kong/go-kong/kong"
-	"github.com/samber/lo"
 	"github.com/samber/mo"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -371,10 +371,10 @@ func (r *KongV1Alpha1KongLicenseReconciler) repickLicenseOnDelete(ctx context.Co
 }
 
 func setLicenseValidityCondition(ks *[]metav1.Condition, licenseValidationError error) {
-	_, index, found := lo.FindIndexOf(*ks, func(condition metav1.Condition) bool {
+	index := slices.IndexFunc(*ks, func(condition metav1.Condition) bool {
 		return condition.Type == ConditionTypeLicenseValid
 	})
-	if !found {
+	if index < 0 {
 		*ks = append(*ks, metav1.Condition{
 			Type: ConditionTypeLicenseValid,
 		})
@@ -410,10 +410,10 @@ func (r *KongV1Alpha1KongLicenseReconciler) ensureControllerStatusConditions(
 
 	fullControllerName := r.fullControllerName()
 	// Find the managed controller status item and append new item when absent.
-	_, controllerIndex, found := lo.FindIndexOf(license.Status.KongLicenseControllerStatuses, func(controllerStatus configurationv1alpha1.KongLicenseControllerStatus) bool {
+	controllerIndex := slices.IndexFunc(license.Status.KongLicenseControllerStatuses, func(controllerStatus configurationv1alpha1.KongLicenseControllerStatus) bool {
 		return controllerStatus.ControllerName == fullControllerName
 	})
-	if !found {
+	if controllerIndex < 0 {
 		wantedControllerStatus := configurationv1alpha1.KongLicenseControllerStatus{
 			ControllerName: fullControllerName,
 		}
@@ -433,10 +433,10 @@ func (r *KongV1Alpha1KongLicenseReconciler) ensureControllerStatusConditions(
 		Message:            message,
 	}
 	// Find the "programmed" condition in the condition list.
-	programmedCondition, conditionIndex, found := lo.FindIndexOf(*ctrlManagedConditions, func(condition metav1.Condition) bool {
+	conditionIndex := slices.IndexFunc(*ctrlManagedConditions, func(condition metav1.Condition) bool {
 		return condition.Type == ConditionTypeProgrammed
 	})
-	if !found {
+	if conditionIndex < 0 {
 		// Return error if the number of conditions already reached the limit.
 		if len(license.Status.KongLicenseControllerStatuses) >= maxConditionNum {
 			return fmt.Errorf("already %d condition items in controller status exceeding the limit %d, cannot add new item",
@@ -447,6 +447,7 @@ func (r *KongV1Alpha1KongLicenseReconciler) ensureControllerStatusConditions(
 		)
 		return r.Client.Status().Update(ctx, license)
 	}
+	programmedCondition := (*ctrlManagedConditions)[conditionIndex]
 	if programmedCondition.Status != programmedStatus {
 		(*ctrlManagedConditions)[conditionIndex] = wantedCondition
 	}
