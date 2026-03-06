@@ -481,6 +481,101 @@ func TestExtractDataPlaneIngressServiceLabels(t *testing.T) {
 	}
 }
 
+func TestAddAnnotationsForDataPlaneIngressService(t *testing.T) {
+	testCases := []struct {
+		name                string
+		existingAnnotations map[string]string
+		dataplane           operatorv1beta1.DataPlane
+		expectedAnnotations map[string]string
+	}{
+		{
+			name:                "no-op when DataPlane has no ingress service annotations",
+			existingAnnotations: map[string]string{"existing": "val"},
+			dataplane:           operatorv1beta1.DataPlane{},
+			expectedAnnotations: map[string]string{"existing": "val"},
+		},
+		{
+			name:                "annotations merged onto object",
+			existingAnnotations: map[string]string{"existing": "val"},
+			dataplane: operatorv1beta1.DataPlane{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Network: operatorv1beta1.DataPlaneNetworkOptions{
+							Services: &operatorv1beta1.DataPlaneServices{
+								Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+									ServiceOptions: operatorv1beta1.ServiceOptions{
+										Annotations: map[string]string{"new-annotation": "new-val"},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedAnnotations: map[string]string{
+				"existing":                              "val",
+				"new-annotation":                        "new-val",
+				consts.AnnotationLastAppliedAnnotations: `{"new-annotation":"new-val"}`,
+			},
+		},
+		{
+			name:                "spec annotation wins over existing on conflict",
+			existingAnnotations: map[string]string{"conflict": "old"},
+			dataplane: operatorv1beta1.DataPlane{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Network: operatorv1beta1.DataPlaneNetworkOptions{
+							Services: &operatorv1beta1.DataPlaneServices{
+								Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+									ServiceOptions: operatorv1beta1.ServiceOptions{
+										Annotations: map[string]string{"conflict": "new"},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedAnnotations: map[string]string{
+				"conflict":                              "new",
+				consts.AnnotationLastAppliedAnnotations: `{"conflict":"new"}`,
+			},
+		},
+		{
+			name:                "nil existing annotations initialized correctly",
+			existingAnnotations: nil,
+			dataplane: operatorv1beta1.DataPlane{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Network: operatorv1beta1.DataPlaneNetworkOptions{
+							Services: &operatorv1beta1.DataPlaneServices{
+								Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+									ServiceOptions: operatorv1beta1.ServiceOptions{
+										Annotations: map[string]string{"k": "v"},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedAnnotations: map[string]string{
+				"k":                                     "v",
+				consts.AnnotationLastAppliedAnnotations: `{"k":"v"}`,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			svc := &corev1.Service{}
+			svc.Annotations = tc.existingAnnotations
+			addAnnotationsForDataPlaneIngressService(svc, tc.dataplane)
+			require.Equal(t, tc.expectedAnnotations, svc.Annotations)
+		})
+	}
+}
+
 func TestAddLabelsForDataPlaneIngressService(t *testing.T) {
 	testCases := []struct {
 		name           string
