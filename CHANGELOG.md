@@ -44,6 +44,10 @@
 
 ### Added
 
+- TLSRoute support: Configure DataPlaneOption in created `DataPlane` to
+  configure Kong DataPlane deployment and ingress service for listeners with
+  `TLS` protocol.
+  [#3493](https://github.com/Kong/kong-operator/pull/3493)
 - Allow cross-namespace reference for `KonnectAPIAuthConfiguration` from
   `GatewayConfiguration` using `KongReferenceGrant`. When a user creates a
   `KongReferenceGrant` allowing `GatewayConfiguration` to reference a
