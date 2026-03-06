@@ -44,6 +44,7 @@ import (
 const (
 	webhookReadinessTimeout = 2 * time.Minute
 	webhookReadinessTick    = 2 * time.Second
+	waitTime                = 3 * time.Minute
 )
 
 // -----------------------------------------------------------------------------
@@ -52,7 +53,6 @@ const (
 
 var (
 	existingCluster    = os.Getenv("KONG_TEST_CLUSTER")
-	imageOverride      = os.Getenv("KONG_TEST_KONG_OPERATOR_IMAGE_OVERRIDE")
 	imageLoad          = os.Getenv("KONG_TEST_KONG_OPERATOR_IMAGE_LOAD")
 	skipClusterCleanup = strings.ToLower(os.Getenv("KONG_TEST_CLUSTER_PERSIST")) == "true"
 )
@@ -69,52 +69,16 @@ type TestEnvironment struct {
 	Environment environments.Environment
 }
 
-// TestEnvOption is a functional option for configuring a test environment.
-type TestEnvOption func(opt *testEnvOptions)
-
-type testEnvOptions struct {
-	Image string
-	// InstallViaKustomize makes the test environment install the operator and all the
-	// dependencies via kustomize.
-	// NOTE: when this is false the caller is responsible for installing (and cleaning up)
-	// the operator in the test environment.
-	InstallViaKustomize bool
-}
-
-// WithOperatorImage allows configuring the operator image to use in the test environment.
-func WithOperatorImage(image string) TestEnvOption {
-	return func(opts *testEnvOptions) {
-		opts.Image = image
-	}
-}
-
-// WithInstallViaKustomize makes the test environment install the operator and all the
-// dependencies via kustomize.
-func WithInstallViaKustomize() TestEnvOption {
-	return func(opts *testEnvOptions) {
-		opts.InstallViaKustomize = true
-	}
-}
-
 var loggerOnce sync.Once
-
-// AdditionalKustomizeDir is a path to additional kustomize configuration to deploy to the test cluster.
-// It is applied after all configuration from this repository is applied.
-var AdditionalKustomizeDir string
 
 // CreateEnvironment creates a new independent testing environment for running isolated e2e test.
 // When running with Helm, the caller is responsible for cleaning up the environment.
-func CreateEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption) TestEnvironment {
+func CreateEnvironment(t *testing.T, ctx context.Context) TestEnvironment {
 	t.Helper()
 
 	const (
 		waitTime = 1 * time.Minute
 	)
-
-	var opt testEnvOptions
-	for _, o := range opts {
-		o(&opt)
-	}
 
 	skipClusterCleanup = existingCluster != ""
 
@@ -166,23 +130,22 @@ func CreateEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption)
 		builder.WithAddons(imageLoader.Build())
 	}
 
-	if len(opt.Image) == 0 {
-		opt.Image = getOperatorImage(t)
-	}
-
-	var kustomizeDir KustomizeDir
-	if opt.InstallViaKustomize {
-		kustomizeDir = PrepareKustomizeDir(t, opt.Image)
-	}
-
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
-
-	t.Cleanup(func() {
-		if opt.InstallViaKustomize {
-			cleanupEnvironment(t, context.Background(), env, kustomizeDir.Tests())
-		}
-	})
+	if existingCluster == "" {
+		t.Cleanup(
+			func() {
+				if skipClusterCleanup {
+					t.Logf("cleaning up whole environment is skipped")
+					return
+				}
+				t.Logf("cleaning up testing cluster and environment %q", env.Name())
+				ctx, cancel := context.WithTimeout(context.Background(), waitTime)
+				defer cancel()
+				assert.NoError(t, env.Cleanup(ctx))
+			},
+		)
+	}
 
 	t.Logf("waiting for cluster %s and all addons to become ready", env.Cluster().Name())
 	require.NoError(t, <-env.WaitForReady(ctx))
@@ -215,36 +178,6 @@ func CreateEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption)
 	)
 	require.NoError(t, err)
 
-	if opt.InstallViaKustomize {
-
-		t.Log("creating system namespaces and serviceaccounts")
-		require.NoError(t, clusters.CreateNamespace(ctx, env.Cluster(), "kong-system"))
-
-		t.Logf("deploying operator CRDs to test cluster via kustomize (%s)", kustomizeDir.CRD())
-		require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), kustomizeDir.CRD(), "--server-side"))
-
-		t.Logf("deploying operator to test cluster via kustomize (%s)", kustomizeDir.Tests())
-		require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), kustomizeDir.Tests(), "--server-side"))
-
-		if AdditionalKustomizeDir != "" {
-			t.Logf("deploying additional configuration to test cluster via kustomize (%s)", AdditionalKustomizeDir)
-			require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), AdditionalKustomizeDir))
-		} else {
-			t.Log("no additional configuration provided")
-		}
-
-		t.Log("waiting for operator deployment to complete")
-		require.NoError(t, waitForOperatorDeployment(t, ctx, "kong-system", clients.K8sClient, waitTime))
-
-		if test.IsWebhookEnabled() {
-			t.Log("waiting for operator webhook service to be connective")
-			require.Eventually(t, waitForOperatorWebhookEventually(t, ctx, clients.K8sClient),
-				webhookReadinessTimeout, webhookReadinessTick)
-		}
-	} else {
-		t.Log("not deploying operator to test cluster via kustomize")
-	}
-
 	t.Log("environment is ready, starting tests")
 
 	return TestEnvironment{
@@ -253,23 +186,6 @@ func CreateEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption)
 		Cleaner:     cleaner,
 		Environment: env,
 	}
-}
-
-func cleanupEnvironment(t *testing.T, ctx context.Context, env environments.Environment, kustomizePath string) {
-	t.Helper()
-
-	if env == nil {
-		return
-	}
-
-	if skipClusterCleanup {
-		t.Logf("cleaning up operator manifests using kustomize path: %s", kustomizePath)
-		assert.NoError(t, clusters.KustomizeDeleteForCluster(ctx, env.Cluster(), kustomizePath))
-		return
-	}
-
-	t.Logf("cleaning up testing cluster and environment %q", env.Name())
-	assert.NoError(t, env.Cleanup(ctx))
 }
 
 // -----------------------------------------------------------------------------
@@ -322,12 +238,7 @@ func waitForOperatorDeployment(
 			return ctx.Err()
 		case <-pollTimer.C:
 			listOpts := metav1.ListOptions{
-				// NOTE: This is a common label used by:
-				// - kustomize https://github.com/kong/kong-operator/blob/f98ef9358078ac100e143ab677a9ca836d0222a0/config/manager/manager.yaml#L15
-				// - helm https://github.com/Kong/charts/blob/4968b34ae7c252ab056b37cc137eaeb7a071e101/charts/gateway-operator/templates/deployment.yaml#L5-L6
-				//
-				// As long as kustomize is used for tests let's use this label selector.
-				LabelSelector: "app.kubernetes.io/name=kong-operator",
+				LabelSelector: "app.kubernetes.io/component=ko",
 			}
 			deploymentList, err := k8sClient.AppsV1().Deployments(ns).List(ctx, listOpts)
 			if err != nil {
@@ -390,9 +301,14 @@ func logOperatorPodLogs(t *testing.T, ctx context.Context, k8sClient *kubernetes
 	t.Logf("Operator pod logs:\n%s", string(b))
 }
 
-func waitForOperatorWebhookEventually(t *testing.T, ctx context.Context, k8sClient *kubernetes.Clientset) func() bool {
+func waitForOperatorWebhookEventually(
+	t *testing.T, ctx context.Context, installationNamespace, installationName string, k8sClient *kubernetes.Clientset,
+) func() bool {
+	webhookServiceName := fmt.Sprintf("%s-kong-operator-webhook", installationName)
 	return func() bool {
-		if err := waitForOperatorWebhook(ctx, k8sClient); err != nil {
+		if err := networking.WaitForConnectionOnServicePort(
+			ctx, k8sClient, installationNamespace, webhookServiceName, 443, 10*time.Second,
+		); err != nil {
 			t.Logf("failed to wait for operator webhook: %v", err)
 			return false
 		}
@@ -400,11 +316,4 @@ func waitForOperatorWebhookEventually(t *testing.T, ctx context.Context, k8sClie
 		t.Log("operator webhook ready")
 		return true
 	}
-}
-
-func waitForOperatorWebhook(ctx context.Context, k8sClient *kubernetes.Clientset) error {
-	webhookServiceNamespace := "kong-system"
-	webhookServiceName := "gateway-operator-validating-webhook"
-	webhookServicePort := 443
-	return networking.WaitForConnectionOnServicePort(ctx, k8sClient, webhookServiceNamespace, webhookServiceName, webhookServicePort, 10*time.Second)
 }
