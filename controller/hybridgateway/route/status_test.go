@@ -1566,6 +1566,12 @@ func TestIsBackendRefSupported(t *testing.T) {
 			kind:  nil,
 			want:  true,
 		},
+		{
+			name:  "empty kind defaults to Service",
+			group: groupPtr("core"),
+			kind:  kindPtr(""),
+			want:  true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -1632,6 +1638,32 @@ func TestIsHTTPReferenceGranted(t *testing.T) {
 						Name:  gwtypes.ObjectName("my-service"),
 						Kind:  nil,
 						Group: nil,
+					},
+				},
+			},
+			fromNamespace: "default",
+			want:          true,
+		},
+		{
+			name: "granted when backend kind is empty string (defaults to Service)",
+			grantSpec: gwtypes.ReferenceGrantSpec{
+				From: []gwtypes.ReferenceGrantFrom{{
+					Group:     gwtypes.GroupName,
+					Kind:      "HTTPRoute",
+					Namespace: gwtypes.Namespace("default"),
+				}},
+				To: []gwtypes.ReferenceGrantTo{{
+					Group: gwtypes.Group("core"),
+					Kind:  gwtypes.Kind("Service"),
+					Name:  ptrObjName("my-service"),
+				}},
+			},
+			backendRef: gwtypes.HTTPBackendRef{
+				BackendRef: gwtypes.BackendRef{
+					BackendObjectReference: gwtypes.BackendObjectReference{
+						Name:  gwtypes.ObjectName("my-service"),
+						Kind:  kindPtr(""),
+						Group: groupPtr(""),
 					},
 				},
 			},
