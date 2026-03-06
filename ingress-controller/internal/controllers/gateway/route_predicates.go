@@ -118,6 +118,36 @@ func isOrWasRouteAttachedToReconciledGateway[routeT gatewayapi.RouteT](
 	cl client.Client, log logr.Logger, gatewayNN controllers.OptionalNamespacedName, e event.UpdateEvent,
 ) bool {
 	oldObj, newObj := e.ObjectOld, e.ObjectNew
-	return IsRouteAttachedToReconciledGateway[routeT](cl, log, gatewayNN, oldObj) ||
-		IsRouteAttachedToReconciledGateway[routeT](cl, log, gatewayNN, newObj)
+	if IsRouteAttachedToReconciledGateway[routeT](cl, log, gatewayNN, oldObj) ||
+		IsRouteAttachedToReconciledGateway[routeT](cl, log, gatewayNN, newObj) {
+		return true
+	}
+	return routeHasKongParentStatus[routeT](oldObj, gatewayNN) || routeHasKongParentStatus[routeT](newObj, gatewayNN)
+}
+
+// routeHasKongParentStatus checks if a route has a parent status set by our controller
+// (identified by our ControllerName). This is a fallback for cases where attachment changes
+// due to external object modifications (e.g., GatewayClass controller name changes) that cause
+// both old and new parentRef-based checks to return false. It ensures we still reconcile routes
+// we previously managed so we can clean up stale parent status and dataplane state.
+// When gatewayNN is set, only statuses whose parentRef matches the specified Gateway
+// are considered, preventing cross-instance interference when multiple KIC instances
+// share the same controller name.
+func routeHasKongParentStatus[routeT gatewayapi.RouteT](obj client.Object, gatewayNN controllers.OptionalNamespacedName) bool {
+	route, ok := obj.(routeT)
+	if !ok {
+		return false
+	}
+	for _, parentStatus := range getRouteStatusParents(route) {
+		if parentStatus.ControllerName != GetControllerName() {
+			continue
+		}
+		if gNN, ok := gatewayNN.Get(); ok {
+			if !parentRefMatchesGatewayNN(parentStatus.ParentRef, obj.GetNamespace(), gNN) {
+				continue
+			}
+		}
+		return true
+	}
+	return false
 }

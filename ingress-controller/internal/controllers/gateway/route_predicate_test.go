@@ -6,6 +6,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
 	"github.com/samber/mo"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -208,5 +209,186 @@ func TestIsRouteAttachedToReconciledGateway(t *testing.T) {
 			require.Equal(t, tc.expectedResult, result)
 		},
 		)
+	}
+}
+
+func TestRouteHasKongParentStatus(t *testing.T) {
+	gwNamespace := gatewayapi.Namespace("default")
+	otherNamespace := gatewayapi.Namespace("other-ns")
+
+	testCases := []struct {
+		name      string
+		route     *gatewayapi.HTTPRoute
+		gatewayNN controllers.OptionalNamespacedName
+		expected  bool
+	}{
+		{
+			name: "no gatewayNN set, route has our controller status - returns true",
+			route: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-route",
+					Namespace: "default",
+				},
+				Status: gatewayapi.HTTPRouteStatus{
+					RouteStatus: gatewayapi.RouteStatus{
+						Parents: []gatewayapi.RouteParentStatus{
+							{
+								ControllerName: GetControllerName(),
+								ParentRef: gatewayapi.ParentReference{
+									Name:      "gateway-a",
+									Namespace: &gwNamespace,
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "no gatewayNN set, route has another controller status - returns false",
+			route: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-route",
+					Namespace: "default",
+				},
+				Status: gatewayapi.HTTPRouteStatus{
+					RouteStatus: gatewayapi.RouteStatus{
+						Parents: []gatewayapi.RouteParentStatus{
+							{
+								ControllerName: "another-controller",
+								ParentRef: gatewayapi.ParentReference{
+									Name:      "gateway-a",
+									Namespace: &gwNamespace,
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "gatewayNN set, route has matching gateway status - returns true",
+			route: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-route",
+					Namespace: "default",
+				},
+				Status: gatewayapi.HTTPRouteStatus{
+					RouteStatus: gatewayapi.RouteStatus{
+						Parents: []gatewayapi.RouteParentStatus{
+							{
+								ControllerName: GetControllerName(),
+								ParentRef: gatewayapi.ParentReference{
+									Name:      "gateway-a",
+									Namespace: &gwNamespace,
+								},
+							},
+						},
+					},
+				},
+			},
+			gatewayNN: controllers.NewOptionalNamespacedName(mo.Some(k8stypes.NamespacedName{
+				Namespace: "default",
+				Name:      "gateway-a",
+			})),
+			expected: true,
+		},
+		{
+			name: "gatewayNN set, route has status for different gateway - returns false",
+			route: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-route",
+					Namespace: "default",
+				},
+				Status: gatewayapi.HTTPRouteStatus{
+					RouteStatus: gatewayapi.RouteStatus{
+						Parents: []gatewayapi.RouteParentStatus{
+							{
+								ControllerName: GetControllerName(),
+								ParentRef: gatewayapi.ParentReference{
+									Name:      "gateway-b",
+									Namespace: &otherNamespace,
+								},
+							},
+						},
+					},
+				},
+			},
+			gatewayNN: controllers.NewOptionalNamespacedName(mo.Some(k8stypes.NamespacedName{
+				Namespace: "default",
+				Name:      "gateway-a",
+			})),
+			expected: false,
+		},
+		{
+			name: "gatewayNN set, route has status for matching and non-matching gateways - returns true",
+			route: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-route",
+					Namespace: "default",
+				},
+				Status: gatewayapi.HTTPRouteStatus{
+					RouteStatus: gatewayapi.RouteStatus{
+						Parents: []gatewayapi.RouteParentStatus{
+							{
+								ControllerName: GetControllerName(),
+								ParentRef: gatewayapi.ParentReference{
+									Name:      "gateway-other",
+									Namespace: &gwNamespace,
+								},
+							},
+							{
+								ControllerName: GetControllerName(),
+								ParentRef: gatewayapi.ParentReference{
+									Name:      "gateway-a",
+									Namespace: &gwNamespace,
+								},
+							},
+						},
+					},
+				},
+			},
+			gatewayNN: controllers.NewOptionalNamespacedName(mo.Some(k8stypes.NamespacedName{
+				Namespace: "default",
+				Name:      "gateway-a",
+			})),
+			expected: true,
+		},
+		{
+			name: "gatewayNN set, parentRef namespace nil defaults to route namespace - returns true",
+			route: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-route",
+					Namespace: "default",
+				},
+				Status: gatewayapi.HTTPRouteStatus{
+					RouteStatus: gatewayapi.RouteStatus{
+						Parents: []gatewayapi.RouteParentStatus{
+							{
+								ControllerName: GetControllerName(),
+								ParentRef: gatewayapi.ParentReference{
+									Name: "gateway-a",
+									// Namespace is nil, defaults to route's namespace
+								},
+							},
+						},
+					},
+				},
+			},
+			gatewayNN: controllers.NewOptionalNamespacedName(mo.Some(k8stypes.NamespacedName{
+				Namespace: "default",
+				Name:      "gateway-a",
+			})),
+			expected: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := routeHasKongParentStatus[*gatewayapi.HTTPRoute](tc.route, tc.gatewayNN)
+			assert.Equal(t, tc.expected, result)
+		})
 	}
 }
