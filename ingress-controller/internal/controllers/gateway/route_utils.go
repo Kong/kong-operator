@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -878,8 +879,11 @@ func isRouteAcceptedByListener[T gatewayapi.RouteT](ctx context.Context,
 // ensureGatewayReferenceStatusRemoved uses the ControllerName provided by the Gateway
 // implementation to prune status references to Gateways supported by this controller
 // in the provided route.
+// When gatewayNN is set, only status entries whose parentRef matches the specified
+// Gateway are removed. This prevents one KIC instance from removing statuses set
+// by another instance that manages a different Gateway.
 func ensureGatewayReferenceStatusRemoved[routeT gatewayapi.RouteT](
-	ctx context.Context, cl client.Client, log logr.Logger, route routeT,
+	ctx context.Context, cl client.Client, log logr.Logger, route routeT, gatewayNN controllers.OptionalNamespacedName,
 ) (bool, error) {
 	debug(log, route, "Unsupported route found, processing to verify whether it was ever supported")
 	kind := route.GetObjectKind().GroupVersionKind().Kind
@@ -890,13 +894,21 @@ func ensureGatewayReferenceStatusRemoved[routeT gatewayapi.RouteT](
 	for _, status := range parents {
 		if status.ControllerName != GetControllerName() {
 			newStatuses = append(newStatuses, status)
-		} else {
-			parentRefNN := string(status.ParentRef.Name)
-			if status.ParentRef.Namespace != nil {
-				parentRefNN = fmt.Sprintf("%s/%s", *status.ParentRef.Namespace, parentRefNN)
-			}
-			debug(log, route, "Removing parentRef from route status", "parentRef", parentRefNN, "kind", kind)
+			continue
 		}
+		// When gatewayNN is set, only remove statuses for the specific gateway
+		// this controller instance manages.
+		if gNN, ok := gatewayNN.Get(); ok {
+			if !parentRefMatchesGatewayNN(status.ParentRef, route.GetNamespace(), gNN) {
+				newStatuses = append(newStatuses, status)
+				continue
+			}
+		}
+		parentRefNN := string(status.ParentRef.Name)
+		if status.ParentRef.Namespace != nil {
+			parentRefNN = fmt.Sprintf("%s/%s", *status.ParentRef.Namespace, parentRefNN)
+		}
+		debug(log, route, "Removing parentRef from route status", "parentRef", parentRefNN, "kind", kind)
 	}
 
 	// If the new list of statuses is the same length as the old
@@ -934,4 +946,15 @@ func getRouteParentRefs[T gatewayapi.RouteT](route T) []gatewayapi.ParentReferen
 	default:
 		return nil
 	}
+}
+
+// parentRefMatchesGatewayNN returns true if the given parentRef references the
+// specified gateway. routeNamespace is used as the default namespace when
+// parentRef.Namespace is nil.
+func parentRefMatchesGatewayNN(parentRef gatewayapi.ParentReference, routeNamespace string, gatewayNN k8stypes.NamespacedName) bool {
+	ns := routeNamespace
+	if parentRef.Namespace != nil {
+		ns = string(*parentRef.Namespace)
+	}
+	return ns == gatewayNN.Namespace && string(parentRef.Name) == gatewayNN.Name
 }
