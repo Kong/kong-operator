@@ -1,11 +1,11 @@
 package integration
 
 import (
+	"slices"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -204,7 +204,7 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 		}
 		cp := controlplanes[0]
 
-		return lo.Contains(cp.Spec.Controllers,
+		return slices.Contains(cp.Spec.Controllers,
 			gwtypes.ControlPlaneController{
 				Name:  controlplane.ControllerNameIngress,
 				State: gwtypes.ControlPlaneControllerStateDisabled,
@@ -284,7 +284,7 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 		}
 		cp := controlplanes[0]
 
-		return !lo.Contains(cp.Spec.Controllers,
+		return !slices.Contains(cp.Spec.Controllers,
 			gwtypes.ControlPlaneController{
 				Name:  controlplane.ControllerNameIngress,
 				State: gwtypes.ControlPlaneControllerStateDisabled,

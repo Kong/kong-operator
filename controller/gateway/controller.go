@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"slices"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -1049,10 +1050,10 @@ func deploymentOptionsDeepEqual(o1, o2 *operatorv1beta1.DeploymentOptions, envVa
 		cmp.Comparer(func(a, b []corev1.EnvVar) bool {
 			// Throw out env vars that we ignore.
 			a = lo.Filter(a, func(e corev1.EnvVar, _ int) bool {
-				return !lo.Contains(envVarsToIgnore, e.Name)
+				return !slices.Contains(envVarsToIgnore, e.Name)
 			})
 			b = lo.Filter(b, func(e corev1.EnvVar, _ int) bool {
-				return !lo.Contains(envVarsToIgnore, e.Name)
+				return !slices.Contains(envVarsToIgnore, e.Name)
 			})
 
 			// And compare.

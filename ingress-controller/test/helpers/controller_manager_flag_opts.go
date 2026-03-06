@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/samber/lo"
@@ -26,7 +27,7 @@ func ControllerManagerOptAdditionalWatchNamespace(ns string) ControllerManagerOp
 		// If it is, then check the existing value (split by a comma) if it's in the list.
 		v := strings.TrimPrefix(wn, "--watch-namespace=")
 		namespaces := strings.Split(v, ",")
-		if !lo.Contains(namespaces, ns) {
+		if !slices.Contains(namespaces, ns) {
 			// Replace the existing value with the new one.
 			args[idx] = fmt.Sprintf("%s,%s", wn, ns)
 		}
