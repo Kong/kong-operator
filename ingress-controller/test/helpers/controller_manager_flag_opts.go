@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-
-	"github.com/samber/lo"
 )
 
 type ControllerManagerOpt func([]string) []string
@@ -15,15 +13,16 @@ type ControllerManagerOpt func([]string) []string
 func ControllerManagerOptAdditionalWatchNamespace(ns string) ControllerManagerOpt {
 	return func(args []string) []string {
 		// Check if watch namespace is set at all.
-		wn, idx, ok := lo.FindIndexOf(args, func(arg string) bool {
+		idx := slices.IndexFunc(args, func(arg string) bool {
 			return strings.HasPrefix(arg, "--watch-namespace=")
 		})
 		// If it isn't then append new watch namespace flag with the provided namespace.
-		if !ok {
+		if idx < 0 {
 			args = append(args, fmt.Sprintf("--watch-namespace=%s", ns))
 			return args
 		}
 
+		wn := args[idx]
 		// If it is, then check the existing value (split by a comma) if it's in the list.
 		v := strings.TrimPrefix(wn, "--watch-namespace=")
 		namespaces := strings.Split(v, ",")

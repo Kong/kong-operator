@@ -92,6 +92,8 @@ linters:
           msg: Please use built-in new() instead
         - pattern: ^lo\.Contains$
           msg: Please use slices.Contains() instead
+        - pattern: ^lo\.FindIndexOf$
+          msg: Please use slices.IndexFunc() instead
     gomodguard:
       blocked:
         modules:
