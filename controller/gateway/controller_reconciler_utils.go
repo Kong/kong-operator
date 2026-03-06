@@ -1211,7 +1211,8 @@ func setDataPlaneDeploymentListenPorts(
 			listenerPortToKongListenPort[int(l.Port)] = consts.DataPlaneProxySSLPort
 		case gatewayv1.TLSProtocolType:
 			portNumber := int(l.Port)
-			// TODO: support multiple listeners using the same port.
+			// TODO: support multiple listeners using the same port:
+			// https://github.com/Kong/kong-operator/issues/3511
 			tlsPorts = append(tlsPorts, portNumber)
 			if _, occupied := kongPortOccupied[portNumber]; occupied {
 				for {
@@ -1236,6 +1237,7 @@ func setDataPlaneDeploymentListenPorts(
 		return nil, errs
 	}
 
+	// Configure env `KONG_STREAM_LISTEN` if there are TLS listeners.
 	if len(tlsPorts) > 0 {
 		sort.Ints(tlsPorts)
 		streamListenEnvs := make([]string, 0, len(tlsPorts))
@@ -1247,7 +1249,7 @@ func setDataPlaneDeploymentListenPorts(
 			Value: strings.Join(streamListenEnvs, ","),
 		})
 	}
-	// configure env KONG_PORT_MAPS
+	// Configure env KONG_PORT_MAPS.
 	listenerPorts := lo.Keys(listenerPortToKongListenPort)
 	sort.Ints(listenerPorts)
 	portMapEnvs := make([]string, 0, len(listenerPorts))
