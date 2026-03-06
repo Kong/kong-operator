@@ -58,12 +58,12 @@ func generateDataPlaneImage(dataplane *operatorv1beta1.DataPlane, defaultImage s
 // DataPlane - Private Functions - Kubernetes Object Labels and Annotations
 // -----------------------------------------------------------------------------
 
-func addAnnotationsForDataPlaneIngressService(obj client.Object, dataplane operatorv1beta1.DataPlane) {
+func addAnnotationsForDataPlaneIngressService(svc *corev1.Service, dataplane operatorv1beta1.DataPlane) {
 	specAnnotations := extractDataPlaneIngressServiceAnnotations(&dataplane)
 	if specAnnotations == nil {
 		return
 	}
-	annotations := obj.GetAnnotations()
+	annotations := svc.GetAnnotations()
 	if annotations == nil {
 		annotations = make(map[string]string)
 	}
@@ -72,7 +72,7 @@ func addAnnotationsForDataPlaneIngressService(obj client.Object, dataplane opera
 	if err == nil {
 		annotations[consts.AnnotationLastAppliedAnnotations] = string(encodedSpecAnnotations)
 	}
-	obj.SetAnnotations(annotations)
+	svc.SetAnnotations(annotations)
 }
 
 func extractDataPlaneIngressServiceAnnotations(dataplane *operatorv1beta1.DataPlane) map[string]string {
@@ -86,17 +86,17 @@ func extractDataPlaneIngressServiceAnnotations(dataplane *operatorv1beta1.DataPl
 	return anns
 }
 
-func addLabelsForDataPlaneIngressService(obj client.Object, dataplane operatorv1beta1.DataPlane) {
+func addLabelsForDataPlaneIngressService(svc *corev1.Service, dataplane operatorv1beta1.DataPlane) {
 	specLabels := extractDataPlaneIngressServiceLabels(&dataplane)
 	if specLabels == nil {
 		return
 	}
-	lbls := obj.GetLabels()
+	lbls := svc.GetLabels()
 	if lbls == nil {
 		lbls = make(map[string]string)
 	}
 	maps.Copy(lbls, specLabels)
-	obj.SetLabels(lbls)
+	svc.SetLabels(lbls)
 }
 
 func extractDataPlaneIngressServiceLabels(dataplane *operatorv1beta1.DataPlane) map[string]string {
