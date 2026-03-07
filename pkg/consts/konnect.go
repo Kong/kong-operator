@@ -14,6 +14,10 @@ const (
 // -----------------------------------------------------------------------------
 
 const (
+	// KonnectGatewayControlPlaneFinalizer is the finalizer added to KonnectGatewayControlPlane
+	// resources when created by the Gateway controller.
+	KonnectGatewayControlPlaneFinalizer = "gateway.operator.konghq.com/konnect-gateway-controlplane"
+
 	// CleanupPluginBindingFinalizer is the finalizer that is attached to entities that
 	// are referenced as targets by managed KongPluginBindings (binding instances created
 	// by the controller out of entities' konghq.com/plugins annotations).
