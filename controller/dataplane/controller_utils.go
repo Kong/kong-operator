@@ -58,12 +58,12 @@ func generateDataPlaneImage(dataplane *operatorv1beta1.DataPlane, defaultImage s
 // DataPlane - Private Functions - Kubernetes Object Labels and Annotations
 // -----------------------------------------------------------------------------
 
-func addAnnotationsForDataPlaneIngressService(obj client.Object, dataplane operatorv1beta1.DataPlane) {
+func addAnnotationsForDataPlaneIngressService(svc *corev1.Service, dataplane operatorv1beta1.DataPlane) {
 	specAnnotations := extractDataPlaneIngressServiceAnnotations(&dataplane)
 	if specAnnotations == nil {
 		return
 	}
-	annotations := obj.GetAnnotations()
+	annotations := svc.GetAnnotations()
 	if annotations == nil {
 		annotations = make(map[string]string)
 	}
@@ -72,7 +72,7 @@ func addAnnotationsForDataPlaneIngressService(obj client.Object, dataplane opera
 	if err == nil {
 		annotations[consts.AnnotationLastAppliedAnnotations] = string(encodedSpecAnnotations)
 	}
-	obj.SetAnnotations(annotations)
+	svc.SetAnnotations(annotations)
 }
 
 func extractDataPlaneIngressServiceAnnotations(dataplane *operatorv1beta1.DataPlane) map[string]string {
@@ -84,6 +84,32 @@ func extractDataPlaneIngressServiceAnnotations(dataplane *operatorv1beta1.DataPl
 
 	anns := dataplane.Spec.Network.Services.Ingress.Annotations
 	return anns
+}
+
+func addLabelsForDataPlaneIngressService(svc *corev1.Service, dataplane operatorv1beta1.DataPlane) {
+	specLabels := extractDataPlaneIngressServiceLabels(&dataplane)
+	if specLabels == nil {
+		return
+	}
+	lbls := svc.GetLabels()
+	if lbls == nil {
+		lbls = make(map[string]string)
+	}
+	maps.Copy(lbls, specLabels)
+	svc.SetLabels(lbls)
+}
+
+func extractDataPlaneIngressServiceLabels(dataplane *operatorv1beta1.DataPlane) map[string]string {
+	if dataplane.Spec.Network.Services == nil ||
+		dataplane.Spec.Network.Services.Ingress == nil ||
+		dataplane.Spec.Network.Services.Ingress.Labels == nil {
+		return nil
+	}
+	result := make(map[string]string, len(dataplane.Spec.Network.Services.Ingress.Labels))
+	for k, v := range dataplane.Spec.Network.Services.Ingress.Labels {
+		result[string(k)] = string(v)
+	}
+	return result
 }
 
 // extractOutdatedDataPlaneIngressServiceAnnotations returns the last applied annotations

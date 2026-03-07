@@ -410,3 +410,256 @@ func TestEnsureDataPlaneReadyStatus(t *testing.T) {
 		})
 	}
 }
+
+func TestExtractDataPlaneIngressServiceLabels(t *testing.T) {
+	testCases := []struct {
+		name           string
+		dataplane      operatorv1beta1.DataPlane
+		expectedLabels map[string]string
+	}{
+		{
+			name:           "nil Services",
+			dataplane:      operatorv1beta1.DataPlane{},
+			expectedLabels: nil,
+		},
+		{
+			name: "nil Ingress",
+			dataplane: operatorv1beta1.DataPlane{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Network: operatorv1beta1.DataPlaneNetworkOptions{
+							Services: &operatorv1beta1.DataPlaneServices{},
+						},
+					},
+				},
+			},
+			expectedLabels: nil,
+		},
+		{
+			name: "nil Labels",
+			dataplane: operatorv1beta1.DataPlane{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Network: operatorv1beta1.DataPlaneNetworkOptions{
+							Services: &operatorv1beta1.DataPlaneServices{
+								Ingress: &operatorv1beta1.DataPlaneServiceOptions{},
+							},
+						},
+					},
+				},
+			},
+			expectedLabels: nil,
+		},
+		{
+			name: "labels present",
+			dataplane: operatorv1beta1.DataPlane{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Network: operatorv1beta1.DataPlaneNetworkOptions{
+							Services: &operatorv1beta1.DataPlaneServices{
+								Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+									ServiceOptions: operatorv1beta1.ServiceOptions{
+										Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
+											"my-label": "my-value",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedLabels: map[string]string{"my-label": "my-value"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := extractDataPlaneIngressServiceLabels(&tc.dataplane)
+			require.Equal(t, tc.expectedLabels, result)
+		})
+	}
+}
+
+func TestAddAnnotationsForDataPlaneIngressService(t *testing.T) {
+	testCases := []struct {
+		name                string
+		existingAnnotations map[string]string
+		dataplane           operatorv1beta1.DataPlane
+		expectedAnnotations map[string]string
+	}{
+		{
+			name:                "no-op when DataPlane has no ingress service annotations",
+			existingAnnotations: map[string]string{"existing": "val"},
+			dataplane:           operatorv1beta1.DataPlane{},
+			expectedAnnotations: map[string]string{"existing": "val"},
+		},
+		{
+			name:                "annotations merged onto object",
+			existingAnnotations: map[string]string{"existing": "val"},
+			dataplane: operatorv1beta1.DataPlane{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Network: operatorv1beta1.DataPlaneNetworkOptions{
+							Services: &operatorv1beta1.DataPlaneServices{
+								Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+									ServiceOptions: operatorv1beta1.ServiceOptions{
+										Annotations: map[string]string{"new-annotation": "new-val"},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedAnnotations: map[string]string{
+				"existing":                              "val",
+				"new-annotation":                        "new-val",
+				consts.AnnotationLastAppliedAnnotations: `{"new-annotation":"new-val"}`,
+			},
+		},
+		{
+			name:                "spec annotation wins over existing on conflict",
+			existingAnnotations: map[string]string{"conflict": "old"},
+			dataplane: operatorv1beta1.DataPlane{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Network: operatorv1beta1.DataPlaneNetworkOptions{
+							Services: &operatorv1beta1.DataPlaneServices{
+								Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+									ServiceOptions: operatorv1beta1.ServiceOptions{
+										Annotations: map[string]string{"conflict": "new"},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedAnnotations: map[string]string{
+				"conflict":                              "new",
+				consts.AnnotationLastAppliedAnnotations: `{"conflict":"new"}`,
+			},
+		},
+		{
+			name:                "nil existing annotations initialized correctly",
+			existingAnnotations: nil,
+			dataplane: operatorv1beta1.DataPlane{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Network: operatorv1beta1.DataPlaneNetworkOptions{
+							Services: &operatorv1beta1.DataPlaneServices{
+								Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+									ServiceOptions: operatorv1beta1.ServiceOptions{
+										Annotations: map[string]string{"k": "v"},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedAnnotations: map[string]string{
+				"k":                                     "v",
+				consts.AnnotationLastAppliedAnnotations: `{"k":"v"}`,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			svc := &corev1.Service{}
+			svc.Annotations = tc.existingAnnotations
+			addAnnotationsForDataPlaneIngressService(svc, tc.dataplane)
+			require.Equal(t, tc.expectedAnnotations, svc.Annotations)
+		})
+	}
+}
+
+func TestAddLabelsForDataPlaneIngressService(t *testing.T) {
+	testCases := []struct {
+		name           string
+		existingLabels map[string]string
+		dataplane      operatorv1beta1.DataPlane
+		expectedLabels map[string]string
+	}{
+		{
+			name:           "no-op when DataPlane has no ingress service labels",
+			existingLabels: map[string]string{"existing": "val"},
+			dataplane:      operatorv1beta1.DataPlane{},
+			expectedLabels: map[string]string{"existing": "val"},
+		},
+		{
+			name:           "labels merged onto object",
+			existingLabels: map[string]string{"existing": "val"},
+			dataplane: operatorv1beta1.DataPlane{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Network: operatorv1beta1.DataPlaneNetworkOptions{
+							Services: &operatorv1beta1.DataPlaneServices{
+								Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+									ServiceOptions: operatorv1beta1.ServiceOptions{
+										Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{"new-label": "new-val"},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedLabels: map[string]string{
+				"existing":  "val",
+				"new-label": "new-val",
+			},
+		},
+		{
+			name:           "spec label wins over existing on conflict",
+			existingLabels: map[string]string{"conflict": "old"},
+			dataplane: operatorv1beta1.DataPlane{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Network: operatorv1beta1.DataPlaneNetworkOptions{
+							Services: &operatorv1beta1.DataPlaneServices{
+								Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+									ServiceOptions: operatorv1beta1.ServiceOptions{
+										Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{"conflict": "new"},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedLabels: map[string]string{"conflict": "new"},
+		},
+		{
+			name:           "nil existing labels initialized correctly",
+			existingLabels: nil,
+			dataplane: operatorv1beta1.DataPlane{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Network: operatorv1beta1.DataPlaneNetworkOptions{
+							Services: &operatorv1beta1.DataPlaneServices{
+								Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+									ServiceOptions: operatorv1beta1.ServiceOptions{
+										Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{"k": "v"},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedLabels: map[string]string{"k": "v"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			svc := &corev1.Service{}
+			svc.Labels = tc.existingLabels
+			addLabelsForDataPlaneIngressService(svc, tc.dataplane)
+			require.Equal(t, tc.expectedLabels, svc.Labels)
+		})
+	}
+}

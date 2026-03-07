@@ -245,6 +245,20 @@ type NamespacedName struct {
 	Namespace string `json:"namespace"`
 }
 
+// LabelName is a label key with constraints matching Kubernetes label key requirements.
+//
+// +kubebuilder:validation:MinLength=1
+// +kubebuilder:validation:MaxLength=253
+// +kubebuilder:validation:Pattern=`^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?([A-Za-z0-9][-A-Za-z0-9_.]{0,61})?[A-Za-z0-9]$`
+type LabelName string
+
+// LabelValue is a label value with constraints matching Kubernetes label value requirements.
+//
+// +kubebuilder:validation:MinLength=0
+// +kubebuilder:validation:MaxLength=63
+// +kubebuilder:validation:Pattern=`^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$`
+type LabelValue string
+
 // ServiceOptions is used to includes options to customize the ingress service,
 // such as the annotations.
 // +kubebuilder:validation:XValidation:message="Cannot set ExternalTrafficPolicy for ClusterIP service.", rule="has(self.type) && self.type == 'ClusterIP' ? !has(self.externalTrafficPolicy) : true"
@@ -285,6 +299,16 @@ type ServiceOptions struct {
 	//
 	// +optional
 	Annotations map[string]string `json:"annotations,omitempty" protobuf:"bytes,12,rep,name=annotations"`
+
+	// Labels are an unstructured key value map that may be used to organize and
+	// categorize resources and that are propagated to the DataPlane's ingress Service
+	// by the operator.
+	//
+	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=64
+	Labels map[LabelName]LabelValue `json:"labels,omitempty" protobuf:"bytes,13,rep,name=labels"`
 
 	// ExternalTrafficPolicy describes how nodes distribute service traffic they
 	// receive on one of the Service's "externally-facing" addresses (NodePorts,
