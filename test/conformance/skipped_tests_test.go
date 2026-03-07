@@ -7,10 +7,6 @@ import (
 )
 
 var skippedTestsShared = []string{
-	// TODO: https://github.com/Kong/kong-operator/issues/2215
-	// HTTPRouteWeight is flaky for some reason. 2215 tracks solving it.
-	tests.HTTPRouteWeight.ShortName,
-
 	// NOTE:
 	// Issue tracking all gRPC related conformance tests:
 	// https://github.com/Kong/kong-operator/issues/2345
