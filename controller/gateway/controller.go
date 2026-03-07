@@ -607,7 +607,16 @@ func (r *Reconciler) provisionDataPlane(
 	}
 	// Don't require setting defaults for DataPlane when using Gateway CRD.
 	setDataPlaneOptionsDefaults(expectedDataPlaneOptions, r.DefaultDataPlaneImage)
-	err = setDataPlaneIngressServicePorts(expectedDataPlaneOptions, gateway.Spec.Listeners, gatewayConfig.Spec.ListenersOptions)
+	portMap, err := setDataPlaneDeploymentListenPorts(expectedDataPlaneOptions, gateway.Spec.Listeners)
+	if err != nil {
+		errWrap := fmt.Errorf("dataplane creation failed - error: %w", err)
+		k8sutils.SetCondition(
+			createDataPlaneCondition(metav1.ConditionFalse, kcfgdataplane.UnableToProvisionReason, errWrap.Error(), gateway.Generation),
+			gatewayConditionsAndListenersAware(gateway),
+		)
+		return nil, errWrap
+	}
+	err = setDataPlaneIngressServicePorts(expectedDataPlaneOptions, gateway.Spec.Listeners, gatewayConfig.Spec.ListenersOptions, portMap)
 	if err != nil {
 		errWrap := fmt.Errorf("dataplane creation failed - error: %w", err)
 		k8sutils.SetCondition(
