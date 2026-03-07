@@ -6,10 +6,12 @@ import (
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	finalizerconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/finalizers"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/converter"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/managedfields"
@@ -88,6 +90,50 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 			log.Debug(logger, "Waiting for previous resource kind to be fully created/updated before processing next kind", "waitingForKind", stopAtKind, "currentKind", desired.GetKind())
 			objectsSkipped++
 			continue
+		}
+
+		// Best-effort dependency gating: avoid creating dependent resources before
+		// their prerequisites are Programmed in Konnect. This reduces transient
+		// 404s during conformance and prevents noisy reconciliation errors like
+		// "can't create target without a Konnect Upstream ID".
+		switch desired.GetKind() {
+		case "KongTarget":
+			// KongTarget depends on KongUpstream being Programmed.
+			upstreamName, _, _ := unstructured.NestedString(desired.Object, "spec", "upstreamRef", "name")
+			if upstreamName != "" {
+				var up configurationv1alpha1.KongUpstream
+				if err := cl.Get(ctx, client.ObjectKey{Namespace: desired.GetNamespace(), Name: upstreamName}, &up); err != nil {
+					// Upstream not present yet, wait.
+					log.Debug(logger, "Upstream not found yet for target, waiting", "upstream", upstreamName)
+					objectsSkipped++
+					stopAtKind = "KongUpstream"
+					continue
+				}
+				if !hasProgrammedTrue(up.Status.Conditions) {
+					log.Debug(logger, "Upstream not Programmed yet for target, waiting", "upstream", upstreamName)
+					objectsSkipped++
+					stopAtKind = "KongUpstream"
+					continue
+				}
+			}
+		case "KongRoute":
+			// KongRoute (serviceful) depends on KongService being Programmed.
+			svcName, _, _ := unstructured.NestedString(desired.Object, "spec", "serviceRef", "namespacedRef", "name")
+			if svcName != "" {
+				var svc configurationv1alpha1.KongService
+				if err := cl.Get(ctx, client.ObjectKey{Namespace: desired.GetNamespace(), Name: svcName}, &svc); err != nil {
+					log.Debug(logger, "Service not found yet for route, waiting", "service", svcName)
+					objectsSkipped++
+					stopAtKind = "KongService"
+					continue
+				}
+				if !hasProgrammedTrue(svc.Status.Conditions) {
+					log.Debug(logger, "Service not Programmed yet for route, waiting", "service", svcName)
+					objectsSkipped++
+					stopAtKind = "KongService"
+					continue
+				}
+			}
 		}
 		log.Debug(logger, "Processing desired object", "index", i, "kind", desired.GetKind(), "name", desired.GetName())
 		// Get the existing object by name from the API server.
@@ -189,6 +235,16 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 	// Return true also if any resources were skipped to ensure requeue for proper ordering
 	waitingForSkipped := objectsSkipped > 0
 	return stateChanged && waitingForSkipped, nil
+}
+
+// hasProgrammedTrue checks whether the Programmed condition is set to True.
+func hasProgrammedTrue(conds []metav1.Condition) bool {
+	for _, c := range conds {
+		if c.Type == "Programmed" && c.Status == metav1.ConditionTrue {
+			return true
+		}
+	}
+	return false
 }
 
 // enforceStatus updates the status of the root object managed by the provided APIConverter.
