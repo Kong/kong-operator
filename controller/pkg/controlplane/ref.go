@@ -72,5 +72,11 @@ func getCPForNamespacedRef(
 		}
 		return nil, fmt.Errorf("failed to get ControlPlane %s: %w", nn, err)
 	}
+	if deletionTimestamp := cp.GetDeletionTimestamp(); deletionTimestamp != nil && !deletionTimestamp.IsZero() {
+		return nil, ReferencedControlPlaneIsBeingDeletedError{
+			Reference:         ref,
+			DeletionTimestamp: *deletionTimestamp,
+		}
+	}
 	return &cp, nil
 }

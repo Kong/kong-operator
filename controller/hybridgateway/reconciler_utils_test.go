@@ -336,6 +336,49 @@ func TestCleanOrphanedResources_DeletingCertificateDoesNotBlockSNIOrphanCleanup(
 	assert.False(t, certificateList.Items[0].GetDeletionTimestamp().IsZero())
 }
 
+func TestCleanOrphanedResources_DeletingResourcesKeepRequeueingUntilGone(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	certificateGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongCertificate"}
+	sniGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongSNI"}
+
+	root := &gwtypes.Gateway{}
+	root.SetName("same-namespace-with-https-listener")
+	root.SetNamespace("gateway-conformance-infra")
+	root.SetUID("gateway-uid")
+	root.SetGroupVersionKind(schema.GroupVersionKind{Group: gatewayv1.GroupVersion.Group, Version: gatewayv1.GroupVersion.Version, Kind: "Gateway"})
+
+	ownerLabels := metadata.BuildLabels(root, nil)
+	now := metav1.Now()
+
+	certificate := newUnstructured(root.GetNamespace(), "cert.same-namespace-with-https-listener.443", certificateGVK, ownerLabels)
+	certificate.SetDeletionTimestamp(&now)
+	certificate.SetFinalizers([]string{"gateway.konghq.com/konnect-cleanup"})
+
+	sni := newUnstructured(root.GetNamespace(), "cert.same-namespace-with-https-listener.443", sniGVK, ownerLabels)
+	sni.SetDeletionTimestamp(&now)
+	sni.SetFinalizers([]string{"gateway.konghq.com/konnect-cleanup"})
+
+	cl := fake.NewClientBuilder().
+		WithScheme(runtime.NewScheme()).
+		WithObjects(&certificate, &sni).
+		Build()
+
+	conv := &fakeGatewayConverter{
+		gvks: []schema.GroupVersionKind{certificateGVK, sniGVK},
+		root: *root,
+	}
+
+	requeue, err := cleanOrphanedResources(ctx, cl, logger, conv)
+	require.NoError(t, err)
+	assert.True(t, requeue, "cleanup should keep requeueing while owned resources are still terminating")
+
+	requeue, err = cleanOrphanedResources(ctx, fake.NewClientBuilder().Build(), logger, conv)
+	require.NoError(t, err)
+	assert.False(t, requeue, "cleanup should stop requeueing once terminating resources are gone")
+}
+
 // Minimal fake converter for HTTPRoute
 
 type fakeHTTPRouteConverter struct {

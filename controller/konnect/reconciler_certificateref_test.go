@@ -168,6 +168,35 @@ var testKongCertControlPlaneRefNotProgrammed = &configurationv1alpha1.KongCertif
 	},
 }
 
+var testKongCertControlPlaneRefBeingDeleted = &configurationv1alpha1.KongCertificate{
+	ObjectMeta: metav1.ObjectMeta{
+		Name:      "cert-cpref-being-deleted",
+		Namespace: "default",
+	},
+	Spec: configurationv1alpha1.KongCertificateSpec{
+		ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+			Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+			KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+				Name: "cp-being-deleted",
+			},
+		},
+	},
+	Status: configurationv1alpha1.KongCertificateStatus{
+		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
+				ID: "12345",
+			},
+			ControlPlaneID: "123456789",
+		},
+		Conditions: []metav1.Condition{
+			{
+				Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
+				Status: metav1.ConditionTrue,
+			},
+		},
+	},
+}
+
 func TestHandleCertificateRef(t *testing.T) {
 	testCases := []handleCertRefTestCase[configurationv1alpha1.KongSNI, *configurationv1alpha1.KongSNI]{
 		{
@@ -356,6 +385,33 @@ func TestHandleCertificateRef(t *testing.T) {
 					}), "KongSNI does not have ControlPlaneRefValid condition set to False"
 				},
 			},
+		},
+		{
+			name: "ControlPlaneRef is being deleted",
+			ent: &configurationv1alpha1.KongSNI{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "sni-cp-ref-being-deleted",
+				},
+				Spec: configurationv1alpha1.KongSNISpec{
+					CertificateRef: commonv1alpha1.NameRef{
+						Name: "cert-cpref-being-deleted",
+					},
+				},
+			},
+			objects: []client.Object{
+				testKongCertControlPlaneRefBeingDeleted,
+				&konnectv1alpha2.KonnectGatewayControlPlane{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace:         "default",
+						Name:              "cp-being-deleted",
+						DeletionTimestamp: &metav1.Time{Time: time.Now()},
+						Finalizers:        []string{"gateway.konghq.com/konnect-cleanup"},
+					},
+				},
+			},
+			expectError:         true,
+			expectErrorContains: `referenced Control Plane "<konnectNamespacedRef:cp-being-deleted>" is being deleted`,
 		},
 	}
 

@@ -2,6 +2,9 @@ package controlplane
 
 import (
 	"fmt"
+	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 )
@@ -23,6 +26,20 @@ func (e ReferencedControlPlaneDoesNotExistError) Error() string {
 // Unwrap returns the underlying error.
 func (e ReferencedControlPlaneDoesNotExistError) Unwrap() error {
 	return e.Err
+}
+
+// ReferencedControlPlaneIsBeingDeletedError is an error type that is returned when
+// a Konnect entity references a KonnectGatewayControlPlane that is already deleting.
+type ReferencedControlPlaneIsBeingDeletedError struct {
+	Reference         commonv1alpha1.ControlPlaneRef
+	DeletionTimestamp metav1.Time
+}
+
+// Error implements the error interface.
+func (e ReferencedControlPlaneIsBeingDeletedError) Error() string {
+	return fmt.Sprintf("referenced Control Plane %q is being deleted (deletion timestamp: %s)",
+		e.Reference.String(), e.DeletionTimestamp.Format(time.RFC3339),
+	)
 }
 
 // ReferencedKongGatewayControlPlaneIsUnsupportedError is an error type that is returned when a given CP reference type is not

@@ -95,6 +95,20 @@ func TestHandleControlPlaneRef(t *testing.T) {
 			},
 		}
 
+		cpBeingDeleted = &konnectv1alpha2.KonnectGatewayControlPlane{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace:         "default",
+				Name:              "cp-being-deleted",
+				DeletionTimestamp: lo.ToPtr(metav1.Now()),
+				Finalizers:        []string{"gateway.konghq.com/konnect-cleanup"},
+			},
+			Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
+				KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
+					ID: "cp-deleting-12345",
+				},
+			},
+		}
+
 		svcNoCPRef = &configurationv1alpha1.KongService{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "default",
@@ -157,6 +171,21 @@ func TestHandleControlPlaneRef(t *testing.T) {
 					Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 					KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 						Name: "cp-not-programmed",
+					},
+				},
+			},
+		}
+
+		svcCPRefBeingDeleted = &configurationv1alpha1.KongService{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "default",
+				Name:      "svc-cp-being-deleted",
+			},
+			Spec: configurationv1alpha1.KongServiceSpec{
+				ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+					Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+					KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+						Name: "cp-being-deleted",
 					},
 				},
 			},
@@ -239,6 +268,23 @@ func TestHandleControlPlaneRef(t *testing.T) {
 							c.Status == metav1.ConditionFalse &&
 							c.Reason == konnectv1alpha1.ControlPlaneRefReasonNotProgrammed
 					}), "service should have ControlPlaneRefValid set to False with NotProgrammed reason"
+				},
+			},
+		},
+		{
+			name: "control plane is being deleted",
+			ent:  svcCPRefBeingDeleted,
+			objects: []client.Object{
+				cpBeingDeleted,
+			},
+			expectResult:        ctrl.Result{},
+			expectError:         true,
+			expectErrorContains: `referenced Control Plane "<konnectNamespacedRef:cp-being-deleted>" is being deleted`,
+			updatedEntAssertions: []func(svc *configurationv1alpha1.KongService) (ok bool, message string){
+				func(svc *configurationv1alpha1.KongService) (bool, string) {
+					return lo.ContainsBy(svc.Status.Conditions, func(c metav1.Condition) bool {
+						return c.Type == konnectv1alpha1.ControlPlaneRefValidConditionType && c.Status == metav1.ConditionFalse
+					}), "service should have ControlPlaneRefValid set to False"
 				},
 			},
 		},
