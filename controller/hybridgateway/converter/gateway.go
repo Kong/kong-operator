@@ -5,17 +5,22 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	kcfggateway "github.com/kong/kong-operator/v2/api/gateway-operator/gateway"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/builder"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/refs"
@@ -205,9 +210,288 @@ func (c *gatewayConverter) GetExpectedGVKs() []schema.GroupVersionKind {
 //   - stop: true if reconciliation should halt
 //   - err: any error encountered during status update processing
 func (c *gatewayConverter) UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (updated bool, stop bool, err error) {
-	// TODO: implement status update logic
+	logger = logger.WithValues("phase", "gateway-status")
+	log.Debug(logger, "Starting UpdateRootObjectStatus")
 
-	return false, false, nil
+	oldStatus := c.gateway.Status
+
+	if err := c.setGatewayStatus(ctx); err != nil {
+		return false, false, fmt.Errorf("failed to build gateway status: %w", err)
+	}
+
+	if equality.Semantic.DeepEqual(oldStatus, c.gateway.Status) {
+		log.Debug(logger, "No status update required for Gateway")
+		return false, false, nil
+	}
+
+	log.Debug(logger, "Updating Gateway status in cluster", "status", c.gateway.Status)
+	if err := c.Status().Update(ctx, c.gateway); err != nil {
+		if apierrors.IsConflict(err) {
+			return false, true, err
+		}
+		return false, false, fmt.Errorf("failed to update Gateway status: %w", err)
+	}
+
+	log.Debug(logger, "Finished UpdateRootObjectStatus", "updated", true)
+	return true, false, nil
+}
+
+type gatewayConditionsAndListenersAware struct {
+	*gwtypes.Gateway
+}
+
+// GetConditions returns the conditions of the Gateway status.
+func (g gatewayConditionsAndListenersAware) GetConditions() []metav1.Condition {
+	return g.Status.Conditions
+}
+
+// SetConditions sets the conditions of the Gateway status.
+func (g gatewayConditionsAndListenersAware) SetConditions(conditions []metav1.Condition) {
+	g.Status.Conditions = conditions
+}
+
+// GetListenersConditions returns the listener conditions of the Gateway status.
+func (g gatewayConditionsAndListenersAware) GetListenersConditions() []gatewayv1.ListenerStatus {
+	return g.Status.Listeners
+}
+
+// SetListenersConditions sets the listener conditions of the Gateway status.
+func (g gatewayConditionsAndListenersAware) SetListenersConditions(listeners []gatewayv1.ListenerStatus) {
+	g.Status.Listeners = listeners
+}
+
+type listenerConditionsAware struct {
+	*gatewayv1.ListenerStatus
+}
+
+// GetConditions returns the conditions of the Listener status.
+func (l listenerConditionsAware) GetConditions() []metav1.Condition {
+	return l.Conditions
+}
+
+// SetConditions sets the conditions of the Listener status.
+func (l listenerConditionsAware) SetConditions(conditions []metav1.Condition) {
+	l.Conditions = conditions
+}
+
+func (c *gatewayConverter) setGatewayStatus(ctx context.Context) error {
+	existingStatuses := make(map[gatewayv1.SectionName]gatewayv1.ListenerStatus, len(c.gateway.Status.Listeners))
+	for _, status := range c.gateway.Status.Listeners {
+		existingStatuses[status.Name] = status
+	}
+
+	listenerStatuses := make([]gatewayv1.ListenerStatus, 0, len(c.gateway.Spec.Listeners))
+	for _, listener := range c.gateway.Spec.Listeners {
+		listenerStatus := existingStatuses[listener.Name]
+		listenerStatus.Name = listener.Name
+		listenerStatus.AttachedRoutes = 0
+
+		supportedKinds, resolvedRefsCondition, err := c.getSupportedKindsWithResolvedRefsCondition(ctx, listener)
+		if err != nil {
+			return fmt.Errorf("failed to build listener status for %s: %w", listener.Name, err)
+		}
+		listenerStatus.SupportedKinds = supportedKinds
+
+		acceptedCondition := metav1.Condition{
+			Type:               string(gatewayv1.ListenerConditionAccepted),
+			Status:             metav1.ConditionTrue,
+			Reason:             string(gatewayv1.ListenerReasonAccepted),
+			Message:            "Listener is accepted.",
+			ObservedGeneration: c.gateway.Generation,
+			LastTransitionTime: metav1.Now(),
+		}
+		if !hybridGatewayListenerProtocolSupported(listener.Protocol) {
+			acceptedCondition.Status = metav1.ConditionFalse
+			acceptedCondition.Reason = string(gatewayv1.ListenerReasonUnsupportedProtocol)
+			acceptedCondition.Message = fmt.Sprintf("Protocol %s is not supported.", listener.Protocol)
+		}
+
+		listenerAware := listenerConditionsAware{ListenerStatus: &listenerStatus}
+		k8sutils.SetCondition(acceptedCondition, listenerAware)
+		k8sutils.SetCondition(resolvedRefsCondition, listenerAware)
+
+		programmedCondition := metav1.Condition{
+			Type:               string(gatewayv1.ListenerConditionProgrammed),
+			Status:             metav1.ConditionTrue,
+			Reason:             string(gatewayv1.ListenerReasonProgrammed),
+			Message:            "Listener is programmed.",
+			ObservedGeneration: c.gateway.Generation,
+			LastTransitionTime: metav1.Now(),
+		}
+		if acceptedCondition.Status != metav1.ConditionTrue || resolvedRefsCondition.Status != metav1.ConditionTrue {
+			programmedCondition.Status = metav1.ConditionFalse
+			programmedCondition.Reason = string(gatewayv1.ListenerReasonPending)
+			programmedCondition.Message = "Listener is not ready for programming."
+		}
+		k8sutils.SetCondition(programmedCondition, listenerAware)
+
+		listenerStatuses = append(listenerStatuses, listenerStatus)
+	}
+
+	c.gateway.Status.Listeners = listenerStatuses
+
+	gatewayAware := gatewayConditionsAndListenersAware{Gateway: c.gateway}
+	k8sutils.SetAcceptedConditionOnGateway(gatewayAware)
+	k8sutils.SetCondition(c.buildGatewayProgrammedCondition(), gatewayAware)
+
+	return nil
+}
+
+func (c *gatewayConverter) buildGatewayProgrammedCondition() metav1.Condition {
+	condition := metav1.Condition{
+		Type:               string(gatewayv1.GatewayConditionProgrammed),
+		Status:             metav1.ConditionTrue,
+		Reason:             string(gatewayv1.GatewayReasonProgrammed),
+		Message:            "All listeners are programmed.",
+		ObservedGeneration: c.gateway.Generation,
+		LastTransitionTime: metav1.Now(),
+	}
+
+	for _, listenerStatus := range c.gateway.Status.Listeners {
+		programmed := false
+		for _, cond := range listenerStatus.Conditions {
+			if cond.Type == string(gatewayv1.ListenerConditionProgrammed) {
+				programmed = cond.Status == metav1.ConditionTrue
+				break
+			}
+		}
+		if !programmed {
+			condition.Status = metav1.ConditionFalse
+			condition.Reason = string(gatewayv1.GatewayReasonPending)
+			condition.Message = "At least one listener is not programmed."
+			break
+		}
+	}
+
+	return condition
+}
+
+func (c *gatewayConverter) getSupportedKindsWithResolvedRefsCondition(ctx context.Context, listener gwtypes.Listener) ([]gatewayv1.RouteGroupKind, metav1.Condition, error) {
+	supportedKinds := make([]gatewayv1.RouteGroupKind, 0)
+	resolvedRefsCondition := metav1.Condition{
+		Type:               string(gatewayv1.ListenerConditionResolvedRefs),
+		Status:             metav1.ConditionTrue,
+		Reason:             string(gatewayv1.ListenerReasonResolvedRefs),
+		Message:            "Listeners' references are accepted.",
+		ObservedGeneration: c.gateway.Generation,
+		LastTransitionTime: metav1.Now(),
+	}
+
+	message := ""
+	if listener.TLS != nil {
+		if listener.TLS.Mode != nil && *listener.TLS.Mode != gatewayv1.TLSModeTerminate {
+			resolvedRefsCondition.Status = metav1.ConditionFalse
+			resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidCertificateRef)
+			message = conditionMessage(message, "Only Terminate mode is supported")
+		}
+
+		if len(listener.TLS.CertificateRefs) != 1 {
+			resolvedRefsCondition.Status = metav1.ConditionFalse
+			resolvedRefsCondition.Reason = string(kcfggateway.ListenerReasonTooManyTLSSecrets)
+			message = conditionMessage(message, "Only one certificate per listener is supported")
+		} else {
+			certificateRef := listener.TLS.CertificateRefs[0]
+			secretref.EnsureNamespaceInSecretRef(&certificateRef, gatewayv1.Namespace(c.gateway.Namespace))
+
+			if err := secretref.DoesFieldReferenceCoreV1Secret(certificateRef, "CertificateRef"); err != nil {
+				resolvedRefsCondition.Status = metav1.ConditionFalse
+				resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidCertificateRef)
+				message = conditionMessage(message, err.Error())
+			} else {
+				whyNotGranted, isGranted, err := secretref.CheckReferenceGrantForSecret(ctx, c.Client, c.gateway, certificateRef)
+				if err != nil {
+					return nil, metav1.Condition{}, fmt.Errorf("failed to resolve certificate reference: %w", err)
+				}
+				if !isGranted {
+					resolvedRefsCondition.Status = metav1.ConditionFalse
+					resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonRefNotPermitted)
+					message = conditionMessage(message, whyNotGranted)
+				} else {
+					secret := &corev1.Secret{}
+					if err := c.Get(ctx, types.NamespacedName{Namespace: string(*certificateRef.Namespace), Name: string(certificateRef.Name)}, secret); err != nil {
+						if !apierrors.IsNotFound(err) {
+							return nil, metav1.Condition{}, fmt.Errorf("failed to get Secret: %w", err)
+						}
+						resolvedRefsCondition.Status = metav1.ConditionFalse
+						resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidCertificateRef)
+						message = conditionMessage(message, fmt.Sprintf("Referenced secret %s/%s does not exist", *certificateRef.Namespace, certificateRef.Name))
+					} else if !secrets.IsTLSSecretValid(secret) {
+						resolvedRefsCondition.Status = metav1.ConditionFalse
+						resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidCertificateRef)
+						message = conditionMessage(message, "Referenced secret does not contain a valid TLS certificate")
+					}
+				}
+			}
+		}
+	}
+
+	if listener.AllowedRoutes == nil || len(listener.AllowedRoutes.Kinds) == 0 {
+		supportedKinds = defaultSupportedKindsForProtocol(listener.Protocol)
+	} else {
+		validKinds := validRouteKindsForProtocol(listener.Protocol)
+		for _, routeGK := range listener.AllowedRoutes.Kinds {
+			if routeGK.Group == nil || *routeGK.Group != gatewayv1.Group(gatewayv1.GroupVersion.Group) {
+				resolvedRefsCondition.Status = metav1.ConditionFalse
+				resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidRouteKinds)
+				message = conditionMessage(message, fmt.Sprintf("Route %s not supported", routeGK.Kind))
+				continue
+			}
+			if _, ok := validKinds[routeGK.Kind]; !ok {
+				resolvedRefsCondition.Status = metav1.ConditionFalse
+				resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidRouteKinds)
+				message = conditionMessage(message, fmt.Sprintf("Route %s not supported", routeGK.Kind))
+				continue
+			}
+
+			supportedKinds = append(supportedKinds, gatewayv1.RouteGroupKind{
+				Group: routeGK.Group,
+				Kind:  routeGK.Kind,
+			})
+		}
+	}
+
+	if resolvedRefsCondition.Status == metav1.ConditionFalse {
+		resolvedRefsCondition.Message = message
+	}
+
+	return supportedKinds, resolvedRefsCondition, nil
+}
+
+func hybridGatewayListenerProtocolSupported(protocol gatewayv1.ProtocolType) bool {
+	_, ok := validRouteKindsForProtocol(protocol)[gatewayv1.Kind("HTTPRoute")]
+	return ok
+}
+
+func validRouteKindsForProtocol(protocol gatewayv1.ProtocolType) map[gatewayv1.Kind]struct{} {
+	switch protocol {
+	case gatewayv1.HTTPProtocolType, gatewayv1.HTTPSProtocolType:
+		return map[gatewayv1.Kind]struct{}{"HTTPRoute": {}}
+	default:
+		return map[gatewayv1.Kind]struct{}{}
+	}
+}
+
+func defaultSupportedKindsForProtocol(protocol gatewayv1.ProtocolType) []gatewayv1.RouteGroupKind {
+	validKinds := validRouteKindsForProtocol(protocol)
+	supportedKinds := make([]gatewayv1.RouteGroupKind, 0, len(validKinds))
+	for kind := range validKinds {
+		group := gatewayv1.Group(gatewayv1.GroupVersion.Group)
+		supportedKinds = append(supportedKinds, gatewayv1.RouteGroupKind{
+			Group: &group,
+			Kind:  kind,
+		})
+	}
+	return supportedKinds
+}
+
+func conditionMessage(oldStr, newStr string) string {
+	if len(newStr) > 0 && !strings.HasSuffix(newStr, ".") {
+		newStr += "."
+	}
+	if oldStr == "" {
+		return newStr
+	}
+	return fmt.Sprintf("%s %s", oldStr, newStr)
 }
 
 // HandleOrphanedResource implements OrphanedResourceHandler.
