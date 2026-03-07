@@ -1,6 +1,6 @@
 module github.com/kong/kong-operator/v2
 
-go 1.26.0
+go 1.26.1
 
 require (
 	cloud.google.com/go/container v1.46.0
@@ -20,7 +20,7 @@ require (
 	github.com/goccy/go-json v0.10.5
 	github.com/gohugoio/hashstructure v0.6.0
 	github.com/google/go-cmp v0.7.0
-	github.com/google/go-containerregistry v0.21.1
+	github.com/google/go-containerregistry v0.21.2
 	github.com/google/pprof v0.0.0-20260115054156-294ebfa9ad83
 	github.com/google/uuid v1.6.0
 	github.com/gruntwork-io/terratest v0.56.0
@@ -29,7 +29,7 @@ require (
 	github.com/jpillora/backoff v1.0.0
 	github.com/kong/go-database-reconciler v1.31.6
 	github.com/kong/go-kong v0.72.1
-	github.com/kong/kubernetes-telemetry v0.1.12
+	github.com/kong/kubernetes-telemetry v0.1.13
 	github.com/kong/kubernetes-testing-framework v0.48.1-0.20260114143846-8c0e96b5bf82
 	github.com/kong/semver/v4 v4.0.1
 	github.com/kr/pretty v0.3.1
@@ -65,7 +65,7 @@ require (
 	k8s.io/kubernetes v1.35.2
 	k8s.io/utils v0.0.0-20260108192941-914a6e750570
 	oras.land/oras-go/v2 v2.6.0
-	sigs.k8s.io/controller-runtime v0.23.1
+	sigs.k8s.io/controller-runtime v0.23.3
 	sigs.k8s.io/controller-tools v0.20.1
 	sigs.k8s.io/e2e-framework v0.6.0
 	sigs.k8s.io/gateway-api v1.5.0
