@@ -507,16 +507,25 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 				}
 				return ctrl.Result{}, err
 			}
-			if err := r.Client.Update(ctx, ent); err != nil {
-				if apierrors.IsConflict(err) {
-					return ctrl.Result{Requeue: true}, nil
-				}
-				// in case the finalizer removal fails because the resource does not exist, ignore the error.
-				if apierrors.IsNotFound(err) {
-					return ctrl.Result{}, nil
-				}
-				return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
+		}
+
+		// For KonnectGatewayControlPlane resources, also remove the finalizer added
+		// by the Gateway controller. This handles the race condition where a Gateway
+		// is deleted before the Konnect reconciler adds its own finalizer, leaving
+		// only the Gateway controller's finalizer on the KonnectGatewayControlPlane
+		// with no controller able to remove it (since the parent Gateway is gone).
+		if _, ok := any(ent).(*konnectv1alpha2.KonnectGatewayControlPlane); ok {
+			controllerutil.RemoveFinalizer(ent, consts.KonnectGatewayControlPlaneFinalizer)
+		}
+
+		if err := r.Client.Update(ctx, ent); err != nil {
+			if apierrors.IsConflict(err) {
+				return ctrl.Result{Requeue: true}, nil
 			}
+			if apierrors.IsNotFound(err) {
+				return ctrl.Result{}, nil
+			}
+			return ctrl.Result{}, fmt.Errorf("failed to update resource after finalizer removal: %w", err)
 		}
 
 		return ctrl.Result{}, nil
