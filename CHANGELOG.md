@@ -47,6 +47,12 @@
 
 - Do not try to list `Gateway`s for namespaces that are not being watched by controller
   [#3625](https://github.com/Kong/kong-operator/pull/3625)
+- Fix `KonnectGatewayControlPlane` not setting `Programmed=False` when its
+  `KonnectAPIAuthConfiguration` reference cannot be resolved (e.g. the auth
+  config does not exist, or a cross-namespace reference lacks a
+  `KongReferenceGrant`). Both `APIAuthResolvedRef` and `Programmed` conditions
+  are now set to `False` atomically.
+  [#3526](https://github.com/Kong/kong-operator/pull/3526)
 
 ## [v2.1.2]
 
