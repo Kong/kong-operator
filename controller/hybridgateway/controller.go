@@ -3,6 +3,7 @@ package hybridgateway
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -197,7 +198,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 	)
 
 	// Phase 3: State Enforcement.
-	stateChanged, err := enforceState(ctx, r.Client, logger, conv)
+	applied, waiting, err := enforceState(ctx, r.Client, logger, conv)
 	if err != nil {
 		// Record state enforcement failure event.
 		r.eventRecorder.Event(
@@ -210,7 +211,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 	}
 
 	// Only emit success event if state was actually changed.
-	if stateChanged {
+	if applied {
 		r.eventRecorder.Event(
 			obj,
 			corev1.EventTypeNormal,
@@ -219,6 +220,12 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 		)
 		log.Trace(logger, "State changed, requeueing")
 		return ctrl.Result{Requeue: true}, nil
+	}
+
+	// If we are intentionally waiting for prerequisites (e.g., Programmed deps),
+	// schedule a short requeue as a safety net in case watch events are delayed.
+	if waiting {
+		return ctrl.Result{RequeueAfter: time.Second}, nil
 	}
 
 	// Phase 4: Orphan Cleanup.
