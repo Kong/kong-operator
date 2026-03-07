@@ -51,6 +51,7 @@ import (
 	mgrconfig "github.com/kong/kong-operator/v2/modules/manager/config"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/metadata"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 	"github.com/kong/kong-operator/v2/pkg/vars"
 )
 
@@ -111,6 +112,7 @@ type Config struct {
 	AIGatewayControllerEnabled              bool
 	KongPluginInstallationControllerEnabled bool
 	KonnectSyncPeriod                       time.Duration
+	KonnectRequestTimeout                   time.Duration
 	// TODO: remove this a couple of versions after 2.1 release
 	// TODO: https://github.com/Kong/kong-operator/issues/2768
 	KonnectControllerMaxConcurrentReconciles uint
@@ -165,6 +167,8 @@ func DefaultConfig() Config {
 		DataPlaneControllerEnabled:    true,
 		ConversionWebhookEnabled:      true,
 		ValidatingWebhookEnabled:      true,
+		KonnectSyncPeriod:             consts.DefaultKonnectSyncPeriod,
+		KonnectRequestTimeout:         consts.DefaultKonnectRequestTimeout,
 	}
 }
 
