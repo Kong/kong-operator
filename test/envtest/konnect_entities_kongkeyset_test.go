@@ -10,7 +10,6 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -95,7 +94,7 @@ func TestKongKeySet(t *testing.T) {
 		t.Log("Setting up SDK expectations on KongKeySet update")
 		sdk.KeySetsSDK.EXPECT().UpsertKeySet(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.UpsertKeySetRequest) bool {
 			return r.KeySetID == keySetID &&
-				lo.Contains(r.KeySet.Tags, "addedTag")
+				slices.Contains(r.KeySet.Tags, "addedTag")
 		})).Return(&sdkkonnectops.UpsertKeySetResponse{}, nil)
 
 		t.Log("Patching KongKeySet")

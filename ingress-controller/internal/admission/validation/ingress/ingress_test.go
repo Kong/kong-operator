@@ -2,6 +2,7 @@ package ingress
 
 import (
 	"context"
+	"slices"
 	"testing"
 
 	"github.com/go-logr/zapr"
@@ -106,7 +107,7 @@ type mockRoutesValidator struct{}
 
 func (mockRoutesValidator) Validate(_ context.Context, r *kong.Route) (bool, string, error) {
 	protocols := lo.FromSlicePtr(r.Protocols)
-	if lo.Contains(protocols, "http") && lo.Contains(protocols, "tcp") {
+	if slices.Contains(protocols, "http") && slices.Contains(protocols, "tcp") {
 		return false, "Invalid protocols: http and tcp are mutally exclusive", nil
 	}
 	return true, "", nil
