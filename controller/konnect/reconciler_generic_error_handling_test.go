@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -15,8 +16,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/controller/consts"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
@@ -145,4 +148,101 @@ func TestHandleOpsErr(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestReconcile_RemovesFinalizerWhenDeletingKongCertificateParentControlPlaneIsDeleting(t *testing.T) {
+	ctx := context.Background()
+
+	cp := &konnectv1alpha2.KonnectGatewayControlPlane{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              "cp-deleting",
+			Namespace:         "default",
+			DeletionTimestamp: lo.ToPtr(metav1.Now()),
+			Finalizers:        []string{"gateway.konghq.com/konnect-cleanup"},
+		},
+	}
+
+	certificate := &configurationv1alpha1.KongCertificate{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              "cert-deleting",
+			Namespace:         "default",
+			DeletionTimestamp: lo.ToPtr(metav1.Now()),
+			Finalizers:        []string{KonnectCleanupFinalizer},
+		},
+		Spec: configurationv1alpha1.KongCertificateSpec{
+			ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+				Type:                 commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{Name: cp.Name},
+			},
+		},
+	}
+
+	cl := fake.NewClientBuilder().
+		WithScheme(scheme.Get()).
+		WithObjects(certificate, cp).
+		WithStatusSubresource(certificate).
+		Build()
+
+	r := &KonnectEntityReconciler[configurationv1alpha1.KongCertificate, *configurationv1alpha1.KongCertificate]{
+		Client: cl,
+	}
+
+	res, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(certificate)})
+	require.NoError(t, err)
+	assert.Equal(t, ctrl.Result{}, res)
+
+	updated := &configurationv1alpha1.KongCertificate{}
+	err = cl.Get(ctx, client.ObjectKeyFromObject(certificate), updated)
+	if apierrors.IsNotFound(err) {
+		return
+	}
+	require.NoError(t, err)
+	assert.NotContains(t, updated.GetFinalizers(), KonnectCleanupFinalizer)
+}
+
+func TestReconcile_RemovesFinalizerWhenDeletingKongSNIReferencedCertificateIsDeleting(t *testing.T) {
+	ctx := context.Background()
+
+	certificate := &configurationv1alpha1.KongCertificate{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              "cert-deleting",
+			Namespace:         "default",
+			DeletionTimestamp: lo.ToPtr(metav1.Now()),
+			Finalizers:        []string{"gateway.konghq.com/konnect-cleanup"},
+		},
+	}
+
+	sni := &configurationv1alpha1.KongSNI{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              "sni-deleting",
+			Namespace:         "default",
+			DeletionTimestamp: lo.ToPtr(metav1.Now()),
+			Finalizers:        []string{KonnectCleanupFinalizer},
+		},
+		Spec: configurationv1alpha1.KongSNISpec{
+			CertificateRef: commonv1alpha1.NameRef{Name: certificate.Name},
+		},
+	}
+
+	cl := fake.NewClientBuilder().
+		WithScheme(scheme.Get()).
+		WithObjects(sni, certificate).
+		WithStatusSubresource(sni).
+		Build()
+
+	r := &KonnectEntityReconciler[configurationv1alpha1.KongSNI, *configurationv1alpha1.KongSNI]{
+		Client: cl,
+	}
+
+	res, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(sni)})
+	require.NoError(t, err)
+	assert.Equal(t, ctrl.Result{}, res)
+
+	updated := &configurationv1alpha1.KongSNI{}
+	err = cl.Get(ctx, client.ObjectKeyFromObject(sni), updated)
+	if apierrors.IsNotFound(err) {
+		return
+	}
+	require.NoError(t, err)
+	assert.NotContains(t, updated.GetFinalizers(), KonnectCleanupFinalizer)
 }

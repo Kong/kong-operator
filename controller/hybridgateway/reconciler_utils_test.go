@@ -276,6 +276,109 @@ func TestCleanOrphanedResources(t *testing.T) {
 	}
 }
 
+func TestCleanOrphanedResources_DeletingCertificateDoesNotBlockSNIOrphanCleanup(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	certificateGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongCertificate"}
+	sniGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongSNI"}
+
+	root := &gwtypes.Gateway{}
+	root.SetName("same-namespace-with-https-listener")
+	root.SetNamespace("gateway-conformance-infra")
+	root.SetUID("gateway-uid")
+	root.SetGroupVersionKind(schema.GroupVersionKind{Group: gatewayv1.GroupVersion.Group, Version: gatewayv1.GroupVersion.Version, Kind: "Gateway"})
+
+	ownerLabels := metadata.BuildLabels(root, nil)
+
+	certificate := newUnstructured(root.GetNamespace(), "cert.same-namespace-with-https-listener.443", certificateGVK, ownerLabels)
+	certificate.SetFinalizers([]string{"gateway.konghq.com/konnect-cleanup"})
+	certificate.SetOwnerReferences([]metav1.OwnerReference{{
+		APIVersion: gatewayv1.GroupVersion.String(),
+		Kind:       "Gateway",
+		Name:       root.GetName(),
+		UID:        root.GetUID(),
+	}})
+	now := metav1.Now()
+	certificate.SetDeletionTimestamp(&now)
+
+	sni := newUnstructured(root.GetNamespace(), "cert.same-namespace-with-https-listener.443", sniGVK, ownerLabels)
+	sni.SetOwnerReferences([]metav1.OwnerReference{{
+		APIVersion: gatewayv1.GroupVersion.String(),
+		Kind:       "Gateway",
+		Name:       root.GetName(),
+		UID:        root.GetUID(),
+	}})
+
+	cl := fake.NewClientBuilder().
+		WithScheme(runtime.NewScheme()).
+		WithObjects(&certificate, &sni).
+		Build()
+
+	conv := &fakeGatewayConverter{
+		gvks: []schema.GroupVersionKind{certificateGVK, sniGVK},
+		root: *root,
+	}
+
+	requeue, err := cleanOrphanedResources(ctx, cl, logger, conv)
+	require.NoError(t, err)
+	assert.True(t, requeue)
+
+	sniList := &unstructured.UnstructuredList{}
+	sniList.SetGroupVersionKind(sniGVK)
+	require.NoError(t, cl.List(ctx, sniList))
+	assert.Empty(t, sniList.Items, "KongSNI orphan should be deleted even when KongCertificate is already terminating")
+
+	certificateList := &unstructured.UnstructuredList{}
+	certificateList.SetGroupVersionKind(certificateGVK)
+	require.NoError(t, cl.List(ctx, certificateList))
+	require.Len(t, certificateList.Items, 1)
+	assert.False(t, certificateList.Items[0].GetDeletionTimestamp().IsZero())
+}
+
+func TestCleanOrphanedResources_DeletingResourcesKeepRequeueingUntilGone(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	certificateGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongCertificate"}
+	sniGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongSNI"}
+
+	root := &gwtypes.Gateway{}
+	root.SetName("same-namespace-with-https-listener")
+	root.SetNamespace("gateway-conformance-infra")
+	root.SetUID("gateway-uid")
+	root.SetGroupVersionKind(schema.GroupVersionKind{Group: gatewayv1.GroupVersion.Group, Version: gatewayv1.GroupVersion.Version, Kind: "Gateway"})
+
+	ownerLabels := metadata.BuildLabels(root, nil)
+	now := metav1.Now()
+
+	certificate := newUnstructured(root.GetNamespace(), "cert.same-namespace-with-https-listener.443", certificateGVK, ownerLabels)
+	certificate.SetDeletionTimestamp(&now)
+	certificate.SetFinalizers([]string{"gateway.konghq.com/konnect-cleanup"})
+
+	sni := newUnstructured(root.GetNamespace(), "cert.same-namespace-with-https-listener.443", sniGVK, ownerLabels)
+	sni.SetDeletionTimestamp(&now)
+	sni.SetFinalizers([]string{"gateway.konghq.com/konnect-cleanup"})
+
+	cl := fake.NewClientBuilder().
+		WithScheme(runtime.NewScheme()).
+		WithObjects(&certificate, &sni).
+		Build()
+
+	conv := &fakeGatewayConverter{
+		gvks: []schema.GroupVersionKind{certificateGVK, sniGVK},
+		root: *root,
+	}
+
+	requeue, err := cleanOrphanedResources(ctx, cl, logger, conv)
+	require.NoError(t, err)
+	assert.True(t, requeue, "cleanup should keep requeueing while owned resources are still terminating")
+
+	requeue, err = cleanOrphanedResources(ctx, fake.NewClientBuilder().Build(), logger, conv)
+	require.NoError(t, err)
+	assert.False(t, requeue, "cleanup should stop requeueing once terminating resources are gone")
+}
+
 // Minimal fake converter for HTTPRoute
 
 type fakeHTTPRouteConverter struct {
@@ -324,6 +427,32 @@ func (f *fakeHTTPRouteConverter) HandleOrphanedResource(ctx context.Context, log
 	}
 
 	// Annotation exists and matches our root - allow deletion
+	return false, nil
+}
+
+type fakeGatewayConverter struct {
+	desired []unstructured.Unstructured
+	gvks    []schema.GroupVersionKind
+	root    gwtypes.Gateway
+}
+
+func (f *fakeGatewayConverter) GetOutputStore(ctx context.Context, logger logr.Logger) ([]unstructured.Unstructured, error) {
+	return f.desired, nil
+}
+
+func (f *fakeGatewayConverter) GetExpectedGVKs() []schema.GroupVersionKind { return f.gvks }
+
+func (f *fakeGatewayConverter) GetRootObject() gwtypes.Gateway { return f.root }
+
+func (f *fakeGatewayConverter) Translate(ctx context.Context, logger logr.Logger) (int, error) {
+	return len(f.desired), nil
+}
+
+func (f *fakeGatewayConverter) UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (updated bool, stop bool, err error) {
+	return false, false, nil
+}
+
+func (f *fakeGatewayConverter) HandleOrphanedResource(ctx context.Context, logger logr.Logger, resource *unstructured.Unstructured) (bool, error) {
 	return false, nil
 }
 

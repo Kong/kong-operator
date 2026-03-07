@@ -170,6 +170,24 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 					}
 					return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
 				}
+				if !ent.GetDeletionTimestamp().IsZero() {
+					return ctrl.Result{}, nil
+				}
+			}
+		}
+		if _, ok := errors.AsType[controlplane.ReferencedControlPlaneIsBeingDeletedError](err); ok && !ent.GetDeletionTimestamp().IsZero() {
+			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
+				if err := r.Client.Update(ctx, ent); err != nil {
+					if apierrors.IsConflict(err) {
+						return ctrl.Result{Requeue: true}, nil
+					}
+					// in case the finalizer removal fails because the resource does not exist, ignore the error.
+					if apierrors.IsNotFound(err) {
+						return ctrl.Result{}, nil
+					}
+					return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
+				}
+				return ctrl.Result{}, nil
 			}
 		}
 		return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
@@ -331,13 +349,17 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		}
 
 		_, referencedCPDoesNotExist := errors.AsType[controlplane.ReferencedControlPlaneDoesNotExistError](err)
+		_, referencedCPIsBeingDeleted := errors.AsType[controlplane.ReferencedControlPlaneIsBeingDeletedError](err)
 		_, referencedKongCertificateDoesNotExist := errors.AsType[ReferencedKongCertificateDoesNotExistError](err)
+		_, referencedKongCertificateIsBeingDeleted := errors.AsType[ReferencedKongCertificateIsBeingDeletedError](err)
 
 		// If the referenced KongCertificate is not found or is being deleted
 		// and the object is being deleted, remove the finalizer and let the
 		// deletion proceed without trying to delete the entity from Konnect
 		// as the KongCertificate deletion will take care of it on the Konnect side.
-		if referencedKongCertificateDoesNotExist || referencedCPDoesNotExist {
+		if referencedKongCertificateDoesNotExist || referencedCPDoesNotExist ||
+			(referencedKongCertificateIsBeingDeleted && !ent.GetDeletionTimestamp().IsZero()) ||
+			(referencedCPIsBeingDeleted && !ent.GetDeletionTimestamp().IsZero()) {
 			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 				if err := r.Client.Update(ctx, ent); err != nil {
 					if apierrors.IsConflict(err) {
@@ -353,6 +375,9 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 					"finalizer", KonnectCleanupFinalizer,
 				)
 			}
+		}
+		if !ent.GetDeletionTimestamp().IsZero() {
+			return ctrl.Result{}, nil
 		}
 
 		return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)

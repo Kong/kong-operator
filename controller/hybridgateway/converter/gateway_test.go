@@ -8,6 +8,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -1731,6 +1732,95 @@ func TestGatewayConverter_GetOutputStore(t *testing.T) {
 //go:fix inline
 func ptrTo[T any](v T) *T {
 	return new(v)
+}
+
+func TestGatewayConverter_UpdateRootObjectStatus(t *testing.T) {
+	t.Run("programs http listener status", func(t *testing.T) {
+		gateway := &gwtypes.Gateway{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "http-gateway",
+				Namespace:  "default",
+				Generation: 1,
+			},
+			Spec: gatewayv1.GatewaySpec{
+				GatewayClassName: "kong",
+				Listeners: []gatewayv1.Listener{{
+					Name:     "http",
+					Port:     80,
+					Protocol: gatewayv1.HTTPProtocolType,
+				}},
+			},
+		}
+
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithStatusSubresource(gateway).WithObjects(gateway).Build()
+		converter := newGatewayConverter(gateway, fakeClient).(*gatewayConverter)
+
+		updated, stop, err := converter.UpdateRootObjectStatus(context.Background(), logr.Discard())
+		require.NoError(t, err)
+		require.True(t, updated)
+		require.False(t, stop)
+
+		listener := gateway.Status.Listeners[0]
+		require.Len(t, gateway.Status.Listeners, 1)
+		require.NotNil(t, apimeta.FindStatusCondition(listener.Conditions, string(gatewayv1.ListenerConditionAccepted)))
+		require.Equal(t, metav1.ConditionTrue, apimeta.FindStatusCondition(listener.Conditions, string(gatewayv1.ListenerConditionAccepted)).Status)
+		require.NotNil(t, apimeta.FindStatusCondition(listener.Conditions, string(gatewayv1.ListenerConditionProgrammed)))
+		require.Equal(t, metav1.ConditionTrue, apimeta.FindStatusCondition(listener.Conditions, string(gatewayv1.ListenerConditionProgrammed)).Status)
+		require.NotNil(t, apimeta.FindStatusCondition(gateway.Status.Conditions, string(gatewayv1.GatewayConditionProgrammed)))
+		require.Equal(t, metav1.ConditionTrue, apimeta.FindStatusCondition(gateway.Status.Conditions, string(gatewayv1.GatewayConditionProgrammed)).Status)
+
+		updated, stop, err = converter.UpdateRootObjectStatus(context.Background(), logr.Discard())
+		require.NoError(t, err)
+		require.False(t, updated)
+		require.False(t, stop)
+	})
+
+	t.Run("keeps tls listener unprogrammed when certificate is unresolved", func(t *testing.T) {
+		mode := gatewayv1.TLSModeTerminate
+		gateway := &gwtypes.Gateway{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "tls-gateway",
+				Namespace:  "default",
+				Generation: 1,
+			},
+			Spec: gatewayv1.GatewaySpec{
+				GatewayClassName: "kong",
+				Listeners: []gatewayv1.Listener{{
+					Name:     "https",
+					Port:     443,
+					Protocol: gatewayv1.HTTPSProtocolType,
+					TLS: &gatewayv1.ListenerTLSConfig{
+						Mode: &mode,
+						CertificateRefs: []gatewayv1.SecretObjectReference{{
+							Name: "missing-secret",
+						}},
+					},
+				}},
+			},
+		}
+
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithStatusSubresource(gateway).WithObjects(gateway).Build()
+		converter := newGatewayConverter(gateway, fakeClient).(*gatewayConverter)
+
+		updated, stop, err := converter.UpdateRootObjectStatus(context.Background(), logr.Discard())
+		require.NoError(t, err)
+		require.True(t, updated)
+		require.False(t, stop)
+
+		listener := gateway.Status.Listeners[0]
+		resolvedRefs := apimeta.FindStatusCondition(listener.Conditions, string(gatewayv1.ListenerConditionResolvedRefs))
+		require.NotNil(t, resolvedRefs)
+		require.Equal(t, metav1.ConditionFalse, resolvedRefs.Status)
+		require.Equal(t, string(gatewayv1.ListenerReasonInvalidCertificateRef), resolvedRefs.Reason)
+
+		programmed := apimeta.FindStatusCondition(listener.Conditions, string(gatewayv1.ListenerConditionProgrammed))
+		require.NotNil(t, programmed)
+		require.Equal(t, metav1.ConditionFalse, programmed.Status)
+
+		gatewayProgrammed := apimeta.FindStatusCondition(gateway.Status.Conditions, string(gatewayv1.GatewayConditionProgrammed))
+		require.NotNil(t, gatewayProgrammed)
+		require.Equal(t, metav1.ConditionFalse, gatewayProgrammed.Status)
+	})
 }
 
 func TestHandleOrphanedResource(t *testing.T) {

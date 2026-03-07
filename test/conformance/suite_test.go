@@ -186,7 +186,7 @@ func startControllerManager(metadata metadata.Info) <-chan struct{} {
 func waitForConformanceGatewaysToCleanup(ctx context.Context, gw gwapiv1.GatewayV1Interface, logf func(string, ...any)) error {
 	var (
 		gwClient         = gw.Gateways(conformanceInfraNamespace)
-		ticker           = time.NewTicker(100 * time.Millisecond)
+		ticker           = time.NewTicker(500 * time.Millisecond)
 		gatewayRemaining = 0
 	)
 	defer ticker.Stop()
