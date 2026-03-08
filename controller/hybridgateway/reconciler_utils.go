@@ -85,6 +85,11 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 	// In order to ensure proper ordering of resource creation/update, track the kind of the last created resource in the
 	// loop and skip further processing if we move to a different desired kind which may dependend on the just generated
 	// resource.
+	//
+	// Intentional: when dependency gating sets a specific kind in stopAtKind (e.g., waiting for
+	// KongService/KongUpstream to become Programmed), we conservatively skip all other kinds until
+	// that prerequisite kind is enforced. This avoids out-of-order application that could cause Konnect
+	// rejects (e.g., creating Routes/Targets before Services/Upstreams are ready).
 	stopAtKind := ""
 	for i, desired := range desiredObjects {
 		if stopAtKind != "" && desired.GetKind() != stopAtKind {
