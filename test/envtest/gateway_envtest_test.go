@@ -321,6 +321,10 @@ func TestGatewayInfrastructureLabels(t *testing.T) {
 			t.Logf("ingress service annotation %q = %q, want %q", infraAnnotation, svc.Annotations[infraAnnotation], infraAnnotValue)
 			return false
 		}
+		if svc.Labels[consts.GatewayNameLabel] != gw.Name {
+			t.Logf("ingress service missing gateway-name label, got %q want %q", svc.Labels[consts.GatewayNameLabel], gw.Name)
+			return false
+		}
 		return true
 	}, waitTime, pollTime, "infrastructure labels/annotations did not appear on ingress Service")
 
@@ -350,6 +354,10 @@ func TestGatewayInfrastructureLabels(t *testing.T) {
 		}
 		if podAnnotations[infraAnnotation] != infraAnnotValue {
 			t.Logf("pod template annotation %q = %q, want %q", infraAnnotation, podAnnotations[infraAnnotation], infraAnnotValue)
+			return false
+		}
+		if podLabels[consts.GatewayNameLabel] != gw.Name {
+			t.Logf("pod template missing gateway-name label, got %q want %q", podLabels[consts.GatewayNameLabel], gw.Name)
 			return false
 		}
 		return true

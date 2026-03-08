@@ -2748,3 +2748,79 @@ func TestMergeInfrastructureIntoDataPlane(t *testing.T) {
 		})
 	}
 }
+
+func TestSetGatewayNameLabelInDataPlane(t *testing.T) {
+	const gatewayName = "my-gateway"
+
+	t.Run("empty DataPlaneOptions gets gateway-name label on pod template and service", func(t *testing.T) {
+		spec := &operatorv1beta1.DataPlaneOptions{}
+		setGatewayNameLabelInDataPlane(spec, gatewayName)
+
+		require.NotNil(t, spec.Deployment.PodTemplateSpec)
+		require.Equal(t, gatewayName, spec.Deployment.PodTemplateSpec.Labels[consts.GatewayNameLabel])
+
+		require.NotNil(t, spec.Network.Services)
+		require.NotNil(t, spec.Network.Services.Ingress)
+		require.Equal(t,
+			operatorv1beta1.LabelValue(gatewayName),
+			spec.Network.Services.Ingress.Labels[operatorv1beta1.LabelName(consts.GatewayNameLabel)],
+		)
+	})
+
+	t.Run("pre-existing labels are preserved", func(t *testing.T) {
+		spec := &operatorv1beta1.DataPlaneOptions{
+			Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+				DeploymentOptions: operatorv1beta1.DeploymentOptions{
+					PodTemplateSpec: &corev1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{
+							Labels: map[string]string{"existing": "pod-label"},
+						},
+					},
+				},
+			},
+			Network: operatorv1beta1.DataPlaneNetworkOptions{
+				Services: &operatorv1beta1.DataPlaneServices{
+					Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+						ServiceOptions: operatorv1beta1.ServiceOptions{
+							Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
+								"existing": "svc-label",
+							},
+						},
+					},
+				},
+			},
+		}
+		setGatewayNameLabelInDataPlane(spec, gatewayName)
+
+		require.Equal(t, "pod-label", spec.Deployment.PodTemplateSpec.Labels["existing"])
+		require.Equal(t, gatewayName, spec.Deployment.PodTemplateSpec.Labels[consts.GatewayNameLabel])
+
+		require.Equal(t, operatorv1beta1.LabelValue("svc-label"), spec.Network.Services.Ingress.Labels["existing"])
+		require.Equal(t,
+			operatorv1beta1.LabelValue(gatewayName),
+			spec.Network.Services.Ingress.Labels[operatorv1beta1.LabelName(consts.GatewayNameLabel)],
+		)
+	})
+
+	t.Run("gateway-name label is set after mergeInfrastructureIntoDataPlane", func(t *testing.T) {
+		spec := &operatorv1beta1.DataPlaneOptions{}
+		infra := &gatewayv1.GatewayInfrastructure{
+			Labels: map[gatewayv1.LabelKey]gatewayv1.LabelValue{
+				"infra-label": "infra-value",
+			},
+		}
+		mergeInfrastructureIntoDataPlane(spec, infra)
+		setGatewayNameLabelInDataPlane(spec, gatewayName)
+
+		// Both infra label and gateway-name label are present on pod template.
+		require.Equal(t, "infra-value", spec.Deployment.PodTemplateSpec.Labels["infra-label"])
+		require.Equal(t, gatewayName, spec.Deployment.PodTemplateSpec.Labels[consts.GatewayNameLabel])
+
+		// Both infra label and gateway-name label are present on service.
+		require.Equal(t, operatorv1beta1.LabelValue("infra-value"), spec.Network.Services.Ingress.Labels["infra-label"])
+		require.Equal(t,
+			operatorv1beta1.LabelValue(gatewayName),
+			spec.Network.Services.Ingress.Labels[operatorv1beta1.LabelName(consts.GatewayNameLabel)],
+		)
+	})
+}
