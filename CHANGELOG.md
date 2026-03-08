@@ -97,6 +97,12 @@
   parent statuses set by another instance managing a different Gateway,
   breaking cross-namespace HTTPRoute backend references via `ReferenceGrant`.
   [#3524](https://github.com/Kong/kong-operator/pull/3524)
+- Fix `KonnectGatewayControlPlane` not setting `Programmed=False` when its
+  `KonnectAPIAuthConfiguration` reference cannot be resolved (e.g. the auth
+  config does not exist, or a cross-namespace reference lacks a
+  `KongReferenceGrant`). Both `APIAuthResolvedRef` and `Programmed` conditions
+  are now set to `False` atomically.
+  [#3526](https://github.com/Kong/kong-operator/pull/3526)
 
 ## [v2.1.2]
 
