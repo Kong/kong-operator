@@ -11,36 +11,41 @@ import (
 )
 
 func TestLabelObjForGateway(t *testing.T) {
+	const testGatewayName = "test-gateway"
+
 	for _, tt := range []struct {
 		name     string
 		input    map[string]string
 		expected map[string]string
 	}{
 		{
-			name: "a dataplane with empty labels receives a gateway managed label",
+			name: "a dataplane with empty labels receives gateway managed and gateway-name labels",
 			expected: map[string]string{
 				consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue,
+				consts.GatewayNameLabel:              testGatewayName,
 			},
 		},
 		{
-			name:  "a dataplane with no labels receives a gateway managed label",
+			name:  "a dataplane with no labels receives gateway managed and gateway-name labels",
 			input: make(map[string]string),
 			expected: map[string]string{
 				consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue,
+				consts.GatewayNameLabel:              testGatewayName,
 			},
 		},
 		{
-			name: "a dataplane with one label receives a gateway managed label in addition",
+			name: "a dataplane with one label receives gateway managed and gateway-name labels in addition",
 			input: map[string]string{
 				"url": "konghq.com",
 			},
 			expected: map[string]string{
 				"url":                                "konghq.com",
 				consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue,
+				consts.GatewayNameLabel:              testGatewayName,
 			},
 		},
 		{
-			name: "a dataplane with several labels receives a gateway managed label in addition",
+			name: "a dataplane with several labels receives gateway managed and gateway-name labels in addition",
 			input: map[string]string{
 				"test1": "1",
 				"test2": "2",
@@ -53,17 +58,20 @@ func TestLabelObjForGateway(t *testing.T) {
 				"test3":                              "3",
 				"test4":                              "4",
 				consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue,
+				consts.GatewayNameLabel:              testGatewayName,
 			},
 		},
 		{
-			name: "a dataplane with an existing management label gets updated",
+			name: "a dataplane with existing management and gateway-name labels gets updated",
 			input: map[string]string{
 				"test1":                              "1",
 				consts.GatewayOperatorManagedByLabel: "other",
+				consts.GatewayNameLabel:              "old-gateway",
 			},
 			expected: map[string]string{
 				"test1":                              "1",
 				consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue,
+				consts.GatewayNameLabel:              testGatewayName,
 			},
 		},
 	} {
@@ -73,7 +81,7 @@ func TestLabelObjForGateway(t *testing.T) {
 					Labels: tt.input,
 				},
 			}
-			LabelObjectAsGatewayManaged(dataplane)
+			LabelObjectAsGatewayManaged(dataplane, testGatewayName)
 			assert.Equal(t, tt.expected, dataplane.GetLabels())
 		})
 	}

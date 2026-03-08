@@ -16,10 +16,12 @@ import (
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	dpreconciler "github.com/kong/kong-operator/v2/controller/dataplane"
 	kogateway "github.com/kong/kong-operator/v2/controller/gateway"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/util"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
@@ -362,4 +364,54 @@ func TestGatewayInfrastructureLabels(t *testing.T) {
 		}
 		return true
 	}, waitTime, pollTime, "infrastructure labels/annotations did not appear on Deployment pod template")
+
+	// Verify the DataPlane CRD object itself carries the gateway-name label.
+	t.Log("verifying gateway-name label is set on the DataPlane object")
+	require.Eventually(t, func() bool {
+		var dpList operatorv1beta1.DataPlaneList
+		if err := c.List(ctx, &dpList,
+			ctrlclient.InNamespace(ns.Name),
+			ctrlclient.MatchingLabels{
+				consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue,
+			},
+		); err != nil {
+			t.Logf("failed listing DataPlanes: %v", err)
+			return false
+		}
+		if len(dpList.Items) == 0 {
+			t.Log("no DataPlanes found yet")
+			return false
+		}
+		dp := &dpList.Items[0]
+		if dp.Labels[consts.GatewayNameLabel] != gw.Name {
+			t.Logf("DataPlane missing gateway-name label, got %q want %q", dp.Labels[consts.GatewayNameLabel], gw.Name)
+			return false
+		}
+		return true
+	}, waitTime, pollTime, "gateway-name label did not appear on DataPlane object")
+
+	// Verify the ControlPlane CRD object itself carries the gateway-name label.
+	t.Log("verifying gateway-name label is set on the ControlPlane object")
+	require.Eventually(t, func() bool {
+		var cpList gwtypes.ControlPlaneList
+		if err := c.List(ctx, &cpList,
+			ctrlclient.InNamespace(ns.Name),
+			ctrlclient.MatchingLabels{
+				consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue,
+			},
+		); err != nil {
+			t.Logf("failed listing ControlPlanes: %v", err)
+			return false
+		}
+		if len(cpList.Items) == 0 {
+			t.Log("no ControlPlanes found yet")
+			return false
+		}
+		cp := &cpList.Items[0]
+		if cp.Labels[consts.GatewayNameLabel] != gw.Name {
+			t.Logf("ControlPlane missing gateway-name label, got %q want %q", cp.Labels[consts.GatewayNameLabel], gw.Name)
+			return false
+		}
+		return true
+	}, waitTime, pollTime, "gateway-name label did not appear on ControlPlane object")
 }
