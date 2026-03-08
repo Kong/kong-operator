@@ -63,6 +63,11 @@
   When both a `GatewayConfiguration` and `Gateway.spec.infrastructure` specify the same
   key, the infrastructure value takes precedence.
   [#3412](https://github.com/Kong/kong-operator/pull/3412)
+- Propagate the GEP-1762 `gateway.networking.k8s.io/gateway-name` label to all
+  operator-level resources created by the Gateway controller: `DataPlane`'s `Service` and `Pods`, as well as
+  `DataPlane` it self, `ControlPlane`, `KonnectGatewayControlPlane`, `KonnectExtension`, and
+  `NetworkPolicy`.
+  [#3531](https://github.com/Kong/kong-operator/pull/3531)
 
 ### Fixes
 
