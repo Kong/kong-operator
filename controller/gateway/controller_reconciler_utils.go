@@ -64,6 +64,9 @@ func (r *Reconciler) createDataPlane(
 	}
 	// Merge Gateway.spec.infrastructure labels/annotations on top of GatewayConfig options.
 	mergeInfrastructureIntoDataPlane(&dataplane.Spec.DataPlaneOptions, gateway.Spec.Infrastructure)
+	// Add the GEP-1762 gateway-name label unconditionally (after mergeInfrastructureIntoDataPlane
+	// so it cannot be overridden by spec.infrastructure).
+	setGatewayNameLabelInDataPlane(&dataplane.Spec.DataPlaneOptions, gateway.Name)
 	setDataPlaneOptionsDefaults(&dataplane.Spec.DataPlaneOptions, r.DefaultDataPlaneImage)
 	if err := setDataPlaneIngressServicePorts(&dataplane.Spec.DataPlaneOptions, gateway.Spec.Listeners, gatewayConfig.Spec.ListenersOptions); err != nil {
 		return nil, err
@@ -364,6 +367,34 @@ func mergeInfrastructureIntoDataPlane(
 			maps.Copy(spec.Deployment.PodTemplateSpec.Annotations, infraAnnotations)
 		}
 	}
+}
+
+// setGatewayNameLabelInDataPlane adds the gateway.networking.k8s.io/gateway-name
+// label (GEP-1762) to the DataPlane pod template and ingress Service so that the
+// Gateway API conformance test can locate them via label selector.
+// This is always called after mergeInfrastructureIntoDataPlane so that the label
+// cannot be accidentally overridden by spec.infrastructure.
+func setGatewayNameLabelInDataPlane(spec *operatorv1beta1.DataPlaneOptions, gatewayName string) {
+	// --- Pod template ---
+	if spec.Deployment.PodTemplateSpec == nil {
+		spec.Deployment.PodTemplateSpec = &corev1.PodTemplateSpec{}
+	}
+	if spec.Deployment.PodTemplateSpec.Labels == nil {
+		spec.Deployment.PodTemplateSpec.Labels = make(map[string]string)
+	}
+	spec.Deployment.PodTemplateSpec.Labels[consts.GatewayNameLabel] = gatewayName
+
+	// --- Ingress Service ---
+	if spec.Network.Services == nil {
+		spec.Network.Services = &operatorv1beta1.DataPlaneServices{}
+	}
+	if spec.Network.Services.Ingress == nil {
+		spec.Network.Services.Ingress = &operatorv1beta1.DataPlaneServiceOptions{}
+	}
+	if spec.Network.Services.Ingress.Labels == nil {
+		spec.Network.Services.Ingress.Labels = make(map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue)
+	}
+	spec.Network.Services.Ingress.Labels[operatorv1beta1.LabelName(consts.GatewayNameLabel)] = operatorv1beta1.LabelValue(gatewayName)
 }
 
 func gatewayAddressesFromService(svc corev1.Service) ([]gwtypes.GatewayStatusAddress, error) {
