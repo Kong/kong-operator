@@ -75,7 +75,7 @@ func (r *Reconciler) createDataPlane(
 	dataplane.Spec.Extensions = extensions.MergeExtensionsForDataPlane(gateway, gatewayConfig.Spec.Extensions, konnectExtension)
 
 	k8sutils.SetOwnerForObject(dataplane, gateway)
-	gatewayutils.LabelObjectAsGatewayManaged(dataplane)
+	gatewayutils.LabelObjectAsGatewayManaged(dataplane, gateway.Name)
 	err := r.Create(ctx, dataplane)
 	if err != nil {
 		return nil, err
@@ -104,7 +104,7 @@ func (r *Reconciler) createControlPlane(
 	controlplane.Spec.Extensions = extensions.MergeExtensions(gatewayConfig.Spec.Extensions, controlplane)
 
 	k8sutils.SetOwnerForObject(controlplane, gateway)
-	gatewayutils.LabelObjectAsGatewayManaged(controlplane)
+	gatewayutils.LabelObjectAsGatewayManaged(controlplane, gateway.Name)
 	return r.Create(ctx, controlplane)
 }
 
@@ -141,7 +141,7 @@ func (r *Reconciler) createKonnectGatewayControlPlane(
 	}
 
 	k8sutils.SetOwnerForObject(kgcp, gateway)
-	gatewayutils.LabelObjectAsGatewayManaged(kgcp)
+	gatewayutils.LabelObjectAsGatewayManaged(kgcp, gateway.Name)
 
 	if err := r.Create(ctx, kgcp); err != nil {
 		return nil, err
@@ -176,7 +176,7 @@ func (r *Reconciler) createKonnectExtension(
 	}
 
 	k8sutils.SetOwnerForObject(konnectExt, gateway)
-	gatewayutils.LabelObjectAsGatewayManaged(konnectExt)
+	gatewayutils.LabelObjectAsGatewayManaged(konnectExt, gateway.Name)
 
 	if err := r.Create(ctx, konnectExt); err != nil {
 		return nil, err
@@ -553,7 +553,7 @@ func (r *Reconciler) ensureDataPlaneHasNetworkPolicy(
 		return false, fmt.Errorf("failed generating network policy for DataPlane %s: %w", dataplane.Name, err)
 	}
 	k8sutils.SetOwnerForObject(generatedPolicy, gateway)
-	gatewayutils.LabelObjectAsGatewayManaged(generatedPolicy)
+	gatewayutils.LabelObjectAsGatewayManaged(generatedPolicy, gateway.Name)
 
 	if count == 1 {
 		var (

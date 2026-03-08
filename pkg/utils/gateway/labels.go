@@ -11,13 +11,15 @@ import (
 // -----------------------------------------------------------------------------
 
 // LabelObjectAsGatewayManaged ensures that labels are set on the provided
-// object to signal that it's owned by a Gateway resource and that it's
-// lifecycle is managed by this operator.
-func LabelObjectAsGatewayManaged(obj client.Object) {
+// object to signal that it's owned by a Gateway resource and that its
+// lifecycle is managed by this operator. gatewayName is the name of the
+// owning Gateway and is set as the GEP-1762 gateway-name label.
+func LabelObjectAsGatewayManaged(obj client.Object, gatewayName string) {
 	labels := obj.GetLabels()
 	if labels == nil {
 		labels = make(map[string]string)
 	}
 	labels[consts.GatewayOperatorManagedByLabel] = consts.GatewayManagedLabelValue
+	labels[consts.GatewayNameLabel] = gatewayName
 	obj.SetLabels(labels)
 }
