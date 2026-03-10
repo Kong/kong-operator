@@ -695,6 +695,7 @@ func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 		name             string
 		listeners        []gwtypes.Listener
 		listenersOptions []operatorv2beta1.GatewayConfigurationListenerOptions
+		portMap          map[int]int
 		expectedPorts    []operatorv1beta1.DataPlaneServicePort
 		expectedError    error
 	}{
@@ -714,7 +715,13 @@ func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 					Protocol: gatewayv1.HTTPSProtocolType,
 					Port:     gatewayv1.PortNumber(443),
 				},
+				{
+					Name:     "tls",
+					Protocol: gatewayv1.HTTPSProtocolType,
+					Port:     gatewayv1.PortNumber(9443),
+				},
 			},
+			portMap: map[int]int{9443: 9443},
 			expectedPorts: []operatorv1beta1.DataPlaneServicePort{
 				{
 					Name:       "http",
@@ -725,6 +732,11 @@ func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 					Name:       "https",
 					Port:       443,
 					TargetPort: intstr.FromInt(consts.DataPlaneProxySSLPort),
+				},
+				{
+					Name:       "tls",
+					Port:       9443,
+					TargetPort: intstr.FromInt(9443),
 				},
 			},
 		},
@@ -812,7 +824,7 @@ func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := setDataPlaneIngressServicePorts(&operatorv1beta1.DataPlaneOptions{}, tc.listeners, tc.listenersOptions, nil)
+			err := setDataPlaneIngressServicePorts(&operatorv1beta1.DataPlaneOptions{}, tc.listeners, tc.listenersOptions, tc.portMap)
 			if tc.expectedError == nil {
 				require.NoError(t, err)
 			} else {
