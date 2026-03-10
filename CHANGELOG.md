@@ -71,6 +71,11 @@
 - Added `--konnect-request-timeout` flag to control Konnect API calls timeout.
   Be default that is set to 10 seconds.
   [#3513](https://github.com/Kong/kong-operator/pull/3513)
+- Added `sticky_sessions_cookie` and `sticky_sessions_cookie_path` fields to
+  `KongUpstream` CRD, enabling sticky session configuration for Kong Gateway 3.11+
+  upstreams synced to Konnect. A CEL validation rule enforces that
+  `sticky_sessions_cookie` is set when `algorithm` is `sticky-sessions`.
+  [#3555](https://github.com/Kong/kong-operator/pull/3555)
 
 ### Fixes
 
