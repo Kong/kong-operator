@@ -191,27 +191,6 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 	return stateChanged && waitingForSkipped, nil
 }
 
-// enforceStatus updates the status of the root object managed by the provided APIConverter.
-// This function delegates to the converter's UpdateRootObjectStatus method to handle
-// status condition management and cluster updates.
-//
-// Parameters:
-//   - ctx: The context for API calls
-//   - logger: Logger for debugging information
-//   - conv: The APIConverter that manages the root object and its status
-//
-// Returns:
-//   - bool: true if the status was actually updated in the cluster
-//   - bool: true if the reconciliation loop should stop further processing
-//   - error: Any error that occurred during status processing
-//
-// This is a generic wrapper function that works with any converter implementing
-// the APIConverter interface, providing a consistent interface for status enforcement
-// across different resource types.
-func enforceStatus[t converter.RootObject](ctx context.Context, logger logr.Logger, conv converter.APIConverter[t]) (updated bool, stop bool, err error) {
-	return conv.UpdateRootObjectStatus(ctx, logger)
-}
-
 // cleanOrphanedResources deletes resources previously managed by the converter but no longer present in the desired output.
 //
 // The function performs the following operations:
