@@ -454,9 +454,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-        - router-flavor: traditional_compatible
-        - router-flavor: expressions
+        router-flavor: [traditional_compatible, expressions]
+        gateway-type: [standard, hybrid]
     steps:
     - name: Harden Runner
       uses: step-security/harden-runner@a90bcbc6539c36a85cdfeb73f7e2f433735f215b # v2.15.0
@@ -499,14 +498,18 @@ jobs:
     - name: run conformance tests
       run: make test.conformance
       env:
-        GOTESTSUM_JUNITFILE: conformance-tests-${{ matrix.router-flavor }}.xml
+        GOTESTSUM_JUNITFILE: conformance-tests-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}.xml
         TEST_KONG_ROUTER_FLAVOR: ${{ matrix.router-flavor }}
+        KONG_TEST_CONFORMANCE_GATEWAY_TYPE: ${{ matrix.gateway-type }}
+        KONG_TEST_KONNECT_ACCESS_TOKEN: ${{ matrix.gateway-type == 'hybrid' && secrets.KONG_TEST_KONNECT_ACCESS_TOKEN || '' }}
+        KONG_TEST_KONNECT_SERVER_URL: ${{ matrix.gateway-type == 'hybrid' && 'us.api.konghq.tech' || '' }}
+        KONG_TEST_FORCE_CLEANUP: "true"
 
     - name: upload diagnostics
       if: ${{ always() }}
       uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
       with:
-        name: diagnostics-conformance-${{ matrix.router-flavor }}
+        name: diagnostics-conformance-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
 
@@ -514,20 +517,20 @@ jobs:
       if: ${{ always() }}
       uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
       with:
-        name: tests-report-conformance-${{ matrix.router-flavor }}
-        path: conformance-tests-${{ matrix.router-flavor }}.xml
+        name: tests-report-conformance-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}
+        path: conformance-tests-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}.xml
 
     - name: collect conformance report
       uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
       with:
-        name: conformance-report-${{ matrix.router-flavor }}
+        name: conformance-report-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}
         path: experimental-*-report.yaml
 
     - name: upload controller logs
       if: ${{ always() }}
       uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
       with:
-        name: controller-logs-${{ matrix.router-flavor }}
+        name: controller-logs-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}
         path: /tmp/kong-operator-controller-logs*
         if-no-files-found: error
 

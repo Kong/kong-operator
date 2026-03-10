@@ -10253,6 +10253,21 @@ spec:
                             - Cluster
                             - Local
                             type: string
+                          labels:
+                            additionalProperties:
+                              description: LabelValue is a label value with constraints matching Kubernetes label value requirements.
+                              maxLength: 63
+                              minLength: 0
+                              pattern: ^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$
+                              type: string
+                            description: |-
+                              Labels are an unstructured key value map that may be used to organize and
+                              categorize resources and that are propagated to the DataPlane's ingress Service
+                              by the operator.
+
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+                            maxProperties: 64
+                            type: object
                           name:
                             description: |-
                               Name defines the name of the service.
@@ -19937,6 +19952,21 @@ spec:
                                 - Cluster
                                 - Local
                                 type: string
+                              labels:
+                                additionalProperties:
+                                  description: LabelValue is a label value with constraints matching Kubernetes label value requirements.
+                                  maxLength: 63
+                                  minLength: 0
+                                  pattern: ^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$
+                                  type: string
+                                description: |-
+                                  Labels are an unstructured key value map that may be used to organize and
+                                  categorize resources and that are propagated to the DataPlane's ingress Service
+                                  by the operator.
+
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+                                maxProperties: 64
+                                type: object
                               name:
                                 description: |-
                                   Name defines the name of the service.

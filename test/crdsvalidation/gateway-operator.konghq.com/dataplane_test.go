@@ -437,6 +437,101 @@ func TestDataplane(t *testing.T) {
 				},
 				ExpectedErrorMessage: new("spec.network.services.ingress.ports: Too many: 65: must have at most 64 items"),
 			},
+			{
+				Name: "can specify service ingress labels",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: validDataplaneOptions.Deployment,
+							Network: operatorv1beta1.DataPlaneNetworkOptions{
+								Services: &operatorv1beta1.DataPlaneServices{
+									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+										ServiceOptions: operatorv1beta1.ServiceOptions{
+											Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
+												"environment": "production",
+												"team":        "platform",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "cannot specify service ingress label with value exceeding 63 characters",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: validDataplaneOptions.Deployment,
+							Network: operatorv1beta1.DataPlaneNetworkOptions{
+								Services: &operatorv1beta1.DataPlaneServices{
+									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+										ServiceOptions: operatorv1beta1.ServiceOptions{
+											Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
+												"key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				// ExpectedErrorMessage: new("Too long: may not be more than 63"),
+				// Error message comparison relaxed to be compliant with kubernetes versions older than 1.32
+				// https://github.com/kubernetes/kubernetes/commit/4d0e1c8fd4c6577d90dfa1fca67113b8b0af739a#diff-a19c130ec933dd032483bf5a4713317d644cefbe48783ea76fa5592080bedf0eL238-L242
+				ExpectedErrorMessage: new("Too long: may not be"),
+			},
+			{
+				Name: "cannot specify service ingress label value starting with non-alphanumeric character",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: validDataplaneOptions.Deployment,
+							Network: operatorv1beta1.DataPlaneNetworkOptions{
+								Services: &operatorv1beta1.DataPlaneServices{
+									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+										ServiceOptions: operatorv1beta1.ServiceOptions{
+											Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
+												"key": "-starts-with-dash",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: new("in body should match"),
+			},
+			{
+				Name: "cannot specify service ingress label value ending with non-alphanumeric character",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: validDataplaneOptions.Deployment,
+							Network: operatorv1beta1.DataPlaneNetworkOptions{
+								Services: &operatorv1beta1.DataPlaneServices{
+									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+										ServiceOptions: operatorv1beta1.ServiceOptions{
+											Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
+												"key": "ends-with-dash-",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: new("in body should match"),
+			},
 		}.
 			RunWithConfig(t, cfg, scheme)
 	})

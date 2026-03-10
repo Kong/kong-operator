@@ -13,7 +13,7 @@ gotestsum: "1.13.0"
 # renovate: datasource=github-releases depName=elastic/crd-ref-docs
 crd-ref-docs: "0.3.0"
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-runtime
-setup-envtest: "0.23.1"
+setup-envtest: "0.23.3"
 # renovate: datasource=github-releases depName=rhysd/actionlint
 actionlint: "1.7.11"
 # renovate: datasource=github-releases depName=koalaman/shellcheck

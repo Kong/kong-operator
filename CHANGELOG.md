@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [v2.1.2](#v212)
 - [v2.1.1](#v211)
 - [v2.1.0](#v210)
 - [v2.0.7](#v207)
@@ -56,6 +57,12 @@
   - `--leader-election-renew-deadline`
   - `--leader-election-retry-period`
   [#3345](https://github.com/Kong/kong-operator/pull/3345)
+- Support `Gateway.spec.infrastructure.labels` and `Gateway.spec.infrastructure.annotations`.
+  Labels and annotations set on a Gateway's infrastructure are now propagated to the
+  DataPlane's ingress `Service` metadata and `Deployment` pod template metadata.
+  When both a `GatewayConfiguration` and `Gateway.spec.infrastructure` specify the same
+  key, the infrastructure value takes precedence.
+  [#3412](https://github.com/Kong/kong-operator/pull/3412)
 
 ### Fixes
 
@@ -77,6 +84,38 @@
   [#3463](https://github.com/Kong/kong-operator/pull/3463)
 - Fix counting of route attached to a listener by taking into account hostname intersection between the listener and the route.
   [#3490](https://github.com/Kong/kong-operator/pull/3490)
+- Fix reducing `Secret`s with in use finalizers.
+  [#3506](https://github.com/Kong/kong-operator/pull/3506)
+- Fix `ensureGatewayReferenceStatusRemoved` and `routeHasKongParentStatus` not
+  scoping to the specific Gateway when `GatewayNN` is set.
+  This could cause one ingress-controller instance to erroneously remove route
+  parent statuses set by another instance managing a different Gateway,
+  breaking cross-namespace HTTPRoute backend references via `ReferenceGrant`.
+  [#3524](https://github.com/Kong/kong-operator/pull/3524)
+- Fix `KonnectGatewayControlPlane` not setting `Programmed=False` when its
+  `KonnectAPIAuthConfiguration` reference cannot be resolved (e.g. the auth
+  config does not exist, or a cross-namespace reference lacks a
+  `KongReferenceGrant`). Both `APIAuthResolvedRef` and `Programmed` conditions
+  are now set to `False` atomically.
+  [#3526](https://github.com/Kong/kong-operator/pull/3526)
+
+## [v2.1.2]
+
+> Release date: 2026-03-05
+
+### Fixes
+
+- Fix `ResolvedRefs` status condition on `HTTPRoute` not being updated when a
+  referenced `KongPlugin` is deleted in self-managed ControlPlane mode.
+  [#3206](https://github.com/Kong/kong-operator/pull/3206)
+- Fix handling removal of annotations for DataPlane's Services
+  [#3402](https://github.com/Kong/kong-operator/pull/3402)
+- Fix Gateway controller deleting all DataPlanes when KonnectExtension's
+  `ControlPlaneRefValid` condition is temporarily False due to transient Konnect
+  API failures. DataPlanes now continue serving traffic during Konnect
+  connectivity issues. Added `NotProgrammed` condition reason to differentiate
+  transient failures from permanent reference errors.
+  [#3463](https://github.com/Kong/kong-operator/pull/3463)
 
 ## [v2.1.1]
 
@@ -1787,6 +1826,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.1.2]: https://github.com/Kong/kong-operator/compare/v2.1.1..v2.1.2
 [v2.1.1]: https://github.com/Kong/kong-operator/compare/v2.1.0..v2.1.1
 [v2.1.0]: https://github.com/Kong/kong-operator/compare/v2.0.5..v2.1.0
 [v2.0.7]: https://github.com/Kong/kong-operator/compare/v2.0.6..v2.0.7

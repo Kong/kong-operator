@@ -607,6 +607,8 @@ func (r *Reconciler) provisionDataPlane(
 	}
 	// Don't require setting defaults for DataPlane when using Gateway CRD.
 	setDataPlaneOptionsDefaults(expectedDataPlaneOptions, r.DefaultDataPlaneImage)
+	// Merge Gateway.spec.infrastructure labels/annotations on top of GatewayConfig options.
+	mergeInfrastructureIntoDataPlane(expectedDataPlaneOptions, gateway.Spec.Infrastructure)
 	err = setDataPlaneIngressServicePorts(expectedDataPlaneOptions, gateway.Spec.Listeners, gatewayConfig.Spec.ListenersOptions)
 	if err != nil {
 		errWrap := fmt.Errorf("dataplane creation failed - error: %w", err)

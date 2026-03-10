@@ -410,11 +410,18 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 	}
 
+	programmedFalseCondition := metav1.Condition{
+		Type:    konnectv1alpha1.KonnectEntityProgrammedConditionType,
+		Status:  metav1.ConditionFalse,
+		Reason:  konnectv1alpha1.KonnectEntityProgrammedReasonConditionWithStatusFalseExists,
+		Message: "Some conditions have status set to False",
+	}
+
 	apiAuthRef, err := getAPIAuthRefNN(ctx, r.Client, ent)
 	if err != nil {
 		if crossnamespace.IsReferenceNotGranted(err) {
 			log.Info(logger, "cross-namespace reference to KonnectAPIAuthConfiguration is not granted", "error", err.Error())
-			if requeue, res, retErr := handleAPIAuthStatusCondition(ctx, r.Client, ent, konnectv1alpha1.KonnectAPIAuthConfiguration{}, apiAuthRef, err); requeue {
+			if requeue, res, retErr := handleAPIAuthStatusCondition(ctx, r.Client, ent, konnectv1alpha1.KonnectAPIAuthConfiguration{}, apiAuthRef, err, programmedFalseCondition); requeue {
 				return res, retErr
 			}
 		}
@@ -424,7 +431,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 	var apiAuth konnectv1alpha1.KonnectAPIAuthConfiguration
 	err = r.Client.Get(ctx, apiAuthRef, &apiAuth)
-	if requeue, res, retErr := handleAPIAuthStatusCondition(ctx, r.Client, ent, apiAuth, apiAuthRef, err); requeue {
+	if requeue, res, retErr := handleAPIAuthStatusCondition(ctx, r.Client, ent, apiAuth, apiAuthRef, err, programmedFalseCondition); requeue {
 		return res, retErr
 	}
 
@@ -507,16 +514,25 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 				}
 				return ctrl.Result{}, err
 			}
-			if err := r.Client.Update(ctx, ent); err != nil {
-				if apierrors.IsConflict(err) {
-					return ctrl.Result{Requeue: true}, nil
-				}
-				// in case the finalizer removal fails because the resource does not exist, ignore the error.
-				if apierrors.IsNotFound(err) {
-					return ctrl.Result{}, nil
-				}
-				return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
+		}
+
+		// For KonnectGatewayControlPlane resources, also remove the finalizer added
+		// by the Gateway controller. This handles the race condition where a Gateway
+		// is deleted before the Konnect reconciler adds its own finalizer, leaving
+		// only the Gateway controller's finalizer on the KonnectGatewayControlPlane
+		// with no controller able to remove it (since the parent Gateway is gone).
+		if _, ok := any(ent).(*konnectv1alpha2.KonnectGatewayControlPlane); ok {
+			controllerutil.RemoveFinalizer(ent, consts.KonnectGatewayControlPlaneFinalizer)
+		}
+
+		if err := r.Client.Update(ctx, ent); err != nil {
+			if apierrors.IsConflict(err) {
+				return ctrl.Result{Requeue: true}, nil
 			}
+			if apierrors.IsNotFound(err) {
+				return ctrl.Result{}, nil
+			}
+			return ctrl.Result{}, fmt.Errorf("failed to update resource after finalizer removal: %w", err)
 		}
 
 		return ctrl.Result{}, nil
