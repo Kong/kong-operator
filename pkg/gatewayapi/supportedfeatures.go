@@ -30,6 +30,7 @@ var commonSupportedFeatures = sets.New(
 
 	// Gateway extended.
 	features.SupportGatewayPort8080,
+	features.SupportGatewayInfrastructurePropagation,
 
 	// HTTPRoute extended.
 	features.SupportHTTPRouteResponseHeaderModification,

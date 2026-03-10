@@ -20,6 +20,7 @@ import (
 	kcfggateway "github.com/kong/kong-operator/v2/api/gateway-operator/gateway"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
@@ -2747,4 +2748,158 @@ func TestMergeInfrastructureIntoDataPlane(t *testing.T) {
 			require.Equal(t, tc.expected, *result)
 		})
 	}
+}
+
+func TestSetGatewayNameLabelInDataPlane(t *testing.T) {
+	const gatewayName = "my-gateway"
+
+	t.Run("empty DataPlaneOptions gets gateway-name label on pod template and service", func(t *testing.T) {
+		spec := &operatorv1beta1.DataPlaneOptions{}
+		setGatewayNameLabelInDataPlane(spec, gatewayName)
+
+		require.NotNil(t, spec.Deployment.PodTemplateSpec)
+		require.Equal(t, gatewayName, spec.Deployment.PodTemplateSpec.Labels[consts.GatewayNameLabel])
+
+		require.NotNil(t, spec.Network.Services)
+		require.NotNil(t, spec.Network.Services.Ingress)
+		require.Equal(t,
+			operatorv1beta1.LabelValue(gatewayName),
+			spec.Network.Services.Ingress.Labels[operatorv1beta1.LabelName(consts.GatewayNameLabel)],
+		)
+	})
+
+	t.Run("pre-existing labels are preserved", func(t *testing.T) {
+		spec := &operatorv1beta1.DataPlaneOptions{
+			Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+				DeploymentOptions: operatorv1beta1.DeploymentOptions{
+					PodTemplateSpec: &corev1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{
+							Labels: map[string]string{"existing": "pod-label"},
+						},
+					},
+				},
+			},
+			Network: operatorv1beta1.DataPlaneNetworkOptions{
+				Services: &operatorv1beta1.DataPlaneServices{
+					Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+						ServiceOptions: operatorv1beta1.ServiceOptions{
+							Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
+								"existing": "svc-label",
+							},
+						},
+					},
+				},
+			},
+		}
+		setGatewayNameLabelInDataPlane(spec, gatewayName)
+
+		require.Equal(t, "pod-label", spec.Deployment.PodTemplateSpec.Labels["existing"])
+		require.Equal(t, gatewayName, spec.Deployment.PodTemplateSpec.Labels[consts.GatewayNameLabel])
+
+		require.Equal(t, operatorv1beta1.LabelValue("svc-label"), spec.Network.Services.Ingress.Labels["existing"])
+		require.Equal(t,
+			operatorv1beta1.LabelValue(gatewayName),
+			spec.Network.Services.Ingress.Labels[operatorv1beta1.LabelName(consts.GatewayNameLabel)],
+		)
+	})
+
+	t.Run("gateway-name label is set after mergeInfrastructureIntoDataPlane", func(t *testing.T) {
+		spec := &operatorv1beta1.DataPlaneOptions{}
+		infra := &gatewayv1.GatewayInfrastructure{
+			Labels: map[gatewayv1.LabelKey]gatewayv1.LabelValue{
+				"infra-label": "infra-value",
+			},
+		}
+		mergeInfrastructureIntoDataPlane(spec, infra)
+		setGatewayNameLabelInDataPlane(spec, gatewayName)
+
+		// Both infra label and gateway-name label are present on pod template.
+		require.Equal(t, "infra-value", spec.Deployment.PodTemplateSpec.Labels["infra-label"])
+		require.Equal(t, gatewayName, spec.Deployment.PodTemplateSpec.Labels[consts.GatewayNameLabel])
+
+		// Both infra label and gateway-name label are present on service.
+		require.Equal(t, operatorv1beta1.LabelValue("infra-value"), spec.Network.Services.Ingress.Labels["infra-label"])
+		require.Equal(t,
+			operatorv1beta1.LabelValue(gatewayName),
+			spec.Network.Services.Ingress.Labels[operatorv1beta1.LabelName(consts.GatewayNameLabel)],
+		)
+	})
+}
+
+// TestGatewayManagedLabelOnCreatedResources verifies that every resource object
+// created by the gateway controller carries the GEP-1762
+// gateway.networking.k8s.io/gateway-name label set to the owning Gateway name.
+func TestGatewayManagedLabelOnCreatedResources(t *testing.T) {
+	const (
+		gwName      = "my-gateway"
+		gwNamespace = "default"
+	)
+
+	gateway := &gwtypes.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: gwNamespace,
+			Name:      gwName,
+		},
+		Spec: gwtypes.GatewaySpec{
+			GatewayClassName: "kong",
+			Listeners: []gatewayv1.Listener{
+				{
+					Name:     "http",
+					Protocol: gatewayv1.HTTPProtocolType,
+					Port:     80,
+				},
+			},
+		},
+	}
+
+	fakeClient := fakectrlruntimeclient.NewClientBuilder().WithScheme(scheme.Get()).Build()
+	reconciler := &Reconciler{
+		Client:                fakeClient,
+		DefaultDataPlaneImage: consts.DefaultDataPlaneImage,
+	}
+	ctx := t.Context()
+	emptyGatewayConfig := &GatewayConfiguration{}
+
+	t.Run("DataPlane carries gateway-name label", func(t *testing.T) {
+		dp, err := reconciler.createDataPlane(ctx, gateway, emptyGatewayConfig, nil)
+		require.NoError(t, err)
+		require.Equal(t, gwName, dp.Labels[consts.GatewayNameLabel],
+			"DataPlane object must carry the GEP-1762 gateway-name label")
+	})
+
+	t.Run("ControlPlane carries gateway-name label", func(t *testing.T) {
+		err := reconciler.createControlPlane(ctx, gateway, emptyGatewayConfig)
+		require.NoError(t, err)
+
+		var cpList gwtypes.ControlPlaneList
+		require.NoError(t, fakeClient.List(ctx, &cpList, client.InNamespace(gwNamespace)))
+		require.Len(t, cpList.Items, 1, "expected exactly one ControlPlane to be created")
+		require.Equal(t, gwName, cpList.Items[0].Labels[consts.GatewayNameLabel],
+			"ControlPlane object must carry the GEP-1762 gateway-name label")
+	})
+
+	t.Run("KonnectGatewayControlPlane carries gateway-name label", func(t *testing.T) {
+		gatewayConfigWithKonnect := &GatewayConfiguration{
+			Spec: operatorv2beta1.GatewayConfigurationSpec{
+				Konnect: &operatorv2beta1.KonnectOptions{},
+			},
+		}
+		kgcp, err := reconciler.createKonnectGatewayControlPlane(ctx, gateway, gatewayConfigWithKonnect)
+		require.NoError(t, err)
+		require.Equal(t, gwName, kgcp.Labels[consts.GatewayNameLabel],
+			"KonnectGatewayControlPlane object must carry the GEP-1762 gateway-name label")
+	})
+
+	t.Run("KonnectExtension carries gateway-name label", func(t *testing.T) {
+		fakeKonnectCP := &konnectv1alpha2.KonnectGatewayControlPlane{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: gwNamespace,
+				Name:      "fake-konnect-cp",
+			},
+		}
+		konnectExt, err := reconciler.createKonnectExtension(ctx, gateway, fakeKonnectCP)
+		require.NoError(t, err)
+		require.Equal(t, gwName, konnectExt.Labels[consts.GatewayNameLabel],
+			"KonnectExtension object must carry the GEP-1762 gateway-name label")
+	})
 }

@@ -609,6 +609,9 @@ func (r *Reconciler) provisionDataPlane(
 	setDataPlaneOptionsDefaults(expectedDataPlaneOptions, r.DefaultDataPlaneImage)
 	// Merge Gateway.spec.infrastructure labels/annotations on top of GatewayConfig options.
 	mergeInfrastructureIntoDataPlane(expectedDataPlaneOptions, gateway.Spec.Infrastructure)
+	// Add the GEP-1762 gateway-name label unconditionally (after mergeInfrastructureIntoDataPlane
+	// so it cannot be overridden by spec.infrastructure).
+	setGatewayNameLabelInDataPlane(expectedDataPlaneOptions, gateway.Name)
 	err = setDataPlaneIngressServicePorts(expectedDataPlaneOptions, gateway.Spec.Listeners, gatewayConfig.Spec.ListenersOptions)
 	if err != nil {
 		errWrap := fmt.Errorf("dataplane creation failed - error: %w", err)

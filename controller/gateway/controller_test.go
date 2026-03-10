@@ -397,7 +397,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 			}
 			for _, gatewaySubResource := range tc.gatewaySubResources {
 				k8sutils.SetOwnerForObject(gatewaySubResource, tc.gateway)
-				gatewayutils.LabelObjectAsGatewayManaged(gatewaySubResource)
+				gatewayutils.LabelObjectAsGatewayManaged(gatewaySubResource, tc.gateway.Name)
 				if gatewaySubResource.GetName() == "test-dataplane" {
 					for _, dataplaneSubresource := range tc.dataplaneSubResources {
 						k8sutils.SetOwnerForObject(dataplaneSubresource, gatewaySubResource)
