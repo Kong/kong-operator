@@ -245,6 +245,8 @@ func TestAdminAPIClientsManager_SubscribeToGatewayClientsChanges(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
 	m, err := clients.NewAdminAPIClientsManager(
 		ctx,
 		[]*adminapi.Client{testClient},

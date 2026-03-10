@@ -126,7 +126,7 @@ func DeployControllerManagerForCluster(
 		opt(&cfg)
 	}
 
-	ctx, cancel := context.WithCancel(ctx)
+	ctx, cancel := context.WithCancel(ctx) //nolint:gosec
 	// run the controller in the background
 	go func() {
 		defer os.Remove(kubeconfig.Name())
