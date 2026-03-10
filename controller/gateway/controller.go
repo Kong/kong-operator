@@ -614,7 +614,8 @@ func (r *Reconciler) provisionDataPlane(
 	// Add the GEP-1762 gateway-name label unconditionally (after mergeInfrastructureIntoDataPlane
 	// so it cannot be overridden by spec.infrastructure).
 	setGatewayNameLabelInDataPlane(expectedDataPlaneOptions, gateway.Name)
-	err = setDataPlaneIngressServicePorts(expectedDataPlaneOptions, gateway.Spec.Listeners, gatewayConfig.Spec.ListenersOptions)
+
+	err = setDataPlaneOptionsForListeners(expectedDataPlaneOptions, gateway.Spec.Listeners, gatewayConfig.Spec.ListenersOptions)
 	if err != nil {
 		errWrap := fmt.Errorf("dataplane creation failed - error: %w", err)
 		k8sutils.SetCondition(
