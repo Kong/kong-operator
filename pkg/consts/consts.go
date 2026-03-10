@@ -168,6 +168,9 @@ const (
 	// DefaultKonnectSyncPeriod is the default sync period for Konnect entities.
 	DefaultKonnectSyncPeriod = time.Minute
 
+	// DefaultKonnectRequestTimeout is the default timeout for requests to Konnect API.
+	DefaultKonnectRequestTimeout = 10 * time.Second
+
 	// DefaultMaxConcurrentReconcilesKonnect is the default max concurrent
 	// reconciles for Konnect entities controllers.
 	DefaultMaxConcurrentReconcilesKonnect = uint(8)

@@ -68,6 +68,9 @@
   `DataPlane` it self, `ControlPlane`, `KonnectGatewayControlPlane`, `KonnectExtension`, and
   `NetworkPolicy`.
   [#3531](https://github.com/Kong/kong-operator/pull/3531)
+- Added `--konnect-request-timeout` flag to control Konnect API calls timeout.
+  Be default that is set to 10 seconds.
+  [#3513](https://github.com/Kong/kong-operator/pull/3513)
 
 ### Fixes
 

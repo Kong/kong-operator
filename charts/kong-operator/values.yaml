@@ -120,6 +120,9 @@ global:
     konnectDataplaneAutoscale:
       # Enable validation for konnectclouddataplanegroupconfig autoscale type.
       enabled: true
+    serviceAnnotations:
+      # Enable validation on annotations of Services.
+      enabled: true
   webhooks:
     options:
       certManager:
