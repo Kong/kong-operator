@@ -1,6 +1,7 @@
 package konnect
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -98,6 +99,33 @@ var testKongServiceNotProgrammed = &configurationv1alpha1.KongService{
 		Namespace: "default",
 	},
 	Status: configurationv1alpha1.KongServiceStatus{
+		Conditions: []metav1.Condition{
+			{
+				Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
+				Status: metav1.ConditionFalse,
+			},
+		},
+	},
+}
+
+// testKongServiceNotProgrammedWithCPRef is a KongService with KonnectEntityProgrammed=False,
+// a ControlPlane ref, and Status.Konnect == nil (never synced to Konnect).
+// Used to test the nil pointer dereference regression in handleKongServiceRef.
+var testKongServiceNotProgrammedWithCPRef = &configurationv1alpha1.KongService{
+	ObjectMeta: metav1.ObjectMeta{
+		Name:      "svc-not-programmed-with-cp-ref",
+		Namespace: "default",
+	},
+	Spec: configurationv1alpha1.KongServiceSpec{
+		ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+			Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+			KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+				Name: "cp-ok",
+			},
+		},
+	},
+	Status: configurationv1alpha1.KongServiceStatus{
+		// Status.Konnect is intentionally nil to simulate a service not yet synced to Konnect.
 		Conditions: []metav1.Condition{
 			{
 				Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
@@ -215,6 +243,61 @@ func TestHandleServiceRef(t *testing.T) {
 					return lo.NoneBy(ks.OwnerReferences, func(o metav1.OwnerReference) bool {
 						return o.Kind == "KongService" && o.Name == "svc-ok"
 					}), "OwnerReference of KongRoute is set but it shouldn't be"
+				},
+			},
+		},
+		{
+			// Regression test: on the 2nd+ reconciliation the KongRoute already has both the
+			// KongServiceRefValid=False condition AND Status.Konnect initialized (from the 1st
+			// reconciliation's SetKonnectID("") call). In that state, patch.ApplyStatusPatchIfNotEmpty
+			// returns op.Noop (nothing changed), causing a fall-through to the ServiceID assignment.
+			// If KongService.Status.Konnect is nil, the old code panicked with a nil pointer dereference
+			// on kongSvc.Status.Konnect.GetKonnectID().
+			// The fix uses kongSvc.GetKonnectID() which is nil-safe.
+			name: "has service ref to an unprogrammed service with nil Konnect status (2nd reconciliation, regression for nil panic)",
+			ent: &configurationv1alpha1.KongRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "route-1",
+					Namespace: "default",
+				},
+				Spec: configurationv1alpha1.KongRouteSpec{
+					ServiceRef: &configurationv1alpha1.ServiceRef{
+						Type: configurationv1alpha1.ServiceRefNamespacedRef,
+						NamespacedRef: &commonv1alpha1.NamespacedRef{
+							Name: "svc-not-programmed-with-cp-ref",
+						},
+					},
+				},
+				Status: configurationv1alpha1.KongRouteStatus{
+					// Both Konnect and condition are pre-set as they would be after the 1st reconciliation.
+					Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndServiceRefs{},
+					Conditions: []metav1.Condition{
+						{
+							Type:               konnectv1alpha1.KongServiceRefValidConditionType,
+							Status:             metav1.ConditionFalse,
+							Reason:             konnectv1alpha1.KongServiceRefReasonInvalid,
+							Message:            "Referenced KongService default/svc-not-programmed-with-cp-ref is not programmed yet",
+							LastTransitionTime: metav1.Now(),
+						},
+					},
+				},
+			},
+			objects: []client.Object{
+				testKongServiceNotProgrammedWithCPRef,
+				testControlPlaneOK,
+			},
+			expectResult: ctrl.Result{},
+			expectError:  false,
+			updatedEntAssertions: []func(*configurationv1alpha1.KongRoute) (bool, string){
+				func(ks *configurationv1alpha1.KongRoute) (bool, string) {
+					if ks.Status.Konnect == nil {
+						return false, "KongRoute.Status.Konnect is nil"
+					}
+					return ks.Status.Konnect.ServiceID == "",
+						fmt.Sprintf(
+							"KongRoute.Status.Konnect.ServiceID should be empty (KongService has no Konnect ID), got %q",
+							ks.Status.Konnect.ServiceID,
+						)
 				},
 			},
 		},
