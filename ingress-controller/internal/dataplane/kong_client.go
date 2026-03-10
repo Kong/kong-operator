@@ -799,6 +799,7 @@ func (c *KongClient) sendToClient(
 		ExpressionRoutes:                config.ExpressionRoutes,
 		PluginSchemas:                   client.PluginSchemaStore(),
 		AppendStubEntityWhenConfigEmpty: config.InMemory,
+		InMemory:                        config.InMemory,
 	}
 	targetContent := deckgen.ToDeckContent(ctx, logger, s, deckGenParams)
 	customEntities := make(sendconfig.CustomEntitiesByType)
