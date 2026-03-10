@@ -607,7 +607,7 @@ func TestNodeAgent_TickerResetsOnEveryNodesUpdate(t *testing.T) {
 // runAgent runs the agent in a goroutine and cancels the context after the test is done, ensuring that the agent
 // doesn't return prematurely.
 func runAgent(t *testing.T, nodeAgent *konnect.NodeAgent) {
-	ctx, cancel := context.WithCancel(t.Context())
+	ctx, cancel := context.WithCancel(t.Context()) //nolint:gosec
 
 	// To be used as a barrier to ensure that the agent returned after the context was cancelled.
 	agentReturned := make(chan struct{})

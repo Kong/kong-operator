@@ -85,7 +85,7 @@ func (s *CheckServer) Start(ctx context.Context, addr string, logger logr.Logger
 		}
 	}()
 
-	go func() {
+	go func() { //nolint:gosec
 		<-ctx.Done()
 
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
