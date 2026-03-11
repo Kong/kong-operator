@@ -333,7 +333,7 @@ CreateEventGatewayRequest maps to the Konnect CreateGatewayRequest / UpdateGatew
 
 | Field | Description |
 | --- | --- |
-| `name` _string_ | Name is the human-readable name of the Event Gateway. |
+| `name` _string_ | Name is the human-readable name of the Event Gateway. π |
 | `description` _*string_ | Description is a human-readable description of the Event Gateway. |
 | `minRuntimeVersion` _*string_ | MinRuntimeVersion is the minimum keg version that can connect to this gateway. Must match the pattern X.Y (e.g. "1.1"). |
 | `labels` _map[string]string_ | Labels are metadata key-value pairs for filtering and searching. |

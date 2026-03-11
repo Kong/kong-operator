@@ -55791,7 +55791,9 @@ spec:
                     pattern: ^\d+\.\d+$
                     type: string
                   name:
-                    description: Name is the human-readable name of the Event Gateway.
+                    description: |-
+                      Name is the human-readable name of the Event Gateway.
+                      π
                     maxLength: 255
                     minLength: 1
                     type: string
