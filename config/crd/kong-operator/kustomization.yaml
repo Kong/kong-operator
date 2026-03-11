@@ -39,5 +39,6 @@ resources:
   - konnect.konghq.com_konnectcloudgatewaydataplanegroupconfigurations.yaml
   - konnect.konghq.com_konnectcloudgatewaynetworks.yaml
   - konnect.konghq.com_konnectcloudgatewaytransitgateways.yaml
+  - konnect.konghq.com_konnecteventgateways.yaml
   - konnect.konghq.com_konnectextensions.yaml
   - konnect.konghq.com_konnectgatewaycontrolplanes.yaml
