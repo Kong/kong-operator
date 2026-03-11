@@ -2,12 +2,12 @@ package configfetcher_test
 
 import (
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/kong/go-database-reconciler/pkg/utils"
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/go-kong/kong/custom"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -385,7 +385,7 @@ func ensureAllKongStateFieldsAreTested(t *testing.T, testedFields []string) {
 		typ := reflect.ValueOf(kongstate.KongState{}).Type()
 		for field := range typ.Fields() {
 			name := field.Name
-			if !lo.Contains(exempt, name) {
+			if !slices.Contains(exempt, name) {
 				fields = append(fields, name)
 			}
 		}
@@ -394,6 +394,6 @@ func ensureAllKongStateFieldsAreTested(t *testing.T, testedFields []string) {
 
 	// Meta test - ensure we have testcases covering all fields in KongRawState.
 	for _, field := range allKongStateFields {
-		assert.True(t, lo.Contains(testedFields, field), "field %s not tested", field)
+		assert.True(t, slices.Contains(testedFields, field), "field %s not tested", field)
 	}
 }

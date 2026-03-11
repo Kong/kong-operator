@@ -3,6 +3,7 @@ package dataplane
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/samber/lo"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -17,7 +18,7 @@ func OwnedObjectPreDeleteHook(ctx context.Context, cl client.Client, obj client.
 	finalizers := obj.GetFinalizers()
 
 	// If there's no finalizer, we don't need to do anything.
-	if !lo.Contains(finalizers, consts.DataPlaneOwnedWaitForOwnerFinalizer) {
+	if !slices.Contains(finalizers, consts.DataPlaneOwnedWaitForOwnerFinalizer) {
 		return nil
 	}
 

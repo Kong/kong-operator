@@ -3,6 +3,7 @@ package integration
 import (
 	"fmt"
 	"net/http"
+	"slices"
 	"testing"
 	"time"
 
@@ -10,7 +11,6 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -63,10 +63,10 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 	require.Eventually(t, func() bool {
 		gw, err = gatewayClient.GatewayV1().Gateways(ns.Name).Get(ctx, defaultGatewayName, metav1.GetOptions{})
 		require.NoError(t, err)
-		return lo.Contains(
+		return slices.Contains(
 			annotations.ExtractGatewayPublishService(gw.Annotations),
 			fmt.Sprintf("%s/%s", pubsvc.Namespace, pubsvc.Name),
-		) && lo.Contains(
+		) && slices.Contains(
 			annotations.ExtractGatewayPublishService(gw.Annotations),
 			fmt.Sprintf("%s/%s", pubsvcUDP.Namespace, pubsvcUDP.Name),
 		)
