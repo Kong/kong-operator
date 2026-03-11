@@ -200,6 +200,36 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 		fmt.Sprintf("Successfully translated to %d Kong resources", resourceCount),
 	)
 
+	// Phase 1.5: Status Update (Accepted/ResolvedRefs/Programmed)
+	// If the converter supports status updates for the root object (e.g., HTTPRoute),
+	// build and persist status conditions before enforcing state. This ensures that
+	// conformance tests expecting immediate status (e.g., NoMatchingParent) observe
+	// the conditions even when no resources are applied.
+	if su, ok := any(conv).(interface {
+		UpdateRootObjectStatus(context.Context, logr.Logger) (bool, bool, error)
+	}); ok {
+		updated, stop, err := su.UpdateRootObjectStatus(ctx, logger)
+		if err != nil {
+			// Record status update failure event and exit.
+			r.eventRecorder.Event(
+				obj,
+				corev1.EventTypeWarning,
+				eventconst.EventReasonStatusUpdateFailed,
+				fmt.Sprintf("Status update failed: %v", err),
+			)
+			return ctrl.Result{}, err
+		}
+		if updated {
+			// Best-effort trace; no event noise for normal status churn.
+			log.Trace(logger, "Root object status updated")
+		}
+		if stop {
+			// Accepted or ResolvedRefs is False; do not proceed with applying resources.
+			log.Debug(logger, "Halting reconciliation after status update (invalid or unresolved references)")
+			return ctrl.Result{}, nil
+		}
+	}
+
 	// Phase 3: State Enforcement.
 	applied, waiting, err := enforceState(ctx, r.Client, logger, conv)
 	if err != nil {
