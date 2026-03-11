@@ -72,12 +72,12 @@ func TestEqualWithDefault_NamedStringType(t *testing.T) {
 
 	http := proto("http")
 	// nil vs value equal to default
-	assert.True(t, equalWithDefault[proto](nil, &http, "http"))
+	assert.True(t, equalWithDefault(nil, &http, "http"))
 
 	// nil vs value not equal to default
-	assert.False(t, equalWithDefault[proto](nil, &http, "https"))
+	assert.False(t, equalWithDefault(nil, &http, "https"))
 
 	// empty value vs default fallback
 	empty := proto("")
-	assert.True(t, equalWithDefault[proto](&empty, nil, "http"))
+	assert.True(t, equalWithDefault(&empty, nil, "http"))
 }
