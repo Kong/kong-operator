@@ -41,19 +41,18 @@ make test.unit.pretty GOTESTFLAGS="-run TestSpecificGatewayNN -count 1" # Run sp
 ### Envtest (Controller Tests with Simulated Kubernetes)
 
 ```bash
-make test.envtest                                                        # Run envtest tests with standard verbose output
-make test.envtest.pretty                                                 # Run envtest tests with compact output
-make test.envtest CLUSTER_VERSION=1.30                                   # Run envtest tests with specific Kubernetes (apiserver) version
-make test.unit.pretty GOTESTFLAGS="-run TestSpecificGatewayNN -count 1"  # Run specific test from envtest suite
+make test.envtest                                                    # Run envtest tests with standard verbose output
+make test.envtest.pretty                                             # Run envtest tests with compact output
+make test.envtest CLUSTER_VERSION=1.30                               # Run envtest tests with specific Kubernetes (apiserver) version
+make test.envtest GOTESTFLAGS="-run TestSpecificGatewayNN -count 1"  # Run specific test from envtest suite
 ```
 
 ### Integration Tests (Require Running Cluster)
 
 ```bash
-make test.integration-ko              # Kong Operator integration tests
-make test.integration_bluegreen       # DataPlane upgrade/blue-green tests
-make test.integration_validatingwebhook  # Webhook tests
-make test.crds-validation             # CRD validation tests
+make test.integration-ko                 # Kong Operator integration tests
+make test.integration-bluegreen          # DataPlane upgrade/blue-green tests
+make test.integration-validatingwebhook  # Webhook tests
 ```
 
 ### CRD Validation Tests

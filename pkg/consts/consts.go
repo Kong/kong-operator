@@ -55,6 +55,11 @@ const (
 	// the gateway controller.
 	GatewayManagedLabelValue = "gateway"
 
+	// GatewayNameLabel is the label key defined by GEP-1762 that must be present
+	// on all resources generated in response to a Gateway. The value is set to
+	// the Gateway's name.
+	GatewayNameLabel = "gateway.networking.k8s.io/gateway-name"
+
 	// ServiceSecretLabel is a label that is added to operator related Service
 	// Secrets to designate which Service this particular Secret it used by.
 	ServiceSecretLabel = OperatorLabelPrefix + "service-secret"

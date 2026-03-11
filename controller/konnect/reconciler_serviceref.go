@@ -176,7 +176,7 @@ func handleKongServiceRef[T constraints.SupportedKonnectEntityType, TEnt constra
 		if route.Status.Konnect == nil {
 			route.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndServiceRefs{}
 		}
-		route.Status.Konnect.ServiceID = kongSvc.Status.Konnect.GetKonnectID()
+		route.Status.Konnect.ServiceID = kongSvc.GetKonnectID()
 	}
 
 	_ = patch.SetStatusWithConditionIfDifferent(ent,
