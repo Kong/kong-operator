@@ -20,6 +20,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	finalizerconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/finalizers"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
@@ -87,6 +88,79 @@ func TestPruneDesiredObj(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestEnforceState_DependencyGating(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	// Prepare Scheme with needed types.
+	s := scheme.Get()
+
+	ns := "ns"
+
+	// Case 1: Target waits for missing Upstream.
+	t.Run("target waits for missing upstream", func(t *testing.T) {
+		// Desired contains a KongTarget referencing upstream "u1".
+		targetGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongTarget"}
+		desired := newUnstructured(ns, "t1", targetGVK, map[string]string{})
+		_ = unstructured.SetNestedField(desired.Object, map[string]any{
+			"upstreamRef": map[string]any{"name": "u1"},
+		}, "spec")
+
+		fakeConv := &fakeHTTPRouteConverter{desired: []unstructured.Unstructured{desired}}
+		cl := fake.NewClientBuilder().WithScheme(s).Build()
+
+		applied, waiting, err := enforceState[gwtypes.HTTPRoute](ctx, cl, logger, fakeConv)
+		require.NoError(t, err)
+		assert.False(t, applied)
+		assert.True(t, waiting)
+	})
+
+	// Case 2: Route waits for not-Programmed Service.
+	t.Run("route waits for not programmed service", func(t *testing.T) {
+		routeGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongRoute"}
+		desired := newUnstructured(ns, "r1", routeGVK, nil)
+		_ = unstructured.SetNestedField(desired.Object, map[string]any{
+			"serviceRef": map[string]any{"namespacedRef": map[string]any{"name": "svc1"}},
+		}, "spec")
+
+		// Existing KongService with Programmed=False.
+		svc := &configurationv1alpha1.KongService{}
+		svc.SetName("svc1")
+		svc.SetNamespace(ns)
+		// Default conditions include Programmed Unknown; ensure it’s not True.
+
+		fakeConv := &fakeHTTPRouteConverter{desired: []unstructured.Unstructured{desired}}
+		cl := fake.NewClientBuilder().WithScheme(s).WithObjects(svc).Build()
+
+		applied, waiting, err := enforceState[gwtypes.HTTPRoute](ctx, cl, logger, fakeConv)
+		require.NoError(t, err)
+		assert.False(t, applied)
+		assert.True(t, waiting)
+	})
+
+	// Case 3: PluginBinding waits for not-Programmed Route.
+	t.Run("pluginbinding waits for not programmed route", func(t *testing.T) {
+		kpbGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongPluginBinding"}
+		desired := newUnstructured(ns, "b1", kpbGVK, nil)
+		_ = unstructured.SetNestedField(desired.Object, map[string]any{
+			"routeRef": map[string]any{"name": "route1"},
+		}, "spec", "targets")
+
+		route := &configurationv1alpha1.KongRoute{}
+		route.SetName("route1")
+		route.SetNamespace(ns)
+		// Programmed not True by default.
+
+		fakeConv := &fakeHTTPRouteConverter{desired: []unstructured.Unstructured{desired}}
+		cl := fake.NewClientBuilder().WithScheme(s).WithObjects(route).Build()
+
+		applied, waiting, err := enforceState[gwtypes.HTTPRoute](ctx, cl, logger, fakeConv)
+		require.NoError(t, err)
+		assert.False(t, applied)
+		assert.True(t, waiting)
+	})
 }
 
 func TestCleanOrphanedResources(t *testing.T) {

@@ -140,6 +140,40 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 					continue
 				}
 			}
+		case "KongPluginBinding":
+			// Gate on referenced KongRoute/KongService readiness before creating a binding.
+			if routeName, _, _ := unstructured.NestedString(desired.Object, "spec", "targets", "routeRef", "name"); routeName != "" {
+				var route configurationv1alpha1.KongRoute
+				if err := cl.Get(ctx, client.ObjectKey{Namespace: desired.GetNamespace(), Name: routeName}, &route); err != nil {
+					log.Debug(logger, "Route not found yet for plugin binding, waiting", "route", routeName)
+					objectsSkipped++
+					stopAtKind = "KongRoute"
+					continue
+				}
+				if !k8sutils.HasConditionTrue(konnectv1alpha1.KonnectEntityProgrammedConditionType, &route) {
+					log.Debug(logger, "Route not Programmed yet for plugin binding, waiting", "route", routeName)
+					objectsSkipped++
+					stopAtKind = "KongRoute"
+					continue
+				}
+			}
+			if svcName, _, _ := unstructured.NestedString(desired.Object, "spec", "targets", "serviceRef", "name"); svcName != "" {
+				if kind, _, _ := unstructured.NestedString(desired.Object, "spec", "targets", "serviceRef", "kind"); kind == "KongService" {
+					var svc configurationv1alpha1.KongService
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: desired.GetNamespace(), Name: svcName}, &svc); err != nil {
+						log.Debug(logger, "Service not found yet for plugin binding, waiting", "service", svcName)
+						objectsSkipped++
+						stopAtKind = "KongService"
+						continue
+					}
+					if !k8sutils.HasConditionTrue(konnectv1alpha1.KonnectEntityProgrammedConditionType, &svc) {
+						log.Debug(logger, "Service not Programmed yet for plugin binding, waiting", "service", svcName)
+						objectsSkipped++
+						stopAtKind = "KongService"
+						continue
+					}
+				}
+			}
 		}
 		log.Debug(logger, "Processing desired object", "index", i, "kind", desired.GetKind(), "name", desired.GetName())
 		// Get the existing object by name from the API server.

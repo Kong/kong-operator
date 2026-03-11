@@ -26,6 +26,9 @@ import (
 const (
 	// ControllerName is the name used for logging and event recording in the hybrid gateway controller.
 	ControllerName = "hybridgateway"
+	// requeueWhileWaiting is a short safety requeue used when we intentionally
+	// wait for prerequisites (e.g., Programmed dependencies) before proceeding.
+	requeueWhileWaiting = time.Second
 )
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongroutes,verbs=get;list;watch;create;update;patch;delete
@@ -225,7 +228,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 	// If we are intentionally waiting for prerequisites (e.g., Programmed deps),
 	// schedule a short requeue as a safety net in case watch events are delayed.
 	if waiting {
-		return ctrl.Result{RequeueAfter: time.Second}, nil
+		return ctrl.Result{RequeueAfter: requeueWhileWaiting}, nil
 	}
 
 	// Phase 4: Orphan Cleanup.
