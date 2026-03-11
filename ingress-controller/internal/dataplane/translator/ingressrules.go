@@ -3,6 +3,7 @@ package translator
 import (
 	"fmt"
 	"maps"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -592,5 +593,5 @@ func collectInconsistentAnnotations(
 func isNonTLSProtocol(proto string) bool {
 	// Strings used here for comparison reflect Kong's protocol names.
 	nonTLSProtocols := []string{"http", "grpc", "tcp", "tls_passthrough", "udp", "ws"}
-	return lo.Contains(nonTLSProtocols, proto)
+	return slices.Contains(nonTLSProtocols, proto)
 }

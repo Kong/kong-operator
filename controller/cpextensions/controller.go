@@ -3,6 +3,7 @@ package cpextensions
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -305,7 +306,7 @@ func listServicesThatHavePluginsManagedByControlPlane(
 
 func ensureStringInCommaSeparatedString(v, commaSeparated string) string {
 	split := strings.Split(commaSeparated, ",")
-	if lo.Contains(split, v) {
+	if slices.Contains(split, v) {
 		return commaSeparated
 	}
 	return commaSeparated + "," + v
@@ -313,7 +314,7 @@ func ensureStringInCommaSeparatedString(v, commaSeparated string) string {
 
 func ensureStringNotInCommaSeparatedString(v, commaSeparated string) string {
 	split := strings.Split(commaSeparated, ",")
-	if lo.Contains(split, v) {
+	if slices.Contains(split, v) {
 		return strings.Join(
 			lo.Filter(split, func(s string, _ int) bool {
 				return s != v
@@ -387,7 +388,7 @@ func ensureKongPluginsAnnotationIsSetForPrometheusPlugin(svc *corev1.Service, pr
 		svc.Annotations[consts.KongIngressControllerPluginsAnnotation] = prometheusPlugin.Name
 	} else if ann != prometheusPlugin.Name {
 		pluginNames := strings.Split(ann, ",")
-		ok = lo.Contains(pluginNames, prometheusPlugin.Name)
+		ok = slices.Contains(pluginNames, prometheusPlugin.Name)
 		if !ok {
 			svc.Annotations[consts.KongIngressControllerPluginsAnnotation] = ann + "," + prometheusPlugin.Name
 		}

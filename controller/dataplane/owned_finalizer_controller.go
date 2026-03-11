@@ -3,6 +3,7 @@ package dataplane
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/samber/lo"
@@ -143,7 +144,7 @@ func (r DataPlaneOwnedResourceFinalizerReconciler[T, PT]) Reconcile(ctx context.
 	}
 
 	// If the object does not have the finalizer, we don't need to do anything.
-	hasDataPlaneOwnedFinalizer := lo.Contains(obj.GetFinalizers(), consts.DataPlaneOwnedWaitForOwnerFinalizer)
+	hasDataPlaneOwnedFinalizer := slices.Contains(obj.GetFinalizers(), consts.DataPlaneOwnedWaitForOwnerFinalizer)
 	if !hasDataPlaneOwnedFinalizer {
 		log.Debug(logger, "object has no finalizer",
 			"finalizer", consts.DataPlaneOwnedWaitForOwnerFinalizer,

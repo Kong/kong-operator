@@ -3,11 +3,11 @@ package ops
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
-	"github.com/samber/lo"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -191,7 +191,7 @@ func keySetMatch(konnectKeySet *sdkkonnectcomp.KeySet, keySet *configurationv1al
 	}
 
 	for _, tag := range keySet.Spec.Tags {
-		if !lo.Contains(konnectKeySet.Tags, tag) {
+		if !slices.Contains(konnectKeySet.Tags, tag) {
 			return false
 		}
 	}

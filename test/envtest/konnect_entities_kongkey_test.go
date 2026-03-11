@@ -102,7 +102,7 @@ func TestKongKey(t *testing.T) {
 		t.Log("Setting up SDK expectations on KongKey update")
 		sdk.KeysSDK.EXPECT().UpsertKey(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.UpsertKeyRequest) bool {
 			return r.KeyID == keyID &&
-				lo.Contains(r.Key.Tags, "addedTag")
+				slices.Contains(r.Key.Tags, "addedTag")
 		})).Return(&sdkkonnectops.UpsertKeyResponse{}, nil)
 
 		t.Log("Patching KongKey")
