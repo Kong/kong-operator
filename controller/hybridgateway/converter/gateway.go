@@ -194,6 +194,16 @@ func (c *gatewayConverter) GetExpectedGVKs() []schema.GroupVersionKind {
 	return c.expectedGVKs
 }
 
+// UpdateRootObjectStatus updates the status of the Gateway resource.
+//
+// NOTE: This method is not implemented for Gateway resource as status updates
+// are handled by the Gateway controller.
+// Implementing this would cause more than 1 controller to update the status of
+// the same resource which can lead to conflicts and endless update loops.
+func (c *gatewayConverter) UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (updated bool, stop bool, err error) {
+	return false, false, nil
+}
+
 // HandleOrphanedResource implements OrphanedResourceHandler.
 //
 // Determines whether an orphaned resource should be deleted or preserved during cleanup.
