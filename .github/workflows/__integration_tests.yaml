@@ -52,8 +52,10 @@ jobs:
     # Create cache keys just for the suite. Different e.g. flavors do not warrant
     # a separate cache since they all use the same dependencies, so we can save some
     # cache storage and increase hit rate by not including the router flavor in the key.
-    - run: echo "GO_CACHE_KEY=go-integrationtests-${{ matrix.suite }}-${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.mod') }}" >> $GITHUB_ENV
-    - run: echo "GO_CACHE_KEY_2=go-integrationtests-${{ matrix.suite }}-${{ runner.os }}-${{ runner.arch }}-go-" >> $GITHUB_ENV
+    #
+    # bluegreen and ko suites are using the same dependencies, so we can use the same cache for them.
+    - run: echo "GO_CACHE_KEY=go-integrationtests-${{ matrix.suite == 'bluegreen' && 'ko' || matrix.suite }}-${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.mod') }}" >> $GITHUB_ENV
+    - run: echo "GO_CACHE_KEY_2=go-integrationtests-${{ matrix.suite == 'bluegreen' && 'ko' || matrix.suite }}-${{ runner.os }}-${{ runner.arch }}-go-" >> $GITHUB_ENV
 
     - name: Go cache main branch
       if: ${{ github.ref == 'refs/heads/main' }}
