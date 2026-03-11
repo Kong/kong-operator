@@ -3,6 +3,7 @@ package hybridgateway
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -24,6 +25,9 @@ import (
 const (
 	// ControllerName is the name used for logging and event recording in the hybrid gateway controller.
 	ControllerName = "hybridgateway"
+	// requeueWhileWaiting is a short safety requeue used when we intentionally
+	// wait for prerequisites (e.g., Programmed dependencies) before proceeding.
+	requeueWhileWaiting = time.Second
 )
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongroutes,verbs=get;list;watch;create;update;patch;delete
@@ -164,32 +168,45 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 		fmt.Sprintf("Successfully translated to %d Kong resources", resourceCount),
 	)
 
-	// Phase 2: State Enforcement.
-	stateChanged, err := enforceState(ctx, r.Client, logger, conv)
-	if err != nil {
-		// Record state enforcement failure event.
-		r.eventRecorder.Event(
-			obj,
-			corev1.EventTypeWarning,
-			eventconst.EventReasonStateEnforcementFailed,
-			fmt.Sprintf("State enforcement failed: %v", err),
-		)
-		return ctrl.Result{}, err
+        // Phase 2: State Enforcement.
+        applied, waiting, err := enforceState(ctx, r.Client, logger, conv)
+        if err != nil {
+            // Record state enforcement failure event.
+            r.eventRecorder.Event(
+                obj,
+                corev1.EventTypeWarning,
+                eventconst.EventReasonStateEnforcementFailed,
+                fmt.Sprintf("State enforcement failed: %v", err),
+            )
+            return ctrl.Result{}, err
+        }
+
+        // Only emit success event if state was actually changed.
+        if applied {
+            r.eventRecorder.Event(
+                obj,
+                corev1.EventTypeNormal,
+                eventconst.EventReasonStateEnforcementSucceeded,
+                fmt.Sprintf("Kong resources successfully enforced: %d total", resourceCount),
+            )
+            log.Trace(logger, "State changed, requeueing")
+            return ctrl.Result{Requeue: true}, nil
+        }
+
+	// If we are intentionally waiting for prerequisites (e.g., Programmed deps),
+	// schedule a short requeue as a safety net in case watch events are delayed.
+	if waiting {
+		return ctrl.Result{RequeueAfter: time.Second}, nil
 	}
 
-	// Only emit success event if state was actually changed.
-	if stateChanged {
-		r.eventRecorder.Event(
-			obj,
-			corev1.EventTypeNormal,
-			eventconst.EventReasonStateEnforcementSucceeded,
-			fmt.Sprintf("Kong resources successfully enforced: %d total", resourceCount),
-		)
-		log.Trace(logger, "State changed, requeueing")
-		return ctrl.Result{Requeue: true}, nil
+    // Phase 3: Orphan Cleanup.
+	// If we are intentionally waiting for prerequisites (e.g., Programmed deps),
+	// schedule a short requeue as a safety net in case watch events are delayed.
+	if waiting {
+		return ctrl.Result{RequeueAfter: requeueWhileWaiting}, nil
 	}
 
-	// Phase 3: Orphan Cleanup.
+        // Phase 4: Orphan Cleanup.
 	orphansDeleted, err := cleanOrphanedResources[t, tPtr](ctx, r.Client, logger, conv)
 	if err != nil {
 		// Record orphan cleanup failure event.
