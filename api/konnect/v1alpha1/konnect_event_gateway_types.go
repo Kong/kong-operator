@@ -85,7 +85,6 @@ type KonnectEventGatewaySpec struct {
 // +kubebuilder:validation:XValidation:message="spec.createGatewayRequest.labels keys must not start with 'kong', 'konnect', 'mesh', 'kic' or '_'",rule="!has(self.labels) || self.labels.all(key, !key.startsWith('kong') && !key.startsWith('konnect') && !key.startsWith('mesh') && !key.startsWith('kic') && !key.startsWith('_'))"
 type CreateEventGatewayRequest struct {
 	// Name is the human-readable name of the Event Gateway.
-	//π
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=255
