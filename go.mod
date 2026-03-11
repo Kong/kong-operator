@@ -30,7 +30,7 @@ require (
 	github.com/kong/go-database-reconciler v1.32.0
 	github.com/kong/go-kong v0.72.1
 	github.com/kong/kubernetes-telemetry v0.1.13
-	github.com/kong/kubernetes-testing-framework v0.48.1-0.20260114143846-8c0e96b5bf82
+	github.com/kong/kubernetes-testing-framework v0.48.1-0.20260311085432-0922a0a0e6a8
 	github.com/kong/semver/v4 v4.0.1
 	github.com/kr/pretty v0.3.1
 	github.com/mitchellh/mapstructure v1.5.0
