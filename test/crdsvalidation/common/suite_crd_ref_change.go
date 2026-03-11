@@ -1,9 +1,9 @@
 package common
 
 import (
+	"slices"
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -114,7 +114,7 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 			// TODO: This list has to be updated as we progress through implementing
 			// ControlPlane cross namespaces references for various kinds.
 			// https://github.com/Kong/kong-operator/issues/2873
-			if lo.Contains([]string{"KongService", "KongRoute", "KongUpstream", "KongCertificate", "KongCACertificate", "KongConsumer", "KongConsumerGroup", "KongKey", "KongKeySet", "KongDataPlaneClientCertificate"}, obj.GetObjectKind().GroupVersionKind().Kind) {
+			if slices.Contains([]string{"KongService", "KongRoute", "KongUpstream", "KongCertificate", "KongCACertificate", "KongConsumer", "KongConsumerGroup", "KongKey", "KongKeySet", "KongDataPlaneClientCertificate"}, obj.GetObjectKind().GroupVersionKind().Kind) {
 				testcase.Name = "cpRef (type=konnectNamespacedRef) can have namespace"
 				testcase.ExpectedErrorMessage = nil
 			} else {

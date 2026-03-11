@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -143,7 +144,38 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{}, err
 	}
 
-	// Phase 1: Translation.
+	// Phase 1: Status Update.
+	statusChanged, stop, err := enforceStatus(ctx, logger, conv)
+	if err != nil && !apierrors.IsConflict(err) {
+		// Record status update failure event.
+		r.eventRecorder.Event(
+			obj,
+			corev1.EventTypeWarning,
+			eventconst.EventReasonStatusUpdateFailed,
+			fmt.Sprintf("Status update failed: %v", err),
+		)
+		return ctrl.Result{}, err
+	} else if apierrors.IsConflict(err) {
+		return ctrl.Result{Requeue: true}, nil
+	}
+	if stop {
+		log.Debug(logger, "Stopping further reconciliation as the resource is not ready for processing")
+		return ctrl.Result{}, nil
+	}
+
+	// Only emit success event if status was actually changed.
+	if statusChanged {
+		r.eventRecorder.Event(
+			obj,
+			corev1.EventTypeNormal,
+			eventconst.EventReasonStatusUpdateSucceeded,
+			"Status successfully updated",
+		)
+		log.Trace(logger, "Status updated, requeueing")
+		return ctrl.Result{Requeue: true}, nil
+	}
+
+	// Phase 2: Translation.
 	resourceCount, err := translate(conv, ctx, logger)
 	if err != nil {
 		// Record translation failure event.
@@ -164,7 +196,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 		fmt.Sprintf("Successfully translated to %d Kong resources", resourceCount),
 	)
 
-	// Phase 2: State Enforcement.
+	// Phase 3: State Enforcement.
 	stateChanged, err := enforceState(ctx, r.Client, logger, conv)
 	if err != nil {
 		// Record state enforcement failure event.
@@ -189,7 +221,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// Phase 3: Orphan Cleanup.
+	// Phase 4: Orphan Cleanup.
 	orphansDeleted, err := cleanOrphanedResources[t, tPtr](ctx, r.Client, logger, conv)
 	if err != nil {
 		// Record orphan cleanup failure event.

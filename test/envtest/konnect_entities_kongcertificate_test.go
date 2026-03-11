@@ -113,7 +113,7 @@ func TestKongCertificate(t *testing.T) {
 		t.Log("Setting up SDK expectations on KongCertificate update")
 		sdk.CertificatesSDK.EXPECT().UpsertCertificate(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.UpsertCertificateRequest) bool {
 			return r.CertificateID == "cert-12345" &&
-				lo.Contains(r.Certificate.Tags, "addedTag")
+				slices.Contains(r.Certificate.Tags, "addedTag")
 		})).Return(&sdkkonnectops.UpsertCertificateResponse{}, nil)
 
 		t.Log("Patching KongCertificate")
