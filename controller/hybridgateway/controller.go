@@ -200,7 +200,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 		fmt.Sprintf("Successfully translated to %d Kong resources", resourceCount),
 	)
 
-	// Phase 1.5: Status Update (Accepted/ResolvedRefs/Programmed)
+	// Phase 3: Status Update (Accepted/ResolvedRefs/Programmed)
 	// If the converter supports status updates for the root object (e.g., HTTPRoute),
 	// build and persist status conditions before enforcing state. This ensures that
 	// conformance tests expecting immediate status (e.g., NoMatchingParent) observe
@@ -220,7 +220,10 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 			return ctrl.Result{}, err
 		}
 		if updated {
-			// Best-effort trace; no event noise for normal status churn.
+			// Safe to continue: this only updates the HTTPRoute status subresource.
+			// controller-runtime will enqueue a follow-up reconcile, but same-key
+			// reconciles are serialized, and state enforcement uses the already-computed
+			// desired state, not fresh root status.
 			log.Trace(logger, "Root object status updated")
 		}
 		if stop {
@@ -230,7 +233,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 		}
 	}
 
-	// Phase 3: State Enforcement.
+	// Phase 4: State Enforcement.
 	applied, waiting, err := enforceState(ctx, r.Client, logger, conv)
 	if err != nil {
 		// Record state enforcement failure event.
@@ -261,7 +264,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{RequeueAfter: requeueWhileWaiting}, nil
 	}
 
-	// Phase 4: Orphan Cleanup.
+	// Phase 5: Orphan Cleanup.
 	orphansDeleted, err := cleanOrphanedResources[t, tPtr](ctx, r.Client, logger, conv)
 	if err != nil {
 		// Record orphan cleanup failure event.
