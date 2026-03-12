@@ -130,6 +130,7 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 			index.OptionsForKonnectGatewayControlPlane(),
 			index.OptionsForKonnectAPIAuthConfiguration(),
 			index.OptionsForKonnectCloudGatewayNetwork(),
+			index.OptionsForKonnectEventGateway(),
 			index.OptionsForKonnectExtension(),
 			index.OptionsForKonnectCloudGatewayDataPlaneGroupConfiguration(cl),
 		)
@@ -618,6 +619,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			newKonnectEntityController[konnectv1alpha1.KonnectCloudGatewayNetwork](controllerFactory),
 			newKonnectEntityController[konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration](controllerFactory),
 			newKonnectEntityController[konnectv1alpha1.KonnectCloudGatewayTransitGateway](controllerFactory),
+			newKonnectEntityController[konnectv1alpha1.KonnectEventGateway](controllerFactory),
 			newKonnectEntityController[configurationv1alpha1.KongService](controllerFactory),
 			newKonnectEntityController[configurationv1alpha1.KongRoute](controllerFactory),
 			newKonnectEntityController[configurationv1.KongConsumer](controllerFactory),

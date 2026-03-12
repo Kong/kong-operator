@@ -112,6 +112,8 @@ func Create[
 		err = createSNI(ctx, sdk.GetSNIsSDK(), ent)
 	case *configurationv1alpha1.KongDataPlaneClientCertificate:
 		err = CreateKongDataPlaneClientCertificate(ctx, sdk.GetDataPlaneCertificatesSDK(), ent)
+	case *konnectv1alpha1.KonnectEventGateway:
+		err = ensureEventGateway(ctx, sdk.GetEventGatewaysSDK(), ent)
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
 	default:
@@ -174,6 +176,8 @@ func Create[
 			id, errGet = getKongCertificateForUID(ctx, sdk.GetCertificatesSDK(), ent)
 		case *configurationv1alpha1.KongCACertificate:
 			id, errGet = getKongCACertificateForUID(ctx, sdk.GetCACertificatesSDK(), ent)
+		case *konnectv1alpha1.KonnectEventGateway:
+			id, errGet = getEventGatewayForUID(ctx, sdk.GetEventGatewaysSDK(), ent)
 			// ---------------------------------------------------------------------
 			// TODO: add other Konnect types
 		default:
@@ -315,6 +319,8 @@ func Delete[
 		err = deleteSNI(ctx, sdk.GetSNIsSDK(), ent)
 	case *configurationv1alpha1.KongDataPlaneClientCertificate:
 		err = DeleteKongDataPlaneClientCertificate(ctx, sdk.GetDataPlaneCertificatesSDK(), ent)
+	case *konnectv1alpha1.KonnectEventGateway:
+		err = deleteEventGateway(ctx, sdk.GetEventGatewaysSDK(), ent)
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
 	default:
@@ -468,6 +474,10 @@ func Update[
 		err = updateSNI(ctx, sdk.GetSNIsSDK(), ent)
 	case *configurationv1alpha1.KongDataPlaneClientCertificate:
 		err = nil // DataPlaneCertificates are immutable.
+	case *konnectv1alpha1.KonnectEventGateway:
+		if ent.Spec.Source != nil && *ent.Spec.Source == commonv1alpha1.EntitySourceOrigin {
+			err = updateEventGateway(ctx, sdk.GetEventGatewaysSDK(), ent)
+		}
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
 
@@ -852,7 +862,8 @@ func isMirrorableEntity[
 	TEnt constraints.EntityType[T],
 ](ent TEnt) bool {
 	switch any(ent).(type) {
-	case *konnectv1alpha2.KonnectGatewayControlPlane:
+	case *konnectv1alpha2.KonnectGatewayControlPlane,
+		*konnectv1alpha1.KonnectEventGateway:
 		return true
 	default:
 		return false
@@ -865,9 +876,11 @@ func isMirrorEntity[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
 ](ent TEnt) bool {
-	switch cp := any(ent).(type) {
+	switch e := any(ent).(type) {
 	case *konnectv1alpha2.KonnectGatewayControlPlane:
-		return cp.Spec.Source != nil && *cp.Spec.Source == commonv1alpha1.EntitySourceMirror
+		return e.Spec.Source != nil && *e.Spec.Source == commonv1alpha1.EntitySourceMirror
+	case *konnectv1alpha1.KonnectEventGateway:
+		return e.Spec.Source != nil && *e.Spec.Source == commonv1alpha1.EntitySourceMirror
 	default:
 		return false
 	}
