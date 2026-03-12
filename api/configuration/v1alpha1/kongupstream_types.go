@@ -74,6 +74,7 @@ type KongUpstreamSpec struct {
 // +kubebuilder:validation:XValidation:rule="!has(self.hash_on) || (self.hash_on != 'header' || has(self.hash_on_header))", message="hash_on_header is required when hash_on is set to `header`."
 // +kubebuilder:validation:XValidation:rule="!has(self.hash_on) || (self.hash_on != 'query_arg' || has(self.hash_on_query_arg))", message="hash_on_query_arg is required when `hash_on` is set to `query_arg`."
 // +kubebuilder:validation:XValidation:rule="!has(self.hash_on) || (self.hash_on != 'uri_capture' || has(self.hash_on_uri_capture))", message="hash_on_uri_capture is required when `hash_on` is set to `uri_capture`."
+// +kubebuilder:validation:XValidation:rule="!has(self.algorithm) || (self.algorithm != 'sticky-sessions' || has(self.sticky_sessions_cookie))", message="sticky_sessions_cookie is required when algorithm is set to `sticky-sessions`."
 // +kubebuilder:validation:XValidation:rule="!has(self.adopt) ? true : (has(self.controlPlaneRef) && self.controlPlaneRef.type == 'konnectNamespacedRef')", message="spec.adopt is allowed only when controlPlaneRef is konnectNamespacedRef"
 // +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
 type KongUpstreamAPISpec struct {
@@ -113,6 +114,10 @@ type KongUpstreamAPISpec struct {
 	// +kubebuilder:validation:Minimum=10
 	// +kubebuilder:validation:Maximum=65536
 	Slots *int64 `default:"10000" json:"slots,omitempty"`
+	// The cookie name to keep sticky sessions. Required when `algorithm` is set to `sticky-sessions`.
+	StickySessionsCookie *string `json:"sticky_sessions_cookie,omitempty"`
+	// The cookie path to set in the response headers for sticky sessions.
+	StickySessionsCookiePath *string `default:"/" json:"sticky_sessions_cookie_path,omitempty"`
 	// An optional set of strings associated with the Upstream for grouping and filtering.
 	Tags commonv1alpha1.Tags `json:"tags,omitempty"`
 	// If set, the balancer will use SRV hostname(if DNS Answer has SRV record) as the proxy upstream `Host`.

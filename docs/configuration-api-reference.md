@@ -1736,6 +1736,8 @@ KongUpstreamAPISpec defines specification of a Kong Upstream.
 | `host_header` _*string_ | The hostname to be used as `Host` header when proxying requests through Kong. |
 | `name` _string_ | This is a hostname, which must be equal to the `host` of a Service. |
 | `slots` _*int64_ | The number of slots in the load balancer algorithm. If `algorithm` is set to `round-robin`, this setting determines the maximum number of slots. If `algorithm` is set to `consistent-hashing`, this setting determines the actual number of slots in the algorithm. Accepts an integer in the range `10`-`65536`. |
+| `sticky_sessions_cookie` _*string_ | The cookie name to keep sticky sessions. Required when `algorithm` is set to `sticky-sessions`. |
+| `sticky_sessions_cookie_path` _*string_ | The cookie path to set in the response headers for sticky sessions. |
 | `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | An optional set of strings associated with the Upstream for grouping and filtering. |
 | `use_srv_name` _*bool_ | If set, the balancer will use SRV hostname(if DNS Answer has SRV record) as the proxy upstream `Host`. |
 
@@ -1768,6 +1770,8 @@ KongUpstreamSpec defines the spec of Kong Upstream.
 | `host_header` _*string_ | The hostname to be used as `Host` header when proxying requests through Kong. |
 | `name` _string_ | This is a hostname, which must be equal to the `host` of a Service. |
 | `slots` _*int64_ | The number of slots in the load balancer algorithm. If `algorithm` is set to `round-robin`, this setting determines the maximum number of slots. If `algorithm` is set to `consistent-hashing`, this setting determines the actual number of slots in the algorithm. Accepts an integer in the range `10`-`65536`. |
+| `sticky_sessions_cookie` _*string_ | The cookie name to keep sticky sessions. Required when `algorithm` is set to `sticky-sessions`. |
+| `sticky_sessions_cookie_path` _*string_ | The cookie path to set in the response headers for sticky sessions. |
 | `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | An optional set of strings associated with the Upstream for grouping and filtering. |
 | `use_srv_name` _*bool_ | If set, the balancer will use SRV hostname(if DNS Answer has SRV record) as the proxy upstream `Host`. |
 | `controlPlaneRef` _[ControlPlaneRef](#common-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef is a reference to a ControlPlane this KongUpstream is associated with. |
