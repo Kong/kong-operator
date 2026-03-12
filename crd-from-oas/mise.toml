@@ -7,7 +7,7 @@ version = "0.20.1"
 
 [tools."github:golangci/golangci-lint"]
 # renovate: datasource=github-releases depName=golangci/golangci-lint
-version = "2.10.1"
+version = "2.11.3"
 
 [tools."go:sigs.k8s.io/kube-api-linter/cmd/golangci-lint-kube-api-linter"]
 # renovate: datasource=git-refs packageName=https://github.com/kubernetes-sigs/kube-api-linter.git
@@ -15,7 +15,7 @@ version = "39e3d06a2850e38a8e9e82918bab14ce84e608de"
 
 [tools."github:kubernetes-sigs/controller-runtime"]
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-runtime
-version = "0.23.1"
+version = "0.23.3"
 [tools."github:kubernetes-sigs/controller-runtime".platforms]
 darwin-arm64 = { asset_pattern = "setup-envtest-darwin-arm64" }
 

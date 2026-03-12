@@ -21,7 +21,8 @@ apiGroupVersions:
           alias: commonv1alpha1
     types:
       - path: /v3/portals/{portalId}/teams
-      - path: /v3/portals/{portalId}/custom-domain
-      - path: /v3/identity-providers
-      - path: /v2/dcr-providers
-      - path: /v3/portals/{portalId}/teams/{teamId}/developers
+      # TODO: uncomment
+      # - path: /v3/portals/{portalId}/custom-domain
+      # - path: /v3/identity-providers
+      # - path: /v2/dcr-providers
+      # - path: /v3/portals/{portalId}/teams/{teamId}/developers
