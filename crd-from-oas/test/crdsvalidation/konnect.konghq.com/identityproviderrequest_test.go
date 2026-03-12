@@ -109,7 +109,7 @@ func TestIdentityProviderRequest(t *testing.T) {
 							Type: "oidc",
 							Config: &konnectv1alpha1.Config{
 								Type: konnectv1alpha1.ConfigTypeOIDC,
-								OIDC: &konnectv1alpha1.ConfigureOIDCIdentityProviderConfig{
+								OIDC: &konnectv1alpha1.OIDCIdentityProviderConfig{
 									ClientID:     "my-client-id",
 									ClientSecret: "my-client-secret",
 									IssuerURL:    "https://issuer.example.com",
@@ -174,7 +174,7 @@ func TestIdentityProviderRequest(t *testing.T) {
 							LoginPath: "/sso/login",
 							Config: &konnectv1alpha1.Config{
 								Type: konnectv1alpha1.ConfigTypeOIDC,
-								OIDC: &konnectv1alpha1.ConfigureOIDCIdentityProviderConfig{
+								OIDC: &konnectv1alpha1.OIDCIdentityProviderConfig{
 									ClientID:     "full-spec-client-id",
 									ClientSecret: "full-spec-client-secret",
 									IssuerURL:    "https://issuer.example.com",

@@ -1,15 +1,5 @@
 package v1alpha1
 
-// ConfigureOIDCIdentityProviderConfig The identity provider that contains
-// configuration data for the OIDC authentication integration.
-type ConfigureOIDCIdentityProviderConfig struct {
-	ClaimMappings OIDCIdentityProviderClaimMappings `json:"claim_mappings,omitempty"`
-	ClientID      OIDCIdentityProviderClientId      `json:"client_id,omitempty"`
-	ClientSecret  OIDCIdentityProviderClientSecret  `json:"client_secret,omitempty"`
-	IssuerURL     OIDCIdentityProviderIssuer        `json:"issuer_url,omitempty"`
-	Scopes        OIDCIdentityProviderScopes        `json:"scopes,omitempty"`
-}
-
 // CreateDcrConfigAuth0InRequest Payload to create an Auth0 DCR provider.
 type CreateDcrConfigAuth0InRequest struct {
 	InitialClientAudience     DcrConfigPropertyInitialClientAudience `json:"initial_client_audience,omitempty"`
@@ -20,8 +10,9 @@ type CreateDcrConfigAuth0InRequest struct {
 
 // CreateDcrConfigAzureAdInRequest Payload to create an Azure AD DCR provider.
 type CreateDcrConfigAzureAdInRequest struct {
-	InitialClientID     DcrConfigPropertyInitialClientId     `json:"initial_client_id,omitempty"`
-	InitialClientSecret DcrConfigPropertyInitialClientSecret `json:"initial_client_secret,omitempty"`
+	AllowMultipleCredentials DcrConfigPropertyAllowMultipleCredentials `json:"allow_multiple_credentials,omitempty"`
+	InitialClientID          DcrConfigPropertyInitialClientId          `json:"initial_client_id,omitempty"`
+	InitialClientSecret      DcrConfigPropertyInitialClientSecret      `json:"initial_client_secret,omitempty"`
 }
 
 // CreateDcrConfigCurityInRequest Payload to create a Curity DCR provider.
@@ -32,15 +23,17 @@ type CreateDcrConfigCurityInRequest struct {
 
 // CreateDcrConfigHttpInRequest Payload to create an HTTP DCR provider.
 type CreateDcrConfigHttpInRequest struct {
-	APIKey               DcrConfigPropertyApiKey               `json:"api_key,omitempty"`
-	DcrBaseURL           DcrBaseUrl                            `json:"dcr_base_url,omitempty"`
-	DisableEventHooks    DcrConfigPropertyDisableEventHooks    `json:"disable_event_hooks,omitempty"`
-	DisableRefreshSecret DcrConfigPropertyDisableRefreshSecret `json:"disable_refresh_secret,omitempty"`
+	AllowMultipleCredentials DcrConfigPropertyAllowMultipleCredentials `json:"allow_multiple_credentials,omitempty"`
+	APIKey                   DcrConfigPropertyApiKey                   `json:"api_key,omitempty"`
+	DcrBaseURL               DcrBaseUrl                                `json:"dcr_base_url,omitempty"`
+	DisableEventHooks        DcrConfigPropertyDisableEventHooks        `json:"disable_event_hooks,omitempty"`
+	DisableRefreshSecret     DcrConfigPropertyDisableRefreshSecret     `json:"disable_refresh_secret,omitempty"`
 }
 
 // CreateDcrConfigOktaInRequest Payload to create an Okta DCR provider.
 type CreateDcrConfigOktaInRequest struct {
-	DcrToken DcrConfigPropertyDcrToken `json:"dcr_token,omitempty"`
+	AllowMultipleCredentials DcrConfigPropertyAllowMultipleCredentials `json:"allow_multiple_credentials,omitempty"`
+	DcrToken                 DcrConfigPropertyDcrToken                 `json:"dcr_token,omitempty"`
 }
 
 // CreateDcrProviderRequestAuth0 Request body for creating an Auth0 DCR
@@ -117,6 +110,11 @@ type CreatePortalCustomDomainSSLWithCustomCertificate struct {
 // the DCR provider.
 // This URL must be accessible from the Konnect service.
 type DcrBaseUrl string
+
+// DcrConfigPropertyAllowMultipleCredentials When enabled, indicates that the
+// HTTP DCR provider supports creating and managing multiple credentials per
+// application.
+type DcrConfigPropertyAllowMultipleCredentials bool
 
 // DcrConfigPropertyApiKey This is the API Key that will be sent with each HTTP
 // request to the custom DCR server.
@@ -197,6 +195,16 @@ type OIDCIdentityProviderClientId string
 // OIDCIdentityProviderClientSecret The Client Secret assigned to your
 // application by the identity provider.
 type OIDCIdentityProviderClientSecret string
+
+// OIDCIdentityProviderConfig The identity provider that contains configuration
+// data for the OIDC authentication integration.
+type OIDCIdentityProviderConfig struct {
+	ClaimMappings OIDCIdentityProviderClaimMappings `json:"claim_mappings,omitempty"`
+	ClientID      OIDCIdentityProviderClientId      `json:"client_id,omitempty"`
+	ClientSecret  OIDCIdentityProviderClientSecret  `json:"client_secret,omitempty"`
+	IssuerURL     OIDCIdentityProviderIssuer        `json:"issuer_url,omitempty"`
+	Scopes        OIDCIdentityProviderScopes        `json:"scopes,omitempty"`
+}
 
 // OIDCIdentityProviderIssuer The issuer URI of the identity provider.
 // This is the URL where the provider's metadata can be obtained.
