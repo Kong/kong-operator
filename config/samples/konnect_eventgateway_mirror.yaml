@@ -1,0 +1,29 @@
+# KonnectAPIAuthConfiguration holds the PAT used to authenticate with Konnect.
+# Replace the token and serverURL with your own values.
+# For available server URLs see: https://docs.konghq.com/konnect/network/
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth
+  namespace: default
+spec:
+  type: token
+  token: kpat_PUT_YOUR_TOKEN_HERE
+  serverURL: eu.api.konghq.tech
+---
+# KonnectEventGateway (Mirror) — the operator reads an existing Event Gateway from Konnect
+# and populates status.id without creating or modifying the Konnect entity.
+# Replace spec.mirror.konnect.id with the UUID of your existing Event Gateway.
+kind: KonnectEventGateway
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: existing-event-gateway
+  namespace: default
+spec:
+  source: Mirror
+  mirror:
+    konnect:
+      id: "PUT_YOUR_EVENT_GATEWAY_UUID_HERE"  # replace with real Event Gateway UUID
+  konnect:
+    authRef:
+      name: konnect-api-auth

@@ -74,6 +74,10 @@ type KonnectEventGatewaySpec struct {
 	// KonnectConfiguration contains the Konnect API authentication configuration.
 	//
 	// +optional
+	// TODO: Decide if we want the crossnamespace reference for APIAuthConfigurationRef here, 
+	// or if we want to enforce that the referenced APIAuthConfiguration must be in the same namespace as the KonnectEventGateway. 
+	// If we allow cross-namespace references, we need to change this type to v1alpha2.ControlPlaneKonnectConfiguration to reuse the 
+	// logic we already have for cross-namespace references in control planes.
 	KonnectConfiguration konnectv1alpha2.KonnectConfiguration `json:"konnect,omitempty"`
 }
 
