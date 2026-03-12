@@ -121,6 +121,12 @@ spec:
                         description: CreateDcrConfigAzureAdInRequest Payload to create
                           an Azure AD DCR provider.
                         properties:
+                          allow_multiple_credentials:
+                            description: |-
+                              DcrConfigPropertyAllowMultipleCredentials When enabled, indicates that the
+                              HTTP DCR provider supports creating and managing multiple credentials per
+                              application.
+                            type: boolean
                           initial_client_id:
                             description: |-
                               DcrConfigPropertyInitialClientId This ID should be copied from your identity
@@ -211,6 +217,12 @@ spec:
                         description: CreateDcrConfigHttpInRequest Payload to create
                           an HTTP DCR provider.
                         properties:
+                          allow_multiple_credentials:
+                            description: |-
+                              DcrConfigPropertyAllowMultipleCredentials When enabled, indicates that the
+                              HTTP DCR provider supports creating and managing multiple credentials per
+                              application.
+                            type: boolean
                           api_key:
                             description: |-
                               DcrConfigPropertyApiKey This is the API Key that will be sent with each HTTP
@@ -269,6 +281,12 @@ spec:
                         description: CreateDcrConfigOktaInRequest Payload to create
                           an Okta DCR provider.
                         properties:
+                          allow_multiple_credentials:
+                            description: |-
+                              DcrConfigPropertyAllowMultipleCredentials When enabled, indicates that the
+                              HTTP DCR provider supports creating and managing multiple credentials per
+                              application.
+                            type: boolean
                           dcr_token:
                             description: |-
                               DcrConfigPropertyDcrToken This secret should be copied from your identity

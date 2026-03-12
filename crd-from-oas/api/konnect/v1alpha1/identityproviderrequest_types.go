@@ -116,7 +116,7 @@ type Config struct {
 	// OIDC configuration.
 	//
 	// +optional
-	OIDC *ConfigureOIDCIdentityProviderConfig `json:"oidc,omitempty"`
+	OIDC *OIDCIdentityProviderConfig `json:"oidc,omitempty"`
 	// SAML configuration.
 	//
 	// +optional
