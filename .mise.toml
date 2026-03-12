@@ -41,9 +41,9 @@ macos-arm64 = { asset_pattern = "telepresence-darwin-arm64" }
 # renovate: datasource=github-releases depName=helm/helm
 version = "4.1.3"
 [tools."http:helm".platforms]
-linux-x64 = { url = "https://get.helm.sh/helm-v{version}-linux-amd64.tar.gz" }
-linux-arm64 = { url = "https://get.helm.sh/helm-v{version}-linux-arm64.tar.gz" }
-macos-arm64 = { url = "https://get.helm.sh/helm-v{version}-darwin-arm64.tar.gz" }
+linux-x64 = { url = "https://get.helm.sh/helm-v{{version}}-linux-amd64.tar.gz" }
+linux-arm64 = { url = "https://get.helm.sh/helm-v{{version}}-linux-arm64.tar.gz" }
+macos-arm64 = { url = "https://get.helm.sh/helm-v{{version}}-darwin-arm64.tar.gz" }
 
 [tools."go:sigs.k8s.io/kube-api-linter/cmd/golangci-lint-kube-api-linter"]
 # renovate: datasource=git-refs packageName=https://github.com/kubernetes-sigs/kube-api-linter.git
