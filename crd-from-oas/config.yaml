@@ -2,6 +2,7 @@ apiGroupVersions:
   # TODO: temporary
   x-konnect.konghq.com/v1alpha1:
     types:
+      - path: /v1/event-gateways
       - path: /v3/portals
         cel:
           name:
