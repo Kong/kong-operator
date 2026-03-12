@@ -27951,6 +27951,12 @@ spec:
                 maximum: 65536
                 minimum: 10
                 type: integer
+              sticky_sessions_cookie:
+                description: The cookie name to keep sticky sessions. Required when `algorithm` is set to `sticky-sessions`.
+                type: string
+              sticky_sessions_cookie_path:
+                description: The cookie path to set in the response headers for sticky sessions.
+                type: string
               tags:
                 description: An optional set of strings associated with the Upstream for grouping and filtering.
                 items:
@@ -27989,6 +27995,8 @@ spec:
               rule: '!has(self.hash_on) || (self.hash_on != ''query_arg'' || has(self.hash_on_query_arg))'
             - message: hash_on_uri_capture is required when `hash_on` is set to `uri_capture`.
               rule: '!has(self.hash_on) || (self.hash_on != ''uri_capture'' || has(self.hash_on_uri_capture))'
+            - message: sticky_sessions_cookie is required when algorithm is set to `sticky-sessions`.
+              rule: '!has(self.algorithm) || (self.algorithm != ''sticky-sessions'' || has(self.sticky_sessions_cookie))'
             - message: spec.adopt is allowed only when controlPlaneRef is konnectNamespacedRef
               rule: '!has(self.adopt) ? true : (has(self.controlPlaneRef) && self.controlPlaneRef.type == ''konnectNamespacedRef'')'
             - message: Cannot set or unset spec.adopt in updates

@@ -142,24 +142,26 @@ func kongUpstreamToSDKUpstreamInput(
 	upstream *configurationv1alpha1.KongUpstream,
 ) sdkkonnectcomp.Upstream {
 	return sdkkonnectcomp.Upstream{
-		Algorithm:              upstream.Spec.Algorithm,
-		ClientCertificate:      upstream.Spec.ClientCertificate,
-		HashFallback:           upstream.Spec.HashFallback,
-		HashFallbackHeader:     upstream.Spec.HashFallbackHeader,
-		HashFallbackQueryArg:   upstream.Spec.HashFallbackQueryArg,
-		HashFallbackURICapture: upstream.Spec.HashFallbackURICapture,
-		HashOn:                 upstream.Spec.HashOn,
-		HashOnCookie:           upstream.Spec.HashOnCookie,
-		HashOnCookiePath:       upstream.Spec.HashOnCookiePath,
-		HashOnHeader:           upstream.Spec.HashOnHeader,
-		HashOnQueryArg:         upstream.Spec.HashOnQueryArg,
-		HashOnURICapture:       upstream.Spec.HashOnURICapture,
-		Healthchecks:           upstream.Spec.Healthchecks,
-		HostHeader:             upstream.Spec.HostHeader,
-		Name:                   upstream.Spec.Name,
-		Slots:                  upstream.Spec.Slots,
-		Tags:                   GenerateTagsForObject(upstream, upstream.Spec.Tags...),
-		UseSrvName:             upstream.Spec.UseSrvName,
+		Algorithm:                upstream.Spec.Algorithm,
+		ClientCertificate:        upstream.Spec.ClientCertificate,
+		HashFallback:             upstream.Spec.HashFallback,
+		HashFallbackHeader:       upstream.Spec.HashFallbackHeader,
+		HashFallbackQueryArg:     upstream.Spec.HashFallbackQueryArg,
+		HashFallbackURICapture:   upstream.Spec.HashFallbackURICapture,
+		HashOn:                   upstream.Spec.HashOn,
+		HashOnCookie:             upstream.Spec.HashOnCookie,
+		HashOnCookiePath:         upstream.Spec.HashOnCookiePath,
+		HashOnHeader:             upstream.Spec.HashOnHeader,
+		HashOnQueryArg:           upstream.Spec.HashOnQueryArg,
+		HashOnURICapture:         upstream.Spec.HashOnURICapture,
+		Healthchecks:             upstream.Spec.Healthchecks,
+		HostHeader:               upstream.Spec.HostHeader,
+		Name:                     upstream.Spec.Name,
+		Slots:                    upstream.Spec.Slots,
+		StickySessionsCookie:     upstream.Spec.StickySessionsCookie,
+		StickySessionsCookiePath: upstream.Spec.StickySessionsCookiePath,
+		Tags:                     GenerateTagsForObject(upstream, upstream.Spec.Tags...),
+		UseSrvName:               upstream.Spec.UseSrvName,
 	}
 }
 
@@ -207,5 +209,7 @@ func upstreamMatch(konnectUpstream *sdkkonnectcomp.Upstream, upstream *configura
 		equalWithDefault(konnectUpstream.Healthchecks, upstreamInput.Healthchecks, sdkkonnectcomp.Healthchecks{}) &&
 		equalWithDefault(konnectUpstream.HostHeader, upstreamInput.HostHeader, "") &&
 		konnectUpstream.Name == upstreamInput.Name &&
-		equalWithDefault(konnectUpstream.Slots, upstreamInput.Slots, 10000)
+		equalWithDefault(konnectUpstream.Slots, upstreamInput.Slots, 10000) &&
+		equalWithDefault(konnectUpstream.StickySessionsCookie, upstreamInput.StickySessionsCookie, "") &&
+		equalWithDefault(konnectUpstream.StickySessionsCookiePath, upstreamInput.StickySessionsCookiePath, "/")
 }

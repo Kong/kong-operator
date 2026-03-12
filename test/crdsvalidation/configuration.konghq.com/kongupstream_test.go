@@ -473,6 +473,67 @@ func TestKongUpstream(t *testing.T) {
 			RunWithConfig(t, cfg, scheme)
 	})
 
+	t.Run("sticky sessions", func(t *testing.T) {
+		common.TestCasesGroup[*configurationv1alpha1.KongUpstream]{
+			{
+				Name: "sticky_sessions_cookie is required when algorithm is set to 'sticky-sessions'",
+				TestObject: &configurationv1alpha1.KongUpstream{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongUpstreamSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
+							Algorithm:            sdkkonnectcomp.UpstreamAlgorithmStickySessions.ToPointer(),
+							StickySessionsCookie: new("session"),
+						},
+					},
+				},
+			},
+			{
+				Name: "sticky_sessions_cookie and sticky_sessions_cookie_path can be set together",
+				TestObject: &configurationv1alpha1.KongUpstream{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongUpstreamSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
+							Algorithm:                sdkkonnectcomp.UpstreamAlgorithmStickySessions.ToPointer(),
+							StickySessionsCookie:     new("session"),
+							StickySessionsCookiePath: new("/api"),
+						},
+					},
+				},
+			},
+			{
+				Name: "validation fails when sticky_sessions_cookie is not provided when algorithm is set to 'sticky-sessions'",
+				TestObject: &configurationv1alpha1.KongUpstream{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongUpstreamSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
+							Algorithm: sdkkonnectcomp.UpstreamAlgorithmStickySessions.ToPointer(),
+						},
+					},
+				},
+				ExpectedErrorMessage: new("sticky_sessions_cookie is required when algorithm is set to `sticky-sessions`."),
+			},
+		}.
+			RunWithConfig(t, cfg, scheme)
+	})
+
 	t.Run("spec", func(t *testing.T) {
 		common.TestCasesGroup[*configurationv1alpha1.KongUpstream]{
 			{
