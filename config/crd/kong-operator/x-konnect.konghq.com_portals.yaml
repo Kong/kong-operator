@@ -3,7 +3,8 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.20.1
+    kubernetes-configuration.konghq.com/channels: kong-operator
+    kubernetes-configuration.konghq.com/version: v2.1.0
   name: portals.x-konnect.konghq.com
 spec:
   group: x-konnect.konghq.com
