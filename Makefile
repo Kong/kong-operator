@@ -825,6 +825,10 @@ test.kongintegration:
 test.kongintegration.pretty:
 	@$(MAKE) _test.kongintegration GOTESTSUM_FORMAT=testname
 
+.PHONY: test.kongintegration.golden.update
+test.kongintegration.golden.update:
+	@go test -v -run TestKongClient_GoldenTests ./ingress-controller/internal/dataplane -update
+
 .PHONY: _test.kongintegration
 _test.kongintegration: gotestsum
 	# Disable testcontainer's reaper (Ryuk). It's needed because Ryuk requires
