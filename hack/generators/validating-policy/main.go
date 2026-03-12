@@ -32,6 +32,11 @@ func main() {
 			chartValidatingPolicyFileName: "validation-policy-service-annotations.yaml",
 			helmValueName:                 "serviceAnnotations",
 		},
+		{
+			validatingPoliciesSubPath:     "konnect",
+			chartValidatingPolicyFileName: "validation-policy-konnect.yaml",
+			helmValueName:                 "konnectDataplaneAutoscale",
+		},
 	}
 	for _, param := range validatingPolicyGroups {
 		chartsValidatingPolicyTemplateFilePath := path.Join(chartsTemplatePathPrefix, param.chartValidatingPolicyFileName)

@@ -62,7 +62,7 @@ func TestCreateControlPlane(t *testing.T) {
 					CreateControlPlane(ctx, *expectedRequest).
 					Return(
 						&sdkkonnectops.CreateControlPlaneResponse{
-							ControlPlane: &sdkkonnectcomp.ControlPlane{
+							ControlPlane: &sdkkonnectcomp.ControlPlane1{
 								ID: cpID,
 							},
 						},
@@ -171,7 +171,7 @@ func TestCreateControlPlane(t *testing.T) {
 					CreateControlPlane(ctx, *expectedRequest).
 					Return(
 						&sdkkonnectops.CreateControlPlaneResponse{
-							ControlPlane: &sdkkonnectcomp.ControlPlane{
+							ControlPlane: &sdkkonnectcomp.ControlPlane1{
 								ID: cpgID,
 							},
 						},
@@ -247,7 +247,7 @@ func TestCreateControlPlane(t *testing.T) {
 					CreateControlPlane(ctx, *expectedRequest).
 					Return(
 						&sdkkonnectops.CreateControlPlaneResponse{
-							ControlPlane: &sdkkonnectcomp.ControlPlane{
+							ControlPlane: &sdkkonnectcomp.ControlPlane1{
 								ID: cpgID,
 							},
 						},
@@ -462,7 +462,7 @@ func TestUpdateControlPlane(t *testing.T) {
 					).
 					Return(
 						&sdkkonnectops.UpdateControlPlaneResponse{
-							ControlPlane: &sdkkonnectcomp.ControlPlane{
+							ControlPlane: &sdkkonnectcomp.ControlPlane1{
 								ID: "12345",
 							},
 						},
@@ -570,7 +570,7 @@ func TestUpdateControlPlane(t *testing.T) {
 					CreateControlPlane(ctx, expectedRequest).
 					Return(
 						&sdkkonnectops.CreateControlPlaneResponse{
-							ControlPlane: &sdkkonnectcomp.ControlPlane{
+							ControlPlane: &sdkkonnectcomp.ControlPlane1{
 								ID: "12345",
 							},
 						},
@@ -643,7 +643,7 @@ func TestCreateAndUpdateControlPlane_KubernetesMetadataConsistency(t *testing.T)
 			Labels: expectedLabels,
 		}).
 		Return(&sdkkonnectops.CreateControlPlaneResponse{
-			ControlPlane: &sdkkonnectcomp.ControlPlane{
+			ControlPlane: &sdkkonnectcomp.ControlPlane1{
 				ID: "12345",
 			},
 		}, nil)
@@ -657,7 +657,7 @@ func TestCreateAndUpdateControlPlane_KubernetesMetadataConsistency(t *testing.T)
 			Labels: expectedLabels,
 		}).
 		Return(&sdkkonnectops.UpdateControlPlaneResponse{
-			ControlPlane: &sdkkonnectcomp.ControlPlane{
+			ControlPlane: &sdkkonnectcomp.ControlPlane1{
 				ID: "12345",
 			},
 		}, nil)
