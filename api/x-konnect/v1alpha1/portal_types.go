@@ -4,6 +4,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 )
 
 // Portal is the Schema for the portals API.
@@ -88,7 +89,7 @@ type PortalAPISpec struct {
 	// unless set during publication.
 	//
 	// +optional
-	DefaultApplicationAuthStrategyIDRef *ObjectRef `json:"default_application_auth_strategy_id_ref,omitempty"`
+	DefaultApplicationAuthStrategyIDRef *commonv1alpha1.ObjectRef `json:"default_application_auth_strategy_id_ref,omitempty"`
 
 	// The default visibility of pages in the portal.
 	// If set to `public`, newly created pages are visible to unauthenticated

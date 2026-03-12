@@ -46,3 +46,6 @@ resources:
   - konnect.konghq.com_portalcustomdomains.yaml
   - konnect.konghq.com_portals.yaml
   - konnect.konghq.com_portalteams.yaml
+  - x-konnect.konghq.com_eventgateways.yaml
+  - x-konnect.konghq.com_portals.yaml
+  - x-konnect.konghq.com_portalteams.yaml

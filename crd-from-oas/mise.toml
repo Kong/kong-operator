@@ -37,7 +37,7 @@ depends = [ "clean" ]
 depends_post = [ "generate-deepcopy" ]
 [tasks.generate-api.env]
 INPUT_FILE = "openapi.yaml"
-OUTPUT_DIR = "api/"
+OUTPUT_DIR = "../api/"
 CONFIG_FILE = "config.yaml"
 
 [tasks.generate-crds]
@@ -47,12 +47,12 @@ description = "Generate CRD manifests from the API types"
 # go run ./scripts/crds-generator
 run = """
 rm -rf ./config/crd/
-controller-gen crd paths=./api/... output:crd:dir=./config/crd 2>&1
+controller-gen crd paths=../api/... output:crd:dir=../config/crd 2>&1
 """
 
 [tasks.generate-deepcopy]
 description = "Generate DeepCopy methods for the API types"
-run = "controller-gen object paths=./api/..."
+run = "controller-gen object:headerFile='../hack/generators/boilerplate.go.txt' paths=../api/..."
 
 [tasks.lint]
 description = "Run golangci-lint"
