@@ -425,23 +425,24 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 			log.Debug(logger, "Successfully translated KongService resource",
 				"service", serviceName)
 
-			// Build the KongRoute resource.
-			routePtr, err := kongroute.RouteForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp, serviceName, hostnames)
+			// Build one KongRoute per match in the rule.
+			routes, err := kongroute.RoutesForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp, serviceName, hostnames)
 			if err != nil {
-				log.Error(logger, err, "Failed to translate KongRoute resource, skipping rule",
+				log.Error(logger, err, "Failed to translate KongRoute resources for rule, skipping rule",
 					"service", serviceName,
 					"hostnames", hostnames)
-				translationErrors = append(translationErrors, fmt.Errorf("failed to translate KongRoute for rule: %w", err))
+				translationErrors = append(translationErrors, fmt.Errorf("failed to translate KongRoutes for rule: %w", err))
 				continue
 			}
-			routeName := routePtr.Name
-			c.outputStore = append(c.outputStore, routePtr)
-			log.Debug(logger, "Successfully translated KongRoute resource",
-				"route", routeName)
+			for _, r := range routes {
+				routeName := r.Name
+				c.outputStore = append(c.outputStore, r)
+				log.Debug(logger, "Successfully translated KongRoute resource",
+					"route", routeName)
+			}
 
 			// Build the KongPlugin and KongPluginBinding resources.
 			log.Debug(logger, "Processing filters for rule",
-				"kongRoute", routeName,
 				"filterCount", len(rule.Filters))
 
 			for _, filter := range rule.Filters {
@@ -456,30 +457,33 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				for _, plugin := range plugins {
 					pluginName := plugin.Name
 					c.outputStore = append(c.outputStore, &plugin)
-					// Create a KongPluginBinding to bind the KongPlugin to each KongRoute.
-					bindingPtr, err := pluginbinding.BindingForPluginAndRoute(
-						ctx,
-						logger,
-						c.Client,
-						c.route,
-						&pRef,
-						cp,
-						pluginName,
-						routeName,
-					)
-					if err != nil {
-						log.Error(logger, err, "Failed to build KongPluginBinding resource, skipping binding",
-							"plugin", pluginName,
-							"kongRoute", routeName)
-						translationErrors = append(translationErrors, fmt.Errorf("failed to build KongPluginBinding for plugin %s: %w", pluginName, err))
-						continue
-					}
-					bindingName := bindingPtr.Name
-					c.outputStore = append(c.outputStore, bindingPtr)
+					// Create a KongPluginBinding to bind the KongPlugin to each KongRoute generated for the rule.
+					for _, r := range routes {
+						bindingPtr, err := pluginbinding.BindingForPluginAndRoute(
+							ctx,
+							logger,
+							c.Client,
+							c.route,
+							&pRef,
+							cp,
+							pluginName,
+							r.Name,
+						)
+						if err != nil {
+							log.Error(logger, err, "Failed to build KongPluginBinding resource, skipping binding",
+								"plugin", pluginName,
+								"kongRoute", r.Name)
+							translationErrors = append(translationErrors, fmt.Errorf("failed to build KongPluginBinding for plugin %s: %w", pluginName, err))
+							continue
+						}
+						bindingName := bindingPtr.Name
+						c.outputStore = append(c.outputStore, bindingPtr)
 
-					log.Debug(logger, "Successfully translated KongPlugin and KongPluginBinding resources",
-						"plugin", pluginName,
-						"binding", bindingName)
+						log.Debug(logger, "Successfully translated KongPlugin and KongPluginBinding resources",
+							"plugin", pluginName,
+							"binding", bindingName,
+							"route", r.Name)
+					}
 				}
 			}
 

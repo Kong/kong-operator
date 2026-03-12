@@ -449,7 +449,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
 			},
 			wantErr:    true,
-			wantErrSub: "failed to translate KongRoute for rule",
+			wantErrSub: "failed to translate KongRoutes for rule",
 			wantOutputs: outputCount{
 				upstreams: 1,
 				services:  1,
