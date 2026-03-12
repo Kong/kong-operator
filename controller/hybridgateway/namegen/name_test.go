@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,6 +14,50 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
+
+func testRoute(namespace, name string) *gwtypes.HTTPRoute {
+	return &gwtypes.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+	}
+}
+
+func testControlPlaneRef(name string) *commonv1alpha1.ControlPlaneRef {
+	return &commonv1alpha1.ControlPlaneRef{
+		Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+			Name: name,
+		},
+	}
+}
+
+func testPathMatch(path string) []gatewayv1.HTTPRouteMatch {
+	matchType := gatewayv1.PathMatchPathPrefix
+	return []gatewayv1.HTTPRouteMatch{
+		{
+			Path: &gatewayv1.HTTPPathMatch{
+				Type:  &matchType,
+				Value: &path,
+			},
+		},
+	}
+}
+
+func testBackendRef(
+	name string, namespace *gatewayv1.Namespace, port *gatewayv1.PortNumber,
+) gatewayv1.HTTPBackendRef {
+	return gatewayv1.HTTPBackendRef{
+		BackendRef: gatewayv1.BackendRef{
+			BackendObjectReference: gatewayv1.BackendObjectReference{
+				Name:      gatewayv1.ObjectName(name),
+				Namespace: namespace,
+				Port:      port,
+			},
+		},
+	}
+}
 
 func TestNewName(t *testing.T) {
 	tests := []struct {
@@ -64,83 +109,115 @@ func TestNewName(t *testing.T) {
 
 func TestNewKongUpstreamName(t *testing.T) {
 	tests := []struct {
-		name             string
-		route            *gwtypes.HTTPRoute
-		cp               *commonv1alpha1.ControlPlaneRef
-		rule             gatewayv1.HTTPRouteRule
-		expectedReadable string
+		name     string
+		route    *gwtypes.HTTPRoute
+		cp       *commonv1alpha1.ControlPlaneRef
+		rule     gatewayv1.HTTPRouteRule
+		expected string
 	}{
 		{
-			name: "basic upstream name generation",
-			route: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-				},
-			},
-			cp: &commonv1alpha1.ControlPlaneRef{
-				Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-				KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
-					Name: "test-cp",
-				},
-			},
+			name:  "basic upstream name generation",
+			route: testRoute("default", "test-route"),
+			cp:    testControlPlaneRef("test-cp"),
 			rule: gatewayv1.HTTPRouteRule{
 				BackendRefs: []gatewayv1.HTTPBackendRef{
-					{
-						BackendRef: gatewayv1.BackendRef{
-							BackendObjectReference: gatewayv1.BackendObjectReference{
-								Name: "service1",
-								Port: func() *gatewayv1.PortNumber { p := gatewayv1.PortNumber(8080); return &p }(),
-							},
-						},
-					},
+					testBackendRef("service1", nil, lo.ToPtr(gatewayv1.PortNumber(8080))),
 				},
 			},
-			expectedReadable: "http.default-service1-8080.1",
+			expected: "http.default-service1-8080.1.cp1fbfa93f.e25441d7",
 		},
 		{
-			name: "multiple backend refs",
-			route: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-				},
-			},
-			cp: &commonv1alpha1.ControlPlaneRef{
-				Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-				KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
-					Name: "multi-cp",
-				},
-			},
+			name:  "multiple backend refs use lowest lexical backend in readable prefix",
+			route: testRoute("default", "test-route"),
+			cp:    testControlPlaneRef("multi-cp"),
 			rule: gatewayv1.HTTPRouteRule{
 				BackendRefs: []gatewayv1.HTTPBackendRef{
+					testBackendRef("service2", nil, lo.ToPtr(gatewayv1.PortNumber(9090))),
+					testBackendRef("service1", nil, lo.ToPtr(gatewayv1.PortNumber(8080))),
+				},
+			},
+			expected: "http.default-service1-8080.2.cp918460a.2c5d1acf",
+		},
+		{
+			name:  "cross namespace backend is reflected in readable prefix",
+			route: testRoute("default", "test-route"),
+			cp:    testControlPlaneRef("namespaced-cp"),
+			rule: gatewayv1.HTTPRouteRule{
+				BackendRefs: []gatewayv1.HTTPBackendRef{
+					testBackendRef("backend-service", lo.ToPtr(gatewayv1.Namespace("backend-ns")), nil),
+				},
+			},
+			expected: "http.backend-ns-backend-service.1.cpba78230e.1f2a8c5",
+		},
+		{
+			name:  "backendless rule produces readable prefix with just http and cp hash",
+			route: testRoute("default", "test-route"),
+			cp:    testControlPlaneRef("namespaced-cp"),
+			rule: gatewayv1.HTTPRouteRule{
+				BackendRefs: []gatewayv1.HTTPBackendRef{},
+				Filters: []gatewayv1.HTTPRouteFilter{
 					{
-						BackendRef: gatewayv1.BackendRef{
-							BackendObjectReference: gatewayv1.BackendObjectReference{
-								Name: "service1",
-								Port: func() *gatewayv1.PortNumber { p := gatewayv1.PortNumber(8080); return &p }(),
-							},
-						},
-					},
-					{
-						BackendRef: gatewayv1.BackendRef{
-							BackendObjectReference: gatewayv1.BackendObjectReference{
-								Name: "service2",
-								Port: func() *gatewayv1.PortNumber { p := gatewayv1.PortNumber(9090); return &p }(),
+						Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
+						RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
+							Set: []gatewayv1.HTTPHeader{
+								{
+									Name:  "header",
+									Value: "value",
+								},
 							},
 						},
 					},
 				},
+				Matches: []gatewayv1.HTTPRouteMatch{
+					{
+						Path: &gatewayv1.HTTPPathMatch{
+							Type:  lo.ToPtr(gatewayv1.PathMatchPathPrefix),
+							Value: lo.ToPtr("/prefix"),
+						},
+					},
+				},
 			},
-			expectedReadable: "http.default-service1-8080.2",
+			expected: "http.cpba78230e.7f99a851",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := NewKongUpstreamName(tt.route, tt.cp, tt.rule)
-			expected := tt.expectedReadable + ".cp" + utils.Hash32(tt.cp) + "." + utils.Hash32(tt.rule.BackendRefs)
-			assert.Equal(t, expected, result)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestNewKongUpstreamName_Equality(t *testing.T) {
+	tests := []struct {
+		name  string
+		route *gwtypes.HTTPRoute
+		cp    *commonv1alpha1.ControlPlaneRef
+		ruleA gatewayv1.HTTPRouteRule
+		ruleB gatewayv1.HTTPRouteRule
+		equal bool
+	}{
+		{
+			name:  "different matches with no backends produce different results",
+			route: testRoute("gateway-conformance-infra", "redirect-host-and-status"),
+			cp:    testControlPlaneRef("same-namespace-rrfhd"),
+			ruleA: gatewayv1.HTTPRouteRule{Matches: testPathMatch("/hostname-redirect")},
+			ruleB: gatewayv1.HTTPRouteRule{Matches: testPathMatch("/host-and-status")},
+			equal: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nameA := NewKongUpstreamName(tt.route, tt.cp, tt.ruleA)
+			nameB := NewKongUpstreamName(tt.route, tt.cp, tt.ruleB)
+
+			if tt.equal {
+				assert.Equal(t, nameA, nameB)
+			} else {
+				assert.NotEqual(t, nameA, nameB)
+			}
 		})
 	}
 }
@@ -154,41 +231,19 @@ func TestNewKongServiceName(t *testing.T) {
 		expectedReadable string
 	}{
 		{
-			name: "basic service name generation",
-			route: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-				},
-			},
-			cp: &commonv1alpha1.ControlPlaneRef{
-				Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-				KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
-					Name: "test-cp",
-				},
-			},
+			name:  "basic service name generation",
+			route: testRoute("default", "test-route"),
+			cp:    testControlPlaneRef("test-cp"),
 			rule: gatewayv1.HTTPRouteRule{
 				BackendRefs: []gatewayv1.HTTPBackendRef{
-					{
-						BackendRef: gatewayv1.BackendRef{
-							BackendObjectReference: gatewayv1.BackendObjectReference{
-								Name: "service1",
-								Port: func() *gatewayv1.PortNumber { p := gatewayv1.PortNumber(8080); return &p }(),
-							},
-						},
-					},
+					testBackendRef("service1", nil, lo.ToPtr(gatewayv1.PortNumber(8080))),
 				},
 			},
 			expectedReadable: "http.default-service1-8080.1",
 		},
 		{
-			name: "service with namespace",
-			route: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-				},
-			},
+			name:  "service with namespace",
+			route: testRoute("default", "test-route"),
 			cp: &commonv1alpha1.ControlPlaneRef{
 				Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 				KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
@@ -198,14 +253,7 @@ func TestNewKongServiceName(t *testing.T) {
 			},
 			rule: gatewayv1.HTTPRouteRule{
 				BackendRefs: []gatewayv1.HTTPBackendRef{
-					{
-						BackendRef: gatewayv1.BackendRef{
-							BackendObjectReference: gatewayv1.BackendObjectReference{
-								Name:      "backend-service",
-								Namespace: func() *gatewayv1.Namespace { ns := gatewayv1.Namespace("backend-ns"); return &ns }(),
-							},
-						},
-					},
+					testBackendRef("backend-service", lo.ToPtr(gatewayv1.Namespace("backend-ns")), nil),
 				},
 			},
 			expectedReadable: "http.backend-ns-backend-service.1",
@@ -217,6 +265,39 @@ func TestNewKongServiceName(t *testing.T) {
 			result := NewKongServiceName(tt.route, tt.cp, tt.rule)
 			expected := tt.expectedReadable + ".cp" + utils.Hash32(tt.cp) + "." + utils.Hash32(tt.rule.BackendRefs)
 			assert.Equal(t, expected, result)
+		})
+	}
+}
+
+func TestNewKongServiceName_Equality(t *testing.T) {
+	tests := []struct {
+		name  string
+		route *gwtypes.HTTPRoute
+		cp    *commonv1alpha1.ControlPlaneRef
+		ruleA gatewayv1.HTTPRouteRule
+		ruleB gatewayv1.HTTPRouteRule
+		equal bool
+	}{
+		{
+			name:  "different matches with no backends produce different results",
+			route: testRoute("gateway-conformance-infra", "redirect-host-and-status"),
+			cp:    testControlPlaneRef("same-namespace-rrfhd"),
+			ruleA: gatewayv1.HTTPRouteRule{Matches: testPathMatch("/hostname-redirect")},
+			ruleB: gatewayv1.HTTPRouteRule{Matches: testPathMatch("/host-and-status")},
+			equal: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nameA := NewKongServiceName(tt.route, tt.cp, tt.ruleA)
+			nameB := NewKongServiceName(tt.route, tt.cp, tt.ruleB)
+
+			if tt.equal {
+				assert.Equal(t, nameA, nameB)
+			} else {
+				assert.NotEqual(t, nameA, nameB)
+			}
 		})
 	}
 }

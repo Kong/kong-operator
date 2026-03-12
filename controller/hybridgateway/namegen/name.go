@@ -79,10 +79,7 @@ func NewKongUpstreamName(route *gwtypes.HTTPRoute, cp *commonv1alpha1.ControlPla
 		[]string{httpProcolPrefix},
 		backendRefDisplayNames(route.Namespace, rule.BackendRefs)...,
 	)
-	hashElements := []string{
-		defaultCPPrefix + utils.Hash32(cp),
-		utils.Hash32(rule.BackendRefs),
-	}
+	hashElements := hashElementsForServiceLikeName(route, cp, rule)
 	return newNameWithHashSuffix(readableElements, hashElements)
 }
 
@@ -92,11 +89,37 @@ func NewKongServiceName(route *gwtypes.HTTPRoute, cp *commonv1alpha1.ControlPlan
 		[]string{httpProcolPrefix},
 		backendRefDisplayNames(route.Namespace, rule.BackendRefs)...,
 	)
-	hashElements := []string{
-		defaultCPPrefix + utils.Hash32(cp),
-		utils.Hash32(rule.BackendRefs),
-	}
+	hashElements := hashElementsForServiceLikeName(route, cp, rule)
 	return newNameWithHashSuffix(readableElements, hashElements)
+}
+
+func hashElementsForServiceLikeName(
+	route *gwtypes.HTTPRoute,
+	cp *commonv1alpha1.ControlPlaneRef,
+	rule gatewayv1.HTTPRouteRule,
+) []string {
+	var hash string
+	if len(rule.BackendRefs) > 0 {
+		hash = utils.Hash32(rule.BackendRefs)
+	} else {
+		zeroBackendRuleIdentity := struct {
+			RouteNamespace string
+			RouteName      string
+			Matches        []gatewayv1.HTTPRouteMatch
+			Filters        []gatewayv1.HTTPRouteFilter
+		}{
+			RouteNamespace: route.Namespace,
+			RouteName:      route.Name,
+			Matches:        rule.Matches,
+			Filters:        rule.Filters,
+		}
+		hash = utils.Hash32(zeroBackendRuleIdentity)
+	}
+
+	return []string{
+		defaultCPPrefix + utils.Hash32(cp),
+		hash,
+	}
 }
 
 // NewKongRouteName generates a KongRoute name based on the HTTPRoute, ControlPlaneRef, and HTTPRouteRule passed as arguments.

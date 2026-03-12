@@ -57,6 +57,11 @@
   [#3554](https://github.com/Kong/kong-operator/pull/3554)
 - Fix reducing `Secret`s with in use finalizers.
   [#3506](https://github.com/Kong/kong-operator/pull/3506)
+- Fix KongUpstream and KongService names in hybrid mode not taking into account
+  backendless rules. When a rule has no BackendRefs, the generated KongUpsteam and KongService names
+  now include a hash of rule's other field to avoid naming collisions with other
+  rules that also have no BackendRefs.
+  [#3576](https://github.com/Kong/kong-operator/pull/3576)
 
 ## [v2.1.2]
 
