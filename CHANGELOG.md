@@ -53,6 +53,8 @@
   `KongReferenceGrant`). Both `APIAuthResolvedRef` and `Programmed` conditions
   are now set to `False` atomically.
   [#3526](https://github.com/Kong/kong-operator/pull/3526)
+- Fix configuring SNIs in ingress-controller when running with local controlplane.
+  [#3554](https://github.com/Kong/kong-operator/pull/3554)
 
 ## [v2.1.2]
 
