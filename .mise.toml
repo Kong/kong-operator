@@ -39,7 +39,7 @@ macos-arm64 = { asset_pattern = "telepresence-darwin-arm64" }
 
 [tools."http:helm"]
 # renovate: datasource=github-releases depName=helm/helm
-version = "4.1.1"
+version = "4.1.3"
 [tools."http:helm".platforms]
 linux-x64 = { url = "https://get.helm.sh/helm-v{version}-linux-amd64.tar.gz" }
 linux-arm64 = { url = "https://get.helm.sh/helm-v{version}-linux-arm64.tar.gz" }
