@@ -97,9 +97,7 @@ func Setup(t *testing.T, ctx context.Context, scheme *k8sruntime.Scheme, optModi
 			kcfg.IngressControllerIncubatorCRDsPath(),
 		)
 	}
-	for _, p := range opts.AdditionalCRDPaths {
-		crdPaths = append(crdPaths, p)
-	}
+	crdPaths = append(crdPaths, opts.AdditionalCRDPaths...)
 
 	testEnv := &envtest.Environment{
 		ControlPlaneStopTimeout: time.Second * 60,

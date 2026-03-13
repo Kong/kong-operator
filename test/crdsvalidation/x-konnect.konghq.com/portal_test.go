@@ -4,9 +4,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	xkonnectv1alpha1 "github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/scheme"
-
 	common "github.com/kong/kong-operator/v2/test/crdsvalidation/common"
 	"github.com/kong/kong-operator/v2/test/envtest"
 )
@@ -15,7 +16,7 @@ func TestPortal(t *testing.T) {
 	t.Parallel()
 
 	scheme := scheme.Get()
-	xkonnectv1alpha1.AddToScheme(scheme)
+	require.NoError(t, xkonnectv1alpha1.AddToScheme(scheme))
 
 	ctx := t.Context()
 	cfg, ns := envtest.Setup(t, ctx, scheme)
@@ -54,7 +55,9 @@ func TestPortal(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: new("spec.apiSpec.name: Too long: may not be more than 255"),
+				// NOTE: Different versions of k8s return a different error
+				// message hence this trying to match on the common part of the message.
+				ExpectedErrorMessage: new("spec.apiSpec.name: Too long: may not be"),
 			},
 			{
 				Name: "name is immutable",
@@ -143,7 +146,9 @@ func TestPortal(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: new("spec.apiSpec.description: Too long: may not be more than 512"),
+				// NOTE: Different versions of k8s return a different error
+				// message hence this trying to match on the common part of the message.
+				ExpectedErrorMessage: new("spec.apiSpec.description: Too long: may not be"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)

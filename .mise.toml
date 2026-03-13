@@ -107,11 +107,6 @@ description = "Generate DeepCopy methods for the API types"
 dir = "./{{env.DIR}}"
 run = "controller-gen object:headerFile='../hack/generators/boilerplate.go.txt' paths=../api/..."
 
-[tasks.lint]
-description = "Run golangci-lint"
-dir = "./{{env.DIR}}"
-run = "golangci-lint run -v --config .golangci.yml ./..."
-
 [tasks.gofix]
 description = "Run go fix"
 dir = "./{{env.DIR}}"

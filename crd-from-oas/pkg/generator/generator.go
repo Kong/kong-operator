@@ -546,10 +546,12 @@ func (g *Generator) generateRegister(parsed *parser.ParsedSpec) (string, error) 
 }
 
 func (g *Generator) generateDoc() string {
-	return fmt.Sprintf(`// +kubebuilder:object:generate=true
+	return fmt.Sprintf(`// Package %s contains API types for the %s API group.
+//
+// +kubebuilder:object:generate=true
 // +groupName=%s
 package %s
-`, g.config.APIGroup, g.config.APIVersion)
+`, g.config.APIVersion, g.config.APIGroup, g.config.APIGroup, g.config.APIVersion)
 }
 
 func (g *Generator) generateCommonTypes() (string, error) {

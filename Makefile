@@ -341,7 +341,6 @@ generate.api: controller-gen
 .PHONY: generate.api-from-oas
 generate.api-from-oas:
 	mise r generate-api
-	mise r lint
 	mise r lint-api
 	mise r test-unit
 	mise r gofix
