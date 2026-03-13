@@ -5,15 +5,20 @@ import (
 	"testing"
 
 	xkonnectv1alpha1 "github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1"
-	"github.com/kong/kong-operator/v2/crd-from-oas/test/crdsvalidation/common"
-	testscheme "github.com/kong/kong-operator/v2/crd-from-oas/test/scheme"
+	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/scheme"
+
+	common "github.com/kong/kong-operator/v2/test/crdsvalidation/common"
+	"github.com/kong/kong-operator/v2/test/envtest"
 )
 
 func TestPortal(t *testing.T) {
 	t.Parallel()
 
-	scheme := testscheme.Get()
-	cfg, ns := common.Setup(t, scheme)
+	scheme := scheme.Get()
+	xkonnectv1alpha1.AddToScheme(scheme)
+
+	ctx := t.Context()
+	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	t.Run("name field validation", func(t *testing.T) {
 		common.TestCasesGroup[*xkonnectv1alpha1.Portal]{
