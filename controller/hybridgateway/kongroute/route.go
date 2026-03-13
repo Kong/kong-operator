@@ -44,60 +44,87 @@ import (
 // Returns:
 //   - kongRoutes: The created or updated KongRoute resources (one per match)
 //   - err: Any error that occurred during the process
-func RoutesForRule(
+func RouteForRule[
+	T gwtypes.SupportedRoute,
+	R gwtypes.SupportedRouteRule,
+](
 	ctx context.Context,
 	logger logr.Logger,
 	cl client.Client,
-	httpRoute *gwtypes.HTTPRoute,
-	rule gwtypes.HTTPRouteRule,
+	route T,
+	rule R,
 	pRef *gwtypes.ParentReference,
 	cp *commonv1alpha1.ControlPlaneRef,
 	serviceName string,
 	hostnames []string,
 ) (kongRoutes []*configurationv1alpha1.KongRoute, err error) {
-	// If the rule has no matches, create a single catch-all route.
-	// Kong requires at least one matcher; use "/" path to represent catch-all.
-	if len(rule.Matches) == 0 {
-		match := gatewayv1.HTTPRouteMatch{
-			Path: &gatewayv1.HTTPPathMatch{Type: ptr.To(gatewayv1.PathMatchPathPrefix), Value: new("/")},
+	routeName := namegen.NewKongRouteName(route, cp, rule)
+	routeBuilder := builder.NewKongRoute().
+		WithName(routeName).
+		WithNamespace(metadata.NamespaceFromParentRef(route, pRef)).
+		WithLabels(route, pRef).
+		WithAnnotations(route, pRef).
+		WithSpecName(routeName).
+		WithKongService(serviceName)
+
+	switch r := any(route).(type) {
+	case *gwtypes.HTTPRoute:
+		httpRule, ok := any(rule).(gwtypes.HTTPRouteRule)
+		if !ok {
+			return nil, fmt.Errorf("rule type %T and route type %T does not match", rule, route)
 		}
-		rule.Matches = append(rule.Matches, match)
-	}
+		// If the rule has no matches, create a single catch-all route.
+		// Kong requires at least one matcher; use "/" path to represent catch-all.
+		if len(httpRule.Matches) == 0 {
+			match := gatewayv1.HTTPRouteMatch{
+				Path: &gatewayv1.HTTPPathMatch{Type: ptr.To(gatewayv1.PathMatchPathPrefix), Value: new("/")},
+			}
+			httpRule.Matches = append(httpRule.Matches, match)
+		}
 
-	// Check filters to determine if we need capture groups in paths.
-	setCaptureGroup := needsCaptureGroup(rule)
+		// Check filters to determine if we need capture groups in paths.
+		setCaptureGroup := needsCaptureGroup(httpRule)
 
-	for i, match := range rule.Matches {
-		routeName := namegen.NewKongRouteNameForMatch(httpRoute, cp, match, i)
-		mLog := logger.WithValues("kongroute", routeName, "matchIndex", i)
-		log.Debug(mLog, "Creating KongRoute for HTTPRoute match")
+		for i, match := range httpRule.Matches {
+			matchRouteName := namegen.NewKongRouteNameForMatch(r, cp, match, i)
+			mLog := logger.WithValues("kongroute", matchRouteName, "matchIndex", i)
+			log.Debug(mLog, "Creating KongRoute for HTTPRoute match")
 
-		routeBuilder := builder.NewKongRoute().
-			WithName(routeName).
-			WithNamespace(metadata.NamespaceFromParentRef(httpRoute, pRef)).
-			WithLabels(httpRoute, pRef).
-			WithAnnotations(httpRoute, pRef).
-			WithSpecName(routeName).
-			WithHosts(hostnames).
-			WithStripPath(metadata.ExtractStripPath(httpRoute.Annotations)).
-			WithPreserveHost(metadata.ExtractPreserveHost(httpRoute.Annotations)).
-			WithKongService(serviceName).
-			WithHTTPRouteMatch(match, setCaptureGroup)
+			matchRouteBuilder := routeBuilder.Clone().
+				WithName(routeName).
+				WithHosts(hostnames).
+				WithStripPath(metadata.ExtractStripPath(r.Annotations)).
+				WithPreserveHost(metadata.ExtractPreserveHost(r.Annotations)).
+				WithHTTPRouteMatch(match, setCaptureGroup)
+
+			newRoute, buildErr := matchRouteBuilder.Build()
+			if buildErr != nil {
+				log.Error(mLog, buildErr, "Failed to build KongRoute resource")
+				return nil, fmt.Errorf("failed to build KongRoute %s: %w", routeName, buildErr)
+			}
+
+			if _, updErr := translator.VerifyAndUpdate(ctx, mLog, cl, &newRoute, r, true); updErr != nil {
+				return nil, updErr
+			}
+
+			// Add to result slice as an explicit copy for clarity.
+			// Using DeepCopy expresses the intent that each match yields an
+			// independent KongRoute object.
+			kongRoutes = append(kongRoutes, newRoute.DeepCopy())
+		}
+	case *gwtypes.TLSRoute:
+		routeBuilder.WithSNI(hostnames)
 
 		newRoute, buildErr := routeBuilder.Build()
 		if buildErr != nil {
-			log.Error(mLog, buildErr, "Failed to build KongRoute resource")
+			log.Error(logger, buildErr, "Failed to build KongRoute resource")
 			return nil, fmt.Errorf("failed to build KongRoute %s: %w", routeName, buildErr)
 		}
+		kongRoutes = append(kongRoutes, &newRoute)
 
-		if _, updErr := translator.VerifyAndUpdate(ctx, mLog, cl, &newRoute, httpRoute, true); updErr != nil {
+		if _, updErr := translator.VerifyAndUpdate(ctx, logger, cl, &newRoute, r, true); updErr != nil {
 			return nil, updErr
 		}
-
-		// Add to result slice as an explicit copy for clarity.
-		// Using DeepCopy expresses the intent that each match yields an
-		// independent KongRoute object.
-		kongRoutes = append(kongRoutes, newRoute.DeepCopy())
 	}
 
 	return kongRoutes, nil

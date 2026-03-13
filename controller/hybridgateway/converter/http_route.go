@@ -368,7 +368,7 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 
 	var translationErrors []error
 
-	supportedParentRefs, err := c.getHybridGatewayParents(ctx, logger)
+	supportedParentRefs, err := getHybridGatewayParents(ctx, logger, c.Client, c.route, c.route.Spec.ParentRefs)
 	if err != nil {
 		log.Error(logger, err, "Failed to get supported parent references")
 		return err
@@ -498,7 +498,7 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				logger.WithValues("upstream", upstreamName),
 				c.Client,
 				c.route,
-				rule.BackendRefs,
+				httpBackendRefsToBackendRefs(rule.BackendRefs),
 				&pRef,
 				upstreamName,
 				c.fqdnMode,
@@ -652,4 +652,10 @@ func (c *httpRouteConverter) getHostnamesByParentRef(ctx context.Context, logger
 
 	log.Debug(logger, "Finished processing hostnames", "finalHostnames", hostnames)
 	return hostnames, nil
+}
+
+func httpBackendRefsToBackendRefs(backendRefs []gwtypes.HTTPBackendRef) []gwtypes.BackendRef {
+	return lo.Map(backendRefs, func(bRef gwtypes.HTTPBackendRef, _ int) gwtypes.BackendRef {
+		return bRef.BackendRef
+	})
 }

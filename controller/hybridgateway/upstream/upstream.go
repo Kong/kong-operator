@@ -38,24 +38,28 @@ import (
 // Returns:
 //   - kongUpstream: The translated KongUpstream resource
 //   - err: Any error that occurred during the process
-func UpstreamForRule(
+func UpstreamForRule[
+	T gwtypes.SupportedRoute,
+	R gwtypes.SupportedRouteRule,
+](
 	ctx context.Context,
 	logger logr.Logger,
 	cl client.Client,
-	httpRoute *gwtypes.HTTPRoute,
-	rule gwtypes.HTTPRouteRule,
+	route T,
+	rule R,
 	pRef *gwtypes.ParentReference,
 	cp *commonv1alpha1.ControlPlaneRef,
 ) (kongUpstream *configurationv1alpha1.KongUpstream, err error) {
-	upstreamName := namegen.NewKongUpstreamName(httpRoute, cp, rule)
+
+	upstreamName := namegen.NewKongUpstreamName(route, cp, rule)
 	logger = logger.WithValues("kongupstream", upstreamName)
 	log.Debug(logger, "Creating KongUpstream for HTTPRoute rule")
 
 	upstream, err := builder.NewKongUpstream().
 		WithName(upstreamName).
-		WithNamespace(metadata.NamespaceFromParentRef(httpRoute, pRef)).
-		WithLabels(httpRoute, pRef).
-		WithAnnotations(httpRoute, pRef).
+		WithNamespace(metadata.NamespaceFromParentRef(route, pRef)).
+		WithLabels(route, pRef).
+		WithAnnotations(route, pRef).
 		WithSpecName(upstreamName).
 		WithControlPlaneRef(*cp).
 		Build()
@@ -64,7 +68,7 @@ func UpstreamForRule(
 		return nil, fmt.Errorf("failed to build KongUpstream %s: %w", upstreamName, err)
 	}
 
-	if _, err = translator.VerifyAndUpdate(ctx, logger, cl, &upstream, httpRoute, false); err != nil {
+	if _, err = translator.VerifyAndUpdate(ctx, logger, cl, &upstream, route, false); err != nil {
 		return nil, err
 	}
 

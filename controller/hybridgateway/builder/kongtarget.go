@@ -7,6 +7,7 @@ import (
 	"net"
 	"strconv"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -43,7 +44,7 @@ func (b *KongTargetBuilder) WithNamespace(namespace string) *KongTargetBuilder {
 }
 
 // WithLabels sets the labels for the KongTarget being built.
-func (b *KongTargetBuilder) WithLabels(route *gwtypes.HTTPRoute, parentRef *gwtypes.ParentReference) *KongTargetBuilder {
+func (b *KongTargetBuilder) WithLabels(route client.Object, parentRef *gwtypes.ParentReference) *KongTargetBuilder {
 	labels := metadata.BuildLabels(route, parentRef)
 	if b.target.Labels == nil {
 		b.target.Labels = make(map[string]string)
@@ -82,7 +83,7 @@ func (b *KongTargetBuilder) WithUpstreamRef(upstreamRef string) *KongTargetBuild
 }
 
 // WithAnnotations sets the annotations for the KongTarget being built.
-func (b *KongTargetBuilder) WithAnnotations(route *gwtypes.HTTPRoute, parentRef *gwtypes.ParentReference) *KongTargetBuilder {
+func (b *KongTargetBuilder) WithAnnotations(route client.Object, parentRef *gwtypes.ParentReference) *KongTargetBuilder {
 	annotations := metadata.BuildAnnotations(route, parentRef)
 	if b.target.Annotations == nil {
 		b.target.Annotations = make(map[string]string)
@@ -91,8 +92,8 @@ func (b *KongTargetBuilder) WithAnnotations(route *gwtypes.HTTPRoute, parentRef 
 	return b
 }
 
-// WithOwner sets the owner reference for the KongTarget to the given HTTPRoute.
-func (b *KongTargetBuilder) WithOwner(owner *gwtypes.HTTPRoute) *KongTargetBuilder {
+// WithOwner sets the owner reference for the KongTarget to the given owner.
+func (b *KongTargetBuilder) WithOwner(owner client.Object) *KongTargetBuilder {
 	if owner == nil {
 		b.errors = append(b.errors, errors.New("owner cannot be nil"))
 		return b

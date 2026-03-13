@@ -48,6 +48,10 @@ type (
 	RouteNamespaces        = gatewayv1.RouteNamespaces
 	RouteParentStatus      = gatewayv1.RouteParentStatus
 	SectionName            = gatewayv1.SectionName
+	TLSRoute               = gatewayv1.TLSRoute
+	TLSRouteRule           = gatewayv1.TLSRouteRule
+	TLSRouteSpec           = gatewayv1.TLSRouteSpec
+	TLSRouteStatus         = gatewayv1.TLSRouteStatus
 )
 
 var GroupVersion = gatewayv1.GroupVersion
