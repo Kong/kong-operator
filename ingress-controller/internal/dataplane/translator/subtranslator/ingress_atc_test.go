@@ -81,6 +81,7 @@ func TestTranslateIngressATC(t *testing.T) {
 						},
 						Route: kong.Route{
 							Name:       new("default.test-ingress.test-service.konghq.com.80"),
+							Protocols:  kong.StringSlice("http", "https"),
 							Expression: new(`(http.host == "konghq.com") && ((http.path == "/api") || (http.path ^= "/api/"))`),
 							Priority: new(IngressRoutePriorityTraits{
 								MatchFields:   2,
@@ -157,6 +158,7 @@ func TestTranslateIngressATC(t *testing.T) {
 						},
 						Route: kong.Route{
 							Name:       new("default.test-ingress.test-service.konghq.com.80"),
+							Protocols:  kong.StringSlice("http", "https"),
 							Expression: new(`(http.host == "konghq.com") && (http.path ^= "/api/")`),
 							Priority: new(IngressRoutePriorityTraits{
 								MatchFields:   2,
@@ -243,6 +245,7 @@ func TestTranslateIngressATC(t *testing.T) {
 						},
 						Route: kong.Route{
 							Name:       new("default.test-ingress-annotations.test-service.konghq.com.80"),
+							Protocols:  kong.StringSlice("http", "https"),
 							Expression: new(`(http.host == "konghq.com") && (http.path ^= "/api/") && (http.headers.foo == "bar") && (http.method == "GET")`),
 							Priority: new(IngressRoutePriorityTraits{
 								MatchFields:   4,
@@ -347,6 +350,7 @@ func TestTranslateIngressATC(t *testing.T) {
 						},
 						Route: kong.Route{
 							Name:       new("default.test-ingress.konghq.com.svc-facade.svc.facade"),
+							Protocols:  kong.StringSlice("http", "https"),
 							Expression: new(`(http.host == "konghq.com") && (http.path ^= "/api/")`),
 							Priority: new(IngressRoutePriorityTraits{
 								MatchFields:   2,

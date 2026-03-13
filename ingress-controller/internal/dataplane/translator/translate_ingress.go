@@ -245,6 +245,7 @@ func translateIngressDefaultBackendRoute(ingress *netv1.Ingress, tags []*string,
 		Ingress: util.FromK8sObject(ingress),
 		Route: kong.Route{
 			Name:              new(ingress.Namespace + "." + ingress.Name),
+			Protocols:         kong.StringSlice("http", "https"),
 			StripPath:         new(false),
 			PreserveHost:      new(true),
 			RequestBuffering:  new(true),
@@ -262,7 +263,6 @@ func translateIngressDefaultBackendRoute(ingress *netv1.Ingress, tags []*string,
 		atc.ApplyExpression(&r.Route, catchAllMatcher, subtranslator.IngressDefaultBackendPriority)
 	} else {
 		r.Paths = kong.StringSlice("/")
-		r.Protocols = kong.StringSlice("http", "https")
 		r.RegexPriority = new(0)
 	}
 	return r
