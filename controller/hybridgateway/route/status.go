@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -453,10 +454,11 @@ func BuildResolvedRefsCondition(ctx context.Context, logger logr.Logger, cl clie
 				bRefNamespace = string(*bRef.Namespace)
 			}
 
-			// BackendRef group kind.
-			bRefGK := string(*bRef.Kind)
-			if gr := string(*bRef.Group); gr != "" {
-				bRefGK = fmt.Sprintf("%s/%s", gr, bRefGK)
+			// BackendRef group/kind (default to core/Service when unset).
+			bRefGroup, bRefKind := backendRefGroupKind(bRef.Group, bRef.Kind)
+			bRefGK := bRefKind
+			if bRefGroup != "" {
+				bRefGK = fmt.Sprintf("%s/%s", bRefGroup, bRefKind)
 			}
 
 			// Check if the group kind is supported for the reference.
@@ -918,21 +920,22 @@ func FilterOutGVKByKind(expectedGVKs []schema.GroupVersionKind, kindToFilter str
 	return filtered
 }
 
+// backendRefGroupKind returns the effective group and kind for a BackendRef,
+// applying Gateway API defaults: kind defaults to "Service" and group defaults
+// to "" (core) when nil or empty.
+func backendRefGroupKind(group *gwtypes.Group, kind *gwtypes.Kind) (string, string) {
+	g := string(lo.FromPtr(group))
+	k := string(lo.FromPtr(kind))
+	if k == "" {
+		k = "Service"
+	}
+	return g, k
+}
+
 // IsBackendRefSupported returns true if the BackendRef group and kind are supported by Gateway API.
 // Only core "Service" is supported.
 func IsBackendRefSupported(group *gwtypes.Group, kind *gwtypes.Kind) bool {
-	if kind == nil {
-		return false
-	}
-
-	k := string(*kind)
-
-	// Acceptable group values for Service: nil, "", "core".
-	var g string
-	if group != nil {
-		g = string(*group)
-	}
-
+	g, k := backendRefGroupKind(group, kind)
 	return (g == "" || g == "core") && k == "Service"
 }
 
@@ -955,15 +958,7 @@ func IsExtensionRefSupported(group gwtypes.Group, kind gwtypes.Kind) bool {
 // Returns:
 //   - bool: true if the reference is permitted by the grant, false otherwise
 func IsHTTPReferenceGranted(grantSpec gwtypes.ReferenceGrantSpec, backendRef gwtypes.HTTPBackendRef, fromNamespace string) bool {
-	var backendRefGroup gwtypes.Group
-	var backendRefKind gwtypes.Kind
-
-	if backendRef.Group != nil {
-		backendRefGroup = *backendRef.Group
-	}
-	if backendRef.Kind != nil {
-		backendRefKind = *backendRef.Kind
-	}
+	bRefGroup, bRefKind := backendRefGroupKind(backendRef.Group, backendRef.Kind)
 
 	for _, from := range grantSpec.From {
 		if from.Group != gwtypes.GroupName || from.Kind != "HTTPRoute" || fromNamespace != string(from.Namespace) {
@@ -971,14 +966,15 @@ func IsHTTPReferenceGranted(grantSpec gwtypes.ReferenceGrantSpec, backendRef gwt
 		}
 
 		for _, to := range grantSpec.To {
-			if to.Group == "" {
-				to.Group = "core"
+			toGroup := string(to.Group)
+			if toGroup == "" {
+				toGroup = "core"
 			}
-			if backendRefGroup == "" {
-				backendRefGroup = "core"
+			if bRefGroup == "" {
+				bRefGroup = "core"
 			}
-			if backendRefGroup == to.Group &&
-				backendRefKind == to.Kind &&
+			if gwtypes.Group(bRefGroup) == gwtypes.Group(toGroup) &&
+				gwtypes.Kind(bRefKind) == to.Kind &&
 				(to.Name == nil || *to.Name == backendRef.Name) {
 				return true
 			}
