@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"errors"
+	"maps"
 	"net/http"
 	"testing"
 
@@ -556,11 +557,145 @@ func TestSetAcceptedOnGateway(t *testing.T) {
 	}
 }
 
+func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
+	testCases := []struct {
+		name            string
+		listeners       []gwtypes.Listener
+		expectedEnvs    []corev1.EnvVar
+		expectedPortMap map[int]int
+		expectedError   error
+	}{
+		{
+			name: "Only HTTP and HTTPS listener",
+			listeners: []gwtypes.Listener{
+				{
+					Name:     "http",
+					Protocol: gatewayv1.HTTPProtocolType,
+					Port:     gatewayv1.PortNumber(80),
+				},
+				{
+					Name:     "https",
+					Protocol: gatewayv1.HTTPSProtocolType,
+					Port:     gatewayv1.PortNumber(443),
+				},
+			},
+			expectedEnvs: []corev1.EnvVar{
+				{
+					Name:  "KONG_PORT_MAPS",
+					Value: "80:8000,443:8443",
+				},
+			},
+			expectedPortMap: map[int]int{
+				80:  8000,
+				443: 8443,
+			},
+		},
+		{
+			name: "HTTP and multiple TLS listeners",
+			listeners: []gwtypes.Listener{
+				{
+					Name:     "http",
+					Protocol: gatewayv1.HTTPProtocolType,
+					Port:     gatewayv1.PortNumber(80),
+				},
+				{
+					Name:     "tls-1",
+					Protocol: gatewayv1.TLSProtocolType,
+					Port:     gatewayv1.PortNumber(8899),
+				},
+				{
+					Name:     "tls-2",
+					Protocol: gatewayv1.TLSProtocolType,
+					Port:     gatewayv1.PortNumber(9999),
+				},
+			},
+			expectedEnvs: []corev1.EnvVar{
+				{
+					Name:  "KONG_PORT_MAPS",
+					Value: "80:8000,8899:8899,9999:9999",
+				},
+				{
+					Name:  "KONG_STREAM_LISTEN",
+					Value: "0.0.0.0:8899 ssl reuseport,0.0.0.0:9999 ssl reuseport",
+				},
+			},
+			expectedPortMap: map[int]int{
+				80:   8000,
+				8899: 8899,
+				9999: 9999,
+			},
+		},
+		{
+			name: "unsupported protocol TCP in listeners",
+			listeners: []gwtypes.Listener{
+				{
+					Name:     "http",
+					Protocol: gatewayv1.HTTPProtocolType,
+					Port:     gatewayv1.PortNumber(80),
+				},
+				{
+					Name:     "https",
+					Protocol: gatewayv1.HTTPSProtocolType,
+					Port:     gatewayv1.PortNumber(443),
+				},
+				{
+					Name:     "tcp",
+					Protocol: gatewayv1.TCPProtocolType,
+					Port:     gatewayv1.PortNumber(8888),
+				},
+			},
+			expectedError: errors.New("listener 2 uses unsupported protocol TCP"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			opts := operatorv1beta1.DataPlaneOptions{
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
+						PodTemplateSpec: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name: consts.DataPlaneProxyContainerName,
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+			portMap, err := setDataPlaneDeploymentListenPorts(&opts, tc.listeners)
+			if tc.expectedError != nil {
+				require.EqualError(t, tc.expectedError, err.Error())
+				return
+			}
+			require.NoError(t, err)
+
+			container := k8sutils.GetPodContainerByName(&opts.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+			require.NotNil(t, container, "Should find proxy container")
+			for _, env := range tc.expectedEnvs {
+				require.Containsf(
+					t, container.Env, env,
+					"Should contain env %s with value %s",
+					env.Name, env.Value,
+				)
+			}
+
+			require.Truef(t, maps.Equal(tc.expectedPortMap, portMap),
+				"listener port maps should equal: expected %v, actual %v",
+				tc.expectedPortMap, portMap,
+			)
+		})
+	}
+}
+
 func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 	testCases := []struct {
 		name             string
 		listeners        []gwtypes.Listener
 		listenersOptions []operatorv2beta1.GatewayConfigurationListenerOptions
+		portMap          map[int]int
 		expectedPorts    []operatorv1beta1.DataPlaneServicePort
 		expectedError    error
 	}{
@@ -580,7 +715,13 @@ func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 					Protocol: gatewayv1.HTTPSProtocolType,
 					Port:     gatewayv1.PortNumber(443),
 				},
+				{
+					Name:     "tls",
+					Protocol: gatewayv1.HTTPSProtocolType,
+					Port:     gatewayv1.PortNumber(9443),
+				},
 			},
+			portMap: map[int]int{9443: 9443},
 			expectedPorts: []operatorv1beta1.DataPlaneServicePort{
 				{
 					Name:       "http",
@@ -591,6 +732,11 @@ func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 					Name:       "https",
 					Port:       443,
 					TargetPort: intstr.FromInt(consts.DataPlaneProxySSLPort),
+				},
+				{
+					Name:       "tls",
+					Port:       9443,
+					TargetPort: intstr.FromInt(9443),
 				},
 			},
 		},
@@ -678,7 +824,7 @@ func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := setDataPlaneIngressServicePorts(&operatorv1beta1.DataPlaneOptions{}, tc.listeners, tc.listenersOptions)
+			err := setDataPlaneIngressServicePorts(&operatorv1beta1.DataPlaneOptions{}, tc.listeners, tc.listenersOptions, tc.portMap)
 			if tc.expectedError == nil {
 				require.NoError(t, err)
 			} else {
