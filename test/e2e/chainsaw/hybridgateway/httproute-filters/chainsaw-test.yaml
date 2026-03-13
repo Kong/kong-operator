@@ -145,30 +145,97 @@ spec:
           value: 
             - ($fqdn)
     # Step 11: Assert that the HTTPRoute is translated into a KongRoute resource (RequestHeaderModifier).
-    - name: Assert-kong-route-request-header-modifier
-      description: Assert that the KongRoute resource is created for the HTTPRoute with RequestHeaderModifier.
+    # Assert KongRoute for each match independently (per-match route generation).
+    - name: Assert-kong-route-request-header-modifier-get
+      description: Assert KongRoute for GET /get
       use:
         template: ../../common/_step_templates/assert-kongRoute.yaml
       bindings:
-        - name: route_hosts
-          value: ($fqdn)
         - name: route_paths
-          value: 
+          value:
             - "~/get$"
             - "/get/"
-            - "~/post$"
-            - "~/put$"
-            - "~/patch$"
-            - "~/delete$"
-            - "~/status$"
-            - "/status/"
         - name: route_methods
           value:
             - "GET"
+        - name: strip_path
+          value: false
+        - name: resource_type
+          value: "kongservices.configuration.konghq.com"
+
+    - name: Assert-kong-route-request-header-modifier-post
+      description: Assert KongRoute for POST /post
+      use:
+        template: ../../common/_step_templates/assert-kongRoute.yaml
+      bindings:
+        - name: route_paths
+          value:
+            - "~/post$"
+        - name: route_methods
+          value:
             - "POST"
+        - name: strip_path
+          value: false
+        - name: resource_type
+          value: "kongservices.configuration.konghq.com"
+
+    - name: Assert-kong-route-request-header-modifier-put
+      description: Assert KongRoute for PUT /put
+      use:
+        template: ../../common/_step_templates/assert-kongRoute.yaml
+      bindings:
+        - name: route_paths
+          value:
+            - "~/put$"
+        - name: route_methods
+          value:
             - "PUT"
+        - name: strip_path
+          value: false
+        - name: resource_type
+          value: "kongservices.configuration.konghq.com"
+
+    - name: Assert-kong-route-request-header-modifier-patch
+      description: Assert KongRoute for PATCH /patch
+      use:
+        template: ../../common/_step_templates/assert-kongRoute.yaml
+      bindings:
+        - name: route_paths
+          value:
+            - "~/patch$"
+        - name: route_methods
+          value:
             - "PATCH"
+        - name: strip_path
+          value: false
+        - name: resource_type
+          value: "kongservices.configuration.konghq.com"
+
+    - name: Assert-kong-route-request-header-modifier-delete
+      description: Assert KongRoute for DELETE /delete
+      use:
+        template: ../../common/_step_templates/assert-kongRoute.yaml
+      bindings:
+        - name: route_paths
+          value:
+            - "~/delete$"
+        - name: route_methods
+          value:
             - "DELETE"
+        - name: strip_path
+          value: false
+        - name: resource_type
+          value: "kongservices.configuration.konghq.com"
+
+    - name: Assert-kong-route-request-header-modifier-status
+      description: Assert KongRoute for any method /status prefix
+      use:
+        template: ../../common/_step_templates/assert-kongRoute.yaml
+      bindings:
+        - name: route_paths
+          value:
+            - "~/status$"
+            - "/status/"
         - name: strip_path
           value: false
         - name: resource_type
