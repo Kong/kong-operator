@@ -23,8 +23,8 @@ func init() {
 // +kubebuilder:printcolumn:name="ID",description="Konnect ID",type=string,JSONPath=`.status.id`
 // +kubebuilder:printcolumn:name="OrgID",description="Konnect Organization ID this resource belongs to.",type=string,JSONPath=`.status.organizationID`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
-// +kubebuilder:validation:XValidation:message="spec.konnect.authRef is immutable when an entity is already Programmed",rule="(!has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : self.spec.konnect.authRef == oldSelf.spec.konnect.authRef"
-// +kubebuilder:validation:XValidation:message="spec.konnect.authRef is immutable when an entity refers to a Valid API Auth Configuration",rule="(!has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'APIAuthValid' && c.status == 'True')) ? true : self.spec.konnect.authRef == oldSelf.spec.konnect.authRef"
+// +kubebuilder:validation:XValidation:message="spec.konnect is immutable when an entity is already Programmed",rule="(!has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : self.spec.konnect == oldSelf.spec.konnect"
+// +kubebuilder:validation:XValidation:message="spec.konnect is immutable when an entity refers to a Valid API Auth Configuration",rule="(!has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'APIAuthValid' && c.status == 'True')) ? true : self.spec.konnect == oldSelf.spec.konnect"
 // +kong:channels=kong-operator
 type KonnectEventGateway struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -74,16 +74,12 @@ type KonnectEventGatewaySpec struct {
 	// KonnectConfiguration contains the Konnect API authentication configuration.
 	//
 	// +optional
-	// TODO: Decide if we want the crossnamespace reference for APIAuthConfigurationRef here, 
-	// or if we want to enforce that the referenced APIAuthConfiguration must be in the same namespace as the KonnectEventGateway. 
-	// If we allow cross-namespace references, we need to change this type to v1alpha2.ControlPlaneKonnectConfiguration to reuse the 
-	// logic we already have for cross-namespace references in control planes.
-	KonnectConfiguration konnectv1alpha2.KonnectConfiguration `json:"konnect,omitempty"`
+	KonnectConfiguration konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef `json:"konnect,omitempty"`
 }
 
 // CreateEventGatewayRequest maps to the Konnect CreateGatewayRequest / UpdateGatewayRequest schema.
 //
-// +kubebuilder:validation:XValidation:message="spec.createGatewayRequest.labels must not have more than 50 entries",rule="!has(self.labels) || size(self.labels) <= 50"
+// +kubebuilder:validation:XValidation:message="spec.createGatewayRequest.labels must not have more than 40 entries",rule="!has(self.labels) || size(self.labels) <= 40"
 // +kubebuilder:validation:XValidation:message="spec.createGatewayRequest.labels keys must be of length 1-63 characters",rule="!has(self.labels) || self.labels.all(key, size(key) >= 1 && size(key) <= 63)"
 // +kubebuilder:validation:XValidation:message="spec.createGatewayRequest.labels values must be of length 1-63 characters",rule="!has(self.labels) || self.labels.all(key, size(self.labels[key]) >= 1 && size(self.labels[key]) <= 63)"
 // +kubebuilder:validation:XValidation:message="spec.createGatewayRequest.labels keys must not start with 'kong', 'konnect', 'mesh', 'kic' or '_'",rule="!has(self.labels) || self.labels.all(key, !key.startsWith('kong') && !key.startsWith('konnect') && !key.startsWith('mesh') && !key.startsWith('kic') && !key.startsWith('_'))"
@@ -186,9 +182,7 @@ func (eg *KonnectEventGateway) SetKonnectName(name string) {
 
 // GetKonnectAPIAuthConfigurationRef returns the Konnect API Auth Configuration Ref.
 func (eg *KonnectEventGateway) GetKonnectAPIAuthConfigurationRef() konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef {
-	return konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
-		Name: eg.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name,
-	}
+	return eg.Spec.KonnectConfiguration
 }
 
 // KonnectEventGatewayList contains a list of KonnectEventGateway.

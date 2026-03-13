@@ -29,6 +29,8 @@ func TestEnqueueKonnectEventGatewayForKonnectAPIAuthConfiguration(t *testing.T) 
 		require.Nil(t, f(t.Context(), &konnectv1alpha1.KonnectEventGateway{}))
 	})
 
+	ns := func(s string) *string { return &s }
+
 	tests := []struct {
 		name     string
 		gateways []konnectv1alpha1.KonnectEventGateway
@@ -40,18 +42,13 @@ func TestEnqueueKonnectEventGatewayForKonnectAPIAuthConfiguration(t *testing.T) 
 			expected: nil,
 		},
 		{
-			name: "single gateway references auth",
+			name: "single gateway references auth in same namespace",
 			gateways: []konnectv1alpha1.KonnectEventGateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "eg-1",
-						Namespace: "default",
-					},
+					ObjectMeta: metav1.ObjectMeta{Name: "eg-1", Namespace: "default"},
 					Spec: konnectv1alpha1.KonnectEventGatewaySpec{
-						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
-								Name: "test-auth",
-							},
+						KonnectConfiguration: konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
+							Name: "test-auth",
 						},
 					},
 				},
@@ -61,31 +58,53 @@ func TestEnqueueKonnectEventGatewayForKonnectAPIAuthConfiguration(t *testing.T) 
 			},
 		},
 		{
+			name: "gateway in different namespace with explicit namespace override is enqueued",
+			gateways: []konnectv1alpha1.KonnectEventGateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "eg-1", Namespace: "other-ns"},
+					Spec: konnectv1alpha1.KonnectEventGatewaySpec{
+						KonnectConfiguration: konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
+							Name:      "test-auth",
+							Namespace: ns("default"),
+						},
+					},
+				},
+			},
+			expected: []ctrl.Request{
+				{NamespacedName: types.NamespacedName{Name: "eg-1", Namespace: "other-ns"}},
+			},
+		},
+		{
+			name: "gateway in different namespace without namespace override is not enqueued",
+			gateways: []konnectv1alpha1.KonnectEventGateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "eg-1", Namespace: "other-ns"},
+					Spec: konnectv1alpha1.KonnectEventGatewaySpec{
+						// No Namespace override: resolves to "other-ns/test-auth", not "default/test-auth".
+						KonnectConfiguration: konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
+							Name: "test-auth",
+						},
+					},
+				},
+			},
+			expected: nil,
+		},
+		{
 			name: "multiple gateways only one references auth",
 			gateways: []konnectv1alpha1.KonnectEventGateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "eg-1",
-						Namespace: "default",
-					},
+					ObjectMeta: metav1.ObjectMeta{Name: "eg-1", Namespace: "default"},
 					Spec: konnectv1alpha1.KonnectEventGatewaySpec{
-						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
-								Name: "test-auth",
-							},
+						KonnectConfiguration: konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
+							Name: "test-auth",
 						},
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "eg-2",
-						Namespace: "default",
-					},
+					ObjectMeta: metav1.ObjectMeta{Name: "eg-2", Namespace: "default"},
 					Spec: konnectv1alpha1.KonnectEventGatewaySpec{
-						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
-								Name: "other-auth",
-							},
+						KonnectConfiguration: konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
+							Name: "other-auth",
 						},
 					},
 				},
@@ -98,28 +117,18 @@ func TestEnqueueKonnectEventGatewayForKonnectAPIAuthConfiguration(t *testing.T) 
 			name: "multiple gateways all reference auth",
 			gateways: []konnectv1alpha1.KonnectEventGateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "eg-1",
-						Namespace: "default",
-					},
+					ObjectMeta: metav1.ObjectMeta{Name: "eg-1", Namespace: "default"},
 					Spec: konnectv1alpha1.KonnectEventGatewaySpec{
-						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
-								Name: "test-auth",
-							},
+						KonnectConfiguration: konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
+							Name: "test-auth",
 						},
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "eg-2",
-						Namespace: "default",
-					},
+					ObjectMeta: metav1.ObjectMeta{Name: "eg-2", Namespace: "default"},
 					Spec: konnectv1alpha1.KonnectEventGatewaySpec{
-						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
-								Name: "test-auth",
-							},
+						KonnectConfiguration: konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
+							Name: "test-auth",
 						},
 					},
 				},
@@ -128,25 +137,6 @@ func TestEnqueueKonnectEventGatewayForKonnectAPIAuthConfiguration(t *testing.T) 
 				{NamespacedName: types.NamespacedName{Name: "eg-1", Namespace: "default"}},
 				{NamespacedName: types.NamespacedName{Name: "eg-2", Namespace: "default"}},
 			},
-		},
-		{
-			name: "gateway in different namespace is not enqueued",
-			gateways: []konnectv1alpha1.KonnectEventGateway{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "eg-1",
-						Namespace: "other-ns",
-					},
-					Spec: konnectv1alpha1.KonnectEventGatewaySpec{
-						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
-								Name: "test-auth",
-							},
-						},
-					},
-				},
-			},
-			expected: nil,
 		},
 	}
 

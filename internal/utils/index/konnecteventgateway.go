@@ -27,6 +27,9 @@ func konnectEventGatewayAPIAuthConfigurationRef(object client.Object) []string {
 	if !ok {
 		return nil
 	}
-
-	return []string{eg.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name}
+	ns := eg.GetNamespace()
+	if eg.Spec.KonnectConfiguration.Namespace != nil {
+		ns = *eg.Spec.KonnectConfiguration.Namespace
+	}
+	return []string{ns + "/" + eg.Spec.KonnectConfiguration.Name}
 }

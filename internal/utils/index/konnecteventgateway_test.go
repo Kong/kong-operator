@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
@@ -23,17 +24,29 @@ func TestKonnectEventGatewayAPIAuthConfigurationRef(t *testing.T) {
 			expected: nil,
 		},
 		{
-			name:     "returns auth ref name",
-			input:    &konnectv1alpha1.KonnectEventGateway{
+			name: "defaults to gateway namespace when no namespace override",
+			input: &konnectv1alpha1.KonnectEventGateway{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default"},
 				Spec: konnectv1alpha1.KonnectEventGatewaySpec{
-					KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
-						APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
-							Name: "my-auth",
-						},
+					KonnectConfiguration: konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
+						Name: "my-auth",
 					},
 				},
 			},
-			expected: []string{"my-auth"},
+			expected: []string{"default/my-auth"},
+		},
+		{
+			name: "uses explicit namespace when set",
+			input: &konnectv1alpha1.KonnectEventGateway{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default"},
+				Spec: konnectv1alpha1.KonnectEventGatewaySpec{
+					KonnectConfiguration: konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
+						Name:      "my-auth",
+						Namespace: func() *string { s := "other-ns"; return &s }(),
+					},
+				},
+			},
+			expected: []string{"other-ns/my-auth"},
 		},
 	}
 

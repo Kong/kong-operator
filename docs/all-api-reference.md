@@ -5261,7 +5261,7 @@ CreateEventGatewayRequest maps to the Konnect CreateGatewayRequest / UpdateGatew
 
 | Field | Description |
 | --- | --- |
-| `name` _string_ | Name is the human-readable name of the Event Gateway. π |
+| `name` _string_ | Name is the human-readable name of the Event Gateway. |
 | `description` _*string_ | Description is a human-readable description of the Event Gateway. |
 | `minRuntimeVersion` _*string_ | MinRuntimeVersion is the minimum keg version that can connect to this gateway. Must match the pattern X.Y (e.g. "1.1"). |
 | `labels` _map[string]string_ | Labels are metadata key-value pairs for filtering and searching. |
@@ -5571,7 +5571,7 @@ KonnectEventGatewaySpec defines the desired state of KonnectEventGateway.
 | `source` _[EntitySource](#common-konghq-com-v1alpha1-types-entitysource)_ | Source represents the source type of the Konnect entity. Origin means the operator owns the lifecycle — it creates, updates, and deletes the Event Gateway in Konnect. Mirror means the Event Gateway already exists in Konnect and the operator only reads its state and populates the status. |
 | `mirror` _[EventGatewayMirrorSpec](#konnect-konghq-com-v1alpha1-types-eventgatewaymirrorspec)_ | Mirror holds the configuration for a mirrored Event Gateway. Only applicable when source is Mirror. |
 | `createGatewayRequest` _[CreateEventGatewayRequest](#konnect-konghq-com-v1alpha1-types-createeventgatewayrequest)_ | CreateGatewayRequest groups all fields sent to POST /v1/event-gateways. Only applicable when source is Origin. |
-| `konnect` _[KonnectConfiguration](#konnect-konghq-com-v1alpha2-types-konnectconfiguration)_ | KonnectConfiguration contains the Konnect API authentication configuration. |
+| `konnect` _[ControlPlaneKonnectAPIAuthConfigurationRef](#konnect-konghq-com-v1alpha2-types-controlplanekonnectapiauthconfigurationref)_ | KonnectConfiguration contains the Konnect API authentication configuration. |
 
 _Appears in:_
 
@@ -5972,6 +5972,7 @@ in the control plane.
 _Appears in:_
 
 - [ControlPlaneKonnectConfiguration](#konnect-konghq-com-v1alpha2-types-controlplanekonnectconfiguration)
+- [KonnectEventGatewaySpec](#konnect-konghq-com-v1alpha1-types-konnecteventgatewayspec)
 - [KonnectExtensionControlPlaneStatus](#konnect-konghq-com-v1alpha2-types-konnectextensioncontrolplanestatus)
 - [KonnectOptions](#gateway-operator-konghq-com-v2beta1-types-konnectoptions)
 
@@ -6047,7 +6048,6 @@ KonnectConfiguration is the Schema for the KonnectConfiguration API.
 _Appears in:_
 
 - [KonnectCloudGatewayNetworkSpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaynetworkspec)
-- [KonnectEventGatewaySpec](#konnect-konghq-com-v1alpha1-types-konnecteventgatewayspec)
 - [KonnectExtensionKonnectSpec](#konnect-konghq-com-v1alpha1-types-konnectextensionkonnectspec)
 - [KonnectGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanespec)
 

@@ -55792,9 +55792,7 @@ spec:
                     pattern: ^\d+\.\d+$
                     type: string
                   name:
-                    description: |-
-                      Name is the human-readable name of the Event Gateway.
-                      π
+                    description: Name is the human-readable name of the Event Gateway.
                     maxLength: 255
                     minLength: 1
                     type: string
@@ -55802,8 +55800,8 @@ spec:
                 - name
                 type: object
                 x-kubernetes-validations:
-                - message: spec.createGatewayRequest.labels must not have more than 50 entries
-                  rule: '!has(self.labels) || size(self.labels) <= 50'
+                - message: spec.createGatewayRequest.labels must not have more than 40 entries
+                  rule: '!has(self.labels) || size(self.labels) <= 40'
                 - message: spec.createGatewayRequest.labels keys must be of length 1-63 characters
                   rule: '!has(self.labels) || self.labels.all(key, size(key) >= 1 && size(key) <= 63)'
                 - message: spec.createGatewayRequest.labels values must be of length 1-63 characters
@@ -55813,20 +55811,18 @@ spec:
               konnect:
                 description: KonnectConfiguration contains the Konnect API authentication configuration.
                 properties:
-                  authRef:
+                  name:
+                    description: Name is the name of the KonnectAPIAuthConfiguration resource.
+                    minLength: 1
+                    type: string
+                  namespace:
                     description: |-
-                      APIAuthConfigurationRef is the reference to the API Auth Configuration
-                      that should be used for this Konnect Configuration.
-                    properties:
-                      name:
-                        description: Name is the name of the KonnectAPIAuthConfiguration resource.
-                        minLength: 1
-                        type: string
-                    required:
-                    - name
-                    type: object
+                      Namespace is the namespace of the KonnectAPIAuthConfiguration resource.
+                      If not specified, defaults to the same namespace as the KonnectConfiguration resource.
+                    minLength: 1
+                    type: string
                 required:
-                - authRef
+                - name
                 type: object
               mirror:
                 description: |-
@@ -55961,10 +55957,10 @@ spec:
         - spec
         type: object
         x-kubernetes-validations:
-        - message: spec.konnect.authRef is immutable when an entity is already Programmed
-          rule: '(!has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'')) ? true : self.spec.konnect.authRef == oldSelf.spec.konnect.authRef'
-        - message: spec.konnect.authRef is immutable when an entity refers to a Valid API Auth Configuration
-          rule: '(!has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''APIAuthValid'' && c.status == ''True'')) ? true : self.spec.konnect.authRef == oldSelf.spec.konnect.authRef'
+        - message: spec.konnect is immutable when an entity is already Programmed
+          rule: '(!has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'')) ? true : self.spec.konnect == oldSelf.spec.konnect'
+        - message: spec.konnect is immutable when an entity refers to a Valid API Auth Configuration
+          rule: '(!has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''APIAuthValid'' && c.status == ''True'')) ? true : self.spec.konnect == oldSelf.spec.konnect'
     served: true
     storage: true
     subresources:
