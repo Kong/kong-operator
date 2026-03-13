@@ -65,6 +65,9 @@ func main() {
 		// incubator.ingress-controller.konghq.com
 		"github.com/kong/kong-operator/v2/api/incubator/v1alpha1",
 
+		// x-konnect.konghq.com
+		"github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1",
+
 		// konnect.konghq.com
 		"github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		"github.com/kong/kong-operator/v2/api/konnect/v1alpha2",
@@ -76,6 +79,7 @@ func main() {
 
 		// common types
 		"github.com/kong/kong-operator/v2/api/common/v1alpha1",
+		"github.com/kong/kong-operator/v2/crd-from-oas/api/konnect/v1alpha1",
 	)
 	if err != nil {
 		log.Fatalf("failed to load package roots: %s", err)

@@ -61,6 +61,8 @@ func main() {
 	}
 	crdContent := out.String()
 
+	// TODO: This makes sure that temporary CRDs are not included in the chart.
+	crdContent = filterOutAPIGroup(crdContent, "x-konnect.konghq.com")
 	crdContent = wrapInIfEnabled(crdContent)
 	crdContent = wrapCertAnnotations(crdContent)
 	crdContent = wrapWebhookConfig(crdContent)
@@ -294,6 +296,24 @@ func wrapDeprecatedVersions(content string) string {
 	}
 
 	return strings.Join(result, "\n")
+}
+
+// filterOutAPIGroup removes all CRD documents belonging to the specified API group
+// from the multi-document YAML content.
+func filterOutAPIGroup(content, apiGroup string) string {
+	docs := strings.Split(content, "---")
+	groupPattern := "group: " + apiGroup
+	var filtered []string
+	for _, doc := range docs {
+		if strings.TrimSpace(doc) == "" {
+			continue
+		}
+		if strings.Contains(doc, groupPattern) {
+			continue
+		}
+		filtered = append(filtered, doc)
+	}
+	return strings.Join(filtered, "---")
 }
 
 // findVersionEnd finds the end of a version entry starting at startIndex.

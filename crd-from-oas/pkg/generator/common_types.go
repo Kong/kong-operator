@@ -1,0 +1,136 @@
+package generator
+
+const objectRefTypeEnum = `// ObjectRefType is the enum type for the ObjectRef.
+//
+// +kubebuilder:validation:Enum=namespacedRef
+type ObjectRefType string
+
+const (
+	// ObjectRefTypeNamespacedRef is the type for the namespaced ref.
+	// It is used to reference an entity inside the cluster
+	// using a namespaced reference.
+	ObjectRefTypeNamespacedRef ObjectRefType = "namespacedRef"
+)`
+
+const objectRefType = `// ObjectRef is the schema for the ObjectRef type.
+// It is used to reference an entity inside the cluster
+// by its namespaced name.
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'namespacedRef' ? has(self.namespacedRef) : true", message="when type is namespacedRef, namespacedRef must be set"
+// +kong:channels=kong-operator
+type ObjectRef struct {
+	// Type defines type of the object which is referenced. It can be one of:
+	//
+	// - namespacedRef
+	//
+	// +required
+	Type ObjectRefType ` + "`json:\"type,omitempty\"`" + `
+
+	// NamespacedRef is a reference to an entity inside the cluster.
+	// This field is required when the Type is namespacedRef.
+	//
+	// +optional
+	NamespacedRef *NamespacedRef ` + "`json:\"namespacedRef,omitempty\"`" + `
+}`
+
+// namespacedRefType uses Go template syntax for the conditional Namespace field.
+// It is parsed as part of commonTypesTemplate.
+const namespacedRefType = `// NamespacedRef is a reference to a namespaced resource.
+type NamespacedRef struct {
+	// Name is the name of the referred resource.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Name string ` + "`json:\"name,omitempty\"`" + `
+{{- if .Namespaced}}
+
+	// Namespace is the namespace of the referred resource.
+	//
+	// For namespace-scoped resources if no Namespace is provided then the
+	// namespace of the parent object MUST be used.
+	//
+	// This field MUST not be set when referring to cluster-scoped resources.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Namespace *string ` + "`json:\"namespace,omitempty\"`" + `
+{{- end}}
+}`
+
+const secretKeyRefType = `// SecretKeyRef is a reference to a key in a Secret
+type SecretKeyRef struct {
+	// Name is the name of the Secret
+	//
+	// +required
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:MinLength=1
+	Name string ` + "`json:\"name,omitempty\"`" + `
+
+	// Key is the key within the Secret
+	//
+	// +required
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:MinLength=1
+	Key string ` + "`json:\"key,omitempty\"`" + `
+
+	// Namespace is the namespace of the Secret
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=63
+	Namespace string ` + "`json:\"namespace,omitempty\"`" + `
+}`
+
+const configMapKeyRefType = `// ConfigMapKeyRef is a reference to a key in a ConfigMap
+type ConfigMapKeyRef struct {
+	// Name is the name of the ConfigMap
+	//
+	// +required
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:MinLength=1
+	Name string ` + "`json:\"name,omitempty\"`" + `
+
+	// Key is the key within the ConfigMap
+	//
+	// +required
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:MinLength=1
+	Key string ` + "`json:\"key,omitempty\"`" + `
+
+	// Namespace is the namespace of the ConfigMap
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=63
+	Namespace string ` + "`json:\"namespace,omitempty\"`" + `
+}`
+
+const konnectEntityStatusType = `// KonnectEntityStatus represents the status of a Konnect entity.
+type KonnectEntityStatus struct {
+	// ID is the unique identifier of the Konnect entity as assigned by Konnect API.
+	// If it's unset (empty string), it means the Konnect entity hasn't been created yet.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=256
+	ID string ` + "`json:\"id,omitempty\"`" + `
+
+	// ServerURL is the URL of the Konnect server in which the entity exists.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=512
+	ServerURL string ` + "`json:\"serverURL,omitempty\"`" + `
+
+	// OrgID is ID of Konnect Org that this entity has been created in.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=256
+	OrgID string ` + "`json:\"organizationID,omitempty\"`" + `
+}`
+
+const konnectEntityRefType = `// KonnectEntityRef is a reference to a Konnect entity.
+type KonnectEntityRef struct {
+	// ID is the unique identifier of the Konnect entity as assigned by Konnect API.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=256
+	ID string ` + "`json:\"id,omitempty\"`" + `
+}`
