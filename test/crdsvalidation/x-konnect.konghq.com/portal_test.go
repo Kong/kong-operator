@@ -115,7 +115,9 @@ func TestPortal(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: new("spec.apiSpec.display_name: Too long: may not be more than 255"),
+				// NOTE: Different versions of k8s return a different error
+				// message hence this trying to match on the common part of the message.
+				ExpectedErrorMessage: new("spec.apiSpec.display_name: Too long: may not be"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)

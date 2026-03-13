@@ -107,33 +107,11 @@ description = "Generate DeepCopy methods for the API types"
 dir = "./{{env.DIR}}"
 run = "controller-gen object:headerFile='../hack/generators/boilerplate.go.txt' paths=../api/..."
 
-[tasks.gofix]
-description = "Run go fix"
-dir = "./{{env.DIR}}"
-run = "go fix ./..."
-
 [tasks.lint-api]
 description = "Run golangci-lint"
 # TODO: This hardcodes the x-konnect API group. Removing this hardcode would cause the linter
 # to run against all the API groups which might create unwanted issues being reported here.
 run = "golangci-lint-kube-api-linter run -v --config .golangci-kube-api.yaml ./api/x-konnect/..."
-
-[tasks.test-unit-api]
-description = "Run unit api tests"
-# NOTE: this runs for all API groups, not just x-konnect.
-run = 'go test -v -count 1 ${GOTESTFLAGS} ./api/...'
-
-[tasks.test-unit-pkg]
-description = "Run unit package tests"
-dir = "./{{env.DIR}}"
-run = 'go test -v -count 1 ${GOTESTFLAGS} ./pkg/...'
-
-[tasks.test-unit]
-description = "Run all unit tests"
-run = [
-       { task = "test-unit-api" },
-       { task = "test-unit-pkg" },
-]
 
 [tasks.test-crdsvalidation]
 description = "Run CRD validation tests"
