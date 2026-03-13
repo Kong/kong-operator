@@ -196,12 +196,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	log.Trace(logger, "managing the gateway resource finalizers")
+	oldGateway := gateway.DeepCopy()
 	cpFinalizerSet := controllerutil.AddFinalizer(&gateway, string(GatewayFinalizerCleanupControlPlanes))
 	dpFinalizerSet := controllerutil.AddFinalizer(&gateway, string(GatewayFinalizerCleanupDataPlanes))
 	npFinalizerSet := controllerutil.AddFinalizer(&gateway, string(GatewayFinalizerCleanupNetworkPolicies))
 	if cpFinalizerSet || dpFinalizerSet || npFinalizerSet {
 		log.Trace(logger, "Setting finalizers")
-		if err := r.Update(ctx, &gateway); err != nil {
+		if err := r.Patch(ctx, &gateway, client.MergeFromWithOptions(oldGateway, client.MergeFromWithOptimisticLock{})); err != nil {
 			return finalizer.HandlePatchOrUpdateError(err, logger)
 		}
 		return ctrl.Result{}, nil
@@ -212,7 +213,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil
 	}
 
-	oldGateway := gateway.DeepCopy()
+	oldGateway = gateway.DeepCopy()
 	gwConditionAware := gatewayConditionsAndListenersAware(&gateway)
 	oldGwConditionsAware := gatewayConditionsAndListenersAware(oldGateway)
 

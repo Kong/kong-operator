@@ -136,7 +136,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 		log.Debug(logger, "Adding finalizer", "finalizer", finalizerName)
 		old := obj.DeepCopyObject().(tPtr)
 		controllerutil.AddFinalizer(obj, finalizerName)
-		if err := r.Patch(ctx, obj, client.MergeFrom(old)); err != nil {
+		if err := r.Patch(ctx, obj, client.MergeFromWithOptions(old, client.MergeFromWithOptimisticLock{})); err != nil {
 			log.Error(logger, err, "Failed to add finalizer", "finalizer", finalizerName)
 			return finalizer.HandlePatchOrUpdateError(err, logger)
 		}
@@ -351,12 +351,13 @@ func (r *HybridGatewayReconciler[t, tPtr]) handleDeletion(ctx context.Context, l
 	// All resources have been deleted, now we can remove the finalizer.
 	log.Debug(logger, "All generated resources deleted, removing finalizer")
 
-	// Remove finalizer using patch for safer concurrent updates.
+	// Remove the finalizer with an optimistic-lock patch so we only mutate the
+	// finalizer list and stale cached state fails as a conflict.
 	finalizerName := finalizerconst.GetFinalizerForType(rootObj)
 	old := obj.DeepCopyObject().(tPtr)
 	if controllerutil.RemoveFinalizer(obj, finalizerName) {
 		log.Debug(logger, "Removing finalizer", "finalizer", finalizerName)
-		if err := r.Patch(ctx, obj, client.MergeFrom(old)); err != nil {
+		if err := r.Patch(ctx, obj, client.MergeFromWithOptions(old, client.MergeFromWithOptimisticLock{})); err != nil {
 			return finalizer.HandlePatchOrUpdateError(err, logger)
 		}
 	}

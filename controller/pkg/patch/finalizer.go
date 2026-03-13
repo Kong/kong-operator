@@ -32,7 +32,7 @@ func WithFinalizer[
 		return false, ctrl.Result{}, nil
 	}
 
-	if errUpd := cl.Patch(ctx, objWithFinalizer, client.MergeFrom(ent)); errUpd != nil {
+	if errUpd := cl.Patch(ctx, objWithFinalizer, client.MergeFromWithOptions(ent, client.MergeFromWithOptimisticLock{})); errUpd != nil {
 		if apierrors.IsConflict(errUpd) {
 			return false, ctrl.Result{Requeue: true}, nil
 		}
@@ -66,7 +66,7 @@ func WithoutFinalizer[
 		return false, ctrl.Result{}, nil
 	}
 
-	if errUpd := cl.Patch(ctx, objWithFinalizer, client.MergeFrom(ent)); errUpd != nil {
+	if errUpd := cl.Patch(ctx, objWithFinalizer, client.MergeFromWithOptions(ent, client.MergeFromWithOptimisticLock{})); errUpd != nil {
 		if apierrors.IsConflict(errUpd) {
 			return false, ctrl.Result{Requeue: true}, nil
 		}
