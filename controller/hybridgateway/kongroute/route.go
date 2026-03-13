@@ -94,9 +94,10 @@ func RoutesForRule(
 			return nil, updErr
 		}
 
-		// Add to result slice.
-		routeCopy := newRoute
-		kongRoutes = append(kongRoutes, &routeCopy)
+		// Add to result slice as an explicit copy for clarity.
+		// Using DeepCopy expresses the intent that each match yields an
+		// independent KongRoute object.
+		kongRoutes = append(kongRoutes, newRoute.DeepCopy())
 	}
 
 	return kongRoutes, nil

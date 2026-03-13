@@ -426,6 +426,9 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				"service", serviceName)
 
 			// Build one KongRoute per match in the rule.
+			// Gateway API semantics require OR across matches within a rule
+			// and AND within a single match. Generating a route per match
+			// preserves the OR semantics for Hybrid Gateway.
 			routes, err := kongroute.RoutesForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp, serviceName, hostnames)
 			if err != nil {
 				log.Error(logger, err, "Failed to translate KongRoute resources for rule, skipping rule",

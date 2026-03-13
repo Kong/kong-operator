@@ -77,6 +77,13 @@
   `sticky_sessions_cookie` is set when `algorithm` is `sticky-sessions`.
   [#3555](https://github.com/Kong/kong-operator/pull/3555)
 
+### Changed
+
+- HybridGateway: generate one KongRoute per HTTPRouteMatch to honor Gateway API OR semantics across matches within a rule.
+  This enables the `HTTPRouteMatching` conformance test for Hybrid mode.
+  Note: routes count per rule may increase.
+  [#3577](https://github.com/Kong/kong-operator/pull/3577)
+
 ### Fixes
 
 - Admission webhook now validates HTTPRoute regex patterns before sending
