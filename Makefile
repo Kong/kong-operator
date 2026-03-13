@@ -341,9 +341,6 @@ generate.api: controller-gen
 .PHONY: generate.api-from-oas
 generate.api-from-oas:
 	mise r generate-api
-	mise r lint-api
-	mise r test-unit
-	mise r gofix
 
 .PHONY: generate.apitypes-funcs
 generate.apitypes-funcs:
@@ -570,6 +567,7 @@ KONG_CONTROLLER_FEATURE_GATES ?= GatewayAlpha=true
 test: test.unit
 
 UNIT_TEST_PATHS := ./api/... ./controller/... ./internal/... ./pkg/... ./modules/... ./ingress-controller/internal/... ./ingress-controller/pkg/...
+UNIT_TEST_PATHS_CRD_GEN := ./pkg/...
 
 .PHONY: _test.unit
 _test.unit: gotestsum
@@ -579,6 +577,11 @@ _test.unit: gotestsum
 		-coverprofile=coverage.unit.out \
 		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS)" \
 		$(UNIT_TEST_PATHS)
+	cd crd-from-oas && \
+		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
+		$(GOTESTSUM) -- $(GOTESTFLAGS) \
+		-race \
+		$(UNIT_TEST_PATHS_CRD_GEN)
 
 .PHONY: test.unit
 test.unit:
@@ -1139,3 +1142,4 @@ lint.api: download.kube-api-linter
 		./api/konnect/v1alpha1/... \
 		./api/konnect/v1alpha2/... \
 		./api/common/v1alpha1/...
+	mise r lint-api
