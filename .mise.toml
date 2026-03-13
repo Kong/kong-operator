@@ -89,14 +89,18 @@ run = "rm -rf ./api/x-konnect/"
 [tasks.generate-api]
 description = "Generate Kubernetes Go API from OpenAPI spec"
 dir = "./{{env.DIR}}"
-run = "go run ."
+# NOTE we get the openapi.yaml file from the sdk-konnect-go module which is expected
+# to be present in the local Go module cache.
+# This ensures that we use the same OpenAPI spec as the one used to generate the
+# SDK which should help avoid potential discrepancies between the API and the SDK.
+run = '''
+export INPUT_FILE="$(go list -m -f '{{`{{.Dir}}`}}' github.com/Kong/sdk-konnect-go)/openapi.yaml"
+export OUTPUT_DIR="../api/"
+export CONFIG_FILE="config.yaml"
+go run .
+'''
 depends = [ "clean" ]
 depends_post = [ "generate-deepcopy" ]
-[tasks.generate-api.env]
-# TODO: use opeanapi.yaml from imported version of sdk-konnect-go.
-INPUT_FILE = "openapi.yaml"
-OUTPUT_DIR = "../api/"
-CONFIG_FILE = "config.yaml"
 
 [tasks.generate-deepcopy]
 description = "Generate DeepCopy methods for the API types"
