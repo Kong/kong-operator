@@ -323,7 +323,7 @@ API_DIR ?= api
 #   make generate && make manifests && make test.charts.golden.update
 # into a single command: make generate
 # Note: manifests is placed near the end to preserve the prior ordering (docs are generated from CRDs first).
-generate: generate.crds generate.crd-kustomize generate.k8sio-gomod-replace generate.deepcopy generate.apitypes-funcs generate.docs generate.lint-fix manifests test.charts.golden.update generate.cli-arguments-docs test.ingress-controller.golden.update
+generate: generate.crds generate.crd-kustomize generate.k8sio-gomod-replace generate.deepcopy generate.apitypes-funcs generate.docs generate.lint-fix manifests test.charts.golden.update generate.cli-arguments-docs test.kongintegration.golden.update
 
 .PHONY: generate.crds
 generate.crds: controller-gen ## Generate WebhookConfiguration and CustomResourceDefinition objects.
@@ -583,9 +583,6 @@ test.unit:
 .PHONY: test.unit.pretty
 test.unit.pretty:
 	@$(MAKE) _test.unit GOTESTSUM_FORMAT=pkgname GOTESTFLAGS="$(GOTESTFLAGS)" UNIT_TEST_PATHS="$(UNIT_TEST_PATHS)"
-
-.PHONY: test.ingress-controller.golden.update
-	@go test -v -run TestKongClient_GoldenTests ./ingres-controller/internal/dataplane -update
 
 ENVTEST_TEST_PATHS := ./test/envtest/...
 ENVTEST_TIMEOUT ?= 15m
