@@ -8,6 +8,10 @@ on:
         description: "Kind node image version"
         type: string
         required: true
+      artifacts_run_id:
+        description: "Workflow run id that produced the e2e image artifact"
+        type: string
+        required: true
 
 permissions:
   contents: read
@@ -32,8 +36,15 @@ jobs:
         egress-policy: audit
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-    - name: build docker image
-      run: make docker.build
+    - name: download e2e image artifact
+      uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+      with:
+        name: kong-operator-e2e-image-${{ inputs.artifacts_run_id }}
+        run-id: ${{ inputs.artifacts_run_id }}
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: load docker image
+      run: docker load -i kong-operator_e2e.tar
 
     - uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db # v3.6.3
       with:
