@@ -42,25 +42,28 @@ import (
 // Returns:
 //   - kongService: The created or updated service resource
 //   - err: Any error that occurred during the process
-func ServiceForRule(
+func ServiceForRule[
+	T gwtypes.SupportedRoute,
+	R gwtypes.SupportedRouteRule,
+](
 	ctx context.Context,
 	logger logr.Logger,
 	cl client.Client,
-	httpRoute *gwtypes.HTTPRoute,
-	rule gwtypes.HTTPRouteRule,
+	route T,
+	rule R,
 	pRef *gwtypes.ParentReference,
 	cp *commonv1alpha1.ControlPlaneRef,
 	upstreamName string,
 ) (kongService *configurationv1alpha1.KongService, err error) {
-	serviceName := namegen.NewKongServiceName(httpRoute, cp, rule)
+	serviceName := namegen.NewKongServiceName(route, cp, rule)
 	logger = logger.WithValues("kongservice", serviceName)
 	log.Debug(logger, "Generating KongService for HTTPRoute rule")
 
 	service, err := builder.NewKongService().
 		WithName(serviceName).
-		WithNamespace(metadata.NamespaceFromParentRef(httpRoute, pRef)).
-		WithLabels(httpRoute, pRef).
-		WithAnnotations(httpRoute, pRef).
+		WithNamespace(metadata.NamespaceFromParentRef(route, pRef)).
+		WithLabels(route, pRef).
+		WithAnnotations(route, pRef).
 		WithSpecName(serviceName).
 		WithSpecHost(upstreamName).
 		WithProtocol("http").
@@ -70,7 +73,7 @@ func ServiceForRule(
 		return nil, fmt.Errorf("failed to build KongService %s: %w", serviceName, err)
 	}
 
-	if _, err = translator.VerifyAndUpdate(ctx, logger, cl, &service, httpRoute, false); err != nil {
+	if _, err = translator.VerifyAndUpdate(ctx, logger, cl, &service, route, false); err != nil {
 		return nil, err
 	}
 

@@ -44,7 +44,7 @@ type OrphanedResourceHandler interface {
 // RootObject is an interface that represents all resource types that can be loaded
 // as root by the APIConverter.
 type RootObject interface {
-	gwtypes.HTTPRoute | gwtypes.Gateway
+	gwtypes.TLSRoute | gwtypes.HTTPRoute | gwtypes.Gateway
 }
 
 // RootObjectPtr is a generic interface that represents a pointer to a type T,
@@ -63,6 +63,8 @@ func NewConverter[t RootObject](obj t, cl client.Client, fqdnMode bool, clusterD
 	// TODO: add other types here
 	case gwtypes.HTTPRoute:
 		return newHTTPRouteConverter(&o, cl, fqdnMode, clusterDomain).(APIConverter[t]), nil
+	case gwtypes.TLSRoute:
+		return newTLSRouteConverter(&o, cl).(APIConverter[t]), nil
 	case gwtypes.Gateway:
 		return newGatewayConverter(&o, cl).(APIConverter[t]), nil
 	default:

@@ -35,11 +35,11 @@ func GetNamespacedRefs(ctx context.Context, cl client.Client, obj runtime.Object
 }
 
 // GetControlPlaneRefByParentRef retrieves the control plane reference for a given parent reference.
-func GetControlPlaneRefByParentRef(ctx context.Context, logger logr.Logger, cl client.Client, route *gwtypes.HTTPRoute,
+func GetControlPlaneRefByParentRef[T gwtypes.SupportedRoute](ctx context.Context, logger logr.Logger, cl client.Client, route T,
 	pRef gwtypes.ParentReference) (*commonv1alpha1.ControlPlaneRef, error) {
 
 	// Validate and get the supported Gateway for the ParentReference.
-	gw, found, err := GetSupportedGatewayForParentRef(ctx, logger, cl, pRef, route.Namespace)
+	gw, found, err := GetSupportedGatewayForParentRef(ctx, logger, cl, pRef, route.GetNamespace())
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +86,7 @@ func GetControlPlaneRefByGateway(ctx context.Context, cl client.Client, gateway 
 }
 
 // GetListenersByParentRef retrieves the listeners for a given parent reference.
-func GetListenersByParentRef(ctx context.Context, cl client.Client, route *gwtypes.HTTPRoute, pRef gwtypes.ParentReference) ([]gwtypes.Listener, error) {
+func GetListenersByParentRef[T gwtypes.SupportedRoute](ctx context.Context, cl client.Client, route T, pRef gwtypes.ParentReference) ([]gwtypes.Listener, error) {
 	var namespace string
 	if pRef.Group == nil || *pRef.Group != gwtypes.GroupName {
 		return nil, nil
@@ -96,7 +96,7 @@ func GetListenersByParentRef(ctx context.Context, cl client.Client, route *gwtyp
 	}
 
 	if pRef.Namespace == nil || *pRef.Namespace == "" {
-		namespace = route.Namespace
+		namespace = route.GetNamespace()
 	} else {
 		namespace = string(*pRef.Namespace)
 	}

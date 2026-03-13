@@ -42,7 +42,7 @@ func TargetsForBackendRefs(
 	logger logr.Logger,
 	cl client.Client,
 	httpRoute *gwtypes.HTTPRoute,
-	backendRefs []gwtypes.HTTPBackendRef,
+	backendRefs []gwtypes.BackendRef,
 	pRef *gwtypes.ParentReference,
 	upstreamName string,
 	fqdn bool,
@@ -79,7 +79,7 @@ func TargetsForBackendRefs(
 // findBackendRefPortInService returns the ServicePort from svc that matches the port specified in bRef.
 // If bRef.Port is nil or no matching port is found in svc.Spec.Ports, an error is returned.
 // This function is used to validate and resolve the actual ServicePort for a given BackendRef.
-func findBackendRefPortInService(bRef *gwtypes.HTTPBackendRef, svc *corev1.Service) (*corev1.ServicePort, error) {
+func findBackendRefPortInService(bRef *gwtypes.BackendRef, svc *corev1.Service) (*corev1.ServicePort, error) {
 	// Check if the port is specified in the BackendRef. The port is required.
 	if bRef.Port == nil {
 		// If the port is not specified, return an error.
@@ -267,7 +267,7 @@ func filterValidBackendRefs(
 	logger logr.Logger,
 	cl client.Client,
 	httpRoute *gwtypes.HTTPRoute,
-	backendRefs []gwtypes.HTTPBackendRef,
+	backendRefs []gwtypes.BackendRef,
 	fqdn bool,
 	clusterDomain string,
 ) ([]validBackendRef, error) {
