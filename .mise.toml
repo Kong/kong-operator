@@ -1,6 +1,25 @@
 [settings.github]
 github_attestations = false
 
+################################################################################
+# Tools
+
+[tools."github:kubernetes-sigs/controller-tools"]
+# renovate: datasource=github-releases depName=kubernetes-sigs/controller-tools
+version = "0.20.1"
+
+[tools."github:golangci/golangci-lint"]
+# renovate: datasource=github-releases depName=golangci/golangci-lint
+version = "2.11.3"
+
+[tools."github:kubernetes-sigs/controller-runtime"]
+# renovate: datasource=github-releases depName=kubernetes-sigs/controller-runtime
+version = "0.23.3"
+[tools."github:kubernetes-sigs/controller-runtime".platforms]
+darwin-arm64 = { asset_pattern = "setup-envtest-darwin-arm64" }
+linux-arm64 = { asset_pattern = "setup-envtest-linux-arm64" }
+linux-amd64 = { asset_pattern = "setup-envtest-linux-amd64" }
+
 # NOTE: The reason for tool version being set here and not in .tools-versions.toml
 # is that mise requires the version to be specified when using version_prefix
 # and we need to set the latter for kustomize because its tags on GitHub are prefixed
@@ -48,3 +67,89 @@ macos-arm64 = { url = "https://get.helm.sh/helm-v{{version}}-darwin-arm64.tar.gz
 [tools."go:sigs.k8s.io/kube-api-linter/cmd/golangci-lint-kube-api-linter"]
 # renovate: datasource=git-refs packageName=https://github.com/kubernetes-sigs/kube-api-linter.git
 version = "39e3d06a2850e38a8e9e82918bab14ce84e608de"
+
+
+################################################################################
+# Tasks
+
+[env]
+DIR = "crd-from-oas"
+
+[tasks.build-crd-from-oas]
+description = "Build the {{env.DIR}} binary"
+dir = "./{{env.DIR}}"
+run = "go build -o ../bin/{{env.DIR}} main.go"
+
+[tasks.clean]
+# TODO: This hardcodes the x-konnect API group. Removing this hardcode would cause
+# the removal of other non generated APIs to be removed.
+description = "Clean generated api/x-konnect directory"
+run = "rm -rf ./api/x-konnect/"
+
+[tasks.generate-api]
+description = "Generate Kubernetes Go API from OpenAPI spec"
+dir = "./{{env.DIR}}"
+run = "go run ."
+depends = [ "clean" ]
+depends_post = [ "generate-deepcopy" ]
+[tasks.generate-api.env]
+# TODO: use opeanapi.yaml from imported version of sdk-konnect-go.
+INPUT_FILE = "openapi.yaml"
+OUTPUT_DIR = "../api/"
+CONFIG_FILE = "config.yaml"
+
+[tasks.generate-deepcopy]
+description = "Generate DeepCopy methods for the API types"
+dir = "./{{env.DIR}}"
+run = "controller-gen object:headerFile='../hack/generators/boilerplate.go.txt' paths=../api/..."
+
+[tasks.lint]
+description = "Run golangci-lint"
+dir = "./{{env.DIR}}"
+run = "golangci-lint run -v --config .golangci.yml ./..."
+
+[tasks.gofix]
+description = "Run go fix"
+dir = "./{{env.DIR}}"
+run = "go fix ./..."
+
+[tasks.lint-api]
+description = "Run golangci-lint"
+# TODO: This hardcodes the x-konnect API group. Removing this hardcode would cause the linter
+# to run against all the API groups which might create unwanted issues being reported here.
+run = "golangci-lint-kube-api-linter run -v --config .golangci-kube-api.yaml ./api/x-konnect/..."
+
+[tasks.test-unit-api]
+description = "Run unit api tests"
+# NOTE: this runs for all API groups, not just x-konnect.
+run = 'go test -v -count 1 ${GOTESTFLAGS} ./api/...'
+
+[tasks.test-unit-pkg]
+description = "Run unit package tests"
+dir = "./{{env.DIR}}"
+run = 'go test -v -count 1 ${GOTESTFLAGS} ./pkg/...'
+
+[tasks.test-unit]
+description = "Run all unit tests"
+run = [
+       { task = "test-unit-api" },
+       { task = "test-unit-pkg" },
+]
+
+[tasks.test-crdsvalidation]
+description = "Run CRD validation tests"
+dir = "./{{env.DIR}}"
+# Update test paths below if more API groups are added
+run = '''
+export KUBEBUILDER_ASSETS=$(setup-envtest use -p path)
+go test -v -count 1 ${GOTESTFLAGS} ./test/crdsvalidation/x-konnect.konghq.com/...
+'''
+
+[tasks.all]
+description = "Generate API, CRDs, and run all tests and linters"
+run = [
+       { task = "generate-api" },
+       { task = "lint" },
+       { tasks = [ "lint-api", "test-unit", "gofix"] },
+       { task = "test-crdsvalidation" },
+]
