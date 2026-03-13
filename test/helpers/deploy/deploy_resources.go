@@ -425,6 +425,38 @@ func KonnectCloudGatewayNetwork(
 	return &obj
 }
 
+// KonnectEventGateway deploys a KonnectEventGateway resource and returns it.
+func KonnectEventGateway(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
+	opts ...ObjOption,
+) *konnectv1alpha1.KonnectEventGateway {
+	t.Helper()
+	name := "event-gateway-" + uuid.NewString()[:8]
+	obj := konnectv1alpha1.KonnectEventGateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: konnectv1alpha1.KonnectEventGatewaySpec{
+			Source: new(commonv1alpha1.EntitySourceOrigin),
+			CreateGatewayRequest: &konnectv1alpha1.CreateEventGatewayRequest{
+				Name: name,
+			},
+			KonnectConfiguration: konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
+				Name: apiAuth.Name,
+			},
+		},
+	}
+	for _, opt := range opts {
+		opt(&obj)
+	}
+	require.NoError(t, cl.Create(ctx, &obj))
+	logObjectCreate(t, &obj)
+	return &obj
+}
+
 // KonnectCloudGatewayNetworkWithProgrammed deploys a KonnectNetwork resource and returns it.
 // The Programmed condition is set on the returned resource using status Update() call.
 // It can be useful where the reconciler for KonnectNetwork is not started
