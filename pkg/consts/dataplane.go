@@ -151,6 +151,9 @@ const (
 
 	// DataPlaneStatusPort is the port that the dataplane uses for status.
 	DataPlaneStatusPort = 8100
+
+	// DataPlaneAssignedPortStart is the port to assign when desired port is already occupied for other usage.
+	DataPlaneAssignedPortStart = 16384
 )
 
 // -----------------------------------------------------------------------------
