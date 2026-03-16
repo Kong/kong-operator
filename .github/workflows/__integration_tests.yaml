@@ -81,6 +81,11 @@ jobs:
           ${{ env.GO_CACHE_KEY }}
           ${{ env.GO_CACHE_KEY_2 }}
 
+    - name: start tcpdump capture
+      run: |
+        sudo tcpdump -i any 'dst port 443' -w /tmp/capture-${{ matrix.suite }}-${{ matrix.router_flavor }}.pcap &
+        echo $! > /tmp/tcpdump.pid
+
     - name: run integration tests
       run: make test.integration-${{ matrix.suite }}
       env:
@@ -94,6 +99,21 @@ jobs:
         # This could be changed so that ktf addons have their versions pinned
         # in the test Makefile instead.
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: stop tcpdump capture
+      if: always()
+      run: |
+        if [ -f /tmp/tcpdump.pid ]; then
+          sudo kill "$(cat /tmp/tcpdump.pid)" || true
+        fi
+
+    - name: upload pcap capture
+      if: failure()
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      with:
+        name: pcap-integration-${{ matrix.suite }}-${{ matrix.router_flavor }}
+        path: /tmp/capture-${{ matrix.suite }}-${{ matrix.router_flavor }}.pcap
+        if-no-files-found: ignore
 
     - name: upload diagnostics
       if: always()
