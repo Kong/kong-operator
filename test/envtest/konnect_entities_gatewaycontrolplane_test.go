@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/url"
 	"testing"
+	"time"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
@@ -23,7 +24,10 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/controller/konnect"
 	"github.com/kong/kong-operator/v2/controller/konnect/ops"
+	"github.com/kong/kong-operator/v2/modules/manager/logging"
+	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
+	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
 	"github.com/kong/kong-operator/v2/test/mocks/sdkmocks"
 )
 
@@ -52,7 +56,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				).
 				Return(
 					&sdkkonnectops.CreateControlPlaneResponse{
-						ControlPlane: &sdkkonnectcomp.ControlPlane{
+						ControlPlane: &sdkkonnectcomp.ControlPlane1{
 							ID: "12345",
 						},
 					},
@@ -69,7 +73,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				Return(
 					&sdkkonnectops.ListControlPlanesResponse{
 						ListControlPlanesResponse: &sdkkonnectcomp.ListControlPlanesResponse{
-							Data: []sdkkonnectcomp.ControlPlane{
+							Data: []sdkkonnectcomp.ControlPlane1{
 								{
 									ID: "12345",
 									Config: sdkkonnectcomp.ControlPlaneConfig{
@@ -142,7 +146,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				).
 				Return(
 					&sdkkonnectops.CreateControlPlaneResponse{
-						ControlPlane: &sdkkonnectcomp.ControlPlane{
+						ControlPlane: &sdkkonnectcomp.ControlPlane1{
 							ID: "12345",
 						},
 					},
@@ -157,7 +161,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				).
 				Return(
 					&sdkkonnectops.CreateControlPlaneResponse{
-						ControlPlane: &sdkkonnectcomp.ControlPlane{
+						ControlPlane: &sdkkonnectcomp.ControlPlane1{
 							ID: "12346",
 						},
 					},
@@ -173,7 +177,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				Return(
 					&sdkkonnectops.ListControlPlanesResponse{
 						ListControlPlanesResponse: &sdkkonnectcomp.ListControlPlanesResponse{
-							Data: []sdkkonnectcomp.ControlPlane{
+							Data: []sdkkonnectcomp.ControlPlane1{
 								{
 									ID: "12346",
 									Config: sdkkonnectcomp.ControlPlaneConfig{
@@ -214,7 +218,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				).
 				Return(
 					&sdkkonnectops.UpdateControlPlaneResponse{
-						ControlPlane: &sdkkonnectcomp.ControlPlane{
+						ControlPlane: &sdkkonnectcomp.ControlPlane1{
 							ID: "12346",
 						},
 					},
@@ -308,7 +312,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				).
 				Return(
 					&sdkkonnectops.CreateControlPlaneResponse{
-						ControlPlane: &sdkkonnectcomp.ControlPlane{
+						ControlPlane: &sdkkonnectcomp.ControlPlane1{
 							ID: "12345",
 						},
 					},
@@ -325,7 +329,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				).
 				Return(
 					&sdkkonnectops.CreateControlPlaneResponse{
-						ControlPlane: &sdkkonnectcomp.ControlPlane{
+						ControlPlane: &sdkkonnectcomp.ControlPlane1{
 							ID: "123467",
 						},
 					},
@@ -359,7 +363,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				Return(
 					&sdkkonnectops.ListControlPlanesResponse{
 						ListControlPlanesResponse: &sdkkonnectcomp.ListControlPlanesResponse{
-							Data: []sdkkonnectcomp.ControlPlane{
+							Data: []sdkkonnectcomp.ControlPlane1{
 								{
 									ID: "123467",
 									Config: sdkkonnectcomp.ControlPlaneConfig{
@@ -383,7 +387,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				).
 				Return(
 					&sdkkonnectops.UpdateControlPlaneResponse{
-						ControlPlane: &sdkkonnectcomp.ControlPlane{
+						ControlPlane: &sdkkonnectcomp.ControlPlane1{
 							ID: "123467",
 						},
 					},
@@ -474,7 +478,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				Return(
 					&sdkkonnectops.ListControlPlanesResponse{
 						ListControlPlanesResponse: &sdkkonnectcomp.ListControlPlanesResponse{
-							Data: []sdkkonnectcomp.ControlPlane{
+							Data: []sdkkonnectcomp.ControlPlane1{
 								{
 									ID: "123456",
 									Config: sdkkonnectcomp.ControlPlaneConfig{
@@ -498,7 +502,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				Return(
 					&sdkkonnectops.ListControlPlanesResponse{
 						ListControlPlanesResponse: &sdkkonnectcomp.ListControlPlanesResponse{
-							Data: []sdkkonnectcomp.ControlPlane{
+							Data: []sdkkonnectcomp.ControlPlane1{
 								{
 									ID: "123456",
 									Config: sdkkonnectcomp.ControlPlaneConfig{
@@ -570,7 +574,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				).
 				Return(
 					&sdkkonnectops.CreateControlPlaneResponse{
-						ControlPlane: &sdkkonnectcomp.ControlPlane{
+						ControlPlane: &sdkkonnectcomp.ControlPlane1{
 							ID: "123456",
 						},
 					}, nil,
@@ -601,7 +605,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				Return(
 					&sdkkonnectops.ListControlPlanesResponse{
 						ListControlPlanesResponse: &sdkkonnectcomp.ListControlPlanesResponse{
-							Data: []sdkkonnectcomp.ControlPlane{
+							Data: []sdkkonnectcomp.ControlPlane1{
 								{
 									ID: "group-123456",
 									Config: sdkkonnectcomp.ControlPlaneConfig{
@@ -625,7 +629,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				Return(
 					&sdkkonnectops.ListControlPlanesResponse{
 						ListControlPlanesResponse: &sdkkonnectcomp.ListControlPlanesResponse{
-							Data: []sdkkonnectcomp.ControlPlane{
+							Data: []sdkkonnectcomp.ControlPlane1{
 								{
 									ID: "group-123456",
 									Config: sdkkonnectcomp.ControlPlaneConfig{
@@ -649,7 +653,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				Return(
 					&sdkkonnectops.ListControlPlanesResponse{
 						ListControlPlanesResponse: &sdkkonnectcomp.ListControlPlanesResponse{
-							Data: []sdkkonnectcomp.ControlPlane{
+							Data: []sdkkonnectcomp.ControlPlane1{
 								{
 									ID: "123456",
 									Config: sdkkonnectcomp.ControlPlaneConfig{
@@ -687,7 +691,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				).
 				Return(
 					&sdkkonnectops.UpdateControlPlaneResponse{
-						ControlPlane: &sdkkonnectcomp.ControlPlane{
+						ControlPlane: &sdkkonnectcomp.ControlPlane1{
 							ID: "group-123456",
 						},
 					},
@@ -747,7 +751,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				Return(
 					&sdkkonnectops.ListControlPlanesResponse{
 						ListControlPlanesResponse: &sdkkonnectcomp.ListControlPlanesResponse{
-							Data: []sdkkonnectcomp.ControlPlane{
+							Data: []sdkkonnectcomp.ControlPlane1{
 								{
 									ID: "cpg-id",
 									Config: sdkkonnectcomp.ControlPlaneConfig{
@@ -770,7 +774,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				).
 				Return(
 					&sdkkonnectops.CreateControlPlaneResponse{
-						ControlPlane: &sdkkonnectcomp.ControlPlane{
+						ControlPlane: &sdkkonnectcomp.ControlPlane1{
 							ID: "cpg-id",
 						},
 					},
@@ -863,6 +867,55 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			)
 		},
 	},
+	{
+		enabled: true,
+		name:    "unresolved APIAuth ref sets both APIAuthResolvedRef and Programmed conditions to False",
+		objectOps: func(ctx context.Context, t *testing.T, cl client.Client, ns *corev1.Namespace) {
+			// Reference a KonnectAPIAuthConfiguration that does not exist.
+			fakeAuth := &konnectv1alpha1.KonnectAPIAuthConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Name: "nonexistent-auth"},
+			}
+			deploy.KonnectGatewayControlPlane(t, ctx, cl, fakeAuth,
+				func(obj client.Object) {
+					cp := obj.(*konnectv1alpha2.KonnectGatewayControlPlane)
+					cp.Name = "cp-unresolved-auth"
+					cp.Spec.CreateControlPlaneRequest.Name = "cp-unresolved-auth"
+				},
+			)
+		},
+		mockExpectations: func(t *testing.T, sdk *sdkmocks.MockSDKWrapper, cl client.Client, ns *corev1.Namespace) {
+			// No SDK calls expected — reconciler returns early when auth ref is not found.
+		},
+		eventuallyPredicate: func(ctx context.Context, t *assert.CollectT, cl client.Client, ns *corev1.Namespace) {
+			cp := &konnectv1alpha2.KonnectGatewayControlPlane{}
+			require.NoError(t,
+				cl.Get(ctx,
+					k8stypes.NamespacedName{
+						Namespace: ns.Name,
+						Name:      "cp-unresolved-auth",
+					},
+					cp,
+				),
+			)
+
+			assert.True(t, lo.ContainsBy(cp.Status.Conditions, func(c metav1.Condition) bool {
+				return c.Type == konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefConditionType &&
+					c.Status == metav1.ConditionFalse &&
+					c.Reason == konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefReasonRefNotFound
+			}), "APIAuthResolvedRef condition should be False with RefNotFound reason")
+
+			assert.True(t, conditionsContainProgrammedFalse(cp.Status.Conditions),
+				"Programmed condition should be set to False when APIAuth ref is not found",
+			)
+			assert.True(t,
+				conditionsContainProgrammedWithReason(
+					cp.Status.Conditions,
+					konnectv1alpha1.KonnectEntityProgrammedReasonConditionWithStatusFalseExists,
+				),
+				"Programmed condition reason should indicate ConditionWithStatusFalseExists",
+			)
+		},
+	},
 }
 
 func conditionsContainProgrammed(conds []metav1.Condition, status metav1.ConditionStatus) bool {
@@ -909,4 +962,81 @@ func conditionsContainMembersRefResolvedFalse(conds []metav1.Condition) bool {
 
 func conditionsContainMembersRefResolvedTrue(conds []metav1.Condition) bool {
 	return conditionsContainMembersRefResolved(conds, metav1.ConditionTrue)
+}
+
+// TestKonnectGatewayControlPlane_CrossNamespaceRefNotPermitted verifies that when a
+// KonnectGatewayControlPlane in one namespace references a KonnectAPIAuthConfiguration
+// in another namespace without a KongReferenceGrant, both APIAuthResolvedRef=False
+// (RefNotPermitted) and Programmed=False are set.
+//
+// This is a standalone test (not in the test table) because the table-driven suite
+// uses a namespaced client that cannot perform cross-namespace operations.
+func TestKonnectGatewayControlPlane_CrossNamespaceRefNotPermitted(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	cfg, _ := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
+	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+
+	cl := mgr.GetClient()
+	factory := sdkmocks.NewMockSDKFactory(t)
+
+	StartReconcilers(ctx, t, mgr, logs,
+		konnect.NewKonnectEntityReconciler[
+			konnectv1alpha2.KonnectGatewayControlPlane,
+			*konnectv1alpha2.KonnectGatewayControlPlane,
+		](factory, logging.DevelopmentMode, cl,
+			konnect.WithMetricRecorder[
+				konnectv1alpha2.KonnectGatewayControlPlane,
+				*konnectv1alpha2.KonnectGatewayControlPlane,
+			](&metricsmocks.MockRecorder{})))
+
+	// Create two namespaces: one for the CP, one for the auth config target.
+	cpNs := deploy.Namespace(t, ctx, cl)
+	authNs := deploy.Namespace(t, ctx, cl)
+
+	// Reference a KonnectAPIAuthConfiguration in the auth namespace.
+	// It doesn't need to exist — the cross-namespace grant check runs first.
+	fakeAuth := &konnectv1alpha1.KonnectAPIAuthConfiguration{
+		ObjectMeta: metav1.ObjectMeta{Name: "auth-in-other-ns"},
+	}
+	deploy.KonnectGatewayControlPlane(t, ctx, cl, fakeAuth,
+		func(obj client.Object) {
+			cp := obj.(*konnectv1alpha2.KonnectGatewayControlPlane)
+			cp.Name = "cp-xns-no-grant"
+			cp.Namespace = cpNs.Name
+			cp.Spec.CreateControlPlaneRequest.Name = "cp-xns-no-grant"
+			cp.Spec.KonnectConfiguration.APIAuthConfigurationRef.Namespace = new(authNs.Name)
+		},
+	)
+
+	require.EventuallyWithT(t, func(collect *assert.CollectT) {
+		cp := &konnectv1alpha2.KonnectGatewayControlPlane{}
+		require.NoError(collect,
+			cl.Get(ctx,
+				k8stypes.NamespacedName{
+					Namespace: cpNs.Name,
+					Name:      "cp-xns-no-grant",
+				},
+				cp,
+			),
+		)
+
+		assert.True(collect, lo.ContainsBy(cp.Status.Conditions, func(c metav1.Condition) bool {
+			return c.Type == konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefConditionType &&
+				c.Status == metav1.ConditionFalse &&
+				c.Reason == konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefReasonRefNotPermitted
+		}), "APIAuthResolvedRef condition should be False with RefNotPermitted reason")
+
+		assert.True(collect, conditionsContainProgrammedFalse(cp.Status.Conditions),
+			"Programmed condition should be set to False when cross-namespace ref is not permitted",
+		)
+		assert.True(collect,
+			conditionsContainProgrammedWithReason(
+				cp.Status.Conditions,
+				konnectv1alpha1.KonnectEntityProgrammedReasonConditionWithStatusFalseExists,
+			),
+			"Programmed condition reason should indicate ConditionWithStatusFalseExists",
+		)
+	}, 10*time.Second, 200*time.Millisecond)
 }

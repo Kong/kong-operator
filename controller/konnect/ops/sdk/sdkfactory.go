@@ -1,6 +1,8 @@
 package sdk
 
 import (
+	"net/http"
+
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 
@@ -178,24 +180,47 @@ type SDKFactory interface {
 	NewKonnectSDK(server server.Server, token SDKToken) SDKWrapper
 }
 
-type sdkFactory struct{}
+type sdkFactory struct {
+	httpClient *http.Client
+}
+
+// SDKFactoryOpt is a functional option for configuring the SDKFactory.
+type SDKFactoryOpt func(*sdkFactory)
+
+// WithHTTPClient allows to set a custom HTTP client for the SDK,
+// which can be useful for testing or customizing timeouts.
+func WithHTTPClient(client *http.Client) SDKFactoryOpt {
+	return func(f *sdkFactory) {
+		f.httpClient = client
+	}
+}
 
 // NewSDKFactory creates a new SDKFactory.
-func NewSDKFactory() SDKFactory {
-	return sdkFactory{}
+func NewSDKFactory(opts ...SDKFactoryOpt) SDKFactory {
+	factory := &sdkFactory{}
+	for _, opt := range opts {
+		opt(factory)
+	}
+	return factory
 }
 
 // NewKonnectSDK creates a new Konnect SDK.
 func (f sdkFactory) NewKonnectSDK(server server.Server, token SDKToken) SDKWrapper {
+	opts := []sdkkonnectgo.SDKOption{
+		sdkkonnectgo.WithSecurity(
+			sdkkonnectcomp.Security{
+				PersonalAccessToken: new(string(token)),
+			},
+		),
+		sdkkonnectgo.WithServerURL(server.URL()),
+	}
+
+	if f.httpClient != nil {
+		opts = append(opts, sdkkonnectgo.WithClient(f.httpClient))
+	}
+
 	return sdkWrapper{
 		server: server,
-		sdk: sdkkonnectgo.New(
-			sdkkonnectgo.WithSecurity(
-				sdkkonnectcomp.Security{
-					PersonalAccessToken: new(string(token)),
-				},
-			),
-			sdkkonnectgo.WithServerURL(server.URL()),
-		),
+		sdk:    sdkkonnectgo.New(opts...),
 	}
 }

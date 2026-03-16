@@ -2768,6 +2768,16 @@ func (in *KongUpstreamAPISpec) DeepCopyInto(out *KongUpstreamAPISpec) {
 		*out = new(int64)
 		**out = **in
 	}
+	if in.StickySessionsCookie != nil {
+		in, out := &in.StickySessionsCookie, &out.StickySessionsCookie
+		*out = new(string)
+		**out = **in
+	}
+	if in.StickySessionsCookiePath != nil {
+		in, out := &in.StickySessionsCookiePath, &out.StickySessionsCookiePath
+		*out = new(string)
+		**out = **in
+	}
 	if in.Tags != nil {
 		in, out := &in.Tags, &out.Tags
 		*out = make(commonv1alpha1.Tags, len(*in))

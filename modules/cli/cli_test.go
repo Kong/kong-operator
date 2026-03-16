@@ -327,6 +327,17 @@ func TestParse(t *testing.T) {
 				return cfg
 			},
 		},
+		{
+			name: "konnect api request timeout env vars are set",
+			envVars: map[string]string{
+				"KONG_OPERATOR_KONNECT_REQUEST_TIMEOUT": "20s",
+			},
+			expectedCfg: func() manager.Config {
+				cfg := expectedDefaultCfg()
+				cfg.KonnectRequestTimeout = 20 * time.Second
+				return cfg
+			},
+		},
 	}
 
 	for _, tC := range testCases {
@@ -379,6 +390,7 @@ func expectedDefaultCfg() manager.Config {
 		ControlPlaneExtensionsControllerEnabled:  true,
 		KonnectControllersEnabled:                false,
 		KonnectSyncPeriod:                        consts.DefaultKonnectSyncPeriod,
+		KonnectRequestTimeout:                    consts.DefaultKonnectRequestTimeout,
 		KongPluginInstallationControllerEnabled:  false,
 		LoggerOpts:                               &zap.Options{},
 		MaxConcurrentReconcilesKonnect:           consts.DefaultMaxConcurrentReconcilesKonnect,

@@ -1,11 +1,11 @@
 module github.com/kong/kong-operator/v2
 
-go 1.26.0
+go 1.26.1
 
 require (
 	cloud.google.com/go/container v1.46.0
 	dario.cat/mergo v1.0.2
-	github.com/Kong/sdk-konnect-go v0.25.0
+	github.com/Kong/sdk-konnect-go v0.26.1
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/avast/retry-go/v4 v4.7.0
 	github.com/blang/semver/v4 v4.0.0
@@ -20,16 +20,16 @@ require (
 	github.com/goccy/go-json v0.10.5
 	github.com/gohugoio/hashstructure v0.6.0
 	github.com/google/go-cmp v0.7.0
-	github.com/google/go-containerregistry v0.21.1
+	github.com/google/go-containerregistry v0.21.2
 	github.com/google/pprof v0.0.0-20260115054156-294ebfa9ad83
 	github.com/google/uuid v1.6.0
 	github.com/gruntwork-io/terratest v0.56.0
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/jpillora/backoff v1.0.0
-	github.com/kong/go-database-reconciler v1.31.6
+	github.com/kong/go-database-reconciler v1.32.0
 	github.com/kong/go-kong v0.72.1
-	github.com/kong/kubernetes-telemetry v0.1.12
+	github.com/kong/kubernetes-telemetry v0.1.13
 	github.com/kong/kubernetes-testing-framework v0.48.1-0.20260114143846-8c0e96b5bf82
 	github.com/kong/semver/v4 v4.0.1
 	github.com/kr/pretty v0.3.1
@@ -40,7 +40,7 @@ require (
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_model v0.6.2
 	github.com/prometheus/common v0.67.5
-	github.com/samber/lo v1.52.0
+	github.com/samber/lo v1.53.0
 	github.com/samber/mo v1.16.0
 	github.com/sourcegraph/conc v0.3.1-0.20240121214520-5f936abd7ae8
 	github.com/stretchr/testify v1.11.1
@@ -51,10 +51,10 @@ require (
 	github.com/tonglil/buflogr v1.1.1
 	go.uber.org/goleak v1.3.0
 	go.uber.org/zap v1.27.1
-	golang.org/x/mod v0.33.0
-	golang.org/x/sync v0.19.0
+	golang.org/x/mod v0.34.0
+	golang.org/x/sync v0.20.0
 	google.golang.org/api v0.269.0
-	google.golang.org/grpc v1.79.1
+	google.golang.org/grpc v1.79.2
 	google.golang.org/protobuf v1.36.11
 	k8s.io/api v0.35.2
 	k8s.io/apiextensions-apiserver v0.35.1
@@ -65,7 +65,7 @@ require (
 	k8s.io/kubernetes v1.35.2
 	k8s.io/utils v0.0.0-20260108192941-914a6e750570
 	oras.land/oras-go/v2 v2.6.0
-	sigs.k8s.io/controller-runtime v0.23.1
+	sigs.k8s.io/controller-runtime v0.23.3
 	sigs.k8s.io/controller-tools v0.20.1
 	sigs.k8s.io/e2e-framework v0.6.0
 	sigs.k8s.io/gateway-api v1.5.0
@@ -176,7 +176,7 @@ require (
 	github.com/google/certificate-transparency-go v1.3.1 // indirect
 	github.com/google/gnostic-models v0.7.0 // indirect
 	github.com/google/go-github/v48 v48.2.0 // indirect
-	github.com/google/go-querystring v1.1.0 // indirect
+	github.com/google/go-querystring v1.2.0 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.12 // indirect
 	github.com/googleapis/gax-go/v2 v2.17.0 // indirect

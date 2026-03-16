@@ -409,7 +409,10 @@ manifests.conversion-webhook: kustomize
 	KUSTOMIZE_BIN=$(KUSTOMIZE) go run hack/generators/conversion-webhook/main.go
 
 .PHONY: manifests.validating-webhook
-manifests.validating-webhook: kustomize
+manifests.validating-webhook: controller-gen kustomize
+	$(CONTROLLER_GEN) \
+		webhook:headerFile="hack/generators/boilerplate_validating_webhook.yaml" paths="./ingress-controller/internal/admission/..." \
+		output:webhook:artifacts:config=config/default/validating_webhook/;
 	KUSTOMIZE_BIN=$(KUSTOMIZE) go run hack/generators/validating-webhook/main.go
 
 .PHONY: manifests.validating-policy
@@ -705,8 +708,8 @@ test.integration-ko:
 #   sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).Start.func1.gowrap2()
 #       /home/runner/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:173 +0x33
 
-.PHONY: test.integration_bluegreen
-test.integration_bluegreen: download.telepresence
+.PHONY: test.integration-bluegreen
+test.integration-bluegreen: download.telepresence
 	KUBECONFIG=$(KUBECONFIG) \
 	TELEPRESENCE_BIN=$(TELEPRESENCE) \
 	GOFLAGS=$(GOFLAGS) \
@@ -719,8 +722,8 @@ test.integration_bluegreen: download.telepresence
 	-coverprofile="coverage.integration-bluegreen.out" \
 	./test/integration/
 
-.PHONY: test.integration_validatingwebhook
-test.integration_validatingwebhook: download.telepresence
+.PHONY: test.integration-validatingwebhook
+test.integration-validatingwebhook: download.telepresence
 	KUBECONFIG=$(KUBECONFIG) \
 	TELEPRESENCE_BIN=$(TELEPRESENCE) \
 	GOFLAGS=$(GOFLAGS) \
@@ -821,6 +824,10 @@ test.kongintegration:
 .PHONY: test.kongintegration.pretty
 test.kongintegration.pretty:
 	@$(MAKE) _test.kongintegration GOTESTSUM_FORMAT=testname
+
+.PHONY: test.kongintegration.golden.update
+test.kongintegration.golden.update:
+	@go test -v -run TestKongClient_GoldenTests ./ingress-controller/internal/dataplane -update
 
 .PHONY: _test.kongintegration
 _test.kongintegration: gotestsum

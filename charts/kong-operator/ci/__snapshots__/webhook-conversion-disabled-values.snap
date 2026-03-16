@@ -10278,6 +10278,21 @@ spec:
                             - Cluster
                             - Local
                             type: string
+                          labels:
+                            additionalProperties:
+                              description: LabelValue is a label value with constraints matching Kubernetes label value requirements.
+                              maxLength: 63
+                              minLength: 0
+                              pattern: ^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$
+                              type: string
+                            description: |-
+                              Labels are an unstructured key value map that may be used to organize and
+                              categorize resources and that are propagated to the DataPlane's ingress Service
+                              by the operator.
+
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+                            maxProperties: 64
+                            type: object
                           name:
                             description: |-
                               Name defines the name of the service.
@@ -19962,6 +19977,21 @@ spec:
                                 - Cluster
                                 - Local
                                 type: string
+                              labels:
+                                additionalProperties:
+                                  description: LabelValue is a label value with constraints matching Kubernetes label value requirements.
+                                  maxLength: 63
+                                  minLength: 0
+                                  pattern: ^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$
+                                  type: string
+                                description: |-
+                                  Labels are an unstructured key value map that may be used to organize and
+                                  categorize resources and that are propagated to the DataPlane's ingress Service
+                                  by the operator.
+
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+                                maxProperties: 64
+                                type: object
                               name:
                                 description: |-
                                   Name defines the name of the service.
@@ -27946,6 +27976,12 @@ spec:
                 maximum: 65536
                 minimum: 10
                 type: integer
+              sticky_sessions_cookie:
+                description: The cookie name to keep sticky sessions. Required when `algorithm` is set to `sticky-sessions`.
+                type: string
+              sticky_sessions_cookie_path:
+                description: The cookie path to set in the response headers for sticky sessions.
+                type: string
               tags:
                 description: An optional set of strings associated with the Upstream for grouping and filtering.
                 items:
@@ -27984,6 +28020,8 @@ spec:
               rule: '!has(self.hash_on) || (self.hash_on != ''query_arg'' || has(self.hash_on_query_arg))'
             - message: hash_on_uri_capture is required when `hash_on` is set to `uri_capture`.
               rule: '!has(self.hash_on) || (self.hash_on != ''uri_capture'' || has(self.hash_on_uri_capture))'
+            - message: sticky_sessions_cookie is required when algorithm is set to `sticky-sessions`.
+              rule: '!has(self.algorithm) || (self.algorithm != ''sticky-sessions'' || has(self.sticky_sessions_cookie))'
             - message: spec.adopt is allowed only when controlPlaneRef is konnectNamespacedRef
               rule: '!has(self.adopt) ? true : (has(self.controlPlaneRef) && self.controlPlaneRef.type == ''konnectNamespacedRef'')'
             - message: Cannot set or unset spec.adopt in updates
@@ -31485,7 +31523,61 @@ webhooks:
       ###DYNAMIC_FIELD###
   failurePolicy: Fail
   matchPolicy: Equivalent
-  name: validations.kong.konghq.com
+  name: secrets.validations.kong.konghq.com
+  objectSelector:
+    matchLabels:
+      konghq.com/secret: "true"
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - secrets
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: chartsnap-kong-operator-webhook
+      namespace: default
+      port: 5443
+    caBundle: |-
+      ###DYNAMIC_FIELD###
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: gwapi.validations.kong.konghq.com
+  rules:
+  - apiGroups:
+    - gateway.networking.k8s.io
+    apiVersions:
+    - v1alpha2
+    - v1beta1
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - gateways
+    - httproutes
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: chartsnap-kong-operator-webhook
+      namespace: default
+      port: 5443
+    caBundle: |-
+      ###DYNAMIC_FIELD###
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: kong.validations.kong.konghq.com
   rules:
   - apiGroups:
     - configuration.konghq.com
@@ -31501,7 +31593,21 @@ webhooks:
     - kongclusterplugins
     - kongvaults
     - kongcustomentities
-    scope: '*'
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: chartsnap-kong-operator-webhook
+      namespace: default
+      port: 5443
+    caBundle: |-
+      ###DYNAMIC_FIELD###
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: networking.validations.kong.konghq.com
+  rules:
   - apiGroups:
     - networking.k8s.io
     apiVersions:
@@ -31511,73 +31617,6 @@ webhooks:
     - UPDATE
     resources:
     - ingresses
-    scope: '*'
-  - apiGroups:
-    - gateway.networking.k8s.io
-    apiVersions:
-    - v1alpha2
-    - v1beta1
-    - v1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - gateways
-    - httproutes
-    scope: '*'
-  sideEffects: None
-  timeoutSeconds: 10
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    service:
-      name: chartsnap-kong-operator-webhook
-      namespace: default
-      port: 5443
-    caBundle: |-
-      ###DYNAMIC_FIELD###
-  failurePolicy: Fail
-  matchPolicy: Equivalent
-  name: secrets.validations.kong.konghq.com
-  objectSelector:
-    matchLabels:
-      konghq.com/secret: "true"
-  rules:
-  - apiGroups:
-    - ""
-    apiVersions:
-    - v1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - secrets
-    scope: '*'
-  sideEffects: None
-  timeoutSeconds: 10
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    service:
-      name: chartsnap-kong-operator-webhook
-      namespace: default
-      port: 5443
-    caBundle: |-
-      ###DYNAMIC_FIELD###
-  failurePolicy: Fail
-  matchPolicy: Equivalent
-  name: services.validations.kong.konghq.com
-  rules:
-  - apiGroups:
-    - ""
-    apiVersions:
-    - v1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - services
-    scope: '*'
   sideEffects: None
   timeoutSeconds: 10
 ---
@@ -31663,30 +31702,50 @@ spec:
     name: portMapPorts
 ---
 # Source: kong-operator/templates/validation-policy-konnect.yaml
+# This file is auto-generated by KO's hack/generators/validating-policy/main.go generator.
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicy
 metadata:
-  name: "autoscale.dataplanegroups.konnectclouddataplanegroupconfig.konnect.konghq.com"
+  name: autoscale.dataplanegroups.konnectclouddataplanegroupconfig.konnect.konghq.com
 spec:
   failurePolicy: Fail
   matchConstraints:
     resourceRules:
     - apiGroups:
-      - "konnect.konghq.com"
+      - konnect.konghq.com
       apiVersions:
-      - "v1alpha1"
+      - v1alpha1
       operations:
-      - "CREATE"
-      - "UPDATE"
+      - CREATE
+      - UPDATE
       resources:
-      - "konnectcloudgatewaydataplanegroupconfigurations"
-      # NOTE: field-level deprecations via Kubebuilder annotations do not generate any warning to the
-      # users when the deprecated field is used.
-      # Until this is not fixed we need a ValidatingAdmissionPolicy to emit the warning.
-      # Upstream issue: https://github.com/kubernetes/kubernetes/issues/131817
+      - konnectcloudgatewaydataplanegroupconfigurations
   validations:
   - expression: object.spec.dataplane_groups.all(d, d.autoscale.type != "static")
     message: '''Value "static" in spec.dataplane_groups.autoscale.type is deprecated, use "automatic" instead.'''
+---
+# Source: kong-operator/templates/validation-policy-service-annotations.yaml
+# This file is auto-generated by KO's hack/generators/validating-policy/main.go generator.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: annotations.services.konghq.com
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups:
+      - ""
+      apiVersions:
+      - v1
+      operations:
+      - CREATE
+      - UPDATE
+      resources:
+      - services
+  validations:
+  - expression: '!has(object.metadata.annotations) || !(''konghq.com/override'' in object.metadata.annotations)'
+    message: '''Annotation "konghq.com/override" is deprecated and will be removed in a future release. Use Service annotations for the "proxy" section and "konghq.com/upstream-policy" with a KongUpstreamPolicy resource instead.'''
 ---
 # Source: kong-operator/templates/validation-policy-dataplane.yaml
 apiVersion: admissionregistration.k8s.io/v1
@@ -31702,7 +31761,19 @@ spec:
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding
 metadata:
-  name: "biding-autoscale.dataplanegroups.konnectclouddataplanegroupconfig.konnect.konghq.com"
+  name: biding-autoscale.dataplanegroups.konnectclouddataplanegroupconfig.konnect.konghq.com
 spec:
-  policyName: "autoscale.dataplanegroups.konnectclouddataplanegroupconfig.konnect.konghq.com"
-  validationActions: [Warn, Audit]
+  policyName: autoscale.dataplanegroups.konnectclouddataplanegroupconfig.konnect.konghq.com
+  validationActions:
+  - Warn
+  - Audit
+---
+# Source: kong-operator/templates/validation-policy-service-annotations.yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: binding-annotations.services.konghq.com
+spec:
+  policyName: annotations.services.konghq.com
+  validationActions:
+  - Warn

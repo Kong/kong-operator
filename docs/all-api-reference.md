@@ -1742,6 +1742,8 @@ KongUpstreamAPISpec defines specification of a Kong Upstream.
 | `host_header` _*string_ | The hostname to be used as `Host` header when proxying requests through Kong. |
 | `name` _string_ | This is a hostname, which must be equal to the `host` of a Service. |
 | `slots` _*int64_ | The number of slots in the load balancer algorithm. If `algorithm` is set to `round-robin`, this setting determines the maximum number of slots. If `algorithm` is set to `consistent-hashing`, this setting determines the actual number of slots in the algorithm. Accepts an integer in the range `10`-`65536`. |
+| `sticky_sessions_cookie` _*string_ | The cookie name to keep sticky sessions. Required when `algorithm` is set to `sticky-sessions`. |
+| `sticky_sessions_cookie_path` _*string_ | The cookie path to set in the response headers for sticky sessions. |
 | `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | An optional set of strings associated with the Upstream for grouping and filtering. |
 | `use_srv_name` _*bool_ | If set, the balancer will use SRV hostname(if DNS Answer has SRV record) as the proxy upstream `Host`. |
 
@@ -1774,6 +1776,8 @@ KongUpstreamSpec defines the spec of Kong Upstream.
 | `host_header` _*string_ | The hostname to be used as `Host` header when proxying requests through Kong. |
 | `name` _string_ | This is a hostname, which must be equal to the `host` of a Service. |
 | `slots` _*int64_ | The number of slots in the load balancer algorithm. If `algorithm` is set to `round-robin`, this setting determines the maximum number of slots. If `algorithm` is set to `consistent-hashing`, this setting determines the actual number of slots in the algorithm. Accepts an integer in the range `10`-`65536`. |
+| `sticky_sessions_cookie` _*string_ | The cookie name to keep sticky sessions. Required when `algorithm` is set to `sticky-sessions`. |
+| `sticky_sessions_cookie_path` _*string_ | The cookie path to set in the response headers for sticky sessions. |
 | `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | An optional set of strings associated with the Upstream for grouping and filtering. |
 | `use_srv_name` _*bool_ | If set, the balancer will use SRV hostname(if DNS Answer has SRV record) as the proxy upstream `Host`. |
 | `controlPlaneRef` _[ControlPlaneRef](#common-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef is a reference to a ControlPlane this KongUpstream is associated with. |
@@ -3129,6 +3133,7 @@ DataPlaneServiceOptions contains Services related DataPlane configuration.
 | `type` _[ServiceType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#servicetype-v1-core)_ | Type determines how the Service is exposed. Defaults to `LoadBalancer`.<br /><br />`ClusterIP` allocates a cluster-internal IP address for load-balancing to endpoints.<br /><br />`NodePort` exposes the Service on each Node's IP at a static port (the NodePort). To make the node port available, Kubernetes sets up a cluster IP address, the same as if you had requested a Service of type: ClusterIP.<br /><br />`LoadBalancer` builds on NodePort and creates an external load-balancer (if supported in the current cloud) which routes to the same endpoints as the clusterIP.<br /><br />More info: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types |
 | `name` _*string_ | Name defines the name of the service. If Name is empty, the controller will generate a service name from the owning object. |
 | `annotations` _map[string]string_ | Annotations is an unstructured key value map stored with a resource that may be set by external tools to store and retrieve arbitrary metadata. They are not queryable and should be preserved when modifying objects.<br /><br />More info: http://kubernetes.io/docs/user-guide/annotations |
+| `labels` _[LabelValue](#gateway-operator-konghq-com-v1beta1-types-labelvalue)_ | Labels are an unstructured key value map that may be used to organize and categorize resources and that are propagated to the DataPlane's ingress Service by the operator.<br /><br />More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/ |
 | `externalTrafficPolicy` _[ServiceExternalTrafficPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#serviceexternaltrafficpolicy-v1-core)_ | ExternalTrafficPolicy describes how nodes distribute service traffic they receive on one of the Service's "externally-facing" addresses (NodePorts, ExternalIPs, and LoadBalancer IPs). If set to "Local", the proxy will configure the service in a way that assumes that external load balancers will take care of balancing the service traffic between nodes, and so each node will deliver traffic only to the node-local endpoints of the service, without masquerading the client source IP. (Traffic mistakenly sent to a node with no endpoints will be dropped.) The default value, "Cluster", uses the standard behavior of routing to all endpoints evenly (possibly modified by topology and other features). Note that traffic sent to an External IP or LoadBalancer IP from within the cluster will always get "Cluster" semantics, but clients sending to a NodePort from within the cluster may need to take traffic policy into account when picking a node.<br /><br />More info: https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip |
 | `ports` _[DataPlaneServicePort](#gateway-operator-konghq-com-v1beta1-types-dataplaneserviceport)_ | Ports defines the list of ports that are exposed by the service. The ports field allows defining the name, port and targetPort of the underlying service ports, while the protocol is defaulted to TCP, as it is the only protocol currently supported. |
 
@@ -3309,6 +3314,7 @@ such as the annotations.
 | `type` _[ServiceType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#servicetype-v1-core)_ | Type determines how the Service is exposed. Defaults to `LoadBalancer`.<br /><br />`ClusterIP` allocates a cluster-internal IP address for load-balancing to endpoints.<br /><br />`NodePort` exposes the Service on each Node's IP at a static port (the NodePort). To make the node port available, Kubernetes sets up a cluster IP address, the same as if you had requested a Service of type: ClusterIP.<br /><br />`LoadBalancer` builds on NodePort and creates an external load-balancer (if supported in the current cloud) which routes to the same endpoints as the clusterIP.<br /><br />More info: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types |
 | `name` _*string_ | Name defines the name of the service. If Name is empty, the controller will generate a service name from the owning object. |
 | `annotations` _map[string]string_ | Annotations is an unstructured key value map stored with a resource that may be set by external tools to store and retrieve arbitrary metadata. They are not queryable and should be preserved when modifying objects.<br /><br />More info: http://kubernetes.io/docs/user-guide/annotations |
+| `labels` _[LabelValue](#gateway-operator-konghq-com-v1beta1-types-labelvalue)_ | Labels are an unstructured key value map that may be used to organize and categorize resources and that are propagated to the DataPlane's ingress Service by the operator.<br /><br />More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/ |
 | `externalTrafficPolicy` _[ServiceExternalTrafficPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#serviceexternaltrafficpolicy-v1-core)_ | ExternalTrafficPolicy describes how nodes distribute service traffic they receive on one of the Service's "externally-facing" addresses (NodePorts, ExternalIPs, and LoadBalancer IPs). If set to "Local", the proxy will configure the service in a way that assumes that external load balancers will take care of balancing the service traffic between nodes, and so each node will deliver traffic only to the node-local endpoints of the service, without masquerading the client source IP. (Traffic mistakenly sent to a node with no endpoints will be dropped.) The default value, "Cluster", uses the standard behavior of routing to all endpoints evenly (possibly modified by topology and other features). Note that traffic sent to an External IP or LoadBalancer IP from within the cluster will always get "Cluster" semantics, but clients sending to a NodePort from within the cluster may need to take traffic policy into account when picking a node.<br /><br />More info: https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip |
 
 _Appears in:_
@@ -3406,6 +3412,36 @@ to interact with Konnect.
 _Appears in:_
 
 - [DataPlaneNetworkOptions](#gateway-operator-konghq-com-v1beta1-types-dataplanenetworkoptions)
+
+#### LabelName
+
+_Underlying type:_ `string`
+
+LabelName is a label key with constraints matching Kubernetes label key requirements.
+
+
+
+
+_Appears in:_
+
+- [DataPlaneServiceOptions](#gateway-operator-konghq-com-v1beta1-types-dataplaneserviceoptions)
+- [GatewayConfigServiceOptions](#gateway-operator-konghq-com-v1beta1-types-gatewayconfigserviceoptions)
+- [ServiceOptions](#gateway-operator-konghq-com-v1beta1-types-serviceoptions)
+
+#### LabelValue
+
+_Underlying type:_ `string`
+
+LabelValue is a label value with constraints matching Kubernetes label value requirements.
+
+
+
+
+_Appears in:_
+
+- [DataPlaneServiceOptions](#gateway-operator-konghq-com-v1beta1-types-dataplaneserviceoptions)
+- [GatewayConfigServiceOptions](#gateway-operator-konghq-com-v1beta1-types-gatewayconfigserviceoptions)
+- [ServiceOptions](#gateway-operator-konghq-com-v1beta1-types-serviceoptions)
 
 #### NamespacedName
 
@@ -3632,6 +3668,7 @@ such as the annotations.
 | `type` _[ServiceType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#servicetype-v1-core)_ | Type determines how the Service is exposed. Defaults to `LoadBalancer`.<br /><br />`ClusterIP` allocates a cluster-internal IP address for load-balancing to endpoints.<br /><br />`NodePort` exposes the Service on each Node's IP at a static port (the NodePort). To make the node port available, Kubernetes sets up a cluster IP address, the same as if you had requested a Service of type: ClusterIP.<br /><br />`LoadBalancer` builds on NodePort and creates an external load-balancer (if supported in the current cloud) which routes to the same endpoints as the clusterIP.<br /><br />More info: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types |
 | `name` _*string_ | Name defines the name of the service. If Name is empty, the controller will generate a service name from the owning object. |
 | `annotations` _map[string]string_ | Annotations is an unstructured key value map stored with a resource that may be set by external tools to store and retrieve arbitrary metadata. They are not queryable and should be preserved when modifying objects.<br /><br />More info: http://kubernetes.io/docs/user-guide/annotations |
+| `labels` _[LabelValue](#gateway-operator-konghq-com-v1beta1-types-labelvalue)_ | Labels are an unstructured key value map that may be used to organize and categorize resources and that are propagated to the DataPlane's ingress Service by the operator.<br /><br />More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/ |
 | `externalTrafficPolicy` _[ServiceExternalTrafficPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#serviceexternaltrafficpolicy-v1-core)_ | ExternalTrafficPolicy describes how nodes distribute service traffic they receive on one of the Service's "externally-facing" addresses (NodePorts, ExternalIPs, and LoadBalancer IPs). If set to "Local", the proxy will configure the service in a way that assumes that external load balancers will take care of balancing the service traffic between nodes, and so each node will deliver traffic only to the node-local endpoints of the service, without masquerading the client source IP. (Traffic mistakenly sent to a node with no endpoints will be dropped.) The default value, "Cluster", uses the standard behavior of routing to all endpoints evenly (possibly modified by topology and other features). Note that traffic sent to an External IP or LoadBalancer IP from within the cluster will always get "Cluster" semantics, but clients sending to a NodePort from within the cluster may need to take traffic policy into account when picking a node.<br /><br />More info: https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip |
 
 _Appears in:_
@@ -4441,6 +4478,7 @@ such as the annotations.
 | `type` _[ServiceType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#servicetype-v1-core)_ | Type determines how the Service is exposed. Defaults to `LoadBalancer`.<br /><br />`ClusterIP` allocates a cluster-internal IP address for load-balancing to endpoints.<br /><br />`NodePort` exposes the Service on each Node's IP at a static port (the NodePort). To make the node port available, Kubernetes sets up a cluster IP address, the same as if you had requested a Service of type: ClusterIP.<br /><br />`LoadBalancer` builds on NodePort and creates an external load-balancer (if supported in the current cloud) which routes to the same endpoints as the clusterIP.<br /><br />More info: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types |
 | `name` _*string_ | Name defines the name of the service. If Name is empty, the controller will generate a service name from the owning object. |
 | `annotations` _map[string]string_ | Annotations is an unstructured key value map stored with a resource that may be set by external tools to store and retrieve arbitrary metadata. They are not queryable and should be preserved when modifying objects.<br /><br />More info: http://kubernetes.io/docs/user-guide/annotations |
+| `labels` _[LabelValue](#gateway-operator-konghq-com-v2beta1-types-labelvalue)_ | Labels are an unstructured key value map that may be used to organize and categorize resources and that are propagated to the DataPlane's ingress Service by the operator.<br /><br />More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/ |
 | `externalTrafficPolicy` _[ServiceExternalTrafficPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#serviceexternaltrafficpolicy-v1-core)_ | ExternalTrafficPolicy describes how nodes distribute service traffic they receive on one of the Service's "externally-facing" addresses (NodePorts, ExternalIPs, and LoadBalancer IPs). If set to "Local", the proxy will configure the service in a way that assumes that external load balancers will take care of balancing the service traffic between nodes, and so each node will deliver traffic only to the node-local endpoints of the service, without masquerading the client source IP. (Traffic mistakenly sent to a node with no endpoints will be dropped.) The default value, "Cluster", uses the standard behavior of routing to all endpoints evenly (possibly modified by topology and other features). Note that traffic sent to an External IP or LoadBalancer IP from within the cluster will always get "Cluster" semantics, but clients sending to a NodePort from within the cluster may need to take traffic policy into account when picking a node.<br /><br />More info: https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip |
 
 _Appears in:_
@@ -4540,6 +4578,34 @@ KonnectOptions contains the options for configuring a Konnect-managed ControlPla
 _Appears in:_
 
 - [GatewayConfigurationSpec](#gateway-operator-konghq-com-v2beta1-types-gatewayconfigurationspec)
+
+#### LabelName
+
+_Underlying type:_ `string`
+
+LabelName is a label key with constraints matching Kubernetes label key requirements.
+
+
+
+
+_Appears in:_
+
+- [GatewayConfigServiceOptions](#gateway-operator-konghq-com-v2beta1-types-gatewayconfigserviceoptions)
+- [ServiceOptions](#gateway-operator-konghq-com-v2beta1-types-serviceoptions)
+
+#### LabelValue
+
+_Underlying type:_ `string`
+
+LabelValue is a label value with constraints matching Kubernetes label value requirements.
+
+
+
+
+_Appears in:_
+
+- [GatewayConfigServiceOptions](#gateway-operator-konghq-com-v2beta1-types-gatewayconfigserviceoptions)
+- [ServiceOptions](#gateway-operator-konghq-com-v2beta1-types-serviceoptions)
 
 #### NamespacedName
 
@@ -4745,6 +4811,7 @@ such as the annotations.
 | `type` _[ServiceType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#servicetype-v1-core)_ | Type determines how the Service is exposed. Defaults to `LoadBalancer`.<br /><br />`ClusterIP` allocates a cluster-internal IP address for load-balancing to endpoints.<br /><br />`NodePort` exposes the Service on each Node's IP at a static port (the NodePort). To make the node port available, Kubernetes sets up a cluster IP address, the same as if you had requested a Service of type: ClusterIP.<br /><br />`LoadBalancer` builds on NodePort and creates an external load-balancer (if supported in the current cloud) which routes to the same endpoints as the clusterIP.<br /><br />More info: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types |
 | `name` _*string_ | Name defines the name of the service. If Name is empty, the controller will generate a service name from the owning object. |
 | `annotations` _map[string]string_ | Annotations is an unstructured key value map stored with a resource that may be set by external tools to store and retrieve arbitrary metadata. They are not queryable and should be preserved when modifying objects.<br /><br />More info: http://kubernetes.io/docs/user-guide/annotations |
+| `labels` _[LabelValue](#gateway-operator-konghq-com-v2beta1-types-labelvalue)_ | Labels are an unstructured key value map that may be used to organize and categorize resources and that are propagated to the DataPlane's ingress Service by the operator.<br /><br />More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/ |
 | `externalTrafficPolicy` _[ServiceExternalTrafficPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#serviceexternaltrafficpolicy-v1-core)_ | ExternalTrafficPolicy describes how nodes distribute service traffic they receive on one of the Service's "externally-facing" addresses (NodePorts, ExternalIPs, and LoadBalancer IPs). If set to "Local", the proxy will configure the service in a way that assumes that external load balancers will take care of balancing the service traffic between nodes, and so each node will deliver traffic only to the node-local endpoints of the service, without masquerading the client source IP. (Traffic mistakenly sent to a node with no endpoints will be dropped.) The default value, "Cluster", uses the standard behavior of routing to all endpoints evenly (possibly modified by topology and other features). Note that traffic sent to an External IP or LoadBalancer IP from within the cluster will always get "Cluster" semantics, but clients sending to a NodePort from within the cluster may need to take traffic policy into account when picking a node.<br /><br />More info: https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip |
 
 _Appears in:_

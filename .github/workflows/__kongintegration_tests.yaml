@@ -51,16 +51,30 @@ jobs:
           echo "TEST_KONG_IMAGE=kong/kong-gateway" >> $GITHUB_ENV
           echo "TEST_KONG_TAG=$(yq -ojson -r '.kongintegration.kong-ee' < test/test_dependencies.yaml )" >> $GITHUB_ENV
 
-      - uses: jdx/mise-action@e79ddf65a11cec7b0e882bedced08d6e976efb2d # v3.6.2
+      - uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db # v3.6.3
         with:
           install: false
 
       - run: echo "GOTESTSUM_JUNITFILE=kongintegration-${{ matrix.name }}-tests.xml" >> $GITHUB_ENV
+      # Share the cache key across all kongintegration tests since they all use the same dependencies.
       - run: echo "GO_CACHE_KEY=go-kongintegration-${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.mod') }}" >> $GITHUB_ENV
       - run: echo "GO_CACHE_KEY_2=go-kongintegration-${{ runner.os }}-${{ runner.arch }}-go-" >> $GITHUB_ENV
 
-      - name: Go cache
+      - name: Go cache main branch
+        if: ${{ github.ref == 'refs/heads/main' }}
         uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+        with:
+          path: |
+            ${{ env.GO_MOD_CACHE }}
+            ${{ env.GO_BUILD_CACHE }}
+          key: ${{ env.GO_CACHE_KEY }}
+          restore-keys: |
+            ${{ env.GO_CACHE_KEY }}
+            ${{ env.GO_CACHE_KEY_2 }}
+
+      - name: Go cache (restore only for non-main branches)
+        if: ${{ github.ref != 'refs/heads/main' }}
+        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
         with:
           path: |
             ${{ env.GO_MOD_CACHE }}

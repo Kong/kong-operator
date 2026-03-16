@@ -88,7 +88,7 @@ func TestAdoptMatchDataPlaneGroupConfigurationSuccess(t *testing.T) {
 						Environment: []sdkkonnectcomp.ConfigurationDataPlaneGroupEnvironmentField{
 							{Name: "KONG_CLUSTER_CERT", Value: "cert"},
 						},
-						State: sdkkonnectcomp.StateReady,
+						State: sdkkonnectcomp.ConfigurationDataPlaneGroupStateReady,
 					},
 				},
 			},
@@ -170,7 +170,7 @@ func TestAdoptMatchDataPlaneGroupConfigurationMismatch(t *testing.T) {
 						Environment: []sdkkonnectcomp.ConfigurationDataPlaneGroupEnvironmentField{
 							{Name: "KONG_CLUSTER_CERT", Value: "cert"},
 						},
-						State: sdkkonnectcomp.StateReady,
+						State: sdkkonnectcomp.ConfigurationDataPlaneGroupStateReady,
 					},
 				},
 			},

@@ -12,7 +12,6 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -142,7 +141,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{{
 							Name:        gatewayapi.ObjectName(gatewayName),
-							SectionName: lo.ToPtr(gatewayapi.SectionName(gatewayUDPPortName)),
+							SectionName: new(gatewayapi.SectionName(gatewayUDPPortName)),
 						}},
 					},
 					Rules: []gatewayapi.UDPRouteRule{{

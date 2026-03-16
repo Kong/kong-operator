@@ -304,7 +304,7 @@ func buildKongAdminClient(t *testing.T, ctx context.Context, namespace, dataplan
 	}, testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 
 	kubeconfigPath := writeTemporaryKubeconfig(t, env)
-	forwardCtx, cancel := context.WithCancel(context.Background())
+	forwardCtx, cancel := context.WithCancel(context.Background()) //nolint:gosec
 	localPort := startPortForward(forwardCtx, t, kubeconfigPath, namespace, fmt.Sprintf("pod/%s", selectedPod.Name), consts.DataPlaneAdminAPIPort)
 
 	tlsConfig := buildAdminTLSConfig(t, adminSecret)

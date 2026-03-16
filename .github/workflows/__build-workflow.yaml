@@ -174,14 +174,14 @@ jobs:
 
       - name: Log in to the Container registry
         if: ${{ inputs.push }}
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
         with:
           registry: ${{ inputs.registry }}
           username: ${{ inputs.username }}
           password: ${{ secrets.dockerhub-token }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
 
       - name: Add standard tags
         if: ${{ inputs.tag != '' }}
@@ -204,7 +204,7 @@ jobs:
 
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5.10.0
+        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6.0.0
         with:
           images: |
             ${{ inputs.registry }}/${{ inputs.image-name }}
@@ -262,7 +262,7 @@ jobs:
           outputs: |
             ${{ !inputs.push && 'type=docker,dest=/tmp/image.tar' }}
 
-      - uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+      - uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
         with:
           platforms: ${{ matrix.arch }}
 
@@ -325,7 +325,7 @@ jobs:
       - name: Configure Git for private repositories (this is needed by repositories that include this workflow and have other private dependencies)
         run: git config --global url."https://${{ secrets.gh-pat }}@github.com".insteadOf "https://github.com"
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
 
       - name: Add standard tags
         if: ${{ inputs.tag != '' }}
@@ -348,7 +348,7 @@ jobs:
 
       - name: Docker metadata
         id: meta
-        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5.10.0
+        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6.0.0
         with:
           images: |
             ${{ inputs.registry }}/${{ inputs.image-name }}
@@ -365,7 +365,7 @@ jobs:
 
       - name: Log in to the Container registry
         if: ${{ inputs.push }}
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
         with:
           registry: ${{ inputs.registry }}
           username: ${{ inputs.username }}

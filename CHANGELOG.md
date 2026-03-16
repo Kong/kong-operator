@@ -57,6 +57,25 @@
   - `--leader-election-renew-deadline`
   - `--leader-election-retry-period`
   [#3345](https://github.com/Kong/kong-operator/pull/3345)
+- Support `Gateway.spec.infrastructure.labels` and `Gateway.spec.infrastructure.annotations`.
+  Labels and annotations set on a Gateway's infrastructure are now propagated to the
+  DataPlane's ingress `Service` metadata and `Deployment` pod template metadata.
+  When both a `GatewayConfiguration` and `Gateway.spec.infrastructure` specify the same
+  key, the infrastructure value takes precedence.
+  [#3412](https://github.com/Kong/kong-operator/pull/3412)
+- Propagate the GEP-1762 `gateway.networking.k8s.io/gateway-name` label to all
+  operator-level resources created by the Gateway controller: `DataPlane`'s `Service` and `Pods`, as well as
+  `DataPlane` it self, `ControlPlane`, `KonnectGatewayControlPlane`, `KonnectExtension`, and
+  `NetworkPolicy`.
+  [#3531](https://github.com/Kong/kong-operator/pull/3531)
+- Added `--konnect-request-timeout` flag to control Konnect API calls timeout.
+  Be default that is set to 10 seconds.
+  [#3513](https://github.com/Kong/kong-operator/pull/3513)
+- Added `sticky_sessions_cookie` and `sticky_sessions_cookie_path` fields to
+  `KongUpstream` CRD, enabling sticky session configuration for Kong Gateway 3.11+
+  upstreams synced to Konnect. A CEL validation rule enforces that
+  `sticky_sessions_cookie` is set when `algorithm` is `sticky-sessions`.
+  [#3555](https://github.com/Kong/kong-operator/pull/3555)
 
 ### Fixes
 
@@ -78,6 +97,27 @@
   [#3463](https://github.com/Kong/kong-operator/pull/3463)
 - Fix counting of route attached to a listener by taking into account hostname intersection between the listener and the route.
   [#3490](https://github.com/Kong/kong-operator/pull/3490)
+- Fix reducing `Secret`s with in use finalizers.
+  [#3506](https://github.com/Kong/kong-operator/pull/3506)
+- Fix `ensureGatewayReferenceStatusRemoved` and `routeHasKongParentStatus` not
+  scoping to the specific Gateway when `GatewayNN` is set.
+  This could cause one ingress-controller instance to erroneously remove route
+  parent statuses set by another instance managing a different Gateway,
+  breaking cross-namespace HTTPRoute backend references via `ReferenceGrant`.
+  [#3524](https://github.com/Kong/kong-operator/pull/3524)
+- Fix `KonnectGatewayControlPlane` not setting `Programmed=False` when its
+  `KonnectAPIAuthConfiguration` reference cannot be resolved (e.g. the auth
+  config does not exist, or a cross-namespace reference lacks a
+  `KongReferenceGrant`). Both `APIAuthResolvedRef` and `Programmed` conditions
+  are now set to `False` atomically.
+  [#3526](https://github.com/Kong/kong-operator/pull/3526)
+- Fix configuring SNIs in ingress-controller when running with local controlplane.
+  [#3554](https://github.com/Kong/kong-operator/pull/3554)
+- Fix KongUpstream and KongService names in hybrid mode not taking into account
+  backendless rules. When a rule has no BackendRefs, the generated KongUpsteam and KongService names
+  now include a hash of rule's other field to avoid naming collisions with other
+  rules that also have no BackendRefs.
+  [#3576](https://github.com/Kong/kong-operator/pull/3576)
 
 ## [v2.1.2]
 

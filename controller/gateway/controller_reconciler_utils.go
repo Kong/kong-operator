@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net"
 	"path"
 	"sort"
@@ -61,6 +62,11 @@ func (r *Reconciler) createDataPlane(
 	if gatewayConfig.Spec.DataPlaneOptions != nil {
 		dataplane.Spec.DataPlaneOptions = *gatewayConfigDataPlaneOptionsToDataPlaneOptions(gatewayConfig.Namespace, *gatewayConfig.Spec.DataPlaneOptions)
 	}
+	// Merge Gateway.spec.infrastructure labels/annotations on top of GatewayConfig options.
+	mergeInfrastructureIntoDataPlane(&dataplane.Spec.DataPlaneOptions, gateway.Spec.Infrastructure)
+	// Add the GEP-1762 gateway-name label unconditionally (after mergeInfrastructureIntoDataPlane
+	// so it cannot be overridden by spec.infrastructure).
+	setGatewayNameLabelInDataPlane(&dataplane.Spec.DataPlaneOptions, gateway.Name)
 	setDataPlaneOptionsDefaults(&dataplane.Spec.DataPlaneOptions, r.DefaultDataPlaneImage)
 	if err := setDataPlaneIngressServicePorts(&dataplane.Spec.DataPlaneOptions, gateway.Spec.Listeners, gatewayConfig.Spec.ListenersOptions); err != nil {
 		return nil, err
@@ -69,7 +75,7 @@ func (r *Reconciler) createDataPlane(
 	dataplane.Spec.Extensions = extensions.MergeExtensionsForDataPlane(gateway, gatewayConfig.Spec.Extensions, konnectExtension)
 
 	k8sutils.SetOwnerForObject(dataplane, gateway)
-	gatewayutils.LabelObjectAsGatewayManaged(dataplane)
+	gatewayutils.LabelObjectAsGatewayManaged(dataplane, gateway.Name)
 	err := r.Create(ctx, dataplane)
 	if err != nil {
 		return nil, err
@@ -98,7 +104,7 @@ func (r *Reconciler) createControlPlane(
 	controlplane.Spec.Extensions = extensions.MergeExtensions(gatewayConfig.Spec.Extensions, controlplane)
 
 	k8sutils.SetOwnerForObject(controlplane, gateway)
-	gatewayutils.LabelObjectAsGatewayManaged(controlplane)
+	gatewayutils.LabelObjectAsGatewayManaged(controlplane, gateway.Name)
 	return r.Create(ctx, controlplane)
 }
 
@@ -135,7 +141,7 @@ func (r *Reconciler) createKonnectGatewayControlPlane(
 	}
 
 	k8sutils.SetOwnerForObject(kgcp, gateway)
-	gatewayutils.LabelObjectAsGatewayManaged(kgcp)
+	gatewayutils.LabelObjectAsGatewayManaged(kgcp, gateway.Name)
 
 	if err := r.Create(ctx, kgcp); err != nil {
 		return nil, err
@@ -170,7 +176,7 @@ func (r *Reconciler) createKonnectExtension(
 	}
 
 	k8sutils.SetOwnerForObject(konnectExt, gateway)
-	gatewayutils.LabelObjectAsGatewayManaged(konnectExt)
+	gatewayutils.LabelObjectAsGatewayManaged(konnectExt, gateway.Name)
 
 	if err := r.Create(ctx, konnectExt); err != nil {
 		return nil, err
@@ -258,12 +264,20 @@ func gatewayConfigDataPlaneOptionsToDataPlaneOptions(
 	}
 
 	if opts.Network.Services != nil && opts.Network.Services.Ingress != nil {
+		var ingressLabels map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue
+		if len(opts.Network.Services.Ingress.Labels) > 0 {
+			ingressLabels = make(map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue, len(opts.Network.Services.Ingress.Labels))
+			for k, v := range opts.Network.Services.Ingress.Labels {
+				ingressLabels[operatorv1beta1.LabelName(k)] = operatorv1beta1.LabelValue(v)
+			}
+		}
 		dataPlaneOptions.Network = operatorv1beta1.DataPlaneNetworkOptions{
 			Services: &operatorv1beta1.DataPlaneServices{
 				Ingress: &operatorv1beta1.DataPlaneServiceOptions{
 					ServiceOptions: operatorv1beta1.ServiceOptions{
 						Type:                  opts.Network.Services.Ingress.Type,
 						Annotations:           opts.Network.Services.Ingress.Annotations,
+						Labels:                ingressLabels,
 						ExternalTrafficPolicy: opts.Network.Services.Ingress.ExternalTrafficPolicy,
 						Name:                  opts.Network.Services.Ingress.Name,
 					},
@@ -283,6 +297,104 @@ func gatewayConfigDataPlaneOptionsToDataPlaneOptions(
 	}
 
 	return dataPlaneOptions
+}
+
+// mergeInfrastructureIntoDataPlane merges labels and annotations from
+// Gateway.spec.infrastructure into the DataPlaneOptions spec. It is called
+// after GatewayConfiguration options have been applied, so infrastructure
+// values take precedence (last-write-wins).
+//
+// The merge rules are:
+//   - infrastructure.labels -> DataPlane ingress Service labels AND pod template labels
+//   - infrastructure.annotations -> DataPlane ingress Service annotations AND pod template annotations
+func mergeInfrastructureIntoDataPlane(
+	spec *operatorv1beta1.DataPlaneOptions,
+	infra *gatewayv1.GatewayInfrastructure,
+) {
+	if infra == nil {
+		return
+	}
+
+	// Convert GatewayInfrastructure maps to plain string maps.
+	infraLabels := make(map[string]string, len(infra.Labels))
+	for k, v := range infra.Labels {
+		infraLabels[string(k)] = string(v)
+	}
+	infraAnnotations := make(map[string]string, len(infra.Annotations))
+	for k, v := range infra.Annotations {
+		infraAnnotations[string(k)] = string(v)
+	}
+
+	// --- Service labels and annotations ---
+	if len(infraLabels) > 0 || len(infraAnnotations) > 0 {
+		if spec.Network.Services == nil {
+			spec.Network.Services = &operatorv1beta1.DataPlaneServices{}
+		}
+		if spec.Network.Services.Ingress == nil {
+			spec.Network.Services.Ingress = &operatorv1beta1.DataPlaneServiceOptions{}
+		}
+		if len(infraLabels) > 0 {
+			if spec.Network.Services.Ingress.Labels == nil {
+				spec.Network.Services.Ingress.Labels = make(map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue, len(infraLabels))
+			}
+			for k, v := range infraLabels {
+				spec.Network.Services.Ingress.Labels[operatorv1beta1.LabelName(k)] = operatorv1beta1.LabelValue(v)
+			}
+		}
+		if len(infraAnnotations) > 0 {
+			if spec.Network.Services.Ingress.Annotations == nil {
+				spec.Network.Services.Ingress.Annotations = make(map[string]string)
+			}
+			maps.Copy(spec.Network.Services.Ingress.Annotations, infraAnnotations)
+		}
+	}
+
+	// --- Pod template labels and annotations ---
+	if len(infraLabels) > 0 || len(infraAnnotations) > 0 {
+		if spec.Deployment.PodTemplateSpec == nil {
+			spec.Deployment.PodTemplateSpec = &corev1.PodTemplateSpec{}
+		}
+		if len(infraLabels) > 0 {
+			if spec.Deployment.PodTemplateSpec.Labels == nil {
+				spec.Deployment.PodTemplateSpec.Labels = make(map[string]string)
+			}
+			maps.Copy(spec.Deployment.PodTemplateSpec.Labels, infraLabels)
+		}
+		if len(infraAnnotations) > 0 {
+			if spec.Deployment.PodTemplateSpec.Annotations == nil {
+				spec.Deployment.PodTemplateSpec.Annotations = make(map[string]string)
+			}
+			maps.Copy(spec.Deployment.PodTemplateSpec.Annotations, infraAnnotations)
+		}
+	}
+}
+
+// setGatewayNameLabelInDataPlane adds the gateway.networking.k8s.io/gateway-name
+// label (GEP-1762) to the DataPlane pod template and ingress Service so that the
+// Gateway API conformance test can locate them via label selector.
+// This is always called after mergeInfrastructureIntoDataPlane so that the label
+// cannot be accidentally overridden by spec.infrastructure.
+func setGatewayNameLabelInDataPlane(spec *operatorv1beta1.DataPlaneOptions, gatewayName string) {
+	// --- Pod template ---
+	if spec.Deployment.PodTemplateSpec == nil {
+		spec.Deployment.PodTemplateSpec = &corev1.PodTemplateSpec{}
+	}
+	if spec.Deployment.PodTemplateSpec.Labels == nil {
+		spec.Deployment.PodTemplateSpec.Labels = make(map[string]string)
+	}
+	spec.Deployment.PodTemplateSpec.Labels[consts.GatewayNameLabel] = gatewayName
+
+	// --- Ingress Service ---
+	if spec.Network.Services == nil {
+		spec.Network.Services = &operatorv1beta1.DataPlaneServices{}
+	}
+	if spec.Network.Services.Ingress == nil {
+		spec.Network.Services.Ingress = &operatorv1beta1.DataPlaneServiceOptions{}
+	}
+	if spec.Network.Services.Ingress.Labels == nil {
+		spec.Network.Services.Ingress.Labels = make(map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue)
+	}
+	spec.Network.Services.Ingress.Labels[operatorv1beta1.LabelName(consts.GatewayNameLabel)] = operatorv1beta1.LabelValue(gatewayName)
 }
 
 func gatewayAddressesFromService(svc corev1.Service) ([]gwtypes.GatewayStatusAddress, error) {
@@ -441,7 +553,7 @@ func (r *Reconciler) ensureDataPlaneHasNetworkPolicy(
 		return false, fmt.Errorf("failed generating network policy for DataPlane %s: %w", dataplane.Name, err)
 	}
 	k8sutils.SetOwnerForObject(generatedPolicy, gateway)
-	gatewayutils.LabelObjectAsGatewayManaged(generatedPolicy)
+	gatewayutils.LabelObjectAsGatewayManaged(generatedPolicy, gateway.Name)
 
 	if count == 1 {
 		var (
