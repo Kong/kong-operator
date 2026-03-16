@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -39,9 +40,11 @@ func TestParseKongProxyListenEnv(t *testing.T) {
 			Name:            "basic http",
 			KongProxyListen: "0.0.0.0:8001 reuseport backlog=16384",
 			Expected: kongListenConfig{
-				Endpoint: &proxyListenEndpoint{
-					Address: "0.0.0.0",
-					Port:    8001,
+				Endpoints: []*proxyListenEndpoint{
+					{
+						Address: "0.0.0.0",
+						Port:    8001,
+					},
 				},
 			},
 		},
@@ -49,9 +52,11 @@ func TestParseKongProxyListenEnv(t *testing.T) {
 			Name:            "basic https",
 			KongProxyListen: "0.0.0.0:8443 http2 ssl reuseport backlog=16384",
 			Expected: kongListenConfig{
-				SSLEndpoint: &proxyListenEndpoint{
-					Address: "0.0.0.0",
-					Port:    8443,
+				SSLEndpoints: []*proxyListenEndpoint{
+					{
+						Address: "0.0.0.0",
+						Port:    8443,
+					},
 				},
 			},
 		},
@@ -59,13 +64,33 @@ func TestParseKongProxyListenEnv(t *testing.T) {
 			Name:            "basic http + https",
 			KongProxyListen: "0.0.0.0:8001 reuseport backlog=16384, 0.0.0.0:8443 http2 ssl reuseport backlog=16384",
 			Expected: kongListenConfig{
-				Endpoint: &proxyListenEndpoint{
-					Address: "0.0.0.0",
-					Port:    8001,
+				Endpoints: []*proxyListenEndpoint{
+					{
+						Address: "0.0.0.0",
+						Port:    8001,
+					},
 				},
-				SSLEndpoint: &proxyListenEndpoint{
-					Address: "0.0.0.0",
-					Port:    8443,
+				SSLEndpoints: []*proxyListenEndpoint{
+					{
+						Address: "0.0.0.0",
+						Port:    8443,
+					},
+				},
+			},
+		},
+		{
+			Name:            "multiple https ports",
+			KongProxyListen: "0.0.0.0:6443 http2 ssl, 0.0.0.0:8443 http2 ssl reuseport backlog=16384",
+			Expected: kongListenConfig{
+				SSLEndpoints: []*proxyListenEndpoint{
+					{
+						Address: "0.0.0.0",
+						Port:    6443,
+					},
+					{
+						Address: "0.0.0.0",
+						Port:    8443,
+					},
 				},
 			},
 		},
@@ -3083,4 +3108,143 @@ func TestGatewayManagedLabelOnCreatedResources(t *testing.T) {
 		require.Equal(t, gwName, konnectExt.Labels[consts.GatewayNameLabel],
 			"KonnectExtension object must carry the GEP-1762 gateway-name label")
 	})
+}
+
+func TestGenerateDataPlaneNetworkPolicy(t *testing.T) {
+	const (
+		testNamespace     = "test-network-policy"
+		testDataPlaneName = "test-dp"
+	)
+	var (
+		protocolTCP = corev1.ProtocolTCP
+		podLabels   = map[string]string{
+			"app": "test",
+		}
+		defaultDataPlane = &operatorv1beta1.DataPlane{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: testNamespace,
+				Name:      testDataPlaneName,
+			},
+			Spec: operatorv1beta1.DataPlaneSpec{
+				DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+					Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+						DeploymentOptions: operatorv1beta1.DeploymentOptions{
+							PodTemplateSpec: &corev1.PodTemplateSpec{
+								Spec: corev1.PodSpec{
+									Containers: []corev1.Container{
+										{
+											Name:  consts.DataPlaneProxyContainerName,
+											Image: consts.DefaultDataPlaneImage,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		defaultIngressRuleAdminAPI = networkingv1.NetworkPolicyIngressRule{
+			Ports: []networkingv1.NetworkPolicyPort{
+				{
+					Protocol: &protocolTCP,
+					Port:     new(intstr.FromInt(consts.DataPlaneAdminAPIPort)),
+				},
+			},
+			From: []networkingv1.NetworkPolicyPeer{
+				{
+					PodSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"app": "test",
+						},
+					},
+					NamespaceSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"kubernetes.io/metadata.name": testNamespace,
+						},
+					},
+				},
+			},
+		}
+		defaultIngressRuleProxy = networkingv1.NetworkPolicyIngressRule{
+			Ports: []networkingv1.NetworkPolicyPort{
+				{
+					Protocol: &protocolTCP,
+					Port:     new(intstr.FromInt(consts.DataPlaneProxyPort)),
+				},
+				{
+					Protocol: &protocolTCP,
+					Port:     new(intstr.FromInt(consts.DataPlaneProxySSLPort)),
+				},
+			},
+		}
+		defaultIngressRuleMetrics = networkingv1.NetworkPolicyIngressRule{
+			Ports: []networkingv1.NetworkPolicyPort{
+				{
+					Protocol: &protocolTCP,
+					Port:     new(intstr.FromInt(consts.DataPlaneMetricsPort)),
+				},
+			},
+		}
+	)
+
+	testCases := []struct {
+		name                  string
+		proxyContainerOptions func(c *corev1.Container)
+		expectedIngressRules  []networkingv1.NetworkPolicyIngressRule
+	}{
+		{
+			name: "default DataPlane",
+			expectedIngressRules: []networkingv1.NetworkPolicyIngressRule{
+				defaultIngressRuleAdminAPI,
+				defaultIngressRuleProxy,
+				defaultIngressRuleMetrics,
+			},
+		},
+		{
+			name: "dataplane with stream listen",
+			proxyContainerOptions: func(c *corev1.Container) {
+				c.Env = append(c.Env, corev1.EnvVar{
+					Name:  "KONG_STREAM_LISTEN",
+					Value: "0.0.0.0:8899 ssl reuseport",
+				})
+			},
+			expectedIngressRules: []networkingv1.NetworkPolicyIngressRule{
+				defaultIngressRuleAdminAPI,
+				defaultIngressRuleProxy,
+				defaultIngressRuleMetrics,
+				{
+					Ports: []networkingv1.NetworkPolicyPort{
+						{
+							Protocol: &protocolTCP,
+							Port:     new(intstr.FromInt(8899)),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			dp := defaultDataPlane.DeepCopy()
+			container := k8sutils.GetPodContainerByName(&dp.Spec.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+			if tc.proxyContainerOptions != nil {
+				tc.proxyContainerOptions(container)
+			}
+
+			policy, err := generateDataPlaneNetworkPolicy(testNamespace, dp, podLabels)
+			require.NoError(t, err)
+			// compare expected NetworkPolicy and the generated one.
+			require.Equal(t, testNamespace, policy.Namespace)
+			require.Equal(t, "test-dp-limit-admin-api-", policy.GenerateName)
+			// compare pod selector.
+			require.Equal(t, map[string]string{"app": "test-dp"}, policy.Spec.PodSelector.MatchLabels)
+			// compare ingress policies.
+			require.Len(t, policy.Spec.Ingress, len(tc.expectedIngressRules))
+			for i, ingressRule := range tc.expectedIngressRules {
+				require.Equal(t, ingressRule, policy.Spec.Ingress[i])
+			}
+		})
+	}
 }

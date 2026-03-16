@@ -588,11 +588,12 @@ func generateDataPlaneNetworkPolicy(
 	podLabels map[string]string,
 ) (*networkingv1.NetworkPolicy, error) {
 	var (
-		protocolTCP     = corev1.ProtocolTCP
-		adminAPISSLPort = intstr.FromInt(consts.DataPlaneAdminAPIPort)
-		proxyPort       = intstr.FromInt(consts.DataPlaneProxyPort)
-		proxySSLPort    = intstr.FromInt(consts.DataPlaneProxySSLPort)
-		metricsPort     = intstr.FromInt(consts.DataPlaneMetricsPort)
+		protocolTCP       = corev1.ProtocolTCP
+		adminAPISSLPorts  = []intstr.IntOrString{intstr.FromInt(consts.DataPlaneAdminAPIPort)}
+		proxyPorts        = []intstr.IntOrString{intstr.FromInt(consts.DataPlaneProxyPort)}
+		proxySSLPorts     = []intstr.IntOrString{intstr.FromInt(consts.DataPlaneProxySSLPort)}
+		metricsPorts      = []intstr.IntOrString{intstr.FromInt(consts.DataPlaneMetricsPort)}
+		streamListenPorts = []intstr.IntOrString{}
 		// The label keys to match Kong operator pod.
 		// To not create new NetworkPolicy on upgrade of , we just keep the keys marking the application
 		// and remove the keys related to versions such as `version`,`pod-template-hash`,`helm.sh/chart`.
@@ -619,21 +620,33 @@ func generateDataPlaneNetworkPolicy(
 		if err != nil {
 			return nil, fmt.Errorf("failed parsing KONG_PROXY_LISTEN env: %w", err)
 		}
-		if kongListenConfig.Endpoint != nil {
-			proxyPort = intstr.FromInt(kongListenConfig.Endpoint.Port)
-		}
-		if kongListenConfig.SSLEndpoint != nil {
-			proxySSLPort = intstr.FromInt(kongListenConfig.SSLEndpoint.Port)
-		}
+
+		proxyPorts = lo.Map(kongListenConfig.Endpoints, func(ep *proxyListenEndpoint, _ int) intstr.IntOrString {
+			return intstr.FromInt(ep.Port)
+		})
+		proxySSLPorts = lo.Map(kongListenConfig.SSLEndpoints, func(ep *proxyListenEndpoint, _ int) intstr.IntOrString {
+			return intstr.FromInt(ep.Port)
+		})
 	}
 	if adminListen := k8sutils.EnvValueByName(container.Env, "KONG_ADMIN_LISTEN"); adminListen != "" {
 		kongListenConfig, err := parseKongListenEnv(adminListen)
 		if err != nil {
 			return nil, fmt.Errorf("failed parsing KONG_ADMIN_LISTEN env: %w", err)
 		}
-		if kongListenConfig.SSLEndpoint != nil {
-			adminAPISSLPort = intstr.FromInt(kongListenConfig.SSLEndpoint.Port)
+		adminAPISSLPorts = lo.Map(kongListenConfig.SSLEndpoints, func(ep *proxyListenEndpoint, _ int) intstr.IntOrString {
+			return intstr.FromInt(ep.Port)
+		})
+	}
+	if streamListen := k8sutils.EnvValueByName(container.Env, "KONG_STREAM_LISTEN"); streamListen != "" {
+		kongListenConfig, err := parseKongListenEnv(streamListen)
+		if err != nil {
+			return nil, fmt.Errorf("failed parsing KONG_STREAM_LISTEN env: %w", err)
 		}
+		// Since currently we only support TLS (TCP SSL) listeners, we only extract SSL ports here.
+		// For TCPRoute and UDPRoute, we also need to extract TCP endpoints and UDP endpoints.
+		streamListenPorts = lo.Map(kongListenConfig.SSLEndpoints, func(ep *proxyListenEndpoint, _ int) intstr.IntOrString {
+			return intstr.FromInt(ep.Port)
+		})
 	}
 
 	// Construct the policy to allow the KO pod to access DataPlane admin APIs.
@@ -658,25 +671,44 @@ func generateDataPlaneNetworkPolicy(
 		}
 	}
 	limitAdminAPIIngress := networkingv1.NetworkPolicyIngressRule{
-		Ports: []networkingv1.NetworkPolicyPort{
-			{Protocol: &protocolTCP, Port: &adminAPISSLPort},
-		},
+		Ports: lo.Map(adminAPISSLPorts, func(port intstr.IntOrString, _ int) networkingv1.NetworkPolicyPort {
+			return networkingv1.NetworkPolicyPort{Protocol: &protocolTCP, Port: &port}
+		}),
 		From: []networkingv1.NetworkPolicyPeer{
 			policyPeerForControllerPod,
 		},
 	}
 
 	allowProxyIngress := networkingv1.NetworkPolicyIngressRule{
-		Ports: []networkingv1.NetworkPolicyPort{
-			{Protocol: &protocolTCP, Port: &proxyPort},
-			{Protocol: &protocolTCP, Port: &proxySSLPort},
-		},
+		Ports: append(
+			lo.Map(proxyPorts, func(port intstr.IntOrString, _ int) networkingv1.NetworkPolicyPort {
+				return networkingv1.NetworkPolicyPort{Protocol: &protocolTCP, Port: &port}
+			}),
+			lo.Map(proxySSLPorts, func(port intstr.IntOrString, _ int) networkingv1.NetworkPolicyPort {
+				return networkingv1.NetworkPolicyPort{Protocol: &protocolTCP, Port: &port}
+			})...,
+		),
 	}
 
 	allowMetricsIngress := networkingv1.NetworkPolicyIngressRule{
-		Ports: []networkingv1.NetworkPolicyPort{
-			{Protocol: &protocolTCP, Port: &metricsPort},
-		},
+		Ports: lo.Map(metricsPorts, func(port intstr.IntOrString, _ int) networkingv1.NetworkPolicyPort {
+			return networkingv1.NetworkPolicyPort{Protocol: &protocolTCP, Port: &port}
+		}),
+	}
+
+	ingressRules := []networkingv1.NetworkPolicyIngressRule{
+		limitAdminAPIIngress,
+		allowProxyIngress,
+		allowMetricsIngress,
+	}
+
+	if len(streamListenPorts) > 0 {
+		allowStreamIngress := networkingv1.NetworkPolicyIngressRule{
+			Ports: lo.Map(streamListenPorts, func(port intstr.IntOrString, _ int) networkingv1.NetworkPolicyPort {
+				return networkingv1.NetworkPolicyPort{Protocol: &protocolTCP, Port: &port}
+			}),
+		}
+		ingressRules = append(ingressRules, allowStreamIngress)
 	}
 
 	return &networkingv1.NetworkPolicy{
@@ -693,11 +725,7 @@ func generateDataPlaneNetworkPolicy(
 			PolicyTypes: []networkingv1.PolicyType{
 				networkingv1.PolicyTypeIngress,
 			},
-			Ingress: []networkingv1.NetworkPolicyIngressRule{
-				limitAdminAPIIngress,
-				allowProxyIngress,
-				allowMetricsIngress,
-			},
+			Ingress: ingressRules,
 		},
 	}, nil
 }
@@ -1182,7 +1210,7 @@ func setDataPlaneOptionsForListeners(
 	return setDataPlaneIngressServicePorts(opts, listeners, listenersOpts, listenerPortToKongListenPort)
 }
 
-// setDataPlaneListenPorts configures deploymentOptions to set listen ports of the generated DataPlane.
+// setDataPlaneDeploymentListenPorts configures deploymentOptions to set listen ports of the generated DataPlane.
 // It returns the map from the listener's port to the port.
 func setDataPlaneDeploymentListenPorts(
 	opts *operatorv1beta1.DataPlaneOptions,
@@ -1487,8 +1515,8 @@ type proxyListenEndpoint struct {
 }
 
 type kongListenConfig struct {
-	Endpoint    *proxyListenEndpoint
-	SSLEndpoint *proxyListenEndpoint
+	Endpoints    []*proxyListenEndpoint
+	SSLEndpoints []*proxyListenEndpoint
 }
 
 // parseKongListenEnv parses the provided kong listen string and returns
@@ -1521,19 +1549,19 @@ func parseKongListenEnv(str string) (kongListenConfig, error) {
 			if err != nil {
 				return kongListenConfig, fmt.Errorf("failed parsing port %s: %w", port, err)
 			}
-			kongListenConfig.SSLEndpoint = &proxyListenEndpoint{
+			kongListenConfig.SSLEndpoints = append(kongListenConfig.SSLEndpoints, &proxyListenEndpoint{
 				Address: host,
 				Port:    p,
-			}
+			})
 		} else {
 			p, err := strconv.Atoi(port)
 			if err != nil {
 				return kongListenConfig, fmt.Errorf("failed parsing port %s: %w", port, err)
 			}
-			kongListenConfig.Endpoint = &proxyListenEndpoint{
+			kongListenConfig.Endpoints = append(kongListenConfig.Endpoints, &proxyListenEndpoint{
 				Address: host,
 				Port:    p,
-			}
+			})
 		}
 	}
 
