@@ -120,6 +120,11 @@
   [#3526](https://github.com/Kong/kong-operator/pull/3526)
 - Fix configuring SNIs in ingress-controller when running with local controlplane.
   [#3554](https://github.com/Kong/kong-operator/pull/3554)
+- Fix KongUpstream and KongService names in hybrid mode not taking into account
+  backendless rules. When a rule has no BackendRefs, the generated KongUpsteam and KongService names
+  now include a hash of rule's other field to avoid naming collisions with other
+  rules that also have no BackendRefs.
+  [#3576](https://github.com/Kong/kong-operator/pull/3576)
 
 ## [v2.1.2]
 

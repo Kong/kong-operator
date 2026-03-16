@@ -40,8 +40,10 @@ func CreateTestPersonalAccessToken(ctx context.Context, t *testing.T) string {
 		createResp, err := s.PersonalAccessTokens.
 			CreatePersonalAccessToken(ctx, *me.User.ID,
 				&sdkkonnectcomp.PersonalAccessTokenCreateRequest{
-					Name:      tokenName,
-					ExpiresAt: time.Now().Add(time.Hour),
+					PersonalAccessTokenCreateRequestWithExpiresAt: &sdkkonnectcomp.PersonalAccessTokenCreateRequestWithExpiresAt{
+						Name:      tokenName,
+						ExpiresAt: time.Now().Add(time.Hour),
+					},
 				},
 			)
 		if err != nil {

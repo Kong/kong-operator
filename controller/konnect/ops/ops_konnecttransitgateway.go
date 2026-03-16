@@ -168,7 +168,7 @@ func transitGatewaySpecToTransitGatewayInput(
 			}),
 			CidrBlocks: spec.AWSTransitGateway.CIDRBlocks,
 			TransitGatewayAttachmentConfig: sdkkonnectcomp.AwsTransitGatewayAttachmentConfig{
-				Kind:             sdkkonnectcomp.AWSTransitGatewayAttachmentTypeAwsTransitGatewayAttachment,
+				Kind:             sdkkonnectcomp.AWSTransitGatewayAttachmentConfigAWSTransitGatewayAttachmentTypeAwsTransitGatewayAttachment,
 				TransitGatewayID: spec.AWSTransitGateway.AttachmentConfig.TransitGatewayID,
 				RAMShareArn:      spec.AWSTransitGateway.AttachmentConfig.RAMShareArn,
 			},
@@ -368,7 +368,7 @@ func compareTransitGatewayDNSConfig(
 
 func compareAwsTransitGatewayAttachment(
 	spec konnectv1alpha1.AwsTransitGatewayAttachmentConfig,
-	remote sdkkonnectcomp.AwsTransitGatewayAttachmentConfig,
+	remote sdkkonnectcomp.AwsTransitGatewayAttachmentConfigForResponse,
 ) string {
 	if spec.TransitGatewayID != remote.GetTransitGatewayID() {
 		return fmt.Sprintf(
