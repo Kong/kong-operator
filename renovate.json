@@ -72,7 +72,7 @@
       "fileMatch": [
         "^pkg/consts/dataplane\\.go$",
         "^internal/versions/controlplane\\.go$",
-        "^test/e2e/test_helm_install_upgrade\\.go$"
+        "^test/e2e/helm_install_upgrade_test\\.go$"
       ],
       "matchStrings": [
         ".+\\s?[=:]\\s+\"(?<currentValue>.+?)\",?\\s+//\\s+renovate:\\s+datasource=(?<datasource>.*?)\\s+(packageName=(?<packageName>.*)\\s+)?depName=(?<depName>.*)"
