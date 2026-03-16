@@ -8,7 +8,7 @@ metadata:
   namespace: default
 spec:
   type: token
-  token: kpat_PUT_YOUR_TOKEN_HERE
+  token: kpat_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
   serverURL: eu.api.konghq.tech
 ---
 # KonnectEventGateway (Mirror) — the operator reads an existing Event Gateway from Konnect
@@ -23,7 +23,7 @@ spec:
   source: Mirror
   mirror:
     konnect:
-      id: "PUT_YOUR_EVENT_GATEWAY_UUID_HERE"  # replace with real Event Gateway UUID
+      id: "00000000-0000-0000-0000-000000000000"  # fake Event Gateway UUID
   konnect:
-    authRef:
-      name: konnect-api-auth
+    name: konnect-api-auth
+    namespace: default
