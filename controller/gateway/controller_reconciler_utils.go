@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"maps"
-	"math/rand"
 	"net"
 	"path"
 	"sort"
@@ -1212,6 +1211,11 @@ func setDataPlaneDeploymentListenPorts(
 	// Extract listeners with TLS ports.
 	tlsPorts := []int{}
 	var errs error
+	// assignedPortNumber and assignedPortMax defines the interval of ports to assign to listen on Kong stream proxy
+	// if the specified port in the listener is already occupied on Kong DataPlane.
+	assignedPortNumber := consts.DataPlaneAssignedPortStart
+	assignedPortMax := consts.DataPlaneAssignedPortStart + 1024
+
 	for i, l := range listeners {
 		switch l.Protocol {
 		case gatewayv1.HTTPProtocolType:
@@ -1224,15 +1228,19 @@ func setDataPlaneDeploymentListenPorts(
 			// https://github.com/Kong/kong-operator/issues/3511
 			tlsPorts = append(tlsPorts, portNumber)
 			// Assign another port if the listener's port is already allocated on Kong DP.
-			// REVIEW: Also re-assign a port if known ports  (<1024) are used? Or always assign a random port?
+			// REVIEW: Also re-assign a port if known ports (<1024) are used? Or always assign a port?
 			if _, occupied := kongPortOccupied[portNumber]; occupied {
-				for {
-					assignedPortNumber := rand.Intn(1024) + 16384 //nolint:gosec // No Need to use the crypto safe algorithm to assign an available port, I think.
+				for ; assignedPortNumber < assignedPortMax; assignedPortNumber++ {
 					if _, occupied := kongPortOccupied[assignedPortNumber]; !occupied {
 						listenerPortToKongListenPort[portNumber] = assignedPortNumber
 						kongPortOccupied[assignedPortNumber] = struct{}{}
 						break
 					}
+				}
+				// Although it should not happen where no ports can be assigned for the listener,
+				// we attach an error if the case really happens.
+				if assignedPortNumber >= assignedPortMax {
+					errs = errors.Join(errs, fmt.Errorf("listener %d's port %d already occupied and no available ports can be assinged", i, portNumber))
 				}
 
 			} else {
