@@ -626,6 +626,41 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 			},
 		},
 		{
+			name: "TLS listener uses occupied port on Kong DP",
+			listeners: []gwtypes.Listener{
+				{
+					Name:     "http",
+					Protocol: gatewayv1.HTTPProtocolType,
+					Port:     gatewayv1.PortNumber(80),
+				},
+				{
+					Name:     "tls-1",
+					Protocol: gatewayv1.TLSProtocolType,
+					Port:     gatewayv1.PortNumber(7443),
+				},
+				{
+					Name:     "tls-2",
+					Protocol: gatewayv1.TLSProtocolType,
+					Port:     gatewayv1.PortNumber(8443),
+				},
+			},
+			expectedEnvs: []corev1.EnvVar{
+				{
+					Name:  "KONG_PORT_MAPS",
+					Value: "80:8000,7443:7443,8443:16384", // Should assign the first port in the assigned port interval
+				},
+				{
+					Name:  "KONG_STREAM_LISTEN",
+					Value: "0.0.0.0:7443 ssl reuseport,0.0.0.0:16384 ssl reuseport",
+				},
+			},
+			expectedPortMap: map[int]int{
+				80:   8000,
+				7443: 7443,
+				8443: 16384,
+			},
+		},
+		{
 			name: "unsupported protocol TCP in listeners",
 			listeners: []gwtypes.Listener{
 				{
@@ -717,7 +752,7 @@ func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 				},
 				{
 					Name:     "tls",
-					Protocol: gatewayv1.HTTPSProtocolType,
+					Protocol: gatewayv1.TLSProtocolType,
 					Port:     gatewayv1.PortNumber(9443),
 				},
 			},
