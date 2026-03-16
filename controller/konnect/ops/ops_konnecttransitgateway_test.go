@@ -94,7 +94,7 @@ func TestAdoptMatchTransitGatewaySuccess(t *testing.T) {
 			DNSConfig: []sdkkonnectcomp.TransitGatewayDNSConfig{
 				{RemoteDNSServerIPAddresses: []string{"10.1.0.1"}, DomainProxyList: []string{"internal.example.com"}},
 			},
-			TransitGatewayAttachmentConfig: sdkkonnectcomp.AwsTransitGatewayAttachmentConfig{
+			TransitGatewayAttachmentConfig: sdkkonnectcomp.AwsTransitGatewayAttachmentConfigForResponse{
 				TransitGatewayID: "tgw-123",
 				RAMShareArn:      "arn:aws:ram:us-east-1:123456789012:resource-share/tgw",
 			},
@@ -161,7 +161,7 @@ func TestAdoptMatchTransitGatewayMismatch(t *testing.T) {
 			DNSConfig: []sdkkonnectcomp.TransitGatewayDNSConfig{
 				{RemoteDNSServerIPAddresses: []string{"10.1.0.1"}, DomainProxyList: []string{"internal.example.com"}},
 			},
-			TransitGatewayAttachmentConfig: sdkkonnectcomp.AwsTransitGatewayAttachmentConfig{
+			TransitGatewayAttachmentConfig: sdkkonnectcomp.AwsTransitGatewayAttachmentConfigForResponse{
 				TransitGatewayID: "tgw-123",
 				RAMShareArn:      "arn:aws:ram:us-east-1:123456789012:resource-share/tgw",
 			},

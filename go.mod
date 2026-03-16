@@ -5,7 +5,7 @@ go 1.26.1
 require (
 	cloud.google.com/go/container v1.46.0
 	dario.cat/mergo v1.0.2
-	github.com/Kong/sdk-konnect-go v0.26.1
+	github.com/Kong/sdk-konnect-go v0.27.0
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/avast/retry-go/v4 v4.7.0
 	github.com/blang/semver/v4 v4.0.0
@@ -68,8 +68,8 @@ require (
 	sigs.k8s.io/controller-runtime v0.23.3
 	sigs.k8s.io/controller-tools v0.20.1
 	sigs.k8s.io/e2e-framework v0.6.0
-	sigs.k8s.io/gateway-api v1.5.0
-	sigs.k8s.io/gateway-api/conformance v1.5.0
+	sigs.k8s.io/gateway-api v1.5.1
+	sigs.k8s.io/gateway-api/conformance v1.5.1
 	sigs.k8s.io/kustomize/api v0.21.1
 	sigs.k8s.io/structured-merge-diff/v4 v4.7.0
 	sigs.k8s.io/yaml v1.6.0
