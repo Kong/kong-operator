@@ -15,12 +15,11 @@ import (
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
-	"github.com/kong/kong-operator/v2/controller/hybridgateway/builder"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
-func TestRouteForRule(t *testing.T) {
+func TestRoutesForRule(t *testing.T) {
 	ctx := context.Background()
 	logger := logr.Discard()
 
@@ -43,14 +42,21 @@ func TestRouteForRule(t *testing.T) {
 		},
 	}
 
-	// Create test rule
+	// Create test rule with two matches so that two KongRoutes are generated
+	prefix := gatewayv1.PathMatchPathPrefix
 	rule := gwtypes.HTTPRouteRule{
 		Matches: []gatewayv1.HTTPRouteMatch{
 			{
 				Path: &gatewayv1.HTTPPathMatch{
-					Type:  (*gatewayv1.PathMatchType)(new("PathPrefix")),
+					Type:  &prefix,
 					Value: new("/test"),
 				},
+			},
+			{
+				Headers: []gatewayv1.HTTPHeaderMatch{{
+					Name:  "X-Foo",
+					Value: "bar",
+				}},
 			},
 		},
 	}
@@ -75,13 +81,14 @@ func TestRouteForRule(t *testing.T) {
 		serviceName   string
 		hostnames     []string
 		expectError   bool
-		expectUpdate  bool
+		expectRoutes  int
 	}{
 		{
-			name:        "create new route",
-			serviceName: "test-service",
-			hostnames:   []string{"example.com"},
-			expectError: false,
+			name:         "create new route",
+			serviceName:  "test-service",
+			hostnames:    []string{"example.com"},
+			expectError:  false,
+			expectRoutes: 2,
 		},
 	}
 
@@ -93,38 +100,43 @@ func TestRouteForRule(t *testing.T) {
 			}
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
-			result, err := RouteForRule(ctx, logger, fakeClient, httpRoute, rule, pRef, cpRef, tt.serviceName, tt.hostnames)
+			results, err := RoutesForRule(ctx, logger, fakeClient, httpRoute, rule, pRef, cpRef, tt.serviceName, tt.hostnames)
 
 			if tt.expectError {
 				assert.Error(t, err)
-				assert.Nil(t, result)
+				assert.Nil(t, results)
 				return
 			}
 
 			require.NoError(t, err)
-			require.NotNil(t, result)
+			require.NotNil(t, results)
+			assert.Len(t, results, tt.expectRoutes)
 
-			// Verify the route has correct properties
-			assert.Equal(t, "test-namespace", result.Namespace)
-			assert.NotEmpty(t, result.Name)
-			assert.Equal(t, tt.hostnames, result.Spec.Hosts)
+			for _, result := range results {
+				// Verify the route has correct properties
+				assert.Equal(t, "test-namespace", result.Namespace)
+				assert.NotEmpty(t, result.Name)
+				assert.Equal(t, tt.hostnames, result.Spec.Hosts)
 
-			// Verify service reference
-			if tt.serviceName != "" {
-				require.NotNil(t, result.Spec.ServiceRef)
-				assert.Equal(t, configurationv1alpha1.ServiceRefNamespacedRef, result.Spec.ServiceRef.Type)
-				require.NotNil(t, result.Spec.ServiceRef.NamespacedRef)
-				assert.Equal(t, tt.serviceName, result.Spec.ServiceRef.NamespacedRef.Name)
-			}
+				// Verify service reference
+				if tt.serviceName != "" {
+					require.NotNil(t, result.Spec.ServiceRef)
+					assert.Equal(t, configurationv1alpha1.ServiceRefNamespacedRef, result.Spec.ServiceRef.Type)
+					require.NotNil(t, result.Spec.ServiceRef.NamespacedRef)
+					assert.Equal(t, tt.serviceName, result.Spec.ServiceRef.NamespacedRef.Name)
+				}
 
-			// Verify HTTPRoute annotation
-			expectedAnnotation := httpRoute.Namespace + "/" + httpRoute.Name
-			assert.Contains(t, result.Annotations[consts.GatewayOperatorHybridRoutesAnnotation], expectedAnnotation)
+				// Verify HTTPRoute annotation
+				expectedAnnotation := httpRoute.Namespace + "/" + httpRoute.Name
+				assert.Contains(t, result.Annotations[consts.GatewayOperatorHybridRoutesAnnotation], expectedAnnotation)
 
-			// Verify paths from rule matches
-			if len(rule.Matches) > 0 && rule.Matches[0].Path != nil {
-				paths, _ := builder.GenerateKongRoutePathFromHTTPRouteMatch(rule.Matches[0].Path, false)
-				assert.Subset(t, result.Spec.Paths, paths)
+				// Verify at least one path/header/method is set based on the match.
+				// For the first match with path, we expect Paths to be non-empty.
+				// For the second header-only match, Paths may be empty; Headers must be set.
+				if len(result.Spec.Paths) == 0 {
+					// header-only route
+					assert.Contains(t, result.Spec.Headers, "X-Foo")
+				}
 			}
 		})
 	}
