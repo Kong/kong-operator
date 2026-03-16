@@ -1,0 +1,184 @@
+# KonnectEventGateway Cross-Namespace Reference Grant test scenario
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: konnecteventgateway-referencegrant
+spec:
+  description: |
+    This test validates that a KonnectEventGateway in one namespace can reference a
+    KonnectAPIAuthConfiguration in a different namespace once a KongReferenceGrant is in place.
+    It ensures that:
+    1. Without a KongReferenceGrant the gateway cannot resolve the cross-namespace auth ref
+       and stays not-Programmed (APIAuthResolvedRef=False/RefNotPermitted).
+    2. Once a KongReferenceGrant is created in the auth namespace the gateway resolves the
+       reference and becomes Programmed=True.
+    3. Deleting the KonnectEventGateway removes it from Konnect (finalizer is cleaned up).
+
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    # Auth lives in a separate namespace to exercise cross-namespace referencing.
+    - name: auth_namespace
+      value: (join('-', [($test_name), 'auth']))
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: event_gateway_name
+      value: (join('-', [($test_name), 'event-gw']))
+    - name: kong_reference_grant_name
+      value: (join('-', [($test_name), 'ref-grant']))
+
+  steps:
+    # Step 01: Create the auth namespace.
+    - name: 01-Create-auth-namespace
+      description: Create a dedicated namespace for the KonnectAPIAuthConfiguration.
+      use:
+        template: ../../common/_step_templates/apply-assert-namespace.yaml
+        with:
+          bindings:
+            - name: namespace_name
+              value: ($auth_namespace)
+
+    # Step 02: Create the Secret holding the Konnect token in the auth namespace.
+    - name: 02-Create-konnect-auth-secret
+      description: Create Secret with Konnect token (avoids leaking the token in debug snapshots).
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+        with:
+          bindings:
+            - name: auth_secret_name
+              value: ($auth_secret_name)
+            - name: auth_secret_namespace
+              value: ($auth_namespace)
+
+    # Step 03: Create KonnectAPIAuthConfiguration backed by the secret in the auth namespace.
+    - name: 03-Create-konnect-api-auth
+      description: Create KonnectAPIAuthConfiguration with secretRef in the auth namespace and verify it's valid.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+        with:
+          bindings:
+            - name: konnect_auth_name
+              value: ($konnect_auth_name)
+            - name: konnect_auth_namespace
+              value: ($auth_namespace)
+            - name: auth_secret_name
+              value: ($auth_secret_name)
+            - name: auth_secret_namespace
+              value: ($auth_namespace)
+
+    # Step 04: Create KonnectEventGateway referencing auth cross-namespace, no grant yet.
+    - name: 04-Create-event-gateway-no-grant
+      description: |
+        Create KonnectEventGateway referencing auth in a different namespace.
+        Without a KongReferenceGrant the auth ref must not resolve.
+      try:
+        - apply:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectEventGateway
+              metadata:
+                name: ($event_gateway_name)
+                namespace: ($namespace)
+              spec:
+                source: Origin
+                createGatewayRequest:
+                  name: ($event_gateway_name)
+                konnect:
+                  name: ($konnect_auth_name)
+                  namespace: ($auth_namespace)
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectEventGateway
+              metadata:
+                name: ($event_gateway_name)
+                namespace: ($namespace)
+              status:
+                # Logic: Without a KongReferenceGrant the cross-namespace auth ref must be denied.
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+
+    # Step 05: Create KongReferenceGrant in auth namespace to allow the cross-namespace ref.
+    - name: 05-Create-reference-grant
+      description: |
+        Create a KongReferenceGrant in the auth namespace that allows KonnectEventGateway
+        resources from the test namespace to reference KonnectAPIAuthConfiguration.
+      use:
+        template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+        with:
+          bindings:
+            - name: kong_reference_grant_name
+              value: ($kong_reference_grant_name)
+            - name: kong_reference_grant_namespace
+              value: ($auth_namespace)
+            - name: from
+              value:
+                - group: konnect.konghq.com
+                  kind: KonnectEventGateway
+                  namespace: ($namespace)
+            - name: to
+              value:
+                - group: konnect.konghq.com
+                  kind: KonnectAPIAuthConfiguration
+
+    # Step 06: Assert the gateway is now Programmed.
+    - name: 06-Assert-event-gateway-programmed
+      description: Assert the KonnectEventGateway resolves the auth ref and becomes Programmed.
+      try:
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectEventGateway
+              metadata:
+                name: ($event_gateway_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (id != null): true
+                (organizationID != null): true
+                (serverURL != null): true
+
+    # Step 07: Delete KonnectEventGateway and verify it is removed.
+    - name: 07-Delete-event-gateway
+      description: Delete KonnectEventGateway and verify the finalizer is released and resource is gone.
+      try:
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectEventGateway
+              name: ($event_gateway_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectEventGateway
+              metadata:
+                name: ($event_gateway_name)
+                namespace: ($namespace)
+
+  catch:
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: konnect-event_gateway_referencegrant
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: ADDITIONAL_NAMESPACES
+            value: ($auth_namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

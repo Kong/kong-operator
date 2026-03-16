@@ -1,0 +1,43 @@
+# Template for creating and asserting a KonnectEventGateway.
+#
+# Required bindings:
+#   - event_gateway_name: Name of the KonnectEventGateway to create.
+#   - namespace: Namespace where the KonnectEventGateway will be created.
+#   - konnect_auth_name: Name of the KonnectAPIAuthConfiguration to reference.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-konnect-event-gateway
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: konnect.konghq.com/v1alpha1
+          kind: KonnectEventGateway
+          metadata:
+            name: ($event_gateway_name)
+            namespace: ($namespace)
+          spec:
+            source: Origin
+            createGatewayRequest:
+              name: ($event_gateway_name)
+            konnect:
+              name: ($konnect_auth_name)
+    - assert:
+        resource:
+          apiVersion: konnect.konghq.com/v1alpha1
+          kind: KonnectEventGateway
+          metadata:
+            name: ($event_gateway_name)
+            namespace: ($namespace)
+          status:
+            (conditions[?type == 'APIAuthResolvedRef']):
+              - status: 'True'
+                reason: ResolvedRef
+            (conditions[?type == 'Programmed']):
+              - status: 'True'
+                reason: Programmed
+            # Logic: Ensure all KonnectEntityStatus fields are populated.
+            (id != null): true
+            (organizationID != null): true
+            (serverURL != null): true
