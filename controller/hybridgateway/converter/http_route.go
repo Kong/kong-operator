@@ -432,9 +432,10 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 			routes, err := kongroute.RoutesForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp, serviceName, hostnames)
 			if err != nil {
 				log.Error(logger, err, "Failed to translate KongRoute resources for rule, skipping rule",
+					"ruleIndex", ruleIndex,
 					"service", serviceName,
 					"hostnames", hostnames)
-				translationErrors = append(translationErrors, fmt.Errorf("failed to translate KongRoutes for rule: %w", err))
+				translationErrors = append(translationErrors, fmt.Errorf("failed to translate KongRoutes for rule %d: %w", ruleIndex, err))
 				continue
 			}
 			for _, r := range routes {
