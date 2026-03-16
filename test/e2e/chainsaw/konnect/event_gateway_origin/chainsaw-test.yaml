@@ -1,0 +1,93 @@
+# KonnectEventGateway e2e test scenario
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: konnecteventgateway-origin
+spec:
+  description: |
+    This test validates that the KonnectEventGateway controller correctly
+    creates, synchronizes, and deletes Event Gateways in Konnect. It ensures that:
+    1. KonnectAPIAuthConfiguration backed by a Secret is properly created and valid.
+    2. KonnectEventGateway with Origin source is created in Konnect and reaches Programmed=True.
+    3. The Konnect ID is assigned and reflected in the resource status.
+    4. Deleting the KonnectEventGateway removes it from Konnect (finalizer is cleaned up).
+
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: event_gateway_name
+      value: (join('-', [($test_name), 'event-gw']))
+
+  steps:
+    # Step 01: Create the Secret holding the Konnect token.
+    - name: 01-Create-konnect-auth-secret
+      description: Create Secret with Konnect token (avoids leaking the token in debug snapshots).
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+        with:
+          bindings:
+            - name: auth_secret_name
+              value: ($auth_secret_name)
+            - name: auth_secret_namespace
+              value: ($namespace)
+
+    # Step 02: Create KonnectAPIAuthConfiguration backed by the secret.
+    - name: 02-Create-konnect-api-auth
+      description: Create KonnectAPIAuthConfiguration with secretRef and verify it's valid.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+        with:
+          bindings:
+            - name: konnect_auth_name
+              value: ($konnect_auth_name)
+            - name: konnect_auth_namespace
+              value: ($namespace)
+            - name: auth_secret_name
+              value: ($auth_secret_name)
+            - name: auth_secret_namespace
+              value: ($namespace)
+
+    # Step 03: Create KonnectEventGateway and assert it becomes Programmed.
+    - name: 03-Create-event-gateway
+      description: Create KonnectEventGateway and wait for it to be Programmed with a Konnect ID.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectEventGateway.yaml
+
+    # Step 04: Delete KonnectEventGateway and verify it is removed.
+    - name: 04-Delete-event-gateway
+      description: Delete KonnectEventGateway and verify the finalizer is released and resource is gone.
+      try:
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectEventGateway
+              name: ($event_gateway_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectEventGateway
+              metadata:
+                name: ($event_gateway_name)
+                namespace: ($namespace)
+
+  catch:
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: konnect-event_gateway
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

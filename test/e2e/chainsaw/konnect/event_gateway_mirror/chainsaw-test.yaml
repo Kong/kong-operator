@@ -1,0 +1,185 @@
+# KonnectEventGateway Mirror source e2e test scenario
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: konnecteventgateway-mirror
+spec:
+  description: |
+    This test validates that the KonnectEventGateway controller correctly handles
+    the Mirror source mode. It ensures that:
+    1. An Event Gateway is pre-created directly in Konnect via the REST API.
+    2. A KonnectEventGateway with source=Mirror pointing to that ID reaches Programmed=True.
+    3. The Konnect ID and org/server metadata are reflected in the resource status.
+    4. Deleting the KonnectEventGateway does NOT delete it from Konnect (Mirror semantics).
+    5. The pre-created Event Gateway is cleaned up via the REST API after the test.
+
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: event_gateway_name
+      value: (join('-', [($test_name), 'event-gw-mirror']))
+    - name: gateway_id_file
+      value: (join('', ['/tmp/konnect_event_gateway_id_', ($test_name)]))
+  steps:
+    # Step 01: Create the Secret holding the Konnect token.
+    - name: 01-Create-konnect-auth-secret
+      description: Create Secret with Konnect token (avoids leaking the token in debug snapshots).
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+        with:
+          bindings:
+            - name: auth_secret_name
+              value: ($auth_secret_name)
+            - name: auth_secret_namespace
+              value: ($namespace)
+
+    # Step 02: Create KonnectAPIAuthConfiguration backed by the secret.
+    - name: 02-Create-konnect-api-auth
+      description: Create KonnectAPIAuthConfiguration with secretRef and verify it's valid.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+        with:
+          bindings:
+            - name: konnect_auth_name
+              value: ($konnect_auth_name)
+            - name: konnect_auth_namespace
+              value: ($namespace)
+            - name: auth_secret_name
+              value: ($auth_secret_name)
+            - name: auth_secret_namespace
+              value: ($namespace)
+
+    # Step 03: Pre-create an Event Gateway in Konnect via REST API, then apply the Mirror CR.
+    # The script output binding (konnect_gateway_id) must be consumed in the same step
+    # so the UUID is available for the apply and assert operations below.
+    - name: 03-Create-event-gateway-in-konnect-and-apply-mirror-cr
+      description: |
+        Create an Event Gateway in Konnect via REST API, capture its ID, then create the
+        KonnectEventGateway CR with source=Mirror and assert it becomes Programmed.
+      try:
+        - script:
+            env:
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_SERVER_URL
+                value: ($konnect_url)
+              - name: GATEWAY_NAME
+                value: ($event_gateway_name)
+              - name: GATEWAY_ID_FILE
+                value: ($gateway_id_file)
+            content: |
+              bash ../../common/scripts/create_konnect_event_gateway.sh
+            outputs:
+              - name: konnect_gateway_id
+                value: (json_parse($stdout).id)
+        - apply:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectEventGateway
+              metadata:
+                name: ($event_gateway_name)
+                namespace: ($namespace)
+              spec:
+                source: Mirror
+                mirror:
+                  konnect:
+                    id: ($konnect_gateway_id)
+                konnect:
+                  name: ($konnect_auth_name)
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectEventGateway
+              metadata:
+                name: ($event_gateway_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                # Logic: Ensure the mirrored resource ID matches what was pre-created.
+                id: ($konnect_gateway_id)
+                (organizationID != null): true
+                (serverURL != null): true
+
+    # Step 04: Delete KonnectEventGateway and verify the CR is removed but Konnect entity persists.
+    - name: 04-Delete-mirror-event-gateway
+      description: |
+        Delete the KonnectEventGateway CR and verify it is removed from the cluster.
+        The underlying Event Gateway must remain in Konnect (Mirror semantics: operator does not own it).
+      try:
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectEventGateway
+              name: ($event_gateway_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectEventGateway
+              metadata:
+                name: ($event_gateway_name)
+                namespace: ($namespace)
+        # Verify the Konnect entity was NOT deleted (Mirror semantics: operator does not own the resource).
+        - script:
+            env:
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_SERVER_URL
+                value: ($konnect_url)
+              - name: GATEWAY_ID_FILE
+                value: ($gateway_id_file)
+            content: |
+              bash ../../common/scripts/assert_konnect_event_gateway_exists.sh
+
+    # Step 05: Clean up the pre-created Event Gateway from Konnect via REST API.
+    - name: 05-Delete-event-gateway-from-konnect
+      description: Remove the pre-created Event Gateway from Konnect using the REST API.
+      try:
+        - script:
+            env:
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_SERVER_URL
+                value: ($konnect_url)
+              - name: GATEWAY_ID_FILE
+                value: ($gateway_id_file)
+            content: |
+              bash ../../common/scripts/delete_konnect_event_gateway.sh
+
+  catch:
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: konnect-event_gateway_mirror
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
+    # Best-effort cleanup: delete the Konnect entity even on failure.
+    - description: Cleanup Konnect Event Gateway on failure
+      script:
+        env:
+          - name: KONNECT_TOKEN
+            value: ($konnect_token)
+          - name: KONNECT_SERVER_URL
+            value: ($konnect_url)
+          - name: GATEWAY_ID_FILE
+            value: ($gateway_id_file)
+        content: |
+          bash ../../common/scripts/delete_konnect_event_gateway.sh
