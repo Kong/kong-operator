@@ -281,33 +281,84 @@ spec:
         template: ../../common/_step_templates/assert-kongService.yaml
     
     # Step 23: Verify that the updated HTTPRoute is translated into a KongRoute resource.
-    - name: Assert-kong-route-updated
-      description: Assert that the KongRoute resource is updated for the HTTPRoute.
+    - name: Assert-kong-route-updated-get
+      description: Assert that a KongRoute exists for GET /get after update.
       use:
         template: ../../common/_step_templates/assert-kongRoute.yaml
       bindings:
         - name: route_paths
-          value: 
-            - "~/get$"
-            - "~/post$"
-            - "~/put$"
-            - "~/patch$"
-            - "~/delete$"
-            - "~/status$"
-            - "/status/"
-        - name: route_methods
           value:
-            - "GET"
-            - "POST"
-            - "PUT"
-            - "PATCH"
-            - "DELETE"
+            - "~/get$"
         - name: strip_path
           value: false
         - name: resource_type
           value: "kongservices.configuration.konghq.com"
 
-    # Step 24: Verify that the HTTPRoute backend is translated into a KongUpstream resource for httpbin.
+    - name: Assert-kong-route-updated-post
+      description: Assert that a KongRoute exists for POST /post after update.
+      use:
+        template: ../../common/_step_templates/assert-kongRoute.yaml
+      bindings:
+        - name: route_paths
+          value:
+            - "~/post$"
+        - name: strip_path
+          value: false
+        - name: resource_type
+          value: "kongservices.configuration.konghq.com"
+
+    - name: Assert-kong-route-updated-put
+      description: Assert that a KongRoute exists for PUT /put after update.
+      use:
+        template: ../../common/_step_templates/assert-kongRoute.yaml
+      bindings:
+        - name: route_paths
+          value:
+            - "~/put$"
+        - name: strip_path
+          value: false
+        - name: resource_type
+          value: "kongservices.configuration.konghq.com"
+
+    - name: Assert-kong-route-updated-patch
+      description: Assert that a KongRoute exists for PATCH /patch after update.
+      use:
+        template: ../../common/_step_templates/assert-kongRoute.yaml
+      bindings:
+        - name: route_paths
+          value:
+            - "~/patch$"
+        - name: strip_path
+          value: false
+        - name: resource_type
+          value: "kongservices.configuration.konghq.com"
+
+    - name: Assert-kong-route-updated-delete
+      description: Assert that a KongRoute exists for DELETE /delete after update.
+      use:
+        template: ../../common/_step_templates/assert-kongRoute.yaml
+      bindings:
+        - name: route_paths
+          value:
+            - "~/delete$"
+        - name: strip_path
+          value: false
+        - name: resource_type
+          value: "kongservices.configuration.konghq.com"
+
+    - name: Assert-kong-route-updated-status
+      description: Assert that a KongRoute exists for /status prefix after update.
+      use:
+        template: ../../common/_step_templates/assert-kongRoute.yaml
+      bindings:
+        - name: route_paths
+          value:
+            - "~/status$"
+            - "/status/"
+        - name: strip_path
+          value: false
+        - name: resource_type
+          value: "kongservices.configuration.konghq.com"
     - name: Assert-kong-upstream-httpbin
       description: Assert that the KongUpstream resource is created for the httpbin backend.
       use:

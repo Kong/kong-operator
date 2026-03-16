@@ -135,6 +135,22 @@ func NewKongRouteName(route *gwtypes.HTTPRoute, cp *commonv1alpha1.ControlPlaneR
 	return newNameWithHashSuffix(readableElements, hashElements)
 }
 
+// NewKongRouteNameForMatch generates a KongRoute name based on HTTPRoute, ControlPlaneRef,
+// and a single HTTPRouteMatch. The optional index is included to avoid collisions when
+// multiple matches are identical.
+func NewKongRouteNameForMatch(route *gwtypes.HTTPRoute, cp *commonv1alpha1.ControlPlaneRef, match gatewayv1.HTTPRouteMatch, index int) string {
+	readableElements := []string{
+		httpProcolPrefix,
+		route.Namespace + "-" + route.Name,
+	}
+	hashElements := []string{
+		defaultCPPrefix + utils.Hash32(cp),
+		utils.Hash32(match),
+		fmt.Sprintf("m%02d", index),
+	}
+	return newNameWithHashSuffix(readableElements, hashElements)
+}
+
 // NewKongPluginName generates a KongPlugin name based on the HTTPRouteFilter passed as argument.
 func NewKongPluginName(filter gatewayv1.HTTPRouteFilter, namespace string, pluginName string) string {
 	return newName(namespace, pluginName, utils.Hash32(filter))

@@ -66,7 +66,8 @@
 - Propagate the GEP-1762 `gateway.networking.k8s.io/gateway-name` label to all
   operator-level resources created by the Gateway controller: `DataPlane`'s `Service` and `Pods`, as well as
   `DataPlane` it self, `ControlPlane`, `KonnectGatewayControlPlane`, `KonnectExtension`, and
-  `NetworkPolicy`.
+  `NetworkPolicy`. This changes enforces patching of the `DataPlane` deployment to add the label, which causes
+  a rolling restart of the `DataPlane` Pods.
   [#3531](https://github.com/Kong/kong-operator/pull/3531)
 - Added `--konnect-request-timeout` flag to control Konnect API calls timeout.
   Be default that is set to 10 seconds.
@@ -76,6 +77,17 @@
   upstreams synced to Konnect. A CEL validation rule enforces that
   `sticky_sessions_cookie` is set when `algorithm` is `sticky-sessions`.
   [#3555](https://github.com/Kong/kong-operator/pull/3555)
+
+### Changed
+
+- HybridGateway: generate one KongRoute per HTTPRouteMatch to honor Gateway API OR semantics across matches within a rule.
+  This enables the `HTTPRouteMatching` conformance test for Hybrid mode.
+  Note: routes count per rule may increase.
+  [#3577](https://github.com/Kong/kong-operator/pull/3577)
+- Upgrade Gateway API to v1.5.1, it requires manual step of installing
+  new CRDs before the upgrade, see [UPGRADE](charts/kong-operator/UPGRADE.md).
+  [#3596](https://github.com/Kong/kong-operator/pull/3596)
+  [#3599](https://github.com/Kong/kong-operator/pull/3599)
 
 ### Fixes
 
@@ -196,7 +208,7 @@
 - `KongCertificate`: Add support for sourcing certificates from Kubernetes Secrets.
   This allows users to define KongCertificates that reference existing Kubernetes
   Secrets containing TLS certificate and key data, instead of embedding them inline.
-  [#2802](https://github.com/Kong/kong-operator/pull/2802)  
+  [#2802](https://github.com/Kong/kong-operator/pull/2802)
 - `KongCACertificate`: Add support for sourcing CA certificates from Kubernetes Secrets.
   This allows users to define KongCACertificates that references existing Kubernetes
   Secrets containing TLS CA certificate instead of embedding them inline
