@@ -18,12 +18,14 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
 	"github.com/kong/kong-operator/v2/pkg/utils/gateway"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
@@ -31,6 +33,11 @@ import (
 	"github.com/kong/kong-operator/v2/test/helpers"
 	"github.com/kong/kong-operator/v2/test/helpers/eventually"
 	"github.com/kong/kong-operator/v2/test/helpers/kcfg"
+)
+
+const (
+	testHeaderKey   = "Header-Added-By-Plugin"
+	testHeaderValue = "Test"
 )
 
 func TestHelmUpgrade(t *testing.T) {
@@ -75,7 +82,21 @@ func TestHelmUpgrade(t *testing.T) {
 	testDeployment.Namespace = e.Namespace.Name
 	testService := generators.NewServiceForDeployment(testDeployment, corev1.ServiceTypeClusterIP)
 	testService.Namespace = e.Namespace.Name
-	httpRoute := helpers.GenerateHTTPRoute(e.Namespace.Name, gateway.Name, testService.Name)
+	kongPlugin := &configurationv1.KongPlugin{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: e.Namespace.Name,
+			Name:      "response-transformer-add-header",
+		},
+		PluginName: "response-transformer",
+		Config: apiextensionsv1.JSON{
+			Raw: fmt.Appendf(nil, `{"add":{"headers":["%s:%s"]}}`, testHeaderKey, testHeaderValue),
+		},
+	}
+	httpRoute := helpers.GenerateHTTPRoute(
+		e.Namespace.Name, gateway.Name, testService.Name, func(h *gatewayv1.HTTPRoute) {
+			h.Annotations["konghq.com/plugins"] = kongPlugin.Name
+		},
+	)
 
 	objectsToDeploy := []client.Object{
 		gatewayConfig,
@@ -83,6 +104,7 @@ func TestHelmUpgrade(t *testing.T) {
 		gateway,
 		testDeployment,
 		testService,
+		kongPlugin,
 		httpRoute,
 	}
 
@@ -118,7 +140,7 @@ func TestHelmUpgrade(t *testing.T) {
 			},
 		},
 		{
-			Name: "HTTPRoute responds with 200 status code",
+			Name: "HTTPRoute responds with 200 status code and presents response header added by plugin",
 			Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
 				gatewayHTTPRoutingWorks("gateway-on-prem=true")(ctx, c, cl.MgrClient)
 			},
@@ -160,7 +182,7 @@ func TestHelmUpgrade(t *testing.T) {
 			},
 		},
 		{
-			Name: "HTTPRoute responds with 200 status code",
+			Name: "HTTPRoute responds with 200 status code and presents response header added by plugin",
 			Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
 				gatewayHTTPRoutingWorks("gateway-on-prem=true")(ctx, c, cl.MgrClient)
 			},
@@ -352,8 +374,13 @@ func gatewayHTTPRoutingWorks(gatewayLabelSelector string) func(ctx context.Conte
 			require.NoError(collect, err, "failed to make HTTP request to Gateway %q at %q", client.ObjectKeyFromObject(gw), url)
 			defer res.Body.Close()
 			require.Equal(collect, http.StatusOK, res.StatusCode,
-				"Expected HTTP 200 from Gateway %q at %q, got %d",
+				"expected HTTP 200 from Gateway %q at %q, got %d",
 				client.ObjectKeyFromObject(gw), url, res.StatusCode,
+			)
+			require.Equal(
+				collect, testHeaderValue, res.Header.Get(testHeaderKey),
+				"expected response header %q to have value %q from Gateway %q at %q",
+				testHeaderKey, testHeaderValue, client.ObjectKeyFromObject(gw), url,
 			)
 		}, waitTime, 1*time.Second)
 	}
