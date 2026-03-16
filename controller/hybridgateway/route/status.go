@@ -456,9 +456,9 @@ func BuildResolvedRefsCondition(ctx context.Context, logger logr.Logger, cl clie
 
 			// BackendRef group/kind (default to core/Service when unset).
 			bRefGroup, bRefKind := backendRefGroupKind(bRef.Group, bRef.Kind)
-			bRefGK := bRefKind
+			bRefGK := string(bRefKind)
 			if bRefGroup != "" {
-				bRefGK = fmt.Sprintf("%s/%s", bRefGroup, bRefKind)
+				bRefGK = fmt.Sprintf("%s/%s", string(bRefGroup), string(bRefKind))
 			}
 
 			// Check if the group kind is supported for the reference.
@@ -923,9 +923,9 @@ func FilterOutGVKByKind(expectedGVKs []schema.GroupVersionKind, kindToFilter str
 // backendRefGroupKind returns the effective group and kind for a BackendRef,
 // applying Gateway API defaults: kind defaults to "Service" and group defaults
 // to "" (core) when nil or empty.
-func backendRefGroupKind(group *gwtypes.Group, kind *gwtypes.Kind) (string, string) {
-	g := string(lo.FromPtr(group))
-	k := string(lo.FromPtr(kind))
+func backendRefGroupKind(group *gwtypes.Group, kind *gwtypes.Kind) (gwtypes.Group, gwtypes.Kind) {
+	g := lo.FromPtr(group)
+	k := lo.FromPtr(kind)
 	if k == "" {
 		k = "Service"
 	}
@@ -966,15 +966,15 @@ func IsHTTPReferenceGranted(grantSpec gwtypes.ReferenceGrantSpec, backendRef gwt
 		}
 
 		for _, to := range grantSpec.To {
-			toGroup := string(to.Group)
+			toGroup := to.Group
 			if toGroup == "" {
 				toGroup = "core"
 			}
 			if bRefGroup == "" {
 				bRefGroup = "core"
 			}
-			if gwtypes.Group(bRefGroup) == gwtypes.Group(toGroup) &&
-				gwtypes.Kind(bRefKind) == to.Kind &&
+			if bRefGroup == toGroup &&
+				bRefKind == to.Kind &&
 				(to.Name == nil || *to.Name == backendRef.Name) {
 				return true
 			}
