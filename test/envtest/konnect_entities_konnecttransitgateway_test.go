@@ -65,7 +65,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 			mock.MatchedBy(func(req sdkkonnectcomp.CreateTransitGatewayRequest) bool {
 				return req.Type == sdkkonnectcomp.CreateTransitGatewayRequestTypeAWSTransitGateway &&
 					req.AWSTransitGateway.Name == transitGatewayName &&
-					req.AWSTransitGateway.TransitGatewayAttachmentConfig.Kind == sdkkonnectcomp.AWSTransitGatewayAttachmentTypeAwsTransitGatewayAttachment
+					req.AWSTransitGateway.TransitGatewayAttachmentConfig.Kind == sdkkonnectcomp.AWSTransitGatewayAttachmentConfigAWSTransitGatewayAttachmentTypeAwsTransitGatewayAttachment
 			}),
 			mock.Anything,
 		).Return(
@@ -177,7 +177,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 			mock.MatchedBy(func(req sdkkonnectcomp.CreateTransitGatewayRequest) bool {
 				return req.Type == sdkkonnectcomp.CreateTransitGatewayRequestTypeAWSTransitGateway &&
 					req.AWSTransitGateway.Name == transitGatewayName &&
-					req.AWSTransitGateway.TransitGatewayAttachmentConfig.Kind == sdkkonnectcomp.AWSTransitGatewayAttachmentTypeAwsTransitGatewayAttachment
+					req.AWSTransitGateway.TransitGatewayAttachmentConfig.Kind == sdkkonnectcomp.AWSTransitGatewayAttachmentConfigAWSTransitGatewayAttachmentTypeAwsTransitGatewayAttachment
 			}),
 			mock.Anything,
 		).Return(
