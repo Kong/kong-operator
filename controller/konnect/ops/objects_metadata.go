@@ -35,6 +35,12 @@ const (
 
 	// KubernetesVersionLabelKey is the key for the Kubernetes version label.
 	KubernetesVersionLabelKey = "k8s-version"
+
+	// ManagedByLabelKey is the key for the label that indicates the manager of the Konnect entity.
+	ManagedByLabelKey = "managed-by"
+
+	// ManagedByKongOperatorLabelValue is the value for the label that indicates the kong operator is the manager of the Konnect entity.
+	ManagedByKongOperatorLabelValue = "kong-operator"
 )
 
 // ObjectWithMetadata is an interface that accepts an object with Kubernetes metadata and object Kind information.
@@ -89,6 +95,7 @@ func generateKubernetesMetadataTags(obj ObjectWithMetadata) []string {
 		{Key: KubernetesNameLabelKey, Value: obj.GetName()},
 		{Key: KubernetesUIDLabelKey, Value: string(obj.GetUID())},
 		{Key: KubernetesVersionLabelKey, Value: obj.GetObjectKind().GroupVersionKind().GroupVersion().Version},
+		{Key: ManagedByLabelKey, Value: ManagedByKongOperatorLabelValue},
 	}
 	if k8sNamespace := obj.GetNamespace(); k8sNamespace != "" {
 		labels = append(labels, lo.Entry[string, string]{Key: KubernetesNamespaceLabelKey, Value: k8sNamespace})
@@ -113,6 +120,7 @@ func WithKubernetesMetadataLabels(obj ObjectWithMetadata, userSetLabels map[stri
 		KubernetesKindLabelKey:       obj.GetObjectKind().GroupVersionKind().Kind,
 		KubernetesGroupLabelKey:      obj.GetObjectKind().GroupVersionKind().GroupVersion().Group,
 		KubernetesVersionLabelKey:    obj.GetObjectKind().GroupVersionKind().GroupVersion().Version,
+		ManagedByLabelKey:            ManagedByKongOperatorLabelValue,
 	}
 	if k8sNamespace := obj.GetNamespace(); k8sNamespace != "" {
 		labels[KubernetesNamespaceLabelKey] = k8sNamespace

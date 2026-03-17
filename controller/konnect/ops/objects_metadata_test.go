@@ -44,6 +44,7 @@ func TestWithKubernetesMetadataLabels(t *testing.T) {
 				ops.KubernetesNamespaceLabelKey:  "test-namespace",
 				ops.KubernetesUIDLabelKey:        "test-uid",
 				ops.KubernetesGenerationLabelKey: "2",
+				ops.ManagedByLabelKey:            ops.ManagedByKongOperatorLabelValue,
 			},
 		},
 		{
@@ -66,6 +67,7 @@ func TestWithKubernetesMetadataLabels(t *testing.T) {
 				ops.KubernetesNameLabelKey:       "test-object",
 				ops.KubernetesUIDLabelKey:        "test-uid",
 				ops.KubernetesGenerationLabelKey: "2",
+				ops.ManagedByLabelKey:            ops.ManagedByKongOperatorLabelValue,
 			},
 		},
 		{
@@ -94,6 +96,7 @@ func TestWithKubernetesMetadataLabels(t *testing.T) {
 				ops.KubernetesNamespaceLabelKey:  "test-namespace",
 				ops.KubernetesUIDLabelKey:        "test-uid",
 				ops.KubernetesGenerationLabelKey: "2",
+				ops.ManagedByLabelKey:            ops.ManagedByKongOperatorLabelValue,
 				"custom-label":                   "custom-value",
 				"another-label":                  "another-value",
 			},
@@ -120,6 +123,7 @@ func TestWithKubernetesMetadataLabels(t *testing.T) {
 				ops.KubernetesNamespaceLabelKey:  "testnamespaceverylonglonglonglonglonglonglonglonglonglonglonglo",
 				ops.KubernetesUIDLabelKey:        "test-uid",
 				ops.KubernetesGenerationLabelKey: "2",
+				ops.ManagedByLabelKey:            ops.ManagedByKongOperatorLabelValue,
 			},
 		},
 	}
@@ -178,6 +182,7 @@ func TestGenerateTagsForObject(t *testing.T) {
 				"k8s-namespace:test-namespace",
 				"k8s-uid:test-uid",
 				"k8s-version:v1",
+				"managed-by:kong-operator",
 			},
 		},
 		{
@@ -190,6 +195,7 @@ func TestGenerateTagsForObject(t *testing.T) {
 				"k8s-name:test-object",
 				"k8s-uid:test-uid",
 				"k8s-version:v1",
+				"managed-by:kong-operator",
 			},
 		},
 		{
@@ -209,6 +215,7 @@ func TestGenerateTagsForObject(t *testing.T) {
 				"k8s-namespace:test-namespace",
 				"k8s-uid:test-uid",
 				"k8s-version:v1",
+				"managed-by:kong-operator",
 				"tag1",
 				"tag2",
 			},
@@ -232,6 +239,7 @@ func TestGenerateTagsForObject(t *testing.T) {
 				"k8s-namespace:test-namespace",
 				"k8s-uid:test-uid",
 				"k8s-version:v1",
+				"managed-by:kong-operator",
 				"tag1",
 				"tag2",
 				"tag3",
@@ -259,6 +267,7 @@ func TestGenerateTagsForObject(t *testing.T) {
 				"k8s-namespace:testnamespaceverylonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglongl",
 				"k8s-uid:test-uid",
 				"k8s-version:v1",
+				"managed-by:kong-operator",
 			},
 		},
 		{
@@ -279,6 +288,7 @@ func TestGenerateTagsForObject(t *testing.T) {
 				"k8s-uid:test-uid",
 				"k8s-version:v1",
 				"long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-tag-that-would-end-here",
+				"managed-by:kong-operator",
 				"tag1",
 				"tag2",
 			},
@@ -288,7 +298,7 @@ func TestGenerateTagsForObject(t *testing.T) {
 			obj: func() testObjectKind {
 				obj := namespacedObject()
 				obj.Annotations = map[string]string{
-					"konghq.com/tags": "a,b,c,d,e,f,g,h,i,j,k,l,m,iwillbediscarded",
+					"konghq.com/tags": "a,b,c,d,e,f,g,h,i,j,k,l,iwillbediscarded",
 				}
 				return obj
 			}(),
@@ -312,7 +322,7 @@ func TestGenerateTagsForObject(t *testing.T) {
 				"k8s-uid:test-uid",
 				"k8s-version:v1",
 				"l",
-				"m",
+				"managed-by:kong-operator",
 			},
 		},
 		{
@@ -320,7 +330,7 @@ func TestGenerateTagsForObject(t *testing.T) {
 			obj: func() testObjectKind {
 				obj := namespacedObject()
 				obj.Annotations = map[string]string{
-					"konghq.com/tags": "a,c,e,gwillbediscarded,iwillbediscarded,kwillbediscarded,mwillbediscarded",
+					"konghq.com/tags": "a,c,gwillbediscarded,iwillbediscarded,kwillbediscarded,mwillbediscarded",
 				}
 				return obj
 			}(),
@@ -330,7 +340,6 @@ func TestGenerateTagsForObject(t *testing.T) {
 				"b",
 				"c",
 				"d",
-				"e",
 				"f",
 				"h",
 				"j",
@@ -342,6 +351,7 @@ func TestGenerateTagsForObject(t *testing.T) {
 				"k8s-uid:test-uid",
 				"k8s-version:v1",
 				"l",
+				"managed-by:kong-operator",
 				"n",
 				"o",
 				"p",
