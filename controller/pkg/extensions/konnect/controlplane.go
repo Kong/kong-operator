@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
@@ -95,20 +94,17 @@ func kicInKonnectDefaults(ctx context.Context, cl client.Client, konnectExtensio
 		}
 
 		// Build the configuration and return it.
+		konnectConfig := managercfg.DefaultKonnectConfig()
+		konnectConfig.Address = buildKonnectAddress(konnectExtension.Status.Konnect.Endpoints.ControlPlaneEndpoint)
+		konnectConfig.ControlPlaneID = konnectExtension.Status.Konnect.ControlPlaneID
+		konnectConfig.TLSClient = managercfg.TLSClientConfig{
+			Cert: TLSClientCert,
+			Key:  TLSClientKey,
+		}
+		konnectConfig.LicenseSynchronizationEnabled = true
+		konnectConfig.ConfigSynchronizationEnabled = true
 		return &KonnectExtensionConfig{
-			KonnectConfig: &managercfg.KonnectConfig{
-				Address:        buildKonnectAddress(konnectExtension.Status.Konnect.Endpoints.ControlPlaneEndpoint),
-				ControlPlaneID: konnectExtension.Status.Konnect.ControlPlaneID,
-				TLSClient: managercfg.TLSClientConfig{
-					Cert: TLSClientCert,
-					Key:  TLSClientKey,
-				},
-				LicenseSynchronizationEnabled: true,
-				ConfigSynchronizationEnabled:  true,
-				UploadConfigPeriod:            time.Second * 10,
-				InitialLicensePollingPeriod:   time.Second * 10,
-				LicensePollingPeriod:          time.Second * 10,
-			},
+			KonnectConfig: &konnectConfig,
 		}, nil
 
 	case konnectv1alpha2.ClusterTypeControlPlane:
