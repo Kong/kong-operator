@@ -40712,6 +40712,7 @@ rules:
   - konnectcloudgatewaydataplanegroupconfigurations
   - konnectcloudgatewaynetworks
   - konnectcloudgatewaytransitgateways
+  - konnecteventgateways
   verbs:
   - get
   - list
@@ -40729,6 +40730,8 @@ rules:
   - konnectcloudgatewaynetworks/status
   - konnectcloudgatewaytransitgateways/finalizers
   - konnectcloudgatewaytransitgateways/status
+  - konnecteventgateways/finalizers
+  - konnecteventgateways/status
   - konnectextensions/finalizers
   - konnectextensions/status
   - konnectgatewaycontrolplanes/finalizers
