@@ -15,6 +15,7 @@ Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1al
 - [KonnectCloudGatewayTransitGateway](#konnect-konghq-com-v1alpha1-konnectcloudgatewaytransitgateway)
 - [KonnectExtension](#konnect-konghq-com-v1alpha1-konnectextension)
 - [KonnectGatewayControlPlane](#konnect-konghq-com-v1alpha1-konnectgatewaycontrolplane)
+- [MCPServer](#konnect-konghq-com-v1alpha1-mcpserver)
 
 ### KonnectAPIAuthConfiguration
 
@@ -108,6 +109,21 @@ KonnectGatewayControlPlane is the Schema for the KonnectGatewayControlplanes API
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KonnectGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanespec)_ | Spec defines the desired state of KonnectGatewayControlPlane. |
 | `status` _[KonnectGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanestatus)_ | Status defines the observed state of KonnectGatewayControlPlane. |
+
+### MCPServer
+
+
+MCPServer is the Schema for the MCPServer API.
+
+<!-- mcp_server description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `MCPServer`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[MCPServerSpec](#konnect-konghq-com-v1alpha1-types-mcpserverspec)_ |  |
+| `status` _[MCPServerStatus](#konnect-konghq-com-v1alpha1-types-mcpserverstatus)_ |  |
 
 ### Types
 
@@ -764,6 +780,41 @@ _Appears in:_
 
 - [KonnectCloudGatewayTransitGatewaySpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewayspec)
 
+#### MCPServerSpec
+
+
+MCPServerSpec is the specification of the MCPServer resource.
+
+
+
+| Field | Description |
+| --- | --- |
+| `mirror` _[MirrorSpec](#konnect-konghq-com-v1alpha1-types-mirrorspec)_ | Mirror is the Konnect Mirror configuration. It is only applicable for ControlPlanes that are created as Mirrors. |
+| `source` _[EntitySource](#common-konghq-com-v1alpha1-types-entitysource)_ | Source represents the source type of the Konnect entity. |
+| `konnect` _[KonnectConfiguration](#konnect-konghq-com-v1alpha2-types-konnectconfiguration)_ | KonnectConfiguration contains the Konnect configuration for the MCP server. |
+
+_Appears in:_
+
+- [MCPServer](#konnect-konghq-com-v1alpha1-mcpserver)
+
+#### MCPServerStatus
+
+
+MCPServerStatus defines the observed state of MCPServer.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the current conditions of the MCPServer.<br /><br />Known condition types are:<br /><br />* "Programmed" * "Mirrored" |
+| `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
+| `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
+| `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
+
+_Appears in:_
+
+- [MCPServer](#konnect-konghq-com-v1alpha1-mcpserver)
+
 #### MirrorKonnect
 
 
@@ -793,6 +844,7 @@ MirrorSpec contains the Konnect Mirror configuration.
 _Appears in:_
 
 - [KonnectGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanespec)
+- [MCPServerSpec](#konnect-konghq-com-v1alpha1-types-mcpserverspec)
 
 #### ProvisioningMethod
 
@@ -1018,6 +1070,7 @@ _Appears in:_
 - [KonnectCloudGatewayNetworkSpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaynetworkspec)
 - [KonnectExtensionKonnectSpec](#konnect-konghq-com-v1alpha1-types-konnectextensionkonnectspec)
 - [KonnectGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanespec)
+- [MCPServerSpec](#konnect-konghq-com-v1alpha1-types-mcpserverspec)
 
 #### KonnectEndpoints
 
@@ -1063,6 +1116,7 @@ _Appears in:_
 - [KonnectEntityStatusWithNetworkRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithnetworkref)
 - [KonnectGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanestatus)
 - [KonnectGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha2-types-konnectgatewaycontrolplanestatus)
+- [MCPServerStatus](#konnect-konghq-com-v1alpha1-types-mcpserverstatus)
 
 
 
