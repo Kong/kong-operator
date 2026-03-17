@@ -19,6 +19,7 @@ import (
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
 
+	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
 	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/v2/controller/konnect/server"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
@@ -186,9 +187,14 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 				return ctrl.Result{}, errUpdate
 			}
 
-			return ctrl.Result{}, nil
+			// Requeue with backoff to avoid spamming the API if there is
+			// a persistent issue with the token, server URL or connectivity.
+			return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithBackoff}, nil
 		}
-		return ctrl.Result{}, nil
+
+		// Requeue with backoff to avoid spamming the API if there is
+		// a persistent issue with the token, server URL or connectivity.
+		return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithBackoff}, nil
 	}
 
 	// Update the status only if it would change to prevent unnecessary updates.
