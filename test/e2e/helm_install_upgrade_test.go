@@ -27,18 +27,130 @@ import (
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/pkg/utils/gateway"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
+	testenv "github.com/kong/kong-operator/v2/test"
 	"github.com/kong/kong-operator/v2/test/helpers"
 	"github.com/kong/kong-operator/v2/test/helpers/eventually"
 	"github.com/kong/kong-operator/v2/test/helpers/kcfg"
 )
 
+const testHeaderKey = "Header-Added-By-Plugin"
+
+type gatewayMode string
+
 const (
-	testHeaderKey   = "Header-Added-By-Plugin"
-	testHeaderValue = "Test"
+	gatewayModeOnPrem gatewayMode = "on-prem"
+	gatewayModeHybrid gatewayMode = "hybrid"
 )
+
+func objectsToDeployForMode(
+	t *testing.T,
+	e TestEnvironment,
+	gatewayMode gatewayMode,
+) ([]client.Object, string) {
+	t.Helper()
+
+	const workloadLabelKey = "gateway-under-test"
+
+	// List of Kubernetes objects that should be present in the cluster
+	// to check if they are properly handled during the upgrade.
+	gatewayConfig := helpers.GenerateGatewayConfiguration(e.Namespace.Name)
+	gatewayClassParametersRef := gatewayv1.ParametersReference{
+		Group:     gatewayv1.Group(operatorv2beta1.SchemeGroupVersion.Group),
+		Kind:      gatewayv1.Kind("GatewayConfiguration"),
+		Namespace: (*gatewayv1.Namespace)(&e.Namespace.Name),
+		Name:      gatewayConfig.Name,
+	}
+	gatewayClass := helpers.MustGenerateGatewayClass(t, gatewayClassParametersRef)
+	gateway := helpers.GenerateGateway(
+		types.NamespacedName{Namespace: e.Namespace.Name, Name: fmt.Sprintf("gateway-%s", gatewayMode)},
+		gatewayClass,
+		func(gw *gatewayv1.Gateway) {
+			gw.Labels = map[string]string{workloadLabelKey: string(gatewayMode)}
+		},
+	)
+	// Create a test service backend for the HTTPRoute.
+	container := generators.NewContainer(fmt.Sprintf("httpbin-%s", gatewayMode), testutils.HTTPBinImage, 80)
+	testDeployment := generators.NewDeploymentForContainer(container)
+	testDeployment.Namespace = e.Namespace.Name
+	testService := generators.NewServiceForDeployment(testDeployment, corev1.ServiceTypeClusterIP)
+	testService.Namespace = e.Namespace.Name
+	kongPlugin := &configurationv1.KongPlugin{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: e.Namespace.Name,
+			Name:      fmt.Sprintf("response-transformer-add-header-%s", gatewayMode),
+		},
+		PluginName: "response-transformer",
+		Config: apiextensionsv1.JSON{
+			Raw: fmt.Appendf(nil, `{"add":{"headers":["%s:%s"]}}`, testHeaderKey, gatewayMode),
+		},
+	}
+	httpRoute := helpers.GenerateHTTPRoute(
+		e.Namespace.Name, gateway.Name, testService.Name, func(h *gatewayv1.HTTPRoute) {
+			// For on-prem it's typical to attach plugin with annotations.
+			// For Hybrid Gateway annotation is not supported by choice, hence use
+			// ExtensionRef to reference the plugin.
+			switch gatewayMode {
+			case gatewayModeOnPrem:
+				h.Annotations["konghq.com/plugins"] = kongPlugin.Name
+			case gatewayModeHybrid:
+				h.Spec.Rules[0].Filters = []gatewayv1.HTTPRouteFilter{
+					{
+						Type: gatewayv1.HTTPRouteFilterExtensionRef,
+						ExtensionRef: &gatewayv1.LocalObjectReference{
+							Group: gatewayv1.Group(configurationv1.GroupVersion.Group),
+							Kind:  "KongPlugin",
+							Name:  gatewayv1.ObjectName(kongPlugin.Name),
+						},
+					},
+				}
+			}
+		},
+	)
+
+	objects := []client.Object{
+		gatewayConfig,
+		gatewayClass,
+		gateway,
+		testDeployment,
+		testService,
+		kongPlugin,
+		httpRoute,
+	}
+
+	if gatewayMode == gatewayModeHybrid {
+		konnectAccessToken := testenv.KonnectAccessToken()
+		konnectServerURL := testenv.KonnectServerURL()
+		require.NotEmpty(t, konnectAccessToken, "hybrid deployment mode requires KONG_TEST_KONNECT_ACCESS_TOKEN")
+		require.NotEmpty(t, konnectServerURL, "hybrid deployment mode requires KONG_TEST_KONNECT_SERVER_URL")
+
+		konnectAPIAuthConfiguration := &konnectv1alpha1.KonnectAPIAuthConfiguration{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: e.Namespace.Name,
+				Name:      fmt.Sprintf("api-auth-config-%s", gatewayMode),
+			},
+			Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
+				Type:      konnectv1alpha1.KonnectAPIAuthTypeToken,
+				Token:     konnectAccessToken,
+				ServerURL: konnectServerURL,
+			},
+		}
+
+		gatewayConfig.Spec.Konnect = &operatorv2beta1.KonnectOptions{
+			APIAuthConfigurationRef: &konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
+				Name: konnectAPIAuthConfiguration.Name,
+			},
+		}
+
+		objects = append([]client.Object{konnectAPIAuthConfiguration}, objects...)
+	}
+
+	return objects, fmt.Sprintf("%s=%s", workloadLabelKey, gatewayMode)
+}
 
 func TestHelmUpgrade(t *testing.T) {
 	ctx := t.Context()
@@ -59,134 +171,177 @@ func TestHelmUpgrade(t *testing.T) {
 	// and dumping diagnostics if the test fails.
 	e := CreateEnvironment(t, ctx)
 
-	// List of Kubernetes objects that should be present in the cluster
-	// to check if they are properly handled during the upgrade.
-	gatewayConfig := helpers.GenerateGatewayConfiguration(e.Namespace.Name)
-	gatewayClassParametersRef := gatewayv1.ParametersReference{
-		Group:     gatewayv1.Group(operatorv2beta1.SchemeGroupVersion.Group),
-		Kind:      gatewayv1.Kind("GatewayConfiguration"),
-		Namespace: (*gatewayv1.Namespace)(&e.Namespace.Name),
-		Name:      gatewayConfig.Name,
-	}
-	gatewayClass := helpers.MustGenerateGatewayClass(t, gatewayClassParametersRef)
-	gateway := helpers.GenerateGateway(
-		types.NamespacedName{Namespace: e.Namespace.Name, Name: "gateway-on-prem"},
-		gatewayClass,
-		func(gw *gatewayv1.Gateway) {
-			gw.Labels = map[string]string{"gateway-on-prem": "true"}
-		},
-	)
-	// Create a test service backend for the HTTPRoute.
-	container := generators.NewContainer("httpbin", testutils.HTTPBinImage, 80)
-	testDeployment := generators.NewDeploymentForContainer(container)
-	testDeployment.Namespace = e.Namespace.Name
-	testService := generators.NewServiceForDeployment(testDeployment, corev1.ServiceTypeClusterIP)
-	testService.Namespace = e.Namespace.Name
-	kongPlugin := &configurationv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: e.Namespace.Name,
-			Name:      "response-transformer-add-header",
-		},
-		PluginName: "response-transformer",
-		Config: apiextensionsv1.JSON{
-			Raw: fmt.Appendf(nil, `{"add":{"headers":["%s:%s"]}}`, testHeaderKey, testHeaderValue),
-		},
-	}
-	httpRoute := helpers.GenerateHTTPRoute(
-		e.Namespace.Name, gateway.Name, testService.Name, func(h *gatewayv1.HTTPRoute) {
-			h.Annotations["konghq.com/plugins"] = kongPlugin.Name
-		},
-	)
-
-	objectsToDeploy := []client.Object{
-		gatewayConfig,
-		gatewayClass,
-		gateway,
-		testDeployment,
-		testService,
-		kongPlugin,
-		httpRoute,
-	}
-
 	// Assertion is run after the upgrade to assert the state of the resources in the cluster.
 	type assertion struct {
 		Name string
 		Func func(*assert.CollectT, *testutils.K8sClients)
 	}
-	assertionsAfterInstall := []assertion{
-		{
-			Name: "Gateway is programmed",
-			Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-				gatewayAndItsListenersAreProgrammedAssertion("gateway-on-prem=true")(ctx, c, cl.MgrClient)
-			},
-		},
-		{
-			Name: "ControlPlane is ready",
-			Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-				controlPlaneOwnedByGatewayReady("gateway-on-prem=true")(ctx, c, cl.MgrClient)
-			},
-		},
-		{
-			Name: "DataPlane is ready",
-			Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-				dataPlaneOwnedByGatewayReady("gateway-on-prem=true")(ctx, c, cl.MgrClient)
-			},
-		},
-
-		{
-			Name: "DataPlane deployment is not patched after install",
-			Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-				gatewayDataPlaneDeploymentIsNotPatched("gateway-on-prem=true")(ctx, c, cl.MgrClient)
-			},
-		},
-		{
-			Name: "HTTPRoute responds with 200 status code and presents response header added by plugin",
-			Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-				gatewayHTTPRoutingWorks("gateway-on-prem=true")(ctx, c, cl.MgrClient)
-			},
-		},
+	type suite struct {
+		Name                   string
+		Objects                []client.Object
+		AssertionsAfterInstall []assertion
+		AssertionsAfterUpgrade []assertion
 	}
+
 	// This is the place to add steps that should be performed before the upgrade.
 	// For instance change in CRDs requires manual installation of new CRDs before the upgrade,
 	// see charts/kong-operator/UPGRADE.md this section mostly should be empty.
+	// IDEALLY IT SHOULD BE EMPTY - seamless upgrade should not require manual steps.
 	stepsToDoBeforeUpgrade := []func(context.Context, *testing.T, clusters.Cluster){
 		func(ctx context.Context, t *testing.T, cluster clusters.Cluster) {
 			t.Log("Applying Gateway API CRDs for v1.5.1 due to PR #3491")
 			require.NoError(t, clusters.KustomizeDeployForCluster(ctx, cluster, "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v1.5.1"))
 		},
 	}
-	assertionsAfterUpgrade := []assertion{
+
+	onPremObjects, onPremGatewayLabelSelector := objectsToDeployForMode(t, e, gatewayModeOnPrem)
+	suitesToRun := []suite{
 		{
-			Name: "Gateway is programmed",
-			Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-				gatewayAndItsListenersAreProgrammedAssertion("gateway-on-prem=true")(ctx, c, cl.MgrClient)
+			Name:    "on-prem",
+			Objects: onPremObjects,
+			AssertionsAfterInstall: []assertion{
+				{
+					Name: "Gateway is programmed",
+					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+						gatewayAndItsListenersAreProgrammedAssertion(onPremGatewayLabelSelector)(ctx, c, cl.MgrClient)
+					},
+				},
+				{
+					Name: "ControlPlane is ready",
+					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+						controlPlaneOwnedByGatewayReady(onPremGatewayLabelSelector)(ctx, c, cl.MgrClient)
+					},
+				},
+				{
+					Name: "DataPlane is ready",
+					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+						dataPlaneOwnedByGatewayReady(onPremGatewayLabelSelector)(ctx, c, cl.MgrClient)
+					},
+				},
+
+				{
+					Name: "DataPlane deployment is not patched after install",
+					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+						gatewayDataPlaneDeploymentIsNotPatched(onPremGatewayLabelSelector)(ctx, c, cl.MgrClient)
+					},
+				},
+				{
+					Name: "HTTPRoute responds with 200 status code and presents response header added by plugin",
+					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+						gatewayHTTPRoutingWorks(onPremGatewayLabelSelector, gatewayModeOnPrem)(ctx, c, cl.MgrClient)
+					},
+				},
+			},
+			AssertionsAfterUpgrade: []assertion{
+				{
+					Name: "Gateway is programmed",
+					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+						gatewayAndItsListenersAreProgrammedAssertion(onPremGatewayLabelSelector)(ctx, c, cl.MgrClient)
+					},
+				},
+				{
+					Name: "ControlPlane is ready",
+					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+						controlPlaneOwnedByGatewayReady(onPremGatewayLabelSelector)(ctx, c, cl.MgrClient)
+					},
+				},
+				{
+					Name: "DataPlane is ready",
+					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+						dataPlaneOwnedByGatewayReady(onPremGatewayLabelSelector)(ctx, c, cl.MgrClient)
+					},
+				},
+				// Normally DataPlane Deployment should not be patched during the upgrade.
+				{
+					Name: "DataPlane deployment is patched after operator upgrade, due to PR #3531",
+					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+						gatewayDataPlaneDeploymentIsPatched(onPremGatewayLabelSelector)(ctx, c, cl.MgrClient)
+					},
+				},
+				{
+					Name: "HTTPRoute responds with 200 status code and presents response header added by plugin",
+					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+						gatewayHTTPRoutingWorks(onPremGatewayLabelSelector, gatewayModeOnPrem)(ctx, c, cl.MgrClient)
+					},
+				},
 			},
 		},
-		{
-			Name: "ControlPlane is ready",
-			Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-				controlPlaneOwnedByGatewayReady("gateway-on-prem=true")(ctx, c, cl.MgrClient)
+	}
+
+	if testenv.KonnectAccessToken() != "" && testenv.KonnectServerURL() != "" {
+		hybridObjects, hybridGatewayLabelSelector := objectsToDeployForMode(t, e, gatewayModeHybrid)
+		suitesToRun = append(suitesToRun, suite{
+			Name:    "hybrid",
+			Objects: hybridObjects,
+			AssertionsAfterInstall: []assertion{
+				{
+					Name: "Gateway is programmed",
+					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+						gatewayAndItsListenersAreProgrammedAssertion(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
+					},
+				},
+				{
+					Name: "KonnectGatewayControlPlane is programmed",
+					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+						konnectGatewayControlPlaneOwnedByGatewayProgrammed(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
+					},
+				},
+				{
+					Name: "DataPlane is ready",
+					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+						dataPlaneOwnedByGatewayReady(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
+					},
+				},
+				{
+					Name: "DataPlane deployment is not patched after install",
+					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+						gatewayDataPlaneDeploymentIsNotPatched(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
+					},
+				},
+				{
+					Name: "HTTPRoute responds with 200 status code and presents response header added by plugin",
+					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+						gatewayHTTPRoutingWorks(hybridGatewayLabelSelector, gatewayModeHybrid)(ctx, c, cl.MgrClient)
+					},
+				},
 			},
-		},
-		{
-			Name: "DataPlane is ready",
-			Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-				dataPlaneOwnedByGatewayReady("gateway-on-prem=true")(ctx, c, cl.MgrClient)
+			AssertionsAfterUpgrade: []assertion{
+				{
+					Name: "Gateway is programmed",
+					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+						gatewayAndItsListenersAreProgrammedAssertion(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
+					},
+				},
+				{
+					Name: "KonnectGatewayControlPlane is programmed",
+					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+						konnectGatewayControlPlaneOwnedByGatewayProgrammed(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
+					},
+				},
+				{
+					Name: "DataPlane is ready",
+					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+						dataPlaneOwnedByGatewayReady(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
+					},
+				},
+				{
+					Name: "DataPlane deployment is patched after operator upgrade, due to PR #3531",
+					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+						gatewayDataPlaneDeploymentIsPatched(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
+					},
+				},
+				{
+					Name: "HTTPRoute responds with 200 status code and presents response header added by plugin",
+					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+						gatewayHTTPRoutingWorks(hybridGatewayLabelSelector, gatewayModeHybrid)(ctx, c, cl.MgrClient)
+					},
+				},
 			},
-		},
-		// Normally DataPlane Deployment should not be patched during the upgrade.
-		{
-			Name: "DataPlane deployment is patched after operator upgrade, due to PR #3531",
-			Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-				gatewayDataPlaneDeploymentIsPatched("gateway-on-prem=true")(ctx, c, cl.MgrClient)
-			},
-		},
-		{
-			Name: "HTTPRoute responds with 200 status code and presents response header added by plugin",
-			Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-				gatewayHTTPRoutingWorks("gateway-on-prem=true")(ctx, c, cl.MgrClient)
-			},
-		},
+		})
+	} else {
+		t.Log(
+			"Skipping tests for Hybrid Gateway, KONG_TEST_KONNECT_ACCESS_TOKEN and/or KONG_TEST_KONNECT_SERVER_URL env vars are not set",
+		)
 	}
 
 	const releaseName = "ko-upgrade-test"
@@ -198,6 +353,7 @@ func TestHelmUpgrade(t *testing.T) {
 		SetValues: map[string]string{
 			"readinessProbe.initialDelaySeconds": "1",
 			"readinessProbe.periodSeconds":       "1",
+			"env.enable_controller_konnect":      "true",
 			// Disable leader election and anonymous reports for tests.
 			"env.no_leader_election": "true",
 			"env.anonymous_reports":  "false",
@@ -235,44 +391,33 @@ func TestHelmUpgrade(t *testing.T) {
 	})
 	ensureBasicReadiness(t, ctx, e, releaseName)
 
-	require.NoError(
-		t,
-		waitForOperatorDeployment(
-			t, ctx, e.Namespace.Name, e.Clients.K8sClient, waitTime, deploymentAssertConditions(t, deploymentReadyConditions()...),
-		),
-	)
-	require.Eventually(
-		t,
-		waitForOperatorWebhookEventually(t, ctx, e.Namespace.Name, releaseName, e.Clients.K8sClient),
-		webhookReadinessTimeout, webhookReadinessTick,
-	)
-
 	// Deploy the objects that should be present before the upgrade.
 	cl := client.NewNamespacedClient(e.Clients.MgrClient, e.Namespace.Name)
-	for _, obj := range objectsToDeploy {
-		// NOTE: Create objects with eventually since we're deploying
-		// admission webhook and that can take a moment to become ready.
-		require.EventuallyWithT(t, func(t *assert.CollectT) {
+	for _, suite := range suitesToRun {
+		t.Logf("Deploying objects for suite %q...", suite.Name)
+		for _, obj := range suite.Objects {
 			obj := obj.DeepCopyObject().(client.Object)
 			require.NoError(t, cl.Create(ctx, obj))
-		}, waitTime, 500*time.Millisecond)
-		t.Cleanup(func() {
-			// Ensure that every object is properly deleted (the finalizer must
-			// be executed, it requires some time) before the Helm chart is uninstalled.
-			ctx, cancel := context.WithTimeout(context.Background(), waitTime)
-			defer cancel()
-			require.NoError(t, client.IgnoreNotFound(cl.Delete(ctx, obj)))
-			eventually.WaitForObjectToNotExist(t, ctx, cl, obj, waitTime, time.Second)
-		})
+			t.Cleanup(func() {
+				// Ensure that every object is properly deleted (the finalizer must
+				// be executed, it requires some time) before the Helm chart is uninstalled.
+				ctx, cancel := context.WithTimeout(context.Background(), waitTime)
+				defer cancel()
+				require.NoError(t, client.IgnoreNotFound(cl.Delete(ctx, obj)))
+				eventually.WaitForObjectToNotExist(t, ctx, cl, obj, waitTime, time.Second)
+			})
+		}
 	}
 
 	t.Logf("Checking assertions after install...")
-	for _, assertion := range assertionsAfterInstall {
-		t.Run("after_install/"+assertion.Name, func(t *testing.T) {
-			require.EventuallyWithT(t, func(c *assert.CollectT) {
-				assertion.Func(c, e.Clients)
-			}, waitTime, 500*time.Millisecond)
-		})
+	for _, suite := range suitesToRun {
+		for _, assertion := range suite.AssertionsAfterInstall {
+			t.Run(suite.Name+"/after_install/"+assertion.Name, func(t *testing.T) {
+				require.EventuallyWithT(t, func(c *assert.CollectT) {
+					assertion.Func(c, e.Clients)
+				}, waitTime, 500*time.Millisecond)
+			})
+		}
 	}
 
 	if len(stepsToDoBeforeUpgrade) > 0 {
@@ -297,12 +442,15 @@ func TestHelmUpgrade(t *testing.T) {
 	ensureBasicReadiness(t, ctx, e, releaseName)
 
 	t.Logf("Checking assertions after upgrade...")
-	for _, assertion := range assertionsAfterUpgrade {
-		t.Run("after_upgrade/"+assertion.Name, func(t *testing.T) {
-			require.EventuallyWithT(t, func(c *assert.CollectT) {
-				assertion.Func(c, e.Clients)
-			}, waitTime, 500*time.Millisecond)
-		})
+	for _, suite := range suitesToRun {
+		t.Logf("Running assertions for suite %q...", suite.Name)
+		for _, assertion := range suite.AssertionsAfterUpgrade {
+			t.Run(suite.Name+"/after_upgrade/"+assertion.Name, func(t *testing.T) {
+				require.EventuallyWithT(t, func(c *assert.CollectT) {
+					assertion.Func(c, e.Clients)
+				}, waitTime, 500*time.Millisecond)
+			})
+		}
 	}
 }
 
@@ -350,7 +498,9 @@ func splitRepoVersionFromImageOrFail(t *testing.T, image string) (string, string
 
 // gatewayHTTPRoutingWorks verifies that HTTP requests to the Gateway's public IP
 // are successfully routed to the backend through the HTTPRoute.
-func gatewayHTTPRoutingWorks(gatewayLabelSelector string) func(ctx context.Context, c *assert.CollectT, cl client.Client) {
+func gatewayHTTPRoutingWorks(
+	gatewayLabelSelector string, gatewayMode gatewayMode,
+) func(ctx context.Context, c *assert.CollectT, cl client.Client) {
 	return func(ctx context.Context, c *assert.CollectT, cl client.Client) {
 		gw := getGatewayByLabelSelector(gatewayLabelSelector, ctx, c, cl)
 		require.NotNil(c, gw, "Gateway not found with label selector %q", gatewayLabelSelector)
@@ -373,14 +523,15 @@ func gatewayHTTPRoutingWorks(gatewayLabelSelector string) func(ctx context.Conte
 			res, err := httpClient.Do(req)
 			require.NoError(collect, err, "failed to make HTTP request to Gateway %q at %q", client.ObjectKeyFromObject(gw), url)
 			defer res.Body.Close()
-			require.Equal(collect, http.StatusOK, res.StatusCode,
+			require.Equal(
+				collect, http.StatusOK, res.StatusCode,
 				"expected HTTP 200 from Gateway %q at %q, got %d",
 				client.ObjectKeyFromObject(gw), url, res.StatusCode,
 			)
-			require.Equal(
-				collect, testHeaderValue, res.Header.Get(testHeaderKey),
+			require.EqualValues(
+				collect, gatewayMode, res.Header.Get(testHeaderKey),
 				"expected response header %q to have value %q from Gateway %q at %q",
-				testHeaderKey, testHeaderValue, client.ObjectKeyFromObject(gw), url,
+				testHeaderKey, gatewayMode, client.ObjectKeyFromObject(gw), url,
 			)
 		}, waitTime, 1*time.Second)
 	}
@@ -500,6 +651,24 @@ func controlPlaneOwnedByGatewayReady(gatewayLabelSelector string) func(ctx conte
 			return condition.Type == "Ready" && condition.Status == metav1.ConditionTrue
 		})
 		require.True(c, ready, "ControlPlane is not ready")
+	}
+}
+
+// konnectGatewayControlPlaneOwnedByGatewayReady is the predicate that asserts the ControlPlane owned by the gateway is ready.
+func konnectGatewayControlPlaneOwnedByGatewayProgrammed(gatewayLabelSelector string) func(ctx context.Context, c *assert.CollectT, cl client.Client) {
+	return func(ctx context.Context, c *assert.CollectT, cl client.Client) {
+		gw := getGatewayByLabelSelector(gatewayLabelSelector, ctx, c, cl)
+		require.NotNil(c, gw, "Gateway not found with label selector %q", gatewayLabelSelector)
+
+		controlPlanes, err := gateway.ListKonnectGatewayControlPlanesForGateway(ctx, cl, gw)
+		require.NoError(c, err, "failed to list KonnectGatewayControlPlanes for Gateway %q: %v", client.ObjectKeyFromObject(gw), err)
+		require.Len(c, controlPlanes, 1, "expected 1 KonnectGatewayControlPlane for Gateway %q, got %d", client.ObjectKeyFromObject(gw), len(controlPlanes))
+		cp := controlPlanes[0]
+
+		programmed := lo.ContainsBy(cp.Status.Conditions, func(condition metav1.Condition) bool {
+			return condition.Type == "Programmed" && condition.Status == metav1.ConditionTrue
+		})
+		require.True(c, programmed, "KonnectGatewayControlPlane is not programmed")
 	}
 }
 
