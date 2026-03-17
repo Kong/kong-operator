@@ -17,12 +17,10 @@ import (
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
 
-	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
 	"github.com/kong/kong-operator/v2/controller/konnect"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
-	"github.com/kong/kong-operator/v2/test/helpers"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
 	"github.com/kong/kong-operator/v2/test/mocks/sdkmocks"
 )
@@ -186,14 +184,14 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 			Return(
 				&sdkkonnectops.GetOrganizationsMeResponse{
 					MeOrganization: &sdkkonnectcomp.MeOrganization{
-						ID:   new("12345"),
-						Name: new("org-12345"),
+						ID:   lo.ToPtr("12345"),
+						Name: lo.ToPtr("org-12345"),
 					},
 				},
 				nil,
 			)
 		t.Log("Waiting for KonnectAPIAuthConfiguration to be APIAuthValid=true after no error is returned now")
-		helpers.WatchFor(t, ctx, w.WatchI(), apiwatch.Modified, 2*ctrlconsts.RequeueWithBackoff,
+		watchFor(t, ctx, w, apiwatch.Modified,
 			func(r *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
 				return client.ObjectKeyFromObject(r) == client.ObjectKeyFromObject(apiAuth) &&
 					k8sutils.HasConditionTrue("APIAuthValid", r)
