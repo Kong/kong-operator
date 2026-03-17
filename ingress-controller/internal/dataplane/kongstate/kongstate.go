@@ -50,6 +50,9 @@ type KongState struct {
 // Licenses are excluded because a state with only a license is still "empty" from
 // a routing perspective and would cause 404s.
 func (ks *KongState) IsEmpty() bool {
+	if ks == nil {
+		return true
+	}
 	return len(ks.Services) == 0 &&
 		len(ks.Upstreams) == 0 &&
 		len(ks.Certificates) == 0 &&

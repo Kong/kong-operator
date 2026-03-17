@@ -198,6 +198,14 @@ type KongClient struct {
 	// konnectKongStateUpdater is used to update the current state seen by Konnect that will be picked asynchronously
 	// by the Konnect config synchronization loop.
 	konnectKongStateUpdater KonnectKongStateUpdater
+
+	// hasSuccessfullyPushedConfig indicates whether this client instance has already
+	// successfully pushed a configuration to a gateway during its lifetime.
+	// It is used to prevent an initial empty config push from replacing a known
+	// last valid configuration during startup race between last valid config fetching
+	// and syncing informer cache.
+	hasSuccessfullyPushedConfig     bool
+	hasSuccessfullyPushedConfigOnce sync.Once
 }
 
 // KongClientOption is a functional option for configuring a KongClient.
@@ -526,18 +534,8 @@ func (c *KongClient) Update(ctx context.Context) error {
 		c.logger.V(logging.DebugLevel).Info("Successfully built data-plane configuration", "duration", translationDuration.String())
 	}
 
-	// Guard against pushing an empty config when we have a known valid config from the gateway.
-	// This can happen during startup when the K8s informer cache hasn't been fully populated yet
-	// (e.g., HTTPRoute controller hasn't processed routes because Gateway isn't Programmed).
-	if lastValid, ok := c.kongConfigFetcher.LastValidConfig(); ok {
-		if parsingResult.KongState.IsEmpty() && !lastValid.IsEmpty() {
-			c.logger.Info(
-				"Skipping config push: new config is empty but a previously valid config exists, likely a startup race",
-				"last_valid_services", len(lastValid.Services),
-				"last_valid_routes", lo.SumBy(lastValid.Services, func(s kongstate.Service) int { return len(s.Routes) }),
-			)
-			return nil
-		}
+	if c.shouldSkipInitialEmptyConfigPush(parsingResult.KongState) {
+		return nil
 	}
 
 	const isFallback = false
@@ -591,6 +589,26 @@ func (c *KongClient) maybePreserveTheLastValidConfigCache(lastValidCache store.C
 		c.logger.V(logging.DebugLevel).Info("Preserving the last valid configuration cache")
 		c.lastValidCacheSnapshot = &lastValidCache
 	}
+}
+
+func (c *KongClient) shouldSkipInitialEmptyConfigPush(s *kongstate.KongState) bool {
+	if c.hasSuccessfullyPushedConfig {
+		return false
+	}
+
+	if !s.IsEmpty() {
+		return false
+	}
+
+	lastValidConfig, ok := c.kongConfigFetcher.LastValidConfig()
+	if !ok || lastValidConfig == nil || lastValidConfig.IsEmpty() {
+		return false
+	}
+
+	c.logger.V(logging.DebugLevel).Info(
+		"Skipping empty config push before first successful update because a last valid config is already available",
+	)
+	return true
 }
 
 // maybeTryRecoveringFromGatewaysSyncError tries to recover from a configuration rejection if the error is of the expected
@@ -785,6 +803,9 @@ func (c *KongClient) sendOutToGatewayClients(
 	previousSHAs := c.SHAs
 	sort.Strings(shas)
 	c.SHAs = shas
+	c.hasSuccessfullyPushedConfigOnce.Do(func() {
+		c.hasSuccessfullyPushedConfig = true
+	})
 
 	c.kongConfigFetcher.StoreLastValidConfig(s)
 
