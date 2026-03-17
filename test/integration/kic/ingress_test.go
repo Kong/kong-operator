@@ -30,17 +30,20 @@ import (
 	"github.com/kong/kong-operator/v2/test/integration/kic/consts"
 )
 
+// ingressClassMutex protects tests that mutate the shared cluster-scoped IngressClass.
 var ingressClassMutex = sync.Mutex{}
+
+func namespacedHost(namespace string, labels ...string) string {
+	parts := append(append([]string{}, labels...), namespace, "example")
+	return strings.Join(parts, ".")
+}
+
+func namespacedWildcardHost(namespace string) string {
+	return fmt.Sprintf("*.%s", namespacedHost(namespace))
+}
 
 func TestIngressEssentials(t *testing.T) {
 	t.Parallel()
-
-	t.Log("locking IngressClass management")
-	ingressClassMutex.Lock()
-	t.Cleanup(func() {
-		t.Log("unlocking IngressClass management")
-		ingressClassMutex.Unlock()
-	})
 
 	ctx := t.Context()
 	ns, cleaner := helpers.Setup(ctx, t, env)
@@ -195,12 +198,6 @@ func TestIngressDefaultBackend(t *testing.T) {
 
 func TestIngressClassNameSpec(t *testing.T) {
 	t.Parallel()
-	t.Log("locking IngressClass management")
-	ingressClassMutex.Lock()
-	t.Cleanup(func() {
-		t.Log("unlocking IngressClass management")
-		ingressClassMutex.Unlock()
-	})
 
 	ctx := t.Context()
 	ns, cleaner := helpers.Setup(ctx, t, env)
@@ -975,6 +972,10 @@ func TestIngressMatchByHost(t *testing.T) {
 	ctx := t.Context()
 
 	ns, cleaner := helpers.Setup(ctx, t, env)
+	exactHost := namespacedHost(ns.Name, "test")
+	unmatchedHost := namespacedHost(ns.Name, "test", "another")
+	wildcardHost := namespacedWildcardHost(ns.Name)
+	wildcardMatchHost := namespacedHost(ns.Name, "test0")
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
@@ -995,14 +996,14 @@ func TestIngressMatchByHost(t *testing.T) {
 	}, service)
 	ingress.Spec.IngressClassName = kong.String(consts.IngressClass)
 	for i := range ingress.Spec.Rules {
-		ingress.Spec.Rules[i].Host = "test.example"
+		ingress.Spec.Rules[i].Host = exactHost
 	}
 	ingress, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Create(ctx, ingress, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(ingress)
 
 	t.Log("try to access the ingress by matching host")
-	req := helpers.MustHTTPRequest(t, http.MethodGet, "test.example", "/", nil)
+	req := helpers.MustHTTPRequest(t, http.MethodGet, exactHost, "/", nil)
 	require.Eventually(t, func() bool {
 		resp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(req)
 		if err != nil {
@@ -1021,7 +1022,7 @@ func TestIngressMatchByHost(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("try to access the ingress by unmatching host, should return 404")
-	req = helpers.MustHTTPRequest(t, http.MethodGet, "foo.example", "/", nil)
+	req = helpers.MustHTTPRequest(t, http.MethodGet, unmatchedHost, "/", nil)
 	resp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -1036,7 +1037,7 @@ func TestIngressMatchByHost(t *testing.T) {
 		}
 		t.Log("change the ingress to wildcard host")
 		for i := range ingress.Spec.Rules {
-			ingress.Spec.Rules[i].Host = "*.example"
+			ingress.Spec.Rules[i].Host = wildcardHost
 		}
 
 		_, err = ingClient.Update(ctx, ingress, metav1.UpdateOptions{})
@@ -1045,7 +1046,7 @@ func TestIngressMatchByHost(t *testing.T) {
 
 	t.Log("try to access the ingress by matching host")
 
-	req = helpers.MustHTTPRequest(t, http.MethodGet, "test0.example", "/", nil)
+	req = helpers.MustHTTPRequest(t, http.MethodGet, wildcardMatchHost, "/", nil)
 	require.Eventually(t, func() bool {
 		resp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(req)
 		if err != nil {
@@ -1064,7 +1065,7 @@ func TestIngressMatchByHost(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("try to access the ingress by unmatching host, should return 404")
-	req = helpers.MustHTTPRequest(t, http.MethodGet, "test.another", "/", nil)
+	req = helpers.MustHTTPRequest(t, http.MethodGet, unmatchedHost, "/", nil)
 	resp, err = helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -1094,7 +1095,7 @@ func TestIngressRewriteURI(t *testing.T) {
 	cleaner.Add(service)
 
 	t.Logf("creating an Ingress for service %s without rewrite annotation", service.Name)
-	const serviceDomainDirect = "direct.example"
+	serviceDomainDirect := namespacedHost(ns.Name, "direct")
 	ingressDirect := generators.NewIngressForService("/", nil, service)
 	ingressDirect.Name += "-direct"
 	ingressDirect.Spec.IngressClassName = kong.String(consts.IngressClass)
@@ -1164,7 +1165,7 @@ func TestIngressRewriteURI(t *testing.T) {
 	}()
 
 	t.Logf("creating an Ingress for service %s with rewrite annotation", service.Name)
-	const serviceDomainRewrite = "rewrite.example"
+	serviceDomainRewrite := namespacedHost(ns.Name, "rewrite")
 	ingressRewrite := generators.NewIngressForService("/~/foo/(.*)", map[string]string{
 		annotations.AnnotationPrefix + annotations.RewriteURIKey: "/image/$1",
 	}, service)

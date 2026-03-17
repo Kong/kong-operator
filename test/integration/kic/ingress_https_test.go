@@ -79,6 +79,9 @@ func TestHTTPSIngress(t *testing.T) {
 
 	t.Parallel()
 	ns, cleaner := helpers.Setup(ctx, t, env)
+	fooHost := namespacedHost(ns.Name, "foo")
+	barHost := namespacedHost(ns.Name, "bar")
+	bazHost := namespacedHost(ns.Name, "baz")
 
 	certPool := x509.NewCertPool()
 	dialer := &net.Dialer{
@@ -88,7 +91,7 @@ func TestHTTPSIngress(t *testing.T) {
 	testTransport := http.Transport{
 		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
 			switch addr {
-			case "foo.example:443", "bar.example:443", "baz.example:443":
+			case fmt.Sprintf("%s:443", fooHost), fmt.Sprintf("%s:443", barHost), fmt.Sprintf("%s:443", bazHost):
 				addr = proxyHTTPSURL.Host
 			default:
 			}
@@ -128,18 +131,18 @@ func TestHTTPSIngress(t *testing.T) {
 	ingress2.Spec.IngressClassName = kong.String(consts.IngressClass)
 
 	t.Log("configuring ingress tls spec")
-	ingress1.Spec.TLS = []netv1.IngressTLS{{SecretName: "secret1", Hosts: []string{"foo.example"}}}
+	ingress1.Spec.TLS = []netv1.IngressTLS{{SecretName: "secret1", Hosts: []string{fooHost}}}
 	ingress1.Name = "ingress1"
-	ingress2.Spec.TLS = []netv1.IngressTLS{{SecretName: "secret2", Hosts: []string{"bar.example", "baz.example"}}}
+	ingress2.Spec.TLS = []netv1.IngressTLS{{SecretName: "secret2", Hosts: []string{barHost, bazHost}}}
 	ingress2.Name = "ingress2"
 
 	t.Log("configuring secrets")
 	fooExampleTLSCert, fooExampleTLSKey := certificate.MustGenerateCertPEMFormat(
-		certificate.WithCommonName("secure-foo-bar"), certificate.WithDNSNames("secure-foo-bar", "foo.example"),
+		certificate.WithCommonName("secure-foo-bar"), certificate.WithDNSNames("secure-foo-bar", fooHost),
 	)
 	require.True(t, certPool.AppendCertsFromPEM(fooExampleTLSCert))
 	barExampleTLSCert, barExampleTLSKey := certificate.MustGenerateCertPEMFormat(
-		certificate.WithCommonName("foo.com"), certificate.WithDNSNames("foo.com", "bar.example", "baz.example"),
+		certificate.WithCommonName("foo.com"), certificate.WithDNSNames("foo.com", barHost, bazHost),
 	)
 	require.True(t, certPool.AppendCertsFromPEM(barExampleTLSCert))
 
@@ -219,9 +222,9 @@ func TestHTTPSIngress(t *testing.T) {
 
 	t.Log("waiting for routes from Ingress to be operational with expected certificate")
 	assert.Eventually(t, func() bool {
-		resp, err := httpcStatic.Get("https://foo.example:443/foo")
+		resp, err := httpcStatic.Get(fmt.Sprintf("https://%s:443/foo", fooHost))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for https://foo.example:443/foo: %v", err)
+			t.Logf("WARNING: error while waiting for https://%s:443/foo: %v", fooHost, err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -237,9 +240,9 @@ func TestHTTPSIngress(t *testing.T) {
 
 	t.Log("waiting for routes from Ingress to be operational with expected certificate")
 	assert.Eventually(t, func() bool {
-		resp, err := httpcStatic.Get("https://bar.example:443/bar")
+		resp, err := httpcStatic.Get(fmt.Sprintf("https://%s:443/bar", barHost))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for https://bar.example:443/bar: %v", err)
+			t.Logf("WARNING: error while waiting for https://%s:443/bar: %v", barHost, err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -255,9 +258,9 @@ func TestHTTPSIngress(t *testing.T) {
 
 	t.Log("confirm Ingress path routes available on other hostnames")
 	assert.Eventually(t, func() bool {
-		resp, err := httpcStatic.Get("https://baz.example:443/bar")
+		resp, err := httpcStatic.Get(fmt.Sprintf("https://%s:443/bar", bazHost))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for https://baz.example:443/bar: %v", err)
+			t.Logf("WARNING: error while waiting for https://%s:443/bar: %v", bazHost, err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -273,15 +276,15 @@ func TestHTTPSIngress(t *testing.T) {
 
 	ingress2, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Get(ctx, ingress2.Name, metav1.GetOptions{})
 	assert.NoError(t, err)
-	ingress2.Annotations["konghq.com/snis"] = "bar.example"
+	ingress2.Annotations["konghq.com/snis"] = barHost
 	_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingress2, metav1.UpdateOptions{})
 	assert.NoError(t, err)
 
 	t.Log("confirm Ingress no longer routes without matching SNI")
 	assert.Eventually(t, func() bool {
-		resp, err := httpcStatic.Get("https://baz.example:443/bar")
+		resp, err := httpcStatic.Get(fmt.Sprintf("https://%s:443/bar", bazHost))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for https://baz.example:443/bar: %v", err)
+			t.Logf("WARNING: error while waiting for https://%s:443/bar: %v", bazHost, err)
 			return false
 		}
 
@@ -291,9 +294,9 @@ func TestHTTPSIngress(t *testing.T) {
 
 	t.Log("confirm Ingress still routes with matching SNI")
 	assert.Eventually(t, func() bool {
-		resp, err := httpcStatic.Get("https://bar.example:443/bar")
+		resp, err := httpcStatic.Get(fmt.Sprintf("https://%s:443/bar", barHost))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for https://bar.example:443/bar: %v", err)
+			t.Logf("WARNING: error while waiting for https://%s:443/bar: %v", barHost, err)
 			return false
 		}
 		defer resp.Body.Close()
