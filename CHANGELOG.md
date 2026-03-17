@@ -130,6 +130,8 @@
   now include a hash of rule's other field to avoid naming collisions with other
   rules that also have no BackendRefs.
   [#3576](https://github.com/Kong/kong-operator/pull/3576)
+- Do not try to list `Gateway`s for namespaces that are not being watched by controller
+  [#3625](https://github.com/Kong/kong-operator/pull/3625)
 
 ## [v2.1.2]
 
