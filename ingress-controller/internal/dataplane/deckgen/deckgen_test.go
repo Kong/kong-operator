@@ -32,12 +32,14 @@ func TestGetFCertificateFromKongCert(t *testing.T) {
 				ID:   new("cert-id"),
 				Key:  new("cert-key"),
 				Cert: new("cert-pem"),
+				Tags: kong.StringSlice("k8s-name:secret1", "k8s-namespace:default"),
 				SNIs: []*string{new("example.com"), new("other.com")},
 			},
 			want: file.FCertificate{
 				ID:   new("cert-id"),
 				Key:  new("cert-key"),
 				Cert: new("cert-pem"),
+				Tags: kong.StringSlice("k8s-name:secret1", "k8s-namespace:default"),
 				SNIs: []kong.SNI{
 					{Name: new("example.com")},
 					{Name: new("other.com")},
@@ -51,12 +53,14 @@ func TestGetFCertificateFromKongCert(t *testing.T) {
 				ID:   new("cert-id"),
 				Key:  new("cert-key"),
 				Cert: new("cert-pem"),
+				Tags: kong.StringSlice("k8s-name:secret1", "k8s-namespace:default"),
 				SNIs: []*string{new("example.com")},
 			},
 			want: file.FCertificate{
 				ID:   new("cert-id"),
 				Key:  new("cert-key"),
 				Cert: new("cert-pem"),
+				Tags: kong.StringSlice("k8s-name:secret1", "k8s-namespace:default"),
 				SNIs: []kong.SNI{
 					{
 						Name:        new("example.com"),
