@@ -13,12 +13,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/konnect/sdk"
+	testhelpers "github.com/kong/kong-operator/v2/test"
 )
 
 func CreateTestSystemAccountToken(ctx context.Context, t *testing.T, systemAccountID string) (string, string) {
 	t.Helper()
 
-	s := sdk.New(accessToken(), serverURLOpt())
+	s := sdk.New(testhelpers.KonnectAccessToken(), serverURLOpt())
 
 	var (
 		systemAccountToken     string

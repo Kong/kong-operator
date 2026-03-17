@@ -20,6 +20,7 @@ import (
 	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/v2/ingress-controller/test"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/testenv"
+	testhelpers "github.com/kong/kong-operator/v2/test"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
 )
 
@@ -32,7 +33,7 @@ func CreateTestControlPlane(ctx context.Context, t *testing.T, token ...string) 
 
 	var s *sdkkonnectgo.SDK
 	if len(token) == 0 {
-		s = sdk.New(accessToken(), serverURLOpt())
+		s = sdk.New(testhelpers.KonnectAccessToken(), serverURLOpt())
 	} else {
 		s = sdk.New(token[0], serverURLOpt())
 	}

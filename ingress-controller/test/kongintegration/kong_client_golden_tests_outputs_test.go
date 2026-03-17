@@ -29,6 +29,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/test/helpers/konnect"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/kongintegration/containers"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/testenv"
+	"github.com/kong/kong-operator/v2/test"
 )
 
 const (
@@ -101,7 +102,9 @@ func TestKongClientGoldenTestsOutputs_Konnect(t *testing.T) {
 		timeout = 90 * time.Second
 	)
 
-	konnect.SkipIfMissingRequiredKonnectEnvVariables(t)
+	if test.KonnectAccessToken() == "" {
+		t.Skip("Konnect token is not available, skipping test")
+	}
 	t.Parallel()
 
 	ctx := t.Context()
