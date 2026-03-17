@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/konnect/sdk"
+	testhelpers "github.com/kong/kong-operator/v2/test"
 )
 
 // CreateTestPersonalAccessToken creates a personal access token for the user
@@ -23,7 +24,7 @@ import (
 func CreateTestPersonalAccessToken(ctx context.Context, t *testing.T) string {
 	t.Helper()
 
-	s := sdk.New(accessToken(), serverURLOpt())
+	s := sdk.New(testhelpers.KonnectAccessToken(), serverURLOpt())
 
 	me, err := s.Me.GetUsersMe(ctx)
 	require.NoError(t, err)

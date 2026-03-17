@@ -15,6 +15,7 @@ import (
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/konnect/sdk"
 	"github.com/kong/kong-operator/v2/ingress-controller/test"
+	testhelpers "github.com/kong/kong-operator/v2/test"
 )
 
 // CreateTestSystemAccount creates a system account in Konnect for testing purposes and returns its ID.
@@ -22,7 +23,7 @@ import (
 func CreateTestSystemAccount(ctx context.Context, t *testing.T) string {
 	t.Helper()
 
-	s := sdk.New(accessToken(), serverURLOpt())
+	s := sdk.New(testhelpers.KonnectAccessToken(), serverURLOpt())
 
 	var (
 		systemAccountID   string
