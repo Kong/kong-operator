@@ -1,7 +1,9 @@
 package envtest
 
 import (
+	"errors"
 	"testing"
+	"time"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
@@ -149,5 +151,52 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 			return client.ObjectKeyFromObject(r) == client.ObjectKeyFromObject(apiAuth) &&
 				k8sutils.HasConditionFalse("APIAuthValid", r)
 		}, "KonnectAPIAuthConfiguration didn't get APIAuthValid status condition set to false")
+	})
+
+	t.Run("when calling Konnect API fails, reconciliation is requeued and status is updated", func(t *testing.T) {
+		call = call.
+			Return(
+				nil,
+				errors.New("some error"),
+			)
+
+		w := setupWatch[konnectv1alpha1.KonnectAPIAuthConfigurationList](t, ctx, cl, client.InNamespace(ns.Name))
+		apiAuth := deploy.KonnectAPIAuthConfiguration(t, ctx, clientNamespaced)
+		t.Cleanup(func() { assert.NoError(t, cl.Delete(ctx, apiAuth)) })
+
+		t.Log("Waiting for KonnectAPIAuthConfiguration to be APIAuthValid=false")
+		watchFor(t, ctx, w, apiwatch.Modified, func(r *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
+			return client.ObjectKeyFromObject(r) == client.ObjectKeyFromObject(apiAuth) &&
+				k8sutils.HasConditionFalse("APIAuthValid", r)
+		}, "KonnectAPIAuthConfiguration didn't get APIAuthValid status condition set to false")
+
+		// Wait for a bit to allow the controller to requeue the reconciliation after
+		// the status update. Otherwise we'd pass the test because the status update
+		// would triggered another reconciliation.
+		// This is not what we want to test here.
+		// We want a time based requeue to happen and to verify it here.
+		select {
+		case <-t.Context().Done():
+		case <-time.After(500 * time.Millisecond):
+		}
+
+		call = call.
+			Return(
+				&sdkkonnectops.GetOrganizationsMeResponse{
+					MeOrganization: &sdkkonnectcomp.MeOrganization{
+						ID:   lo.ToPtr("12345"),
+						Name: lo.ToPtr("org-12345"),
+					},
+				},
+				nil,
+			)
+		t.Log("Waiting for KonnectAPIAuthConfiguration to be APIAuthValid=true after no error is returned now")
+		watchFor(t, ctx, w, apiwatch.Modified,
+			func(r *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
+				return client.ObjectKeyFromObject(r) == client.ObjectKeyFromObject(apiAuth) &&
+					k8sutils.HasConditionTrue("APIAuthValid", r)
+			},
+			"KonnectAPIAuthConfiguration didn't get APIAuthValid status condition set to true",
+		)
 	})
 }
