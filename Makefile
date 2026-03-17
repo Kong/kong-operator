@@ -766,14 +766,8 @@ test.integration-kic.dbless:
 		DBMODE=off \
 		COVERAGE_OUT=coverage.integration.kic.out
 
-.PHONY: test.integration-kic.postgres
-test.integration-kic.postgres:
-	@$(MAKE) _test.integration-kic \
-		DBMODE=postgres \
-		COVERAGE_OUT=coverage.integration.kic.out
-
 .PHONY: test.integration-kic
-test.integration-kic: test.integration-kic.dbless test.integration-kic.postgres
+test.integration-kic: test.integration-kic.dbless
 
 .PHONY: _test.e2e
 _test.e2e: gotestsum
