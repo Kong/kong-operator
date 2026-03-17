@@ -526,6 +526,20 @@ func (c *KongClient) Update(ctx context.Context) error {
 		c.logger.V(logging.DebugLevel).Info("Successfully built data-plane configuration", "duration", translationDuration.String())
 	}
 
+	// Guard against pushing an empty config when we have a known valid config from the gateway.
+	// This can happen during startup when the K8s informer cache hasn't been fully populated yet
+	// (e.g., HTTPRoute controller hasn't processed routes because Gateway isn't Programmed).
+	if lastValid, ok := c.kongConfigFetcher.LastValidConfig(); ok {
+		if parsingResult.KongState.IsEmpty() && !lastValid.IsEmpty() {
+			c.logger.Info(
+				"Skipping config push: new config is empty but a previously valid config exists, likely a startup race",
+				"last_valid_services", len(lastValid.Services),
+				"last_valid_routes", lo.SumBy(lastValid.Services, func(s kongstate.Service) int { return len(s.Routes) }),
+			)
+			return nil
+		}
+	}
+
 	const isFallback = false
 	shas, gatewaysSyncErr := c.sendOutToGatewayClients(ctx, parsingResult.KongState, c.kongConfig, isFallback)
 

@@ -101,6 +101,12 @@ func (cf *DefaultKongLastGoodConfigFetcher) LastValidConfig() (*kongstate.KongSt
 }
 
 func (cf *DefaultKongLastGoodConfigFetcher) StoreLastValidConfig(s *kongstate.KongState) {
+	// Do not overwrite a non-empty last valid config with an empty one.
+	// This protects against startup races where the K8s informer cache hasn't
+	// been fully populated yet and BuildKongConfig() produces an empty state.
+	if s.IsEmpty() && cf.lastValidState != nil && !cf.lastValidState.IsEmpty() {
+		return
+	}
 	cf.lastValidState = s
 }
 

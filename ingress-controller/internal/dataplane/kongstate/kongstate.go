@@ -46,6 +46,21 @@ type KongState struct {
 	CustomEntities map[string]*KongCustomEntityCollection
 }
 
+// IsEmpty returns true if the KongState has no meaningful configuration entities.
+// Licenses are excluded because a state with only a license is still "empty" from
+// a routing perspective and would cause 404s.
+func (ks *KongState) IsEmpty() bool {
+	return len(ks.Services) == 0 &&
+		len(ks.Upstreams) == 0 &&
+		len(ks.Certificates) == 0 &&
+		len(ks.CACertificates) == 0 &&
+		len(ks.Plugins) == 0 &&
+		len(ks.Consumers) == 0 &&
+		len(ks.ConsumerGroups) == 0 &&
+		len(ks.Vaults) == 0 &&
+		len(ks.CustomEntities) == 0
+}
+
 // SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
 func (ks *KongState) SanitizedCopy(uuidGenerator util.UUIDGenerator) *KongState {
 	return &KongState{
