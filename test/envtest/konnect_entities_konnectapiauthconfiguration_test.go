@@ -186,8 +186,8 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 			Return(
 				&sdkkonnectops.GetOrganizationsMeResponse{
 					MeOrganization: &sdkkonnectcomp.MeOrganization{
-						ID:   new("12345"),
-						Name: new("org-12345"),
+						ID:   lo.ToPtr("12345"),
+						Name: lo.ToPtr("org-12345"),
 					},
 				},
 				nil,
