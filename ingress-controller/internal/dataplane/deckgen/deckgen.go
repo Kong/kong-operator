@@ -43,6 +43,7 @@ func GetFCertificateFromKongCert(inmemory bool, kongCert kong.Certificate) file.
 	if kongCert.Cert != nil {
 		res.Cert = new(*kongCert.Cert)
 	}
+	res.Tags = kongCert.Tags
 	res.SNIs = getCertsSNIs(inmemory, kongCert)
 	return res
 }
