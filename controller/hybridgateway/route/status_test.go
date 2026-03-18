@@ -21,7 +21,9 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
 // Test helpers for BuildProgrammedCondition
@@ -754,11 +756,29 @@ func Test_BuildProgrammedCondition(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
 	}
 	gvk := schema.GroupVersionKind{Group: "example.com", Version: "v1", Kind: "FakeResource"}
+	kongServiceGVK := configurationv1alpha1.SchemeGroupVersion.WithKind("KongService")
 
 	// Helper to create unstructured with Programmed condition
 	makeUnstructured := func(programmed bool) *unstructured.Unstructured {
 		obj := &unstructured.Unstructured{}
 		obj.SetGroupVersionKind(gvk)
+		obj.SetAnnotations(map[string]string{
+			consts.GatewayOperatorHybridRoutesAnnotation: "default/route",
+		})
+		cond := map[string]any{"type": "Programmed", "status": "True"}
+		if !programmed {
+			cond["status"] = "False"
+		}
+		obj.Object["status"] = map[string]any{"conditions": []any{cond}}
+		return obj
+	}
+
+	makeAnnotatedUnstructured := func(gvk schema.GroupVersionKind, programmed bool, routeRef string) *unstructured.Unstructured {
+		obj := &unstructured.Unstructured{}
+		obj.SetGroupVersionKind(gvk)
+		obj.SetAnnotations(map[string]string{
+			consts.GatewayOperatorHybridRoutesAnnotation: routeRef,
+		})
 		cond := map[string]any{"type": "Programmed", "status": "True"}
 		if !programmed {
 			cond["status"] = "False"
@@ -802,6 +822,16 @@ func Test_BuildProgrammedCondition(t *testing.T) {
 			wantLen: 0,
 			wantErr: true,
 		},
+		{
+			name: "ignores resources owned by other routes",
+			client: &fakeListClient{items: []*unstructured.Unstructured{
+				makeAnnotatedUnstructured(kongServiceGVK, true, "default/route"),
+				makeAnnotatedUnstructured(kongServiceGVK, false, "default/other-route"),
+			}},
+			gvks:    []schema.GroupVersionKind{kongServiceGVK},
+			wantLen: 1,
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -816,6 +846,10 @@ func Test_BuildProgrammedCondition(t *testing.T) {
 		if tt.name == "one programmed, one not" && len(conds) == 1 {
 			// For unknown GVKs, GetProgrammedConditionForGVK returns an empty condition
 			require.Empty(t, conds[0].Type, "Type should be empty for unknown GVK")
+		}
+		if tt.name == "ignores resources owned by other routes" && len(conds) == 1 {
+			require.Equal(t, "KongServiceProgrammed", conds[0].Type)
+			require.Equal(t, metav1.ConditionTrue, conds[0].Status)
 		}
 	}
 }
