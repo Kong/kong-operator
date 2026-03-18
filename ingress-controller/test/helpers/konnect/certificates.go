@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/konnect/sdk"
+	"github.com/kong/kong-operator/v2/test"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 )
 
@@ -37,7 +38,7 @@ func CreateClientCertificate(ctx context.Context, t *testing.T, cpID string, tok
 
 	var s *sdkkonnectgo.SDK
 	if len(token) == 0 {
-		s = sdk.New(accessToken(), serverURLOpt(), retryConfig)
+		s = sdk.New(test.KonnectAccessToken(), serverURLOpt(), retryConfig)
 	} else {
 		s = sdk.New(token[0], serverURLOpt(), retryConfig)
 	}

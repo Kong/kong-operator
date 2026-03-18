@@ -389,6 +389,7 @@ func BuildAcceptedCondition(ctx context.Context, logger logr.Logger, cl client.C
 func BuildProgrammedCondition(ctx context.Context, logger logr.Logger, cl client.Client, route *gwtypes.HTTPRoute,
 	pRef gwtypes.ParentReference, expectedGVKs []schema.GroupVersionKind) ([]metav1.Condition, error) {
 	var conditions []metav1.Condition
+	am := metadata.NewAnnotationManager(logger)
 
 	// Skip setting programmed conditions for KongPlugins because they lack a status field.
 	expectedGVKs = FilterOutGVKByKind(expectedGVKs, "KongPlugin")
@@ -405,6 +406,14 @@ func BuildProgrammedCondition(ctx context.Context, logger logr.Logger, cl client
 		}
 
 		for _, item := range list.Items {
+			if !am.ContainsRoute(&item, route) {
+				log.Trace(logger, "Skipping resource not owned by route",
+					"gvk", gvk.String(),
+					"name", item.GetName(),
+					"namespace", item.GetNamespace())
+				continue
+			}
+
 			// Check if the item is programmed.
 			prog := isProgrammed(&item)
 			log.Debug(logger, "Resource programmed status", "gvk", gvk.String(), "name", item.GetName(), "namespace", item.GetNamespace(), "programmed", prog)

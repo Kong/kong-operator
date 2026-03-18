@@ -3,7 +3,6 @@ package manager
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"reflect"
 	"slices"
 	"time"
@@ -397,6 +396,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				KonnectEnabled:          c.KonnectControllersEnabled,
 				AnonymousReportsEnabled: c.AnonymousReports,
 				LoggingMode:             c.LoggingMode,
+				WatchNamespaces:         c.WatchNamespaces,
 			},
 		},
 		// ControlPlane controller
@@ -529,9 +529,11 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 
 	// Konnect controllers
 	if c.KonnectControllersEnabled {
-		httpClient := *http.DefaultClient
-		httpClient.Timeout = c.KonnectRequestTimeout
-		sdkFactory := sdkops.NewSDKFactory(sdkops.WithHTTPClient(&httpClient))
+		httpClient, err := httpClientForKonnect(c)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create HTTP client for Konnect: %w", err)
+		}
+		sdkFactory := sdkops.NewSDKFactory(sdkops.WithHTTPClient(httpClient))
 		ctrlOpts := controllerOptions(ctrlOpts, withMaxConcurrentReconciles(int(c.MaxConcurrentReconcilesKonnect)))
 
 		controllerFactory := konnectControllerFactory{
