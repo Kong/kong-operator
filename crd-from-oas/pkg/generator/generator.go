@@ -250,15 +250,15 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 	entityName := parser.GetEntityNameFromType(name)
 
 	// Build a map of valid field names for validation
-	validFields := make(map[string]bool)
+	validFields := make(map[string]struct{})
 	for _, prop := range schema.Properties {
 		if !skipProperty(prop) {
-			validFields[prop.Name] = true
+			validFields[prop.Name] = struct{}{}
 		}
 	}
 	// Also include dependency fields
 	for _, dep := range schema.Dependencies {
-		validFields[dep.JSONName] = true
+		validFields[dep.JSONName] = struct{}{}
 	}
 
 	// Validate that all configured fields exist
