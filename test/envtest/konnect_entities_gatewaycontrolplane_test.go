@@ -1006,7 +1006,7 @@ func TestKonnectGatewayControlPlane_CrossNamespaceRefNotPermitted(t *testing.T) 
 			cp.Name = "cp-xns-no-grant"
 			cp.Namespace = cpNs.Name
 			cp.Spec.CreateControlPlaneRequest.Name = "cp-xns-no-grant"
-			cp.Spec.KonnectConfiguration.APIAuthConfigurationRef.Namespace = new(authNs.Name)
+			cp.Spec.KonnectConfiguration.APIAuthConfigurationRef.Namespace = &authNs.Name
 		},
 	)
 
