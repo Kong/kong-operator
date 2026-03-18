@@ -776,7 +776,7 @@ func TestKongClient_EmptyConfigUpdate(t *testing.T) {
 	})
 }
 
-func TestKongClient_EmptyConfigUpdate_IsSkippedOnStartupWhenLastValidConfigExists(t *testing.T) {
+func TestKongClient_EmptyConfigUpdate_UsesLastValidConfigOnStartupWhenLastValidConfigExistsOnStartup(t *testing.T) {
 	var (
 		ctx               = t.Context()
 		testGatewayClient = mustSampleGatewayClient(t)
@@ -802,12 +802,12 @@ func TestKongClient_EmptyConfigUpdate_IsSkippedOnStartupWhenLastValidConfigExist
 	require.NoError(t, err)
 
 	_, ok := updateStrategyResolver.LastUpdatedContentForURL(testGatewayClient.BaseRootURL())
-	require.False(t, ok)
+	require.True(t, ok)
 
 	lastValidConfig, ok := kongRawStateGetter.LastValidConfig()
 	require.True(t, ok)
 	require.False(t, lastValidConfig.IsEmpty())
-	require.False(t, kongClient.hasSuccessfullyPushedConfig)
+	require.True(t, kongClient.hasSuccessfullyPushedConfig)
 }
 
 func TestKongClient_EmptyConfigUpdate_ReplacesPreviousValidConfigAfterSuccessfulPush(t *testing.T) {

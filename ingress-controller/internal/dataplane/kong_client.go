@@ -523,23 +523,24 @@ func (c *KongClient) Update(ctx context.Context) error {
 	parsingResult := c.kongConfigBuilder.BuildKongConfig()
 	translationDuration := time.Since(translationStart)
 
-	if failuresCount := len(parsingResult.TranslationFailures); failuresCount > 0 {
-		c.metricsRecorder.RecordTranslationFailure(translationDuration)
-		c.metricsRecorder.RecordTranslationBrokenResources(failuresCount)
-		c.recordResourceFailureEvents(parsingResult.TranslationFailures, KongConfigurationTranslationFailedEventReason)
-		c.logger.V(logging.DebugLevel).Info("Translation failures occurred when building data-plane configuration", "count", failuresCount)
+	kongState := parsingResult.KongState
+	if newKongState, skip := c.shouldSkipInitialEmptyConfigPush(parsingResult.KongState); skip {
+		kongState = newKongState
 	} else {
-		c.metricsRecorder.RecordTranslationSuccess(translationDuration)
-		c.metricsRecorder.RecordTranslationBrokenResources(0)
-		c.logger.V(logging.DebugLevel).Info("Successfully built data-plane configuration", "duration", translationDuration.String())
-	}
-
-	if c.shouldSkipInitialEmptyConfigPush(parsingResult.KongState) {
-		return nil
+		if failuresCount := len(parsingResult.TranslationFailures); failuresCount > 0 {
+			c.metricsRecorder.RecordTranslationFailure(translationDuration)
+			c.metricsRecorder.RecordTranslationBrokenResources(failuresCount)
+			c.recordResourceFailureEvents(parsingResult.TranslationFailures, KongConfigurationTranslationFailedEventReason)
+			c.logger.V(logging.DebugLevel).Info("Translation failures occurred when building data-plane configuration", "count", failuresCount)
+		} else {
+			c.metricsRecorder.RecordTranslationSuccess(translationDuration)
+			c.metricsRecorder.RecordTranslationBrokenResources(0)
+			c.logger.V(logging.DebugLevel).Info("Successfully built data-plane configuration", "duration", translationDuration.String())
+		}
 	}
 
 	const isFallback = false
-	shas, gatewaysSyncErr := c.sendOutToGatewayClients(ctx, parsingResult.KongState, c.kongConfig, isFallback)
+	shas, gatewaysSyncErr := c.sendOutToGatewayClients(ctx, kongState, c.kongConfig, isFallback)
 
 	// Taking into account the results of syncing configuration with Gateways and potential translation
 	// failures, calculate the config status and update it.
@@ -563,7 +564,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 	}
 
 	// Send configuration to Konnect only when successfully applied configuration to Kong Gateways run in cluster.
-	c.maybeUpdateKonnectKongState(parsingResult.KongState, isFallback)
+	c.maybeUpdateKonnectKongState(kongState, isFallback)
 	// Gateways were successfully synced with the current configuration, so we can update the last valid cache snapshot.
 	c.maybePreserveTheLastValidConfigCache(cacheSnapshot)
 
@@ -591,24 +592,33 @@ func (c *KongClient) maybePreserveTheLastValidConfigCache(lastValidCache store.C
 	}
 }
 
-func (c *KongClient) shouldSkipInitialEmptyConfigPush(s *kongstate.KongState) bool {
+// shouldSkipInitialEmptyConfigPush returns true if the client should skip pushing
+// an initial empty configuration to the gateways, which can happen during startup
+// when the informer cache has not yet been fully populated and the client has
+// not yet successfully pushed any configuration.
+// In this case, if there is a last valid configuration available,
+// we can skip pushing an empty configuration and instead use the last valid
+// configuration as the one to be pushed, which can help avoid unnecessary downtime
+// due to pushing an empty configuration.
+// Last valid configuration is returned when function returns true.
+func (c *KongClient) shouldSkipInitialEmptyConfigPush(s *kongstate.KongState) (*kongstate.KongState, bool) {
 	if c.hasSuccessfullyPushedConfig {
-		return false
+		return nil, false
 	}
 
 	if !s.IsEmpty() {
-		return false
+		return nil, false
 	}
 
 	lastValidConfig, ok := c.kongConfigFetcher.LastValidConfig()
 	if !ok || lastValidConfig == nil || lastValidConfig.IsEmpty() {
-		return false
+		return nil, false
 	}
 
 	c.logger.V(logging.DebugLevel).Info(
 		"Skipping empty config push before first successful update because a last valid config is already available",
 	)
-	return true
+	return lastValidConfig, true
 }
 
 // maybeTryRecoveringFromGatewaysSyncError tries to recover from a configuration rejection if the error is of the expected
