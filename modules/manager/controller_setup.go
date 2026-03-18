@@ -396,6 +396,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				KonnectEnabled:          c.KonnectControllersEnabled,
 				AnonymousReportsEnabled: c.AnonymousReports,
 				LoggingMode:             c.LoggingMode,
+				WatchNamespaces:         c.WatchNamespaces,
 			},
 		},
 		// ControlPlane controller

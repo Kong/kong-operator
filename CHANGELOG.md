@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [v2.1.3](#v213)
 - [v2.1.2](#v212)
 - [v2.1.1](#v211)
 - [v2.1.0](#v210)
@@ -37,6 +38,15 @@
 - [v0.2.0](#v020)
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
+
+## [v2.1.3]
+
+> Release date: TBD
+
+### Fixes
+
+- Do not try to list `Gateway`s for namespaces that are not being watched by controller
+  [#3625](https://github.com/Kong/kong-operator/pull/3625)
 
 ## [v2.1.2]
 
