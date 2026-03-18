@@ -32,6 +32,10 @@ const (
 	KonnectTestIDLabel = "operator-test-id"
 )
 
+func randomSuffix() string {
+	return uuid.NewString()
+}
+
 // ObjOption is a function that modifies a  client.Object.
 type ObjOption func(obj client.Object)
 
@@ -252,7 +256,7 @@ func KonnectGatewayControlPlane(
 ) *konnectv1alpha2.KonnectGatewayControlPlane {
 	t.Helper()
 
-	name := "cp-" + uuid.NewString()[:8]
+	name := "cp-" + randomSuffix()
 	cp := &konnectv1alpha2.KonnectGatewayControlPlane{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
@@ -342,7 +346,7 @@ func KonnectGatewayControlPlaneWithID(
 			LastTransitionTime: metav1.Now(),
 		},
 	}
-	cp.Status.ID = uuid.NewString()[:8]
+	cp.Status.ID = randomSuffix()
 	cp.Status.Endpoints = &konnectv1alpha2.KonnectEndpoints{
 		ControlPlaneEndpoint: "cp.endpoint",
 		TelemetryEndpoint:    "tp.endpoint",
@@ -366,7 +370,7 @@ func KonnectCloudGatewayDataPlaneGroupConfiguration(
 	t.Helper()
 	obj := konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "data-plane-group-configuration-" + uuid.NewString()[:8],
+			Name: "data-plane-group-configuration-" + randomSuffix(),
 		},
 		Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
 			Version:         consts.DefaultDataPlaneTag,
@@ -392,7 +396,7 @@ func KonnectCloudGatewayNetwork(
 	opts ...ObjOption,
 ) *konnectv1alpha1.KonnectCloudGatewayNetwork {
 	t.Helper()
-	name := "network-" + uuid.NewString()[:8]
+	name := "network-" + randomSuffix()
 	obj := konnectv1alpha1.KonnectCloudGatewayNetwork{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
@@ -474,7 +478,7 @@ func KongServiceWithID(
 			LastTransitionTime: metav1.Now(),
 		},
 	}
-	svc.SetKonnectID(uuid.NewString()[:8])
+	svc.SetKonnectID(randomSuffix())
 	require.NoError(t, cl.Status().Update(ctx, svc))
 	return svc
 }
@@ -488,7 +492,7 @@ func KongService(
 ) *configurationv1alpha1.KongService {
 	t.Helper()
 
-	name := "kongservice-" + uuid.NewString()[:8]
+	name := "kongservice-" + randomSuffix()
 	kongService := configurationv1alpha1.KongService{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
@@ -520,7 +524,7 @@ func KongRoute(
 ) *configurationv1alpha1.KongRoute {
 	t.Helper()
 
-	name := "kongroute-" + uuid.NewString()[:8]
+	name := "kongroute-" + randomSuffix()
 	kongRoute := configurationv1alpha1.KongRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
@@ -952,7 +956,7 @@ func KongConsumerGroupAttachedToCP(
 ) *configurationv1beta1.KongConsumerGroup {
 	t.Helper()
 
-	name := "consumer-group-" + uuid.NewString()[:8]
+	name := "consumer-group-" + randomSuffix()
 	cg := configurationv1beta1.KongConsumerGroup{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
@@ -1176,7 +1180,7 @@ func KongSNIAttachedToCertificate(
 ) *configurationv1alpha1.KongSNI {
 	t.Helper()
 
-	name := "sni-" + uuid.NewString()[:8]
+	name := "sni-" + randomSuffix()
 	sni := &configurationv1alpha1.KongSNI{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
@@ -1368,7 +1372,7 @@ func KongReferenceGrant(
 ) *configurationv1alpha1.KongReferenceGrant {
 	t.Helper()
 
-	name := "kongreferencegrant-" + uuid.NewString()[:8]
+	name := "kongreferencegrant-" + randomSuffix()
 	krg := configurationv1alpha1.KongReferenceGrant{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
