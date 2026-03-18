@@ -97,7 +97,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-    - uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db # v3.6.3
+    - uses: jdx/mise-action@c1ecc8f748cd28cdeabf76dab3cccde4ce692fe4 # v4.0.0
       with:
         install: false
 
@@ -119,7 +119,7 @@ jobs:
       uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
       with:
         go-version-file: go.mod
-    - uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db # v3.6.3
+    - uses: jdx/mise-action@c1ecc8f748cd28cdeabf76dab3cccde4ce692fe4 # v4.0.0
       with:
         install: false
     - run: make govulncheck
@@ -142,7 +142,7 @@ jobs:
         go-version-file: go.mod
         cache: false
 
-    - uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db # v3.6.3
+    - uses: jdx/mise-action@c1ecc8f748cd28cdeabf76dab3cccde4ce692fe4 # v4.0.0
       with:
         install: false
 
@@ -226,7 +226,7 @@ jobs:
         version: v0.30.0
         node_image: kindest/node:${{ needs.matrix_k8s_node_versions.outputs.latest }}
 
-    - uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db # v3.6.3
+    - uses: jdx/mise-action@c1ecc8f748cd28cdeabf76dab3cccde4ce692fe4 # v4.0.0
       with:
         install: false
 
@@ -274,7 +274,7 @@ jobs:
         ignore_failed_clean: true
         node_image: kindest/node:${{ needs.matrix_k8s_node_versions.outputs.latest }}
 
-    - uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db # v3.6.3
+    - uses: jdx/mise-action@c1ecc8f748cd28cdeabf76dab3cccde4ce692fe4 # v4.0.0
       with:
         install: false
 
