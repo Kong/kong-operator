@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"slices"
 
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
@@ -350,6 +351,11 @@ func (r *Reconciler) listManagedGatewaysInNamespace(ctx context.Context, obj cli
 		)
 		return nil
 	}
+	if len(r.WatchNamespaces) > 0 && !slices.Contains(r.WatchNamespaces, ns.Name) {
+		log.Trace(logger, "namespace is not configured to be watched by controller, skipping", "namespace", ns.Name)
+		return nil
+	}
+
 	gateways := &gatewayv1.GatewayList{}
 	if err := r.List(ctx, gateways, &client.ListOptions{
 		Namespace: ns.Name,

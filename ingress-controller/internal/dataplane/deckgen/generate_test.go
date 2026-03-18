@@ -46,6 +46,38 @@ func TestToDeckContent(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:   "certificate tags are preserved in rendered content",
+			params: GenerateDeckContentParams{},
+			input: &kongstate.KongState{
+				Certificates: []kongstate.Certificate{
+					{
+						Certificate: kong.Certificate{
+							ID:   new("cert-id"),
+							Cert: new("cert-pem"),
+							Key:  new("cert-key"),
+							Tags: kong.StringSlice("k8s-name:secret1", "k8s-namespace:default", "k8s-uid:uid-1"),
+							SNIs: kong.StringSlice("example.com"),
+						},
+					},
+				},
+			},
+			expected: &file.Content{
+				FormatVersion: versions.DeckFileFormatVersion,
+				Certificates: []file.FCertificate{
+					{
+						ID:   new("cert-id"),
+						Cert: new("cert-pem"),
+						Key:  new("cert-key"),
+						Tags: kong.StringSlice("k8s-name:secret1", "k8s-namespace:default", "k8s-uid:uid-1"),
+						SNIs: []kong.SNI{{
+							Name:        new("example.com"),
+							Certificate: &kong.Certificate{ID: new("cert-id")},
+						}},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
