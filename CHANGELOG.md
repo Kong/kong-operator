@@ -96,17 +96,6 @@
   [#3213](https://github.com/Kong/kong-operator/pull/3213)
 - Fix setting up indices for HTTPRoute and Gateway when Konnect controllers are disabled.
   [#3229](https://github.com/Kong/kong-operator/pull/3229)
-- Fix `ResolvedRefs` status condition on `HTTPRoute` not being updated when a
-  referenced `KongPlugin` is deleted in self-managed ControlPlane mode.
-  [#3206](https://github.com/Kong/kong-operator/pull/3206)
-- Fix handling removal of annotations for DataPlane's Services
-  [#3402](https://github.com/Kong/kong-operator/pull/3402)
-- Fix Gateway controller deleting all DataPlanes when KonnectExtension's
-  `ControlPlaneRefValid` condition is temporarily False due to transient Konnect
-  API failures. DataPlanes now continue serving traffic during Konnect
-  connectivity issues. Added `NotProgrammed` condition reason to differentiate
-  transient failures from permanent reference errors.
-  [#3463](https://github.com/Kong/kong-operator/pull/3463)
 - Fix counting of route attached to a listener by taking into account hostname intersection between the listener and the route.
   [#3490](https://github.com/Kong/kong-operator/pull/3490)
 - Fix reducing `Secret`s with in use finalizers.
