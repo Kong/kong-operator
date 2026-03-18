@@ -143,7 +143,7 @@ func GenerateCMCertificateForOwner(
 			// garbage. DNS Names have something more readable.
 			CommonName: fmt.Sprintf("konnect-%x", cn[:16]),
 			DNSNames:   []string{fmt.Sprintf("%s.%s.%s.konnect", owner.GetName(), owner.GetNamespace(), kind)},
-			IssuerRef: cmmeta.ObjectReference{
+			IssuerRef: cmmeta.IssuerReference{
 				Name:  issuer.Name,
 				Group: certmanager.GroupName,
 				Kind:  issuerKind,
