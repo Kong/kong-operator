@@ -205,9 +205,7 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 				fmt.Fprintf(&buf, "type %s %s\n\n", refName, goType)
 			}
 		} else {
-			// Schema not found in parsed schemas, generate a placeholder
-			fmt.Fprintf(&buf, "// %s is a referenced type (definition not found in spec)\n", refName)
-			fmt.Fprintf(&buf, "type %s map[string]string\n\n", refName)
+			panic("Schema not found for reference: " + refName)
 		}
 	}
 
