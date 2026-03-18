@@ -94,7 +94,7 @@ dir = "./{{env.DIR}}"
 # This ensures that we use the same OpenAPI spec as the one used to generate the
 # SDK which should help avoid potential discrepancies between the API and the SDK.
 run = '''
-go mod download -x
+go mod download
 export INPUT_FILE="$(go list -m -f '{{`{{.Dir}}`}}' github.com/Kong/sdk-konnect-go)/openapi.yaml"
 export OUTPUT_DIR="../api/"
 export CONFIG_FILE="config.yaml"

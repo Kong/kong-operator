@@ -209,7 +209,7 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 		}
 	}
 
-	return buf.String()
+	return strings.TrimRight(buf.String(), "\n") + "\n"
 }
 
 // schemaToGoType converts a parsed Schema's type info to the appropriate Go type string.
@@ -913,7 +913,14 @@ func formatSchemaComment(name, desc string) string {
 	// First line includes the type name
 	firstLine := strings.TrimSpace(lines[0])
 	if firstLine != "" {
-		firstLineWithName := fmt.Sprintf("%s %s", name, firstLine)
+		// Avoid stuttering: if the description already starts with the type
+		// name, don't prepend it again.
+		var firstLineWithName string
+		if strings.HasPrefix(firstLine, name+" ") || strings.HasPrefix(firstLine, name+".") || firstLine == name {
+			firstLineWithName = firstLine
+		} else {
+			firstLineWithName = fmt.Sprintf("%s %s", name, firstLine)
+		}
 		// Wrap if needed (accounting for "// " prefix = 3 chars)
 		wrapped := WrapLine(firstLineWithName, 77)
 		for _, wrappedLine := range wrapped {
@@ -934,6 +941,10 @@ func formatSchemaComment(name, desc string) string {
 				result = append(result, "// "+wrappedLine)
 			}
 		}
+	}
+	// Remove trailing empty comment lines
+	for len(result) > 0 && result[len(result)-1] == "//" {
+		result = result[:len(result)-1]
 	}
 	return strings.Join(result, "\n") + "\n"
 }

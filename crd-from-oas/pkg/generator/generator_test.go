@@ -537,6 +537,65 @@ func TestCleanSingleVariantName(t *testing.T) {
 	}
 }
 
+func TestFormatSchemaComment(t *testing.T) {
+	tests := []struct {
+		name     string
+		typeName string
+		desc     string
+		expected string
+	}{
+		{
+			name:     "empty description",
+			typeName: "Labels",
+			desc:     "",
+			expected: "// Labels is a type alias.\n",
+		},
+		{
+			name:     "description does not start with type name",
+			typeName: "Labels",
+			desc:     "Store metadata of an entity.",
+			expected: "// Labels Store metadata of an entity.\n",
+		},
+		{
+			name:     "description starts with type name - no stutter",
+			typeName: "Labels",
+			desc:     "Labels store metadata of an entity.",
+			expected: "// Labels store metadata of an entity.\n",
+		},
+		{
+			name:     "description starts with type name followed by dot",
+			typeName: "Labels",
+			desc:     "Labels.",
+			expected: "// Labels.\n",
+		},
+		{
+			name:     "description equals type name exactly",
+			typeName: "Labels",
+			desc:     "Labels",
+			expected: "// Labels\n",
+		},
+		{
+			name:     "trailing empty lines are stripped",
+			typeName: "Labels",
+			desc:     "Labels store metadata.\n\n",
+			expected: "// Labels store metadata.\n",
+		},
+		{
+			name:     "multiline with trailing empty lines stripped",
+			typeName: "Labels",
+			desc:     "Labels store metadata.\n\nKeys must be 1-63 chars.\n\n",
+			expected: "// Labels store metadata.\n//\n// Keys must be 1-63 chars.\n",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := formatSchemaComment(tc.typeName, tc.desc)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
+
 func TestParseSDKTypePath(t *testing.T) {
 	tests := []struct {
 		name       string
