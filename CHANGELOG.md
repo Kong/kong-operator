@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [v2.0.8](#v208)
 - [v2.0.7](#v207)
 - [v2.0.6](#v206)
 - [v2.0.5](#v205)
@@ -37,9 +38,18 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
-## [v2.0.7]
+## [v2.0.8]
 
 > Release date: TBD
+
+### Fixed
+
+- Do not try to list `Gateway`s for namespaces that are not being watched by controller
+  [#3625](https://github.com/Kong/kong-operator/pull/3625)
+
+## [v2.0.7]
+
+> Release date: 2026-02-19
 
 ### Fixed
 

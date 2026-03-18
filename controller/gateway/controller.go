@@ -66,6 +66,7 @@ type Reconciler struct {
 	KonnectEnabled          bool
 	AnonymousReportsEnabled bool
 	LoggingMode             logging.Mode
+	WatchNamespaces         []string
 }
 
 // provisionDataPlaneFailRequeueAfter is the time duration after which we retry provisioning
