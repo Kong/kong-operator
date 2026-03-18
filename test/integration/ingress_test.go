@@ -15,7 +15,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
-	netv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -152,7 +151,7 @@ func TestIngressEssentials(t *testing.T) {
 	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, ingressClass)
 	kubernetesVersion, err := GetEnv().Cluster().Version()
 	require.NoError(t, err)
-	ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion,
+	ingressObj := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion,
 		fmt.Sprintf("/%s-httpbin", strings.ToLower(t.Name())),
 		map[string]string{
 			annotations.IngressClassKey: ingressClass,
@@ -160,14 +159,16 @@ func TestIngressEssentials(t *testing.T) {
 		}, service)
 	require.EventuallyWithT(t,
 		func(c *assert.CollectT) {
-			err := clusters.DeployIngress(GetCtx(), GetEnv().Cluster(), namespace.Name, ingress)
+			err := clusters.DeployIngress(GetCtx(), GetEnv().Cluster(), namespace.Name, ingressObj)
 			require.NoError(c, err, "failed to deploy ingress in namespace %s", namespace.Name)
 			// Set the namespace so that the cleaner is happy
-			ingress.(client.Object).SetNamespace(namespace.Name)
+			ingressObj.(client.Object).SetNamespace(namespace.Name)
 		},
 		testutils.DefaultIngressWait, testutils.WaitIngressTick,
 	)
-	cleaner.Add(ingress.(client.Object))
+	ingress, ok := ingressObj.(*netv1.Ingress)
+	require.True(t, ok, "expected ingress to be of type *netv1.Ingress")
+	cleaner.Add(ingress)
 
 	t.Log("waiting for updated ingress status to include IP")
 	require.Eventually(t, func() bool {
@@ -203,29 +204,13 @@ func TestIngressEssentials(t *testing.T) {
 
 	t.Logf("removing the ingress.class annotation %q from ingress", ingressClass)
 	require.Eventually(t, func() bool {
-		switch obj := ingress.(type) {
-		case *netv1.Ingress:
-			ingress, err := GetEnv().Cluster().Client().NetworkingV1().Ingresses(namespace.Name).Get(GetCtx(), obj.Name, metav1.GetOptions{})
-			if err != nil {
-				return false
-			}
-			delete(ingress.Annotations, annotations.IngressClassKey)
-			_, err = GetEnv().Cluster().Client().NetworkingV1().Ingresses(namespace.Name).Update(GetCtx(), ingress, metav1.UpdateOptions{})
-			if err != nil {
-				return false
-			}
-		case *netv1beta1.Ingress:
-			ingress, err := GetEnv().Cluster().Client().NetworkingV1beta1().Ingresses(namespace.Name).Get(GetCtx(), obj.Name, metav1.GetOptions{})
-			if err != nil {
-				return false
-			}
-			delete(ingress.Annotations, annotations.IngressClassKey)
-			_, err = GetEnv().Cluster().Client().NetworkingV1beta1().Ingresses(namespace.Name).Update(GetCtx(), ingress, metav1.UpdateOptions{})
-			if err != nil {
-				return false
-			}
+		ingress, err := GetEnv().Cluster().Client().NetworkingV1().Ingresses(namespace.Name).Get(GetCtx(), ingress.Name, metav1.GetOptions{})
+		if err != nil {
+			return false
 		}
-		return true
+		delete(ingress.Annotations, annotations.IngressClassKey)
+		_, err = GetEnv().Cluster().Client().NetworkingV1().Ingresses(namespace.Name).Update(GetCtx(), ingress, metav1.UpdateOptions{})
+		return err == nil
 	}, testutils.DefaultIngressWait, testutils.WaitIngressTick)
 
 	t.Logf("verifying that removing the ingress.class annotation %q from ingress causes routes to disconnect", ingressClass)
@@ -235,29 +220,13 @@ func TestIngressEssentials(t *testing.T) {
 
 	t.Logf("putting the ingress.class annotation %q back on ingress", ingressClass)
 	require.Eventually(t, func() bool {
-		switch obj := ingress.(type) {
-		case *netv1.Ingress:
-			ingress, err := GetEnv().Cluster().Client().NetworkingV1().Ingresses(namespace.Name).Get(GetCtx(), obj.Name, metav1.GetOptions{})
-			if err != nil {
-				return false
-			}
-			ingress.Annotations[annotations.IngressClassKey] = ingressClass
-			_, err = GetEnv().Cluster().Client().NetworkingV1().Ingresses(namespace.Name).Update(GetCtx(), ingress, metav1.UpdateOptions{})
-			if err != nil {
-				return false
-			}
-		case *netv1beta1.Ingress:
-			ingress, err := GetEnv().Cluster().Client().NetworkingV1beta1().Ingresses(namespace.Name).Get(GetCtx(), obj.Name, metav1.GetOptions{})
-			if err != nil {
-				return false
-			}
-			ingress.Annotations[annotations.IngressClassKey] = ingressClass
-			_, err = GetEnv().Cluster().Client().NetworkingV1beta1().Ingresses(namespace.Name).Update(GetCtx(), ingress, metav1.UpdateOptions{})
-			if err != nil {
-				return false
-			}
+		ingress, err := GetEnv().Cluster().Client().NetworkingV1().Ingresses(namespace.Name).Get(GetCtx(), ingress.Name, metav1.GetOptions{})
+		if err != nil {
+			return false
 		}
-		return true
+		ingress.Annotations[annotations.IngressClassKey] = ingressClass
+		_, err = GetEnv().Cluster().Client().NetworkingV1().Ingresses(namespace.Name).Update(GetCtx(), ingress, metav1.UpdateOptions{})
+		return err == nil
 	}, testutils.DefaultIngressWait, testutils.WaitIngressTick)
 
 	t.Log("waiting for routes from Ingress to be operational after reintroducing ingress class annotation")
