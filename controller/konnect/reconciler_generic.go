@@ -400,11 +400,18 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 	}
 
+	programmedFalseCondition := metav1.Condition{
+		Type:    konnectv1alpha1.KonnectEntityProgrammedConditionType,
+		Status:  metav1.ConditionFalse,
+		Reason:  konnectv1alpha1.KonnectEntityProgrammedReasonConditionWithStatusFalseExists,
+		Message: "Some conditions have status set to False",
+	}
+
 	apiAuthRef, err := getAPIAuthRefNN(ctx, r.Client, ent)
 	if err != nil {
 		if crossnamespace.IsReferenceNotGranted(err) {
 			log.Info(logger, "cross-namespace reference to KonnectAPIAuthConfiguration is not granted", "error", err.Error())
-			if requeue, res, retErr := handleAPIAuthStatusCondition(ctx, r.Client, ent, konnectv1alpha1.KonnectAPIAuthConfiguration{}, apiAuthRef, err); requeue {
+			if requeue, res, retErr := handleAPIAuthStatusCondition(ctx, r.Client, ent, konnectv1alpha1.KonnectAPIAuthConfiguration{}, apiAuthRef, err, programmedFalseCondition); requeue {
 				return res, retErr
 			}
 		}
@@ -414,7 +421,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 	var apiAuth konnectv1alpha1.KonnectAPIAuthConfiguration
 	err = r.Client.Get(ctx, apiAuthRef, &apiAuth)
-	if requeue, res, retErr := handleAPIAuthStatusCondition(ctx, r.Client, ent, apiAuth, apiAuthRef, err); requeue {
+	if requeue, res, retErr := handleAPIAuthStatusCondition(ctx, r.Client, ent, apiAuth, apiAuthRef, err, programmedFalseCondition); requeue {
 		return res, retErr
 	}
 
