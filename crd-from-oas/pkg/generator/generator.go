@@ -187,7 +187,8 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 			comment := formatSchemaComment(refName, schema.Description)
 
 			// Generate based on schema type
-			if len(schema.Properties) > 0 {
+			switch {
+			case len(schema.Properties) > 0:
 				// It's an object type - generate a struct
 				buf.WriteString(comment)
 				fmt.Fprintf(&buf, "type %s struct {\n", refName)
@@ -198,7 +199,26 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 					fmt.Fprintf(&buf, "\t%s %s `json:\"%s\"`\n", goFieldName(prop.Name), g.goType(prop), jsonTag(prop))
 				}
 				buf.WriteString("}\n\n")
-			} else {
+
+			case schema.AdditionalProperties != nil:
+				// Map type with value constraints: generate a dedicated value type
+				// with native kubebuilder markers, then define the map using it.
+				valueTypeName := refName + "Value"
+				valueBaseType := propertyToGoBaseType(schema.AdditionalProperties)
+
+				fmt.Fprintf(&buf, "// %s is the value type for %s.\n", valueTypeName, refName)
+				if markers := valueTypeMarkers(schema.AdditionalProperties); len(markers) > 0 {
+					buf.WriteString("//\n")
+					for _, marker := range markers {
+						fmt.Fprintf(&buf, "// %s\n", marker)
+					}
+				}
+				fmt.Fprintf(&buf, "type %s %s\n\n", valueTypeName, valueBaseType)
+
+				buf.WriteString(comment)
+				fmt.Fprintf(&buf, "type %s map[string]%s\n\n", refName, valueTypeName)
+
+			default:
 				// Generate based on the schema's actual type
 				buf.WriteString(comment)
 				goType := schemaToGoType(schema)

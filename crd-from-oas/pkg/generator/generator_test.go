@@ -596,6 +596,89 @@ func TestFormatSchemaComment(t *testing.T) {
 	}
 }
 
+func TestGenerateSchemaTypes_MapWithValueTypes(t *testing.T) {
+	g := NewGenerator(Config{
+		APIVersion: "v1alpha1",
+	})
+
+	parsed := &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"Labels": {
+				Name:          "Labels",
+				Description:   "Labels store metadata.",
+				Type:          "object",
+				MaxProperties: func() *int64 { v := int64(50); return &v }(),
+				AdditionalProperties: &parser.Property{
+					Type:      "string",
+					MinLength: func() *int64 { v := int64(1); return &v }(),
+					MaxLength: func() *int64 { v := int64(63); return &v }(),
+					Pattern:   `^[a-z0-9A-Z]+$`,
+				},
+			},
+			"LabelsUpdate": {
+				Name:        "LabelsUpdate",
+				Description: "LabelsUpdate store metadata.",
+				Type:        "object",
+				AdditionalProperties: &parser.Property{
+					Type:      "string",
+					MinLength: func() *int64 { v := int64(1); return &v }(),
+					MaxLength: func() *int64 { v := int64(63); return &v }(),
+					Pattern:   `^[a-z0-9A-Z]+$`,
+				},
+			},
+		},
+	}
+
+	refs := map[string]bool{
+		"Labels":       true,
+		"LabelsUpdate": true,
+	}
+
+	content := g.generateSchemaTypes(refs, parsed)
+
+	// Labels should generate a value type with native markers, then a map type using it
+	assert.Contains(t, content, "type LabelsValue string")
+	assert.Contains(t, content, "type Labels map[string]LabelsValue")
+	assert.Contains(t, content, "+kubebuilder:validation:MinLength=1")
+	assert.Contains(t, content, "+kubebuilder:validation:MaxLength=63")
+	assert.Contains(t, content, "+kubebuilder:validation:Pattern=`^[a-z0-9A-Z]+$`")
+
+	// LabelsUpdate should also generate a value type
+	assert.Contains(t, content, "type LabelsUpdateValue string")
+	assert.Contains(t, content, "type LabelsUpdate map[string]LabelsUpdateValue")
+
+	// No CEL XValidation rules or MaxProperties on the type (goes on the field)
+	assert.NotContains(t, content, "XValidation")
+	assert.NotContains(t, content, "MaxProperties")
+}
+
+func TestGenerateSchemaTypes_NoValueTypeForNonMapTypes(t *testing.T) {
+	g := NewGenerator(Config{
+		APIVersion: "v1alpha1",
+	})
+
+	parsed := &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"GatewayName": {
+				Name:        "GatewayName",
+				Description: "The name of the Gateway.",
+				Type:        "string",
+			},
+		},
+	}
+
+	refs := map[string]bool{
+		"GatewayName": true,
+	}
+
+	content := g.generateSchemaTypes(refs, parsed)
+
+	assert.Contains(t, content, "type GatewayName string")
+	assert.NotContains(t, content, "Value")
+	assert.NotContains(t, content, "XValidation")
+	assert.NotContains(t, content, "MaxProperties")
+}
+
 func TestParseSDKTypePath(t *testing.T) {
 	tests := []struct {
 		name       string

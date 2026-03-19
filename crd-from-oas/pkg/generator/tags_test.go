@@ -238,6 +238,147 @@ func TestKubebuilderTags(t *testing.T) {
 	}
 }
 
+func TestKubebuilderTags_MapType(t *testing.T) {
+	tests := []struct {
+		name     string
+		prop     *parser.Property
+		expected []string
+	}{
+		{
+			name: "map field with MaxProperties",
+			prop: &parser.Property{
+				Name:          "labels",
+				Type:          "object",
+				Required:      false,
+				MaxProperties: new(int64(50)),
+				AdditionalProperties: &parser.Property{
+					Name: "value",
+					Type: "string",
+				},
+			},
+			expected: []string{
+				"+optional",
+				"+kubebuilder:validation:MaxProperties=50",
+			},
+		},
+		{
+			name: "map ref field with MaxProperties",
+			prop: &parser.Property{
+				Name:          "labels",
+				Type:          "object",
+				Required:      false,
+				RefName:       "LabelsUpdate",
+				MaxProperties: new(int64(50)),
+				AdditionalProperties: &parser.Property{
+					Name:      "value",
+					Type:      "string",
+					MinLength: new(int64(1)),
+					MaxLength: new(int64(63)),
+				},
+			},
+			expected: []string{
+				"+optional",
+				"+kubebuilder:validation:MaxProperties=50",
+			},
+		},
+		{
+			name: "map field without MaxProperties",
+			prop: &parser.Property{
+				Name:     "tags",
+				Type:     "object",
+				Required: false,
+				AdditionalProperties: &parser.Property{
+					Name: "value",
+					Type: "string",
+				},
+			},
+			expected: []string{
+				"+optional",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := KubebuilderTags(tt.prop, "TestEntity", nil)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestValueTypeMarkers(t *testing.T) {
+	tests := []struct {
+		name     string
+		prop     *parser.Property
+		expected []string
+	}{
+		{
+			name: "string with all constraints",
+			prop: &parser.Property{
+				Type:      "string",
+				MinLength: new(int64(1)),
+				MaxLength: new(int64(63)),
+				Pattern:   `^[a-z0-9A-Z]+$`,
+			},
+			expected: []string{
+				"+kubebuilder:validation:MinLength=1",
+				"+kubebuilder:validation:MaxLength=63",
+				"+kubebuilder:validation:Pattern=`^[a-z0-9A-Z]+$`",
+			},
+		},
+		{
+			name: "string with only maxLength",
+			prop: &parser.Property{
+				Type:      "string",
+				MaxLength: new(int64(256)),
+			},
+			expected: []string{
+				"+kubebuilder:validation:MaxLength=256",
+			},
+		},
+		{
+			name:     "string with no constraints",
+			prop:     &parser.Property{Type: "string"},
+			expected: nil,
+		},
+		{
+			name: "non-string type returns nil",
+			prop: &parser.Property{
+				Type:      "integer",
+				MinLength: new(int64(1)),
+			},
+			expected: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := valueTypeMarkers(tt.prop)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestPropertyToGoBaseType(t *testing.T) {
+	tests := []struct {
+		propType string
+		expected string
+	}{
+		{"string", "string"},
+		{"integer", "int"},
+		{"boolean", "bool"},
+		{"number", "float64"},
+		{"unknown", "string"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.propType, func(t *testing.T) {
+			result := propertyToGoBaseType(&parser.Property{Type: tt.propType})
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
 func TestKubebuilderTags_WithFieldConfig(t *testing.T) {
 	tests := []struct {
 		name        string

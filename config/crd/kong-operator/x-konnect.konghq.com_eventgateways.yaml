@@ -66,6 +66,10 @@ spec:
                     type: string
                   labels:
                     additionalProperties:
+                      description: LabelsValue is the value type for Labels.
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
                       type: string
                     description: |-
                       Labels store metadata of an entity that can be used for filtering an entity

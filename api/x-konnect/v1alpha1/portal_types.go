@@ -126,6 +126,7 @@ type PortalAPISpec struct {
 	//
 	//
 	// +optional
+	// +kubebuilder:validation:MaxProperties=50
 	Labels LabelsUpdate `json:"labels,omitempty"`
 
 	// The name of the portal, used to distinguish it from other portals.

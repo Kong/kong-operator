@@ -88,6 +88,12 @@ func ParseProperty(name string, schemaRef *openapi3.SchemaRef, depth int, visite
 		})
 	}
 
+	// Handle maxProperties (map size constraint)
+	if schemaValue.MaxProps != nil {
+		maxProps := int64(*schemaValue.MaxProps)
+		prop.MaxProperties = &maxProps
+	}
+
 	// Handle additionalProperties (map types)
 	if schemaValue.AdditionalProperties.Schema != nil {
 		prop.AdditionalProperties = ParseProperty("value", schemaValue.AdditionalProperties.Schema, depth+1, visited)
