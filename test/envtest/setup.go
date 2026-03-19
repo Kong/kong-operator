@@ -37,6 +37,7 @@ import (
 type Options struct {
 	InstallGatewayCRDs bool
 	InstallKongCRDs    bool
+	AdditionalCRDPaths []string
 }
 
 var DefaultEnvTestOpts = Options{
@@ -56,6 +57,13 @@ func WithInstallKongCRDs(install bool) OptionModifier {
 func WithInstallGatewayCRDs(install bool) OptionModifier {
 	return func(opts Options) Options {
 		opts.InstallGatewayCRDs = install
+		return opts
+	}
+}
+
+func WithAdditionalCRDPaths(paths []string) OptionModifier {
+	return func(opts Options) Options {
+		opts.AdditionalCRDPaths = paths
 		return opts
 	}
 }
@@ -89,6 +97,7 @@ func Setup(t *testing.T, ctx context.Context, scheme *k8sruntime.Scheme, optModi
 			kcfg.IngressControllerIncubatorCRDsPath(),
 		)
 	}
+	crdPaths = append(crdPaths, opts.AdditionalCRDPaths...)
 
 	testEnv := &envtest.Environment{
 		ControlPlaneStopTimeout: time.Second * 60,

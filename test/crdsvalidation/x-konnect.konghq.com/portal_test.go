@@ -1,0 +1,272 @@
+package configuration_test
+
+import (
+	"strings"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	xkonnectv1alpha1 "github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1"
+	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/scheme"
+	common "github.com/kong/kong-operator/v2/test/crdsvalidation/common"
+	"github.com/kong/kong-operator/v2/test/envtest"
+)
+
+func TestPortal(t *testing.T) {
+	t.Parallel()
+
+	scheme := scheme.Get()
+	require.NoError(t, xkonnectv1alpha1.AddToScheme(scheme))
+
+	ctx := t.Context()
+	cfg, ns := envtest.Setup(t, ctx, scheme)
+
+	t.Run("name field validation", func(t *testing.T) {
+		common.TestCasesGroup[*xkonnectv1alpha1.Portal]{
+			{
+				Name: "name with valid value passes validation",
+				TestObject: &xkonnectv1alpha1.Portal{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: xkonnectv1alpha1.PortalSpec{
+						APISpec: xkonnectv1alpha1.PortalAPISpec{
+							Name: "test-portal",
+						},
+					},
+				},
+			},
+			{
+				Name: "name at max length (255) passes validation",
+				TestObject: &xkonnectv1alpha1.Portal{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: xkonnectv1alpha1.PortalSpec{
+						APISpec: xkonnectv1alpha1.PortalAPISpec{
+							Name: strings.Repeat("a", 255),
+						},
+					},
+				},
+			},
+			{
+				Name: "name exceeding max length (256) fails validation",
+				TestObject: &xkonnectv1alpha1.Portal{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: xkonnectv1alpha1.PortalSpec{
+						APISpec: xkonnectv1alpha1.PortalAPISpec{
+							Name: strings.Repeat("a", 256),
+						},
+					},
+				},
+				// NOTE: Different versions of k8s return a different error
+				// message hence this trying to match on the common part of the message.
+				ExpectedErrorMessage: new("spec.apiSpec.name: Too long: may not be"),
+			},
+			{
+				Name: "name is immutable",
+				TestObject: &xkonnectv1alpha1.Portal{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: xkonnectv1alpha1.PortalSpec{
+						APISpec: xkonnectv1alpha1.PortalAPISpec{
+							Name: "immutable-portal-name",
+						},
+					},
+				},
+				Update: func(p *xkonnectv1alpha1.Portal) {
+					p.Spec.APISpec.Name = "changed-portal-name"
+				},
+				ExpectedUpdateErrorMessage: new("name is immutable"),
+			},
+		}.
+			RunWithConfig(t, cfg, scheme)
+	})
+
+	t.Run("display_name field validation", func(t *testing.T) {
+		common.TestCasesGroup[*xkonnectv1alpha1.Portal]{
+			{
+				Name: "display_name with valid value passes validation",
+				TestObject: &xkonnectv1alpha1.Portal{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: xkonnectv1alpha1.PortalSpec{
+						APISpec: xkonnectv1alpha1.PortalAPISpec{
+							Name:        "portal-display-name-valid",
+							DisplayName: "My Portal",
+						},
+					},
+				},
+			},
+			{
+				Name: "display_name at max length (255) passes validation",
+				TestObject: &xkonnectv1alpha1.Portal{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: xkonnectv1alpha1.PortalSpec{
+						APISpec: xkonnectv1alpha1.PortalAPISpec{
+							Name:        "portal-display-name-max",
+							DisplayName: strings.Repeat("d", 255),
+						},
+					},
+				},
+			},
+			{
+				Name: "display_name exceeding max length (256) fails validation",
+				TestObject: &xkonnectv1alpha1.Portal{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: xkonnectv1alpha1.PortalSpec{
+						APISpec: xkonnectv1alpha1.PortalAPISpec{
+							Name:        "portal-display-name-over",
+							DisplayName: strings.Repeat("d", 256),
+						},
+					},
+				},
+				// NOTE: Different versions of k8s return a different error
+				// message hence this trying to match on the common part of the message.
+				ExpectedErrorMessage: new("spec.apiSpec.display_name: Too long: may not be"),
+			},
+		}.
+			RunWithConfig(t, cfg, scheme)
+	})
+
+	t.Run("description field validation", func(t *testing.T) {
+		common.TestCasesGroup[*xkonnectv1alpha1.Portal]{
+			{
+				Name: "description at max length (512) passes validation",
+				TestObject: &xkonnectv1alpha1.Portal{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: xkonnectv1alpha1.PortalSpec{
+						APISpec: xkonnectv1alpha1.PortalAPISpec{
+							Name:        "portal-desc-max",
+							Description: new(strings.Repeat("x", 512)),
+						},
+					},
+				},
+			},
+			{
+				Name: "description exceeding max length (513) fails validation",
+				TestObject: &xkonnectv1alpha1.Portal{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: xkonnectv1alpha1.PortalSpec{
+						APISpec: xkonnectv1alpha1.PortalAPISpec{
+							Name:        "portal-desc-over",
+							Description: new(strings.Repeat("x", 513)),
+						},
+					},
+				},
+				// NOTE: Different versions of k8s return a different error
+				// message hence this trying to match on the common part of the message.
+				ExpectedErrorMessage: new("spec.apiSpec.description: Too long: may not be"),
+			},
+		}.
+			RunWithConfig(t, cfg, scheme)
+	})
+
+	t.Run("default_api_visibility field validation", func(t *testing.T) {
+		common.TestCasesGroup[*xkonnectv1alpha1.Portal]{
+			{
+				Name: "default_api_visibility set to public passes validation",
+				TestObject: &xkonnectv1alpha1.Portal{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: xkonnectv1alpha1.PortalSpec{
+						APISpec: xkonnectv1alpha1.PortalAPISpec{
+							Name:                 "portal-vis-public",
+							DefaultAPIVisibility: "public",
+						},
+					},
+				},
+			},
+			{
+				Name: "default_api_visibility set to private passes validation",
+				TestObject: &xkonnectv1alpha1.Portal{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: xkonnectv1alpha1.PortalSpec{
+						APISpec: xkonnectv1alpha1.PortalAPISpec{
+							Name:                 "portal-vis-private",
+							DefaultAPIVisibility: "private",
+						},
+					},
+				},
+			},
+			{
+				Name: "default_api_visibility with invalid value fails validation",
+				TestObject: &xkonnectv1alpha1.Portal{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: xkonnectv1alpha1.PortalSpec{
+						APISpec: xkonnectv1alpha1.PortalAPISpec{
+							Name:                 "portal-vis-invalid",
+							DefaultAPIVisibility: "invalid",
+						},
+					},
+				},
+				ExpectedErrorMessage: new(`spec.apiSpec.default_api_visibility: Unsupported value: "invalid"`),
+			},
+		}.
+			RunWithConfig(t, cfg, scheme)
+	})
+
+	t.Run("default_page_visibility field validation", func(t *testing.T) {
+		common.TestCasesGroup[*xkonnectv1alpha1.Portal]{
+			{
+				Name: "default_page_visibility set to public passes validation",
+				TestObject: &xkonnectv1alpha1.Portal{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: xkonnectv1alpha1.PortalSpec{
+						APISpec: xkonnectv1alpha1.PortalAPISpec{
+							Name:                  "portal-page-vis-public",
+							DefaultPageVisibility: "public",
+						},
+					},
+				},
+			},
+			{
+				Name: "default_page_visibility set to private passes validation",
+				TestObject: &xkonnectv1alpha1.Portal{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: xkonnectv1alpha1.PortalSpec{
+						APISpec: xkonnectv1alpha1.PortalAPISpec{
+							Name:                  "portal-page-vis-private",
+							DefaultPageVisibility: "private",
+						},
+					},
+				},
+			},
+			{
+				Name: "default_page_visibility with invalid value fails validation",
+				TestObject: &xkonnectv1alpha1.Portal{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: xkonnectv1alpha1.PortalSpec{
+						APISpec: xkonnectv1alpha1.PortalAPISpec{
+							Name:                  "portal-page-vis-invalid",
+							DefaultPageVisibility: "invalid",
+						},
+					},
+				},
+				ExpectedErrorMessage: new(`spec.apiSpec.default_page_visibility: Unsupported value: "invalid"`),
+			},
+		}.
+			RunWithConfig(t, cfg, scheme)
+	})
+
+	t.Run("full spec with all fields passes validation", func(t *testing.T) {
+		common.TestCasesGroup[*xkonnectv1alpha1.Portal]{
+			{
+				Name: "all fields populated passes validation",
+				TestObject: &xkonnectv1alpha1.Portal{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: xkonnectv1alpha1.PortalSpec{
+						APISpec: xkonnectv1alpha1.PortalAPISpec{
+							Name:                    "portal-full-spec",
+							DisplayName:             "Full Spec Portal",
+							Description:             new("A full spec portal"),
+							AuthenticationEnabled:   true,
+							AutoApproveApplications: true,
+							AutoApproveDevelopers:   true,
+							DefaultAPIVisibility:    "public",
+							DefaultPageVisibility:   "private",
+							RBACEnabled:             true,
+							Labels: xkonnectv1alpha1.LabelsUpdate{
+								"env": "test",
+							},
+						},
+					},
+				},
+			},
+		}.
+			RunWithConfig(t, cfg, scheme)
+	})
+}

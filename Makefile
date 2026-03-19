@@ -261,9 +261,13 @@ lint: lint.modules lint.golangci-lint
 lint.modules:
 	go mod tidy -diff
 
+# NOTE: we need to run golangci-lint separately in the root and in crd-from-oas
+# because it does not support running in repos that have multiple Go modules defined.
+# Ref: https://github.com/golangci/golangci-lint/issues/828
 .PHONY: lint.golangci-lint
 lint.golangci-lint: golangci-lint
 	$(GOLANGCI_LINT) run -v --config $(GOLANGCI_LINT_CONFIG) $(GOLANGCI_LINT_FLAGS)
+	cd crd-from-oas && $(GOLANGCI_LINT) run -v --config $(GOLANGCI_LINT_CONFIG) $(GOLANGCI_LINT_FLAGS)
 
 .PHONY: lint.charts
 lint.charts: download.kube-linter
@@ -323,7 +327,7 @@ API_DIR ?= api
 #   make generate && make manifests && make test.charts.golden.update
 # into a single command: make generate
 # Note: manifests is placed near the end to preserve the prior ordering (docs are generated from CRDs first).
-generate: generate.crds generate.crd-kustomize generate.k8sio-gomod-replace generate.deepcopy generate.apitypes-funcs generate.docs generate.lint-fix manifests test.charts.golden.update generate.cli-arguments-docs test.kongintegration.golden.update
+generate: generate.api generate.api-from-oas generate.crds generate.crd-kustomize generate.k8sio-gomod-replace generate.apitypes-funcs generate.docs generate.lint-fix manifests test.charts.golden.update generate.cli-arguments-docs test.kongintegration.golden.update
 
 .PHONY: generate.crds
 generate.crds: controller-gen ## Generate WebhookConfiguration and CustomResourceDefinition objects.
@@ -338,8 +342,9 @@ generate.crd-kustomize:
 generate.api: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/generators/boilerplate.go.txt" paths="./$(API_DIR)/..."
 
-.PHONY: generate.deepcopy
-generate.deepcopy: generate.api
+.PHONY: generate.api-from-oas
+generate.api-from-oas:
+	mise r generate-api
 
 .PHONY: generate.apitypes-funcs
 generate.apitypes-funcs:
@@ -566,6 +571,7 @@ KONG_CONTROLLER_FEATURE_GATES ?= GatewayAlpha=true
 test: test.unit
 
 UNIT_TEST_PATHS := ./api/... ./controller/... ./internal/... ./pkg/... ./modules/... ./ingress-controller/internal/... ./ingress-controller/pkg/...
+UNIT_TEST_PATHS_CRD_GEN := ./pkg/...
 
 .PHONY: _test.unit
 _test.unit: gotestsum
@@ -575,6 +581,11 @@ _test.unit: gotestsum
 		-coverprofile=coverage.unit.out \
 		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS)" \
 		$(UNIT_TEST_PATHS)
+	cd crd-from-oas && \
+		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
+		$(GOTESTSUM) -- $(GOTESTFLAGS) \
+		-race \
+		$(UNIT_TEST_PATHS_CRD_GEN)
 
 .PHONY: test.unit
 test.unit:
@@ -1135,3 +1146,4 @@ lint.api: download.kube-api-linter
 		./api/konnect/v1alpha1/... \
 		./api/konnect/v1alpha2/... \
 		./api/common/v1alpha1/...
+	mise r lint-api
