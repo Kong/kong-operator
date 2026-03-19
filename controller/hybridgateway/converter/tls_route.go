@@ -24,9 +24,11 @@ var _ APIConverter[gwtypes.TLSRoute] = &tlsRouteConverter{}
 type tlsRouteConverter struct {
 	client.Client
 
-	route        *gwtypes.TLSRoute
-	outputStore  []client.Object
-	expectedGVKs []schema.GroupVersionKind
+	route         *gwtypes.TLSRoute
+	outputStore   []client.Object
+	expectedGVKs  []schema.GroupVersionKind
+	fqdnMode      bool
+	clusterDomain string
 }
 
 func newTLSRouteConverter(tlsRoute *gwtypes.TLSRoute, cl client.Client) APIConverter[gwtypes.TLSRoute] {

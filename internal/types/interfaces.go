@@ -10,3 +10,7 @@ type SupportedRoute interface {
 type SupportedRouteRule interface {
 	TLSRouteRule | HTTPRouteRule
 }
+
+type SupportedRouteBackendRef interface {
+	BackendRef | HTTPBackendRef
+}
