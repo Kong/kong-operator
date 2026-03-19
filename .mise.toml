@@ -110,7 +110,6 @@ run = "controller-gen object:headerFile='../hack/generators/boilerplate.go.txt' 
 
 [tasks.test-crdsvalidation]
 description = "Run CRD validation tests"
-dir = "./{{env.DIR}}"
 # Update test paths below if more API groups are added
 run = '''
 export KUBEBUILDER_ASSETS=$(setup-envtest use -p path)

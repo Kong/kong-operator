@@ -231,6 +231,25 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 				fmt.Fprintf(&buf, "\t// %sDisabled sets %s as disabled.\n", goName, goName)
 				fmt.Fprintf(&buf, "\t%sDisabled %s = \"Disabled\"\n", goName, goName)
 				fmt.Fprintf(&buf, ")\n\n")
+
+			case schema.AdditionalProperties != nil:
+				// Map type with value constraints: generate a dedicated value type
+				// with native kubebuilder markers, then define the map using it.
+				valueTypeName := refName + "Value"
+				valueBaseType := propertyToGoBaseType(schema.AdditionalProperties)
+
+				fmt.Fprintf(&buf, "// %s is the value type for %s.\n", valueTypeName, refName)
+				if markers := valueTypeMarkers(schema.AdditionalProperties); len(markers) > 0 {
+					buf.WriteString("//\n")
+					for _, marker := range markers {
+						fmt.Fprintf(&buf, "// %s\n", marker)
+					}
+				}
+				fmt.Fprintf(&buf, "type %s %s\n\n", valueTypeName, valueBaseType)
+
+				buf.WriteString(comment)
+				fmt.Fprintf(&buf, "type %s map[string]%s\n\n", refName, valueTypeName)
+
 			default:
 				// Generate based on the schema's actual type
 				buf.WriteString(comment)
