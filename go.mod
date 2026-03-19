@@ -344,7 +344,7 @@ replace (
 	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.35.2
 	k8s.io/dynamic-resource-allocation => k8s.io/dynamic-resource-allocation v0.35.2
 	k8s.io/endpointslice => k8s.io/endpointslice v0.35.2
-	k8s.io/externaljwt => k8s.io/externaljwt v0.35.2
+	k8s.io/externaljwt => k8s.io/externaljwt v0.35.3
 	k8s.io/kms => k8s.io/kms v0.35.2
 	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.35.2
 	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.35.2
