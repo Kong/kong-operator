@@ -51,7 +51,6 @@ type KongRoute struct {
 
 // KongRouteSpec defines spec of a Kong Route.
 //
-// +kubebuilder:validation:XValidation:rule="!has(self.controlPlaneRef) ? true : self.controlPlaneRef.type != 'kic'", message="KIC is not supported as control plane"
 // +kubebuilder:validation:XValidation:rule="!has(self.adopt) ? true : (has(self.serviceRef) || (has(self.controlPlaneRef) && self.controlPlaneRef.type == 'konnectNamespacedRef'))", message="spec.adopt is allowed only when serviceRef exists or controlPlaneRef is konnectNamespacedRef"
 // +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
 type KongRouteSpec struct {

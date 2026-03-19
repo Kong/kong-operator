@@ -56,6 +56,15 @@ type FakeObjects struct {
 	KongServiceFacades   []*incubatorv1alpha1.KongServiceFacade
 	KongVaults           []*configurationv1alpha1.KongVault
 	KongCustomEntities   []*configurationv1alpha1.KongCustomEntity
+
+	KongServicesV1Alpha1      []*configurationv1alpha1.KongService
+	KongRoutesV1Alpha1        []*configurationv1alpha1.KongRoute
+	KongUpstreamsV1Alpha1     []*configurationv1alpha1.KongUpstream
+	KongTargetsV1Alpha1       []*configurationv1alpha1.KongTarget
+	KongCertificatesV1Alpha1  []*configurationv1alpha1.KongCertificate
+	KongCACertificatesV1Alpha1 []*configurationv1alpha1.KongCACertificate
+	KongSNIsV1Alpha1          []*configurationv1alpha1.KongSNI
+	KongPluginBindingsV1Alpha1 []*configurationv1alpha1.KongPluginBinding
 }
 
 // NewFakeStore creates a store backed by the objects passed in as arguments.
@@ -217,6 +226,54 @@ func NewFakeStore(
 			return nil, err
 		}
 	}
+	kongServiceV1Alpha1Store := cache.NewStore(namespacedKeyFunc)
+	for _, e := range objects.KongServicesV1Alpha1 {
+		if err := kongServiceV1Alpha1Store.Add(e); err != nil {
+			return nil, err
+		}
+	}
+	kongRouteV1Alpha1Store := cache.NewStore(namespacedKeyFunc)
+	for _, e := range objects.KongRoutesV1Alpha1 {
+		if err := kongRouteV1Alpha1Store.Add(e); err != nil {
+			return nil, err
+		}
+	}
+	kongUpstreamV1Alpha1Store := cache.NewStore(namespacedKeyFunc)
+	for _, e := range objects.KongUpstreamsV1Alpha1 {
+		if err := kongUpstreamV1Alpha1Store.Add(e); err != nil {
+			return nil, err
+		}
+	}
+	kongTargetV1Alpha1Store := cache.NewStore(namespacedKeyFunc)
+	for _, e := range objects.KongTargetsV1Alpha1 {
+		if err := kongTargetV1Alpha1Store.Add(e); err != nil {
+			return nil, err
+		}
+	}
+	kongCertificateV1Alpha1Store := cache.NewStore(namespacedKeyFunc)
+	for _, e := range objects.KongCertificatesV1Alpha1 {
+		if err := kongCertificateV1Alpha1Store.Add(e); err != nil {
+			return nil, err
+		}
+	}
+	kongCACertificateV1Alpha1Store := cache.NewStore(namespacedKeyFunc)
+	for _, e := range objects.KongCACertificatesV1Alpha1 {
+		if err := kongCACertificateV1Alpha1Store.Add(e); err != nil {
+			return nil, err
+		}
+	}
+	kongSNIV1Alpha1Store := cache.NewStore(namespacedKeyFunc)
+	for _, e := range objects.KongSNIsV1Alpha1 {
+		if err := kongSNIV1Alpha1Store.Add(e); err != nil {
+			return nil, err
+		}
+	}
+	kongPluginBindingV1Alpha1Store := cache.NewStore(namespacedKeyFunc)
+	for _, e := range objects.KongPluginBindingsV1Alpha1 {
+		if err := kongPluginBindingV1Alpha1Store.Add(e); err != nil {
+			return nil, err
+		}
+	}
 
 	s = &Store{
 		stores: CacheStores{
@@ -245,6 +302,14 @@ func NewFakeStore(
 			KongServiceFacade:              kongServiceFacade,
 			KongVault:                      kongVaultStore,
 			KongCustomEntity:               kongCustomEntityStore,
+			KongServiceV1Alpha1:            kongServiceV1Alpha1Store,
+			KongRouteV1Alpha1:              kongRouteV1Alpha1Store,
+			KongUpstreamV1Alpha1:           kongUpstreamV1Alpha1Store,
+			KongTargetV1Alpha1:             kongTargetV1Alpha1Store,
+			KongCertificateV1Alpha1:        kongCertificateV1Alpha1Store,
+			KongCACertificateV1Alpha1:      kongCACertificateV1Alpha1Store,
+			KongSNIV1Alpha1:                kongSNIV1Alpha1Store,
+			KongPluginBindingV1Alpha1:      kongPluginBindingV1Alpha1Store,
 		},
 		ingressClass:          annotations.DefaultIngressClass,
 		isValidIngressClass:   annotations.IngressClassValidatorFuncFromObjectMeta(annotations.DefaultIngressClass),

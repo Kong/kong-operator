@@ -41,7 +41,6 @@ type KongCertificate struct {
 }
 
 // KongCertificateSpec contains the specification for the KongCertificate.
-// +kubebuilder:validation:XValidation:rule="!has(self.controlPlaneRef) ? true : self.controlPlaneRef.type != 'kic'", message="KIC is not supported as control plane"
 // +kubebuilder:validation:XValidation:rule="!has(self.adopt) ? true : (has(self.controlPlaneRef) && self.controlPlaneRef.type == 'konnectNamespacedRef')", message="spec.adopt is allowed only when controlPlaneRef is konnectNamespacedRef"
 // +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
 // +kubebuilder:validation:XValidation:rule="self.type != 'inline' || (has(self.cert) && self.cert.size() != 0)", message="spec.cert is required when type is 'inline'"
