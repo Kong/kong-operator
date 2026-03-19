@@ -58,9 +58,9 @@ func TestParseProperty_NumberValidations(t *testing.T) {
 
 	assert.Equal(t, "number", prop.Type)
 	require.NotNil(t, prop.Minimum)
-	assert.Equal(t, 0.0, *prop.Minimum)
+	assert.EqualValues(t, 0.0, *prop.Minimum) //nolint:testifylint
 	require.NotNil(t, prop.Maximum)
-	assert.Equal(t, 100.0, *prop.Maximum)
+	assert.InEpsilon(t, 100.0, *prop.Maximum, 0.001)
 }
 
 func TestParseProperty_IntegerType(t *testing.T) {
@@ -331,7 +331,7 @@ func TestParseProperty_CycleDetection(t *testing.T) {
 
 	// Should return early with just the ref name set, no type/properties
 	assert.Equal(t, "RecursiveSchema", prop.RefName)
-	assert.Equal(t, "", prop.Type)
+	assert.Empty(t, prop.Type)
 	assert.Empty(t, prop.Properties)
 }
 
@@ -353,7 +353,7 @@ func TestParseProperty_DepthLimit(t *testing.T) {
 	prop := ParseProperty("deep", schemaRef, 11, make(map[string]bool))
 
 	assert.Equal(t, "deep", prop.Name)
-	assert.Equal(t, "", prop.Type)
+	assert.Empty(t, prop.Type)
 	assert.Empty(t, prop.Properties)
 }
 
@@ -367,7 +367,7 @@ func TestParseProperty_NilSchemaValue(t *testing.T) {
 
 	assert.Equal(t, "field", prop.Name)
 	assert.Equal(t, "SomeSchema", prop.RefName)
-	assert.Equal(t, "", prop.Type)
+	assert.Empty(t, prop.Type)
 }
 
 func TestParseProperty_EmptySchema(t *testing.T) {
@@ -378,7 +378,7 @@ func TestParseProperty_EmptySchema(t *testing.T) {
 	prop := ParseProperty("empty", schemaRef, 0, make(map[string]bool))
 
 	assert.Equal(t, "empty", prop.Name)
-	assert.Equal(t, "", prop.Type)
+	assert.Empty(t, prop.Type)
 }
 
 func TestParseProperty_MultipleTypes(t *testing.T) {
@@ -474,6 +474,6 @@ func TestParseProperty_AllValidations(t *testing.T) {
 	assert.Equal(t, "a", prop.Default)
 	assert.True(t, prop.Nullable)
 	assert.True(t, prop.ReadOnly)
-	assert.Equal(t, 1.0, *prop.Minimum)
-	assert.Equal(t, 100.0, *prop.Maximum)
+	assert.InEpsilon(t, 1.0, *prop.Minimum, 0.001)
+	assert.InEpsilon(t, 100.0, *prop.Maximum, 0.001)
 }

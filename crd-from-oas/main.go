@@ -11,6 +11,7 @@ import (
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/run"
 )
 
+// EnvConfig holds the configuration for the generator, populated from environment variables.
 type EnvConfig struct {
 	InputFile  string `env:"INPUT_FILE" envDefault:"openapi.yaml"`
 	OutputDir  string `env:"OUTPUT_DIR" envDefault:"api/"`
@@ -18,7 +19,7 @@ type EnvConfig struct {
 }
 
 func main() {
-	logger := GetLogger()
+	logger := getLogger()
 
 	var cfg EnvConfig
 	if err := env.Parse(&cfg); err != nil {
@@ -47,12 +48,12 @@ func main() {
 	logger.Info("done")
 }
 
-func LogOptions() *slog.HandlerOptions {
+func logOptions() *slog.HandlerOptions {
 	return &slog.HandlerOptions{
 		Level: slog.LevelInfo,
 	}
 }
 
-func GetLogger() *slog.Logger {
-	return slog.New(slog.NewTextHandler(os.Stderr, LogOptions()))
+func getLogger() *slog.Logger {
+	return slog.New(slog.NewTextHandler(os.Stderr, logOptions()))
 }

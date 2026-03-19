@@ -10,7 +10,7 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 )
 
-// Dependency represents a parent resource dependency from a path parameter
+// Dependency represents a parent resource dependency from a path parameter.
 type Dependency struct {
 	// ParamName is the original path parameter name (e.g., "portalId")
 	ParamName string
@@ -22,7 +22,7 @@ type Dependency struct {
 	JSONName string
 }
 
-// Property represents a parsed OpenAPI property with its validations
+// Property represents a parsed OpenAPI property with its validations.
 type Property struct {
 	Name        string
 	Type        string
@@ -54,7 +54,7 @@ type Property struct {
 	OneOf []*Property // For oneOf types - each represents a variant
 }
 
-// Schema represents a parsed OpenAPI schema
+// Schema represents a parsed OpenAPI schema.
 type Schema struct {
 	Name         string
 	SourcePath   string // The OpenAPI path this schema was extracted from
@@ -80,13 +80,13 @@ type ParsedSpec struct {
 	RequestBodies map[string]*Schema
 }
 
-// Parser parses OpenAPI specs
+// Parser parses OpenAPI specs.
 type Parser struct {
 	doc     *openapi3.T
 	visited map[string]bool // Track visited schemas to prevent infinite recursion
 }
 
-// NewParser creates a new parser
+// NewParser creates a new parser.
 func NewParser(doc *openapi3.T) *Parser {
 	return &Parser{
 		doc:     doc,
@@ -178,7 +178,7 @@ func (p *Parser) parsePath(targetPath string) (string, *Schema, error) {
 	return "", nil, fmt.Errorf("path %s POST request body has no valid schema", targetPath)
 }
 
-// extractPathDependencies extracts parent resource dependencies from path parameters
+// extractPathDependencies extracts parent resource dependencies from path parameters.
 func (p *Parser) extractPathDependencies(path string) []*Dependency {
 	var deps []*Dependency
 
@@ -204,7 +204,7 @@ func (p *Parser) extractPathDependencies(path string) []*Dependency {
 }
 
 // getEntityNameFromParam converts a path parameter name to an entity name
-// e.g., "portalId" -> "Portal", "teamId" -> "Team"
+// e.g., "portalId" -> "Portal", "teamId" -> "Team".
 func getEntityNameFromParam(paramName string) string {
 	// Remove common suffixes
 	name := paramName
@@ -220,7 +220,7 @@ func getEntityNameFromParam(paramName string) string {
 	return name
 }
 
-// toSnakeCase converts a string to snake_case
+// toSnakeCase converts a string to snake_case.
 func toSnakeCase(s string) string {
 	var result strings.Builder
 	for i, r := range s {
@@ -232,7 +232,7 @@ func toSnakeCase(s string) string {
 	return strings.ToLower(result.String())
 }
 
-// toTitleCase converts the first character of a string to uppercase
+// toTitleCase converts the first character of a string to uppercase.
 func toTitleCase(s string) string {
 	if len(s) == 0 {
 		return s
@@ -240,7 +240,7 @@ func toTitleCase(s string) string {
 	return strings.ToUpper(s[:1]) + s[1:]
 }
 
-// deriveSchemaNameFromPath derives a schema name from the path and operation ID
+// deriveSchemaNameFromPath derives a schema name from the path and operation ID.
 func deriveSchemaNameFromPath(path string, operationID string) string {
 	// Try to use operation ID first (e.g., "create-portal-team" -> "CreatePortalTeam")
 	if operationID != "" {
@@ -267,7 +267,7 @@ func deriveSchemaNameFromPath(path string, operationID string) string {
 	return "Unknown"
 }
 
-// collectReferencedSchemas collects all schema names referenced by the schema's properties
+// collectReferencedSchemas collects all schema names referenced by the schema's properties.
 func (p *Parser) collectReferencedSchemas(schema *Schema, refs map[string]bool) {
 	for _, prop := range schema.Properties {
 		p.collectRefsFromProperty(prop, refs)
@@ -350,7 +350,7 @@ func (p *Parser) parseSchema(name string, schemaValue *openapi3.Schema) *Schema 
 	return schema
 }
 
-// getSchemaType extracts the type from a schema, handling OpenAPI 3.1 type arrays
+// getSchemaType extracts the type from a schema, handling OpenAPI 3.1 type arrays.
 func getSchemaType(schema *openapi3.Schema) string {
 	if schema.Type == nil {
 		return ""
@@ -368,7 +368,7 @@ func getSchemaType(schema *openapi3.Schema) string {
 	return types[0]
 }
 
-// extractRefName extracts the schema name from a $ref string
+// extractRefName extracts the schema name from a $ref string.
 func extractRefName(ref string) string {
 	// #/components/schemas/SomeSchema -> SomeSchema
 	parts := strings.Split(ref, "/")
@@ -378,7 +378,7 @@ func extractRefName(ref string) string {
 	return ref
 }
 
-// isReferenceProperty checks if a property is a reference to another entity
+// isReferenceProperty checks if a property is a reference to another entity.
 func isReferenceProperty(name string, schema *openapi3.Schema) bool {
 	// Check if the property name ends with _id and has uuid format
 	if strings.HasSuffix(name, "_id") && schema.Format == "uuid" {
@@ -388,7 +388,7 @@ func isReferenceProperty(name string, schema *openapi3.Schema) bool {
 }
 
 // GetEntityNameFromType extracts the entity name from a type name
-// e.g., "CreatePortal" -> "Portal", "PortalCreateTeam" -> "PortalTeam"
+// e.g., "CreatePortal" -> "Portal", "PortalCreateTeam" -> "PortalTeam".
 func GetEntityNameFromType(name string) string {
 	// Remove common prefixes
 	result := name
@@ -405,7 +405,7 @@ func GetEntityNameFromType(name string) string {
 }
 
 // GetRefEntityName extracts the entity name from a reference property name
-// e.g., "default_application_auth_strategy_id" -> "ApplicationAuthStrategy"
+// e.g., "default_application_auth_strategy_id" -> "ApplicationAuthStrategy".
 func GetRefEntityName(propName string) string {
 	// Remove _id suffix
 	name := strings.TrimSuffix(propName, "_id")
@@ -423,14 +423,4 @@ func GetRefEntityName(propName string) string {
 	result = strings.TrimPrefix(result, "Default")
 
 	return result
-}
-
-// ValidateRefName validates and normalizes a reference name
-var refNameRegex = regexp.MustCompile(`^[A-Z][a-zA-Z0-9]*$`)
-
-func ValidateRefName(name string) error {
-	if !refNameRegex.MatchString(name) {
-		return fmt.Errorf("invalid reference name: %s", name)
-	}
-	return nil
 }

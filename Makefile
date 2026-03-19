@@ -261,9 +261,13 @@ lint: lint.modules lint.golangci-lint
 lint.modules:
 	go mod tidy -diff
 
+# NOTE: we need to run golangci-lint separately in the root and in crd-from-oas
+# because it does not support running in repos that have multiple Go modules defined.
+# Ref: https://github.com/golangci/golangci-lint/issues/828
 .PHONY: lint.golangci-lint
 lint.golangci-lint: golangci-lint
 	$(GOLANGCI_LINT) run -v --config $(GOLANGCI_LINT_CONFIG) $(GOLANGCI_LINT_FLAGS)
+	cd crd-from-oas && $(GOLANGCI_LINT) run -v --config $(GOLANGCI_LINT_CONFIG) $(GOLANGCI_LINT_FLAGS)
 
 .PHONY: lint.charts
 lint.charts: download.kube-linter

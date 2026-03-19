@@ -34,7 +34,7 @@ func WrapLine(line string, maxWidth int) []string {
 	return result
 }
 
-// SplitSentences splits text on sentence boundaries (". " followed by more text)
+// SplitSentences splits text on sentence boundaries (". " followed by more text).
 func SplitSentences(text string) []string {
 	var sentences []string
 	remaining := text
@@ -65,7 +65,7 @@ func SplitSentences(text string) []string {
 	return sentences
 }
 
-// WrapLongLine wraps a single long line at word boundaries
+// WrapLongLine wraps a single long line at word boundaries.
 func WrapLongLine(line string, maxWidth int) []string {
 	var result []string
 	words := strings.Fields(line)

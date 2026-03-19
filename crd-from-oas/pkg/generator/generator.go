@@ -10,7 +10,7 @@ import (
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/parser"
 )
 
-// Config holds generator configuration
+// Config holds generator configuration.
 type Config struct {
 	// API group for CRDs.
 	APIGroup string
@@ -29,23 +29,23 @@ type Config struct {
 	CommonTypes *config.CommonTypesConfig
 }
 
-// Generator generates Go CRD types from parsed OpenAPI schemas
+// Generator generates Go CRD types from parsed OpenAPI schemas.
 type Generator struct {
 	config Config
 }
 
-// NewGenerator creates a new generator
+// NewGenerator creates a new generator.
 func NewGenerator(config Config) *Generator {
 	return &Generator{config: config}
 }
 
-// GeneratedFile represents a generated Go file
+// GeneratedFile represents a generated Go file.
 type GeneratedFile struct {
 	Name    string
 	Content string
 }
 
-// Generate generates Go CRD types from parsed schemas
+// Generate generates Go CRD types from parsed schemas.
 func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error) {
 	var files []GeneratedFile
 
@@ -132,7 +132,7 @@ func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error)
 	return files, nil
 }
 
-// collectReferencedSchemas collects all schema names referenced by properties
+// collectReferencedSchemas collects all schema names referenced by properties.
 func (g *Generator) collectReferencedSchemas(schema *parser.Schema, refs map[string]bool) {
 	for _, prop := range schema.Properties {
 		g.collectRefsFromProperty(prop, refs)
@@ -169,7 +169,7 @@ func (g *Generator) collectRefsFromProperty(prop *parser.Property, refs map[stri
 	}
 }
 
-// generateSchemaTypes generates Go type definitions for referenced schemas
+// generateSchemaTypes generates Go type definitions for referenced schemas.
 func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.ParsedSpec) string {
 	var buf strings.Builder
 	fmt.Fprintf(&buf, "package %s\n\n", g.config.APIVersion)
@@ -321,7 +321,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 	return result, nil
 }
 
-// generateUnionTypes generates Go union type structs for properties with oneOf
+// generateUnionTypes generates Go union type structs for properties with oneOf.
 func (g *Generator) generateUnionTypes(schema *parser.Schema) string {
 	var buf strings.Builder
 
@@ -343,7 +343,7 @@ func (g *Generator) generateUnionTypes(schema *parser.Schema) string {
 	return buf.String()
 }
 
-// generateRootUnionType generates a union type for a schema with root-level oneOf
+// generateRootUnionType generates a union type for a schema with root-level oneOf.
 func (g *Generator) generateRootUnionType(schema *parser.Schema) string {
 	// Create a synthetic property for the union type
 	// Add "Config" suffix to differentiate from the main CRD type
@@ -355,7 +355,7 @@ func (g *Generator) generateRootUnionType(schema *parser.Schema) string {
 	return g.generateUnionType(prop)
 }
 
-// generateUnionType generates a single union type struct
+// generateUnionType generates a single union type struct.
 func (g *Generator) generateUnionType(prop *parser.Property) string {
 	var buf strings.Builder
 
@@ -426,7 +426,7 @@ func (g *Generator) generateUnionType(prop *parser.Property) string {
 // extractVariantNames extracts clean field names from a list of variant names
 // by finding the common prefix and suffix, then extracting the unique middle part.
 // e.g., ["ConfigureOIDCIdentityProviderConfig", "SAMLIdentityProviderConfig"] -> ["OIDC", "SAML"]
-// e.g., ["CreateDcrProviderRequestAuth0", "CreateDcrProviderRequestAzureAd"] -> ["Auth0", "AzureAd"]
+// e.g., ["CreateDcrProviderRequestAuth0", "CreateDcrProviderRequestAzureAd"] -> ["Auth0", "AzureAd"].
 func extractVariantNames(names []string) []string {
 	if len(names) == 0 {
 		return nil
@@ -471,7 +471,7 @@ func extractVariantNames(names []string) []string {
 	return result
 }
 
-// commonPrefix finds the longest common prefix of two strings
+// commonPrefix finds the longest common prefix of two strings.
 func commonPrefix(a, b string) string {
 	minLen := min(len(b), len(a))
 	i := 0
@@ -481,7 +481,7 @@ func commonPrefix(a, b string) string {
 	return a[:i]
 }
 
-// commonSuffix finds the longest common suffix of two strings
+// commonSuffix finds the longest common suffix of two strings.
 func commonSuffix(a, b string) string {
 	minLen := min(len(b), len(a))
 	i := 0
@@ -491,7 +491,7 @@ func commonSuffix(a, b string) string {
 	return a[len(a)-i:]
 }
 
-// cleanSingleVariantName cleans a single variant name by removing common prefixes/suffixes
+// cleanSingleVariantName cleans a single variant name by removing common prefixes/suffixes.
 func cleanSingleVariantName(name string) string {
 	result := name
 	for _, suffix := range []string{"Config", "Configuration", "Provider", "Request", "IdentityProvider"} {
@@ -503,7 +503,7 @@ func cleanSingleVariantName(name string) string {
 	return result
 }
 
-// fixTrailingEmptyLines removes empty lines that appear right before a closing brace
+// fixTrailingEmptyLines removes empty lines that appear right before a closing brace.
 func fixTrailingEmptyLines(s string) string {
 	lines := strings.Split(s, "\n")
 	var result []string
@@ -799,7 +799,7 @@ func testValueForType(goType string) string {
 	return ""
 }
 
-// goType converts OpenAPI type to Go type
+// goType converts OpenAPI type to Go type.
 func (g *Generator) goType(prop *parser.Property) string {
 	// Handle references to other entities - convert to ObjectRef
 	if prop.IsReference {
@@ -880,7 +880,7 @@ func (g *Generator) goType(prop *parser.Property) string {
 
 // formatComment formats a description string for use as a Go comment
 // It handles multiline descriptions by prefixing each line with //
-// and wraps lines longer than 80 characters
+// and wraps lines longer than 80 characters.
 func formatComment(desc string) string {
 	if desc == "" {
 		return "\t//"
@@ -903,7 +903,7 @@ func formatComment(desc string) string {
 }
 
 // formatSchemaComment formats a description for a top-level schema type
-// and wraps lines longer than 80 characters
+// and wraps lines longer than 80 characters.
 func formatSchemaComment(name, desc string) string {
 	if desc == "" {
 		return fmt.Sprintf("// %s is a type alias.\n", name)
@@ -949,7 +949,7 @@ func formatSchemaComment(name, desc string) string {
 	return strings.Join(result, "\n") + "\n"
 }
 
-// goFieldName converts property name to Go field name (PascalCase)
+// goFieldName converts property name to Go field name (PascalCase).
 func goFieldName(name string) string {
 	parts := strings.Split(name, "_")
 	for i, part := range parts {
@@ -986,7 +986,7 @@ func isCommonAcronym(s string) bool {
 	return acronyms[s]
 }
 
-// jsonTag generates the json struct tag
+// jsonTag generates the json struct tag.
 func jsonTag(prop *parser.Property) string {
 	tag := prop.Name
 	// K8s API best practice: all fields should have omitempty
@@ -994,17 +994,17 @@ func jsonTag(prop *parser.Property) string {
 	return tag
 }
 
-// isRefProperty checks if a property is a reference
+// isRefProperty checks if a property is a reference.
 func isRefProperty(prop *parser.Property) bool {
 	return prop.IsReference
 }
 
-// hasRootOneOf returns true if the schema has root-level oneOf (i.e., the schema itself is a union type)
+// hasRootOneOf returns true if the schema has root-level oneOf (i.e., the schema itself is a union type).
 func hasRootOneOf(schema *parser.Schema) bool {
 	return len(schema.OneOf) > 0
 }
 
-// skipProperty returns true if the property should be skipped in CRD generation
+// skipProperty returns true if the property should be skipped in CRD generation.
 func skipProperty(prop *parser.Property) bool {
 	// Skip read-only properties (they're typically server-managed like id, created_at, updated_at).
 	if prop.ReadOnly {
@@ -1021,7 +1021,7 @@ func skipProperty(prop *parser.Property) bool {
 	return false
 }
 
-// schemaUsesJSON checks if any property in the schema will be generated as apiextensionsv1.JSON
+// schemaUsesJSON checks if any property in the schema will be generated as apiextensionsv1.JSON.
 func schemaUsesJSON(g *Generator, schema *parser.Schema) bool {
 	for _, prop := range schema.Properties {
 		if skipProperty(prop) {
