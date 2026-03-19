@@ -304,15 +304,14 @@ func logOperatorPodLogs(t *testing.T, ctx context.Context, k8sClient *kubernetes
 func waitForOperatorWebhookEventually(
 	t *testing.T, ctx context.Context, installationNamespace, installationName string, k8sClient *kubernetes.Clientset,
 ) func() bool {
+	t.Helper()
 	webhookServiceName := fmt.Sprintf("%s-kong-operator-webhook", installationName)
 	return func() bool {
 		if err := networking.WaitForConnectionOnServicePort(
 			ctx, k8sClient, installationNamespace, webhookServiceName, 443, 10*time.Second,
 		); err != nil {
-			t.Logf("failed to wait for operator webhook: %v", err)
 			return false
 		}
-
 		t.Log("operator webhook ready")
 		return true
 	}
