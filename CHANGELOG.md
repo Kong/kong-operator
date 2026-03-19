@@ -121,6 +121,9 @@
   [#3576](https://github.com/Kong/kong-operator/pull/3576)
 - Do not try to list `Gateway`s for namespaces that are not being watched by controller
   [#3625](https://github.com/Kong/kong-operator/pull/3625)
+- Fix the on-prem translator to set `protocols` in translated Kong routes to
+  `http,https`.
+  [#3587](https://github.com/Kong/kong-operator/pull/3587)
 
 ## [v2.1.2]
 
