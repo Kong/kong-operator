@@ -525,8 +525,11 @@ func (c *KongClient) Update(ctx context.Context) error {
 
 	kongState := parsingResult.KongState
 	if newKongState, skip := c.shouldSkipInitialEmptyConfigPush(parsingResult.KongState); skip {
+		// Use last valid state if we should skip the initial empty config.
 		kongState = newKongState
 	} else {
+		// Otherwise, the translated Kong state is used so we should record
+		// the statistics of the translation.
 		if failuresCount := len(parsingResult.TranslationFailures); failuresCount > 0 {
 			c.metricsRecorder.RecordTranslationFailure(translationDuration)
 			c.metricsRecorder.RecordTranslationBrokenResources(failuresCount)
