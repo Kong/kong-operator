@@ -1006,15 +1006,15 @@ func hasRootOneOf(schema *parser.Schema) bool {
 
 // skipProperty returns true if the property should be skipped in CRD generation
 func skipProperty(prop *parser.Property) bool {
-	// Skip read-only properties (they're typically server-managed like id, created_at, updated_at)
+	// Skip read-only properties (they're typically server-managed like id, created_at, updated_at).
 	if prop.ReadOnly {
 		return true
 	}
-	// Skip id field as it's managed by Kubernetes
+	// Skip id field as it's managed by Kubernetes.
 	if prop.Name == "id" {
 		return true
 	}
-	// Skip timestamp fields
+	// Skip timestamp fields.
 	if prop.Name == "created_at" || prop.Name == "updated_at" {
 		return true
 	}

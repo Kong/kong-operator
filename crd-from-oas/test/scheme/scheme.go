@@ -5,7 +5,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 
-	// konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	xkonnectv1alpha1 "github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1"
 )
 
@@ -15,7 +14,6 @@ func Get() *runtime.Scheme {
 
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
-	// utilruntime.Must(konnectv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(xkonnectv1alpha1.AddToScheme(scheme))
 
 	return scheme

@@ -43,7 +43,7 @@ func ParseProperty(name string, schemaRef *openapi3.SchemaRef, depth int, visite
 	prop.Nullable = schemaValue.Nullable
 	prop.ReadOnly = schemaValue.ReadOnly
 
-	// Check if this is a reference to another entity (ends with _id and has uuid format)
+	// Check if this is a reference to another entity (ends with _id and has uuid format).
 	prop.IsReference = isReferenceProperty(name, schemaValue)
 
 	// Validations
@@ -71,12 +71,12 @@ func ParseProperty(name string, schemaRef *openapi3.SchemaRef, depth int, visite
 		prop.Default = schemaValue.Default
 	}
 
-	// Handle array types
+	// Handle array types.
 	if prop.Type == "array" && schemaValue.Items != nil {
 		prop.Items = ParseProperty("items", schemaValue.Items, depth+1, visited)
 	}
 
-	// Handle nested object types
+	// Handle nested object types.
 	if prop.Type == "object" && len(schemaValue.Properties) > 0 {
 		for nestedName, nestedRef := range schemaValue.Properties {
 			nestedProp := ParseProperty(nestedName, nestedRef, depth+1, visited)
@@ -93,10 +93,10 @@ func ParseProperty(name string, schemaRef *openapi3.SchemaRef, depth int, visite
 		prop.AdditionalProperties = ParseProperty("value", schemaValue.AdditionalProperties.Schema, depth+1, visited)
 	}
 
-	// Handle oneOf (union types)
+	// Handle oneOf (union types).
 	if len(schemaValue.OneOf) > 0 {
 		for _, oneOfRef := range schemaValue.OneOf {
-			// Extract the name from the $ref if available
+			// Extract the name from the $ref if available.
 			variantName := "Variant"
 			if oneOfRef.Ref != "" {
 				variantName = extractRefName(oneOfRef.Ref)

@@ -17,7 +17,6 @@ func Setup(
 	return envtest.Setup(t, t.Context(), scheme,
 		envtest.WithInstallGatewayCRDs(false),
 		envtest.WithInstallKongCRDs(false),
-		// TODO: make this not relative
-		envtest.WithAdditionalCRDPaths([]string{"../../../config/crd/"}),
+		envtest.WithAdditionalCRDPaths([]string{kcfg.KongOperatorCRDsPath()}),
 	)
 }

@@ -32,7 +32,6 @@ func (g TestCasesGroup[T]) Run(t *testing.T) {
 	cfg, err := config.GetConfig()
 	require.NoError(t, err)
 
-	// TODO
 	scheme := scheme.Get()
 
 	g.RunWithConfig(t, cfg, scheme)
