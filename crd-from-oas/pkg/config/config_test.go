@@ -275,6 +275,58 @@ func TestParseAPIGroupVersion(t *testing.T) {
 	}
 }
 
+func TestLoadProjectConfig_NameOverride(t *testing.T) {
+	content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    types:
+      - path: /v1/event-gateways
+        name: KonnectEventControlPlane
+      - path: /v3/portals
+`
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+	cfg, err := LoadProjectConfig(path)
+	require.NoError(t, err)
+
+	konnect := cfg.APIGroupVersions["konnect.konghq.com/v1alpha1"]
+	require.NotNil(t, konnect)
+	assert.Equal(t, "KonnectEventControlPlane", konnect.Types[0].Name)
+	assert.Empty(t, konnect.Types[1].Name)
+}
+
+func TestAPIGroupVersionConfig_NameOverrides(t *testing.T) {
+	t.Run("with overrides", func(t *testing.T) {
+		agv := &APIGroupVersionConfig{
+			Types: []*TypeConfig{
+				{Path: "/v1/event-gateways", Name: "KonnectEventControlPlane"},
+				{Path: "/v3/portals"},
+			},
+		}
+		overrides := agv.NameOverrides()
+		assert.Equal(t, map[string]string{
+			"/v1/event-gateways": "KonnectEventControlPlane",
+		}, overrides)
+	})
+
+	t.Run("no overrides", func(t *testing.T) {
+		agv := &APIGroupVersionConfig{
+			Types: []*TypeConfig{
+				{Path: "/v3/portals"},
+			},
+		}
+		overrides := agv.NameOverrides()
+		assert.Empty(t, overrides)
+	})
+
+	t.Run("nil types", func(t *testing.T) {
+		agv := &APIGroupVersionConfig{}
+		overrides := agv.NameOverrides()
+		assert.Empty(t, overrides)
+	})
+}
+
 func TestAPIGroupVersionConfig_GetPaths(t *testing.T) {
 	agv := &APIGroupVersionConfig{
 		Types: []*TypeConfig{

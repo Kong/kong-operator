@@ -1,4 +1,10 @@
-## TODO
+## crd-from-oas
+
+This is a tool to generate Kubernetes CRD definitions and conversion functions
+from OpenAPI Specification (OAS) files.
+It is designed to help create CRDs that are consistent with API specifications,
+reducing the manual effort required to maintain CRD definitions and ensuring that
+they stay up-to-date with the API changes.
 
 ### TODOs
 

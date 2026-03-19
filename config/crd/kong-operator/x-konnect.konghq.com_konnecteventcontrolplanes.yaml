@@ -5,14 +5,14 @@ metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: kong-operator
     kubernetes-configuration.konghq.com/version: v2.1.0
-  name: eventgateways.x-konnect.konghq.com
+  name: konnecteventcontrolplanes.x-konnect.konghq.com
 spec:
   group: x-konnect.konghq.com
   names:
-    kind: EventGateway
-    listKind: EventGatewayList
-    plural: eventgateways
-    singular: eventgateway
+    kind: KonnectEventControlPlane
+    listKind: KonnectEventControlPlaneList
+    plural: konnecteventcontrolplanes
+    singular: konnecteventcontrolplane
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
@@ -34,7 +34,8 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: EventGateway is the Schema for the eventgateways API.
+        description: KonnectEventControlPlane is the Schema for the konnecteventcontrolplanes
+          API.
         properties:
           apiVersion:
             description: |-
@@ -54,7 +55,8 @@ spec:
           metadata:
             type: object
           spec:
-            description: EventGatewaySpec defines the desired state of EventGateway.
+            description: KonnectEventControlPlaneSpec defines the desired state of
+              KonnectEventControlPlane.
             properties:
               apiSpec:
                 description: APISpec defines the desired state of the resource's API
@@ -94,7 +96,8 @@ spec:
                 type: object
             type: object
           status:
-            description: EventGatewayStatus defines the observed state of EventGateway.
+            description: KonnectEventControlPlaneStatus defines the observed state
+              of KonnectEventControlPlane.
             properties:
               conditions:
                 description: Conditions represent the current state of the resource.
