@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Bootstrapping CA certificate (that is used for signing certificates for
+  ControlPlane - DataPlane communication) can be done by cert-manager,
+  see the options `global.certificateAuthority.options.certManager.enabled`.
+  [#3655](https://github.com/Kong/kong-operator/pull/3655)
+
 ## 1.2.0
 
 ### Fixes

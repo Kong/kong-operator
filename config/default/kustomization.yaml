@@ -28,6 +28,11 @@ replacements:
       kind: Certificate
       group: cert-manager.io
       version: v1
+    reject:
+    - kind: Certificate
+      group: cert-manager.io
+      version: v1
+      name: kong-operator-ca
     fieldPaths:
     - spec.dnsNames.0
     - spec.dnsNames.1
@@ -51,6 +56,11 @@ replacements:
       kind: Certificate
       group: cert-manager.io
       version: v1
+    reject:
+    - kind: Certificate
+      group: cert-manager.io
+      version: v1
+      name: kong-operator-ca
     fieldPaths:
     - spec.dnsNames.0
     - spec.dnsNames.1
