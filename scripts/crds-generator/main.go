@@ -174,7 +174,7 @@ resources:
 			return fmt.Sprintf("  - %s", filepath.Base(f))
 		}), "\n")
 		kustomizeContent := fmt.Sprintf(kustomizeFileTemplate, resources)
-		err = os.WriteFile(kustomizeFile, []byte(kustomizeContent), 0o600)
+		err = os.WriteFile(kustomizeFile, []byte(kustomizeContent+"\n"), 0o600)
 		if err != nil {
 			log.Fatalf("failed to write kustomization file: %s", err)
 		}
