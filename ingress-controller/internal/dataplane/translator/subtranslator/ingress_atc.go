@@ -42,6 +42,7 @@ func (m *ingressTranslationMeta) translateIntoKongExpressionRoute() *kongstate.R
 		Ingress: util.FromK8sObject(m.parentIngress),
 		Route: kong.Route{
 			Name:              new(routeName),
+			Protocols:         kong.StringSlice("http", "https"),
 			StripPath:         new(false),
 			PreserveHost:      new(true),
 			RequestBuffering:  new(true),

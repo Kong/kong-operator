@@ -549,3 +549,341 @@ func TestReconciler_listGatewaysForKongReferenceGrant(t *testing.T) {
 		})
 	}
 }
+func TestReconciler_listManagedGatewaysInNamespace(t *testing.T) {
+	commonGatewayClass := &gatewayv1.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-gatewayclass",
+		},
+		Spec: gatewayv1.GatewayClassSpec{
+			ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
+		},
+		Status: gatewayv1.GatewayClassStatus{
+			Conditions: []metav1.Condition{
+				{
+					Type:               string(gatewayv1.GatewayClassConditionStatusAccepted),
+					Status:             metav1.ConditionTrue,
+					Reason:             string(gatewayv1.GatewayClassReasonAccepted),
+					LastTransitionTime: metav1.Now(),
+				},
+			},
+		},
+	}
+
+	testCases := []struct {
+		name             string
+		obj              client.Object
+		watchNamespaces  []string
+		gatewayClass     *gatewayv1.GatewayClass
+		gateways         []*gwtypes.Gateway
+		expectedRequests []reconcile.Request
+	}{
+		{
+			name: "namespace with managed gateways returns requests",
+			obj: &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "default",
+				},
+			},
+			watchNamespaces: []string{},
+			gatewayClass:    commonGatewayClass,
+			gateways: []*gwtypes.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gw-1",
+						Namespace: "default",
+						UID:       types.UID(uuid.NewString()),
+					},
+					Spec: gatewayv1.GatewaySpec{
+						GatewayClassName: "test-gatewayclass",
+						Listeners: []gatewayv1.Listener{
+							{
+								Name:     "http",
+								Port:     80,
+								Protocol: gatewayv1.HTTPProtocolType,
+							},
+						},
+					},
+				},
+			},
+			expectedRequests: []reconcile.Request{
+				{NamespacedName: types.NamespacedName{Namespace: "default", Name: "gw-1"}},
+			},
+		},
+		{
+			name: "multiple gateways in namespace returns multiple requests",
+			obj: &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "default",
+				},
+			},
+			watchNamespaces: []string{},
+			gatewayClass:    commonGatewayClass,
+			gateways: []*gwtypes.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gw-1",
+						Namespace: "default",
+						UID:       types.UID(uuid.NewString()),
+					},
+					Spec: gatewayv1.GatewaySpec{
+						GatewayClassName: "test-gatewayclass",
+						Listeners: []gatewayv1.Listener{
+							{
+								Name:     "http",
+								Port:     80,
+								Protocol: gatewayv1.HTTPProtocolType,
+							},
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gw-2",
+						Namespace: "default",
+						UID:       types.UID(uuid.NewString()),
+					},
+					Spec: gatewayv1.GatewaySpec{
+						GatewayClassName: "test-gatewayclass",
+						Listeners: []gatewayv1.Listener{
+							{
+								Name:     "http",
+								Port:     80,
+								Protocol: gatewayv1.HTTPProtocolType,
+							},
+						},
+					},
+				},
+			},
+			expectedRequests: []reconcile.Request{
+				{NamespacedName: types.NamespacedName{Namespace: "default", Name: "gw-1"}},
+				{NamespacedName: types.NamespacedName{Namespace: "default", Name: "gw-2"}},
+			},
+		},
+		{
+			name: "namespace not in watch list returns empty",
+			obj: &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "unwatched-ns",
+				},
+			},
+			watchNamespaces: []string{"watched-ns"},
+			gatewayClass:    commonGatewayClass,
+			gateways: []*gwtypes.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gw-1",
+						Namespace: "unwatched-ns",
+						UID:       types.UID(uuid.NewString()),
+					},
+					Spec: gatewayv1.GatewaySpec{
+						GatewayClassName: gatewayv1.ObjectName(commonGatewayClass.Name),
+						Listeners: []gatewayv1.Listener{
+							{
+								Name:     "http",
+								Port:     80,
+								Protocol: gatewayv1.HTTPProtocolType,
+							},
+						},
+					},
+				},
+			},
+			expectedRequests: nil,
+		},
+		{
+			name: "gateway with unsupported gateway class is filtered out",
+			obj: &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "default",
+				},
+			},
+			watchNamespaces: []string{},
+			gatewayClass: &gatewayv1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "unsupported-gatewayclass",
+				},
+				Spec: gatewayv1.GatewayClassSpec{
+					ControllerName: gatewayv1.GatewayController("other-controller"),
+				},
+				Status: gatewayv1.GatewayClassStatus{
+					Conditions: []metav1.Condition{
+						{
+							Type:               string(gatewayv1.GatewayClassConditionStatusAccepted),
+							Status:             metav1.ConditionTrue,
+							Reason:             string(gatewayv1.GatewayClassReasonAccepted),
+							LastTransitionTime: metav1.Now(),
+						},
+					},
+				},
+			},
+			gateways: []*gwtypes.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gw-1",
+						Namespace: "default",
+						UID:       types.UID(uuid.NewString()),
+					},
+					Spec: gatewayv1.GatewaySpec{
+						GatewayClassName: "unsupported-gatewayclass",
+						Listeners: []gatewayv1.Listener{
+							{
+								Name:     "http",
+								Port:     80,
+								Protocol: gatewayv1.HTTPProtocolType,
+							},
+						},
+					},
+				},
+			},
+			expectedRequests: nil,
+		},
+		{
+			name: "gateway with not accepted gateway class is filtered out",
+			obj: &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "default",
+				},
+			},
+			watchNamespaces: []string{},
+			gatewayClass: &gatewayv1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "not-accepted-gatewayclass",
+				},
+				Spec: gatewayv1.GatewayClassSpec{
+					ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
+				},
+				Status: gatewayv1.GatewayClassStatus{
+					Conditions: []metav1.Condition{
+						{
+							Type:               string(gatewayv1.GatewayClassConditionStatusAccepted),
+							Status:             metav1.ConditionFalse,
+							Reason:             "InvalidParameters",
+							LastTransitionTime: metav1.Now(),
+						},
+					},
+				},
+			},
+			gateways: []*gwtypes.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gw-1",
+						Namespace: "default",
+						UID:       types.UID(uuid.NewString()),
+					},
+					Spec: gatewayv1.GatewaySpec{
+						GatewayClassName: "not-accepted-gatewayclass",
+						Listeners: []gatewayv1.Listener{
+							{
+								Name:     "http",
+								Port:     80,
+								Protocol: gatewayv1.HTTPProtocolType,
+							},
+						},
+					},
+				},
+			},
+			expectedRequests: nil,
+		},
+		{
+			name: "wrong object type returns empty",
+			obj: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "some-secret",
+					Namespace: "default",
+				},
+			},
+			watchNamespaces:  []string{},
+			gatewayClass:     nil,
+			gateways:         nil,
+			expectedRequests: nil,
+		},
+		{
+			name: "empty namespace with no gateways returns empty",
+			obj: &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "empty-ns",
+				},
+			},
+			watchNamespaces:  []string{},
+			gatewayClass:     nil,
+			gateways:         nil,
+			expectedRequests: nil,
+		},
+		{
+			name: "mixed gateways with some having unsupported classes returns only supported",
+			obj: &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "default",
+				},
+			},
+			watchNamespaces: []string{},
+			gatewayClass:    commonGatewayClass,
+			gateways: []*gwtypes.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gw-1",
+						Namespace: "default",
+						UID:       types.UID(uuid.NewString()),
+					},
+					Spec: gatewayv1.GatewaySpec{
+						GatewayClassName: gatewayv1.ObjectName(commonGatewayClass.Name),
+						Listeners: []gatewayv1.Listener{
+							{
+								Name:     "http",
+								Port:     80,
+								Protocol: gatewayv1.HTTPProtocolType,
+							},
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gw-2",
+						Namespace: "default",
+						UID:       types.UID(uuid.NewString()),
+					},
+					Spec: gatewayv1.GatewaySpec{
+						GatewayClassName: "unsupported-gatewayclass",
+						Listeners: []gatewayv1.Listener{
+							{
+								Name:     "http",
+								Port:     80,
+								Protocol: gatewayv1.HTTPProtocolType,
+							},
+						},
+					},
+				},
+			},
+			expectedRequests: []reconcile.Request{
+				{NamespacedName: types.NamespacedName{Namespace: "default", Name: "gw-1"}},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := t.Context()
+
+			clientBuilder := fakectrlruntimeclient.NewClientBuilder().
+				WithScheme(scheme.Get())
+
+			if tc.gatewayClass != nil {
+				clientBuilder.WithObjects(tc.gatewayClass)
+			}
+
+			for _, gw := range tc.gateways {
+				clientBuilder.WithObjects(gw)
+			}
+
+			fakeClient := clientBuilder.Build()
+
+			reconciler := &Reconciler{
+				Client:          fakeClient,
+				WatchNamespaces: tc.watchNamespaces,
+			}
+
+			requests := reconciler.listManagedGatewaysInNamespace(ctx, tc.obj)
+
+			require.ElementsMatch(t, tc.expectedRequests, requests)
+		})
+	}
+}
