@@ -171,13 +171,13 @@ func createTestService(name, namespace string, serviceType corev1.ServiceType, c
 // createTestvalidBackendRef creates a test validBackendRef for testing.
 //
 //nolint:unparam // False positive: namespace parameter receives multiple different values (default, frontend, backend, test-namespace)
-func createTestvalidBackendRef(serviceName, namespace string, weight *int32, readyEndpoints []string) validBackendRef {
+func createTestvalidBackendRef(serviceName, namespace string, weight *int32, readyEndpoints []string) validBackendRef[gwtypes.HTTPBackendRef] {
 	serviceKind := gwtypes.Kind("Service")
 	actualWeight := int32(100) // Default weight.
 	if weight != nil {
 		actualWeight = *weight
 	}
-	return validBackendRef{
+	return validBackendRef[gwtypes.HTTPBackendRef]{
 		backendRef: &gwtypes.HTTPBackendRef{
 			BackendRef: gwtypes.BackendRef{
 				BackendObjectReference: gwtypes.BackendObjectReference{
@@ -205,9 +205,9 @@ func createTestvalidBackendRef(serviceName, namespace string, weight *int32, rea
 
 // TestFindBackendRefPortInService tests the findBackendRefPortInService function.
 func TestFindBackendRefPortInService(t *testing.T) {
-	// Helper function to create test HTTPBackendRef.
-	createTestHTTPBackendRef := func(port *int32) *gwtypes.HTTPBackendRef {
-		ref := &gwtypes.HTTPBackendRef{}
+	// Helper function to create test BackendRef.
+	createTestBackendRef := func(port *int32) *gwtypes.BackendRef {
+		ref := &gwtypes.BackendRef{}
 		if port != nil {
 			ref.Port = port
 		}
@@ -224,14 +224,14 @@ func TestFindBackendRefPortInService(t *testing.T) {
 
 	tests := []struct {
 		name          string
-		backendRef    *gwtypes.HTTPBackendRef
+		backendRef    *gwtypes.BackendRef
 		service       *corev1.Service
 		expectedPort  *corev1.ServicePort
 		expectedError string
 	}{
 		{
 			name:       "Valid port found",
-			backendRef: createTestHTTPBackendRef(ptr.To[int32](80)),
+			backendRef: createTestBackendRef(ptr.To[int32](80)),
 			service: createSvc("test-service", "default", []corev1.ServicePort{
 				{
 					Name:     "http",
@@ -247,13 +247,13 @@ func TestFindBackendRefPortInService(t *testing.T) {
 		},
 		{
 			name:          "Port not specified in BackendRef",
-			backendRef:    createTestHTTPBackendRef(nil),
+			backendRef:    createTestBackendRef(nil),
 			service:       createSvc("test-service", "default", []corev1.ServicePort{}),
 			expectedError: "port not specified in BackendRef",
 		},
 		{
 			name:       "Port not found in service",
-			backendRef: createTestHTTPBackendRef(ptr.To[int32](443)),
+			backendRef: createTestBackendRef(ptr.To[int32](443)),
 			service: createSvc("test-service", "default", []corev1.ServicePort{
 				{
 					Name:     "http",
@@ -265,7 +265,7 @@ func TestFindBackendRefPortInService(t *testing.T) {
 		},
 		{
 			name:       "Multiple ports, correct one found",
-			backendRef: createTestHTTPBackendRef(ptr.To[int32](443)),
+			backendRef: createTestBackendRef(ptr.To[int32](443)),
 			service: createSvc("web-service", "prod", []corev1.ServicePort{
 				{
 					Name:     "http",
@@ -291,13 +291,13 @@ func TestFindBackendRefPortInService(t *testing.T) {
 		},
 		{
 			name:          "Service with no ports",
-			backendRef:    createTestHTTPBackendRef(ptr.To[int32](80)),
+			backendRef:    createTestBackendRef(ptr.To[int32](80)),
 			service:       createSvc("empty-service", "default", []corev1.ServicePort{}),
 			expectedError: "port 80 not found in service default/empty-service",
 		},
 		{
 			name:       "Different port protocols should not matter for matching",
-			backendRef: createTestHTTPBackendRef(ptr.To[int32](53)),
+			backendRef: createTestBackendRef(ptr.To[int32](53)),
 			service: createSvc("dns-service", "kube-system", []corev1.ServicePort{
 				{
 					Name:     "dns-tcp",
@@ -1428,7 +1428,7 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 		expectError            bool
 		expectedErrorString    string
 		expectedValidCount     int
-		validateResults        func(t *testing.T, results []validBackendRef)
+		validateResults        func(t *testing.T, results []validBackendRef[gatewayv1.HTTPBackendRef])
 	}{
 		{
 			name:      "Valid backend ref with regular service",
@@ -1461,7 +1461,7 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 				},
 			},
 			expectedValidCount: 1,
-			validateResults: func(t *testing.T, results []validBackendRef) {
+			validateResults: func(t *testing.T, results []validBackendRef[gatewayv1.HTTPBackendRef]) {
 				require.Len(t, results, 1)
 				assert.Equal(t, "test-service", string(results[0].backendRef.Name))
 				assert.Equal(t, []string{"10.0.1.1"}, results[0].readyEndpoints)
@@ -1481,7 +1481,7 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 				}),
 			},
 			expectedValidCount: 1,
-			validateResults: func(t *testing.T, results []validBackendRef) {
+			validateResults: func(t *testing.T, results []validBackendRef[gatewayv1.HTTPBackendRef]) {
 				require.Len(t, results, 1)
 				assert.Equal(t, []string{"test-service.default.svc.cluster.local"}, results[0].readyEndpoints)
 				assert.Equal(t, 80, results[0].targetPort) // Should use service port for FQDN mode.
@@ -1500,7 +1500,7 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 				}),
 			},
 			expectedValidCount: 1,
-			validateResults: func(t *testing.T, results []validBackendRef) {
+			validateResults: func(t *testing.T, results []validBackendRef[gatewayv1.HTTPBackendRef]) {
 				require.Len(t, results, 1)
 				assert.Equal(t, []string{"external.example.com"}, results[0].readyEndpoints)
 				assert.Equal(t, 443, results[0].targetPort) // Should use service port for ExternalName.
@@ -1537,7 +1537,7 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 				},
 			},
 			expectedValidCount: 1,
-			validateResults: func(t *testing.T, results []validBackendRef) {
+			validateResults: func(t *testing.T, results []validBackendRef[gatewayv1.HTTPBackendRef]) {
 				require.Len(t, results, 1)
 				assert.Equal(t, []string{"10.0.1.1", "10.0.1.2"}, results[0].readyEndpoints)
 				assert.Equal(t, 8080, results[0].targetPort) // Should use target port for headless service.
@@ -1646,7 +1646,7 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 				},
 			},
 			expectedValidCount: 1, // Only the first backend ref should be valid.
-			validateResults: func(t *testing.T, results []validBackendRef) {
+			validateResults: func(t *testing.T, results []validBackendRef[gatewayv1.HTTPBackendRef]) {
 				require.Len(t, results, 1)
 				assert.Equal(t, "valid-service", string(results[0].backendRef.Name))
 			},
@@ -1952,9 +1952,9 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 // TestRecalculateWeightsAcrossBackendRefs tests the recalculateWeightsAcrossBackendRefs function.
 func TestRecalculateWeightsAcrossBackendRefs(t *testing.T) {
 	// Helper function to create test validBackendRef.
-	createTestValidBackendRef := func(serviceName, namespace string, weight *int32, readyEndpoints []string) validBackendRef {
+	createTestValidBackendRef := func(serviceName, namespace string, weight *int32, readyEndpoints []string) validBackendRef[gwtypes.HTTPBackendRef] {
 		serviceKind := gwtypes.Kind("Service")
-		return validBackendRef{
+		return validBackendRef[gwtypes.HTTPBackendRef]{
 			backendRef: &gwtypes.HTTPBackendRef{
 				BackendRef: gwtypes.BackendRef{
 					BackendObjectReference: gwtypes.BackendObjectReference{
@@ -1982,22 +1982,22 @@ func TestRecalculateWeightsAcrossBackendRefs(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		input          []validBackendRef
-		validateResult func(t *testing.T, result []validBackendRef)
+		input          []validBackendRef[gatewayv1.HTTPBackendRef]
+		validateResult func(t *testing.T, result []validBackendRef[gatewayv1.HTTPBackendRef])
 	}{
 		{
 			name:  "Empty input should return empty output",
-			input: []validBackendRef{},
-			validateResult: func(t *testing.T, result []validBackendRef) {
+			input: []validBackendRef[gatewayv1.HTTPBackendRef]{},
+			validateResult: func(t *testing.T, result []validBackendRef[gatewayv1.HTTPBackendRef]) {
 				assert.Empty(t, result)
 			},
 		},
 		{
 			name: "Single backend ref should get calculated weight",
-			input: []validBackendRef{
+			input: []validBackendRef[gatewayv1.HTTPBackendRef]{
 				createTestValidBackendRef("service1", "default", ptr.To[int32](100), []string{"10.0.1.1", "10.0.1.2"}),
 			},
-			validateResult: func(t *testing.T, result []validBackendRef) {
+			validateResult: func(t *testing.T, result []validBackendRef[gatewayv1.HTTPBackendRef]) {
 				require.Len(t, result, 1)
 				// With single backend, weight should be simplified ratio.
 				// 100 weight / 2 endpoints = 50/1 = 50, but simplified to 1.
@@ -2006,11 +2006,11 @@ func TestRecalculateWeightsAcrossBackendRefs(t *testing.T) {
 		},
 		{
 			name: "Multiple backend refs with equal weights",
-			input: []validBackendRef{
+			input: []validBackendRef[gatewayv1.HTTPBackendRef]{
 				createTestValidBackendRef("service1", "default", ptr.To[int32](50), []string{"10.0.1.1"}),
 				createTestValidBackendRef("service2", "default", ptr.To[int32](50), []string{"10.0.2.1"}),
 			},
-			validateResult: func(t *testing.T, result []validBackendRef) {
+			validateResult: func(t *testing.T, result []validBackendRef[gatewayv1.HTTPBackendRef]) {
 				require.Len(t, result, 2)
 				// Both services have equal weight/endpoint ratios (50/1), so they get equal weight.
 				assert.Equal(t, int32(1), result[0].weight)
@@ -2019,11 +2019,11 @@ func TestRecalculateWeightsAcrossBackendRefs(t *testing.T) {
 		},
 		{
 			name: "Multiple backend refs with different weights",
-			input: []validBackendRef{
+			input: []validBackendRef[gatewayv1.HTTPBackendRef]{
 				createTestValidBackendRef("service1", "default", ptr.To[int32](80), []string{"10.0.1.1"}),
 				createTestValidBackendRef("service2", "default", ptr.To[int32](20), []string{"10.0.2.1"}),
 			},
-			validateResult: func(t *testing.T, result []validBackendRef) {
+			validateResult: func(t *testing.T, result []validBackendRef[gatewayv1.HTTPBackendRef]) {
 				require.Len(t, result, 2)
 				// service1: 80/1 = 80, service2: 20/1 = 20. Ratio 80:20 = 4:1.
 				assert.Equal(t, int32(4), result[0].weight)
@@ -2032,11 +2032,11 @@ func TestRecalculateWeightsAcrossBackendRefs(t *testing.T) {
 		},
 		{
 			name: "Backend refs with different endpoint counts",
-			input: []validBackendRef{
+			input: []validBackendRef[gatewayv1.HTTPBackendRef]{
 				createTestValidBackendRef("service1", "default", ptr.To[int32](50), []string{"10.0.1.1", "10.0.1.2"}), // 2 endpoints.
 				createTestValidBackendRef("service2", "default", ptr.To[int32](50), []string{"10.0.2.1"}),             // 1 endpoint.
 			},
-			validateResult: func(t *testing.T, result []validBackendRef) {
+			validateResult: func(t *testing.T, result []validBackendRef[gatewayv1.HTTPBackendRef]) {
 				require.Len(t, result, 2)
 				// service1: 50/2 = 25, service2: 50/1 = 50. Ratio 25:50 = 1:2.
 				assert.Equal(t, int32(1), result[0].weight)
@@ -2045,11 +2045,11 @@ func TestRecalculateWeightsAcrossBackendRefs(t *testing.T) {
 		},
 		{
 			name: "Backend refs with nil weights should default to 1",
-			input: []validBackendRef{
+			input: []validBackendRef[gatewayv1.HTTPBackendRef]{
 				createTestValidBackendRef("service1", "default", nil, []string{"10.0.1.1"}),              // No weight (defaults to 1).
 				createTestValidBackendRef("service2", "default", ptr.To[int32](3), []string{"10.0.2.1"}), // Weight 3.
 			},
-			validateResult: func(t *testing.T, result []validBackendRef) {
+			validateResult: func(t *testing.T, result []validBackendRef[gatewayv1.HTTPBackendRef]) {
 				require.Len(t, result, 2)
 				// service1: 1/1 = 1, service2: 3/1 = 3. Ratio 1:3.
 				assert.Equal(t, int32(1), result[0].weight)
@@ -2058,11 +2058,11 @@ func TestRecalculateWeightsAcrossBackendRefs(t *testing.T) {
 		},
 		{
 			name: "Backend refs with no ready endpoints should get zero weight",
-			input: []validBackendRef{
+			input: []validBackendRef[gatewayv1.HTTPBackendRef]{
 				createTestValidBackendRef("service-with-endpoints", "default", ptr.To[int32](50), []string{"10.0.1.1"}),
 				createTestValidBackendRef("service-no-endpoints", "default", ptr.To[int32](50), []string{}), // No endpoints.
 			},
-			validateResult: func(t *testing.T, result []validBackendRef) {
+			validateResult: func(t *testing.T, result []validBackendRef[gatewayv1.HTTPBackendRef]) {
 				require.Len(t, result, 2)
 				// Service with endpoints should get positive weight.
 				assert.Positive(t, result[0].weight, "service with endpoints should have positive weight")
@@ -2072,11 +2072,11 @@ func TestRecalculateWeightsAcrossBackendRefs(t *testing.T) {
 		},
 		{
 			name: "Backend ref with zero weight should get zero weight regardless of endpoints",
-			input: []validBackendRef{
+			input: []validBackendRef[gatewayv1.HTTPBackendRef]{
 				createTestValidBackendRef("service-normal", "default", ptr.To[int32](50), []string{"10.0.1.1"}),
 				createTestValidBackendRef("service-zero-weight", "default", ptr.To[int32](0), []string{"10.0.2.1"}), // Zero weight.
 			},
-			validateResult: func(t *testing.T, result []validBackendRef) {
+			validateResult: func(t *testing.T, result []validBackendRef[gatewayv1.HTTPBackendRef]) {
 				require.Len(t, result, 2)
 				// Normal service should get positive weight.
 				assert.Positive(t, result[0].weight, "normal service should have positive weight")
@@ -2086,12 +2086,12 @@ func TestRecalculateWeightsAcrossBackendRefs(t *testing.T) {
 		},
 		{
 			name: "Complex scenario with multiple services and varying endpoints",
-			input: []validBackendRef{
+			input: []validBackendRef[gatewayv1.HTTPBackendRef]{
 				createTestValidBackendRef("web", "frontend", ptr.To[int32](60), []string{"10.0.1.1", "10.0.1.2", "10.0.1.3"}), // 3 endpoints.
 				createTestValidBackendRef("api", "backend", ptr.To[int32](30), []string{"10.0.2.1", "10.0.2.2"}),              // 2 endpoints.
 				createTestValidBackendRef("cache", "backend", ptr.To[int32](10), []string{"10.0.3.1"}),                        // 1 endpoint.
 			},
-			validateResult: func(t *testing.T, result []validBackendRef) {
+			validateResult: func(t *testing.T, result []validBackendRef[gatewayv1.HTTPBackendRef]) {
 				require.Len(t, result, 3)
 				// Complex weight calculation based on CalculateEndpointWeights logic.
 				// The exact values depend on the weight distribution algorithm.
@@ -2147,7 +2147,7 @@ func TestCreateTargetsFromvalidBackendRefs(t *testing.T) {
 		httpRoute        *gwtypes.HTTPRoute
 		pRef             *gwtypes.ParentReference
 		upstreamName     string
-		validBackendRefs []validBackendRef
+		validBackendRefs []validBackendRef[gatewayv1.HTTPBackendRef]
 		expectedTargets  int
 		expectedError    bool
 		validateResult   func(t *testing.T, targets []configurationv1alpha1.KongTarget)
@@ -2159,7 +2159,7 @@ func TestCreateTargetsFromvalidBackendRefs(t *testing.T) {
 			}),
 			pRef:             &gwtypes.ParentReference{Name: "test-gateway"},
 			upstreamName:     "test-upstream",
-			validBackendRefs: []validBackendRef{},
+			validBackendRefs: []validBackendRef[gatewayv1.HTTPBackendRef]{},
 			expectedTargets:  0,
 			expectedError:    false,
 		},
@@ -2170,7 +2170,7 @@ func TestCreateTargetsFromvalidBackendRefs(t *testing.T) {
 			}),
 			pRef:         &gwtypes.ParentReference{Name: "test-gateway"},
 			upstreamName: "test-upstream",
-			validBackendRefs: []validBackendRef{
+			validBackendRefs: []validBackendRef[gatewayv1.HTTPBackendRef]{
 				createTestvalidBackendRef("service1", "test-namespace", ptr.To[int32](50), []string{}), // No endpoints.
 			},
 			expectedTargets: 0,
@@ -2183,7 +2183,7 @@ func TestCreateTargetsFromvalidBackendRefs(t *testing.T) {
 			}),
 			pRef:         &gwtypes.ParentReference{Name: "test-gateway"},
 			upstreamName: "test-upstream",
-			validBackendRefs: []validBackendRef{
+			validBackendRefs: []validBackendRef[gatewayv1.HTTPBackendRef]{
 				createTestvalidBackendRef("service1", "test-namespace", ptr.To[int32](100), []string{"10.0.0.1"}),
 			},
 			expectedTargets: 1,
@@ -2211,7 +2211,7 @@ func TestCreateTargetsFromvalidBackendRefs(t *testing.T) {
 			}),
 			pRef:         &gwtypes.ParentReference{Name: "test-gateway"},
 			upstreamName: "test-upstream",
-			validBackendRefs: []validBackendRef{
+			validBackendRefs: []validBackendRef[gatewayv1.HTTPBackendRef]{
 				createTestvalidBackendRef("service1", "test-namespace", ptr.To[int32](50), []string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}),
 			},
 			expectedTargets: 3,
@@ -2247,7 +2247,7 @@ func TestCreateTargetsFromvalidBackendRefs(t *testing.T) {
 			}),
 			pRef:         &gwtypes.ParentReference{Name: "test-gateway"},
 			upstreamName: "test-upstream",
-			validBackendRefs: []validBackendRef{
+			validBackendRefs: []validBackendRef[gatewayv1.HTTPBackendRef]{
 				createTestvalidBackendRef("service1", "test-namespace", ptr.To[int32](30), []string{"10.0.1.1", "10.0.1.2"}),
 				createTestvalidBackendRef("service2", "test-namespace", ptr.To[int32](70), []string{"10.0.2.1"}),
 			},
@@ -2289,7 +2289,7 @@ func TestCreateTargetsFromvalidBackendRefs(t *testing.T) {
 			}),
 			pRef:         &gwtypes.ParentReference{Name: "test-gateway"},
 			upstreamName: "test-upstream",
-			validBackendRefs: []validBackendRef{
+			validBackendRefs: []validBackendRef[gatewayv1.HTTPBackendRef]{
 				createTestvalidBackendRef("service1", "test-namespace", ptr.To[int32](0), []string{}),                        // No endpoints, should be skipped.
 				createTestvalidBackendRef("service2", "test-namespace", ptr.To[int32](60), []string{"10.0.2.1"}),             // 1 endpoint.
 				createTestvalidBackendRef("service3", "test-namespace", ptr.To[int32](40), []string{"10.0.3.1", "10.0.3.2"}), // 2 endpoints.
@@ -2322,7 +2322,7 @@ func TestCreateTargetsFromvalidBackendRefs(t *testing.T) {
 			}),
 			pRef:         &gwtypes.ParentReference{Name: "test-gateway"},
 			upstreamName: "test-upstream",
-			validBackendRefs: []validBackendRef{
+			validBackendRefs: []validBackendRef[gatewayv1.HTTPBackendRef]{
 				{
 					backendRef: &gwtypes.HTTPBackendRef{
 						BackendRef: gwtypes.BackendRef{

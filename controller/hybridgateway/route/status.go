@@ -498,7 +498,7 @@ func BuildResolvedRefsCondition(ctx context.Context, logger logr.Logger, cl clie
 			// Check if the referenced object is permitted by the reference grant if in a different namespace.
 			if bRefNamespace != route.Namespace {
 				// Use CheckReferenceGrant helper to check if the reference is permitted.
-				permitted, found, err := CheckReferenceGrant(ctx, cl, &bRef, route.Namespace)
+				permitted, found, err := CheckReferenceGrant(ctx, cl, &bRef.BackendRef, route.Kind, route.Namespace)
 				if err != nil {
 					return nil, fmt.Errorf("failed to check ReferenceGrant for BackendRef %s/%s: %w", bRefNamespace, bRef.Name, err)
 				}
@@ -970,7 +970,7 @@ func IsHTTPReferenceGranted(grantSpec gwtypes.ReferenceGrantSpec, backendRef gwt
 	bRefGroup, bRefKind := backendRefGroupKind(backendRef.Group, backendRef.Kind)
 
 	for _, from := range grantSpec.From {
-		if from.Group != gwtypes.GroupName || from.Kind != "HTTPRoute" || fromNamespace != string(from.Namespace) {
+		if from.Group != gwtypes.GroupName || string(from.Kind) != fromKind || fromNamespace != string(from.Namespace) {
 			continue
 		}
 
@@ -1008,7 +1008,7 @@ func IsHTTPReferenceGranted(grantSpec gwtypes.ReferenceGrantSpec, backendRef gwt
 //
 // Note: This function does NOT check if namespaces are the same - it assumes cross-namespace
 // access and will return an error if no namespace is set on the BackendRef.
-func CheckReferenceGrant(ctx context.Context, cl client.Client, bRef *gwtypes.HTTPBackendRef, routeNamespace string) (permitted bool, found bool, err error) {
+func CheckReferenceGrant(ctx context.Context, cl client.Client, bRef *gwtypes.BackendRef, routeKind, routeNamespace string) (permitted bool, found bool, err error) {
 	// Check that the backendRef has a namespace set and if not return an error.
 	if bRef.Namespace == nil || *bRef.Namespace == "" {
 		return false, false, fmt.Errorf("backendRef namespace is not set for cross-namespace reference check, name %s", bRef.Name)
@@ -1027,7 +1027,7 @@ func CheckReferenceGrant(ctx context.Context, cl client.Client, bRef *gwtypes.HT
 
 	// Check if any ReferenceGrant permits this reference
 	for _, grant := range grantList.Items {
-		if IsHTTPReferenceGranted(grant.Spec, *bRef, routeNamespace) {
+		if IsHTTPReferenceGranted(grant.Spec, *bRef, routeKind, routeNamespace) {
 			return true, true, nil
 		}
 	}

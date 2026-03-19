@@ -498,7 +498,7 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				logger.WithValues("upstream", upstreamName),
 				c.Client,
 				c.route,
-				httpBackendRefsToBackendRefs(rule.BackendRefs),
+				rule.BackendRefs,
 				&pRef,
 				upstreamName,
 				c.fqdnMode,
@@ -652,10 +652,4 @@ func (c *httpRouteConverter) getHostnamesByParentRef(ctx context.Context, logger
 
 	log.Debug(logger, "Finished processing hostnames", "finalHostnames", hostnames)
 	return hostnames, nil
-}
-
-func httpBackendRefsToBackendRefs(backendRefs []gwtypes.HTTPBackendRef) []gwtypes.BackendRef {
-	return lo.Map(backendRefs, func(bRef gwtypes.HTTPBackendRef, _ int) gwtypes.BackendRef {
-		return bRef.BackendRef
-	})
 }

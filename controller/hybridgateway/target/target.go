@@ -23,8 +23,8 @@ import (
 )
 
 // validBackendRef represents a BackendRef that has passed all validation checks.
-type validBackendRef struct {
-	backendRef  *gwtypes.HTTPBackendRef
+type validBackendRef[T gwtypes.SupportedRouteBackendRef] struct {
+	backendRef  *T
 	service     *corev1.Service
 	servicePort *corev1.ServicePort
 	// readyEndpoints contains merged endpoint addresses from all EndpointSlices for this service.
@@ -37,19 +37,22 @@ type validBackendRef struct {
 
 // TargetsForBackendRefs creates KongTargets for all BackendRefs in a rule.
 // This function processes all BackendRefs together, enabling better weight distribution and optimization.
-func TargetsForBackendRefs(
+func TargetsForBackendRefs[
+	T gwtypes.SupportedRoute,
+	R gwtypes.SupportedRouteBackendRef,
+](
 	ctx context.Context,
 	logger logr.Logger,
 	cl client.Client,
-	httpRoute *gwtypes.HTTPRoute,
-	backendRefs []gwtypes.BackendRef,
+	parentRoute T,
+	backendRefs []R,
 	pRef *gwtypes.ParentReference,
 	upstreamName string,
 	fqdn bool,
 	clusterDomain string,
 ) ([]configurationv1alpha1.KongTarget, error) {
 	// Step 1: Filter and validate all BackendRefs, extracting endpoints.
-	validBackendRefs, err := filterValidBackendRefs(ctx, logger, cl, httpRoute, backendRefs, fqdn, clusterDomain)
+	validBackendRefs, err := filterValidBackendRefs(ctx, logger, cl, parentRoute, backendRefs, fqdn, clusterDomain)
 	if err != nil {
 		return nil, fmt.Errorf("failed to filter valid BackendRefs: %w", err)
 	}
@@ -63,7 +66,7 @@ func TargetsForBackendRefs(
 	validBackendRefs = recalculateWeightsAcrossBackendRefs(validBackendRefs)
 
 	// Step 3: Create KongTargets from the processed ValidBackendRef structs.
-	targets, err := createTargetsFromValidBackendRefs(ctx, logger, cl, httpRoute, pRef, upstreamName, validBackendRefs)
+	targets, err := createTargetsFromValidBackendRefs(ctx, logger, cl, parentRoute, pRef, upstreamName, validBackendRefs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create targets from valid BackendRefs: %w", err)
 	}
@@ -262,18 +265,22 @@ func resolveTargetPort(ctx context.Context, cl client.Client, svc *corev1.Servic
 // 3. Check if the specified port exists in the Service.
 // 4. Check if ReferenceGrant permits cross-namespace access (if needed).
 // 5. Fetch EndpointSlices and extract ready endpoints (for headless services, regular services, or when FQDN is disabled).
-func filterValidBackendRefs(
+func filterValidBackendRefs[
+	T gwtypes.SupportedRoute,
+	R gwtypes.SupportedRouteBackendRef,
+](
 	ctx context.Context,
 	logger logr.Logger,
 	cl client.Client,
-	httpRoute *gwtypes.HTTPRoute,
-	backendRefs []gwtypes.BackendRef,
+	parentRoute T,
+	backendRefs []R,
 	fqdn bool,
 	clusterDomain string,
-) ([]validBackendRef, error) {
-	var validBackendRefs []validBackendRef
+) ([]validBackendRef[R], error) {
+	var validBackendRefs []validBackendRef[R]
 
-	for _, bRef := range backendRefs {
+	for _, backendRef := range backendRefs {
+		bRef := extractBackendRef(backendRef)
 		// Check if the backendRef is supported.
 		if !route.IsBackendRefSupported(bRef.Group, bRef.Kind) {
 			log.Info(logger, "skipping unsupported backendRef", "group", bRef.Group, "kind", bRef.Kind)
@@ -281,7 +288,8 @@ func filterValidBackendRefs(
 		}
 
 		// Determine the namespace for the referenced Service.
-		bRefNamespace := httpRoute.Namespace
+		routeNamespace := parentRoute.GetNamespace()
+		bRefNamespace := routeNamespace
 		if bRef.Namespace != nil && *bRef.Namespace != "" {
 			bRefNamespace = string(*bRef.Namespace)
 		}
@@ -302,8 +310,8 @@ func filterValidBackendRefs(
 		}
 
 		// Check ReferenceGrant permission for cross-namespace access.
-		if bRefNamespace != httpRoute.Namespace {
-			permitted, found, err := route.CheckReferenceGrant(ctx, cl, &bRef, httpRoute.Namespace)
+		if bRefNamespace != routeNamespace {
+			permitted, found, err := route.CheckReferenceGrant(ctx, cl, &bRef, parentRoute.GetObjectKind().GroupVersionKind().Kind, routeNamespace)
 			if err != nil {
 				return nil, fmt.Errorf("error checking ReferenceGrant for BackendRef %s: %w", bRef.Name, err)
 			}
@@ -333,8 +341,8 @@ func filterValidBackendRefs(
 		}
 
 		// If we reach here, the BackendRef is valid and has endpoints.
-		validBackendRefs = append(validBackendRefs, validBackendRef{
-			backendRef:     &bRef,
+		validBackendRefs = append(validBackendRefs, validBackendRef[R]{
+			backendRef:     &backendRef,
 			service:        svc,
 			servicePort:    svcPort,
 			readyEndpoints: readyEndpoints,
@@ -350,7 +358,7 @@ func filterValidBackendRefs(
 // recalculateWeightsAcrossBackendRefs recalculates weights across all valid BackendRefs in a rule.
 // This uses the weight calculation algorithm from weight.go to ensure mathematically
 // correct proportional distribution based on the original BackendRef weights and endpoint counts.
-func recalculateWeightsAcrossBackendRefs(validBackendRefs []validBackendRef) []validBackendRef {
+func recalculateWeightsAcrossBackendRefs[T gwtypes.SupportedRouteBackendRef](validBackendRefs []validBackendRef[T]) []validBackendRef[T] {
 	if len(validBackendRefs) == 0 {
 		return validBackendRefs
 	}
@@ -358,13 +366,14 @@ func recalculateWeightsAcrossBackendRefs(validBackendRefs []validBackendRef) []v
 	// Convert ValidBackendRef to BackendRef for weight calculation.
 	backends := make([]BackendRef, len(validBackendRefs))
 	for i, vbRef := range validBackendRefs {
+		backendRef := extractBackendRef(*vbRef.backendRef)
 		// Generate a unique name for this backend (using service name and namespace).
 		backendName := fmt.Sprintf("%s/%s", vbRef.service.Namespace, vbRef.service.Name)
 
 		// Get the original weight (default to 1 if not specified).
 		weight := uint32(1)
-		if vbRef.backendRef.Weight != nil {
-			weight = uint32(*vbRef.backendRef.Weight)
+		if backendRef.Weight != nil {
+			weight = uint32(*backendRef.Weight)
 		}
 
 		// Number of ready endpoints (could be 1 for FQDN/ExternalName).
@@ -392,8 +401,11 @@ func recalculateWeightsAcrossBackendRefs(validBackendRefs []validBackendRef) []v
 
 // createTargetsFromValidBackendRefs creates KongTargets from validBackendRef structs.
 // This function handles all service types (ClusterIP, ExternalName, FQDN) using a unified approach.
-func createTargetsFromValidBackendRefs(ctx context.Context, logger logr.Logger, cl client.Client, httpRoute *gwtypes.HTTPRoute, pRef *gwtypes.ParentReference, upstreamName string,
-	validBackendRefs []validBackendRef,
+func createTargetsFromValidBackendRefs[
+	T gwtypes.SupportedRoute,
+	R gwtypes.SupportedRouteBackendRef,
+](ctx context.Context, logger logr.Logger, cl client.Client, route T, pRef *gwtypes.ParentReference, upstreamName string,
+	validBackendRefs []validBackendRef[R],
 ) ([]configurationv1alpha1.KongTarget, error) {
 	var targets []configurationv1alpha1.KongTarget
 
@@ -418,9 +430,9 @@ func createTargetsFromValidBackendRefs(ctx context.Context, logger logr.Logger, 
 
 			target, err := builder.NewKongTarget().
 				WithName(targetName).
-				WithNamespace(metadata.NamespaceFromParentRef(httpRoute, pRef)).
-				WithLabels(httpRoute, pRef).
-				WithAnnotations(httpRoute, pRef).
+				WithNamespace(metadata.NamespaceFromParentRef(route, pRef)).
+				WithLabels(route, pRef).
+				WithAnnotations(route, pRef).
 				WithUpstreamRef(upstreamName).
 				WithTarget(endpoint, port).
 				WithWeight(&weight).
@@ -430,7 +442,7 @@ func createTargetsFromValidBackendRefs(ctx context.Context, logger logr.Logger, 
 				return nil, fmt.Errorf("failed to build KongTarget %s: %w", targetName, err)
 			}
 
-			_, err = translator.VerifyAndUpdate(ctx, logger, cl, &target, httpRoute, false)
+			_, err = translator.VerifyAndUpdate(ctx, logger, cl, &target, route, false)
 			if err != nil {
 				return nil, err
 			}
@@ -440,4 +452,14 @@ func createTargetsFromValidBackendRefs(ctx context.Context, logger logr.Logger, 
 	}
 
 	return targets, nil
+}
+
+func extractBackendRef[T gwtypes.SupportedRouteBackendRef](backendRef T) gwtypes.BackendRef {
+	switch b := any(backendRef).(type) {
+	case gwtypes.BackendRef:
+		return b
+	case gwtypes.HTTPBackendRef:
+		return b.BackendRef
+	}
+	return gwtypes.BackendRef{}
 }

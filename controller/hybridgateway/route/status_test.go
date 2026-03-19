@@ -1619,10 +1619,13 @@ func TestIsBackendRefSupported(t *testing.T) {
 }
 
 func TestIsHTTPReferenceGranted(t *testing.T) {
+	const (
+		kindHTTPRoute = "HTTPRoute"
+	)
 	tests := []struct {
 		name          string
 		grantSpec     gwtypes.ReferenceGrantSpec
-		backendRef    gwtypes.HTTPBackendRef
+		backendRef    gwtypes.BackendRef
 		fromNamespace string
 		want          bool
 	}{
@@ -1640,13 +1643,11 @@ func TestIsHTTPReferenceGranted(t *testing.T) {
 					Name:  ptrObjName("my-service"),
 				}},
 			},
-			backendRef: gwtypes.HTTPBackendRef{
-				BackendRef: gwtypes.BackendRef{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name:  gwtypes.ObjectName("my-service"),
-						Kind:  kindPtr("Service"),
-						Group: groupPtr("core"),
-					},
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gwtypes.BackendObjectReference{
+					Name:  gwtypes.ObjectName("my-service"),
+					Kind:  kindPtr("Service"),
+					Group: groupPtr("core"),
 				},
 			},
 			fromNamespace: "default",
@@ -1718,13 +1719,11 @@ func TestIsHTTPReferenceGranted(t *testing.T) {
 					Name:  ptrObjName("my-service"),
 				}},
 			},
-			backendRef: gwtypes.HTTPBackendRef{
-				BackendRef: gwtypes.BackendRef{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name:  gwtypes.ObjectName("my-service"),
-						Kind:  kindPtr("Service"),
-						Group: groupPtr("other"),
-					},
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gwtypes.BackendObjectReference{
+					Name:  gwtypes.ObjectName("my-service"),
+					Kind:  kindPtr("Service"),
+					Group: groupPtr("other"),
 				},
 			},
 			fromNamespace: "default",
@@ -1744,13 +1743,11 @@ func TestIsHTTPReferenceGranted(t *testing.T) {
 					Name:  ptrObjName("my-service"),
 				}},
 			},
-			backendRef: gwtypes.HTTPBackendRef{
-				BackendRef: gwtypes.BackendRef{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name:  gwtypes.ObjectName("my-service"),
-						Kind:  kindPtr("OtherKind"),
-						Group: groupPtr("core"),
-					},
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gwtypes.BackendObjectReference{
+					Name:  gwtypes.ObjectName("my-service"),
+					Kind:  kindPtr("OtherKind"),
+					Group: groupPtr("core"),
 				},
 			},
 			fromNamespace: "default",
@@ -1770,13 +1767,11 @@ func TestIsHTTPReferenceGranted(t *testing.T) {
 					Name:  ptrObjName("my-service"),
 				}},
 			},
-			backendRef: gwtypes.HTTPBackendRef{
-				BackendRef: gwtypes.BackendRef{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name:  gwtypes.ObjectName("other-service"),
-						Kind:  kindPtr("Service"),
-						Group: groupPtr("core"),
-					},
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gwtypes.BackendObjectReference{
+					Name:  gwtypes.ObjectName("other-service"),
+					Kind:  kindPtr("Service"),
+					Group: groupPtr("core"),
 				},
 			},
 			fromNamespace: "default",
@@ -1796,13 +1791,11 @@ func TestIsHTTPReferenceGranted(t *testing.T) {
 					Name:  nil,
 				}},
 			},
-			backendRef: gwtypes.HTTPBackendRef{
-				BackendRef: gwtypes.BackendRef{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name:  gwtypes.ObjectName("my-service"),
-						Kind:  kindPtr("Service"),
-						Group: groupPtr("core"),
-					},
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gwtypes.BackendObjectReference{
+					Name:  gwtypes.ObjectName("my-service"),
+					Kind:  kindPtr("Service"),
+					Group: groupPtr("core"),
 				},
 			},
 			fromNamespace: "default",
@@ -1822,13 +1815,11 @@ func TestIsHTTPReferenceGranted(t *testing.T) {
 					Name:  ptrObjName("my-service"),
 				}},
 			},
-			backendRef: gwtypes.HTTPBackendRef{
-				BackendRef: gwtypes.BackendRef{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name:  gwtypes.ObjectName("my-service"),
-						Kind:  kindPtr("Service"),
-						Group: groupPtr("core"),
-					},
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gwtypes.BackendObjectReference{
+					Name:  gwtypes.ObjectName("my-service"),
+					Kind:  kindPtr("Service"),
+					Group: groupPtr("core"),
 				},
 			},
 			fromNamespace: "other-ns",
@@ -1838,7 +1829,7 @@ func TestIsHTTPReferenceGranted(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := IsHTTPReferenceGranted(tt.grantSpec, tt.backendRef, tt.fromNamespace)
+			got := IsHTTPReferenceGranted(tt.grantSpec, tt.backendRef, kindHTTPRoute, tt.fromNamespace)
 			if got != tt.want {
 				t.Errorf("IsHTTPReferenceGranted() = %v, want %v", got, tt.want)
 			}
@@ -2550,9 +2541,13 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 func TestCheckReferenceGrant(t *testing.T) {
 	ctx := context.Background()
 
+	const (
+		kindHTTPRoute = "HTTPRoute"
+	)
+
 	tests := []struct {
 		name             string
-		bRef             *gwtypes.HTTPBackendRef
+		bRef             *gwtypes.BackendRef
 		routeNamespace   string
 		clientObjs       []client.Object
 		wantPermitted    bool
@@ -2562,11 +2557,9 @@ func TestCheckReferenceGrant(t *testing.T) {
 	}{
 		{
 			name: "nil namespace returns error",
-			bRef: &gwtypes.HTTPBackendRef{
-				BackendRef: gwtypes.BackendRef{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name: "service",
-					},
+			bRef: &gwtypes.BackendRef{
+				BackendObjectReference: gwtypes.BackendObjectReference{
+					Name: "service",
 				},
 			},
 			routeNamespace:   "default",
@@ -2577,12 +2570,10 @@ func TestCheckReferenceGrant(t *testing.T) {
 		},
 		{
 			name: "empty namespace returns error",
-			bRef: &gwtypes.HTTPBackendRef{
-				BackendRef: gwtypes.BackendRef{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name:      "service",
-						Namespace: nsPtr(""),
-					},
+			bRef: &gwtypes.BackendRef{
+				BackendObjectReference: gwtypes.BackendObjectReference{
+					Name:      "service",
+					Namespace: nsPtr(""),
 				},
 			},
 			routeNamespace:   "default",
@@ -2593,13 +2584,11 @@ func TestCheckReferenceGrant(t *testing.T) {
 		},
 		{
 			name: "no reference grants found",
-			bRef: &gwtypes.HTTPBackendRef{
-				BackendRef: gwtypes.BackendRef{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name:      "service",
-						Namespace: nsPtr("target-ns"),
-						Kind:      kindPtr("Service"),
-					},
+			bRef: &gwtypes.BackendRef{
+				BackendObjectReference: gwtypes.BackendObjectReference{
+					Name:      "service",
+					Namespace: nsPtr("target-ns"),
+					Kind:      kindPtr("Service"),
 				},
 			},
 			routeNamespace: "source-ns",
@@ -2610,13 +2599,11 @@ func TestCheckReferenceGrant(t *testing.T) {
 		},
 		{
 			name: "reference grants exist but none permit the reference",
-			bRef: &gwtypes.HTTPBackendRef{
-				BackendRef: gwtypes.BackendRef{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name:      "service",
-						Namespace: nsPtr("target-ns"),
-						Kind:      kindPtr("Service"),
-					},
+			bRef: &gwtypes.BackendRef{
+				BackendObjectReference: gwtypes.BackendObjectReference{
+					Name:      "service",
+					Namespace: nsPtr("target-ns"),
+					Kind:      kindPtr("Service"),
 				},
 			},
 			routeNamespace: "source-ns",
@@ -2650,13 +2637,11 @@ func TestCheckReferenceGrant(t *testing.T) {
 		},
 		{
 			name: "reference grant permits the reference",
-			bRef: &gwtypes.HTTPBackendRef{
-				BackendRef: gwtypes.BackendRef{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name:      "service",
-						Namespace: nsPtr("target-ns"),
-						Kind:      kindPtr("Service"),
-					},
+			bRef: &gwtypes.BackendRef{
+				BackendObjectReference: gwtypes.BackendObjectReference{
+					Name:      "service",
+					Namespace: nsPtr("target-ns"),
+					Kind:      kindPtr("Service"),
 				},
 			},
 			routeNamespace: "source-ns",
@@ -2690,13 +2675,11 @@ func TestCheckReferenceGrant(t *testing.T) {
 		},
 		{
 			name: "reference grant permits with wildcard service name",
-			bRef: &gwtypes.HTTPBackendRef{
-				BackendRef: gwtypes.BackendRef{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name:      "any-service",
-						Namespace: nsPtr("target-ns"),
-						Kind:      kindPtr("Service"),
-					},
+			bRef: &gwtypes.BackendRef{
+				BackendObjectReference: gwtypes.BackendObjectReference{
+					Name:      "any-service",
+					Namespace: nsPtr("target-ns"),
+					Kind:      kindPtr("Service"),
 				},
 			},
 			routeNamespace: "source-ns",
@@ -2730,13 +2713,11 @@ func TestCheckReferenceGrant(t *testing.T) {
 		},
 		{
 			name: "multiple grants, first doesn't match but second does",
-			bRef: &gwtypes.HTTPBackendRef{
-				BackendRef: gwtypes.BackendRef{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name:      "service",
-						Namespace: nsPtr("target-ns"),
-						Kind:      kindPtr("Service"),
-					},
+			bRef: &gwtypes.BackendRef{
+				BackendObjectReference: gwtypes.BackendObjectReference{
+					Name:      "service",
+					Namespace: nsPtr("target-ns"),
+					Kind:      kindPtr("Service"),
 				},
 			},
 			routeNamespace: "source-ns",
@@ -2792,14 +2773,12 @@ func TestCheckReferenceGrant(t *testing.T) {
 		},
 		{
 			name: "backend ref with explicit group",
-			bRef: &gwtypes.HTTPBackendRef{
-				BackendRef: gwtypes.BackendRef{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name:      "service",
-						Namespace: nsPtr("target-ns"),
-						Kind:      kindPtr("Service"),
-						Group:     groupPtr("core"),
-					},
+			bRef: &gwtypes.BackendRef{
+				BackendObjectReference: gwtypes.BackendObjectReference{
+					Name:      "service",
+					Namespace: nsPtr("target-ns"),
+					Kind:      kindPtr("Service"),
+					Group:     groupPtr("core"),
 				},
 			},
 			routeNamespace: "source-ns",
@@ -2836,20 +2815,18 @@ func TestCheckReferenceGrant(t *testing.T) {
 	// Test with error client.
 	errorTests := []struct {
 		name             string
-		bRef             *gwtypes.HTTPBackendRef
+		bRef             *gwtypes.BackendRef
 		routeNamespace   string
 		wantError        bool
 		wantErrorMessage string
 	}{
 		{
 			name: "error listing reference grants",
-			bRef: &gwtypes.HTTPBackendRef{
-				BackendRef: gwtypes.BackendRef{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name:      "service",
-						Namespace: nsPtr("target-ns"),
-						Kind:      kindPtr("Service"),
-					},
+			bRef: &gwtypes.BackendRef{
+				BackendObjectReference: gwtypes.BackendObjectReference{
+					Name:      "service",
+					Namespace: nsPtr("target-ns"),
+					Kind:      kindPtr("Service"),
 				},
 			},
 			routeNamespace:   "source-ns",
@@ -2866,7 +2843,7 @@ func TestCheckReferenceGrant(t *testing.T) {
 
 			cl := fake.NewClientBuilder().WithScheme(s).WithObjects(tt.clientObjs...).Build()
 
-			permitted, found, err := CheckReferenceGrant(ctx, cl, tt.bRef, tt.routeNamespace)
+			permitted, found, err := CheckReferenceGrant(ctx, cl, tt.bRef, kindHTTPRoute, tt.routeNamespace)
 
 			if tt.wantError {
 				require.Error(t, err)
@@ -2900,7 +2877,7 @@ func TestCheckReferenceGrant(t *testing.T) {
 				}).
 				Build()
 
-			permitted, found, err := CheckReferenceGrant(ctx, cl, tt.bRef, tt.routeNamespace)
+			permitted, found, err := CheckReferenceGrant(ctx, cl, tt.bRef, kindHTTPRoute, tt.routeNamespace)
 
 			if tt.wantError {
 				require.Error(t, err)

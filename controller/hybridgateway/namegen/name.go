@@ -241,24 +241,11 @@ func NewKongPluginBindingName(routeID, pluginID string) string {
 
 // NewKongTargetName generates a KongTarget name based on the KongUpstream name, the Service Endpoint ip,
 // the service port and the HTTPBackendRef.
-func NewKongTargetName(upstreamID, endpointID string, port int, br *gwtypes.HTTPBackendRef) string {
+func NewKongTargetName[T gwtypes.SupportedRouteBackendRef](upstreamID, endpointID string, port int, br *T) string {
 	obj := struct {
 		endpointID string
 		port       int
-		backend    *gwtypes.HTTPBackendRef
-	}{
-		endpointID: endpointID,
-		port:       port,
-		backend:    br,
-	}
-	return newName(upstreamID, utils.Hash32(obj))
-}
-
-func KongTargetNameForBackendRef(upstreamID, endpointID string, port int, br *gwtypes.BackendRef) string {
-	obj := struct {
-		endpointID string
-		port       int
-		backend    *gwtypes.BackendRef
+		backend    *T
 	}{
 		endpointID: endpointID,
 		port:       port,
