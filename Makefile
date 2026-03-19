@@ -114,8 +114,8 @@ golangci-lint: mise yq ## Download golangci-lint locally if necessary.
 	$(MAKE) mise-install DEP_VER=github:golangci/golangci-lint@$(GOLANGCI_LINT_VERSION)
 
 .PHONY: golangci-lint-cache-path
-golangci-lint-cache-path:
-	@$(GOLANGCI_LINT) cache status | awk '{ print $$2 }'
+golangci-lint-cache-path: golangci-lint
+	@$(GOLANGCI_LINT) cache status | head -1 | awk '{ print $$2 }'
 
 .PHONY: go-fix
 go-fix:
