@@ -323,7 +323,7 @@ API_DIR ?= api
 #   make generate && make manifests && make test.charts.golden.update
 # into a single command: make generate
 # Note: manifests is placed near the end to preserve the prior ordering (docs are generated from CRDs first).
-generate: generate.api generate.api-from-oas generate.crds generate.crd-kustomize generate.k8sio-gomod-replace generate.deepcopy generate.apitypes-funcs generate.docs generate.lint-fix manifests test.charts.golden.update generate.cli-arguments-docs test.kongintegration.golden.update
+generate: generate.api generate.api-from-oas generate.crds generate.crd-kustomize generate.k8sio-gomod-replace generate.apitypes-funcs generate.docs generate.lint-fix manifests test.charts.golden.update generate.cli-arguments-docs test.kongintegration.golden.update
 
 .PHONY: generate.crds
 generate.crds: controller-gen ## Generate WebhookConfiguration and CustomResourceDefinition objects.
