@@ -62,6 +62,7 @@ func TestKongRouteToSDKRouteInput_Tags(t *testing.T) {
 		"k8s-version:v1alpha1",
 		"k8s-group:configuration.konghq.com",
 		"k8s-generation:2",
+		"managed-by:kong-operator",
 		"tag1",
 		"tag2",
 		"tag3",

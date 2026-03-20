@@ -59,6 +59,7 @@ func TestKongCACertificateToCACertificateInput_Tags(t *testing.T) {
 		"k8s-version:v1alpha1",
 		"k8s-group:configuration.konghq.com",
 		"k8s-namespace:default",
+		"managed-by:kong-operator",
 		"tag1",
 		"tag2",
 		"tag3",

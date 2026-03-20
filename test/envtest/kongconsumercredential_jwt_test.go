@@ -80,6 +80,7 @@ func TestKongConsumerCredential_JWT(t *testing.T) {
 		"k8s-namespace:" + ns.Name,
 		"k8s-uid:" + string(kongCredentialJWT.GetUID()),
 		"k8s-version:v1alpha1",
+		"managed-by:kong-operator",
 	}
 
 	factory := sdkmocks.NewMockSDKFactory(t)
