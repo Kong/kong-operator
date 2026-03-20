@@ -8,20 +8,18 @@ import (
 	"github.com/go-logr/zapr"
 	kongdbreconciler "github.com/kong/go-database-reconciler/pkg/cprint"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
-
-	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
 )
 
 // SetupLoggers sets up the loggers for the controller manager.
-func SetupLoggers(c managercfg.Config, output io.Writer) (logr.Logger, error) {
-	zapBase, err := makeLogger(c.LogLevel, c.LogFormat, output)
+func SetupLoggers(logLevel string, logFormat string, output io.Writer) (logr.Logger, error) {
+	zapBase, err := makeLogger(logLevel, logFormat, output)
 	if err != nil {
 		return logr.Logger{}, fmt.Errorf("failed to make logger: %w", err)
 	}
 	logger := zapr.NewLoggerWithOptions(zapBase, zapr.LogInfoLevel("v"))
 
 	// It's specific for the Kong Ingress Controller.
-	if c.LogLevel != "trace" && c.LogLevel != "debug" {
+	if logLevel != "trace" && logLevel != "debug" {
 		// Disable deck's per-change diff output
 		kongdbreconciler.DisableOutput = true
 	}

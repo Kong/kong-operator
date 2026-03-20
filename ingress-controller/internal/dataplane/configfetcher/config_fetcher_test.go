@@ -10,6 +10,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/adminapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
 	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/mocks"
 )
@@ -124,4 +125,25 @@ func TestTryFetchingValidConfigFromGateways(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestStoreLastValidConfig_AllowsReplacingNonEmptyWithEmpty(t *testing.T) {
+	fetcher := NewDefaultKongLastGoodConfigFetcher(false, "")
+
+	nonEmpty := &kongstate.KongState{
+		Services: []kongstate.Service{{}},
+	}
+	fetcher.StoreLastValidConfig(nonEmpty)
+
+	state, ok := fetcher.LastValidConfig()
+	require.True(t, ok)
+	require.Same(t, nonEmpty, state)
+
+	empty := &kongstate.KongState{}
+	fetcher.StoreLastValidConfig(empty)
+
+	state, ok = fetcher.LastValidConfig()
+	require.True(t, ok)
+	require.Same(t, empty, state)
+	require.True(t, state.IsEmpty())
 }

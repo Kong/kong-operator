@@ -169,12 +169,8 @@ func SetupLoggers(logLevel string, logFormat string) (logr.Logger, string, error
 			return logr.Logger{}, logOutput, err
 		}
 	}
-	config := managercfg.Config{
-		LogLevel:  logLevel,
-		LogFormat: logFormat,
-	}
 
-	logger, err := logging.SetupLoggers(config, output)
+	logger, err := logging.SetupLoggers(logLevel, logFormat, output)
 	// Prevents controller-runtime from logging
 	// [controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
 	return logger, "", err
