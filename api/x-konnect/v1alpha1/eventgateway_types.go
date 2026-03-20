@@ -62,6 +62,7 @@ type EventGatewayAPISpec struct {
 	//
 	//
 	// +optional
+	// +kubebuilder:validation:MaxProperties=50
 	Labels Labels `json:"labels,omitempty"`
 
 	// The minimum runtime version supported by the API.

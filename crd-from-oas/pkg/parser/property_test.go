@@ -443,6 +443,40 @@ func TestParseProperty_DeeplyNestedObject(t *testing.T) {
 	assert.Equal(t, "string", value.Type)
 }
 
+func TestParseProperty_MapTypeWithValidations(t *testing.T) {
+	maxProps := uint64(50)
+	maxLen := uint64(63)
+	schemaRef := &openapi3.SchemaRef{
+		Value: &openapi3.Schema{
+			Type:     &openapi3.Types{"object"},
+			MaxProps: &maxProps,
+			AdditionalProperties: openapi3.AdditionalProperties{
+				Schema: &openapi3.SchemaRef{
+					Value: &openapi3.Schema{
+						Type:      &openapi3.Types{"string"},
+						MinLength: 1,
+						MaxLength: &maxLen,
+						Pattern:   `^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$`,
+					},
+				},
+			},
+		},
+	}
+
+	prop := ParseProperty("labels", schemaRef, 0, make(map[string]bool))
+
+	assert.Equal(t, "object", prop.Type)
+	require.NotNil(t, prop.MaxProperties)
+	assert.Equal(t, int64(50), *prop.MaxProperties)
+	require.NotNil(t, prop.AdditionalProperties)
+	assert.Equal(t, "string", prop.AdditionalProperties.Type)
+	require.NotNil(t, prop.AdditionalProperties.MinLength)
+	assert.Equal(t, int64(1), *prop.AdditionalProperties.MinLength)
+	require.NotNil(t, prop.AdditionalProperties.MaxLength)
+	assert.Equal(t, int64(63), *prop.AdditionalProperties.MaxLength)
+	assert.Equal(t, `^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$`, prop.AdditionalProperties.Pattern)
+}
+
 func TestParseProperty_AllValidations(t *testing.T) {
 	schemaRef := &openapi3.SchemaRef{
 		Value: &openapi3.Schema{

@@ -72,6 +72,11 @@ func KubebuilderTags(prop *parser.Property, entityName string, fieldConfig *conf
 		}
 	}
 
+	// Map MaxProperties constraint (applies to both ref and inline map types)
+	if prop.MaxProperties != nil {
+		tags = append(tags, markerValidationMaxProperties(int(*prop.MaxProperties)))
+	}
+
 	// Add custom validations from config
 	if fieldConfig != nil {
 		customValidations := fieldConfig.GetFieldValidations(entityName, prop.Name)
@@ -79,4 +84,38 @@ func KubebuilderTags(prop *parser.Property, entityName string, fieldConfig *conf
 	}
 
 	return tags
+}
+
+// valueTypeMarkers generates kubebuilder validation markers for a map value type
+// based on the additionalProperties constraints from the OpenAPI spec.
+func valueTypeMarkers(ap *parser.Property) []string {
+	var markers []string
+	if ap.Type == "string" {
+		if ap.MinLength != nil {
+			markers = append(markers, markerValidationMinLength(int(*ap.MinLength)))
+		}
+		if ap.MaxLength != nil {
+			markers = append(markers, markerValidationMaxLength(int(*ap.MaxLength)))
+		}
+		if ap.Pattern != "" {
+			markers = append(markers, markerValidationPattern(ap.Pattern))
+		}
+	}
+	return markers
+}
+
+// propertyToGoBaseType returns the Go base type for a simple property.
+func propertyToGoBaseType(prop *parser.Property) string {
+	switch prop.Type {
+	case "string":
+		return "string"
+	case "integer":
+		return "int"
+	case "boolean":
+		return "bool"
+	case "number":
+		return "float64"
+	default:
+		return "string"
+	}
 }

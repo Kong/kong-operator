@@ -116,7 +116,6 @@ run = "golangci-lint-kube-api-linter run -v --config .golangci-kube-api.yaml ./a
 
 [tasks.test-crdsvalidation]
 description = "Run CRD validation tests"
-dir = "./{{env.DIR}}"
 # Update test paths below if more API groups are added
 run = '''
 export KUBEBUILDER_ASSETS=$(setup-envtest use -p path)
