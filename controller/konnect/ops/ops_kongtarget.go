@@ -194,7 +194,8 @@ func getKongTargetForUID(
 		return "", fmt.Errorf("failed listing %s: %w", target.GetTypeName(), ErrNilResponse)
 	}
 
-	return getMatchingEntryFromListResponseData(sliceToEntityWithIDPtrSlice(resp.Object.Data), target)
+	_, id, err := getMatchingEntryFromListResponseData(sliceToEntityWithIDPtrSlice(resp.Object.Data), target)
+	return id, err
 }
 
 func targetMatch(konnectTarget *sdkkonnectcomp.Target, target *configurationv1alpha1.KongTarget) bool {

@@ -178,7 +178,8 @@ func getKongKeySetForUID(
 		return "", fmt.Errorf("failed listing %s: %w", keySet.GetTypeName(), ErrNilResponse)
 	}
 
-	return getMatchingEntryFromListResponseData(sliceToEntityWithIDPtrSlice(resp.Object.Data), keySet)
+	_, id, err := getMatchingEntryFromListResponseData(sliceToEntityWithIDPtrSlice(resp.Object.Data), keySet)
+	return id, err
 }
 
 func keySetMatch(konnectKeySet *sdkkonnectcomp.KeySet, keySet *configurationv1alpha1.KongKeySet) bool {

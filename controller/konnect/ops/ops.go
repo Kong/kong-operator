@@ -795,15 +795,20 @@ func getMatchingEntryFromListResponseData[
 ](
 	data []T,
 	entity entity,
-) (string, error) {
-	var id string
+) (T, string, error) {
+	var (
+		id  string
+		ret T
+	)
 	for _, entry := range data {
 		entryID := entry.GetID()
 		switch entryID := any(entryID).(type) {
 		case string:
 			if entryID != "" {
 				id = entryID
+				ret = entry
 				break
+
 			}
 		case *string:
 			if entryID != nil && *entryID != "" {
@@ -814,12 +819,12 @@ func getMatchingEntryFromListResponseData[
 	}
 
 	if id == "" {
-		return "", EntityWithMatchingUIDNotFoundError{
+		return ret, "", EntityWithMatchingUIDNotFoundError{
 			Entity: entity,
 		}
 	}
 
-	return id, nil
+	return ret, id, nil
 }
 
 // ClearInstanceFromError clears the instance field from the error.
