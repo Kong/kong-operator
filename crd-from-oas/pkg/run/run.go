@@ -39,6 +39,24 @@ func (r *Runner) Run(
 
 		logger.Info("found paths to process", "apiGroupVersion", gvKey, "count", len(parsed.RequestBodies))
 
+		// Apply name overrides: rename request body entries so the generator
+		// uses the custom CRD type name instead of the one derived from the
+		// OpenAPI schema.
+		nameOverrides := agvConfig.NameOverrides()
+		for name, schema := range parsed.RequestBodies {
+			override, ok := nameOverrides[schema.SourcePath]
+			if !ok {
+				continue
+			}
+			delete(parsed.RequestBodies, name)
+			// Prefix with "Create" so GetEntityNameFromType strips it to
+			// yield the override name.
+			newKey := "Create" + override
+			schema.Name = newKey
+			parsed.RequestBodies[newKey] = schema
+			logger.Info("applied name override", "path", schema.SourcePath, "from", parser.GetEntityNameFromType(name), "to", override)
+		}
+
 		// Build path → entity name mapping for field config resolution
 		pathToEntityName := make(map[string]string)
 		for name, schema := range parsed.RequestBodies {

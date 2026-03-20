@@ -84,7 +84,7 @@ run = "go build -o ../bin/{{env.DIR}} main.go"
 # TODO: This hardcodes the x-konnect API group. Removing this hardcode would cause
 # the removal of other non generated APIs to be removed.
 description = "Clean generated api/x-konnect directory"
-run = "rm -rf ./api/x-konnect/"
+run = "rm -rf ./api/x-konnect/ ./config/crd/kong-operator/x-konnect.konghq.com_*"
 
 [tasks.generate-api]
 description = "Generate Kubernetes Go API from OpenAPI spec"

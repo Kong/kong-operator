@@ -6,7 +6,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EventGateway is the Schema for the eventgateways API.
+// KonnectEventControlPlane is the Schema for the konnecteventcontrolplanes API.
 //
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
@@ -18,36 +18,36 @@ import (
 // +kubebuilder:storageversion
 // +apireference:kgo:include
 // +kong:channels=kong-operator
-type EventGateway struct {
+type KonnectEventControlPlane struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitzero"`
 
 	// +optional
-	Spec EventGatewaySpec `json:"spec,omitzero"`
+	Spec KonnectEventControlPlaneSpec `json:"spec,omitzero"`
 
 	// +optional
-	Status EventGatewayStatus `json:"status,omitzero"`
+	Status KonnectEventControlPlaneStatus `json:"status,omitzero"`
 }
 
-// EventGatewayList contains a list of EventGateway.
+// KonnectEventControlPlaneList contains a list of KonnectEventControlPlane.
 //
 // +kubebuilder:object:root=true
-type EventGatewayList struct {
+type KonnectEventControlPlaneList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitzero"`
-	Items           []EventGateway `json:"items"`
+	Items           []KonnectEventControlPlane `json:"items"`
 }
 
-// EventGatewaySpec defines the desired state of EventGateway.
-type EventGatewaySpec struct {
+// KonnectEventControlPlaneSpec defines the desired state of KonnectEventControlPlane.
+type KonnectEventControlPlaneSpec struct {
 	// APISpec defines the desired state of the resource's API spec fields.
 	//
 	// +optional
-	APISpec EventGatewayAPISpec `json:"apiSpec,omitzero"`
+	APISpec KonnectEventControlPlaneAPISpec `json:"apiSpec,omitzero"`
 }
 
-// EventGatewayAPISpec defines the API spec fields for EventGateway.
-type EventGatewayAPISpec struct {
+// KonnectEventControlPlaneAPISpec defines the API spec fields for KonnectEventControlPlane.
+type KonnectEventControlPlaneAPISpec struct {
 	// A human-readable description of the Gateway.
 	//
 	// +optional
@@ -84,8 +84,8 @@ type EventGatewayAPISpec struct {
 	Name GatewayName `json:"name,omitempty"`
 }
 
-// EventGatewayStatus defines the observed state of EventGateway.
-type EventGatewayStatus struct {
+// KonnectEventControlPlaneStatus defines the observed state of KonnectEventControlPlane.
+type KonnectEventControlPlaneStatus struct {
 	// Conditions represent the current state of the resource.
 	//
 	// +optional
@@ -108,5 +108,5 @@ type EventGatewayStatus struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&EventGateway{}, &EventGatewayList{})
+	SchemeBuilder.Register(&KonnectEventControlPlane{}, &KonnectEventControlPlaneList{})
 }
