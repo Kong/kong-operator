@@ -5,6 +5,7 @@ import (
 
 	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/deckgen"
@@ -29,18 +30,18 @@ func TestGetFCertificateFromKongCert(t *testing.T) {
 			name:     "all fields set, inmemory=true, SNIs have no certificate ref",
 			inmemory: true,
 			cert: kong.Certificate{
-				ID:   new("cert-id"),
-				Key:  new("cert-key"),
-				Cert: new("cert-pem"),
-				SNIs: []*string{new("example.com"), new("other.com")},
+				ID:   lo.ToPtr("cert-id"),
+				Key:  lo.ToPtr("cert-key"),
+				Cert: lo.ToPtr("cert-pem"),
+				SNIs: []*string{lo.ToPtr("example.com"), lo.ToPtr("other.com")},
 			},
 			want: file.FCertificate{
-				ID:   new("cert-id"),
-				Key:  new("cert-key"),
-				Cert: new("cert-pem"),
+				ID:   lo.ToPtr("cert-id"),
+				Key:  lo.ToPtr("cert-key"),
+				Cert: lo.ToPtr("cert-pem"),
 				SNIs: []kong.SNI{
-					{Name: new("example.com")},
-					{Name: new("other.com")},
+					{Name: lo.ToPtr("example.com")},
+					{Name: lo.ToPtr("other.com")},
 				},
 			},
 		},
@@ -48,19 +49,19 @@ func TestGetFCertificateFromKongCert(t *testing.T) {
 			name:     "all fields set, inmemory=false, SNIs have certificate ref",
 			inmemory: false,
 			cert: kong.Certificate{
-				ID:   new("cert-id"),
-				Key:  new("cert-key"),
-				Cert: new("cert-pem"),
-				SNIs: []*string{new("example.com")},
+				ID:   lo.ToPtr("cert-id"),
+				Key:  lo.ToPtr("cert-key"),
+				Cert: lo.ToPtr("cert-pem"),
+				SNIs: []*string{lo.ToPtr("example.com")},
 			},
 			want: file.FCertificate{
-				ID:   new("cert-id"),
-				Key:  new("cert-key"),
-				Cert: new("cert-pem"),
+				ID:   lo.ToPtr("cert-id"),
+				Key:  lo.ToPtr("cert-key"),
+				Cert: lo.ToPtr("cert-pem"),
 				SNIs: []kong.SNI{
 					{
-						Name:        new("example.com"),
-						Certificate: &kong.Certificate{ID: new("cert-id")},
+						Name:        lo.ToPtr("example.com"),
+						Certificate: &kong.Certificate{ID: lo.ToPtr("cert-id")},
 					},
 				},
 			},
@@ -69,15 +70,15 @@ func TestGetFCertificateFromKongCert(t *testing.T) {
 			name:     "nil ID, inmemory=false, SNIs have no certificate ref",
 			inmemory: false,
 			cert: kong.Certificate{
-				Key:  new("cert-key"),
-				Cert: new("cert-pem"),
-				SNIs: []*string{new("example.com")},
+				Key:  lo.ToPtr("cert-key"),
+				Cert: lo.ToPtr("cert-pem"),
+				SNIs: []*string{lo.ToPtr("example.com")},
 			},
 			want: file.FCertificate{
-				Key:  new("cert-key"),
-				Cert: new("cert-pem"),
+				Key:  lo.ToPtr("cert-key"),
+				Cert: lo.ToPtr("cert-pem"),
 				SNIs: []kong.SNI{
-					{Name: new("example.com")},
+					{Name: lo.ToPtr("example.com")},
 				},
 			},
 		},
@@ -85,14 +86,14 @@ func TestGetFCertificateFromKongCert(t *testing.T) {
 			name:     "no SNIs",
 			inmemory: false,
 			cert: kong.Certificate{
-				ID:   new("cert-id"),
-				Key:  new("cert-key"),
-				Cert: new("cert-pem"),
+				ID:   lo.ToPtr("cert-id"),
+				Key:  lo.ToPtr("cert-key"),
+				Cert: lo.ToPtr("cert-pem"),
 			},
 			want: file.FCertificate{
-				ID:   new("cert-id"),
-				Key:  new("cert-key"),
-				Cert: new("cert-pem"),
+				ID:   lo.ToPtr("cert-id"),
+				Key:  lo.ToPtr("cert-key"),
+				Cert: lo.ToPtr("cert-pem"),
 				SNIs: []kong.SNI{},
 			},
 		},
