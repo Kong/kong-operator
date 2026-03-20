@@ -5,7 +5,7 @@ controller-tools: "0.20.1"
 # renovate: datasource=github-releases depName=golangci/golangci-lint
 golangci-lint: "2.11.3"
 # renovate: datasource=github-releases depName=GoogleContainerTools/skaffold
-skaffold: "2.18.0"
+skaffold: "2.18.1"
 # renovate: datasource=github-releases depName=go-delve/delve
 dlv: "1.26.1"
 # renovate: datasource=github-releases depName=gotestyourself/gotestsum
