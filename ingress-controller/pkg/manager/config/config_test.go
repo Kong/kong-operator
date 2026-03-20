@@ -12,7 +12,6 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/gateway"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/konnect"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/license"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/manager/consts"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/kubernetes/object/status"
@@ -111,7 +110,7 @@ func TestNewConfig(t *testing.T) {
 				LicensePollingPeriod:        license.DefaultPollingPeriod,
 				LicenseStorageEnabled:       true,
 				UploadConfigPeriod:          managercfg.DefaultKonnectConfigUploadPeriod,
-				RefreshNodePeriod:           konnect.DefaultRefreshNodePeriod,
+				RefreshNodePeriod:           managercfg.DefaultKonnectNodeRefreshPeriod,
 			},
 			SplunkEndpoint:                   "",
 			SplunkEndpointInsecureSkipVerify: false,
