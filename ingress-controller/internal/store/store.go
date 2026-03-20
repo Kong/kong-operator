@@ -87,6 +87,16 @@ type Storer interface {
 	ListKongVaults() []*configurationv1alpha1.KongVault
 	ListKongCustomEntities() []*configurationv1alpha1.KongCustomEntity
 
+	// v1alpha1 Kong Gateway entity types (KIC standalone).
+	ListKongServicesV1Alpha1() []*configurationv1alpha1.KongService
+	ListKongRoutesV1Alpha1() []*configurationv1alpha1.KongRoute
+	ListKongUpstreamsV1Alpha1() []*configurationv1alpha1.KongUpstream
+	ListKongTargetsV1Alpha1() []*configurationv1alpha1.KongTarget
+	ListKongCertificatesV1Alpha1() []*configurationv1alpha1.KongCertificate
+	ListKongCACertificatesV1Alpha1() []*configurationv1alpha1.KongCACertificate
+	ListKongSNIsV1Alpha1() []*configurationv1alpha1.KongSNI
+	ListKongPluginBindingsV1Alpha1() []*configurationv1alpha1.KongPluginBinding
+
 	// Ingress API resources.
 	GetIngressClassName() string
 	GetIngressClassV1(name string) (*netv1.IngressClass, error)
@@ -704,6 +714,94 @@ func (s Store) ListKongCustomEntities() []*configurationv1alpha1.KongCustomEntit
 		}
 	}
 	return kongCustomEntities
+}
+
+func (s Store) ListKongServicesV1Alpha1() []*configurationv1alpha1.KongService {
+	var items []*configurationv1alpha1.KongService
+	for _, obj := range s.stores.KongServiceV1Alpha1.List() {
+		item, ok := obj.(*configurationv1alpha1.KongService)
+		if ok && s.isValidIngressClass(&item.ObjectMeta, annotations.IngressClassKey, s.getIngressClassHandling()) {
+			items = append(items, item)
+		}
+	}
+	return items
+}
+
+func (s Store) ListKongRoutesV1Alpha1() []*configurationv1alpha1.KongRoute {
+	var items []*configurationv1alpha1.KongRoute
+	for _, obj := range s.stores.KongRouteV1Alpha1.List() {
+		item, ok := obj.(*configurationv1alpha1.KongRoute)
+		if ok && s.isValidIngressClass(&item.ObjectMeta, annotations.IngressClassKey, s.getIngressClassHandling()) {
+			items = append(items, item)
+		}
+	}
+	return items
+}
+
+func (s Store) ListKongUpstreamsV1Alpha1() []*configurationv1alpha1.KongUpstream {
+	var items []*configurationv1alpha1.KongUpstream
+	for _, obj := range s.stores.KongUpstreamV1Alpha1.List() {
+		item, ok := obj.(*configurationv1alpha1.KongUpstream)
+		if ok && s.isValidIngressClass(&item.ObjectMeta, annotations.IngressClassKey, s.getIngressClassHandling()) {
+			items = append(items, item)
+		}
+	}
+	return items
+}
+
+func (s Store) ListKongTargetsV1Alpha1() []*configurationv1alpha1.KongTarget {
+	var items []*configurationv1alpha1.KongTarget
+	for _, obj := range s.stores.KongTargetV1Alpha1.List() {
+		item, ok := obj.(*configurationv1alpha1.KongTarget)
+		if ok && s.isValidIngressClass(&item.ObjectMeta, annotations.IngressClassKey, s.getIngressClassHandling()) {
+			items = append(items, item)
+		}
+	}
+	return items
+}
+
+func (s Store) ListKongCertificatesV1Alpha1() []*configurationv1alpha1.KongCertificate {
+	var items []*configurationv1alpha1.KongCertificate
+	for _, obj := range s.stores.KongCertificateV1Alpha1.List() {
+		item, ok := obj.(*configurationv1alpha1.KongCertificate)
+		if ok && s.isValidIngressClass(&item.ObjectMeta, annotations.IngressClassKey, s.getIngressClassHandling()) {
+			items = append(items, item)
+		}
+	}
+	return items
+}
+
+func (s Store) ListKongCACertificatesV1Alpha1() []*configurationv1alpha1.KongCACertificate {
+	var items []*configurationv1alpha1.KongCACertificate
+	for _, obj := range s.stores.KongCACertificateV1Alpha1.List() {
+		item, ok := obj.(*configurationv1alpha1.KongCACertificate)
+		if ok && s.isValidIngressClass(&item.ObjectMeta, annotations.IngressClassKey, s.getIngressClassHandling()) {
+			items = append(items, item)
+		}
+	}
+	return items
+}
+
+func (s Store) ListKongSNIsV1Alpha1() []*configurationv1alpha1.KongSNI {
+	var items []*configurationv1alpha1.KongSNI
+	for _, obj := range s.stores.KongSNIV1Alpha1.List() {
+		item, ok := obj.(*configurationv1alpha1.KongSNI)
+		if ok && s.isValidIngressClass(&item.ObjectMeta, annotations.IngressClassKey, s.getIngressClassHandling()) {
+			items = append(items, item)
+		}
+	}
+	return items
+}
+
+func (s Store) ListKongPluginBindingsV1Alpha1() []*configurationv1alpha1.KongPluginBinding {
+	var items []*configurationv1alpha1.KongPluginBinding
+	for _, obj := range s.stores.KongPluginBindingV1Alpha1.List() {
+		item, ok := obj.(*configurationv1alpha1.KongPluginBinding)
+		if ok && s.isValidIngressClass(&item.ObjectMeta, annotations.IngressClassKey, s.getIngressClassHandling()) {
+			items = append(items, item)
+		}
+	}
+	return items
 }
 
 // getIngressClassHandling returns annotations.ExactOrEmptyClassMatch if an IngressClass is the default class, or

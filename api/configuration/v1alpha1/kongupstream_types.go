@@ -48,7 +48,6 @@ type KongUpstream struct {
 }
 
 // KongUpstreamSpec defines the spec of Kong Upstream.
-// +kubebuilder:validation:XValidation:rule="!has(self.controlPlaneRef) ? true : self.controlPlaneRef.type != 'kic'", message="KIC is not supported as control plane"
 type KongUpstreamSpec struct {
 	KongUpstreamAPISpec `json:",inline"`
 
