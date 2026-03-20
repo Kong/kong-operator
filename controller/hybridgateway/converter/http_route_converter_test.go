@@ -2,6 +2,7 @@ package converter
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -297,6 +298,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 		wantErrSub   string
 		wantOutputs  outputCount
 		wantStoreLen int
+		assertFn     func(t *testing.T, store []client.Object)
 	}{
 		{
 			name: "translates route with plugins and targets",
@@ -325,6 +327,109 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				plugins:   2,
 			},
 			wantStoreLen: 8,
+		},
+		{
+			name: "translates multi rule redirect only route end to end",
+			setup: func() *httpRouteConverter {
+				route := newHTTPRouteWithRules(
+					[]string{"api.example.com"},
+					[]gwtypes.HTTPRouteRule{
+						{
+							Matches: []gwtypes.HTTPRouteMatch{{
+								Path: &gatewayv1.HTTPPathMatch{
+									Type:  lo.ToPtr(gatewayv1.PathMatchPathPrefix),
+									Value: lo.ToPtr("/hostname-redirect"),
+								},
+							}},
+							Filters: []gwtypes.HTTPRouteFilter{
+								newRequestRedirectFilter("example.org", nil),
+							},
+						},
+						{
+							Matches: []gwtypes.HTTPRouteMatch{{
+								Path: &gatewayv1.HTTPPathMatch{
+									Type:  lo.ToPtr(gatewayv1.PathMatchPathPrefix),
+									Value: lo.ToPtr("/host-and-status"),
+								},
+							}},
+							Filters: []gwtypes.HTTPRouteFilter{
+								newRequestRedirectFilter("example.org", lo.ToPtr(301)),
+							},
+						},
+					},
+				)
+				gateway := baseGateway()
+				objects := append(newKonnectGatewayStandardObjects(gateway), newNamespace())
+				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
+				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+			},
+			wantCount: 10,
+			wantOutputs: outputCount{
+				upstreams: 2,
+				services:  2,
+				routes:    2,
+				targets:   0,
+				bindings:  2,
+				plugins:   2,
+			},
+			wantStoreLen: 10,
+			assertFn: func(t *testing.T, store []client.Object) {
+				t.Helper()
+
+				upstreamNames := map[string]struct{}{}
+				serviceNames := map[string]struct{}{}
+				routeNames := map[string]struct{}{}
+				pluginNames := map[string]struct{}{}
+				bindingNames := map[string]struct{}{}
+
+				pluginConfigs := map[string]map[string]any{}
+
+				for _, obj := range store {
+					switch typed := obj.(type) {
+					case *configurationv1alpha1.KongUpstream:
+						upstreamNames[typed.Name] = struct{}{}
+					case *configurationv1alpha1.KongService:
+						serviceNames[typed.Name] = struct{}{}
+					case *configurationv1alpha1.KongRoute:
+						routeNames[typed.Name] = struct{}{}
+					case *configurationv1.KongPlugin:
+						pluginNames[typed.Name] = struct{}{}
+						var config map[string]any
+						require.NoError(t, json.Unmarshal(typed.Config.Raw, &config))
+						pluginConfigs[typed.Name] = config
+					case *configurationv1alpha1.KongPluginBinding:
+						bindingNames[typed.Name] = struct{}{}
+						require.NotNil(t, typed.Spec.Targets)
+						require.NotNil(t, typed.Spec.Targets.RouteReference)
+						assert.Contains(t, routeNames, typed.Spec.Targets.RouteReference.Name)
+						require.NotNil(t, typed.Spec.PluginReference)
+						assert.Contains(t, pluginNames, typed.Spec.PluginReference.Name)
+					}
+				}
+
+				assert.Len(t, upstreamNames, 2)
+				assert.Len(t, serviceNames, 2)
+				assert.Len(t, routeNames, 2)
+				assert.Len(t, pluginNames, 2)
+				assert.Len(t, bindingNames, 2)
+
+				var sawDefaultStatus bool
+				var sawCustomStatus bool
+				for _, config := range pluginConfigs {
+					assert.Equal(t, "http://example.org/", config["location"])
+					assert.Equal(t, true, config["keep_incoming_path"])
+					statusCode, ok := config["status_code"].(float64)
+					require.True(t, ok)
+					switch int(statusCode) {
+					case 301:
+						sawCustomStatus = true
+					case 302:
+						sawDefaultStatus = true
+					}
+				}
+				assert.True(t, sawDefaultStatus)
+				assert.True(t, sawCustomStatus)
+			},
 		},
 		{
 			name: "returns error when filter translation fails",
@@ -539,6 +644,9 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 			}
 			if (tt.wantOutputs != outputCount{}) {
 				assert.Equal(t, tt.wantOutputs, countOutputs(converter.outputStore))
+			}
+			if tt.assertFn != nil {
+				tt.assertFn(t, converter.outputStore)
 			}
 		})
 	}
@@ -1101,6 +1209,19 @@ func assertConditionStatus(t *testing.T, conditions []metav1.Condition, conditio
 }
 
 func newHTTPRouteForTranslation(hostnames []string, backendRefs []gwtypes.HTTPBackendRef, filters []gwtypes.HTTPRouteFilter) *gwtypes.HTTPRoute {
+	return newHTTPRouteWithRules(hostnames, []gwtypes.HTTPRouteRule{{
+		Matches: []gwtypes.HTTPRouteMatch{{
+			Path: &gatewayv1.HTTPPathMatch{
+				Type:  ptr.To(gatewayv1.PathMatchPathPrefix),
+				Value: ptr.To("/"),
+			},
+		}},
+		BackendRefs: backendRefs,
+		Filters:     filters,
+	}})
+}
+
+func newHTTPRouteWithRules(hostnames []string, rules []gwtypes.HTTPRouteRule) *gwtypes.HTTPRoute {
 	var gwHostnames []gatewayv1.Hostname
 	for _, hostname := range hostnames {
 		gwHostnames = append(gwHostnames, gatewayv1.Hostname(hostname))
@@ -1113,20 +1234,7 @@ func newHTTPRouteForTranslation(hostnames []string, backendRefs []gwtypes.HTTPBa
 		},
 		Spec: gwtypes.HTTPRouteSpec{
 			Hostnames: gwHostnames,
-			Rules: []gwtypes.HTTPRouteRule{
-				{
-					Matches: []gwtypes.HTTPRouteMatch{
-						{
-							Path: &gatewayv1.HTTPPathMatch{
-								Type:  lo.ToPtr(gatewayv1.PathMatchPathPrefix),
-								Value: lo.ToPtr("/"),
-							},
-						},
-					},
-					BackendRefs: backendRefs,
-					Filters:     filters,
-				},
-			},
+			Rules:     rules,
 			CommonRouteSpec: gwtypes.CommonRouteSpec{
 				ParentRefs: []gwtypes.ParentReference{
 					{
@@ -1138,6 +1246,19 @@ func newHTTPRouteForTranslation(hostnames []string, backendRefs []gwtypes.HTTPBa
 			},
 		},
 	}
+}
+
+func newRequestRedirectFilter(hostname string, statusCode *int) gwtypes.HTTPRouteFilter {
+	filter := gwtypes.HTTPRouteFilter{
+		Type: gatewayv1.HTTPRouteFilterRequestRedirect,
+		RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
+			Hostname: ptr.To(gatewayv1.PreciseHostname(hostname)),
+		},
+	}
+	if statusCode != nil {
+		filter.RequestRedirect.StatusCode = statusCode
+	}
+	return filter
 }
 
 func newBackendRef(namespace string) gwtypes.HTTPBackendRef {
