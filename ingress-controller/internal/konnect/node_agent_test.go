@@ -16,15 +16,20 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/konnect/nodes"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/versions"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/mocks"
+	"github.com/kong/kong-operator/v2/modules/manager/metadata"
 )
 
 const (
-	testKicVersion = "2.9.0"
-	testHostname   = "ingress-0"
+	testHostname             = "ingress-0"
+	defaultRefreshNodePeriod = 60 * time.Second
 )
 
-// testKongVersion matches enterprise version format.
-var testKongVersion = fmt.Sprintf("%s.0", versions.KICv3VersionCutoff)
+var (
+	// testKongVersion matches enterprise version format.
+	testKongVersion = fmt.Sprintf("%s.0", versions.KICv3VersionCutoff)
+	// testKOUserAgent matches the current KO user agent.
+	testKOUserAgent = metadata.Metadata().UserAgent()
+)
 
 type mockGatewayInstanceGetter struct {
 	gatewayInstances []konnect.GatewayInstance
@@ -121,7 +126,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 					ID:       testManagerID.String(),
 					Type:     nodes.NodeTypeIngressController,
 					Status:   string(nodes.IngressControllerStateOperational),
-					Version:  testKicVersion,
+					Version:  testKOUserAgent,
 				},
 			},
 			numNodes: 1,
@@ -134,7 +139,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 					ID:       testNodeIDs[0],
 					Type:     nodes.NodeTypeIngressController,
 					Status:   string(nodes.IngressControllerStateOperational),
-					Version:  testKicVersion,
+					Version:  testKOUserAgent,
 				},
 			},
 			gatewayConfigStatus: lo.ToPtr(clients.GatewayConfigApplyStatus{TranslationFailuresOccurred: true}),
@@ -144,7 +149,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 					ID:       testNodeIDs[0],
 					Type:     nodes.NodeTypeIngressController,
 					Status:   string(nodes.IngressControllerStatePartialConfigFail),
-					Version:  testKicVersion,
+					Version:  testKOUserAgent,
 				},
 			},
 			numNodes: 1,
@@ -158,7 +163,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 					ID:       testNodeIDs[0],
 					Type:     nodes.NodeTypeIngressController,
 					Status:   string(nodes.IngressControllerStatePartialConfigFail),
-					Version:  testKicVersion,
+					Version:  testKOUserAgent,
 					LastPing: time.Now().Unix() - 10,
 				},
 				// newer node, should reserve this.
@@ -167,7 +172,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 					ID:       testManagerID.String(),
 					Type:     nodes.NodeTypeIngressController,
 					Status:   string(nodes.IngressControllerStateOperational),
-					Version:  testKicVersion,
+					Version:  testKOUserAgent,
 					LastPing: time.Now().Unix() - 3,
 				},
 				// KIC node with other name, should delete this.
@@ -176,7 +181,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 					ID:       testNodeIDs[2],
 					Type:     nodes.NodeTypeIngressController,
 					Status:   string(nodes.IngressControllerStateOperational),
-					Version:  testKicVersion,
+					Version:  testKOUserAgent,
 					LastPing: time.Now().Unix() - 3,
 				},
 			},
@@ -186,7 +191,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 					ID:       testManagerID.String(),
 					Type:     nodes.NodeTypeIngressController,
 					Status:   string(nodes.IngressControllerStateOperational),
-					Version:  testKicVersion,
+					Version:  testKOUserAgent,
 				},
 			},
 			notContainNodes: []*nodes.NodeItem{
@@ -194,7 +199,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 					Hostname: "ingress-1",
 					Type:     nodes.NodeTypeIngressController,
 					Status:   string(nodes.IngressControllerStateOperational),
-					Version:  testKicVersion,
+					Version:  testKOUserAgent,
 				},
 			},
 			numNodes: 1,
@@ -207,7 +212,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 					ID:       testManagerID.String(),
 					Type:     nodes.NodeTypeIngressController,
 					Status:   string(nodes.IngressControllerStateOperational),
-					Version:  testKicVersion,
+					Version:  testKOUserAgent,
 				},
 				{
 					Hostname: testHostname,
@@ -240,7 +245,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 					ID:       testManagerID.String(),
 					Type:     nodes.NodeTypeIngressController,
 					Status:   string(nodes.IngressControllerStateOperational),
-					Version:  testKicVersion,
+					Version:  testKOUserAgent,
 				},
 				{
 					Hostname: "proxy-1",
@@ -268,8 +273,8 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 
 			nodeAgent := konnect.NewNodeAgent(
 				testHostname,
-				testKicVersion,
-				konnect.DefaultRefreshNodePeriod,
+				testKOUserAgent,
+				defaultRefreshNodePeriod,
 				logr.Discard(),
 				nodeClient,
 				configStatusQueue,
@@ -336,8 +341,8 @@ func TestNodeAgent_StartDoesntReturnUntilContextGetsCancelled(t *testing.T) {
 
 	nodeAgent := konnect.NewNodeAgent(
 		testHostname,
-		testKicVersion,
-		konnect.DefaultRefreshNodePeriod,
+		testKOUserAgent,
+		defaultRefreshNodePeriod,
 		logr.Discard(),
 		nodeClient,
 		newMockConfigStatusNotifier(),
@@ -381,8 +386,8 @@ func TestNodeAgent_ControllerNodeStatusGetsUpdatedOnStatusNotification(t *testin
 
 	nodeAgent := konnect.NewNodeAgent(
 		testHostname,
-		testKicVersion,
-		konnect.DefaultRefreshNodePeriod,
+		testKOUserAgent,
+		defaultRefreshNodePeriod,
 		logr.Discard(),
 		nodeClient,
 		configStatusQueue,
@@ -483,8 +488,8 @@ func TestNodeAgent_ControllerNodeStatusGetsUpdatedOnlyWhenItChanges(t *testing.T
 
 	nodeAgent := konnect.NewNodeAgent(
 		testHostname,
-		testKicVersion,
-		konnect.DefaultRefreshNodePeriod,
+		testKOUserAgent,
+		defaultRefreshNodePeriod,
 		logr.Discard(),
 		nodeClient,
 		configStatusQueue,
@@ -523,7 +528,7 @@ func TestNodeAgent_ControllerNodeStatusGetsUpdatedOnlyWhenItChanges(t *testing.T
 }
 
 func TestNodeAgent_TickerResetsOnEveryNodesUpdate(t *testing.T) {
-	const halfOfRefreshPeriod = konnect.DefaultRefreshNodePeriod / 2
+	const halfOfRefreshPeriod = defaultRefreshNodePeriod / 2
 
 	t.Run("config status notification", func(t *testing.T) {
 		nodeClient := newMockNodeClient(nil)
@@ -533,8 +538,8 @@ func TestNodeAgent_TickerResetsOnEveryNodesUpdate(t *testing.T) {
 		ticker := mocks.NewTicker()
 		nodeAgent := konnect.NewNodeAgent(
 			testHostname,
-			testKicVersion,
-			konnect.DefaultRefreshNodePeriod,
+			testKOUserAgent,
+			defaultRefreshNodePeriod,
 			logr.Discard(),
 			nodeClient,
 			configStatusQueue,
@@ -558,7 +563,7 @@ func TestNodeAgent_TickerResetsOnEveryNodesUpdate(t *testing.T) {
 		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() == 2 }, time.Second, time.Microsecond)
 
 		t.Log("trigger update with ticker")
-		ticker.Add(konnect.DefaultRefreshNodePeriod)
+		ticker.Add(defaultRefreshNodePeriod)
 		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() > 2 }, time.Second, time.Microsecond)
 	})
 
@@ -570,8 +575,8 @@ func TestNodeAgent_TickerResetsOnEveryNodesUpdate(t *testing.T) {
 		ticker := mocks.NewTicker()
 		nodeAgent := konnect.NewNodeAgent(
 			testHostname,
-			testKicVersion,
-			konnect.DefaultRefreshNodePeriod,
+			testKOUserAgent,
+			defaultRefreshNodePeriod,
 			logr.Discard(),
 			nodeClient,
 			configStatusQueue,
@@ -594,7 +599,7 @@ func TestNodeAgent_TickerResetsOnEveryNodesUpdate(t *testing.T) {
 		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() == 2 }, time.Second, time.Microsecond)
 
 		t.Log("trigger update with ticker")
-		ticker.Add(konnect.DefaultRefreshNodePeriod)
+		ticker.Add(defaultRefreshNodePeriod)
 		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() == 3 }, time.Second, time.Microsecond)
 	})
 }

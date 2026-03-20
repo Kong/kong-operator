@@ -2,6 +2,8 @@ package config
 
 import (
 	"time"
+
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/license"
 )
 
 type KonnectConfig struct {
@@ -20,4 +22,26 @@ type KonnectConfig struct {
 	LicensePollingPeriod          time.Duration
 	LicenseStorageEnabled         bool
 	ConsumersSyncDisabled         bool
+}
+
+// DefaultKonnectConfig returns a KonnectConfig with default values for all fields.
+func DefaultKonnectConfig() KonnectConfig {
+	return KonnectConfig{
+		ConfigSynchronizationEnabled:  false,
+		LicenseSynchronizationEnabled: false,
+		LicenseStorageEnabled:         true,
+		InitialLicensePollingPeriod:   license.DefaultInitialPollingPeriod,
+		LicensePollingPeriod:          license.DefaultPollingPeriod,
+		ControlPlaneID:                "",
+		Address:                       "https://us.kic.api.konghq.com",
+		TLSClient: TLSClientConfig{
+			Cert:     "",
+			CertFile: "",
+			Key:      "",
+			KeyFile:  "",
+		},
+		UploadConfigPeriod:    DefaultKonnectConfigUploadPeriod,
+		RefreshNodePeriod:     DefaultKonnectNodeRefreshPeriod,
+		ConsumersSyncDisabled: false,
+	}
 }

@@ -445,7 +445,7 @@ func setupLicenseGetter(
 				return nil, err
 			}
 			licenseStore := konnectLicense.NewSecretLicenseStore(
-				mgr.GetClient(), nn.Namespace, c.Konnect.ControlPlaneID,
+				mgr.GetClient(), nn.Namespace, c.Konnect.ControlPlaneID, c.SecretLabelSelector,
 			)
 			konnectLicenseAPIClient.WithLicenseStore(licenseStore)
 			konnectLicenseAPIClient = konnectLicenseAPIClient.WithLicenseStore(licenseStore)

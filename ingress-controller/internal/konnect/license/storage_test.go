@@ -13,8 +13,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	konnectlicense "github.com/kong/kong-operator/v2/ingress-controller/internal/konnect/license"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/labels"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/license"
 )
+
+var testLabelSelector = map[string]string{
+	"app": "konnect-license",
+}
 
 func TestSecretLicenseStore_Store(t *testing.T) {
 	testCases := []struct {
@@ -55,18 +60,19 @@ func TestSecretLicenseStore_Store(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			cl := fake.NewClientBuilder().WithObjects(tc.secret).Build()
-			s := konnectlicense.NewSecretLicenseStore(cl, "default", "test-cp")
-			err := s.Store(t.Context(), tc.license)
-
-			require.NoError(t, err)
+			s := konnectlicense.NewSecretLicenseStore(cl, "default", "test-cp", testLabelSelector)
+			require.NoError(t, s.Store(t.Context(), tc.license))
 			secret := &corev1.Secret{}
-			err = cl.Get(t.Context(), client.ObjectKey{
+
+			err := cl.Get(t.Context(), client.ObjectKey{
 				Namespace: "default",
 				Name:      "konnect-license-test-cp",
 			}, secret)
 			require.NoError(t, err)
 			// fake client stores stringData of secret as-is.
 			require.Equal(t, tc.license.Payload, secret.StringData["payload"])
+			require.Equal(t, labels.ManagedByLabelValueIngressController, secret.Labels[labels.ManagedByLabel])
+			require.Equal(t, "konnect-license", secret.Labels["app"])
 		})
 	}
 }
@@ -87,9 +93,9 @@ func TestSecretLicenseStore_Load(t *testing.T) {
 					Namespace: "default",
 				},
 				Data: map[string][]byte{
-					"payload":    []byte(base64.StdEncoding.EncodeToString([]byte("some-license-payload"))),
-					"id":         []byte(base64.StdEncoding.EncodeToString([]byte("some-license-id"))),
-					"updated_at": []byte(base64.StdEncoding.EncodeToString([]byte(strconv.FormatInt(timeNowUnix, 10)))),
+					"payload":    []byte("some-license-payload"),
+					"id":         []byte("some-license-id"),
+					"updated_at": []byte(strconv.FormatInt(timeNowUnix, 10)),
 				},
 			},
 			license: license.KonnectLicense{
@@ -142,7 +148,7 @@ func TestSecretLicenseStore_Load(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			cl := fake.NewClientBuilder().WithObjects(tc.secret).Build()
-			s := konnectlicense.NewSecretLicenseStore(cl, "default", "test-cp")
+			s := konnectlicense.NewSecretLicenseStore(cl, "default", "test-cp", testLabelSelector)
 
 			l, err := s.Load(t.Context())
 			if tc.expectError {
