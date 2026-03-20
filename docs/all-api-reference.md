@@ -5719,7 +5719,7 @@ MCPServerSpec is the specification of the MCPServer resource.
 | --- | --- |
 | `mirror` _[MirrorSpec](#konnect-konghq-com-v1alpha1-types-mirrorspec)_ | Mirror is the Konnect Mirror configuration. It is only applicable for ControlPlanes that are created as Mirrors. |
 | `source` _[EntitySource](#common-konghq-com-v1alpha1-types-entitysource)_ | Source represents the source type of the Konnect entity. |
-| `konnect` _[KonnectConfiguration](#konnect-konghq-com-v1alpha2-types-konnectconfiguration)_ | KonnectConfiguration contains the Konnect configuration for the MCP server. |
+| `controlPlaneRef` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#localobjectreference-v1-core)_ | ControlPlaneRef is a reference to the KonnectGatewayControlPlane this MCP server belongs to. The auth token is inferred from the referenced control plane's KonnectAPIAuthConfiguration. |
 
 _Appears in:_
 
@@ -6000,7 +6000,6 @@ _Appears in:_
 - [KonnectCloudGatewayNetworkSpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaynetworkspec)
 - [KonnectExtensionKonnectSpec](#konnect-konghq-com-v1alpha1-types-konnectextensionkonnectspec)
 - [KonnectGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanespec)
-- [MCPServerSpec](#konnect-konghq-com-v1alpha1-types-mcpserverspec)
 
 #### KonnectEndpoints
 

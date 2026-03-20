@@ -30614,24 +30614,22 @@ spec:
           spec:
             description: MCPServerSpec is the specification of the MCPServer resource.
             properties:
-              konnect:
-                description: KonnectConfiguration contains the Konnect configuration for the MCP server.
+              controlPlaneRef:
+                description: |-
+                  ControlPlaneRef is a reference to the KonnectGatewayControlPlane this MCP server belongs to.
+                  The auth token is inferred from the referenced control plane's KonnectAPIAuthConfiguration.
                 properties:
-                  authRef:
+                  name:
+                    default: ""
                     description: |-
-                      APIAuthConfigurationRef is the reference to the API Auth Configuration
-                      that should be used for this Konnect Configuration.
-                    properties:
-                      name:
-                        description: Name is the name of the KonnectAPIAuthConfiguration resource.
-                        minLength: 1
-                        type: string
-                    required:
-                    - name
-                    type: object
-                required:
-                - authRef
+                      Name of the referent.
+                      This field is effectively required, but due to backwards compatibility is
+                      allowed to be empty. Instances of this type with an empty value here are
+                      almost certainly wrong.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                    type: string
                 type: object
+                x-kubernetes-map-type: atomic
               mirror:
                 description: |-
                   Mirror is the Konnect Mirror configuration.
@@ -30662,7 +30660,7 @@ spec:
                 - Mirror
                 type: string
             required:
-            - konnect
+            - controlPlaneRef
             - mirror
             type: object
           status:

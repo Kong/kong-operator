@@ -435,7 +435,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		return res, retErr
 	}
 
-	token, err := getTokenFromKonnectAPIAuthConfiguration(ctx, r.Client, &apiAuth)
+	token, err := GetTokenFromKonnectAPIAuthConfiguration(ctx, r.Client, &apiAuth)
 	if err != nil {
 		if res, errStatus := patch.StatusWithCondition(
 			ctx, r.Client, &apiAuth,

@@ -14,6 +14,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -63,10 +64,11 @@ type MCPServerSpec struct {
 	// +kubebuilder:default=Mirror
 	Source *commonv1alpha1.EntitySource `json:"source,omitempty"`
 
-	// KonnectConfiguration contains the Konnect configuration for the MCP server.
+	// ControlPlaneRef is a reference to the KonnectGatewayControlPlane this MCP server belongs to.
+	// The auth token is inferred from the referenced control plane's KonnectAPIAuthConfiguration.
 	//
 	// +required
-	KonnectConfiguration konnectv1alpha2.KonnectConfiguration `json:"konnect"`
+	ControlPlaneRef corev1.LocalObjectReference `json:"controlPlaneRef"`
 }
 
 // MCPServerStatus defines the observed state of MCPServer.
@@ -88,11 +90,6 @@ type MCPServerStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 
 	konnectv1alpha2.KonnectEntityStatus `json:",inline"` //nolint:embeddedstructfieldcheck
-}
-
-// GetKonnectAPIAuthConfigurationRef returns the Konnect API Auth Configuration Ref.
-func (s *MCPServer) GetKonnectAPIAuthConfigurationRef() konnectv1alpha2.KonnectAPIAuthConfigurationRef {
-	return s.Spec.KonnectConfiguration.APIAuthConfigurationRef
 }
 
 // MCPServerList contains a list of MCPServer resources.

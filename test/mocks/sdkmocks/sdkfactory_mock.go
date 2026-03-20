@@ -37,6 +37,7 @@ type MockSDKWrapper struct {
 	KeySetsSDK                  *mocks.MockKeySetsSDK
 	SNIsSDK                     *mocks.MockSNIsSDK
 	DataPlaneCertificatesSDK    *mocks.MockDPCertificatesSDK
+	MCPServersSDK               *sdkkonnectgo.MCPServers
 	server                      server.Server
 }
 
@@ -175,6 +176,10 @@ func (m MockSDKWrapper) GetDataPlaneCertificatesSDK() sdkkonnectgo.DPCertificate
 
 func (m MockSDKWrapper) GetCloudGatewaysSDK() sdkkonnectgo.CloudGatewaysSDK {
 	return m.CloudGatewaysSDK
+}
+
+func (m MockSDKWrapper) GetMCPServersSDK() *sdkkonnectgo.MCPServers {
+	return m.MCPServersSDK
 }
 
 type MockSDKFactory struct {
