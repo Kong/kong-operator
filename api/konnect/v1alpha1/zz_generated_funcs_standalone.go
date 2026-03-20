@@ -38,6 +38,36 @@ func (obj *KonnectGatewayControlPlane) SetConditions(conditions []metav1.Conditi
 	obj.Status.Conditions = conditions
 }
 
+// GetKonnectStatus returns the Konnect status contained in the MCPServer status.
+func (obj *MCPServer) GetKonnectStatus() *konnectv1alpha2.KonnectEntityStatus {
+	return &obj.Status.KonnectEntityStatus
+}
+
+// GetKonnectID returns the Konnect ID in the MCPServer status.
+func (obj *MCPServer) GetKonnectID() string {
+	return obj.Status.ID
+}
+
+// SetKonnectID sets the Konnect ID in the MCPServer status.
+func (obj *MCPServer) SetKonnectID(id string) {
+	obj.Status.ID = id
+}
+
+// GetTypeName returns the MCPServer Kind name.
+func (obj MCPServer) GetTypeName() string {
+	return "MCPServer"
+}
+
+// GetConditions returns the Status Conditions.
+func (obj *MCPServer) GetConditions() []metav1.Condition {
+	return obj.Status.Conditions
+}
+
+// SetConditions sets the Status Conditions.
+func (obj *MCPServer) SetConditions(conditions []metav1.Condition) {
+	obj.Status.Conditions = conditions
+}
+
 // GetTypeName returns the KonnectAPIAuthConfiguration Kind name.
 func (obj KonnectAPIAuthConfiguration) GetTypeName() string {
 	return "KonnectAPIAuthConfiguration"

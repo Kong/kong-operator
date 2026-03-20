@@ -237,6 +237,21 @@ const (
 )
 
 const (
+	// MCPServerMirroredConditionType is the type of the condition that indicates
+	// the status for the MCP server mirroring.
+	MCPServerMirroredConditionType = "Mirrored"
+
+	// MCPServerMirroredReasonMirrored is the reason used with the
+	// Mirrored condition type indicating that the MCP server
+	// mirroring has succeeded.
+	MCPServerMirroredReasonMirrored = "Mirrored"
+	// MCPServerMirroredReasonFailed is the reason used with the
+	// Mirrored condition type indicating that the MCP server
+	// mirroring has failed.
+	MCPServerMirroredReasonFailed = "Failed"
+)
+
+const (
 	// KonnectEntityAdoptedConditionType is the type of the condition that indicates
 	// the status for adopting existing entity in Konnect.
 	KonnectEntityAdoptedConditionType = "Adopted"

@@ -196,6 +196,12 @@ var supportedKonnectTypesStandalone = []supportedTypesT{
 				GetKonnectStatusReturnType: "*konnectv1alpha2.KonnectEntityStatus",
 			},
 			{
+				Type:                       "MCPServer",
+				KonnectStatusType:          "KonnectEntityStatus",
+				KonnectStatusEmbedded:      true,
+				GetKonnectStatusReturnType: "*konnectv1alpha2.KonnectEntityStatus",
+			},
+			{
 				Type: "KonnectAPIAuthConfiguration",
 			},
 			{

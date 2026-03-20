@@ -80,6 +80,10 @@
 - Fix license storage not being enabled for `ControlPlane`s, license decoding
   from `Secret`s and not setting the `Secret` label selector labels on license `Secret`s.
   [#3610](https://github.com/Kong/kong-operator/pull/3610)
+- Added `MCPServer` CRD (`konnect.konghq.com/v1alpha1`) for declarative management
+  of MCP (Managed Control Plane) servers in Konnect. Supports Mirror mode configuration
+  to reference existing Konnect control planes by ID.
+  [#3612](https://github.com/Kong/kong-operator/pull/3612)
 
 ### Changed
 
