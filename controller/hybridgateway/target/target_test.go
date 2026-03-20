@@ -71,6 +71,10 @@ func createTestServicePort() *corev1.ServicePort {
 // Global helper to create HTTPRoute with optional BackendRefs.
 func createGlobalTestHTTPRoute(name, namespace string, backendRefs ...[]gwtypes.HTTPBackendRef) *gwtypes.HTTPRoute {
 	route := &gwtypes.HTTPRoute{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "HTTPRoute",
+			APIVersion: "gateway.networking.k8s.io/v1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,

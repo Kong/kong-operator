@@ -44,7 +44,7 @@ import (
 // Returns:
 //   - kongRoutes: The created or updated KongRoute resources (one per match)
 //   - err: Any error that occurred during the process
-func RouteForRule[
+func RoutesForRule[
 	T gwtypes.SupportedRoute,
 	R gwtypes.SupportedRouteRule,
 ](

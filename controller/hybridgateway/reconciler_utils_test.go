@@ -111,7 +111,7 @@ func TestEnforceState_DependencyGating(t *testing.T) {
 		fakeConv := &fakeHTTPRouteConverter{desired: []unstructured.Unstructured{desired}}
 		cl := fake.NewClientBuilder().WithScheme(s).Build()
 
-		applied, waiting, err := enforceState[gwtypes.HTTPRoute](ctx, cl, logger, fakeConv)
+		applied, waiting, err := enforceState(ctx, cl, logger, fakeConv)
 		require.NoError(t, err)
 		assert.False(t, applied)
 		assert.True(t, waiting)
@@ -134,7 +134,7 @@ func TestEnforceState_DependencyGating(t *testing.T) {
 		fakeConv := &fakeHTTPRouteConverter{desired: []unstructured.Unstructured{desired}}
 		cl := fake.NewClientBuilder().WithScheme(s).WithObjects(svc).Build()
 
-		applied, waiting, err := enforceState[gwtypes.HTTPRoute](ctx, cl, logger, fakeConv)
+		applied, waiting, err := enforceState(ctx, cl, logger, fakeConv)
 		require.NoError(t, err)
 		assert.False(t, applied)
 		assert.True(t, waiting)
@@ -156,7 +156,7 @@ func TestEnforceState_DependencyGating(t *testing.T) {
 		fakeConv := &fakeHTTPRouteConverter{desired: []unstructured.Unstructured{desired}}
 		cl := fake.NewClientBuilder().WithScheme(s).WithObjects(route).Build()
 
-		applied, waiting, err := enforceState[gwtypes.HTTPRoute](ctx, cl, logger, fakeConv)
+		applied, waiting, err := enforceState(ctx, cl, logger, fakeConv)
 		require.NoError(t, err)
 		assert.False(t, applied)
 		assert.True(t, waiting)

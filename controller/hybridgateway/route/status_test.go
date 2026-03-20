@@ -1667,13 +1667,11 @@ func TestIsHTTPReferenceGranted(t *testing.T) {
 					Name:  ptrObjName("my-service"),
 				}},
 			},
-			backendRef: gwtypes.HTTPBackendRef{
-				BackendRef: gwtypes.BackendRef{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name:  gwtypes.ObjectName("my-service"),
-						Kind:  nil,
-						Group: nil,
-					},
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gwtypes.BackendObjectReference{
+					Name:  gwtypes.ObjectName("my-service"),
+					Kind:  nil,
+					Group: nil,
 				},
 			},
 			fromNamespace: "default",
@@ -1693,13 +1691,11 @@ func TestIsHTTPReferenceGranted(t *testing.T) {
 					Name:  ptrObjName("my-service"),
 				}},
 			},
-			backendRef: gwtypes.HTTPBackendRef{
-				BackendRef: gwtypes.BackendRef{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name:  gwtypes.ObjectName("my-service"),
-						Kind:  kindPtr(""),
-						Group: groupPtr(""),
-					},
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gwtypes.BackendObjectReference{
+					Name:  gwtypes.ObjectName("my-service"),
+					Kind:  kindPtr(""),
+					Group: groupPtr(""),
 				},
 			},
 			fromNamespace: "default",
@@ -1829,7 +1825,7 @@ func TestIsHTTPReferenceGranted(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := IsHTTPReferenceGranted(tt.grantSpec, tt.backendRef, kindHTTPRoute, tt.fromNamespace)
+			got := IsReferenceGranted(tt.grantSpec, tt.backendRef, kindHTTPRoute, tt.fromNamespace)
 			if got != tt.want {
 				t.Errorf("IsHTTPReferenceGranted() = %v, want %v", got, tt.want)
 			}
@@ -1865,8 +1861,14 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 		PluginName: "rate-limiting",
 	}
 
+	httpRouteTypeMeta := metav1.TypeMeta{
+		Kind:       "HTTPRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
+	}
+
 	// Create base route
 	routeBase := &gwtypes.HTTPRoute{
+		TypeMeta: httpRouteTypeMeta,
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "default",
 			Name:      "route",
@@ -2492,7 +2494,8 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			clientBuilder := fake.NewClientBuilder().WithScheme(s).WithObjects(tt.clientObjs...)
 
 			cl := clientBuilder.Build()
-
+			route := tt.route
+			route.TypeMeta = httpRouteTypeMeta
 			cond, err := BuildResolvedRefsCondition(ctx, logger, cl, tt.route)
 			require.NoError(t, err)
 			require.NotNil(t, cond)
@@ -2523,7 +2526,10 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 				WithInterceptorFuncs(tt.interceptor).
 				Build()
 
-			cond, err := BuildResolvedRefsCondition(ctx, logger, cl, tt.route)
+			route := tt.route
+			route.TypeMeta = httpRouteTypeMeta
+			fmt.Println("===", route.GetObjectKind().GroupVersionKind().Group)
+			cond, err := BuildResolvedRefsCondition(ctx, logger, cl, route)
 			if tt.wantError {
 				require.Error(t, err)
 				require.Nil(t, cond)
