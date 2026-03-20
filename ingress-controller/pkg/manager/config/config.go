@@ -140,25 +140,7 @@ func NewConfig(opts ...Opt) Config {
 		// SIGTERM or SIGINT signal delay
 		TermDelay: 0,
 
-		// Konnect - all disabled by default
-		Konnect: KonnectConfig{
-			ConfigSynchronizationEnabled:  false,
-			LicenseSynchronizationEnabled: false,
-			LicenseStorageEnabled:         true,
-			InitialLicensePollingPeriod:   time.Minute,    // license.DefaultInitialPollingPeriod,
-			LicensePollingPeriod:          12 * time.Hour, // license.DefaultPollingPeriod
-			ControlPlaneID:                "",
-			Address:                       "https://us.kic.api.konghq.com",
-			TLSClient: TLSClientConfig{
-				Cert:     "",
-				CertFile: "",
-				Key:      "",
-				KeyFile:  "",
-			},
-			UploadConfigPeriod:    DefaultKonnectConfigUploadPeriod,
-			RefreshNodePeriod:     60 * time.Second, // konnect.DefaultRefreshNodePeriod
-			ConsumersSyncDisabled: false,
-		},
+		Konnect: DefaultKonnectConfig(),
 
 		// Telemetry settings - defaults
 		SplunkEndpoint:                   "",

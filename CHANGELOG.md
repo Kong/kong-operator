@@ -77,6 +77,9 @@
   upstreams synced to Konnect. A CEL validation rule enforces that
   `sticky_sessions_cookie` is set when `algorithm` is `sticky-sessions`.
   [#3555](https://github.com/Kong/kong-operator/pull/3555)
+- Fix license storage not being enabled for `ControlPlane`s, license decoding
+  from `Secret`s and not setting the `Secret` label selector labels on license `Secret`s.
+  [#3610](https://github.com/Kong/kong-operator/pull/3610)
 
 ### Changed
 

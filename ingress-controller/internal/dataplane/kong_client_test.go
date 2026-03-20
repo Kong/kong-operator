@@ -776,6 +776,134 @@ func TestKongClient_EmptyConfigUpdate(t *testing.T) {
 	})
 }
 
+func TestKongClient_EmptyConfigUpdate_UsesLastValidConfigOnStartupWhenLastValidConfigExistsOnStartup(t *testing.T) {
+	var (
+		ctx               = t.Context()
+		testGatewayClient = mustSampleGatewayClient(t)
+
+		clientsProvider = &mockGatewayClientsProvider{
+			gatewayClients: []*adminapi.Client{testGatewayClient},
+		}
+
+		updateStrategyResolver = mocks.NewUpdateStrategyResolver()
+		configChangeDetector   = mocks.ConfigurationChangeDetector{ConfigurationChanged: true}
+		configBuilder          = newMockKongConfigBuilder()
+		kongRawStateGetter     = &mockKongLastValidConfigFetcher{
+			lastKongState: &kongstate.KongState{
+				Services: []kongstate.Service{{
+					Routes: []kongstate.Route{{}},
+				}},
+			},
+		}
+		kongClient = setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder, nil, kongRawStateGetter)
+	)
+
+	err := kongClient.Update(ctx)
+	require.NoError(t, err)
+
+	_, ok := updateStrategyResolver.LastUpdatedContentForURL(testGatewayClient.BaseRootURL())
+	require.True(t, ok)
+
+	lastValidConfig, ok := kongRawStateGetter.LastValidConfig()
+	require.True(t, ok)
+	require.False(t, lastValidConfig.IsEmpty())
+	require.True(t, kongClient.hasSuccessfullyPushedConfig)
+}
+
+func TestKongClient_EmptyConfigUpdate_ReplacesPreviousValidConfigAfterSuccessfulPush(t *testing.T) {
+	var (
+		ctx               = t.Context()
+		testGatewayClient = mustSampleGatewayClient(t)
+
+		clientsProvider = &mockGatewayClientsProvider{
+			gatewayClients: []*adminapi.Client{testGatewayClient},
+		}
+
+		configChangeDetector = mocks.ConfigurationChangeDetector{ConfigurationChanged: true}
+	)
+
+	t.Run("dbless", func(t *testing.T) {
+		updateStrategyResolver := mocks.NewUpdateStrategyResolver()
+		configBuilder := newMockKongConfigBuilder()
+		configBuilder.kongState = &kongstate.KongState{
+			Services: []kongstate.Service{{
+				Routes: []kongstate.Route{{}},
+			}},
+		}
+		kongRawStateGetter := &mockKongLastValidConfigFetcher{
+			lastKongState: &kongstate.KongState{
+				Services: []kongstate.Service{{
+					Routes: []kongstate.Route{{}},
+				}},
+			},
+		}
+		kongClient := setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder, nil, kongRawStateGetter)
+		konnectKongStateUpdater := &mocks.KonnectKongStateUpdater{}
+		kongClient.SetKonnectKongStateUpdater(konnectKongStateUpdater)
+		kongClient.kongConfig.InMemory = true
+
+		err := kongClient.Update(ctx)
+		require.NoError(t, err)
+		require.True(t, kongClient.hasSuccessfullyPushedConfig)
+
+		configBuilder.kongState = &kongstate.KongState{}
+		err = kongClient.Update(ctx)
+		require.NoError(t, err)
+
+		gwContent, ok := updateStrategyResolver.LastUpdatedContentForURL(testGatewayClient.BaseRootURL())
+		require.True(t, ok)
+		assert.Equal(t, &file.Content{
+			FormatVersion: versions.DeckFileFormatVersion,
+			Upstreams: []file.FUpstream{{
+				Upstream: kong.Upstream{
+					Name: new(deckgen.StubUpstreamName),
+				},
+			}},
+		}, gwContent.Content, "gateway content should have appended stub upstream")
+
+		lastValidConfig, ok := kongRawStateGetter.LastValidConfig()
+		require.True(t, ok)
+		require.True(t, lastValidConfig.IsEmpty())
+	})
+
+	t.Run("db", func(t *testing.T) {
+		updateStrategyResolver := mocks.NewUpdateStrategyResolver()
+		configBuilder := newMockKongConfigBuilder()
+		configBuilder.kongState = &kongstate.KongState{
+			Services: []kongstate.Service{{
+				Routes: []kongstate.Route{{}},
+			}},
+		}
+		kongRawStateGetter := &mockKongLastValidConfigFetcher{
+			lastKongState: &kongstate.KongState{
+				Services: []kongstate.Service{{
+					Routes: []kongstate.Route{{}},
+				}},
+			},
+		}
+		kongClient := setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder, nil, kongRawStateGetter)
+		konnectKongStateUpdater := &mocks.KonnectKongStateUpdater{}
+		kongClient.SetKonnectKongStateUpdater(konnectKongStateUpdater)
+		kongClient.kongConfig.InMemory = false
+
+		err := kongClient.Update(ctx)
+		require.NoError(t, err)
+		require.True(t, kongClient.hasSuccessfullyPushedConfig)
+
+		configBuilder.kongState = &kongstate.KongState{}
+		err = kongClient.Update(ctx)
+		require.NoError(t, err)
+
+		gwContent, ok := updateStrategyResolver.LastUpdatedContentForURL(testGatewayClient.BaseRootURL())
+		require.True(t, ok)
+		require.True(t, deckgen.IsContentEmpty(gwContent.Content), "gateway content should be empty")
+
+		lastValidConfig, ok := kongRawStateGetter.LastValidConfig()
+		require.True(t, ok)
+		require.True(t, lastValidConfig.IsEmpty())
+	})
+}
+
 // setupTestKongClient creates a KongClient with mocked dependencies.
 func setupTestKongClient(
 	t *testing.T,
