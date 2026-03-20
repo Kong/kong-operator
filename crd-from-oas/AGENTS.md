@@ -22,8 +22,8 @@ mise r generate-api     # Generate Kubernetes CRDs from OpenAPI Specifications
 ## Linting
 
 ```bash
-mise r lint             # Run Go linters (modules, golangci-lint, modernize)
-mise r lint.api         # Lint Kubernetes API types
+make lint.api            # Lint Kubernetes API types
+make lint.golangci-lint  # Run Go linters (modules, golangci-lint, modernize)
 ```
 
 ## Testing
@@ -31,7 +31,13 @@ mise r lint.api         # Lint Kubernetes API types
 ### Unit Tests
 
 ```bash
-mise r test-unit        # Run unit tests with verbose output
+make test.unit.pretty
+```
+
+### CRD Validation Tests
+
+```bash
+mise r test-crdsvalidation # Run tests to validate generated CRDs
 ```
 
 ## Instructions

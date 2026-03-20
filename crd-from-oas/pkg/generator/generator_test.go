@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -244,6 +245,29 @@ func TestGenerateCRDType_NoObjectRefImportWhenUnneeded(t *testing.T) {
 	// When there are no dependencies or ref properties, the import should
 	// not be included to avoid unused import errors.
 	assert.NotContains(t, content, "commonv1alpha1")
+}
+
+func TestGenerateSchemaTypes_AddsKubebuilderTags(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	parsed := &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"CreateDcrProviderRequestOkta": {
+				Name: "CreateDcrProviderRequestOkta",
+				Properties: []*parser.Property{
+					{
+						Name: "provider_type",
+						Type: "string",
+					},
+				},
+			},
+		},
+	}
+
+	content := g.generateSchemaTypes(map[string]bool{"CreateDcrProviderRequestOkta": true}, parsed)
+
+	assert.Contains(t, content, "// +optional")
+	assert.Contains(t, content, fmt.Sprintf("// +kubebuilder:validation:MaxLength=%d", defaultMaxLength))
+	assert.Contains(t, content, "ProviderType string `json:\"provider_type,omitempty\"`")
 }
 
 func TestObjectRefNamespaced(t *testing.T) {
@@ -537,6 +561,108 @@ func TestCleanSingleVariantName(t *testing.T) {
 	}
 }
 
+func TestFixInitialisms(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "Http becomes HTTP",
+			input:    "CreateDcrConfigHttpInRequest",
+			expected: "CreateDcrConfigHTTPInRequest",
+		},
+		{
+			name:     "trailing Http becomes HTTP",
+			input:    "CreateDcrProviderRequestHttp",
+			expected: "CreateDcrProviderRequestHTTP",
+		},
+		{
+			name:     "Url becomes URL",
+			input:    "DcrBaseUrl",
+			expected: "DcrBaseURL",
+		},
+		{
+			name:     "Api becomes API",
+			input:    "DcrConfigPropertyApiKey",
+			expected: "DcrConfigPropertyAPIKey",
+		},
+		{
+			name:     "trailing Id becomes ID",
+			input:    "DcrConfigPropertyInitialClientId",
+			expected: "DcrConfigPropertyInitialClientID",
+		},
+		{
+			name:     "already correct initialisms unchanged",
+			input:    "DcrBaseURL",
+			expected: "DcrBaseURL",
+		},
+		{
+			name:     "multiple initialisms fixed",
+			input:    "HttpApiUrl",
+			expected: "HTTPAPIURL",
+		},
+		{
+			name:     "no initialisms unchanged",
+			input:    "CreatePortal",
+			expected: "CreatePortal",
+		},
+		{
+			name:     "empty string",
+			input:    "",
+			expected: "",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := fixInitialisms(tc.input)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+func TestSplitPascalCase(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected []string
+	}{
+		{
+			name:     "simple PascalCase",
+			input:    "CreatePortal",
+			expected: []string{"Create", "Portal"},
+		},
+		{
+			name:     "multiple words",
+			input:    "CreateDcrConfigHttpInRequest",
+			expected: []string{"Create", "Dcr", "Config", "Http", "In", "Request"},
+		},
+		{
+			name:     "single word",
+			input:    "Portal",
+			expected: []string{"Portal"},
+		},
+		{
+			name:     "existing acronym sequence",
+			input:    "DcrBaseURL",
+			expected: []string{"Dcr", "Base", "U", "R", "L"},
+		},
+		{
+			name:     "empty string",
+			input:    "",
+			expected: nil,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := splitPascalCase(tc.input)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
+
 func TestFormatSchemaComment(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -594,6 +720,122 @@ func TestFormatSchemaComment(t *testing.T) {
 			assert.Equal(t, tc.expected, result)
 		})
 	}
+}
+
+func TestCollectSDKOpsBoolFields(t *testing.T) {
+	g := NewGenerator(Config{})
+	schema := &parser.Schema{
+		Properties: []*parser.Property{
+			{
+				Name: "enabled",
+				Type: "boolean",
+			},
+			{
+				Name: "settings",
+				Type: "object",
+				Properties: []*parser.Property{
+					{
+						Name: "nested_enabled",
+						Type: "boolean",
+					},
+				},
+			},
+			{
+				Name: "items",
+				Type: "array",
+				Items: &parser.Property{
+					Type: "object",
+					Properties: []*parser.Property{
+						{
+							Name: "item_enabled",
+							Type: "boolean",
+						},
+					},
+				},
+			},
+			{
+				Name: "flags",
+				Type: "object",
+				AdditionalProperties: &parser.Property{
+					Type: "boolean",
+				},
+			},
+		},
+	}
+
+	assert.Equal(t, []sdkOpsBoolField{
+		{Label: "enabled", Path: []string{"enabled"}},
+		{Label: "flags.{}", Path: []string{"flags", "{}"}},
+		{Label: "items.[].item_enabled", Path: []string{"items", "[]", "item_enabled"}},
+		{Label: "settings.nested_enabled", Path: []string{"settings", "nested_enabled"}},
+	}, g.collectSDKOpsBoolFields(schema))
+}
+
+func TestGenerateSDKOps_NormalizesBooleanFields(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	schema := &parser.Schema{
+		Properties: []*parser.Property{
+			{
+				Name: "name",
+				Type: "string",
+			},
+			{
+				Name: "rbac_enabled",
+				Type: "boolean",
+			},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {
+				Path: "github.com/Kong/sdk-konnect-go/models/components.CreatePortal",
+			},
+		},
+	}
+
+	content, err := g.generateSDKOps("Portal", schema, opsConfig)
+	require.NoError(t, err)
+	assert.Contains(t, content, "var sdkOpsBoolFields = []sdkOpsBoolField")
+	assert.Contains(t, content, "func (s *PortalAPISpec) marshalSDKOpsPayload() ([]byte, error)")
+	assert.Contains(t, content, "data, err := s.marshalSDKOpsPayload()")
+	assert.Contains(t, content, "Label: \"rbac_enabled\"")
+	assert.Contains(t, content, "failed to normalize PortalAPISpec SDK payload")
+	assert.Contains(t, content, "case \"Enabled\":")
+	assert.Contains(t, content, "return true, nil")
+	assert.NotContains(t, content, "error) {\n\n\tdata")
+	assert.NotContains(t, content, "err)\n\n\tvar target")
+	assert.NotContains(t, content, "}var target")
+	assert.Contains(t, content, "}\n\tvar target")
+	assert.NotContains(t, content, "if err := normalizeSDKOpsBoolFields(payload); err != nil {\n\t\treturn nil, fmt.Errorf(\"failed to normalize PortalAPISpec for CreatePortal: %w\", err)")
+}
+
+func TestGenerateSDKOpsTest_AssertsNormalizedPayload(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	schema := &parser.Schema{
+		Properties: []*parser.Property{
+			{
+				Name: "name",
+				Type: "string",
+			},
+			{
+				Name: "rbac_enabled",
+				Type: "boolean",
+			},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {
+				Path: "github.com/Kong/sdk-konnect-go/models/components.CreatePortal",
+			},
+		},
+	}
+
+	content, err := g.generateSDKOpsTest("Portal", schema, opsConfig)
+	require.NoError(t, err)
+	assert.Contains(t, content, `RBACEnabled: "Enabled"`)
+	assert.Contains(t, content, `require.Equal(t, true, payload["rbac_enabled"])`)
+	assert.Contains(t, content, `require.Equal(t, "test-value", payload["name"])`)
 }
 
 func TestParseSDKTypePath(t *testing.T) {
