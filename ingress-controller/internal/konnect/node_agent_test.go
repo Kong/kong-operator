@@ -20,7 +20,8 @@ import (
 )
 
 const (
-	testHostname = "ingress-0"
+	testHostname             = "ingress-0"
+	defaultRefreshNodePeriod = 60 * time.Second
 )
 
 var (
@@ -273,7 +274,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 			nodeAgent := konnect.NewNodeAgent(
 				testHostname,
 				testKOUserAgent,
-				konnect.DefaultRefreshNodePeriod,
+				defaultRefreshNodePeriod,
 				logr.Discard(),
 				nodeClient,
 				configStatusQueue,
@@ -341,7 +342,7 @@ func TestNodeAgent_StartDoesntReturnUntilContextGetsCancelled(t *testing.T) {
 	nodeAgent := konnect.NewNodeAgent(
 		testHostname,
 		testKOUserAgent,
-		konnect.DefaultRefreshNodePeriod,
+		defaultRefreshNodePeriod,
 		logr.Discard(),
 		nodeClient,
 		newMockConfigStatusNotifier(),
@@ -386,7 +387,7 @@ func TestNodeAgent_ControllerNodeStatusGetsUpdatedOnStatusNotification(t *testin
 	nodeAgent := konnect.NewNodeAgent(
 		testHostname,
 		testKOUserAgent,
-		konnect.DefaultRefreshNodePeriod,
+		defaultRefreshNodePeriod,
 		logr.Discard(),
 		nodeClient,
 		configStatusQueue,
@@ -488,7 +489,7 @@ func TestNodeAgent_ControllerNodeStatusGetsUpdatedOnlyWhenItChanges(t *testing.T
 	nodeAgent := konnect.NewNodeAgent(
 		testHostname,
 		testKOUserAgent,
-		konnect.DefaultRefreshNodePeriod,
+		defaultRefreshNodePeriod,
 		logr.Discard(),
 		nodeClient,
 		configStatusQueue,
@@ -527,7 +528,7 @@ func TestNodeAgent_ControllerNodeStatusGetsUpdatedOnlyWhenItChanges(t *testing.T
 }
 
 func TestNodeAgent_TickerResetsOnEveryNodesUpdate(t *testing.T) {
-	const halfOfRefreshPeriod = konnect.DefaultRefreshNodePeriod / 2
+	const halfOfRefreshPeriod = defaultRefreshNodePeriod / 2
 
 	t.Run("config status notification", func(t *testing.T) {
 		nodeClient := newMockNodeClient(nil)
@@ -538,7 +539,7 @@ func TestNodeAgent_TickerResetsOnEveryNodesUpdate(t *testing.T) {
 		nodeAgent := konnect.NewNodeAgent(
 			testHostname,
 			testKOUserAgent,
-			konnect.DefaultRefreshNodePeriod,
+			defaultRefreshNodePeriod,
 			logr.Discard(),
 			nodeClient,
 			configStatusQueue,
@@ -562,7 +563,7 @@ func TestNodeAgent_TickerResetsOnEveryNodesUpdate(t *testing.T) {
 		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() == 2 }, time.Second, time.Microsecond)
 
 		t.Log("trigger update with ticker")
-		ticker.Add(konnect.DefaultRefreshNodePeriod)
+		ticker.Add(defaultRefreshNodePeriod)
 		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() > 2 }, time.Second, time.Microsecond)
 	})
 
@@ -575,7 +576,7 @@ func TestNodeAgent_TickerResetsOnEveryNodesUpdate(t *testing.T) {
 		nodeAgent := konnect.NewNodeAgent(
 			testHostname,
 			testKOUserAgent,
-			konnect.DefaultRefreshNodePeriod,
+			defaultRefreshNodePeriod,
 			logr.Discard(),
 			nodeClient,
 			configStatusQueue,
@@ -598,7 +599,7 @@ func TestNodeAgent_TickerResetsOnEveryNodesUpdate(t *testing.T) {
 		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() == 2 }, time.Second, time.Microsecond)
 
 		t.Log("trigger update with ticker")
-		ticker.Add(konnect.DefaultRefreshNodePeriod)
+		ticker.Add(defaultRefreshNodePeriod)
 		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() == 3 }, time.Second, time.Microsecond)
 	})
 }

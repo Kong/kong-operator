@@ -17,8 +17,7 @@ import (
 )
 
 const (
-	MinRefreshNodePeriod     = 30 * time.Second
-	DefaultRefreshNodePeriod = 60 * time.Second
+	MinRefreshNodePeriod = 30 * time.Second
 )
 
 // GatewayInstance is a controlled kong gateway instance.
