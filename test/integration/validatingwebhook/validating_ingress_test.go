@@ -22,7 +22,7 @@ func TestAdmissionWebhook_Ingress(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
-	ns, _, ingressClass, _ := bootstrapGateway(ctx, t, integration.GetEnv(), integration.GetClients().MgrClient)
+	ns, _, ingressClass, _, _ := bootstrapGateway(ctx, t, integration.GetEnv(), integration.GetClients().MgrClient) //nolint:dogsled
 
 	k8sClient := integration.GetEnv().Cluster().Client()
 

@@ -25,7 +25,7 @@ import (
 )
 
 func bootstrapGateway(ctx context.Context, t *testing.T, env environments.Environment, mgrClient client.Client) (
-	namespace *corev1.Namespace, cleaner *clusters.Cleaner, ingressClass string, ctrlClient client.Client,
+	namespace *corev1.Namespace, cleaner *clusters.Cleaner, ingressClass string, ctrlClient client.Client, gwc *gatewayv1.GatewayClass,
 ) {
 	namespace, cleaner = helpers.SetupTestEnv(t, ctx, env)
 
@@ -77,7 +77,7 @@ func bootstrapGateway(ctx context.Context, t *testing.T, env environments.Enviro
 	require.Eventually(t, testutils.GatewayIsProgrammed(t, ctx, gatewayNSN, mgrClient), 3*time.Minute, time.Second)
 	t.Log("Gateway is programmed, proceeding with the test cases")
 
-	return namespace, cleaner, ingressClass, ctrlClient
+	return namespace, cleaner, ingressClass, ctrlClient, gatewayClass
 }
 
 // kongRouterFlavor returns router mode of Kong in tests.
