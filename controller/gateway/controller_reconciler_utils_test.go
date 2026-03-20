@@ -686,6 +686,35 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 			},
 		},
 		{
+			name: "TLS listener uses known port",
+			listeners: []gwtypes.Listener{
+				{
+					Name:     "http",
+					Protocol: gatewayv1.HTTPProtocolType,
+					Port:     gatewayv1.PortNumber(80),
+				},
+				{
+					Name:     "tls",
+					Protocol: gatewayv1.TLSProtocolType,
+					Port:     gatewayv1.PortNumber(445),
+				},
+			},
+			expectedEnvs: []corev1.EnvVar{
+				{
+					Name:  "KONG_PORT_MAPS",
+					Value: "80:8000,445:16384", // Should assign the first port in the assigned port interval
+				},
+				{
+					Name:  "KONG_STREAM_LISTEN",
+					Value: "0.0.0.0:16384 ssl reuseport",
+				},
+			},
+			expectedPortMap: map[int]int{
+				80:  8000,
+				445: 16384,
+			},
+		},
+		{
 			name: "unsupported protocol TCP in listeners",
 			listeners: []gwtypes.Listener{
 				{

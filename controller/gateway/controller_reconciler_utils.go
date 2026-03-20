@@ -1210,6 +1210,12 @@ func setDataPlaneOptionsForListeners(
 	return setDataPlaneIngressServicePorts(opts, listeners, listenersOpts, listenerPortToKongListenPort)
 }
 
+// isKnownPort returns true if the required listener port number is a well-known port (below 1024)
+// that we usually cannot listen on Kong DP.
+func isKnownPort(portNumber int) bool {
+	return portNumber < 1024
+}
+
 // setDataPlaneDeploymentListenPorts configures deploymentOptions to set listen ports of the generated DataPlane.
 // It returns the map from the listener's port to the port.
 func setDataPlaneDeploymentListenPorts(
@@ -1256,8 +1262,9 @@ func setDataPlaneDeploymentListenPorts(
 			// https://github.com/Kong/kong-operator/issues/3511
 			tlsPorts = append(tlsPorts, portNumber)
 			// Assign another port if the listener's port is already allocated on Kong DP.
-			// REVIEW: Also re-assign a port if known ports (<1024) are used? Or always assign a port?
-			if _, occupied := kongPortOccupied[portNumber]; occupied {
+			// Also re-assign a port if known ports (<1024) are used because we usually cannot listen on those port on Kong DP.
+			_, occupied := kongPortOccupied[portNumber]
+			if isKnownPort(portNumber) || occupied {
 				for ; assignedPortNumber < assignedPortMax; assignedPortNumber++ {
 					if _, occupied := kongPortOccupied[assignedPortNumber]; !occupied {
 						listenerPortToKongListenPort[portNumber] = assignedPortNumber
