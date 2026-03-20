@@ -55,3 +55,19 @@ func GetContainerVolumeMountByMountPath(container *corev1.Container, mountPath s
 
 	return nil
 }
+
+// SetContainerEnv overrides the environment variable by given `env` with the same name in its envs.
+// If there are no env with the same name, it adds the `env` to `envs`.
+func SetContainerEnv(container *corev1.Container, env corev1.EnvVar) {
+	found := false
+	for i, existingEnv := range container.Env {
+		if env.Name == existingEnv.Name {
+			container.Env[i] = env
+			found = true
+			// In case there are multiple items in env with the same name, we should finish the loop always.
+		}
+	}
+	if !found {
+		container.Env = append(container.Env, env)
+	}
+}

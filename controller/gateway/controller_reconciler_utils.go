@@ -68,7 +68,12 @@ func (r *Reconciler) createDataPlane(
 	// so it cannot be overridden by spec.infrastructure).
 	setGatewayNameLabelInDataPlane(&dataplane.Spec.DataPlaneOptions, gateway.Name)
 	setDataPlaneOptionsDefaults(&dataplane.Spec.DataPlaneOptions, r.DefaultDataPlaneImage)
-	if err := setDataPlaneIngressServicePorts(&dataplane.Spec.DataPlaneOptions, gateway.Spec.Listeners, gatewayConfig.Spec.ListenersOptions); err != nil {
+
+	if err := setDataPlaneOptionsForListeners(
+		&dataplane.Spec.DataPlaneOptions,
+		gateway.Spec.Listeners,
+		gatewayConfig.Spec.ListenersOptions,
+	); err != nil {
 		return nil, err
 	}
 
@@ -583,11 +588,12 @@ func generateDataPlaneNetworkPolicy(
 	podLabels map[string]string,
 ) (*networkingv1.NetworkPolicy, error) {
 	var (
-		protocolTCP     = corev1.ProtocolTCP
-		adminAPISSLPort = intstr.FromInt(consts.DataPlaneAdminAPIPort)
-		proxyPort       = intstr.FromInt(consts.DataPlaneProxyPort)
-		proxySSLPort    = intstr.FromInt(consts.DataPlaneProxySSLPort)
-		metricsPort     = intstr.FromInt(consts.DataPlaneMetricsPort)
+		protocolTCP       = corev1.ProtocolTCP
+		adminAPISSLPorts  = []intstr.IntOrString{intstr.FromInt(consts.DataPlaneAdminAPIPort)}
+		proxyPorts        = []intstr.IntOrString{intstr.FromInt(consts.DataPlaneProxyPort)}
+		proxySSLPorts     = []intstr.IntOrString{intstr.FromInt(consts.DataPlaneProxySSLPort)}
+		metricsPorts      = []intstr.IntOrString{intstr.FromInt(consts.DataPlaneMetricsPort)}
+		streamListenPorts = []intstr.IntOrString{}
 		// The label keys to match Kong operator pod.
 		// To not create new NetworkPolicy on upgrade of , we just keep the keys marking the application
 		// and remove the keys related to versions such as `version`,`pod-template-hash`,`helm.sh/chart`.
@@ -614,21 +620,33 @@ func generateDataPlaneNetworkPolicy(
 		if err != nil {
 			return nil, fmt.Errorf("failed parsing KONG_PROXY_LISTEN env: %w", err)
 		}
-		if kongListenConfig.Endpoint != nil {
-			proxyPort = intstr.FromInt(kongListenConfig.Endpoint.Port)
-		}
-		if kongListenConfig.SSLEndpoint != nil {
-			proxySSLPort = intstr.FromInt(kongListenConfig.SSLEndpoint.Port)
-		}
+
+		proxyPorts = lo.Map(kongListenConfig.Endpoints, func(ep *proxyListenEndpoint, _ int) intstr.IntOrString {
+			return intstr.FromInt(ep.Port)
+		})
+		proxySSLPorts = lo.Map(kongListenConfig.SSLEndpoints, func(ep *proxyListenEndpoint, _ int) intstr.IntOrString {
+			return intstr.FromInt(ep.Port)
+		})
 	}
 	if adminListen := k8sutils.EnvValueByName(container.Env, "KONG_ADMIN_LISTEN"); adminListen != "" {
 		kongListenConfig, err := parseKongListenEnv(adminListen)
 		if err != nil {
 			return nil, fmt.Errorf("failed parsing KONG_ADMIN_LISTEN env: %w", err)
 		}
-		if kongListenConfig.SSLEndpoint != nil {
-			adminAPISSLPort = intstr.FromInt(kongListenConfig.SSLEndpoint.Port)
+		adminAPISSLPorts = lo.Map(kongListenConfig.SSLEndpoints, func(ep *proxyListenEndpoint, _ int) intstr.IntOrString {
+			return intstr.FromInt(ep.Port)
+		})
+	}
+	if streamListen := k8sutils.EnvValueByName(container.Env, "KONG_STREAM_LISTEN"); streamListen != "" {
+		kongListenConfig, err := parseKongListenEnv(streamListen)
+		if err != nil {
+			return nil, fmt.Errorf("failed parsing KONG_STREAM_LISTEN env: %w", err)
 		}
+		// Since currently we only support TLS (TCP SSL) listeners, we only extract SSL ports here.
+		// For TCPRoute and UDPRoute, we also need to extract TCP endpoints and UDP endpoints.
+		streamListenPorts = lo.Map(kongListenConfig.SSLEndpoints, func(ep *proxyListenEndpoint, _ int) intstr.IntOrString {
+			return intstr.FromInt(ep.Port)
+		})
 	}
 
 	// Construct the policy to allow the KO pod to access DataPlane admin APIs.
@@ -653,25 +671,44 @@ func generateDataPlaneNetworkPolicy(
 		}
 	}
 	limitAdminAPIIngress := networkingv1.NetworkPolicyIngressRule{
-		Ports: []networkingv1.NetworkPolicyPort{
-			{Protocol: &protocolTCP, Port: &adminAPISSLPort},
-		},
+		Ports: lo.Map(adminAPISSLPorts, func(port intstr.IntOrString, _ int) networkingv1.NetworkPolicyPort {
+			return networkingv1.NetworkPolicyPort{Protocol: &protocolTCP, Port: &port}
+		}),
 		From: []networkingv1.NetworkPolicyPeer{
 			policyPeerForControllerPod,
 		},
 	}
 
 	allowProxyIngress := networkingv1.NetworkPolicyIngressRule{
-		Ports: []networkingv1.NetworkPolicyPort{
-			{Protocol: &protocolTCP, Port: &proxyPort},
-			{Protocol: &protocolTCP, Port: &proxySSLPort},
-		},
+		Ports: append(
+			lo.Map(proxyPorts, func(port intstr.IntOrString, _ int) networkingv1.NetworkPolicyPort {
+				return networkingv1.NetworkPolicyPort{Protocol: &protocolTCP, Port: &port}
+			}),
+			lo.Map(proxySSLPorts, func(port intstr.IntOrString, _ int) networkingv1.NetworkPolicyPort {
+				return networkingv1.NetworkPolicyPort{Protocol: &protocolTCP, Port: &port}
+			})...,
+		),
 	}
 
 	allowMetricsIngress := networkingv1.NetworkPolicyIngressRule{
-		Ports: []networkingv1.NetworkPolicyPort{
-			{Protocol: &protocolTCP, Port: &metricsPort},
-		},
+		Ports: lo.Map(metricsPorts, func(port intstr.IntOrString, _ int) networkingv1.NetworkPolicyPort {
+			return networkingv1.NetworkPolicyPort{Protocol: &protocolTCP, Port: &port}
+		}),
+	}
+
+	ingressRules := []networkingv1.NetworkPolicyIngressRule{
+		limitAdminAPIIngress,
+		allowProxyIngress,
+		allowMetricsIngress,
+	}
+
+	if len(streamListenPorts) > 0 {
+		allowStreamIngress := networkingv1.NetworkPolicyIngressRule{
+			Ports: lo.Map(streamListenPorts, func(port intstr.IntOrString, _ int) networkingv1.NetworkPolicyPort {
+				return networkingv1.NetworkPolicyPort{Protocol: &protocolTCP, Port: &port}
+			}),
+		}
+		ingressRules = append(ingressRules, allowStreamIngress)
 	}
 
 	return &networkingv1.NetworkPolicy{
@@ -688,11 +725,7 @@ func generateDataPlaneNetworkPolicy(
 			PolicyTypes: []networkingv1.PolicyType{
 				networkingv1.PolicyTypeIngress,
 			},
-			Ingress: []networkingv1.NetworkPolicyIngressRule{
-				limitAdminAPIIngress,
-				allowProxyIngress,
-				allowMetricsIngress,
-			},
+			Ingress: ingressRules,
 		},
 	}, nil
 }
@@ -837,9 +870,8 @@ func supportedRoutesByProtocol() map[gatewayv1.ProtocolType]map[gatewayv1.Kind]s
 	return map[gatewayv1.ProtocolType]map[gatewayv1.Kind]struct{}{
 		gatewayv1.HTTPProtocolType:  {"HTTPRoute": {}},
 		gatewayv1.HTTPSProtocolType: {"HTTPRoute": {}},
-
-		// L4 routes not supported yet
-		// gatewayv1.TLSProtocolType:   {"TLSRoute": {}},
+		gatewayv1.TLSProtocolType:   {"TLSRoute": {}},
+		// TCPRoutes ad UDPRoutes are not supported yet
 		// gatewayv1.TCPProtocolType:   {"TCPRoute": {}},
 		// gatewayv1.UDPProtocolType:   {"UDPRoute": {}},
 	}
@@ -1024,8 +1056,11 @@ func countAttachedRoutesForGatewayListener(ctx context.Context, g *gwtypes.Gatew
 						)
 					}
 					count += countAttachedHTTPRoutes(listener, httpRoutes)
+				case "TLSRoute":
+					// TODO: implement ListTLSRoute
+					return 0, nil
 				default:
-					return 0, fmt.Errorf("unsupported route kind: %T", k)
+					return 0, fmt.Errorf("unsupported route kind: %s", k)
 				}
 			}
 		}
@@ -1160,10 +1195,137 @@ func (g *gatewayConditionsAndListenersAwareT) setListenersStatus(status metav1.C
 	}
 }
 
+// setDataPlaneOptionsForListeners configures DataPlaneOptions in generated DataPlane from listeners of the gateway.
+// It includes configuring deployment options and ingress service options.
+func setDataPlaneOptionsForListeners(
+	opts *operatorv1beta1.DataPlaneOptions,
+	listeners []gatewayv1.Listener,
+	listenersOpts []operatorv2beta1.GatewayConfigurationListenerOptions,
+) error {
+	listenerPortToKongListenPort, err := setDataPlaneDeploymentListenPorts(opts, listeners)
+	if err != nil {
+		return err
+	}
+
+	return setDataPlaneIngressServicePorts(opts, listeners, listenersOpts, listenerPortToKongListenPort)
+}
+
+// isKnownPort returns true if the required listener port number is a well-known port (below 1024)
+// that we usually cannot listen on Kong DP.
+func isKnownPort(portNumber int) bool {
+	return portNumber < 1024
+}
+
+// setDataPlaneDeploymentListenPorts configures deploymentOptions to set listen ports of the generated DataPlane.
+// It returns the map from the listener's port to the port.
+func setDataPlaneDeploymentListenPorts(
+	opts *operatorv1beta1.DataPlaneOptions,
+	listeners []gatewayv1.Listener,
+) (map[int]int, error) {
+
+	if opts.Deployment.PodTemplateSpec == nil {
+		return nil, errors.New("podTemplateSpec in DeploymentOptions not initialized")
+	}
+	container := k8sutils.GetPodContainerByName(&opts.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+	if container == nil {
+		return nil, errors.New("dataPlane proxy container not initialized")
+	}
+
+	listenerPortToKongListenPort := map[int]int{}
+	kongPortOccupied := map[int]struct{}{
+		consts.DataPlaneProxyPort:    {},
+		consts.DataPlaneProxySSLPort: {},
+		consts.DataPlaneMetricsPort:  {},
+		// Currently DataPlaneMetricsPort and DataPlaneStatusPort are the same port.
+		// We should uncomment this if they are changed to use different ports.
+		// consts.DataPlaneStatusPort:   {},
+		consts.DataPlaneAdminAPIPort: {},
+	}
+
+	// Extract listeners with TLS ports.
+	tlsPorts := []int{}
+	var errs error
+	// assignedPortNumber and assignedPortMax defines the interval of ports to assign to listen on Kong stream proxy
+	// if the specified port in the listener is already occupied on Kong DataPlane.
+	assignedPortNumber := consts.DataPlaneAssignedPortStart
+	assignedPortMax := consts.DataPlaneAssignedPortStart + 1024
+
+	for i, l := range listeners {
+		switch l.Protocol {
+		case gatewayv1.HTTPProtocolType:
+			listenerPortToKongListenPort[int(l.Port)] = consts.DataPlaneProxyPort
+		case gatewayv1.HTTPSProtocolType:
+			listenerPortToKongListenPort[int(l.Port)] = consts.DataPlaneProxySSLPort
+		case gatewayv1.TLSProtocolType:
+			portNumber := int(l.Port)
+			// TODO: support multiple listeners using the same port:
+			// https://github.com/Kong/kong-operator/issues/3511
+			tlsPorts = append(tlsPorts, portNumber)
+			// Assign another port if the listener's port is already allocated on Kong DP.
+			// Also re-assign a port if known ports (<1024) are used because we usually cannot listen on those port on Kong DP.
+			_, occupied := kongPortOccupied[portNumber]
+			if isKnownPort(portNumber) || occupied {
+				for ; assignedPortNumber < assignedPortMax; assignedPortNumber++ {
+					if _, occupied := kongPortOccupied[assignedPortNumber]; !occupied {
+						listenerPortToKongListenPort[portNumber] = assignedPortNumber
+						kongPortOccupied[assignedPortNumber] = struct{}{}
+						break
+					}
+				}
+				// Although it should not happen where no ports can be assigned for the listener,
+				// we attach an error if the case really happens.
+				if assignedPortNumber >= assignedPortMax {
+					errs = errors.Join(errs, fmt.Errorf("listener %d's port %d already occupied and no available ports can be assinged", i, portNumber))
+				}
+
+			} else {
+				listenerPortToKongListenPort[portNumber] = portNumber
+				kongPortOccupied[portNumber] = struct{}{}
+			}
+		default:
+			errs = errors.Join(errs, fmt.Errorf("listener %d uses unsupported protocol %s", i, l.Protocol))
+		}
+	}
+
+	if errs != nil {
+		return nil, errs
+	}
+
+	// Configure env `KONG_STREAM_LISTEN` if there are TLS listeners.
+	// To make the value of the env stable when listener not changed, we sort the ports here.
+	if len(tlsPorts) > 0 {
+		sort.Ints(tlsPorts)
+		streamListenEnvs := make([]string, 0, len(tlsPorts))
+		for _, portNumber := range tlsPorts {
+			streamListenEnvs = append(streamListenEnvs, fmt.Sprintf("0.0.0.0:%d ssl reuseport", listenerPortToKongListenPort[portNumber]))
+		}
+		k8sutils.SetContainerEnv(container, corev1.EnvVar{
+			Name:  "KONG_STREAM_LISTEN",
+			Value: strings.Join(streamListenEnvs, ","),
+		})
+	}
+
+	// Configure env KONG_PORT_MAPS.
+	// Also we sort the ports here to make the env stable.
+	listenerPorts := lo.Keys(listenerPortToKongListenPort)
+	sort.Ints(listenerPorts)
+	portMapEnvs := make([]string, 0, len(listenerPorts))
+	for _, portNumber := range listenerPorts {
+		portMapEnvs = append(portMapEnvs, fmt.Sprintf("%d:%d", portNumber, listenerPortToKongListenPort[portNumber]))
+	}
+	k8sutils.SetContainerEnv(container, corev1.EnvVar{
+		Name:  "KONG_PORT_MAPS",
+		Value: strings.Join(portMapEnvs, ","),
+	})
+
+	return listenerPortToKongListenPort, nil
+}
+
 func setDataPlaneIngressServicePorts(
 	opts *operatorv1beta1.DataPlaneOptions,
 	listeners []gatewayv1.Listener,
 	listenersOpts []operatorv2beta1.GatewayConfigurationListenerOptions,
+	servicePortMap map[int]int,
 ) error {
 	// Check if all the names in GatewayConfiguration's spec.listenersOptions matches a listener in Gateway.
 	for i, listenerOpts := range listenersOpts {
@@ -1187,6 +1349,10 @@ func setDataPlaneIngressServicePorts(
 		}
 	}
 
+	if servicePortMap == nil {
+		servicePortMap = map[int]int{}
+	}
+
 	var errs error
 	for i, l := range listeners {
 		var name string
@@ -1206,6 +1372,13 @@ func setDataPlaneIngressServicePorts(
 			port.TargetPort = intstr.FromInt(consts.DataPlaneProxySSLPort)
 		case gatewayv1.HTTPProtocolType:
 			port.TargetPort = intstr.FromInt(consts.DataPlaneProxyPort)
+		case gatewayv1.TLSProtocolType:
+			targetPort, ok := servicePortMap[int(l.Port)]
+			if !ok {
+				errs = errors.Join(errs, fmt.Errorf("no target port assigned listener %s on port %d", l.Name, l.Port))
+				continue
+			}
+			port.TargetPort = intstr.FromInt(targetPort)
 		default:
 			errs = errors.Join(errs, fmt.Errorf("listener %d uses unsupported protocol %s", i, l.Protocol))
 			continue
@@ -1349,8 +1522,8 @@ type proxyListenEndpoint struct {
 }
 
 type kongListenConfig struct {
-	Endpoint    *proxyListenEndpoint
-	SSLEndpoint *proxyListenEndpoint
+	Endpoints    []*proxyListenEndpoint
+	SSLEndpoints []*proxyListenEndpoint
 }
 
 // parseKongListenEnv parses the provided kong listen string and returns
@@ -1383,19 +1556,19 @@ func parseKongListenEnv(str string) (kongListenConfig, error) {
 			if err != nil {
 				return kongListenConfig, fmt.Errorf("failed parsing port %s: %w", port, err)
 			}
-			kongListenConfig.SSLEndpoint = &proxyListenEndpoint{
+			kongListenConfig.SSLEndpoints = append(kongListenConfig.SSLEndpoints, &proxyListenEndpoint{
 				Address: host,
 				Port:    p,
-			}
+			})
 		} else {
 			p, err := strconv.Atoi(port)
 			if err != nil {
 				return kongListenConfig, fmt.Errorf("failed parsing port %s: %w", port, err)
 			}
-			kongListenConfig.Endpoint = &proxyListenEndpoint{
+			kongListenConfig.Endpoints = append(kongListenConfig.Endpoints, &proxyListenEndpoint{
 				Address: host,
 				Port:    p,
-			}
+			})
 		}
 	}
 
