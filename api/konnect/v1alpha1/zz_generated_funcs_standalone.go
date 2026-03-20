@@ -82,3 +82,33 @@ func (obj *KonnectCloudGatewayNetwork) GetConditions() []metav1.Condition {
 func (obj *KonnectCloudGatewayNetwork) SetConditions(conditions []metav1.Condition) {
 	obj.Status.Conditions = conditions
 }
+
+// GetKonnectStatus returns the Konnect status contained in the KonnectEventGateway status.
+func (obj *KonnectEventGateway) GetKonnectStatus() *konnectv1alpha2.KonnectEntityStatus {
+	return &obj.Status.KonnectEntityStatus
+}
+
+// GetKonnectID returns the Konnect ID in the KonnectEventGateway status.
+func (obj *KonnectEventGateway) GetKonnectID() string {
+	return obj.Status.ID
+}
+
+// SetKonnectID sets the Konnect ID in the KonnectEventGateway status.
+func (obj *KonnectEventGateway) SetKonnectID(id string) {
+	obj.Status.ID = id
+}
+
+// GetTypeName returns the KonnectEventGateway Kind name.
+func (obj KonnectEventGateway) GetTypeName() string {
+	return "KonnectEventGateway"
+}
+
+// GetConditions returns the Status Conditions.
+func (obj *KonnectEventGateway) GetConditions() []metav1.Condition {
+	return obj.Status.Conditions
+}
+
+// SetConditions sets the Status Conditions.
+func (obj *KonnectEventGateway) SetConditions(conditions []metav1.Condition) {
+	obj.Status.Conditions = conditions
+}

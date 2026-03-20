@@ -204,6 +204,12 @@ var supportedKonnectTypesStandalone = []supportedTypesT{
 				KonnectStatusEmbedded:      true,
 				GetKonnectStatusReturnType: "*konnectv1alpha2.KonnectEntityStatus",
 			},
+			{
+				Type:                       "KonnectEventGateway",
+				KonnectStatusType:          "KonnectEntityStatus",
+				KonnectStatusEmbedded:      true,
+				GetKonnectStatusReturnType: "*konnectv1alpha2.KonnectEntityStatus",
+			},
 		},
 	},
 	{

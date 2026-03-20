@@ -49,6 +49,8 @@ func ReconciliationWatchOptionsForEntity[
 		return KonnectCloudGatewayDataPlaneGroupConfigurationReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.KonnectCloudGatewayTransitGateway:
 		return KonnectCloudGatewayTransitGatewayWatchOptions(cl)
+	case *konnectv1alpha1.KonnectEventGateway:
+		return KonnectEventGatewayReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.KongPluginBinding:
 		return KongPluginBindingReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.KongUpstream:
@@ -317,7 +319,8 @@ type WatchableEntityType interface {
 		configurationv1alpha1.KongKeySet |
 		configurationv1alpha1.KongSNI |
 		configurationv1alpha1.KongDataPlaneClientCertificate |
-		konnectv1alpha1.KonnectAPIAuthConfiguration
+		konnectv1alpha1.KonnectAPIAuthConfiguration |
+		konnectv1alpha1.KonnectEventGateway
 
 	GetTypeName() string
 }
