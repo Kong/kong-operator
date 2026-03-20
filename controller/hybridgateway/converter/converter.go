@@ -64,7 +64,7 @@ func NewConverter[t RootObject](obj t, cl client.Client, fqdnMode bool, clusterD
 	case gwtypes.HTTPRoute:
 		return newHTTPRouteConverter(&o, cl, fqdnMode, clusterDomain).(APIConverter[t]), nil
 	case gwtypes.TLSRoute:
-		return newTLSRouteConverter(&o, cl).(APIConverter[t]), nil
+		return newTLSRouteConverter(&o, cl, fqdnMode, clusterDomain).(APIConverter[t]), nil
 	case gwtypes.Gateway:
 		return newGatewayConverter(&o, cl).(APIConverter[t]), nil
 	default:
