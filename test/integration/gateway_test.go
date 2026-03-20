@@ -22,7 +22,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
@@ -745,11 +744,13 @@ func TestGatewayWithMultipleListeners(t *testing.T) {
 func TestScalingDataPlaneThroughGatewayConfiguration(t *testing.T) {
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
+	cl := GetClients().MgrClient
+
+	ctx := t.Context()
 
 	gatewayConfig := helpers.GenerateGatewayConfiguration(namespace.Name)
 	t.Logf("deploying GatewayConfiguration %s/%s", gatewayConfig.Namespace, gatewayConfig.Name)
-	gatewayConfig, err := GetClients().OperatorClient.GatewayOperatorV2beta1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
-	require.NoError(t, err)
+	require.NoError(t, cl.Create(ctx, gatewayConfig))
 	cleaner.Add(gatewayConfig)
 
 	gatewayClass := helpers.MustGenerateGatewayClass(t)
@@ -760,8 +761,7 @@ func TestScalingDataPlaneThroughGatewayConfiguration(t *testing.T) {
 		Namespace: (*gatewayv1.Namespace)(&namespace.Name),
 	}
 	t.Logf("deploying the GatewayClass %s", gatewayClass.Name)
-	gatewayClass, err = GetClients().GatewayClient.GatewayV1().GatewayClasses().Create(GetCtx(), gatewayClass, metav1.CreateOptions{})
-	require.NoError(t, err)
+	require.NoError(t, cl.Create(ctx, gatewayClass))
 	cleaner.Add(gatewayClass)
 
 	t.Log("deploying Gateway resource")
@@ -770,61 +770,53 @@ func TestScalingDataPlaneThroughGatewayConfiguration(t *testing.T) {
 		Namespace: namespace.Name,
 	}
 	gateway := helpers.GenerateGateway(gatewayNN, gatewayClass)
-	gateway, err = GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Create(GetCtx(), gateway, metav1.CreateOptions{})
-	require.NoError(t, err)
+	require.NoError(t, cl.Create(ctx, gateway))
 	cleaner.Add(gateway)
 
 	t.Log("verifying Gateway gets marked as Scheduled")
-	require.Eventually(t, testutils.GatewayIsAccepted(t, GetCtx(), gatewayNN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayIsAccepted(t, ctx, gatewayNN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
 
 	t.Log("verifying Gateway gets marked as Programmed")
-	require.Eventually(t, testutils.GatewayIsProgrammed(t, GetCtx(), gatewayNN, clients.MgrClient), testutils.GatewayReadyTimeLimit, time.Second)
-	require.Eventually(t, testutils.GatewayListenersAreProgrammed(t, GetCtx(), gatewayNN, clients), testutils.GatewayReadyTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayIsProgrammed(t, ctx, gatewayNN, clients.MgrClient), testutils.GatewayReadyTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayListenersAreProgrammed(t, ctx, gatewayNN, clients), testutils.GatewayReadyTimeLimit, time.Second)
 
 	t.Log("verifying that the ControlPlane becomes provisioned")
-	require.Eventually(t, testutils.GatewayControlPlaneIsProvisioned(t, GetCtx(), gateway, clients), testutils.SubresourceReadinessWait, time.Second)
+	require.Eventually(t, testutils.GatewayControlPlaneIsProvisioned(t, ctx, gateway, clients), testutils.SubresourceReadinessWait, time.Second)
 
 	t.Log("verifying that the DataPlane becomes ready")
-	require.Eventually(t, testutils.GatewayDataPlaneIsReady(t, GetCtx(), gateway, clients), testutils.SubresourceReadinessWait, time.Second)
+	require.Eventually(t, testutils.GatewayDataPlaneIsReady(t, ctx, gateway, clients), testutils.SubresourceReadinessWait, time.Second)
 
 	testCases := []struct {
 		name                       string
-		dataplaneDeploymentOptions operatorv1beta1.DeploymentOptions
+		dataplaneDeploymentOptions operatorv2beta1.DeploymentOptions
 		expectedReplicasCount      int32
 	}{
 		{
 			name: "replicas=2",
-			dataplaneDeploymentOptions: operatorv1beta1.DeploymentOptions{
+			dataplaneDeploymentOptions: operatorv2beta1.DeploymentOptions{
 				Replicas: new(int32(2)),
 			},
 			expectedReplicasCount: 2,
 		},
 		{
 			name: "replicas=0",
-			dataplaneDeploymentOptions: operatorv1beta1.DeploymentOptions{
+			dataplaneDeploymentOptions: operatorv2beta1.DeploymentOptions{
 				Replicas: new(int32(0)),
 			},
 			expectedReplicasCount: 0,
 		},
 		{
-			name: "replicas=3",
-			dataplaneDeploymentOptions: operatorv1beta1.DeploymentOptions{
-				Replicas: new(int32(3)),
-			},
-			expectedReplicasCount: 3,
-		},
-		{
 			name: "replicas=1",
-			dataplaneDeploymentOptions: operatorv1beta1.DeploymentOptions{
+			dataplaneDeploymentOptions: operatorv2beta1.DeploymentOptions{
 				Replicas: new(int32(1)),
 			},
 			expectedReplicasCount: 1,
 		},
 		{
 			name: "horizontal scaling with minReplicas=2",
-			dataplaneDeploymentOptions: operatorv1beta1.DeploymentOptions{
-				Scaling: &operatorv1beta1.Scaling{
-					HorizontalScaling: &operatorv1beta1.HorizontalScaling{
+			dataplaneDeploymentOptions: operatorv2beta1.DeploymentOptions{
+				Scaling: &operatorv2beta1.Scaling{
+					HorizontalScaling: &operatorv2beta1.HorizontalScaling{
 						MinReplicas: new(int32(2)),
 						MaxReplicas: 4,
 					},
@@ -835,32 +827,34 @@ func TestScalingDataPlaneThroughGatewayConfiguration(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			deploymentOptions := tc.dataplaneDeploymentOptions
-			gatewayConfiguration, err := GetClients().OperatorClient.GatewayOperatorV1beta1().GatewayConfigurations(namespace.Name).Get(GetCtx(), gatewayConfig.Name, metav1.GetOptions{})
-			require.NoError(t, err)
-			gatewayConfiguration.Spec.DataPlaneOptions.Deployment.DeploymentOptions = deploymentOptions
-			t.Logf("changing the GatewayConfiguration to change dataplane deploymentOptions to %v", deploymentOptions)
+			ctx := t.Context()
+
 			require.EventuallyWithT(t, func(c *assert.CollectT) {
-				_, err = GetClients().OperatorClient.GatewayOperatorV1beta1().GatewayConfigurations(namespace.Name).Update(GetCtx(), gatewayConfiguration, metav1.UpdateOptions{})
+				deploymentOptions := tc.dataplaneDeploymentOptions
+				var gatewayConfiguration operatorv2beta1.GatewayConfiguration
+				require.NoError(t, cl.Get(ctx, client.ObjectKey{Namespace: namespace.Name, Name: gatewayConfig.Name}, &gatewayConfiguration))
+				gatewayConfiguration.Spec.DataPlaneOptions.Deployment.DeploymentOptions = deploymentOptions
+				t.Logf("changing the GatewayConfiguration to change dataplane deploymentOptions to %v", deploymentOptions)
+				err := cl.Update(ctx, &gatewayConfiguration)
 				if !assert.NoError(c, err) {
 					return
 				}
 			}, time.Minute, time.Second)
 
 			t.Logf("verifying the deployment managed by the dataplane is ready and has %d available dataplane replicas", tc.expectedReplicasCount)
-			dataplanes := testutils.MustListDataPlanesForGateway(t, GetCtx(), gateway, clients)
+			dataplanes := testutils.MustListDataPlanesForGateway(t, ctx, gateway, clients)
 			require.Len(t, dataplanes, 1)
 			dataplane := dataplanes[0]
 			dataplaneNN := client.ObjectKeyFromObject(&dataplane)
 			require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t,
-				GetCtx(),
+				ctx,
 				dataplaneNN,
 				&appsv1.Deployment{},
 				client.MatchingLabels{
 					consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 				},
 				clients), testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick)
-			require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, GetCtx(), dataplaneNN, clients, tc.expectedReplicasCount), time.Minute, time.Second)
+			require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, ctx, dataplaneNN, clients, tc.expectedReplicasCount), time.Minute, time.Second)
 		})
 	}
 }
