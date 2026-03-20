@@ -117,6 +117,7 @@ func runConformance(
 	timeoutConfig.GatewayStatusMustHaveListeners = conformanceLooserTimeout
 	timeoutConfig.GatewayListenersMustHaveConditions = conformanceLooserTimeout
 	timeoutConfig.HTTPRouteMustHaveCondition = conformanceLooserTimeout
+	timeoutConfig.MaxTimeToConsistency = conformanceLooserTimeout
 
 	opts := conformance.DefaultOptions(t)
 	// It takes default conformance suite configuration manifests from provided location.
