@@ -33,7 +33,8 @@ import (
 
 var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 	{
-		name: "should create control plane successfully",
+		name:    "should create control plane successfully",
+		enabled: true,
 		objectOps: func(ctx context.Context, t *testing.T, cl client.Client, ns *corev1.Namespace) {
 			auth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, cl)
 			deploy.KonnectGatewayControlPlane(t, ctx, cl, auth,
@@ -112,7 +113,8 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 		},
 	},
 	{
-		name: "should create control plane group and control plane as member successfully",
+		name:    "should create control plane group and control plane as member successfully",
+		enabled: true,
 		objectOps: func(ctx context.Context, t *testing.T, cl client.Client, ns *corev1.Namespace) {
 			auth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, cl)
 			deploy.KonnectGatewayControlPlane(t, ctx, cl, auth,
@@ -278,7 +280,8 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 		},
 	},
 	{
-		name: "control plane group with members when receiving an error from PutControlPlanesIDGroupMemberships, correctly sets the ID and finalizer on group",
+		name:    "control plane group with members when receiving an error from PutControlPlanesIDGroupMemberships, correctly sets the ID and finalizer on group",
+		enabled: true,
 		objectOps: func(ctx context.Context, t *testing.T, cl client.Client, ns *corev1.Namespace) {
 			auth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, cl)
 			deploy.KonnectGatewayControlPlane(t, ctx, cl, auth,
@@ -441,7 +444,8 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 		},
 	},
 	{
-		name: "receiving HTTP Conflict 409 on creation results in lookup by UID and setting Konnect ID",
+		name:    "receiving HTTP Conflict 409 on creation results in lookup by UID and setting Konnect ID",
+		enabled: true,
 		objectOps: func(ctx context.Context, t *testing.T, cl client.Client, ns *corev1.Namespace) {
 			auth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, cl)
 			deploy.KonnectGatewayControlPlane(t, ctx, cl, auth,
@@ -541,7 +545,8 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 		},
 	},
 	{
-		name: "receiving HTTP Conflict 409 on creation for creating control plane group should have members set",
+		name:    "receiving HTTP Conflict 409 on creation for creating control plane group should have members set",
+		enabled: true,
 		objectOps: func(ctx context.Context, t *testing.T, cl client.Client, ns *corev1.Namespace) {
 			auth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, cl)
 			deploy.KonnectGatewayControlPlane(t, ctx, cl, auth,
