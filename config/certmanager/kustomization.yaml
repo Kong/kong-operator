@@ -1,5 +1,6 @@
 resources:
 - issuer.yaml
+- certificate-operator-ca.yaml
 - certificate-webhook.yaml
 - certificate-webhook-validating.yaml
 - certificate-metrics.yaml

@@ -1,0 +1,19 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  labels:
+    app.kubernetes.io/name: kong-gateway-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: kong-operator-ca
+  namespace: system
+spec:
+  secretName: kong-operator-ca
+  secretTemplate:
+    labels:
+      konghq.com/secret: internal
+  isCA: true
+  commonName: "Kong Operator CA"
+  duration: 87600h # 3650 days
+  issuerRef:
+    name: selfsigned-issuer
+    kind: Issuer

@@ -47,6 +47,324 @@ const (
 	gatewayModeHybrid gatewayMode = "hybrid"
 )
 
+type certBootstrapMode string
+
+const (
+	certManager certBootstrapMode = "cert-manager"
+	chart       certBootstrapMode = "chart"
+)
+
+func TestHelmUpgrade(t *testing.T) {
+	ctx := t.Context()
+
+	// This is the latest Chart available publicly (used by actual users) that we can upgrade from.
+	const (
+		lastReleasedChart        = "oci://docker.io/kong/kong-operator-chart"
+		lastReleasedChartVersion = "1.2.1" // renovate: datasource=docker depName=kong/kong-operator-chart versioning=docker
+	)
+	// This is the Chart and image from current state of the repository that we want to upgrade to.
+	// Image has to be loaded into the cluster beforehand and specified via KONG_TEST_KONG_OPERATOR_IMAGE_LOAD
+	// env var as a prerequisite.
+	var currentChart = kcfg.ChartPath()
+	t.Logf("KONG_TEST_KONG_OPERATOR_IMAGE_LOAD set to %q", imageLoad)
+	currentImageRepository, currentImageTag := splitRepoVersionFromImageOrFail(t, imageLoad)
+
+	for _, certMode := range []certBootstrapMode{certManager, chart} {
+		t.Run(fmt.Sprintf("certificates from %s", certMode), func(t *testing.T) {
+
+			// CreateEnvironment will queue up environment cleanup if necessary
+			// and dumping diagnostics if the test fails.
+			e := CreateEnvironment(t, ctx)
+
+			// Assertion is run after the upgrade to assert the state of the resources in the cluster.
+			type assertion struct {
+				Name string
+				Func func(*assert.CollectT, *testutils.K8sClients)
+			}
+			type suite struct {
+				Name                   string
+				Objects                []client.Object
+				AssertionsAfterInstall []assertion
+				AssertionsAfterUpgrade []assertion
+			}
+
+			// This is the place to add steps that should be performed before the upgrade.
+			// For instance change in CRDs requires manual installation of new CRDs before the upgrade,
+			// see charts/kong-operator/UPGRADE.md this section mostly should be empty.
+			// IDEALLY IT SHOULD BE EMPTY - seamless upgrade should not require manual steps.
+			stepsToDoBeforeUpgrade := []func(context.Context, *testing.T, clusters.Cluster){
+				func(ctx context.Context, t *testing.T, cluster clusters.Cluster) {
+					t.Log("Applying Gateway API CRDs for v1.5.1 due to PR #3491")
+					require.NoError(t, clusters.KustomizeDeployForCluster(ctx, cluster, "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v1.5.1"))
+				},
+			}
+
+			onPremObjects, onPremGatewayLabelSelector := objectsToDeployForMode(t, e, gatewayModeOnPrem)
+			suitesToRun := []suite{
+				{
+					Name:    "on-prem",
+					Objects: onPremObjects,
+					AssertionsAfterInstall: []assertion{
+						{
+							Name: "Gateway is programmed",
+							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+								gatewayAndItsListenersAreProgrammedAssertion(onPremGatewayLabelSelector)(ctx, c, cl.MgrClient)
+							},
+						},
+						{
+							Name: "ControlPlane is ready",
+							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+								controlPlaneOwnedByGatewayReady(onPremGatewayLabelSelector)(ctx, c, cl.MgrClient)
+							},
+						},
+						{
+							Name: "DataPlane is ready",
+							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+								dataPlaneOwnedByGatewayReady(onPremGatewayLabelSelector)(ctx, c, cl.MgrClient)
+							},
+						},
+
+						{
+							Name: "DataPlane deployment is not patched after install",
+							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+								gatewayDataPlaneDeploymentIsNotPatched(onPremGatewayLabelSelector)(ctx, c, cl.MgrClient)
+							},
+						},
+						{
+							Name: "HTTPRoute responds with 200 status code and presents response header added by plugin",
+							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+								gatewayHTTPRoutingWorks(onPremGatewayLabelSelector, gatewayModeOnPrem)(ctx, c, cl.MgrClient)
+							},
+						},
+					},
+					AssertionsAfterUpgrade: []assertion{
+						{
+							Name: "Gateway is programmed",
+							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+								gatewayAndItsListenersAreProgrammedAssertion(onPremGatewayLabelSelector)(ctx, c, cl.MgrClient)
+							},
+						},
+						{
+							Name: "ControlPlane is ready",
+							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+								controlPlaneOwnedByGatewayReady(onPremGatewayLabelSelector)(ctx, c, cl.MgrClient)
+							},
+						},
+						{
+							Name: "DataPlane is ready",
+							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+								dataPlaneOwnedByGatewayReady(onPremGatewayLabelSelector)(ctx, c, cl.MgrClient)
+							},
+						},
+						// Normally DataPlane Deployment should not be patched during the upgrade.
+						{
+							Name: "DataPlane deployment is patched after operator upgrade, due to PR #3531",
+							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+								gatewayDataPlaneDeploymentIsPatched(onPremGatewayLabelSelector)(ctx, c, cl.MgrClient)
+							},
+						},
+						{
+							Name: "HTTPRoute responds with 200 status code and presents response header added by plugin",
+							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+								gatewayHTTPRoutingWorks(onPremGatewayLabelSelector, gatewayModeOnPrem)(ctx, c, cl.MgrClient)
+							},
+						},
+					},
+				},
+			}
+
+			if testenv.KonnectAccessToken() != "" && testenv.KonnectServerURL() != "" {
+				hybridObjects, hybridGatewayLabelSelector := objectsToDeployForMode(t, e, gatewayModeHybrid)
+				suitesToRun = append(suitesToRun, suite{
+					Name:    "hybrid",
+					Objects: hybridObjects,
+					AssertionsAfterInstall: []assertion{
+						{
+							Name: "Gateway is programmed",
+							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+								gatewayAndItsListenersAreProgrammedAssertion(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
+							},
+						},
+						{
+							Name: "KonnectGatewayControlPlane is programmed",
+							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+								konnectGatewayControlPlaneOwnedByGatewayProgrammed(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
+							},
+						},
+						{
+							Name: "DataPlane is ready",
+							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+								dataPlaneOwnedByGatewayReady(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
+							},
+						},
+						{
+							Name: "DataPlane deployment is not patched after install",
+							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+								gatewayDataPlaneDeploymentIsNotPatched(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
+							},
+						},
+						{
+							Name: "HTTPRoute responds with 200 status code and presents response header added by plugin",
+							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+								gatewayHTTPRoutingWorks(hybridGatewayLabelSelector, gatewayModeHybrid)(ctx, c, cl.MgrClient)
+							},
+						},
+					},
+					AssertionsAfterUpgrade: []assertion{
+						{
+							Name: "Gateway is programmed",
+							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+								gatewayAndItsListenersAreProgrammedAssertion(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
+							},
+						},
+						{
+							Name: "KonnectGatewayControlPlane is programmed",
+							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+								konnectGatewayControlPlaneOwnedByGatewayProgrammed(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
+							},
+						},
+						{
+							Name: "DataPlane is ready",
+							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+								dataPlaneOwnedByGatewayReady(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
+							},
+						},
+						{
+							Name: "DataPlane deployment is patched after operator upgrade, due to PR #3531",
+							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+								gatewayDataPlaneDeploymentIsPatched(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
+							},
+						},
+						{
+							Name: "HTTPRoute responds with 200 status code and presents response header added by plugin",
+							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+								gatewayHTTPRoutingWorks(hybridGatewayLabelSelector, gatewayModeHybrid)(ctx, c, cl.MgrClient)
+							},
+						},
+					},
+				})
+			} else {
+				t.Log(
+					"Skipping tests for Hybrid Gateway, KONG_TEST_KONNECT_ACCESS_TOKEN and/or KONG_TEST_KONNECT_SERVER_URL env vars are not set",
+				)
+			}
+
+			const releaseName = "ko-upgrade-test"
+			helmOpts := &helm.Options{
+				KubectlOptions: &k8s.KubectlOptions{
+					Namespace:  e.Namespace.Name,
+					RestConfig: e.Environment.Cluster().Config(),
+				},
+				SetValues: map[string]string{
+					"readinessProbe.initialDelaySeconds": "1",
+					"readinessProbe.periodSeconds":       "1",
+					"env.enable_controller_konnect":      "true",
+					// Disable leader election and anonymous reports for tests.
+					"env.no_leader_election": "true",
+					"env.anonymous_reports":  "false",
+				},
+				Version: lastReleasedChartVersion,
+				ExtraArgs: map[string][]string{
+					"install": {
+						"--devel",
+						"--namespace", e.Namespace.Name,
+					},
+					"upgrade": {
+						"--devel",
+						"--namespace", e.Namespace.Name,
+					},
+					"uninstall": {
+						"--wait",
+						"--namespace", e.Namespace.Name,
+					},
+				},
+			}
+			if certMode == certManager {
+				helmOpts.SetValues["global.webhooks.options.certManager.enabled"] = "true"
+				helmOpts.SetValues["global.certificateAuthority.options.certManager.enabled"] = "true"
+			}
+
+			t.Logf(
+				"Installing Helm release %q with chart %q version %q",
+				releaseName, lastReleasedChart, lastReleasedChartVersion,
+			)
+			require.NoError(t, helm.InstallE(t, helmOpts, lastReleasedChart, releaseName))
+			out, err := helm.RunHelmCommandAndGetOutputE(t, helmOpts, "list")
+			require.NoError(t, err)
+			t.Logf("Helm list output after install:\n  %s", out)
+			t.Cleanup(func() {
+				out, err := helm.RunHelmCommandAndGetOutputE(t, helmOpts, "uninstall", releaseName)
+				if !assert.NoError(t, err) {
+					t.Logf("output: %s", out)
+				}
+			})
+			ensureBasicReadiness(t, ctx, e, releaseName)
+
+			// Deploy the objects that should be present before the upgrade.
+			cl := client.NewNamespacedClient(e.Clients.MgrClient, e.Namespace.Name)
+			for _, suite := range suitesToRun {
+				t.Logf("Deploying objects for suite %q...", suite.Name)
+				for _, obj := range suite.Objects {
+					obj := obj.DeepCopyObject().(client.Object)
+					require.NoError(t, cl.Create(ctx, obj))
+					t.Cleanup(func() {
+						// Ensure that every object is properly deleted (the finalizer must
+						// be executed, it requires some time) before the Helm chart is uninstalled.
+						ctx, cancel := context.WithTimeout(context.Background(), waitTime)
+						defer cancel()
+						require.NoError(t, client.IgnoreNotFound(cl.Delete(ctx, obj)))
+						eventually.WaitForObjectToNotExist(t, ctx, cl, obj, waitTime, time.Second)
+					})
+				}
+			}
+
+			t.Logf("Checking assertions after install...")
+			for _, suite := range suitesToRun {
+				for _, assertion := range suite.AssertionsAfterInstall {
+					t.Run(suite.Name+"/after_install/"+assertion.Name, func(t *testing.T) {
+						require.EventuallyWithT(t, func(c *assert.CollectT) {
+							assertion.Func(c, e.Clients)
+						}, waitTime, 500*time.Millisecond)
+					})
+				}
+			}
+
+			if len(stepsToDoBeforeUpgrade) > 0 {
+				t.Logf("Performing steps before upgrade...")
+				for _, step := range stepsToDoBeforeUpgrade {
+					step(ctx, t, e.Environment.Cluster())
+				}
+			}
+
+			t.Logf(
+				"Upgrading Helm release %q to chart %q with image %s:%s",
+				releaseName, currentChart, currentImageRepository, currentImageTag,
+			)
+			helmOpts.SetValues["image.repository"] = currentImageRepository
+			helmOpts.SetValues["image.tag"] = currentImageTag
+			helmOpts.Version = "" // For local charts, version must be empty.
+			require.NoError(t, helm.UpgradeE(t, helmOpts, currentChart, releaseName))
+
+			out, err = helm.RunHelmCommandAndGetOutputE(t, helmOpts, "list")
+			require.NoError(t, err)
+			t.Logf("Helm list output after upgrade:\n  %s", out)
+			ensureBasicReadiness(t, ctx, e, releaseName)
+
+			t.Logf("Checking assertions after upgrade...")
+			for _, suite := range suitesToRun {
+				t.Logf("Running assertions for suite %q...", suite.Name)
+				for _, assertion := range suite.AssertionsAfterUpgrade {
+					t.Run(suite.Name+"/after_upgrade/"+assertion.Name, func(t *testing.T) {
+						require.EventuallyWithT(t, func(c *assert.CollectT) {
+							assertion.Func(c, e.Clients)
+						}, waitTime, 500*time.Millisecond)
+					})
+				}
+			}
+		})
+	}
+}
+
 func objectsToDeployForMode(
 	t *testing.T,
 	e TestEnvironment,
@@ -150,308 +468,6 @@ func objectsToDeployForMode(
 	}
 
 	return objects, fmt.Sprintf("%s=%s", workloadLabelKey, gatewayMode)
-}
-
-func TestHelmUpgrade(t *testing.T) {
-	ctx := t.Context()
-
-	// This is the latest Chart available publicly (used by actual users) that we can upgrade from.
-	const (
-		lastReleasedChart        = "oci://docker.io/kong/kong-operator-chart"
-		lastReleasedChartVersion = "1.2.1" // renovate: datasource=docker depName=kong/kong-operator-chart versioning=docker
-	)
-	// This is the Chart and image from current state of the repository that we want to upgrade to.
-	// Image has to be loaded into the cluster beforehand and specified via KONG_TEST_KONG_OPERATOR_IMAGE_LOAD
-	// env var as a prerequisite.
-	var currentChart = kcfg.ChartPath()
-	t.Logf("KONG_TEST_KONG_OPERATOR_IMAGE_LOAD set to %q", imageLoad)
-	currentImageRepository, currentImageTag := splitRepoVersionFromImageOrFail(t, imageLoad)
-
-	// CreateEnvironment will queue up environment cleanup if necessary
-	// and dumping diagnostics if the test fails.
-	e := CreateEnvironment(t, ctx)
-
-	// Assertion is run after the upgrade to assert the state of the resources in the cluster.
-	type assertion struct {
-		Name string
-		Func func(*assert.CollectT, *testutils.K8sClients)
-	}
-	type suite struct {
-		Name                   string
-		Objects                []client.Object
-		AssertionsAfterInstall []assertion
-		AssertionsAfterUpgrade []assertion
-	}
-
-	// This is the place to add steps that should be performed before the upgrade.
-	// For instance change in CRDs requires manual installation of new CRDs before the upgrade,
-	// see charts/kong-operator/UPGRADE.md this section mostly should be empty.
-	// IDEALLY IT SHOULD BE EMPTY - seamless upgrade should not require manual steps.
-	stepsToDoBeforeUpgrade := []func(context.Context, *testing.T, clusters.Cluster){
-		func(ctx context.Context, t *testing.T, cluster clusters.Cluster) {
-			t.Log("Applying Gateway API CRDs for v1.5.1 due to PR #3491")
-			require.NoError(t, clusters.KustomizeDeployForCluster(ctx, cluster, "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v1.5.1"))
-		},
-	}
-
-	onPremObjects, onPremGatewayLabelSelector := objectsToDeployForMode(t, e, gatewayModeOnPrem)
-	suitesToRun := []suite{
-		{
-			Name:    "on-prem",
-			Objects: onPremObjects,
-			AssertionsAfterInstall: []assertion{
-				{
-					Name: "Gateway is programmed",
-					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						gatewayAndItsListenersAreProgrammedAssertion(onPremGatewayLabelSelector)(ctx, c, cl.MgrClient)
-					},
-				},
-				{
-					Name: "ControlPlane is ready",
-					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						controlPlaneOwnedByGatewayReady(onPremGatewayLabelSelector)(ctx, c, cl.MgrClient)
-					},
-				},
-				{
-					Name: "DataPlane is ready",
-					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						dataPlaneOwnedByGatewayReady(onPremGatewayLabelSelector)(ctx, c, cl.MgrClient)
-					},
-				},
-
-				{
-					Name: "DataPlane deployment is not patched after install",
-					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						gatewayDataPlaneDeploymentIsNotPatched(onPremGatewayLabelSelector)(ctx, c, cl.MgrClient)
-					},
-				},
-				{
-					Name: "HTTPRoute responds with 200 status code and presents response header added by plugin",
-					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						gatewayHTTPRoutingWorks(onPremGatewayLabelSelector, gatewayModeOnPrem)(ctx, c, cl.MgrClient)
-					},
-				},
-			},
-			AssertionsAfterUpgrade: []assertion{
-				{
-					Name: "Gateway is programmed",
-					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						gatewayAndItsListenersAreProgrammedAssertion(onPremGatewayLabelSelector)(ctx, c, cl.MgrClient)
-					},
-				},
-				{
-					Name: "ControlPlane is ready",
-					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						controlPlaneOwnedByGatewayReady(onPremGatewayLabelSelector)(ctx, c, cl.MgrClient)
-					},
-				},
-				{
-					Name: "DataPlane is ready",
-					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						dataPlaneOwnedByGatewayReady(onPremGatewayLabelSelector)(ctx, c, cl.MgrClient)
-					},
-				},
-				// Normally DataPlane Deployment should not be patched during the upgrade.
-				{
-					Name: "DataPlane deployment is patched after operator upgrade, due to PR #3531",
-					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						gatewayDataPlaneDeploymentIsPatched(onPremGatewayLabelSelector)(ctx, c, cl.MgrClient)
-					},
-				},
-				{
-					Name: "HTTPRoute responds with 200 status code and presents response header added by plugin",
-					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						gatewayHTTPRoutingWorks(onPremGatewayLabelSelector, gatewayModeOnPrem)(ctx, c, cl.MgrClient)
-					},
-				},
-			},
-		},
-	}
-
-	if testenv.KonnectAccessToken() != "" && testenv.KonnectServerURL() != "" {
-		hybridObjects, hybridGatewayLabelSelector := objectsToDeployForMode(t, e, gatewayModeHybrid)
-		suitesToRun = append(suitesToRun, suite{
-			Name:    "hybrid",
-			Objects: hybridObjects,
-			AssertionsAfterInstall: []assertion{
-				{
-					Name: "Gateway is programmed",
-					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						gatewayAndItsListenersAreProgrammedAssertion(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
-					},
-				},
-				{
-					Name: "KonnectGatewayControlPlane is programmed",
-					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						konnectGatewayControlPlaneOwnedByGatewayProgrammed(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
-					},
-				},
-				{
-					Name: "DataPlane is ready",
-					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						dataPlaneOwnedByGatewayReady(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
-					},
-				},
-				{
-					Name: "DataPlane deployment is not patched after install",
-					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						gatewayDataPlaneDeploymentIsNotPatched(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
-					},
-				},
-				{
-					Name: "HTTPRoute responds with 200 status code and presents response header added by plugin",
-					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						gatewayHTTPRoutingWorks(hybridGatewayLabelSelector, gatewayModeHybrid)(ctx, c, cl.MgrClient)
-					},
-				},
-			},
-			AssertionsAfterUpgrade: []assertion{
-				{
-					Name: "Gateway is programmed",
-					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						gatewayAndItsListenersAreProgrammedAssertion(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
-					},
-				},
-				{
-					Name: "KonnectGatewayControlPlane is programmed",
-					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						konnectGatewayControlPlaneOwnedByGatewayProgrammed(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
-					},
-				},
-				{
-					Name: "DataPlane is ready",
-					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						dataPlaneOwnedByGatewayReady(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
-					},
-				},
-				{
-					Name: "DataPlane deployment is patched after operator upgrade, due to PR #3531",
-					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						gatewayDataPlaneDeploymentIsPatched(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
-					},
-				},
-				{
-					Name: "HTTPRoute responds with 200 status code and presents response header added by plugin",
-					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						gatewayHTTPRoutingWorks(hybridGatewayLabelSelector, gatewayModeHybrid)(ctx, c, cl.MgrClient)
-					},
-				},
-			},
-		})
-	} else {
-		t.Log(
-			"Skipping tests for Hybrid Gateway, KONG_TEST_KONNECT_ACCESS_TOKEN and/or KONG_TEST_KONNECT_SERVER_URL env vars are not set",
-		)
-	}
-
-	const releaseName = "ko-upgrade-test"
-	helmOpts := &helm.Options{
-		KubectlOptions: &k8s.KubectlOptions{
-			Namespace:  e.Namespace.Name,
-			RestConfig: e.Environment.Cluster().Config(),
-		},
-		SetValues: map[string]string{
-			"readinessProbe.initialDelaySeconds": "1",
-			"readinessProbe.periodSeconds":       "1",
-			"env.enable_controller_konnect":      "true",
-			// Disable leader election and anonymous reports for tests.
-			"env.no_leader_election": "true",
-			"env.anonymous_reports":  "false",
-		},
-		Version: lastReleasedChartVersion,
-		ExtraArgs: map[string][]string{
-			"install": {
-				"--devel",
-				"--namespace", e.Namespace.Name,
-			},
-			"upgrade": {
-				"--devel",
-				"--namespace", e.Namespace.Name,
-			},
-			"uninstall": {
-				"--wait",
-				"--namespace", e.Namespace.Name,
-			},
-		},
-	}
-
-	t.Logf(
-		"Installing Helm release %q with chart %q version %q",
-		releaseName, lastReleasedChart, lastReleasedChartVersion,
-	)
-	require.NoError(t, helm.InstallE(t, helmOpts, lastReleasedChart, releaseName))
-	out, err := helm.RunHelmCommandAndGetOutputE(t, helmOpts, "list")
-	require.NoError(t, err)
-	t.Logf("Helm list output after install:\n  %s", out)
-	t.Cleanup(func() {
-		out, err := helm.RunHelmCommandAndGetOutputE(t, helmOpts, "uninstall", releaseName)
-		if !assert.NoError(t, err) {
-			t.Logf("output: %s", out)
-		}
-	})
-	ensureBasicReadiness(t, ctx, e, releaseName)
-
-	// Deploy the objects that should be present before the upgrade.
-	cl := client.NewNamespacedClient(e.Clients.MgrClient, e.Namespace.Name)
-	for _, suite := range suitesToRun {
-		t.Logf("Deploying objects for suite %q...", suite.Name)
-		for _, obj := range suite.Objects {
-			obj := obj.DeepCopyObject().(client.Object)
-			require.NoError(t, cl.Create(ctx, obj))
-			t.Cleanup(func() {
-				// Ensure that every object is properly deleted (the finalizer must
-				// be executed, it requires some time) before the Helm chart is uninstalled.
-				ctx, cancel := context.WithTimeout(context.Background(), waitTime)
-				defer cancel()
-				require.NoError(t, client.IgnoreNotFound(cl.Delete(ctx, obj)))
-				eventually.WaitForObjectToNotExist(t, ctx, cl, obj, waitTime, time.Second)
-			})
-		}
-	}
-
-	t.Logf("Checking assertions after install...")
-	for _, suite := range suitesToRun {
-		for _, assertion := range suite.AssertionsAfterInstall {
-			t.Run(suite.Name+"/after_install/"+assertion.Name, func(t *testing.T) {
-				require.EventuallyWithT(t, func(c *assert.CollectT) {
-					assertion.Func(c, e.Clients)
-				}, waitTime, 500*time.Millisecond)
-			})
-		}
-	}
-
-	if len(stepsToDoBeforeUpgrade) > 0 {
-		t.Logf("Performing steps before upgrade...")
-		for _, step := range stepsToDoBeforeUpgrade {
-			step(ctx, t, e.Environment.Cluster())
-		}
-	}
-
-	t.Logf(
-		"Upgrading Helm release %q to chart %q with image %s:%s",
-		releaseName, currentChart, currentImageRepository, currentImageTag,
-	)
-	helmOpts.SetValues["image.repository"] = currentImageRepository
-	helmOpts.SetValues["image.tag"] = currentImageTag
-	helmOpts.Version = "" // For local charts, version must be empty.
-	require.NoError(t, helm.UpgradeE(t, helmOpts, currentChart, releaseName))
-
-	out, err = helm.RunHelmCommandAndGetOutputE(t, helmOpts, "list")
-	require.NoError(t, err)
-	t.Logf("Helm list output after upgrade:\n  %s", out)
-	ensureBasicReadiness(t, ctx, e, releaseName)
-
-	t.Logf("Checking assertions after upgrade...")
-	for _, suite := range suitesToRun {
-		t.Logf("Running assertions for suite %q...", suite.Name)
-		for _, assertion := range suite.AssertionsAfterUpgrade {
-			t.Run(suite.Name+"/after_upgrade/"+assertion.Name, func(t *testing.T) {
-				require.EventuallyWithT(t, func(c *assert.CollectT) {
-					assertion.Func(c, e.Clients)
-				}, waitTime, 500*time.Millisecond)
-			})
-		}
-	}
 }
 
 func ensureBasicReadiness(
