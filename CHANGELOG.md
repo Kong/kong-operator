@@ -55,6 +55,8 @@
   [#3526](https://github.com/Kong/kong-operator/pull/3526)
 - Fix configuring SNIs in ingress-controller when running with local controlplane.
   [#3554](https://github.com/Kong/kong-operator/pull/3554)
+- Fix reducing `Secret`s with in use finalizers.
+  [#3506](https://github.com/Kong/kong-operator/pull/3506)
 
 ## [v2.1.2]
 

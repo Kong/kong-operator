@@ -15,6 +15,7 @@ import (
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
 // FilterNone filter nothing, that is it returns the same slice as provided.
@@ -29,7 +30,8 @@ func FilterNone[T any](objs []T) []T {
 // filterSecrets filters out the Secret to be kept and returns all the Secrets
 // to be deleted.
 // The filtered-out Secret is decided as follows:
-// 1. creationTimestamp (older is better)
+// 1. Secrets with in-use finalizers are preferred over those without.
+// 2. creationTimestamp (older is better).
 func filterSecrets(secrets []corev1.Secret) []corev1.Secret {
 	if len(secrets) < 2 {
 		return []corev1.Secret{}
@@ -37,12 +39,36 @@ func filterSecrets(secrets []corev1.Secret) []corev1.Secret {
 
 	toFilter := 0
 	for i, secret := range secrets {
+		toFilterHasFinalizer := hasInUseFinalizer(secrets[toFilter])
+		candidateHasFinalizer := hasInUseFinalizer(secret)
+
+		// Prefer secrets with in-use finalizers (keep them, delete others first).
+		if candidateHasFinalizer != toFilterHasFinalizer {
+			if candidateHasFinalizer {
+				toFilter = i
+			}
+			continue
+		}
+
+		// Within the same finalizer group, prefer the older secret.
 		if secret.CreationTimestamp.Before(&secrets[toFilter].CreationTimestamp) {
 			toFilter = i
 		}
 	}
 
 	return append(secrets[:toFilter], secrets[toFilter+1:]...)
+}
+
+// hasInUseFinalizer returns true if the secret has either the secret-in-use or
+// secret-in-use-by-konnect-resource finalizer set.
+func hasInUseFinalizer(secret corev1.Secret) bool {
+	for _, f := range secret.Finalizers {
+		if f == consts.KonnectExtensionSecretInUseFinalizer ||
+			f == consts.KonnectSecretInUseFinalizer {
+			return true
+		}
+	}
+	return false
 }
 
 // -----------------------------------------------------------------------------
