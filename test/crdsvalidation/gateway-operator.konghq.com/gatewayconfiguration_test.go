@@ -1,3 +1,4 @@
+// nolint:forbidigo
 package crdsvalidation_test
 
 import (

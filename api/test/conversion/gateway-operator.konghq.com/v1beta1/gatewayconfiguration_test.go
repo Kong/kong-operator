@@ -1,3 +1,4 @@
+// nolint:forbidigo
 package v1beta1_test
 
 import (

@@ -94,6 +94,10 @@ linters:
           msg: Please use slices.Contains() instead
         - pattern: ^lo\.FindIndexOf$
           msg: Please use slices.IndexFunc() instead
+        - pattern: GatewayOperatorV1beta1\(\)\.GatewayConfigurations$
+          msg: Please use controller-runtime client and v2beta1 GatewayConfigurations instead
+        - pattern: v1beta1\.GatewayConfiguration$
+          msg: Please use v2beta1 GatewayConfiguration instead
     gomodguard:
       blocked:
         modules:
