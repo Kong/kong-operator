@@ -539,6 +539,7 @@ func TestCreateAndUpdateKongService_KubernetesMetadataConsistency(t *testing.T) 
 		"k8s-group:configuration.konghq.com",
 		"k8s-namespace:default",
 		"k8s-generation:2",
+		"managed-by:kong-operator",
 		"tag1",
 		"tag2",
 		"tag3",

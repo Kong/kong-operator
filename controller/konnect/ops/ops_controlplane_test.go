@@ -636,6 +636,7 @@ func TestCreateAndUpdateControlPlane_KubernetesMetadataConsistency(t *testing.T)
 		"k8s-group":      "konnect.konghq.com",
 		"k8s-version":    "v1alpha1",
 		"k8s-generation": "2",
+		"managed-by":     "kong-operator",
 	}
 	sdkControlPlanes.EXPECT().
 		CreateControlPlane(ctx, sdkkonnectcomp.CreateControlPlaneRequest{
