@@ -129,6 +129,10 @@ rows:
     type: '`bool`'
     description: "Enforce the configuration on the generated cluster resources. If set to false, the operator will only enforce the configuration when the owner resource spec changes."
     default: '`true`'
+  - flag: '`--feature-gates`'
+    type: '`string`'
+    description: "Comma-separated list of feature gates to enable. Valid values: mcp-server."
+    default: '`""`'
   - flag: '`--health-probe-bind-address`'
     type: '`string`'
     description: "The address the probe endpoint binds to."

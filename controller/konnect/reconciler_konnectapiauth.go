@@ -148,7 +148,7 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
-	token, err := getTokenFromKonnectAPIAuthConfiguration(ctx, r.client, &apiAuth)
+	token, err := GetTokenFromKonnectAPIAuthConfiguration(ctx, r.client, &apiAuth)
 	if err != nil {
 		if res, errStatus := patch.StatusWithCondition(
 			ctx, r.client, &apiAuth,
@@ -273,8 +273,8 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 	return ctrl.Result{}, nil
 }
 
-// getTokenFromKonnectAPIAuthConfiguration returns the token from the secret reference or the token field.
-func getTokenFromKonnectAPIAuthConfiguration(
+// GetTokenFromKonnectAPIAuthConfiguration returns the token from the secret reference or the token field.
+func GetTokenFromKonnectAPIAuthConfiguration(
 	ctx context.Context, cl client.Client, apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
 ) (string, error) {
 	switch apiAuth.Spec.Type {

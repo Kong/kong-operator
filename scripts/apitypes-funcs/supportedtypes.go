@@ -18,6 +18,14 @@ var supportedKonnectTypesWithControlPlaneRef = []supportedTypesT{
 				ControlPlaneRefType:        "commonv1alpha1.ControlPlaneRef",
 				ControlPlaneRefRequired:    true,
 			},
+			{
+				Type:                       "MCPServer",
+				KonnectStatusType:          "KonnectEntityStatusWithControlPlaneRef",
+				KonnectStatusEmbedded:      true,
+				GetKonnectStatusReturnType: "*konnectv1alpha2.KonnectEntityStatus",
+				ControlPlaneRefType:        "commonv1alpha1.ControlPlaneRef",
+				ControlPlaneRefRequired:    true,
+			},
 		},
 	},
 	{
@@ -191,12 +199,6 @@ var supportedKonnectTypesStandalone = []supportedTypesT{
 		Types: []templateDataT{
 			{
 				Type:                       "KonnectGatewayControlPlane",
-				KonnectStatusType:          "KonnectEntityStatus",
-				KonnectStatusEmbedded:      true,
-				GetKonnectStatusReturnType: "*konnectv1alpha2.KonnectEntityStatus",
-			},
-			{
-				Type:                       "MCPServer",
 				KonnectStatusType:          "KonnectEntityStatus",
 				KonnectStatusEmbedded:      true,
 				GetKonnectStatusReturnType: "*konnectv1alpha2.KonnectEntityStatus",

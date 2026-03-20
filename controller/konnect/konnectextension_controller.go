@@ -428,7 +428,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		Message: "APIAuthConfiguration is valid",
 	}
 
-	token, err := getTokenFromKonnectAPIAuthConfiguration(ctx, r.Client, &apiAuth)
+	token, err := GetTokenFromKonnectAPIAuthConfiguration(ctx, r.Client, &apiAuth)
 	if err != nil {
 		apiAuthConfigValidCond.Status = metav1.ConditionFalse
 		apiAuthConfigValidCond.Reason = konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonInvalid
