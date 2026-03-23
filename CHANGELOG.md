@@ -62,6 +62,9 @@
   now include a hash of rule's other field to avoid naming collisions with other
   rules that also have no BackendRefs.
   [#3576](https://github.com/Kong/kong-operator/pull/3576)
+- Fix the on-prem translator to set `protocols` in translated Kong routes to
+  `http,https`.
+  [#3587](https://github.com/Kong/kong-operator/pull/3587)
 
 ## [v2.1.2]
 
