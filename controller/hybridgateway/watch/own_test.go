@@ -32,6 +32,17 @@ func TestOwns(t *testing.T) {
 			},
 		},
 		{
+			name:    "TLSRoute",
+			obj:     &gwtypes.TLSRoute{},
+			wantLen: 4,
+			want: []any{
+				&configurationv1alpha1.KongRoute{},
+				&configurationv1alpha1.KongService{},
+				&configurationv1alpha1.KongUpstream{},
+				&configurationv1alpha1.KongTarget{},
+			},
+		},
+		{
 			name:    "Gateway",
 			obj:     &gwtypes.Gateway{},
 			wantLen: 2,

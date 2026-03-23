@@ -13,10 +13,11 @@ import (
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
-// GetGatewaysByHTTPRoute returns Gateways referenced by the given HTTPRoute.
-func GetGatewaysByHTTPRoute(ctx context.Context, cl client.Client, r gwtypes.HTTPRoute) []gwtypes.Gateway {
+// GetGatewaysByRoute returns Gateways referenced by the given HTTPRoute.
+func GetGatewaysByRoute[T gwtypes.SupportedRoute](ctx context.Context, cl client.Client, route T) []gwtypes.Gateway {
 	gatewayRefs := []gwtypes.Gateway{}
-	for _, ref := range r.Spec.ParentRefs {
+	parentRefs := gwtypes.GetSpecParentRefs(route)
+	for _, ref := range parentRefs {
 		var namespace string
 		if ref.Group == nil || *ref.Group != gwtypes.GroupName {
 			continue
@@ -27,7 +28,7 @@ func GetGatewaysByHTTPRoute(ctx context.Context, cl client.Client, r gwtypes.HTT
 		if ref.Namespace != nil && *ref.Namespace != "" {
 			namespace = string(*ref.Namespace)
 		} else {
-			namespace = r.Namespace
+			namespace = route.GetNamespace()
 		}
 		gw := &gwtypes.Gateway{}
 		err := cl.Get(ctx, client.ObjectKey{

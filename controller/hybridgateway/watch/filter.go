@@ -18,7 +18,9 @@ func FilterBy(ctx context.Context, cl client.Client, obj client.Object) (*predic
 	case *gwtypes.Gateway:
 		return filterByGateway(ctx, cl), nil
 	case *gwtypes.HTTPRoute:
-		return filterByHTTPRoute(ctx, cl), nil
+		return filterByRoute[*gwtypes.HTTPRoute](ctx, cl), nil
+	case *gwtypes.TLSRoute:
+		return filterByRoute[*gwtypes.TLSRoute](ctx, cl), nil
 	default:
 		return nil, fmt.Errorf("unsupported object type during creation of predicates: %T", o)
 	}
@@ -26,16 +28,16 @@ func FilterBy(ctx context.Context, cl client.Client, obj client.Object) (*predic
 
 // filterByHTTPRoute returns a predicate.Funcs that filters HTTPRoute objects
 // based on whether they reference a Konnect Gateway ControlPlane.
-func filterByHTTPRoute(ctx context.Context, cl client.Client) *predicate.Funcs {
+func filterByRoute[T gwtypes.SupportedRoute](ctx context.Context, cl client.Client) *predicate.Funcs {
 	filter := func(obj client.Object) bool {
-		httpRoute, ok := obj.(*gwtypes.HTTPRoute)
+		route, ok := obj.(T)
 		if !ok {
 			// In case of an error, enqueue the event and in case the error persists
 			// the reconciler will log it and act accordingly.
 			return true
 		}
 
-		konnectGatewayControlPlaneRefs, err := refs.GetNamespacedRefs(ctx, cl, httpRoute)
+		konnectGatewayControlPlaneRefs, err := refs.GetNamespacedRefs(ctx, cl, route)
 		if err != nil {
 			// In case of an error, enqueue the event and in case the error persists
 			// the reconciler will log it and act accordingly.

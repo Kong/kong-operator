@@ -431,6 +431,41 @@ func (r *Reconciler) listGatewaysAttachedByHTTPRoute(ctx context.Context, obj cl
 	return recs
 }
 
+func (r *Reconciler) listGatewaysAttachedByTLSRoute(ctx context.Context, obj client.Object) []reconcile.Request {
+	logger := ctrllog.FromContext(ctx)
+
+	tlsRoute, ok := obj.(*gwtypes.TLSRoute)
+	if !ok {
+		logger.Error(
+			fmt.Errorf("unexpected object type"),
+			"TLSRoute watch predicate received unexpected object type",
+			"expected", "*gatewayapi.TLSRoute", "found", reflect.TypeOf(obj),
+		)
+		return nil
+	}
+	gateways := &gatewayv1.GatewayList{}
+	if err := r.List(ctx, gateways); err != nil {
+		logger.Error(err, "Failed to list gateways in watch", "TLSRoute", tlsRoute.Name)
+		return nil
+	}
+	var recs []reconcile.Request
+	for _, gateway := range gateways.Items {
+		for _, parentRef := range gwtypes.GetSpecParentRefs(tlsRoute) {
+			if parentRef.Group != nil && string(*parentRef.Group) == gatewayv1.GroupName &&
+				parentRef.Kind != nil && string(*parentRef.Kind) == "Gateway" &&
+				string(parentRef.Name) == gateway.Name {
+				recs = append(recs, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Namespace: gateway.Namespace,
+						Name:      gateway.Name,
+					},
+				})
+			}
+		}
+	}
+	return recs
+}
+
 // -----------------------------------------------------------------------------
 // GatewayReconciler - Config Defaults
 // -----------------------------------------------------------------------------

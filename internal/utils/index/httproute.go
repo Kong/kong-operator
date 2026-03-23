@@ -33,7 +33,7 @@ func OptionsForHTTPRoute() []Option {
 		{
 			Object:         &gwtypes.HTTPRoute{},
 			Field:          GatewayOnHTTPRouteIndex,
-			ExtractValueFn: GatewaysOnHTTPRoute,
+			ExtractValueFn: GatewaysOnRoute[*gwtypes.HTTPRoute],
 		},
 		{
 			Object:         &gwtypes.HTTPRoute{},
@@ -54,21 +54,9 @@ func backendServicesOnHTTPRoute(o client.Object) []string {
 	var services []string
 	for _, rule := range httpRoute.Spec.Rules {
 		for _, backendRef := range rule.BackendRefs {
-			if backendRef.Group != nil && *backendRef.Group != "" && *backendRef.Group != "core" {
-				continue
+			if serviceKey, ok := backendRefToServiceKey(backendRef.BackendRef, httpRoute.Namespace); ok {
+				services = append(services, serviceKey)
 			}
-			if backendRef.Kind != nil && *backendRef.Kind != "Service" {
-				continue
-			}
-			if backendRef.Name == "" || backendRef.Port == nil {
-				continue
-			}
-			ns := httpRoute.Namespace
-			if backendRef.Namespace != nil {
-				ns = string(*backendRef.Namespace)
-			}
-
-			services = append(services, ns+"/"+string(backendRef.Name))
 		}
 	}
 	return lo.Uniq(services)

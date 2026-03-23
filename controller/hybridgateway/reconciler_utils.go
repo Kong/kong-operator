@@ -571,6 +571,22 @@ func referencesSupportedGateway(ctx context.Context, cl client.Client, obj clien
 		}
 		return false
 
+	case *gwtypes.TLSRoute:
+		for _, pRef := range o.Spec.ParentRefs {
+			gw, found, err := refs.GetSupportedGatewayForParentRef(ctx, logger, cl, pRef, o.Namespace)
+			if err != nil {
+				// Log the error but continue checking other ParentRefs.
+				log.Trace(logger, "Error checking ParentRef", "parentRef", pRef, "error", err)
+				continue
+			}
+			if found {
+				// Found at least one supported Gateway reference.
+				log.Trace(logger, "Found supported Gateway reference", "gateway", client.ObjectKeyFromObject(gw))
+				return true
+			}
+		}
+		return false
+
 	case *gwtypes.Gateway:
 		// For Gateway objects, check if they are supported by checking their GatewayClass.
 		supported, err := refs.IsGatewayInKonnect(ctx, cl, o)

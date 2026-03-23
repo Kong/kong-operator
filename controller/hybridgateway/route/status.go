@@ -137,7 +137,7 @@ func SetStatusConditions[T gwtypes.SupportedRoute](route T, pRef gwtypes.ParentR
 func CleanupOrphanedParentStatus[T gwtypes.SupportedRoute](logger logr.Logger, route T, controllerName string) bool {
 
 	parentStatus := getParentStatus(route)
-	parentRefs := getSpecParentRefs(route)
+	parentRefs := gwtypes.GetSpecParentRefs(route)
 
 	if len(parentStatus) == 0 {
 		return false
@@ -215,16 +215,6 @@ func RemoveStatusForParentRef[T gwtypes.SupportedRoute](logger logr.Logger, rout
 		setParentRefStatus(route, filteredParents)
 	}
 	return removed
-}
-
-func getSpecParentRefs[T gwtypes.SupportedRoute](route T) []gwtypes.ParentReference {
-	switch r := any(route).(type) {
-	case *gwtypes.HTTPRoute:
-		return r.Spec.ParentRefs
-	case *gwtypes.TLSRoute:
-		return r.Spec.ParentRefs
-	}
-	return nil
 }
 
 func getParentStatus[T gwtypes.SupportedRoute](route T) []gwtypes.RouteParentStatus {

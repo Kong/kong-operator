@@ -49,6 +49,7 @@ type (
 	RouteParentStatus      = gatewayv1.RouteParentStatus
 	SectionName            = gatewayv1.SectionName
 	TLSRoute               = gatewayv1.TLSRoute
+	TLSRouteList           = gatewayv1.TLSRouteList
 	TLSRouteRule           = gatewayv1.TLSRouteRule
 	TLSRouteSpec           = gatewayv1.TLSRouteSpec
 	TLSRouteStatus         = gatewayv1.TLSRouteStatus
@@ -78,3 +79,13 @@ const (
 	RouteReasonResolvedRefs               = gatewayv1.RouteReasonResolvedRefs
 	TLSModeTerminate                      = gatewayv1.TLSModeTerminate
 )
+
+func GetSpecParentRefs[T SupportedRoute](route T) []ParentReference {
+	switch r := any(route).(type) {
+	case *HTTPRoute:
+		return r.Spec.ParentRefs
+	case *TLSRoute:
+		return r.Spec.ParentRefs
+	}
+	return []ParentReference{}
+}
