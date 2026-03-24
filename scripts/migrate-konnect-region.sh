@@ -51,6 +51,17 @@ usage() {
   exit "${exit_code}"
 }
 
+# ---------------------------------------------------------------------------
+# Dependency checks
+# ---------------------------------------------------------------------------
+
+for cmd in kubectl jq; do
+  if ! command -v "${cmd}" &>/dev/null; then
+    log_error "Required tool '${cmd}' not found in PATH. Please install it and retry."
+    exit 1
+  fi
+done
+
 FROM_REGION=""
 TO_REGION=""
 KONNECT_AUTH_NAME=""
