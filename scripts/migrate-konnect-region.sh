@@ -37,8 +37,8 @@ usage() {
   echo -e "${BOLD}Usage:${RESET} $0 --region-from <region> --region-to <region> --auth-config-name <name> --namespace <namespace>"
   echo ""
   echo -e "${BOLD}Flags:${RESET}"
-  echo "  --region-from       Source region to migrate from (eu or me)"
-  echo "  --region-to         Target region to migrate to   (eu or me)"
+  echo "  --region-from       Source region to migrate from (eu, me or us)"
+  echo "  --region-to         Target region to migrate to   (eu, me or us)"
   echo "  --auth-config-name  Name of the KonnectAPIAuthConfiguration resource"
   echo "  --namespace         Kubernetes namespace containing the resources"
   echo "  --help              Show this help message and exit"
@@ -88,13 +88,13 @@ if [[ "$FROM_REGION" == "$TO_REGION" ]]; then
   exit 1
 fi
 
-if [[ "$FROM_REGION" != "eu" && "$FROM_REGION" != "me" ]]; then
-  log_error "from-region must be 'eu' or 'me', got: $FROM_REGION"
+if [[ "$FROM_REGION" != "eu" && "$FROM_REGION" != "me" && "$FROM_REGION" != "us" ]]; then
+  log_error "from-region must be 'eu', 'me' or 'us', got: $FROM_REGION"
   exit 1
 fi
 
-if [[ "$TO_REGION" != "eu" && "$TO_REGION" != "me" ]]; then
-  log_error "to-region must be 'eu' or 'me', got: $TO_REGION"
+if [[ "$TO_REGION" != "eu" && "$TO_REGION" != "me" && "$TO_REGION" != "us" ]]; then
+  log_error "to-region must be 'eu', 'me' or 'us', got: $TO_REGION"
   exit 1
 fi
 
