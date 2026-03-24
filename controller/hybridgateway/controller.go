@@ -49,6 +49,8 @@ const (
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongsnis,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongsnis/status,verbs=get;update;patch
 
+//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=tlsroutes,verbs=get;list;watch;update;patch
+
 // HybridGatewayReconciler is a generic reconciler for handling Gateway API resources
 // in a hybrid environment. It operates on objects implementing the RootObject and
 // RootObjectPtr interfaces, allowing flexible reconciliation logic for different resource types.
