@@ -135,14 +135,12 @@ func TestUpdateStrategyInMemory_PropagatesResourcesErrors(t *testing.T) {
 			fmt.Printf("DEBUG: resource failure [%d]: message=%q, causingObjects=%v\n", i, rf.Message(), rf.CausingObjects())
 		}
 		resourceErr, found := lo.Find(updateError.ResourceFailures(), func(r failures.ResourceFailure) bool {
-			return lo.ContainsBy(r.CausingObjects(), func(obj client.Object) bool {
-				return obj.GetName() == "test-service"
-			})
+			return r.Message() == expectedMessage &&
+				lo.ContainsBy(r.CausingObjects(), func(obj client.Object) bool {
+					return obj.GetName() == "test-service"
+				})
 		})
-		if !assert.Truef(t, found, "expected resource error for test-service, got: %+v", updateError.ResourceFailures()) {
-			return
-		}
-		if !assert.Equal(t, resourceErr.Message(), expectedMessage) {
+		if !assert.Truef(t, found, "expected resource error for test-service with message %q, got: %+v", expectedMessage, updateError.ResourceFailures()) {
 			return
 		}
 		if diff := cmp.Diff(expectedCausingObjects, resourceErr.CausingObjects()); !assert.Empty(t, diff) {
