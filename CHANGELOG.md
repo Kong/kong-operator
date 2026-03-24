@@ -40,7 +40,7 @@
 
 ## [v2.0.8]
 
-> Release date: TBD
+> Release date: 2026-03-24
 
 ### Fixed
 
@@ -1439,6 +1439,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.0.8]: https://github.com/Kong/kong-operator/compare/v2.0.7..v2.0.8
 [v2.0.7]: https://github.com/Kong/kong-operator/compare/v2.0.6..v2.0.7
 [v2.0.6]: https://github.com/Kong/kong-operator/compare/v2.0.5..v2.0.6
 [v2.0.5]: https://github.com/Kong/kong-operator/compare/v2.0.4..v2.0.5
