@@ -60,6 +60,10 @@ spec:
                 description: APISpec defines the desired state of the resource's API
                   spec fields.
                 properties:
+                  can_own_applications:
+                    default: false
+                    description: Whether the team is allowed to own applications
+                    type: boolean
                   description:
                     maxLength: 250
                     type: string
