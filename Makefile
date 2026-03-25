@@ -1139,11 +1139,11 @@ install.telepresence: download.telepresence
 uninstall.telepresence: download.telepresence
 	@$(PROJECT_DIR)/scripts/telepresence-manager.sh uninstall "$(TELEPRESENCE)"
 
-.PHONY: lint.api
+.PHONY: lint.api 
 lint.api: download.kube-api-linter
 	$(KUBE_API_LINTER) run --config $(PROJECT_DIR)/.golangci-kube-api.yaml -v \
 		./api/gateway-operator/v2beta1/... \
 		./api/konnect/v1alpha1/... \
 		./api/konnect/v1alpha2/... \
-		./api/common/v1alpha1/...
-	mise r lint-api
+		./api/common/v1alpha1/...  \
+		./api/x-konnect/...
