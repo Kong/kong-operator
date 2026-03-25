@@ -41,7 +41,7 @@
 
 ## [v2.1.3]
 
-> Release date: TBD
+> Release date: 2026-03-25
 
 ### Fixes
 
