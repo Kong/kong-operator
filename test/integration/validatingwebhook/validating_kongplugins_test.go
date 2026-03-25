@@ -25,7 +25,7 @@ var secretLabels = map[string]string{
 }
 
 func TestAdmissionWebhook_KongPlugins(t *testing.T) {
-	_, _, _, ctrlClient := bootstrapGateway(t.Context(), t, integration.GetEnv(), integration.GetClients().MgrClient) //nolint:dogsled
+	_, _, _, ctrlClient, _ := bootstrapGateway(t.Context(), t, integration.GetEnv(), integration.GetClients().MgrClient) //nolint:dogsled
 
 	testCases := []struct {
 		name          string
@@ -230,7 +230,7 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 
 	ctrlClientGlobal := integration.GetClients().MgrClient
 
-	ns, _, ingressClass, ctrlClient := bootstrapGateway(t.Context(), t, integration.GetEnv(), ctrlClientGlobal)
+	ns, _, ingressClass, ctrlClient, _ := bootstrapGateway(t.Context(), t, integration.GetEnv(), ctrlClientGlobal)
 
 	testCases := []struct {
 		name                string
