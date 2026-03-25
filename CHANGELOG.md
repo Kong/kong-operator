@@ -5,6 +5,7 @@
 - [v2.1.2](#v212)
 - [v2.1.1](#v211)
 - [v2.1.0](#v210)
+- [v2.0.8](#v208)
 - [v2.0.7](#v207)
 - [v2.0.6](#v206)
 - [v2.0.5](#v205)
@@ -472,6 +473,18 @@
   `spec.listeners.tls.certificateRef`, ensuring Gateway status conditions
   are updated when referenced certificates change.
   [#2661](https://github.com/Kong/kong-operator/pull/2661)
+
+## [v2.0.8]
+
+> Release date: 2026-03-24
+
+### Fixed
+
+- Do not try to list `Gateway`s for namespaces that are not being watched by controller
+  [#3625](https://github.com/Kong/kong-operator/pull/3625)
+- Fix the on-prem translator to set `protocols` in translated Kong routes to
+  `http,https`.
+  [#3587](https://github.com/Kong/kong-operator/pull/3587)
 
 ## [v2.0.7]
 
@@ -1865,6 +1878,7 @@ re-installing the operator through the bundle.
 [v2.1.2]: https://github.com/Kong/kong-operator/compare/v2.1.1..v2.1.2
 [v2.1.1]: https://github.com/Kong/kong-operator/compare/v2.1.0..v2.1.1
 [v2.1.0]: https://github.com/Kong/kong-operator/compare/v2.0.5..v2.1.0
+[v2.0.8]: https://github.com/Kong/kong-operator/compare/v2.0.7..v2.0.8
 [v2.0.7]: https://github.com/Kong/kong-operator/compare/v2.0.6..v2.0.7
 [v2.0.6]: https://github.com/Kong/kong-operator/compare/v2.0.5..v2.0.6
 [v2.0.5]: https://github.com/Kong/kong-operator/compare/v2.0.4..v2.0.5
