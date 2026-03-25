@@ -702,6 +702,9 @@ func generateDataPlaneNetworkPolicy(
 		allowMetricsIngress,
 	}
 
+	// Add a rule to allow ingress traffics to listened ports for stream proxy on dataplane pods.
+	// Only add the rule when there are at least one stream proxy port because a rule with an empty port list allows ingress traffics to ALL ports,
+	// then the whole NetworkPolicy allows ALL ingress traffics to the pods.
 	if len(streamListenPorts) > 0 {
 		allowStreamIngress := networkingv1.NetworkPolicyIngressRule{
 			Ports: lo.Map(streamListenPorts, func(port intstr.IntOrString, _ int) networkingv1.NetworkPolicyPort {
@@ -1275,7 +1278,7 @@ func setDataPlaneDeploymentListenPorts(
 				// Although it should not happen where no ports can be assigned for the listener,
 				// we attach an error if the case really happens.
 				if assignedPortNumber >= assignedPortMax {
-					errs = errors.Join(errs, fmt.Errorf("listener %d's port %d already occupied and no available ports can be assinged", i, portNumber))
+					errs = errors.Join(errs, fmt.Errorf("listener %d's port %d already occupied and no available ports can be assigned", i, portNumber))
 				}
 
 			} else {
