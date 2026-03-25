@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/go-logr/logr"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -16,6 +17,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/translator"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
@@ -113,6 +115,18 @@ func RoutesForRule[
 			kongRoutes = append(kongRoutes, newRoute.DeepCopy())
 		}
 	case *gwtypes.TLSRoute:
+		var protocol sdkkonnectcomp.RouteJSONProtocols
+		tlsPassthrough, err := isTLSRoutePassthrough(ctx, cl, r, pRef)
+		if err != nil {
+			return nil, err
+		}
+		if tlsPassthrough {
+			protocol = sdkkonnectcomp.RouteJSONProtocolsTLSPassthrough
+		} else {
+			protocol = sdkkonnectcomp.RouteJSONProtocolsTLS
+		}
+		routeBuilder.WithProtocols([]sdkkonnectcomp.RouteJSONProtocols{protocol})
+
 		routeBuilder.WithSNI(hostnames)
 
 		newRoute, buildErr := routeBuilder.Build()
@@ -149,4 +163,30 @@ func needsCaptureGroup(rule gwtypes.HTTPRouteRule) bool {
 		}
 	}
 	return false
+}
+
+func isTLSRoutePassthrough(
+	ctx context.Context, cl client.Client, tlsRoute *gwtypes.TLSRoute, parentRef *gwtypes.ParentReference,
+) (bool, error) {
+	ns := tlsRoute.Namespace
+	if parentRef.Namespace != nil && *parentRef.Namespace != "" {
+		ns = string(*parentRef.Namespace)
+	}
+
+	gw := &gwtypes.Gateway{}
+	err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: string(parentRef.Name)}, gw)
+	if err != nil {
+		return false, fmt.Errorf("failed to get parent Gateway %s/%s for TLSRoute %s/%s", ns, parentRef.Name, tlsRoute.Namespace, tlsRoute.Name)
+	}
+	// If any of the gateway's listeners is configured to passthrough
+	// TLS requests, we return true.
+	for _, listener := range gw.Spec.Listeners {
+		if parentRef.SectionName == nil || listener.Name == *parentRef.SectionName {
+			if listener.TLS != nil && listener.TLS.Mode != nil &&
+				*listener.TLS.Mode == gatewayapi.TLSModePassthrough {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
 }

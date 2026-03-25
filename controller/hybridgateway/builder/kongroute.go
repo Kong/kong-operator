@@ -6,6 +6,7 @@ import (
 	"maps"
 	"strings"
 
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -171,6 +172,11 @@ func (b *KongRouteBuilder) WithAnnotations(route client.Object, parentRef *gwtyp
 		b.route.Annotations = make(map[string]string)
 	}
 	maps.Copy(b.route.Annotations, annotations)
+	return b
+}
+
+func (b *KongRouteBuilder) WithProtocols(protocols []sdkkonnectcomp.RouteJSONProtocols) *KongRouteBuilder {
+	b.route.Spec.Protocols = protocols
 	return b
 }
 

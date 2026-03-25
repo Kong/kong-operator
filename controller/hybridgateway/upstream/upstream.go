@@ -53,7 +53,7 @@ func UpstreamForRule[
 
 	upstreamName := namegen.NewKongUpstreamName(route, cp, rule)
 	logger = logger.WithValues("kongupstream", upstreamName)
-	log.Debug(logger, "Creating KongUpstream for HTTPRoute rule")
+	log.Debug(logger, fmt.Sprintf("Creating KongUpstream for %s rule", route.GetObjectKind().GroupVersionKind().Kind))
 
 	upstream, err := builder.NewKongUpstream().
 		WithName(upstreamName).
