@@ -58,6 +58,10 @@ type ImportConfig struct {
 type TypeConfig struct {
 	// Path is the OpenAPI path that identifies the resource (e.g. "/services").
 	Path string `yaml:"path"`
+	// Name overrides the generated CRD type name. When set, the entity name
+	// derived from the OpenAPI path will be replaced with this value.
+	// All related types (Spec, Status, List) will use this name as their base.
+	Name string `yaml:"name,omitempty"`
 	// CEL maps field names to their configurations, allowing additional
 	// kubebuilder validation markers to be attached to specific fields.
 	CEL map[string]*FieldConfig `yaml:"cel,omitempty"`
@@ -77,6 +81,18 @@ type OpConfig struct {
 type EntityOpsConfig struct {
 	// Ops maps operation names (e.g. "create", "update") to their SDK type configs.
 	Ops map[string]*OpConfig
+}
+
+// NameOverrides returns a mapping from OpenAPI path to the custom CRD type name
+// for types that have a Name override configured.
+func (c *APIGroupVersionConfig) NameOverrides() map[string]string {
+	overrides := make(map[string]string)
+	for _, tc := range c.Types {
+		if tc.Name != "" {
+			overrides[tc.Path] = tc.Name
+		}
+	}
+	return overrides
 }
 
 // GetPaths returns the list of OpenAPI paths from the types configuration.
