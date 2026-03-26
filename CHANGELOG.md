@@ -93,6 +93,12 @@
 - Added `managed-by:kong-operator` tag to all Konnect entities to allow
   filtering resources managed by Kong Operator in Konnect.
   [#3609](https://github.com/Kong/kong-operator/pull/3609)
+- Added MCP ControlPlane signalling controller: a new `MCPServerCPReconciler` watches
+  `KonnectGatewayControlPlane` resources and, via a `SignalManager`, maintains per-control-plane
+  background goroutines that poll the Konnect MCP server signal API. This enables the operator
+  to react in near-real-time to Konnect-side configuration changes affecting `MCPServer` objects
+  linked to a control plane. The feature is gated behind the `MCPController` feature gate.
+  [#3677](https://github.com/Kong/kong-operator/pull/3677)
 
 ### Changed
 
