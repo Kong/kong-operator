@@ -3,9 +3,7 @@ package watch
 import (
 	"context"
 
-	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
@@ -33,6 +31,7 @@ func listTLSRoutesForGateway(ctx context.Context, cl client.Client, gatewayNames
 	return requests, nil
 }
 
+// listTLSRoutesForService returns all reconcile.Requests for TLSRoutes referencing the given service as the backend.
 func listTLSRoutesForService(ctx context.Context, cl client.Client, svcNamespace, svcName string) ([]reconcile.Request, error) {
 	tlsRoutes := &gwtypes.TLSRouteList{}
 
@@ -54,32 +53,4 @@ func listTLSRoutesForService(ctx context.Context, cl client.Client, svcNamespace
 		}
 	}
 	return requests, nil
-}
-func MapTLSRouteForGateway(cl client.Client) handler.MapFunc {
-	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		gateway, ok := obj.(*gwtypes.Gateway)
-		if !ok {
-			return nil
-		}
-		requests, err := listTLSRoutesForGateway(ctx, cl, gateway.Namespace, gateway.Name)
-		if err != nil {
-			return nil
-		}
-		return requests
-	}
-}
-
-func MapTLSRouteForService(cl client.Client) handler.MapFunc {
-	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		svc, ok := obj.(*corev1.Service)
-		if !ok {
-			return nil
-		}
-
-		requests, err := listTLSRoutesForService(ctx, cl, svc.Namespace, svc.Name)
-		if err != nil {
-			return nil
-		}
-		return requests
-	}
 }

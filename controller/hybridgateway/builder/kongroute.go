@@ -44,7 +44,7 @@ func NewKongRoute() *KongRouteBuilder {
 // Clone creates a KongRouteBuilder with the same route in the given builder.
 func (b *KongRouteBuilder) Clone() *KongRouteBuilder {
 	return &KongRouteBuilder{
-		route:  *b.route.DeepCopy(),
+		route:  *(b.route.DeepCopy()),
 		errors: make([]error, 0),
 	}
 }
@@ -124,7 +124,7 @@ func (b *KongRouteBuilder) WithPreserveHost(preserveHost bool) *KongRouteBuilder
 }
 
 // WithSNIs sets the SNIs for the KongRoute.
-func (b *KongRouteBuilder) WithSNI(snis []string) *KongRouteBuilder {
+func (b *KongRouteBuilder) WithSNIs(snis []string) *KongRouteBuilder {
 	b.route.Spec.Snis = snis
 	return b
 }
@@ -175,6 +175,7 @@ func (b *KongRouteBuilder) WithAnnotations(route client.Object, parentRef *gwtyp
 	return b
 }
 
+// WithProtocols sets the protocols of the translated KongRoute.
 func (b *KongRouteBuilder) WithProtocols(protocols []sdkkonnectcomp.RouteJSONProtocols) *KongRouteBuilder {
 	b.route.Spec.Protocols = protocols
 	return b

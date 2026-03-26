@@ -31173,7 +31173,6 @@ rules:
   - grpcroutes
   - referencegrants
   - tcproutes
-  - tlsroutes
   - udproutes
   verbs:
   - get
@@ -31231,6 +31230,16 @@ rules:
   - referencegrants/status
   verbs:
   - get
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - tlsroutes
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - incubator.ingress-controller.konghq.com
   resources:

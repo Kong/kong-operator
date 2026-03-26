@@ -55,14 +55,26 @@ func newTLSRouteConverter(tlsRoute *gwtypes.TLSRoute, cl client.Client, fqdnMode
 	}
 }
 
+// GetExpectedGVKs implements the APIConverter interface.
+// It returns the list of GroupVersionKinds that this converter expects to manage for TLSRoute resources.
 func (c *tlsRouteConverter) GetExpectedGVKs() []schema.GroupVersionKind {
 	return c.expectedGVKs
 }
 
+// GetRootObject implements the APIConverter interface.
+// It returns the TLSRoute resource that the converter is managing.
 func (c *tlsRouteConverter) GetRootObject() gwtypes.TLSRoute {
 	return *c.route
 }
 
+// UpdateRootObjectStatus implements the APIConverter interface.
+// It updates the status of the TLSRoute by processing each ParentReference
+// and setting appropriate conditions based on the Gateway's support and readiness.
+//
+// The return values:
+// - updated is true if the status is modified;
+// - stop is true if the TLSRoute is not ready for the next round of reconciliation;
+// - err is the error happened (if there is) in processing.
 func (c *tlsRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (updated bool, stop bool, err error) {
 	logger = logger.WithValues("phase", "tlsroute-status")
 	log.Debug(logger, "Starting UpdateRootObjectStatus")
@@ -154,6 +166,11 @@ func (c *tlsRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger l
 	return updated, stop, nil
 }
 
+// GetOutputStore implements APIConverter.
+//
+// Converts all objects in the outputStore to unstructured format for use by the caller.
+// It outputs all resources generated from the `Translate` method that translate the TLSRoute to entities that can be managed in Konnect.
+// A non-nil error is returned if there are errors in the translation.
 func (c *tlsRouteConverter) GetOutputStore(ctx context.Context, logger logr.Logger) ([]unstructured.Unstructured, error) {
 	logger = logger.WithValues("phase", "output-store-conversion")
 	log.Debug(logger, "Starting output store conversion")
@@ -191,6 +208,13 @@ func (c *tlsRouteConverter) GetOutputStore(ctx context.Context, logger logr.Logg
 	return objects, nil
 }
 
+// HandleOrphanedResource implements OrphanedResourceHandler.
+//
+// Processes orphaned resources by checking and updating hybrid-routes annotations.
+//
+// Returns:
+//   - skipDelete: true if the resource should NOT be deleted (skip deletion), false if it should be deleted
+//   - err: any error that occurred during processing
 func (c *tlsRouteConverter) HandleOrphanedResource(ctx context.Context, logger logr.Logger, resource *unstructured.Unstructured) (skipDelete bool, err error) {
 	am := metadata.NewAnnotationManager(logger)
 
@@ -216,6 +240,15 @@ func (c *tlsRouteConverter) HandleOrphanedResource(ctx context.Context, logger l
 	return false, nil
 }
 
+// Translate implements APIConverter.
+//
+// Performs the complete translation of an HTTPRoute resource into Kong-specific resources.
+// This is the main entry point for the conversion process, delegating to the internal
+// translate() method for the actual implementation.
+//
+// Returns:
+//   - int: Number of Kong resources created during translation
+//   - error: Aggregated translation errors or nil if successful
 func (c *tlsRouteConverter) Translate(ctx context.Context, logger logr.Logger) (int, error) {
 	if err := c.translate(ctx, logger); err != nil {
 		return 0, err
@@ -266,8 +299,7 @@ func (c *tlsRouteConverter) translate(ctx context.Context, logger logr.Logger) e
 			}
 			upstreamName := upstreamPtr.Name
 			c.outputStore = append(c.outputStore, upstreamPtr)
-			log.Debug(logger, "Successfully translated KongUpstream resource",
-				"upstream", upstreamName)
+			log.Debug(logger, "Successfully translated KongUpstream resource", "upstream", upstreamName)
 
 			// Build the KongService resource.
 			servicePtr, err := service.ServiceForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp, upstreamName)
@@ -280,8 +312,7 @@ func (c *tlsRouteConverter) translate(ctx context.Context, logger logr.Logger) e
 			}
 			serviceName := servicePtr.Name
 			c.outputStore = append(c.outputStore, servicePtr)
-			log.Debug(logger, "Successfully translated KongService resource",
-				"service", serviceName)
+			log.Debug(logger, "Successfully translated KongService resource", "service", serviceName)
 
 			// Build the KongRoute resource.
 			routes, err := kongroute.RoutesForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp, serviceName, hostnames)

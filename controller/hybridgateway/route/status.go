@@ -1043,26 +1043,27 @@ func IsExtensionRefSupported(group gwtypes.Group, kind gwtypes.Kind) bool {
 	return group == "configuration.konghq.com" && kind == "KongPlugin"
 }
 
-// IsHTTPReferenceGranted checks if a ReferenceGrant permits an HTTPRoute to reference a backend in another namespace.
-// It validates that the ReferenceGrant's 'from' section matches the HTTPRoute and source namespace,
+// IsReferenceGranted checks if a ReferenceGrant permits a route with given kind to reference a backend in another namespace.
+// It validates that the ReferenceGrant's 'from' section matches the route and source namespace,
 // and that the 'to' section matches the backend's group, kind, and name.
 // Returns true if the reference is permitted, false otherwise.
 //
 // Parameters:
 //   - grantSpec: The ReferenceGrant spec to check
-//   - backendRef: The HTTPBackendRef being referenced
-//   - fromNamespace: The namespace of the HTTPRoute making the reference
+//   - backendRef: The BackendRef being referenced
+//   - fromKind: The kind of the 'from' resource
+//   - fromNamespace: The namespace of the route making the reference
 //
 // Returns:
 //   - bool: true if the reference is permitted by the grant, false otherwise
 func IsReferenceGranted(grantSpec gwtypes.ReferenceGrantSpec, backendRef gwtypes.BackendRef, fromKind string, fromNamespace string) bool {
-	var backendRefGroup gwtypes.Group
-	var backendRefKind gwtypes.Kind
+	var backendRefGroup gwtypes.Group = "core"
+	var backendRefKind gwtypes.Kind = "Service"
 
-	if backendRef.Group != nil {
+	if backendRef.Group != nil && *backendRef.Group != "" {
 		backendRefGroup = *backendRef.Group
 	}
-	if backendRef.Kind != nil {
+	if backendRef.Kind != nil && *backendRef.Kind != "" {
 		backendRefKind = *backendRef.Kind
 	}
 
@@ -1076,9 +1077,7 @@ func IsReferenceGranted(grantSpec gwtypes.ReferenceGrantSpec, backendRef gwtypes
 			if toGroup == "" {
 				toGroup = "core"
 			}
-			if backendRefGroup == "" {
-				backendRefGroup = "core"
-			}
+
 			if backendRefGroup == toGroup &&
 				backendRefKind == to.Kind &&
 				(to.Name == nil || *to.Name == backendRef.Name) {

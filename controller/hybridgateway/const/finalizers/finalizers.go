@@ -9,7 +9,7 @@ const (
 	// HybridHTTPRouteFinalizer is the finalizer added to HTTPRoute objects to manage cleanup of generated resources.
 	HybridHTTPRouteFinalizer = "gateway-operator.konghq.com/hybrid-httproute-cleanup"
 
-	// HybridTLSRouteFinailizer is the finalizer added to TLSRoute objects to manage cleanup of generated resources.
+	// HybridTLSRouteFinalizer is the finalizer added to TLSRoute objects to manage cleanup of generated resources.
 	HybridTLSRouteFinalizer = "gateway.operator.konghq.com/hybrid-tlsroute-cleanup"
 
 	// HybridGatewayFinalizer is the finalizer added to Gateway objects to manage cleanup of generated resources.

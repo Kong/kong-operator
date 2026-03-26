@@ -127,7 +127,7 @@ func RoutesForRule[
 		}
 		routeBuilder.WithProtocols([]sdkkonnectcomp.RouteJSONProtocols{protocol})
 
-		routeBuilder.WithSNI(hostnames)
+		routeBuilder.WithSNIs(hostnames)
 
 		newRoute, buildErr := routeBuilder.Build()
 		if buildErr != nil {
