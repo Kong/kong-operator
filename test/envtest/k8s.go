@@ -34,7 +34,7 @@ func CreatePod(ctx context.Context, t *testing.T, client ctrlclient.Client, ns s
 
 	pod := corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns,
+			Namespace:    ns,
 			GenerateName: "pod-",
 		},
 		Spec: corev1.PodSpec{

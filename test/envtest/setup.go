@@ -235,7 +235,7 @@ func deployGatewayUsingGatewayClass(ctx context.Context, t *testing.T, client cl
 			},
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
+			Namespace:    ns.Name,
 			GenerateName: "gw-",
 		},
 	}
