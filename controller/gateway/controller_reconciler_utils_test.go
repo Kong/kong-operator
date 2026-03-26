@@ -2,12 +2,14 @@ package gateway
 
 import (
 	"errors"
+	"maps"
 	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -38,9 +40,11 @@ func TestParseKongProxyListenEnv(t *testing.T) {
 			Name:            "basic http",
 			KongProxyListen: "0.0.0.0:8001 reuseport backlog=16384",
 			Expected: kongListenConfig{
-				Endpoint: &proxyListenEndpoint{
-					Address: "0.0.0.0",
-					Port:    8001,
+				Endpoints: []*proxyListenEndpoint{
+					{
+						Address: "0.0.0.0",
+						Port:    8001,
+					},
 				},
 			},
 		},
@@ -48,9 +52,11 @@ func TestParseKongProxyListenEnv(t *testing.T) {
 			Name:            "basic https",
 			KongProxyListen: "0.0.0.0:8443 http2 ssl reuseport backlog=16384",
 			Expected: kongListenConfig{
-				SSLEndpoint: &proxyListenEndpoint{
-					Address: "0.0.0.0",
-					Port:    8443,
+				SSLEndpoints: []*proxyListenEndpoint{
+					{
+						Address: "0.0.0.0",
+						Port:    8443,
+					},
 				},
 			},
 		},
@@ -58,13 +64,33 @@ func TestParseKongProxyListenEnv(t *testing.T) {
 			Name:            "basic http + https",
 			KongProxyListen: "0.0.0.0:8001 reuseport backlog=16384, 0.0.0.0:8443 http2 ssl reuseport backlog=16384",
 			Expected: kongListenConfig{
-				Endpoint: &proxyListenEndpoint{
-					Address: "0.0.0.0",
-					Port:    8001,
+				Endpoints: []*proxyListenEndpoint{
+					{
+						Address: "0.0.0.0",
+						Port:    8001,
+					},
 				},
-				SSLEndpoint: &proxyListenEndpoint{
-					Address: "0.0.0.0",
-					Port:    8443,
+				SSLEndpoints: []*proxyListenEndpoint{
+					{
+						Address: "0.0.0.0",
+						Port:    8443,
+					},
+				},
+			},
+		},
+		{
+			Name:            "multiple https ports",
+			KongProxyListen: "0.0.0.0:6443 http2 ssl, 0.0.0.0:8443 http2 ssl reuseport backlog=16384",
+			Expected: kongListenConfig{
+				SSLEndpoints: []*proxyListenEndpoint{
+					{
+						Address: "0.0.0.0",
+						Port:    6443,
+					},
+					{
+						Address: "0.0.0.0",
+						Port:    8443,
+					},
 				},
 			},
 		},
@@ -556,11 +582,209 @@ func TestSetAcceptedOnGateway(t *testing.T) {
 	}
 }
 
+func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
+	testCases := []struct {
+		name            string
+		listeners       []gwtypes.Listener
+		expectedEnvs    []corev1.EnvVar
+		expectedPortMap map[int]int
+		expectedError   error
+	}{
+		{
+			name: "Only HTTP and HTTPS listener",
+			listeners: []gwtypes.Listener{
+				{
+					Name:     "http",
+					Protocol: gatewayv1.HTTPProtocolType,
+					Port:     gatewayv1.PortNumber(80),
+				},
+				{
+					Name:     "https",
+					Protocol: gatewayv1.HTTPSProtocolType,
+					Port:     gatewayv1.PortNumber(443),
+				},
+			},
+			expectedEnvs: []corev1.EnvVar{
+				{
+					Name:  "KONG_PORT_MAPS",
+					Value: "80:8000,443:8443",
+				},
+			},
+			expectedPortMap: map[int]int{
+				80:  8000,
+				443: 8443,
+			},
+		},
+		{
+			name: "HTTP and multiple TLS listeners",
+			listeners: []gwtypes.Listener{
+				{
+					Name:     "http",
+					Protocol: gatewayv1.HTTPProtocolType,
+					Port:     gatewayv1.PortNumber(80),
+				},
+				{
+					Name:     "tls-1",
+					Protocol: gatewayv1.TLSProtocolType,
+					Port:     gatewayv1.PortNumber(8899),
+				},
+				{
+					Name:     "tls-2",
+					Protocol: gatewayv1.TLSProtocolType,
+					Port:     gatewayv1.PortNumber(9999),
+				},
+			},
+			expectedEnvs: []corev1.EnvVar{
+				{
+					Name:  "KONG_PORT_MAPS",
+					Value: "80:8000,8899:8899,9999:9999",
+				},
+				{
+					Name:  "KONG_STREAM_LISTEN",
+					Value: "0.0.0.0:8899 ssl reuseport,0.0.0.0:9999 ssl reuseport",
+				},
+			},
+			expectedPortMap: map[int]int{
+				80:   8000,
+				8899: 8899,
+				9999: 9999,
+			},
+		},
+		{
+			name: "TLS listener uses occupied port on Kong DP",
+			listeners: []gwtypes.Listener{
+				{
+					Name:     "http",
+					Protocol: gatewayv1.HTTPProtocolType,
+					Port:     gatewayv1.PortNumber(80),
+				},
+				{
+					Name:     "tls-1",
+					Protocol: gatewayv1.TLSProtocolType,
+					Port:     gatewayv1.PortNumber(7443),
+				},
+				{
+					Name:     "tls-2",
+					Protocol: gatewayv1.TLSProtocolType,
+					Port:     gatewayv1.PortNumber(8443),
+				},
+			},
+			expectedEnvs: []corev1.EnvVar{
+				{
+					Name:  "KONG_PORT_MAPS",
+					Value: "80:8000,7443:7443,8443:16384", // Should assign the first port in the assigned port interval
+				},
+				{
+					Name:  "KONG_STREAM_LISTEN",
+					Value: "0.0.0.0:7443 ssl reuseport,0.0.0.0:16384 ssl reuseport",
+				},
+			},
+			expectedPortMap: map[int]int{
+				80:   8000,
+				7443: 7443,
+				8443: 16384,
+			},
+		},
+		{
+			name: "TLS listener uses known port",
+			listeners: []gwtypes.Listener{
+				{
+					Name:     "http",
+					Protocol: gatewayv1.HTTPProtocolType,
+					Port:     gatewayv1.PortNumber(80),
+				},
+				{
+					Name:     "tls",
+					Protocol: gatewayv1.TLSProtocolType,
+					Port:     gatewayv1.PortNumber(445),
+				},
+			},
+			expectedEnvs: []corev1.EnvVar{
+				{
+					Name:  "KONG_PORT_MAPS",
+					Value: "80:8000,445:16384", // Should assign the first port in the assigned port interval
+				},
+				{
+					Name:  "KONG_STREAM_LISTEN",
+					Value: "0.0.0.0:16384 ssl reuseport",
+				},
+			},
+			expectedPortMap: map[int]int{
+				80:  8000,
+				445: 16384,
+			},
+		},
+		{
+			name: "unsupported protocol TCP in listeners",
+			listeners: []gwtypes.Listener{
+				{
+					Name:     "http",
+					Protocol: gatewayv1.HTTPProtocolType,
+					Port:     gatewayv1.PortNumber(80),
+				},
+				{
+					Name:     "https",
+					Protocol: gatewayv1.HTTPSProtocolType,
+					Port:     gatewayv1.PortNumber(443),
+				},
+				{
+					Name:     "tcp",
+					Protocol: gatewayv1.TCPProtocolType,
+					Port:     gatewayv1.PortNumber(8888),
+				},
+			},
+			expectedError: errors.New("listener 2 uses unsupported protocol TCP"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			opts := operatorv1beta1.DataPlaneOptions{
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
+						PodTemplateSpec: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name: consts.DataPlaneProxyContainerName,
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+			portMap, err := setDataPlaneDeploymentListenPorts(&opts, tc.listeners)
+			if tc.expectedError != nil {
+				require.EqualError(t, tc.expectedError, err.Error())
+				return
+			}
+			require.NoError(t, err)
+
+			container := k8sutils.GetPodContainerByName(&opts.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+			require.NotNil(t, container, "Should find proxy container")
+			for _, env := range tc.expectedEnvs {
+				require.Containsf(
+					t, container.Env, env,
+					"Should contain env %s with value %s",
+					env.Name, env.Value,
+				)
+			}
+
+			require.Truef(t, maps.Equal(tc.expectedPortMap, portMap),
+				"listener port maps should equal: expected %v, actual %v",
+				tc.expectedPortMap, portMap,
+			)
+		})
+	}
+}
+
 func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 	testCases := []struct {
 		name             string
 		listeners        []gwtypes.Listener
 		listenersOptions []operatorv2beta1.GatewayConfigurationListenerOptions
+		portMap          map[int]int
 		expectedPorts    []operatorv1beta1.DataPlaneServicePort
 		expectedError    error
 	}{
@@ -580,7 +804,13 @@ func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 					Protocol: gatewayv1.HTTPSProtocolType,
 					Port:     gatewayv1.PortNumber(443),
 				},
+				{
+					Name:     "tls",
+					Protocol: gatewayv1.TLSProtocolType,
+					Port:     gatewayv1.PortNumber(9443),
+				},
 			},
+			portMap: map[int]int{9443: 9443},
 			expectedPorts: []operatorv1beta1.DataPlaneServicePort{
 				{
 					Name:       "http",
@@ -591,6 +821,11 @@ func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 					Name:       "https",
 					Port:       443,
 					TargetPort: intstr.FromInt(consts.DataPlaneProxySSLPort),
+				},
+				{
+					Name:       "tls",
+					Port:       9443,
+					TargetPort: intstr.FromInt(9443),
 				},
 			},
 		},
@@ -678,7 +913,7 @@ func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := setDataPlaneIngressServicePorts(&operatorv1beta1.DataPlaneOptions{}, tc.listeners, tc.listenersOptions)
+			err := setDataPlaneIngressServicePorts(&operatorv1beta1.DataPlaneOptions{}, tc.listeners, tc.listenersOptions, tc.portMap)
 			if tc.expectedError == nil {
 				require.NoError(t, err)
 			} else {
@@ -2902,4 +3137,143 @@ func TestGatewayManagedLabelOnCreatedResources(t *testing.T) {
 		require.Equal(t, gwName, konnectExt.Labels[consts.GatewayNameLabel],
 			"KonnectExtension object must carry the GEP-1762 gateway-name label")
 	})
+}
+
+func TestGenerateDataPlaneNetworkPolicy(t *testing.T) {
+	const (
+		testNamespace     = "test-network-policy"
+		testDataPlaneName = "test-dp"
+	)
+	var (
+		protocolTCP = corev1.ProtocolTCP
+		podLabels   = map[string]string{
+			"app": "test",
+		}
+		defaultDataPlane = &operatorv1beta1.DataPlane{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: testNamespace,
+				Name:      testDataPlaneName,
+			},
+			Spec: operatorv1beta1.DataPlaneSpec{
+				DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+					Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+						DeploymentOptions: operatorv1beta1.DeploymentOptions{
+							PodTemplateSpec: &corev1.PodTemplateSpec{
+								Spec: corev1.PodSpec{
+									Containers: []corev1.Container{
+										{
+											Name:  consts.DataPlaneProxyContainerName,
+											Image: consts.DefaultDataPlaneImage,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		defaultIngressRuleAdminAPI = networkingv1.NetworkPolicyIngressRule{
+			Ports: []networkingv1.NetworkPolicyPort{
+				{
+					Protocol: &protocolTCP,
+					Port:     new(intstr.FromInt(consts.DataPlaneAdminAPIPort)),
+				},
+			},
+			From: []networkingv1.NetworkPolicyPeer{
+				{
+					PodSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"app": "test",
+						},
+					},
+					NamespaceSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"kubernetes.io/metadata.name": testNamespace,
+						},
+					},
+				},
+			},
+		}
+		defaultIngressRuleProxy = networkingv1.NetworkPolicyIngressRule{
+			Ports: []networkingv1.NetworkPolicyPort{
+				{
+					Protocol: &protocolTCP,
+					Port:     new(intstr.FromInt(consts.DataPlaneProxyPort)),
+				},
+				{
+					Protocol: &protocolTCP,
+					Port:     new(intstr.FromInt(consts.DataPlaneProxySSLPort)),
+				},
+			},
+		}
+		defaultIngressRuleMetrics = networkingv1.NetworkPolicyIngressRule{
+			Ports: []networkingv1.NetworkPolicyPort{
+				{
+					Protocol: &protocolTCP,
+					Port:     new(intstr.FromInt(consts.DataPlaneMetricsPort)),
+				},
+			},
+		}
+	)
+
+	testCases := []struct {
+		name                  string
+		proxyContainerOptions func(c *corev1.Container)
+		expectedIngressRules  []networkingv1.NetworkPolicyIngressRule
+	}{
+		{
+			name: "default DataPlane",
+			expectedIngressRules: []networkingv1.NetworkPolicyIngressRule{
+				defaultIngressRuleAdminAPI,
+				defaultIngressRuleProxy,
+				defaultIngressRuleMetrics,
+			},
+		},
+		{
+			name: "dataplane with stream listen",
+			proxyContainerOptions: func(c *corev1.Container) {
+				c.Env = append(c.Env, corev1.EnvVar{
+					Name:  "KONG_STREAM_LISTEN",
+					Value: "0.0.0.0:8899 ssl reuseport",
+				})
+			},
+			expectedIngressRules: []networkingv1.NetworkPolicyIngressRule{
+				defaultIngressRuleAdminAPI,
+				defaultIngressRuleProxy,
+				defaultIngressRuleMetrics,
+				{
+					Ports: []networkingv1.NetworkPolicyPort{
+						{
+							Protocol: &protocolTCP,
+							Port:     new(intstr.FromInt(8899)),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			dp := defaultDataPlane.DeepCopy()
+			container := k8sutils.GetPodContainerByName(&dp.Spec.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+			if tc.proxyContainerOptions != nil {
+				tc.proxyContainerOptions(container)
+			}
+
+			policy, err := generateDataPlaneNetworkPolicy(testNamespace, dp, podLabels)
+			require.NoError(t, err)
+			// compare expected NetworkPolicy and the generated one.
+			require.Equal(t, testNamespace, policy.Namespace)
+			require.Equal(t, "test-dp-limit-admin-api-", policy.GenerateName)
+			// compare pod selector.
+			require.Equal(t, map[string]string{"app": "test-dp"}, policy.Spec.PodSelector.MatchLabels)
+			// compare ingress policies.
+			require.Len(t, policy.Spec.Ingress, len(tc.expectedIngressRules))
+			for i, ingressRule := range tc.expectedIngressRules {
+				require.Equal(t, ingressRule, policy.Spec.Ingress[i])
+			}
+		})
+	}
 }
