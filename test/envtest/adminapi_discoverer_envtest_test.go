@@ -83,7 +83,7 @@ func TestDiscoverer_GetAdminAPIsForServiceReturnsAllAddressesCorrectlyPagingThro
 					es := discoveryv1.EndpointSlice{
 						ObjectMeta: metav1.ObjectMeta{
 							GenerateName: "endpointslice-",
-							Namespace: ns.Name,
+							Namespace:    ns.Name,
 							Labels: map[string]string{
 								"kubernetes.io/service-name": serviceName,
 							},

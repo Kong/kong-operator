@@ -152,7 +152,7 @@ func createHTTPRoutes(
 		httpRoute := &gatewayapi.HTTPRoute{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "httproute-",
-				Namespace: gw.Namespace,
+				Namespace:    gw.Namespace,
 			},
 			Spec: gatewayapi.HTTPRouteSpec{
 				CommonRouteSpec: gatewayapi.CommonRouteSpec{
