@@ -320,6 +320,8 @@ func konnectClusterTypeToCRDClusterType(clusterType sdkkonnectcomp.ControlPlaneC
 		return konnectv1alpha2.ClusterTypeControlPlane
 	case sdkkonnectcomp.ControlPlaneClusterTypeClusterTypeK8SIngressController:
 		return konnectv1alpha2.ClusterTypeK8sIngressController
+	case sdkkonnectcomp.ControlPlaneClusterTypeClusterTypeControlPlaneGroup:
+		return konnectv1alpha2.ClusterTypeControlPlaneGroup
 	default:
 		// default never happens as the validation is at the CRD level
 		return ""

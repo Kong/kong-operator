@@ -142,6 +142,124 @@ func TestKonnectExtension(t *testing.T) {
 		}.
 			RunWithConfig(t, cfg, scheme)
 	})
+	t.Run("status clusterType", func(t *testing.T) {
+		common.TestCasesGroup[*konnectv1alpha2.KonnectExtension]{
+			{
+				Name: "status clusterType ControlPlane",
+				TestObject: &konnectv1alpha2.KonnectExtension{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: konnectv1alpha2.KonnectExtensionSpec{
+						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+								Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+										Name: "test-konnect-control-plane",
+									},
+								},
+							},
+						},
+					},
+				},
+				StatusUpdate: func(ke *konnectv1alpha2.KonnectExtension) {
+					ke.Status.Konnect = &konnectv1alpha2.KonnectExtensionControlPlaneStatus{
+						ControlPlaneID: "cp-id",
+						ClusterType:    konnectv1alpha2.ClusterTypeControlPlane,
+						Endpoints: konnectv1alpha2.KonnectEndpoints{
+							TelemetryEndpoint:    "telemetry.example.com",
+							ControlPlaneEndpoint: "cp.example.com",
+						},
+					}
+				},
+			},
+			{
+				Name: "status clusterType K8SIngressController",
+				TestObject: &konnectv1alpha2.KonnectExtension{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: konnectv1alpha2.KonnectExtensionSpec{
+						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+								Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+										Name: "test-konnect-control-plane",
+									},
+								},
+							},
+						},
+					},
+				},
+				StatusUpdate: func(ke *konnectv1alpha2.KonnectExtension) {
+					ke.Status.Konnect = &konnectv1alpha2.KonnectExtensionControlPlaneStatus{
+						ControlPlaneID: "cp-id",
+						ClusterType:    konnectv1alpha2.ClusterTypeK8sIngressController,
+						Endpoints: konnectv1alpha2.KonnectEndpoints{
+							TelemetryEndpoint:    "telemetry.example.com",
+							ControlPlaneEndpoint: "cp.example.com",
+						},
+					}
+				},
+			},
+			{
+				Name: "status clusterType ControlPlaneGroup",
+				TestObject: &konnectv1alpha2.KonnectExtension{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: konnectv1alpha2.KonnectExtensionSpec{
+						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+								Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+										Name: "test-konnect-control-plane",
+									},
+								},
+							},
+						},
+					},
+				},
+				StatusUpdate: func(ke *konnectv1alpha2.KonnectExtension) {
+					ke.Status.Konnect = &konnectv1alpha2.KonnectExtensionControlPlaneStatus{
+						ControlPlaneID: "cp-id",
+						ClusterType:    konnectv1alpha2.ClusterTypeControlPlaneGroup,
+						Endpoints: konnectv1alpha2.KonnectEndpoints{
+							TelemetryEndpoint:    "telemetry.example.com",
+							ControlPlaneEndpoint: "cp.example.com",
+						},
+					}
+				},
+			},
+			{
+				Name: "status clusterType invalid",
+				TestObject: &konnectv1alpha2.KonnectExtension{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: konnectv1alpha2.KonnectExtensionSpec{
+						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+								Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+										Name: "test-konnect-control-plane",
+									},
+								},
+							},
+						},
+					},
+				},
+				StatusUpdate: func(ke *konnectv1alpha2.KonnectExtension) {
+					ke.Status.Konnect = &konnectv1alpha2.KonnectExtensionControlPlaneStatus{
+						ControlPlaneID: "cp-id",
+						ClusterType:    konnectv1alpha2.KonnectExtensionClusterType("InvalidType"),
+						Endpoints: konnectv1alpha2.KonnectEndpoints{
+							TelemetryEndpoint:    "telemetry.example.com",
+							ControlPlaneEndpoint: "cp.example.com",
+						},
+					}
+				},
+				ExpectedStatusUpdateErrorMessage: new(`Unsupported value: "InvalidType"`),
+			},
+		}.
+			RunWithConfig(t, cfg, scheme)
+	})
 	t.Run("dataPlane labels", func(t *testing.T) {
 		common.TestCasesGroup[*konnectv1alpha2.KonnectExtension]{
 			{
