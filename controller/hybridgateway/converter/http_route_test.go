@@ -16,6 +16,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	gatewayoperatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
@@ -88,6 +89,8 @@ func TestHostnamesIntersection(t *testing.T) {
 
 	scheme := runtime.NewScheme()
 	err := gatewayv1.Install(scheme)
+	require.NoError(t, err)
+	err = configurationv1.AddToScheme(scheme)
 	require.NoError(t, err)
 	err = configurationv1alpha1.AddToScheme(scheme)
 	require.NoError(t, err)

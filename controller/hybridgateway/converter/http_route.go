@@ -247,8 +247,10 @@ func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger 
 		if err != nil {
 			return false, stop, fmt.Errorf("failed to build accepted condition for parentRef %s: %w", pRef.Name, err)
 		}
-		// If the Accepted or ResolvedRefs condition is False, we should stop further processing.
-		if acceptedCondition.Status == metav1.ConditionFalse || resolvedRefsCond.Status == metav1.ConditionFalse {
+		// Unresolved backend references should still translate and be applied so the
+		// data plane returns a Gateway API-compliant 500 instead of falling through to 404.
+		// Only an unaccepted route must halt state enforcement.
+		if acceptedCondition.Status == metav1.ConditionFalse {
 			stop = true
 		}
 
@@ -517,6 +519,44 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				"targetCount", len(targets))
 			for _, tgt := range targets {
 				c.outputStore = append(c.outputStore, &tgt)
+			}
+
+			if len(rule.BackendRefs) > 0 && len(targets) == 0 {
+				terminationPlugin, err := plugin.RequestTerminationForBackendNotFound(
+					ctx,
+					logger,
+					c.Client,
+					c.route,
+					&pRef,
+					serviceName,
+				)
+				if err != nil {
+					log.Error(logger, err, "Failed to translate request-termination plugin for backend-less rule",
+						"service", serviceName,
+						"backendRefs", rule.BackendRefs)
+					translationErrors = append(translationErrors, fmt.Errorf("failed to translate request-termination plugin for service %s: %w", serviceName, err))
+					continue
+				}
+				c.outputStore = append(c.outputStore, terminationPlugin)
+
+				bindingPtr, err := pluginbinding.BindingForPluginAndService(
+					ctx,
+					logger,
+					c.Client,
+					c.route,
+					&pRef,
+					cp,
+					terminationPlugin.Name,
+					serviceName,
+				)
+				if err != nil {
+					log.Error(logger, err, "Failed to bind request-termination plugin to service",
+						"service", serviceName,
+						"plugin", terminationPlugin.Name)
+					translationErrors = append(translationErrors, fmt.Errorf("failed to bind request-termination plugin %s to service %s: %w", terminationPlugin.Name, serviceName, err))
+					continue
+				}
+				c.outputStore = append(c.outputStore, bindingPtr)
 			}
 		}
 	}
