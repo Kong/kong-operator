@@ -142,7 +142,7 @@ func TestKongAdminAPIController(t *testing.T) {
 						UID:        adminService.UID,
 					},
 				},
-				Name:      uuid.NewString(),
+				GenerateName: "endpointslice-",
 				Namespace: adminService.Namespace,
 				Labels: map[string]string{
 					"kubernetes.io/service-name": adminService.Name,
@@ -221,7 +221,7 @@ func TestKongAdminAPIController(t *testing.T) {
 						UID:        adminService.UID,
 					},
 				},
-				Name:      uuid.NewString(),
+				GenerateName: "endpointslice-",
 				Namespace: adminService.Namespace,
 				Labels: map[string]string{
 					"kubernetes.io/service-name": adminService.Name,
@@ -288,7 +288,7 @@ func TestKongAdminAPIController(t *testing.T) {
 						UID:        adminService.UID,
 					},
 				},
-				Name:      uuid.NewString(),
+				GenerateName: "endpointslice-",
 				Namespace: adminService.Namespace,
 				Labels: map[string]string{
 					"kubernetes.io/service-name": adminService.Name,
@@ -333,7 +333,7 @@ func TestKongAdminAPIController(t *testing.T) {
 						UID:        adminService.UID,
 					},
 				},
-				Name:      uuid.NewString(),
+				GenerateName: "endpointslice-",
 				Namespace: adminService.Namespace,
 				Labels: map[string]string{
 					"kubernetes.io/service-name": adminService.Name,
@@ -424,7 +424,7 @@ func TestKongAdminAPIController(t *testing.T) {
 						UID:        adminService.UID,
 					},
 				},
-				Name:      uuid.NewString(),
+				GenerateName: "endpointslice-",
 				Namespace: adminService.Namespace,
 				Labels: map[string]string{
 					"kubernetes.io/service-name": adminService.Name,
@@ -528,7 +528,7 @@ func TestKongAdminAPIController(t *testing.T) {
 						UID:        adminService.UID,
 					},
 				},
-				Name:      uuid.NewString(),
+				GenerateName: "endpointslice-",
 				Namespace: adminService.Namespace,
 				Labels: map[string]string{
 					"kubernetes.io/service-name": adminService.Name,

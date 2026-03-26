@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -153,7 +152,7 @@ func createHTTPRoutes(
 		pathMatchPrefix := gatewayapi.PathMatchPathPrefix
 		httpRoute := &gatewayapi.HTTPRoute{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      uuid.NewString(),
+				GenerateName: "httproute-",
 				Namespace: gw.Namespace,
 			},
 			Spec: gatewayapi.HTTPRouteSpec{
