@@ -31,6 +31,7 @@ If the troubleshooting section does not contain the answer to the problem you en
 - [ ] Update the official documentation at [https://github.com/Kong/developer.konghq.com/][docs_repo]
   - [ ] **CLI configuration options** and **CRD reference**: Automatically synced by the release workflow. A PR will be created in the docs repo. Review and merge it when ready.
   - [ ] Update supported releases table at <https://github.com/Kong/developer.konghq.com/blob/main/app/_data/products/operator.yml>
+  - [ ] Update the [changelog](https://developer.konghq.com/operator/changelog/) in the docs repo by adding a new version entry to [`app/operator/changelog.md`](https://github.com/Kong/developer.konghq.com/blob/main/app/operator/changelog.md) with the release date and a list of changes (fixes, features, breaking changes, etc.) referencing the corresponding PRs.
 
 ## Conformance tests report
 
