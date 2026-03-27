@@ -2,9 +2,11 @@
 
 ## Table of Contents
 
+- [v2.1.3](#v213)
 - [v2.1.2](#v212)
 - [v2.1.1](#v211)
 - [v2.1.0](#v210)
+- [v2.0.8](#v208)
 - [v2.0.7](#v207)
 - [v2.0.6](#v206)
 - [v2.0.5](#v205)
@@ -44,6 +46,10 @@
 
 ### Added
 
+- TLSRoute support: Configure DataPlaneOption in created `DataPlane` to
+  configure Kong DataPlane deployment and ingress service for listeners with
+  `TLS` protocol.
+  [#3493](https://github.com/Kong/kong-operator/pull/3493)
 - Allow cross-namespace reference for `KonnectAPIAuthConfiguration` from
   `GatewayConfiguration` using `KongReferenceGrant`. When a user creates a
   `KongReferenceGrant` allowing `GatewayConfiguration` to reference a
@@ -131,6 +137,36 @@
   [#3576](https://github.com/Kong/kong-operator/pull/3576)
 - Do not try to list `Gateway`s for namespaces that are not being watched by controller
   [#3625](https://github.com/Kong/kong-operator/pull/3625)
+- Fix the on-prem translator to set `protocols` in translated Kong routes to
+  `http,https`.
+  [#3587](https://github.com/Kong/kong-operator/pull/3587)
+
+## [v2.1.3]
+
+> Release date: 2026-03-25
+
+### Fixes
+
+- Admission webhook now validates HTTPRoute regex patterns before sending
+  configuration to the Admin API.
+  [#3666](https://github.com/Kong/kong-operator/pull/3666)
+- Do not try to list `Gateway`s for namespaces that are not being watched by controller
+  [#3625](https://github.com/Kong/kong-operator/pull/3625)
+- Fix `KonnectGatewayControlPlane` not setting `Programmed=False` when its
+  `KonnectAPIAuthConfiguration` reference cannot be resolved (e.g. the auth
+  config does not exist, or a cross-namespace reference lacks a
+  `KongReferenceGrant`). Both `APIAuthResolvedRef` and `Programmed` conditions
+  are now set to `False` atomically.
+  [#3526](https://github.com/Kong/kong-operator/pull/3526)
+- Fix configuring SNIs in ingress-controller when running with local controlplane.
+  [#3554](https://github.com/Kong/kong-operator/pull/3554)
+- Fix reducing `Secret`s with in use finalizers.
+  [#3506](https://github.com/Kong/kong-operator/pull/3506)
+- Fix KongUpstream and KongService names in hybrid mode not taking into account
+  backendless rules. When a rule has no BackendRefs, the generated KongUpsteam and KongService names
+  now include a hash of rule's other field to avoid naming collisions with other
+  rules that also have no BackendRefs.
+  [#3576](https://github.com/Kong/kong-operator/pull/3576)
 - Fix the on-prem translator to set `protocols` in translated Kong routes to
   `http,https`.
   [#3587](https://github.com/Kong/kong-operator/pull/3587)
@@ -472,6 +508,18 @@
   `spec.listeners.tls.certificateRef`, ensuring Gateway status conditions
   are updated when referenced certificates change.
   [#2661](https://github.com/Kong/kong-operator/pull/2661)
+
+## [v2.0.8]
+
+> Release date: 2026-03-24
+
+### Fixed
+
+- Do not try to list `Gateway`s for namespaces that are not being watched by controller
+  [#3625](https://github.com/Kong/kong-operator/pull/3625)
+- Fix the on-prem translator to set `protocols` in translated Kong routes to
+  `http,https`.
+  [#3587](https://github.com/Kong/kong-operator/pull/3587)
 
 ## [v2.0.7]
 
@@ -1862,9 +1910,11 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.1.3]: https://github.com/Kong/kong-operator/compare/v2.1.2..v2.1.3
 [v2.1.2]: https://github.com/Kong/kong-operator/compare/v2.1.1..v2.1.2
 [v2.1.1]: https://github.com/Kong/kong-operator/compare/v2.1.0..v2.1.1
 [v2.1.0]: https://github.com/Kong/kong-operator/compare/v2.0.5..v2.1.0
+[v2.0.8]: https://github.com/Kong/kong-operator/compare/v2.0.7..v2.0.8
 [v2.0.7]: https://github.com/Kong/kong-operator/compare/v2.0.6..v2.0.7
 [v2.0.6]: https://github.com/Kong/kong-operator/compare/v2.0.5..v2.0.6
 [v2.0.5]: https://github.com/Kong/kong-operator/compare/v2.0.4..v2.0.5

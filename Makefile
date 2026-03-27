@@ -952,16 +952,6 @@ endif
 .PHONY: _ensure-kong-system-namespace
 _ensure-kong-system-namespace:
 	@kubectl create ns kong-system 2>/dev/null || true
-	@kubectl get secret kong-operator-ca -n kong-system >/dev/null 2>&1 || \
-		(openssl genrsa -out /tmp/ko-makefile-ca.key 4096 2>/dev/null && \
-		openssl req -x509 -new -key /tmp/ko-makefile-ca.key -days 3650 -out /tmp/ko-makefile-ca.crt -subj "/CN=Kong Operator CA" 2>/dev/null && \
-		kubectl create secret tls kong-operator-ca \
-			--cert=/tmp/ko-makefile-ca.crt \
-			--key=/tmp/ko-makefile-ca.key \
-			--namespace kong-system \
-			--dry-run=client -o yaml | \
-			kubectl label -f - konghq.com/secret=internal --overwrite --local -o yaml | \
-			kubectl apply -f -)
 
 # Run a controller from your host.
 # TODO: https://github.com/Kong/kong-operator/issues/1989
@@ -1139,11 +1129,11 @@ install.telepresence: download.telepresence
 uninstall.telepresence: download.telepresence
 	@$(PROJECT_DIR)/scripts/telepresence-manager.sh uninstall "$(TELEPRESENCE)"
 
-.PHONY: lint.api
+.PHONY: lint.api 
 lint.api: download.kube-api-linter
 	$(KUBE_API_LINTER) run --config $(PROJECT_DIR)/.golangci-kube-api.yaml -v \
 		./api/gateway-operator/v2beta1/... \
 		./api/konnect/v1alpha1/... \
 		./api/konnect/v1alpha2/... \
-		./api/common/v1alpha1/...
-	mise r lint-api
+		./api/common/v1alpha1/...  \
+		./api/x-konnect/...
