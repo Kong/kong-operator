@@ -1618,7 +1618,7 @@ func TestIsBackendRefSupported(t *testing.T) {
 	}
 }
 
-func TestIsHTTPReferenceGranted(t *testing.T) {
+func TestIsRouteReferenceGranted(t *testing.T) {
 	tests := []struct {
 		name          string
 		grantSpec     gwtypes.ReferenceGrantSpec
@@ -1838,7 +1838,7 @@ func TestIsHTTPReferenceGranted(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := IsHTTPReferenceGranted(tt.grantSpec, tt.backendRef, tt.fromNamespace)
+			got := IsRouteReferenceGranted(tt.grantSpec, tt.backendRef.BackendRef, "HTTPRoute", tt.fromNamespace)
 			if got != tt.want {
 				t.Errorf("IsHTTPReferenceGranted() = %v, want %v", got, tt.want)
 			}
@@ -2502,7 +2502,7 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 
 			cl := clientBuilder.Build()
 
-			cond, err := BuildResolvedRefsCondition(ctx, logger, cl, tt.route)
+			cond, err := BuildResolvedRefsConditionForHTTPRoute(ctx, logger, cl, tt.route)
 			require.NoError(t, err)
 			require.NotNil(t, cond)
 
@@ -2532,7 +2532,7 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 				WithInterceptorFuncs(tt.interceptor).
 				Build()
 
-			cond, err := BuildResolvedRefsCondition(ctx, logger, cl, tt.route)
+			cond, err := BuildResolvedRefsConditionForHTTPRoute(ctx, logger, cl, tt.route)
 			if tt.wantError {
 				require.Error(t, err)
 				require.Nil(t, cond)
@@ -2866,7 +2866,7 @@ func TestCheckReferenceGrant(t *testing.T) {
 
 			cl := fake.NewClientBuilder().WithScheme(s).WithObjects(tt.clientObjs...).Build()
 
-			permitted, found, err := CheckReferenceGrant(ctx, cl, tt.bRef, tt.routeNamespace)
+			permitted, found, err := CheckReferenceGrant(ctx, cl, &tt.bRef.BackendRef, "HTTPRoute", tt.routeNamespace)
 
 			if tt.wantError {
 				require.Error(t, err)
@@ -2900,7 +2900,7 @@ func TestCheckReferenceGrant(t *testing.T) {
 				}).
 				Build()
 
-			permitted, found, err := CheckReferenceGrant(ctx, cl, tt.bRef, tt.routeNamespace)
+			permitted, found, err := CheckReferenceGrant(ctx, cl, &tt.bRef.BackendRef, "HTTPRoute", tt.routeNamespace)
 
 			if tt.wantError {
 				require.Error(t, err)

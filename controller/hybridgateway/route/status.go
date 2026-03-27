@@ -32,7 +32,7 @@ import (
 // - Only manages ParentStatus entries owned by the specified controller
 //
 // Parameters:
-//   - route: The HTTPRoute to update
+//   - route: The route with supported type to update
 //   - pRef: The ParentReference to match against
 //   - controllerName: The controller name that should own the ParentStatus entry
 //   - conditions: Variable number of conditions to set or update (any existing conditions not in this list will be removed)
@@ -42,27 +42,31 @@ import (
 //
 // This function respects controller ownership and will not modify ParentStatus entries
 // managed by other controllers, making it safe for use in multi-controller environments.
-func SetStatusConditions(route *gwtypes.HTTPRoute, pRef gwtypes.ParentReference, controllerName string, conditions ...metav1.Condition) bool {
+func SetStatusConditions[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](
+	route TPtr, pRef gwtypes.ParentReference, controllerName string, conditions ...metav1.Condition,
+) bool {
 	updated := false
 
 	// Find the ParentStatus for the given ParentRef that is managed by our controller.
 	var targetParentStatus *gwtypes.RouteParentStatus
-	for i := range route.Status.Parents {
-		if string(route.Status.Parents[i].ControllerName) == controllerName &&
-			isParentRefEqual(route.Status.Parents[i].ParentRef, pRef) {
-			targetParentStatus = &route.Status.Parents[i]
+	parentStatus := getParentStatus(*route)
+	for i := range parentStatus {
+		if string(parentStatus[i].ControllerName) == controllerName &&
+			isParentRefEqual(parentStatus[i].ParentRef, pRef) {
+			targetParentStatus = &parentStatus[i]
 			break
 		}
 	}
 
 	// If ParentStatus doesn't exist for our controller, create it.
 	if targetParentStatus == nil {
-		route.Status.Parents = append(route.Status.Parents, gwtypes.RouteParentStatus{
+		parentStatus = append(parentStatus, gwtypes.RouteParentStatus{
 			ParentRef:      pRef,
 			ControllerName: gwtypes.GatewayController(controllerName),
 			Conditions:     conditions,
 		})
 		// We are done, return.
+		setParentRefStatus[T](route, parentStatus)
 		return true
 	}
 
@@ -116,6 +120,9 @@ func SetStatusConditions(route *gwtypes.HTTPRoute, pRef gwtypes.ParentReference,
 		}
 	}
 
+	if updated {
+		setParentRefStatus[T](route, parentStatus)
+	}
 	return updated
 }
 
@@ -124,7 +131,7 @@ func SetStatusConditions(route *gwtypes.HTTPRoute, pRef gwtypes.ParentReference,
 // This function helps maintain a clean status by removing stale entries when parentRefs are removed from the route spec.
 //
 // Parameters:
-//   - route: The HTTPRoute to clean up
+//   - route: The route to clean up
 //   - controllerName: The controller name that should own the ParentStatus entries to be cleaned
 //
 // Returns:
@@ -132,14 +139,17 @@ func SetStatusConditions(route *gwtypes.HTTPRoute, pRef gwtypes.ParentReference,
 //
 // This function only removes ParentStatus entries owned by the specified controller, leaving
 // entries from other controllers untouched, making it safe for use in multi-controller environments.
-func CleanupOrphanedParentStatus(logger logr.Logger, route *gwtypes.HTTPRoute, controllerName string) bool {
-	if len(route.Status.Parents) == 0 {
+func CleanupOrphanedParentStatus[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](
+	logger logr.Logger, route TPtr, controllerName string) bool {
+
+	parentStatus := getParentStatus(*route)
+	if len(parentStatus) == 0 {
 		return false
 	}
 
 	// Create a set of current parentRefs for quick lookup.
 	currentParentRefs := make(map[string]bool)
-	for _, pRef := range route.Spec.ParentRefs {
+	for _, pRef := range gwtypes.GetSpecParentRefs(*route) {
 		// Create a unique key for each parentRef.
 		key := parentRefKey(pRef)
 		currentParentRefs[key] = true
@@ -149,7 +159,7 @@ func CleanupOrphanedParentStatus(logger logr.Logger, route *gwtypes.HTTPRoute, c
 	filteredParents := []gwtypes.RouteParentStatus{}
 	removed := false
 
-	for _, parentStatus := range route.Status.Parents {
+	for _, parentStatus := range parentStatus {
 		// Only process entries owned by our controller.
 		if string(parentStatus.ControllerName) != controllerName {
 			// Keep entries from other controllers.
@@ -171,7 +181,7 @@ func CleanupOrphanedParentStatus(logger logr.Logger, route *gwtypes.HTTPRoute, c
 
 	// Update the route status if we removed any entries
 	if removed {
-		route.Status.Parents = filteredParents
+		setParentRefStatus[T](route, filteredParents)
 	}
 
 	return removed
@@ -183,19 +193,22 @@ func CleanupOrphanedParentStatus(logger logr.Logger, route *gwtypes.HTTPRoute, c
 // ParentReference and controllerName. It is useful for cleaning up status when a parent reference is deleted or no longer relevant.
 //
 // Parameters:
-//   - route: The HTTPRoute whose status should be updated
+//   - route: The route whose status should be updated
 //   - pRef: The ParentReference to match for removal
 //   - controllerName: The controller name that must match for removal
 //
 // Returns:
 //   - bool: true if a matching ParentStatus entry was removed, false otherwise
-func RemoveStatusForParentRef(logger logr.Logger, route *gwtypes.HTTPRoute, pRef gwtypes.ParentReference, controllerName string) bool {
-	if len(route.Status.Parents) == 0 {
+func RemoveStatusForParentRef[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](
+	logger logr.Logger, route TPtr, pRef gwtypes.ParentReference, controllerName string) bool {
+
+	parentStatus := getParentStatus(*route)
+	if len(parentStatus) == 0 {
 		return false
 	}
 	removed := false
 	filteredParents := []gwtypes.RouteParentStatus{}
-	for _, parentStatus := range route.Status.Parents {
+	for _, parentStatus := range parentStatus {
 		if string(parentStatus.ControllerName) == controllerName && isParentRefEqual(parentStatus.ParentRef, pRef) {
 			// Skip this entry (remove it).
 			log.Debug(logger, "Removing ParentStatus entry for ParentReference", "parentRef", parentStatus.ParentRef, "controller", controllerName)
@@ -205,9 +218,22 @@ func RemoveStatusForParentRef(logger logr.Logger, route *gwtypes.HTTPRoute, pRef
 		filteredParents = append(filteredParents, parentStatus)
 	}
 	if removed {
-		route.Status.Parents = filteredParents
+		setParentRefStatus[T](route, filteredParents)
 	}
 	return removed
+}
+
+func getParentStatus[T gwtypes.SupportedRoute](route T) []gwtypes.RouteParentStatus {
+	if r, ok := any(route).(gwtypes.HTTPRoute); ok {
+		return r.Status.Parents
+	}
+	return nil
+}
+
+func setParentRefStatus[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](route TPtr, parentStatus []gwtypes.RouteParentStatus) {
+	if r, ok := any(route).(gwtypes.HTTPRoute); ok {
+		r.Status.Parents = parentStatus
+	}
 }
 
 // parentRefKey generates a unique key for a ParentReference to enable comparison.
@@ -319,22 +345,23 @@ func isConditionEqual(a, b metav1.Condition) bool {
 // The function returns a condition with status "False" if any validation step fails,
 // or status "True" if the route is accepted by the gateway. The condition includes
 // specific reasons and messages to help diagnose acceptance issues.
-func BuildAcceptedCondition(ctx context.Context, logger logr.Logger, cl client.Client, gateway *gwtypes.Gateway,
-	route *gwtypes.HTTPRoute, pRef gwtypes.ParentReference) (*metav1.Condition, error) {
+func BuildAcceptedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](
+	ctx context.Context, logger logr.Logger, cl client.Client, gateway *gwtypes.Gateway,
+	route TPtr, pRef gwtypes.ParentReference) (*metav1.Condition, error) {
 	// Begin by excluding listeners that do not match the specified section name.
 	listeners, cond := FilterMatchingListeners(logger, gateway, pRef, gateway.Spec.Listeners)
 	if cond != nil {
 		log.Debug(logger, "No matching listeners for ParentReference", "parentRef", pRef, "gateway", gateway.Name)
 		// Return the condition indicating no matching listeners.
-		return SetConditionMeta(*cond, route), nil
+		return SetConditionMeta[T](*cond, route), nil
 	}
 
 	// If we have listeners that match, we check the allowed routes.
 	// We need to get the namespace of the route to check against the allowed routes.
 	routeNamespace := corev1.Namespace{}
-	if err := cl.Get(ctx, client.ObjectKey{Name: route.Namespace}, &routeNamespace); err != nil {
+	if err := cl.Get(ctx, client.ObjectKey{Name: route.GetNamespace()}, &routeNamespace); err != nil {
 		return nil, fmt.Errorf("failed to get namespace %s for route %s while building accepted condition for gateway %s: %w",
-			route.Namespace, client.ObjectKeyFromObject(route), client.ObjectKeyFromObject(gateway), err)
+			route.GetNamespace(), client.ObjectKeyFromObject(route), client.ObjectKeyFromObject(gateway), err)
 	}
 	// Prepare the RouteGroupKind for the HTTPRoute.
 	rgk := GetRouteGroupKind(route)
@@ -345,25 +372,33 @@ func BuildAcceptedCondition(ctx context.Context, logger logr.Logger, cl client.C
 	}
 	if cond != nil {
 		log.Debug(logger, "Listeners do not allow route", "parentRef", pRef, "gateway", gateway.Name, "reason", cond.Reason)
-		return SetConditionMeta(*cond, route), nil
+		return SetConditionMeta[T](*cond, route), nil
 	}
 
 	// If we have listeners that allow the route, we check the hostnames.
-	_, cond = FilterListenersByHostnames(logger, listeners, route.Spec.Hostnames)
+	_, cond = FilterListenersByHostnames(logger, listeners, getSpecHostnames(*route))
 	if cond != nil {
 		log.Debug(logger, "Listeners do not match hostnames", "parentRef", pRef, "gateway", gateway.Name, "reason", cond.Reason)
-		return SetConditionMeta(*cond, route), nil
+		return SetConditionMeta[T](*cond, route), nil
 	}
 
 	// If we have listeners that match the hostnames, we can accept the route.
-	log.Debug(logger, "Route accepted by gateway", "route", route.Name, "gateway", gateway.Name)
+	log.Debug(logger, "Route accepted by gateway", "route", route.GetName(), "gateway", gateway.Name)
 	cond = &metav1.Condition{
 		Type:    string(gwtypes.RouteConditionAccepted),
 		Status:  metav1.ConditionTrue,
 		Reason:  string(gwtypes.RouteReasonAccepted),
 		Message: "The route is accepted by the gateway",
 	}
-	return SetConditionMeta(*cond, route), nil
+	return SetConditionMeta[T](*cond, route), nil
+}
+
+// getSpecHostnames returns the hostnames in the route spec.
+func getSpecHostnames[T gwtypes.SupportedRoute](route T) []gwtypes.Hostname {
+	if r, ok := any(route).(gwtypes.HTTPRoute); ok {
+		return r.Spec.Hostnames
+	}
+	return []gwtypes.Hostname{}
 }
 
 // BuildProgrammedCondition evaluates the programmed status of all resources associated with a route and gateway.
@@ -376,7 +411,7 @@ func BuildAcceptedCondition(ctx context.Context, logger logr.Logger, cl client.C
 //   - ctx: Context for API calls.
 //   - logger: Logger for debugging information.
 //   - cl: Kubernetes client for resource operations.
-//   - route: The HTTPRoute whose resources are being checked.
+//   - route: The route whose resources are being checked.
 //   - pRef: The ParentReference (gateway) associated with the route.
 //   - expectedGVKs: Slice of GVKs representing the resource types to check.
 //
@@ -386,7 +421,8 @@ func BuildAcceptedCondition(ctx context.Context, logger logr.Logger, cl client.C
 //
 // This function provides granular feedback for each resource type, allowing users to see exactly which
 // resources are not programmed and why, improving troubleshooting and status visibility.
-func BuildProgrammedCondition(ctx context.Context, logger logr.Logger, cl client.Client, route *gwtypes.HTTPRoute,
+func BuildProgrammedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](
+	ctx context.Context, logger logr.Logger, cl client.Client, route *gwtypes.HTTPRoute,
 	pRef gwtypes.ParentReference, expectedGVKs []schema.GroupVersionKind) ([]metav1.Condition, error) {
 	var conditions []metav1.Condition
 	am := metadata.NewAnnotationManager(logger)
@@ -425,7 +461,7 @@ func BuildProgrammedCondition(ctx context.Context, logger logr.Logger, cl client
 	return DeduplicateConditionsByType(conditions), nil
 }
 
-// BuildResolvedRefsCondition evaluates all BackendRefs and ExtensionRefs in an HTTPRoute to determine if their
+// BuildResolvedRefsConditionForHTTPRoute evaluates all BackendRefs and ExtensionRefs in an HTTPRoute to determine if their
 // references are valid and permitted.
 // It checks that each BackendRef:
 //   - Has a supported group/kind
@@ -447,7 +483,7 @@ func BuildProgrammedCondition(ctx context.Context, logger logr.Logger, cl client
 // Returns:
 //   - *metav1.Condition: Condition indicating resolved refs status
 //   - error: Any error encountered during evaluation
-func BuildResolvedRefsCondition(ctx context.Context, logger logr.Logger, cl client.Client, route *gwtypes.HTTPRoute) (*metav1.Condition, error) {
+func BuildResolvedRefsConditionForHTTPRoute(ctx context.Context, logger logr.Logger, cl client.Client, route *gwtypes.HTTPRoute) (*metav1.Condition, error) {
 	conditionSet := false
 	cond := &metav1.Condition{
 		Type:    string(gwtypes.RouteConditionResolvedRefs),
@@ -458,70 +494,17 @@ func BuildResolvedRefsCondition(ctx context.Context, logger logr.Logger, cl clie
 	for _, rule := range route.Spec.Rules {
 		for _, bRef := range rule.BackendRefs {
 			// BackendRef namespace.
-			bRefNamespace := route.Namespace
-			if bRef.Namespace != nil && *bRef.Namespace != "" {
-				bRefNamespace = string(*bRef.Namespace)
+			bRefValidCond, err := backendRefResolvedCondition(ctx, logger, cl, route, bRef.BackendRef)
+			if err != nil {
+				return nil, err
 			}
-
-			// BackendRef group/kind (default to core/Service when unset).
-			bRefGroup, bRefKind := backendRefGroupKind(bRef.Group, bRef.Kind)
-			bRefGK := string(bRefKind)
-			if bRefGroup != "" {
-				bRefGK = fmt.Sprintf("%s/%s", string(bRefGroup), string(bRefKind))
-			}
-
-			// Check if the group kind is supported for the reference.
-			if !IsBackendRefSupported(bRef.Group, bRef.Kind) {
-				log.Debug(logger, "Unsupported BackendRef group/kind", "group", bRef.Group, "kind", bRef.Kind)
-				cond.Reason = string(gwtypes.RouteReasonInvalidKind)
-				cond.Status = metav1.ConditionFalse
-				cond.Message = fmt.Sprintf("Unsupported BackendRef %s/%s group/kind: %s", bRefNamespace, bRef.Name, bRefGK)
+			if bRefValidCond.Status != metav1.ConditionTrue {
+				cond.Status = bRefValidCond.Status
+				cond.Reason = bRefValidCond.Reason
+				cond.Message = bRefValidCond.Message
 				conditionSet = true
 				break
 			}
-
-			// Check if the referenced object exists.
-			service := &corev1.Service{}
-			err := cl.Get(ctx, client.ObjectKey{Namespace: bRefNamespace, Name: string(bRef.Name)}, service)
-			if err != nil {
-				if apierrors.IsNotFound(err) {
-					log.Debug(logger, "BackendRef not found", "namespace", bRefNamespace, "name", bRef.Name)
-					cond.Reason = string(gwtypes.RouteReasonBackendNotFound)
-					cond.Status = metav1.ConditionFalse
-					cond.Message = fmt.Sprintf("BackendRef %s/%s not found", bRefNamespace, bRef.Name)
-					conditionSet = true
-					break
-				}
-				return nil, fmt.Errorf("failed to get BackendRef %s/%s: %w", bRefNamespace, bRef.Name, err)
-			}
-
-			// Check if the referenced object is permitted by the reference grant if in a different namespace.
-			if bRefNamespace != route.Namespace {
-				// Use CheckReferenceGrant helper to check if the reference is permitted.
-				permitted, found, err := CheckReferenceGrant(ctx, cl, &bRef, route.Namespace)
-				if err != nil {
-					return nil, fmt.Errorf("failed to check ReferenceGrant for BackendRef %s/%s: %w", bRefNamespace, bRef.Name, err)
-				}
-
-				if !found {
-					log.Debug(logger, "No ReferenceGrants found in backend ref namespace", "namespace", bRefNamespace)
-					cond.Reason = string(gwtypes.RouteReasonRefNotPermitted)
-					cond.Status = metav1.ConditionFalse
-					cond.Message = fmt.Sprintf("No ReferenceGrants found in namespace %s for BackendRef %s/%s", bRefNamespace, bRefNamespace, bRef.Name)
-					conditionSet = true
-					break
-				}
-
-				if !permitted {
-					log.Debug(logger, "BackendRef not permitted by ReferenceGrant", "namespace", bRefNamespace, "name", bRef.Name)
-					cond.Reason = string(gwtypes.RouteReasonRefNotPermitted)
-					cond.Status = metav1.ConditionFalse
-					cond.Message = fmt.Sprintf("BackendRef %s/%s not permitted by any ReferenceGrant", bRefNamespace, bRef.Name)
-					conditionSet = true
-					break
-				}
-			}
-
 		}
 		if conditionSet {
 			break
@@ -569,6 +552,94 @@ func BuildResolvedRefsCondition(ctx context.Context, logger logr.Logger, cl clie
 	}
 
 	return SetConditionMeta(*cond, route), nil
+}
+
+// backendRefResolvedCondition returns the ResolvedRefs condition of the route according to the status of the given banckendRef in the route.
+//
+// Parameters:
+//   - ctx: Context for API calls
+//   - logger: Logger for debugging information
+//   - cl: Kubernetes client for resource operations
+//   - route: The route whose BackendRefs are being checked
+//   - bRef: The backendRef being checked
+//
+// Returns:
+//
+//   - condition: The condition built from the backendRef.
+//     It is "True" if the backend ref is valid and "False" with the reason if it is invalid, including:
+//     -- backendRef's group/kind is not supported (only core/Services are supported)
+//     -- The object given by backendRef is not found
+//     -- The backend Service is in a different namespace with the route without the permission of a ReferenceGrant
+//
+//   - error: any error happened in checking the validity of the backendRef.
+func backendRefResolvedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](
+	ctx context.Context, logger logr.Logger, cl client.Client,
+	route TPtr, bRef gwtypes.BackendRef,
+) (*metav1.Condition, error) {
+	cond := &metav1.Condition{
+		Type:   string(gwtypes.RouteConditionResolvedRefs),
+		Status: metav1.ConditionTrue,
+	}
+	bRefNamespace := route.GetNamespace()
+	if bRef.Namespace != nil && *bRef.Namespace != "" {
+		bRefNamespace = string(*bRef.Namespace)
+	}
+
+	// BackendRef group/kind (default to core/Service when unset).
+	bRefGroup, bRefKind := backendRefGroupKind(bRef.Group, bRef.Kind)
+	bRefGK := string(bRefKind)
+	if bRefGroup != "" {
+		bRefGK = fmt.Sprintf("%s/%s", string(bRefGroup), string(bRefKind))
+	}
+
+	// Check if the group kind is supported for the reference.
+	if !IsBackendRefSupported(bRef.Group, bRef.Kind) {
+		log.Debug(logger, "Unsupported BackendRef group/kind", "group", bRef.Group, "kind", bRef.Kind)
+		cond.Reason = string(gwtypes.RouteReasonInvalidKind)
+		cond.Status = metav1.ConditionFalse
+		cond.Message = fmt.Sprintf("Unsupported BackendRef %s/%s group/kind: %s", bRefNamespace, bRef.Name, bRefGK)
+		return cond, nil
+	}
+
+	// Check if the referenced object exists.
+	service := &corev1.Service{}
+	err := cl.Get(ctx, client.ObjectKey{Namespace: bRefNamespace, Name: string(bRef.Name)}, service)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Debug(logger, "BackendRef not found", "namespace", bRefNamespace, "name", bRef.Name)
+			cond.Reason = string(gwtypes.RouteReasonBackendNotFound)
+			cond.Status = metav1.ConditionFalse
+			cond.Message = fmt.Sprintf("BackendRef %s/%s not found", bRefNamespace, bRef.Name)
+			return cond, nil
+		}
+		return nil, fmt.Errorf("failed to get BackendRef %s/%s: %w", bRefNamespace, bRef.Name, err)
+	}
+
+	// Check if the referenced object is permitted by the reference grant if in a different namespace.
+	if bRefNamespace != route.GetNamespace() {
+		// Use CheckReferenceGrant helper to check if the reference is permitted.
+		permitted, found, err := CheckReferenceGrant(ctx, cl, &bRef, route.GetObjectKind().GroupVersionKind().Kind, route.GetNamespace())
+		if err != nil {
+			return nil, fmt.Errorf("failed to check ReferenceGrant for BackendRef %s/%s: %w", bRefNamespace, bRef.Name, err)
+		}
+
+		if !found {
+			log.Debug(logger, "No ReferenceGrants found in backend ref namespace", "namespace", bRefNamespace)
+			cond.Reason = string(gwtypes.RouteReasonRefNotPermitted)
+			cond.Status = metav1.ConditionFalse
+			cond.Message = fmt.Sprintf("No ReferenceGrants found in namespace %s for BackendRef %s/%s", bRefNamespace, bRefNamespace, bRef.Name)
+			return cond, nil
+		}
+
+		if !permitted {
+			log.Debug(logger, "BackendRef not permitted by ReferenceGrant", "namespace", bRefNamespace, "name", bRef.Name)
+			cond.Reason = string(gwtypes.RouteReasonRefNotPermitted)
+			cond.Status = metav1.ConditionFalse
+			cond.Message = fmt.Sprintf("BackendRef %s/%s not permitted by any ReferenceGrant", bRefNamespace, bRef.Name)
+			return cond, nil
+		}
+	}
+	return cond, nil
 }
 
 // The function safely navigates the object's status.conditions array to find a condition with:
@@ -904,15 +975,15 @@ func GetRouteGroupKind(route client.Object) gwtypes.RouteGroupKind {
 //
 // Parameters:
 //   - cond: The condition to update with metadata
-//   - route: The HTTPRoute object to extract generation information from
+//   - route: The route object to extract generation information from
 //
 // Returns:
 //   - *metav1.Condition: Pointer to the updated condition with metadata fields set
 //
 // This function is typically called before setting conditions in route status to ensure proper
 // condition metadata tracking according to Kubernetes conventions.
-func SetConditionMeta(cond metav1.Condition, route *gwtypes.HTTPRoute) *metav1.Condition {
-	cond.ObservedGeneration = route.Generation
+func SetConditionMeta[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](cond metav1.Condition, route TPtr) *metav1.Condition {
+	cond.ObservedGeneration = route.GetGeneration()
 	cond.LastTransitionTime = metav1.Now()
 	return &cond
 }
@@ -954,23 +1025,24 @@ func IsExtensionRefSupported(group gwtypes.Group, kind gwtypes.Kind) bool {
 	return group == "configuration.konghq.com" && kind == "KongPlugin"
 }
 
-// IsHTTPReferenceGranted checks if a ReferenceGrant permits an HTTPRoute to reference a backend in another namespace.
+// IsRouteReferenceGranted checks if a ReferenceGrant permits a route to reference a backend in another namespace.
 // It validates that the ReferenceGrant's 'from' section matches the HTTPRoute and source namespace,
 // and that the 'to' section matches the backend's group, kind, and name.
 // Returns true if the reference is permitted, false otherwise.
 //
 // Parameters:
 //   - grantSpec: The ReferenceGrant spec to check
-//   - backendRef: The HTTPBackendRef being referenced
-//   - fromNamespace: The namespace of the HTTPRoute making the reference
+//   - backendRef: The BackendRef being referenced
+//   - routeKind: The kind of the route
+//   - fromNamespace: The namespace of the route making the reference
 //
 // Returns:
 //   - bool: true if the reference is permitted by the grant, false otherwise
-func IsHTTPReferenceGranted(grantSpec gwtypes.ReferenceGrantSpec, backendRef gwtypes.HTTPBackendRef, fromNamespace string) bool {
+func IsRouteReferenceGranted(grantSpec gwtypes.ReferenceGrantSpec, backendRef gwtypes.BackendRef, routeKind string, fromNamespace string) bool {
 	bRefGroup, bRefKind := backendRefGroupKind(backendRef.Group, backendRef.Kind)
 
 	for _, from := range grantSpec.From {
-		if from.Group != gwtypes.GroupName || from.Kind != "HTTPRoute" || fromNamespace != string(from.Namespace) {
+		if from.Group != gwtypes.GroupName || string(from.Kind) != routeKind || fromNamespace != string(from.Namespace) {
 			continue
 		}
 
@@ -1008,7 +1080,7 @@ func IsHTTPReferenceGranted(grantSpec gwtypes.ReferenceGrantSpec, backendRef gwt
 //
 // Note: This function does NOT check if namespaces are the same - it assumes cross-namespace
 // access and will return an error if no namespace is set on the BackendRef.
-func CheckReferenceGrant(ctx context.Context, cl client.Client, bRef *gwtypes.HTTPBackendRef, routeNamespace string) (permitted bool, found bool, err error) {
+func CheckReferenceGrant(ctx context.Context, cl client.Client, bRef *gwtypes.BackendRef, routeKind string, routeNamespace string) (permitted bool, found bool, err error) {
 	// Check that the backendRef has a namespace set and if not return an error.
 	if bRef.Namespace == nil || *bRef.Namespace == "" {
 		return false, false, fmt.Errorf("backendRef namespace is not set for cross-namespace reference check, name %s", bRef.Name)
@@ -1027,7 +1099,7 @@ func CheckReferenceGrant(ctx context.Context, cl client.Client, bRef *gwtypes.HT
 
 	// Check if any ReferenceGrant permits this reference
 	for _, grant := range grantList.Items {
-		if IsHTTPReferenceGranted(grant.Spec, *bRef, routeNamespace) {
+		if IsRouteReferenceGranted(grant.Spec, *bRef, routeKind, routeNamespace) {
 			return true, true, nil
 		}
 	}
