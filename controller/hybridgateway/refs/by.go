@@ -28,18 +28,19 @@ func GetNamespacedRefs(ctx context.Context, cl client.Client, obj runtime.Object
 	switch o := obj.(type) {
 	// TODO: add other types here
 	case *gwtypes.HTTPRoute:
-		return byHTTPRoute(ctx, cl, *o)
+		return byRoute(ctx, cl, o)
 	default:
 		return nil, nil
 	}
 }
 
 // GetControlPlaneRefByParentRef retrieves the control plane reference for a given parent reference.
-func GetControlPlaneRefByParentRef(ctx context.Context, logger logr.Logger, cl client.Client, route *gwtypes.HTTPRoute,
+func GetControlPlaneRefByParentRef[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](
+	ctx context.Context, logger logr.Logger, cl client.Client, route TPtr,
 	pRef gwtypes.ParentReference) (*commonv1alpha1.ControlPlaneRef, error) {
 
 	// Validate and get the supported Gateway for the ParentReference.
-	gw, found, err := GetSupportedGatewayForParentRef(ctx, logger, cl, pRef, route.Namespace)
+	gw, found, err := GetSupportedGatewayForParentRef(ctx, logger, cl, pRef, route.GetNamespace())
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +87,9 @@ func GetControlPlaneRefByGateway(ctx context.Context, cl client.Client, gateway 
 }
 
 // GetListenersByParentRef retrieves the listeners for a given parent reference.
-func GetListenersByParentRef(ctx context.Context, cl client.Client, route *gwtypes.HTTPRoute, pRef gwtypes.ParentReference) ([]gwtypes.Listener, error) {
+func GetListenersByParentRef[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](
+	ctx context.Context, cl client.Client, route TPtr, pRef gwtypes.ParentReference,
+) ([]gwtypes.Listener, error) {
 	var namespace string
 	if pRef.Group == nil || *pRef.Group != gwtypes.GroupName {
 		return nil, nil
@@ -96,7 +99,7 @@ func GetListenersByParentRef(ctx context.Context, cl client.Client, route *gwtyp
 	}
 
 	if pRef.Namespace == nil || *pRef.Namespace == "" {
-		namespace = route.Namespace
+		namespace = route.GetNamespace()
 	} else {
 		namespace = string(*pRef.Namespace)
 	}
@@ -113,10 +116,11 @@ func GetListenersByParentRef(ctx context.Context, cl client.Client, route *gwtyp
 	return gw.Spec.Listeners, nil
 }
 
-// byHTTPRoute returns a slice of KonnectNamespacedRef associated with the given HTTPRoute, or an error if retrieval fails.
-func byHTTPRoute(ctx context.Context, cl client.Client, httpRoute gwtypes.HTTPRoute) (map[string]GatewaysByNamespacedRef, error) {
+// byRoute returns a slice of KonnectNamespacedRef associated with the given route, or an error if retrieval fails.
+func byRoute[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](
+	ctx context.Context, cl client.Client, route TPtr) (map[string]GatewaysByNamespacedRef, error) {
 	namespacedRefs := map[string]GatewaysByNamespacedRef{}
-	gateways := GetGatewaysByHTTPRoute(ctx, cl, httpRoute)
+	gateways := GetGatewaysByRoute[T](ctx, cl, route)
 	for _, gw := range gateways {
 		ref, found, err := byGateway(ctx, cl, gw)
 		if err != nil {
