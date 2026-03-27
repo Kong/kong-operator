@@ -708,6 +708,112 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 	}
 }
 
+func TestHTTPRouteConverter_TranslateCrossNamespaceReferenceGrantLifecycle(t *testing.T) {
+	ctx := context.Background()
+
+	route := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{
+		newBackendRef("backend"),
+	}, nil)
+	gateway := newGatewayWithListenerHostnames("api.example.com")
+	gateway.UID = types.UID("gateway-uid")
+	referenceGrant := &gwtypes.ReferenceGrant{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "allow-backend",
+			Namespace: "backend",
+		},
+		Spec: gwtypes.ReferenceGrantSpec{
+			From: []gwtypes.ReferenceGrantFrom{{
+				Group:     gatewayv1.GroupName,
+				Kind:      gatewayv1.Kind("HTTPRoute"),
+				Namespace: gatewayv1.Namespace("default"),
+			}},
+			To: []gwtypes.ReferenceGrantTo{{
+				Group: "",
+				Kind:  gatewayv1.Kind("Service"),
+				Name: func() *gatewayv1.ObjectName {
+					name := gatewayv1.ObjectName("backend-service")
+					return &name
+				}(),
+			}},
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(
+		append(
+			newKonnectGatewayStandardObjects(gateway),
+			newNamespace(),
+			&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "backend"}},
+			newService("backend"),
+			newEndpointSlice("backend-service", "backend", 8080, []string{"10.0.0.1"}),
+			referenceGrant,
+		)...,
+	).Build()
+
+	assertHasTarget := func(t *testing.T, store []client.Object) {
+		t.Helper()
+
+		var (
+			targets                int
+			requestTerminationSeen bool
+		)
+		for _, obj := range store {
+			switch typed := obj.(type) {
+			case *configurationv1alpha1.KongTarget:
+				targets++
+			case *configurationv1.KongPlugin:
+				if typed.PluginName == "request-termination" {
+					requestTerminationSeen = true
+				}
+			}
+		}
+
+		assert.Equal(t, 1, targets)
+		assert.False(t, requestTerminationSeen)
+	}
+
+	assertFallsBackTo500 := func(t *testing.T, store []client.Object) {
+		t.Helper()
+
+		var (
+			targets               int
+			terminationPluginSeen bool
+			terminationBinding    bool
+		)
+		for _, obj := range store {
+			switch typed := obj.(type) {
+			case *configurationv1alpha1.KongTarget:
+				targets++
+			case *configurationv1.KongPlugin:
+				if typed.PluginName == "request-termination" {
+					terminationPluginSeen = true
+				}
+			case *configurationv1alpha1.KongPluginBinding:
+				if typed.Spec.Targets != nil && typed.Spec.Targets.ServiceReference != nil {
+					terminationBinding = true
+				}
+			}
+		}
+
+		assert.Zero(t, targets)
+		assert.True(t, terminationPluginSeen)
+		assert.True(t, terminationBinding)
+	}
+
+	converter := newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+	count, err := converter.Translate(ctx, logr.Discard())
+	require.NoError(t, err)
+	assert.Equal(t, 4, count)
+	assertHasTarget(t, converter.outputStore)
+
+	require.NoError(t, fakeClient.Delete(ctx, referenceGrant))
+
+	converter = newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+	count, err = converter.Translate(ctx, logr.Discard())
+	require.NoError(t, err)
+	assert.Equal(t, 5, count)
+	assertFallsBackTo500(t, converter.outputStore)
+}
+
 func TestHTTPRouteConverter_UpdateRootObjectStatus(t *testing.T) {
 	baseGateway := func() *gwtypes.Gateway {
 		gateway := newGatewayWithListenerHostnames("api.example.com")
