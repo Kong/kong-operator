@@ -35,7 +35,7 @@ func init() {
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
 // +kubebuilder:printcolumn:name="ID",description="Konnect ID",type=string,JSONPath=`.status.id`
-// +kubebuilder:printcolumn:name="OrgID",description="Konnect Organization ID this resource belongs to.",type=string,JSONPath=`.status.organizationID`
+// +kubebuilder:validation:XValidation:rule="oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable."
 // +kong:channels=kong-operator
 type MCPServer struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -63,10 +63,12 @@ type MCPServerSpec struct {
 	// +kubebuilder:default=Mirror
 	Source *commonv1alpha1.EntitySource `json:"source,omitempty"`
 
-	// KonnectConfiguration contains the Konnect configuration for the MCP server.
+	// ControlPlaneRef is a reference to a Konnect ControlPlane this MCP server belongs to.
+	// The auth token is inferred from the referenced control plane's KonnectAPIAuthConfiguration.
 	//
+	// +kubebuilder:validation:XValidation:message="'konnectID' type is not supported", rule="self.type != 'konnectID'"
 	// +required
-	KonnectConfiguration konnectv1alpha2.KonnectConfiguration `json:"konnect"`
+	ControlPlaneRef commonv1alpha1.ControlPlaneRef `json:"controlPlaneRef"`
 }
 
 // MCPServerStatus defines the observed state of MCPServer.
@@ -87,12 +89,7 @@ type MCPServerStatus struct {
 	// +patchMergeKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 
-	konnectv1alpha2.KonnectEntityStatus `json:",inline"` //nolint:embeddedstructfieldcheck
-}
-
-// GetKonnectAPIAuthConfigurationRef returns the Konnect API Auth Configuration Ref.
-func (s *MCPServer) GetKonnectAPIAuthConfigurationRef() konnectv1alpha2.KonnectAPIAuthConfigurationRef {
-	return s.Spec.KonnectConfiguration.APIAuthConfigurationRef
+	konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef `json:",inline"` //nolint:embeddedstructfieldcheck
 }
 
 // MCPServerList contains a list of MCPServer resources.

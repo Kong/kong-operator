@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	"github.com/samber/lo"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -370,7 +369,7 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 
 	var translationErrors []error
 
-	supportedParentRefs, err := c.getHybridGatewayParents(ctx, logger)
+	supportedParentRefs, err := getHybridGatewayParents(ctx, logger, c.Client, c.route)
 	if err != nil {
 		log.Error(logger, err, "Failed to get supported parent references")
 		return err
@@ -581,115 +580,4 @@ type hybridGatewayParent struct {
 	parentRef gwtypes.ParentReference
 	cpRef     *commonv1alpha1.ControlPlaneRef
 	hostnames []string
-}
-
-// getHybridGatewayParents returns parent references that are supported by this controller.
-func (c *httpRouteConverter) getHybridGatewayParents(ctx context.Context, logger logr.Logger) ([]hybridGatewayParent, error) {
-	log.Debug(logger, "Getting hybrid gateway parents", "parentRefCount", len(c.route.Spec.ParentRefs))
-
-	result := []hybridGatewayParent{}
-	for i, pRef := range c.route.Spec.ParentRefs {
-		log.Debug(logger, "Processing parent reference", "index", i, "parentRef", pRef)
-
-		cp, err := refs.GetControlPlaneRefByParentRef(ctx, logger, c.Client, c.route, pRef)
-		if err != nil {
-			switch {
-			case errors.Is(err, hybridgatewayerrors.ErrNoGatewayFound),
-				errors.Is(err, hybridgatewayerrors.ErrNoGatewayClassFound),
-				errors.Is(err, hybridgatewayerrors.ErrNoGatewayController),
-				errors.Is(err, hybridgatewayerrors.ErrUnsupportedKind),
-				errors.Is(err, hybridgatewayerrors.ErrUnsupportedGroup):
-				// These are expected errors to be handled gracefully. Log and skip this ParentRef, continue with others.
-				log.Debug(logger, "Skipping ParentRef due to expected error", "parentRef", pRef, "error", err)
-				continue
-			default:
-				// Unexpected system error, fail the entire translation.
-				return nil, fmt.Errorf("failed to get ControlPlaneRef for ParentRef %s: %w", pRef.Name, err)
-			}
-		}
-
-		if cp == nil {
-			log.Debug(logger, "No ControlPlaneRef found for ParentRef, skipping", "parentRef", pRef)
-			continue
-		}
-
-		log.Debug(logger, "Found ControlPlaneRef for ParentRef", "parentRef", pRef, "controlPlane", cp.KonnectNamespacedRef)
-
-		hostnames, err := c.getHostnamesByParentRef(ctx, logger, pRef)
-		if err != nil {
-			log.Error(logger, err, "Failed to get hostnames for ParentRef", "parentRef", pRef)
-			return nil, err
-		}
-		if hostnames == nil {
-			log.Debug(logger, "No hostnames found for ParentRef, skipping", "parentRef", pRef)
-			continue
-		}
-
-		log.Debug(logger, "Adding parent reference to result", "parentRef", pRef, "hostnames", hostnames)
-		result = append(result, hybridGatewayParent{
-			parentRef: pRef,
-			cpRef:     cp,
-			hostnames: hostnames,
-		})
-	}
-
-	log.Debug(logger, "Finished processing parent references", "supportedParents", len(result))
-	return result, nil
-}
-
-// getHostnamesByParentRef returns the hostnames that match between the HTTPRoute and the Gateway listeners.
-func (c *httpRouteConverter) getHostnamesByParentRef(ctx context.Context, logger logr.Logger, pRef gwtypes.ParentReference) ([]string, error) {
-	logger = logger.WithValues("parentRef", pRef.Name)
-	log.Debug(logger, "Getting hostnames for ParentRef")
-
-	var err error
-	var hostnames []string
-
-	listeners, err := refs.GetListenersByParentRef(ctx, c.Client, c.route, pRef)
-	if err != nil {
-		log.Error(logger, err, "Failed to get listeners for ParentRef")
-		return nil, err
-	}
-
-	log.Debug(logger, "Found listeners for ParentRef", "listenerCount", len(listeners))
-
-	for _, listener := range listeners {
-		// Check section reference if present
-		if pRef.SectionName != nil {
-			sectionName := string(*pRef.SectionName)
-			if string(listener.Name) != sectionName {
-				// This listener doesn't match the section reference, skip it
-				continue
-			}
-			if listener.Port != lo.FromPtr(pRef.Port) {
-				// This listener doesn't match the port reference, skip it
-				continue
-			}
-		}
-
-		// If the listener has no hostname, it means it accepts all HTTPRoute hostnames.
-		// No need to do further checks.
-		if listener.Hostname == nil || *listener.Hostname == "" {
-			log.Debug(logger, "Listener accepts all hostnames", "listener", listener.Name)
-			hostnames = []string{}
-			for _, host := range c.route.Spec.Hostnames {
-				hostnames = append(hostnames, string(host))
-			}
-			log.Debug(logger, "Returning all HTTPRoute hostnames", "hostnames", hostnames)
-			return hostnames, nil
-		}
-
-		// Handle wildcard hostnames - get intersection
-		log.Debug(logger, "Processing listener with hostname", "listener", listener.Name, "listenerHostname", *listener.Hostname)
-		for _, host := range c.route.Spec.Hostnames {
-			routeHostname := string(host)
-			if intersection := utils.HostnameIntersection(string(*listener.Hostname), routeHostname); intersection != "" {
-				log.Trace(logger, "Found hostname intersection", "listenerHostname", *listener.Hostname, "routeHostname", routeHostname, "intersection", intersection)
-				hostnames = append(hostnames, intersection)
-			}
-		}
-	}
-
-	log.Debug(logger, "Finished processing hostnames", "finalHostnames", hostnames)
-	return hostnames, nil
 }

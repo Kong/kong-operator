@@ -62,3 +62,57 @@ func (obj *KonnectCloudGatewayDataPlaneGroupConfiguration) SetControlPlaneRef(re
 func (obj *KonnectCloudGatewayDataPlaneGroupConfiguration) GetControlPlaneRef() *commonv1alpha1.ControlPlaneRef {
 	return &obj.Spec.ControlPlaneRef
 }
+
+// GetKonnectStatus returns the Konnect status contained in the MCPServer status.
+func (obj *MCPServer) GetKonnectStatus() *konnectv1alpha2.KonnectEntityStatus {
+	return &obj.Status.KonnectEntityStatus
+}
+
+// GetKonnectID returns the Konnect ID in the MCPServer status.
+func (obj *MCPServer) GetKonnectID() string {
+	return obj.Status.ID
+}
+
+// SetKonnectID sets the Konnect ID in the MCPServer status.
+func (obj *MCPServer) SetKonnectID(id string) {
+	obj.Status.ID = id
+}
+
+// GetControlPlaneID returns the ControlPlane ID in the MCPServer status.
+func (obj *MCPServer) GetControlPlaneID() string {
+	return obj.Status.ControlPlaneID
+}
+
+// SetControlPlaneID sets the ControlPlane ID in the MCPServer status.
+func (obj *MCPServer) SetControlPlaneID(id string) {
+	obj.Status.ControlPlaneID = id
+}
+
+// GetTypeName returns the MCPServer Kind name.
+func (obj MCPServer) GetTypeName() string {
+	return "MCPServer"
+}
+
+// GetConditions returns the Status Conditions.
+func (obj *MCPServer) GetConditions() []metav1.Condition {
+	return obj.Status.Conditions
+}
+
+// SetConditions sets the Status Conditions.
+func (obj *MCPServer) SetConditions(conditions []metav1.Condition) {
+	obj.Status.Conditions = conditions
+}
+
+// SetControlPlaneRef sets the ControlPlaneRef.
+func (obj *MCPServer) SetControlPlaneRef(ref *commonv1alpha1.ControlPlaneRef) {
+	if ref == nil {
+		obj.Spec.ControlPlaneRef = commonv1alpha1.ControlPlaneRef{}
+		return
+	}
+	obj.Spec.ControlPlaneRef = *ref
+}
+
+// GetControlPlaneRef returns the ControlPlaneRef.
+func (obj *MCPServer) GetControlPlaneRef() *commonv1alpha1.ControlPlaneRef {
+	return &obj.Spec.ControlPlaneRef
+}
