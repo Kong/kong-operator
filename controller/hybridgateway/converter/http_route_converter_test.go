@@ -326,6 +326,65 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 			wantStoreLen: 8,
 		},
 		{
+			name: "translates nonexistent backend into request termination plugin",
+			setup: func() *httpRouteConverter {
+				route := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{
+					newBackendRef(""),
+				}, nil)
+				gateway := baseGateway()
+				objects := append(newKonnectGatewayStandardObjects(gateway), newNamespace())
+				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
+				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+			},
+			wantCount: 5,
+			wantOutputs: outputCount{
+				upstreams: 1,
+				services:  1,
+				routes:    1,
+				targets:   0,
+				bindings:  1,
+				plugins:   1,
+			},
+			wantStoreLen: 5,
+			assertFn: func(t *testing.T, store []client.Object) {
+				t.Helper()
+
+				var (
+					serviceName string
+					pluginObj   *configurationv1.KongPlugin
+					bindingObj  *configurationv1alpha1.KongPluginBinding
+				)
+
+				for _, obj := range store {
+					switch typed := obj.(type) {
+					case *configurationv1alpha1.KongService:
+						serviceName = typed.Name
+					case *configurationv1.KongPlugin:
+						pluginObj = typed
+					case *configurationv1alpha1.KongPluginBinding:
+						bindingObj = typed
+					}
+				}
+
+				require.NotEmpty(t, serviceName)
+				require.NotNil(t, pluginObj)
+				require.NotNil(t, bindingObj)
+				assert.Equal(t, "request-termination", pluginObj.PluginName)
+
+				var config map[string]any
+				require.NoError(t, json.Unmarshal(pluginObj.Config.Raw, &config))
+				statusCode, ok := config["status_code"].(float64)
+				require.True(t, ok)
+				assert.InDelta(t, 500, statusCode, 0)
+				assert.Equal(t, "no existing backendRef provided", config["message"])
+
+				require.NotNil(t, bindingObj.Spec.Targets)
+				require.NotNil(t, bindingObj.Spec.Targets.ServiceReference)
+				assert.Equal(t, serviceName, bindingObj.Spec.Targets.ServiceReference.Name)
+				assert.Equal(t, pluginObj.Name, bindingObj.Spec.PluginReference.Name)
+			},
+		},
+		{
 			name: "translates multi rule redirect only route end to end",
 			setup: func() *httpRouteConverter {
 				route := newHTTPRouteWithRules(
@@ -689,7 +748,7 @@ func TestHTTPRouteConverter_UpdateRootObjectStatus(t *testing.T) {
 			},
 		},
 		{
-			name: "resolved refs false sets stop",
+			name: "resolved refs false does not set stop",
 			setup: func() (*httpRouteConverter, *gwtypes.HTTPRoute) {
 				route := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{
 					newBackendRef("backend"),
@@ -700,11 +759,30 @@ func TestHTTPRouteConverter_UpdateRootObjectStatus(t *testing.T) {
 				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter), route
 			},
 			wantUpdated: true,
-			wantStop:    true,
 			assertFn: func(t *testing.T, route *gwtypes.HTTPRoute) {
 				require.Len(t, route.Status.Parents, 1)
 				conditions := route.Status.Parents[0].Conditions
 				assertConditionStatus(t, conditions, string(gwtypes.RouteConditionResolvedRefs), metav1.ConditionFalse)
+			},
+		},
+		{
+			name: "accepted false sets stop",
+			setup: func() (*httpRouteConverter, *gwtypes.HTTPRoute) {
+				route := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{
+					newBackendRef(""),
+				}, nil)
+				gateway := newGatewayWithListenerHostnames("other.example.com")
+				gateway.UID = types.UID("gateway-uid")
+				objects := baseObjects(gateway, route)
+				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithStatusSubresource(route).WithObjects(objects...).Build()
+				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter), route
+			},
+			wantUpdated: true,
+			wantStop:    true,
+			assertFn: func(t *testing.T, route *gwtypes.HTTPRoute) {
+				require.Len(t, route.Status.Parents, 1)
+				conditions := route.Status.Parents[0].Conditions
+				assertConditionStatus(t, conditions, string(gwtypes.RouteConditionAccepted), metav1.ConditionFalse)
 			},
 		},
 		{

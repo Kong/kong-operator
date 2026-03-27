@@ -6,6 +6,22 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
+func isNumericKind(kind reflect.Kind) bool {
+	return kind == reflect.Int ||
+		kind == reflect.Int8 ||
+		kind == reflect.Int16 ||
+		kind == reflect.Int32 ||
+		kind == reflect.Int64 ||
+		kind == reflect.Uint ||
+		kind == reflect.Uint8 ||
+		kind == reflect.Uint16 ||
+		kind == reflect.Uint32 ||
+		kind == reflect.Uint64 ||
+		kind == reflect.Uintptr ||
+		kind == reflect.Float32 ||
+		kind == reflect.Float64
+}
+
 // Recursively remove empty maps and slices from a map[string]interface{}.
 func pruneEmptyFields(m map[string]any) {
 	for k, v := range m {
@@ -55,6 +71,11 @@ func pruneEmptyFields(m map[string]any) {
 			rv := reflect.ValueOf(v)
 			// Don't delete boolean fields even if they're false.
 			if rv.Kind() == reflect.Bool {
+				continue
+			}
+			// Don't delete numeric zero values. They can be semantically meaningful,
+			// for example KongTarget.spec.weight=0 for Gateway API weighted backends.
+			if isNumericKind(rv.Kind()) {
 				continue
 			}
 			// Don't delete pointer fields that point to zero values (user explicitly set them to zero).
