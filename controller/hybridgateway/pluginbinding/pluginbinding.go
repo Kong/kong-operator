@@ -73,3 +73,39 @@ func BindingForPluginAndRoute(
 
 	return &binding, nil
 }
+
+// BindingForPluginAndService creates or updates a KongPluginBinding for the given plugin and service.
+func BindingForPluginAndService(
+	ctx context.Context,
+	logger logr.Logger,
+	cl client.Client,
+	httpRoute *gwtypes.HTTPRoute,
+	pRef *gwtypes.ParentReference,
+	cp *commonv1alpha1.ControlPlaneRef,
+	pluginName string,
+	serviceName string,
+) (kongPluginBinding *configurationv1alpha1.KongPluginBinding, err error) {
+	bindingName := namegen.NewKongPluginBindingName(serviceName, pluginName)
+	logger = logger.WithValues("kongpluginbinding", bindingName)
+	log.Debug(logger, "Generating KongPluginBinding for KongPlugin and KongService")
+
+	binding, err := builder.NewKongPluginBinding().
+		WithName(bindingName).
+		WithNamespace(metadata.NamespaceFromParentRef(httpRoute, pRef)).
+		WithLabels(httpRoute, pRef).
+		WithAnnotations(httpRoute, pRef).
+		WithPluginRef(pluginName).
+		WithControlPlaneRef(*cp).
+		WithServiceRef(serviceName).
+		Build()
+	if err != nil {
+		log.Error(logger, err, "Failed to build KongPluginBinding resource")
+		return nil, fmt.Errorf("failed to build KongPluginBinding %s: %w", bindingName, err)
+	}
+
+	if _, err = translator.VerifyAndUpdate(ctx, logger, cl, &binding, httpRoute, true); err != nil {
+		return nil, err
+	}
+
+	return &binding, nil
+}
