@@ -227,7 +227,7 @@ func TestHTTPRouteConverter_GetHybridGatewayParents(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			converter := tt.setup()
-			parents, err := converter.getHybridGatewayParents(ctx, logr.Discard())
+			parents, err := getHybridGatewayParents(ctx, logr.Discard(), converter.Client, converter.route)
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.errContains)
@@ -1153,7 +1153,7 @@ func TestHTTPRouteConverter_GetHostnamesByParentRef(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			converter, pRef := tt.setup()
-			hostnames, err := converter.getHostnamesByParentRef(ctx, logr.Discard(), pRef)
+			hostnames, err := getHostnamesByParentRef(ctx, logr.Discard(), converter.Client, converter.route, pRef)
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.errContains)
