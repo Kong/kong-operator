@@ -14,20 +14,9 @@ type SupportedRoutePtr[T SupportedRoute] interface {
 	client.Object
 }
 
-// SupportedRouteRule defines rules in supported routes.
-type SupportedRouteRule interface {
-	HTTPRouteRule
-}
-
-// SupportedRouteBackendRef defines backend references in supported routes.
-type SupportedRouteBackendRef interface {
-	BackendRef | HTTPBackendRef
-}
-
 // GetSpecParentRefs returns the parent references of a supported route.
 func GetSpecParentRefs[T SupportedRoute](route T) []ParentReference {
-	switch r := any(route).(type) {
-	case HTTPRoute:
+	if r, ok := any(route).(HTTPRoute); ok {
 		return r.Spec.ParentRefs
 	}
 	return []ParentReference{}

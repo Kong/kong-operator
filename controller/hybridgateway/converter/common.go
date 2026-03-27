@@ -109,13 +109,13 @@ func getHostnamesByParentRef[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRou
 		// No need to do further checks.
 		if listener.Hostname == nil || *listener.Hostname == "" {
 			log.Debug(logger, "Listener accepts all hostnames", "listener", listener.Name)
-			hostnames := routeHostNames[T](route)
+			hostnames := routeHostNames(*route)
 			return hostnames, nil
 		}
 
 		// Handle wildcard hostnames - get intersection
 		log.Debug(logger, "Processing listener with hostname", "listener", listener.Name, "listenerHostname", *listener.Hostname)
-		for _, host := range routeHostNames[T](route) {
+		for _, host := range routeHostNames(*route) {
 			if intersection := utils.HostnameIntersection(string(*listener.Hostname), host); intersection != "" {
 				log.Trace(logger, "Found hostname intersection", "listenerHostname", *listener.Hostname, "routeHostname", host, "intersection", intersection)
 				hostnames = append(hostnames, intersection)
@@ -127,11 +127,9 @@ func getHostnamesByParentRef[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRou
 	return hostnames, nil
 }
 
-func routeHostNames[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](route TPtr) []string {
-	switch r := any(route).(type) {
-	case *gwtypes.HTTPRoute:
+func routeHostNames[T gwtypes.SupportedRoute](route T) []string {
+	if r, ok := any(route).(gwtypes.HTTPRoute); ok {
 		return lo.Map(r.Spec.Hostnames, func(host gwtypes.Hostname, _ int) string { return string(host) })
-		// TODO: Add other routes that also supports hostnames (GRPCRoute) when we support them.
 	}
 	return []string{}
 }

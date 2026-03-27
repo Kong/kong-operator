@@ -28,7 +28,7 @@ func GetNamespacedRefs(ctx context.Context, cl client.Client, obj runtime.Object
 	switch o := obj.(type) {
 	// TODO: add other types here
 	case *gwtypes.HTTPRoute:
-		return byHTTPRoute(ctx, cl, *o)
+		return byRoute(ctx, cl, o)
 	default:
 		return nil, nil
 	}
@@ -116,10 +116,11 @@ func GetListenersByParentRef[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRou
 	return gw.Spec.Listeners, nil
 }
 
-// byHTTPRoute returns a slice of KonnectNamespacedRef associated with the given HTTPRoute, or an error if retrieval fails.
-func byHTTPRoute(ctx context.Context, cl client.Client, httpRoute gwtypes.HTTPRoute) (map[string]GatewaysByNamespacedRef, error) {
+// byRoute returns a slice of KonnectNamespacedRef associated with the given route, or an error if retrieval fails.
+func byRoute[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](
+	ctx context.Context, cl client.Client, route TPtr) (map[string]GatewaysByNamespacedRef, error) {
 	namespacedRefs := map[string]GatewaysByNamespacedRef{}
-	gateways := GetGatewaysByHTTPRoute(ctx, cl, httpRoute)
+	gateways := GetGatewaysByRoute[T](ctx, cl, route)
 	for _, gw := range gateways {
 		ref, found, err := byGateway(ctx, cl, gw)
 		if err != nil {
