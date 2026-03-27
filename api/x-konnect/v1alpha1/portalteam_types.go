@@ -54,6 +54,12 @@ type PortalTeamSpec struct {
 
 // PortalTeamAPISpec defines the API spec fields for PortalTeam.
 type PortalTeamAPISpec struct {
+	// Whether the team is allowed to own applications
+	//
+	// +optional
+	// +kubebuilder:default=false
+	CanOwnApplications bool `json:"can_own_applications,omitempty"`
+
 	//
 	//
 	// +optional
