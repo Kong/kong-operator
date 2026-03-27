@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/go-logr/logr"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -78,6 +79,10 @@ func RoutesForRule(
 			WithLabels(httpRoute, pRef).
 			WithAnnotations(httpRoute, pRef).
 			WithSpecName(routeName).
+			WithProtocols(
+				sdkkonnectcomp.RouteJSONProtocols("http"),
+				sdkkonnectcomp.RouteJSONProtocols("https"),
+			).
 			WithHosts(hostnames).
 			WithStripPath(metadata.ExtractStripPath(httpRoute.Annotations)).
 			WithPreserveHost(metadata.ExtractPreserveHost(httpRoute.Annotations)).

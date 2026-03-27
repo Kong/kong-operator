@@ -45,7 +45,6 @@ var skippedTestsForHybrid = []string{
 	tests.HTTPRoutePathMatchOrder.ShortName,
 	tests.HTTPRouteQueryParamMatching.ShortName,
 	tests.HTTPRouteReferenceGrant.ShortName,
-	tests.HTTPRouteExactPathMatching.ShortName,
 	tests.HTTPRouteHostnameIntersection.ShortName,
 	tests.HTTPRouteCrossNamespace.ShortName,
 	tests.GatewayModifyListeners.ShortName,
