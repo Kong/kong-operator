@@ -19,6 +19,10 @@ on:
         options:
           - prerelease
           - release
+      release_issue_number:
+        description: "The release issue number to comment on with the docs PR link (e.g. 3622)"
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -43,3 +47,4 @@ jobs:
       base: ${{ github.ref_name }}
       release-type: ${{ inputs.release_type }}
       regenerate-manifests: true
+      release-issue-number: ${{ inputs.release_issue_number }}
