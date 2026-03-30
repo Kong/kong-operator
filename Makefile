@@ -861,8 +861,7 @@ test.samples: kustomize
 	@$(KUSTOMIZE) build config/crd | kubectl apply --server-side --force-conflicts --field-manager=kong-operator-tests -f -
 	@kubectl apply --server-side --force-conflicts --field-manager=kong-operator-tests -f charts/kong-operator/charts/gwapi-standard-crds/crds/gwapi-crds.yaml || true
 	@kubectl get crd -ojsonpath='{.items[*].metadata.name}' | xargs -n1 kubectl wait --for condition=established crd
-	# Disable tests including GatewayConfiguration v1beta1 and ControlPlane v1beta1 temporarily because they need conversion webhooks: https://github.com/Kong/kong-operator/issues/1986
-	@cd config/samples/ && find . -not -name "kustomization.*" -not -name "zz_temp_disabled_*" -type f | sort | xargs -I{} bash -c "echo;echo {}; kubectl apply -f {} && kubectl delete -f {}" \;
+	@cd config/samples/ && find . -maxdepth 1 -name "*.yaml" -exec bash -c "echo; echo {}; kubectl apply -f {} && kubectl delete -f {}" \;
 
 .PHONY: test.charts.golden
 test.charts.golden:
@@ -1129,7 +1128,7 @@ install.telepresence: download.telepresence
 uninstall.telepresence: download.telepresence
 	@$(PROJECT_DIR)/scripts/telepresence-manager.sh uninstall "$(TELEPRESENCE)"
 
-.PHONY: lint.api 
+.PHONY: lint.api
 lint.api: download.kube-api-linter
 	$(KUBE_API_LINTER) run --config $(PROJECT_DIR)/.golangci-kube-api.yaml -v \
 		./api/gateway-operator/v2beta1/... \
