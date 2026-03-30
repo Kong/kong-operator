@@ -42,6 +42,7 @@ apiVersion: configuration.konghq.com/v1
 kind: KongPlugin
 metadata:
  name: rate-limit-5-min
+ namespace: default
 config:
  minute: 5
  policy: local
@@ -51,6 +52,7 @@ apiVersion: configuration.konghq.com/v1alpha1
 kind: KongPluginBinding
 metadata:
   name: plugin-binding-kongservice
+  namespace: default
 spec:
   controlPlaneRef:
     type: konnectNamespacedRef
