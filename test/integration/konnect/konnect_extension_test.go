@@ -84,12 +84,7 @@ func TestKonnectExtensionControlPlaneRotation(t *testing.T) {
 
 	authCfg := deploy.KonnectAPIAuthConfiguration(t, ctx, clientNamespaced,
 		deploy.WithTestIDLabel(testID),
-		func(obj client.Object) {
-			authCfg := obj.(*konnectv1alpha1.KonnectAPIAuthConfiguration)
-			authCfg.Spec.Type = konnectv1alpha1.KonnectAPIAuthTypeToken
-			authCfg.Spec.Token = test.KonnectAccessToken()
-			authCfg.Spec.ServerURL = test.KonnectServerURL()
-		},
+		deploy.KonnectAPIAuthConfigurationWithTestToken(test.KonnectAccessToken(), test.KonnectServerURL()),
 	)
 
 	// Create a Konnect control plane for the KonnectExtension to attach to.
@@ -181,12 +176,7 @@ func TestKonnectExtension(t *testing.T) {
 
 	authCfg := deploy.KonnectAPIAuthConfiguration(t, ctx, clientNamespaced,
 		deploy.WithTestIDLabel(testID),
-		func(obj client.Object) {
-			authCfg := obj.(*konnectv1alpha1.KonnectAPIAuthConfiguration)
-			authCfg.Spec.Type = konnectv1alpha1.KonnectAPIAuthTypeToken
-			authCfg.Spec.Token = test.KonnectAccessToken()
-			authCfg.Spec.ServerURL = test.KonnectServerURL()
-		},
+		deploy.KonnectAPIAuthConfigurationWithTestToken(test.KonnectAccessToken(), test.KonnectServerURL()),
 	)
 
 	t.Log("deploying backend deployment (httpbin) of HTTPRoute")

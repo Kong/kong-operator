@@ -288,7 +288,7 @@ func KonnectGatewayControlPlaneType(typ sdkkonnectcomp.CreateControlPlaneRequest
 		if !ok {
 			panic(fmt.Errorf("%T does not implement KonnectGatewayControlPlane", obj))
 		}
-		cp.SetKonnectClusterType(new(typ))
+		cp.SetKonnectClusterType(&typ)
 	}
 }
 
@@ -301,6 +301,26 @@ func KonnectGatewayControlPlaneTypeWithCloudGatewaysEnabled() ObjOption {
 			panic(fmt.Errorf("%T does not implement KonnectGatewayControlPlane", obj))
 		}
 		cp.SetKonnectCloudGateway(new(true))
+	}
+}
+
+// KonnectAPIAuthConfigurationWithTestToken returns an ObjOption that sets
+// KonnectAPIAuthConfiguration's token, type and server URL for tests.
+func KonnectAPIAuthConfigurationWithTestToken(token, url string) ObjOption {
+	return func(obj client.Object) {
+		apiAuth, ok := obj.(*konnectv1alpha1.KonnectAPIAuthConfiguration)
+		if !ok {
+			panic(fmt.Errorf("%T does not implement KonnectAPIAuthConfiguration", obj))
+		}
+		apiAuth.Spec.Type = konnectv1alpha1.KonnectAPIAuthTypeToken
+		if token == "" {
+			panic("konnect access token is not set through environment variable")
+		}
+		apiAuth.Spec.Token = token
+		if url == "" {
+			panic("konnect server url is not set through environment variable")
+		}
+		apiAuth.Spec.ServerURL = url
 	}
 }
 
