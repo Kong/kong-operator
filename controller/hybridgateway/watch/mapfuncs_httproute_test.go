@@ -54,7 +54,7 @@ func Test_listHTTPRoutesForGateway_table(t *testing.T) {
 	cl := fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithObjects(gateway, httpRoute).
-		WithIndex(&gwtypes.HTTPRoute{}, index.GatewayOnHTTPRouteIndex, index.GatewaysOnHTTPRoute).
+		WithIndex(&gwtypes.HTTPRoute{}, index.GatewayOnHTTPRouteIndex, index.GatewaysOnRoute[gwtypes.HTTPRoute]).
 		Build()
 
 	tests := []struct {

@@ -4,8 +4,6 @@ import (
 	"context"
 	"testing"
 
-	gwtypes "github.com/kong/kong-operator/v2/internal/types"
-	"github.com/kong/kong-operator/v2/internal/utils/index"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -16,6 +14,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
 // partialErrorClient simulates a client.Client that returns an error only when listing HTTPRoutes for a Gateway.
@@ -106,7 +107,7 @@ func Test_MapRouteForGateway(t *testing.T) {
 	cl := fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithObjects(gateway, httpRoute).
-		WithIndex(&gwtypes.HTTPRoute{}, index.GatewayOnHTTPRouteIndex, index.GatewaysOnHTTPRoute).
+		WithIndex(&gwtypes.HTTPRoute{}, index.GatewayOnHTTPRouteIndex, index.GatewaysOnRoute[gwtypes.HTTPRoute]).
 		Build()
 
 	mapFunc := MapRouteForGateway(cl, &gwtypes.HTTPRoute{})
@@ -179,7 +180,7 @@ func Test_MapRouteForGatewayClass(t *testing.T) {
 		WithScheme(scheme).
 		WithObjects(gatewayClass, gateway, httpRoute).
 		WithIndex(&gwtypes.Gateway{}, index.GatewayClassOnGatewayIndex, index.GatewayClassOnGateway).
-		WithIndex(&gwtypes.HTTPRoute{}, index.GatewayOnHTTPRouteIndex, index.GatewaysOnHTTPRoute).
+		WithIndex(&gwtypes.HTTPRoute{}, index.GatewayOnHTTPRouteIndex, index.GatewaysOnRoute[gwtypes.HTTPRoute]).
 		Build()
 
 	mapFunc := MapRouteForGatewayClass(cl, &gwtypes.HTTPRoute{})

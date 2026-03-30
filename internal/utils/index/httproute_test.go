@@ -8,58 +8,107 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
-func TestGatewaysOnHTTPRoute(t *testing.T) {
-	tests := []struct {
+func TestBackendRefOnHTTPRoute(t *testing.T) {
+	testCases := []struct {
 		name string
 		obj  client.Object
 		want []string
 	}{
 		{
-			name: "single parentref, default ns",
+			name: "no backendRefs",
 			obj: &gwtypes.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "ns1"},
 				Spec: gwtypes.HTTPRouteSpec{
-					CommonRouteSpec: gwtypes.CommonRouteSpec{
-						ParentRefs: []gwtypes.ParentReference{
-							{
-								Name: "gw1",
+					Rules: []gwtypes.HTTPRouteRule{
+						{},
+					},
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "single backendRef with default group/kind in single rule",
+			obj: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "ns1"},
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{
+						{
+							BackendRefs: []gwtypes.HTTPBackendRef{
+								{
+									BackendRef: gatewayv1.BackendRef{
+										BackendObjectReference: gatewayv1.BackendObjectReference{
+											Name: gatewayv1.ObjectName("svc1"),
+											Port: ptrPort(80),
+										},
+									},
+								},
 							},
 						},
 					},
 				},
 			},
-			want: []string{"ns1/gw1"},
+			want: []string{"ns1/svc1"},
 		},
 		{
-			name: "parentref with explicit ns",
+			name: "backendRef in different namespaces",
 			obj: &gwtypes.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "ns1"},
 				Spec: gwtypes.HTTPRouteSpec{
-					CommonRouteSpec: gwtypes.CommonRouteSpec{
-						ParentRefs: []gwtypes.ParentReference{
-							{
-								Name:      "gw2",
-								Namespace: ptrNamespace("ns2"),
+					Rules: []gwtypes.HTTPRouteRule{
+						{
+							BackendRefs: []gwtypes.HTTPBackendRef{
+								{
+									BackendRef: gatewayv1.BackendRef{
+										BackendObjectReference: gatewayv1.BackendObjectReference{
+											Group: ptrGroup("core"),
+											Kind:  ptrKind("Service"),
+											Name:  gatewayv1.ObjectName("svc1"),
+											Port:  ptrPort(80),
+										},
+									},
+								},
+							},
+						},
+						{
+							BackendRefs: []gwtypes.HTTPBackendRef{
+								{
+									BackendRef: gatewayv1.BackendRef{
+										BackendObjectReference: gatewayv1.BackendObjectReference{
+											Namespace: ptrNamespace("ns2"),
+											Name:      gatewayv1.ObjectName("svc2"),
+											Port:      ptrPort(80),
+										},
+									},
+								},
 							},
 						},
 					},
 				},
 			},
-			want: []string{"ns2/gw2"},
+			want: []string{"ns1/svc1", "ns2/svc2"},
 		},
 		{
-			name: "parentref with non-Gateway kind",
+			name: "unmatched group/kind",
 			obj: &gwtypes.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "ns1"},
 				Spec: gwtypes.HTTPRouteSpec{
-					CommonRouteSpec: gwtypes.CommonRouteSpec{
-						ParentRefs: []gwtypes.ParentReference{
-							{
-								Name: "gw3",
-								Kind: ptrKind("OtherKind"),
+					Rules: []gwtypes.HTTPRouteRule{
+						{
+							BackendRefs: []gwtypes.HTTPBackendRef{
+								{
+									BackendRef: gatewayv1.BackendRef{
+										BackendObjectReference: gatewayv1.BackendObjectReference{
+											Group: ptrGroup("configuration.konghq.com"),
+											Kind:  ptrKind("KongService"),
+											Name:  gatewayv1.ObjectName("svc1"),
+											Port:  ptrPort(8080),
+										},
+									},
+								},
 							},
 						},
 					},
@@ -68,62 +117,158 @@ func TestGatewaysOnHTTPRoute(t *testing.T) {
 			want: nil,
 		},
 		{
-			name: "parentref with non-gateway group",
+			name: "empty port",
 			obj: &gwtypes.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "ns1"},
 				Spec: gwtypes.HTTPRouteSpec{
-					CommonRouteSpec: gwtypes.CommonRouteSpec{
-						ParentRefs: []gwtypes.ParentReference{
-							{
-								Name:  "gw4",
-								Group: ptrGroup("other.group"),
+					Rules: []gwtypes.HTTPRouteRule{
+						{
+							BackendRefs: []gwtypes.HTTPBackendRef{
+								{
+									BackendRef: gatewayv1.BackendRef{
+										BackendObjectReference: gatewayv1.BackendObjectReference{
+											Name: gatewayv1.ObjectName("svc1"),
+										},
+									},
+								},
 							},
 						},
 					},
 				},
 			},
-			want: nil,
-		},
-		{
-			name: "multiple parentrefs, dedup",
-			obj: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns1"},
-				Spec: gwtypes.HTTPRouteSpec{
-					CommonRouteSpec: gwtypes.CommonRouteSpec{
-						ParentRefs: []gwtypes.ParentReference{
-							{Name: "gw1"},
-							{Name: "gw1"},
-							{Name: "gw2", Namespace: ptrNamespace("ns2")},
-						},
-					},
-				},
-			},
-			want: []string{"ns1/gw1", "ns2/gw2"},
-		},
-		{
-			name: "wrong type",
-			obj:  &gwtypes.Gateway{},
 			want: nil,
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := GatewaysOnHTTPRoute(tt.obj)
-			require.ElementsMatch(t, tt.want, got)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := backendServicesOnHTTPRoute(tc.obj)
+			require.ElementsMatch(t, tc.want, got)
 		})
 	}
 }
 
-func ptrNamespace(s string) *gatewayv1.Namespace {
-	ns := gatewayv1.Namespace(s)
-	return &ns
-}
-func ptrKind(s string) *gatewayv1.Kind {
-	k := gatewayv1.Kind(s)
-	return &k
-}
-func ptrGroup(s string) *gatewayv1.Group {
-	g := gatewayv1.Group(s)
-	return &g
+func TestKongPluginsOnHTTPRoute(t *testing.T) {
+	testCases := []struct {
+		name string
+		obj  client.Object
+		want []string
+	}{
+		{
+			name: "no filters",
+			obj: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "ns1"},
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{
+						{},
+					},
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "single filter with extenstionRef type",
+			obj: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "ns1"},
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{
+						{
+							Filters: []gwtypes.HTTPRouteFilter{
+								{
+									Type: gwtypes.HTTPRouteFilterExtensionRef,
+									ExtensionRef: &gwtypes.LocalObjectReference{
+										Group: gatewayv1.Group(configurationv1.GroupVersion.Group),
+										Kind:  gatewayv1.Kind("KongPlugin"),
+										Name:  gatewayv1.ObjectName("rate-limiting-1"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			want: []string{"ns1/rate-limiting-1"},
+		},
+		{
+			name: "extensionRef with unmatched group/kind",
+			obj: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "ns1"},
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{
+						{
+							Filters: []gwtypes.HTTPRouteFilter{
+								{
+									Type: gwtypes.HTTPRouteFilterExtensionRef,
+									ExtensionRef: &gwtypes.LocalObjectReference{
+										Group: gatewayv1.Group(configurationv1.GroupVersion.Group),
+										Kind:  gatewayv1.Kind("KongConsumer"),
+										Name:  gatewayv1.ObjectName("consumer-1"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "multiple exensionRefs with duplicate names",
+			obj: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "ns1"},
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{
+						{
+							Filters: []gwtypes.HTTPRouteFilter{
+								{
+									Type: gwtypes.HTTPRouteFilterExtensionRef,
+									ExtensionRef: &gwtypes.LocalObjectReference{
+										Group: gatewayv1.Group(configurationv1.GroupVersion.Group),
+										Kind:  gatewayv1.Kind("KongPlugin"),
+										Name:  gatewayv1.ObjectName("rate-limiting-1"),
+									},
+								},
+								{
+									Type: gwtypes.HTTPRouteFilterExtensionRef,
+									ExtensionRef: &gwtypes.LocalObjectReference{
+										Group: gatewayv1.Group(configurationv1.GroupVersion.Group),
+										Kind:  gatewayv1.Kind("KongPlugin"),
+										Name:  gatewayv1.ObjectName("key-auth-1"),
+									},
+								},
+							},
+						},
+						{
+							Filters: []gwtypes.HTTPRouteFilter{
+								{
+									Type: gwtypes.HTTPRouteFilterExtensionRef,
+									ExtensionRef: &gwtypes.LocalObjectReference{
+										Group: gatewayv1.Group(configurationv1.GroupVersion.Group),
+										Kind:  gatewayv1.Kind("KongPlugin"),
+										Name:  gatewayv1.ObjectName("rate-limiting-1"),
+									},
+								},
+								{
+									Type: gwtypes.HTTPRouteFilterExtensionRef,
+									ExtensionRef: &gwtypes.LocalObjectReference{
+										Group: gatewayv1.Group(configurationv1.GroupVersion.Group),
+										Kind:  gatewayv1.Kind("KongPlugin"),
+										Name:  gatewayv1.ObjectName("key-auth-2"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			want: []string{"ns1/key-auth-1", "ns1/key-auth-2", "ns1/rate-limiting-1"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := KongPluginsOnHTTPRoute(tc.obj)
+			require.ElementsMatch(t, tc.want, got)
+		})
+	}
 }
