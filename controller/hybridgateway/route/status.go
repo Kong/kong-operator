@@ -231,7 +231,7 @@ func getParentStatus[T gwtypes.SupportedRoute](route T) []gwtypes.RouteParentSta
 }
 
 func setParentRefStatus[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](route TPtr, parentStatus []gwtypes.RouteParentStatus) {
-	if r, ok := any(route).(gwtypes.HTTPRoute); ok {
+	if r, ok := any(route).(*gwtypes.HTTPRoute); ok {
 		r.Status.Parents = parentStatus
 	}
 }

@@ -26,35 +26,35 @@ func Watches(obj client.Object, cl client.Client) []Watcher {
 	case *gwtypes.HTTPRoute:
 		return []Watcher{
 			{
-				MapHTTPRouteForGateway(cl),
+				MapRouteForGateway(cl, &gwtypes.HTTPRoute{}),
 				&gwtypes.Gateway{},
 			},
 			{
-				MapHTTPRouteForGatewayClass(cl),
+				MapRouteForGatewayClass(cl, &gwtypes.HTTPRoute{}),
 				&gwtypes.GatewayClass{},
 			},
 			{
-				MapHTTPRouteForService(cl),
+				MapRouteForService(cl, &gwtypes.HTTPRoute{}),
 				&corev1.Service{},
 			},
 			{
-				MapHTTPRouteForEndpointSlice(cl),
+				MapRouteForEndpointSlice(cl, &gwtypes.HTTPRoute{}),
 				&discoveryv1.EndpointSlice{},
 			},
 			{
-				MapHTTPRouteForKongResource[*configurationv1alpha1.KongUpstream](cl),
+				MapRouteForKongResource[*configurationv1alpha1.KongUpstream](cl),
 				&configurationv1alpha1.KongUpstream{},
 			},
 			{
-				MapHTTPRouteForKongResource[*configurationv1alpha1.KongTarget](cl),
+				MapRouteForKongResource[*configurationv1alpha1.KongTarget](cl),
 				&configurationv1alpha1.KongTarget{},
 			},
 			{
-				MapHTTPRouteForKongResource[*configurationv1alpha1.KongService](cl),
+				MapRouteForKongResource[*configurationv1alpha1.KongService](cl),
 				&configurationv1alpha1.KongService{},
 			},
 			{
-				MapHTTPRouteForKongResource[*configurationv1alpha1.KongRoute](cl),
+				MapRouteForKongResource[*configurationv1alpha1.KongRoute](cl),
 				&configurationv1alpha1.KongRoute{},
 			},
 			{
@@ -62,7 +62,7 @@ func Watches(obj client.Object, cl client.Client) []Watcher {
 				&configurationv1.KongPlugin{},
 			},
 			{
-				MapHTTPRouteForKongResource[*configurationv1alpha1.KongPluginBinding](cl),
+				MapRouteForKongResource[*configurationv1alpha1.KongPluginBinding](cl),
 				&configurationv1alpha1.KongPluginBinding{},
 			},
 			{
