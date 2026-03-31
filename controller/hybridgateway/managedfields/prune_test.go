@@ -151,6 +151,21 @@ func TestPruneEmptyFields_AllBranches(t *testing.T) {
 			expect: map[string]any{"enabled": false, "disabled": false},
 		},
 		{
+			name: "keeps explicit zero numeric values",
+			input: map[string]any{
+				"weight": 0,
+				"nested": map[string]any{
+					"retries": 0,
+				},
+			},
+			expect: map[string]any{
+				"weight": 0,
+				"nested": map[string]any{
+					"retries": 0,
+				},
+			},
+		},
+		{
 			name:   "keeps true boolean value",
 			input:  map[string]any{"enabled": true},
 			expect: map[string]any{"enabled": true},

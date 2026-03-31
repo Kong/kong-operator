@@ -42,6 +42,41 @@ env:
   MISE_VERBOSE: 1
 
 jobs:
+  build-e2e-image:
+    runs-on: ubuntu-latest
+    needs: [check-docs-only]
+    if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
+    env:
+      IMG: kong-operator
+      TAG: e2e-${{ github.sha }}
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@fa2e9d605c4eeb9fcad4c99c224cee0c6c7f3594 # v2.16.0
+        with:
+          egress-policy: audit
+      - name: checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: setup golang
+        uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: build docker image
+        run: make docker.build
+
+      - name: save docker image as artifact
+        run: docker save ${{ env.IMG }}:${{ env.TAG }} -o kong-operator_e2e.tar
+
+      - name: upload docker image artifact
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: kong-operator-e2e-image-${{ github.run_id }}
+          path: kong-operator_e2e.tar
+          retention-days: 1
+          if-no-files-found: error
+
   check-docs-only:
     runs-on: ubuntu-latest
     outputs:
@@ -66,7 +101,7 @@ jobs:
       with:
         egress-policy: audit
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-    - uses: zgosalvez/github-actions-ensure-sha-pinned-actions@cc9ffdc62fadb9f83b46dd0979d9ad50408cc6a6 # v5.0.2
+    - uses: zgosalvez/github-actions-ensure-sha-pinned-actions@471d5ace1f08e3c4df1c4c2f7e6341aa75da434a # v5.0.3
 
   ossf-scorecard:
     runs-on: ubuntu-latest
@@ -274,7 +309,7 @@ jobs:
 
     - name: Go cache main branch
       if: ${{ github.ref == 'refs/heads/main' }}
-      uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+      uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7
       with:
         path: |
           ${{ env.GO_MOD_CACHE }}
@@ -286,7 +321,7 @@ jobs:
 
     - name: Go cache (restore only for non-main branches)
       if: ${{ github.ref != 'refs/heads/main' }}
-      uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+      uses: actions/cache/restore@668228422ae6a00e4ad889ee87cd7109ec5666a7
       with:
         path: |
           ${{ env.GO_MOD_CACHE }}
@@ -352,6 +387,7 @@ jobs:
   e2e-tests:
     needs:
       - check-docs-only
+      - build-e2e-image
       - matrix_k8s_node_versions
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
     uses: ./.github/workflows/__e2e_tests.yaml
@@ -360,6 +396,7 @@ jobs:
   e2e-tests-chainsaw:
     needs:
       - check-docs-only
+      - build-e2e-image
       - matrix_k8s_node_versions
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
     uses: ./.github/workflows/__e2e_chainsaw_tests.yaml
@@ -420,6 +457,7 @@ jobs:
       - samples
       - install-with-kustomize
       - build
+      - build-e2e-image
       - CRDs
       - unit-tests
       - envtest-tests

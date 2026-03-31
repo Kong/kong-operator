@@ -34,7 +34,6 @@ var skippedTestsForHybrid = []string{
 
 	// Core profile.
 	tests.HTTPRouteHTTPSListener.ShortName,
-	tests.HTTPRouteInvalidCrossNamespaceBackendRef.ShortName,
 	tests.HTTPRouteInvalidNonExistentBackendRef.ShortName,
 	tests.HTTPRouteInvalidReferenceGrant.ShortName,
 	tests.HTTPRouteListenerHostnameMatching.ShortName,
@@ -45,10 +44,8 @@ var skippedTestsForHybrid = []string{
 	tests.HTTPRoutePartiallyInvalidViaInvalidReferenceGrant.ShortName,
 	tests.HTTPRoutePathMatchOrder.ShortName,
 	tests.HTTPRouteQueryParamMatching.ShortName,
-	tests.HTTPRouteReferenceGrant.ShortName,
 	tests.HTTPRouteExactPathMatching.ShortName,
 	tests.HTTPRouteHostnameIntersection.ShortName,
-	tests.HTTPRouteCrossNamespace.ShortName,
 	tests.GatewayModifyListeners.ShortName,
 	tests.GatewayObservedGenerationBump.ShortName,
 	tests.GatewaySecretReferenceGrantAllInNamespace.ShortName,

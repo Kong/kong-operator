@@ -1,4 +1,5 @@
 version: "2"
+go: "1.26"
 linters:
   default: none
   enable:

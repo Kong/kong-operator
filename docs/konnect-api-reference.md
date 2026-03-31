@@ -791,7 +791,7 @@ MCPServerSpec is the specification of the MCPServer resource.
 | --- | --- |
 | `mirror` _[MirrorSpec](#konnect-konghq-com-v1alpha1-types-mirrorspec)_ | Mirror is the Konnect Mirror configuration. It is only applicable for ControlPlanes that are created as Mirrors. |
 | `source` _[EntitySource](#common-konghq-com-v1alpha1-types-entitysource)_ | Source represents the source type of the Konnect entity. |
-| `konnect` _[KonnectConfiguration](#konnect-konghq-com-v1alpha2-types-konnectconfiguration)_ | KonnectConfiguration contains the Konnect configuration for the MCP server. |
+| `controlPlaneRef` _[ControlPlaneRef](#common-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef is a reference to a Konnect ControlPlane this MCP server belongs to. The auth token is inferred from the referenced control plane's KonnectAPIAuthConfiguration. |
 
 _Appears in:_
 
@@ -810,6 +810,7 @@ MCPServerStatus defines the observed state of MCPServer.
 | `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
 | `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
 | `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
+| `controlPlaneID` _string_ | ControlPlaneID is the Konnect ID of the ControlPlane this Route is associated with. |
 
 _Appears in:_
 
@@ -1070,7 +1071,6 @@ _Appears in:_
 - [KonnectCloudGatewayNetworkSpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaynetworkspec)
 - [KonnectExtensionKonnectSpec](#konnect-konghq-com-v1alpha1-types-konnectextensionkonnectspec)
 - [KonnectGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanespec)
-- [MCPServerSpec](#konnect-konghq-com-v1alpha1-types-mcpserverspec)
 
 #### KonnectEndpoints
 
@@ -1146,6 +1146,7 @@ with a reference to a ControlPlane.
 _Appears in:_
 
 - [KonnectCloudGatewayDataPlaneGroupConfigurationStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaydataplanegroupconfigurationstatus)
+- [MCPServerStatus](#konnect-konghq-com-v1alpha1-types-mcpserverstatus)
 
 #### KonnectEntityStatusWithNetworkRef
 

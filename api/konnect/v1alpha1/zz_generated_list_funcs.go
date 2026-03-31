@@ -7,11 +7,6 @@ func (obj KonnectGatewayControlPlaneList) GetItems() []KonnectGatewayControlPlan
 	return obj.Items
 }
 
-// GetItems returns the list of MCPServer items.
-func (obj MCPServerList) GetItems() []MCPServer {
-	return obj.Items
-}
-
 // GetItems returns the list of KonnectAPIAuthConfiguration items.
 func (obj KonnectAPIAuthConfigurationList) GetItems() []KonnectAPIAuthConfiguration {
 	return obj.Items
@@ -24,6 +19,11 @@ func (obj KonnectCloudGatewayNetworkList) GetItems() []KonnectCloudGatewayNetwor
 
 // GetItems returns the list of KonnectCloudGatewayDataPlaneGroupConfiguration items.
 func (obj KonnectCloudGatewayDataPlaneGroupConfigurationList) GetItems() []KonnectCloudGatewayDataPlaneGroupConfiguration {
+	return obj.Items
+}
+
+// GetItems returns the list of MCPServer items.
+func (obj MCPServerList) GetItems() []MCPServer {
 	return obj.Items
 }
 

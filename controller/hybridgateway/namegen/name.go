@@ -156,6 +156,11 @@ func NewKongPluginName(filter gatewayv1.HTTPRouteFilter, namespace string, plugi
 	return newName(namespace, pluginName, utils.Hash32(filter))
 }
 
+// NewKongPluginNameForService generates a KongPlugin name tied to a KongService.
+func NewKongPluginNameForService(serviceName, pluginName string) string {
+	return newName(serviceName, pluginName)
+}
+
 // NewKongPluginBindingName generates a KongPlugin name based on the KongRoute and the KongPlugin names.
 func NewKongPluginBindingName(routeID, pluginID string) string {
 	return newName(routeID, pluginID)

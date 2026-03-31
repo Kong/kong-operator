@@ -3,7 +3,7 @@ module github.com/kong/kong-operator/v2/crd-from-oas
 go 1.26.1
 
 require (
-	github.com/caarlos0/env/v11 v11.3.1
+	github.com/caarlos0/env/v11 v11.4.0
 	github.com/getkin/kin-openapi v0.134.0
 	github.com/kong/kong-operator/v2 v2.0.0-00000000000000-000000000000
 	github.com/stretchr/testify v1.11.1
@@ -13,7 +13,7 @@ require (
 )
 
 require (
-	github.com/Kong/sdk-konnect-go v0.27.1 // indirect
+	github.com/Kong/sdk-konnect-go v0.28.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect

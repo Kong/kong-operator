@@ -10,7 +10,7 @@ version = "0.20.1"
 
 [tools."github:golangci/golangci-lint"]
 # renovate: datasource=github-releases depName=golangci/golangci-lint
-version = "2.11.3"
+version = "2.11.4"
 
 [tools."github:kubernetes-sigs/controller-runtime"]
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-runtime
@@ -66,7 +66,7 @@ macos-arm64 = { url = "https://get.helm.sh/helm-v{{version}}-darwin-arm64.tar.gz
 
 [tools."go:sigs.k8s.io/kube-api-linter/cmd/golangci-lint-kube-api-linter"]
 # renovate: datasource=git-refs packageName=https://github.com/kubernetes-sigs/kube-api-linter.git
-version = "b89d6bcc42da56a83afac298f9184e34d04fad46"
+version = "c9b9b51b278a39c2d09b149df45196275919c23b"
 
 
 ################################################################################
@@ -84,7 +84,7 @@ run = "go build -o ../bin/{{env.DIR}} main.go"
 # TODO: This hardcodes the x-konnect API group. Removing this hardcode would cause
 # the removal of other non generated APIs to be removed.
 description = "Clean generated api/x-konnect directory"
-run = "rm -rf ./api/x-konnect/"
+run = "rm -rf ./api/x-konnect/ ./config/crd/kong-operator/x-konnect.konghq.com_*"
 
 [tasks.generate-api]
 description = "Generate Kubernetes Go API from OpenAPI spec"
@@ -108,12 +108,6 @@ description = "Generate DeepCopy methods for the API types"
 dir = "./{{env.DIR}}"
 run = "controller-gen object:headerFile='../hack/generators/boilerplate.go.txt' paths=../api/..."
 
-[tasks.lint-api]
-description = "Run golangci-lint"
-# TODO: This hardcodes the x-konnect API group. Removing this hardcode would cause the linter
-# to run against all the API groups which might create unwanted issues being reported here.
-run = "golangci-lint-kube-api-linter run -v --config .golangci-kube-api.yaml ./api/x-konnect/..."
-
 [tasks.test-crdsvalidation]
 description = "Run CRD validation tests"
 dir = "./{{env.DIR}}"
@@ -127,6 +121,6 @@ go test -v -count 1 ${GOTESTFLAGS} ./test/crdsvalidation/x-konnect.konghq.com/..
 description = "Generate API, CRDs, and run all tests and linters"
 run = [
        { task = "generate-api" },
-       { tasks = [ "lint-api", "test-unit", "gofix"] },
+       { tasks = ["test-unit", "gofix"] },
        { task = "test-crdsvalidation" },
 ]
