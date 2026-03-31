@@ -41,10 +41,19 @@ type fakePluginSvc struct {
 	err   error
 	msg   string
 	valid bool
+	// If non-nil, GetFullSchema returns this error (e.g. 404 = plugin not on gateway).
+	getFullSchemaErr error
 }
 
 func (f *fakePluginSvc) Validate(context.Context, *kong.Plugin) (bool, string, error) {
 	return f.valid, f.msg, f.err
+}
+
+func (f *fakePluginSvc) GetFullSchema(context.Context, *string) (kong.Schema, error) {
+	if f.getFullSchemaErr != nil {
+		return nil, f.getFullSchemaErr
+	}
+	return kong.Schema{}, nil
 }
 
 type fakeConsumersSvc struct {
@@ -1385,6 +1394,46 @@ func (s fakeVaultSvc) Validate(_ context.Context, _ *kong.Vault) (bool, string, 
 		return false, "something is wrong with the vault", nil
 	}
 	return true, "", nil
+}
+
+func TestPluginServicesForAvailablePlugin(t *testing.T) {
+	ctx := t.Context()
+	svcs := []kong.AbstractPluginService{
+		&fakePluginSvc{getFullSchemaErr: kong.NewAPIError(http.StatusNotFound, "unknown plugin")},
+		&fakePluginSvc{},
+	}
+
+	t.Run("404 skipped others kept", func(t *testing.T) {
+		got, err := pluginServicesForAvailablePlugin(ctx, svcs, "my-plugin")
+		require.NoError(t, err)
+		require.Len(t, got, 1)
+	})
+
+	t.Run("non-404 error returned", func(t *testing.T) {
+		e := kong.NewAPIError(http.StatusServiceUnavailable, "upstream")
+		_, err := pluginServicesForAvailablePlugin(ctx, []kong.AbstractPluginService{
+			&fakePluginSvc{getFullSchemaErr: e},
+		}, "my-plugin")
+		require.ErrorIs(t, err, e)
+	})
+
+	t.Run("404 then non-404 returns non-404", func(t *testing.T) {
+		e := kong.NewAPIError(http.StatusBadGateway, "bad")
+		_, err := pluginServicesForAvailablePlugin(ctx, []kong.AbstractPluginService{
+			&fakePluginSvc{getFullSchemaErr: kong.NewAPIError(http.StatusNotFound, "nope")},
+			&fakePluginSvc{getFullSchemaErr: e},
+		}, "my-plugin")
+		require.ErrorIs(t, err, e)
+	})
+
+	t.Run("all 404 yields empty", func(t *testing.T) {
+		got, err := pluginServicesForAvailablePlugin(ctx, []kong.AbstractPluginService{
+			&fakePluginSvc{getFullSchemaErr: kong.NewAPIError(http.StatusNotFound, "a")},
+			&fakePluginSvc{getFullSchemaErr: kong.NewAPIError(http.StatusNotFound, "b")},
+		}, "my-plugin")
+		require.NoError(t, err)
+		require.Empty(t, got)
+	})
 }
 
 func TestValidatePluginAcrossPluginServices(t *testing.T) {
