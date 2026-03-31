@@ -66,7 +66,7 @@ func SetStatusConditions[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePt
 			Conditions:     conditions,
 		})
 		// We are done, return.
-		setParentRefStatus[T](route, parentStatus)
+		setParentRefStatus(route, parentStatus)
 		return true
 	}
 
@@ -121,7 +121,7 @@ func SetStatusConditions[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePt
 	}
 
 	if updated {
-		setParentRefStatus[T](route, parentStatus)
+		setParentRefStatus(route, parentStatus)
 	}
 	return updated
 }
@@ -181,7 +181,7 @@ func CleanupOrphanedParentStatus[T gwtypes.SupportedRoute, TPtr gwtypes.Supporte
 
 	// Update the route status if we removed any entries
 	if removed {
-		setParentRefStatus[T](route, filteredParents)
+		setParentRefStatus(route, filteredParents)
 	}
 
 	return removed
@@ -218,7 +218,7 @@ func RemoveStatusForParentRef[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRo
 		filteredParents = append(filteredParents, parentStatus)
 	}
 	if removed {
-		setParentRefStatus[T](route, filteredParents)
+		setParentRefStatus(route, filteredParents)
 	}
 	return removed
 }
@@ -353,7 +353,7 @@ func BuildAcceptedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRout
 	if cond != nil {
 		log.Debug(logger, "No matching listeners for ParentReference", "parentRef", pRef, "gateway", gateway.Name)
 		// Return the condition indicating no matching listeners.
-		return SetConditionMeta[T](*cond, route), nil
+		return SetConditionMeta(*cond, route), nil
 	}
 
 	// If we have listeners that match, we check the allowed routes.
@@ -372,14 +372,14 @@ func BuildAcceptedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRout
 	}
 	if cond != nil {
 		log.Debug(logger, "Listeners do not allow route", "parentRef", pRef, "gateway", gateway.Name, "reason", cond.Reason)
-		return SetConditionMeta[T](*cond, route), nil
+		return SetConditionMeta(*cond, route), nil
 	}
 
 	// If we have listeners that allow the route, we check the hostnames.
 	_, cond = FilterListenersByHostnames(logger, listeners, getSpecHostnames(*route))
 	if cond != nil {
 		log.Debug(logger, "Listeners do not match hostnames", "parentRef", pRef, "gateway", gateway.Name, "reason", cond.Reason)
-		return SetConditionMeta[T](*cond, route), nil
+		return SetConditionMeta(*cond, route), nil
 	}
 
 	// If we have listeners that match the hostnames, we can accept the route.
@@ -390,7 +390,7 @@ func BuildAcceptedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRout
 		Reason:  string(gwtypes.RouteReasonAccepted),
 		Message: "The route is accepted by the gateway",
 	}
-	return SetConditionMeta[T](*cond, route), nil
+	return SetConditionMeta(*cond, route), nil
 }
 
 // getSpecHostnames returns the hostnames in the route spec.
@@ -453,7 +453,7 @@ func BuildProgrammedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRo
 			// Check if the item is programmed.
 			prog := isProgrammed(&item)
 			log.Debug(logger, "Resource programmed status", "gvk", gvk.String(), "name", item.GetName(), "namespace", item.GetNamespace(), "programmed", prog)
-			conditions = append(conditions, *SetConditionMeta[T](GetProgrammedConditionForGVK(gvk, prog), route))
+			conditions = append(conditions, *SetConditionMeta(GetProgrammedConditionForGVK(gvk, prog), route))
 		}
 	}
 
@@ -551,6 +551,49 @@ func BuildResolvedRefsConditionForHTTPRoute(ctx context.Context, logger logr.Log
 		}
 	}
 
+	return SetConditionMeta(*cond, route), nil
+}
+
+// BuildResolvedRefsConditionForTLSRoute evaluates all BackendRefs in an TLSRoute to determine if their
+// references are valid and permitted.
+// It checks that each BackendRef:
+//   - Has a supported group/kind
+//   - Exists in the target namespace
+//   - Is permitted by ReferenceGrant if referencing a different namespace
+//
+// Returns a condition indicating whether all references are resolved, or details about the first failure encountered.
+//
+// Parameters:
+//   - ctx: Context for API calls
+//   - logger: Logger for debugging information
+//   - cl: Kubernetes client for resource operations
+//   - route: The TLSRoute whose BackendRefs are being checked
+//
+// Returns:
+//   - *metav1.Condition: Condition indicating resolved refs status
+//   - error: Any error encountered during evaluation
+func BuildResolvedRefsConditionForTLSRoute(ctx context.Context, logger logr.Logger, cl client.Client, route *gwtypes.TLSRoute) (*metav1.Condition, error) {
+	cond := &metav1.Condition{
+		Type:    string(gwtypes.RouteConditionResolvedRefs),
+		Status:  metav1.ConditionTrue,
+		Reason:  string(gwtypes.RouteReasonResolvedRefs),
+		Message: "All references resolved",
+	}
+	for _, rule := range route.Spec.Rules {
+		for _, bRef := range rule.BackendRefs {
+			// BackendRef namespace.
+			bRefValidCond, err := backendRefResolvedCondition(ctx, logger, cl, route, bRef)
+			if err != nil {
+				return nil, err
+			}
+			if bRefValidCond.Status != metav1.ConditionTrue {
+				cond.Status = bRefValidCond.Status
+				cond.Reason = bRefValidCond.Reason
+				cond.Message = bRefValidCond.Message
+				return SetConditionMeta(*cond, route), nil
+			}
+		}
+	}
 	return SetConditionMeta(*cond, route), nil
 }
 

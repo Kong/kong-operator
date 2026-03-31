@@ -27,7 +27,7 @@ func getHybridGatewayParents[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRou
 	for i, pRef := range parentRefs {
 		log.Debug(logger, "Processing parent reference", "index", i, "parentRef", pRef)
 
-		cp, err := refs.GetControlPlaneRefByParentRef[T](ctx, logger, cl, route, pRef)
+		cp, err := refs.GetControlPlaneRefByParentRef(ctx, logger, cl, route, pRef)
 		if err != nil {
 			switch {
 			case errors.Is(err, hybridgatewayerrors.ErrNoGatewayFound),
@@ -51,7 +51,7 @@ func getHybridGatewayParents[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRou
 
 		log.Debug(logger, "Found ControlPlaneRef for ParentRef", "parentRef", pRef, "controlPlane", cp.KonnectNamespacedRef)
 
-		hostnames, err := getHostnamesByParentRef[T](ctx, logger, cl, route, pRef)
+		hostnames, err := getHostnamesByParentRef(ctx, logger, cl, route, pRef)
 		if err != nil {
 			log.Error(logger, err, "Failed to get hostnames for ParentRef", "parentRef", pRef)
 			return nil, err
@@ -83,7 +83,7 @@ func getHostnamesByParentRef[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRou
 	var err error
 	var hostnames []string
 
-	listeners, err := refs.GetListenersByParentRef[T](ctx, cl, route, pRef)
+	listeners, err := refs.GetListenersByParentRef(ctx, cl, route, pRef)
 	if err != nil {
 		log.Error(logger, err, "Failed to get listeners for ParentRef")
 		return nil, err

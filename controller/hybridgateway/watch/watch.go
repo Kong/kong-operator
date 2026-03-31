@@ -70,6 +70,45 @@ func Watches(obj client.Object, cl client.Client) []Watcher {
 				&gwtypes.ReferenceGrant{},
 			},
 		}
+	case *gwtypes.TLSRoute:
+		return []Watcher{
+			{
+				MapRouteForGateway(cl, &gwtypes.TLSRoute{}),
+				&gwtypes.Gateway{},
+			},
+			{
+				MapRouteForGatewayClass(cl, &gwtypes.TLSRoute{}),
+				&gwtypes.GatewayClass{},
+			},
+			{
+				MapRouteForService(cl, &gwtypes.TLSRoute{}),
+				&corev1.Service{},
+			},
+			{
+				MapRouteForEndpointSlice(cl, &gwtypes.TLSRoute{}),
+				&discoveryv1.EndpointSlice{},
+			},
+			{
+				MapRouteForKongResource[*configurationv1alpha1.KongUpstream](cl),
+				&configurationv1alpha1.KongUpstream{},
+			},
+			{
+				MapRouteForKongResource[*configurationv1alpha1.KongTarget](cl),
+				&configurationv1alpha1.KongTarget{},
+			},
+			{
+				MapRouteForKongResource[*configurationv1alpha1.KongService](cl),
+				&configurationv1alpha1.KongService{},
+			},
+			{
+				MapRouteForKongResource[*configurationv1alpha1.KongRoute](cl),
+				&configurationv1alpha1.KongRoute{},
+			},
+			{
+				MapTLSRouteForReferenceGrant(cl),
+				&gwtypes.ReferenceGrant{},
+			},
+		}
 	case *gwtypes.Gateway:
 		return []Watcher{
 			{

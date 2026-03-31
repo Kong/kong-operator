@@ -102,6 +102,7 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 			index.OptionsForGatewayClass(),
 			index.OptionsForGateway(),
 			index.OptionsForHTTPRoute(),
+			index.OptionsForTLSRoute(),
 		)
 	}
 
@@ -749,6 +750,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			controllers = append(controllers,
 				newGatewayAPIHybridController[gwtypes.Gateway](mgr, c.FQDNModeEnabled, c.ClusterDomain),
 				newGatewayAPIHybridController[gwtypes.HTTPRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain),
+				newGatewayAPIHybridController[gwtypes.TLSRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain),
 			)
 		}
 	}

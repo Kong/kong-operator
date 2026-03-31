@@ -3,13 +3,11 @@ package watch
 import (
 	"context"
 
-	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
-	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
@@ -112,32 +110,6 @@ func MapHTTPRouteForReferenceGrant(cl client.Client) handler.MapFunc {
 					})
 				}
 			}
-		}
-		return requests
-	}
-}
-
-// MapHTTPRouteForKongResource returns a handler.MapFunc that, given a Kong resource object of type T,
-// retrieves the HTTPRoutes referenced in its annotations. It returns a slice of reconcile.Requests
-// for each matching HTTPRoute.
-func MapHTTPRouteForKongResource[T kongResource](cl client.Client) handler.MapFunc {
-	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		_, ok := obj.(T)
-		if !ok {
-			return nil
-		}
-
-		am := metadata.NewAnnotationManager(logr.Discard())
-		routes := am.GetRoutes(obj)
-		if len(routes) == 0 {
-			return nil
-		}
-
-		var requests []reconcile.Request
-		for _, r := range routes {
-			requests = append(requests, reconcile.Request{
-				NamespacedName: metadata.NameStringToObjectKey(r),
-			})
 		}
 		return requests
 	}

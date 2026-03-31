@@ -4,7 +4,7 @@ import "sigs.k8s.io/controller-runtime/pkg/client"
 
 // SupportedRoute defines a supported route type.
 type SupportedRoute interface {
-	HTTPRoute
+	TLSRoute | HTTPRoute
 }
 
 // SupportedRoutePtr defines a pointer of a supported route type.
@@ -16,7 +16,10 @@ type SupportedRoutePtr[T SupportedRoute] interface {
 
 // GetSpecParentRefs returns the parent references of a supported route.
 func GetSpecParentRefs[T SupportedRoute](route T) []ParentReference {
-	if r, ok := any(route).(HTTPRoute); ok {
+	switch r := any(route).(type) {
+	case HTTPRoute:
+		return r.Spec.ParentRefs
+	case TLSRoute:
 		return r.Spec.ParentRefs
 	}
 	return []ParentReference{}
