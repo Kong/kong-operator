@@ -61,6 +61,12 @@ type AdminAPIServicesProvider interface {
 	GetSchemasService() (kong.AbstractSchemaService, bool)
 }
 
+// MultiGatewayAdminAPIServicesProvider is an optional extension for providers that
+// can expose services for all discovered gateways.
+type MultiGatewayAdminAPIServicesProvider interface {
+	GetPluginsServices() []kong.AbstractPluginService
+}
+
 // ConsumerGetter is an interface for retrieving KongConsumers.
 type ConsumerGetter interface {
 	ListAllConsumers(ctx context.Context) ([]configurationv1.KongConsumer, error)
@@ -560,6 +566,16 @@ func (validator KongHTTPValidator) ensureConsumerDoesNotExistInGateway(ctx conte
 }
 
 func (validator KongHTTPValidator) validatePluginAgainstGatewaySchema(ctx context.Context, plugin kong.Plugin) (string, error) {
+	if multiGatewayProvider, ok := validator.AdminAPIServicesProvider.(MultiGatewayAdminAPIServicesProvider); ok {
+		pluginServices := multiGatewayProvider.GetPluginsServices()
+		if len(pluginServices) > 0 && plugin.Name != nil {
+			availablePluginServices := pluginServicesForAvailablePlugin(ctx, pluginServices, *plugin.Name)
+			if len(availablePluginServices) > 0 {
+				return validatePluginAcrossPluginServices(ctx, availablePluginServices, plugin)
+			}
+		}
+	}
+
 	pluginService, hasClient := validator.AdminAPIServicesProvider.GetPluginsService()
 	if hasClient {
 		isValid, msg, err := pluginService.Validate(ctx, &plugin)
@@ -572,6 +588,45 @@ func (validator KongHTTPValidator) validatePluginAgainstGatewaySchema(ctx contex
 	}
 
 	// if there's no client, do not verify with data-plane as there's none available
+	return "", nil
+}
+
+func pluginServicesForAvailablePlugin(
+	ctx context.Context,
+	pluginServices []kong.AbstractPluginService,
+	pluginName string,
+) []kong.AbstractPluginService {
+	available := make([]kong.AbstractPluginService, 0, len(pluginServices))
+	for _, ps := range pluginServices {
+		if _, err := ps.GetFullSchema(ctx, &pluginName); err == nil {
+			available = append(available, ps)
+		}
+	}
+	return available
+}
+
+// validatePluginAcrossPluginServices returns success if any gateway validates the plugin.
+// This matches multi-gateway deployments where plugin bundles differ between data planes.
+func validatePluginAcrossPluginServices(ctx context.Context, pluginServices []kong.AbstractPluginService, plugin kong.Plugin) (string, error) {
+	var lastErr error
+	var lastInvalidMsg string
+	for _, ps := range pluginServices {
+		isValid, msg, err := ps.Validate(ctx, &plugin)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		if isValid {
+			return "", nil
+		}
+		lastInvalidMsg = msg
+	}
+	if lastErr != nil {
+		return ErrTextPluginConfigValidationFailed, lastErr
+	}
+	if lastInvalidMsg != "" {
+		return fmt.Sprintf(ErrTextPluginConfigViolatesSchema, lastInvalidMsg), nil
+	}
 	return "", nil
 }
 
