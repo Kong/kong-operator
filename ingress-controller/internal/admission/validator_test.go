@@ -1387,6 +1387,48 @@ func (s fakeVaultSvc) Validate(_ context.Context, _ *kong.Vault) (bool, string, 
 	return true, "", nil
 }
 
+func TestValidatePluginAcrossPluginServices(t *testing.T) {
+	ctx := t.Context()
+	plugin := kong.Plugin{Name: kong.String("test")}
+
+	t.Run("first invalid second valid", func(t *testing.T) {
+		msg, err := validatePluginAcrossPluginServices(ctx, []kong.AbstractPluginService{
+			&fakePluginSvc{valid: false, msg: "unknown plugin"},
+			&fakePluginSvc{valid: true},
+		}, plugin)
+		require.NoError(t, err)
+		assert.Empty(t, msg)
+	})
+
+	t.Run("first error second valid", func(t *testing.T) {
+		msg, err := validatePluginAcrossPluginServices(ctx, []kong.AbstractPluginService{
+			&fakePluginSvc{err: errors.New("connection refused")},
+			&fakePluginSvc{valid: true},
+		}, plugin)
+		require.NoError(t, err)
+		assert.Empty(t, msg)
+	})
+
+	t.Run("all invalid uses last message", func(t *testing.T) {
+		msg, err := validatePluginAcrossPluginServices(ctx, []kong.AbstractPluginService{
+			&fakePluginSvc{valid: false, msg: "bad"},
+			&fakePluginSvc{valid: false, msg: "worse"},
+		}, plugin)
+		require.NoError(t, err)
+		assert.Contains(t, msg, "worse")
+	})
+
+	t.Run("all errors", func(t *testing.T) {
+		e := errors.New("upstream failure")
+		msg, err := validatePluginAcrossPluginServices(ctx, []kong.AbstractPluginService{
+			&fakePluginSvc{err: e},
+			&fakePluginSvc{err: e},
+		}, plugin)
+		require.ErrorIs(t, err, e)
+		assert.Equal(t, ErrTextPluginConfigValidationFailed, msg)
+	})
+}
+
 func TestValidator_ValidateCustomEntity(t *testing.T) {
 	testCases := []struct {
 		name            string
