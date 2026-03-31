@@ -19,6 +19,7 @@ import (
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	dpreconciler "github.com/kong/kong-operator/v2/controller/dataplane"
 	kogateway "github.com/kong/kong-operator/v2/controller/gateway"
+	secretcert "github.com/kong/kong-operator/v2/controller/secret_cert"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/util"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
@@ -249,6 +250,11 @@ func TestGatewayInfrastructureLabels(t *testing.T) {
 			ClusterCASecretName:      caSecretName,
 			ClusterCASecretNamespace: ns.Name,
 			DefaultImage:             consts.DefaultDataPlaneImage,
+			CertTTL:                  consts.DefaultCertTTL,
+		},
+		&secretcert.Reconciler{
+			Client:               c,
+			CertExpirationMargin: consts.DefaultCertExpirationMargin,
 		},
 	)
 

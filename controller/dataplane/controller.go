@@ -3,6 +3,7 @@ package dataplane
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
@@ -50,6 +51,7 @@ type Reconciler struct {
 	EnforceConfig          bool
 	LoggingMode            logging.Mode
 	ValidateDataPlaneImage bool
+	CertTTL                time.Duration
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -170,6 +172,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			Name:      dataplaneAdminService.Name,
 		},
 		r.SecretLabelSelector,
+		r.CertTTL,
 	)
 	if err != nil {
 		return ctrl.Result{}, err

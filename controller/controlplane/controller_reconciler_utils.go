@@ -126,6 +126,7 @@ func (r *Reconciler) ensureAdminMTLSCertificateSecret(
 		usages,
 		r.Client,
 		matchingLabels,
+		r.CertTTL,
 	)
 }
 
