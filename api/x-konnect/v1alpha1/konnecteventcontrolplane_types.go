@@ -72,7 +72,7 @@ type KonnectEventControlPlaneAPISpec struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^\d+\.\d+$`
 	MinRuntimeVersion MinRuntimeVersion `json:"min_runtime_version,omitempty"`
 

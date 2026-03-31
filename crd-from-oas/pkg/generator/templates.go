@@ -133,15 +133,135 @@ import (
 	{{.Alias}} "{{.Path}}"
 {{- end}}
 )
+{{if .BoolFields}}
+type sdkOpsBoolField struct {
+	Label string
+	Path  []string
+}
+
+var sdkOpsBoolFields = []sdkOpsBoolField{
+{{- range .BoolFields}}
+	{
+		Label: "{{.Label}}",
+		Path: []string{
+{{- range .Path}}
+			"{{.}}",
+{{- end}}
+		},
+	},
+{{- end}}
+}
+
+func normalizeSDKOpsBoolFields(payload map[string]any) error {
+	for _, field := range sdkOpsBoolFields {
+		if _, err := normalizeSDKOpsBoolField(payload, field.Path); err != nil {
+			return fmt.Errorf("%s: %w", field.Label, err)
+		}
+	}
+	return nil
+}
+
+func normalizeSDKOpsBoolField(value any, path []string) (any, error) {
+	if len(path) == 0 {
+		switch typed := value.(type) {
+		case nil:
+			return nil, nil
+		case bool:
+			return typed, nil
+		case string:
+			switch typed {
+			case "Enabled":
+				return true, nil
+			case "Disabled":
+				return false, nil
+			default:
+				return nil, fmt.Errorf("unexpected boolean enum %q", typed)
+			}
+		default:
+			return nil, fmt.Errorf("expected string boolean enum, got %T", value)
+		}
+	}
+
+	if value == nil {
+		return nil, nil
+	}
+
+	segment := path[0]
+	switch segment {
+	case "[]":
+		items, ok := value.([]any)
+		if !ok {
+			return nil, fmt.Errorf("expected array, got %T", value)
+		}
+		for i, item := range items {
+			normalized, err := normalizeSDKOpsBoolField(item, path[1:])
+			if err != nil {
+				return nil, err
+			}
+			items[i] = normalized
+		}
+		return items, nil
+	case "{}":
+		object, ok := value.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("expected object, got %T", value)
+		}
+		for key, item := range object {
+			normalized, err := normalizeSDKOpsBoolField(item, path[1:])
+			if err != nil {
+				return nil, err
+			}
+			object[key] = normalized
+		}
+		return object, nil
+	default:
+		object, ok := value.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("expected object, got %T", value)
+		}
+		child, ok := object[segment]
+		if !ok {
+			return value, nil
+		}
+		normalized, err := normalizeSDKOpsBoolField(child, path[1:])
+		if err != nil {
+			return nil, err
+		}
+		object[segment] = normalized
+		return object, nil
+	}
+}
+{{end}}
+func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() ([]byte, error) {
+	data, err := json.Marshal(s)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal {{$.EntityName}}APISpec: %w", err)
+	}
+	{{- if $.BoolFields}}
+	var payload map[string]any
+	if err := json.Unmarshal(data, &payload); err != nil {
+		return nil, fmt.Errorf("failed to decode {{$.EntityName}}APISpec: %w", err)
+	}
+	if err := normalizeSDKOpsBoolFields(payload); err != nil {
+		return nil, fmt.Errorf("failed to normalize {{$.EntityName}}APISpec SDK payload: %w", err)
+	}
+	data, err = json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal normalized {{$.EntityName}}APISpec: %w", err)
+	}
+	{{- end }}
+	return data, nil
+}
+
 {{range .Methods}}
 // {{.MethodName}} converts the {{$.EntityName}}APISpec to the SDK type
 // {{.ImportAlias}}.{{.TypeName}} using JSON marshal/unmarshal.
 // Fields that exist in the CRD spec but not in the SDK type (e.g., Kubernetes
 // object references) are naturally excluded because they have different JSON names.
 func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeName}}, error) {
-	data, err := json.Marshal(s)
+	data, err := s.marshalSDKOpsPayload()
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal {{$.EntityName}}APISpec: %w", err)
+		return nil, err
 	}
 	var target {{.ImportAlias}}.{{.TypeName}}
 	if err := json.Unmarshal(data, &target); err != nil {
@@ -156,6 +276,7 @@ const sdkOpsTestTemplate = sharedGeneratedFilePreamble + `
 package {{.APIVersion}}
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -170,6 +291,16 @@ func Test{{$.EntityName}}APISpec_{{.MethodName}}(t *testing.T) {
 	result, err := spec.{{.MethodName}}()
 	require.NoError(t, err)
 	require.NotNil(t, result)
+
+	data, err := json.Marshal(result)
+	require.NoError(t, err)
+
+	var payload map[string]any
+	err = json.Unmarshal(data, &payload)
+	require.NoError(t, err)
+{{- range $.TestFields}}
+	require.Equal(t, {{.ExpectedValue}}, payload["{{.JSONName}}"])
+{{- end}}
 }
 {{end}}`
 

@@ -20,8 +20,8 @@ apiGroupVersions:
           update:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdatePortal
       - path: /v3/portals/{portalId}/teams
+      - path: /v2/dcr-providers
       # TODO: uncomment
       # - path: /v3/portals/{portalId}/custom-domain
       # - path: /v3/identity-providers
-      # - path: /v2/dcr-providers
       # - path: /v3/portals/{portalId}/teams/{teamId}/developers

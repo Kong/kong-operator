@@ -61,24 +61,33 @@ spec:
                   spec fields.
                 properties:
                   authentication_enabled:
-                    default: true
+                    default: Enabled
                     description: |-
                       Whether the portal supports developer authentication.
                       If disabled, developers cannot register for accounts or create applications.
-                    type: boolean
+                    enum:
+                    - Enabled
+                    - Disabled
+                    type: string
                   auto_approve_applications:
-                    default: false
+                    default: Disabled
                     description: |-
                       Whether requests from applications to register for APIs will be
                       automatically approved, or if they will be set to pending until approved by
                       an admin.
-                    type: boolean
+                    enum:
+                    - Enabled
+                    - Disabled
+                    type: string
                   auto_approve_developers:
-                    default: false
+                    default: Disabled
                     description: |-
                       Whether developer account registrations will be automatically approved, or
                       if they will be set to pending until approved by an admin.
-                    type: boolean
+                    enum:
+                    - Enabled
+                    - Disabled
+                    type: string
                   default_api_visibility:
                     description: |-
                       The default visibility of APIs in the portal.
@@ -89,7 +98,7 @@ spec:
                     enum:
                     - public
                     - private
-                    maxLength: 256
+                    maxLength: 253
                     type: string
                   default_application_auth_strategy_id_ref:
                     description: |-
@@ -163,7 +172,7 @@ spec:
                     enum:
                     - public
                     - private
-                    maxLength: 256
+                    maxLength: 253
                     type: string
                   description:
                     description: A description of the portal.
@@ -199,14 +208,17 @@ spec:
                     - message: name is immutable
                       rule: self == oldSelf
                   rbac_enabled:
-                    default: false
+                    default: Disabled
                     description: |-
                       Whether the portal resources are protected by Role Based Access Control
                       (RBAC).
                       If enabled, developers view or register for APIs until unless assigned to
                       teams with access to view and consume specific APIs.
                       Authentication must be enabled to use RBAC.
-                    type: boolean
+                    enum:
+                    - Enabled
+                    - Disabled
+                    type: string
                 required:
                 - name
                 type: object
