@@ -74,6 +74,10 @@ on:
         description: "Whether to regenerate the manifests before creating the release PR"
         type: boolean
         default: false
+      release-issue-number:
+        description: "The release issue number to comment on with the docs PR link (e.g. 3622)"
+        type: string
+        required: false
 
 permissions:
   contents: read
@@ -417,6 +421,7 @@ jobs:
           fi
 
       - name: Create Pull Request
+        id: create-docs-pr
         uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v7.0.6
         if: steps.detect-changes.outputs.has_changes
         with:
@@ -436,3 +441,14 @@ jobs:
           committer: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>
           author: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>
           labels: team-k8s, product-kgo
+
+      - name: Comment on release issue with docs PR link
+        if: steps.create-docs-pr.outputs.pull-request-url && inputs.release-issue-number
+        env:
+          GH_TOKEN: ${{ secrets.gh-pat }}
+        run: |
+          gh issue comment "${{ inputs.release-issue-number }}" \
+            --repo "${{ github.repository }}" \
+            --body "🤖 Docs PR created: ${{ steps.create-docs-pr.outputs.pull-request-url }}
+          
+          Please review and merge it to update the official documentation (CLI args, CRD reference, changelog)."
