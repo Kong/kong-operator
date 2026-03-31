@@ -142,7 +142,7 @@ func TestBackendRefOnHTTPRoute(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := backendServicesOnHTTPRoute(tc.obj)
+			got := BackendServicesOnHTTPRoute(tc.obj)
 			require.ElementsMatch(t, tc.want, got)
 		})
 	}
@@ -167,7 +167,7 @@ func TestKongPluginsOnHTTPRoute(t *testing.T) {
 			want: nil,
 		},
 		{
-			name: "single filter with extenstionRef type",
+			name: "single filter with extensionRef type",
 			obj: &gwtypes.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "ns1"},
 				Spec: gwtypes.HTTPRouteSpec{
@@ -213,7 +213,7 @@ func TestKongPluginsOnHTTPRoute(t *testing.T) {
 			want: nil,
 		},
 		{
-			name: "multiple exensionRefs with duplicate names",
+			name: "multiple extensionRefs with duplicate names",
 			obj: &gwtypes.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "ns1"},
 				Spec: gwtypes.HTTPRouteSpec{

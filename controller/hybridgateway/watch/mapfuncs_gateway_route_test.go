@@ -246,6 +246,7 @@ func Test_MapRouteForService(t *testing.T) {
 					BackendRef: gwtypes.BackendRef{
 						BackendObjectReference: gwtypes.BackendObjectReference{
 							Name: gatewayv1.ObjectName("test-svc"),
+							Port: new(gatewayv1.PortNumber(80)),
 						},
 					},
 				}},
@@ -256,19 +257,7 @@ func Test_MapRouteForService(t *testing.T) {
 	cl := fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithObjects(svc, httpRoute).
-		WithIndex(&gwtypes.HTTPRoute{}, index.BackendServicesOnHTTPRouteIndex, func(obj client.Object) []string {
-			httpRoute, ok := obj.(*gwtypes.HTTPRoute)
-			if !ok {
-				return nil
-			}
-			var keys []string
-			for _, rule := range httpRoute.Spec.Rules {
-				for _, ref := range rule.BackendRefs {
-					keys = append(keys, httpRoute.Namespace+"/"+string(ref.BackendRef.Name))
-				}
-			}
-			return keys
-		}).
+		WithIndex(&gwtypes.HTTPRoute{}, index.BackendServicesOnHTTPRouteIndex, index.BackendServicesOnHTTPRoute).
 		Build()
 
 	mapFunc := MapRouteForService(cl, &gwtypes.HTTPRoute{})
@@ -293,19 +282,7 @@ func Test_MapRouteForService(t *testing.T) {
 		clDiffNS := fake.NewClientBuilder().
 			WithScheme(scheme).
 			WithObjects(otherSvc, httpRoute).
-			WithIndex(&gwtypes.HTTPRoute{}, index.BackendServicesOnHTTPRouteIndex, func(obj client.Object) []string {
-				httpRoute, ok := obj.(*gwtypes.HTTPRoute)
-				if !ok {
-					return nil
-				}
-				var keys []string
-				for _, rule := range httpRoute.Spec.Rules {
-					for _, ref := range rule.BackendRefs {
-						keys = append(keys, httpRoute.Namespace+"/"+string(ref.BackendRef.Name))
-					}
-				}
-				return keys
-			}).
+			WithIndex(&gwtypes.HTTPRoute{}, index.BackendServicesOnHTTPRouteIndex, index.BackendServicesOnHTTPRoute).
 			Build()
 		mapFuncDiffNS := MapRouteForService(clDiffNS, &gwtypes.HTTPRoute{})
 		ctx := context.Background()
@@ -356,6 +333,7 @@ func Test_MapRouteForEndpointSlice(t *testing.T) {
 					BackendRef: gwtypes.BackendRef{
 						BackendObjectReference: gwtypes.BackendObjectReference{
 							Name: gatewayv1.ObjectName("test-svc"),
+							Port: new(gatewayv1.PortNumber(80)),
 						},
 					},
 				}},
@@ -376,19 +354,7 @@ func Test_MapRouteForEndpointSlice(t *testing.T) {
 	cl := fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithObjects(svc, httpRoute, epSlice).
-		WithIndex(&gwtypes.HTTPRoute{}, index.BackendServicesOnHTTPRouteIndex, func(obj client.Object) []string {
-			httpRoute, ok := obj.(*gwtypes.HTTPRoute)
-			if !ok {
-				return nil
-			}
-			var keys []string
-			for _, rule := range httpRoute.Spec.Rules {
-				for _, ref := range rule.BackendRefs {
-					keys = append(keys, httpRoute.Namespace+"/"+string(ref.BackendRef.Name))
-				}
-			}
-			return keys
-		}).
+		WithIndex(&gwtypes.HTTPRoute{}, index.BackendServicesOnHTTPRouteIndex, index.BackendServicesOnHTTPRoute).
 		Build()
 
 	mapFunc := MapRouteForEndpointSlice(cl, &gwtypes.HTTPRoute{})

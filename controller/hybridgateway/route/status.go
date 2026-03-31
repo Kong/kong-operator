@@ -422,7 +422,7 @@ func getSpecHostnames[T gwtypes.SupportedRoute](route T) []gwtypes.Hostname {
 // This function provides granular feedback for each resource type, allowing users to see exactly which
 // resources are not programmed and why, improving troubleshooting and status visibility.
 func BuildProgrammedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](
-	ctx context.Context, logger logr.Logger, cl client.Client, route *gwtypes.HTTPRoute,
+	ctx context.Context, logger logr.Logger, cl client.Client, route TPtr,
 	pRef gwtypes.ParentReference, expectedGVKs []schema.GroupVersionKind) ([]metav1.Condition, error) {
 	var conditions []metav1.Condition
 	am := metadata.NewAnnotationManager(logger)
@@ -453,7 +453,7 @@ func BuildProgrammedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRo
 			// Check if the item is programmed.
 			prog := isProgrammed(&item)
 			log.Debug(logger, "Resource programmed status", "gvk", gvk.String(), "name", item.GetName(), "namespace", item.GetNamespace(), "programmed", prog)
-			conditions = append(conditions, *SetConditionMeta(GetProgrammedConditionForGVK(gvk, prog), route))
+			conditions = append(conditions, *SetConditionMeta[T](GetProgrammedConditionForGVK(gvk, prog), route))
 		}
 	}
 
@@ -554,7 +554,7 @@ func BuildResolvedRefsConditionForHTTPRoute(ctx context.Context, logger logr.Log
 	return SetConditionMeta(*cond, route), nil
 }
 
-// backendRefResolvedCondition returns the ResolvedRefs condition of the route according to the status of the given banckendRef in the route.
+// backendRefResolvedCondition returns the ResolvedRefs condition of the route according to the status of the given backendRef in the route.
 //
 // Parameters:
 //   - ctx: Context for API calls

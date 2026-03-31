@@ -1840,7 +1840,7 @@ func TestIsRouteReferenceGranted(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := IsRouteReferenceGranted(tt.grantSpec, tt.backendRef.BackendRef, "HTTPRoute", tt.fromNamespace)
 			if got != tt.want {
-				t.Errorf("IsHTTPReferenceGranted() = %v, want %v", got, tt.want)
+				t.Errorf("IsRouteReferenceGranted() = %v, want %v", got, tt.want)
 			}
 		})
 	}

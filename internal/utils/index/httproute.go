@@ -28,7 +28,7 @@ func OptionsForHTTPRoute() []Option {
 		{
 			Object:         &gwtypes.HTTPRoute{},
 			Field:          BackendServicesOnHTTPRouteIndex,
-			ExtractValueFn: backendServicesOnHTTPRoute,
+			ExtractValueFn: BackendServicesOnHTTPRoute,
 		},
 		{
 			Object:         &gwtypes.HTTPRoute{},
@@ -43,9 +43,9 @@ func OptionsForHTTPRoute() []Option {
 	}
 }
 
-// backendServicesOnHTTPRoute extracts and returns a list of unique Service references (in "namespace/name" format)
+// BackendServicesOnHTTPRoute extracts and returns a list of unique Service references (in "namespace/name" format)
 // from the BackendRefs of the given HTTPRoute object.
-func backendServicesOnHTTPRoute(o client.Object) []string {
+func BackendServicesOnHTTPRoute(o client.Object) []string {
 	httpRoute, ok := o.(*gwtypes.HTTPRoute)
 	if !ok {
 		return nil

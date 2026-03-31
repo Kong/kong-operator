@@ -20,7 +20,7 @@ import (
 // This file is for map functions shared by all supported routes in gateway APIs.
 
 // kongResource is a type constraint that encompasses all Kong resource types
-// that can be mapped back to HTTPRoutes via annotations.
+// that can be mapped back to routes with supported type via annotations.
 type kongResource interface {
 	*configurationv1alpha1.KongUpstream |
 		*configurationv1alpha1.KongTarget |
@@ -31,7 +31,7 @@ type kongResource interface {
 }
 
 // MapRouteForKongResource returns a handler.MapFunc that, given a Kong resource object of type T,
-// retrieves the routesreferenced in its annotations. It returns a slice of reconcile.Requests
+// retrieves the routes referenced in its annotations. It returns a slice of reconcile.Requests
 // for each matching route.
 func MapRouteForKongResource[T kongResource](cl client.Client) handler.MapFunc {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {

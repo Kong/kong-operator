@@ -11,7 +11,7 @@ import (
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
-func TestGatewaysOnRoute(t *testing.T) {
+func TestGatewaysOnRoute_HTTPRoute(t *testing.T) {
 	tests := []struct {
 		name string
 		obj  client.Object
@@ -109,7 +109,7 @@ func TestGatewaysOnRoute(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := GatewaysOnRoute(tt.obj)
+			got := GatewaysOnRoute[gwtypes.HTTPRoute](tt.obj)
 			require.ElementsMatch(t, tt.want, got)
 		})
 	}
