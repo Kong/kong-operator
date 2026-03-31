@@ -1398,18 +1398,30 @@ func (s fakeVaultSvc) Validate(_ context.Context, _ *kong.Vault) (bool, string, 
 
 func TestPluginServicesForAvailablePlugin(t *testing.T) {
 	ctx := t.Context()
-	svcs := []kong.AbstractPluginService{
-		&fakePluginSvc{getFullSchemaErr: kong.NewAPIError(http.StatusNotFound, "unknown plugin")},
-		&fakePluginSvc{},
-	}
 
 	t.Run("404 skipped others kept", func(t *testing.T) {
+		svcs := []kong.AbstractPluginService{
+			&fakePluginSvc{getFullSchemaErr: kong.NewAPIError(http.StatusNotFound, "unknown plugin")},
+			&fakePluginSvc{},
+		}
 		got, err := pluginServicesForAvailablePlugin(ctx, svcs, "my-plugin")
 		require.NoError(t, err)
 		require.Len(t, got, 1)
 	})
 
-	t.Run("non-404 error returned", func(t *testing.T) {
+	t.Run("first non-404 second schema ok is order-independent", func(t *testing.T) {
+		e503 := kong.NewAPIError(http.StatusServiceUnavailable, "upstream")
+		ok := &fakePluginSvc{}
+		got, err := pluginServicesForAvailablePlugin(ctx, []kong.AbstractPluginService{
+			&fakePluginSvc{getFullSchemaErr: e503},
+			ok,
+		}, "my-plugin")
+		require.NoError(t, err)
+		require.Len(t, got, 1)
+		require.Same(t, ok, got[0])
+	})
+
+	t.Run("single gateway non-404 only returns that error", func(t *testing.T) {
 		e := kong.NewAPIError(http.StatusServiceUnavailable, "upstream")
 		_, err := pluginServicesForAvailablePlugin(ctx, []kong.AbstractPluginService{
 			&fakePluginSvc{getFullSchemaErr: e},
@@ -1417,13 +1429,32 @@ func TestPluginServicesForAvailablePlugin(t *testing.T) {
 		require.ErrorIs(t, err, e)
 	})
 
-	t.Run("404 then non-404 returns non-404", func(t *testing.T) {
+	t.Run("404 then non-404 when no gateway exposes schema returns non-404", func(t *testing.T) {
 		e := kong.NewAPIError(http.StatusBadGateway, "bad")
 		_, err := pluginServicesForAvailablePlugin(ctx, []kong.AbstractPluginService{
 			&fakePluginSvc{getFullSchemaErr: kong.NewAPIError(http.StatusNotFound, "nope")},
 			&fakePluginSvc{getFullSchemaErr: e},
 		}, "my-plugin")
 		require.ErrorIs(t, err, e)
+	})
+
+	t.Run("non-404 then 404 when no gateway exposes schema returns first error", func(t *testing.T) {
+		e := kong.NewAPIError(http.StatusServiceUnavailable, "first")
+		_, err := pluginServicesForAvailablePlugin(ctx, []kong.AbstractPluginService{
+			&fakePluginSvc{getFullSchemaErr: e},
+			&fakePluginSvc{getFullSchemaErr: kong.NewAPIError(http.StatusNotFound, "nope")},
+		}, "my-plugin")
+		require.ErrorIs(t, err, e)
+	})
+
+	t.Run("multiple non-404 no success returns first probe error", func(t *testing.T) {
+		first := kong.NewAPIError(http.StatusBadGateway, "first")
+		second := kong.NewAPIError(http.StatusGatewayTimeout, "second")
+		_, err := pluginServicesForAvailablePlugin(ctx, []kong.AbstractPluginService{
+			&fakePluginSvc{getFullSchemaErr: first},
+			&fakePluginSvc{getFullSchemaErr: second},
+		}, "my-plugin")
+		require.ErrorIs(t, err, first)
 	})
 
 	t.Run("all 404 yields empty", func(t *testing.T) {

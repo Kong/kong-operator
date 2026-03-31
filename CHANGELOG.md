@@ -156,10 +156,11 @@
 - Revert change in configuring SNIs in ingress-controller when running with local controlplane.
   [#3761](https://github.com/Kong/kong-operator/pull/3761)
 - Fix `KongPlugin` admission validation when multiple Kong Gateway Admin API
-  clients are discovered: probe plugin schema per gateway and validate only on
-  gateways that expose the plugin, falling back to the previous single-client
-  behavior when none match. Avoids false rejections when plugin bundles differ
-  across gateways.
+  clients are discovered: probe plugin schema on every gateway (order-independent),
+  validate only on gateways that expose the plugin, and fall back to the previous
+  single-client behavior when none match. Partial probe failures on one gateway do
+  not reject admission if another gateway exposes the plugin. Avoids false rejections
+  when plugin bundles differ across gateways.
   [#3737](https://github.com/Kong/kong-operator/issues/3737)
 
 ## [v2.1.3]
