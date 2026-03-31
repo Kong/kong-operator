@@ -569,7 +569,10 @@ func (validator KongHTTPValidator) validatePluginAgainstGatewaySchema(ctx contex
 	if multiGatewayProvider, ok := validator.AdminAPIServicesProvider.(MultiGatewayAdminAPIServicesProvider); ok {
 		pluginServices := multiGatewayProvider.GetPluginsServices()
 		if len(pluginServices) > 0 && plugin.Name != nil {
-			availablePluginServices := pluginServicesForAvailablePlugin(ctx, pluginServices, *plugin.Name)
+			availablePluginServices, err := pluginServicesForAvailablePlugin(ctx, pluginServices, *plugin.Name)
+			if err != nil {
+				return ErrTextPluginConfigValidationFailed, err
+			}
 			if len(availablePluginServices) > 0 {
 				return validatePluginAcrossPluginServices(ctx, availablePluginServices, plugin)
 			}
@@ -591,18 +594,27 @@ func (validator KongHTTPValidator) validatePluginAgainstGatewaySchema(ctx contex
 	return "", nil
 }
 
+// pluginServicesForAvailablePlugin returns plugin services for gateways that expose the plugin schema.
+// A 404 from GetFullSchema means the plugin is not available on that gateway and that client is skipped.
+// Any other error is returned immediately so transient Admin API failures are not mistaken for "plugin absent".
 func pluginServicesForAvailablePlugin(
 	ctx context.Context,
 	pluginServices []kong.AbstractPluginService,
 	pluginName string,
-) []kong.AbstractPluginService {
+) ([]kong.AbstractPluginService, error) {
 	available := make([]kong.AbstractPluginService, 0, len(pluginServices))
 	for _, ps := range pluginServices {
-		if _, err := ps.GetFullSchema(ctx, &pluginName); err == nil {
+		_, err := ps.GetFullSchema(ctx, &pluginName)
+		switch {
+		case err == nil:
 			available = append(available, ps)
+		case kong.IsNotFoundErr(err):
+			// Plugin not installed / not exposed on this gateway.
+		default:
+			return nil, err
 		}
 	}
-	return available
+	return available, nil
 }
 
 // validatePluginAcrossPluginServices returns success if any gateway validates the plugin.
