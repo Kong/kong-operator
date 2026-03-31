@@ -594,15 +594,19 @@ func (validator KongHTTPValidator) validatePluginAgainstGatewaySchema(ctx contex
 	return "", nil
 }
 
-// pluginServicesForAvailablePlugin returns plugin services for gateways that expose the plugin schema.
-// A 404 from GetFullSchema means the plugin is not available on that gateway and that client is skipped.
-// Any other error is returned immediately so transient Admin API failures are not mistaken for "plugin absent".
+// pluginServicesForAvailablePlugin returns plugin services for gateways that expose the plugin schema
+// (GetFullSchema succeeds). A 404 means the plugin is not available on that gateway and is skipped.
+// Other probe errors are remembered but do not stop the scan: if any gateway exposes the schema,
+// those services are returned and probe failures on other gateways are ignored. If no gateway
+// exposes the schema, the first non-404 probe error is returned (when present); otherwise an empty
+// slice and nil error (all 404), so callers can fall back to legacy validation.
 func pluginServicesForAvailablePlugin(
 	ctx context.Context,
 	pluginServices []kong.AbstractPluginService,
 	pluginName string,
 ) ([]kong.AbstractPluginService, error) {
 	available := make([]kong.AbstractPluginService, 0, len(pluginServices))
+	var firstProbeErr error
 	for _, ps := range pluginServices {
 		_, err := ps.GetFullSchema(ctx, &pluginName)
 		switch {
@@ -611,8 +615,16 @@ func pluginServicesForAvailablePlugin(
 		case kong.IsNotFoundErr(err):
 			// Plugin not installed / not exposed on this gateway.
 		default:
-			return nil, err
+			if firstProbeErr == nil {
+				firstProbeErr = err
+			}
 		}
+	}
+	if len(available) > 0 {
+		return available, nil
+	}
+	if firstProbeErr != nil {
+		return nil, firstProbeErr
 	}
 	return available, nil
 }
