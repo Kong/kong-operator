@@ -288,7 +288,7 @@ func GetControlPlaneByID(
 	ctx context.Context,
 	sdk sdkkonnectgo.ControlPlanesSDK,
 	id string,
-) (*sdkkonnectcomp.ControlPlane1, error) {
+) (*sdkkonnectcomp.ControlPlane, error) {
 	reqList := sdkkonnectops.ListControlPlanesRequest{
 		Filter: &sdkkonnectcomp.ControlPlaneFilterParameters{
 			ID: &sdkkonnectcomp.ID{
