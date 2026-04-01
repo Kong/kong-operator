@@ -109,6 +109,11 @@
   against the Konnect API. The controller sets status conditions and the Konnect entity ID
   on the resource. The feature is gated behind the `MCPController` feature gate.
   [#3739](https://github.com/Kong/kong-operator/pull/3739)
+- Added `MCPServer` reconciler that manages owned Kubernetes workloads (Deployments
+  and Services) for `MCPServer` resources. The reconciler fetches MCP server configuration
+  from Konnect via the signal manager and reconciles the corresponding local resources.
+  The feature is gated behind the `MCPController` feature gate.
+  [#3755](https://github.com/Kong/kong-operator/pull/3755)
 
 ### Changed
 

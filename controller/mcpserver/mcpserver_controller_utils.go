@@ -1,6 +1,43 @@
 package mcpserver
 
-import konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+
+	"k8s.io/apimachinery/pkg/types"
+
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	konnectcontroller "github.com/kong/kong-operator/v2/controller/konnect"
+	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
+	"github.com/kong/kong-operator/v2/controller/konnect/server"
+)
+
+// generateHashedName builds a Kubernetes-safe NamespacedName from a namespace,
+// a name prefix, and a hash key. The key is SHA-256 hashed and truncated to
+// 8 hex characters. The total name is capped at 63 characters (DNS label limit),
+// with the 8-char hash suffix always preserved; the prefix is truncated if needed.
+func generateHashedName(namespace, prefix, hashKey string) types.NamespacedName {
+	const maxLen = 63
+
+	hash := sha256.Sum256([]byte(hashKey))
+	shortHash := hex.EncodeToString(hash[:])[:8]
+	suffix := "-" + shortHash // 9 chars
+
+	maxPrefix := maxLen - len(suffix)
+	if len(prefix) > maxPrefix {
+		prefix = prefix[:maxPrefix]
+		for len(prefix) > 0 && prefix[len(prefix)-1] == '-' {
+			prefix = prefix[:len(prefix)-1]
+		}
+	}
+
+	return types.NamespacedName{
+		Namespace: namespace,
+		Name:      prefix + suffix,
+	}
+}
 
 // ownerControlPlaneName returns the name of the KonnectGatewayControlPlane that
 // owns the given MCPServer, or an empty string if no such owner is found.
@@ -11,4 +48,33 @@ func ownerControlPlaneName(mcpServer *konnectv1alpha1.MCPServer) string {
 		}
 	}
 	return ""
+}
+
+// buildSDK resolves the KonnectAPIAuthConfiguration for the given MCPServer
+// and returns an authenticated SDK wrapper.
+func (r *MCPServerReconciler) buildSDK(
+	ctx context.Context,
+	mcpServer *konnectv1alpha1.MCPServer,
+) (sdkops.SDKWrapper, error) {
+	apiAuthRef, err := konnectcontroller.GetAPIAuthRefNN(ctx, r.Client, mcpServer)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get APIAuth ref: %w", err)
+	}
+
+	var apiAuth konnectv1alpha1.KonnectAPIAuthConfiguration
+	if err := r.Get(ctx, apiAuthRef, &apiAuth); err != nil {
+		return nil, fmt.Errorf("failed to get KonnectAPIAuthConfiguration %s: %w", apiAuthRef, err)
+	}
+
+	token, err := konnectcontroller.GetTokenFromKonnectAPIAuthConfiguration(ctx, r.Client, &apiAuth)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get token from KonnectAPIAuthConfiguration %s: %w", apiAuthRef, err)
+	}
+
+	srv, err := server.NewServer[konnectv1alpha1.MCPServer](apiAuth.Spec.ServerURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse server URL from KonnectAPIAuthConfiguration %s: %w", apiAuthRef, err)
+	}
+
+	return r.SdkFactory.NewKonnectSDK(srv, sdkops.SDKToken(token)), nil
 }

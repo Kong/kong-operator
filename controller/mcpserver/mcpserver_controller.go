@@ -4,16 +4,29 @@ import (
 	"context"
 	"fmt"
 
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	"github.com/kong/kong-operator/v2/controller/pkg/op"
+	"github.com/kong/kong-operator/v2/controller/pkg/patch"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
+)
+
+const (
+	// TriggerChannelBufSize is the buffer size for the channel used to
+	// enqueue artificial reconciliation events.
+	TriggerChannelBufSize = 100
 )
 
 // MCPServerReconciler reconciles a MCPServer object.
@@ -26,6 +39,11 @@ type MCPServerReconciler struct {
 	LoggingMode       logging.Mode
 	SignalManager     *SignalManager
 	SdkFactory        sdkops.SDKFactory
+
+	// ReconcileEventCh allows external callers to push synthetic reconciliation
+	// events so that a Reconcile loop starts without an actual change on the
+	// MCPServer CRD.
+	ReconcileEventCh chan event.GenericEvent
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -33,6 +51,14 @@ func (r *MCPServerReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Man
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(r.ControllerOptions).
 		For(&konnectv1alpha1.MCPServer{}).
+		Owns(&appsv1.Deployment{}).
+		Owns(&corev1.Service{}).
+		WatchesRawSource(
+			source.Channel(
+				r.ReconcileEventCh,
+				&handler.EnqueueRequestForObject{},
+			),
+		).
 		Complete(r)
 }
 
@@ -71,7 +97,67 @@ func (r *MCPServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, nil
 	}
 
-	// TODO: Ensure deployment, service, and kong entities
+	// Fetch the remote MCPServer from Konnect by its ID.
+	mcpServerID := mcpServer.GetKonnectID()
+	if mcpServerID == "" {
+		log.Debug(logger, "Waiting for the MCPServer to get the ID assigned", "namespace", mcpServer.Namespace, "name", mcpServer.Name)
+		return ctrl.Result{}, nil
+	}
+	cpID := mcpServer.GetControlPlaneID()
+	if cpID == "" {
+		log.Debug(logger, "Waiting for the MCPServer to get the ControlPlane ID assigned", "namespace", mcpServer.Namespace, "name", mcpServer.Name)
+		return ctrl.Result{}, nil
+	}
+
+	// Resolve the reference chain to KonnectAPIAuthConfiguration and build the SDK.
+	sdk, err := r.buildSDK(ctx, &mcpServer)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to build SDK for MCPServer %s/%s: %w",
+			mcpServer.Namespace, mcpServer.Name, err)
+	}
+
+	resp, err := sdk.GetMCPServersSDK().GetMcpServerByControlPlane(ctx, cpID, mcpServerID)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to get MCPServer %s/%s from Konnect: %w",
+			mcpServer.Namespace, mcpServer.Name, err)
+	}
+	if resp == nil || resp.MCPServerCPInfo == nil {
+		return ctrl.Result{}, fmt.Errorf("got nil response for MCPServer %s/%s from Konnect",
+			mcpServer.Namespace, mcpServer.Name)
+	}
+	remoteMCPServer := resp.MCPServerCPInfo
+
+	// Ensure a Deployment exists for this MCPServer.
+	res, _, err := r.ensureDeployment(ctx, &mcpServer, remoteMCPServer)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if res != op.Noop {
+		log.Info(logger, fmt.Sprintf("%s Deployment for MCPServer", res), "namespace", mcpServer.Namespace, "name", mcpServer.Name)
+	}
+
+	// Ensure a Service exists for this MCPServer.
+	svcRes, _, err := r.ensureService(ctx, &mcpServer)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if svcRes != op.Noop {
+		log.Info(logger, fmt.Sprintf("%s Service for MCPServer", svcRes), "namespace", mcpServer.Namespace, "name", mcpServer.Name)
+	}
+
+	// TODO: Ensure kong entities
+
+	// Patch the MCPServer status with the remote version.
+	version := remoteMCPServer.Version
+	old := mcpServer.DeepCopy()
+	mcpServer.Status.Version = &version
+	statusRes, err := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, &mcpServer, old)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if statusRes != op.Noop {
+		log.Info(logger, "patched MCPServer status", "namespace", mcpServer.Namespace, "name", mcpServer.Name)
+	}
 
 	return ctrl.Result{}, nil
 }

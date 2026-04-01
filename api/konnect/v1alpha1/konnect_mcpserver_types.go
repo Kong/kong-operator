@@ -90,6 +90,7 @@ type MCPServerStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 
 	konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef `json:",inline"` //nolint:embeddedstructfieldcheck
+	MCPServerWorkloadsStatus                               `json:",inline"`
 }
 
 // MCPServerList contains a list of MCPServer resources.
@@ -100,4 +101,12 @@ type MCPServerList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 
 	Items []MCPServer `json:"items"`
+}
+
+// MCPServerWorkloadsStatus defines the observed state of the MCPServer workloads.
+type MCPServerWorkloadsStatus struct {
+	// Version is the version of the MCPServer workloads.
+	//
+	// +optional
+	Version *string `json:"version,omitempty"`
 }
