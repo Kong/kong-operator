@@ -6,6 +6,7 @@ import (
 	"maps"
 	"strings"
 
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -42,6 +43,12 @@ func NewKongRoute() *KongRouteBuilder {
 // WithHosts sets the hosts for the KongRoute being built.
 func (b *KongRouteBuilder) WithHosts(hosts []string) *KongRouteBuilder {
 	b.route.Spec.Hosts = append(b.route.Spec.Hosts, hosts...)
+	return b
+}
+
+// WithProtocols sets the allowed protocols for the KongRoute being built.
+func (b *KongRouteBuilder) WithProtocols(protocols ...sdkkonnectcomp.RouteJSONProtocols) *KongRouteBuilder {
+	b.route.Spec.Protocols = append(b.route.Spec.Protocols, protocols...)
 	return b
 }
 

@@ -39,6 +39,14 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## Unreleased
+
+### Fixes
+
+- Fix the hybrid gateway translator to set `protocols` in translated KongRoutes
+  to `http,https` to avoid 426 errors from Konnect hybrid gateways.
+  [#3753](https://github.com/Kong/kong-operator/pull/3753)
+
 ## [v2.1.3]
 
 > Release date: 2026-03-25

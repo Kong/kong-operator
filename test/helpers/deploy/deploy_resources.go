@@ -528,6 +528,11 @@ func KongRoute(
 		Spec: configurationv1alpha1.KongRouteSpec{
 			KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
 				Name: lo.ToPtr(name),
+				Protocols: []sdkkonnectcomp.RouteJSONProtocols{
+					sdkkonnectcomp.RouteJSONProtocolsHTTP,
+					sdkkonnectcomp.RouteJSONProtocolsHTTPS,
+				},
+				Methods: []string{"GET"},
 			},
 		},
 	}

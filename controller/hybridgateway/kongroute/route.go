@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -70,6 +71,11 @@ func RouteForRule(
 	// Check if the rule contains a URLRewrite or RequestRedirect filter with ReplacePrefixMatch:
 	// if so, we need to set a capture group on the KongRoute paths.
 	setCaptureGroup := needsCaptureGroup(rule)
+
+	routeBuilder = routeBuilder.WithProtocols(
+		sdkkonnectcomp.RouteJSONProtocols("http"),
+		sdkkonnectcomp.RouteJSONProtocols("https"),
+	)
 
 	// Add HTTPRoute matches
 	for _, match := range rule.Matches {
