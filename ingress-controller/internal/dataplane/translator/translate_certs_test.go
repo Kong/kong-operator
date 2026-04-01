@@ -12,6 +12,67 @@ import (
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 )
 
+func TestGetCertAlgorithm(t *testing.T) {
+	rsaCert, _ := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("rsa.example.com"))
+	ecdsaCert, _ := certificate.MustGenerateCertPEMFormat(
+		certificate.WithCommonName("ecdsa.example.com"),
+		certificate.WithKeyType(certificate.ECDSA),
+	)
+
+	algo, err := getCertAlgorithm(string(rsaCert))
+	require.NoError(t, err)
+	require.Equal(t, "RSA", algo.String())
+
+	algo, err = getCertAlgorithm(string(ecdsaCert))
+	require.NoError(t, err)
+	require.Equal(t, "ECDSA", algo.String())
+
+	_, err = getCertAlgorithm("not a pem block")
+	require.Error(t, err)
+}
+
+func TestVerifyCertSANsMatch(t *testing.T) {
+	rsaCert, _ := certificate.MustGenerateCertPEMFormat(
+		certificate.WithCommonName("example.com"),
+		certificate.WithDNSNames("example.com", "www.example.com"),
+	)
+	ecdsaCert, _ := certificate.MustGenerateCertPEMFormat(
+		certificate.WithCommonName("example.com"),
+		certificate.WithDNSNames("example.com", "www.example.com"),
+		certificate.WithKeyType(certificate.ECDSA),
+	)
+
+	// same CN and SANs — should pass
+	require.NoError(t, verifyCertSANsMatch(string(rsaCert), string(ecdsaCert)))
+
+	// different CN — should fail
+	other, _ := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("other.com"))
+	require.Error(t, verifyCertSANsMatch(string(rsaCert), string(other)))
+
+	// different SANs — should fail
+	diffSAN, _ := certificate.MustGenerateCertPEMFormat(
+		certificate.WithCommonName("example.com"),
+		certificate.WithDNSNames("example.com"),
+	)
+	require.Error(t, verifyCertSANsMatch(string(rsaCert), string(diffSAN)))
+
+	// same SANs in different order — should pass (order must not matter)
+	ecdsaReversedSANs, _ := certificate.MustGenerateCertPEMFormat(
+		certificate.WithCommonName("example.com"),
+		certificate.WithDNSNames("www.example.com", "example.com"),
+		certificate.WithKeyType(certificate.ECDSA),
+	)
+	require.NoError(t, verifyCertSANsMatch(string(rsaCert), string(ecdsaReversedSANs)))
+
+	// both certs with no DNS SANs, only CN — should pass
+	rsaNoDNS, _ := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("nodns.com"))
+	ecdsaNoDNS, _ := certificate.MustGenerateCertPEMFormat(
+		certificate.WithCommonName("nodns.com"),
+		certificate.WithKeyType(certificate.ECDSA),
+	)
+	require.NoError(t, verifyCertSANsMatch(string(rsaNoDNS), string(ecdsaNoDNS)))
+}
+
 func TestMergeCerts(t *testing.T) {
 	crt1, key1 := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("foo.com"))
 	crt2, key2 := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("bar.com"))
