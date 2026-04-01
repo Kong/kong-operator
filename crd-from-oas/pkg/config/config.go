@@ -68,6 +68,12 @@ type TypeConfig struct {
 	// Ops maps operation names (e.g. "create", "update") to SDK type configurations.
 	// When set, conversion methods are generated on the entity's APISpec type.
 	Ops map[string]*OpConfig `yaml:"ops,omitempty"`
+	// OptionalSecretReference enables generation of a union type field on the
+	// Spec that allows the user to provide sensitive data either inline in the
+	// APISpec or via a Kubernetes Secret reference. When true the generated Spec
+	// will include a SourceType discriminator (inline / secretRef), and a
+	// SecretRef field of type NamespacedRef.
+	OptionalSecretReference bool `yaml:"optionalSecretReference,omitempty"`
 }
 
 // OpConfig holds configuration for a single SDK operation.
@@ -120,6 +126,23 @@ func (c *APIGroupVersionConfig) FieldConfig(pathToEntityName map[string]string) 
 		entities[entityName] = &EntityConfig{Fields: tc.CEL}
 	}
 	return &Config{Entities: entities}
+}
+
+// SecretRefEntities returns the set of entity names that have
+// OptionalSecretReference enabled, using the provided pathToEntityName mapping.
+func (c *APIGroupVersionConfig) SecretRefEntities(pathToEntityName map[string]string) map[string]bool {
+	result := make(map[string]bool)
+	for _, tc := range c.Types {
+		if !tc.OptionalSecretReference {
+			continue
+		}
+		entityName, ok := pathToEntityName[tc.Path]
+		if !ok {
+			continue
+		}
+		result[entityName] = true
+	}
+	return result
 }
 
 // OpsConfig builds a mapping from entity name to operations config using the provided

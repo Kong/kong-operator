@@ -58,10 +58,28 @@ type {{.EntityName}}Spec struct {
 	// +required
 	{{.FieldName}} {{objectRefTypeName}} ` + "`" + `json:"{{.JSONName}},omitzero"` + "`" + `
 {{end}}
+{{- if .HasOptionalSecretRef}}
+	// Type indicates the source of the sensitive data.
+	// Can be 'inline' or 'secretRef'.
+	//
+	// +kubebuilder:validation:Enum=inline;secretRef
+	// +kubebuilder:default=inline
+	// +optional
+	Type *{{.EntityName}}SourceType ` + "`" + `json:"type,omitempty"` + "`" + `
+{{end}}
 	// APISpec defines the desired state of the resource's API spec fields.
 	//
 	// +optional
 	APISpec {{.EntityName}}APISpec ` + "`" + `json:"apiSpec,omitzero"` + "`" + `
+{{- if .HasOptionalSecretRef}}
+
+	// SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+	// This field is used when type is 'secretRef'.
+	// The Secret must contain the relevant data keys for this resource.
+	//
+	// +optional
+	SecretRef *{{namespacedRefTypeName}} ` + "`" + `json:"secretRef,omitempty"` + "`" + `
+{{- end}}
 }
 
 // {{.EntityName}}APISpec defines the API spec fields for {{.EntityName}}.
@@ -116,6 +134,18 @@ type {{.EntityName}}Status struct {
 	// +optional
 	ObservedGeneration int64 ` + "`" + `json:"observedGeneration,omitempty"` + "`" + `
 }
+{{- if .HasOptionalSecretRef}}
+
+// {{.EntityName}}SourceType is the type of source for the sensitive data.
+type {{.EntityName}}SourceType string
+
+const (
+	// {{.EntityName}}SourceTypeInline indicates that the data is provided inline in the APISpec.
+	{{.EntityName}}SourceTypeInline {{.EntityName}}SourceType = "inline"
+	// {{.EntityName}}SourceTypeSecretRef indicates that the data is sourced from a Kubernetes Secret.
+	{{.EntityName}}SourceTypeSecretRef {{.EntityName}}SourceType = "secretRef"
+)
+{{- end}}
 
 func init() {
 	SchemeBuilder.Register(&{{.EntityName}}{}, &{{.EntityName}}List{})

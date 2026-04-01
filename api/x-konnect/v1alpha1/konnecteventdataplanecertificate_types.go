@@ -46,10 +46,25 @@ type KonnectEventDataPlaneCertificateSpec struct {
 	// +required
 	GatewayRef commonv1alpha1.ObjectRef `json:"gateway_ref,omitzero"`
 
+	// Type indicates the source of the sensitive data.
+	// Can be 'inline' or 'secretRef'.
+	//
+	// +kubebuilder:validation:Enum=inline;secretRef
+	// +kubebuilder:default=inline
+	// +optional
+	Type *KonnectEventDataPlaneCertificateSourceType `json:"type,omitempty"`
+
 	// APISpec defines the desired state of the resource's API spec fields.
 	//
 	// +optional
 	APISpec KonnectEventDataPlaneCertificateAPISpec `json:"apiSpec,omitzero"`
+
+	// SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+	// This field is used when type is 'secretRef'.
+	// The Secret must contain the relevant data keys for this resource.
+	//
+	// +optional
+	SecretRef *commonv1alpha1.NamespacedRef `json:"secretRef,omitempty"`
 }
 
 // KonnectEventDataPlaneCertificateAPISpec defines the API spec fields for KonnectEventDataPlaneCertificate.
@@ -101,6 +116,16 @@ type KonnectEventDataPlaneCertificateStatus struct {
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
+
+// KonnectEventDataPlaneCertificateSourceType is the type of source for the sensitive data.
+type KonnectEventDataPlaneCertificateSourceType string
+
+const (
+	// KonnectEventDataPlaneCertificateSourceTypeInline indicates that the data is provided inline in the APISpec.
+	KonnectEventDataPlaneCertificateSourceTypeInline KonnectEventDataPlaneCertificateSourceType = "inline"
+	// KonnectEventDataPlaneCertificateSourceTypeSecretRef indicates that the data is sourced from a Kubernetes Secret.
+	KonnectEventDataPlaneCertificateSourceTypeSecretRef KonnectEventDataPlaneCertificateSourceType = "secretRef"
+)
 
 func init() {
 	SchemeBuilder.Register(&KonnectEventDataPlaneCertificate{}, &KonnectEventDataPlaneCertificateList{})

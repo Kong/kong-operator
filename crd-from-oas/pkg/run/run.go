@@ -80,12 +80,13 @@ func (r *Runner) Run(
 
 		// Generate CRD types
 		gen := generator.NewGenerator(generator.Config{
-			APIGroup:       apiGroup,
-			APIVersion:     apiVersion,
-			GenerateStatus: true,
-			FieldConfig:    agvConfig.FieldConfig(pathToEntityName),
-			OpsConfig:      agvConfig.OpsConfig(pathToEntityName),
-			CommonTypes:    agvConfig.CommonTypes,
+			APIGroup:          apiGroup,
+			APIVersion:        apiVersion,
+			GenerateStatus:    true,
+			FieldConfig:       agvConfig.FieldConfig(pathToEntityName),
+			OpsConfig:         agvConfig.OpsConfig(pathToEntityName),
+			CommonTypes:       agvConfig.CommonTypes,
+			SecretRefEntities: agvConfig.SecretRefEntities(pathToEntityName),
 		})
 
 		files, err := gen.Generate(parsed)
