@@ -188,5 +188,6 @@ func getKongConsumerGroupForUID(
 		return "", fmt.Errorf("failed listing %s: %w", cg.GetTypeName(), ErrNilResponse)
 	}
 
-	return getMatchingEntryFromListResponseData(sliceToEntityWithIDPtrSlice(resp.Object.Data), cg)
+	_, id, err := getMatchingEntryFromListResponseData(sliceToEntityWithIDPtrSlice(resp.Object.Data), cg)
+	return id, err
 }

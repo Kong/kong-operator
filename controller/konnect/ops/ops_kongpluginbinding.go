@@ -139,7 +139,8 @@ func getPluginForUID(
 		return "", fmt.Errorf("failed listing %s: %w", pluginBinding.GetTypeName(), ErrNilResponse)
 	}
 
-	return getMatchingEntryFromListResponseData(sliceToEntityWithIDPtrSlice(resp.Object.Data), pluginBinding)
+	_, id, err := getMatchingEntryFromListResponseData(sliceToEntityWithIDPtrSlice(resp.Object.Data), pluginBinding)
+	return id, err
 }
 
 func adoptPluginBinding(

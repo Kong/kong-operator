@@ -245,12 +245,13 @@ func getKongRouteForUID(
 		return "", fmt.Errorf("failed listing %s: %w", r.GetTypeName(), ErrNilResponse)
 	}
 
-	return getMatchingEntryFromListResponseData(
+	_, id, err := getMatchingEntryFromListResponseData(
 		sliceToEntityWithIDPtrSlice(
 			lo.Map(resp.Object.Data, func(route sdkkonnectcomp.Route, _ int) sdkkonnectcomp.RouteJSON {
 				return *route.RouteJSON
 			}),
 		), r)
+	return id, err
 }
 
 // routeHeadersMatch compares two header matches in the two routes.

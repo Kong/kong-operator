@@ -208,7 +208,8 @@ func getKongServiceForUID(
 		return "", fmt.Errorf("failed listing %s: %w", svc.GetTypeName(), ErrNilResponse)
 	}
 
-	return getMatchingEntryFromListResponseData(sliceToEntityWithIDPtrSlice(resp.Object.Data), svc)
+	_, id, err := getMatchingEntryFromListResponseData(sliceToEntityWithIDPtrSlice(resp.Object.Data), svc)
+	return id, err
 }
 
 // serviceMatch compares the existing service fetched from Konnect and the spec of the KongService

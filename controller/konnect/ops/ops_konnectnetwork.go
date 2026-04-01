@@ -109,7 +109,7 @@ func getKonnectNetworkMatchingSpecName(
 		return "", fmt.Errorf("failed listing %s: %w", n.GetTypeName(), ErrNilResponse)
 	}
 
-	id, err := getMatchingEntryFromListResponseData(sliceToEntityWithIDSlice(resp.ListNetworksResponse.Data), n)
+	_, id, err := getMatchingEntryFromListResponseData(sliceToEntityWithIDSlice(resp.ListNetworksResponse.Data), n)
 	if err != nil {
 		return "", err
 	}
