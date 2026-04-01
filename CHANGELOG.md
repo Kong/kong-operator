@@ -46,6 +46,12 @@
 
 ### Added
 
+- Support multiple `certificateRefs` per Gateway Listener (up to two): one RSA
+  and one ECDSA certificate. Kong stores the RSA cert in `cert`/`key` and the
+  ECDSA cert in `cert_alt`/`key_alt`, selecting the appropriate certificate at
+  TLS handshake time based on client algorithm support. Both certificates must
+  cover the same CN and DNS SANs.
+  [#3758](https://github.com/Kong/kong-operator/pull/3758)
 - TLSRoute support: Configure DataPlaneOption in created `DataPlane` to
   configure Kong DataPlane deployment and ingress service for listeners with
   `TLS` protocol.
