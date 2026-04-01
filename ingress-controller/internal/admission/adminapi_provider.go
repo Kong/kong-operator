@@ -95,7 +95,5 @@ func (p DefaultAdminAPIServicesProvider) designatedAdminAPIClient() (*kong.Clien
 	// Uses the first discovered gateway for Admin API calls (consumers, routes, etc.).
 	// KongPlugin admission can opt into multi-gateway plugin service selection through
 	// the optional GetPluginsServices() extension.
-	//
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/3363
 	return gwClients[0].AdminAPIClient(), true
 }

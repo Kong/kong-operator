@@ -34,7 +34,6 @@ import (
 )
 
 func TestKongPluginInstallationEssentials(t *testing.T) {
-	t.Skip("skipping until https://github.com/Kong/kong-operator/issues/2867 is resolved")
 	t.Parallel()
 	ctx := t.Context()
 	clients := integration.GetClients()

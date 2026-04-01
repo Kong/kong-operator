@@ -1469,7 +1469,7 @@ func TestPluginServicesForAvailablePlugin(t *testing.T) {
 
 func TestValidatePluginAcrossPluginServices(t *testing.T) {
 	ctx := t.Context()
-	plugin := kong.Plugin{Name: kong.String("test")}
+	plugin := kong.Plugin{Name: new("test")}
 
 	t.Run("first invalid second valid", func(t *testing.T) {
 		msg, err := validatePluginAcrossPluginServices(ctx, []kong.AbstractPluginService{

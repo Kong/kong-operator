@@ -161,7 +161,7 @@
   single-client behavior when none match. Partial probe failures on one gateway do
   not reject admission if another gateway exposes the plugin. Avoids false rejections
   when plugin bundles differ across gateways.
-  [#3737](https://github.com/Kong/kong-operator/issues/3737)
+  [#3754](https://github.com/Kong/kong-operator/pull/3754)
 
 ## [v2.1.3]
 
