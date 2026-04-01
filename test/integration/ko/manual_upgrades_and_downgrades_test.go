@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"testing"
@@ -22,11 +23,14 @@ import (
 	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
 	"github.com/kong/kong-operator/v2/pkg/vars"
 	"github.com/kong/kong-operator/v2/test/helpers"
+	"github.com/kong/kong-operator/v2/test/integration"
 )
 
 func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 	t.Parallel()
-	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
+	ctx := t.Context()
+	namespace, cleaner := helpers.SetupTestEnv(t, ctx, integration.GetEnv())
+	cl := integration.GetClients().MgrClient
 
 	originalDataPlaneImageName := helpers.GetDefaultDataPlaneBaseImage()
 	originalDataPlaneImageVersion := "3.3.0"
@@ -66,7 +70,7 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 		},
 	}
 	var err error
-	gatewayConfig, err = GetClients().OperatorClient.GatewayOperatorV2beta1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
+	gatewayConfig, err = integration.GetClients().OperatorClient.GatewayOperatorV2beta1().GatewayConfigurations(namespace.Name).Create(ctx, gatewayConfig, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayConfig)
 
@@ -85,7 +89,7 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 			ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
 		},
 	}
-	gatewayClass, err = GetClients().GatewayClient.GatewayV1().GatewayClasses().Create(GetCtx(), gatewayClass, metav1.CreateOptions{})
+	gatewayClass, err = integration.GetClients().GatewayClient.GatewayV1().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
 
@@ -104,13 +108,13 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 			}},
 		},
 	}
-	gateway, err = GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Create(GetCtx(), gateway, metav1.CreateOptions{})
+	gateway, err = integration.GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 
 	t.Log("verifying that the DataPlane receives the configuration override")
 	require.Eventually(t, func() bool {
-		dataplanes, err := gatewayutils.ListDataPlanesForGateway(GetCtx(), GetClients().MgrClient, gateway)
+		dataplanes, err := gatewayutils.ListDataPlanesForGateway(ctx, integration.GetClients().MgrClient, gateway)
 		if err != nil {
 			return false
 		}
@@ -126,18 +130,18 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 
 	t.Log("verifying initial pod images for Gateway")
 	require.Eventually(t, func() bool {
-		upToDate, err := verifyContainerImageForGateway(gateway, originalDataPlaneImage)
+		upToDate, err := verifyContainerImageForGateway(ctx, cl, gateway, originalDataPlaneImage)
 		return err == nil && upToDate
 	}, time.Minute, time.Second)
 
 	t.Log("upgrading the DataPlane version for the Gateway")
 	require.Eventually(t, func() bool {
-		return changeDataPlaneImage(gatewayConfig, originalDataPlaneImageName, newDataPlaneImageVersion) == nil
+		return changeDataPlaneImage(ctx, gatewayConfig, originalDataPlaneImageName, newDataPlaneImageVersion) == nil
 	}, testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick)
 
 	t.Log("verifying that the DataPlane receives the configuration override")
 	require.Eventually(t, func() bool {
-		dataplanes, err := gatewayutils.ListDataPlanesForGateway(GetCtx(), GetClients().MgrClient, gateway)
+		dataplanes, err := gatewayutils.ListDataPlanesForGateway(ctx, integration.GetClients().MgrClient, gateway)
 		if err != nil {
 			return false
 		}
@@ -153,18 +157,18 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 
 	t.Log("verifying upgraded DataPlane Pod images for Gateway")
 	require.Eventually(t, func() bool {
-		upToDate, err := verifyContainerImageForGateway(gateway, newDataPlaneImage)
+		upToDate, err := verifyContainerImageForGateway(ctx, cl, gateway, newDataPlaneImage)
 		return err == nil && upToDate
 	}, time.Minute, time.Second)
 
 	t.Log("downgrading the DataPlane version for the Gateway")
 	require.Eventually(t, func() bool {
-		return changeDataPlaneImage(gatewayConfig, originalDataPlaneImageName, originalDataPlaneImageVersion) == nil
+		return changeDataPlaneImage(ctx, gatewayConfig, originalDataPlaneImageName, originalDataPlaneImageVersion) == nil
 	}, testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick)
 
 	t.Log("verifying that the DataPlane receives the configuration override")
 	require.Eventually(t, func() bool {
-		dataplanes, err := gatewayutils.ListDataPlanesForGateway(GetCtx(), GetClients().MgrClient, gateway)
+		dataplanes, err := gatewayutils.ListDataPlanesForGateway(ctx, integration.GetClients().MgrClient, gateway)
 		if err != nil {
 			return false
 		}
@@ -180,15 +184,15 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 
 	t.Log("verifying downgraded DataPlane Pod images for Gateway")
 	require.Eventually(t, func() bool {
-		upToDate, err := verifyContainerImageForGateway(gateway, originalDataPlaneImage)
+		upToDate, err := verifyContainerImageForGateway(ctx, cl, gateway, originalDataPlaneImage)
 		return err == nil && upToDate
 	}, testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick)
 }
 
 // verifyContainerImageForGateway indicates whether or not the underlying
 // Pods' containers are configured with the images provided.
-func verifyContainerImageForGateway(gateway *gwtypes.Gateway, dataPlaneImage string) (bool, error) {
-	dataPlanes, err := gatewayutils.ListDataPlanesForGateway(GetCtx(), GetClients().MgrClient, gateway)
+func verifyContainerImageForGateway(ctx context.Context, cl client.Client, gateway *gwtypes.Gateway, dataPlaneImage string) (bool, error) {
+	dataPlanes, err := gatewayutils.ListDataPlanesForGateway(ctx, cl, gateway)
 	if err != nil {
 		return false, err
 	}
@@ -198,8 +202,8 @@ func verifyContainerImageForGateway(gateway *gwtypes.Gateway, dataPlaneImage str
 	}
 
 	deployments, err := k8sutils.ListDeploymentsForOwner(
-		GetCtx(),
-		GetClients().MgrClient,
+		ctx,
+		integration.GetClients().MgrClient,
 		dataPlanes[0].Namespace,
 		dataPlanes[0].UID,
 		client.MatchingLabels{
@@ -231,12 +235,13 @@ func verifyContainerImageForGateway(gateway *gwtypes.Gateway, dataPlaneImage str
 // changeDataPlaneImage is a helper function to update the image
 // for DataPlane in a given GatewayConfiguration.
 func changeDataPlaneImage(
+	ctx context.Context,
 	gcfg *operatorv2beta1.GatewayConfiguration,
 	dataPlaneImageName,
 	dataPlaneImageVersion string,
 ) error {
 	// refresh the object
-	gcfg, err := GetClients().OperatorClient.GatewayOperatorV2beta1().GatewayConfigurations(gcfg.Namespace).Get(GetCtx(), gcfg.Name, metav1.GetOptions{})
+	gcfg, err := integration.GetClients().OperatorClient.GatewayOperatorV2beta1().GatewayConfigurations(gcfg.Namespace).Get(ctx, gcfg.Name, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -247,6 +252,6 @@ func changeDataPlaneImage(
 	}
 	container.Image = fmt.Sprintf("%s:%s", dataPlaneImageName, dataPlaneImageVersion)
 
-	_, err = GetClients().OperatorClient.GatewayOperatorV2beta1().GatewayConfigurations(gcfg.Namespace).Update(GetCtx(), gcfg, metav1.UpdateOptions{})
+	_, err = integration.GetClients().OperatorClient.GatewayOperatorV2beta1().GatewayConfigurations(gcfg.Namespace).Update(ctx, gcfg, metav1.UpdateOptions{})
 	return err
 }

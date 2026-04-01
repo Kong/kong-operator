@@ -15,11 +15,13 @@ import (
 	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
 	"github.com/kong/kong-operator/v2/pkg/vars"
 	"github.com/kong/kong-operator/v2/test/helpers"
+	"github.com/kong/kong-operator/v2/test/integration"
 )
 
 func TestGatewayConfigurationServiceName(t *testing.T) {
 	t.Parallel()
-	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
+	ctx := t.Context()
+	namespace, cleaner := helpers.SetupTestEnv(t, ctx, integration.GetEnv())
 
 	// Create a custom service name
 	customServiceName := "custom-service-name-" + uuid.NewString()
@@ -44,7 +46,7 @@ func TestGatewayConfigurationServiceName(t *testing.T) {
 			},
 		},
 	}
-	gatewayConfig, err := GetClients().OperatorClient.GatewayOperatorV2beta1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
+	gatewayConfig, err := integration.GetClients().OperatorClient.GatewayOperatorV2beta1().GatewayConfigurations(namespace.Name).Create(ctx, gatewayConfig, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayConfig)
 
@@ -63,7 +65,7 @@ func TestGatewayConfigurationServiceName(t *testing.T) {
 			ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
 		},
 	}
-	gatewayClass, err = GetClients().GatewayClient.GatewayV1().GatewayClasses().Create(GetCtx(), gatewayClass, metav1.CreateOptions{})
+	gatewayClass, err = integration.GetClients().GatewayClient.GatewayV1().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
 
@@ -82,13 +84,13 @@ func TestGatewayConfigurationServiceName(t *testing.T) {
 			}},
 		},
 	}
-	gateway, err = GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Create(GetCtx(), gateway, metav1.CreateOptions{})
+	gateway, err = integration.GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 
 	t.Log("verifying that the DataPlane has the custom service name")
 	require.Eventually(t, func() bool {
-		dataplanes, err := gatewayutils.ListDataPlanesForGateway(GetCtx(), GetClients().MgrClient, gateway)
+		dataplanes, err := gatewayutils.ListDataPlanesForGateway(ctx, integration.GetClients().MgrClient, gateway)
 		if err != nil {
 			return false
 		}
@@ -104,7 +106,7 @@ func TestGatewayConfigurationServiceName(t *testing.T) {
 
 	t.Log("verifying that the service has the custom name using DataPlane's status.service field")
 	require.Eventually(t, func() bool {
-		dataplanes, err := gatewayutils.ListDataPlanesForGateway(GetCtx(), GetClients().MgrClient, gateway)
+		dataplanes, err := gatewayutils.ListDataPlanesForGateway(ctx, integration.GetClients().MgrClient, gateway)
 		if err != nil {
 			return false
 		}

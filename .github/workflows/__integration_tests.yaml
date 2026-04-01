@@ -24,6 +24,7 @@ jobs:
       matrix:
         include:
           - suite: ko
+          - suite: konnect
           - suite: kic
           - suite: bluegreen
           - suite: validatingwebhook
@@ -53,9 +54,10 @@ jobs:
     # a separate cache since they all use the same dependencies, so we can save some
     # cache storage and increase hit rate by not including the router flavor in the key.
     #
-    # bluegreen and ko suites are using the same dependencies, so we can use the same cache for them.
-    - run: echo "GO_CACHE_KEY=go-integrationtests-${{ matrix.suite == 'bluegreen' && 'ko' || matrix.suite }}-${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.mod') }}" >> $GITHUB_ENV
-    - run: echo "GO_CACHE_KEY_2=go-integrationtests-${{ matrix.suite == 'bluegreen' && 'ko' || matrix.suite }}-${{ runner.os }}-${{ runner.arch }}-go-" >> $GITHUB_ENV
+    # Separate cache keys only for kic and ko to minimize cache eviction.
+    - run: echo "GO_CACHE_KEY=go-integrationtests-${{ matrix.suite == 'kic' && 'kic' || 'ko' }}-${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.mod') }}" >> $GITHUB_ENV
+    - run: echo "GO_CACHE_KEY_2=go-integrationtests-${{ matrix.suite == 'kic' && 'kic' || 'ko' }}-${{ runner.os }}-${{ runner.arch }}-go-" >> $GITHUB_ENV
+    - run: echo "GO_CACHE_KEY_3=go-integrationtests-" >> $GITHUB_ENV
 
     - name: Go cache main branch
       if: ${{ github.ref == 'refs/heads/main' }}
@@ -68,6 +70,7 @@ jobs:
         restore-keys: |
           ${{ env.GO_CACHE_KEY }}
           ${{ env.GO_CACHE_KEY_2 }}
+          ${{ env.GO_CACHE_KEY_3 }}
 
     - name: Go cache (restore only for non-main branches)
       if: ${{ github.ref != 'refs/heads/main' }}
@@ -80,6 +83,7 @@ jobs:
         restore-keys: |
           ${{ env.GO_CACHE_KEY }}
           ${{ env.GO_CACHE_KEY_2 }}
+          ${{ env.GO_CACHE_KEY_3 }}
 
     - name: start tcpdump capture
       run: |

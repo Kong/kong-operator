@@ -1,6 +1,7 @@
-package integration
+package konnect
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 	"time"
@@ -29,6 +30,8 @@ import (
 	"github.com/kong/kong-operator/v2/test/helpers/conditions"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
 	"github.com/kong/kong-operator/v2/test/helpers/eventually"
+	"github.com/kong/kong-operator/v2/test/helpers/object"
+	"github.com/kong/kong-operator/v2/test/integration"
 )
 
 const (
@@ -37,14 +40,17 @@ const (
 )
 
 func TestKonnectEntityAdoption_ServiceAndRoute(t *testing.T) {
+	ctx := t.Context()
+	cl := integration.GetClients().MgrClient
+
 	// A cleaner is created underneath anyway, and a whole namespace is deleted eventually.
 	// We can't use a cleaner to delete objects because it handles deletes in FIFO order and that won't work in this
 	// case: KonnectAPIAuthConfiguration shouldn't be deleted before any other object as that is required for others to
 	// complete their finalizer which is deleting a reflecting entity in Konnect. That's why we're only cleaning up a
-	// KonnectGatewayControlPlane and waiting for its deletion synchronously with deleteObjectAndWaitForDeletionFn to ensure it
+	// KonnectGatewayControlPlane and waiting for its deletion synchronously with delete.ObjectAndWaitForDeletionFn to ensure it
 	// was successfully deleted along with its children. The KonnectAPIAuthConfiguration is implicitly deleted along
 	// with the namespace.
-	ns, _ := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
+	ns, _ := helpers.SetupTestEnv(t, ctx, integration.GetEnv())
 
 	// Let's generate a unique test ID that we can refer to in Konnect entities.
 	// Using only the first 8 characters of the UUID to keep the ID short enough for Konnect to accept it as a part
@@ -52,9 +58,9 @@ func TestKonnectEntityAdoption_ServiceAndRoute(t *testing.T) {
 	testID := uuid.NewString()[:8]
 	t.Logf("Running Konnect entities test with ID: %s", testID)
 
-	clientNamespaced := client.NewNamespacedClient(GetClients().MgrClient, ns.Name)
+	clientNamespaced := client.NewNamespacedClient(cl, ns.Name)
 
-	authCfg := deploy.KonnectAPIAuthConfiguration(t, GetCtx(), clientNamespaced,
+	authCfg := deploy.KonnectAPIAuthConfiguration(t, ctx, clientNamespaced,
 		deploy.WithTestIDLabel(testID),
 		func(obj client.Object) {
 			authCfg := obj.(*konnectv1alpha1.KonnectAPIAuthConfiguration)
@@ -64,16 +70,16 @@ func TestKonnectEntityAdoption_ServiceAndRoute(t *testing.T) {
 		},
 	)
 
-	cp := deploy.KonnectGatewayControlPlane(t, GetCtx(), clientNamespaced, authCfg,
+	cp := deploy.KonnectGatewayControlPlane(t, ctx, clientNamespaced, authCfg,
 		deploy.WithTestIDLabel(testID),
 		deploy.KonnectGatewayControlPlaneLabel(deploy.KonnectTestIDLabel, testID),
 	)
 
-	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, cp.DeepCopy()))
+	t.Cleanup(object.DeleteAndWaitForDeletionFn(context.Background(), t, cl, cp.DeepCopy()))
 
 	t.Logf("Waiting for Konnect ID to be assigned to ControlPlane %s/%s", cp.Namespace, cp.Name)
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: cp.Name, Namespace: cp.Namespace}, cp)
+		err := cl.Get(ctx, types.NamespacedName{Name: cp.Name, Namespace: cp.Namespace}, cp)
 		require.NoError(t, err)
 		conditions.KonnectEntityIsProgrammed(t, cp)
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
@@ -86,7 +92,7 @@ func TestKonnectEntityAdoption_ServiceAndRoute(t *testing.T) {
 	sdk := sdkops.NewSDKFactory().NewKonnectSDK(server, sdkops.SDKToken(test.KonnectAccessToken()))
 	require.NotNil(t, sdk)
 
-	resp, err := sdk.GetServicesSDK().CreateService(GetCtx(), cpKonnectID, sdkkonnectcomp.Service{
+	resp, err := sdk.GetServicesSDK().CreateService(ctx, cpKonnectID, sdkkonnectcomp.Service{
 		Name: new("test-adoption"),
 		URL:  new("http://example.com"),
 		Host: "example.com",
@@ -98,7 +104,7 @@ func TestKonnectEntityAdoption_ServiceAndRoute(t *testing.T) {
 	serviceKonnectID := *serviceOutput.ID
 
 	t.Logf("Create a KongService to adopt the service %s in Konnect", serviceKonnectID)
-	kongService := deploy.KongService(t, GetCtx(), clientNamespaced,
+	kongService := deploy.KongService(t, ctx, clientNamespaced,
 		deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 		func(obj client.Object) {
 			svc, ok := obj.(*configurationv1alpha1.KongService)
@@ -112,11 +118,11 @@ func TestKonnectEntityAdoption_ServiceAndRoute(t *testing.T) {
 			}
 			svc.Spec.Name = new("test-adoption")
 		})
-	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, kongService.DeepCopy()))
+	t.Cleanup(object.DeleteAndWaitForDeletionFn(context.Background(), t, cl, kongService.DeepCopy()))
 
 	t.Logf("Waiting for the KongService to be programmed and set Konnect ID")
 	require.EventuallyWithT(t, func(collect *assert.CollectT) {
-		err = clientNamespaced.Get(GetCtx(), client.ObjectKeyFromObject(kongService), kongService)
+		err = clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kongService), kongService)
 		require.NoError(t, err)
 
 		conditions.KonnectEntityIsProgrammed(collect, kongService)
@@ -129,12 +135,12 @@ func TestKonnectEntityAdoption_ServiceAndRoute(t *testing.T) {
 	t.Log("Updating the KongService to set a new path in its URL")
 	oldKongService := kongService.DeepCopy()
 	kongService.Spec.URL = new("http://example.com/example")
-	err = clientNamespaced.Patch(GetCtx(), kongService, client.MergeFrom(oldKongService))
+	err = clientNamespaced.Patch(ctx, kongService, client.MergeFrom(oldKongService))
 	require.NoError(t, err)
 
 	t.Log("Verifying that the service in Konnect is overridden by the KongService when KongService updated")
 	require.EventuallyWithT(t, func(collect *assert.CollectT) {
-		resp, err := sdk.GetServicesSDK().GetService(GetCtx(), serviceKonnectID, cp.GetKonnectID())
+		resp, err := sdk.GetServicesSDK().GetService(ctx, serviceKonnectID, cp.GetKonnectID())
 		require.NoError(collect, err, "Should get service from Konnect successfully")
 
 		serviceOutput := resp.GetService()
@@ -144,14 +150,14 @@ func TestKonnectEntityAdoption_ServiceAndRoute(t *testing.T) {
 			assert.Equal(collect, "/example", *serviceOutput.Path, "path of the service should be updated to match the spec in KongService")
 		}
 
-		err = clientNamespaced.Get(GetCtx(), client.ObjectKeyFromObject(kongService), kongService)
+		err = clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kongService), kongService)
 		require.NoError(t, err)
 		conditions.KonnectEntityIsProgrammed(t, kongService)
 	}, testutils.ObjectUpdateTimeout, checkKonnectAPITick,
 		"Did not see service in Konnect updated to match spec of KongService")
 
 	t.Logf("Creating a route attached to service %s by SDK for adoption", serviceKonnectID)
-	routeResp, err := sdk.GetRoutesSDK().CreateRoute(GetCtx(), cpKonnectID, sdkkonnectcomp.Route{
+	routeResp, err := sdk.GetRoutesSDK().CreateRoute(ctx, cpKonnectID, sdkkonnectcomp.Route{
 		Type: sdkkonnectcomp.RouteTypeRouteJSON,
 		RouteJSON: &sdkkonnectcomp.RouteJSON{
 			Name: new("route-test-adopt"),
@@ -171,7 +177,7 @@ func TestKonnectEntityAdoption_ServiceAndRoute(t *testing.T) {
 	routeKonnectID := *routeResp.Route.RouteJSON.ID
 
 	t.Logf("Adopting the route %s in override mode", routeKonnectID)
-	kongRoute := deploy.KongRoute(t, GetCtx(), clientNamespaced,
+	kongRoute := deploy.KongRoute(t, ctx, clientNamespaced,
 		deploy.WithNamespacedKongServiceRef(kongService),
 		func(obj client.Object) {
 			kr, ok := obj.(*configurationv1alpha1.KongRoute)
@@ -186,11 +192,11 @@ func TestKonnectEntityAdoption_ServiceAndRoute(t *testing.T) {
 				},
 			}
 		})
-	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, kongRoute.DeepCopy()))
+	t.Cleanup(object.DeleteAndWaitForDeletionFn(context.Background(), t, cl, kongRoute.DeepCopy()))
 
 	t.Logf("Waiting for the KongRoute to be programmed and set Konnect ID")
 	require.EventuallyWithT(t, func(collect *assert.CollectT) {
-		err = clientNamespaced.Get(GetCtx(), client.ObjectKeyFromObject(kongRoute), kongRoute)
+		err = clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kongRoute), kongRoute)
 		require.NoError(t, err)
 
 		conditions.KonnectEntityIsProgrammed(collect, kongRoute)
@@ -204,7 +210,7 @@ func TestKonnectEntityAdoption_ServiceAndRoute(t *testing.T) {
 	// to match the spec of the KongRoute.
 	t.Log("Verifying that the route in Konnect is modified as the spec of the KongRoute")
 	require.EventuallyWithT(t, func(collect *assert.CollectT) {
-		getRouteResp, err := sdk.GetRoutesSDK().GetRoute(GetCtx(), routeKonnectID, cpKonnectID)
+		getRouteResp, err := sdk.GetRoutesSDK().GetRoute(ctx, routeKonnectID, cpKonnectID)
 		assert.NoError(collect, err)
 		assert.NotNil(collect, getRouteResp, "Should get a non-nil response for creating route")
 		if getRouteResp.Route != nil && getRouteResp.Route.RouteJSON != nil {
@@ -218,7 +224,9 @@ func TestKonnectEntityAdoption_ServiceAndRoute(t *testing.T) {
 }
 
 func TestKonnectEntityAdoption_Plugin(t *testing.T) {
-	ns, _ := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
+	ctx := t.Context()
+	cl := integration.GetClients().MgrClient
+	ns, _ := helpers.SetupTestEnv(t, ctx, integration.GetEnv())
 
 	// Let's generate a unique test ID that we can refer to in Konnect entities.
 	// Using only the first 8 characters of the UUID to keep the ID short enough for Konnect to accept it as a part
@@ -226,10 +234,10 @@ func TestKonnectEntityAdoption_Plugin(t *testing.T) {
 	testID := uuid.NewString()[:8]
 	t.Logf("Running Konnect entity adoption test for plugins with ID: %s", testID)
 
-	clientNamespaced := client.NewNamespacedClient(GetClients().MgrClient, ns.Name)
+	clientNamespaced := client.NewNamespacedClient(integration.GetClients().MgrClient, ns.Name)
 
 	t.Log("Creating Konnect API auth configuration and Konnect control plane")
-	authCfg := deploy.KonnectAPIAuthConfiguration(t, GetCtx(), clientNamespaced,
+	authCfg := deploy.KonnectAPIAuthConfiguration(t, ctx, clientNamespaced,
 		deploy.WithTestIDLabel(testID),
 		func(obj client.Object) {
 			authCfg := obj.(*konnectv1alpha1.KonnectAPIAuthConfiguration)
@@ -239,12 +247,12 @@ func TestKonnectEntityAdoption_Plugin(t *testing.T) {
 		},
 	)
 
-	cp := deploy.KonnectGatewayControlPlane(t, GetCtx(), clientNamespaced, authCfg,
+	cp := deploy.KonnectGatewayControlPlane(t, ctx, clientNamespaced, authCfg,
 		deploy.WithTestIDLabel(testID),
 		deploy.KonnectGatewayControlPlaneLabel(deploy.KonnectTestIDLabel, testID),
 	)
 
-	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, cp.DeepCopy()))
+	t.Cleanup(object.DeleteAndWaitForDeletionFn(context.Background(), t, cl, cp.DeepCopy()))
 
 	t.Logf("Waiting for Konnect ID to be assigned to ControlPlane %s/%s", cp.Namespace, cp.Name)
 	cp = eventually.KonnectEntityGetsProgrammed(t, ctx, clientNamespaced, cp)
@@ -292,10 +300,10 @@ func TestKonnectEntityAdoption_Plugin(t *testing.T) {
 			Raw: buf,
 		},
 	}
-	require.NoError(t, clientNamespaced.Create(GetCtx(), kongPluginReqTransformer))
-	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, kongPluginReqTransformer.DeepCopy()))
+	require.NoError(t, clientNamespaced.Create(ctx, kongPluginReqTransformer))
+	t.Cleanup(object.DeleteAndWaitForDeletionFn(context.Background(), t, cl, kongPluginReqTransformer.DeepCopy()))
 
-	kpbGlobal := deploy.KongPluginBinding(t, GetCtx(), clientNamespaced, &configurationv1alpha1.KongPluginBinding{
+	kpbGlobal := deploy.KongPluginBinding(t, ctx, clientNamespaced, &configurationv1alpha1.KongPluginBinding{
 		Spec: configurationv1alpha1.KongPluginBindingSpec{
 			PluginReference: configurationv1alpha1.PluginRef{
 				Name: kongPluginReqTransformer.Name,
@@ -306,7 +314,7 @@ func TestKonnectEntityAdoption_Plugin(t *testing.T) {
 		deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 		deploy.WithKonnectAdoptOptions[*configurationv1alpha1.KongPluginBinding](commonv1alpha1.AdoptModeOverride, globalPluginID),
 	)
-	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, kpbGlobal.DeepCopy()))
+	t.Cleanup(object.DeleteAndWaitForDeletionFn(context.Background(), t, cl, kpbGlobal.DeepCopy()))
 
 	t.Log("Waiting for KongPluginBinding to be programmed and set Konnect ID")
 	eventually.KonnectEntityGetsProgrammed(
@@ -320,8 +328,8 @@ func TestKonnectEntityAdoption_Plugin(t *testing.T) {
 	)
 
 	t.Log("Creating a KongService to attach plugins to")
-	ks := deploy.KongService(t, GetCtx(), clientNamespaced, deploy.WithKonnectNamespacedRefControlPlaneRef(cp))
-	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, ks.DeepCopy()))
+	ks := deploy.KongService(t, ctx, clientNamespaced, deploy.WithKonnectNamespacedRefControlPlaneRef(cp))
+	t.Cleanup(object.DeleteAndWaitForDeletionFn(context.Background(), t, cl, ks.DeepCopy()))
 
 	t.Log("Waiting for the KongService to get a Konnect ID")
 	ks = eventually.KonnectEntityGetsProgrammed(
@@ -332,7 +340,7 @@ func TestKonnectEntityAdoption_Plugin(t *testing.T) {
 
 	t.Log("Creating a plugin by SDK attached to the service for adopting")
 	resp, err = sdk.GetPluginSDK().CreatePlugin(
-		GetCtx(),
+		ctx,
 		cpKonnectID,
 		sdkkonnectcomp.Plugin{
 			Name: "response-transformer",
@@ -355,9 +363,9 @@ func TestKonnectEntityAdoption_Plugin(t *testing.T) {
 
 	t.Log("Creating a KongPlugin and a KongPluginBinding for adopting the plugin")
 	kongPluginResponseTransformer := deploy.ResponseTransformerPlugin(t, ctx, clientNamespaced)
-	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, kongPluginResponseTransformer.DeepCopy()))
+	t.Cleanup(object.DeleteAndWaitForDeletionFn(context.Background(), t, cl, kongPluginResponseTransformer.DeepCopy()))
 
-	kpbService := deploy.KongPluginBinding(t, GetCtx(), clientNamespaced, &configurationv1alpha1.KongPluginBinding{
+	kpbService := deploy.KongPluginBinding(t, ctx, clientNamespaced, &configurationv1alpha1.KongPluginBinding{
 		Spec: configurationv1alpha1.KongPluginBindingSpec{
 			PluginReference: configurationv1alpha1.PluginRef{
 				Name: kongPluginResponseTransformer.Name,
@@ -368,7 +376,7 @@ func TestKonnectEntityAdoption_Plugin(t *testing.T) {
 		deploy.WithKonnectAdoptOptions[*configurationv1alpha1.KongPluginBinding](commonv1alpha1.AdoptModeOverride, pluginServiceID),
 		deploy.WithKongPluginBindingTarget(ks),
 	)
-	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, kpbService.DeepCopy()))
+	t.Cleanup(object.DeleteAndWaitForDeletionFn(context.Background(), t, cl, kpbService.DeepCopy()))
 
 	t.Log("Waiting for KongPluginBinding to be programmed and set Konnect ID")
 	eventually.KonnectEntityGetsProgrammed(t, ctx, clientNamespaced, kpbService,
@@ -382,15 +390,17 @@ func TestKonnectEntityAdoption_Plugin(t *testing.T) {
 }
 
 func TestKonnectEntityAdoption_ConsumerWithCredentials(t *testing.T) {
-	ns, _ := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
+	ctx := t.Context()
+	cl := integration.GetClients().MgrClient
+	ns, _ := helpers.SetupTestEnv(t, ctx, integration.GetEnv())
 
 	testID := uuid.NewString()[:8]
 	t.Logf("Running Konnect entity adoption test for consumer with credentials with ID: %s", testID)
 
-	clientNamespaced := client.NewNamespacedClient(GetClients().MgrClient, ns.Name)
+	clientNamespaced := client.NewNamespacedClient(integration.GetClients().MgrClient, ns.Name)
 
 	t.Log("Creating Konnect API auth configuration and Konnect control plane")
-	authCfg := deploy.KonnectAPIAuthConfiguration(t, GetCtx(), clientNamespaced,
+	authCfg := deploy.KonnectAPIAuthConfiguration(t, ctx, clientNamespaced,
 		deploy.WithTestIDLabel(testID),
 		func(obj client.Object) {
 			authCfg := obj.(*konnectv1alpha1.KonnectAPIAuthConfiguration)
@@ -400,12 +410,12 @@ func TestKonnectEntityAdoption_ConsumerWithCredentials(t *testing.T) {
 		},
 	)
 
-	cp := deploy.KonnectGatewayControlPlane(t, GetCtx(), clientNamespaced, authCfg,
+	cp := deploy.KonnectGatewayControlPlane(t, ctx, clientNamespaced, authCfg,
 		deploy.WithTestIDLabel(testID),
 		deploy.KonnectGatewayControlPlaneLabel(deploy.KonnectTestIDLabel, testID),
 	)
 
-	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, cp.DeepCopy()))
+	t.Cleanup(object.DeleteAndWaitForDeletionFn(context.Background(), t, cl, cp.DeepCopy()))
 
 	t.Logf("Waiting for Konnect ID to be assigned to ControlPlane %s/%s", cp.Namespace, cp.Name)
 	cp = eventually.KonnectEntityGetsProgrammed(t, ctx, clientNamespaced, cp)
@@ -419,7 +429,7 @@ func TestKonnectEntityAdoption_ConsumerWithCredentials(t *testing.T) {
 	require.NotNil(t, sdk)
 
 	consumerUsername := "test-adoption-consumer-" + testID
-	consumerResp, err := sdk.GetConsumersSDK().CreateConsumer(GetCtx(), cpKonnectID, sdkkonnectcomp.Consumer{
+	consumerResp, err := sdk.GetConsumersSDK().CreateConsumer(ctx, cpKonnectID, sdkkonnectcomp.Consumer{
 		Username: new(consumerUsername),
 	})
 	require.NoError(t, err, "Should create consumer in Konnect successfully")
@@ -431,7 +441,7 @@ func TestKonnectEntityAdoption_ConsumerWithCredentials(t *testing.T) {
 
 	t.Log("Create a BasicAuth credential attached to the consumer by SDK for adoption")
 	basicAuthResp, err := sdk.GetBasicAuthCredentialsSDK().CreateBasicAuthWithConsumer(
-		GetCtx(),
+		ctx,
 		sdkkonnectops.CreateBasicAuthWithConsumerRequest{
 			ControlPlaneID:              cpKonnectID,
 			ConsumerIDForNestedEntities: consumerKonnectID,
@@ -450,7 +460,7 @@ func TestKonnectEntityAdoption_ConsumerWithCredentials(t *testing.T) {
 
 	t.Log("Create an APIKey credential attached to the consumer by SDK for adoption")
 	apiKeyResp, err := sdk.GetAPIKeyCredentialsSDK().CreateKeyAuthWithConsumer(
-		GetCtx(),
+		ctx,
 		sdkkonnectops.CreateKeyAuthWithConsumerRequest{
 			ControlPlaneID:              cpKonnectID,
 			ConsumerIDForNestedEntities: consumerKonnectID,
@@ -467,11 +477,11 @@ func TestKonnectEntityAdoption_ConsumerWithCredentials(t *testing.T) {
 	t.Logf("Created APIKey credential in Konnect with ID: %s", apiKeyKonnectID)
 
 	t.Log("Create a KongConsumer to adopt the consumer in Konnect")
-	kongConsumer := deploy.KongConsumer(t, GetCtx(), clientNamespaced, consumerUsername,
+	kongConsumer := deploy.KongConsumer(t, ctx, clientNamespaced, consumerUsername,
 		deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 		deploy.WithKonnectAdoptOptions[*configurationv1.KongConsumer](commonv1alpha1.AdoptModeOverride, consumerKonnectID),
 	)
-	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, kongConsumer.DeepCopy()))
+	t.Cleanup(object.DeleteAndWaitForDeletionFn(context.Background(), t, cl, kongConsumer.DeepCopy()))
 
 	t.Log("Waiting for the KongConsumer to be programmed and set Konnect ID")
 	kongConsumer = eventually.KonnectEntityGetsProgrammed(t, ctx, clientNamespaced, kongConsumer,
@@ -505,8 +515,8 @@ func TestKonnectEntityAdoption_ConsumerWithCredentials(t *testing.T) {
 			},
 		},
 	}
-	require.NoError(t, clientNamespaced.Create(GetCtx(), kongCredentialBasicAuth))
-	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, kongCredentialBasicAuth.DeepCopy()))
+	require.NoError(t, clientNamespaced.Create(ctx, kongCredentialBasicAuth))
+	t.Cleanup(object.DeleteAndWaitForDeletionFn(context.Background(), t, cl, kongCredentialBasicAuth.DeepCopy()))
 
 	t.Log("Waiting for the KongCredentialBasicAuth to be programmed and set Konnect ID")
 	eventually.KonnectEntityGetsProgrammed(t, ctx, clientNamespaced, kongCredentialBasicAuth,
@@ -539,8 +549,8 @@ func TestKonnectEntityAdoption_ConsumerWithCredentials(t *testing.T) {
 			},
 		},
 	}
-	require.NoError(t, clientNamespaced.Create(GetCtx(), kongCredentialAPIKey))
-	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, kongCredentialAPIKey.DeepCopy()))
+	require.NoError(t, clientNamespaced.Create(ctx, kongCredentialAPIKey))
+	t.Cleanup(object.DeleteAndWaitForDeletionFn(context.Background(), t, cl, kongCredentialAPIKey.DeepCopy()))
 
 	t.Log("Waiting for the KongCredentialAPIKey to be programmed and set Konnect ID")
 	eventually.KonnectEntityGetsProgrammed(t, ctx, clientNamespaced, kongCredentialAPIKey,
@@ -554,12 +564,12 @@ func TestKonnectEntityAdoption_ConsumerWithCredentials(t *testing.T) {
 	t.Log("Updating the KongConsumer to verify the adopted consumer can be updated")
 	oldKongConsumer := kongConsumer.DeepCopy()
 	kongConsumer.CustomID = "custom-id-" + testID
-	err = clientNamespaced.Patch(GetCtx(), kongConsumer, client.MergeFrom(oldKongConsumer))
+	err = clientNamespaced.Patch(ctx, kongConsumer, client.MergeFrom(oldKongConsumer))
 	require.NoError(t, err)
 
 	t.Log("Verifying that the consumer in Konnect is updated")
 	require.EventuallyWithT(t, func(collect *assert.CollectT) {
-		resp, err := sdk.GetConsumersSDK().GetConsumer(GetCtx(), consumerKonnectID, cpKonnectID)
+		resp, err := sdk.GetConsumersSDK().GetConsumer(ctx, consumerKonnectID, cpKonnectID)
 		require.NoError(collect, err, "Should get consumer from Konnect successfully")
 
 		consumerOutput := resp.GetConsumer()
