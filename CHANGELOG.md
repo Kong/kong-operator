@@ -146,6 +146,9 @@
 - Fix the on-prem translator to set `protocols` in translated Kong routes to
   `http,https`.
   [#3587](https://github.com/Kong/kong-operator/pull/3587)
+- Fix the hybrid gateway translator to set `protocols` in translated KongRoutes
+  to `http,https` to avoid 426 errors from Konnect hybrid gateways.
+  [#3753](https://github.com/Kong/kong-operator/pull/3753)
 
 ## [v2.1.3]
 
