@@ -14,6 +14,18 @@ type SupportedRoutePtr[T SupportedRoute] interface {
 	client.Object
 }
 
+// SupportedRouteList defines a list of supported route.
+type SupportedRouteList interface {
+	TLSRouteList | HTTPRouteList
+}
+
+// SupportedRouteListPtr defines a pointer of a supported route list.
+// It includes the client.ObjectList interface to be used as the receiver in the client.List.
+type SupportedRouteListPtr[T SupportedRouteList] interface {
+	*T
+	client.ObjectList
+}
+
 // GetSpecParentRefs returns the parent references of a supported route.
 func GetSpecParentRefs[T SupportedRoute](route T) []ParentReference {
 	switch r := any(route).(type) {
