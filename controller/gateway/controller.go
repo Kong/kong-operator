@@ -759,7 +759,7 @@ func (r *Reconciler) provisionControlPlane(
 	}
 
 	if !controlPlaneSpecDeepEqual(&controlPlane.Spec.ControlPlaneOptions, &expectedControlPlaneOptions) ||
-		reflect.DeepEqual(controlPlane.Spec.Extensions, expectedExtensions) {
+		!reflect.DeepEqual(controlPlane.Spec.Extensions, expectedExtensions) {
 		log.Trace(logger, "controlplane config is out of date")
 		controlplaneOld := controlPlane.DeepCopy()
 		controlPlane.Spec.ControlPlaneOptions = expectedControlPlaneOptions
