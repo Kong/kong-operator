@@ -429,6 +429,117 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 	}
 }
 
+func TestProvisionControlPlane_UpdatesExtensionsWhenOnlyExtensionsDiffer(t *testing.T) {
+	ctx := t.Context()
+
+	gateway := &gwtypes.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-gateway",
+			Namespace: "test-namespace",
+			UID:       types.UID(uuid.NewString()),
+		},
+	}
+
+	controlPlane := &gwtypes.ControlPlane{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-controlplane",
+			Namespace: "test-namespace",
+		},
+		Spec: gwtypes.ControlPlaneSpec{
+			ControlPlaneOptions: gwtypes.ControlPlaneOptions{},
+			Extensions: []commonv1alpha1.ExtensionRef{
+				{
+					Group: "sample.group",
+					Kind:  "SampleExtension",
+					NamespacedRef: commonv1alpha1.NamespacedRef{
+						Name: "old-extension",
+					},
+				},
+			},
+		},
+	}
+	k8sutils.SetOwnerForObject(controlPlane, gateway)
+	gatewayutils.LabelObjectAsGatewayManaged(controlPlane, gateway.Name)
+
+	fakeClient := fakectrlruntimeclient.
+		NewClientBuilder().
+		WithScheme(scheme.Get()).
+		WithObjects(controlPlane).
+		Build()
+
+	reconciler := Reconciler{
+		Client: fakeClient,
+	}
+
+	gatewayConfig := &GatewayConfiguration{
+		Spec: GatewayConfigurationSpec{
+			Extensions: []commonv1alpha1.ExtensionRef{
+				{
+					Group: "sample.group",
+					Kind:  "SampleExtension",
+					NamespacedRef: commonv1alpha1.NamespacedRef{
+						Name: "new-extension",
+					},
+				},
+			},
+		},
+	}
+
+	reconciler.provisionControlPlane(ctx, logr.Discard(), gateway, gatewayConfig)
+
+	var updatedControlPlane gwtypes.ControlPlane
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{
+		Name:      controlPlane.Name,
+		Namespace: controlPlane.Namespace,
+	}, &updatedControlPlane))
+	require.Equal(t, gatewayConfig.Spec.Extensions, updatedControlPlane.Spec.Extensions)
+}
+
+func TestDataPlaneSpecDeepEqual_HybridIgnoresKonnectExtensionOnBothSides(t *testing.T) {
+	specCurrent := &operatorv1beta1.DataPlaneOptions{
+		Extensions: []commonv1alpha1.ExtensionRef{
+			{
+				Group: konnectv1alpha2.SchemeGroupVersion.Group,
+				Kind:  konnectv1alpha2.KonnectExtensionKind,
+				NamespacedRef: commonv1alpha1.NamespacedRef{
+					Name: "konnect-ext",
+				},
+			},
+		},
+	}
+	specExpected := &operatorv1beta1.DataPlaneOptions{
+		Extensions: []commonv1alpha1.ExtensionRef{},
+	}
+
+	require.True(t, dataPlaneSpecDeepEqual(specCurrent, specExpected, true))
+}
+
+func TestDataPlaneSpecDeepEqual_HybridStillComparesNonKonnectExtensions(t *testing.T) {
+	specCurrent := &operatorv1beta1.DataPlaneOptions{
+		Extensions: []commonv1alpha1.ExtensionRef{
+			{
+				Group: "example.konghq.com",
+				Kind:  "SomeExtension",
+				NamespacedRef: commonv1alpha1.NamespacedRef{
+					Name: "ext-a",
+				},
+			},
+		},
+	}
+	specExpected := &operatorv1beta1.DataPlaneOptions{
+		Extensions: []commonv1alpha1.ExtensionRef{
+			{
+				Group: "example.konghq.com",
+				Kind:  "SomeExtension",
+				NamespacedRef: commonv1alpha1.NamespacedRef{
+					Name: "ext-b",
+				},
+			},
+		},
+	}
+
+	require.False(t, dataPlaneSpecDeepEqual(specCurrent, specExpected, true))
+}
 func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 	testcases := []struct {
 		name     string
