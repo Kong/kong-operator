@@ -1618,7 +1618,7 @@ func TestIsBackendRefSupported(t *testing.T) {
 	}
 }
 
-func TestIsHTTPReferenceGranted(t *testing.T) {
+func TestIsRouteReferenceGranted(t *testing.T) {
 	tests := []struct {
 		name          string
 		grantSpec     gwtypes.ReferenceGrantSpec
@@ -1838,9 +1838,9 @@ func TestIsHTTPReferenceGranted(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := IsHTTPReferenceGranted(tt.grantSpec, tt.backendRef, tt.fromNamespace)
+			got := IsRouteReferenceGranted(tt.grantSpec, tt.backendRef.BackendRef, "HTTPRoute", tt.fromNamespace)
 			if got != tt.want {
-				t.Errorf("IsHTTPReferenceGranted() = %v, want %v", got, tt.want)
+				t.Errorf("IsRouteReferenceGranted() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -1874,8 +1874,14 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 		PluginName: "rate-limiting",
 	}
 
+	httpRouteTypeMeta := metav1.TypeMeta{
+		Kind:       "HTTPRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
+	}
+
 	// Create base route
 	routeBase := &gwtypes.HTTPRoute{
+		TypeMeta: httpRouteTypeMeta,
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "default",
 			Name:      "route",
@@ -1995,6 +2001,7 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 				},
 			},
 			route: &gwtypes.HTTPRoute{
+				TypeMeta:   httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
 				Spec: gwtypes.HTTPRouteSpec{
 					Rules: []gwtypes.HTTPRouteRule{{
@@ -2039,6 +2046,7 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 				},
 			},
 			route: &gwtypes.HTTPRoute{
+				TypeMeta:   httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
 				Spec: gwtypes.HTTPRouteSpec{
 					Rules: []gwtypes.HTTPRouteRule{{
@@ -2063,6 +2071,7 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			name:       "multiple refs, first fails",
 			clientObjs: []client.Object{serviceDefault},
 			route: &gwtypes.HTTPRoute{
+				TypeMeta:   httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
 				Spec: gwtypes.HTTPRouteSpec{
 					Rules: []gwtypes.HTTPRouteRule{{
@@ -2097,6 +2106,7 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			name:       "empty group uses implicit core",
 			clientObjs: []client.Object{serviceDefault},
 			route: &gwtypes.HTTPRoute{
+				TypeMeta:   httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
 				Spec: gwtypes.HTTPRouteSpec{
 					Rules: []gwtypes.HTTPRouteRule{{
@@ -2121,6 +2131,7 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			name:       "ExtensionRef resolved - KongPlugin exists",
 			clientObjs: []client.Object{kongPlugin},
 			route: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
 					Name:      "route",
@@ -2146,6 +2157,7 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			name:       "ExtensionRef unsupported group/kind",
 			clientObjs: []client.Object{},
 			route: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
 					Name:      "route",
@@ -2171,6 +2183,7 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			name:       "ExtensionRef not found",
 			clientObjs: []client.Object{},
 			route: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
 					Name:      "route",
@@ -2196,6 +2209,7 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			name:       "ExtensionRef nil but type is ExtensionRef - skips validation",
 			clientObjs: []client.Object{},
 			route: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
 					Name:      "route",
@@ -2217,6 +2231,7 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			name:       "Multiple filters with ExtensionRef - first fails",
 			clientObjs: []client.Object{kongPlugin},
 			route: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
 					Name:      "route",
@@ -2252,6 +2267,7 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			name:       "Mixed BackendRef and ExtensionRef - BackendRef fails",
 			clientObjs: []client.Object{kongPlugin},
 			route: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
 					Name:      "route",
@@ -2293,6 +2309,7 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 				},
 			},
 			route: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
 					Name:      "route",
@@ -2335,6 +2352,7 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 				kongPlugin,
 			},
 			route: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
 					Name:      "route",
@@ -2369,6 +2387,7 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			name:       "Non-ExtensionRef filter - should be ignored",
 			clientObjs: []client.Object{},
 			route: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
 					Name:      "route",
@@ -2502,7 +2521,7 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 
 			cl := clientBuilder.Build()
 
-			cond, err := BuildResolvedRefsCondition(ctx, logger, cl, tt.route)
+			cond, err := BuildResolvedRefsConditionForHTTPRoute(ctx, logger, cl, tt.route)
 			require.NoError(t, err)
 			require.NotNil(t, cond)
 
@@ -2532,7 +2551,7 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 				WithInterceptorFuncs(tt.interceptor).
 				Build()
 
-			cond, err := BuildResolvedRefsCondition(ctx, logger, cl, tt.route)
+			cond, err := BuildResolvedRefsConditionForHTTPRoute(ctx, logger, cl, tt.route)
 			if tt.wantError {
 				require.Error(t, err)
 				require.Nil(t, cond)
@@ -2866,7 +2885,7 @@ func TestCheckReferenceGrant(t *testing.T) {
 
 			cl := fake.NewClientBuilder().WithScheme(s).WithObjects(tt.clientObjs...).Build()
 
-			permitted, found, err := CheckReferenceGrant(ctx, cl, tt.bRef, tt.routeNamespace)
+			permitted, found, err := CheckReferenceGrant(ctx, cl, &tt.bRef.BackendRef, "HTTPRoute", tt.routeNamespace)
 
 			if tt.wantError {
 				require.Error(t, err)
@@ -2900,7 +2919,7 @@ func TestCheckReferenceGrant(t *testing.T) {
 				}).
 				Build()
 
-			permitted, found, err := CheckReferenceGrant(ctx, cl, tt.bRef, tt.routeNamespace)
+			permitted, found, err := CheckReferenceGrant(ctx, cl, &tt.bRef.BackendRef, "HTTPRoute", tt.routeNamespace)
 
 			if tt.wantError {
 				require.Error(t, err)
