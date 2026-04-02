@@ -17,8 +17,7 @@ func SetValueByName(envs []corev1.EnvVar, name string, value string) []corev1.En
 	})
 }
 
-// GetValueByName returns the corresponding value of LAST item with given name.
-// returns empty string if the name not appeared.
+// GetValueByName returns the corresponding value of the LAST item with the given name, for non-existing name returns empty string.
 func GetValueByName(envs []corev1.EnvVar, name string) string {
 	value := ""
 	for _, env := range envs {
