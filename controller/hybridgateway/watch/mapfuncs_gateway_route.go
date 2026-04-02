@@ -109,6 +109,8 @@ func MapRouteForGatewayClass[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRou
 			switch any(route).(type) {
 			case *gwtypes.HTTPRoute:
 				gwRequests, err = listHTTPRoutesForGateway(ctx, cl, gateway.Namespace, gateway.Name)
+			case *gwtypes.TLSRoute:
+				gwRequests, err = listTLSRoutesForGateway(ctx, cl, gateway.Namespace, gateway.Name)
 			default:
 				return nil
 			}
@@ -137,6 +139,8 @@ func MapRouteForService[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr
 		switch any(route).(type) {
 		case *gwtypes.HTTPRoute:
 			requests, err = listHTTPRoutesForService(ctx, cl, svc.Namespace, svc.Name)
+		case *gwtypes.TLSRoute:
+			requests, err = listTLSRoutesForService(ctx, cl, svc.Namespace, svc.Name)
 		default:
 			return nil
 		}
@@ -174,6 +178,8 @@ func MapRouteForEndpointSlice[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRo
 		switch any(route).(type) {
 		case *gwtypes.HTTPRoute:
 			requests, err = listHTTPRoutesForService(ctx, cl, svc.Namespace, svc.Name)
+		case *gwtypes.TLSRoute:
+			requests, err = listTLSRoutesForService(ctx, cl, svc.Namespace, svc.Name)
 		default:
 			return nil
 		}
@@ -183,4 +189,81 @@ func MapRouteForEndpointSlice[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRo
 		}
 		return requests
 	}
+}
+
+func MapRouteForReferenceGrant[TList gwtypes.SupportedRouteList,
+	TListPtr gwtypes.SupportedRouteListPtr[TList]](cl client.Client) handler.MapFunc {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		rg, ok := obj.(*gwtypes.ReferenceGrant)
+		if !ok {
+			return nil
+		}
+		var kind string
+		var list TList
+		switch any(list).(type) {
+		case gwtypes.HTTPRouteList:
+			kind = "HTTPRoute"
+		case gwtypes.TLSRouteList:
+			kind = "TLSRoute"
+		}
+		var requests []reconcile.Request
+		for _, from := range rg.Spec.From {
+
+			// Check that the from kind is TLSRoute and group is gateway.networking.k8s.io.
+			if string(from.Kind) != kind || (from.Group != "" && from.Group != gwtypes.GroupName) {
+				continue
+			}
+			var listPtr TListPtr
+			err := cl.List(ctx, listPtr, client.InNamespace(string(from.Namespace)))
+			if err != nil {
+				return nil
+			}
+
+			switch l := any(listPtr).(type) {
+			case *gwtypes.HTTPRouteList:
+				requests = append(requests, mapRouteInListForReferenceGrant(l.Items, rg)...)
+			case *gwtypes.TLSRouteList:
+				requests = append(requests, mapRouteInListForReferenceGrant(l.Items, rg)...)
+			}
+		}
+		return requests
+	}
+}
+
+func mapRouteInListForReferenceGrant[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](items []T, rg *gwtypes.ReferenceGrant) []reconcile.Request {
+	requests := []reconcile.Request{}
+	for _, route := range items {
+		var backendRefs []gwtypes.BackendRef
+		var rPtr TPtr = &route
+
+		switch r := any(route).(type) {
+		case gwtypes.HTTPRoute:
+			for _, rule := range r.Spec.Rules {
+				for _, backendRef := range rule.BackendRefs {
+					backendRefs = append(backendRefs, backendRef.BackendRef)
+				}
+			}
+		case gwtypes.TLSRoute:
+			for _, rule := range r.Spec.Rules {
+				for _, backendRef := range rule.BackendRefs {
+					backendRefs = append(backendRefs, backendRef)
+				}
+			}
+		// TODO: Add other supported types.
+		default:
+			return nil
+		}
+		for _, backendRef := range backendRefs {
+			if backendRef.Namespace != nil && string(*backendRef.Namespace) == rg.Namespace && rPtr.GetNamespace() != rg.Namespace {
+				requests = append(requests, reconcile.Request{
+					NamespacedName: client.ObjectKey{
+						Namespace: rPtr.GetNamespace(),
+						Name:      rPtr.GetName(),
+					},
+				})
+				break
+			}
+		}
+	}
+	return requests
 }
