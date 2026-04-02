@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -109,6 +110,13 @@ func TestRouteForRule(t *testing.T) {
 			assert.Equal(t, "test-namespace", result.Namespace)
 			assert.NotEmpty(t, result.Name)
 			assert.Equal(t, tt.hostnames, result.Spec.Hosts)
+			assert.Equal(t,
+				[]sdkkonnectcomp.RouteJSONProtocols{
+					sdkkonnectcomp.RouteJSONProtocols("http"),
+					sdkkonnectcomp.RouteJSONProtocols("https"),
+				},
+				result.Spec.Protocols,
+			)
 
 			// Verify service reference
 			if tt.serviceName != "" {
