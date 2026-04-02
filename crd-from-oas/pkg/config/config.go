@@ -74,6 +74,17 @@ type TypeConfig struct {
 	// will include a SourceType discriminator (inline / secretRef), and a
 	// SecretRef field of type NamespacedRef.
 	OptionalSecretReference bool `yaml:"optionalSecretReference,omitempty"`
+	// Reconciler holds configuration for reconciler code generation.
+	// When set, reconciler wiring files (interface methods, watch options,
+	// index files) are generated for this entity.
+	Reconciler *ReconcilerConfig `yaml:"reconciler,omitempty"`
+}
+
+// ReconcilerConfig holds configuration for reconciler code generation.
+type ReconcilerConfig struct {
+	// IsRoot indicates this is a root entity that directly references
+	// KonnectAPIAuthConfiguration. Child entities inherit auth from their parent.
+	IsRoot bool `yaml:"isRoot"`
 }
 
 // OpConfig holds configuration for a single SDK operation.
@@ -141,6 +152,23 @@ func (c *APIGroupVersionConfig) SecretRefEntities(pathToEntityName map[string]st
 			continue
 		}
 		result[entityName] = true
+	}
+	return result
+}
+
+// ReconcilerConfigs builds a mapping from entity name to reconciler config using the provided
+// pathToEntityName mapping (built after parsing the OpenAPI spec).
+func (c *APIGroupVersionConfig) ReconcilerConfigs(pathToEntityName map[string]string) map[string]*ReconcilerConfig {
+	result := make(map[string]*ReconcilerConfig)
+	for _, tc := range c.Types {
+		if tc.Reconciler == nil {
+			continue
+		}
+		entityName, ok := pathToEntityName[tc.Path]
+		if !ok {
+			continue
+		}
+		result[entityName] = tc.Reconciler
 	}
 	return result
 }

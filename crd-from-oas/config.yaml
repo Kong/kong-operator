@@ -22,6 +22,8 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/components.CreatePortal
           update:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdatePortal
+        reconciler:
+          isRoot: true
       - path: /v3/portals/{portalId}/teams
       - path: /v2/dcr-providers
       # TODO: uncomment

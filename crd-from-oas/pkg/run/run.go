@@ -78,15 +78,24 @@ func (r *Runner) Run(
 			continue
 		}
 
+		// Build API package path and alias for reconciler generation.
+		// e.g. group "x-konnect.konghq.com" → prefix "x-konnect", alias "xkonnectv1alpha1"
+		groupPrefix := strings.Split(apiGroup, ".")[0]
+		apiGroupPackagePath := fmt.Sprintf("github.com/kong/kong-operator/v2/api/%s/%s", groupPrefix, apiVersion)
+		apiGroupPackageAlias := strings.ReplaceAll(groupPrefix, "-", "") + apiVersion
+
 		// Generate CRD types
 		gen := generator.NewGenerator(generator.Config{
-			APIGroup:          apiGroup,
-			APIVersion:        apiVersion,
-			GenerateStatus:    true,
-			FieldConfig:       agvConfig.FieldConfig(pathToEntityName),
-			OpsConfig:         agvConfig.OpsConfig(pathToEntityName),
-			CommonTypes:       agvConfig.CommonTypes,
-			SecretRefEntities: agvConfig.SecretRefEntities(pathToEntityName),
+			APIGroup:             apiGroup,
+			APIVersion:           apiVersion,
+			GenerateStatus:       true,
+			FieldConfig:          agvConfig.FieldConfig(pathToEntityName),
+			OpsConfig:            agvConfig.OpsConfig(pathToEntityName),
+			CommonTypes:          agvConfig.CommonTypes,
+			SecretRefEntities:    agvConfig.SecretRefEntities(pathToEntityName),
+			ReconcilerConfig:     agvConfig.ReconcilerConfigs(pathToEntityName),
+			APIGroupPackagePath:  apiGroupPackagePath,
+			APIGroupPackageAlias: apiGroupPackageAlias,
 		})
 
 		files, err := gen.Generate(parsed)
@@ -102,7 +111,17 @@ func (r *Runner) Run(
 
 		// Write generated files
 		for _, file := range files {
-			filePath := filepath.Join(dir, file.Name)
+			var filePath string
+			if file.RelativeDir != "" {
+				// Write to a directory relative to the project root (outputDir's parent).
+				targetDir := filepath.Join(r.projectRoot, file.RelativeDir)
+				if err := os.MkdirAll(targetDir, 0o755); err != nil {
+					return fmt.Errorf("failed to create output directory %q: %w", targetDir, err)
+				}
+				filePath = filepath.Join(targetDir, file.Name)
+			} else {
+				filePath = filepath.Join(dir, file.Name)
+			}
 			if err := os.WriteFile(filePath, []byte(file.Content), 0o600); err != nil {
 				return fmt.Errorf("failed to write file %q: %w", filePath, err)
 			}

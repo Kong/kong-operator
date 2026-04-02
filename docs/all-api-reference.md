@@ -6001,6 +6001,7 @@ _Appears in:_
 - [KonnectCloudGatewayNetworkSpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaynetworkspec)
 - [KonnectExtensionKonnectSpec](#konnect-konghq-com-v1alpha1-types-konnectextensionkonnectspec)
 - [KonnectGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanespec)
+- [PortalSpec](#x-konnect-konghq-com-v1alpha1-types-portalspec)
 
 #### KonnectEndpoints
 
@@ -6047,6 +6048,7 @@ _Appears in:_
 - [KonnectGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanestatus)
 - [KonnectGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha2-types-konnectgatewaycontrolplanestatus)
 - [MCPServerStatus](#konnect-konghq-com-v1alpha1-types-mcpserverstatus)
+- [PortalStatus](#x-konnect-konghq-com-v1alpha1-types-portalstatus)
 
 #### KonnectEntityStatusWithControlPlaneAndCertificateRefs
 

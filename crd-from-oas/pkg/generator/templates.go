@@ -16,6 +16,9 @@ import (
 {{- if .ObjectRefImport}}
 	{{.ObjectRefImport.Alias}} "{{.ObjectRefImport.Path}}"
 {{- end}}
+{{- if .HasReconciler}}
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+{{- end}}
 )
 
 // {{.EntityName}} is the Schema for the {{.EntityName | lower}}s API.
@@ -52,6 +55,12 @@ type {{.EntityName}}List struct {
 
 // {{.EntityName}}Spec defines the desired state of {{.EntityName}}.
 type {{.EntityName}}Spec struct {
+{{- if .HasReconciler}}
+	// KonnectConfiguration is the Konnect configuration for this entity.
+	//
+	// +required
+	KonnectConfiguration konnectv1alpha2.KonnectConfiguration ` + "`" + `json:"konnect"` + "`" + `
+{{end}}
 {{- range .Schema.Dependencies}}
 	// {{.FieldName}} is the reference to the parent {{.EntityName}} object.
 	//
@@ -122,7 +131,11 @@ type {{.EntityName}}Status struct {
 	// Konnect contains the Konnect entity status.
 	//
 	// +optional
+{{- if .HasReconciler}}
+	konnectv1alpha2.KonnectEntityStatus ` + "`" + `json:",inline"` + "`" + `
+{{- else}}
 	KonnectEntityStatus ` + "`" + `json:",inline"` + "`" + `
+{{- end}}
 {{range .Schema.Dependencies}}
 	// {{.EntityName}}ID is the Konnect ID of the parent {{.EntityName}}.
 	//

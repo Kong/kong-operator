@@ -22,6 +22,7 @@ import (
 	kcfgkonnect "github.com/kong/kong-operator/v2/api/konnect"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	xkonnectv1alpha1 "github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
@@ -115,6 +116,9 @@ func Create[
 	case *konnectv1alpha1.MCPServer:
 		// MCPServer is mirror-only, so we use Konnect as the source of truth for it.
 		err = ensureMCPServer(ctx, sdk.GetMCPServersSDK(), ent)
+	case *xkonnectv1alpha1.Portal:
+		// TODO: implement Portal SDK ops
+		err = fmt.Errorf("Portal create operation not yet implemented")
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
 	default:
@@ -177,6 +181,8 @@ func Create[
 			id, errGet = getKongCertificateForUID(ctx, sdk.GetCertificatesSDK(), ent)
 		case *configurationv1alpha1.KongCACertificate:
 			id, errGet = getKongCACertificateForUID(ctx, sdk.GetCACertificatesSDK(), ent)
+		case *xkonnectv1alpha1.Portal:
+			// TODO: implement Portal getForUID
 			// ---------------------------------------------------------------------
 			// TODO: add other Konnect types
 		default:
@@ -323,6 +329,9 @@ func Delete[
 	case *konnectv1alpha1.MCPServer:
 		// MCPServer is mirror-only, so we use Konnect as the source of truth for it.
 		break
+	case *xkonnectv1alpha1.Portal:
+		// TODO: implement Portal SDK delete
+		err = fmt.Errorf("Portal delete operation not yet implemented")
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
 	default:
@@ -479,6 +488,9 @@ func Update[
 	case *konnectv1alpha1.MCPServer:
 		// MCPServer is mirror-only, so we use Konnect as the source of truth for it.
 		break
+	case *xkonnectv1alpha1.Portal:
+		// TODO: implement Portal SDK update
+		err = fmt.Errorf("Portal update operation not yet implemented")
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
 	default:
@@ -607,6 +619,9 @@ func Adopt[
 		err = adoptKongCredentialHMAC(ctx, sdk.GetHMACCredentialsSDK(), ent)
 	case *configurationv1alpha1.KongDataPlaneClientCertificate:
 		err = adoptKongDataPlaneCertificate(ctx, sdk.GetDataPlaneCertificatesSDK(), ent)
+	case *xkonnectv1alpha1.Portal:
+		// TODO: implement Portal adoption
+		err = fmt.Errorf("Portal adopt operation not yet implemented")
 	// TODO: implement adoption for other types.
 	default:
 		return ctrl.Result{}, fmt.Errorf("unsupported entity type %T", ent)

@@ -13,9 +13,10 @@ import (
 
 // EnvConfig holds the configuration for the generator, populated from environment variables.
 type EnvConfig struct {
-	InputFile  string `env:"INPUT_FILE" envDefault:"openapi.yaml"`
-	OutputDir  string `env:"OUTPUT_DIR" envDefault:"api/"`
-	ConfigFile string `env:"CONFIG_FILE,required"`
+	InputFile   string `env:"INPUT_FILE" envDefault:"openapi.yaml"`
+	OutputDir   string `env:"OUTPUT_DIR" envDefault:"api/"`
+	ConfigFile  string `env:"CONFIG_FILE,required"`
+	ProjectRoot string `env:"PROJECT_ROOT" envDefault:".."`
 }
 
 func main() {
@@ -34,7 +35,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	runner, err := run.New(projectCfg, cfg.InputFile, cfg.OutputDir)
+	runner, err := run.New(projectCfg, cfg.InputFile, cfg.OutputDir, run.WithProjectRoot(cfg.ProjectRoot))
 	if err != nil {
 		logger.Error("failed to initialize runner", "error", err)
 		os.Exit(1)

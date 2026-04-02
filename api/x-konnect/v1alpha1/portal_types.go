@@ -5,6 +5,7 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 )
 
 // Portal is the Schema for the portals API.
@@ -41,6 +42,11 @@ type PortalList struct {
 
 // PortalSpec defines the desired state of Portal.
 type PortalSpec struct {
+	// KonnectConfiguration is the Konnect configuration for this entity.
+	//
+	// +required
+	KonnectConfiguration konnectv1alpha2.KonnectConfiguration `json:"konnect"`
+
 	// APISpec defines the desired state of the resource's API spec fields.
 	//
 	// +optional
@@ -168,7 +174,7 @@ type PortalStatus struct {
 	// Konnect contains the Konnect entity status.
 	//
 	// +optional
-	KonnectEntityStatus `json:",inline"`
+	konnectv1alpha2.KonnectEntityStatus `json:",inline"`
 
 	// ObservedGeneration is the most recent generation observed
 	//
