@@ -1362,6 +1362,10 @@ func newHTTPRouteWithRules(hostnames []string, rules []gwtypes.HTTPRouteRule) *g
 	}
 
 	return &gwtypes.HTTPRoute{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "HTTPRoute",
+			APIVersion: "gateway.networking.k8s.io/v1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-route",
 			Namespace: "default",

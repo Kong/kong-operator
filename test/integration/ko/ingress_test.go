@@ -30,6 +30,8 @@ import (
 	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
 	"github.com/kong/kong-operator/v2/pkg/vars"
 	"github.com/kong/kong-operator/v2/test/helpers"
+	"github.com/kong/kong-operator/v2/test/helpers/asserts"
+	"github.com/kong/kong-operator/v2/test/integration"
 )
 
 const (
@@ -39,7 +41,8 @@ const (
 
 func TestIngressEssentials(t *testing.T) {
 	t.Parallel()
-	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
+	ctx := t.Context()
+	namespace, cleaner := helpers.SetupTestEnv(t, ctx, integration.GetEnv())
 
 	t.Log("deploying a GatewayClass resource")
 	gatewayClass := &gatewayv1.GatewayClass{
@@ -50,7 +53,7 @@ func TestIngressEssentials(t *testing.T) {
 			ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
 		},
 	}
-	gatewayClass, err := GetClients().GatewayClient.GatewayV1().GatewayClasses().Create(GetCtx(), gatewayClass, metav1.CreateOptions{})
+	gatewayClass, err := integration.GetClients().GatewayClient.GatewayV1().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
 
@@ -69,14 +72,14 @@ func TestIngressEssentials(t *testing.T) {
 			}},
 		},
 	}
-	gateway, err = GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Create(GetCtx(), gateway, metav1.CreateOptions{})
+	gateway, err = integration.GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 
 	t.Log("verifying Gateway gets an IP address")
 	var gatewayIP string
 	require.Eventually(t, func() bool {
-		gateway, err = GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Get(GetCtx(), gateway.Name, metav1.GetOptions{})
+		gateway, err = integration.GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		if len(gateway.Status.Addresses) > 0 && *gateway.Status.Addresses[0].Type == gatewayv1.IPAddressType {
 			gatewayIP = gateway.Status.Addresses[0].Value
@@ -88,7 +91,7 @@ func TestIngressEssentials(t *testing.T) {
 	t.Log("verifying that the DataPlane becomes Ready")
 	var dataplane *operatorv1beta1.DataPlane
 	require.Eventually(t, func() bool {
-		dataplanes, err := gatewayutils.ListDataPlanesForGateway(GetCtx(), GetClients().MgrClient, gateway)
+		dataplanes, err := gatewayutils.ListDataPlanesForGateway(ctx, integration.GetClients().MgrClient, gateway)
 		if err != nil {
 			return false
 		}
@@ -107,7 +110,7 @@ func TestIngressEssentials(t *testing.T) {
 	t.Log("verifying that the ControlPlane becomes provisioned")
 	var controlPlane *gwtypes.ControlPlane
 	require.Eventually(t, func() bool {
-		controlplanes, err := gatewayutils.ListControlPlanesForGateway(GetCtx(), GetClients().MgrClient, gateway)
+		controlplanes, err := gatewayutils.ListControlPlanesForGateway(ctx, integration.GetClients().MgrClient, gateway)
 		if err != nil {
 			return false
 		}
@@ -124,32 +127,32 @@ func TestIngressEssentials(t *testing.T) {
 	require.NotNil(t, controlPlane)
 
 	t.Log("verifying connectivity to the Gateway")
-	require.Eventually(t, Expect404WithNoRouteFunc(t, GetCtx(), fmt.Sprintf("http://%s", gatewayIP)), testutils.DefaultIngressWait, time.Second)
+	require.Eventually(t, asserts.Expect404WithNoRouteFunc(t, ctx, fmt.Sprintf("http://%s", gatewayIP)), testutils.DefaultIngressWait, time.Second)
 
 	t.Log("retrieving the kong-proxy url")
-	services := testutils.MustListDataPlaneServices(t, GetCtx(), dataplane, GetClients().MgrClient, client.MatchingLabels{
+	services := testutils.MustListDataPlaneServices(t, ctx, dataplane, integration.GetClients().MgrClient, client.MatchingLabels{
 		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 		consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
 	})
 	require.Len(t, services, 1)
-	proxyURL, err := URLForService(GetCtx(), GetEnv().Cluster(), types.NamespacedName{Namespace: services[0].Namespace, Name: services[0].Name}, testutils.DefaultHTTPPort)
+	proxyURL, err := URLForService(ctx, integration.GetEnv().Cluster(), types.NamespacedName{Namespace: services[0].Namespace, Name: services[0].Name}, testutils.DefaultHTTPPort)
 	require.NoError(t, err)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", testutils.HTTPBinImage, 80)
 	deployment := generators.NewDeploymentForContainer(container)
-	deployment, err = GetEnv().Cluster().Client().AppsV1().Deployments(namespace.Name).Create(GetCtx(), deployment, metav1.CreateOptions{})
+	deployment, err = integration.GetEnv().Cluster().Client().AppsV1().Deployments(namespace.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(deployment)
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
-	service, err = GetEnv().Cluster().Client().CoreV1().Services(namespace.Name).Create(GetCtx(), service, metav1.CreateOptions{})
+	service, err = integration.GetEnv().Cluster().Client().CoreV1().Services(namespace.Name).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(service)
 
 	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, ingressClass)
-	kubernetesVersion, err := GetEnv().Cluster().Version()
+	kubernetesVersion, err := integration.GetEnv().Cluster().Version()
 	require.NoError(t, err)
 	ingressObj := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion,
 		fmt.Sprintf("/%s-httpbin", strings.ToLower(t.Name())),
@@ -159,7 +162,7 @@ func TestIngressEssentials(t *testing.T) {
 		}, service)
 	require.EventuallyWithT(t,
 		func(c *assert.CollectT) {
-			err := clusters.DeployIngress(GetCtx(), GetEnv().Cluster(), namespace.Name, ingressObj)
+			err := clusters.DeployIngress(ctx, integration.GetEnv().Cluster(), namespace.Name, ingressObj)
 			require.NoError(c, err, "failed to deploy ingress in namespace %s", namespace.Name)
 			// Set the namespace so that the cleaner is happy
 			ingressObj.(client.Object).SetNamespace(namespace.Name)
@@ -172,7 +175,7 @@ func TestIngressEssentials(t *testing.T) {
 
 	t.Log("waiting for updated ingress status to include IP")
 	require.Eventually(t, func() bool {
-		lbstatus, err := clusters.GetIngressLoadbalancerStatus(GetCtx(), GetEnv().Cluster(), namespace.Name, ingress)
+		lbstatus, err := clusters.GetIngressLoadbalancerStatus(ctx, integration.GetEnv().Cluster(), namespace.Name, ingress)
 		if err != nil {
 			t.Logf("failed to get ingress LoadBalancer status: %v", err)
 			return false
@@ -204,28 +207,28 @@ func TestIngressEssentials(t *testing.T) {
 
 	t.Logf("removing the ingress.class annotation %q from ingress", ingressClass)
 	require.Eventually(t, func() bool {
-		ingress, err := GetEnv().Cluster().Client().NetworkingV1().Ingresses(namespace.Name).Get(GetCtx(), ingress.Name, metav1.GetOptions{})
+		ingress, err := integration.GetEnv().Cluster().Client().NetworkingV1().Ingresses(namespace.Name).Get(ctx, ingress.Name, metav1.GetOptions{})
 		if err != nil {
 			return false
 		}
 		delete(ingress.Annotations, annotations.IngressClassKey)
-		_, err = GetEnv().Cluster().Client().NetworkingV1().Ingresses(namespace.Name).Update(GetCtx(), ingress, metav1.UpdateOptions{})
+		_, err = integration.GetEnv().Cluster().Client().NetworkingV1().Ingresses(namespace.Name).Update(ctx, ingress, metav1.UpdateOptions{})
 		return err == nil
 	}, testutils.DefaultIngressWait, testutils.WaitIngressTick)
 
 	t.Logf("verifying that removing the ingress.class annotation %q from ingress causes routes to disconnect", ingressClass)
 	require.Eventually(t,
-		Expect404WithNoRouteFunc(t, GetCtx(), fmt.Sprintf("%s/%s-httpbin", proxyURL, strings.ToLower(t.Name()))),
+		asserts.Expect404WithNoRouteFunc(t, ctx, fmt.Sprintf("%s/%s-httpbin", proxyURL, strings.ToLower(t.Name()))),
 		testutils.DefaultIngressWait, testutils.WaitIngressTick)
 
 	t.Logf("putting the ingress.class annotation %q back on ingress", ingressClass)
 	require.Eventually(t, func() bool {
-		ingress, err := GetEnv().Cluster().Client().NetworkingV1().Ingresses(namespace.Name).Get(GetCtx(), ingress.Name, metav1.GetOptions{})
+		ingress, err := integration.GetEnv().Cluster().Client().NetworkingV1().Ingresses(namespace.Name).Get(ctx, ingress.Name, metav1.GetOptions{})
 		if err != nil {
 			return false
 		}
 		ingress.Annotations[annotations.IngressClassKey] = ingressClass
-		_, err = GetEnv().Cluster().Client().NetworkingV1().Ingresses(namespace.Name).Update(GetCtx(), ingress, metav1.UpdateOptions{})
+		_, err = integration.GetEnv().Cluster().Client().NetworkingV1().Ingresses(namespace.Name).Update(ctx, ingress, metav1.UpdateOptions{})
 		return err == nil
 	}, testutils.DefaultIngressWait, testutils.WaitIngressTick)
 
@@ -250,8 +253,8 @@ func TestIngressEssentials(t *testing.T) {
 	}, testutils.DefaultIngressWait, testutils.WaitIngressTick)
 
 	t.Log("deleting Ingress and waiting for routes to be torn down")
-	require.NoError(t, clusters.DeleteIngress(GetCtx(), GetEnv().Cluster(), namespace.Name, ingress))
+	require.NoError(t, clusters.DeleteIngress(ctx, integration.GetEnv().Cluster(), namespace.Name, ingress))
 	require.Eventually(t,
-		Expect404WithNoRouteFunc(t, GetCtx(), fmt.Sprintf("%s/%s-httpbin", proxyURL, strings.ToLower(t.Name()))),
+		asserts.Expect404WithNoRouteFunc(t, ctx, fmt.Sprintf("%s/%s-httpbin", proxyURL, strings.ToLower(t.Name()))),
 		testutils.DefaultIngressWait, testutils.WaitIngressTick)
 }

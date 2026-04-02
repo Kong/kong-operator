@@ -53,23 +53,26 @@ type PortalAPISpec struct {
 	// If disabled, developers cannot register for accounts or create applications.
 	//
 	// +optional
-	// +kubebuilder:default=true
-	AuthenticationEnabled bool `json:"authentication_enabled,omitempty"`
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	// +kubebuilder:default=Enabled
+	AuthenticationEnabled string `json:"authentication_enabled,omitempty"`
 
 	// Whether requests from applications to register for APIs will be
 	// automatically approved, or if they will be set to pending until approved by
 	// an admin.
 	//
 	// +optional
-	// +kubebuilder:default=false
-	AutoApproveApplications bool `json:"auto_approve_applications,omitempty"`
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	// +kubebuilder:default=Disabled
+	AutoApproveApplications string `json:"auto_approve_applications,omitempty"`
 
 	// Whether developer account registrations will be automatically approved, or
 	// if they will be set to pending until approved by an admin.
 	//
 	// +optional
-	// +kubebuilder:default=false
-	AutoApproveDevelopers bool `json:"auto_approve_developers,omitempty"`
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	// +kubebuilder:default=Disabled
+	AutoApproveDevelopers string `json:"auto_approve_developers,omitempty"`
 
 	// The default visibility of APIs in the portal.
 	// If set to `public`, newly published APIs are visible to unauthenticated
@@ -78,7 +81,7 @@ type PortalAPISpec struct {
 	// developers.
 	//
 	// +optional
-	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=public;private
 	DefaultAPIVisibility string `json:"default_api_visibility,omitempty"`
 
@@ -98,7 +101,7 @@ type PortalAPISpec struct {
 	// developers.
 	//
 	// +optional
-	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=public;private
 	DefaultPageVisibility string `json:"default_page_visibility,omitempty"`
 
@@ -144,8 +147,9 @@ type PortalAPISpec struct {
 	// Authentication must be enabled to use RBAC.
 	//
 	// +optional
-	// +kubebuilder:default=false
-	RBACEnabled bool `json:"rbac_enabled,omitempty"`
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	// +kubebuilder:default=Disabled
+	RBACEnabled string `json:"rbac_enabled,omitempty"`
 }
 
 // PortalStatus defines the observed state of Portal.

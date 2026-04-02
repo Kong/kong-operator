@@ -14,11 +14,14 @@ import (
 	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
 	"github.com/kong/kong-operator/v2/pkg/vars"
 	"github.com/kong/kong-operator/v2/test/helpers"
+	"github.com/kong/kong-operator/v2/test/integration"
 )
 
 func TestGatewayClassUpdates(t *testing.T) {
 	t.Parallel()
-	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
+	ctx := t.Context()
+	clients := integration.GetClients()
+	namespace, cleaner := helpers.SetupTestEnv(t, ctx, integration.GetEnv())
 
 	t.Log("deploying an unsupported GatewayClass resource")
 	unsupportedGatewayClass := &gatewayv1.GatewayClass{
@@ -29,7 +32,7 @@ func TestGatewayClassUpdates(t *testing.T) {
 			ControllerName: gatewayv1.GatewayController("konghq.com/fake-operator"),
 		},
 	}
-	unsupportedGatewayClass, err := GetClients().GatewayClient.GatewayV1().GatewayClasses().Create(GetCtx(), unsupportedGatewayClass, metav1.CreateOptions{})
+	unsupportedGatewayClass, err := integration.GetClients().GatewayClient.GatewayV1().GatewayClasses().Create(ctx, unsupportedGatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(unsupportedGatewayClass)
 
@@ -43,11 +46,11 @@ func TestGatewayClassUpdates(t *testing.T) {
 			ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
 		},
 	}
-	gatewayClass, err = GetClients().GatewayClient.GatewayV1().GatewayClasses().Create(GetCtx(), gatewayClass, metav1.CreateOptions{})
+	gatewayClass, err = integration.GetClients().GatewayClient.GatewayV1().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
 
-	require.Eventually(t, testutils.GatewayClassIsAccepted(t, GetCtx(), gatewayClassName, clients),
+	require.Eventually(t, testutils.GatewayClassIsAccepted(t, ctx, gatewayClassName, clients),
 		testutils.GatewayClassAcceptanceTimeLimit, time.Second)
 
 	t.Log("deploying a Gateway using an unsupported class")
@@ -65,30 +68,30 @@ func TestGatewayClassUpdates(t *testing.T) {
 			}},
 		},
 	}
-	gateway, err = GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Create(GetCtx(), gateway, metav1.CreateOptions{})
+	gateway, err = integration.GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 
 	t.Log("verifying that the controller doesn't try to schedule the unsupported Gateway")
 	timeout := time.Now().Add(time.Second * 5)
 	for timeout.After(time.Now()) {
-		gateway, err = GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Get(GetCtx(), gateway.Name, metav1.GetOptions{})
+		gateway, err = integration.GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		require.False(t, gatewayutils.IsAccepted(gateway))
 	}
 
 	t.Log("updating unsupported Gateway to use the supported GatewayClass")
 	require.Eventually(t, func() bool {
-		gateway, err = GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Get(GetCtx(), gateway.Name, metav1.GetOptions{})
+		gateway, err = integration.GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		gateway.Spec.GatewayClassName = gatewayv1.ObjectName(gatewayClass.Name)
-		gateway, err = GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Update(GetCtx(), gateway, metav1.UpdateOptions{})
+		gateway, err = integration.GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Update(ctx, gateway, metav1.UpdateOptions{})
 		return err == nil
 	}, testutils.ObjectUpdateTimeout, time.Second)
 
 	t.Log("verifying that the updated Gateway is now considered supported and becomes scheduled")
 	require.Eventually(t, func() bool {
-		gateway, err = GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Get(GetCtx(), gateway.Name, metav1.GetOptions{})
+		gateway, err = integration.GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		return gatewayutils.IsAccepted(gateway)
 	}, testutils.GatewaySchedulingTimeLimit, time.Second)
@@ -96,7 +99,9 @@ func TestGatewayClassUpdates(t *testing.T) {
 
 func TestGatewayClassCreation(t *testing.T) {
 	t.Parallel()
-	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
+	ctx := t.Context()
+	clients := integration.GetClients()
+	namespace, cleaner := helpers.SetupTestEnv(t, ctx, integration.GetEnv())
 
 	t.Log("deploying a Gateway with a non-existent GatewayClass")
 	gatewayClassName := uuid.NewString()
@@ -114,14 +119,14 @@ func TestGatewayClassCreation(t *testing.T) {
 			}},
 		},
 	}
-	gateway, err := GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Create(GetCtx(), gateway, metav1.CreateOptions{})
+	gateway, err := integration.GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 
 	t.Log("verifying that the controller doesn't try to schedule the unsupported Gateway")
 	timeout := time.Now().Add(time.Second * 5)
 	for timeout.After(time.Now()) {
-		gateway, err = GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Get(GetCtx(), gateway.Name, metav1.GetOptions{})
+		gateway, err = integration.GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		require.False(t, gatewayutils.IsAccepted(gateway))
 	}
@@ -136,16 +141,16 @@ func TestGatewayClassCreation(t *testing.T) {
 		},
 	}
 
-	gatewayClass, err = GetClients().GatewayClient.GatewayV1().GatewayClasses().Create(GetCtx(), gatewayClass, metav1.CreateOptions{})
+	gatewayClass, err = integration.GetClients().GatewayClient.GatewayV1().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
 
-	require.Eventually(t, testutils.GatewayClassIsAccepted(t, GetCtx(), gatewayClassName, clients),
+	require.Eventually(t, testutils.GatewayClassIsAccepted(t, ctx, gatewayClassName, clients),
 		testutils.GatewayClassAcceptanceTimeLimit, time.Second)
 
 	t.Log("verifying that the Gateway is now considered supported and becomes scheduled")
 	require.Eventually(t, func() bool {
-		gateway, err = GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Get(GetCtx(), gateway.Name, metav1.GetOptions{})
+		gateway, err = integration.GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		return gatewayutils.IsAccepted(gateway)
 	}, testutils.GatewaySchedulingTimeLimit, time.Second)

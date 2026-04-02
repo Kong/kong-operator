@@ -79,6 +79,8 @@ func ReconciliationWatchOptionsForEntity[
 		return KongSNIReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.KongDataPlaneClientCertificate:
 		return KongDataPlaneClientCertificateReconciliationWatchOptions(cl)
+	case *konnectv1alpha1.MCPServer:
+		return MCPServerReconciliationWatchOptions(cl)
 	default:
 		panic(fmt.Sprintf("unsupported entity type %T", ent))
 	}

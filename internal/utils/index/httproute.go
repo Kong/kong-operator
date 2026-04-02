@@ -28,12 +28,12 @@ func OptionsForHTTPRoute() []Option {
 		{
 			Object:         &gwtypes.HTTPRoute{},
 			Field:          BackendServicesOnHTTPRouteIndex,
-			ExtractValueFn: backendServicesOnHTTPRoute,
+			ExtractValueFn: BackendServicesOnHTTPRoute,
 		},
 		{
 			Object:         &gwtypes.HTTPRoute{},
 			Field:          GatewayOnHTTPRouteIndex,
-			ExtractValueFn: GatewaysOnHTTPRoute,
+			ExtractValueFn: GatewaysOnRoute[gwtypes.HTTPRoute],
 		},
 		{
 			Object:         &gwtypes.HTTPRoute{},
@@ -43,9 +43,9 @@ func OptionsForHTTPRoute() []Option {
 	}
 }
 
-// backendServicesOnHTTPRoute extracts and returns a list of unique Service references (in "namespace/name" format)
+// BackendServicesOnHTTPRoute extracts and returns a list of unique Service references (in "namespace/name" format)
 // from the BackendRefs of the given HTTPRoute object.
-func backendServicesOnHTTPRoute(o client.Object) []string {
+func BackendServicesOnHTTPRoute(o client.Object) []string {
 	httpRoute, ok := o.(*gwtypes.HTTPRoute)
 	if !ok {
 		return nil
@@ -54,50 +54,12 @@ func backendServicesOnHTTPRoute(o client.Object) []string {
 	var services []string
 	for _, rule := range httpRoute.Spec.Rules {
 		for _, backendRef := range rule.BackendRefs {
-			if backendRef.Group != nil && *backendRef.Group != "" && *backendRef.Group != "core" {
-				continue
+			if serviceKey, ok := backendRefToServiceKey(backendRef.BackendRef, httpRoute.Namespace); ok {
+				services = append(services, serviceKey)
 			}
-			if backendRef.Kind != nil && *backendRef.Kind != "Service" {
-				continue
-			}
-			if backendRef.Name == "" || backendRef.Port == nil {
-				continue
-			}
-			ns := httpRoute.Namespace
-			if backendRef.Namespace != nil {
-				ns = string(*backendRef.Namespace)
-			}
-
-			services = append(services, ns+"/"+string(backendRef.Name))
 		}
 	}
 	return lo.Uniq(services)
-}
-
-// GatewaysOnHTTPRoute extracts and returns a list of unique Gateway references (in "namespace/name" format)
-// from the ParentRefs of the given HTTPRoute object.
-func GatewaysOnHTTPRoute(o client.Object) []string {
-	httpRoute, ok := o.(*gwtypes.HTTPRoute)
-	if !ok {
-		return nil
-	}
-
-	var gateways []string
-	for _, parentRef := range httpRoute.Spec.ParentRefs {
-		// Only consider ParentRefs that refer to Gateways
-		if parentRef.Group != nil && *parentRef.Group != "" && *parentRef.Group != "gateway.networking.k8s.io" {
-			continue
-		}
-		if parentRef.Kind != nil && *parentRef.Kind != "Gateway" {
-			continue
-		}
-		ns := httpRoute.Namespace
-		if parentRef.Namespace != nil {
-			ns = string(*parentRef.Namespace)
-		}
-		gateways = append(gateways, ns+"/"+string(parentRef.Name))
-	}
-	return lo.Uniq(gateways)
 }
 
 // KongPluginsOnHTTPRoute extracts and returns a list of unique KongPlugin references (in "namespace/name" format)

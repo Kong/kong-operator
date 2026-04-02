@@ -1,5 +1,5 @@
 # renovate: datasource=github-tags depName=kubernetes/code-generator
-code-generator: "0.35.2"
+code-generator: "0.35.3"
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-tools
 controller-tools: "0.20.1"
 # renovate: datasource=github-releases depName=golangci/golangci-lint
@@ -15,7 +15,7 @@ crd-ref-docs: "0.3.0"
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-runtime
 setup-envtest: "0.23.3"
 # renovate: datasource=github-releases depName=rhysd/actionlint
-actionlint: "1.7.11"
+actionlint: "1.7.12"
 # renovate: datasource=github-releases depName=koalaman/shellcheck
 shellcheck: "0.11.0"
 # NOTE: This does not work and requires further investigation.

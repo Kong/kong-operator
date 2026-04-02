@@ -13,6 +13,7 @@ import (
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	"github.com/kong/kong-operator/v2/test/helpers"
+	"github.com/kong/kong-operator/v2/test/integration"
 )
 
 // TestDataPlanePortsValidatingAdmissionPolicy tests if the validating admission policy
@@ -20,8 +21,9 @@ import (
 // logic are in test/crdsvalidation/dataplane_validatingadmissionpolicy_test.go.
 func TestDataPlanePortsValidatingAdmissionPolicy(t *testing.T) {
 	t.Parallel()
+	ctx := t.Context()
 
-	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
+	namespace, cleaner := helpers.SetupTestEnv(t, ctx, integration.GetEnv())
 	testCases := []struct {
 		name            string
 		dataPlane       *operatorv1beta1.DataPlane
@@ -140,27 +142,28 @@ func TestDataPlanePortsValidatingAdmissionPolicy(t *testing.T) {
 		},
 	}
 
-	dataplaneClient := GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
+	dataplaneClient := integration.GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
+			ctx := t.Context()
 
 			var err error
 			if tc.updateDataPlane != nil {
 				var dpToUpdate *operatorv1beta1.DataPlane
-				dpToUpdate, err = dataplaneClient.Create(GetCtx(), tc.dataPlane, metav1.CreateOptions{})
+				dpToUpdate, err = dataplaneClient.Create(ctx, tc.dataPlane, metav1.CreateOptions{})
 				require.NoError(t, err, "failed to create initial DataPlane")
 				cleaner.Add(dpToUpdate)
 
 				require.Eventually(t, func() bool {
-					dpToUpdate, err = dataplaneClient.Get(GetCtx(), dpToUpdate.Name, metav1.GetOptions{})
+					dpToUpdate, err = dataplaneClient.Get(ctx, dpToUpdate.Name, metav1.GetOptions{})
 					tc.updateDataPlane(dpToUpdate)
-					_, err = dataplaneClient.Update(GetCtx(), dpToUpdate, metav1.UpdateOptions{})
+					_, err = dataplaneClient.Update(ctx, dpToUpdate, metav1.UpdateOptions{})
 					return !apierrors.IsConflict(err)
 				}, 10*time.Second, 100*time.Millisecond)
 
 			} else {
-				_, err = dataplaneClient.Create(GetCtx(), tc.dataPlane, metav1.CreateOptions{})
+				_, err = dataplaneClient.Create(ctx, tc.dataPlane, metav1.CreateOptions{})
 			}
 			require.Error(t, err, "expected error when submitting DataPlane")
 			require.True(t, apierrors.IsInvalid(err), "error should be of type Invalid, got: %v", err)

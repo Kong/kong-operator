@@ -2,8 +2,10 @@ package integration
 
 import (
 	"testing"
+
+	"github.com/kong/kong-operator/v2/test/integration"
 )
 
 func TestMain(m *testing.M) {
-	Suite(m)
+	integration.Suite(m)
 }

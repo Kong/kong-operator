@@ -58,7 +58,8 @@ type SupportedKonnectEntityType interface {
 		configurationv1alpha1.KongKey |
 		configurationv1alpha1.KongKeySet |
 		configurationv1alpha1.KongSNI |
-		configurationv1alpha1.KongDataPlaneClientCertificate
+		configurationv1alpha1.KongDataPlaneClientCertificate |
+		konnectv1alpha1.MCPServer
 	// TODO: add other types
 
 	GetTypeName() string

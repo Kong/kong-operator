@@ -303,7 +303,7 @@ func filterValidBackendRefs(
 
 		// Check ReferenceGrant permission for cross-namespace access.
 		if bRefNamespace != httpRoute.Namespace {
-			permitted, found, err := route.CheckReferenceGrant(ctx, cl, &bRef, httpRoute.Namespace)
+			permitted, found, err := route.CheckReferenceGrant(ctx, cl, &bRef.BackendRef, httpRoute.GetObjectKind().GroupVersionKind().Kind, httpRoute.Namespace)
 			if err != nil {
 				return nil, fmt.Errorf("error checking ReferenceGrant for BackendRef %s: %w", bRef.Name, err)
 			}

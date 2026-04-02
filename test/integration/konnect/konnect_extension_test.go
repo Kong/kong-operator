@@ -1,6 +1,7 @@
-package integration
+package konnect
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"testing"
@@ -15,7 +16,6 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
@@ -25,13 +25,18 @@ import (
 	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
 	"github.com/kong/kong-operator/v2/test"
 	"github.com/kong/kong-operator/v2/test/helpers"
+	"github.com/kong/kong-operator/v2/test/helpers/asserts"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 	"github.com/kong/kong-operator/v2/test/helpers/conditions"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
+	"github.com/kong/kong-operator/v2/test/helpers/object"
+	"github.com/kong/kong-operator/v2/test/integration"
 )
 
 func TestKonnectExtensionKonnectControlPlaneNotFound(t *testing.T) {
-	ns, _ := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
+	ctx := t.Context()
+	ns, _ := helpers.SetupTestEnv(t, ctx, integration.GetEnv())
+	cl := integration.GetClients().MgrClient
 
 	// Let's generate a unique test ID that we can refer to in Konnect entities.
 	// Using only the first 8 characters of the UUID to keep the ID short enough for Konnect to accept it as a part
@@ -40,7 +45,7 @@ func TestKonnectExtensionKonnectControlPlaneNotFound(t *testing.T) {
 	t.Logf("Running Konnect extensions test with ID: %s", testID)
 
 	// Create an APIAuth for test.
-	clientNamespaced := client.NewNamespacedClient(GetClients().MgrClient, ns.Name)
+	clientNamespaced := client.NewNamespacedClient(integration.GetClients().MgrClient, ns.Name)
 
 	konnectExtension := deploy.KonnectExtension(
 		t, ctx, clientNamespaced,
@@ -54,7 +59,7 @@ func TestKonnectExtensionKonnectControlPlaneNotFound(t *testing.T) {
 
 	t.Logf("Waiting for KonnectExtension %s/%s to have expected conditions set to False", konnectExtension.Namespace, konnectExtension.Name)
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		ok, msg := checkKonnectExtensionConditions(t,
+		ok, msg := conditions.CheckKonnectExtensionConditions(ctx, t, cl,
 			konnectExtension,
 			helpers.CheckAllConditionsFalse,
 			konnectv1alpha1.ControlPlaneRefValidConditionType,
@@ -64,7 +69,9 @@ func TestKonnectExtensionKonnectControlPlaneNotFound(t *testing.T) {
 }
 
 func TestKonnectExtensionControlPlaneRotation(t *testing.T) {
-	ns, _ := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
+	ctx := t.Context()
+	ns, _ := helpers.SetupTestEnv(t, ctx, integration.GetEnv())
+	cl := integration.GetClients().MgrClient
 
 	// Let's generate a unique test ID that we can refer to in Konnect entities.
 	// Using only the first 8 characters of the UUID to keep the ID short enough for Konnect to accept it as a part
@@ -73,9 +80,9 @@ func TestKonnectExtensionControlPlaneRotation(t *testing.T) {
 	t.Logf("Running Konnect extensions test with ID: %s", testID)
 
 	// Create an APIAuth for test.
-	clientNamespaced := client.NewNamespacedClient(GetClients().MgrClient, ns.Name)
+	clientNamespaced := client.NewNamespacedClient(cl, ns.Name)
 
-	authCfg := deploy.KonnectAPIAuthConfiguration(t, GetCtx(), clientNamespaced,
+	authCfg := deploy.KonnectAPIAuthConfiguration(t, ctx, clientNamespaced,
 		deploy.WithTestIDLabel(testID),
 		func(obj client.Object) {
 			authCfg := obj.(*konnectv1alpha1.KonnectAPIAuthConfiguration)
@@ -86,14 +93,14 @@ func TestKonnectExtensionControlPlaneRotation(t *testing.T) {
 	)
 
 	// Create a Konnect control plane for the KonnectExtension to attach to.
-	cp := deploy.KonnectGatewayControlPlane(t, GetCtx(), clientNamespaced, authCfg,
+	cp := deploy.KonnectGatewayControlPlane(t, ctx, clientNamespaced, authCfg,
 		deploy.WithTestIDLabel(testID),
 		deploy.KonnectGatewayControlPlaneLabel(deploy.KonnectTestIDLabel, testID),
 	)
 
 	t.Logf("Waiting for Konnect ID to be assigned to ControlPlane %s/%s", cp.Namespace, cp.Name)
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		err := GetClients().MgrClient.Get(GetCtx(), k8stypes.NamespacedName{Name: cp.Name, Namespace: cp.Namespace}, cp)
+		err := cl.Get(ctx, k8stypes.NamespacedName{Name: cp.Name, Namespace: cp.Namespace}, cp)
 		require.NoError(t, err)
 		conditions.KonnectEntityIsProgrammed(t, cp)
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
@@ -105,7 +112,7 @@ func TestKonnectExtensionControlPlaneRotation(t *testing.T) {
 
 	t.Logf("Waiting for KonnectExtension %s/%s to have expected conditions set to True", konnectExtension.Namespace, konnectExtension.Name)
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		ok, msg := checkKonnectExtensionConditions(t,
+		ok, msg := conditions.CheckKonnectExtensionConditions(ctx, t, cl,
 			konnectExtension,
 			helpers.CheckAllConditionsTrue,
 			konnectv1alpha1.ControlPlaneRefValidConditionType,
@@ -116,30 +123,30 @@ func TestKonnectExtensionControlPlaneRotation(t *testing.T) {
 
 	t.Logf("waiting for status.konnect and status.dataPlaneClientAuth to be set for KonnectExtension %s/%s", konnectExtension.Namespace, konnectExtension.Name)
 	require.EventuallyWithT(t,
-		checkKonnectExtensionStatus(konnectExtension, cp.GetKonnectID(), ""),
+		conditions.CheckKonnectExtensionStatus(ctx, cl, konnectExtension, cp.GetKonnectID(), ""),
 		testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 	t.Logf("deleting Konnect control plane %s/%s", cp.Namespace, cp.Name)
-	deleteObjectAndWaitForDeletionFn(t, cp.DeepCopy())()
+	object.DeleteAndWaitForDeletionFn(context.Background(), t, cl, cp.DeepCopy())()
 
 	// Create a Konnect control plane for the KonnectExtension to attach to.
-	cp = deploy.KonnectGatewayControlPlane(t, GetCtx(), clientNamespaced, authCfg,
+	cp = deploy.KonnectGatewayControlPlane(t, ctx, clientNamespaced, authCfg,
 		deploy.WithTestIDLabel(testID),
 		deploy.WithName(cp.Name), // Reuse the same name to ensure the KonnectExtension is recreated with the same name.
 		deploy.KonnectGatewayControlPlaneLabel(deploy.KonnectTestIDLabel, testID),
 	)
-	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, cp.DeepCopy()))
+	t.Cleanup(object.DeleteAndWaitForDeletionFn(context.Background(), t, cl, cp.DeepCopy()))
 
 	t.Logf("Waiting for Konnect ID to be assigned to ControlPlane %s/%s", cp.Namespace, cp.Name)
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		err := GetClients().MgrClient.Get(GetCtx(), k8stypes.NamespacedName{Name: cp.Name, Namespace: cp.Namespace}, cp)
+		err := cl.Get(ctx, k8stypes.NamespacedName{Name: cp.Name, Namespace: cp.Namespace}, cp)
 		require.NoError(t, err)
 		conditions.KonnectEntityIsProgrammed(t, cp)
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 	t.Logf("Waiting for KonnectExtension %s/%s to have expected conditions set to True", konnectExtension.Namespace, konnectExtension.Name)
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		ok, msg := checkKonnectExtensionConditions(t,
+		ok, msg := conditions.CheckKonnectExtensionConditions(ctx, t, cl,
 			konnectExtension,
 			helpers.CheckAllConditionsTrue,
 			konnectv1alpha1.ControlPlaneRefValidConditionType,
@@ -150,16 +157,18 @@ func TestKonnectExtensionControlPlaneRotation(t *testing.T) {
 
 	t.Logf("waiting for status.konnect and status.dataPlaneClientAuth to be properly updated for KonnectExtension %s/%s", konnectExtension.Namespace, konnectExtension.Name)
 	require.EventuallyWithT(t,
-		checkKonnectExtensionStatus(konnectExtension, cp.GetKonnectID(), ""),
+		conditions.CheckKonnectExtensionStatus(ctx, cl, konnectExtension, cp.GetKonnectID(), ""),
 		testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 	// delete the KonnectExtension first to avoid the ControlPlane gets deleted first and
 	// the KonnectExtension gets stuck in deletion.
-	deleteObjectAndWaitForDeletionFn(t, konnectExtension.DeepCopy())()
+	object.DeleteAndWaitForDeletionFn(context.Background(), t, cl, konnectExtension.DeepCopy())()
 }
 
 func TestKonnectExtension(t *testing.T) {
-	ns, _ := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
+	ctx := t.Context()
+	ns, _ := helpers.SetupTestEnv(t, ctx, integration.GetEnv())
+	cl := integration.GetClients().MgrClient
 
 	// Let's generate a unique test ID that we can refer to in Konnect entities.
 	// Using only the first 8 characters of the UUID to keep the ID short enough for Konnect to accept it as a part
@@ -168,9 +177,9 @@ func TestKonnectExtension(t *testing.T) {
 	t.Logf("Running Konnect extensions test with ID: %s", testID)
 
 	// Create an APIAuth for test.
-	clientNamespaced := client.NewNamespacedClient(GetClients().MgrClient, ns.Name)
+	clientNamespaced := client.NewNamespacedClient(integration.GetClients().MgrClient, ns.Name)
 
-	authCfg := deploy.KonnectAPIAuthConfiguration(t, GetCtx(), clientNamespaced,
+	authCfg := deploy.KonnectAPIAuthConfiguration(t, ctx, clientNamespaced,
 		deploy.WithTestIDLabel(testID),
 		func(obj client.Object) {
 			authCfg := obj.(*konnectv1alpha1.KonnectAPIAuthConfiguration)
@@ -191,22 +200,22 @@ func TestKonnectExtension(t *testing.T) {
 
 	t.Run("Konnect hybrid ControlPlane", func(t *testing.T) {
 		// Create a Konnect control plane for the KonnectExtension to attach to.
-		cp := deploy.KonnectGatewayControlPlane(t, GetCtx(), clientNamespaced, authCfg,
+		cp := deploy.KonnectGatewayControlPlane(t, ctx, clientNamespaced, authCfg,
 			deploy.WithTestIDLabel(testID),
 			deploy.KonnectGatewayControlPlaneLabel(deploy.KonnectTestIDLabel, testID),
 		)
-		t.Cleanup(deleteObjectAndWaitForDeletionFn(t, cp.DeepCopy()))
+		t.Cleanup(object.DeleteAndWaitForDeletionFn(context.Background(), t, cl, cp.DeepCopy()))
 
 		t.Logf("Waiting for Konnect ID to be assigned to ControlPlane %s/%s", cp.Namespace, cp.Name)
 		require.EventuallyWithT(t, func(t *assert.CollectT) {
-			err := GetClients().MgrClient.Get(GetCtx(), k8stypes.NamespacedName{Name: cp.Name, Namespace: cp.Namespace}, cp)
+			err := integration.GetClients().MgrClient.Get(ctx, k8stypes.NamespacedName{Name: cp.Name, Namespace: cp.Namespace}, cp)
 			require.NoError(t, err)
 			conditions.KonnectEntityIsProgrammed(t, cp)
 		}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 		t.Run("Origin ControlPlane", func(t *testing.T) {
 			// Create entities to check proper working on Konnect.
-			deployKonnectEntitiesForKonnectExtensionTest(t, KonnectExtensionTestCaseParams{
+			deployKonnectEntitiesForKonnectExtensionTest(t, cl, KonnectExtensionTestCaseParams{
 				konnectControlPlane: cp,
 				client:              clientNamespaced,
 				namespace:           ns.Name,
@@ -215,7 +224,7 @@ func TestKonnectExtension(t *testing.T) {
 			})
 
 			// run the KonnectExtension test cases.
-			konnectExtensionTestCases(t, KonnectExtensionTestCaseParams{
+			konnectExtensionTestCases(t, cl, KonnectExtensionTestCaseParams{
 				konnectControlPlane: cp,
 				service:             service,
 				client:              clientNamespaced,
@@ -226,21 +235,21 @@ func TestKonnectExtension(t *testing.T) {
 
 		t.Run("Mirror ControlPlane", func(t *testing.T) {
 			// Create a Mirror Konnect control plane for the KonnectExtension to attach to.
-			mirrorCP := deploy.KonnectGatewayControlPlane(t, GetCtx(), clientNamespaced, authCfg,
+			mirrorCP := deploy.KonnectGatewayControlPlane(t, ctx, clientNamespaced, authCfg,
 				deploy.WithTestIDLabel(testID),
 				deploy.WithMirrorSource(cp.GetKonnectID()),
 			)
-			t.Cleanup(deleteObjectAndWaitForDeletionFn(t, mirrorCP.DeepCopy()))
+			t.Cleanup(object.DeleteAndWaitForDeletionFn(context.Background(), t, cl, mirrorCP.DeepCopy()))
 
 			t.Logf("Waiting for Konnect ID to be assigned to ControlPlane %s/%s", mirrorCP.Namespace, mirrorCP.Name)
 			require.EventuallyWithT(t, func(t *assert.CollectT) {
-				err := GetClients().MgrClient.Get(GetCtx(), k8stypes.NamespacedName{Name: mirrorCP.Name, Namespace: mirrorCP.Namespace}, mirrorCP)
+				err := integration.GetClients().MgrClient.Get(ctx, k8stypes.NamespacedName{Name: mirrorCP.Name, Namespace: mirrorCP.Namespace}, mirrorCP)
 				require.NoError(t, err)
 				conditions.KonnectEntityIsProgrammed(t, mirrorCP)
 			}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 			require.Eventually(t,
-				testutils.ObjectPredicates(t, clients.MgrClient,
+				testutils.ObjectPredicates(t, cl,
 					testutils.MatchCondition[*konnectv1alpha2.KonnectGatewayControlPlane](t).
 						Type(string(konnectv1alpha1.ControlPlaneMirroredConditionType)).
 						Status(metav1.ConditionTrue).
@@ -251,7 +260,7 @@ func TestKonnectExtension(t *testing.T) {
 			)
 
 			// Create entities to check proper working on Konnect.
-			deployKonnectEntitiesForKonnectExtensionTest(t, KonnectExtensionTestCaseParams{
+			deployKonnectEntitiesForKonnectExtensionTest(t, cl, KonnectExtensionTestCaseParams{
 				konnectControlPlane: mirrorCP,
 				client:              clientNamespaced,
 				namespace:           ns.Name,
@@ -259,7 +268,7 @@ func TestKonnectExtension(t *testing.T) {
 				authConfigName:      authCfg.Name,
 			})
 
-			konnectExtensionTestCases(t, KonnectExtensionTestCaseParams{
+			konnectExtensionTestCases(t, cl, KonnectExtensionTestCaseParams{
 				konnectControlPlane: mirrorCP,
 				service:             service,
 				client:              clientNamespaced,
@@ -271,14 +280,14 @@ func TestKonnectExtension(t *testing.T) {
 
 	t.Run("Konnect hybrid ControlPlane different order of deletion (KonnectGatewayControlPlane before KonnectExtension)", func(t *testing.T) {
 		// Create a Konnect control plane for the KonnectExtension to attach to.
-		cp := deploy.KonnectGatewayControlPlane(t, GetCtx(), clientNamespaced, authCfg,
+		cp := deploy.KonnectGatewayControlPlane(t, ctx, clientNamespaced, authCfg,
 			deploy.WithTestIDLabel(testID),
 			deploy.KonnectGatewayControlPlaneLabel(deploy.KonnectTestIDLabel, testID),
 		)
 
 		t.Logf("Waiting for Konnect ID to be assigned to ControlPlane %s/%s", cp.Namespace, cp.Name)
 		require.EventuallyWithT(t, func(t *assert.CollectT) {
-			err := GetClients().MgrClient.Get(GetCtx(), k8stypes.NamespacedName{Name: cp.Name, Namespace: cp.Namespace}, cp)
+			err := integration.GetClients().MgrClient.Get(ctx, k8stypes.NamespacedName{Name: cp.Name, Namespace: cp.Namespace}, cp)
 			require.NoError(t, err)
 			conditions.KonnectEntityIsProgrammed(t, cp)
 		}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
@@ -292,8 +301,7 @@ func TestKonnectExtension(t *testing.T) {
 
 		t.Logf("Waiting for KonnectExtension %s/%s to have expected conditions set to True", konnectExtension.Namespace, konnectExtension.Name)
 		require.EventuallyWithT(t, func(t *assert.CollectT) {
-			ok, msg := checkKonnectExtensionConditions(
-				t,
+			ok, msg := conditions.CheckKonnectExtensionConditions(ctx, t, cl,
 				konnectExtension,
 				helpers.CheckAllConditionsTrue,
 				konnectv1alpha1.ControlPlaneRefValidConditionType,
@@ -304,16 +312,16 @@ func TestKonnectExtension(t *testing.T) {
 
 		t.Logf("waiting for status.konnect and status.dataPlaneClientAuth to be set for KonnectExtension %s/%s", konnectExtension.Namespace, konnectExtension.Name)
 		require.EventuallyWithT(t,
-			checkKonnectExtensionStatus(konnectExtension, cp.GetKonnectID(), ""),
+			conditions.CheckKonnectExtensionStatus(ctx, cl, konnectExtension, cp.GetKonnectID(), ""),
 			testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 		t.Log("Test deletion")
 
 		// Enforce order explicitly to check the behavior.
 		t.Log("Deleting KonnectControlPlane")
-		deleteObjectAndWaitForDeletionFn(t, cp.DeepCopy())()
+		object.DeleteAndWaitForDeletionFn(context.Background(), t, cl, cp.DeepCopy())()
 		t.Log("Deleting KonnectExtension")
-		deleteObjectAndWaitForDeletionFn(t, konnectExtension.DeepCopy())()
+		object.DeleteAndWaitForDeletionFn(context.Background(), t, cl, konnectExtension.DeepCopy())()
 	})
 }
 
@@ -325,7 +333,8 @@ type KonnectExtensionTestCaseParams struct {
 	authConfigName      string
 }
 
-func konnectExtensionTestCases(t *testing.T, params KonnectExtensionTestCaseParams) {
+func konnectExtensionTestCases(t *testing.T, cl client.Client, params KonnectExtensionTestCaseParams) {
+	ctx := t.Context()
 	cert, key := certificate.MustGenerateCertPEMFormat()
 
 	t.Run("KonnectExtension with KonnectNamespacedRef control plane ref", func(t *testing.T) {
@@ -344,14 +353,14 @@ func konnectExtensionTestCases(t *testing.T, params KonnectExtensionTestCasePara
 					"konghq.com/secret", "true",
 				),
 			)
-			t.Cleanup(deleteObjectAndWaitForDeletionFn(t, secretCert.DeepCopy()))
+			t.Cleanup(object.DeleteAndWaitForDeletionFn(context.Background(), t, cl, secretCert.DeepCopy()))
 
 			konnectExtension := deploy.KonnectExtension(
 				t, ctx, params.client,
 				deploy.WithKonnectExtensionKonnectNamespacedRefControlPlaneRef(params.konnectControlPlane),
 				setKonnectExtensionDPCertSecretRef(t, secretCert),
 			)
-			t.Cleanup(deleteObjectAndWaitForDeletionFn(t, konnectExtension.DeepCopy()))
+			t.Cleanup(object.DeleteAndWaitForDeletionFn(context.Background(), t, cl, konnectExtension.DeepCopy()))
 
 			params := KonnectExtensionTestBodyParams{
 				konnectControlPlane: params.konnectControlPlane,
@@ -361,7 +370,7 @@ func konnectExtensionTestCases(t *testing.T, params KonnectExtensionTestCasePara
 				authConfigName:      params.authConfigName,
 				namespace:           params.namespace,
 			}
-			konnectExtensionTestBody(t, params)
+			konnectExtensionTestBody(t, cl, params)
 		})
 
 		t.Run("automatic secret provisioning", func(t *testing.T) {
@@ -369,7 +378,7 @@ func konnectExtensionTestCases(t *testing.T, params KonnectExtensionTestCasePara
 				t, ctx, params.client,
 				deploy.WithKonnectExtensionKonnectNamespacedRefControlPlaneRef(params.konnectControlPlane),
 			)
-			t.Cleanup(deleteObjectAndWaitForDeletionFn(t, konnectExtension.DeepCopy()))
+			t.Cleanup(object.DeleteAndWaitForDeletionFn(context.Background(), t, cl, konnectExtension.DeepCopy()))
 			params := KonnectExtensionTestBodyParams{
 				konnectControlPlane: params.konnectControlPlane,
 				konnectExtension:    konnectExtension,
@@ -378,7 +387,7 @@ func konnectExtensionTestCases(t *testing.T, params KonnectExtensionTestCasePara
 				authConfigName:      params.authConfigName,
 				namespace:           params.namespace,
 			}
-			konnectExtensionTestBody(t, params)
+			konnectExtensionTestBody(t, cl, params)
 		})
 	})
 }
@@ -397,8 +406,12 @@ type KonnectExtensionTestBodyParams struct {
 
 func deployKonnectEntitiesForKonnectExtensionTest(
 	t *testing.T,
+	cl client.Client,
 	params KonnectExtensionTestCaseParams,
 ) {
+	t.Helper()
+
+	ctx := t.Context()
 	ks := deploy.KongService(t, ctx, params.client,
 		deploy.WithKonnectNamespacedRefControlPlaneRef(params.konnectControlPlane),
 		func(obj client.Object) {
@@ -413,11 +426,11 @@ func deployKonnectEntitiesForKonnectExtensionTest(
 	)
 	t.Logf("Waiting for KongService to be updated with Konnect ID")
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		err := GetClients().MgrClient.Get(GetCtx(), k8stypes.NamespacedName{Name: ks.Name, Namespace: ks.Namespace}, ks)
+		err := integration.GetClients().MgrClient.Get(ctx, k8stypes.NamespacedName{Name: ks.Name, Namespace: ks.Namespace}, ks)
 		require.NoError(t, err)
 		conditions.KonnectEntityIsProgrammed(t, ks)
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
-	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, ks))
+	t.Cleanup(object.DeleteAndWaitForDeletionFn(context.Background(), t, cl, ks))
 
 	kr := deploy.KongRoute(
 		t, ctx, params.client,
@@ -429,20 +442,23 @@ func deployKonnectEntitiesForKonnectExtensionTest(
 	)
 	t.Logf("Waiting for KongRoute to be updated with Konnect ID")
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		err := GetClients().MgrClient.Get(GetCtx(), k8stypes.NamespacedName{Name: kr.Name, Namespace: kr.Namespace}, kr)
+		err := integration.GetClients().MgrClient.Get(ctx, k8stypes.NamespacedName{Name: kr.Name, Namespace: kr.Namespace}, kr)
 		require.NoError(t, err)
 
 		conditions.KonnectEntityIsProgrammed(t, kr)
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
-	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, kr))
+	t.Cleanup(object.DeleteAndWaitForDeletionFn(context.Background(), t, cl, kr))
 }
 
 // konnectExtensionTestBody is a function that runs the test body for KonnectExtension.
 // The logic herein defined is shared between all the dataplane KonnectExtension tests.
-func konnectExtensionTestBody(t *testing.T, p KonnectExtensionTestBodyParams) {
+func konnectExtensionTestBody(t *testing.T, cl client.Client, p KonnectExtensionTestBodyParams) {
+	t.Helper()
+	ctx := t.Context()
+
 	t.Logf("Waiting for KonnectExtension %s/%s to have expected conditions set to True", p.konnectExtension.Namespace, p.konnectExtension.Name)
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		ok, msg := checkKonnectExtensionConditions(t,
+		ok, msg := conditions.CheckKonnectExtensionConditions(ctx, t, cl,
 			p.konnectExtension,
 			helpers.CheckAllConditionsTrue,
 			konnectv1alpha1.ControlPlaneRefValidConditionType,
@@ -453,7 +469,7 @@ func konnectExtensionTestBody(t *testing.T, p KonnectExtensionTestBodyParams) {
 
 	t.Logf("waiting for status.konnect and status.dataPlaneClientAuth to be set for KonnectExtension %s/%s", p.konnectExtension.Namespace, p.konnectExtension.Name)
 	require.EventuallyWithT(t,
-		checkKonnectExtensionStatus(p.konnectExtension, p.konnectControlPlane.GetKonnectID(), ""),
+		conditions.CheckKonnectExtensionStatus(ctx, cl, p.konnectExtension, p.konnectControlPlane.GetKonnectID(), ""),
 		testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 	t.Logf("Creating a DataPlane using the KonnectExtension %s/%s", p.konnectExtension.Namespace, p.konnectExtension.Name)
@@ -494,7 +510,7 @@ func konnectExtensionTestBody(t *testing.T, p KonnectExtensionTestBodyParams) {
 			},
 		).Build()
 	require.NoError(t, p.client.Create(ctx, dataPlane))
-	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, dataPlane))
+	t.Cleanup(object.DeleteAndWaitForDeletionFn(context.Background(), t, cl, dataPlane))
 
 	dpName := k8stypes.NamespacedName{
 		Namespace: dataPlane.Namespace,
@@ -502,11 +518,11 @@ func konnectExtensionTestBody(t *testing.T, p KonnectExtensionTestBodyParams) {
 	}
 
 	t.Log("verifying dataplane gets marked provisioned")
-	require.Eventually(t, testutils.DataPlaneIsReady(t, GetCtx(), dpName, GetClients().OperatorClient), waitTime, tickTime)
+	require.Eventually(t, testutils.DataPlaneIsReady(t, ctx, dpName, integration.GetClients().OperatorClient), waitTime, tickTime)
 
 	t.Logf("verifying dataplane %s has ingress service", dpName)
 	var dpIngressService corev1.Service
-	require.Eventually(t, testutils.DataPlaneHasActiveService(t, GetCtx(), dpName, &dpIngressService, clients, client.MatchingLabels{
+	require.Eventually(t, testutils.DataPlaneHasActiveService(t, ctx, dpName, &dpIngressService, integration.GetClients(), client.MatchingLabels{
 		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 		consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
 	}), waitTime, tickTime)
@@ -521,17 +537,17 @@ func konnectExtensionTestBody(t *testing.T, p KonnectExtensionTestBodyParams) {
 		return len(dpIngressService.Status.LoadBalancer.Ingress) > 0
 	}, waitTime, tickTime)
 	dpIngressIP := dpIngressService.Status.LoadBalancer.Ingress[0].IP
-	require.Eventuallyf(t, Expect404WithNoRouteFunc(t, GetCtx(), "http://"+dpIngressIP), waitTime, tickTime,
+	require.Eventuallyf(t, asserts.Expect404WithNoRouteFunc(t, ctx, "http://"+dpIngressIP), waitTime, tickTime,
 		"Should receive 'No Route' response from dataplane's ingress service IP %s", dpIngressIP)
 
 	t.Log("route to /test path of service httpbin should receive a 200 OK response")
 	httpClient, err := helpers.CreateHTTPClient(nil, "")
 	require.NoError(t, err)
 	const routeAccessTimeout = 3 * time.Minute
-	request := helpers.MustBuildRequest(t, GetCtx(), http.MethodGet, "http://"+dpIngressIP+"/test", "")
+	request := helpers.MustBuildRequest(t, ctx, http.MethodGet, "http://"+dpIngressIP+"/test", "")
 	require.Eventually(
 		t,
-		testutils.GetResponseBodyContains(t, clients, httpClient, request, "<title>httpbin.org</title>"),
+		testutils.GetResponseBodyContains(t, integration.GetClients(), httpClient, request, "<title>httpbin.org</title>"),
 		routeAccessTimeout,
 		time.Second,
 	)
@@ -548,42 +564,6 @@ func setKonnectExtensionDPCertSecretRef(t *testing.T, s *corev1.Secret) deploy.O
 					Name: s.Name,
 				},
 			},
-		}
-	}
-}
-
-func checkKonnectExtensionConditions(
-	t *assert.CollectT,
-	ke *konnectv1alpha2.KonnectExtension,
-	checker helpers.ConditionsChecker,
-	conditions ...kcfgconsts.ConditionType,
-) (bool, string) {
-	err := GetClients().MgrClient.Get(GetCtx(), k8stypes.NamespacedName{Name: ke.Name, Namespace: ke.Namespace}, ke)
-	require.NoError(t, err)
-
-	return checker(ke, conditions...)
-}
-
-func checkKonnectExtensionStatus(
-	ke *konnectv1alpha2.KonnectExtension,
-	expectedKonnectCPID string,
-	expectedDPCertificateSecretName string, //nolint:unparam
-) func(t *assert.CollectT) {
-	return func(t *assert.CollectT) {
-		err := GetClients().MgrClient.Get(GetCtx(), k8stypes.NamespacedName{Name: ke.Name, Namespace: ke.Namespace}, ke)
-		require.NoError(t, err)
-		// Check Konnect control plane ID
-		require.NotNil(t, ke.Status.Konnect, "status.konnect should be present")
-		require.NotEmpty(t, ke.Status.Konnect.ControlPlaneID, "status.konnect.controlPlaneID should be present")
-		require.NotEmpty(t, ke.Status.Konnect.Endpoints.ControlPlaneEndpoint, "status.konnect.endpoints.controlPlaneEndpoint should be present")
-		require.NotEmpty(t, ke.Status.Konnect.Endpoints.TelemetryEndpoint, "status.konnect.endpoints.telemetryEndpoint should be present")
-		assert.Equal(t, expectedKonnectCPID, ke.Status.Konnect.ControlPlaneID, "Konnect control plane ID should be set in status")
-		// Check dataplane client auth
-		require.NotNil(t, ke.Status.DataPlaneClientAuth, "status.dataPlaneClientAuth should be present")
-		require.NotNil(t, ke.Status.DataPlaneClientAuth.CertificateSecretRef, "status.dataPlaneClientAuth.certiifcateSecretRef should be present")
-		if expectedDPCertificateSecretName != "" {
-			assert.Equal(t, expectedDPCertificateSecretName, ke.Status.DataPlaneClientAuth.CertificateSecretRef.Name,
-				"status.dataPlaneClientAuth.certiifcateSecretRef should have the expected secret name")
 		}
 	}
 }

@@ -136,6 +136,13 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 		)
 	}
 
+	if cfg.FeatureGates.Enabled(FeatureGateMCPServer) {
+		cl := mgr.GetClient()
+		indexOptions = slices.Concat(indexOptions,
+			index.OptionsForMCPServer(cl),
+		)
+	}
+
 	for _, e := range indexOptions {
 		ctrllog.FromContext(ctx).Info("Setting up index", "index", e.String())
 		if err := mgr.GetCache().IndexField(ctx, e.Object, e.Field, e.ExtractValueFn); err != nil {
@@ -799,6 +806,13 @@ func newGatewayAPIHybridController[t converter.RootObject, tPtr converter.RootOb
 func newMCPServerControllers(mgr manager.Manager, c *Config, ctrlOpts controller.Options) []ControllerDef {
 	sm := mcpserver.NewSignalManager(c.LoggingMode, mgr.GetClient(), mgr.GetScheme())
 	sdkFactory := sdkops.NewSDKFactory()
+	controllerFactory := konnectControllerFactory{
+		sdkFactory:        sdkFactory,
+		loggingMode:       c.LoggingMode,
+		client:            mgr.GetClient(),
+		syncPeriod:        c.KonnectSyncPeriod,
+		controllerOptions: ctrlOpts,
+	}
 	return []ControllerDef{
 		{
 			Enabled: true,
@@ -821,6 +835,9 @@ func newMCPServerControllers(mgr manager.Manager, c *Config, ctrlOpts controller
 				SdkFactory:        sdkFactory,
 			},
 		},
+		// Generic KonnectEntityReconciler for MCPServer: resolves ControlPlaneRef,
+		// verifies the entity exists in Konnect, and sets Programmed/Mirrored conditions.
+		newKonnectEntityController[konnectv1alpha1.MCPServer](controllerFactory),
 	}
 }
 

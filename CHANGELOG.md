@@ -99,6 +99,10 @@
   to react in near-real-time to Konnect-side configuration changes affecting `MCPServer` objects
   linked to a control plane. The feature is gated behind the `MCPController` feature gate.
   [#3677](https://github.com/Kong/kong-operator/pull/3677)
+- Added `MCPServer` entity controller that reconciles `MCPServer` custom resources
+  against the Konnect API. The controller sets status conditions and the Konnect entity ID
+  on the resource. The feature is gated behind the `MCPController` feature gate.
+  [#3739](https://github.com/Kong/kong-operator/pull/3739)
 
 ### Changed
 
@@ -146,6 +150,11 @@
 - Fix the on-prem translator to set `protocols` in translated Kong routes to
   `http,https`.
   [#3587](https://github.com/Kong/kong-operator/pull/3587)
+- Fix the hybrid gateway translator to set `protocols` in translated KongRoutes
+  to `http,https` to avoid 426 errors from Konnect hybrid gateways.
+  [#3753](https://github.com/Kong/kong-operator/pull/3753)
+- Revert change in configuring SNIs in ingress-controller when running with local controlplane.
+  [#3761](https://github.com/Kong/kong-operator/pull/3761)
 
 ## [v2.1.3]
 

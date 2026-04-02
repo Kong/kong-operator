@@ -17,12 +17,16 @@ import (
 	gatewayutils "github.com/kong/kong-operator/v2/pkg/utils/gateway"
 	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
 	"github.com/kong/kong-operator/v2/test/helpers"
+	"github.com/kong/kong-operator/v2/test/helpers/asserts"
+	"github.com/kong/kong-operator/v2/test/integration"
 )
 
 func TestAIGatewayCreation(t *testing.T) {
 	t.Parallel()
+	ctx := t.Context()
+	clients := integration.GetClients()
 
-	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
+	namespace, cleaner := helpers.SetupTestEnv(t, ctx, integration.GetEnv())
 
 	t.Log("deploying a GatewayConfiguration resource")
 	gatewayConfiguration := &operatorv2beta1.GatewayConfiguration{
@@ -62,7 +66,7 @@ func TestAIGatewayCreation(t *testing.T) {
 			},
 		},
 	}
-	gatewayConfiguration, err := GetClients().OperatorClient.GatewayOperatorV2beta1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfiguration, metav1.CreateOptions{})
+	gatewayConfiguration, err := integration.GetClients().OperatorClient.GatewayOperatorV2beta1().GatewayConfigurations(namespace.Name).Create(ctx, gatewayConfiguration, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayConfiguration)
 
@@ -74,7 +78,7 @@ func TestAIGatewayCreation(t *testing.T) {
 		Name:      gatewayConfiguration.Name,
 		Namespace: (*gatewayv1.Namespace)(&namespace.Name),
 	}
-	gatewayClass, err = GetClients().GatewayClient.GatewayV1().GatewayClasses().Create(GetCtx(), gatewayClass, metav1.CreateOptions{})
+	gatewayClass, err = integration.GetClients().GatewayClient.GatewayV1().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
 
@@ -97,7 +101,7 @@ func TestAIGatewayCreation(t *testing.T) {
 			"cohere": []byte("cohere-key"),
 		},
 	}
-	credSecret, err = GetClients().K8sClient.CoreV1().Secrets(namespace.Name).Create(GetCtx(), credSecret, metav1.CreateOptions{})
+	credSecret, err = integration.GetClients().K8sClient.CoreV1().Secrets(namespace.Name).Create(ctx, credSecret, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(credSecret)
 
@@ -148,35 +152,35 @@ func TestAIGatewayCreation(t *testing.T) {
 			},
 		},
 	}
-	aigateway, err = GetClients().OperatorClient.GatewayOperatorV1alpha1().AIGateways(namespace.Name).Create(GetCtx(), aigateway, metav1.CreateOptions{})
+	aigateway, err = integration.GetClients().OperatorClient.GatewayOperatorV1alpha1().AIGateways(namespace.Name).Create(ctx, aigateway, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(aigateway)
 
 	t.Log("checking for the Gateway that should have been created for the AIGateway")
-	gateway := eventuallyDetermineGatewayForAIGateway(t, aigateway, GetClients())
+	gateway := eventuallyDetermineGatewayForAIGateway(t, aigateway, integration.GetClients())
 
 	t.Log("verifying Gateway gets marked as Scheduled")
 	gatewayExpectedNN := types.NamespacedName{Name: gateway.Name, Namespace: gateway.Namespace}
-	require.Eventually(t, testutils.GatewayIsAccepted(t, GetCtx(), gatewayExpectedNN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayIsAccepted(t, ctx, gatewayExpectedNN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
 
 	t.Log("verifying Gateway gets marked as Programmed")
-	require.Eventually(t, testutils.GatewayIsProgrammed(t, GetCtx(), gatewayExpectedNN, clients.MgrClient), testutils.GatewayReadyTimeLimit, time.Second)
-	require.Eventually(t, testutils.GatewayListenersAreProgrammed(t, GetCtx(), gatewayExpectedNN, clients), testutils.GatewayReadyTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayIsProgrammed(t, ctx, gatewayExpectedNN, clients.MgrClient), testutils.GatewayReadyTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayListenersAreProgrammed(t, ctx, gatewayExpectedNN, clients), testutils.GatewayReadyTimeLimit, time.Second)
 
 	t.Log("verifying Gateway gets an IP address")
-	require.Eventually(t, testutils.GatewayIPAddressExist(t, GetCtx(), gatewayExpectedNN, clients), testutils.SubresourceReadinessWait, time.Second)
-	gateway = testutils.MustGetGateway(t, GetCtx(), gatewayExpectedNN, clients.MgrClient)
+	require.Eventually(t, testutils.GatewayIPAddressExist(t, ctx, gatewayExpectedNN, clients), testutils.SubresourceReadinessWait, time.Second)
+	gateway = testutils.MustGetGateway(t, ctx, gatewayExpectedNN, clients.MgrClient)
 	gatewayIPAddress := gateway.Status.Addresses[0].Value
 
 	t.Logf("verifying that the DataPlane becomes Ready for Gateway [%s]", gateway.Name)
-	require.Eventually(t, testutils.GatewayDataPlaneIsReady(t, GetCtx(), gateway, clients), testutils.SubresourceReadinessWait, time.Second)
-	dataplanes := testutils.MustListDataPlanesForGateway(t, GetCtx(), gateway, clients)
+	require.Eventually(t, testutils.GatewayDataPlaneIsReady(t, ctx, gateway, clients), testutils.SubresourceReadinessWait, time.Second)
+	dataplanes := testutils.MustListDataPlanesForGateway(t, ctx, gateway, clients)
 	require.Len(t, dataplanes, 1)
 	dataplane := dataplanes[0]
 
 	t.Logf("verifying that the ControlPlane becomes provisioned for Gateway [%s]", gateway.Name)
-	require.Eventually(t, testutils.GatewayControlPlaneIsProvisioned(t, GetCtx(), gateway, clients), testutils.SubresourceReadinessWait, time.Second)
-	controlplanes := testutils.MustListControlPlanesForGateway(t, GetCtx(), gateway, clients)
+	require.Eventually(t, testutils.GatewayControlPlaneIsProvisioned(t, ctx, gateway, clients), testutils.SubresourceReadinessWait, time.Second)
+	controlplanes := testutils.MustListControlPlanesForGateway(t, ctx, gateway, clients)
 	require.Len(t, controlplanes, 1)
 
 	t.Run("checking NetworkPolicies", func(t *testing.T) {
@@ -186,20 +190,20 @@ func TestAIGatewayCreation(t *testing.T) {
 		// Code ref: https://github.com/Kong/kong-operator/blob/27e3c46cd201bf3d03d2e81000239b047da2b2ce/controller/gateway/controller.go#L397-L410
 
 		// t.Log("verifying networkpolicies are created")
-		// require.Eventually(t, testutils.GatewayNetworkPoliciesExist(t, GetCtx(), gateway, clients), testutils.SubresourceReadinessWait, time.Second)
+		// require.Eventually(t, testutils.GatewayNetworkPoliciesExist(t, ctx, gateway, clients), testutils.SubresourceReadinessWait, time.Second)
 	})
 
 	t.Log("verifying connectivity to the Gateway")
-	require.Eventually(t, Expect404WithNoRouteFunc(t, GetCtx(), "http://"+gatewayIPAddress), testutils.SubresourceReadinessWait, time.Second)
+	require.Eventually(t, asserts.Expect404WithNoRouteFunc(t, ctx, "http://"+gatewayIPAddress), testutils.SubresourceReadinessWait, time.Second)
 
 	dataplaneNN := types.NamespacedName{Namespace: namespace.Name, Name: dataplane.Name}
 
 	t.Log("verifying that dataplane has 1 ready replica")
-	require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, GetCtx(), dataplaneNN, clients, 1), time.Minute, time.Second)
+	require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, ctx, dataplaneNN, clients, 1), time.Minute, time.Second)
 
 	t.Log("verifying that the HTTPRoute is now available for these LLMs")
 	require.Eventually(t, func() bool {
-		gateway, err = GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Get(GetCtx(), gateway.Name, metav1.GetOptions{})
+		gateway, err = integration.GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		return gatewayutils.IsAccepted(gateway)
 	}, testutils.GatewaySchedulingTimeLimit, time.Second)
@@ -221,8 +225,9 @@ func eventuallyDetermineGatewayForAIGateway(
 	aigateway *operatorv1alpha1.AIGateway,
 	clients testutils.K8sClients,
 ) (gateway *gatewayv1.Gateway) {
+	ctx := t.Context()
 	require.Eventually(t, func() bool {
-		gateways, err := clients.GatewayClient.GatewayV1().Gateways(aigateway.Namespace).List(GetCtx(), metav1.ListOptions{})
+		gateways, err := clients.GatewayClient.GatewayV1().Gateways(aigateway.Namespace).List(ctx, metav1.ListOptions{})
 		require.NoError(t, err)
 
 		for _, item := range gateways.Items {
