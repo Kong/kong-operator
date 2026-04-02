@@ -282,13 +282,13 @@ func setStatusConditionForKongPluginInstallation(
 		return c.Type == string(operatorv1alpha1.KongPluginInstallationConditionStatusAccepted)
 	})
 	if index < 0 {
+		kpi.Status.Conditions = append(kpi.Status.Conditions, status)
+	} else {
 		// Nothing changed, condition doesn't need to be updated.
 		if c := kpi.Status.Conditions[index]; c.Status == status.Status && c.Reason == status.Reason && c.Message == status.Message {
 			return nil
 		}
 		kpi.Status.Conditions[index] = status
-	} else {
-		kpi.Status.Conditions = append(kpi.Status.Conditions, status)
 	}
 	return client.Status().Update(ctx, kpi)
 }
