@@ -17,11 +17,10 @@ limitations under the License.
 package v1alpha1
 
 import (
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-
-	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 )
 
 func init() {
@@ -37,7 +36,7 @@ func init() {
 // +kubebuilder:object:generate=true
 // +kubebuilder:subresource:status
 // +kubebuilder:subresource:scale:specpath=.spec.deployment.replicas,statuspath=.status.replicas,selectorpath=.status.selector
-// +kubebuilder:resource:shortName=egdp,categories=kong,plural=dataplanes
+// +kubebuilder:resource:shortName=egdp,categories=kong
 // +kubebuilder:printcolumn:name="Ready",description="The Resource is ready",type=string,JSONPath=`.status.conditions[?(@.type=='Ready')].status`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 // +kong:channels=kong-operator
@@ -68,12 +67,13 @@ type DataPlaneList struct {
 
 // DataPlaneSpec defines the desired state of DataPlane.
 type DataPlaneSpec struct {
-	// KonnectEventGatewayRef references the KonnectEventGateway that this
-	// data plane connects to. The controller reads its status to obtain the
-	// Konnect gateway ID and region.
+	// ControlPlaneRef references the KonnectEventGateway resource that acts as the
+	// control plane for this data plane. KonnectEventGateway is the Konnect-side
+	// resource that provisions the Event Gateway cluster. The controller reads its
+	// status to obtain the Konnect gateway ID and region.
 	//
 	// +required
-	KonnectEventGatewayRef corev1.LocalObjectReference `json:"konnectEventGatewayRef"`
+	ControlPlaneRef corev1.LocalObjectReference `json:"controlPlaneRef"`
 
 	// Deployment configures the keg Deployment: image, replicas, resources,
 	// extra env vars, volume mounts, etc.
@@ -93,10 +93,69 @@ type DataPlaneSpec struct {
 	Config *Config `json:"config,omitempty"`
 }
 
-// DeploymentOptions specifies options for the Deployment managed
-// by the DataPlane controller.
+// DeploymentOptions specifies options for the Deployment managed by the DataPlane controller.
+//
+// +kubebuilder:validation:XValidation:message="Using both replicas and scaling fields is not allowed.",rule="!(has(self.scaling) && has(self.replicas))"
 type DeploymentOptions struct {
-	operatorv1beta1.DeploymentOptions `json:",inline"`
+	// Replicas describes the number of desired pods.
+	// This is a pointer to distinguish between explicit zero and not specified.
+	// This is effectively shorthand for setting a scaling minimum and maximum
+	// to the same value. This field and the scaling field are mutually exclusive:
+	// You can only configure one or the other.
+	//
+	// +optional
+	Replicas *int32 `json:"replicas,omitempty"`
+
+	// Scaling defines the scaling options for the deployment.
+	//
+	// +optional
+	Scaling *Scaling `json:"scaling,omitempty"`
+
+	// PodTemplateSpec defines PodTemplateSpec for Deployment's pods.
+	// It's being applied on top of the generated Deployments using
+	// [StrategicMergePatch](https://pkg.go.dev/k8s.io/apimachinery/pkg/util/strategicpatch#StrategicMergePatch).
+	//
+	// Note: environment variables set here take precedence over strongly-typed
+	// fields in Spec.Config. Using raw env vars is discouraged and intended for
+	// advanced use cases only.
+	//
+	// +optional
+	PodTemplateSpec *corev1.PodTemplateSpec `json:"podTemplateSpec,omitempty"`
+}
+
+// Scaling defines the scaling options for the deployment.
+type Scaling struct {
+	// HorizontalScaling defines horizontal scaling options for the deployment.
+	//
+	// +optional
+	HorizontalScaling *HorizontalScaling `json:"horizontal,omitempty"`
+}
+
+// HorizontalScaling defines horizontal scaling options for the deployment.
+// It holds all the options from the HorizontalPodAutoscalerSpec besides the
+// ScaleTargetRef which is being controlled by the Operator.
+type HorizontalScaling struct {
+	// minReplicas is the lower limit for the number of replicas to which the autoscaler
+	// can scale down. It defaults to 1 pod.
+	//
+	// +optional
+	MinReplicas *int32 `json:"minReplicas,omitempty"`
+
+	// maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up.
+	// It cannot be less than minReplicas.
+	MaxReplicas int32 `json:"maxReplicas"`
+
+	// metrics contains the specifications for which to use to calculate the desired replica count.
+	//
+	// +listType=atomic
+	// +optional
+	Metrics []autoscalingv2.MetricSpec `json:"metrics,omitempty"`
+
+	// behavior configures the scaling behavior of the target in both Up and Down directions.
+	// If not set, the default HPAScalingRules for scale up and scale down are used.
+	//
+	// +optional
+	Behavior *autoscalingv2.HorizontalPodAutoscalerBehavior `json:"behavior,omitempty"`
 }
 
 // NetworkOptions defines network-related options for an DataPlane.
@@ -128,6 +187,20 @@ type Services struct {
 	Kafka *ServiceOptions `json:"kafka,omitempty"`
 }
 
+// LabelName is a label key with constraints matching Kubernetes label key requirements.
+//
+// +kubebuilder:validation:MinLength=1
+// +kubebuilder:validation:MaxLength=253
+// +kubebuilder:validation:Pattern=`^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?([A-Za-z0-9][-A-Za-z0-9_.]{0,61})?[A-Za-z0-9]$`
+type LabelName string
+
+// LabelValue is a label value with constraints matching Kubernetes label value requirements.
+//
+// +kubebuilder:validation:MinLength=0
+// +kubebuilder:validation:MaxLength=63
+// +kubebuilder:validation:Pattern=`^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$`
+type LabelValue string
+
 // ServiceOptions contains Service configuration for the DataPlane.
 //
 // +kubebuilder:validation:XValidation:message="Cannot set NodePort when service type is not NodePort or LoadBalancer",rule="!has(self.ports) || !(self.ports.exists(p, has(p.nodePort))) ? true : has(self.type) && ['LoadBalancer', 'NodePort'].exists(t, t == self.type)"
@@ -149,7 +222,7 @@ type ServiceOptions struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxProperties=64
-	Labels map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue `json:"labels,omitempty"`
+	Labels map[LabelName]LabelValue `json:"labels,omitempty"`
 
 	// ExternalTrafficPolicy describes how nodes distribute service traffic they
 	// receive on one of the Service's externally-facing addresses.
@@ -245,9 +318,10 @@ type KonnectConfig struct {
 
 // ObservabilityConfig configures logging, metrics, and tracing for KEG.
 type ObservabilityConfig struct {
-	// LogFlags sets the log level. Accepted values: trace, debug, info, warn, error.
+	// LogFlags sets the log level.
 	// Corresponds to observability.log_flags / KEG__OBSERVABILITY__LOG_FLAGS. Default: info.
 	//
+	// +kubebuilder:validation:Enum=trace;debug;info;warn;error
 	// +optional
 	LogFlags *string `json:"logFlags,omitempty"`
 

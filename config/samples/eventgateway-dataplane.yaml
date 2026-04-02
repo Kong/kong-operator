@@ -4,7 +4,7 @@ metadata:
   name: my-event-gateway-dp
   namespace: default
 spec:
-  konnectEventGatewayRef:
+  controlPlaneRef:
     name: my-event-gateway
   network:
     services:

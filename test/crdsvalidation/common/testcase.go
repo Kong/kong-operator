@@ -179,11 +179,6 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *run
 			return
 		}
 
-		if tc.Assert != nil {
-			require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(tc.TestObject), tc.TestObject))
-			tc.Assert(t, tc.TestObject)
-		}
-
 		// Check with reflect if the status field is set and Update the status if so before updating the object.
 		// That's required to populate Status that is not set on Create.
 		if status := reflect.ValueOf(desiredObj).Elem().FieldByName("Status"); status.IsValid() && !status.IsZero() {
@@ -196,6 +191,11 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *run
 
 			err = cl.Get(ctx, client.ObjectKeyFromObject(tc.TestObject), tc.TestObject)
 			require.NoError(t, err)
+		}
+
+		if tc.Assert != nil {
+			require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(tc.TestObject), tc.TestObject))
+			tc.Assert(t, tc.TestObject)
 		}
 
 		// If the Update function was defined, update the object and check if the update is allowed.

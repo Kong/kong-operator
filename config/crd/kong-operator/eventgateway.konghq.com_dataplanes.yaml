@@ -98,8 +98,14 @@ spec:
                     properties:
                       logFlags:
                         description: |-
-                          LogFlags sets the log level. Accepted values: trace, debug, info, warn, error.
+                          LogFlags sets the log level.
                           Corresponds to observability.log_flags / KEG__OBSERVABILITY__LOG_FLAGS. Default: info.
+                        enum:
+                        - trace
+                        - debug
+                        - info
+                        - warn
+                        - error
                         type: string
                       logFormat:
                         description: |-
@@ -146,6 +152,24 @@ spec:
                         type: string
                     type: object
                 type: object
+              controlPlaneRef:
+                description: |-
+                  ControlPlaneRef references the KonnectEventGateway resource that acts as the
+                  control plane for this data plane. KonnectEventGateway is the Konnect-side
+                  resource that provisions the Event Gateway cluster. The controller reads its
+                  status to obtain the Konnect gateway ID and region.
+                properties:
+                  name:
+                    default: ""
+                    description: |-
+                      Name of the referent.
+                      This field is effectively required, but due to backwards compatibility is
+                      allowed to be empty. Instances of this type with an empty value here are
+                      almost certainly wrong.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                    type: string
+                type: object
+                x-kubernetes-map-type: atomic
               deployment:
                 description: |-
                   Deployment configures the keg Deployment: image, replicas, resources,
@@ -156,6 +180,10 @@ spec:
                       PodTemplateSpec defines PodTemplateSpec for Deployment's pods.
                       It's being applied on top of the generated Deployments using
                       [StrategicMergePatch](https://pkg.go.dev/k8s.io/apimachinery/pkg/util/strategicpatch#StrategicMergePatch).
+
+                      Note: environment variables set here take precedence over strongly-typed
+                      fields in Spec.Config. Using raw env vars is discouraged and intended for
+                      advanced use cases only.
                     properties:
                       metadata:
                         description: |-
@@ -8739,8 +8767,7 @@ spec:
                         properties:
                           behavior:
                             description: |-
-                              behavior configures the scaling behavior of the target
-                              in both Up and Down directions (scaleUp and scaleDown fields respectively).
+                              behavior configures the scaling behavior of the target in both Up and Down directions.
                               If not set, the default HPAScalingRules for scale up and scale down are used.
                             properties:
                               scaleDown:
@@ -8898,19 +8925,12 @@ spec:
                           maxReplicas:
                             description: |-
                               maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up.
-                              It cannot be less that minReplicas.
+                              It cannot be less than minReplicas.
                             format: int32
                             type: integer
                           metrics:
-                            description: |-
-                              metrics contains the specifications for which to use to calculate the
-                              desired replica count (the maximum replica count across all metrics will
-                              be used).  The desired replica count is calculated multiplying the
-                              ratio between the target value and the current value by the current
-                              number of pods.  Ergo, metrics used must decrease as the pod count is
-                              increased, and vice-versa.  See the individual metric source types for
-                              more information about how each type of metric must respond.
-                              If not set, the default metric will be set to 80% average CPU utilization.
+                            description: metrics contains the specifications for which
+                              to use to calculate the desired replica count.
                             items:
                               description: |-
                                 MetricSpec specifies how to scale based on a single metric
@@ -9389,10 +9409,7 @@ spec:
                           minReplicas:
                             description: |-
                               minReplicas is the lower limit for the number of replicas to which the autoscaler
-                              can scale down.  It defaults to 1 pod.  minReplicas is allowed to be 0 if the
-                              alpha feature gate HPAScaleToZero is enabled and at least one Object or External
-                              metric is configured.  Scaling is active as long as at least one metric value is
-                              available.
+                              can scale down. It defaults to 1 pod.
                             format: int32
                             type: integer
                         required:
@@ -9403,23 +9420,6 @@ spec:
                 x-kubernetes-validations:
                 - message: Using both replicas and scaling fields is not allowed.
                   rule: '!(has(self.scaling) && has(self.replicas))'
-              konnectEventGatewayRef:
-                description: |-
-                  KonnectEventGatewayRef references the KonnectEventGateway that this
-                  data plane connects to. The controller reads its status to obtain the
-                  Konnect gateway ID and region.
-                properties:
-                  name:
-                    default: ""
-                    description: |-
-                      Name of the referent.
-                      This field is effectively required, but due to backwards compatibility is
-                      allowed to be empty. Instances of this type with an empty value here are
-                      almost certainly wrong.
-                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                    type: string
-                type: object
-                x-kubernetes-map-type: atomic
               network:
                 description: Network configures how the keg pod is exposed to Kafka
                   clients.
@@ -9519,7 +9519,7 @@ spec:
                     type: object
                 type: object
             required:
-            - konnectEventGatewayRef
+            - controlPlaneRef
             type: object
           status:
             description: Status defines the observed state of DataPlane.
