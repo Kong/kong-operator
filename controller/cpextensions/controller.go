@@ -355,14 +355,14 @@ func (r *Reconciler) ensurePrometheusPlugin(
 	}
 
 	// If it exists, ensure it's up to date.
-	if !cmp.Equal(generatedPlugin.Config, &prometheusPluginActual.Config) ||
-		!cmp.Equal(generatedPlugin.Annotations, &prometheusPluginActual.Annotations) ||
-		!cmp.Equal(generatedPlugin.OwnerReferences, &prometheusPluginActual.OwnerReferences) ||
-		!cmp.Equal(generatedPlugin.Labels, &prometheusPluginActual.Labels) ||
-		!cmp.Equal(generatedPlugin.Finalizers, &prometheusPluginActual.Finalizers) ||
-		!cmp.Equal(generatedPlugin.InstanceName, &prometheusPluginActual.InstanceName) ||
-		!cmp.Equal(generatedPlugin.PluginName, &prometheusPluginActual.PluginName) ||
-		!cmp.Equal(generatedPlugin.Disabled, &prometheusPluginActual.Disabled) {
+	if !cmp.Equal(generatedPlugin.Config, prometheusPluginActual.Config) ||
+		!cmp.Equal(generatedPlugin.Annotations, prometheusPluginActual.Annotations) ||
+		!cmp.Equal(generatedPlugin.OwnerReferences, prometheusPluginActual.OwnerReferences) ||
+		!cmp.Equal(generatedPlugin.Labels, prometheusPluginActual.Labels) ||
+		!cmp.Equal(generatedPlugin.Finalizers, prometheusPluginActual.Finalizers) ||
+		!cmp.Equal(generatedPlugin.InstanceName, prometheusPluginActual.InstanceName) ||
+		!cmp.Equal(generatedPlugin.PluginName, prometheusPluginActual.PluginName) ||
+		!cmp.Equal(generatedPlugin.Disabled, prometheusPluginActual.Disabled) {
 		prometheusPluginActual.Config = generatedPlugin.Config
 		prometheusPluginActual.Disabled = generatedPlugin.Disabled
 		prometheusPluginActual.Annotations = generatedPlugin.Annotations
