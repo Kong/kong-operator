@@ -61,6 +61,12 @@ type AdminAPIServicesProvider interface {
 	GetSchemasService() (kong.AbstractSchemaService, bool)
 }
 
+// MultiGatewayAdminAPIServicesProvider is an optional extension for providers that
+// can expose services for all discovered gateways.
+type MultiGatewayAdminAPIServicesProvider interface {
+	GetPluginsServices() []kong.AbstractPluginService
+}
+
 // ConsumerGetter is an interface for retrieving KongConsumers.
 type ConsumerGetter interface {
 	ListAllConsumers(ctx context.Context) ([]configurationv1.KongConsumer, error)
@@ -560,6 +566,19 @@ func (validator KongHTTPValidator) ensureConsumerDoesNotExistInGateway(ctx conte
 }
 
 func (validator KongHTTPValidator) validatePluginAgainstGatewaySchema(ctx context.Context, plugin kong.Plugin) (string, error) {
+	if multiGatewayProvider, ok := validator.AdminAPIServicesProvider.(MultiGatewayAdminAPIServicesProvider); ok {
+		pluginServices := multiGatewayProvider.GetPluginsServices()
+		if len(pluginServices) > 0 && plugin.Name != nil {
+			availablePluginServices, err := pluginServicesForAvailablePlugin(ctx, pluginServices, *plugin.Name)
+			if err != nil {
+				return ErrTextPluginConfigValidationFailed, err
+			}
+			if len(availablePluginServices) > 0 {
+				return validatePluginAcrossPluginServices(ctx, availablePluginServices, plugin)
+			}
+		}
+	}
+
 	pluginService, hasClient := validator.AdminAPIServicesProvider.GetPluginsService()
 	if hasClient {
 		isValid, msg, err := pluginService.Validate(ctx, &plugin)
@@ -572,6 +591,66 @@ func (validator KongHTTPValidator) validatePluginAgainstGatewaySchema(ctx contex
 	}
 
 	// if there's no client, do not verify with data-plane as there's none available
+	return "", nil
+}
+
+// pluginServicesForAvailablePlugin returns plugin services for gateways that expose the plugin schema
+// (GetFullSchema succeeds). A 404 means the plugin is not available on that gateway and is skipped.
+// Other probe errors are remembered but do not stop the scan: if any gateway exposes the schema,
+// those services are returned and probe failures on other gateways are ignored. If no gateway
+// exposes the schema, the first non-404 probe error is returned (when present); otherwise an empty
+// slice and nil error (all 404), so callers can fall back to legacy validation.
+func pluginServicesForAvailablePlugin(
+	ctx context.Context,
+	pluginServices []kong.AbstractPluginService,
+	pluginName string,
+) ([]kong.AbstractPluginService, error) {
+	available := make([]kong.AbstractPluginService, 0, len(pluginServices))
+	var firstProbeErr error
+	for _, ps := range pluginServices {
+		_, err := ps.GetFullSchema(ctx, &pluginName)
+		switch {
+		case err == nil:
+			available = append(available, ps)
+		case kong.IsNotFoundErr(err):
+			// Plugin not installed / not exposed on this gateway.
+		default:
+			if firstProbeErr == nil {
+				firstProbeErr = err
+			}
+		}
+	}
+	if len(available) > 0 {
+		return available, nil
+	}
+	if firstProbeErr != nil {
+		return nil, firstProbeErr
+	}
+	return available, nil
+}
+
+// validatePluginAcrossPluginServices returns success if any gateway validates the plugin.
+// This matches multi-gateway deployments where plugin bundles differ between data planes.
+func validatePluginAcrossPluginServices(ctx context.Context, pluginServices []kong.AbstractPluginService, plugin kong.Plugin) (string, error) {
+	var lastErr error
+	var lastInvalidMsg string
+	for _, ps := range pluginServices {
+		isValid, msg, err := ps.Validate(ctx, &plugin)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		if isValid {
+			return "", nil
+		}
+		lastInvalidMsg = msg
+	}
+	if lastErr != nil {
+		return ErrTextPluginConfigValidationFailed, lastErr
+	}
+	if lastInvalidMsg != "" {
+		return fmt.Sprintf(ErrTextPluginConfigViolatesSchema, lastInvalidMsg), nil
+	}
 	return "", nil
 }
 

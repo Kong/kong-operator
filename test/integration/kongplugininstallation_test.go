@@ -33,7 +33,6 @@ import (
 )
 
 func TestKongPluginInstallationEssentials(t *testing.T) {
-	t.Skip("skipping until https://github.com/Kong/kong-operator/issues/2867 is resolved")
 	t.Parallel()
 
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
