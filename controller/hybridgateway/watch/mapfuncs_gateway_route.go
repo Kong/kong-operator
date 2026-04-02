@@ -139,9 +139,9 @@ func MapRouteForService[T gwtypes.SupportedRoute](cl client.Client, route T) han
 		var requests []reconcile.Request
 		var err error
 		switch any(route).(type) {
-		case *gwtypes.HTTPRoute:
+		case gwtypes.HTTPRoute:
 			requests, err = listHTTPRoutesForService(ctx, cl, svc.Namespace, svc.Name)
-		case *gwtypes.TLSRoute:
+		case gwtypes.TLSRoute:
 			requests, err = listTLSRoutesForService(ctx, cl, svc.Namespace, svc.Name)
 		default:
 			return nil
@@ -178,9 +178,9 @@ func MapRouteForEndpointSlice[T gwtypes.SupportedRoute](cl client.Client, route 
 
 		var requests []reconcile.Request
 		switch any(route).(type) {
-		case *gwtypes.HTTPRoute:
+		case gwtypes.HTTPRoute:
 			requests, err = listHTTPRoutesForService(ctx, cl, svc.Namespace, svc.Name)
-		case *gwtypes.TLSRoute:
+		case gwtypes.TLSRoute:
 			requests, err = listTLSRoutesForService(ctx, cl, svc.Namespace, svc.Name)
 		default:
 			return nil
@@ -214,12 +214,12 @@ func MapRouteForReferenceGrant[TList gwtypes.SupportedRouteList,
 		}
 		var requests []reconcile.Request
 		for _, from := range rg.Spec.From {
-
 			// Check that the from kind is TLSRoute and group is gateway.networking.k8s.io.
 			if string(from.Kind) != kind || (from.Group != "" && from.Group != gwtypes.GroupName) {
 				continue
 			}
-			var listPtr TListPtr
+			var list TList
+			var listPtr TListPtr = &list
 			err := cl.List(ctx, listPtr, client.InNamespace(string(from.Namespace)))
 			if err != nil {
 				return nil

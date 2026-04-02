@@ -52,6 +52,24 @@ func TargetsForBackendRefs[
 	fqdn bool,
 	clusterDomain string,
 ) ([]configurationv1alpha1.KongTarget, error) {
+
+	// Step 0: Check if type of parentRoute matches the type of BackendRefs
+	switch any(parentRoute).(type) {
+	case *gwtypes.HTTPRoute:
+		if _, ok := any(backendRefs).([]gwtypes.HTTPBackendRef); !ok {
+			return nil, fmt.Errorf("failed to build KongTarget: unmatched route and backendRefs type: %T and  %T", parentRoute, backendRefs)
+		}
+	case *gwtypes.TLSRoute:
+		if _, ok := any(backendRefs).([]gwtypes.BackendRef); !ok {
+			return nil, fmt.Errorf("failed to build KongTarget: unmatched route and backendRefs type: %T and  %T", parentRoute, backendRefs)
+		}
+		// TODO: add other types of routes when we support them.
+
+		// Should be unreachable.
+	default:
+		return nil, fmt.Errorf("failed to build KongTarget: unsupported route type %T", parentRoute)
+	}
+
 	// Step 1: Filter and validate all BackendRefs, extracting endpoints.
 	validBackendRefs, err := filterValidBackendRefs(ctx, logger, cl, parentRoute, backendRefs, fqdn, clusterDomain)
 	if err != nil {
@@ -411,22 +429,6 @@ func createTargetsFromValidBackendRefs[
 ](ctx context.Context, logger logr.Logger, cl client.Client, parentRoute TPtr, pRef *gwtypes.ParentReference, upstreamName string,
 	validBackendRefs []validBackendRef[R],
 ) ([]configurationv1alpha1.KongTarget, error) {
-
-	switch any(parentRoute).(type) {
-	case *gwtypes.HTTPRoute:
-		if _, ok := any(validBackendRefs).([]gwtypes.HTTPBackendRef); !ok {
-			return nil, fmt.Errorf("failed to build KongTarget: unmatched route and backendRefs type: %T and  %T", parentRoute, validBackendRefs)
-		}
-	case *gwtypes.TLSRoute:
-		if _, ok := any(validBackendRefs).([]gwtypes.BackendRef); !ok {
-			return nil, fmt.Errorf("failed to build KongTarget: unmatched route and backendRefs type: %T and  %T", parentRoute, validBackendRefs)
-		}
-		// TODO: add other types of routes when we support them.
-
-		// Should be unreachable.
-	default:
-		return nil, fmt.Errorf("failed to build KongTarget: unsupported route type %T", parentRoute)
-	}
 
 	var targets []configurationv1alpha1.KongTarget
 	for _, vbRef := range validBackendRefs {
