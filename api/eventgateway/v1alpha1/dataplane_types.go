@@ -47,7 +47,7 @@ type DataPlane struct {
 	// Spec defines the desired state of DataPlane.
 	//
 	// +required
-	Spec DataPlaneSpec `json:"spec"`
+	Spec DataPlaneSpec `json:"spec,omitzero"`
 
 	// Status defines the observed state of DataPlane.
 	//
@@ -73,7 +73,7 @@ type DataPlaneSpec struct {
 	// status to obtain the Konnect gateway ID and region.
 	//
 	// +required
-	ControlPlaneRef corev1.LocalObjectReference `json:"controlPlaneRef"`
+	ControlPlaneRef corev1.LocalObjectReference `json:"controlPlaneRef,omitempty"`
 
 	// Deployment configures the keg Deployment: image, replicas, resources,
 	// extra env vars, volume mounts, etc.
@@ -136,26 +136,37 @@ type Scaling struct {
 // ScaleTargetRef which is being controlled by the Operator.
 type HorizontalScaling struct {
 	// minReplicas is the lower limit for the number of replicas to which the autoscaler
-	// can scale down. It defaults to 1 pod.
-	//
+	// can scale down.  It defaults to 1 pod.  minReplicas is allowed to be 0 if the
+	// alpha feature gate HPAScaleToZero is enabled and at least one Object or External
+	// metric is configured.  Scaling is active as long as at least one metric value is
+	// available.
 	// +optional
-	MinReplicas *int32 `json:"minReplicas,omitempty"`
+	MinReplicas *int32 `json:"minReplicas,omitempty" protobuf:"varint,2,opt,name=minReplicas"`
 
 	// maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up.
 	// It cannot be less than minReplicas.
-	MaxReplicas int32 `json:"maxReplicas"`
-
-	// metrics contains the specifications for which to use to calculate the desired replica count.
 	//
+	// +required
+	MaxReplicas int32 `json:"maxReplicas" protobuf:"varint,3,opt,name=maxReplicas"`
+
+	// metrics contains the specifications for which to use to calculate the
+	// desired replica count (the maximum replica count across all metrics will
+	// be used).  The desired replica count is calculated multiplying the
+	// ratio between the target value and the current value by the current
+	// number of pods.  Ergo, metrics used must decrease as the pod count is
+	// increased, and vice-versa.  See the individual metric source types for
+	// more information about how each type of metric must respond.
+	// If not set, the default metric will be set to 80% average CPU utilization.
 	// +listType=atomic
+	// +kubebuilder:validation:MaxItems=32
 	// +optional
-	Metrics []autoscalingv2.MetricSpec `json:"metrics,omitempty"`
+	Metrics []autoscalingv2.MetricSpec `json:"metrics,omitempty" protobuf:"bytes,4,rep,name=metrics"`
 
-	// behavior configures the scaling behavior of the target in both Up and Down directions.
+	// behavior configures the scaling behavior of the target
+	// in both Up and Down directions (scaleUp and scaleDown fields respectively).
 	// If not set, the default HPAScalingRules for scale up and scale down are used.
-	//
 	// +optional
-	Behavior *autoscalingv2.HorizontalPodAutoscalerBehavior `json:"behavior,omitempty"`
+	Behavior *autoscalingv2.HorizontalPodAutoscalerBehavior `json:"behavior,omitempty" protobuf:"bytes,5,opt,name=behavior"`
 }
 
 // NetworkOptions defines network-related options for an DataPlane.
@@ -243,21 +254,26 @@ type ServicePort struct {
 	// The name of this port within the service.
 	//
 	// +optional
-	Name string `json:"name,omitempty"`
+	// +kubebuilder:validation:MaxLength=253
+	Name *string `json:"name,omitempty"`
 
 	// The port that will be exposed by this service.
-	Port int32 `json:"port"`
+	//
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=65535
+	// +required
+	Port int32 `json:"port,omitempty"`
 
 	// Number or name of the port to access on the pods targeted by the service.
 	//
 	// +optional
-	TargetPort intstr.IntOrString `json:"targetPort,omitempty"`
+	TargetPort *intstr.IntOrString `json:"targetPort,omitempty"`
 
 	// The port on each node on which this service is exposed when type is
 	// NodePort or LoadBalancer.
 	//
 	// +optional
-	NodePort int32 `json:"nodePort,omitempty"`
+	NodePort *int32 `json:"nodePort,omitempty"`
 }
 
 // Config provides optional overrides for keg runtime settings.
@@ -270,17 +286,20 @@ type Config struct {
 	// +optional
 	Konnect *KonnectConfig `json:"konnect,omitempty"`
 
-	// ConfigPollInterval overrides how often keg polls Konnect for config changes.
-	// Corresponds to config_poll_interval / KEG__CONFIG_POLL_INTERVAL. Default: 5s.
+	// ConfigPollIntervalSeconds overrides how often keg polls Konnect for config changes, in seconds.
+	// Corresponds to config_poll_interval / KEG__CONFIG_POLL_INTERVAL. Default: 5.
 	//
 	// +optional
-	ConfigPollInterval *metav1.Duration `json:"configPollInterval,omitempty"`
+	// +kubebuilder:default=5
+	// +kubebuilder:validation:Minimum=1
+	ConfigPollIntervalSeconds *int32 `json:"configPollIntervalSeconds,omitempty"`
 
 	// EnableDebugEndpoints enables the /debug/pprof/allocs endpoint.
-	// Corresponds to enable_debug_endpoints / KEG__ENABLE_DEBUG_ENDPOINTS. Default: false.
+	// Corresponds to enable_debug_endpoints / KEG__ENABLE_DEBUG_ENDPOINTS.
 	//
 	// +optional
-	EnableDebugEndpoints *bool `json:"enableDebugEndpoints,omitempty"`
+	// +kubebuilder:default=Disabled
+	EnableDebugEndpoints *DebugEndpointsState `json:"enableDebugEndpoints,omitempty"`
 
 	// Observability configures logging, metrics, and tracing.
 	//
@@ -296,32 +315,62 @@ type Config struct {
 // KonnectConfig exposes the small subset of konnect.* config keys
 // that are user-tunable (all others are set automatically by the controller).
 type KonnectConfig struct {
-	// Domain overrides the Konnect domain (default: konghq.com).
+	// Domain overrides the Konnect domain.
 	// Corresponds to konnect.domain / KONG_KONNECT_DOMAIN.
 	//
 	// +optional
+	// +kubebuilder:default="konghq.com"
+	// +kubebuilder:validation:MaxLength=253
 	Domain *string `json:"domain,omitempty"`
 
-	// APIRequestTimeout overrides the Konnect API request timeout (default: 5s).
-	// Corresponds to konnect.api_request_timeout / KONG_KONNECT_API_REQUEST_TIMEOUT.
+	// APIRequestTimeoutSeconds overrides the Konnect API request timeout, in seconds.
+	// Corresponds to konnect.api_request_timeout / KONG_KONNECT_API_REQUEST_TIMEOUT. Default: 5.
 	//
 	// +optional
-	APIRequestTimeout *metav1.Duration `json:"apiRequestTimeout,omitempty"`
+	// +kubebuilder:default=5
+	// +kubebuilder:validation:Minimum=1
+	APIRequestTimeoutSeconds *int32 `json:"apiRequestTimeoutSeconds,omitempty"`
 
 	// InsecureSkipVerify disables TLS verification for the Konnect connection.
 	// For testing only, do not use in production.
 	// Corresponds to konnect.insecure_skip_verify / KONG_KONNECT_INSECURE_SKIP_VERIFY.
 	//
 	// +optional
-	InsecureSkipVerify *bool `json:"insecureSkipVerify,omitempty"`
+	// +kubebuilder:default=Disabled
+	InsecureSkipVerify *TLSVerificationState `json:"insecureSkipVerify,omitempty"`
 }
+
+// DebugEndpointsState controls whether keg debug endpoints are exposed.
+//
+// +kubebuilder:validation:Enum=Enabled;Disabled
+type DebugEndpointsState string
+
+const (
+	// DebugEndpointsStateEnabled enables the /debug/pprof/allocs endpoint.
+	DebugEndpointsStateEnabled DebugEndpointsState = "Enabled"
+	// DebugEndpointsStateDisabled disables the debug endpoints (default).
+	DebugEndpointsStateDisabled DebugEndpointsState = "Disabled"
+)
+
+// TLSVerificationState controls whether TLS verification is skipped.
+//
+// +kubebuilder:validation:Enum=Enabled;Disabled
+type TLSVerificationState string
+
+const (
+	// TLSVerificationStateEnabled skips TLS verification. For testing only.
+	TLSVerificationStateEnabled TLSVerificationState = "Enabled"
+	// TLSVerificationStateDisabled enforces TLS verification (default).
+	TLSVerificationStateDisabled TLSVerificationState = "Disabled"
+)
 
 // ObservabilityConfig configures logging, metrics, and tracing for KEG.
 type ObservabilityConfig struct {
 	// LogFlags sets the log level.
-	// Corresponds to observability.log_flags / KEG__OBSERVABILITY__LOG_FLAGS. Default: info.
+	// Corresponds to observability.log_flags / KEG__OBSERVABILITY__LOG_FLAGS.
 	//
 	// +kubebuilder:validation:Enum=trace;debug;info;warn;error
+	// +kubebuilder:default=info
 	// +optional
 	LogFlags *string `json:"logFlags,omitempty"`
 
@@ -335,40 +384,50 @@ type ObservabilityConfig struct {
 	// MetricsRollupAllowMap prevents high-cardinality metrics by collapsing
 	// unmatched label values to "other".
 	// Corresponds to observability.metrics_rollup_allow_map /
-	// KEG__OBSERVABILITY__METRICS_ROLLUP_ALLOW_MAP. Default: "messaging.operation.name=produce,fetch".
+	// KEG__OBSERVABILITY__METRICS_ROLLUP_ALLOW_MAP.
 	//
 	// +optional
+	// +kubebuilder:default="messaging.operation.name=produce,fetch"
+	// +kubebuilder:validation:MaxLength=2048
 	MetricsRollupAllowMap *string `json:"metricsRollupAllowMap,omitempty"`
 
-	// PolicyErrorsInfoLogInterval sets the interval for INFO-level logging of policy errors.
-	// Set to 0s to disable. Default: 1s.
+	// PolicyErrorsInfoLogIntervalSeconds sets the interval for INFO-level logging of policy errors, in seconds.
+	// Set to 0 to disable. Default: 1.
 	// Corresponds to observability.policy_errors_info_log_interval /
 	// KEG__OBSERVABILITY__POLICY_ERRORS_INFO_LOG_INTERVAL.
 	//
 	// +optional
-	PolicyErrorsInfoLogInterval *metav1.Duration `json:"policyErrorsInfoLogInterval,omitempty"`
+	// +kubebuilder:default=1
+	// +kubebuilder:validation:Minimum=0
+	PolicyErrorsInfoLogIntervalSeconds *int32 `json:"policyErrorsInfoLogIntervalSeconds,omitempty"`
 }
 
 // RuntimeOptions configures graceful shutdown and health endpoint behaviour for keg.
 type RuntimeOptions struct {
 	// HealthListenerAddressPort sets the address:port for the health endpoint.
 	// Corresponds to runtime.health_listener_address_port /
-	// KEG__RUNTIME__HEALTH_LISTENER_ADDRESS_PORT. Default: 0.0.0.0:8080.
+	// KEG__RUNTIME__HEALTH_LISTENER_ADDRESS_PORT.
 	//
 	// +optional
+	// +kubebuilder:default="0.0.0.0:8080"
+	// +kubebuilder:validation:MaxLength=253
 	HealthListenerAddressPort *string `json:"healthListenerAddressPort,omitempty"`
 
-	// DrainDuration sets how long keg drains existing connections on shutdown.
-	// Corresponds to runtime.drain_duration / KEG__RUNTIME__DRAIN_DURATION. Default: 5s.
+	// DrainDurationSeconds sets how long keg drains existing connections on shutdown, in seconds.
+	// Corresponds to runtime.drain_duration / KEG__RUNTIME__DRAIN_DURATION. Default: 5.
 	//
 	// +optional
-	DrainDuration *metav1.Duration `json:"drainDuration,omitempty"`
+	// +kubebuilder:default=5
+	// +kubebuilder:validation:Minimum=0
+	DrainDurationSeconds *int32 `json:"drainDurationSeconds,omitempty"`
 
-	// ShutdownTimeout sets the graceful shutdown timeout.
-	// Corresponds to runtime.shutdown_timeout / KEG__RUNTIME__SHUTDOWN_TIMEOUT. Default: 10s.
+	// ShutdownTimeoutSeconds sets the graceful shutdown timeout, in seconds.
+	// Corresponds to runtime.shutdown_timeout / KEG__RUNTIME__SHUTDOWN_TIMEOUT. Default: 10.
 	//
 	// +optional
-	ShutdownTimeout *metav1.Duration `json:"shutdownTimeout,omitempty"`
+	// +kubebuilder:default=10
+	// +kubebuilder:validation:Minimum=1
+	ShutdownTimeoutSeconds *int32 `json:"shutdownTimeoutSeconds,omitempty"`
 }
 
 // DataPlaneStatus defines the observed state of DataPlane.
@@ -380,16 +439,20 @@ type DataPlaneStatus struct {
 	// +kubebuilder:validation:MaxItems=8
 	// +kubebuilder:default={{type: "Ready", status: "Unknown", reason: "Pending", message: "Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
 	// +optional
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	// +patchStrategy=merge
+	// +patchMergeKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 
 	// ReadyReplicas indicates how many replicas have reported to be ready.
 	//
 	// +kubebuilder:default=0
+	// +optional
 	ReadyReplicas int32 `json:"readyReplicas"`
 
 	// Replicas indicates how many replicas have been set for the DataPlane.
 	//
 	// +kubebuilder:default=0
+	// +optional
 	Replicas int32 `json:"replicas"`
 }
 
