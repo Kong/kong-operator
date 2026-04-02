@@ -50,6 +50,7 @@ type (
 	SectionName            = gatewayv1.SectionName
 	TLSRoute               = gatewayv1.TLSRoute
 	TLSRouteList           = gatewayv1.TLSRouteList
+	TLSRouteRule           = gatewayv1.TLSRouteRule
 )
 
 var GroupVersion = gatewayv1.GroupVersion

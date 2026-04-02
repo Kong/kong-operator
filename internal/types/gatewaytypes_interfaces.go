@@ -4,7 +4,7 @@ import "sigs.k8s.io/controller-runtime/pkg/client"
 
 // SupportedRoute defines a supported route type.
 type SupportedRoute interface {
-	TLSRoute | HTTPRoute
+	HTTPRoute | TLSRoute
 }
 
 // SupportedRoutePtr defines a pointer of a supported route type.
@@ -16,7 +16,7 @@ type SupportedRoutePtr[T SupportedRoute] interface {
 
 // SupportedRouteList defines a list of supported route.
 type SupportedRouteList interface {
-	TLSRouteList | HTTPRouteList
+	HTTPRouteList | TLSRouteList
 }
 
 // SupportedRouteListPtr defines a pointer of a supported route list.
@@ -24,6 +24,16 @@ type SupportedRouteList interface {
 type SupportedRouteListPtr[T SupportedRouteList] interface {
 	*T
 	client.ObjectList
+}
+
+// SupportedRouteRule defines a rule in a supported route.
+type SupportedRouteRule interface {
+	HTTPRouteRule | TLSRouteRule
+}
+
+// SupportedBackendRef defines a supported backendRef type.
+type SupportedBackendRef interface {
+	BackendRef | HTTPBackendRef
 }
 
 // GetSpecParentRefs returns the parent references of a supported route.
@@ -46,4 +56,15 @@ func GetSpecHostnames[T SupportedRoute](route T) []Hostname {
 		return r.Spec.Hostnames
 	}
 	return []Hostname{}
+}
+
+// GetBackendRef gets the internal BackendRef of supported BackendRef types.
+func GetBackendRef[T SupportedBackendRef](bRef T) BackendRef {
+	switch b := any(bRef).(type) {
+	case HTTPBackendRef:
+		return b.BackendRef
+	case BackendRef:
+		return b
+	}
+	panic("Unsupported BackendRef type")
 }
