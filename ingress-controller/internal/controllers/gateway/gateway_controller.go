@@ -889,9 +889,9 @@ func (r *GatewayReconciler) determineListenersFromDataPlane(
 // Gateway Controller - Private Object Update Methods
 // -----------------------------------------------------------------------------
 
-// updateAddressesAndListenersStatus updates a unmanaged gateway's status with new addresses and listeners.
-// If the addresses and listeners provided are the same as what exists,
-// it is assumed that reconciliation is complete and a Programmed condition is posted.
+// updateAddressesAndListenersStatus updates an unmanaged Gateway status with
+// the provided listener statuses and addresses when status changes are detected.
+// If the Gateway is not yet programmed, it also sets the Programmed condition.
 func (r *GatewayReconciler) updateAddressesAndListenersStatus(
 	ctx context.Context,
 	log logr.Logger,
@@ -899,26 +899,29 @@ func (r *GatewayReconciler) updateAddressesAndListenersStatus(
 	listenerStatuses []gatewayapi.ListenerStatus,
 	addresses []gatewayapi.GatewayStatusAddress,
 ) (ctrl.Result, error) {
-	if !isGatewayProgrammed(gateway) {
+	programmed := isGatewayProgrammed(gateway)
+	listenersChanged := !isEqualListenersStatus(gateway.Status.Listeners, listenerStatuses)
+	addressesChanged := !reflect.DeepEqual(gateway.Status.Addresses, addresses)
+
+	if !programmed || listenersChanged || addressesChanged {
 		gateway.Status.Listeners = listenerStatuses
 		gateway.Status.Addresses = addresses
-		programmedCondition := metav1.Condition{
-			Type:               string(gatewayapi.GatewayConditionProgrammed),
-			Status:             metav1.ConditionTrue,
-			ObservedGeneration: gateway.Generation,
-			LastTransitionTime: metav1.Now(),
-			Reason:             string(gatewayapi.GatewayReasonProgrammed),
+
+		if !programmed {
+			programmedCondition := metav1.Condition{
+				Type:               string(gatewayapi.GatewayConditionProgrammed),
+				Status:             metav1.ConditionTrue,
+				ObservedGeneration: gateway.Generation,
+				LastTransitionTime: metav1.Now(),
+				Reason:             string(gatewayapi.GatewayReasonProgrammed),
+			}
+			setGatewayCondition(gateway, programmedCondition)
+			info(log, gateway, "Gateway programmed status updated")
+			return handleUpdateError(r.Status().Update(ctx, pruneGatewayStatusConds(gateway)), r.Log, gateway)
 		}
-		setGatewayCondition(gateway, programmedCondition)
-		info(log, gateway, "Gateway Programmed status updated")
-		err := r.Status().Update(ctx, pruneGatewayStatusConds(gateway))
-		return handleUpdateError(err, r.Log, gateway)
-	}
-	if !isEqualListenersStatus(gateway.Status.Listeners, listenerStatuses) {
-		gateway.Status.Listeners = listenerStatuses
-		info(log, gateway, "Gateway listener status updated")
-		err := r.Status().Update(ctx, gateway)
-		return handleUpdateError(err, r.Log, gateway)
+
+		info(log, gateway, "Gateway status updated")
+		return handleUpdateError(r.Status().Update(ctx, gateway), r.Log, gateway)
 	}
 
 	debug(log, gateway, "Gateway status not updated")
