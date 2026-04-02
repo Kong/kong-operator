@@ -149,6 +149,8 @@
 - Fix the hybrid gateway translator to set `protocols` in translated KongRoutes
   to `http,https` to avoid 426 errors from Konnect hybrid gateways.
   [#3753](https://github.com/Kong/kong-operator/pull/3753)
+- Revert change in configuring SNIs in ingress-controller when running with local controlplane.
+  [#3761](https://github.com/Kong/kong-operator/pull/3761)
 
 ## [v2.1.3]
 
