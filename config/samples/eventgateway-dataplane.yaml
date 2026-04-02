@@ -1,0 +1,16 @@
+apiVersion: eventgateway.konghq.com/v1alpha1
+kind: DataPlane
+metadata:
+  name: my-event-gateway-dp
+  namespace: default
+spec:
+  konnectEventGatewayRef:
+    name: my-event-gateway
+  network:
+    services:
+      kafka:
+        type: LoadBalancer
+        ports:
+          - name: kafka
+            port: 9092
+            targetPort: 9092
