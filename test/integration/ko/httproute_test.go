@@ -19,15 +19,18 @@ import (
 	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
 	"github.com/kong/kong-operator/v2/test/helpers"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
+	"github.com/kong/kong-operator/v2/test/integration"
 )
 
 func TestHTTPRoute(t *testing.T) {
 	t.Parallel()
-	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
+	ctx := t.Context()
+	clients := integration.GetClients()
+	namespace, cleaner := helpers.SetupTestEnv(t, ctx, integration.GetEnv())
 
 	gatewayConfig := helpers.GenerateGatewayConfiguration(namespace.Name)
 	t.Logf("deploying GatewayConfiguration %s/%s", gatewayConfig.Namespace, gatewayConfig.Name)
-	gatewayConfig, err := GetClients().OperatorClient.GatewayOperatorV2beta1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
+	gatewayConfig, err := integration.GetClients().OperatorClient.GatewayOperatorV2beta1().GatewayConfigurations(namespace.Name).Create(ctx, gatewayConfig, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayConfig)
 
@@ -38,7 +41,7 @@ func TestHTTPRoute(t *testing.T) {
 		Name:      gatewayConfig.Name,
 	})
 	t.Logf("deploying GatewayClass %s", gatewayClass.Name)
-	gatewayClass, err = GetClients().GatewayClient.GatewayV1().GatewayClasses().Create(GetCtx(), gatewayClass, metav1.CreateOptions{})
+	gatewayClass, err = integration.GetClients().GatewayClient.GatewayV1().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
 
@@ -49,39 +52,39 @@ func TestHTTPRoute(t *testing.T) {
 
 	gateway := helpers.GenerateGateway(gatewayNSN, gatewayClass)
 	t.Logf("deploying Gateway %s/%s", gateway.Namespace, gateway.Name)
-	gateway, err = GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Create(GetCtx(), gateway, metav1.CreateOptions{})
+	gateway, err = integration.GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 
 	t.Logf("verifying Gateway %s/%s gets marked as Accepted", gateway.Namespace, gateway.Name)
-	require.Eventually(t, testutils.GatewayIsAccepted(t, GetCtx(), gatewayNSN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayIsAccepted(t, ctx, gatewayNSN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
 
 	t.Logf("verifying Gateway %s/%s gets marked as Programmed", gateway.Namespace, gateway.Name)
-	require.Eventually(t, testutils.GatewayIsProgrammed(t, GetCtx(), gatewayNSN, clients.MgrClient), testutils.GatewayReadyTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayIsProgrammed(t, ctx, gatewayNSN, clients.MgrClient), testutils.GatewayReadyTimeLimit, time.Second)
 	t.Logf("verifying Gateway %s/%s Listeners get marked as Programmed", gateway.Namespace, gateway.Name)
-	require.Eventually(t, testutils.GatewayListenersAreProgrammed(t, GetCtx(), gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayListenersAreProgrammed(t, ctx, gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
 
 	t.Logf("verifying Gateway %s/%s gets an IP address", gateway.Namespace, gateway.Name)
-	require.Eventually(t, testutils.GatewayIPAddressExist(t, GetCtx(), gatewayNSN, clients), testutils.SubresourceReadinessWait, time.Second)
-	gateway = testutils.MustGetGateway(t, GetCtx(), gatewayNSN, clients.MgrClient)
+	require.Eventually(t, testutils.GatewayIPAddressExist(t, ctx, gatewayNSN, clients), testutils.SubresourceReadinessWait, time.Second)
+	gateway = testutils.MustGetGateway(t, ctx, gatewayNSN, clients.MgrClient)
 	gatewayIPAddress := gateway.Status.Addresses[0].Value
 
 	t.Log("deploying backend deployment (httpbin) of HTTPRoute")
 	container := generators.NewContainer("httpbin", testutils.HTTPBinImage, 80)
 	deployment := generators.NewDeploymentForContainer(container)
-	deployment, err = GetEnv().Cluster().Client().AppsV1().Deployments(namespace.Name).Create(GetCtx(), deployment, metav1.CreateOptions{})
+	deployment, err = integration.GetEnv().Cluster().Client().AppsV1().Deployments(namespace.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeClusterIP)
-	_, err = GetEnv().Cluster().Client().CoreV1().Services(namespace.Name).Create(GetCtx(), service, metav1.CreateOptions{})
+	_, err = integration.GetEnv().Cluster().Client().CoreV1().Services(namespace.Name).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	httpRoute := helpers.GenerateHTTPRoute(namespace.Name, gateway.Name, service.Name)
 	t.Logf("creating httproute %s/%s to access deployment %s via kong", httpRoute.Namespace, httpRoute.Name, deployment.Name)
 	require.EventuallyWithT(t,
 		func(c *assert.CollectT) {
-			result, err := GetClients().GatewayClient.GatewayV1().HTTPRoutes(namespace.Name).Create(GetCtx(), httpRoute, metav1.CreateOptions{})
+			result, err := integration.GetClients().GatewayClient.GatewayV1().HTTPRoutes(namespace.Name).Create(ctx, httpRoute, metav1.CreateOptions{})
 			require.NoError(c, err, "failed to deploy httproute %s/%s", httpRoute.Namespace, httpRoute.Name)
 			cleaner.Add(result)
 		},
@@ -98,7 +101,7 @@ func TestHTTPRoute(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("route to /test path of service httpbin should receive a 200 OK response")
-	request := helpers.MustBuildRequest(t, GetCtx(), http.MethodGet, "http://"+gatewayIPAddress+"/test", "")
+	request := helpers.MustBuildRequest(t, ctx, http.MethodGet, "http://"+gatewayIPAddress+"/test", "")
 	require.Eventually(
 		t,
 		testutils.GetResponseBodyContains(t, clients, httpClient, request, "<title>httpbin.org</title>"),
@@ -107,7 +110,7 @@ func TestHTTPRoute(t *testing.T) {
 	)
 
 	t.Log("route to /test/1234 path of service httpbin should receive a 404 OK response")
-	request = helpers.MustBuildRequest(t, GetCtx(), http.MethodGet, "http://"+gatewayIPAddress+"/test/1234", "")
+	request = helpers.MustBuildRequest(t, ctx, http.MethodGet, "http://"+gatewayIPAddress+"/test/1234", "")
 	require.Eventually(
 		t,
 		testutils.GetResponseBodyContains(t, clients, httpClient, request, "<h1>Not Found</h1>"),
@@ -118,11 +121,13 @@ func TestHTTPRoute(t *testing.T) {
 
 func TestHTTPRouteWithTLS(t *testing.T) {
 	t.Parallel()
-	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
+	ctx := t.Context()
+	clients := integration.GetClients()
+	namespace, cleaner := helpers.SetupTestEnv(t, ctx, integration.GetEnv())
 
 	gatewayConfig := helpers.GenerateGatewayConfiguration(namespace.Name)
 	t.Logf("deploying GatewayConfiguration %s/%s", gatewayConfig.Namespace, gatewayConfig.Name)
-	gatewayConfig, err := GetClients().OperatorClient.GatewayOperatorV2beta1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
+	gatewayConfig, err := integration.GetClients().OperatorClient.GatewayOperatorV2beta1().GatewayConfigurations(namespace.Name).Create(ctx, gatewayConfig, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayConfig)
 
@@ -133,7 +138,7 @@ func TestHTTPRouteWithTLS(t *testing.T) {
 		Name:      gatewayConfig.Name,
 	})
 	t.Logf("deploying GatewayClass %s", gatewayClass.Name)
-	gatewayClass, err = GetClients().GatewayClient.GatewayV1().GatewayClasses().Create(GetCtx(), gatewayClass, metav1.CreateOptions{})
+	gatewayClass, err = integration.GetClients().GatewayClient.GatewayV1().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
 
@@ -160,7 +165,7 @@ func TestHTTPRouteWithTLS(t *testing.T) {
 		},
 	}
 	t.Logf("deploying Secret %s/%s", secret.Namespace, secret.Name)
-	secret, err = GetClients().K8sClient.CoreV1().Secrets(namespace.Name).Create(GetCtx(), secret, metav1.CreateOptions{})
+	secret, err = integration.GetClients().K8sClient.CoreV1().Secrets(namespace.Name).Create(ctx, secret, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	gateway := helpers.GenerateGateway(gatewayNSN, gatewayClass, func(gateway *gatewayv1.Gateway) {
@@ -177,32 +182,32 @@ func TestHTTPRouteWithTLS(t *testing.T) {
 	})
 
 	t.Logf("deploying Gateway %s/%s", gateway.Namespace, gateway.Name)
-	gateway, err = GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Create(GetCtx(), gateway, metav1.CreateOptions{})
+	gateway, err = integration.GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 
 	t.Logf("verifying Gateway %s/%s gets marked as Scheduled", gateway.Namespace, gateway.Name)
-	require.Eventually(t, testutils.GatewayIsAccepted(t, GetCtx(), gatewayNSN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayIsAccepted(t, ctx, gatewayNSN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
 
 	t.Logf("verifying Gateway %s/%s gets marked as Programmed", gateway.Namespace, gateway.Name)
-	require.Eventually(t, testutils.GatewayIsProgrammed(t, GetCtx(), gatewayNSN, clients.MgrClient), testutils.GatewayReadyTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayIsProgrammed(t, ctx, gatewayNSN, clients.MgrClient), testutils.GatewayReadyTimeLimit, time.Second)
 	t.Logf("verifying Gateway %s/%s Listeners get marked as Programmed", gateway.Namespace, gateway.Name)
-	require.Eventually(t, testutils.GatewayListenersAreProgrammed(t, GetCtx(), gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayListenersAreProgrammed(t, ctx, gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
 
 	t.Logf("verifying Gateway %s/%s gets an IP address", gateway.Namespace, gateway.Name)
-	require.Eventually(t, testutils.GatewayIPAddressExist(t, GetCtx(), gatewayNSN, clients), testutils.SubresourceReadinessWait, time.Second)
-	gateway = testutils.MustGetGateway(t, GetCtx(), gatewayNSN, clients.MgrClient)
+	require.Eventually(t, testutils.GatewayIPAddressExist(t, ctx, gatewayNSN, clients), testutils.SubresourceReadinessWait, time.Second)
+	gateway = testutils.MustGetGateway(t, ctx, gatewayNSN, clients.MgrClient)
 	gatewayIPAddress := gateway.Status.Addresses[0].Value
 
 	t.Log("deploying httpbin backend deployment")
 	container := generators.NewContainer("httpbin", testutils.HTTPBinImage, 80)
 	deployment := generators.NewDeploymentForContainer(container)
-	deployment, err = GetEnv().Cluster().Client().AppsV1().Deployments(namespace.Name).Create(GetCtx(), deployment, metav1.CreateOptions{})
+	deployment, err = integration.GetEnv().Cluster().Client().AppsV1().Deployments(namespace.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	t.Logf("exposing httpbin deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeClusterIP)
-	_, err = GetEnv().Cluster().Client().CoreV1().Services(namespace.Name).Create(GetCtx(), service, metav1.CreateOptions{})
+	_, err = integration.GetEnv().Cluster().Client().CoreV1().Services(namespace.Name).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	httpRoute := helpers.GenerateHTTPRoute(namespace.Name, gateway.Name, service.Name, func(h *gatewayv1.HTTPRoute) {
@@ -212,7 +217,7 @@ func TestHTTPRouteWithTLS(t *testing.T) {
 	t.Logf("creating httproute %s/%s to access deployment %s via kong", httpRoute.Namespace, httpRoute.Name, deployment.Name)
 	require.EventuallyWithT(t,
 		func(c *assert.CollectT) {
-			result, err := GetClients().GatewayClient.GatewayV1().HTTPRoutes(namespace.Name).Create(GetCtx(), httpRoute, metav1.CreateOptions{})
+			result, err := integration.GetClients().GatewayClient.GatewayV1().HTTPRoutes(namespace.Name).Create(ctx, httpRoute, metav1.CreateOptions{})
 			require.NoError(c, err, "failed to deploy httproute %s/%s", httpRoute.Namespace, httpRoute.Name)
 			cleaner.Add(result)
 		},
@@ -228,7 +233,7 @@ func TestHTTPRouteWithTLS(t *testing.T) {
 	httpClient := helpers.MustCreateHTTPClient(t, secret, host)
 
 	t.Log("route to /test path of service httpbin should receive a 200 OK response")
-	request := helpers.MustBuildRequest(t, GetCtx(), http.MethodGet, "https://"+gatewayIPAddress+"/test", host)
+	request := helpers.MustBuildRequest(t, ctx, http.MethodGet, "https://"+gatewayIPAddress+"/test", host)
 	require.Eventually(
 		t,
 		testutils.GetResponseBodyContains(t, clients, httpClient, request, "<title>httpbin.org</title>"),
@@ -236,7 +241,7 @@ func TestHTTPRouteWithTLS(t *testing.T) {
 		time.Second,
 	)
 	t.Log("route to /test/1234 path of service httpbin should receive a 404 OK response")
-	request = helpers.MustBuildRequest(t, GetCtx(), http.MethodGet, "https://"+gatewayIPAddress+"/test/1234", host)
+	request = helpers.MustBuildRequest(t, ctx, http.MethodGet, "https://"+gatewayIPAddress+"/test/1234", host)
 	require.Eventually(
 		t,
 		testutils.GetResponseBodyContains(t, clients, httpClient, request, "<h1>Not Found</h1>"),

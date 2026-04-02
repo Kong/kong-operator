@@ -25,6 +25,7 @@ import (
 	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
 	"github.com/kong/kong-operator/v2/test/helpers"
+	"github.com/kong/kong-operator/v2/test/integration"
 )
 
 var dataplaneSpec = gov1beta1.DataPlaneSpec{
@@ -55,8 +56,10 @@ var dataplaneSpec = gov1beta1.DataPlaneSpec{
 
 func TestControlPlaneEssentials(t *testing.T) {
 	t.Parallel()
-	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
-	cl := GetClients().MgrClient
+	ctx := t.Context()
+	clients := integration.GetClients()
+	cl := integration.GetClients().MgrClient
+	namespace, cleaner := helpers.SetupTestEnv(t, ctx, integration.GetEnv())
 
 	dataplane := &gov1beta1.DataPlane{
 		ObjectMeta: metav1.ObjectMeta{
@@ -66,17 +69,17 @@ func TestControlPlaneEssentials(t *testing.T) {
 		Spec: dataplaneSpec,
 	}
 	t.Log("deploying dataplane resource")
-	require.NoError(t, cl.Create(GetCtx(), dataplane))
+	require.NoError(t, cl.Create(ctx, dataplane))
 	cleaner.Add(dataplane)
 	dataplaneName := client.ObjectKeyFromObject(dataplane)
 
 	t.Log("verifying deployments managed by the dataplane are ready")
-	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, GetCtx(), dataplaneName, &appsv1.Deployment{}, client.MatchingLabels{
+	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, &appsv1.Deployment{}, client.MatchingLabels{
 		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 	}, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 
 	t.Log("verifying services managed by the dataplane")
-	require.Eventually(t, testutils.DataPlaneHasActiveService(t, GetCtx(), dataplaneName, nil, clients, client.MatchingLabels{
+	require.Eventually(t, testutils.DataPlaneHasActiveService(t, ctx, dataplaneName, nil, clients, client.MatchingLabels{
 		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 		consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
 	}), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
@@ -104,24 +107,26 @@ func TestControlPlaneEssentials(t *testing.T) {
 	}
 
 	t.Log("deploying controlplane resource")
-	require.NoError(t, cl.Create(GetCtx(), controlplane))
+	require.NoError(t, cl.Create(ctx, controlplane))
 	addToCleanup(t, cl, controlplane)
 	controlplaneName := client.ObjectKeyFromObject(controlplane)
 
 	t.Log("verifying controlplane gets marked scheduled")
-	require.Eventually(t, testutils.ControlPlaneIsScheduled(t, GetCtx(), controlplaneName, GetClients().OperatorClient), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
+	require.Eventually(t, testutils.ControlPlaneIsScheduled(t, ctx, controlplaneName, integration.GetClients().OperatorClient), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 
 	t.Log("verifying that the controlplane gets marked as provisioned")
-	require.Eventually(t, testutils.ControlPlaneIsProvisioned(t, GetCtx(), controlplaneName, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
+	require.Eventually(t, testutils.ControlPlaneIsProvisioned(t, ctx, controlplaneName, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 
 	t.Log("verifying that the controlplane gets marked as optionsValid")
-	require.Eventually(t, testutils.ControlPlaneIsOptionsValid(t, GetCtx(), controlplaneName, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
+	require.Eventually(t, testutils.ControlPlaneIsOptionsValid(t, ctx, controlplaneName, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 }
 
 func TestControlPlaneWatchNamespaces(t *testing.T) {
 	t.Parallel()
-	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
-	cl := GetClients().MgrClient
+	ctx := t.Context()
+	clients := integration.GetClients()
+	namespace, cleaner := helpers.SetupTestEnv(t, ctx, integration.GetEnv())
+	cl := integration.GetClients().MgrClient
 
 	dp := builder.NewDataPlaneBuilder().
 		WithObjectMeta(metav1.ObjectMeta{
@@ -142,7 +147,7 @@ func TestControlPlaneWatchNamespaces(t *testing.T) {
 
 	t.Log("deploying dataplane resource")
 
-	require.NoError(t, cl.Create(GetCtx(), dp))
+	require.NoError(t, cl.Create(ctx, dp))
 
 	createNamespace := func(t *testing.T, cl client.Client, cleaner *clusters.Cleaner, generateName string) *corev1.Namespace {
 		ns := &corev1.Namespace{
@@ -150,7 +155,7 @@ func TestControlPlaneWatchNamespaces(t *testing.T) {
 				GenerateName: generateName,
 			},
 		}
-		require.NoError(t, cl.Create(GetCtx(), ns))
+		require.NoError(t, cl.Create(ctx, ns))
 		cleaner.AddNamespace(ns)
 		return ns
 	}
@@ -183,7 +188,7 @@ func TestControlPlaneWatchNamespaces(t *testing.T) {
 	}
 
 	t.Log("deploying controlplane resource")
-	require.NoError(t, cl.Create(GetCtx(), cp))
+	require.NoError(t, cl.Create(ctx, cp))
 	cleaner.Add(cp)
 
 	t.Log("verifying controlplane has a status condition indicating missing WatchNamespaceGrants")
@@ -222,7 +227,7 @@ func TestControlPlaneWatchNamespaces(t *testing.T) {
 		testutils.ControlPlaneCondDeadline, 2*testutils.ControlPlaneCondTick,
 	)
 
-	require.NoError(t, cl.Delete(GetCtx(), wA))
+	require.NoError(t, cl.Delete(ctx, wA))
 	t.Log("verifying that after removing a WatchNamespaceGrant for a watched namespace controlplane has a status condition indicating invalid/missing WatchNamespaceGrants")
 	require.Eventually(t,
 		testutils.ObjectPredicates(t, clients.MgrClient,
@@ -241,6 +246,7 @@ func TestControlPlaneWatchNamespaces(t *testing.T) {
 }
 
 func watchNamespaceGrantForNamespace(t *testing.T, cl client.Client, cp *gwtypes.ControlPlane, ns string) *gov1alpha1.WatchNamespaceGrant {
+	ctx := t.Context()
 	wng := &gov1alpha1.WatchNamespaceGrant{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: ns + "-refgrant-",
@@ -257,15 +263,17 @@ func watchNamespaceGrantForNamespace(t *testing.T, cl client.Client, cp *gwtypes
 		},
 	}
 
-	require.NoError(t, cl.Create(GetCtx(), wng))
+	require.NoError(t, cl.Create(ctx, wng))
 	return wng
 }
 
 func TestControlPlaneUpdate(t *testing.T) {
 	t.Parallel()
-	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
+	ctx := t.Context()
+	clients := integration.GetClients()
+	namespace, cleaner := helpers.SetupTestEnv(t, ctx, integration.GetEnv())
 
-	dataplaneClient := GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
+	dataplaneClient := integration.GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
 
 	dataplaneName := types.NamespacedName{
 		Namespace: namespace.Name,
@@ -323,35 +331,35 @@ func TestControlPlaneUpdate(t *testing.T) {
 	}
 
 	t.Log("deploying dataplane resource")
-	dataplane, err := dataplaneClient.Create(GetCtx(), dataplane, metav1.CreateOptions{})
+	dataplane, err := dataplaneClient.Create(ctx, dataplane, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(dataplane)
 
 	t.Log("verifying deployments managed by the dataplane are ready")
 	require.Eventually(t,
-		testutils.DataPlaneHasActiveDeployment(t, GetCtx(), dataplaneName, &appsv1.Deployment{}, client.MatchingLabels{
+		testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, &appsv1.Deployment{}, client.MatchingLabels{
 			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 		}, clients),
 		testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,
 	)
 
 	t.Log("deploying controlplane resource")
-	require.NoError(t, GetClients().MgrClient.Create(GetCtx(), cp))
+	require.NoError(t, integration.GetClients().MgrClient.Create(ctx, cp))
 	cleaner.Add(cp)
 
 	t.Log("verifying that the controlplane gets marked as provisioned")
-	require.Eventually(t, testutils.ControlPlaneIsProvisioned(t, GetCtx(), controlplaneName, clients),
+	require.Eventually(t, testutils.ControlPlaneIsProvisioned(t, ctx, controlplaneName, clients),
 		testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,
 	)
 
 	t.Log("verifying that the controlplane gets marked as ready")
-	require.Eventually(t, testutils.ControlPlaneIsReady(t, GetCtx(), controlplaneName, clients),
+	require.Eventually(t, testutils.ControlPlaneIsReady(t, ctx, controlplaneName, clients),
 		testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,
 	)
 
 	t.Log("updating controlplane to disable the Kong Consumer controller")
 	require.Eventually(t,
-		testutils.ControlPlaneUpdateEventually(t, GetCtx(), controlplaneName, clients,
+		testutils.ControlPlaneUpdateEventually(t, ctx, controlplaneName, clients,
 			func(cp *gwtypes.ControlPlane) {
 				cp.Spec.Controllers = append(cp.Spec.Controllers, gwtypes.ControlPlaneController{
 					Name:  controlplane.ControllerNameKongConsumer,
@@ -366,7 +374,7 @@ func TestControlPlaneUpdate(t *testing.T) {
 	require.EventuallyWithT(t,
 		func(t *assert.CollectT) {
 			var cp gwtypes.ControlPlane
-			require.NoError(t, GetClients().MgrClient.Get(GetCtx(), controlplaneName, &cp))
+			require.NoError(t, integration.GetClients().MgrClient.Get(ctx, controlplaneName, &cp))
 
 			assert.Contains(t, cp.Status.Controllers, gwtypes.ControlPlaneController{
 				Name:  controlplane.ControllerNameKongConsumer,

@@ -19,10 +19,13 @@ import (
 	osstestutils "github.com/kong/kong-operator/v2/pkg/utils/test"
 	"github.com/kong/kong-operator/v2/pkg/vars"
 	osshelpers "github.com/kong/kong-operator/v2/test/helpers"
+	"github.com/kong/kong-operator/v2/test/integration"
 )
 
 func TestControlPlaneExtensionsDataPlaneMetrics(t *testing.T) {
 	t.Parallel()
+	ctx := t.Context()
+	clients := integration.GetClients()
 
 	createExtensionRefWithoutNamespace := func(extRefName string) commonv1alpha1.ExtensionRef {
 		return commonv1alpha1.ExtensionRef{
@@ -39,10 +42,8 @@ func TestControlPlaneExtensionsDataPlaneMetrics(t *testing.T) {
 		interval    = time.Second
 	)
 
-	ctx := GetCtx()
-	namespace, cleaner := osshelpers.SetupTestEnv(t, ctx, GetEnv())
+	namespace, cleaner := osshelpers.SetupTestEnv(t, ctx, integration.GetEnv())
 
-	clients := GetClients()
 	operatorClient := clients.OperatorClient
 	gwClient := clients.GatewayClient
 	mgrClient := clients.MgrClient

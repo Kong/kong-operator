@@ -17,6 +17,7 @@ import (
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
 	"github.com/kong/kong-operator/v2/test/helpers"
+	"github.com/kong/kong-operator/v2/test/integration"
 )
 
 // runKubectlScaleDataPlane runs the kubectl scale command to test the scale subresource for the DataPlane CRD.
@@ -36,9 +37,10 @@ func runKubectlScaleDataPlane(t *testing.T, namespacedName types.NamespacedName,
 // the new ReplicaSet maintains the correct replica count.
 func TestDataPlaneScaleSubresource(t *testing.T) {
 	t.Parallel()
+	ctx := t.Context()
+	clients := integration.GetClients()
 
-	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
-	clients := GetClients()
+	namespace, cleaner := helpers.SetupTestEnv(t, ctx, integration.GetEnv())
 
 	t.Log("deploying dataplane resource with 2 replicas")
 	dataplane := &operatorv1beta1.DataPlane{
@@ -68,21 +70,21 @@ func TestDataPlaneScaleSubresource(t *testing.T) {
 	}
 
 	dataplaneClient := clients.OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
-	dataplane, err := dataplaneClient.Create(GetCtx(), dataplane, metav1.CreateOptions{})
+	dataplane, err := dataplaneClient.Create(ctx, dataplane, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(dataplane)
 
 	dataplaneName := client.ObjectKeyFromObject(dataplane)
 
 	t.Log("verifying dataplane gets marked ready")
-	require.Eventually(t, testutils.DataPlaneIsReady(t, GetCtx(), dataplaneName, clients.OperatorClient), testutils.GatewayReadyTimeLimit, testutils.ObjectUpdateTick)
+	require.Eventually(t, testutils.DataPlaneIsReady(t, ctx, dataplaneName, clients.OperatorClient), testutils.GatewayReadyTimeLimit, testutils.ObjectUpdateTick)
 
 	t.Log("verifying dataplane has 2 ready replicas")
-	require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, GetCtx(), dataplaneName, clients, 2), testutils.GatewayReadyTimeLimit, testutils.ObjectUpdateTick)
+	require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, ctx, dataplaneName, clients, 2), testutils.GatewayReadyTimeLimit, testutils.ObjectUpdateTick)
 
 	// Get the deployment created by the dataplane controller
 	var deployment appsv1.Deployment
-	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, GetCtx(), dataplaneName, &deployment, client.MatchingLabels{
+	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, &deployment, client.MatchingLabels{
 		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 	}, clients), testutils.GatewayReadyTimeLimit, testutils.ObjectUpdateTick)
 
@@ -98,7 +100,7 @@ func TestDataPlaneScaleSubresource(t *testing.T) {
 	require.NoError(t, scaleErr)
 
 	t.Log("verifying dataplane scales to 3 replicas")
-	require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, GetCtx(), dataplaneName, clients, 3), testutils.GatewayReadyTimeLimit, testutils.ObjectUpdateTick)
+	require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, ctx, dataplaneName, clients, 3), testutils.GatewayReadyTimeLimit, testutils.ObjectUpdateTick)
 
 	t.Log("simulating kubectl rollout restart by adding restart annotation")
 	deploymentCopy := deployment.DeepCopy()
@@ -109,7 +111,7 @@ func TestDataPlaneScaleSubresource(t *testing.T) {
 	restartTime := time.Now()
 	deploymentCopy.Spec.Template.Annotations["kubectl.kubernetes.io/restartedAt"] = restartTime.Format(time.RFC3339)
 
-	err = clients.MgrClient.Patch(GetCtx(), deploymentCopy, client.MergeFrom(&deployment))
+	err = clients.MgrClient.Patch(ctx, deploymentCopy, client.MergeFrom(&deployment))
 	require.NoError(t, err)
 
 	t.Log("waiting for new ReplicaSet to be created")
@@ -118,7 +120,7 @@ func TestDataPlaneScaleSubresource(t *testing.T) {
 	require.Eventually(t, func() bool {
 		rs := FindDataPlaneReplicaSetNewerThan(
 			t,
-			GetCtx(),
+			ctx,
 			clients.MgrClient,
 			restartTime,
 			namespace.Name,
@@ -137,7 +139,7 @@ func TestDataPlaneScaleSubresource(t *testing.T) {
 
 	// Wait for the ReplicaSet to have the correct replica count
 	require.Eventually(t, func() bool {
-		if err := clients.MgrClient.Get(GetCtx(), types.NamespacedName{
+		if err := clients.MgrClient.Get(ctx, types.NamespacedName{
 			Namespace: newReplicaSet.Namespace,
 			Name:      newReplicaSet.Name,
 		}, newReplicaSet); err != nil {
@@ -150,7 +152,7 @@ func TestDataPlaneScaleSubresource(t *testing.T) {
 
 	t.Log("waiting for rollout to complete")
 	require.Eventually(t, func() bool {
-		if err := clients.MgrClient.Get(GetCtx(), types.NamespacedName{
+		if err := clients.MgrClient.Get(ctx, types.NamespacedName{
 			Namespace: newReplicaSet.Namespace,
 			Name:      newReplicaSet.Name,
 		}, newReplicaSet); err != nil {
@@ -160,7 +162,7 @@ func TestDataPlaneScaleSubresource(t *testing.T) {
 	}, testutils.GatewayReadyTimeLimit, testutils.ObjectUpdateTick, "New ReplicaSet should have all replicas ready")
 
 	t.Log("verifying dataplane still has 3 ready replicas after rollout")
-	require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, GetCtx(), dataplaneName, clients, 3), testutils.GatewayReadyTimeLimit, testutils.ObjectUpdateTick)
+	require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, ctx, dataplaneName, clients, 3), testutils.GatewayReadyTimeLimit, testutils.ObjectUpdateTick)
 
 	// Test the specific issue where scaling after restart didn't work properly
 	t.Log("scaling DataPlane to 4 replicas after restart")
@@ -176,5 +178,5 @@ func TestDataPlaneScaleSubresource(t *testing.T) {
 	require.NoError(t, scaleErr)
 
 	t.Log("verifying dataplane scales to 4 replicas")
-	require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, GetCtx(), dataplaneName, clients, 4), testutils.GatewayReadyTimeLimit, testutils.ObjectUpdateTick)
+	require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, ctx, dataplaneName, clients, 4), testutils.GatewayReadyTimeLimit, testutils.ObjectUpdateTick)
 }

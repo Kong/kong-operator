@@ -35,16 +35,17 @@ import (
 	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
 	"github.com/kong/kong-operator/v2/test/helpers"
+	"github.com/kong/kong-operator/v2/test/integration"
 )
 
 func TestControlPlaneDrainSupport(t *testing.T) {
 	t.Parallel()
+	ctx := t.Context()
+	clients := integration.GetClients()
 
-	ctx := GetCtx()
-	env := GetEnv()
+	env := integration.GetEnv()
 	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
 
-	clients := GetClients()
 	mgrClient := clients.MgrClient
 
 	dataplane := builder.NewDataPlaneBuilder().
@@ -232,7 +233,7 @@ func deployDrainSupportBackend(t *testing.T, ctx context.Context, namespace stri
 		},
 	}
 
-	k8sClient := GetEnv().Cluster().Client()
+	k8sClient := integration.GetEnv().Cluster().Client()
 	createdDeployment, err := k8sClient.AppsV1().Deployments(namespace).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
 
@@ -263,7 +264,7 @@ func deployDrainSupportBackend(t *testing.T, ctx context.Context, namespace stri
 func createDrainSupportIngress(t *testing.T, ctx context.Context, namespace string, svc *corev1.Service) client.Object {
 	t.Helper()
 
-	clusterVersion, err := GetEnv().Cluster().Version()
+	clusterVersion, err := integration.GetEnv().Cluster().Version()
 	require.NoError(t, err)
 
 	ingress := generators.NewIngressForServiceWithClusterVersion(
@@ -273,7 +274,7 @@ func createDrainSupportIngress(t *testing.T, ctx context.Context, namespace stri
 		svc,
 	)
 
-	require.NoError(t, clusters.DeployIngress(ctx, GetEnv().Cluster(), namespace, ingress))
+	require.NoError(t, clusters.DeployIngress(ctx, integration.GetEnv().Cluster(), namespace, ingress))
 	ingress.(client.Object).SetNamespace(namespace)
 
 	return ingress.(client.Object)
@@ -282,7 +283,7 @@ func createDrainSupportIngress(t *testing.T, ctx context.Context, namespace stri
 func buildKongAdminClient(t *testing.T, ctx context.Context, namespace, dataplaneName string, adminSecret *corev1.Secret) *kong.Client {
 	t.Helper()
 
-	env := GetEnv()
+	env := integration.GetEnv()
 	podsClient := env.Cluster().Client().CoreV1().Pods(namespace)
 
 	var selectedPod corev1.Pod
@@ -393,7 +394,7 @@ func waitForInitialTargets(t *testing.T, ctx context.Context, kongClient *kong.C
 func waitForTerminatingEndpoint(t *testing.T, ctx context.Context, namespace, serviceName, terminatingIP string) {
 	t.Helper()
 
-	sliceClient := GetEnv().Cluster().Client().DiscoveryV1().EndpointSlices(namespace)
+	sliceClient := integration.GetEnv().Cluster().Client().DiscoveryV1().EndpointSlices(namespace)
 	selector := labels.SelectorFromSet(map[string]string{discoveryv1.LabelServiceName: serviceName}).String()
 
 	require.Eventually(t, func() bool {

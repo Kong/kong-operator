@@ -33,7 +33,9 @@ var (
 	existingCluster      = os.Getenv("KONG_TEST_CLUSTER")
 	controllerManagerOut = os.Getenv("KONG_CONTROLLER_OUT")
 	skipClusterCleanup   = strings.ToLower(os.Getenv("KONG_TEST_CLUSTER_PERSIST")) == "true"
-	blueGreenController  = strings.ToLower(os.Getenv("KONG_OPERATOR_BLUEGREEN_CONTROLLER")) == "true"
+	// BlueGreenControllerEnabled indicates whether the blue-green controller
+	// should be enabled in the controller manager for tests in this suite.
+	BlueGreenControllerEnabled = strings.ToLower(os.Getenv("KONG_OPERATOR_BLUEGREEN_CONTROLLER")) == "true"
 )
 
 var (
@@ -78,7 +80,7 @@ func Suite(m *testing.M) {
 	helpers.SetDefaultDataPlaneImage(consts.DefaultDataPlaneImage)
 	helpers.SetDefaultDataPlaneBaseImage(consts.DefaultDataPlaneBaseImage)
 
-	cfg := testutils.DefaultControllerConfigForTests(testutils.WithBlueGreenController(blueGreenController))
+	cfg := testutils.DefaultControllerConfigForTests(testutils.WithBlueGreenController(BlueGreenControllerEnabled))
 	controllerNamespace := cfg.ControllerNamespace
 
 	var cancel context.CancelFunc

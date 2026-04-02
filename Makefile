@@ -669,9 +669,15 @@ _test.integration: gotestsum download.telepresence download.helm
 .PHONY: test.integration-ko
 test.integration-ko:
 	@$(MAKE) _test.integration \
-		GOTESTFLAGS="-skip='BlueGreen|TestAdmissionWebhook_' $(GOTESTFLAGS)" \
+		GOTESTFLAGS="-skip='BlueGreen' $(GOTESTFLAGS)" \
 		COVERPROFILE="coverage.integration.ko.out" \
-		GOTESTPATH=./test/integration/
+		GOTESTPATH=./test/integration/ko/
+
+.PHONY: test.integration-konnect
+test.integration-konnect:
+	@$(MAKE) _test.integration \
+		COVERPROFILE="coverage.integration.konnect.out" \
+		GOTESTPATH=./test/integration/konnect/
 
 # Prevent the following data race by not running via gotestsum:
 # WARNING: DATA RACE
@@ -739,7 +745,6 @@ test.integration-validatingwebhook: download.telepresence
 	TELEPRESENCE_BIN=$(TELEPRESENCE) \
 	GOFLAGS=$(GOFLAGS) \
 	go test \
-	-run='TestAdmissionWebhook_' $(GOTESTFLAGS) \
 	-timeout $(INTEGRATION_TEST_TIMEOUT) \
 	-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS) $(LDFLAGS_METADATA)" \
 	-race -v \
