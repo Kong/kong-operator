@@ -99,6 +99,10 @@
   to react in near-real-time to Konnect-side configuration changes affecting `MCPServer` objects
   linked to a control plane. The feature is gated behind the `MCPController` feature gate.
   [#3677](https://github.com/Kong/kong-operator/pull/3677)
+- Added `MCPServer` entity controller that reconciles `MCPServer` custom resources
+  against the Konnect API. The controller sets status conditions and the Konnect entity ID
+  on the resource. The feature is gated behind the `MCPController` feature gate.
+  [#3739](https://github.com/Kong/kong-operator/pull/3739)
 
 ### Changed
 
