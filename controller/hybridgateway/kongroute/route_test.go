@@ -149,3 +149,62 @@ func TestRoutesForRule(t *testing.T) {
 		})
 	}
 }
+
+func TestRoutesForRule_ExactPathMatch(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+
+	httpRoute := &gwtypes.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-route",
+			Namespace: "test-namespace",
+		},
+		Spec: gatewayv1.HTTPRouteSpec{
+			CommonRouteSpec: gatewayv1.CommonRouteSpec{
+				ParentRefs: []gatewayv1.ParentReference{
+					{Name: "test-gateway"},
+				},
+			},
+		},
+	}
+
+	exact := gatewayv1.PathMatchExact
+	rule := gwtypes.HTTPRouteRule{
+		Matches: []gatewayv1.HTTPRouteMatch{{
+			Path: &gatewayv1.HTTPPathMatch{
+				Type:  &exact,
+				Value: new("/one"),
+			},
+		}},
+	}
+
+	pRef := &gwtypes.ParentReference{
+		Name:      "test-gateway",
+		Namespace: (*gatewayv1.Namespace)(new("test-namespace")),
+	}
+
+	cpRef := &commonv1alpha1.ControlPlaneRef{
+		Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+			Name: "test-cp",
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+
+	results, err := RoutesForRule(ctx, logger, fakeClient, httpRoute, rule, pRef, cpRef, "test-service", nil)
+	require.NoError(t, err)
+	require.Len(t, results, 1)
+
+	assert.Equal(t, []string{"~/one$"}, results[0].Spec.Paths)
+	assert.Equal(t,
+		[]sdkkonnectcomp.RouteJSONProtocols{
+			sdkkonnectcomp.RouteJSONProtocols("http"),
+			sdkkonnectcomp.RouteJSONProtocols("https"),
+		},
+		results[0].Spec.Protocols,
+	)
+}
