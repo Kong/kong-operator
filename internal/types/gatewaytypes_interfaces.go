@@ -36,3 +36,14 @@ func GetSpecParentRefs[T SupportedRoute](route T) []ParentReference {
 	}
 	return []ParentReference{}
 }
+
+// GetSpecHostnames returns the hostnames in the route spec.
+func GetSpecHostnames[T SupportedRoute](route T) []Hostname {
+	switch r := any(route).(type) {
+	case HTTPRoute:
+		return r.Spec.Hostnames
+	case TLSRoute:
+		return r.Spec.Hostnames
+	}
+	return []Hostname{}
+}

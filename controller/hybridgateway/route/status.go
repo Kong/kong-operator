@@ -224,15 +224,24 @@ func RemoveStatusForParentRef[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRo
 }
 
 func getParentStatus[T gwtypes.SupportedRoute](route T) []gwtypes.RouteParentStatus {
-	if r, ok := any(route).(gwtypes.HTTPRoute); ok {
+	switch r := any(route).(type) {
+	case gwtypes.HTTPRoute:
+		return r.Status.Parents
+	case gwtypes.TLSRoute:
 		return r.Status.Parents
 	}
 	return nil
 }
 
 func setParentRefStatus[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](route TPtr, parentStatus []gwtypes.RouteParentStatus) {
-	if r, ok := any(route).(*gwtypes.HTTPRoute); ok {
+	switch r := any(route).(type) {
+	case *gwtypes.HTTPRoute:
 		r.Status.Parents = parentStatus
+	case *gwtypes.TLSRoute:
+		r.Status.Parents = parentStatus
+	// Should be unreachable.
+	default:
+		panic(fmt.Sprintf("Not supported type: %T", route))
 	}
 }
 
@@ -376,7 +385,7 @@ func BuildAcceptedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRout
 	}
 
 	// If we have listeners that allow the route, we check the hostnames.
-	_, cond = FilterListenersByHostnames(logger, listeners, getSpecHostnames(*route))
+	_, cond = FilterListenersByHostnames(logger, listeners, gwtypes.GetSpecHostnames(*route))
 	if cond != nil {
 		log.Debug(logger, "Listeners do not match hostnames", "parentRef", pRef, "gateway", gateway.Name, "reason", cond.Reason)
 		return SetConditionMeta(*cond, route), nil
@@ -391,14 +400,6 @@ func BuildAcceptedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRout
 		Message: "The route is accepted by the gateway",
 	}
 	return SetConditionMeta(*cond, route), nil
-}
-
-// getSpecHostnames returns the hostnames in the route spec.
-func getSpecHostnames[T gwtypes.SupportedRoute](route T) []gwtypes.Hostname {
-	if r, ok := any(route).(gwtypes.HTTPRoute); ok {
-		return r.Spec.Hostnames
-	}
-	return []gwtypes.Hostname{}
 }
 
 // BuildProgrammedCondition evaluates the programmed status of all resources associated with a route and gateway.

@@ -26,19 +26,19 @@ func Watches(obj client.Object, cl client.Client) []Watcher {
 	case *gwtypes.HTTPRoute:
 		return []Watcher{
 			{
-				MapRouteForGateway(cl, &gwtypes.HTTPRoute{}),
+				MapRouteForGateway(cl, gwtypes.HTTPRoute{}),
 				&gwtypes.Gateway{},
 			},
 			{
-				MapRouteForGatewayClass(cl, &gwtypes.HTTPRoute{}),
+				MapRouteForGatewayClass(cl, gwtypes.HTTPRoute{}),
 				&gwtypes.GatewayClass{},
 			},
 			{
-				MapRouteForService(cl, &gwtypes.HTTPRoute{}),
+				MapRouteForService(cl, gwtypes.HTTPRoute{}),
 				&corev1.Service{},
 			},
 			{
-				MapRouteForEndpointSlice(cl, &gwtypes.HTTPRoute{}),
+				MapRouteForEndpointSlice(cl, gwtypes.HTTPRoute{}),
 				&discoveryv1.EndpointSlice{},
 			},
 			{
@@ -73,19 +73,19 @@ func Watches(obj client.Object, cl client.Client) []Watcher {
 	case *gwtypes.TLSRoute:
 		return []Watcher{
 			{
-				MapRouteForGateway(cl, &gwtypes.TLSRoute{}),
+				MapRouteForGateway(cl, gwtypes.TLSRoute{}),
 				&gwtypes.Gateway{},
 			},
 			{
-				MapRouteForGatewayClass(cl, &gwtypes.TLSRoute{}),
+				MapRouteForGatewayClass(cl, gwtypes.TLSRoute{}),
 				&gwtypes.GatewayClass{},
 			},
 			{
-				MapRouteForService(cl, &gwtypes.TLSRoute{}),
+				MapRouteForService(cl, gwtypes.TLSRoute{}),
 				&corev1.Service{},
 			},
 			{
-				MapRouteForEndpointSlice(cl, &gwtypes.TLSRoute{}),
+				MapRouteForEndpointSlice(cl, gwtypes.TLSRoute{}),
 				&discoveryv1.EndpointSlice{},
 			},
 			{

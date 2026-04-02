@@ -60,7 +60,7 @@ func MapRouteForKongResource[T kongResource](cl client.Client) handler.MapFunc {
 // lists all supported routes with the given type referencing that Gateway (via ParentRefs).
 // It returns a slice of reconcile.Requests for each matching route, enabling efficient event handling
 // and reconciliation when a Gateway changes.
-func MapRouteForGateway[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](cl client.Client, route TPtr) handler.MapFunc {
+func MapRouteForGateway[T gwtypes.SupportedRoute](cl client.Client, route T) handler.MapFunc {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
 		gateway, ok := obj.(*gwtypes.Gateway)
 		if !ok {
@@ -69,8 +69,10 @@ func MapRouteForGateway[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr
 		var requests []reconcile.Request
 		var err error
 		switch any(route).(type) {
-		case *gwtypes.HTTPRoute:
+		case gwtypes.HTTPRoute:
 			requests, err = listHTTPRoutesForGateway(ctx, cl, gateway.Namespace, gateway.Name)
+		case gwtypes.TLSRoute:
+			requests, err = listTLSRoutesForGateway(ctx, cl, gateway.Namespace, gateway.Name)
 		default:
 			// Unsupported types.
 			return nil
@@ -87,7 +89,7 @@ func MapRouteForGateway[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr
 // then for each Gateway, lists all routes with given type referencing it (via ParentRefs and index).
 // It returns a slice of reconcile.Requests for each matching route, enabling efficient event handling
 // and reconciliation when a GatewayClass changes.
-func MapRouteForGatewayClass[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](cl client.Client, route TPtr) handler.MapFunc {
+func MapRouteForGatewayClass[T gwtypes.SupportedRoute](cl client.Client, route T) handler.MapFunc {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
 		gc, ok := obj.(*gwtypes.GatewayClass)
 		if !ok {
@@ -107,9 +109,9 @@ func MapRouteForGatewayClass[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRou
 		for _, gateway := range gateways.Items {
 			var gwRequests []reconcile.Request
 			switch any(route).(type) {
-			case *gwtypes.HTTPRoute:
+			case gwtypes.HTTPRoute:
 				gwRequests, err = listHTTPRoutesForGateway(ctx, cl, gateway.Namespace, gateway.Name)
-			case *gwtypes.TLSRoute:
+			case gwtypes.TLSRoute:
 				gwRequests, err = listTLSRoutesForGateway(ctx, cl, gateway.Namespace, gateway.Name)
 			default:
 				return nil
@@ -127,7 +129,7 @@ func MapRouteForGatewayClass[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRou
 // lists all routes with given type referencing that Service using the index for service on route.
 // It returns a slice of reconcile.Requests for each matching route, enabling efficient event handling
 // and reconciliation when a Service changes.
-func MapRouteForService[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](cl client.Client, route TPtr) handler.MapFunc {
+func MapRouteForService[T gwtypes.SupportedRoute](cl client.Client, route T) handler.MapFunc {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
 		svc, ok := obj.(*corev1.Service)
 		if !ok {
@@ -156,7 +158,7 @@ func MapRouteForService[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr
 // retrieves the owning Service and lists all routes with the given type referencing that Service using the index.
 // It returns a slice of reconcile.Requests for each matching route, enabling efficient event handling
 // and reconciliation when an EndpointSlice changes.
-func MapRouteForEndpointSlice[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](cl client.Client, route TPtr) handler.MapFunc {
+func MapRouteForEndpointSlice[T gwtypes.SupportedRoute](cl client.Client, route T) handler.MapFunc {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
 		epSlice, ok := obj.(*discoveryv1.EndpointSlice)
 		if !ok {
@@ -191,6 +193,10 @@ func MapRouteForEndpointSlice[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRo
 	}
 }
 
+// MapRouteForReferenceGrant returns a handler.MapFunc that, given a ReferenceGrant object,
+// finds all routes with the given type in the "from" namespaces that have cross-namespace backend references
+// to the ReferenceGrant's namespace. It returns a slice of reconcile.Requests for each matching
+// route, enabling efficient event handling and reconciliation when a ReferenceGrant changes.
 func MapRouteForReferenceGrant[TList gwtypes.SupportedRouteList,
 	TListPtr gwtypes.SupportedRouteListPtr[TList]](cl client.Client) handler.MapFunc {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
@@ -245,9 +251,7 @@ func mapRouteInListForReferenceGrant[T gwtypes.SupportedRoute, TPtr gwtypes.Supp
 			}
 		case gwtypes.TLSRoute:
 			for _, rule := range r.Spec.Rules {
-				for _, backendRef := range rule.BackendRefs {
-					backendRefs = append(backendRefs, backendRef)
-				}
+				backendRefs = append(backendRefs, rule.BackendRefs...)
 			}
 		// TODO: Add other supported types.
 		default:
