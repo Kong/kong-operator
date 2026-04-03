@@ -187,7 +187,7 @@ func NewKongRouteNameForMatch(route *gwtypes.HTTPRoute, cp *commonv1alpha1.Contr
 	return newNameWithHashSuffix(readableElements, hashElements)
 }
 
-// NewKongRouteNameForTLSRouteRule gerneates a KongRoute name based on the TLSRoute rule, ControlPlaneRef and its parent TLSRoute.
+// NewKongRouteNameForTLSRouteRule generates a KongRoute name based on the TLSRoute rule, ControlPlaneRef and its parent TLSRoute.
 func NewKongRouteNameForTLSRouteRule(route *gwtypes.TLSRoute, cp *commonv1alpha1.ControlPlaneRef, rule gatewayv1.TLSRouteRule) string {
 	readableElements := []string{
 		tlsProtocolPrefix,

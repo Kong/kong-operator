@@ -86,7 +86,7 @@ func BuildAnnotations(obj client.Object, parentRef *gwtypes.ParentReference) map
 
 	// Add route annotation for TLSRoute and HTTPRoute objects
 	// TODO: include kind of the parent route to prevent conflicts:
-	//
+	// https://github.com/Kong/kong-operator/issues/3747
 	switch obj.(type) {
 	case *gwtypes.HTTPRoute:
 		annotations[consts.GatewayOperatorHybridRoutesAnnotation] = client.ObjectKeyFromObject(obj).String()

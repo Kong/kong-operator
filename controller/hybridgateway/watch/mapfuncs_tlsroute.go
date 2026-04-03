@@ -36,7 +36,7 @@ func listTLSRoutesForGateway(ctx context.Context, cl client.Client, gatewayNames
 func listTLSRoutesForService(ctx context.Context, cl client.Client, svcNamespace, svcName string) ([]reconcile.Request, error) {
 	tlsRoutes := &gwtypes.TLSRouteList{}
 
-	// List all HTTPRoutes that reference this Service using the index.
+	// List all TLSRoutes that reference this Service using the index.
 	err := cl.List(ctx, tlsRoutes, client.MatchingFields{
 		index.BackendServicesOnTLSRouteIndex: svcNamespace + "/" + svcName,
 	})

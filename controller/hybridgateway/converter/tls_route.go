@@ -359,21 +359,20 @@ func (c *tlsRouteConverter) translate(ctx context.Context, logger logr.Logger) e
 			}
 
 		}
-
-		// Check if any translation errors occurred
-		if len(translationErrors) > 0 {
-			log.Error(logger, nil, "TLSRoute translation completed with errors",
-				"totalResourcesCreated", len(c.outputStore),
-				"errorCount", len(translationErrors))
-
-			// Join all errors using errors.Join for better error handling
-			return fmt.Errorf("translation failed with %d errors: %w", len(translationErrors), errors.Join(translationErrors...))
-		}
-
-		log.Debug(logger, "Successfully completed TLSRoute translation",
-			"totalResourcesCreated", len(c.outputStore))
-
 	}
+
+	// Check if any translation errors occurred
+	if len(translationErrors) > 0 {
+		log.Error(logger, nil, "TLSRoute translation completed with errors",
+			"totalResourcesCreated", len(c.outputStore),
+			"errorCount", len(translationErrors))
+
+		// Join all errors using errors.Join for better error handling
+		return fmt.Errorf("translation failed with %d errors: %w", len(translationErrors), errors.Join(translationErrors...))
+	}
+
+	log.Debug(logger, "Successfully completed TLSRoute translation",
+		"totalResourcesCreated", len(c.outputStore))
 
 	return nil
 }

@@ -166,7 +166,7 @@ func needsCaptureGroup(rule gwtypes.HTTPRouteRule) bool {
 // routesForTLSRouteRule generates Kong routes for the given rule in a TLSRoute and its parent route.
 // It generates a L4 Kong route with the following fields configured by:
 //
-// - protocols: set to `tls_passthough` if the route's parent Gateway listener uses TLS passthrough.
+// - protocols: set to `tls_passthrough` if the route's parent Gateway listener uses TLS passthrough.
 // - snis: Set to match the SNI of the request by the hostnames in the parent TLSRoute.
 func routesForTLSRouteRule(
 	ctx context.Context,
