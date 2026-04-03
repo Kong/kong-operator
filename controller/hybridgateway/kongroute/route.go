@@ -216,9 +216,9 @@ func routesForTLSRouteRule(
 }
 
 // isTLSRoutePassthrough checks if the TLSRoute's parent Gateway listener uses TLS passthrough mode
-// to determine the protocols of the transalated route from the TLSRoute.
-// If the parent listener confiugres TLS mode to passthrough, it returns true to make the translated route use `tls_passthrough` protocol.
-// Returns error if we failed to get the parent Gateway listener.
+// to determine the protocols of the translated route from the TLSRoute.
+// If the parent listener configures TLS mode to passthrough, it returns true to make the translated route use `tls_passthrough` protocol.
+// Returns an error if it fails to get the parent Gateway listener.
 func isTLSRoutePassthrough(
 	ctx context.Context, cl client.Client, tlsRoute *gwtypes.TLSRoute, parentRef *gwtypes.ParentReference,
 ) (bool, error) {

@@ -92,7 +92,7 @@ func NewKongUpstreamNameForTLSRouteRule(route *gwtypes.TLSRoute, cp *commonv1alp
 		[]string{tlsProtocolPrefix},
 		backendRefDisplayNames(route.Namespace, rule.BackendRefs)...,
 	)
-	hashElements := hashElementsForServicelikeNameTLSRouteRule(cp, rule)
+	hashElements := hashElementsForServiceLikeNameTLSRouteRule(cp, rule)
 	return newNameWithHashSuffix(readableElements, hashElements)
 }
 
@@ -112,7 +112,7 @@ func NewKongServiceNameForTLSRouteRule(route *gwtypes.TLSRoute, cp *commonv1alph
 		[]string{tlsProtocolPrefix},
 		backendRefDisplayNames(route.Namespace, rule.BackendRefs)...,
 	)
-	hashElements := hashElementsForServicelikeNameTLSRouteRule(cp, rule)
+	hashElements := hashElementsForServiceLikeNameTLSRouteRule(cp, rule)
 	return newNameWithHashSuffix(readableElements, hashElements)
 }
 
@@ -145,7 +145,7 @@ func hashElementsForServiceLikeName(
 	}
 }
 
-func hashElementsForServicelikeNameTLSRouteRule(
+func hashElementsForServiceLikeNameTLSRouteRule(
 	cp *commonv1alpha1.ControlPlaneRef,
 	rule gwtypes.TLSRouteRule,
 ) []string {

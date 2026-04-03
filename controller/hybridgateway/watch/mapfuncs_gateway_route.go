@@ -214,7 +214,7 @@ func MapRouteForReferenceGrant[TList gwtypes.SupportedRouteList,
 		}
 		var requests []reconcile.Request
 		for _, from := range rg.Spec.From {
-			// Check that the from kind is TLSRoute and group is gateway.networking.k8s.io.
+			// Check that the from kind matches the given type and group is gateway.networking.k8s.io.
 			if string(from.Kind) != kind || (from.Group != "" && from.Group != gwtypes.GroupName) {
 				continue
 			}
