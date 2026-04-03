@@ -126,6 +126,16 @@ type KonnectEntityStatus struct {
 	OrgID string ` + "`json:\"organizationID,omitempty\"`" + `
 }`
 
+const sensitiveDataSourceType = `// SensitiveDataSourceType is the type of source for the sensitive data.
+type SensitiveDataSourceType string
+
+const (
+	// SensitiveDataSourceTypeInline indicates that the data is provided inline in the APISpec.
+	SensitiveDataSourceTypeInline SensitiveDataSourceType = "inline"
+	// SensitiveDataSourceTypeSecretRef indicates that the data is sourced from a Kubernetes Secret.
+	SensitiveDataSourceTypeSecretRef SensitiveDataSourceType = "secretRef"
+)`
+
 const konnectEntityRefType = `// KonnectEntityRef is a reference to a Konnect entity.
 type KonnectEntityRef struct {
 	// ID is the unique identifier of the Konnect entity as assigned by Konnect API.

@@ -639,13 +639,15 @@ func (g *Generator) generateCommonTypes() (string, error) {
 
 	var buf strings.Builder
 	data := struct {
-		APIVersion        string
-		ObjectRefImported bool
-		Namespaced        bool
+		APIVersion           string
+		ObjectRefImported    bool
+		Namespaced           bool
+		HasSecretRefEntities bool
 	}{
-		APIVersion:        g.config.APIVersion,
-		ObjectRefImported: g.objectRefImported(),
-		Namespaced:        g.objectRefNamespaced(),
+		APIVersion:           g.config.APIVersion,
+		ObjectRefImported:    g.objectRefImported(),
+		Namespaced:           g.objectRefNamespaced(),
+		HasSecretRefEntities: len(g.config.SecretRefEntities) > 0,
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {

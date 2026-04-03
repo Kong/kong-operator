@@ -65,7 +65,7 @@ type {{.EntityName}}Spec struct {
 	// +kubebuilder:validation:Enum=inline;secretRef
 	// +kubebuilder:default=inline
 	// +optional
-	Type *{{.EntityName}}SourceType ` + "`" + `json:"type,omitempty"` + "`" + `
+	Type *SensitiveDataSourceType ` + "`" + `json:"type,omitempty"` + "`" + `
 {{end}}
 	// APISpec defines the desired state of the resource's API spec fields.
 	//
@@ -134,18 +134,6 @@ type {{.EntityName}}Status struct {
 	// +optional
 	ObservedGeneration int64 ` + "`" + `json:"observedGeneration,omitempty"` + "`" + `
 }
-{{- if .HasOptionalSecretRef}}
-
-// {{.EntityName}}SourceType is the type of source for the sensitive data.
-type {{.EntityName}}SourceType string
-
-const (
-	// {{.EntityName}}SourceTypeInline indicates that the data is provided inline in the APISpec.
-	{{.EntityName}}SourceTypeInline {{.EntityName}}SourceType = "inline"
-	// {{.EntityName}}SourceTypeSecretRef indicates that the data is sourced from a Kubernetes Secret.
-	{{.EntityName}}SourceTypeSecretRef {{.EntityName}}SourceType = "secretRef"
-)
-{{- end}}
 
 func init() {
 	SchemeBuilder.Register(&{{.EntityName}}{}, &{{.EntityName}}List{})
@@ -353,6 +341,10 @@ package {{.APIVersion}}
 ` + konnectEntityStatusType + `
 
 ` + konnectEntityRefType + `
+{{- if .HasSecretRefEntities}}
+
+` + sensitiveDataSourceType + `
+{{- end}}
 `
 
 const registerTemplate = sharedGeneratedFilePreamble + `

@@ -52,7 +52,7 @@ type KonnectEventDataPlaneCertificateSpec struct {
 	// +kubebuilder:validation:Enum=inline;secretRef
 	// +kubebuilder:default=inline
 	// +optional
-	Type *KonnectEventDataPlaneCertificateSourceType `json:"type,omitempty"`
+	Type *SensitiveDataSourceType `json:"type,omitempty"`
 
 	// APISpec defines the desired state of the resource's API spec fields.
 	//
@@ -116,16 +116,6 @@ type KonnectEventDataPlaneCertificateStatus struct {
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
-
-// KonnectEventDataPlaneCertificateSourceType is the type of source for the sensitive data.
-type KonnectEventDataPlaneCertificateSourceType string
-
-const (
-	// KonnectEventDataPlaneCertificateSourceTypeInline indicates that the data is provided inline in the APISpec.
-	KonnectEventDataPlaneCertificateSourceTypeInline KonnectEventDataPlaneCertificateSourceType = "inline"
-	// KonnectEventDataPlaneCertificateSourceTypeSecretRef indicates that the data is sourced from a Kubernetes Secret.
-	KonnectEventDataPlaneCertificateSourceTypeSecretRef KonnectEventDataPlaneCertificateSourceType = "secretRef"
-)
 
 func init() {
 	SchemeBuilder.Register(&KonnectEventDataPlaneCertificate{}, &KonnectEventDataPlaneCertificateList{})

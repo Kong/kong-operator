@@ -619,7 +619,7 @@ func (in *KonnectEventDataPlaneCertificateSpec) DeepCopyInto(out *KonnectEventDa
 	in.GatewayRef.DeepCopyInto(&out.GatewayRef)
 	if in.Type != nil {
 		in, out := &in.Type, &out.Type
-		*out = new(KonnectEventDataPlaneCertificateSourceType)
+		*out = new(SensitiveDataSourceType)
 		**out = **in
 	}
 	out.APISpec = in.APISpec
