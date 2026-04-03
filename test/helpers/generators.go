@@ -74,9 +74,6 @@ func GenerateGatewayConfiguration(namespace string, opts ...gatewayConfiguration
 			Name:      uuid.NewString(),
 		},
 		Spec: operatorv2beta1.GatewayConfigurationSpec{
-			// TODO(pmalek): add support for ControlPlane optionns using GatewayConfiguration v2
-			// https://github.com/kong/kong-operator/issues/1728
-
 			DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
 				Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv2beta1.DeploymentOptions{
