@@ -30,7 +30,7 @@ require (
 	github.com/kong/go-database-reconciler v1.33.0
 	github.com/kong/go-kong v0.73.1
 	github.com/kong/kubernetes-telemetry v0.1.13
-	github.com/kong/kubernetes-testing-framework v0.48.1-0.20260403102030-70ddc3492a26
+	github.com/kong/kubernetes-testing-framework v0.49.0
 	github.com/kong/semver/v4 v4.0.1
 	github.com/kr/pretty v0.3.1
 	github.com/mitchellh/mapstructure v1.5.0
@@ -78,6 +78,8 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.7.0
 	sigs.k8s.io/yaml v1.6.0
 )
+
+require github.com/moby/moby/api v1.54.1-0.20260401134807-948d5691a093
 
 require (
 	cel.dev/expr v0.25.1 // indirect
@@ -236,7 +238,6 @@ require (
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/go-archive v0.2.0 // indirect
-	github.com/moby/moby/api v1.54.1-0.20260401134807-948d5691a093 // indirect
 	github.com/moby/moby/client v0.3.1-0.20260401134807-948d5691a093 // indirect
 	github.com/moby/patternmatcher v0.6.1 // indirect
 	github.com/moby/spdystream v0.5.0 // indirect
