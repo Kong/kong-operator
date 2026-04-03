@@ -73,7 +73,7 @@ type DataPlaneSpec struct {
 	// KonnectEventGateway resource in the same namespace.
 	//
 	// +required
-	ControlPlaneRef ControlPlaneRef `json:"controlPlaneRef,omitempty"`
+	ControlPlaneRef ControlPlaneRef `json:"controlPlaneRef,omitzero"`
 
 	// Deployment configures the keg Deployment: image, replicas, resources,
 	// extra env vars, volume mounts, etc.
@@ -87,10 +87,11 @@ type DataPlaneSpec struct {
 	Network *NetworkOptions `json:"network,omitempty"`
 
 	// Config provides optional overrides for keg runtime settings.
-	// When a field is omitted the keg default applies.
+	// When omitted, the keg built-in defaults are used.
+	// https://developer.konghq.com/event-gateway/configuration/#applying-configuration
 	//
 	// +optional
-	Config *Config `json:"config,omitempty"`
+	Config *DataPlaneConfiguration `json:"config,omitempty"`
 }
 
 // DeploymentOptions specifies options for the Deployment managed by the DataPlane controller.
@@ -276,10 +277,10 @@ type ServicePort struct {
 	NodePort *int32 `json:"nodePort,omitempty"`
 }
 
-// Config provides optional overrides for keg runtime settings.
+// DataPlaneConfiguration provides optional overrides for keg runtime settings.
 // All fields map 1-to-1 to keg configuration variables.
-type Config struct {
-	// Konnect provides optional overrides for the keg → Konnect connection
+type DataPlaneConfiguration struct {
+	// Konnect provides optional overrides for the keg to Konnect connection
 	// parameters. All other connection values (region, gateway_cluster_id,
 	// cert paths) are derived automatically and cannot be overridden here.
 	//
@@ -287,10 +288,9 @@ type Config struct {
 	Konnect *KonnectConfig `json:"konnect,omitempty"`
 
 	// ConfigPollIntervalSeconds overrides how often keg polls Konnect for config changes, in seconds.
-	// Corresponds to config_poll_interval / KEG__CONFIG_POLL_INTERVAL. Default: 5.
+	// Corresponds to config_poll_interval / KEG__CONFIG_POLL_INTERVAL.
 	//
 	// +optional
-	// +kubebuilder:default=5
 	// +kubebuilder:validation:Minimum=1
 	ConfigPollIntervalSeconds *int32 `json:"configPollIntervalSeconds,omitempty"`
 
@@ -298,7 +298,6 @@ type Config struct {
 	// Corresponds to enable_debug_endpoints / KEG__ENABLE_DEBUG_ENDPOINTS.
 	//
 	// +optional
-	// +kubebuilder:default=Disabled
 	EnableDebugEndpoints *DebugEndpointsState `json:"enableDebugEndpoints,omitempty"`
 
 	// Observability configures logging, metrics, and tracing.
@@ -319,15 +318,13 @@ type KonnectConfig struct {
 	// Corresponds to konnect.domain / KONG_KONNECT_DOMAIN.
 	//
 	// +optional
-	// +kubebuilder:default="konghq.com"
 	// +kubebuilder:validation:MaxLength=253
 	Domain *string `json:"domain,omitempty"`
 
 	// APIRequestTimeoutSeconds overrides the Konnect API request timeout, in seconds.
-	// Corresponds to konnect.api_request_timeout / KONG_KONNECT_API_REQUEST_TIMEOUT. Default: 5.
+	// Corresponds to konnect.api_request_timeout / KONG_KONNECT_API_REQUEST_TIMEOUT.
 	//
 	// +optional
-	// +kubebuilder:default=5
 	// +kubebuilder:validation:Minimum=1
 	APIRequestTimeoutSeconds *int32 `json:"apiRequestTimeoutSeconds,omitempty"`
 
@@ -336,7 +333,6 @@ type KonnectConfig struct {
 	// Corresponds to konnect.insecure_skip_verify / KONG_KONNECT_INSECURE_SKIP_VERIFY.
 	//
 	// +optional
-	// +kubebuilder:default=Disabled
 	InsecureSkipVerify *TLSVerificationState `json:"insecureSkipVerify,omitempty"`
 }
 
@@ -370,7 +366,6 @@ type ObservabilityConfig struct {
 	// Corresponds to observability.log_flags / KEG__OBSERVABILITY__LOG_FLAGS.
 	//
 	// +kubebuilder:validation:Enum=trace;debug;info;warn;error
-	// +kubebuilder:default=info
 	// +optional
 	LogFlags *string `json:"logFlags,omitempty"`
 
@@ -387,17 +382,15 @@ type ObservabilityConfig struct {
 	// KEG__OBSERVABILITY__METRICS_ROLLUP_ALLOW_MAP.
 	//
 	// +optional
-	// +kubebuilder:default="messaging.operation.name=produce,fetch"
 	// +kubebuilder:validation:MaxLength=2048
 	MetricsRollupAllowMap *string `json:"metricsRollupAllowMap,omitempty"`
 
 	// PolicyErrorsInfoLogIntervalSeconds sets the interval for INFO-level logging of policy errors, in seconds.
-	// Set to 0 to disable. Default: 1.
+	// Set to 0 to disable.
 	// Corresponds to observability.policy_errors_info_log_interval /
 	// KEG__OBSERVABILITY__POLICY_ERRORS_INFO_LOG_INTERVAL.
 	//
 	// +optional
-	// +kubebuilder:default=1
 	// +kubebuilder:validation:Minimum=0
 	PolicyErrorsInfoLogIntervalSeconds *int32 `json:"policyErrorsInfoLogIntervalSeconds,omitempty"`
 }
@@ -409,23 +402,20 @@ type RuntimeOptions struct {
 	// KEG__RUNTIME__HEALTH_LISTENER_ADDRESS_PORT.
 	//
 	// +optional
-	// +kubebuilder:default="0.0.0.0:8080"
 	// +kubebuilder:validation:MaxLength=253
 	HealthListenerAddressPort *string `json:"healthListenerAddressPort,omitempty"`
 
 	// DrainDurationSeconds sets how long keg drains existing connections on shutdown, in seconds.
-	// Corresponds to runtime.drain_duration / KEG__RUNTIME__DRAIN_DURATION. Default: 5.
+	// Corresponds to runtime.drain_duration / KEG__RUNTIME__DRAIN_DURATION.
 	//
 	// +optional
-	// +kubebuilder:default=5
 	// +kubebuilder:validation:Minimum=0
 	DrainDurationSeconds *int32 `json:"drainDurationSeconds,omitempty"`
 
 	// ShutdownTimeoutSeconds sets the graceful shutdown timeout, in seconds.
-	// Corresponds to runtime.shutdown_timeout / KEG__RUNTIME__SHUTDOWN_TIMEOUT. Default: 10.
+	// Corresponds to runtime.shutdown_timeout / KEG__RUNTIME__SHUTDOWN_TIMEOUT.
 	//
 	// +optional
-	// +kubebuilder:default=10
 	// +kubebuilder:validation:Minimum=1
 	ShutdownTimeoutSeconds *int32 `json:"shutdownTimeoutSeconds,omitempty"`
 }

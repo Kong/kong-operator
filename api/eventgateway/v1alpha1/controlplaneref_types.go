@@ -26,8 +26,7 @@ type ControlPlaneRef struct {
 	// Currently only konnectNamespacedRef is supported.
 	//
 	// +required
-	// +kubebuilder:validation:Enum=konnectNamespacedRef
-	Type ControlPlaneRefType `json:"type"`
+	Type ControlPlaneRefType `json:"type,omitempty"`
 
 	// KonnectNamespacedRef references a KonnectEventGateway resource in the same namespace.
 	// Must be set when type is konnectNamespacedRef; validated by CEL rules on this struct.

@@ -1340,18 +1340,17 @@ spec:
               config:
                 description: |-
                   Config provides optional overrides for keg runtime settings.
-                  When a field is omitted the keg default applies.
+                  When omitted, the keg built-in defaults are used.
+                  https://developer.konghq.com/event-gateway/configuration/#applying-configuration
                 properties:
                   configPollIntervalSeconds:
-                    default: 5
                     description: |-
                       ConfigPollIntervalSeconds overrides how often keg polls Konnect for config changes, in seconds.
-                      Corresponds to config_poll_interval / KEG__CONFIG_POLL_INTERVAL. Default: 5.
+                      Corresponds to config_poll_interval / KEG__CONFIG_POLL_INTERVAL.
                     format: int32
                     minimum: 1
                     type: integer
                   enableDebugEndpoints:
-                    default: Disabled
                     description: |-
                       EnableDebugEndpoints enables the /debug/pprof/allocs endpoint.
                       Corresponds to enable_debug_endpoints / KEG__ENABLE_DEBUG_ENDPOINTS.
@@ -1361,27 +1360,24 @@ spec:
                     type: string
                   konnect:
                     description: |-
-                      Konnect provides optional overrides for the keg → Konnect connection
+                      Konnect provides optional overrides for the keg to Konnect connection
                       parameters. All other connection values (region, gateway_cluster_id,
                       cert paths) are derived automatically and cannot be overridden here.
                     properties:
                       apiRequestTimeoutSeconds:
-                        default: 5
                         description: |-
                           APIRequestTimeoutSeconds overrides the Konnect API request timeout, in seconds.
-                          Corresponds to konnect.api_request_timeout / KONG_KONNECT_API_REQUEST_TIMEOUT. Default: 5.
+                          Corresponds to konnect.api_request_timeout / KONG_KONNECT_API_REQUEST_TIMEOUT.
                         format: int32
                         minimum: 1
                         type: integer
                       domain:
-                        default: konghq.com
                         description: |-
                           Domain overrides the Konnect domain.
                           Corresponds to konnect.domain / KONG_KONNECT_DOMAIN.
                         maxLength: 253
                         type: string
                       insecureSkipVerify:
-                        default: Disabled
                         description: |-
                           InsecureSkipVerify disables TLS verification for the Konnect connection.
                           For testing only, do not use in production.
@@ -1395,7 +1391,6 @@ spec:
                     description: Observability configures logging, metrics, and tracing.
                     properties:
                       logFlags:
-                        default: info
                         description: |-
                           LogFlags sets the log level.
                           Corresponds to observability.log_flags / KEG__OBSERVABILITY__LOG_FLAGS.
@@ -1415,7 +1410,6 @@ spec:
                         - json
                         type: string
                       metricsRollupAllowMap:
-                        default: messaging.operation.name=produce,fetch
                         description: |-
                           MetricsRollupAllowMap prevents high-cardinality metrics by collapsing
                           unmatched label values to "other".
@@ -1424,10 +1418,9 @@ spec:
                         maxLength: 2048
                         type: string
                       policyErrorsInfoLogIntervalSeconds:
-                        default: 1
                         description: |-
                           PolicyErrorsInfoLogIntervalSeconds sets the interval for INFO-level logging of policy errors, in seconds.
-                          Set to 0 to disable. Default: 1.
+                          Set to 0 to disable.
                           Corresponds to observability.policy_errors_info_log_interval /
                           KEG__OBSERVABILITY__POLICY_ERRORS_INFO_LOG_INTERVAL.
                         format: int32
@@ -1438,15 +1431,13 @@ spec:
                     description: Runtime configures graceful shutdown and health endpoint behaviour.
                     properties:
                       drainDurationSeconds:
-                        default: 5
                         description: |-
                           DrainDurationSeconds sets how long keg drains existing connections on shutdown, in seconds.
-                          Corresponds to runtime.drain_duration / KEG__RUNTIME__DRAIN_DURATION. Default: 5.
+                          Corresponds to runtime.drain_duration / KEG__RUNTIME__DRAIN_DURATION.
                         format: int32
                         minimum: 0
                         type: integer
                       healthListenerAddressPort:
-                        default: 0.0.0.0:8080
                         description: |-
                           HealthListenerAddressPort sets the address:port for the health endpoint.
                           Corresponds to runtime.health_listener_address_port /
@@ -1454,10 +1445,9 @@ spec:
                         maxLength: 253
                         type: string
                       shutdownTimeoutSeconds:
-                        default: 10
                         description: |-
                           ShutdownTimeoutSeconds sets the graceful shutdown timeout, in seconds.
-                          Corresponds to runtime.shutdown_timeout / KEG__RUNTIME__SHUTDOWN_TIMEOUT. Default: 10.
+                          Corresponds to runtime.shutdown_timeout / KEG__RUNTIME__SHUTDOWN_TIMEOUT.
                         format: int32
                         minimum: 1
                         type: integer
@@ -1484,14 +1474,11 @@ spec:
                     - name
                     type: object
                   type:
-                    allOf:
-                    - enum:
-                      - konnectNamespacedRef
-                    - enum:
-                      - konnectNamespacedRef
                     description: |-
                       Type indicates the type of the control plane being referenced.
                       Currently only konnectNamespacedRef is supported.
+                    enum:
+                    - konnectNamespacedRef
                     type: string
                 required:
                 - type

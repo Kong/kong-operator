@@ -238,7 +238,7 @@ func TestEventGatewayDataPlane(t *testing.T) {
 								Name: "my-event-gateway",
 							},
 						},
-						Config: &eventgatewayv1alpha1.Config{
+						Config: &eventgatewayv1alpha1.DataPlaneConfiguration{
 							Observability: &eventgatewayv1alpha1.ObservabilityConfig{
 								LogFlags: new("info"),
 							},
@@ -257,7 +257,7 @@ func TestEventGatewayDataPlane(t *testing.T) {
 								Name: "my-event-gateway",
 							},
 						},
-						Config: &eventgatewayv1alpha1.Config{
+						Config: &eventgatewayv1alpha1.DataPlaneConfiguration{
 							Observability: &eventgatewayv1alpha1.ObservabilityConfig{
 								LogFlags: new("debug"),
 							},
@@ -276,7 +276,7 @@ func TestEventGatewayDataPlane(t *testing.T) {
 								Name: "my-event-gateway",
 							},
 						},
-						Config: &eventgatewayv1alpha1.Config{
+						Config: &eventgatewayv1alpha1.DataPlaneConfiguration{
 							Observability: &eventgatewayv1alpha1.ObservabilityConfig{
 								LogFlags: new("verbose"),
 							},
@@ -284,111 +284,6 @@ func TestEventGatewayDataPlane(t *testing.T) {
 					},
 				},
 				ExpectedErrorMessage: new("Unsupported value: \"verbose\""),
-			},
-		}.RunWithConfig(t, cfg, scheme)
-	})
-
-	t.Run("spec defaults applied when parent object is set", func(t *testing.T) {
-		common.TestCasesGroup[*eventgatewayv1alpha1.DataPlane]{
-			{
-				Name: "config defaults applied when config is set",
-				TestObject: &eventgatewayv1alpha1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: eventgatewayv1alpha1.DataPlaneSpec{
-						ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
-							Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
-							KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
-								Name: "my-event-gateway",
-							},
-						},
-						Config: &eventgatewayv1alpha1.Config{},
-					},
-				},
-				Assert: func(t *testing.T, dp *eventgatewayv1alpha1.DataPlane) {
-					require.NotNil(t, dp.Spec.Config)
-					require.NotNil(t, dp.Spec.Config.EnableDebugEndpoints)
-					assert.Equal(t, eventgatewayv1alpha1.DebugEndpointsStateDisabled, *dp.Spec.Config.EnableDebugEndpoints)
-					require.NotNil(t, dp.Spec.Config.ConfigPollIntervalSeconds)
-					assert.Equal(t, int32(5), *dp.Spec.Config.ConfigPollIntervalSeconds)
-				},
-			},
-			{
-				Name: "konnect config defaults applied when konnect is set",
-				TestObject: &eventgatewayv1alpha1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: eventgatewayv1alpha1.DataPlaneSpec{
-						ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
-							Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
-							KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
-								Name: "my-event-gateway",
-							},
-						},
-						Config: &eventgatewayv1alpha1.Config{
-							Konnect: &eventgatewayv1alpha1.KonnectConfig{},
-						},
-					},
-				},
-				Assert: func(t *testing.T, dp *eventgatewayv1alpha1.DataPlane) {
-					require.NotNil(t, dp.Spec.Config.Konnect)
-					require.NotNil(t, dp.Spec.Config.Konnect.Domain)
-					assert.Equal(t, "konghq.com", *dp.Spec.Config.Konnect.Domain)
-					require.NotNil(t, dp.Spec.Config.Konnect.InsecureSkipVerify)
-					assert.Equal(t, eventgatewayv1alpha1.TLSVerificationStateDisabled, *dp.Spec.Config.Konnect.InsecureSkipVerify)
-					require.NotNil(t, dp.Spec.Config.Konnect.APIRequestTimeoutSeconds)
-					assert.Equal(t, int32(5), *dp.Spec.Config.Konnect.APIRequestTimeoutSeconds)
-				},
-			},
-			{
-				Name: "observability defaults applied when observability is set",
-				TestObject: &eventgatewayv1alpha1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: eventgatewayv1alpha1.DataPlaneSpec{
-						ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
-							Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
-							KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
-								Name: "my-event-gateway",
-							},
-						},
-						Config: &eventgatewayv1alpha1.Config{
-							Observability: &eventgatewayv1alpha1.ObservabilityConfig{},
-						},
-					},
-				},
-				Assert: func(t *testing.T, dp *eventgatewayv1alpha1.DataPlane) {
-					require.NotNil(t, dp.Spec.Config.Observability)
-					require.NotNil(t, dp.Spec.Config.Observability.LogFlags)
-					assert.Equal(t, "info", *dp.Spec.Config.Observability.LogFlags)
-					require.NotNil(t, dp.Spec.Config.Observability.MetricsRollupAllowMap)
-					assert.Equal(t, "messaging.operation.name=produce,fetch", *dp.Spec.Config.Observability.MetricsRollupAllowMap)
-					require.NotNil(t, dp.Spec.Config.Observability.PolicyErrorsInfoLogIntervalSeconds)
-					assert.Equal(t, int32(1), *dp.Spec.Config.Observability.PolicyErrorsInfoLogIntervalSeconds)
-				},
-			},
-			{
-				Name: "runtime defaults applied when runtime is set",
-				TestObject: &eventgatewayv1alpha1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: eventgatewayv1alpha1.DataPlaneSpec{
-						ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
-							Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
-							KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
-								Name: "my-event-gateway",
-							},
-						},
-						Config: &eventgatewayv1alpha1.Config{
-							Runtime: &eventgatewayv1alpha1.RuntimeOptions{},
-						},
-					},
-				},
-				Assert: func(t *testing.T, dp *eventgatewayv1alpha1.DataPlane) {
-					require.NotNil(t, dp.Spec.Config.Runtime)
-					require.NotNil(t, dp.Spec.Config.Runtime.HealthListenerAddressPort)
-					assert.Equal(t, "0.0.0.0:8080", *dp.Spec.Config.Runtime.HealthListenerAddressPort)
-					require.NotNil(t, dp.Spec.Config.Runtime.DrainDurationSeconds)
-					assert.Equal(t, int32(5), *dp.Spec.Config.Runtime.DrainDurationSeconds)
-					require.NotNil(t, dp.Spec.Config.Runtime.ShutdownTimeoutSeconds)
-					assert.Equal(t, int32(10), *dp.Spec.Config.Runtime.ShutdownTimeoutSeconds)
-				},
 			},
 		}.RunWithConfig(t, cfg, scheme)
 	})
@@ -406,7 +301,7 @@ func TestEventGatewayDataPlane(t *testing.T) {
 								Name: "my-event-gateway",
 							},
 						},
-						Config: &eventgatewayv1alpha1.Config{
+						Config: &eventgatewayv1alpha1.DataPlaneConfiguration{
 							ConfigPollIntervalSeconds: new(int32(0)),
 						},
 					},
@@ -424,7 +319,7 @@ func TestEventGatewayDataPlane(t *testing.T) {
 								Name: "my-event-gateway",
 							},
 						},
-						Config: &eventgatewayv1alpha1.Config{
+						Config: &eventgatewayv1alpha1.DataPlaneConfiguration{
 							Konnect: &eventgatewayv1alpha1.KonnectConfig{
 								APIRequestTimeoutSeconds: new(int32(0)),
 							},
@@ -444,7 +339,7 @@ func TestEventGatewayDataPlane(t *testing.T) {
 								Name: "my-event-gateway",
 							},
 						},
-						Config: &eventgatewayv1alpha1.Config{
+						Config: &eventgatewayv1alpha1.DataPlaneConfiguration{
 							Runtime: &eventgatewayv1alpha1.RuntimeOptions{
 								ShutdownTimeoutSeconds: new(int32(0)),
 							},
