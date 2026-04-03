@@ -92,8 +92,8 @@ func (b *KongTargetBuilder) WithAnnotations(route client.Object, parentRef *gwty
 	return b
 }
 
-// WithOwner sets the owner reference for the KongTarget to the given HTTPRoute.
-func (b *KongTargetBuilder) WithOwner(owner *gwtypes.HTTPRoute) *KongTargetBuilder {
+// WithOwner sets the owner reference for the KongTarget to the given route.
+func (b *KongTargetBuilder) WithOwner(owner client.Object) *KongTargetBuilder {
 	if owner == nil {
 		b.errors = append(b.errors, errors.New("owner cannot be nil"))
 		return b

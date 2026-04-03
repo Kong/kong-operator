@@ -194,9 +194,9 @@ func NewKongRouteNameForTLSRouteRule(route *gwtypes.TLSRoute, cp *commonv1alpha1
 		route.Namespace + "-" + route.Name,
 	}
 	hashElements := []string{
+		// Since there can be only one rule in TLSRoute, we do not need to consider identical rules within the same TLSRoute.
 		defaultCPPrefix + utils.Hash32(cp),
 		utils.Hash32(rule),
-		fmt.Sprintf("hostnames:%v", route.Spec.Hostnames),
 	}
 	return newNameWithHashSuffix(readableElements, hashElements)
 }

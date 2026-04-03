@@ -127,8 +127,8 @@ func (b *KongRouteBuilder) WithSNIs(snis []string) *KongRouteBuilder {
 	return b
 }
 
-// WithOwner sets the owner reference for the KongRoute to the given HTTPRoute.
-func (b *KongRouteBuilder) WithOwner(owner *gwtypes.HTTPRoute) *KongRouteBuilder {
+// WithOwner sets the owner reference for the KongRoute to the given route.
+func (b *KongRouteBuilder) WithOwner(owner client.Object) *KongRouteBuilder {
 	if owner == nil {
 		b.errors = append(b.errors, errors.New("owner cannot be nil"))
 		return b

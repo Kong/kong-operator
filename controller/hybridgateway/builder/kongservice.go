@@ -80,8 +80,8 @@ func (b *KongServiceBuilder) WithControlPlaneRef(cpr commonv1alpha1.ControlPlane
 	return b
 }
 
-// WithOwner sets the owner reference for the KongService to the given HTTPRoute.
-func (b *KongServiceBuilder) WithOwner(owner *gwtypes.HTTPRoute) *KongServiceBuilder {
+// WithOwner sets the owner reference for the KongService to the given route.
+func (b *KongServiceBuilder) WithOwner(owner client.Object) *KongServiceBuilder {
 	if owner == nil {
 		b.errors = append(b.errors, errors.New("owner cannot be nil"))
 		return b
@@ -102,6 +102,8 @@ func (b *KongServiceBuilder) WithProtocol(protocol string) *KongServiceBuilder {
 	switch protocol {
 	case "http", "HTTP":
 		b.service.Spec.Protocol = sdkkonnectcomp.ProtocolHTTP
+	case "tls", "TLS":
+		b.service.Spec.Protocol = sdkkonnectcomp.ProtocolTLS
 	default:
 		b.errors = append(b.errors, fmt.Errorf("unsupported protocol: %s", protocol))
 	}

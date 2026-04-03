@@ -67,8 +67,8 @@ func (b *KongUpstreamBuilder) WithSpecName(name string) *KongUpstreamBuilder {
 	return b
 }
 
-// WithOwner sets the owner reference for the KongUpstream to the given HTTPRoute.
-func (b *KongUpstreamBuilder) WithOwner(owner *gwtypes.HTTPRoute) *KongUpstreamBuilder {
+// WithOwner sets the owner reference for the KongUpstream to the given route.
+func (b *KongUpstreamBuilder) WithOwner(owner client.Object) *KongUpstreamBuilder {
 	if owner == nil {
 		b.errors = append(b.errors, fmt.Errorf("owner cannot be nil"))
 		return b
