@@ -18,8 +18,11 @@ func validDataPlane(ns string) *eventgatewayv1alpha1.DataPlane {
 	return &eventgatewayv1alpha1.DataPlane{
 		ObjectMeta: common.CommonObjectMeta(ns),
 		Spec: eventgatewayv1alpha1.DataPlaneSpec{
-			ControlPlaneRef: corev1.LocalObjectReference{
-				Name: "my-event-gateway",
+			ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
+				Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
+				KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
+					Name: "my-event-gateway",
+				},
 			},
 		},
 	}
@@ -32,6 +35,27 @@ func TestEventGatewayDataPlane(t *testing.T) {
 	scheme := scheme.Get()
 	cfg, ns := envtest.Setup(t, ctx, scheme)
 
+	t.Run("controlPlaneRef validation", func(t *testing.T) {
+		common.TestCasesGroup[*eventgatewayv1alpha1.DataPlane]{
+			{
+				Name:       "konnectNamespacedRef type with ref set - valid",
+				TestObject: validDataPlane(ns.Name),
+			},
+			{
+				Name: "konnectNamespacedRef type without ref - invalid",
+				TestObject: &eventgatewayv1alpha1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: eventgatewayv1alpha1.DataPlaneSpec{
+						ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
+							Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
+						},
+					},
+				},
+				ExpectedErrorMessage: new("konnectNamespacedRef must be set when type is konnectNamespacedRef"),
+			},
+		}.RunWithConfig(t, cfg, scheme)
+	})
+
 	t.Run("service options nodeport validation", func(t *testing.T) {
 		common.TestCasesGroup[*eventgatewayv1alpha1.DataPlane]{
 			{
@@ -43,7 +67,12 @@ func TestEventGatewayDataPlane(t *testing.T) {
 				TestObject: &eventgatewayv1alpha1.DataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: eventgatewayv1alpha1.DataPlaneSpec{
-						ControlPlaneRef: corev1.LocalObjectReference{Name: "my-event-gateway"},
+						ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
+							Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
+							KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
+								Name: "my-event-gateway",
+							},
+						},
 						Network: &eventgatewayv1alpha1.NetworkOptions{
 							Services: &eventgatewayv1alpha1.Services{
 								Kafka: &eventgatewayv1alpha1.ServiceOptions{
@@ -59,7 +88,12 @@ func TestEventGatewayDataPlane(t *testing.T) {
 				TestObject: &eventgatewayv1alpha1.DataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: eventgatewayv1alpha1.DataPlaneSpec{
-						ControlPlaneRef: corev1.LocalObjectReference{Name: "my-event-gateway"},
+						ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
+							Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
+							KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
+								Name: "my-event-gateway",
+							},
+						},
 						Network: &eventgatewayv1alpha1.NetworkOptions{
 							Services: &eventgatewayv1alpha1.Services{
 								Kafka: &eventgatewayv1alpha1.ServiceOptions{
@@ -78,7 +112,12 @@ func TestEventGatewayDataPlane(t *testing.T) {
 				TestObject: &eventgatewayv1alpha1.DataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: eventgatewayv1alpha1.DataPlaneSpec{
-						ControlPlaneRef: corev1.LocalObjectReference{Name: "my-event-gateway"},
+						ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
+							Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
+							KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
+								Name: "my-event-gateway",
+							},
+						},
 						Network: &eventgatewayv1alpha1.NetworkOptions{
 							Services: &eventgatewayv1alpha1.Services{
 								Kafka: &eventgatewayv1alpha1.ServiceOptions{
@@ -97,7 +136,12 @@ func TestEventGatewayDataPlane(t *testing.T) {
 				TestObject: &eventgatewayv1alpha1.DataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: eventgatewayv1alpha1.DataPlaneSpec{
-						ControlPlaneRef: corev1.LocalObjectReference{Name: "my-event-gateway"},
+						ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
+							Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
+							KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
+								Name: "my-event-gateway",
+							},
+						},
 						Network: &eventgatewayv1alpha1.NetworkOptions{
 							Services: &eventgatewayv1alpha1.Services{
 								Kafka: &eventgatewayv1alpha1.ServiceOptions{
@@ -122,7 +166,12 @@ func TestEventGatewayDataPlane(t *testing.T) {
 				TestObject: &eventgatewayv1alpha1.DataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: eventgatewayv1alpha1.DataPlaneSpec{
-						ControlPlaneRef: corev1.LocalObjectReference{Name: "my-event-gateway"},
+						ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
+							Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
+							KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
+								Name: "my-event-gateway",
+							},
+						},
 						Deployment: &eventgatewayv1alpha1.DeploymentOptions{
 							Replicas: new(int32(2)),
 						},
@@ -134,7 +183,12 @@ func TestEventGatewayDataPlane(t *testing.T) {
 				TestObject: &eventgatewayv1alpha1.DataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: eventgatewayv1alpha1.DataPlaneSpec{
-						ControlPlaneRef: corev1.LocalObjectReference{Name: "my-event-gateway"},
+						ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
+							Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
+							KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
+								Name: "my-event-gateway",
+							},
+						},
 						Deployment: &eventgatewayv1alpha1.DeploymentOptions{
 							Scaling: &eventgatewayv1alpha1.Scaling{
 								HorizontalScaling: &eventgatewayv1alpha1.HorizontalScaling{
@@ -150,7 +204,12 @@ func TestEventGatewayDataPlane(t *testing.T) {
 				TestObject: &eventgatewayv1alpha1.DataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: eventgatewayv1alpha1.DataPlaneSpec{
-						ControlPlaneRef: corev1.LocalObjectReference{Name: "my-event-gateway"},
+						ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
+							Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
+							KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
+								Name: "my-event-gateway",
+							},
+						},
 						Deployment: &eventgatewayv1alpha1.DeploymentOptions{
 							Replicas: new(int32(2)),
 							Scaling: &eventgatewayv1alpha1.Scaling{
@@ -173,7 +232,12 @@ func TestEventGatewayDataPlane(t *testing.T) {
 				TestObject: &eventgatewayv1alpha1.DataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: eventgatewayv1alpha1.DataPlaneSpec{
-						ControlPlaneRef: corev1.LocalObjectReference{Name: "my-event-gateway"},
+						ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
+							Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
+							KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
+								Name: "my-event-gateway",
+							},
+						},
 						Config: &eventgatewayv1alpha1.Config{
 							Observability: &eventgatewayv1alpha1.ObservabilityConfig{
 								LogFlags: new("info"),
@@ -187,7 +251,12 @@ func TestEventGatewayDataPlane(t *testing.T) {
 				TestObject: &eventgatewayv1alpha1.DataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: eventgatewayv1alpha1.DataPlaneSpec{
-						ControlPlaneRef: corev1.LocalObjectReference{Name: "my-event-gateway"},
+						ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
+							Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
+							KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
+								Name: "my-event-gateway",
+							},
+						},
 						Config: &eventgatewayv1alpha1.Config{
 							Observability: &eventgatewayv1alpha1.ObservabilityConfig{
 								LogFlags: new("debug"),
@@ -201,7 +270,12 @@ func TestEventGatewayDataPlane(t *testing.T) {
 				TestObject: &eventgatewayv1alpha1.DataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: eventgatewayv1alpha1.DataPlaneSpec{
-						ControlPlaneRef: corev1.LocalObjectReference{Name: "my-event-gateway"},
+						ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
+							Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
+							KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
+								Name: "my-event-gateway",
+							},
+						},
 						Config: &eventgatewayv1alpha1.Config{
 							Observability: &eventgatewayv1alpha1.ObservabilityConfig{
 								LogFlags: new("verbose"),
@@ -221,8 +295,13 @@ func TestEventGatewayDataPlane(t *testing.T) {
 				TestObject: &eventgatewayv1alpha1.DataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: eventgatewayv1alpha1.DataPlaneSpec{
-						ControlPlaneRef: corev1.LocalObjectReference{Name: "my-event-gateway"},
-						Config:          &eventgatewayv1alpha1.Config{},
+						ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
+							Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
+							KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
+								Name: "my-event-gateway",
+							},
+						},
+						Config: &eventgatewayv1alpha1.Config{},
 					},
 				},
 				Assert: func(t *testing.T, dp *eventgatewayv1alpha1.DataPlane) {
@@ -238,7 +317,12 @@ func TestEventGatewayDataPlane(t *testing.T) {
 				TestObject: &eventgatewayv1alpha1.DataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: eventgatewayv1alpha1.DataPlaneSpec{
-						ControlPlaneRef: corev1.LocalObjectReference{Name: "my-event-gateway"},
+						ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
+							Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
+							KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
+								Name: "my-event-gateway",
+							},
+						},
 						Config: &eventgatewayv1alpha1.Config{
 							Konnect: &eventgatewayv1alpha1.KonnectConfig{},
 						},
@@ -259,7 +343,12 @@ func TestEventGatewayDataPlane(t *testing.T) {
 				TestObject: &eventgatewayv1alpha1.DataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: eventgatewayv1alpha1.DataPlaneSpec{
-						ControlPlaneRef: corev1.LocalObjectReference{Name: "my-event-gateway"},
+						ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
+							Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
+							KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
+								Name: "my-event-gateway",
+							},
+						},
 						Config: &eventgatewayv1alpha1.Config{
 							Observability: &eventgatewayv1alpha1.ObservabilityConfig{},
 						},
@@ -280,7 +369,12 @@ func TestEventGatewayDataPlane(t *testing.T) {
 				TestObject: &eventgatewayv1alpha1.DataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: eventgatewayv1alpha1.DataPlaneSpec{
-						ControlPlaneRef: corev1.LocalObjectReference{Name: "my-event-gateway"},
+						ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
+							Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
+							KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
+								Name: "my-event-gateway",
+							},
+						},
 						Config: &eventgatewayv1alpha1.Config{
 							Runtime: &eventgatewayv1alpha1.RuntimeOptions{},
 						},
@@ -306,7 +400,12 @@ func TestEventGatewayDataPlane(t *testing.T) {
 				TestObject: &eventgatewayv1alpha1.DataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: eventgatewayv1alpha1.DataPlaneSpec{
-						ControlPlaneRef: corev1.LocalObjectReference{Name: "my-event-gateway"},
+						ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
+							Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
+							KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
+								Name: "my-event-gateway",
+							},
+						},
 						Config: &eventgatewayv1alpha1.Config{
 							ConfigPollIntervalSeconds: new(int32(0)),
 						},
@@ -319,7 +418,12 @@ func TestEventGatewayDataPlane(t *testing.T) {
 				TestObject: &eventgatewayv1alpha1.DataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: eventgatewayv1alpha1.DataPlaneSpec{
-						ControlPlaneRef: corev1.LocalObjectReference{Name: "my-event-gateway"},
+						ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
+							Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
+							KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
+								Name: "my-event-gateway",
+							},
+						},
 						Config: &eventgatewayv1alpha1.Config{
 							Konnect: &eventgatewayv1alpha1.KonnectConfig{
 								APIRequestTimeoutSeconds: new(int32(0)),
@@ -334,7 +438,12 @@ func TestEventGatewayDataPlane(t *testing.T) {
 				TestObject: &eventgatewayv1alpha1.DataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: eventgatewayv1alpha1.DataPlaneSpec{
-						ControlPlaneRef: corev1.LocalObjectReference{Name: "my-event-gateway"},
+						ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
+							Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
+							KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
+								Name: "my-event-gateway",
+							},
+						},
 						Config: &eventgatewayv1alpha1.Config{
 							Runtime: &eventgatewayv1alpha1.RuntimeOptions{
 								ShutdownTimeoutSeconds: new(int32(0)),
@@ -354,7 +463,12 @@ func TestEventGatewayDataPlane(t *testing.T) {
 				TestObject: &eventgatewayv1alpha1.DataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: eventgatewayv1alpha1.DataPlaneSpec{
-						ControlPlaneRef: corev1.LocalObjectReference{Name: "my-event-gateway"},
+						ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
+							Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
+							KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
+								Name: "my-event-gateway",
+							},
+						},
 					},
 					// Non-zero status triggers the framework's status update, which causes
 					// the API server to apply the +kubebuilder:default on status.conditions.

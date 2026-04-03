@@ -184,22 +184,41 @@ spec:
                 type: object
               controlPlaneRef:
                 description: |-
-                  ControlPlaneRef references the KonnectEventGateway resource that acts as the
-                  control plane for this data plane. KonnectEventGateway is the Konnect-side
-                  resource that provisions the Event Gateway cluster. The controller reads its
-                  status to obtain the Konnect gateway ID and region.
+                  ControlPlaneRef references the control plane this DataPlane connects to.
+                  The type field identifies which kind of control plane is being referenced.
+                  Currently only konnectNamespacedRef is supported, which references a
+                  KonnectEventGateway resource in the same namespace.
                 properties:
-                  name:
-                    default: ""
+                  konnectNamespacedRef:
                     description: |-
-                      Name of the referent.
-                      This field is effectively required, but due to backwards compatibility is
-                      allowed to be empty. Instances of this type with an empty value here are
-                      almost certainly wrong.
-                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                      KonnectNamespacedRef references a KonnectEventGateway resource in the same namespace.
+                      Must be set when type is konnectNamespacedRef; validated by CEL rules on this struct.
+                    properties:
+                      name:
+                        description: Name is the name of the KonnectEventGateway resource.
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  type:
+                    allOf:
+                    - enum:
+                      - konnectNamespacedRef
+                    - enum:
+                      - konnectNamespacedRef
+                    description: |-
+                      Type indicates the type of the control plane being referenced.
+                      Currently only konnectNamespacedRef is supported.
                     type: string
+                required:
+                - type
                 type: object
-                x-kubernetes-map-type: atomic
+                x-kubernetes-validations:
+                - message: konnectNamespacedRef must be set when type is konnectNamespacedRef
+                  rule: 'self.type == ''konnectNamespacedRef'' ? has(self.konnectNamespacedRef)
+                    : true'
               deployment:
                 description: |-
                   Deployment configures the keg Deployment: image, replicas, resources,

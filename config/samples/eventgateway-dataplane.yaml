@@ -5,7 +5,9 @@ metadata:
   namespace: default
 spec:
   controlPlaneRef:
-    name: my-event-gateway
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
+      name: my-event-gateway
   network:
     services:
       kafka:

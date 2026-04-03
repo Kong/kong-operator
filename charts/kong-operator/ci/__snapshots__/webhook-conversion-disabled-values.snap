@@ -1367,46 +1367,63 @@ spec:
                   Config provides optional overrides for keg runtime settings.
                   When a field is omitted the keg default applies.
                 properties:
-                  configPollInterval:
+                  configPollIntervalSeconds:
+                    default: 5
                     description: |-
-                      ConfigPollInterval overrides how often keg polls Konnect for config changes.
-                      Corresponds to config_poll_interval / KEG__CONFIG_POLL_INTERVAL. Default: 5s.
-                    type: string
+                      ConfigPollIntervalSeconds overrides how often keg polls Konnect for config changes, in seconds.
+                      Corresponds to config_poll_interval / KEG__CONFIG_POLL_INTERVAL. Default: 5.
+                    format: int32
+                    minimum: 1
+                    type: integer
                   enableDebugEndpoints:
+                    default: Disabled
                     description: |-
                       EnableDebugEndpoints enables the /debug/pprof/allocs endpoint.
-                      Corresponds to enable_debug_endpoints / KEG__ENABLE_DEBUG_ENDPOINTS. Default: false.
-                    type: boolean
+                      Corresponds to enable_debug_endpoints / KEG__ENABLE_DEBUG_ENDPOINTS.
+                    enum:
+                    - Enabled
+                    - Disabled
+                    type: string
                   konnect:
                     description: |-
                       Konnect provides optional overrides for the keg → Konnect connection
                       parameters. All other connection values (region, gateway_cluster_id,
                       cert paths) are derived automatically and cannot be overridden here.
                     properties:
-                      apiRequestTimeout:
+                      apiRequestTimeoutSeconds:
+                        default: 5
                         description: |-
-                          APIRequestTimeout overrides the Konnect API request timeout (default: 5s).
-                          Corresponds to konnect.api_request_timeout / KONG_KONNECT_API_REQUEST_TIMEOUT.
-                        type: string
+                          APIRequestTimeoutSeconds overrides the Konnect API request timeout, in seconds.
+                          Corresponds to konnect.api_request_timeout / KONG_KONNECT_API_REQUEST_TIMEOUT. Default: 5.
+                        format: int32
+                        minimum: 1
+                        type: integer
                       domain:
+                        default: konghq.com
                         description: |-
-                          Domain overrides the Konnect domain (default: konghq.com).
+                          Domain overrides the Konnect domain.
                           Corresponds to konnect.domain / KONG_KONNECT_DOMAIN.
+                        maxLength: 253
                         type: string
                       insecureSkipVerify:
+                        default: Disabled
                         description: |-
                           InsecureSkipVerify disables TLS verification for the Konnect connection.
                           For testing only, do not use in production.
                           Corresponds to konnect.insecure_skip_verify / KONG_KONNECT_INSECURE_SKIP_VERIFY.
-                        type: boolean
+                        enum:
+                        - Enabled
+                        - Disabled
+                        type: string
                     type: object
                   observability:
                     description: Observability configures logging, metrics, and tracing.
                     properties:
                       logFlags:
+                        default: info
                         description: |-
                           LogFlags sets the log level.
-                          Corresponds to observability.log_flags / KEG__OBSERVABILITY__LOG_FLAGS. Default: info.
+                          Corresponds to observability.log_flags / KEG__OBSERVABILITY__LOG_FLAGS.
                         enum:
                         - trace
                         - debug
@@ -1423,59 +1440,90 @@ spec:
                         - json
                         type: string
                       metricsRollupAllowMap:
+                        default: messaging.operation.name=produce,fetch
                         description: |-
                           MetricsRollupAllowMap prevents high-cardinality metrics by collapsing
                           unmatched label values to "other".
                           Corresponds to observability.metrics_rollup_allow_map /
-                          KEG__OBSERVABILITY__METRICS_ROLLUP_ALLOW_MAP. Default: "messaging.operation.name=produce,fetch".
+                          KEG__OBSERVABILITY__METRICS_ROLLUP_ALLOW_MAP.
+                        maxLength: 2048
                         type: string
-                      policyErrorsInfoLogInterval:
+                      policyErrorsInfoLogIntervalSeconds:
+                        default: 1
                         description: |-
-                          PolicyErrorsInfoLogInterval sets the interval for INFO-level logging of policy errors.
-                          Set to 0s to disable. Default: 1s.
+                          PolicyErrorsInfoLogIntervalSeconds sets the interval for INFO-level logging of policy errors, in seconds.
+                          Set to 0 to disable. Default: 1.
                           Corresponds to observability.policy_errors_info_log_interval /
                           KEG__OBSERVABILITY__POLICY_ERRORS_INFO_LOG_INTERVAL.
-                        type: string
+                        format: int32
+                        minimum: 0
+                        type: integer
                     type: object
                   runtime:
                     description: Runtime configures graceful shutdown and health endpoint behaviour.
                     properties:
-                      drainDuration:
+                      drainDurationSeconds:
+                        default: 5
                         description: |-
-                          DrainDuration sets how long keg drains existing connections on shutdown.
-                          Corresponds to runtime.drain_duration / KEG__RUNTIME__DRAIN_DURATION. Default: 5s.
-                        type: string
+                          DrainDurationSeconds sets how long keg drains existing connections on shutdown, in seconds.
+                          Corresponds to runtime.drain_duration / KEG__RUNTIME__DRAIN_DURATION. Default: 5.
+                        format: int32
+                        minimum: 0
+                        type: integer
                       healthListenerAddressPort:
+                        default: 0.0.0.0:8080
                         description: |-
                           HealthListenerAddressPort sets the address:port for the health endpoint.
                           Corresponds to runtime.health_listener_address_port /
-                          KEG__RUNTIME__HEALTH_LISTENER_ADDRESS_PORT. Default: 0.0.0.0:8080.
+                          KEG__RUNTIME__HEALTH_LISTENER_ADDRESS_PORT.
+                        maxLength: 253
                         type: string
-                      shutdownTimeout:
+                      shutdownTimeoutSeconds:
+                        default: 10
                         description: |-
-                          ShutdownTimeout sets the graceful shutdown timeout.
-                          Corresponds to runtime.shutdown_timeout / KEG__RUNTIME__SHUTDOWN_TIMEOUT. Default: 10s.
-                        type: string
+                          ShutdownTimeoutSeconds sets the graceful shutdown timeout, in seconds.
+                          Corresponds to runtime.shutdown_timeout / KEG__RUNTIME__SHUTDOWN_TIMEOUT. Default: 10.
+                        format: int32
+                        minimum: 1
+                        type: integer
                     type: object
                 type: object
               controlPlaneRef:
                 description: |-
-                  ControlPlaneRef references the KonnectEventGateway resource that acts as the
-                  control plane for this data plane. KonnectEventGateway is the Konnect-side
-                  resource that provisions the Event Gateway cluster. The controller reads its
-                  status to obtain the Konnect gateway ID and region.
+                  ControlPlaneRef references the control plane this DataPlane connects to.
+                  The type field identifies which kind of control plane is being referenced.
+                  Currently only konnectNamespacedRef is supported, which references a
+                  KonnectEventGateway resource in the same namespace.
                 properties:
-                  name:
-                    default: ""
+                  konnectNamespacedRef:
                     description: |-
-                      Name of the referent.
-                      This field is effectively required, but due to backwards compatibility is
-                      allowed to be empty. Instances of this type with an empty value here are
-                      almost certainly wrong.
-                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                      KonnectNamespacedRef references a KonnectEventGateway resource in the same namespace.
+                      Must be set when type is konnectNamespacedRef; validated by CEL rules on this struct.
+                    properties:
+                      name:
+                        description: Name is the name of the KonnectEventGateway resource.
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  type:
+                    allOf:
+                    - enum:
+                      - konnectNamespacedRef
+                    - enum:
+                      - konnectNamespacedRef
+                    description: |-
+                      Type indicates the type of the control plane being referenced.
+                      Currently only konnectNamespacedRef is supported.
                     type: string
+                required:
+                - type
                 type: object
-                x-kubernetes-map-type: atomic
+                x-kubernetes-validations:
+                - message: konnectNamespacedRef must be set when type is konnectNamespacedRef
+                  rule: 'self.type == ''konnectNamespacedRef'' ? has(self.konnectNamespacedRef) : true'
               deployment:
                 description: |-
                   Deployment configures the keg Deployment: image, replicas, resources,
@@ -9620,7 +9668,8 @@ spec:
                         properties:
                           behavior:
                             description: |-
-                              behavior configures the scaling behavior of the target in both Up and Down directions.
+                              behavior configures the scaling behavior of the target
+                              in both Up and Down directions (scaleUp and scaleDown fields respectively).
                               If not set, the default HPAScalingRules for scale up and scale down are used.
                             properties:
                               scaleDown:
@@ -9776,7 +9825,15 @@ spec:
                             format: int32
                             type: integer
                           metrics:
-                            description: metrics contains the specifications for which to use to calculate the desired replica count.
+                            description: |-
+                              metrics contains the specifications for which to use to calculate the
+                              desired replica count (the maximum replica count across all metrics will
+                              be used).  The desired replica count is calculated multiplying the
+                              ratio between the target value and the current value by the current
+                              number of pods.  Ergo, metrics used must decrease as the pod count is
+                              increased, and vice-versa.  See the individual metric source types for
+                              more information about how each type of metric must respond.
+                              If not set, the default metric will be set to 80% average CPU utilization.
                             items:
                               description: |-
                                 MetricSpec specifies how to scale based on a single metric
@@ -10205,12 +10262,16 @@ spec:
                               required:
                               - type
                               type: object
+                            maxItems: 32
                             type: array
                             x-kubernetes-list-type: atomic
                           minReplicas:
                             description: |-
                               minReplicas is the lower limit for the number of replicas to which the autoscaler
-                              can scale down. It defaults to 1 pod.
+                              can scale down.  It defaults to 1 pod.  minReplicas is allowed to be 0 if the
+                              alpha feature gate HPAScaleToZero is enabled and at least one Object or External
+                              metric is configured.  Scaling is active as long as at least one metric value is
+                              available.
                             format: int32
                             type: integer
                         required:
@@ -10270,6 +10331,7 @@ spec:
                               properties:
                                 name:
                                   description: The name of this port within the service.
+                                  maxLength: 253
                                   type: string
                                 nodePort:
                                   description: |-
@@ -10280,6 +10342,8 @@ spec:
                                 port:
                                   description: The port that will be exposed by this service.
                                   format: int32
+                                  maximum: 65535
+                                  minimum: 1
                                   type: integer
                                 targetPort:
                                   anyOf:
@@ -10390,9 +10454,6 @@ spec:
                 description: Replicas indicates how many replicas have been set for the DataPlane.
                 format: int32
                 type: integer
-            required:
-            - readyReplicas
-            - replicas
             type: object
         required:
         - spec

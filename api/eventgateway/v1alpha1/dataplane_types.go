@@ -67,13 +67,13 @@ type DataPlaneList struct {
 
 // DataPlaneSpec defines the desired state of DataPlane.
 type DataPlaneSpec struct {
-	// ControlPlaneRef references the KonnectEventGateway resource that acts as the
-	// control plane for this data plane. KonnectEventGateway is the Konnect-side
-	// resource that provisions the Event Gateway cluster. The controller reads its
-	// status to obtain the Konnect gateway ID and region.
+	// ControlPlaneRef references the control plane this DataPlane connects to.
+	// The type field identifies which kind of control plane is being referenced.
+	// Currently only konnectNamespacedRef is supported, which references a
+	// KonnectEventGateway resource in the same namespace.
 	//
 	// +required
-	ControlPlaneRef corev1.LocalObjectReference `json:"controlPlaneRef,omitempty"`
+	ControlPlaneRef ControlPlaneRef `json:"controlPlaneRef,omitempty"`
 
 	// Deployment configures the keg Deployment: image, replicas, resources,
 	// extra env vars, volume mounts, etc.
