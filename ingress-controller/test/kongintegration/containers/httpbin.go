@@ -26,7 +26,7 @@ func NewHTTPBin(ctx context.Context, t *testing.T) HTTPBin {
 	req := testcontainers.ContainerRequest{
 		Image:        test.HTTPBinImage,
 		ExposedPorts: []string{MappedLocalPort(t, port)},
-		WaitingFor:   wait.ForListeningPort(port),
+		WaitingFor:   wait.ForListeningPort(port.Port()),
 	}
 	httpBinC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: req,
