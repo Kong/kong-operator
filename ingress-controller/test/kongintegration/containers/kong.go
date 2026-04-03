@@ -62,10 +62,6 @@ type Kong struct {
 func NewKong(ctx context.Context, t *testing.T, opts ...KongOpt) Kong {
 	req := testcontainers.ContainerRequest{
 		Image: kongImageUnderTest(),
-		ExposedPorts: []string{
-			MappedLocalPort(t, kongAdminPort),
-			MappedLocalPort(t, kongProxyPort),
-		},
 		Env: map[string]string{
 			"KONG_DATABASE":      "off",
 			"KONG_ADMIN_LISTEN":  fmt.Sprintf("0.0.0.0:%s", kongAdminPort),
@@ -81,6 +77,8 @@ func NewKong(ctx context.Context, t *testing.T, opts ...KongOpt) Kong {
 	for _, opt := range opts {
 		opt(&req)
 	}
+	BindLocalPort(t, &req, kongAdminPort)
+	BindLocalPort(t, &req, kongProxyPort)
 
 	kongC, err := retry.DoWithData(
 		func() (testcontainers.Container, error) {
