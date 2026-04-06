@@ -2060,6 +2060,75 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			wantMsgPart: "All references resolved",
 		},
 		{
+			name: "partially invalid cross-namespace sibling backends still report ref not permitted",
+			clientObjs: []client.Object{
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "app-backend",
+						Name:      "app-backend-v1",
+					},
+				},
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "app-backend",
+						Name:      "app-backend-v2",
+					},
+				},
+				&gwtypes.ReferenceGrant{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "app-backend",
+						Name:      "grant-v1-only",
+					},
+					Spec: gwtypes.ReferenceGrantSpec{
+						From: []gwtypes.ReferenceGrantFrom{{
+							Group:     gwtypes.GroupName,
+							Kind:      "HTTPRoute",
+							Namespace: gwtypes.Namespace("default"),
+						}},
+						To: []gwtypes.ReferenceGrantTo{{
+							Group: gwtypes.Group("core"),
+							Kind:  gwtypes.Kind("Service"),
+							Name:  ptrObjName("app-backend-v1"),
+						}},
+					},
+				},
+			},
+			route: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{
+						{
+							BackendRefs: []gwtypes.HTTPBackendRef{{
+								BackendRef: gwtypes.BackendRef{
+									BackendObjectReference: gwtypes.BackendObjectReference{
+										Name:      gwtypes.ObjectName("app-backend-v2"),
+										Kind:      kindPtr("Service"),
+										Group:     groupPtr("core"),
+										Namespace: nsPtr("app-backend"),
+									},
+								},
+							}},
+						},
+						{
+							BackendRefs: []gwtypes.HTTPBackendRef{{
+								BackendRef: gwtypes.BackendRef{
+									BackendObjectReference: gwtypes.BackendObjectReference{
+										Name:      gwtypes.ObjectName("app-backend-v1"),
+										Kind:      kindPtr("Service"),
+										Group:     groupPtr("core"),
+										Namespace: nsPtr("app-backend"),
+									},
+								},
+							}},
+						},
+					},
+				},
+			},
+			wantStatus:  metav1.ConditionFalse,
+			wantReason:  string(gwtypes.RouteReasonRefNotPermitted),
+			wantMsgPart: "not permitted by any ReferenceGrant",
+		},
+		{
 			name:       "multiple refs, first fails",
 			clientObjs: []client.Object{serviceDefault},
 			route: &gwtypes.HTTPRoute{
