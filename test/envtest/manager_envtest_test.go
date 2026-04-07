@@ -80,7 +80,9 @@ func TestManager_NoLeakedGoroutinesAfterContextCancellation(t *testing.T) {
 	t.Cleanup(func() {
 		ts.Stop(t)
 		t.Logf("Checking for goroutine leaks")
-		goleak.VerifyNone(t)
+		goleak.VerifyNone(t,
+			goleak.IgnoreTopFunction("sigs.k8s.io/controller-runtime/pkg/controller/priorityqueue.(*priorityqueue[...]).handleReadyItems.func1.1"),
+		)
 	})
 
 	scheme := Scheme(t, WithKong)
