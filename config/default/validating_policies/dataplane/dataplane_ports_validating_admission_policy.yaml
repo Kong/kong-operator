@@ -35,6 +35,10 @@ spec:
       expression: |
         variables.proxyContainer != null && has(variables.proxyContainer.env) ?
           variables.proxyContainer.env.filter(e, e.name == "KONG_PROXY_LISTEN") : []
+    - name: envFilteredStreamListen
+      expression: |
+        variables.proxyContainer != null && has(variables.proxyContainer.env) ?
+          variables.proxyContainer.env.filter(e, e.name == "KONG_STREAM_LISTEN") : []
     - name: envPortMaps
       expression: |
         variables.envFilteredPortMaps.size() > 0 ? variables.envFilteredPortMaps[0].value : null
@@ -87,6 +91,20 @@ spec:
         ).map(addr,
           addr.substring(addr.lastIndexOf(':') + 1)
         ) : []
+
+    # Pre-calculate the ports from KONG_STREAM_LISTEN to handle IPv4 (0.0.0.0:8888) and IPv6 ([::]:8888) correctly.
+    # Logic:
+    # 1. Split by comma to get entries (e.g. "0.0.0.0:8888 reuseport", "[::]:8888")
+    # 2. Trim and take the first part (address:port)
+    # 3. Find the last colon and take the substring after it to get the port
+    - name: streamListenPorts
+      expression: |
+        variables.envStreamListen != null ?
+        variables.envStreamListen.split(',').map(s,
+          s.trim().split(' ')[0]
+        ).map(addr,
+          addr.substring(addr.lastIndexOf(':') + 1)
+        ) : [] 
 
     # Pre-calculate ports from KONG_PORT_MAPS for consistency
     - name: portMapPorts
