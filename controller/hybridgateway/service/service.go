@@ -17,15 +17,15 @@ import (
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
-// ServiceForRule creates or updates a KongService for the given HTTPRoute rule.
+// ServiceForRule creates or updates a KongService for the given route rule.
 // This function handles the creation of services with proper annotations that track
-// which HTTPRoutes reference the KongService. If the KongService already exists, it appends
-// the current HTTPRoute name to the existing hybrid-routes annotation.
+// which routes reference the KongService. If the KongService already exists, it appends
+// the current route kind and name to the existing hybrid-routes annotation.
 //
 // The function performs the following operations:
 // 1. Generates the KongService name using the namegen package
 // 2. Checks if a KongService with that name already exists in the cluster
-// 3. If it exists, appends the current HTTPRoute name to the existing hybrid-routes annotation
+// 3. If it exists, appends the current route kind and name to the existing hybrid-routes annotation
 // 4. If it doesn't exist, creates a new KongService
 // 5. Returns the KongService resource for use by the caller
 //
@@ -33,44 +33,73 @@ import (
 //   - ctx: The context for API calls and cancellation
 //   - logger: Logger for structured logging
 //   - cl: Kubernetes client for API operations
-//   - httpRoute: The HTTPRoute resource that needs the service
-//   - rule: The specific rule within the HTTPRoute
-//   - pRef: The parent reference (Gateway) for the HTTPRoute
+//   - route: The route resource that needs the service
+//   - rule: The specific rule within the route
+//   - pRef: The parent reference (Gateway) for the route
 //   - cp: The control plane reference for the service
 //   - upstreamName: The name of the KongUpstream this service should point to
 //
 // Returns:
 //   - kongService: The created or updated service resource
 //   - err: Any error that occurred during the process
-func ServiceForRule(
+func ServiceForRule[
+	T gwtypes.SupportedRoute,
+	TPtr gwtypes.SupportedRoutePtr[T],
+	R gwtypes.SupportedRouteRule,
+](
 	ctx context.Context,
 	logger logr.Logger,
 	cl client.Client,
-	httpRoute *gwtypes.HTTPRoute,
-	rule gwtypes.HTTPRouteRule,
+	parentRoute TPtr,
+	rule R,
 	pRef *gwtypes.ParentReference,
 	cp *commonv1alpha1.ControlPlaneRef,
 	upstreamName string,
 ) (kongService *configurationv1alpha1.KongService, err error) {
-	serviceName := namegen.NewKongServiceName(httpRoute, cp, rule)
+
+	var serviceName string
+	var protocol string
+
+	switch r := any(parentRoute).(type) {
+	case *gwtypes.HTTPRoute:
+		httpRule, ok := any(rule).(gwtypes.HTTPRouteRule)
+		if !ok {
+			return nil, fmt.Errorf("failed to build KongService : unmatched route type and rule type: %T and %T", parentRoute, rule)
+		}
+		serviceName = namegen.NewKongServiceNameForHTTPRouteRule(r, cp, httpRule)
+		protocol = "http"
+	case *gwtypes.TLSRoute:
+		tlsRule, ok := any(rule).(gwtypes.TLSRouteRule)
+		if !ok {
+			return nil, fmt.Errorf("failed to build KongService : unmatched route type and rule type: %T and %T", parentRoute, rule)
+		}
+		serviceName = namegen.NewKongServiceNameForTLSRouteRule(r, cp, tlsRule)
+		// TODO: decide it should be "tls" or "tls_passthrough"?
+		protocol = "tls"
+	// TODO: add other types of routes and rules when we support them.
+
+	// Should be unreachable.
+	default:
+		return nil, fmt.Errorf("failed to build KongService: unsupported route type: %T", parentRoute)
+	}
 	logger = logger.WithValues("kongservice", serviceName)
-	log.Debug(logger, "Generating KongService for HTTPRoute rule")
+	log.Debug(logger, fmt.Sprintf("Generating KongService for %s rule", parentRoute.GetObjectKind().GroupVersionKind().Kind))
 
 	service, err := builder.NewKongService().
 		WithName(serviceName).
-		WithNamespace(metadata.NamespaceFromParentRef(httpRoute, pRef)).
-		WithLabels(httpRoute, pRef).
-		WithAnnotations(httpRoute, pRef).
+		WithNamespace(metadata.NamespaceFromParentRef(parentRoute, pRef)).
+		WithLabels(parentRoute, pRef).
+		WithAnnotations(parentRoute, pRef).
 		WithSpecName(serviceName).
 		WithSpecHost(upstreamName).
-		WithProtocol("http").
+		WithProtocol(protocol).
 		WithControlPlaneRef(*cp).Build()
 	if err != nil {
 		log.Error(logger, err, "Failed to build KongService resource")
 		return nil, fmt.Errorf("failed to build KongService %s: %w", serviceName, err)
 	}
 
-	if _, err = translator.VerifyAndUpdate(ctx, logger, cl, &service, httpRoute, false); err != nil {
+	if _, err = translator.VerifyAndUpdate(ctx, logger, cl, &service, parentRoute, false); err != nil {
 		return nil, err
 	}
 

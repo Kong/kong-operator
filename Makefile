@@ -83,8 +83,11 @@ ARCH := $(shell uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')
 
 # Do not store yq's version in .tools_versions.yaml as it is used to get tool versions.
 # renovate: datasource=github-releases depName=mikefarah/yq
-YQ_VERSION = 4.52.4
+YQ_VERSION = 4.52.5
 YQ = $(PROJECT_DIR)/bin/installs/github-mikefarah-yq/$(YQ_VERSION)/yq_$(OS)_$(ARCH)
+ifeq ($(OS),darwin)
+YQ = $(PROJECT_DIR)/bin/installs/github-mikefarah-yq/$(YQ_VERSION)/yq
+endif
 .PHONY: yq
 yq: mise # Download yq locally if necessary.
 	$(MAKE) mise-install DEP_VER=github:mikefarah/yq@$(YQ_VERSION)
@@ -669,9 +672,15 @@ _test.integration: gotestsum download.telepresence download.helm
 .PHONY: test.integration-ko
 test.integration-ko:
 	@$(MAKE) _test.integration \
-		GOTESTFLAGS="-skip='BlueGreen|TestAdmissionWebhook_' $(GOTESTFLAGS)" \
+		GOTESTFLAGS="-skip='BlueGreen' $(GOTESTFLAGS)" \
 		COVERPROFILE="coverage.integration.ko.out" \
-		GOTESTPATH=./test/integration/
+		GOTESTPATH=./test/integration/ko/
+
+.PHONY: test.integration-konnect
+test.integration-konnect:
+	@$(MAKE) _test.integration \
+		COVERPROFILE="coverage.integration.konnect.out" \
+		GOTESTPATH=./test/integration/konnect/
 
 # Prevent the following data race by not running via gotestsum:
 # WARNING: DATA RACE
@@ -739,7 +748,6 @@ test.integration-validatingwebhook: download.telepresence
 	TELEPRESENCE_BIN=$(TELEPRESENCE) \
 	GOFLAGS=$(GOFLAGS) \
 	go test \
-	-run='TestAdmissionWebhook_' $(GOTESTFLAGS) \
 	-timeout $(INTEGRATION_TEST_TIMEOUT) \
 	-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS) $(LDFLAGS_METADATA)" \
 	-race -v \
@@ -861,8 +869,7 @@ test.samples: kustomize
 	@$(KUSTOMIZE) build config/crd | kubectl apply --server-side --force-conflicts --field-manager=kong-operator-tests -f -
 	@kubectl apply --server-side --force-conflicts --field-manager=kong-operator-tests -f charts/kong-operator/charts/gwapi-standard-crds/crds/gwapi-crds.yaml || true
 	@kubectl get crd -ojsonpath='{.items[*].metadata.name}' | xargs -n1 kubectl wait --for condition=established crd
-	# Disable tests including GatewayConfiguration v1beta1 and ControlPlane v1beta1 temporarily because they need conversion webhooks: https://github.com/Kong/kong-operator/issues/1986
-	@cd config/samples/ && find . -not -name "kustomization.*" -not -name "zz_temp_disabled_*" -type f | sort | xargs -I{} bash -c "echo;echo {}; kubectl apply -f {} && kubectl delete -f {}" \;
+	@cd config/samples/ && find . -maxdepth 1 -name "*.yaml" -exec bash -c "echo; echo {}; kubectl apply -f {} && kubectl delete -f {}" \;
 
 .PHONY: test.charts.golden
 test.charts.golden:
@@ -1129,11 +1136,12 @@ install.telepresence: download.telepresence
 uninstall.telepresence: download.telepresence
 	@$(PROJECT_DIR)/scripts/telepresence-manager.sh uninstall "$(TELEPRESENCE)"
 
-.PHONY: lint.api 
+.PHONY: lint.api
 lint.api: download.kube-api-linter
 	$(KUBE_API_LINTER) run --config $(PROJECT_DIR)/.golangci-kube-api.yaml -v \
 		./api/gateway-operator/v2beta1/... \
 		./api/konnect/v1alpha1/... \
 		./api/konnect/v1alpha2/... \
 		./api/common/v1alpha1/...  \
-		./api/x-konnect/...
+		./api/x-konnect/... \
+		./api/eventgateway/v1alpha1/...

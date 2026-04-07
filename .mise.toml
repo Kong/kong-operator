@@ -45,12 +45,12 @@ macos-arm64 = { asset_pattern = "kind-darwin-arm64" }
 
 [tools."github:Kong/kubernetes-testing-framework"]
 # renovate: datasource=github-releases depName=Kong/kubernetes-testing-framework
-version = "v0.48.0"
+version = "v0.49.0"
 bin = "ktf"
 
 [tools."github:telepresenceio/telepresence"]
 # renovate: datasource=github-releases depName=telepresenceio/telepresence
-version = "2.27.2"
+version = "2.27.3"
 [tools."github:telepresenceio/telepresence".platforms]
 linux-x64 = { asset_pattern = "telepresence-linux-amd64" }
 linux-arm64 = { asset_pattern = "telepresence-linux-arm64" }
@@ -121,6 +121,5 @@ go test -v -count 1 ${GOTESTFLAGS} ./test/crdsvalidation/x-konnect.konghq.com/..
 description = "Generate API, CRDs, and run all tests and linters"
 run = [
        { task = "generate-api" },
-       { tasks = ["test-unit", "gofix"] },
        { task = "test-crdsvalidation" },
 ]

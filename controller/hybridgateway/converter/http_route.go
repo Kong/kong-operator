@@ -206,7 +206,7 @@ func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger 
 
 	// First, build the resolvedRefs conditons for the HTTPRoute since it is the same for all ParentRefs.
 	log.Debug(logger, "Building ResolvedRefs condition for HTTPRoute")
-	resolvedRefsCond, err := route.BuildResolvedRefsCondition(ctx, logger, c.Client, c.route)
+	resolvedRefsCond, err := route.BuildResolvedRefsConditionForHTTPRoute(ctx, logger, c.Client, c.route)
 	if err != nil {
 		return false, stop, fmt.Errorf("failed to build resolvedRefs condition for HTTPRoute %s: %w", c.route.Name, err)
 	}

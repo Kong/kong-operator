@@ -83,7 +83,7 @@ spec:
                       release that can be used with the entity model.
                       When not specified, the minimum runtime version will be pinned to the latest
                       available release.
-                    maxLength: 256
+                    maxLength: 253
                     pattern: ^\d+\.\d+$
                     type: string
                   name:

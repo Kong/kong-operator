@@ -27,6 +27,9 @@ type Config struct {
 	// When ObjectRef has an Import config, it will be imported from an external
 	// package instead of being generated locally.
 	CommonTypes *config.CommonTypesConfig
+	// SecretRefEntities is the set of entity names that should generate an
+	// optional secret reference on the Spec (SourceType discriminator + SecretRef field).
+	SecretRefEntities map[string]bool
 }
 
 // Generator generates Go CRD types from parsed OpenAPI schemas.
@@ -69,7 +72,7 @@ func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error)
 		// Generate SDK ops conversion file if ops are configured for this entity
 		if g.config.OpsConfig != nil {
 			if opsConfig, ok := g.config.OpsConfig[entityName]; ok && opsConfig != nil && len(opsConfig.Ops) > 0 {
-				opsContent, err := g.generateSDKOps(entityName, opsConfig)
+				opsContent, err := g.generateSDKOps(entityName, schema, opsConfig)
 				if err != nil {
 					return nil, fmt.Errorf("failed to generate SDK ops for %s: %w", entityName, err)
 				}
@@ -172,7 +175,7 @@ func (g *Generator) collectRefsFromProperty(prop *parser.Property, refs map[stri
 // generateSchemaTypes generates Go type definitions for referenced schemas.
 func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.ParsedSpec) string {
 	var buf strings.Builder
-	fmt.Fprintf(&buf, "package %s\n\n", g.config.APIVersion)
+	fmt.Fprintf(&buf, "%s\n\npackage %s\n\n", sharedGeneratedFilePreamble, g.config.APIVersion)
 
 	// Sort keys to ensure deterministic output order
 	refNames := make([]string, 0, len(refs))
@@ -181,28 +184,58 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 	}
 	sort.Strings(refNames)
 
+	if needsJSONImport, objectRefImport := g.schemaTypesImports(refNames, parsed); needsJSONImport || objectRefImport != nil {
+		buf.WriteString("import (\n")
+		if needsJSONImport {
+			buf.WriteString("\tapiextensionsv1 \"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1\"\n")
+		}
+		if objectRefImport != nil {
+			if objectRefImport.Alias != "" {
+				fmt.Fprintf(&buf, "\t%s %q\n", objectRefImport.Alias, objectRefImport.Path)
+			} else {
+				fmt.Fprintf(&buf, "\t%q\n", objectRefImport.Path)
+			}
+		}
+		buf.WriteString(")\n\n")
+	}
+
 	for _, refName := range refNames {
 		if schema, ok := parsed.Schemas[refName]; ok {
+			goName := fixInitialisms(refName)
+
 			// Format the description as a proper comment
-			comment := formatSchemaComment(refName, schema.Description)
+			comment := formatSchemaComment(goName, schema.Description)
 
 			// Generate based on schema type
-			if len(schema.Properties) > 0 {
+			switch {
+			case len(schema.Properties) > 0:
 				// It's an object type - generate a struct
 				buf.WriteString(comment)
-				fmt.Fprintf(&buf, "type %s struct {\n", refName)
+				fmt.Fprintf(&buf, "type %s struct {\n", goName)
 				for _, prop := range schema.Properties {
 					if skipProperty(prop) {
 						continue
 					}
-					fmt.Fprintf(&buf, "\t%s %s `json:\"%s\"`\n", goFieldName(prop.Name), g.goType(prop), jsonTag(prop))
+					g.writeSchemaTypeField(&buf, prop)
 				}
 				buf.WriteString("}\n\n")
-			} else {
+			case schema.Type == "boolean":
+				// Per K8s API convention (nobools), boolean schemas become string
+				// types with Enabled/Disabled enum constants.
+				buf.WriteString(comment)
+				buf.WriteString("//\n// +kubebuilder:validation:Enum=Enabled;Disabled\n")
+				fmt.Fprintf(&buf, "type %s string\n\n", goName)
+				fmt.Fprintf(&buf, "const (\n")
+				fmt.Fprintf(&buf, "\t// %sEnabled sets %s as enabled.\n", goName, goName)
+				fmt.Fprintf(&buf, "\t%sEnabled  %s = \"Enabled\"\n", goName, goName)
+				fmt.Fprintf(&buf, "\t// %sDisabled sets %s as disabled.\n", goName, goName)
+				fmt.Fprintf(&buf, "\t%sDisabled %s = \"Disabled\"\n", goName, goName)
+				fmt.Fprintf(&buf, ")\n\n")
+			default:
 				// Generate based on the schema's actual type
 				buf.WriteString(comment)
 				goType := schemaToGoType(schema)
-				fmt.Fprintf(&buf, "type %s %s\n\n", refName, goType)
+				fmt.Fprintf(&buf, "type %s %s\n\n", goName, goType)
 			}
 		} else {
 			panic("Schema not found for reference: " + refName)
@@ -212,6 +245,41 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 	return strings.TrimRight(buf.String(), "\n") + "\n"
 }
 
+func (g *Generator) schemaTypesImports(refNames []string, parsed *parser.ParsedSpec) (bool, *config.ImportConfig) {
+	needsJSONImport := false
+	var objectRefImport *config.ImportConfig
+
+	for _, refName := range refNames {
+		schema, ok := parsed.Schemas[refName]
+		if !ok {
+			continue
+		}
+
+		if !needsJSONImport && schemaUsesJSON(g, schema) {
+			needsJSONImport = true
+		}
+		if objectRefImport == nil {
+			objectRefImport = g.objectRefImportIfNeeded(schema)
+		}
+
+		if needsJSONImport && objectRefImport != nil {
+			break
+		}
+	}
+
+	return needsJSONImport, objectRefImport
+}
+
+func (g *Generator) writeSchemaTypeField(buf *strings.Builder, prop *parser.Property) {
+	buf.WriteString(formatComment(prop.Description))
+	buf.WriteString("\n")
+	buf.WriteString("\t//\n")
+	for _, tag := range KubebuilderTags(prop, "", nil) {
+		fmt.Fprintf(buf, "\t// %s\n", tag)
+	}
+	fmt.Fprintf(buf, "\t%s %s `json:\"%s\"`\n", goFieldName(prop.Name), g.goType(prop), jsonTag(prop))
+}
+
 // schemaToGoType converts a parsed Schema's type info to the appropriate Go type string.
 // This is used for referenced schemas that are simple types (not objects with properties).
 func schemaToGoType(schema *parser.Schema) string {
@@ -219,7 +287,7 @@ func schemaToGoType(schema *parser.Schema) string {
 	case "string":
 		return "string"
 	case "boolean":
-		return "bool"
+		return "string"
 	case "integer":
 		return "int"
 	case "number":
@@ -271,37 +339,49 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		return KubebuilderTags(prop, entityName, g.config.FieldConfig)
 	}
 
+	hasOptionalSecretRef := g.config.SecretRefEntities[entityName]
+
 	funcMap := template.FuncMap{
-		"goType":            g.goType,
-		"goFieldName":       goFieldName,
-		"jsonTag":           jsonTag,
-		"kubebuilderTags":   kubebuilderTagsWithConfig,
-		"isRefProperty":     isRefProperty,
-		"refEntityName":     parser.GetRefEntityName,
-		"skipProperty":      skipProperty,
-		"lower":             strings.ToLower,
-		"formatComment":     formatComment,
-		"hasRootOneOf":      hasRootOneOf,
-		"objectRefTypeName": func() string { return g.objectRefTypeName() },
+		"goType":                g.goType,
+		"goFieldName":           goFieldName,
+		"jsonTag":               jsonTag,
+		"kubebuilderTags":       kubebuilderTagsWithConfig,
+		"isRefProperty":         isRefProperty,
+		"refEntityName":         parser.GetRefEntityName,
+		"skipProperty":          skipProperty,
+		"lower":                 strings.ToLower,
+		"formatComment":         formatComment,
+		"hasRootOneOf":          hasRootOneOf,
+		"objectRefTypeName":     func() string { return g.objectRefTypeName() },
+		"namespacedRefTypeName": func() string { return g.namespacedRefTypeName() },
 	}
 
 	tmpl := template.Must(template.New("crd").Funcs(funcMap).Parse(crdTypeTemplate))
 
+	// Determine whether we need the ObjectRef import: either for dependencies/refs
+	// or for the optional secret ref's NamespacedRef type.
+	objectRefImport := g.objectRefImportIfNeeded(schema)
+	if objectRefImport == nil && hasOptionalSecretRef && g.objectRefImported() {
+		objectRefImport = g.config.CommonTypes.ObjectRef.Import
+	}
+
 	var buf strings.Builder
 	data := struct {
-		EntityName      string
-		Schema          *parser.Schema
-		APIGroup        string
-		APIVersion      string
-		NeedsJSONImport bool
-		ObjectRefImport *config.ImportConfig
+		EntityName           string
+		Schema               *parser.Schema
+		APIGroup             string
+		APIVersion           string
+		NeedsJSONImport      bool
+		ObjectRefImport      *config.ImportConfig
+		HasOptionalSecretRef bool
 	}{
-		EntityName:      entityName,
-		Schema:          schema,
-		APIGroup:        g.config.APIGroup,
-		APIVersion:      g.config.APIVersion,
-		NeedsJSONImport: schemaUsesJSON(g, schema),
-		ObjectRefImport: g.objectRefImportIfNeeded(schema),
+		EntityName:           entityName,
+		Schema:               schema,
+		APIGroup:             g.config.APIGroup,
+		APIVersion:           g.config.APIVersion,
+		NeedsJSONImport:      schemaUsesJSON(g, schema),
+		ObjectRefImport:      objectRefImport,
+		HasOptionalSecretRef: hasOptionalSecretRef,
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
@@ -392,13 +472,14 @@ func (g *Generator) generateUnionType(prop *parser.Property) string {
 	for i, variant := range prop.OneOf {
 		refTypeName := variant.Name
 		if variant.RefName != "" {
-			refTypeName = variant.RefName
+			refTypeName = fixInitialisms(variant.RefName)
 		}
 
-		fieldName := variantNames[i]
+		fieldName := fixInitialisms(variantNames[i])
 
-		// Generate JSON tag - convert to lowercase
-		jsonTag := strings.ToLower(fieldName)
+		// Generate JSON tag - convert to lowercase, using the original variant name
+		// to preserve API compatibility.
+		jsonTag := strings.ToLower(variantNames[i])
 
 		fmt.Fprintf(&buf, "\t// %s configuration.\n", fieldName)
 		buf.WriteString("\t//\n")
@@ -415,7 +496,8 @@ func (g *Generator) generateUnionType(prop *parser.Property) string {
 	fmt.Fprintf(&buf, "// %sType values.\n", typeName)
 	buf.WriteString("const (\n")
 	for _, variantName := range variantNames {
-		constName := fmt.Sprintf("%sType%s", typeName, variantName)
+		goVariantName := fixInitialisms(variantName)
+		constName := fmt.Sprintf("%sType%s", typeName, goVariantName)
 		fmt.Fprintf(&buf, "\t%s %sType = \"%s\"\n", constName, typeName, variantName)
 	}
 	buf.WriteString(")\n")
@@ -557,13 +639,15 @@ func (g *Generator) generateCommonTypes() (string, error) {
 
 	var buf strings.Builder
 	data := struct {
-		APIVersion        string
-		ObjectRefImported bool
-		Namespaced        bool
+		APIVersion           string
+		ObjectRefImported    bool
+		Namespaced           bool
+		HasSecretRefEntities bool
 	}{
-		APIVersion:        g.config.APIVersion,
-		ObjectRefImported: g.objectRefImported(),
-		Namespaced:        g.objectRefNamespaced(),
+		APIVersion:           g.config.APIVersion,
+		ObjectRefImported:    g.objectRefImported(),
+		Namespaced:           g.objectRefNamespaced(),
+		HasSecretRefEntities: len(g.config.SecretRefEntities) > 0,
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
@@ -619,15 +703,30 @@ func schemaUsesObjectRef(schema *parser.Schema) bool {
 // import alias when ObjectRef is imported from an external package.
 func (g *Generator) objectRefTypeName() string {
 	if g.objectRefImported() {
-		imp := g.config.CommonTypes.ObjectRef.Import
-		if imp.Alias != "" {
-			return imp.Alias + ".ObjectRef"
-		}
-		// Fall back to last segment of the import path as the package name.
-		parts := strings.Split(imp.Path, "/")
-		return parts[len(parts)-1] + ".ObjectRef"
+		return g.importedTypePrefix() + "ObjectRef"
 	}
 	return "ObjectRef"
+}
+
+// namespacedRefTypeName returns the Go type name for NamespacedRef, qualified
+// with the import alias when ObjectRef (and therefore NamespacedRef) is
+// imported from an external package.
+func (g *Generator) namespacedRefTypeName() string {
+	if g.objectRefImported() {
+		return g.importedTypePrefix() + "NamespacedRef"
+	}
+	return "NamespacedRef"
+}
+
+// importedTypePrefix returns the package qualifier prefix for types imported
+// from the ObjectRef external package (e.g. "commonv1alpha1.").
+func (g *Generator) importedTypePrefix() string {
+	imp := g.config.CommonTypes.ObjectRef.Import
+	if imp.Alias != "" {
+		return imp.Alias + "."
+	}
+	parts := strings.Split(imp.Path, "/")
+	return parts[len(parts)-1] + "."
 }
 
 // sdkOpsImport represents a single import needed for SDK ops generation.
@@ -643,19 +742,29 @@ type sdkOpsMethod struct {
 	ImportAlias string
 }
 
+// sdkOpsBoolField represents a boolean field path that needs normalization
+// from the CRD's Enabled/Disabled enum strings back to JSON booleans.
+type sdkOpsBoolField struct {
+	Label string
+	Path  []string
+}
+
 // sdkOpsTestField represents a field to populate in the generated test.
 type sdkOpsTestField struct {
-	FieldName string
-	TestValue string
+	FieldName     string
+	JSONName      string
+	TestValue     string
+	ExpectedValue string
 }
 
 // generateSDKOps generates a file with conversion methods from {Entity}APISpec
 // to SDK request types using JSON marshal/unmarshal.
-func (g *Generator) generateSDKOps(entityName string, opsConfig *config.EntityOpsConfig) (string, error) {
+func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, opsConfig *config.EntityOpsConfig) (string, error) {
 	imports, methods, err := g.buildSDKOpsMethods(opsConfig)
 	if err != nil {
 		return "", err
 	}
+	boolFields := g.collectSDKOpsBoolFields(schema)
 
 	tmpl := template.Must(template.New("sdkops").Parse(sdkOpsTemplate))
 	var buf strings.Builder
@@ -663,11 +772,13 @@ func (g *Generator) generateSDKOps(entityName string, opsConfig *config.EntityOp
 		APIVersion string
 		EntityName string
 		Imports    []*sdkOpsImport
+		BoolFields []sdkOpsBoolField
 		Methods    []sdkOpsMethod
 	}{
 		APIVersion: g.config.APIVersion,
 		EntityName: entityName,
 		Imports:    imports,
+		BoolFields: boolFields,
 		Methods:    methods,
 	}
 
@@ -691,13 +802,15 @@ func (g *Generator) generateSDKOpsTest(entityName string, schema *parser.Schema,
 			continue
 		}
 		goType := g.goType(prop)
-		testValue := testValueForType(goType)
-		if testValue == "" {
+		testValue, expectedValue := testValuesForProperty(prop, goType)
+		if testValue == "" || expectedValue == "" {
 			continue
 		}
 		testFields = append(testFields, sdkOpsTestField{
-			FieldName: goFieldName(prop.Name),
-			TestValue: testValue,
+			FieldName:     goFieldName(prop.Name),
+			JSONName:      prop.Name,
+			TestValue:     testValue,
+			ExpectedValue: expectedValue,
 		})
 	}
 
@@ -765,6 +878,50 @@ func (g *Generator) buildSDKOpsMethods(opsConfig *config.EntityOpsConfig) ([]*sd
 	return sortedImports, methods, nil
 }
 
+func (g *Generator) collectSDKOpsBoolFields(schema *parser.Schema) []sdkOpsBoolField {
+	if schema == nil {
+		return nil
+	}
+
+	var fields []sdkOpsBoolField
+	for _, prop := range schema.Properties {
+		g.collectSDKOpsBoolFieldsFromProperty(prop, []string{prop.Name}, &fields)
+	}
+
+	sort.Slice(fields, func(i, j int) bool {
+		return fields[i].Label < fields[j].Label
+	})
+
+	return fields
+}
+
+func (g *Generator) collectSDKOpsBoolFieldsFromProperty(prop *parser.Property, path []string, fields *[]sdkOpsBoolField) {
+	if prop == nil || skipProperty(prop) || prop.IsReference {
+		return
+	}
+
+	if prop.Type == "boolean" {
+		*fields = append(*fields, sdkOpsBoolField{
+			Label: sdkOpsBoolFieldLabel(path),
+			Path:  append([]string(nil), path...),
+		})
+	}
+
+	if prop.Items != nil {
+		g.collectSDKOpsBoolFieldsFromProperty(prop.Items, append(path, "[]"), fields)
+	}
+	for _, nestedProp := range prop.Properties {
+		g.collectSDKOpsBoolFieldsFromProperty(nestedProp, append(path, nestedProp.Name), fields)
+	}
+	if prop.AdditionalProperties != nil {
+		g.collectSDKOpsBoolFieldsFromProperty(prop.AdditionalProperties, append(path, "{}"), fields)
+	}
+}
+
+func sdkOpsBoolFieldLabel(path []string) string {
+	return strings.Join(path, ".")
+}
+
 // sdkImportAlias generates a deterministic import alias from an SDK import path.
 // For "github.com/Kong/sdk-konnect-go/models/components" it produces "sdkkonnectcomp".
 func sdkImportAlias(importPath string) string {
@@ -779,24 +936,29 @@ func sdkImportAlias(importPath string) string {
 	return "sdkkonnect" + short
 }
 
-// testValueForType returns a Go literal suitable for populating a test struct field.
-func testValueForType(goType string) string {
+// testValuesForProperty returns Go literals suitable for populating a generated
+// test struct field and asserting the marshaled SDK payload value.
+func testValuesForProperty(prop *parser.Property, goType string) (string, string) {
+	if prop.Type == "boolean" {
+		return `"Enabled"`, "true"
+	}
+
 	switch goType {
 	case "string":
-		return `"test-value"`
+		return `"test-value"`, `"test-value"`
 	case "*string":
-		return `new("test-value")`
+		return `new("test-value")`, `"test-value"`
 	case "bool":
-		return "true"
+		return "true", "true"
 	case "*bool":
-		return `new(true)`
+		return `new(true)`, "true"
 	case "int", "int32", "int64":
-		return "1"
+		return "1", "float64(1)"
 	case "float32", "float64":
-		return "1.0"
+		return "1.0", "1.0"
 	}
 	// Skip complex types (maps, slices, structs, etc.) in generated tests
-	return ""
+	return "", ""
 }
 
 // goType converts OpenAPI type to Go type.
@@ -808,7 +970,7 @@ func (g *Generator) goType(prop *parser.Property) string {
 
 	// Handle $ref
 	if prop.RefName != "" {
-		return prop.RefName
+		return fixInitialisms(prop.RefName)
 	}
 
 	// Handle oneOf - this becomes a union type
@@ -840,11 +1002,7 @@ func (g *Generator) goType(prop *parser.Property) string {
 			baseType = "float64"
 		}
 	case "boolean":
-		// Required bools have a valid zero value (false), so they need to be pointers
-		if prop.Required && !prop.Nullable {
-			return "*bool"
-		}
-		baseType = "bool"
+		baseType = "string"
 	case "array":
 		if prop.Items != nil {
 			itemType := g.goType(prop.Items)
@@ -964,6 +1122,36 @@ func goFieldName(name string) string {
 		}
 	}
 	return strings.Join(parts, "")
+}
+
+// fixInitialisms corrects common initialisms in PascalCase type names to follow
+// Go naming conventions (e.g., "Http" → "HTTP", "Url" → "URL", "Id" → "ID").
+func fixInitialisms(name string) string {
+	words := splitPascalCase(name)
+	for i, word := range words {
+		upper := strings.ToUpper(word)
+		if isCommonAcronym(upper) {
+			words[i] = upper
+		}
+	}
+	return strings.Join(words, "")
+}
+
+// splitPascalCase splits a PascalCase string into individual words.
+// e.g., "CreateDcrConfigHttpInRequest" → ["Create", "Dcr", "Config", "Http", "In", "Request"].
+func splitPascalCase(s string) []string {
+	var words []string
+	start := 0
+	for i := 1; i < len(s); i++ {
+		if s[i] >= 'A' && s[i] <= 'Z' {
+			words = append(words, s[start:i])
+			start = i
+		}
+	}
+	if start < len(s) {
+		words = append(words, s[start:])
+	}
+	return words
 }
 
 func isCommonAcronym(s string) bool {

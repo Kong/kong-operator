@@ -28,6 +28,7 @@ resources:
   - configuration.konghq.com_kongupstreampolicies.yaml
   - configuration.konghq.com_kongupstreams.yaml
   - configuration.konghq.com_kongvaults.yaml
+  - eventgateway.konghq.com_kegdataplanes.yaml
   - gateway-operator.konghq.com_aigateways.yaml
   - gateway-operator.konghq.com_controlplanes.yaml
   - gateway-operator.konghq.com_dataplanemetricsextensions.yaml
@@ -42,6 +43,8 @@ resources:
   - konnect.konghq.com_konnectextensions.yaml
   - konnect.konghq.com_konnectgatewaycontrolplanes.yaml
   - konnect.konghq.com_mcpservers.yaml
+  - x-konnect.konghq.com_dcrproviders.yaml
   - x-konnect.konghq.com_konnecteventcontrolplanes.yaml
+  - x-konnect.konghq.com_konnecteventdataplanecertificates.yaml
   - x-konnect.konghq.com_portals.yaml
   - x-konnect.konghq.com_portalteams.yaml

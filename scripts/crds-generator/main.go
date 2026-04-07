@@ -68,6 +68,9 @@ func main() {
 		// x-konnect.konghq.com
 		"github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1",
 
+		// eventgateway.konghq.com
+		"github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1",
+
 		// konnect.konghq.com
 		"github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		"github.com/kong/kong-operator/v2/api/konnect/v1alpha2",

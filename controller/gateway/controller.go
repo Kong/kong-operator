@@ -123,8 +123,12 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 			handler.EnqueueRequestsFromMapFunc(r.listGatewaysForKongReferenceGrant)).
 		// watch HTTPRoutes so that Gateway listener status can be updated.
 		Watches(
-			&gatewayv1beta1.HTTPRoute{},
+			&gatewayv1.HTTPRoute{},
 			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByHTTPRoute)).
+		Watches(
+			&gatewayv1.TLSRoute{},
+			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByTLSRoute),
+		).
 		// watch Namespaces so that managed routes have correct status reflected in Gateway's
 		// status in status.listeners.attachedRoutes
 		// This is required to properly support Gateway's listeners.allowedRoutes.namespaces.selector.

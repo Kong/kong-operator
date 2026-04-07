@@ -57,7 +57,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				).
 				Return(
 					&sdkkonnectops.CreateControlPlaneResponse{
-						ControlPlane: &sdkkonnectcomp.ControlPlane1{
+						ControlPlane: &sdkkonnectcomp.ControlPlane{
 							ID: "12345",
 						},
 					},
@@ -74,7 +74,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				Return(
 					&sdkkonnectops.ListControlPlanesResponse{
 						ListControlPlanesResponse: &sdkkonnectcomp.ListControlPlanesResponse{
-							Data: []sdkkonnectcomp.ControlPlane1{
+							Data: []sdkkonnectcomp.ControlPlane{
 								{
 									ID: "12345",
 									Config: sdkkonnectcomp.ControlPlaneConfig{
@@ -148,7 +148,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				).
 				Return(
 					&sdkkonnectops.CreateControlPlaneResponse{
-						ControlPlane: &sdkkonnectcomp.ControlPlane1{
+						ControlPlane: &sdkkonnectcomp.ControlPlane{
 							ID: "12345",
 						},
 					},
@@ -163,7 +163,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				).
 				Return(
 					&sdkkonnectops.CreateControlPlaneResponse{
-						ControlPlane: &sdkkonnectcomp.ControlPlane1{
+						ControlPlane: &sdkkonnectcomp.ControlPlane{
 							ID: "12346",
 						},
 					},
@@ -179,7 +179,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				Return(
 					&sdkkonnectops.ListControlPlanesResponse{
 						ListControlPlanesResponse: &sdkkonnectcomp.ListControlPlanesResponse{
-							Data: []sdkkonnectcomp.ControlPlane1{
+							Data: []sdkkonnectcomp.ControlPlane{
 								{
 									ID: "12346",
 									Config: sdkkonnectcomp.ControlPlaneConfig{
@@ -220,7 +220,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				).
 				Return(
 					&sdkkonnectops.UpdateControlPlaneResponse{
-						ControlPlane: &sdkkonnectcomp.ControlPlane1{
+						ControlPlane: &sdkkonnectcomp.ControlPlane{
 							ID: "12346",
 						},
 					},
@@ -315,7 +315,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				).
 				Return(
 					&sdkkonnectops.CreateControlPlaneResponse{
-						ControlPlane: &sdkkonnectcomp.ControlPlane1{
+						ControlPlane: &sdkkonnectcomp.ControlPlane{
 							ID: "12345",
 						},
 					},
@@ -332,7 +332,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				).
 				Return(
 					&sdkkonnectops.CreateControlPlaneResponse{
-						ControlPlane: &sdkkonnectcomp.ControlPlane1{
+						ControlPlane: &sdkkonnectcomp.ControlPlane{
 							ID: "123467",
 						},
 					},
@@ -366,7 +366,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				Return(
 					&sdkkonnectops.ListControlPlanesResponse{
 						ListControlPlanesResponse: &sdkkonnectcomp.ListControlPlanesResponse{
-							Data: []sdkkonnectcomp.ControlPlane1{
+							Data: []sdkkonnectcomp.ControlPlane{
 								{
 									ID: "123467",
 									Config: sdkkonnectcomp.ControlPlaneConfig{
@@ -390,7 +390,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				).
 				Return(
 					&sdkkonnectops.UpdateControlPlaneResponse{
-						ControlPlane: &sdkkonnectcomp.ControlPlane1{
+						ControlPlane: &sdkkonnectcomp.ControlPlane{
 							ID: "123467",
 						},
 					},
@@ -482,7 +482,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				Return(
 					&sdkkonnectops.ListControlPlanesResponse{
 						ListControlPlanesResponse: &sdkkonnectcomp.ListControlPlanesResponse{
-							Data: []sdkkonnectcomp.ControlPlane1{
+							Data: []sdkkonnectcomp.ControlPlane{
 								{
 									ID: "123456",
 									Config: sdkkonnectcomp.ControlPlaneConfig{
@@ -506,7 +506,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				Return(
 					&sdkkonnectops.ListControlPlanesResponse{
 						ListControlPlanesResponse: &sdkkonnectcomp.ListControlPlanesResponse{
-							Data: []sdkkonnectcomp.ControlPlane1{
+							Data: []sdkkonnectcomp.ControlPlane{
 								{
 									ID: "123456",
 									Config: sdkkonnectcomp.ControlPlaneConfig{
@@ -579,7 +579,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				).
 				Return(
 					&sdkkonnectops.CreateControlPlaneResponse{
-						ControlPlane: &sdkkonnectcomp.ControlPlane1{
+						ControlPlane: &sdkkonnectcomp.ControlPlane{
 							ID: "123456",
 						},
 					}, nil,
@@ -610,7 +610,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				Return(
 					&sdkkonnectops.ListControlPlanesResponse{
 						ListControlPlanesResponse: &sdkkonnectcomp.ListControlPlanesResponse{
-							Data: []sdkkonnectcomp.ControlPlane1{
+							Data: []sdkkonnectcomp.ControlPlane{
 								{
 									ID: "group-123456",
 									Config: sdkkonnectcomp.ControlPlaneConfig{
@@ -634,7 +634,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				Return(
 					&sdkkonnectops.ListControlPlanesResponse{
 						ListControlPlanesResponse: &sdkkonnectcomp.ListControlPlanesResponse{
-							Data: []sdkkonnectcomp.ControlPlane1{
+							Data: []sdkkonnectcomp.ControlPlane{
 								{
 									ID: "group-123456",
 									Config: sdkkonnectcomp.ControlPlaneConfig{
@@ -658,7 +658,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				Return(
 					&sdkkonnectops.ListControlPlanesResponse{
 						ListControlPlanesResponse: &sdkkonnectcomp.ListControlPlanesResponse{
-							Data: []sdkkonnectcomp.ControlPlane1{
+							Data: []sdkkonnectcomp.ControlPlane{
 								{
 									ID: "123456",
 									Config: sdkkonnectcomp.ControlPlaneConfig{
@@ -696,7 +696,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				).
 				Return(
 					&sdkkonnectops.UpdateControlPlaneResponse{
-						ControlPlane: &sdkkonnectcomp.ControlPlane1{
+						ControlPlane: &sdkkonnectcomp.ControlPlane{
 							ID: "group-123456",
 						},
 					},
@@ -756,7 +756,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				Return(
 					&sdkkonnectops.ListControlPlanesResponse{
 						ListControlPlanesResponse: &sdkkonnectcomp.ListControlPlanesResponse{
-							Data: []sdkkonnectcomp.ControlPlane1{
+							Data: []sdkkonnectcomp.ControlPlane{
 								{
 									ID: "cpg-id",
 									Config: sdkkonnectcomp.ControlPlaneConfig{
@@ -779,7 +779,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				).
 				Return(
 					&sdkkonnectops.CreateControlPlaneResponse{
-						ControlPlane: &sdkkonnectcomp.ControlPlane1{
+						ControlPlane: &sdkkonnectcomp.ControlPlane{
 							ID: "cpg-id",
 						},
 					},
