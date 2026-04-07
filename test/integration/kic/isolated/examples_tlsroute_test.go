@@ -12,7 +12,6 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
-	"github.com/kong/kong-operator/v2/ingress-controller/test"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/testlabels"
 	"github.com/kong/kong-operator/v2/test/helpers"
 	"github.com/kong/kong-operator/v2/test/integration/kic/consts"
@@ -49,10 +48,14 @@ func TestExampleTLSRoute(t *testing.T) {
 				assert.True(t, certPool.AppendCertsFromPEM(decodedCert))
 
 				t.Log("verifying that TLSRoute becomes routable")
-				tlsOpt := test.WithTLSOption("example-tlsroute.kong.example", certPool, true) // URL as in gateway-tlsroute.yaml.
+				tlsOpt := helpers.TLSOpt{
+					Hostname:    "example-tlsroute.kong.example",
+					CertPool:    certPool,
+					Passthrough: true,
+				} // URL as in gateway-tlsroute.yaml.
 				assert.EventuallyWithT(t, func(c *assert.CollectT) {
-					err := test.EchoResponds(
-						test.ProtocolTLS, proxyTLSURL, "example-tlsroute-manifest", tlsOpt,
+					err := helpers.EchoResponds(
+						t, helpers.ProtocolTLS, proxyTLSURL, "example-tlsroute-manifest", tlsOpt,
 					)
 					assert.NoError(c, err)
 				}, consts.IngressWait, consts.WaitTick)

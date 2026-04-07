@@ -44,7 +44,7 @@ func EchoResponds(t *testing.T, protocol Protocol, url string, podName string, t
 	if protocol == ProtocolTLS {
 		require.Len(t, tlsOpt, 1, "Must specify TLSOpts when protocol isTLS")
 	} else {
-		require.Len(t, tlsOpt, 0, fmt.Sprintf("Cannot specify TLSOpts for non-TLS protocol %s", protocol))
+		require.Emptyf(t, tlsOpt, "Cannot specify TLSOpts for non-TLS protocol %s", protocol)
 	}
 
 	dialer := net.Dialer{Timeout: netDialTimeout}

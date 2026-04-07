@@ -1,13 +1,10 @@
 package integration
 
 import (
-	"bytes"
-	"crypto/tls"
 	"crypto/x509"
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	"sync"
 	"syscall"
 	"testing"
@@ -265,7 +262,11 @@ func TestTLSRoutePassthroughReferenceGrant(t *testing.T) {
 
 	t.Log("verifying that the tcpecho is responding properly over TLS")
 	require.Eventually(t, func() bool {
-		if err := tlsEchoResponds(proxyTLSURL, testUUID, tlsRouteHostname, certPool, true); err != nil {
+		if err := helpers.EchoResponds(t, helpers.ProtocolTLS, proxyTLSURL, testUUID, helpers.TLSOpt{
+			Hostname:    tlsRouteHostname,
+			CertPool:    certPool,
+			Passthrough: true,
+		}); err != nil {
 			t.Logf("failed accessing tcpecho at %s, err: %v", proxyTLSURL, err)
 			return false
 		}
@@ -274,7 +275,11 @@ func TestTLSRoutePassthroughReferenceGrant(t *testing.T) {
 
 	t.Log("verifying that the tcpecho route can also serve certificates permitted by a ReferenceGrant with a named To")
 	require.Eventually(t, func() bool {
-		if err := tlsEchoResponds(proxyTLSURL, testUUID2, tlsRouteExtraHostname, certPool, true); err != nil {
+		if err := helpers.EchoResponds(t, helpers.ProtocolTLS, proxyTLSURL, testUUID2, helpers.TLSOpt{
+			Hostname:    tlsRouteHostname,
+			CertPool:    certPool,
+			Passthrough: true,
+		}); err != nil {
 			t.Logf("failed accessing tcpecho at %s, err: %v", proxyTLSURL, err)
 			return true
 		}
@@ -288,7 +293,11 @@ func TestTLSRoutePassthroughReferenceGrant(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {
-		return tlsEchoResponds(proxyTLSURL, testUUID2, tlsRouteExtraHostname, certPool, true) != nil
+		return helpers.EchoResponds(t, helpers.ProtocolTLS, proxyTLSURL, testUUID2, helpers.TLSOpt{
+			Hostname:    tlsRouteHostname,
+			CertPool:    certPool,
+			Passthrough: true,
+		}) != nil
 	}, ingressWait, waitTick)
 
 	t.Log("verifying that a Listener has the invalid ref status condition")
@@ -316,7 +325,11 @@ func TestTLSRoutePassthroughReferenceGrant(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {
-		if err := tlsEchoResponds(proxyTLSURL, testUUID2, tlsRouteExtraHostname, certPool, true); err != nil {
+		if err := helpers.EchoResponds(t, helpers.ProtocolTLS, proxyTLSURL, testUUID2, helpers.TLSOpt{
+			Hostname:    tlsRouteHostname,
+			CertPool:    certPool,
+			Passthrough: true,
+		}); err != nil {
 			t.Logf("failed accessing tcpecho at %s, err: %v", proxyTLSURL, err)
 			return false
 		}
@@ -469,7 +482,11 @@ func TestTLSRoutePassthrough(t *testing.T) {
 
 	t.Log("verifying that the tcpecho is responding properly over TLS")
 	require.Eventually(t, func() bool {
-		if err := tlsEchoResponds(proxyTLSURL, testUUID, tlsRouteHostname, certPool, true); err != nil {
+		if err := helpers.EchoResponds(t, helpers.ProtocolTLS, proxyTLSURL, testUUID, helpers.TLSOpt{
+			Hostname:    tlsRouteHostname,
+			CertPool:    certPool,
+			Passthrough: true,
+		}); err != nil {
 			t.Logf("failed accessing tcpecho at %s, err: %v", proxyTLSURL, err)
 			return false
 		}
@@ -492,9 +509,15 @@ func TestTLSRoutePassthrough(t *testing.T) {
 
 	t.Log("verifying that the tcpecho is no longer responding")
 	require.Eventually(t, func() bool {
-		err := tlsEchoResponds(
+		err := helpers.EchoResponds(
+			t, helpers.ProtocolTLS,
 			proxyTLSURL,
-			testUUID, tlsRouteHostname, certPool, false,
+			testUUID,
+			helpers.TLSOpt{
+				Hostname:    tlsRouteHostname,
+				CertPool:    certPool,
+				Passthrough: false,
+			},
 		)
 		return isTLSNoResponseError(err)
 	}, ingressWait, waitTick)
@@ -514,7 +537,11 @@ func TestTLSRoutePassthrough(t *testing.T) {
 
 	t.Log("verifying that putting the parentRefs back results in the routes becoming available again")
 	require.Eventually(t, func() bool {
-		if err := tlsEchoResponds(proxyTLSURL, testUUID, tlsRouteHostname, certPool, true); err != nil {
+		if err := helpers.EchoResponds(t, helpers.ProtocolTLS, proxyTLSURL, testUUID, helpers.TLSOpt{
+			Hostname:    tlsRouteHostname,
+			CertPool:    certPool,
+			Passthrough: true,
+		}); err != nil {
 			t.Logf("failed accessing tcpecho at %s, err: %v", proxyTLSURL, err)
 			return false
 		}
@@ -530,7 +557,11 @@ func TestTLSRoutePassthrough(t *testing.T) {
 
 	t.Log("verifying that the data-plane configuration from the TLSRoute gets dropped with the GatewayClass now removed")
 	require.Eventually(t, func() bool {
-		err := tlsEchoResponds(proxyTLSURL, testUUID, tlsRouteHostname, certPool, true)
+		err := helpers.EchoResponds(t, helpers.ProtocolTLS, proxyTLSURL, testUUID, helpers.TLSOpt{
+			Hostname:    tlsRouteHostname,
+			CertPool:    certPool,
+			Passthrough: true,
+		})
 		return isTLSNoResponseError(err)
 	}, ingressWait, waitTick)
 
@@ -544,7 +575,11 @@ func TestTLSRoutePassthrough(t *testing.T) {
 
 	t.Log("verifying that creating the GatewayClass again triggers reconciliation of TLSRoutes and the route becomes available again")
 	require.Eventually(t, func() bool {
-		if err := tlsEchoResponds(proxyTLSURL, testUUID, tlsRouteHostname, certPool, true); err != nil {
+		if err := helpers.EchoResponds(t, helpers.ProtocolTLS, proxyTLSURL, testUUID, helpers.TLSOpt{
+			Hostname:    tlsRouteHostname,
+			CertPool:    certPool,
+			Passthrough: true,
+		}); err != nil {
 			t.Logf("failed accessing tcpecho at %s, err: %v", proxyTLSURL, err)
 			return false
 		}
@@ -560,7 +595,11 @@ func TestTLSRoutePassthrough(t *testing.T) {
 
 	t.Log("verifying that the data-plane configuration from the TLSRoute gets dropped with the Gateway now removed")
 	require.Eventually(t, func() bool {
-		err := tlsEchoResponds(proxyTLSURL, testUUID, tlsRouteHostname, certPool, true)
+		err := helpers.EchoResponds(t, helpers.ProtocolTLS, proxyTLSURL, testUUID, helpers.TLSOpt{
+			Hostname:    tlsRouteHostname,
+			CertPool:    certPool,
+			Passthrough: true,
+		})
 		return isTLSNoResponseError(err)
 	}, ingressWait, waitTick)
 
@@ -593,7 +632,11 @@ func TestTLSRoutePassthrough(t *testing.T) {
 
 	t.Log("verifying that creating the Gateway again triggers reconciliation of TLSRoutes and the route becomes available again")
 	require.Eventually(t, func() bool {
-		if err := tlsEchoResponds(proxyTLSURL, testUUID, tlsRouteHostname, certPool, true); err != nil {
+		if err := helpers.EchoResponds(t, helpers.ProtocolTLS, proxyTLSURL, testUUID, helpers.TLSOpt{
+			Hostname:    tlsRouteHostname,
+			CertPool:    certPool,
+			Passthrough: true,
+		}); err != nil {
 			t.Logf("failed accessing tcpecho at %s, err: %v", proxyTLSURL, err)
 			return false
 		}
@@ -628,14 +671,22 @@ func TestTLSRoutePassthrough(t *testing.T) {
 
 	t.Log("verifying that the TLSRoute is now load-balanced between two services")
 	require.Eventually(t, func() bool {
-		if err := tlsEchoResponds(proxyTLSURL, testUUID, tlsRouteHostname, certPool, true); err != nil {
+		if err := helpers.EchoResponds(t, helpers.ProtocolTLS, proxyTLSURL, testUUID, helpers.TLSOpt{
+			Hostname:    tlsRouteHostname,
+			CertPool:    certPool,
+			Passthrough: true,
+		}); err != nil {
 			t.Logf("failed accessing tcpecho at %s, err: %v", proxyTLSURL, err)
 			return false
 		}
 		return true
 	}, ingressWait, waitTick)
 	require.Eventually(t, func() bool {
-		if err := tlsEchoResponds(proxyTLSURL, testUUID2, tlsRouteHostname, certPool, true); err != nil {
+		if err := helpers.EchoResponds(t, helpers.ProtocolTLS, proxyTLSURL, testUUID2, helpers.TLSOpt{
+			Hostname:    tlsRouteHostname,
+			CertPool:    certPool,
+			Passthrough: true,
+		}); err != nil {
 			t.Logf("failed accessing tcpecho at %s, err: %v", proxyTLSURL, err)
 			return false
 		}
@@ -652,9 +703,15 @@ func TestTLSRoutePassthrough(t *testing.T) {
 
 	t.Log("verifying that the data-plane configuration from the TLSRoute does not get orphaned with the GatewayClass and Gateway gone")
 	require.Eventually(t, func() bool {
-		err := tlsEchoResponds(
+		err := helpers.EchoResponds(
+			t, helpers.ProtocolTLS,
 			proxyTLSURL,
-			testUUID, tlsRouteHostname, certPool, true)
+			testUUID,
+			helpers.TLSOpt{
+				Hostname:    tlsRouteHostname,
+				CertPool:    certPool,
+				Passthrough: true,
+			})
 		return isTLSNoResponseError(err)
 	}, ingressWait, waitTick)
 
@@ -687,7 +744,11 @@ func TestTLSRoutePassthrough(t *testing.T) {
 
 	t.Log("ensuring tls echo responds after recreating gateway and gateway class")
 	require.Eventually(t, func() bool {
-		if err := tlsEchoResponds(proxyTLSURL, testUUID, tlsRouteHostname, certPool, true); err != nil {
+		if err := helpers.EchoResponds(t, helpers.ProtocolTLS, proxyTLSURL, testUUID, helpers.TLSOpt{
+			Hostname:    tlsRouteHostname,
+			CertPool:    certPool,
+			Passthrough: true,
+		}); err != nil {
 			t.Logf("failed accessing tcpecho at %s, err: %v", proxyTLSURL, err)
 			return false
 		}
@@ -708,89 +769,17 @@ func TestTLSRoutePassthrough(t *testing.T) {
 
 	t.Log("ensuring tls echo does not respond after using not existing port")
 	require.Eventually(t, func() bool {
-		err := tlsEchoResponds(
-			proxyTLSURL, testUUID, tlsRouteHostname, certPool, true,
+		err := helpers.EchoResponds(
+			t, helpers.ProtocolTLS,
+			proxyTLSURL, testUUID,
+			helpers.TLSOpt{
+				Hostname:    tlsRouteHostname,
+				CertPool:    certPool,
+				Passthrough: true,
+			},
 		)
 		return isTLSNoResponseError(err)
 	}, ingressWait, waitTick)
-}
-
-// tlsEchoResponds takes a TLS address URL and a Pod name and checks if a go-echo
-// instance is running on that Pod at that address using hostname for SNI. It sends
-// a message and checks if returned one matches. It returns an error with
-// an explanation if it is not (typical network related errors like [io.EOF] or
-// [syscall.ECONNRESET] are returned directly).
-//
-// Deprecated: use test.EchoResponds with ProtocolTLS instead.
-func tlsEchoResponds(
-	url string, podName string, hostname string, certPool *x509.CertPool, passthrough bool,
-) error {
-	dialer := net.Dialer{Timeout: time.Second * 10}
-	conn, err := tls.DialWithDialer(
-		&dialer,
-		"tcp",
-		url,
-		&tls.Config{
-			MinVersion: tls.VersionTLS12,
-			ServerName: hostname,
-			RootCAs:    certPool,
-		},
-	)
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-
-	header := fmt.Appendf(nil, "Running on Pod %s.", podName)
-	// If we are testing with passthrough, the go-echo service should return a message
-	// mentioning that it is listening in TLS mode.
-	if passthrough {
-		header = append(header, []byte("\nThrough TLS connection.")...)
-	}
-	message := []byte("testing tlsroute")
-
-	wrote, err := conn.Write(message)
-	if err != nil {
-		return err
-	}
-
-	if wrote != len(message) {
-		return fmt.Errorf("wrote message of size %d, expected %d", wrote, len(message))
-	}
-
-	if err := conn.SetDeadline(time.Now().Add(time.Second * 5)); err != nil {
-		return err
-	}
-
-	headerResponse := make([]byte, len(header)+1)
-	read, err := conn.Read(headerResponse)
-	if err != nil {
-		return err
-	}
-
-	if read != len(header)+1 { // add 1 for newline
-		return fmt.Errorf("read %d bytes but expected %d", read, len(header)+1)
-	}
-
-	if !bytes.Contains(headerResponse, header) {
-		return fmt.Errorf(`expected header response "%s", received: "%s"`, string(header), string(headerResponse))
-	}
-
-	messageResponse := make([]byte, wrote+1)
-	read, err = conn.Read(messageResponse)
-	if err != nil {
-		return err
-	}
-
-	if read != len(message) {
-		return fmt.Errorf("read %d bytes but expected %d", read, len(message))
-	}
-
-	if !bytes.Contains(messageResponse, message) {
-		return fmt.Errorf(`expected message response "%s", received: "%s"`, string(message), string(messageResponse))
-	}
-
-	return nil
 }
 
 func createTLSEchoContainer(tlsEchoPort int32, sendMsg string) corev1.Container { //nolint:unparam
