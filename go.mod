@@ -79,7 +79,7 @@ require (
 	sigs.k8s.io/yaml v1.6.0
 )
 
-require github.com/moby/moby/api v1.54.1-0.20260401134807-948d5691a093
+require github.com/moby/moby/api v1.54.1
 
 require (
 	cel.dev/expr v0.25.1 // indirect
