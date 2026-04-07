@@ -123,8 +123,12 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 			handler.EnqueueRequestsFromMapFunc(r.listGatewaysForKongReferenceGrant)).
 		// watch HTTPRoutes so that Gateway listener status can be updated.
 		Watches(
-			&gatewayv1beta1.HTTPRoute{},
+			&gatewayv1.HTTPRoute{},
 			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByHTTPRoute)).
+		Watches(
+			&gatewayv1.TLSRoute{},
+			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByTLSRoute),
+		).
 		// watch Namespaces so that managed routes have correct status reflected in Gateway's
 		// status in status.listeners.attachedRoutes
 		// This is required to properly support Gateway's listeners.allowedRoutes.namespaces.selector.
@@ -614,7 +618,8 @@ func (r *Reconciler) provisionDataPlane(
 	// Add the GEP-1762 gateway-name label unconditionally (after mergeInfrastructureIntoDataPlane
 	// so it cannot be overridden by spec.infrastructure).
 	setGatewayNameLabelInDataPlane(expectedDataPlaneOptions, gateway.Name)
-	err = setDataPlaneIngressServicePorts(expectedDataPlaneOptions, gateway.Spec.Listeners, gatewayConfig.Spec.ListenersOptions)
+
+	err = setDataPlaneOptionsForListeners(expectedDataPlaneOptions, gateway.Spec.Listeners, gatewayConfig.Spec.ListenersOptions)
 	if err != nil {
 		errWrap := fmt.Errorf("dataplane creation failed - error: %w", err)
 		k8sutils.SetCondition(
@@ -689,7 +694,7 @@ func (r *Reconciler) provisionControlPlane(
 	case count == 0:
 		err := r.createControlPlane(ctx, gateway, gatewayConfig)
 		if err != nil {
-			log.Debug(logger, fmt.Sprintf("controlplane creation failed - error: %v", err))
+			log.Error(logger, err, "controlplane creation failed")
 			k8sutils.SetCondition(
 				createControlPlaneCondition(metav1.ConditionFalse, kcfgdataplane.UnableToProvisionReason, err.Error(), gateway.Generation),
 				gatewayConditionsAndListenersAware(gateway),

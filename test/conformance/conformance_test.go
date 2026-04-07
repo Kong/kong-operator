@@ -39,8 +39,10 @@ func TestGatewayConformance(t *testing.T) {
 	cleanupResources := !test.SkipCleanup()
 	if cleanupResources {
 		t.Cleanup(func() {
+			// NOTE: t.Context() is canceled before cleanup functions run (Go 1.24+),
+			// so we use context.Background() here instead.
 			ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: conformanceInfraNamespace}}
-			err := clients.MgrClient.Delete(ctx, ns)
+			err := clients.MgrClient.Delete(context.Background(), ns)
 			if err != nil && !apierrors.IsNotFound(err) {
 				require.NoError(t, err)
 			}

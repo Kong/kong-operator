@@ -8,6 +8,10 @@ import (
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/parser"
 )
 
+// defaultMaxLength is the fallback MaxLength applied to string fields when
+// the OpenAPI spec does not declare an explicit maxLength constraint.
+const defaultMaxLength = 253
+
 // KubebuilderTags generates kubebuilder validation tags for a property.
 // It takes an optional fieldConfig for custom validations.
 func KubebuilderTags(prop *parser.Property, entityName string, fieldConfig *config.Config) []string {
@@ -32,7 +36,7 @@ func KubebuilderTags(prop *parser.Property, entityName string, fieldConfig *conf
 			tags = append(tags, markerValidationMaxLength(int(*prop.MaxLength)))
 		} else {
 			// Add default MaxLength for strings without explicit maxLength
-			tags = append(tags, markerValidationMaxLength(256))
+			tags = append(tags, markerValidationMaxLength(defaultMaxLength))
 		}
 		if prop.Pattern != "" {
 			tags = append(tags, markerValidationPattern(prop.Pattern))
@@ -45,6 +49,12 @@ func KubebuilderTags(prop *parser.Property, entityName string, fieldConfig *conf
 	}
 	if prop.Maximum != nil {
 		tags = append(tags, markerValidationMaximum(*prop.Maximum))
+	}
+
+	// Boolean-to-string enum validation for inline boolean properties (no RefName).
+	// Type-aliased booleans get their Enum marker on the type definition instead.
+	if prop.Type == "boolean" && prop.RefName == "" {
+		tags = append(tags, markerValidationEnum("Enabled;Disabled"))
 	}
 
 	// Enum validation
@@ -64,7 +74,12 @@ func KubebuilderTags(prop *parser.Property, entityName string, fieldConfig *conf
 	if prop.Default != nil {
 		switch v := prop.Default.(type) {
 		case bool:
-			tags = append(tags, markerDefaultBool(v))
+			// Bool defaults map to Enabled/Disabled to match the string enum.
+			if v {
+				tags = append(tags, markerDefaultString("Enabled"))
+			} else {
+				tags = append(tags, markerDefaultString("Disabled"))
+			}
 		case string:
 			tags = append(tags, markerDefaultString(v))
 		default:

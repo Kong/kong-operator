@@ -45,12 +45,12 @@ macos-arm64 = { asset_pattern = "kind-darwin-arm64" }
 
 [tools."github:Kong/kubernetes-testing-framework"]
 # renovate: datasource=github-releases depName=Kong/kubernetes-testing-framework
-version = "v0.48.0"
+version = "v0.49.0"
 bin = "ktf"
 
 [tools."github:telepresenceio/telepresence"]
 # renovate: datasource=github-releases depName=telepresenceio/telepresence
-version = "2.27.2"
+version = "2.27.3"
 [tools."github:telepresenceio/telepresence".platforms]
 linux-x64 = { asset_pattern = "telepresence-linux-amd64" }
 linux-arm64 = { asset_pattern = "telepresence-linux-arm64" }
@@ -84,7 +84,7 @@ run = "go build -o ../bin/{{env.DIR}} main.go"
 # TODO: This hardcodes the x-konnect API group. Removing this hardcode would cause
 # the removal of other non generated APIs to be removed.
 description = "Clean generated api/x-konnect directory"
-run = "rm -rf ./api/x-konnect/"
+run = "rm -rf ./api/x-konnect/ ./config/crd/kong-operator/x-konnect.konghq.com_*"
 
 [tasks.generate-api]
 description = "Generate Kubernetes Go API from OpenAPI spec"
@@ -108,12 +108,6 @@ description = "Generate DeepCopy methods for the API types"
 dir = "./{{env.DIR}}"
 run = "controller-gen object:headerFile='../hack/generators/boilerplate.go.txt' paths=../api/..."
 
-[tasks.lint-api]
-description = "Run golangci-lint"
-# TODO: This hardcodes the x-konnect API group. Removing this hardcode would cause the linter
-# to run against all the API groups which might create unwanted issues being reported here.
-run = "golangci-lint-kube-api-linter run -v --config .golangci-kube-api.yaml ./api/x-konnect/..."
-
 [tasks.test-crdsvalidation]
 description = "Run CRD validation tests"
 dir = "./{{env.DIR}}"
@@ -127,6 +121,5 @@ go test -v -count 1 ${GOTESTFLAGS} ./test/crdsvalidation/x-konnect.konghq.com/..
 description = "Generate API, CRDs, and run all tests and linters"
 run = [
        { task = "generate-api" },
-       { tasks = [ "lint-api", "test-unit", "gofix"] },
        { task = "test-crdsvalidation" },
 ]

@@ -83,7 +83,7 @@ ARCH := $(shell uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')
 
 # Do not store yq's version in .tools_versions.yaml as it is used to get tool versions.
 # renovate: datasource=github-releases depName=mikefarah/yq
-YQ_VERSION = 4.52.4
+YQ_VERSION = 4.52.5
 YQ = $(PROJECT_DIR)/bin/installs/github-mikefarah-yq/$(YQ_VERSION)/yq_$(OS)_$(ARCH)
 .PHONY: yq
 yq: mise # Download yq locally if necessary.
@@ -669,9 +669,15 @@ _test.integration: gotestsum download.telepresence download.helm
 .PHONY: test.integration-ko
 test.integration-ko:
 	@$(MAKE) _test.integration \
-		GOTESTFLAGS="-skip='BlueGreen|TestAdmissionWebhook_' $(GOTESTFLAGS)" \
+		GOTESTFLAGS="-skip='BlueGreen' $(GOTESTFLAGS)" \
 		COVERPROFILE="coverage.integration.ko.out" \
-		GOTESTPATH=./test/integration/
+		GOTESTPATH=./test/integration/ko/
+
+.PHONY: test.integration-konnect
+test.integration-konnect:
+	@$(MAKE) _test.integration \
+		COVERPROFILE="coverage.integration.konnect.out" \
+		GOTESTPATH=./test/integration/konnect/
 
 # Prevent the following data race by not running via gotestsum:
 # WARNING: DATA RACE
@@ -739,7 +745,6 @@ test.integration-validatingwebhook: download.telepresence
 	TELEPRESENCE_BIN=$(TELEPRESENCE) \
 	GOFLAGS=$(GOFLAGS) \
 	go test \
-	-run='TestAdmissionWebhook_' $(GOTESTFLAGS) \
 	-timeout $(INTEGRATION_TEST_TIMEOUT) \
 	-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS) $(LDFLAGS_METADATA)" \
 	-race -v \
@@ -861,8 +866,7 @@ test.samples: kustomize
 	@$(KUSTOMIZE) build config/crd | kubectl apply --server-side --force-conflicts --field-manager=kong-operator-tests -f -
 	@kubectl apply --server-side --force-conflicts --field-manager=kong-operator-tests -f charts/kong-operator/charts/gwapi-standard-crds/crds/gwapi-crds.yaml || true
 	@kubectl get crd -ojsonpath='{.items[*].metadata.name}' | xargs -n1 kubectl wait --for condition=established crd
-	# Disable tests including GatewayConfiguration v1beta1 and ControlPlane v1beta1 temporarily because they need conversion webhooks: https://github.com/Kong/kong-operator/issues/1986
-	@cd config/samples/ && find . -not -name "kustomization.*" -not -name "zz_temp_disabled_*" -type f | sort | xargs -I{} bash -c "echo;echo {}; kubectl apply -f {} && kubectl delete -f {}" \;
+	@cd config/samples/ && find . -maxdepth 1 -name "*.yaml" -exec bash -c "echo; echo {}; kubectl apply -f {} && kubectl delete -f {}" \;
 
 .PHONY: test.charts.golden
 test.charts.golden:
@@ -952,16 +956,6 @@ endif
 .PHONY: _ensure-kong-system-namespace
 _ensure-kong-system-namespace:
 	@kubectl create ns kong-system 2>/dev/null || true
-	@kubectl get secret kong-operator-ca -n kong-system >/dev/null 2>&1 || \
-		(openssl genrsa -out /tmp/ko-makefile-ca.key 4096 2>/dev/null && \
-		openssl req -x509 -new -key /tmp/ko-makefile-ca.key -days 3650 -out /tmp/ko-makefile-ca.crt -subj "/CN=Kong Operator CA" 2>/dev/null && \
-		kubectl create secret tls kong-operator-ca \
-			--cert=/tmp/ko-makefile-ca.crt \
-			--key=/tmp/ko-makefile-ca.key \
-			--namespace kong-system \
-			--dry-run=client -o yaml | \
-			kubectl label -f - konghq.com/secret=internal --overwrite --local -o yaml | \
-			kubectl apply -f -)
 
 # Run a controller from your host.
 # TODO: https://github.com/Kong/kong-operator/issues/1989
@@ -1145,5 +1139,5 @@ lint.api: download.kube-api-linter
 		./api/gateway-operator/v2beta1/... \
 		./api/konnect/v1alpha1/... \
 		./api/konnect/v1alpha2/... \
-		./api/common/v1alpha1/...
-	mise r lint-api
+		./api/common/v1alpha1/...  \
+		./api/x-konnect/...

@@ -38,6 +38,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/konnect"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
+	"github.com/kong/kong-operator/v2/controller/mcpserver"
 	"github.com/kong/kong-operator/v2/controller/specialized"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/multiinstance"
 	"github.com/kong/kong-operator/v2/internal/metrics"
@@ -101,6 +102,7 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 			index.OptionsForGatewayClass(),
 			index.OptionsForGateway(),
 			index.OptionsForHTTPRoute(),
+			index.OptionsForTLSRoute(),
 		)
 	}
 
@@ -135,6 +137,13 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 		)
 	}
 
+	if cfg.FeatureGates.Enabled(FeatureGateMCPServer) {
+		cl := mgr.GetClient()
+		indexOptions = slices.Concat(indexOptions,
+			index.OptionsForMCPServer(cl),
+		)
+	}
+
 	for _, e := range indexOptions {
 		ctrllog.FromContext(ctx).Info("Setting up index", "index", e.String())
 		if err := mgr.GetCache().IndexField(ctx, e.Object, e.Field, e.ExtractValueFn); err != nil {
@@ -144,39 +153,47 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 	return nil
 }
 
-// SetupControllers returns a list of ControllerDefs based on config.
-func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Manager) ([]ControllerDef, error) {
-	// metricRecorder is the recorder used to record custom metrics in the controller manager's metrics server.
-	metricRecorder := metrics.NewGlobalCtrlRuntimeMetricsRecorder()
+type requiredCRDCheck struct {
+	condition bool
+	gvrs      []schema.GroupVersionResource
+}
 
-	// These checks prevent controller-runtime spamming in logs about failing
-	// to get informer from cache.
-	// This way we only ever check the CRD once and issue clear log entry about
-	// particular CRD missing.
-	// Also this makes it possible to specify more complex boolean conditions
-	// whether to check for particular CRD or not, and also makes it possible to
-	// specify several CRDs to be checked for existence, which are required
-	// for specific controller to work.
-	crdChecks := []struct {
-		Condition bool
-		GVRs      []schema.GroupVersionResource
-	}{
+// requiredCRDChecks prevents controller-runtime spamming in logs about failing
+// to get informer from cache.
+// This way we only ever check the CRD once and issue clear log entry about
+// particular CRD missing.
+// Also this makes it possible to specify more complex boolean conditions
+// whether to check for particular CRD or not, and also makes it possible to
+// specify several CRDs to be checked for existence, which are required
+// for specific controller to work.
+func requiredCRDChecks(c *Config) []requiredCRDCheck {
+	return []requiredCRDCheck{
 		{
-			Condition: c.GatewayControllerEnabled || c.DataPlaneBlueGreenControllerEnabled || c.DataPlaneControllerEnabled,
-			GVRs: []schema.GroupVersionResource{
+			condition: c.GatewayControllerEnabled || c.DataPlaneBlueGreenControllerEnabled || c.DataPlaneControllerEnabled,
+			gvrs: []schema.GroupVersionResource{
 				operatorv1beta1.DataPlaneGVR(),
 				operatorv1alpha1.KongPluginInstallationGVR(),
 			},
 		},
 		{
-			Condition: c.GatewayControllerEnabled || c.ControlPlaneControllerEnabled,
-			GVRs: []schema.GroupVersionResource{
+			condition: c.GatewayControllerEnabled || c.ControlPlaneControllerEnabled || c.ControlPlaneExtensionsControllerEnabled,
+			gvrs: []schema.GroupVersionResource{
 				gwtypes.ControlPlaneGVR(),
 			},
 		},
 		{
-			Condition: c.GatewayControllerEnabled,
-			GVRs: []schema.GroupVersionResource{
+			condition: c.ControlPlaneControllerEnabled,
+			gvrs: []schema.GroupVersionResource{
+				{
+					Group:    operatorv1alpha1.SchemeGroupVersion.Group,
+					Version:  operatorv1alpha1.SchemeGroupVersion.Version,
+					Resource: "watchnamespacegrants",
+				},
+			},
+		},
+		{
+			condition: c.GatewayControllerEnabled,
+			gvrs: []schema.GroupVersionResource{
 				{
 					Group:    gatewayv1.GroupVersion.Group,
 					Version:  gatewayv1.GroupVersion.Version,
@@ -192,24 +209,71 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 					Version:  gatewayv1beta1.GroupVersion.Version,
 					Resource: "referencegrants",
 				},
-				operatorv1alpha1.KongPluginInstallationGVR(),
+				{
+					Group:    gatewayv1beta1.GroupVersion.Group,
+					Version:  gatewayv1beta1.GroupVersion.Version,
+					Resource: "httproutes",
+				},
+				gwtypes.GatewayConfigurationGVR(),
+				{
+					Group:    configurationv1alpha1.SchemeGroupVersion.Group,
+					Version:  configurationv1alpha1.SchemeGroupVersion.Version,
+					Resource: "kongreferencegrants",
+				},
 			},
 		},
 		{
-			Condition: c.AIGatewayControllerEnabled,
-			GVRs: []schema.GroupVersionResource{
+			condition: c.AIGatewayControllerEnabled,
+			gvrs: []schema.GroupVersionResource{
 				operatorv1alpha1.AIGatewayGVR(),
+				{
+					Group:    gatewayv1beta1.GroupVersion.Group,
+					Version:  gatewayv1beta1.GroupVersion.Version,
+					Resource: "referencegrants",
+				},
 			},
 		},
 		{
-			Condition: c.KongPluginInstallationControllerEnabled,
-			GVRs: []schema.GroupVersionResource{
+			condition: c.FeatureGates.Enabled(FeatureGateMCPServer),
+			gvrs: []schema.GroupVersionResource{
+				{
+					Group:    konnectv1alpha1.SchemeGroupVersion.Group,
+					Version:  konnectv1alpha1.SchemeGroupVersion.Version,
+					Resource: "mcpservers",
+				},
+			},
+		},
+		{
+			condition: c.KongPluginInstallationControllerEnabled,
+			gvrs: []schema.GroupVersionResource{
 				operatorv1alpha1.KongPluginInstallationGVR(),
+				{
+					Group:    gatewayv1beta1.GroupVersion.Group,
+					Version:  gatewayv1beta1.GroupVersion.Version,
+					Resource: "referencegrants",
+				},
 			},
 		},
 		{
-			Condition: c.KonnectControllersEnabled,
-			GVRs: []schema.GroupVersionResource{
+			condition: c.ControlPlaneExtensionsControllerEnabled,
+			gvrs: []schema.GroupVersionResource{
+				operatorv1beta1.DataPlaneGVR(),
+				{
+					Group:    operatorv1alpha1.SchemeGroupVersion.Group,
+					Version:  operatorv1alpha1.SchemeGroupVersion.Version,
+					Resource: "dataplanemetricsextensions",
+				},
+				{
+					Group:    configurationv1.SchemeGroupVersion.Group,
+					Version:  configurationv1.SchemeGroupVersion.Version,
+					Resource: "kongplugins",
+				},
+			},
+		},
+		{
+			condition: c.KonnectControllersEnabled,
+			gvrs: []schema.GroupVersionResource{
+				gwtypes.GatewayConfigurationGVR(),
 				{
 					Group:    konnectv1alpha2.SchemeGroupVersion.Group,
 					Version:  konnectv1alpha2.SchemeGroupVersion.Version,
@@ -224,6 +288,26 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 					Group:    konnectv1alpha1.SchemeGroupVersion.Group,
 					Version:  konnectv1alpha1.SchemeGroupVersion.Version,
 					Resource: "konnectapiauthconfigurations",
+				},
+				{
+					Group:    konnectv1alpha1.SchemeGroupVersion.Group,
+					Version:  konnectv1alpha1.SchemeGroupVersion.Version,
+					Resource: "konnectcloudgatewaynetworks",
+				},
+				{
+					Group:    konnectv1alpha1.SchemeGroupVersion.Group,
+					Version:  konnectv1alpha1.SchemeGroupVersion.Version,
+					Resource: "konnectcloudgatewaydataplanegroupconfigurations",
+				},
+				{
+					Group:    konnectv1alpha1.SchemeGroupVersion.Group,
+					Version:  konnectv1alpha1.SchemeGroupVersion.Version,
+					Resource: "konnectcloudgatewaytransitgateways",
+				},
+				{
+					Group:    configurationv1alpha1.SchemeGroupVersion.Group,
+					Version:  configurationv1alpha1.SchemeGroupVersion.Version,
+					Resource: "kongreferencegrants",
 				},
 				{
 					Group:    configurationv1alpha1.SchemeGroupVersion.Group,
@@ -328,20 +412,38 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			},
 		},
 	}
+}
 
-	checker := k8sutils.CRDChecker{Client: mgr.GetClient()}
-	for _, check := range crdChecks {
-		if !check.Condition {
+type crdExistenceChecker interface {
+	CRDExists(schema.GroupVersionResource) (bool, error)
+}
+
+func ensureRequiredCRDs(c *Config, checker crdExistenceChecker) error {
+	for _, check := range requiredCRDChecks(c) {
+		if !check.condition {
 			continue
 		}
 
-		for _, gvr := range check.GVRs {
+		for _, gvr := range check.gvrs {
 			if ok, err := checker.CRDExists(gvr); err != nil {
-				return nil, err
+				return err
 			} else if !ok {
-				return nil, fmt.Errorf("missing a required CRD: %v", gvr)
+				return fmt.Errorf("missing a required CRD: %v", gvr)
 			}
 		}
+	}
+
+	return nil
+}
+
+// SetupControllers returns a list of ControllerDefs based on config.
+func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Manager) ([]ControllerDef, error) {
+	// metricRecorder is the recorder used to record custom metrics in the controller manager's metrics server.
+	metricRecorder := metrics.NewGlobalCtrlRuntimeMetricsRecorder()
+
+	checker := k8sutils.CRDChecker{Client: mgr.GetClient()}
+	if err := ensureRequiredCRDs(c, checker); err != nil {
+		return nil, err
 	}
 
 	const (
@@ -527,6 +629,11 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		},
 	}
 
+	// MCPServer controllers
+	if c.FeatureGates.Enabled(FeatureGateMCPServer) {
+		controllers = append(controllers, newMCPServerControllers(mgr, c, ctrlOpts)...)
+	}
+
 	// Konnect controllers
 	if c.KonnectControllersEnabled {
 		httpClient, err := httpClientForKonnect(c)
@@ -643,6 +750,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			controllers = append(controllers,
 				newGatewayAPIHybridController[gwtypes.Gateway](mgr, c.FQDNModeEnabled, c.ClusterDomain),
 				newGatewayAPIHybridController[gwtypes.HTTPRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain),
+				newGatewayAPIHybridController[gwtypes.TLSRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain),
 			)
 		}
 	}
@@ -694,6 +802,44 @@ func newGatewayAPIHybridController[t converter.RootObject, tPtr converter.RootOb
 	return ControllerDef{
 		Enabled:    true,
 		Controller: hybridgateway.NewHybridGatewayReconciler[t, tPtr](mgr, fqdnMode, clusterDomain),
+	}
+}
+
+func newMCPServerControllers(mgr manager.Manager, c *Config, ctrlOpts controller.Options) []ControllerDef {
+	sm := mcpserver.NewSignalManager(c.LoggingMode, mgr.GetClient(), mgr.GetScheme())
+	sdkFactory := sdkops.NewSDKFactory()
+	controllerFactory := konnectControllerFactory{
+		sdkFactory:        sdkFactory,
+		loggingMode:       c.LoggingMode,
+		client:            mgr.GetClient(),
+		syncPeriod:        c.KonnectSyncPeriod,
+		controllerOptions: ctrlOpts,
+	}
+	return []ControllerDef{
+		{
+			Enabled: true,
+			Controller: &mcpserver.MCPServerReconciler{
+				Client:            mgr.GetClient(),
+				Scheme:            mgr.GetScheme(),
+				ControllerOptions: ctrlOpts,
+				LoggingMode:       c.LoggingMode,
+				SignalManager:     sm,
+				SdkFactory:        sdkFactory,
+			},
+		},
+		{
+			Enabled: true,
+			Controller: &mcpserver.MCPServerCPReconciler{
+				ControllerOptions: ctrlOpts,
+				Client:            mgr.GetClient(),
+				LoggingMode:       c.LoggingMode,
+				SignalManager:     sm,
+				SdkFactory:        sdkFactory,
+			},
+		},
+		// Generic KonnectEntityReconciler for MCPServer: resolves ControlPlaneRef,
+		// verifies the entity exists in Konnect, and sets Programmed/Mirrored conditions.
+		newKonnectEntityController[konnectv1alpha1.MCPServer](controllerFactory),
 	}
 }
 

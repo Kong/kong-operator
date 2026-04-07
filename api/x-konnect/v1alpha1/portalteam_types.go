@@ -54,6 +54,13 @@ type PortalTeamSpec struct {
 
 // PortalTeamAPISpec defines the API spec fields for PortalTeam.
 type PortalTeamAPISpec struct {
+	// Whether the team is allowed to own applications
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	// +kubebuilder:default=Disabled
+	CanOwnApplications string `json:"can_own_applications,omitempty"`
+
 	//
 	//
 	// +optional
@@ -64,7 +71,7 @@ type PortalTeamAPISpec struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[\w \W]+$`
 	Name string `json:"name,omitempty"`
 }

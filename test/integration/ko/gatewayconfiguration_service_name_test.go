@@ -1,0 +1,119 @@
+package integration
+
+import (
+	"testing"
+
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+
+	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
+	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	gatewayutils "github.com/kong/kong-operator/v2/pkg/utils/gateway"
+	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
+	"github.com/kong/kong-operator/v2/pkg/vars"
+	"github.com/kong/kong-operator/v2/test/helpers"
+	"github.com/kong/kong-operator/v2/test/integration"
+)
+
+func TestGatewayConfigurationServiceName(t *testing.T) {
+	t.Parallel()
+	ctx := t.Context()
+	namespace, cleaner := helpers.SetupTestEnv(t, ctx, integration.GetEnv())
+
+	// Create a custom service name
+	customServiceName := "custom-service-name-" + uuid.NewString()
+
+	t.Logf("deploying a GatewayConfiguration resource with a custom service name: %s", customServiceName)
+	gatewayConfig := &operatorv2beta1.GatewayConfiguration{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace.Name,
+			Name:      uuid.NewString(),
+		},
+		Spec: operatorv2beta1.GatewayConfigurationSpec{
+			DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
+				Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
+					Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
+						Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
+							ServiceOptions: operatorv2beta1.ServiceOptions{
+								Name: &customServiceName,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	gatewayConfig, err := integration.GetClients().OperatorClient.GatewayOperatorV2beta1().GatewayConfigurations(namespace.Name).Create(ctx, gatewayConfig, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(gatewayConfig)
+
+	t.Log("deploying a GatewayClass resource with the GatewayConfiguration attached via ParametersReference")
+	gatewayClass := &gatewayv1.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: uuid.NewString(),
+		},
+		Spec: gatewayv1.GatewayClassSpec{
+			ParametersRef: &gatewayv1.ParametersReference{
+				Group:     gatewayv1.Group(operatorv1beta1.SchemeGroupVersion.Group),
+				Kind:      gatewayv1.Kind("GatewayConfiguration"),
+				Namespace: (*gatewayv1.Namespace)(&gatewayConfig.Namespace),
+				Name:      gatewayConfig.Name,
+			},
+			ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
+		},
+	}
+	gatewayClass, err = integration.GetClients().GatewayClient.GatewayV1().GatewayClasses().Create(ctx, gatewayClass, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(gatewayClass)
+
+	t.Log("deploying Gateway resource")
+	gateway := &gwtypes.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace.Name,
+			Name:      uuid.NewString(),
+		},
+		Spec: gatewayv1.GatewaySpec{
+			GatewayClassName: gatewayv1.ObjectName(gatewayClass.Name),
+			Listeners: []gatewayv1.Listener{{
+				Name:     "http",
+				Protocol: gatewayv1.HTTPProtocolType,
+				Port:     gatewayv1.PortNumber(80),
+			}},
+		},
+	}
+	gateway, err = integration.GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(gateway)
+
+	t.Log("verifying that the DataPlane has the custom service name")
+	require.Eventually(t, func() bool {
+		dataplanes, err := gatewayutils.ListDataPlanesForGateway(ctx, integration.GetClients().MgrClient, gateway)
+		if err != nil {
+			return false
+		}
+		if len(dataplanes) != 1 {
+			return false
+		}
+		dp := dataplanes[0]
+		if dp.Spec.Network.Services == nil || dp.Spec.Network.Services.Ingress == nil || dp.Spec.Network.Services.Ingress.Name == nil {
+			return false
+		}
+		return *dp.Spec.Network.Services.Ingress.Name == customServiceName
+	}, testutils.GatewayReadyTimeLimit, testutils.ObjectUpdateTick)
+
+	t.Log("verifying that the service has the custom name using DataPlane's status.service field")
+	require.Eventually(t, func() bool {
+		dataplanes, err := gatewayutils.ListDataPlanesForGateway(ctx, integration.GetClients().MgrClient, gateway)
+		if err != nil {
+			return false
+		}
+		if len(dataplanes) != 1 {
+			return false
+		}
+		dp := dataplanes[0]
+		return dp.Status.Service == customServiceName
+	}, testutils.GatewayReadyTimeLimit, testutils.ObjectUpdateTick)
+}

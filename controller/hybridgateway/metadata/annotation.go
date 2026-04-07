@@ -68,7 +68,7 @@ func parseAnnotationBool(anns map[string]string, key string) (enabled bool, ok b
 }
 
 // BuildAnnotations creates the standard annotations map for Kong resources managed by Gateway API objects.
-// For HTTPRoute, it includes both route and gateway annotations.
+// For supported routes (HTTPRoute, TLSRoute), it includes both route and gateway annotations.
 // For Gateway, it only includes the gateway annotation.
 func BuildAnnotations(obj client.Object, parentRef *gwtypes.ParentReference) map[string]string {
 	gwObjKey := client.ObjectKey{
@@ -84,8 +84,13 @@ func BuildAnnotations(obj client.Object, parentRef *gwtypes.ParentReference) map
 		consts.GatewayOperatorHybridGatewaysAnnotation: gwObjKey.String(),
 	}
 
-	// Add route annotation only for HTTPRoute objects
-	if _, ok := obj.(*gwtypes.HTTPRoute); ok {
+	// Add route annotation for TLSRoute and HTTPRoute objects
+	// TODO: include kind of the parent route to prevent conflicts:
+	// https://github.com/Kong/kong-operator/issues/3747
+	switch obj.(type) {
+	case *gwtypes.HTTPRoute:
+		annotations[consts.GatewayOperatorHybridRoutesAnnotation] = client.ObjectKeyFromObject(obj).String()
+	case *gwtypes.TLSRoute:
 		annotations[consts.GatewayOperatorHybridRoutesAnnotation] = client.ObjectKeyFromObject(obj).String()
 	}
 

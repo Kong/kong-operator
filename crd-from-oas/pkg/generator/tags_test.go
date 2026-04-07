@@ -28,7 +28,7 @@ func TestKubebuilderTags(t *testing.T) {
 			expected: []string{
 				"+required",
 				"+kubebuilder:validation:MinLength=1",
-				"+kubebuilder:validation:MaxLength=256",
+				"+kubebuilder:validation:MaxLength=253",
 			},
 		},
 		{
@@ -40,7 +40,7 @@ func TestKubebuilderTags(t *testing.T) {
 			},
 			expected: []string{
 				"+optional",
-				"+kubebuilder:validation:MaxLength=256",
+				"+kubebuilder:validation:MaxLength=253",
 			},
 		},
 		{
@@ -53,7 +53,7 @@ func TestKubebuilderTags(t *testing.T) {
 			},
 			expected: []string{
 				"+optional",
-				"+kubebuilder:validation:MaxLength=256",
+				"+kubebuilder:validation:MaxLength=253",
 			},
 		},
 		{
@@ -82,7 +82,7 @@ func TestKubebuilderTags(t *testing.T) {
 			expected: []string{
 				"+required",
 				"+kubebuilder:validation:MinLength=1",
-				"+kubebuilder:validation:MaxLength=256",
+				"+kubebuilder:validation:MaxLength=253",
 				"+kubebuilder:validation:Pattern=`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$`",
 			},
 		},
@@ -97,7 +97,7 @@ func TestKubebuilderTags(t *testing.T) {
 			expected: []string{
 				"+required",
 				"+kubebuilder:validation:MinLength=1",
-				"+kubebuilder:validation:MaxLength=256",
+				"+kubebuilder:validation:MaxLength=253",
 				"+kubebuilder:validation:Enum=active;inactive;pending",
 			},
 		},
@@ -139,7 +139,8 @@ func TestKubebuilderTags(t *testing.T) {
 			},
 			expected: []string{
 				"+optional",
-				"+kubebuilder:default=true",
+				"+kubebuilder:validation:Enum=Enabled;Disabled",
+				"+kubebuilder:default=Enabled",
 			},
 		},
 		{
@@ -152,7 +153,8 @@ func TestKubebuilderTags(t *testing.T) {
 			},
 			expected: []string{
 				"+optional",
-				"+kubebuilder:default=false",
+				"+kubebuilder:validation:Enum=Enabled;Disabled",
+				"+kubebuilder:default=Disabled",
 			},
 		},
 		{
@@ -165,7 +167,7 @@ func TestKubebuilderTags(t *testing.T) {
 			},
 			expected: []string{
 				"+optional",
-				"+kubebuilder:validation:MaxLength=256",
+				"+kubebuilder:validation:MaxLength=253",
 				"+kubebuilder:default=https",
 			},
 		},
@@ -212,7 +214,7 @@ func TestKubebuilderTags(t *testing.T) {
 			},
 			expected: []string{
 				"+optional",
-				"+kubebuilder:validation:MaxLength=256",
+				"+kubebuilder:validation:MaxLength=253",
 				"+kubebuilder:validation:Enum=low;high;medium",
 			},
 		},
@@ -270,7 +272,7 @@ func TestKubebuilderTags_WithFieldConfig(t *testing.T) {
 			expected: []string{
 				"+required",
 				"+kubebuilder:validation:MinLength=1",
-				"+kubebuilder:validation:MaxLength=256",
+				"+kubebuilder:validation:MaxLength=253",
 				"+kubebuilder:validation:Format=uri",
 			},
 		},
@@ -298,7 +300,7 @@ func TestKubebuilderTags_WithFieldConfig(t *testing.T) {
 			},
 			expected: []string{
 				"+optional",
-				"+kubebuilder:validation:MaxLength=256",
+				"+kubebuilder:validation:MaxLength=253",
 				"+kubebuilder:validation:Format=hostname",
 				"+kubebuilder:validation:XValidation:rule=\"self.matches('^[a-z]')\"",
 			},
@@ -327,7 +329,7 @@ func TestKubebuilderTags_WithFieldConfig(t *testing.T) {
 			expected: []string{
 				"+required",
 				"+kubebuilder:validation:MinLength=1",
-				"+kubebuilder:validation:MaxLength=256",
+				"+kubebuilder:validation:MaxLength=253",
 			},
 		},
 		{
@@ -354,7 +356,7 @@ func TestKubebuilderTags_WithFieldConfig(t *testing.T) {
 			expected: []string{
 				"+required",
 				"+kubebuilder:validation:MinLength=1",
-				"+kubebuilder:validation:MaxLength=256",
+				"+kubebuilder:validation:MaxLength=253",
 			},
 		},
 		{
@@ -369,7 +371,7 @@ func TestKubebuilderTags_WithFieldConfig(t *testing.T) {
 			expected: []string{
 				"+required",
 				"+kubebuilder:validation:MinLength=1",
-				"+kubebuilder:validation:MaxLength=256",
+				"+kubebuilder:validation:MaxLength=253",
 			},
 		},
 		{
@@ -386,7 +388,7 @@ func TestKubebuilderTags_WithFieldConfig(t *testing.T) {
 			expected: []string{
 				"+required",
 				"+kubebuilder:validation:MinLength=1",
-				"+kubebuilder:validation:MaxLength=256",
+				"+kubebuilder:validation:MaxLength=253",
 			},
 		},
 	}

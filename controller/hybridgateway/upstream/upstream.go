@@ -17,7 +17,7 @@ import (
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
-// UpstreamForRule creates or updates a KongUpstream for the given HTTPRoute rule.
+// UpstreamForRule creates or updates a KongUpstream for the given route rule.
 //
 // The function performs the following operations:
 // 1. Generates the KongUpstream name using the namegen package
@@ -30,32 +30,56 @@ import (
 //   - ctx: The context for API calls and cancellation
 //   - logger: Logger for structured logging
 //   - cl: Kubernetes client for API operations
-//   - httpRoute: The HTTPRoute resource from which the KongUpstream is derived
-//   - rule: The specific rule within the HTTPRoute
-//   - pRef: The parent reference (Gateway) for the HTTPRoute
+//   - parentRoute: The route resource from which the KongUpstream is derived
+//   - rule: The specific rule within the route
+//   - pRef: The parent reference (Gateway) for the route
 //   - cp: The control plane reference for the KongUpstream
 //
 // Returns:
 //   - kongUpstream: The translated KongUpstream resource
 //   - err: Any error that occurred during the process
-func UpstreamForRule(
+func UpstreamForRule[
+	T gwtypes.SupportedRoute,
+	TPtr gwtypes.SupportedRoutePtr[T],
+	R gwtypes.SupportedRouteRule,
+](
 	ctx context.Context,
 	logger logr.Logger,
 	cl client.Client,
-	httpRoute *gwtypes.HTTPRoute,
-	rule gwtypes.HTTPRouteRule,
+	parentRoute TPtr,
+	rule R,
 	pRef *gwtypes.ParentReference,
 	cp *commonv1alpha1.ControlPlaneRef,
 ) (kongUpstream *configurationv1alpha1.KongUpstream, err error) {
-	upstreamName := namegen.NewKongUpstreamName(httpRoute, cp, rule)
+
+	var upstreamName string
+	switch r := any(parentRoute).(type) {
+	case *gwtypes.HTTPRoute:
+		httpRule, ok := any(rule).(gwtypes.HTTPRouteRule)
+		if !ok {
+			return nil, fmt.Errorf("failed to build KongUpstream: unmatched route type and rule type: %T and %T", parentRoute, rule)
+		}
+		upstreamName = namegen.NewKongUpstreamNameForHTTPRouteRule(r, cp, httpRule)
+	case *gwtypes.TLSRoute:
+		tlsRule, ok := any(rule).(gwtypes.TLSRouteRule)
+		if !ok {
+			return nil, fmt.Errorf("failed to build KongUpstream: unmatched route type and rule type: %T and %T", parentRoute, rule)
+		}
+		upstreamName = namegen.NewKongUpstreamNameForTLSRouteRule(r, cp, tlsRule)
+	// TODO: add other types of rules when we support them.
+
+	// Should be unreachable.
+	default:
+		return nil, fmt.Errorf("failed to build KongUpstream: unsupported route type: %T", parentRoute)
+	}
 	logger = logger.WithValues("kongupstream", upstreamName)
-	log.Debug(logger, "Creating KongUpstream for HTTPRoute rule")
+	log.Debug(logger, fmt.Sprintf("Creating KongUpstream for %s rule", parentRoute.GetObjectKind().GroupVersionKind().Kind))
 
 	upstream, err := builder.NewKongUpstream().
 		WithName(upstreamName).
-		WithNamespace(metadata.NamespaceFromParentRef(httpRoute, pRef)).
-		WithLabels(httpRoute, pRef).
-		WithAnnotations(httpRoute, pRef).
+		WithNamespace(metadata.NamespaceFromParentRef(parentRoute, pRef)).
+		WithLabels(parentRoute, pRef).
+		WithAnnotations(parentRoute, pRef).
 		WithSpecName(upstreamName).
 		WithControlPlaneRef(*cp).
 		Build()
@@ -64,7 +88,7 @@ func UpstreamForRule(
 		return nil, fmt.Errorf("failed to build KongUpstream %s: %w", upstreamName, err)
 	}
 
-	if _, err = translator.VerifyAndUpdate(ctx, logger, cl, &upstream, httpRoute, false); err != nil {
+	if _, err = translator.VerifyAndUpdate(ctx, logger, cl, &upstream, parentRoute, false); err != nil {
 		return nil, err
 	}
 

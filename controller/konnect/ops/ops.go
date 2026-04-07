@@ -112,6 +112,9 @@ func Create[
 		err = createSNI(ctx, sdk.GetSNIsSDK(), ent)
 	case *configurationv1alpha1.KongDataPlaneClientCertificate:
 		err = CreateKongDataPlaneClientCertificate(ctx, sdk.GetDataPlaneCertificatesSDK(), ent)
+	case *konnectv1alpha1.MCPServer:
+		// MCPServer is mirror-only, so we use Konnect as the source of truth for it.
+		err = ensureMCPServer(ctx, sdk.GetMCPServersSDK(), ent)
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
 	default:
@@ -207,10 +210,12 @@ func Create[
 		SetKonnectEntityProgrammedConditionTrue(e)
 	}
 
+	var isMirror bool
 	// For mirrorable entities, we need to check if the source type is mirror
 	// and set the mirrored condition accordingly.
 	if isMirrorableEntity(e) {
-		if isMirrorEntity(e) {
+		isMirror = isMirrorEntity(e)
+		if isMirror {
 			if err == nil {
 				SetKonnectEntityMirroredConditionTrue(e)
 			} else {
@@ -229,7 +234,7 @@ func Create[
 			time.Since(start),
 			statusCode,
 		)
-	} else {
+	} else if !isMirror {
 		metricRecorder.RecordKonnectEntityOperationSuccess(
 			sdk.GetServerURL(),
 			metrics.KonnectEntityOperationCreate,
@@ -315,6 +320,9 @@ func Delete[
 		err = deleteSNI(ctx, sdk.GetSNIsSDK(), ent)
 	case *configurationv1alpha1.KongDataPlaneClientCertificate:
 		err = DeleteKongDataPlaneClientCertificate(ctx, sdk.GetDataPlaneCertificatesSDK(), ent)
+	case *konnectv1alpha1.MCPServer:
+		// MCPServer is mirror-only, so we use Konnect as the source of truth for it.
+		break
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
 	default:
@@ -468,9 +476,11 @@ func Update[
 		err = updateSNI(ctx, sdk.GetSNIsSDK(), ent)
 	case *configurationv1alpha1.KongDataPlaneClientCertificate:
 		err = nil // DataPlaneCertificates are immutable.
+	case *konnectv1alpha1.MCPServer:
+		// MCPServer is mirror-only, so we use Konnect as the source of truth for it.
+		break
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
-
 	default:
 		return ctrl.Result{}, fmt.Errorf("unsupported entity type %T", ent)
 	}
@@ -491,10 +501,12 @@ func Update[
 		SetKonnectEntityProgrammedConditionTrue(e)
 	}
 
+	var isMirror bool
 	// For mirrorable entities, we need to check if the source type is mirror
 	// and set the mirrored condition accordingly.
 	if isMirrorableEntity(e) {
-		if isMirrorEntity(e) {
+		isMirror = isMirrorEntity(e)
+		if isMirror {
 			if err == nil {
 				SetKonnectEntityMirroredConditionTrue(e)
 			} else {
@@ -513,7 +525,7 @@ func Update[
 			time.Since(start),
 			statusCode,
 		)
-	} else {
+	} else if !isMirror {
 		metricRecorder.RecordKonnectEntityOperationSuccess(
 			sdk.GetServerURL(),
 			metrics.KonnectEntityOperationUpdate,
@@ -854,6 +866,8 @@ func isMirrorableEntity[
 	switch any(ent).(type) {
 	case *konnectv1alpha2.KonnectGatewayControlPlane:
 		return true
+	case *konnectv1alpha1.MCPServer:
+		return true
 	default:
 		return false
 	}
@@ -868,6 +882,9 @@ func isMirrorEntity[
 	switch cp := any(ent).(type) {
 	case *konnectv1alpha2.KonnectGatewayControlPlane:
 		return cp.Spec.Source != nil && *cp.Spec.Source == commonv1alpha1.EntitySourceMirror
+	case *konnectv1alpha1.MCPServer:
+		// MCPServer is mirror-only
+		return cp.Spec.Source == nil || *cp.Spec.Source == commonv1alpha1.EntitySourceMirror
 	default:
 		return false
 	}

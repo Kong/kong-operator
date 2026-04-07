@@ -1,21 +1,48 @@
 package containers
 
 import (
-	"fmt"
+	"net/netip"
+	"strconv"
 	"testing"
 
 	"github.com/docker/go-connections/nat"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/network"
+	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/test/helpers"
 )
 
-// MappedLocalPort returns a port mapping for a container port that can be used to access the
-// container from the host. The returned string is in the format expected by testcontainers.ContainerRequest ExposedPorts.
+// BindLocalPort exposes a container port and binds it to a fixed IPv4 host port.
 //
-// This is a workaround for a bug in docker that causes IPv4 and IPv6 port mappings to overlap with
-// different containers on the same host. See: https://github.com/moby/moby/issues/42442.
-func MappedLocalPort(t *testing.T, containerPort nat.Port) string {
-	// Return the port mapping in the format expected by testcontainers.ContainerRequest ExposedPorts:
-	// <host>:<host-port>:<container-port>.
-	return fmt.Sprintf("0.0.0.0:%d:%s", helpers.GetFreePort(t), containerPort.Port())
+// This preserves the explicit IPv4 binding workaround for moby/moby#42442 without relying on
+// Docker accepting host mapping syntax in ContainerRequest.ExposedPorts.
+func BindLocalPort(t *testing.T, req *testcontainers.ContainerRequest, containerPort nat.Port) {
+	t.Helper()
+
+	normalizedPort, err := nat.NewPort(containerPort.Proto(), containerPort.Port())
+	require.NoError(t, err)
+
+	hostPort := strconv.Itoa(helpers.GetFreePort(t))
+	req.ExposedPorts = append(req.ExposedPorts, string(normalizedPort))
+
+	previousModifier := req.HostConfigModifier
+	req.HostConfigModifier = func(hostConfig *container.HostConfig) {
+		if previousModifier != nil {
+			previousModifier(hostConfig)
+		}
+		if hostConfig.PortBindings == nil {
+			hostConfig.PortBindings = network.PortMap{}
+		}
+
+		port, ok := network.PortFrom(uint16(normalizedPort.Int()), network.IPProtocol(normalizedPort.Proto()))
+		require.True(t, ok)
+		addr, err := netip.ParseAddr("0.0.0.0")
+		require.NoError(t, err)
+		hostConfig.PortBindings[port] = append(hostConfig.PortBindings[port], network.PortBinding{
+			HostIP:   addr,
+			HostPort: hostPort,
+		})
+	}
 }

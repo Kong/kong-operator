@@ -60,11 +60,18 @@ spec:
                 description: APISpec defines the desired state of the resource's API
                   spec fields.
                 properties:
+                  can_own_applications:
+                    default: Disabled
+                    description: Whether the team is allowed to own applications
+                    enum:
+                    - Enabled
+                    - Disabled
+                    type: string
                   description:
                     maxLength: 250
                     type: string
                   name:
-                    maxLength: 256
+                    maxLength: 253
                     minLength: 1
                     pattern: ^[\w \W]+$
                     type: string

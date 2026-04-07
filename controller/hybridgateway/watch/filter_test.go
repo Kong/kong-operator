@@ -497,7 +497,7 @@ func TestFilterByHTTPRoute(t *testing.T) {
 			}
 			cl := builder.Build()
 
-			predicates := filterByHTTPRoute(context.Background(), cl)
+			predicates := filterByRoute[gwtypes.HTTPRoute](context.Background(), cl)
 			require.NotNil(t, predicates)
 
 			var result bool

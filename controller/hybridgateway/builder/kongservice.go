@@ -6,6 +6,7 @@ import (
 	"maps"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -42,7 +43,7 @@ func (b *KongServiceBuilder) WithNamespace(namespace string) *KongServiceBuilder
 }
 
 // WithLabels sets the labels for the KongService being built.
-func (b *KongServiceBuilder) WithLabels(route *gwtypes.HTTPRoute, parentRef *gwtypes.ParentReference) *KongServiceBuilder {
+func (b *KongServiceBuilder) WithLabels(route client.Object, parentRef *gwtypes.ParentReference) *KongServiceBuilder {
 	labels := metadata.BuildLabels(route, parentRef)
 	if b.service.Labels == nil {
 		b.service.Labels = make(map[string]string)
@@ -52,7 +53,7 @@ func (b *KongServiceBuilder) WithLabels(route *gwtypes.HTTPRoute, parentRef *gwt
 }
 
 // WithAnnotations sets the annotations for the KongService being built.
-func (b *KongServiceBuilder) WithAnnotations(route *gwtypes.HTTPRoute, parentRef *gwtypes.ParentReference) *KongServiceBuilder {
+func (b *KongServiceBuilder) WithAnnotations(route client.Object, parentRef *gwtypes.ParentReference) *KongServiceBuilder {
 	annotations := metadata.BuildAnnotations(route, parentRef)
 	if b.service.Annotations == nil {
 		b.service.Annotations = make(map[string]string)
@@ -79,8 +80,8 @@ func (b *KongServiceBuilder) WithControlPlaneRef(cpr commonv1alpha1.ControlPlane
 	return b
 }
 
-// WithOwner sets the owner reference for the KongService to the given HTTPRoute.
-func (b *KongServiceBuilder) WithOwner(owner *gwtypes.HTTPRoute) *KongServiceBuilder {
+// WithOwner sets the owner reference for the KongService to the given route.
+func (b *KongServiceBuilder) WithOwner(owner client.Object) *KongServiceBuilder {
 	if owner == nil {
 		b.errors = append(b.errors, errors.New("owner cannot be nil"))
 		return b
@@ -101,6 +102,8 @@ func (b *KongServiceBuilder) WithProtocol(protocol string) *KongServiceBuilder {
 	switch protocol {
 	case "http", "HTTP":
 		b.service.Spec.Protocol = sdkkonnectcomp.ProtocolHTTP
+	case "tls", "TLS":
+		b.service.Spec.Protocol = sdkkonnectcomp.ProtocolTLS
 	default:
 		b.errors = append(b.errors, fmt.Errorf("unsupported protocol: %s", protocol))
 	}
