@@ -318,6 +318,11 @@ func TestPortal(t *testing.T) {
 			return &xkonnectv1alpha1.Portal{
 				ObjectMeta: common.CommonObjectMeta(ns.Name),
 				Spec: xkonnectv1alpha1.PortalSpec{
+					KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+						APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+							Name: "test-auth",
+						},
+					},
 					APISpec: xkonnectv1alpha1.PortalAPISpec{
 						Name: "portal-labels",
 						Labels: xkonnectv1alpha1.LabelsUpdate{
