@@ -165,8 +165,8 @@ func GenerateHTTPRoute(namespace string, gatewayName, serviceName string, opts .
 func GenerateTLSRoute(namespace string, gatewayName, serviceName string, portNumber int, opts ...func(*gatewayv1.TLSRoute)) *gatewayv1.TLSRoute {
 	tlsRoute := &gatewayv1.TLSRoute{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      namespace,
-			Namespace: uuid.NewString(),
+			Name:      uuid.NewString(),
+			Namespace: namespace,
 		},
 		Spec: gatewayv1.TLSRouteSpec{
 			CommonRouteSpec: gatewayv1.CommonRouteSpec{
