@@ -1,5 +1,5 @@
 apiVersion: eventgateway.konghq.com/v1alpha1
-kind: DataPlane
+kind: KegDataPlane
 metadata:
   name: my-event-gateway-dp
   namespace: default

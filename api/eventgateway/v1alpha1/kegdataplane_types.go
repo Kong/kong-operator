@@ -24,10 +24,10 @@ import (
 )
 
 func init() {
-	SchemeBuilder.Register(&DataPlane{}, &DataPlaneList{})
+	SchemeBuilder.Register(&KegDataPlane{}, &KegDataPlaneList{})
 }
 
-// DataPlane is the Schema for the EventGateway data planes API.
+// KegDataPlane is the Schema for the EventGateway data planes API.
 // It manages a keg binary Deployment that connects to Konnect via a
 // referenced KonnectEventGateway resource.
 //
@@ -36,38 +36,38 @@ func init() {
 // +kubebuilder:object:generate=true
 // +kubebuilder:subresource:status
 // +kubebuilder:subresource:scale:specpath=.spec.deployment.replicas,statuspath=.status.replicas,selectorpath=.status.selector
-// +kubebuilder:resource:shortName=egdp,categories=kong
+// +kubebuilder:resource:shortName=kegdp,categories=kong
 // +kubebuilder:printcolumn:name="Ready",description="The Resource is ready",type=string,JSONPath=`.status.conditions[?(@.type=='Ready')].status`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 // +kong:channels=kong-operator
-type DataPlane struct {
+type KegDataPlane struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Spec defines the desired state of DataPlane.
+	// Spec defines the desired state of KegDataPlane.
 	//
 	// +required
-	Spec DataPlaneSpec `json:"spec,omitzero"`
+	Spec KegDataPlaneSpec `json:"spec,omitzero"`
 
-	// Status defines the observed state of DataPlane.
+	// Status defines the observed state of KegDataPlane.
 	//
 	// +optional
-	Status DataPlaneStatus `json:"status,omitempty"`
+	Status KegDataPlaneStatus `json:"status,omitempty"`
 }
 
-// DataPlaneList contains a list of DataPlane.
+// KegDataPlaneList contains a list of KegDataPlane.
 //
 // +kubebuilder:object:root=true
-type DataPlaneList struct {
+type KegDataPlaneList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 
-	Items []DataPlane `json:"items"`
+	Items []KegDataPlane `json:"items"`
 }
 
-// DataPlaneSpec defines the desired state of DataPlane.
-type DataPlaneSpec struct {
-	// ControlPlaneRef references the control plane this DataPlane connects to.
+// KegDataPlaneSpec defines the desired state of KegDataPlane.
+type KegDataPlaneSpec struct {
+	// ControlPlaneRef references the control plane this KegDataPlane connects to.
 	// The type field identifies which kind of control plane is being referenced.
 	// Currently only konnectNamespacedRef is supported, which references a
 	// KonnectEventGateway resource in the same namespace.
@@ -91,10 +91,10 @@ type DataPlaneSpec struct {
 	// https://developer.konghq.com/event-gateway/configuration/#applying-configuration
 	//
 	// +optional
-	Config *DataPlaneConfiguration `json:"config,omitempty"`
+	Config *KegDataPlaneConfiguration `json:"config,omitempty"`
 }
 
-// DeploymentOptions specifies options for the Deployment managed by the DataPlane controller.
+// DeploymentOptions specifies options for the Deployment managed by the KegDataPlane controller.
 //
 // +kubebuilder:validation:XValidation:message="Using both replicas and scaling fields is not allowed.",rule="!(has(self.scaling) && has(self.replicas))"
 type DeploymentOptions struct {
@@ -170,7 +170,7 @@ type HorizontalScaling struct {
 	Behavior *autoscalingv2.HorizontalPodAutoscalerBehavior `json:"behavior,omitempty" protobuf:"bytes,5,opt,name=behavior"`
 }
 
-// NetworkOptions defines network-related options for an DataPlane.
+// NetworkOptions defines network-related options for a KegDataPlane.
 type NetworkOptions struct {
 	// Services configures the Kubernetes Services that expose the keg pod to
 	// Kafka clients.
@@ -213,7 +213,7 @@ type LabelName string
 // +kubebuilder:validation:Pattern=`^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$`
 type LabelValue string
 
-// ServiceOptions contains Service configuration for the DataPlane.
+// ServiceOptions contains Service configuration for the KegDataPlane.
 //
 // +kubebuilder:validation:XValidation:message="Cannot set NodePort when service type is not NodePort or LoadBalancer",rule="!has(self.ports) || !(self.ports.exists(p, has(p.nodePort))) ? true : has(self.type) && ['LoadBalancer', 'NodePort'].exists(t, t == self.type)"
 type ServiceOptions struct {
@@ -230,7 +230,7 @@ type ServiceOptions struct {
 	// +optional
 	Annotations map[string]string `json:"annotations,omitempty"`
 
-	// Labels are propagated to the DataPlane's Kafka Service.
+	// Labels are propagated to the KegDataPlane's Kafka Service.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxProperties=64
@@ -277,9 +277,9 @@ type ServicePort struct {
 	NodePort *int32 `json:"nodePort,omitempty"`
 }
 
-// DataPlaneConfiguration provides optional overrides for keg runtime settings.
+// KegDataPlaneConfiguration provides optional overrides for keg runtime settings.
 // All fields map 1-to-1 to keg configuration variables.
-type DataPlaneConfiguration struct {
+type KegDataPlaneConfiguration struct {
 	// Konnect provides optional overrides for the keg to Konnect connection
 	// parameters. All other connection values (region, gateway_cluster_id,
 	// cert paths) are derived automatically and cannot be overridden here.
@@ -420,9 +420,9 @@ type RuntimeOptions struct {
 	ShutdownTimeoutSeconds *int32 `json:"shutdownTimeoutSeconds,omitempty"`
 }
 
-// DataPlaneStatus defines the observed state of DataPlane.
-type DataPlaneStatus struct {
-	// Conditions describe the status of the DataPlane.
+// KegDataPlaneStatus defines the observed state of KegDataPlane.
+type KegDataPlaneStatus struct {
+	// Conditions describe the status of the KegDataPlane.
 	//
 	// +listType=map
 	// +listMapKey=type
@@ -439,19 +439,19 @@ type DataPlaneStatus struct {
 	// +optional
 	ReadyReplicas int32 `json:"readyReplicas"`
 
-	// Replicas indicates how many replicas have been set for the DataPlane.
+	// Replicas indicates how many replicas have been set for the KegDataPlane.
 	//
 	// +kubebuilder:default=0
 	// +optional
 	Replicas int32 `json:"replicas"`
 }
 
-// GetConditions retrieves the DataPlane Status Conditions.
-func (e *DataPlane) GetConditions() []metav1.Condition {
+// GetConditions retrieves the KegDataPlane Status Conditions.
+func (e *KegDataPlane) GetConditions() []metav1.Condition {
 	return e.Status.Conditions
 }
 
-// SetConditions sets the DataPlane Status Conditions.
-func (e *DataPlane) SetConditions(conditions []metav1.Condition) {
+// SetConditions sets the KegDataPlane Status Conditions.
+func (e *KegDataPlane) SetConditions(conditions []metav1.Condition) {
 	e.Status.Conditions = conditions
 }

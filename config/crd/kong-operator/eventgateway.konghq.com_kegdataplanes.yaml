@@ -5,18 +5,18 @@ metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: kong-operator
     kubernetes-configuration.konghq.com/version: v2.1.0
-  name: dataplanes.eventgateway.konghq.com
+  name: kegdataplanes.eventgateway.konghq.com
 spec:
   group: eventgateway.konghq.com
   names:
     categories:
     - kong
-    kind: DataPlane
-    listKind: DataPlaneList
-    plural: dataplanes
+    kind: KegDataPlane
+    listKind: KegDataPlaneList
+    plural: kegdataplanes
     shortNames:
-    - egdp
-    singular: dataplane
+    - kegdp
+    singular: kegdataplane
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
@@ -31,7 +31,7 @@ spec:
     schema:
       openAPIV3Schema:
         description: |-
-          DataPlane is the Schema for the EventGateway data planes API.
+          KegDataPlane is the Schema for the EventGateway data planes API.
           It manages a keg binary Deployment that connects to Konnect via a
           referenced KonnectEventGateway resource.
         properties:
@@ -53,7 +53,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: Spec defines the desired state of DataPlane.
+            description: Spec defines the desired state of KegDataPlane.
             properties:
               config:
                 description: |-
@@ -174,7 +174,7 @@ spec:
                 type: object
               controlPlaneRef:
                 description: |-
-                  ControlPlaneRef references the control plane this DataPlane connects to.
+                  ControlPlaneRef references the control plane this KegDataPlane connects to.
                   The type field identifies which kind of control plane is being referenced.
                   Currently only konnectNamespacedRef is supported, which references a
                   KonnectEventGateway resource in the same namespace.
@@ -9510,7 +9510,7 @@ spec:
                               minLength: 0
                               pattern: ^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$
                               type: string
-                            description: Labels are propagated to the DataPlane's
+                            description: Labels are propagated to the KegDataPlane's
                               Kafka Service.
                             maxProperties: 64
                             type: object
@@ -9573,7 +9573,7 @@ spec:
             - controlPlaneRef
             type: object
           status:
-            description: Status defines the observed state of DataPlane.
+            description: Status defines the observed state of KegDataPlane.
             properties:
               conditions:
                 default:
@@ -9582,7 +9582,7 @@ spec:
                   reason: Pending
                   status: Unknown
                   type: Ready
-                description: Conditions describe the status of the DataPlane.
+                description: Conditions describe the status of the KegDataPlane.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -9651,7 +9651,7 @@ spec:
               replicas:
                 default: 0
                 description: Replicas indicates how many replicas have been set for
-                  the DataPlane.
+                  the KegDataPlane.
                 format: int32
                 type: integer
             type: object

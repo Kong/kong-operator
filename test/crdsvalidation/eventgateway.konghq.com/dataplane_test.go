@@ -14,10 +14,10 @@ import (
 	"github.com/kong/kong-operator/v2/test/envtest"
 )
 
-func validDataPlane(ns string) *eventgatewayv1alpha1.DataPlane {
-	return &eventgatewayv1alpha1.DataPlane{
+func validDataPlane(ns string) *eventgatewayv1alpha1.KegDataPlane {
+	return &eventgatewayv1alpha1.KegDataPlane{
 		ObjectMeta: common.CommonObjectMeta(ns),
-		Spec: eventgatewayv1alpha1.DataPlaneSpec{
+		Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 			ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
 				Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
 				KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
@@ -36,16 +36,16 @@ func TestEventGatewayDataPlane(t *testing.T) {
 	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	t.Run("controlPlaneRef validation", func(t *testing.T) {
-		common.TestCasesGroup[*eventgatewayv1alpha1.DataPlane]{
+		common.TestCasesGroup[*eventgatewayv1alpha1.KegDataPlane]{
 			{
 				Name:       "konnectNamespacedRef type with ref set - valid",
 				TestObject: validDataPlane(ns.Name),
 			},
 			{
 				Name: "konnectNamespacedRef type without ref - invalid",
-				TestObject: &eventgatewayv1alpha1.DataPlane{
+				TestObject: &eventgatewayv1alpha1.KegDataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: eventgatewayv1alpha1.DataPlaneSpec{
+					Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 						ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
 							Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
 						},
@@ -57,16 +57,16 @@ func TestEventGatewayDataPlane(t *testing.T) {
 	})
 
 	t.Run("service options nodeport validation", func(t *testing.T) {
-		common.TestCasesGroup[*eventgatewayv1alpha1.DataPlane]{
+		common.TestCasesGroup[*eventgatewayv1alpha1.KegDataPlane]{
 			{
 				Name:       "no network set",
 				TestObject: validDataPlane(ns.Name),
 			},
 			{
 				Name: "kafka service, no ports",
-				TestObject: &eventgatewayv1alpha1.DataPlane{
+				TestObject: &eventgatewayv1alpha1.KegDataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: eventgatewayv1alpha1.DataPlaneSpec{
+					Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 						ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
 							Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
 							KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
@@ -85,9 +85,9 @@ func TestEventGatewayDataPlane(t *testing.T) {
 			},
 			{
 				Name: "kafka service, nodePort with type NodePort - valid",
-				TestObject: &eventgatewayv1alpha1.DataPlane{
+				TestObject: &eventgatewayv1alpha1.KegDataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: eventgatewayv1alpha1.DataPlaneSpec{
+					Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 						ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
 							Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
 							KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
@@ -109,9 +109,9 @@ func TestEventGatewayDataPlane(t *testing.T) {
 			},
 			{
 				Name: "kafka service, nodePort with type LoadBalancer - valid",
-				TestObject: &eventgatewayv1alpha1.DataPlane{
+				TestObject: &eventgatewayv1alpha1.KegDataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: eventgatewayv1alpha1.DataPlaneSpec{
+					Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 						ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
 							Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
 							KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
@@ -133,9 +133,9 @@ func TestEventGatewayDataPlane(t *testing.T) {
 			},
 			{
 				Name: "kafka service, nodePort with type ClusterIP - invalid",
-				TestObject: &eventgatewayv1alpha1.DataPlane{
+				TestObject: &eventgatewayv1alpha1.KegDataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: eventgatewayv1alpha1.DataPlaneSpec{
+					Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 						ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
 							Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
 							KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
@@ -160,12 +160,12 @@ func TestEventGatewayDataPlane(t *testing.T) {
 	})
 
 	t.Run("deployment replicas and scaling are mutually exclusive", func(t *testing.T) {
-		common.TestCasesGroup[*eventgatewayv1alpha1.DataPlane]{
+		common.TestCasesGroup[*eventgatewayv1alpha1.KegDataPlane]{
 			{
 				Name: "only replicas set - valid",
-				TestObject: &eventgatewayv1alpha1.DataPlane{
+				TestObject: &eventgatewayv1alpha1.KegDataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: eventgatewayv1alpha1.DataPlaneSpec{
+					Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 						ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
 							Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
 							KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
@@ -180,9 +180,9 @@ func TestEventGatewayDataPlane(t *testing.T) {
 			},
 			{
 				Name: "only scaling set - valid",
-				TestObject: &eventgatewayv1alpha1.DataPlane{
+				TestObject: &eventgatewayv1alpha1.KegDataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: eventgatewayv1alpha1.DataPlaneSpec{
+					Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 						ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
 							Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
 							KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
@@ -201,9 +201,9 @@ func TestEventGatewayDataPlane(t *testing.T) {
 			},
 			{
 				Name: "both replicas and scaling set - invalid",
-				TestObject: &eventgatewayv1alpha1.DataPlane{
+				TestObject: &eventgatewayv1alpha1.KegDataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: eventgatewayv1alpha1.DataPlaneSpec{
+					Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 						ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
 							Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
 							KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
@@ -226,19 +226,19 @@ func TestEventGatewayDataPlane(t *testing.T) {
 	})
 
 	t.Run("observability log flags enum", func(t *testing.T) {
-		common.TestCasesGroup[*eventgatewayv1alpha1.DataPlane]{
+		common.TestCasesGroup[*eventgatewayv1alpha1.KegDataPlane]{
 			{
 				Name: "valid log level: info",
-				TestObject: &eventgatewayv1alpha1.DataPlane{
+				TestObject: &eventgatewayv1alpha1.KegDataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: eventgatewayv1alpha1.DataPlaneSpec{
+					Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 						ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
 							Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
 							KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
 								Name: "my-event-gateway",
 							},
 						},
-						Config: &eventgatewayv1alpha1.DataPlaneConfiguration{
+						Config: &eventgatewayv1alpha1.KegDataPlaneConfiguration{
 							Observability: &eventgatewayv1alpha1.ObservabilityConfig{
 								LogFlags: new("info"),
 							},
@@ -248,16 +248,16 @@ func TestEventGatewayDataPlane(t *testing.T) {
 			},
 			{
 				Name: "valid log level: debug",
-				TestObject: &eventgatewayv1alpha1.DataPlane{
+				TestObject: &eventgatewayv1alpha1.KegDataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: eventgatewayv1alpha1.DataPlaneSpec{
+					Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 						ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
 							Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
 							KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
 								Name: "my-event-gateway",
 							},
 						},
-						Config: &eventgatewayv1alpha1.DataPlaneConfiguration{
+						Config: &eventgatewayv1alpha1.KegDataPlaneConfiguration{
 							Observability: &eventgatewayv1alpha1.ObservabilityConfig{
 								LogFlags: new("debug"),
 							},
@@ -267,16 +267,16 @@ func TestEventGatewayDataPlane(t *testing.T) {
 			},
 			{
 				Name: "invalid log level - invalid",
-				TestObject: &eventgatewayv1alpha1.DataPlane{
+				TestObject: &eventgatewayv1alpha1.KegDataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: eventgatewayv1alpha1.DataPlaneSpec{
+					Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 						ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
 							Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
 							KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
 								Name: "my-event-gateway",
 							},
 						},
-						Config: &eventgatewayv1alpha1.DataPlaneConfiguration{
+						Config: &eventgatewayv1alpha1.KegDataPlaneConfiguration{
 							Observability: &eventgatewayv1alpha1.ObservabilityConfig{
 								LogFlags: new("verbose"),
 							},
@@ -289,19 +289,19 @@ func TestEventGatewayDataPlane(t *testing.T) {
 	})
 
 	t.Run("minimum field validations", func(t *testing.T) {
-		common.TestCasesGroup[*eventgatewayv1alpha1.DataPlane]{
+		common.TestCasesGroup[*eventgatewayv1alpha1.KegDataPlane]{
 			{
 				Name: "configPollIntervalSeconds=0 - invalid",
-				TestObject: &eventgatewayv1alpha1.DataPlane{
+				TestObject: &eventgatewayv1alpha1.KegDataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: eventgatewayv1alpha1.DataPlaneSpec{
+					Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 						ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
 							Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
 							KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
 								Name: "my-event-gateway",
 							},
 						},
-						Config: &eventgatewayv1alpha1.DataPlaneConfiguration{
+						Config: &eventgatewayv1alpha1.KegDataPlaneConfiguration{
 							ConfigPollIntervalSeconds: new(int32(0)),
 						},
 					},
@@ -310,16 +310,16 @@ func TestEventGatewayDataPlane(t *testing.T) {
 			},
 			{
 				Name: "apiRequestTimeoutSeconds=0 - invalid",
-				TestObject: &eventgatewayv1alpha1.DataPlane{
+				TestObject: &eventgatewayv1alpha1.KegDataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: eventgatewayv1alpha1.DataPlaneSpec{
+					Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 						ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
 							Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
 							KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
 								Name: "my-event-gateway",
 							},
 						},
-						Config: &eventgatewayv1alpha1.DataPlaneConfiguration{
+						Config: &eventgatewayv1alpha1.KegDataPlaneConfiguration{
 							Konnect: &eventgatewayv1alpha1.KonnectConfig{
 								APIRequestTimeoutSeconds: new(int32(0)),
 							},
@@ -330,16 +330,16 @@ func TestEventGatewayDataPlane(t *testing.T) {
 			},
 			{
 				Name: "shutdownTimeoutSeconds=0 - invalid",
-				TestObject: &eventgatewayv1alpha1.DataPlane{
+				TestObject: &eventgatewayv1alpha1.KegDataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: eventgatewayv1alpha1.DataPlaneSpec{
+					Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 						ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
 							Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
 							KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
 								Name: "my-event-gateway",
 							},
 						},
-						Config: &eventgatewayv1alpha1.DataPlaneConfiguration{
+						Config: &eventgatewayv1alpha1.KegDataPlaneConfiguration{
 							Runtime: &eventgatewayv1alpha1.RuntimeOptions{
 								ShutdownTimeoutSeconds: new(int32(0)),
 							},
@@ -352,12 +352,12 @@ func TestEventGatewayDataPlane(t *testing.T) {
 	})
 
 	t.Run("status defaults", func(t *testing.T) {
-		common.TestCasesGroup[*eventgatewayv1alpha1.DataPlane]{
+		common.TestCasesGroup[*eventgatewayv1alpha1.KegDataPlane]{
 			{
 				Name: "ready condition defaulted on first status update",
-				TestObject: &eventgatewayv1alpha1.DataPlane{
+				TestObject: &eventgatewayv1alpha1.KegDataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: eventgatewayv1alpha1.DataPlaneSpec{
+					Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 						ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
 							Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
 							KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
@@ -367,11 +367,11 @@ func TestEventGatewayDataPlane(t *testing.T) {
 					},
 					// Non-zero status triggers the framework's status update, which causes
 					// the API server to apply the +kubebuilder:default on status.conditions.
-					Status: eventgatewayv1alpha1.DataPlaneStatus{
+					Status: eventgatewayv1alpha1.KegDataPlaneStatus{
 						Replicas: 1,
 					},
 				},
-				Assert: func(t *testing.T, dp *eventgatewayv1alpha1.DataPlane) {
+				Assert: func(t *testing.T, dp *eventgatewayv1alpha1.KegDataPlane) {
 					var readyCond *metav1.Condition
 					for i := range dp.Status.Conditions {
 						if dp.Status.Conditions[i].Type == "Ready" {
