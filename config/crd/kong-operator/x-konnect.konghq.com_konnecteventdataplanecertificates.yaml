@@ -133,6 +133,39 @@ spec:
                   rule: 'self.type == ''konnectID'' ? has(self.konnectID) : true'
                 - message: when type is konnectID, namespacedRef must not be set
                   rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
+              secretRef:
+                description: |-
+                  SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+                  This field is used when type is 'secretRef'.
+                  The Secret must contain the relevant data keys for this resource.
+                properties:
+                  name:
+                    description: Name is the name of the referred resource.
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                  namespace:
+                    description: |-
+                      Namespace is the namespace of the referred resource.
+
+                      For namespace-scoped resources if no Namespace is provided then the
+                      namespace of the parent object MUST be used.
+
+                      This field MUST not be set when referring to cluster-scoped resources.
+                    maxLength: 253
+                    type: string
+                required:
+                - name
+                type: object
+              type:
+                default: inline
+                description: |-
+                  Type indicates the source of the sensitive data.
+                  Can be 'inline' or 'secretRef'.
+                enum:
+                - inline
+                - secretRef
+                type: string
             required:
             - gateway_ref
             type: object

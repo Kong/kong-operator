@@ -11,6 +11,7 @@ apiGroupVersions:
         name: KonnectEventControlPlane
       - path: /v1/event-gateways/{gatewayId}/data-plane-certificates
         name: KonnectEventDataPlaneCertificate
+        optionalSecretReference: true
       - path: /v3/portals
         cel:
           name:

@@ -27,6 +27,9 @@ type Config struct {
 	// When ObjectRef has an Import config, it will be imported from an external
 	// package instead of being generated locally.
 	CommonTypes *config.CommonTypesConfig
+	// SecretRefEntities is the set of entity names that should generate an
+	// optional secret reference on the Spec (SourceType discriminator + SecretRef field).
+	SecretRefEntities map[string]bool
 }
 
 // Generator generates Go CRD types from parsed OpenAPI schemas.
@@ -336,37 +339,49 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		return KubebuilderTags(prop, entityName, g.config.FieldConfig)
 	}
 
+	hasOptionalSecretRef := g.config.SecretRefEntities[entityName]
+
 	funcMap := template.FuncMap{
-		"goType":            g.goType,
-		"goFieldName":       goFieldName,
-		"jsonTag":           jsonTag,
-		"kubebuilderTags":   kubebuilderTagsWithConfig,
-		"isRefProperty":     isRefProperty,
-		"refEntityName":     parser.GetRefEntityName,
-		"skipProperty":      skipProperty,
-		"lower":             strings.ToLower,
-		"formatComment":     formatComment,
-		"hasRootOneOf":      hasRootOneOf,
-		"objectRefTypeName": func() string { return g.objectRefTypeName() },
+		"goType":                g.goType,
+		"goFieldName":           goFieldName,
+		"jsonTag":               jsonTag,
+		"kubebuilderTags":       kubebuilderTagsWithConfig,
+		"isRefProperty":         isRefProperty,
+		"refEntityName":         parser.GetRefEntityName,
+		"skipProperty":          skipProperty,
+		"lower":                 strings.ToLower,
+		"formatComment":         formatComment,
+		"hasRootOneOf":          hasRootOneOf,
+		"objectRefTypeName":     func() string { return g.objectRefTypeName() },
+		"namespacedRefTypeName": func() string { return g.namespacedRefTypeName() },
 	}
 
 	tmpl := template.Must(template.New("crd").Funcs(funcMap).Parse(crdTypeTemplate))
 
+	// Determine whether we need the ObjectRef import: either for dependencies/refs
+	// or for the optional secret ref's NamespacedRef type.
+	objectRefImport := g.objectRefImportIfNeeded(schema)
+	if objectRefImport == nil && hasOptionalSecretRef && g.objectRefImported() {
+		objectRefImport = g.config.CommonTypes.ObjectRef.Import
+	}
+
 	var buf strings.Builder
 	data := struct {
-		EntityName      string
-		Schema          *parser.Schema
-		APIGroup        string
-		APIVersion      string
-		NeedsJSONImport bool
-		ObjectRefImport *config.ImportConfig
+		EntityName           string
+		Schema               *parser.Schema
+		APIGroup             string
+		APIVersion           string
+		NeedsJSONImport      bool
+		ObjectRefImport      *config.ImportConfig
+		HasOptionalSecretRef bool
 	}{
-		EntityName:      entityName,
-		Schema:          schema,
-		APIGroup:        g.config.APIGroup,
-		APIVersion:      g.config.APIVersion,
-		NeedsJSONImport: schemaUsesJSON(g, schema),
-		ObjectRefImport: g.objectRefImportIfNeeded(schema),
+		EntityName:           entityName,
+		Schema:               schema,
+		APIGroup:             g.config.APIGroup,
+		APIVersion:           g.config.APIVersion,
+		NeedsJSONImport:      schemaUsesJSON(g, schema),
+		ObjectRefImport:      objectRefImport,
+		HasOptionalSecretRef: hasOptionalSecretRef,
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
@@ -624,13 +639,15 @@ func (g *Generator) generateCommonTypes() (string, error) {
 
 	var buf strings.Builder
 	data := struct {
-		APIVersion        string
-		ObjectRefImported bool
-		Namespaced        bool
+		APIVersion           string
+		ObjectRefImported    bool
+		Namespaced           bool
+		HasSecretRefEntities bool
 	}{
-		APIVersion:        g.config.APIVersion,
-		ObjectRefImported: g.objectRefImported(),
-		Namespaced:        g.objectRefNamespaced(),
+		APIVersion:           g.config.APIVersion,
+		ObjectRefImported:    g.objectRefImported(),
+		Namespaced:           g.objectRefNamespaced(),
+		HasSecretRefEntities: len(g.config.SecretRefEntities) > 0,
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
@@ -686,15 +703,30 @@ func schemaUsesObjectRef(schema *parser.Schema) bool {
 // import alias when ObjectRef is imported from an external package.
 func (g *Generator) objectRefTypeName() string {
 	if g.objectRefImported() {
-		imp := g.config.CommonTypes.ObjectRef.Import
-		if imp.Alias != "" {
-			return imp.Alias + ".ObjectRef"
-		}
-		// Fall back to last segment of the import path as the package name.
-		parts := strings.Split(imp.Path, "/")
-		return parts[len(parts)-1] + ".ObjectRef"
+		return g.importedTypePrefix() + "ObjectRef"
 	}
 	return "ObjectRef"
+}
+
+// namespacedRefTypeName returns the Go type name for NamespacedRef, qualified
+// with the import alias when ObjectRef (and therefore NamespacedRef) is
+// imported from an external package.
+func (g *Generator) namespacedRefTypeName() string {
+	if g.objectRefImported() {
+		return g.importedTypePrefix() + "NamespacedRef"
+	}
+	return "NamespacedRef"
+}
+
+// importedTypePrefix returns the package qualifier prefix for types imported
+// from the ObjectRef external package (e.g. "commonv1alpha1.").
+func (g *Generator) importedTypePrefix() string {
+	imp := g.config.CommonTypes.ObjectRef.Import
+	if imp.Alias != "" {
+		return imp.Alias + "."
+	}
+	parts := strings.Split(imp.Path, "/")
+	return parts[len(parts)-1] + "."
 }
 
 // sdkOpsImport represents a single import needed for SDK ops generation.
