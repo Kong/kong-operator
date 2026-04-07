@@ -106,7 +106,7 @@ func TestNewName(t *testing.T) {
 	}
 }
 
-func TestNewKongUpstreamName(t *testing.T) {
+func TestNewKongUpstreamNameForHTTPRoute(t *testing.T) {
 	tests := []struct {
 		name     string
 		route    *gwtypes.HTTPRoute
@@ -182,7 +182,7 @@ func TestNewKongUpstreamName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := NewKongUpstreamName(tt.route, tt.cp, tt.rule)
+			result := NewKongUpstreamNameForHTTPRouteRule(tt.route, tt.cp, tt.rule)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -209,8 +209,8 @@ func TestNewKongUpstreamName_Equality(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			nameA := NewKongUpstreamName(tt.route, tt.cp, tt.ruleA)
-			nameB := NewKongUpstreamName(tt.route, tt.cp, tt.ruleB)
+			nameA := NewKongUpstreamNameForHTTPRouteRule(tt.route, tt.cp, tt.ruleA)
+			nameB := NewKongUpstreamNameForHTTPRouteRule(tt.route, tt.cp, tt.ruleB)
 
 			if tt.equal {
 				assert.Equal(t, nameA, nameB)
@@ -261,7 +261,7 @@ func TestNewKongServiceName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := NewKongServiceName(tt.route, tt.cp, tt.rule)
+			result := NewKongServiceNameForHTTPRouteRule(tt.route, tt.cp, tt.rule)
 			expected := tt.expectedReadable + ".cp" + utils.Hash32(tt.cp) + "." + utils.Hash32(tt.rule.BackendRefs)
 			assert.Equal(t, expected, result)
 		})
@@ -289,8 +289,8 @@ func TestNewKongServiceName_Equality(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			nameA := NewKongServiceName(tt.route, tt.cp, tt.ruleA)
-			nameB := NewKongServiceName(tt.route, tt.cp, tt.ruleB)
+			nameA := NewKongServiceNameForHTTPRouteRule(tt.route, tt.cp, tt.ruleA)
+			nameB := NewKongServiceNameForHTTPRouteRule(tt.route, tt.cp, tt.ruleB)
 
 			if tt.equal {
 				assert.Equal(t, nameA, nameB)
@@ -405,7 +405,7 @@ func TestNewKongServiceName_BackendDisplayLimit(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			rule := gatewayv1.HTTPRouteRule{BackendRefs: tt.backends}
-			result := NewKongServiceName(tt.route, tt.cp, rule)
+			result := NewKongServiceNameForHTTPRouteRule(tt.route, tt.cp, rule)
 			expected := buildExpected(tt.readable, tt.cp, tt.backends)
 			assert.Equal(t, expected, result)
 		})
@@ -693,14 +693,14 @@ func TestNameGenerationConsistency(t *testing.T) {
 	}
 
 	t.Run("upstream name consistency", func(t *testing.T) {
-		result1 := NewKongUpstreamName(route, cp, rule)
-		result2 := NewKongUpstreamName(route, cp, rule)
+		result1 := NewKongUpstreamNameForHTTPRouteRule(route, cp, rule)
+		result2 := NewKongUpstreamNameForHTTPRouteRule(route, cp, rule)
 		assert.Equal(t, result1, result2)
 	})
 
 	t.Run("service name consistency", func(t *testing.T) {
-		result1 := NewKongServiceName(route, cp, rule)
-		result2 := NewKongServiceName(route, cp, rule)
+		result1 := NewKongServiceNameForHTTPRouteRule(route, cp, rule)
+		result2 := NewKongServiceNameForHTTPRouteRule(route, cp, rule)
 		assert.Equal(t, result1, result2)
 	})
 

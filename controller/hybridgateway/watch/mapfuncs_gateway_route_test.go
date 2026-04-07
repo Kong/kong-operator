@@ -110,7 +110,7 @@ func Test_MapRouteForGateway(t *testing.T) {
 		WithIndex(&gwtypes.HTTPRoute{}, index.GatewayOnHTTPRouteIndex, index.GatewaysOnRoute[gwtypes.HTTPRoute]).
 		Build()
 
-	mapFunc := MapRouteForGateway(cl, &gwtypes.HTTPRoute{})
+	mapFunc := MapRouteForGateway(cl, gwtypes.HTTPRoute{})
 
 	t.Run("success", func(t *testing.T) {
 		ctx := context.Background()
@@ -130,7 +130,7 @@ func Test_MapRouteForGateway(t *testing.T) {
 
 	t.Run("error branch", func(t *testing.T) {
 		// Use a fake client that always errors.
-		errorMapFunc := MapRouteForGateway(&fakeErrorClient{}, &gwtypes.HTTPRoute{})
+		errorMapFunc := MapRouteForGateway(&fakeErrorClient{}, gwtypes.HTTPRoute{})
 		ctx := context.Background()
 		obj := gateway
 		requests := errorMapFunc(ctx, obj)
@@ -183,7 +183,7 @@ func Test_MapRouteForGatewayClass(t *testing.T) {
 		WithIndex(&gwtypes.HTTPRoute{}, index.GatewayOnHTTPRouteIndex, index.GatewaysOnRoute[gwtypes.HTTPRoute]).
 		Build()
 
-	mapFunc := MapRouteForGatewayClass(cl, &gwtypes.HTTPRoute{})
+	mapFunc := MapRouteForGatewayClass(cl, gwtypes.HTTPRoute{})
 
 	t.Run("success", func(t *testing.T) {
 		ctx := context.Background()
@@ -202,7 +202,7 @@ func Test_MapRouteForGatewayClass(t *testing.T) {
 	})
 
 	t.Run("error branch - gatewayclass list", func(t *testing.T) {
-		errorMapFunc := MapRouteForGatewayClass(&fakeErrorClient{}, &gwtypes.HTTPRoute{})
+		errorMapFunc := MapRouteForGatewayClass(&fakeErrorClient{}, gwtypes.HTTPRoute{})
 		ctx := context.Background()
 		obj := gatewayClass
 		requests := errorMapFunc(ctx, obj)
@@ -212,7 +212,7 @@ func Test_MapRouteForGatewayClass(t *testing.T) {
 	t.Run("error branch - httproute list in loop", func(t *testing.T) {
 		gateways := &gwtypes.GatewayList{Items: []gwtypes.Gateway{*gateway}}
 		cl := &partialErrorClient{gateways: gateways}
-		errorMapFunc := MapRouteForGatewayClass(cl, &gwtypes.HTTPRoute{})
+		errorMapFunc := MapRouteForGatewayClass(cl, gwtypes.HTTPRoute{})
 		ctx := context.Background()
 		obj := gatewayClass
 		requests := errorMapFunc(ctx, obj)
@@ -260,7 +260,7 @@ func Test_MapRouteForService(t *testing.T) {
 		WithIndex(&gwtypes.HTTPRoute{}, index.BackendServicesOnHTTPRouteIndex, index.BackendServicesOnHTTPRoute).
 		Build()
 
-	mapFunc := MapRouteForService(cl, &gwtypes.HTTPRoute{})
+	mapFunc := MapRouteForService(cl, gwtypes.HTTPRoute{})
 
 	t.Run("success", func(t *testing.T) {
 		ctx := context.Background()
@@ -284,7 +284,7 @@ func Test_MapRouteForService(t *testing.T) {
 			WithObjects(otherSvc, httpRoute).
 			WithIndex(&gwtypes.HTTPRoute{}, index.BackendServicesOnHTTPRouteIndex, index.BackendServicesOnHTTPRoute).
 			Build()
-		mapFuncDiffNS := MapRouteForService(clDiffNS, &gwtypes.HTTPRoute{})
+		mapFuncDiffNS := MapRouteForService(clDiffNS, gwtypes.HTTPRoute{})
 		ctx := context.Background()
 		obj := otherSvc
 		requests := mapFuncDiffNS(ctx, obj)
@@ -299,7 +299,7 @@ func Test_MapRouteForService(t *testing.T) {
 	})
 
 	t.Run("error branch", func(t *testing.T) {
-		errorMapFunc := MapRouteForService(&fakeErrorClient{}, &gwtypes.HTTPRoute{})
+		errorMapFunc := MapRouteForService(&fakeErrorClient{}, gwtypes.HTTPRoute{})
 		ctx := context.Background()
 		obj := svc
 		requests := errorMapFunc(ctx, obj)
@@ -357,7 +357,7 @@ func Test_MapRouteForEndpointSlice(t *testing.T) {
 		WithIndex(&gwtypes.HTTPRoute{}, index.BackendServicesOnHTTPRouteIndex, index.BackendServicesOnHTTPRoute).
 		Build()
 
-	mapFunc := MapRouteForEndpointSlice(cl, &gwtypes.HTTPRoute{})
+	mapFunc := MapRouteForEndpointSlice(cl, gwtypes.HTTPRoute{})
 
 	t.Run("success", func(t *testing.T) {
 		ctx := context.Background()
@@ -404,7 +404,7 @@ func Test_MapRouteForEndpointSlice(t *testing.T) {
 
 	t.Run("error branch", func(t *testing.T) {
 		clGetErr := &getErrorClient{}
-		errorMapFunc := MapRouteForEndpointSlice(clGetErr, &gwtypes.HTTPRoute{})
+		errorMapFunc := MapRouteForEndpointSlice(clGetErr, gwtypes.HTTPRoute{})
 		ctx := context.Background()
 		obj := epSlice
 		requests := errorMapFunc(ctx, obj)
@@ -413,7 +413,7 @@ func Test_MapRouteForEndpointSlice(t *testing.T) {
 
 	t.Run("error on HTTPRoute list", func(t *testing.T) {
 		clListErr := &listErrorClient{}
-		mapFuncErrList := MapRouteForEndpointSlice(clListErr, &gwtypes.HTTPRoute{})
+		mapFuncErrList := MapRouteForEndpointSlice(clListErr, gwtypes.HTTPRoute{})
 		ctx := context.Background()
 		obj := epSlice
 		requests := mapFuncErrList(ctx, obj)

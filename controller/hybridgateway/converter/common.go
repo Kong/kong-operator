@@ -27,7 +27,7 @@ func getHybridGatewayParents[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRou
 	for i, pRef := range parentRefs {
 		log.Debug(logger, "Processing parent reference", "index", i, "parentRef", pRef)
 
-		cp, err := refs.GetControlPlaneRefByParentRef[T](ctx, logger, cl, route, pRef)
+		cp, err := refs.GetControlPlaneRefByParentRef(ctx, logger, cl, route, pRef)
 		if err != nil {
 			switch {
 			case errors.Is(err, hybridgatewayerrors.ErrNoGatewayFound),
@@ -51,7 +51,7 @@ func getHybridGatewayParents[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRou
 
 		log.Debug(logger, "Found ControlPlaneRef for ParentRef", "parentRef", pRef, "controlPlane", cp.KonnectNamespacedRef)
 
-		hostnames, err := getHostnamesByParentRef[T](ctx, logger, cl, route, pRef)
+		hostnames, err := getHostnamesByParentRef(ctx, logger, cl, route, pRef)
 		if err != nil {
 			log.Error(logger, err, "Failed to get hostnames for ParentRef", "parentRef", pRef)
 			return nil, err
@@ -83,7 +83,7 @@ func getHostnamesByParentRef[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRou
 	var err error
 	var hostnames []string
 
-	listeners, err := refs.GetListenersByParentRef[T](ctx, cl, route, pRef)
+	listeners, err := refs.GetListenersByParentRef(ctx, cl, route, pRef)
 	if err != nil {
 		log.Error(logger, err, "Failed to get listeners for ParentRef")
 		return nil, err
@@ -109,13 +109,13 @@ func getHostnamesByParentRef[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRou
 		// No need to do further checks.
 		if listener.Hostname == nil || *listener.Hostname == "" {
 			log.Debug(logger, "Listener accepts all hostnames", "listener", listener.Name)
-			hostnames := routeHostNames(*route)
+			hostnames := routeHostNamesString(*route)
 			return hostnames, nil
 		}
 
 		// Handle wildcard hostnames - get intersection
 		log.Debug(logger, "Processing listener with hostname", "listener", listener.Name, "listenerHostname", *listener.Hostname)
-		for _, host := range routeHostNames(*route) {
+		for _, host := range routeHostNamesString(*route) {
 			if intersection := utils.HostnameIntersection(string(*listener.Hostname), host); intersection != "" {
 				log.Trace(logger, "Found hostname intersection", "listenerHostname", *listener.Hostname, "routeHostname", host, "intersection", intersection)
 				hostnames = append(hostnames, intersection)
@@ -127,9 +127,8 @@ func getHostnamesByParentRef[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRou
 	return hostnames, nil
 }
 
-func routeHostNames[T gwtypes.SupportedRoute](route T) []string {
-	if r, ok := any(route).(gwtypes.HTTPRoute); ok {
-		return lo.Map(r.Spec.Hostnames, func(host gwtypes.Hostname, _ int) string { return string(host) })
-	}
-	return []string{}
+func routeHostNamesString[T gwtypes.SupportedRoute](route T) []string {
+	return lo.Map(gwtypes.GetSpecHostnames(route), func(h gwtypes.Hostname, _ int) string {
+		return string(h)
+	})
 }

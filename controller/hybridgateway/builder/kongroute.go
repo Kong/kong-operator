@@ -8,6 +8,7 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -120,8 +121,14 @@ func (b *KongRouteBuilder) WithPreserveHost(preserveHost bool) *KongRouteBuilder
 	return b
 }
 
-// WithOwner sets the owner reference for the KongRoute to the given HTTPRoute.
-func (b *KongRouteBuilder) WithOwner(owner *gwtypes.HTTPRoute) *KongRouteBuilder {
+// WithSNIs sets the SNIs for the KongRoute.
+func (b *KongRouteBuilder) WithSNIs(snis []string) *KongRouteBuilder {
+	b.route.Spec.Snis = snis
+	return b
+}
+
+// WithOwner sets the owner reference for the KongRoute to the given route.
+func (b *KongRouteBuilder) WithOwner(owner client.Object) *KongRouteBuilder {
 	if owner == nil {
 		b.errors = append(b.errors, errors.New("owner cannot be nil"))
 		return b
@@ -146,8 +153,8 @@ func (b *KongRouteBuilder) WithNamespace(namespace string) *KongRouteBuilder {
 	return b
 }
 
-// WithLabels sets the labels for the KongRoute resource based on the given HTTPRoute.
-func (b *KongRouteBuilder) WithLabels(route *gwtypes.HTTPRoute, parentRef *gwtypes.ParentReference) *KongRouteBuilder {
+// WithLabels sets the labels for the KongRoute resource based on the given route.
+func (b *KongRouteBuilder) WithLabels(route client.Object, parentRef *gwtypes.ParentReference) *KongRouteBuilder {
 	labels := metadata.BuildLabels(route, parentRef)
 	if b.route.Labels == nil {
 		b.route.Labels = make(map[string]string)
@@ -156,8 +163,8 @@ func (b *KongRouteBuilder) WithLabels(route *gwtypes.HTTPRoute, parentRef *gwtyp
 	return b
 }
 
-// WithAnnotations sets the annotations for the KongRoute resource based on the given HTTPRoute and parent reference.
-func (b *KongRouteBuilder) WithAnnotations(route *gwtypes.HTTPRoute, parentRef *gwtypes.ParentReference) *KongRouteBuilder {
+// WithAnnotations sets the annotations for the KongRoute resource based on the given route and parent reference.
+func (b *KongRouteBuilder) WithAnnotations(route client.Object, parentRef *gwtypes.ParentReference) *KongRouteBuilder {
 	annotations := metadata.BuildAnnotations(route, parentRef)
 	if b.route.Annotations == nil {
 		b.route.Annotations = make(map[string]string)
