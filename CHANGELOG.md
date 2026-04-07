@@ -46,6 +46,9 @@
 
 ### Added
 
+- TLSRoute support: Add `TLSRoute` reconciler in hybrid gateway controllers
+  and add translator of `TLSRoute`.
+  [#3763](https://github.com/Kong/kong-operator/pull/3763)
 - TLSRoute support: Configure DataPlaneOption in created `DataPlane` to
   configure Kong DataPlane deployment and ingress service for listeners with
   `TLS` protocol.
