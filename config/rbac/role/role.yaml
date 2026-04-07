@@ -523,3 +523,21 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - x-konnect.konghq.com
+  resources:
+  - portals
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - x-konnect.konghq.com
+  resources:
+  - portals/finalizers
+  - portals/status
+  verbs:
+  - patch
+  - update
