@@ -4,10 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	xkonnectv1alpha1 "github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1"
-	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/scheme"
 	common "github.com/kong/kong-operator/v2/test/crdsvalidation/common"
 	"github.com/kong/kong-operator/v2/test/envtest"
 )
@@ -15,10 +12,8 @@ import (
 func TestPortal(t *testing.T) {
 	t.Parallel()
 
-	scheme := scheme.Get()
-	require.NoError(t, xkonnectv1alpha1.AddToScheme(scheme))
-
 	ctx := t.Context()
+	scheme := Scheme(t)
 	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	t.Run("name field validation", func(t *testing.T) {
@@ -237,6 +232,40 @@ func TestPortal(t *testing.T) {
 					},
 				},
 				ExpectedErrorMessage: new(`spec.apiSpec.default_page_visibility: Unsupported value: "invalid"`),
+			},
+		}.
+			RunWithConfig(t, cfg, scheme)
+	})
+
+	t.Run("labels field validation", func(t *testing.T) {
+		portalWithLabelValue := func(labelValue string) *xkonnectv1alpha1.Portal {
+			return &xkonnectv1alpha1.Portal{
+				ObjectMeta: common.CommonObjectMeta(ns.Name),
+				Spec: xkonnectv1alpha1.PortalSpec{
+					APISpec: xkonnectv1alpha1.PortalAPISpec{
+						Name: "portal-labels",
+						Labels: xkonnectv1alpha1.LabelsUpdate{
+							"team": xkonnectv1alpha1.LabelsUpdateValue(labelValue),
+						},
+					},
+				},
+			}
+		}
+
+		common.TestCasesGroup[*xkonnectv1alpha1.Portal]{
+			{
+				Name:       "labels value at max length (63) passes validation",
+				TestObject: portalWithLabelValue(strings.Repeat("a", 63)),
+			},
+			{
+				Name:                 "labels value exceeding max length (64) fails validation",
+				TestObject:           portalWithLabelValue(strings.Repeat("a", 64)),
+				ExpectedErrorMessage: new("Too long: may not be"),
+			},
+			{
+				Name:                 "labels value with invalid pattern fails validation",
+				TestObject:           portalWithLabelValue("invalid!"),
+				ExpectedErrorMessage: new("^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)

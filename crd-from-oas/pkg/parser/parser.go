@@ -33,13 +33,14 @@ type Property struct {
 	ReadOnly    bool
 
 	// Validations
-	MinLength *int64
-	MaxLength *int64
-	Minimum   *float64
-	Maximum   *float64
-	Pattern   string
-	Enum      []any
-	Default   any
+	MinLength     *int64
+	MaxLength     *int64
+	MaxProperties *int64
+	Minimum       *float64
+	Maximum       *float64
+	Pattern       string
+	Enum          []any
+	Default       any
 
 	// Reference info
 	RefName     string // If this is a $ref, the referenced schema name
@@ -66,6 +67,10 @@ type Schema struct {
 	Dependencies []*Dependency // Parent resource dependencies from path parameters
 	OneOf        []*Property   // Root-level oneOf variants (for union type schemas)
 	Items        *Property     // For array-type schemas, the items type
+
+	// Map type support
+	AdditionalProperties *Property // For object types with additionalProperties (map value schema)
+	MaxProperties        *int64    // Maximum number of map entries
 }
 
 // ParsedSpec is the result of parsing an OpenAPI spec via ParsePaths.
@@ -317,6 +322,17 @@ func (p *Parser) parseSchema(name string, schemaValue *openapi3.Schema) *Schema 
 	// Handle array items
 	if schema.Type == "array" && schemaValue.Items != nil {
 		schema.Items = ParseProperty("items", schemaValue.Items, 0, p.visited)
+	}
+
+	// Handle additionalProperties (map value schema)
+	if schemaValue.AdditionalProperties.Schema != nil {
+		schema.AdditionalProperties = ParseProperty("value", schemaValue.AdditionalProperties.Schema, 0, p.visited)
+	}
+
+	// Handle maxProperties
+	if schemaValue.MaxProps != nil {
+		maxProps := int64(*schemaValue.MaxProps)
+		schema.MaxProperties = &maxProps
 	}
 
 	// Handle root-level oneOf (union type schemas)
