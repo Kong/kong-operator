@@ -85,6 +85,9 @@ ARCH := $(shell uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')
 # renovate: datasource=github-releases depName=mikefarah/yq
 YQ_VERSION = 4.52.5
 YQ = $(PROJECT_DIR)/bin/installs/github-mikefarah-yq/$(YQ_VERSION)/yq_$(OS)_$(ARCH)
+ifeq ($(OS),darwin)
+YQ = $(PROJECT_DIR)/bin/installs/github-mikefarah-yq/$(YQ_VERSION)/yq
+endif
 .PHONY: yq
 yq: mise # Download yq locally if necessary.
 	$(MAKE) mise-install DEP_VER=github:mikefarah/yq@$(YQ_VERSION)
@@ -1140,4 +1143,5 @@ lint.api: download.kube-api-linter
 		./api/konnect/v1alpha1/... \
 		./api/konnect/v1alpha2/... \
 		./api/common/v1alpha1/...  \
-		./api/x-konnect/...
+		./api/x-konnect/... \
+		./api/eventgateway/v1alpha1/...

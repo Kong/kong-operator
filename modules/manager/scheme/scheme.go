@@ -11,6 +11,7 @@ import (
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
+	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
@@ -36,6 +37,8 @@ func Get() *runtime.Scheme {
 
 	utilruntime.Must(konnectv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(konnectv1alpha2.AddToScheme(scheme))
+
+	utilruntime.Must(eventgatewayv1alpha1.AddToScheme(scheme))
 
 	utilruntime.Must(certmanagerv1.AddToScheme(scheme))
 
