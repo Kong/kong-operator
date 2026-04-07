@@ -1,12 +1,14 @@
 package integration
 
 import (
+	"crypto/x509"
 	"fmt"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -20,7 +22,6 @@ import (
 	"github.com/kong/kong-operator/v2/test/helpers"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 	"github.com/kong/kong-operator/v2/test/integration"
-	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 )
 
 const (
@@ -104,7 +105,7 @@ func TestTLSRoute(t *testing.T) {
 		Namespace: namespace.Name,
 	}
 
-	gateway := helpers.GenerateGateway(gatewayNSN, gatewayClass, setTLSListener(tlsPort, gatewayv1.TLSModePassthrough, host))
+	gateway := helpers.GenerateGateway(gatewayNSN, gatewayClass, setTLSListener(tlsPort, gatewayv1.TLSModePassthrough, secret.Name))
 	t.Logf("deploying Gateway %s/%s", gateway.Namespace, gateway.Name)
 	gateway, err = integration.GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -156,7 +157,7 @@ func TestTLSRoute(t *testing.T) {
 			Name: "cert-secret",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName:  certSecretName,
+					SecretName:  secret.Name,
 					DefaultMode: new(int32(0o420)),
 				},
 			},
@@ -188,10 +189,13 @@ func TestTLSRoute(t *testing.T) {
 	)
 
 	t.Logf("verifying connectivity to the TLSRoute")
+	certPool := x509.NewCertPool()
+	require.True(t, certPool.AppendCertsFromPEM(cert), "Should add certificate to cert pool successfully")
 	require.Eventually(t, func() bool {
 		err := helpers.EchoResponds(t, helpers.ProtocolTLS, fmt.Sprintf("%s:%d", gatewayIPAddress, tlsPort), "test-tls-echo",
 			helpers.TLSOpt{
 				Hostname:    "a." + host,
+				CertPool:    certPool,
 				Passthrough: true,
 			})
 		if err != nil {

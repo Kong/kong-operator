@@ -160,3 +160,40 @@ func GenerateHTTPRoute(namespace string, gatewayName, serviceName string, opts .
 
 	return httpRoute
 }
+
+// GenerateTLSRoute generates a TLSRoute to be used in tests.
+func GenerateTLSRoute(namespace string, gatewayName, serviceName string, portNumber int, opts ...func(*gatewayv1.TLSRoute)) *gatewayv1.TLSRoute {
+	tlsRoute := &gatewayv1.TLSRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      namespace,
+			Namespace: uuid.NewString(),
+		},
+		Spec: gatewayv1.TLSRouteSpec{
+			CommonRouteSpec: gatewayv1.CommonRouteSpec{
+				ParentRefs: []gatewayv1.ParentReference{
+					{
+						Name: gatewayv1.ObjectName(gatewayName),
+					},
+				},
+			},
+			Rules: []gatewayv1.TLSRouteRule{
+				{
+					BackendRefs: []gatewayv1.BackendRef{
+						{
+							BackendObjectReference: gatewayv1.BackendObjectReference{
+								Name: gatewayv1.ObjectName(serviceName),
+								Port: new(gatewayv1.PortNumber(portNumber)),
+								Kind: new(gatewayv1.Kind("Service")),
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, opt := range opts {
+		opt(tlsRoute)
+	}
+	return tlsRoute
+}
