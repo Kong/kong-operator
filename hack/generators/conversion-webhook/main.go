@@ -63,6 +63,8 @@ func main() {
 
 	// Keep temporary x-konnect CRDs out of the chart, but allow the Portal CRD,
 	// which is required by the operator at startup.
+	// TODO: revisit this filter as more x-konnect CRDs are generated and then
+	// migrated into the konnect group. https://github.com/Kong/kong-operator/issues/3785
 	crdContent = filterOutCRDsByName(
 		crdContent,
 		"dcrproviders.x-konnect.konghq.com",

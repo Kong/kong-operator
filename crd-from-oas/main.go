@@ -13,9 +13,11 @@ import (
 
 // EnvConfig holds the configuration for the generator, populated from environment variables.
 type EnvConfig struct {
-	InputFile   string `env:"INPUT_FILE" envDefault:"openapi.yaml"`
-	OutputDir   string `env:"OUTPUT_DIR" envDefault:"api/"`
-	ConfigFile  string `env:"CONFIG_FILE,required"`
+	InputFile  string `env:"INPUT_FILE" envDefault:"openapi.yaml"`
+	OutputDir  string `env:"OUTPUT_DIR" envDefault:"api/"`
+	ConfigFile string `env:"CONFIG_FILE,required"`
+	// ProjectRoot is used when generated reconciler artifacts need to be written
+	// outside the API output directory, e.g. into controller and index packages.
 	ProjectRoot string `env:"PROJECT_ROOT" envDefault:".."`
 }
 
