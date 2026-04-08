@@ -256,7 +256,7 @@ func TestTLSRoutePassthroughReferenceGrant(t *testing.T) {
 			}},
 		},
 	}
-	tlsroute, err = gatewayClient.GatewayV1alpha2().TLSRoutes(ns.Name).Create(ctx, tlsroute, metav1.CreateOptions{})
+	tlsroute, err = gatewayClient.GatewayV1().TLSRoutes(ns.Name).Create(ctx, tlsroute, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(tlsroute)
 
@@ -476,7 +476,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 			}},
 		},
 	}
-	tlsRoute, err = gatewayClient.GatewayV1alpha2().TLSRoutes(ns.Name).Create(ctx, tlsRoute, metav1.CreateOptions{})
+	tlsRoute, err = gatewayClient.GatewayV1().TLSRoutes(ns.Name).Create(ctx, tlsRoute, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(tlsRoute)
 
@@ -496,10 +496,10 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	t.Log("removing the parentrefs from the TLSRoute")
 	oldParentRefs := tlsRoute.Spec.ParentRefs
 	require.Eventually(t, func() bool {
-		tlsRoute, err = gatewayClient.GatewayV1alpha2().TLSRoutes(ns.Name).Get(ctx, tlsRoute.Name, metav1.GetOptions{})
+		tlsRoute, err = gatewayClient.GatewayV1().TLSRoutes(ns.Name).Get(ctx, tlsRoute.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		tlsRoute.Spec.ParentRefs = nil
-		tlsRoute, err = gatewayClient.GatewayV1alpha2().TLSRoutes(ns.Name).Update(ctx, tlsRoute, metav1.UpdateOptions{})
+		tlsRoute, err = gatewayClient.GatewayV1().TLSRoutes(ns.Name).Update(ctx, tlsRoute, metav1.UpdateOptions{})
 		return err == nil
 	}, time.Minute, time.Second)
 
@@ -524,10 +524,10 @@ func TestTLSRoutePassthrough(t *testing.T) {
 
 	t.Log("putting the parentRefs back")
 	require.Eventually(t, func() bool {
-		tlsRoute, err = gatewayClient.GatewayV1alpha2().TLSRoutes(ns.Name).Get(ctx, tlsRoute.Name, metav1.GetOptions{})
+		tlsRoute, err = gatewayClient.GatewayV1().TLSRoutes(ns.Name).Get(ctx, tlsRoute.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		tlsRoute.Spec.ParentRefs = oldParentRefs
-		tlsRoute, err = gatewayClient.GatewayV1alpha2().TLSRoutes(ns.Name).Update(ctx, tlsRoute, metav1.UpdateOptions{})
+		tlsRoute, err = gatewayClient.GatewayV1().TLSRoutes(ns.Name).Update(ctx, tlsRoute, metav1.UpdateOptions{})
 		return err == nil
 	}, time.Minute, time.Second)
 
@@ -645,7 +645,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 
 	t.Log("adding an additional backendRef to the TLSRoute")
 	require.EventuallyWithT(t, func(c *assert.CollectT) {
-		tlsRoute, err = gatewayClient.GatewayV1alpha2().TLSRoutes(ns.Name).Get(ctx, tlsRoute.Name, metav1.GetOptions{})
+		tlsRoute, err = gatewayClient.GatewayV1().TLSRoutes(ns.Name).Get(ctx, tlsRoute.Name, metav1.GetOptions{})
 		if !assert.NoError(c, err) {
 			return
 		}
@@ -665,7 +665,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 			},
 		}
 
-		tlsRoute, err = gatewayClient.GatewayV1alpha2().TLSRoutes(ns.Name).Update(ctx, tlsRoute, metav1.UpdateOptions{})
+		tlsRoute, err = gatewayClient.GatewayV1().TLSRoutes(ns.Name).Update(ctx, tlsRoute, metav1.UpdateOptions{})
 		assert.NoError(c, err)
 	}, ingressWait, waitTick)
 
@@ -757,13 +757,13 @@ func TestTLSRoutePassthrough(t *testing.T) {
 
 	t.Log("setting the port in ParentRef which does not have a matching listener in Gateway")
 	require.Eventually(t, func() bool {
-		tlsRoute, err = gatewayClient.GatewayV1alpha2().TLSRoutes(ns.Name).Get(ctx, tlsRoute.Name, metav1.GetOptions{})
+		tlsRoute, err = gatewayClient.GatewayV1().TLSRoutes(ns.Name).Get(ctx, tlsRoute.Name, metav1.GetOptions{})
 		if err != nil {
 			return false
 		}
 		notExistingPort := gatewayapi.PortNumber(81)
 		tlsRoute.Spec.ParentRefs[0].Port = &notExistingPort
-		tlsRoute, err = gatewayClient.GatewayV1alpha2().TLSRoutes(ns.Name).Update(ctx, tlsRoute, metav1.UpdateOptions{})
+		tlsRoute, err = gatewayClient.GatewayV1().TLSRoutes(ns.Name).Update(ctx, tlsRoute, metav1.UpdateOptions{})
 		return err == nil
 	}, time.Minute, time.Second)
 
