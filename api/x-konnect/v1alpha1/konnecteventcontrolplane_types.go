@@ -108,6 +108,35 @@ type KonnectEventControlPlaneStatus struct {
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
 
+// GetKonnectLabels gets the Konnect labels from the object's API spec.
+func (obj *KonnectEventControlPlane) GetKonnectLabels() map[string]string {
+	if obj.Spec.APISpec.Labels == nil {
+		return nil
+	}
+
+	labels := make(map[string]string, len(obj.Spec.APISpec.Labels))
+	for key, value := range obj.Spec.APISpec.Labels {
+		labels[key] = string(value)
+	}
+
+	return labels
+}
+
+// SetKonnectLabels sets the Konnect labels in the object's API spec.
+func (obj *KonnectEventControlPlane) SetKonnectLabels(labels map[string]string) {
+	if labels == nil {
+		obj.Spec.APISpec.Labels = nil
+		return
+	}
+
+	converted := make(Labels, len(labels))
+	for key, value := range labels {
+		converted[key] = LabelsValue(value)
+	}
+
+	obj.Spec.APISpec.Labels = converted
+}
+
 func init() {
 	SchemeBuilder.Register(&KonnectEventControlPlane{}, &KonnectEventControlPlaneList{})
 }
