@@ -145,7 +145,7 @@ func (r *MCPServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		log.Info(logger, fmt.Sprintf("%s Service for MCPServer", svcRes), "namespace", mcpServer.Namespace, "name", mcpServer.Name)
 	}
 
-	// TODO: Ensure kong entities
+	// TODO: Ensure kong entities https://github.com/Kong/kong-operator/issues/3799
 
 	// Patch the MCPServer status with the remote version.
 	version := remoteMCPServer.Version
