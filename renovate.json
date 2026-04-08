@@ -152,6 +152,13 @@
 
     // Latest release branch specific rules for updating patch versions of Go toolchain and Dockerfiles.
     {
+      "description": "Disable Go dependencies updates (still handled by dependabot)",
+      "matchManagers": ["gomod"],
+      "matchDepNames": ["go"],
+      "matchBaseBranches": ["$default", "release/2.1.x"],
+      "enabled": false
+    },
+    {
       "description": "Disable dependency updates on release/2.1.x by default",
       "matchBaseBranches": ["release/2.1.x"],
       "enabled": false
