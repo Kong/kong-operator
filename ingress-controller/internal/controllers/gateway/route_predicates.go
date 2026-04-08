@@ -67,8 +67,20 @@ func IsRouteAttachedToReconciledGateway[routeT gatewayapi.RouteT](
 			if parentRef.Group != nil && *parentRef.Group != gatewayapi.Group(gatewayapi.GroupVersion.Group) {
 				continue
 			}
+			log.Info("route is attached to gateway, enqueue it",
+				"route_kind", obj.GetObjectKind().GroupVersionKind().Kind,
+				"route_namespace", route.GetNamespace(),
+				"route_name", route.GetName(),
+				"gateway", gatewayNN.MustGet().String(),
+			)
 			return true
 		}
+		log.Info("route is not attached to gateway, do not enqueue it",
+			"route_kind", obj.GetObjectKind().GroupVersionKind().Kind,
+			"route_namespace", route.GetNamespace(),
+			"route_name", route.GetName(),
+			"gateway", gatewayNN.MustGet().String(),
+		)
 		return false
 	}
 

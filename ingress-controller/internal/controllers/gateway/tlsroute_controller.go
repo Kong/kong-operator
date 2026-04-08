@@ -51,6 +51,7 @@ type TLSRouteReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *TLSRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	r.Log.Info("TLSRoute reconciler SetupWithManager")
 	blder := ctrl.NewControllerManagedBy(mgr).
 		Named("tlsroute-controller").
 		WithOptions(controller.Options{

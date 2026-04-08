@@ -353,7 +353,7 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: c.GatewayAPITLSRouteController && featureGates.Enabled(managercfg.GatewayAlphaFeature),
+			Enabled: c.GatewayAPITLSRouteController,
 			Controller: &crds.DynamicCRDController{
 				Manager:          mgr,
 				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/TLSRoute"),

@@ -245,7 +245,7 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 			)
 			require.NoError(t, err)
 
-			_, err = gcl.GatewayV1alpha2().TLSRoutes(namespace).Create(
+			_, err = gcl.GatewayV1().TLSRoutes(namespace).Create(
 				ctx,
 				&gatewayapi.TLSRoute{
 					ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("test-%d", i)},

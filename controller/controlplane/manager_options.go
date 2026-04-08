@@ -202,6 +202,9 @@ const (
 	// ControllerNameGatewayAPIGRPCRoute identifies the controller for managing
 	// Gateway API GRPCRoute resources.
 	ControllerNameGatewayAPIGRPCRoute = "GWAPI_GRPCROUTE"
+	// ControllerNameGatewayAPITLSRoute identifies the controller for managing
+	// Gateway API TLSRoute resources.
+	ControllerNameGatewayAPITLSRoute = "GWAPI_TLSRoute"
 	// ControllerNameGatewayAPIReferenceGrant identifies the controller for managing
 	// Gateway API ReferenceGrant resources.
 	ControllerNameGatewayAPIReferenceGrant = "GWAPI_REFERENCE_GRANT"
@@ -270,9 +273,10 @@ func WithControllers(logger logr.Logger, controllers []gwtypes.ControlPlaneContr
 				setOpt(&c.GatewayAPIHTTPRouteController, controller.State)
 			case ControllerNameGatewayAPIGRPCRoute:
 				setOpt(&c.GatewayAPIGRPCRouteController, controller.State)
+			case ControllerNameGatewayAPITLSRoute:
+				setOpt(&c.GatewayAPITLSRouteController, controller.State)
 			case ControllerNameGatewayAPIReferenceGrant:
 				setOpt(&c.GatewayAPIReferenceGrantController, controller.State)
-
 			default:
 				// If the controller is not recognized, we can log it or handle it as needed.
 				log.Info(logger, "unknown controller", "controller", controller.Name, "state", controller.State)
@@ -365,6 +369,11 @@ func managerConfigToStatusControllers(
 	controllers = append(controllers, gwtypes.ControlPlaneController{
 		Name:  ControllerNameGatewayAPIGRPCRoute,
 		State: boolToControllerState(cfg.GatewayAPIGRPCRouteController),
+	})
+
+	controllers = append(controllers, gwtypes.ControlPlaneController{
+		Name:  ControllerNameGatewayAPITLSRoute,
+		State: boolToControllerState(cfg.GatewayAPITLSRouteController),
 	})
 
 	controllers = append(controllers, gwtypes.ControlPlaneController{
