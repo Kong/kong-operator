@@ -135,6 +135,38 @@ type {{.EntityName}}Status struct {
 	ObservedGeneration int64 ` + "`" + `json:"observedGeneration,omitempty"` + "`" + `
 }
 
+{{- if .KonnectLabelsField}}
+
+// GetKonnectLabels gets the Konnect labels from the object's API spec.
+func (obj *{{.EntityName}}) GetKonnectLabels() map[string]string {
+	if obj.Spec.APISpec.{{.KonnectLabelsField.FieldName}} == nil {
+		return nil
+	}
+
+	labels := make(map[string]string, len(obj.Spec.APISpec.{{.KonnectLabelsField.FieldName}}))
+	for key, value := range obj.Spec.APISpec.{{.KonnectLabelsField.FieldName}} {
+		labels[key] = string(value)
+	}
+
+	return labels
+}
+
+// SetKonnectLabels sets the Konnect labels in the object's API spec.
+func (obj *{{.EntityName}}) SetKonnectLabels(labels map[string]string) {
+	if labels == nil {
+		obj.Spec.APISpec.{{.KonnectLabelsField.FieldName}} = nil
+		return
+	}
+
+	converted := make({{.KonnectLabelsField.FieldType}}, len(labels))
+	for key, value := range labels {
+		converted[key] = {{.KonnectLabelsField.ValueType}}(value)
+	}
+
+	obj.Spec.APISpec.{{.KonnectLabelsField.FieldName}} = converted
+}
+{{- end}}
+
 func init() {
 	SchemeBuilder.Register(&{{.EntityName}}{}, &{{.EntityName}}List{})
 }

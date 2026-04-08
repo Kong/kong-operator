@@ -247,6 +247,87 @@ func TestGenerateCRDType_NoObjectRefImportWhenUnneeded(t *testing.T) {
 	assert.NotContains(t, content, "commonv1alpha1")
 }
 
+func TestGenerateCRDType_GeneratesKonnectLabelAccessors(t *testing.T) {
+	t.Run("referenced labels map type", func(t *testing.T) {
+		schema := &parser.Schema{
+			Name: "CreatePortal",
+			Properties: []*parser.Property{
+				{
+					Name:    "labels",
+					Type:    "object",
+					RefName: "LabelsUpdate",
+					AdditionalProperties: &parser.Property{
+						Name: "value",
+						Type: "string",
+					},
+				},
+			},
+		}
+
+		g := NewGenerator(Config{
+			APIGroup:   "x-konnect.konghq.com",
+			APIVersion: "v1alpha1",
+		})
+
+		content, err := g.generateCRDType("CreatePortal", schema)
+		require.NoError(t, err)
+		assert.Contains(t, content, "func (obj *Portal) GetKonnectLabels() map[string]string {")
+		assert.Contains(t, content, "if obj.Spec.APISpec.Labels == nil {")
+		assert.Contains(t, content, "labels[key] = string(value)")
+		assert.Contains(t, content, "converted := make(LabelsUpdate, len(labels))")
+		assert.Contains(t, content, "converted[key] = LabelsUpdateValue(value)")
+		assert.Contains(t, content, "obj.Spec.APISpec.Labels = converted")
+	})
+
+	t.Run("inline labels map type", func(t *testing.T) {
+		schema := &parser.Schema{
+			Name: "CreatePortal",
+			Properties: []*parser.Property{
+				{
+					Name: "labels",
+					Type: "object",
+					AdditionalProperties: &parser.Property{
+						Name: "value",
+						Type: "string",
+					},
+				},
+			},
+		}
+
+		g := NewGenerator(Config{
+			APIGroup:   "x-konnect.konghq.com",
+			APIVersion: "v1alpha1",
+		})
+
+		content, err := g.generateCRDType("CreatePortal", schema)
+		require.NoError(t, err)
+		assert.Contains(t, content, "converted := make(map[string]string, len(labels))")
+		assert.Contains(t, content, "converted[key] = string(value)")
+	})
+
+	t.Run("without labels field", func(t *testing.T) {
+		schema := &parser.Schema{
+			Name: "CreatePortal",
+			Properties: []*parser.Property{
+				{
+					Name: "name",
+					Type: "string",
+				},
+			},
+		}
+
+		g := NewGenerator(Config{
+			APIGroup:   "x-konnect.konghq.com",
+			APIVersion: "v1alpha1",
+		})
+
+		content, err := g.generateCRDType("CreatePortal", schema)
+		require.NoError(t, err)
+		assert.NotContains(t, content, "GetKonnectLabels")
+		assert.NotContains(t, content, "SetKonnectLabels")
+	})
+}
+
 func TestGenerateSchemaTypes_AddsKubebuilderTags(t *testing.T) {
 	g := NewGenerator(Config{APIVersion: "v1alpha1"})
 	parsed := &parser.ParsedSpec{

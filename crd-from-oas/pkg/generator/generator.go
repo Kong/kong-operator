@@ -48,6 +48,12 @@ type GeneratedFile struct {
 	Content string
 }
 
+type konnectLabelsField struct {
+	FieldName string
+	FieldType string
+	ValueType string
+}
+
 // Generate generates Go CRD types from parsed schemas.
 func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error) {
 	var files []GeneratedFile
@@ -385,6 +391,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 	}
 
 	var buf strings.Builder
+	labelsField := g.konnectLabelsField(schema)
 	data := struct {
 		EntityName           string
 		Schema               *parser.Schema
@@ -393,6 +400,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		NeedsJSONImport      bool
 		ObjectRefImport      *config.ImportConfig
 		HasOptionalSecretRef bool
+		KonnectLabelsField   *konnectLabelsField
 	}{
 		EntityName:           entityName,
 		Schema:               schema,
@@ -401,6 +409,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		NeedsJSONImport:      schemaUsesJSON(g, schema),
 		ObjectRefImport:      objectRefImport,
 		HasOptionalSecretRef: hasOptionalSecretRef,
+		KonnectLabelsField:   labelsField,
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
@@ -418,6 +427,47 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 	result := fixTrailingEmptyLines(buf.String())
 
 	return result, nil
+}
+
+func (g *Generator) konnectLabelsField(schema *parser.Schema) *konnectLabelsField {
+	if schema == nil {
+		return nil
+	}
+
+	for _, prop := range schema.Properties {
+		if skipProperty(prop) || prop.Name != "labels" {
+			continue
+		}
+
+		valueType, ok := g.konnectLabelsValueType(prop)
+		if !ok {
+			continue
+		}
+
+		return &konnectLabelsField{
+			FieldName: goFieldName(prop.Name),
+			FieldType: g.goType(prop),
+			ValueType: valueType,
+		}
+	}
+
+	return nil
+}
+
+func (g *Generator) konnectLabelsValueType(prop *parser.Property) (string, bool) {
+	if prop == nil {
+		return "", false
+	}
+
+	if prop.RefName != "" {
+		return fixInitialisms(prop.RefName + "Value"), true
+	}
+
+	if prop.AdditionalProperties == nil {
+		return "", false
+	}
+
+	return g.goType(prop.AdditionalProperties), true
 }
 
 // generateUnionTypes generates Go union type structs for properties with oneOf.
