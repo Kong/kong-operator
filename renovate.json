@@ -3,10 +3,17 @@
   "extends": [
     "config:recommended"
   ],
+  "baseBranchPatterns": [
+    "$default",
+    "release/2.1.x"
+  ],
   "ignorePaths": [],
   "enabledManagers": [
     "custom.regex",
-    "kustomize"
+    "kustomize",
+    // Only for Go toolchain updates, not module updates. Modules are still update via dependabot.
+     "gomod",
+     "dockerfile"
   ],
   "automerge": false,
   "separateMinorPatch": true,
@@ -120,11 +127,13 @@
   "packageRules": [
     {
       "description": "Strip kustomize/ version prefix",
+      "matchBaseBranches": ["$default"],
       "matchPackageNames": ["kubernetes-sigs/kustomize"],
       "extractVersion": "^kustomize/(?<version>.*)$"
     },
     {
       "description": "Ignore minor updates if depName has `@only-patch` suffix.",
+      "matchBaseBranches": ["$default"],
       "matchUpdateTypes": [
         "minor"
       ],
@@ -132,6 +141,46 @@
       "matchDepNames": [
         "/.*@only-patch/"
       ]
+    },
+
+    // Latest release branch specific rules for updating patch versions of Go toolchain and Dockerfiles.
+    {
+      "description": "Disable dependency updates on release/2.1.x by default",
+      "matchBaseBranches": ["release/2.1.x"],
+      "enabled": false
+    },
+    {
+      "description": "Go toolchain patch updates only on release/2.1.x",
+      "matchManagers": ["gomod"],
+      "matchDepNames": ["go"],
+      "matchBaseBranches": ["release/2.1.x"],
+      "rangeStrategy": "bump",
+      "enabled": true
+    },
+    {
+      "description": "Disable Go toolchain major and minor updates on release/2.1.x",
+      "matchManagers": ["gomod"],
+      "matchDepNames": ["go"],
+      "matchBaseBranches": ["release/2.1.x"],
+      "matchUpdateTypes": ["major", "minor"],
+      "enabled": false
+    },
+    {
+      "description": "Go modules patch updates only on release/2.1.x",
+      "matchManagers": ["gomod"],
+      "matchDepNames": ["!go"],
+      "matchBaseBranches": ["release/2.1.x"],
+      "matchUpdateTypes": ["patch"],
+      "enabled": true
+    },
+    {
+      "description": "Dockerfile golang patch updates only on release/2.1.x",
+      "matchManagers": ["dockerfile"],
+      "matchDatasources": ["docker"],
+      "matchDepNames": ["golang"],
+      "matchBaseBranches": ["release/2.1.x"],
+      "matchUpdateTypes": ["patch"],
+      "enabled": true
     }
   ]
 }
