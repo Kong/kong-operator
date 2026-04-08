@@ -9,6 +9,7 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	xkonnectv1alpha1 "github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
@@ -106,6 +107,28 @@ func TestEnsureRequiredCRDsChecksKonnectCloudGatewayTransitGatewayForKonnectCont
 		Group:    konnectv1alpha1.SchemeGroupVersion.Group,
 		Version:  konnectv1alpha1.SchemeGroupVersion.Version,
 		Resource: "konnectcloudgatewaytransitgateways",
+	}
+	checker := &fakeCRDChecker{
+		missing: map[schema.GroupVersionResource]struct{}{
+			missingGVR: {},
+		},
+	}
+
+	err := ensureRequiredCRDs(&cfg, checker)
+	require.Error(t, err)
+	require.ErrorContains(t, err, missingGVR.String())
+}
+
+func TestEnsureRequiredCRDsChecksPortalForKonnectControllers(t *testing.T) {
+	t.Parallel()
+
+	cfg := defaultConfigWithDisabledControllers()
+	cfg.KonnectControllersEnabled = true
+
+	missingGVR := schema.GroupVersionResource{
+		Group:    xkonnectv1alpha1.GroupVersion.Group,
+		Version:  xkonnectv1alpha1.GroupVersion.Version,
+		Resource: "portals",
 	}
 	checker := &fakeCRDChecker{
 		missing: map[schema.GroupVersionResource]struct{}{

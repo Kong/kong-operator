@@ -61,8 +61,15 @@ func main() {
 	}
 	crdContent := out.String()
 
-	// TODO: This makes sure that temporary CRDs are not included in the chart.
-	crdContent = filterOutAPIGroup(crdContent, "x-konnect.konghq.com")
+	// Keep temporary x-konnect CRDs out of the chart, but allow the Portal CRD,
+	// which is required by the operator at startup.
+	crdContent = filterOutCRDsByName(
+		crdContent,
+		"dcrproviders.x-konnect.konghq.com",
+		"konnecteventcontrolplanes.x-konnect.konghq.com",
+		"konnecteventdataplanecertificates.x-konnect.konghq.com",
+		"portalteams.x-konnect.konghq.com",
+	)
 	crdContent = wrapInIfEnabled(crdContent)
 	crdContent = wrapCertAnnotations(crdContent)
 	crdContent = wrapWebhookConfig(crdContent)
@@ -298,22 +305,39 @@ func wrapDeprecatedVersions(content string) string {
 	return strings.Join(result, "\n")
 }
 
-// filterOutAPIGroup removes all CRD documents belonging to the specified API group
-// from the multi-document YAML content.
-func filterOutAPIGroup(content, apiGroup string) string {
+// filterOutCRDsByName removes CRD documents matching the provided names from the
+// multi-document YAML content.
+func filterOutCRDsByName(content string, crdNames ...string) string {
 	docs := strings.Split(content, "---")
-	groupPattern := "group: " + apiGroup
+	excluded := make(map[string]struct{}, len(crdNames))
+	for _, crdName := range crdNames {
+		excluded[crdName] = struct{}{}
+	}
 	var filtered []string
 	for _, doc := range docs {
 		if strings.TrimSpace(doc) == "" {
 			continue
 		}
-		if strings.Contains(doc, groupPattern) {
+		if shouldFilterCRDByName(doc, excluded) {
 			continue
 		}
 		filtered = append(filtered, doc)
 	}
 	return strings.Join(filtered, "---")
+}
+
+func shouldFilterCRDByName(doc string, excluded map[string]struct{}) bool {
+	if !strings.Contains(doc, "\nkind: CustomResourceDefinition\n") {
+		return false
+	}
+
+	for name := range excluded {
+		if strings.Contains(doc, "\n  name: "+name+"\n") {
+			return true
+		}
+	}
+
+	return false
 }
 
 // findVersionEnd finds the end of a version entry starting at startIndex.

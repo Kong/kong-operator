@@ -411,6 +411,11 @@ func requiredCRDChecks(c *Config) []requiredCRDCheck {
 					Version:  configurationv1alpha1.SchemeGroupVersion.Version,
 					Resource: "kongvaults",
 				},
+				{
+					Group:    xkonnectv1alpha1.GroupVersion.Group,
+					Version:  xkonnectv1alpha1.GroupVersion.Version,
+					Resource: "portals",
+				},
 			},
 		},
 	}
