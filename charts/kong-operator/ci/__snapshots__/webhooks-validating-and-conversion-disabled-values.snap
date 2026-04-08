@@ -29848,12 +29848,15 @@ spec:
                     description: |-
                       ID is the unique identifier of the Konnect entity as assigned by Konnect API.
                       If it's unset (empty string), it means the Konnect entity hasn't been created yet.
+                    maxLength: 256
                     type: string
                   organizationID:
                     description: OrgID is ID of Konnect Org that this entity has been created in.
+                    maxLength: 256
                     type: string
                   serverURL:
                     description: ServerURL is the URL of the Konnect server in which the entity exists.
+                    maxLength: 512
                     type: string
                 type: object
             type: object
@@ -30232,12 +30235,15 @@ spec:
                     description: |-
                       ID is the unique identifier of the Konnect entity as assigned by Konnect API.
                       If it's unset (empty string), it means the Konnect entity hasn't been created yet.
+                    maxLength: 256
                     type: string
                   organizationID:
                     description: OrgID is ID of Konnect Org that this entity has been created in.
+                    maxLength: 256
                     type: string
                   serverURL:
                     description: ServerURL is the URL of the Konnect server in which the entity exists.
+                    maxLength: 512
                     type: string
                 type: object
             type: object
@@ -30827,12 +30833,15 @@ spec:
                     description: |-
                       ID is the unique identifier of the Konnect entity as assigned by Konnect API.
                       If it's unset (empty string), it means the Konnect entity hasn't been created yet.
+                    maxLength: 256
                     type: string
                   organizationID:
                     description: OrgID is ID of Konnect Org that this entity has been created in.
+                    maxLength: 256
                     type: string
                   serverURL:
                     description: ServerURL is the URL of the Konnect server in which the entity exists.
+                    maxLength: 512
                     type: string
                 type: object
             type: object
@@ -31141,12 +31150,15 @@ spec:
                     description: |-
                       ID is the unique identifier of the Konnect entity as assigned by Konnect API.
                       If it's unset (empty string), it means the Konnect entity hasn't been created yet.
+                    maxLength: 256
                     type: string
                   organizationID:
                     description: OrgID is ID of Konnect Org that this entity has been created in.
+                    maxLength: 256
                     type: string
                   serverURL:
                     description: ServerURL is the URL of the Konnect server in which the entity exists.
+                    maxLength: 512
                     type: string
                 type: object
             type: object
@@ -31394,12 +31406,15 @@ spec:
                     description: |-
                       ID is the unique identifier of the Konnect entity as assigned by Konnect API.
                       If it's unset (empty string), it means the Konnect entity hasn't been created yet.
+                    maxLength: 256
                     type: string
                   organizationID:
                     description: OrgID is ID of Konnect Org that this entity has been created in.
+                    maxLength: 256
                     type: string
                   serverURL:
                     description: ServerURL is the URL of the Konnect server in which the entity exists.
+                    maxLength: 512
                     type: string
                 type: object
             type: object
@@ -31640,12 +31655,15 @@ spec:
                     description: |-
                       ID is the unique identifier of the Konnect entity as assigned by Konnect API.
                       If it's unset (empty string), it means the Konnect entity hasn't been created yet.
+                    maxLength: 256
                     type: string
                   organizationID:
                     description: OrgID is ID of Konnect Org that this entity has been created in.
+                    maxLength: 256
                     type: string
                   serverURL:
                     description: ServerURL is the URL of the Konnect server in which the entity exists.
+                    maxLength: 512
                     type: string
                 type: object
             type: object
@@ -31890,12 +31908,15 @@ spec:
                     description: |-
                       ID is the unique identifier of the Konnect entity as assigned by Konnect API.
                       If it's unset (empty string), it means the Konnect entity hasn't been created yet.
+                    maxLength: 256
                     type: string
                   organizationID:
                     description: OrgID is ID of Konnect Org that this entity has been created in.
+                    maxLength: 256
                     type: string
                   serverURL:
                     description: ServerURL is the URL of the Konnect server in which the entity exists.
+                    maxLength: 512
                     type: string
                 type: object
             type: object
@@ -32142,12 +32163,15 @@ spec:
                     description: |-
                       ID is the unique identifier of the Konnect entity as assigned by Konnect API.
                       If it's unset (empty string), it means the Konnect entity hasn't been created yet.
+                    maxLength: 256
                     type: string
                   organizationID:
                     description: OrgID is ID of Konnect Org that this entity has been created in.
+                    maxLength: 256
                     type: string
                   serverURL:
                     description: ServerURL is the URL of the Konnect server in which the entity exists.
+                    maxLength: 512
                     type: string
                 type: object
             type: object
@@ -32414,12 +32438,15 @@ spec:
                     description: |-
                       ID is the unique identifier of the Konnect entity as assigned by Konnect API.
                       If it's unset (empty string), it means the Konnect entity hasn't been created yet.
+                    maxLength: 256
                     type: string
                   organizationID:
                     description: OrgID is ID of Konnect Org that this entity has been created in.
+                    maxLength: 256
                     type: string
                   serverURL:
                     description: ServerURL is the URL of the Konnect server in which the entity exists.
+                    maxLength: 512
                     type: string
                 type: object
             type: object
@@ -32880,12 +32907,15 @@ spec:
                     description: |-
                       ID is the unique identifier of the Konnect entity as assigned by Konnect API.
                       If it's unset (empty string), it means the Konnect entity hasn't been created yet.
+                    maxLength: 256
                     type: string
                   organizationID:
                     description: OrgID is ID of Konnect Org that this entity has been created in.
+                    maxLength: 256
                     type: string
                   serverURL:
                     description: ServerURL is the URL of the Konnect server in which the entity exists.
+                    maxLength: 512
                     type: string
                 type: object
             type: object
@@ -33240,15 +33270,18 @@ spec:
                     description: |-
                       ID is the unique identifier of the Konnect entity as assigned by Konnect API.
                       If it's unset (empty string), it means the Konnect entity hasn't been created yet.
+                    maxLength: 256
                     type: string
                   keySetID:
                     description: KeySetID is the Konnect ID of the KeySet this entity is associated with.
                     type: string
                   organizationID:
                     description: OrgID is ID of Konnect Org that this entity has been created in.
+                    maxLength: 256
                     type: string
                   serverURL:
                     description: ServerURL is the URL of the Konnect server in which the entity exists.
+                    maxLength: 512
                     type: string
                 type: object
             type: object
@@ -33532,12 +33565,15 @@ spec:
                     description: |-
                       ID is the unique identifier of the Konnect entity as assigned by Konnect API.
                       If it's unset (empty string), it means the Konnect entity hasn't been created yet.
+                    maxLength: 256
                     type: string
                   organizationID:
                     description: OrgID is ID of Konnect Org that this entity has been created in.
+                    maxLength: 256
                     type: string
                   serverURL:
                     description: ServerURL is the URL of the Konnect server in which the entity exists.
+                    maxLength: 512
                     type: string
                 type: object
             type: object
@@ -34162,12 +34198,15 @@ spec:
                     description: |-
                       ID is the unique identifier of the Konnect entity as assigned by Konnect API.
                       If it's unset (empty string), it means the Konnect entity hasn't been created yet.
+                    maxLength: 256
                     type: string
                   organizationID:
                     description: OrgID is ID of Konnect Org that this entity has been created in.
+                    maxLength: 256
                     type: string
                   serverURL:
                     description: ServerURL is the URL of the Konnect server in which the entity exists.
+                    maxLength: 512
                     type: string
                 type: object
             type: object
@@ -35216,12 +35255,15 @@ spec:
                     description: |-
                       ID is the unique identifier of the Konnect entity as assigned by Konnect API.
                       If it's unset (empty string), it means the Konnect entity hasn't been created yet.
+                    maxLength: 256
                     type: string
                   organizationID:
                     description: OrgID is ID of Konnect Org that this entity has been created in.
+                    maxLength: 256
                     type: string
                   serverURL:
                     description: ServerURL is the URL of the Konnect server in which the entity exists.
+                    maxLength: 512
                     type: string
                   serviceID:
                     description: ServiceID is the Konnect ID of the Service this entity is associated with.
@@ -35559,12 +35601,15 @@ spec:
                     description: |-
                       ID is the unique identifier of the Konnect entity as assigned by Konnect API.
                       If it's unset (empty string), it means the Konnect entity hasn't been created yet.
+                    maxLength: 256
                     type: string
                   organizationID:
                     description: OrgID is ID of Konnect Org that this entity has been created in.
+                    maxLength: 256
                     type: string
                   serverURL:
                     description: ServerURL is the URL of the Konnect server in which the entity exists.
+                    maxLength: 512
                     type: string
                 type: object
             type: object
@@ -35805,12 +35850,15 @@ spec:
                     description: |-
                       ID is the unique identifier of the Konnect entity as assigned by Konnect API.
                       If it's unset (empty string), it means the Konnect entity hasn't been created yet.
+                    maxLength: 256
                     type: string
                   organizationID:
                     description: OrgID is ID of Konnect Org that this entity has been created in.
+                    maxLength: 256
                     type: string
                   serverURL:
                     description: ServerURL is the URL of the Konnect server in which the entity exists.
+                    maxLength: 512
                     type: string
                 type: object
             type: object
@@ -36052,12 +36100,15 @@ spec:
                     description: |-
                       ID is the unique identifier of the Konnect entity as assigned by Konnect API.
                       If it's unset (empty string), it means the Konnect entity hasn't been created yet.
+                    maxLength: 256
                     type: string
                   organizationID:
                     description: OrgID is ID of Konnect Org that this entity has been created in.
+                    maxLength: 256
                     type: string
                   serverURL:
                     description: ServerURL is the URL of the Konnect server in which the entity exists.
+                    maxLength: 512
                     type: string
                   upstreamID:
                     description: UpstreamID is the Konnect ID of the Upstream this entity is associated with.
@@ -37232,12 +37283,15 @@ spec:
                     description: |-
                       ID is the unique identifier of the Konnect entity as assigned by Konnect API.
                       If it's unset (empty string), it means the Konnect entity hasn't been created yet.
+                    maxLength: 256
                     type: string
                   organizationID:
                     description: OrgID is ID of Konnect Org that this entity has been created in.
+                    maxLength: 256
                     type: string
                   serverURL:
                     description: ServerURL is the URL of the Konnect server in which the entity exists.
+                    maxLength: 512
                     type: string
                 type: object
             type: object
@@ -37558,12 +37612,15 @@ spec:
                     description: |-
                       ID is the unique identifier of the Konnect entity as assigned by Konnect API.
                       If it's unset (empty string), it means the Konnect entity hasn't been created yet.
+                    maxLength: 256
                     type: string
                   organizationID:
                     description: OrgID is ID of Konnect Org that this entity has been created in.
+                    maxLength: 256
                     type: string
                   serverURL:
                     description: ServerURL is the URL of the Konnect server in which the entity exists.
+                    maxLength: 512
                     type: string
                 type: object
             required:
@@ -38251,12 +38308,15 @@ spec:
                 description: |-
                   ID is the unique identifier of the Konnect entity as assigned by Konnect API.
                   If it's unset (empty string), it means the Konnect entity hasn't been created yet.
+                maxLength: 256
                 type: string
               organizationID:
                 description: OrgID is ID of Konnect Org that this entity has been created in.
+                maxLength: 256
                 type: string
               serverURL:
                 description: ServerURL is the URL of the Konnect server in which the entity exists.
+                maxLength: 512
                 type: string
             type: object
         required:
@@ -38518,12 +38578,15 @@ spec:
                 description: |-
                   ID is the unique identifier of the Konnect entity as assigned by Konnect API.
                   If it's unset (empty string), it means the Konnect entity hasn't been created yet.
+                maxLength: 256
                 type: string
               organizationID:
                 description: OrgID is ID of Konnect Org that this entity has been created in.
+                maxLength: 256
                 type: string
               serverURL:
                 description: ServerURL is the URL of the Konnect server in which the entity exists.
+                maxLength: 512
                 type: string
               state:
                 description: State is the current state of the network. Can be e.g. initializing, ready, terminating.
@@ -38954,15 +39017,18 @@ spec:
                 description: |-
                   ID is the unique identifier of the Konnect entity as assigned by Konnect API.
                   If it's unset (empty string), it means the Konnect entity hasn't been created yet.
+                maxLength: 256
                 type: string
               networkID:
                 description: NetworkID is the Konnect ID of the Konnect cloud gateway network this entity is associated with.
                 type: string
               organizationID:
                 description: OrgID is ID of Konnect Org that this entity has been created in.
+                maxLength: 256
                 type: string
               serverURL:
                 description: ServerURL is the URL of the Konnect server in which the entity exists.
+                maxLength: 512
                 type: string
               state:
                 description: State is the state of the transit gateway on Konnect side.
@@ -39662,6 +39728,7 @@ spec:
                 description: |-
                   ID is the unique identifier of the Konnect entity as assigned by Konnect API.
                   If it's unset (empty string), it means the Konnect entity hasn't been created yet.
+                maxLength: 256
                 type: string
               konnectEndpoints:
                 description: |-
@@ -39683,9 +39750,11 @@ spec:
                 type: object
               organizationID:
                 description: OrgID is ID of Konnect Org that this entity has been created in.
+                maxLength: 256
                 type: string
               serverURL:
                 description: ServerURL is the URL of the Konnect server in which the entity exists.
+                maxLength: 512
                 type: string
             type: object
         required:
@@ -39930,12 +39999,15 @@ spec:
                 description: |-
                   ID is the unique identifier of the Konnect entity as assigned by Konnect API.
                   If it's unset (empty string), it means the Konnect entity hasn't been created yet.
+                maxLength: 256
                 type: string
               organizationID:
                 description: OrgID is ID of Konnect Org that this entity has been created in.
+                maxLength: 256
                 type: string
               serverURL:
                 description: ServerURL is the URL of the Konnect server in which the entity exists.
+                maxLength: 512
                 type: string
             type: object
         type: object

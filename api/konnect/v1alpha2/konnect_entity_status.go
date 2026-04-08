@@ -6,16 +6,19 @@ type KonnectEntityStatus struct {
 	// If it's unset (empty string), it means the Konnect entity hasn't been created yet.
 	//
 	// +optional
+	// +kubebuilder:validation:MaxLength=256
 	ID string `json:"id,omitempty"`
 
 	// ServerURL is the URL of the Konnect server in which the entity exists.
 	//
 	// +optional
+	// +kubebuilder:validation:MaxLength=512
 	ServerURL string `json:"serverURL,omitempty"`
 
 	// OrgID is ID of Konnect Org that this entity has been created in.
 	//
 	// +optional
+	// +kubebuilder:validation:MaxLength=256
 	OrgID string `json:"organizationID,omitempty"`
 }
 
