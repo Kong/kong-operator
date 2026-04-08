@@ -15,7 +15,13 @@ excludeVulns="$(jq -nc '[
   # Kubernetes GitRepo Volume Inadvertent Local Repository Access in k8s.io/kubernetes
   # We do not use the GitRepo volume type.
   # https://github.com/kubernetes/kubernetes/issues/130786
-  "GO-2025-3521"
+  "GO-2025-3521",
+
+  # Memory-safety vulnerability in github.com/jackc/pgx/v5.
+  # pgx is an indirect dependency (via terratest, testcontainers, certificate-transparency-go)
+  # and is not imported or used anywhere in our code.
+  "GO-2026-4771",
+  "GO-2026-4772"
 
 ]')"
 export excludeVulns
