@@ -236,9 +236,14 @@ spec:
                 description: ServerURL is the URL of the Konnect server in which the
                   entity exists.
                 type: string
-              version:
-                description: Version is the version of the MCPServer workloads.
-                type: string
+              workloads:
+                description: Workloads defines the observed state of the MCPServer
+                  workloads.
+                properties:
+                  version:
+                    description: Version is the version of the MCPServer workloads.
+                    type: string
+                type: object
             type: object
         type: object
         x-kubernetes-validations:

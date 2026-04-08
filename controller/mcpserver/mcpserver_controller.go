@@ -150,7 +150,7 @@ func (r *MCPServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// Patch the MCPServer status with the remote version.
 	version := remoteMCPServer.Version
 	old := mcpServer.DeepCopy()
-	mcpServer.Status.Version = &version
+	mcpServer.Status.Workloads.Version = &version
 	statusRes, err := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, &mcpServer, old)
 	if err != nil {
 		return ctrl.Result{}, err
