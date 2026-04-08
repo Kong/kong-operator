@@ -29,6 +29,9 @@ func portalAPIAuthConfigurationRef(object client.Object) []string {
 	if !ok {
 		return nil
 	}
+	if ent.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name == "" {
+		return nil
+	}
 
-	return []string{ent.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name}
+	return []string{ent.GetNamespace() + "/" + ent.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name}
 }

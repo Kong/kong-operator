@@ -10,7 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	konnectapiauthv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	xkonnectv1alpha1 "github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
@@ -26,7 +26,7 @@ func PortalReconciliationWatchOptions(
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
-				&konnectv1alpha1.KonnectAPIAuthConfiguration{},
+				&konnectapiauthv1alpha1.KonnectAPIAuthConfiguration{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueuePortalForKonnectAPIAuthConfiguration(cl),
 				),
@@ -39,7 +39,7 @@ func enqueuePortalForKonnectAPIAuthConfiguration(
 	cl client.Client,
 ) func(ctx context.Context, obj client.Object) []reconcile.Request {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		auth, ok := obj.(*konnectv1alpha1.KonnectAPIAuthConfiguration)
+		auth, ok := obj.(*konnectapiauthv1alpha1.KonnectAPIAuthConfiguration)
 		if !ok {
 			return nil
 		}
@@ -48,7 +48,7 @@ func enqueuePortalForKonnectAPIAuthConfiguration(
 			// TODO: change this when cross namespace refs are allowed.
 			client.InNamespace(auth.GetNamespace()),
 			client.MatchingFields{
-				index.IndexFieldPortalOnAPIAuthConfiguration: auth.Name,
+				index.IndexFieldPortalOnAPIAuthConfiguration: auth.Namespace + "/" + auth.Name,
 			},
 		); err != nil {
 			return nil

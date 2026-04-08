@@ -89,6 +89,49 @@ func TestGoType_ObjectRef(t *testing.T) {
 	})
 }
 
+func TestGenerateWatch_UsesStableAPIAuthImportAndNamespacedLookup(t *testing.T) {
+	t.Run("reuses generated package import for konnect v1alpha1 entities", func(t *testing.T) {
+		g := NewGenerator(Config{
+			APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+			APIGroupPackageAlias: "konnectv1alpha1",
+		})
+
+		content, err := g.generateWatch("Portal")
+		require.NoError(t, err)
+
+		assert.Contains(t, content, `konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"`)
+		assert.NotContains(t, content, `konnectapiauthv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"`)
+		assert.Contains(t, content, `&konnectv1alpha1.KonnectAPIAuthConfiguration{}`)
+	})
+
+	t.Run("uses separate auth import and namespaced lookup for other api groups", func(t *testing.T) {
+		g := NewGenerator(Config{
+			APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1",
+			APIGroupPackageAlias: "xkonnectv1alpha1",
+		})
+
+		content, err := g.generateWatch("Portal")
+		require.NoError(t, err)
+
+		assert.Contains(t, content, `konnectapiauthv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"`)
+		assert.Contains(t, content, `&konnectapiauthv1alpha1.KonnectAPIAuthConfiguration{}`)
+		assert.Contains(t, content, `index.IndexFieldPortalOnAPIAuthConfiguration: auth.Namespace + "/" + auth.Name,`)
+	})
+}
+
+func TestGenerateIndex_UsesNamespacedAPIAuthKey(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1",
+		APIGroupPackageAlias: "xkonnectv1alpha1",
+	})
+
+	content, err := g.generateIndex("Portal")
+	require.NoError(t, err)
+
+	assert.Contains(t, content, `if ent.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name == "" {`)
+	assert.Contains(t, content, `return []string{ent.GetNamespace() + "/" + ent.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name}`)
+}
+
 func TestGenerateCommonTypes(t *testing.T) {
 	t.Run("without import includes union ObjectRef types", func(t *testing.T) {
 		g := NewGenerator(Config{APIVersion: "v1alpha1"})

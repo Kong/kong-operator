@@ -70,7 +70,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+{{- if .NeedsSeparateAPIAuthImport}}
+	{{.APIAuthPackageAlias}} "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+{{- end}}
 	{{.APIGroupPackageAlias}} "{{.APIGroupPackagePath}}"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
@@ -86,7 +88,7 @@ func {{.EntityName}}ReconciliationWatchOptions(
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
-				&konnectv1alpha1.KonnectAPIAuthConfiguration{},
+				&{{.APIAuthPackageAlias}}.KonnectAPIAuthConfiguration{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueue{{.EntityName}}ForKonnectAPIAuthConfiguration(cl),
 				),
@@ -99,7 +101,7 @@ func enqueue{{.EntityName}}ForKonnectAPIAuthConfiguration(
 	cl client.Client,
 ) func(ctx context.Context, obj client.Object) []reconcile.Request {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		auth, ok := obj.(*konnectv1alpha1.KonnectAPIAuthConfiguration)
+		auth, ok := obj.(*{{.APIAuthPackageAlias}}.KonnectAPIAuthConfiguration)
 		if !ok {
 			return nil
 		}
@@ -108,7 +110,7 @@ func enqueue{{.EntityName}}ForKonnectAPIAuthConfiguration(
 			// TODO: change this when cross namespace refs are allowed.
 			client.InNamespace(auth.GetNamespace()),
 			client.MatchingFields{
-				index.IndexField{{.EntityName}}OnAPIAuthConfiguration: auth.Name,
+				index.IndexField{{.EntityName}}OnAPIAuthConfiguration: auth.Namespace + "/" + auth.Name,
 			},
 		); err != nil {
 			return nil
@@ -150,8 +152,11 @@ func {{.EntityNameLowerCamel}}APIAuthConfigurationRef(object client.Object) []st
 	if !ok {
 		return nil
 	}
+	if ent.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name == "" {
+		return nil
+	}
 
-	return []string{ent.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name}
+	return []string{ent.GetNamespace() + "/" + ent.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name}
 }
 `
 
@@ -224,15 +229,27 @@ func (g *Generator) generateReconcilerFuncs(entityNames []string) (string, error
 func (g *Generator) generateWatch(entityName string) (string, error) {
 	tmpl := template.Must(template.New("watch").Parse(watchTemplate))
 
+	const konnectAPIAuthPackagePath = "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+
+	apiAuthPackageAlias := g.config.APIGroupPackageAlias
+	needsSeparateAPIAuthImport := g.config.APIGroupPackagePath != konnectAPIAuthPackagePath
+	if needsSeparateAPIAuthImport {
+		apiAuthPackageAlias = "konnectapiauthv1alpha1"
+	}
+
 	var buf strings.Builder
 	data := struct {
-		EntityName           string
-		APIGroupPackagePath  string
-		APIGroupPackageAlias string
+		EntityName                 string
+		APIAuthPackageAlias        string
+		NeedsSeparateAPIAuthImport bool
+		APIGroupPackagePath        string
+		APIGroupPackageAlias       string
 	}{
-		EntityName:           entityName,
-		APIGroupPackagePath:  g.config.APIGroupPackagePath,
-		APIGroupPackageAlias: g.config.APIGroupPackageAlias,
+		EntityName:                 entityName,
+		APIAuthPackageAlias:        apiAuthPackageAlias,
+		NeedsSeparateAPIAuthImport: needsSeparateAPIAuthImport,
+		APIGroupPackagePath:        g.config.APIGroupPackagePath,
+		APIGroupPackageAlias:       g.config.APIGroupPackageAlias,
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
