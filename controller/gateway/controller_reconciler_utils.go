@@ -1414,7 +1414,7 @@ func getSupportedKindsWithResolvedRefsCondition(ctx context.Context, c client.Cl
 
 	message := ""
 	if listener.TLS != nil {
-		// We only support Terminate for protocols other then TLS.
+		// We only support Terminate for protocols other than TLS.
 		tlsMode := gatewayv1.TLSModeTerminate
 		if listener.TLS.Mode != nil {
 			tlsMode = *listener.TLS.Mode

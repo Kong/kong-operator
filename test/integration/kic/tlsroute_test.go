@@ -281,7 +281,7 @@ func TestTLSRoutePassthroughReferenceGrant(t *testing.T) {
 			Passthrough: true,
 		}); err != nil {
 			t.Logf("failed accessing tcpecho at %s, err: %v", proxyTLSURL, err)
-			return true
+			return false
 		}
 		return true
 	}, ingressWait, waitTick)

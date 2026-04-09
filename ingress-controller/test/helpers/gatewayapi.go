@@ -147,7 +147,7 @@ func gatewayLinkStatusMatches(
 				check(verifyLinked, string(mgrconsts.GetControllerName()))
 		}
 	case gatewayapi.TLSProtocolType:
-		route, err := c.GatewayV1alpha2().TLSRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
+		route, err := c.GatewayV1().TLSRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			t.Logf("error getting tls route: %v", err)
 		} else {
@@ -231,7 +231,7 @@ func verifyProgrammedConditionStatus(t *testing.T,
 			return parentStatusContainsProgrammedCondition(route.Status.Parents, mgrconsts.GetControllerName(), expectedStatus)
 		}
 	case gatewayapi.TLSProtocolType:
-		route, err := c.GatewayV1alpha2().TLSRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
+		route, err := c.GatewayV1().TLSRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			t.Logf("error getting tls route: %v", err)
 		} else {
