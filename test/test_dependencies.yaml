@@ -1,7 +1,7 @@
 e2e:
   gke:
     # renovate: datasource=custom.gke-rapid depName=gke versioning=semver
-    - '1.33.1'
+    - '1.35.3'
 
 integration:
   helm:
