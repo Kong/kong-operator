@@ -14,6 +14,7 @@ import (
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	xkonnectv1alpha1 "github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
@@ -417,6 +418,20 @@ func TestEnsureFinalizerOnKonnectAPIAuthConfiguration(t *testing.T) {
 					if authRef.Namespace != nil && *authRef.Namespace != "" {
 						ns = *authRef.Namespace
 					}
+					if authRef.Name != "" {
+						return []string{ns + "/" + authRef.Name}
+					}
+					return nil
+				},
+			)
+
+			clientBuilder = clientBuilder.WithIndex(
+				&xkonnectv1alpha1.Portal{},
+				index.IndexFieldPortalOnAPIAuthConfiguration,
+				func(obj client.Object) []string {
+					p := obj.(*xkonnectv1alpha1.Portal)
+					ns := p.GetNamespace()
+					authRef := p.Spec.KonnectConfiguration.APIAuthConfigurationRef
 					if authRef.Name != "" {
 						return []string{ns + "/" + authRef.Name}
 					}

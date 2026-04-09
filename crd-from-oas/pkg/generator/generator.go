@@ -30,6 +30,15 @@ type Config struct {
 	// SecretRefEntities is the set of entity names that should generate an
 	// optional secret reference on the Spec (SourceType discriminator + SecretRef field).
 	SecretRefEntities map[string]bool
+	// ReconcilerConfig maps entity names to reconciler generation configurations.
+	// When set, reconciler wiring files are generated for the entity.
+	ReconcilerConfig map[string]*config.ReconcilerConfig
+	// APIGroupPackagePath is the full Go import path for the generated API types package
+	// (e.g. "github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1").
+	APIGroupPackagePath string
+	// APIGroupPackageAlias is the import alias for the generated API types package
+	// (e.g. "xkonnectv1alpha1").
+	APIGroupPackageAlias string
 }
 
 // Generator generates Go CRD types from parsed OpenAPI schemas.
@@ -46,6 +55,9 @@ func NewGenerator(config Config) *Generator {
 type GeneratedFile struct {
 	Name    string
 	Content string
+	// RelativeDir, when set, specifies the output directory relative to the
+	// project root instead of the default API types directory.
+	RelativeDir string
 }
 
 type konnectLabelsField struct {
@@ -60,6 +72,9 @@ func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error)
 
 	// Collect all referenced schema names from the CRD types
 	referencedSchemas := make(map[string]bool)
+
+	// Collect entity names that have reconciler config for batch generation.
+	var reconcilerEntities []string
 
 	// Generate types for each request body (these are the main CRD types)
 	for name, schema := range parsed.RequestBodies {
@@ -98,8 +113,25 @@ func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error)
 			}
 		}
 
+		// Track entities with reconciler config
+		if g.config.ReconcilerConfig != nil {
+			if _, ok := g.config.ReconcilerConfig[entityName]; ok {
+				reconcilerEntities = append(reconcilerEntities, entityName)
+			}
+		}
+
 		// Collect referenced schemas
 		g.collectReferencedSchemas(schema, referencedSchemas)
+	}
+
+	// Generate reconciler wiring files for entities with reconciler config
+	if len(reconcilerEntities) > 0 {
+		sort.Strings(reconcilerEntities)
+		reconcilerFiles, err := g.generateReconcilerFiles(reconcilerEntities)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate reconciler files: %w", err)
+		}
+		files = append(files, reconcilerFiles...)
 	}
 
 	// Generate a register file
@@ -390,6 +422,14 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		objectRefImport = g.config.CommonTypes.ObjectRef.Import
 	}
 
+	// Check if this entity has reconciler config (needs KonnectConfiguration in Spec)
+	hasReconciler := false
+	if g.config.ReconcilerConfig != nil {
+		if _, ok := g.config.ReconcilerConfig[entityName]; ok {
+			hasReconciler = true
+		}
+	}
+
 	var buf strings.Builder
 	labelsField := g.konnectLabelsField(schema)
 	data := struct {
@@ -401,6 +441,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		ObjectRefImport      *config.ImportConfig
 		HasOptionalSecretRef bool
 		KonnectLabelsField   *konnectLabelsField
+		HasReconciler        bool
 	}{
 		EntityName:           entityName,
 		Schema:               schema,
@@ -410,6 +451,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		ObjectRefImport:      objectRefImport,
 		HasOptionalSecretRef: hasOptionalSecretRef,
 		KonnectLabelsField:   labelsField,
+		HasReconciler:        hasReconciler,
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
