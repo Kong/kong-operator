@@ -114,6 +114,11 @@
   from Konnect via the signal manager and reconciles the corresponding local resources.
   The feature is gated behind the `MCPController` feature gate.
   [#3755](https://github.com/Kong/kong-operator/pull/3755)
+- Added Kong entity reconciliation for `MCPServer`: the reconciler now fetches
+  `KongService` and `KongRoute` definitions from the Konnect API and ensures
+  matching Kubernetes CRs exist in the cluster. The `KongService` host is set to
+  the in-cluster Service DNS name. Stale resources are garbage-collected.
+  [#3831](https://github.com/Kong/kong-operator/pull/3831)
 
 ### Changed
 

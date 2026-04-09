@@ -827,6 +827,7 @@ func newMCPServerControllers(mgr manager.Manager, c *Config, ctrlOpts controller
 				LoggingMode:       c.LoggingMode,
 				SignalManager:     sm,
 				SdkFactory:        sdkFactory,
+				ClusterDomain:     c.ClusterDomain,
 				ReconcileEventCh:  reconcileEventCh,
 			},
 		},
