@@ -1415,7 +1415,11 @@ func getSupportedKindsWithResolvedRefsCondition(ctx context.Context, c client.Cl
 	message := ""
 	if listener.TLS != nil {
 		// We only support Terminate for protocols other then TLS.
-		if *listener.TLS.Mode != gatewayv1.TLSModeTerminate && listener.Protocol != gatewayv1.TLSProtocolType {
+		tlsMode := gatewayv1.TLSModeTerminate
+		if listener.TLS.Mode != nil {
+			tlsMode = *listener.TLS.Mode
+		}
+		if tlsMode != gatewayv1.TLSModeTerminate && listener.Protocol != gatewayv1.TLSProtocolType {
 			resolvedRefsCondition.Status = metav1.ConditionFalse
 			resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidCertificateRef)
 			message = conditionMessage(message, "Only Terminate mode is supported")

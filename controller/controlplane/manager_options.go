@@ -204,7 +204,7 @@ const (
 	ControllerNameGatewayAPIGRPCRoute = "GWAPI_GRPCROUTE"
 	// ControllerNameGatewayAPITLSRoute identifies the controller for managing
 	// Gateway API TLSRoute resources.
-	ControllerNameGatewayAPITLSRoute = "GWAPI_TLSRoute"
+	ControllerNameGatewayAPITLSRoute = "GWAPI_TLSROUTE"
 	// ControllerNameGatewayAPIReferenceGrant identifies the controller for managing
 	// Gateway API ReferenceGrant resources.
 	ControllerNameGatewayAPIReferenceGrant = "GWAPI_REFERENCE_GRANT"
