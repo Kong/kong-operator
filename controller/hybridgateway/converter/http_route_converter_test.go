@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -750,6 +752,134 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				}
 				assert.True(t, sawDefaultStatus)
 				assert.True(t, sawCustomStatus)
+			},
+		},
+		{
+			name: "translates upstream header matching route end to end",
+			setup: func() *httpRouteConverter {
+				route := newHTTPRouteWithRules(
+					[]string{"api.example.com"},
+					[]gwtypes.HTTPRouteRule{
+						{
+							Matches: []gwtypes.HTTPRouteMatch{{
+								Headers: []gatewayv1.HTTPHeaderMatch{{
+									Name:  "version",
+									Value: "one",
+								}},
+							}},
+							BackendRefs: []gwtypes.HTTPBackendRef{newBackendRef("")},
+						},
+						{
+							Matches: []gwtypes.HTTPRouteMatch{{
+								Headers: []gatewayv1.HTTPHeaderMatch{{
+									Name:  "version",
+									Value: "two",
+								}},
+							}},
+							BackendRefs: []gwtypes.HTTPBackendRef{newBackendRef("")},
+						},
+						{
+							Matches: []gwtypes.HTTPRouteMatch{{
+								Headers: []gatewayv1.HTTPHeaderMatch{
+									{
+										Name:  "version",
+										Value: "two",
+									},
+									{
+										Name:  "color",
+										Value: "orange",
+									},
+								},
+							}},
+							BackendRefs: []gwtypes.HTTPBackendRef{newBackendRef("")},
+						},
+						{
+							Matches: []gwtypes.HTTPRouteMatch{
+								{
+									Headers: []gatewayv1.HTTPHeaderMatch{{
+										Name:  "color",
+										Value: "blue",
+									}},
+								},
+								{
+									Headers: []gatewayv1.HTTPHeaderMatch{{
+										Name:  "color",
+										Value: "green",
+									}},
+								},
+							},
+							BackendRefs: []gwtypes.HTTPBackendRef{newBackendRef("")},
+						},
+						{
+							Matches: []gwtypes.HTTPRouteMatch{
+								{
+									Headers: []gatewayv1.HTTPHeaderMatch{{
+										Name:  "color",
+										Value: "red",
+									}},
+								},
+								{
+									Headers: []gatewayv1.HTTPHeaderMatch{{
+										Name:  "color",
+										Value: "yellow",
+									}},
+								},
+							},
+							BackendRefs: []gwtypes.HTTPBackendRef{newBackendRef("")},
+						},
+					},
+				)
+				gateway := baseGateway()
+				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(baseObjects(gateway)...).Build()
+				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+			},
+			wantCount: 22,
+			wantOutputs: outputCount{
+				upstreams: 5,
+				services:  5,
+				routes:    7,
+				targets:   5,
+			},
+			wantStoreLen: 22,
+			assertFn: func(t *testing.T, store []client.Object) {
+				t.Helper()
+
+				routeNames := map[string]struct{}{}
+				serviceNames := map[string]struct{}{}
+				headersByRoute := map[string]int{}
+
+				for _, obj := range store {
+					route, ok := obj.(*configurationv1alpha1.KongRoute)
+					if !ok {
+						continue
+					}
+
+					routeNames[route.Name] = struct{}{}
+					assert.Empty(t, route.Spec.Paths)
+					assert.Empty(t, route.Spec.Methods)
+					require.NotNil(t, route.Spec.ServiceRef)
+					require.NotNil(t, route.Spec.ServiceRef.NamespacedRef)
+
+					serviceName := route.Spec.ServiceRef.NamespacedRef.Name
+					serviceNames[serviceName] = struct{}{}
+
+					headersKey := canonicalHeaderMatchSet(route.Spec.Headers)
+					headersByRoute[headersKey]++
+				}
+
+				expectedHeaders := map[string]int{
+					"color=blue":               1,
+					"color=green":              1,
+					"color=orange&version=two": 1,
+					"color=red":                1,
+					"color=yellow":             1,
+					"version=one":              1,
+					"version=two":              1,
+				}
+
+				assert.Len(t, routeNames, 7)
+				assert.Len(t, serviceNames, 1)
+				assert.Equal(t, expectedHeaders, headersByRoute)
 			},
 		},
 		{
@@ -1599,6 +1729,27 @@ func newHTTPRouteForTranslation(hostnames []string, backendRefs []gwtypes.HTTPBa
 		BackendRefs: backendRefs,
 		Filters:     filters,
 	}})
+}
+
+func canonicalHeaderMatchSet(headers map[string][]string) string {
+	if len(headers) == 0 {
+		return ""
+	}
+
+	keys := make([]string, 0, len(headers))
+	for key := range headers {
+		keys = append(keys, key)
+	}
+	slices.Sort(keys)
+
+	parts := make([]string, 0, len(keys))
+	for _, key := range keys {
+		values := append([]string(nil), headers[key]...)
+		slices.Sort(values)
+		parts = append(parts, key+"="+strings.Join(values, "|"))
+	}
+
+	return strings.Join(parts, "&")
 }
 
 func newHTTPRouteWithRules(hostnames []string, rules []gwtypes.HTTPRouteRule) *gwtypes.HTTPRoute {
