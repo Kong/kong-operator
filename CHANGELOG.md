@@ -128,39 +128,11 @@
 
 ### Fixes
 
-- Admission webhook now validates HTTPRoute regex patterns before sending
-  configuration to the Admin API.
-  [#3213](https://github.com/Kong/kong-operator/pull/3213)
-- Fix setting up indices for HTTPRoute and Gateway when Konnect controllers are disabled.
-  [#3229](https://github.com/Kong/kong-operator/pull/3229)
+- Fix `ResolvedRefs` status condition on `HTTPRoute` not being updated when a
+  referenced `KongPlugin` is deleted in self-managed ControlPlane mode.
+  [#3206](https://github.com/Kong/kong-operator/pull/3206)
 - Fix counting of route attached to a listener by taking into account hostname intersection between the listener and the route.
   [#3490](https://github.com/Kong/kong-operator/pull/3490)
-- Fix reducing `Secret`s with in use finalizers.
-  [#3506](https://github.com/Kong/kong-operator/pull/3506)
-- Fix `ensureGatewayReferenceStatusRemoved` and `routeHasKongParentStatus` not
-  scoping to the specific Gateway when `GatewayNN` is set.
-  This could cause one ingress-controller instance to erroneously remove route
-  parent statuses set by another instance managing a different Gateway,
-  breaking cross-namespace HTTPRoute backend references via `ReferenceGrant`.
-  [#3524](https://github.com/Kong/kong-operator/pull/3524)
-- Fix `KonnectGatewayControlPlane` not setting `Programmed=False` when its
-  `KonnectAPIAuthConfiguration` reference cannot be resolved (e.g. the auth
-  config does not exist, or a cross-namespace reference lacks a
-  `KongReferenceGrant`). Both `APIAuthResolvedRef` and `Programmed` conditions
-  are now set to `False` atomically.
-  [#3526](https://github.com/Kong/kong-operator/pull/3526)
-- Fix configuring SNIs in ingress-controller when running with local controlplane.
-  [#3554](https://github.com/Kong/kong-operator/pull/3554)
-- Fix KongUpstream and KongService names in hybrid mode not taking into account
-  backendless rules. When a rule has no BackendRefs, the generated KongUpsteam and KongService names
-  now include a hash of rule's other field to avoid naming collisions with other
-  rules that also have no BackendRefs.
-  [#3576](https://github.com/Kong/kong-operator/pull/3576)
-- Do not try to list `Gateway`s for namespaces that are not being watched by controller
-  [#3625](https://github.com/Kong/kong-operator/pull/3625)
-- Fix the on-prem translator to set `protocols` in translated Kong routes to
-  `http,https`.
-  [#3587](https://github.com/Kong/kong-operator/pull/3587)
 - Fix the hybrid gateway translator to set `protocols` in translated KongRoutes
   to `http,https` to avoid 426 errors from Konnect hybrid gateways.
   [#3753](https://github.com/Kong/kong-operator/pull/3753)
@@ -182,27 +154,33 @@
 
 - Admission webhook now validates HTTPRoute regex patterns before sending
   configuration to the Admin API.
-  [#3666](https://github.com/Kong/kong-operator/pull/3666)
+  [#3213](https://github.com/Kong/kong-operator/pull/3213) [#3666](https://github.com/Kong/kong-operator/pull/3666)
 - Do not try to list `Gateway`s for namespaces that are not being watched by controller
-  [#3625](https://github.com/Kong/kong-operator/pull/3625)
+  [#3625](https://github.com/Kong/kong-operator/pull/3625) [#3629](https://github.com/Kong/kong-operator/pull/3629)
+- Fix `ensureGatewayReferenceStatusRemoved` and `routeHasKongParentStatus` not
+  scoping to the specific Gateway when `GatewayNN` is set.
+  This could cause one ingress-controller instance to erroneously remove route
+  parent statuses set by another instance managing a different Gateway,
+  breaking cross-namespace HTTPRoute backend references via `ReferenceGrant`.
+  [#3524](https://github.com/Kong/kong-operator/pull/3524) [#3561](https://github.com/Kong/kong-operator/pull/3561)
 - Fix `KonnectGatewayControlPlane` not setting `Programmed=False` when its
   `KonnectAPIAuthConfiguration` reference cannot be resolved (e.g. the auth
   config does not exist, or a cross-namespace reference lacks a
   `KongReferenceGrant`). Both `APIAuthResolvedRef` and `Programmed` conditions
   are now set to `False` atomically.
-  [#3526](https://github.com/Kong/kong-operator/pull/3526)
+  [#3526](https://github.com/Kong/kong-operator/pull/3526) [#3640](https://github.com/Kong/kong-operator/pull/3640)
 - Fix configuring SNIs in ingress-controller when running with local controlplane.
-  [#3554](https://github.com/Kong/kong-operator/pull/3554)
+  [#3554](https://github.com/Kong/kong-operator/pull/3554) [#3667](https://github.com/Kong/kong-operator/pull/3667)
 - Fix reducing `Secret`s with in use finalizers.
-  [#3506](https://github.com/Kong/kong-operator/pull/3506)
+  [#3506](https://github.com/Kong/kong-operator/pull/3506)[#3670](https://github.com/Kong/kong-operator/pull/3670)
 - Fix KongUpstream and KongService names in hybrid mode not taking into account
   backendless rules. When a rule has no BackendRefs, the generated KongUpsteam and KongService names
   now include a hash of rule's other field to avoid naming collisions with other
   rules that also have no BackendRefs.
-  [#3576](https://github.com/Kong/kong-operator/pull/3576)
+  [#3576](https://github.com/Kong/kong-operator/pull/3576) [#3675](https://github.com/Kong/kong-operator/pull/3675)
 - Fix the on-prem translator to set `protocols` in translated Kong routes to
   `http,https`.
-  [#3587](https://github.com/Kong/kong-operator/pull/3587)
+  [#3587](https://github.com/Kong/kong-operator/pull/3587) [#3681](https://github.com/Kong/kong-operator/pull/3681)
 
 ## [v2.1.2]
 
@@ -210,17 +188,14 @@
 
 ### Fixes
 
-- Fix `ResolvedRefs` status condition on `HTTPRoute` not being updated when a
-  referenced `KongPlugin` is deleted in self-managed ControlPlane mode.
-  [#3206](https://github.com/Kong/kong-operator/pull/3206)
 - Fix handling removal of annotations for DataPlane's Services
-  [#3402](https://github.com/Kong/kong-operator/pull/3402)
+  [#3402](https://github.com/Kong/kong-operator/pull/3402) [#3420](https://github.com/Kong/kong-operator/pull/3420)
 - Fix Gateway controller deleting all DataPlanes when KonnectExtension's
   `ControlPlaneRefValid` condition is temporarily False due to transient Konnect
   API failures. DataPlanes now continue serving traffic during Konnect
   connectivity issues. Added `NotProgrammed` condition reason to differentiate
   transient failures from permanent reference errors.
-  [#3463](https://github.com/Kong/kong-operator/pull/3463)
+  [#3463](https://github.com/Kong/kong-operator/pull/3463) [#3495](https://github.com/Kong/kong-operator/pull/3495)
 
 ## [v2.1.1]
 
@@ -229,21 +204,21 @@
 ### Fixes
 
 - Fix setting up indices for HTTPRoute and Gateway when Konnect controllers are disabled.
-  [#3234](https://github.com/Kong/kong-operator/pull/3234)
+  [#3229](https://github.com/Kong/kong-operator/pull/3229) [#3234](https://github.com/Kong/kong-operator/pull/3234)
 - Fix v2 module
-  [#3353](https://github.com/Kong/kong-operator/pull/3353)
+  [#3346](https://github.com/Kong/kong-operator/pull/3346) [#3353](https://github.com/Kong/kong-operator/pull/3353)
 - Bump Go to 1.25.7
-  [#3235](https://github.com/Kong/kong-operator/pull/3235)
+  [#3230](https://github.com/Kong/kong-operator/pull/3230) [#3235](https://github.com/Kong/kong-operator/pull/3235)
 - Name of Konnect Gateway Control Plane resource created in Konnect matches
   the name of the corresponding `KonnectGatewayControlPlane` resource in Kubernetes
   (the same random suffix is added). It prevents collisions in Konnect.
-  [#3357](https://github.com/Kong/kong-operator/pull/3357)
+  [#3357](https://github.com/Kong/kong-operator/pull/3357) [#3368](https://github.com/Kong/kong-operator/pull/3368)
 - Use the same defaults for `preserve_host` and `strip_path` in for Konnect Gateway Control Plane
   as in self-managed.
-  [#3366](https://github.com/Kong/kong-operator/pull/3366)
+  [#3366](https://github.com/Kong/kong-operator/pull/3366) [#3377](https://github.com/Kong/kong-operator/pull/3377)
 - Fix not resetting resource errors in ControlPlane's DB mode from previous `Update()`
   calls to prevent stale errors from leaking into subsequent calls.
-  [#3369](https://github.com/Kong/kong-operator/pull/3369)
+  [#3315](https://github.com/Kong/kong-operator/pull/3315) [#3369](https://github.com/Kong/kong-operator/pull/3369)
 
 ## [v2.1.0]
 
