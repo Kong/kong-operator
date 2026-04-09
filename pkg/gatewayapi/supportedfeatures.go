@@ -27,7 +27,6 @@ var commonSupportedFeatures = sets.New(
 	features.SupportHTTPRoute,
 	features.SupportGRPCRoute,
 	features.SupportReferenceGrant,
-	features.SupportTLSRoute,
 
 	// Gateway extended.
 	features.SupportGatewayPort8080,
