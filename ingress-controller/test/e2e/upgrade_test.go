@@ -11,10 +11,9 @@ import (
 	"testing"
 	"time"
 
-	dockerimage "github.com/docker/docker/api/types/image"
-	"github.com/docker/docker/client"
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
+	"github.com/moby/moby/client"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -180,20 +179,17 @@ func extractKongVersionFromManifest(t *testing.T, manifestPath string) kong.Vers
 // extractKongVersionFromDockerImage extracts the Kong version from the docker image by inspecting the image's env vars
 // for the KONG_VERSION env var.
 func extractKongVersionFromDockerImage(t *testing.T, image string) kong.Version {
-	dockerc, err := client.NewClientWithOpts(client.FromEnv)
+	dockerc, err := client.New(client.FromEnv)
 	require.NoError(t, err)
 
 	ctx := t.Context()
 
-	t.Log("negotiating docker API version")
-	dockerc.NegotiateAPIVersion(ctx)
-
 	t.Logf("pulling docker image %s to inspect it", image)
-	_, err = dockerc.ImagePull(ctx, image, dockerimage.PullOptions{})
+	_, err = dockerc.ImagePull(ctx, image, client.ImagePullOptions{})
 	require.NoError(t, err)
 
 	t.Logf("inspecting docker image %s", image)
-	var imageDetails dockerimage.InspectResponse
+	var imageDetails client.ImageInspectResult
 	// Retry because the image may not be available immediately after pulling it.
 	require.Eventually(t, func() bool {
 		var err error
