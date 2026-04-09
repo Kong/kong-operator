@@ -4,8 +4,10 @@ import (
 	"context"
 	"testing"
 
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -27,6 +29,7 @@ func TestServiceForRule(t *testing.T) {
 	// Create a scheme with the necessary types
 	scheme := runtime.NewScheme()
 	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, corev1.AddToScheme(scheme))
 
 	// Create test HTTPRoute
 	httpRoute := &gwtypes.HTTPRoute{
@@ -162,6 +165,250 @@ func TestServiceForRule(t *testing.T) {
 			annotations := service.GetAnnotations()
 			assert.NotNil(t, annotations)
 			assert.Equal(t, tt.expectedAnnotation, annotations[consts.GatewayOperatorHybridRoutesAnnotation])
+		})
+	}
+}
+
+func TestServiceForRule_ProtocolAnnotation(t *testing.T) {
+	ctx := context.Background()
+	logger := zap.New()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	cp := &commonv1alpha1.ControlPlaneRef{
+		Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+			Name: "test-cp",
+		},
+	}
+	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
+	upstreamName := "test-upstream"
+	port443 := gatewayv1.PortNumber(443)
+	port80 := gatewayv1.PortNumber(80)
+
+	tests := []struct {
+		name             string
+		backendRefs      []gatewayv1.HTTPBackendRef
+		backendServices  []corev1.Service
+		expectedProtocol sdkkonnectcomp.Protocol
+	}{
+		{
+			name: "backend service with https protocol annotation",
+			backendRefs: []gatewayv1.HTTPBackendRef{
+				{
+					BackendRef: gatewayv1.BackendRef{
+						BackendObjectReference: gatewayv1.BackendObjectReference{
+							Name: "my-svc",
+							Port: &port443,
+						},
+					},
+				},
+			},
+			backendServices: []corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "my-svc",
+						Namespace: "test-namespace",
+						Annotations: map[string]string{
+							"konghq.com/protocol": "https",
+						},
+					},
+					Spec: corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 443}},
+					},
+				},
+			},
+			expectedProtocol: sdkkonnectcomp.ProtocolHTTPS,
+		},
+		{
+			name: "backend service with grpcs protocol annotation",
+			backendRefs: []gatewayv1.HTTPBackendRef{
+				{
+					BackendRef: gatewayv1.BackendRef{
+						BackendObjectReference: gatewayv1.BackendObjectReference{
+							Name: "grpc-svc",
+							Port: &port443,
+						},
+					},
+				},
+			},
+			backendServices: []corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "grpc-svc",
+						Namespace: "test-namespace",
+						Annotations: map[string]string{
+							"konghq.com/protocol": "grpcs",
+						},
+					},
+					Spec: corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 443}},
+					},
+				},
+			},
+			expectedProtocol: sdkkonnectcomp.ProtocolGrpcs,
+		},
+		{
+			name: "backend service without protocol annotation defaults to http",
+			backendRefs: []gatewayv1.HTTPBackendRef{
+				{
+					BackendRef: gatewayv1.BackendRef{
+						BackendObjectReference: gatewayv1.BackendObjectReference{
+							Name: "plain-svc",
+							Port: &port80,
+						},
+					},
+				},
+			},
+			backendServices: []corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "plain-svc",
+						Namespace: "test-namespace",
+					},
+					Spec: corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 80}},
+					},
+				},
+			},
+			expectedProtocol: sdkkonnectcomp.ProtocolHTTP,
+		},
+		{
+			name: "backend service with invalid protocol annotation defaults to http",
+			backendRefs: []gatewayv1.HTTPBackendRef{
+				{
+					BackendRef: gatewayv1.BackendRef{
+						BackendObjectReference: gatewayv1.BackendObjectReference{
+							Name: "bad-svc",
+							Port: &port80,
+						},
+					},
+				},
+			},
+			backendServices: []corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "bad-svc",
+						Namespace: "test-namespace",
+						Annotations: map[string]string{
+							"konghq.com/protocol": "invalid-protocol",
+						},
+					},
+					Spec: corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 80}},
+					},
+				},
+			},
+			expectedProtocol: sdkkonnectcomp.ProtocolHTTP,
+		},
+		{
+			name: "multiple backend refs, first with annotation wins",
+			backendRefs: []gatewayv1.HTTPBackendRef{
+				{
+					BackendRef: gatewayv1.BackendRef{
+						BackendObjectReference: gatewayv1.BackendObjectReference{
+							Name: "svc-with-annotation",
+							Port: &port443,
+						},
+					},
+				},
+				{
+					BackendRef: gatewayv1.BackendRef{
+						BackendObjectReference: gatewayv1.BackendObjectReference{
+							Name: "svc-without-annotation",
+							Port: &port80,
+						},
+					},
+				},
+			},
+			backendServices: []corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "svc-with-annotation",
+						Namespace: "test-namespace",
+						Annotations: map[string]string{
+							"konghq.com/protocol": "https",
+						},
+					},
+					Spec: corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 443}},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "svc-without-annotation",
+						Namespace: "test-namespace",
+					},
+					Spec: corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 80}},
+					},
+				},
+			},
+			expectedProtocol: sdkkonnectcomp.ProtocolHTTPS,
+		},
+		{
+			name:             "no backend refs defaults to http",
+			backendRefs:      []gatewayv1.HTTPBackendRef{},
+			backendServices:  []corev1.Service{},
+			expectedProtocol: sdkkonnectcomp.ProtocolHTTP,
+		},
+		{
+			name: "backend service does not exist defaults to http",
+			backendRefs: []gatewayv1.HTTPBackendRef{
+				{
+					BackendRef: gatewayv1.BackendRef{
+						BackendObjectReference: gatewayv1.BackendObjectReference{
+							Name: "nonexistent-svc",
+							Port: &port80,
+						},
+					},
+				},
+			},
+			backendServices:  []corev1.Service{},
+			expectedProtocol: sdkkonnectcomp.ProtocolHTTP,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			httpRoute := &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-route",
+					Namespace: "test-namespace",
+				},
+				Spec: gatewayv1.HTTPRouteSpec{
+					CommonRouteSpec: gatewayv1.CommonRouteSpec{
+						ParentRefs: []gatewayv1.ParentReference{
+							{Name: "test-gateway"},
+						},
+					},
+				},
+			}
+
+			rule := gwtypes.HTTPRouteRule{
+				BackendRefs: tt.backendRefs,
+				Matches: []gatewayv1.HTTPRouteMatch{
+					{Path: &gatewayv1.HTTPPathMatch{Type: &[]gatewayv1.PathMatchType{gatewayv1.PathMatchPathPrefix}[0], Value: &[]string{"/test"}[0]}},
+				},
+			}
+
+			var objects []client.Object
+			for i := range tt.backendServices {
+				objects = append(objects, &tt.backendServices[i])
+			}
+
+			cl := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(objects...).
+				Build()
+
+			service, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, upstreamName)
+
+			require.NoError(t, err)
+			require.NotNil(t, service)
+			assert.Equal(t, tt.expectedProtocol, service.Spec.Protocol)
 		})
 	}
 }

@@ -3,6 +3,7 @@ package builder
 import (
 	"testing"
 
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -206,6 +207,41 @@ func TestKongServiceBuilder_WithOwner(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to set owner reference")
 	})
+}
+
+func TestKongServiceBuilder_WithProtocol(t *testing.T) {
+	tests := []struct {
+		name             string
+		protocol         string
+		expectedProtocol sdkkonnectcomp.Protocol
+		expectError      bool
+	}{
+		{name: "http", protocol: "http", expectedProtocol: sdkkonnectcomp.ProtocolHTTP},
+		{name: "https", protocol: "https", expectedProtocol: sdkkonnectcomp.ProtocolHTTPS},
+		{name: "grpc", protocol: "grpc", expectedProtocol: sdkkonnectcomp.ProtocolGrpc},
+		{name: "grpcs", protocol: "grpcs", expectedProtocol: sdkkonnectcomp.ProtocolGrpcs},
+		{name: "ws", protocol: "ws", expectedProtocol: sdkkonnectcomp.ProtocolWs},
+		{name: "wss", protocol: "wss", expectedProtocol: sdkkonnectcomp.ProtocolWss},
+		{name: "tls", protocol: "tls", expectedProtocol: sdkkonnectcomp.ProtocolTLS},
+		{name: "tcp", protocol: "tcp", expectedProtocol: sdkkonnectcomp.ProtocolTCP},
+		{name: "tls_passthrough", protocol: "tls_passthrough", expectedProtocol: sdkkonnectcomp.ProtocolTLSPassthrough},
+		{name: "udp", protocol: "udp", expectedProtocol: sdkkonnectcomp.ProtocolUDP},
+		{name: "empty defaults to http", protocol: "", expectedProtocol: sdkkonnectcomp.ProtocolHTTP},
+		{name: "unsupported protocol", protocol: "invalid", expectError: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			service, err := NewKongService().WithProtocol(tt.protocol).Build()
+			if tt.expectError {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "unsupported protocol")
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.expectedProtocol, service.Spec.Protocol)
+			}
+		})
+	}
 }
 
 func TestKongServiceBuilder_Build(t *testing.T) {

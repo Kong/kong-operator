@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -12,6 +13,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/builder"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/route"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/translator"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
@@ -67,7 +69,7 @@ func ServiceForRule[
 			return nil, fmt.Errorf("failed to build KongService : unmatched route type and rule type: %T and %T", parentRoute, rule)
 		}
 		serviceName = namegen.NewKongServiceNameForHTTPRouteRule(r, cp, httpRule)
-		protocol = "http"
+		protocol = resolveProtocolFromBackendRefs(ctx, cl, r, httpRule, "http", logger)
 	case *gwtypes.TLSRoute:
 		tlsRule, ok := any(rule).(gwtypes.TLSRouteRule)
 		if !ok {
@@ -104,4 +106,53 @@ func ServiceForRule[
 	}
 
 	return &service, nil
+}
+
+// resolveProtocolFromBackendRefs inspects the Kubernetes Service annotations of the
+// HTTPRoute's backend references to determine the upstream protocol. If any backend
+// Service has a valid konghq.com/protocol annotation, that protocol is returned.
+// Otherwise, defaultProtocol is returned.
+func resolveProtocolFromBackendRefs(
+	ctx context.Context,
+	cl client.Client,
+	httpRoute *gwtypes.HTTPRoute,
+	rule gwtypes.HTTPRouteRule,
+	defaultProtocol string,
+	logger logr.Logger,
+) string {
+	for _, backendRef := range rule.BackendRefs {
+		bRef := backendRef.BackendRef
+		if !route.IsBackendRefSupported(bRef.Group, bRef.Kind) {
+			continue
+		}
+
+		bRefNamespace := httpRoute.GetNamespace()
+		if bRef.Namespace != nil && *bRef.Namespace != "" {
+			bRefNamespace = string(*bRef.Namespace)
+		}
+
+		svc := &corev1.Service{}
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: bRefNamespace, Name: string(bRef.Name)}, svc); err != nil {
+			log.Debug(logger, "Failed to fetch backend Service for protocol annotation check",
+				"service", fmt.Sprintf("%s/%s", bRefNamespace, bRef.Name), "error", err)
+			continue
+		}
+
+		protocol := metadata.ExtractProtocol(svc.GetAnnotations())
+		if protocol == "" {
+			continue
+		}
+
+		if !metadata.IsValidProtocol(protocol) {
+			log.Info(logger, "Ignoring invalid konghq.com/protocol annotation value on backend Service",
+				"service", fmt.Sprintf("%s/%s", bRefNamespace, bRef.Name), "protocol", protocol)
+			continue
+		}
+
+		log.Debug(logger, "Using protocol from backend Service annotation",
+			"service", fmt.Sprintf("%s/%s", bRefNamespace, bRef.Name), "protocol", protocol)
+		return protocol
+	}
+
+	return defaultProtocol
 }
