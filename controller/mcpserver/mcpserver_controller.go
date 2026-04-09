@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
@@ -40,6 +41,8 @@ type MCPServerReconciler struct {
 	SignalManager     *SignalManager
 	SdkFactory        sdkops.SDKFactory
 
+	ClusterDomain string
+
 	// ReconcileEventCh allows external callers to push synthetic reconciliation
 	// events so that a Reconcile loop starts without an actual change on the
 	// MCPServer CRD.
@@ -53,6 +56,8 @@ func (r *MCPServerReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Man
 		For(&konnectv1alpha1.MCPServer{}).
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Service{}).
+		Owns(&configurationv1alpha1.KongService{}).
+		Owns(&configurationv1alpha1.KongRoute{}).
 		WatchesRawSource(
 			source.Channel(
 				r.ReconcileEventCh,
@@ -145,7 +150,11 @@ func (r *MCPServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		log.Info(logger, fmt.Sprintf("%s Service for MCPServer", svcRes), "namespace", mcpServer.Namespace, "name", mcpServer.Name)
 	}
 
-	// TODO: Ensure kong entities https://github.com/Kong/kong-operator/issues/3799
+	// Ensure Kong entities (KongService, KongRoute) are created in the cluster
+	// from the remote MCP server's entity definitions.
+	if err := r.ensureKongEntities(ctx, &mcpServer, sdk); err != nil {
+		return ctrl.Result{}, err
+	}
 
 	// Patch the MCPServer status with the remote version.
 	version := remoteMCPServer.Version

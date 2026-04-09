@@ -26,10 +26,13 @@ const (
 	mcpServerVersionAnnotationKey = "kong-operator.konghq.com/mcp-server-version"
 )
 
-// generateWorkloadNN builds a Kubernetes-safe NamespacedName for a workload
-// owned by the given MCPServer.
+// generateWorkloadNN returns the NamespacedName for resources owned by the
+// given MCPServer. All owned resources share the MCPServer's own name.
 func generateWorkloadNN(mcpServer *konnectv1alpha1.MCPServer) types.NamespacedName {
-	return generateHashedName(mcpServer.Namespace, "mcpserver-"+mcpServer.Name, mcpServer.Name)
+	return types.NamespacedName{
+		Namespace: mcpServer.Namespace,
+		Name:      fmt.Sprintf("mcpserver-%s", mcpServer.Name),
+	}
 }
 
 // ----------------------------------------------------------------------------
