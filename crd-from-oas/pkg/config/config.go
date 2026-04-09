@@ -192,6 +192,11 @@ func (c *APIGroupVersionConfig) OpsConfig(pathToEntityName map[string]string) ma
 
 func (c *APIGroupVersionConfig) validate() error {
 	if c.CommonTypes == nil || c.CommonTypes.ObjectRef == nil {
+		for _, tc := range c.Types {
+			if err := tc.validate(); err != nil {
+				return fmt.Errorf("type %q: %w", tc.Path, err)
+			}
+		}
 		return nil
 	}
 	ref := c.CommonTypes.ObjectRef
@@ -212,6 +217,15 @@ func (c *APIGroupVersionConfig) validate() error {
 	if ref.Import != nil && ref.Import.Path == "" {
 		return fmt.Errorf("commonTypes.objectRef.import: path is required")
 	}
+	for _, tc := range c.Types {
+		if err := tc.validate(); err != nil {
+			return fmt.Errorf("type %q: %w", tc.Path, err)
+		}
+	}
+	return nil
+}
+
+func (tc *TypeConfig) validate() error {
 	return nil
 }
 

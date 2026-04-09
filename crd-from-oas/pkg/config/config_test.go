@@ -11,25 +11,23 @@ import (
 
 func TestLoadProjectConfig(t *testing.T) {
 	t.Run("valid config", func(t *testing.T) {
-		content := `
-apiGroupVersions:
-  konnect.konghq.com/v1alpha1:
-    types:
-      - path: /v3/portals
-        cel:
-          name:
-            _validations:
-              - "+kubebuilder:validation:MinLength=1"
-        ops:
-          create:
-            path: github.com/Kong/sdk-konnect-go/models/components.CreatePortal
-          update:
-            path: github.com/Kong/sdk-konnect-go/models/components.UpdatePortal
-      - path: /v3/portals/{portalId}/teams
-  gateway.konghq.com/v1beta1:
-    types:
-      - path: /v3/gateways
-`
+		content := "apiGroupVersions:\n" +
+			"  konnect.konghq.com/v1alpha1:\n" +
+			"    types:\n" +
+			"      - path: /v3/portals\n" +
+			"        cel:\n" +
+			"          name:\n" +
+			"            _validations:\n" +
+			"              - \"+kubebuilder:validation:MinLength=1\"\n" +
+			"        ops:\n" +
+			"          create:\n" +
+			"            path: github.com/Kong/sdk-konnect-go/models/components.CreatePortal\n" +
+			"          update:\n" +
+			"            path: github.com/Kong/sdk-konnect-go/models/components.UpdatePortal\n" +
+			"      - path: /v3/portals/{portalId}/teams\n" +
+			"  gateway.konghq.com/v1beta1:\n" +
+			"    types:\n" +
+			"      - path: /v3/gateways\n"
 		path := filepath.Join(t.TempDir(), "config.yaml")
 		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
 

@@ -109,6 +109,10 @@ func (r *Runner) Run(
 			return fmt.Errorf("failed to create output directory %q: %w", dir, err)
 		}
 
+		if err := cleanupLegacyGeneratedFiles(dir, parsed); err != nil {
+			return fmt.Errorf("failed to remove obsolete generated files in %q: %w", dir, err)
+		}
+
 		// Write generated files
 		for _, file := range files {
 			var filePath string
@@ -129,5 +133,32 @@ func (r *Runner) Run(
 		}
 	}
 
+	return nil
+}
+
+func cleanupLegacyGeneratedFiles(dir string, parsed *parser.ParsedSpec) error {
+	for entityName := range parsed.RequestBodies {
+		legacyFilePath := filepath.Join(dir, legacyGeneratedFuncsFileName(parser.GetEntityNameFromType(entityName)))
+		if err := removeFileIfExists(legacyFilePath); err != nil {
+			return err
+		}
+	}
+
+	sharedReconcilerFuncsPath := filepath.Join(dir, "zz_generated_reconciler_funcs.go")
+	if err := removeFileIfExists(sharedReconcilerFuncsPath); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func legacyGeneratedFuncsFileName(entityName string) string {
+	return strings.ToLower(entityName) + "_funcs.go"
+}
+
+func removeFileIfExists(filePath string) error {
+	if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
+		return err
+	}
 	return nil
 }

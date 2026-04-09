@@ -2,63 +2,10 @@ package generator
 
 import (
 	"fmt"
-	"slices"
 	"strings"
 	"text/template"
 	"unicode"
 )
-
-// reconcilerFuncsTemplate generates interface methods for each entity.
-// These are needed by the generic KonnectEntityReconciler.
-const reconcilerFuncsTemplate = sharedGeneratedFilePreamble + `
-
-package {{.APIVersion}}
-
-import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
-)
-{{range .Entities}}
-// GetKonnectStatus returns the Konnect status contained in the {{.Name}} status.
-func (obj *{{.Name}}) GetKonnectStatus() *konnectv1alpha2.KonnectEntityStatus {
-	return &obj.Status.KonnectEntityStatus
-}
-
-// GetKonnectID returns the Konnect ID in the {{.Name}} status.
-func (obj *{{.Name}}) GetKonnectID() string {
-	return obj.Status.ID
-}
-
-// SetKonnectID sets the Konnect ID in the {{.Name}} status.
-func (obj *{{.Name}}) SetKonnectID(id string) {
-	obj.Status.ID = id
-}
-
-// GetTypeName returns the {{.Name}} Kind name.
-func (obj {{.Name}}) GetTypeName() string {
-	return "{{.Name}}"
-}
-
-// GetConditions returns the Status Conditions.
-func (obj *{{.Name}}) GetConditions() []metav1.Condition {
-	return obj.Status.Conditions
-}
-
-// SetConditions sets the Status Conditions.
-func (obj *{{.Name}}) SetConditions(conditions []metav1.Condition) {
-	obj.Status.Conditions = conditions
-}
-
-{{- if .IsRoot }}
-// GetKonnectAPIAuthConfigurationRef returns the Konnect API Auth Configuration Ref.
-func (obj *{{.Name}}) GetKonnectAPIAuthConfigurationRef() konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef {
-	return konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
-		Name: obj.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name,
-	}
-}
-{{- end }}
-{{end}}`
 
 // watchTemplate generates watch options for a single entity.
 const watchTemplate = sharedGeneratedFilePreamble + `
@@ -169,16 +116,6 @@ func {{.EntityNameLowerCamel}}APIAuthConfigurationRef(object client.Object) []st
 func (g *Generator) generateReconcilerFiles(entityNames []string) ([]GeneratedFile, error) {
 	var files []GeneratedFile
 
-	// Generate zz_generated_reconciler_funcs.go (one file for all entities, in the API dir)
-	funcsContent, err := g.generateReconcilerFuncs(entityNames)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate reconciler funcs: %w", err)
-	}
-	files = append(files, GeneratedFile{
-		Name:    "zz_generated_reconciler_funcs.go",
-		Content: funcsContent,
-	})
-
 	// Generate per-entity watch and index files
 	for _, entityName := range entityNames {
 		rc := g.config.ReconcilerConfig[entityName]
@@ -211,40 +148,6 @@ func (g *Generator) generateReconcilerFiles(entityNames []string) ([]GeneratedFi
 	}
 
 	return files, nil
-}
-
-func (g *Generator) generateReconcilerFuncs(entityNames []string) (string, error) {
-	tmpl := template.Must(template.New("reconcilerFuncs").Parse(reconcilerFuncsTemplate))
-
-	var buf strings.Builder
-	type reconcilerEntity struct {
-		Name   string
-		IsRoot bool
-	}
-
-	entities := make([]reconcilerEntity, 0, len(entityNames))
-	for _, entityName := range entityNames {
-		entities = append(entities, reconcilerEntity{
-			Name:   entityName,
-			IsRoot: g.config.ReconcilerConfig[entityName] != nil && g.config.ReconcilerConfig[entityName].IsRoot,
-		})
-	}
-	slices.SortFunc(entities, func(a, b reconcilerEntity) int {
-		return strings.Compare(a.Name, b.Name)
-	})
-
-	data := struct {
-		APIVersion string
-		Entities   []reconcilerEntity
-	}{
-		APIVersion: g.config.APIVersion,
-		Entities:   entities,
-	}
-
-	if err := tmpl.Execute(&buf, data); err != nil {
-		return "", err
-	}
-	return buf.String(), nil
 }
 
 func (g *Generator) generateWatch(entityName string) (string, error) {
