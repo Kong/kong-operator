@@ -132,6 +132,24 @@ func TestGenerateIndex_UsesNamespacedAPIAuthKey(t *testing.T) {
 	assert.Contains(t, content, `return []string{ent.GetNamespace() + "/" + ent.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name}`)
 }
 
+func TestGenerateReconcilerFuncs_GeneratesAPIAuthAccessorOnlyForRootEntities(t *testing.T) {
+	g := NewGenerator(Config{
+		APIVersion: "v1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"Portal": {
+				IsRoot: true,
+			},
+			"PortalTeam": {},
+		},
+	})
+
+	content, err := g.generateReconcilerFuncs([]string{"PortalTeam", "Portal"})
+	require.NoError(t, err)
+
+	assert.Contains(t, content, `func (obj *Portal) GetKonnectAPIAuthConfigurationRef() konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef {`)
+	assert.NotContains(t, content, `func (obj *PortalTeam) GetKonnectAPIAuthConfigurationRef() konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef {`)
+}
+
 func TestGenerateCommonTypes(t *testing.T) {
 	t.Run("without import includes union ObjectRef types", func(t *testing.T) {
 		g := NewGenerator(Config{APIVersion: "v1alpha1"})

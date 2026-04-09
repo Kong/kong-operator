@@ -2,6 +2,7 @@ package generator
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"text/template"
 	"unicode"
@@ -19,42 +20,44 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 )
 {{range .Entities}}
-// GetKonnectStatus returns the Konnect status contained in the {{.}} status.
-func (obj *{{.}}) GetKonnectStatus() *konnectv1alpha2.KonnectEntityStatus {
+// GetKonnectStatus returns the Konnect status contained in the {{.Name}} status.
+func (obj *{{.Name}}) GetKonnectStatus() *konnectv1alpha2.KonnectEntityStatus {
 	return &obj.Status.KonnectEntityStatus
 }
 
-// GetKonnectID returns the Konnect ID in the {{.}} status.
-func (obj *{{.}}) GetKonnectID() string {
+// GetKonnectID returns the Konnect ID in the {{.Name}} status.
+func (obj *{{.Name}}) GetKonnectID() string {
 	return obj.Status.ID
 }
 
-// SetKonnectID sets the Konnect ID in the {{.}} status.
-func (obj *{{.}}) SetKonnectID(id string) {
+// SetKonnectID sets the Konnect ID in the {{.Name}} status.
+func (obj *{{.Name}}) SetKonnectID(id string) {
 	obj.Status.ID = id
 }
 
-// GetTypeName returns the {{.}} Kind name.
-func (obj {{.}}) GetTypeName() string {
-	return "{{.}}"
+// GetTypeName returns the {{.Name}} Kind name.
+func (obj {{.Name}}) GetTypeName() string {
+	return "{{.Name}}"
 }
 
 // GetConditions returns the Status Conditions.
-func (obj *{{.}}) GetConditions() []metav1.Condition {
+func (obj *{{.Name}}) GetConditions() []metav1.Condition {
 	return obj.Status.Conditions
 }
 
 // SetConditions sets the Status Conditions.
-func (obj *{{.}}) SetConditions(conditions []metav1.Condition) {
+func (obj *{{.Name}}) SetConditions(conditions []metav1.Condition) {
 	obj.Status.Conditions = conditions
 }
 
+{{- if .IsRoot }}
 // GetKonnectAPIAuthConfigurationRef returns the Konnect API Auth Configuration Ref.
-func (obj *{{.}}) GetKonnectAPIAuthConfigurationRef() konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef {
+func (obj *{{.Name}}) GetKonnectAPIAuthConfigurationRef() konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef {
 	return konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
 		Name: obj.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name,
 	}
 }
+{{- end }}
 {{end}}`
 
 // watchTemplate generates watch options for a single entity.
@@ -214,12 +217,28 @@ func (g *Generator) generateReconcilerFuncs(entityNames []string) (string, error
 	tmpl := template.Must(template.New("reconcilerFuncs").Parse(reconcilerFuncsTemplate))
 
 	var buf strings.Builder
+	type reconcilerEntity struct {
+		Name   string
+		IsRoot bool
+	}
+
+	entities := make([]reconcilerEntity, 0, len(entityNames))
+	for _, entityName := range entityNames {
+		entities = append(entities, reconcilerEntity{
+			Name:   entityName,
+			IsRoot: g.config.ReconcilerConfig[entityName] != nil && g.config.ReconcilerConfig[entityName].IsRoot,
+		})
+	}
+	slices.SortFunc(entities, func(a, b reconcilerEntity) int {
+		return strings.Compare(a.Name, b.Name)
+	})
+
 	data := struct {
 		APIVersion string
-		Entities   []string
+		Entities   []reconcilerEntity
 	}{
 		APIVersion: g.config.APIVersion,
-		Entities:   entityNames,
+		Entities:   entities,
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {

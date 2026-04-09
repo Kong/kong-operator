@@ -61,6 +61,8 @@ type SupportedKonnectEntityType interface {
 		configurationv1alpha1.KongSNI |
 		configurationv1alpha1.KongDataPlaneClientCertificate |
 		konnectv1alpha1.MCPServer |
+		// TODO: auto-generate SupportedKonnectEntityType entries for generated Konnect entities.
+		// https://github.com/Kong/kong-operator/issues/3785
 		xkonnectv1alpha1.Portal
 	// TODO: add other types
 
