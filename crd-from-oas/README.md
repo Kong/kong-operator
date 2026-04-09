@@ -6,6 +6,41 @@ It is designed to help create CRDs that are consistent with API specifications,
 reducing the manual effort required to maintain CRD definitions and ensuring that
 they stay up-to-date with the API changes.
 
+### Exemplar config
+
+```yaml
+apiGroupVersions:
+  x-konnect.konghq.com/v1alpha1:
+    commonTypes:
+      objectRef:
+        import:
+          path: github.com/kong/kong-operator/v2/api/common/v1alpha1
+          alias: commonv1alpha1
+    types:
+      - path: /v1/event-gateways
+        name: KonnectEventControlPlane
+      - path: /v1/event-gateways/{gatewayId}/data-plane-certificates
+        name: KonnectEventDataPlaneCertificate
+        optionalSecretReference: true
+        funcs:
+          GetKonnectStatus:
+            returnType:
+              package: github.com/kong/kong-operator/v2/api/konnect/v1alpha2
+              alias: konnectv1alpha2
+              type: KonnectEntityStatus
+      - path: /v3/portals
+        cel:
+          name:
+            _validations:
+              - "+kubebuilder:validation:XValidation:rule=\"self == oldSelf\",message=\"name is immutable\""
+        ops:
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreatePortal
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdatePortal
+      - path: /v3/portals/{portalId}/teams
+```
+
 ### TODOs
 
 - Generated conversion functions unit tests have to check the actual conversion logic, not just the presence of the functions and that not error has been returned.

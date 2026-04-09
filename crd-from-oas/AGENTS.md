@@ -7,12 +7,6 @@ This file provides guidance to Claude Code (claude.ai/code) and other AI agents 
 This project generates Kubernetes Custom Resource Definitions (CRDs) from OpenAPI Specifications (OAS).
 It includes tools for code generation, linting, and testing to ensure high-quality code and maintainability.
 
-## Build commands
-
-```bash
-mise r build            # Build the manager binary (includes code generation)
-```
-
 ## Generation
 
 ```bash
@@ -46,5 +40,5 @@ mise r test-crdsvalidation # Run tests to validate generated CRDs
   rather than building the project with `mise r build` to avoid unnecessary compilation of the manager binary.
 - To run the whole pipeline from generation, through linting and testing, use:
   ```
-  mise r all
+  make generate.api-from-oas generate.crds lint.golangci-lint lint.api
   ```

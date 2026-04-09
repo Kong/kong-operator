@@ -148,8 +148,24 @@ type {{.EntityName}}Status struct {
 	ObservedGeneration int64 ` + "`" + `json:"observedGeneration,omitempty"` + "`" + `
 }
 
-{{- if .KonnectLabelsField}}
+func init() {
+	SchemeBuilder.Register(&{{.EntityName}}{}, &{{.EntityName}}List{})
+}
+`
 
+const crdFuncsTemplate = sharedGeneratedFilePreamble + `
+
+package {{.APIVersion}}{{if .Imports}}
+
+import (
+{{- range .Imports}}
+{{- if .Alias}}
+	{{.Alias}} "{{.Path}}"
+{{- else}}
+	"{{.Path}}"
+{{- end}}
+{{- end}}
+){{end}}{{if .KonnectLabelsField}}
 // GetKonnectLabels gets the Konnect labels from the object's API spec.
 func (obj *{{.EntityName}}) GetKonnectLabels() map[string]string {
 	if obj.Spec.APISpec.{{.KonnectLabelsField.FieldName}} == nil {
@@ -180,9 +196,46 @@ func (obj *{{.EntityName}}) SetKonnectLabels(labels map[string]string) {
 }
 {{- end}}
 
-func init() {
-	SchemeBuilder.Register(&{{.EntityName}}{}, &{{.EntityName}}List{})
+// GetKonnectStatus returns the Konnect status contained in the {{.EntityName}} status.
+func (obj *{{.EntityName}}) GetKonnectStatus() *{{.KonnectStatusType}} {
+	return &obj.Status.KonnectEntityStatus
 }
+
+// SetKonnectID sets the Konnect ID in the {{.EntityName}} status.
+func (obj *{{.EntityName}}) SetKonnectID(id string) {
+	obj.Status.ID = id
+}
+{{- if .HasReconcilerFuncs}}
+
+// GetKonnectID returns the Konnect ID in the {{.EntityName}} status.
+func (obj *{{.EntityName}}) GetKonnectID() string {
+	return obj.Status.ID
+}
+
+// GetTypeName returns the {{.EntityName}} Kind name.
+func (obj {{.EntityName}}) GetTypeName() string {
+	return "{{.EntityName}}"
+}
+
+// GetConditions returns the Status Conditions.
+func (obj *{{.EntityName}}) GetConditions() []metav1.Condition {
+	return obj.Status.Conditions
+}
+
+// SetConditions sets the Status Conditions.
+func (obj *{{.EntityName}}) SetConditions(conditions []metav1.Condition) {
+	obj.Status.Conditions = conditions
+}
+{{- if .IsReconcilerRoot}}
+
+// GetKonnectAPIAuthConfigurationRef returns the Konnect API Auth Configuration Ref.
+func (obj *{{.EntityName}}) GetKonnectAPIAuthConfigurationRef() {{.KonnectAPIAuthConfigurationRefType}} {
+	return {{.KonnectAPIAuthConfigurationRefType}}{
+		Name: obj.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name,
+	}
+}
+{{- end}}
+{{- end}}
 `
 
 const sdkOpsTemplate = sharedGeneratedFilePreamble + `
@@ -370,6 +423,16 @@ func Test{{$.EntityName}}APISpec_{{.MethodName}}(t *testing.T) {
 const commonTypesTemplate = sharedGeneratedFilePreamble + `
 
 package {{.APIVersion}}
+{{- if .KonnectStatusImport}}
+
+import (
+{{- if .KonnectStatusImport.Alias}}
+	{{.KonnectStatusImport.Alias}} "{{.KonnectStatusImport.Path}}"
+{{- else}}
+	"{{.KonnectStatusImport.Path}}"
+{{- end}}
+)
+{{- end}}
 {{- if not .ObjectRefImported}}
 
 ` + objectRefTypeEnum + `

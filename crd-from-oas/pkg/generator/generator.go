@@ -20,6 +20,8 @@ type Config struct {
 	GenerateStatus bool
 	// FieldConfig holds additional field configurations from YAML
 	FieldConfig *config.Config
+	// FuncsConfig maps entity names to helper method generation overrides.
+	FuncsConfig map[string]*config.EntityFuncsConfig
 	// OpsConfig maps entity names to SDK operation configurations.
 	// When set, conversion methods are generated on the entity's APISpec type.
 	OpsConfig map[string]*config.EntityOpsConfig
@@ -66,6 +68,12 @@ type konnectLabelsField struct {
 	ValueType string
 }
 
+const (
+	defaultKonnectStatusPackage = "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	defaultKonnectStatusAlias   = "konnectv1alpha2"
+	defaultKonnectStatusType    = "KonnectEntityStatus"
+)
+
 // Generate generates Go CRD types from parsed schemas.
 func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error) {
 	var files []GeneratedFile
@@ -78,16 +86,26 @@ func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error)
 
 	// Generate types for each request body (these are the main CRD types)
 	for name, schema := range parsed.RequestBodies {
+		entityName := parser.GetEntityNameFromType(name)
+
 		content, err := g.generateCRDType(name, schema)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate type for %s: %w", name, err)
 		}
 
-		entityName := parser.GetEntityNameFromType(name)
 		fileName := strings.ToLower(entityName) + "_types.go"
 		files = append(files, GeneratedFile{
 			Name:    fileName,
 			Content: content,
+		})
+
+		funcsContent, err := g.generateCRDFuncs(name, schema)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate funcs for %s: %w", name, err)
+		}
+		files = append(files, GeneratedFile{
+			Name:    generatedFuncsFileName(entityName),
+			Content: funcsContent,
 		})
 
 		// Generate SDK ops conversion file if ops are configured for this entity
@@ -431,7 +449,6 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 	}
 
 	var buf strings.Builder
-	labelsField := g.konnectLabelsField(schema)
 	data := struct {
 		EntityName           string
 		Schema               *parser.Schema
@@ -440,7 +457,6 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		NeedsJSONImport      bool
 		ObjectRefImport      *config.ImportConfig
 		HasOptionalSecretRef bool
-		KonnectLabelsField   *konnectLabelsField
 		HasReconciler        bool
 	}{
 		EntityName:           entityName,
@@ -450,7 +466,6 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		NeedsJSONImport:      schemaUsesJSON(g, schema),
 		ObjectRefImport:      objectRefImport,
 		HasOptionalSecretRef: hasOptionalSecretRef,
-		KonnectLabelsField:   labelsField,
 		HasReconciler:        hasReconciler,
 	}
 
@@ -469,6 +484,83 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 	result := fixTrailingEmptyLines(buf.String())
 
 	return result, nil
+}
+
+func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string, error) {
+	entityName := parser.GetEntityNameFromType(name)
+	konnectStatusReturnType, err := g.resolvedKonnectStatusReturnType()
+	if err != nil {
+		return "", err
+	}
+	hasReconcilerFuncs := false
+	isReconcilerRoot := false
+	if rc := g.config.ReconcilerConfig[entityName]; rc != nil {
+		hasReconcilerFuncs = true
+		isReconcilerRoot = rc.IsRoot
+	}
+
+	imports := make([]*config.ImportConfig, 0, 3)
+	imports = appendUniqueImportConfig(imports, importConfigFromTypeRef(konnectStatusReturnType))
+	if hasReconcilerFuncs {
+		imports = appendUniqueImportConfig(imports, &config.ImportConfig{
+			Alias: "metav1",
+			Path:  "k8s.io/apimachinery/pkg/apis/meta/v1",
+		})
+	}
+	if isReconcilerRoot {
+		imports = appendUniqueImportConfig(imports, &config.ImportConfig{
+			Alias: defaultKonnectStatusAlias,
+			Path:  defaultKonnectStatusPackage,
+		})
+	}
+
+	tmpl := template.Must(template.New("crdFuncs").Parse(crdFuncsTemplate))
+
+	var buf strings.Builder
+	data := struct {
+		EntityName                         string
+		APIVersion                         string
+		Imports                            []*config.ImportConfig
+		KonnectStatusType                  string
+		KonnectLabelsField                 *konnectLabelsField
+		HasReconcilerFuncs                 bool
+		IsReconcilerRoot                   bool
+		KonnectAPIAuthConfigurationRefType string
+	}{
+		EntityName:                         entityName,
+		APIVersion:                         g.config.APIVersion,
+		Imports:                            imports,
+		KonnectStatusType:                  qualifiedTypeNameForTypeRef(konnectStatusReturnType),
+		KonnectLabelsField:                 g.konnectLabelsField(schema),
+		HasReconcilerFuncs:                 hasReconcilerFuncs,
+		IsReconcilerRoot:                   isReconcilerRoot,
+		KonnectAPIAuthConfigurationRefType: defaultKonnectStatusAlias + ".ControlPlaneKonnectAPIAuthConfigurationRef",
+	}
+
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return "", err
+	}
+
+	return fixTrailingEmptyLines(buf.String()), nil
+}
+
+func generatedFuncsFileName(entityName string) string {
+	return "zz_generated_" + strings.ToLower(entityName) + "_funcs.go"
+}
+
+func appendUniqueImportConfig(imports []*config.ImportConfig, imp *config.ImportConfig) []*config.ImportConfig {
+	if imp == nil {
+		return imports
+	}
+	for _, existing := range imports {
+		if existing.Path == imp.Path && existing.Alias == imp.Alias {
+			return imports
+		}
+	}
+	return append(imports, &config.ImportConfig{
+		Alias: imp.Alias,
+		Path:  imp.Path,
+	})
 }
 
 func (g *Generator) konnectLabelsField(schema *parser.Schema) *konnectLabelsField {
@@ -747,15 +839,23 @@ package %s
 
 func (g *Generator) generateCommonTypes() (string, error) {
 	tmpl := template.Must(template.New("commonTypes").Parse(commonTypesTemplate))
+	konnectStatusReturnType, err := g.resolvedKonnectStatusReturnType()
+	if err != nil {
+		return "", err
+	}
 
 	var buf strings.Builder
 	data := struct {
 		APIVersion           string
+		KonnectStatusImport  *config.ImportConfig
+		KonnectStatusType    string
 		ObjectRefImported    bool
 		Namespaced           bool
 		HasSecretRefEntities bool
 	}{
 		APIVersion:           g.config.APIVersion,
+		KonnectStatusImport:  importConfigFromTypeRef(konnectStatusReturnType),
+		KonnectStatusType:    qualifiedTypeNameForTypeRef(konnectStatusReturnType),
 		ObjectRefImported:    g.objectRefImported(),
 		Namespaced:           g.objectRefNamespaced(),
 		HasSecretRefEntities: len(g.config.SecretRefEntities) > 0,
@@ -765,6 +865,49 @@ func (g *Generator) generateCommonTypes() (string, error) {
 		return "", err
 	}
 	return buf.String(), nil
+}
+
+func defaultKonnectStatusReturnType() *config.TypeRefConfig {
+	return &config.TypeRefConfig{
+		Package: defaultKonnectStatusPackage,
+		Alias:   defaultKonnectStatusAlias,
+		Type:    defaultKonnectStatusType,
+	}
+}
+
+func (g *Generator) resolvedKonnectStatusReturnType() (*config.TypeRefConfig, error) {
+	resolved := defaultKonnectStatusReturnType()
+	var resolvedFrom string
+
+	for entityName, entityCfg := range g.config.FuncsConfig {
+		if entityCfg == nil || entityCfg.Funcs == nil {
+			continue
+		}
+		funcCfg, ok := entityCfg.Funcs["GetKonnectStatus"]
+		if !ok || funcCfg == nil || funcCfg.ReturnType == nil {
+			continue
+		}
+
+		if resolvedFrom == "" {
+			resolved = &config.TypeRefConfig{
+				Package: funcCfg.ReturnType.Package,
+				Alias:   funcCfg.ReturnType.Alias,
+				Type:    funcCfg.ReturnType.Type,
+			}
+			resolvedFrom = entityName
+			continue
+		}
+
+		if !sameTypeRefConfigs(resolved, funcCfg.ReturnType) {
+			return nil, fmt.Errorf(
+				"GetKonnectStatus returnType override for %q conflicts with %q",
+				entityName,
+				resolvedFrom,
+			)
+		}
+	}
+
+	return resolved, nil
 }
 
 // objectRefNamespaced returns true if the generated ObjectRef's NamespacedRef
@@ -833,6 +976,40 @@ func (g *Generator) namespacedRefTypeName() string {
 // from the ObjectRef external package (e.g. "commonv1alpha1.").
 func (g *Generator) importedTypePrefix() string {
 	imp := g.config.CommonTypes.ObjectRef.Import
+	return importQualifier(imp)
+}
+
+func sameTypeRefConfigs(a, b *config.TypeRefConfig) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+
+	return a.Package == b.Package && a.Alias == b.Alias && a.Type == b.Type
+}
+
+func importConfigFromTypeRef(typeRef *config.TypeRefConfig) *config.ImportConfig {
+	if typeRef == nil {
+		return nil
+	}
+
+	return &config.ImportConfig{
+		Path:  typeRef.Package,
+		Alias: typeRef.Alias,
+	}
+}
+
+func qualifiedTypeNameForTypeRef(typeRef *config.TypeRefConfig) string {
+	if typeRef == nil {
+		return ""
+	}
+
+	return importQualifier(importConfigFromTypeRef(typeRef)) + typeRef.Type
+}
+
+func importQualifier(imp *config.ImportConfig) string {
+	if imp == nil {
+		return ""
+	}
 	if imp.Alias != "" {
 		return imp.Alias + "."
 	}

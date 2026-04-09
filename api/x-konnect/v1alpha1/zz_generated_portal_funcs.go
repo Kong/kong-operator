@@ -3,24 +3,51 @@
 package v1alpha1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+// GetKonnectLabels gets the Konnect labels from the object's API spec.
+func (obj *Portal) GetKonnectLabels() map[string]string {
+	if obj.Spec.APISpec.Labels == nil {
+		return nil
+	}
+
+	labels := make(map[string]string, len(obj.Spec.APISpec.Labels))
+	for key, value := range obj.Spec.APISpec.Labels {
+		labels[key] = string(value)
+	}
+
+	return labels
+}
+
+// SetKonnectLabels sets the Konnect labels in the object's API spec.
+func (obj *Portal) SetKonnectLabels(labels map[string]string) {
+	if labels == nil {
+		obj.Spec.APISpec.Labels = nil
+		return
+	}
+
+	converted := make(LabelsUpdate, len(labels))
+	for key, value := range labels {
+		converted[key] = LabelsUpdateValue(value)
+	}
+
+	obj.Spec.APISpec.Labels = converted
+}
 
 // GetKonnectStatus returns the Konnect status contained in the Portal status.
 func (obj *Portal) GetKonnectStatus() *konnectv1alpha2.KonnectEntityStatus {
 	return &obj.Status.KonnectEntityStatus
 }
 
-// GetKonnectID returns the Konnect ID in the Portal status.
-func (obj *Portal) GetKonnectID() string {
-	return obj.Status.ID
-}
-
 // SetKonnectID sets the Konnect ID in the Portal status.
 func (obj *Portal) SetKonnectID(id string) {
 	obj.Status.ID = id
+}
+
+// GetKonnectID returns the Konnect ID in the Portal status.
+func (obj *Portal) GetKonnectID() string {
+	return obj.Status.ID
 }
 
 // GetTypeName returns the Portal Kind name.
@@ -37,6 +64,7 @@ func (obj *Portal) GetConditions() []metav1.Condition {
 func (obj *Portal) SetConditions(conditions []metav1.Condition) {
 	obj.Status.Conditions = conditions
 }
+
 // GetKonnectAPIAuthConfigurationRef returns the Konnect API Auth Configuration Ref.
 func (obj *Portal) GetKonnectAPIAuthConfigurationRef() konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef {
 	return konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
