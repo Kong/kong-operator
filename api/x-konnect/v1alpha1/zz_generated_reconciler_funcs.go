@@ -37,7 +37,6 @@ func (obj *Portal) GetConditions() []metav1.Condition {
 func (obj *Portal) SetConditions(conditions []metav1.Condition) {
 	obj.Status.Conditions = conditions
 }
-
 // GetKonnectAPIAuthConfigurationRef returns the Konnect API Auth Configuration Ref.
 func (obj *Portal) GetKonnectAPIAuthConfigurationRef() konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef {
 	return konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
