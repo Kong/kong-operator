@@ -39,6 +39,7 @@ type MockSDKWrapper struct {
 	DataPlaneCertificatesSDK    *mocks.MockDPCertificatesSDK
 	MCPServersSDK               *sdkkonnectgo.MCPServers
 	server                      server.Server
+	EventGatewaySDK             *mocks.MockEventGatewaysSDK
 }
 
 var _ sdkops.SDKWrapper = MockSDKWrapper{}
@@ -68,6 +69,7 @@ func NewMockSDKWrapperWithT(t *testing.T) *MockSDKWrapper {
 		KeySetsSDK:                  mocks.NewMockKeySetsSDK(t),
 		SNIsSDK:                     mocks.NewMockSNIsSDK(t),
 		DataPlaneCertificatesSDK:    mocks.NewMockDPCertificatesSDK(t),
+		EventGatewaySDK:             mocks.NewMockEventGatewaysSDK(t),
 
 		server: lo.Must(server.NewServer[*gwtypes.ControlPlane](SDKServerURL)),
 	}
@@ -180,6 +182,10 @@ func (m MockSDKWrapper) GetCloudGatewaysSDK() sdkkonnectgo.CloudGatewaysSDK {
 
 func (m MockSDKWrapper) GetMCPServersSDK() *sdkkonnectgo.MCPServers {
 	return m.MCPServersSDK
+}
+
+func (m MockSDKWrapper) GetEventGatewaysSDK() sdkkonnectgo.EventGatewaysSDK {
+	return m.EventGatewaySDK
 }
 
 type MockSDKFactory struct {

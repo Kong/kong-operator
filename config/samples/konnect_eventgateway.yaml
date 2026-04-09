@@ -1,0 +1,53 @@
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: auth
+---
+# KonnectAPIAuthConfiguration holds the PAT used to authenticate with Konnect.
+# Replace the token and serverURL with your own values.
+# For available server URLs see: https://docs.konghq.com/konnect/network/
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth
+  namespace: auth
+spec:
+  type: token
+  token: kpat_PUT_YOUR_TOKEN_HERE
+  serverURL: us.api.konghq.tech
+---
+# KonnectEventGateway (Origin): the operator creates and owns the Event Gateway in Konnect.
+# Once reconciled, status.id will be populated with the Konnect Event Gateway ID.
+kind: KonnectEventGateway
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: my-event-gateway
+  namespace: default
+spec:
+  source: Origin
+  createGatewayRequest:
+    name: my-event-gateway
+    description: "Managed by kong-operator"
+    minRuntimeVersion: "1.1"
+    labels:
+      env: dev
+  konnect:
+    name: konnect-api-auth
+    namespace: auth
+---
+# KongReferenceGrant allows KonnectEventGateway in 'default' to reference
+# KonnectAPIAuthConfiguration in 'auth'.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongReferenceGrant
+metadata:
+  name: allow-event-gateway-to-auth
+  namespace: auth
+spec:
+  from:
+    - group: konnect.konghq.com
+      kind: KonnectEventGateway
+      namespace: default
+  to:
+    - group: konnect.konghq.com
+      kind: KonnectAPIAuthConfiguration

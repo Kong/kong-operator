@@ -17,6 +17,11 @@ func (obj KonnectCloudGatewayNetworkList) GetItems() []KonnectCloudGatewayNetwor
 	return obj.Items
 }
 
+// GetItems returns the list of KonnectEventGateway items.
+func (obj KonnectEventGatewayList) GetItems() []KonnectEventGateway {
+	return obj.Items
+}
+
 // GetItems returns the list of KonnectCloudGatewayDataPlaneGroupConfiguration items.
 func (obj KonnectCloudGatewayDataPlaneGroupConfigurationList) GetItems() []KonnectCloudGatewayDataPlaneGroupConfiguration {
 	return obj.Items
