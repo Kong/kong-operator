@@ -486,21 +486,17 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 
 func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string, error) {
 	entityName := parser.GetEntityNameFromType(name)
-	hasReconcilerFuncs := false
 	isReconcilerRoot := false
 	if rc := g.config.ReconcilerConfig[entityName]; rc != nil {
-		hasReconcilerFuncs = true
 		isReconcilerRoot = rc.IsRoot
 	}
 
 	imports := make([]*config.ImportConfig, 0, 3)
 	imports = appendUniqueImportConfig(imports, defaultKonnectStatusImport())
-	if hasReconcilerFuncs {
-		imports = appendUniqueImportConfig(imports, &config.ImportConfig{
-			Alias: "metav1",
-			Path:  "k8s.io/apimachinery/pkg/apis/meta/v1",
-		})
-	}
+	imports = appendUniqueImportConfig(imports, &config.ImportConfig{
+		Alias: "metav1",
+		Path:  "k8s.io/apimachinery/pkg/apis/meta/v1",
+	})
 	if isReconcilerRoot {
 		imports = appendUniqueImportConfig(imports, &config.ImportConfig{
 			Alias: defaultKonnectStatusAlias,
@@ -517,7 +513,6 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		Imports                            []*config.ImportConfig
 		KonnectStatusType                  string
 		KonnectLabelsField                 *konnectLabelsField
-		HasReconcilerFuncs                 bool
 		IsReconcilerRoot                   bool
 		KonnectAPIAuthConfigurationRefType string
 	}{
@@ -526,7 +521,6 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		Imports:                            imports,
 		KonnectStatusType:                  defaultKonnectStatusQualifiedTypeName(),
 		KonnectLabelsField:                 g.konnectLabelsField(schema),
-		HasReconcilerFuncs:                 hasReconcilerFuncs,
 		IsReconcilerRoot:                   isReconcilerRoot,
 		KonnectAPIAuthConfigurationRefType: defaultKonnectStatusAlias + ".ControlPlaneKonnectAPIAuthConfigurationRef",
 	}
