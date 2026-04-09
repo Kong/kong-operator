@@ -250,6 +250,9 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 				&gatewayapi.TLSRoute{
 					ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("test-%d", i)},
 					Spec: gatewayapi.TLSRouteSpec{
+						Hostnames: []gatewayapi.Hostname{
+							gatewayapi.Hostname(fmt.Sprintf("test-%d.tlsroute.example", i)),
+						},
 						Rules: []gatewayapi.TLSRouteRule{
 							{
 								BackendRefs: []gatewayapi.BackendRef{

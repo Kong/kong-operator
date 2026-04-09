@@ -276,7 +276,7 @@ func TestTLSRoutePassthroughReferenceGrant(t *testing.T) {
 	t.Log("verifying that the tcpecho route can also serve certificates permitted by a ReferenceGrant with a named To")
 	require.Eventually(t, func() bool {
 		if err := helpers.EchoResponds(t, helpers.ProtocolTLS, proxyTLSURL, testUUID2, helpers.TLSOpt{
-			Hostname:    tlsRouteHostname,
+			Hostname:    tlsRouteExtraHostname,
 			CertPool:    certPool,
 			Passthrough: true,
 		}); err != nil {
@@ -294,7 +294,7 @@ func TestTLSRoutePassthroughReferenceGrant(t *testing.T) {
 
 	require.Eventually(t, func() bool {
 		return helpers.EchoResponds(t, helpers.ProtocolTLS, proxyTLSURL, testUUID2, helpers.TLSOpt{
-			Hostname:    tlsRouteHostname,
+			Hostname:    tlsRouteExtraHostname,
 			CertPool:    certPool,
 			Passthrough: true,
 		}) != nil
@@ -326,7 +326,7 @@ func TestTLSRoutePassthroughReferenceGrant(t *testing.T) {
 
 	require.Eventually(t, func() bool {
 		if err := helpers.EchoResponds(t, helpers.ProtocolTLS, proxyTLSURL, testUUID2, helpers.TLSOpt{
-			Hostname:    tlsRouteHostname,
+			Hostname:    tlsRouteExtraHostname,
 			CertPool:    certPool,
 			Passthrough: true,
 		}); err != nil {

@@ -91,7 +91,7 @@ spec:
       certificateRefs:
       - name: example-tlsroute
 ---
-apiVersion: gateway.networking.k8s.io/v1alpha2
+apiVersion: gateway.networking.k8s.io/v1
 kind: TLSRoute
 metadata:
   name: tlsecho

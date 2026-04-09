@@ -773,7 +773,7 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 		return &gatewayapi.TCPRoute{}, nil
 	case schema.GroupVersion(gatewayv1alpha2.GroupVersion).WithKind("UDPRoute"):
 		return &gatewayapi.UDPRoute{}, nil
-	case schema.GroupVersion(gatewayv1alpha2.GroupVersion).WithKind("TLSRoute"):
+	case schema.GroupVersion(gatewayv1.GroupVersion).WithKind("TLSRoute"):
 		return &gatewayapi.TLSRoute{}, nil
 	case schema.GroupVersion(gatewayv1beta1.GroupVersion).WithKind("ReferenceGrant"):
 		return &gatewayapi.ReferenceGrant{}, nil

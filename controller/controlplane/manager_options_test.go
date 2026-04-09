@@ -345,6 +345,7 @@ func TestManagerConfigToStatusControllers(t *testing.T) {
 				ServiceEnabled:                     false,
 				GatewayAPIGatewayController:        false,
 				GatewayAPIHTTPRouteController:      false,
+				GatewayAPITLSRouteController:       false,
 				GatewayAPIGRPCRouteController:      false,
 				GatewayAPIReferenceGrantController: false,
 			},
@@ -407,6 +408,10 @@ func TestManagerConfigToStatusControllers(t *testing.T) {
 				},
 				{
 					Name:  ControllerNameGatewayAPIGRPCRoute,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameGatewayAPITLSRoute,
 					State: gwtypes.ControlPlaneControllerStateDisabled,
 				},
 				{
@@ -484,6 +489,10 @@ func TestManagerConfigToStatusControllers(t *testing.T) {
 					State: gwtypes.ControlPlaneControllerStateDisabled,
 				},
 				{
+					Name:  ControllerNameGatewayAPITLSRoute,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
 					Name:  ControllerNameGatewayAPIReferenceGrant,
 					State: gwtypes.ControlPlaneControllerStateDisabled,
 				},
@@ -553,6 +562,10 @@ func TestManagerConfigToStatusControllers(t *testing.T) {
 				},
 				{
 					Name:  ControllerNameGatewayAPIGRPCRoute,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameGatewayAPITLSRoute,
 					State: gwtypes.ControlPlaneControllerStateDisabled,
 				},
 				{

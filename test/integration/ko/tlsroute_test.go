@@ -174,7 +174,7 @@ func TestTLSRoute(t *testing.T) {
 	t.Logf("generating a TLSRoute")
 	tlsRoute := helpers.GenerateTLSRoute(namespace.Name, gateway.Name, service.Name, tlsPort, func(r *gatewayv1.TLSRoute) {
 		r.Spec.Hostnames = []gatewayv1.Hostname{
-			gatewayv1.Hostname("*." + host),
+			gatewayv1.Hostname(host),
 		}
 	})
 
@@ -194,7 +194,7 @@ func TestTLSRoute(t *testing.T) {
 	require.Eventually(t, func() bool {
 		err := helpers.EchoResponds(t, helpers.ProtocolTLS, fmt.Sprintf("%s:%d", gatewayIPAddress, tlsPort), "test-tls-echo",
 			helpers.TLSOpt{
-				Hostname:    "a." + host,
+				Hostname:    host,
 				CertPool:    certPool,
 				Passthrough: true,
 			})
