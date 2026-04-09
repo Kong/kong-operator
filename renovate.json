@@ -188,13 +188,21 @@
       "enabled": true
     },
     {
-      "description": "Dockerfile golang patch updates only on release/2.1.x",
+      "description": "Enable Dockerfile golang updates on release/2.1.x",
       "matchManagers": ["dockerfile"],
       "matchDatasources": ["docker"],
       "matchDepNames": ["golang"],
       "matchBaseBranches": ["release/2.1.x"],
-      "matchUpdateTypes": ["patch"],
       "enabled": true
+    },
+    {
+      "description": "Disable Dockerfile golang major and minor updates on release/2.1.x",
+      "matchManagers": ["dockerfile"],
+      "matchDatasources": ["docker"],
+      "matchDepNames": ["golang"],
+      "matchBaseBranches": ["release/2.1.x"],
+      "matchUpdateTypes": ["major", "minor"],
+      "enabled": false
     }
   ]
 }
