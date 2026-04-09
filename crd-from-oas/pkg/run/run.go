@@ -96,7 +96,6 @@ func (r *Runner) Run(
 			ReconcilerConfig:     agvConfig.ReconcilerConfigs(pathToEntityName),
 			APIGroupPackagePath:  apiGroupPackagePath,
 			APIGroupPackageAlias: apiGroupPackageAlias,
-			FuncsConfig:          agvConfig.FuncsConfig(pathToEntityName),
 		})
 
 		files, err := gen.Generate(parsed)

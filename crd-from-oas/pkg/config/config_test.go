@@ -24,12 +24,6 @@ func TestLoadProjectConfig(t *testing.T) {
 			"            path: github.com/Kong/sdk-konnect-go/models/components.CreatePortal\n" +
 			"          update:\n" +
 			"            path: github.com/Kong/sdk-konnect-go/models/components.UpdatePortal\n" +
-			"        funcs:\n" +
-			"          GetKonnectStatus:\n" +
-			"            returnType:\n" +
-			"              package: github.com/kong/kong-operator/v2/api/konnect/v1alpha2\n" +
-			"              alias: konnectv1alpha2\n" +
-			"              type: KonnectEntityStatus\n" +
 			"      - path: /v3/portals/{portalId}/teams\n" +
 			"  gateway.konghq.com/v1beta1:\n" +
 			"    types:\n" +
@@ -51,16 +45,9 @@ func TestLoadProjectConfig(t *testing.T) {
 		assert.Len(t, konnect.Types[0].Ops, 2)
 		assert.Equal(t, "github.com/Kong/sdk-konnect-go/models/components.CreatePortal", konnect.Types[0].Ops["create"].Path)
 		assert.Equal(t, "github.com/Kong/sdk-konnect-go/models/components.UpdatePortal", konnect.Types[0].Ops["update"].Path)
-		require.NotNil(t, konnect.Types[0].Funcs)
-		require.Contains(t, konnect.Types[0].Funcs, "GetKonnectStatus")
-		require.NotNil(t, konnect.Types[0].Funcs["GetKonnectStatus"].ReturnType)
-		assert.Equal(t, "github.com/kong/kong-operator/v2/api/konnect/v1alpha2", konnect.Types[0].Funcs["GetKonnectStatus"].ReturnType.Package)
-		assert.Equal(t, "konnectv1alpha2", konnect.Types[0].Funcs["GetKonnectStatus"].ReturnType.Alias)
-		assert.Equal(t, "KonnectEntityStatus", konnect.Types[0].Funcs["GetKonnectStatus"].ReturnType.Type)
 		assert.Equal(t, "/v3/portals/{portalId}/teams", konnect.Types[1].Path)
 		assert.Nil(t, konnect.Types[1].CEL)
 		assert.Nil(t, konnect.Types[1].Ops)
-		assert.Nil(t, konnect.Types[1].Funcs)
 
 		gateway := cfg.APIGroupVersions["gateway.konghq.com/v1beta1"]
 		require.NotNil(t, gateway)
@@ -210,40 +197,6 @@ apiGroupVersions:
 
 		_, err := LoadProjectConfig(path)
 		assert.ErrorContains(t, err, "path is required")
-	})
-
-	t.Run("invalid: funcs with unsupported method", func(t *testing.T) {
-		content := `
-apiGroupVersions:
-  konnect.konghq.com/v1alpha1:
-    types:
-      - path: /v3/portals
-        funcs:
-          UnknownFunc: {}
-`
-		path := filepath.Join(t.TempDir(), "config.yaml")
-		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
-
-		_, err := LoadProjectConfig(path)
-		assert.ErrorContains(t, err, "funcs.UnknownFunc is not supported")
-	})
-
-	t.Run("invalid: funcs returnType missing package", func(t *testing.T) {
-		content := `
-apiGroupVersions:
-  konnect.konghq.com/v1alpha1:
-    types:
-      - path: /v3/portals
-        funcs:
-          GetKonnectStatus:
-            returnType:
-              type: KonnectEntityStatus
-`
-		path := filepath.Join(t.TempDir(), "config.yaml")
-		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
-
-		_, err := LoadProjectConfig(path)
-		assert.ErrorContains(t, err, "funcs.GetKonnectStatus.returnType.package is required")
 	})
 
 	t.Run("missing apiGroupVersions", func(t *testing.T) {
@@ -477,50 +430,5 @@ func TestAPIGroupVersionConfig_OpsConfig(t *testing.T) {
 
 		oc := agv.OpsConfig(nil)
 		assert.Empty(t, oc)
-	})
-}
-
-func TestAPIGroupVersionConfig_FuncsConfig(t *testing.T) {
-	t.Run("with funcs configured", func(t *testing.T) {
-		agv := &APIGroupVersionConfig{
-			Types: []*TypeConfig{
-				{
-					Path: "/v3/portals",
-					Funcs: map[string]*FuncConfig{
-						"GetKonnectStatus": {
-							ReturnType: &TypeRefConfig{
-								Package: "github.com/kong/kong-operator/v2/api/konnect/v1alpha2",
-								Alias:   "konnectv1alpha2",
-								Type:    "KonnectEntityStatus",
-							},
-						},
-					},
-				},
-				{
-					Path: "/v3/portals/{portalId}/teams",
-				},
-			},
-		}
-
-		pathToEntity := map[string]string{
-			"/v3/portals":                  "Portal",
-			"/v3/portals/{portalId}/teams": "PortalTeam",
-		}
-
-		fc := agv.FuncsConfig(pathToEntity)
-		require.Len(t, fc, 1)
-		require.Contains(t, fc, "Portal")
-		require.Contains(t, fc["Portal"].Funcs, "GetKonnectStatus")
-		assert.Equal(t, "KonnectEntityStatus", fc["Portal"].Funcs["GetKonnectStatus"].ReturnType.Type)
-		assert.NotContains(t, fc, "PortalTeam")
-	})
-
-	t.Run("no funcs configured", func(t *testing.T) {
-		agv := &APIGroupVersionConfig{
-			Types: []*TypeConfig{{Path: "/v3/portals"}},
-		}
-
-		fc := agv.FuncsConfig(map[string]string{"/v3/portals": "Portal"})
-		assert.Empty(t, fc)
 	})
 }

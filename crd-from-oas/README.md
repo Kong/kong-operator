@@ -22,12 +22,6 @@ apiGroupVersions:
       - path: /v1/event-gateways/{gatewayId}/data-plane-certificates
         name: KonnectEventDataPlaneCertificate
         optionalSecretReference: true
-        funcs:
-          GetKonnectStatus:
-            returnType:
-              package: github.com/kong/kong-operator/v2/api/konnect/v1alpha2
-              alias: konnectv1alpha2
-              type: KonnectEntityStatus
       - path: /v3/portals
         cel:
           name:

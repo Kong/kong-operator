@@ -54,22 +54,6 @@ type ImportConfig struct {
 	Alias string `yaml:"alias,omitempty"`
 }
 
-// TypeRefConfig identifies a Go type that should be referenced from a generated method.
-type TypeRefConfig struct {
-	// Package is the Go import path containing the type.
-	Package string `yaml:"package"`
-	// Alias is an optional alias to use for the imported package.
-	Alias string `yaml:"alias,omitempty"`
-	// Type is the exported Go type name.
-	Type string `yaml:"type"`
-}
-
-// FuncConfig holds configuration for a generated helper method.
-type FuncConfig struct {
-	// ReturnType overrides the generated method return type when supported.
-	ReturnType *TypeRefConfig `yaml:"returnType,omitempty"`
-}
-
 // TypeConfig holds configuration for a single CRD type (identified by its OpenAPI path).
 type TypeConfig struct {
 	// Path is the OpenAPI path that identifies the resource (e.g. "/services").
@@ -94,8 +78,6 @@ type TypeConfig struct {
 	// When set, reconciler wiring files (interface methods, watch options,
 	// index files) are generated for this entity.
 	Reconciler *ReconcilerConfig `yaml:"reconciler,omitempty"`
-	// Funcs overrides configuration for generated helper methods on the root type.
-	Funcs map[string]*FuncConfig `yaml:"funcs,omitempty"`
 }
 
 // ReconcilerConfig holds configuration for reconciler code generation.
@@ -116,12 +98,6 @@ type OpConfig struct {
 type EntityOpsConfig struct {
 	// Ops maps operation names (e.g. "create", "update") to their SDK type configs.
 	Ops map[string]*OpConfig
-}
-
-// EntityFuncsConfig holds generated helper method configuration for a single entity type.
-type EntityFuncsConfig struct {
-	// Funcs maps method names to their generation configuration.
-	Funcs map[string]*FuncConfig
 }
 
 // NameOverrides returns a mapping from OpenAPI path to the custom CRD type name
@@ -214,23 +190,6 @@ func (c *APIGroupVersionConfig) OpsConfig(pathToEntityName map[string]string) ma
 	return result
 }
 
-// FuncsConfig builds a mapping from entity name to generated helper method config
-// using the provided pathToEntityName mapping (built after parsing the OpenAPI spec).
-func (c *APIGroupVersionConfig) FuncsConfig(pathToEntityName map[string]string) map[string]*EntityFuncsConfig {
-	result := make(map[string]*EntityFuncsConfig)
-	for _, tc := range c.Types {
-		if tc.Funcs == nil {
-			continue
-		}
-		entityName, ok := pathToEntityName[tc.Path]
-		if !ok {
-			continue
-		}
-		result[entityName] = &EntityFuncsConfig{Funcs: tc.Funcs}
-	}
-	return result
-}
-
 func (c *APIGroupVersionConfig) validate() error {
 	if c.CommonTypes == nil || c.CommonTypes.ObjectRef == nil {
 		for _, tc := range c.Types {
@@ -267,27 +226,6 @@ func (c *APIGroupVersionConfig) validate() error {
 }
 
 func (tc *TypeConfig) validate() error {
-	for funcName, funcCfg := range tc.Funcs {
-		switch funcName {
-		case "SetKonnectID":
-			if funcCfg != nil && funcCfg.ReturnType != nil {
-				return fmt.Errorf("funcs.%s.returnType is not supported", funcName)
-			}
-		case "GetKonnectStatus":
-			if funcCfg == nil || funcCfg.ReturnType == nil {
-				continue
-			}
-			if funcCfg.ReturnType.Package == "" {
-				return fmt.Errorf("funcs.%s.returnType.package is required", funcName)
-			}
-			if funcCfg.ReturnType.Type == "" {
-				return fmt.Errorf("funcs.%s.returnType.type is required", funcName)
-			}
-		default:
-			return fmt.Errorf("funcs.%s is not supported", funcName)
-		}
-	}
-
 	return nil
 }
 

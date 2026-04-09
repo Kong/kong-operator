@@ -20,8 +20,6 @@ type Config struct {
 	GenerateStatus bool
 	// FieldConfig holds additional field configurations from YAML
 	FieldConfig *config.Config
-	// FuncsConfig maps entity names to helper method generation overrides.
-	FuncsConfig map[string]*config.EntityFuncsConfig
 	// OpsConfig maps entity names to SDK operation configurations.
 	// When set, conversion methods are generated on the entity's APISpec type.
 	OpsConfig map[string]*config.EntityOpsConfig
@@ -488,10 +486,6 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 
 func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string, error) {
 	entityName := parser.GetEntityNameFromType(name)
-	konnectStatusReturnType, err := g.resolvedKonnectStatusReturnType()
-	if err != nil {
-		return "", err
-	}
 	hasReconcilerFuncs := false
 	isReconcilerRoot := false
 	if rc := g.config.ReconcilerConfig[entityName]; rc != nil {
@@ -500,7 +494,7 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 	}
 
 	imports := make([]*config.ImportConfig, 0, 3)
-	imports = appendUniqueImportConfig(imports, importConfigFromTypeRef(konnectStatusReturnType))
+	imports = appendUniqueImportConfig(imports, defaultKonnectStatusImport())
 	if hasReconcilerFuncs {
 		imports = appendUniqueImportConfig(imports, &config.ImportConfig{
 			Alias: "metav1",
@@ -530,7 +524,7 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		EntityName:                         entityName,
 		APIVersion:                         g.config.APIVersion,
 		Imports:                            imports,
-		KonnectStatusType:                  qualifiedTypeNameForTypeRef(konnectStatusReturnType),
+		KonnectStatusType:                  defaultKonnectStatusQualifiedTypeName(),
 		KonnectLabelsField:                 g.konnectLabelsField(schema),
 		HasReconcilerFuncs:                 hasReconcilerFuncs,
 		IsReconcilerRoot:                   isReconcilerRoot,
@@ -839,10 +833,6 @@ package %s
 
 func (g *Generator) generateCommonTypes() (string, error) {
 	tmpl := template.Must(template.New("commonTypes").Parse(commonTypesTemplate))
-	konnectStatusReturnType, err := g.resolvedKonnectStatusReturnType()
-	if err != nil {
-		return "", err
-	}
 
 	var buf strings.Builder
 	data := struct {
@@ -854,8 +844,8 @@ func (g *Generator) generateCommonTypes() (string, error) {
 		HasSecretRefEntities bool
 	}{
 		APIVersion:           g.config.APIVersion,
-		KonnectStatusImport:  importConfigFromTypeRef(konnectStatusReturnType),
-		KonnectStatusType:    qualifiedTypeNameForTypeRef(konnectStatusReturnType),
+		KonnectStatusImport:  defaultKonnectStatusImport(),
+		KonnectStatusType:    defaultKonnectStatusQualifiedTypeName(),
 		ObjectRefImported:    g.objectRefImported(),
 		Namespaced:           g.objectRefNamespaced(),
 		HasSecretRefEntities: len(g.config.SecretRefEntities) > 0,
@@ -867,47 +857,15 @@ func (g *Generator) generateCommonTypes() (string, error) {
 	return buf.String(), nil
 }
 
-func defaultKonnectStatusReturnType() *config.TypeRefConfig {
-	return &config.TypeRefConfig{
-		Package: defaultKonnectStatusPackage,
-		Alias:   defaultKonnectStatusAlias,
-		Type:    defaultKonnectStatusType,
+func defaultKonnectStatusImport() *config.ImportConfig {
+	return &config.ImportConfig{
+		Path:  defaultKonnectStatusPackage,
+		Alias: defaultKonnectStatusAlias,
 	}
 }
 
-func (g *Generator) resolvedKonnectStatusReturnType() (*config.TypeRefConfig, error) {
-	resolved := defaultKonnectStatusReturnType()
-	var resolvedFrom string
-
-	for entityName, entityCfg := range g.config.FuncsConfig {
-		if entityCfg == nil || entityCfg.Funcs == nil {
-			continue
-		}
-		funcCfg, ok := entityCfg.Funcs["GetKonnectStatus"]
-		if !ok || funcCfg == nil || funcCfg.ReturnType == nil {
-			continue
-		}
-
-		if resolvedFrom == "" {
-			resolved = &config.TypeRefConfig{
-				Package: funcCfg.ReturnType.Package,
-				Alias:   funcCfg.ReturnType.Alias,
-				Type:    funcCfg.ReturnType.Type,
-			}
-			resolvedFrom = entityName
-			continue
-		}
-
-		if !sameTypeRefConfigs(resolved, funcCfg.ReturnType) {
-			return nil, fmt.Errorf(
-				"GetKonnectStatus returnType override for %q conflicts with %q",
-				entityName,
-				resolvedFrom,
-			)
-		}
-	}
-
-	return resolved, nil
+func defaultKonnectStatusQualifiedTypeName() string {
+	return defaultKonnectStatusAlias + "." + defaultKonnectStatusType
 }
 
 // objectRefNamespaced returns true if the generated ObjectRef's NamespacedRef
@@ -977,33 +935,6 @@ func (g *Generator) namespacedRefTypeName() string {
 func (g *Generator) importedTypePrefix() string {
 	imp := g.config.CommonTypes.ObjectRef.Import
 	return importQualifier(imp)
-}
-
-func sameTypeRefConfigs(a, b *config.TypeRefConfig) bool {
-	if a == nil || b == nil {
-		return a == b
-	}
-
-	return a.Package == b.Package && a.Alias == b.Alias && a.Type == b.Type
-}
-
-func importConfigFromTypeRef(typeRef *config.TypeRefConfig) *config.ImportConfig {
-	if typeRef == nil {
-		return nil
-	}
-
-	return &config.ImportConfig{
-		Path:  typeRef.Package,
-		Alias: typeRef.Alias,
-	}
-}
-
-func qualifiedTypeNameForTypeRef(typeRef *config.TypeRefConfig) string {
-	if typeRef == nil {
-		return ""
-	}
-
-	return importQualifier(importConfigFromTypeRef(typeRef)) + typeRef.Type
 }
 
 func importQualifier(imp *config.ImportConfig) string {
