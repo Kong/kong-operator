@@ -72,8 +72,10 @@ import (
 
 {{- if .NeedsSeparateAPIAuthImport}}
 	{{.APIAuthPackageAlias}} "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
-{{- end}}
 	{{.APIGroupPackageAlias}} "{{.APIGroupPackagePath}}"
+{{- else}}
+	{{.APIGroupPackageAlias}} "{{.APIGroupPackagePath}}"
+{{- end}}
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
