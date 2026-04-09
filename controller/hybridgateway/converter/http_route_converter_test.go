@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -441,6 +442,148 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				require.NotNil(t, bindingObj.Spec.Targets.ServiceReference)
 				assert.Equal(t, serviceName, bindingObj.Spec.Targets.ServiceReference.Name)
 				assert.Equal(t, pluginObj.Name, bindingObj.Spec.PluginReference.Name)
+			},
+		},
+		{
+			name: "translates partially invalid cross-namespace sibling backends",
+			setup: func() *httpRouteConverter {
+				v1Name := gwtypes.ObjectName("app-backend-v1")
+				v2Name := gwtypes.ObjectName("app-backend-v2")
+				serviceKind := gwtypes.Kind("Service")
+				serviceGroup := gwtypes.Group("")
+
+				route := newHTTPRouteWithRules(
+					[]string{"api.example.com"},
+					[]gwtypes.HTTPRouteRule{
+						{
+							Matches: []gwtypes.HTTPRouteMatch{{
+								Path: &gatewayv1.HTTPPathMatch{
+									Type:  new(gatewayv1.PathMatchPathPrefix),
+									Value: new("/v2"),
+								},
+							}},
+							BackendRefs: []gwtypes.HTTPBackendRef{{
+								BackendRef: gwtypes.BackendRef{
+									BackendObjectReference: gwtypes.BackendObjectReference{
+										Name:      v2Name,
+										Namespace: ptr.To(gwtypes.Namespace("app-backend")),
+										Kind:      &serviceKind,
+										Group:     &serviceGroup,
+										Port:      new(gwtypes.PortNumber(80)),
+									},
+								},
+							}},
+						},
+						{
+							Matches: []gwtypes.HTTPRouteMatch{{
+								Path: &gatewayv1.HTTPPathMatch{
+									Type:  new(gatewayv1.PathMatchPathPrefix),
+									Value: new("/"),
+								},
+							}},
+							BackendRefs: []gwtypes.HTTPBackendRef{{
+								BackendRef: gwtypes.BackendRef{
+									BackendObjectReference: gwtypes.BackendObjectReference{
+										Name:      v1Name,
+										Namespace: ptr.To(gwtypes.Namespace("app-backend")),
+										Kind:      &serviceKind,
+										Group:     &serviceGroup,
+										Port:      new(gwtypes.PortNumber(80)),
+									},
+								},
+							}},
+						},
+					},
+				)
+
+				gateway := baseGateway()
+				objects := append(
+					newKonnectGatewayStandardObjects(gateway),
+					newNamespace(),
+					&corev1.Service{
+						ObjectMeta: metav1.ObjectMeta{Name: "app-backend-v1", Namespace: "app-backend"},
+						Spec: corev1.ServiceSpec{
+							ClusterIP: "10.0.0.2",
+							Ports: []corev1.ServicePort{{
+								Name:       "http",
+								Port:       80,
+								Protocol:   corev1.ProtocolTCP,
+								TargetPort: intstr.FromInt(8080),
+							}},
+						},
+					},
+					&corev1.Service{
+						ObjectMeta: metav1.ObjectMeta{Name: "app-backend-v2", Namespace: "app-backend"},
+						Spec: corev1.ServiceSpec{
+							ClusterIP: "10.0.0.3",
+							Ports: []corev1.ServicePort{{
+								Name:       "http",
+								Port:       80,
+								Protocol:   corev1.ProtocolTCP,
+								TargetPort: intstr.FromInt(8080),
+							}},
+						},
+					},
+					newEndpointSlice("app-backend-v1", "app-backend", 8080, []string{"10.0.1.1"}),
+					&gwtypes.ReferenceGrant{
+						ObjectMeta: metav1.ObjectMeta{Name: "allow-app-backend-v1", Namespace: "app-backend"},
+						Spec: gwtypes.ReferenceGrantSpec{
+							From: []gwtypes.ReferenceGrantFrom{{
+								Group:     gwtypes.GroupName,
+								Kind:      "HTTPRoute",
+								Namespace: "default",
+							}},
+							To: []gwtypes.ReferenceGrantTo{{
+								Group: gwtypes.Group(""),
+								Kind:  gwtypes.Kind("Service"),
+								Name:  &v1Name,
+							}},
+						},
+					},
+				)
+				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
+				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+			},
+			wantCount: 9,
+			wantOutputs: outputCount{
+				upstreams: 2,
+				services:  2,
+				routes:    2,
+				targets:   1,
+				bindings:  1,
+				plugins:   1,
+			},
+			wantStoreLen: 9,
+			assertFn: func(t *testing.T, store []client.Object) {
+				t.Helper()
+
+				var (
+					targets    []*configurationv1alpha1.KongTarget
+					pluginObj  *configurationv1.KongPlugin
+					bindingObj *configurationv1alpha1.KongPluginBinding
+				)
+
+				for _, obj := range store {
+					switch typed := obj.(type) {
+					case *configurationv1alpha1.KongTarget:
+						targets = append(targets, typed)
+					case *configurationv1.KongPlugin:
+						pluginObj = typed
+					case *configurationv1alpha1.KongPluginBinding:
+						bindingObj = typed
+					}
+				}
+
+				require.Len(t, targets, 1)
+				assert.Equal(t, "10.0.1.1:8080", targets[0].Spec.Target)
+
+				require.NotNil(t, pluginObj)
+				require.NotNil(t, bindingObj)
+				assert.Equal(t, "request-termination", pluginObj.PluginName)
+
+				var config map[string]any
+				require.NoError(t, json.Unmarshal(pluginObj.Config.Raw, &config))
+				assert.Equal(t, "no existing backendRef provided", config["message"])
 			},
 		},
 		{

@@ -2685,6 +2685,79 @@ func TestTargetsForBackendRefs(t *testing.T) {
 			expectedError:   false,
 		},
 		{
+			name: "Mixed cross-namespace backend refs should keep permitted sibling targets",
+			httpRoute: createTestHTTPRoute("test-route", "frontend-ns", []gwtypes.HTTPBackendRef{
+				createTestHTTPBackendRef("app-backend-v2", "backend-ns", nil, ptr.To[int32](80)),
+				createTestHTTPBackendRef("app-backend-v1", "backend-ns", nil, ptr.To[int32](80)),
+			}),
+			backendRefs: []gwtypes.HTTPBackendRef{
+				createTestHTTPBackendRef("app-backend-v2", "backend-ns", nil, ptr.To[int32](80)),
+				createTestHTTPBackendRef("app-backend-v1", "backend-ns", nil, ptr.To[int32](80)),
+			},
+			pRef:         &gwtypes.ParentReference{Name: "test-gateway"},
+			upstreamName: "test-upstream",
+			fqdn:         false,
+			services: []corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "app-backend-v1", Namespace: "backend-ns"},
+					Spec: corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Name: "http", Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(8080)}},
+						Type:  corev1.ServiceTypeClusterIP,
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "app-backend-v2", Namespace: "backend-ns"},
+					Spec: corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Name: "http", Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(8080)}},
+						Type:  corev1.ServiceTypeClusterIP,
+					},
+				},
+			},
+			endpointSlices: []discoveryv1.EndpointSlice{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-backend-v1-slice",
+						Namespace: "backend-ns",
+						Labels: map[string]string{
+							"kubernetes.io/service-name": "app-backend-v1",
+						},
+					},
+					Ports:     []discoveryv1.EndpointPort{createTestEndpointPort("http", 8080, corev1.ProtocolTCP)},
+					Endpoints: []discoveryv1.Endpoint{createTestEndpoint([]string{"10.0.3.1"}, true)},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app-backend-v2-slice",
+						Namespace: "backend-ns",
+						Labels: map[string]string{
+							"kubernetes.io/service-name": "app-backend-v2",
+						},
+					},
+					Ports:     []discoveryv1.EndpointPort{createTestEndpointPort("http", 8080, corev1.ProtocolTCP)},
+					Endpoints: []discoveryv1.Endpoint{createTestEndpoint([]string{"10.0.3.2"}, true)},
+				},
+			},
+			referenceGrants: []gwtypes.ReferenceGrant{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "allow-frontend-to-v1", Namespace: "backend-ns"},
+					Spec: gwtypes.ReferenceGrantSpec{
+						From: []gwtypes.ReferenceGrantFrom{
+							{Group: gwtypes.GroupName, Kind: "HTTPRoute", Namespace: "frontend-ns"},
+						},
+						To: []gwtypes.ReferenceGrantTo{
+							{Group: "", Kind: "Service", Name: ptr.To(gatewayv1.ObjectName("app-backend-v1"))},
+						},
+					},
+				},
+			},
+			expectedTargets: 1,
+			expectedError:   false,
+			validateResult: func(t *testing.T, targets []configurationv1alpha1.KongTarget) {
+				require.Len(t, targets, 1)
+				assert.Equal(t, "10.0.3.1:8080", targets[0].Spec.Target)
+			},
+		},
+		{
 			name: "Cross-namespace backend refs without ReferenceGrant should fail",
 			httpRoute: createTestHTTPRoute("test-route", "frontend-ns", []gwtypes.HTTPBackendRef{
 				createTestHTTPBackendRef("backend-service", "backend-ns", nil, ptr.To[int32](80)),
