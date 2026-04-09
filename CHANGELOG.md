@@ -119,6 +119,8 @@
   matching Kubernetes CRs exist in the cluster. The `KongService` host is set to
   the in-cluster Service DNS name. Stale resources are garbage-collected.
   [#3831](https://github.com/Kong/kong-operator/pull/3831)
+- Hybridgateway: add support for `konghq.com/protocol` service annotation
+  [#3847](https://github.com/Kong/kong-operator/pull/3847)
 
 ### Changed
 
