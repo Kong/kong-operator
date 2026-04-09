@@ -811,10 +811,26 @@ MCPServerStatus defines the observed state of MCPServer.
 | `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
 | `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
 | `controlPlaneID` _string_ | ControlPlaneID is the Konnect ID of the ControlPlane this Route is associated with. |
+| `workloads` _[MCPServerWorkloadsStatus](#konnect-konghq-com-v1alpha1-types-mcpserverworkloadsstatus)_ | Workloads defines the observed state of the MCPServer workloads. |
 
 _Appears in:_
 
 - [MCPServer](#konnect-konghq-com-v1alpha1-mcpserver)
+
+#### MCPServerWorkloadsStatus
+
+
+MCPServerWorkloadsStatus defines the observed state of the MCPServer workloads.
+
+
+
+| Field | Description |
+| --- | --- |
+| `version` _*string_ | Version is the version of the MCPServer workloads. |
+
+_Appears in:_
+
+- [MCPServerStatus](#konnect-konghq-com-v1alpha1-types-mcpserverstatus)
 
 #### MirrorKonnect
 

@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
@@ -19,7 +20,8 @@ import (
 func newTestSignalManager(t *testing.T) *SignalManager {
 	t.Helper()
 	s := scheme.Get()
-	sm := NewSignalManager(logging.DevelopmentMode, nil, s)
+	reconcileEventCh := make(chan event.GenericEvent, TriggerChannelBufSize)
+	sm := NewSignalManager(logging.DevelopmentMode, nil, s, reconcileEventCh)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // pre-cancel so derived contexts are immediately done

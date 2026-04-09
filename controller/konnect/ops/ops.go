@@ -329,6 +329,11 @@ func Delete[
 		return fmt.Errorf("unsupported entity type %T", ent)
 	}
 
+	var isMirror bool
+	if isMirrorableEntity(ent) {
+		isMirror = isMirrorEntity(ent)
+	}
+
 	if err != nil {
 		if errSDK, ok := errors.AsType[*sdkkonnecterrs.SDKError](err); ok {
 			statusCode = errSDK.StatusCode
@@ -340,7 +345,7 @@ func Delete[
 			time.Since(start),
 			statusCode,
 		)
-	} else {
+	} else if !isMirror {
 		metricRecorder.RecordKonnectEntityOperationSuccess(
 			sdk.GetServerURL(),
 			metrics.KonnectEntityOperationDelete,

@@ -1,0 +1,225 @@
+package mcpserver
+
+import (
+	"context"
+	"fmt"
+
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	"github.com/kong/kong-operator/v2/controller/pkg/op"
+	"github.com/kong/kong-operator/v2/pkg/consts"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
+	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
+)
+
+const (
+	// mcpServerVersionAnnotationKey is the annotation key used to store the
+	// remote MCP server version on the owned Deployment's pod template.
+	mcpServerVersionAnnotationKey = "kong-operator.konghq.com/mcp-server-version"
+)
+
+// generateWorkloadNN builds a Kubernetes-safe NamespacedName for a workload
+// owned by the given MCPServer.
+func generateWorkloadNN(mcpServer *konnectv1alpha1.MCPServer) types.NamespacedName {
+	return generateHashedName(mcpServer.Namespace, "mcpserver-"+mcpServer.Name, mcpServer.Name)
+}
+
+// ----------------------------------------------------------------------------
+// Deployment
+// ----------------------------------------------------------------------------
+
+// ensureDeployment ensures that exactly one Deployment exists for the given
+// MCPServer. It creates a new Deployment if none exists, updates it if needed,
+// and returns the operation result.
+func (r *MCPServerReconciler) ensureDeployment(
+	ctx context.Context,
+	mcpServer *konnectv1alpha1.MCPServer,
+	remoteMCPServer *sdkkonnectcomp.MCPServerCPInfo,
+) (op.Result, *appsv1.Deployment, error) {
+	desired := generateDeployment(mcpServer, *remoteMCPServer)
+
+	existing := &appsv1.Deployment{}
+	err := r.Get(ctx, types.NamespacedName{
+		Namespace: desired.Namespace,
+		Name:      desired.Name,
+	}, existing)
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			return op.Noop, nil, fmt.Errorf("failed to get Deployment for MCPServer %s/%s: %w",
+				mcpServer.Namespace, mcpServer.Name, err)
+		}
+
+		k8sutils.SetOwnerForObject(desired, mcpServer)
+		if err := r.Create(ctx, desired); err != nil {
+			return op.Noop, nil, fmt.Errorf("failed to create Deployment for MCPServer %s/%s: %w",
+				mcpServer.Namespace, mcpServer.Name, err)
+		}
+		return op.Created, desired, nil
+	}
+
+	// Ensure the pod template annotations are up to date.
+	// TODO: ensure the whole deployment spec is up to date and enforced.
+	if existing.Spec.Template.Annotations == nil {
+		existing.Spec.Template.Annotations = make(map[string]string)
+	}
+	if existing.Spec.Template.Annotations[mcpServerVersionAnnotationKey] != desired.Spec.Template.Annotations[mcpServerVersionAnnotationKey] {
+		old := existing.DeepCopy()
+		existing.Spec.Template.Annotations[mcpServerVersionAnnotationKey] = desired.Spec.Template.Annotations[mcpServerVersionAnnotationKey]
+		if err := r.Patch(ctx, existing, client.MergeFrom(old)); err != nil {
+			return op.Noop, nil, fmt.Errorf("failed to patch Deployment %s/%s pod template annotations: %w",
+				existing.Namespace, existing.Name, err)
+		}
+		return op.Updated, existing, nil
+	}
+
+	return op.Noop, existing, nil
+}
+
+// generateDeployment creates the desired Deployment spec for the given MCPServer.
+func generateDeployment(mcpServer *konnectv1alpha1.MCPServer, remoteMCPServer sdkkonnectcomp.MCPServerCPInfo) *appsv1.Deployment {
+	nn := generateWorkloadNN(mcpServer)
+	labels := map[string]string{
+		"app": nn.Name,
+	}
+
+	var replicas int32 = 1
+
+	deployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      nn.Name,
+			Namespace: nn.Namespace,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: &replicas,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: labels,
+			},
+			Strategy: appsv1.DeploymentStrategy{
+				Type: appsv1.RollingUpdateDeploymentStrategyType,
+				RollingUpdate: &appsv1.RollingUpdateDeployment{
+					MaxUnavailable: &intstr.IntOrString{
+						Type:   intstr.Int,
+						IntVal: 0,
+					},
+					MaxSurge: &intstr.IntOrString{
+						Type:   intstr.Int,
+						IntVal: 1,
+					},
+				},
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: labels,
+					Annotations: map[string]string{
+						mcpServerVersionAnnotationKey: remoteMCPServer.Version,
+					},
+				},
+				Spec: corev1.PodSpec{
+					// TODO: replace containers with the actual MCP server container spec once we have it, this is just a placeholder to demonstrate the concept.
+					InitContainers: []corev1.Container{
+						{
+							Name:            "init-mcp-server",
+							Image:           "alpine:3.23",
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Command:         []string{"sh", "-c", `echo "[DEMO] Fetch code from Konnect..."`},
+						},
+					},
+					Containers: []corev1.Container{
+						{
+							Name:            "mcp-server",
+							Image:           "alpine:3.23",
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Command:         []string{"sh", "-c", `echo "[DEMO] running code..." && sleep infinity`},
+							Ports: []corev1.ContainerPort{
+								{
+									Name:          "mcp",
+									ContainerPort: consts.MCPServerDefaultPort,
+									Protocol:      corev1.ProtocolTCP,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	k8sresources.LabelObjectAsMCPServerManaged(deployment)
+
+	return deployment
+}
+
+// ----------------------------------------------------------------------------
+// Service
+// ----------------------------------------------------------------------------
+
+// ensureService ensures that exactly one Service exists for the given
+// MCPServer. It creates a new Service if none exists and returns the
+// operation result.
+func (r *MCPServerReconciler) ensureService(
+	ctx context.Context,
+	mcpServer *konnectv1alpha1.MCPServer,
+) (op.Result, *corev1.Service, error) {
+	desired := generateService(mcpServer)
+
+	existing := &corev1.Service{}
+	err := r.Get(ctx, types.NamespacedName{
+		Namespace: desired.Namespace,
+		Name:      desired.Name,
+	}, existing)
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			return op.Noop, nil, fmt.Errorf("failed to get Service for MCPServer %s/%s: %w",
+				mcpServer.Namespace, mcpServer.Name, err)
+		}
+
+		k8sutils.SetOwnerForObject(desired, mcpServer)
+		if err := r.Create(ctx, desired); err != nil {
+			return op.Noop, nil, fmt.Errorf("failed to create Service for MCPServer %s/%s: %w",
+				mcpServer.Namespace, mcpServer.Name, err)
+		}
+		return op.Created, desired, nil
+	}
+
+	// TODO: if the service already exists, we should check if its spec is up to date and update it if needed.
+
+	return op.Noop, existing, nil
+}
+
+// generateService creates the desired Service spec for the given MCPServer.
+func generateService(mcpServer *konnectv1alpha1.MCPServer) *corev1.Service {
+	nn := generateWorkloadNN(mcpServer)
+	labels := map[string]string{
+		"app": nn.Name,
+	}
+
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      nn.Name,
+			Namespace: nn.Namespace,
+		},
+		Spec: corev1.ServiceSpec{
+			Selector: labels,
+			Ports: []corev1.ServicePort{
+				{
+					Name:       "mcp",
+					Protocol:   corev1.ProtocolTCP,
+					Port:       consts.MCPServerDefaultPort,
+					TargetPort: intstr.FromInt32(consts.MCPServerDefaultPort),
+				},
+			},
+		},
+	}
+
+	k8sresources.LabelObjectAsMCPServerManaged(svc)
+
+	return svc
+}

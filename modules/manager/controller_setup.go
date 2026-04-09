@@ -14,6 +14,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -806,7 +807,8 @@ func newGatewayAPIHybridController[t converter.RootObject, tPtr converter.RootOb
 }
 
 func newMCPServerControllers(mgr manager.Manager, c *Config, ctrlOpts controller.Options) []ControllerDef {
-	sm := mcpserver.NewSignalManager(c.LoggingMode, mgr.GetClient(), mgr.GetScheme())
+	reconcileEventCh := make(chan event.GenericEvent, mcpserver.TriggerChannelBufSize)
+	sm := mcpserver.NewSignalManager(c.LoggingMode, mgr.GetClient(), mgr.GetScheme(), reconcileEventCh)
 	sdkFactory := sdkops.NewSDKFactory()
 	controllerFactory := konnectControllerFactory{
 		sdkFactory:        sdkFactory,
@@ -825,6 +827,7 @@ func newMCPServerControllers(mgr manager.Manager, c *Config, ctrlOpts controller
 				LoggingMode:       c.LoggingMode,
 				SignalManager:     sm,
 				SdkFactory:        sdkFactory,
+				ReconcileEventCh:  reconcileEventCh,
 			},
 		},
 		{
