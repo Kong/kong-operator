@@ -37,6 +37,15 @@ func (p DefaultAdminAPIServicesProvider) GetPluginsService() (kong.AbstractPlugi
 	return c.Plugins, true
 }
 
+func (p DefaultAdminAPIServicesProvider) GetPluginsServices() []kong.AbstractPluginService {
+	gwClients := p.gatewayClientsProvider.GatewayClients()
+	services := make([]kong.AbstractPluginService, 0, len(gwClients))
+	for _, c := range gwClients {
+		services = append(services, c.AdminAPIClient().Plugins)
+	}
+	return services
+}
+
 func (p DefaultAdminAPIServicesProvider) GetConsumerGroupsService() (kong.AbstractConsumerGroupService, bool) {
 	c, ok := p.designatedAdminAPIClient()
 	if !ok {
@@ -83,13 +92,8 @@ func (p DefaultAdminAPIServicesProvider) designatedAdminAPIClient() (*kong.Clien
 		return nil, false
 	}
 
-	// For now using first client is kind of OK. Using Consumer and Plugin
-	// services from first kong client should theoretically return the same
-	// results as for all other clients. There might be instances where
-	// configurations in different Kong Gateways are ever so slightly
-	// different but that shouldn't cause a fatal failure.
-	//
-	// TODO: We should take a look at this sooner rather than later.
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/3363
+	// Uses the first discovered gateway for Admin API calls (consumers, routes, etc.).
+	// KongPlugin admission can opt into multi-gateway plugin service selection through
+	// the optional GetPluginsServices() extension.
 	return gwClients[0].AdminAPIClient(), true
 }
