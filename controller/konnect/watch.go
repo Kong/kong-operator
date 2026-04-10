@@ -82,6 +82,7 @@ func ReconciliationWatchOptionsForEntity[
 		return KongDataPlaneClientCertificateReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.MCPServer:
 		return MCPServerReconciliationWatchOptions(cl)
+	// TODO: https://github.com/Kong/kong-operator/issues/3785
 	case *xkonnectv1alpha1.KonnectEventControlPlane:
 		return KonnectEventControlPlaneReconciliationWatchOptions(cl)
 	case *xkonnectv1alpha1.Portal:

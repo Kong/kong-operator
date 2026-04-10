@@ -1,5 +1,8 @@
 package ops
 
+// TODO: This file is hand-written and will be replaced with generated code.
+// https://github.com/Kong/kong-operator/issues/3857
+
 import (
 	"context"
 	"fmt"
