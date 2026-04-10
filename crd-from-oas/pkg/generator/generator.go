@@ -1160,15 +1160,29 @@ func testValuesForProperty(prop *parser.Property, goType string) (string, string
 	case "string":
 		return `"test-value"`, `"test-value"`
 	case "*string":
-		return `new("test-value")`, `"test-value"`
+		return `func(v string) *string { return &v }("test-value")`, `"test-value"`
 	case "bool":
 		return "true", "true"
 	case "*bool":
-		return `new(true)`, "true"
+		return `func(v bool) *bool { return &v }(true)`, "true"
 	case "int", "int32", "int64":
 		return "1", "float64(1)"
 	case "float32", "float64":
 		return "1.0", "1.0"
+	}
+
+	if prop.RefName != "" {
+		switch prop.Type {
+		case "string":
+			if elementType, ok := strings.CutPrefix(goType, "*"); ok {
+				return fmt.Sprintf(`func(v %[1]s) *%[1]s { return &v }(%[1]s("test-value"))`, elementType), `"test-value"`
+			}
+			return fmt.Sprintf(`%s("test-value")`, goType), `"test-value"`
+		case "object":
+			if prop.AdditionalProperties != nil && prop.AdditionalProperties.Type == "string" {
+				return fmt.Sprintf(`%s{"test-key": "test-value"}`, goType), `map[string]any{"test-key": "test-value"}`
+			}
+		}
 	}
 	// Skip complex types (maps, slices, structs, etc.) in generated tests
 	return "", ""

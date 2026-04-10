@@ -1091,6 +1091,56 @@ func TestGenerateSDKOpsTest_AssertsNormalizedPayload(t *testing.T) {
 	assert.Contains(t, content, `require.Equal(t, "test-value", payload["name"])`)
 }
 
+func TestGenerateSDKOpsTest_SupportsPointerAndNamedFields(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	schema := &parser.Schema{
+		Properties: []*parser.Property{
+			{
+				Name:     "description",
+				Type:     "string",
+				Nullable: true,
+			},
+			{
+				Name:    "labels",
+				Type:    "object",
+				RefName: "Labels",
+				AdditionalProperties: &parser.Property{
+					Name:    "value",
+					Type:    "string",
+					RefName: "LabelsValue",
+				},
+			},
+			{
+				Name:    "min_runtime_version",
+				Type:    "string",
+				RefName: "MinRuntimeVersion",
+			},
+			{
+				Name:    "name",
+				Type:    "string",
+				RefName: "GatewayName",
+			},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {
+				Path: "github.com/Kong/sdk-konnect-go/models/components.CreateGatewayRequest",
+			},
+		},
+	}
+
+	content, err := g.generateSDKOpsTest("KonnectEventControlPlane", schema, opsConfig)
+	require.NoError(t, err)
+	assert.Contains(t, content, `Description: func(v string) *string { return &v }("test-value")`)
+	assert.Contains(t, content, `Labels: Labels{"test-key": "test-value"}`)
+	assert.Contains(t, content, `MinRuntimeVersion: MinRuntimeVersion("test-value")`)
+	assert.Contains(t, content, `Name: GatewayName("test-value")`)
+	assert.Contains(t, content, `require.Equal(t, map[string]any{"test-key": "test-value"}, payload["labels"])`)
+	assert.Contains(t, content, `require.Equal(t, "test-value", payload["min_runtime_version"])`)
+	assert.Contains(t, content, `require.Equal(t, "test-value", payload["name"])`)
+}
+
 func TestParseSDKTypePath(t *testing.T) {
 	tests := []struct {
 		name       string
