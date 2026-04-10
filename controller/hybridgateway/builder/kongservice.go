@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"strings"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -14,6 +15,12 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+)
+
+const (
+	KongServiceProtocolHTTP = "http"
+	KongServiceProtocolTCP  = "tcp"
+	KongServiceProtocolTLS  = "tls"
 )
 
 // KongServiceBuilder is a builder for configurationv1alpha1.KongService resources.
@@ -98,8 +105,9 @@ func (b *KongServiceBuilder) WithOwner(owner client.Object) *KongServiceBuilder 
 // Supported protocols match the Kong Gateway upstream protocol set.
 func (b *KongServiceBuilder) WithProtocol(protocol string) *KongServiceBuilder {
 	if protocol == "" {
-		protocol = "http"
+		protocol = KongServiceProtocolHTTP
 	}
+	protocol = strings.ToLower(protocol)
 	switch protocol {
 	case "http":
 		b.service.Spec.Protocol = sdkkonnectcomp.ProtocolHTTP

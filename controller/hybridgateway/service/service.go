@@ -77,8 +77,14 @@ func ServiceForRule[
 			return nil, fmt.Errorf("failed to build KongService : unmatched route type and rule type: %T and %T", parentRoute, rule)
 		}
 		serviceName = namegen.NewKongServiceNameForTLSRouteRule(r, cp, tlsRule)
-		// TODO: decide it should be "tls" or "tls_passthrough"?
-		protocol = "tls"
+		// As specified in Kong gateway documents, either TLS passthrough or TLS terminate should set `tcp` as the service protocol:
+		// For TLS passthrogh, we should use `tls_passthrough` for protocols of routes and `tcp` for protocols of services:
+		// https://developer.konghq.com/gateway/entities/route/#proxying-tls-passthrough-traffic
+		// For TLS terminate, we should set `tls` for routes and `tcp` for services:
+		// https://developer.konghq.com/gateway/traffic-control/proxying/#proxy-tcp-tls-traffic
+		// TODO: support specifying protocols of KongService by annotation:
+		// https://github.com/Kong/kong-operator/issues/3750
+		protocol = builder.KongServiceProtocolTCP
 	// TODO: add other types of routes and rules when we support them.
 
 	// Should be unreachable.

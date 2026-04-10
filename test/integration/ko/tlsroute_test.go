@@ -158,7 +158,7 @@ func TestTLSRoute(t *testing.T) {
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName:  secret.Name,
-					DefaultMode: new(int32(0o420)),
+					DefaultMode: new(int32(0o644)),
 				},
 			},
 		},
