@@ -6015,6 +6015,7 @@ KonnectConfiguration is the Schema for the KonnectConfiguration API.
 _Appears in:_
 
 - [KonnectCloudGatewayNetworkSpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaynetworkspec)
+- [KonnectEventControlPlaneSpec](#x-konnect-konghq-com-v1alpha1-types-konnecteventcontrolplanespec)
 - [KonnectExtensionKonnectSpec](#konnect-konghq-com-v1alpha1-types-konnectextensionkonnectspec)
 - [KonnectGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanespec)
 - [PortalSpec](#x-konnect-konghq-com-v1alpha1-types-portalspec)
@@ -6061,6 +6062,7 @@ _Appears in:_
 - [KonnectEntityStatusWithControlPlaneAndUpstreamRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandupstreamrefs)
 - [KonnectEntityStatusWithControlPlaneRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneref)
 - [KonnectEntityStatusWithNetworkRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithnetworkref)
+- [KonnectEventControlPlaneStatus](#x-konnect-konghq-com-v1alpha1-types-konnecteventcontrolplanestatus)
 - [KonnectGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanestatus)
 - [KonnectGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha2-types-konnectgatewaycontrolplanestatus)
 - [MCPServerStatus](#konnect-konghq-com-v1alpha1-types-mcpserverstatus)

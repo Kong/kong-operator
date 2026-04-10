@@ -64,3 +64,10 @@ func (obj *KonnectEventControlPlane) GetConditions() []metav1.Condition {
 func (obj *KonnectEventControlPlane) SetConditions(conditions []metav1.Condition) {
 	obj.Status.Conditions = conditions
 }
+
+// GetKonnectAPIAuthConfigurationRef returns the Konnect API Auth Configuration Ref.
+func (obj *KonnectEventControlPlane) GetKonnectAPIAuthConfigurationRef() konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef {
+	return konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
+		Name: obj.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name,
+	}
+}
