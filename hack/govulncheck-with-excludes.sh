@@ -15,7 +15,19 @@ excludeVulns="$(jq -nc '[
   # Kubernetes GitRepo Volume Inadvertent Local Repository Access in k8s.io/kubernetes
   # We do not use the GitRepo volume type.
   # https://github.com/kubernetes/kubernetes/issues/130786
-  "GO-2025-3521"
+  "GO-2025-3521",
+
+  # Moby has an Off-by-one error in its plugin privilege validation in github.com/docker/docker
+  "GO-2026-4883",
+
+  # Moby has AuthZ plugin bypass when provided oversized request bodies in github.com/docker/docker
+  "GO-2026-4887",
+
+  # Memory-safety vulnerability in github.com/jackc/pgx/v5.
+  "GO-2026-4771",
+
+  # Memory-safety vulnerability in github.com/jackc/pgx/v5.
+  "GO-2026-4772"
 
 ]')"
 export excludeVulns
