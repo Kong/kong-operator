@@ -119,6 +119,12 @@
   matching Kubernetes CRs exist in the cluster. The `KongService` host is set to
   the in-cluster Service DNS name. Stale resources are garbage-collected.
   [#3831](https://github.com/Kong/kong-operator/pull/3831)
+- Added per-version workload status reporting for `MCPServer`: after each
+  reconcile the controller walks the Deployment's ReplicaSets, classifies every
+  Pod as ready, starting, or failing, and posts the aggregated
+  `MCPServerVersionStatus` to the Konnect API. A Pod watch is added so that
+  status is updated in near-real-time during rolling updates.
+  [#3850](https://github.com/Kong/kong-operator/pull/3850)
 - Hybridgateway: add support for `konghq.com/protocol` service annotation
   [#3847](https://github.com/Kong/kong-operator/pull/3847)
 

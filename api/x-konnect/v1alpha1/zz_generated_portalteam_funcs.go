@@ -4,6 +4,7 @@ package v1alpha1
 
 import (
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // GetKonnectStatus returns the Konnect status contained in the PortalTeam status.
@@ -14,4 +15,24 @@ func (obj *PortalTeam) GetKonnectStatus() *konnectv1alpha2.KonnectEntityStatus {
 // SetKonnectID sets the Konnect ID in the PortalTeam status.
 func (obj *PortalTeam) SetKonnectID(id string) {
 	obj.Status.ID = id
+}
+
+// GetKonnectID returns the Konnect ID in the PortalTeam status.
+func (obj *PortalTeam) GetKonnectID() string {
+	return obj.Status.ID
+}
+
+// GetTypeName returns the PortalTeam Kind name.
+func (obj PortalTeam) GetTypeName() string {
+	return "PortalTeam"
+}
+
+// GetConditions returns the Status Conditions.
+func (obj *PortalTeam) GetConditions() []metav1.Condition {
+	return obj.Status.Conditions
+}
+
+// SetConditions sets the Status Conditions.
+func (obj *PortalTeam) SetConditions(conditions []metav1.Condition) {
+	obj.Status.Conditions = conditions
 }

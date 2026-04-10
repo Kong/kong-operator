@@ -20,6 +20,7 @@ import (
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
@@ -38,7 +39,7 @@ type MCPServersFetcher struct {
 	scheme        *runtime.Scheme
 	konnectClient sdkops.SDKWrapper
 
-	controlPlane *konnectv1alpha1.KonnectGatewayControlPlane
+	controlPlane *konnectv1alpha2.KonnectGatewayControlPlane
 
 	fetchEventCh     chan struct{}
 	reconcileEventCh chan<- event.GenericEvent
@@ -51,7 +52,7 @@ func NewMCPServersFetcher(
 	konnectClient sdkops.SDKWrapper,
 	fetchEventCh chan struct{},
 	reconcileEventCh chan<- event.GenericEvent,
-	controlPlane *konnectv1alpha1.KonnectGatewayControlPlane,
+	controlPlane *konnectv1alpha2.KonnectGatewayControlPlane,
 	scheme *runtime.Scheme,
 ) *MCPServersFetcher {
 	return &MCPServersFetcher{

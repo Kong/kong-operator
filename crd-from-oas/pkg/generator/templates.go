@@ -205,7 +205,6 @@ func (obj *{{.EntityName}}) GetKonnectStatus() *{{.KonnectStatusType}} {
 func (obj *{{.EntityName}}) SetKonnectID(id string) {
 	obj.Status.ID = id
 }
-{{- if .HasReconcilerFuncs}}
 
 // GetKonnectID returns the Konnect ID in the {{.EntityName}} status.
 func (obj *{{.EntityName}}) GetKonnectID() string {
@@ -234,7 +233,6 @@ func (obj *{{.EntityName}}) GetKonnectAPIAuthConfigurationRef() {{.KonnectAPIAut
 		Name: obj.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name,
 	}
 }
-{{- end}}
 {{- end}}
 `
 

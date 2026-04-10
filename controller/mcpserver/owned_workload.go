@@ -68,16 +68,27 @@ func (r *MCPServerReconciler) ensureDeployment(
 		return op.Created, desired, nil
 	}
 
-	// Ensure the pod template annotations are up to date.
+	// Ensure the version annotation is up to date on both the Deployment and
+	// its pod template.
 	// TODO: ensure the whole deployment spec is up to date and enforced.
+	desiredVersion := desired.Annotations[mcpServerVersionAnnotationKey]
+
+	if existing.Annotations == nil {
+		existing.Annotations = make(map[string]string)
+	}
 	if existing.Spec.Template.Annotations == nil {
 		existing.Spec.Template.Annotations = make(map[string]string)
 	}
-	if existing.Spec.Template.Annotations[mcpServerVersionAnnotationKey] != desired.Spec.Template.Annotations[mcpServerVersionAnnotationKey] {
+
+	deployNeedsUpdate := existing.Annotations[mcpServerVersionAnnotationKey] != desiredVersion
+	templateNeedsUpdate := existing.Spec.Template.Annotations[mcpServerVersionAnnotationKey] != desiredVersion
+
+	if deployNeedsUpdate || templateNeedsUpdate {
 		old := existing.DeepCopy()
-		existing.Spec.Template.Annotations[mcpServerVersionAnnotationKey] = desired.Spec.Template.Annotations[mcpServerVersionAnnotationKey]
+		existing.Annotations[mcpServerVersionAnnotationKey] = desiredVersion
+		existing.Spec.Template.Annotations[mcpServerVersionAnnotationKey] = desiredVersion
 		if err := r.Patch(ctx, existing, client.MergeFrom(old)); err != nil {
-			return op.Noop, nil, fmt.Errorf("failed to patch Deployment %s/%s pod template annotations: %w",
+			return op.Noop, nil, fmt.Errorf("failed to patch Deployment %s/%s version annotation: %w",
 				existing.Namespace, existing.Name, err)
 		}
 		return op.Updated, existing, nil
@@ -89,8 +100,13 @@ func (r *MCPServerReconciler) ensureDeployment(
 // generateDeployment creates the desired Deployment spec for the given MCPServer.
 func generateDeployment(mcpServer *konnectv1alpha1.MCPServer, remoteMCPServer sdkkonnectcomp.MCPServerCPInfo) *appsv1.Deployment {
 	nn := generateWorkloadNN(mcpServer)
-	labels := map[string]string{
+	selectorLabels := map[string]string{
 		"app": nn.Name,
+	}
+	podLabels := map[string]string{
+		"app":                                    nn.Name,
+		consts.GatewayOperatorManagedByLabel:     consts.MCPServerManagedByLabelValue,
+		consts.GatewayOperatorManagedByNameLabel: mcpServer.Name,
 	}
 
 	var replicas int32 = 1
@@ -99,11 +115,14 @@ func generateDeployment(mcpServer *konnectv1alpha1.MCPServer, remoteMCPServer sd
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      nn.Name,
 			Namespace: nn.Namespace,
+			Annotations: map[string]string{
+				mcpServerVersionAnnotationKey: remoteMCPServer.Version,
+			},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: labels,
+				MatchLabels: selectorLabels,
 			},
 			Strategy: appsv1.DeploymentStrategy{
 				Type: appsv1.RollingUpdateDeploymentStrategyType,
@@ -120,7 +139,7 @@ func generateDeployment(mcpServer *konnectv1alpha1.MCPServer, remoteMCPServer sd
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
+					Labels: podLabels,
 					Annotations: map[string]string{
 						mcpServerVersionAnnotationKey: remoteMCPServer.Version,
 					},

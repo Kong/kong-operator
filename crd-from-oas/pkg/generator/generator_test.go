@@ -420,11 +420,16 @@ func TestGenerateCRDFuncs_GeneratesKonnectFuncs(t *testing.T) {
 
 		content, err := g.generateCRDFuncs("CreatePortal", schema)
 		require.NoError(t, err)
+		assert.Contains(t, content, `metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"`)
 		assert.Contains(t, content, `konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"`)
 		assert.Contains(t, content, "func (obj *Portal) GetKonnectStatus() *konnectv1alpha2.KonnectEntityStatus {")
 		assert.Contains(t, content, "return &obj.Status.KonnectEntityStatus")
 		assert.Contains(t, content, "func (obj *Portal) SetKonnectID(id string) {")
 		assert.Contains(t, content, "obj.Status.ID = id")
+		assert.Contains(t, content, `func (obj *Portal) GetKonnectID() string {`)
+		assert.Contains(t, content, `func (obj Portal) GetTypeName() string {`)
+		assert.Contains(t, content, `func (obj *Portal) GetConditions() []metav1.Condition {`)
+		assert.Contains(t, content, `func (obj *Portal) SetConditions(conditions []metav1.Condition) {`)
 	})
 
 	t.Run("reconciler entities include lifecycle helpers in the same file", func(t *testing.T) {
@@ -460,6 +465,9 @@ func TestGenerateCRDFuncs_GeneratesKonnectFuncs(t *testing.T) {
 		content, err := g.generateCRDFuncs("CreatePortalTeam", schema)
 		require.NoError(t, err)
 		assert.Contains(t, content, `func (obj *PortalTeam) GetKonnectID() string {`)
+		assert.Contains(t, content, `func (obj PortalTeam) GetTypeName() string {`)
+		assert.Contains(t, content, `func (obj *PortalTeam) GetConditions() []metav1.Condition {`)
+		assert.Contains(t, content, `func (obj *PortalTeam) SetConditions(conditions []metav1.Condition) {`)
 		assert.NotContains(t, content, `GetKonnectAPIAuthConfigurationRef`)
 	})
 }

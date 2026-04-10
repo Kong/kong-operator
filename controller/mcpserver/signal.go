@@ -12,7 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
@@ -43,7 +43,7 @@ const (
 type CPEvent struct {
 	Type          EventType
 	KonnectClient sdkops.SDKWrapper
-	ControlPlane  *konnectv1alpha1.KonnectGatewayControlPlane
+	ControlPlane  *konnectv1alpha2.KonnectGatewayControlPlane
 }
 
 // SignalManager manages a set of per-UUID background goroutines that periodically
@@ -127,7 +127,7 @@ func (s *SignalManager) NotifyMCPServerDeleted(namespace, cpName string) {
 
 // registerControlPlane registers the control plane and starts a dedicated goroutine for it.
 // If the control plane is already registered, registerControlPlane is a no-op.
-func (s *SignalManager) registerControlPlane(konnectClient sdkops.SDKWrapper, cp *konnectv1alpha1.KonnectGatewayControlPlane) {
+func (s *SignalManager) registerControlPlane(konnectClient sdkops.SDKWrapper, cp *konnectv1alpha2.KonnectGatewayControlPlane) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -164,7 +164,7 @@ func (s *SignalManager) CPEvents() <-chan CPEvent {
 
 // deregisterControlPlane cancels and unregisters the goroutine for the given control plane.
 // If the control plane is not registered, deregisterControlPlane is a no-op.
-func (s *SignalManager) deregisterControlPlane(cp *konnectv1alpha1.KonnectGatewayControlPlane) {
+func (s *SignalManager) deregisterControlPlane(cp *konnectv1alpha2.KonnectGatewayControlPlane) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -178,7 +178,7 @@ func (s *SignalManager) deregisterControlPlane(cp *konnectv1alpha1.KonnectGatewa
 	delete(s.resetChs, key)
 }
 
-func (s *SignalManager) mcpCPSignalRoutine(ctx context.Context, cp *konnectv1alpha1.KonnectGatewayControlPlane, konnectClient sdkops.SDKWrapper, fetchEventCh chan<- struct{}, resetCh <-chan struct{}) {
+func (s *SignalManager) mcpCPSignalRoutine(ctx context.Context, cp *konnectv1alpha2.KonnectGatewayControlPlane, konnectClient sdkops.SDKWrapper, fetchEventCh chan<- struct{}, resetCh <-chan struct{}) {
 	logger := log.GetLogger(ctx, "mcpserver-signal", s.loggingMode)
 	offset := new(initialOffset)
 

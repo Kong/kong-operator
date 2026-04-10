@@ -994,9 +994,10 @@ _run:
 		-enable-controller-controlplaneextensions \
 		-enable-conversion-webhook=false \
 		-enable-validating-webhook=false \
-		-zap-time-encoding iso8601 \
-		-zap-log-level 2 \
-		-zap-devel true \
+		-zap-time-encoding=iso8601 \
+		-zap-log-level=2 \
+		-zap-devel=true \
+		-feature-gates=mcp-server \
 	"
 
 # Run the operator locally with impersonation of controller-manager service account from kong-system namespace.
@@ -1010,7 +1011,7 @@ _run.with-impersonate:
 	@$(eval TMP_TOKEN := $(shell kubectl create token --namespace=kong-system controller-manager))
 	@$(eval CLUSTER := $(shell kubectl config get-contexts | grep '^\*' | tr -s ' ' | cut -d ' ' -f 3))
 	KUBECONFIG=$(TMP_KUBECONFIG) kubectl config set-credentials ko --token=$(TMP_TOKEN)
-	KUBECONFIG=$(TMP_KUBECONFIG) kubectl config set-context ko --cluster=$(CLUSTER) --user=kgo --namespace=kong-system
+	KUBECONFIG=$(TMP_KUBECONFIG) kubectl config set-context ko --cluster=$(CLUSTER) --user=ko --namespace=kong-system
 	KUBECONFIG=$(TMP_KUBECONFIG) kubectl config use-context ko
 	$(MAKE) _run TMP_KUBECONFIG=$(TMP_KUBECONFIG)
 
