@@ -6,10 +6,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestFilterOutCRDsByNameKeepsPortal(t *testing.T) {
+func TestFilterOutCRDsByNameKeepsRootXKonnectCRDs(t *testing.T) {
 	t.Parallel()
 
 	content := `apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: konnecteventcontrolplanes.x-konnect.konghq.com
+spec:
+  group: x-konnect.konghq.com
+---
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   name: portals.x-konnect.konghq.com
@@ -26,6 +33,7 @@ spec:
 
 	filtered := filterOutCRDsByName(content, "dcrproviders.x-konnect.konghq.com")
 
+	require.Contains(t, filtered, "konnecteventcontrolplanes.x-konnect.konghq.com")
 	require.Contains(t, filtered, "portals.x-konnect.konghq.com")
 	require.NotContains(t, filtered, "dcrproviders.x-konnect.konghq.com")
 }
