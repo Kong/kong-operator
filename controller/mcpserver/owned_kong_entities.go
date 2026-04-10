@@ -252,7 +252,7 @@ func (r *MCPServerReconciler) deleteStaleResources(
 
 	items := extractItems(list)
 	for _, item := range items {
-		if !isOwnedBy(item, mcpServer) {
+		if !isOwnedBy(item.GetOwnerReferences(), mcpServer.GetUID()) {
 			continue
 		}
 		if _, ok := desiredNames[item.GetName()]; ok {
@@ -283,14 +283,4 @@ func extractItems(list client.ObjectList) []client.Object {
 		return items
 	}
 	return nil
-}
-
-// isOwnedBy checks whether obj has an owner reference pointing to the given owner.
-func isOwnedBy(obj, owner client.Object) bool {
-	for _, ref := range obj.GetOwnerReferences() {
-		if ref.UID == owner.GetUID() {
-			return true
-		}
-	}
-	return false
 }

@@ -133,7 +133,7 @@ func (r *MCPServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	remoteMCPServer := resp.MCPServerCPInfo
 
 	// Ensure a Deployment exists for this MCPServer.
-	res, _, err := r.ensureDeployment(ctx, &mcpServer, remoteMCPServer)
+	res, deployment, err := r.ensureDeployment(ctx, &mcpServer, remoteMCPServer)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -154,6 +154,21 @@ func (r *MCPServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// from the remote MCP server's entity definitions.
 	if err := r.ensureKongEntities(ctx, &mcpServer, sdk); err != nil {
 		return ctrl.Result{}, err
+	}
+
+	// Gather per-version workload status and push it to Konnect.
+	versionStatuses, err := buildVersionStatuses(ctx, r.Client, deployment)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to build version statuses for MCPServer %s/%s: %w",
+			mcpServer.Namespace, mcpServer.Name, err)
+	}
+	log.Debug(logger, "posting MCPServer status to Konnect",
+		"namespace", mcpServer.Namespace, "name", mcpServer.Name,
+		"versionStatuses", versionStatuses,
+	)
+	if err := postStatusToKonnect(ctx, sdk, cpID, mcpServerID, versionStatuses); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to post status for MCPServer %s/%s: %w",
+			mcpServer.Namespace, mcpServer.Name, err)
 	}
 
 	// Patch the MCPServer status with the remote version.
