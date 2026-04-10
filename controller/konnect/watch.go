@@ -82,6 +82,8 @@ func ReconciliationWatchOptionsForEntity[
 		return KongDataPlaneClientCertificateReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.MCPServer:
 		return MCPServerReconciliationWatchOptions(cl)
+	case *xkonnectv1alpha1.KonnectEventControlPlane:
+		return KonnectEventControlPlaneReconciliationWatchOptions(cl)
 	case *xkonnectv1alpha1.Portal:
 		return PortalReconciliationWatchOptions(cl)
 	default:
