@@ -1160,11 +1160,11 @@ func testValuesForProperty(prop *parser.Property, goType string) (string, string
 	case "string":
 		return `"test-value"`, `"test-value"`
 	case "*string":
-		return `func(v string) *string { return &v }("test-value")`, `"test-value"`
+		return `new("test-value")`, `"test-value"`
 	case "bool":
 		return "true", "true"
 	case "*bool":
-		return `func(v bool) *bool { return &v }(true)`, "true"
+		return `new(true)`, "true"
 	case "int", "int32", "int64":
 		return "1", "float64(1)"
 	case "float32", "float64":
@@ -1175,7 +1175,7 @@ func testValuesForProperty(prop *parser.Property, goType string) (string, string
 		switch prop.Type {
 		case "string":
 			if elementType, ok := strings.CutPrefix(goType, "*"); ok {
-				return fmt.Sprintf(`func(v %[1]s) *%[1]s { return &v }(%[1]s("test-value"))`, elementType), `"test-value"`
+				return fmt.Sprintf(`new(%s("test-value"))`, elementType), `"test-value"`
 			}
 			return fmt.Sprintf(`%s("test-value")`, goType), `"test-value"`
 		case "object":

@@ -101,12 +101,12 @@ func TestSyncMCPServers(t *testing.T) {
 	)
 
 	// controlPlane is the owner KonnectGatewayControlPlane used in all tests.
-	controlPlane := &konnectv1alpha1.KonnectGatewayControlPlane{
+	controlPlane := &konnectv1alpha2.KonnectGatewayControlPlane{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cpName,
 			Namespace: namespace,
 		},
-		Status: konnectv1alpha1.KonnectGatewayControlPlaneStatus{
+		Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
 			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 				ID: cpID,
 			},

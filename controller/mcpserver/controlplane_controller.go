@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/controller/konnect"
 	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/v2/controller/konnect/server"
@@ -35,7 +36,7 @@ func (r *MCPServerCPReconciler) SetupWithManager(ctx context.Context, mgr ctrl.M
 	r.SignalManager.run(ctx)
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(r.ControllerOptions).
-		For(&konnectv1alpha1.KonnectGatewayControlPlane{}).
+		For(&konnectv1alpha2.KonnectGatewayControlPlane{}).
 		Complete(r)
 }
 
@@ -43,12 +44,12 @@ func (r *MCPServerCPReconciler) SetupWithManager(ctx context.Context, mgr ctrl.M
 func (r *MCPServerCPReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.GetLogger(ctx, "mcp-cp", r.LoggingMode)
 
-	var controlPlane konnectv1alpha1.KonnectGatewayControlPlane
+	var controlPlane konnectv1alpha2.KonnectGatewayControlPlane
 	if err := r.Get(ctx, req.NamespacedName, &controlPlane); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.SignalManager.EmitControlPlaneEvent(ctx, CPEvent{
 				Type: EventTypeDeregister,
-				ControlPlane: &konnectv1alpha1.KonnectGatewayControlPlane{
+				ControlPlane: &konnectv1alpha2.KonnectGatewayControlPlane{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      req.Name,
 						Namespace: req.Namespace,
@@ -91,7 +92,7 @@ func (r *MCPServerCPReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 		return ctrl.Result{}, err
 	}
-	srv, err := server.NewServer[konnectv1alpha1.KonnectGatewayControlPlane](apiAuth.Status.ServerURL)
+	srv, err := server.NewServer[konnectv1alpha2.KonnectGatewayControlPlane](apiAuth.Status.ServerURL)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to parse server URL %q: %w", apiAuth.Status.ServerURL, err)
 	}
