@@ -40766,6 +40766,14 @@ rules:
   - update
   - watch
 - apiGroups:
+  - apps
+  resources:
+  - replicasets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - autoscaling
   resources:
   - horizontalpodautoscalers
@@ -41096,6 +41104,7 @@ rules:
   - konnectextensions/status
   - konnectgatewaycontrolplanes/finalizers
   - konnectgatewaycontrolplanes/status
+  - mcpservers/status
   verbs:
   - patch
   - update
@@ -41104,6 +41113,7 @@ rules:
   resources:
   - konnectextensions
   - konnectgatewaycontrolplanes
+  - mcpservers
   verbs:
   - create
   - delete
@@ -41112,6 +41122,12 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - konnect.konghq.com
+  resources:
+  - mcpservers/finalizers
+  verbs:
+  - update
 - apiGroups:
   - networking.k8s.io
   resources:
