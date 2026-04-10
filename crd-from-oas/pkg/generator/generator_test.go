@@ -1132,7 +1132,7 @@ func TestGenerateSDKOpsTest_SupportsPointerAndNamedFields(t *testing.T) {
 
 	content, err := g.generateSDKOpsTest("KonnectEventControlPlane", schema, opsConfig)
 	require.NoError(t, err)
-	assert.Contains(t, content, `Description: func(v string) *string { return &v }("test-value")`)
+	assert.Contains(t, content, `Description: new("test-value")`)
 	assert.Contains(t, content, `Labels: Labels{"test-key": "test-value"}`)
 	assert.Contains(t, content, `MinRuntimeVersion: MinRuntimeVersion("test-value")`)
 	assert.Contains(t, content, `Name: GatewayName("test-value")`)
