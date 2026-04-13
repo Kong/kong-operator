@@ -44,6 +44,7 @@ import (
 const (
 	webhookReadinessTimeout = 2 * time.Minute
 	webhookReadinessTick    = 2 * time.Second
+	waitTime                = 3 * time.Minute
 )
 
 // -----------------------------------------------------------------------------
