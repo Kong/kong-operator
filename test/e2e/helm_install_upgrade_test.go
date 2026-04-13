@@ -10,28 +10,25 @@ import (
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
+	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/kr/pretty"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
-	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
-
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
-	"github.com/kong/kong-operator/v2/pkg/consts"
 	"github.com/kong/kong-operator/v2/pkg/utils/gateway"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
@@ -301,7 +298,7 @@ func TestHelmUpgrade(t *testing.T) {
 					t.Logf("output: %s", out)
 				}
 			})
-			ensureBasicReadiness(t, ctx, e, releaseName)
+			ensureBasicReadiness(t, ctx, e)
 
 			// Deploy the objects that should be present before the upgrade.
 			cl := client.NewNamespacedClient(e.Clients.MgrClient, e.Namespace.Name)
@@ -351,7 +348,7 @@ func TestHelmUpgrade(t *testing.T) {
 			out, err = helm.RunHelmCommandAndGetOutputE(t, helmOpts, "list")
 			require.NoError(t, err)
 			t.Logf("Helm list output after upgrade:\n  %s", out)
-			ensureBasicReadiness(t, ctx, e, releaseName)
+			ensureBasicReadiness(t, ctx, e)
 
 			t.Logf("Checking assertions after upgrade...")
 			for _, suite := range suitesToRun {
@@ -474,7 +471,7 @@ func objectsToDeployForMode(
 }
 
 func ensureBasicReadiness(
-	t *testing.T, ctx context.Context, e TestEnvironment, releaseName string,
+	t *testing.T, ctx context.Context, e TestEnvironment,
 ) {
 	t.Helper()
 	t.Log("ensure readiness of KO deployment and availability of webhook")
@@ -503,42 +500,6 @@ func deploymentReadyConditions() []appsv1.DeploymentCondition {
 			Status: "True",
 			Type:   "Available",
 		},
-	}
-}
-
-func splitRepoVersionFromImage(t *testing.T, image string) (string, string) {
-	splitImage := strings.Split(image, ":")
-	l := len(splitImage)
-	if l < 2 {
-		t.Fatalf("image %q does not contain a tag", image)
-	}
-	return strings.Join(splitImage[:l-1], ":"), splitImage[l-1]
-}
-
-func baseGatewayConfigurationSpec() operatorv2beta1.GatewayConfigurationSpec {
-	return operatorv2beta1.GatewayConfigurationSpec{
-		DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
-			Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
-				DeploymentOptions: operatorv2beta1.DeploymentOptions{
-					PodTemplateSpec: &corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{
-							Containers: []corev1.Container{
-								{
-									Name: consts.DataPlaneProxyContainerName,
-									ReadinessProbe: &corev1.Probe{
-										InitialDelaySeconds: 1,
-										PeriodSeconds:       1,
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-
-		// TODO(pmalek): add support for ControlPlane optionns using GatewayConfiguration v2
-		// https://github.com/kong/kong-operator/issues/1728
 	}
 }
 
@@ -581,27 +542,6 @@ func gatewayAndItsListenersAreProgrammedAssertion(gatewayLabelSelector string) f
 		assert.True(c, gateway.IsProgrammed(gw), "Gateway %q is not programmed: %s", client.ObjectKeyFromObject(gw), pretty.Sprint(gw))
 		assert.True(c, gateway.AreListenersProgrammed(gw), "Listeners of Gateway %q are not programmed: %s", client.ObjectKeyFromObject(gw), pretty.Sprint(gw))
 	}
-}
-
-func gatewayDataPlaneDeploymentHasImageSetTo(
-	gatewayLabelSelector string,
-	image string,
-) func(context.Context, *assert.CollectT, client.Client) {
-	return gatewayDataPlaneDeploymentCheck(gatewayLabelSelector, func(d *appsv1.Deployment) error {
-		container := d.Spec.Template.Spec.Containers
-		if len(container) != 1 {
-			return fmt.Errorf("expected 1 container in Deployment %q, got %d",
-				client.ObjectKeyFromObject(d), len(d.Spec.Template.Spec.Containers),
-			)
-		}
-
-		if container[0].Image != image {
-			return fmt.Errorf("Gateway's DataPlane Deployment %q expected image %s got %s",
-				client.ObjectKeyFromObject(d), image, container[0].Image,
-			)
-		}
-		return nil
-	})
 }
 
 func gatewayDataPlaneDeploymentIsNotPatched(
