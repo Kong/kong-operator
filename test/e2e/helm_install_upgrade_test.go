@@ -3,6 +3,7 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 	"testing"
 	"time"
@@ -24,11 +25,17 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	"github.com/kong/kong-operator/v2/pkg/utils/gateway"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
+	testenv "github.com/kong/kong-operator/v2/test"
 	"github.com/kong/kong-operator/v2/test/helpers"
 	"github.com/kong/kong-operator/v2/test/helpers/eventually"
 	"github.com/kong/kong-operator/v2/test/helpers/kcfg"
@@ -479,7 +486,7 @@ func ensureBasicReadiness(
 	)
 	require.Eventually(
 		t,
-		waitForOperatorWebhookEventually(t, ctx, e.Namespace.Name, releaseName, e.Clients.K8sClient),
+		waitForOperatorWebhookEventually(t, ctx, e.Clients.K8sClient),
 		webhookReadinessTimeout, webhookReadinessTick,
 	)
 }
@@ -698,5 +705,91 @@ func controlPlaneOwnedByGatewayReady(gatewayLabelSelector string) func(ctx conte
 		}); !assert.True(c, ready, "ControlPlane is not ready") {
 			return
 		}
+	}
+}
+
+func splitRepoVersionFromImageOrFail(t *testing.T, image string) (string, string) {
+	splitImage := strings.Split(image, ":")
+	l := len(splitImage)
+	if l < 2 {
+		t.Fatalf("image %q does not contain a tag", image)
+	}
+	return strings.Join(splitImage[:l-1], ":"), splitImage[l-1]
+}
+
+// dataPlaneOwnedByGatewayReady is the predicate that asserts the DataPlane owned by the gateway is ready.
+func dataPlaneOwnedByGatewayReady(gatewayLabelSelector string) func(ctx context.Context, c *assert.CollectT, cl client.Client) {
+	return func(ctx context.Context, c *assert.CollectT, cl client.Client) {
+		gw := getGatewayByLabelSelector(gatewayLabelSelector, ctx, c, cl)
+		require.NotNil(c, gw, "Gateway not found with label selector %q", gatewayLabelSelector)
+
+		dataPlanes, err := gateway.ListDataPlanesForGateway(ctx, cl, gw)
+		require.NoError(c, err, "failed to list DataPlanes for Gateway %q: %v", client.ObjectKeyFromObject(gw), err)
+		require.Len(c, dataPlanes, 1, "expected 1 DataPlane for Gateway %q, got %d", client.ObjectKeyFromObject(gw), len(dataPlanes))
+		dp := dataPlanes[0]
+
+		ready := lo.ContainsBy(dp.Status.Conditions, func(condition metav1.Condition) bool {
+			return condition.Type == "Ready" && condition.Status == metav1.ConditionTrue
+		})
+		require.True(c, ready, "DataPlane is not ready")
+	}
+}
+
+// gatewayHTTPRoutingWorks verifies that HTTP requests to the Gateway's public IP
+// are successfully routed to the backend through the HTTPRoute.
+func gatewayHTTPRoutingWorks(
+	gatewayLabelSelector string, gatewayMode gatewayMode,
+) func(ctx context.Context, c *assert.CollectT, cl client.Client) {
+	return func(ctx context.Context, c *assert.CollectT, cl client.Client) {
+		gw := getGatewayByLabelSelector(gatewayLabelSelector, ctx, c, cl)
+		require.NotNil(c, gw, "Gateway not found with label selector %q", gatewayLabelSelector)
+
+		require.NotEmpty(c, gw.Status.Addresses, "Gateway %q has no addresses in status", client.ObjectKeyFromObject(gw))
+		gatewayIP := gw.Status.Addresses[0].Value
+		require.NotEmpty(c, gatewayIP, "Gateway %q has empty address value", client.ObjectKeyFromObject(gw))
+
+		// Make HTTP request to the Gateway's public IP at the /test path
+		// which is the HTTPRoute path prefix
+		url := fmt.Sprintf("http://%s:80/test", gatewayIP)
+		httpClient := &http.Client{
+			Timeout: 5 * time.Second,
+		}
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		require.NoError(c, err, "failed to create HTTP request to %q", url)
+
+		require.EventuallyWithT(c, func(collect *assert.CollectT) {
+			res, err := httpClient.Do(req)
+			require.NoError(collect, err, "failed to make HTTP request to Gateway %q at %q", client.ObjectKeyFromObject(gw), url)
+			defer res.Body.Close()
+			require.Equal(
+				collect, http.StatusOK, res.StatusCode,
+				"expected HTTP 200 from Gateway %q at %q, got %d",
+				client.ObjectKeyFromObject(gw), url, res.StatusCode,
+			)
+			require.EqualValues(
+				collect, gatewayMode, res.Header.Get(testHeaderKey),
+				"expected response header %q to have value %q from Gateway %q at %q",
+				testHeaderKey, gatewayMode, client.ObjectKeyFromObject(gw), url,
+			)
+		}, waitTime, 1*time.Second)
+	}
+}
+
+// konnectGatewayControlPlaneOwnedByGatewayReady is the predicate that asserts the ControlPlane owned by the gateway is ready.
+func konnectGatewayControlPlaneOwnedByGatewayProgrammed(gatewayLabelSelector string) func(ctx context.Context, c *assert.CollectT, cl client.Client) {
+	return func(ctx context.Context, c *assert.CollectT, cl client.Client) {
+		gw := getGatewayByLabelSelector(gatewayLabelSelector, ctx, c, cl)
+		require.NotNil(c, gw, "Gateway not found with label selector %q", gatewayLabelSelector)
+
+		controlPlanes, err := gateway.ListKonnectGatewayControlPlanesForGateway(ctx, cl, gw)
+		require.NoError(c, err, "failed to list KonnectGatewayControlPlanes for Gateway %q: %v", client.ObjectKeyFromObject(gw), err)
+		require.Len(c, controlPlanes, 1, "expected 1 KonnectGatewayControlPlane for Gateway %q, got %d", client.ObjectKeyFromObject(gw), len(controlPlanes))
+		cp := controlPlanes[0]
+
+		programmed := lo.ContainsBy(cp.Status.Conditions, func(condition metav1.Condition) bool {
+			return condition.Type == "Programmed" && condition.Status == metav1.ConditionTrue
+		})
+		require.True(c, programmed, "KonnectGatewayControlPlane is not programmed")
 	}
 }
