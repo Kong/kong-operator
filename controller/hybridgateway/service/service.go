@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -138,7 +139,7 @@ func resolveProtocolFromBackendRefs(
 			continue
 		}
 
-		protocol := metadata.ExtractProtocol(svc.GetAnnotations())
+		protocol := strings.ToLower(metadata.ExtractProtocol(svc.GetAnnotations()))
 		if protocol == "" {
 			continue
 		}

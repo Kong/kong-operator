@@ -349,6 +349,34 @@ func TestServiceForRule_ProtocolAnnotation(t *testing.T) {
 			expectedProtocol: sdkkonnectcomp.ProtocolHTTPS,
 		},
 		{
+			name: "backend service with upper case protocol annotation is normalized",
+			backendRefs: []gatewayv1.HTTPBackendRef{
+				{
+					BackendRef: gatewayv1.BackendRef{
+						BackendObjectReference: gatewayv1.BackendObjectReference{
+							Name: "upper-svc",
+							Port: &port443,
+						},
+					},
+				},
+			},
+			backendServices: []corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "upper-svc",
+						Namespace: "test-namespace",
+						Annotations: map[string]string{
+							"konghq.com/protocol": "HTTPS",
+						},
+					},
+					Spec: corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 443}},
+					},
+				},
+			},
+			expectedProtocol: sdkkonnectcomp.ProtocolHTTPS,
+		},
+		{
 			name:             "no backend refs defaults to http",
 			backendRefs:      []gatewayv1.HTTPBackendRef{},
 			backendServices:  []corev1.Service{},
