@@ -9,6 +9,11 @@ apiGroupVersions:
     types:
       - path: /v1/event-gateways
         name: KonnectEventControlPlane
+        ops:
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateGatewayRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdateGatewayRequest
         reconciler:
           isRoot: true
       - path: /v1/event-gateways/{gatewayId}/data-plane-certificates

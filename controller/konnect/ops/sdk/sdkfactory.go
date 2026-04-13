@@ -34,6 +34,7 @@ type SDKWrapper interface {
 	GetSNIsSDK() sdkkonnectgo.SNIsSDK
 	GetDataPlaneCertificatesSDK() sdkkonnectgo.DPCertificatesSDK
 	GetCloudGatewaysSDK() sdkkonnectgo.CloudGatewaysSDK
+	GetEventGatewaysSDK() sdkkonnectgo.EventGatewaysSDK
 	GetMCPServersSDK() *sdkkonnectgo.MCPServers
 
 	// GetServerURL returns the server URL for recording metrics.
@@ -171,6 +172,11 @@ func (w sdkWrapper) GetDataPlaneCertificatesSDK() sdkkonnectgo.DPCertificatesSDK
 // GetCloudGatewaysSDK returns the SDK to operate Konnect Dedicated Cloud Gateways SDK.
 func (w sdkWrapper) GetCloudGatewaysSDK() sdkkonnectgo.CloudGatewaysSDK {
 	return w.sdk.CloudGateways
+}
+
+// GetEventGatewaysSDK returns the SDK to operate Konnect Event Gateways.
+func (w sdkWrapper) GetEventGatewaysSDK() sdkkonnectgo.EventGatewaysSDK {
+	return w.sdk.EventGateways
 }
 
 // GetMCPServersSDK returns the SDK to operate MCP servers.
