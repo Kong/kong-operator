@@ -9,6 +9,8 @@ apiGroupVersions:
     types:
       - path: /v1/event-gateways
         name: KonnectEventControlPlane
+        reconciler:
+          isRoot: true
       - path: /v1/event-gateways/{gatewayId}/data-plane-certificates
         name: KonnectEventDataPlaneCertificate
         optionalSecretReference: true

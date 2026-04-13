@@ -1170,6 +1170,20 @@ func testValuesForProperty(prop *parser.Property, goType string) (string, string
 	case "float32", "float64":
 		return "1.0", "1.0"
 	}
+
+	if prop.RefName != "" {
+		switch prop.Type {
+		case "string":
+			if elementType, ok := strings.CutPrefix(goType, "*"); ok {
+				return fmt.Sprintf(`new(%s("test-value"))`, elementType), `"test-value"`
+			}
+			return fmt.Sprintf(`%s("test-value")`, goType), `"test-value"`
+		case "object":
+			if prop.AdditionalProperties != nil && prop.AdditionalProperties.Type == "string" {
+				return fmt.Sprintf(`%s{"test-key": "test-value"}`, goType), `map[string]any{"test-key": "test-value"}`
+			}
+		}
+	}
 	// Skip complex types (maps, slices, structs, etc.) in generated tests
 	return "", ""
 }
