@@ -39055,9 +39055,9 @@ metadata:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
     kubernetes-configuration.konghq.com/version: v2.1.0
-  name: konnecteventcontrolplanes.x-konnect.konghq.com
+  name: konnecteventcontrolplanes.konnect.konghq.com
 spec:
-  group: x-konnect.konghq.com
+  group: konnect.konghq.com
   names:
     kind: KonnectEventControlPlane
     listKind: KonnectEventControlPlaneList

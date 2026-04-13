@@ -130,7 +130,7 @@ func (g *Generator) generateReconcilerFiles(entityNames []string) ([]GeneratedFi
 			return nil, fmt.Errorf("failed to generate watch for %s: %w", entityName, err)
 		}
 		files = append(files, GeneratedFile{
-			Name:        "zz_generated_watch_" + strings.ToLower(entityName) + ".go",
+			Name:        "zz_generated_watch_" + entityFilePrefix(entityName) + ".go",
 			Content:     watchContent,
 			RelativeDir: "controller/konnect",
 		})
@@ -141,7 +141,7 @@ func (g *Generator) generateReconcilerFiles(entityNames []string) ([]GeneratedFi
 			return nil, fmt.Errorf("failed to generate index for %s: %w", entityName, err)
 		}
 		files = append(files, GeneratedFile{
-			Name:        "zz_generated_" + strings.ToLower(entityName) + ".go",
+			Name:        "zz_generated_" + entityFilePrefix(entityName) + ".go",
 			Content:     indexContent,
 			RelativeDir: "internal/utils/index",
 		})
