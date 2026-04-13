@@ -690,6 +690,80 @@ func TestSetRoutes(t *testing.T) {
 	}
 }
 
+func TestExtractProtocol(t *testing.T) {
+	tests := []struct {
+		name        string
+		annotations map[string]string
+		expected    string
+	}{
+		{
+			name:        "nil annotations",
+			annotations: nil,
+			expected:    "",
+		},
+		{
+			name:        "empty annotations",
+			annotations: map[string]string{},
+			expected:    "",
+		},
+		{
+			name: "protocol annotation present",
+			annotations: map[string]string{
+				"konghq.com/protocol": "https",
+			},
+			expected: "https",
+		},
+		{
+			name: "protocol annotation empty value",
+			annotations: map[string]string{
+				"konghq.com/protocol": "",
+			},
+			expected: "",
+		},
+		{
+			name: "other annotations present without protocol",
+			annotations: map[string]string{
+				"konghq.com/strip-path": "true",
+			},
+			expected: "",
+		},
+		{
+			name: "grpc protocol",
+			annotations: map[string]string{
+				"konghq.com/protocol": "grpc",
+			},
+			expected: "grpc",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ExtractProtocol(tt.annotations)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestIsValidProtocol(t *testing.T) {
+	validProtocols := []string{"http", "https", "grpc", "grpcs", "ws", "wss", "tls", "tcp", "tls_passthrough"}
+	for _, p := range validProtocols {
+		t.Run("valid_"+p, func(t *testing.T) {
+			assert.True(t, IsValidProtocol(p))
+		})
+	}
+
+	invalidProtocols := []string{"", "HTTP", "HTTPS", "invalid", "ftp", "udps", "unix"}
+	for _, p := range invalidProtocols {
+		name := p
+		if name == "" {
+			name = "empty"
+		}
+		t.Run("invalid_"+name, func(t *testing.T) {
+			assert.False(t, IsValidProtocol(p))
+		})
+	}
+}
+
 // TestGenericObjectTypes tests that the annotation manager works with different Kubernetes object types.
 func TestGenericObjectTypes(t *testing.T) {
 	logger := logr.Discard()

@@ -486,21 +486,17 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 
 func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string, error) {
 	entityName := parser.GetEntityNameFromType(name)
-	hasReconcilerFuncs := false
 	isReconcilerRoot := false
 	if rc := g.config.ReconcilerConfig[entityName]; rc != nil {
-		hasReconcilerFuncs = true
 		isReconcilerRoot = rc.IsRoot
 	}
 
 	imports := make([]*config.ImportConfig, 0, 3)
 	imports = appendUniqueImportConfig(imports, defaultKonnectStatusImport())
-	if hasReconcilerFuncs {
-		imports = appendUniqueImportConfig(imports, &config.ImportConfig{
-			Alias: "metav1",
-			Path:  "k8s.io/apimachinery/pkg/apis/meta/v1",
-		})
-	}
+	imports = appendUniqueImportConfig(imports, &config.ImportConfig{
+		Alias: "metav1",
+		Path:  "k8s.io/apimachinery/pkg/apis/meta/v1",
+	})
 	if isReconcilerRoot {
 		imports = appendUniqueImportConfig(imports, &config.ImportConfig{
 			Alias: defaultKonnectStatusAlias,
@@ -517,7 +513,6 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		Imports                            []*config.ImportConfig
 		KonnectStatusType                  string
 		KonnectLabelsField                 *konnectLabelsField
-		HasReconcilerFuncs                 bool
 		IsReconcilerRoot                   bool
 		KonnectAPIAuthConfigurationRefType string
 	}{
@@ -526,7 +521,6 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		Imports:                            imports,
 		KonnectStatusType:                  defaultKonnectStatusQualifiedTypeName(),
 		KonnectLabelsField:                 g.konnectLabelsField(schema),
-		HasReconcilerFuncs:                 hasReconcilerFuncs,
 		IsReconcilerRoot:                   isReconcilerRoot,
 		KonnectAPIAuthConfigurationRefType: defaultKonnectStatusAlias + ".ControlPlaneKonnectAPIAuthConfigurationRef",
 	}
@@ -1175,6 +1169,20 @@ func testValuesForProperty(prop *parser.Property, goType string) (string, string
 		return "1", "float64(1)"
 	case "float32", "float64":
 		return "1.0", "1.0"
+	}
+
+	if prop.RefName != "" {
+		switch prop.Type {
+		case "string":
+			if elementType, ok := strings.CutPrefix(goType, "*"); ok {
+				return fmt.Sprintf(`new(%s("test-value"))`, elementType), `"test-value"`
+			}
+			return fmt.Sprintf(`%s("test-value")`, goType), `"test-value"`
+		case "object":
+			if prop.AdditionalProperties != nil && prop.AdditionalProperties.Type == "string" {
+				return fmt.Sprintf(`%s{"test-key": "test-value"}`, goType), `map[string]any{"test-key": "test-value"}`
+			}
+		}
 	}
 	// Skip complex types (maps, slices, structs, etc.) in generated tests
 	return "", ""

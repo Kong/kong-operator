@@ -4,6 +4,7 @@ package v1alpha1
 
 import (
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 // GetKonnectLabels gets the Konnect labels from the object's API spec.
 func (obj *KonnectEventControlPlane) GetKonnectLabels() map[string]string {
@@ -42,4 +43,31 @@ func (obj *KonnectEventControlPlane) GetKonnectStatus() *konnectv1alpha2.Konnect
 // SetKonnectID sets the Konnect ID in the KonnectEventControlPlane status.
 func (obj *KonnectEventControlPlane) SetKonnectID(id string) {
 	obj.Status.ID = id
+}
+
+// GetKonnectID returns the Konnect ID in the KonnectEventControlPlane status.
+func (obj *KonnectEventControlPlane) GetKonnectID() string {
+	return obj.Status.ID
+}
+
+// GetTypeName returns the KonnectEventControlPlane Kind name.
+func (obj KonnectEventControlPlane) GetTypeName() string {
+	return "KonnectEventControlPlane"
+}
+
+// GetConditions returns the Status Conditions.
+func (obj *KonnectEventControlPlane) GetConditions() []metav1.Condition {
+	return obj.Status.Conditions
+}
+
+// SetConditions sets the Status Conditions.
+func (obj *KonnectEventControlPlane) SetConditions(conditions []metav1.Condition) {
+	obj.Status.Conditions = conditions
+}
+
+// GetKonnectAPIAuthConfigurationRef returns the Konnect API Auth Configuration Ref.
+func (obj *KonnectEventControlPlane) GetKonnectAPIAuthConfigurationRef() konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef {
+	return konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
+		Name: obj.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name,
+	}
 }

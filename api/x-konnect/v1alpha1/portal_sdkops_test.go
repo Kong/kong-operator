@@ -18,6 +18,7 @@ func TestPortalAPISpec_ToCreatePortal(t *testing.T) {
 		DefaultPageVisibility: "test-value",
 		Description: new("test-value"),
 		DisplayName: "test-value",
+		Labels: LabelsUpdate{"test-key": "test-value"},
 		Name: "test-value",
 		RBACEnabled: "Enabled",
 	}
@@ -38,6 +39,7 @@ func TestPortalAPISpec_ToCreatePortal(t *testing.T) {
 	require.Equal(t, "test-value", payload["default_page_visibility"])
 	require.Equal(t, "test-value", payload["description"])
 	require.Equal(t, "test-value", payload["display_name"])
+	require.Equal(t, map[string]any{"test-key": "test-value"}, payload["labels"])
 	require.Equal(t, "test-value", payload["name"])
 	require.Equal(t, true, payload["rbac_enabled"])
 }
@@ -51,6 +53,7 @@ func TestPortalAPISpec_ToUpdatePortal(t *testing.T) {
 		DefaultPageVisibility: "test-value",
 		Description: new("test-value"),
 		DisplayName: "test-value",
+		Labels: LabelsUpdate{"test-key": "test-value"},
 		Name: "test-value",
 		RBACEnabled: "Enabled",
 	}
@@ -71,6 +74,7 @@ func TestPortalAPISpec_ToUpdatePortal(t *testing.T) {
 	require.Equal(t, "test-value", payload["default_page_visibility"])
 	require.Equal(t, "test-value", payload["description"])
 	require.Equal(t, "test-value", payload["display_name"])
+	require.Equal(t, map[string]any{"test-key": "test-value"}, payload["labels"])
 	require.Equal(t, "test-value", payload["name"])
 	require.Equal(t, true, payload["rbac_enabled"])
 }

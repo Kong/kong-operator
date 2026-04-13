@@ -18,6 +18,7 @@ const (
 	annotationPrefix = "konghq.com"
 	stripPathKey     = "/strip-path"
 	preserveHostKey  = "/preserve-host"
+	protocolKey      = "/protocol"
 )
 
 // Defaults for the annotations when not specified that match the behavior of on-prem.
@@ -47,6 +48,24 @@ func ExtractPreserveHost(anns map[string]string) bool {
 		return defaultPreserveHost
 	}
 	return parsePreserveHost
+}
+
+// ExtractProtocol extracts the protocol supplied in the konghq.com/protocol annotation.
+// Returns an empty string if the annotation is not present.
+// This mirrors ingress-controller/internal/annotations.ExtractProtocolName.
+func ExtractProtocol(anns map[string]string) string {
+	return anns[annotationPrefix+protocolKey]
+}
+
+// IsValidProtocol returns true if the provided protocol is a valid Kong upstream protocol.
+// This mirrors ingress-controller/internal/util.ValidateProtocol.
+func IsValidProtocol(protocol string) bool {
+	switch protocol {
+	case "http", "https", "grpc", "grpcs", "ws", "wss", "tls", "tcp", "tls_passthrough":
+		return true
+	default:
+		return false
+	}
 }
 
 func parseAnnotationBool(anns map[string]string, key string) (enabled bool, ok bool) {

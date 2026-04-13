@@ -16,6 +16,7 @@ import (
 type MockSDKWrapper struct {
 	ControlPlaneSDK             *mocks.MockControlPlanesSDK
 	CloudGatewaysSDK            *mocks.MockCloudGatewaysSDK
+	EventGatewaysSDK            *mocks.MockEventGatewaysSDK
 	ControlPlaneGroupSDK        *mocks.MockControlPlaneGroupsSDK
 	ServicesSDK                 *mocks.MockServicesSDK
 	RoutesSDK                   *mocks.MockRoutesSDK
@@ -48,6 +49,7 @@ func NewMockSDKWrapperWithT(t *testing.T) *MockSDKWrapper {
 		ControlPlaneSDK:             mocks.NewMockControlPlanesSDK(t),
 		ControlPlaneGroupSDK:        mocks.NewMockControlPlaneGroupsSDK(t),
 		CloudGatewaysSDK:            mocks.NewMockCloudGatewaysSDK(t),
+		EventGatewaysSDK:            mocks.NewMockEventGatewaysSDK(t),
 		ServicesSDK:                 mocks.NewMockServicesSDK(t),
 		RoutesSDK:                   mocks.NewMockRoutesSDK(t),
 		ConsumersSDK:                mocks.NewMockConsumersSDK(t),
@@ -176,6 +178,10 @@ func (m MockSDKWrapper) GetDataPlaneCertificatesSDK() sdkkonnectgo.DPCertificate
 
 func (m MockSDKWrapper) GetCloudGatewaysSDK() sdkkonnectgo.CloudGatewaysSDK {
 	return m.CloudGatewaysSDK
+}
+
+func (m MockSDKWrapper) GetEventGatewaysSDK() sdkkonnectgo.EventGatewaysSDK {
+	return m.EventGatewaysSDK
 }
 
 func (m MockSDKWrapper) GetMCPServersSDK() *sdkkonnectgo.MCPServers {

@@ -268,6 +268,35 @@ func TestEnsureFinalizerOnKonnectAPIAuthConfiguration(t *testing.T) {
 			expectedPatched:        true,
 		},
 		{
+			name: "adds finalizer when KonnectEventControlPlane references the auth",
+			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-auth",
+					Namespace: "default",
+				},
+			},
+			referencingResources: []client.Object{
+				&xkonnectv1alpha1.KonnectEventControlPlane{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-event-cp",
+						Namespace: "default",
+					},
+					Spec: xkonnectv1alpha1.KonnectEventControlPlaneSpec{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+								Name: "test-auth",
+							},
+						},
+						APISpec: xkonnectv1alpha1.KonnectEventControlPlaneAPISpec{
+							Name: "event-cp",
+						},
+					},
+				},
+			},
+			expectedFinalizerAdded: true,
+			expectedPatched:        true,
+		},
+		{
 			name: "adds finalizer when multiple resources reference the auth",
 			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
 				ObjectMeta: metav1.ObjectMeta{
@@ -432,6 +461,19 @@ func TestEnsureFinalizerOnKonnectAPIAuthConfiguration(t *testing.T) {
 					p := obj.(*xkonnectv1alpha1.Portal)
 					ns := p.GetNamespace()
 					authRef := p.Spec.KonnectConfiguration.APIAuthConfigurationRef
+					if authRef.Name != "" {
+						return []string{ns + "/" + authRef.Name}
+					}
+					return nil
+				},
+			)
+			clientBuilder = clientBuilder.WithIndex(
+				&xkonnectv1alpha1.KonnectEventControlPlane{},
+				index.IndexFieldKonnectEventControlPlaneOnAPIAuthConfiguration,
+				func(obj client.Object) []string {
+					cp := obj.(*xkonnectv1alpha1.KonnectEventControlPlane)
+					ns := cp.GetNamespace()
+					authRef := cp.Spec.KonnectConfiguration.APIAuthConfigurationRef
 					if authRef.Name != "" {
 						return []string{ns + "/" + authRef.Name}
 					}
