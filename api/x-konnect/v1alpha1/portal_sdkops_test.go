@@ -21,6 +21,7 @@ func TestPortalAPISpec_ToCreatePortal(t *testing.T) {
 		Labels: LabelsUpdate{"test-key": "test-value"},
 		Name: "test-value",
 		RBACEnabled: "Enabled",
+		SiprEnabled: "Enabled",
 	}
 	result, err := spec.ToCreatePortal()
 	require.NoError(t, err)
@@ -42,6 +43,7 @@ func TestPortalAPISpec_ToCreatePortal(t *testing.T) {
 	require.Equal(t, map[string]any{"test-key": "test-value"}, payload["labels"])
 	require.Equal(t, "test-value", payload["name"])
 	require.Equal(t, true, payload["rbac_enabled"])
+	require.Equal(t, true, payload["sipr_enabled"])
 }
 
 func TestPortalAPISpec_ToUpdatePortal(t *testing.T) {
@@ -56,6 +58,7 @@ func TestPortalAPISpec_ToUpdatePortal(t *testing.T) {
 		Labels: LabelsUpdate{"test-key": "test-value"},
 		Name: "test-value",
 		RBACEnabled: "Enabled",
+		SiprEnabled: "Enabled",
 	}
 	result, err := spec.ToUpdatePortal()
 	require.NoError(t, err)
@@ -77,4 +80,5 @@ func TestPortalAPISpec_ToUpdatePortal(t *testing.T) {
 	require.Equal(t, map[string]any{"test-key": "test-value"}, payload["labels"])
 	require.Equal(t, "test-value", payload["name"])
 	require.Equal(t, true, payload["rbac_enabled"])
+	require.Equal(t, true, payload["sipr_enabled"])
 }
