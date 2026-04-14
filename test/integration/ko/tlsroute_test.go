@@ -203,5 +203,5 @@ func TestTLSRoute(t *testing.T) {
 			return false
 		}
 		return true
-	}, testutils.DefaultIngressWait, testutils.WaitIngressTick)
+	}, testutils.DefaultTLSRouteWait, testutils.WaitTLSRouteTick)
 }

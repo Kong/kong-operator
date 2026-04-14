@@ -52,6 +52,10 @@ const (
 	WaitIngressTick = time.Second * 1
 	// DefaultIngressWait is the default timeout for checking on ingress resources.
 	DefaultIngressWait = time.Minute * 3
+	// WaitTLSRouteTick is the default timeout tick interval for checking on TLSRoute resources.
+	WaitTLSRouteTick = time.Second * 10
+	// DefaultTLSRouteWait is the default timeout for checking on TLSRoute resources.
+	DefaultTLSRouteWait = time.Minute * 3
 )
 
 // -----------------------------------------------------------------------------
