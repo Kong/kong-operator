@@ -45,9 +45,9 @@
 
 - Fix the hybrid gateway translator to set `protocols` in translated KongRoutes
   to `http,https` to avoid 426 errors from Konnect hybrid gateways.
-  [#3753](https://github.com/Kong/kong-operator/pull/3753)
+  [#3753](https://github.com/Kong/kong-operator/pull/3753) [3759](https://github.com/Kong/kong-operator/pull/3759)
 - Revert change in configuring SNIs in ingress-controller when running with local controlplane.
-  [#3761](https://github.com/Kong/kong-operator/pull/3761)
+  [#3761](https://github.com/Kong/kong-operator/pull/3761) [3764](https://github.com/Kong/kong-operator/pull/3764)
 - Fix `KongPlugin` admission validation when multiple Kong Gateway Admin API
   clients are discovered: probe plugin schema on every gateway (order-independent),
   validate only on gateways that expose the plugin, and fall back to the previous
@@ -57,7 +57,7 @@
   [#3754](https://github.com/Kong/kong-operator/pull/3754) [#3835](https://github.com/Kong/kong-operator/pull/3835)
 - Fix `ResolvedRefs` status condition on `HTTPRoute` not being updated when a
   referenced `KongPlugin` is deleted in self-managed ControlPlane mode.
-  [#3206](https://github.com/Kong/kong-operator/pull/3206)
+  [#3206](https://github.com/Kong/kong-operator/pull/3206) [#3836](https://github.com/Kong/kong-operator/pull/3836)
 
 ## [v2.1.3]
 
