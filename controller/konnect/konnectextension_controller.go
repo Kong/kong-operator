@@ -57,6 +57,7 @@ type KonnectExtensionReconciler struct {
 	ClusterCASecretName      string
 	ClusterCASecretNamespace string
 	SecretLabelSelector      string
+	CertTTL                  time.Duration
 }
 
 // SetupWithManager sets up the controller with the Manager.

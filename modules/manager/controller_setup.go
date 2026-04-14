@@ -40,6 +40,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/v2/controller/mcpserver"
+	secretcert "github.com/kong/kong-operator/v2/controller/secret_cert"
 	"github.com/kong/kong-operator/v2/controller/specialized"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/multiinstance"
 	"github.com/kong/kong-operator/v2/internal/metrics"
@@ -462,6 +463,8 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 	scrapersMgr := metricsscraper.NewManager(
 		mgr.GetLogger(),
 		metricsScrapeInterval,
+		c.CertTTL,
+		c.CertExpirationMargin,
 		mgr.GetClient(),
 		k8stypes.NamespacedName{
 			Name:      c.ClusterCASecretName,
@@ -530,6 +533,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				ClusterDomain:            c.ClusterDomain,
 				EmitKubernetesEvents:     c.EmitKubernetesEvents,
 				WatchNamespaces:          c.WatchNamespaces,
+				CertTTL:                  c.CertTTL,
 			},
 		},
 		// DataPlane controller
@@ -547,6 +551,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				EnforceConfig:            c.EnforceConfig,
 				LoggingMode:              c.LoggingMode,
 				ValidateDataPlaneImage:   c.ValidateImages,
+				CertTTL:                  c.CertTTL,
 			},
 		},
 		// DataPlaneBlueGreen controller
@@ -571,12 +576,14 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 					EnforceConfig:            c.EnforceConfig,
 					ValidateDataPlaneImage:   c.ValidateImages,
 					LoggingMode:              c.LoggingMode,
+					CertTTL:                  c.CertTTL,
 				},
 				DefaultImage:           consts.DefaultDataPlaneImage,
 				KonnectEnabled:         c.KonnectControllersEnabled,
 				EnforceConfig:          c.EnforceConfig,
 				ValidateDataPlaneImage: c.ValidateImages,
 				LoggingMode:            c.LoggingMode,
+				CertTTL:                c.CertTTL,
 			},
 		},
 		// DataPlaneOwnedServiceFinalizer controller
@@ -605,6 +612,16 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				c.LoggingMode,
 				ctrlOpts,
 			),
+		},
+		// SecretCert controller
+		{
+			Enabled: c.DataPlaneControllerEnabled || c.DataPlaneBlueGreenControllerEnabled || c.ControlPlaneControllerEnabled,
+			Controller: &secretcert.Reconciler{
+				ControllerOptions:    ctrlOpts,
+				Client:               mgr.GetClient(),
+				LoggingMode:          c.LoggingMode,
+				CertExpirationMargin: c.CertExpirationMargin,
+			},
 		},
 		// AIGateway Controller
 		{
@@ -714,6 +731,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 					ClusterCASecretName:      c.ClusterCASecretName,
 					ClusterCASecretNamespace: c.ClusterCASecretNamespace,
 					SecretLabelSelector:      c.SecretLabelSelector,
+					CertTTL:                  c.CertTTL,
 				},
 			},
 		)
