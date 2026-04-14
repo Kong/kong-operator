@@ -14,6 +14,7 @@ Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1al
 - [KonnectCloudGatewayNetwork](#konnect-konghq-com-v1alpha1-konnectcloudgatewaynetwork)
 - [KonnectCloudGatewayTransitGateway](#konnect-konghq-com-v1alpha1-konnectcloudgatewaytransitgateway)
 - [KonnectEventControlPlane](#konnect-konghq-com-v1alpha1-konnecteventcontrolplane)
+- [KonnectEventDataPlaneCertificate](#konnect-konghq-com-v1alpha1-konnecteventdataplanecertificate)
 - [KonnectExtension](#konnect-konghq-com-v1alpha1-konnectextension)
 - [KonnectGatewayControlPlane](#konnect-konghq-com-v1alpha1-konnectgatewaycontrolplane)
 - [MCPServer](#konnect-konghq-com-v1alpha1-mcpserver)
@@ -92,6 +93,21 @@ KonnectEventControlPlane is the Schema for the konnecteventcontrolplanes API.
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KonnectEventControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnecteventcontrolplanespec)_ |  |
 | `status` _[KonnectEventControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-konnecteventcontrolplanestatus)_ |  |
+
+### KonnectEventDataPlaneCertificate
+
+
+KonnectEventDataPlaneCertificate is the Schema for the konnecteventdataplanecertificates API.
+
+<!-- konnect_event_data_plane_certificate description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `KonnectEventDataPlaneCertificate`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KonnectEventDataPlaneCertificateSpec](#konnect-konghq-com-v1alpha1-types-konnecteventdataplanecertificatespec)_ |  |
+| `status` _[KonnectEventDataPlaneCertificateStatus](#konnect-konghq-com-v1alpha1-types-konnecteventdataplanecertificatestatus)_ |  |
 
 ### KonnectExtension
 
@@ -626,7 +642,20 @@ _Appears in:_
 - [KonnectExtensionControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-konnectextensioncontrolplanestatus)
 - [KonnectGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanestatus)
 
+#### KonnectEntityRef
 
+
+KonnectEntityRef is a reference to a Konnect entity.
+
+
+
+| Field | Description |
+| --- | --- |
+| `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. |
+
+_Appears in:_
+
+- [KonnectEventDataPlaneCertificateStatus](#konnect-konghq-com-v1alpha1-types-konnecteventdataplanecertificatestatus)
 
 
 
@@ -682,6 +711,58 @@ KonnectEventControlPlaneStatus defines the observed state of KonnectEventControl
 _Appears in:_
 
 - [KonnectEventControlPlane](#konnect-konghq-com-v1alpha1-konnecteventcontrolplane)
+
+#### KonnectEventDataPlaneCertificateAPISpec
+
+
+KonnectEventDataPlaneCertificateAPISpec defines the API spec fields for KonnectEventDataPlaneCertificate.
+
+
+
+| Field | Description |
+| --- | --- |
+| `certificate` _string_ | JSON escaped string of the certificate. |
+| `description` _string_ | A description of the certificate. |
+| `name` _string_ | The name to identify of the certificate. |
+
+_Appears in:_
+
+- [KonnectEventDataPlaneCertificateSpec](#konnect-konghq-com-v1alpha1-types-konnecteventdataplanecertificatespec)
+
+#### KonnectEventDataPlaneCertificateSpec
+
+
+KonnectEventDataPlaneCertificateSpec defines the desired state of KonnectEventDataPlaneCertificate.
+
+
+
+| Field | Description |
+| --- | --- |
+| `gateway_ref` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. |
+| `type` _[SensitiveDataSourceType](#konnect-konghq-com-v1alpha1-types-sensitivedatasourcetype)_ | Type indicates the source of the sensitive data. Can be 'inline' or 'secretRef'. |
+| `apiSpec` _[KonnectEventDataPlaneCertificateAPISpec](#konnect-konghq-com-v1alpha1-types-konnecteventdataplanecertificateapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+| `secretRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | SecretRef is a reference to a Kubernetes Secret containing the sensitive data. This field is used when type is 'secretRef'. The Secret must contain the relevant data keys for this resource. |
+
+_Appears in:_
+
+- [KonnectEventDataPlaneCertificate](#konnect-konghq-com-v1alpha1-konnecteventdataplanecertificate)
+
+#### KonnectEventDataPlaneCertificateStatus
+
+
+KonnectEventDataPlaneCertificateStatus defines the observed state of KonnectEventDataPlaneCertificate.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [KonnectEventDataPlaneCertificate](#konnect-konghq-com-v1alpha1-konnecteventdataplanecertificate)
 
 #### KonnectExtensionClientAuth
 
@@ -1046,6 +1127,26 @@ _Appears in:_
 
 - [CertificateSecret](#konnect-konghq-com-v1alpha1-types-certificatesecret)
 - [DataPlaneClientAuthStatus](#konnect-konghq-com-v1alpha1-types-dataplaneclientauthstatus)
+
+#### SensitiveDataSourceType
+
+_Underlying type:_ `string`
+
+SensitiveDataSourceType is the type of source for the sensitive data.
+
+
+
+
+_Appears in:_
+
+- [KonnectEventDataPlaneCertificateSpec](#konnect-konghq-com-v1alpha1-types-konnecteventdataplanecertificatespec)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `inline` | SensitiveDataSourceTypeInline indicates that the data is provided inline in the APISpec.<br /> |
+| `secretRef` | SensitiveDataSourceTypeSecretRef indicates that the data is sourced from a Kubernetes Secret.<br /> |
 
 #### TransitGatewayDNSConfig
 
