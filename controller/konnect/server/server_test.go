@@ -98,3 +98,45 @@ func TestServer(t *testing.T) {
 		}
 	})
 }
+
+func TestServer_Domain(t *testing.T) {
+	tests := []struct {
+		name       string
+		input      string
+		wantDomain string
+	}{
+		{
+			name:       "standard Konnect URL",
+			input:      "https://us.api.konghq.com",
+			wantDomain: "konghq.com",
+		},
+		{
+			name:       "eu region",
+			input:      "https://eu.api.konghq.com",
+			wantDomain: "konghq.com",
+		},
+		{
+			name:       "bare hostname with region only",
+			input:      "us.konghq.com",
+			wantDomain: "konghq.com",
+		},
+		{
+			name:       "custom domain with many labels",
+			input:      "us.gateway.internal.example.com",
+			wantDomain: "example.com",
+		},
+		{
+			name:       "hostname with single label after region",
+			input:      "us.konghq",
+			wantDomain: "konghq",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			s, err := server.NewServer[konnectv1alpha2.KonnectGatewayControlPlane](tc.input)
+			require.NoError(t, err)
+			assert.Equal(t, tc.wantDomain, s.Domain())
+		})
+	}
+}

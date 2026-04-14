@@ -4,6 +4,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
@@ -46,6 +47,13 @@ func LabelObjectAsMCPServerManaged(obj metav1.Object) {
 	SetLabel(obj, consts.GatewayOperatorManagedByLabel, consts.MCPServerManagedByLabelValue)
 }
 
+// LabelObjectAsKEGDataPlaneManaged ensures that labels are set on the
+// provided object to signal that it's owned by a KEG DataPlane resource
+// and that its lifecycle is managed by this operator.
+func LabelObjectAsKEGDataPlaneManaged(obj metav1.Object) {
+	SetLabel(obj, consts.GatewayOperatorManagedByLabel, consts.KEGDataPlaneManagedByLabelValue)
+}
+
 // SetLabel sets a label on the provided object.
 func SetLabel(obj metav1.Object, key string, value string) {
 	if key == "" || value == "" {
@@ -77,6 +85,10 @@ func GetManagedLabelForOwner(owner metav1.Object) client.MatchingLabels {
 	case *konnectv1alpha1.MCPServer:
 		return client.MatchingLabels{
 			consts.GatewayOperatorManagedByLabel: consts.MCPServerManagedByLabelValue,
+		}
+	case *eventgatewayv1alpha1.KegDataPlane:
+		return client.MatchingLabels{
+			consts.GatewayOperatorManagedByLabel: consts.KEGDataPlaneManagedByLabelValue,
 		}
 	}
 	return client.MatchingLabels{}
