@@ -28,7 +28,7 @@ func TestCleanupLegacyGeneratedFiles(t *testing.T) {
 		},
 	}
 
-	require.NoError(t, cleanupLegacyGeneratedFiles(dir, parsed))
+	require.NoError(t, cleanupLegacyGeneratedFiles(t.TempDir(), dir, parsed))
 	require.NoFileExists(t, legacyFuncs)
 	require.NoFileExists(t, sharedReconcilerFuncs)
 	require.FileExists(t, keepFile)

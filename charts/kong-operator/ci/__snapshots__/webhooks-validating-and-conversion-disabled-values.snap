@@ -39055,9 +39055,9 @@ metadata:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
     kubernetes-configuration.konghq.com/version: v2.1.0
-  name: konnecteventcontrolplanes.x-konnect.konghq.com
+  name: konnecteventcontrolplanes.konnect.konghq.com
 spec:
-  group: x-konnect.konghq.com
+  group: konnect.konghq.com
   names:
     kind: KonnectEventControlPlane
     listKind: KonnectEventControlPlaneList
@@ -41090,6 +41090,7 @@ rules:
   - konnectcloudgatewaydataplanegroupconfigurations
   - konnectcloudgatewaynetworks
   - konnectcloudgatewaytransitgateways
+  - konnecteventcontrolplanes
   verbs:
   - get
   - list
@@ -41107,6 +41108,8 @@ rules:
   - konnectcloudgatewaynetworks/status
   - konnectcloudgatewaytransitgateways/finalizers
   - konnectcloudgatewaytransitgateways/status
+  - konnecteventcontrolplanes/finalizers
+  - konnecteventcontrolplanes/status
   - konnectextensions/finalizers
   - konnectextensions/status
   - konnectgatewaycontrolplanes/finalizers
@@ -41200,7 +41203,6 @@ rules:
 - apiGroups:
   - x-konnect.konghq.com
   resources:
-  - konnecteventcontrolplanes
   - portals
   verbs:
   - get
@@ -41211,8 +41213,6 @@ rules:
 - apiGroups:
   - x-konnect.konghq.com
   resources:
-  - konnecteventcontrolplanes/finalizers
-  - konnecteventcontrolplanes/status
   - portals/finalizers
   - portals/status
   verbs:

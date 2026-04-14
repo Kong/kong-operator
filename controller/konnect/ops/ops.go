@@ -77,7 +77,7 @@ func Create[
 		err = createKonnectTransitGateway(ctx, sdk.GetCloudGatewaysSDK(), ent)
 	// TODO: auto-generate ops entries for generated Konnect entities.
 	// https://github.com/Kong/kong-operator/issues/3785
-	case *xkonnectv1alpha1.KonnectEventControlPlane:
+	case *konnectv1alpha1.KonnectEventControlPlane:
 		err = createKonnectEventControlPlane(ctx, sdk.GetEventGatewaysSDK(), ent)
 	case *configurationv1alpha1.KongService:
 		err = createService(ctx, sdk.GetServicesSDK(), ent)
@@ -151,7 +151,7 @@ func Create[
 			id, err = getKonnectTransitGatewayMatchingSpecName(ctx, sdk.GetCloudGatewaysSDK(), ent)
 		// TODO: auto-generate ops entries for generated Konnect entities.
 		// https://github.com/Kong/kong-operator/issues/3785
-		case *xkonnectv1alpha1.KonnectEventControlPlane:
+		case *konnectv1alpha1.KonnectEventControlPlane:
 			id, errGet = getKonnectEventControlPlaneForUID(ctx, sdk.GetEventGatewaysSDK(), ent)
 		case *configurationv1alpha1.KongService:
 			id, errGet = getKongServiceForUID(ctx, sdk.GetServicesSDK(), ent)
@@ -298,7 +298,7 @@ func Delete[
 		err = deleteKonnectTransitGateway(ctx, sdk.GetCloudGatewaysSDK(), ent)
 	// TODO: auto-generate ops entries for generated Konnect entities.
 	// https://github.com/Kong/kong-operator/issues/3785
-	case *xkonnectv1alpha1.KonnectEventControlPlane:
+	case *konnectv1alpha1.KonnectEventControlPlane:
 		err = deleteKonnectEventControlPlane(ctx, sdk.GetEventGatewaysSDK(), ent)
 	case *configurationv1alpha1.KongService:
 		err = deleteService(ctx, sdk.GetServicesSDK(), ent)
@@ -466,7 +466,7 @@ func Update[
 		err = updateKonnectTransitGateway(ctx, sdk.GetCloudGatewaysSDK(), ent)
 	// TODO: auto-generate ops entries for generated Konnect entities.
 	// https://github.com/Kong/kong-operator/issues/3785
-	case *xkonnectv1alpha1.KonnectEventControlPlane:
+	case *konnectv1alpha1.KonnectEventControlPlane:
 		err = updateKonnectEventControlPlane(ctx, sdk.GetEventGatewaysSDK(), ent)
 	case *configurationv1alpha1.KongService:
 		err = updateService(ctx, sdk.GetServicesSDK(), ent)

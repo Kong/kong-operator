@@ -13,6 +13,7 @@ Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1al
 - [KonnectCloudGatewayDataPlaneGroupConfiguration](#konnect-konghq-com-v1alpha1-konnectcloudgatewaydataplanegroupconfiguration)
 - [KonnectCloudGatewayNetwork](#konnect-konghq-com-v1alpha1-konnectcloudgatewaynetwork)
 - [KonnectCloudGatewayTransitGateway](#konnect-konghq-com-v1alpha1-konnectcloudgatewaytransitgateway)
+- [KonnectEventControlPlane](#konnect-konghq-com-v1alpha1-konnecteventcontrolplane)
 - [KonnectExtension](#konnect-konghq-com-v1alpha1-konnectextension)
 - [KonnectGatewayControlPlane](#konnect-konghq-com-v1alpha1-konnectgatewaycontrolplane)
 - [MCPServer](#konnect-konghq-com-v1alpha1-mcpserver)
@@ -76,6 +77,21 @@ KonnectCloudGatewayTransitGateway is the Schema for the Konnect Transit Gateway 
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KonnectCloudGatewayTransitGatewaySpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewayspec)_ | Spec defines the desired state of KonnectCloudGatewayTransitGateway. |
 | `status` _[KonnectCloudGatewayTransitGatewayStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewaystatus)_ | Status defines the observed state of KonnectCloudGatewayTransitGateway. |
+
+### KonnectEventControlPlane
+
+
+KonnectEventControlPlane is the Schema for the konnecteventcontrolplanes API.
+
+<!-- konnect_event_control_plane description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `KonnectEventControlPlane`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KonnectEventControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnecteventcontrolplanespec)_ |  |
+| `status` _[KonnectEventControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-konnecteventcontrolplanestatus)_ |  |
 
 ### KonnectExtension
 
@@ -217,6 +233,8 @@ _Appears in:_
 
 - [KonnectExtensionClientAuth](#konnect-konghq-com-v1alpha1-types-konnectextensionclientauth)
 
+
+
 #### ConfigurationDataPlaneGroupAutoscale
 
 
@@ -350,6 +368,32 @@ DataPlaneLabelValue is the type that defines the value of a label that will be a
 _Appears in:_
 
 - [KonnectExtensionDataPlane](#konnect-konghq-com-v1alpha1-types-konnectextensiondataplane)
+
+#### GatewayDescription
+
+_Underlying type:_ `string`
+
+GatewayDescription A human-readable description of the Gateway.
+
+
+
+
+_Appears in:_
+
+- [KonnectEventControlPlaneAPISpec](#konnect-konghq-com-v1alpha1-types-konnecteventcontrolplaneapispec)
+
+#### GatewayName
+
+_Underlying type:_ `string`
+
+GatewayName The name of the Gateway.
+
+
+
+
+_Appears in:_
+
+- [KonnectEventControlPlaneAPISpec](#konnect-konghq-com-v1alpha1-types-konnecteventcontrolplaneapispec)
 
 #### KonnectAPIAuthConfigurationSpec
 
@@ -582,6 +626,63 @@ _Appears in:_
 - [KonnectExtensionControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-konnectextensioncontrolplanestatus)
 - [KonnectGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanestatus)
 
+
+
+
+
+#### KonnectEventControlPlaneAPISpec
+
+
+KonnectEventControlPlaneAPISpec defines the API spec fields for KonnectEventControlPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `description` _[GatewayDescription](#konnect-konghq-com-v1alpha1-types-gatewaydescription)_ | A human-readable description of the Gateway. |
+| `labels` _[Labels](#konnect-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `min_runtime_version` _[MinRuntimeVersion](#konnect-konghq-com-v1alpha1-types-minruntimeversion)_ | The minimum runtime version supported by the API. This is the lowest version of the data plane release that can be used with the entity model. When not specified, the minimum runtime version will be pinned to the latest available release. |
+| `name` _[GatewayName](#konnect-konghq-com-v1alpha1-types-gatewayname)_ | The name of the Gateway. |
+
+_Appears in:_
+
+- [KonnectEventControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnecteventcontrolplanespec)
+
+#### KonnectEventControlPlaneSpec
+
+
+KonnectEventControlPlaneSpec defines the desired state of KonnectEventControlPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectConfiguration](#konnect-konghq-com-v1alpha2-types-konnectconfiguration)_ | KonnectConfiguration is the Konnect configuration for this entity. |
+| `apiSpec` _[KonnectEventControlPlaneAPISpec](#konnect-konghq-com-v1alpha1-types-konnecteventcontrolplaneapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [KonnectEventControlPlane](#konnect-konghq-com-v1alpha1-konnecteventcontrolplane)
+
+#### KonnectEventControlPlaneStatus
+
+
+KonnectEventControlPlaneStatus defines the observed state of KonnectEventControlPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
+| `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
+| `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [KonnectEventControlPlane](#konnect-konghq-com-v1alpha1-konnecteventcontrolplane)
+
 #### KonnectExtensionClientAuth
 
 
@@ -780,6 +881,34 @@ _Appears in:_
 
 - [KonnectCloudGatewayTransitGatewaySpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewayspec)
 
+#### Labels
+
+_Underlying type:_ `[map[string]LabelsValue](#map[string]labelsvalue)`
+
+Labels store metadata of an entity that can be used for filtering an entity
+list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong",
+"konnect", "mesh", "kic", or "_".
+
+
+
+
+_Appears in:_
+
+- [KonnectEventControlPlaneAPISpec](#konnect-konghq-com-v1alpha1-types-konnecteventcontrolplaneapispec)
+
+#### LabelsValue
+
+_Underlying type:_ `string`
+
+LabelsValue is the value type for Labels.
+
+
+
+
+_Appears in:_
+
+- [Labels](#konnect-konghq-com-v1alpha1-types-labels)
+
 #### MCPServerSpec
 
 
@@ -832,6 +961,23 @@ _Appears in:_
 
 - [MCPServerStatus](#konnect-konghq-com-v1alpha1-types-mcpserverstatus)
 
+#### MinRuntimeVersion
+
+_Underlying type:_ `string`
+
+MinRuntimeVersion The minimum runtime version supported by the API.
+This is the lowest version of the data plane
+release that can be used with the entity model.
+When not specified, the minimum runtime version will be pinned to the latest
+available release.
+
+
+
+
+_Appears in:_
+
+- [KonnectEventControlPlaneAPISpec](#konnect-konghq-com-v1alpha1-types-konnecteventcontrolplaneapispec)
+
 #### MirrorKonnect
 
 
@@ -882,6 +1028,8 @@ Allowed values:
 | --- | --- |
 | `Manual` | ManualSecretProvisioning is the method used to provision the certificate manually.<br /> |
 | `Automatic` | AutomaticSecretProvisioning is the method used to provision the certificate automatically.<br /> |
+
+
 
 #### SecretRef
 
@@ -1085,6 +1233,7 @@ KonnectConfiguration is the Schema for the KonnectConfiguration API.
 _Appears in:_
 
 - [KonnectCloudGatewayNetworkSpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaynetworkspec)
+- [KonnectEventControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnecteventcontrolplanespec)
 - [KonnectExtensionKonnectSpec](#konnect-konghq-com-v1alpha1-types-konnectextensionkonnectspec)
 - [KonnectGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanespec)
 
@@ -1130,6 +1279,7 @@ _Appears in:_
 - [KonnectEntityStatusWithControlPlaneAndUpstreamRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandupstreamrefs)
 - [KonnectEntityStatusWithControlPlaneRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneref)
 - [KonnectEntityStatusWithNetworkRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithnetworkref)
+- [KonnectEventControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-konnecteventcontrolplanestatus)
 - [KonnectGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanestatus)
 - [KonnectGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha2-types-konnectgatewaycontrolplanestatus)
 - [MCPServerStatus](#konnect-konghq-com-v1alpha1-types-mcpserverstatus)

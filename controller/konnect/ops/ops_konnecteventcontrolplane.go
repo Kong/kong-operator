@@ -11,13 +11,13 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 
-	xkonnectv1alpha1 "github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 )
 
 func createKonnectEventControlPlane(
 	ctx context.Context,
 	sdk sdkkonnectgo.EventGatewaysSDK,
-	cp *xkonnectv1alpha1.KonnectEventControlPlane,
+	cp *konnectv1alpha1.KonnectEventControlPlane,
 ) error {
 	req, err := cp.Spec.APISpec.ToCreateGatewayRequest()
 	if err != nil {
@@ -41,7 +41,7 @@ func createKonnectEventControlPlane(
 func updateKonnectEventControlPlane(
 	ctx context.Context,
 	sdk sdkkonnectgo.EventGatewaysSDK,
-	cp *xkonnectv1alpha1.KonnectEventControlPlane,
+	cp *konnectv1alpha1.KonnectEventControlPlane,
 ) error {
 	req, err := cp.Spec.APISpec.ToUpdateGatewayRequest()
 	if err != nil {
@@ -67,7 +67,7 @@ func updateKonnectEventControlPlane(
 func deleteKonnectEventControlPlane(
 	ctx context.Context,
 	sdk sdkkonnectgo.EventGatewaysSDK,
-	cp *xkonnectv1alpha1.KonnectEventControlPlane,
+	cp *konnectv1alpha1.KonnectEventControlPlane,
 ) error {
 	_, err := sdk.DeleteEventGateway(ctx, cp.GetKonnectID())
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, cp); errWrap != nil {
@@ -80,7 +80,7 @@ func deleteKonnectEventControlPlane(
 func getKonnectEventControlPlaneForUID(
 	ctx context.Context,
 	sdk sdkkonnectgo.EventGatewaysSDK,
-	cp *xkonnectv1alpha1.KonnectEventControlPlane,
+	cp *konnectv1alpha1.KonnectEventControlPlane,
 ) (string, error) {
 	resp, err := sdk.ListEventGateways(ctx, sdkkonnectops.ListEventGatewaysRequest{
 		Filter: &sdkkonnectcomp.EventGatewayCommonFilter{
