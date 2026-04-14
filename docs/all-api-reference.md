@@ -1470,6 +1470,7 @@ Currently, this only supports the JSON route fields.
 
 | Field | Description |
 | --- | --- |
+| `id` _*string_ | ID is the unique identifier for the Route. Can be specified when creating a Route, but not updatable. If not specified, Kong will generate one. |
 | `destinations` _[]github.com/Kong/sdk-konnect-go/models/components.Destinations_ | A list of IP destinations of incoming connections that match this Route when using stream routing. Each entry is an object with fields "ip" (optionally in CIDR range notation) and/or "port". |
 | `headers` _map[string][]string_ | One or more lists of values indexed by header name that will cause this Route to match if present in the request. The `Host` header cannot be used with this attribute: hosts should be specified using the `hosts` attribute. When `headers` contains only one value and that value starts with the special prefix `~*`, the value is interpreted as a regular expression. |
 | `hosts` _[]string_ | A list of domain names that match this Route. Note that the hosts value is case sensitive. |
@@ -1501,6 +1502,7 @@ KongRouteSpec defines spec of a Kong Route.
 
 | Field | Description |
 | --- | --- |
+| `id` _*string_ | ID is the unique identifier for the Route. Can be specified when creating a Route, but not updatable. If not specified, Kong will generate one. |
 | `destinations` _[]github.com/Kong/sdk-konnect-go/models/components.Destinations_ | A list of IP destinations of incoming connections that match this Route when using stream routing. Each entry is an object with fields "ip" (optionally in CIDR range notation) and/or "port". |
 | `headers` _map[string][]string_ | One or more lists of values indexed by header name that will cause this Route to match if present in the request. The `Host` header cannot be used with this attribute: hosts should be specified using the `hosts` attribute. When `headers` contains only one value and that value starts with the special prefix `~*`, the value is interpreted as a regular expression. |
 | `hosts` _[]string_ | A list of domain names that match this Route. Note that the hosts value is case sensitive. |
@@ -1601,6 +1603,7 @@ KongServiceAPISpec defines the specification of a Kong Service.
 
 | Field | Description |
 | --- | --- |
+| `id` _*string_ | ID is the unique identifier for the Service. Can be specified when creating a Service, but not updatable. If not specified, Kong will generate one. |
 | `url` _*string_ | Helper field to set `protocol`, `host`, `port` and `path` using a URL. This field is write-only and is not returned in responses. |
 | `connect_timeout` _*int64_ | The timeout in milliseconds for establishing a connection to the upstream server. |
 | `enabled` _*bool_ | Whether the Service is active. If set to `false`, the proxy behavior will be as if any routes attached to it do not exist (404). Default: `true`. |
@@ -1629,6 +1632,7 @@ KongServiceSpec defines specification of a Kong Service.
 
 | Field | Description |
 | --- | --- |
+| `id` _*string_ | ID is the unique identifier for the Service. Can be specified when creating a Service, but not updatable. If not specified, Kong will generate one. |
 | `url` _*string_ | Helper field to set `protocol`, `host`, `port` and `path` using a URL. This field is write-only and is not returned in responses. |
 | `connect_timeout` _*int64_ | The timeout in milliseconds for establishing a connection to the upstream server. |
 | `enabled` _*bool_ | Whether the Service is active. If set to `false`, the proxy behavior will be as if any routes attached to it do not exist (404). Default: `true`. |
@@ -5919,6 +5923,22 @@ _Appears in:_
 
 - [Labels](#konnect-konghq-com-v1alpha1-types-labels)
 
+#### MCPServerKonnectSpec
+
+
+MCPServerKonnectSpec defines the observed state of the MCPServer on Konnect.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _*string_ | Name is the name of the MCPServer on Konnect. |
+| `version` _*string_ | Version is the version of the MCPServer on Konnect. |
+
+_Appears in:_
+
+- [MCPServerStatus](#konnect-konghq-com-v1alpha1-types-mcpserverstatus)
+
 #### MCPServerSpec
 
 
@@ -5950,26 +5970,11 @@ MCPServerStatus defines the observed state of MCPServer.
 | `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
 | `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
 | `controlPlaneID` _string_ | ControlPlaneID is the Konnect ID of the ControlPlane this Route is associated with. |
-| `workloads` _[MCPServerWorkloadsStatus](#konnect-konghq-com-v1alpha1-types-mcpserverworkloadsstatus)_ | Workloads defines the observed state of the MCPServer workloads. |
+| `konnectSpec` _[MCPServerKonnectSpec](#konnect-konghq-com-v1alpha1-types-mcpserverkonnectspec)_ | KonnectSpec holds MCPServer-specific status fields related to its state on Konnect, such as the remote name and version. |
 
 _Appears in:_
 
 - [MCPServer](#konnect-konghq-com-v1alpha1-mcpserver)
-
-#### MCPServerWorkloadsStatus
-
-
-MCPServerWorkloadsStatus defines the observed state of the MCPServer workloads.
-
-
-
-| Field | Description |
-| --- | --- |
-| `version` _*string_ | Version is the version of the MCPServer workloads. |
-
-_Appears in:_
-
-- [MCPServerStatus](#konnect-konghq-com-v1alpha1-types-mcpserverstatus)
 
 #### MinRuntimeVersion
 

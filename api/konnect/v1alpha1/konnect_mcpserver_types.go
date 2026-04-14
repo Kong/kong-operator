@@ -35,6 +35,7 @@ func init() {
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
 // +kubebuilder:printcolumn:name="ID",description="Konnect ID",type=string,JSONPath=`.status.id`
+// +kubebuilder:printcolumn:name="Konnect Name",description="Konnect Name",type=string,JSONPath=`.status.konnectSpec.name`
 // +kubebuilder:validation:XValidation:rule="oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable."
 // +kong:channels=kong-operator
 type MCPServer struct {
@@ -91,10 +92,10 @@ type MCPServerStatus struct {
 
 	konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef `json:",inline"` //nolint:embeddedstructfieldcheck
 
-	// Workloads defines the observed state of the MCPServer workloads.
+	// KonnectSpec holds MCPServer-specific status fields related to its state on Konnect, such as the remote name and version.
 	//
 	// +optional
-	Workloads MCPServerWorkloadsStatus `json:"workloads,omitempty"`
+	KonnectSpec *MCPServerKonnectSpec `json:"konnectSpec,omitempty"`
 }
 
 // MCPServerList contains a list of MCPServer resources.
@@ -107,9 +108,13 @@ type MCPServerList struct {
 	Items []MCPServer `json:"items"`
 }
 
-// MCPServerWorkloadsStatus defines the observed state of the MCPServer workloads.
-type MCPServerWorkloadsStatus struct {
-	// Version is the version of the MCPServer workloads.
+// MCPServerKonnectSpec defines the observed state of the MCPServer on Konnect.
+type MCPServerKonnectSpec struct {
+	// Name is the name of the MCPServer on Konnect.
+	//
+	// +optional
+	Name *string `json:"name,omitempty"`
+	// Version is the version of the MCPServer on Konnect.
 	//
 	// +optional
 	Version *string `json:"version,omitempty"`

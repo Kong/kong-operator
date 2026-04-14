@@ -147,9 +147,11 @@ func generateKongService(mcpServer *konnectv1alpha1.MCPServer, svc sdkkonnectcom
 			Name:      nn.Name,
 			Namespace: nn.Namespace,
 		},
+
 		Spec: configurationv1alpha1.KongServiceSpec{
 			KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
-				Name:     &svc.Name,
+				ID:       svc.ID,
+				Name:     &nn.Name,
 				Host:     host,
 				Port:     svc.Port,
 				Protocol: sdkkonnectcomp.Protocol(svc.Protocol),
@@ -208,7 +210,8 @@ func generateKongRoute(
 		},
 		Spec: configurationv1alpha1.KongRouteSpec{
 			KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
-				Name:    &route.Name,
+				ID:      route.ID,
+				Name:    &nn.Name,
 				Paths:   route.Paths,
 				Methods: route.Methods,
 			},

@@ -990,6 +990,22 @@ _Appears in:_
 
 - [Labels](#konnect-konghq-com-v1alpha1-types-labels)
 
+#### MCPServerKonnectSpec
+
+
+MCPServerKonnectSpec defines the observed state of the MCPServer on Konnect.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _*string_ | Name is the name of the MCPServer on Konnect. |
+| `version` _*string_ | Version is the version of the MCPServer on Konnect. |
+
+_Appears in:_
+
+- [MCPServerStatus](#konnect-konghq-com-v1alpha1-types-mcpserverstatus)
+
 #### MCPServerSpec
 
 
@@ -1021,26 +1037,11 @@ MCPServerStatus defines the observed state of MCPServer.
 | `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
 | `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
 | `controlPlaneID` _string_ | ControlPlaneID is the Konnect ID of the ControlPlane this Route is associated with. |
-| `workloads` _[MCPServerWorkloadsStatus](#konnect-konghq-com-v1alpha1-types-mcpserverworkloadsstatus)_ | Workloads defines the observed state of the MCPServer workloads. |
+| `konnectSpec` _[MCPServerKonnectSpec](#konnect-konghq-com-v1alpha1-types-mcpserverkonnectspec)_ | KonnectSpec holds MCPServer-specific status fields related to its state on Konnect, such as the remote name and version. |
 
 _Appears in:_
 
 - [MCPServer](#konnect-konghq-com-v1alpha1-mcpserver)
-
-#### MCPServerWorkloadsStatus
-
-
-MCPServerWorkloadsStatus defines the observed state of the MCPServer workloads.
-
-
-
-| Field | Description |
-| --- | --- |
-| `version` _*string_ | Version is the version of the MCPServer workloads. |
-
-_Appears in:_
-
-- [MCPServerStatus](#konnect-konghq-com-v1alpha1-types-mcpserverstatus)
 
 #### MinRuntimeVersion
 

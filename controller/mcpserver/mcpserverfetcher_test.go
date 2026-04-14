@@ -72,7 +72,7 @@ func TestGenerateMCPServerName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := generateMCPServerNN("test-ns", tt.cpName, tt.serverName, tt.serverID)
+			result := generateMCPServerNN("test-ns", tt.cpName, tt.serverID)
 
 			assert.LessOrEqual(t, len(result.Name), 63, "name must not exceed 63 characters")
 			assert.NotEmpty(t, result.Name)
@@ -88,7 +88,7 @@ func TestGenerateMCPServerName(t *testing.T) {
 				"name %q must not contain double hyphens", result.Name)
 
 			// Determinism: calling again must produce the same result.
-			assert.Equal(t, result, generateMCPServerNN("test-ns", tt.cpName, tt.serverName, tt.serverID))
+			assert.Equal(t, result, generateMCPServerNN("test-ns", tt.cpName, tt.serverID))
 		})
 	}
 }
@@ -126,8 +126,8 @@ func TestSyncMCPServers(t *testing.T) {
 
 	// existingMCPServer returns an MCPServer that matches what syncMCPServers would
 	// check for, using generateMCPServerNN for the name and the given mirror ID.
-	existingMCPServer := func(serverID, serverName string) *konnectv1alpha1.MCPServer {
-		nn := generateMCPServerNN(namespace, cpName, serverName, serverID)
+	existingMCPServer := func(serverID string) *konnectv1alpha1.MCPServer {
+		nn := generateMCPServerNN(namespace, cpName, serverID)
 		return &konnectv1alpha1.MCPServer{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      nn.Name,
@@ -166,13 +166,13 @@ func TestSyncMCPServers(t *testing.T) {
 		{
 			name:          "new server is created",
 			servers:       []sdkkonnectcomp.MCPServerCPInfo{newServer("srv-id", "srv-name")},
-			expectCreated: []string{generateMCPServerNN(namespace, cpName, "srv-name", "srv-id").Name},
+			expectCreated: []string{generateMCPServerNN(namespace, cpName, "srv-id").Name},
 		},
 		{
 			name:            "existing server (by ID) is skipped without re-creating",
 			servers:         []sdkkonnectcomp.MCPServerCPInfo{newServer("srv-id", "srv-name")},
-			existingObjects: []client.Object{existingMCPServer("srv-id", "srv-name")},
-			expectCreated:   []string{generateMCPServerNN(namespace, cpName, "srv-name", "srv-id").Name},
+			existingObjects: []client.Object{existingMCPServer("srv-id")},
+			expectCreated:   []string{generateMCPServerNN(namespace, cpName, "srv-id").Name},
 		},
 		{
 			name: "stale MCPServer not in Konnect response is deleted",
@@ -180,11 +180,11 @@ func TestSyncMCPServers(t *testing.T) {
 				newServer("live-id", "live-name"),
 			},
 			existingObjects: []client.Object{
-				existingMCPServer("live-id", "live-name"),
-				existingMCPServer("stale-id", "stale-name"),
+				existingMCPServer("live-id"),
+				existingMCPServer("stale-id"),
 			},
-			expectCreated: []string{generateMCPServerNN(namespace, cpName, "live-name", "live-id").Name},
-			expectDeleted: []string{generateMCPServerNN(namespace, cpName, "stale-name", "stale-id").Name},
+			expectCreated: []string{generateMCPServerNN(namespace, cpName, "live-id").Name},
+			expectDeleted: []string{generateMCPServerNN(namespace, cpName, "stale-id").Name},
 		},
 		{
 			name: "mixed: creates new, keeps existing, deletes stale",
@@ -193,14 +193,14 @@ func TestSyncMCPServers(t *testing.T) {
 				newServer("new-id", "new-name"),
 			},
 			existingObjects: []client.Object{
-				existingMCPServer("existing-id", "existing-name"),
-				existingMCPServer("stale-id", "stale-name"),
+				existingMCPServer("existing-id"),
+				existingMCPServer("stale-id"),
 			},
 			expectCreated: []string{
-				generateMCPServerNN(namespace, cpName, "existing-name", "existing-id").Name,
-				generateMCPServerNN(namespace, cpName, "new-name", "new-id").Name,
+				generateMCPServerNN(namespace, cpName, "existing-id").Name,
+				generateMCPServerNN(namespace, cpName, "new-id").Name,
 			},
-			expectDeleted: []string{generateMCPServerNN(namespace, cpName, "stale-name", "stale-id").Name},
+			expectDeleted: []string{generateMCPServerNN(namespace, cpName, "stale-id").Name},
 		},
 		{
 			name:    "list error is returned",
