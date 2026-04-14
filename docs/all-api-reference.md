@@ -6269,6 +6269,7 @@ KonnectConfiguration is the Schema for the KonnectConfiguration API.
 
 _Appears in:_
 
+- [DcrProviderSpec](#x-konnect-konghq-com-v1alpha1-types-dcrproviderspec)
 - [KonnectCloudGatewayNetworkSpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaynetworkspec)
 - [KonnectEventControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnecteventcontrolplanespec)
 - [KonnectExtensionKonnectSpec](#konnect-konghq-com-v1alpha1-types-konnectextensionkonnectspec)
@@ -6307,6 +6308,7 @@ KonnectEntityStatus represents the status of a Konnect entity.
 
 _Appears in:_
 
+- [DcrProviderStatus](#x-konnect-konghq-com-v1alpha1-types-dcrproviderstatus)
 - [KonnectCloudGatewayDataPlaneGroupConfigurationStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaydataplanegroupconfigurationstatus)
 - [KonnectCloudGatewayNetworkStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaynetworkstatus)
 - [KonnectCloudGatewayTransitGatewayStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewaystatus)
@@ -7218,6 +7220,8 @@ _Appears in:_
 - [CreateDcrProviderRequestHTTP](#x-konnect-konghq-com-v1alpha1-types-createdcrproviderrequesthttp)
 - [CreateDcrProviderRequestOkta](#x-konnect-konghq-com-v1alpha1-types-createdcrproviderrequestokta)
 
+
+
 #### DcrProviderSpec
 
 
@@ -7227,6 +7231,7 @@ DcrProviderSpec defines the desired state of DcrProvider.
 
 | Field | Description |
 | --- | --- |
+| `konnect` _[KonnectConfiguration](#konnect-konghq-com-v1alpha2-types-konnectconfiguration)_ | KonnectConfiguration is the Konnect configuration for this entity. |
 | `apiSpec` _[DcrProviderAPISpec](#x-konnect-konghq-com-v1alpha1-types-dcrproviderapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -7243,6 +7248,9 @@ DcrProviderStatus defines the observed state of DcrProvider.
 | Field | Description |
 | --- | --- |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
+| `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
+| `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
 | `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
 
 _Appears in:_

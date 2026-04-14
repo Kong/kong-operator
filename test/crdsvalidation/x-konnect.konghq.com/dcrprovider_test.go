@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	xkonnectv1alpha1 "github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1"
 	common "github.com/kong/kong-operator/v2/test/crdsvalidation/common"
 	"github.com/kong/kong-operator/v2/test/envtest"
@@ -21,6 +22,11 @@ func TestDcrProvider(t *testing.T) {
 			return &xkonnectv1alpha1.DcrProvider{
 				ObjectMeta: common.CommonObjectMeta(ns.Name),
 				Spec: xkonnectv1alpha1.DcrProviderSpec{
+					KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+						APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+							Name: "test-auth",
+						},
+					},
 					APISpec: xkonnectv1alpha1.DcrProviderAPISpec{
 						DcrProviderConfig: &xkonnectv1alpha1.DcrProviderConfig{
 							Type: xkonnectv1alpha1.DcrProviderConfigTypeAuth0,

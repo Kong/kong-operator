@@ -4,6 +4,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 )
 
 // DcrProvider is the Schema for the dcrproviders API.
@@ -40,6 +41,11 @@ type DcrProviderList struct {
 
 // DcrProviderSpec defines the desired state of DcrProvider.
 type DcrProviderSpec struct {
+	// KonnectConfiguration is the Konnect configuration for this entity.
+	//
+	// +required
+	KonnectConfiguration konnectv1alpha2.KonnectConfiguration `json:"konnect"`
+
 	// APISpec defines the desired state of the resource's API spec fields.
 	//
 	// +optional
@@ -69,7 +75,7 @@ type DcrProviderStatus struct {
 	// Konnect contains the Konnect entity status.
 	//
 	// +optional
-	KonnectEntityStatus `json:",inline"`
+	konnectv1alpha2.KonnectEntityStatus `json:",inline"`
 
 	// ObservedGeneration is the most recent generation observed
 	//

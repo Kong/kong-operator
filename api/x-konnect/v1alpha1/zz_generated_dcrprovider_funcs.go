@@ -36,3 +36,10 @@ func (obj *DcrProvider) GetConditions() []metav1.Condition {
 func (obj *DcrProvider) SetConditions(conditions []metav1.Condition) {
 	obj.Status.Conditions = conditions
 }
+
+// GetKonnectAPIAuthConfigurationRef returns the Konnect API Auth Configuration Ref.
+func (obj *DcrProvider) GetKonnectAPIAuthConfigurationRef() konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef {
+	return konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
+		Name: obj.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name,
+	}
+}

@@ -456,6 +456,28 @@ spec:
                 required:
                 - type
                 type: object
+              konnect:
+                description: KonnectConfiguration is the Konnect configuration for
+                  this entity.
+                properties:
+                  authRef:
+                    description: |-
+                      APIAuthConfigurationRef is the reference to the API Auth Configuration
+                      that should be used for this Konnect Configuration.
+                    properties:
+                      name:
+                        description: Name is the name of the KonnectAPIAuthConfiguration
+                          resource.
+                        minLength: 1
+                        type: string
+                    required:
+                    - name
+                    type: object
+                required:
+                - authRef
+                type: object
+            required:
+            - konnect
             type: object
           status:
             description: DcrProviderStatus defines the observed state of DcrProvider.
