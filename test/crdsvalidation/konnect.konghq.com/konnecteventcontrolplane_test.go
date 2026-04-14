@@ -1,4 +1,4 @@
-package configuration_test
+package crdsvalidation
 
 import (
 	"strings"
@@ -6,6 +6,7 @@ import (
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	common "github.com/kong/kong-operator/v2/test/crdsvalidation/common"
 	"github.com/kong/kong-operator/v2/test/envtest"
 )
@@ -14,7 +15,7 @@ func TestKonnectEventControlPlane(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
-	scheme := Scheme(t)
+	scheme := scheme.Get()
 	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	t.Run("labels field validation", func(t *testing.T) {
