@@ -9,12 +9,12 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 )
 
-type sdkOpsBoolField struct {
+type PortalSDKOpsBoolField struct {
 	Label string
 	Path  []string
 }
 
-var sdkOpsBoolFields = []sdkOpsBoolField{
+var PortalSDKOpsBoolFields = []PortalSDKOpsBoolField{
 	{
 		Label: "authentication_enabled",
 		Path: []string{
@@ -47,16 +47,16 @@ var sdkOpsBoolFields = []sdkOpsBoolField{
 	},
 }
 
-func normalizeSDKOpsBoolFields(payload map[string]any) error {
-	for _, field := range sdkOpsBoolFields {
-		if _, err := normalizeSDKOpsBoolField(payload, field.Path); err != nil {
+func normalizePortalSDKOpsBoolFields(payload map[string]any) error {
+	for _, field := range PortalSDKOpsBoolFields {
+		if _, err := normalizePortalSDKOpsBoolField(payload, field.Path); err != nil {
 			return fmt.Errorf("%s: %w", field.Label, err)
 		}
 	}
 	return nil
 }
 
-func normalizeSDKOpsBoolField(value any, path []string) (any, error) {
+func normalizePortalSDKOpsBoolField(value any, path []string) (any, error) {
 	if len(path) == 0 {
 		switch typed := value.(type) {
 		case nil:
@@ -89,7 +89,7 @@ func normalizeSDKOpsBoolField(value any, path []string) (any, error) {
 			return nil, fmt.Errorf("expected array, got %T", value)
 		}
 		for i, item := range items {
-			normalized, err := normalizeSDKOpsBoolField(item, path[1:])
+			normalized, err := normalizePortalSDKOpsBoolField(item, path[1:])
 			if err != nil {
 				return nil, err
 			}
@@ -102,7 +102,7 @@ func normalizeSDKOpsBoolField(value any, path []string) (any, error) {
 			return nil, fmt.Errorf("expected object, got %T", value)
 		}
 		for key, item := range object {
-			normalized, err := normalizeSDKOpsBoolField(item, path[1:])
+			normalized, err := normalizePortalSDKOpsBoolField(item, path[1:])
 			if err != nil {
 				return nil, err
 			}
@@ -118,7 +118,7 @@ func normalizeSDKOpsBoolField(value any, path []string) (any, error) {
 		if !ok {
 			return value, nil
 		}
-		normalized, err := normalizeSDKOpsBoolField(child, path[1:])
+		normalized, err := normalizePortalSDKOpsBoolField(child, path[1:])
 		if err != nil {
 			return nil, err
 		}
@@ -136,7 +136,7 @@ func (s *PortalAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 	if err := json.Unmarshal(data, &payload); err != nil {
 		return nil, fmt.Errorf("failed to decode PortalAPISpec: %w", err)
 	}
-	if err := normalizeSDKOpsBoolFields(payload); err != nil {
+	if err := normalizePortalSDKOpsBoolFields(payload); err != nil {
 		return nil, fmt.Errorf("failed to normalize PortalAPISpec SDK payload: %w", err)
 	}
 	data, err = json.Marshal(payload)

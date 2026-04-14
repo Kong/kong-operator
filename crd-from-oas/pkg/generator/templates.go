@@ -266,12 +266,12 @@ import (
 {{- end}}
 )
 {{if .BoolFields}}
-type sdkOpsBoolField struct {
+type {{$.EntityName}}SDKOpsBoolField struct {
 	Label string
 	Path  []string
 }
 
-var sdkOpsBoolFields = []sdkOpsBoolField{
+var {{$.EntityName}}SDKOpsBoolFields = []{{$.EntityName}}SDKOpsBoolField{
 {{- range .BoolFields}}
 	{
 		Label: "{{.Label}}",
@@ -284,16 +284,16 @@ var sdkOpsBoolFields = []sdkOpsBoolField{
 {{- end}}
 }
 
-func normalizeSDKOpsBoolFields(payload map[string]any) error {
-	for _, field := range sdkOpsBoolFields {
-		if _, err := normalizeSDKOpsBoolField(payload, field.Path); err != nil {
+func normalize{{$.EntityName}}SDKOpsBoolFields(payload map[string]any) error {
+	for _, field := range {{$.EntityName}}SDKOpsBoolFields {
+		if _, err := normalize{{$.EntityName}}SDKOpsBoolField(payload, field.Path); err != nil {
 			return fmt.Errorf("%s: %w", field.Label, err)
 		}
 	}
 	return nil
 }
 
-func normalizeSDKOpsBoolField(value any, path []string) (any, error) {
+func normalize{{$.EntityName}}SDKOpsBoolField(value any, path []string) (any, error) {
 	if len(path) == 0 {
 		switch typed := value.(type) {
 		case nil:
@@ -326,7 +326,7 @@ func normalizeSDKOpsBoolField(value any, path []string) (any, error) {
 			return nil, fmt.Errorf("expected array, got %T", value)
 		}
 		for i, item := range items {
-			normalized, err := normalizeSDKOpsBoolField(item, path[1:])
+			normalized, err := normalize{{$.EntityName}}SDKOpsBoolField(item, path[1:])
 			if err != nil {
 				return nil, err
 			}
@@ -339,7 +339,7 @@ func normalizeSDKOpsBoolField(value any, path []string) (any, error) {
 			return nil, fmt.Errorf("expected object, got %T", value)
 		}
 		for key, item := range object {
-			normalized, err := normalizeSDKOpsBoolField(item, path[1:])
+			normalized, err := normalize{{$.EntityName}}SDKOpsBoolField(item, path[1:])
 			if err != nil {
 				return nil, err
 			}
@@ -355,7 +355,7 @@ func normalizeSDKOpsBoolField(value any, path []string) (any, error) {
 		if !ok {
 			return value, nil
 		}
-		normalized, err := normalizeSDKOpsBoolField(child, path[1:])
+		normalized, err := normalize{{$.EntityName}}SDKOpsBoolField(child, path[1:])
 		if err != nil {
 			return nil, err
 		}
@@ -374,7 +374,7 @@ func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() ([]byte, error) {
 	if err := json.Unmarshal(data, &payload); err != nil {
 		return nil, fmt.Errorf("failed to decode {{$.EntityName}}APISpec: %w", err)
 	}
-	if err := normalizeSDKOpsBoolFields(payload); err != nil {
+	if err := normalize{{$.EntityName}}SDKOpsBoolFields(payload); err != nil {
 		return nil, fmt.Errorf("failed to normalize {{$.EntityName}}APISpec SDK payload: %w", err)
 	}
 	data, err = json.Marshal(payload)
@@ -403,6 +403,231 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 }
 {{end}}`
 
+const sdkOpsRootUnionTemplate = sharedGeneratedFilePreamble + `
+
+package {{.APIVersion}}
+
+import (
+	"encoding/json"
+	"fmt"
+
+{{range .Imports}}	{{.Alias}} "{{.Path}}"
+{{end}})
+
+{{if .BoolFields}}
+type {{$.EntityName}}SDKOpsBoolField struct {
+	Label string
+	Path  []string
+}
+
+var {{$.EntityName}}SDKOpsBoolFields = []{{$.EntityName}}SDKOpsBoolField{
+{{- range .BoolFields}}
+	{
+		Label: "{{.Label}}",
+		Path: []string{
+{{- range .Path}}
+			"{{.}}",
+{{- end}}
+		},
+	},
+{{- end}}
+}
+
+func normalize{{$.EntityName}}SDKOpsBoolFields(payload map[string]any) error {
+	for _, field := range {{$.EntityName}}SDKOpsBoolFields {
+		if _, err := normalize{{$.EntityName}}SDKOpsBoolField(payload, field.Path); err != nil {
+			return fmt.Errorf("%s: %w", field.Label, err)
+		}
+	}
+	return nil
+}
+
+func normalize{{$.EntityName}}SDKOpsBoolField(value any, path []string) (any, error) {
+	if len(path) == 0 {
+		switch typed := value.(type) {
+		case nil:
+			return nil, nil
+		case bool:
+			return typed, nil
+		case string:
+			switch typed {
+			case "Enabled":
+				return true, nil
+			case "Disabled":
+				return false, nil
+			default:
+				return nil, fmt.Errorf("unexpected boolean enum %q", typed)
+			}
+		default:
+			return nil, fmt.Errorf("expected string boolean enum, got %T", value)
+		}
+	}
+
+	if value == nil {
+		return nil, nil
+	}
+
+	segment := path[0]
+	switch segment {
+	case "[]":
+		items, ok := value.([]any)
+		if !ok {
+			return nil, fmt.Errorf("expected array, got %T", value)
+		}
+		for i, item := range items {
+			normalized, err := normalize{{$.EntityName}}SDKOpsBoolField(item, path[1:])
+			if err != nil {
+				return nil, err
+			}
+			items[i] = normalized
+		}
+		return items, nil
+	case "{}":
+		object, ok := value.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("expected object, got %T", value)
+		}
+		for key, item := range object {
+			normalized, err := normalize{{$.EntityName}}SDKOpsBoolField(item, path[1:])
+			if err != nil {
+				return nil, err
+			}
+			object[key] = normalized
+		}
+		return object, nil
+	default:
+		object, ok := value.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("expected object, got %T", value)
+		}
+		child, ok := object[segment]
+		if !ok {
+			return value, nil
+		}
+		normalized, err := normalize{{$.EntityName}}SDKOpsBoolField(child, path[1:])
+		if err != nil {
+			return nil, err
+		}
+		object[segment] = normalized
+		return object, nil
+	}
+}
+{{end}}
+func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() (map[string]any, error) {
+	data, err := json.Marshal(s)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal {{$.EntityName}}APISpec: %w", err)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(data, &payload); err != nil {
+		return nil, fmt.Errorf("failed to decode {{$.EntityName}}APISpec: %w", err)
+	}
+	{{- if $.BoolFields}}
+	if err := normalize{{$.EntityName}}SDKOpsBoolFields(payload); err != nil {
+		return nil, fmt.Errorf("failed to normalize {{$.EntityName}}APISpec SDK payload: %w", err)
+	}
+	{{- end }}
+	return payload, nil
+}
+
+func (s *{{$.EntityName}}APISpec) selectedSDKOpsPayload(payload map[string]any) ([]byte, string, error) {
+	if s == nil || s.{{$.UnionTypeName}} == nil {
+		return nil, "", fmt.Errorf("{{$.EntityName}} config is required")
+	}
+
+	var selected any
+	var variant string
+	switch s.{{$.UnionTypeName}}.Type {
+{{- range .Variants}}
+	case {{$.UnionTypeName}}Type{{.FieldName}}:
+		selected = payload["{{.JSONName}}"]
+		variant = "{{.FieldName}}"
+{{- end}}
+	default:
+		return nil, "", fmt.Errorf("unsupported {{$.EntityName}} config type %q", s.{{$.UnionTypeName}}.Type)
+	}
+
+	if selected == nil {
+		return nil, "", fmt.Errorf("{{$.EntityName}} config payload missing for type %q", s.{{$.UnionTypeName}}.Type)
+	}
+
+	data, err := json.Marshal(selected)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to marshal selected {{$.EntityName}} config: %w", err)
+	}
+	return data, variant, nil
+}
+
+{{range .Methods}}
+// {{.MethodName}} converts the {{$.EntityName}}APISpec to the SDK type
+// {{.ImportAlias}}.{{.TypeName}} using JSON marshal/unmarshal.
+// Fields that exist in the CRD spec but not in the SDK type (e.g., Kubernetes
+// object references) are naturally excluded because they have different JSON names.
+func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeName}}, error) {
+	payload, err := s.marshalSDKOpsPayload()
+	if err != nil {
+		return nil, err
+	}
+{{- if .IsCreate}}
+	data, variant, err := s.selectedSDKOpsPayload(payload)
+{{- else}}
+	data, variant, err := s.selectedSDKOpsPayload(payload)
+{{- end}}
+	if err != nil {
+		return nil, err
+	}
+{{- if .IsCreate}}
+	{{$importAlias := .ImportAlias}}
+	switch variant {
+{{- range $.Variants}}
+	case "{{.FieldName}}":
+		var member {{$importAlias}}.{{.CreateVariantTypeName}}
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into {{.CreateVariantTypeName}}: %w", err)
+		}
+		target := {{$importAlias}}.{{.CreateConstructorName}}(member)
+		return &target, nil
+{{- end}}
+	default:
+		return nil, fmt.Errorf("unsupported {{$.EntityName}} config variant %q", variant)
+	}
+{{- else}}
+	{{$importAlias := .ImportAlias}}
+	var selected map[string]any
+	if err := json.Unmarshal(data, &selected); err != nil {
+		return nil, fmt.Errorf("failed to decode selected {{$.EntityName}} config: %w", err)
+	}
+	configPayload, ok := selected["dcr_config"]
+	if !ok || configPayload == nil {
+		return nil, fmt.Errorf("{{$.EntityName}} config payload missing dcr_config")
+	}
+	configData, err := json.Marshal(configPayload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal {{$.EntityName}} dcr_config payload: %w", err)
+	}
+	var target {{.ImportAlias}}.{{.TypeName}}
+	if err := json.Unmarshal(data, &target); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal into {{.TypeName}}: %w", err)
+	}
+	switch variant {
+{{- range $.Variants}}
+	case "{{.FieldName}}":
+		var member {{$importAlias}}.{{.UpdateVariantTypeName}}
+		if err := json.Unmarshal(configData, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into {{.UpdateVariantTypeName}}: %w", err)
+		}
+		unionValue := {{$importAlias}}.{{.UpdateConstructorName}}(member)
+		target.DcrConfig = &unionValue
+		return &target, nil
+{{- end}}
+	default:
+		return nil, fmt.Errorf("unsupported {{$.EntityName}} config variant %q", variant)
+	}
+{{- end}}
+}
+{{end}}`
+
 const sdkOpsTestTemplate = sharedGeneratedFilePreamble + `
 
 package {{.APIVersion}}
@@ -421,6 +646,11 @@ func Test{{$.EntityName}}APISpec_{{.MethodName}}(t *testing.T) {
 {{- end}}
 	}
 	result, err := spec.{{.MethodName}}()
+{{- if .ExpectError}}
+	require.Error(t, err)
+	require.Nil(t, result)
+	return
+{{- end}}
 	require.NoError(t, err)
 	require.NotNil(t, result)
 
