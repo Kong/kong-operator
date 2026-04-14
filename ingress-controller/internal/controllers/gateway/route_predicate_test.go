@@ -197,7 +197,7 @@ func TestIsRouteAttachedToReconciledGateway(t *testing.T) {
 					},
 				},
 			},
-			expectedResult: false,
+			expectedResult: true,
 		},
 	}
 

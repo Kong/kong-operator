@@ -9,6 +9,7 @@ import (
 
 var (
 	InstallV1       = gatewayv1.Install
+	InstallV1beta1  = gatewayv1beta1.Install
 	InstallV1alpha3 = gatewayv1alpha3.Install
 	GroupVersion    = gatewayv1.GroupVersion
 )
