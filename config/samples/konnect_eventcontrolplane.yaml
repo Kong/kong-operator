@@ -1,0 +1,26 @@
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth-1
+  namespace: default
+spec:
+  type: token
+  token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  # For a complete list of available API URLs see:https://docs.konghq.com/konnect/network/#kong-gateway-hostnames
+  serverURL: eu.api.konghq.com
+---
+kind: KonnectEventControlPlane
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: cp-event-1
+  namespace: default
+spec:
+  apiSpec:
+    name: cp-event-1
+    description: Test Event Gateway CP
+    labels:
+      app: test1
+      key1: test1
+  konnect:
+    authRef:
+      name: konnect-api-auth-1
