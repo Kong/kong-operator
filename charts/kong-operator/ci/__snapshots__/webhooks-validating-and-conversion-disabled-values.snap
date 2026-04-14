@@ -40457,6 +40457,13 @@ spec:
                     - Enabled
                     - Disabled
                     type: string
+                  sipr_enabled:
+                    default: Disabled
+                    description: Whether ip allow list is enabled for the organization.
+                    enum:
+                    - Enabled
+                    - Disabled
+                    type: string
                 required:
                 - name
                 type: object

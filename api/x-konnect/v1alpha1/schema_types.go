@@ -500,3 +500,15 @@ type LabelsUpdate map[string]LabelsUpdateValue
 // When not specified, the minimum runtime version will be pinned to the latest
 // available release.
 type MinRuntimeVersion string
+
+// SourceIPEnabled Whether ip allow list is enabled for the organization.
+//
+// +kubebuilder:validation:Enum=Enabled;Disabled
+type SourceIPEnabled string
+
+const (
+	// SourceIPEnabledEnabled sets SourceIPEnabled as enabled.
+	SourceIPEnabledEnabled  SourceIPEnabled = "Enabled"
+	// SourceIPEnabledDisabled sets SourceIPEnabled as disabled.
+	SourceIPEnabledDisabled SourceIPEnabled = "Disabled"
+)

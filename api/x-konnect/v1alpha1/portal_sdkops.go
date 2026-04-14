@@ -39,6 +39,12 @@ var sdkOpsBoolFields = []sdkOpsBoolField{
 			"rbac_enabled",
 		},
 	},
+	{
+		Label: "sipr_enabled",
+		Path: []string{
+			"sipr_enabled",
+		},
+	},
 }
 
 func normalizeSDKOpsBoolFields(payload map[string]any) error {
