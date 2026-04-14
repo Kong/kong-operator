@@ -1,11 +1,15 @@
 package sdkmocks
 
 import (
+	"context"
 	"testing"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/samber/lo"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
@@ -18,6 +22,7 @@ type MockSDKWrapper struct {
 	CloudGatewaysSDK            *mocks.MockCloudGatewaysSDK
 	EventGatewaysSDK            *mocks.MockEventGatewaysSDK
 	EventGatewayDPCertsSDK      *mocks.MockEventGatewayDataPlaneCertificatesSDK
+	DCRProvidersSDK             *MockDCRProvidersSDK
 	ControlPlaneGroupSDK        *mocks.MockControlPlaneGroupsSDK
 	ServicesSDK                 *mocks.MockServicesSDK
 	RoutesSDK                   *mocks.MockRoutesSDK
@@ -52,6 +57,7 @@ func NewMockSDKWrapperWithT(t *testing.T) *MockSDKWrapper {
 		CloudGatewaysSDK:            mocks.NewMockCloudGatewaysSDK(t),
 		EventGatewaysSDK:            mocks.NewMockEventGatewaysSDK(t),
 		EventGatewayDPCertsSDK:      mocks.NewMockEventGatewayDataPlaneCertificatesSDK(t),
+		DCRProvidersSDK:             NewMockDCRProvidersSDK(t),
 		ServicesSDK:                 mocks.NewMockServicesSDK(t),
 		RoutesSDK:                   mocks.NewMockRoutesSDK(t),
 		ConsumersSDK:                mocks.NewMockConsumersSDK(t),
@@ -190,8 +196,77 @@ func (m MockSDKWrapper) GetEventGatewayDataPlaneCertificatesSDK() sdkkonnectgo.E
 	return m.EventGatewayDPCertsSDK
 }
 
+func (m MockSDKWrapper) GetDCRProvidersSDK() sdkops.DCRProvidersSDK {
+	return m.DCRProvidersSDK
+}
+
 func (m MockSDKWrapper) GetMCPServersSDK() *sdkkonnectgo.MCPServers {
 	return m.MCPServersSDK
+}
+
+type MockDCRProvidersSDK struct {
+	mock.Mock
+}
+
+func NewMockDCRProvidersSDK(t *testing.T) *MockDCRProvidersSDK {
+	t.Helper()
+
+	m := &MockDCRProvidersSDK{}
+	t.Cleanup(func() {
+		m.AssertExpectations(t)
+	})
+	return m
+}
+
+func (m *MockDCRProvidersSDK) CreateDcrProvider(
+	ctx context.Context,
+	request sdkkonnectcomp.CreateDcrProviderRequest,
+	opts ...sdkkonnectops.Option,
+) (*sdkkonnectops.CreateDcrProviderResponse, error) {
+	args := m.Called(ctx, request)
+	resp, _ := args.Get(0).(*sdkkonnectops.CreateDcrProviderResponse)
+	return resp, args.Error(1)
+}
+
+func (m *MockDCRProvidersSDK) ListDcrProviders(
+	ctx context.Context,
+	request sdkkonnectops.ListDcrProvidersRequest,
+	opts ...sdkkonnectops.Option,
+) (*sdkkonnectops.ListDcrProvidersResponse, error) {
+	args := m.Called(ctx, request)
+	resp, _ := args.Get(0).(*sdkkonnectops.ListDcrProvidersResponse)
+	return resp, args.Error(1)
+}
+
+func (m *MockDCRProvidersSDK) GetDcrProvider(
+	ctx context.Context,
+	dcrProviderID string,
+	opts ...sdkkonnectops.Option,
+) (*sdkkonnectops.GetDcrProviderResponse, error) {
+	args := m.Called(ctx, dcrProviderID)
+	resp, _ := args.Get(0).(*sdkkonnectops.GetDcrProviderResponse)
+	return resp, args.Error(1)
+}
+
+func (m *MockDCRProvidersSDK) UpdateDcrProvider(
+	ctx context.Context,
+	dcrProviderID string,
+	updateDcrProviderRequest sdkkonnectcomp.UpdateDcrProviderRequest,
+	opts ...sdkkonnectops.Option,
+) (*sdkkonnectops.UpdateDcrProviderResponse, error) {
+	args := m.Called(ctx, dcrProviderID, updateDcrProviderRequest)
+	resp, _ := args.Get(0).(*sdkkonnectops.UpdateDcrProviderResponse)
+	return resp, args.Error(1)
+}
+
+func (m *MockDCRProvidersSDK) DeleteDcrProvider(
+	ctx context.Context,
+	dcrProviderID string,
+	opts ...sdkkonnectops.Option,
+) (*sdkkonnectops.DeleteDcrProviderResponse, error) {
+	args := m.Called(ctx, dcrProviderID)
+	resp, _ := args.Get(0).(*sdkkonnectops.DeleteDcrProviderResponse)
+	return resp, args.Error(1)
 }
 
 type MockSDKFactory struct {

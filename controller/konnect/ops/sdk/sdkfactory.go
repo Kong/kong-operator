@@ -1,13 +1,24 @@
 package sdk
 
 import (
+	"context"
 	"net/http"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 
 	"github.com/kong/kong-operator/v2/controller/konnect/server"
 )
+
+// DCRProvidersSDK is the subset of the Konnect SDK used by the DcrProvider reconciler.
+type DCRProvidersSDK interface {
+	CreateDcrProvider(ctx context.Context, request sdkkonnectcomp.CreateDcrProviderRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.CreateDcrProviderResponse, error)
+	ListDcrProviders(ctx context.Context, request sdkkonnectops.ListDcrProvidersRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.ListDcrProvidersResponse, error)
+	GetDcrProvider(ctx context.Context, dcrProviderID string, opts ...sdkkonnectops.Option) (*sdkkonnectops.GetDcrProviderResponse, error)
+	UpdateDcrProvider(ctx context.Context, dcrProviderID string, updateDcrProviderRequest sdkkonnectcomp.UpdateDcrProviderRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.UpdateDcrProviderResponse, error)
+	DeleteDcrProvider(ctx context.Context, dcrProviderID string, opts ...sdkkonnectops.Option) (*sdkkonnectops.DeleteDcrProviderResponse, error)
+}
 
 // SDKWrapper is a wrapper of Konnect SDK to allow using mock SDKs in tests.
 type SDKWrapper interface {
@@ -36,6 +47,7 @@ type SDKWrapper interface {
 	GetCloudGatewaysSDK() sdkkonnectgo.CloudGatewaysSDK
 	GetEventGatewaysSDK() sdkkonnectgo.EventGatewaysSDK
 	GetEventGatewayDataPlaneCertificatesSDK() sdkkonnectgo.EventGatewayDataPlaneCertificatesSDK
+	GetDCRProvidersSDK() DCRProvidersSDK
 	GetMCPServersSDK() *sdkkonnectgo.MCPServers
 
 	// GetServerURL returns the server URL for recording metrics.
@@ -183,6 +195,11 @@ func (w sdkWrapper) GetEventGatewaysSDK() sdkkonnectgo.EventGatewaysSDK {
 // GetEventGatewayDataPlaneCertificatesSDK returns the SDK to operate Event Gateway dataplane certificates.
 func (w sdkWrapper) GetEventGatewayDataPlaneCertificatesSDK() sdkkonnectgo.EventGatewayDataPlaneCertificatesSDK {
 	return w.sdk.EventGatewayDataPlaneCertificates
+}
+
+// GetDCRProvidersSDK returns the SDK to operate Konnect DCR providers.
+func (w sdkWrapper) GetDCRProvidersSDK() DCRProvidersSDK {
+	return w.sdk.DCRProviders
 }
 
 // GetMCPServersSDK returns the SDK to operate MCP servers.

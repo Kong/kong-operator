@@ -87,6 +87,8 @@ func ReconciliationWatchOptionsForEntity[
 		return KonnectEventControlPlaneReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.KonnectEventDataPlaneCertificate:
 		return KonnectEventDataPlaneCertificateReconciliationWatchOptions(cl)
+	case *xkonnectv1alpha1.DcrProvider:
+		return DcrProviderReconciliationWatchOptions(cl)
 	case *xkonnectv1alpha1.Portal:
 		return PortalReconciliationWatchOptions(cl)
 	default:

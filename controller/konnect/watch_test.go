@@ -16,6 +16,7 @@ import (
 	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	xkonnectv1alpha1 "github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
@@ -32,6 +33,7 @@ func TestWatchOptions(t *testing.T) {
 	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.KongKey{})
 	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.KongKeySet{})
 	testReconciliationWatchOptionsForEntity(t, &konnectv1alpha1.KonnectEventControlPlane{})
+	testReconciliationWatchOptionsForEntity(t, &xkonnectv1alpha1.DcrProvider{})
 }
 
 func testReconciliationWatchOptionsForEntity[

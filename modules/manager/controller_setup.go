@@ -27,6 +27,7 @@ import (
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	xkonnectv1alpha1 "github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/controlplane"
 	"github.com/kong/kong-operator/v2/controller/cpextensions"
 	"github.com/kong/kong-operator/v2/controller/cpextensions/metricsscraper"
@@ -141,6 +142,7 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 			// https://github.com/Kong/kong-operator/issues/3785
 			index.OptionsForKonnectEventControlPlane(),
 			index.OptionsForKonnectEventDataPlaneCertificate(),
+			index.OptionsForDcrProvider(),
 			index.OptionsForKonnectCloudGatewayDataPlaneGroupConfiguration(cl),
 		)
 	}
@@ -790,6 +792,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			// https://github.com/Kong/kong-operator/issues/3785
 			newKonnectEntityController[konnectv1alpha1.KonnectEventControlPlane](controllerFactory),
 			newKonnectEntityController[konnectv1alpha1.KonnectEventDataPlaneCertificate](controllerFactory),
+			newKonnectEntityController[xkonnectv1alpha1.DcrProvider](controllerFactory),
 		)
 
 		controllers = append(controllers,

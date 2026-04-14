@@ -65,6 +65,7 @@ type SupportedKonnectEntityType interface {
 		// https://github.com/Kong/kong-operator/issues/3785
 		konnectv1alpha1.KonnectEventControlPlane |
 		konnectv1alpha1.KonnectEventDataPlaneCertificate |
+		xkonnectv1alpha1.DcrProvider |
 		xkonnectv1alpha1.Portal
 	// TODO: add other types
 
