@@ -36,3 +36,19 @@ func (obj *KonnectEventDataPlaneCertificate) GetConditions() []metav1.Condition 
 func (obj *KonnectEventDataPlaneCertificate) SetConditions(conditions []metav1.Condition) {
 	obj.Status.Conditions = conditions
 }
+
+// GetGatewayID returns the Konnect ID of the parent Gateway.
+func (obj *KonnectEventDataPlaneCertificate) GetGatewayID() string {
+	if obj.Status.GatewayID == nil {
+		return ""
+	}
+	return obj.Status.GatewayID.ID
+}
+
+// SetGatewayID sets the Konnect ID of the parent Gateway.
+func (obj *KonnectEventDataPlaneCertificate) SetGatewayID(id string) {
+	if obj.Status.GatewayID == nil {
+		obj.Status.GatewayID = &KonnectEntityRef{}
+	}
+	obj.Status.GatewayID.ID = id
+}

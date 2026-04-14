@@ -36,3 +36,19 @@ func (obj *PortalTeam) GetConditions() []metav1.Condition {
 func (obj *PortalTeam) SetConditions(conditions []metav1.Condition) {
 	obj.Status.Conditions = conditions
 }
+
+// GetPortalID returns the Konnect ID of the parent Portal.
+func (obj *PortalTeam) GetPortalID() string {
+	if obj.Status.PortalID == nil {
+		return ""
+	}
+	return obj.Status.PortalID.ID
+}
+
+// SetPortalID sets the Konnect ID of the parent Portal.
+func (obj *PortalTeam) SetPortalID(id string) {
+	if obj.Status.PortalID == nil {
+		obj.Status.PortalID = &KonnectEntityRef{}
+	}
+	obj.Status.PortalID.ID = id
+}

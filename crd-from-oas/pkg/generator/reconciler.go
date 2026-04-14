@@ -6,6 +6,8 @@ import (
 	"text/template"
 	"unicode"
 
+	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/config"
+	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/parser"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -157,8 +159,115 @@ func (g *Generator) generateRBAC(entityNames []string) (string, error) {
 	return buf.String(), nil
 }
 
+const childWatchTemplate = sharedGeneratedFilePreamble + `
+
+package konnect
+
+import (
+	"context"
+
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	{{.APIGroupPackageAlias}} "{{.APIGroupPackagePath}}"
+	"github.com/kong/kong-operator/v2/internal/utils/index"
+)
+
+// {{.EntityName}}ReconciliationWatchOptions returns the watch options for
+// the {{.EntityName}}.
+func {{.EntityName}}ReconciliationWatchOptions(
+	cl client.Client,
+) []func(*ctrl.Builder) *ctrl.Builder {
+	return []func(*ctrl.Builder) *ctrl.Builder{
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.For(&{{.APIGroupPackageAlias}}.{{.EntityName}}{})
+		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&{{.APIGroupPackageAlias}}.{{.ParentEntityName}}{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueue{{.EntityName}}For{{.ParentEntityName}}(cl),
+				),
+			)
+		},
+	}
+}
+
+func enqueue{{.EntityName}}For{{.ParentEntityName}}(
+	cl client.Client,
+) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		parent, ok := obj.(*{{.APIGroupPackageAlias}}.{{.ParentEntityName}})
+		if !ok {
+			return nil
+		}
+		var l {{.APIGroupPackageAlias}}.{{.EntityName}}List
+		if err := cl.List(ctx, &l,
+			// TODO: change this when cross namespace refs are allowed.
+			client.InNamespace(parent.GetNamespace()),
+			client.MatchingFields{
+				index.IndexField{{.EntityName}}On{{.ParentEntityName}}Ref: parent.Name,
+			},
+		); err != nil {
+			return nil
+		}
+		return objectListToReconcileRequests(l.Items)
+	}
+}
+`
+
+const childIndexTemplate = sharedGeneratedFilePreamble + `
+
+package index
+
+import (
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	{{.APIGroupPackageAlias}} "{{.APIGroupPackagePath}}"
+)
+
+const (
+	// IndexField{{.EntityName}}On{{.ParentEntityName}}Ref is the index field for {{.EntityName}} -> {{.ParentEntityName}}.
+	IndexField{{.EntityName}}On{{.ParentEntityName}}Ref = "{{.EntityNameLowerCamel}}On{{.ParentEntityName}}Ref"
+)
+
+// OptionsFor{{.EntityName}} returns required Index options for {{.EntityName}} reconciler.
+func OptionsFor{{.EntityName}}() []Option {
+	return []Option{
+		{
+			Object:         &{{.APIGroupPackageAlias}}.{{.EntityName}}{},
+			Field:          IndexField{{.EntityName}}On{{.ParentEntityName}}Ref,
+			ExtractValueFn: {{.EntityNameLowerCamel}}On{{.ParentEntityName}}Ref,
+		},
+	}
+}
+
+func {{.EntityNameLowerCamel}}On{{.ParentEntityName}}Ref(object client.Object) []string {
+	ent, ok := object.(*{{.APIGroupPackageAlias}}.{{.EntityName}})
+	if !ok {
+		return nil
+	}
+	if ent.Spec.{{.ParentRefFieldName}}.NamespacedRef == nil {
+		return nil
+	}
+
+	return []string{ent.Spec.{{.ParentRefFieldName}}.NamespacedRef.Name}
+}
+`
+
+type reconcilerEntityMetadata struct {
+	EntityName           string
+	EntityNameLowerCamel string
+	ParentEntityName     string
+	ParentRefFieldName   string
+	APIGroupPackagePath  string
+	APIGroupPackageAlias string
+}
+
 // generateReconcilerFiles generates all reconciler wiring files for the given entities.
-func (g *Generator) generateReconcilerFiles(entityNames []string) ([]GeneratedFile, error) {
+func (g *Generator) generateReconcilerFiles(entityNames []string, entitySchemas map[string]*parser.Schema) ([]GeneratedFile, error) {
 	var files []GeneratedFile
 
 	// Generate RBAC markers file for all reconciler entities.
@@ -175,13 +284,18 @@ func (g *Generator) generateReconcilerFiles(entityNames []string) ([]GeneratedFi
 	// Generate per-entity watch and index files
 	for _, entityName := range entityNames {
 		rc := g.config.ReconcilerConfig[entityName]
-		if !rc.IsRoot {
-			// Non-root entities have different watch/index patterns (Phase 2)
-			continue
+		schema, ok := entitySchemas[entityName]
+		if !ok {
+			return nil, fmt.Errorf("missing schema for reconciler entity %s", entityName)
+		}
+
+		metadata, err := g.reconcilerEntityMetadata(entityName, schema, rc)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build reconciler metadata for %s: %w", entityName, err)
 		}
 
 		// Watch file → controller/konnect/
-		watchContent, err := g.generateWatch(entityName)
+		watchContent, err := g.generateWatch(metadata, rc)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate watch for %s: %w", entityName, err)
 		}
@@ -192,7 +306,7 @@ func (g *Generator) generateReconcilerFiles(entityNames []string) ([]GeneratedFi
 		})
 
 		// Index file → internal/utils/index/
-		indexContent, err := g.generateIndex(entityName)
+		indexContent, err := g.generateIndex(metadata, rc)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate index for %s: %w", entityName, err)
 		}
@@ -206,8 +320,11 @@ func (g *Generator) generateReconcilerFiles(entityNames []string) ([]GeneratedFi
 	return files, nil
 }
 
-func (g *Generator) generateWatch(entityName string) (string, error) {
+func (g *Generator) generateWatch(metadata reconcilerEntityMetadata, rc *config.ReconcilerConfig) (string, error) {
 	tmpl := template.Must(template.New("watch").Parse(watchTemplate))
+	if !rc.IsRoot {
+		tmpl = template.Must(template.New("childWatch").Parse(childWatchTemplate))
+	}
 
 	const konnectAPIAuthPackagePath = "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 
@@ -220,16 +337,22 @@ func (g *Generator) generateWatch(entityName string) (string, error) {
 	var buf strings.Builder
 	data := struct {
 		EntityName                 string
+		EntityNameLowerCamel       string
+		ParentEntityName           string
+		ParentRefFieldName         string
 		APIAuthPackageAlias        string
 		NeedsSeparateAPIAuthImport bool
 		APIGroupPackagePath        string
 		APIGroupPackageAlias       string
 	}{
-		EntityName:                 entityName,
+		EntityName:                 metadata.EntityName,
+		EntityNameLowerCamel:       metadata.EntityNameLowerCamel,
+		ParentEntityName:           metadata.ParentEntityName,
+		ParentRefFieldName:         metadata.ParentRefFieldName,
 		APIAuthPackageAlias:        apiAuthPackageAlias,
 		NeedsSeparateAPIAuthImport: needsSeparateAPIAuthImport,
-		APIGroupPackagePath:        g.config.APIGroupPackagePath,
-		APIGroupPackageAlias:       g.config.APIGroupPackageAlias,
+		APIGroupPackagePath:        metadata.APIGroupPackagePath,
+		APIGroupPackageAlias:       metadata.APIGroupPackageAlias,
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
@@ -238,26 +361,62 @@ func (g *Generator) generateWatch(entityName string) (string, error) {
 	return buf.String(), nil
 }
 
-func (g *Generator) generateIndex(entityName string) (string, error) {
+func (g *Generator) generateIndex(metadata reconcilerEntityMetadata, rc *config.ReconcilerConfig) (string, error) {
 	tmpl := template.Must(template.New("index").Parse(indexTemplate))
+	if !rc.IsRoot {
+		tmpl = template.Must(template.New("childIndex").Parse(childIndexTemplate))
+	}
 
 	var buf strings.Builder
 	data := struct {
 		EntityName           string
 		EntityNameLowerCamel string
+		ParentEntityName     string
+		ParentRefFieldName   string
 		APIGroupPackagePath  string
 		APIGroupPackageAlias string
 	}{
-		EntityName:           entityName,
-		EntityNameLowerCamel: toLowerCamel(entityName),
-		APIGroupPackagePath:  g.config.APIGroupPackagePath,
-		APIGroupPackageAlias: g.config.APIGroupPackageAlias,
+		EntityName:           metadata.EntityName,
+		EntityNameLowerCamel: metadata.EntityNameLowerCamel,
+		ParentEntityName:     metadata.ParentEntityName,
+		ParentRefFieldName:   metadata.ParentRefFieldName,
+		APIGroupPackagePath:  metadata.APIGroupPackagePath,
+		APIGroupPackageAlias: metadata.APIGroupPackageAlias,
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
 		return "", err
 	}
 	return buf.String(), nil
+}
+
+func (g *Generator) reconcilerEntityMetadata(
+	entityName string,
+	schema *parser.Schema,
+	rc *config.ReconcilerConfig,
+) (reconcilerEntityMetadata, error) {
+	metadata := reconcilerEntityMetadata{
+		EntityName:           entityName,
+		EntityNameLowerCamel: toLowerCamel(entityName),
+		APIGroupPackagePath:  g.config.APIGroupPackagePath,
+		APIGroupPackageAlias: g.config.APIGroupPackageAlias,
+	}
+
+	if rc.IsRoot {
+		return metadata, nil
+	}
+	if len(schema.Dependencies) == 0 {
+		return reconcilerEntityMetadata{}, fmt.Errorf("non-root entity %s has no parent dependency", entityName)
+	}
+
+	parentDep := schema.Dependencies[len(schema.Dependencies)-1]
+	metadata.ParentRefFieldName = parentDep.FieldName
+	metadata.ParentEntityName = parentDep.EntityName
+	if rc.ParentEntityType != "" {
+		metadata.ParentEntityName = rc.ParentEntityType
+	}
+
+	return metadata, nil
 }
 
 // toLowerCamel converts a PascalCase name to lowerCamelCase.

@@ -16,7 +16,7 @@ import (
 {{- if .ObjectRefImport}}
 	{{.ObjectRefImport.Alias}} "{{.ObjectRefImport.Path}}"
 {{- end}}
-{{- if .HasReconciler}}
+{{- if .HasRootReconciler}}
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 {{- end}}
 )
@@ -55,7 +55,7 @@ type {{.EntityName}}List struct {
 
 // {{.EntityName}}Spec defines the desired state of {{.EntityName}}.
 type {{.EntityName}}Spec struct {
-{{- if .HasReconciler}}
+{{- if .HasRootReconciler}}
 	// KonnectConfiguration is the Konnect configuration for this entity.
 	//
 	// +required
@@ -131,7 +131,7 @@ type {{.EntityName}}Status struct {
 	// Konnect contains the Konnect entity status.
 	//
 	// +optional
-{{- if .HasReconciler}}
+{{- if .HasRootReconciler}}
 	konnectv1alpha2.KonnectEntityStatus ` + "`" + `json:",inline"` + "`" + `
 {{- else}}
 	KonnectEntityStatus ` + "`" + `json:",inline"` + "`" + `
@@ -225,6 +225,24 @@ func (obj *{{.EntityName}}) GetConditions() []metav1.Condition {
 func (obj *{{.EntityName}}) SetConditions(conditions []metav1.Condition) {
 	obj.Status.Conditions = conditions
 }
+{{- range .Dependencies}}
+
+// Get{{.EntityName}}ID returns the Konnect ID of the parent {{.EntityName}}.
+func (obj *{{$.EntityName}}) Get{{.EntityName}}ID() string {
+	if obj.Status.{{.EntityName}}ID == nil {
+		return ""
+	}
+	return obj.Status.{{.EntityName}}ID.ID
+}
+
+// Set{{.EntityName}}ID sets the Konnect ID of the parent {{.EntityName}}.
+func (obj *{{$.EntityName}}) Set{{.EntityName}}ID(id string) {
+	if obj.Status.{{.EntityName}}ID == nil {
+		obj.Status.{{.EntityName}}ID = &KonnectEntityRef{}
+	}
+	obj.Status.{{.EntityName}}ID.ID = id
+}
+{{- end}}
 {{- if .IsReconcilerRoot}}
 
 // GetKonnectAPIAuthConfigurationRef returns the Konnect API Auth Configuration Ref.
