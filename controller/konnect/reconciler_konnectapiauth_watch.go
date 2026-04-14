@@ -15,7 +15,6 @@ import (
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
-	xkonnectv1alpha1 "github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	operatorerrors "github.com/kong/kong-operator/v2/internal/errors"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
@@ -84,7 +83,7 @@ var konnectAPIAuthReferencingTypes = []constraints.EntityWithKonnectAPIAuthConfi
 	&konnectv1alpha1.KonnectCloudGatewayNetwork{},
 	&konnectv1alpha2.KonnectGatewayControlPlane{},
 	&konnectv1alpha2.KonnectExtension{},
-	&xkonnectv1alpha1.KonnectEventControlPlane{},
+	&konnectv1alpha1.KonnectEventControlPlane{},
 }
 
 // konnectAPIAuthReferencingTypeListsWithIndexes is a map of Konnect resource list types
@@ -96,7 +95,7 @@ var konnectAPIAuthReferencingTypeListsWithIndexes = map[client.ObjectList]string
 	&konnectv1alpha1.KonnectCloudGatewayNetworkList{}: index.IndexFieldKonnectCloudGatewayNetworkOnAPIAuthConfiguration,
 	&konnectv1alpha2.KonnectGatewayControlPlaneList{}: index.IndexFieldKonnectGatewayControlPlaneOnAPIAuthConfiguration,
 	&konnectv1alpha2.KonnectExtensionList{}:           index.IndexFieldKonnectExtensionOnAPIAuthConfiguration,
-	&xkonnectv1alpha1.KonnectEventControlPlaneList{}:  index.IndexFieldKonnectEventControlPlaneOnAPIAuthConfiguration,
+	&konnectv1alpha1.KonnectEventControlPlaneList{}:   index.IndexFieldKonnectEventControlPlaneOnAPIAuthConfiguration,
 }
 
 // setKonnectAPIAuthConfigurationRefWatches sets up watches for types that reference KonnectAPIAuthConfiguration.

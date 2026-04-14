@@ -84,18 +84,25 @@ func (r *Runner) Run(
 		apiGroupPackagePath := fmt.Sprintf("github.com/kong/kong-operator/v2/api/%s/%s", groupPrefix, apiVersion)
 		apiGroupPackageAlias := strings.ReplaceAll(groupPrefix, "-", "") + apiVersion
 
+		// Determine whether to generate groupversion_info.go (default: true).
+		generateGVI := true
+		if agvConfig.GenerateGroupVersionInfo != nil {
+			generateGVI = *agvConfig.GenerateGroupVersionInfo
+		}
+
 		// Generate CRD types
 		gen := generator.NewGenerator(generator.Config{
-			APIGroup:             apiGroup,
-			APIVersion:           apiVersion,
-			GenerateStatus:       true,
-			FieldConfig:          agvConfig.FieldConfig(pathToEntityName),
-			OpsConfig:            agvConfig.OpsConfig(pathToEntityName),
-			CommonTypes:          agvConfig.CommonTypes,
-			SecretRefEntities:    agvConfig.SecretRefEntities(pathToEntityName),
-			ReconcilerConfig:     agvConfig.ReconcilerConfigs(pathToEntityName),
-			APIGroupPackagePath:  apiGroupPackagePath,
-			APIGroupPackageAlias: apiGroupPackageAlias,
+			APIGroup:                 apiGroup,
+			APIVersion:               apiVersion,
+			GenerateStatus:           true,
+			GenerateGroupVersionInfo: generateGVI,
+			FieldConfig:              agvConfig.FieldConfig(pathToEntityName),
+			OpsConfig:                agvConfig.OpsConfig(pathToEntityName),
+			CommonTypes:              agvConfig.CommonTypes,
+			SecretRefEntities:        agvConfig.SecretRefEntities(pathToEntityName),
+			ReconcilerConfig:         agvConfig.ReconcilerConfigs(pathToEntityName),
+			APIGroupPackagePath:      apiGroupPackagePath,
+			APIGroupPackageAlias:     apiGroupPackageAlias,
 		})
 
 		files, err := gen.Generate(parsed)
@@ -109,8 +116,14 @@ func (r *Runner) Run(
 			return fmt.Errorf("failed to create output directory %q: %w", dir, err)
 		}
 
-		if err := cleanupLegacyGeneratedFiles(dir, parsed); err != nil {
+		if err := cleanupLegacyGeneratedFiles(r.projectRoot, dir, parsed); err != nil {
 			return fmt.Errorf("failed to remove obsolete generated files in %q: %w", dir, err)
+		}
+
+		// Remove legacy register.go to avoid symbol conflicts with
+		// groupversion_info.go (either generated or hand-written).
+		if err := removeFileIfExists(filepath.Join(dir, "register.go")); err != nil {
+			return fmt.Errorf("failed to remove legacy register.go in %q: %w", dir, err)
 		}
 
 		// Write generated files
@@ -136,11 +149,45 @@ func (r *Runner) Run(
 	return nil
 }
 
-func cleanupLegacyGeneratedFiles(dir string, parsed *parser.ParsedSpec) error {
+func cleanupLegacyGeneratedFiles(projectRoot, dir string, parsed *parser.ParsedSpec) error {
 	for entityName := range parsed.RequestBodies {
-		legacyFilePath := filepath.Join(dir, legacyGeneratedFuncsFileName(parser.GetEntityNameFromType(entityName)))
+		entity := parser.GetEntityNameFromType(entityName)
+
+		legacyFilePath := filepath.Join(dir, legacyGeneratedFuncsFileName(entity))
 		if err := removeFileIfExists(legacyFilePath); err != nil {
 			return err
+		}
+
+		// Remove files that used the old naming convention without underscore
+		// after "konnect" (e.g. konnecteventcontrolplane_types.go).
+		// Only needed when the old prefix differs from the new one.
+		oldPrefix := strings.ToLower(entity)
+		newPrefix := oldPrefix
+		if after, ok := strings.CutPrefix(oldPrefix, "konnect"); ok && after != "" {
+			newPrefix = "konnect_" + after
+		}
+		if oldPrefix != newPrefix {
+			for _, suffix := range []string{
+				"_types.go",
+				"_sdkops.go",
+				"_sdkops_test.go",
+			} {
+				if err := removeFileIfExists(filepath.Join(dir, oldPrefix+suffix)); err != nil {
+					return err
+				}
+			}
+			if err := removeFileIfExists(filepath.Join(dir, "zz_generated_"+oldPrefix+"_funcs.go")); err != nil {
+				return err
+			}
+			// Clean up old-named reconciler wiring files.
+			if err := removeFileIfExists(filepath.Join(projectRoot, "controller/konnect", "zz_generated_watch_"+oldPrefix+".go")); err != nil {
+				return err
+			}
+			for _, suffix := range []string{".go", "_test.go"} {
+				if err := removeFileIfExists(filepath.Join(projectRoot, "internal/utils/index", "zz_generated_"+oldPrefix+suffix)); err != nil {
+					return err
+				}
+			}
 		}
 	}
 

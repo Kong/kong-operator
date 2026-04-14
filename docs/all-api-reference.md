@@ -11,6 +11,7 @@
 - [incubator.ingress-controller.konghq.com/v1alpha1](#incubator-ingress-controller-konghq-com-v1alpha1)
 - [konnect.konghq.com/v1alpha1](#konnect-konghq-com-v1alpha1)
 - [konnect.konghq.com/v1alpha2](#konnect-konghq-com-v1alpha2)
+- [x-konnect.konghq.com/v1alpha1](#x-konnect-konghq-com-v1alpha1)
 
 ## configuration.konghq.com/v1
 
@@ -4941,6 +4942,7 @@ Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1al
 - [KonnectCloudGatewayDataPlaneGroupConfiguration](#konnect-konghq-com-v1alpha1-konnectcloudgatewaydataplanegroupconfiguration)
 - [KonnectCloudGatewayNetwork](#konnect-konghq-com-v1alpha1-konnectcloudgatewaynetwork)
 - [KonnectCloudGatewayTransitGateway](#konnect-konghq-com-v1alpha1-konnectcloudgatewaytransitgateway)
+- [KonnectEventControlPlane](#konnect-konghq-com-v1alpha1-konnecteventcontrolplane)
 - [KonnectExtension](#konnect-konghq-com-v1alpha1-konnectextension)
 - [KonnectGatewayControlPlane](#konnect-konghq-com-v1alpha1-konnectgatewaycontrolplane)
 - [MCPServer](#konnect-konghq-com-v1alpha1-mcpserver)
@@ -5004,6 +5006,21 @@ KonnectCloudGatewayTransitGateway is the Schema for the Konnect Transit Gateway 
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KonnectCloudGatewayTransitGatewaySpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewayspec)_ | Spec defines the desired state of KonnectCloudGatewayTransitGateway. |
 | `status` _[KonnectCloudGatewayTransitGatewayStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewaystatus)_ | Status defines the observed state of KonnectCloudGatewayTransitGateway. |
+
+### KonnectEventControlPlane
+
+
+KonnectEventControlPlane is the Schema for the konnecteventcontrolplanes API.
+
+<!-- konnect_event_control_plane description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `KonnectEventControlPlane`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KonnectEventControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnecteventcontrolplanespec)_ |  |
+| `status` _[KonnectEventControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-konnecteventcontrolplanestatus)_ |  |
 
 ### KonnectExtension
 
@@ -5145,6 +5162,8 @@ _Appears in:_
 
 - [KonnectExtensionClientAuth](#konnect-konghq-com-v1alpha1-types-konnectextensionclientauth)
 
+
+
 #### ConfigurationDataPlaneGroupAutoscale
 
 
@@ -5278,6 +5297,32 @@ DataPlaneLabelValue is the type that defines the value of a label that will be a
 _Appears in:_
 
 - [KonnectExtensionDataPlane](#konnect-konghq-com-v1alpha1-types-konnectextensiondataplane)
+
+#### GatewayDescription
+
+_Underlying type:_ `string`
+
+GatewayDescription A human-readable description of the Gateway.
+
+
+
+
+_Appears in:_
+
+- [KonnectEventControlPlaneAPISpec](#konnect-konghq-com-v1alpha1-types-konnecteventcontrolplaneapispec)
+
+#### GatewayName
+
+_Underlying type:_ `string`
+
+GatewayName The name of the Gateway.
+
+
+
+
+_Appears in:_
+
+- [KonnectEventControlPlaneAPISpec](#konnect-konghq-com-v1alpha1-types-konnecteventcontrolplaneapispec)
 
 #### KonnectAPIAuthConfigurationSpec
 
@@ -5510,6 +5555,63 @@ _Appears in:_
 - [KonnectExtensionControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-konnectextensioncontrolplanestatus)
 - [KonnectGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanestatus)
 
+
+
+
+
+#### KonnectEventControlPlaneAPISpec
+
+
+KonnectEventControlPlaneAPISpec defines the API spec fields for KonnectEventControlPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `description` _[GatewayDescription](#konnect-konghq-com-v1alpha1-types-gatewaydescription)_ | A human-readable description of the Gateway. |
+| `labels` _[Labels](#konnect-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `min_runtime_version` _[MinRuntimeVersion](#konnect-konghq-com-v1alpha1-types-minruntimeversion)_ | The minimum runtime version supported by the API. This is the lowest version of the data plane release that can be used with the entity model. When not specified, the minimum runtime version will be pinned to the latest available release. |
+| `name` _[GatewayName](#konnect-konghq-com-v1alpha1-types-gatewayname)_ | The name of the Gateway. |
+
+_Appears in:_
+
+- [KonnectEventControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnecteventcontrolplanespec)
+
+#### KonnectEventControlPlaneSpec
+
+
+KonnectEventControlPlaneSpec defines the desired state of KonnectEventControlPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectConfiguration](#konnect-konghq-com-v1alpha2-types-konnectconfiguration)_ | KonnectConfiguration is the Konnect configuration for this entity. |
+| `apiSpec` _[KonnectEventControlPlaneAPISpec](#konnect-konghq-com-v1alpha1-types-konnecteventcontrolplaneapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [KonnectEventControlPlane](#konnect-konghq-com-v1alpha1-konnecteventcontrolplane)
+
+#### KonnectEventControlPlaneStatus
+
+
+KonnectEventControlPlaneStatus defines the observed state of KonnectEventControlPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
+| `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
+| `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [KonnectEventControlPlane](#konnect-konghq-com-v1alpha1-konnecteventcontrolplane)
+
 #### KonnectExtensionClientAuth
 
 
@@ -5708,6 +5810,34 @@ _Appears in:_
 
 - [KonnectCloudGatewayTransitGatewaySpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewayspec)
 
+#### Labels
+
+_Underlying type:_ `[map[string]LabelsValue](#map[string]labelsvalue)`
+
+Labels store metadata of an entity that can be used for filtering an entity
+list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong",
+"konnect", "mesh", "kic", or "_".
+
+
+
+
+_Appears in:_
+
+- [KonnectEventControlPlaneAPISpec](#konnect-konghq-com-v1alpha1-types-konnecteventcontrolplaneapispec)
+
+#### LabelsValue
+
+_Underlying type:_ `string`
+
+LabelsValue is the value type for Labels.
+
+
+
+
+_Appears in:_
+
+- [Labels](#konnect-konghq-com-v1alpha1-types-labels)
+
 #### MCPServerSpec
 
 
@@ -5760,6 +5890,23 @@ _Appears in:_
 
 - [MCPServerStatus](#konnect-konghq-com-v1alpha1-types-mcpserverstatus)
 
+#### MinRuntimeVersion
+
+_Underlying type:_ `string`
+
+MinRuntimeVersion The minimum runtime version supported by the API.
+This is the lowest version of the data plane
+release that can be used with the entity model.
+When not specified, the minimum runtime version will be pinned to the latest
+available release.
+
+
+
+
+_Appears in:_
+
+- [KonnectEventControlPlaneAPISpec](#konnect-konghq-com-v1alpha1-types-konnecteventcontrolplaneapispec)
+
 #### MirrorKonnect
 
 
@@ -5811,6 +5958,8 @@ Allowed values:
 | --- | --- |
 | `Manual` | ManualSecretProvisioning is the method used to provision the certificate manually.<br /> |
 | `Automatic` | AutomaticSecretProvisioning is the method used to provision the certificate automatically.<br /> |
+
+
 
 #### SecretRef
 
@@ -6015,7 +6164,7 @@ KonnectConfiguration is the Schema for the KonnectConfiguration API.
 _Appears in:_
 
 - [KonnectCloudGatewayNetworkSpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaynetworkspec)
-- [KonnectEventControlPlaneSpec](#x-konnect-konghq-com-v1alpha1-types-konnecteventcontrolplanespec)
+- [KonnectEventControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnecteventcontrolplanespec)
 - [KonnectExtensionKonnectSpec](#konnect-konghq-com-v1alpha1-types-konnectextensionkonnectspec)
 - [KonnectGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanespec)
 - [PortalSpec](#x-konnect-konghq-com-v1alpha1-types-portalspec)
@@ -6062,7 +6211,7 @@ _Appears in:_
 - [KonnectEntityStatusWithControlPlaneAndUpstreamRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandupstreamrefs)
 - [KonnectEntityStatusWithControlPlaneRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneref)
 - [KonnectEntityStatusWithNetworkRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithnetworkref)
-- [KonnectEventControlPlaneStatus](#x-konnect-konghq-com-v1alpha1-types-konnecteventcontrolplanestatus)
+- [KonnectEventControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-konnecteventcontrolplanestatus)
 - [KonnectGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanestatus)
 - [KonnectGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha2-types-konnectgatewaycontrolplanestatus)
 - [MCPServerStatus](#konnect-konghq-com-v1alpha1-types-mcpserverstatus)
@@ -6461,4 +6610,834 @@ _Appears in:_
 
 - [CertificateSecret](#konnect-konghq-com-v1alpha2-types-certificatesecret)
 - [DataPlaneClientAuthStatus](#konnect-konghq-com-v1alpha2-types-dataplaneclientauthstatus)
+
+## x-konnect.konghq.com/v1alpha1
+
+Package v1alpha1 contains API Schema definitions for the x-konnect.konghq.com v1alpha1 API group.
+
+- [DcrProvider](#x-konnect-konghq-com-v1alpha1-dcrprovider)
+- [KonnectEventDataPlaneCertificate](#x-konnect-konghq-com-v1alpha1-konnecteventdataplanecertificate)
+- [Portal](#x-konnect-konghq-com-v1alpha1-portal)
+- [PortalTeam](#x-konnect-konghq-com-v1alpha1-portalteam)
+
+### DcrProvider
+
+
+DcrProvider is the Schema for the dcrproviders API.
+
+<!-- dcr_provider description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `x-konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `DcrProvider`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[DcrProviderSpec](#x-konnect-konghq-com-v1alpha1-types-dcrproviderspec)_ |  |
+| `status` _[DcrProviderStatus](#x-konnect-konghq-com-v1alpha1-types-dcrproviderstatus)_ |  |
+
+### KonnectEventDataPlaneCertificate
+
+
+KonnectEventDataPlaneCertificate is the Schema for the konnecteventdataplanecertificates API.
+
+<!-- konnect_event_data_plane_certificate description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `x-konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `KonnectEventDataPlaneCertificate`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KonnectEventDataPlaneCertificateSpec](#x-konnect-konghq-com-v1alpha1-types-konnecteventdataplanecertificatespec)_ |  |
+| `status` _[KonnectEventDataPlaneCertificateStatus](#x-konnect-konghq-com-v1alpha1-types-konnecteventdataplanecertificatestatus)_ |  |
+
+### Portal
+
+
+Portal is the Schema for the portals API.
+
+<!-- portal description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `x-konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `Portal`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[PortalSpec](#x-konnect-konghq-com-v1alpha1-types-portalspec)_ |  |
+| `status` _[PortalStatus](#x-konnect-konghq-com-v1alpha1-types-portalstatus)_ |  |
+
+### PortalTeam
+
+
+PortalTeam is the Schema for the portalteams API.
+
+<!-- portal_team description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `x-konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `PortalTeam`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[PortalTeamSpec](#x-konnect-konghq-com-v1alpha1-types-portalteamspec)_ |  |
+| `status` _[PortalTeamStatus](#x-konnect-konghq-com-v1alpha1-types-portalteamstatus)_ |  |
+
+### Types
+
+In this section you will find types that the CRDs rely on.
+
+
+#### CreateDcrConfigAuth0InRequest
+
+
+CreateDcrConfigAuth0InRequest Payload to create an Auth0 DCR provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `initial_client_audience` _[DcrConfigPropertyInitialClientAudience](#x-konnect-konghq-com-v1alpha1-types-dcrconfigpropertyinitialclientaudience)_ | This is the audience value used for the initial client. If using a custom domain on Auth0, this must be set as to the Auth0 Management API audience value. If left blank, the issuer will be used instead. |
+| `initial_client_id` _[DcrConfigPropertyInitialClientID](#x-konnect-konghq-com-v1alpha1-types-dcrconfigpropertyinitialclientid)_ | This ID should be copied from your identity provider's settings after you create a client and assign it as the management client for DCR for this developer portal |
+| `initial_client_secret` _[DcrConfigPropertyInitialClientSecret](#x-konnect-konghq-com-v1alpha1-types-dcrconfigpropertyinitialclientsecret)_ | This secret should be copied from your identity provider's settings after you create a client and assign it as the management client for DCR for this developer portal |
+| `use_developer_managed_scopes` _string_ |  |
+
+_Appears in:_
+
+- [CreateDcrProviderRequestAuth0](#x-konnect-konghq-com-v1alpha1-types-createdcrproviderrequestauth0)
+
+#### CreateDcrConfigAzureAdInRequest
+
+
+CreateDcrConfigAzureAdInRequest Payload to create an Azure AD DCR provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `initial_client_id` _[DcrConfigPropertyInitialClientID](#x-konnect-konghq-com-v1alpha1-types-dcrconfigpropertyinitialclientid)_ | This ID should be copied from your identity provider's settings after you create a client and assign it as the management client for DCR for this developer portal |
+| `initial_client_secret` _[DcrConfigPropertyInitialClientSecret](#x-konnect-konghq-com-v1alpha1-types-dcrconfigpropertyinitialclientsecret)_ | This secret should be copied from your identity provider's settings after you create a client and assign it as the management client for DCR for this developer portal |
+
+_Appears in:_
+
+- [CreateDcrProviderRequestAzureAd](#x-konnect-konghq-com-v1alpha1-types-createdcrproviderrequestazuread)
+
+#### CreateDcrConfigCurityInRequest
+
+
+CreateDcrConfigCurityInRequest Payload to create a Curity DCR provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `initial_client_id` _[DcrConfigPropertyInitialClientID](#x-konnect-konghq-com-v1alpha1-types-dcrconfigpropertyinitialclientid)_ | This ID should be copied from your identity provider's settings after you create a client and assign it as the management client for DCR for this developer portal |
+| `initial_client_secret` _[DcrConfigPropertyInitialClientSecret](#x-konnect-konghq-com-v1alpha1-types-dcrconfigpropertyinitialclientsecret)_ | This secret should be copied from your identity provider's settings after you create a client and assign it as the management client for DCR for this developer portal |
+
+_Appears in:_
+
+- [CreateDcrProviderRequestCurity](#x-konnect-konghq-com-v1alpha1-types-createdcrproviderrequestcurity)
+
+#### CreateDcrConfigHTTPInRequest
+
+
+CreateDcrConfigHTTPInRequest Payload to create an HTTP DCR provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `allow_multiple_credentials` _[DcrConfigPropertyAllowMultipleCredentials](#x-konnect-konghq-com-v1alpha1-types-dcrconfigpropertyallowmultiplecredentials)_ | When enabled, indicates that the DCR provider supports creating and managing multiple credentials per application. |
+| `api_key` _[DcrConfigPropertyAPIKey](#x-konnect-konghq-com-v1alpha1-types-dcrconfigpropertyapikey)_ | This is the API Key that will be sent with each HTTP request to the custom DCR server. It can be verified on the server to ensure that incoming requests are coming from Konnect. |
+| `dcr_base_url` _[DcrBaseURL](#x-konnect-konghq-com-v1alpha1-types-dcrbaseurl)_ | The base URL of the DCR server. This is the URL that will be used to make the HTTP requests from Konnect to the DCR provider. This URL must be accessible from the Konnect service. |
+| `disable_event_hooks` _[DcrConfigPropertyDisableEventHooks](#x-konnect-konghq-com-v1alpha1-types-dcrconfigpropertydisableeventhooks)_ | This flag disables all the event-hooks on the application flow for the DCR provider. |
+| `disable_refresh_secret` _[DcrConfigPropertyDisableRefreshSecret](#x-konnect-konghq-com-v1alpha1-types-dcrconfigpropertydisablerefreshsecret)_ | This flag disable the refresh-secret endpoint on the application flow for the DCR provider. |
+
+_Appears in:_
+
+- [CreateDcrProviderRequestHTTP](#x-konnect-konghq-com-v1alpha1-types-createdcrproviderrequesthttp)
+
+#### CreateDcrConfigOktaInRequest
+
+
+CreateDcrConfigOktaInRequest Payload to create an Okta DCR provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `dcr_token` _[DcrConfigPropertyDcrToken](#x-konnect-konghq-com-v1alpha1-types-dcrconfigpropertydcrtoken)_ | This secret should be copied from your identity provider's settings after you create a client and assign it as the management client for DCR for this developer portal |
+
+_Appears in:_
+
+- [CreateDcrProviderRequestOkta](#x-konnect-konghq-com-v1alpha1-types-createdcrproviderrequestokta)
+
+#### CreateDcrProviderRequestAuth0
+
+
+CreateDcrProviderRequestAuth0 Request body for creating an Auth0 DCR
+provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `dcr_config` _[CreateDcrConfigAuth0InRequest](#x-konnect-konghq-com-v1alpha1-types-createdcrconfigauth0inrequest)_ | Payload to create an Auth0 DCR provider. |
+| `display_name` _[DcrProviderDisplayName](#x-konnect-konghq-com-v1alpha1-types-dcrproviderdisplayname)_ | The display name of the DCR provider. This is used to identify the DCR provider in the Portal UI. |
+| `issuer` _string_ |  |
+| `labels` _[Labels](#x-konnect-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _[DcrProviderName](#x-konnect-konghq-com-v1alpha1-types-dcrprovidername)_ | The name of the DCR provider. This is used to identify the DCR provider in the Konnect UI. |
+| `provider_type` _string_ |  |
+
+_Appears in:_
+
+- [DcrProviderConfig](#x-konnect-konghq-com-v1alpha1-types-dcrproviderconfig)
+
+#### CreateDcrProviderRequestAzureAd
+
+
+CreateDcrProviderRequestAzureAd Request body for creating an Azure AD DCR
+provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `dcr_config` _[CreateDcrConfigAzureAdInRequest](#x-konnect-konghq-com-v1alpha1-types-createdcrconfigazureadinrequest)_ | Payload to create an Azure AD DCR provider. |
+| `display_name` _[DcrProviderDisplayName](#x-konnect-konghq-com-v1alpha1-types-dcrproviderdisplayname)_ | The display name of the DCR provider. This is used to identify the DCR provider in the Portal UI. |
+| `issuer` _string_ |  |
+| `labels` _[Labels](#x-konnect-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _[DcrProviderName](#x-konnect-konghq-com-v1alpha1-types-dcrprovidername)_ | The name of the DCR provider. This is used to identify the DCR provider in the Konnect UI. |
+| `provider_type` _string_ |  |
+
+_Appears in:_
+
+- [DcrProviderConfig](#x-konnect-konghq-com-v1alpha1-types-dcrproviderconfig)
+
+#### CreateDcrProviderRequestCurity
+
+
+CreateDcrProviderRequestCurity Request body for creating a Curity DCR
+provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `dcr_config` _[CreateDcrConfigCurityInRequest](#x-konnect-konghq-com-v1alpha1-types-createdcrconfigcurityinrequest)_ | Payload to create a Curity DCR provider. |
+| `display_name` _[DcrProviderDisplayName](#x-konnect-konghq-com-v1alpha1-types-dcrproviderdisplayname)_ | The display name of the DCR provider. This is used to identify the DCR provider in the Portal UI. |
+| `issuer` _string_ |  |
+| `labels` _[Labels](#x-konnect-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _[DcrProviderName](#x-konnect-konghq-com-v1alpha1-types-dcrprovidername)_ | The name of the DCR provider. This is used to identify the DCR provider in the Konnect UI. |
+| `provider_type` _string_ |  |
+
+_Appears in:_
+
+- [DcrProviderConfig](#x-konnect-konghq-com-v1alpha1-types-dcrproviderconfig)
+
+#### CreateDcrProviderRequestHTTP
+
+
+CreateDcrProviderRequestHTTP Request body for creating an HTTP DCR provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `dcr_config` _[CreateDcrConfigHTTPInRequest](#x-konnect-konghq-com-v1alpha1-types-createdcrconfighttpinrequest)_ | Payload to create an HTTP DCR provider. |
+| `display_name` _[DcrProviderDisplayName](#x-konnect-konghq-com-v1alpha1-types-dcrproviderdisplayname)_ | The display name of the DCR provider. This is used to identify the DCR provider in the Portal UI. |
+| `issuer` _string_ |  |
+| `labels` _[Labels](#x-konnect-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _[DcrProviderName](#x-konnect-konghq-com-v1alpha1-types-dcrprovidername)_ | The name of the DCR provider. This is used to identify the DCR provider in the Konnect UI. |
+| `provider_type` _string_ |  |
+
+_Appears in:_
+
+- [DcrProviderConfig](#x-konnect-konghq-com-v1alpha1-types-dcrproviderconfig)
+
+#### CreateDcrProviderRequestOkta
+
+
+CreateDcrProviderRequestOkta Request body for creating an Okta DCR provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `dcr_config` _[CreateDcrConfigOktaInRequest](#x-konnect-konghq-com-v1alpha1-types-createdcrconfigoktainrequest)_ | Payload to create an Okta DCR provider. |
+| `display_name` _[DcrProviderDisplayName](#x-konnect-konghq-com-v1alpha1-types-dcrproviderdisplayname)_ | The display name of the DCR provider. This is used to identify the DCR provider in the Portal UI. |
+| `issuer` _string_ |  |
+| `labels` _[Labels](#x-konnect-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _[DcrProviderName](#x-konnect-konghq-com-v1alpha1-types-dcrprovidername)_ | The name of the DCR provider. This is used to identify the DCR provider in the Konnect UI. |
+| `provider_type` _string_ |  |
+
+_Appears in:_
+
+- [DcrProviderConfig](#x-konnect-konghq-com-v1alpha1-types-dcrproviderconfig)
+
+#### DcrBaseURL
+
+_Underlying type:_ `string`
+
+DcrBaseURL The base URL of the DCR server.
+This is the URL that will be used to make the HTTP requests from Konnect to
+the DCR provider.
+This URL must be accessible from the Konnect service.
+
+
+
+
+_Appears in:_
+
+- [CreateDcrConfigHTTPInRequest](#x-konnect-konghq-com-v1alpha1-types-createdcrconfighttpinrequest)
+
+#### DcrConfigPropertyAPIKey
+
+_Underlying type:_ `string`
+
+DcrConfigPropertyAPIKey This is the API Key that will be sent with each HTTP
+request to the custom DCR server.
+It can be
+verified on the server to ensure that incoming requests are coming from
+Konnect.
+
+
+
+
+_Appears in:_
+
+- [CreateDcrConfigHTTPInRequest](#x-konnect-konghq-com-v1alpha1-types-createdcrconfighttpinrequest)
+
+#### DcrConfigPropertyAllowMultipleCredentials
+
+_Underlying type:_ `string`
+
+DcrConfigPropertyAllowMultipleCredentials When enabled, indicates that the
+DCR provider supports creating and managing multiple credentials per
+application.
+
+
+
+
+_Appears in:_
+
+- [CreateDcrConfigHTTPInRequest](#x-konnect-konghq-com-v1alpha1-types-createdcrconfighttpinrequest)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `Enabled` | DcrConfigPropertyAllowMultipleCredentialsEnabled sets DcrConfigPropertyAllowMultipleCredentials as enabled.<br /> |
+| `Disabled` | DcrConfigPropertyAllowMultipleCredentialsDisabled sets DcrConfigPropertyAllowMultipleCredentials as disabled.<br /> |
+
+#### DcrConfigPropertyDcrToken
+
+_Underlying type:_ `string`
+
+DcrConfigPropertyDcrToken This secret should be copied from your identity
+provider's settings after you create a client
+and assign it as the management client for DCR for this developer portal
+
+
+
+
+_Appears in:_
+
+- [CreateDcrConfigOktaInRequest](#x-konnect-konghq-com-v1alpha1-types-createdcrconfigoktainrequest)
+
+#### DcrConfigPropertyDisableEventHooks
+
+_Underlying type:_ `string`
+
+DcrConfigPropertyDisableEventHooks This flag disables all the event-hooks on
+the application flow for the DCR provider.
+
+
+
+
+_Appears in:_
+
+- [CreateDcrConfigHTTPInRequest](#x-konnect-konghq-com-v1alpha1-types-createdcrconfighttpinrequest)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `Enabled` | DcrConfigPropertyDisableEventHooksEnabled sets DcrConfigPropertyDisableEventHooks as enabled.<br /> |
+| `Disabled` | DcrConfigPropertyDisableEventHooksDisabled sets DcrConfigPropertyDisableEventHooks as disabled.<br /> |
+
+#### DcrConfigPropertyDisableRefreshSecret
+
+_Underlying type:_ `string`
+
+DcrConfigPropertyDisableRefreshSecret This flag disable the refresh-secret
+endpoint on the application flow for the DCR provider.
+
+
+
+
+_Appears in:_
+
+- [CreateDcrConfigHTTPInRequest](#x-konnect-konghq-com-v1alpha1-types-createdcrconfighttpinrequest)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `Enabled` | DcrConfigPropertyDisableRefreshSecretEnabled sets DcrConfigPropertyDisableRefreshSecret as enabled.<br /> |
+| `Disabled` | DcrConfigPropertyDisableRefreshSecretDisabled sets DcrConfigPropertyDisableRefreshSecret as disabled.<br /> |
+
+#### DcrConfigPropertyInitialClientAudience
+
+_Underlying type:_ `string`
+
+DcrConfigPropertyInitialClientAudience This is the audience value used for
+the initial client.
+If using a custom domain on Auth0, this must be set as to the Auth0
+Management API audience value.
+If left blank, the issuer will be used instead.
+
+
+
+
+_Appears in:_
+
+- [CreateDcrConfigAuth0InRequest](#x-konnect-konghq-com-v1alpha1-types-createdcrconfigauth0inrequest)
+
+#### DcrConfigPropertyInitialClientID
+
+_Underlying type:_ `string`
+
+DcrConfigPropertyInitialClientID This ID should be copied from your identity
+provider's settings after you create a client
+and assign it as the management client for DCR for this developer portal
+
+
+
+
+_Appears in:_
+
+- [CreateDcrConfigAuth0InRequest](#x-konnect-konghq-com-v1alpha1-types-createdcrconfigauth0inrequest)
+- [CreateDcrConfigAzureAdInRequest](#x-konnect-konghq-com-v1alpha1-types-createdcrconfigazureadinrequest)
+- [CreateDcrConfigCurityInRequest](#x-konnect-konghq-com-v1alpha1-types-createdcrconfigcurityinrequest)
+
+#### DcrConfigPropertyInitialClientSecret
+
+_Underlying type:_ `string`
+
+DcrConfigPropertyInitialClientSecret This secret should be copied from your
+identity provider's settings after you create a client
+and assign it as the management client for DCR for this developer portal
+
+
+
+
+_Appears in:_
+
+- [CreateDcrConfigAuth0InRequest](#x-konnect-konghq-com-v1alpha1-types-createdcrconfigauth0inrequest)
+- [CreateDcrConfigAzureAdInRequest](#x-konnect-konghq-com-v1alpha1-types-createdcrconfigazureadinrequest)
+- [CreateDcrConfigCurityInRequest](#x-konnect-konghq-com-v1alpha1-types-createdcrconfigcurityinrequest)
+
+#### DcrProviderAPISpec
+
+
+DcrProviderAPISpec defines the API spec fields for DcrProvider.
+
+
+
+
+_Appears in:_
+
+- [DcrProviderSpec](#x-konnect-konghq-com-v1alpha1-types-dcrproviderspec)
+
+#### DcrProviderConfig
+
+
+DcrProviderConfig represents a union type for DcrProviderConfig.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[DcrProviderConfigType](#x-konnect-konghq-com-v1alpha1-types-dcrproviderconfigtype)_ | Type designates the type of configuration. |
+| `auth0` _[CreateDcrProviderRequestAuth0](#x-konnect-konghq-com-v1alpha1-types-createdcrproviderrequestauth0)_ | Auth0 configuration. |
+| `azuread` _[CreateDcrProviderRequestAzureAd](#x-konnect-konghq-com-v1alpha1-types-createdcrproviderrequestazuread)_ | AzureAd configuration. |
+| `curity` _[CreateDcrProviderRequestCurity](#x-konnect-konghq-com-v1alpha1-types-createdcrproviderrequestcurity)_ | Curity configuration. |
+| `okta` _[CreateDcrProviderRequestOkta](#x-konnect-konghq-com-v1alpha1-types-createdcrproviderrequestokta)_ | Okta configuration. |
+| `http` _[CreateDcrProviderRequestHTTP](#x-konnect-konghq-com-v1alpha1-types-createdcrproviderrequesthttp)_ | HTTP configuration. |
+
+_Appears in:_
+
+- [DcrProviderAPISpec](#x-konnect-konghq-com-v1alpha1-types-dcrproviderapispec)
+
+#### DcrProviderConfigType
+
+_Underlying type:_ `string`
+
+DcrProviderConfigType represents the type of DcrProviderConfig.
+
+
+
+
+_Appears in:_
+
+- [DcrProviderConfig](#x-konnect-konghq-com-v1alpha1-types-dcrproviderconfig)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `Auth0` |  |
+| `AzureAd` |  |
+| `Curity` |  |
+| `Okta` |  |
+| `Http` |  |
+
+#### DcrProviderDisplayName
+
+_Underlying type:_ `string`
+
+DcrProviderDisplayName The display name of the DCR provider.
+This is used to identify the DCR provider in the Portal UI.
+
+
+
+
+_Appears in:_
+
+- [CreateDcrProviderRequestAuth0](#x-konnect-konghq-com-v1alpha1-types-createdcrproviderrequestauth0)
+- [CreateDcrProviderRequestAzureAd](#x-konnect-konghq-com-v1alpha1-types-createdcrproviderrequestazuread)
+- [CreateDcrProviderRequestCurity](#x-konnect-konghq-com-v1alpha1-types-createdcrproviderrequestcurity)
+- [CreateDcrProviderRequestHTTP](#x-konnect-konghq-com-v1alpha1-types-createdcrproviderrequesthttp)
+- [CreateDcrProviderRequestOkta](#x-konnect-konghq-com-v1alpha1-types-createdcrproviderrequestokta)
+
+#### DcrProviderName
+
+_Underlying type:_ `string`
+
+DcrProviderName The name of the DCR provider.
+This is used to identify the DCR provider in the Konnect UI.
+
+
+
+
+_Appears in:_
+
+- [CreateDcrProviderRequestAuth0](#x-konnect-konghq-com-v1alpha1-types-createdcrproviderrequestauth0)
+- [CreateDcrProviderRequestAzureAd](#x-konnect-konghq-com-v1alpha1-types-createdcrproviderrequestazuread)
+- [CreateDcrProviderRequestCurity](#x-konnect-konghq-com-v1alpha1-types-createdcrproviderrequestcurity)
+- [CreateDcrProviderRequestHTTP](#x-konnect-konghq-com-v1alpha1-types-createdcrproviderrequesthttp)
+- [CreateDcrProviderRequestOkta](#x-konnect-konghq-com-v1alpha1-types-createdcrproviderrequestokta)
+
+#### DcrProviderSpec
+
+
+DcrProviderSpec defines the desired state of DcrProvider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `apiSpec` _[DcrProviderAPISpec](#x-konnect-konghq-com-v1alpha1-types-dcrproviderapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [DcrProvider](#x-konnect-konghq-com-v1alpha1-dcrprovider)
+
+#### DcrProviderStatus
+
+
+DcrProviderStatus defines the observed state of DcrProvider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [DcrProvider](#x-konnect-konghq-com-v1alpha1-dcrprovider)
+
+#### KonnectEntityRef
+
+
+KonnectEntityRef is a reference to a Konnect entity.
+
+
+
+| Field | Description |
+| --- | --- |
+| `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. |
+
+_Appears in:_
+
+- [KonnectEventDataPlaneCertificateStatus](#x-konnect-konghq-com-v1alpha1-types-konnecteventdataplanecertificatestatus)
+- [PortalTeamStatus](#x-konnect-konghq-com-v1alpha1-types-portalteamstatus)
+
+
+
+#### KonnectEventDataPlaneCertificateAPISpec
+
+
+KonnectEventDataPlaneCertificateAPISpec defines the API spec fields for KonnectEventDataPlaneCertificate.
+
+
+
+| Field | Description |
+| --- | --- |
+| `certificate` _string_ | JSON escaped string of the certificate. |
+| `description` _string_ | A description of the certificate. |
+| `name` _string_ | The name to identify of the certificate. |
+
+_Appears in:_
+
+- [KonnectEventDataPlaneCertificateSpec](#x-konnect-konghq-com-v1alpha1-types-konnecteventdataplanecertificatespec)
+
+#### KonnectEventDataPlaneCertificateSpec
+
+
+KonnectEventDataPlaneCertificateSpec defines the desired state of KonnectEventDataPlaneCertificate.
+
+
+
+| Field | Description |
+| --- | --- |
+| `gateway_ref` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. |
+| `type` _[SensitiveDataSourceType](#x-konnect-konghq-com-v1alpha1-types-sensitivedatasourcetype)_ | Type indicates the source of the sensitive data. Can be 'inline' or 'secretRef'. |
+| `apiSpec` _[KonnectEventDataPlaneCertificateAPISpec](#x-konnect-konghq-com-v1alpha1-types-konnecteventdataplanecertificateapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+| `secretRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | SecretRef is a reference to a Kubernetes Secret containing the sensitive data. This field is used when type is 'secretRef'. The Secret must contain the relevant data keys for this resource. |
+
+_Appears in:_
+
+- [KonnectEventDataPlaneCertificate](#x-konnect-konghq-com-v1alpha1-konnecteventdataplanecertificate)
+
+#### KonnectEventDataPlaneCertificateStatus
+
+
+KonnectEventDataPlaneCertificateStatus defines the observed state of KonnectEventDataPlaneCertificate.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#x-konnect-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [KonnectEventDataPlaneCertificate](#x-konnect-konghq-com-v1alpha1-konnecteventdataplanecertificate)
+
+#### Labels
+
+_Underlying type:_ `[map[string]LabelsValue](#map[string]labelsvalue)`
+
+Labels store metadata of an entity that can be used for filtering an entity
+list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong",
+"konnect", "mesh", "kic", or "_".
+
+
+
+
+_Appears in:_
+
+- [CreateDcrProviderRequestAuth0](#x-konnect-konghq-com-v1alpha1-types-createdcrproviderrequestauth0)
+- [CreateDcrProviderRequestAzureAd](#x-konnect-konghq-com-v1alpha1-types-createdcrproviderrequestazuread)
+- [CreateDcrProviderRequestCurity](#x-konnect-konghq-com-v1alpha1-types-createdcrproviderrequestcurity)
+- [CreateDcrProviderRequestHTTP](#x-konnect-konghq-com-v1alpha1-types-createdcrproviderrequesthttp)
+- [CreateDcrProviderRequestOkta](#x-konnect-konghq-com-v1alpha1-types-createdcrproviderrequestokta)
+
+#### LabelsUpdate
+
+_Underlying type:_ `[map[string]LabelsUpdateValue](#map[string]labelsupdatevalue)`
+
+LabelsUpdate Labels store metadata of an entity that can be used for
+filtering an entity list or for searching across entity types.<br /><br />Labels are intended to store **INTERNAL** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong",
+"konnect", "mesh", "kic", or "_".
+
+
+
+
+_Appears in:_
+
+- [PortalAPISpec](#x-konnect-konghq-com-v1alpha1-types-portalapispec)
+
+#### LabelsUpdateValue
+
+_Underlying type:_ `string`
+
+LabelsUpdateValue is the value type for LabelsUpdate.
+
+
+
+
+_Appears in:_
+
+- [LabelsUpdate](#x-konnect-konghq-com-v1alpha1-types-labelsupdate)
+
+#### LabelsValue
+
+_Underlying type:_ `string`
+
+LabelsValue is the value type for Labels.
+
+
+
+
+_Appears in:_
+
+- [Labels](#x-konnect-konghq-com-v1alpha1-types-labels)
+
+#### PortalAPISpec
+
+
+PortalAPISpec defines the API spec fields for Portal.
+
+
+
+| Field | Description |
+| --- | --- |
+| `authentication_enabled` _string_ | Whether the portal supports developer authentication. If disabled, developers cannot register for accounts or create applications. |
+| `auto_approve_applications` _string_ | Whether requests from applications to register for APIs will be automatically approved, or if they will be set to pending until approved by an admin. |
+| `auto_approve_developers` _string_ | Whether developer account registrations will be automatically approved, or if they will be set to pending until approved by an admin. |
+| `default_api_visibility` _string_ | The default visibility of APIs in the portal. If set to `public`, newly published APIs are visible to unauthenticated developers. If set to `private`, newly published APIs are hidden from unauthenticated developers. |
+| `default_application_auth_strategy_id_ref` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | The default authentication strategy for APIs published to the portal. Newly published APIs will use this authentication strategy unless overridden during publication. If set to `null`, API publications will not use an authentication strategy unless set during publication. |
+| `default_page_visibility` _string_ | The default visibility of pages in the portal. If set to `public`, newly created pages are visible to unauthenticated developers. If set to `private`, newly created pages are hidden from unauthenticated developers. |
+| `description` _*string_ | A description of the portal. |
+| `display_name` _string_ | The display name of the portal. This value will be the portal's `name` in Portal API. |
+| `labels` _[LabelsUpdate](#x-konnect-konghq-com-v1alpha1-types-labelsupdate)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Labels are intended to store **INTERNAL** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _string_ | The name of the portal, used to distinguish it from other portals. Name must be unique. |
+| `rbac_enabled` _string_ | Whether the portal resources are protected by Role Based Access Control (RBAC). If enabled, developers view or register for APIs until unless assigned to teams with access to view and consume specific APIs. Authentication must be enabled to use RBAC. |
+| `sipr_enabled` _[SourceIPEnabled](#x-konnect-konghq-com-v1alpha1-types-sourceipenabled)_ | Whether ip allow list is enabled for the organization. |
+
+_Appears in:_
+
+- [PortalSpec](#x-konnect-konghq-com-v1alpha1-types-portalspec)
+
+#### PortalSpec
+
+
+PortalSpec defines the desired state of Portal.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectConfiguration](#konnect-konghq-com-v1alpha2-types-konnectconfiguration)_ | KonnectConfiguration is the Konnect configuration for this entity. |
+| `apiSpec` _[PortalAPISpec](#x-konnect-konghq-com-v1alpha1-types-portalapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [Portal](#x-konnect-konghq-com-v1alpha1-portal)
+
+#### PortalStatus
+
+
+PortalStatus defines the observed state of Portal.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
+| `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
+| `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [Portal](#x-konnect-konghq-com-v1alpha1-portal)
+
+#### PortalTeamAPISpec
+
+
+PortalTeamAPISpec defines the API spec fields for PortalTeam.
+
+
+
+| Field | Description |
+| --- | --- |
+| `can_own_applications` _string_ | Whether the team is allowed to own applications |
+| `description` _string_ |  |
+| `name` _string_ |  |
+
+_Appears in:_
+
+- [PortalTeamSpec](#x-konnect-konghq-com-v1alpha1-types-portalteamspec)
+
+#### PortalTeamSpec
+
+
+PortalTeamSpec defines the desired state of PortalTeam.
+
+
+
+| Field | Description |
+| --- | --- |
+| `portal_ref` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | PortalRef is the reference to the parent Portal object. |
+| `apiSpec` _[PortalTeamAPISpec](#x-konnect-konghq-com-v1alpha1-types-portalteamapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [PortalTeam](#x-konnect-konghq-com-v1alpha1-portalteam)
+
+#### PortalTeamStatus
+
+
+PortalTeamStatus defines the observed state of PortalTeam.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `portalID` _[KonnectEntityRef](#x-konnect-konghq-com-v1alpha1-types-konnectentityref)_ | PortalID is the Konnect ID of the parent Portal. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [PortalTeam](#x-konnect-konghq-com-v1alpha1-portalteam)
+
+
+
+#### SensitiveDataSourceType
+
+_Underlying type:_ `string`
+
+SensitiveDataSourceType is the type of source for the sensitive data.
+
+
+
+
+_Appears in:_
+
+- [KonnectEventDataPlaneCertificateSpec](#x-konnect-konghq-com-v1alpha1-types-konnecteventdataplanecertificatespec)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `inline` | SensitiveDataSourceTypeInline indicates that the data is provided inline in the APISpec.<br /> |
+| `secretRef` | SensitiveDataSourceTypeSecretRef indicates that the data is sourced from a Kubernetes Secret.<br /> |
+
+#### SourceIPEnabled
+
+_Underlying type:_ `string`
+
+SourceIPEnabled Whether ip allow list is enabled for the organization.
+
+
+
+
+_Appears in:_
+
+- [PortalAPISpec](#x-konnect-konghq-com-v1alpha1-types-portalapispec)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `Enabled` | SourceIPEnabledEnabled sets SourceIPEnabled as enabled.<br /> |
+| `Disabled` | SourceIPEnabledDisabled sets SourceIPEnabled as disabled.<br /> |
 

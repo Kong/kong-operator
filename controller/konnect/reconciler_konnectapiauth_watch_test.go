@@ -8,7 +8,6 @@ import (
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
-	xkonnectv1alpha1 "github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1"
 )
 
 func TestKonnectAPIAuthReferencingTypesOnlyIncludeSupportedEntities(t *testing.T) {
@@ -20,7 +19,7 @@ func TestKonnectAPIAuthReferencingTypesOnlyIncludeSupportedEntities(t *testing.T
 		case *konnectv1alpha1.KonnectCloudGatewayNetwork,
 			*konnectv1alpha2.KonnectGatewayControlPlane,
 			*konnectv1alpha2.KonnectExtension,
-			*xkonnectv1alpha1.KonnectEventControlPlane:
+			*konnectv1alpha1.KonnectEventControlPlane:
 		default:
 			t.Fatalf("unexpected KonnectAPIAuthConfiguration referencing type %T", ent)
 		}
@@ -43,7 +42,7 @@ func assertSupportedKonnectAPIAuthReferencingListType(t *testing.T, objList clie
 	case *konnectv1alpha1.KonnectCloudGatewayNetworkList,
 		*konnectv1alpha2.KonnectGatewayControlPlaneList,
 		*konnectv1alpha2.KonnectExtensionList,
-		*xkonnectv1alpha1.KonnectEventControlPlaneList:
+		*konnectv1alpha1.KonnectEventControlPlaneList:
 	default:
 		t.Fatalf("unexpected KonnectAPIAuthConfiguration referencing list type %T", objList)
 	}

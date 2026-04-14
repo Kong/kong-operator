@@ -3,7 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"math"
 	"strings"
+	"time"
 
 	"github.com/kong/kong-operator/v2/modules/cli"
 	"github.com/kong/kong-operator/v2/modules/manager"
@@ -51,6 +53,18 @@ func visit(markdown *strings.Builder) func(*flag.Flag) {
 		defaultValue := "\"\""
 		if flag.DefValue != "" {
 			defaultValue = fmt.Sprintf("'`%s`'", flag.DefValue)
+			// Try to parse as duration and convert to human-readable format.
+			if d, err := time.ParseDuration(flag.DefValue); err == nil {
+				hours := d.Hours()
+				switch {
+				case hours >= 24*365 && math.Mod(hours, 24*365) == 0:
+					defaultValue = fmt.Sprintf("'`%dh (%d years)`'", int(hours), int(hours/(24*365)))
+				case hours >= 24 && math.Mod(hours, 24) == 0:
+					defaultValue = fmt.Sprintf("'`%dh (%d days)`'", int(hours), int(hours/24))
+				default:
+					defaultValue = fmt.Sprintf("'`%s`'", flag.DefValue)
+				}
+			}
 		}
 
 		mustWrite(markdown, fmt.Sprintf("  - flag: '%s'\n", name))

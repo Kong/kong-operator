@@ -192,6 +192,7 @@ func EnsureCertificate[
 	usages []certificatesv1.KeyUsage,
 	cl client.Client,
 	additionalMatchingLabels client.MatchingLabels,
+	certTTL time.Duration,
 ) (op.Result, *corev1.Secret, error) {
 	// Get the Secrets for the DataPlane using new labels.
 	matchingLabels := k8sresources.GetManagedLabelForOwner(owner)
@@ -215,7 +216,7 @@ func EnsureCertificate[
 	generatedSecret := k8sresources.GenerateNewTLSSecret(owner, secretOpts...)
 	// If there are no secrets yet, then create one.
 	if count == 0 {
-		return generateTLSDataSecret(ctx, generatedSecret, owner, subject, mtlsCASecretNN, usages, cl)
+		return generateTLSDataSecret(ctx, generatedSecret, owner, subject, mtlsCASecretNN, usages, cl, certTTL)
 	}
 
 	// Otherwise there is already 1 certificate matching specified selectors.
@@ -228,7 +229,7 @@ func EnsureCertificate[
 			return op.Noop, nil, err
 		}
 
-		return generateTLSDataSecret(ctx, generatedSecret, owner, subject, mtlsCASecretNN, usages, cl)
+		return generateTLSDataSecret(ctx, generatedSecret, owner, subject, mtlsCASecretNN, usages, cl, certTTL)
 	}
 
 	// Check if existing certificate is for a different subject.
@@ -242,7 +243,7 @@ func EnsureCertificate[
 			return op.Noop, nil, err
 		}
 
-		return generateTLSDataSecret(ctx, generatedSecret, owner, subject, mtlsCASecretNN, usages, cl)
+		return generateTLSDataSecret(ctx, generatedSecret, owner, subject, mtlsCASecretNN, usages, cl, certTTL)
 	}
 
 	var updated bool
@@ -310,6 +311,7 @@ func generateTLSDataSecret(
 	mtlsCASecret types.NamespacedName,
 	usages []certificatesv1.KeyUsage,
 	k8sClient client.Client,
+	certTTL time.Duration,
 ) (op.Result, *corev1.Secret, error) {
 
 	var ca corev1.Secret
@@ -344,12 +346,7 @@ func generateTLSDataSecret(
 	// This is effectively a placeholder so long as we handle signing internally. When actually creating CSR resources,
 	// this string is used by signers to filter which resources they pay attention to
 	signerName := "gateway-operator.konghq.com/mtls"
-	// TODO This creates certificates that last for 10 years as an arbitrarily long period for the alpha. A production-
-	// ready implementation should use a shorter lifetime and rotate certificates. Rotation requires some mechanism to
-	// recognize that certificates have expired (ideally without permissions to read Secrets across the cluster) and
-	// to get Deployments to acknowledge them. For Kong, this requires a restart, as there's no way to force a reload
-	// of updated files on disk.
-	expiration := int32(315400000) // 10 years in seconds.
+	expiration := int32(certTTL.Seconds())
 
 	csr := certificatesv1.CertificateSigningRequest{
 		ObjectMeta: metav1.ObjectMeta{
@@ -377,9 +374,18 @@ func generateTLSDataSecret(
 		"tls.crt": signed,
 		"tls.key": pem.EncodeToMemory(pemBlock),
 	}
+	// Preserve certificate expiration date as an annotation.
+	if generatedSecret.Annotations == nil {
+		generatedSecret.Annotations = make(map[string]string)
+	}
+	if certBlock, _ := pem.Decode(signed); certBlock != nil {
+		cert, err := x509.ParseCertificate(certBlock.Bytes)
+		if err == nil {
+			generatedSecret.Annotations[consts.CertExpiresAtAnnotation] = cert.NotAfter.UTC().Format(time.RFC3339)
+		}
+	}
 
-	err = k8sClient.Create(ctx, generatedSecret)
-	if err != nil {
+	if err = k8sClient.Create(ctx, generatedSecret); err != nil {
 		return op.Noop, nil, err
 	}
 

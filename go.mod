@@ -5,7 +5,7 @@ go 1.26.2
 require (
 	cloud.google.com/go/container v1.47.0
 	dario.cat/mergo v1.0.2
-	github.com/Kong/sdk-konnect-go v0.30.0
+	github.com/Kong/sdk-konnect-go v0.31.0
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/avast/retry-go/v4 v4.7.0
 	github.com/blang/semver/v4 v4.0.0
@@ -27,7 +27,7 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/jpillora/backoff v1.0.0
-	github.com/kong/go-database-reconciler v1.35.0
+	github.com/kong/go-database-reconciler v1.35.1
 	github.com/kong/go-kong v0.74.0
 	github.com/kong/kubernetes-telemetry v0.1.13
 	github.com/kong/kubernetes-testing-framework v0.49.0
@@ -49,7 +49,7 @@ require (
 	// which is already done in ktf and will get rid of the github.com/docker/docker
 	// dependency in our go.mod file.
 	github.com/testcontainers/testcontainers-go v0.42.0
-	github.com/testcontainers/testcontainers-go/modules/postgres v0.41.0
+	github.com/testcontainers/testcontainers-go/modules/postgres v0.42.0
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/pretty v1.2.1
 	github.com/tonglil/buflogr v1.1.1

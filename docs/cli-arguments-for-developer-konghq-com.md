@@ -76,6 +76,14 @@ rows:
     type: '`string`'
     description: "Sets the time limit for syncing controller caches. Defaults to the controller-runtime value if set to `0`."
     default: '`0s`'
+  - flag: '`--cert-expiration-margin`'
+    type: '`duration`'
+    description: "Duration before certificate expiration at which the operator will trigger certificate renewal (specify it in hours in a format like '168h'). Must be lower than cert-ttl."
+    default: '`168h (7 days)`'
+  - flag: '`--cert-ttl`'
+    type: '`duration`'
+    description: "Time-to-live for certificates issued by the operator (specify it in hours in a format like '87600h')."
+    default: '`87600h (10 years)`'
   - flag: '`--cluster-ca-key-size`'
     type: '`int`'
     description: "WARN: DEPRECATED (it has no effect): Size (in bits) of the key used for the cluster CA certificate. Only used for RSA keys."
