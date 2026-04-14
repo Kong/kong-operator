@@ -1395,7 +1395,7 @@ func TestGenerateRBAC(t *testing.T) {
 		content, err := g.generateRBAC([]string{"KonnectEventControlPlane", "SomeOtherEntity"})
 		require.NoError(t, err)
 		assert.Contains(t, content, "resources=konnecteventcontrolplanes,")
-		assert.Contains(t, content, "resources=someotherentitys,")
+		assert.Contains(t, content, "resources=someotherentities,")
 	})
 }
 
