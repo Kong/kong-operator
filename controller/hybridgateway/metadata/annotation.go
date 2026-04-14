@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -19,6 +20,7 @@ const (
 	stripPathKey     = "/strip-path"
 	preserveHostKey  = "/preserve-host"
 	protocolKey      = "/protocol"
+	kindHTTPRoute    = "HTTPRoute"
 )
 
 // Defaults for the annotations when not specified that match the behavior of on-prem.
@@ -104,13 +106,14 @@ func BuildAnnotations(obj client.Object, parentRef *gwtypes.ParentReference) map
 	}
 
 	// Add route annotation for TLSRoute and HTTPRoute objects
-	// TODO: include kind of the parent route to prevent conflicts:
-	// https://github.com/Kong/kong-operator/issues/3747
+	// Include kind of the parent route to prevent conflicts between different kind of routes.
+	// REVIEW: Should we provide the options to generate the KO 2.1 compatible format (namespace/name) for HTTPRoute for backward compatibility?
+	objectKind := obj.GetObjectKind().GroupVersionKind().Kind
 	switch obj.(type) {
 	case *gwtypes.HTTPRoute:
-		annotations[consts.GatewayOperatorHybridRoutesAnnotation] = client.ObjectKeyFromObject(obj).String()
+		annotations[consts.GatewayOperatorHybridRoutesAnnotation] = objectKind + "/" + client.ObjectKeyFromObject(obj).String()
 	case *gwtypes.TLSRoute:
-		annotations[consts.GatewayOperatorHybridRoutesAnnotation] = client.ObjectKeyFromObject(obj).String()
+		annotations[consts.GatewayOperatorHybridRoutesAnnotation] = objectKind + "/" + client.ObjectKeyFromObject(obj).String()
 	}
 
 	return annotations
@@ -217,8 +220,10 @@ func (am *AnnotationManager) AppendRouteToAnnotation(obj metav1.Object, route cl
 // Returns:
 //   - bool: true if the annotation was modified, false if no changes were made
 func (am *AnnotationManager) RemoveRouteFromAnnotation(obj metav1.Object, route client.Object) bool {
-	currentRouteKey := client.ObjectKeyFromObject(route).String()
-	currentRouteAnnotation := currentRouteKey
+	currentRouteKind := route.GetObjectKind().GroupVersionKind().Kind
+	currentRouteObjectKey := client.ObjectKeyFromObject(route).String()
+	// The annotation is in kind/namespace/name format.
+	currentRouteAnnotation := currentRouteKind + "/" + currentRouteObjectKey
 
 	log.Debug(am.logger, "Removing route from annotation",
 		"routeToRemove", currentRouteAnnotation,
@@ -247,13 +252,15 @@ func (am *AnnotationManager) RemoveRouteFromAnnotation(obj metav1.Object, route 
 
 	// Filter out the route to remove
 	found := false
-	for _, route := range existingRoutes {
-		route = strings.TrimSpace(route)
-		if route != currentRouteAnnotation {
-			remainingRoutes = append(remainingRoutes, route)
-		} else {
+	for _, routeAnnotation := range existingRoutes {
+		routeAnnotation = strings.TrimSpace(routeAnnotation)
+		if routeAnnotation == currentRouteAnnotation ||
+			// For HTTPRoute, KO 2.1 was using namespace/name format so match the format if the kind is HTTPRoute.
+			currentRouteKind == kindHTTPRoute && routeAnnotation == currentRouteObjectKey {
 			found = true
+			continue
 		}
+		remainingRoutes = append(remainingRoutes, routeAnnotation)
 	}
 
 	if !found {
@@ -297,17 +304,20 @@ func (am *AnnotationManager) ContainsRoute(obj metav1.Object, route client.Objec
 		return false
 	}
 
-	currentRouteKey := client.ObjectKeyFromObject(route).String()
-	currentRouteAnnotation := currentRouteKey
+	currentRouteKind := route.GetObjectKind().GroupVersionKind().Kind
+	currentRouteObjectKey := client.ObjectKeyFromObject(route).String()
+	currentRouteAnnotation := currentRouteKind + "/" + currentRouteObjectKey
 
 	existingAnnotation, exists := annotations[consts.GatewayOperatorHybridRoutesAnnotation]
 	if !exists || existingAnnotation == "" {
 		return false
 	}
 
-	for route := range strings.SplitSeq(existingAnnotation, ",") {
-		route = strings.TrimSpace(route)
-		if route == currentRouteAnnotation {
+	for routeAnnotation := range strings.SplitSeq(existingAnnotation, ",") {
+		routeAnnotation = strings.TrimSpace(routeAnnotation)
+		if routeAnnotation == currentRouteAnnotation ||
+			// For HTTPRoute, KO 2.1 was using namespace/name format so match the format if the kind is HTTPRoute.
+			currentRouteKind == kindHTTPRoute && routeAnnotation == currentRouteObjectKey {
 			return true
 		}
 	}
@@ -322,7 +332,7 @@ func (am *AnnotationManager) ContainsRoute(obj metav1.Object, route client.Objec
 //   - obj: Any Kubernetes object that implements metav1.Object
 //
 // Returns:
-//   - []string: List of route references in "namespace/name" format
+//   - []string: List of route references in "kind/namespace/name" format
 func (am *AnnotationManager) GetRoutes(obj metav1.Object) []string {
 	annotations := obj.GetAnnotations()
 	if annotations == nil {
@@ -342,8 +352,12 @@ func (am *AnnotationManager) GetRoutes(obj metav1.Object) []string {
 		if route == "" {
 			continue
 		}
-
-		// Format is now just "namespace/name"
+		// For route keys with only 2 parts, treat them as the annotation created by KO 2.1 so set kind to "HTTPRoute".
+		parts := strings.Split(route, "/")
+		if len(parts) == 2 {
+			route = kindHTTPRoute + "/" + route
+		}
+		// Format is now just "kind/namespace/name"
 		routes = append(routes, route)
 	}
 
@@ -354,7 +368,7 @@ func (am *AnnotationManager) GetRoutes(obj metav1.Object) []string {
 //
 // Parameters:
 //   - obj: Any Kubernetes object that implements metav1.Object
-//   - routes: List of route references to set in the annotation
+//   - routes: List of route references (kind/namespace/name) to set in the annotation
 //
 // Returns:
 //   - bool: true if the annotation was modified, false if no changes were made
@@ -370,28 +384,21 @@ func (am *AnnotationManager) SetRoutes(obj metav1.Object, routes []string) bool 
 	// Check if annotation needs to be updated
 	existingAnnotation := annotations[consts.GatewayOperatorHybridRoutesAnnotation]
 	existingRoutes := strings.Split(existingAnnotation, ",")
-	if len(existingRoutes) == len(routes) {
-		same := true
-		for _, er := range existingRoutes {
-			er = strings.TrimSpace(er)
-			found := false
-			for _, r := range routes {
-				r = strings.TrimSpace(r)
-				if er == r {
-					found = true
-					break
-				}
-			}
-			if !found {
-				same = false
-				break
-			}
+
+	same := lo.ElementsMatchBy(existingRoutes, routes, func(routeKey string) string {
+		routeKey = strings.TrimSpace(routeKey)
+		parts := strings.Split(routeKey, "/")
+		// For route keys with only 2 parts, treat them as the annotation created by KO 2.1 so set kind to "HTTPRoute".
+		if len(parts) == 2 {
+			return kindHTTPRoute + "/" + routeKey
 		}
-		if same {
-			log.Debug(am.logger, "Hybrid-routes annotation already up to date",
-				"objectName", obj.GetName())
-			return false
-		}
+		return routeKey
+	})
+
+	if same {
+		log.Debug(am.logger, "Hybrid-routes annotation already up to date",
+			"objectName", obj.GetName())
+		return false
 	}
 
 	if newAnnotation == "" {

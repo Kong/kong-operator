@@ -2,6 +2,7 @@ package watch
 
 import (
 	"context"
+	"strings"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -19,6 +20,12 @@ import (
 
 // This file is for map functions shared by all supported routes in gateway APIs.
 
+const (
+	// REVIEW: define the kinds in some common packages?
+	kindHTTPRoute = "HTTPRoute"
+	kindTLSRoute  = "TLSRoute"
+)
+
 // kongResource is a type constraint that encompasses all Kong resource types
 // that can be mapped back to routes with supported type via annotations.
 type kongResource interface {
@@ -33,7 +40,7 @@ type kongResource interface {
 // MapRouteForKongResource returns a handler.MapFunc that, given a Kong resource object of type T,
 // retrieves the routes referenced in its annotations. It returns a slice of reconcile.Requests
 // for each matching route.
-func MapRouteForKongResource[T kongResource](cl client.Client) handler.MapFunc {
+func MapRouteForKongResource[T kongResource](cl client.Client, kind string) handler.MapFunc {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
 		_, ok := obj.(T)
 		if !ok {
@@ -48,9 +55,12 @@ func MapRouteForKongResource[T kongResource](cl client.Client) handler.MapFunc {
 
 		var requests []reconcile.Request
 		for _, r := range routes {
-			requests = append(requests, reconcile.Request{
-				NamespacedName: metadata.NameStringToObjectKey(r),
-			})
+			if strings.HasPrefix(r, kind+"/") {
+				requests = append(requests, reconcile.Request{
+					NamespacedName: metadata.NameStringToObjectKey(strings.TrimPrefix(r, kind+"/")),
+				})
+			}
+
 		}
 		return requests
 	}
