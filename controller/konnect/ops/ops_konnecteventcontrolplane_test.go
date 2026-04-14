@@ -12,8 +12,8 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
-	xkonnectv1alpha1 "github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1"
 )
 
 func TestCreateKonnectEventControlPlane(t *testing.T) {
@@ -122,10 +122,10 @@ func TestGetKonnectEventControlPlaneForUID(t *testing.T) {
 	assert.Equal(t, "gateway-1", id)
 }
 
-func testKonnectEventControlPlane() *xkonnectv1alpha1.KonnectEventControlPlane {
-	return &xkonnectv1alpha1.KonnectEventControlPlane{
+func testKonnectEventControlPlane() *konnectv1alpha1.KonnectEventControlPlane {
+	return &konnectv1alpha1.KonnectEventControlPlane{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: xkonnectv1alpha1.GroupVersion.String(),
+			APIVersion: konnectv1alpha1.GroupVersion.String(),
 			Kind:       "KonnectEventControlPlane",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -134,17 +134,17 @@ func testKonnectEventControlPlane() *xkonnectv1alpha1.KonnectEventControlPlane {
 			UID:        "event-control-plane-uid",
 			Generation: 3,
 		},
-		Spec: xkonnectv1alpha1.KonnectEventControlPlaneSpec{
+		Spec: konnectv1alpha1.KonnectEventControlPlaneSpec{
 			KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 				APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 					Name: "test-auth",
 				},
 			},
-			APISpec: xkonnectv1alpha1.KonnectEventControlPlaneAPISpec{
+			APISpec: konnectv1alpha1.KonnectEventControlPlaneAPISpec{
 				Name:              "event-control-plane",
 				Description:       "Event gateway description",
 				MinRuntimeVersion: "3.8",
-				Labels: xkonnectv1alpha1.Labels{
+				Labels: konnectv1alpha1.Labels{
 					"team": "platform",
 				},
 			},

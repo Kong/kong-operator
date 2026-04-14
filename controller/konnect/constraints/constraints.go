@@ -63,7 +63,7 @@ type SupportedKonnectEntityType interface {
 		konnectv1alpha1.MCPServer |
 		// TODO: auto-generate SupportedKonnectEntityType entries for generated Konnect entities.
 		// https://github.com/Kong/kong-operator/issues/3785
-		xkonnectv1alpha1.KonnectEventControlPlane |
+		konnectv1alpha1.KonnectEventControlPlane |
 		xkonnectv1alpha1.Portal
 	// TODO: add other types
 

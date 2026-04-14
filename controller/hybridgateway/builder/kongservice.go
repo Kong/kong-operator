@@ -94,16 +94,33 @@ func (b *KongServiceBuilder) WithOwner(owner client.Object) *KongServiceBuilder 
 	return b
 }
 
-// WithProtocol sets the protocols for the KongService being built.
+// WithProtocol sets the protocol for the KongService being built.
+// Supported protocols match the Kong Gateway upstream protocol set.
 func (b *KongServiceBuilder) WithProtocol(protocol string) *KongServiceBuilder {
 	if protocol == "" {
 		protocol = "http"
 	}
 	switch protocol {
-	case "http", "HTTP":
+	case "http":
 		b.service.Spec.Protocol = sdkkonnectcomp.ProtocolHTTP
-	case "tls", "TLS":
+	case "https":
+		b.service.Spec.Protocol = sdkkonnectcomp.ProtocolHTTPS
+	case "grpc":
+		b.service.Spec.Protocol = sdkkonnectcomp.ProtocolGrpc
+	case "grpcs":
+		b.service.Spec.Protocol = sdkkonnectcomp.ProtocolGrpcs
+	case "ws":
+		b.service.Spec.Protocol = sdkkonnectcomp.ProtocolWs
+	case "wss":
+		b.service.Spec.Protocol = sdkkonnectcomp.ProtocolWss
+	case "tls":
 		b.service.Spec.Protocol = sdkkonnectcomp.ProtocolTLS
+	case "tcp":
+		b.service.Spec.Protocol = sdkkonnectcomp.ProtocolTCP
+	case "tls_passthrough":
+		b.service.Spec.Protocol = sdkkonnectcomp.ProtocolTLSPassthrough
+	case "udp":
+		b.service.Spec.Protocol = sdkkonnectcomp.ProtocolUDP
 	default:
 		b.errors = append(b.errors, fmt.Errorf("unsupported protocol: %s", protocol))
 	}

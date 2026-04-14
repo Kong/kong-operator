@@ -18,6 +18,12 @@ type ProjectConfig struct {
 type APIGroupVersionConfig struct {
 	CommonTypes *CommonTypesConfig `yaml:"commonTypes,omitempty"`
 
+	// GenerateGroupVersionInfo controls whether to generate a groupversion_info.go
+	// file (standard Kubebuilder layout with SchemeGroupVersion and Resource helper).
+	// When true, groupversion_info.go is generated instead of register.go.
+	// Defaults to true when not specified.
+	GenerateGroupVersionInfo *bool `yaml:"generateGroupVersionInfo,omitempty"`
+
 	Types []*TypeConfig `yaml:"types"`
 }
 

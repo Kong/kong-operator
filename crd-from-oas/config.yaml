@@ -1,6 +1,8 @@
 apiGroupVersions:
-  # TODO: temporary
-  x-konnect.konghq.com/v1alpha1:
+  konnect.konghq.com/v1alpha1:
+    # Don't generate GroupVersionInfo for this API group, as it already has it defined.
+    # We might do this in the future to replace the manually defined one.
+    generateGroupVersionInfo: false
     commonTypes:
       objectRef:
         import:
@@ -16,6 +18,16 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdateGatewayRequest
         reconciler:
           isRoot: true
+
+  # TODO: temporary
+  x-konnect.konghq.com/v1alpha1:
+    generateGroupVersionInfo: true
+    commonTypes:
+      objectRef:
+        import:
+          path: github.com/kong/kong-operator/v2/api/common/v1alpha1
+          alias: commonv1alpha1
+    types:
       - path: /v1/event-gateways/{gatewayId}/data-plane-certificates
         name: KonnectEventDataPlaneCertificate
         optionalSecretReference: true

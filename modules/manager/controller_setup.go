@@ -27,7 +27,6 @@ import (
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
-	xkonnectv1alpha1 "github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/controlplane"
 	"github.com/kong/kong-operator/v2/controller/cpextensions"
 	"github.com/kong/kong-operator/v2/controller/cpextensions/metricsscraper"
@@ -310,8 +309,8 @@ func requiredCRDChecks(c *Config) []requiredCRDCheck {
 					Resource: "konnectcloudgatewaytransitgateways",
 				},
 				{
-					Group:    xkonnectv1alpha1.GroupVersion.Group,
-					Version:  xkonnectv1alpha1.GroupVersion.Version,
+					Group:    konnectv1alpha1.GroupVersion.Group,
+					Version:  konnectv1alpha1.GroupVersion.Version,
 					Resource: "konnecteventcontrolplanes",
 				},
 				{
@@ -756,7 +755,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			newKonnectEntityController[configurationv1alpha1.KongSNI](controllerFactory),
 			// TODO: auto-generate controller registration for generated Konnect entities.
 			// https://github.com/Kong/kong-operator/issues/3785
-			newKonnectEntityController[xkonnectv1alpha1.KonnectEventControlPlane](controllerFactory),
+			newKonnectEntityController[konnectv1alpha1.KonnectEventControlPlane](controllerFactory),
 		)
 
 		if c.KonnectControllersEnabled {

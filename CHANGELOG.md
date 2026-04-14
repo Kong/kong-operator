@@ -125,6 +125,8 @@
   `MCPServerVersionStatus` to the Konnect API. A Pod watch is added so that
   status is updated in near-real-time during rolling updates.
   [#3850](https://github.com/Kong/kong-operator/pull/3850)
+- Hybridgateway: add support for `konghq.com/protocol` service annotation
+  [#3847](https://github.com/Kong/kong-operator/pull/3847)
 
 ### Changed
 

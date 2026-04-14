@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
-	xkonnectv1alpha1 "github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1"
 	common "github.com/kong/kong-operator/v2/test/crdsvalidation/common"
 	"github.com/kong/kong-operator/v2/test/envtest"
 )
@@ -18,26 +18,26 @@ func TestKonnectEventControlPlane(t *testing.T) {
 	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	t.Run("labels field validation", func(t *testing.T) {
-		controlPlaneWithLabelValue := func(labelValue string) *xkonnectv1alpha1.KonnectEventControlPlane {
-			return &xkonnectv1alpha1.KonnectEventControlPlane{
+		controlPlaneWithLabelValue := func(labelValue string) *konnectv1alpha1.KonnectEventControlPlane {
+			return &konnectv1alpha1.KonnectEventControlPlane{
 				ObjectMeta: common.CommonObjectMeta(ns.Name),
-				Spec: xkonnectv1alpha1.KonnectEventControlPlaneSpec{
+				Spec: konnectv1alpha1.KonnectEventControlPlaneSpec{
 					KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 						APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 							Name: "test-auth",
 						},
 					},
-					APISpec: xkonnectv1alpha1.KonnectEventControlPlaneAPISpec{
+					APISpec: konnectv1alpha1.KonnectEventControlPlaneAPISpec{
 						Name: "event-control-plane",
-						Labels: xkonnectv1alpha1.Labels{
-							"team": xkonnectv1alpha1.LabelsValue(labelValue),
+						Labels: konnectv1alpha1.Labels{
+							"team": konnectv1alpha1.LabelsValue(labelValue),
 						},
 					},
 				},
 			}
 		}
 
-		common.TestCasesGroup[*xkonnectv1alpha1.KonnectEventControlPlane]{
+		common.TestCasesGroup[*konnectv1alpha1.KonnectEventControlPlane]{
 			{
 				Name:       "labels value at max length (63) passes validation",
 				TestObject: controlPlaneWithLabelValue(strings.Repeat("a", 63)),

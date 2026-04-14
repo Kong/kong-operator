@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 	"text/template"
+	"time"
 
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/config"
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/parser"
@@ -33,6 +34,10 @@ type Config struct {
 	// ReconcilerConfig maps entity names to reconciler generation configurations.
 	// When set, reconciler wiring files are generated for the entity.
 	ReconcilerConfig map[string]*config.ReconcilerConfig
+	// GenerateGroupVersionInfo controls whether to generate groupversion_info.go
+	// (with SchemeGroupVersion and Resource helper) instead of register.go.
+	// Defaults to true.
+	GenerateGroupVersionInfo bool
 	// APIGroupPackagePath is the full Go import path for the generated API types package
 	// (e.g. "github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1").
 	APIGroupPackagePath string
@@ -91,7 +96,7 @@ func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error)
 			return nil, fmt.Errorf("failed to generate type for %s: %w", name, err)
 		}
 
-		fileName := strings.ToLower(entityName) + "_types.go"
+		fileName := entityFilePrefix(entityName) + "_types.go"
 		files = append(files, GeneratedFile{
 			Name:    fileName,
 			Content: content,
@@ -114,7 +119,7 @@ func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error)
 					return nil, fmt.Errorf("failed to generate SDK ops for %s: %w", entityName, err)
 				}
 				files = append(files, GeneratedFile{
-					Name:    strings.ToLower(entityName) + "_sdkops.go",
+					Name:    entityFilePrefix(entityName) + "_sdkops.go",
 					Content: opsContent,
 				})
 
@@ -123,7 +128,7 @@ func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error)
 					return nil, fmt.Errorf("failed to generate SDK ops test for %s: %w", entityName, err)
 				}
 				files = append(files, GeneratedFile{
-					Name:    strings.ToLower(entityName) + "_sdkops_test.go",
+					Name:    entityFilePrefix(entityName) + "_sdkops_test.go",
 					Content: opsTestContent,
 				})
 			}
@@ -150,22 +155,29 @@ func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error)
 		files = append(files, reconcilerFiles...)
 	}
 
-	// Generate a register file
-	registerContent, err := g.generateRegister(parsed)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate register file: %w", err)
+	// Generate groupversion_info.go when enabled (provides GroupVersion,
+	// SchemeBuilder, AddToScheme, SchemeGroupVersion and Resource helper).
+	// When disabled the package is expected to already provide these symbols.
+	if g.config.GenerateGroupVersionInfo {
+		gviContent, err := g.generateGroupVersionInfo(parsed)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate groupversion_info file: %w", err)
+		}
+		files = append(files, GeneratedFile{
+			Name:    "groupversion_info.go",
+			Content: gviContent,
+		})
 	}
-	files = append(files, GeneratedFile{
-		Name:    "register.go",
-		Content: registerContent,
-	})
 
-	// Generate a doc.go file
-	docContent := g.generateDoc()
-	files = append(files, GeneratedFile{
-		Name:    "doc.go",
-		Content: docContent,
-	})
+	// Generate doc.go together with groupversion_info.go.
+	// When disabled the package is expected to already provide doc.go.
+	if g.config.GenerateGroupVersionInfo {
+		docContent := g.generateDoc()
+		files = append(files, GeneratedFile{
+			Name:    "doc.go",
+			Content: docContent,
+		})
+	}
 
 	// Generate common types (ObjectRef, etc.) including referenced schemas
 	commonContent, err := g.generateCommonTypes()
@@ -532,8 +544,21 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 	return fixTrailingEmptyLines(buf.String()), nil
 }
 
+// entityFilePrefix converts a PascalCase entity name to a lowercase file name
+// prefix, inserting an underscore after a leading "Konnect" prefix.
+// e.g. "KonnectEventControlPlane" → "konnect_eventcontrolplane",
+//
+//	"Portal" → "portal".
+func entityFilePrefix(entityName string) string {
+	lower := strings.ToLower(entityName)
+	if after, ok := strings.CutPrefix(lower, "konnect"); ok && after != "" {
+		return "konnect_" + after
+	}
+	return lower
+}
+
 func generatedFuncsFileName(entityName string) string {
-	return "zz_generated_" + strings.ToLower(entityName) + "_funcs.go"
+	return "zz_generated_" + entityFilePrefix(entityName) + "_funcs.go"
 }
 
 func appendUniqueImportConfig(imports []*config.ImportConfig, imp *config.ImportConfig) []*config.ImportConfig {
@@ -790,8 +815,8 @@ func fixTrailingEmptyLines(s string) string {
 	return strings.Join(result, "\n")
 }
 
-func (g *Generator) generateRegister(parsed *parser.ParsedSpec) (string, error) {
-	tmpl := template.Must(template.New("register").Parse(registerTemplate))
+func (g *Generator) generateGroupVersionInfo(parsed *parser.ParsedSpec) (string, error) {
+	tmpl := template.Must(template.New("groupVersionInfo").Parse(groupVersionInfoTemplate))
 
 	var entityNames []string
 	for name := range parsed.RequestBodies {
@@ -817,12 +842,31 @@ func (g *Generator) generateRegister(parsed *parser.ParsedSpec) (string, error) 
 }
 
 func (g *Generator) generateDoc() string {
-	return fmt.Sprintf(`// Package %s contains API types for the %s API group.
-//
+	year := time.Now().Year()
+	return fmt.Sprintf(`%s
+
+/*
+Copyright %d Kong, Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+// Package %s contains API Schema definitions for the %s %s API group.
 // +kubebuilder:object:generate=true
 // +groupName=%s
+// +apireference:kgo:include-all-types
 package %s
-`, g.config.APIVersion, g.config.APIGroup, g.config.APIGroup, g.config.APIVersion)
+`, sharedGeneratedFilePreamble, year, g.config.APIVersion, g.config.APIGroup, g.config.APIVersion, g.config.APIGroup, g.config.APIVersion)
 }
 
 func (g *Generator) generateCommonTypes() (string, error) {
