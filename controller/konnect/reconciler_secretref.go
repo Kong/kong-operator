@@ -35,6 +35,10 @@ func getSecretRefs[T constraints.SupportedKonnectEntityType, TEnt constraints.En
 		if e.Spec.SecretRef != nil {
 			secretRefs = append(secretRefs, *e.Spec.SecretRef)
 		}
+	case *konnectv1alpha1.KonnectEventDataPlaneCertificate:
+		if e.Spec.SecretRef != nil {
+			secretRefs = append(secretRefs, *e.Spec.SecretRef)
+		}
 	}
 	return secretRefs
 }

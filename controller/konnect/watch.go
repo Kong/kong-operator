@@ -85,6 +85,8 @@ func ReconciliationWatchOptionsForEntity[
 	// TODO: https://github.com/Kong/kong-operator/issues/3785
 	case *konnectv1alpha1.KonnectEventControlPlane:
 		return KonnectEventControlPlaneReconciliationWatchOptions(cl)
+	case *konnectv1alpha1.KonnectEventDataPlaneCertificate:
+		return KonnectEventDataPlaneCertificateReconciliationWatchOptions(cl)
 	case *xkonnectv1alpha1.Portal:
 		return PortalReconciliationWatchOptions(cl)
 	default:

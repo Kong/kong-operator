@@ -95,6 +95,19 @@ func GetAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.
 		return getCPAuthRefForRef(ctx, cl, cpRef, cp.Namespace)
 	}
 
+	if gatewayCert, ok := any(ent).(*konnectv1alpha1.KonnectEventDataPlaneCertificate); ok {
+		gateway, _, err := getEventGatewayForRef(ctx, cl, gatewayCert.Spec.GatewayRef, gatewayCert.GetNamespace())
+		if err != nil {
+			return types.NamespacedName{}, err
+		}
+
+		authRef := gateway.GetKonnectAPIAuthConfigurationRef()
+		return types.NamespacedName{
+			Name:      authRef.Name,
+			Namespace: gateway.GetNamespace(),
+		}, nil
+	}
+
 	// If the entity has a KongServiceRef, get the KonnectAPIAuthConfiguration
 	// ref from the referenced KongService.
 	svcRef, ok := getServiceRef(ent).Get()

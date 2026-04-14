@@ -140,6 +140,7 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 			// TODO: auto-generate cache index registration for generated Konnect entities.
 			// https://github.com/Kong/kong-operator/issues/3785
 			index.OptionsForKonnectEventControlPlane(),
+			index.OptionsForKonnectEventDataPlaneCertificate(),
 			index.OptionsForKonnectCloudGatewayDataPlaneGroupConfiguration(cl),
 		)
 	}
@@ -788,6 +789,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			// TODO: auto-generate controller registration for generated Konnect entities.
 			// https://github.com/Kong/kong-operator/issues/3785
 			newKonnectEntityController[konnectv1alpha1.KonnectEventControlPlane](controllerFactory),
+			newKonnectEntityController[konnectv1alpha1.KonnectEventDataPlaneCertificate](controllerFactory),
 		)
 
 		controllers = append(controllers,

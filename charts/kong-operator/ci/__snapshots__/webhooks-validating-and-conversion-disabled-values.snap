@@ -41386,6 +41386,7 @@ rules:
   - konnectcloudgatewaynetworks
   - konnectcloudgatewaytransitgateways
   - konnecteventcontrolplanes
+  - konnecteventdataplanecertificates
   verbs:
   - get
   - list
@@ -41405,6 +41406,8 @@ rules:
   - konnectcloudgatewaytransitgateways/status
   - konnecteventcontrolplanes/finalizers
   - konnecteventcontrolplanes/status
+  - konnecteventdataplanecertificates/finalizers
+  - konnecteventdataplanecertificates/status
   - konnectextensions/finalizers
   - konnectextensions/status
   - konnectgatewaycontrolplanes/finalizers

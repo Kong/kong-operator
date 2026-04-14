@@ -101,6 +101,20 @@ func (e CantPerformOperationWithoutNetworkIDError) Error() string {
 	)
 }
 
+// CantPerformOperationWithoutGatewayIDError is an error indicating that an
+// operation cannot be performed without a Konnect Event Gateway ID.
+type CantPerformOperationWithoutGatewayIDError struct {
+	Entity entity
+	Op     Op
+}
+
+func (e CantPerformOperationWithoutGatewayIDError) Error() string {
+	return fmt.Sprintf(
+		"can't %s %s %s without a Konnect Event Gateway ID",
+		e.Op, e.Entity.GetTypeName(), client.ObjectKeyFromObject(e.Entity),
+	)
+}
+
 type sdkErrorDetails struct {
 	TypeAt   string   `json:"@type"`
 	Type     string   `json:"type"`
