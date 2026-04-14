@@ -496,7 +496,7 @@ func TestGenerate_GeneratesFuncsFile(t *testing.T) {
 		fileNames = append(fileNames, file.Name)
 	}
 
-	assert.Contains(t, fileNames, "portal_types.go")
+	assert.Contains(t, fileNames, "zz_generated_portal_types.go")
 	assert.Contains(t, fileNames, "zz_generated_portal_funcs.go")
 }
 
