@@ -81,6 +81,8 @@ func Create[
 		err = createKonnectEventControlPlane(ctx, sdk.GetEventGatewaysSDK(), ent)
 	case *konnectv1alpha1.KonnectEventDataPlaneCertificate:
 		err = createKonnectEventDataPlaneCertificate(ctx, cl, sdk.GetEventGatewayDataPlaneCertificatesSDK(), ent)
+	case *xkonnectv1alpha1.DcrProvider:
+		err = createDCRProvider(ctx, sdk.GetDCRProvidersSDK(), ent)
 	case *configurationv1alpha1.KongService:
 		err = createService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
@@ -157,6 +159,8 @@ func Create[
 			id, errGet = getKonnectEventControlPlaneForUID(ctx, sdk.GetEventGatewaysSDK(), ent)
 		case *konnectv1alpha1.KonnectEventDataPlaneCertificate:
 			id, errGet = getKonnectEventDataPlaneCertificateForUID(ctx, sdk.GetEventGatewayDataPlaneCertificatesSDK(), ent)
+		case *xkonnectv1alpha1.DcrProvider:
+			id, errGet = getDCRProviderForUID(ctx, sdk.GetDCRProvidersSDK(), ent)
 		case *configurationv1alpha1.KongService:
 			id, errGet = getKongServiceForUID(ctx, sdk.GetServicesSDK(), ent)
 		case *configurationv1alpha1.KongRoute:
@@ -306,6 +310,8 @@ func Delete[
 		err = deleteKonnectEventControlPlane(ctx, sdk.GetEventGatewaysSDK(), ent)
 	case *konnectv1alpha1.KonnectEventDataPlaneCertificate:
 		err = deleteKonnectEventDataPlaneCertificate(ctx, sdk.GetEventGatewayDataPlaneCertificatesSDK(), ent)
+	case *xkonnectv1alpha1.DcrProvider:
+		err = deleteDCRProvider(ctx, sdk.GetDCRProvidersSDK(), ent)
 	case *configurationv1alpha1.KongService:
 		err = deleteService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
@@ -476,6 +482,8 @@ func Update[
 		err = updateKonnectEventControlPlane(ctx, sdk.GetEventGatewaysSDK(), ent)
 	case *konnectv1alpha1.KonnectEventDataPlaneCertificate:
 		err = updateKonnectEventDataPlaneCertificate(ctx, cl, sdk.GetEventGatewayDataPlaneCertificatesSDK(), ent)
+	case *xkonnectv1alpha1.DcrProvider:
+		err = updateDCRProvider(ctx, sdk.GetDCRProvidersSDK(), ent)
 	case *configurationv1alpha1.KongService:
 		err = updateService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
