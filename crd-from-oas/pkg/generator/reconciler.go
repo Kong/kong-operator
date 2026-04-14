@@ -5,6 +5,9 @@ import (
 	"strings"
 	"text/template"
 	"unicode"
+
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // watchTemplate generates watch options for a single entity.
@@ -124,9 +127,18 @@ type rbacEntity struct {
 func (g *Generator) generateRBAC(entityNames []string) (string, error) {
 	entities := make([]rbacEntity, 0, len(entityNames))
 	for _, entityName := range entityNames {
+		// UnsafeGuessKindToResource _is_ marker as broken but for our purposes
+		// it's sufficient to get the pluralized resource name for RBAC generation.
+		// If it fails, changes will get caught in tests or in review or controller-gen
+		// will generate code that doesn't compile, so it's not a silent failure.
+		gvk, _ := meta.UnsafeGuessKindToResource(schema.GroupVersionKind{
+			Group:   g.config.APIGroup,
+			Version: g.config.APIVersion,
+			Kind:    entityName,
+		})
 		entities = append(entities, rbacEntity{
 			APIGroup:     g.config.APIGroup,
-			ResourceName: strings.ToLower(entityName) + "s",
+			ResourceName: gvk.Resource,
 		})
 	}
 
