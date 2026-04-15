@@ -6,10 +6,11 @@ import (
 	"text/template"
 	"unicode"
 
-	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/config"
-	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/parser"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/config"
+	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/parser"
 )
 
 // watchTemplate generates watch options for a single entity.
