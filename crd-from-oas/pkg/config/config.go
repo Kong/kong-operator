@@ -93,7 +93,7 @@ type ReconcilerConfig struct {
 	IsRoot bool `yaml:"isRoot"`
 	// ParentEntityType overrides the generated parent entity type name used for
 	// child reconciler watch/index generation. When unset, the immediate parent
-	// dependency name inferred from the OpenAPI path parameter is used.
+	// dependency name is inferred from the OpenAPI path parameter.
 	ParentEntityType string `yaml:"parentEntityType,omitempty"`
 }
 
