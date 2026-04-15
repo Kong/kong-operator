@@ -148,7 +148,11 @@ func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error)
 	// Generate reconciler wiring files for entities with reconciler config
 	if len(reconcilerEntities) > 0 {
 		sort.Strings(reconcilerEntities)
-		reconcilerFiles, err := g.generateReconcilerFiles(reconcilerEntities)
+		entitySchemas := make(map[string]*parser.Schema, len(parsed.RequestBodies))
+		for name, schema := range parsed.RequestBodies {
+			entitySchemas[parser.GetEntityNameFromType(name)] = schema
+		}
+		reconcilerFiles, err := g.generateReconcilerFiles(reconcilerEntities, entitySchemas)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate reconciler files: %w", err)
 		}
@@ -450,12 +454,9 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		objectRefImport = g.config.CommonTypes.ObjectRef.Import
 	}
 
-	// Check if this entity has reconciler config (needs KonnectConfiguration in Spec)
-	hasReconciler := false
-	if g.config.ReconcilerConfig != nil {
-		if _, ok := g.config.ReconcilerConfig[entityName]; ok {
-			hasReconciler = true
-		}
+	hasRootReconciler := false
+	if rc := g.config.ReconcilerConfig[entityName]; rc != nil {
+		hasRootReconciler = rc.IsRoot
 	}
 
 	var buf strings.Builder
@@ -467,7 +468,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		NeedsJSONImport      bool
 		ObjectRefImport      *config.ImportConfig
 		HasOptionalSecretRef bool
-		HasReconciler        bool
+		HasRootReconciler    bool
 	}{
 		EntityName:           entityName,
 		Schema:               schema,
@@ -476,7 +477,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		NeedsJSONImport:      schemaUsesJSON(g, schema),
 		ObjectRefImport:      objectRefImport,
 		HasOptionalSecretRef: hasOptionalSecretRef,
-		HasReconciler:        hasReconciler,
+		HasRootReconciler:    hasRootReconciler,
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
@@ -525,6 +526,7 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		Imports                            []*config.ImportConfig
 		KonnectStatusType                  string
 		KonnectLabelsField                 *konnectLabelsField
+		Dependencies                       []*parser.Dependency
 		IsReconcilerRoot                   bool
 		KonnectAPIAuthConfigurationRefType string
 	}{
@@ -533,6 +535,7 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		Imports:                            imports,
 		KonnectStatusType:                  defaultKonnectStatusQualifiedTypeName(),
 		KonnectLabelsField:                 g.konnectLabelsField(schema),
+		Dependencies:                       schema.Dependencies,
 		IsReconcilerRoot:                   isReconcilerRoot,
 		KonnectAPIAuthConfigurationRefType: defaultKonnectStatusAlias + ".ControlPlaneKonnectAPIAuthConfigurationRef",
 	}

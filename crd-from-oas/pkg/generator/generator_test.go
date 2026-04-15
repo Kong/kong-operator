@@ -96,7 +96,12 @@ func TestGenerateWatch_UsesStableAPIAuthImportAndNamespacedLookup(t *testing.T) 
 			APIGroupPackageAlias: "konnectv1alpha1",
 		})
 
-		content, err := g.generateWatch("Portal")
+		content, err := g.generateWatch(reconcilerEntityMetadata{
+			EntityName:           "Portal",
+			EntityNameLowerCamel: "portal",
+			APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+			APIGroupPackageAlias: "konnectv1alpha1",
+		}, &config.ReconcilerConfig{IsRoot: true})
 		require.NoError(t, err)
 
 		assert.Contains(t, content, `konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"`)
@@ -110,7 +115,12 @@ func TestGenerateWatch_UsesStableAPIAuthImportAndNamespacedLookup(t *testing.T) 
 			APIGroupPackageAlias: "xkonnectv1alpha1",
 		})
 
-		content, err := g.generateWatch("Portal")
+		content, err := g.generateWatch(reconcilerEntityMetadata{
+			EntityName:           "Portal",
+			EntityNameLowerCamel: "portal",
+			APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1",
+			APIGroupPackageAlias: "xkonnectv1alpha1",
+		}, &config.ReconcilerConfig{IsRoot: true})
 		require.NoError(t, err)
 
 		assert.Contains(t, content, `konnectapiauthv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"`)
@@ -125,11 +135,56 @@ func TestGenerateIndex_UsesNamespacedAPIAuthKey(t *testing.T) {
 		APIGroupPackageAlias: "xkonnectv1alpha1",
 	})
 
-	content, err := g.generateIndex("Portal")
+	content, err := g.generateIndex(reconcilerEntityMetadata{
+		EntityName:           "Portal",
+		EntityNameLowerCamel: "portal",
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1",
+		APIGroupPackageAlias: "xkonnectv1alpha1",
+	}, &config.ReconcilerConfig{IsRoot: true})
 	require.NoError(t, err)
 
 	assert.Contains(t, content, `if ent.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name == "" {`)
 	assert.Contains(t, content, `return []string{ent.GetNamespace() + "/" + ent.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name}`)
+}
+
+func TestGenerateWatchAndIndex_ForChildEntity(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+	})
+
+	metadata := reconcilerEntityMetadata{
+		EntityName:           "KonnectEventDataPlaneCertificate",
+		EntityNameLowerCamel: "konnectEventDataPlaneCertificate",
+		ParentEntityName:     "KonnectEventControlPlane",
+		ParentRefFieldName:   "GatewayRef",
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+	}
+
+	t.Run("watches parent entity", func(t *testing.T) {
+		content, err := g.generateWatch(metadata, &config.ReconcilerConfig{
+			IsRoot:           false,
+			ParentEntityType: "KonnectEventControlPlane",
+		})
+		require.NoError(t, err)
+
+		assert.Contains(t, content, `&konnectv1alpha1.KonnectEventControlPlane{}`)
+		assert.Contains(t, content, `enqueueKonnectEventDataPlaneCertificateForKonnectEventControlPlane(cl)`)
+		assert.Contains(t, content, `index.IndexFieldKonnectEventDataPlaneCertificateOnKonnectEventControlPlaneRef: parent.Name,`)
+	})
+
+	t.Run("indexes by dependency namespaced ref", func(t *testing.T) {
+		content, err := g.generateIndex(metadata, &config.ReconcilerConfig{
+			IsRoot:           false,
+			ParentEntityType: "KonnectEventControlPlane",
+		})
+		require.NoError(t, err)
+
+		assert.Contains(t, content, `IndexFieldKonnectEventDataPlaneCertificateOnKonnectEventControlPlaneRef`)
+		assert.Contains(t, content, `if ent.Spec.GatewayRef.NamespacedRef == nil {`)
+		assert.Contains(t, content, `return []string{ent.Spec.GatewayRef.NamespacedRef.Name}`)
+	})
 }
 
 func TestGenerateCommonTypes(t *testing.T) {
@@ -469,6 +524,30 @@ func TestGenerateCRDFuncs_GeneratesKonnectFuncs(t *testing.T) {
 		assert.Contains(t, content, `func (obj *PortalTeam) GetConditions() []metav1.Condition {`)
 		assert.Contains(t, content, `func (obj *PortalTeam) SetConditions(conditions []metav1.Condition) {`)
 		assert.NotContains(t, content, `GetKonnectAPIAuthConfigurationRef`)
+	})
+
+	t.Run("dependency-backed child entities get parent ID accessors", func(t *testing.T) {
+		g := NewGenerator(Config{
+			APIGroup:   "x-konnect.konghq.com",
+			APIVersion: "v1alpha1",
+			ReconcilerConfig: map[string]*config.ReconcilerConfig{
+				"PortalTeam": {},
+			},
+		})
+
+		schemaWithDependency := &parser.Schema{
+			Name: "CreatePortalTeam",
+			Dependencies: []*parser.Dependency{{
+				EntityName: "Portal",
+				FieldName:  "PortalRef",
+				JSONName:   "portalRef",
+			}},
+		}
+
+		content, err := g.generateCRDFuncs("CreatePortalTeam", schemaWithDependency)
+		require.NoError(t, err)
+		assert.Contains(t, content, `func (obj *PortalTeam) GetPortalID() string {`)
+		assert.Contains(t, content, `func (obj *PortalTeam) SetPortalID(id string) {`)
 	})
 }
 
@@ -1433,7 +1512,12 @@ func TestGenerateReconcilerFiles_IncludesRBAC(t *testing.T) {
 		},
 	})
 
-	files, err := g.generateReconcilerFiles([]string{"Portal"})
+	files, err := g.generateReconcilerFiles(
+		[]string{"Portal"},
+		map[string]*parser.Schema{
+			"Portal": {Name: "CreatePortal"},
+		},
+	)
 	require.NoError(t, err)
 
 	var rbacFile *GeneratedFile

@@ -91,6 +91,10 @@ type ReconcilerConfig struct {
 	// IsRoot indicates this is a root entity that directly references
 	// KonnectAPIAuthConfiguration. Child entities inherit auth from their parent.
 	IsRoot bool `yaml:"isRoot"`
+	// ParentEntityType overrides the generated parent entity type name used for
+	// child reconciler watch/index generation. When unset, the immediate parent
+	// dependency name is inferred from the OpenAPI path parameter.
+	ParentEntityType string `yaml:"parentEntityType,omitempty"`
 }
 
 // OpConfig holds configuration for a single SDK operation.
