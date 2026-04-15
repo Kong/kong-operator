@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	corev1 "k8s.io/api/core/v1"
@@ -11,13 +12,12 @@ import (
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
-	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 )
 
 func createKonnectEventDataPlaneCertificate(
 	ctx context.Context,
 	cl client.Client,
-	sdk sdkops.EventGatewayDataPlaneCertificatesSDK,
+	sdk sdkkonnectgo.EventGatewayDataPlaneCertificatesSDK,
 	cert *konnectv1alpha1.KonnectEventDataPlaneCertificate,
 ) error {
 	gatewayID := certGatewayID(cert)
@@ -45,7 +45,7 @@ func createKonnectEventDataPlaneCertificate(
 func updateKonnectEventDataPlaneCertificate(
 	ctx context.Context,
 	cl client.Client,
-	sdk sdkops.EventGatewayDataPlaneCertificatesSDK,
+	sdk sdkkonnectgo.EventGatewayDataPlaneCertificatesSDK,
 	cert *konnectv1alpha1.KonnectEventDataPlaneCertificate,
 ) error {
 	gatewayID := certGatewayID(cert)
@@ -78,7 +78,7 @@ func updateKonnectEventDataPlaneCertificate(
 
 func deleteKonnectEventDataPlaneCertificate(
 	ctx context.Context,
-	sdk sdkops.EventGatewayDataPlaneCertificatesSDK,
+	sdk sdkkonnectgo.EventGatewayDataPlaneCertificatesSDK,
 	cert *konnectv1alpha1.KonnectEventDataPlaneCertificate,
 ) error {
 	gatewayID := certGatewayID(cert)
@@ -96,7 +96,7 @@ func deleteKonnectEventDataPlaneCertificate(
 
 func getKonnectEventDataPlaneCertificateForUID(
 	ctx context.Context,
-	sdk sdkops.EventGatewayDataPlaneCertificatesSDK,
+	sdk sdkkonnectgo.EventGatewayDataPlaneCertificatesSDK,
 	cert *konnectv1alpha1.KonnectEventDataPlaneCertificate,
 ) (string, error) {
 	gatewayID := certGatewayID(cert)

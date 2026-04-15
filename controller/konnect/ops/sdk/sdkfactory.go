@@ -1,42 +1,13 @@
 package sdk
 
 import (
-	"context"
 	"net/http"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
-	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 
 	"github.com/kong/kong-operator/v2/controller/konnect/server"
 )
-
-// EventGatewayDataPlaneCertificatesSDK wraps the subset of the SDK used by
-// KonnectEventDataPlaneCertificate reconciliation.
-type EventGatewayDataPlaneCertificatesSDK interface {
-	ListEventGatewayDataPlaneCertificates(
-		ctx context.Context,
-		request sdkkonnectops.ListEventGatewayDataPlaneCertificatesRequest,
-		opts ...sdkkonnectops.Option,
-	) (*sdkkonnectops.ListEventGatewayDataPlaneCertificatesResponse, error)
-	CreateEventGatewayDataPlaneCertificate(
-		ctx context.Context,
-		gatewayID string,
-		request *sdkkonnectcomp.CreateEventGatewayDataPlaneCertificateRequest,
-		opts ...sdkkonnectops.Option,
-	) (*sdkkonnectops.CreateEventGatewayDataPlaneCertificateResponse, error)
-	UpdateEventGatewayDataPlaneCertificate(
-		ctx context.Context,
-		request sdkkonnectops.UpdateEventGatewayDataPlaneCertificateRequest,
-		opts ...sdkkonnectops.Option,
-	) (*sdkkonnectops.UpdateEventGatewayDataPlaneCertificateResponse, error)
-	DeleteEventGatewayDataPlaneCertificate(
-		ctx context.Context,
-		gatewayID string,
-		certificateID string,
-		opts ...sdkkonnectops.Option,
-	) (*sdkkonnectops.DeleteEventGatewayDataPlaneCertificateResponse, error)
-}
 
 // SDKWrapper is a wrapper of Konnect SDK to allow using mock SDKs in tests.
 type SDKWrapper interface {
@@ -64,7 +35,7 @@ type SDKWrapper interface {
 	GetDataPlaneCertificatesSDK() sdkkonnectgo.DPCertificatesSDK
 	GetCloudGatewaysSDK() sdkkonnectgo.CloudGatewaysSDK
 	GetEventGatewaysSDK() sdkkonnectgo.EventGatewaysSDK
-	GetEventGatewayDataPlaneCertificatesSDK() EventGatewayDataPlaneCertificatesSDK
+	GetEventGatewayDataPlaneCertificatesSDK() sdkkonnectgo.EventGatewayDataPlaneCertificatesSDK
 	GetMCPServersSDK() *sdkkonnectgo.MCPServers
 
 	// GetServerURL returns the server URL for recording metrics.
@@ -210,7 +181,7 @@ func (w sdkWrapper) GetEventGatewaysSDK() sdkkonnectgo.EventGatewaysSDK {
 }
 
 // GetEventGatewayDataPlaneCertificatesSDK returns the SDK to operate Event Gateway dataplane certificates.
-func (w sdkWrapper) GetEventGatewayDataPlaneCertificatesSDK() EventGatewayDataPlaneCertificatesSDK {
+func (w sdkWrapper) GetEventGatewayDataPlaneCertificatesSDK() sdkkonnectgo.EventGatewayDataPlaneCertificatesSDK {
 	return w.sdk.EventGatewayDataPlaneCertificates
 }
 
