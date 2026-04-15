@@ -139,10 +139,10 @@ func buildDeployment(
 				Template: *egdp.Spec.Deployment.PodTemplateSpec,
 			},
 		}
-		var mergeErr error
-		u, mergeErr = controllerpkgssa.MergeObjects(tc, base, userDeployment)
-		if mergeErr != nil {
-			return nil, mergeErr
+
+		u, err = controllerpkgssa.MergeObjects(tc, base, userDeployment)
+		if err != nil {
+			return nil, err
 		}
 	}
 

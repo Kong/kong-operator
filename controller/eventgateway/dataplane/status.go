@@ -18,7 +18,6 @@ package dataplane
 
 import (
 	"context"
-	"errors"
 
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
@@ -83,23 +82,21 @@ func ensureReadyStatus(
 	return nil
 }
 
-// applyStatus patches the KegDataPlane status subresource via SSA and joins
-// any error into *err so the caller's named return reflects the failure.
+// applyStatus patches the KegDataPlane status subresource via SSA.
 func (r *Reconciler) applyStatus(
 	ctx context.Context,
 	logger logr.Logger,
 	egdp *eventgatewayv1alpha1.KegDataPlane,
-	err *error,
-) {
+) error {
 	result, statusErr := controllerpkgssa.ApplyStatusIfChanged(ctx, logger, r.Client, r.typeConverter, egdp, FieldManager)
 	if statusErr != nil {
 		log.Error(logger, statusErr, "failed to patch KegDataPlane status")
 		r.eventRecorder.Eventf(egdp, nil, corev1.EventTypeWarning, "StatusPatchFailed", "PatchStatus", "%s", statusErr.Error())
-		*err = errors.Join(*err, statusErr)
-		return
+		return statusErr
 	}
 	if result == op.Updated {
 		log.Debug(logger, "KegDataPlane status updated")
 		r.eventRecorder.Eventf(egdp, nil, corev1.EventTypeNormal, "StatusUpdated", "PatchStatus", "KegDataPlane status updated")
 	}
+	return nil
 }

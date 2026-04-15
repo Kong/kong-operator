@@ -18,6 +18,7 @@ package dataplane
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -50,7 +51,7 @@ type Reconciler struct {
 
 	// typeConverter is initialised once during SetupWithManager from the API
 	// server's OpenAPI v3 schemas. It supports all types (core K8s + CRDs) and
-	// is used for both diff-before-apply and SMD-based
+	// is used for both diff-before-apply and structured-merge-diff based
 	// PodTemplateSpec merging.
 	typeConverter managedfields.TypeConverter
 
@@ -91,7 +92,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	defer r.applyStatus(ctx, logger, egdp, &err)
+	defer func() { err = errors.Join(err, r.applyStatus(ctx, logger, egdp)) }()
 
 	// Resolve referenced KonnectEventControlPlane and set resolution condition.
 	keg, err := r.resolveKonnectEventGateway(ctx, logger, egdp)

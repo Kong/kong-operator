@@ -40,6 +40,7 @@ const (
 // Consts - KEG environment variable names
 // Konnect settings use the KONG_KONNECT_ prefix; all other keg settings use
 // the KEG__ prefix with double underscores for nesting.
+// For more info see https://developer.konghq.com/event-gateway/configuration/.
 // -----------------------------------------------------------------------------
 
 const (

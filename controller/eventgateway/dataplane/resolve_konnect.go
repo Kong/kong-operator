@@ -29,7 +29,6 @@ import (
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	log "github.com/kong/kong-operator/v2/controller/pkg/log"
-	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 // resolveKonnectEventGateway resolves the KonnectEventGateway referenced by the
@@ -50,14 +49,13 @@ func (r *Reconciler) resolveKonnectEventGateway(
 		log.Debug(logger, "referenced KonnectEventGateway not found",
 			"ref", egdp.Spec.ControlPlaneRef.KonnectNamespacedRef.Name)
 
-		k8sutils.SetCondition(metav1.Condition{
+		apimeta.SetStatusCondition(&egdp.Status.Conditions, metav1.Condition{
 			Type:               string(eventgatewayv1alpha1.KonnectEventGatewayResolvedType),
 			Status:             metav1.ConditionFalse,
 			Reason:             string(eventgatewayv1alpha1.KonnectEventGatewayNotFoundReason),
 			Message:            eventgatewayv1alpha1.KonnectEventGatewayNotFoundMessage,
 			ObservedGeneration: egdp.Generation,
-			LastTransitionTime: metav1.Now(),
-		}, egdp)
+		})
 
 		return nil, err
 	}
@@ -70,27 +68,25 @@ func (r *Reconciler) resolveKonnectEventGateway(
 		log.Debug(logger, "referenced KonnectEventGateway is not yet Programmed",
 			"ref", egdp.Spec.ControlPlaneRef.KonnectNamespacedRef.Name)
 
-		k8sutils.SetCondition(metav1.Condition{
+		apimeta.SetStatusCondition(&egdp.Status.Conditions, metav1.Condition{
 			Type:               string(eventgatewayv1alpha1.KonnectEventGatewayResolvedType),
 			Status:             metav1.ConditionFalse,
 			Reason:             string(eventgatewayv1alpha1.KonnectEventGatewayNotProgrammedReason),
 			Message:            eventgatewayv1alpha1.KonnectEventGatewayNotProgrammedMessage,
 			ObservedGeneration: egdp.Generation,
-			LastTransitionTime: metav1.Now(),
-		}, egdp)
+		})
 
 		return nil, fmt.Errorf("referenced KonnectEventControlPlane %q is not yet Programmed",
 			egdp.Spec.ControlPlaneRef.KonnectNamespacedRef.Name)
 	}
 
-	k8sutils.SetCondition(metav1.Condition{
+	apimeta.SetStatusCondition(&egdp.Status.Conditions, metav1.Condition{
 		Type:               string(eventgatewayv1alpha1.KonnectEventGatewayResolvedType),
 		Status:             metav1.ConditionTrue,
 		Reason:             string(eventgatewayv1alpha1.KonnectEventGatewayResolvedReason),
 		Message:            eventgatewayv1alpha1.KonnectEventGatewayResolvedMessage,
 		ObservedGeneration: egdp.Generation,
-		LastTransitionTime: metav1.Now(),
-	}, egdp)
+	})
 
 	return keg, nil
 }
