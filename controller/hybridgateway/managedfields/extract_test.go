@@ -161,25 +161,6 @@ func TestExtractAsUnstructured(t *testing.T) {
 	}
 }
 
-func TestFindManagedFields(t *testing.T) {
-	obj := &unstructured.Unstructured{}
-	obj.SetManagedFields([]metav1.ManagedFieldsEntry{
-		{
-			Manager:     "foo",
-			Operation:   metav1.ManagedFieldsOperationApply,
-			Subresource: "bar",
-			FieldsV1:    &metav1.FieldsV1{Raw: []byte(`{"f:spec":{}}`)},
-		},
-	})
-	entry, ok := findManagedFields(obj, "foo", "bar")
-	assert.True(t, ok)
-	assert.Equal(t, "foo", entry.Manager)
-	assert.Equal(t, "bar", entry.Subresource)
-
-	_, ok = findManagedFields(obj, "baz", "bar")
-	assert.False(t, ok)
-}
-
 func TestToTyped(t *testing.T) {
 	parser := generated.Parser()
 	objectType := parser.Type("com.github.kong.kong-operator.api.configuration.v1alpha1.KongRoute")

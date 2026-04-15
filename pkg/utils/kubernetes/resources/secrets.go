@@ -7,6 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
@@ -23,7 +24,8 @@ import (
 type ControlPlaneOrDataPlaneOrKonnectExtension interface {
 	*gwtypes.ControlPlane |
 		*operatorv1beta1.DataPlane |
-		*konnectv1alpha2.KonnectExtension
+		*konnectv1alpha2.KonnectExtension |
+		*eventgatewayv1alpha1.KegDataPlane
 }
 
 // SecretOpt is an option function for a Secret.
@@ -59,6 +61,8 @@ func getPrefixForOwner[T ControlPlaneOrDataPlaneOrKonnectExtension](owner T) str
 		return consts.DataPlanePrefix
 	case *konnectv1alpha2.KonnectExtension:
 		return consts.KonnectExtensionPrefix
+	case *eventgatewayv1alpha1.KegDataPlane:
+		return consts.KEGDataPlanePrefix
 	default:
 		return ""
 	}
@@ -73,6 +77,8 @@ func addLabelForOwner[T ControlPlaneOrDataPlaneOrKonnectExtension](obj client.Ob
 		LabelObjectAsDataPlaneManaged(obj)
 	case *konnectv1alpha2.KonnectExtension:
 		LabelObjectAsKonnectExtensionManaged(obj)
+	case *eventgatewayv1alpha1.KegDataPlane:
+		LabelObjectAsKEGDataPlaneManaged(obj)
 	}
 }
 
