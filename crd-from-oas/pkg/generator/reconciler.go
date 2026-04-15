@@ -5,6 +5,9 @@ import (
 	"strings"
 	"text/template"
 	"unicode"
+
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // watchTemplate generates watch options for a single entity.
@@ -112,9 +115,62 @@ func {{.EntityNameLowerCamel}}APIAuthConfigurationRef(object client.Object) []st
 }
 `
 
+// rbacEntity holds the data needed to generate RBAC markers for a single entity.
+type rbacEntity struct {
+	APIGroup     string
+	ResourceName string
+}
+
+// generateRBAC generates a Go file containing +kubebuilder:rbac marker comments
+// for the given entities. The file is placed in the controller/konnect package
+// so that controller-gen picks up the markers when generating RBAC manifests.
+func (g *Generator) generateRBAC(entityNames []string) (string, error) {
+	entities := make([]rbacEntity, 0, len(entityNames))
+	for _, entityName := range entityNames {
+		// UnsafeGuessKindToResource _is_ marker as broken but for our purposes
+		// it's sufficient to get the pluralized resource name for RBAC generation.
+		// If it fails, changes will get caught in tests or in review or controller-gen
+		// will generate code that doesn't compile, so it's not a silent failure.
+		gvk, _ := meta.UnsafeGuessKindToResource(schema.GroupVersionKind{
+			Group:   g.config.APIGroup,
+			Version: g.config.APIVersion,
+			Kind:    entityName,
+		})
+		entities = append(entities, rbacEntity{
+			APIGroup:     g.config.APIGroup,
+			ResourceName: gvk.Resource,
+		})
+	}
+
+	tmpl := template.Must(template.New("rbac").Parse(rbacTemplate))
+
+	var buf strings.Builder
+	data := struct {
+		Entities []rbacEntity
+	}{
+		Entities: entities,
+	}
+
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
 // generateReconcilerFiles generates all reconciler wiring files for the given entities.
 func (g *Generator) generateReconcilerFiles(entityNames []string) ([]GeneratedFile, error) {
 	var files []GeneratedFile
+
+	// Generate RBAC markers file for all reconciler entities.
+	rbacContent, err := g.generateRBAC(entityNames)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate RBAC for reconciler entities: %w", err)
+	}
+	files = append(files, GeneratedFile{
+		Name:        "zz_generated_reconciler_generic_rbac_" + g.config.APIGroupPackageAlias + ".go",
+		Content:     rbacContent,
+		RelativeDir: "controller/konnect",
+	})
 
 	// Generate per-entity watch and index files
 	for _, entityName := range entityNames {

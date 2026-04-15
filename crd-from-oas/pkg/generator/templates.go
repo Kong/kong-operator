@@ -453,6 +453,16 @@ import (
 {{- end}}
 `
 
+const rbacTemplate = sharedGeneratedFilePreamble + `
+
+package konnect
+{{range .Entities}}
+//+kubebuilder:rbac:groups={{.APIGroup}},resources={{.ResourceName}},verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups={{.APIGroup}},resources={{.ResourceName}}/status,verbs=update;patch
+//+kubebuilder:rbac:groups={{.APIGroup}},resources={{.ResourceName}}/finalizers,verbs=update;patch
+{{- end}}
+`
+
 const groupVersionInfoTemplate = sharedGeneratedFilePreamble + `
 
 package {{.APIVersion}}
