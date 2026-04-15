@@ -42377,10 +42377,6 @@ spec:
       variables.envFilteredPortMaps.size() > 0 ? variables.envFilteredPortMaps[0].value : null
     name: envPortMaps
   - expression: |
-      variables.proxyContainer != null && has(variables.proxyContainer.env) ?
-        variables.proxyContainer.env.filter(e, e.name == "KONG_STREAM_LISTEN") : []
-    name: envFilteredStreamListen
-  - expression: |
       variables.envFilteredProxyListen.size() > 0 ? variables.envFilteredProxyListen[0].value : null
     name: envProxyListen
   - expression: |
@@ -42409,8 +42405,6 @@ spec:
       ).map(addr,
         addr.substring(addr.lastIndexOf(':') + 1)
       ) : []
-    name: streamListenPorts
-  - expression: "variables.envStreamListen != null ?\nvariables.envStreamListen.split(',').map(s,\n  s.trim().split(' ')[0]\n).map(addr,\n  addr.substring(addr.lastIndexOf(':') + 1)\n) : [] \n"
     name: streamListenPorts
   - expression: |
       variables.envPortMaps != null ?
