@@ -517,9 +517,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			return ctrl.Result{}, errors.New("unexpected error, controlplane is nil. Returning to avoid panic")
 		}
 	}
-	// If the dataplane has not been marked as ready yet, return and wait for the next reconciliation loop.
+	// If the dataplane has not been marked as ready yet, clear any stale addresses
+	// and return to wait for the next reconciliation loop.
+	// Clearing addresses prevents the Gateway from advertising an IP for a service
+	// that may no longer exist (e.g. after DataPlane deletion and recreation).
 	if !k8sutils.HasConditionTrue(kcfggateway.DataPlaneReadyType, gwConditionAware) {
 		log.Debug(logger, "dataplane is not ready yet")
+		gateway.Status.Addresses = nil
+		if _, patchErr := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, &gateway, oldGateway); patchErr != nil {
+			return ctrl.Result{}, patchErr
+		}
 		return ctrl.Result{}, nil
 	}
 

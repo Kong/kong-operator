@@ -225,13 +225,20 @@ func TestGatewayHybridFull(t *testing.T) {
 	require.Eventually(t, testutils.GatewayIsProgrammed(t, ctx, gatewayNN, cl), testutils.GatewayReadyTimeLimit, time.Second)
 	require.Eventually(t, testutils.GatewayListenersAreProgrammed(t, ctx, gatewayNN, integration.GetClients()), testutils.GatewayReadyTimeLimit, time.Second)
 
-	t.Log("verifying Gateway gets an IP address again")
-	require.Eventually(t, testutils.GatewayIPAddressExist(t, ctx, gatewayNN, integration.GetClients()), testutils.SubresourceReadinessWait, time.Second)
-	gateway = testutils.MustGetGateway(t, ctx, gatewayNN, cl)
-	gatewayIPAddress = gateway.Status.Addresses[0].Value
-
 	t.Log("verifying connectivity to the Gateway")
-	require.Eventually(t, asserts.Expect404WithNoRouteFunc(t, ctx, "http://"+gatewayIPAddress), testutils.SubresourceReadinessWait, time.Second)
+	// We're using eventually because Gateway can still have the stale IP address
+	// from old DataPlane.
+	require.Eventually(t, func() bool {
+		gw := testutils.MustGetGateway(t, ctx, gatewayNN, cl)
+		addresses := gw.Status.Addresses
+		if len(addresses) == 0 ||
+			addresses[0].Type == nil ||
+			*addresses[0].Type != gatewayv1.IPAddressType {
+			return false
+		}
+		gatewayIPAddress = addresses[0].Value
+		return asserts.Expect404WithNoRouteFunc(t, ctx, "http://"+gatewayIPAddress)()
+	}, testutils.SubresourceReadinessWait, time.Second)
 
 	t.Log("verifying services managed by the dataplane")
 	var dataplaneService corev1.Service
