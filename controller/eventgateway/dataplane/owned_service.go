@@ -142,11 +142,8 @@ func generateKafkaServiceOverlay(egdp *eventgatewayv1alpha1.KegDataPlane) *corev
 		ports = append(ports, sp)
 	}
 
-	var extraLabels map[string]string
+	extraLabels := make(map[string]string)
 	for k, v := range kafka.Labels {
-		if extraLabels == nil {
-			extraLabels = make(map[string]string)
-		}
 		extraLabels[string(k)] = string(v)
 	}
 

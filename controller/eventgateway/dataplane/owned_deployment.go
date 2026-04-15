@@ -179,20 +179,15 @@ func generateBaseDeployment(
 
 	healthPort := intstr.FromInt32(DefaultHealthPort)
 
-	allowPrivilegeEscalation := false
-	readOnlyRootFilesystem := true
-	runAsUser := int64(65532)
-	runAsGroup := int64(65532)
-
 	container := corev1.Container{
 		Name:  consts.KEGContainerName,
 		Image: image,
 		Env:   envVars,
 		SecurityContext: &corev1.SecurityContext{
-			AllowPrivilegeEscalation: &allowPrivilegeEscalation,
-			ReadOnlyRootFilesystem:   &readOnlyRootFilesystem,
-			RunAsUser:                &runAsUser,
-			RunAsGroup:               &runAsGroup,
+			AllowPrivilegeEscalation: new(false),
+			ReadOnlyRootFilesystem:   new(true),
+			RunAsUser:                new(int64(65532)),
+			RunAsGroup:               new(int64(65532)),
 			Capabilities: &corev1.Capabilities{
 				Drop: []corev1.Capability{"NET_RAW"},
 			},

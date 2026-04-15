@@ -106,10 +106,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.
 		return ctrl.Result{}, err
 	}
 
-	// Requeue if the Secret was just created/updated so the Deployment
-	// picks up the correct Secret name on the next reconcile.
+	// Return early if the Secret was just created/updated so the Deployment
+	// picks up the correct Secret name on the next reconcile. No explicit
+	// requeue is needed, the watch on the owned Secret triggers it.
 	if certResult != op.Noop {
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{}, nil
 	}
 
 	// Reconcile the full Keg Deployment spec.
