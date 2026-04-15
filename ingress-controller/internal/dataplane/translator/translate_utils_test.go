@@ -281,7 +281,7 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 			result: kongstate.Service{
 				Service: kong.Service{
 					Name:           new("tcproute.behbudiy.kitab-ul-atfol.999"),
-					Host:           new("tcproute.behbudiy.kitab-ul-atfol.999"),
+					Host:           new("tcproute.behbudiy.kitab-ul-atfol.999.invalid"),
 					Protocol:       new(protocol),
 					ConnectTimeout: new(DefaultServiceTimeout),
 					ReadTimeout:    new(DefaultServiceTimeout),

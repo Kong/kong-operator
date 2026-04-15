@@ -1366,7 +1366,7 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 				"httproute.another-namespace.svc.default.service-1.80": {
 					Service: kong.Service{
 						Name: new("httproute.another-namespace.svc.default.service-1.80"),
-						Host: new("httproute.another-namespace.svc.default.service-1.80"),
+						Host: new("httproute.another-namespace.svc.default.service-1.80.invalid"),
 					},
 					Backends: []kongstate.ServiceBackend{},
 				},
