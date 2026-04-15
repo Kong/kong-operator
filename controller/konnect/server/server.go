@@ -70,3 +70,14 @@ func (s Server) URL() string {
 func (s Server) Region() Region {
 	return s.region
 }
+
+// Domain returns the registrable domain of the server URL, i.e. the last two
+// DNS labels of the hostname (e.g. "konghq.com" from "us.api.konghq.com").
+// If the hostname has fewer than two labels it returns the full hostname.
+func (s Server) Domain() string {
+	parts := strings.Split(s.hostnameWithoutRegion, ".")
+	if len(parts) < 2 {
+		return s.hostnameWithoutRegion
+	}
+	return strings.Join(parts[len(parts)-2:], ".")
+}
