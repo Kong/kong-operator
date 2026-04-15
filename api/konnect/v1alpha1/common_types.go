@@ -63,3 +63,13 @@ type KonnectEntityRef struct {
 	// +kubebuilder:validation:MaxLength=256
 	ID string `json:"id,omitempty"`
 }
+
+// SensitiveDataSourceType is the type of source for the sensitive data.
+type SensitiveDataSourceType string
+
+const (
+	// SensitiveDataSourceTypeInline indicates that the data is provided inline in the APISpec.
+	SensitiveDataSourceTypeInline SensitiveDataSourceType = "inline"
+	// SensitiveDataSourceTypeSecretRef indicates that the data is sourced from a Kubernetes Secret.
+	SensitiveDataSourceTypeSecretRef SensitiveDataSourceType = "secretRef"
+)

@@ -96,7 +96,7 @@ func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error)
 			return nil, fmt.Errorf("failed to generate type for %s: %w", name, err)
 		}
 
-		fileName := entityFilePrefix(entityName) + "_types.go"
+		fileName := commonGeneratedFilePrefix + entityFilePrefix(entityName) + "_types.go"
 		files = append(files, GeneratedFile{
 			Name:    fileName,
 			Content: content,
@@ -119,7 +119,7 @@ func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error)
 					return nil, fmt.Errorf("failed to generate SDK ops for %s: %w", entityName, err)
 				}
 				files = append(files, GeneratedFile{
-					Name:    entityFilePrefix(entityName) + "_sdkops.go",
+					Name:    commonGeneratedFilePrefix + entityFilePrefix(entityName) + "_sdkops.go",
 					Content: opsContent,
 				})
 
@@ -128,7 +128,7 @@ func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error)
 					return nil, fmt.Errorf("failed to generate SDK ops test for %s: %w", entityName, err)
 				}
 				files = append(files, GeneratedFile{
-					Name:    entityFilePrefix(entityName) + "_sdkops_test.go",
+					Name:    commonGeneratedFilePrefix + entityFilePrefix(entityName) + "_sdkops_test.go",
 					Content: opsTestContent,
 				})
 			}

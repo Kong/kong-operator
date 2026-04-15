@@ -38,10 +38,16 @@ spec:
     - name: envPortMaps
       expression: |
         variables.envFilteredPortMaps.size() > 0 ? variables.envFilteredPortMaps[0].value : null
+    - name: envFilteredStreamListen
+      expression: |
+        variables.proxyContainer != null && has(variables.proxyContainer.env) ?
+          variables.proxyContainer.env.filter(e, e.name == "KONG_STREAM_LISTEN") : []
     - name: envProxyListen
       expression: |
         variables.envFilteredProxyListen.size() > 0 ? variables.envFilteredProxyListen[0].value : null
-
+    - name: envStreamListen
+      expression: |
+        variables.envFilteredStreamListen.size() > 0 ? variables.envFilteredStreamListen[0].value : null
     # Helper variable to avoid duplicating the structural checks in every validation
     - name: isNotValidatable
       expression: |
@@ -57,10 +63,26 @@ spec:
     # 1. Split by comma to get entries (e.g. "0.0.0.0:8000 reuseport", "[::]:8000")
     # 2. Trim and take the first part (address:port)
     # 3. Find the last colon and take the substring after it to get the port
+    # 4. If the KONG_PROXY_LISTEN is not defined in environment variable, return the default ports (8000 for HTTP and 8443 for HTTPS).
     - name: proxyListenPorts
       expression: |
         variables.envProxyListen != null ?
         variables.envProxyListen.split(',').map(s,
+          s.trim().split(' ')[0]
+        ).map(addr,
+          addr.substring(addr.lastIndexOf(':') + 1)
+        ) : ["8000","8443"]
+
+    # Pre-calculate the ports from KONG_STREAM_LISTEN to handle IPv4 (0.0.0.0:8888) and IPv6 ([::]:8888) correctly.
+    # Logic:
+    # 1. Split by comma to get entries (e.g. "0.0.0.0:8888 reuseport", "[::]:8888")
+    # 2. Trim and take the first part (address:port)
+    # 3. Find the last colon and take the substring after it to get the port
+    # 4. If there is no KONG_STREAM_LISTEN env, return the empty list since no stream listen port is set when the env is not set.
+    - name: streamListenPorts
+      expression: |
+        variables.envStreamListen != null ?
+        variables.envStreamListen.split(',').map(s,
           s.trim().split(' ')[0]
         ).map(addr,
           addr.substring(addr.lastIndexOf(':') + 1)
@@ -87,11 +109,10 @@ spec:
         variables.envPortMaps == null ||
         variables.ingressPorts.all(p, string(p.targetPort) in variables.portMapPorts)
       reason: Invalid
-    - messageExpression: "'Each port from spec.network.services.ingress.ports has to have an accompanying port in KONG_PROXY_LISTEN env'"
+    - messageExpression: "'Each port from spec.network.services.ingress.ports has to have an accompanying port in KONG_PROXY_LISTEN or KONG_STREAM_LISTEN env'"
       expression: |
         variables.isNotValidatable ||
-        variables.envProxyListen == null ||
-        variables.ingressPorts.all(p, string(p.targetPort) in variables.proxyListenPorts)
+        variables.ingressPorts.all(p, (string(p.targetPort) in variables.proxyListenPorts) || (string(p.targetPort) in variables.streamListenPorts))
       reason: Invalid
 ---
 apiVersion: admissionregistration.k8s.io/v1

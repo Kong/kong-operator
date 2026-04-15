@@ -26,6 +26,7 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/controller/dataplane"
 	"github.com/kong/kong-operator/v2/controller/konnect"
+	secretcert "github.com/kong/kong-operator/v2/controller/secret_cert"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
@@ -82,6 +83,7 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 				ClusterCASecretName:      clusterCASecretNN.Name,
 				ClusterCASecretNamespace: clusterCASecretNN.Namespace,
 				DefaultImage:             consts.DefaultDataPlaneImage,
+				CertTTL:                  consts.DefaultCertTTL,
 				ValidateDataPlaneImage:   true,
 				KonnectEnabled:           true,
 				EnforceConfig:            true,
@@ -93,10 +95,16 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 				SyncPeriod:               konnectInfiniteSyncTime,
 				ClusterCASecretName:      clusterCASecretNN.Name,
 				ClusterCASecretNamespace: clusterCASecretNN.Namespace,
+				CertTTL:                  consts.DefaultCertTTL,
+			}
+			secretCertReconciler := &secretcert.Reconciler{
+				Client:               mgr.GetClient(),
+				CertExpirationMargin: consts.DefaultCertExpirationMargin,
 			}
 
 			StartReconcilers(ctx, t, mgr, logs,
 				dpReconciler,
+				secretCertReconciler,
 				konnectExtensionReconciler,
 				konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
 					konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongDataPlaneClientCertificate](konnectInfiniteSyncTime),

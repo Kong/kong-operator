@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
@@ -37,7 +38,7 @@ func ensureDataPlaneCertificate(
 	clusterCASecretNN types.NamespacedName,
 	adminServiceNN types.NamespacedName,
 	secretLabelSelector string,
-
+	certTTL time.Duration,
 ) (op.Result, *corev1.Secret, error) {
 	usages := []certificatesv1.KeyUsage{
 		certificatesv1.UsageKeyEncipherment,
@@ -54,6 +55,7 @@ func ensureDataPlaneCertificate(
 		usages,
 		cl,
 		matchingLabels,
+		certTTL,
 	)
 }
 

@@ -404,5 +404,7 @@ func expectedDefaultCfg() manager.Config {
 		ConversionWebhookEnabled:                 true,
 		ValidatingWebhookEnabled:                 true,
 		FQDNModeEnabled:                          false,
+		CertTTL:                                  consts.DefaultCertTTL,
+		CertExpirationMargin:                     consts.DefaultCertExpirationMargin,
 	}
 }

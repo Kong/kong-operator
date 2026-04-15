@@ -41,6 +41,18 @@ type TranslateHTTPRouteToKongstateServiceOptions struct {
 	SupportRedirectPlugin                   bool
 }
 
+const invalidBackendRefsServiceHostSuffix = ".invalid"
+
+// HostForKongService returns the upstream host for a translated Kong service.
+// Services created from invalid backendRefs use a distinct host to avoid
+// reusing Kong balancer state when the same logical service later becomes valid.
+func HostForKongService(serviceName string, backendCount, backendRefCount int) string {
+	if backendCount == 0 && backendRefCount != 0 {
+		return serviceName + invalidBackendRefsServiceHostSuffix
+	}
+	return serviceName
+}
+
 // TranslateHTTPRoutesToKongstateServices translates a set of HTTPRoutes to kongstate services,
 // and collect the translation errors in the process of translating.
 func TranslateHTTPRoutesToKongstateServices(
@@ -232,6 +244,7 @@ func translateHTTPRouteRulesMetaToKongstateService(
 		allowed,
 	)
 	service.Backends = kongstateBackends
+	service.Host = new(HostForKongService(serviceName, len(service.Backends), len(backendRefs)))
 	// set the metadata of the kong state service to point to the first HTTPRoute.
 	service.Namespace = firstHTTPRoute.GetNamespace()
 	service.Parent = firstHTTPRoute

@@ -75,6 +75,7 @@ type BlueGreenReconciler struct {
 	EnforceConfig          bool
 	ValidateDataPlaneImage bool
 	LoggingMode            logging.Mode
+	CertTTL                time.Duration
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -189,6 +190,7 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			Name:      dataplaneAdminService.Name,
 		},
 		r.SecretLabelSelector,
+		r.CertTTL,
 	)
 	if err != nil {
 		return ctrl.Result{}, err

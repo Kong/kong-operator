@@ -127,6 +127,10 @@
   [#3850](https://github.com/Kong/kong-operator/pull/3850)
 - Hybridgateway: add support for `konghq.com/protocol` service annotation
   [#3847](https://github.com/Kong/kong-operator/pull/3847)
+- Automatic rotation of certificates issued by the operator and used internally,
+  configured via `--cert-ttl` and `--cert-expiration-margin` flags. The operator will
+  automatically renew certificates before they expire, ensuring secure communication. Short downtime during rotation is expected.
+  [#3745](https://github.com/Kong/kong-operator/pull/3745)
 
 ### Changed
 

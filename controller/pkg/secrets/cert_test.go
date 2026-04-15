@@ -28,6 +28,7 @@ import (
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 )
@@ -371,6 +372,7 @@ func TestMaybeCreateCertificateSecret(t *testing.T) {
 						},
 						fakeClient,
 						tc.additionalMatchingLabels,
+						consts.DefaultCertTTL,
 					)
 
 					if tc.expectedError != nil {

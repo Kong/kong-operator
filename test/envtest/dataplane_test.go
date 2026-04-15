@@ -17,6 +17,7 @@ import (
 	kcfgdataplane "github.com/kong/kong-operator/v2/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	"github.com/kong/kong-operator/v2/controller/dataplane"
+	secretcert "github.com/kong/kong-operator/v2/controller/secret_cert"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
@@ -351,9 +352,17 @@ func setupDataPlaneTest(t *testing.T, ctx context.Context, caSecretName string) 
 		ClusterCASecretName:      clusterCA.Name,
 		ClusterCASecretNamespace: clusterCA.Namespace,
 		DefaultImage:             consts.DefaultDataPlaneImage,
+		CertTTL:                  consts.DefaultCertTTL,
 		ValidateDataPlaneImage:   true,
 	}
-	StartReconcilers(ctx, t, mgr, logs, dpReconciler)
+	secretCertReconciler := &secretcert.Reconciler{
+		Client:               mgr.GetClient(),
+		CertExpirationMargin: consts.DefaultCertExpirationMargin,
+	}
+	StartReconcilers(ctx, t, mgr, logs,
+		dpReconciler,
+		secretCertReconciler,
+	)
 
 	return mgr.GetClient(), ns
 }

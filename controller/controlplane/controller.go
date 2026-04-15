@@ -65,6 +65,7 @@ type Reconciler struct {
 	CacheSyncPeriod          time.Duration
 	ClusterCASecretName      string
 	ClusterCASecretNamespace string
+	CertTTL                  time.Duration
 
 	RestConfig              *rest.Config
 	KubeConfigPath          string

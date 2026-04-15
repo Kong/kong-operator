@@ -34,7 +34,6 @@ var skippedTestsForHybrid = []string{
 	// Core profile.
 	tests.HTTPRouteHTTPSListener.ShortName,
 	tests.HTTPRouteInvalidNonExistentBackendRef.ShortName,
-	tests.HTTPRouteInvalidReferenceGrant.ShortName,
 	tests.HTTPRouteListenerHostnameMatching.ShortName,
 	tests.HTTPRouteHeaderMatching.ShortName,
 	tests.HTTPRouteMethodMatching.ShortName,

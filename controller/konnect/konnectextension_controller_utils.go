@@ -234,6 +234,7 @@ func (r *KonnectExtensionReconciler) ensureCertificateSecret(ctx context.Context
 		usages,
 		r.Client,
 		matchingLabels,
+		r.CertTTL,
 	)
 }
 
