@@ -133,6 +133,9 @@
   [#3745](https://github.com/Kong/kong-operator/pull/3745)
 - Added support for using `KonnectGatewayControlPlane` of type group with `KonnectExtension`s.
   [#3711](https://github.com/Kong/kong-operator/pull/3711)
+- `MCPServer`: set `KongRoute` and `KongService` Konnect IDs during
+  reconciliation.
+  [#3904](https://github.com/Kong/kong-operator/pull/3904)
 
 ### Changed
 
