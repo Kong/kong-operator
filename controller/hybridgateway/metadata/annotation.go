@@ -161,8 +161,9 @@ func NameStringToObjectKey(s string) client.ObjectKey {
 //   - bool: true if the hybrid-routes annotation was modified, false if the annotation was already
 //     there and no changes were made
 func (am *AnnotationManager) AppendRouteToAnnotation(obj metav1.Object, route client.Object) bool {
-	currentRouteKey := ObjectToNameString(route)
-	currentRouteAnnotation := currentRouteKey
+	currentRouteKind := route.GetObjectKind().GroupVersionKind().Kind
+	currentRouteObjectKey := ObjectToNameString(route)
+	currentRouteAnnotation := currentRouteKind + "/" + currentRouteObjectKey
 
 	log.Debug(am.logger, "Processing route annotation",
 		"currentRoute", currentRouteAnnotation,
