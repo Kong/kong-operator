@@ -53,8 +53,7 @@ const (
 	// DefaultKEGBaseImage is the base image name for the KEG container.
 	DefaultKEGBaseImage = "kong/kong-event-gateway"
 	// DefaultKEGTag is the default image tag for the KEG container.
-	// TODO: Consider making this a version-specific tag (e.g. "2.0.0") instead of "latest" to avoid unintended image updates.
-	DefaultKEGTag = "latest"
+	DefaultKEGTag = "v1.1.0"
 	// DefaultKEGImage is the full default image reference for the KEG container.
 	DefaultKEGImage = DefaultKEGBaseImage + ":" + DefaultKEGTag
 )

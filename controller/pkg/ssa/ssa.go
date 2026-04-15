@@ -34,12 +34,13 @@ import (
 	"k8s.io/apimachinery/pkg/util/managedfields"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/openapi"
-	"k8s.io/kube-openapi/pkg/spec3"
-	"k8s.io/kube-openapi/pkg/validation/spec"
+	kubespec3 "k8s.io/kube-openapi/pkg/spec3"
+	validationspec "k8s.io/kube-openapi/pkg/validation/spec"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/structured-merge-diff/v6/fieldpath"
 
+	log "github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
@@ -69,7 +70,7 @@ func NewTypeConverter(mgr ctrl.Manager, groupVersions []schema.GroupVersion) (ma
 		wanted[gvToPathKey(gv)] = struct{}{}
 	}
 
-	schemas := map[string]*spec.Schema{}
+	schemas := map[string]*validationspec.Schema{}
 	for pathKey, gv := range paths {
 		if _, ok := wanted[pathKey]; !ok {
 			continue
@@ -78,7 +79,7 @@ func NewTypeConverter(mgr ctrl.Manager, groupVersions []schema.GroupVersion) (ma
 		if err != nil {
 			return nil, fmt.Errorf("failed to download schema for %s: %w", pathKey, err)
 		}
-		var oa spec3.OpenAPI
+		var oa kubespec3.OpenAPI
 		if err := json.Unmarshal(s, &oa); err != nil {
 			return nil, fmt.Errorf("failed to parse schema for %s: %w", pathKey, err)
 		}
@@ -224,14 +225,14 @@ func ApplyIfChanged(
 	}
 
 	if comparison.IsSame() {
-		logger.V(3).Info("no changes detected",
+		log.Debug(logger, "no changes detected",
 			"object", client.ObjectKeyFromObject(desired),
 			"kind", desired.GetObjectKind().GroupVersionKind().Kind,
 		)
 		return op.Noop, nil
 	}
 
-	logger.V(3).Info("applying changes",
+	log.Debug(logger, "applying changes",
 		"object", client.ObjectKeyFromObject(desired),
 		"kind", desired.GetObjectKind().GroupVersionKind().Kind,
 		"changes", comparison.String(),
@@ -322,14 +323,14 @@ func ApplyStatusIfChanged(
 	}
 
 	if comparison.IsSame() {
-		logger.V(3).Info("no status changes detected",
+		log.Trace(logger, "no status changes detected",
 			"object", client.ObjectKeyFromObject(desired),
 			"kind", gvk.Kind,
 		)
 		return op.Noop, nil
 	}
 
-	logger.V(3).Info("applying status changes",
+	log.Trace(logger, "applying status changes",
 		"object", client.ObjectKeyFromObject(desired),
 		"kind", gvk.Kind,
 		"changes", comparison.String(),
