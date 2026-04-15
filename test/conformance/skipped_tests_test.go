@@ -27,7 +27,6 @@ var skippedTestsForExpressionsRouter = []string{}
 var skippedTestsForTraditionalCompatibleRouter = []string{
 	// HTTPRoute
 	tests.HTTPRouteHeaderMatching.ShortName,
-	tests.HTTPRouteInvalidBackendRefUnknownKind.ShortName,
 }
 
 var skippedTestsForHybrid = []string{
@@ -37,7 +36,6 @@ var skippedTestsForHybrid = []string{
 	tests.HTTPRouteInvalidNonExistentBackendRef.ShortName,
 	tests.HTTPRouteListenerHostnameMatching.ShortName,
 	tests.HTTPRouteHeaderMatching.ShortName,
-	tests.HTTPRouteInvalidBackendRefUnknownKind.ShortName,
 	tests.HTTPRouteMethodMatching.ShortName,
 	tests.HTTPRouteMatchingAcrossRoutes.ShortName,
 	tests.HTTPRoutePathMatchOrder.ShortName,
@@ -61,6 +59,9 @@ func skippedTestsForConfig(routerFlavor consts.RouterFlavor, gwType gatewayType)
 	switch routerFlavor {
 	case consts.RouterFlavorTraditionalCompatible:
 		skipped = append(skipped, skippedTestsForTraditionalCompatibleRouter...)
+		if gwType == standardGateway {
+			skipped = append(skipped, tests.HTTPRouteInvalidBackendRefUnknownKind.ShortName)
+		}
 	case consts.RouterFlavorExpressions:
 		skipped = append(skipped, skippedTestsForExpressionsRouter...)
 	}
