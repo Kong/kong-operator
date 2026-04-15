@@ -762,6 +762,7 @@ func Test_BuildProgrammedCondition(t *testing.T) {
 	ctx := context.Background()
 	pRef := gwtypes.ParentReference{Name: "gw"}
 	route := &gwtypes.HTTPRoute{
+		TypeMeta:   metav1.TypeMeta{Kind: "HTTPRoute", APIVersion: "gateway.networking.k8s.io/v1"},
 		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
 	}
 	gvk := schema.GroupVersionKind{Group: "example.com", Version: "v1", Kind: "FakeResource"}
@@ -772,7 +773,7 @@ func Test_BuildProgrammedCondition(t *testing.T) {
 		obj := &unstructured.Unstructured{}
 		obj.SetGroupVersionKind(gvk)
 		obj.SetAnnotations(map[string]string{
-			consts.GatewayOperatorHybridRoutesAnnotation: "default/route",
+			consts.GatewayOperatorHybridRoutesAnnotation: "HTTPRoute/default/route",
 		})
 		cond := map[string]any{"type": "Programmed", "status": "True"}
 		if !programmed {

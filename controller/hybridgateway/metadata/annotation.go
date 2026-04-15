@@ -188,9 +188,9 @@ func (am *AnnotationManager) AppendRouteToAnnotation(obj metav1.Object, route cl
 		return true
 	}
 
-	for route := range strings.SplitSeq(hybridRouteAnnotation, ",") {
-		route = strings.TrimSpace(route)
-		if route == currentRouteAnnotation {
+	for routeAnnotation := range strings.SplitSeq(hybridRouteAnnotation, ",") {
+		routeAnnotation = strings.TrimSpace(routeAnnotation)
+		if RouteAnnotationMatch(routeAnnotation, route) {
 			log.Debug(am.logger, "Route already exists in annotation, no update needed",
 				"currentRoute", currentRouteAnnotation,
 				"objectName", obj.GetName())
@@ -255,9 +255,7 @@ func (am *AnnotationManager) RemoveRouteFromAnnotation(obj metav1.Object, route 
 	found := false
 	for _, routeAnnotation := range existingRoutes {
 		routeAnnotation = strings.TrimSpace(routeAnnotation)
-		if routeAnnotation == currentRouteAnnotation ||
-			// For HTTPRoute, KO 2.1 was using namespace/name format so match the format if the kind is HTTPRoute.
-			currentRouteKind == kindHTTPRoute && routeAnnotation == currentRouteObjectKey {
+		if RouteAnnotationMatch(routeAnnotation, route) {
 			found = true
 			continue
 		}
@@ -354,8 +352,7 @@ func (am *AnnotationManager) GetRoutes(obj metav1.Object) []string {
 			continue
 		}
 		// For route keys with only 2 parts, treat them as the annotation created by KO 2.1 so set kind to "HTTPRoute".
-		parts := strings.Split(route, "/")
-		if len(parts) == 2 {
+		if strings.Count(route, "/") == 1 {
 			route = kindHTTPRoute + "/" + route
 		}
 		// Format is now just "kind/namespace/name"
@@ -388,9 +385,8 @@ func (am *AnnotationManager) SetRoutes(obj metav1.Object, routes []string) bool 
 
 	same := lo.ElementsMatchBy(existingRoutes, routes, func(routeKey string) string {
 		routeKey = strings.TrimSpace(routeKey)
-		parts := strings.Split(routeKey, "/")
-		// For route keys with only 2 parts, treat them as the annotation created by KO 2.1 so set kind to "HTTPRoute".
-		if len(parts) == 2 {
+		// For route keys with the namespace/name format, treat them as the annotation created by KO 2.1 so set kind to "HTTPRoute".
+		if strings.Count(routeKey, "/") == 1 {
 			return kindHTTPRoute + "/" + routeKey
 		}
 		return routeKey
@@ -412,4 +408,26 @@ func (am *AnnotationManager) SetRoutes(obj metav1.Object, routes []string) bool 
 		consts.GatewayOperatorHybridRoutesAnnotation, newAnnotation,
 		"objectName", obj.GetName())
 	return true
+}
+
+// RouteAnnotationMatch returns true if the hybrid route annotation matches the given route by kind, namespace and name.
+func RouteAnnotationMatch(routeAnnotation string, route client.Object) bool {
+	var kind, namespace, name string
+	parts := strings.Split(routeAnnotation, "/")
+	switch len(parts) {
+	// The annotation kind/namespace/name format.
+	case 3:
+		kind = parts[0]
+		namespace = parts[1]
+		name = parts[2]
+	// The annotation in namespace/name format implies that the kind is HTTPRoute.
+	case 2:
+		kind = kindHTTPRoute
+		namespace = parts[0]
+		name = parts[1]
+	// malformed annotation. Should be unreachable.
+	default:
+		return false
+	}
+	return kind == route.GetObjectKind().GroupVersionKind().Kind && namespace == route.GetNamespace() && name == route.GetName()
 }

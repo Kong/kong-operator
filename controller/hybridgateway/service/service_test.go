@@ -22,6 +22,13 @@ import (
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
+var (
+	httpRouteTypeMeta = metav1.TypeMeta{
+		Kind:       "HTTPRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
+	}
+)
+
 func TestServiceForRule(t *testing.T) {
 	ctx := context.Background()
 	logger := zap.New()
@@ -33,6 +40,7 @@ func TestServiceForRule(t *testing.T) {
 
 	// Create test HTTPRoute
 	httpRoute := &gwtypes.HTTPRoute{
+		TypeMeta: httpRouteTypeMeta,
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-route",
 			Namespace: "test-namespace",
@@ -77,7 +85,7 @@ func TestServiceForRule(t *testing.T) {
 		{
 			name:               "new service creation",
 			existingService:    nil,
-			expectedAnnotation: "test-namespace/test-route",
+			expectedAnnotation: "HTTPRoute/test-namespace/test-route",
 			expectUpdate:       false,
 			expectedHost:       upstreamName,
 		},
@@ -89,7 +97,7 @@ func TestServiceForRule(t *testing.T) {
 					Namespace: "test-namespace",
 				},
 			},
-			expectedAnnotation: "test-namespace/test-route",
+			expectedAnnotation: "HTTPRoute/test-namespace/test-route",
 			expectUpdate:       true,
 			expectedHost:       upstreamName,
 		},
@@ -100,11 +108,11 @@ func TestServiceForRule(t *testing.T) {
 					Name:      serviceName,
 					Namespace: "test-namespace",
 					Annotations: map[string]string{
-						consts.GatewayOperatorHybridRoutesAnnotation: "other-namespace/other-route",
+						consts.GatewayOperatorHybridRoutesAnnotation: "HTTPRoute/other-namespace/other-route",
 					},
 				},
 			},
-			expectedAnnotation: "other-namespace/other-route,test-namespace/test-route",
+			expectedAnnotation: "HTTPRoute/other-namespace/other-route,HTTPRoute/test-namespace/test-route",
 			expectUpdate:       true,
 			expectedHost:       upstreamName,
 		},
@@ -115,11 +123,11 @@ func TestServiceForRule(t *testing.T) {
 					Name:      serviceName,
 					Namespace: "test-namespace",
 					Annotations: map[string]string{
-						consts.GatewayOperatorHybridRoutesAnnotation: "test-namespace/test-route",
+						consts.GatewayOperatorHybridRoutesAnnotation: "HTTPRoute/test-namespace/test-route",
 					},
 				},
 			},
-			expectedAnnotation: "test-namespace/test-route",
+			expectedAnnotation: "HTTPRoute/test-namespace/test-route",
 			expectUpdate:       false,
 			expectedHost:       upstreamName,
 		},
@@ -130,11 +138,11 @@ func TestServiceForRule(t *testing.T) {
 					Name:      serviceName,
 					Namespace: "test-namespace",
 					Annotations: map[string]string{
-						consts.GatewayOperatorHybridRoutesAnnotation: "ns1/route1,ns2/route2",
+						consts.GatewayOperatorHybridRoutesAnnotation: "HTTPRoute/ns1/route1,HTTPRoute/ns2/route2",
 					},
 				},
 			},
-			expectedAnnotation: "ns1/route1,ns2/route2,test-namespace/test-route",
+			expectedAnnotation: "HTTPRoute/ns1/route1,HTTPRoute/ns2/route2,HTTPRoute/test-namespace/test-route",
 			expectUpdate:       true,
 			expectedHost:       upstreamName,
 		},

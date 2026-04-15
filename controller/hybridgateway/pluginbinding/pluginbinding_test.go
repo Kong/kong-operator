@@ -19,6 +19,13 @@ import (
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
+var (
+	httpRouteTypeMeta = metav1.TypeMeta{
+		Kind:       "HTTPRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
+	}
+)
+
 func TestAppendHTTPRouteToBindingAnnotations(t *testing.T) {
 	logger := logr.Discard()
 
@@ -33,12 +40,13 @@ func TestAppendHTTPRouteToBindingAnnotations(t *testing.T) {
 			name:                "no existing annotations",
 			existingAnnotations: nil,
 			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-route",
 					Namespace: "test-namespace",
 				},
 			},
-			expectedAnnotation: "test-namespace/test-route",
+			expectedAnnotation: "HTTPRoute/test-namespace/test-route",
 			expectModification: true,
 		},
 		{
@@ -47,12 +55,13 @@ func TestAppendHTTPRouteToBindingAnnotations(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesAnnotation: "",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-route",
 					Namespace: "test-namespace",
 				},
 			},
-			expectedAnnotation: "test-namespace/test-route",
+			expectedAnnotation: "HTTPRoute/test-namespace/test-route",
 			expectModification: true,
 		},
 		{
@@ -61,20 +70,22 @@ func TestAppendHTTPRouteToBindingAnnotations(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesAnnotation: "other-namespace/other-route",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-route",
 					Namespace: "test-namespace",
 				},
 			},
-			expectedAnnotation: "other-namespace/other-route,test-namespace/test-route",
+			expectedAnnotation: "other-namespace/other-route,HTTPRoute/test-namespace/test-route",
 			expectModification: true,
 		},
 		{
-			name: "route already exists in annotation",
+			name: "route already exists in annotation without kind",
 			existingAnnotations: map[string]string{
 				consts.GatewayOperatorHybridRoutesAnnotation: "test-namespace/test-route",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-route",
 					Namespace: "test-namespace",
@@ -84,17 +95,33 @@ func TestAppendHTTPRouteToBindingAnnotations(t *testing.T) {
 			expectModification: false,
 		},
 		{
+			name: "route already exists in annotation with kind",
+			existingAnnotations: map[string]string{
+				consts.GatewayOperatorHybridRoutesAnnotation: "HTTPRoute/test-namespace/test-route",
+			},
+			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-route",
+					Namespace: "test-namespace",
+				},
+			},
+			expectedAnnotation: "HTTPRoute/test-namespace/test-route",
+			expectModification: false,
+		},
+		{
 			name: "multiple existing routes, adding new one",
 			existingAnnotations: map[string]string{
 				consts.GatewayOperatorHybridRoutesAnnotation: "ns1/route1,ns2/route2",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "route3",
 					Namespace: "ns3",
 				},
 			},
-			expectedAnnotation: "ns1/route1,ns2/route2,ns3/route3",
+			expectedAnnotation: "ns1/route1,ns2/route2,HTTPRoute/ns3/route3",
 			expectModification: true,
 		},
 	}
@@ -138,6 +165,7 @@ func TestBindingForPluginAndRoute(t *testing.T) {
 			routeName:       "test-route",
 			existingBinding: nil,
 			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-httproute",
 					Namespace: "test-namespace",
@@ -164,7 +192,7 @@ func TestBindingForPluginAndRoute(t *testing.T) {
 				assert.Equal(t, "configuration.konghq.com", binding.Spec.Targets.RouteReference.Group)
 				assert.Equal(t, "KongRoute", binding.Spec.Targets.RouteReference.Kind)
 				assert.Contains(t, binding.Annotations, consts.GatewayOperatorHybridRoutesAnnotation)
-				assert.Equal(t, "test-namespace/test-httproute", binding.Annotations[consts.GatewayOperatorHybridRoutesAnnotation])
+				assert.Equal(t, "HTTPRoute/test-namespace/test-httproute", binding.Annotations[consts.GatewayOperatorHybridRoutesAnnotation])
 			},
 		},
 		{
@@ -172,6 +200,7 @@ func TestBindingForPluginAndRoute(t *testing.T) {
 			pluginName: "test-plugin-2",
 			routeName:  "test-route-2",
 			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-httproute-2",
 					Namespace: "test-namespace",

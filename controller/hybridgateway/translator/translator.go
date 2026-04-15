@@ -68,7 +68,7 @@ func VerifyAndUpdate[T client.Object](
 	// See https://github.com/Kong/kong-operator/blob/main/docs/internal/hybridgateway/autogen-resource-naming.md for more details of
 	// how the resource are generated and associated with routes.
 	if exclusiveRoute {
-		if len(routes) > 1 || strings.TrimSpace(routes[0]) != metadata.ObjectToNameString(route) {
+		if len(routes) > 1 || !metadata.RouteAnnotationMatch(routes[0], route) {
 			err = fmt.Errorf("existing %s object %s/%s is associated with multiple routes %s",
 				obj.GetObjectKind().GroupVersionKind().Kind, existingObj.GetNamespace(), existingObj.GetName(), routesCSV)
 			log.Error(logger, err, "Tracking annotation exclusive source Route check failed")

@@ -338,7 +338,22 @@ func TestAppendRouteToAnnotation(t *testing.T) {
 			expectModification: true,
 		},
 		{
-			name: "route already exists in annotation",
+			name: "route already exists in annotation without kind",
+			existingAnnotations: map[string]string{
+				consts.GatewayOperatorHybridRoutesAnnotation: "test-namespace/test-route",
+			},
+			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-route",
+					Namespace: "test-namespace",
+				},
+			},
+			expectedAnnotation: "test-namespace/test-route",
+			expectModification: false,
+		},
+		{
+			name: "route already exists in annotation with kind",
 			existingAnnotations: map[string]string{
 				consts.GatewayOperatorHybridRoutesAnnotation: "HTTPRoute/test-namespace/test-route",
 			},
@@ -800,8 +815,8 @@ func TestSetRoutes(t *testing.T) {
 			existingAnnotations: map[string]string{
 				consts.GatewayOperatorHybridRoutesAnnotation: "ns1/route1",
 			},
-			routes:             []string{"ns2/route2"},
-			expectedAnnotation: "ns2/route2",
+			routes:             []string{"HTTPRoute/ns2/route2"},
+			expectedAnnotation: "HTTPRoute/ns2/route2",
 			expectModification: true,
 		},
 		{
@@ -933,6 +948,7 @@ func TestGenericObjectTypes(t *testing.T) {
 	am := NewAnnotationManager(logger)
 
 	httpRoute := &gwtypes.HTTPRoute{
+		TypeMeta: httpRouteTypeMeta,
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-route",
 			Namespace: "test-namespace",
@@ -967,7 +983,7 @@ func TestGenericObjectTypes(t *testing.T) {
 
 			// Test getting routes
 			routes := am.GetRoutes(obj)
-			assert.Equal(t, []string{"test-namespace/test-route"}, routes)
+			assert.Equal(t, []string{"HTTPRoute/test-namespace/test-route"}, routes)
 
 			// Test removing
 			modified = am.RemoveRouteFromAnnotation(obj, httpRoute)

@@ -40,13 +40,14 @@ type kongResource interface {
 // MapRouteForKongResource returns a handler.MapFunc that, given a Kong resource object of type T,
 // retrieves the routes referenced in its annotations. It returns a slice of reconcile.Requests
 // for each matching route.
-func MapRouteForKongResource[T kongResource](cl client.Client, kind string) handler.MapFunc {
+func MapRouteForKongResource[T kongResource](kind string) handler.MapFunc {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
 		_, ok := obj.(T)
 		if !ok {
 			return nil
 		}
 
+		// am.GetRoutes adds the `HTTPRoute/` prefix for annotations in namespace/name format used in KO 2.1.
 		am := metadata.NewAnnotationManager(logr.Discard())
 		routes := am.GetRoutes(obj)
 		if len(routes) == 0 {
@@ -55,12 +56,11 @@ func MapRouteForKongResource[T kongResource](cl client.Client, kind string) hand
 
 		var requests []reconcile.Request
 		for _, r := range routes {
-			if strings.HasPrefix(r, kind+"/") {
+			if objectKeyStr, ok := strings.CutPrefix(r, kind+"/"); ok {
 				requests = append(requests, reconcile.Request{
-					NamespacedName: metadata.NameStringToObjectKey(strings.TrimPrefix(r, kind+"/")),
+					NamespacedName: metadata.NameStringToObjectKey(objectKeyStr),
 				})
 			}
-
 		}
 		return requests
 	}

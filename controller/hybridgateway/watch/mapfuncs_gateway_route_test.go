@@ -11,12 +11,16 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
 // partialErrorClient simulates a client.Client that returns an error only when listing HTTPRoutes for a Gateway.
@@ -419,4 +423,198 @@ func Test_MapRouteForEndpointSlice(t *testing.T) {
 		requests := mapFuncErrList(ctx, obj)
 		require.Nil(t, requests)
 	})
+}
+
+func TestMapRouteForKongResource_HTTPRoute(t *testing.T) {
+
+	testCases := []struct {
+		name             string
+		obj              client.Object
+		expectedRequests []reconcile.Request
+	}{
+		{
+			name: "no annotation",
+			obj: &configurationv1alpha1.KongUpstream{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-obj",
+					Namespace: "test-ns",
+				},
+			},
+			expectedRequests: []reconcile.Request{},
+		},
+		{
+			name: "unmatched source object type",
+			obj: &configurationv1alpha1.KongTarget{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-obj",
+					Namespace: "test-ns",
+				},
+			},
+			expectedRequests: []reconcile.Request{},
+		},
+		{
+			name: "single route without kind",
+			obj: &configurationv1alpha1.KongUpstream{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-obj",
+					Namespace: "test-ns",
+					Annotations: map[string]string{
+						consts.GatewayOperatorHybridRoutesAnnotation: "test-ns/test-httproute",
+					},
+				},
+			},
+			expectedRequests: []reconcile.Request{
+				{NamespacedName: types.NamespacedName{Namespace: "test-ns", Name: "test-httproute"}},
+			},
+		},
+		{
+			name: "single route with kind",
+			obj: &configurationv1alpha1.KongUpstream{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-obj",
+					Namespace: "test-ns",
+					Annotations: map[string]string{
+						consts.GatewayOperatorHybridRoutesAnnotation: "HTTPRoute/test-ns/test-httproute",
+					},
+				},
+			},
+			expectedRequests: []reconcile.Request{
+				{NamespacedName: types.NamespacedName{Namespace: "test-ns", Name: "test-httproute"}},
+			},
+		},
+		{
+			name: "multiple routes",
+			obj: &configurationv1alpha1.KongUpstream{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-obj",
+					Namespace: "test-ns",
+					Annotations: map[string]string{
+						consts.GatewayOperatorHybridRoutesAnnotation: "HTTPRoute/ns1/route-1,HTTPRoute/ns2/route-2",
+					},
+				},
+			},
+			expectedRequests: []reconcile.Request{
+				{NamespacedName: types.NamespacedName{Namespace: "ns1", Name: "route-1"}},
+				{NamespacedName: types.NamespacedName{Namespace: "ns2", Name: "route-2"}},
+			},
+		},
+		{
+			name: "multiple routes with unmatched kind",
+			obj: &configurationv1alpha1.KongUpstream{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-obj",
+					Namespace: "test-ns",
+					Annotations: map[string]string{
+						consts.GatewayOperatorHybridRoutesAnnotation: "HTTPRoute/ns1/route-1,TLSRoute/ns2/route-2",
+					},
+				},
+			},
+			expectedRequests: []reconcile.Request{
+				{NamespacedName: types.NamespacedName{Namespace: "ns1", Name: "route-1"}},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			requests := MapRouteForKongResource[*configurationv1alpha1.KongUpstream](kindHTTPRoute)(context.Background(), tc.obj)
+			require.ElementsMatch(t, tc.expectedRequests, requests)
+		})
+	}
+}
+
+func TestMapRouteForKongResource_TLSRoute(t *testing.T) {
+
+	testCases := []struct {
+		name             string
+		obj              client.Object
+		expectedRequests []reconcile.Request
+	}{
+		{
+			name: "no annotation",
+			obj: &configurationv1alpha1.KongUpstream{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-obj",
+					Namespace: "test-ns",
+				},
+			},
+			expectedRequests: []reconcile.Request{},
+		},
+		{
+			name: "unmatched source object type",
+			obj: &configurationv1alpha1.KongTarget{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-obj",
+					Namespace: "test-ns",
+				},
+			},
+			expectedRequests: []reconcile.Request{},
+		},
+		{
+			name: "single route without kind",
+			obj: &configurationv1alpha1.KongUpstream{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-obj",
+					Namespace: "test-ns",
+					Annotations: map[string]string{
+						consts.GatewayOperatorHybridRoutesAnnotation: "test-ns/test-route",
+					},
+				},
+			},
+			expectedRequests: []reconcile.Request{},
+		},
+		{
+			name: "single route with kind",
+			obj: &configurationv1alpha1.KongUpstream{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-obj",
+					Namespace: "test-ns",
+					Annotations: map[string]string{
+						consts.GatewayOperatorHybridRoutesAnnotation: "TLSRoute/test-ns/test-route",
+					},
+				},
+			},
+			expectedRequests: []reconcile.Request{
+				{NamespacedName: types.NamespacedName{Namespace: "test-ns", Name: "test-route"}},
+			},
+		},
+		{
+			name: "multiple routes",
+			obj: &configurationv1alpha1.KongUpstream{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-obj",
+					Namespace: "test-ns",
+					Annotations: map[string]string{
+						consts.GatewayOperatorHybridRoutesAnnotation: "TLSRoute/ns1/route-1,TLSRoute/ns2/route-2",
+					},
+				},
+			},
+			expectedRequests: []reconcile.Request{
+				{NamespacedName: types.NamespacedName{Namespace: "ns1", Name: "route-1"}},
+				{NamespacedName: types.NamespacedName{Namespace: "ns2", Name: "route-2"}},
+			},
+		},
+		{
+			name: "multiple routes with unmatched kind",
+			obj: &configurationv1alpha1.KongUpstream{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-obj",
+					Namespace: "test-ns",
+					Annotations: map[string]string{
+						consts.GatewayOperatorHybridRoutesAnnotation: "HTTPRoute/ns1/route-1,TLSRoute/ns2/route-2",
+					},
+				},
+			},
+			expectedRequests: []reconcile.Request{
+				{NamespacedName: types.NamespacedName{Namespace: "ns2", Name: "route-2"}},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			requests := MapRouteForKongResource[*configurationv1alpha1.KongUpstream](kindTLSRoute)(context.Background(), tc.obj)
+			require.ElementsMatch(t, tc.expectedRequests, requests)
+		})
+	}
 }
