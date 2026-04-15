@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/types"
 
@@ -29,10 +30,8 @@ func generateHashedName(namespace, prefix, hashKey string) types.NamespacedName 
 	maxPrefix := maxLen - len(suffix)
 	if len(prefix) > maxPrefix {
 		prefix = prefix[:maxPrefix]
-		for len(prefix) > 0 && prefix[len(prefix)-1] == '-' {
-			prefix = prefix[:len(prefix)-1]
-		}
 	}
+	prefix = strings.TrimRight(prefix, "-")
 
 	return types.NamespacedName{
 		Namespace: namespace,

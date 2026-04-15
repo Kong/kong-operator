@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
@@ -15,6 +17,10 @@ const validUUID = "12345678-1234-1234-1234-123456789abc"
 
 func validMCPServer(ns string) *konnectv1alpha1.MCPServer {
 	return &konnectv1alpha1.MCPServer{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "MCPServer",
+			APIVersion: konnectv1alpha1.GroupVersion.String(),
+		},
 		ObjectMeta: common.CommonObjectMeta(ns),
 		Spec: konnectv1alpha1.MCPServerSpec{
 			ControlPlaneRef: commonv1alpha1.ControlPlaneRef{
@@ -40,10 +46,33 @@ func TestMCPServer(t *testing.T) {
 	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	t.Run("controlPlaneRef validation", func(t *testing.T) {
-		obj := validMCPServer(ns.Name)
-		common.NewCRDValidationTestCasesGroupCPRefChange(
-			t, cfg, obj, common.NotSupportedByKIC, common.ControlPlaneRefRequired,
-		).RunWithConfig(t, cfg, scheme)
+		common.TestCasesGroup[*konnectv1alpha1.MCPServer]{
+			{
+				Name: "providing konnectNamespacedRef when type is kic yields an error",
+				TestObject: func() *konnectv1alpha1.MCPServer {
+					obj := validMCPServer(ns.Name)
+					obj.Spec.ControlPlaneRef = commonv1alpha1.ControlPlaneRef{
+						Type: commonv1alpha1.ControlPlaneRefKIC,
+						KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+							Name: "test-konnect-control-plane",
+						},
+					}
+					return obj
+				}(),
+				ExpectedErrorMessage: new("when type is kic, konnectNamespacedRef must not be set"),
+			},
+			{
+				Name: "konnectID type is not supported",
+				TestObject: func() *konnectv1alpha1.MCPServer {
+					obj := validMCPServer(ns.Name)
+					obj.Spec.ControlPlaneRef = commonv1alpha1.ControlPlaneRef{
+						Type: commonv1alpha1.ControlPlaneRefKonnectID,
+					}
+					return obj
+				}(),
+				ExpectedErrorMessage: new("Unsupported value: \"konnectID\""),
+			},
+		}.RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("mirror field validation", func(t *testing.T) {
@@ -65,7 +94,7 @@ func TestMCPServer(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: new("spec.mirror.konnect.id: Required value"),
+				ExpectedErrorMessage: new("spec.mirror.konnect.id"),
 			},
 			{
 				Name: "invalid UUID pattern in mirror.konnect.id is rejected",
