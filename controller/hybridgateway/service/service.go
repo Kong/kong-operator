@@ -70,21 +70,15 @@ func ServiceForRule[
 			return nil, fmt.Errorf("failed to build KongService : unmatched route type and rule type: %T and %T", parentRoute, rule)
 		}
 		serviceName = namegen.NewKongServiceNameForHTTPRouteRule(r, cp, httpRule)
-		protocol = resolveProtocolFromBackendRefs(ctx, cl, r, httpRule, "http", logger)
+		protocol = resolveProtocolFromHTTPRouteBackendRefs(ctx, cl, r, httpRule, "http", logger)
 	case *gwtypes.TLSRoute:
 		tlsRule, ok := any(rule).(gwtypes.TLSRouteRule)
 		if !ok {
 			return nil, fmt.Errorf("failed to build KongService : unmatched route type and rule type: %T and %T", parentRoute, rule)
 		}
 		serviceName = namegen.NewKongServiceNameForTLSRouteRule(r, cp, tlsRule)
-		// As specified in Kong gateway documents, either TLS passthrough or TLS terminate should set `tcp` as the service protocol:
-		// For TLS passthrogh, we should use `tls_passthrough` for protocols of routes and `tcp` for protocols of services:
-		// https://developer.konghq.com/gateway/entities/route/#proxying-tls-passthrough-traffic
-		// For TLS terminate, we should set `tls` for routes and `tcp` for services:
-		// https://developer.konghq.com/gateway/traffic-control/proxying/#proxy-tcp-tls-traffic
-		// TODO: support specifying protocols of KongService by annotation:
-		// https://github.com/Kong/kong-operator/issues/3750
-		protocol = builder.KongServiceProtocolTCP
+		protocol = resolveProtocolFromTLSRouteBackendRefs(ctx, cl, r, tlsRule, logger)
+
 	// TODO: add other types of routes and rules when we support them.
 
 	// Should be unreachable.
@@ -119,7 +113,7 @@ func ServiceForRule[
 // HTTPRoute's backend references to determine the upstream protocol. If any backend
 // Service has a valid konghq.com/protocol annotation, that protocol is returned.
 // Otherwise, defaultProtocol is returned.
-func resolveProtocolFromBackendRefs(
+func resolveProtocolFromHTTPRouteBackendRefs(
 	ctx context.Context,
 	cl client.Client,
 	httpRoute *gwtypes.HTTPRoute,
@@ -128,38 +122,75 @@ func resolveProtocolFromBackendRefs(
 	logger logr.Logger,
 ) string {
 	for _, backendRef := range rule.BackendRefs {
-		bRef := backendRef.BackendRef
-		if !route.IsBackendRefSupported(bRef.Group, bRef.Kind) {
-			continue
+		if protocol, ok := extractProtocolFromBackendRef(ctx, cl, logger, httpRoute.Namespace, backendRef.BackendRef); ok {
+			return protocol
 		}
-
-		bRefNamespace := httpRoute.GetNamespace()
-		if bRef.Namespace != nil && *bRef.Namespace != "" {
-			bRefNamespace = string(*bRef.Namespace)
-		}
-
-		svc := &corev1.Service{}
-		if err := cl.Get(ctx, client.ObjectKey{Namespace: bRefNamespace, Name: string(bRef.Name)}, svc); err != nil {
-			log.Debug(logger, "Failed to fetch backend Service for protocol annotation check",
-				"service", fmt.Sprintf("%s/%s", bRefNamespace, bRef.Name), "error", err)
-			continue
-		}
-
-		protocol := strings.ToLower(metadata.ExtractProtocol(svc.GetAnnotations()))
-		if protocol == "" {
-			continue
-		}
-
-		if !metadata.IsValidProtocol(protocol) {
-			log.Info(logger, "Ignoring invalid konghq.com/protocol annotation value on backend Service",
-				"service", fmt.Sprintf("%s/%s", bRefNamespace, bRef.Name), "protocol", protocol)
-			continue
-		}
-
-		log.Debug(logger, "Using protocol from backend Service annotation",
-			"service", fmt.Sprintf("%s/%s", bRefNamespace, bRef.Name), "protocol", protocol)
-		return protocol
 	}
 
 	return defaultProtocol
+}
+
+func resolveProtocolFromTLSRouteBackendRefs(
+	ctx context.Context,
+	cl client.Client,
+	tlSRoute *gwtypes.TLSRoute,
+	rule gwtypes.TLSRouteRule,
+	logger logr.Logger,
+) string {
+	// As specified in Kong gateway documents, either TLS passthrough or TLS terminate should set `tcp` as the service protocol:
+	// For TLS passthrogh, we should use `tls_passthrough` for protocols of routes and `tcp` for protocols of services:
+	// https://developer.konghq.com/gateway/entities/route/#proxying-tls-passthrough-traffic
+	// For TLS terminate, we should set `tls` for routes and `tcp` for services:
+	// https://developer.konghq.com/gateway/traffic-control/proxying/#proxy-tcp-tls-traffic
+	// So here we set the default service protocol to `tcp`.
+	protocol := "tcp"
+	for _, backendRef := range rule.BackendRefs {
+		if protocol, ok := extractProtocolFromBackendRef(ctx, cl, logger, tlSRoute.Namespace, backendRef); ok {
+			return protocol
+		}
+	}
+	return protocol
+}
+
+// extractProtocolFromBackendRef returns the protocol in the annotation konghq.com/protocol
+// of the backend service referenced in the BackendRef if the annotation value is a valid Kong service protocol.
+// Also returns a boolean value that is true when a valid protocol is in the annotation.
+func extractProtocolFromBackendRef(
+	ctx context.Context,
+	cl client.Client,
+	logger logr.Logger,
+	namespace string,
+	backendRef gwtypes.BackendRef,
+) (string, bool) {
+
+	if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
+		return "", false
+	}
+
+	bRefNamespace := namespace
+	if backendRef.Namespace != nil && *backendRef.Namespace != "" {
+		bRefNamespace = string(*backendRef.Namespace)
+	}
+
+	svc := &corev1.Service{}
+	if err := cl.Get(ctx, client.ObjectKey{Namespace: bRefNamespace, Name: string(backendRef.Name)}, svc); err != nil {
+		log.Debug(logger, "Failed to fetch backend Service for protocol annotation check",
+			"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "error", err)
+		return "", false
+	}
+
+	protocol := strings.ToLower(metadata.ExtractProtocol(svc.GetAnnotations()))
+	if protocol == "" {
+		return "", false
+	}
+
+	if !metadata.IsValidProtocol(protocol) {
+		log.Info(logger, "Ignoring invalid konghq.com/protocol annotation value on backend Service",
+			"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "protocol", protocol)
+		return "", false
+	}
+
+	log.Debug(logger, "Using protocol from backend Service annotation",
+		"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "protocol", protocol)
+	return protocol, true
 }

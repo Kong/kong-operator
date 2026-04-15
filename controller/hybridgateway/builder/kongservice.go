@@ -18,9 +18,12 @@ import (
 )
 
 const (
+	// KongServiceProtocolHTTP stands for http protocol in Kong Service.
 	KongServiceProtocolHTTP = "http"
-	KongServiceProtocolTCP  = "tcp"
-	KongServiceProtocolTLS  = "tls"
+	// KongServiceProtocolTCP stands for tcp protocol in Kong Service.
+	KongServiceProtocolTCP = "tcp"
+	// KongServiceProtocolTLS stands for tls protocol in Kong Service.
+	KongServiceProtocolTLS = "tls"
 )
 
 // KongServiceBuilder is a builder for configurationv1alpha1.KongService resources.
