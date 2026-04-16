@@ -189,7 +189,6 @@ func (am *AnnotationManager) AppendRouteToAnnotation(obj metav1.Object, route cl
 	}
 
 	for routeAnnotation := range strings.SplitSeq(hybridRouteAnnotation, ",") {
-		routeAnnotation = strings.TrimSpace(routeAnnotation)
 		if RouteAnnotationMatch(routeAnnotation, route) {
 			log.Debug(am.logger, "Route already exists in annotation, no update needed",
 				"currentRoute", currentRouteAnnotation,
@@ -254,7 +253,6 @@ func (am *AnnotationManager) RemoveRouteFromAnnotation(obj metav1.Object, route 
 	// Filter out the route to remove
 	found := false
 	for _, routeAnnotation := range existingRoutes {
-		routeAnnotation = strings.TrimSpace(routeAnnotation)
 		if RouteAnnotationMatch(routeAnnotation, route) {
 			found = true
 			continue
@@ -303,25 +301,14 @@ func (am *AnnotationManager) ContainsRoute(obj metav1.Object, route client.Objec
 		return false
 	}
 
-	currentRouteKind := route.GetObjectKind().GroupVersionKind().Kind
-	currentRouteObjectKey := client.ObjectKeyFromObject(route).String()
-	currentRouteAnnotation := currentRouteKind + "/" + currentRouteObjectKey
-
 	existingAnnotation, exists := annotations[consts.GatewayOperatorHybridRoutesAnnotation]
 	if !exists || existingAnnotation == "" {
 		return false
 	}
 
-	for routeAnnotation := range strings.SplitSeq(existingAnnotation, ",") {
-		routeAnnotation = strings.TrimSpace(routeAnnotation)
-		if routeAnnotation == currentRouteAnnotation ||
-			// For HTTPRoute, KO 2.1 was using namespace/name format so match the format if the kind is HTTPRoute.
-			currentRouteKind == kindHTTPRoute && routeAnnotation == currentRouteObjectKey {
-			return true
-		}
-	}
-
-	return false
+	return lo.ContainsBy(strings.Split(existingAnnotation, ","), func(routeAnnotation string) bool {
+		return RouteAnnotationMatch(routeAnnotation, route)
+	})
 }
 
 // GetRoutes returns all Route references from the hybrid-routes annotation
@@ -413,9 +400,10 @@ func (am *AnnotationManager) SetRoutes(obj metav1.Object, routes []string) bool 
 // RouteAnnotationMatch returns true if the hybrid route annotation matches the given route by kind, namespace and name.
 func RouteAnnotationMatch(routeAnnotation string, route client.Object) bool {
 	var kind, namespace, name string
+	routeAnnotation = strings.TrimSpace(routeAnnotation)
 	parts := strings.Split(routeAnnotation, "/")
 	switch len(parts) {
-	// The annotation kind/namespace/name format.
+	// The annotation in kind/namespace/name format.
 	case 3:
 		kind = parts[0]
 		namespace = parts[1]
