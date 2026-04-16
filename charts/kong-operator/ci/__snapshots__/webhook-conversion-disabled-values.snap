@@ -35082,6 +35082,9 @@ spec:
                 description: 'The status code Kong responds with when all properties of a Route match except the protocol i.e. if the protocol of the request is `HTTP` instead of `HTTPS`. `Location` header is injected by Kong if the field is set to 301, 302, 307 or 308. Note: This config applies only if the Route is configured to only accept the `https` protocol.'
                 format: int64
                 type: integer
+              id:
+                description: ID is the unique identifier for the Route. Can be specified when creating a Route, but not updatable. If not specified, Kong will generate one.
+                type: string
               methods:
                 description: A list of HTTP methods that match this Route.
                 items:
@@ -35305,6 +35308,8 @@ spec:
           rule: '!has(oldSelf.spec.controlPlaneRef) || has(self.spec.controlPlaneRef)'
         - message: spec.controlPlaneRef is immutable when an entity is already Programmed
           rule: '(!has(self.spec) || !has(self.spec.controlPlaneRef)) ? true : (!has(self.status) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef'
+        - message: spec.id is immutable
+          rule: (!has(self.spec.id) && !has(oldSelf.spec.id)) || (has(self.spec.id) && has(oldSelf.spec.id) && self.spec.id == oldSelf.spec.id)
     served: true
     storage: true
     subresources:
@@ -35490,6 +35495,9 @@ spec:
               host:
                 description: The host of the upstream server. Note that the host value is case sensitive.
                 type: string
+              id:
+                description: ID is the unique identifier for the Service. Can be specified when creating a Service, but not updatable. If not specified, Kong will generate one.
+                type: string
               name:
                 description: The Service name.
                 type: string
@@ -35646,6 +35654,8 @@ spec:
           rule: '!has(oldSelf.spec.controlPlaneRef) || has(self.spec.controlPlaneRef)'
         - message: spec.controlPlaneRef is immutable when an entity is already Programmed
           rule: '(!has(self.spec.controlPlaneRef)) ? true : (!has(self.status) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef'
+        - message: spec.id is immutable
+          rule: (!has(self.spec.id) && !has(oldSelf.spec.id)) || (has(self.spec.id) && has(oldSelf.spec.id) && self.spec.id == oldSelf.spec.id)
     served: true
     storage: true
     subresources:
@@ -40309,6 +40319,10 @@ spec:
       jsonPath: .status.id
       name: ID
       type: string
+    - description: Konnect Name
+      jsonPath: .status.konnectSpec.name
+      name: Konnect Name
+      type: string
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -40506,6 +40520,16 @@ spec:
                   If it's unset (empty string), it means the Konnect entity hasn't been created yet.
                 maxLength: 256
                 type: string
+              konnectSpec:
+                description: KonnectSpec holds MCPServer-specific status fields related to its state on Konnect, such as the remote name and version.
+                properties:
+                  name:
+                    description: Name is the name of the MCPServer on Konnect.
+                    type: string
+                  version:
+                    description: Version is the version of the MCPServer on Konnect.
+                    type: string
+                type: object
               organizationID:
                 description: OrgID is ID of Konnect Org that this entity has been created in.
                 maxLength: 256
@@ -40514,13 +40538,6 @@ spec:
                 description: ServerURL is the URL of the Konnect server in which the entity exists.
                 maxLength: 512
                 type: string
-              workloads:
-                description: Workloads defines the observed state of the MCPServer workloads.
-                properties:
-                  version:
-                    description: Version is the version of the MCPServer workloads.
-                    type: string
-                type: object
             type: object
         type: object
         x-kubernetes-validations:

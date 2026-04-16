@@ -194,6 +194,7 @@ func kongRouteToSDKRouteInput(
 ) sdkkonnectcomp.Route {
 	r := sdkkonnectcomp.Route{
 		RouteJSON: &sdkkonnectcomp.RouteJSON{
+			ID:                      route.Spec.ID,
 			Destinations:            route.Spec.Destinations,
 			Headers:                 route.Spec.Headers,
 			Hosts:                   route.Spec.Hosts,

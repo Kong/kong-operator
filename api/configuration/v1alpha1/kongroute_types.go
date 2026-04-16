@@ -38,6 +38,7 @@ import (
 // +kubebuilder:validation:XValidation:rule="has(self.spec.protocols) && self.spec.protocols.exists(p, p == 'http') ? (has(self.spec.hosts) || has(self.spec.methods) || has(self.spec.paths) || has(self.spec.paths) || has(self.spec.paths) || has(self.spec.headers) ) : true", message="If protocols has 'http', at least one of 'hosts', 'methods', 'paths' or 'headers' must be set"
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.spec.controlPlaneRef) || has(self.spec.controlPlaneRef)", message="controlPlaneRef is required once set"
 // +kubebuilder:validation:XValidation:rule="(!has(self.spec) || !has(self.spec.controlPlaneRef)) ? true : (!has(self.status) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable when an entity is already Programmed"
+// +kubebuilder:validation:XValidation:rule="(!has(self.spec.id) && !has(oldSelf.spec.id)) || (has(self.spec.id) && has(oldSelf.spec.id) && self.spec.id == oldSelf.spec.id)", message="spec.id is immutable"
 // +kong:channels=kong-operator
 type KongRoute struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -79,6 +80,8 @@ type KongRouteSpec struct {
 // KongRouteAPISpec represents the configuration of a Route in Kong as defined by the Konnect API.
 // Currently, this only supports the JSON route fields.
 type KongRouteAPISpec struct {
+	// ID is the unique identifier for the Route. Can be specified when creating a Route, but not updatable. If not specified, Kong will generate one.
+	ID *string `json:"id,omitempty"`
 	// A list of IP destinations of incoming connections that match this Route when using stream routing. Each entry is an object with fields "ip" (optionally in CIDR range notation) and/or "port".
 	Destinations []sdkkonnectcomp.Destinations `json:"destinations,omitempty"`
 	// One or more lists of values indexed by header name that will cause this Route to match if present in the request. The `Host` header cannot be used with this attribute: hosts should be specified using the `hosts` attribute. When `headers` contains only one value and that value starts with the special prefix `~*`, the value is interpreted as a regular expression.

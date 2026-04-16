@@ -39,6 +39,116 @@ func TestKongService(t *testing.T) {
 			RunWithConfig(t, cfg, scheme)
 	})
 
+	t.Run("id immutability", func(t *testing.T) {
+		common.TestCasesGroup[*configurationv1alpha1.KongService]{
+			{
+				Name: "creating with id is allowed",
+				TestObject: &configurationv1alpha1.KongService{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongServiceSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
+							ID:   new("my-id"),
+							Host: "example.com",
+						},
+					},
+				},
+			},
+			{
+				Name: "keeping the same id on update is allowed",
+				TestObject: &configurationv1alpha1.KongService{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongServiceSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
+							ID:   new("my-id"),
+							Host: "example.com",
+						},
+					},
+				},
+				Update: func(ks *configurationv1alpha1.KongService) {
+					ks.Spec.Host = "updated.example.com"
+				},
+			},
+			{
+				Name: "changing id on update is not allowed",
+				TestObject: &configurationv1alpha1.KongService{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongServiceSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
+							ID:   new("my-id"),
+							Host: "example.com",
+						},
+					},
+				},
+				Update: func(ks *configurationv1alpha1.KongService) {
+					ks.Spec.ID = new("another-id")
+				},
+				ExpectedUpdateErrorMessage: new("spec.id is immutable"),
+			},
+			{
+				Name: "removing id on update is not allowed",
+				TestObject: &configurationv1alpha1.KongService{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongServiceSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
+							ID:   new("my-id"),
+							Host: "example.com",
+						},
+					},
+				},
+				Update: func(ks *configurationv1alpha1.KongService) {
+					ks.Spec.ID = nil
+				},
+				ExpectedUpdateErrorMessage: new("spec.id is immutable"),
+			},
+			{
+				Name: "setting id after creation without one is not allowed",
+				TestObject: &configurationv1alpha1.KongService{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongServiceSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
+							Host: "example.com",
+						},
+					},
+				},
+				Update: func(ks *configurationv1alpha1.KongService) {
+					ks.Spec.ID = new("new-id")
+				},
+				ExpectedUpdateErrorMessage: new("spec.id is immutable"),
+			},
+		}.
+			RunWithConfig(t, cfg, scheme)
+	})
+
 	t.Run("tags validation", func(t *testing.T) {
 		common.TestCasesGroup[*configurationv1alpha1.KongService]{
 			{

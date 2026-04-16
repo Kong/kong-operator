@@ -213,6 +213,11 @@ spec:
                   `https` protocol.'
                 format: int64
                 type: integer
+              id:
+                description: ID is the unique identifier for the Route. Can be specified
+                  when creating a Route, but not updatable. If not specified, Kong
+                  will generate one.
+                type: string
               methods:
                 description: A list of HTTP methods that match this Route.
                 items:
@@ -480,6 +485,9 @@ spec:
           rule: '(!has(self.spec) || !has(self.spec.controlPlaneRef)) ? true : (!has(self.status)
             || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status
             == ''True'')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef'
+        - message: spec.id is immutable
+          rule: (!has(self.spec.id) && !has(oldSelf.spec.id)) || (has(self.spec.id)
+            && has(oldSelf.spec.id) && self.spec.id == oldSelf.spec.id)
     served: true
     storage: true
     subresources:

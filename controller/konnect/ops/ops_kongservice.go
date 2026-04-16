@@ -162,6 +162,7 @@ func kongServiceToSDKServiceInput(
 	svc *configurationv1alpha1.KongService,
 ) sdkkonnectcomp.Service {
 	s := sdkkonnectcomp.Service{
+		ID:             svc.Spec.ID,
 		URL:            svc.Spec.URL,
 		ConnectTimeout: svc.Spec.ConnectTimeout,
 		Enabled:        svc.Spec.Enabled,

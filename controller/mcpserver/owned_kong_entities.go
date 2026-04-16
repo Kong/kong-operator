@@ -20,10 +20,10 @@ import (
 	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 )
 
-// ensureKongEntities fetches the Kong entities (services, routes) associated
-// with the given MCPServer from Konnect and ensures corresponding Kubernetes
-// custom resources exist in the cluster. Stale resources that no longer have a
-// remote counterpart are deleted.
+// ensureKongEntities fetches the Kong entities (services, routes) that Konnect
+// has preallocated for the given MCPServer, each with an already-assigned UUID.
+// It ensures the corresponding Kubernetes custom resources are created using
+// those exact UUIDs and cleans up stale resources that are no longer expected.
 func (r *MCPServerReconciler) ensureKongEntities(
 	ctx context.Context,
 	mcpServer *konnectv1alpha1.MCPServer,
@@ -147,9 +147,11 @@ func generateKongService(mcpServer *konnectv1alpha1.MCPServer, svc sdkkonnectcom
 			Name:      nn.Name,
 			Namespace: nn.Namespace,
 		},
+
 		Spec: configurationv1alpha1.KongServiceSpec{
 			KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
-				Name:     &svc.Name,
+				ID:       svc.ID,
+				Name:     &nn.Name,
 				Host:     host,
 				Port:     svc.Port,
 				Protocol: sdkkonnectcomp.Protocol(svc.Protocol),
@@ -208,7 +210,8 @@ func generateKongRoute(
 		},
 		Spec: configurationv1alpha1.KongRouteSpec{
 			KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
-				Name:    &route.Name,
+				ID:      route.ID,
+				Name:    &nn.Name,
 				Paths:   route.Paths,
 				Methods: route.Methods,
 			},

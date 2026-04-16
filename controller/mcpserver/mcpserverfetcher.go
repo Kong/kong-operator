@@ -133,7 +133,7 @@ func (f *MCPServersFetcher) syncMCPServers(ctx context.Context, servers []sdkkon
 		if server.ResourceID == nil || *server.ResourceID == "" {
 			// The server is not fully provisioned on the Konnect side.
 			// Delete the corresponding Kubernetes resource if it exists.
-			nn := generateMCPServerNN(cpNamespace, cpName, server.Name, server.ID)
+			nn := generateMCPServerNN(cpNamespace, cpName, server.ID)
 			mcpServer := &konnectv1alpha1.MCPServer{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      nn.Name,
@@ -147,7 +147,7 @@ func (f *MCPServersFetcher) syncMCPServers(ctx context.Context, servers []sdkkon
 		}
 		konnectIDs[server.ID] = struct{}{}
 
-		nn := generateMCPServerNN(cpNamespace, cpName, server.Name, server.ID)
+		nn := generateMCPServerNN(cpNamespace, cpName, server.ID)
 		var existing konnectv1alpha1.MCPServer
 		if err := f.client.Get(ctx, nn, &existing); err == nil {
 			// The MCPServer already exists on the API server: trigger a
@@ -290,6 +290,6 @@ func (f *MCPServersFetcher) fetchAll(ctx context.Context) ([]sdkkonnectcomp.MCPS
 
 // generateMCPServerNN builds a Kubernetes-safe NamespacedName for a mirrored
 // MCPServer from the control plane name/namespace, server name, and Konnect server ID.
-func generateMCPServerNN(cpNamespace, cpName, serverName, serverID string) types.NamespacedName {
-	return generateHashedName(cpNamespace, cpName+"-"+serverName, serverID)
+func generateMCPServerNN(cpNamespace, cpName, serverID string) types.NamespacedName {
+	return generateHashedName(cpNamespace, cpName, serverID)
 }

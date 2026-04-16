@@ -38,6 +38,7 @@ import (
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.spec.controlPlaneRef) || has(self.spec.controlPlaneRef)", message="controlPlaneRef is required once set"
 // +kubebuilder:validation:XValidation:rule="(!has(self.spec.controlPlaneRef)) ? true : (!has(self.status) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable when an entity is already Programmed"
+// +kubebuilder:validation:XValidation:rule="(!has(self.spec.id) && !has(oldSelf.spec.id)) || (has(self.spec.id) && has(oldSelf.spec.id) && self.spec.id == oldSelf.spec.id)", message="spec.id is immutable"
 // +kong:channels=kong-operator
 type KongService struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -80,6 +81,8 @@ type KongServiceAPISpec struct {
 	//
 	// sdkkonnectcomp.ServiceInput`json:",inline"`
 
+	// ID is the unique identifier for the Service. Can be specified when creating a Service, but not updatable. If not specified, Kong will generate one.
+	ID *string `json:"id,omitempty"`
 	// Helper field to set `protocol`, `host`, `port` and `path` using a URL. This field is write-only and is not returned in responses.
 	URL *string `json:"url,omitempty"`
 	// The timeout in milliseconds for establishing a connection to the upstream server.
