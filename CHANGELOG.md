@@ -46,12 +46,16 @@
 
 ### Added
 
+- KegDataplane: Implement the `KegDataPlane` reconciler (`eventgateway.konghq.com/v1alpha1`)
+  which manages the full lifecycle of Kong Event Gateway (KEG) DataPlane workloads.
+  [#3914](https://github.com/Kong/kong-operator/pull/3891)
 - TLSRoute support: Add `TLSRoute` reconciler in hybrid gateway controllers
   and add translator of `TLSRoute`.
   [#3763](https://github.com/Kong/kong-operator/pull/3763)
 - EventGatewayDataPlane: introduces the eventgateway.konghq.com/v1alpha1 API group with
   a new KegDataPlane kind that manages a keg binary Deployment connecting to Konnect
   via a referenced KonnectEventGateway resource.
+  [#3765](https://github.com/Kong/kong-operator/pull/3765)
 - TLSRoute support: Configure DataPlaneOption in created `DataPlane` to
   configure Kong DataPlane deployment and ingress service for listeners with
   `TLS` protocol.

@@ -10,6 +10,7 @@ rules:
   - ""
   resources:
   - configmaps
+  - secrets
   - serviceaccounts
   verbs:
   - create
@@ -41,17 +42,6 @@ rules:
   - nodes
   verbs:
   - list
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - secrets
-  verbs:
-  - delete
-  - get
-  - list
-  - patch
-  - update
   - watch
 - apiGroups:
   - ""
@@ -273,6 +263,23 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - eventgateway.konghq.com
+  resources:
+  - kegdataplanes
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - eventgateway.konghq.com
+  resources:
+  - kegdataplanes/status
+  verbs:
+  - patch
+  - update
 - apiGroups:
   - gateway-operator.konghq.com
   resources:

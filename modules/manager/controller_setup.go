@@ -31,6 +31,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/cpextensions"
 	"github.com/kong/kong-operator/v2/controller/cpextensions/metricsscraper"
 	"github.com/kong/kong-operator/v2/controller/dataplane"
+	egdataplane "github.com/kong/kong-operator/v2/controller/eventgateway/dataplane"
 	"github.com/kong/kong-operator/v2/controller/gateway"
 	"github.com/kong/kong-operator/v2/controller/gatewayclass"
 	hybridgateway "github.com/kong/kong-operator/v2/controller/hybridgateway"
@@ -134,6 +135,7 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 			index.OptionsForKonnectGatewayControlPlane(),
 			index.OptionsForKonnectAPIAuthConfiguration(),
 			index.OptionsForKonnectCloudGatewayNetwork(),
+			index.OptionsForKegDataPlane(),
 			index.OptionsForKonnectExtension(),
 			// TODO: auto-generate cache index registration for generated Konnect entities.
 			// https://github.com/Kong/kong-operator/issues/3785
@@ -653,6 +655,18 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				DataPlaneScraperManagerNotifier: scrapersMgr,
 			},
 		},
+		// EventGateway DataPlane controller
+		{
+			Enabled: c.KonnectControllersEnabled,
+			Controller: &egdataplane.Reconciler{
+				Client:                   mgr.GetClient(),
+				LoggingMode:              c.LoggingMode,
+				ClusterCASecretName:      c.ClusterCASecretName,
+				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
+				SecretLabelSelector:      c.SecretLabelSelector,
+				CertTTL:                  c.CertTTL,
+			},
+		},
 	}
 
 	// MCPServer controllers
@@ -776,13 +790,11 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			newKonnectEntityController[konnectv1alpha1.KonnectEventControlPlane](controllerFactory),
 		)
 
-		if c.KonnectControllersEnabled {
-			controllers = append(controllers,
-				newGatewayAPIHybridController[gwtypes.Gateway](mgr, c.FQDNModeEnabled, c.ClusterDomain),
-				newGatewayAPIHybridController[gwtypes.HTTPRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain),
-				newGatewayAPIHybridController[gwtypes.TLSRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain),
-			)
-		}
+		controllers = append(controllers,
+			newGatewayAPIHybridController[gwtypes.Gateway](mgr, c.FQDNModeEnabled, c.ClusterDomain),
+			newGatewayAPIHybridController[gwtypes.HTTPRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain),
+			newGatewayAPIHybridController[gwtypes.TLSRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain),
+		)
 	}
 
 	return controllers, nil
