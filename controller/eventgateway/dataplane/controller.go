@@ -74,6 +74,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Service{}).
 		Owns(&corev1.Secret{}).
+		Owns(&konnectv1alpha1.KonnectEventDataPlaneCertificate{}).
 		Watches(
 			&konnectv1alpha1.KonnectEventControlPlane{},
 			handler.EnqueueRequestsFromMapFunc(enqueueForKonnectEventGatewayRef(mgr.GetClient())),
@@ -110,6 +111,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.
 	// picks up the correct Secret name on the next reconcile. No explicit
 	// requeue is needed, the watch on the owned Secret triggers it.
 	if certResult != op.Noop {
+		return ctrl.Result{}, nil
+	}
+
+	// Ensure the KonnectEventDataPlaneCertificate is registered with Konnect.
+	// Return early if not yet programmed; the Owns() watch retriggeres once
+	// the Konnect controller flips Programmed to True.
+	certProgrammed, err := r.ensureKonnectCertificate(ctx, logger, egdp, keg, certSecret)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	// If the certificate is not yet programmed on Konnect, return early.
+	// Without this, we would create a deployment that uses a cert secret not yet present in Konnect.
+	if !certProgrammed {
 		return ctrl.Result{}, nil
 	}
 

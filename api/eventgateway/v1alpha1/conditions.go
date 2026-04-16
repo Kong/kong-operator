@@ -100,3 +100,24 @@ const (
 	// been resolved.
 	KonnectEventGatewayResolvedMessage = "Referenced KonnectEventGateway is resolved and Programmed"
 )
+
+// -----------------------------------------------------------------------------
+// DataPlane - KonnectCertificate Registration Condition Constants
+// -----------------------------------------------------------------------------
+
+const (
+	// KonnectCertificateRegisteredType indicates whether the
+	// KonnectEventDataPlaneCertificate resource has been ensured for the DataPlane.
+	KonnectCertificateRegisteredType consts.ConditionType = "KonnectCertificateRegistered"
+
+	// KonnectCertificateRegisteredReason indicates the certificate resource was
+	// successfully created or is already up-to-date.
+	KonnectCertificateRegisteredReason consts.ConditionReason = "KonnectCertificateRegistered"
+	// KonnectCertificateRegistrationFailedReason indicates the certificate resource
+	// could not be ensured.
+	KonnectCertificateRegistrationFailedReason consts.ConditionReason = "KonnectCertificateRegistrationFailed"
+	// KonnectCertificateNotProgrammedReason indicates the
+	// KonnectEventDataPlaneCertificate exists but has not yet been programmed
+	// on Konnect by the Konnect controller.
+	KonnectCertificateNotProgrammedReason consts.ConditionReason = "KonnectCertificateNotProgrammed"
+)

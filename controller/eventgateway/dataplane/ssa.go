@@ -33,6 +33,8 @@ var requiredSchemas = []schema.GroupVersion{
 	{Group: "apps", Version: "v1"},
 	// KegDataPlane (status apply)
 	{Group: "eventgateway.konghq.com", Version: "v1alpha1"},
+	// KonnectEventDataPlaneCertificate
+	{Group: "konnect.konghq.com", Version: "v1alpha1"},
 }
 
 // initTypeConverter creates a TypeConverter from the API server's OpenAPI v3 schemas.
