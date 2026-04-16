@@ -1,5 +1,8 @@
 package v1alpha1
 
+// TODO: generate condition constants for generated Konnect entities.
+// https://github.com/kong/kong-operator/issues/3925
+
 const (
 	// KonnectEntityProgrammedConditionType is the condition that
 	// indicates whether the entity has been programmed in Konnect.

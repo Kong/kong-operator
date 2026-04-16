@@ -9,7 +9,40 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
 )
+
+type generatedReferenceHandler[T any] func(context.Context, T) (bool, ctrl.Result, error)
+
+// handleGeneratedTypeReferences runs reference handling that is specific to
+// generated Konnect types.
+func (r *KonnectEntityReconciler[T, TEnt]) handleGeneratedTypeReferences(
+	ctx context.Context,
+	ent TEnt,
+) (bool, ctrl.Result, error) {
+	for _, handler := range r.generatedTypeReferenceHandlers() {
+		if stop, res, err := handler(ctx, ent); stop {
+			return true, res, err
+		}
+	}
+
+	return false, ctrl.Result{}, nil
+}
+
+func (r *KonnectEntityReconciler[T, TEnt]) generatedTypeReferenceHandlers() []generatedReferenceHandler[TEnt] {
+	return []generatedReferenceHandler[TEnt]{
+		r.handleGeneratedEventGatewayRef,
+	}
+}
+
+func (r *KonnectEntityReconciler[T, TEnt]) handleGeneratedEventGatewayRef(
+	ctx context.Context,
+	ent TEnt,
+) (bool, ctrl.Result, error) {
+	res, err := handleEventGatewayRef(ctx, r.Client, ent)
+	return r.handleEventGatewayRefResult(ctx, ent, res, err)
+}
 
 // handleEventGatewayRefResult handles the generic reconciler flow after
 // handleEventGatewayRef resolved the Event Gateway reference.
@@ -31,7 +64,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) handleEventGatewayRefResult(
 			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 				if err := r.Client.Update(ctx, ent); err != nil {
 					if apierrors.IsConflict(err) {
-						return true, ctrl.Result{Requeue: true}, nil
+						return true, ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 					}
 					if apierrors.IsNotFound(err) {
 						return true, ctrl.Result{}, nil

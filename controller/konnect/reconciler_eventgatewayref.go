@@ -79,7 +79,7 @@ func handleEventGatewayRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
 		}
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 	}
 
 	if gateway.GetKonnectID() == "" {
@@ -107,7 +107,7 @@ func handleEventGatewayRef[T constraints.SupportedKonnectEntityType, TEnt constr
 	_, err = patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), cert, old)
 	if err != nil {
 		if apierrors.IsConflict(err) {
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 		}
 		return ctrl.Result{}, err
 	}

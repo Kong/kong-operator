@@ -175,9 +175,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 	}
 
-	// If a type has an Event Gateway ref, handle it.
-	res, err = handleEventGatewayRef(ctx, r.Client, ent)
-	if stop, res, err := r.handleEventGatewayRefResult(ctx, ent, res, err); stop {
+	if stop, res, err := r.handleGeneratedTypeReferences(ctx, ent); stop {
 		return res, err
 	}
 

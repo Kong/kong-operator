@@ -1,6 +1,7 @@
 package konnect
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -13,9 +14,11 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
@@ -100,6 +103,63 @@ func TestHandleEventGatewayRefResult(t *testing.T) {
 		var updated konnectv1alpha1.KonnectEventDataPlaneCertificate
 		require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(ent), &updated))
 		assert.Empty(t, updated.Finalizers)
+	})
+
+	t.Run("conflict while removing cleanup finalizer requeues without backoff", func(t *testing.T) {
+		ent := testKonnectEventDataPlaneCertificateForEventGatewayRefResult()
+		ent.Finalizers = []string{KonnectCleanupFinalizer}
+
+		cl := fake.NewClientBuilder().
+			WithScheme(scheme.Get()).
+			WithObjects(ent).
+			WithInterceptorFuncs(interceptor.Funcs{
+				Update: func(
+					ctx context.Context,
+					client client.WithWatch,
+					obj client.Object,
+					opts ...client.UpdateOption,
+				) error {
+					return apierrors.NewConflict(
+						schema.GroupResource{
+							Group:    konnectv1alpha1.GroupVersion.Group,
+							Resource: "konnecteventdataplanecertificates",
+						},
+						obj.GetName(),
+						assert.AnError,
+					)
+				},
+			}).
+			Build()
+
+		r := &KonnectEntityReconciler[
+			konnectv1alpha1.KonnectEventDataPlaneCertificate,
+			*konnectv1alpha1.KonnectEventDataPlaneCertificate,
+		]{
+			Client: cl,
+		}
+
+		stop, result, err := r.handleEventGatewayRefResult(
+			t.Context(),
+			ent,
+			ctrl.Result{},
+			ReferencedObjectDoesNotExistError{
+				Reference: types.NamespacedName{
+					Namespace: "default",
+					Name:      "missing-event-control-plane",
+				},
+				Err: apierrors.NewNotFound(
+					schema.GroupResource{
+						Group:    konnectv1alpha1.GroupVersion.Group,
+						Resource: "konnecteventcontrolplanes",
+					},
+					"missing-event-control-plane",
+				),
+			},
+		)
+
+		require.NoError(t, err)
+		assert.True(t, stop)
+		assert.Equal(t, ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, result)
 	})
 }
 
