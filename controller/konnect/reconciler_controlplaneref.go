@@ -74,7 +74,12 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 	// The configuration in control plane group type are read only so they are unsupported to attach entities to them:
 	// https://docs.konghq.com/konnect/gateway-manager/control-plane-groups/#limitations
 	if cp.GetKonnectClusterType() != nil &&
-		*cp.GetKonnectClusterType() == sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup {
+		(*cp.GetKonnectClusterType() == sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup &&
+			// We don't allow attaching to control plane group type as they are read only
+			// and don't have the configuration that can be used by the entities,
+			// but we want to allow attaching KongDataPlaneClientCertificate to them
+			// as they are used for CP/DP mTLS.
+			ent.GetObjectKind().GroupVersionKind().GroupKind().Kind != "KongDataPlaneClientCertificate") {
 		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, ent,
 			konnectv1alpha1.ControlPlaneRefValidConditionType,

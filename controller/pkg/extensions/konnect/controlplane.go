@@ -107,7 +107,7 @@ func kicInKonnectDefaults(ctx context.Context, cl client.Client, konnectExtensio
 			KonnectConfig: &konnectConfig,
 		}, nil
 
-	case konnectv1alpha2.ClusterTypeControlPlane:
+	case konnectv1alpha2.ClusterTypeControlPlane, konnectv1alpha2.ClusterTypeControlPlaneGroup:
 		return nil, fmt.Errorf("unsupported Konnect cluster type: %s", konnectExtension.Status.Konnect.ClusterType)
 	default:
 		// default never happens as the validation is at the CRD level

@@ -6507,6 +6507,7 @@ Allowed values:
 | --- | --- |
 | `ControlPlane` | ClusterTypeControlPlane is the type of the Konnect Control Plane.<br /> |
 | `K8SIngressController` | ClusterTypeK8sIngressController is the type of the Kubernetes Control Plane.<br /> |
+| `ControlPlaneGroup` | ClusterTypeControlPlaneGroup is the type of the Control Plane Group.<br /> |
 
 #### KonnectExtensionControlPlane
 

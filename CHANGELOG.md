@@ -135,6 +135,8 @@
   configured via `--cert-ttl` and `--cert-expiration-margin` flags. The operator will
   automatically renew certificates before they expire, ensuring secure communication. Short downtime during rotation is expected.
   [#3745](https://github.com/Kong/kong-operator/pull/3745)
+- Added support for using `KonnectGatewayControlPlane` of type group with `KonnectExtension`s.
+  [#3711](https://github.com/Kong/kong-operator/pull/3711)
 
 ### Changed
 
