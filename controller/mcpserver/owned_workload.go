@@ -46,8 +46,9 @@ func (r *MCPServerReconciler) ensureDeployment(
 	ctx context.Context,
 	mcpServer *konnectv1alpha1.MCPServer,
 	remoteMCPServer *sdkkonnectcomp.MCPServerCPInfo,
+	apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
 ) (op.Result, *appsv1.Deployment, error) {
-	desired := generateDeployment(mcpServer, *remoteMCPServer)
+	desired := generateDeployment(mcpServer, *remoteMCPServer, apiAuth)
 
 	existing := &appsv1.Deployment{}
 	err := r.Get(ctx, types.NamespacedName{
@@ -98,7 +99,11 @@ func (r *MCPServerReconciler) ensureDeployment(
 }
 
 // generateDeployment creates the desired Deployment spec for the given MCPServer.
-func generateDeployment(mcpServer *konnectv1alpha1.MCPServer, remoteMCPServer sdkkonnectcomp.MCPServerCPInfo) *appsv1.Deployment {
+func generateDeployment(
+	mcpServer *konnectv1alpha1.MCPServer,
+	remoteMCPServer sdkkonnectcomp.MCPServerCPInfo,
+	apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
+) *appsv1.Deployment {
 	nn := generateWorkloadNN(mcpServer)
 	selectorLabels := map[string]string{
 		"app": nn.Name,
@@ -110,6 +115,10 @@ func generateDeployment(mcpServer *konnectv1alpha1.MCPServer, remoteMCPServer sd
 	}
 
 	var replicas int32 = 1
+
+	patEnvVar := patEnvVarFromAuth(apiAuth)
+
+	const mcpServerVolumeName = "mcp-server-code"
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -145,27 +154,58 @@ func generateDeployment(mcpServer *konnectv1alpha1.MCPServer, remoteMCPServer sd
 					},
 				},
 				Spec: corev1.PodSpec{
-					// TODO: replace containers with the actual MCP server container spec once we have it, this is just a placeholder to demonstrate the concept.
 					InitContainers: []corev1.Container{
 						{
 							Name:            "init-mcp-server",
-							Image:           "alpine:3.23",
+							Image:           "kong/mcp-server-init",
 							ImagePullPolicy: corev1.PullIfNotPresent,
-							Command:         []string{"sh", "-c", `echo "[DEMO] Fetch code from Konnect..."`},
+							Args: []string{
+								"-cp-url", apiAuth.Spec.ServerURL,
+								"-cp-id", mcpServer.GetControlPlaneID(),
+								"-mcp-server-id", mcpServer.GetKonnectID(),
+								"-output-path", "/mcp-server/app.py",
+								"-pat", "$(PAT)",
+							},
+							Env: []corev1.EnvVar{patEnvVar},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      mcpServerVolumeName,
+									MountPath: "/mcp-server",
+								},
+							},
 						},
 					},
 					Containers: []corev1.Container{
 						{
 							Name:            "mcp-server",
-							Image:           "alpine:3.23",
+							Image:           "kong/mcp-server-runner",
 							ImagePullPolicy: corev1.PullIfNotPresent,
-							Command:         []string{"sh", "-c", `echo "[DEMO] running code..." && sleep infinity`},
+							Env: []corev1.EnvVar{
+								{
+									Name:  "MCP_SERVER_PATH",
+									Value: "/mcp-server/app.py",
+								},
+							},
 							Ports: []corev1.ContainerPort{
 								{
 									Name:          "mcp",
 									ContainerPort: consts.MCPServerDefaultPort,
 									Protocol:      corev1.ProtocolTCP,
 								},
+							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      mcpServerVolumeName,
+									MountPath: "/mcp-server",
+								},
+							},
+						},
+					},
+					Volumes: []corev1.Volume{
+						{
+							Name: mcpServerVolumeName,
+							VolumeSource: corev1.VolumeSource{
+								EmptyDir: &corev1.EmptyDirVolumeSource{},
 							},
 						},
 					},
@@ -177,6 +217,29 @@ func generateDeployment(mcpServer *konnectv1alpha1.MCPServer, remoteMCPServer sd
 	k8sresources.LabelObjectAsMCPServerManaged(deployment)
 
 	return deployment
+}
+
+// patEnvVarFromAuth builds a PAT environment variable from the given
+// KonnectAPIAuthConfiguration. For token-type auth the token value is inlined;
+// for secretRef-type auth the value is sourced from the referenced Secret.
+func patEnvVarFromAuth(apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration) corev1.EnvVar {
+	if apiAuth.Spec.Type == konnectv1alpha1.KonnectAPIAuthTypeSecretRef && apiAuth.Spec.SecretRef != nil {
+		return corev1.EnvVar{
+			Name: "PAT",
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: apiAuth.Spec.SecretRef.Name,
+					},
+					Key: "token",
+				},
+			},
+		}
+	}
+	return corev1.EnvVar{
+		Name:  "PAT",
+		Value: apiAuth.Spec.Token,
+	}
 }
 
 // ----------------------------------------------------------------------------

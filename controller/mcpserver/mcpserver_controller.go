@@ -115,6 +115,12 @@ func (r *MCPServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	// Resolve the reference chain to KonnectAPIAuthConfiguration and build the SDK.
+	apiAuth, err := r.resolveAuth(ctx, &mcpServer)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to resolve auth for MCPServer %s/%s: %w",
+			mcpServer.Namespace, mcpServer.Name, err)
+	}
+
 	sdk, err := r.buildSDK(ctx, &mcpServer)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to build SDK for MCPServer %s/%s: %w",
@@ -133,7 +139,7 @@ func (r *MCPServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	remoteMCPServer := resp.MCPServerCPInfo
 
 	// Ensure a Deployment exists for this MCPServer.
-	res, deployment, err := r.ensureDeployment(ctx, &mcpServer, remoteMCPServer)
+	res, deployment, err := r.ensureDeployment(ctx, &mcpServer, remoteMCPServer, apiAuth)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

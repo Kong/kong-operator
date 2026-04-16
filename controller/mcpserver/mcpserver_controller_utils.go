@@ -50,12 +50,11 @@ func ownerControlPlaneName(mcpServer *konnectv1alpha1.MCPServer) string {
 	return ""
 }
 
-// buildSDK resolves the KonnectAPIAuthConfiguration for the given MCPServer
-// and returns an authenticated SDK wrapper.
-func (r *MCPServerReconciler) buildSDK(
+// resolveAuth resolves the KonnectAPIAuthConfiguration for the given MCPServer.
+func (r *MCPServerReconciler) resolveAuth(
 	ctx context.Context,
 	mcpServer *konnectv1alpha1.MCPServer,
-) (sdkops.SDKWrapper, error) {
+) (*konnectv1alpha1.KonnectAPIAuthConfiguration, error) {
 	apiAuthRef, err := konnectcontroller.GetAPIAuthRefNN(ctx, r.Client, mcpServer)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get APIAuth ref: %w", err)
@@ -66,14 +65,30 @@ func (r *MCPServerReconciler) buildSDK(
 		return nil, fmt.Errorf("failed to get KonnectAPIAuthConfiguration %s: %w", apiAuthRef, err)
 	}
 
-	token, err := konnectcontroller.GetTokenFromKonnectAPIAuthConfiguration(ctx, r.Client, &apiAuth)
+	return &apiAuth, nil
+}
+
+// buildSDK resolves the KonnectAPIAuthConfiguration for the given MCPServer
+// and returns an authenticated SDK wrapper.
+func (r *MCPServerReconciler) buildSDK(
+	ctx context.Context,
+	mcpServer *konnectv1alpha1.MCPServer,
+) (sdkops.SDKWrapper, error) {
+	apiAuth, err := r.resolveAuth(ctx, mcpServer)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get token from KonnectAPIAuthConfiguration %s: %w", apiAuthRef, err)
+		return nil, err
+	}
+
+	token, err := konnectcontroller.GetTokenFromKonnectAPIAuthConfiguration(ctx, r.Client, apiAuth)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get token from KonnectAPIAuthConfiguration %s/%s: %w",
+			apiAuth.Namespace, apiAuth.Name, err)
 	}
 
 	srv, err := server.NewServer[konnectv1alpha1.MCPServer](apiAuth.Spec.ServerURL)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse server URL from KonnectAPIAuthConfiguration %s: %w", apiAuthRef, err)
+		return nil, fmt.Errorf("failed to parse server URL from KonnectAPIAuthConfiguration %s/%s: %w",
+			apiAuth.Namespace, apiAuth.Name, err)
 	}
 
 	return r.SdkFactory.NewKonnectSDK(srv, sdkops.SDKToken(token)), nil
