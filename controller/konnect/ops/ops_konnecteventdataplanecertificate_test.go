@@ -20,9 +20,7 @@ import (
 )
 
 func TestCreateKonnectEventDataPlaneCertificate(t *testing.T) {
-	t.Parallel()
-
-	ctx := context.Background()
+	ctx := t.Context()
 	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
 	sdk := sdkmocks.NewMockEventGatewayDataPlaneCertificatesSDK(t)
 	cert := testKonnectEventDataPlaneCertificate()
@@ -44,9 +42,7 @@ func TestCreateKonnectEventDataPlaneCertificate(t *testing.T) {
 }
 
 func TestUpdateKonnectEventDataPlaneCertificate(t *testing.T) {
-	t.Parallel()
-
-	ctx := context.Background()
+	ctx := t.Context()
 	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
 	sdk := sdkmocks.NewMockEventGatewayDataPlaneCertificatesSDK(t)
 	cert := testKonnectEventDataPlaneCertificate()
@@ -73,9 +69,7 @@ func TestUpdateKonnectEventDataPlaneCertificate(t *testing.T) {
 }
 
 func TestDeleteKonnectEventDataPlaneCertificate(t *testing.T) {
-	t.Parallel()
-
-	ctx := context.Background()
+	ctx := t.Context()
 	sdk := sdkmocks.NewMockEventGatewayDataPlaneCertificatesSDK(t)
 	cert := testKonnectEventDataPlaneCertificate()
 	cert.SetKonnectID("cert-1")
@@ -89,9 +83,7 @@ func TestDeleteKonnectEventDataPlaneCertificate(t *testing.T) {
 }
 
 func TestGetKonnectEventDataPlaneCertificateForUID(t *testing.T) {
-	t.Parallel()
-
-	ctx := context.Background()
+	ctx := t.Context()
 	sdk := sdkmocks.NewMockEventGatewayDataPlaneCertificatesSDK(t)
 	cert := testKonnectEventDataPlaneCertificate()
 
@@ -122,9 +114,7 @@ func TestGetKonnectEventDataPlaneCertificateForUID(t *testing.T) {
 }
 
 func TestKongEventDataPlaneCertificateCreateRequestFromSecretRef(t *testing.T) {
-	t.Parallel()
-
-	ctx := context.Background()
+	ctx := t.Context()
 	sourceType := konnectv1alpha1.SensitiveDataSourceTypeSecretRef
 	cert := testKonnectEventDataPlaneCertificate()
 	cert.Spec.Type = &sourceType
@@ -180,8 +170,3 @@ func testKonnectEventDataPlaneCertificate() *konnectv1alpha1.KonnectEventDataPla
 		},
 	}
 }
-
-//go:fix inline
-// func stringPtr(s string) *string {
-// 	return &s
-// }
