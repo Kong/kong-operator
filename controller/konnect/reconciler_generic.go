@@ -175,37 +175,10 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 	}
 
-	// If a type has a Gateway ref, handle it.
-	res, err = handleGatewayRef(ctx, r.Client, ent)
-	if err != nil {
-		if errDel, ok := errors.AsType[ReferencedObjectIsBeingDeletedError](err); ok &&
-			ent.GetDeletionTimestamp().IsZero() {
-			return ctrl.Result{
-				RequeueAfter: time.Until(errDel.DeletionTimestamp),
-			}, nil
-		}
-
-		if _, ok := errors.AsType[ReferencedObjectDoesNotExistError](err); ok {
-			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
-				if err := r.Client.Update(ctx, ent); err != nil {
-					if apierrors.IsConflict(err) {
-						return ctrl.Result{Requeue: true}, nil
-					}
-					if apierrors.IsNotFound(err) {
-						return ctrl.Result{}, nil
-					}
-					return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
-				}
-			}
-			return ctrl.Result{}, nil
-		}
-
-		return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
-	} else if !res.IsZero() {
-		if _, errStatus := patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent); errStatus != nil {
-			return ctrl.Result{}, errStatus
-		}
-		return res, nil
+	// If a type has an Event Gateway ref, handle it.
+	res, err = handleEventGatewayRef(ctx, r.Client, ent)
+	if stop, res, err := r.handleEventGatewayRefResult(ctx, ent, res, err); stop {
+		return res, err
 	}
 
 	// If a type has a KongService ref, handle it.

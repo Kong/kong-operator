@@ -22,8 +22,8 @@ import (
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
-// handleGatewayRef handles the GatewayRef for KonnectEventDataPlaneCertificate.
-func handleGatewayRef[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
+// handleEventGatewayRef handles the GatewayRef for KonnectEventDataPlaneCertificate.
+func handleEventGatewayRef[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
 	ctx context.Context,
 	cl client.Client,
 	ent TEnt,
@@ -33,7 +33,7 @@ func handleGatewayRef[T constraints.SupportedKonnectEntityType, TEnt constraints
 		return ctrl.Result{}, nil
 	}
 
-	if res, err := ensureKongReferenceGrantForGatewayRef(ctx, cl, cert); err != nil || !res.IsZero() {
+	if res, err := ensureKongReferenceGrantForEventGatewayRef(ctx, cl, cert); err != nil || !res.IsZero() {
 		return res, err
 	}
 
@@ -41,9 +41,9 @@ func handleGatewayRef[T constraints.SupportedKonnectEntityType, TEnt constraints
 	if err != nil {
 		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, cert,
-			konnectv1alpha1.GatewayRefValidConditionType,
+			konnectv1alpha1.EventGatewayRefValidConditionType,
 			metav1.ConditionFalse,
-			konnectv1alpha1.GatewayRefReasonInvalid,
+			konnectv1alpha1.EventGatewayRefReasonInvalid,
 			err.Error(),
 		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
@@ -55,9 +55,9 @@ func handleGatewayRef[T constraints.SupportedKonnectEntityType, TEnt constraints
 		msg := fmt.Sprintf("Referenced KonnectEventControlPlane %s is being deleted", nn)
 		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, cert,
-			konnectv1alpha1.GatewayRefValidConditionType,
+			konnectv1alpha1.EventGatewayRefValidConditionType,
 			metav1.ConditionFalse,
-			konnectv1alpha1.GatewayRefReasonInvalid,
+			konnectv1alpha1.EventGatewayRefReasonInvalid,
 			msg,
 		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
@@ -72,9 +72,9 @@ func handleGatewayRef[T constraints.SupportedKonnectEntityType, TEnt constraints
 	if !ok || cond.Status != metav1.ConditionTrue {
 		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, cert,
-			konnectv1alpha1.GatewayRefValidConditionType,
+			konnectv1alpha1.EventGatewayRefValidConditionType,
 			metav1.ConditionFalse,
-			konnectv1alpha1.GatewayRefReasonNotProgrammed,
+			konnectv1alpha1.EventGatewayRefReasonNotProgrammed,
 			fmt.Sprintf("Referenced KonnectEventControlPlane %s is not programmed yet", nn),
 		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
@@ -89,9 +89,9 @@ func handleGatewayRef[T constraints.SupportedKonnectEntityType, TEnt constraints
 		}
 		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, cert,
-			konnectv1alpha1.GatewayRefValidConditionType,
+			konnectv1alpha1.EventGatewayRefValidConditionType,
 			metav1.ConditionFalse,
-			konnectv1alpha1.GatewayRefReasonInvalid,
+			konnectv1alpha1.EventGatewayRefReasonInvalid,
 			err.Error(),
 		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
@@ -114,9 +114,9 @@ func handleGatewayRef[T constraints.SupportedKonnectEntityType, TEnt constraints
 
 	if res, errStatus := patch.StatusWithCondition(
 		ctx, cl, cert,
-		konnectv1alpha1.GatewayRefValidConditionType,
+		konnectv1alpha1.EventGatewayRefValidConditionType,
 		metav1.ConditionTrue,
-		konnectv1alpha1.GatewayRefReasonValid,
+		konnectv1alpha1.EventGatewayRefReasonValid,
 		fmt.Sprintf("Referenced KonnectEventControlPlane %s is programmed", nn),
 	); errStatus != nil || !res.IsZero() {
 		return res, errStatus
@@ -125,7 +125,7 @@ func handleGatewayRef[T constraints.SupportedKonnectEntityType, TEnt constraints
 	return ctrl.Result{}, nil
 }
 
-func ensureKongReferenceGrantForGatewayRef(
+func ensureKongReferenceGrantForEventGatewayRef(
 	ctx context.Context,
 	cl client.Client,
 	ent *konnectv1alpha1.KonnectEventDataPlaneCertificate,

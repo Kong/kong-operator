@@ -88,21 +88,21 @@ const (
 )
 
 const (
-	// GatewayRefValidConditionType is the type of the condition that indicates
-	// whether the Gateway reference is valid and points to an existing
+	// EventGatewayRefValidConditionType is the type of the condition that indicates
+	// whether the Event Gateway reference is valid and points to an existing
 	// KonnectEventControlPlane.
-	GatewayRefValidConditionType = "GatewayRefValid"
+	EventGatewayRefValidConditionType = "EventGatewayRefValid"
 
-	// GatewayRefReasonValid is the reason used with the GatewayRefValid
-	// condition type indicating that the Gateway reference is valid.
-	GatewayRefReasonValid = "Valid"
-	// GatewayRefReasonInvalid is the reason used with the GatewayRefValid
-	// condition type indicating that the Gateway reference is invalid.
-	GatewayRefReasonInvalid = "Invalid"
-	// GatewayRefReasonNotProgrammed is the reason used with the GatewayRefValid
+	// EventGatewayRefReasonValid is the reason used with the EventGatewayRefValid
+	// condition type indicating that the Event Gateway reference is valid.
+	EventGatewayRefReasonValid = "Valid"
+	// EventGatewayRefReasonInvalid is the reason used with the EventGatewayRefValid
+	// condition type indicating that the Event Gateway reference is invalid.
+	EventGatewayRefReasonInvalid = "Invalid"
+	// EventGatewayRefReasonNotProgrammed is the reason used with the EventGatewayRefValid
 	// condition type indicating that the referenced Gateway exists but is not
 	// yet programmed in Konnect.
-	GatewayRefReasonNotProgrammed = "NotProgrammed"
+	EventGatewayRefReasonNotProgrammed = "NotProgrammed"
 )
 
 const (

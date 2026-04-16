@@ -1,5 +1,8 @@
 package ops
 
+// TODO: This file is hand-written and will be replaced with generated code.
+// https://github.com/kong/kong-operator/issues/3857
+
 import (
 	"context"
 	"fmt"
@@ -22,7 +25,7 @@ func createKonnectEventDataPlaneCertificate(
 ) error {
 	gatewayID := certGatewayID(cert)
 	if gatewayID == "" {
-		return CantPerformOperationWithoutGatewayIDError{Entity: cert, Op: CreateOp}
+		return CantPerformOperationWithoutEventGatewayIDError{Entity: cert, Op: CreateOp}
 	}
 
 	req, err := kongEventDataPlaneCertificateCreateRequest(ctx, cl, cert)
@@ -50,7 +53,7 @@ func updateKonnectEventDataPlaneCertificate(
 ) error {
 	gatewayID := certGatewayID(cert)
 	if gatewayID == "" {
-		return CantPerformOperationWithoutGatewayIDError{Entity: cert, Op: UpdateOp}
+		return CantPerformOperationWithoutEventGatewayIDError{Entity: cert, Op: UpdateOp}
 	}
 
 	req, err := kongEventDataPlaneCertificateUpdateRequest(ctx, cl, cert)
@@ -83,7 +86,7 @@ func deleteKonnectEventDataPlaneCertificate(
 ) error {
 	gatewayID := certGatewayID(cert)
 	if gatewayID == "" {
-		return CantPerformOperationWithoutGatewayIDError{Entity: cert, Op: DeleteOp}
+		return CantPerformOperationWithoutEventGatewayIDError{Entity: cert, Op: DeleteOp}
 	}
 
 	_, err := sdk.DeleteEventGatewayDataPlaneCertificate(ctx, gatewayID, cert.GetKonnectID())
@@ -101,7 +104,7 @@ func getKonnectEventDataPlaneCertificateForUID(
 ) (string, error) {
 	gatewayID := certGatewayID(cert)
 	if gatewayID == "" {
-		return "", CantPerformOperationWithoutGatewayIDError{Entity: cert, Op: GetOp}
+		return "", CantPerformOperationWithoutEventGatewayIDError{Entity: cert, Op: GetOp}
 	}
 
 	resp, err := sdk.ListEventGatewayDataPlaneCertificates(ctx, sdkkonnectops.ListEventGatewayDataPlaneCertificatesRequest{
