@@ -125,6 +125,11 @@ func runConformance(
 	timeoutConfig.GatewayStatusMustHaveListeners = conformanceLooserTimeout
 	timeoutConfig.GatewayListenersMustHaveConditions = conformanceLooserTimeout
 	timeoutConfig.HTTPRouteMustHaveCondition = conformanceLooserTimeout
+	// Increase the HTTP polling timeout to avoid flaky failures.
+	// Ref: https://github.com/Kong/kong-operator/issues/2793
+	if gwType == hybridGateway {
+		timeoutConfig.MaxTimeToConsistency = 60 * time.Second
+	}
 
 	opts := conformance.DefaultOptions(t)
 	// It takes default conformance suite configuration manifests from provided location.
