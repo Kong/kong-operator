@@ -315,16 +315,20 @@ func enforceKonnectExtensionStatus(
 
 func konnectClusterTypeToCRDClusterType(clusterType sdkkonnectcomp.ControlPlaneClusterType) konnectv1alpha2.KonnectExtensionClusterType {
 	switch clusterType {
-	// When it's not specified by the caller (left empty) in Konnect it's set to CLUSTER_TYPE_CONTROL_PLANE.
-	case sdkkonnectcomp.ControlPlaneClusterTypeClusterTypeControlPlane, "":
+	// When it's not specified by the caller (left empty) in Konnect it's set
+	// to CLUSTER_TYPE_CONTROL_PLANE.
+	case "",
+		sdkkonnectcomp.ControlPlaneClusterTypeClusterTypeControlPlane:
 		return konnectv1alpha2.ClusterTypeControlPlane
 	case sdkkonnectcomp.ControlPlaneClusterTypeClusterTypeK8SIngressController:
 		return konnectv1alpha2.ClusterTypeK8sIngressController
 	case sdkkonnectcomp.ControlPlaneClusterTypeClusterTypeControlPlaneGroup:
 		return konnectv1alpha2.ClusterTypeControlPlaneGroup
 	default:
-		// default never happens as the validation is at the CRD level
-		return ""
+		// Simply translate the SDK cluster type to the CRD cluster type.
+		// This way bubble up any unsupported cluster types to be handled at the CRD validation level,
+		// instead of silently ignored here.
+		return konnectv1alpha2.KonnectExtensionClusterType(clusterType)
 	}
 }
 
