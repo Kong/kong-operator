@@ -225,16 +225,16 @@ func Test_buildKafkaService(t *testing.T) {
 		},
 	}
 
-	for _, tc2 := range tests {
-		t.Run(tc2.name, func(t *testing.T) {
-			obj, err := buildKafkaService(tc, tc2.egdp)
-			if tc2.wantErr {
+	for _, testcase := range tests {
+		t.Run(testcase.name, func(t *testing.T) {
+			obj, err := buildKafkaService(tc, testcase.egdp)
+			if testcase.wantErr {
 				require.Error(t, err)
 				return
 			}
 			require.NoError(t, err)
 			require.NotNil(t, obj)
-			tc2.check(t, obj)
+			testcase.check(t, obj)
 		})
 	}
 }
@@ -294,34 +294,34 @@ func Test_ensureKafkaService(t *testing.T) {
 		},
 	}
 
-	for _, tc2 := range tests {
-		t.Run(tc2.name, func(t *testing.T) {
+	for _, testcase := range tests {
+		t.Run(testcase.name, func(t *testing.T) {
 			recorder := events.NewFakeRecorder(10)
 			base := fake.NewClientBuilder().WithScheme(scheme).Build()
 			r := &Reconciler{
-				Client:        tc2.buildClient(base),
+				Client:        testcase.buildClient(base),
 				typeConverter: tc,
 				eventRecorder: recorder,
 			}
 
-			if tc2.prepareRecorder != nil {
-				tc2.prepareRecorder(r, recorder)
+			if testcase.prepareRecorder != nil {
+				testcase.prepareRecorder(r, recorder)
 			}
 
 			err := r.ensureKafkaService(context.Background(), logr.Discard(), egdp)
 
-			if tc2.wantErr {
+			if testcase.wantErr {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
 			}
 
-			if tc2.wantEvent != "" {
+			if testcase.wantEvent != "" {
 				select {
 				case event := <-recorder.Events:
-					assert.Contains(t, event, tc2.wantEvent)
+					assert.Contains(t, event, testcase.wantEvent)
 				default:
-					t.Errorf("expected event containing %q but channel was empty", tc2.wantEvent)
+					t.Errorf("expected event containing %q but channel was empty", testcase.wantEvent)
 				}
 			} else {
 				assert.Empty(t, recorder.Events, "expected no events but got %d", len(recorder.Events))

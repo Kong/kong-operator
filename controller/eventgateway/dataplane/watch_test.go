@@ -102,7 +102,7 @@ func Test_enqueueForKonnectEventGatewayRef(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			mapFunc := enqueueForKonnectEventGatewayRef(tc.cl)
-			requests := mapFunc(context.Background(), tc.obj)
+			requests := mapFunc(t.Context(), tc.obj)
 			if tc.wantNil {
 				require.Nil(t, requests)
 				return

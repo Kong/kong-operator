@@ -205,15 +205,15 @@ func Test_applyStatus(t *testing.T) {
 		},
 	}
 
-	for _, tc2 := range tests {
-		t.Run(tc2.name, func(t *testing.T) {
+	for _, testcase := range tests {
+		t.Run(testcase.name, func(t *testing.T) {
 			egdp := egdpWithType()
-			if tc2.modifyEGDP != nil {
-				tc2.modifyEGDP(egdp)
+			if testcase.modifyEGDP != nil {
+				testcase.modifyEGDP(egdp)
 			}
 
 			var objects []client.Object
-			if tc2.preObjects {
+			if testcase.preObjects {
 				objects = append(objects, egdp)
 			}
 
@@ -224,22 +224,22 @@ func Test_applyStatus(t *testing.T) {
 				Build()
 
 			recorder := events.NewFakeRecorder(10)
-			r := newReconciler(tc2.buildClient(base), recorder)
+			r := newReconciler(testcase.buildClient(base), recorder)
 
-			result := errors.Join(tc2.incomingErr, r.applyStatus(context.Background(), logr.Discard(), egdp))
+			result := errors.Join(testcase.incomingErr, r.applyStatus(context.Background(), logr.Discard(), egdp))
 
-			if tc2.wantErrJoined {
+			if testcase.wantErrJoined {
 				require.Error(t, result)
 			} else {
 				require.NoError(t, result)
 			}
 
-			if tc2.wantEvent != "" {
+			if testcase.wantEvent != "" {
 				select {
 				case event := <-recorder.Events:
-					assert.Contains(t, event, tc2.wantEvent)
+					assert.Contains(t, event, testcase.wantEvent)
 				default:
-					t.Errorf("expected event containing %q but channel was empty", tc2.wantEvent)
+					t.Errorf("expected event containing %q but channel was empty", testcase.wantEvent)
 				}
 			} else {
 				assert.Empty(t, recorder.Events)
