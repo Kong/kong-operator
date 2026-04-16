@@ -5,7 +5,7 @@ go 1.26.2
 require (
 	cloud.google.com/go/container v1.48.0
 	dario.cat/mergo v1.0.2
-	github.com/Kong/sdk-konnect-go v0.31.0
+	github.com/Kong/sdk-konnect-go v0.31.1
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/avast/retry-go/v4 v4.7.0
 	github.com/blang/semver/v4 v4.0.0
@@ -370,7 +370,7 @@ replace (
 	k8s.io/kubelet => k8s.io/kubelet v0.35.3
 	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.30.3
 	k8s.io/metrics => k8s.io/metrics v0.35.3
-	k8s.io/mount-utils => k8s.io/mount-utils v0.35.3
+	k8s.io/mount-utils => k8s.io/mount-utils v0.35.4
 	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.35.3
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.35.3
 	k8s.io/sample-cli-plugin => k8s.io/sample-cli-plugin v0.35.3
