@@ -52,12 +52,7 @@ func TestKonnectEntities(t *testing.T) {
 
 	authCfg := deploy.KonnectAPIAuthConfiguration(t, ctx, clientNamespaced,
 		deploy.WithTestIDLabel(testID),
-		func(obj client.Object) {
-			authCfg := obj.(*konnectv1alpha1.KonnectAPIAuthConfiguration)
-			authCfg.Spec.Type = konnectv1alpha1.KonnectAPIAuthTypeToken
-			authCfg.Spec.Token = test.KonnectAccessToken()
-			authCfg.Spec.ServerURL = test.KonnectServerURL()
-		},
+		deploy.KonnectAPIAuthConfigurationWithTestToken(test.KonnectAccessToken(), test.KonnectServerURL()),
 	)
 
 	cp := deploy.KonnectGatewayControlPlane(t, ctx, clientNamespaced, authCfg,
@@ -342,6 +337,40 @@ func KonnectEntitiesTestCase(t *testing.T, cl client.Client, params konnectEntit
 		func(t *assert.CollectT, obj *configurationv1alpha1.KongSNI) {
 			require.NotNil(t, obj.Status.Konnect, "Status.Konnect should not be nil")
 			assert.Equal(t, kcert.GetKonnectID(), obj.Status.Konnect.CertificateID, "CertificateID should be set")
+		},
+	)
+}
+
+func TestKonnectEntities_KonnectGatewayControlPlaneGroup(t *testing.T) {
+	ctx := t.Context()
+	cl := integration.GetClients().MgrClient
+	ns, _ := helpers.SetupTestEnv(t, ctx, integration.GetEnv())
+
+	// Let's generate a unique test ID that we can refer to in Konnect entities.
+	// Using only the first 8 characters of the UUID to keep the ID short enough for Konnect to accept it as a part
+	// of an entity name.
+	testID := uuid.NewString()[:8]
+	t.Logf("Running test with ID: %s", testID)
+
+	clientNamespaced := client.NewNamespacedClient(cl, ns.Name)
+
+	authCfg := deploy.KonnectAPIAuthConfiguration(t, ctx, clientNamespaced,
+		deploy.WithTestIDLabel(testID),
+		deploy.KonnectAPIAuthConfigurationWithTestToken(test.KonnectAccessToken(), test.KonnectServerURL()),
+	)
+
+	cp := deploy.KonnectGatewayControlPlane(t, ctx, clientNamespaced, authCfg,
+		deploy.WithTestIDLabel(testID),
+		deploy.KonnectGatewayControlPlaneLabel(deploy.KonnectTestIDLabel, testID),
+		deploy.KonnectGatewayControlPlaneType(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
+	)
+
+	t.Cleanup(object.DeleteAndWaitForDeletionFn(context.Background(), t, cl, cp.DeepCopy()))
+
+	t.Logf("Waiting for Konnect ID to be assigned to ControlPlane group %s/%s", cp.Namespace, cp.Name)
+	eventually.KonnectEntityGetsProgrammed(t, ctx, cl, cp,
+		func(t *assert.CollectT, obj *konnectv1alpha2.KonnectGatewayControlPlane) {
+			assert.NotEmpty(t, obj.GetKonnectID(), "ID should be set")
 		},
 	)
 }

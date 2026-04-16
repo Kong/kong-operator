@@ -81,7 +81,7 @@ func KongInKonnectDefaults(
 	var template map[string]string
 
 	switch konnectExtensionStatus.Konnect.ClusterType {
-	case konnectv1alpha2.ClusterTypeControlPlane:
+	case konnectv1alpha2.ClusterTypeControlPlane, konnectv1alpha2.ClusterTypeControlPlaneGroup:
 		template = kongInKonnectClusterTypeControlPlane
 	case konnectv1alpha2.ClusterTypeK8sIngressController:
 		template = kongInKonnectClusterTypeIngressController

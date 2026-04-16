@@ -71,9 +71,15 @@ type TestCase[T client.Object] struct {
 	// ExpectedUpdateErrorMessage is the expected error message when updating the object.
 	ExpectedUpdateErrorMessage *string
 
+	// ExpectedStatusUpdateErrorMessage is the expected error message when updating the object status.
+	ExpectedStatusUpdateErrorMessage *string
+
 	// Update is a function that updates the object in the test case after it's created.
 	// It can be used to verify CEL rules that verify the previous object's version against the new one.
 	Update func(T)
+
+	// StatusUpdate is a function that updates the status of the object in the test case after it's created.
+	StatusUpdate func(T)
 
 	// WarningCollector (optional) collects API server warnings emitted during operations.
 	// If set together with ExpectedWarningMessage, the test will assert that a warning containing the
@@ -223,6 +229,28 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *run
 				if tc.ExpectedUpdateErrorMessage != nil {
 					require.Error(c, err)
 					assert.Contains(c, err.Error(), *tc.ExpectedUpdateErrorMessage)
+					return
+				}
+				require.NoError(c, err)
+			}, timeout, period)
+		}
+
+		// If the StatusUpdate function was defined, update the object status
+		// and check if the update is allowed.
+		if tc.StatusUpdate != nil {
+			require.EventuallyWithT(t, func(c *assert.CollectT) {
+				err := cl.Get(ctx, client.ObjectKeyFromObject(tc.TestObject), tc.TestObject)
+				require.NoError(c, err)
+				// Update the object status and push the update to the server.
+				tc.StatusUpdate(tc.TestObject)
+				err = cl.Status().Update(ctx, tc.TestObject)
+
+				// If the expected status update error message is defined,
+				// check if the error message contains the expected message
+				// and return. Otherwise, expect no error.
+				if tc.ExpectedStatusUpdateErrorMessage != nil {
+					require.Error(c, err)
+					assert.Contains(c, err.Error(), *tc.ExpectedStatusUpdateErrorMessage)
 					return
 				}
 				require.NoError(c, err)

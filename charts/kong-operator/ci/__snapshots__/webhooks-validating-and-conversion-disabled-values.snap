@@ -39868,6 +39868,7 @@ spec:
                     enum:
                     - ControlPlane
                     - K8SIngressController
+                    - ControlPlaneGroup
                     type: string
                   controlPlaneID:
                     description: ControlPlaneID is the Konnect ID of the ControlPlane this KonnectExtension is associated with.
