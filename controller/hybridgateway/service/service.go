@@ -155,6 +155,7 @@ func resolveProtocolFromTLSRouteBackendRefs(
 // extractProtocolFromBackendRef returns the protocol in the annotation konghq.com/protocol
 // of the backend service referenced in the BackendRef if the annotation value is a valid Kong service protocol.
 // Also returns a boolean value that is true when a valid protocol is in the annotation.
+// See: https://github.com/Kong/kong-operator/pull/3750
 func extractProtocolFromBackendRef(
 	ctx context.Context,
 	cl client.Client,
