@@ -1035,6 +1035,7 @@ type sdkOpsRootUnionVariant struct {
 	TypeConstName         string
 	CreateVariantTypeName string
 	CreateConstructorName string
+	UpdatePayloadJSONName string
 	UpdateVariantTypeName string
 	UpdateConstructorName string
 }
@@ -1084,10 +1085,15 @@ func (g *Generator) generateRootUnionSDKOps(
 	rootUnionTypeName := goFieldName(entityName + "Config")
 
 	rootUnionMethods := make([]sdkOpsRootUnionMethod, 0, len(methods))
+	hasUpdateMethod := false
 	for _, method := range methods {
+		isCreate := strings.HasPrefix(method.MethodName, "ToCreate")
+		if !isCreate {
+			hasUpdateMethod = true
+		}
 		rootUnionMethods = append(rootUnionMethods, sdkOpsRootUnionMethod{
 			sdkOpsMethod: method,
-			IsCreate:     strings.HasPrefix(method.MethodName, "ToCreate"),
+			IsCreate:     isCreate,
 		})
 	}
 
@@ -1107,11 +1113,20 @@ func (g *Generator) generateRootUnionSDKOps(
 		if variant.RefName != "" {
 			variantRefName = variant.RefName
 		}
+		updatePayloadJSONName := ""
 		updateVariantTypeName := ""
 		updateConstructorName := ""
-		if configProp := findPropertyByName(variant.Properties, "dcr_config"); configProp != nil && configProp.RefName != "" {
-			updateVariantTypeName = fixInitialisms(strings.Replace(configProp.RefName, "Create", "Update", 1))
-			updateConstructorName = "Create" + goFieldName(configProp.Name) + updateVariantTypeName
+		if hasUpdateMethod {
+			updatePayloadProp, err := findRootUnionUpdatePayloadProperty(variant.Properties)
+			if err != nil {
+				return "", fmt.Errorf("failed to infer update payload property for %s variant %q: %w", entityName, variantRefName, err)
+			}
+			if updatePayloadProp == nil {
+				return "", fmt.Errorf("failed to infer update payload property for %s variant %q: no ref payload property found", entityName, variantRefName)
+			}
+			updatePayloadJSONName = updatePayloadProp.Name
+			updateVariantTypeName = fixInitialisms(strings.Replace(updatePayloadProp.RefName, "Create", "Update", 1))
+			updateConstructorName = "Create" + goFieldName(updatePayloadProp.Name) + updateVariantTypeName
 		}
 		fieldName := fixInitialisms(variantNames[i])
 		variants = append(variants, sdkOpsRootUnionVariant{
@@ -1120,6 +1135,7 @@ func (g *Generator) generateRootUnionSDKOps(
 			TypeConstName:         fmt.Sprintf("%sType%s", rootUnionTypeName, fieldName),
 			CreateVariantTypeName: fixInitialisms(variantRefName),
 			CreateConstructorName: "Create" + fixInitialisms(variantRefName),
+			UpdatePayloadJSONName: updatePayloadJSONName,
 			UpdateVariantTypeName: updateVariantTypeName,
 			UpdateConstructorName: updateConstructorName,
 		})
@@ -1309,13 +1325,36 @@ func sdkOpsBoolFieldLabel(path []string) string {
 	return strings.Join(path, ".")
 }
 
-func findPropertyByName(properties []*parser.Property, name string) *parser.Property {
+func findRootUnionUpdatePayloadProperty(properties []*parser.Property) (*parser.Property, error) {
+	requiredRefProps := make([]*parser.Property, 0, len(properties))
+	refProps := make([]*parser.Property, 0, len(properties))
+
 	for _, prop := range properties {
-		if prop.Name == name {
-			return prop
+		if prop.RefName == "" {
+			continue
+		}
+		refProps = append(refProps, prop)
+		if prop.Required {
+			requiredRefProps = append(requiredRefProps, prop)
 		}
 	}
-	return nil
+
+	switch len(requiredRefProps) {
+	case 1:
+		return requiredRefProps[0], nil
+	case 0:
+	default:
+		return nil, fmt.Errorf("multiple required ref payload properties found")
+	}
+
+	switch len(refProps) {
+	case 1:
+		return refProps[0], nil
+	case 0:
+		return nil, nil
+	default:
+		return nil, fmt.Errorf("multiple ref payload properties found")
+	}
 }
 
 // sdkImportAlias generates a deterministic import alias from an SDK import path.

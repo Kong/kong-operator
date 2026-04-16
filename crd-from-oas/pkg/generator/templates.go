@@ -598,14 +598,6 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 	if err := json.Unmarshal(data, &selected); err != nil {
 		return nil, fmt.Errorf("failed to decode selected {{$.EntityName}} config: %w", err)
 	}
-	configPayload, ok := selected["dcr_config"]
-	if !ok || configPayload == nil {
-		return nil, fmt.Errorf("{{$.EntityName}} config payload missing dcr_config")
-	}
-	configData, err := json.Marshal(configPayload)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal {{$.EntityName}} dcr_config payload: %w", err)
-	}
 	var target {{.ImportAlias}}.{{.TypeName}}
 	if err := json.Unmarshal(data, &target); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal into {{.TypeName}}: %w", err)
@@ -613,6 +605,14 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 	switch variant {
 {{- range $.Variants}}
 	case "{{.FieldName}}":
+		configPayload, ok := selected["{{.UpdatePayloadJSONName}}"]
+		if !ok || configPayload == nil {
+			return nil, fmt.Errorf("{{$.EntityName}} config payload missing {{.UpdatePayloadJSONName}}")
+		}
+		configData, err := json.Marshal(configPayload)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal {{$.EntityName}} {{.UpdatePayloadJSONName}} payload: %w", err)
+		}
 		var member {{$importAlias}}.{{.UpdateVariantTypeName}}
 		if err := json.Unmarshal(configData, &member); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal into {{.UpdateVariantTypeName}}: %w", err)
