@@ -1217,7 +1217,7 @@ func TestGenerateSDKOps_NormalizesBooleanFields(t *testing.T) {
 
 	content, err := g.generateSDKOps("Portal", schema, opsConfig)
 	require.NoError(t, err)
-	assert.Contains(t, content, "var sdkOpsBoolFields = []sdkOpsBoolField")
+	assert.Contains(t, content, "var PortalSDKOpsBoolFields = []PortalSDKOpsBoolField")
 	assert.Contains(t, content, "func (s *PortalAPISpec) marshalSDKOpsPayload() ([]byte, error)")
 	assert.Contains(t, content, "data, err := s.marshalSDKOpsPayload()")
 	assert.Contains(t, content, "Label: \"rbac_enabled\"")
@@ -1228,7 +1228,147 @@ func TestGenerateSDKOps_NormalizesBooleanFields(t *testing.T) {
 	assert.NotContains(t, content, "err)\n\n\tvar target")
 	assert.NotContains(t, content, "}var target")
 	assert.Contains(t, content, "}\n\tvar target")
-	assert.NotContains(t, content, "if err := normalizeSDKOpsBoolFields(payload); err != nil {\n\t\treturn nil, fmt.Errorf(\"failed to normalize PortalAPISpec for CreatePortal: %w\", err)")
+	assert.Contains(t, content, "if err := normalizePortalSDKOpsBoolFields(payload); err != nil {")
+}
+
+func TestGenerateSDKOps_RootUnionUsesSelectedVariantPayload(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	schema := &parser.Schema{
+		OneOf: []*parser.Property{
+			{
+				Name:    "CreateDcrProviderRequestAuth0",
+				RefName: "CreateDcrProviderRequestAuth0",
+				Properties: []*parser.Property{
+					{
+						Name:     "provider_config",
+						RefName:  "CreateDcrConfigAuth0InRequest",
+						Required: true,
+					},
+				},
+			},
+			{
+				Name:    "CreateDcrProviderRequestHttp",
+				RefName: "CreateDcrProviderRequestHttp",
+				Properties: []*parser.Property{
+					{
+						Name:     "provider_config",
+						RefName:  "CreateDcrConfigHTTPInRequest",
+						Required: true,
+					},
+				},
+			},
+		},
+		Properties: []*parser.Property{
+			{
+				Name: "auth0",
+				Type: "object",
+				Properties: []*parser.Property{
+					{
+						Name: "provider_config",
+						Type: "object",
+						Properties: []*parser.Property{
+							{
+								Name: "use_developer_managed_scopes",
+								Type: "boolean",
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "http",
+				Type: "object",
+				Properties: []*parser.Property{
+					{
+						Name: "provider_config",
+						Type: "object",
+						Properties: []*parser.Property{
+							{
+								Name: "allow_multiple_credentials",
+								Type: "boolean",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {
+				Path: "github.com/Kong/sdk-konnect-go/models/components.CreateDcrProviderRequest",
+			},
+			"update": {
+				Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateDcrProviderRequest",
+			},
+		},
+	}
+
+	content, err := g.generateSDKOps("DcrProvider", schema, opsConfig)
+	require.NoError(t, err)
+	assert.Contains(t, content, "func (s *DcrProviderAPISpec) selectedSDKOpsPayload(payload map[string]any) ([]byte, string, error)")
+	assert.Contains(t, content, `selected = payload["auth0"]`)
+	assert.Contains(t, content, `selected = payload["http"]`)
+	assert.Contains(t, content, "DcrProvider config is required")
+	assert.Contains(t, content, "CreateCreateDcrProviderRequestAuth0")
+	assert.Contains(t, content, "CreateCreateDcrProviderRequestHTTP")
+	assert.Contains(t, content, `configPayload, ok := selected["provider_config"]`)
+	assert.Contains(t, content, "CreateProviderConfigUpdateDcrConfigAuth0InRequest")
+	assert.Contains(t, content, "target.ProviderConfig = &unionValue")
+	assert.Contains(t, content, "failed to normalize DcrProviderAPISpec SDK payload")
+	assert.NotContains(t, content, `selected["dcr_config"]`)
+	assert.NotContains(t, content, "target.DcrConfig = &unionValue")
+}
+
+func TestFindRootUnionUpdatePayloadProperty(t *testing.T) {
+	t.Run("prefers single required ref property", func(t *testing.T) {
+		prop, err := findRootUnionUpdatePayloadProperty([]*parser.Property{
+			{Name: "display_name"},
+			{Name: "provider_config", RefName: "CreatePayload", Required: true},
+			{Name: "labels"},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, prop)
+		assert.Equal(t, "provider_config", prop.Name)
+	})
+
+	t.Run("falls back to single ref property", func(t *testing.T) {
+		prop, err := findRootUnionUpdatePayloadProperty([]*parser.Property{
+			{Name: "provider_config", RefName: "CreatePayload"},
+			{Name: "labels"},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, prop)
+		assert.Equal(t, "provider_config", prop.Name)
+	})
+
+	t.Run("errors on multiple required ref properties", func(t *testing.T) {
+		prop, err := findRootUnionUpdatePayloadProperty([]*parser.Property{
+			{Name: "provider_config", RefName: "CreatePayload", Required: true},
+			{Name: "client_config", RefName: "CreateClientPayload", Required: true},
+		})
+		require.Error(t, err)
+		assert.Nil(t, prop)
+		assert.Contains(t, err.Error(), "multiple required ref payload properties")
+	})
+
+	t.Run("errors on ambiguous ref properties", func(t *testing.T) {
+		prop, err := findRootUnionUpdatePayloadProperty([]*parser.Property{
+			{Name: "provider_config", RefName: "CreatePayload"},
+			{Name: "client_config", RefName: "CreateClientPayload"},
+		})
+		require.Error(t, err)
+		assert.Nil(t, prop)
+		assert.Contains(t, err.Error(), "multiple ref payload properties")
+	})
+
+	t.Run("returns nil when no ref properties", func(t *testing.T) {
+		prop, err := findRootUnionUpdatePayloadProperty([]*parser.Property{
+			{Name: "display_name"},
+		})
+		require.NoError(t, err)
+		assert.Nil(t, prop)
+	})
 }
 
 func TestGenerateSDKOpsTest_AssertsNormalizedPayload(t *testing.T) {

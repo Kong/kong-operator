@@ -7352,6 +7352,8 @@ _Appears in:_
 
 - [PortalSpec](#x-konnect-konghq-com-v1alpha1-types-portalspec)
 
+
+
 #### PortalSpec
 
 

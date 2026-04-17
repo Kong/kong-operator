@@ -1002,6 +1002,18 @@ type sdkOpsMethod struct {
 	ImportAlias string
 }
 
+type sdkOpsRootUnionMethod struct {
+	sdkOpsMethod
+
+	IsCreate bool
+}
+
+type sdkOpsTestMethod struct {
+	sdkOpsMethod
+
+	ExpectError bool
+}
+
 // sdkOpsBoolField represents a boolean field path that needs normalization
 // from the CRD's Enabled/Disabled enum strings back to JSON booleans.
 type sdkOpsBoolField struct {
@@ -1017,6 +1029,18 @@ type sdkOpsTestField struct {
 	ExpectedValue string
 }
 
+type sdkOpsRootUnionVariant struct {
+	FieldName             string
+	JSONName              string
+	TypeConstName         string
+	CreateVariantTypeName string
+	CreateConstructorName string
+	UpdatePayloadJSONName string
+	UpdateTargetFieldName string
+	UpdateVariantTypeName string
+	UpdateConstructorName string
+}
+
 // generateSDKOps generates a file with conversion methods from {Entity}APISpec
 // to SDK request types using JSON marshal/unmarshal.
 func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, opsConfig *config.EntityOpsConfig) (string, error) {
@@ -1025,6 +1049,10 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		return "", err
 	}
 	boolFields := g.collectSDKOpsBoolFields(schema)
+
+	if hasRootOneOf(schema) {
+		return g.generateRootUnionSDKOps(entityName, schema, imports, methods, boolFields)
+	}
 
 	tmpl := template.Must(template.New("sdkops").Parse(sdkOpsTemplate))
 	var buf strings.Builder
@@ -1042,6 +1070,100 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		Methods:    methods,
 	}
 
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
+func (g *Generator) generateRootUnionSDKOps(
+	entityName string,
+	schema *parser.Schema,
+	imports []*sdkOpsImport,
+	methods []sdkOpsMethod,
+	boolFields []sdkOpsBoolField,
+) (string, error) {
+	rootUnionTypeName := goFieldName(entityName + "Config")
+
+	rootUnionMethods := make([]sdkOpsRootUnionMethod, 0, len(methods))
+	hasUpdateMethod := false
+	for _, method := range methods {
+		isCreate := strings.HasPrefix(method.MethodName, "ToCreate")
+		if !isCreate {
+			hasUpdateMethod = true
+		}
+		rootUnionMethods = append(rootUnionMethods, sdkOpsRootUnionMethod{
+			sdkOpsMethod: method,
+			IsCreate:     isCreate,
+		})
+	}
+
+	var rawVariantNames []string
+	for _, variant := range schema.OneOf {
+		variantName := variant.Name
+		if variant.RefName != "" {
+			variantName = variant.RefName
+		}
+		rawVariantNames = append(rawVariantNames, variantName)
+	}
+	variantNames := extractVariantNames(rawVariantNames)
+
+	variants := make([]sdkOpsRootUnionVariant, 0, len(schema.OneOf))
+	for i, variant := range schema.OneOf {
+		variantRefName := variant.Name
+		if variant.RefName != "" {
+			variantRefName = variant.RefName
+		}
+		updatePayloadJSONName := ""
+		updateTargetFieldName := ""
+		updateVariantTypeName := ""
+		updateConstructorName := ""
+		if hasUpdateMethod {
+			updatePayloadProp, err := findRootUnionUpdatePayloadProperty(variant.Properties)
+			if err != nil {
+				return "", fmt.Errorf("failed to infer update payload property for %s variant %q: %w", entityName, variantRefName, err)
+			}
+			if updatePayloadProp == nil {
+				return "", fmt.Errorf("failed to infer update payload property for %s variant %q: no ref payload property found", entityName, variantRefName)
+			}
+			updatePayloadJSONName = updatePayloadProp.Name
+			updateTargetFieldName = goFieldName(updatePayloadProp.Name)
+			updateVariantTypeName = fixInitialisms(strings.Replace(updatePayloadProp.RefName, "Create", "Update", 1))
+			updateConstructorName = "Create" + goFieldName(updatePayloadProp.Name) + updateVariantTypeName
+		}
+		fieldName := fixInitialisms(variantNames[i])
+		variants = append(variants, sdkOpsRootUnionVariant{
+			FieldName:             fieldName,
+			JSONName:              strings.ToLower(variantNames[i]),
+			TypeConstName:         fmt.Sprintf("%sType%s", rootUnionTypeName, fieldName),
+			CreateVariantTypeName: fixInitialisms(variantRefName),
+			CreateConstructorName: "Create" + fixInitialisms(variantRefName),
+			UpdatePayloadJSONName: updatePayloadJSONName,
+			UpdateTargetFieldName: updateTargetFieldName,
+			UpdateVariantTypeName: updateVariantTypeName,
+			UpdateConstructorName: updateConstructorName,
+		})
+	}
+
+	tmpl := template.Must(template.New("sdkops-root-union").Parse(sdkOpsRootUnionTemplate))
+	var buf strings.Builder
+	data := struct {
+		APIVersion    string
+		EntityName    string
+		UnionTypeName string
+		Imports       []*sdkOpsImport
+		BoolFields    []sdkOpsBoolField
+		Methods       []sdkOpsRootUnionMethod
+		Variants      []sdkOpsRootUnionVariant
+	}{
+		APIVersion:    g.config.APIVersion,
+		EntityName:    entityName,
+		UnionTypeName: rootUnionTypeName,
+		Imports:       imports,
+		BoolFields:    boolFields,
+		Methods:       rootUnionMethods,
+		Variants:      variants,
+	}
 	if err := tmpl.Execute(&buf, data); err != nil {
 		return "", err
 	}
@@ -1074,17 +1196,25 @@ func (g *Generator) generateSDKOpsTest(entityName string, schema *parser.Schema,
 		})
 	}
 
+	testMethods := make([]sdkOpsTestMethod, 0, len(methods))
+	for _, method := range methods {
+		testMethods = append(testMethods, sdkOpsTestMethod{
+			sdkOpsMethod: method,
+			ExpectError:  len(testFields) == 0,
+		})
+	}
+
 	tmpl := template.Must(template.New("sdkopstest").Parse(sdkOpsTestTemplate))
 	var buf strings.Builder
 	data := struct {
 		APIVersion string
 		EntityName string
-		Methods    []sdkOpsMethod
+		Methods    []sdkOpsTestMethod
 		TestFields []sdkOpsTestField
 	}{
 		APIVersion: g.config.APIVersion,
 		EntityName: entityName,
-		Methods:    methods,
+		Methods:    testMethods,
 		TestFields: testFields,
 	}
 
@@ -1147,6 +1277,23 @@ func (g *Generator) collectSDKOpsBoolFields(schema *parser.Schema) []sdkOpsBoolF
 	for _, prop := range schema.Properties {
 		g.collectSDKOpsBoolFieldsFromProperty(prop, []string{prop.Name}, &fields)
 	}
+	if len(schema.OneOf) > 0 {
+		rawVariantNames := make([]string, 0, len(schema.OneOf))
+		for _, variant := range schema.OneOf {
+			variantName := variant.Name
+			if variant.RefName != "" {
+				variantName = variant.RefName
+			}
+			rawVariantNames = append(rawVariantNames, variantName)
+		}
+		variantNames := extractVariantNames(rawVariantNames)
+		for i, variant := range schema.OneOf {
+			variantJSONName := strings.ToLower(variantNames[i])
+			for _, nestedProp := range variant.Properties {
+				g.collectSDKOpsBoolFieldsFromProperty(nestedProp, []string{variantJSONName, nestedProp.Name}, &fields)
+			}
+		}
+	}
 
 	sort.Slice(fields, func(i, j int) bool {
 		return fields[i].Label < fields[j].Label
@@ -1180,6 +1327,38 @@ func (g *Generator) collectSDKOpsBoolFieldsFromProperty(prop *parser.Property, p
 
 func sdkOpsBoolFieldLabel(path []string) string {
 	return strings.Join(path, ".")
+}
+
+func findRootUnionUpdatePayloadProperty(properties []*parser.Property) (*parser.Property, error) {
+	requiredRefProps := make([]*parser.Property, 0, len(properties))
+	refProps := make([]*parser.Property, 0, len(properties))
+
+	for _, prop := range properties {
+		if prop.RefName == "" {
+			continue
+		}
+		refProps = append(refProps, prop)
+		if prop.Required {
+			requiredRefProps = append(requiredRefProps, prop)
+		}
+	}
+
+	switch len(requiredRefProps) {
+	case 1:
+		return requiredRefProps[0], nil
+	case 0:
+	default:
+		return nil, fmt.Errorf("multiple required ref payload properties found")
+	}
+
+	switch len(refProps) {
+	case 1:
+		return refProps[0], nil
+	case 0:
+		return nil, nil
+	default:
+		return nil, fmt.Errorf("multiple ref payload properties found")
+	}
 }
 
 // sdkImportAlias generates a deterministic import alias from an SDK import path.
