@@ -8,3 +8,6 @@ package konnect
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnecteventdataplanecertificates,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnecteventdataplanecertificates/status,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnecteventdataplanecertificates/finalizers,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=portals,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=portals/status,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=portals/finalizers,verbs=update;patch

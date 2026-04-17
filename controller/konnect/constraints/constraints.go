@@ -10,7 +10,6 @@ import (
 	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
-	xkonnectv1alpha1 "github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1"
 )
 
 // SupportedCredentialType is a generic type constraint that all Kong credential
@@ -65,7 +64,7 @@ type SupportedKonnectEntityType interface {
 		// https://github.com/Kong/kong-operator/issues/3785
 		konnectv1alpha1.KonnectEventControlPlane |
 		konnectv1alpha1.KonnectEventDataPlaneCertificate |
-		xkonnectv1alpha1.Portal
+		konnectv1alpha1.Portal
 	// TODO: add other types
 
 	GetTypeName() string

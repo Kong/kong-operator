@@ -441,6 +441,7 @@ rules:
   - konnectcloudgatewaytransitgateways
   - konnecteventcontrolplanes
   - konnecteventdataplanecertificates
+  - portals
   verbs:
   - get
   - list
@@ -467,6 +468,8 @@ rules:
   - konnectgatewaycontrolplanes/finalizers
   - konnectgatewaycontrolplanes/status
   - mcpservers/status
+  - portals/finalizers
+  - portals/status
   verbs:
   - patch
   - update

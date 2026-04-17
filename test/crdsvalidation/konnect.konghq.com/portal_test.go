@@ -1,11 +1,12 @@
-package configuration_test
+package crdsvalidation
 
 import (
 	"strings"
 	"testing"
 
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
-	xkonnectv1alpha1 "github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1"
+	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	common "github.com/kong/kong-operator/v2/test/crdsvalidation/common"
 	"github.com/kong/kong-operator/v2/test/envtest"
 )
@@ -14,22 +15,22 @@ func TestPortal(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
-	scheme := Scheme(t)
+	scheme := scheme.Get()
 	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	t.Run("name field validation", func(t *testing.T) {
-		common.TestCasesGroup[*xkonnectv1alpha1.Portal]{
+		common.TestCasesGroup[*konnectv1alpha1.Portal]{
 			{
 				Name: "name with valid value passes validation",
-				TestObject: &xkonnectv1alpha1.Portal{
+				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: xkonnectv1alpha1.PortalSpec{
+					Spec: konnectv1alpha1.PortalSpec{
 						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "test-auth",
 							},
 						},
-						APISpec: xkonnectv1alpha1.PortalAPISpec{
+						APISpec: konnectv1alpha1.PortalAPISpec{
 							Name: "test-portal",
 						},
 					},
@@ -37,15 +38,15 @@ func TestPortal(t *testing.T) {
 			},
 			{
 				Name: "name at max length (255) passes validation",
-				TestObject: &xkonnectv1alpha1.Portal{
+				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: xkonnectv1alpha1.PortalSpec{
+					Spec: konnectv1alpha1.PortalSpec{
 						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "test-auth",
 							},
 						},
-						APISpec: xkonnectv1alpha1.PortalAPISpec{
+						APISpec: konnectv1alpha1.PortalAPISpec{
 							Name: strings.Repeat("a", 255),
 						},
 					},
@@ -53,15 +54,15 @@ func TestPortal(t *testing.T) {
 			},
 			{
 				Name: "name exceeding max length (256) fails validation",
-				TestObject: &xkonnectv1alpha1.Portal{
+				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: xkonnectv1alpha1.PortalSpec{
+					Spec: konnectv1alpha1.PortalSpec{
 						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "test-auth",
 							},
 						},
-						APISpec: xkonnectv1alpha1.PortalAPISpec{
+						APISpec: konnectv1alpha1.PortalAPISpec{
 							Name: strings.Repeat("a", 256),
 						},
 					},
@@ -72,20 +73,20 @@ func TestPortal(t *testing.T) {
 			},
 			{
 				Name: "name is immutable",
-				TestObject: &xkonnectv1alpha1.Portal{
+				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: xkonnectv1alpha1.PortalSpec{
+					Spec: konnectv1alpha1.PortalSpec{
 						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "test-auth",
 							},
 						},
-						APISpec: xkonnectv1alpha1.PortalAPISpec{
+						APISpec: konnectv1alpha1.PortalAPISpec{
 							Name: "immutable-portal-name",
 						},
 					},
 				},
-				Update: func(p *xkonnectv1alpha1.Portal) {
+				Update: func(p *konnectv1alpha1.Portal) {
 					p.Spec.APISpec.Name = "changed-portal-name"
 				},
 				ExpectedUpdateErrorMessage: new("name is immutable"),
@@ -95,18 +96,18 @@ func TestPortal(t *testing.T) {
 	})
 
 	t.Run("display_name field validation", func(t *testing.T) {
-		common.TestCasesGroup[*xkonnectv1alpha1.Portal]{
+		common.TestCasesGroup[*konnectv1alpha1.Portal]{
 			{
 				Name: "display_name with valid value passes validation",
-				TestObject: &xkonnectv1alpha1.Portal{
+				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: xkonnectv1alpha1.PortalSpec{
+					Spec: konnectv1alpha1.PortalSpec{
 						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "test-auth",
 							},
 						},
-						APISpec: xkonnectv1alpha1.PortalAPISpec{
+						APISpec: konnectv1alpha1.PortalAPISpec{
 							Name:        "portal-display-name-valid",
 							DisplayName: "My Portal",
 						},
@@ -115,15 +116,15 @@ func TestPortal(t *testing.T) {
 			},
 			{
 				Name: "display_name at max length (255) passes validation",
-				TestObject: &xkonnectv1alpha1.Portal{
+				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: xkonnectv1alpha1.PortalSpec{
+					Spec: konnectv1alpha1.PortalSpec{
 						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "test-auth",
 							},
 						},
-						APISpec: xkonnectv1alpha1.PortalAPISpec{
+						APISpec: konnectv1alpha1.PortalAPISpec{
 							Name:        "portal-display-name-max",
 							DisplayName: strings.Repeat("d", 255),
 						},
@@ -132,15 +133,15 @@ func TestPortal(t *testing.T) {
 			},
 			{
 				Name: "display_name exceeding max length (256) fails validation",
-				TestObject: &xkonnectv1alpha1.Portal{
+				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: xkonnectv1alpha1.PortalSpec{
+					Spec: konnectv1alpha1.PortalSpec{
 						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "test-auth",
 							},
 						},
-						APISpec: xkonnectv1alpha1.PortalAPISpec{
+						APISpec: konnectv1alpha1.PortalAPISpec{
 							Name:        "portal-display-name-over",
 							DisplayName: strings.Repeat("d", 256),
 						},
@@ -155,18 +156,18 @@ func TestPortal(t *testing.T) {
 	})
 
 	t.Run("description field validation", func(t *testing.T) {
-		common.TestCasesGroup[*xkonnectv1alpha1.Portal]{
+		common.TestCasesGroup[*konnectv1alpha1.Portal]{
 			{
 				Name: "description at max length (512) passes validation",
-				TestObject: &xkonnectv1alpha1.Portal{
+				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: xkonnectv1alpha1.PortalSpec{
+					Spec: konnectv1alpha1.PortalSpec{
 						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "test-auth",
 							},
 						},
-						APISpec: xkonnectv1alpha1.PortalAPISpec{
+						APISpec: konnectv1alpha1.PortalAPISpec{
 							Name:        "portal-desc-max",
 							Description: new(strings.Repeat("x", 512)),
 						},
@@ -175,15 +176,15 @@ func TestPortal(t *testing.T) {
 			},
 			{
 				Name: "description exceeding max length (513) fails validation",
-				TestObject: &xkonnectv1alpha1.Portal{
+				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: xkonnectv1alpha1.PortalSpec{
+					Spec: konnectv1alpha1.PortalSpec{
 						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "test-auth",
 							},
 						},
-						APISpec: xkonnectv1alpha1.PortalAPISpec{
+						APISpec: konnectv1alpha1.PortalAPISpec{
 							Name:        "portal-desc-over",
 							Description: new(strings.Repeat("x", 513)),
 						},
@@ -198,18 +199,18 @@ func TestPortal(t *testing.T) {
 	})
 
 	t.Run("default_api_visibility field validation", func(t *testing.T) {
-		common.TestCasesGroup[*xkonnectv1alpha1.Portal]{
+		common.TestCasesGroup[*konnectv1alpha1.Portal]{
 			{
 				Name: "default_api_visibility set to public passes validation",
-				TestObject: &xkonnectv1alpha1.Portal{
+				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: xkonnectv1alpha1.PortalSpec{
+					Spec: konnectv1alpha1.PortalSpec{
 						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "test-auth",
 							},
 						},
-						APISpec: xkonnectv1alpha1.PortalAPISpec{
+						APISpec: konnectv1alpha1.PortalAPISpec{
 							Name:                 "portal-vis-public",
 							DefaultAPIVisibility: "public",
 						},
@@ -218,15 +219,15 @@ func TestPortal(t *testing.T) {
 			},
 			{
 				Name: "default_api_visibility set to private passes validation",
-				TestObject: &xkonnectv1alpha1.Portal{
+				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: xkonnectv1alpha1.PortalSpec{
+					Spec: konnectv1alpha1.PortalSpec{
 						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "test-auth",
 							},
 						},
-						APISpec: xkonnectv1alpha1.PortalAPISpec{
+						APISpec: konnectv1alpha1.PortalAPISpec{
 							Name:                 "portal-vis-private",
 							DefaultAPIVisibility: "private",
 						},
@@ -235,15 +236,15 @@ func TestPortal(t *testing.T) {
 			},
 			{
 				Name: "default_api_visibility with invalid value fails validation",
-				TestObject: &xkonnectv1alpha1.Portal{
+				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: xkonnectv1alpha1.PortalSpec{
+					Spec: konnectv1alpha1.PortalSpec{
 						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "test-auth",
 							},
 						},
-						APISpec: xkonnectv1alpha1.PortalAPISpec{
+						APISpec: konnectv1alpha1.PortalAPISpec{
 							Name:                 "portal-vis-invalid",
 							DefaultAPIVisibility: "invalid",
 						},
@@ -256,18 +257,18 @@ func TestPortal(t *testing.T) {
 	})
 
 	t.Run("default_page_visibility field validation", func(t *testing.T) {
-		common.TestCasesGroup[*xkonnectv1alpha1.Portal]{
+		common.TestCasesGroup[*konnectv1alpha1.Portal]{
 			{
 				Name: "default_page_visibility set to public passes validation",
-				TestObject: &xkonnectv1alpha1.Portal{
+				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: xkonnectv1alpha1.PortalSpec{
+					Spec: konnectv1alpha1.PortalSpec{
 						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "test-auth",
 							},
 						},
-						APISpec: xkonnectv1alpha1.PortalAPISpec{
+						APISpec: konnectv1alpha1.PortalAPISpec{
 							Name:                  "portal-page-vis-public",
 							DefaultPageVisibility: "public",
 						},
@@ -276,15 +277,15 @@ func TestPortal(t *testing.T) {
 			},
 			{
 				Name: "default_page_visibility set to private passes validation",
-				TestObject: &xkonnectv1alpha1.Portal{
+				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: xkonnectv1alpha1.PortalSpec{
+					Spec: konnectv1alpha1.PortalSpec{
 						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "test-auth",
 							},
 						},
-						APISpec: xkonnectv1alpha1.PortalAPISpec{
+						APISpec: konnectv1alpha1.PortalAPISpec{
 							Name:                  "portal-page-vis-private",
 							DefaultPageVisibility: "private",
 						},
@@ -293,15 +294,15 @@ func TestPortal(t *testing.T) {
 			},
 			{
 				Name: "default_page_visibility with invalid value fails validation",
-				TestObject: &xkonnectv1alpha1.Portal{
+				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: xkonnectv1alpha1.PortalSpec{
+					Spec: konnectv1alpha1.PortalSpec{
 						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "test-auth",
 							},
 						},
-						APISpec: xkonnectv1alpha1.PortalAPISpec{
+						APISpec: konnectv1alpha1.PortalAPISpec{
 							Name:                  "portal-page-vis-invalid",
 							DefaultPageVisibility: "invalid",
 						},
@@ -314,26 +315,26 @@ func TestPortal(t *testing.T) {
 	})
 
 	t.Run("labels field validation", func(t *testing.T) {
-		portalWithLabelValue := func(labelValue string) *xkonnectv1alpha1.Portal {
-			return &xkonnectv1alpha1.Portal{
+		portalWithLabelValue := func(labelValue string) *konnectv1alpha1.Portal {
+			return &konnectv1alpha1.Portal{
 				ObjectMeta: common.CommonObjectMeta(ns.Name),
-				Spec: xkonnectv1alpha1.PortalSpec{
+				Spec: konnectv1alpha1.PortalSpec{
 					KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 						APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 							Name: "test-auth",
 						},
 					},
-					APISpec: xkonnectv1alpha1.PortalAPISpec{
+					APISpec: konnectv1alpha1.PortalAPISpec{
 						Name: "portal-labels",
-						Labels: xkonnectv1alpha1.LabelsUpdate{
-							"team": xkonnectv1alpha1.LabelsUpdateValue(labelValue),
+						Labels: konnectv1alpha1.LabelsUpdate{
+							"team": konnectv1alpha1.LabelsUpdateValue(labelValue),
 						},
 					},
 				},
 			}
 		}
 
-		common.TestCasesGroup[*xkonnectv1alpha1.Portal]{
+		common.TestCasesGroup[*konnectv1alpha1.Portal]{
 			{
 				Name:       "labels value at max length (63) passes validation",
 				TestObject: portalWithLabelValue(strings.Repeat("a", 63)),
@@ -353,18 +354,18 @@ func TestPortal(t *testing.T) {
 	})
 
 	t.Run("full spec with all fields passes validation", func(t *testing.T) {
-		common.TestCasesGroup[*xkonnectv1alpha1.Portal]{
+		common.TestCasesGroup[*konnectv1alpha1.Portal]{
 			{
 				Name: "all fields populated passes validation",
-				TestObject: &xkonnectv1alpha1.Portal{
+				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: xkonnectv1alpha1.PortalSpec{
+					Spec: konnectv1alpha1.PortalSpec{
 						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "test-auth",
 							},
 						},
-						APISpec: xkonnectv1alpha1.PortalAPISpec{
+						APISpec: konnectv1alpha1.PortalAPISpec{
 							Name:                    "portal-full-spec",
 							DisplayName:             "Full Spec Portal",
 							Description:             new("A full spec portal"),
@@ -374,7 +375,7 @@ func TestPortal(t *testing.T) {
 							DefaultAPIVisibility:    "public",
 							DefaultPageVisibility:   "private",
 							RBACEnabled:             "Enabled",
-							Labels: xkonnectv1alpha1.LabelsUpdate{
+							Labels: konnectv1alpha1.LabelsUpdate{
 								"env": "test",
 							},
 						},

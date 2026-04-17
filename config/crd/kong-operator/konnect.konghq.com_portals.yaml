@@ -5,9 +5,9 @@ metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: kong-operator
     kubernetes-configuration.konghq.com/version: v2.1.0
-  name: portals.x-konnect.konghq.com
+  name: portals.konnect.konghq.com
 spec:
-  group: x-konnect.konghq.com
+  group: konnect.konghq.com
   names:
     kind: Portal
     listKind: PortalList
