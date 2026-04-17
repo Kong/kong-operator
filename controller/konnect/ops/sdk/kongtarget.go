@@ -12,4 +12,5 @@ type TargetsSDK interface {
 	UpsertTargetWithUpstream(ctx context.Context, req sdkkonnectops.UpsertTargetWithUpstreamRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.UpsertTargetWithUpstreamResponse, error)
 	DeleteTargetWithUpstream(ctx context.Context, req sdkkonnectops.DeleteTargetWithUpstreamRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.DeleteTargetWithUpstreamResponse, error)
 	ListTargetWithUpstream(ctx context.Context, request sdkkonnectops.ListTargetWithUpstreamRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.ListTargetWithUpstreamResponse, error)
+	ListTargets(ctx context.Context, request sdkkonnectops.ListTargetsRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.ListTargetsResponse, error)
 }
