@@ -50,6 +50,7 @@ type Config struct {
 type Generator struct {
 	config         Config
 	opsCreateInfos []*OpsCreateFileInfo
+	opsUpdateInfos []*OpsUpdateFileInfo
 }
 
 // NewGenerator creates a new generator.
@@ -62,6 +63,13 @@ func NewGenerator(config Config) *Generator {
 // cross-group ops dispatcher after all group-versions have been generated.
 func (g *Generator) OpsCreateInfos() []*OpsCreateFileInfo {
 	return g.opsCreateInfos
+}
+
+// OpsUpdateInfos returns metadata for every update op file emitted by the most
+// recent Generate call. Callers (e.g. the Runner) use it to assemble the
+// cross-group update dispatcher after all group-versions have been generated.
+func (g *Generator) OpsUpdateInfos() []*OpsUpdateFileInfo {
+	return g.opsUpdateInfos
 }
 
 // GeneratedFile represents a generated Go file.
@@ -154,12 +162,12 @@ func (g *Generator) generateEntityFiles(name, entityName string, schema *parser.
 	}
 	files = append(files, sdkOpsFiles...)
 
-	opsCreateFile, err := g.generateEntityOpsCreateFile(entityName, schema)
+	opsFile, err := g.generateEntityOpsFileForEntity(entityName, schema)
 	if err != nil {
 		return nil, err
 	}
-	if opsCreateFile != nil {
-		files = append(files, *opsCreateFile)
+	if opsFile != nil {
+		files = append(files, *opsFile)
 	}
 
 	return files, nil
@@ -193,10 +201,10 @@ func (g *Generator) generateEntitySDKOpsFiles(entityName string, schema *parser.
 	}, nil
 }
 
-// generateEntityOpsCreateFile generates the per-entity Konnect ops create file
-// for reconciler entities that have a create op configured. The cross-group
-// dispatcher is emitted separately by the Runner after all group-versions finish.
-func (g *Generator) generateEntityOpsCreateFile(entityName string, schema *parser.Schema) (*GeneratedFile, error) {
+// generateEntityOpsFile generates the per-entity Konnect ops file containing
+// create and/or update functions. The cross-group dispatchers are emitted
+// separately by the Runner after all group-versions finish.
+func (g *Generator) generateEntityOpsFileForEntity(entityName string, schema *parser.Schema) (*GeneratedFile, error) {
 	if g.config.ReconcilerConfig == nil || g.config.OpsConfig == nil {
 		return nil, nil
 	}
@@ -208,14 +216,19 @@ func (g *Generator) generateEntityOpsCreateFile(entityName string, schema *parse
 		return nil, nil
 	}
 
-	opsFile, info, err := g.generateOpsCreate(entityName, schema, opsConfig)
+	opsFile, createInfo, updateInfo, err := g.generateEntityOpsFile(entityName, schema, opsConfig)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate ops create for %s: %w", entityName, err)
+		return nil, fmt.Errorf("failed to generate ops file for %s: %w", entityName, err)
 	}
 	if opsFile == nil {
 		return nil, nil
 	}
-	g.opsCreateInfos = append(g.opsCreateInfos, info)
+	if createInfo != nil {
+		g.opsCreateInfos = append(g.opsCreateInfos, createInfo)
+	}
+	if updateInfo != nil {
+		g.opsUpdateInfos = append(g.opsUpdateInfos, updateInfo)
+	}
 	return opsFile, nil
 }
 

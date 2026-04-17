@@ -77,6 +77,14 @@ type Schema struct {
 	Tags               []string // POST tags (e.g. ["portals"])
 	SuccessResponseRef string   // ref name of the 2xx success response schema (e.g. "Portal", "EventGatewayInfo")
 	RespIDIsPointer    bool     // true when the 2xx response schema's "id" field is not in required (i.e. *string in SDK codegen)
+
+	// PATCH/PUT operation hints for update ops generation.
+	UpdateOperationID        string   // PATCH/PUT operationId (e.g. "update-portal")
+	UpdateTags               []string // PATCH/PUT tags (e.g. ["Portals"])
+	UpdateSuccessResponseRef string   // ref name of the 2xx success response schema for update
+	UpdateRespIDIsPointer    bool     // true when the update 2xx response schema's "id" is not required
+	UpdatePathParams         []string // ordered path params from the PATCH/PUT path (e.g. ["portalId","id"])
+	UpdateReqBodyPointer     bool     // true when PATCH/PUT requestBody is not marked required (SDK emits pointer)
 }
 
 // ParsedSpec is the result of parsing an OpenAPI spec via ParsePaths.
@@ -187,10 +195,76 @@ func (p *Parser) parsePath(targetPath string) (string, *Schema, error) {
 		schema.Tags = append([]string(nil), pathItem.Post.Tags...)
 		schema.SuccessResponseRef = extractSuccessResponseRef(pathItem.Post.Responses)
 		schema.RespIDIsPointer = p.successResponseIDIsPointer(pathItem.Post.Responses)
+		p.extractUpdateOp(targetPath, schema)
 		return schemaName, schema, nil
 	}
 
 	return "", nil, fmt.Errorf("path %s POST request body has no valid schema", targetPath)
+}
+
+// extractUpdateOp finds the PATCH (or PUT fallback) operation for the entity —
+// either on the same path or on a sibling path that extends targetPath with one
+// `{<id>}` segment — and populates the Update* fields of the schema.
+func (p *Parser) extractUpdateOp(targetPath string, schema *Schema) {
+	updateOp, updatePath := p.findUpdateOperation(targetPath)
+	if updateOp == nil {
+		return
+	}
+
+	schema.UpdateOperationID = updateOp.OperationID
+	schema.UpdateTags = append([]string(nil), updateOp.Tags...)
+	schema.UpdateSuccessResponseRef = extractSuccessResponseRef(updateOp.Responses)
+	schema.UpdateRespIDIsPointer = p.successResponseIDIsPointer(updateOp.Responses)
+	schema.UpdatePathParams = extractPathParams(updatePath)
+	if updateOp.RequestBody != nil && updateOp.RequestBody.Value != nil {
+		schema.UpdateReqBodyPointer = !updateOp.RequestBody.Value.Required
+	}
+}
+
+// findUpdateOperation returns the PATCH (fallback PUT) operation and its path
+// for the given POST targetPath. It checks the same path first, then looks for
+// a sibling path that extends targetPath with a single `{<param>}` segment.
+func (p *Parser) findUpdateOperation(targetPath string) (*openapi3.Operation, string) {
+	// Same path.
+	if item := p.doc.Paths.Find(targetPath); item != nil {
+		if item.Patch != nil {
+			return item.Patch, targetPath
+		}
+		if item.Put != nil {
+			return item.Put, targetPath
+		}
+	}
+
+	// Sibling: <targetPath>/{<anything>} with exactly one additional segment.
+	for pathKey, item := range p.doc.Paths.Map() {
+		if !strings.HasPrefix(pathKey, targetPath+"/") {
+			continue
+		}
+		rest := pathKey[len(targetPath)+1:]
+		// Must be a single {param} segment — no nested slashes.
+		if strings.HasPrefix(rest, "{") && strings.HasSuffix(rest, "}") && !strings.Contains(rest, "/") {
+			if item.Patch != nil {
+				return item.Patch, pathKey
+			}
+			if item.Put != nil {
+				return item.Put, pathKey
+			}
+		}
+	}
+	return nil, ""
+}
+
+// extractPathParams returns the ordered list of path parameter names (without
+// braces) from a URL path, e.g. "/v3/portals/{portalId}/teams/{id}" →
+// ["portalId","id"].
+func extractPathParams(path string) []string {
+	paramRegex := regexp.MustCompile(`\{([^}]+)\}`)
+	matches := paramRegex.FindAllStringSubmatch(path, -1)
+	params := make([]string, 0, len(matches))
+	for _, m := range matches {
+		params = append(params, m[1])
+	}
+	return params
 }
 
 // extractPathDependencies extracts parent resource dependencies from path parameters.

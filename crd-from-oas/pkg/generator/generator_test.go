@@ -1902,3 +1902,266 @@ func TestGenerateOpsCreate_NonRootEntityMissingDependency_ReturnsError(t *testin
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "no parent dependency")
 }
+
+func TestGenerateOpsUpdate_RootEntity(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"Portal": {IsRoot: true},
+		},
+	})
+
+	schema := &parser.Schema{
+		OperationID:        "create-portal",
+		Tags:               []string{"Portals"},
+		SuccessResponseRef: "PortalResponse",
+		// PATCH /v3/portals/{portalId} — 1 path param → positional call.
+		UpdateOperationID: "update-portal",
+		UpdateTags:        []string{"Portals"},
+		UpdatePathParams:  []string{"portalId"},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreatePortal"},
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.UpdatePortal"},
+		},
+	}
+
+	file, info, err := g.generateOpsUpdate("Portal", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotNil(t, info)
+
+	assert.Equal(t, "zz_generated_portal_ops.go", file.Name)
+	assert.Equal(t, "GetPortalsSDK", info.SDKGetter)
+
+	// Contains both create and update functions.
+	assert.Contains(t, file.Content, "func createPortal(")
+	assert.Contains(t, file.Content, "func updatePortal(")
+
+	// Root: no parent guard.
+	assert.NotContains(t, file.Content, "CantPerformOperationWithoutParentIDError")
+
+	// Positional call: sdk.UpdatePortal(ctx, id, *req).
+	assert.Contains(t, file.Content, "sdk.UpdatePortal(ctx, id, *req)")
+
+	// Uses GetKonnectID for the entity ID.
+	assert.Contains(t, file.Content, "obj.GetKonnectStatus().GetKonnectID()")
+
+	// UpdateOp constant in error wrapping.
+	assert.Contains(t, file.Content, "wrapErrIfKonnectOpFailed(err, UpdateOp, obj)")
+}
+
+func TestGenerateOpsUpdate_NonRootEntity(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"IdentityProviderRequest": {IsRoot: false},
+		},
+	})
+
+	schema := &parser.Schema{
+		OperationID:        "create-portal-identity-provider",
+		Tags:               []string{"Portal Auth Settings"},
+		SuccessResponseRef: "IdentityProvider",
+		RespIDIsPointer:    true,
+		Dependencies: []*parser.Dependency{
+			{ParamName: "portalId", EntityName: "Portal"},
+		},
+		// PATCH /v3/portals/{portalId}/identity-providers/{id} — 2 params → wrapped struct.
+		UpdateOperationID: "update-portal-identity-provider",
+		UpdateTags:        []string{"Portal Auth Settings"},
+		UpdatePathParams:  []string{"portalId", "id"},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateIdentityProvider"},
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateIdentityProvider"},
+		},
+	}
+
+	file, info, err := g.generateOpsUpdate("IdentityProviderRequest", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotNil(t, info)
+
+	assert.Equal(t, "GetPortalAuthSettingsSDK", info.SDKGetter)
+
+	// Non-root: parent guard with UpdateOp.
+	assert.Contains(t, file.Content, "parentID := obj.GetPortalID()")
+	assert.Contains(t, file.Content, `CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "Portal", Op: UpdateOp}`)
+
+	// Wrapped-struct call.
+	assert.Contains(t, file.Content, "sdkkonnectops.UpdatePortalIdentityProviderRequest{")
+	assert.Contains(t, file.Content, "PortalID: parentID,")
+	assert.Contains(t, file.Content, "ID: id,")
+	assert.Contains(t, file.Content, "UpdateIdentityProvider: *req,")
+
+	// sdkkonnectops import present.
+	assert.Contains(t, file.Content, `sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"`)
+}
+
+func TestGenerateOpsUpdate_NonRootEntityWithParentTypeOverride(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"KonnectEventDataPlaneCertificate": {
+				IsRoot:           false,
+				ParentEntityType: "KonnectEventControlPlane",
+			},
+		},
+	})
+
+	schema := &parser.Schema{
+		OperationID:        "create-event-gateway-data-plane-certificate",
+		Tags:               []string{"Event Gateway Data Plane Certificates"},
+		SuccessResponseRef: "EventGatewayDataPlaneCertificate",
+		Dependencies: []*parser.Dependency{
+			{ParamName: "gatewayId", EntityName: "Gateway"},
+		},
+		// PATCH /v1/event-gateways/{gatewayId}/data-plane-certificates/{certificateId}.
+		UpdateOperationID: "update-event-gateway-data-plane-certificate",
+		UpdateTags:        []string{"Event Gateway Data Plane Certificates"},
+		UpdatePathParams:  []string{"gatewayId", "certificateId"},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateEventGatewayDataPlaneCertificateRequest"},
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateEventGatewayDataPlaneCertificateRequest"},
+		},
+	}
+
+	file, _, err := g.generateOpsUpdate("KonnectEventDataPlaneCertificate", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, file)
+
+	// parentIDGetter uses dep.EntityName ("Gateway"), not ParentEntityType override.
+	assert.Contains(t, file.Content, "parentID := obj.GetGatewayID()")
+
+	// Error label uses ParentEntityType override.
+	assert.Contains(t, file.Content, `Parent: "KonnectEventControlPlane"`)
+
+	// Struct fields derived from path params: gatewayId → GatewayID, certificateId → CertificateID.
+	assert.Contains(t, file.Content, "GatewayID: parentID,")
+	assert.Contains(t, file.Content, "CertificateID: id,")
+	assert.Contains(t, file.Content, "UpdateEventGatewayDataPlaneCertificateRequest: *req,")
+}
+
+func TestGenerateOpsUpdate_PointerBody(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"Foo": {IsRoot: true},
+		},
+	})
+
+	schema := &parser.Schema{
+		OperationID:          "create-foo",
+		Tags:                 []string{"Foos"},
+		SuccessResponseRef:   "Foo",
+		UpdateOperationID:    "update-foo",
+		UpdateTags:           []string{"Foos"},
+		UpdatePathParams:     []string{"fooId"},
+		UpdateReqBodyPointer: true,
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateFoo"},
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateFoo"},
+		},
+	}
+
+	file, _, err := g.generateOpsUpdate("Foo", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, file)
+
+	// Pointer body: pass req (pointer) not *req.
+	assert.Contains(t, file.Content, "sdk.UpdateFoo(ctx, id, req)")
+	assert.NotContains(t, file.Content, "sdk.UpdateFoo(ctx, id, *req)")
+}
+
+func TestGenerateOpsUpdate_NoUpdateOp_Skipped(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"Portal": {IsRoot: true},
+		},
+	})
+
+	schema := &parser.Schema{
+		OperationID:        "create-portal",
+		Tags:               []string{"Portals"},
+		SuccessResponseRef: "PortalResponse",
+		// No UpdateOperationID — no PATCH found.
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreatePortal"},
+			// No "update" key.
+		},
+	}
+
+	file, info, err := g.generateOpsUpdate("Portal", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, file) // file emitted for create
+	require.Nil(t, info)    // no update info → not in dispatcher
+
+	// File contains create but no update.
+	assert.Contains(t, file.Content, "func createPortal(")
+	assert.NotContains(t, file.Content, "func updatePortal(")
+}
+
+func TestGenerateOpsUpdateDispatcher(t *testing.T) {
+	infos := []*OpsUpdateFileInfo{
+		{
+			Entity:         "Portal",
+			APIAlias:       "konnectv1alpha1",
+			APIPackagePath: "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+			SDKGetter:      "GetPortalsSDK",
+		},
+		{
+			Entity:         "IdentityProviderRequest",
+			APIAlias:       "konnectv1alpha1",
+			APIPackagePath: "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+			SDKGetter:      "GetPortalAuthSettingsSDK",
+		},
+	}
+
+	file, err := GenerateOpsUpdateDispatcher(infos)
+	require.NoError(t, err)
+	require.NotNil(t, file)
+
+	assert.Equal(t, "zz_generated_ops_update.go", file.Name)
+	assert.Contains(t, file.Content, "func UpdateGeneratedOps[")
+
+	// Alphabetical ordering: IdentityProviderRequest before Portal.
+	idxIdentity := strings.Index(file.Content, "IdentityProviderRequest")
+	idxPortal := strings.Index(file.Content, "Portal")
+	assert.Less(t, idxIdentity, idxPortal, "cases should be alphabetically sorted")
+
+	// Dispatcher calls updateX not createX.
+	assert.Contains(t, file.Content, "return updatePortal(ctx, sdk.GetPortalsSDK(), ent)")
+	assert.Contains(t, file.Content, "return updateIdentityProviderRequest(ctx, sdk.GetPortalAuthSettingsSDK(), ent)")
+	assert.NotContains(t, file.Content, "createPortal")
+}
+
+func TestPathParamToFieldName(t *testing.T) {
+	tests := []struct {
+		param string
+		want  string
+	}{
+		{"portalId", "PortalID"},
+		{"id", "ID"},
+		{"gatewayId", "GatewayID"},
+		{"certificateId", "CertificateID"},
+		{"fooId", "FooID"},
+	}
+	for _, tc := range tests {
+		assert.Equal(t, tc.want, pathParamToFieldName(tc.param), "param=%q", tc.param)
+	}
+}
