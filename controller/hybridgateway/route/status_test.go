@@ -556,7 +556,13 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 		},
 	}
 
+	httpRouteTypeMeta := metav1.TypeMeta{
+		Kind:       "HTTPRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
+	}
+
 	route := &gwtypes.HTTPRoute{
+		TypeMeta: httpRouteTypeMeta,
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "default",
 			Name:      "route",
@@ -629,6 +635,7 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 				},
 			},
 			route: &gwtypes.HTTPRoute{
+				TypeMeta:   httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
 				Spec:       gwtypes.HTTPRouteSpec{Hostnames: []gwtypes.Hostname{"not-matching.com"}},
 			},
@@ -677,6 +684,7 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 				},
 			},
 			route: &gwtypes.HTTPRoute{
+				TypeMeta:   httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{Namespace: "nonexistent", Name: "route"},
 				Spec:       gwtypes.HTTPRouteSpec{},
 			},
@@ -718,6 +726,7 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 				},
 			},
 			route: &gwtypes.HTTPRoute{
+				TypeMeta:   httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
 				Spec:       gwtypes.HTTPRouteSpec{},
 			},
@@ -1147,13 +1156,17 @@ func Test_FilterMatchingListeners(t *testing.T) {
 	}
 	listenerReady := gwtypes.Listener{Name: "listener1", Port: 80, Protocol: gwtypes.HTTPProtocolType}
 	listenerNotReady := gwtypes.Listener{Name: "listener2", Port: 80, Protocol: gwtypes.HTTPProtocolType}
-	listenerWrongProtocol := gwtypes.Listener{Name: "listener1", Port: 80, Protocol: "TCP"}
+	listenerProtocolTCP := gwtypes.Listener{Name: "listener1", Port: 80, Protocol: "TCP"}
 	tlsModePassthrough := gatewayv1.TLSModePassthrough
-	listenerWrongTLS := gwtypes.Listener{Name: "listener1", Port: 80, Protocol: gwtypes.HTTPSProtocolType, TLS: &gatewayv1.ListenerTLSConfig{Mode: &tlsModePassthrough}}
+	tlsModeTerminate := gatewayv1.TLSModeTerminate
+	listenerTLSPassthrough := gwtypes.Listener{Name: "listener1", Port: 80, Protocol: gwtypes.HTTPSProtocolType, TLS: &gatewayv1.ListenerTLSConfig{Mode: &tlsModePassthrough}}
+	listenerNotReadyTLS := gwtypes.Listener{Name: "listener2", Port: 80, Protocol: gwtypes.TLSProtocolType, TLS: &gatewayv1.ListenerTLSConfig{Mode: &tlsModeTerminate}}
+	listenerProtocolTLS := gwtypes.Listener{Name: "listener1", Port: 80, Protocol: gwtypes.TLSProtocolType, TLS: &gatewayv1.ListenerTLSConfig{Mode: &tlsModePassthrough}}
 
 	tests := []struct {
 		name      string
 		pRef      gwtypes.ParentReference
+		routeKind string
 		listeners []gwtypes.Listener
 		wantLen   int
 		wantCond  bool
@@ -1162,6 +1175,7 @@ func Test_FilterMatchingListeners(t *testing.T) {
 		{
 			name:      "no listeners",
 			pRef:      pRef,
+			routeKind: "HTTPRoute",
 			listeners: []gwtypes.Listener{},
 			wantLen:   0,
 			wantCond:  true,
@@ -1170,6 +1184,7 @@ func Test_FilterMatchingListeners(t *testing.T) {
 		{
 			name:      "section name mismatch",
 			pRef:      gwtypes.ParentReference{Name: "listener1", SectionName: sectionPtr("notfound")},
+			routeKind: "HTTPRoute",
 			listeners: []gwtypes.Listener{listenerReady},
 			wantLen:   0,
 			wantCond:  true,
@@ -1178,6 +1193,7 @@ func Test_FilterMatchingListeners(t *testing.T) {
 		{
 			name:      "port mismatch",
 			pRef:      gwtypes.ParentReference{Name: "listener1", Port: new(int32(81))},
+			routeKind: "HTTPRoute",
 			listeners: []gwtypes.Listener{listenerReady},
 			wantLen:   0,
 			wantCond:  true,
@@ -1186,7 +1202,8 @@ func Test_FilterMatchingListeners(t *testing.T) {
 		{
 			name:      "protocol mismatch",
 			pRef:      pRef,
-			listeners: []gwtypes.Listener{listenerWrongProtocol},
+			routeKind: "HTTPRoute",
+			listeners: []gwtypes.Listener{listenerProtocolTCP},
 			wantLen:   0,
 			wantCond:  true,
 			condMsg:   string(gwtypes.RouteReasonNoMatchingParent),
@@ -1194,7 +1211,8 @@ func Test_FilterMatchingListeners(t *testing.T) {
 		{
 			name:      "TLS mode mismatch",
 			pRef:      pRef,
-			listeners: []gwtypes.Listener{listenerWrongTLS},
+			routeKind: "HTTPRoute",
+			listeners: []gwtypes.Listener{listenerTLSPassthrough},
 			wantLen:   0,
 			wantCond:  true,
 			condMsg:   string(gwtypes.RouteReasonNoMatchingParent),
@@ -1202,6 +1220,7 @@ func Test_FilterMatchingListeners(t *testing.T) {
 		{
 			name:      "listener matches but not ready",
 			pRef:      gwtypes.ParentReference{Name: "listener2"},
+			routeKind: "HTTPRoute",
 			listeners: []gwtypes.Listener{listenerNotReady},
 			wantLen:   0,
 			wantCond:  true,
@@ -1210,6 +1229,7 @@ func Test_FilterMatchingListeners(t *testing.T) {
 		{
 			name:      "listener matches and is ready",
 			pRef:      pRef,
+			routeKind: "HTTPRoute",
 			listeners: []gwtypes.Listener{listenerReady},
 			wantLen:   1,
 			wantCond:  false,
@@ -1217,14 +1237,41 @@ func Test_FilterMatchingListeners(t *testing.T) {
 		{
 			name:      "multiple listeners, mixed readiness",
 			pRef:      gwtypes.ParentReference{Name: "listener1"},
+			routeKind: "HTTPRoute",
 			listeners: []gwtypes.Listener{listenerReady, listenerNotReady},
 			wantLen:   1,
 			wantCond:  false,
 		},
+		{
+			name:      "TLSRoute - no ready listeners",
+			pRef:      pRef,
+			routeKind: "TLSRoute",
+			listeners: []gwtypes.Listener{listenerNotReadyTLS},
+			wantLen:   0,
+			wantCond:  true,
+			condMsg:   "A Gateway Listener matches this route but is not ready",
+		},
+		{
+			name:      "TLSRoute - ready and match listener",
+			pRef:      pRef,
+			routeKind: "TLSRoute",
+			listeners: []gwtypes.Listener{listenerProtocolTLS},
+			wantLen:   1,
+			wantCond:  false,
+		},
+		{
+			name:      "TLSRoute - protocol mismatch",
+			pRef:      pRef,
+			routeKind: "TLSRoute",
+			listeners: []gwtypes.Listener{listenerProtocolTCP},
+			wantLen:   0,
+			wantCond:  true,
+			condMsg:   string(gwtypes.RouteReasonNoMatchingParent),
+		},
 	}
 
 	for _, tt := range tests {
-		matches, cond := FilterMatchingListeners(logr.Discard(), gw, tt.pRef, tt.listeners)
+		matches, cond := FilterMatchingListeners(logr.Discard(), gw, tt.routeKind, tt.pRef, tt.listeners)
 		require.Len(t, matches, tt.wantLen, tt.name)
 		if tt.wantCond {
 			require.NotNil(t, cond, tt.name)
