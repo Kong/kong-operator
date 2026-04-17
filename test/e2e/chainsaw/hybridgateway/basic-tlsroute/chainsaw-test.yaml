@@ -18,6 +18,8 @@ spec:
       value: ($namespace)
     - name: tls_mode
       value: "Passthrough"
+    - name: listener_tls_port
+      value: 8899
     - name: sni_hostname
       value: (join('.', ['*', ($test_name), 'example.com']))
     - name: fqdn
@@ -110,3 +112,46 @@ spec:
       description: Create and assert an echo service to route traffic to.
       use:
         template: ../../common/_step_templates/apply-assert-echoService.yaml
+
+    # Step 10: Create the TLSRoute that routes traffic to the echo service.
+    - name: Create-tlsroute-echo
+      description: Create TLSRoute to route traffic to the echo service.
+      try:
+        - apply:
+            file: 01-tlsRoute-echo.yaml
+        - assert:
+            file: 02-tlsRoute-echo-assert.yaml
+      bindings:
+        - name: route_hosts
+          value:
+            - ($fqdn)
+
+    # TODO: modify the scripts for checking Kong resource and check generated Konnect entities for the TLSRoute. 
+
+    # Step 11: Verify that the TLS certificate deployed to the dataplane matches the TLS secret.
+    - name: Verify-TLS-Fingerprint
+      description: Verify that the TLS certificate deployed to the dataplane matches the TLS secret.
+      use:
+        template: ../../common/_step_templates/verify-gateway-tls-fingerprint.yaml
+
+    # Step 12: Verify TLS traffic from host.
+    - name: Verify-TLS-traffic-from-host
+      description: Verify that TLS traffic can be routed through the gateway to the echo service from the host.
+      use:
+        template: ../../common/_step_templates/verify-tls-traffic-from-host.yaml
+      bindings:
+        - name: request_sni
+          value: fqdn
+  catch:
+    # Capture debug snapshot on test failure for CI debugging.
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: hybridgateway-basic-tlsroute
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

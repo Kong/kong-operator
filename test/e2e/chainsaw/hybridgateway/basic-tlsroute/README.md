@@ -12,21 +12,21 @@ This test validates the complete lifecycle of a `TLSRoute` managed by the Hybrid
     - Asserts all deployments and gateway-related resources are ready and programmed.
 
 2. **Create and Verify TLSRoute**
-    - Applies an `TLSRoute` that routes traffic from the `echo.kong.test` SNI to the `echo` service.
+    - Applies an `TLSRoute` that routes traffic from the `echo.example.com` SNI to the `echo` service.
     - Verifies the controller creates the expected Kong resources (`KongRoute`, `KongService`, `KongUpstream`, `KongTarget`) with correct configuration and status.
 
 3. **Traffic Verification (Initial Route)**
-    - Sends TLS traffic with SNI `echo.kong.test` on the address that Kong gateway dataplane listens for TLS traffics.
+    - Sends TLS traffic with SNI `echo.example.com` on the address that Kong gateway dataplane listens for TLS traffics.
     - Verifies that the TLS request is routed to the `echo` backend.
     - Checks that TLS uses the expected certificate.
-    - Sends TLS traffic with another SNI `alter.kong.test` on the address and verify that the TLS connection cannot be established.
+    - Sends TLS traffic with another SNI `alter.example.com` on the address and verify that the TLS connection cannot be established.
 
 4. **Update TLSRoute and Verify Changes**
-    - Updates the `TLSRoute` to use wildcard SNI `*.kong.test` in `spec.hostname`.
+    - Updates the `TLSRoute` to use wildcard SNI `*.example.com` in `spec.hostname`.
     - Verifies that old Kong resources for the previous route are deleted and new ones are created reflecting the updated rules.
 
 5. **Traffic Verification (Updated Route)**
-    - Sends TLS traffic with both SNIs `echo.kong.test` and `alter.kong.test` and verifies that they both works.
+    - Sends TLS traffic with both SNIs `echo.example.com` and `alter.example.com` and verifies that they both works.
 
 ## Notes
 - The test is fully automated and self-contained, using a dynamically assigned namespace for isolation.
