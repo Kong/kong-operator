@@ -96,13 +96,13 @@ spec:
     - name: Assert-kong-certificate
       description: Assert that the KongCertificate resource is created for the TLS secret.
       use:
-       template: ../../common/_step_templates/assert-kongCertificate.yaml
+       template: ../../common/_step_templates/assert-kongCertificate-tls-listener.yaml
   
     # Step 8: Verify that the KongSNI resource is created for the SNI hostname.
     - name: Assert-kong-sni
       description: Assert that the KongSNI resource is created for the SNI hostname.
       use:
-       template: ../../common/_step_templates/assert-kongSNI.yaml
+       template: ../../common/_step_templates/assert-kongSNI-tls-listener.yaml
       bindings:
         - name: resource_type
           value: "kongcertificates.configuration.konghq.com"
@@ -142,6 +142,8 @@ spec:
       bindings:
         - name: request_sni
           value: fqdn
+        - name: gateway_port
+          value: $(listener_tls_port)
   catch:
     # Capture debug snapshot on test failure for CI debugging.
     - description: Capture debug snapshot

@@ -13,6 +13,6 @@ spec:
       kind: Gateway
       name: ($gateway_name)
   rules:
-      backendRefs:
+    - backendRefs:
         - name: (join('-', [($test_name), 'echo']))
           port: 1030
