@@ -15,6 +15,9 @@
      "gomod",
      "dockerfile"
   ],
+  "dockerfile": {
+    "fileMatch": ["^Dockerfile$", "^debug\\.Dockerfile$"]
+  },
   "automerge": false,
   "separateMinorPatch": true,
   "labels": [
@@ -148,6 +151,19 @@
       "matchDepNames": [
         "/.*@only-patch/"
       ]
+    },
+
+    {
+      "description": "Disable updates of the root module in submodules (e.g. crd-from-oas/go.mod)",
+      "matchManagers": ["gomod"],
+      "matchDepNames": ["/^github\\.com\\/kong\\/kong-operator/"],
+      "enabled": false
+    },
+    {
+      "description": "Disable KO image bumps in kustomize (done at release time)",
+      "matchManagers": ["kustomize"],
+      "matchDepNames": ["docker.io/kong/kong-operator"],
+      "enabled": false
     },
 
     // Latest release branch specific rules for updating patch versions of Go toolchain and Dockerfiles.
