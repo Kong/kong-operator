@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	"github.com/samber/lo"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -164,7 +165,7 @@ func cloudGatewayDataPlaneGroupConfigurationInit(
 
 	return sdkkonnectcomp.CreateConfigurationRequest{
 		ControlPlaneID:  cpID,
-		Version:         spec.Version,
+		Version:         lo.ToPtr(spec.Version),
 		APIAccess:       spec.APIAccess,
 		ControlPlaneGeo: cpGeo,
 		DataplaneGroups: []sdkkonnectcomp.CreateConfigurationDataPlaneGroup{},
@@ -242,8 +243,8 @@ func konnectConfigurationDataPlaneGroupToAPIRequest(
 			}
 			return ret
 		}(),
-		CloudGatewayNetworkID: networkID,
-		Autoscale:             autoscaleConf,
+		CloudGatewayNetworkID: lo.ToPtr(networkID),
+		Autoscale:             lo.ToPtr(autoscaleConf),
 	}, nil
 }
 
@@ -286,7 +287,7 @@ func dataPlaneGroupsResponseToStatus(
 			konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationStatusGroup{
 				ID:                    g.ID,
 				State:                 string(g.State),
-				CloudGatewayNetworkID: g.CloudGatewayNetworkID,
+				CloudGatewayNetworkID: lo.FromPtr(g.CloudGatewayNetworkID),
 				PrivateIPAddresses:    g.PrivateIPAddresses,
 				EgressIPAddresses:     g.EgressIPAddresses,
 				Provider:              g.Provider,

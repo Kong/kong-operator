@@ -38,6 +38,15 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## [v2.0.9]
+
+> Release date: Unreleased
+
+### Fixed
+
+- Fix incorrect Konnect API used for target lookup
+  [#3911](https://github.com/Kong/kong-operator/pull/3910) [#3939](https://github.com/Kong/kong-operator/pull/3939)
+
 ## [v2.0.8]
 
 > Release date: 2026-03-24

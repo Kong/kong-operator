@@ -116,22 +116,46 @@ func getKongTargetForUID(
 	sdk sdkops.TargetsSDK,
 	target *configurationv1alpha1.KongTarget,
 ) (string, error) {
-	reqList := sdkkonnectops.ListTargetWithUpstreamRequest{
-		// NOTE: only filter on object's UID.
-		// Other fields like name might have changed in the meantime but that's OK.
-		// Those will be enforced via subsequent updates.
-		Tags:           lo.ToPtr(UIDLabelForObject(target)),
-		ControlPlaneID: target.GetControlPlaneID(),
+	var targets []sdkkonnectcomp.Target
+	switch upstreamID := target.Status.Konnect.UpstreamID; upstreamID {
+	case "":
+		reqList := sdkkonnectops.ListTargetsRequest{
+			// NOTE: only filter on object's UID.
+			// Other fields like name might have changed in the meantime but that's OK.
+			// Those will be enforced via subsequent updates.
+			Tags:           lo.ToPtr(UIDLabelForObject(target)),
+			ControlPlaneID: target.GetControlPlaneID(),
+		}
+
+		resp, err := sdk.ListTargets(ctx, reqList)
+		if err != nil {
+			return "", fmt.Errorf("failed listing %s: %w", target.GetTypeName(), err)
+		}
+
+		if resp == nil || resp.ListTargets == nil {
+			return "", fmt.Errorf("failed listing %s: %w", target.GetTypeName(), ErrNilResponse)
+		}
+		targets = resp.ListTargets.Data
+	default:
+		reqList := sdkkonnectops.ListTargetWithUpstreamRequest{
+			// NOTE: only filter on object's UID.
+			// Other fields like name might have changed in the meantime but that's OK.
+			// Those will be enforced via subsequent updates.
+			Tags:                lo.ToPtr(UIDLabelForObject(target)),
+			ControlPlaneID:      target.GetControlPlaneID(),
+			UpstreamIDForTarget: upstreamID,
+		}
+
+		resp, err := sdk.ListTargetWithUpstream(ctx, reqList)
+		if err != nil {
+			return "", fmt.Errorf("failed listing %s: %w", target.GetTypeName(), err)
+		}
+
+		if resp == nil || resp.Object == nil {
+			return "", fmt.Errorf("failed listing %s: %w", target.GetTypeName(), ErrNilResponse)
+		}
+		targets = resp.Object.Data
 	}
 
-	resp, err := sdk.ListTargetWithUpstream(ctx, reqList)
-	if err != nil {
-		return "", fmt.Errorf("failed listing %s: %w", target.GetTypeName(), err)
-	}
-
-	if resp == nil || resp.Object == nil {
-		return "", fmt.Errorf("failed listing %s: %w", target.GetTypeName(), ErrNilResponse)
-	}
-
-	return getMatchingEntryFromListResponseData(sliceToEntityWithIDPtrSlice(resp.Object.Data), target)
+	return getMatchingEntryFromListResponseData(sliceToEntityWithIDPtrSlice(targets), target)
 }
