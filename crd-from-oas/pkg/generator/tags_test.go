@@ -172,6 +172,19 @@ func TestKubebuilderTags(t *testing.T) {
 			},
 		},
 		{
+			name: "array with string defaults",
+			prop: &parser.Property{
+				Name:     "scopes",
+				Type:     "array",
+				Required: false,
+				Default:  []any{"email", "openid", "profile"},
+			},
+			expected: []string{
+				"+optional",
+				"+kubebuilder:default={\"email\",\"openid\",\"profile\"}",
+			},
+		},
+		{
 			name: "non-string type without string validations",
 			prop: &parser.Property{
 				Name:     "count",
@@ -548,6 +561,19 @@ func TestKubebuilderTags_DefaultPanic(t *testing.T) {
 		Type:     "integer",
 		Required: false,
 		Default:  123, // int type, not bool or string
+	}
+
+	assert.Panics(t, func() {
+		KubebuilderTags(prop, "Test", nil)
+	})
+}
+
+func TestKubebuilderTags_ArrayDefaultItemPanic(t *testing.T) {
+	prop := &parser.Property{
+		Name:     "scopes",
+		Type:     "array",
+		Required: false,
+		Default:  []any{"email", 1},
 	}
 
 	assert.Panics(t, func() {
