@@ -88,7 +88,7 @@ func (r *Reconciler) applyStatus(
 	logger logr.Logger,
 	egdp *eventgatewayv1alpha1.KegDataPlane,
 ) error {
-	result, statusErr := controllerpkgssa.ApplyStatusIfChanged(ctx, logger, r.Client, r.typeConverter, egdp, FieldManager)
+	result, statusErr := controllerpkgssa.ApplyStatusIfChanged(ctx, logger, r.Client, r.typeConverter, egdp, controllerpkgssa.FieldManager)
 	if statusErr != nil {
 		log.Error(logger, statusErr, "failed to patch KegDataPlane status")
 		r.eventRecorder.Eventf(egdp, nil, corev1.EventTypeWarning, "StatusPatchFailed", "PatchStatus", "%s", statusErr.Error())

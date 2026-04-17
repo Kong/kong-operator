@@ -45,6 +45,10 @@ import (
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
+// FieldManager is the field manager name used by the operator for
+// Server-Side Apply operations.
+const FieldManager = "gateway-operator"
+
 // NewTypeConverter builds a TypeConverter from the API server's live OpenAPI v3
 // schemas. Only schemas for the specified GroupVersions are fetched, reducing
 // startup latency compared to downloading the full schema set.

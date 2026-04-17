@@ -57,7 +57,7 @@ func (r *Reconciler) ensureDeployment(
 			egdp.Namespace, egdp.Name, err)
 	}
 
-	result, err := controllerpkgssa.ApplyIfChanged(ctx, logger, r.Client, r.typeConverter, desired, FieldManager)
+	result, err := controllerpkgssa.ApplyIfChanged(ctx, logger, r.Client, r.typeConverter, desired, controllerpkgssa.FieldManager)
 	if err != nil {
 		r.eventRecorder.Eventf(egdp, nil, corev1.EventTypeWarning, "DeploymentFailed", "ApplyDeployment",
 			"Failed to apply Deployment: %v", err)

@@ -5,16 +5,19 @@ import (
 	"fmt"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	log "github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
+	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
@@ -39,63 +42,50 @@ func generateWorkloadNN(mcpServer *konnectv1alpha1.MCPServer) types.NamespacedNa
 // Deployment
 // ----------------------------------------------------------------------------
 
-// ensureDeployment ensures that exactly one Deployment exists for the given
-// MCPServer. It creates a new Deployment if none exists, updates it if needed,
-// and returns the operation result.
+// ensureDeployment reconciles the Deployment for the given MCPServer using
+// Server-Side Apply. It returns the live Deployment after the apply so callers
+// can derive ReplicaSet/Pod version statuses from it.
 func (r *MCPServerReconciler) ensureDeployment(
 	ctx context.Context,
+	logger logr.Logger,
 	mcpServer *konnectv1alpha1.MCPServer,
 	remoteMCPServer *sdkkonnectcomp.MCPServerCPInfo,
 	apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
-) (op.Result, *appsv1.Deployment, error) {
+) (*appsv1.Deployment, error) {
+	if remoteMCPServer.InitContainer == nil {
+		return nil, fmt.Errorf("remote MCPServer %s is missing init container info", remoteMCPServer.ID)
+	}
+	if remoteMCPServer.Container == nil {
+		return nil, fmt.Errorf("remote MCPServer %s is missing container info", remoteMCPServer.ID)
+	}
+
 	desired := generateDeployment(mcpServer, *remoteMCPServer, apiAuth)
 
-	existing := &appsv1.Deployment{}
-	err := r.Get(ctx, types.NamespacedName{
-		Namespace: desired.Namespace,
-		Name:      desired.Name,
-	}, existing)
+	result, err := controllerpkgssa.ApplyIfChanged(ctx, logger, r.Client, r.typeConverter, desired, controllerpkgssa.FieldManager)
 	if err != nil {
-		if !apierrors.IsNotFound(err) {
-			return op.Noop, nil, fmt.Errorf("failed to get Deployment for MCPServer %s/%s: %w",
-				mcpServer.Namespace, mcpServer.Name, err)
-		}
-
-		k8sutils.SetOwnerForObject(desired, mcpServer)
-		if err := r.Create(ctx, desired); err != nil {
-			return op.Noop, nil, fmt.Errorf("failed to create Deployment for MCPServer %s/%s: %w",
-				mcpServer.Namespace, mcpServer.Name, err)
-		}
-		return op.Created, desired, nil
+		r.eventRecorder.Eventf(mcpServer, nil, corev1.EventTypeWarning, "DeploymentFailed", "ApplyDeployment",
+			"Failed to apply Deployment: %v", err)
+		return nil, fmt.Errorf("failed to apply Deployment for MCPServer %s/%s: %w",
+			mcpServer.Namespace, mcpServer.Name, err)
+	}
+	switch result {
+	case op.Created:
+		log.Debug(logger, "Deployment created", "name", desired.GetName())
+		r.eventRecorder.Eventf(mcpServer, nil, corev1.EventTypeNormal, "DeploymentCreated", "CreateDeployment",
+			"Deployment %s created", desired.GetName())
+	case op.Updated:
+		log.Debug(logger, "Deployment updated", "name", desired.GetName())
+		r.eventRecorder.Eventf(mcpServer, nil, corev1.EventTypeNormal, "DeploymentUpdated", "UpdateDeployment",
+			"Deployment %s updated", desired.GetName())
+	case op.Noop, op.Deleted:
 	}
 
-	// Ensure the version annotation is up to date on both the Deployment and
-	// its pod template.
-	// TODO: ensure the whole deployment spec is up to date and enforced.
-	desiredVersion := desired.Annotations[mcpServerVersionAnnotationKey]
-
-	if existing.Annotations == nil {
-		existing.Annotations = make(map[string]string)
+	existing := &appsv1.Deployment{}
+	if err := r.Get(ctx, client.ObjectKeyFromObject(desired), existing); err != nil {
+		return nil, fmt.Errorf("failed to get Deployment after apply for MCPServer %s/%s: %w",
+			mcpServer.Namespace, mcpServer.Name, err)
 	}
-	if existing.Spec.Template.Annotations == nil {
-		existing.Spec.Template.Annotations = make(map[string]string)
-	}
-
-	deployNeedsUpdate := existing.Annotations[mcpServerVersionAnnotationKey] != desiredVersion
-	templateNeedsUpdate := existing.Spec.Template.Annotations[mcpServerVersionAnnotationKey] != desiredVersion
-
-	if deployNeedsUpdate || templateNeedsUpdate {
-		old := existing.DeepCopy()
-		existing.Annotations[mcpServerVersionAnnotationKey] = desiredVersion
-		existing.Spec.Template.Annotations[mcpServerVersionAnnotationKey] = desiredVersion
-		if err := r.Patch(ctx, existing, client.MergeFrom(old)); err != nil {
-			return op.Noop, nil, fmt.Errorf("failed to patch Deployment %s/%s version annotation: %w",
-				existing.Namespace, existing.Name, err)
-		}
-		return op.Updated, existing, nil
-	}
-
-	return op.Noop, existing, nil
+	return existing, nil
 }
 
 // generateDeployment creates the desired Deployment spec for the given MCPServer.
@@ -118,9 +108,16 @@ func generateDeployment(
 
 	patEnvVar := patEnvVarFromAuth(apiAuth)
 
-	const mcpServerVolumeName = "mcp-server-code"
+	const (
+		mcpServerVolumeName      = "mcp-server-code"
+		mcpServerVolumeMountPath = "/mcp-server"
+	)
 
 	deployment := &appsv1.Deployment{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "apps/v1",
+			Kind:       "Deployment",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      nn.Name,
 			Namespace: nn.Namespace,
@@ -157,20 +154,30 @@ func generateDeployment(
 					InitContainers: []corev1.Container{
 						{
 							Name:            "init-mcp-server",
-							Image:           "kong/mcp-server-init",
+							Image:           *remoteMCPServer.InitContainer.Image,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Args: []string{
 								"-cp-url", apiAuth.Spec.ServerURL,
 								"-cp-id", mcpServer.GetControlPlaneID(),
 								"-mcp-server-id", mcpServer.GetKonnectID(),
-								"-output-path", "/mcp-server/app.py",
+								"-output-path", mcpServerVolumeMountPath + "/app.py",
 								"-pat", "$(PAT)",
 							},
 							Env: []corev1.EnvVar{patEnvVar},
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      mcpServerVolumeName,
-									MountPath: "/mcp-server",
+									MountPath: mcpServerVolumeMountPath,
+								},
+							},
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("100m"),
+									corev1.ResourceMemory: resource.MustParse("64Mi"),
+								},
+								Limits: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("500m"),
+									corev1.ResourceMemory: resource.MustParse("256Mi"),
 								},
 							},
 						},
@@ -178,14 +185,8 @@ func generateDeployment(
 					Containers: []corev1.Container{
 						{
 							Name:            "mcp-server",
-							Image:           "kong/mcp-server-runner",
+							Image:           *remoteMCPServer.Container.Image,
 							ImagePullPolicy: corev1.PullIfNotPresent,
-							Env: []corev1.EnvVar{
-								{
-									Name:  "MCP_SERVER_PATH",
-									Value: "/mcp-server/app.py",
-								},
-							},
 							Ports: []corev1.ContainerPort{
 								{
 									Name:          "mcp",
@@ -196,7 +197,17 @@ func generateDeployment(
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      mcpServerVolumeName,
-									MountPath: "/mcp-server",
+									MountPath: mcpServerVolumeMountPath,
+								},
+							},
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("100m"),
+									corev1.ResourceMemory: resource.MustParse("128Mi"),
+								},
+								Limits: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("1000m"),
+									corev1.ResourceMemory: resource.MustParse("512Mi"),
 								},
 							},
 						},
@@ -215,6 +226,7 @@ func generateDeployment(
 	}
 
 	k8sresources.LabelObjectAsMCPServerManaged(deployment)
+	k8sutils.SetOwnerForObject(deployment, mcpServer)
 
 	return deployment
 }
@@ -246,37 +258,34 @@ func patEnvVarFromAuth(apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration) cor
 // Service
 // ----------------------------------------------------------------------------
 
-// ensureService ensures that exactly one Service exists for the given
-// MCPServer. It creates a new Service if none exists and returns the
-// operation result.
+// ensureService reconciles the Service for the given MCPServer using
+// Server-Side Apply.
 func (r *MCPServerReconciler) ensureService(
 	ctx context.Context,
+	logger logr.Logger,
 	mcpServer *konnectv1alpha1.MCPServer,
-) (op.Result, *corev1.Service, error) {
+) error {
 	desired := generateService(mcpServer)
 
-	existing := &corev1.Service{}
-	err := r.Get(ctx, types.NamespacedName{
-		Namespace: desired.Namespace,
-		Name:      desired.Name,
-	}, existing)
+	result, err := controllerpkgssa.ApplyIfChanged(ctx, logger, r.Client, r.typeConverter, desired, controllerpkgssa.FieldManager)
 	if err != nil {
-		if !apierrors.IsNotFound(err) {
-			return op.Noop, nil, fmt.Errorf("failed to get Service for MCPServer %s/%s: %w",
-				mcpServer.Namespace, mcpServer.Name, err)
-		}
-
-		k8sutils.SetOwnerForObject(desired, mcpServer)
-		if err := r.Create(ctx, desired); err != nil {
-			return op.Noop, nil, fmt.Errorf("failed to create Service for MCPServer %s/%s: %w",
-				mcpServer.Namespace, mcpServer.Name, err)
-		}
-		return op.Created, desired, nil
+		r.eventRecorder.Eventf(mcpServer, nil, corev1.EventTypeWarning, "ServiceFailed", "ApplyService",
+			"Failed to apply Service: %v", err)
+		return fmt.Errorf("failed to apply Service for MCPServer %s/%s: %w",
+			mcpServer.Namespace, mcpServer.Name, err)
 	}
-
-	// TODO: if the service already exists, we should check if its spec is up to date and update it if needed.
-
-	return op.Noop, existing, nil
+	switch result {
+	case op.Created:
+		log.Debug(logger, "Service created", "name", desired.GetName())
+		r.eventRecorder.Eventf(mcpServer, nil, corev1.EventTypeNormal, "ServiceCreated", "CreateService",
+			"Service %s created", desired.GetName())
+	case op.Updated:
+		log.Debug(logger, "Service updated", "name", desired.GetName())
+		r.eventRecorder.Eventf(mcpServer, nil, corev1.EventTypeNormal, "ServiceUpdated", "UpdateService",
+			"Service %s updated", desired.GetName())
+	case op.Noop, op.Deleted:
+	}
+	return nil
 }
 
 // generateService creates the desired Service spec for the given MCPServer.
@@ -287,6 +296,10 @@ func generateService(mcpServer *konnectv1alpha1.MCPServer) *corev1.Service {
 	}
 
 	svc := &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Service",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      nn.Name,
 			Namespace: nn.Namespace,
@@ -305,6 +318,7 @@ func generateService(mcpServer *konnectv1alpha1.MCPServer) *corev1.Service {
 	}
 
 	k8sresources.LabelObjectAsMCPServerManaged(svc)
+	k8sutils.SetOwnerForObject(svc, mcpServer)
 
 	return svc
 }
