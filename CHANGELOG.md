@@ -157,6 +157,13 @@
 
 ### Fixes
 
+- Fix a hot loop in the `KonnectExtension` reconciler when two
+  `KonnectExtension`s share the same client-certificate `Secret`: the losing
+  extension now adopts the existing `KongDataPlaneClientCertificate` CR by
+  adding itself as an additional ownerReference instead of retrying `Create`
+  on every reconcile, eliminating redundant calls to Konnect's
+  `dp-client-certificates` List API.
+  [#3940](https://github.com/Kong/kong-operator/issues/3940)
 - Fix `ResolvedRefs` status condition on `HTTPRoute` not being updated when a
   referenced `KongPlugin` is deleted in self-managed ControlPlane mode.
   [#3206](https://github.com/Kong/kong-operator/pull/3206)
