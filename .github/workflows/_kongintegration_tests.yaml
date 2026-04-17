@@ -36,13 +36,13 @@ jobs:
         if: ${{ !matrix.enterprise }}
         run: |
           echo "TEST_KONG_IMAGE=kong" >> $GITHUB_ENV
-          echo "TEST_KONG_TAG=$(yq -ojson -r '.kongintegration.kong-oss' < .github/test_dependencies.yaml )" >> $GITHUB_ENV
+          echo "TEST_KONG_TAG=$(yq -ojson -r '.kongintegration.kong-oss' < ingress-controller/test/test_dependencies.yaml )" >> $GITHUB_ENV
 
       - name: set kong ee version
         if: ${{ matrix.enterprise }}
         run: |
           echo "TEST_KONG_IMAGE=kong/kong-gateway" >> $GITHUB_ENV
-          echo "TEST_KONG_TAG=$(yq -ojson -r '.kongintegration.kong-ee' < .github/test_dependencies.yaml )" >> $GITHUB_ENV
+          echo "TEST_KONG_TAG=$(yq -ojson -r '.kongintegration.kong-ee' < ingress-controller/test/test_dependencies.yaml )" >> $GITHUB_ENV
 
       - uses: jdx/mise-action@5ac50f778e26fac95da98d50503682459e86d566 # v3.2.0
         with:
