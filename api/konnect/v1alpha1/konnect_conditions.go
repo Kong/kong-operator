@@ -1,5 +1,8 @@
 package v1alpha1
 
+// TODO: generate condition constants for generated Konnect entities.
+// https://github.com/kong/kong-operator/issues/3925
+
 const (
 	// KonnectEntityProgrammedConditionType is the condition that
 	// indicates whether the entity has been programmed in Konnect.
@@ -85,6 +88,24 @@ const (
 	// yet programmed in Konnect. This is typically a transient condition that resolves
 	// when the ControlPlane successfully syncs with the Konnect API.
 	ControlPlaneRefReasonNotProgrammed = "NotProgrammed"
+)
+
+const (
+	// EventGatewayRefValidConditionType is the type of the condition that indicates
+	// whether the Event Gateway reference is valid and points to an existing
+	// KonnectEventControlPlane.
+	EventGatewayRefValidConditionType = "EventGatewayRefValid"
+
+	// EventGatewayRefReasonValid is the reason used with the EventGatewayRefValid
+	// condition type indicating that the Event Gateway reference is valid.
+	EventGatewayRefReasonValid = "Valid"
+	// EventGatewayRefReasonInvalid is the reason used with the EventGatewayRefValid
+	// condition type indicating that the Event Gateway reference is invalid.
+	EventGatewayRefReasonInvalid = "Invalid"
+	// EventGatewayRefReasonNotProgrammed is the reason used with the EventGatewayRefValid
+	// condition type indicating that the referenced Gateway exists but is not
+	// yet programmed in Konnect.
+	EventGatewayRefReasonNotProgrammed = "NotProgrammed"
 )
 
 const (

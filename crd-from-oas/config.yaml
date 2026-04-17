@@ -21,6 +21,14 @@ apiGroupVersions:
       - path: /v1/event-gateways/{gatewayId}/data-plane-certificates
         name: KonnectEventDataPlaneCertificate
         optionalSecretReference: true
+        ops:
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateEventGatewayDataPlaneCertificateRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdateEventGatewayDataPlaneCertificateRequest
+        reconciler:
+          isRoot: false
+          parentEntityType: KonnectEventControlPlane
 
   # TODO: temporary
   x-konnect.konghq.com/v1alpha1:

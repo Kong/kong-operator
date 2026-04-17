@@ -175,6 +175,10 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 	}
 
+	if stop, res, err := r.handleGeneratedTypeReferences(ctx, ent); stop {
+		return res, err
+	}
+
 	// If a type has a KongService ref, handle it.
 	res, err = handleKongServiceRef(ctx, r.Client, ent)
 	if err != nil {

@@ -79,6 +79,8 @@ func Create[
 	// https://github.com/Kong/kong-operator/issues/3785
 	case *konnectv1alpha1.KonnectEventControlPlane:
 		err = createKonnectEventControlPlane(ctx, sdk.GetEventGatewaysSDK(), ent)
+	case *konnectv1alpha1.KonnectEventDataPlaneCertificate:
+		err = createKonnectEventDataPlaneCertificate(ctx, cl, sdk.GetEventGatewayDataPlaneCertificatesSDK(), ent)
 	case *configurationv1alpha1.KongService:
 		err = createService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
@@ -153,6 +155,8 @@ func Create[
 		// https://github.com/Kong/kong-operator/issues/3785
 		case *konnectv1alpha1.KonnectEventControlPlane:
 			id, errGet = getKonnectEventControlPlaneForUID(ctx, sdk.GetEventGatewaysSDK(), ent)
+		case *konnectv1alpha1.KonnectEventDataPlaneCertificate:
+			id, errGet = getKonnectEventDataPlaneCertificateForUID(ctx, sdk.GetEventGatewayDataPlaneCertificatesSDK(), ent)
 		case *configurationv1alpha1.KongService:
 			id, errGet = getKongServiceForUID(ctx, sdk.GetServicesSDK(), ent)
 		case *configurationv1alpha1.KongRoute:
@@ -300,6 +304,8 @@ func Delete[
 	// https://github.com/Kong/kong-operator/issues/3785
 	case *konnectv1alpha1.KonnectEventControlPlane:
 		err = deleteKonnectEventControlPlane(ctx, sdk.GetEventGatewaysSDK(), ent)
+	case *konnectv1alpha1.KonnectEventDataPlaneCertificate:
+		err = deleteKonnectEventDataPlaneCertificate(ctx, sdk.GetEventGatewayDataPlaneCertificatesSDK(), ent)
 	case *configurationv1alpha1.KongService:
 		err = deleteService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
@@ -468,6 +474,8 @@ func Update[
 	// https://github.com/Kong/kong-operator/issues/3785
 	case *konnectv1alpha1.KonnectEventControlPlane:
 		err = updateKonnectEventControlPlane(ctx, sdk.GetEventGatewaysSDK(), ent)
+	case *konnectv1alpha1.KonnectEventDataPlaneCertificate:
+		err = updateKonnectEventDataPlaneCertificate(ctx, cl, sdk.GetEventGatewayDataPlaneCertificatesSDK(), ent)
 	case *configurationv1alpha1.KongService:
 		err = updateService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
