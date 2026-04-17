@@ -3,7 +3,7 @@ module github.com/kong/kong-operator/v2
 go 1.26.2
 
 require (
-	cloud.google.com/go/container v1.48.0
+	cloud.google.com/go/container v1.49.0
 	dario.cat/mergo v1.0.2
 	github.com/Kong/sdk-konnect-go v0.31.1
 	github.com/Masterminds/sprig/v3 v3.3.0
