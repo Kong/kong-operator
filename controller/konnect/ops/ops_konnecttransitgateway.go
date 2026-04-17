@@ -203,7 +203,8 @@ func extractKonnectIDFromTransitGatewayResponse(resp *sdkkonnectcomp.TransitGate
 		return resp.AwsTransitGatewayResponse.ID
 	case sdkkonnectcomp.TransitGatewayResponseTypeAzureTransitGatewayResponse:
 		return resp.AzureTransitGatewayResponse.ID
-	case sdkkonnectcomp.TransitGatewayResponseTypeAwsVpcPeeringGatewayResponse:
+	case sdkkonnectcomp.TransitGatewayResponseTypeAwsVpcPeeringGatewayResponse,
+		sdkkonnectcomp.TransitGatewayResponseTypeAzureVhubPeeringGatewayResponse:
 		// AWS VPC peering gateway is not supported yet.
 		// It is not valid in the KonnectCloudGatewayTransitGateway's spec.type.
 		return ""
