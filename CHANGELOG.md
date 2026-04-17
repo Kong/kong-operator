@@ -143,6 +143,11 @@
 - `MCPServer`: set MCPServer ID as the name identifier for the Kubernetes resource and store
   the Konnect name in the `MCPServer` CRD status.
   [#3904](https://github.com/Kong/kong-operator/pull/3904)
+- `MCPServer`: reconcile the owned `Deployment` and `Service` via Server-Side
+  Apply so the full spec is enforced on every reconcile, and set the init and
+  runner container images (`kong/mcp-server-init`, `kong/mcp-server-runner`) to
+  the versions returned by Konnect.
+  [#3943](https://github.com/Kong/kong-operator/pull/3943)
 
 ### Changed
 
