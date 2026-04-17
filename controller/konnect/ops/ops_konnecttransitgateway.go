@@ -222,7 +222,8 @@ func extractStateFromTransitGatewayResponse(resp *sdkkonnectcomp.TransitGatewayR
 		return resp.AwsTransitGatewayResponse.State
 	case sdkkonnectcomp.TransitGatewayResponseTypeAzureTransitGatewayResponse:
 		return resp.AzureTransitGatewayResponse.State
-	case sdkkonnectcomp.TransitGatewayResponseTypeAwsVpcPeeringGatewayResponse:
+	case sdkkonnectcomp.TransitGatewayResponseTypeAwsVpcPeeringGatewayResponse,
+		sdkkonnectcomp.TransitGatewayResponseTypeAzureVhubPeeringGatewayResponse:
 		// AWS VPC peering gateway is not supported yet.
 		// It is not valid in the KonnectCloudGatewayTransitGateway's spec.type.
 		return sdkkonnectcomp.TransitGatewayState("")
