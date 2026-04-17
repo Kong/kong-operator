@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -124,6 +125,46 @@ func updateKongUpstreamStatusWithProgrammed(
 	}
 
 	require.NoError(t, cl.Status().Update(ctx, obj))
+}
+
+func updateKonnectEventControlPlaneStatusWithProgrammed(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	obj *konnectv1alpha1.KonnectEventControlPlane,
+	id string,
+) {
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(obj), obj)) {
+			return
+		}
+		obj.Status.KonnectEntityStatus = konnectv1alpha2.KonnectEntityStatus{
+			ID:        id,
+			ServerURL: sdkmocks.SDKServerURL,
+			OrgID:     "org-id",
+		}
+		obj.Status.Conditions = []metav1.Condition{
+			programmedCondition(obj.GetGeneration()),
+		}
+		assert.NoError(ct, cl.Status().Update(ctx, obj))
+	}, waitTime, tickTime)
+}
+
+func updateKonnectEventDataPlaneCertificateStatusWithProgrammed(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	obj *konnectv1alpha1.KonnectEventDataPlaneCertificate,
+) {
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(obj), obj)) {
+			return
+		}
+		obj.Status.Conditions = []metav1.Condition{
+			programmedCondition(obj.GetGeneration()),
+		}
+		assert.NoError(ct, cl.Status().Update(ctx, obj))
+	}, waitTime, tickTime)
 }
 
 func konnectEntityStatus(id string) konnectv1alpha2.KonnectEntityStatus {
