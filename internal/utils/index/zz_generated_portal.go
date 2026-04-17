@@ -5,7 +5,7 @@ package index
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	xkonnectv1alpha1 "github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 )
 
 const (
@@ -17,7 +17,7 @@ const (
 func OptionsForPortal() []Option {
 	return []Option{
 		{
-			Object:         &xkonnectv1alpha1.Portal{},
+			Object:         &konnectv1alpha1.Portal{},
 			Field:          IndexFieldPortalOnAPIAuthConfiguration,
 			ExtractValueFn: portalAPIAuthConfigurationRef,
 		},
@@ -25,7 +25,7 @@ func OptionsForPortal() []Option {
 }
 
 func portalAPIAuthConfigurationRef(object client.Object) []string {
-	ent, ok := object.(*xkonnectv1alpha1.Portal)
+	ent, ok := object.(*konnectv1alpha1.Portal)
 	if !ok {
 		return nil
 	}

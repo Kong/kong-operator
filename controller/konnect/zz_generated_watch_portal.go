@@ -9,8 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	konnectapiauthv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
-	xkonnectv1alpha1 "github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
@@ -21,11 +20,11 @@ func PortalReconciliationWatchOptions(
 ) []func(*ctrl.Builder) *ctrl.Builder {
 	return []func(*ctrl.Builder) *ctrl.Builder{
 		func(b *ctrl.Builder) *ctrl.Builder {
-			return b.For(&xkonnectv1alpha1.Portal{})
+			return b.For(&konnectv1alpha1.Portal{})
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
-				&konnectapiauthv1alpha1.KonnectAPIAuthConfiguration{},
+				&konnectv1alpha1.KonnectAPIAuthConfiguration{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueuePortalForKonnectAPIAuthConfiguration(cl),
 				),
@@ -38,11 +37,11 @@ func enqueuePortalForKonnectAPIAuthConfiguration(
 	cl client.Client,
 ) func(ctx context.Context, obj client.Object) []reconcile.Request {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		auth, ok := obj.(*konnectapiauthv1alpha1.KonnectAPIAuthConfiguration)
+		auth, ok := obj.(*konnectv1alpha1.KonnectAPIAuthConfiguration)
 		if !ok {
 			return nil
 		}
-		var l xkonnectv1alpha1.PortalList
+		var l konnectv1alpha1.PortalList
 		if err := cl.List(ctx, &l,
 			// TODO: change this when cross namespace refs are allowed.
 			client.InNamespace(auth.GetNamespace()),

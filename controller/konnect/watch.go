@@ -17,7 +17,6 @@ import (
 	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
-	xkonnectv1alpha1 "github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	"github.com/kong/kong-operator/v2/controller/pkg/controlplane"
 	operatorerrors "github.com/kong/kong-operator/v2/internal/errors"
@@ -87,7 +86,7 @@ func ReconciliationWatchOptionsForEntity[
 		return KonnectEventControlPlaneReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.KonnectEventDataPlaneCertificate:
 		return KonnectEventDataPlaneCertificateReconciliationWatchOptions(cl)
-	case *xkonnectv1alpha1.Portal:
+	case *konnectv1alpha1.Portal:
 		return PortalReconciliationWatchOptions(cl)
 	default:
 		panic(fmt.Sprintf("unsupported entity type %T", ent))

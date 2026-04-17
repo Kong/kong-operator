@@ -18,6 +18,7 @@ Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1al
 - [KonnectExtension](#konnect-konghq-com-v1alpha1-konnectextension)
 - [KonnectGatewayControlPlane](#konnect-konghq-com-v1alpha1-konnectgatewaycontrolplane)
 - [MCPServer](#konnect-konghq-com-v1alpha1-mcpserver)
+- [Portal](#konnect-konghq-com-v1alpha1-portal)
 
 ### KonnectAPIAuthConfiguration
 
@@ -156,6 +157,21 @@ MCPServer is the Schema for the MCPServer API.
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[MCPServerSpec](#konnect-konghq-com-v1alpha1-types-mcpserverspec)_ |  |
 | `status` _[MCPServerStatus](#konnect-konghq-com-v1alpha1-types-mcpserverstatus)_ |  |
+
+### Portal
+
+
+Portal is the Schema for the portals API.
+
+<!-- portal description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `Portal`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[PortalSpec](#konnect-konghq-com-v1alpha1-types-portalspec)_ |  |
+| `status` _[PortalStatus](#konnect-konghq-com-v1alpha1-types-portalstatus)_ |  |
 
 ### Types
 
@@ -977,6 +993,34 @@ _Appears in:_
 
 - [KonnectEventControlPlaneAPISpec](#konnect-konghq-com-v1alpha1-types-konnecteventcontrolplaneapispec)
 
+#### LabelsUpdate
+
+_Underlying type:_ `[map[string]LabelsUpdateValue](#map[string]labelsupdatevalue)`
+
+LabelsUpdate Labels store metadata of an entity that can be used for
+filtering an entity list or for searching across entity types.<br /><br />Labels are intended to store **INTERNAL** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong",
+"konnect", "mesh", "kic", or "_".
+
+
+
+
+_Appears in:_
+
+- [PortalAPISpec](#konnect-konghq-com-v1alpha1-types-portalapispec)
+
+#### LabelsUpdateValue
+
+_Underlying type:_ `string`
+
+LabelsUpdateValue is the value type for LabelsUpdate.
+
+
+
+
+_Appears in:_
+
+- [LabelsUpdate](#konnect-konghq-com-v1alpha1-types-labelsupdate)
+
 #### LabelsValue
 
 _Underlying type:_ `string`
@@ -1091,6 +1135,69 @@ _Appears in:_
 - [KonnectGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanespec)
 - [MCPServerSpec](#konnect-konghq-com-v1alpha1-types-mcpserverspec)
 
+#### PortalAPISpec
+
+
+PortalAPISpec defines the API spec fields for Portal.
+
+
+
+| Field | Description |
+| --- | --- |
+| `authentication_enabled` _string_ | Whether the portal supports developer authentication. If disabled, developers cannot register for accounts or create applications. |
+| `auto_approve_applications` _string_ | Whether requests from applications to register for APIs will be automatically approved, or if they will be set to pending until approved by an admin. |
+| `auto_approve_developers` _string_ | Whether developer account registrations will be automatically approved, or if they will be set to pending until approved by an admin. |
+| `default_api_visibility` _string_ | The default visibility of APIs in the portal. If set to `public`, newly published APIs are visible to unauthenticated developers. If set to `private`, newly published APIs are hidden from unauthenticated developers. |
+| `default_application_auth_strategy_id_ref` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | The default authentication strategy for APIs published to the portal. Newly published APIs will use this authentication strategy unless overridden during publication. If set to `null`, API publications will not use an authentication strategy unless set during publication. |
+| `default_page_visibility` _string_ | The default visibility of pages in the portal. If set to `public`, newly created pages are visible to unauthenticated developers. If set to `private`, newly created pages are hidden from unauthenticated developers. |
+| `description` _*string_ | A description of the portal. |
+| `display_name` _string_ | The display name of the portal. This value will be the portal's `name` in Portal API. |
+| `labels` _[LabelsUpdate](#konnect-konghq-com-v1alpha1-types-labelsupdate)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Labels are intended to store **INTERNAL** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _string_ | The name of the portal, used to distinguish it from other portals. Name must be unique. |
+| `rbac_enabled` _string_ | Whether the portal resources are protected by Role Based Access Control (RBAC). If enabled, developers view or register for APIs until unless assigned to teams with access to view and consume specific APIs. Authentication must be enabled to use RBAC. |
+| `sipr_enabled` _[SourceIPEnabled](#konnect-konghq-com-v1alpha1-types-sourceipenabled)_ | Whether ip allow list is enabled for the organization. |
+
+_Appears in:_
+
+- [PortalSpec](#konnect-konghq-com-v1alpha1-types-portalspec)
+
+
+
+#### PortalSpec
+
+
+PortalSpec defines the desired state of Portal.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectConfiguration](#konnect-konghq-com-v1alpha2-types-konnectconfiguration)_ | KonnectConfiguration is the Konnect configuration for this entity. |
+| `apiSpec` _[PortalAPISpec](#konnect-konghq-com-v1alpha1-types-portalapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [Portal](#konnect-konghq-com-v1alpha1-portal)
+
+#### PortalStatus
+
+
+PortalStatus defines the observed state of Portal.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
+| `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
+| `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [Portal](#konnect-konghq-com-v1alpha1-portal)
+
 #### ProvisioningMethod
 
 _Underlying type:_ `string`
@@ -1148,6 +1255,26 @@ Allowed values:
 | --- | --- |
 | `inline` | SensitiveDataSourceTypeInline indicates that the data is provided inline in the APISpec.<br /> |
 | `secretRef` | SensitiveDataSourceTypeSecretRef indicates that the data is sourced from a Kubernetes Secret.<br /> |
+
+#### SourceIPEnabled
+
+_Underlying type:_ `string`
+
+SourceIPEnabled Whether ip allow list is enabled for the organization.
+
+
+
+
+_Appears in:_
+
+- [PortalAPISpec](#konnect-konghq-com-v1alpha1-types-portalapispec)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `Enabled` | SourceIPEnabledEnabled sets SourceIPEnabled as enabled.<br /> |
+| `Disabled` | SourceIPEnabledDisabled sets SourceIPEnabled as disabled.<br /> |
 
 #### TransitGatewayDNSConfig
 
@@ -1338,6 +1465,7 @@ _Appears in:_
 - [KonnectEventControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnecteventcontrolplanespec)
 - [KonnectExtensionKonnectSpec](#konnect-konghq-com-v1alpha1-types-konnectextensionkonnectspec)
 - [KonnectGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanespec)
+- [PortalSpec](#konnect-konghq-com-v1alpha1-types-portalspec)
 
 #### KonnectEndpoints
 
@@ -1385,6 +1513,7 @@ _Appears in:_
 - [KonnectGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanestatus)
 - [KonnectGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha2-types-konnectgatewaycontrolplanestatus)
 - [MCPServerStatus](#konnect-konghq-com-v1alpha1-types-mcpserverstatus)
+- [PortalStatus](#konnect-konghq-com-v1alpha1-types-portalstatus)
 
 
 

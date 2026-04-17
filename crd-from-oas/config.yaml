@@ -29,16 +29,6 @@ apiGroupVersions:
         reconciler:
           isRoot: false
           parentEntityType: KonnectEventControlPlane
-
-  # TODO: temporary
-  x-konnect.konghq.com/v1alpha1:
-    generateGroupVersionInfo: true
-    commonTypes:
-      objectRef:
-        import:
-          path: github.com/kong/kong-operator/v2/api/common/v1alpha1
-          alias: commonv1alpha1
-    types:
       - path: /v3/portals
         cel:
           name:
@@ -51,6 +41,16 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdatePortal
         reconciler:
           isRoot: true
+
+  # TODO: temporary
+  x-konnect.konghq.com/v1alpha1:
+    generateGroupVersionInfo: true
+    commonTypes:
+      objectRef:
+        import:
+          path: github.com/kong/kong-operator/v2/api/common/v1alpha1
+          alias: commonv1alpha1
+    types:
       - path: /v3/portals/{portalId}/teams
       - path: /v2/dcr-providers
       # TODO: uncomment
