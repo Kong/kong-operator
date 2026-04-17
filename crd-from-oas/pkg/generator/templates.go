@@ -618,7 +618,7 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 			return nil, fmt.Errorf("failed to unmarshal into {{.UpdateVariantTypeName}}: %w", err)
 		}
 		unionValue := {{$importAlias}}.{{.UpdateConstructorName}}(member)
-		target.DcrConfig = &unionValue
+		target.{{.UpdateTargetFieldName}} = &unionValue
 		return &target, nil
 {{- end}}
 	default:

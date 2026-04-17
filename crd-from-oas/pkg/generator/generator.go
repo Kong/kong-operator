@@ -1036,6 +1036,7 @@ type sdkOpsRootUnionVariant struct {
 	CreateVariantTypeName string
 	CreateConstructorName string
 	UpdatePayloadJSONName string
+	UpdateTargetFieldName string
 	UpdateVariantTypeName string
 	UpdateConstructorName string
 }
@@ -1114,6 +1115,7 @@ func (g *Generator) generateRootUnionSDKOps(
 			variantRefName = variant.RefName
 		}
 		updatePayloadJSONName := ""
+		updateTargetFieldName := ""
 		updateVariantTypeName := ""
 		updateConstructorName := ""
 		if hasUpdateMethod {
@@ -1125,6 +1127,7 @@ func (g *Generator) generateRootUnionSDKOps(
 				return "", fmt.Errorf("failed to infer update payload property for %s variant %q: no ref payload property found", entityName, variantRefName)
 			}
 			updatePayloadJSONName = updatePayloadProp.Name
+			updateTargetFieldName = goFieldName(updatePayloadProp.Name)
 			updateVariantTypeName = fixInitialisms(strings.Replace(updatePayloadProp.RefName, "Create", "Update", 1))
 			updateConstructorName = "Create" + goFieldName(updatePayloadProp.Name) + updateVariantTypeName
 		}
@@ -1136,6 +1139,7 @@ func (g *Generator) generateRootUnionSDKOps(
 			CreateVariantTypeName: fixInitialisms(variantRefName),
 			CreateConstructorName: "Create" + fixInitialisms(variantRefName),
 			UpdatePayloadJSONName: updatePayloadJSONName,
+			UpdateTargetFieldName: updateTargetFieldName,
 			UpdateVariantTypeName: updateVariantTypeName,
 			UpdateConstructorName: updateConstructorName,
 		})

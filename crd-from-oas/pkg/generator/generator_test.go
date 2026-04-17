@@ -1314,8 +1314,10 @@ func TestGenerateSDKOps_RootUnionUsesSelectedVariantPayload(t *testing.T) {
 	assert.Contains(t, content, "CreateCreateDcrProviderRequestHTTP")
 	assert.Contains(t, content, `configPayload, ok := selected["provider_config"]`)
 	assert.Contains(t, content, "CreateProviderConfigUpdateDcrConfigAuth0InRequest")
+	assert.Contains(t, content, "target.ProviderConfig = &unionValue")
 	assert.Contains(t, content, "failed to normalize DcrProviderAPISpec SDK payload")
 	assert.NotContains(t, content, `selected["dcr_config"]`)
+	assert.NotContains(t, content, "target.DcrConfig = &unionValue")
 }
 
 func TestFindRootUnionUpdatePayloadProperty(t *testing.T) {
