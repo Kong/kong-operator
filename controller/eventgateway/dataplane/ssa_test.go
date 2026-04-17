@@ -43,6 +43,7 @@ func Test_requiredSchemas(t *testing.T) {
 		{Group: "", Version: "v1"},
 		{Group: "apps", Version: "v1"},
 		{Group: "eventgateway.konghq.com", Version: "v1alpha1"},
+		{Group: "konnect.konghq.com", Version: "v1alpha1"},
 	}
 	assert.Equal(t, expected, requiredSchemas)
 }

@@ -37,6 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/kong/kong-operator/v2/api/common/consts"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
@@ -169,6 +170,34 @@ func drainEvents(recorder *events.FakeRecorder) []string {
 	}
 }
 
+// newProgrammedKonnectCert builds a KonnectEventDataPlaneCertificate with Programmed=True,
+// modelling the state after the Konnect controller has registered it.
+func newProgrammedKonnectCert() *konnectv1alpha1.KonnectEventDataPlaneCertificate {
+	gatewayID := "keg-id-123"
+	secretRefType := konnectv1alpha1.SensitiveDataSourceTypeSecretRef
+	return &konnectv1alpha1.KonnectEventDataPlaneCertificate{
+		ObjectMeta: metav1.ObjectMeta{Namespace: reconcileTestNS, Name: reconcileTestDPName},
+		Spec: konnectv1alpha1.KonnectEventDataPlaneCertificateSpec{
+			GatewayRef: commonv1alpha1.ObjectRef{
+				Type:      commonv1alpha1.ObjectRefTypeKonnectID,
+				KonnectID: &gatewayID,
+			},
+			Type:      &secretRefType,
+			SecretRef: &commonv1alpha1.NamespacedRef{Name: reconcileTestDPName},
+		},
+		Status: konnectv1alpha1.KonnectEventDataPlaneCertificateStatus{
+			Conditions: []metav1.Condition{
+				{
+					Type:               konnectv1alpha1.KonnectEntityProgrammedConditionType,
+					Status:             metav1.ConditionTrue,
+					Reason:             "Programmed",
+					LastTransitionTime: metav1.NewTime(time.Now()),
+				},
+			},
+		},
+	}
+}
+
 // -----------------------------------------------------------------
 // TestReconciler_Reconcile
 // -----------------------------------------------------------------
@@ -276,9 +305,10 @@ func TestReconciler_Reconcile(t *testing.T) {
 				newReconcileEGDP(),
 				newProgrammedKEG(),
 				caSecret(),
+				newProgrammedKonnectCert(),
 			},
-			// 1st reconcile: cert created → returns early (owned Secret watch triggers next reconcile).
-			// 2nd reconcile: cert found → Deployment + Service created → Result{}.
+			// 1st reconcile: cert Secret created → returns early (owned Secret watch triggers next reconcile).
+			// 2nd reconcile: cert Secret + programmed KonnectEventDataPlaneCertificate present → Deployment + Service created.
 			reconcileCount: 2,
 			wantResult:     ctrl.Result{},
 			assertFn: func(t *testing.T, cl client.Client, recorder *events.FakeRecorder) {
@@ -327,8 +357,9 @@ func TestReconciler_Reconcile(t *testing.T) {
 				newReconcileEGDP(),
 				newProgrammedKEG(),
 				caSecret(),
+				newProgrammedKonnectCert(),
 			},
-			// 1st: cert created. 2nd: Deployment+Service created. 3rd: everything exists → noop.
+			// 1st: cert Secret created. 2nd: Deployment+Service created. 3rd: everything exists → noop.
 			reconcileCount: 3,
 			wantResult:     ctrl.Result{},
 			assertFn: func(t *testing.T, cl client.Client, recorder *events.FakeRecorder) {
@@ -347,7 +378,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 			base := fake.NewClientBuilder().
 				WithScheme(scheme).
 				WithObjects(tc.objects...).
-				WithStatusSubresource(egdp).
+				WithStatusSubresource(egdp, &konnectv1alpha1.KonnectEventDataPlaneCertificate{}).
 				Build()
 
 			recorder := events.NewFakeRecorder(30)
