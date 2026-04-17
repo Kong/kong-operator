@@ -71,6 +71,11 @@ type Schema struct {
 	// Map type support
 	AdditionalProperties *Property // For object types with additionalProperties (map value schema)
 	MaxProperties        *int64    // Maximum number of map entries
+
+	// POST operation hints used by downstream generators (e.g. Konnect SDK ops).
+	OperationID        string   // POST operationId (e.g. "create-portal")
+	Tags               []string // POST tags (e.g. ["portals"])
+	SuccessResponseRef string   // ref name of the 2xx success response schema (e.g. "Portal", "EventGatewayInfo")
 }
 
 // ParsedSpec is the result of parsing an OpenAPI spec via ParsePaths.
@@ -177,6 +182,9 @@ func (p *Parser) parsePath(targetPath string) (string, *Schema, error) {
 		schema := p.parseSchema(schemaName, mediaTypeObj.Schema.Value)
 		schema.SourcePath = targetPath
 		schema.Dependencies = dependencies
+		schema.OperationID = pathItem.Post.OperationID
+		schema.Tags = append([]string(nil), pathItem.Post.Tags...)
+		schema.SuccessResponseRef = extractSuccessResponseRef(pathItem.Post.Responses)
 		return schemaName, schema, nil
 	}
 
@@ -382,6 +390,38 @@ func getSchemaType(schema *openapi3.Schema) string {
 		}
 	}
 	return types[0]
+}
+
+// extractSuccessResponseRef returns the ref name of the 2xx success response
+// schema (preferring 201, then 200) for a POST operation, or "" if none is set.
+// It handles both response-level $refs (e.g. #/components/responses/Foo) and
+// nested content-schema $refs (e.g. #/components/schemas/Foo). When both are
+// present the content-schema ref is preferred because it names the actual
+// payload type produced by SDK codegen.
+func extractSuccessResponseRef(responses *openapi3.Responses) string {
+	if responses == nil {
+		return ""
+	}
+	for _, code := range []string{"201", "200"} {
+		respRef := responses.Value(code)
+		if respRef == nil {
+			continue
+		}
+		if respRef.Value != nil {
+			for _, mt := range respRef.Value.Content {
+				if mt == nil || mt.Schema == nil {
+					continue
+				}
+				if mt.Schema.Ref != "" {
+					return extractRefName(mt.Schema.Ref)
+				}
+			}
+		}
+		if respRef.Ref != "" {
+			return extractRefName(respRef.Ref)
+		}
+	}
+	return ""
 }
 
 // extractRefName extracts the schema name from a $ref string.

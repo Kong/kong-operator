@@ -19,6 +19,9 @@ func (r *Runner) Run(
 	ctx context.Context,
 	logger *slog.Logger,
 ) error {
+	// Accumulate ops create metadata across all group-versions so the
+	// cross-group dispatcher can be emitted once at the end.
+	var allOpsCreateInfos []*generator.OpsCreateFileInfo
 	for _, gvKey := range r.gvKeys {
 		agvConfig := r.projectCfg.APIGroupVersions[gvKey]
 
@@ -126,8 +129,43 @@ func (r *Runner) Run(
 			return fmt.Errorf("failed to remove legacy register.go in %q: %w", dir, err)
 		}
 
+		// Collect ops infos for post-loop dispatcher emission; drop infos
+		// whose corresponding generated file was skipped due to a
+		// hand-written ops_<entity>.go collision.
+		opsInfosKept := make([]*generator.OpsCreateFileInfo, 0, len(gen.OpsCreateInfos()))
+		skippedOpsFiles := make(map[string]bool)
+		opsDir := filepath.Join(r.projectRoot, "controller/konnect/ops")
+		for _, info := range gen.OpsCreateInfos() {
+			// Remove any stale generated ops file first so regeneration is idempotent.
+			staleOpsFile := filepath.Join(opsDir, generatedOpsFileName(info.Entity))
+			if err := removeFileIfExists(staleOpsFile); err != nil {
+				return fmt.Errorf("failed to remove stale ops file %q: %w", staleOpsFile, err)
+			}
+			// TODO: For now we don't do anything for types that already have hand-written ops.
+			// This would require adding logic for non root objects (like KonnectEventDataPlaneCertificate).
+			// We want to implement this eventually but not yet.
+			collided := false
+			for _, candidate := range handWrittenOpsFileNames(info.Entity) {
+				handWritten := filepath.Join(opsDir, candidate)
+				if _, err := os.Stat(handWritten); err == nil {
+					logger.Info("skipping ops create generation; hand-written file present", "entity", info.Entity, "file", handWritten)
+					skippedOpsFiles[generatedOpsFileName(info.Entity)] = true
+					collided = true
+					break
+				}
+			}
+			if collided {
+				continue
+			}
+			opsInfosKept = append(opsInfosKept, info)
+		}
+		allOpsCreateInfos = append(allOpsCreateInfos, opsInfosKept...)
+
 		// Write generated files
 		for _, file := range files {
+			if file.RelativeDir == "controller/konnect/ops" && skippedOpsFiles[file.Name] {
+				continue
+			}
 			var filePath string
 			if file.RelativeDir != "" {
 				// Write to a directory relative to the project root (outputDir's parent).
@@ -146,7 +184,49 @@ func (r *Runner) Run(
 		}
 	}
 
+	// Emit cross-group ops dispatcher. If no entities were generated, remove
+	// any stale dispatcher to keep the tree clean.
+	dispatcherPath := filepath.Join(r.projectRoot, "controller/konnect/ops", "zz_generated_ops.go")
+	dispatcher, err := generator.GenerateOpsDispatcher(allOpsCreateInfos)
+	if err != nil {
+		return fmt.Errorf("failed to generate ops dispatcher: %w", err)
+	}
+	if dispatcher == nil {
+		if err := removeFileIfExists(dispatcherPath); err != nil {
+			return fmt.Errorf("failed to remove stale ops dispatcher %q: %w", dispatcherPath, err)
+		}
+	} else {
+		targetDir := filepath.Join(r.projectRoot, dispatcher.RelativeDir)
+		if err := os.MkdirAll(targetDir, 0o755); err != nil {
+			return fmt.Errorf("failed to create output directory %q: %w", targetDir, err)
+		}
+		filePath := filepath.Join(targetDir, dispatcher.Name)
+		if err := os.WriteFile(filePath, []byte(dispatcher.Content), 0o600); err != nil {
+			return fmt.Errorf("failed to write file %q: %w", filePath, err)
+		}
+		logger.Info("generated file", "path", filePath)
+	}
+
 	return nil
+}
+
+// handWrittenOpsFileNames returns candidate hand-written ops file names for an
+// entity. It returns both the current prefix form (ops_<EntityFilePrefix>.go)
+// and the legacy unconverted-lowercase form (ops_<lower>.go) so collisions with
+// either naming convention are detected.
+func handWrittenOpsFileNames(entity string) []string {
+	prefix := generator.EntityFilePrefix(entity)
+	legacy := strings.ToLower(entity)
+	if prefix == legacy {
+		return []string{"ops_" + prefix + ".go"}
+	}
+	return []string{"ops_" + prefix + ".go", "ops_" + legacy + ".go"}
+}
+
+// generatedOpsFileName returns the generated ops file name for an entity,
+// e.g. "Portal" → "zz_generated_portal_ops.go".
+func generatedOpsFileName(entity string) string {
+	return "zz_generated_" + generator.EntityFilePrefix(entity) + "_ops.go"
 }
 
 func cleanupLegacyGeneratedFiles(projectRoot, dir string, parsed *parser.ParsedSpec) error {

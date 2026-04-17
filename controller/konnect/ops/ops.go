@@ -121,13 +121,9 @@ func Create[
 	case *konnectv1alpha1.MCPServer:
 		// MCPServer is mirror-only, so we use Konnect as the source of truth for it.
 		err = ensureMCPServer(ctx, sdk.GetMCPServersSDK(), ent)
-	case *konnectv1alpha1.Portal:
-		// TODO: implement Portal SDK ops
-		err = fmt.Errorf("Portal create operation not yet implemented")
-		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
 	default:
-		return nil, fmt.Errorf("unsupported entity type %T", ent)
+		err = CreateGeneratedOps(ctx, sdk, e)
 	}
 
 	var errGet error

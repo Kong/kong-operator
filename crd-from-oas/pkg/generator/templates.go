@@ -738,6 +738,88 @@ import (
 {{- end}}
 `
 
+const opsCreateTemplate = sharedGeneratedFilePreamble + `
+
+package ops
+
+import (
+	"context"
+	"fmt"
+
+	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
+
+	{{.APIAlias}} "{{.APIPackagePath}}"
+)
+
+func create{{.Entity}}(
+	ctx context.Context,
+	sdk sdkkonnectgo.{{.SDKInterface}},
+	obj *{{.APIAlias}}.{{.Entity}},
+) error {
+	req, err := obj.Spec.APISpec.To{{.CreateReqType}}()
+	if err != nil {
+		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
+	}
+{{- if .HasTags}}
+	req.Tags = GenerateTagsForObject(obj, req.Tags...)
+{{- else if .HasLabels}}
+{{- if .LabelsPointer}}
+	req.Labels = WithKubernetesMetadataLabelsPtr(obj, req.Labels)
+{{- else}}
+	req.Labels = WithKubernetesMetadataLabels(obj, req.Labels)
+{{- end}}
+{{- end}}
+
+	resp, err := sdk.{{.SDKMethod}}(ctx, *req)
+	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, obj); errWrap != nil {
+		return errWrap
+	}
+
+	if resp == nil || resp.{{.RespField}} == nil || resp.{{.RespField}}.ID == "" {
+		return fmt.Errorf("failed creating %s: %w", obj.GetTypeName(), ErrNilResponse)
+	}
+
+	obj.SetKonnectID(resp.{{.RespField}}.ID)
+	return nil
+}
+`
+
+const opsDispatcherTemplate = sharedGeneratedFilePreamble + `
+
+package ops
+
+import (
+	"context"
+	"fmt"
+
+{{.APIImportsBlock}}
+	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
+	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
+)
+
+// CreateGeneratedOps dispatches create operations to per-entity generated
+// create functions. It is a stub dispatcher intended for Konnect entities whose
+// ops layer is fully generated; entities handled by hand-written ops remain in
+// the Create function in ops.go.
+func CreateGeneratedOps[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](
+	ctx context.Context,
+	sdk sdkops.SDKWrapper,
+	e TEnt,
+) error {
+	switch ent := any(e).(type) {
+{{- range .Cases}}
+	case *{{.APIAlias}}.{{.Entity}}:
+		return create{{.Entity}}(ctx, sdk.{{.SDKGetter}}(), ent)
+{{- end}}
+	default:
+		return fmt.Errorf("unsupported entity type %T", ent)
+	}
+}
+`
+
 const rbacTemplate = sharedGeneratedFilePreamble + `
 
 package konnect

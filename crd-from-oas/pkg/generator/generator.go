@@ -48,12 +48,20 @@ type Config struct {
 
 // Generator generates Go CRD types from parsed OpenAPI schemas.
 type Generator struct {
-	config Config
+	config         Config
+	opsCreateInfos []*OpsCreateFileInfo
 }
 
 // NewGenerator creates a new generator.
 func NewGenerator(config Config) *Generator {
 	return &Generator{config: config}
+}
+
+// OpsCreateInfos returns metadata for every create op file emitted by the most
+// recent Generate call. Callers (e.g. the Runner) use it to assemble a single
+// cross-group ops dispatcher after all group-versions have been generated.
+func (g *Generator) OpsCreateInfos() []*OpsCreateFileInfo {
+	return g.opsCreateInfos
 }
 
 // GeneratedFile represents a generated Go file.
@@ -138,6 +146,24 @@ func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error)
 		if g.config.ReconcilerConfig != nil {
 			if _, ok := g.config.ReconcilerConfig[entityName]; ok {
 				reconcilerEntities = append(reconcilerEntities, entityName)
+			}
+		}
+
+		// Generate per-entity Konnect ops create file for reconciler entities
+		// that have a create op configured. The cross-group dispatcher is
+		// emitted separately by the Runner after all group-versions finish.
+		if g.config.ReconcilerConfig != nil && g.config.OpsConfig != nil {
+			if _, hasReconciler := g.config.ReconcilerConfig[entityName]; hasReconciler {
+				if opsConfig, ok := g.config.OpsConfig[entityName]; ok && opsConfig != nil {
+					opsFile, info, err := g.generateOpsCreate(entityName, schema, opsConfig)
+					if err != nil {
+						return nil, fmt.Errorf("failed to generate ops create for %s: %w", entityName, err)
+					}
+					if opsFile != nil {
+						files = append(files, *opsFile)
+						g.opsCreateInfos = append(g.opsCreateInfos, info)
+					}
+				}
 			}
 		}
 
@@ -556,6 +582,13 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 	}
 
 	return fixTrailingEmptyLines(buf.String()), nil
+}
+
+// EntityFilePrefix is the exported counterpart of entityFilePrefix for callers
+// in sibling packages (e.g. the Runner) that need to reason about generated
+// file names.
+func EntityFilePrefix(entityName string) string {
+	return entityFilePrefix(entityName)
 }
 
 // entityFilePrefix converts a PascalCase entity name to a lowercase file name
