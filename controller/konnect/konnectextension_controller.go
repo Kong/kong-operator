@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -501,6 +502,8 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		}
 		return "", false
 	})
+	// Sort so that the annotation value is stable regardless of list order.
+	sort.Strings(mappedIDs)
 
 	// update the secret annotation with the IDs of the mapped certificates
 	newMappedIDsStr := strings.Join(mappedIDs, ",")
@@ -562,6 +565,8 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			}
 			return "", false
 		})
+		// Sort so that the annotation value is stable regardless of list order.
+		sort.Strings(mappedIDs)
 	}
 
 	switch {
@@ -584,34 +589,14 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 				},
 			)
 
-			err := controllerutil.SetOwnerReference(&ext, &dpCert, r.Scheme(), controllerutil.WithBlockOwnerDeletion(true))
-			if err != nil {
+			if err := controllerutil.SetOwnerReference(&ext, &dpCert, r.Scheme(), controllerutil.WithBlockOwnerDeletion(true)); err != nil {
 				return ctrl.Result{}, err
 			}
 
-			if err := r.Create(ctx, &dpCert); err != nil {
-				if errS, ok := errors.AsType[*apierrors.StatusError](err); ok {
-					if errS.ErrStatus.Reason == metav1.StatusReasonAlreadyExists {
-						log.Debug(logger, "DataPlane client certificate already exists", "name", dpCert.Name, "namespace", dpCert.Namespace)
-					}
-				} else {
-					certProvisionedCond.Status = metav1.ConditionFalse
-					certProvisionedCond.Reason = konnectv1alpha1.DataPlaneCertificateProvisionedReasonKonnectAPIOpFailed
-					certProvisionedCond.Message = err.Error()
-					if res, updated, err := patch.StatusWithConditions(
-						ctx,
-						r.Client,
-						&ext,
-						readyCondition,
-						certProvisionedCond,
-					); err != nil || updated || !res.IsZero() {
-						return res, err
-					}
-					// In case of an error when creating the object in Konnect, we requeue "immediately"
-					// so that the operation is retried without waiting for the resync period.
-					return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
-				}
+			if res, err := r.createOrAdoptDataPlaneClientCertificate(ctx, logger, &ext, &dpCert, certDataStr, &certProvisionedCond, readyCondition); err != nil || !res.IsZero() {
+				return res, err
 			}
+
 			updated, res, err := patch.WithFinalizer(ctx, r.Client, certificateSecret, KonnectCleanupFinalizer)
 			if err != nil || !res.IsZero() {
 				return res, err
@@ -645,34 +630,14 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 					}
 				},
 			)
-			err := controllerutil.SetOwnerReference(&ext, &dpCert, r.Scheme(), controllerutil.WithBlockOwnerDeletion(true))
-			if err != nil {
+			if err := controllerutil.SetOwnerReference(&ext, &dpCert, r.Scheme(), controllerutil.WithBlockOwnerDeletion(true)); err != nil {
 				return ctrl.Result{}, err
 			}
 
-			if err := r.Create(ctx, &dpCert); err != nil {
-				if errS, ok := errors.AsType[*apierrors.StatusError](err); ok {
-					if errS.ErrStatus.Reason == metav1.StatusReasonAlreadyExists {
-						log.Debug(logger, "DataPlane client certificate already exists", "name", dpCert.Name, "namespace", dpCert.Namespace)
-					}
-				} else {
-					certProvisionedCond.Status = metav1.ConditionFalse
-					certProvisionedCond.Reason = konnectv1alpha1.DataPlaneCertificateProvisionedReasonKonnectAPIOpFailed
-					certProvisionedCond.Message = err.Error()
-					if res, updated, err := patch.StatusWithConditions(
-						ctx,
-						r.Client,
-						&ext,
-						readyCondition,
-						certProvisionedCond,
-					); err != nil || updated || !res.IsZero() {
-						return res, err
-					}
-					// In case of an error when creating the object in Konnect, we requeue "immediately"
-					// so that the operation is retried without waiting for the resync period.
-					return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
-				}
+			if res, err := r.createOrAdoptDataPlaneClientCertificate(ctx, logger, &ext, &dpCert, certDataStr, &certProvisionedCond, readyCondition); err != nil || !res.IsZero() {
+				return res, err
 			}
+
 			updated, res, err := patch.WithFinalizer(ctx, r.Client, certificateSecret, KonnectCleanupFinalizer)
 			if err != nil || !res.IsZero() {
 				return res, err
@@ -886,6 +851,138 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		Requeue:      true,
 		RequeueAfter: r.SyncPeriod,
 	}, nil
+}
+
+// errDataPlaneClientCertificateNameConflict is returned by createOrAdoptDataPlaneClientCertificate
+// when a KongDataPlaneClientCertificate with the target name already exists in the namespace but
+// holds certificate data that does not match the one referenced by the reconciling extension.
+// In that case the operator cannot safely adopt the existing CR without overwriting
+// user-managed data.
+var errDataPlaneClientCertificateNameConflict = errors.New("KongDataPlaneClientCertificate name conflict: a CR with the same name exists but holds a different certificate")
+
+// createOrAdoptDataPlaneClientCertificate creates the desired KongDataPlaneClientCertificate.
+// If a CR with the same name already exists, it attempts to adopt it by adding the reconciling
+// KonnectExtension as an additional (non-controller) ownerReference, provided the cert content
+// matches. This allows multiple KonnectExtension resources that share the same client-certificate
+// Secret to coexist without the reconciler retrying Create on every loop and repeatedly falling
+// back to the Konnect dp-client-certificates List API.
+//
+// The returned ctrl.Result and error match the conventions of a reconcile step: a non-zero Result
+// means the caller should return immediately; a nil error means normal flow can continue (the CR
+// was created, adopted, or is already owned by this extension).
+func (r *KonnectExtensionReconciler) createOrAdoptDataPlaneClientCertificate(
+	ctx context.Context,
+	logger logr.Logger,
+	ext *konnectv1alpha2.KonnectExtension,
+	dpCert *configurationv1alpha1.KongDataPlaneClientCertificate,
+	certDataStr string,
+	certProvisionedCond *metav1.Condition,
+	readyCondition metav1.Condition,
+) (ctrl.Result, error) {
+	err := r.Create(ctx, dpCert)
+	if err == nil {
+		return ctrl.Result{}, nil
+	}
+	if !apierrors.IsAlreadyExists(err) {
+		certProvisionedCond.Status = metav1.ConditionFalse
+		certProvisionedCond.Reason = konnectv1alpha1.DataPlaneCertificateProvisionedReasonKonnectAPIOpFailed
+		certProvisionedCond.Message = err.Error()
+		if res, updated, err := patch.StatusWithConditions(
+			ctx,
+			r.Client,
+			ext,
+			readyCondition,
+			*certProvisionedCond,
+		); err != nil || updated || !res.IsZero() {
+			return res, err
+		}
+		// In case of an error when creating the CR, we requeue "immediately"
+		// so that the operation is retried without waiting for the resync period.
+		return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+	}
+
+	// A CR with the same name already exists. Try to adopt it by adding ourselves as an owner.
+	if err := r.adoptExistingDataPlaneClientCertificate(ctx, logger, ext, dpCert, certDataStr); err != nil {
+		if errors.Is(err, errDataPlaneClientCertificateNameConflict) {
+			certProvisionedCond.Status = metav1.ConditionFalse
+			certProvisionedCond.Reason = konnectv1alpha1.DataPlaneCertificateProvisionedReasonNameConflict
+			certProvisionedCond.Message = fmt.Sprintf(
+				"a KongDataPlaneClientCertificate named %q already exists in namespace %q but holds a different certificate; cannot adopt",
+				dpCert.Name, dpCert.Namespace,
+			)
+			if res, updated, err := patch.StatusWithConditions(
+				ctx,
+				r.Client,
+				ext,
+				readyCondition,
+				*certProvisionedCond,
+			); err != nil || updated || !res.IsZero() {
+				return res, err
+			}
+			// Do not tight-requeue on a name conflict; the user must resolve it.
+			// Keep the standard sync period so the condition is re-asserted but the log is not spammed.
+			return ctrl.Result{RequeueAfter: r.SyncPeriod}, nil
+		}
+		certProvisionedCond.Status = metav1.ConditionFalse
+		certProvisionedCond.Reason = konnectv1alpha1.DataPlaneCertificateProvisionedReasonKonnectAPIOpFailed
+		certProvisionedCond.Message = err.Error()
+		if res, updated, err := patch.StatusWithConditions(
+			ctx,
+			r.Client,
+			ext,
+			readyCondition,
+			*certProvisionedCond,
+		); err != nil || updated || !res.IsZero() {
+			return res, err
+		}
+		return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+	}
+
+	return ctrl.Result{}, nil
+}
+
+// adoptExistingDataPlaneClientCertificate fetches the KongDataPlaneClientCertificate with the
+// given name/namespace and, if its cert content matches, adds the reconciling KonnectExtension
+// as an additional (non-controller) ownerReference when absent. Returns
+// errDataPlaneClientCertificateNameConflict when the cert content does not match.
+func (r *KonnectExtensionReconciler) adoptExistingDataPlaneClientCertificate(
+	ctx context.Context,
+	logger logr.Logger,
+	ext *konnectv1alpha2.KonnectExtension,
+	dpCert *configurationv1alpha1.KongDataPlaneClientCertificate,
+	certDataStr string,
+) error {
+	var existing configurationv1alpha1.KongDataPlaneClientCertificate
+	if err := r.Get(ctx, client.ObjectKeyFromObject(dpCert), &existing); err != nil {
+		return err
+	}
+
+	if sanitizeCert(existing.Spec.Cert) != certDataStr {
+		return errDataPlaneClientCertificateNameConflict
+	}
+
+	for _, or := range existing.OwnerReferences {
+		if or.UID == ext.UID {
+			// This KonnectExtension already owns the CR — nothing to do.
+			return nil
+		}
+	}
+
+	if err := controllerutil.SetOwnerReference(ext, &existing, r.Scheme()); err != nil {
+		return err
+	}
+	if err := r.Update(ctx, &existing); err != nil {
+		if apierrors.IsConflict(err) {
+			// Let controller-runtime retry on the next reconcile.
+			return nil
+		}
+		return err
+	}
+	log.Debug(logger,
+		"adopted existing KongDataPlaneClientCertificate by adding this KonnectExtension as an owner",
+		"name", existing.Name, "namespace", existing.Namespace,
+	)
+	return nil
 }
 
 // SecretInUseEnforceT is an enum type for enforcing or removing the secret-in-use finalizer.

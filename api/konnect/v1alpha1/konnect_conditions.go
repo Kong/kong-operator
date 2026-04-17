@@ -206,6 +206,12 @@ const (
 	// used with the DataPlaneCertificateProvisioned condition type indicating that the
 	// DataPlane client certificate creation in Konnect is in progress.
 	DataPlaneCertificateProvisionedReasonProvisioning = "Provisioning"
+	// DataPlaneCertificateProvisionedReasonNameConflict is the reason
+	// used with the DataPlaneCertificateProvisioned condition type indicating that a
+	// KongDataPlaneClientCertificate with the target name already exists in the namespace
+	// but carries a different certificate than the one referenced by this KonnectExtension,
+	// so it cannot be adopted.
+	DataPlaneCertificateProvisionedReasonNameConflict = "NameConflict"
 )
 
 const (
