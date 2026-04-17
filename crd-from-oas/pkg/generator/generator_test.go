@@ -2,6 +2,7 @@ package generator
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -1320,6 +1321,49 @@ func TestGenerateSDKOps_RootUnionUsesSelectedVariantPayload(t *testing.T) {
 	assert.NotContains(t, content, "target.DcrConfig = &unionValue")
 }
 
+func TestGenerateSDKOps_NestedUnionFlattensSelectedPayload(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	schema := &parser.Schema{
+		Properties: []*parser.Property{
+			{
+				Name:    "config",
+				RefName: "Config",
+				OneOf: []*parser.Property{
+					{
+						Name:    "OIDCIdentityProviderConfig",
+						RefName: "OIDCIdentityProviderConfig",
+					},
+					{
+						Name:    "SAMLIdentityProviderConfig",
+						RefName: "SAMLIdentityProviderConfig",
+					},
+				},
+			},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {
+				Path: "github.com/Kong/sdk-konnect-go/models/components.CreateIdentityProvider",
+			},
+			"update": {
+				Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateIdentityProvider",
+			},
+		},
+	}
+
+	content, err := g.generateSDKOps("IdentityProviderRequest", schema, opsConfig)
+	require.NoError(t, err)
+	assert.Contains(t, content, `rawConfig, ok := payload["config"]`)
+	assert.Contains(t, content, `typeConfig, ok := objectConfig["type"].(string)`)
+	assert.Contains(t, content, `case "OIDC":`)
+	assert.Contains(t, content, `selectedConfig = objectConfig["oidc"]`)
+	assert.Contains(t, content, `case "SAML":`)
+	assert.Contains(t, content, `selectedConfig = objectConfig["saml"]`)
+	assert.Contains(t, content, `payload["config"] = selectedConfig`)
+	assert.Contains(t, content, `data, err = json.Marshal(payload)`)
+}
+
 func TestFindRootUnionUpdatePayloadProperty(t *testing.T) {
 	t.Run("prefers single required ref property", func(t *testing.T) {
 		prop, err := findRootUnionUpdatePayloadProperty([]*parser.Property{
@@ -1448,6 +1492,41 @@ func TestGenerateSDKOpsTest_SupportsPointerAndNamedFields(t *testing.T) {
 	assert.Contains(t, content, `require.Equal(t, map[string]any{"test-key": "test-value"}, payload["labels"])`)
 	assert.Contains(t, content, `require.Equal(t, "test-value", payload["min_runtime_version"])`)
 	assert.Contains(t, content, `require.Equal(t, "test-value", payload["name"])`)
+}
+
+func TestGenerateSDKOpsTest_SkipsTypeAssertionsForUpdateMethods(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	schema := &parser.Schema{
+		Properties: []*parser.Property{
+			{
+				Name: "enabled",
+				Type: "boolean",
+			},
+			{
+				Name: "type",
+				Type: "string",
+				Enum: []any{"oidc", "saml"},
+			},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {
+				Path: "github.com/Kong/sdk-konnect-go/models/components.CreateIdentityProvider",
+			},
+			"update": {
+				Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateIdentityProvider",
+			},
+		},
+	}
+
+	content, err := g.generateSDKOpsTest("IdentityProviderRequest", schema, opsConfig)
+	require.NoError(t, err)
+	assert.Contains(t, content, `func TestIdentityProviderRequestAPISpec_ToCreateIdentityProvider`)
+	assert.Contains(t, content, `Type: "test-value"`)
+	assert.Contains(t, content, `require.Equal(t, "test-value", payload["type"])`)
+	assert.Contains(t, content, `func TestIdentityProviderRequestAPISpec_ToUpdateIdentityProvider`)
+	assert.Equal(t, 1, strings.Count(content, `Type: "test-value"`))
 }
 
 func TestParseSDKTypePath(t *testing.T) {

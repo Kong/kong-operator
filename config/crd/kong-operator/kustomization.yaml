@@ -47,4 +47,5 @@ resources:
   - konnect.konghq.com_mcpservers.yaml
   - konnect.konghq.com_portals.yaml
   - x-konnect.konghq.com_dcrproviders.yaml
+  - x-konnect.konghq.com_identityproviderrequests.yaml
   - x-konnect.konghq.com_portalteams.yaml

@@ -2,6 +2,6 @@
 
 package konnect
 
-//+kubebuilder:rbac:groups=x-konnect.konghq.com,resources=portals,verbs=get;list;watch;update;patch
-//+kubebuilder:rbac:groups=x-konnect.konghq.com,resources=portals/status,verbs=update;patch
-//+kubebuilder:rbac:groups=x-konnect.konghq.com,resources=portals/finalizers,verbs=update;patch
+//+kubebuilder:rbac:groups=x-konnect.konghq.com,resources=identityproviderrequests,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=x-konnect.konghq.com,resources=identityproviderrequests/status,verbs=update;patch
+//+kubebuilder:rbac:groups=x-konnect.konghq.com,resources=identityproviderrequests/finalizers,verbs=update;patch

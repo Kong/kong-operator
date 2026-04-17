@@ -6396,6 +6396,7 @@ KonnectConfiguration is the Schema for the KonnectConfiguration API.
 
 _Appears in:_
 
+- [IdentityProviderRequestSpec](#x-konnect-konghq-com-v1alpha1-types-identityproviderrequestspec)
 - [KonnectCloudGatewayNetworkSpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaynetworkspec)
 - [KonnectEventControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnecteventcontrolplanespec)
 - [KonnectExtensionKonnectSpec](#konnect-konghq-com-v1alpha1-types-konnectextensionkonnectspec)
@@ -6434,6 +6435,7 @@ KonnectEntityStatus represents the status of a Konnect entity.
 
 _Appears in:_
 
+- [IdentityProviderRequestStatus](#x-konnect-konghq-com-v1alpha1-types-identityproviderrequeststatus)
 - [KonnectCloudGatewayDataPlaneGroupConfigurationStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaydataplanegroupconfigurationstatus)
 - [KonnectCloudGatewayNetworkStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaynetworkstatus)
 - [KonnectCloudGatewayTransitGatewayStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewaystatus)
@@ -6850,6 +6852,7 @@ _Appears in:_
 Package v1alpha1 contains API Schema definitions for the x-konnect.konghq.com v1alpha1 API group.
 
 - [DcrProvider](#x-konnect-konghq-com-v1alpha1-dcrprovider)
+- [IdentityProviderRequest](#x-konnect-konghq-com-v1alpha1-identityproviderrequest)
 - [PortalTeam](#x-konnect-konghq-com-v1alpha1-portalteam)
 
 ### DcrProvider
@@ -6866,6 +6869,21 @@ DcrProvider is the Schema for the dcrproviders API.
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[DcrProviderSpec](#x-konnect-konghq-com-v1alpha1-types-dcrproviderspec)_ |  |
 | `status` _[DcrProviderStatus](#x-konnect-konghq-com-v1alpha1-types-dcrproviderstatus)_ |  |
+
+### IdentityProviderRequest
+
+
+IdentityProviderRequest is the Schema for the identityproviderrequests API.
+
+<!-- identity_provider_request description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `x-konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `IdentityProviderRequest`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[IdentityProviderRequestSpec](#x-konnect-konghq-com-v1alpha1-types-identityproviderrequestspec)_ |  |
+| `status` _[IdentityProviderRequestStatus](#x-konnect-konghq-com-v1alpha1-types-identityproviderrequeststatus)_ |  |
 
 ### PortalTeam
 
@@ -6885,7 +6903,45 @@ PortalTeam is the Schema for the portalteams API.
 ### Types
 
 In this section you will find types that the CRDs rely on.
+#### Config
 
+
+Config represents a union type for config.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[ConfigType](#x-konnect-konghq-com-v1alpha1-types-configtype)_ | Type designates the type of configuration. |
+| `oidc` _[OIDCIdentityProviderConfig](#x-konnect-konghq-com-v1alpha1-types-oidcidentityproviderconfig)_ | OIDC configuration. |
+| `saml` _[SAMLIdentityProviderConfig](#x-konnect-konghq-com-v1alpha1-types-samlidentityproviderconfig)_ | SAML configuration. |
+
+_Appears in:_
+
+- [IdentityProviderRequestAPISpec](#x-konnect-konghq-com-v1alpha1-types-identityproviderrequestapispec)
+
+
+
+#### ConfigType
+
+_Underlying type:_ `string`
+
+ConfigType represents the type of config.
+
+
+
+
+_Appears in:_
+
+- [Config](#x-konnect-konghq-com-v1alpha1-types-config)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `OIDC` |  |
+| `SAML` |  |
 
 #### CreateDcrConfigAuth0InRequest
 
@@ -7360,6 +7416,109 @@ _Appears in:_
 
 - [DcrProvider](#x-konnect-konghq-com-v1alpha1-dcrprovider)
 
+#### IdentityProviderEnabled
+
+_Underlying type:_ `string`
+
+IdentityProviderEnabled Indicates whether the identity provider is enabled.
+Only one identity provider can be active at a time, such as SAML or OIDC.
+
+
+
+
+_Appears in:_
+
+- [IdentityProviderRequestAPISpec](#x-konnect-konghq-com-v1alpha1-types-identityproviderrequestapispec)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `Enabled` | IdentityProviderEnabledEnabled sets IdentityProviderEnabled as enabled.<br /> |
+| `Disabled` | IdentityProviderEnabledDisabled sets IdentityProviderEnabled as disabled.<br /> |
+
+#### IdentityProviderLoginPath
+
+_Underlying type:_ `string`
+
+IdentityProviderLoginPath The path used for initiating login requests with
+the identity provider.
+
+
+
+
+_Appears in:_
+
+- [IdentityProviderRequestAPISpec](#x-konnect-konghq-com-v1alpha1-types-identityproviderrequestapispec)
+
+#### IdentityProviderRequestAPISpec
+
+
+IdentityProviderRequestAPISpec defines the API spec fields for IdentityProviderRequest.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[Config](#x-konnect-konghq-com-v1alpha1-types-config)_ |  |
+| `enabled` _[IdentityProviderEnabled](#x-konnect-konghq-com-v1alpha1-types-identityproviderenabled)_ | Indicates whether the identity provider is enabled. Only one identity provider can be active at a time, such as SAML or OIDC. |
+| `login_path` _[IdentityProviderLoginPath](#x-konnect-konghq-com-v1alpha1-types-identityproviderloginpath)_ | The path used for initiating login requests with the identity provider. |
+| `type` _[IdentityProviderType](#x-konnect-konghq-com-v1alpha1-types-identityprovidertype)_ | Specifies the type of identity provider. |
+
+_Appears in:_
+
+- [IdentityProviderRequestSpec](#x-konnect-konghq-com-v1alpha1-types-identityproviderrequestspec)
+
+
+
+#### IdentityProviderRequestSpec
+
+
+IdentityProviderRequestSpec defines the desired state of IdentityProviderRequest.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectConfiguration](#konnect-konghq-com-v1alpha2-types-konnectconfiguration)_ | KonnectConfiguration is the Konnect configuration for this entity. |
+| `apiSpec` _[IdentityProviderRequestAPISpec](#x-konnect-konghq-com-v1alpha1-types-identityproviderrequestapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [IdentityProviderRequest](#x-konnect-konghq-com-v1alpha1-identityproviderrequest)
+
+#### IdentityProviderRequestStatus
+
+
+IdentityProviderRequestStatus defines the observed state of IdentityProviderRequest.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
+| `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
+| `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [IdentityProviderRequest](#x-konnect-konghq-com-v1alpha1-identityproviderrequest)
+
+#### IdentityProviderType
+
+_Underlying type:_ `string`
+
+IdentityProviderType Specifies the type of identity provider.
+
+
+
+
+_Appears in:_
+
+- [IdentityProviderRequestAPISpec](#x-konnect-konghq-com-v1alpha1-types-identityproviderrequestapispec)
+
 #### KonnectEntityRef
 
 
@@ -7408,6 +7567,101 @@ LabelsValue is the value type for Labels.
 _Appears in:_
 
 - [Labels](#x-konnect-konghq-com-v1alpha1-types-labels)
+
+#### OIDCIdentityProviderClaimMappings
+
+
+OIDCIdentityProviderClaimMappings Defines the mappings between OpenID Connect
+(OIDC) claims and local claims used by your application for
+authentication.
+
+
+
+| Field | Description |
+| --- | --- |
+| `email` _string_ | The claim mapping for the user's email address. |
+| `groups` _string_ | The claim mapping for the user's group membership information. |
+| `name` _string_ | The claim mapping for the user's name. |
+
+_Appears in:_
+
+- [OIDCIdentityProviderConfig](#x-konnect-konghq-com-v1alpha1-types-oidcidentityproviderconfig)
+
+#### OIDCIdentityProviderClientID
+
+_Underlying type:_ `string`
+
+OIDCIdentityProviderClientID The client ID assigned to your application by
+the identity provider.
+
+
+
+
+_Appears in:_
+
+- [OIDCIdentityProviderConfig](#x-konnect-konghq-com-v1alpha1-types-oidcidentityproviderconfig)
+
+#### OIDCIdentityProviderClientSecret
+
+_Underlying type:_ `string`
+
+OIDCIdentityProviderClientSecret The Client Secret assigned to your
+application by the identity provider.
+
+
+
+
+_Appears in:_
+
+- [OIDCIdentityProviderConfig](#x-konnect-konghq-com-v1alpha1-types-oidcidentityproviderconfig)
+
+#### OIDCIdentityProviderConfig
+
+
+OIDCIdentityProviderConfig The identity provider that contains configuration
+data for the OIDC authentication integration.
+
+
+
+| Field | Description |
+| --- | --- |
+| `claim_mappings` _[OIDCIdentityProviderClaimMappings](#x-konnect-konghq-com-v1alpha1-types-oidcidentityproviderclaimmappings)_ | Defines the mappings between OpenID Connect (OIDC) claims and local claims used by your application for authentication. |
+| `client_id` _[OIDCIdentityProviderClientID](#x-konnect-konghq-com-v1alpha1-types-oidcidentityproviderclientid)_ | The client ID assigned to your application by the identity provider. |
+| `client_secret` _[OIDCIdentityProviderClientSecret](#x-konnect-konghq-com-v1alpha1-types-oidcidentityproviderclientsecret)_ | The Client Secret assigned to your application by the identity provider. |
+| `issuer_url` _[OIDCIdentityProviderIssuer](#x-konnect-konghq-com-v1alpha1-types-oidcidentityproviderissuer)_ | The issuer URI of the identity provider. This is the URL where the provider's metadata can be obtained. |
+| `scopes` _[OIDCIdentityProviderScopes](#x-konnect-konghq-com-v1alpha1-types-oidcidentityproviderscopes)_ | The scopes requested by your application when authenticating with the identity provider. |
+
+_Appears in:_
+
+- [Config](#x-konnect-konghq-com-v1alpha1-types-config)
+
+#### OIDCIdentityProviderIssuer
+
+_Underlying type:_ `string`
+
+OIDCIdentityProviderIssuer The issuer URI of the identity provider.
+This is the URL where the provider's metadata can be obtained.
+
+
+
+
+_Appears in:_
+
+- [OIDCIdentityProviderConfig](#x-konnect-konghq-com-v1alpha1-types-oidcidentityproviderconfig)
+
+#### OIDCIdentityProviderScopes
+
+_Underlying type:_ `string array`
+
+OIDCIdentityProviderScopes The scopes requested by your application when
+authenticating with the identity provider.
+
+
+
+
+_Appears in:_
+
+- [OIDCIdentityProviderConfig](#x-konnect-konghq-com-v1alpha1-types-oidcidentityproviderconfig)
 
 #### PortalTeamAPISpec
 
@@ -7458,6 +7712,52 @@ PortalTeamStatus defines the observed state of PortalTeam.
 _Appears in:_
 
 - [PortalTeam](#x-konnect-konghq-com-v1alpha1-portalteam)
+
+#### SAMLIdentityProviderConfig
+
+
+SAMLIdentityProviderConfig The identity provider that contains configuration
+data for the SAML authentication integration.
+
+
+
+| Field | Description |
+| --- | --- |
+| `idp_metadata_url` _[SAMLIdentityProviderMetadataURL](#x-konnect-konghq-com-v1alpha1-types-samlidentityprovidermetadataurl)_ | The identity provider's metadata URL where the identity provider's metadata can be obtained. |
+| `idp_metadata_xml` _[SAMLIdentityProviderMetadata](#x-konnect-konghq-com-v1alpha1-types-samlidentityprovidermetadata)_ | The identity provider's SAML metadata. If the identity provider supports a metadata URL, you can use the `idp_metadata_url` field instead. |
+
+_Appears in:_
+
+- [Config](#x-konnect-konghq-com-v1alpha1-types-config)
+
+#### SAMLIdentityProviderMetadata
+
+_Underlying type:_ `string`
+
+SAMLIdentityProviderMetadata The identity provider's SAML metadata.
+If the identity provider supports a metadata URL, you can use the
+`idp_metadata_url` field instead.
+
+
+
+
+_Appears in:_
+
+- [SAMLIdentityProviderConfig](#x-konnect-konghq-com-v1alpha1-types-samlidentityproviderconfig)
+
+#### SAMLIdentityProviderMetadataURL
+
+_Underlying type:_ `string`
+
+SAMLIdentityProviderMetadataURL The identity provider's metadata URL where
+the identity provider's metadata can be obtained.
+
+
+
+
+_Appears in:_
+
+- [SAMLIdentityProviderConfig](#x-konnect-konghq-com-v1alpha1-types-samlidentityproviderconfig)
 
 
 

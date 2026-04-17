@@ -55,5 +55,12 @@ apiGroupVersions:
       - path: /v2/dcr-providers
       # TODO: uncomment
       # - path: /v3/portals/{portalId}/custom-domain
-      # - path: /v3/identity-providers
+      - path: /v3/identity-providers
+        ops:
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateIdentityProvider
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdateIdentityProvider
+        reconciler:
+          isRoot: true
       # - path: /v3/portals/{portalId}/teams/{teamId}/developers

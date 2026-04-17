@@ -558,6 +558,7 @@ rules:
 - apiGroups:
   - x-konnect.konghq.com
   resources:
+  - identityproviderrequests
   - portals
   verbs:
   - get
@@ -568,6 +569,8 @@ rules:
 - apiGroups:
   - x-konnect.konghq.com
   resources:
+  - identityproviderrequests/finalizers
+  - identityproviderrequests/status
   - portals/finalizers
   - portals/status
   verbs:
