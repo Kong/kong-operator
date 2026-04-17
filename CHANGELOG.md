@@ -58,6 +58,8 @@
 - Fix `ResolvedRefs` status condition on `HTTPRoute` not being updated when a
   referenced `KongPlugin` is deleted in self-managed ControlPlane mode.
   [#3206](https://github.com/Kong/kong-operator/pull/3206) [#3836](https://github.com/Kong/kong-operator/pull/3836)
+- Fix incorrect Konnect API used for target lookup
+  [#3910](https://github.com/Kong/kong-operator/pull/3910) [#3938](https://github.com/Kong/kong-operator/pull/3938)
 
 ## [v2.1.3]
 
