@@ -7,6 +7,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/managedfields"
+	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -47,10 +49,24 @@ type MCPServerReconciler struct {
 	// events so that a Reconcile loop starts without an actual change on the
 	// MCPServer CRD.
 	ReconcileEventCh chan event.GenericEvent
+
+	// typeConverter is initialised once during SetupWithManager from the API
+	// server's OpenAPI v3 schemas. It supports all types (core K8s + CRDs) and
+	// is used for diff-before-apply via Server-Side Apply.
+	typeConverter managedfields.TypeConverter
+
+	// eventRecorder records Kubernetes events on MCPServer objects.
+	eventRecorder events.EventRecorder
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *MCPServerReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
+	tc, err := initTypeConverter(mgr)
+	if err != nil {
+		return fmt.Errorf("MCPServer controller: failed to initialize TypeConverter: %w", err)
+	}
+	r.typeConverter = tc
+	r.eventRecorder = mgr.GetEventRecorder(ControllerName)
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(r.ControllerOptions).
 		For(&konnectv1alpha1.MCPServer{}).
@@ -115,6 +131,12 @@ func (r *MCPServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	// Resolve the reference chain to KonnectAPIAuthConfiguration and build the SDK.
+	apiAuth, err := r.resolveAuth(ctx, &mcpServer)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to resolve auth for MCPServer %s/%s: %w",
+			mcpServer.Namespace, mcpServer.Name, err)
+	}
+
 	sdk, err := r.buildSDK(ctx, &mcpServer)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to build SDK for MCPServer %s/%s: %w",
@@ -133,21 +155,14 @@ func (r *MCPServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	remoteMCPServer := resp.MCPServerCPInfo
 
 	// Ensure a Deployment exists for this MCPServer.
-	res, deployment, err := r.ensureDeployment(ctx, &mcpServer, remoteMCPServer)
+	deployment, err := r.ensureDeployment(ctx, logger, &mcpServer, remoteMCPServer, apiAuth)
 	if err != nil {
 		return ctrl.Result{}, err
-	}
-	if res != op.Noop {
-		log.Info(logger, fmt.Sprintf("%s Deployment for MCPServer", res), "namespace", mcpServer.Namespace, "name", mcpServer.Name)
 	}
 
 	// Ensure a Service exists for this MCPServer.
-	svcRes, _, err := r.ensureService(ctx, &mcpServer)
-	if err != nil {
+	if err := r.ensureService(ctx, logger, &mcpServer); err != nil {
 		return ctrl.Result{}, err
-	}
-	if svcRes != op.Noop {
-		log.Info(logger, fmt.Sprintf("%s Service for MCPServer", svcRes), "namespace", mcpServer.Namespace, "name", mcpServer.Name)
 	}
 
 	// Ensure Kong entities (KongService, KongRoute) are created in the cluster

@@ -17,9 +17,6 @@ limitations under the License.
 package dataplane
 
 const (
-	// FieldManager is the field manager name used for Server-Side Apply operations.
-	FieldManager = "gateway-operator"
-
 	// ControllerName is the name used for logging and event recording.
 	ControllerName = "keg-dataplane"
 

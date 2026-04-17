@@ -19,13 +19,9 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/refs"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
-)
-
-const (
-	// FieldManager is the field manager name used for server-side apply operations.
-	FieldManager = "gateway-operator"
 )
 
 // translate performs the full translation process using the provided APIConverter.
@@ -193,7 +189,7 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 				// Object doesn't exist, create it using server-side apply.
 				log.Debug(logger, "Creating new object", "kind", desired.GetKind(), "obj", namespacedNameDesired)
 				// Set field manager for server-side apply
-				if err := cl.Apply(ctx, client.ApplyConfigurationFromUnstructured(&desired), client.FieldOwner(FieldManager), client.ForceOwnership); err != nil {
+				if err := cl.Apply(ctx, client.ApplyConfigurationFromUnstructured(&desired), client.FieldOwner(controllerpkgssa.FieldManager), client.ForceOwnership); err != nil {
 					if apierrors.IsConflict(err) {
 						return false, false, fmt.Errorf("conflict during create of object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
 					}
@@ -218,14 +214,14 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 		}
 
 		// Object exists, check if we need to update it.
-		managedFieldsObj, err := managedfields.ExtractAsUnstructured(existing, FieldManager, "")
+		managedFieldsObj, err := managedfields.ExtractAsUnstructured(existing, controllerpkgssa.FieldManager, "")
 		if err != nil {
 			return false, false, fmt.Errorf("failed to extract managed fields for kind %s obj %s: %w", existing.GetKind(), namespacedNameExisting, err)
 		}
 		if managedFieldsObj == nil {
 			// No managed fields for our field manager, we should update.
 			log.Debug(logger, "No managed fields found for our field manager, will apply desired state", "kind", existing.GetKind(), "obj", namespacedNameExisting)
-			if err := cl.Apply(ctx, client.ApplyConfigurationFromUnstructured(&desired), client.FieldOwner(FieldManager), client.ForceOwnership); err != nil {
+			if err := cl.Apply(ctx, client.ApplyConfigurationFromUnstructured(&desired), client.FieldOwner(controllerpkgssa.FieldManager), client.ForceOwnership); err != nil {
 				if apierrors.IsConflict(err) {
 					return false, false, fmt.Errorf("conflict during create of object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
 				}
@@ -253,7 +249,7 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 		} else {
 			log.Info(logger, "Changes detected for obj, applying desired state", "kind", existing.GetKind(), "obj", namespacedNameExisting, "changes", compare.String())
 			// Changes detected, apply the desired state using server-side apply.
-			if err := cl.Apply(ctx, client.ApplyConfigurationFromUnstructured(&desired), client.FieldOwner(FieldManager), client.ForceOwnership); err != nil {
+			if err := cl.Apply(ctx, client.ApplyConfigurationFromUnstructured(&desired), client.FieldOwner(controllerpkgssa.FieldManager), client.ForceOwnership); err != nil {
 				if apierrors.IsConflict(err) {
 					return false, false, fmt.Errorf("conflict during create of object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
 				}

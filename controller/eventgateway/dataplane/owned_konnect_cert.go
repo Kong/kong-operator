@@ -69,7 +69,7 @@ func (r *Reconciler) ensureKonnectCertificate(
 
 	k8sutils.SetOwnerForObject(desired, egdp)
 
-	result, err := controllerpkgssa.ApplyIfChanged(ctx, logger, r.Client, r.typeConverter, desired, FieldManager)
+	result, err := controllerpkgssa.ApplyIfChanged(ctx, logger, r.Client, r.typeConverter, desired, controllerpkgssa.FieldManager)
 	if err != nil {
 		apimeta.SetStatusCondition(&egdp.Status.Conditions, metav1.Condition{
 			Type:               string(eventgatewayv1alpha1.KonnectCertificateRegisteredType),
