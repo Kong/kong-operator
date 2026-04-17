@@ -17,10 +17,17 @@ excludeVulns="$(jq -nc '[
   # https://github.com/kubernetes/kubernetes/issues/130786
   "GO-2025-3521",
 
-  # Moby firewalld reload removes bridge network isolation in github.com/docker/docker
-  # https://pkg.go.dev/vuln/GO-2025-3829
-  # (aka CVE-2025-54410, GHSA-4vq8-7jfc-9cvp)
-  "GO-2025-3829"
+  # Moby has an Off-by-one error in its plugin privilege validation in github.com/docker/docker
+  "GO-2026-4883",
+
+  # Moby has AuthZ plugin bypass when provided oversized request bodies in github.com/docker/docker
+  "GO-2026-4887",
+
+  # Memory-safety vulnerability in github.com/jackc/pgx/v5.
+  # pgx is an indirect dependency (via terratest, testcontainers, certificate-transparency-go)
+  # and is not imported or used anywhere in our code.
+  "GO-2026-4771",
+  "GO-2026-4772"
 
 ]')"
 export excludeVulns

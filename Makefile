@@ -142,11 +142,10 @@ mockery: mise yq ## Download mockery locally if necessary.
 	@$(MISE) install -q mockery@$(MOCKERY_VERSION)
 
 SETUP_ENVTEST_VERSION = $(shell $(YQ) -r '.setup-envtest' < $(TOOLS_VERSIONS_FILE))
-SETUP_ENVTEST = $(PROJECT_DIR)/bin/installs/setup-envtest/$(SETUP_ENVTEST_VERSION)/bin/setup-envtest
+SETUP_ENVTEST = $(PROJECT_DIR)/bin/installs/github-kubernetes-sigs-controller-runtime/$(SETUP_ENVTEST_VERSION)/setup-envtest
 .PHONY: setup-envtest
-setup-envtest: mise ## Download setup-envtest locally if necessary.
-	@$(MAKE) mise-plugin-install DEP=setup-envtest URL=https://github.com/pmalek/mise-setup-envtest.git
-	@$(MAKE) mise-install DEP_VER=setup-envtest@$(SETUP_ENVTEST_VERSION)
+setup-envtest: mise yq ## Download setup-envtest locally if necessary.
+	$(MAKE) mise-install DEP_VER=github:kubernetes-sigs/controller-runtime@$(SETUP_ENVTEST_VERSION)
 
 ACTIONLINT_VERSION = $(shell $(YQ) -r '.actionlint' < $(TOOLS_VERSIONS_FILE))
 ACTIONLINT = $(PROJECT_DIR)/bin/installs/actionlint/$(ACTIONLINT_VERSION)/bin/actionlint
