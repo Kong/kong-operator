@@ -163,7 +163,7 @@
   adding itself as an additional ownerReference instead of retrying `Create`
   on every reconcile, eliminating redundant calls to Konnect's
   `dp-client-certificates` List API.
-  [#3940](https://github.com/Kong/kong-operator/issues/3940)
+  [#3949](https://github.com/Kong/kong-operator/pull/3949)
 - Fix `ResolvedRefs` status condition on `HTTPRoute` not being updated when a
   referenced `KongPlugin` is deleted in self-managed ControlPlane mode.
   [#3206](https://github.com/Kong/kong-operator/pull/3206)
