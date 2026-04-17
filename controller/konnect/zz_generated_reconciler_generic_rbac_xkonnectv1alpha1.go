@@ -2,6 +2,9 @@
 
 package konnect
 
+//+kubebuilder:rbac:groups=x-konnect.konghq.com,resources=dcrproviders,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=x-konnect.konghq.com,resources=dcrproviders/status,verbs=update;patch
+//+kubebuilder:rbac:groups=x-konnect.konghq.com,resources=dcrproviders/finalizers,verbs=update;patch
 //+kubebuilder:rbac:groups=x-konnect.konghq.com,resources=portals,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=x-konnect.konghq.com,resources=portals/status,verbs=update;patch
 //+kubebuilder:rbac:groups=x-konnect.konghq.com,resources=portals/finalizers,verbs=update;patch

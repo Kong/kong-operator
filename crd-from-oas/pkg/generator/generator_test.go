@@ -1242,6 +1242,7 @@ func TestGenerateSDKOps_RootUnionUsesSelectedVariantPayload(t *testing.T) {
 					{
 						Name:     "provider_config",
 						RefName:  "CreateDcrConfigAuth0InRequest",
+						Type:     "object",
 						Required: true,
 					},
 				},
@@ -1253,6 +1254,7 @@ func TestGenerateSDKOps_RootUnionUsesSelectedVariantPayload(t *testing.T) {
 					{
 						Name:     "provider_config",
 						RefName:  "CreateDcrConfigHTTPInRequest",
+						Type:     "object",
 						Required: true,
 					},
 				},
@@ -1324,7 +1326,7 @@ func TestFindRootUnionUpdatePayloadProperty(t *testing.T) {
 	t.Run("prefers single required ref property", func(t *testing.T) {
 		prop, err := findRootUnionUpdatePayloadProperty([]*parser.Property{
 			{Name: "display_name"},
-			{Name: "provider_config", RefName: "CreatePayload", Required: true},
+			{Name: "provider_config", RefName: "CreatePayload", Type: "object", Required: true},
 			{Name: "labels"},
 		})
 		require.NoError(t, err)
@@ -1334,7 +1336,7 @@ func TestFindRootUnionUpdatePayloadProperty(t *testing.T) {
 
 	t.Run("falls back to single ref property", func(t *testing.T) {
 		prop, err := findRootUnionUpdatePayloadProperty([]*parser.Property{
-			{Name: "provider_config", RefName: "CreatePayload"},
+			{Name: "provider_config", RefName: "CreatePayload", Type: "object"},
 			{Name: "labels"},
 		})
 		require.NoError(t, err)
@@ -1342,10 +1344,21 @@ func TestFindRootUnionUpdatePayloadProperty(t *testing.T) {
 		assert.Equal(t, "provider_config", prop.Name)
 	})
 
+	t.Run("ignores scalar ref properties", func(t *testing.T) {
+		prop, err := findRootUnionUpdatePayloadProperty([]*parser.Property{
+			{Name: "name", RefName: "Name", Type: "string", Required: true},
+			{Name: "issuer", RefName: "Issuer", Type: "string", Required: true},
+			{Name: "dcr_config", RefName: "CreatePayload", Type: "object", Required: true},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, prop)
+		assert.Equal(t, "dcr_config", prop.Name)
+	})
+
 	t.Run("errors on multiple required ref properties", func(t *testing.T) {
 		prop, err := findRootUnionUpdatePayloadProperty([]*parser.Property{
-			{Name: "provider_config", RefName: "CreatePayload", Required: true},
-			{Name: "client_config", RefName: "CreateClientPayload", Required: true},
+			{Name: "provider_config", RefName: "CreatePayload", Type: "object", Required: true},
+			{Name: "client_config", RefName: "CreateClientPayload", Type: "object", Required: true},
 		})
 		require.Error(t, err)
 		assert.Nil(t, prop)
@@ -1354,8 +1367,8 @@ func TestFindRootUnionUpdatePayloadProperty(t *testing.T) {
 
 	t.Run("errors on ambiguous ref properties", func(t *testing.T) {
 		prop, err := findRootUnionUpdatePayloadProperty([]*parser.Property{
-			{Name: "provider_config", RefName: "CreatePayload"},
-			{Name: "client_config", RefName: "CreateClientPayload"},
+			{Name: "provider_config", RefName: "CreatePayload", Type: "object"},
+			{Name: "client_config", RefName: "CreateClientPayload", Type: "object"},
 		})
 		require.Error(t, err)
 		assert.Nil(t, prop)

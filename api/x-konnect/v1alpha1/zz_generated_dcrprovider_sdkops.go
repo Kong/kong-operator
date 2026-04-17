@@ -258,20 +258,20 @@ func (s *DcrProviderAPISpec) ToUpdateDcrProviderRequest() (*sdkkonnectcomp.Updat
 	if err := json.Unmarshal(data, &selected); err != nil {
 		return nil, fmt.Errorf("failed to decode selected DcrProvider config: %w", err)
 	}
-	configPayload, ok := selected["dcr_config"]
-	if !ok || configPayload == nil {
-		return nil, fmt.Errorf("DcrProvider config payload missing dcr_config")
-	}
-	configData, err := json.Marshal(configPayload)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal DcrProvider dcr_config payload: %w", err)
-	}
 	var target sdkkonnectcomp.UpdateDcrProviderRequest
 	if err := json.Unmarshal(data, &target); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal into UpdateDcrProviderRequest: %w", err)
 	}
 	switch variant {
 	case "Auth0":
+		configPayload, ok := selected["dcr_config"]
+		if !ok || configPayload == nil {
+			return nil, fmt.Errorf("DcrProvider config payload missing dcr_config")
+		}
+		configData, err := json.Marshal(configPayload)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal DcrProvider dcr_config payload: %w", err)
+		}
 		var member sdkkonnectcomp.UpdateDcrConfigAuth0InRequest
 		if err := json.Unmarshal(configData, &member); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal into UpdateDcrConfigAuth0InRequest: %w", err)
@@ -280,6 +280,14 @@ func (s *DcrProviderAPISpec) ToUpdateDcrProviderRequest() (*sdkkonnectcomp.Updat
 		target.DcrConfig = &unionValue
 		return &target, nil
 	case "AzureAd":
+		configPayload, ok := selected["dcr_config"]
+		if !ok || configPayload == nil {
+			return nil, fmt.Errorf("DcrProvider config payload missing dcr_config")
+		}
+		configData, err := json.Marshal(configPayload)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal DcrProvider dcr_config payload: %w", err)
+		}
 		var member sdkkonnectcomp.UpdateDcrConfigAzureAdInRequest
 		if err := json.Unmarshal(configData, &member); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal into UpdateDcrConfigAzureAdInRequest: %w", err)
@@ -288,6 +296,14 @@ func (s *DcrProviderAPISpec) ToUpdateDcrProviderRequest() (*sdkkonnectcomp.Updat
 		target.DcrConfig = &unionValue
 		return &target, nil
 	case "Curity":
+		configPayload, ok := selected["dcr_config"]
+		if !ok || configPayload == nil {
+			return nil, fmt.Errorf("DcrProvider config payload missing dcr_config")
+		}
+		configData, err := json.Marshal(configPayload)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal DcrProvider dcr_config payload: %w", err)
+		}
 		var member sdkkonnectcomp.UpdateDcrConfigCurityInRequest
 		if err := json.Unmarshal(configData, &member); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal into UpdateDcrConfigCurityInRequest: %w", err)
@@ -296,6 +312,14 @@ func (s *DcrProviderAPISpec) ToUpdateDcrProviderRequest() (*sdkkonnectcomp.Updat
 		target.DcrConfig = &unionValue
 		return &target, nil
 	case "Okta":
+		configPayload, ok := selected["dcr_config"]
+		if !ok || configPayload == nil {
+			return nil, fmt.Errorf("DcrProvider config payload missing dcr_config")
+		}
+		configData, err := json.Marshal(configPayload)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal DcrProvider dcr_config payload: %w", err)
+		}
 		var member sdkkonnectcomp.UpdateDcrConfigOktaInRequest
 		if err := json.Unmarshal(configData, &member); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal into UpdateDcrConfigOktaInRequest: %w", err)
@@ -304,6 +328,14 @@ func (s *DcrProviderAPISpec) ToUpdateDcrProviderRequest() (*sdkkonnectcomp.Updat
 		target.DcrConfig = &unionValue
 		return &target, nil
 	case "HTTP":
+		configPayload, ok := selected["dcr_config"]
+		if !ok || configPayload == nil {
+			return nil, fmt.Errorf("DcrProvider config payload missing dcr_config")
+		}
+		configData, err := json.Marshal(configPayload)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal DcrProvider dcr_config payload: %w", err)
+		}
 		var member sdkkonnectcomp.UpdateDcrConfigHTTPInRequest
 		if err := json.Unmarshal(configData, &member); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal into UpdateDcrConfigHTTPInRequest: %w", err)

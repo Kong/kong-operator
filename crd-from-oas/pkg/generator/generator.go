@@ -1334,7 +1334,7 @@ func findRootUnionUpdatePayloadProperty(properties []*parser.Property) (*parser.
 	refProps := make([]*parser.Property, 0, len(properties))
 
 	for _, prop := range properties {
-		if prop.RefName == "" {
+		if !isRootUnionUpdatePayloadCandidate(prop) {
 			continue
 		}
 		refProps = append(refProps, prop)
@@ -1359,6 +1359,16 @@ func findRootUnionUpdatePayloadProperty(properties []*parser.Property) (*parser.
 	default:
 		return nil, fmt.Errorf("multiple ref payload properties found")
 	}
+}
+
+func isRootUnionUpdatePayloadCandidate(prop *parser.Property) bool {
+	if prop == nil || prop.RefName == "" {
+		return false
+	}
+
+	return prop.Type == "object" || prop.Type == "array" ||
+		len(prop.Properties) > 0 || len(prop.OneOf) > 0 ||
+		prop.Items != nil || prop.AdditionalProperties != nil
 }
 
 // sdkImportAlias generates a deterministic import alias from an SDK import path.

@@ -41501,6 +41501,7 @@ rules:
 - apiGroups:
   - x-konnect.konghq.com
   resources:
+  - dcrproviders
   - portals
   verbs:
   - get
@@ -41511,6 +41512,8 @@ rules:
 - apiGroups:
   - x-konnect.konghq.com
   resources:
+  - dcrproviders/finalizers
+  - dcrproviders/status
   - portals/finalizers
   - portals/status
   verbs:
