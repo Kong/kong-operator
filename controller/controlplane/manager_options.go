@@ -601,5 +601,10 @@ func WithKonnectOptions(konnectOptions *operatorv2beta1.ControlPlaneKonnectOptio
 		if konnectOptions.ConfigUploadPeriod != nil {
 			c.Konnect.UploadConfigPeriod = konnectOptions.ConfigUploadPeriod.Duration
 		}
+
+		// Configure config upload concurrency
+		if konnectOptions.ConfigUploadConcurrency != nil {
+			c.Konnect.UploadConfigConcurrency = *konnectOptions.ConfigUploadConcurrency
+		}
 	}
 }

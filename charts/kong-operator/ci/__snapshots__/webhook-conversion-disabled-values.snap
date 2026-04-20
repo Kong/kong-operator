@@ -842,6 +842,14 @@ spec:
               konnect:
                 description: Konnect defines the Konnect-related configuration options for the ControlPlane.
                 properties:
+                  configUploadConcurrency:
+                    description: |-
+                      ConfigUploadConcurrency is the concurrency of the client for uploading configuration to Konnect.
+                      In case of large configuration with many entities,
+                      too high concurrency may trigger rate limiting on Konnect API service and fail with 429 responses on requests.
+                    maximum: 16
+                    minimum: 1
+                    type: integer
                   configUploadPeriod:
                     description: ConfigUploadPeriod is the period for uploading configuration to Konnect.
                     type: string
@@ -10962,6 +10970,14 @@ spec:
                   konnect:
                     description: Konnect defines the Konnect-related configuration options for the ControlPlane.
                     properties:
+                      configUploadConcurrency:
+                        description: |-
+                          ConfigUploadConcurrency is the concurrency of the client for uploading configuration to Konnect.
+                          In case of large configuration with many entities,
+                          too high concurrency may trigger rate limiting on Konnect API service and fail with 429 responses on requests.
+                        maximum: 16
+                        minimum: 1
+                        type: integer
                       configUploadPeriod:
                         description: ConfigUploadPeriod is the period for uploading configuration to Konnect.
                         type: string
