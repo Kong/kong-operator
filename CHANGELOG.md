@@ -168,7 +168,7 @@
   instead of the `Secret`, so each extension gets its own CR in its own Konnect
   ControlPlane and the reconciler no longer retries `Create` on every loop or
   falls back to Konnect's `dp-client-certificates` List API.
-  [#PRPLACEHOLDER](https://github.com/Kong/kong-operator/pull/PRPLACEHOLDER)
+  [#3961](https://github.com/Kong/kong-operator/pull/3961)
 - Fix `ResolvedRefs` status condition on `HTTPRoute` not being updated when a
   referenced `KongPlugin` is deleted in self-managed ControlPlane mode.
   [#3206](https://github.com/Kong/kong-operator/pull/3206)
