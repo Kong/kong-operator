@@ -4,7 +4,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 )
 
 // IdentityProviderRequest is the Schema for the identityproviderrequests API.
@@ -41,10 +41,10 @@ type IdentityProviderRequestList struct {
 
 // IdentityProviderRequestSpec defines the desired state of IdentityProviderRequest.
 type IdentityProviderRequestSpec struct {
-	// KonnectConfiguration is the Konnect configuration for this entity.
+	// PortalRef is the reference to the parent Portal object.
 	//
 	// +required
-	KonnectConfiguration konnectv1alpha2.KonnectConfiguration `json:"konnect"`
+	PortalRef commonv1alpha1.ObjectRef `json:"portal_ref,omitzero"`
 
 	// APISpec defines the desired state of the resource's API spec fields.
 	//
@@ -96,7 +96,12 @@ type IdentityProviderRequestStatus struct {
 	// Konnect contains the Konnect entity status.
 	//
 	// +optional
-	konnectv1alpha2.KonnectEntityStatus `json:",inline"`
+	KonnectEntityStatus `json:",inline"`
+
+	// PortalID is the Konnect ID of the parent Portal.
+	//
+	// +optional
+	PortalID *KonnectEntityRef `json:"portalID,omitempty"`
 
 	// ObservedGeneration is the most recent generation observed
 	//

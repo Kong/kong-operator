@@ -5,8 +5,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
-	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	common "github.com/kong/kong-operator/v2/test/crdsvalidation/common"
 	"github.com/kong/kong-operator/v2/test/envtest"
@@ -23,9 +23,10 @@ func TestIdentityProviderRequest(t *testing.T) {
 		return &konnectv1alpha1.IdentityProviderRequest{
 			ObjectMeta: common.CommonObjectMeta(ns.Name),
 			Spec: konnectv1alpha1.IdentityProviderRequestSpec{
-				KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
-					APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
-						Name: "test-auth",
+				PortalRef: commonv1alpha1.ObjectRef{
+					Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+					NamespacedRef: &commonv1alpha1.NamespacedRef{
+						Name: "portal-name",
 					},
 				},
 				APISpec: konnectv1alpha1.IdentityProviderRequestAPISpec{

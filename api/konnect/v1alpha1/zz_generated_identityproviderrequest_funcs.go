@@ -37,9 +37,18 @@ func (obj *IdentityProviderRequest) SetConditions(conditions []metav1.Condition)
 	obj.Status.Conditions = conditions
 }
 
-// GetKonnectAPIAuthConfigurationRef returns the Konnect API Auth Configuration Ref.
-func (obj *IdentityProviderRequest) GetKonnectAPIAuthConfigurationRef() konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef {
-	return konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
-		Name: obj.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name,
+// GetPortalID returns the Konnect ID of the parent Portal.
+func (obj *IdentityProviderRequest) GetPortalID() string {
+	if obj.Status.PortalID == nil {
+		return ""
 	}
+	return obj.Status.PortalID.ID
+}
+
+// SetPortalID sets the Konnect ID of the parent Portal.
+func (obj *IdentityProviderRequest) SetPortalID(id string) {
+	if obj.Status.PortalID == nil {
+		obj.Status.PortalID = &KonnectEntityRef{}
+	}
+	obj.Status.PortalID.ID = id
 }

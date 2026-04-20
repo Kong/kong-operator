@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
@@ -24,29 +25,29 @@ func IdentityProviderRequestReconciliationWatchOptions(
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
-				&konnectv1alpha1.KonnectAPIAuthConfiguration{},
+				&konnectv1alpha1.Portal{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueIdentityProviderRequestForKonnectAPIAuthConfiguration(cl),
+					enqueueIdentityProviderRequestForPortal(cl),
 				),
 			)
 		},
 	}
 }
 
-func enqueueIdentityProviderRequestForKonnectAPIAuthConfiguration(
+func enqueueIdentityProviderRequestForPortal(
 	cl client.Client,
 ) func(ctx context.Context, obj client.Object) []reconcile.Request {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		auth, ok := obj.(*konnectv1alpha1.KonnectAPIAuthConfiguration)
+		parent, ok := obj.(*konnectv1alpha1.Portal)
 		if !ok {
 			return nil
 		}
 		var l konnectv1alpha1.IdentityProviderRequestList
 		if err := cl.List(ctx, &l,
 			// TODO: change this when cross namespace refs are allowed.
-			client.InNamespace(auth.GetNamespace()),
+			client.InNamespace(parent.GetNamespace()),
 			client.MatchingFields{
-				index.IndexFieldIdentityProviderRequestOnAPIAuthConfiguration: auth.Namespace + "/" + auth.Name,
+				index.IndexFieldIdentityProviderRequestOnPortalRef: parent.Name,
 			},
 		); err != nil {
 			return nil
