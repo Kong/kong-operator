@@ -281,45 +281,7 @@ _Appears in:_
 
 - [KonnectExtensionClientAuth](#konnect-konghq-com-v1alpha1-types-konnectextensionclientauth)
 
-#### Config
 
-
-Config represents a union type for config.
-Only one of the fields should be set based on the Type.
-
-
-
-| Field | Description |
-| --- | --- |
-| `type` _[ConfigType](#konnect-konghq-com-v1alpha1-types-configtype)_ | Type designates the type of configuration. |
-| `oidc` _[OIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderconfig)_ | OIDC configuration. |
-| `saml` _[SAMLIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-samlidentityproviderconfig)_ | SAML configuration. |
-
-_Appears in:_
-
-- [IdentityProviderRequestAPISpec](#konnect-konghq-com-v1alpha1-types-identityproviderrequestapispec)
-
-
-
-#### ConfigType
-
-_Underlying type:_ `string`
-
-ConfigType represents the type of config.
-
-
-
-
-_Appears in:_
-
-- [Config](#konnect-konghq-com-v1alpha1-types-config)
-
-Allowed values:
-
-| Value | Description |
-| --- | --- |
-| `OIDC` |  |
-| `SAML` |  |
 
 #### ConfigurationDataPlaneGroupAutoscale
 
@@ -525,7 +487,7 @@ IdentityProviderRequestAPISpec defines the API spec fields for IdentityProviderR
 
 | Field | Description |
 | --- | --- |
-| `config` _[Config](#konnect-konghq-com-v1alpha1-types-config)_ |  |
+| `config` _[IdentityProviderRequestConfig](#konnect-konghq-com-v1alpha1-types-identityproviderrequestconfig)_ |  |
 | `enabled` _[IdentityProviderEnabled](#konnect-konghq-com-v1alpha1-types-identityproviderenabled)_ | Indicates whether the identity provider is enabled. Only one identity provider can be active at a time, such as SAML or OIDC. |
 | `login_path` _[IdentityProviderLoginPath](#konnect-konghq-com-v1alpha1-types-identityproviderloginpath)_ | The path used for initiating login requests with the identity provider. |
 | `type` _[IdentityProviderType](#konnect-konghq-com-v1alpha1-types-identityprovidertype)_ | Specifies the type of identity provider. |
@@ -533,6 +495,44 @@ IdentityProviderRequestAPISpec defines the API spec fields for IdentityProviderR
 _Appears in:_
 
 - [IdentityProviderRequestSpec](#konnect-konghq-com-v1alpha1-types-identityproviderrequestspec)
+
+#### IdentityProviderRequestConfig
+
+
+IdentityProviderRequestConfig represents a union type for config.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[IdentityProviderRequestConfigType](#konnect-konghq-com-v1alpha1-types-identityproviderrequestconfigtype)_ | Type designates the type of configuration. |
+| `oidc` _[OIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderconfig)_ | OIDC configuration. |
+| `saml` _[SAMLIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-samlidentityproviderconfig)_ | SAML configuration. |
+
+_Appears in:_
+
+- [IdentityProviderRequestAPISpec](#konnect-konghq-com-v1alpha1-types-identityproviderrequestapispec)
+
+#### IdentityProviderRequestConfigType
+
+_Underlying type:_ `string`
+
+IdentityProviderRequestConfigType represents the type of config.
+
+
+
+
+_Appears in:_
+
+- [IdentityProviderRequestConfig](#konnect-konghq-com-v1alpha1-types-identityproviderrequestconfig)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `OIDC` |  |
+| `SAML` |  |
 
 
 
@@ -1357,7 +1357,7 @@ data for the OIDC authentication integration.
 
 _Appears in:_
 
-- [Config](#konnect-konghq-com-v1alpha1-types-config)
+- [IdentityProviderRequestConfig](#konnect-konghq-com-v1alpha1-types-identityproviderrequestconfig)
 
 #### OIDCIdentityProviderIssuer
 
@@ -1485,7 +1485,7 @@ data for the SAML authentication integration.
 
 _Appears in:_
 
-- [Config](#konnect-konghq-com-v1alpha1-types-config)
+- [IdentityProviderRequestConfig](#konnect-konghq-com-v1alpha1-types-identityproviderrequestconfig)
 
 #### SAMLIdentityProviderMetadata
 
