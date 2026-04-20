@@ -76,6 +76,7 @@ type Schema struct {
 	OperationID        string   // POST operationId (e.g. "create-portal")
 	Tags               []string // POST tags (e.g. ["portals"])
 	SuccessResponseRef string   // ref name of the 2xx success response schema (e.g. "Portal", "EventGatewayInfo")
+	RespIDIsPointer    bool     // true when the 2xx response schema's "id" field is not in required (i.e. *string in SDK codegen)
 }
 
 // ParsedSpec is the result of parsing an OpenAPI spec via ParsePaths.
@@ -185,6 +186,7 @@ func (p *Parser) parsePath(targetPath string) (string, *Schema, error) {
 		schema.OperationID = pathItem.Post.OperationID
 		schema.Tags = append([]string(nil), pathItem.Post.Tags...)
 		schema.SuccessResponseRef = extractSuccessResponseRef(pathItem.Post.Responses)
+		schema.RespIDIsPointer = p.successResponseIDIsPointer(pathItem.Post.Responses)
 		return schemaName, schema, nil
 	}
 
@@ -390,6 +392,46 @@ func getSchemaType(schema *openapi3.Schema) string {
 		}
 	}
 	return types[0]
+}
+
+// successResponseIDIsPointer reports whether the 2xx response schema's "id"
+// field is absent from the schema's required array, which causes SDK codegen to
+// emit it as *string rather than string. Returns false when "id" is required or
+// when the response schema cannot be resolved.
+func (p *Parser) successResponseIDIsPointer(responses *openapi3.Responses) bool {
+	if responses == nil {
+		return false
+	}
+	for _, code := range []string{"201", "200"} {
+		respRef := responses.Value(code)
+		if respRef == nil || respRef.Value == nil {
+			continue
+		}
+		for _, mt := range respRef.Value.Content {
+			if mt == nil || mt.Schema == nil {
+				continue
+			}
+			schemaVal := mt.Schema.Value
+			if mt.Schema.Ref != "" {
+				refName := extractRefName(mt.Schema.Ref)
+				if s, ok := p.doc.Components.Schemas[refName]; ok && s != nil && s.Value != nil {
+					schemaVal = s.Value
+				}
+			}
+			if schemaVal == nil {
+				continue
+			}
+			if slices.Contains(schemaVal.Required, "id") {
+				return false
+			}
+			// "id" field exists but is not required → SDK emits *string
+			if _, ok := schemaVal.Properties["id"]; ok {
+				return true
+			}
+			return false
+		}
+	}
+	return false
 }
 
 // extractSuccessResponseRef returns the ref name of the 2xx success response

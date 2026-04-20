@@ -26,7 +26,6 @@ func createPortal(
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, obj); errWrap != nil {
 		return errWrap
 	}
-
 	if resp == nil || resp.PortalResponse == nil || resp.PortalResponse.ID == "" {
 		return fmt.Errorf("failed creating %s: %w", obj.GetTypeName(), ErrNilResponse)
 	}

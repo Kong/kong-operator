@@ -1750,3 +1750,155 @@ func TestGenerateReconcilerFiles_IncludesRBAC(t *testing.T) {
 	assert.Equal(t, "controller/konnect", rbacFile.RelativeDir)
 	assert.Contains(t, rbacFile.Content, "//+kubebuilder:rbac:groups=x-konnect.konghq.com,resources=portals,verbs=get;list;watch;update;patch")
 }
+
+func TestGenerateOpsCreate_RootEntity(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"Portal": {IsRoot: true},
+		},
+	})
+
+	schema := &parser.Schema{
+		OperationID:        "create-portal",
+		Tags:               []string{"Portals"},
+		SuccessResponseRef: "PortalResponse",
+		RespIDIsPointer:    false,
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreatePortal"},
+		},
+	}
+
+	file, info, err := g.generateOpsCreate("Portal", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotNil(t, info)
+
+	assert.Equal(t, "zz_generated_portal_ops.go", file.Name)
+	assert.Equal(t, "GetPortalsSDK", info.SDKGetter)
+
+	// Root entity: no parent ID guard, direct SDK call.
+	assert.NotContains(t, file.Content, "parentID")
+	assert.NotContains(t, file.Content, "CantPerformOperationWithoutParentIDError")
+	assert.Contains(t, file.Content, "sdk.CreatePortal(ctx, *req)")
+
+	// Non-pointer ID: no pointer dereference.
+	assert.Contains(t, file.Content, `resp.PortalResponse.ID == ""`)
+	assert.Contains(t, file.Content, "obj.SetKonnectID(resp.PortalResponse.ID)")
+	assert.NotContains(t, file.Content, "*resp.PortalResponse.ID")
+}
+
+func TestGenerateOpsCreate_NonRootEntity(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"IdentityProviderRequest": {IsRoot: false},
+		},
+	})
+
+	schema := &parser.Schema{
+		OperationID:        "create-portal-identity-provider",
+		Tags:               []string{"Portal Auth Settings"},
+		SuccessResponseRef: "IdentityProvider",
+		RespIDIsPointer:    true,
+		Dependencies: []*parser.Dependency{
+			{ParamName: "portalId", EntityName: "Portal", FieldName: "PortalRef"},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateIdentityProvider"},
+		},
+	}
+
+	file, info, err := g.generateOpsCreate("IdentityProviderRequest", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotNil(t, info)
+
+	assert.Equal(t, "zz_generated_identityproviderrequest_ops.go", file.Name)
+	assert.Equal(t, "GetPortalAuthSettingsSDK", info.SDKGetter)
+
+	// Non-root: parentID guard present.
+	assert.Contains(t, file.Content, "parentID := obj.GetPortalID()")
+	assert.Contains(t, file.Content, `CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "Portal", Op: CreateOp}`)
+
+	// Scoped SDK call passes parentID.
+	assert.Contains(t, file.Content, "sdk.CreatePortalIdentityProvider(ctx, parentID, *req)")
+	assert.NotContains(t, file.Content, "sdk.CreatePortalIdentityProvider(ctx, *req)")
+
+	// Pointer ID: dereference in nil check and SetKonnectID.
+	assert.Contains(t, file.Content, "resp.IdentityProvider.ID == nil")
+	assert.Contains(t, file.Content, "*resp.IdentityProvider.ID")
+	assert.Contains(t, file.Content, "obj.SetKonnectID(*resp.IdentityProvider.ID)")
+}
+
+func TestGenerateOpsCreate_NonRootEntityWithParentTypeOverride(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"KonnectEventDataPlaneCertificate": {
+				IsRoot:           false,
+				ParentEntityType: "KonnectEventControlPlane",
+			},
+		},
+	})
+
+	schema := &parser.Schema{
+		OperationID:        "create-event-gateway-data-plane-certificate",
+		Tags:               []string{"Event Gateway Data Plane Certificates"},
+		SuccessResponseRef: "EventGatewayDataPlaneCertificate",
+		RespIDIsPointer:    false,
+		Dependencies: []*parser.Dependency{
+			{ParamName: "gatewayId", EntityName: "Gateway", FieldName: "GatewayRef"},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateEventGatewayDataPlaneCertificateRequest"},
+		},
+	}
+
+	file, info, err := g.generateOpsCreate("KonnectEventDataPlaneCertificate", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotNil(t, info)
+
+	// parentIDGetter must use dep.EntityName ("Gateway") not ParentEntityType ("KonnectEventControlPlane"),
+	// because crdFuncsTemplate emits GetGatewayID() based on the OAS path param.
+	assert.Contains(t, file.Content, "parentID := obj.GetGatewayID()")
+
+	// ParentEntityName uses ParentEntityType override in the error message.
+	assert.Contains(t, file.Content, `Parent: "KonnectEventControlPlane"`)
+}
+
+func TestGenerateOpsCreate_NonRootEntityMissingDependency_ReturnsError(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"Orphan": {IsRoot: false},
+		},
+	})
+
+	schema := &parser.Schema{
+		OperationID:        "create-orphan",
+		Tags:               []string{"Orphans"},
+		SuccessResponseRef: "Orphan",
+		Dependencies:       nil, // No deps despite IsRoot=false.
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateOrphan"},
+		},
+	}
+
+	_, _, err := g.generateOpsCreate("Orphan", schema, opsConfig)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no parent dependency")
+}

@@ -756,6 +756,12 @@ func create{{.Entity}}(
 	sdk sdkkonnectgo.{{.SDKInterface}},
 	obj *{{.APIAlias}}.{{.Entity}},
 ) error {
+{{- if .ParentEntityName}}
+	parentID := obj.{{.ParentIDGetter}}()
+	if parentID == "" {
+		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "{{.ParentEntityName}}", Op: CreateOp}
+	}
+{{- end}}
 	req, err := obj.Spec.APISpec.To{{.CreateReqType}}()
 	if err != nil {
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
@@ -769,17 +775,30 @@ func create{{.Entity}}(
 	req.Labels = WithKubernetesMetadataLabels(obj, req.Labels)
 {{- end}}
 {{- end}}
+{{- if .ParentEntityName}}
+
+	resp, err := sdk.{{.SDKMethod}}(ctx, parentID, *req)
+{{- else}}
 
 	resp, err := sdk.{{.SDKMethod}}(ctx, *req)
+{{- end}}
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, obj); errWrap != nil {
 		return errWrap
 	}
 
+{{- if .RespIDIsPointer}}
+	if resp == nil || resp.{{.RespField}} == nil || resp.{{.RespField}}.ID == nil || *resp.{{.RespField}}.ID == "" {
+		return fmt.Errorf("failed creating %s: %w", obj.GetTypeName(), ErrNilResponse)
+	}
+
+	obj.SetKonnectID(*resp.{{.RespField}}.ID)
+{{- else}}
 	if resp == nil || resp.{{.RespField}} == nil || resp.{{.RespField}}.ID == "" {
 		return fmt.Errorf("failed creating %s: %w", obj.GetTypeName(), ErrNilResponse)
 	}
 
 	obj.SetKonnectID(resp.{{.RespField}}.ID)
+{{- end}}
 	return nil
 }
 `

@@ -115,6 +115,23 @@ func (e CantPerformOperationWithoutEventGatewayIDError) Error() string {
 	)
 }
 
+// CantPerformOperationWithoutParentIDError is an error indicating that an
+// operation cannot be performed because the parent entity's Konnect ID has not
+// been populated on the child object's status. Used by generated ops code for
+// non-root (scoped) entities.
+type CantPerformOperationWithoutParentIDError struct {
+	Entity entity
+	Parent string
+	Op     Op
+}
+
+func (e CantPerformOperationWithoutParentIDError) Error() string {
+	return fmt.Sprintf(
+		"can't %s %s %s without a Konnect %s ID",
+		e.Op, e.Entity.GetTypeName(), client.ObjectKeyFromObject(e.Entity), e.Parent,
+	)
+}
+
 type sdkErrorDetails struct {
 	TypeAt   string   `json:"@type"`
 	Type     string   `json:"type"`

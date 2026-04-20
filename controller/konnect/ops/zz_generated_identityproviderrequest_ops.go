@@ -13,23 +13,26 @@ import (
 
 func createIdentityProviderRequest(
 	ctx context.Context,
-	sdk sdkkonnectgo.AuthSettingsSDK,
+	sdk sdkkonnectgo.PortalAuthSettingsSDK,
 	obj *konnectv1alpha1.IdentityProviderRequest,
 ) error {
+	parentID := obj.GetPortalID()
+	if parentID == "" {
+		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "Portal", Op: CreateOp}
+	}
 	req, err := obj.Spec.APISpec.ToCreateIdentityProvider()
 	if err != nil {
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
 	}
 
-	resp, err := sdk.CreateIdentityProvider(ctx, *req)
+	resp, err := sdk.CreatePortalIdentityProvider(ctx, parentID, *req)
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, obj); errWrap != nil {
 		return errWrap
 	}
-
-	if resp == nil || resp.IdentityProvider == nil || resp.IdentityProvider.ID == "" {
+	if resp == nil || resp.IdentityProvider == nil || resp.IdentityProvider.ID == nil || *resp.IdentityProvider.ID == "" {
 		return fmt.Errorf("failed creating %s: %w", obj.GetTypeName(), ErrNilResponse)
 	}
 
-	obj.SetKonnectID(resp.IdentityProvider.ID)
+	obj.SetKonnectID(*resp.IdentityProvider.ID)
 	return nil
 }

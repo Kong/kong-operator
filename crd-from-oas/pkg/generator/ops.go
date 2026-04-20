@@ -52,28 +52,50 @@ func (g *Generator) generateOpsCreate(
 
 	hasTags, hasLabels, labelsPointer := metadataFields(schema)
 
+	var parentEntityName, parentIDGetter string
+	rc := g.config.ReconcilerConfig[entityName]
+	if rc != nil && !rc.IsRoot {
+		if len(schema.Dependencies) == 0 {
+			return nil, nil, fmt.Errorf("non-root entity %q has no parent dependency in OAS path", entityName)
+		}
+		parentDep := schema.Dependencies[len(schema.Dependencies)-1]
+		parentEntityName = parentDep.EntityName
+		if rc.ParentEntityType != "" {
+			parentEntityName = rc.ParentEntityType
+		}
+		// parentIDGetter must use parentDep.EntityName (not the override) because
+		// crdFuncsTemplate emits Get<dep.EntityName>ID() based on the OAS path param.
+		parentIDGetter = "Get" + parentDep.EntityName + "ID"
+	}
+
 	data := struct {
-		Entity         string
-		APIAlias       string
-		APIPackagePath string
-		SDKInterface   string
-		SDKMethod      string
-		CreateReqType  string
-		RespField      string
-		HasTags        bool
-		HasLabels      bool
-		LabelsPointer  bool
+		Entity           string
+		APIAlias         string
+		APIPackagePath   string
+		SDKInterface     string
+		SDKMethod        string
+		CreateReqType    string
+		RespField        string
+		HasTags          bool
+		HasLabels        bool
+		LabelsPointer    bool
+		ParentEntityName string
+		ParentIDGetter   string
+		RespIDIsPointer  bool
 	}{
-		Entity:         entityName,
-		APIAlias:       g.config.APIGroupPackageAlias,
-		APIPackagePath: g.config.APIGroupPackagePath,
-		SDKInterface:   sdkInterface,
-		SDKMethod:      sdkMethod,
-		CreateReqType:  createReqType,
-		RespField:      schema.SuccessResponseRef,
-		HasTags:        hasTags,
-		HasLabels:      hasLabels,
-		LabelsPointer:  labelsPointer,
+		Entity:           entityName,
+		APIAlias:         g.config.APIGroupPackageAlias,
+		APIPackagePath:   g.config.APIGroupPackagePath,
+		SDKInterface:     sdkInterface,
+		SDKMethod:        sdkMethod,
+		CreateReqType:    createReqType,
+		RespField:        schema.SuccessResponseRef,
+		HasTags:          hasTags,
+		HasLabels:        hasLabels,
+		LabelsPointer:    labelsPointer,
+		ParentEntityName: parentEntityName,
+		ParentIDGetter:   parentIDGetter,
+		RespIDIsPointer:  schema.RespIDIsPointer,
 	}
 
 	tmpl := template.Must(template.New("opscreate").Parse(opsCreateTemplate))
