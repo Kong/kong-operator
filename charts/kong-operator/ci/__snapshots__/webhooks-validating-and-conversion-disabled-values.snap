@@ -20337,9 +20337,9 @@ metadata:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
     kubernetes-configuration.konghq.com/version: v2.1.0
-  name: identityproviderrequests.x-konnect.konghq.com
+  name: identityproviderrequests.konnect.konghq.com
 spec:
-  group: x-konnect.konghq.com
+  group: konnect.konghq.com
   names:
     kind: IdentityProviderRequest
     listKind: IdentityProviderRequestList
@@ -41663,6 +41663,7 @@ rules:
 - apiGroups:
   - konnect.konghq.com
   resources:
+  - identityproviderrequests
   - konnectapiauthconfigurations
   - konnectcloudgatewaydataplanegroupconfigurations
   - konnectcloudgatewaynetworks
@@ -41679,6 +41680,8 @@ rules:
 - apiGroups:
   - konnect.konghq.com
   resources:
+  - identityproviderrequests/finalizers
+  - identityproviderrequests/status
   - konnectapiauthconfigurations/finalizers
   - konnectapiauthconfigurations/status
   - konnectcloudgatewaydataplanegroupconfigurations/finalizers
@@ -41787,7 +41790,6 @@ rules:
   - x-konnect.konghq.com
   resources:
   - identityproviderrequests
-  - portals
   verbs:
   - get
   - list
@@ -41799,8 +41801,6 @@ rules:
   resources:
   - identityproviderrequests/finalizers
   - identityproviderrequests/status
-  - portals/finalizers
-  - portals/status
   verbs:
   - patch
   - update

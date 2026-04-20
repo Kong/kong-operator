@@ -57,7 +57,7 @@ type IdentityProviderRequestAPISpec struct {
 	//
 	//
 	// +optional
-	Config *Config `json:"config,omitempty"`
+	Config *IdentityProviderRequestConfig `json:"config,omitempty"`
 
 	// Indicates whether the identity provider is enabled.
 	// Only one identity provider can be active at a time, such as SAML or OIDC.
@@ -108,16 +108,16 @@ func init() {
 	SchemeBuilder.Register(&IdentityProviderRequest{}, &IdentityProviderRequestList{})
 }
 
-// Config represents a union type for config.
+// IdentityProviderRequestConfig represents a union type for config.
 // Only one of the fields should be set based on the Type.
 //
-type Config struct {
+type IdentityProviderRequestConfig struct {
 	// Type designates the type of configuration.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:Enum=OIDC;SAML
-	Type ConfigType `json:"type,omitempty"`
+	Type IdentityProviderRequestConfigType `json:"type,omitempty"`
 
 	// OIDC configuration.
 	//
@@ -129,11 +129,11 @@ type Config struct {
 	SAML *SAMLIdentityProviderConfig `json:"saml,omitempty"`
 }
 
-// ConfigType represents the type of config.
-type ConfigType string
+// IdentityProviderRequestConfigType represents the type of config.
+type IdentityProviderRequestConfigType string
 
-// ConfigType values.
+// IdentityProviderRequestConfigType values.
 const (
-	ConfigTypeOIDC ConfigType = "OIDC"
-	ConfigTypeSAML ConfigType = "SAML"
+	IdentityProviderRequestConfigTypeOIDC IdentityProviderRequestConfigType = "OIDC"
+	IdentityProviderRequestConfigTypeSAML IdentityProviderRequestConfigType = "SAML"
 )

@@ -30,8 +30,8 @@ func TestIdentityProviderRequest(t *testing.T) {
 				},
 				APISpec: konnectv1alpha1.IdentityProviderRequestAPISpec{
 					Type: konnectv1alpha1.IdentityProviderType("oidc"),
-					Config: &konnectv1alpha1.Config{
-						Type: konnectv1alpha1.ConfigTypeOIDC,
+					Config: &konnectv1alpha1.IdentityProviderRequestConfig{
+						Type: konnectv1alpha1.IdentityProviderRequestConfigTypeOIDC,
 						OIDC: &konnectv1alpha1.OIDCIdentityProviderConfig{
 							ClientID:  "client-id",
 							IssuerURL: "https://issuer.example.com",

@@ -430,8 +430,19 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 
 	hasOptionalSecretRef := g.config.SecretRefEntities[entityName]
 
+	// In the CRD APISpec, property-level oneOf types are rendered as a pointer
+	// to a generated union type. The union type is emitted in the same package,
+	// so its name must be prefixed with the entity name to avoid package-scoped
+	// collisions (e.g. a bare "Config" type would clash across entities).
+	goTypeInCRD := func(prop *parser.Property) string {
+		if len(prop.OneOf) > 0 {
+			return "*" + entityName + goFieldName(prop.Name)
+		}
+		return g.goType(prop)
+	}
+
 	funcMap := template.FuncMap{
-		"goType":                g.goType,
+		"goType":                goTypeInCRD,
 		"goFieldName":           goFieldName,
 		"jsonTag":               jsonTag,
 		"kubebuilderTags":       kubebuilderTagsWithConfig,
@@ -485,7 +496,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 	}
 
 	// Generate union types for any oneOf properties
-	unionTypes := g.generateUnionTypes(schema)
+	unionTypes := g.generateUnionTypes(schema, entityName)
 	if unionTypes != "" {
 		buf.WriteString("\n")
 		buf.WriteString(unionTypes)
@@ -621,7 +632,10 @@ func (g *Generator) konnectLabelsValueType(prop *parser.Property) (string, bool)
 }
 
 // generateUnionTypes generates Go union type structs for properties with oneOf.
-func (g *Generator) generateUnionTypes(schema *parser.Schema) string {
+// Property-level union type names are prefixed with entityName to avoid
+// package-scoped collisions between entities that share a property name
+// (e.g. "config").
+func (g *Generator) generateUnionTypes(schema *parser.Schema, entityName string) string {
 	var buf strings.Builder
 
 	// Handle root-level oneOf (the schema itself is a union type)
@@ -635,7 +649,7 @@ func (g *Generator) generateUnionTypes(schema *parser.Schema) string {
 			continue
 		}
 		if len(prop.OneOf) > 0 {
-			buf.WriteString(g.generateUnionType(prop))
+			buf.WriteString(g.generateUnionType(prop, entityName))
 		}
 	}
 
@@ -651,14 +665,17 @@ func (g *Generator) generateRootUnionType(schema *parser.Schema) string {
 		Name:  entityName + "Config",
 		OneOf: schema.OneOf,
 	}
-	return g.generateUnionType(prop)
+	// The synthetic prop.Name already encodes the entity prefix, so pass empty.
+	return g.generateUnionType(prop, "")
 }
 
 // generateUnionType generates a single union type struct.
-func (g *Generator) generateUnionType(prop *parser.Property) string {
+// typeNamePrefix is prepended to the generated Go type name to avoid
+// package-scoped collisions for common property names like "config".
+func (g *Generator) generateUnionType(prop *parser.Property, typeNamePrefix string) string {
 	var buf strings.Builder
 
-	typeName := goFieldName(prop.Name)
+	typeName := typeNamePrefix + goFieldName(prop.Name)
 
 	// Collect raw variant names (ref names or variant names)
 	var rawVariantNames []string
