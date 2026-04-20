@@ -46,6 +46,11 @@
 
 ### Added
 
+- Add `spec.konnect.configUploadConcurrency` to set the concurrency of uploading
+  configuration to Konnect in the on-prem gateway integration wit Konnect and
+  decrease the default concurrency to `4` to reduce the possibility of triggering
+  rate limiting of Konnect API service.
+  [#3959](https://github.com/Kong/kong-operator/pull/3959)
 - KegDataplane: Implement the `KegDataPlane` reconciler (`eventgateway.konghq.com/v1alpha1`)
   which manages the full lifecycle of Kong Event Gateway (KEG) DataPlane workloads.
   [#3914](https://github.com/Kong/kong-operator/pull/3891)
