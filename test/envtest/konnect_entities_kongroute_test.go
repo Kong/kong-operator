@@ -169,7 +169,7 @@ func TestKongRoute(t *testing.T) {
 			cp.GetKonnectID(),
 		).Return(&sdkkonnectops.GetRouteResponse{
 			Route: &sdkkonnectcomp.Route{
-				Type: sdkkonnectcomp.RouteTypeRouteJSON,
+				Type: sdkkonnectcomp.RouteUnionTypeRouteJSON,
 				RouteJSON: &sdkkonnectcomp.RouteJSON{
 					ID:    &routeID,
 					Name:  &routeName,
@@ -224,7 +224,7 @@ func TestKongRoute(t *testing.T) {
 			cp.GetKonnectID(),
 		).Return(&sdkkonnectops.GetRouteResponse{
 			Route: &sdkkonnectcomp.Route{
-				Type: sdkkonnectcomp.RouteTypeRouteJSON,
+				Type: sdkkonnectcomp.RouteUnionTypeRouteJSON,
 				RouteJSON: &sdkkonnectcomp.RouteJSON{
 					ID:    &routeID,
 					Name:  &routeName,
@@ -268,7 +268,7 @@ func TestKongRoute(t *testing.T) {
 			cp.GetKonnectID(),
 		).Return(&sdkkonnectops.GetRouteResponse{
 			Route: &sdkkonnectcomp.Route{
-				Type: sdkkonnectcomp.RouteTypeRouteJSON,
+				Type: sdkkonnectcomp.RouteUnionTypeRouteJSON,
 				RouteJSON: &sdkkonnectcomp.RouteJSON{
 					ID:    &routeID,
 					Name:  &routeName,

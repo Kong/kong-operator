@@ -187,8 +187,8 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 		sdk.CloudGatewaysSDK.EXPECT().ListTransitGateways(mock.Anything, mock.MatchedBy(func(req sdkkonnectops.ListTransitGatewaysRequest) bool {
 			return req.NetworkID == networkID &&
 				req.Filter != nil && req.Filter.Name != nil &&
-				req.Filter.Name.CloudGatewaysStringFieldEqualsFilterOverride != nil &&
-				*req.Filter.Name.CloudGatewaysStringFieldEqualsFilterOverride.Str == transitGatewayName
+				req.Filter.Name.Eq != nil &&
+				*req.Filter.Name.Eq == transitGatewayName
 		})).Return(
 			&sdkkonnectops.ListTransitGatewaysResponse{
 				ListTransitGatewaysResponse: &sdkkonnectcomp.ListTransitGatewaysResponse{
