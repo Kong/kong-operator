@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	// IndexFieldIdentityProviderRequestOnAPIAuthConfiguration is the index field for IdentityProviderRequest -> APIAuthConfiguration.
-	IndexFieldIdentityProviderRequestOnAPIAuthConfiguration = "identityProviderRequestAPIAuthConfigurationRef"
+	// IndexFieldIdentityProviderRequestOnPortalRef is the index field for IdentityProviderRequest -> Portal.
+	IndexFieldIdentityProviderRequestOnPortalRef = "identityProviderRequestOnPortalRef"
 )
 
 // OptionsForIdentityProviderRequest returns required Index options for IdentityProviderRequest reconciler.
@@ -18,20 +18,20 @@ func OptionsForIdentityProviderRequest() []Option {
 	return []Option{
 		{
 			Object:         &konnectv1alpha1.IdentityProviderRequest{},
-			Field:          IndexFieldIdentityProviderRequestOnAPIAuthConfiguration,
-			ExtractValueFn: identityProviderRequestAPIAuthConfigurationRef,
+			Field:          IndexFieldIdentityProviderRequestOnPortalRef,
+			ExtractValueFn: identityProviderRequestOnPortalRef,
 		},
 	}
 }
 
-func identityProviderRequestAPIAuthConfigurationRef(object client.Object) []string {
+func identityProviderRequestOnPortalRef(object client.Object) []string {
 	ent, ok := object.(*konnectv1alpha1.IdentityProviderRequest)
 	if !ok {
 		return nil
 	}
-	if ent.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name == "" {
+	if ent.Spec.PortalRef.NamespacedRef == nil {
 		return nil
 	}
 
-	return []string{ent.GetNamespace() + "/" + ent.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name}
+	return []string{ent.Spec.PortalRef.NamespacedRef.Name}
 }

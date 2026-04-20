@@ -545,7 +545,7 @@ IdentityProviderRequestSpec defines the desired state of IdentityProviderRequest
 
 | Field | Description |
 | --- | --- |
-| `konnect` _[KonnectConfiguration](#konnect-konghq-com-v1alpha2-types-konnectconfiguration)_ | KonnectConfiguration is the Konnect configuration for this entity. |
+| `portal_ref` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | PortalRef is the reference to the parent Portal object. |
 | `apiSpec` _[IdentityProviderRequestAPISpec](#konnect-konghq-com-v1alpha1-types-identityproviderrequestapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -562,9 +562,7 @@ IdentityProviderRequestStatus defines the observed state of IdentityProviderRequ
 | Field | Description |
 | --- | --- |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
-| `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
-| `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
-| `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
+| `portalID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | PortalID is the Konnect ID of the parent Portal. |
 | `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
 
 _Appears in:_
@@ -828,6 +826,7 @@ KonnectEntityRef is a reference to a Konnect entity.
 
 _Appears in:_
 
+- [IdentityProviderRequestStatus](#konnect-konghq-com-v1alpha1-types-identityproviderrequeststatus)
 - [KonnectEventDataPlaneCertificateStatus](#konnect-konghq-com-v1alpha1-types-konnecteventdataplanecertificatestatus)
 
 
@@ -1759,7 +1758,6 @@ KonnectConfiguration is the Schema for the KonnectConfiguration API.
 
 _Appears in:_
 
-- [IdentityProviderRequestSpec](#konnect-konghq-com-v1alpha1-types-identityproviderrequestspec)
 - [KonnectCloudGatewayNetworkSpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaynetworkspec)
 - [KonnectEventControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnecteventcontrolplanespec)
 - [KonnectExtensionKonnectSpec](#konnect-konghq-com-v1alpha1-types-konnectextensionkonnectspec)
@@ -1798,7 +1796,6 @@ KonnectEntityStatus represents the status of a Konnect entity.
 
 _Appears in:_
 
-- [IdentityProviderRequestStatus](#konnect-konghq-com-v1alpha1-types-identityproviderrequeststatus)
 - [KonnectCloudGatewayDataPlaneGroupConfigurationStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaydataplanegroupconfigurationstatus)
 - [KonnectCloudGatewayNetworkStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaynetworkstatus)
 - [KonnectCloudGatewayTransitGatewayStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewaystatus)
