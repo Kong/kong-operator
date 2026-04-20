@@ -111,6 +111,7 @@ func TestNewConfig(t *testing.T) {
 				LicenseStorageEnabled:       true,
 				UploadConfigPeriod:          managercfg.DefaultKonnectConfigUploadPeriod,
 				RefreshNodePeriod:           managercfg.DefaultKonnectNodeRefreshPeriod,
+				UploadConfigConcurrency:     managercfg.DefaultKonnectConfigUploadConcurrency,
 			},
 			SplunkEndpoint:                   "",
 			SplunkEndpointInsecureSkipVerify: false,
