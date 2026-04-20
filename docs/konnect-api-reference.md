@@ -9,6 +9,7 @@
 
 Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1alpha1 API group.
 
+- [IdentityProviderRequest](#konnect-konghq-com-v1alpha1-identityproviderrequest)
 - [KonnectAPIAuthConfiguration](#konnect-konghq-com-v1alpha1-konnectapiauthconfiguration)
 - [KonnectCloudGatewayDataPlaneGroupConfiguration](#konnect-konghq-com-v1alpha1-konnectcloudgatewaydataplanegroupconfiguration)
 - [KonnectCloudGatewayNetwork](#konnect-konghq-com-v1alpha1-konnectcloudgatewaynetwork)
@@ -19,6 +20,21 @@ Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1al
 - [KonnectGatewayControlPlane](#konnect-konghq-com-v1alpha1-konnectgatewaycontrolplane)
 - [MCPServer](#konnect-konghq-com-v1alpha1-mcpserver)
 - [Portal](#konnect-konghq-com-v1alpha1-portal)
+
+### IdentityProviderRequest
+
+
+IdentityProviderRequest is the Schema for the identityproviderrequests API.
+
+<!-- identity_provider_request description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `IdentityProviderRequest`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[IdentityProviderRequestSpec](#konnect-konghq-com-v1alpha1-types-identityproviderrequestspec)_ |  |
+| `status` _[IdentityProviderRequestStatus](#konnect-konghq-com-v1alpha1-types-identityproviderrequeststatus)_ |  |
 
 ### KonnectAPIAuthConfiguration
 
@@ -265,7 +281,45 @@ _Appears in:_
 
 - [KonnectExtensionClientAuth](#konnect-konghq-com-v1alpha1-types-konnectextensionclientauth)
 
+#### Config
 
+
+Config represents a union type for config.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[ConfigType](#konnect-konghq-com-v1alpha1-types-configtype)_ | Type designates the type of configuration. |
+| `oidc` _[OIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderconfig)_ | OIDC configuration. |
+| `saml` _[SAMLIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-samlidentityproviderconfig)_ | SAML configuration. |
+
+_Appears in:_
+
+- [IdentityProviderRequestAPISpec](#konnect-konghq-com-v1alpha1-types-identityproviderrequestapispec)
+
+
+
+#### ConfigType
+
+_Underlying type:_ `string`
+
+ConfigType represents the type of config.
+
+
+
+
+_Appears in:_
+
+- [Config](#konnect-konghq-com-v1alpha1-types-config)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `OIDC` |  |
+| `SAML` |  |
 
 #### ConfigurationDataPlaneGroupAutoscale
 
@@ -426,6 +480,109 @@ GatewayName The name of the Gateway.
 _Appears in:_
 
 - [KonnectEventControlPlaneAPISpec](#konnect-konghq-com-v1alpha1-types-konnecteventcontrolplaneapispec)
+
+#### IdentityProviderEnabled
+
+_Underlying type:_ `string`
+
+IdentityProviderEnabled Indicates whether the identity provider is enabled.
+Only one identity provider can be active at a time, such as SAML or OIDC.
+
+
+
+
+_Appears in:_
+
+- [IdentityProviderRequestAPISpec](#konnect-konghq-com-v1alpha1-types-identityproviderrequestapispec)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `Enabled` | IdentityProviderEnabledEnabled sets IdentityProviderEnabled as enabled.<br /> |
+| `Disabled` | IdentityProviderEnabledDisabled sets IdentityProviderEnabled as disabled.<br /> |
+
+#### IdentityProviderLoginPath
+
+_Underlying type:_ `string`
+
+IdentityProviderLoginPath The path used for initiating login requests with
+the identity provider.
+
+
+
+
+_Appears in:_
+
+- [IdentityProviderRequestAPISpec](#konnect-konghq-com-v1alpha1-types-identityproviderrequestapispec)
+
+#### IdentityProviderRequestAPISpec
+
+
+IdentityProviderRequestAPISpec defines the API spec fields for IdentityProviderRequest.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[Config](#konnect-konghq-com-v1alpha1-types-config)_ |  |
+| `enabled` _[IdentityProviderEnabled](#konnect-konghq-com-v1alpha1-types-identityproviderenabled)_ | Indicates whether the identity provider is enabled. Only one identity provider can be active at a time, such as SAML or OIDC. |
+| `login_path` _[IdentityProviderLoginPath](#konnect-konghq-com-v1alpha1-types-identityproviderloginpath)_ | The path used for initiating login requests with the identity provider. |
+| `type` _[IdentityProviderType](#konnect-konghq-com-v1alpha1-types-identityprovidertype)_ | Specifies the type of identity provider. |
+
+_Appears in:_
+
+- [IdentityProviderRequestSpec](#konnect-konghq-com-v1alpha1-types-identityproviderrequestspec)
+
+
+
+#### IdentityProviderRequestSpec
+
+
+IdentityProviderRequestSpec defines the desired state of IdentityProviderRequest.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectConfiguration](#konnect-konghq-com-v1alpha2-types-konnectconfiguration)_ | KonnectConfiguration is the Konnect configuration for this entity. |
+| `apiSpec` _[IdentityProviderRequestAPISpec](#konnect-konghq-com-v1alpha1-types-identityproviderrequestapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [IdentityProviderRequest](#konnect-konghq-com-v1alpha1-identityproviderrequest)
+
+#### IdentityProviderRequestStatus
+
+
+IdentityProviderRequestStatus defines the observed state of IdentityProviderRequest.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
+| `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
+| `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [IdentityProviderRequest](#konnect-konghq-com-v1alpha1-identityproviderrequest)
+
+#### IdentityProviderType
+
+_Underlying type:_ `string`
+
+IdentityProviderType Specifies the type of identity provider.
+
+
+
+
+_Appears in:_
+
+- [IdentityProviderRequestAPISpec](#konnect-konghq-com-v1alpha1-types-identityproviderrequestapispec)
 
 #### KonnectAPIAuthConfigurationSpec
 
@@ -1135,6 +1292,101 @@ _Appears in:_
 - [KonnectGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanespec)
 - [MCPServerSpec](#konnect-konghq-com-v1alpha1-types-mcpserverspec)
 
+#### OIDCIdentityProviderClaimMappings
+
+
+OIDCIdentityProviderClaimMappings Defines the mappings between OpenID Connect
+(OIDC) claims and local claims used by your application for
+authentication.
+
+
+
+| Field | Description |
+| --- | --- |
+| `email` _string_ | The claim mapping for the user's email address. |
+| `groups` _string_ | The claim mapping for the user's group membership information. |
+| `name` _string_ | The claim mapping for the user's name. |
+
+_Appears in:_
+
+- [OIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderconfig)
+
+#### OIDCIdentityProviderClientID
+
+_Underlying type:_ `string`
+
+OIDCIdentityProviderClientID The client ID assigned to your application by
+the identity provider.
+
+
+
+
+_Appears in:_
+
+- [OIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderconfig)
+
+#### OIDCIdentityProviderClientSecret
+
+_Underlying type:_ `string`
+
+OIDCIdentityProviderClientSecret The Client Secret assigned to your
+application by the identity provider.
+
+
+
+
+_Appears in:_
+
+- [OIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderconfig)
+
+#### OIDCIdentityProviderConfig
+
+
+OIDCIdentityProviderConfig The identity provider that contains configuration
+data for the OIDC authentication integration.
+
+
+
+| Field | Description |
+| --- | --- |
+| `claim_mappings` _[OIDCIdentityProviderClaimMappings](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclaimmappings)_ | Defines the mappings between OpenID Connect (OIDC) claims and local claims used by your application for authentication. |
+| `client_id` _[OIDCIdentityProviderClientID](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclientid)_ | The client ID assigned to your application by the identity provider. |
+| `client_secret` _[OIDCIdentityProviderClientSecret](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclientsecret)_ | The Client Secret assigned to your application by the identity provider. |
+| `issuer_url` _[OIDCIdentityProviderIssuer](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderissuer)_ | The issuer URI of the identity provider. This is the URL where the provider's metadata can be obtained. |
+| `scopes` _[OIDCIdentityProviderScopes](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderscopes)_ | The scopes requested by your application when authenticating with the identity provider. |
+
+_Appears in:_
+
+- [Config](#konnect-konghq-com-v1alpha1-types-config)
+
+#### OIDCIdentityProviderIssuer
+
+_Underlying type:_ `string`
+
+OIDCIdentityProviderIssuer The issuer URI of the identity provider.
+This is the URL where the provider's metadata can be obtained.
+
+
+
+
+_Appears in:_
+
+- [OIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderconfig)
+
+#### OIDCIdentityProviderScopes
+
+_Underlying type:_ `string array`
+
+OIDCIdentityProviderScopes The scopes requested by your application when
+authenticating with the identity provider.
+
+
+
+
+_Appears in:_
+
+- [OIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderconfig)
+
 #### PortalAPISpec
 
 
@@ -1217,6 +1469,52 @@ Allowed values:
 | --- | --- |
 | `Manual` | ManualSecretProvisioning is the method used to provision the certificate manually.<br /> |
 | `Automatic` | AutomaticSecretProvisioning is the method used to provision the certificate automatically.<br /> |
+
+#### SAMLIdentityProviderConfig
+
+
+SAMLIdentityProviderConfig The identity provider that contains configuration
+data for the SAML authentication integration.
+
+
+
+| Field | Description |
+| --- | --- |
+| `idp_metadata_url` _[SAMLIdentityProviderMetadataURL](#konnect-konghq-com-v1alpha1-types-samlidentityprovidermetadataurl)_ | The identity provider's metadata URL where the identity provider's metadata can be obtained. |
+| `idp_metadata_xml` _[SAMLIdentityProviderMetadata](#konnect-konghq-com-v1alpha1-types-samlidentityprovidermetadata)_ | The identity provider's SAML metadata. If the identity provider supports a metadata URL, you can use the `idp_metadata_url` field instead. |
+
+_Appears in:_
+
+- [Config](#konnect-konghq-com-v1alpha1-types-config)
+
+#### SAMLIdentityProviderMetadata
+
+_Underlying type:_ `string`
+
+SAMLIdentityProviderMetadata The identity provider's SAML metadata.
+If the identity provider supports a metadata URL, you can use the
+`idp_metadata_url` field instead.
+
+
+
+
+_Appears in:_
+
+- [SAMLIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-samlidentityproviderconfig)
+
+#### SAMLIdentityProviderMetadataURL
+
+_Underlying type:_ `string`
+
+SAMLIdentityProviderMetadataURL The identity provider's metadata URL where
+the identity provider's metadata can be obtained.
+
+
+
+
+_Appears in:_
+
+- [SAMLIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-samlidentityproviderconfig)
 
 
 
@@ -1461,6 +1759,7 @@ KonnectConfiguration is the Schema for the KonnectConfiguration API.
 
 _Appears in:_
 
+- [IdentityProviderRequestSpec](#konnect-konghq-com-v1alpha1-types-identityproviderrequestspec)
 - [KonnectCloudGatewayNetworkSpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaynetworkspec)
 - [KonnectEventControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnecteventcontrolplanespec)
 - [KonnectExtensionKonnectSpec](#konnect-konghq-com-v1alpha1-types-konnectextensionkonnectspec)
@@ -1499,6 +1798,7 @@ KonnectEntityStatus represents the status of a Konnect entity.
 
 _Appears in:_
 
+- [IdentityProviderRequestStatus](#konnect-konghq-com-v1alpha1-types-identityproviderrequeststatus)
 - [KonnectCloudGatewayDataPlaneGroupConfigurationStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaydataplanegroupconfigurationstatus)
 - [KonnectCloudGatewayNetworkStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaynetworkstatus)
 - [KonnectCloudGatewayTransitGatewayStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewaystatus)

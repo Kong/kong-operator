@@ -5,7 +5,7 @@ package index
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	xkonnectv1alpha1 "github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 )
 
 const (
@@ -17,7 +17,7 @@ const (
 func OptionsForIdentityProviderRequest() []Option {
 	return []Option{
 		{
-			Object:         &xkonnectv1alpha1.IdentityProviderRequest{},
+			Object:         &konnectv1alpha1.IdentityProviderRequest{},
 			Field:          IndexFieldIdentityProviderRequestOnAPIAuthConfiguration,
 			ExtractValueFn: identityProviderRequestAPIAuthConfigurationRef,
 		},
@@ -25,7 +25,7 @@ func OptionsForIdentityProviderRequest() []Option {
 }
 
 func identityProviderRequestAPIAuthConfigurationRef(object client.Object) []string {
-	ent, ok := object.(*xkonnectv1alpha1.IdentityProviderRequest)
+	ent, ok := object.(*konnectv1alpha1.IdentityProviderRequest)
 	if !ok {
 		return nil
 	}
