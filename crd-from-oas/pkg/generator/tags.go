@@ -2,6 +2,7 @@ package generator
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/config"
@@ -82,6 +83,8 @@ func KubebuilderTags(prop *parser.Property, entityName string, fieldConfig *conf
 			}
 		case string:
 			tags = append(tags, markerDefaultString(v))
+		case []any:
+			tags = append(tags, markerDefaultString(formatArrayDefaultValue(v)))
 		default:
 			panic("unsupported default value type: " + fmt.Sprintf("%T", v))
 		}
@@ -99,6 +102,21 @@ func KubebuilderTags(prop *parser.Property, entityName string, fieldConfig *conf
 	}
 
 	return tags
+}
+
+func formatArrayDefaultValue(values []any) string {
+	formatted := make([]string, 0, len(values))
+	for _, value := range values {
+		switch v := value.(type) {
+		case string:
+			formatted = append(formatted, strconv.Quote(v))
+		case bool:
+			formatted = append(formatted, strconv.FormatBool(v))
+		default:
+			panic("unsupported array default item type: " + fmt.Sprintf("%T", v))
+		}
+	}
+	return "{" + strings.Join(formatted, ",") + "}"
 }
 
 // valueTypeMarkers generates kubebuilder validation markers for a map value type
