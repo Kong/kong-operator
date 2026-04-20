@@ -88,106 +88,156 @@ const (
 // Generate generates Go CRD types from parsed schemas.
 func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error) {
 	var files []GeneratedFile
-
-	// Collect all referenced schema names from the CRD types
 	referencedSchemas := make(map[string]bool)
-
-	// Collect entity names that have reconciler config for batch generation.
 	var reconcilerEntities []string
 
-	// Generate types for each request body (these are the main CRD types)
+	// Generate types for each request body (these are the main CRD types).
 	for name, schema := range parsed.RequestBodies {
 		entityName := parser.GetEntityNameFromType(name)
 
-		content, err := g.generateCRDType(name, schema)
+		entityFiles, err := g.generateEntityFiles(name, entityName, schema)
 		if err != nil {
-			return nil, fmt.Errorf("failed to generate type for %s: %w", name, err)
+			return nil, err
 		}
+		files = append(files, entityFiles...)
 
-		fileName := commonGeneratedFilePrefix + EntityFilePrefix(entityName) + "_types.go"
-		files = append(files, GeneratedFile{
-			Name:    fileName,
-			Content: content,
-		})
-
-		funcsContent, err := g.generateCRDFuncs(name, schema)
-		if err != nil {
-			return nil, fmt.Errorf("failed to generate funcs for %s: %w", name, err)
-		}
-		files = append(files, GeneratedFile{
-			Name:    generatedFuncsFileName(entityName),
-			Content: funcsContent,
-		})
-
-		// Generate SDK ops conversion file if ops are configured for this entity
-		if g.config.OpsConfig != nil {
-			if opsConfig, ok := g.config.OpsConfig[entityName]; ok && opsConfig != nil && len(opsConfig.Ops) > 0 {
-				opsContent, err := g.generateSDKOps(entityName, schema, opsConfig)
-				if err != nil {
-					return nil, fmt.Errorf("failed to generate SDK ops for %s: %w", entityName, err)
-				}
-				files = append(files, GeneratedFile{
-					Name:    commonGeneratedFilePrefix + EntityFilePrefix(entityName) + "_sdkops.go",
-					Content: opsContent,
-				})
-
-				opsTestContent, err := g.generateSDKOpsTest(entityName, schema, opsConfig)
-				if err != nil {
-					return nil, fmt.Errorf("failed to generate SDK ops test for %s: %w", entityName, err)
-				}
-				files = append(files, GeneratedFile{
-					Name:    commonGeneratedFilePrefix + EntityFilePrefix(entityName) + "_sdkops_test.go",
-					Content: opsTestContent,
-				})
-			}
-		}
-
-		// Track entities with reconciler config
 		if g.config.ReconcilerConfig != nil {
 			if _, ok := g.config.ReconcilerConfig[entityName]; ok {
 				reconcilerEntities = append(reconcilerEntities, entityName)
 			}
 		}
 
-		// Generate per-entity Konnect ops create file for reconciler entities
-		// that have a create op configured. The cross-group dispatcher is
-		// emitted separately by the Runner after all group-versions finish.
-		if g.config.ReconcilerConfig != nil && g.config.OpsConfig != nil {
-			if _, hasReconciler := g.config.ReconcilerConfig[entityName]; hasReconciler {
-				if opsConfig, ok := g.config.OpsConfig[entityName]; ok && opsConfig != nil {
-					opsFile, info, err := g.generateOpsCreate(entityName, schema, opsConfig)
-					if err != nil {
-						return nil, fmt.Errorf("failed to generate ops create for %s: %w", entityName, err)
-					}
-					if opsFile != nil {
-						files = append(files, *opsFile)
-						g.opsCreateInfos = append(g.opsCreateInfos, info)
-					}
-				}
-			}
-		}
-
-		// Collect referenced schemas
 		g.collectReferencedSchemas(schema, referencedSchemas)
 	}
 
-	// Generate reconciler wiring files for entities with reconciler config
-	if len(reconcilerEntities) > 0 {
-		sort.Strings(reconcilerEntities)
-		entitySchemas := make(map[string]*parser.Schema, len(parsed.RequestBodies))
-		for name, schema := range parsed.RequestBodies {
-			entitySchemas[parser.GetEntityNameFromType(name)] = schema
-		}
-		reconcilerFiles, err := g.generateReconcilerFiles(reconcilerEntities, entitySchemas)
-		if err != nil {
-			return nil, fmt.Errorf("failed to generate reconciler files: %w", err)
-		}
-		files = append(files, reconcilerFiles...)
+	reconcilerFiles, err := g.generateReconcilerEntityFiles(reconcilerEntities, parsed)
+	if err != nil {
+		return nil, err
+	}
+	files = append(files, reconcilerFiles...)
+
+	sharedFiles, err := g.generateSharedFiles(parsed, referencedSchemas)
+	if err != nil {
+		return nil, err
+	}
+	files = append(files, sharedFiles...)
+
+	return files, nil
+}
+
+// generateEntityFiles produces all generated files for a single CRD entity:
+// types, funcs, SDK ops, and ops create.
+func (g *Generator) generateEntityFiles(name, entityName string, schema *parser.Schema) ([]GeneratedFile, error) {
+	var files []GeneratedFile
+
+	content, err := g.generateCRDType(name, schema)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate type for %s: %w", name, err)
+	}
+	files = append(files, GeneratedFile{
+		Name:    commonGeneratedFilePrefix + EntityFilePrefix(entityName) + "_types.go",
+		Content: content,
+	})
+
+	funcsContent, err := g.generateCRDFuncs(name, schema)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate funcs for %s: %w", name, err)
+	}
+	files = append(files, GeneratedFile{
+		Name:    generatedFuncsFileName(entityName),
+		Content: funcsContent,
+	})
+
+	sdkOpsFiles, err := g.generateEntitySDKOpsFiles(entityName, schema)
+	if err != nil {
+		return nil, err
+	}
+	files = append(files, sdkOpsFiles...)
+
+	opsCreateFile, err := g.generateEntityOpsCreateFile(entityName, schema)
+	if err != nil {
+		return nil, err
+	}
+	if opsCreateFile != nil {
+		files = append(files, *opsCreateFile)
 	}
 
-	// Generate groupversion_info.go when enabled (provides GroupVersion,
-	// SchemeBuilder, AddToScheme, SchemeGroupVersion and Resource helper).
-	// When disabled the package is expected to already provide these symbols.
+	return files, nil
+}
+
+// generateEntitySDKOpsFiles generates SDK ops conversion files for an entity
+// when ops are configured.
+func (g *Generator) generateEntitySDKOpsFiles(entityName string, schema *parser.Schema) ([]GeneratedFile, error) {
+	if g.config.OpsConfig == nil {
+		return nil, nil
+	}
+	opsConfig, ok := g.config.OpsConfig[entityName]
+	if !ok || opsConfig == nil || len(opsConfig.Ops) == 0 {
+		return nil, nil
+	}
+
+	opsContent, err := g.generateSDKOps(entityName, schema, opsConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate SDK ops for %s: %w", entityName, err)
+	}
+
+	opsTestContent, err := g.generateSDKOpsTest(entityName, schema, opsConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate SDK ops test for %s: %w", entityName, err)
+	}
+
+	prefix := commonGeneratedFilePrefix + EntityFilePrefix(entityName)
+	return []GeneratedFile{
+		{Name: prefix + "_sdkops.go", Content: opsContent},
+		{Name: prefix + "_sdkops_test.go", Content: opsTestContent},
+	}, nil
+}
+
+// generateEntityOpsCreateFile generates the per-entity Konnect ops create file
+// for reconciler entities that have a create op configured. The cross-group
+// dispatcher is emitted separately by the Runner after all group-versions finish.
+func (g *Generator) generateEntityOpsCreateFile(entityName string, schema *parser.Schema) (*GeneratedFile, error) {
+	if g.config.ReconcilerConfig == nil || g.config.OpsConfig == nil {
+		return nil, nil
+	}
+	if _, hasReconciler := g.config.ReconcilerConfig[entityName]; !hasReconciler {
+		return nil, nil
+	}
+	opsConfig, ok := g.config.OpsConfig[entityName]
+	if !ok || opsConfig == nil {
+		return nil, nil
+	}
+
+	opsFile, info, err := g.generateOpsCreate(entityName, schema, opsConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate ops create for %s: %w", entityName, err)
+	}
+	if opsFile == nil {
+		return nil, nil
+	}
+	g.opsCreateInfos = append(g.opsCreateInfos, info)
+	return opsFile, nil
+}
+
+// generateReconcilerEntityFiles generates reconciler wiring files for all
+// entities that have reconciler config.
+func (g *Generator) generateReconcilerEntityFiles(reconcilerEntities []string, parsed *parser.ParsedSpec) ([]GeneratedFile, error) {
+	if len(reconcilerEntities) == 0 {
+		return nil, nil
+	}
+	sort.Strings(reconcilerEntities)
+	entitySchemas := make(map[string]*parser.Schema, len(parsed.RequestBodies))
+	for name, schema := range parsed.RequestBodies {
+		entitySchemas[parser.GetEntityNameFromType(name)] = schema
+	}
+	return g.generateReconcilerFiles(reconcilerEntities, entitySchemas)
+}
+
+// generateSharedFiles generates files shared across all entities:
+// groupversion_info.go, doc.go, common_types.go, and schema_types.go.
+func (g *Generator) generateSharedFiles(parsed *parser.ParsedSpec, referencedSchemas map[string]bool) ([]GeneratedFile, error) {
+	var files []GeneratedFile
+
 	if g.config.GenerateGroupVersionInfo {
 		gviContent, err := g.generateGroupVersionInfo(parsed)
 		if err != nil {
@@ -197,19 +247,13 @@ func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error)
 			Name:    "groupversion_info.go",
 			Content: gviContent,
 		})
-	}
 
-	// Generate doc.go together with groupversion_info.go.
-	// When disabled the package is expected to already provide doc.go.
-	if g.config.GenerateGroupVersionInfo {
-		docContent := g.generateDoc()
 		files = append(files, GeneratedFile{
 			Name:    "doc.go",
-			Content: docContent,
+			Content: g.generateDoc(),
 		})
 	}
 
-	// Generate common types (ObjectRef, etc.) including referenced schemas
 	commonContent, err := g.generateCommonTypes()
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate common types: %w", err)
@@ -219,12 +263,10 @@ func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error)
 		Content: commonContent,
 	})
 
-	// Generate type aliases for referenced schemas
 	if len(referencedSchemas) > 0 {
-		schemaTypesContent := g.generateSchemaTypes(referencedSchemas, parsed)
 		files = append(files, GeneratedFile{
 			Name:    "schema_types.go",
-			Content: schemaTypesContent,
+			Content: g.generateSchemaTypes(referencedSchemas, parsed),
 		})
 	}
 

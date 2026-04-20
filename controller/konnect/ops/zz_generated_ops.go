@@ -24,6 +24,8 @@ func CreateGeneratedOps[
 	e TEnt,
 ) error {
 	switch ent := any(e).(type) {
+	case *konnectv1alpha1.IdentityProviderRequest:
+		return createIdentityProviderRequest(ctx, sdk.GetAuthSettingsSDK(), ent)
 	case *konnectv1alpha1.Portal:
 		return createPortal(ctx, sdk.GetPortalsSDK(), ent)
 	default:
