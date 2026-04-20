@@ -9,6 +9,7 @@ apiGroupVersions:
           path: github.com/kong/kong-operator/v2/api/common/v1alpha1
           alias: commonv1alpha1
     types:
+      # Event Gateway APIs
       - path: /v1/event-gateways
         name: KonnectEventControlPlane
         ops:
@@ -29,6 +30,8 @@ apiGroupVersions:
         reconciler:
           isRoot: false
           parentEntityType: KonnectEventControlPlane
+
+      # Portal APIs
       - path: /v3/portals
         cel:
           name:
@@ -39,6 +42,14 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/components.CreatePortal
           update:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdatePortal
+        reconciler:
+          isRoot: true
+      - path: /v3/identity-providers
+        ops:
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateIdentityProvider
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdateIdentityProvider
         reconciler:
           isRoot: true
 
@@ -55,5 +66,4 @@ apiGroupVersions:
       - path: /v2/dcr-providers
       # TODO: uncomment
       # - path: /v3/portals/{portalId}/custom-domain
-      # - path: /v3/identity-providers
       # - path: /v3/portals/{portalId}/teams/{teamId}/developers

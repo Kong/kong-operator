@@ -88,7 +88,8 @@ run = '''
 rm -rf \
        ./api/x-konnect/ \
        ./api/konnect/zz_generated_* \
-       ./config/crd/kong-operator/x-konnect.konghq.com_*
+       ./config/crd/kong-operator/x-konnect.konghq.com_* \
+       ./controller/konnect/zz_generated_reconciler_generic_rbac_*
 '''
 
 [tasks.generate-api]

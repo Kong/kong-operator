@@ -430,8 +430,19 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 
 	hasOptionalSecretRef := g.config.SecretRefEntities[entityName]
 
+	// In the CRD APISpec, property-level oneOf types are rendered as a pointer
+	// to a generated union type. The union type is emitted in the same package,
+	// so its name must be prefixed with the entity name to avoid package-scoped
+	// collisions (e.g. a bare "Config" type would clash across entities).
+	goTypeInCRD := func(prop *parser.Property) string {
+		if len(prop.OneOf) > 0 {
+			return "*" + entityName + goFieldName(prop.Name)
+		}
+		return g.goType(prop)
+	}
+
 	funcMap := template.FuncMap{
-		"goType":                g.goType,
+		"goType":                goTypeInCRD,
 		"goFieldName":           goFieldName,
 		"jsonTag":               jsonTag,
 		"kubebuilderTags":       kubebuilderTagsWithConfig,
@@ -485,7 +496,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 	}
 
 	// Generate union types for any oneOf properties
-	unionTypes := g.generateUnionTypes(schema)
+	unionTypes := g.generateUnionTypes(schema, entityName)
 	if unionTypes != "" {
 		buf.WriteString("\n")
 		buf.WriteString(unionTypes)
@@ -621,7 +632,10 @@ func (g *Generator) konnectLabelsValueType(prop *parser.Property) (string, bool)
 }
 
 // generateUnionTypes generates Go union type structs for properties with oneOf.
-func (g *Generator) generateUnionTypes(schema *parser.Schema) string {
+// Property-level union type names are prefixed with entityName to avoid
+// package-scoped collisions between entities that share a property name
+// (e.g. "config").
+func (g *Generator) generateUnionTypes(schema *parser.Schema, entityName string) string {
 	var buf strings.Builder
 
 	// Handle root-level oneOf (the schema itself is a union type)
@@ -635,7 +649,7 @@ func (g *Generator) generateUnionTypes(schema *parser.Schema) string {
 			continue
 		}
 		if len(prop.OneOf) > 0 {
-			buf.WriteString(g.generateUnionType(prop))
+			buf.WriteString(g.generateUnionType(prop, entityName))
 		}
 	}
 
@@ -651,14 +665,17 @@ func (g *Generator) generateRootUnionType(schema *parser.Schema) string {
 		Name:  entityName + "Config",
 		OneOf: schema.OneOf,
 	}
-	return g.generateUnionType(prop)
+	// The synthetic prop.Name already encodes the entity prefix, so pass empty.
+	return g.generateUnionType(prop, "")
 }
 
 // generateUnionType generates a single union type struct.
-func (g *Generator) generateUnionType(prop *parser.Property) string {
+// typeNamePrefix is prepended to the generated Go type name to avoid
+// package-scoped collisions for common property names like "config".
+func (g *Generator) generateUnionType(prop *parser.Property, typeNamePrefix string) string {
 	var buf strings.Builder
 
-	typeName := goFieldName(prop.Name)
+	typeName := typeNamePrefix + goFieldName(prop.Name)
 
 	// Collect raw variant names (ref names or variant names)
 	var rawVariantNames []string
@@ -1000,6 +1017,8 @@ type sdkOpsMethod struct {
 	MethodName  string
 	TypeName    string
 	ImportAlias string
+
+	NestedUnionFields []sdkOpsNestedUnionField
 }
 
 type sdkOpsRootUnionMethod struct {
@@ -1012,6 +1031,7 @@ type sdkOpsTestMethod struct {
 	sdkOpsMethod
 
 	ExpectError bool
+	TestFields  []sdkOpsTestField
 }
 
 // sdkOpsBoolField represents a boolean field path that needs normalization
@@ -1027,6 +1047,21 @@ type sdkOpsTestField struct {
 	JSONName      string
 	TestValue     string
 	ExpectedValue string
+}
+
+type sdkOpsNestedUnionField struct {
+	FieldName       string
+	JSONName        string
+	TargetFieldName string
+	Variants        []sdkOpsNestedUnionVariant
+}
+
+type sdkOpsNestedUnionVariant struct {
+	FieldName       string
+	JSONName        string
+	TypeValue       string
+	MemberTypeName  string
+	ConstructorName string
 }
 
 type sdkOpsRootUnionVariant struct {
@@ -1054,6 +1089,12 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		return g.generateRootUnionSDKOps(entityName, schema, imports, methods, boolFields)
 	}
 
+	standardMethods := make([]sdkOpsMethod, 0, len(methods))
+	for _, method := range methods {
+		method.NestedUnionFields = g.buildSDKOpsNestedUnionFields(schema, method)
+		standardMethods = append(standardMethods, method)
+	}
+
 	tmpl := template.Must(template.New("sdkops").Parse(sdkOpsTemplate))
 	var buf strings.Builder
 	data := struct {
@@ -1067,13 +1108,59 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		EntityName: entityName,
 		Imports:    imports,
 		BoolFields: boolFields,
-		Methods:    methods,
+		Methods:    standardMethods,
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
 		return "", err
 	}
 	return buf.String(), nil
+}
+
+func (g *Generator) buildSDKOpsNestedUnionFields(
+	schema *parser.Schema,
+	method sdkOpsMethod,
+) []sdkOpsNestedUnionField {
+	fields := make([]sdkOpsNestedUnionField, 0)
+	for _, prop := range schema.Properties {
+		if skipProperty(prop) || len(prop.OneOf) == 0 {
+			continue
+		}
+
+		rawVariantNames := make([]string, 0, len(prop.OneOf))
+		for _, variant := range prop.OneOf {
+			variantName := variant.Name
+			if variant.RefName != "" {
+				variantName = variant.RefName
+			}
+			rawVariantNames = append(rawVariantNames, variantName)
+		}
+		variantNames := extractVariantNames(rawVariantNames)
+
+		variants := make([]sdkOpsNestedUnionVariant, 0, len(prop.OneOf))
+		for i, variant := range prop.OneOf {
+			variantRefName := variant.Name
+			if variant.RefName != "" {
+				variantRefName = variant.RefName
+			}
+			variants = append(variants, sdkOpsNestedUnionVariant{
+				FieldName:       fixInitialisms(variantNames[i]),
+				JSONName:        strings.ToLower(variantNames[i]),
+				TypeValue:       variantNames[i],
+				MemberTypeName:  fixInitialisms(variantRefName),
+				ConstructorName: "Create" + method.TypeName + goFieldName(prop.Name) + fixInitialisms(variantRefName),
+			})
+		}
+
+		fields = append(fields, sdkOpsNestedUnionField{
+			FieldName:       goFieldName(prop.Name),
+			JSONName:        prop.Name,
+			TargetFieldName: goFieldName(prop.Name),
+			Variants:        variants,
+		})
+	}
+
+	return fields
 }
 
 func (g *Generator) generateRootUnionSDKOps(
@@ -1177,10 +1264,38 @@ func (g *Generator) generateSDKOpsTest(entityName string, schema *parser.Schema,
 		return "", err
 	}
 
-	// Build test fields from schema properties
-	var testFields []sdkOpsTestField
-	for _, prop := range schema.Properties {
-		if skipProperty(prop) || prop.IsReference {
+	testMethods := make([]sdkOpsTestMethod, 0, len(methods))
+	for _, method := range methods {
+		testFields := g.buildSDKOpsTestFields(schema.Properties, method)
+		testMethods = append(testMethods, sdkOpsTestMethod{
+			sdkOpsMethod: method,
+			ExpectError:  len(testFields) == 0,
+			TestFields:   testFields,
+		})
+	}
+
+	tmpl := template.Must(template.New("sdkopstest").Parse(sdkOpsTestTemplate))
+	var buf strings.Builder
+	data := struct {
+		APIVersion string
+		EntityName string
+		Methods    []sdkOpsTestMethod
+	}{
+		APIVersion: g.config.APIVersion,
+		EntityName: entityName,
+		Methods:    testMethods,
+	}
+
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
+func (g *Generator) buildSDKOpsTestFields(props []*parser.Property, method sdkOpsMethod) []sdkOpsTestField {
+	testFields := make([]sdkOpsTestField, 0, len(props))
+	for _, prop := range props {
+		if skipProperty(prop) || prop.IsReference || shouldSkipSDKOpsTestField(prop, method) {
 			continue
 		}
 		goType := g.goType(prop)
@@ -1195,33 +1310,11 @@ func (g *Generator) generateSDKOpsTest(entityName string, schema *parser.Schema,
 			ExpectedValue: expectedValue,
 		})
 	}
+	return testFields
+}
 
-	testMethods := make([]sdkOpsTestMethod, 0, len(methods))
-	for _, method := range methods {
-		testMethods = append(testMethods, sdkOpsTestMethod{
-			sdkOpsMethod: method,
-			ExpectError:  len(testFields) == 0,
-		})
-	}
-
-	tmpl := template.Must(template.New("sdkopstest").Parse(sdkOpsTestTemplate))
-	var buf strings.Builder
-	data := struct {
-		APIVersion string
-		EntityName string
-		Methods    []sdkOpsTestMethod
-		TestFields []sdkOpsTestField
-	}{
-		APIVersion: g.config.APIVersion,
-		EntityName: entityName,
-		Methods:    testMethods,
-		TestFields: testFields,
-	}
-
-	if err := tmpl.Execute(&buf, data); err != nil {
-		return "", err
-	}
-	return buf.String(), nil
+func shouldSkipSDKOpsTestField(prop *parser.Property, method sdkOpsMethod) bool {
+	return strings.HasPrefix(method.MethodName, "ToUpdate") && prop.Name == "type"
 }
 
 // buildSDKOpsMethods parses the ops config and returns sorted imports and methods.

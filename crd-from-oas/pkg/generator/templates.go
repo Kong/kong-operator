@@ -395,6 +395,43 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 	if err != nil {
 		return nil, err
 	}
+{{- if .NestedUnionFields}}
+	var payload map[string]any
+	if err := json.Unmarshal(data, &payload); err != nil {
+		return nil, fmt.Errorf("failed to decode {{$.EntityName}}APISpec SDK payload: %w", err)
+	}
+{{- range .NestedUnionFields}}
+	{{- $fieldName := .FieldName}}
+	raw{{.FieldName}}, ok := payload["{{.JSONName}}"]
+	if ok && raw{{.FieldName}} != nil {
+		object{{.FieldName}}, ok := raw{{.FieldName}}.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("{{$.EntityName}} {{.JSONName}} payload has unexpected type %T", raw{{.FieldName}})
+		}
+		type{{.FieldName}}, ok := object{{.FieldName}}["type"].(string)
+		if !ok || type{{.FieldName}} == "" {
+			return nil, fmt.Errorf("{{$.EntityName}} {{.JSONName}} payload missing type")
+		}
+		var selected{{.FieldName}} any
+		switch type{{.FieldName}} {
+{{- range .Variants}}
+		case "{{.TypeValue}}":
+			selected{{$fieldName}} = object{{$fieldName}}["{{.JSONName}}"]
+{{- end}}
+		default:
+			return nil, fmt.Errorf("unsupported {{$.EntityName}} {{.JSONName}} type %q", type{{.FieldName}})
+		}
+		if selected{{.FieldName}} == nil {
+			return nil, fmt.Errorf("{{$.EntityName}} {{.JSONName}} payload missing for type %q", type{{.FieldName}})
+		}
+		payload["{{.JSONName}}"] = selected{{.FieldName}}
+	}
+{{- end}}
+	data, err = json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal normalized {{$.EntityName}}APISpec: %w", err)
+	}
+{{- end}}
 	var target {{.ImportAlias}}.{{.TypeName}}
 	if err := json.Unmarshal(data, &target); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal into {{.TypeName}}: %w", err)
@@ -641,7 +678,7 @@ import (
 {{range .Methods}}
 func Test{{$.EntityName}}APISpec_{{.MethodName}}(t *testing.T) {
 	spec := &{{$.EntityName}}APISpec{
-{{- range $.TestFields}}
+{{- range .TestFields}}
 		{{.FieldName}}: {{.TestValue}},
 {{- end}}
 	}
@@ -660,7 +697,7 @@ func Test{{$.EntityName}}APISpec_{{.MethodName}}(t *testing.T) {
 	var payload map[string]any
 	err = json.Unmarshal(data, &payload)
 	require.NoError(t, err)
-{{- range $.TestFields}}
+{{- range .TestFields}}
 	require.Equal(t, {{.ExpectedValue}}, payload["{{.JSONName}}"])
 {{- end}}
 }

@@ -435,6 +435,7 @@ rules:
   - apiGroups:
       - konnect.konghq.com
     resources:
+      - identityproviderrequests
       - konnectapiauthconfigurations
       - konnectcloudgatewaydataplanegroupconfigurations
       - konnectcloudgatewaynetworks
@@ -451,6 +452,8 @@ rules:
   - apiGroups:
       - konnect.konghq.com
     resources:
+      - identityproviderrequests/finalizers
+      - identityproviderrequests/status
       - konnectapiauthconfigurations/finalizers
       - konnectapiauthconfigurations/status
       - konnectcloudgatewaydataplanegroupconfigurations/finalizers
@@ -555,21 +558,3 @@ rules:
       - patch
       - update
       - watch
-  - apiGroups:
-      - x-konnect.konghq.com
-    resources:
-      - portals
-    verbs:
-      - get
-      - list
-      - patch
-      - update
-      - watch
-  - apiGroups:
-      - x-konnect.konghq.com
-    resources:
-      - portals/finalizers
-      - portals/status
-    verbs:
-      - patch
-      - update

@@ -2,6 +2,9 @@
 
 package konnect
 
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=identityproviderrequests,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=identityproviderrequests/status,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=identityproviderrequests/finalizers,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnecteventcontrolplanes,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnecteventcontrolplanes/status,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnecteventcontrolplanes/finalizers,verbs=update;patch

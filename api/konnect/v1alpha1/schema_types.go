@@ -8,6 +8,26 @@ type GatewayDescription string
 // GatewayName The name of the Gateway.
 type GatewayName string
 
+// IdentityProviderEnabled Indicates whether the identity provider is enabled.
+// Only one identity provider can be active at a time, such as SAML or OIDC.
+//
+// +kubebuilder:validation:Enum=Enabled;Disabled
+type IdentityProviderEnabled string
+
+const (
+	// IdentityProviderEnabledEnabled sets IdentityProviderEnabled as enabled.
+	IdentityProviderEnabledEnabled  IdentityProviderEnabled = "Enabled"
+	// IdentityProviderEnabledDisabled sets IdentityProviderEnabled as disabled.
+	IdentityProviderEnabledDisabled IdentityProviderEnabled = "Disabled"
+)
+
+// IdentityProviderLoginPath The path used for initiating login requests with
+// the identity provider.
+type IdentityProviderLoginPath string
+
+// IdentityProviderType Specifies the type of identity provider.
+type IdentityProviderType string
+
 // LabelsValue is the value type for Labels.
 //
 // +kubebuilder:validation:MinLength=1
@@ -44,6 +64,110 @@ type LabelsUpdate map[string]LabelsUpdateValue
 // When not specified, the minimum runtime version will be pinned to the latest
 // available release.
 type MinRuntimeVersion string
+
+// OIDCIdentityProviderClaimMappings Defines the mappings between OpenID Connect
+// (OIDC) claims and local claims used by your application for
+// authentication.
+type OIDCIdentityProviderClaimMappings struct {
+	// The claim mapping for the user's email address.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:default=email
+	Email string `json:"email,omitempty"`
+	// The claim mapping for the user's group membership information.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:default=groups
+	Groups string `json:"groups,omitempty"`
+	// The claim mapping for the user's name.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:default=name
+	Name string `json:"name,omitempty"`
+}
+
+// OIDCIdentityProviderClientID The client ID assigned to your application by
+// the identity provider.
+type OIDCIdentityProviderClientID string
+
+// OIDCIdentityProviderClientSecret The Client Secret assigned to your
+// application by the identity provider.
+type OIDCIdentityProviderClientSecret string
+
+// OIDCIdentityProviderConfig The identity provider that contains configuration
+// data for the OIDC authentication integration.
+type OIDCIdentityProviderConfig struct {
+	// Defines the mappings between OpenID Connect (OIDC) claims and local claims
+	// used by your application for
+	// authentication.
+	//
+	//
+	// +optional
+	ClaimMappings OIDCIdentityProviderClaimMappings `json:"claim_mappings,omitempty"`
+	// The client ID assigned to your application by the identity provider.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	ClientID OIDCIdentityProviderClientID `json:"client_id,omitempty"`
+	// The Client Secret assigned to your application by the identity provider.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	ClientSecret OIDCIdentityProviderClientSecret `json:"client_secret,omitempty"`
+	// The issuer URI of the identity provider.
+	// This is the URL where the provider's metadata can be obtained.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	IssuerURL OIDCIdentityProviderIssuer `json:"issuer_url,omitempty"`
+	// The scopes requested by your application when authenticating with the
+	// identity provider.
+	//
+	// +optional
+	// +kubebuilder:default={"email","openid","profile"}
+	Scopes OIDCIdentityProviderScopes `json:"scopes,omitempty"`
+}
+
+// OIDCIdentityProviderIssuer The issuer URI of the identity provider.
+// This is the URL where the provider's metadata can be obtained.
+type OIDCIdentityProviderIssuer string
+
+// OIDCIdentityProviderScopes The scopes requested by your application when
+// authenticating with the identity provider.
+type OIDCIdentityProviderScopes []string
+
+// SAMLIdentityProviderConfig The identity provider that contains configuration
+// data for the SAML authentication integration.
+type SAMLIdentityProviderConfig struct {
+	// The identity provider's metadata URL where the identity provider's metadata
+	// can be obtained.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	IdpMetadataURL SAMLIdentityProviderMetadataURL `json:"idp_metadata_url,omitempty"`
+	// The identity provider's SAML metadata.
+	// If the identity provider supports a metadata URL, you can use the
+	// `idp_metadata_url` field instead.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	IdpMetadataXML SAMLIdentityProviderMetadata `json:"idp_metadata_xml,omitempty"`
+}
+
+// SAMLIdentityProviderMetadata The identity provider's SAML metadata.
+// If the identity provider supports a metadata URL, you can use the
+// `idp_metadata_url` field instead.
+type SAMLIdentityProviderMetadata string
+
+// SAMLIdentityProviderMetadataURL The identity provider's metadata URL where
+// the identity provider's metadata can be obtained.
+type SAMLIdentityProviderMetadataURL string
 
 // SourceIPEnabled Whether ip allow list is enabled for the organization.
 //
