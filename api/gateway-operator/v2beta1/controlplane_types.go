@@ -530,6 +530,15 @@ type ControlPlaneKonnectOptions struct {
 	//
 	// +optional
 	ConfigUploadPeriod *metav1.Duration `json:"configUploadPeriod,omitempty"`
+
+	// ConfigUploadConcurrency is the concurrency of the client for uploading configuration to Konnect.
+	// In case of large configuration with many entities,
+	// too high concurrency may trigger rate limiting on Konnect API service and fail with 429 responses on requests.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=16
+	ConfigUploadConcurrency *int32 `json:"configUploadConcurrency,omitempty"`
 }
 
 // ControlPlaneKonnectConsumersSyncState defines the state of consumer synchronization with Konnect.
