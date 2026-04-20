@@ -83,7 +83,7 @@ func (g *Generator) generateOpsCreate(
 	}
 
 	file := &GeneratedFile{
-		Name:        "zz_generated_" + entityFilePrefix(entityName) + "_ops.go",
+		Name:        "zz_generated_" + EntityFilePrefix(entityName) + "_ops.go",
 		Content:     buf.String(),
 		RelativeDir: "controller/konnect/ops",
 	}

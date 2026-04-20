@@ -104,7 +104,7 @@ func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error)
 			return nil, fmt.Errorf("failed to generate type for %s: %w", name, err)
 		}
 
-		fileName := commonGeneratedFilePrefix + entityFilePrefix(entityName) + "_types.go"
+		fileName := commonGeneratedFilePrefix + EntityFilePrefix(entityName) + "_types.go"
 		files = append(files, GeneratedFile{
 			Name:    fileName,
 			Content: content,
@@ -127,7 +127,7 @@ func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error)
 					return nil, fmt.Errorf("failed to generate SDK ops for %s: %w", entityName, err)
 				}
 				files = append(files, GeneratedFile{
-					Name:    commonGeneratedFilePrefix + entityFilePrefix(entityName) + "_sdkops.go",
+					Name:    commonGeneratedFilePrefix + EntityFilePrefix(entityName) + "_sdkops.go",
 					Content: opsContent,
 				})
 
@@ -136,7 +136,7 @@ func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error)
 					return nil, fmt.Errorf("failed to generate SDK ops test for %s: %w", entityName, err)
 				}
 				files = append(files, GeneratedFile{
-					Name:    commonGeneratedFilePrefix + entityFilePrefix(entityName) + "_sdkops_test.go",
+					Name:    commonGeneratedFilePrefix + EntityFilePrefix(entityName) + "_sdkops_test.go",
 					Content: opsTestContent,
 				})
 			}
@@ -584,19 +584,12 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 	return fixTrailingEmptyLines(buf.String()), nil
 }
 
-// EntityFilePrefix is the exported counterpart of entityFilePrefix for callers
-// in sibling packages (e.g. the Runner) that need to reason about generated
-// file names.
-func EntityFilePrefix(entityName string) string {
-	return entityFilePrefix(entityName)
-}
-
-// entityFilePrefix converts a PascalCase entity name to a lowercase file name
+// EntityFilePrefix converts a PascalCase entity name to a lowercase file name
 // prefix, inserting an underscore after a leading "Konnect" prefix.
 // e.g. "KonnectEventControlPlane" → "konnect_eventcontrolplane",
 //
 //	"Portal" → "portal".
-func entityFilePrefix(entityName string) string {
+func EntityFilePrefix(entityName string) string {
 	lower := strings.ToLower(entityName)
 	if after, ok := strings.CutPrefix(lower, "konnect"); ok && after != "" {
 		return "konnect_" + after
@@ -605,7 +598,7 @@ func entityFilePrefix(entityName string) string {
 }
 
 func generatedFuncsFileName(entityName string) string {
-	return "zz_generated_" + entityFilePrefix(entityName) + "_funcs.go"
+	return "zz_generated_" + EntityFilePrefix(entityName) + "_funcs.go"
 }
 
 func appendUniqueImportConfig(imports []*config.ImportConfig, imp *config.ImportConfig) []*config.ImportConfig {
