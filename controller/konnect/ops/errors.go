@@ -119,7 +119,7 @@ func (e KonnectEntityAdoptionReferenceServiceIDMismatchError) Is(target error) b
 // KonnectEntityAdoptionRouteTypeNotSupportedError is an error type returned when
 // adopting an existing entity but the route type is not supported.
 type KonnectEntityAdoptionRouteTypeNotSupportedError struct {
-	RouteType sdkkonnectcomp.RouteType
+	RouteType sdkkonnectcomp.RouteUnionType
 }
 
 // Error implements the error interface.

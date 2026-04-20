@@ -127,7 +127,7 @@ func adoptRoute(
 		}
 	}
 	// KO only supports routes with "RouteJSON" type now.
-	if resp.Route.Type != sdkkonnectcomp.RouteTypeRouteJSON {
+	if resp.Route.Type != sdkkonnectcomp.RouteUnionTypeRouteJSON {
 		return KonnectEntityAdoptionRouteTypeNotSupportedError{
 			RouteType: resp.Route.Type,
 		}

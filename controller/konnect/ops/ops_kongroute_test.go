@@ -165,7 +165,7 @@ func TestAdoptRoute(t *testing.T) {
 				).Return(
 					&sdkkonnectops.GetRouteResponse{
 						Route: &sdkkonnectcomp.Route{
-							Type: sdkkonnectcomp.RouteTypeRouteJSON,
+							Type: sdkkonnectcomp.RouteUnionTypeRouteJSON,
 							RouteJSON: &sdkkonnectcomp.RouteJSON{
 								Service: &sdkkonnectcomp.RouteJSONService{
 									ID: new("12345"),
@@ -267,16 +267,16 @@ func TestAdoptRoute(t *testing.T) {
 				).Return(
 					&sdkkonnectops.GetRouteResponse{
 						Route: &sdkkonnectcomp.Route{
-							Type: sdkkonnectcomp.RouteTypeRouteExpression,
+							Type: sdkkonnectcomp.RouteUnionTypeRouteExpression,
 						},
 					}, nil,
 				)
 
 				return sdk, route
 			},
-			// expectedErrContains: fmt.Sprintf("route type %q not supported", sdkkonnectcomp.RouteTypeRouteExpression),
+			// expectedErrContains: fmt.Sprintf("route type %q not supported", sdkkonnectcomp.RouteUnionTypeRouteExpression),
 			expectedError: KonnectEntityAdoptionRouteTypeNotSupportedError{
-				RouteType: sdkkonnectcomp.RouteTypeRouteExpression,
+				RouteType: sdkkonnectcomp.RouteUnionTypeRouteExpression,
 			},
 		},
 		{
@@ -319,7 +319,7 @@ func TestAdoptRoute(t *testing.T) {
 				).Return(
 					&sdkkonnectops.GetRouteResponse{
 						Route: &sdkkonnectcomp.Route{
-							Type: sdkkonnectcomp.RouteTypeRouteJSON,
+							Type: sdkkonnectcomp.RouteUnionTypeRouteJSON,
 							RouteJSON: &sdkkonnectcomp.RouteJSON{
 								Service: &sdkkonnectcomp.RouteJSONService{
 									ID: new("123456"),
@@ -372,7 +372,7 @@ func TestAdoptRoute(t *testing.T) {
 				).Return(
 					&sdkkonnectops.GetRouteResponse{
 						Route: &sdkkonnectcomp.Route{
-							Type: sdkkonnectcomp.RouteTypeRouteJSON,
+							Type: sdkkonnectcomp.RouteUnionTypeRouteJSON,
 							RouteJSON: &sdkkonnectcomp.RouteJSON{
 								Paths: []string{"/test", "/test-2"},
 								Headers: map[string][]string{
@@ -429,7 +429,7 @@ func TestAdoptRoute(t *testing.T) {
 				).Return(
 					&sdkkonnectops.GetRouteResponse{
 						Route: &sdkkonnectcomp.Route{
-							Type: sdkkonnectcomp.RouteTypeRouteJSON,
+							Type: sdkkonnectcomp.RouteUnionTypeRouteJSON,
 							RouteJSON: &sdkkonnectcomp.RouteJSON{
 								Paths: []string{"/test", "/test-2"},
 								Headers: map[string][]string{

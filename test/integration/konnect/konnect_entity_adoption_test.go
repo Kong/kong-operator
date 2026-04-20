@@ -152,7 +152,7 @@ func TestKonnectEntityAdoption_ServiceAndRoute(t *testing.T) {
 
 	t.Logf("Creating a route attached to service %s by SDK for adoption", serviceKonnectID)
 	routeResp, err := sdk.GetRoutesSDK().CreateRoute(ctx, cpKonnectID, sdkkonnectcomp.Route{
-		Type: sdkkonnectcomp.RouteTypeRouteJSON,
+		Type: sdkkonnectcomp.RouteUnionTypeRouteJSON,
 		RouteJSON: &sdkkonnectcomp.RouteJSON{
 			Name: new("route-test-adopt"),
 			Paths: []string{

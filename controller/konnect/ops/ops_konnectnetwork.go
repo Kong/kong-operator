@@ -92,10 +92,7 @@ func getKonnectNetworkMatchingSpecName(
 			// at this moment so use the name filter to get the network matching the name
 			// of the reconciled KonnectNetwork.
 			Name: &sdkkonnectcomp.CloudGatewaysStringFieldFilterOverride{
-				StringFieldOEQFilter: &sdkkonnectcomp.StringFieldOEQFilter{
-					Oeq: n.Spec.Name,
-				},
-				Type: sdkkonnectcomp.CloudGatewaysStringFieldFilterOverrideTypeStringFieldOEQFilter,
+				Oeq: new(n.Spec.Name),
 			},
 		},
 	}

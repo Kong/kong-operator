@@ -41,9 +41,9 @@ func CreateTestPersonalAccessToken(ctx context.Context, t *testing.T) string {
 		createResp, err := s.PersonalAccessTokens.
 			CreatePersonalAccessToken(ctx, *me.User.ID,
 				&sdkkonnectcomp.PersonalAccessTokenCreateRequest{
-					PersonalAccessTokenCreateRequestWithExpiresAt: &sdkkonnectcomp.PersonalAccessTokenCreateRequestWithExpiresAt{
-						Name:      tokenName,
-						ExpiresAt: time.Now().Add(time.Hour),
+					PersonalAccessTokenCreateRequestWithTTL: &sdkkonnectcomp.PersonalAccessTokenCreateRequestWithTTL{
+						Name:       tokenName,
+						TTLSeconds: int64(time.Hour.Seconds()),
 					},
 				},
 			)
