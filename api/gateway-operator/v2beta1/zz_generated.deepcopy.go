@@ -356,7 +356,7 @@ func (in *ControlPlaneKonnectOptions) DeepCopyInto(out *ControlPlaneKonnectOptio
 	}
 	if in.ConfigUploadConcurrency != nil {
 		in, out := &in.ConfigUploadConcurrency, &out.ConfigUploadConcurrency
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 }

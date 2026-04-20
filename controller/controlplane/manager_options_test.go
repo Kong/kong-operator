@@ -1145,7 +1145,7 @@ func TestWithKonnectOptions(t *testing.T) {
 			konnectOptions: &operatorv2beta1.ControlPlaneKonnectOptions{
 				NodeRefreshPeriod:       &metav1.Duration{Duration: 15 * time.Second},
 				ConfigUploadPeriod:      &metav1.Duration{Duration: 30 * time.Second},
-				ConfigUploadConcurrency: new(8),
+				ConfigUploadConcurrency: new(int32(8)),
 			},
 			existingKonnectConfig: &managercfg.KonnectConfig{},
 			expectedConfig: managercfg.KonnectConfig{

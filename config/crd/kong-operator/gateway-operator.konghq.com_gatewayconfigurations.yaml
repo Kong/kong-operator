@@ -18845,6 +18845,7 @@ spec:
                           ConfigUploadConcurrency is the concurrency of the client for uploading configuration to Konnect.
                           In case of large configuration with many entities,
                           too high concurrency may trigger rate limiting on Konnect API service and fail with 429 responses on requests.
+                        format: int32
                         maximum: 16
                         minimum: 1
                         type: integer

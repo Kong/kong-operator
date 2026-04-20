@@ -538,7 +538,7 @@ type ControlPlaneKonnectOptions struct {
 	// +optional
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=16
-	ConfigUploadConcurrency *int `json:"configUploadConcurrency,omitempty"`
+	ConfigUploadConcurrency *int32 `json:"configUploadConcurrency,omitempty"`
 }
 
 // ControlPlaneKonnectConsumersSyncState defines the state of consumer synchronization with Konnect.

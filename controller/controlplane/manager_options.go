@@ -604,7 +604,7 @@ func WithKonnectOptions(konnectOptions *operatorv2beta1.ControlPlaneKonnectOptio
 
 		// Configure config upload concurrency
 		if konnectOptions.ConfigUploadConcurrency != nil {
-			c.Konnect.UploadConfigConcurrency = *konnectOptions.ConfigUploadConcurrency
+			c.Konnect.UploadConfigConcurrency = int(*konnectOptions.ConfigUploadConcurrency)
 		}
 	}
 }

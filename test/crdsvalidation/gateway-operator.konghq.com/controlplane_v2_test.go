@@ -1126,7 +1126,7 @@ func TestControlPlaneV2(t *testing.T) {
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
 								IngressClass: new("kong"),
 								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
-									ConfigUploadConcurrency: new(6),
+									ConfigUploadConcurrency: new(int32(6)),
 								},
 							},
 						},
@@ -1141,7 +1141,7 @@ func TestControlPlaneV2(t *testing.T) {
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
 								IngressClass: new("kong"),
 								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
-									ConfigUploadConcurrency: new(66),
+									ConfigUploadConcurrency: new(int32(66)),
 								},
 							},
 						},
