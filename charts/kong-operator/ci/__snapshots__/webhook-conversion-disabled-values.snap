@@ -20418,7 +20418,7 @@ spec:
                 properties:
                   config:
                     description: |-
-                      Config represents a union type for config.
+                      IdentityProviderRequestConfig represents a union type for config.
                       Only one of the fields should be set based on the Type.
                     properties:
                       oidc:
@@ -41811,24 +41811,6 @@ rules:
   - patch
   - update
   - watch
-- apiGroups:
-  - x-konnect.konghq.com
-  resources:
-  - identityproviderrequests
-  verbs:
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - x-konnect.konghq.com
-  resources:
-  - identityproviderrequests/finalizers
-  - identityproviderrequests/status
-  verbs:
-  - patch
-  - update
 ---
 # Source: kong-operator/templates/rbac-resources.yaml
 apiVersion: rbac.authorization.k8s.io/v1
