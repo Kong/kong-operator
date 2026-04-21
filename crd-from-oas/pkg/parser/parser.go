@@ -73,10 +73,11 @@ type Schema struct {
 	MaxProperties        *int64    // Maximum number of map entries
 
 	// POST operation hints used by downstream generators (e.g. Konnect SDK ops).
-	OperationID        string   // POST operationId (e.g. "create-portal")
-	Tags               []string // POST tags (e.g. ["portals"])
-	SuccessResponseRef string   // ref name of the 2xx success response schema (e.g. "Portal", "EventGatewayInfo")
-	RespIDIsPointer    bool     // true when the 2xx response schema's "id" field is not in required (i.e. *string in SDK codegen)
+	OperationID          string   // POST operationId (e.g. "create-portal")
+	Tags                 []string // POST tags (e.g. ["portals"])
+	SuccessResponseRef   string   // ref name of the 2xx success response schema (e.g. "Portal", "EventGatewayInfo")
+	RespIDIsPointer      bool     // true when the 2xx response schema's "id" field is not in required (i.e. *string in SDK codegen)
+	CreateReqBodyPointer bool     // true when POST requestBody is not marked required (SDK emits pointer)
 
 	// PATCH/PUT operation hints for update ops generation.
 	UpdateOperationID        string   // PATCH/PUT operationId (e.g. "update-portal")
@@ -201,6 +202,7 @@ func (p *Parser) parsePath(targetPath string) (string, *Schema, error) {
 		schema.Tags = append([]string(nil), pathItem.Post.Tags...)
 		schema.SuccessResponseRef = extractSuccessResponseRef(pathItem.Post.Responses)
 		schema.RespIDIsPointer = p.successResponseIDIsPointer(pathItem.Post.Responses)
+		schema.CreateReqBodyPointer = !reqBody.Required
 		p.extractUpdateOp(targetPath, schema)
 		p.extractDeleteOp(targetPath, schema)
 		return schemaName, schema, nil

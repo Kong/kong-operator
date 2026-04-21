@@ -73,7 +73,10 @@ type TypeConfig struct {
 	CEL map[string]*FieldConfig `yaml:"cel,omitempty"`
 	// Ops maps operation names (e.g. "create", "update") to SDK type configurations.
 	// When set, conversion methods are generated on the entity's APISpec type.
-	Ops map[string]*OpConfig `yaml:"ops,omitempty"`
+	Ops map[string]*OpConfig `yaml:"-"`
+	// OpsRequireClient indicates that generated ops for this entity require a
+	// controller-runtime client to read cluster state while building SDK requests.
+	OpsRequireClient bool `yaml:"-"`
 	// OptionalSecretReference enables generation of a union type field on the
 	// Spec that allows the user to provide sensitive data either inline in the
 	// APISpec or via a Kubernetes Secret reference. When true the generated Spec
@@ -104,10 +107,54 @@ type OpConfig struct {
 	Path string `yaml:"path"`
 }
 
+type typeOpsYAML struct {
+	// RequireClient indicates that generated ops for this entity need a
+	// controller-runtime client to fetch cluster data such as Secrets.
+	RequireClient bool `yaml:"requireClient,omitempty"`
+	// Operations maps operation names (e.g. "create", "update") to SDK type configs.
+	Operations map[string]*OpConfig `yaml:",inline"`
+}
+
+type typeConfigYAML struct {
+	Path                    string                  `yaml:"path"`
+	Name                    string                  `yaml:"name,omitempty"`
+	CEL                     map[string]*FieldConfig `yaml:"cel,omitempty"`
+	Ops                     *typeOpsYAML            `yaml:"ops,omitempty"`
+	OptionalSecretReference bool                    `yaml:"optionalSecretReference,omitempty"`
+	Reconciler              *ReconcilerConfig       `yaml:"reconciler,omitempty"`
+}
+
+// UnmarshalYAML preserves the in-memory Ops map shape while allowing
+// additional per-ops settings, such as requireClient, under the same YAML key.
+func (tc *TypeConfig) UnmarshalYAML(value *yaml.Node) error {
+	var raw typeConfigYAML
+	if err := value.Decode(&raw); err != nil {
+		return err
+	}
+
+	*tc = TypeConfig{
+		Path:                    raw.Path,
+		Name:                    raw.Name,
+		CEL:                     raw.CEL,
+		OptionalSecretReference: raw.OptionalSecretReference,
+		Reconciler:              raw.Reconciler,
+	}
+
+	if raw.Ops != nil {
+		tc.Ops = raw.Ops.Operations
+		tc.OpsRequireClient = raw.Ops.RequireClient
+	}
+
+	return nil
+}
+
 // EntityOpsConfig holds the operations configuration for a single entity type.
 type EntityOpsConfig struct {
 	// Ops maps operation names (e.g. "create", "update") to their SDK type configs.
 	Ops map[string]*OpConfig
+	// RequireClient indicates that generated ops need a controller-runtime client
+	// to build their SDK requests.
+	RequireClient bool
 }
 
 // NameOverrides returns a mapping from OpenAPI path to the custom CRD type name
@@ -195,7 +242,8 @@ func (c *APIGroupVersionConfig) OpsConfig(pathToEntityName map[string]string) ma
 		if !ok {
 			continue
 		}
-		result[entityName] = &EntityOpsConfig{Ops: tc.Ops}
+		requireClient := tc.OpsRequireClient || tc.OptionalSecretReference
+		result[entityName] = &EntityOpsConfig{Ops: tc.Ops, RequireClient: requireClient}
 	}
 	return result
 }

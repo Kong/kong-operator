@@ -122,7 +122,6 @@ func (s *IdentityProviderRequestAPISpec) marshalSDKOpsPayload() ([]byte, error) 
 	return data, nil
 }
 
-
 // ToCreateIdentityProvider converts the IdentityProviderRequestAPISpec to the SDK type
 // sdkkonnectcomp.CreateIdentityProvider using JSON marshal/unmarshal.
 // Fields that exist in the CRD spec but not in the SDK type (e.g., Kubernetes

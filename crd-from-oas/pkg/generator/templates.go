@@ -384,7 +384,6 @@ func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() ([]byte, error) {
 	{{- end }}
 	return data, nil
 }
-
 {{range .Methods}}
 // {{.MethodName}} converts the {{$.EntityName}}APISpec to the SDK type
 // {{.ImportAlias}}.{{.TypeName}} using JSON marshal/unmarshal.
@@ -595,7 +594,6 @@ func (s *{{$.EntityName}}APISpec) selectedSDKOpsPayload(payload map[string]any) 
 	}
 	return data, variant, nil
 }
-
 {{range .Methods}}
 // {{.MethodName}} converts the {{$.EntityName}}APISpec to the SDK type
 // {{.ImportAlias}}.{{.TypeName}} using JSON marshal/unmarshal.
@@ -748,6 +746,9 @@ package ops
 import (
 	"context"
 	"fmt"
+{{- if .NeedsClientImport}}
+	"sigs.k8s.io/controller-runtime/pkg/client"
+{{- end}}
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 {{- if .NeedsOpsImport}}
@@ -763,6 +764,9 @@ import (
 const opsCreateFuncTemplate = `
 func create{{.Entity}}(
 	ctx context.Context,
+	{{- if .NeedsClient}}
+	cl client.Client,
+	{{- end}}
 	sdk sdkkonnectgo.{{.SDKInterface}},
 	obj *{{.APIAlias}}.{{.Entity}},
 ) error {
@@ -772,7 +776,11 @@ func create{{.Entity}}(
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "{{.ParentEntityName}}", Op: CreateOp}
 	}
 {{- end}}
+	{{- if .NeedsClient}}
+	req, err := {{.CreateRequestBuilder}}(ctx, cl, obj)
+	{{- else}}
 	req, err := obj.Spec.APISpec.To{{.CreateReqType}}()
+	{{- end}}
 	if err != nil {
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
 	}
@@ -787,10 +795,10 @@ func create{{.Entity}}(
 {{- end}}
 {{- if .ParentEntityName}}
 
-	resp, err := sdk.{{.SDKMethod}}(ctx, parentID, *req)
+	resp, err := sdk.{{.SDKMethod}}(ctx, parentID, {{if .CreateReqBodyPointer}}req{{else}}*req{{end}})
 {{- else}}
 
-	resp, err := sdk.{{.SDKMethod}}(ctx, *req)
+	resp, err := sdk.{{.SDKMethod}}(ctx, {{if .CreateReqBodyPointer}}req{{else}}*req{{end}})
 {{- end}}
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, obj); errWrap != nil {
 		return errWrap
@@ -818,6 +826,9 @@ func create{{.Entity}}(
 const opsUpdateFuncTemplate = `
 func update{{.Entity}}(
 	ctx context.Context,
+	{{- if .NeedsClient}}
+	cl client.Client,
+	{{- end}}
 	sdk sdkkonnectgo.{{.UpdateSDKInterface}},
 	obj *{{.APIAlias}}.{{.Entity}},
 ) error {
@@ -828,7 +839,11 @@ func update{{.Entity}}(
 	}
 {{- end}}
 	id := obj.GetKonnectStatus().GetKonnectID()
+	{{- if .NeedsClient}}
+	req, err := {{.UpdateRequestBuilder}}(ctx, cl, obj)
+	{{- else}}
 	req, err := obj.Spec.APISpec.To{{.UpdateReqType}}()
+	{{- end}}
 	if err != nil {
 		return fmt.Errorf("failed building %s SDK update request: %w", obj.GetTypeName(), err)
 	}
@@ -898,6 +913,7 @@ package ops
 import (
 	"context"
 	"fmt"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 {{.APIImportsBlock}}
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
@@ -914,12 +930,13 @@ func CreateGeneratedOps[
 ](
 	ctx context.Context,
 	sdk sdkops.SDKWrapper,
+	cl client.Client,
 	e TEnt,
 ) error {
 	switch ent := any(e).(type) {
 {{- range .Cases}}
 	case *{{.APIAlias}}.{{.Entity}}:
-		return create{{.Entity}}(ctx, sdk.{{.SDKGetter}}(), ent)
+		return create{{.Entity}}(ctx, {{if .NeedsClient}}cl, {{end}}sdk.{{.SDKGetter}}(), ent)
 {{- end}}
 	default:
 		return fmt.Errorf("unsupported entity type %T", ent)
@@ -935,6 +952,7 @@ package ops
 import (
 	"context"
 	"fmt"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 {{.APIImportsBlock}}
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
@@ -951,12 +969,13 @@ func UpdateGeneratedOps[
 ](
 	ctx context.Context,
 	sdk sdkops.SDKWrapper,
+	cl client.Client,
 	e TEnt,
 ) error {
 	switch ent := any(e).(type) {
 {{- range .Cases}}
 	case *{{.APIAlias}}.{{.Entity}}:
-		return update{{.Entity}}(ctx, sdk.{{.SDKGetter}}(), ent)
+		return update{{.Entity}}(ctx, {{if .NeedsClient}}cl, {{end}}sdk.{{.SDKGetter}}(), ent)
 {{- end}}
 	default:
 		return fmt.Errorf("unsupported entity type %T", ent)

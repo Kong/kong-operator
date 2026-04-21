@@ -40,16 +40,19 @@ func (g *Generator) generateEntityOpsFile(
 	// Determine whether we need the sdkkonnectops import (wrapped request structs
 	// are only used by update; delete always uses positional SDK args).
 	needsOpsImport := updateData != nil && updateData.UpdateWrapped
+	needsClientImport := (createData != nil && createData.NeedsClient) || (updateData != nil && updateData.NeedsClient)
 
 	// Render file header.
 	headerData := struct {
-		APIAlias       string
-		APIPackagePath string
-		NeedsOpsImport bool
+		APIAlias          string
+		APIPackagePath    string
+		NeedsOpsImport    bool
+		NeedsClientImport bool
 	}{
-		APIAlias:       g.config.APIGroupPackageAlias,
-		APIPackagePath: g.config.APIGroupPackagePath,
-		NeedsOpsImport: needsOpsImport,
+		APIAlias:          g.config.APIGroupPackageAlias,
+		APIPackagePath:    g.config.APIGroupPackagePath,
+		NeedsOpsImport:    needsOpsImport,
+		NeedsClientImport: needsClientImport,
 	}
 	var content strings.Builder
 	headerTmpl := template.Must(template.New("opsheader").Parse(opsPerEntityFileHeaderTemplate))
@@ -95,6 +98,7 @@ func (g *Generator) generateEntityOpsFile(
 			APIAlias:       g.config.APIGroupPackageAlias,
 			APIPackagePath: g.config.APIGroupPackagePath,
 			SDKGetter:      sdkGetter,
+			NeedsClient:    createData.NeedsClient,
 		}
 	}
 
@@ -106,6 +110,7 @@ func (g *Generator) generateEntityOpsFile(
 			APIAlias:       g.config.APIGroupPackageAlias,
 			APIPackagePath: g.config.APIGroupPackagePath,
 			SDKGetter:      sdkGetter,
+			NeedsClient:    updateData.NeedsClient,
 		}
 	}
 
@@ -166,9 +171,10 @@ func buildDispatcherFile(
 	sort.Slice(infos, func(i, j int) bool { return infos[i].Entity < infos[j].Entity })
 
 	type dispatchCase struct {
-		Entity    string
-		APIAlias  string
-		SDKGetter string
+		Entity      string
+		APIAlias    string
+		SDKGetter   string
+		NeedsClient bool
 	}
 
 	importSet := map[string]string{}
@@ -176,9 +182,10 @@ func buildDispatcherFile(
 	for _, info := range infos {
 		importSet[info.APIPackagePath] = info.APIAlias
 		cases = append(cases, dispatchCase{
-			Entity:    info.Entity,
-			APIAlias:  info.APIAlias,
-			SDKGetter: info.SDKGetter,
+			Entity:      info.Entity,
+			APIAlias:    info.APIAlias,
+			SDKGetter:   info.SDKGetter,
+			NeedsClient: info.NeedsClient,
 		})
 	}
 
@@ -260,6 +267,13 @@ func pascalFromKebab(s string) string {
 		b.WriteString(part[1:])
 	}
 	return b.String()
+}
+
+func clientRequestHelperBase(entityName string) string {
+	if trimmed, ok := strings.CutPrefix(entityName, "Konnect"); ok && trimmed != "" {
+		return "kong" + trimmed
+	}
+	return toLowerCamel(entityName)
 }
 
 // metadataFields reports whether the request body schema declares a "tags"

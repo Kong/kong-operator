@@ -17,7 +17,6 @@ func (s *KonnectEventControlPlaneAPISpec) marshalSDKOpsPayload() ([]byte, error)
 	return data, nil
 }
 
-
 // ToCreateGatewayRequest converts the KonnectEventControlPlaneAPISpec to the SDK type
 // sdkkonnectcomp.CreateGatewayRequest using JSON marshal/unmarshal.
 // Fields that exist in the CRD spec but not in the SDK type (e.g., Kubernetes

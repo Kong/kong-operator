@@ -14,22 +14,26 @@ type OpsCreateFileInfo struct {
 	APIAlias       string // Go import alias for the API package, e.g. "konnectv1alpha1"
 	APIPackagePath string // Go import path for the API package
 	SDKGetter      string // SDKWrapper method name, e.g. "GetPortalsSDK"
+	NeedsClient    bool   // true when the generated create function needs client.Client
 }
 
 // opsCreateFuncData holds template data for a single create<Entity> function.
 type opsCreateFuncData struct {
-	Entity           string
-	APIAlias         string
-	SDKInterface     string
-	SDKMethod        string
-	CreateReqType    string
-	RespField        string
-	HasTags          bool
-	HasLabels        bool
-	LabelsPointer    bool
-	ParentEntityName string
-	ParentIDGetter   string
-	RespIDIsPointer  bool
+	Entity               string
+	APIAlias             string
+	SDKInterface         string
+	SDKMethod            string
+	CreateReqType        string
+	CreateReqBodyPointer bool
+	NeedsClient          bool
+	CreateRequestBuilder string
+	RespField            string
+	HasTags              bool
+	HasLabels            bool
+	LabelsPointer        bool
+	ParentEntityName     string
+	ParentIDGetter       string
+	RespIDIsPointer      bool
 }
 
 // generateOpsCreateFuncBody renders the create<Entity> function body (no file header).
@@ -60,6 +64,11 @@ func (g *Generator) generateOpsCreateFuncBody(
 	sdkMethod := pascalFromKebab(schema.OperationID)
 	sdkInterface := pascalFromKebab(schema.Tags[0]) + "SDK"
 	hasTags, hasLabels, labelsPointer := metadataFields(schema)
+	needsClient := opsConfig.RequireClient
+	createRequestBuilder := ""
+	if needsClient {
+		createRequestBuilder = clientRequestHelperBase(entityName) + "CreateRequest"
+	}
 
 	parentEntityName, parentIDGetter, err := g.resolveParentEntity(entityName, schema)
 	if err != nil {
@@ -67,18 +76,21 @@ func (g *Generator) generateOpsCreateFuncBody(
 	}
 
 	return &opsCreateFuncData{
-		Entity:           entityName,
-		APIAlias:         g.config.APIGroupPackageAlias,
-		SDKInterface:     sdkInterface,
-		SDKMethod:        sdkMethod,
-		CreateReqType:    createReqType,
-		RespField:        schema.SuccessResponseRef,
-		HasTags:          hasTags,
-		HasLabels:        hasLabels,
-		LabelsPointer:    labelsPointer,
-		ParentEntityName: parentEntityName,
-		ParentIDGetter:   parentIDGetter,
-		RespIDIsPointer:  schema.RespIDIsPointer,
+		Entity:               entityName,
+		APIAlias:             g.config.APIGroupPackageAlias,
+		SDKInterface:         sdkInterface,
+		SDKMethod:            sdkMethod,
+		CreateReqType:        createReqType,
+		CreateReqBodyPointer: schema.CreateReqBodyPointer,
+		NeedsClient:          needsClient,
+		CreateRequestBuilder: createRequestBuilder,
+		RespField:            schema.SuccessResponseRef,
+		HasTags:              hasTags,
+		HasLabels:            hasLabels,
+		LabelsPointer:        labelsPointer,
+		ParentEntityName:     parentEntityName,
+		ParentIDGetter:       parentIDGetter,
+		RespIDIsPointer:      schema.RespIDIsPointer,
 	}, nil
 }
 
@@ -87,6 +99,7 @@ type flatInfo struct {
 	APIAlias       string
 	APIPackagePath string
 	SDKGetter      string
+	NeedsClient    bool
 }
 
 // GenerateOpsCreateDispatcher emits zz_generated_ops_create.go with
@@ -99,6 +112,7 @@ func GenerateOpsCreateDispatcher(infos []*OpsCreateFileInfo) (*GeneratedFile, er
 			APIAlias:       info.APIAlias,
 			APIPackagePath: info.APIPackagePath,
 			SDKGetter:      info.SDKGetter,
+			NeedsClient:    info.NeedsClient,
 		})
 	}
 	return buildDispatcherFile("zz_generated_ops_create.go", opsCreateDispatcherTemplate, flat)
