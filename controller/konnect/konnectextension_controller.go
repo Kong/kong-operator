@@ -458,7 +458,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		if !certFound {
 			log.Debug(logger, "DataPlane client certificate enforced in Konnect")
 			dpCert := konnectresource.GenerateKongDataPlaneClientCertificate(
-				certificateSecret.Name,
+				ext.Name,
 				certificateSecret.Namespace,
 				&ext.Spec.Konnect.ControlPlane.Ref,
 				string(certificateSecret.Data[consts.TLSCRT]),

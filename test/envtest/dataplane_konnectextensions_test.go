@@ -467,4 +467,167 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 			}), "expected DataPlane to have KonnectExtensionApplied condition, got: %+v", dp.Status.Conditions)
 		}, waitTime, tickTime)
 	})
+
+	// Regression test for https://github.com/Kong/kong-operator/issues/3940.
+	// Two KonnectExtensions sharing a single client-certificate Secret must each
+	// produce their own KongDataPlaneClientCertificate CR (named after the
+	// KonnectExtension, not after the Secret). Before the fix, both extensions
+	// tried to create a CR named after the Secret, the loser kept hitting
+	// AlreadyExists and repeatedly called Konnect's dp-client-certificates List API.
+	t.Run("two extensions sharing the same Secret each get their own CR (issue #3940)", func(t *testing.T) {
+		const (
+			konnectControlPlaneIDA = "aee0667a-90c6-45a6-a2d8-575e1e48aaaa"
+			konnectControlPlaneIDB = "aee0667a-90c6-45a6-a2d8-575e1e48bbbb"
+			dpCertIDA              = "33333333-3333-3333-3333-33333333333a"
+			dpCertIDB              = "33333333-3333-3333-3333-33333333333b"
+		)
+
+		sdk.EXPECT().ListDpClientCertificates(mock.Anything, konnectControlPlaneIDA).
+			Return(&sdkkonnectops.ListDpClientCertificatesResponse{StatusCode: http.StatusOK}, nil).Maybe()
+		sdk.EXPECT().ListDpClientCertificates(mock.Anything, konnectControlPlaneIDB).
+			Return(&sdkkonnectops.ListDpClientCertificatesResponse{StatusCode: http.StatusOK}, nil).Maybe()
+		sdk.EXPECT().CreateDataplaneCertificate(mock.Anything, konnectControlPlaneIDA, mock.Anything).
+			Return(&sdkkonnectops.CreateDataplaneCertificateResponse{
+				DataPlaneClientCertificateResponse: &sdkkonnectcomp.DataPlaneClientCertificateResponse{
+					Item: &sdkkonnectcomp.DataPlaneClientCertificate{
+						ID:   new(dpCertIDA),
+						Cert: new(deploy.TestValidCACertPEM),
+					},
+				},
+			}, nil).Maybe()
+		sdk.EXPECT().CreateDataplaneCertificate(mock.Anything, konnectControlPlaneIDB, mock.Anything).
+			Return(&sdkkonnectops.CreateDataplaneCertificateResponse{
+				DataPlaneClientCertificateResponse: &sdkkonnectcomp.DataPlaneClientCertificateResponse{
+					Item: &sdkkonnectcomp.DataPlaneClientCertificate{
+						ID:   new(dpCertIDB),
+						Cert: new(deploy.TestValidCACertPEM),
+					},
+				},
+			}, nil).Maybe()
+
+		t.Logf("Waiting for caches to sync")
+		mgr.GetCache().WaitForCacheSync(ctx)
+
+		t.Logf("Creating KonnectAPIAuthConfiguration")
+		konnectAPIAuthConfiguration := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, cl)
+
+		t.Logf("Creating two KonnectGatewayControlPlanes with distinct Konnect IDs")
+		cpA := deploy.KonnectGatewayControlPlaneWithID(t, ctx, cl, konnectAPIAuthConfiguration, deploy.WithKonnectID(konnectControlPlaneIDA))
+		cpB := deploy.KonnectGatewayControlPlaneWithID(t, ctx, cl, konnectAPIAuthConfiguration, deploy.WithKonnectID(konnectControlPlaneIDB))
+
+		t.Logf("Creating shared client-certificate Secret (used by both KonnectExtensions)")
+		certPEM, keyPEM := certificate.MustGenerateCertPEMFormat(
+			certificate.WithCommonName("kong-client"),
+			certificate.WithKeyType(keyType),
+		)
+		sharedSecret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "shared-dp-cert-",
+				Namespace:    ns.Name,
+				Labels: map[string]string{
+					konnect.SecretKonnectDataPlaneCertificateLabel: "true",
+				},
+			},
+			Type: corev1.SecretTypeTLS,
+			Data: map[string][]byte{
+				"tls.crt": certPEM,
+				"tls.key": keyPEM,
+			},
+		}
+		require.NoError(t, cl.Create(ctx, sharedSecret))
+
+		mkExtension := func(name, cpName string) *konnectv1alpha2.KonnectExtension {
+			provisioning := konnectv1alpha2.ManualSecretProvisioning
+			return &konnectv1alpha2.KonnectExtension{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: ns.Name,
+				},
+				Spec: konnectv1alpha2.KonnectExtensionSpec{
+					ClientAuth: &konnectv1alpha2.KonnectExtensionClientAuth{
+						CertificateSecret: konnectv1alpha2.CertificateSecret{
+							Provisioning: &provisioning,
+							CertificateSecretRef: &konnectv1alpha2.SecretRef{
+								Name: sharedSecret.Name,
+							},
+						},
+					},
+					Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+						ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+							Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+								Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+								KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+									Name: cpName,
+								},
+							},
+						},
+					},
+				},
+			}
+		}
+
+		t.Logf("Creating two KonnectExtensions sharing the same Secret, each targeting a different Konnect CP")
+		extA := mkExtension("ke-shared-a", cpA.Name)
+		extB := mkExtension("ke-shared-b", cpB.Name)
+		require.NoError(t, cl.Create(ctx, extA))
+		require.NoError(t, cl.Create(ctx, extB))
+
+		mkDP := func(name, extName string) *operatorv1beta1.DataPlane {
+			return &operatorv1beta1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns.Name},
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Extensions: []commonv1alpha1.ExtensionRef{{
+							Group: konnectv1alpha1.GroupVersion.Group,
+							Kind:  "KonnectExtension",
+							NamespacedRef: commonv1alpha1.NamespacedRef{
+								Name: extName,
+							},
+						}},
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{{
+											Name:  consts.DataPlaneProxyContainerName,
+											Image: consts.DefaultDataPlaneImage,
+										}},
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+		}
+
+		t.Logf("Creating one DataPlane per KonnectExtension")
+		require.NoError(t, cl.Create(ctx, mkDP("dp-shared-a", extA.Name)))
+		require.NoError(t, cl.Create(ctx, mkDP("dp-shared-b", extB.Name)))
+
+		t.Logf("Waiting for both KonnectExtensions to become Ready")
+		for _, name := range []string{extA.Name, extB.Name} {
+			nameCopy := name
+			require.EventuallyWithT(t, func(t *assert.CollectT) {
+				var ke konnectv1alpha2.KonnectExtension
+				require.NoError(t, cl.Get(ctx, types.NamespacedName{Name: nameCopy, Namespace: ns.Name}, &ke))
+				require.True(t, k8sutils.HasConditionTrue("Ready", &ke),
+					"expected %s to have Ready=True, got: %+v", nameCopy, ke.Status.Conditions)
+			}, waitTime, tickTime)
+		}
+
+		t.Logf("Verifying each KonnectExtension owns its own KongDataPlaneClientCertificate named after the extension")
+		require.EventuallyWithT(t, func(t *assert.CollectT) {
+			for _, e := range []*konnectv1alpha2.KonnectExtension{extA, extB} {
+				var dpCert configurationv1alpha1.KongDataPlaneClientCertificate
+				require.NoError(t, cl.Get(ctx, types.NamespacedName{Name: e.Name, Namespace: ns.Name}, &dpCert),
+					"expected a KongDataPlaneClientCertificate named %q to exist", e.Name)
+				owners := lo.Map(dpCert.OwnerReferences, func(or metav1.OwnerReference, _ int) string {
+					return or.Name
+				})
+				require.Equal(t, []string{e.Name}, owners,
+					"expected %q to be the sole owner of its CR, got %v", e.Name, owners)
+			}
+		}, waitTime, tickTime)
+	})
 }
