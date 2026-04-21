@@ -52,3 +52,17 @@ func updatePortal(
 	}
 	return nil
 }
+
+func deletePortal(
+	ctx context.Context,
+	sdk sdkkonnectgo.PortalsSDK,
+	obj *konnectv1alpha1.Portal,
+) error {
+	id := obj.GetKonnectStatus().GetKonnectID()
+
+	_, err := sdk.DeletePortal(ctx, id, nil)
+	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, obj); errWrap != nil {
+		return errWrap
+	}
+	return nil
+}

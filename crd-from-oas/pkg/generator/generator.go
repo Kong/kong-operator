@@ -51,6 +51,7 @@ type Generator struct {
 	config         Config
 	opsCreateInfos []*OpsCreateFileInfo
 	opsUpdateInfos []*OpsUpdateFileInfo
+	opsDeleteInfos []*OpsDeleteFileInfo
 }
 
 // NewGenerator creates a new generator.
@@ -70,6 +71,13 @@ func (g *Generator) OpsCreateInfos() []*OpsCreateFileInfo {
 // cross-group update dispatcher after all group-versions have been generated.
 func (g *Generator) OpsUpdateInfos() []*OpsUpdateFileInfo {
 	return g.opsUpdateInfos
+}
+
+// OpsDeleteInfos returns metadata for every delete op file emitted by the most
+// recent Generate call. Callers (e.g. the Runner) use it to assemble the
+// cross-group delete dispatcher after all group-versions have been generated.
+func (g *Generator) OpsDeleteInfos() []*OpsDeleteFileInfo {
+	return g.opsDeleteInfos
 }
 
 // GeneratedFile represents a generated Go file.
@@ -216,7 +224,7 @@ func (g *Generator) generateEntityOpsFileForEntity(entityName string, schema *pa
 		return nil, nil
 	}
 
-	opsFile, createInfo, updateInfo, err := g.generateEntityOpsFile(entityName, schema, opsConfig)
+	opsFile, createInfo, updateInfo, deleteInfo, err := g.generateEntityOpsFile(entityName, schema, opsConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate ops file for %s: %w", entityName, err)
 	}
@@ -228,6 +236,9 @@ func (g *Generator) generateEntityOpsFileForEntity(entityName string, schema *pa
 	}
 	if updateInfo != nil {
 		g.opsUpdateInfos = append(g.opsUpdateInfos, updateInfo)
+	}
+	if deleteInfo != nil {
+		g.opsDeleteInfos = append(g.opsDeleteInfos, deleteInfo)
 	}
 	return opsFile, nil
 }
@@ -1410,6 +1421,10 @@ func (g *Generator) buildSDKOpsMethods(opsConfig *config.EntityOpsConfig) ([]*sd
 	sort.Strings(opNames)
 
 	for _, opName := range opNames {
+		// Delete ops have no request body type — skip SDK method generation.
+		if opName == "delete" {
+			continue
+		}
 		opCfg := opsConfig.Ops[opName]
 		importPath, typeName, err := ParseSDKTypePath(opCfg.Path)
 		if err != nil {

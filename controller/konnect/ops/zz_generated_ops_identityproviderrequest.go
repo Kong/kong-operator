@@ -63,3 +63,21 @@ func updateIdentityProviderRequest(
 	}
 	return nil
 }
+
+func deleteIdentityProviderRequest(
+	ctx context.Context,
+	sdk sdkkonnectgo.PortalAuthSettingsSDK,
+	obj *konnectv1alpha1.IdentityProviderRequest,
+) error {
+	parentID := obj.GetPortalID()
+	if parentID == "" {
+		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "Portal", Op: DeleteOp}
+	}
+	id := obj.GetKonnectStatus().GetKonnectID()
+
+	_, err := sdk.DeletePortalIdentityProvider(ctx, parentID, id)
+	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, obj); errWrap != nil {
+		return errWrap
+	}
+	return nil
+}

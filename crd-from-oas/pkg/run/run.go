@@ -23,6 +23,7 @@ func (r *Runner) Run(
 	// dispatchers can be emitted once at the end.
 	var allOpsCreateInfos []*generator.OpsCreateFileInfo
 	var allOpsUpdateInfos []*generator.OpsUpdateFileInfo
+	var allOpsDeleteInfos []*generator.OpsDeleteFileInfo
 	for _, gvKey := range r.gvKeys {
 		agvConfig := r.projectCfg.APIGroupVersions[gvKey]
 
@@ -135,10 +136,11 @@ func (r *Runner) Run(
 		// hand-written ops_<entity>.go collision.
 		opsCreateInfosKept := make([]*generator.OpsCreateFileInfo, 0, len(gen.OpsCreateInfos()))
 		opsUpdateInfosKept := make([]*generator.OpsUpdateFileInfo, 0, len(gen.OpsUpdateInfos()))
+		opsDeleteInfosKept := make([]*generator.OpsDeleteFileInfo, 0, len(gen.OpsDeleteInfos()))
 		skippedOpsFiles := make(map[string]bool)
 		opsDir := filepath.Join(r.projectRoot, "controller/konnect/ops")
 
-		// Build a set of entities with hand-written collision to skip both create and update.
+		// Build a set of entities with hand-written collision to skip create, update, and delete.
 		collidedEntities := make(map[string]bool)
 		for _, info := range gen.OpsCreateInfos() {
 			for _, candidate := range handWrittenOpsFileNames(info.Entity) {
@@ -170,8 +172,16 @@ func (r *Runner) Run(
 			opsUpdateInfosKept = append(opsUpdateInfosKept, info)
 		}
 
+		for _, info := range gen.OpsDeleteInfos() {
+			if collidedEntities[info.Entity] {
+				continue
+			}
+			opsDeleteInfosKept = append(opsDeleteInfosKept, info)
+		}
+
 		allOpsCreateInfos = append(allOpsCreateInfos, opsCreateInfosKept...)
 		allOpsUpdateInfos = append(allOpsUpdateInfos, opsUpdateInfosKept...)
+		allOpsDeleteInfos = append(allOpsDeleteInfos, opsDeleteInfosKept...)
 
 		// Write generated files
 		for _, file := range files {
@@ -226,6 +236,18 @@ func (r *Runner) Run(
 		return err
 	}
 
+	// Emit delete dispatcher.
+	if err := emitDispatcherFile(
+		r.projectRoot,
+		logger,
+		"delete",
+		func() (*generator.GeneratedFile, error) {
+			return generator.GenerateOpsDeleteDispatcher(allOpsDeleteInfos)
+		},
+	); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -274,9 +296,9 @@ func handWrittenOpsFileNames(entity string) []string {
 }
 
 // generatedOpsFileName returns the generated ops file name for an entity,
-// e.g. "Portal" → "zz_generated_portal_ops.go".
+// e.g. "Portal" → "zz_generated_ops_portal.go".
 func generatedOpsFileName(entity string) string {
-	return "zz_generated_" + generator.EntityFilePrefix(entity) + "_ops.go"
+	return "zz_generated_ops_" + generator.EntityFilePrefix(entity) + ".go"
 }
 
 func cleanupLegacyGeneratedFiles(projectRoot, dir string, parsed *parser.ParsedSpec) error {

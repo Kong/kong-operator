@@ -859,6 +859,37 @@ func update{{.Entity}}(
 }
 `
 
+// opsDeleteFuncTemplate renders a single delete<Entity> function body.
+// It is concatenated after the file header and any create/update functions.
+// SDK delete methods always use positional arguments (no wrapped request struct).
+// Optional query parameters (e.g. force) are passed as nil.
+const opsDeleteFuncTemplate = `
+func delete{{.Entity}}(
+	ctx context.Context,
+	sdk sdkkonnectgo.{{.DeleteSDKInterface}},
+	obj *{{.APIAlias}}.{{.Entity}},
+) error {
+{{- if .ParentEntityName}}
+	parentID := obj.{{.ParentIDGetter}}()
+	if parentID == "" {
+		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "{{.ParentEntityName}}", Op: DeleteOp}
+	}
+{{- end}}
+	id := obj.GetKonnectStatus().GetKonnectID()
+{{- if .ParentEntityName}}
+
+	_, err := sdk.{{.DeleteSDKMethod}}(ctx, parentID, id{{range .DeleteNilArgs}}, nil{{end}})
+{{- else}}
+
+	_, err := sdk.{{.DeleteSDKMethod}}(ctx, id{{range .DeleteNilArgs}}, nil{{end}})
+{{- end}}
+	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, obj); errWrap != nil {
+		return errWrap
+	}
+	return nil
+}
+`
+
 // opsCreateDispatcherTemplate renders zz_generated_ops_create.go.
 const opsCreateDispatcherTemplate = sharedGeneratedFilePreamble + `
 
@@ -926,6 +957,43 @@ func UpdateGeneratedOps[
 {{- range .Cases}}
 	case *{{.APIAlias}}.{{.Entity}}:
 		return update{{.Entity}}(ctx, sdk.{{.SDKGetter}}(), ent)
+{{- end}}
+	default:
+		return fmt.Errorf("unsupported entity type %T", ent)
+	}
+}
+`
+
+// opsDeleteDispatcherTemplate renders zz_generated_ops_delete.go.
+const opsDeleteDispatcherTemplate = sharedGeneratedFilePreamble + `
+
+package ops
+
+import (
+	"context"
+	"fmt"
+
+{{.APIImportsBlock}}
+	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
+	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
+)
+
+// DeleteGeneratedOps dispatches delete operations to per-entity generated
+// delete functions. It is a stub dispatcher intended for Konnect entities whose
+// ops layer is fully generated; entities handled by hand-written ops remain in
+// the Delete function in ops.go.
+func DeleteGeneratedOps[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](
+	ctx context.Context,
+	sdk sdkops.SDKWrapper,
+	e TEnt,
+) error {
+	switch ent := any(e).(type) {
+{{- range .Cases}}
+	case *{{.APIAlias}}.{{.Entity}}:
+		return delete{{.Entity}}(ctx, sdk.{{.SDKGetter}}(), ent)
 {{- end}}
 	default:
 		return fmt.Errorf("unsupported entity type %T", ent)

@@ -1,0 +1,113 @@
+package generator
+
+import (
+	"fmt"
+
+	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/config"
+	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/parser"
+)
+
+// OpsUpdateFileInfo is metadata returned from generateEntityOpsFile so the
+// caller (e.g. run.go) can assemble the cross-group update dispatcher.
+type OpsUpdateFileInfo struct {
+	Entity         string
+	APIAlias       string
+	APIPackagePath string
+	SDKGetter      string
+}
+
+// opsUpdateFuncData holds template data for a single update<Entity> function.
+type opsUpdateFuncData struct {
+	Entity               string
+	APIAlias             string
+	UpdateSDKInterface   string
+	UpdateSDKMethod      string
+	UpdateReqType        string
+	HasTags              bool
+	HasLabels            bool
+	LabelsPointer        bool
+	ParentEntityName     string
+	ParentIDGetter       string
+	UpdateWrapped        bool   // true when SDK call uses a request-struct (non-root)
+	ParentIDField        string // e.g. "PortalID" — only set when UpdateWrapped
+	EntityIDField        string // e.g. "ID" — only set when UpdateWrapped
+	UpdateBodyField      string // e.g. "UpdateIdentityProvider" — only set when UpdateWrapped
+	UpdateReqBodyPointer bool   // true when SDK body param is a pointer
+}
+
+// generateOpsUpdateFuncBody renders the update<Entity> function body (no file header).
+func (g *Generator) generateOpsUpdateFuncBody(
+	entityName string,
+	schema *parser.Schema,
+	opsConfig *config.EntityOpsConfig,
+) (*opsUpdateFuncData, error) {
+	updateOp, ok := opsConfig.Ops["update"]
+	if !ok || updateOp == nil {
+		return nil, nil
+	}
+	if schema.UpdateOperationID == "" {
+		return nil, fmt.Errorf("entity %q: missing OpenAPI operationId for update op (no PATCH/PUT found)", entityName)
+	}
+	if len(schema.UpdateTags) == 0 {
+		return nil, fmt.Errorf("entity %q: missing OpenAPI tags for update op", entityName)
+	}
+
+	_, updateReqType, err := ParseSDKTypePath(updateOp.Path)
+	if err != nil {
+		return nil, fmt.Errorf("entity %q: %w", entityName, err)
+	}
+
+	sdkMethod := pascalFromKebab(schema.UpdateOperationID)
+	sdkInterface := pascalFromKebab(schema.UpdateTags[0]) + "SDK"
+	hasTags, hasLabels, labelsPointer := metadataFields(schema)
+
+	parentEntityName, parentIDGetter, err := g.resolveParentEntity(entityName, schema)
+	if err != nil {
+		return nil, err
+	}
+
+	// Determine SDK call shape based on number of path params in the PATCH path.
+	// ≥2 params → wrapped operations.XxxRequest struct (parent ID + entity ID).
+	// 1 param → positional (entity ID only, root entity).
+	wrapped := len(schema.UpdatePathParams) >= 2
+	var parentIDField, entityIDField, updateBodyField string
+	if wrapped {
+		params := schema.UpdatePathParams
+		parentIDField = pathParamToFieldName(params[len(params)-2])
+		entityIDField = pathParamToFieldName(params[len(params)-1])
+		updateBodyField = updateReqType
+	}
+
+	return &opsUpdateFuncData{
+		Entity:               entityName,
+		APIAlias:             g.config.APIGroupPackageAlias,
+		UpdateSDKInterface:   sdkInterface,
+		UpdateSDKMethod:      sdkMethod,
+		UpdateReqType:        updateReqType,
+		HasTags:              hasTags,
+		HasLabels:            hasLabels,
+		LabelsPointer:        labelsPointer,
+		ParentEntityName:     parentEntityName,
+		ParentIDGetter:       parentIDGetter,
+		UpdateWrapped:        wrapped,
+		ParentIDField:        parentIDField,
+		EntityIDField:        entityIDField,
+		UpdateBodyField:      updateBodyField,
+		UpdateReqBodyPointer: schema.UpdateReqBodyPointer,
+	}, nil
+}
+
+// GenerateOpsUpdateDispatcher emits zz_generated_ops_update.go with
+// UpdateGeneratedOps[T,TEnt]. Call after all per-group generation has finished.
+func GenerateOpsUpdateDispatcher(infos []*OpsUpdateFileInfo) (*GeneratedFile, error) {
+	flat := make([]flatInfo, 0, len(infos))
+	for _, info := range infos {
+		flat = append(flat, flatInfo{
+			Entity:         info.Entity,
+			APIAlias:       info.APIAlias,
+			APIPackagePath: info.APIPackagePath,
+			SDKGetter:      info.SDKGetter,
+		})
+	}
+	return buildDispatcherFile("zz_generated_ops_update.go", opsUpdateDispatcherTemplate, flat)
+}

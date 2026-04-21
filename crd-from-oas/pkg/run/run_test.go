@@ -33,3 +33,20 @@ func TestCleanupLegacyGeneratedFiles(t *testing.T) {
 	require.NoFileExists(t, sharedReconcilerFuncs)
 	require.FileExists(t, keepFile)
 }
+
+func TestHandWrittenOpsFileNamesIncludesLegacyKonnectName(t *testing.T) {
+	require.Equal(
+		t,
+		[]string{"ops_konnect_eventcontrolplane.go", "ops_konnecteventcontrolplane.go"},
+		handWrittenOpsFileNames("KonnectEventControlPlane"),
+	)
+}
+
+func TestGeneratedOpsFileNameMatchesGeneratorConvention(t *testing.T) {
+	require.Equal(t, "zz_generated_ops_portal.go", generatedOpsFileName("Portal"))
+	require.Equal(
+		t,
+		"zz_generated_ops_konnect_eventcontrolplane.go",
+		generatedOpsFileName("KonnectEventControlPlane"),
+	)
+}
