@@ -156,6 +156,10 @@
 
 ### Changed
 
+- Increase default interval of uploading configuration and node status to the
+  read-only Konnect control plane (The legacy KIC type CP) to 3 minutes to
+  decrease the API calls to Konnect.
+  [#3969](https://github.com/Kong/kong-operator/pull/3969)
 - HybridGateway: generate one KongRoute per HTTPRouteMatch to honor Gateway API OR semantics across matches within a rule.
   This enables the `HTTPRouteMatching` conformance test for Hybrid mode.
   Note: routes count per rule may increase.
