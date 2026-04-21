@@ -14,3 +14,6 @@ package konnect
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=portals,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=portals/status,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=portals/finalizers,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=portalteams,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=portalteams/status,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=portalteams/finalizers,verbs=update;patch

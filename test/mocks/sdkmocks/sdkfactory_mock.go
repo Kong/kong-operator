@@ -43,6 +43,7 @@ type MockSDKWrapper struct {
 
 	PortalsSDK            *mocks.MockPortalsSDK
 	PortalAuthSettingsSDK *mocks.MockPortalAuthSettingsSDK
+	PortalTeamsSDK        *mocks.MockPortalTeamsSDK
 
 	server server.Server
 }
@@ -79,6 +80,7 @@ func NewMockSDKWrapperWithT(t *testing.T) *MockSDKWrapper {
 
 		PortalsSDK:            mocks.NewMockPortalsSDK(t),
 		PortalAuthSettingsSDK: mocks.NewMockPortalAuthSettingsSDK(t),
+		PortalTeamsSDK:        mocks.NewMockPortalTeamsSDK(t),
 
 		server: lo.Must(server.NewServer[*gwtypes.ControlPlane](SDKServerURL)),
 	}
@@ -207,6 +209,10 @@ func (m MockSDKWrapper) GetPortalsSDK() sdkkonnectgo.PortalsSDK {
 
 func (m MockSDKWrapper) GetPortalAuthSettingsSDK() sdkkonnectgo.PortalAuthSettingsSDK {
 	return m.PortalAuthSettingsSDK
+}
+
+func (m MockSDKWrapper) GetPortalTeamsSDK() sdkkonnectgo.PortalTeamsSDK {
+	return m.PortalTeamsSDK
 }
 
 type MockSDKFactory struct {

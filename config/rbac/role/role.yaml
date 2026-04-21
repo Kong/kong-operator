@@ -443,6 +443,7 @@ rules:
   - konnecteventcontrolplanes
   - konnecteventdataplanecertificates
   - portals
+  - portalteams
   verbs:
   - get
   - list
@@ -473,6 +474,8 @@ rules:
   - mcpservers/status
   - portals/finalizers
   - portals/status
+  - portalteams/finalizers
+  - portalteams/status
   verbs:
   - patch
   - update

@@ -4954,6 +4954,7 @@ Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1al
 - [KonnectGatewayControlPlane](#konnect-konghq-com-v1alpha1-konnectgatewaycontrolplane)
 - [MCPServer](#konnect-konghq-com-v1alpha1-mcpserver)
 - [Portal](#konnect-konghq-com-v1alpha1-portal)
+- [PortalTeam](#konnect-konghq-com-v1alpha1-portalteam)
 
 ### IdentityProviderRequest
 
@@ -5122,6 +5123,21 @@ Portal is the Schema for the portals API.
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[PortalSpec](#konnect-konghq-com-v1alpha1-types-portalspec)_ |  |
 | `status` _[PortalStatus](#konnect-konghq-com-v1alpha1-types-portalstatus)_ |  |
+
+### PortalTeam
+
+
+PortalTeam is the Schema for the portalteams API.
+
+<!-- portal_team description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `PortalTeam`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[PortalTeamSpec](#konnect-konghq-com-v1alpha1-types-portalteamspec)_ |  |
+| `status` _[PortalTeamStatus](#konnect-konghq-com-v1alpha1-types-portalteamstatus)_ |  |
 
 ### Types
 
@@ -5762,6 +5778,7 @@ _Appears in:_
 
 - [IdentityProviderRequestStatus](#konnect-konghq-com-v1alpha1-types-identityproviderrequeststatus)
 - [KonnectEventDataPlaneCertificateStatus](#konnect-konghq-com-v1alpha1-types-konnecteventdataplanecertificatestatus)
+- [PortalTeamStatus](#konnect-konghq-com-v1alpha1-types-portalteamstatus)
 
 
 
@@ -6383,6 +6400,58 @@ PortalStatus defines the observed state of Portal.
 _Appears in:_
 
 - [Portal](#konnect-konghq-com-v1alpha1-portal)
+
+#### PortalTeamAPISpec
+
+
+PortalTeamAPISpec defines the API spec fields for PortalTeam.
+
+
+
+| Field | Description |
+| --- | --- |
+| `can_own_applications` _string_ | Whether the team is allowed to own applications |
+| `description` _string_ |  |
+| `name` _string_ |  |
+
+_Appears in:_
+
+- [PortalTeamSpec](#konnect-konghq-com-v1alpha1-types-portalteamspec)
+
+
+
+#### PortalTeamSpec
+
+
+PortalTeamSpec defines the desired state of PortalTeam.
+
+
+
+| Field | Description |
+| --- | --- |
+| `portal_ref` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | PortalRef is the reference to the parent Portal object. |
+| `apiSpec` _[PortalTeamAPISpec](#konnect-konghq-com-v1alpha1-types-portalteamapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [PortalTeam](#konnect-konghq-com-v1alpha1-portalteam)
+
+#### PortalTeamStatus
+
+
+PortalTeamStatus defines the observed state of PortalTeam.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `portalID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | PortalID is the Konnect ID of the parent Portal. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [PortalTeam](#konnect-konghq-com-v1alpha1-portalteam)
 
 #### ProvisioningMethod
 
@@ -7148,7 +7217,6 @@ _Appears in:_
 Package v1alpha1 contains API Schema definitions for the x-konnect.konghq.com v1alpha1 API group.
 
 - [DcrProvider](#x-konnect-konghq-com-v1alpha1-dcrprovider)
-- [PortalTeam](#x-konnect-konghq-com-v1alpha1-portalteam)
 
 ### DcrProvider
 
@@ -7164,21 +7232,6 @@ DcrProvider is the Schema for the dcrproviders API.
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[DcrProviderSpec](#x-konnect-konghq-com-v1alpha1-types-dcrproviderspec)_ |  |
 | `status` _[DcrProviderStatus](#x-konnect-konghq-com-v1alpha1-types-dcrproviderstatus)_ |  |
-
-### PortalTeam
-
-
-PortalTeam is the Schema for the portalteams API.
-
-<!-- portal_team description placeholder -->
-
-| Field | Description |
-| --- | --- |
-| `apiVersion` _string_ | `x-konnect.konghq.com/v1alpha1`
-| `kind` _string_ | `PortalTeam`
-| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[PortalTeamSpec](#x-konnect-konghq-com-v1alpha1-types-portalteamspec)_ |  |
-| `status` _[PortalTeamStatus](#x-konnect-konghq-com-v1alpha1-types-portalteamstatus)_ |  |
 
 ### Types
 
@@ -7658,20 +7711,7 @@ _Appears in:_
 
 - [DcrProvider](#x-konnect-konghq-com-v1alpha1-dcrprovider)
 
-#### KonnectEntityRef
 
-
-KonnectEntityRef is a reference to a Konnect entity.
-
-
-
-| Field | Description |
-| --- | --- |
-| `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. |
-
-_Appears in:_
-
-- [PortalTeamStatus](#x-konnect-konghq-com-v1alpha1-types-portalteamstatus)
 
 
 
@@ -7706,56 +7746,6 @@ LabelsValue is the value type for Labels.
 _Appears in:_
 
 - [Labels](#x-konnect-konghq-com-v1alpha1-types-labels)
-
-#### PortalTeamAPISpec
-
-
-PortalTeamAPISpec defines the API spec fields for PortalTeam.
-
-
-
-| Field | Description |
-| --- | --- |
-| `can_own_applications` _string_ | Whether the team is allowed to own applications |
-| `description` _string_ |  |
-| `name` _string_ |  |
-
-_Appears in:_
-
-- [PortalTeamSpec](#x-konnect-konghq-com-v1alpha1-types-portalteamspec)
-
-#### PortalTeamSpec
-
-
-PortalTeamSpec defines the desired state of PortalTeam.
-
-
-
-| Field | Description |
-| --- | --- |
-| `portal_ref` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | PortalRef is the reference to the parent Portal object. |
-| `apiSpec` _[PortalTeamAPISpec](#x-konnect-konghq-com-v1alpha1-types-portalteamapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
-
-_Appears in:_
-
-- [PortalTeam](#x-konnect-konghq-com-v1alpha1-portalteam)
-
-#### PortalTeamStatus
-
-
-PortalTeamStatus defines the observed state of PortalTeam.
-
-
-
-| Field | Description |
-| --- | --- |
-| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
-| `portalID` _[KonnectEntityRef](#x-konnect-konghq-com-v1alpha1-types-konnectentityref)_ | PortalID is the Konnect ID of the parent Portal. |
-| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
-
-_Appears in:_
-
-- [PortalTeam](#x-konnect-konghq-com-v1alpha1-portalteam)
 
 
 

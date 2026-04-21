@@ -28,6 +28,13 @@ type opsGetForUIDFuncData struct {
 	// ParentIDField is the SDK request struct field name for the parent ID,
 	// e.g. "PortalID" for an entity nested under Portal.
 	ParentIDField string
+	// HasLabels indicates the entity's request schema declares a "labels"
+	// field, so list response items are expected to expose GetLabels() and
+	// the generator can match by the Kubernetes UID label.
+	HasLabels bool
+	// HasName indicates the entity's request schema declares a "name" field,
+	// used as a fallback UID-matching strategy when HasLabels is false.
+	HasName bool
 }
 
 // generateOpsGetForUIDFuncBody renders the get<Entity>ForUID function body
@@ -72,6 +79,9 @@ func (g *Generator) generateOpsGetForUIDFuncBody(
 	// <ListSDKMethod>Response on the outer struct (e.g. ListPortalsResponse).
 	listResponseField := listMethod + "Response"
 
+	_, hasLabels, _ := metadataFields(schema)
+	hasName := schemaHasNameProperty(schema)
+
 	return &opsGetForUIDFuncData{
 		Entity:            entityName,
 		APIAlias:          g.config.APIGroupPackageAlias,
@@ -81,7 +91,27 @@ func (g *Generator) generateOpsGetForUIDFuncBody(
 		ParentEntityName:  parentEntityName,
 		ParentIDGetter:    parentIDGetter,
 		ParentIDField:     parentIDField,
+		HasLabels:         hasLabels,
+		HasName:           hasName,
 	}, nil
+}
+
+// schemaHasNameProperty reports whether the request body schema declares a
+// "name" string property, used as a UID-match fallback when the SDK list
+// response type lacks GetLabels() / tags.
+func schemaHasNameProperty(schema *parser.Schema) bool {
+	if schema == nil {
+		return false
+	}
+	for _, prop := range schema.Properties {
+		if prop == nil {
+			continue
+		}
+		if prop.Name == "name" && prop.Type == "string" {
+			return true
+		}
+	}
+	return false
 }
 
 // GenerateOpsGetForUIDDispatcher emits zz_generated_ops_getforuid.go with

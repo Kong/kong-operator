@@ -63,6 +63,15 @@ apiGroupVersions:
           delete: {}
         reconciler:
           isRoot: false
+      - path: /v3/portals/{portalId}/teams
+        ops:
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.PortalCreateTeamRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.PortalUpdateTeamRequest
+          delete: {}
+        reconciler:
+          isRoot: false
 
   # TODO: temporary
   x-konnect.konghq.com/v1alpha1:
@@ -73,7 +82,6 @@ apiGroupVersions:
           path: github.com/kong/kong-operator/v2/api/common/v1alpha1
           alias: commonv1alpha1
     types:
-      - path: /v3/portals/{portalId}/teams
       - path: /v2/dcr-providers
       # TODO: uncomment
       # - path: /v3/portals/{portalId}/custom-domain
