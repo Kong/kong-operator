@@ -38,6 +38,9 @@ type SDKWrapper interface {
 	GetEventGatewayDataPlaneCertificatesSDK() sdkkonnectgo.EventGatewayDataPlaneCertificatesSDK
 	GetMCPServersSDK() *sdkkonnectgo.MCPServers
 
+	GetPortalsSDK() sdkkonnectgo.PortalsSDK
+	GetPortalAuthSettingsSDK() sdkkonnectgo.PortalAuthSettingsSDK
+
 	// GetServerURL returns the server URL for recording metrics.
 	GetServerURL() string
 	GetServer() server.Server
@@ -188,6 +191,16 @@ func (w sdkWrapper) GetEventGatewayDataPlaneCertificatesSDK() sdkkonnectgo.Event
 // GetMCPServersSDK returns the SDK to operate MCP servers.
 func (w sdkWrapper) GetMCPServersSDK() *sdkkonnectgo.MCPServers {
 	return w.sdk.MCPServers
+}
+
+// GetPortalsSDK returns the SDK to operate Portals.
+func (w sdkWrapper) GetPortalsSDK() sdkkonnectgo.PortalsSDK {
+	return w.sdk.Portals
+}
+
+// GetPortalAuthSettingsSDK returns the SDK to operate Portal Auth Settings.
+func (w sdkWrapper) GetPortalAuthSettingsSDK() sdkkonnectgo.PortalAuthSettingsSDK {
+	return w.sdk.PortalAuthSettings
 }
 
 // SDKToken is a token used to authenticate with the Konnect SDK.

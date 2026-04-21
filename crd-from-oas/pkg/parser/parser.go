@@ -71,6 +71,12 @@ type Schema struct {
 	// Map type support
 	AdditionalProperties *Property // For object types with additionalProperties (map value schema)
 	MaxProperties        *int64    // Maximum number of map entries
+
+	// POST operation hints used by downstream generators (e.g. Konnect SDK ops).
+	OperationID        string   // POST operationId (e.g. "create-portal")
+	Tags               []string // POST tags (e.g. ["portals"])
+	SuccessResponseRef string   // ref name of the 2xx success response schema (e.g. "Portal", "EventGatewayInfo")
+	RespIDIsPointer    bool     // true when the 2xx response schema's "id" field is not in required (i.e. *string in SDK codegen)
 }
 
 // ParsedSpec is the result of parsing an OpenAPI spec via ParsePaths.
@@ -177,6 +183,10 @@ func (p *Parser) parsePath(targetPath string) (string, *Schema, error) {
 		schema := p.parseSchema(schemaName, mediaTypeObj.Schema.Value)
 		schema.SourcePath = targetPath
 		schema.Dependencies = dependencies
+		schema.OperationID = pathItem.Post.OperationID
+		schema.Tags = append([]string(nil), pathItem.Post.Tags...)
+		schema.SuccessResponseRef = extractSuccessResponseRef(pathItem.Post.Responses)
+		schema.RespIDIsPointer = p.successResponseIDIsPointer(pathItem.Post.Responses)
 		return schemaName, schema, nil
 	}
 
@@ -382,6 +392,78 @@ func getSchemaType(schema *openapi3.Schema) string {
 		}
 	}
 	return types[0]
+}
+
+// successResponseIDIsPointer reports whether the 2xx response schema's "id"
+// field is absent from the schema's required array, which causes SDK codegen to
+// emit it as *string rather than string. Returns false when "id" is required or
+// when the response schema cannot be resolved.
+func (p *Parser) successResponseIDIsPointer(responses *openapi3.Responses) bool {
+	if responses == nil {
+		return false
+	}
+	for _, code := range []string{"201", "200"} {
+		respRef := responses.Value(code)
+		if respRef == nil || respRef.Value == nil {
+			continue
+		}
+		for _, mt := range respRef.Value.Content {
+			if mt == nil || mt.Schema == nil {
+				continue
+			}
+			schemaVal := mt.Schema.Value
+			if mt.Schema.Ref != "" {
+				refName := extractRefName(mt.Schema.Ref)
+				if s, ok := p.doc.Components.Schemas[refName]; ok && s != nil && s.Value != nil {
+					schemaVal = s.Value
+				}
+			}
+			if schemaVal == nil {
+				continue
+			}
+			if slices.Contains(schemaVal.Required, "id") {
+				return false
+			}
+			// "id" field exists but is not required → SDK emits *string
+			if _, ok := schemaVal.Properties["id"]; ok {
+				return true
+			}
+			return false
+		}
+	}
+	return false
+}
+
+// extractSuccessResponseRef returns the ref name of the 2xx success response
+// schema (preferring 201, then 200) for a POST operation, or "" if none is set.
+// It handles both response-level $refs (e.g. #/components/responses/Foo) and
+// nested content-schema $refs (e.g. #/components/schemas/Foo). When both are
+// present the content-schema ref is preferred because it names the actual
+// payload type produced by SDK codegen.
+func extractSuccessResponseRef(responses *openapi3.Responses) string {
+	if responses == nil {
+		return ""
+	}
+	for _, code := range []string{"201", "200"} {
+		respRef := responses.Value(code)
+		if respRef == nil {
+			continue
+		}
+		if respRef.Value != nil {
+			for _, mt := range respRef.Value.Content {
+				if mt == nil || mt.Schema == nil {
+					continue
+				}
+				if mt.Schema.Ref != "" {
+					return extractRefName(mt.Schema.Ref)
+				}
+			}
+		}
+		if respRef.Ref != "" {
+			return extractRefName(respRef.Ref)
+		}
+	}
+	return ""
 }
 
 // extractRefName extracts the schema name from a $ref string.

@@ -64,7 +64,8 @@ type SupportedKonnectEntityType interface {
 		// https://github.com/Kong/kong-operator/issues/3785
 		konnectv1alpha1.KonnectEventControlPlane |
 		konnectv1alpha1.KonnectEventDataPlaneCertificate |
-		konnectv1alpha1.Portal
+		konnectv1alpha1.Portal |
+		konnectv1alpha1.IdentityProviderRequest
 	// TODO: add other types
 
 	GetTypeName() string

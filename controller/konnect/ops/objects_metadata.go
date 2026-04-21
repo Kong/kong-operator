@@ -143,6 +143,21 @@ func UIDLabelForObject(obj client.Object) string {
 	return fmt.Sprintf("%s:%s", KubernetesUIDLabelKey, obj.GetUID())
 }
 
+// WithKubernetesMetadataLabelsPtr is the pointer-valued counterpart of
+// WithKubernetesMetadataLabels for Konnect APIs whose label maps use
+// nullable string values (map[string]*string). It preserves nil user-set
+// entries (which semantically delete a label on update) while adding the
+// Kubernetes metadata labels as non-nil values.
+func WithKubernetesMetadataLabelsPtr(obj ObjectWithMetadata, userSetLabels map[string]*string) map[string]*string {
+	merged := WithKubernetesMetadataLabels(obj, nil)
+	out := make(map[string]*string, len(merged)+len(userSetLabels))
+	for k, v := range merged {
+		out[k] = &v
+	}
+	maps.Copy(out, userSetLabels)
+	return out
+}
+
 func truncate(s string, limit int) string {
 	if len(s) <= limit {
 		return s
