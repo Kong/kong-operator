@@ -569,8 +569,14 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 		if !certFound && !certSDKFound {
 			log.Debug(logger, "Creating KongDataPlaneClientCertificate custom resource")
+			// Derive the CR name from the KonnectExtension name (not the Secret name) so
+			// that two KonnectExtensions that share the same client-certificate Secret each
+			// get their own CR in their own ControlPlane. Lookups elsewhere in this
+			// reconciler use the KonnectExtension owner-reference index and Konnect-side
+			// cert-content filtering, not the CR name, so this is backward compatible:
+			// pre-existing CRs named after the Secret are still found via the owner index.
 			dpCert := konnectresource.GenerateKongDataPlaneClientCertificate(
-				certificateSecret.Name,
+				ext.Name,
 				certificateSecret.Namespace,
 				&ext.Spec.Konnect.ControlPlane.Ref,
 				string(certificateSecret.Data[consts.TLSCRT]),
@@ -624,8 +630,10 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			// In case the certificate exists in Konnect but not in cluster,
 			// we create the KongDataPlaneClientCertificate resource in cluster
 			// to adopt the existing certificate in Konnect.
+			// Name the CR after the KonnectExtension (not the Secret) so two
+			// KonnectExtensions that share the same Secret do not collide on the CR name.
 			dpCert := konnectresource.GenerateKongDataPlaneClientCertificate(
-				certificateSecret.Name,
+				ext.Name,
 				certificateSecret.Namespace,
 				&ext.Spec.Konnect.ControlPlane.Ref,
 				string(certificateSecret.Data[consts.TLSCRT]),
@@ -793,10 +801,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	if certFound {
 		var (
 			dpCert   configurationv1alpha1.KongDataPlaneClientCertificate
-			dpCertNN = types.NamespacedName{
-				Name:      certificateSecret.Name,
-				Namespace: certificateSecret.Namespace,
-			}
+			dpCertNN = client.ObjectKeyFromObject(&cert)
 		)
 		if err = r.Get(ctx, dpCertNN, &dpCert); err != nil {
 			if !apierrors.IsNotFound(err) {
