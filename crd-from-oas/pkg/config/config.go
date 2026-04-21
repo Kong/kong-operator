@@ -77,6 +77,8 @@ type TypeConfig struct {
 	// OpsRequireClient indicates that generated ops for this entity require a
 	// controller-runtime client to read cluster state while building SDK requests.
 	OpsRequireClient bool `yaml:"-"`
+	// OpsSkipGetForUID skips generation of the getForUID function for this entity.
+	OpsSkipGetForUID bool `yaml:"-"`
 	// OptionalSecretReference enables generation of a union type field on the
 	// Spec that allows the user to provide sensitive data either inline in the
 	// APISpec or via a Kubernetes Secret reference. When true the generated Spec
@@ -111,6 +113,10 @@ type typeOpsYAML struct {
 	// RequireClient indicates that generated ops for this entity need a
 	// controller-runtime client to fetch cluster data such as Secrets.
 	RequireClient bool `yaml:"requireClient,omitempty"`
+	// SkipGetForUID skips generation of the getForUID function for this entity.
+	// Use when the SDK list endpoint does not support UID-label filtering, or
+	// when the hand-written implementation already exists.
+	SkipGetForUID bool `yaml:"skipGetForUID,omitempty"`
 	// Operations maps operation names (e.g. "create", "update") to SDK type configs.
 	Operations map[string]*OpConfig `yaml:",inline"`
 }
@@ -143,6 +149,7 @@ func (tc *TypeConfig) UnmarshalYAML(value *yaml.Node) error {
 	if raw.Ops != nil {
 		tc.Ops = raw.Ops.Operations
 		tc.OpsRequireClient = raw.Ops.RequireClient
+		tc.OpsSkipGetForUID = raw.Ops.SkipGetForUID
 	}
 
 	return nil
@@ -155,6 +162,8 @@ type EntityOpsConfig struct {
 	// RequireClient indicates that generated ops need a controller-runtime client
 	// to build their SDK requests.
 	RequireClient bool
+	// SkipGetForUID skips generation of the getForUID function for this entity.
+	SkipGetForUID bool
 }
 
 // NameOverrides returns a mapping from OpenAPI path to the custom CRD type name
@@ -243,7 +252,11 @@ func (c *APIGroupVersionConfig) OpsConfig(pathToEntityName map[string]string) ma
 			continue
 		}
 		requireClient := tc.OpsRequireClient || tc.OptionalSecretReference
-		result[entityName] = &EntityOpsConfig{Ops: tc.Ops, RequireClient: requireClient}
+		result[entityName] = &EntityOpsConfig{
+			Ops:           tc.Ops,
+			RequireClient: requireClient,
+			SkipGetForUID: tc.OpsSkipGetForUID,
+		}
 	}
 	return result
 }

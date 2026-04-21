@@ -28,6 +28,8 @@ func CreateGeneratedOps[
 	switch ent := any(e).(type) {
 	case *konnectv1alpha1.IdentityProviderRequest:
 		return createIdentityProviderRequest(ctx, sdk.GetPortalAuthSettingsSDK(), ent)
+	case *konnectv1alpha1.KonnectEventControlPlane:
+		return createKonnectEventControlPlane(ctx, sdk.GetEventGatewaysSDK(), ent)
 	case *konnectv1alpha1.KonnectEventDataPlaneCertificate:
 		return createKonnectEventDataPlaneCertificate(ctx, cl, sdk.GetEventGatewayDataPlaneCertificatesSDK(), ent)
 	case *konnectv1alpha1.Portal:

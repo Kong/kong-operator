@@ -62,7 +62,9 @@ func updateKonnectEventDataPlaneCertificate(
 		UpdateEventGatewayDataPlaneCertificateRequest: req,
 	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {
-		return errWrap
+		return handleUpdateError(ctx, err, obj, func(ctx context.Context) error {
+			return createKonnectEventDataPlaneCertificate(ctx, cl, sdk, obj)
+		})
 	}
 	return nil
 }
@@ -80,7 +82,7 @@ func deleteKonnectEventDataPlaneCertificate(
 
 	_, err := sdk.DeleteEventGatewayDataPlaneCertificate(ctx, parentID, id)
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, obj); errWrap != nil {
-		return errWrap
+		return handleDeleteError(ctx, errWrap, obj)
 	}
 	return nil
 }

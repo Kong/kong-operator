@@ -93,11 +93,8 @@ func TestGetKonnectEventControlPlaneForUID(t *testing.T) {
 
 	sdk.EXPECT().
 		ListEventGateways(mock.Anything, sdkkonnectops.ListEventGatewaysRequest{
-			Filter: &sdkkonnectcomp.EventGatewayCommonFilter{
-				Name: &sdkkonnectcomp.StringFieldContainsFilter{
-					Contains: "event-control-plane",
-				},
-			},
+			// TODO: this will be more specific when we start generating getForUID functions
+			// with support for filters derived from the OpenAPI schema.
 		}).
 		Return(&sdkkonnectops.ListEventGatewaysResponse{
 			ListEventGatewaysResponse: &sdkkonnectcomp.ListEventGatewaysResponse{

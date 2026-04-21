@@ -868,7 +868,9 @@ func update{{.Entity}}(
 	_, err = sdk.{{.UpdateSDKMethod}}(ctx, id, {{if .UpdateReqBodyPointer}}req{{else}}*req{{end}})
 {{- end}}
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {
-		return errWrap
+		return handleUpdateError(ctx, err, obj, func(ctx context.Context) error {
+			return create{{.Entity}}(ctx, {{if .NeedsClient}}cl, {{end}}sdk, obj)
+		})
 	}
 	return nil
 }
@@ -899,7 +901,7 @@ func delete{{.Entity}}(
 	_, err := sdk.{{.DeleteSDKMethod}}(ctx, id{{range .DeleteNilArgs}}, nil{{end}})
 {{- end}}
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, obj); errWrap != nil {
-		return errWrap
+		return handleDeleteError(ctx, errWrap, obj)
 	}
 	return nil
 }
@@ -1016,6 +1018,106 @@ func DeleteGeneratedOps[
 {{- end}}
 	default:
 		return fmt.Errorf("unsupported entity type %T", ent)
+	}
+}
+`
+
+// opsGetForUIDFuncTemplate renders a single get<Entity>ForUID function body.
+// It is concatenated after the delete function body in the per-entity ops file.
+const opsGetForUIDFuncTemplate = `
+func get{{.Entity}}ForUID(
+	ctx context.Context,
+	sdk sdkkonnectgo.{{.ListSDKInterface}},
+	obj *{{.APIAlias}}.{{.Entity}},
+) (string, error) {
+{{- if .ParentEntityName}}
+	parentID := obj.{{.ParentIDGetter}}()
+	if parentID == "" {
+		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "{{.ParentEntityName}}", Op: GetOp}
+	}
+{{- end}}
+
+	// TODO: pass a Filter to {{.ListSDKMethod}} (e.g. by name/labels) so we
+	// do not page through every entity in the tenant. Filter types and
+	// fields are entity-specific; derive from OpenAPI schema.
+{{- if .ParentEntityName}}
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
+		{{.ParentIDField}}: parentID,
+	})
+{{- else}}
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{})
+{{- end}}
+	if err != nil {
+		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
+	}
+	if resp == nil || resp.{{.ListResponseField}} == nil {
+		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
+	}
+
+	for _, entry := range resp.{{.ListResponseField}}.Data {
+		if entry.GetLabels()[KubernetesUIDLabelKey] != string(obj.GetUID()) {
+			continue
+		}
+		if entry.GetID() != "" {
+			return entry.GetID(), nil
+		}
+	}
+
+	return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+}
+`
+
+// opsGetForUIDDispatcherTemplate renders zz_generated_ops_getforuid.go.
+// It also defines ConflictOnCreateButNoConflifctHandlingImplementedError and
+// the generic getForUID[T, TEnt] dispatcher used by ops.go.
+const opsGetForUIDDispatcherTemplate = sharedGeneratedFilePreamble + `
+
+package ops
+
+import (
+	"context"
+	"fmt"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+{{.APIImportsBlock}}
+	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
+	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
+)
+
+// ConflictOnCreateButNoConflifctHandlingImplementedError is returned when a
+// create request conflicts with an existing Konnect entity but no conflict
+// resolution is implemented for the entity type.
+type ConflictOnCreateButNoConflifctHandlingImplementedError struct {
+	Entity client.Object
+}
+
+// Error implements the error interface.
+func (e ConflictOnCreateButNoConflifctHandlingImplementedError) Error() string {
+	return fmt.Sprintf("conflict on create request for %T %s, but no conflict handling implemented",
+		e.Entity, client.ObjectKeyFromObject(e.Entity),
+	)
+}
+
+// getForUID dispatches getForUID operations to per-entity generated functions.
+// It is used during conflict resolution on create to locate an existing Konnect
+// entity by its Kubernetes UID. Entities handled by hand-written ops remain in
+// the Create function in ops.go and do not route through here.
+func getForUID[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](
+	ctx context.Context,
+	sdk sdkops.SDKWrapper,
+	e TEnt,
+) (string, error) {
+	switch ent := any(e).(type) {
+{{- range .Cases}}
+	case *{{.APIAlias}}.{{.Entity}}:
+		return get{{.Entity}}ForUID(ctx, sdk.{{.SDKGetter}}(), ent)
+{{- end}}
+	default:
+		return "", ConflictOnCreateButNoConflifctHandlingImplementedError{Entity: e}
 	}
 }
 `

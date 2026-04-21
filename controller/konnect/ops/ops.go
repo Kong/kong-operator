@@ -188,15 +188,15 @@ func Create[
 			id, errGet = getKongCertificateForUID(ctx, sdk.GetCertificatesSDK(), ent)
 		case *configurationv1alpha1.KongCACertificate:
 			id, errGet = getKongCACertificateForUID(ctx, sdk.GetCACertificatesSDK(), ent)
-		case *konnectv1alpha1.Portal:
-			// TODO: implement Portal getForUID
 
 		// ---------------------------------------------------------------------
 		// TODO: add other manually maintained Konnect types here
 		default:
-			return e, fmt.Errorf("conflict on create request for %T %s, but no conflict handling implemented: %w",
-				e, client.ObjectKeyFromObject(e), err,
-			)
+			id, errGet = getForUID(ctx, sdk, e)
+		}
+
+		if errConflict, ok := errors.AsType[ConflictOnCreateButNoConflifctHandlingImplementedError](errGet); ok {
+			return e, errConflict
 		}
 
 		if errGet == nil && id != "" {

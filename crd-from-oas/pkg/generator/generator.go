@@ -44,14 +44,19 @@ type Config struct {
 	// APIGroupPackageAlias is the import alias for the generated API types package
 	// (e.g. "xkonnectv1alpha1").
 	APIGroupPackageAlias string
+	// SkipGetForUIDEntities is the set of entity names for which getForUID
+	// generation should be skipped (e.g. because a hand-written implementation
+	// already exists in an ops_<entity>_manual.go file).
+	SkipGetForUIDEntities map[string]bool
 }
 
 // Generator generates Go CRD types from parsed OpenAPI schemas.
 type Generator struct {
-	config         Config
-	opsCreateInfos []*OpsCreateFileInfo
-	opsUpdateInfos []*OpsUpdateFileInfo
-	opsDeleteInfos []*OpsDeleteFileInfo
+	config            Config
+	opsCreateInfos    []*OpsCreateFileInfo
+	opsUpdateInfos    []*OpsUpdateFileInfo
+	opsDeleteInfos    []*OpsDeleteFileInfo
+	opsGetForUIDInfos []*OpsGetForUIDFileInfo
 }
 
 // NewGenerator creates a new generator.
@@ -78,6 +83,14 @@ func (g *Generator) OpsUpdateInfos() []*OpsUpdateFileInfo {
 // cross-group delete dispatcher after all group-versions have been generated.
 func (g *Generator) OpsDeleteInfos() []*OpsDeleteFileInfo {
 	return g.opsDeleteInfos
+}
+
+// OpsGetForUIDInfos returns metadata for every getForUID op file emitted by
+// the most recent Generate call. Callers (e.g. the Runner) use it to assemble
+// the cross-group getForUID dispatcher after all group-versions have been
+// generated.
+func (g *Generator) OpsGetForUIDInfos() []*OpsGetForUIDFileInfo {
+	return g.opsGetForUIDInfos
 }
 
 // GeneratedFile represents a generated Go file.
@@ -224,23 +237,26 @@ func (g *Generator) generateEntityOpsFileForEntity(entityName string, schema *pa
 		return nil, nil
 	}
 
-	opsFile, createInfo, updateInfo, deleteInfo, err := g.generateEntityOpsFile(entityName, schema, opsConfig)
+	opsResult, err := g.generateEntityOpsFile(entityName, schema, opsConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate ops file for %s: %w", entityName, err)
 	}
-	if opsFile == nil {
+	if opsResult.File == nil {
 		return nil, nil
 	}
-	if createInfo != nil {
-		g.opsCreateInfos = append(g.opsCreateInfos, createInfo)
+	if opsResult.CreateInfo != nil {
+		g.opsCreateInfos = append(g.opsCreateInfos, opsResult.CreateInfo)
 	}
-	if updateInfo != nil {
-		g.opsUpdateInfos = append(g.opsUpdateInfos, updateInfo)
+	if opsResult.UpdateInfo != nil {
+		g.opsUpdateInfos = append(g.opsUpdateInfos, opsResult.UpdateInfo)
 	}
-	if deleteInfo != nil {
-		g.opsDeleteInfos = append(g.opsDeleteInfos, deleteInfo)
+	if opsResult.DeleteInfo != nil {
+		g.opsDeleteInfos = append(g.opsDeleteInfos, opsResult.DeleteInfo)
 	}
-	return opsFile, nil
+	if opsResult.GetForUIDInfo != nil {
+		g.opsGetForUIDInfos = append(g.opsGetForUIDInfos, opsResult.GetForUIDInfo)
+	}
+	return opsResult.File, nil
 }
 
 // generateReconcilerEntityFiles generates reconciler wiring files for all

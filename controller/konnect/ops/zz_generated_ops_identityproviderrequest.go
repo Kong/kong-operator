@@ -59,7 +59,9 @@ func updateIdentityProviderRequest(
 		UpdateIdentityProvider: *req,
 	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {
-		return errWrap
+		return handleUpdateError(ctx, err, obj, func(ctx context.Context) error {
+			return createIdentityProviderRequest(ctx, sdk, obj)
+		})
 	}
 	return nil
 }
@@ -77,7 +79,7 @@ func deleteIdentityProviderRequest(
 
 	_, err := sdk.DeletePortalIdentityProvider(ctx, parentID, id)
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, obj); errWrap != nil {
-		return errWrap
+		return handleDeleteError(ctx, errWrap, obj)
 	}
 	return nil
 }

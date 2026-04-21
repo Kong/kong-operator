@@ -24,6 +24,7 @@ func (r *Runner) Run(
 	var allOpsCreateInfos []*generator.OpsCreateFileInfo
 	var allOpsUpdateInfos []*generator.OpsUpdateFileInfo
 	var allOpsDeleteInfos []*generator.OpsDeleteFileInfo
+	var allOpsGetForUIDInfos []*generator.OpsGetForUIDFileInfo
 	for _, gvKey := range r.gvKeys {
 		agvConfig := r.projectCfg.APIGroupVersions[gvKey]
 
@@ -95,6 +96,20 @@ func (r *Runner) Run(
 			generateGVI = *agvConfig.GenerateGroupVersionInfo
 		}
 
+		// Detect which entities have a hand-written _manual.go ops file.
+		// These already contain a getForUID implementation; skip generation to
+		// avoid a duplicate function declaration in the generated ops file.
+		opsDir := filepath.Join(r.projectRoot, "controller/konnect/ops")
+		skipGetForUIDEntities := make(map[string]bool)
+		for _, entityName := range pathToEntityName {
+			for _, candidate := range handWrittenGetForUIDFileNames(entityName) {
+				if _, err := os.Stat(filepath.Join(opsDir, candidate)); err == nil {
+					skipGetForUIDEntities[entityName] = true
+					break
+				}
+			}
+		}
+
 		// Generate CRD types
 		gen := generator.NewGenerator(generator.Config{
 			APIGroup:                 apiGroup,
@@ -108,6 +123,7 @@ func (r *Runner) Run(
 			ReconcilerConfig:         agvConfig.ReconcilerConfigs(pathToEntityName),
 			APIGroupPackagePath:      apiGroupPackagePath,
 			APIGroupPackageAlias:     apiGroupPackageAlias,
+			SkipGetForUIDEntities:    skipGetForUIDEntities,
 		})
 
 		files, err := gen.Generate(parsed)
@@ -137,8 +153,8 @@ func (r *Runner) Run(
 		opsCreateInfosKept := make([]*generator.OpsCreateFileInfo, 0, len(gen.OpsCreateInfos()))
 		opsUpdateInfosKept := make([]*generator.OpsUpdateFileInfo, 0, len(gen.OpsUpdateInfos()))
 		opsDeleteInfosKept := make([]*generator.OpsDeleteFileInfo, 0, len(gen.OpsDeleteInfos()))
+		opsGetForUIDInfosKept := make([]*generator.OpsGetForUIDFileInfo, 0, len(gen.OpsGetForUIDInfos()))
 		skippedOpsFiles := make(map[string]bool)
-		opsDir := filepath.Join(r.projectRoot, "controller/konnect/ops")
 
 		// Build a set of entities with hand-written collision to skip create, update, and delete.
 		collidedEntities := make(map[string]bool)
@@ -179,9 +195,17 @@ func (r *Runner) Run(
 			opsDeleteInfosKept = append(opsDeleteInfosKept, info)
 		}
 
+		for _, info := range gen.OpsGetForUIDInfos() {
+			if collidedEntities[info.Entity] {
+				continue
+			}
+			opsGetForUIDInfosKept = append(opsGetForUIDInfosKept, info)
+		}
+
 		allOpsCreateInfos = append(allOpsCreateInfos, opsCreateInfosKept...)
 		allOpsUpdateInfos = append(allOpsUpdateInfos, opsUpdateInfosKept...)
 		allOpsDeleteInfos = append(allOpsDeleteInfos, opsDeleteInfosKept...)
+		allOpsGetForUIDInfos = append(allOpsGetForUIDInfos, opsGetForUIDInfosKept...)
 
 		// Write generated files
 		for _, file := range files {
@@ -248,6 +272,18 @@ func (r *Runner) Run(
 		return err
 	}
 
+	// Emit getForUID dispatcher.
+	if err := emitDispatcherFile(
+		r.projectRoot,
+		logger,
+		"getforuid",
+		func() (*generator.GeneratedFile, error) {
+			return generator.GenerateOpsGetForUIDDispatcher(allOpsGetForUIDInfos)
+		},
+	); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -293,6 +329,16 @@ func handWrittenOpsFileNames(entity string) []string {
 		return []string{"ops_" + prefix + ".go"}
 	}
 	return []string{"ops_" + prefix + ".go", "ops_" + legacy + ".go"}
+}
+
+// handWrittenGetForUIDFileNames returns candidate hand-written file names for
+// entities whose getForUID function is implemented manually (i.e. in a
+// fully hand-written ops file, not a _manual.go helper file). This is the
+// same set as handWrittenOpsFileNames — entities with a _manual.go helper
+// file (which only contains SDK request builders) use the ops config's
+// skipGetForUID flag instead.
+func handWrittenGetForUIDFileNames(entity string) []string {
+	return handWrittenOpsFileNames(entity)
 }
 
 // generatedOpsFileName returns the generated ops file name for an entity,

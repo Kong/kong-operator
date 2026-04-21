@@ -10,36 +10,51 @@ import (
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/parser"
 )
 
+// entityOpsFileResult holds the outputs of generateEntityOpsFile.
+type entityOpsFileResult struct {
+	File          *GeneratedFile
+	CreateInfo    *OpsCreateFileInfo
+	UpdateInfo    *OpsUpdateFileInfo
+	DeleteInfo    *OpsDeleteFileInfo
+	GetForUIDInfo *OpsGetForUIDFileInfo
+}
+
 // generateEntityOpsFile emits a zz_generated_ops_<entity>.go file containing
-// create<Entity>, update<Entity>, and delete<Entity> functions (whichever are
-// configured). It returns the file plus metadata for each dispatcher.
+// create<Entity>, update<Entity>, delete<Entity>, and get<Entity>ForUID
+// functions (whichever are configured). It returns the file plus metadata for
+// each dispatcher.
 func (g *Generator) generateEntityOpsFile(
 	entityName string,
 	schema *parser.Schema,
 	opsConfig *config.EntityOpsConfig,
-) (*GeneratedFile, *OpsCreateFileInfo, *OpsUpdateFileInfo, *OpsDeleteFileInfo, error) {
+) (entityOpsFileResult, error) {
 	createData, err := g.generateOpsCreateFuncBody(entityName, schema, opsConfig)
 	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("failed create op for %s: %w", entityName, err)
+		return entityOpsFileResult{}, fmt.Errorf("failed create op for %s: %w", entityName, err)
 	}
 
 	updateData, err := g.generateOpsUpdateFuncBody(entityName, schema, opsConfig)
 	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("failed update op for %s: %w", entityName, err)
+		return entityOpsFileResult{}, fmt.Errorf("failed update op for %s: %w", entityName, err)
 	}
 
 	deleteData, err := g.generateOpsDeleteFuncBody(entityName, schema, opsConfig)
 	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("failed delete op for %s: %w", entityName, err)
+		return entityOpsFileResult{}, fmt.Errorf("failed delete op for %s: %w", entityName, err)
 	}
 
-	if createData == nil && updateData == nil && deleteData == nil {
-		return nil, nil, nil, nil, nil
+	getForUIDData, err := g.generateOpsGetForUIDFuncBody(entityName, schema, opsConfig)
+	if err != nil {
+		return entityOpsFileResult{}, fmt.Errorf("failed getForUID op for %s: %w", entityName, err)
+	}
+
+	if createData == nil && updateData == nil && deleteData == nil && getForUIDData == nil {
+		return entityOpsFileResult{}, nil
 	}
 
 	// Determine whether we need the sdkkonnectops import (wrapped request structs
-	// are only used by update; delete always uses positional SDK args).
-	needsOpsImport := updateData != nil && updateData.UpdateWrapped
+	// are used by update and getForUID).
+	needsOpsImport := (updateData != nil && updateData.UpdateWrapped) || getForUIDData != nil
 	needsClientImport := (createData != nil && createData.NeedsClient) || (updateData != nil && updateData.NeedsClient)
 
 	// Render file header.
@@ -57,14 +72,14 @@ func (g *Generator) generateEntityOpsFile(
 	var content strings.Builder
 	headerTmpl := template.Must(template.New("opsheader").Parse(opsPerEntityFileHeaderTemplate))
 	if err := headerTmpl.Execute(&content, headerData); err != nil {
-		return nil, nil, nil, nil, err
+		return entityOpsFileResult{}, err
 	}
 
 	// Render create function body.
 	if createData != nil {
 		createTmpl := template.Must(template.New("opscreatefunc").Parse(opsCreateFuncTemplate))
 		if err := createTmpl.Execute(&content, createData); err != nil {
-			return nil, nil, nil, nil, err
+			return entityOpsFileResult{}, err
 		}
 	}
 
@@ -72,7 +87,7 @@ func (g *Generator) generateEntityOpsFile(
 	if updateData != nil {
 		updateTmpl := template.Must(template.New("opsupdatefunc").Parse(opsUpdateFuncTemplate))
 		if err := updateTmpl.Execute(&content, updateData); err != nil {
-			return nil, nil, nil, nil, err
+			return entityOpsFileResult{}, err
 		}
 	}
 
@@ -80,7 +95,15 @@ func (g *Generator) generateEntityOpsFile(
 	if deleteData != nil {
 		deleteTmpl := template.Must(template.New("opsdeletefunc").Parse(opsDeleteFuncTemplate))
 		if err := deleteTmpl.Execute(&content, deleteData); err != nil {
-			return nil, nil, nil, nil, err
+			return entityOpsFileResult{}, err
+		}
+	}
+
+	// Render getForUID function body.
+	if getForUIDData != nil {
+		getForUIDTmpl := template.Must(template.New("opsgetforuidfunc").Parse(opsGetForUIDFuncTemplate))
+		if err := getForUIDTmpl.Execute(&content, getForUIDData); err != nil {
+			return entityOpsFileResult{}, err
 		}
 	}
 
@@ -125,7 +148,24 @@ func (g *Generator) generateEntityOpsFile(
 		}
 	}
 
-	return file, createInfo, updateInfo, deleteInfo, nil
+	var getForUIDInfo *OpsGetForUIDFileInfo
+	if getForUIDData != nil {
+		sdkGetter := "Get" + getForUIDData.ListSDKInterface
+		getForUIDInfo = &OpsGetForUIDFileInfo{
+			Entity:         entityName,
+			APIAlias:       g.config.APIGroupPackageAlias,
+			APIPackagePath: g.config.APIGroupPackagePath,
+			SDKGetter:      sdkGetter,
+		}
+	}
+
+	return entityOpsFileResult{
+		File:          file,
+		CreateInfo:    createInfo,
+		UpdateInfo:    updateInfo,
+		DeleteInfo:    deleteInfo,
+		GetForUIDInfo: getForUIDInfo,
+	}, nil
 }
 
 // generateOpsCreate is retained for backwards-compatible unit tests. It calls
@@ -135,8 +175,8 @@ func (g *Generator) generateOpsCreate(
 	schema *parser.Schema,
 	opsConfig *config.EntityOpsConfig,
 ) (*GeneratedFile, *OpsCreateFileInfo, error) {
-	file, createInfo, _, _, err := g.generateEntityOpsFile(entityName, schema, opsConfig)
-	return file, createInfo, err
+	res, err := g.generateEntityOpsFile(entityName, schema, opsConfig)
+	return res.File, res.CreateInfo, err
 }
 
 // generateOpsUpdate is a thin wrapper for unit tests — returns only update outputs.
@@ -145,8 +185,8 @@ func (g *Generator) generateOpsUpdate(
 	schema *parser.Schema,
 	opsConfig *config.EntityOpsConfig,
 ) (*GeneratedFile, *OpsUpdateFileInfo, error) {
-	file, _, updateInfo, _, err := g.generateEntityOpsFile(entityName, schema, opsConfig)
-	return file, updateInfo, err
+	res, err := g.generateEntityOpsFile(entityName, schema, opsConfig)
+	return res.File, res.UpdateInfo, err
 }
 
 // generateOpsDelete is a thin wrapper for unit tests — returns only delete outputs.
@@ -155,8 +195,8 @@ func (g *Generator) generateOpsDelete(
 	schema *parser.Schema,
 	opsConfig *config.EntityOpsConfig,
 ) (*GeneratedFile, *OpsDeleteFileInfo, error) {
-	file, _, _, deleteInfo, err := g.generateEntityOpsFile(entityName, schema, opsConfig)
-	return file, deleteInfo, err
+	res, err := g.generateEntityOpsFile(entityName, schema, opsConfig)
+	return res.File, res.DeleteInfo, err
 }
 
 // buildDispatcherFile is a shared helper that renders a dispatcher Go file.

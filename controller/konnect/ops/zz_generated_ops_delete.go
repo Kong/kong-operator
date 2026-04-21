@@ -26,6 +26,8 @@ func DeleteGeneratedOps[
 	switch ent := any(e).(type) {
 	case *konnectv1alpha1.IdentityProviderRequest:
 		return deleteIdentityProviderRequest(ctx, sdk.GetPortalAuthSettingsSDK(), ent)
+	case *konnectv1alpha1.KonnectEventControlPlane:
+		return deleteKonnectEventControlPlane(ctx, sdk.GetEventGatewaysSDK(), ent)
 	case *konnectv1alpha1.KonnectEventDataPlaneCertificate:
 		return deleteKonnectEventDataPlaneCertificate(ctx, sdk.GetEventGatewayDataPlaneCertificatesSDK(), ent)
 	case *konnectv1alpha1.Portal:
