@@ -512,13 +512,9 @@ func Update[
 	case *konnectv1alpha1.MCPServer:
 		// MCPServer is mirror-only, so we use Konnect as the source of truth for it.
 		break
-	case *konnectv1alpha1.Portal:
-		// TODO: implement Portal SDK update
-		err = fmt.Errorf("Portal update operation not yet implemented")
-		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
 	default:
-		return ctrl.Result{}, fmt.Errorf("unsupported entity type %T", ent)
+		err = UpdateGeneratedOps(ctx, sdk, e)
 	}
 
 	errSDK, isSDKErr := errors.AsType[*sdkkonnecterrs.SDKError](err)

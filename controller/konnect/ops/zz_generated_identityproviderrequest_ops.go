@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
+	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 )
@@ -34,5 +35,31 @@ func createIdentityProviderRequest(
 	}
 
 	obj.SetKonnectID(*resp.IdentityProvider.ID)
+	return nil
+}
+
+func updateIdentityProviderRequest(
+	ctx context.Context,
+	sdk sdkkonnectgo.PortalAuthSettingsSDK,
+	obj *konnectv1alpha1.IdentityProviderRequest,
+) error {
+	parentID := obj.GetPortalID()
+	if parentID == "" {
+		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "Portal", Op: UpdateOp}
+	}
+	id := obj.GetKonnectStatus().GetKonnectID()
+	req, err := obj.Spec.APISpec.ToUpdateIdentityProvider()
+	if err != nil {
+		return fmt.Errorf("failed building %s SDK update request: %w", obj.GetTypeName(), err)
+	}
+
+	_, err = sdk.UpdatePortalIdentityProvider(ctx, sdkkonnectops.UpdatePortalIdentityProviderRequest{
+		PortalID: parentID,
+		ID: id,
+		UpdateIdentityProvider: *req,
+	})
+	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {
+		return errWrap
+	}
 	return nil
 }

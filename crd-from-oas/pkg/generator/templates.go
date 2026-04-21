@@ -738,7 +738,10 @@ import (
 {{- end}}
 `
 
-const opsCreateTemplate = sharedGeneratedFilePreamble + `
+// opsPerEntityFileHeaderTemplate renders the shared file header (preamble,
+// package declaration, imports) for a per-entity ops file. It is followed by
+// one or more function bodies rendered separately.
+const opsPerEntityFileHeaderTemplate = sharedGeneratedFilePreamble + `
 
 package ops
 
@@ -747,10 +750,17 @@ import (
 	"fmt"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
+{{- if .NeedsOpsImport}}
+	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+{{- end}}
 
 	{{.APIAlias}} "{{.APIPackagePath}}"
 )
+`
 
+// opsCreateFuncTemplate renders a single create<Entity> function body.
+// It is concatenated after the file header produced by opsPerEntityFileHeaderTemplate.
+const opsCreateFuncTemplate = `
 func create{{.Entity}}(
 	ctx context.Context,
 	sdk sdkkonnectgo.{{.SDKInterface}},
@@ -803,7 +813,54 @@ func create{{.Entity}}(
 }
 `
 
-const opsDispatcherTemplate = sharedGeneratedFilePreamble + `
+// opsUpdateFuncTemplate renders a single update<Entity> function body.
+// It is concatenated after the file header and any create function.
+const opsUpdateFuncTemplate = `
+func update{{.Entity}}(
+	ctx context.Context,
+	sdk sdkkonnectgo.{{.UpdateSDKInterface}},
+	obj *{{.APIAlias}}.{{.Entity}},
+) error {
+{{- if .ParentEntityName}}
+	parentID := obj.{{.ParentIDGetter}}()
+	if parentID == "" {
+		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "{{.ParentEntityName}}", Op: UpdateOp}
+	}
+{{- end}}
+	id := obj.GetKonnectStatus().GetKonnectID()
+	req, err := obj.Spec.APISpec.To{{.UpdateReqType}}()
+	if err != nil {
+		return fmt.Errorf("failed building %s SDK update request: %w", obj.GetTypeName(), err)
+	}
+{{- if .HasTags}}
+	req.Tags = GenerateTagsForObject(obj, req.Tags...)
+{{- else if .HasLabels}}
+{{- if .LabelsPointer}}
+	req.Labels = WithKubernetesMetadataLabelsPtr(obj, req.Labels)
+{{- else}}
+	req.Labels = WithKubernetesMetadataLabels(obj, req.Labels)
+{{- end}}
+{{- end}}
+{{- if .UpdateWrapped}}
+
+	_, err = sdk.{{.UpdateSDKMethod}}(ctx, sdkkonnectops.{{.UpdateSDKMethod}}Request{
+		{{.ParentIDField}}: parentID,
+		{{.EntityIDField}}: id,
+		{{.UpdateBodyField}}: {{if .UpdateReqBodyPointer}}req{{else}}*req{{end}},
+	})
+{{- else}}
+
+	_, err = sdk.{{.UpdateSDKMethod}}(ctx, id, {{if .UpdateReqBodyPointer}}req{{else}}*req{{end}})
+{{- end}}
+	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {
+		return errWrap
+	}
+	return nil
+}
+`
+
+// opsCreateDispatcherTemplate renders zz_generated_ops_create.go.
+const opsCreateDispatcherTemplate = sharedGeneratedFilePreamble + `
 
 package ops
 
@@ -832,6 +889,43 @@ func CreateGeneratedOps[
 {{- range .Cases}}
 	case *{{.APIAlias}}.{{.Entity}}:
 		return create{{.Entity}}(ctx, sdk.{{.SDKGetter}}(), ent)
+{{- end}}
+	default:
+		return fmt.Errorf("unsupported entity type %T", ent)
+	}
+}
+`
+
+// opsUpdateDispatcherTemplate renders zz_generated_ops_update.go.
+const opsUpdateDispatcherTemplate = sharedGeneratedFilePreamble + `
+
+package ops
+
+import (
+	"context"
+	"fmt"
+
+{{.APIImportsBlock}}
+	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
+	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
+)
+
+// UpdateGeneratedOps dispatches update operations to per-entity generated
+// update functions. It is a stub dispatcher intended for Konnect entities whose
+// ops layer is fully generated; entities handled by hand-written ops remain in
+// the Update function in ops.go.
+func UpdateGeneratedOps[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](
+	ctx context.Context,
+	sdk sdkops.SDKWrapper,
+	e TEnt,
+) error {
+	switch ent := any(e).(type) {
+{{- range .Cases}}
+	case *{{.APIAlias}}.{{.Entity}}:
+		return update{{.Entity}}(ctx, sdk.{{.SDKGetter}}(), ent)
 {{- end}}
 	default:
 		return fmt.Errorf("unsupported entity type %T", ent)

@@ -33,3 +33,22 @@ func createPortal(
 	obj.SetKonnectID(resp.PortalResponse.ID)
 	return nil
 }
+
+func updatePortal(
+	ctx context.Context,
+	sdk sdkkonnectgo.PortalsSDK,
+	obj *konnectv1alpha1.Portal,
+) error {
+	id := obj.GetKonnectStatus().GetKonnectID()
+	req, err := obj.Spec.APISpec.ToUpdatePortal()
+	if err != nil {
+		return fmt.Errorf("failed building %s SDK update request: %w", obj.GetTypeName(), err)
+	}
+	req.Labels = WithKubernetesMetadataLabelsPtr(obj, req.Labels)
+
+	_, err = sdk.UpdatePortal(ctx, id, *req)
+	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {
+		return errWrap
+	}
+	return nil
+}

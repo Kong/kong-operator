@@ -19,9 +19,10 @@ func (r *Runner) Run(
 	ctx context.Context,
 	logger *slog.Logger,
 ) error {
-	// Accumulate ops create metadata across all group-versions so the
-	// cross-group dispatcher can be emitted once at the end.
+	// Accumulate ops metadata across all group-versions so the cross-group
+	// dispatchers can be emitted once at the end.
 	var allOpsCreateInfos []*generator.OpsCreateFileInfo
+	var allOpsUpdateInfos []*generator.OpsUpdateFileInfo
 	for _, gvKey := range r.gvKeys {
 		agvConfig := r.projectCfg.APIGroupVersions[gvKey]
 
@@ -132,34 +133,45 @@ func (r *Runner) Run(
 		// Collect ops infos for post-loop dispatcher emission; drop infos
 		// whose corresponding generated file was skipped due to a
 		// hand-written ops_<entity>.go collision.
-		opsInfosKept := make([]*generator.OpsCreateFileInfo, 0, len(gen.OpsCreateInfos()))
+		opsCreateInfosKept := make([]*generator.OpsCreateFileInfo, 0, len(gen.OpsCreateInfos()))
+		opsUpdateInfosKept := make([]*generator.OpsUpdateFileInfo, 0, len(gen.OpsUpdateInfos()))
 		skippedOpsFiles := make(map[string]bool)
 		opsDir := filepath.Join(r.projectRoot, "controller/konnect/ops")
+
+		// Build a set of entities with hand-written collision to skip both create and update.
+		collidedEntities := make(map[string]bool)
+		for _, info := range gen.OpsCreateInfos() {
+			for _, candidate := range handWrittenOpsFileNames(info.Entity) {
+				if _, err := os.Stat(filepath.Join(opsDir, candidate)); err == nil {
+					logger.Info("skipping ops generation; hand-written file present", "entity", info.Entity, "file", candidate)
+					collidedEntities[info.Entity] = true
+					skippedOpsFiles[generatedOpsFileName(info.Entity)] = true
+					break
+				}
+			}
+		}
+
 		for _, info := range gen.OpsCreateInfos() {
 			// Remove any stale generated ops file first so regeneration is idempotent.
 			staleOpsFile := filepath.Join(opsDir, generatedOpsFileName(info.Entity))
 			if err := removeFileIfExists(staleOpsFile); err != nil {
 				return fmt.Errorf("failed to remove stale ops file %q: %w", staleOpsFile, err)
 			}
-			// TODO: For now we don't do anything for types that already have hand-written ops.
-			// This would require adding logic for non root objects (like KonnectEventDataPlaneCertificate).
-			// We want to implement this eventually but not yet.
-			collided := false
-			for _, candidate := range handWrittenOpsFileNames(info.Entity) {
-				handWritten := filepath.Join(opsDir, candidate)
-				if _, err := os.Stat(handWritten); err == nil {
-					logger.Info("skipping ops create generation; hand-written file present", "entity", info.Entity, "file", handWritten)
-					skippedOpsFiles[generatedOpsFileName(info.Entity)] = true
-					collided = true
-					break
-				}
-			}
-			if collided {
+			if collidedEntities[info.Entity] {
 				continue
 			}
-			opsInfosKept = append(opsInfosKept, info)
+			opsCreateInfosKept = append(opsCreateInfosKept, info)
 		}
-		allOpsCreateInfos = append(allOpsCreateInfos, opsInfosKept...)
+
+		for _, info := range gen.OpsUpdateInfos() {
+			if collidedEntities[info.Entity] {
+				continue
+			}
+			opsUpdateInfosKept = append(opsUpdateInfosKept, info)
+		}
+
+		allOpsCreateInfos = append(allOpsCreateInfos, opsCreateInfosKept...)
+		allOpsUpdateInfos = append(allOpsUpdateInfos, opsUpdateInfosKept...)
 
 		// Write generated files
 		for _, file := range files {
@@ -184,29 +196,67 @@ func (r *Runner) Run(
 		}
 	}
 
-	// Emit cross-group ops dispatcher. If no entities were generated, remove
-	// any stale dispatcher to keep the tree clean.
-	dispatcherPath := filepath.Join(r.projectRoot, "controller/konnect/ops", "zz_generated_ops.go")
-	dispatcher, err := generator.GenerateOpsDispatcher(allOpsCreateInfos)
-	if err != nil {
-		return fmt.Errorf("failed to generate ops dispatcher: %w", err)
-	}
-	if dispatcher == nil {
-		if err := removeFileIfExists(dispatcherPath); err != nil {
-			return fmt.Errorf("failed to remove stale ops dispatcher %q: %w", dispatcherPath, err)
-		}
-	} else {
-		targetDir := filepath.Join(r.projectRoot, dispatcher.RelativeDir)
-		if err := os.MkdirAll(targetDir, 0o755); err != nil {
-			return fmt.Errorf("failed to create output directory %q: %w", targetDir, err)
-		}
-		filePath := filepath.Join(targetDir, dispatcher.Name)
-		if err := os.WriteFile(filePath, []byte(dispatcher.Content), 0o600); err != nil {
-			return fmt.Errorf("failed to write file %q: %w", filePath, err)
-		}
-		logger.Info("generated file", "path", filePath)
+	// Remove legacy single-dispatcher file if present (replaced by split files).
+	legacyDispatcherPath := filepath.Join(r.projectRoot, "controller/konnect/ops", "zz_generated_ops.go")
+	if err := removeFileIfExists(legacyDispatcherPath); err != nil {
+		return fmt.Errorf("failed to remove legacy ops dispatcher %q: %w", legacyDispatcherPath, err)
 	}
 
+	// Emit create dispatcher.
+	if err := emitDispatcherFile(
+		r.projectRoot,
+		logger,
+		"create",
+		func() (*generator.GeneratedFile, error) {
+			return generator.GenerateOpsCreateDispatcher(allOpsCreateInfos)
+		},
+	); err != nil {
+		return err
+	}
+
+	// Emit update dispatcher.
+	if err := emitDispatcherFile(
+		r.projectRoot,
+		logger,
+		"update",
+		func() (*generator.GeneratedFile, error) {
+			return generator.GenerateOpsUpdateDispatcher(allOpsUpdateInfos)
+		},
+	); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// emitDispatcherFile writes a generated dispatcher file, or removes the stale
+// one when the generator returns nil (no entities).
+func emitDispatcherFile(
+	projectRoot string,
+	logger *slog.Logger,
+	opKind string,
+	generate func() (*generator.GeneratedFile, error),
+) error {
+	file, err := generate()
+	if err != nil {
+		return fmt.Errorf("failed to generate ops %s dispatcher: %w", opKind, err)
+	}
+	targetDir := filepath.Join(projectRoot, "controller/konnect/ops")
+	stale := filepath.Join(targetDir, "zz_generated_ops_"+opKind+".go")
+	if file == nil {
+		if err := removeFileIfExists(stale); err != nil {
+			return fmt.Errorf("failed to remove stale ops %s dispatcher %q: %w", opKind, stale, err)
+		}
+		return nil
+	}
+	if err := os.MkdirAll(targetDir, 0o755); err != nil {
+		return fmt.Errorf("failed to create output directory %q: %w", targetDir, err)
+	}
+	filePath := filepath.Join(targetDir, file.Name)
+	if err := os.WriteFile(filePath, []byte(file.Content), 0o600); err != nil {
+		return fmt.Errorf("failed to write file %q: %w", filePath, err)
+	}
+	logger.Info("generated file", "path", filePath)
 	return nil
 }
 
