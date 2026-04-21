@@ -49,13 +49,13 @@ func TestAppendHTTPRouteToPluginAnnotations(t *testing.T) {
 					Namespace: "test-namespace",
 				},
 			},
-			expectedAnnotation: "HTTPRoute/test-namespace/test-route",
+			expectedAnnotation: "test-namespace/test-route",
 			expectModification: true,
 		},
 		{
 			name: "empty hybrid-routes annotation",
 			existingAnnotations: map[string]string{
-				consts.GatewayOperatorHybridRoutesAnnotation: "",
+				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
 				TypeMeta: httpRouteTypeMeta,
@@ -70,7 +70,7 @@ func TestAppendHTTPRouteToPluginAnnotations(t *testing.T) {
 		{
 			name: "existing different route in annotation",
 			existingAnnotations: map[string]string{
-				consts.GatewayOperatorHybridRoutesAnnotation: "other-namespace/other-route",
+				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "other-namespace/other-route",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
 				TypeMeta: httpRouteTypeMeta,
@@ -79,13 +79,13 @@ func TestAppendHTTPRouteToPluginAnnotations(t *testing.T) {
 					Namespace: "test-namespace",
 				},
 			},
-			expectedAnnotation: "other-namespace/other-route,HTTPRoute/test-namespace/test-route",
+			expectedAnnotation: "other-namespace/other-route,test-namespace/test-route",
 			expectModification: true,
 		},
 		{
-			name: "route already exists in annotation without kind",
+			name: "route already exists in annotation",
 			existingAnnotations: map[string]string{
-				consts.GatewayOperatorHybridRoutesAnnotation: "test-namespace/test-route",
+				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "test-namespace/test-route",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
 				TypeMeta: httpRouteTypeMeta,
@@ -98,24 +98,9 @@ func TestAppendHTTPRouteToPluginAnnotations(t *testing.T) {
 			expectModification: false,
 		},
 		{
-			name: "route already exists in annotation with kind",
-			existingAnnotations: map[string]string{
-				consts.GatewayOperatorHybridRoutesAnnotation: "HTTPRoute/test-namespace/test-route",
-			},
-			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
-			},
-			expectedAnnotation: "HTTPRoute/test-namespace/test-route",
-			expectModification: false,
-		},
-		{
 			name: "multiple existing routes, adding new one",
 			existingAnnotations: map[string]string{
-				consts.GatewayOperatorHybridRoutesAnnotation: "ns1/route1,HTTPRoute/ns2/route2",
+				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1,ns2/route2",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
 				TypeMeta: httpRouteTypeMeta,
@@ -124,7 +109,7 @@ func TestAppendHTTPRouteToPluginAnnotations(t *testing.T) {
 					Namespace: "ns3",
 				},
 			},
-			expectedAnnotation: "ns1/route1,HTTPRoute/ns2/route2,HTTPRoute/ns3/route3",
+			expectedAnnotation: "ns1/route1,ns2/route2,ns3/route3",
 			expectModification: true,
 		},
 	}
@@ -141,7 +126,7 @@ func TestAppendHTTPRouteToPluginAnnotations(t *testing.T) {
 
 			am := metadata.NewAnnotationManager(logger)
 			am.AppendRouteToAnnotation(plugin, tt.httpRoute)
-			actualAnnotation := plugin.Annotations[consts.GatewayOperatorHybridRoutesAnnotation]
+			actualAnnotation := plugin.Annotations[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation]
 			assert.Equal(t, tt.expectedAnnotation, actualAnnotation)
 		})
 	}
@@ -198,8 +183,8 @@ func TestPluginForFilter(t *testing.T) {
 				require.NotNil(t, plugin)
 				assert.Equal(t, "test-namespace", plugin.Namespace)
 				assert.Equal(t, "request-transformer", plugin.PluginName)
-				assert.Contains(t, plugin.Annotations, consts.GatewayOperatorHybridRoutesAnnotation)
-				assert.Equal(t, "HTTPRoute/test-namespace/test-route", plugin.Annotations[consts.GatewayOperatorHybridRoutesAnnotation])
+				assert.Contains(t, plugin.Annotations, consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation)
+				assert.Equal(t, "test-namespace/test-route", plugin.Annotations[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation])
 			},
 		},
 	}

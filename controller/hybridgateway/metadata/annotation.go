@@ -21,6 +21,7 @@ const (
 	preserveHostKey  = "/preserve-host"
 	protocolKey      = "/protocol"
 	kindHTTPRoute    = "HTTPRoute"
+	kindTLSRoute     = "TLSRoute"
 )
 
 // Defaults for the annotations when not specified that match the behavior of on-prem.
@@ -105,15 +106,13 @@ func BuildAnnotations(obj client.Object, parentRef *gwtypes.ParentReference) map
 		consts.GatewayOperatorHybridGatewaysAnnotation: gwObjKey.String(),
 	}
 
-	// Add route annotation for TLSRoute and HTTPRoute objects
-	// Include kind of the parent route to prevent conflicts between different kind of routes.
-	// REVIEW: Should we provide the options to generate the KO 2.1 compatible format (namespace/name) for HTTPRoute for backward compatibility?
-	objectKind := obj.GetObjectKind().GroupVersionKind().Kind
+	// Add route annotation for TLSRoute and HTTPRoute objects.
+	// Use different annotation keys for each type to distinguish the routes with same namespace/name but different kinds.
 	switch obj.(type) {
 	case *gwtypes.HTTPRoute:
-		annotations[consts.GatewayOperatorHybridRoutesAnnotation] = objectKind + "/" + client.ObjectKeyFromObject(obj).String()
+		annotations[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation] = client.ObjectKeyFromObject(obj).String()
 	case *gwtypes.TLSRoute:
-		annotations[consts.GatewayOperatorHybridRoutesAnnotation] = objectKind + "/" + client.ObjectKeyFromObject(obj).String()
+		annotations[consts.GatewayOperatorHybridRoutesTLSRouteAnnotation] = client.ObjectKeyFromObject(obj).String()
 	}
 
 	return annotations
@@ -163,10 +162,10 @@ func NameStringToObjectKey(s string) client.ObjectKey {
 func (am *AnnotationManager) AppendRouteToAnnotation(obj metav1.Object, route client.Object) bool {
 	currentRouteKind := route.GetObjectKind().GroupVersionKind().Kind
 	currentRouteObjectKey := ObjectToNameString(route)
-	currentRouteAnnotation := currentRouteKind + "/" + currentRouteObjectKey
 
 	log.Debug(am.logger, "Processing route annotation",
-		"currentRoute", currentRouteAnnotation,
+		"routeKind", currentRouteKind,
+		"currentRoute", currentRouteObjectKey,
 		"objectName", obj.GetName(),
 		"objectNamespace", obj.GetNamespace())
 
@@ -176,14 +175,19 @@ func (am *AnnotationManager) AppendRouteToAnnotation(obj metav1.Object, route cl
 	}
 
 	// Get existing hybrid-routes annotation
-	hybridRouteAnnotation, exists := annotations[consts.GatewayOperatorHybridRoutesAnnotation]
+	routeAnnotationKey := am.RouteAnnotationKeyForKind(currentRouteKind)
+	if routeAnnotationKey == "" {
+		log.Debug(am.logger, "Unsupported route kind for setting annotation", "routeKind", currentRouteKind)
+		return false
+	}
+	hybridRouteAnnotation, exists := annotations[routeAnnotationKey]
 
 	if !exists || hybridRouteAnnotation == "" {
 		// No existing hybrid-routes annotation, set it to the current route
-		annotations[consts.GatewayOperatorHybridRoutesAnnotation] = currentRouteAnnotation
+		annotations[routeAnnotationKey] = currentRouteObjectKey
 		obj.SetAnnotations(annotations)
 		log.Debug(am.logger, "Set new hybrid-routes annotation",
-			"annotation", currentRouteAnnotation,
+			"annotation", currentRouteObjectKey,
 			"objectName", obj.GetName())
 		return true
 	}
@@ -191,15 +195,15 @@ func (am *AnnotationManager) AppendRouteToAnnotation(obj metav1.Object, route cl
 	for routeAnnotation := range strings.SplitSeq(hybridRouteAnnotation, ",") {
 		if RouteAnnotationMatch(routeAnnotation, route) {
 			log.Debug(am.logger, "Route already exists in annotation, no update needed",
-				"currentRoute", currentRouteAnnotation,
+				"currentRoute", currentRouteObjectKey,
 				"objectName", obj.GetName())
 			return false
 		}
 	}
 
 	// Append current route to existing list
-	updatedAnnotation := hybridRouteAnnotation + "," + currentRouteAnnotation
-	annotations[consts.GatewayOperatorHybridRoutesAnnotation] = updatedAnnotation
+	updatedAnnotation := hybridRouteAnnotation + "," + currentRouteObjectKey
+	annotations[routeAnnotationKey] = updatedAnnotation
 	obj.SetAnnotations(annotations)
 
 	log.Debug(am.logger, "Appended Route to existing annotation",
@@ -222,27 +226,32 @@ func (am *AnnotationManager) AppendRouteToAnnotation(obj metav1.Object, route cl
 func (am *AnnotationManager) RemoveRouteFromAnnotation(obj metav1.Object, route client.Object) bool {
 	currentRouteKind := route.GetObjectKind().GroupVersionKind().Kind
 	currentRouteObjectKey := client.ObjectKeyFromObject(route).String()
-	// The annotation is in kind/namespace/name format.
-	currentRouteAnnotation := currentRouteKind + "/" + currentRouteObjectKey
 
 	log.Debug(am.logger, "Removing route from annotation",
-		"routeToRemove", currentRouteAnnotation,
+		"routeKind", currentRouteKind,
+		"routeToRemove", currentRouteObjectKey,
 		"objectName", obj.GetName())
 
 	annotations := obj.GetAnnotations()
 	if annotations == nil {
 		log.Debug(am.logger, "No annotations present, nothing to remove",
-			"routeToRemove", currentRouteAnnotation,
+			"routeKind", currentRouteKind,
+			"routeToRemove", currentRouteObjectKey,
 			"objectName", obj.GetName())
 		return false
 	}
 
-	// Get existing hybrid-routes annotation
-	existingAnnotation, exists := annotations[consts.GatewayOperatorHybridRoutesAnnotation]
+	// Get existing hybrid-routes annotation fir the route kind.
+	routeAnnotationKey := am.RouteAnnotationKeyForKind(currentRouteKind)
+	if routeAnnotationKey == "" {
+		return false
+	}
+	existingAnnotation, exists := annotations[routeAnnotationKey]
 
 	if !exists || existingAnnotation == "" {
 		log.Debug(am.logger, "No hybrid-routes annotation exists, nothing to remove",
-			"routeToRemove", currentRouteAnnotation,
+			"routeKind", currentRouteKind,
+			"routeToRemove", currentRouteObjectKey,
 			"objectName", obj.GetName())
 		return false
 	}
@@ -262,7 +271,8 @@ func (am *AnnotationManager) RemoveRouteFromAnnotation(obj metav1.Object, route 
 
 	if !found {
 		log.Debug(am.logger, "Route not found in annotation, no changes made",
-			"routeToRemove", currentRouteAnnotation,
+			"routeKind", currentRouteKind,
+			"routeToRemove", currentRouteObjectKey,
 			"objectName", obj.GetName())
 		return false
 	}
@@ -270,13 +280,13 @@ func (am *AnnotationManager) RemoveRouteFromAnnotation(obj metav1.Object, route 
 	// Update annotation
 	if len(remainingRoutes) == 0 {
 		// No routes left, remove the annotation entirely
-		delete(annotations, consts.GatewayOperatorHybridRoutesAnnotation)
+		delete(annotations, routeAnnotationKey)
 		log.Debug(am.logger, "Removed hybrid-routes annotation completely as no routes remain",
 			"objectName", obj.GetName())
 	} else {
 		// Update with remaining routes
 		updatedAnnotation := strings.Join(remainingRoutes, ",")
-		annotations[consts.GatewayOperatorHybridRoutesAnnotation] = updatedAnnotation
+		annotations[routeAnnotationKey] = updatedAnnotation
 		log.Debug(am.logger, "Updated hybrid-routes annotation",
 			"previousAnnotation", existingAnnotation,
 			"updatedAnnotation", updatedAnnotation,
@@ -301,7 +311,12 @@ func (am *AnnotationManager) ContainsRoute(obj metav1.Object, route client.Objec
 		return false
 	}
 
-	existingAnnotation, exists := annotations[consts.GatewayOperatorHybridRoutesAnnotation]
+	currentRouteKind := route.GetObjectKind().GroupVersionKind().Kind
+	routeAnnotationKey := am.RouteAnnotationKeyForKind(currentRouteKind)
+	if routeAnnotationKey == "" {
+		return false
+	}
+	existingAnnotation, exists := annotations[routeAnnotationKey]
 	if !exists || existingAnnotation == "" {
 		return false
 	}
@@ -311,21 +326,27 @@ func (am *AnnotationManager) ContainsRoute(obj metav1.Object, route client.Objec
 	})
 }
 
-// GetRoutes returns all Route references from the hybrid-routes annotation
-// of the provided Kubernetes object.
+// GetRoutesWithKind returns all Route references having the given route kind
+// from the hybrid-routes annotation of the provided Kubernetes object.
 //
 // Parameters:
 //   - obj: Any Kubernetes object that implements metav1.Object
+//   - routeKind: The kind of the route reference
 //
 // Returns:
-//   - []string: List of route references in "kind/namespace/name" format
-func (am *AnnotationManager) GetRoutes(obj metav1.Object) []string {
+//   - []string: List of route references in "namespace/name" format
+func (am *AnnotationManager) GetRoutesWithKind(obj metav1.Object, routeKind string) []string {
 	annotations := obj.GetAnnotations()
 	if annotations == nil {
 		return []string{}
 	}
 
-	existingAnnotation, exists := annotations[consts.GatewayOperatorHybridRoutesAnnotation]
+	routeAnnotationKey := am.RouteAnnotationKeyForKind(routeKind)
+	if routeAnnotationKey == "" {
+		return []string{}
+	}
+	existingAnnotation, exists := annotations[routeAnnotationKey]
+
 	if !exists || existingAnnotation == "" {
 		return []string{}
 	}
@@ -338,10 +359,6 @@ func (am *AnnotationManager) GetRoutes(obj metav1.Object) []string {
 		if route == "" {
 			continue
 		}
-		// For route keys with only 2 parts, treat them as the annotation created by KO 2.1 so set kind to "HTTPRoute".
-		if strings.Count(route, "/") == 1 {
-			route = kindHTTPRoute + "/" + route
-		}
 		// Format is now just "kind/namespace/name"
 		routes = append(routes, route)
 	}
@@ -349,35 +366,34 @@ func (am *AnnotationManager) GetRoutes(obj metav1.Object) []string {
 	return routes
 }
 
-// SetRoutes sets the hybrid-routes annotation to contain exactly the provided route references.
+// SetRoutesWithKind sets the hybrid-routes annotation to contain exactly the provided route references with given kind.
 //
 // Parameters:
 //   - obj: Any Kubernetes object that implements metav1.Object
-//   - routes: List of route references (kind/namespace/name) to set in the annotation
+//   - routeKind: The kind of the route references
+//   - routes: List of route references (namespace/name) to set in the annotation
 //
 // Returns:
 //   - bool: true if the annotation was modified, false if no changes were made
-func (am *AnnotationManager) SetRoutes(obj metav1.Object, routes []string) bool {
+func (am *AnnotationManager) SetRoutesWithKind(obj metav1.Object, routeKind string, routes []string) bool {
 	annotations := obj.GetAnnotations()
 	if annotations == nil {
 		annotations = make(map[string]string)
 		obj.SetAnnotations(annotations)
 	}
 
+	routeAnnotationKey := am.RouteAnnotationKeyForKind(routeKind)
+	if routeAnnotationKey == "" {
+		return false
+	}
+
 	newAnnotation := strings.Join(routes, ",")
 
 	// Check if annotation needs to be updated
-	existingAnnotation := annotations[consts.GatewayOperatorHybridRoutesAnnotation]
+	existingAnnotation := annotations[routeAnnotationKey]
 	existingRoutes := strings.Split(existingAnnotation, ",")
 
-	same := lo.ElementsMatchBy(existingRoutes, routes, func(routeKey string) string {
-		routeKey = strings.TrimSpace(routeKey)
-		// For route keys with the namespace/name format, treat them as the annotation created by KO 2.1 so set kind to "HTTPRoute".
-		if strings.Count(routeKey, "/") == 1 {
-			return kindHTTPRoute + "/" + routeKey
-		}
-		return routeKey
-	})
+	same := lo.ElementsMatchBy(existingRoutes, routes, strings.TrimSpace)
 
 	if same {
 		log.Debug(am.logger, "Hybrid-routes annotation already up to date",
@@ -386,36 +402,32 @@ func (am *AnnotationManager) SetRoutes(obj metav1.Object, routes []string) bool 
 	}
 
 	if newAnnotation == "" {
-		delete(annotations, consts.GatewayOperatorHybridRoutesAnnotation)
+		delete(annotations, routeAnnotationKey)
 	} else {
-		annotations[consts.GatewayOperatorHybridRoutesAnnotation] = newAnnotation
+		annotations[routeAnnotationKey] = newAnnotation
 	}
 	obj.SetAnnotations(annotations)
 	log.Debug(am.logger, "Set hybrid-routes annotation",
-		consts.GatewayOperatorHybridRoutesAnnotation, newAnnotation,
+		routeAnnotationKey, newAnnotation,
 		"objectName", obj.GetName())
 	return true
 }
 
-// RouteAnnotationMatch returns true if the hybrid route annotation matches the given route by kind, namespace and name.
-func RouteAnnotationMatch(routeAnnotation string, route client.Object) bool {
-	var kind, namespace, name string
-	routeAnnotation = strings.TrimSpace(routeAnnotation)
-	parts := strings.Split(routeAnnotation, "/")
-	switch len(parts) {
-	// The annotation in kind/namespace/name format.
-	case 3:
-		kind = parts[0]
-		namespace = parts[1]
-		name = parts[2]
-	// The annotation in namespace/name format implies that the kind is HTTPRoute.
-	case 2:
-		kind = kindHTTPRoute
-		namespace = parts[0]
-		name = parts[1]
-	// malformed annotation. Should be unreachable.
-	default:
-		return false
+// RouteAnnotationKeyForKind returns the annotation key for the route kind to
+// mark the namespace and name of the route with given kind that owns the object.
+func (am *AnnotationManager) RouteAnnotationKeyForKind(routeKind string) string {
+	switch routeKind {
+	case kindHTTPRoute:
+		return consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation
+	case kindTLSRoute:
+		return consts.GatewayOperatorHybridRoutesTLSRouteAnnotation
 	}
-	return kind == route.GetObjectKind().GroupVersionKind().Kind && namespace == route.GetNamespace() && name == route.GetName()
+	// Not supported route kind. Should be unreachable.
+	return ""
+}
+
+// RouteAnnotationMatch returns true if the hybrid route annotation matches the given route by its namespace and name.
+func RouteAnnotationMatch(routeAnnotation string, route client.Object) bool {
+	routeObjectKey := client.ObjectKeyFromObject(route)
+	return routeAnnotation == routeObjectKey.String()
 }

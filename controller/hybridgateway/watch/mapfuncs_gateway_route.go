@@ -2,9 +2,9 @@ package watch
 
 import (
 	"context"
-	"strings"
 
 	"github.com/go-logr/logr"
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -47,22 +47,18 @@ func MapRouteForKongResource[T kongResource](kind string) handler.MapFunc {
 			return nil
 		}
 
-		// am.GetRoutes adds the `HTTPRoute/` prefix for annotations in namespace/name format used in KO 2.1.
 		am := metadata.NewAnnotationManager(logr.Discard())
-		routes := am.GetRoutes(obj)
+		routes := am.GetRoutesWithKind(obj, kind)
 		if len(routes) == 0 {
 			return nil
 		}
 
-		var requests []reconcile.Request
-		for _, r := range routes {
-			if objectKeyStr, ok := strings.CutPrefix(r, kind+"/"); ok {
-				requests = append(requests, reconcile.Request{
-					NamespacedName: metadata.NameStringToObjectKey(objectKeyStr),
-				})
+		return lo.Map(routes, func(routeKey string, _ int) reconcile.Request {
+			return reconcile.Request{
+				NamespacedName: metadata.NameStringToObjectKey(routeKey),
 			}
-		}
-		return requests
+		})
+
 	}
 }
 

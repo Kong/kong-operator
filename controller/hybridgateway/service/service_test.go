@@ -97,7 +97,7 @@ func TestServiceForRule(t *testing.T) {
 					Namespace: "test-namespace",
 				},
 			},
-			expectedAnnotation: "HTTPRoute/test-namespace/test-route",
+			expectedAnnotation: "test-namespace/test-route",
 			expectUpdate:       true,
 			expectedHost:       upstreamName,
 		},
@@ -108,11 +108,11 @@ func TestServiceForRule(t *testing.T) {
 					Name:      serviceName,
 					Namespace: "test-namespace",
 					Annotations: map[string]string{
-						consts.GatewayOperatorHybridRoutesAnnotation: "HTTPRoute/other-namespace/other-route",
+						consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "other-namespace/other-route",
 					},
 				},
 			},
-			expectedAnnotation: "HTTPRoute/other-namespace/other-route,HTTPRoute/test-namespace/test-route",
+			expectedAnnotation: "other-namespace/other-route,test-namespace/test-route",
 			expectUpdate:       true,
 			expectedHost:       upstreamName,
 		},
@@ -123,11 +123,11 @@ func TestServiceForRule(t *testing.T) {
 					Name:      serviceName,
 					Namespace: "test-namespace",
 					Annotations: map[string]string{
-						consts.GatewayOperatorHybridRoutesAnnotation: "HTTPRoute/test-namespace/test-route",
+						consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "test-namespace/test-route",
 					},
 				},
 			},
-			expectedAnnotation: "HTTPRoute/test-namespace/test-route",
+			expectedAnnotation: "test-namespace/test-route",
 			expectUpdate:       false,
 			expectedHost:       upstreamName,
 		},
@@ -138,11 +138,11 @@ func TestServiceForRule(t *testing.T) {
 					Name:      serviceName,
 					Namespace: "test-namespace",
 					Annotations: map[string]string{
-						consts.GatewayOperatorHybridRoutesAnnotation: "HTTPRoute/ns1/route1,HTTPRoute/ns2/route2",
+						consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1,ns2/route2",
 					},
 				},
 			},
-			expectedAnnotation: "HTTPRoute/ns1/route1,HTTPRoute/ns2/route2,HTTPRoute/test-namespace/test-route",
+			expectedAnnotation: "ns1/route1,ns2/route2,test-namespace/test-route",
 			expectUpdate:       true,
 			expectedHost:       upstreamName,
 		},
@@ -172,7 +172,7 @@ func TestServiceForRule(t *testing.T) {
 			// Check annotation
 			annotations := service.GetAnnotations()
 			assert.NotNil(t, annotations)
-			assert.Equal(t, tt.expectedAnnotation, annotations[consts.GatewayOperatorHybridRoutesAnnotation])
+			assert.Equal(t, tt.expectedAnnotation, annotations[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation])
 		})
 	}
 }

@@ -141,8 +141,8 @@ func TestRoutesForRule(t *testing.T) {
 				}
 
 				// Verify HTTPRoute annotation
-				expectedAnnotation := "HTTPRoute/" + httpRoute.Namespace + "/" + httpRoute.Name
-				assert.Contains(t, result.Annotations[consts.GatewayOperatorHybridRoutesAnnotation], expectedAnnotation)
+				expectedAnnotation := httpRoute.Namespace + "/" + httpRoute.Name
+				assert.Contains(t, result.Annotations[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation], expectedAnnotation)
 
 				// Verify at least one path/header/method is set based on the match.
 				// For the first match with path, we expect Paths to be non-empty.

@@ -1290,7 +1290,7 @@ func TestHTTPRouteConverter_HandleOrphanedResource(t *testing.T) {
 			},
 			wantSkip: true,
 			assertFn: func(t *testing.T, resource *unstructured.Unstructured) {
-				assert.Equal(t, "other-ns/other-route", resource.GetAnnotations()[consts.GatewayOperatorHybridRoutesAnnotation])
+				assert.Equal(t, "other-ns/other-route", resource.GetAnnotations()[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation])
 			},
 		},
 		{
@@ -1302,7 +1302,7 @@ func TestHTTPRouteConverter_HandleOrphanedResource(t *testing.T) {
 				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter), resource
 			},
 			assertFn: func(t *testing.T, resource *unstructured.Unstructured) {
-				_, exists := resource.GetAnnotations()[consts.GatewayOperatorHybridRoutesAnnotation]
+				_, exists := resource.GetAnnotations()[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation]
 				assert.False(t, exists)
 			},
 		},
@@ -1715,7 +1715,7 @@ func newUnstructuredResource(routesAnnotation string) *unstructured.Unstructured
 	resource.SetNamespace("default")
 	if routesAnnotation != "" {
 		resource.SetAnnotations(map[string]string{
-			consts.GatewayOperatorHybridRoutesAnnotation: routesAnnotation,
+			consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: routesAnnotation,
 		})
 	}
 	return resource

@@ -459,22 +459,7 @@ func TestMapRouteForKongResource_HTTPRoute(t *testing.T) {
 					Name:      "test-obj",
 					Namespace: "test-ns",
 					Annotations: map[string]string{
-						consts.GatewayOperatorHybridRoutesAnnotation: "test-ns/test-httproute",
-					},
-				},
-			},
-			expectedRequests: []reconcile.Request{
-				{NamespacedName: types.NamespacedName{Namespace: "test-ns", Name: "test-httproute"}},
-			},
-		},
-		{
-			name: "single route with kind",
-			obj: &configurationv1alpha1.KongUpstream{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-obj",
-					Namespace: "test-ns",
-					Annotations: map[string]string{
-						consts.GatewayOperatorHybridRoutesAnnotation: "HTTPRoute/test-ns/test-httproute",
+						consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "test-ns/test-httproute",
 					},
 				},
 			},
@@ -489,7 +474,7 @@ func TestMapRouteForKongResource_HTTPRoute(t *testing.T) {
 					Name:      "test-obj",
 					Namespace: "test-ns",
 					Annotations: map[string]string{
-						consts.GatewayOperatorHybridRoutesAnnotation: "HTTPRoute/ns1/route-1,HTTPRoute/ns2/route-2",
+						consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route-1,ns2/route-2",
 					},
 				},
 			},
@@ -505,7 +490,8 @@ func TestMapRouteForKongResource_HTTPRoute(t *testing.T) {
 					Name:      "test-obj",
 					Namespace: "test-ns",
 					Annotations: map[string]string{
-						consts.GatewayOperatorHybridRoutesAnnotation: "HTTPRoute/ns1/route-1,TLSRoute/ns2/route-2",
+						consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route-1",
+						consts.GatewayOperatorHybridRoutesTLSRouteAnnotation:  "ns2/route-2",
 					},
 				},
 			},
@@ -551,26 +537,13 @@ func TestMapRouteForKongResource_TLSRoute(t *testing.T) {
 			expectedRequests: []reconcile.Request{},
 		},
 		{
-			name: "single route without kind",
+			name: "single route",
 			obj: &configurationv1alpha1.KongUpstream{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-obj",
 					Namespace: "test-ns",
 					Annotations: map[string]string{
-						consts.GatewayOperatorHybridRoutesAnnotation: "test-ns/test-route",
-					},
-				},
-			},
-			expectedRequests: []reconcile.Request{},
-		},
-		{
-			name: "single route with kind",
-			obj: &configurationv1alpha1.KongUpstream{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-obj",
-					Namespace: "test-ns",
-					Annotations: map[string]string{
-						consts.GatewayOperatorHybridRoutesAnnotation: "TLSRoute/test-ns/test-route",
+						consts.GatewayOperatorHybridRoutesTLSRouteAnnotation: "test-ns/test-route",
 					},
 				},
 			},
@@ -585,7 +558,7 @@ func TestMapRouteForKongResource_TLSRoute(t *testing.T) {
 					Name:      "test-obj",
 					Namespace: "test-ns",
 					Annotations: map[string]string{
-						consts.GatewayOperatorHybridRoutesAnnotation: "TLSRoute/ns1/route-1,TLSRoute/ns2/route-2",
+						consts.GatewayOperatorHybridRoutesTLSRouteAnnotation: "ns1/route-1,ns2/route-2",
 					},
 				},
 			},
@@ -601,7 +574,8 @@ func TestMapRouteForKongResource_TLSRoute(t *testing.T) {
 					Name:      "test-obj",
 					Namespace: "test-ns",
 					Annotations: map[string]string{
-						consts.GatewayOperatorHybridRoutesAnnotation: "HTTPRoute/ns1/route-1,TLSRoute/ns2/route-2",
+						consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route-1",
+						consts.GatewayOperatorHybridRoutesTLSRouteAnnotation:  "ns2/route-2",
 					},
 				},
 			},

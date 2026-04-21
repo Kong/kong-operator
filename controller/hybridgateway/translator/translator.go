@@ -11,7 +11,6 @@ import (
 
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
-	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
 // VerifyAndUpdate verifies if the object passaed as parameter already exists or not in the cluster.
@@ -54,7 +53,10 @@ func VerifyAndUpdate[T client.Object](
 	}
 
 	// Update: verify and update the hybrid-routes annotation
-	routesCSV := existingObj.GetAnnotations()[consts.GatewayOperatorHybridRoutesAnnotation]
+	routeKind := route.GetObjectKind().GroupVersionKind().Kind
+	am := metadata.NewAnnotationManager(logger)
+	routeAnnotationKey := am.RouteAnnotationKeyForKind(routeKind)
+	routesCSV := existingObj.GetAnnotations()[routeAnnotationKey]
 	routes := strings.Split(routesCSV, ",")
 	if len(routes) == 0 {
 		err = fmt.Errorf("existing %s object %s/%s has empty hybrid-routes annotation",
@@ -77,8 +79,7 @@ func VerifyAndUpdate[T client.Object](
 	}
 
 	// Object exists, update annotation to include current route
-	am := metadata.NewAnnotationManager(logger)
-	am.SetRoutes(obj, am.GetRoutes(existingObj))
+	am.SetRoutesWithKind(obj, routeKind, am.GetRoutesWithKind(existingObj, routeKind))
 	am.AppendRouteToAnnotation(obj, route)
 
 	return true, nil

@@ -773,7 +773,7 @@ func Test_BuildProgrammedCondition(t *testing.T) {
 		obj := &unstructured.Unstructured{}
 		obj.SetGroupVersionKind(gvk)
 		obj.SetAnnotations(map[string]string{
-			consts.GatewayOperatorHybridRoutesAnnotation: "HTTPRoute/default/route",
+			consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "default/route",
 		})
 		cond := map[string]any{"type": "Programmed", "status": "True"}
 		if !programmed {
@@ -787,7 +787,7 @@ func Test_BuildProgrammedCondition(t *testing.T) {
 		obj := &unstructured.Unstructured{}
 		obj.SetGroupVersionKind(gvk)
 		obj.SetAnnotations(map[string]string{
-			consts.GatewayOperatorHybridRoutesAnnotation: routeRef,
+			consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: routeRef,
 		})
 		cond := map[string]any{"type": "Programmed", "status": "True"}
 		if !programmed {
