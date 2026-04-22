@@ -10,212 +10,35 @@ import (
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/parser"
 )
 
-// OpsCreateFileInfo is metadata returned from generateEntityOpsFile so the
-// caller (e.g. run.go) can assemble the cross-group create dispatcher.
-type OpsCreateFileInfo struct {
-	Entity         string // PascalCase entity name, e.g. "Portal"
-	APIAlias       string // Go import alias for the API package, e.g. "konnectv1alpha1"
-	APIPackagePath string // Go import path for the API package
-	SDKGetter      string // SDKWrapper method name, e.g. "GetPortalsSDK"
-}
-
-// OpsUpdateFileInfo is metadata returned from generateEntityOpsFile so the
-// caller (e.g. run.go) can assemble the cross-group update dispatcher.
-type OpsUpdateFileInfo struct {
-	Entity         string
-	APIAlias       string
-	APIPackagePath string
-	SDKGetter      string
-}
-
-// opsCreateFuncData holds template data for a single create<Entity> function.
-type opsCreateFuncData struct {
-	Entity           string
-	APIAlias         string
-	SDKInterface     string
-	SDKMethod        string
-	CreateReqType    string
-	RespField        string
-	HasTags          bool
-	HasLabels        bool
-	LabelsPointer    bool
-	ParentEntityName string
-	ParentIDGetter   string
-	RespIDIsPointer  bool
-}
-
-// opsUpdateFuncData holds template data for a single update<Entity> function.
-type opsUpdateFuncData struct {
-	Entity               string
-	APIAlias             string
-	UpdateSDKInterface   string
-	UpdateSDKMethod      string
-	UpdateReqType        string
-	HasTags              bool
-	HasLabels            bool
-	LabelsPointer        bool
-	ParentEntityName     string
-	ParentIDGetter       string
-	UpdateWrapped        bool   // true when SDK call uses a request-struct (non-root)
-	ParentIDField        string // e.g. "PortalID" — only set when UpdateWrapped
-	EntityIDField        string // e.g. "ID" — only set when UpdateWrapped
-	UpdateBodyField      string // e.g. "UpdateIdentityProvider" — only set when UpdateWrapped
-	UpdateReqBodyPointer bool   // true when SDK body param is a pointer
-}
-
-// generateOpsCreateFuncBody renders the create<Entity> function body (no file header).
-func (g *Generator) generateOpsCreateFuncBody(
-	entityName string,
-	schema *parser.Schema,
-	opsConfig *config.EntityOpsConfig,
-) (*opsCreateFuncData, error) {
-	createOp, ok := opsConfig.Ops["create"]
-	if !ok || createOp == nil {
-		return nil, nil
-	}
-	if schema.OperationID == "" {
-		return nil, fmt.Errorf("entity %q: missing OpenAPI operationId for create op", entityName)
-	}
-	if len(schema.Tags) == 0 {
-		return nil, fmt.Errorf("entity %q: missing OpenAPI tags for create op", entityName)
-	}
-	if schema.SuccessResponseRef == "" {
-		return nil, fmt.Errorf("entity %q: missing 2xx response ref for create op", entityName)
-	}
-
-	_, createReqType, err := ParseSDKTypePath(createOp.Path)
-	if err != nil {
-		return nil, fmt.Errorf("entity %q: %w", entityName, err)
-	}
-
-	sdkMethod := pascalFromKebab(schema.OperationID)
-	sdkInterface := pascalFromKebab(schema.Tags[0]) + "SDK"
-	hasTags, hasLabels, labelsPointer := metadataFields(schema)
-
-	var parentEntityName, parentIDGetter string
-	rc := g.config.ReconcilerConfig[entityName]
-	if rc != nil && !rc.IsRoot {
-		if len(schema.Dependencies) == 0 {
-			return nil, fmt.Errorf("non-root entity %q has no parent dependency in OAS path", entityName)
-		}
-		parentDep := schema.Dependencies[len(schema.Dependencies)-1]
-		parentEntityName = parentDep.EntityName
-		if rc.ParentEntityType != "" {
-			parentEntityName = rc.ParentEntityType
-		}
-		parentIDGetter = "Get" + parentDep.EntityName + "ID"
-	}
-
-	return &opsCreateFuncData{
-		Entity:           entityName,
-		APIAlias:         g.config.APIGroupPackageAlias,
-		SDKInterface:     sdkInterface,
-		SDKMethod:        sdkMethod,
-		CreateReqType:    createReqType,
-		RespField:        schema.SuccessResponseRef,
-		HasTags:          hasTags,
-		HasLabels:        hasLabels,
-		LabelsPointer:    labelsPointer,
-		ParentEntityName: parentEntityName,
-		ParentIDGetter:   parentIDGetter,
-		RespIDIsPointer:  schema.RespIDIsPointer,
-	}, nil
-}
-
-// generateOpsUpdateFuncBody renders the update<Entity> function body (no file header).
-func (g *Generator) generateOpsUpdateFuncBody(
-	entityName string,
-	schema *parser.Schema,
-	opsConfig *config.EntityOpsConfig,
-) (*opsUpdateFuncData, error) {
-	updateOp, ok := opsConfig.Ops["update"]
-	if !ok || updateOp == nil {
-		return nil, nil
-	}
-	if schema.UpdateOperationID == "" {
-		return nil, fmt.Errorf("entity %q: missing OpenAPI operationId for update op (no PATCH/PUT found)", entityName)
-	}
-	if len(schema.UpdateTags) == 0 {
-		return nil, fmt.Errorf("entity %q: missing OpenAPI tags for update op", entityName)
-	}
-
-	_, updateReqType, err := ParseSDKTypePath(updateOp.Path)
-	if err != nil {
-		return nil, fmt.Errorf("entity %q: %w", entityName, err)
-	}
-
-	sdkMethod := pascalFromKebab(schema.UpdateOperationID)
-	sdkInterface := pascalFromKebab(schema.UpdateTags[0]) + "SDK"
-	hasTags, hasLabels, labelsPointer := metadataFields(schema)
-
-	var parentEntityName, parentIDGetter string
-	rc := g.config.ReconcilerConfig[entityName]
-	if rc != nil && !rc.IsRoot {
-		if len(schema.Dependencies) == 0 {
-			return nil, fmt.Errorf("non-root entity %q has no parent dependency in OAS path", entityName)
-		}
-		parentDep := schema.Dependencies[len(schema.Dependencies)-1]
-		parentEntityName = parentDep.EntityName
-		if rc.ParentEntityType != "" {
-			parentEntityName = rc.ParentEntityType
-		}
-		parentIDGetter = "Get" + parentDep.EntityName + "ID"
-	}
-
-	// Determine SDK call shape based on number of path params in the PATCH path.
-	// ≥2 params → wrapped operations.XxxRequest struct (parent ID + entity ID).
-	// 1 param → positional (entity ID only, root entity).
-	wrapped := len(schema.UpdatePathParams) >= 2
-	var parentIDField, entityIDField, updateBodyField string
-	if wrapped {
-		params := schema.UpdatePathParams
-		parentIDField = pathParamToFieldName(params[len(params)-2])
-		entityIDField = pathParamToFieldName(params[len(params)-1])
-		updateBodyField = updateReqType
-	}
-
-	return &opsUpdateFuncData{
-		Entity:               entityName,
-		APIAlias:             g.config.APIGroupPackageAlias,
-		UpdateSDKInterface:   sdkInterface,
-		UpdateSDKMethod:      sdkMethod,
-		UpdateReqType:        updateReqType,
-		HasTags:              hasTags,
-		HasLabels:            hasLabels,
-		LabelsPointer:        labelsPointer,
-		ParentEntityName:     parentEntityName,
-		ParentIDGetter:       parentIDGetter,
-		UpdateWrapped:        wrapped,
-		ParentIDField:        parentIDField,
-		EntityIDField:        entityIDField,
-		UpdateBodyField:      updateBodyField,
-		UpdateReqBodyPointer: schema.UpdateReqBodyPointer,
-	}, nil
-}
-
-// generateEntityOpsFile emits a zz_generated_<entity>_ops.go file containing
-// both create<Entity> and update<Entity> functions (whichever are configured).
-// It returns the file plus metadata for each dispatcher.
+// generateEntityOpsFile emits a zz_generated_ops_<entity>.go file containing
+// create<Entity>, update<Entity>, and delete<Entity> functions (whichever are
+// configured). It returns the file plus metadata for each dispatcher.
 func (g *Generator) generateEntityOpsFile(
 	entityName string,
 	schema *parser.Schema,
 	opsConfig *config.EntityOpsConfig,
-) (*GeneratedFile, *OpsCreateFileInfo, *OpsUpdateFileInfo, error) {
+) (*GeneratedFile, *OpsCreateFileInfo, *OpsUpdateFileInfo, *OpsDeleteFileInfo, error) {
 	createData, err := g.generateOpsCreateFuncBody(entityName, schema, opsConfig)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed create op for %s: %w", entityName, err)
+		return nil, nil, nil, nil, fmt.Errorf("failed create op for %s: %w", entityName, err)
 	}
 
 	updateData, err := g.generateOpsUpdateFuncBody(entityName, schema, opsConfig)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed update op for %s: %w", entityName, err)
+		return nil, nil, nil, nil, fmt.Errorf("failed update op for %s: %w", entityName, err)
 	}
 
-	if createData == nil && updateData == nil {
-		return nil, nil, nil, nil
+	deleteData, err := g.generateOpsDeleteFuncBody(entityName, schema, opsConfig)
+	if err != nil {
+		return nil, nil, nil, nil, fmt.Errorf("failed delete op for %s: %w", entityName, err)
 	}
 
-	// Determine whether we need the sdkkonnectops import.
+	if createData == nil && updateData == nil && deleteData == nil {
+		return nil, nil, nil, nil, nil
+	}
+
+	// Determine whether we need the sdkkonnectops import (wrapped request structs
+	// are only used by update; delete always uses positional SDK args).
 	needsOpsImport := updateData != nil && updateData.UpdateWrapped
 
 	// Render file header.
@@ -231,14 +54,14 @@ func (g *Generator) generateEntityOpsFile(
 	var content strings.Builder
 	headerTmpl := template.Must(template.New("opsheader").Parse(opsPerEntityFileHeaderTemplate))
 	if err := headerTmpl.Execute(&content, headerData); err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	// Render create function body.
 	if createData != nil {
 		createTmpl := template.Must(template.New("opscreatefunc").Parse(opsCreateFuncTemplate))
 		if err := createTmpl.Execute(&content, createData); err != nil {
-			return nil, nil, nil, err
+			return nil, nil, nil, nil, err
 		}
 	}
 
@@ -246,12 +69,20 @@ func (g *Generator) generateEntityOpsFile(
 	if updateData != nil {
 		updateTmpl := template.Must(template.New("opsupdatefunc").Parse(opsUpdateFuncTemplate))
 		if err := updateTmpl.Execute(&content, updateData); err != nil {
-			return nil, nil, nil, err
+			return nil, nil, nil, nil, err
+		}
+	}
+
+	// Render delete function body.
+	if deleteData != nil {
+		deleteTmpl := template.Must(template.New("opsdeletefunc").Parse(opsDeleteFuncTemplate))
+		if err := deleteTmpl.Execute(&content, deleteData); err != nil {
+			return nil, nil, nil, nil, err
 		}
 	}
 
 	file := &GeneratedFile{
-		Name:        "zz_generated_" + EntityFilePrefix(entityName) + "_ops.go",
+		Name:        "zz_generated_ops_" + EntityFilePrefix(entityName) + ".go",
 		Content:     content.String(),
 		RelativeDir: "controller/konnect/ops",
 	}
@@ -278,7 +109,18 @@ func (g *Generator) generateEntityOpsFile(
 		}
 	}
 
-	return file, createInfo, updateInfo, nil
+	var deleteInfo *OpsDeleteFileInfo
+	if deleteData != nil {
+		sdkGetter := "Get" + deleteData.DeleteSDKInterface
+		deleteInfo = &OpsDeleteFileInfo{
+			Entity:         entityName,
+			APIAlias:       g.config.APIGroupPackageAlias,
+			APIPackagePath: g.config.APIGroupPackagePath,
+			SDKGetter:      sdkGetter,
+		}
+	}
+
+	return file, createInfo, updateInfo, deleteInfo, nil
 }
 
 // generateOpsCreate is retained for backwards-compatible unit tests. It calls
@@ -288,7 +130,7 @@ func (g *Generator) generateOpsCreate(
 	schema *parser.Schema,
 	opsConfig *config.EntityOpsConfig,
 ) (*GeneratedFile, *OpsCreateFileInfo, error) {
-	file, createInfo, _, err := g.generateEntityOpsFile(entityName, schema, opsConfig)
+	file, createInfo, _, _, err := g.generateEntityOpsFile(entityName, schema, opsConfig)
 	return file, createInfo, err
 }
 
@@ -298,14 +140,24 @@ func (g *Generator) generateOpsUpdate(
 	schema *parser.Schema,
 	opsConfig *config.EntityOpsConfig,
 ) (*GeneratedFile, *OpsUpdateFileInfo, error) {
-	file, _, updateInfo, err := g.generateEntityOpsFile(entityName, schema, opsConfig)
+	file, _, updateInfo, _, err := g.generateEntityOpsFile(entityName, schema, opsConfig)
 	return file, updateInfo, err
+}
+
+// generateOpsDelete is a thin wrapper for unit tests — returns only delete outputs.
+func (g *Generator) generateOpsDelete(
+	entityName string,
+	schema *parser.Schema,
+	opsConfig *config.EntityOpsConfig,
+) (*GeneratedFile, *OpsDeleteFileInfo, error) {
+	file, _, _, deleteInfo, err := g.generateEntityOpsFile(entityName, schema, opsConfig)
+	return file, deleteInfo, err
 }
 
 // buildDispatcherFile is a shared helper that renders a dispatcher Go file.
 func buildDispatcherFile(
 	fileName, templateStr string,
-	infos []struct{ Entity, APIAlias, APIPackagePath, SDKGetter string },
+	infos []flatInfo,
 ) (*GeneratedFile, error) {
 	if len(infos) == 0 {
 		return nil, nil
@@ -358,28 +210,25 @@ func buildDispatcherFile(
 	}, nil
 }
 
-// GenerateOpsCreateDispatcher emits zz_generated_ops_create.go with
-// CreateGeneratedOps[T,TEnt]. Call after all per-group generation has finished.
-func GenerateOpsCreateDispatcher(infos []*OpsCreateFileInfo) (*GeneratedFile, error) {
-	flat := make([]struct{ Entity, APIAlias, APIPackagePath, SDKGetter string }, 0, len(infos))
-	for _, info := range infos {
-		flat = append(flat, struct{ Entity, APIAlias, APIPackagePath, SDKGetter string }{
-			info.Entity, info.APIAlias, info.APIPackagePath, info.SDKGetter,
-		})
+// resolveParentEntity returns the parent entity name and the ID getter method
+// name for a non-root entity, deriving them from the schema's last dependency
+// and the reconciler config's optional ParentEntityType override.
+// Returns empty strings for root entities.
+func (g *Generator) resolveParentEntity(entityName string, schema *parser.Schema) (parentEntityName, parentIDGetter string, err error) {
+	rc := g.config.ReconcilerConfig[entityName]
+	if rc == nil || rc.IsRoot {
+		return "", "", nil
 	}
-	return buildDispatcherFile("zz_generated_ops_create.go", opsCreateDispatcherTemplate, flat)
-}
-
-// GenerateOpsUpdateDispatcher emits zz_generated_ops_update.go with
-// UpdateGeneratedOps[T,TEnt]. Call after all per-group generation has finished.
-func GenerateOpsUpdateDispatcher(infos []*OpsUpdateFileInfo) (*GeneratedFile, error) {
-	flat := make([]struct{ Entity, APIAlias, APIPackagePath, SDKGetter string }, 0, len(infos))
-	for _, info := range infos {
-		flat = append(flat, struct{ Entity, APIAlias, APIPackagePath, SDKGetter string }{
-			info.Entity, info.APIAlias, info.APIPackagePath, info.SDKGetter,
-		})
+	if len(schema.Dependencies) == 0 {
+		return "", "", fmt.Errorf("non-root entity %q has no parent dependency in OAS path", entityName)
 	}
-	return buildDispatcherFile("zz_generated_ops_update.go", opsUpdateDispatcherTemplate, flat)
+	parentDep := schema.Dependencies[len(schema.Dependencies)-1]
+	parentEntityName = parentDep.EntityName
+	if rc.ParentEntityType != "" {
+		parentEntityName = rc.ParentEntityType
+	}
+	parentIDGetter = "Get" + parentDep.EntityName + "ID"
+	return parentEntityName, parentIDGetter, nil
 }
 
 // pathParamToFieldName converts an OpenAPI path parameter name to a Go struct

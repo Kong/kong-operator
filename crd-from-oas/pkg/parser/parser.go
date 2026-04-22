@@ -85,6 +85,12 @@ type Schema struct {
 	UpdateRespIDIsPointer    bool     // true when the update 2xx response schema's "id" is not required
 	UpdatePathParams         []string // ordered path params from the PATCH/PUT path (e.g. ["portalId","id"])
 	UpdateReqBodyPointer     bool     // true when PATCH/PUT requestBody is not marked required (SDK emits pointer)
+
+	// DELETE operation hints for delete ops generation.
+	DeleteOperationID     string   // DELETE operationId (e.g. "delete-portal")
+	DeleteTags            []string // DELETE tags (e.g. ["Portals"])
+	DeletePathParams      []string // ordered path params from the DELETE path (e.g. ["portalId","id"])
+	DeleteQueryParamCount int      // number of query parameters on the DELETE operation (each becomes a nil arg)
 }
 
 // ParsedSpec is the result of parsing an OpenAPI spec via ParsePaths.
@@ -196,6 +202,7 @@ func (p *Parser) parsePath(targetPath string) (string, *Schema, error) {
 		schema.SuccessResponseRef = extractSuccessResponseRef(pathItem.Post.Responses)
 		schema.RespIDIsPointer = p.successResponseIDIsPointer(pathItem.Post.Responses)
 		p.extractUpdateOp(targetPath, schema)
+		p.extractDeleteOp(targetPath, schema)
 		return schemaName, schema, nil
 	}
 
@@ -248,6 +255,54 @@ func (p *Parser) findUpdateOperation(targetPath string) (*openapi3.Operation, st
 			}
 			if item.Put != nil {
 				return item.Put, pathKey
+			}
+		}
+	}
+	return nil, ""
+}
+
+// extractDeleteOp finds the DELETE operation for the entity — either on the
+// same path or on a sibling path that extends targetPath with one `{<id>}`
+// segment — and populates the Delete* fields of the schema.
+func (p *Parser) extractDeleteOp(targetPath string, schema *Schema) {
+	deleteOp, deletePath := p.findDeleteOperation(targetPath)
+	if deleteOp == nil {
+		return
+	}
+
+	schema.DeleteOperationID = deleteOp.OperationID
+	schema.DeleteTags = append([]string(nil), deleteOp.Tags...)
+	schema.DeletePathParams = extractPathParams(deletePath)
+
+	// Count query parameters so the generator can pass nil for each optional
+	// query param that the SDK codegen promotes to a positional argument.
+	for _, p := range deleteOp.Parameters {
+		if p.Value != nil && p.Value.In == "query" {
+			schema.DeleteQueryParamCount++
+		}
+	}
+}
+
+// findDeleteOperation returns the DELETE operation and its path for the given
+// POST targetPath. It checks the same path first, then looks for a sibling
+// path that extends targetPath with a single `{<param>}` segment.
+func (p *Parser) findDeleteOperation(targetPath string) (*openapi3.Operation, string) {
+	// Same path.
+	if item := p.doc.Paths.Find(targetPath); item != nil {
+		if item.Delete != nil {
+			return item.Delete, targetPath
+		}
+	}
+
+	// Sibling: <targetPath>/{<anything>} with exactly one additional segment.
+	for pathKey, item := range p.doc.Paths.Map() {
+		if !strings.HasPrefix(pathKey, targetPath+"/") {
+			continue
+		}
+		rest := pathKey[len(targetPath)+1:]
+		if strings.HasPrefix(rest, "{") && strings.HasSuffix(rest, "}") && !strings.Contains(rest, "/") {
+			if item.Delete != nil {
+				return item.Delete, pathKey
 			}
 		}
 	}

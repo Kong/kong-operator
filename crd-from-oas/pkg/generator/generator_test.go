@@ -1777,7 +1777,7 @@ func TestGenerateOpsCreate_RootEntity(t *testing.T) {
 	require.NotNil(t, file)
 	require.NotNil(t, info)
 
-	assert.Equal(t, "zz_generated_portal_ops.go", file.Name)
+	assert.Equal(t, "zz_generated_ops_portal.go", file.Name)
 	assert.Equal(t, "GetPortalsSDK", info.SDKGetter)
 
 	// Root entity: no parent ID guard, direct SDK call.
@@ -1820,7 +1820,7 @@ func TestGenerateOpsCreate_NonRootEntity(t *testing.T) {
 	require.NotNil(t, file)
 	require.NotNil(t, info)
 
-	assert.Equal(t, "zz_generated_identityproviderrequest_ops.go", file.Name)
+	assert.Equal(t, "zz_generated_ops_identityproviderrequest.go", file.Name)
 	assert.Equal(t, "GetPortalAuthSettingsSDK", info.SDKGetter)
 
 	// Non-root: parentID guard present.
@@ -1933,7 +1933,7 @@ func TestGenerateOpsUpdate_RootEntity(t *testing.T) {
 	require.NotNil(t, file)
 	require.NotNil(t, info)
 
-	assert.Equal(t, "zz_generated_portal_ops.go", file.Name)
+	assert.Equal(t, "zz_generated_ops_portal.go", file.Name)
 	assert.Equal(t, "GetPortalsSDK", info.SDKGetter)
 
 	// Contains both create and update functions.
@@ -2148,6 +2148,233 @@ func TestGenerateOpsUpdateDispatcher(t *testing.T) {
 	assert.Contains(t, file.Content, "return updatePortal(ctx, sdk.GetPortalsSDK(), ent)")
 	assert.Contains(t, file.Content, "return updateIdentityProviderRequest(ctx, sdk.GetPortalAuthSettingsSDK(), ent)")
 	assert.NotContains(t, file.Content, "createPortal")
+}
+
+func TestGenerateOpsDelete_RootEntity(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"Portal": {IsRoot: true},
+		},
+	})
+
+	schema := &parser.Schema{
+		OperationID:        "create-portal",
+		Tags:               []string{"Portals"},
+		SuccessResponseRef: "PortalResponse",
+		UpdateOperationID:  "update-portal",
+		UpdateTags:         []string{"Portals"},
+		UpdatePathParams:   []string{"portalId"},
+		// DELETE /v3/portals/{portalId} — 1 path param, 1 query param (force).
+		DeleteOperationID:     "delete-portal",
+		DeleteTags:            []string{"Portals"},
+		DeletePathParams:      []string{"portalId"},
+		DeleteQueryParamCount: 1,
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreatePortal"},
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.UpdatePortal"},
+			"delete": {},
+		},
+	}
+
+	file, info, err := g.generateOpsDelete("Portal", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotNil(t, info)
+
+	assert.Equal(t, "zz_generated_ops_portal.go", file.Name)
+	assert.Equal(t, "GetPortalsSDK", info.SDKGetter)
+
+	// File contains create, update, and delete functions.
+	assert.Contains(t, file.Content, "func createPortal(")
+	assert.Contains(t, file.Content, "func updatePortal(")
+	assert.Contains(t, file.Content, "func deletePortal(")
+
+	// Root: no parent guard.
+	assert.NotContains(t, file.Content, "CantPerformOperationWithoutParentIDError")
+
+	// Positional call with nil for the force query param.
+	assert.Contains(t, file.Content, "sdk.DeletePortal(ctx, id, nil)")
+
+	// Uses GetKonnectID for the entity ID.
+	assert.Contains(t, file.Content, "obj.GetKonnectStatus().GetKonnectID()")
+
+	// DeleteOp constant in error wrapping.
+	assert.Contains(t, file.Content, "wrapErrIfKonnectOpFailed(err, DeleteOp, obj)")
+}
+
+func TestGenerateOpsDelete_NonRootEntity(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"IdentityProviderRequest": {IsRoot: false},
+		},
+	})
+
+	schema := &parser.Schema{
+		OperationID:        "create-portal-identity-provider",
+		Tags:               []string{"Portal Auth Settings"},
+		SuccessResponseRef: "IdentityProvider",
+		RespIDIsPointer:    true,
+		Dependencies: []*parser.Dependency{
+			{ParamName: "portalId", EntityName: "Portal"},
+		},
+		UpdateOperationID: "update-portal-identity-provider",
+		UpdateTags:        []string{"Portal Auth Settings"},
+		UpdatePathParams:  []string{"portalId", "id"},
+		// DELETE /v3/portals/{portalId}/identity-providers/{id} — 2 path params, 0 query params.
+		DeleteOperationID: "delete-portal-identity-provider",
+		DeleteTags:        []string{"Portal Auth Settings"},
+		DeletePathParams:  []string{"portalId", "id"},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateIdentityProvider"},
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateIdentityProvider"},
+			"delete": {},
+		},
+	}
+
+	file, info, err := g.generateOpsDelete("IdentityProviderRequest", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotNil(t, info)
+
+	assert.Equal(t, "GetPortalAuthSettingsSDK", info.SDKGetter)
+
+	// Non-root: parent guard with DeleteOp.
+	assert.Contains(t, file.Content, "parentID := obj.GetPortalID()")
+	assert.Contains(t, file.Content, `CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "Portal", Op: DeleteOp}`)
+
+	// Positional call: sdk.DeletePortalIdentityProvider(ctx, parentID, id).
+	assert.Contains(t, file.Content, "sdk.DeletePortalIdentityProvider(ctx, parentID, id)")
+
+	// Delete does not reference sdkkonnectops directly (no wrapped struct for delete).
+	assert.NotContains(t, file.Content, "sdkkonnectops.Delete")
+}
+
+func TestGenerateOpsDelete_NonRootEntityWithParentTypeOverride(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"KonnectEventDataPlaneCertificate": {
+				IsRoot:           false,
+				ParentEntityType: "KonnectEventControlPlane",
+			},
+		},
+	})
+
+	schema := &parser.Schema{
+		OperationID:        "create-event-gateway-data-plane-certificate",
+		Tags:               []string{"Event Gateway Data Plane Certificates"},
+		SuccessResponseRef: "EventGatewayDataPlaneCertificate",
+		Dependencies: []*parser.Dependency{
+			{ParamName: "gatewayId", EntityName: "Gateway"},
+		},
+		UpdateOperationID: "update-event-gateway-data-plane-certificate",
+		UpdateTags:        []string{"Event Gateway Data Plane Certificates"},
+		UpdatePathParams:  []string{"gatewayId", "certificateId"},
+		// DELETE /v1/event-gateways/{gatewayId}/data-plane-certificates/{certificateId}.
+		DeleteOperationID: "delete-event-gateway-data-plane-certificate",
+		DeleteTags:        []string{"Event Gateway Data Plane Certificates"},
+		DeletePathParams:  []string{"gatewayId", "certificateId"},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateEventGatewayDataPlaneCertificateRequest"},
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateEventGatewayDataPlaneCertificateRequest"},
+			"delete": {},
+		},
+	}
+
+	file, _, err := g.generateOpsDelete("KonnectEventDataPlaneCertificate", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, file)
+
+	// parentIDGetter uses dep.EntityName ("Gateway"), not ParentEntityType override.
+	assert.Contains(t, file.Content, "parentID := obj.GetGatewayID()")
+
+	// Error label uses ParentEntityType override.
+	assert.Contains(t, file.Content, `Parent: "KonnectEventControlPlane"`)
+
+	// Positional call: sdk.DeleteEventGatewayDataPlaneCertificate(ctx, parentID, id).
+	assert.Contains(t, file.Content, "sdk.DeleteEventGatewayDataPlaneCertificate(ctx, parentID, id)")
+}
+
+func TestGenerateOpsDelete_NoDeleteOp_Skipped(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"Portal": {IsRoot: true},
+		},
+	})
+
+	schema := &parser.Schema{
+		OperationID:        "create-portal",
+		Tags:               []string{"Portals"},
+		SuccessResponseRef: "PortalResponse",
+		UpdateOperationID:  "update-portal",
+		UpdateTags:         []string{"Portals"},
+		UpdatePathParams:   []string{"portalId"},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreatePortal"},
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.UpdatePortal"},
+			// No "delete" key.
+		},
+	}
+
+	file, info, err := g.generateOpsDelete("Portal", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, file) // file emitted for create+update
+	require.Nil(t, info)    // no delete info → not in dispatcher
+
+	// File contains create and update but no delete.
+	assert.Contains(t, file.Content, "func createPortal(")
+	assert.Contains(t, file.Content, "func updatePortal(")
+	assert.NotContains(t, file.Content, "func deletePortal(")
+}
+
+func TestGenerateOpsDeleteDispatcher(t *testing.T) {
+	infos := []*OpsDeleteFileInfo{
+		{
+			Entity:         "Portal",
+			APIAlias:       "konnectv1alpha1",
+			APIPackagePath: "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+			SDKGetter:      "GetPortalsSDK",
+		},
+		{
+			Entity:         "IdentityProviderRequest",
+			APIAlias:       "konnectv1alpha1",
+			APIPackagePath: "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+			SDKGetter:      "GetPortalAuthSettingsSDK",
+		},
+	}
+
+	file, err := GenerateOpsDeleteDispatcher(infos)
+	require.NoError(t, err)
+	require.NotNil(t, file)
+
+	assert.Equal(t, "zz_generated_ops_delete.go", file.Name)
+	assert.Contains(t, file.Content, "func DeleteGeneratedOps[")
+
+	// Alphabetical ordering: IdentityProviderRequest before Portal.
+	idxIdentity := strings.Index(file.Content, "IdentityProviderRequest")
+	idxPortal := strings.Index(file.Content, "Portal")
+	assert.Less(t, idxIdentity, idxPortal, "cases should be alphabetically sorted")
+
+	// Dispatcher calls deleteX not createX or updateX.
+	assert.Contains(t, file.Content, "return deletePortal(ctx, sdk.GetPortalsSDK(), ent)")
+	assert.Contains(t, file.Content, "return deleteIdentityProviderRequest(ctx, sdk.GetPortalAuthSettingsSDK(), ent)")
+	assert.NotContains(t, file.Content, "createPortal")
+	assert.NotContains(t, file.Content, "updatePortal")
 }
 
 func TestPathParamToFieldName(t *testing.T) {

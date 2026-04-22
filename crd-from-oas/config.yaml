@@ -17,6 +17,7 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/components.CreateGatewayRequest
           update:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdateGatewayRequest
+          delete: {}
         reconciler:
           isRoot: true
       - path: /v1/event-gateways/{gatewayId}/data-plane-certificates
@@ -27,6 +28,7 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/components.CreateEventGatewayDataPlaneCertificateRequest
           update:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdateEventGatewayDataPlaneCertificateRequest
+          delete: {}
         reconciler:
           isRoot: false
           parentEntityType: KonnectEventControlPlane
@@ -42,6 +44,7 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/components.CreatePortal
           update:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdatePortal
+          delete: {}
         reconciler:
           isRoot: true
       - path: /v3/portals/{portalId}/identity-providers
@@ -50,6 +53,7 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/components.CreateIdentityProvider
           update:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdateIdentityProvider
+          delete: {}
         reconciler:
           isRoot: false
 
