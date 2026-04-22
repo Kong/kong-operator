@@ -92,6 +92,11 @@ type Schema struct {
 	DeleteTags            []string // DELETE tags (e.g. ["Portals"])
 	DeletePathParams      []string // ordered path params from the DELETE path (e.g. ["portalId","id"])
 	DeleteQueryParamCount int      // number of query parameters on the DELETE operation (each becomes a nil arg)
+
+	// GET operation hints for getForUID ops generation.
+	ListOperationID string   // GET operationId on the collection path (e.g. "list-portals")
+	ListTags        []string // GET tags (used to derive SDK interface name)
+	ListPathParams  []string // ordered path params from the GET collection path (parent params only)
 }
 
 // ParsedSpec is the result of parsing an OpenAPI spec via ParsePaths.
@@ -205,6 +210,7 @@ func (p *Parser) parsePath(targetPath string) (string, *Schema, error) {
 		schema.CreateReqBodyPointer = !reqBody.Required
 		p.extractUpdateOp(targetPath, schema)
 		p.extractDeleteOp(targetPath, schema)
+		p.extractListOp(targetPath, schema)
 		return schemaName, schema, nil
 	}
 
@@ -230,17 +236,17 @@ func (p *Parser) extractUpdateOp(targetPath string, schema *Schema) {
 	}
 }
 
-// findUpdateOperation returns the PATCH (fallback PUT) operation and its path
+// findUpdateOperation returns the PUT (fallback PATCH) operation and its path
 // for the given POST targetPath. It checks the same path first, then looks for
 // a sibling path that extends targetPath with a single `{<param>}` segment.
 func (p *Parser) findUpdateOperation(targetPath string) (*openapi3.Operation, string) {
 	// Same path.
 	if item := p.doc.Paths.Find(targetPath); item != nil {
-		if item.Patch != nil {
-			return item.Patch, targetPath
-		}
 		if item.Put != nil {
 			return item.Put, targetPath
+		}
+		if item.Patch != nil {
+			return item.Patch, targetPath
 		}
 	}
 
@@ -252,11 +258,11 @@ func (p *Parser) findUpdateOperation(targetPath string) (*openapi3.Operation, st
 		rest := pathKey[len(targetPath)+1:]
 		// Must be a single {param} segment — no nested slashes.
 		if strings.HasPrefix(rest, "{") && strings.HasSuffix(rest, "}") && !strings.Contains(rest, "/") {
-			if item.Patch != nil {
-				return item.Patch, pathKey
-			}
 			if item.Put != nil {
 				return item.Put, pathKey
+			}
+			if item.Patch != nil {
+				return item.Patch, pathKey
 			}
 		}
 	}
@@ -309,6 +315,30 @@ func (p *Parser) findDeleteOperation(targetPath string) (*openapi3.Operation, st
 		}
 	}
 	return nil, ""
+}
+
+// extractListOp finds the GET operation for the entity collection — i.e. GET
+// on the same targetPath as the POST — and populates the List* fields of the
+// schema.
+func (p *Parser) extractListOp(targetPath string, schema *Schema) {
+	listOp := p.findListOperation(targetPath)
+	if listOp == nil {
+		return
+	}
+
+	schema.ListOperationID = listOp.OperationID
+	schema.ListTags = append([]string(nil), listOp.Tags...)
+	schema.ListPathParams = extractPathParams(targetPath)
+}
+
+// findListOperation returns the GET operation on targetPath (the collection
+// endpoint), or nil if none exists.
+func (p *Parser) findListOperation(targetPath string) *openapi3.Operation {
+	item := p.doc.Paths.Find(targetPath)
+	if item == nil {
+		return nil
+	}
+	return item.Get
 }
 
 // extractPathParams returns the ordered list of path parameter names (without

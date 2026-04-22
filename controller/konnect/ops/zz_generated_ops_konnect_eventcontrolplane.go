@@ -12,82 +12,82 @@ import (
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 )
 
-func createPortal(
+func createKonnectEventControlPlane(
 	ctx context.Context,
-	sdk sdkkonnectgo.PortalsSDK,
-	obj *konnectv1alpha1.Portal,
+	sdk sdkkonnectgo.EventGatewaysSDK,
+	obj *konnectv1alpha1.KonnectEventControlPlane,
 ) error {
-	req, err := obj.Spec.APISpec.ToCreatePortal()
+	req, err := obj.Spec.APISpec.ToCreateGatewayRequest()
 	if err != nil {
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
 	}
-	req.Labels = WithKubernetesMetadataLabelsPtr(obj, req.Labels)
+	req.Labels = WithKubernetesMetadataLabels(obj, req.Labels)
 
-	resp, err := sdk.CreatePortal(ctx, *req)
+	resp, err := sdk.CreateEventGateway(ctx, *req)
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, obj); errWrap != nil {
 		return errWrap
 	}
-	if resp == nil || resp.PortalResponse == nil || resp.PortalResponse.ID == "" {
+	if resp == nil || resp.EventGatewayInfo == nil || resp.EventGatewayInfo.ID == "" {
 		return fmt.Errorf("failed creating %s: %w", obj.GetTypeName(), ErrNilResponse)
 	}
 
-	obj.SetKonnectID(resp.PortalResponse.ID)
+	obj.SetKonnectID(resp.EventGatewayInfo.ID)
 	return nil
 }
 
-func updatePortal(
+func updateKonnectEventControlPlane(
 	ctx context.Context,
-	sdk sdkkonnectgo.PortalsSDK,
-	obj *konnectv1alpha1.Portal,
+	sdk sdkkonnectgo.EventGatewaysSDK,
+	obj *konnectv1alpha1.KonnectEventControlPlane,
 ) error {
 	id := obj.GetKonnectStatus().GetKonnectID()
-	req, err := obj.Spec.APISpec.ToUpdatePortal()
+	req, err := obj.Spec.APISpec.ToUpdateGatewayRequest()
 	if err != nil {
 		return fmt.Errorf("failed building %s SDK update request: %w", obj.GetTypeName(), err)
 	}
-	req.Labels = WithKubernetesMetadataLabelsPtr(obj, req.Labels)
+	req.Labels = WithKubernetesMetadataLabels(obj, req.Labels)
 
-	_, err = sdk.UpdatePortal(ctx, id, *req)
+	_, err = sdk.UpdateEventGateway(ctx, id, *req)
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {
 		return handleUpdateError(ctx, err, obj, func(ctx context.Context) error {
-			return createPortal(ctx, sdk, obj)
+			return createKonnectEventControlPlane(ctx, sdk, obj)
 		})
 	}
 	return nil
 }
 
-func deletePortal(
+func deleteKonnectEventControlPlane(
 	ctx context.Context,
-	sdk sdkkonnectgo.PortalsSDK,
-	obj *konnectv1alpha1.Portal,
+	sdk sdkkonnectgo.EventGatewaysSDK,
+	obj *konnectv1alpha1.KonnectEventControlPlane,
 ) error {
 	id := obj.GetKonnectStatus().GetKonnectID()
 
-	_, err := sdk.DeletePortal(ctx, id, nil)
+	_, err := sdk.DeleteEventGateway(ctx, id)
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, obj); errWrap != nil {
 		return handleDeleteError(ctx, errWrap, obj)
 	}
 	return nil
 }
 
-func getPortalForUID(
+func getKonnectEventControlPlaneForUID(
 	ctx context.Context,
-	sdk sdkkonnectgo.PortalsSDK,
-	obj *konnectv1alpha1.Portal,
+	sdk sdkkonnectgo.EventGatewaysSDK,
+	obj *konnectv1alpha1.KonnectEventControlPlane,
 ) (string, error) {
 
-	// TODO: pass a Filter to ListPortals (e.g. by name/labels) so we
+	// TODO: pass a Filter to ListEventGateways (e.g. by name/labels) so we
 	// do not page through every entity in the tenant. Filter types and
 	// fields are entity-specific; derive from OpenAPI schema.
-	resp, err := sdk.ListPortals(ctx, sdkkonnectops.ListPortalsRequest{})
+	resp, err := sdk.ListEventGateways(ctx, sdkkonnectops.ListEventGatewaysRequest{})
 	if err != nil {
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
 	}
-	if resp == nil || resp.ListPortalsResponse == nil {
+	if resp == nil || resp.ListEventGatewaysResponse == nil {
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
 	}
 
-	for _, entry := range resp.ListPortalsResponse.Data {
+	for _, entry := range resp.ListEventGatewaysResponse.Data {
 		if entry.GetLabels()[KubernetesUIDLabelKey] != string(obj.GetUID()) {
 			continue
 		}
