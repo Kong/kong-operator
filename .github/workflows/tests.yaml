@@ -309,7 +309,7 @@ jobs:
 
     - name: Go cache main branch
       if: ${{ github.ref == 'refs/heads/main' }}
-      uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae
       with:
         path: |
           ${{ env.GO_MOD_CACHE }}
@@ -321,7 +321,7 @@ jobs:
 
     - name: Go cache (restore only for non-main branches)
       if: ${{ github.ref != 'refs/heads/main' }}
-      uses: actions/cache/restore@668228422ae6a00e4ad889ee87cd7109ec5666a7
+      uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
       with:
         path: |
           ${{ env.GO_MOD_CACHE }}
