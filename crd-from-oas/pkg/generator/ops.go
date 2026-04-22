@@ -294,6 +294,19 @@ func (g *Generator) resolveParentEntity(entityName string, schema *parser.Schema
 	return parentEntityName, parentIDGetter, nil
 }
 
+func resolveSDKInterfaceTypeName(opsConfig *config.EntityOpsConfig, fallbackTypeName string) (string, error) {
+	if opsConfig == nil || opsConfig.SDK == nil || opsConfig.SDK.Interface == "" {
+		return fallbackTypeName, nil
+	}
+
+	_, typeName, err := ParseSDKTypePath(opsConfig.SDK.Interface)
+	if err != nil {
+		return "", err
+	}
+
+	return typeName, nil
+}
+
 // pathParamToFieldName converts an OpenAPI path parameter name to a Go struct
 // field name using the Speakeasy SDK codegen convention:
 // "portalId" → "PortalID", "id" → "ID", "certificateId" → "CertificateID".

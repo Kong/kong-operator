@@ -61,6 +61,10 @@ func (g *Generator) generateOpsGetForUIDFuncBody(
 
 	listMethod := pascalFromKebab(schema.ListOperationID)
 	listInterface := pascalFromKebab(schema.ListTags[0]) + "SDK"
+	listInterface, err := resolveSDKInterfaceTypeName(opsConfig, listInterface)
+	if err != nil {
+		return nil, fmt.Errorf("entity %q: resolve list SDK interface: %w", entityName, err)
+	}
 
 	parentEntityName, parentIDGetter, err := g.resolveParentEntity(entityName, schema)
 	if err != nil {

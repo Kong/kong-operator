@@ -80,10 +80,24 @@ apiGroupVersions:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.PortalTeamsSDK
             fieldName: PortalTeams
+          # The SDK list endpoint uses positional args and response items lack
+          # UID labels, so getForUID cannot be generated automatically.
+          skipGetForUID: true
           create:
             path: github.com/Kong/sdk-konnect-go/models/components.PortalCreateTeamRequest
           update:
             path: github.com/Kong/sdk-konnect-go/models/components.PortalUpdateTeamRequest
+        reconciler:
+          isRoot: false
+      - path: /v3/portals/{portalId}/pages
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.PortalPagesSDK
+            fieldName: PortalPages
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreatePortalPageRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdatePortalPageRequest
           delete: {}
         reconciler:
           isRoot: false
@@ -98,6 +112,3 @@ apiGroupVersions:
           alias: commonv1alpha1
     types:
       - path: /v2/dcr-providers
-      # TODO: uncomment
-      # - path: /v3/portals/{portalId}/custom-domain
-      # - path: /v3/portals/{portalId}/teams/{teamId}/developers
