@@ -85,7 +85,7 @@ func TestServiceForRule(t *testing.T) {
 		{
 			name:               "new service creation",
 			existingService:    nil,
-			expectedAnnotation: "HTTPRoute/test-namespace/test-route",
+			expectedAnnotation: "test-namespace/test-route",
 			expectUpdate:       false,
 			expectedHost:       upstreamName,
 		},

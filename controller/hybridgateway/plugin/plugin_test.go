@@ -64,7 +64,7 @@ func TestAppendHTTPRouteToPluginAnnotations(t *testing.T) {
 					Namespace: "test-namespace",
 				},
 			},
-			expectedAnnotation: "HTTPRoute/test-namespace/test-route",
+			expectedAnnotation: "test-namespace/test-route",
 			expectModification: true,
 		},
 		{

@@ -97,7 +97,7 @@ func TestAppendHTTPRouteToAnnotations(t *testing.T) {
 		{
 			name: "multiple existing routes, adding new one",
 			existingAnnotations: map[string]string{
-				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1,HTTPRoute/ns2/route2",
+				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1,ns2/route2",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
 				TypeMeta: httpRouteTypeMeta,
@@ -106,7 +106,7 @@ func TestAppendHTTPRouteToAnnotations(t *testing.T) {
 					Namespace: "ns3",
 				},
 			},
-			expectedAnnotation: "ns1/route1,HTTPRoute/ns2/route2,HTTPRoute/ns3/route3",
+			expectedAnnotation: "ns1/route1,ns2/route2,ns3/route3",
 			expectModification: true,
 		},
 	}
