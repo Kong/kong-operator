@@ -42370,12 +42370,12 @@ spec:
         variables.proxyContainer.env.filter(e, e.name == "KONG_PROXY_LISTEN") : []
     name: envFilteredProxyListen
   - expression: |
-      variables.envFilteredPortMaps.size() > 0 ? variables.envFilteredPortMaps[0].value : null
-    name: envPortMaps
-  - expression: |
       variables.proxyContainer != null && has(variables.proxyContainer.env) ?
         variables.proxyContainer.env.filter(e, e.name == "KONG_STREAM_LISTEN") : []
     name: envFilteredStreamListen
+  - expression: |
+      variables.envFilteredPortMaps.size() > 0 ? variables.envFilteredPortMaps[0].value : null
+    name: envPortMaps
   - expression: |
       variables.envFilteredProxyListen.size() > 0 ? variables.envFilteredProxyListen[0].value : null
     name: envProxyListen

@@ -107,11 +107,11 @@ type (
 	TCPRouteRule         = gatewayv1alpha2.TCPRouteRule
 	TCPRouteSpec         = gatewayv1alpha2.TCPRouteSpec
 	TCPRouteStatus       = gatewayv1alpha2.TCPRouteStatus
-	TLSRoute             = gatewayv1alpha2.TLSRoute
-	TLSRouteList         = gatewayv1alpha2.TLSRouteList
-	TLSRouteRule         = gatewayv1alpha2.TLSRouteRule
-	TLSRouteSpec         = gatewayv1alpha2.TLSRouteSpec
-	TLSRouteStatus       = gatewayv1alpha2.TLSRouteStatus
+	TLSRoute             = gatewayv1.TLSRoute
+	TLSRouteList         = gatewayv1.TLSRouteList
+	TLSRouteRule         = gatewayv1.TLSRouteRule
+	TLSRouteSpec         = gatewayv1.TLSRouteSpec
+	TLSRouteStatus       = gatewayv1.TLSRouteStatus
 	UDPRoute             = gatewayv1alpha2.UDPRoute
 	UDPRouteList         = gatewayv1alpha2.UDPRouteList
 	UDPRouteRule         = gatewayv1alpha2.UDPRouteRule

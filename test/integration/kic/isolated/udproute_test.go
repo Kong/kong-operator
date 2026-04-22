@@ -203,7 +203,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 			t.Log("verifying that the udpecho is no longer responding")
 			defer func() {
 				if t.Failed() {
-					err := test.EchoResponds(test.ProtocolUDP, udpGatewayURL, test1UUID)
+					err := helpers.EchoResponds(t, helpers.ProtocolUDP, udpGatewayURL, test1UUID)
 					t.Logf("no longer responding check failure state: eof=%v, reset=%v, err=%v",
 						errors.Is(err, io.EOF), errors.Is(err, syscall.ECONNRESET), err)
 				}

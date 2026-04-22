@@ -35,13 +35,13 @@ spec:
       expression: |
         variables.proxyContainer != null && has(variables.proxyContainer.env) ?
           variables.proxyContainer.env.filter(e, e.name == "KONG_PROXY_LISTEN") : []
-    - name: envPortMaps
-      expression: |
-        variables.envFilteredPortMaps.size() > 0 ? variables.envFilteredPortMaps[0].value : null
     - name: envFilteredStreamListen
       expression: |
         variables.proxyContainer != null && has(variables.proxyContainer.env) ?
           variables.proxyContainer.env.filter(e, e.name == "KONG_STREAM_LISTEN") : []
+    - name: envPortMaps
+      expression: |
+        variables.envFilteredPortMaps.size() > 0 ? variables.envFilteredPortMaps[0].value : null
     - name: envProxyListen
       expression: |
         variables.envFilteredProxyListen.size() > 0 ? variables.envFilteredProxyListen[0].value : null

@@ -54,6 +54,12 @@
 - KegDataplane: Implement the `KegDataPlane` reconciler (`eventgateway.konghq.com/v1alpha1`)
   which manages the full lifecycle of Kong Event Gateway (KEG) DataPlane workloads.
   [#3914](https://github.com/Kong/kong-operator/pull/3891)
+- TLSRoute support: Move `TLSRoute` controller out of `GatewayAlpha` feature gate
+  in controlplane controller managers and migrate the controller to reconcile
+  `TLSRoute`s in gateway API `v1` instead of `v1alpha2`.
+  Note: This may be incompatible when migrating the management of `TLSRoute`
+  from Kong ingress controller to Kong operator.
+  [#3812](https://github.com/Kong/kong-operator/pull/3812)
 - TLSRoute support: Add `TLSRoute` reconciler in hybrid gateway controllers
   and add translator of `TLSRoute`.
   [#3763](https://github.com/Kong/kong-operator/pull/3763)
