@@ -9,6 +9,8 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/go-logr/logr"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/helpers/certificate"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -482,25 +484,25 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 			dpCertIDB              = "33333333-3333-3333-3333-33333333333b"
 		)
 
-		sdk.EXPECT().ListDpClientCertificates(mock.Anything, konnectControlPlaneIDA).
+		factory.SDK.DataPlaneCertificatesSDK.EXPECT().ListDpClientCertificates(mock.Anything, konnectControlPlaneIDA).
 			Return(&sdkkonnectops.ListDpClientCertificatesResponse{StatusCode: http.StatusOK}, nil).Maybe()
-		sdk.EXPECT().ListDpClientCertificates(mock.Anything, konnectControlPlaneIDB).
+		factory.SDK.DataPlaneCertificatesSDK.EXPECT().ListDpClientCertificates(mock.Anything, konnectControlPlaneIDB).
 			Return(&sdkkonnectops.ListDpClientCertificatesResponse{StatusCode: http.StatusOK}, nil).Maybe()
-		sdk.EXPECT().CreateDataplaneCertificate(mock.Anything, konnectControlPlaneIDA, mock.Anything).
+		factory.SDK.DataPlaneCertificatesSDK.EXPECT().CreateDataplaneCertificate(mock.Anything, konnectControlPlaneIDA, mock.Anything).
 			Return(&sdkkonnectops.CreateDataplaneCertificateResponse{
 				DataPlaneClientCertificateResponse: &sdkkonnectcomp.DataPlaneClientCertificateResponse{
 					Item: &sdkkonnectcomp.DataPlaneClientCertificate{
-						ID:   new(dpCertIDA),
-						Cert: new(deploy.TestValidCACertPEM),
+						ID:   lo.ToPtr(dpCertIDA),
+						Cert: lo.ToPtr(deploy.TestValidCACertPEM),
 					},
 				},
 			}, nil).Maybe()
-		sdk.EXPECT().CreateDataplaneCertificate(mock.Anything, konnectControlPlaneIDB, mock.Anything).
+		factory.SDK.DataPlaneCertificatesSDK.EXPECT().CreateDataplaneCertificate(mock.Anything, konnectControlPlaneIDB, mock.Anything).
 			Return(&sdkkonnectops.CreateDataplaneCertificateResponse{
 				DataPlaneClientCertificateResponse: &sdkkonnectcomp.DataPlaneClientCertificateResponse{
 					Item: &sdkkonnectcomp.DataPlaneClientCertificate{
-						ID:   new(dpCertIDB),
-						Cert: new(deploy.TestValidCACertPEM),
+						ID:   lo.ToPtr(dpCertIDB),
+						Cert: lo.ToPtr(deploy.TestValidCACertPEM),
 					},
 				},
 			}, nil).Maybe()
@@ -518,7 +520,6 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 		t.Logf("Creating shared client-certificate Secret (used by both KonnectExtensions)")
 		certPEM, keyPEM := certificate.MustGenerateCertPEMFormat(
 			certificate.WithCommonName("kong-client"),
-			certificate.WithKeyType(keyType),
 		)
 		sharedSecret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{

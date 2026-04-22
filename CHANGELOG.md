@@ -44,6 +44,13 @@
 
 ### Fixed
 
+- Fix a hot loop in the `KonnectExtension` reconciler when two
+  `KonnectExtension`s share the same client-certificate `Secret`: the
+  `KongDataPlaneClientCertificate` CR is now named after the `KonnectExtension`
+  instead of the `Secret`, so each extension gets its own CR in its own Konnect
+  ControlPlane and the reconciler no longer retries `Create` on every loop or
+  falls back to Konnect's `dp-client-certificates` List API.
+  [#3961](https://github.com/Kong/kong-operator/pull/3961) [#3978](https://github.com/Kong/kong-operator/pull/3978)
 - Fix incorrect Konnect API used for target lookup
   [#3911](https://github.com/Kong/kong-operator/pull/3910) [#3939](https://github.com/Kong/kong-operator/pull/3939)
 
