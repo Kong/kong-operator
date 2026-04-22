@@ -25,6 +25,7 @@ func (r *Runner) Run(
 	var allOpsUpdateInfos []*generator.OpsUpdateFileInfo
 	var allOpsDeleteInfos []*generator.OpsDeleteFileInfo
 	var allOpsGetForUIDInfos []*generator.OpsGetForUIDFileInfo
+	var allWatchInfos []*generator.WatchFileInfo
 	for _, gvKey := range r.gvKeys {
 		agvConfig := r.projectCfg.APIGroupVersions[gvKey]
 
@@ -206,6 +207,7 @@ func (r *Runner) Run(
 		allOpsUpdateInfos = append(allOpsUpdateInfos, opsUpdateInfosKept...)
 		allOpsDeleteInfos = append(allOpsDeleteInfos, opsDeleteInfosKept...)
 		allOpsGetForUIDInfos = append(allOpsGetForUIDInfos, opsGetForUIDInfosKept...)
+		allWatchInfos = append(allWatchInfos, gen.WatchInfos()...)
 
 		// Write generated files
 		for _, file := range files {
@@ -240,7 +242,8 @@ func (r *Runner) Run(
 	if err := emitDispatcherFile(
 		r.projectRoot,
 		logger,
-		"create",
+		"controller/konnect/ops",
+		"zz_generated_ops_create.go",
 		func() (*generator.GeneratedFile, error) {
 			return generator.GenerateOpsCreateDispatcher(allOpsCreateInfos)
 		},
@@ -252,7 +255,8 @@ func (r *Runner) Run(
 	if err := emitDispatcherFile(
 		r.projectRoot,
 		logger,
-		"update",
+		"controller/konnect/ops",
+		"zz_generated_ops_update.go",
 		func() (*generator.GeneratedFile, error) {
 			return generator.GenerateOpsUpdateDispatcher(allOpsUpdateInfos)
 		},
@@ -264,7 +268,8 @@ func (r *Runner) Run(
 	if err := emitDispatcherFile(
 		r.projectRoot,
 		logger,
-		"delete",
+		"controller/konnect/ops",
+		"zz_generated_ops_delete.go",
 		func() (*generator.GeneratedFile, error) {
 			return generator.GenerateOpsDeleteDispatcher(allOpsDeleteInfos)
 		},
@@ -276,9 +281,23 @@ func (r *Runner) Run(
 	if err := emitDispatcherFile(
 		r.projectRoot,
 		logger,
-		"getforuid",
+		"controller/konnect/ops",
+		"zz_generated_ops_getforuid.go",
 		func() (*generator.GeneratedFile, error) {
 			return generator.GenerateOpsGetForUIDDispatcher(allOpsGetForUIDInfos)
+		},
+	); err != nil {
+		return err
+	}
+
+	// Emit watch dispatcher.
+	if err := emitDispatcherFile(
+		r.projectRoot,
+		logger,
+		"controller/konnect",
+		"zz_generated_watch.go",
+		func() (*generator.GeneratedFile, error) {
+			return generator.GenerateWatchDispatcher(allWatchInfos)
 		},
 	); err != nil {
 		return err
@@ -289,21 +308,24 @@ func (r *Runner) Run(
 
 // emitDispatcherFile writes a generated dispatcher file, or removes the stale
 // one when the generator returns nil (no entities).
+// relativeDir is relative to projectRoot (e.g. "controller/konnect/ops").
+// staleFileName is the file name to remove when the generator returns nil.
 func emitDispatcherFile(
 	projectRoot string,
 	logger *slog.Logger,
-	opKind string,
+	relativeDir string,
+	staleFileName string,
 	generate func() (*generator.GeneratedFile, error),
 ) error {
 	file, err := generate()
 	if err != nil {
-		return fmt.Errorf("failed to generate ops %s dispatcher: %w", opKind, err)
+		return fmt.Errorf("failed to generate dispatcher %s/%s: %w", relativeDir, staleFileName, err)
 	}
-	targetDir := filepath.Join(projectRoot, "controller/konnect/ops")
-	stale := filepath.Join(targetDir, "zz_generated_ops_"+opKind+".go")
+	targetDir := filepath.Join(projectRoot, relativeDir)
+	stale := filepath.Join(targetDir, staleFileName)
 	if file == nil {
 		if err := removeFileIfExists(stale); err != nil {
-			return fmt.Errorf("failed to remove stale ops %s dispatcher %q: %w", opKind, stale, err)
+			return fmt.Errorf("failed to remove stale dispatcher %q: %w", stale, err)
 		}
 		return nil
 	}

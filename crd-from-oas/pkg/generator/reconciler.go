@@ -305,6 +305,11 @@ func (g *Generator) generateReconcilerFiles(entityNames []string, entitySchemas 
 			Content:     watchContent,
 			RelativeDir: "controller/konnect",
 		})
+		g.watchInfos = append(g.watchInfos, &WatchFileInfo{
+			Entity:         entityName,
+			APIAlias:       g.config.APIGroupPackageAlias,
+			APIPackagePath: g.config.APIGroupPackagePath,
+		})
 
 		// Index file → internal/utils/index/
 		indexContent, err := g.generateIndex(metadata, rc)

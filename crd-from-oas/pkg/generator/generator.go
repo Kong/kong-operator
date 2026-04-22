@@ -57,6 +57,7 @@ type Generator struct {
 	opsUpdateInfos    []*OpsUpdateFileInfo
 	opsDeleteInfos    []*OpsDeleteFileInfo
 	opsGetForUIDInfos []*OpsGetForUIDFileInfo
+	watchInfos        []*WatchFileInfo
 }
 
 // NewGenerator creates a new generator.
@@ -91,6 +92,13 @@ func (g *Generator) OpsDeleteInfos() []*OpsDeleteFileInfo {
 // generated.
 func (g *Generator) OpsGetForUIDInfos() []*OpsGetForUIDFileInfo {
 	return g.opsGetForUIDInfos
+}
+
+// WatchInfos returns metadata for every reconciler entity emitted by the most
+// recent Generate call. Callers (e.g. the Runner) use it to assemble the
+// cross-group watch dispatcher after all group-versions have been generated.
+func (g *Generator) WatchInfos() []*WatchFileInfo {
+	return g.watchInfos
 }
 
 // GeneratedFile represents a generated Go file.
