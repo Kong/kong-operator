@@ -2,6 +2,7 @@ package generator
 
 import (
 	"fmt"
+	"go/format"
 	"strings"
 	"testing"
 
@@ -1587,6 +1588,105 @@ func TestParseSDKTypePath(t *testing.T) {
 			assert.Equal(t, tc.wantType, typeName)
 		})
 	}
+}
+
+func TestGenerateSDKFactoryDispatcher(t *testing.T) {
+	infos := []*SDKFactoryFileInfo{
+		{
+			Entity:                 "Portal",
+			SDKInterfaceImportPath: "github.com/Kong/sdk-konnect-go",
+			SDKInterfaceTypeName:   "PortalsSDK",
+			SDKFieldName:           "Portals",
+		},
+		{
+			Entity:                 "IdentityProviderRequest",
+			SDKInterfaceImportPath: "github.com/Kong/sdk-konnect-go",
+			SDKInterfaceTypeName:   "PortalAuthSettingsSDK",
+			SDKFieldName:           "PortalAuthSettings",
+		},
+		{
+			Entity:                 "KonnectEventDataPlaneCertificate",
+			SDKInterfaceImportPath: "github.com/Kong/sdk-konnect-go",
+			SDKInterfaceTypeName:   "EventGatewayDataPlaneCertificatesSDK",
+			SDKFieldName:           "EventGatewayDataPlaneCertificates",
+		},
+	}
+
+	file, err := GenerateSDKFactoryDispatcher(infos)
+	require.NoError(t, err)
+	require.NotNil(t, file)
+
+	assert.Equal(t, "zz_generated_sdkfactory.go", file.Name)
+	assert.Equal(t, "controller/konnect/ops/sdk", file.RelativeDir)
+	assert.Contains(t, file.Content, "type GeneratedSDK interface {")
+	assert.Contains(t, file.Content, "GetPortalAuthSettingsSDK() sdkkonnectgo.PortalAuthSettingsSDK")
+	assert.Contains(t, file.Content, "GetEventGatewayDataPlaneCertificatesSDK() sdkkonnectgo.EventGatewayDataPlaneCertificatesSDK")
+	assert.Contains(t, file.Content, "return w.sdk.PortalAuthSettings")
+	assert.Contains(t, file.Content, "return w.sdk.EventGatewayDataPlaneCertificates")
+
+	idxIdentity := strings.Index(file.Content, "GetPortalAuthSettingsSDK()")
+	idxEventCert := strings.Index(file.Content, "GetEventGatewayDataPlaneCertificatesSDK()")
+	idxPortal := strings.Index(file.Content, "GetPortalsSDK()")
+	assert.Less(t, idxIdentity, idxEventCert)
+	assert.Less(t, idxEventCert, idxPortal)
+}
+
+func TestGenerateMockSDKFactoryDispatcher(t *testing.T) {
+	infos := []*SDKFactoryFileInfo{
+		{
+			Entity:                 "Portal",
+			SDKInterfaceImportPath: "github.com/Kong/sdk-konnect-go",
+			SDKInterfaceTypeName:   "PortalsSDK",
+			SDKFieldName:           "Portals",
+		},
+		{
+			Entity:                 "IdentityProviderRequest",
+			SDKInterfaceImportPath: "github.com/Kong/sdk-konnect-go",
+			SDKInterfaceTypeName:   "PortalAuthSettingsSDK",
+			SDKFieldName:           "PortalAuthSettings",
+		},
+		{
+			Entity:                 "KonnectEventDataPlaneCertificate",
+			SDKInterfaceImportPath: "github.com/Kong/sdk-konnect-go",
+			SDKInterfaceTypeName:   "EventGatewayDataPlaneCertificatesSDK",
+			SDKFieldName:           "EventGatewayDataPlaneCertificates",
+		},
+		{
+			Entity:                 "KonnectEventControlPlane",
+			SDKInterfaceImportPath: "github.com/Kong/sdk-konnect-go",
+			SDKInterfaceTypeName:   "EventGatewaysSDK",
+			SDKFieldName:           "EventGateways",
+		},
+	}
+
+	file, err := GenerateMockSDKFactoryDispatcher(infos)
+	require.NoError(t, err)
+	require.NotNil(t, file)
+
+	assert.Equal(t, "zz_generated_sdkfactory_mock.go", file.Name)
+	assert.Equal(t, "test/mocks/sdkmocks", file.RelativeDir)
+	assert.Contains(t, file.Content, "package sdkmocks")
+	assert.Contains(t, file.Content, "type generatedMockSDKWrapper struct {")
+	assert.Contains(t, file.Content, "*mocks.MockEventGatewaysSDK")
+	assert.Contains(t, file.Content, "*mocks.MockEventGatewayDataPlaneCertificatesSDK")
+	assert.Contains(t, file.Content, "*mocks.MockPortalsSDK")
+	assert.Contains(t, file.Content, "*mocks.MockPortalAuthSettingsSDK")
+	assert.Contains(t, file.Content, "func newGeneratedMockSDKWrapper(t *testing.T) generatedMockSDKWrapper {")
+	assert.Contains(t, file.Content, "mocks.NewMockEventGatewaysSDK(t)")
+	assert.Contains(t, file.Content, "mocks.NewMockEventGatewayDataPlaneCertificatesSDK(t)")
+	assert.Contains(t, file.Content, "func (m generatedMockSDKWrapper) GetPortalsSDK() sdkkonnectgo.PortalsSDK {")
+	assert.Contains(t, file.Content, "return m.PortalAuthSettingsSDK")
+	formatted, err := format.Source([]byte(file.Content))
+	require.NoError(t, err)
+	assert.Equal(t, string(formatted), file.Content)
+
+	idxIdentity := strings.Index(file.Content, "*mocks.MockPortalAuthSettingsSDK")
+	idxEvent := strings.Index(file.Content, "*mocks.MockEventGatewaysSDK")
+	idxEventCert := strings.Index(file.Content, "*mocks.MockEventGatewayDataPlaneCertificatesSDK")
+	idxPortal := strings.Index(file.Content, "*mocks.MockPortalsSDK")
+	assert.Less(t, idxIdentity, idxEvent)
+	assert.Less(t, idxEvent, idxEventCert)
+	assert.Less(t, idxEventCert, idxPortal)
 }
 
 func TestGenerateSchemaTypes_MapWithValueTypes(t *testing.T) {

@@ -6358,7 +6358,7 @@ PortalAPISpec defines the API spec fields for Portal.
 | `labels` _[LabelsUpdate](#konnect-konghq-com-v1alpha1-types-labelsupdate)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Labels are intended to store **INTERNAL** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `name` _string_ | The name of the portal, used to distinguish it from other portals. Name must be unique. |
 | `rbac_enabled` _string_ | Whether the portal resources are protected by Role Based Access Control (RBAC). If enabled, developers view or register for APIs until unless assigned to teams with access to view and consume specific APIs. Authentication must be enabled to use RBAC. |
-| `sipr_enabled` _[SourceIPEnabled](#konnect-konghq-com-v1alpha1-types-sourceipenabled)_ | Whether ip allow list is enabled for the organization. |
+| `sipr_enabled` _string_ | Whether ip allow list is enabled for the portal. |
 
 _Appears in:_
 
@@ -6556,26 +6556,6 @@ Allowed values:
 | --- | --- |
 | `inline` | SensitiveDataSourceTypeInline indicates that the data is provided inline in the APISpec.<br /> |
 | `secretRef` | SensitiveDataSourceTypeSecretRef indicates that the data is sourced from a Kubernetes Secret.<br /> |
-
-#### SourceIPEnabled
-
-_Underlying type:_ `string`
-
-SourceIPEnabled Whether ip allow list is enabled for the organization.
-
-
-
-
-_Appears in:_
-
-- [PortalAPISpec](#konnect-konghq-com-v1alpha1-types-portalapispec)
-
-Allowed values:
-
-| Value | Description |
-| --- | --- |
-| `Enabled` | SourceIPEnabledEnabled sets SourceIPEnabled as enabled.<br /> |
-| `Disabled` | SourceIPEnabledDisabled sets SourceIPEnabled as disabled.<br /> |
 
 #### TransitGatewayDNSConfig
 

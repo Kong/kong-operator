@@ -34,13 +34,9 @@ type SDKWrapper interface {
 	GetSNIsSDK() sdkkonnectgo.SNIsSDK
 	GetDataPlaneCertificatesSDK() sdkkonnectgo.DPCertificatesSDK
 	GetCloudGatewaysSDK() sdkkonnectgo.CloudGatewaysSDK
-	GetEventGatewaysSDK() sdkkonnectgo.EventGatewaysSDK
-	GetEventGatewayDataPlaneCertificatesSDK() sdkkonnectgo.EventGatewayDataPlaneCertificatesSDK
 	GetMCPServersSDK() *sdkkonnectgo.MCPServers
 
-	GetPortalsSDK() sdkkonnectgo.PortalsSDK
-	GetPortalAuthSettingsSDK() sdkkonnectgo.PortalAuthSettingsSDK
-	GetPortalTeamsSDK() sdkkonnectgo.PortalTeamsSDK
+	GeneratedSDK
 
 	// GetServerURL returns the server URL for recording metrics.
 	GetServerURL() string
@@ -179,34 +175,9 @@ func (w sdkWrapper) GetCloudGatewaysSDK() sdkkonnectgo.CloudGatewaysSDK {
 	return w.sdk.CloudGateways
 }
 
-// GetEventGatewaysSDK returns the SDK to operate Konnect Event Gateways.
-func (w sdkWrapper) GetEventGatewaysSDK() sdkkonnectgo.EventGatewaysSDK {
-	return w.sdk.EventGateways
-}
-
-// GetEventGatewayDataPlaneCertificatesSDK returns the SDK to operate Event Gateway dataplane certificates.
-func (w sdkWrapper) GetEventGatewayDataPlaneCertificatesSDK() sdkkonnectgo.EventGatewayDataPlaneCertificatesSDK {
-	return w.sdk.EventGatewayDataPlaneCertificates
-}
-
 // GetMCPServersSDK returns the SDK to operate MCP servers.
 func (w sdkWrapper) GetMCPServersSDK() *sdkkonnectgo.MCPServers {
 	return w.sdk.MCPServers
-}
-
-// GetPortalsSDK returns the SDK to operate Portals.
-func (w sdkWrapper) GetPortalsSDK() sdkkonnectgo.PortalsSDK {
-	return w.sdk.Portals
-}
-
-// GetPortalTeamsSDK returns the SDK to operate Portal Teams.
-func (w sdkWrapper) GetPortalTeamsSDK() sdkkonnectgo.PortalTeamsSDK {
-	return w.sdk.PortalTeams
-}
-
-// GetPortalAuthSettingsSDK returns the SDK to operate Portal Auth Settings.
-func (w sdkWrapper) GetPortalAuthSettingsSDK() sdkkonnectgo.PortalAuthSettingsSDK {
-	return w.sdk.PortalAuthSettings
 }
 
 // SDKToken is a token used to authenticate with the Konnect SDK.
