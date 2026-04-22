@@ -1228,7 +1228,9 @@ func TestGenerateSDKOps_NormalizesBooleanFields(t *testing.T) {
 	assert.NotContains(t, content, "error) {\n\n\tdata")
 	assert.NotContains(t, content, "err)\n\n\tvar target")
 	assert.NotContains(t, content, "}var target")
+	assert.NotContains(t, content, "}\n\n\n// ToCreate")
 	assert.Contains(t, content, "}\n\tvar target")
+	assert.Contains(t, content, "}\n\n// ToCreate")
 	assert.Contains(t, content, "if err := normalizePortalSDKOpsBoolFields(payload); err != nil {")
 }
 
@@ -1317,6 +1319,8 @@ func TestGenerateSDKOps_RootUnionUsesSelectedVariantPayload(t *testing.T) {
 	assert.Contains(t, content, "CreateProviderConfigUpdateDcrConfigAuth0InRequest")
 	assert.Contains(t, content, "target.ProviderConfig = &unionValue")
 	assert.Contains(t, content, "failed to normalize DcrProviderAPISpec SDK payload")
+	assert.NotContains(t, content, "}\n\n\n// ToCreate")
+	assert.Contains(t, content, "}\n\n// ToCreate")
 	assert.NotContains(t, content, `selected["dcr_config"]`)
 	assert.NotContains(t, content, "target.DcrConfig = &unionValue")
 }
@@ -1850,15 +1854,17 @@ func TestGenerateOpsCreate_NonRootEntityWithParentTypeOverride(t *testing.T) {
 	})
 
 	schema := &parser.Schema{
-		OperationID:        "create-event-gateway-data-plane-certificate",
-		Tags:               []string{"Event Gateway Data Plane Certificates"},
-		SuccessResponseRef: "EventGatewayDataPlaneCertificate",
-		RespIDIsPointer:    false,
+		OperationID:          "create-event-gateway-data-plane-certificate",
+		Tags:                 []string{"Event Gateway Data Plane Certificates"},
+		SuccessResponseRef:   "EventGatewayDataPlaneCertificate",
+		RespIDIsPointer:      false,
+		CreateReqBodyPointer: true,
 		Dependencies: []*parser.Dependency{
 			{ParamName: "gatewayId", EntityName: "Gateway", FieldName: "GatewayRef"},
 		},
 	}
 	opsConfig := &config.EntityOpsConfig{
+		RequireClient: true,
 		Ops: map[string]*config.OpConfig{
 			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateEventGatewayDataPlaneCertificateRequest"},
 		},
@@ -1875,6 +1881,11 @@ func TestGenerateOpsCreate_NonRootEntityWithParentTypeOverride(t *testing.T) {
 
 	// ParentEntityName uses ParentEntityType override in the error message.
 	assert.Contains(t, file.Content, `Parent: "KonnectEventControlPlane"`)
+	assert.True(t, info.NeedsClient)
+	assert.Contains(t, file.Content, `"sigs.k8s.io/controller-runtime/pkg/client"`)
+	assert.Contains(t, file.Content, "cl client.Client")
+	assert.Contains(t, file.Content, "kongEventDataPlaneCertificateCreateRequest(ctx, cl, obj)")
+	assert.Contains(t, file.Content, "sdk.CreateEventGatewayDataPlaneCertificate(ctx, parentID, req)")
 }
 
 func TestGenerateOpsCreate_NonRootEntityMissingDependency_ReturnsError(t *testing.T) {
@@ -1901,6 +1912,37 @@ func TestGenerateOpsCreate_NonRootEntityMissingDependency_ReturnsError(t *testin
 	_, _, err := g.generateOpsCreate("Orphan", schema, opsConfig)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "no parent dependency")
+}
+
+func TestGenerateOpsCreateDispatcher(t *testing.T) {
+	infos := []*OpsCreateFileInfo{
+		{
+			Entity:         "Portal",
+			APIAlias:       "konnectv1alpha1",
+			APIPackagePath: "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+			SDKGetter:      "GetPortalsSDK",
+		},
+		{
+			Entity:         "KonnectEventDataPlaneCertificate",
+			APIAlias:       "konnectv1alpha1",
+			APIPackagePath: "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+			SDKGetter:      "GetEventGatewayDataPlaneCertificatesSDK",
+			NeedsClient:    true,
+		},
+	}
+
+	file, err := GenerateOpsCreateDispatcher(infos)
+	require.NoError(t, err)
+	require.NotNil(t, file)
+
+	assert.Equal(t, "zz_generated_ops_create.go", file.Name)
+	assert.Contains(t, file.Content, "func CreateGeneratedOps[")
+	assert.Contains(t, file.Content, `"sigs.k8s.io/controller-runtime/pkg/client"`)
+	assert.Contains(t, file.Content, "cl client.Client")
+	assert.Contains(t, file.Content, "return createPortal(ctx, sdk.GetPortalsSDK(), ent)")
+	assert.Contains(t, file.Content, "return createKonnectEventDataPlaneCertificate(ctx, cl, sdk.GetEventGatewayDataPlaneCertificatesSDK(), ent)")
+	assert.NotContains(t, file.Content, "updatePortal")
+	assert.NotContains(t, file.Content, "deletePortal")
 }
 
 func TestGenerateOpsUpdate_RootEntity(t *testing.T) {
@@ -2023,11 +2065,13 @@ func TestGenerateOpsUpdate_NonRootEntityWithParentTypeOverride(t *testing.T) {
 			{ParamName: "gatewayId", EntityName: "Gateway"},
 		},
 		// PATCH /v1/event-gateways/{gatewayId}/data-plane-certificates/{certificateId}.
-		UpdateOperationID: "update-event-gateway-data-plane-certificate",
-		UpdateTags:        []string{"Event Gateway Data Plane Certificates"},
-		UpdatePathParams:  []string{"gatewayId", "certificateId"},
+		UpdateOperationID:    "update-event-gateway-data-plane-certificate",
+		UpdateTags:           []string{"Event Gateway Data Plane Certificates"},
+		UpdatePathParams:     []string{"gatewayId", "certificateId"},
+		UpdateReqBodyPointer: true,
 	}
 	opsConfig := &config.EntityOpsConfig{
+		RequireClient: true,
 		Ops: map[string]*config.OpConfig{
 			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateEventGatewayDataPlaneCertificateRequest"},
 			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateEventGatewayDataPlaneCertificateRequest"},
@@ -2047,7 +2091,9 @@ func TestGenerateOpsUpdate_NonRootEntityWithParentTypeOverride(t *testing.T) {
 	// Struct fields derived from path params: gatewayId → GatewayID, certificateId → CertificateID.
 	assert.Contains(t, file.Content, "GatewayID: parentID,")
 	assert.Contains(t, file.Content, "CertificateID: id,")
-	assert.Contains(t, file.Content, "UpdateEventGatewayDataPlaneCertificateRequest: *req,")
+	assert.Contains(t, file.Content, "cl client.Client")
+	assert.Contains(t, file.Content, "kongEventDataPlaneCertificateUpdateRequest(ctx, cl, obj)")
+	assert.Contains(t, file.Content, "UpdateEventGatewayDataPlaneCertificateRequest: req,")
 }
 
 func TestGenerateOpsUpdate_PointerBody(t *testing.T) {
@@ -2130,6 +2176,13 @@ func TestGenerateOpsUpdateDispatcher(t *testing.T) {
 			APIPackagePath: "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 			SDKGetter:      "GetPortalAuthSettingsSDK",
 		},
+		{
+			Entity:         "KonnectEventDataPlaneCertificate",
+			APIAlias:       "konnectv1alpha1",
+			APIPackagePath: "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+			SDKGetter:      "GetEventGatewayDataPlaneCertificatesSDK",
+			NeedsClient:    true,
+		},
 	}
 
 	file, err := GenerateOpsUpdateDispatcher(infos)
@@ -2138,15 +2191,20 @@ func TestGenerateOpsUpdateDispatcher(t *testing.T) {
 
 	assert.Equal(t, "zz_generated_ops_update.go", file.Name)
 	assert.Contains(t, file.Content, "func UpdateGeneratedOps[")
+	assert.Contains(t, file.Content, `"sigs.k8s.io/controller-runtime/pkg/client"`)
+	assert.Contains(t, file.Content, "cl client.Client")
 
-	// Alphabetical ordering: IdentityProviderRequest before Portal.
-	idxIdentity := strings.Index(file.Content, "IdentityProviderRequest")
-	idxPortal := strings.Index(file.Content, "Portal")
+	// Alphabetical ordering of case labels.
+	idxIdentity := strings.Index(file.Content, "case *konnectv1alpha1.IdentityProviderRequest:")
+	idxKonnectEvent := strings.Index(file.Content, "case *konnectv1alpha1.KonnectEventDataPlaneCertificate:")
+	idxPortal := strings.Index(file.Content, "case *konnectv1alpha1.Portal:")
 	assert.Less(t, idxIdentity, idxPortal, "cases should be alphabetically sorted")
+	assert.Less(t, idxKonnectEvent, idxPortal, "cases should be alphabetically sorted")
 
 	// Dispatcher calls updateX not createX.
 	assert.Contains(t, file.Content, "return updatePortal(ctx, sdk.GetPortalsSDK(), ent)")
 	assert.Contains(t, file.Content, "return updateIdentityProviderRequest(ctx, sdk.GetPortalAuthSettingsSDK(), ent)")
+	assert.Contains(t, file.Content, "return updateKonnectEventDataPlaneCertificate(ctx, cl, sdk.GetEventGatewayDataPlaneCertificatesSDK(), ent)")
 	assert.NotContains(t, file.Content, "createPortal")
 }
 

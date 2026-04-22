@@ -146,7 +146,6 @@ func (s *PortalAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 	return data, nil
 }
 
-
 // ToCreatePortal converts the PortalAPISpec to the SDK type
 // sdkkonnectcomp.CreatePortal using JSON marshal/unmarshal.
 // Fields that exist in the CRD spec but not in the SDK type (e.g., Kubernetes

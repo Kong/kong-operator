@@ -17,6 +17,7 @@ func TestParsePaths_BasicPath(t *testing.T) {
 					RequestBody: &openapi3.RequestBodyRef{
 						Ref: "#/components/requestBodies/CreatePortal",
 						Value: &openapi3.RequestBody{
+							Required: true,
 							Content: openapi3.Content{
 								"application/json": &openapi3.MediaType{
 									Schema: &openapi3.SchemaRef{
@@ -80,6 +81,39 @@ func TestParsePaths_BasicPath(t *testing.T) {
 	assert.True(t, schema.Properties[1].Required)
 	assert.Equal(t, int64(1), *schema.Properties[1].MinLength)
 	assert.Equal(t, int64(100), *schema.Properties[1].MaxLength)
+	assert.False(t, schema.CreateReqBodyPointer)
+}
+
+func TestParsePaths_CreateRequestBodyPointerHint(t *testing.T) {
+	doc := &openapi3.T{
+		Paths: openapi3.NewPaths(
+			openapi3.WithPath("/v1/event-gateways/{gatewayId}/data-plane-certificates", &openapi3.PathItem{
+				Post: &openapi3.Operation{
+					OperationID: "create-event-gateway-data-plane-certificate",
+					RequestBody: &openapi3.RequestBodyRef{
+						Value: &openapi3.RequestBody{
+							Content: openapi3.Content{
+								"application/json": &openapi3.MediaType{
+									Schema: &openapi3.SchemaRef{
+										Value: &openapi3.Schema{Type: &openapi3.Types{"object"}},
+									},
+								},
+							},
+						},
+					},
+				},
+			}),
+		),
+		Components: &openapi3.Components{Schemas: openapi3.Schemas{}},
+	}
+
+	parser := NewParser(doc)
+	result, err := parser.ParsePaths([]string{"/v1/event-gateways/{gatewayId}/data-plane-certificates"})
+
+	require.NoError(t, err)
+	schema := result.RequestBodies["CreateEventGatewayDataPlaneCertificate"]
+	require.NotNil(t, schema)
+	assert.True(t, schema.CreateReqBodyPointer)
 }
 
 func TestParsePaths_WithPathDependencies(t *testing.T) {

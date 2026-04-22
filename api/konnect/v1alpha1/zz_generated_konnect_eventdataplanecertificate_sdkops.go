@@ -17,7 +17,6 @@ func (s *KonnectEventDataPlaneCertificateAPISpec) marshalSDKOpsPayload() ([]byte
 	return data, nil
 }
 
-
 // ToCreateEventGatewayDataPlaneCertificateRequest converts the KonnectEventDataPlaneCertificateAPISpec to the SDK type
 // sdkkonnectcomp.CreateEventGatewayDataPlaneCertificateRequest using JSON marshal/unmarshal.
 // Fields that exist in the CRD spec but not in the SDK type (e.g., Kubernetes

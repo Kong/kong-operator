@@ -35,6 +35,11 @@ apiGroupVersions:
       - path: /v3/portals/{portalId}/teams
 ```
 
+Generated ops infer that a controller-runtime client is needed when
+`optionalSecretReference: true` is enabled. For other entities that need to
+read cluster state while building SDK requests, set `ops.requireClient: true`
+under the type configuration.
+
 ### TODOs
 
 - Generated conversion functions unit tests have to check the actual conversion logic, not just the presence of the functions and that not error has been returned.

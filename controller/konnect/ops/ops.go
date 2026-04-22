@@ -78,8 +78,6 @@ func Create[
 	// https://github.com/Kong/kong-operator/issues/3785
 	case *konnectv1alpha1.KonnectEventControlPlane:
 		err = createKonnectEventControlPlane(ctx, sdk.GetEventGatewaysSDK(), ent)
-	case *konnectv1alpha1.KonnectEventDataPlaneCertificate:
-		err = createKonnectEventDataPlaneCertificate(ctx, cl, sdk.GetEventGatewayDataPlaneCertificatesSDK(), ent)
 	case *configurationv1alpha1.KongService:
 		err = createService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
@@ -125,7 +123,7 @@ func Create[
 	// ---------------------------------------------------------------------
 	// TODO: add other manually maintained Konnect types here
 	default:
-		err = CreateGeneratedOps(ctx, sdk, e)
+		err = CreateGeneratedOps(ctx, sdk, cl, e)
 	}
 
 	var errGet error
@@ -302,8 +300,6 @@ func Delete[
 	// https://github.com/Kong/kong-operator/issues/3785
 	case *konnectv1alpha1.KonnectEventControlPlane:
 		err = deleteKonnectEventControlPlane(ctx, sdk.GetEventGatewaysSDK(), e)
-	case *konnectv1alpha1.KonnectEventDataPlaneCertificate:
-		err = deleteKonnectEventDataPlaneCertificate(ctx, sdk.GetEventGatewayDataPlaneCertificatesSDK(), e)
 	case *configurationv1alpha1.KongService:
 		err = deleteService(ctx, sdk.GetServicesSDK(), e)
 	case *configurationv1alpha1.KongRoute:
@@ -469,8 +465,6 @@ func Update[
 	// https://github.com/Kong/kong-operator/issues/3785
 	case *konnectv1alpha1.KonnectEventControlPlane:
 		err = updateKonnectEventControlPlane(ctx, sdk.GetEventGatewaysSDK(), ent)
-	case *konnectv1alpha1.KonnectEventDataPlaneCertificate:
-		err = updateKonnectEventDataPlaneCertificate(ctx, cl, sdk.GetEventGatewayDataPlaneCertificatesSDK(), ent)
 	case *configurationv1alpha1.KongService:
 		err = updateService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
@@ -516,7 +510,7 @@ func Update[
 	// ---------------------------------------------------------------------
 	// TODO: add other manually maintained Konnect types here
 	default:
-		err = UpdateGeneratedOps(ctx, sdk, e)
+		err = UpdateGeneratedOps(ctx, sdk, cl, e)
 	}
 
 	errSDK, isSDKErr := errors.AsType[*sdkkonnecterrs.SDKError](err)

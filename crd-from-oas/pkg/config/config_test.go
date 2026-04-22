@@ -55,6 +55,36 @@ func TestLoadProjectConfig(t *testing.T) {
 		assert.Equal(t, "/v3/gateways", gateway.Types[0].Path)
 	})
 
+	t.Run("valid config with ops requireClient", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    types:
+      - path: /v1/event-gateways/{gatewayId}/data-plane-certificates
+        optionalSecretReference: true
+        ops:
+          requireClient: true
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateEventGatewayDataPlaneCertificateRequest
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		cfg, err := LoadProjectConfig(path)
+		require.NoError(t, err)
+
+		konnect := cfg.APIGroupVersions["konnect.konghq.com/v1alpha1"]
+		require.NotNil(t, konnect)
+		require.Len(t, konnect.Types, 1)
+		assert.True(t, konnect.Types[0].OptionalSecretReference)
+		assert.True(t, konnect.Types[0].OpsRequireClient)
+		require.NotNil(t, konnect.Types[0].Ops)
+		assert.Equal(t,
+			"github.com/Kong/sdk-konnect-go/models/components.CreateEventGatewayDataPlaneCertificateRequest",
+			konnect.Types[0].Ops["create"].Path,
+		)
+	})
+
 	t.Run("valid config with commonTypes import", func(t *testing.T) {
 		content := `
 apiGroupVersions:
@@ -409,9 +439,41 @@ func TestAPIGroupVersionConfig_OpsConfig(t *testing.T) {
 		require.Len(t, oc, 1)
 		require.Contains(t, oc, "Portal")
 		assert.Len(t, oc["Portal"].Ops, 2)
+		assert.False(t, oc["Portal"].RequireClient)
 		assert.Equal(t, "github.com/Kong/sdk-konnect-go/models/components.CreatePortal", oc["Portal"].Ops["create"].Path)
 		assert.Equal(t, "github.com/Kong/sdk-konnect-go/models/components.UpdatePortal", oc["Portal"].Ops["update"].Path)
 		assert.NotContains(t, oc, "PortalTeam")
+	})
+
+	t.Run("requireClient is explicit or inferred", func(t *testing.T) {
+		agv := &APIGroupVersionConfig{
+			Types: []*TypeConfig{
+				{
+					Path: "/v1/event-gateways/{gatewayId}/data-plane-certificates",
+					Ops: map[string]*OpConfig{
+						"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateEventGatewayDataPlaneCertificateRequest"},
+					},
+					OptionalSecretReference: true,
+				},
+				{
+					Path: "/v3/portals",
+					Ops: map[string]*OpConfig{
+						"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreatePortal"},
+					},
+					OpsRequireClient: true,
+				},
+			},
+		}
+
+		pathToEntity := map[string]string{
+			"/v1/event-gateways/{gatewayId}/data-plane-certificates": "KonnectEventDataPlaneCertificate",
+			"/v3/portals": "Portal",
+		}
+
+		oc := agv.OpsConfig(pathToEntity)
+		require.Len(t, oc, 2)
+		assert.True(t, oc["KonnectEventDataPlaneCertificate"].RequireClient)
+		assert.True(t, oc["Portal"].RequireClient)
 	})
 
 	t.Run("no ops configured", func(t *testing.T) {

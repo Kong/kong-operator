@@ -5,6 +5,7 @@ package ops
 import (
 	"context"
 	"fmt"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
@@ -21,11 +22,14 @@ func CreateGeneratedOps[
 ](
 	ctx context.Context,
 	sdk sdkops.SDKWrapper,
+	cl client.Client,
 	e TEnt,
 ) error {
 	switch ent := any(e).(type) {
 	case *konnectv1alpha1.IdentityProviderRequest:
 		return createIdentityProviderRequest(ctx, sdk.GetPortalAuthSettingsSDK(), ent)
+	case *konnectv1alpha1.KonnectEventDataPlaneCertificate:
+		return createKonnectEventDataPlaneCertificate(ctx, cl, sdk.GetEventGatewayDataPlaneCertificatesSDK(), ent)
 	case *konnectv1alpha1.Portal:
 		return createPortal(ctx, sdk.GetPortalsSDK(), ent)
 	default:

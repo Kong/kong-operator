@@ -24,6 +24,7 @@ apiGroupVersions:
         name: KonnectEventDataPlaneCertificate
         optionalSecretReference: true
         ops:
+          requireClient: true
           create:
             path: github.com/Kong/sdk-konnect-go/models/components.CreateEventGatewayDataPlaneCertificateRequest
           update:
