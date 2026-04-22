@@ -141,9 +141,7 @@ spec:
         template: ../../common/_step_templates/verify-tls-traffic-from-host.yaml
       bindings:
         - name: request_sni
-          value: fqdn
-        - name: gateway_port
-          value: $(listener_tls_port)
+          value: $(fqdn)
   catch:
     # Capture debug snapshot on test failure for CI debugging.
     - description: Capture debug snapshot

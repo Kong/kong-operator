@@ -3,7 +3,7 @@
 # Required bindings:
 #   - gateway_name: Name of the Gateway.
 #   - gateway_namespace: Namespace of the Gateway.
-#   - gateway_port: Port of the gateway for TLS traffic.
+#   - listener_tls_port: Port of the gateway listener for TLS traffic.
 #   - request_sni: Server name used to establish the TLS connection.
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: StepTemplate
@@ -35,7 +35,7 @@ spec:
           - name: SNI
             value: ($request_sni)
           - name: PROXY_PORT
-            value: to_string($gateway_port)
+            value: to_string($listener_tls_port)
         content: |
           bash ../../common/scripts/host_connectivity_test_with_tls_traffic.sh
         check:
