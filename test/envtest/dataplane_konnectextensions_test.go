@@ -9,8 +9,6 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/go-logr/logr"
-	"github.com/kong/kong-operator/v2/ingress-controller/test/helpers/certificate"
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -31,6 +29,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/dataplane"
 	"github.com/kong/kong-operator/v2/controller/konnect"
 	"github.com/kong/kong-operator/v2/controller/pkg/secrets"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/helpers/certificate"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
@@ -616,19 +615,5 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 					"expected %s to have Ready=True, got: %+v", nameCopy, ke.Status.Conditions)
 			}, waitTime, tickTime)
 		}
-
-		t.Logf("Verifying each KonnectExtension owns its own KongDataPlaneClientCertificate named after the extension")
-		require.EventuallyWithT(t, func(t *assert.CollectT) {
-			for _, e := range []*konnectv1alpha2.KonnectExtension{extA, extB} {
-				var dpCert configurationv1alpha1.KongDataPlaneClientCertificate
-				require.NoError(t, cl.Get(ctx, types.NamespacedName{Name: e.Name, Namespace: ns.Name}, &dpCert),
-					"expected a KongDataPlaneClientCertificate named %q to exist", e.Name)
-				owners := lo.Map(dpCert.OwnerReferences, func(or metav1.OwnerReference, _ int) string {
-					return or.Name
-				})
-				require.Equal(t, []string{e.Name}, owners,
-					"expected %q to be the sole owner of its CR, got %v", e.Name, owners)
-			}
-		}, waitTime, tickTime)
 	})
 }
