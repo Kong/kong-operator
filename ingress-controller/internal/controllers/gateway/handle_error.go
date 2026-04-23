@@ -9,12 +9,12 @@ import (
 
 // handleUpdateError is a helper function to handle errors that occur when updating
 // an object or its status.
-// If the error is a conflict, it will return a requeue result.
-// Otherwise, it will return the provided error.
+// If the error is a conflict, it returns the error so the controller-runtime
+// work queue rate limiter applies exponential backoff before the next retry.
+// Otherwise, it returns the provided error as-is.
 func handleUpdateError(err error, log logr.Logger, obj client.Object) (ctrl.Result, error) {
 	if apierrors.IsConflict(err) {
 		debug(log, obj, "Conflict found when updating, retrying")
-		return ctrl.Result{Requeue: true}, nil
 	}
 	return ctrl.Result{}, err
 }
