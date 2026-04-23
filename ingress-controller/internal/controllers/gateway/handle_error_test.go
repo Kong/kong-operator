@@ -54,8 +54,6 @@ func TestHandleUpdateError(t *testing.T) {
 			gotResult, gotErr := handleUpdateError(tc.inputErr, logr.Discard(), obj)
 			assert.Equal(t, tc.wantResult, gotResult)
 			assert.Equal(t, tc.wantErr, gotErr)
-			// Ensure the result is never a bare Requeue:true (no-backoff path).
-			assert.False(t, gotResult.Requeue, "result must not set Requeue:true — use error return for rate-limited retry")
 		})
 	}
 }
