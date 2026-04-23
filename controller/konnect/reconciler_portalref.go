@@ -46,7 +46,7 @@ func handlePortalRef[
 
 	obj, ok := any(ent).(TObj)
 	if !ok {
-		return ctrl.Result{}, fmt.Errorf("unsupported entity type %T for handling PortalRef", ent)
+		return ctrl.Result{}, nil
 	}
 
 	if res, err := ensureKongReferenceGrantForPortalRef(ctx, cl, obj); err != nil || !res.IsZero() {
