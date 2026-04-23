@@ -44,6 +44,16 @@
 
 ## Unreleased
 
+### Fixes
+
+- Fix Gateway reconcile storm on topologies with multiple listeners sharing the
+  same port and HTTPRoutes with multiple `sectionName`-scoped `parentRefs`.
+  `handleUpdateError` now returns the 409 conflict error so the work-queue rate
+  limiter applies exponential backoff instead of an instant requeue.
+  The HTTPRoute and TLSRoute watches on the Gateway controller now use
+  `GenerationChangedPredicate` to ignore status-only updates.
+  [#4005](https://github.com/Kong/kong-operator/pull/4005)
+
 ### Added
 
 - Add `spec.konnect.configUploadConcurrency` to set the concurrency of uploading
