@@ -40,6 +40,7 @@ type SDKWrapper interface {
 
 	GetPortalsSDK() sdkkonnectgo.PortalsSDK
 	GetPortalAuthSettingsSDK() sdkkonnectgo.PortalAuthSettingsSDK
+	GetPortalTeamsSDK() sdkkonnectgo.PortalTeamsSDK
 
 	// GetServerURL returns the server URL for recording metrics.
 	GetServerURL() string
@@ -196,6 +197,11 @@ func (w sdkWrapper) GetMCPServersSDK() *sdkkonnectgo.MCPServers {
 // GetPortalsSDK returns the SDK to operate Portals.
 func (w sdkWrapper) GetPortalsSDK() sdkkonnectgo.PortalsSDK {
 	return w.sdk.Portals
+}
+
+// GetPortalTeamsSDK returns the SDK to operate Portal Teams.
+func (w sdkWrapper) GetPortalTeamsSDK() sdkkonnectgo.PortalTeamsSDK {
+	return w.sdk.PortalTeams
 }
 
 // GetPortalAuthSettingsSDK returns the SDK to operate Portal Auth Settings.

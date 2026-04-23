@@ -1036,6 +1036,7 @@ func get{{.Entity}}ForUID(
 		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "{{.ParentEntityName}}", Op: GetOp}
 	}
 {{- end}}
+{{- if .HasLabels}}
 
 	// TODO: pass a Filter to {{.ListSDKMethod}} (e.g. by name/labels) so we
 	// do not page through every entity in the tenant. Filter types and
@@ -1062,6 +1063,48 @@ func get{{.Entity}}ForUID(
 			return entry.GetID(), nil
 		}
 	}
+{{- else if .HasName}}
+
+	// TODO: {{.Entity}}'s Konnect list response lacks labels/tags so UID matching
+	// is not possible. Falling back to matching by spec.name; this may return
+	// false positives when multiple entities share a name and cannot be
+	// improved here until Konnect exposes labels/tags on this type. Tracked in
+	// https://github.com/Kong/kong-operator/issues/3987
+{{- if .ParentEntityName}}
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
+		{{.ParentIDField}}: parentID,
+	})
+{{- else}}
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{})
+{{- end}}
+	if err != nil {
+		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
+	}
+	if resp == nil || resp.{{.ListResponseField}} == nil {
+		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
+	}
+
+	for _, entry := range resp.{{.ListResponseField}}.Data {
+		name := entry.GetName()
+		if name == nil || *name != obj.Spec.APISpec.Name {
+			continue
+		}
+		id := entry.GetID()
+		if id == nil || *id == "" {
+			continue
+		}
+		return *id, nil
+	}
+{{- else}}
+
+	// TODO: {{.Entity}}'s Konnect list response lacks labels/tags and no
+	// usable name field is available on the spec, so UID matching cannot be
+	// performed here. This can be revisited once Konnect exposes labels/tags
+	// on this type (tracked in
+	// https://github.com/Kong/kong-operator/issues/3987) or by customizing
+	// this function for a type-specific match strategy.
+	_ = obj
+{{- end}}
 
 	return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 }

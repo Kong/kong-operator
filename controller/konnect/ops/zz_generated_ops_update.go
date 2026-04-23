@@ -34,6 +34,8 @@ func UpdateGeneratedOps[
 		return updateKonnectEventDataPlaneCertificate(ctx, cl, sdk.GetEventGatewayDataPlaneCertificatesSDK(), ent)
 	case *konnectv1alpha1.Portal:
 		return updatePortal(ctx, sdk.GetPortalsSDK(), ent)
+	case *konnectv1alpha1.PortalTeam:
+		return updatePortalTeam(ctx, sdk.GetPortalTeamsSDK(), ent)
 	default:
 		return fmt.Errorf("unsupported entity type %T", ent)
 	}
