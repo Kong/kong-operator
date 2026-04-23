@@ -5,6 +5,7 @@ package v1alpha1
 import (
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 )
 
 // GetKonnectStatus returns the Konnect status contained in the PortalPage status.
@@ -51,4 +52,9 @@ func (obj *PortalPage) SetPortalID(id string) {
 		obj.Status.PortalID = &KonnectEntityRef{}
 	}
 	obj.Status.PortalID.ID = id
+}
+
+// GetPortalRef returns the reference to the root Portal.
+func (obj *PortalPage) GetPortalRef() commonv1alpha1.ObjectRef {
+	return obj.Spec.PortalRef
 }

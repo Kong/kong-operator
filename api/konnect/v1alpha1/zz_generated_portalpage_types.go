@@ -74,6 +74,7 @@ type PortalPageAPISpec struct {
 	//
 	//
 	// +optional
+	// +kubebuilder:validation:XValidation:rule="self == null",message="cannot set parent_page_id_ref"
 	ParentPageIDRef *commonv1alpha1.ObjectRef `json:"parent_page_id_ref,omitempty"`
 
 	// The slug of a page in a portal, used to compute its full URL path within the

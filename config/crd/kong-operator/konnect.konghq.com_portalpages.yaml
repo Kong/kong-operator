@@ -119,6 +119,8 @@ spec:
                     - type
                     type: object
                     x-kubernetes-validations:
+                    - message: cannot set parent_page_id_ref
+                      rule: self == null
                     - message: when type is namespacedRef, namespacedRef must be set
                       rule: 'self.type == ''namespacedRef'' ? has(self.namespacedRef)
                         : true'
