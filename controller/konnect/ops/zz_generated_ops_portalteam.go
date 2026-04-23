@@ -65,3 +65,43 @@ func updatePortalTeam(
 	}
 	return nil
 }
+
+func getPortalTeamForUID(
+	ctx context.Context,
+	sdk sdkkonnectgo.PortalTeamsSDK,
+	obj *konnectv1alpha1.PortalTeam,
+) (string, error) {
+	parentID := obj.GetPortalID()
+	if parentID == "" {
+		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "Portal", Op: GetOp}
+	}
+
+	// TODO: PortalTeam's Konnect list response lacks labels/tags so UID matching
+	// is not possible. Falling back to matching by spec.name; this may return
+	// false positives when multiple entities share a name and cannot be
+	// improved here until Konnect exposes labels/tags on this type. Tracked in
+	// https://github.com/Kong/kong-operator/issues/3987
+	resp, err := sdk.ListPortalTeams(ctx, sdkkonnectops.ListPortalTeamsRequest{
+		PortalID: parentID,
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
+	}
+	if resp == nil || resp.ListPortalTeamsResponse == nil {
+		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
+	}
+
+	for _, entry := range resp.ListPortalTeamsResponse.Data {
+		name := entry.GetName()
+		if name == nil || *name != obj.Spec.APISpec.Name {
+			continue
+		}
+		id := entry.GetID()
+		if id == nil || *id == "" {
+			continue
+		}
+		return *id, nil
+	}
+
+	return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+}

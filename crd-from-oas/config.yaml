@@ -80,9 +80,6 @@ apiGroupVersions:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.PortalTeamsSDK
             fieldName: PortalTeams
-          # The SDK list endpoint uses positional args and response items lack
-          # UID labels, so getForUID cannot be generated automatically.
-          skipGetForUID: true
           create:
             path: github.com/Kong/sdk-konnect-go/models/components.PortalCreateTeamRequest
           update:

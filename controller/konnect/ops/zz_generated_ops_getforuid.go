@@ -46,6 +46,8 @@ func getForUID[
 		return getPortalForUID(ctx, sdk.GetPortalsSDK(), ent)
 	case *konnectv1alpha1.PortalPage:
 		return getPortalPageForUID(ctx, sdk.GetPortalPagesSDK(), ent)
+	case *konnectv1alpha1.PortalTeam:
+		return getPortalTeamForUID(ctx, sdk.GetPortalTeamsSDK(), ent)
 	default:
 		return "", ConflictOnCreateButNoConflifctHandlingImplementedError{Entity: e}
 	}
