@@ -3,6 +3,7 @@
 ## Table of Contents
 
 - [v2.0.8](#v208)
+- [v2.0.8](#v208)
 - [v2.0.7](#v207)
 - [v2.0.6](#v206)
 - [v2.0.5](#v205)
@@ -40,7 +41,7 @@
 
 ## [v2.0.9]
 
-> Release date: Unreleased
+> Release date: 2026-04-23
 
 ### Fixed
 
@@ -52,7 +53,7 @@
   falls back to Konnect's `dp-client-certificates` List API.
   [#3961](https://github.com/Kong/kong-operator/pull/3961) [#3978](https://github.com/Kong/kong-operator/pull/3978)
 - Fix incorrect Konnect API used for target lookup
-  [#3911](https://github.com/Kong/kong-operator/pull/3910) [#3939](https://github.com/Kong/kong-operator/pull/3939)
+  [#3910](https://github.com/Kong/kong-operator/pull/3910) [#3939](https://github.com/Kong/kong-operator/pull/3939)
 
 ## [v2.0.8]
 
@@ -1455,6 +1456,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.0.9]: https://github.com/Kong/kong-operator/compare/v2.0.9..v2.0.8
 [v2.0.8]: https://github.com/Kong/kong-operator/compare/v2.0.7..v2.0.8
 [v2.0.7]: https://github.com/Kong/kong-operator/compare/v2.0.6..v2.0.7
 [v2.0.6]: https://github.com/Kong/kong-operator/compare/v2.0.5..v2.0.6
