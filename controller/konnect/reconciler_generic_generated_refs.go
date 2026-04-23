@@ -18,7 +18,13 @@ func (r *KonnectEntityReconciler[T, TEnt]) handleGeneratedTypeReferences(
 	ctx context.Context,
 	ent TEnt,
 ) (bool, ctrl.Result, error) {
-	for _, handler := range r.generatedTypeReferenceHandlers() {
+	// if the generated reference handlers are nil for some reason we re-generate them.
+	// e.g. reconciler created using struct literal instead of NewKonnectEntityReconciler.
+	if r.generatedRefHandlers == nil {
+		r.generatedRefHandlers = r.generatedTypeReferenceHandlers()
+	}
+
+	for _, handler := range r.generatedRefHandlers {
 		if stop, res, err := handler(ctx, ent); stop {
 			return true, res, err
 		}

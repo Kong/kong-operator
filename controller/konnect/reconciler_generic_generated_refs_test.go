@@ -17,8 +17,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	"github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
+	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
@@ -160,6 +162,37 @@ func TestHandleEventGatewayRefResult(t *testing.T) {
 		require.NoError(t, err)
 		assert.True(t, stop)
 		assert.Equal(t, ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, result)
+	})
+
+	t.Run("generated reference handlers are nil after reconciler creation using struct literal", func(t *testing.T) {
+		r := &KonnectEntityReconciler[
+			konnectv1alpha1.KonnectEventDataPlaneCertificate,
+			*konnectv1alpha1.KonnectEventDataPlaneCertificate,
+		]{}
+
+		assert.Nil(t, r.generatedRefHandlers)
+	})
+
+	t.Run("generated reference handlers are not nil after handleGeneratedTypeReferences has been called", func(t *testing.T) {
+		r := &KonnectEntityReconciler[v1alpha1.KongService, *v1alpha1.KongService]{}
+
+		assert.Nil(t, r.generatedRefHandlers)
+
+		ent := &v1alpha1.KongService{}
+		stop, res, err := r.handleGeneratedTypeReferences(t.Context(), ent)
+
+		require.NoError(t, err)
+		assert.False(t, stop)
+		assert.Equal(t, ctrl.Result{}, res)
+		require.NotNil(t, r.generatedRefHandlers)
+	})
+
+	t.Run("generated reference handlers are not nil after reconciler creation using NewKonnectEntityReconciler", func(t *testing.T) {
+		r := NewKonnectEntityReconciler[
+			v1alpha1.KongService,
+			*v1alpha1.KongService,
+		](nil, logging.DevelopmentMode, nil)
+		assert.NotNil(t, r.generatedRefHandlers)
 	})
 }
 

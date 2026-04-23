@@ -51,7 +51,8 @@ type KonnectEntityReconciler[T constraints.SupportedKonnectEntityType, TEnt cons
 	LoggingMode       logging.Mode
 	SyncPeriod        time.Duration
 
-	MetricRecorder metrics.Recorder
+	MetricRecorder       metrics.Recorder
+	generatedRefHandlers []generatedReferenceHandler[TEnt]
 }
 
 // KonnectEntityReconcilerOption is a functional option for the KonnectEntityReconciler.
@@ -105,6 +106,10 @@ func NewKonnectEntityReconciler[
 		SyncPeriod:     consts.DefaultKonnectSyncPeriod,
 		MetricRecorder: nil,
 	}
+
+	// initialiaze the generated reference handlers
+	// to avoid allocating slice of handlers on each reconciliation.
+	r.generatedRefHandlers = r.generatedTypeReferenceHandlers()
 	for _, opt := range opts {
 		opt(r)
 	}
