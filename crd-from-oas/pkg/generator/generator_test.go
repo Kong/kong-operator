@@ -551,6 +551,64 @@ func TestGenerateCRDFuncs_GeneratesKonnectFuncs(t *testing.T) {
 		assert.Contains(t, content, `func (obj *PortalTeam) GetPortalID() string {`)
 		assert.Contains(t, content, `func (obj *PortalTeam) SetPortalID(id string) {`)
 	})
+
+	t.Run("dependency-backed child entities get root ref accessor", func(t *testing.T) {
+		g := NewGenerator(Config{
+			APIGroup:   "konnect.konghq.com",
+			APIVersion: "v1alpha1",
+			CommonTypes: &config.CommonTypesConfig{
+				ObjectRef: &config.ObjectRefConfig{
+					Import: &config.ImportConfig{
+						Path:  "github.com/kong/kong-operator/v2/api/common/v1alpha1",
+						Alias: "commonv1alpha1",
+					},
+				},
+			},
+		})
+
+		schemaWithDependency := &parser.Schema{
+			Name: "CreatePortalTeam",
+			Dependencies: []*parser.Dependency{{
+				EntityName: "Portal",
+				FieldName:  "PortalRef",
+				JSONName:   "portal_ref",
+			}},
+		}
+
+		content, err := g.generateCRDFuncs("CreatePortalTeam", schemaWithDependency)
+		require.NoError(t, err)
+		assert.Contains(t, content, `commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"`)
+		assert.Contains(t, content, `func (obj *PortalTeam) GetPortalRef() commonv1alpha1.ObjectRef {`)
+		assert.Contains(t, content, `return obj.Spec.PortalRef`)
+	})
+
+	t.Run("root ref accessor uses first dependency", func(t *testing.T) {
+		g := NewGenerator(Config{
+			APIGroup:   "x-konnect.konghq.com",
+			APIVersion: "v1alpha1",
+		})
+
+		schemaWithDependencies := &parser.Schema{
+			Name: "CreatePortalTeamDeveloper",
+			Dependencies: []*parser.Dependency{
+				{
+					EntityName: "Portal",
+					FieldName:  "PortalRef",
+					JSONName:   "portal_ref",
+				},
+				{
+					EntityName: "Team",
+					FieldName:  "TeamRef",
+					JSONName:   "team_ref",
+				},
+			},
+		}
+
+		content, err := g.generateCRDFuncs("CreatePortalTeamDeveloper", schemaWithDependencies)
+		require.NoError(t, err)
+		assert.Contains(t, content, `func (obj *PortalTeamDeveloper) GetPortalRef() ObjectRef {`)
+		assert.NotContains(t, content, `func (obj *PortalTeamDeveloper) GetTeamRef() ObjectRef {`)
+	})
 }
 
 func TestGenerate_GeneratesFuncsFile(t *testing.T) {

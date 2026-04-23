@@ -243,6 +243,13 @@ func (obj *{{$.EntityName}}) Set{{.EntityName}}ID(id string) {
 	obj.Status.{{.EntityName}}ID.ID = id
 }
 {{- end}}
+{{- if .RootRefDependency}}
+
+// Get{{.RootRefDependency.EntityName}}Ref returns the reference to the root {{.RootRefDependency.EntityName}}.
+func (obj *{{.EntityName}}) Get{{.RootRefDependency.EntityName}}Ref() {{.RootRefTypeName}} {
+	return obj.Spec.{{.RootRefDependency.FieldName}}
+}
+{{- end}}
 {{- if .IsReconcilerRoot}}
 
 // GetKonnectAPIAuthConfigurationRef returns the Konnect API Auth Configuration Ref.

@@ -13,32 +13,29 @@ import (
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
-	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 )
 
-func getAPIAuthConfigurationRefFromPortal[
-	T constraints.SupportedKonnectEntityType,
-	TEnt constraints.EntityType[T],
-](
+type portalRefAccessor interface {
+	GetPortalRef() commonv1alpha1.ObjectRef
+	GetNamespace() string
+}
+
+func getAPIAuthConfigurationRefFromPortal(
 	ctx context.Context,
 	cl client.Client,
-	ent TEnt,
+	obj portalRefAccessor,
 ) (types.NamespacedName, error) {
-	var portalRef commonv1alpha1.ObjectRef
-	// TODO: add a method like GetParentRef() to non root entities to avoid this type switch.
-	switch e := any(ent).(type) {
-	case *konnectv1alpha1.IdentityProviderRequest:
-		portalRef = e.Spec.PortalRef
-	case *konnectv1alpha1.PortalTeam:
-		portalRef = e.Spec.PortalRef
-	default:
-		return types.NamespacedName{}, fmt.Errorf("unsupported entity type %T for getting PortalRef", e)
+	portalRef := obj.GetPortalRef()
+	if portalRef.Type != commonv1alpha1.ObjectRefTypeNamespacedRef ||
+		portalRef.NamespacedRef == nil {
+		return types.NamespacedName{},
+			fmt.Errorf("invalid PortalRef: must be a NamespacedRef with a non-nil NamespacedRef field")
 	}
 
 	nnPortal := types.NamespacedName{
 		Name: portalRef.NamespacedRef.Name,
 		// TODO: handle cross namespace refs
-		Namespace: ent.GetNamespace(),
+		Namespace: obj.GetNamespace(),
 	}
 
 	var portal konnectv1alpha1.Portal

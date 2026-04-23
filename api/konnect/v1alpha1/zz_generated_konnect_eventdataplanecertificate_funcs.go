@@ -5,6 +5,7 @@ package v1alpha1
 import (
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 )
 
 // GetKonnectStatus returns the Konnect status contained in the KonnectEventDataPlaneCertificate status.
@@ -51,4 +52,9 @@ func (obj *KonnectEventDataPlaneCertificate) SetGatewayID(id string) {
 		obj.Status.GatewayID = &KonnectEntityRef{}
 	}
 	obj.Status.GatewayID.ID = id
+}
+
+// GetGatewayRef returns the reference to the root Gateway.
+func (obj *KonnectEventDataPlaneCertificate) GetGatewayRef() commonv1alpha1.ObjectRef {
+	return obj.Spec.GatewayRef
 }
