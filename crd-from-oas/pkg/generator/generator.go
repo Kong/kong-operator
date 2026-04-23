@@ -57,6 +57,7 @@ type Generator struct {
 	opsUpdateInfos    []*OpsUpdateFileInfo
 	opsDeleteInfos    []*OpsDeleteFileInfo
 	opsGetForUIDInfos []*OpsGetForUIDFileInfo
+	sdkFactoryInfos   []*SDKFactoryFileInfo
 	watchInfos        []*WatchFileInfo
 }
 
@@ -92,6 +93,14 @@ func (g *Generator) OpsDeleteInfos() []*OpsDeleteFileInfo {
 // generated.
 func (g *Generator) OpsGetForUIDInfos() []*OpsGetForUIDFileInfo {
 	return g.opsGetForUIDInfos
+}
+
+// SDKFactoryInfos returns metadata for every entity emitted by the most recent
+// Generate call that has SDK factory config. Callers (e.g. the Runner) use it
+// to assemble the cross-group SDK factory file after all group-versions have
+// been generated.
+func (g *Generator) SDKFactoryInfos() []*SDKFactoryFileInfo {
+	return g.sdkFactoryInfos
 }
 
 // WatchInfos returns metadata for every reconciler entity emitted by the most
@@ -263,6 +272,9 @@ func (g *Generator) generateEntityOpsFileForEntity(entityName string, schema *pa
 	}
 	if opsResult.GetForUIDInfo != nil {
 		g.opsGetForUIDInfos = append(g.opsGetForUIDInfos, opsResult.GetForUIDInfo)
+	}
+	if opsResult.SDKFactoryInfo != nil {
+		g.sdkFactoryInfos = append(g.sdkFactoryInfos, opsResult.SDKFactoryInfo)
 	}
 	return opsResult.File, nil
 }

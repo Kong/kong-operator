@@ -14,10 +14,10 @@ import (
 )
 
 type MockSDKWrapper struct {
+	generatedMockSDKWrapper
+
 	ControlPlaneSDK             *mocks.MockControlPlanesSDK
 	CloudGatewaysSDK            *mocks.MockCloudGatewaysSDK
-	EventGatewaysSDK            *mocks.MockEventGatewaysSDK
-	EventGatewayDPCertsSDK      *mocks.MockEventGatewayDataPlaneCertificatesSDK
 	ControlPlaneGroupSDK        *mocks.MockControlPlaneGroupsSDK
 	ServicesSDK                 *mocks.MockServicesSDK
 	RoutesSDK                   *mocks.MockRoutesSDK
@@ -41,10 +41,6 @@ type MockSDKWrapper struct {
 	DataPlaneCertificatesSDK    *mocks.MockDPCertificatesSDK
 	MCPServersSDK               *sdkkonnectgo.MCPServers
 
-	PortalsSDK            *mocks.MockPortalsSDK
-	PortalAuthSettingsSDK *mocks.MockPortalAuthSettingsSDK
-	PortalTeamsSDK        *mocks.MockPortalTeamsSDK
-
 	server server.Server
 }
 
@@ -52,11 +48,11 @@ var _ sdkops.SDKWrapper = MockSDKWrapper{}
 
 func NewMockSDKWrapperWithT(t *testing.T) *MockSDKWrapper {
 	return &MockSDKWrapper{
+		generatedMockSDKWrapper: newGeneratedMockSDKWrapper(t),
+
 		ControlPlaneSDK:             mocks.NewMockControlPlanesSDK(t),
 		ControlPlaneGroupSDK:        mocks.NewMockControlPlaneGroupsSDK(t),
 		CloudGatewaysSDK:            mocks.NewMockCloudGatewaysSDK(t),
-		EventGatewaysSDK:            mocks.NewMockEventGatewaysSDK(t),
-		EventGatewayDPCertsSDK:      mocks.NewMockEventGatewayDataPlaneCertificatesSDK(t),
 		ServicesSDK:                 mocks.NewMockServicesSDK(t),
 		RoutesSDK:                   mocks.NewMockRoutesSDK(t),
 		ConsumersSDK:                mocks.NewMockConsumersSDK(t),
@@ -77,10 +73,6 @@ func NewMockSDKWrapperWithT(t *testing.T) *MockSDKWrapper {
 		KeySetsSDK:                  mocks.NewMockKeySetsSDK(t),
 		SNIsSDK:                     mocks.NewMockSNIsSDK(t),
 		DataPlaneCertificatesSDK:    mocks.NewMockDPCertificatesSDK(t),
-
-		PortalsSDK:            mocks.NewMockPortalsSDK(t),
-		PortalAuthSettingsSDK: mocks.NewMockPortalAuthSettingsSDK(t),
-		PortalTeamsSDK:        mocks.NewMockPortalTeamsSDK(t),
 
 		server: lo.Must(server.NewServer[*gwtypes.ControlPlane](SDKServerURL)),
 	}
@@ -191,28 +183,8 @@ func (m MockSDKWrapper) GetCloudGatewaysSDK() sdkkonnectgo.CloudGatewaysSDK {
 	return m.CloudGatewaysSDK
 }
 
-func (m MockSDKWrapper) GetEventGatewaysSDK() sdkkonnectgo.EventGatewaysSDK {
-	return m.EventGatewaysSDK
-}
-
-func (m MockSDKWrapper) GetEventGatewayDataPlaneCertificatesSDK() sdkkonnectgo.EventGatewayDataPlaneCertificatesSDK {
-	return m.EventGatewayDPCertsSDK
-}
-
 func (m MockSDKWrapper) GetMCPServersSDK() *sdkkonnectgo.MCPServers {
 	return m.MCPServersSDK
-}
-
-func (m MockSDKWrapper) GetPortalsSDK() sdkkonnectgo.PortalsSDK {
-	return m.PortalsSDK
-}
-
-func (m MockSDKWrapper) GetPortalAuthSettingsSDK() sdkkonnectgo.PortalAuthSettingsSDK {
-	return m.PortalAuthSettingsSDK
-}
-
-func (m MockSDKWrapper) GetPortalTeamsSDK() sdkkonnectgo.PortalTeamsSDK {
-	return m.PortalTeamsSDK
 }
 
 type MockSDKFactory struct {

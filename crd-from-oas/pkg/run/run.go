@@ -25,6 +25,7 @@ func (r *Runner) Run(
 	var allOpsUpdateInfos []*generator.OpsUpdateFileInfo
 	var allOpsDeleteInfos []*generator.OpsDeleteFileInfo
 	var allOpsGetForUIDInfos []*generator.OpsGetForUIDFileInfo
+	var allSDKFactoryInfos []*generator.SDKFactoryFileInfo
 	var allWatchInfos []*generator.WatchFileInfo
 	for _, gvKey := range r.gvKeys {
 		agvConfig := r.projectCfg.APIGroupVersions[gvKey]
@@ -207,6 +208,7 @@ func (r *Runner) Run(
 		allOpsUpdateInfos = append(allOpsUpdateInfos, opsUpdateInfosKept...)
 		allOpsDeleteInfos = append(allOpsDeleteInfos, opsDeleteInfosKept...)
 		allOpsGetForUIDInfos = append(allOpsGetForUIDInfos, opsGetForUIDInfosKept...)
+		allSDKFactoryInfos = append(allSDKFactoryInfos, gen.SDKFactoryInfos()...)
 		allWatchInfos = append(allWatchInfos, gen.WatchInfos()...)
 
 		// Write generated files
@@ -298,6 +300,32 @@ func (r *Runner) Run(
 		"zz_generated_watch.go",
 		func() (*generator.GeneratedFile, error) {
 			return generator.GenerateWatchDispatcher(allWatchInfos)
+		},
+	); err != nil {
+		return err
+	}
+
+	// Emit SDK factory file.
+	if err := emitDispatcherFile(
+		r.projectRoot,
+		logger,
+		"controller/konnect/ops/sdk",
+		"zz_generated_sdkfactory.go",
+		func() (*generator.GeneratedFile, error) {
+			return generator.GenerateSDKFactoryDispatcher(allSDKFactoryInfos)
+		},
+	); err != nil {
+		return err
+	}
+
+	// Emit mock SDK factory file.
+	if err := emitDispatcherFile(
+		r.projectRoot,
+		logger,
+		"test/mocks/sdkmocks",
+		"zz_generated_sdkfactory_mock.go",
+		func() (*generator.GeneratedFile, error) {
+			return generator.GenerateMockSDKFactoryDispatcher(allSDKFactoryInfos)
 		},
 	); err != nil {
 		return err

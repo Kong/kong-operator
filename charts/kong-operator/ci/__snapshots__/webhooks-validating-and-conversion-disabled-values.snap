@@ -41091,7 +41091,7 @@ spec:
                     type: string
                   sipr_enabled:
                     default: Disabled
-                    description: Whether ip allow list is enabled for the organization.
+                    description: Whether ip allow list is enabled for the portal.
                     enum:
                     - Enabled
                     - Disabled

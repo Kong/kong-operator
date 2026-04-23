@@ -1236,3 +1236,57 @@ func Resource(resource string) schema.GroupResource {
 	return SchemeGroupVersion.WithResource(resource).GroupResource()
 }
 `
+
+// sdkFactoryTemplate renders controller/konnect/ops/sdk/zz_generated_sdkfactory.go.
+const sdkFactoryTemplate = sharedGeneratedFilePreamble + `
+
+package sdk
+
+import (
+{{.APIImportsBlock}}
+)
+
+// GeneratedSDK is the interface for generated SDKs.
+type GeneratedSDK interface {
+{{- range .Cases}}
+	{{.GetterName}}() {{.Alias}}.{{.TypeName}}
+{{- end}}
+}
+{{range .Cases}}
+// {{.GetterName}} returns the SDK to operate {{.Entity}}.
+func (w sdkWrapper) {{.GetterName}}() {{.Alias}}.{{.TypeName}} {
+	return w.sdk.{{.FieldName}}
+}
+{{end}}`
+
+// mockSDKFactoryTemplate renders test/mocks/sdkmocks/zz_generated_sdkfactory_mock.go.
+const mockSDKFactoryTemplate = sharedGeneratedFilePreamble + `
+
+package sdkmocks
+
+import (
+	"testing"
+
+{{.APIImportsBlock}}
+	"github.com/Kong/sdk-konnect-go/test/mocks"
+)
+
+type generatedMockSDKWrapper struct {
+{{- range .Cases}}
+	{{.MockFieldName}} *mocks.{{.MockTypeName}}
+{{- end}}
+}
+
+func newGeneratedMockSDKWrapper(t *testing.T) generatedMockSDKWrapper {
+	return generatedMockSDKWrapper{
+{{- range .Cases}}
+		{{.MockFieldName}}: mocks.{{.MockConstructorName}}(t),
+{{- end}}
+	}
+}
+{{range .Cases}}
+// {{.GetterName}} returns the SDK to operate {{.Entity}}.
+func (m generatedMockSDKWrapper) {{.GetterName}}() {{.Alias}}.{{.TypeName}} {
+	return m.{{.MockFieldName}}
+}
+{{end}}`

@@ -168,15 +168,3 @@ type SAMLIdentityProviderMetadata string
 // SAMLIdentityProviderMetadataURL The identity provider's metadata URL where
 // the identity provider's metadata can be obtained.
 type SAMLIdentityProviderMetadataURL string
-
-// SourceIPEnabled Whether ip allow list is enabled for the organization.
-//
-// +kubebuilder:validation:Enum=Enabled;Disabled
-type SourceIPEnabled string
-
-const (
-	// SourceIPEnabledEnabled sets SourceIPEnabled as enabled.
-	SourceIPEnabledEnabled  SourceIPEnabled = "Enabled"
-	// SourceIPEnabledDisabled sets SourceIPEnabled as disabled.
-	SourceIPEnabledDisabled SourceIPEnabled = "Disabled"
-)
