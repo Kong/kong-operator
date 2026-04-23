@@ -642,6 +642,7 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 	if rc := g.config.ReconcilerConfig[entityName]; rc != nil {
 		isReconcilerRoot = rc.IsRoot
 	}
+	rootRefDependency := rootRefDependency(schema)
 
 	imports := make([]*config.ImportConfig, 0, 3)
 	imports = appendUniqueImportConfig(imports, defaultKonnectStatusImport())
@@ -649,6 +650,9 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		Alias: "metav1",
 		Path:  "k8s.io/apimachinery/pkg/apis/meta/v1",
 	})
+	if rootRefDependency != nil && g.objectRefImported() {
+		imports = appendUniqueImportConfig(imports, g.config.CommonTypes.ObjectRef.Import)
+	}
 	if isReconcilerRoot {
 		imports = appendUniqueImportConfig(imports, &config.ImportConfig{
 			Alias: defaultKonnectStatusAlias,
@@ -666,6 +670,8 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		KonnectStatusType                  string
 		KonnectLabelsField                 *konnectLabelsField
 		Dependencies                       []*parser.Dependency
+		RootRefDependency                  *parser.Dependency
+		RootRefTypeName                    string
 		IsReconcilerRoot                   bool
 		KonnectAPIAuthConfigurationRefType string
 	}{
@@ -675,6 +681,8 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		KonnectStatusType:                  defaultKonnectStatusQualifiedTypeName(),
 		KonnectLabelsField:                 g.konnectLabelsField(schema),
 		Dependencies:                       schema.Dependencies,
+		RootRefDependency:                  rootRefDependency,
+		RootRefTypeName:                    g.objectRefTypeName(),
 		IsReconcilerRoot:                   isReconcilerRoot,
 		KonnectAPIAuthConfigurationRefType: defaultKonnectStatusAlias + ".ControlPlaneKonnectAPIAuthConfigurationRef",
 	}
@@ -684,6 +692,13 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 	}
 
 	return fixTrailingEmptyLines(buf.String()), nil
+}
+
+func rootRefDependency(schema *parser.Schema) *parser.Dependency {
+	if len(schema.Dependencies) == 0 {
+		return nil
+	}
+	return schema.Dependencies[0]
 }
 
 // EntityFilePrefix converts a PascalCase entity name to a lowercase file name
