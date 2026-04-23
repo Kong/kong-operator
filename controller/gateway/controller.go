@@ -133,7 +133,6 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		Watches(
 			&gatewayv1.TLSRoute{},
 			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByTLSRoute),
-			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
 		).
 		// watch Namespaces so that managed routes have correct status reflected in Gateway's
 		// status in status.listeners.attachedRoutes
