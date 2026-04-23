@@ -128,15 +128,8 @@ spec:
 
     # TODO: modify the scripts for checking Kong resource and check generated Konnect entities for the TLSRoute. 
 
-    # Step 11: Verify that the TLS certificate deployed to the dataplane matches the TLS secret.
-    - name: Verify-TLS-Fingerprint
-      description: Verify that the TLS certificate deployed to the dataplane matches the TLS secret.
-      use:
-        template: ../../common/_step_templates/verify-gateway-tls-fingerprint.yaml
-      bindings:
-        - name: proxy_port
-          value: (to_string($listener_tls_port))
-
+    # Since TLS passthrough is used, the certificate provided here when accessing the proxy IP and port is the cert from the backend service.
+    # So we skip the verification of TLS certificate here,
     # Step 12: Verify TLS traffic from host.
     - name: Verify-TLS-traffic-from-host
       description: Verify that TLS traffic can be routed through the gateway to the echo service from the host.
@@ -144,7 +137,7 @@ spec:
         template: ../../common/_step_templates/verify-tls-traffic-from-host.yaml
       bindings:
         - name: request_sni
-          value: $(fqdn)
+          value: ($fqdn)
   catch:
     # Capture debug snapshot on test failure for CI debugging.
     - description: Capture debug snapshot
