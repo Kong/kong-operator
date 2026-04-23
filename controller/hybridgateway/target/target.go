@@ -19,6 +19,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/route"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/translator"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	"github.com/kong/kong-operator/v2/internal/annotations"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
@@ -170,8 +171,8 @@ func resolveServiceEndpoints(
 	clusterDomain string,
 ) ([]string, bool, error) {
 	switch {
-	case fqdn && svc.Spec.ClusterIP != "None":
-		// For FQDN mode with regular services (non-headless), use the service FQDN as the single "endpoint".
+	case shouldUseServiceFQDNTarget(svc, fqdn):
+		// For service-upstream or FQDN mode, use the service FQDN as the single endpoint.
 		return resolveFQDNEndpoints(svc, clusterDomain), false, nil
 
 	case svc.Spec.Type == corev1.ServiceTypeExternalName:
@@ -182,6 +183,14 @@ func resolveServiceEndpoints(
 		// For all other cases (headless services, regular services without FQDN mode).
 		return resolveEndpointSliceEndpoints(ctx, logger, cl, svc, svcPort)
 	}
+}
+
+func shouldUseServiceFQDNTarget(svc *corev1.Service, fqdn bool) bool {
+	if annotations.IsServiceUpstream(svc) {
+		return true
+	}
+
+	return fqdn && svc.Spec.ClusterIP != "None"
 }
 
 // resolveFQDNEndpoints creates FQDN-based endpoints for regular services.
@@ -240,8 +249,8 @@ func resolveEndpointSliceEndpoints(
 // resolveTargetPort determines the appropriate target port based on service type and mode.
 func resolveTargetPort(ctx context.Context, cl client.Client, svc *corev1.Service, svcPort *corev1.ServicePort, fqdn bool) (int, error) {
 	switch {
-	case fqdn && svc.Spec.ClusterIP != "None":
-		// For FQDN mode with regular services, use service port (Kong will resolve via DNS).
+	case shouldUseServiceFQDNTarget(svc, fqdn):
+		// For service-upstream or FQDN mode, use the service port (Kong will resolve via DNS).
 		return int(svcPort.Port), nil
 
 	case svc.Spec.Type == corev1.ServiceTypeExternalName:
