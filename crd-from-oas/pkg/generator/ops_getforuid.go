@@ -127,5 +127,5 @@ func GenerateOpsGetForUIDDispatcher(infos []*OpsGetForUIDFileInfo) (*GeneratedFi
 			SDKGetter:      info.SDKGetter,
 		})
 	}
-	return buildDispatcherFile("zz_generated_ops_getforuid.go", opsGetForUIDDispatcherTemplate, flat)
+	return buildDispatcherFile("zz_generated_ops_getforuid.go", opsGetForUIDDispatcherTemplate, "controller/konnect/ops", flat)
 }

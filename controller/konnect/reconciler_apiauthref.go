@@ -228,8 +228,13 @@ func GetAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.
 		}, nil
 	}
 
-	return types.NamespacedName{}, fmt.Errorf(
-		"cannot get KonnectAPIAuthConfiguration for entity type %T %s",
-		client.ObjectKeyFromObject(ent), ent,
-	)
+	nn, err := getAPIAuthRef(ctx, cl, ent)
+	if err != nil {
+		return types.NamespacedName{}, fmt.Errorf(
+			"cannot get KonnectAPIAuthConfiguration for entity type %T %s",
+			client.ObjectKeyFromObject(ent), ent,
+		)
+	}
+
+	return nn, nil
 }

@@ -122,5 +122,5 @@ func GenerateOpsUpdateDispatcher(infos []*OpsUpdateFileInfo) (*GeneratedFile, er
 			NeedsClient:    info.NeedsClient,
 		})
 	}
-	return buildDispatcherFile("zz_generated_ops_update.go", opsUpdateDispatcherTemplate, flat)
+	return buildDispatcherFile("zz_generated_ops_update.go", opsUpdateDispatcherTemplate, "controller/konnect/ops", flat)
 }

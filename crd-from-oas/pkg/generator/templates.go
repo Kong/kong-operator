@@ -1165,6 +1165,39 @@ func getForUID[
 }
 `
 
+// watchDispatcherTemplate renders controller/konnect/zz_generated_watch.go.
+const watchDispatcherTemplate = sharedGeneratedFilePreamble + `
+
+package konnect
+
+import (
+	"fmt"
+
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+{{.APIImportsBlock}}
+	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
+)
+
+func reconciliationWatchOptionsForEntity[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](
+	cl client.Client,
+	ent TEnt,
+) []func(*ctrl.Builder) *ctrl.Builder {
+	switch any(ent).(type) {
+{{- range .Cases}}
+	case *{{.APIAlias}}.{{.Entity}}:
+		return {{.Entity}}ReconciliationWatchOptions(cl)
+{{- end}}
+	default:
+		panic(fmt.Sprintf("unsupported entity type %T", ent))
+	}
+}
+`
+
 const rbacTemplate = sharedGeneratedFilePreamble + `
 
 package konnect

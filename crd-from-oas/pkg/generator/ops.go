@@ -201,7 +201,7 @@ func (g *Generator) generateOpsDelete(
 
 // buildDispatcherFile is a shared helper that renders a dispatcher Go file.
 func buildDispatcherFile(
-	fileName, templateStr string,
+	fileName, templateStr, relativeDir string,
 	infos []flatInfo,
 ) (*GeneratedFile, error) {
 	if len(infos) == 0 {
@@ -253,7 +253,7 @@ func buildDispatcherFile(
 	return &GeneratedFile{
 		Name:        fileName,
 		Content:     buf.String(),
-		RelativeDir: "controller/konnect/ops",
+		RelativeDir: relativeDir,
 	}, nil
 }
 

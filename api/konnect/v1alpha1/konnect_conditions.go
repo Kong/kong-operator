@@ -90,6 +90,10 @@ const (
 	ControlPlaneRefReasonNotProgrammed = "NotProgrammed"
 )
 
+// TODO: These conditions are manually maintained for now but will be automatically
+// generated for all root entities.
+// TODO: https://github.com/Kong/kong-operator/issues/3925
+
 const (
 	// EventGatewayRefValidConditionType is the type of the condition that indicates
 	// whether the Event Gateway reference is valid and points to an existing
@@ -106,6 +110,28 @@ const (
 	// condition type indicating that the referenced Gateway exists but is not
 	// yet programmed in Konnect.
 	EventGatewayRefReasonNotProgrammed = "NotProgrammed"
+)
+
+// TODO: These conditions are manually maintained for now but will be automatically
+// generated for all root entities.
+// TODO: https://github.com/Kong/kong-operator/issues/3925
+
+const (
+	// PortalRefValidConditionType is the type of the condition that indicates
+	// whether the Event Gateway reference is valid and points to an existing
+	// KonnectEventControlPlane.
+	PortalRefValidConditionType = "PortalRefValid"
+
+	// PortalRefReasonValid is the reason used with the PortalRefValid
+	// condition type indicating that the Event Gateway reference is valid.
+	PortalRefReasonValid = "Valid"
+	// PortalRefReasonInvalid is the reason used with the PortalRefValid
+	// condition type indicating that the Event Gateway reference is invalid.
+	PortalRefReasonInvalid = "Invalid"
+	// PortalRefReasonNotProgrammed is the reason used with the PortalRefValid
+	// condition type indicating that the referenced Gateway exists but is not
+	// yet programmed in Konnect.
+	PortalRefReasonNotProgrammed = "NotProgrammed"
 )
 
 const (

@@ -2,7 +2,6 @@ package konnect
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -81,15 +80,10 @@ func ReconciliationWatchOptionsForEntity[
 		return KongDataPlaneClientCertificateReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.MCPServer:
 		return MCPServerReconciliationWatchOptions(cl)
-	// TODO: https://github.com/Kong/kong-operator/issues/3785
-	case *konnectv1alpha1.KonnectEventControlPlane:
-		return KonnectEventControlPlaneReconciliationWatchOptions(cl)
-	case *konnectv1alpha1.KonnectEventDataPlaneCertificate:
-		return KonnectEventDataPlaneCertificateReconciliationWatchOptions(cl)
-	case *konnectv1alpha1.Portal:
-		return PortalReconciliationWatchOptions(cl)
 	default:
-		panic(fmt.Sprintf("unsupported entity type %T", ent))
+		// This handles watch options for generated entities.
+		// reconciliationWatchOptionsForEntity is generated via crd-from-oas.
+		return reconciliationWatchOptionsForEntity(cl, ent)
 	}
 }
 

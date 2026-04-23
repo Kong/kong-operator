@@ -80,5 +80,5 @@ func GenerateOpsDeleteDispatcher(infos []*OpsDeleteFileInfo) (*GeneratedFile, er
 			SDKGetter:      info.SDKGetter,
 		})
 	}
-	return buildDispatcherFile("zz_generated_ops_delete.go", opsDeleteDispatcherTemplate, flat)
+	return buildDispatcherFile("zz_generated_ops_delete.go", opsDeleteDispatcherTemplate, "controller/konnect/ops", flat)
 }
