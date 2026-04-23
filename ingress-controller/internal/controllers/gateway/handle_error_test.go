@@ -20,10 +20,10 @@ func TestHandleUpdateError(t *testing.T) {
 	other := errors.New("some other error")
 
 	tests := []struct {
-		name        string
-		inputErr    error
-		wantResult  ctrl.Result
-		wantErr     error
+		name       string
+		inputErr   error
+		wantResult ctrl.Result
+		wantErr    error
 	}{
 		{
 			name:       "nil error returns zero result and nil error",
