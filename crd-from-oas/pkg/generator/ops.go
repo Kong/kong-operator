@@ -12,11 +12,12 @@ import (
 
 // entityOpsFileResult holds the outputs of generateEntityOpsFile.
 type entityOpsFileResult struct {
-	File          *GeneratedFile
-	CreateInfo    *OpsCreateFileInfo
-	UpdateInfo    *OpsUpdateFileInfo
-	DeleteInfo    *OpsDeleteFileInfo
-	GetForUIDInfo *OpsGetForUIDFileInfo
+	File           *GeneratedFile
+	CreateInfo     *OpsCreateFileInfo
+	UpdateInfo     *OpsUpdateFileInfo
+	DeleteInfo     *OpsDeleteFileInfo
+	GetForUIDInfo  *OpsGetForUIDFileInfo
+	SDKFactoryInfo *SDKFactoryFileInfo
 }
 
 // generateEntityOpsFile emits a zz_generated_ops_<entity>.go file containing
@@ -159,12 +160,27 @@ func (g *Generator) generateEntityOpsFile(
 		}
 	}
 
+	var sdkFactoryInfo *SDKFactoryFileInfo
+	if opsConfig.SDK != nil {
+		importPath, typeName, err := ParseSDKTypePath(opsConfig.SDK.Interface)
+		if err != nil {
+			return entityOpsFileResult{}, fmt.Errorf("ops.sdk.interface for %s: %w", entityName, err)
+		}
+		sdkFactoryInfo = &SDKFactoryFileInfo{
+			Entity:                 entityName,
+			SDKInterfaceImportPath: importPath,
+			SDKInterfaceTypeName:   typeName,
+			SDKFieldName:           opsConfig.SDK.FieldName,
+		}
+	}
+
 	return entityOpsFileResult{
-		File:          file,
-		CreateInfo:    createInfo,
-		UpdateInfo:    updateInfo,
-		DeleteInfo:    deleteInfo,
-		GetForUIDInfo: getForUIDInfo,
+		File:           file,
+		CreateInfo:     createInfo,
+		UpdateInfo:     updateInfo,
+		DeleteInfo:     deleteInfo,
+		GetForUIDInfo:  getForUIDInfo,
+		SDKFactoryInfo: sdkFactoryInfo,
 	}, nil
 }
 
