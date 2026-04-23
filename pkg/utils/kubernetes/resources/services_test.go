@@ -296,3 +296,79 @@ func TestGenerateNewIngressServiceForDataPlane(t *testing.T) {
 		})
 	}
 }
+
+func TestServicePortsFromDataPlaneIngressOpt(t *testing.T) {
+	makeDP := func(ports []operatorv1beta1.DataPlaneServicePort) *operatorv1beta1.DataPlane {
+		return &operatorv1beta1.DataPlane{
+			ObjectMeta: metav1.ObjectMeta{Name: "dp", Namespace: "ns"},
+			Spec: operatorv1beta1.DataPlaneSpec{
+				DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+					Network: operatorv1beta1.DataPlaneNetworkOptions{
+						Services: &operatorv1beta1.DataPlaneServices{
+							Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+								Ports: ports,
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+
+	tests := []struct {
+		name      string
+		ports     []operatorv1beta1.DataPlaneServicePort
+		wantPorts []corev1.ServicePort
+	}{
+		{
+			// TargetPort must be set explicitly by callers (e.g. setDataPlaneIngressServicePorts
+			// sets it based on listener protocol). When distinct ports are provided they are
+			// all preserved in the output.
+			name: "distinct ports preserved",
+			ports: []operatorv1beta1.DataPlaneServicePort{
+				{Name: "http", Port: 80, TargetPort: intstr.FromInt(8000)},
+				{Name: "https", Port: 443, TargetPort: intstr.FromInt(8443)},
+			},
+			wantPorts: []corev1.ServicePort{
+				{Name: "http", Protocol: corev1.ProtocolTCP, Port: 80, TargetPort: intstr.FromInt(8000)},
+				{Name: "https", Protocol: corev1.ProtocolTCP, Port: 443, TargetPort: intstr.FromInt(8443)},
+			},
+		},
+		{
+			// Multiple Gateway listeners on the same port (e.g. three HTTPS listeners
+			// on port 443 with distinct hostnames) produce three DataPlaneServicePort
+			// entries upstream, but only one ServicePort survives here — Kong routes
+			// by Host header so a single TCP port is sufficient.
+			// The first entry wins; later duplicates are dropped.
+			name: "duplicate ports deduplicated — first entry wins",
+			ports: []operatorv1beta1.DataPlaneServicePort{
+				{Name: "https", Port: 443, TargetPort: intstr.FromInt(8443)},
+				{Name: "https-api", Port: 443, TargetPort: intstr.FromInt(8443)},
+				{Name: "https-ui", Port: 443, TargetPort: intstr.FromInt(8443)},
+			},
+			wantPorts: []corev1.ServicePort{
+				{Name: "https", Protocol: corev1.ProtocolTCP, Port: 443, TargetPort: intstr.FromInt(8443)},
+			},
+		},
+		{
+			name: "mixed — unique and duplicate ports",
+			ports: []operatorv1beta1.DataPlaneServicePort{
+				{Name: "http", Port: 80, TargetPort: intstr.FromInt(8000)},
+				{Name: "https", Port: 443, TargetPort: intstr.FromInt(8443)},
+				{Name: "https-waf", Port: 443, TargetPort: intstr.FromInt(8443)},
+			},
+			wantPorts: []corev1.ServicePort{
+				{Name: "http", Protocol: corev1.ProtocolTCP, Port: 80, TargetPort: intstr.FromInt(8000)},
+				{Name: "https", Protocol: corev1.ProtocolTCP, Port: 443, TargetPort: intstr.FromInt(8443)},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			svc := &corev1.Service{}
+			ServicePortsFromDataPlaneIngressOpt(makeDP(tc.ports))(svc)
+			require.Equal(t, tc.wantPorts, svc.Spec.Ports)
+		})
+	}
+}
