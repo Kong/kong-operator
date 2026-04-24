@@ -1205,6 +1205,50 @@ func reconciliationWatchOptionsForEntity[
 }
 `
 
+// managerControllerSetupTemplate renders modules/manager/zz_generated_konnect_controller_setup.go.
+const managerControllerSetupTemplate = sharedGeneratedFilePreamble + `
+
+package manager
+
+import (
+{{.APIImportsBlock}}
+)
+
+func generatedControllersForKonnectEntities(
+	controllerFactory konnectControllerFactory,
+) []ControllerDef {
+	return []ControllerDef{
+{{- range .Cases}}
+		newKonnectEntityController[{{.APIAlias}}.{{.Entity}}](controllerFactory),
+{{- end}}
+	}
+}
+`
+
+// managerIndexOptionsTemplate renders modules/manager/zz_generated_konnect_index_options.go.
+const managerIndexOptionsTemplate = sharedGeneratedFilePreamble + `
+
+package manager
+
+import (
+	"slices"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/kong/kong-operator/v2/internal/utils/index"
+)
+
+func generatedIndexOptionsForKonnectEntities(
+	cl client.Client,
+) []index.Option {
+	return slices.Concat(
+{{- range .Entities}}
+		index.OptionsFor{{.}}(),
+{{- end}}
+	)
+}
+`
+
 const rbacTemplate = sharedGeneratedFilePreamble + `
 
 package konnect

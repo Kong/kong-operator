@@ -1,12 +1,14 @@
 package run
 
 import (
+	"log/slog"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/generator"
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/parser"
 )
 
@@ -49,4 +51,46 @@ func TestGeneratedOpsFileNameMatchesGeneratorConvention(t *testing.T) {
 		"zz_generated_ops_konnect_eventcontrolplane.go",
 		generatedOpsFileName("KonnectEventControlPlane"),
 	)
+}
+
+func TestEmitDispatcherFileWritesManagerControllerSetupDispatcher(t *testing.T) {
+	projectRoot := t.TempDir()
+	logger := slog.New(slog.DiscardHandler)
+
+	require.NoError(t, emitDispatcherFile(
+		projectRoot,
+		logger,
+		"modules/manager",
+		"zz_generated_konnect_controller_setup.go",
+		func() (*generator.GeneratedFile, error) {
+			return &generator.GeneratedFile{
+				Name:        "zz_generated_konnect_controller_setup.go",
+				Content:     "package manager\n",
+				RelativeDir: "modules/manager",
+			}, nil
+		},
+	))
+
+	require.FileExists(t, filepath.Join(projectRoot, "modules/manager", "zz_generated_konnect_controller_setup.go"))
+}
+
+func TestEmitDispatcherFileWritesManagerIndexOptionsDispatcher(t *testing.T) {
+	projectRoot := t.TempDir()
+	logger := slog.New(slog.DiscardHandler)
+
+	require.NoError(t, emitDispatcherFile(
+		projectRoot,
+		logger,
+		"modules/manager",
+		"zz_generated_konnect_index_options.go",
+		func() (*generator.GeneratedFile, error) {
+			return &generator.GeneratedFile{
+				Name:        "zz_generated_konnect_index_options.go",
+				Content:     "package manager\n",
+				RelativeDir: "modules/manager",
+			}, nil
+		},
+	))
+
+	require.FileExists(t, filepath.Join(projectRoot, "modules/manager", "zz_generated_konnect_index_options.go"))
 }
