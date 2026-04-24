@@ -32,11 +32,8 @@ func TestHandleUpdateError(t *testing.T) {
 			wantErr:    nil,
 		},
 		{
-			// A 409 Conflict must be returned as an error so the controller-runtime
-			// work queue rate limiter applies exponential backoff before the retry.
-			// Returning Requeue:true with nil bypasses the rate limiter and causes
-			// an instant retry storm under concurrent writers.
-			name:       "conflict error returned as error for rate-limited retry",
+			// A 409 Conflict must be returned as an immediate requeue, and no error should be returned.
+			name:       "conflict error returns zero result with immediate requeue and nil error",
 			inputErr:   conflict,
 			wantResult: ctrl.Result{Requeue: true},
 			wantErr:    nil,
