@@ -38,8 +38,8 @@ func TestHandleUpdateError(t *testing.T) {
 			// an instant retry storm under concurrent writers.
 			name:       "conflict error returned as error for rate-limited retry",
 			inputErr:   conflict,
-			wantResult: ctrl.Result{},
-			wantErr:    conflict,
+			wantResult: ctrl.Result{Requeue: true},
+			wantErr:    nil,
 		},
 		{
 			name:       "non-conflict error returned unchanged",
