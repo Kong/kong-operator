@@ -40,9 +40,7 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
-## [v2.1.4]
-
-> Release date: 2026-04-23
+## Unreleased
 
 ### Fixes
 
@@ -50,7 +48,14 @@
   same port and HTTPRoutes with multiple `sectionName`-scoped `parentRefs`.
   The HTTPRoute watch on the Gateway controller now uses
   `GenerationChangedPredicate` to ignore status-only updates.
-  [#4005](https://github.com/Kong/kong-operator/pull/4005)
+  [#4005](https://github.com/Kong/kong-operator/pull/4005) [#4017](https://github.com/Kong/kong-operator/pull/4017)
+
+## [v2.1.4]
+
+> Release date: 2026-04-23
+
+### Fixes
+
 - Fix a hot loop in the `KonnectExtension` reconciler when two
   `KonnectExtension`s share the same client-certificate `Secret`: the
   `KongDataPlaneClientCertificate` CR is now named after the `KonnectExtension`
