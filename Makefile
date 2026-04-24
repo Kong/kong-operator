@@ -78,19 +78,10 @@ mise-install: mise
 mise-install-global: mise
 	@$(MISE) install -q $(DEP_VER)
 
-OS := $(shell uname | tr '[:upper:]' '[:lower:]')
-ARCH := $(shell uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')
-
-# Do not store yq's version in .tools_versions.yaml as it is used to get tool versions.
-# renovate: datasource=github-releases depName=mikefarah/yq
-YQ_VERSION = 4.53.2
-YQ = $(PROJECT_DIR)/bin/installs/github-mikefarah-yq/$(YQ_VERSION)/yq_$(OS)_$(ARCH)
-ifeq ($(OS),darwin)
-YQ = $(PROJECT_DIR)/bin/installs/github-mikefarah-yq/$(YQ_VERSION)/yq
-endif
+YQ = yq
 .PHONY: yq
 yq: mise # Download yq locally if necessary.
-	$(MAKE) mise-install DEP_VER=github:mikefarah/yq@$(YQ_VERSION)
+	$(MAKE) mise-install DEP_VER=yq
 
 CONTROLLER_GEN_VERSION = $(shell $(YQ) -r '.controller-tools' < $(TOOLS_VERSIONS_FILE))
 CONTROLLER_GEN = $(PROJECT_DIR)/bin/installs/github-kubernetes-sigs-controller-tools/$(CONTROLLER_GEN_VERSION)/controller-gen

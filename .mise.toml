@@ -68,6 +68,10 @@ macos-arm64 = { url = "https://get.helm.sh/helm-v{{version}}-darwin-arm64.tar.gz
 # renovate: datasource=git-refs packageName=https://github.com/kubernetes-sigs/kube-api-linter.git
 version = "2b3d1fe145786b26f649cc3a14fe38ebf195d774"
 
+[tools."yq"]
+# renovate: datasource=github-releases depName=mikefarah/yq
+version = "v4.53.2"
+bin = "yq"
 
 ################################################################################
 # Tasks
