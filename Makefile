@@ -1134,6 +1134,5 @@ lint.api: download.kube-api-linter
 		./api/gateway-operator/v2beta1/... \
 		./api/konnect/v1alpha1/... \
 		./api/konnect/v1alpha2/... \
-		./api/common/v1alpha1/...  \
-		./api/x-konnect/... \
+		./api/common/v1alpha1/... \
 		./api/eventgateway/v1alpha1/...

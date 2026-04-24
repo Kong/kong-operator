@@ -14,13 +14,13 @@ golangci-lint run -v ${GOLANGCI_LINT_FLAGS}
 [tasks.generate-api]
 description = "Generate Kubernetes Go API from OpenAPI spec"
 # NOTE we get the openapi.yaml file from the sdk-konnect-go module which is expected
-# to be present in the local Go module cache.
+# to match the version required by the parent kong-operator module.
 # This ensures that we use the same OpenAPI spec as the one used to generate the
 # SDK which should help avoid potential discrepancies between the API and the SDK.
 run = '''
 set -eu
 go mod download
-sdk_konnect_go_dir="$(go mod download -json github.com/Kong/sdk-konnect-go | jq -r .Dir)"
+sdk_konnect_go_dir="$(cd .. && go mod download -json "github.com/Kong/sdk-konnect-go" | jq -re '.Dir')"
 if [ -z "$sdk_konnect_go_dir" ]; then
        echo "failed to resolve github.com/Kong/sdk-konnect-go module directory" >&2
        exit 1

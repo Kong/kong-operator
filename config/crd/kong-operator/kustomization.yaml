@@ -49,4 +49,3 @@ resources:
   - konnect.konghq.com_portalpages.yaml
   - konnect.konghq.com_portals.yaml
   - konnect.konghq.com_portalteams.yaml
-  - x-konnect.konghq.com_dcrproviders.yaml
