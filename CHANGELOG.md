@@ -49,6 +49,8 @@
   The HTTPRoute watch on the Gateway controller now uses
   `GenerationChangedPredicate` to ignore status-only updates.
   [#4005](https://github.com/Kong/kong-operator/pull/4005) [#4017](https://github.com/Kong/kong-operator/pull/4017)
+- Fix counting of route attached to a listener by taking into account hostname intersection between the listener and the route.
+  [#3490](https://github.com/Kong/kong-operator/pull/3490) [4020](https://github.com/Kong/kong-operator/pull/4020)
 
 ## [v2.1.4]
 
