@@ -137,12 +137,10 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 			index.OptionsForKonnectCloudGatewayNetwork(),
 			index.OptionsForKegDataPlane(),
 			index.OptionsForKonnectExtension(),
-			// TODO: auto-generate cache index registration for generated Konnect entities.
-			// https://github.com/Kong/kong-operator/issues/3785
-			index.OptionsForKonnectEventControlPlane(),
-			index.OptionsForKonnectEventDataPlaneCertificate(),
 			index.OptionsForKonnectCloudGatewayDataPlaneGroupConfiguration(cl),
 		)
+
+		indexOptions = append(indexOptions, generatedIndexOptionsForKonnectEntities(cl)...)
 	}
 
 	if cfg.FeatureGates.Enabled(FeatureGateMCPServer) {
@@ -786,14 +784,11 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			newKonnectEntityController[configurationv1alpha1.KongDataPlaneClientCertificate](controllerFactory),
 			newKonnectEntityController[configurationv1alpha1.KongVault](controllerFactory),
 			newKonnectEntityController[configurationv1alpha1.KongSNI](controllerFactory),
-			// TODO: auto-generate controller registration for generated Konnect entities.
-			// https://github.com/Kong/kong-operator/issues/3785
-			newKonnectEntityController[konnectv1alpha1.KonnectEventControlPlane](controllerFactory),
-			newKonnectEntityController[konnectv1alpha1.KonnectEventDataPlaneCertificate](controllerFactory),
-			newKonnectEntityController[konnectv1alpha1.Portal](controllerFactory),
-			newKonnectEntityController[konnectv1alpha1.IdentityProviderRequest](controllerFactory),
-			newKonnectEntityController[konnectv1alpha1.PortalPage](controllerFactory),
-			newKonnectEntityController[konnectv1alpha1.PortalTeam](controllerFactory),
+		)
+
+		controllers = append(
+			controllers,
+			generatedControllersForKonnectEntities(controllerFactory)...,
 		)
 
 		controllers = append(controllers,

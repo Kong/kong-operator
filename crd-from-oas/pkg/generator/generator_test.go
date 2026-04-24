@@ -1648,6 +1648,90 @@ func TestParseSDKTypePath(t *testing.T) {
 	}
 }
 
+func TestGenerateKonnectControllerSetupDispatcher(t *testing.T) {
+	infos := []*WatchFileInfo{
+		{
+			Entity:         "Portal",
+			APIAlias:       "konnectv1alpha1",
+			APIPackagePath: "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		},
+		{
+			Entity:         "IdentityProviderRequest",
+			APIAlias:       "konnectv1alpha1",
+			APIPackagePath: "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		},
+		{
+			Entity:         "KonnectEventDataPlaneCertificate",
+			APIAlias:       "konnectv1alpha1",
+			APIPackagePath: "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		},
+	}
+
+	file, err := GenerateKonnectControllerSetupDispatcher(infos)
+	require.NoError(t, err)
+	require.NotNil(t, file)
+
+	assert.Equal(t, "zz_generated_konnect_controller_setup.go", file.Name)
+	assert.Equal(t, "modules/manager", file.RelativeDir)
+	assert.Contains(t, file.Content, "package manager")
+	assert.Contains(t, file.Content, "func generatedControllersForKonnectEntities(")
+	assert.Contains(t, file.Content, "newKonnectEntityController[konnectv1alpha1.IdentityProviderRequest](controllerFactory)")
+	assert.Contains(t, file.Content, "newKonnectEntityController[konnectv1alpha1.KonnectEventDataPlaneCertificate](controllerFactory)")
+	assert.Contains(t, file.Content, "newKonnectEntityController[konnectv1alpha1.Portal](controllerFactory)")
+
+	idxIdentity := strings.Index(file.Content, "IdentityProviderRequest")
+	idxEventCert := strings.Index(file.Content, "KonnectEventDataPlaneCertificate")
+	idxPortal := strings.Index(file.Content, "Portal")
+	assert.Less(t, idxIdentity, idxEventCert)
+	assert.Less(t, idxEventCert, idxPortal)
+
+	formatted, err := format.Source([]byte(file.Content))
+	require.NoError(t, err)
+	assert.Equal(t, string(formatted), file.Content)
+}
+
+func TestGenerateKonnectIndexOptionsDispatcher(t *testing.T) {
+	infos := []*WatchFileInfo{
+		{
+			Entity:         "Portal",
+			APIAlias:       "konnectv1alpha1",
+			APIPackagePath: "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		},
+		{
+			Entity:         "IdentityProviderRequest",
+			APIAlias:       "konnectv1alpha1",
+			APIPackagePath: "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		},
+		{
+			Entity:         "KonnectEventDataPlaneCertificate",
+			APIAlias:       "konnectv1alpha1",
+			APIPackagePath: "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		},
+	}
+
+	file, err := GenerateKonnectIndexOptionsDispatcher(infos)
+	require.NoError(t, err)
+	require.NotNil(t, file)
+
+	assert.Equal(t, "zz_generated_konnect_index_options.go", file.Name)
+	assert.Equal(t, "modules/manager", file.RelativeDir)
+	assert.Contains(t, file.Content, "package manager")
+	assert.Contains(t, file.Content, "func generatedIndexOptionsForKonnectEntities(")
+	assert.Contains(t, file.Content, "index.OptionsForIdentityProviderRequest()")
+	assert.Contains(t, file.Content, "index.OptionsForKonnectEventDataPlaneCertificate()")
+	assert.Contains(t, file.Content, "index.OptionsForPortal()")
+
+	idxIdentity := strings.Index(file.Content, "OptionsForIdentityProviderRequest")
+	idxEventCert := strings.Index(file.Content, "OptionsForKonnectEventDataPlaneCertificate")
+	idxPortal := strings.Index(file.Content, "OptionsForPortal")
+	assert.Less(t, idxIdentity, idxEventCert)
+	assert.Less(t, idxEventCert, idxPortal)
+
+	formatted, err := format.Source([]byte(file.Content))
+	require.NoError(t, err)
+	assert.Equal(t, string(formatted), file.Content)
+}
+
 func TestGenerateSDKFactoryDispatcher(t *testing.T) {
 	infos := []*SDKFactoryFileInfo{
 		{

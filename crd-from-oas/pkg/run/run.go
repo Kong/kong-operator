@@ -305,6 +305,32 @@ func (r *Runner) Run(
 		return err
 	}
 
+	// Emit manager controller setup dispatcher.
+	if err := emitDispatcherFile(
+		r.projectRoot,
+		logger,
+		"modules/manager",
+		"zz_generated_konnect_controller_setup.go",
+		func() (*generator.GeneratedFile, error) {
+			return generator.GenerateKonnectControllerSetupDispatcher(allWatchInfos)
+		},
+	); err != nil {
+		return err
+	}
+
+	// Emit manager index options dispatcher.
+	if err := emitDispatcherFile(
+		r.projectRoot,
+		logger,
+		"modules/manager",
+		"zz_generated_konnect_index_options.go",
+		func() (*generator.GeneratedFile, error) {
+			return generator.GenerateKonnectIndexOptionsDispatcher(allWatchInfos)
+		},
+	); err != nil {
+		return err
+	}
+
 	// Emit SDK factory file.
 	if err := emitDispatcherFile(
 		r.projectRoot,
