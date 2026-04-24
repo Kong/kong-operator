@@ -328,7 +328,7 @@ func requiredCRDChecks(c *Config) []requiredCRDCheck {
 				{
 					Group:    konnectv1alpha1.GroupVersion.Group,
 					Version:  konnectv1alpha1.GroupVersion.Version,
-					Resource: "konnecteventcontrolplanes",
+					Resource: "konnecteventgateways",
 				},
 				{
 					Group:    configurationv1alpha1.SchemeGroupVersion.Group,

@@ -19,10 +19,10 @@ import (
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
-func newKeg(ns, name string, programmed metav1.ConditionStatus) *konnectv1alpha1.KonnectEventControlPlane {
-	return &konnectv1alpha1.KonnectEventControlPlane{
+func newKeg(ns, name string, programmed metav1.ConditionStatus) *konnectv1alpha1.KonnectEventGateway {
+	return &konnectv1alpha1.KonnectEventGateway{
 		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: name},
-		Status: konnectv1alpha1.KonnectEventControlPlaneStatus{
+		Status: konnectv1alpha1.KonnectEventGatewayStatus{
 			Conditions: []metav1.Condition{
 				{
 					Type:               konnectv1alpha1.KonnectEntityProgrammedConditionType,
@@ -58,7 +58,7 @@ func Test_resolveKonnectEventGateway(t *testing.T) {
 	tests := []struct {
 		name string
 		// nil = not in cluster
-		keg               *konnectv1alpha1.KonnectEventControlPlane
+		keg               *konnectv1alpha1.KonnectEventGateway
 		getErr            error // non-nil injects a GET error via interceptor
 		wantKeg           bool
 		wantErr           bool

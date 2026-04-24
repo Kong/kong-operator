@@ -130,18 +130,9 @@ type rbacEntity struct {
 func (g *Generator) generateRBAC(entityNames []string) (string, error) {
 	entities := make([]rbacEntity, 0, len(entityNames))
 	for _, entityName := range entityNames {
-		// UnsafeGuessKindToResource _is_ marker as broken but for our purposes
-		// it's sufficient to get the pluralized resource name for RBAC generation.
-		// If it fails, changes will get caught in tests or in review or controller-gen
-		// will generate code that doesn't compile, so it's not a silent failure.
-		gvk, _ := meta.UnsafeGuessKindToResource(schema.GroupVersionKind{
-			Group:   g.config.APIGroup,
-			Version: g.config.APIVersion,
-			Kind:    entityName,
-		})
 		entities = append(entities, rbacEntity{
 			APIGroup:     g.config.APIGroup,
-			ResourceName: gvk.Resource,
+			ResourceName: g.resourceNameForKind(entityName),
 		})
 	}
 
@@ -158,6 +149,23 @@ func (g *Generator) generateRBAC(entityNames []string) (string, error) {
 		return "", err
 	}
 	return buf.String(), nil
+}
+
+func (g *Generator) resourceNameForKind(kind string) string {
+	// UnsafeGuessKindToResource is good enough for generated RBAC markers, but
+	// it incorrectly pluralizes Gateway kinds as gatewaies.
+	gvr, _ := meta.UnsafeGuessKindToResource(schema.GroupVersionKind{
+		Group:   g.config.APIGroup,
+		Version: g.config.APIVersion,
+		Kind:    kind,
+	})
+
+	resourceName := gvr.Resource
+	if strings.HasSuffix(kind, "Gateway") && strings.HasSuffix(resourceName, "gatewaies") {
+		return strings.TrimSuffix(resourceName, "gatewaies") + "gateways"
+	}
+
+	return resourceName
 }
 
 const childWatchTemplate = sharedGeneratedFilePreamble + `
@@ -426,13 +434,13 @@ func (g *Generator) reconcilerEntityMetadata(
 }
 
 // toLowerCamel converts a PascalCase name to lowerCamelCase.
-// e.g. "Portal" → "portal", "KonnectEventControlPlane" → "konnectEventControlPlane".
+// e.g. "Portal" → "portal", "KonnectEventGateway" → "konnectEventControlPlane".
 func toLowerCamel(s string) string {
 	if s == "" {
 		return s
 	}
 	// Find the boundary: lowercase the leading uppercase run.
-	// For "KonnectEventControlPlane" → "konnectEventControlPlane"
+	// For "KonnectEventGateway" → "konnectEventControlPlane"
 	runes := []rune(s)
 	i := 0
 	for i < len(runes) && unicode.IsUpper(runes[i]) {

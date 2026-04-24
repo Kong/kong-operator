@@ -33,7 +33,7 @@ import (
 // spec.konnectEventGatewayRef.name matches the changed KonnectEventGateway.
 func enqueueForKonnectEventGatewayRef(cl client.Client) handler.MapFunc {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		keg, ok := obj.(*konnectv1alpha1.KonnectEventControlPlane)
+		keg, ok := obj.(*konnectv1alpha1.KonnectEventGateway)
 		if !ok {
 			return nil
 		}

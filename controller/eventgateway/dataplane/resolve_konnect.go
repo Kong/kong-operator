@@ -38,8 +38,8 @@ func (r *Reconciler) resolveKonnectEventGateway(
 	ctx context.Context,
 	logger logr.Logger,
 	egdp *eventgatewayv1alpha1.KegDataPlane,
-) (*konnectv1alpha1.KonnectEventControlPlane, error) {
-	keg := &konnectv1alpha1.KonnectEventControlPlane{}
+) (*konnectv1alpha1.KonnectEventGateway, error) {
+	keg := &konnectv1alpha1.KonnectEventGateway{}
 	err := r.Get(ctx, types.NamespacedName{
 		Name:      egdp.Spec.ControlPlaneRef.KonnectNamespacedRef.Name,
 		Namespace: egdp.Namespace,
@@ -76,7 +76,7 @@ func (r *Reconciler) resolveKonnectEventGateway(
 			ObservedGeneration: egdp.Generation,
 		})
 
-		return nil, fmt.Errorf("referenced KonnectEventControlPlane %q is not yet Programmed",
+		return nil, fmt.Errorf("referenced KonnectEventGateway %q is not yet Programmed",
 			egdp.Spec.ControlPlaneRef.KonnectNamespacedRef.Name)
 	}
 

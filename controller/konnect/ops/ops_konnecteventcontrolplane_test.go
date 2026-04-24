@@ -16,12 +16,12 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 )
 
-func TestCreateKonnectEventControlPlane(t *testing.T) {
+func TestCreateKonnectEventGateway(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
 	sdk := mocks.NewMockEventGatewaysSDK(t)
-	cp := testKonnectEventControlPlane()
+	cp := testKonnectEventGateway()
 
 	expectedRequest, err := cp.Spec.APISpec.ToCreateGatewayRequest()
 	require.NoError(t, err)
@@ -36,17 +36,17 @@ func TestCreateKonnectEventControlPlane(t *testing.T) {
 		}, nil).
 		Once()
 
-	err = createKonnectEventControlPlane(ctx, sdk, cp)
+	err = createKonnectEventGateway(ctx, sdk, cp)
 	require.NoError(t, err)
 	assert.Equal(t, "gateway-1", cp.GetKonnectID())
 }
 
-func TestUpdateKonnectEventControlPlane(t *testing.T) {
+func TestUpdateKonnectEventGateway(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
 	sdk := mocks.NewMockEventGatewaysSDK(t)
-	cp := testKonnectEventControlPlane()
+	cp := testKonnectEventGateway()
 	cp.SetKonnectID("gateway-1")
 
 	expectedRequest, err := cp.Spec.APISpec.ToUpdateGatewayRequest()
@@ -62,17 +62,17 @@ func TestUpdateKonnectEventControlPlane(t *testing.T) {
 		}, nil).
 		Once()
 
-	err = updateKonnectEventControlPlane(ctx, sdk, cp)
+	err = updateKonnectEventGateway(ctx, sdk, cp)
 	require.NoError(t, err)
 	assert.Equal(t, "gateway-1", cp.GetKonnectID())
 }
 
-func TestDeleteKonnectEventControlPlane(t *testing.T) {
+func TestDeleteKonnectEventGateway(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
 	sdk := mocks.NewMockEventGatewaysSDK(t)
-	cp := testKonnectEventControlPlane()
+	cp := testKonnectEventGateway()
 	cp.SetKonnectID("gateway-1")
 
 	sdk.EXPECT().
@@ -80,16 +80,16 @@ func TestDeleteKonnectEventControlPlane(t *testing.T) {
 		Return(&sdkkonnectops.DeleteEventGatewayResponse{}, nil).
 		Once()
 
-	err := deleteKonnectEventControlPlane(ctx, sdk, cp)
+	err := deleteKonnectEventGateway(ctx, sdk, cp)
 	require.NoError(t, err)
 }
 
-func TestGetKonnectEventControlPlaneForUID(t *testing.T) {
+func TestGetKonnectEventGatewayForUID(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
 	sdk := mocks.NewMockEventGatewaysSDK(t)
-	cp := testKonnectEventControlPlane()
+	cp := testKonnectEventGateway()
 
 	sdk.EXPECT().
 		ListEventGateways(mock.Anything, sdkkonnectops.ListEventGatewaysRequest{
@@ -114,16 +114,16 @@ func TestGetKonnectEventControlPlaneForUID(t *testing.T) {
 		}, nil).
 		Once()
 
-	id, err := getKonnectEventControlPlaneForUID(ctx, sdk, cp)
+	id, err := getKonnectEventGatewayForUID(ctx, sdk, cp)
 	require.NoError(t, err)
 	assert.Equal(t, "gateway-1", id)
 }
 
-func testKonnectEventControlPlane() *konnectv1alpha1.KonnectEventControlPlane {
-	return &konnectv1alpha1.KonnectEventControlPlane{
+func testKonnectEventGateway() *konnectv1alpha1.KonnectEventGateway {
+	return &konnectv1alpha1.KonnectEventGateway{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: konnectv1alpha1.GroupVersion.String(),
-			Kind:       "KonnectEventControlPlane",
+			Kind:       "KonnectEventGateway",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:       "event-control-plane",
@@ -131,13 +131,13 @@ func testKonnectEventControlPlane() *konnectv1alpha1.KonnectEventControlPlane {
 			UID:        "event-control-plane-uid",
 			Generation: 3,
 		},
-		Spec: konnectv1alpha1.KonnectEventControlPlaneSpec{
+		Spec: konnectv1alpha1.KonnectEventGatewaySpec{
 			KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 				APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 					Name: "test-auth",
 				},
 			},
-			APISpec: konnectv1alpha1.KonnectEventControlPlaneAPISpec{
+			APISpec: konnectv1alpha1.KonnectEventGatewayAPISpec{
 				Name:              "event-control-plane",
 				Description:       "Event gateway description",
 				MinRuntimeVersion: "3.8",

@@ -309,7 +309,7 @@ apiGroupVersions:
   konnect.konghq.com/v1alpha1:
     types:
       - path: /v1/event-gateways
-        name: KonnectEventControlPlane
+        name: KonnectEventGateway
       - path: /v3/portals
 `
 	path := filepath.Join(t.TempDir(), "config.yaml")
@@ -320,7 +320,7 @@ apiGroupVersions:
 
 	konnect := cfg.APIGroupVersions["konnect.konghq.com/v1alpha1"]
 	require.NotNil(t, konnect)
-	assert.Equal(t, "KonnectEventControlPlane", konnect.Types[0].Name)
+	assert.Equal(t, "KonnectEventGateway", konnect.Types[0].Name)
 	assert.Empty(t, konnect.Types[1].Name)
 }
 
@@ -328,13 +328,13 @@ func TestAPIGroupVersionConfig_NameOverrides(t *testing.T) {
 	t.Run("with overrides", func(t *testing.T) {
 		agv := &APIGroupVersionConfig{
 			Types: []*TypeConfig{
-				{Path: "/v1/event-gateways", Name: "KonnectEventControlPlane"},
+				{Path: "/v1/event-gateways", Name: "KonnectEventGateway"},
 				{Path: "/v3/portals"},
 			},
 		}
 		overrides := agv.NameOverrides()
 		assert.Equal(t, map[string]string{
-			"/v1/event-gateways": "KonnectEventControlPlane",
+			"/v1/event-gateways": "KonnectEventGateway",
 		}, overrides)
 	})
 

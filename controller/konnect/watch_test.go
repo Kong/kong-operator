@@ -31,7 +31,7 @@ func TestWatchOptions(t *testing.T) {
 	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.KongCertificate{})
 	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.KongKey{})
 	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.KongKeySet{})
-	testReconciliationWatchOptionsForEntity(t, &konnectv1alpha1.KonnectEventControlPlane{})
+	testReconciliationWatchOptionsForEntity(t, &konnectv1alpha1.KonnectEventGateway{})
 }
 
 func testReconciliationWatchOptionsForEntity[

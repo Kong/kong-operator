@@ -76,8 +76,8 @@ func Create[
 		err = createKonnectTransitGateway(ctx, sdk.GetCloudGatewaysSDK(), ent)
 	// TODO: auto-generate ops entries for generated Konnect entities.
 	// https://github.com/Kong/kong-operator/issues/3785
-	case *konnectv1alpha1.KonnectEventControlPlane:
-		err = createKonnectEventControlPlane(ctx, sdk.GetEventGatewaysSDK(), ent)
+	case *konnectv1alpha1.KonnectEventGateway:
+		err = createKonnectEventGateway(ctx, sdk.GetEventGatewaysSDK(), ent)
 	case *configurationv1alpha1.KongService:
 		err = createService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
@@ -148,8 +148,8 @@ func Create[
 			id, err = getKonnectTransitGatewayMatchingSpecName(ctx, sdk.GetCloudGatewaysSDK(), ent)
 		// TODO: auto-generate ops entries for generated Konnect entities.
 		// https://github.com/Kong/kong-operator/issues/3785
-		case *konnectv1alpha1.KonnectEventControlPlane:
-			id, errGet = getKonnectEventControlPlaneForUID(ctx, sdk.GetEventGatewaysSDK(), ent)
+		case *konnectv1alpha1.KonnectEventGateway:
+			id, errGet = getKonnectEventGatewayForUID(ctx, sdk.GetEventGatewaysSDK(), ent)
 		case *konnectv1alpha1.KonnectEventDataPlaneCertificate:
 			id, errGet = getKonnectEventDataPlaneCertificateForUID(ctx, sdk.GetEventGatewayDataPlaneCertificatesSDK(), ent)
 		case *configurationv1alpha1.KongService:
@@ -298,8 +298,8 @@ func Delete[
 		err = deleteKonnectTransitGateway(ctx, sdk.GetCloudGatewaysSDK(), e)
 	// TODO: auto-generate ops entries for generated Konnect entities.
 	// https://github.com/Kong/kong-operator/issues/3785
-	case *konnectv1alpha1.KonnectEventControlPlane:
-		err = deleteKonnectEventControlPlane(ctx, sdk.GetEventGatewaysSDK(), e)
+	case *konnectv1alpha1.KonnectEventGateway:
+		err = deleteKonnectEventGateway(ctx, sdk.GetEventGatewaysSDK(), e)
 	case *configurationv1alpha1.KongService:
 		err = deleteService(ctx, sdk.GetServicesSDK(), e)
 	case *configurationv1alpha1.KongRoute:
@@ -463,8 +463,8 @@ func Update[
 		err = updateKonnectTransitGateway(ctx, sdk.GetCloudGatewaysSDK(), ent)
 	// TODO: auto-generate ops entries for generated Konnect entities.
 	// https://github.com/Kong/kong-operator/issues/3785
-	case *konnectv1alpha1.KonnectEventControlPlane:
-		err = updateKonnectEventControlPlane(ctx, sdk.GetEventGatewaysSDK(), ent)
+	case *konnectv1alpha1.KonnectEventGateway:
+		err = updateKonnectEventGateway(ctx, sdk.GetEventGatewaysSDK(), ent)
 	case *configurationv1alpha1.KongService:
 		err = updateService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:

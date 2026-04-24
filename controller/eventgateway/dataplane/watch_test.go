@@ -30,7 +30,7 @@ func Test_enqueueForKonnectEventGatewayRef(t *testing.T) {
 		kegName = "my-keg"
 	)
 
-	keg := &konnectv1alpha1.KonnectEventControlPlane{
+	keg := &konnectv1alpha1.KonnectEventGateway{
 		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: kegName},
 	}
 

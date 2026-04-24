@@ -56,7 +56,7 @@ func handleEventGatewayRef[T constraints.SupportedKonnectEntityType, TEnt constr
 	}
 
 	if delTimestamp := gateway.GetDeletionTimestamp(); !delTimestamp.IsZero() {
-		msg := fmt.Sprintf("Referenced KonnectEventControlPlane %s is being deleted", nn)
+		msg := fmt.Sprintf("Referenced KonnectEventGateway %s is being deleted", nn)
 		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, cert,
 			konnectv1alpha1.EventGatewayRefValidConditionType,
@@ -79,7 +79,7 @@ func handleEventGatewayRef[T constraints.SupportedKonnectEntityType, TEnt constr
 			konnectv1alpha1.EventGatewayRefValidConditionType,
 			metav1.ConditionFalse,
 			konnectv1alpha1.EventGatewayRefReasonNotProgrammed,
-			fmt.Sprintf("Referenced KonnectEventControlPlane %s is not programmed yet", nn),
+			fmt.Sprintf("Referenced KonnectEventGateway %s is not programmed yet", nn),
 		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
 		}
@@ -89,7 +89,7 @@ func handleEventGatewayRef[T constraints.SupportedKonnectEntityType, TEnt constr
 	if gateway.GetKonnectID() == "" {
 		err := ReferencedObjectIsInvalidError{
 			Reference: nn.String(),
-			Msg:       "Referenced KonnectEventControlPlane does not have a Konnect ID yet",
+			Msg:       "Referenced KonnectEventGateway does not have a Konnect ID yet",
 		}
 		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, cert,
@@ -121,7 +121,7 @@ func handleEventGatewayRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		konnectv1alpha1.EventGatewayRefValidConditionType,
 		metav1.ConditionTrue,
 		konnectv1alpha1.EventGatewayRefReasonValid,
-		fmt.Sprintf("Referenced KonnectEventControlPlane %s is programmed", nn),
+		fmt.Sprintf("Referenced KonnectEventGateway %s is programmed", nn),
 	); errStatus != nil || !res.IsZero() {
 		return res, errStatus
 	}
@@ -156,7 +156,7 @@ func ensureKongReferenceGrantForEventGatewayRef(
 		targetNamespace,
 		ref.NamespacedRef.Name,
 		metav1.GroupVersionKind(ent.GetObjectKind().GroupVersionKind()),
-		metav1.GroupVersionKind(konnectv1alpha1.GroupVersion.WithKind("KonnectEventControlPlane")),
+		metav1.GroupVersionKind(konnectv1alpha1.GroupVersion.WithKind("KonnectEventGateway")),
 	)
 	if crossnamespace.IsReferenceNotGranted(err) {
 		if res, errStatus := patch.StatusWithCondition(
@@ -165,7 +165,7 @@ func ensureKongReferenceGrantForEventGatewayRef(
 			metav1.ConditionFalse,
 			configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted,
 			fmt.Sprintf(
-				"KongReferenceGrants do not allow access to KonnectEventControlPlane %s/%s",
+				"KongReferenceGrants do not allow access to KonnectEventGateway %s/%s",
 				targetNamespace,
 				ref.NamespacedRef.Name,
 			),
@@ -184,7 +184,7 @@ func ensureKongReferenceGrantForEventGatewayRef(
 		metav1.ConditionTrue,
 		configurationv1alpha1.KongReferenceGrantReasonResolvedRefs,
 		fmt.Sprintf(
-			"KongReferenceGrants allow access to KonnectEventControlPlane %s/%s",
+			"KongReferenceGrants allow access to KonnectEventGateway %s/%s",
 			targetNamespace,
 			ref.NamespacedRef.Name,
 		),
@@ -200,7 +200,7 @@ func getEventGatewayForRef(
 	cl client.Client,
 	ref commonv1alpha1.ObjectRef,
 	namespace string,
-) (*konnectv1alpha1.KonnectEventControlPlane, types.NamespacedName, error) {
+) (*konnectv1alpha1.KonnectEventGateway, types.NamespacedName, error) {
 	switch ref.Type {
 	case commonv1alpha1.ObjectRefTypeNamespacedRef:
 		if ref.NamespacedRef == nil {
@@ -214,7 +214,7 @@ func getEventGatewayForRef(
 			nn.Namespace = *ref.NamespacedRef.Namespace
 		}
 
-		var gateway konnectv1alpha1.KonnectEventControlPlane
+		var gateway konnectv1alpha1.KonnectEventGateway
 		if err := cl.Get(ctx, nn, &gateway); err != nil {
 			if apierrors.IsNotFound(err) {
 				return nil, nn, ReferencedObjectDoesNotExistError{
@@ -222,7 +222,7 @@ func getEventGatewayForRef(
 					Err:       err,
 				}
 			}
-			return nil, nn, fmt.Errorf("failed to get KonnectEventControlPlane %s: %w", nn, err)
+			return nil, nn, fmt.Errorf("failed to get KonnectEventGateway %s: %w", nn, err)
 		}
 		return &gateway, nn, nil
 
@@ -231,9 +231,9 @@ func getEventGatewayForRef(
 			return nil, types.NamespacedName{}, fmt.Errorf("gatewayRef.konnectID is required when type is konnectID")
 		}
 
-		var gateways konnectv1alpha1.KonnectEventControlPlaneList
+		var gateways konnectv1alpha1.KonnectEventGatewayList
 		if err := cl.List(ctx, &gateways, client.InNamespace(namespace)); err != nil {
-			return nil, types.NamespacedName{}, fmt.Errorf("failed to list KonnectEventControlPlanes in namespace %s: %w", namespace, err)
+			return nil, types.NamespacedName{}, fmt.Errorf("failed to list KonnectEventGateways in namespace %s: %w", namespace, err)
 		}
 
 		for i := range gateways.Items {
@@ -249,7 +249,7 @@ func getEventGatewayForRef(
 		return nil, types.NamespacedName{}, ReferencedObjectIsInvalidError{
 			Reference: fmt.Sprintf("<konnectID:%s>", *ref.KonnectID),
 			Msg: fmt.Sprintf(
-				"no local KonnectEventControlPlane with matching Konnect ID was found in namespace %s",
+				"no local KonnectEventGateway with matching Konnect ID was found in namespace %s",
 				namespace,
 			),
 		}
