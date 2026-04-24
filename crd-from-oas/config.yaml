@@ -103,14 +103,3 @@ apiGroupVersions:
           delete: {}
         reconciler:
           isRoot: false
-
-  # TODO: temporary
-  x-konnect.konghq.com/v1alpha1:
-    generateGroupVersionInfo: true
-    commonTypes:
-      objectRef:
-        import:
-          path: github.com/kong/kong-operator/v2/api/common/v1alpha1
-          alias: commonv1alpha1
-    types:
-      - path: /v2/dcr-providers

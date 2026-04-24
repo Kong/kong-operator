@@ -67,9 +67,6 @@ func main() {
 	// migrated into the konnect group. https://github.com/Kong/kong-operator/issues/3785
 	crdContent = filterOutCRDsByName(
 		crdContent,
-		"dcrproviders.x-konnect.konghq.com",
-		"konnecteventdataplanecertificates.x-konnect.konghq.com",
-		"portalteams.x-konnect.konghq.com",
 	)
 	crdContent = wrapInIfEnabled(crdContent)
 	crdContent = wrapCertAnnotations(crdContent)

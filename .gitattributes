@@ -4,4 +4,4 @@ docs/api-reference.md linguist-generated=true
 ingress-controller/internal/dataplane/testdata/golden/**/*_golden.yaml linguist-generated=true
 charts/kong-operator/ci/__snapshots__/*.snap linguist-generated=true
 # Mark all generated code in the API directory as not generated, since it should be reviewed.
-api/x-konnect/v1alpha1/* linguist-generated=false
+api/**/zz_generated.*.go linguist-generated=false
