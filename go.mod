@@ -81,7 +81,7 @@ require (
 
 require (
 	github.com/moby/moby/api v1.54.2
-	k8s.io/kube-openapi v0.0.0-20260127142750-a19766b6e2d4
+	k8s.io/kube-openapi v0.0.0-20260414162039-ec9c827d403f
 	sigs.k8s.io/structured-merge-diff/v6 v6.4.0
 )
 
