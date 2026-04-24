@@ -63,6 +63,10 @@ func (g *Generator) generateOpsCreateFuncBody(
 
 	sdkMethod := pascalFromKebab(schema.OperationID)
 	sdkInterface := pascalFromKebab(schema.Tags[0]) + "SDK"
+	sdkInterface, err = resolveSDKInterfaceTypeName(opsConfig, sdkInterface)
+	if err != nil {
+		return nil, fmt.Errorf("entity %q: resolve create SDK interface: %w", entityName, err)
+	}
 	hasTags, hasLabels, labelsPointer := metadataFields(schema)
 	needsClient := opsConfig.RequireClient
 	// TODO: for now request builder e.g. kongEventDataPlaneCertificateCreateRequest

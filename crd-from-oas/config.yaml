@@ -84,6 +84,22 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/components.PortalCreateTeamRequest
           update:
             path: github.com/Kong/sdk-konnect-go/models/components.PortalUpdateTeamRequest
+        reconciler:
+          isRoot: false
+      - path: /v3/portals/{portalId}/pages
+        cel:
+          parent_page_id:
+              _validations:
+                # TODO: https://github.com/Kong/kong-operator/issues/4008
+                - "+kubebuilder:validation:XValidation:rule=\"self == null\",message=\"cannot set parent_page_id_ref\""
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.PortalPagesSDK
+            fieldName: PortalPages
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreatePortalPageRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdatePortalPageRequest
           delete: {}
         reconciler:
           isRoot: false
@@ -98,6 +114,3 @@ apiGroupVersions:
           alias: commonv1alpha1
     types:
       - path: /v2/dcr-providers
-      # TODO: uncomment
-      # - path: /v3/portals/{portalId}/custom-domain
-      # - path: /v3/portals/{portalId}/teams/{teamId}/developers
