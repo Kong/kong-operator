@@ -57784,7 +57784,7 @@ metadata:
     app.kubernetes.io/name: kong-operator
     helm.sh/chart: kong-operator-1.2.3
     app.kubernetes.io/instance: "chartsnap"
-    app.kubernetes.io/version: "2.1.4"
+    app.kubernetes.io/version: "2.1.5"
     app.kubernetes.io/component: ko
   name: chartsnap-kong-operator-controller-manager
   namespace: default
@@ -57812,10 +57812,10 @@ spec:
         app.kubernetes.io/name: kong-operator
         helm.sh/chart: kong-operator-1.2.3
         app.kubernetes.io/instance: "chartsnap"
-        app.kubernetes.io/version: "2.1.4"
+        app.kubernetes.io/version: "2.1.5"
         app.kubernetes.io/component: ko
         app: chartsnap-kong-operator
-        version: "2.1.4"
+        version: "2.1.5"
     spec:
       containers:
       - name: manager
@@ -57840,7 +57840,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        image: docker.io/kong/kong-operator:2.1.4
+        image: docker.io/kong/kong-operator:2.1.5
         livenessProbe:
           httpGet:
             path: /healthz
@@ -57922,7 +57922,7 @@ metadata:
     app.kubernetes.io/name: kong-operator
     helm.sh/chart: kong-operator-1.2.3
     app.kubernetes.io/instance: "chartsnap"
-    app.kubernetes.io/version: "2.1.4"
+    app.kubernetes.io/version: "2.1.5"
     app.kubernetes.io/component: ko
   name: controlplane-configuration-validations
 webhooks:
@@ -58039,7 +58039,7 @@ metadata:
     app.kubernetes.io/name: kong-operator
     helm.sh/chart: kong-operator-1.2.3
     app.kubernetes.io/instance: "chartsnap"
-    app.kubernetes.io/version: "2.1.4"
+    app.kubernetes.io/version: "2.1.5"
     app.kubernetes.io/component: ko
   name: chartsnap-kong-operator-webhook-serving-cert
   namespace: default
@@ -58060,7 +58060,7 @@ metadata:
     app.kubernetes.io/name: kong-operator
     helm.sh/chart: kong-operator-1.2.3
     app.kubernetes.io/instance: "chartsnap"
-    app.kubernetes.io/version: "2.1.4"
+    app.kubernetes.io/version: "2.1.5"
     app.kubernetes.io/component: ko
   name: chartsnap-kong-operator-webhook-validating-serving-cert
   namespace: default
@@ -58081,7 +58081,7 @@ metadata:
     app.kubernetes.io/name: kong-operator
     helm.sh/chart: kong-operator-1.2.3
     app.kubernetes.io/instance: "chartsnap"
-    app.kubernetes.io/version: "2.1.4"
+    app.kubernetes.io/version: "2.1.5"
     app.kubernetes.io/component: ko
   name: kong-operator-ca
   namespace: default
@@ -58105,7 +58105,7 @@ metadata:
     app.kubernetes.io/name: kong-operator
     helm.sh/chart: kong-operator-1.2.3
     app.kubernetes.io/instance: "chartsnap"
-    app.kubernetes.io/version: "2.1.4"
+    app.kubernetes.io/version: "2.1.5"
     app.kubernetes.io/component: ko
   name: chartsnap-kong-operator-webhook-selfsigned-issuer
   namespace: default
@@ -58120,7 +58120,7 @@ metadata:
     app.kubernetes.io/name: kong-operator
     helm.sh/chart: kong-operator-1.2.3
     app.kubernetes.io/instance: "chartsnap"
-    app.kubernetes.io/version: "2.1.4"
+    app.kubernetes.io/version: "2.1.5"
     app.kubernetes.io/component: ko
   name: selfsigned-issuer
   namespace: default
