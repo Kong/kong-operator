@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"path"
 	"sort"
 	"strconv"
 	"strings"
@@ -910,7 +911,7 @@ func countAttachedRoutesForGatewayListener(ctx context.Context, g *gwtypes.Gatew
 							client.ObjectKeyFromObject(g), err,
 						)
 					}
-					count += countAttachedHTTPRoutes(listener.Name, httpRoutes)
+					count += countAttachedHTTPRoutes(listener, httpRoutes)
 				default:
 					return 0, fmt.Errorf("unsupported route kind: %T", k)
 				}
@@ -931,7 +932,7 @@ func countAttachedRoutesForGatewayListener(ctx context.Context, g *gwtypes.Gatew
 				)
 			}
 
-			count += countAttachedHTTPRoutes(listener.Name, httpRoutes)
+			count += countAttachedHTTPRoutes(listener, httpRoutes)
 		}
 	}
 
@@ -939,19 +940,48 @@ func countAttachedRoutesForGatewayListener(ctx context.Context, g *gwtypes.Gatew
 }
 
 // countAttachedHTTPRoutes counts the number of attached HTTPRoutes for a given listener,
-// taking into account the ParentRefs' sectionName.
-func countAttachedHTTPRoutes(listenerName gatewayv1.SectionName, httpRoutes []gatewayv1.HTTPRoute) int32 {
+// taking into account the ParentRefs' sectionName and hostname intersections between the listener and the route.
+func countAttachedHTTPRoutes(listener gwtypes.Listener, httpRoutes []gatewayv1.HTTPRoute) int32 {
 	var count int32
 
 	for _, httpRoute := range httpRoutes {
 		if lo.ContainsBy(httpRoute.Spec.ParentRefs, func(parentRef gatewayv1.ParentReference) bool {
-			return parentRef.SectionName == nil || *parentRef.SectionName == listenerName
+			return (parentRef.SectionName == nil || *parentRef.SectionName == listener.Name) &&
+				listenerHostnameIntersectsRouteHostnames(listener.Hostname, httpRoute.Spec.Hostnames)
 		}) {
 			count++
 		}
 	}
 
 	return count
+}
+
+func listenerHostnameIntersectsRouteHostnames(
+	listenerHostname *gatewayv1.Hostname,
+	routeHostnames []gatewayv1.Hostname,
+) bool {
+	lH := lo.FromPtr(listenerHostname)
+	if lH == "" || len(routeHostnames) == 0 {
+		return true
+	}
+
+	for _, routeHostname := range routeHostnames {
+		if hostnamesMatches(lH, routeHostname) || hostnamesMatches(routeHostname, lH) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func hostnamesMatches(hostnamePattern, hostnameToTest gatewayv1.Hostname) bool {
+	pattern := strings.ToLower(string(hostnamePattern))
+	hostname := strings.ToLower(string(hostnameToTest))
+	res, err := path.Match(pattern, hostname)
+	if err != nil {
+		return false
+	}
+	return res
 }
 
 // setConflicted sets the gateway Conflicted condition according to the Gateway API specification.
