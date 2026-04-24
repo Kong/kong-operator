@@ -40,6 +40,16 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## Unreleased
+
+### Fixes
+
+- Fix Gateway reconcile storm on topologies with multiple listeners sharing the
+  same port and HTTPRoutes with multiple `sectionName`-scoped `parentRefs`.
+  The HTTPRoute watch on the Gateway controller now uses
+  `GenerationChangedPredicate` to ignore status-only updates.
+  [#4005](https://github.com/Kong/kong-operator/pull/4005) [#4017](https://github.com/Kong/kong-operator/pull/4017)
+
 ## [v2.1.4]
 
 > Release date: 2026-04-23

@@ -116,9 +116,14 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 			handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForGateway),
 			builder.WithPredicates(ref.ReferenceGrantForSecretFrom(gatewayv1.GroupName, gatewayv1beta1.Kind("Gateway")))).
 		// watch HTTPRoutes so that Gateway listener status can be updated.
+		// Use GenerationChangedPredicate to ignore status-only updates: the embedded
+		// KIC writes HTTPRoute parent statuses on every sync; without this predicate
+		// each such write would re-enqueue every attached Gateway and amplify the
+		// reconciliation rate significantly.
 		Watches(
 			&gatewayv1beta1.HTTPRoute{},
-			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByHTTPRoute)).
+			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByHTTPRoute),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		// watch Namespaces so that managed routes have correct status reflected in Gateway's
 		// status in status.listeners.attachedRoutes
 		// This is required to properly support Gateway's listeners.allowedRoutes.namespaces.selector.
