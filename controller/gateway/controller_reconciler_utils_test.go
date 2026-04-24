@@ -1794,10 +1794,10 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 						{
 							Name:     gatewayv1.SectionName("http"),
 							Protocol: gwtypes.HTTPProtocolType,
-							Hostname: new(gatewayv1.Hostname("*.example.com")),
+							Hostname: lo.ToPtr(gatewayv1.Hostname("*.example.com")),
 							AllowedRoutes: &gwtypes.AllowedRoutes{
 								Namespaces: &gwtypes.RouteNamespaces{
-									From: new(gwtypes.NamespacesFromSame),
+									From: lo.ToPtr(gwtypes.NamespacesFromSame),
 								},
 							},
 						},
@@ -1816,7 +1816,7 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 								{
 									Name:  gwtypes.ObjectName("test-gw"),
 									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
-									Kind:  new(gwtypes.Kind("Gateway")),
+									Kind:  lo.ToPtr(gwtypes.Kind("Gateway")),
 								},
 							},
 						},
@@ -1834,7 +1834,7 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 								{
 									Name:  gwtypes.ObjectName("test-gw"),
 									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
-									Kind:  new(gwtypes.Kind("Gateway")),
+									Kind:  lo.ToPtr(gwtypes.Kind("Gateway")),
 								},
 							},
 						},
