@@ -177,6 +177,11 @@
 
 ### Fixes
 
+- Fix Gateway reconcile storm on topologies with multiple listeners sharing the
+  same port and HTTPRoutes with multiple `sectionName`-scoped `parentRefs`.
+  The HTTPRoute watch on the Gateway controller now uses
+  `GenerationChangedPredicate` to ignore status-only updates.
+  [#4005](https://github.com/Kong/kong-operator/pull/4005)
 - Fix a hot loop in the `KonnectExtension` reconciler when two
   `KonnectExtension`s share the same client-certificate `Secret`: the
   `KongDataPlaneClientCertificate` CR is now named after the `KonnectExtension`
