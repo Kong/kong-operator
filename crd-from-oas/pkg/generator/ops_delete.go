@@ -49,6 +49,10 @@ func (g *Generator) generateOpsDeleteFuncBody(
 
 	sdkMethod := pascalFromKebab(schema.DeleteOperationID)
 	sdkInterface := pascalFromKebab(schema.DeleteTags[0]) + "SDK"
+	sdkInterface, err := resolveSDKInterfaceTypeName(opsConfig, sdkInterface)
+	if err != nil {
+		return nil, fmt.Errorf("entity %q: resolve delete SDK interface: %w", entityName, err)
+	}
 
 	parentEntityName, parentIDGetter, err := g.resolveParentEntity(entityName, schema)
 	if err != nil {

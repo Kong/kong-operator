@@ -442,6 +442,7 @@ rules:
   - konnectcloudgatewaytransitgateways
   - konnecteventcontrolplanes
   - konnecteventdataplanecertificates
+  - portalpages
   - portals
   - portalteams
   verbs:
@@ -472,6 +473,8 @@ rules:
   - konnectgatewaycontrolplanes/finalizers
   - konnectgatewaycontrolplanes/status
   - mcpservers/status
+  - portalpages/finalizers
+  - portalpages/status
   - portals/finalizers
   - portals/status
   - portalteams/finalizers

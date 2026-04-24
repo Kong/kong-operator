@@ -62,6 +62,10 @@ func (g *Generator) generateOpsUpdateFuncBody(
 
 	sdkMethod := pascalFromKebab(schema.UpdateOperationID)
 	sdkInterface := pascalFromKebab(schema.UpdateTags[0]) + "SDK"
+	sdkInterface, err = resolveSDKInterfaceTypeName(opsConfig, sdkInterface)
+	if err != nil {
+		return nil, fmt.Errorf("entity %q: resolve update SDK interface: %w", entityName, err)
+	}
 	hasTags, hasLabels, labelsPointer := metadataFields(schema)
 	needsClient := opsConfig.RequireClient
 	// TODO: for now request builder e.g. kongEventDataPlaneCertificateUpdateRequest

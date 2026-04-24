@@ -57,6 +57,7 @@ type Generator struct {
 	opsUpdateInfos    []*OpsUpdateFileInfo
 	opsDeleteInfos    []*OpsDeleteFileInfo
 	opsGetForUIDInfos []*OpsGetForUIDFileInfo
+	sdkFactoryInfos   []*SDKFactoryFileInfo
 	watchInfos        []*WatchFileInfo
 }
 
@@ -92,6 +93,14 @@ func (g *Generator) OpsDeleteInfos() []*OpsDeleteFileInfo {
 // generated.
 func (g *Generator) OpsGetForUIDInfos() []*OpsGetForUIDFileInfo {
 	return g.opsGetForUIDInfos
+}
+
+// SDKFactoryInfos returns metadata for every entity emitted by the most recent
+// Generate call that has SDK factory config. Callers (e.g. the Runner) use it
+// to assemble the cross-group SDK factory file after all group-versions have
+// been generated.
+func (g *Generator) SDKFactoryInfos() []*SDKFactoryFileInfo {
+	return g.sdkFactoryInfos
 }
 
 // WatchInfos returns metadata for every reconciler entity emitted by the most
@@ -263,6 +272,9 @@ func (g *Generator) generateEntityOpsFileForEntity(entityName string, schema *pa
 	}
 	if opsResult.GetForUIDInfo != nil {
 		g.opsGetForUIDInfos = append(g.opsGetForUIDInfos, opsResult.GetForUIDInfo)
+	}
+	if opsResult.SDKFactoryInfo != nil {
+		g.sdkFactoryInfos = append(g.sdkFactoryInfos, opsResult.SDKFactoryInfo)
 	}
 	return opsResult.File, nil
 }
@@ -630,6 +642,7 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 	if rc := g.config.ReconcilerConfig[entityName]; rc != nil {
 		isReconcilerRoot = rc.IsRoot
 	}
+	rootRefDependency := rootRefDependency(schema)
 
 	imports := make([]*config.ImportConfig, 0, 3)
 	imports = appendUniqueImportConfig(imports, defaultKonnectStatusImport())
@@ -637,6 +650,9 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		Alias: "metav1",
 		Path:  "k8s.io/apimachinery/pkg/apis/meta/v1",
 	})
+	if rootRefDependency != nil && g.objectRefImported() {
+		imports = appendUniqueImportConfig(imports, g.config.CommonTypes.ObjectRef.Import)
+	}
 	if isReconcilerRoot {
 		imports = appendUniqueImportConfig(imports, &config.ImportConfig{
 			Alias: defaultKonnectStatusAlias,
@@ -654,6 +670,8 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		KonnectStatusType                  string
 		KonnectLabelsField                 *konnectLabelsField
 		Dependencies                       []*parser.Dependency
+		RootRefDependency                  *parser.Dependency
+		RootRefTypeName                    string
 		IsReconcilerRoot                   bool
 		KonnectAPIAuthConfigurationRefType string
 	}{
@@ -663,6 +681,8 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		KonnectStatusType:                  defaultKonnectStatusQualifiedTypeName(),
 		KonnectLabelsField:                 g.konnectLabelsField(schema),
 		Dependencies:                       schema.Dependencies,
+		RootRefDependency:                  rootRefDependency,
+		RootRefTypeName:                    g.objectRefTypeName(),
 		IsReconcilerRoot:                   isReconcilerRoot,
 		KonnectAPIAuthConfigurationRefType: defaultKonnectStatusAlias + ".ControlPlaneKonnectAPIAuthConfigurationRef",
 	}
@@ -672,6 +692,13 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 	}
 
 	return fixTrailingEmptyLines(buf.String()), nil
+}
+
+func rootRefDependency(schema *parser.Schema) *parser.Dependency {
+	if len(schema.Dependencies) == 0 {
+		return nil
+	}
+	return schema.Dependencies[0]
 }
 
 // EntityFilePrefix converts a PascalCase entity name to a lowercase file name

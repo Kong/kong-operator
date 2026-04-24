@@ -13,6 +13,9 @@ apiGroupVersions:
       - path: /v1/event-gateways
         name: KonnectEventControlPlane
         ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.EventGatewaysSDK
+            fieldName: EventGateways
           create:
             path: github.com/Kong/sdk-konnect-go/models/components.CreateGatewayRequest
           update:
@@ -24,6 +27,9 @@ apiGroupVersions:
         name: KonnectEventDataPlaneCertificate
         optionalSecretReference: true
         ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.EventGatewayDataPlaneCertificatesSDK
+            fieldName: EventGatewayDataPlaneCertificates
           requireClient: true
           # SDK list response items lack GetLabels(); getForUID is hand-written in
           # ops_konnecteventdataplanecertificate_manual.go using spec comparison.
@@ -44,6 +50,9 @@ apiGroupVersions:
             _validations:
               - "+kubebuilder:validation:XValidation:rule=\"self == oldSelf\",message=\"name is immutable\""
         ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.PortalsSDK
+            fieldName: Portals
           create:
             path: github.com/Kong/sdk-konnect-go/models/components.CreatePortal
           update:
@@ -53,6 +62,9 @@ apiGroupVersions:
           isRoot: true
       - path: /v3/portals/{portalId}/identity-providers
         ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.PortalAuthSettingsSDK
+            fieldName: PortalAuthSettings
           # The SDK list endpoint uses positional args and response items lack
           # UID labels, so getForUID cannot be generated automatically.
           skipGetForUID: true
@@ -65,10 +77,29 @@ apiGroupVersions:
           isRoot: false
       - path: /v3/portals/{portalId}/teams
         ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.PortalTeamsSDK
+            fieldName: PortalTeams
           create:
             path: github.com/Kong/sdk-konnect-go/models/components.PortalCreateTeamRequest
           update:
             path: github.com/Kong/sdk-konnect-go/models/components.PortalUpdateTeamRequest
+        reconciler:
+          isRoot: false
+      - path: /v3/portals/{portalId}/pages
+        cel:
+          parent_page_id:
+              _validations:
+                # TODO: https://github.com/Kong/kong-operator/issues/4008
+                - "+kubebuilder:validation:XValidation:rule=\"self == null\",message=\"cannot set parent_page_id_ref\""
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.PortalPagesSDK
+            fieldName: PortalPages
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreatePortalPageRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdatePortalPageRequest
           delete: {}
         reconciler:
           isRoot: false
@@ -83,6 +114,3 @@ apiGroupVersions:
           alias: commonv1alpha1
     types:
       - path: /v2/dcr-providers
-      # TODO: uncomment
-      # - path: /v3/portals/{portalId}/custom-domain
-      # - path: /v3/portals/{portalId}/teams/{teamId}/developers

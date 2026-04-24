@@ -158,11 +158,12 @@ type PortalAPISpec struct {
 	// +kubebuilder:default=Disabled
 	RBACEnabled string `json:"rbac_enabled,omitempty"`
 
-	// Whether ip allow list is enabled for the organization.
+	// Whether ip allow list is enabled for the portal.
 	//
 	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
 	// +kubebuilder:default=Disabled
-	SiprEnabled SourceIPEnabled `json:"sipr_enabled,omitempty"`
+	SiprEnabled string `json:"sipr_enabled,omitempty"`
 }
 
 // PortalStatus defines the observed state of Portal.

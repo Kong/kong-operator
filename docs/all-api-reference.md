@@ -4954,6 +4954,7 @@ Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1al
 - [KonnectGatewayControlPlane](#konnect-konghq-com-v1alpha1-konnectgatewaycontrolplane)
 - [MCPServer](#konnect-konghq-com-v1alpha1-mcpserver)
 - [Portal](#konnect-konghq-com-v1alpha1-portal)
+- [PortalPage](#konnect-konghq-com-v1alpha1-portalpage)
 - [PortalTeam](#konnect-konghq-com-v1alpha1-portalteam)
 
 ### IdentityProviderRequest
@@ -5123,6 +5124,21 @@ Portal is the Schema for the portals API.
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[PortalSpec](#konnect-konghq-com-v1alpha1-types-portalspec)_ |  |
 | `status` _[PortalStatus](#konnect-konghq-com-v1alpha1-types-portalstatus)_ |  |
+
+### PortalPage
+
+
+PortalPage is the Schema for the portalpages API.
+
+<!-- portal_page description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `PortalPage`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[PortalPageSpec](#konnect-konghq-com-v1alpha1-types-portalpagespec)_ |  |
+| `status` _[PortalPageStatus](#konnect-konghq-com-v1alpha1-types-portalpagestatus)_ |  |
 
 ### PortalTeam
 
@@ -5366,6 +5382,19 @@ DataPlaneLabelValue is the type that defines the value of a label that will be a
 _Appears in:_
 
 - [KonnectExtensionDataPlane](#konnect-konghq-com-v1alpha1-types-konnectextensiondataplane)
+
+#### Description
+
+_Underlying type:_ `string`
+
+Description is a type alias.
+
+
+
+
+_Appears in:_
+
+- [PortalPageAPISpec](#konnect-konghq-com-v1alpha1-types-portalpageapispec)
 
 #### GatewayDescription
 
@@ -5778,6 +5807,7 @@ _Appears in:_
 
 - [IdentityProviderRequestStatus](#konnect-konghq-com-v1alpha1-types-identityproviderrequeststatus)
 - [KonnectEventDataPlaneCertificateStatus](#konnect-konghq-com-v1alpha1-types-konnecteventdataplanecertificatestatus)
+- [PortalPageStatus](#konnect-konghq-com-v1alpha1-types-portalpagestatus)
 - [PortalTeamStatus](#konnect-konghq-com-v1alpha1-types-portalteamstatus)
 
 
@@ -6338,6 +6368,67 @@ _Appears in:_
 
 - [OIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderconfig)
 
+#### PageContent
+
+_Underlying type:_ `string`
+
+PageContent The renderable markdown content of a page in a portal.
+
+
+
+
+_Appears in:_
+
+- [PortalPageAPISpec](#konnect-konghq-com-v1alpha1-types-portalpageapispec)
+
+#### PageSlug
+
+_Underlying type:_ `string`
+
+PageSlug The slug of a page in a portal, used to compute its full URL path
+within the portal hierarchy.
+When a page has a `parent_page_id`, its full path is built by joining the
+parent’s slug with its own.
+For example, if a parent page has the slug `slug1` and this page’s slug is
+`slug2`, the resulting path will be `/slug1/slug2`.
+This enables nested page structures like `/slug1/slug2/slug3`.
+
+
+
+
+_Appears in:_
+
+- [PortalPageAPISpec](#konnect-konghq-com-v1alpha1-types-portalpageapispec)
+
+#### PageTitle
+
+_Underlying type:_ `string`
+
+PageTitle The title of a page in a portal.
+
+
+
+
+_Appears in:_
+
+- [PortalPageAPISpec](#konnect-konghq-com-v1alpha1-types-portalpageapispec)
+
+#### PageVisibilityStatus
+
+_Underlying type:_ `string`
+
+PageVisibilityStatus Whether a page is publicly accessible to
+non-authenticated users.
+If not provided, the default_page_visibility value of the portal will be
+used.
+
+
+
+
+_Appears in:_
+
+- [PortalPageAPISpec](#konnect-konghq-com-v1alpha1-types-portalpageapispec)
+
 #### PortalAPISpec
 
 
@@ -6358,11 +6449,65 @@ PortalAPISpec defines the API spec fields for Portal.
 | `labels` _[LabelsUpdate](#konnect-konghq-com-v1alpha1-types-labelsupdate)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Labels are intended to store **INTERNAL** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `name` _string_ | The name of the portal, used to distinguish it from other portals. Name must be unique. |
 | `rbac_enabled` _string_ | Whether the portal resources are protected by Role Based Access Control (RBAC). If enabled, developers view or register for APIs until unless assigned to teams with access to view and consume specific APIs. Authentication must be enabled to use RBAC. |
-| `sipr_enabled` _[SourceIPEnabled](#konnect-konghq-com-v1alpha1-types-sourceipenabled)_ | Whether ip allow list is enabled for the organization. |
+| `sipr_enabled` _string_ | Whether ip allow list is enabled for the portal. |
 
 _Appears in:_
 
 - [PortalSpec](#konnect-konghq-com-v1alpha1-types-portalspec)
+
+#### PortalPageAPISpec
+
+
+PortalPageAPISpec defines the API spec fields for PortalPage.
+
+
+
+| Field | Description |
+| --- | --- |
+| `content` _[PageContent](#konnect-konghq-com-v1alpha1-types-pagecontent)_ | The renderable markdown content of a page in a portal. |
+| `description` _[Description](#konnect-konghq-com-v1alpha1-types-description)_ |  |
+| `parent_page_id_ref` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | Pages may be rendered as a tree of files.<br /><br />Specify the `id` of another page as the `parent_page_id` to add some hierarchy to your pages. |
+| `slug` _[PageSlug](#konnect-konghq-com-v1alpha1-types-pageslug)_ | The slug of a page in a portal, used to compute its full URL path within the portal hierarchy. When a page has a `parent_page_id`, its full path is built by joining the parent’s slug with its own. For example, if a parent page has the slug `slug1` and this page’s slug is `slug2`, the resulting path will be `/slug1/slug2`. This enables nested page structures like `/slug1/slug2/slug3`. |
+| `status` _[PublishedStatus](#konnect-konghq-com-v1alpha1-types-publishedstatus)_ | Whether the resource is visible on a given portal. Defaults to unpublished. |
+| `title` _[PageTitle](#konnect-konghq-com-v1alpha1-types-pagetitle)_ | The title of a page in a portal. |
+| `visibility` _[PageVisibilityStatus](#konnect-konghq-com-v1alpha1-types-pagevisibilitystatus)_ | Whether a page is publicly accessible to non-authenticated users. If not provided, the default_page_visibility value of the portal will be used. |
+
+_Appears in:_
+
+- [PortalPageSpec](#konnect-konghq-com-v1alpha1-types-portalpagespec)
+
+#### PortalPageSpec
+
+
+PortalPageSpec defines the desired state of PortalPage.
+
+
+
+| Field | Description |
+| --- | --- |
+| `portal_ref` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | PortalRef is the reference to the parent Portal object. |
+| `apiSpec` _[PortalPageAPISpec](#konnect-konghq-com-v1alpha1-types-portalpageapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [PortalPage](#konnect-konghq-com-v1alpha1-portalpage)
+
+#### PortalPageStatus
+
+
+PortalPageStatus defines the observed state of PortalPage.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `portalID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | PortalID is the Konnect ID of the parent Portal. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [PortalPage](#konnect-konghq-com-v1alpha1-portalpage)
 
 
 
@@ -6473,6 +6618,20 @@ Allowed values:
 | `Manual` | ManualSecretProvisioning is the method used to provision the certificate manually.<br /> |
 | `Automatic` | AutomaticSecretProvisioning is the method used to provision the certificate automatically.<br /> |
 
+#### PublishedStatus
+
+_Underlying type:_ `string`
+
+PublishedStatus Whether the resource is visible on a given portal.
+Defaults to unpublished.
+
+
+
+
+_Appears in:_
+
+- [PortalPageAPISpec](#konnect-konghq-com-v1alpha1-types-portalpageapispec)
+
 #### SAMLIdentityProviderConfig
 
 
@@ -6556,26 +6715,6 @@ Allowed values:
 | --- | --- |
 | `inline` | SensitiveDataSourceTypeInline indicates that the data is provided inline in the APISpec.<br /> |
 | `secretRef` | SensitiveDataSourceTypeSecretRef indicates that the data is sourced from a Kubernetes Secret.<br /> |
-
-#### SourceIPEnabled
-
-_Underlying type:_ `string`
-
-SourceIPEnabled Whether ip allow list is enabled for the organization.
-
-
-
-
-_Appears in:_
-
-- [PortalAPISpec](#konnect-konghq-com-v1alpha1-types-portalapispec)
-
-Allowed values:
-
-| Value | Description |
-| --- | --- |
-| `Enabled` | SourceIPEnabledEnabled sets SourceIPEnabled as enabled.<br /> |
-| `Disabled` | SourceIPEnabledDisabled sets SourceIPEnabled as disabled.<br /> |
 
 #### TransitGatewayDNSConfig
 

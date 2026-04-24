@@ -79,6 +79,8 @@ type TypeConfig struct {
 	OpsRequireClient bool `yaml:"-"`
 	// OpsSkipGetForUID skips generation of the getForUID function for this entity.
 	OpsSkipGetForUID bool `yaml:"-"`
+	// OpsSDK holds SDK interface and field name for SDK factory generation.
+	OpsSDK *OpSDKConfig `yaml:"-"`
 	// OptionalSecretReference enables generation of a union type field on the
 	// Spec that allows the user to provide sensitive data either inline in the
 	// APISpec or via a Kubernetes Secret reference. When true the generated Spec
@@ -109,6 +111,17 @@ type OpConfig struct {
 	Path string `yaml:"path"`
 }
 
+// OpSDKConfig identifies the SDK interface and factory field name used by
+// the generated SDK factory wiring for an entity.
+type OpSDKConfig struct {
+	// Interface is the fully qualified SDK interface path,
+	// e.g. "github.com/Kong/sdk-konnect-go.EventGatewaysSDK".
+	Interface string `yaml:"interface"`
+	// FieldName is the field name on *sdkkonnectgo.SDK backing the interface,
+	// e.g. "EventGateways".
+	FieldName string `yaml:"fieldName"`
+}
+
 type typeOpsYAML struct {
 	// RequireClient indicates that generated ops for this entity need a
 	// controller-runtime client to fetch cluster data such as Secrets.
@@ -117,6 +130,8 @@ type typeOpsYAML struct {
 	// Use when the SDK list endpoint does not support UID-label filtering, or
 	// when the hand-written implementation already exists.
 	SkipGetForUID bool `yaml:"skipGetForUID,omitempty"`
+	// SDK holds the SDK interface and field name for SDK factory generation.
+	SDK *OpSDKConfig `yaml:"sdk,omitempty"`
 	// Operations maps operation names (e.g. "create", "update") to SDK type configs.
 	Operations map[string]*OpConfig `yaml:",inline"`
 }
@@ -150,6 +165,7 @@ func (tc *TypeConfig) UnmarshalYAML(value *yaml.Node) error {
 		tc.Ops = raw.Ops.Operations
 		tc.OpsRequireClient = raw.Ops.RequireClient
 		tc.OpsSkipGetForUID = raw.Ops.SkipGetForUID
+		tc.OpsSDK = raw.Ops.SDK
 	}
 
 	return nil
@@ -164,6 +180,8 @@ type EntityOpsConfig struct {
 	RequireClient bool
 	// SkipGetForUID skips generation of the getForUID function for this entity.
 	SkipGetForUID bool
+	// SDK holds SDK interface and field name for SDK factory generation.
+	SDK *OpSDKConfig
 }
 
 // NameOverrides returns a mapping from OpenAPI path to the custom CRD type name
@@ -256,6 +274,7 @@ func (c *APIGroupVersionConfig) OpsConfig(pathToEntityName map[string]string) ma
 			Ops:           tc.Ops,
 			RequireClient: requireClient,
 			SkipGetForUID: tc.OpsSkipGetForUID,
+			SDK:           tc.OpsSDK,
 		}
 	}
 	return result

@@ -2,6 +2,7 @@ package generator
 
 import (
 	"fmt"
+	"go/format"
 	"strings"
 	"testing"
 
@@ -549,6 +550,64 @@ func TestGenerateCRDFuncs_GeneratesKonnectFuncs(t *testing.T) {
 		require.NoError(t, err)
 		assert.Contains(t, content, `func (obj *PortalTeam) GetPortalID() string {`)
 		assert.Contains(t, content, `func (obj *PortalTeam) SetPortalID(id string) {`)
+	})
+
+	t.Run("dependency-backed child entities get root ref accessor", func(t *testing.T) {
+		g := NewGenerator(Config{
+			APIGroup:   "konnect.konghq.com",
+			APIVersion: "v1alpha1",
+			CommonTypes: &config.CommonTypesConfig{
+				ObjectRef: &config.ObjectRefConfig{
+					Import: &config.ImportConfig{
+						Path:  "github.com/kong/kong-operator/v2/api/common/v1alpha1",
+						Alias: "commonv1alpha1",
+					},
+				},
+			},
+		})
+
+		schemaWithDependency := &parser.Schema{
+			Name: "CreatePortalTeam",
+			Dependencies: []*parser.Dependency{{
+				EntityName: "Portal",
+				FieldName:  "PortalRef",
+				JSONName:   "portal_ref",
+			}},
+		}
+
+		content, err := g.generateCRDFuncs("CreatePortalTeam", schemaWithDependency)
+		require.NoError(t, err)
+		assert.Contains(t, content, `commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"`)
+		assert.Contains(t, content, `func (obj *PortalTeam) GetPortalRef() commonv1alpha1.ObjectRef {`)
+		assert.Contains(t, content, `return obj.Spec.PortalRef`)
+	})
+
+	t.Run("root ref accessor uses first dependency", func(t *testing.T) {
+		g := NewGenerator(Config{
+			APIGroup:   "x-konnect.konghq.com",
+			APIVersion: "v1alpha1",
+		})
+
+		schemaWithDependencies := &parser.Schema{
+			Name: "CreatePortalTeamDeveloper",
+			Dependencies: []*parser.Dependency{
+				{
+					EntityName: "Portal",
+					FieldName:  "PortalRef",
+					JSONName:   "portal_ref",
+				},
+				{
+					EntityName: "Team",
+					FieldName:  "TeamRef",
+					JSONName:   "team_ref",
+				},
+			},
+		}
+
+		content, err := g.generateCRDFuncs("CreatePortalTeamDeveloper", schemaWithDependencies)
+		require.NoError(t, err)
+		assert.Contains(t, content, `func (obj *PortalTeamDeveloper) GetPortalRef() ObjectRef {`)
+		assert.NotContains(t, content, `func (obj *PortalTeamDeveloper) GetTeamRef() ObjectRef {`)
 	})
 }
 
@@ -1589,6 +1648,105 @@ func TestParseSDKTypePath(t *testing.T) {
 	}
 }
 
+func TestGenerateSDKFactoryDispatcher(t *testing.T) {
+	infos := []*SDKFactoryFileInfo{
+		{
+			Entity:                 "Portal",
+			SDKInterfaceImportPath: "github.com/Kong/sdk-konnect-go",
+			SDKInterfaceTypeName:   "PortalsSDK",
+			SDKFieldName:           "Portals",
+		},
+		{
+			Entity:                 "IdentityProviderRequest",
+			SDKInterfaceImportPath: "github.com/Kong/sdk-konnect-go",
+			SDKInterfaceTypeName:   "PortalAuthSettingsSDK",
+			SDKFieldName:           "PortalAuthSettings",
+		},
+		{
+			Entity:                 "KonnectEventDataPlaneCertificate",
+			SDKInterfaceImportPath: "github.com/Kong/sdk-konnect-go",
+			SDKInterfaceTypeName:   "EventGatewayDataPlaneCertificatesSDK",
+			SDKFieldName:           "EventGatewayDataPlaneCertificates",
+		},
+	}
+
+	file, err := GenerateSDKFactoryDispatcher(infos)
+	require.NoError(t, err)
+	require.NotNil(t, file)
+
+	assert.Equal(t, "zz_generated_sdkfactory.go", file.Name)
+	assert.Equal(t, "controller/konnect/ops/sdk", file.RelativeDir)
+	assert.Contains(t, file.Content, "type GeneratedSDK interface {")
+	assert.Contains(t, file.Content, "GetPortalAuthSettingsSDK() sdkkonnectgo.PortalAuthSettingsSDK")
+	assert.Contains(t, file.Content, "GetEventGatewayDataPlaneCertificatesSDK() sdkkonnectgo.EventGatewayDataPlaneCertificatesSDK")
+	assert.Contains(t, file.Content, "return w.sdk.PortalAuthSettings")
+	assert.Contains(t, file.Content, "return w.sdk.EventGatewayDataPlaneCertificates")
+
+	idxIdentity := strings.Index(file.Content, "GetPortalAuthSettingsSDK()")
+	idxEventCert := strings.Index(file.Content, "GetEventGatewayDataPlaneCertificatesSDK()")
+	idxPortal := strings.Index(file.Content, "GetPortalsSDK()")
+	assert.Less(t, idxIdentity, idxEventCert)
+	assert.Less(t, idxEventCert, idxPortal)
+}
+
+func TestGenerateMockSDKFactoryDispatcher(t *testing.T) {
+	infos := []*SDKFactoryFileInfo{
+		{
+			Entity:                 "Portal",
+			SDKInterfaceImportPath: "github.com/Kong/sdk-konnect-go",
+			SDKInterfaceTypeName:   "PortalsSDK",
+			SDKFieldName:           "Portals",
+		},
+		{
+			Entity:                 "IdentityProviderRequest",
+			SDKInterfaceImportPath: "github.com/Kong/sdk-konnect-go",
+			SDKInterfaceTypeName:   "PortalAuthSettingsSDK",
+			SDKFieldName:           "PortalAuthSettings",
+		},
+		{
+			Entity:                 "KonnectEventDataPlaneCertificate",
+			SDKInterfaceImportPath: "github.com/Kong/sdk-konnect-go",
+			SDKInterfaceTypeName:   "EventGatewayDataPlaneCertificatesSDK",
+			SDKFieldName:           "EventGatewayDataPlaneCertificates",
+		},
+		{
+			Entity:                 "KonnectEventControlPlane",
+			SDKInterfaceImportPath: "github.com/Kong/sdk-konnect-go",
+			SDKInterfaceTypeName:   "EventGatewaysSDK",
+			SDKFieldName:           "EventGateways",
+		},
+	}
+
+	file, err := GenerateMockSDKFactoryDispatcher(infos)
+	require.NoError(t, err)
+	require.NotNil(t, file)
+
+	assert.Equal(t, "zz_generated_sdkfactory_mock.go", file.Name)
+	assert.Equal(t, "test/mocks/sdkmocks", file.RelativeDir)
+	assert.Contains(t, file.Content, "package sdkmocks")
+	assert.Contains(t, file.Content, "type generatedMockSDKWrapper struct {")
+	assert.Contains(t, file.Content, "*mocks.MockEventGatewaysSDK")
+	assert.Contains(t, file.Content, "*mocks.MockEventGatewayDataPlaneCertificatesSDK")
+	assert.Contains(t, file.Content, "*mocks.MockPortalsSDK")
+	assert.Contains(t, file.Content, "*mocks.MockPortalAuthSettingsSDK")
+	assert.Contains(t, file.Content, "func newGeneratedMockSDKWrapper(t *testing.T) generatedMockSDKWrapper {")
+	assert.Contains(t, file.Content, "mocks.NewMockEventGatewaysSDK(t)")
+	assert.Contains(t, file.Content, "mocks.NewMockEventGatewayDataPlaneCertificatesSDK(t)")
+	assert.Contains(t, file.Content, "func (m generatedMockSDKWrapper) GetPortalsSDK() sdkkonnectgo.PortalsSDK {")
+	assert.Contains(t, file.Content, "return m.PortalAuthSettingsSDK")
+	formatted, err := format.Source([]byte(file.Content))
+	require.NoError(t, err)
+	assert.Equal(t, string(formatted), file.Content)
+
+	idxIdentity := strings.Index(file.Content, "*mocks.MockPortalAuthSettingsSDK")
+	idxEvent := strings.Index(file.Content, "*mocks.MockEventGatewaysSDK")
+	idxEventCert := strings.Index(file.Content, "*mocks.MockEventGatewayDataPlaneCertificatesSDK")
+	idxPortal := strings.Index(file.Content, "*mocks.MockPortalsSDK")
+	assert.Less(t, idxIdentity, idxEvent)
+	assert.Less(t, idxEvent, idxEventCert)
+	assert.Less(t, idxEventCert, idxPortal)
+}
+
 func TestGenerateSchemaTypes_MapWithValueTypes(t *testing.T) {
 	g := NewGenerator(Config{
 		APIVersion: "v1alpha1",
@@ -1943,6 +2101,62 @@ func TestGenerateOpsCreateDispatcher(t *testing.T) {
 	assert.Contains(t, file.Content, "return createKonnectEventDataPlaneCertificate(ctx, cl, sdk.GetEventGatewayDataPlaneCertificatesSDK(), ent)")
 	assert.NotContains(t, file.Content, "updatePortal")
 	assert.NotContains(t, file.Content, "deletePortal")
+}
+
+func TestGenerateEntityOpsFile_UsesConfiguredSDKInterface(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"PortalPage": {IsRoot: false},
+		},
+	})
+
+	schema := &parser.Schema{
+		OperationID:        "create-portal-page",
+		Tags:               []string{"Pages"},
+		SuccessResponseRef: "PortalPageResponse",
+		Dependencies: []*parser.Dependency{
+			{ParamName: "portalId", EntityName: "Portal"},
+		},
+		UpdateOperationID: "update-portal-page",
+		UpdateTags:        []string{"Pages"},
+		UpdatePathParams:  []string{"portalId", "pageId"},
+		DeleteOperationID: "delete-portal-page",
+		DeleteTags:        []string{"Pages"},
+		DeletePathParams:  []string{"portalId", "pageId"},
+		ListOperationID:   "list-portal-pages",
+		ListTags:          []string{"Pages"},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreatePortalPageRequest"},
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.UpdatePortalPageRequest"},
+			"delete": {},
+		},
+		SDK: &config.OpSDKConfig{
+			Interface: "github.com/Kong/sdk-konnect-go.PortalPagesSDK",
+			FieldName: "PortalPages",
+		},
+	}
+
+	res, err := g.generateEntityOpsFile("PortalPage", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, res.File)
+	require.NotNil(t, res.CreateInfo)
+	require.NotNil(t, res.UpdateInfo)
+	require.NotNil(t, res.DeleteInfo)
+	require.NotNil(t, res.GetForUIDInfo)
+
+	assert.Contains(t, res.File.Content, "sdk sdkkonnectgo.PortalPagesSDK")
+	assert.NotContains(t, res.File.Content, "sdk sdkkonnectgo.PagesSDK")
+	assert.Equal(t, "GetPortalPagesSDK", res.CreateInfo.SDKGetter)
+	assert.Equal(t, "GetPortalPagesSDK", res.UpdateInfo.SDKGetter)
+	assert.Equal(t, "GetPortalPagesSDK", res.DeleteInfo.SDKGetter)
+	assert.Equal(t, "GetPortalPagesSDK", res.GetForUIDInfo.SDKGetter)
+	assert.NotNil(t, res.SDKFactoryInfo)
+	assert.Equal(t, "PortalPagesSDK", res.SDKFactoryInfo.SDKInterfaceTypeName)
+	assert.Equal(t, "PortalPages", res.SDKFactoryInfo.SDKFieldName)
 }
 
 func TestGenerateOpsUpdate_RootEntity(t *testing.T) {
