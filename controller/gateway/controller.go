@@ -121,7 +121,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		// each such write would re-enqueue every attached Gateway and amplify the
 		// reconciliation rate significantly.
 		Watches(
-			&gatewayv1.HTTPRoute{},
+			&gatewayv1beta1.HTTPRoute{},
 			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByHTTPRoute),
 			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		// watch Namespaces so that managed routes have correct status reflected in Gateway's
