@@ -35,8 +35,16 @@ func handlePortalRef[
 	cl client.Client,
 	ent TEnt,
 ) (ctrl.Result, error) {
-	// TODO: expand to other generated types that reference Portal.
-	obj, ok := any(ent).(*konnectv1alpha1.IdentityProviderRequest)
+	// TODO: refactor this to be more generic and reusable for other types of references.
+	type TObj interface {
+		client.Object
+		k8sutils.ConditionsAware
+		portalRefAccessor
+		GetPortalID() string
+		SetPortalID(id string)
+	}
+
+	obj, ok := any(ent).(TObj)
 	if !ok {
 		return ctrl.Result{}, nil
 	}
@@ -45,7 +53,8 @@ func handlePortalRef[
 		return res, err
 	}
 
-	portal, nn, err := getPortalForRef(ctx, cl, obj.Spec.PortalRef, obj.GetNamespace())
+	portalRef := obj.GetPortalRef()
+	portal, nn, err := getPortalForRef(ctx, cl, portalRef, obj.GetNamespace())
 	if err != nil {
 		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, obj,
@@ -107,11 +116,8 @@ func handlePortalRef[
 		return ctrl.Result{}, err
 	}
 
-	old := obj.DeepCopy()
-	if obj.Status.PortalID == nil {
-		obj.Status.PortalID = &konnectv1alpha1.KonnectEntityRef{}
-	}
-	obj.Status.PortalID.ID = portal.GetKonnectID()
+	old := obj.DeepCopyObject().(TObj)
+	obj.SetPortalID(portal.GetKonnectID())
 	_, err = patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), obj, old)
 	if err != nil {
 		if apierrors.IsConflict(err) {
@@ -133,16 +139,20 @@ func handlePortalRef[
 	return ctrl.Result{}, nil
 }
 
-func ensureKongReferenceGrantForPortalRef(
+func ensureKongReferenceGrantForPortalRef[T interface {
+	client.Object
+	k8sutils.ConditionsAware
+	portalRefAccessor
+}](
 	ctx context.Context,
 	cl client.Client,
-	ent *konnectv1alpha1.IdentityProviderRequest,
+	ent T,
 ) (ctrl.Result, error) {
-	ref := ent.Spec.PortalRef
-	if ref.Type != commonv1alpha1.ObjectRefTypeNamespacedRef ||
-		ref.NamespacedRef == nil ||
-		ref.NamespacedRef.Namespace == nil ||
-		*ref.NamespacedRef.Namespace == ent.GetNamespace() {
+	portalRef := ent.GetPortalRef()
+	if portalRef.Type != commonv1alpha1.ObjectRefTypeNamespacedRef ||
+		portalRef.NamespacedRef == nil ||
+		portalRef.NamespacedRef.Namespace == nil ||
+		*portalRef.NamespacedRef.Namespace == ent.GetNamespace() {
 		if res, errStatus := patch.StatusWithoutCondition(
 			ctx, cl, ent,
 			configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs,
@@ -152,13 +162,13 @@ func ensureKongReferenceGrantForPortalRef(
 		return ctrl.Result{}, nil
 	}
 
-	targetNamespace := *ref.NamespacedRef.Namespace
+	targetNamespace := *portalRef.NamespacedRef.Namespace
 	err := crossnamespace.CheckKongReferenceGrantForResource(
 		ctx,
 		cl,
 		ent.GetNamespace(),
 		targetNamespace,
-		ref.NamespacedRef.Name,
+		portalRef.NamespacedRef.Name,
 		metav1.GroupVersionKind(ent.GetObjectKind().GroupVersionKind()),
 		metav1.GroupVersionKind(konnectv1alpha1.GroupVersion.WithKind("Portal")),
 	)
@@ -171,7 +181,7 @@ func ensureKongReferenceGrantForPortalRef(
 			fmt.Sprintf(
 				"KongReferenceGrants do not allow access to Portal %s/%s",
 				targetNamespace,
-				ref.NamespacedRef.Name,
+				portalRef.NamespacedRef.Name,
 			),
 		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
@@ -190,7 +200,7 @@ func ensureKongReferenceGrantForPortalRef(
 		fmt.Sprintf(
 			"KongReferenceGrants allow access to Portal %s/%s",
 			targetNamespace,
-			ref.NamespacedRef.Name,
+			portalRef.NamespacedRef.Name,
 		),
 	); errStatus != nil || !res.IsZero() {
 		return res, errStatus

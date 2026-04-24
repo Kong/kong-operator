@@ -2,6 +2,9 @@
 
 package v1alpha1
 
+// Description is a type alias.
+type Description string
+
 // GatewayDescription A human-readable description of the Gateway.
 type GatewayDescription string
 
@@ -140,6 +143,31 @@ type OIDCIdentityProviderIssuer string
 // OIDCIdentityProviderScopes The scopes requested by your application when
 // authenticating with the identity provider.
 type OIDCIdentityProviderScopes []string
+
+// PageContent The renderable markdown content of a page in a portal.
+type PageContent string
+
+// PageSlug The slug of a page in a portal, used to compute its full URL path
+// within the portal hierarchy.
+// When a page has a `parent_page_id`, its full path is built by joining the
+// parent’s slug with its own.
+// For example, if a parent page has the slug `slug1` and this page’s slug is
+// `slug2`, the resulting path will be `/slug1/slug2`.
+// This enables nested page structures like `/slug1/slug2/slug3`.
+type PageSlug string
+
+// PageTitle The title of a page in a portal.
+type PageTitle string
+
+// PageVisibilityStatus Whether a page is publicly accessible to
+// non-authenticated users.
+// If not provided, the default_page_visibility value of the portal will be
+// used.
+type PageVisibilityStatus string
+
+// PublishedStatus Whether the resource is visible on a given portal.
+// Defaults to unpublished.
+type PublishedStatus string
 
 // SAMLIdentityProviderConfig The identity provider that contains configuration
 // data for the SAML authentication integration.

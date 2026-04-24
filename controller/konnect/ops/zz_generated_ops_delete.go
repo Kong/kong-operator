@@ -32,8 +32,8 @@ func DeleteGeneratedOps[
 		return deleteKonnectEventDataPlaneCertificate(ctx, sdk.GetEventGatewayDataPlaneCertificatesSDK(), ent)
 	case *konnectv1alpha1.Portal:
 		return deletePortal(ctx, sdk.GetPortalsSDK(), ent)
-	case *konnectv1alpha1.PortalTeam:
-		return deletePortalTeam(ctx, sdk.GetPortalTeamsSDK(), ent)
+	case *konnectv1alpha1.PortalPage:
+		return deletePortalPage(ctx, sdk.GetPortalPagesSDK(), ent)
 	default:
 		return fmt.Errorf("unsupported entity type %T", ent)
 	}

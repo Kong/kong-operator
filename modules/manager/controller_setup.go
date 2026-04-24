@@ -790,6 +790,10 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			// https://github.com/Kong/kong-operator/issues/3785
 			newKonnectEntityController[konnectv1alpha1.KonnectEventControlPlane](controllerFactory),
 			newKonnectEntityController[konnectv1alpha1.KonnectEventDataPlaneCertificate](controllerFactory),
+			newKonnectEntityController[konnectv1alpha1.Portal](controllerFactory),
+			newKonnectEntityController[konnectv1alpha1.IdentityProviderRequest](controllerFactory),
+			newKonnectEntityController[konnectv1alpha1.PortalPage](controllerFactory),
+			newKonnectEntityController[konnectv1alpha1.PortalTeam](controllerFactory),
 		)
 
 		controllers = append(controllers,

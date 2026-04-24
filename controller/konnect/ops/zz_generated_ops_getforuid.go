@@ -44,6 +44,8 @@ func getForUID[
 		return getKonnectEventControlPlaneForUID(ctx, sdk.GetEventGatewaysSDK(), ent)
 	case *konnectv1alpha1.Portal:
 		return getPortalForUID(ctx, sdk.GetPortalsSDK(), ent)
+	case *konnectv1alpha1.PortalPage:
+		return getPortalPageForUID(ctx, sdk.GetPortalPagesSDK(), ent)
 	case *konnectv1alpha1.PortalTeam:
 		return getPortalTeamForUID(ctx, sdk.GetPortalTeamsSDK(), ent)
 	default:

@@ -168,27 +168,33 @@ func (p *Parser) parsePath(targetPath string) (string, *Schema, error) {
 		return "", nil, fmt.Errorf("path not found: %s", targetPath)
 	}
 
-	// We're interested in POST operations (create operations)
-	if pathItem.Post == nil {
-		return "", nil, fmt.Errorf("path %s does not have a POST operation", targetPath)
+	var operation *openapi3.Operation
+	// We're interested in POST or alternatively PUT operations (create operations)
+	switch {
+	case pathItem.Post != nil:
+		operation = pathItem.Post
+	case pathItem.Put != nil:
+		operation = pathItem.Put
+	default:
+		return "", nil, fmt.Errorf("path %s does not have a POST or PUT operation", targetPath)
 	}
 
 	// Get request body
-	if pathItem.Post.RequestBody == nil || pathItem.Post.RequestBody.Value == nil {
+	if operation.RequestBody == nil || operation.RequestBody.Value == nil {
 		return "", nil, fmt.Errorf("path %s POST operation has no request body", targetPath)
 	}
 
-	reqBody := pathItem.Post.RequestBody.Value
+	reqBody := operation.RequestBody.Value
 	if reqBody.Content == nil {
 		return "", nil, fmt.Errorf("path %s POST request body has no content", targetPath)
 	}
 
 	// Find the schema name: prefer request body ref, then path derivation
 	var schemaName string
-	if pathItem.Post.RequestBody.Ref != "" {
-		schemaName = extractRefName(pathItem.Post.RequestBody.Ref)
+	if operation.RequestBody.Ref != "" {
+		schemaName = extractRefName(operation.RequestBody.Ref)
 	} else {
-		schemaName = deriveSchemaNameFromPath(targetPath, pathItem.Post.OperationID)
+		schemaName = deriveSchemaNameFromPath(targetPath, operation.OperationID)
 	}
 
 	// Extract path parameters as dependencies
@@ -203,10 +209,10 @@ func (p *Parser) parsePath(targetPath string) (string, *Schema, error) {
 		schema := p.parseSchema(schemaName, mediaTypeObj.Schema.Value)
 		schema.SourcePath = targetPath
 		schema.Dependencies = dependencies
-		schema.OperationID = pathItem.Post.OperationID
-		schema.Tags = append([]string(nil), pathItem.Post.Tags...)
-		schema.SuccessResponseRef = extractSuccessResponseRef(pathItem.Post.Responses)
-		schema.RespIDIsPointer = p.successResponseIDIsPointer(pathItem.Post.Responses)
+		schema.OperationID = operation.OperationID
+		schema.Tags = append([]string(nil), operation.Tags...)
+		schema.SuccessResponseRef = extractSuccessResponseRef(operation.Responses)
+		schema.RespIDIsPointer = p.successResponseIDIsPointer(operation.Responses)
 		schema.CreateReqBodyPointer = !reqBody.Required
 		p.extractUpdateOp(targetPath, schema)
 		p.extractDeleteOp(targetPath, schema)

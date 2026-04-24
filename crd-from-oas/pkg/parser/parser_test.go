@@ -273,7 +273,7 @@ func TestParsePaths_NoPostOperation(t *testing.T) {
 	result, err := parser.ParsePaths([]string{"/v3/portals"})
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "does not have a POST operation")
+	assert.Contains(t, err.Error(), "path /v3/portals does not have a POST or PUT operation")
 	assert.Nil(t, result)
 }
 
