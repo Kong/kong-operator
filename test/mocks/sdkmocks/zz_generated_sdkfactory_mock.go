@@ -11,8 +11,8 @@ import (
 
 type generatedMockSDKWrapper struct {
 	PortalAuthSettingsSDK                *mocks.MockPortalAuthSettingsSDK
-	EventGatewaysSDK                     *mocks.MockEventGatewaysSDK
 	EventGatewayDataPlaneCertificatesSDK *mocks.MockEventGatewayDataPlaneCertificatesSDK
+	EventGatewaysSDK                     *mocks.MockEventGatewaysSDK
 	PortalsSDK                           *mocks.MockPortalsSDK
 	PortalPagesSDK                       *mocks.MockPortalPagesSDK
 	PortalTeamsSDK                       *mocks.MockPortalTeamsSDK
@@ -21,8 +21,8 @@ type generatedMockSDKWrapper struct {
 func newGeneratedMockSDKWrapper(t *testing.T) generatedMockSDKWrapper {
 	return generatedMockSDKWrapper{
 		PortalAuthSettingsSDK:                mocks.NewMockPortalAuthSettingsSDK(t),
-		EventGatewaysSDK:                     mocks.NewMockEventGatewaysSDK(t),
 		EventGatewayDataPlaneCertificatesSDK: mocks.NewMockEventGatewayDataPlaneCertificatesSDK(t),
+		EventGatewaysSDK:                     mocks.NewMockEventGatewaysSDK(t),
 		PortalsSDK:                           mocks.NewMockPortalsSDK(t),
 		PortalPagesSDK:                       mocks.NewMockPortalPagesSDK(t),
 		PortalTeamsSDK:                       mocks.NewMockPortalTeamsSDK(t),
@@ -34,14 +34,14 @@ func (m generatedMockSDKWrapper) GetPortalAuthSettingsSDK() sdkkonnectgo.PortalA
 	return m.PortalAuthSettingsSDK
 }
 
-// GetEventGatewaysSDK returns the SDK to operate KonnectEventControlPlane.
-func (m generatedMockSDKWrapper) GetEventGatewaysSDK() sdkkonnectgo.EventGatewaysSDK {
-	return m.EventGatewaysSDK
-}
-
 // GetEventGatewayDataPlaneCertificatesSDK returns the SDK to operate KonnectEventDataPlaneCertificate.
 func (m generatedMockSDKWrapper) GetEventGatewayDataPlaneCertificatesSDK() sdkkonnectgo.EventGatewayDataPlaneCertificatesSDK {
 	return m.EventGatewayDataPlaneCertificatesSDK
+}
+
+// GetEventGatewaysSDK returns the SDK to operate KonnectEventGateway.
+func (m generatedMockSDKWrapper) GetEventGatewaysSDK() sdkkonnectgo.EventGatewaysSDK {
+	return m.EventGatewaysSDK
 }
 
 // GetPortalsSDK returns the SDK to operate Portal.

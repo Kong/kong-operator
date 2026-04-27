@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	// IndexFieldKonnectEventDataPlaneCertificateOnKonnectEventControlPlaneRef is the index field for KonnectEventDataPlaneCertificate -> KonnectEventControlPlane.
-	IndexFieldKonnectEventDataPlaneCertificateOnKonnectEventControlPlaneRef = "konnectEventDataPlaneCertificateOnKonnectEventControlPlaneRef"
+	// IndexFieldKonnectEventDataPlaneCertificateOnKonnectEventGatewayRef is the index field for KonnectEventDataPlaneCertificate -> KonnectEventGateway.
+	IndexFieldKonnectEventDataPlaneCertificateOnKonnectEventGatewayRef = "konnectEventDataPlaneCertificateOnKonnectEventGatewayRef"
 )
 
 // OptionsForKonnectEventDataPlaneCertificate returns required Index options for KonnectEventDataPlaneCertificate reconciler.
@@ -18,13 +18,13 @@ func OptionsForKonnectEventDataPlaneCertificate() []Option {
 	return []Option{
 		{
 			Object:         &konnectv1alpha1.KonnectEventDataPlaneCertificate{},
-			Field:          IndexFieldKonnectEventDataPlaneCertificateOnKonnectEventControlPlaneRef,
-			ExtractValueFn: konnectEventDataPlaneCertificateOnKonnectEventControlPlaneRef,
+			Field:          IndexFieldKonnectEventDataPlaneCertificateOnKonnectEventGatewayRef,
+			ExtractValueFn: konnectEventDataPlaneCertificateOnKonnectEventGatewayRef,
 		},
 	}
 }
 
-func konnectEventDataPlaneCertificateOnKonnectEventControlPlaneRef(object client.Object) []string {
+func konnectEventDataPlaneCertificateOnKonnectEventGatewayRef(object client.Object) []string {
 	ent, ok := object.(*konnectv1alpha1.KonnectEventDataPlaneCertificate)
 	if !ok {
 		return nil

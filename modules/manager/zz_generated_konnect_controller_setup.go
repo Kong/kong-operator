@@ -11,8 +11,8 @@ func generatedControllersForKonnectEntities(
 ) []ControllerDef {
 	return []ControllerDef{
 		newKonnectEntityController[konnectv1alpha1.IdentityProviderRequest](controllerFactory),
-		newKonnectEntityController[konnectv1alpha1.KonnectEventControlPlane](controllerFactory),
 		newKonnectEntityController[konnectv1alpha1.KonnectEventDataPlaneCertificate](controllerFactory),
+		newKonnectEntityController[konnectv1alpha1.KonnectEventGateway](controllerFactory),
 		newKonnectEntityController[konnectv1alpha1.Portal](controllerFactory),
 		newKonnectEntityController[konnectv1alpha1.PortalPage](controllerFactory),
 		newKonnectEntityController[konnectv1alpha1.PortalTeam](controllerFactory),

@@ -440,8 +440,8 @@ rules:
   - konnectcloudgatewaydataplanegroupconfigurations
   - konnectcloudgatewaynetworks
   - konnectcloudgatewaytransitgateways
-  - konnecteventcontrolplanes
   - konnecteventdataplanecertificates
+  - konnecteventgateways
   - portalpages
   - portals
   - portalteams
@@ -464,10 +464,10 @@ rules:
   - konnectcloudgatewaynetworks/status
   - konnectcloudgatewaytransitgateways/finalizers
   - konnectcloudgatewaytransitgateways/status
-  - konnecteventcontrolplanes/finalizers
-  - konnecteventcontrolplanes/status
   - konnecteventdataplanecertificates/finalizers
   - konnecteventdataplanecertificates/status
+  - konnecteventgateways/finalizers
+  - konnecteventgateways/status
   - konnectextensions/finalizers
   - konnectextensions/status
   - konnectgatewaycontrolplanes/finalizers

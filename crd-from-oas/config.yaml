@@ -11,7 +11,7 @@ apiGroupVersions:
     types:
       # Event Gateway APIs
       - path: /v1/event-gateways
-        name: KonnectEventControlPlane
+        name: KonnectEventGateway
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewaysSDK
@@ -41,7 +41,7 @@ apiGroupVersions:
           delete: {}
         reconciler:
           isRoot: false
-          parentEntityType: KonnectEventControlPlane
+          parentEntityType: KonnectEventGateway
 
       # Portal APIs
       - path: /v3/portals

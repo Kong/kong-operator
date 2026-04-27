@@ -127,11 +127,11 @@ func updateKongUpstreamStatusWithProgrammed(
 	require.NoError(t, cl.Status().Update(ctx, obj))
 }
 
-func updateKonnectEventControlPlaneStatusWithProgrammed(
+func updateKonnectEventGatewayStatusWithProgrammed(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
-	obj *konnectv1alpha1.KonnectEventControlPlane,
+	obj *konnectv1alpha1.KonnectEventGateway,
 	id string,
 ) {
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {

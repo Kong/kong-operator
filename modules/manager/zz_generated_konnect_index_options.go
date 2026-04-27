@@ -15,8 +15,8 @@ func generatedIndexOptionsForKonnectEntities(
 ) []index.Option {
 	return slices.Concat(
 		index.OptionsForIdentityProviderRequest(),
-		index.OptionsForKonnectEventControlPlane(),
 		index.OptionsForKonnectEventDataPlaneCertificate(),
+		index.OptionsForKonnectEventGateway(),
 		index.OptionsForPortal(),
 		index.OptionsForPortalPage(),
 		index.OptionsForPortalTeam(),

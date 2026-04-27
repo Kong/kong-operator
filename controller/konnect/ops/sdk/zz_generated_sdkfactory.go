@@ -9,8 +9,8 @@ import (
 // GeneratedSDK is the interface for generated SDKs.
 type GeneratedSDK interface {
 	GetPortalAuthSettingsSDK() sdkkonnectgo.PortalAuthSettingsSDK
-	GetEventGatewaysSDK() sdkkonnectgo.EventGatewaysSDK
 	GetEventGatewayDataPlaneCertificatesSDK() sdkkonnectgo.EventGatewayDataPlaneCertificatesSDK
+	GetEventGatewaysSDK() sdkkonnectgo.EventGatewaysSDK
 	GetPortalsSDK() sdkkonnectgo.PortalsSDK
 	GetPortalPagesSDK() sdkkonnectgo.PortalPagesSDK
 	GetPortalTeamsSDK() sdkkonnectgo.PortalTeamsSDK
@@ -21,14 +21,14 @@ func (w sdkWrapper) GetPortalAuthSettingsSDK() sdkkonnectgo.PortalAuthSettingsSD
 	return w.sdk.PortalAuthSettings
 }
 
-// GetEventGatewaysSDK returns the SDK to operate KonnectEventControlPlane.
-func (w sdkWrapper) GetEventGatewaysSDK() sdkkonnectgo.EventGatewaysSDK {
-	return w.sdk.EventGateways
-}
-
 // GetEventGatewayDataPlaneCertificatesSDK returns the SDK to operate KonnectEventDataPlaneCertificate.
 func (w sdkWrapper) GetEventGatewayDataPlaneCertificatesSDK() sdkkonnectgo.EventGatewayDataPlaneCertificatesSDK {
 	return w.sdk.EventGatewayDataPlaneCertificates
+}
+
+// GetEventGatewaysSDK returns the SDK to operate KonnectEventGateway.
+func (w sdkWrapper) GetEventGatewaysSDK() sdkkonnectgo.EventGatewaysSDK {
+	return w.sdk.EventGateways
 }
 
 // GetPortalsSDK returns the SDK to operate Portal.

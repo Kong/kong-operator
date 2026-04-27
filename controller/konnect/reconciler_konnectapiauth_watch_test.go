@@ -19,7 +19,7 @@ func TestKonnectAPIAuthReferencingTypesOnlyIncludeSupportedEntities(t *testing.T
 		case *konnectv1alpha1.KonnectCloudGatewayNetwork,
 			*konnectv1alpha2.KonnectGatewayControlPlane,
 			*konnectv1alpha2.KonnectExtension,
-			*konnectv1alpha1.KonnectEventControlPlane:
+			*konnectv1alpha1.KonnectEventGateway:
 		default:
 			t.Fatalf("unexpected KonnectAPIAuthConfiguration referencing type %T", ent)
 		}
@@ -42,7 +42,7 @@ func assertSupportedKonnectAPIAuthReferencingListType(t *testing.T, objList clie
 	case *konnectv1alpha1.KonnectCloudGatewayNetworkList,
 		*konnectv1alpha2.KonnectGatewayControlPlaneList,
 		*konnectv1alpha2.KonnectExtensionList,
-		*konnectv1alpha1.KonnectEventControlPlaneList:
+		*konnectv1alpha1.KonnectEventGatewayList:
 	default:
 		t.Fatalf("unexpected KonnectAPIAuthConfiguration referencing list type %T", objList)
 	}

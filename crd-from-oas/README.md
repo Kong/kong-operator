@@ -18,7 +18,7 @@ apiGroupVersions:
           alias: commonv1alpha1
     types:
       - path: /v1/event-gateways
-        name: KonnectEventControlPlane
+        name: KonnectEventGateway
       - path: /v1/event-gateways/{gatewayId}/data-plane-certificates
         name: KonnectEventDataPlaneCertificate
         optionalSecretReference: true
