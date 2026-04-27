@@ -249,6 +249,13 @@ func (obj *{{$.EntityName}}) Set{{.EntityName}}ID(id string) {
 func (obj *{{.EntityName}}) Get{{.RootRefDependency.EntityName}}Ref() {{.RootRefTypeName}} {
 	return obj.Spec.{{.RootRefDependency.FieldName}}
 }
+{{- if and .RootRefAccessorEntityName (ne .RootRefAccessorEntityName .RootRefDependency.EntityName)}}
+
+// Get{{.RootRefAccessorEntityName}}Ref returns the reference to the root {{.RootRefAccessorEntityName}}.
+func (obj *{{.EntityName}}) Get{{.RootRefAccessorEntityName}}Ref() {{.RootRefTypeName}} {
+	return obj.Spec.{{.RootRefDependency.FieldName}}
+}
+{{- end}}
 {{- end}}
 {{- if .IsReconcilerRoot}}
 

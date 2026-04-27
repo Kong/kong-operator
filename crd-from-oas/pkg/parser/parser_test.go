@@ -801,10 +801,24 @@ func TestExtractPathDependencies(t *testing.T) {
 			path: "/v3/portals/{portalId}/teams",
 			expected: []*Dependency{
 				{
-					ParamName:  "portalId",
-					EntityName: "Portal",
-					FieldName:  "PortalRef",
-					JSONName:   "portal_ref",
+					ParamName:          "portalId",
+					EntityName:         "Portal",
+					AccessorEntityName: "Portal",
+					FieldName:          "PortalRef",
+					JSONName:           "portal_ref",
+				},
+			},
+		},
+		{
+			name: "event gateway dependency keeps event gateway accessor name",
+			path: "/v1/event-gateways/{gatewayId}/data-plane-certificates",
+			expected: []*Dependency{
+				{
+					ParamName:          "gatewayId",
+					EntityName:         "Gateway",
+					AccessorEntityName: "EventGateway",
+					FieldName:          "GatewayRef",
+					JSONName:           "gateway_ref",
 				},
 			},
 		},
@@ -813,16 +827,18 @@ func TestExtractPathDependencies(t *testing.T) {
 			path: "/v3/portals/{portalId}/teams/{teamId}/members",
 			expected: []*Dependency{
 				{
-					ParamName:  "portalId",
-					EntityName: "Portal",
-					FieldName:  "PortalRef",
-					JSONName:   "portal_ref",
+					ParamName:          "portalId",
+					EntityName:         "Portal",
+					AccessorEntityName: "Portal",
+					FieldName:          "PortalRef",
+					JSONName:           "portal_ref",
 				},
 				{
-					ParamName:  "teamId",
-					EntityName: "Team",
-					FieldName:  "TeamRef",
-					JSONName:   "team_ref",
+					ParamName:          "teamId",
+					EntityName:         "Team",
+					AccessorEntityName: "Team",
+					FieldName:          "TeamRef",
+					JSONName:           "team_ref",
 				},
 			},
 		},
@@ -840,6 +856,7 @@ func TestExtractPathDependencies(t *testing.T) {
 				for i, expected := range tc.expected {
 					assert.Equal(t, expected.ParamName, deps[i].ParamName)
 					assert.Equal(t, expected.EntityName, deps[i].EntityName)
+					assert.Equal(t, expected.AccessorEntityName, deps[i].AccessorEntityName)
 					assert.Equal(t, expected.FieldName, deps[i].FieldName)
 					assert.Equal(t, expected.JSONName, deps[i].JSONName)
 				}

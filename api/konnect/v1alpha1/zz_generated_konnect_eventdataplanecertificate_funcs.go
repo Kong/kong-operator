@@ -58,3 +58,8 @@ func (obj *KonnectEventDataPlaneCertificate) SetGatewayID(id string) {
 func (obj *KonnectEventDataPlaneCertificate) GetGatewayRef() commonv1alpha1.ObjectRef {
 	return obj.Spec.GatewayRef
 }
+
+// GetEventGatewayRef returns the reference to the root EventGateway.
+func (obj *KonnectEventDataPlaneCertificate) GetEventGatewayRef() commonv1alpha1.ObjectRef {
+	return obj.Spec.GatewayRef
+}
