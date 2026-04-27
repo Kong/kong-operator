@@ -330,7 +330,7 @@ func isConditionEqual(a, b metav1.Condition) bool {
 		a.ObservedGeneration == b.ObservedGeneration
 }
 
-// BuildAcceptedCondition builds the "Accepted" condition for a given HTTPRoute and ParentReference.
+// BuildAcceptedCondition builds the "Accepted" condition for a given route and ParentReference.
 // It validates whether the route can be accepted by the gateway by checking multiple criteria
 // in sequence, returning the first failure condition encountered or a success condition if all checks pass.
 //
@@ -344,7 +344,7 @@ func isConditionEqual(a, b metav1.Condition) bool {
 //   - logger: Logger for debugging information
 //   - cl: The Kubernetes client for API operations
 //   - gateway: The Gateway object associated with the ParentReference
-//   - route: The HTTPRoute to validate for acceptance
+//   - route: The route to validate for acceptance
 //   - pRef: The ParentReference being evaluated
 //
 // Returns:
@@ -358,7 +358,7 @@ func BuildAcceptedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRout
 	ctx context.Context, logger logr.Logger, cl client.Client, gateway *gwtypes.Gateway,
 	route TPtr, pRef gwtypes.ParentReference) (*metav1.Condition, error) {
 	// Begin by excluding listeners that do not match the specified section name.
-	listeners, cond := FilterMatchingListeners(logger, gateway, pRef, gateway.Spec.Listeners)
+	listeners, cond := FilterMatchingListeners(logger, gateway, route.GetObjectKind().GroupVersionKind().Kind, pRef, gateway.Spec.Listeners)
 	if cond != nil {
 		log.Debug(logger, "No matching listeners for ParentReference", "parentRef", pRef, "gateway", gateway.Name)
 		// Return the condition indicating no matching listeners.
@@ -372,7 +372,7 @@ func BuildAcceptedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRout
 		return nil, fmt.Errorf("failed to get namespace %s for route %s while building accepted condition for gateway %s: %w",
 			route.GetNamespace(), client.ObjectKeyFromObject(route), client.ObjectKeyFromObject(gateway), err)
 	}
-	// Prepare the RouteGroupKind for the HTTPRoute.
+	// Prepare the RouteGroupKind for the route.
 	rgk := GetRouteGroupKind(route)
 	// Filter listeners by allowed routes.
 	listeners, cond, err := FilterListenersByAllowedRoutes(logger, gateway, pRef, listeners, rgk, &routeNamespace)
@@ -739,11 +739,12 @@ func isProgrammed(obj *unstructured.Unstructured) bool {
 // The function performs the following checks for each listener:
 // 1. Matches the section name specified in the ParentReference (if any)
 // 2. Matches the port specified in the ParentReference (if any)
-// 3. Supports HTTP/HTTPS protocol with appropriate TLS termination mode
+// 3. Supports the protocol with appropriate TLS mode
 // 4. Is in a "Programmed" (ready) state according to the Gateway status
 //
 // Parameters:
 //   - gw: The Gateway object containing the listeners and their status
+//   - routeKind: The kind of the route
 //   - logger: Logger for debugging information
 //   - pRef: The ParentReference specifying matching criteria
 //   - listeners: The list of listeners from the Gateway spec to filter
@@ -754,7 +755,7 @@ func isProgrammed(obj *unstructured.Unstructured) bool {
 //
 // The returned condition will have status "False" with reason "NoMatchingParent" if no listeners
 // match the criteria. If listeners match but are not ready, the message will indicate this distinction.
-func FilterMatchingListeners(logger logr.Logger, gw *gwtypes.Gateway, pRef gwtypes.ParentReference, listeners []gwtypes.Listener) ([]gwtypes.Listener, *metav1.Condition) {
+func FilterMatchingListeners(logger logr.Logger, gw *gwtypes.Gateway, routeKind string, pRef gwtypes.ParentReference, listeners []gwtypes.Listener) ([]gwtypes.Listener, *metav1.Condition) {
 	var matchingListeners []gwtypes.Listener
 	var matchedNotReady bool
 	for _, listener := range listeners {
@@ -768,14 +769,7 @@ func FilterMatchingListeners(logger logr.Logger, gw *gwtypes.Gateway, pRef gwtyp
 			continue
 		}
 
-		// Check if the protocol matches.
-		// HTTPRoutes support Terminate only
-		// Note: this is a guess we are doing as the upstream documentation is unclear at the moment.
-		// see https://github.com/kubernetes-sigs/gateway-api/issues/1474
-		if listener.Protocol != gwtypes.HTTPProtocolType && listener.Protocol != gwtypes.HTTPSProtocolType {
-			continue
-		}
-		if listener.TLS != nil && *listener.TLS.Mode != gwtypes.TLSModeTerminate {
+		if !isListenerValidForKind(routeKind, listener) {
 			continue
 		}
 
@@ -818,6 +812,28 @@ func FilterMatchingListeners(logger logr.Logger, gw *gwtypes.Gateway, pRef gwtyp
 	// Return the list of matching and ready listeners that can be used for further processing.
 	log.Debug(logger, "Matching and ready listeners found", "parentRef", pRef, "count", len(matchingListeners))
 	return matchingListeners, nil
+}
+
+// isListenerValidForKind filters listeners that is valid for the given route kind.
+func isListenerValidForKind(routeKind string, listener gwtypes.Listener) bool {
+	switch routeKind {
+	case "HTTPRoute":
+		// Check if the protocol matches.
+		// HTTPRoutes support Terminate only
+		// Note: this is a guess we are doing as the upstream documentation is unclear at the moment.
+		// see https://github.com/kubernetes-sigs/gateway-api/issues/1474
+		if listener.Protocol != gwtypes.HTTPProtocolType && listener.Protocol != gwtypes.HTTPSProtocolType {
+			return false
+		}
+		if listener.TLS != nil && *listener.TLS.Mode != gwtypes.TLSModeTerminate {
+			return false
+		}
+		return true
+	case "TLSRoute":
+		return listener.Protocol == gwtypes.TLSProtocolType && listener.TLS != nil
+	}
+	// Not supported kinds. Should be unreachable.
+	return false
 }
 
 // FilterListenersByAllowedRoutes filters the provided listeners to find those that allow the given HTTPRoute based on its kind and namespace.

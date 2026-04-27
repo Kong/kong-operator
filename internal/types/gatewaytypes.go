@@ -59,6 +59,7 @@ const (
 	GroupName                             = gatewayv1.GroupName
 	HTTPProtocolType                      = gatewayv1.HTTPProtocolType
 	HTTPSProtocolType                     = gatewayv1.HTTPSProtocolType
+	TLSProtocolType                       = gatewayv1.TLSProtocolType
 	HTTPRouteFilterExtensionRef           = gatewayv1.HTTPRouteFilterExtensionRef
 	HTTPRouteFilterRequestHeaderModifier  = gatewayv1.HTTPRouteFilterRequestHeaderModifier
 	ListenerConditionProgrammed           = gatewayv1.ListenerConditionProgrammed
