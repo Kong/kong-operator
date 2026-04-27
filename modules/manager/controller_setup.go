@@ -89,6 +89,15 @@ func (c *ControllerDef) MaybeSetupWithManager(ctx context.Context, mgr ctrl.Mana
 func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) error {
 	var indexOptions []index.Option
 
+	crdChecker := k8sutils.CRDChecker{
+		Client: mgr.GetClient(),
+	}
+	tlsRouteGVR := schema.GroupVersionResource{
+		Group:    gatewayv1.GroupVersion.Group,
+		Version:  gatewayv1.GroupVersion.Version,
+		Resource: "tlsroutes",
+	}
+
 	if cfg.ControlPlaneControllerEnabled || cfg.GatewayControllerEnabled {
 		indexOptions = slices.Concat(indexOptions,
 			index.OptionsForControlPlane(cfg.KonnectControllersEnabled),
@@ -105,8 +114,14 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 			index.OptionsForGatewayClass(),
 			index.OptionsForGateway(),
 			index.OptionsForHTTPRoute(),
-			index.OptionsForTLSRoute(),
 		)
+		hasTLSRoute, err := crdChecker.CRDExists(tlsRouteGVR)
+		if err != nil {
+			return fmt.Errorf("failed to check existence of CRD %s: %w", tlsRouteGVR.String(), err)
+		}
+		if hasTLSRoute {
+			indexOptions = slices.Concat(indexOptions, index.OptionsForTLSRoute())
+		}
 	}
 
 	if cfg.KonnectControllersEnabled {
@@ -794,8 +809,19 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		controllers = append(controllers,
 			newGatewayAPIHybridController[gwtypes.Gateway](mgr, c.FQDNModeEnabled, c.ClusterDomain),
 			newGatewayAPIHybridController[gwtypes.HTTPRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain),
-			newGatewayAPIHybridController[gwtypes.TLSRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain),
 		)
+		tlsRouteGVR := schema.GroupVersionResource{
+			Group:    gatewayv1.GroupVersion.Group,
+			Version:  gatewayv1.GroupVersion.Version,
+			Resource: "tlsroutes",
+		}
+		hasTLSRoute, err := checker.CRDExists(tlsRouteGVR)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check existence of CRD %s: %w", tlsRouteGVR.String(), err)
+		}
+		if hasTLSRoute {
+			controllers = append(controllers, newGatewayAPIHybridController[gwtypes.TLSRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain))
+		}
 	}
 
 	return controllers, nil
