@@ -47,7 +47,7 @@ func (r *Reconciler) ensureDeployment(
 	ctx context.Context,
 	logger logr.Logger,
 	egdp *eventgatewayv1alpha1.KegDataPlane,
-	keg *konnectv1alpha1.KonnectEventControlPlane,
+	keg *konnectv1alpha1.KonnectEventGateway,
 	certSecretName string,
 ) error {
 	image := resolveImage(egdp, consts.DefaultKEGImage)
@@ -102,7 +102,7 @@ func resolveImage(egdp *eventgatewayv1alpha1.KegDataPlane, defaultImage string) 
 func buildDeployment(
 	tc managedfields.TypeConverter,
 	egdp *eventgatewayv1alpha1.KegDataPlane,
-	keg *konnectv1alpha1.KonnectEventControlPlane,
+	keg *konnectv1alpha1.KonnectEventGateway,
 	image string,
 	certSecretName string,
 ) (*unstructured.Unstructured, error) {
@@ -156,7 +156,7 @@ func buildDeployment(
 // generateBaseDeployment creates the operator-managed keg Deployment without user overlays.
 func generateBaseDeployment(
 	egdp *eventgatewayv1alpha1.KegDataPlane,
-	keg *konnectv1alpha1.KonnectEventControlPlane,
+	keg *konnectv1alpha1.KonnectEventGateway,
 	image string,
 	certSecretName string,
 ) (*appsv1.Deployment, error) {
@@ -283,9 +283,9 @@ func generateBaseDeployment(
 // KonnectEventGateway status and DataPlane spec.config.
 func buildKEGEnvVars(
 	egdp *eventgatewayv1alpha1.KegDataPlane,
-	keg *konnectv1alpha1.KonnectEventControlPlane,
+	keg *konnectv1alpha1.KonnectEventGateway,
 ) ([]corev1.EnvVar, error) {
-	srv, err := server.NewServer[konnectv1alpha1.KonnectEventControlPlane](keg.Status.ServerURL)
+	srv, err := server.NewServer[konnectv1alpha1.KonnectEventGateway](keg.Status.ServerURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse Konnect server URL %q: %w", keg.Status.ServerURL, err)
 	}

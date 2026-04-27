@@ -158,7 +158,7 @@ func TestGenerateWatchAndIndex_ForChildEntity(t *testing.T) {
 	metadata := reconcilerEntityMetadata{
 		EntityName:           "KonnectEventDataPlaneCertificate",
 		EntityNameLowerCamel: "konnectEventDataPlaneCertificate",
-		ParentEntityName:     "KonnectEventControlPlane",
+		ParentEntityName:     "KonnectEventGateway",
 		ParentRefFieldName:   "GatewayRef",
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		APIGroupPackageAlias: "konnectv1alpha1",
@@ -167,23 +167,23 @@ func TestGenerateWatchAndIndex_ForChildEntity(t *testing.T) {
 	t.Run("watches parent entity", func(t *testing.T) {
 		content, err := g.generateWatch(metadata, &config.ReconcilerConfig{
 			IsRoot:           false,
-			ParentEntityType: "KonnectEventControlPlane",
+			ParentEntityType: "KonnectEventGateway",
 		})
 		require.NoError(t, err)
 
-		assert.Contains(t, content, `&konnectv1alpha1.KonnectEventControlPlane{}`)
-		assert.Contains(t, content, `enqueueKonnectEventDataPlaneCertificateForKonnectEventControlPlane(cl)`)
-		assert.Contains(t, content, `index.IndexFieldKonnectEventDataPlaneCertificateOnKonnectEventControlPlaneRef: parent.Name,`)
+		assert.Contains(t, content, `&konnectv1alpha1.KonnectEventGateway{}`)
+		assert.Contains(t, content, `enqueueKonnectEventDataPlaneCertificateForKonnectEventGateway(cl)`)
+		assert.Contains(t, content, `index.IndexFieldKonnectEventDataPlaneCertificateOnKonnectEventGatewayRef: parent.Name,`)
 	})
 
 	t.Run("indexes by dependency namespaced ref", func(t *testing.T) {
 		content, err := g.generateIndex(metadata, &config.ReconcilerConfig{
 			IsRoot:           false,
-			ParentEntityType: "KonnectEventControlPlane",
+			ParentEntityType: "KonnectEventGateway",
 		})
 		require.NoError(t, err)
 
-		assert.Contains(t, content, `IndexFieldKonnectEventDataPlaneCertificateOnKonnectEventControlPlaneRef`)
+		assert.Contains(t, content, `IndexFieldKonnectEventDataPlaneCertificateOnKonnectEventGatewayRef`)
 		assert.Contains(t, content, `if ent.Spec.GatewayRef.NamespacedRef == nil {`)
 		assert.Contains(t, content, `return []string{ent.Spec.GatewayRef.NamespacedRef.Name}`)
 	})
@@ -652,8 +652,8 @@ func TestEntityFilePrefix(t *testing.T) {
 		},
 		{
 			name:     "Konnect-prefixed entity",
-			input:    "KonnectEventControlPlane",
-			expected: "konnect_eventcontrolplane",
+			input:    "KonnectEventGateway",
+			expected: "konnect_eventgateway",
 		},
 		{
 			name:     "Konnect alone stays unchanged",
@@ -1546,7 +1546,7 @@ func TestGenerateSDKOpsTest_SupportsPointerAndNamedFields(t *testing.T) {
 		},
 	}
 
-	content, err := g.generateSDKOpsTest("KonnectEventControlPlane", schema, opsConfig)
+	content, err := g.generateSDKOpsTest("KonnectEventGateway", schema, opsConfig)
 	require.NoError(t, err)
 	assert.Contains(t, content, `Description: new("test-value")`)
 	assert.Contains(t, content, `Labels: Labels{"test-key": "test-value"}`)
@@ -1794,7 +1794,7 @@ func TestGenerateMockSDKFactoryDispatcher(t *testing.T) {
 			SDKFieldName:           "EventGatewayDataPlaneCertificates",
 		},
 		{
-			Entity:                 "KonnectEventControlPlane",
+			Entity:                 "KonnectEventGateway",
 			SDKInterfaceImportPath: "github.com/Kong/sdk-konnect-go",
 			SDKInterfaceTypeName:   "EventGatewaysSDK",
 			SDKFieldName:           "EventGateways",
@@ -1827,7 +1827,7 @@ func TestGenerateMockSDKFactoryDispatcher(t *testing.T) {
 	idxEventCert := strings.Index(file.Content, "*mocks.MockEventGatewayDataPlaneCertificatesSDK")
 	idxPortal := strings.Index(file.Content, "*mocks.MockPortalsSDK")
 	assert.Less(t, idxIdentity, idxEvent)
-	assert.Less(t, idxEvent, idxEventCert)
+	assert.Less(t, idxEventCert, idxEvent)
 	assert.Less(t, idxEventCert, idxPortal)
 }
 
@@ -1915,6 +1915,16 @@ func TestGenerateSchemaTypes_NoValueTypeForNonMapTypes(t *testing.T) {
 }
 
 func TestGenerateRBAC(t *testing.T) {
+	t.Run("gateway kinds use gateways plural", func(t *testing.T) {
+		g := NewGenerator(Config{
+			APIGroup:   "konnect.konghq.com",
+			APIVersion: "v1alpha1",
+		})
+
+		assert.Equal(t, "gateways", g.resourceNameForKind("Gateway"))
+		assert.Equal(t, "konnecteventgateways", g.resourceNameForKind("KonnectEventGateway"))
+	})
+
 	t.Run("single entity", func(t *testing.T) {
 		g := NewGenerator(Config{
 			APIGroup:   "x-konnect.konghq.com",
@@ -1936,9 +1946,9 @@ func TestGenerateRBAC(t *testing.T) {
 			APIVersion: "v1alpha1",
 		})
 
-		content, err := g.generateRBAC([]string{"KonnectEventControlPlane", "SomeOtherEntity"})
+		content, err := g.generateRBAC([]string{"KonnectEventGateway", "SomeOtherEntity"})
 		require.NoError(t, err)
-		assert.Contains(t, content, "resources=konnecteventcontrolplanes,")
+		assert.Contains(t, content, "resources=konnecteventgateways,")
 		assert.Contains(t, content, "resources=someotherentities,")
 	})
 }
@@ -2090,7 +2100,7 @@ func TestGenerateOpsCreate_NonRootEntityWithParentTypeOverride(t *testing.T) {
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
 			"KonnectEventDataPlaneCertificate": {
 				IsRoot:           false,
-				ParentEntityType: "KonnectEventControlPlane",
+				ParentEntityType: "KonnectEventGateway",
 			},
 		},
 	})
@@ -2117,12 +2127,12 @@ func TestGenerateOpsCreate_NonRootEntityWithParentTypeOverride(t *testing.T) {
 	require.NotNil(t, file)
 	require.NotNil(t, info)
 
-	// parentIDGetter must use dep.EntityName ("Gateway") not ParentEntityType ("KonnectEventControlPlane"),
+	// parentIDGetter must use dep.EntityName ("Gateway") not ParentEntityType ("KonnectEventGateway"),
 	// because crdFuncsTemplate emits GetGatewayID() based on the OAS path param.
 	assert.Contains(t, file.Content, "parentID := obj.GetGatewayID()")
 
 	// ParentEntityName uses ParentEntityType override in the error message.
-	assert.Contains(t, file.Content, `Parent: "KonnectEventControlPlane"`)
+	assert.Contains(t, file.Content, `Parent: "KonnectEventGateway"`)
 	assert.True(t, info.NeedsClient)
 	assert.Contains(t, file.Content, `"sigs.k8s.io/controller-runtime/pkg/client"`)
 	assert.Contains(t, file.Content, "cl client.Client")
@@ -2350,7 +2360,7 @@ func TestGenerateOpsUpdate_NonRootEntityWithParentTypeOverride(t *testing.T) {
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
 			"KonnectEventDataPlaneCertificate": {
 				IsRoot:           false,
-				ParentEntityType: "KonnectEventControlPlane",
+				ParentEntityType: "KonnectEventGateway",
 			},
 		},
 	})
@@ -2384,7 +2394,7 @@ func TestGenerateOpsUpdate_NonRootEntityWithParentTypeOverride(t *testing.T) {
 	assert.Contains(t, file.Content, "parentID := obj.GetGatewayID()")
 
 	// Error label uses ParentEntityType override.
-	assert.Contains(t, file.Content, `Parent: "KonnectEventControlPlane"`)
+	assert.Contains(t, file.Content, `Parent: "KonnectEventGateway"`)
 
 	// Struct fields derived from path params: gatewayId → GatewayID, certificateId → CertificateID.
 	assert.Contains(t, file.Content, "GatewayID: parentID,")
@@ -2620,7 +2630,7 @@ func TestGenerateOpsDelete_NonRootEntityWithParentTypeOverride(t *testing.T) {
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
 			"KonnectEventDataPlaneCertificate": {
 				IsRoot:           false,
-				ParentEntityType: "KonnectEventControlPlane",
+				ParentEntityType: "KonnectEventGateway",
 			},
 		},
 	})
@@ -2656,7 +2666,7 @@ func TestGenerateOpsDelete_NonRootEntityWithParentTypeOverride(t *testing.T) {
 	assert.Contains(t, file.Content, "parentID := obj.GetGatewayID()")
 
 	// Error label uses ParentEntityType override.
-	assert.Contains(t, file.Content, `Parent: "KonnectEventControlPlane"`)
+	assert.Contains(t, file.Content, `Parent: "KonnectEventGateway"`)
 
 	// Positional call: sdk.DeleteEventGatewayDataPlaneCertificate(ctx, parentID, id).
 	assert.Contains(t, file.Content, "sdk.DeleteEventGatewayDataPlaneCertificate(ctx, parentID, id)")

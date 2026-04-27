@@ -703,7 +703,7 @@ func rootRefDependency(schema *parser.Schema) *parser.Dependency {
 
 // EntityFilePrefix converts a PascalCase entity name to a lowercase file name
 // prefix, inserting an underscore after a leading "Konnect" prefix.
-// e.g. "KonnectEventControlPlane" → "konnect_eventcontrolplane",
+// e.g. "KonnectEventGateway" → "konnect_eventcontrolplane",
 //
 //	"Portal" → "portal".
 func EntityFilePrefix(entityName string) string {

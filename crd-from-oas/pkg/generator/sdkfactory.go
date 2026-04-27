@@ -27,7 +27,7 @@ type sdkFactoryTemplateData struct {
 // SDKFactoryFileInfo captures what is needed to emit one Get<X>SDK method on
 // the shared sdkWrapper and one entry in the GeneratedSDK interface.
 type SDKFactoryFileInfo struct {
-	Entity                 string // e.g. "KonnectEventControlPlane"
+	Entity                 string // e.g. "KonnectEventGateway"
 	SDKInterfaceImportPath string // e.g. "github.com/Kong/sdk-konnect-go"
 	SDKInterfaceTypeName   string // e.g. "EventGatewaysSDK"
 	SDKFieldName           string // e.g. "EventGateways"

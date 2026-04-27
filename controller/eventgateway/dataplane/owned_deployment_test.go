@@ -29,9 +29,9 @@ import (
 // helpers
 // -----------------------------------------------------------------
 
-// testKeg returns a minimal KonnectEventControlPlane with the given server URL and ID.
-func testKeg(serverURL, id string) *konnectv1alpha1.KonnectEventControlPlane {
-	keg := &konnectv1alpha1.KonnectEventControlPlane{}
+// testKeg returns a minimal KonnectEventGateway with the given server URL and ID.
+func testKeg(serverURL, id string) *konnectv1alpha1.KonnectEventGateway {
+	keg := &konnectv1alpha1.KonnectEventGateway{}
 	keg.Status.ServerURL = serverURL
 	keg.Status.ID = id
 	return keg
@@ -152,7 +152,7 @@ func Test_buildKEGEnvVars(t *testing.T) {
 	tests := []struct {
 		name    string
 		egdp    *eventgatewayv1alpha1.KegDataPlane
-		keg     *konnectv1alpha1.KonnectEventControlPlane
+		keg     *konnectv1alpha1.KonnectEventGateway
 		wantErr bool
 		// checkEnvs is called with the resulting env slice when wantErr is false.
 		checkEnvs func(t *testing.T, envs []corev1.EnvVar)
@@ -361,19 +361,19 @@ func Test_buildKEGEnvVars(t *testing.T) {
 func Test_buildDeployment(t *testing.T) {
 	tc := managedfields.NewDeducedTypeConverter()
 
-	validKeg := &konnectv1alpha1.KonnectEventControlPlane{}
+	validKeg := &konnectv1alpha1.KonnectEventGateway{}
 	validKeg.Status.KonnectEntityStatus = konnectv1alpha2.KonnectEntityStatus{
 		ServerURL: "https://us.api.konghq.com",
 		ID:        "gw-id",
 	}
 
-	invalidKeg := &konnectv1alpha1.KonnectEventControlPlane{}
+	invalidKeg := &konnectv1alpha1.KonnectEventGateway{}
 	invalidKeg.Status.ServerURL = "invalid-region.example.com"
 
 	tests := []struct {
 		name           string
 		egdp           *eventgatewayv1alpha1.KegDataPlane
-		keg            *konnectv1alpha1.KonnectEventControlPlane
+		keg            *konnectv1alpha1.KonnectEventGateway
 		image          string
 		certSecretName string
 		wantErr        bool
@@ -491,7 +491,7 @@ func Test_ensureDeployment(t *testing.T) {
 	tc := managedfields.NewDeducedTypeConverter()
 	scheme := managerscheme.Get()
 
-	validKeg := &konnectv1alpha1.KonnectEventControlPlane{
+	validKeg := &konnectv1alpha1.KonnectEventGateway{
 		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "my-keg"},
 	}
 	validKeg.Status.KonnectEntityStatus = konnectv1alpha2.KonnectEntityStatus{

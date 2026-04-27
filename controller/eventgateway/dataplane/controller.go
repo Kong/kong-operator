@@ -76,7 +76,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		Owns(&corev1.Secret{}).
 		Owns(&konnectv1alpha1.KonnectEventDataPlaneCertificate{}).
 		Watches(
-			&konnectv1alpha1.KonnectEventControlPlane{},
+			&konnectv1alpha1.KonnectEventGateway{},
 			handler.EnqueueRequestsFromMapFunc(enqueueForKonnectEventGatewayRef(mgr.GetClient())),
 		).
 		Complete(r)
@@ -95,7 +95,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.
 
 	defer func() { err = errors.Join(err, r.applyStatus(ctx, logger, egdp)) }()
 
-	// Resolve referenced KonnectEventControlPlane and set resolution condition.
+	// Resolve referenced KonnectEventGateway and set resolution condition.
 	keg, err := r.resolveKonnectEventGateway(ctx, logger, egdp)
 	if err != nil {
 		return ctrl.Result{}, err

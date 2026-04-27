@@ -61,13 +61,13 @@ func newTestEGDP() *eventgatewayv1alpha1.KegDataPlane {
 	}
 }
 
-func newTestKEG() *konnectv1alpha1.KonnectEventControlPlane {
-	return &konnectv1alpha1.KonnectEventControlPlane{
+func newTestKEG() *konnectv1alpha1.KonnectEventGateway {
+	return &konnectv1alpha1.KonnectEventGateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-keg",
 			Namespace: "default",
 		},
-		Status: konnectv1alpha1.KonnectEventControlPlaneStatus{
+		Status: konnectv1alpha1.KonnectEventGatewayStatus{
 			Conditions: []metav1.Condition{
 				{
 					Type:               konnectv1alpha1.KonnectEntityProgrammedConditionType,

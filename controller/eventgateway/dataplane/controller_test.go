@@ -77,14 +77,14 @@ func newReconcileEGDP() *eventgatewayv1alpha1.KegDataPlane {
 	}
 }
 
-// newProgrammedKEG builds a KonnectEventControlPlane with Programmed=True.
-func newProgrammedKEG() *konnectv1alpha1.KonnectEventControlPlane {
-	return &konnectv1alpha1.KonnectEventControlPlane{
+// newProgrammedKEG builds a KonnectEventGateway with Programmed=True.
+func newProgrammedKEG() *konnectv1alpha1.KonnectEventGateway {
+	return &konnectv1alpha1.KonnectEventGateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: reconcileTestNS,
 			Name:      reconcileTestKEGName,
 		},
-		Status: konnectv1alpha1.KonnectEventControlPlaneStatus{
+		Status: konnectv1alpha1.KonnectEventGatewayStatus{
 			Conditions: []metav1.Condition{
 				{
 					Type:               konnectv1alpha1.KonnectEntityProgrammedConditionType,
@@ -101,8 +101,8 @@ func newProgrammedKEG() *konnectv1alpha1.KonnectEventControlPlane {
 	}
 }
 
-// newNotProgrammedKEG builds a KonnectEventControlPlane with Programmed=False.
-func newNotProgrammedKEG() *konnectv1alpha1.KonnectEventControlPlane {
+// newNotProgrammedKEG builds a KonnectEventGateway with Programmed=False.
+func newNotProgrammedKEG() *konnectv1alpha1.KonnectEventGateway {
 	keg := newProgrammedKEG()
 	keg.Status.Conditions[0].Status = metav1.ConditionFalse
 	return keg
@@ -223,7 +223,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 			wantResult: ctrl.Result{},
 		},
 		{
-			name: "KonnectEventControlPlane not found: error returned (runtime handles backoff), KonnectResolved=False",
+			name: "KonnectEventGateway not found: error returned (runtime handles backoff), KonnectResolved=False",
 			objects: []client.Object{
 				newReconcileEGDP(),
 				caSecret(),
@@ -241,7 +241,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 			},
 		},
 		{
-			name: "KonnectEventControlPlane not yet programmed: error returned (runtime handles backoff), KonnectResolved=False",
+			name: "KonnectEventGateway not yet programmed: error returned (runtime handles backoff), KonnectResolved=False",
 			objects: []client.Object{
 				newReconcileEGDP(),
 				newNotProgrammedKEG(),

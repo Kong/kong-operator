@@ -22,10 +22,10 @@ func reconciliationWatchOptionsForEntity[
 	switch any(ent).(type) {
 	case *konnectv1alpha1.IdentityProviderRequest:
 		return IdentityProviderRequestReconciliationWatchOptions(cl)
-	case *konnectv1alpha1.KonnectEventControlPlane:
-		return KonnectEventControlPlaneReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.KonnectEventDataPlaneCertificate:
 		return KonnectEventDataPlaneCertificateReconciliationWatchOptions(cl)
+	case *konnectv1alpha1.KonnectEventGateway:
+		return KonnectEventGatewayReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.Portal:
 		return PortalReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.PortalPage:

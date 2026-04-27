@@ -97,7 +97,7 @@ const (
 const (
 	// EventGatewayRefValidConditionType is the type of the condition that indicates
 	// whether the Event Gateway reference is valid and points to an existing
-	// KonnectEventControlPlane.
+	// KonnectEventGateway.
 	EventGatewayRefValidConditionType = "EventGatewayRefValid"
 
 	// EventGatewayRefReasonValid is the reason used with the EventGatewayRefValid
@@ -119,7 +119,7 @@ const (
 const (
 	// PortalRefValidConditionType is the type of the condition that indicates
 	// whether the Event Gateway reference is valid and points to an existing
-	// KonnectEventControlPlane.
+	// KonnectEventGateway.
 	PortalRefValidConditionType = "PortalRefValid"
 
 	// PortalRefReasonValid is the reason used with the PortalRefValid

@@ -93,7 +93,8 @@ rm -rf \
        ./api/konnect/zz_generated_* \
        ./config/crd/kong-operator/x-konnect.konghq.com_* \
        ./controller/konnect/zz_generated_reconciler_generic_rbac_* \
-       ./modules/manager/zz_generated_*
+       ./modules/manager/zz_generated_* \
+       ./internal/utils/index/zz_generated_konnect_*
 '''
 
 [tasks.generate-api]

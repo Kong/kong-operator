@@ -40,8 +40,8 @@ func getForUID[
 	e TEnt,
 ) (string, error) {
 	switch ent := any(e).(type) {
-	case *konnectv1alpha1.KonnectEventControlPlane:
-		return getKonnectEventControlPlaneForUID(ctx, sdk.GetEventGatewaysSDK(), ent)
+	case *konnectv1alpha1.KonnectEventGateway:
+		return getKonnectEventGatewayForUID(ctx, sdk.GetEventGatewaysSDK(), ent)
 	case *konnectv1alpha1.Portal:
 		return getPortalForUID(ctx, sdk.GetPortalsSDK(), ent)
 	case *konnectv1alpha1.PortalPage:

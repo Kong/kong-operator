@@ -89,7 +89,7 @@ func TestHandleEventGatewayRefResult(t *testing.T) {
 				Err: apierrors.NewNotFound(
 					schema.GroupResource{
 						Group:    konnectv1alpha1.GroupVersion.Group,
-						Resource: "konnecteventcontrolplanes",
+						Resource: "konnecteventgateways",
 					},
 					"missing-event-control-plane",
 				),
@@ -150,7 +150,7 @@ func TestHandleEventGatewayRefResult(t *testing.T) {
 				Err: apierrors.NewNotFound(
 					schema.GroupResource{
 						Group:    konnectv1alpha1.GroupVersion.Group,
-						Resource: "konnecteventcontrolplanes",
+						Resource: "konnecteventgateways",
 					},
 					"missing-event-control-plane",
 				),

@@ -25,20 +25,20 @@ func KonnectEventDataPlaneCertificateReconciliationWatchOptions(
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
-				&konnectv1alpha1.KonnectEventControlPlane{},
+				&konnectv1alpha1.KonnectEventGateway{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueKonnectEventDataPlaneCertificateForKonnectEventControlPlane(cl),
+					enqueueKonnectEventDataPlaneCertificateForKonnectEventGateway(cl),
 				),
 			)
 		},
 	}
 }
 
-func enqueueKonnectEventDataPlaneCertificateForKonnectEventControlPlane(
+func enqueueKonnectEventDataPlaneCertificateForKonnectEventGateway(
 	cl client.Client,
 ) func(ctx context.Context, obj client.Object) []reconcile.Request {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		parent, ok := obj.(*konnectv1alpha1.KonnectEventControlPlane)
+		parent, ok := obj.(*konnectv1alpha1.KonnectEventGateway)
 		if !ok {
 			return nil
 		}
@@ -47,7 +47,7 @@ func enqueueKonnectEventDataPlaneCertificateForKonnectEventControlPlane(
 			// TODO: change this when cross namespace refs are allowed.
 			client.InNamespace(parent.GetNamespace()),
 			client.MatchingFields{
-				index.IndexFieldKonnectEventDataPlaneCertificateOnKonnectEventControlPlaneRef: parent.Name,
+				index.IndexFieldKonnectEventDataPlaneCertificateOnKonnectEventGatewayRef: parent.Name,
 			},
 		); err != nil {
 			return nil

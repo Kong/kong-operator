@@ -83,7 +83,7 @@ var konnectAPIAuthReferencingTypes = []constraints.EntityWithKonnectAPIAuthConfi
 	&konnectv1alpha1.KonnectCloudGatewayNetwork{},
 	&konnectv1alpha2.KonnectGatewayControlPlane{},
 	&konnectv1alpha2.KonnectExtension{},
-	&konnectv1alpha1.KonnectEventControlPlane{},
+	&konnectv1alpha1.KonnectEventGateway{},
 }
 
 // konnectAPIAuthReferencingTypeListsWithIndexes is a map of Konnect resource list types
@@ -95,7 +95,7 @@ var konnectAPIAuthReferencingTypeListsWithIndexes = map[client.ObjectList]string
 	&konnectv1alpha1.KonnectCloudGatewayNetworkList{}: index.IndexFieldKonnectCloudGatewayNetworkOnAPIAuthConfiguration,
 	&konnectv1alpha2.KonnectGatewayControlPlaneList{}: index.IndexFieldKonnectGatewayControlPlaneOnAPIAuthConfiguration,
 	&konnectv1alpha2.KonnectExtensionList{}:           index.IndexFieldKonnectExtensionOnAPIAuthConfiguration,
-	&konnectv1alpha1.KonnectEventControlPlaneList{}:   index.IndexFieldKonnectEventControlPlaneOnAPIAuthConfiguration,
+	&konnectv1alpha1.KonnectEventGatewayList{}:        index.IndexFieldKonnectEventGatewayOnAPIAuthConfiguration,
 }
 
 // setKonnectAPIAuthConfigurationRefWatches sets up watches for types that reference KonnectAPIAuthConfiguration.
