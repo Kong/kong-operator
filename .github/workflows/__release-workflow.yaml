@@ -310,6 +310,10 @@ jobs:
         with:
           install: false
 
+      - name: Generate CRDs
+        if: ${{ inputs.regenerate-manifests }}
+        run: make generate.crds
+
       # Generated manifests are part of the release PR.
       - name: Generate manifests
         if: ${{ inputs.regenerate-manifests }}
