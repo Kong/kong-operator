@@ -13,7 +13,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/test/mocks"
 )
 
-func TestClientFactory_CreateAdminAPIClientAttachesPodReference(t *testing.T) {
+func TestClientFactory_CreateAdminAPIClientAttachesDiscoveryMetadata(t *testing.T) {
 	factory := adminapi.NewClientFactoryForWorkspace(logr.Discard(), "workspace", managercfg.AdminAPIClientConfig{}, "")
 
 	adminAPIHandler := mocks.NewAdminAPIHandler(t)
@@ -21,7 +21,8 @@ func TestClientFactory_CreateAdminAPIClientAttachesPodReference(t *testing.T) {
 	t.Cleanup(func() { adminAPIServer.Close() })
 
 	client, err := factory.CreateAdminAPIClient(t.Context(), adminapi.DiscoveredAdminAPI{
-		Address: adminAPIServer.URL,
+		Address:       adminAPIServer.URL,
+		TLSServerName: "pod.dataplane-admin.namespace.svc",
 		PodRef: k8stypes.NamespacedName{
 			Namespace: "namespace",
 			Name:      "name",
@@ -36,4 +37,5 @@ func TestClientFactory_CreateAdminAPIClientAttachesPodReference(t *testing.T) {
 		Namespace: "namespace",
 		Name:      "name",
 	}, ref)
+	require.Equal(t, "pod.dataplane-admin.namespace.svc", client.TLSServerName())
 }
