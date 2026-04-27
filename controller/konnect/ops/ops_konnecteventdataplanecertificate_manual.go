@@ -10,10 +10,7 @@ import (
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
-	corev1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 )
 
@@ -54,73 +51,6 @@ func certGatewayID(cert *konnectv1alpha1.KonnectEventDataPlaneCertificate) strin
 		return ""
 	}
 	return cert.Status.GatewayID.ID
-}
-
-func kongEventDataPlaneCertificateCreateRequest(
-	ctx context.Context,
-	cl client.Client,
-	cert *konnectv1alpha1.KonnectEventDataPlaneCertificate,
-) (*sdkkonnectcomp.CreateEventGatewayDataPlaneCertificateRequest, error) {
-	spec, err := kongEventDataPlaneCertificateAPISpec(ctx, cl, cert)
-	if err != nil {
-		return nil, err
-	}
-	return spec.ToCreateEventGatewayDataPlaneCertificateRequest()
-}
-
-func kongEventDataPlaneCertificateUpdateRequest(
-	ctx context.Context,
-	cl client.Client,
-	cert *konnectv1alpha1.KonnectEventDataPlaneCertificate,
-) (*sdkkonnectcomp.UpdateEventGatewayDataPlaneCertificateRequest, error) {
-	spec, err := kongEventDataPlaneCertificateAPISpec(ctx, cl, cert)
-	if err != nil {
-		return nil, err
-	}
-	return spec.ToUpdateEventGatewayDataPlaneCertificateRequest()
-}
-
-func kongEventDataPlaneCertificateAPISpec(
-	ctx context.Context,
-	cl client.Client,
-	cert *konnectv1alpha1.KonnectEventDataPlaneCertificate,
-) (*konnectv1alpha1.KonnectEventDataPlaneCertificateAPISpec, error) {
-	apiSpec := cert.Spec.APISpec
-	if cert.Spec.Type != nil && *cert.Spec.Type == konnectv1alpha1.SensitiveDataSourceTypeSecretRef {
-		certData, err := fetchEventGatewayTLSCertDataFromSecret(ctx, cl, cert.GetNamespace(), cert.Spec.SecretRef)
-		if err != nil {
-			return nil, err
-		}
-		apiSpec.Certificate = certData
-	}
-	return &apiSpec, nil
-}
-
-func fetchEventGatewayTLSCertDataFromSecret(
-	ctx context.Context,
-	cl client.Client,
-	parentNamespace string,
-	secretRef *commonv1alpha1.NamespacedRef,
-) (string, error) {
-	if secretRef == nil {
-		return "", fmt.Errorf("secretRef is nil")
-	}
-
-	ns := parentNamespace
-	if secretRef.Namespace != nil && *secretRef.Namespace != "" {
-		ns = *secretRef.Namespace
-	}
-
-	var secret corev1.Secret
-	if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: secretRef.Name}, &secret); err != nil {
-		return "", fmt.Errorf("failed to fetch Secret %s/%s: %w", ns, secretRef.Name, err)
-	}
-
-	certBytes, ok := secret.Data["tls.crt"]
-	if !ok {
-		return "", fmt.Errorf("secret %s/%s is missing key 'tls.crt'", ns, secretRef.Name)
-	}
-	return string(certBytes), nil
 }
 
 func eventGatewayDataPlaneCertificateMatchesSpec(
