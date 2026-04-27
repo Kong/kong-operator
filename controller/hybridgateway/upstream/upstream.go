@@ -9,6 +9,7 @@ import (
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/builder"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
@@ -53,6 +54,8 @@ func UpstreamForRule[
 ) (kongUpstream *configurationv1alpha1.KongUpstream, err error) {
 
 	var upstreamName string
+	var policy *configurationv1beta1.KongUpstreamPolicy
+
 	switch r := any(parentRoute).(type) {
 	case *gwtypes.HTTPRoute:
 		httpRule, ok := any(rule).(gwtypes.HTTPRouteRule)
@@ -60,6 +63,7 @@ func UpstreamForRule[
 			return nil, fmt.Errorf("failed to build KongUpstream: unmatched route type and rule type: %T and %T", parentRoute, rule)
 		}
 		upstreamName = namegen.NewKongUpstreamNameForHTTPRouteRule(r, cp, httpRule)
+		policy = upstreamPolicyForHTTPRouteRule(ctx, logger, cl, parentRoute.GetNamespace(), httpRule)
 	case *gwtypes.TLSRoute:
 		tlsRule, ok := any(rule).(gwtypes.TLSRouteRule)
 		if !ok {
@@ -87,6 +91,8 @@ func UpstreamForRule[
 		log.Error(logger, err, "Failed to build KongUpstream resource")
 		return nil, fmt.Errorf("failed to build KongUpstream %s: %w", upstreamName, err)
 	}
+
+	applyPolicyToUpstream(&upstream, policy)
 
 	if _, err = translator.VerifyAndUpdate(ctx, logger, cl, &upstream, parentRoute, false); err != nil {
 		return nil, err
