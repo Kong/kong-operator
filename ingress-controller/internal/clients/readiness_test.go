@@ -57,9 +57,10 @@ func (cf *mockClientFactory) CallsForAddress(address string) int {
 }
 
 type mockAlreadyCreatedClient struct {
-	url     string
-	isReady bool
-	podRef  k8stypes.NamespacedName
+	url           string
+	isReady       bool
+	podRef        k8stypes.NamespacedName
+	tlsServerName string
 }
 
 func (m mockAlreadyCreatedClient) IsReady(context.Context) error {
@@ -75,6 +76,10 @@ func (m mockAlreadyCreatedClient) PodReference() (k8stypes.NamespacedName, bool)
 
 func (m mockAlreadyCreatedClient) BaseRootURL() string {
 	return m.url
+}
+
+func (m mockAlreadyCreatedClient) TLSServerName() string {
+	return m.tlsServerName
 }
 
 func TestDefaultReadinessChecker(t *testing.T) {
@@ -275,4 +280,35 @@ func TestDefaultReadinessChecker(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDefaultReadinessChecker_PreservesTLSServerNameForPendingClients(t *testing.T) {
+	t.Parallel()
+
+	const (
+		testURL           = "https://10.0.0.1:8444"
+		testTLSServerName = "pod.dataplane-admin.default.svc"
+	)
+
+	testPodRef := k8stypes.NamespacedName{
+		Namespace: "default",
+		Name:      "mock",
+	}
+
+	checker := clients.NewDefaultReadinessChecker(newMockClientFactory(t, nil), managercfg.DefaultDataPlanesReadinessCheckTimeout, logr.Discard())
+	result := checker.CheckReadiness(t.Context(), []clients.AlreadyCreatedClient{
+		mockAlreadyCreatedClient{
+			url:           testURL,
+			isReady:       false,
+			podRef:        testPodRef,
+			tlsServerName: testTLSServerName,
+		},
+	}, nil)
+
+	require.Len(t, result.ClientsTurnedPending, 1)
+	require.Equal(t, adminapi.DiscoveredAdminAPI{
+		Address:       testURL,
+		TLSServerName: testTLSServerName,
+		PodRef:        testPodRef,
+	}, result.ClientsTurnedPending[0])
 }
