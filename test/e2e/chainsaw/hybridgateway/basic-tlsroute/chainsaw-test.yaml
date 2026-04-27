@@ -111,7 +111,7 @@ spec:
     - name: Create-echo-service
       description: Create and assert an echo service to route traffic to.
       use:
-        template: ../../common/_step_templates/apply-assert-echoService.yaml
+        template: ../../common/_step_templates/apply-assert-echoService-with-tls.yaml
 
     # Step 10: Create the TLSRoute that routes traffic to the echo service.
     - name: Create-tlsroute-echo

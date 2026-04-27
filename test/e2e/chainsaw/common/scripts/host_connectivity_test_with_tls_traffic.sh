@@ -21,7 +21,7 @@ RETRY_DELAY="${RETRY_DELAY:-1}"
 
 # Build openssl command.
 build_openssl_cmd() {
-  local CMD="openssl s_client -connect ${PROXY_IP}:${PROXY_PORT} -servername ${SNI} -quiet -no_ign_eof -ignore_unexpected_eof"
+  local CMD="openssl s_client -connect ${PROXY_IP}:${PROXY_PORT} -servername ${SNI} -quiet -no_ign_eof"
   # sleep for a second to receive the initial welcome message from the echo server.
   echo "(sleep 1; echo 'Q') | $CMD"
 }
@@ -31,7 +31,7 @@ OPENSSL_CMD=$(build_openssl_cmd)
 # Retry loop: Keep trying until we get the correct repsonse or run out of retries.
 LAST_OUTPUT=""
 for ATTEMPT in $(seq 1 $MAX_RETRIES); do
-  if OUTPUT=$(eval $OPENSSL_CMD 2>&1); then
+  if OUTPUT=$(eval $OPENSSL_CMD 2>&1 | tr '\n' ' '); then
     LAST_OUTPUT="$OUTPUT"
     # Check if the output contains the welcome message from the echo pod.
     if [[ $OUTPUT =~ "Running on Pod" && $OUTPUT =~ "Through TLS connection" ]]; then
