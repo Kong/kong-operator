@@ -26,6 +26,8 @@ func CreateGeneratedOps[
 	e TEnt,
 ) error {
 	switch ent := any(e).(type) {
+	case *konnectv1alpha1.EventGatewayListener:
+		return createEventGatewayListener(ctx, sdk.GetEventGatewayListenersSDK(), ent)
 	case *konnectv1alpha1.IdentityProviderRequest:
 		return createIdentityProviderRequest(ctx, sdk.GetPortalAuthSettingsSDK(), ent)
 	case *konnectv1alpha1.KonnectEventDataPlaneCertificate:

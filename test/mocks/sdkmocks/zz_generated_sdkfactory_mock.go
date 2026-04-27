@@ -10,6 +10,7 @@ import (
 )
 
 type generatedMockSDKWrapper struct {
+	EventGatewayListenersSDK             *mocks.MockEventGatewayListenersSDK
 	PortalAuthSettingsSDK                *mocks.MockPortalAuthSettingsSDK
 	EventGatewayDataPlaneCertificatesSDK *mocks.MockEventGatewayDataPlaneCertificatesSDK
 	EventGatewaysSDK                     *mocks.MockEventGatewaysSDK
@@ -20,6 +21,7 @@ type generatedMockSDKWrapper struct {
 
 func newGeneratedMockSDKWrapper(t *testing.T) generatedMockSDKWrapper {
 	return generatedMockSDKWrapper{
+		EventGatewayListenersSDK:             mocks.NewMockEventGatewayListenersSDK(t),
 		PortalAuthSettingsSDK:                mocks.NewMockPortalAuthSettingsSDK(t),
 		EventGatewayDataPlaneCertificatesSDK: mocks.NewMockEventGatewayDataPlaneCertificatesSDK(t),
 		EventGatewaysSDK:                     mocks.NewMockEventGatewaysSDK(t),
@@ -27,6 +29,11 @@ func newGeneratedMockSDKWrapper(t *testing.T) generatedMockSDKWrapper {
 		PortalPagesSDK:                       mocks.NewMockPortalPagesSDK(t),
 		PortalTeamsSDK:                       mocks.NewMockPortalTeamsSDK(t),
 	}
+}
+
+// GetEventGatewayListenersSDK returns the SDK to operate EventGatewayListener.
+func (m generatedMockSDKWrapper) GetEventGatewayListenersSDK() sdkkonnectgo.EventGatewayListenersSDK {
+	return m.EventGatewayListenersSDK
 }
 
 // GetPortalAuthSettingsSDK returns the SDK to operate IdentityProviderRequest.

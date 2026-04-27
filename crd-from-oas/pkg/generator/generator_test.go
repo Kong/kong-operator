@@ -760,6 +760,60 @@ func TestGenerate_GroupVersionInfo(t *testing.T) {
 	})
 }
 
+func TestGenerate_OmitsUnusedArrayRefAliases(t *testing.T) {
+	// EntityScopes is a $ref whose schema is type:array. goType inlines it as
+	// []string so the alias is never referenced — it must not be emitted.
+	// EntityConfig is a $ref whose schema is type:object — it IS referenced by
+	// name and must be emitted, along with any named refs it transitively uses.
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+
+	files, err := g.Generate(&parser.ParsedSpec{
+		RequestBodies: map[string]*parser.Schema{
+			"CreateEntity": {
+				Name: "CreateEntity",
+				Properties: []*parser.Property{
+					{
+						Name:    "config",
+						RefName: "EntityConfig",
+						Type:    "object",
+					},
+					{
+						Name:    "scopes",
+						RefName: "EntityScopes",
+						Type:    "array",
+						Items:   &parser.Property{Type: "string"},
+					},
+				},
+			},
+		},
+		Schemas: map[string]*parser.Schema{
+			"EntityConfig": {
+				Name: "EntityConfig",
+				Properties: []*parser.Property{
+					{Name: "name", Type: "string"},
+				},
+			},
+			"EntityScopes": {
+				Name:  "EntityScopes",
+				Type:  "array",
+				Items: &parser.Property{Type: "string"},
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	var schemaContent string
+	for _, f := range files {
+		if f.Name == "schema_types.go" {
+			schemaContent = f.Content
+			break
+		}
+	}
+	require.NotEmpty(t, schemaContent, "schema_types.go should be generated")
+	assert.Contains(t, schemaContent, "type EntityConfig struct")
+	assert.NotContains(t, schemaContent, "EntityScopes", "array-typed $ref alias must not be emitted")
+}
+
 func TestGenerateSchemaTypes_AddsKubebuilderTags(t *testing.T) {
 	g := NewGenerator(Config{APIVersion: "v1alpha1"})
 	parsed := &parser.ParsedSpec{
@@ -2823,4 +2877,69 @@ func TestPathParamToFieldName(t *testing.T) {
 	for _, tc := range tests {
 		assert.Equal(t, tc.want, pathParamToFieldName(tc.param), "param=%q", tc.param)
 	}
+}
+
+func TestGenerateSchemaTypes_ScalarOneOfEmitsIntOrString(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	parsed := &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"EventGatewayListenerPort": {
+				Name:        "EventGatewayListenerPort",
+				Description: "A port or a range of ports.",
+				OneOf: []*parser.Property{
+					{Name: "variant0", Type: "string"},
+					{Name: "variant1", Type: "integer"},
+				},
+			},
+		},
+	}
+
+	content := g.generateSchemaTypes(map[string]bool{"EventGatewayListenerPort": true}, parsed)
+
+	assert.Contains(t, content, `type EventGatewayListenerPort = intstr.IntOrString`)
+	assert.Contains(t, content, `+kubebuilder:validation:XIntOrString`)
+	assert.Contains(t, content, `intstr "k8s.io/apimachinery/pkg/util/intstr"`)
+	assert.NotContains(t, content, `map[string]string`)
+}
+
+func TestGenerateSchemaTypes_ArrayItemsRefEmitsTypedSlice(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	parsed := &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"EventGatewayListenerPorts": {
+				Name:        "EventGatewayListenerPorts",
+				Description: "Which port or ports to listen on.",
+				Type:        "array",
+				Items:       &parser.Property{RefName: "EventGatewayListenerPort"},
+			},
+		},
+	}
+
+	content := g.generateSchemaTypes(map[string]bool{"EventGatewayListenerPorts": true}, parsed)
+
+	assert.Contains(t, content, `type EventGatewayListenerPorts []EventGatewayListenerPort`)
+	assert.NotContains(t, content, `[]any`)
+}
+
+func TestGenerateSchemaTypes_NonScalarOneOfFallsBack(t *testing.T) {
+	// A oneOf where variants have RefName must NOT be consumed by the scalar arm;
+	// it falls through to default (map[string]string) until a dedicated follow-up
+	// handles ref-bearing root oneOf.
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	parsed := &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"AuthMethod": {
+				Name: "AuthMethod",
+				OneOf: []*parser.Property{
+					{Name: "OIDCConfig", RefName: "OIDCConfig"},
+					{Name: "SAMLConfig", RefName: "SAMLConfig"},
+				},
+			},
+		},
+	}
+
+	content := g.generateSchemaTypes(map[string]bool{"AuthMethod": true}, parsed)
+
+	assert.NotContains(t, content, `intstr.IntOrString`)
+	assert.NotContains(t, content, `XIntOrString`)
 }

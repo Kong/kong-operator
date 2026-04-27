@@ -4942,6 +4942,7 @@ _Appears in:_
 
 Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1alpha1 API group.
 
+- [EventGatewayListener](#konnect-konghq-com-v1alpha1-eventgatewaylistener)
 - [IdentityProviderRequest](#konnect-konghq-com-v1alpha1-identityproviderrequest)
 - [KonnectAPIAuthConfiguration](#konnect-konghq-com-v1alpha1-konnectapiauthconfiguration)
 - [KonnectCloudGatewayDataPlaneGroupConfiguration](#konnect-konghq-com-v1alpha1-konnectcloudgatewaydataplanegroupconfiguration)
@@ -4955,6 +4956,21 @@ Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1al
 - [Portal](#konnect-konghq-com-v1alpha1-portal)
 - [PortalPage](#konnect-konghq-com-v1alpha1-portalpage)
 - [PortalTeam](#konnect-konghq-com-v1alpha1-portalteam)
+
+### EventGatewayListener
+
+
+EventGatewayListener is the Schema for the eventgatewaylisteners API.
+
+<!-- event_gateway_listener description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `EventGatewayListener`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[EventGatewayListenerSpec](#konnect-konghq-com-v1alpha1-types-eventgatewaylistenerspec)_ |  |
+| `status` _[EventGatewayListenerStatus](#konnect-konghq-com-v1alpha1-types-eventgatewaylistenerstatus)_ |  |
 
 ### IdentityProviderRequest
 
@@ -5395,6 +5411,60 @@ _Appears in:_
 
 - [PortalPageAPISpec](#konnect-konghq-com-v1alpha1-types-portalpageapispec)
 
+#### EventGatewayListenerAPISpec
+
+
+EventGatewayListenerAPISpec defines the API spec fields for EventGatewayListener.
+
+
+
+| Field | Description |
+| --- | --- |
+| `addresses` _[]string_ | Which address or addresses to listen on. `0.0.0.0` means all addresses on the host. `::` means all addresses on the host in IPv6.<br /><br />If `0.0.0.0` or `::` is used, there can't be other extra addresses defined. WARNING: there are use cases where listening on all addresses is insecure. So use this with caution.<br /><br />`localhost` means only the localhost ipv4 address. |
+| `description` _string_ | A human-readable description of the listener. |
+| `labels` _[Labels](#konnect-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _string_ | The unique name of the listener. |
+| `ports` _[EventGatewayListenerPort](#konnect-konghq-com-v1alpha1-types-eventgatewaylistenerport)_ | Which port or ports to listen on. There can be multiple ways to define ports: - as a single port, e.g. 9092 - as a range of ports, e.g. 9092-9094<br /><br />It's possible to combine both, e.g. [9092, "9093-9095", 9096]. |
+
+_Appears in:_
+
+- [EventGatewayListenerSpec](#konnect-konghq-com-v1alpha1-types-eventgatewaylistenerspec)
+
+
+
+#### EventGatewayListenerSpec
+
+
+EventGatewayListenerSpec defines the desired state of EventGatewayListener.
+
+
+
+| Field | Description |
+| --- | --- |
+| `gateway_ref` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. |
+| `apiSpec` _[EventGatewayListenerAPISpec](#konnect-konghq-com-v1alpha1-types-eventgatewaylistenerapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [EventGatewayListener](#konnect-konghq-com-v1alpha1-eventgatewaylistener)
+
+#### EventGatewayListenerStatus
+
+
+EventGatewayListenerStatus defines the observed state of EventGatewayListener.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [EventGatewayListener](#konnect-konghq-com-v1alpha1-eventgatewaylistener)
+
 #### GatewayDescription
 
 _Underlying type:_ `string`
@@ -5804,6 +5874,7 @@ KonnectEntityRef is a reference to a Konnect entity.
 
 _Appears in:_
 
+- [EventGatewayListenerStatus](#konnect-konghq-com-v1alpha1-types-eventgatewaylistenerstatus)
 - [IdentityProviderRequestStatus](#konnect-konghq-com-v1alpha1-types-identityproviderrequeststatus)
 - [KonnectEventDataPlaneCertificateStatus](#konnect-konghq-com-v1alpha1-types-konnecteventdataplanecertificatestatus)
 - [PortalPageStatus](#konnect-konghq-com-v1alpha1-types-portalpagestatus)
@@ -6127,6 +6198,7 @@ list or for searching across entity types.<br /><br />Keys must be of length 1-6
 
 _Appears in:_
 
+- [EventGatewayListenerAPISpec](#konnect-konghq-com-v1alpha1-types-eventgatewaylistenerapispec)
 - [KonnectEventGatewayAPISpec](#konnect-konghq-com-v1alpha1-types-konnecteventgatewayapispec)
 
 #### LabelsUpdate
@@ -6333,7 +6405,7 @@ data for the OIDC authentication integration.
 | `client_id` _[OIDCIdentityProviderClientID](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclientid)_ | The client ID assigned to your application by the identity provider. |
 | `client_secret` _[OIDCIdentityProviderClientSecret](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclientsecret)_ | The Client Secret assigned to your application by the identity provider. |
 | `issuer_url` _[OIDCIdentityProviderIssuer](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderissuer)_ | The issuer URI of the identity provider. This is the URL where the provider's metadata can be obtained. |
-| `scopes` _[OIDCIdentityProviderScopes](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderscopes)_ | The scopes requested by your application when authenticating with the identity provider. |
+| `scopes` _[]string_ | The scopes requested by your application when authenticating with the identity provider. |
 
 _Appears in:_
 
@@ -6345,20 +6417,6 @@ _Underlying type:_ `string`
 
 OIDCIdentityProviderIssuer The issuer URI of the identity provider.
 This is the URL where the provider's metadata can be obtained.
-
-
-
-
-_Appears in:_
-
-- [OIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderconfig)
-
-#### OIDCIdentityProviderScopes
-
-_Underlying type:_ `string array`
-
-OIDCIdentityProviderScopes The scopes requested by your application when
-authenticating with the identity provider.
 
 
 

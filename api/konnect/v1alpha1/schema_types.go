@@ -2,8 +2,17 @@
 
 package v1alpha1
 
+import (
+	intstr "k8s.io/apimachinery/pkg/util/intstr"
+)
+
 // Description is a type alias.
 type Description string
+
+// EventGatewayListenerPort is a type alias.
+//
+// +kubebuilder:validation:XIntOrString
+type EventGatewayListenerPort = intstr.IntOrString
 
 // GatewayDescription A human-readable description of the Gateway.
 type GatewayDescription string
@@ -76,19 +85,19 @@ type OIDCIdentityProviderClaimMappings struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:default=email
+	// +kubebuilder:default="email"
 	Email string `json:"email,omitempty"`
 	// The claim mapping for the user's group membership information.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:default=groups
+	// +kubebuilder:default="groups"
 	Groups string `json:"groups,omitempty"`
 	// The claim mapping for the user's name.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:default=name
+	// +kubebuilder:default="name"
 	Name string `json:"name,omitempty"`
 }
 
@@ -133,16 +142,12 @@ type OIDCIdentityProviderConfig struct {
 	//
 	// +optional
 	// +kubebuilder:default={"email","openid","profile"}
-	Scopes OIDCIdentityProviderScopes `json:"scopes,omitempty"`
+	Scopes []string `json:"scopes,omitempty"`
 }
 
 // OIDCIdentityProviderIssuer The issuer URI of the identity provider.
 // This is the URL where the provider's metadata can be obtained.
 type OIDCIdentityProviderIssuer string
-
-// OIDCIdentityProviderScopes The scopes requested by your application when
-// authenticating with the identity provider.
-type OIDCIdentityProviderScopes []string
 
 // PageContent The renderable markdown content of a page in a portal.
 type PageContent string

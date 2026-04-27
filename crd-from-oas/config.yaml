@@ -42,6 +42,20 @@ apiGroupVersions:
         reconciler:
           isRoot: false
           parentEntityType: KonnectEventGateway
+      - path: /v1/event-gateways/{gatewayId}/listeners
+        name: EventGatewayListener
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.EventGatewayListenersSDK
+            fieldName: EventGatewayListeners
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateEventGatewayListenerRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdateEventGatewayListenerRequest
+          delete: {}
+        reconciler:
+          isRoot: false
+          parentEntityType: KonnectEventGateway
 
       # Portal APIs
       - path: /v3/portals

@@ -168,7 +168,7 @@ func TestKubebuilderTags(t *testing.T) {
 			expected: []string{
 				"+optional",
 				"+kubebuilder:validation:MaxLength=253",
-				"+kubebuilder:default=https",
+				`+kubebuilder:default="https"`,
 			},
 		},
 		{
