@@ -41,6 +41,16 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## [v2.1.6]
+
+> Release date: TBD
+
+### Fixes
+
+- TLSRoute readiness by preserving TLSServerName when a ready Admin API client
+  is demoted back to pending
+  [#4025](https://github.com/Kong/kong-operator/pull/4024) [#4028](https://github.com/Kong/kong-operator/pull/4028)
+
 ## [v2.1.5]
 
 > Release date: 2026-04-24
@@ -1810,6 +1820,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.1.6]: https://github.com/Kong/kong-operator/compare/v2.1.5..v2.1.6
 [v2.1.5]: https://github.com/Kong/kong-operator/compare/v2.1.4..v2.1.5
 [v2.1.4]: https://github.com/Kong/kong-operator/compare/v2.1.3..v2.1.4
 [v2.1.3]: https://github.com/Kong/kong-operator/compare/v2.1.2..v2.1.3
