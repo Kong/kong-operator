@@ -2136,7 +2136,7 @@ func TestGenerateOpsCreate_NonRootEntityWithParentTypeOverride(t *testing.T) {
 	assert.True(t, info.NeedsClient)
 	assert.Contains(t, file.Content, `"sigs.k8s.io/controller-runtime/pkg/client"`)
 	assert.Contains(t, file.Content, "cl client.Client")
-	assert.Contains(t, file.Content, "kongEventDataPlaneCertificateCreateRequest(ctx, cl, obj)")
+	assert.Contains(t, file.Content, "obj.ToCreateEventGatewayDataPlaneCertificateRequest(ctx, cl)")
 	assert.Contains(t, file.Content, "sdk.CreateEventGatewayDataPlaneCertificate(ctx, parentID, req)")
 }
 
@@ -2400,8 +2400,43 @@ func TestGenerateOpsUpdate_NonRootEntityWithParentTypeOverride(t *testing.T) {
 	assert.Contains(t, file.Content, "GatewayID: parentID,")
 	assert.Contains(t, file.Content, "CertificateID: id,")
 	assert.Contains(t, file.Content, "cl client.Client")
-	assert.Contains(t, file.Content, "kongEventDataPlaneCertificateUpdateRequest(ctx, cl, obj)")
+	assert.Contains(t, file.Content, "obj.ToUpdateEventGatewayDataPlaneCertificateRequest(ctx, cl)")
 	assert.Contains(t, file.Content, "UpdateEventGatewayDataPlaneCertificateRequest: req,")
+}
+
+func TestGenerateSDKOps_ClientRequestMethodsResolveSecretRef(t *testing.T) {
+	g := NewGenerator(Config{
+		APIVersion:        "v1alpha1",
+		SecretRefEntities: map[string]bool{"KonnectEventDataPlaneCertificate": true},
+	})
+	schema := &parser.Schema{
+		Properties: []*parser.Property{
+			{Name: "certificate", Type: "string"},
+			{Name: "description", Type: "string"},
+			{Name: "name", Type: "string"},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		RequireClient: true,
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateEventGatewayDataPlaneCertificateRequest"},
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateEventGatewayDataPlaneCertificateRequest"},
+		},
+	}
+
+	content, err := g.generateSDKOps("KonnectEventDataPlaneCertificate", schema, opsConfig)
+	require.NoError(t, err)
+	assert.Contains(t, content, `"context"`)
+	assert.Contains(t, content, `corev1 "k8s.io/api/core/v1"`)
+	assert.Contains(t, content, `"sigs.k8s.io/controller-runtime/pkg/client"`)
+	assert.Contains(t, content, "func (obj *KonnectEventDataPlaneCertificate) sdkOpsAPISpec(ctx context.Context, cl client.Client)")
+	assert.Contains(t, content, "if obj.Spec.Type != nil && *obj.Spec.Type == SensitiveDataSourceTypeSecretRef {")
+	assert.Contains(t, content, `secretBytes, ok := secret.Data["tls.crt"]`)
+	assert.Contains(t, content, "apiSpec.Certificate = string(secretBytes)")
+	assert.Contains(t, content, "func (obj *KonnectEventDataPlaneCertificate) ToCreateEventGatewayDataPlaneCertificateRequest(ctx context.Context, cl client.Client)")
+	assert.Contains(t, content, "return spec.ToCreateEventGatewayDataPlaneCertificateRequest()")
+	assert.Contains(t, content, "func (obj *KonnectEventDataPlaneCertificate) ToUpdateEventGatewayDataPlaneCertificateRequest(ctx context.Context, cl client.Client)")
+	assert.Contains(t, content, "return spec.ToUpdateEventGatewayDataPlaneCertificateRequest()")
 }
 
 func TestGenerateOpsUpdate_PointerBody(t *testing.T) {

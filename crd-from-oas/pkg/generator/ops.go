@@ -338,13 +338,6 @@ func pascalFromKebab(s string) string {
 	return b.String()
 }
 
-func clientRequestHelperBase(entityName string) string {
-	if trimmed, ok := strings.CutPrefix(entityName, "Konnect"); ok && trimmed != "" {
-		return "kong" + trimmed
-	}
-	return toLowerCamel(entityName)
-}
-
 // metadataFields reports whether the request body schema declares a "tags"
 // array property or a "labels" object/map property, driving the optional
 // metadata injection in the generated create function. labelsPointer is true

@@ -1229,7 +1229,7 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 	boolFields := g.collectSDKOpsBoolFields(schema)
 
 	if hasRootOneOf(schema) {
-		return g.generateRootUnionSDKOps(entityName, schema, imports, methods, boolFields)
+		return g.generateRootUnionSDKOps(entityName, schema, opsConfig, imports, methods, boolFields)
 	}
 
 	standardMethods := make([]sdkOpsMethod, 0, len(methods))
@@ -1241,17 +1241,21 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 	tmpl := template.Must(template.New("sdkops").Parse(sdkOpsTemplate))
 	var buf strings.Builder
 	data := struct {
-		APIVersion string
-		EntityName string
-		Imports    []*sdkOpsImport
-		BoolFields []sdkOpsBoolField
-		Methods    []sdkOpsMethod
+		APIVersion   string
+		EntityName   string
+		Imports      []*sdkOpsImport
+		BoolFields   []sdkOpsBoolField
+		Methods      []sdkOpsMethod
+		NeedsClient  bool
+		HasSecretRef bool
 	}{
-		APIVersion: g.config.APIVersion,
-		EntityName: entityName,
-		Imports:    imports,
-		BoolFields: boolFields,
-		Methods:    standardMethods,
+		APIVersion:   g.config.APIVersion,
+		EntityName:   entityName,
+		Imports:      imports,
+		BoolFields:   boolFields,
+		Methods:      standardMethods,
+		NeedsClient:  opsConfig.RequireClient,
+		HasSecretRef: g.config.SecretRefEntities[entityName],
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
@@ -1309,6 +1313,7 @@ func (g *Generator) buildSDKOpsNestedUnionFields(
 func (g *Generator) generateRootUnionSDKOps(
 	entityName string,
 	schema *parser.Schema,
+	opsConfig *config.EntityOpsConfig,
 	imports []*sdkOpsImport,
 	methods []sdkOpsMethod,
 	boolFields []sdkOpsBoolField,
@@ -1385,6 +1390,8 @@ func (g *Generator) generateRootUnionSDKOps(
 		BoolFields    []sdkOpsBoolField
 		Methods       []sdkOpsRootUnionMethod
 		Variants      []sdkOpsRootUnionVariant
+		NeedsClient   bool
+		HasSecretRef  bool
 	}{
 		APIVersion:    g.config.APIVersion,
 		EntityName:    entityName,
@@ -1393,6 +1400,8 @@ func (g *Generator) generateRootUnionSDKOps(
 		BoolFields:    boolFields,
 		Methods:       rootUnionMethods,
 		Variants:      variants,
+		NeedsClient:   opsConfig.RequireClient,
+		HasSecretRef:  g.config.SecretRefEntities[entityName],
 	}
 	if err := tmpl.Execute(&buf, data); err != nil {
 		return "", err

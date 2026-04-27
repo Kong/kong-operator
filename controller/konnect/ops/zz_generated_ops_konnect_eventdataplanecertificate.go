@@ -23,7 +23,7 @@ func createKonnectEventDataPlaneCertificate(
 	if parentID == "" {
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectEventGateway", Op: CreateOp}
 	}
-	req, err := kongEventDataPlaneCertificateCreateRequest(ctx, cl, obj)
+	req, err := obj.ToCreateEventGatewayDataPlaneCertificateRequest(ctx, cl)
 	if err != nil {
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
 	}
@@ -51,7 +51,7 @@ func updateKonnectEventDataPlaneCertificate(
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectEventGateway", Op: UpdateOp}
 	}
 	id := obj.GetKonnectStatus().GetKonnectID()
-	req, err := kongEventDataPlaneCertificateUpdateRequest(ctx, cl, obj)
+	req, err := obj.ToUpdateEventGatewayDataPlaneCertificateRequest(ctx, cl)
 	if err != nil {
 		return fmt.Errorf("failed building %s SDK update request: %w", obj.GetTypeName(), err)
 	}
