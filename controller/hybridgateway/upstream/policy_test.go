@@ -4,9 +4,10 @@ import (
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
-	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
 )
 
 func TestTranslatePolicySpecToUpstreamAPISpec(t *testing.T) {
