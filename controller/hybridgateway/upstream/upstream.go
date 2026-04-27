@@ -63,13 +63,14 @@ func UpstreamForRule[
 			return nil, fmt.Errorf("failed to build KongUpstream: unmatched route type and rule type: %T and %T", parentRoute, rule)
 		}
 		upstreamName = namegen.NewKongUpstreamNameForHTTPRouteRule(r, cp, httpRule)
-		policy = upstreamPolicyForHTTPRouteRule(ctx, logger, cl, parentRoute.GetNamespace(), httpRule)
+		policy = upstreamPolicyForRouteRule(ctx, logger, cl, parentRoute.GetNamespace(), httpRule)
 	case *gwtypes.TLSRoute:
 		tlsRule, ok := any(rule).(gwtypes.TLSRouteRule)
 		if !ok {
 			return nil, fmt.Errorf("failed to build KongUpstream: unmatched route type and rule type: %T and %T", parentRoute, rule)
 		}
 		upstreamName = namegen.NewKongUpstreamNameForTLSRouteRule(r, cp, tlsRule)
+		policy = upstreamPolicyForRouteRule(ctx, logger, cl, parentRoute.GetNamespace(), tlsRule)
 	// TODO: add other types of rules when we support them.
 
 	// Should be unreachable.

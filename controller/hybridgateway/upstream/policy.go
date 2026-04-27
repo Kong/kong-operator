@@ -16,25 +16,38 @@ import (
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
-// upstreamPolicyForHTTPRouteRule returns the KongUpstreamPolicy for the given HTTPRoute rule by
+// upstreamPolicyForRouteRule returns the KongUpstreamPolicy for the given route rule by
 // inspecting the konghq.com/upstream-policy annotation on each backend Service.
 //
 // All backend Services must reference the same policy (or none). Returns nil when no annotation
 // is present. Logs a warning and returns nil when annotations are inconsistent or the referenced
 // policy does not exist.
-func upstreamPolicyForHTTPRouteRule(
+func upstreamPolicyForRouteRule[R gwtypes.SupportedRouteRule](
 	ctx context.Context,
 	logger logr.Logger,
 	cl client.Client,
 	namespace string,
-	rule gwtypes.HTTPRouteRule,
+	rule R,
 ) *configurationv1beta1.KongUpstreamPolicy {
 	policyNames := map[string]struct{}{}
 	var firstPolicyNamespace string
 	var firstPolicyName string
 	found := false
 
-	for _, backendRef := range rule.BackendRefs {
+	var backendRefs []gwtypes.BackendRef
+	switch r := any(rule).(type) {
+	case gwtypes.HTTPRouteRule:
+		backendRefs = make([]gwtypes.BackendRef, 0, len(r.BackendRefs))
+		for _, backendRef := range r.BackendRefs {
+			backendRefs = append(backendRefs, gwtypes.GetBackendRef(backendRef))
+		}
+	case gwtypes.TLSRouteRule:
+		backendRefs = r.BackendRefs
+	default:
+		return nil
+	}
+
+	for _, backendRef := range backendRefs {
 		if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
 			continue
 		}
