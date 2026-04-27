@@ -739,7 +739,7 @@ func isProgrammed(obj *unstructured.Unstructured) bool {
 // The function performs the following checks for each listener:
 // 1. Matches the section name specified in the ParentReference (if any)
 // 2. Matches the port specified in the ParentReference (if any)
-// 3. Supports the protocol with properiate TLS mode
+// 3. Supports the protocol with appropriate TLS mode
 // 4. Is in a "Programmed" (ready) state according to the Gateway status
 //
 // Parameters:
