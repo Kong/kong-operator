@@ -157,6 +157,38 @@ func ListKonnectExtensionsForGateway(
 	return konnectExtensions, nil
 }
 
+// parentRefMatchGateway is a helper function that checks if a ParentReference matches a given Gateway.
+// It compares the Group, Kind, Name, and optionally SectionName and Port of the ParentReference
+// with the corresponding fields of the Gateway and its Listeners.
+func parentRefMatchGateway(parentRef gwtypes.ParentReference, gateway *gwtypes.Gateway) bool {
+	gwGVK := gateway.GroupVersionKind()
+	if parentRef.Group != nil && string(*parentRef.Group) != gwGVK.Group {
+		return false
+	}
+	if parentRef.Kind != nil && string(*parentRef.Kind) != gwGVK.Kind {
+		return false
+	}
+	if string(parentRef.Name) != gateway.Name {
+		return false
+	}
+
+	if parentRef.SectionName != nil {
+		if !lo.ContainsBy(gateway.Spec.Listeners, func(listener gwtypes.Listener) bool {
+			if listener.Name != *parentRef.SectionName {
+				return false
+			}
+			if parentRef.Port != nil && listener.Port != *parentRef.Port {
+				return false
+			}
+			return true
+		}) {
+			return false
+		}
+	}
+
+	return true
+}
+
 // ListHTTPRoutesForGateway is a helper function which returns a list of HTTPRoutes
 // that have the provided Gateway set as parent in their status.
 func ListHTTPRoutesForGateway(
@@ -179,43 +211,35 @@ func ListHTTPRoutesForGateway(
 		return nil, fmt.Errorf("can't list HTTPRoutes for gateway: %w", err)
 	}
 
-	var httpRoutes []gwtypes.HTTPRoute
-	for _, httpRoute := range httpRoutesList.Items {
-		if !lo.ContainsBy(httpRoute.Spec.ParentRefs, func(parentRef gwtypes.ParentReference) bool {
-			gwGVK := gateway.GroupVersionKind()
-			if parentRef.Group != nil && string(*parentRef.Group) != gwGVK.Group {
-				return false
-			}
-			if parentRef.Kind != nil && string(*parentRef.Kind) != gwGVK.Kind {
-				return false
-			}
-			if string(parentRef.Name) != gateway.Name {
-				return false
-			}
+	return lo.Filter(httpRoutesList.Items, func(r gwtypes.HTTPRoute, _ int) bool {
+		return lo.ContainsBy(r.Spec.ParentRefs, func(parentRef gwtypes.ParentReference) bool {
+			return parentRefMatchGateway(parentRef, gateway)
+		})
+	}), nil
+}
 
-			if parentRef.SectionName != nil {
-				if !lo.ContainsBy(gateway.Spec.Listeners, func(listener gwtypes.Listener) bool {
-					if listener.Name != *parentRef.SectionName {
-						return false
-					}
-					if parentRef.Port != nil && listener.Port != *parentRef.Port {
-						return false
-					}
-					return true
-				}) {
-					return false
-				}
-			}
-
-			return true
-		}) {
-			continue
-		}
-
-		httpRoutes = append(httpRoutes, httpRoute)
+// ListTLSRoutesForGateway is a helper function which returns a list of TLSRoutes
+// that have the provided Gateway set as parent in their status.
+func ListTLSRoutesForGateway(
+	ctx context.Context,
+	c client.Client,
+	gateway *gwtypes.Gateway,
+	opts ...client.ListOption,
+) ([]gwtypes.TLSRoute, error) {
+	var tlsRouteList gwtypes.TLSRouteList
+	err := c.List(
+		ctx,
+		&tlsRouteList,
+		opts...,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("can't list TLSRoutes for gateway: %w", err)
 	}
-
-	return httpRoutes, nil
+	return lo.Filter(tlsRouteList.Items, func(r gwtypes.TLSRoute, _ int) bool {
+		return lo.ContainsBy(r.Spec.ParentRefs, func(parentRef gwtypes.ParentReference) bool {
+			return parentRefMatchGateway(parentRef, gateway)
+		})
+	}), nil
 }
 
 // GetDataPlaneServiceName is a helper function that retrieves the name of the service owned by provided dataplane.

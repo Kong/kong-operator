@@ -261,7 +261,7 @@ func TestListHTTPRoutesForGateway(t *testing.T) {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.expected, routes)
+				require.ElementsMatch(t, tc.expected, routes)
 			}
 		})
 	}
