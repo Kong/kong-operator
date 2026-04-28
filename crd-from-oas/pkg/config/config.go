@@ -79,6 +79,9 @@ type TypeConfig struct {
 	OpsRequireClient bool `yaml:"-"`
 	// OpsSkipGetForUID skips generation of the getForUID function for this entity.
 	OpsSkipGetForUID bool `yaml:"-"`
+	// OpsUseUIDTagFilter enables generated getForUID code to pass the object's
+	// Kubernetes UID tag as a list query filter when the API supports it.
+	OpsUseUIDTagFilter bool `yaml:"-"`
 	// OpsSDK holds SDK interface and field name for SDK factory generation.
 	OpsSDK *OpSDKConfig `yaml:"-"`
 	// OptionalSecretReference enables generation of a union type field on the
@@ -130,6 +133,9 @@ type typeOpsYAML struct {
 	// Use when the SDK list endpoint does not support UID-label filtering, or
 	// when the hand-written implementation already exists.
 	SkipGetForUID bool `yaml:"skipGetForUID,omitempty"`
+	// UseUIDTagFilter enables generated getForUID code to pass the object's
+	// Kubernetes UID tag as a list query filter when the API supports it.
+	UseUIDTagFilter bool `yaml:"useUIDTagFilter,omitempty"`
 	// SDK holds the SDK interface and field name for SDK factory generation.
 	SDK *OpSDKConfig `yaml:"sdk,omitempty"`
 	// Operations maps operation names (e.g. "create", "update") to SDK type configs.
@@ -165,6 +171,7 @@ func (tc *TypeConfig) UnmarshalYAML(value *yaml.Node) error {
 		tc.Ops = raw.Ops.Operations
 		tc.OpsRequireClient = raw.Ops.RequireClient
 		tc.OpsSkipGetForUID = raw.Ops.SkipGetForUID
+		tc.OpsUseUIDTagFilter = raw.Ops.UseUIDTagFilter
 		tc.OpsSDK = raw.Ops.SDK
 	}
 
@@ -180,6 +187,9 @@ type EntityOpsConfig struct {
 	RequireClient bool
 	// SkipGetForUID skips generation of the getForUID function for this entity.
 	SkipGetForUID bool
+	// UseUIDTagFilter enables generated getForUID code to pass the object's
+	// Kubernetes UID tag as a list query filter when the API supports it.
+	UseUIDTagFilter bool
 	// SDK holds SDK interface and field name for SDK factory generation.
 	SDK *OpSDKConfig
 }
@@ -271,10 +281,11 @@ func (c *APIGroupVersionConfig) OpsConfig(pathToEntityName map[string]string) ma
 		}
 		requireClient := tc.OpsRequireClient || tc.OptionalSecretReference
 		result[entityName] = &EntityOpsConfig{
-			Ops:           tc.Ops,
-			RequireClient: requireClient,
-			SkipGetForUID: tc.OpsSkipGetForUID,
-			SDK:           tc.OpsSDK,
+			Ops:             tc.Ops,
+			RequireClient:   requireClient,
+			SkipGetForUID:   tc.OpsSkipGetForUID,
+			UseUIDTagFilter: tc.OpsUseUIDTagFilter,
+			SDK:             tc.OpsSDK,
 		}
 	}
 	return result

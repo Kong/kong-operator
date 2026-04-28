@@ -2284,6 +2284,41 @@ func TestGenerateEntityOpsFile_UsesConfiguredSDKInterface(t *testing.T) {
 	assert.Equal(t, "PortalPages", res.SDKFactoryInfo.SDKFieldName)
 }
 
+func TestGenerateEntityOpsFile_GetForUIDUsesUIDTagFilter(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"PortalPage": {IsRoot: false},
+		},
+	})
+
+	schema := &parser.Schema{
+		ListOperationID: "list-portal-pages",
+		ListTags:        []string{"Pages"},
+		Dependencies: []*parser.Dependency{
+			{ParamName: "portalId", EntityName: "Portal"},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		UseUIDTagFilter: true,
+		SDK: &config.OpSDKConfig{
+			Interface: "github.com/Kong/sdk-konnect-go.PortalPagesSDK",
+			FieldName: "PortalPages",
+		},
+	}
+
+	res, err := g.generateEntityOpsFile("PortalPage", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, res.File)
+	require.NotNil(t, res.GetForUIDInfo)
+
+	assert.Contains(t, res.File.Content, "Tags: new(UIDLabelForObject(obj))")
+	assert.Contains(t, res.File.Content, "PortalID: parentID")
+	assert.Contains(t, res.File.Content, "switch id := any(entry.GetID()).(type)")
+	assert.NotContains(t, res.File.Content, "entry.GetLabels()[KubernetesUIDLabelKey]")
+}
+
 func TestGenerateOpsUpdate_RootEntity(t *testing.T) {
 	g := NewGenerator(Config{
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",

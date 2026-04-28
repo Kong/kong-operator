@@ -32,6 +32,9 @@ type opsGetForUIDFuncData struct {
 	// field, so list response items are expected to expose GetLabels() and
 	// the generator can match by the Kubernetes UID label.
 	HasLabels bool
+	// UseUIDTagFilter indicates the API supports filtering list requests by the
+	// Kubernetes UID tag, so getForUID can avoid full scans.
+	UseUIDTagFilter bool
 	// HasName indicates the entity's request schema declares a "name" field,
 	// used as a fallback UID-matching strategy when HasLabels is false.
 	HasName bool
@@ -96,6 +99,7 @@ func (g *Generator) generateOpsGetForUIDFuncBody(
 		ParentIDGetter:    parentIDGetter,
 		ParentIDField:     parentIDField,
 		HasLabels:         hasLabels,
+		UseUIDTagFilter:   opsConfig != nil && opsConfig.UseUIDTagFilter,
 		HasName:           hasName,
 	}, nil
 }
