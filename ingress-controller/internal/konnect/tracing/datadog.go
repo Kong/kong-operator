@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+	"github.com/google/uuid"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/logging"
@@ -25,6 +26,9 @@ const (
 	// SyncStartTimestampKey is the context key for timestamp (in seconds) of starting a round of configuration sync.
 	SyncStartTimestampKey ContextKey = "KonnectSyncStartTimestamp"
 )
+
+// SyncRoundIDNamespace is the UUID namespace used to generate deterministic IDs for Konnect sync rounds.
+var SyncRoundIDNamespace = uuid.NameSpaceDNS
 
 const (
 	// InstanceIDHeader is the header to mark the ID of KIC's Konnect configuration synchronizer instance.
@@ -79,7 +83,7 @@ func DoRequest(ctx context.Context, httpClient *http.Client, req *http.Request) 
 }
 
 // addHeaderFromContext extracts the values to mark a configuration sync round in context
-// and set the headers in the request for tracing.
+// and sets the headers in the request for tracing.
 func addHeaderFromContext(ctx context.Context, req *http.Request) *http.Request {
 	if instanceID, ok := ctx.Value(SynchronizerIDKey).(string); ok {
 		req.Header.Add(InstanceIDHeader, instanceID)

@@ -217,7 +217,7 @@ func (s *ConfigSynchronizer) handleConfigSynchronizationTick(ctx context.Context
 	// Add values about the sync round in the context.
 	serialNumber := s.serialNumber.Add(1)
 	startTimestamp := time.Now().Unix()
-	syncRoundID := uuid.NewSHA1(uuid.Nil, fmt.Appendf([]byte{}, "%s:%d:%d", s.synchronizerID, serialNumber, startTimestamp))
+	syncRoundID := uuid.NewSHA1(tracing.SyncRoundIDNamespace, fmt.Appendf([]byte{}, "%s:%d:%d", s.synchronizerID, serialNumber, startTimestamp))
 	ctx = context.WithValue(ctx, tracing.SyncSerialNumberKey, serialNumber)
 	ctx = context.WithValue(ctx, tracing.SyncStartTimestampKey, startTimestamp)
 	ctx = context.WithValue(ctx, tracing.SyncRoundIDKey, syncRoundID.String())
