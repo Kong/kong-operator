@@ -1,7 +1,6 @@
 package ops
 
 import (
-	"context"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -19,7 +18,7 @@ import (
 func TestCreatePortal_UsesSDKOpsConversion(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	sdk := mocks.NewMockPortalsSDK(t)
 	portal := testGeneratedPortal()
 
@@ -36,15 +35,14 @@ func TestCreatePortal_UsesSDKOpsConversion(t *testing.T) {
 		}, nil).
 		Once()
 
-	err = createPortal(ctx, sdk, portal)
-	require.NoError(t, err)
+	require.NoError(t, createPortal(ctx, sdk, portal))
 	assert.Equal(t, "portal-1", portal.GetKonnectID())
 }
 
 func TestUpdatePortal_UsesSDKOpsConversion(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	sdk := mocks.NewMockPortalsSDK(t)
 	portal := testGeneratedPortal()
 	portal.SetKonnectID("portal-1")
@@ -58,14 +56,13 @@ func TestUpdatePortal_UsesSDKOpsConversion(t *testing.T) {
 		Return(&sdkkonnectops.UpdatePortalResponse{}, nil).
 		Once()
 
-	err = updatePortal(ctx, sdk, portal)
-	require.NoError(t, err)
+	require.NoError(t, updatePortal(ctx, sdk, portal))
 }
 
 func TestDeletePortal_UsesKonnectID(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	sdk := mocks.NewMockPortalsSDK(t)
 	portal := testGeneratedPortal()
 	portal.SetKonnectID("portal-1")
@@ -75,14 +72,13 @@ func TestDeletePortal_UsesKonnectID(t *testing.T) {
 		Return(&sdkkonnectops.DeletePortalResponse{}, nil).
 		Once()
 
-	err := deletePortal(ctx, sdk, portal)
-	require.NoError(t, err)
+	require.NoError(t, deletePortal(ctx, sdk, portal))
 }
 
 func TestCreateIdentityProviderRequest_UsesSDKOpsConversion(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	sdk := mocks.NewMockPortalAuthSettingsSDK(t)
 	idp := testGeneratedIdentityProviderRequest()
 	idp.SetPortalID("portal-1")
@@ -100,15 +96,14 @@ func TestCreateIdentityProviderRequest_UsesSDKOpsConversion(t *testing.T) {
 		}, nil).
 		Once()
 
-	err = createIdentityProviderRequest(ctx, sdk, idp)
-	require.NoError(t, err)
+	require.NoError(t, createIdentityProviderRequest(ctx, sdk, idp))
 	assert.Equal(t, "idp-1", idp.GetKonnectID())
 }
 
 func TestUpdateIdentityProviderRequest_UsesSDKOpsConversion(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	sdk := mocks.NewMockPortalAuthSettingsSDK(t)
 	idp := testGeneratedIdentityProviderRequest()
 	idp.SetPortalID("portal-1")
@@ -126,14 +121,13 @@ func TestUpdateIdentityProviderRequest_UsesSDKOpsConversion(t *testing.T) {
 		Return(&sdkkonnectops.UpdatePortalIdentityProviderResponse{}, nil).
 		Once()
 
-	err = updateIdentityProviderRequest(ctx, sdk, idp)
-	require.NoError(t, err)
+	require.NoError(t, updateIdentityProviderRequest(ctx, sdk, idp))
 }
 
 func TestDeleteIdentityProviderRequest_UsesParentAndKonnectID(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	sdk := mocks.NewMockPortalAuthSettingsSDK(t)
 	idp := testGeneratedIdentityProviderRequest()
 	idp.SetPortalID("portal-1")
@@ -144,8 +138,7 @@ func TestDeleteIdentityProviderRequest_UsesParentAndKonnectID(t *testing.T) {
 		Return(&sdkkonnectops.DeletePortalIdentityProviderResponse{}, nil).
 		Once()
 
-	err := deleteIdentityProviderRequest(ctx, sdk, idp)
-	require.NoError(t, err)
+	require.NoError(t, deleteIdentityProviderRequest(ctx, sdk, idp))
 }
 
 func testGeneratedPortal() *konnectv1alpha1.Portal {
