@@ -24,6 +24,8 @@ func DeleteGeneratedOps[
 	e TEnt,
 ) error {
 	switch ent := any(e).(type) {
+	case *konnectv1alpha1.EventGatewayListener:
+		return deleteEventGatewayListener(ctx, sdk.GetEventGatewayListenersSDK(), ent)
 	case *konnectv1alpha1.IdentityProviderRequest:
 		return deleteIdentityProviderRequest(ctx, sdk.GetPortalAuthSettingsSDK(), ent)
 	case *konnectv1alpha1.KonnectEventDataPlaneCertificate:

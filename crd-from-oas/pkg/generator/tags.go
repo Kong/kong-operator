@@ -82,7 +82,8 @@ func KubebuilderTags(prop *parser.Property, entityName string, fieldConfig *conf
 				tags = append(tags, markerDefaultString("Disabled"))
 			}
 		case string:
-			tags = append(tags, markerDefaultString(v))
+			// Always quote string defaults so empty strings produce `=""` not `=`.
+			tags = append(tags, markerDefaultString(strconv.Quote(v)))
 		case []any:
 			tags = append(tags, markerDefaultString(formatArrayDefaultValue(v)))
 		default:

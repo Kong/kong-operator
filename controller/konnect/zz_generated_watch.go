@@ -20,6 +20,8 @@ func reconciliationWatchOptionsForEntity[
 	ent TEnt,
 ) []func(*ctrl.Builder) *ctrl.Builder {
 	switch any(ent).(type) {
+	case *konnectv1alpha1.EventGatewayListener:
+		return EventGatewayListenerReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.IdentityProviderRequest:
 		return IdentityProviderRequestReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.KonnectEventDataPlaneCertificate:

@@ -8,12 +8,18 @@ import (
 
 // GeneratedSDK is the interface for generated SDKs.
 type GeneratedSDK interface {
+	GetEventGatewayListenersSDK() sdkkonnectgo.EventGatewayListenersSDK
 	GetPortalAuthSettingsSDK() sdkkonnectgo.PortalAuthSettingsSDK
 	GetEventGatewayDataPlaneCertificatesSDK() sdkkonnectgo.EventGatewayDataPlaneCertificatesSDK
 	GetEventGatewaysSDK() sdkkonnectgo.EventGatewaysSDK
 	GetPortalsSDK() sdkkonnectgo.PortalsSDK
 	GetPortalPagesSDK() sdkkonnectgo.PortalPagesSDK
 	GetPortalTeamsSDK() sdkkonnectgo.PortalTeamsSDK
+}
+
+// GetEventGatewayListenersSDK returns the SDK to operate EventGatewayListener.
+func (w sdkWrapper) GetEventGatewayListenersSDK() sdkkonnectgo.EventGatewayListenersSDK {
+	return w.sdk.EventGatewayListeners
 }
 
 // GetPortalAuthSettingsSDK returns the SDK to operate IdentityProviderRequest.
