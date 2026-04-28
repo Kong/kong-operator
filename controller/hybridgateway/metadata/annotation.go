@@ -359,7 +359,7 @@ func (am *AnnotationManager) GetRoutesWithKind(obj metav1.Object, routeKind stri
 		if route == "" {
 			continue
 		}
-		// Format is now just "kind/namespace/name"
+		// Format is now just "namespace/name"
 		routes = append(routes, route)
 	}
 
@@ -429,5 +429,5 @@ func (am *AnnotationManager) RouteAnnotationKeyForKind(routeKind string) string 
 // RouteAnnotationMatch returns true if the hybrid route annotation matches the given route by its namespace and name.
 func RouteAnnotationMatch(routeAnnotation string, route client.Object) bool {
 	routeObjectKey := client.ObjectKeyFromObject(route)
-	return routeAnnotation == routeObjectKey.String()
+	return strings.TrimSpace(routeAnnotation) == routeObjectKey.String()
 }
