@@ -98,9 +98,10 @@ type Schema struct {
 	DeleteQueryParamCount int      // number of query parameters on the DELETE operation (each becomes a nil arg)
 
 	// GET operation hints for getForUID ops generation.
-	ListOperationID string   // GET operationId on the collection path (e.g. "list-portals")
-	ListTags        []string // GET tags (used to derive SDK interface name)
-	ListPathParams  []string // ordered path params from the GET collection path (parent params only)
+	ListOperationID        string   // GET operationId on the collection path (e.g. "list-portals")
+	ListTags               []string // GET tags (used to derive SDK interface name)
+	ListPathParams         []string // ordered path params from the GET collection path (parent params only)
+	ListSuccessResponseRef string   // ref name of the 2xx success response for the list op (e.g. "ListBackendClustersResponse"); names the nested field on the SDK operations response wrapper
 }
 
 // ParsedSpec is the result of parsing an OpenAPI spec via ParsePaths.
@@ -339,6 +340,7 @@ func (p *Parser) extractListOp(targetPath string, schema *Schema) {
 	schema.ListOperationID = listOp.OperationID
 	schema.ListTags = append([]string(nil), listOp.Tags...)
 	schema.ListPathParams = extractPathParams(targetPath)
+	schema.ListSuccessResponseRef = extractSuccessResponseRef(listOp.Responses)
 }
 
 // findListOperation returns the GET operation on targetPath (the collection

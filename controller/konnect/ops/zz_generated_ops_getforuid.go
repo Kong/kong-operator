@@ -40,6 +40,8 @@ func getForUID[
 	e TEnt,
 ) (string, error) {
 	switch ent := any(e).(type) {
+	case *konnectv1alpha1.EventGatewayBackendCluster:
+		return getEventGatewayBackendClusterForUID(ctx, sdk.GetEventGatewayBackendClustersSDK(), ent)
 	case *konnectv1alpha1.EventGatewayListener:
 		return getEventGatewayListenerForUID(ctx, sdk.GetEventGatewayListenersSDK(), ent)
 	case *konnectv1alpha1.KonnectEventGateway:

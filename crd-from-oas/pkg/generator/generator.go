@@ -432,6 +432,13 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 		buf.WriteString(")\n\n")
 	}
 
+	// emittedNested tracks inline-object type names already emitted, so a field
+	// shape reused across multiple parent schemas only produces one definition.
+	emittedNested := make(map[string]bool)
+	for _, refName := range refNames {
+		emittedNested[fixInitialisms(refName)] = true
+	}
+
 	for _, refName := range refNames {
 		if schema, ok := parsed.Schemas[refName]; ok {
 			goName := fixInitialisms(refName)
@@ -452,6 +459,7 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 					g.writeSchemaTypeField(&buf, prop)
 				}
 				buf.WriteString("}\n\n")
+				g.writeNestedInlineTypes(&buf, schema.Properties, emittedNested)
 			case schema.Type == "boolean":
 				// Per K8s API convention (nobools), boolean schemas become string
 				// types with Enabled/Disabled enum constants.
@@ -542,6 +550,68 @@ func (g *Generator) writeSchemaTypeField(buf *strings.Builder, prop *parser.Prop
 		fmt.Fprintf(buf, "\t// %s\n", tag)
 	}
 	fmt.Fprintf(buf, "\t%s %s `json:\"%s\"`\n", goFieldName(prop.Name), g.goType(prop), jsonTag(prop))
+}
+
+// writeNestedInlineTypes emits Go type definitions for any property that is an
+// inline object (Type=="object" with sub-Properties and no $ref). This covers
+// schemas like BackendClusterTLS.client_identity, where the OpenAPI spec
+// declares the nested object inline rather than via $ref. Without this,
+// generateSchemaTypes would reference the type by name (e.g. ClientIdentity)
+// without ever defining it, producing uncompilable Go.
+//
+// emitted is a shared set used to dedupe across all parent schemas: a type
+// name is only emitted once per package. Recurses into nested objects so
+// arbitrarily deep inline shapes are handled.
+func (g *Generator) writeNestedInlineTypes(buf *strings.Builder, props []*parser.Property, emitted map[string]bool) {
+	for _, prop := range props {
+		if skipProperty(prop) || prop == nil {
+			continue
+		}
+		if prop.Items != nil {
+			g.writeNestedInlineTypes(buf, []*parser.Property{prop.Items}, emitted)
+		}
+		if !isInlineObjectWithProperties(prop) {
+			continue
+		}
+		typeName := goFieldName(prop.Name)
+		if emitted[typeName] {
+			g.writeNestedInlineTypes(buf, prop.Properties, emitted)
+			continue
+		}
+		emitted[typeName] = true
+
+		buf.WriteString(formatSchemaComment(typeName, prop.Description))
+		fmt.Fprintf(buf, "type %s struct {\n", typeName)
+		for _, nested := range prop.Properties {
+			if skipProperty(nested) {
+				continue
+			}
+			g.writeSchemaTypeField(buf, nested)
+		}
+		buf.WriteString("}\n\n")
+
+		g.writeNestedInlineTypes(buf, prop.Properties, emitted)
+	}
+}
+
+// isInlineObjectWithProperties returns true for object-typed properties whose
+// shape is declared inline (sub-properties present) rather than via a $ref or
+// a oneOf union. These need a generated Go struct definition because goType
+// returns the field name as the type name.
+func isInlineObjectWithProperties(prop *parser.Property) bool {
+	if prop.Type != "object" {
+		return false
+	}
+	if prop.RefName != "" {
+		return false
+	}
+	if len(prop.OneOf) > 0 {
+		return false
+	}
+	if prop.AdditionalProperties != nil {
+		return false
+	}
+	return len(prop.Properties) > 0
 }
 
 // schemaToGoType converts a parsed Schema's type info to the appropriate Go type string.

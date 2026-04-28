@@ -804,7 +804,7 @@ func Test{{$.EntityName}}APISpec_{{.MethodName}}(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, result)
 
-	data, err := json.Marshal(result)
+	data, err := spec.marshalSDKOpsPayload()
 	require.NoError(t, err)
 
 	var payload map[string]any

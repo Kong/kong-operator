@@ -79,9 +79,16 @@ func (g *Generator) generateOpsGetForUIDFuncBody(
 		parentIDField = pathParamToFieldName(parentDep.ParamName)
 	}
 
-	// Derive response field name: SDK codegen wraps list responses as
-	// <ListSDKMethod>Response on the outer struct (e.g. ListPortalsResponse).
-	listResponseField := listMethod + "Response"
+	// SDK codegen names the nested field on the operations response wrapper after
+	// the components response type. Most entities have those names matching, e.g.
+	// ListPortalsResponse → ListPortalsResponse, but some don't, e.g.
+	// ListEventGatewayBackendClusters → ListBackendClustersResponse. Prefer the
+	// ref name from the OpenAPI spec; fall back to the method-derived name when
+	// the spec does not declare one.
+	listResponseField := schema.ListSuccessResponseRef
+	if listResponseField == "" {
+		listResponseField = listMethod + "Response"
+	}
 
 	_, hasLabels, _ := metadataFields(schema)
 	hasName := schemaHasNameProperty(schema)
