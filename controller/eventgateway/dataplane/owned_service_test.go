@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/managedfields"
@@ -202,6 +203,41 @@ func Test_buildKafkaService(t *testing.T) {
 			},
 			check: func(t *testing.T, obj client.Object) {
 				assert.Equal(t, "dp-kafka", obj.GetName())
+			},
+		},
+		{
+			// A user port named "kafka" (same name as the base port) but on a
+			// different port number must replace the base port and not produce a
+			// Service with two ports that share the same name.
+			name: "user port with same name as base port replaces it (no duplicate names)",
+			egdp: &eventgatewayv1alpha1.KegDataPlane{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "dp"},
+				Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
+					Network: &eventgatewayv1alpha1.NetworkOptions{
+						Services: &eventgatewayv1alpha1.Services{
+							Kafka: &eventgatewayv1alpha1.ServiceOptions{
+								Ports: []eventgatewayv1alpha1.ServicePort{
+									{Name: new("kafka"), Port: 19092},
+								},
+							},
+						},
+					},
+				},
+			},
+			check: func(t *testing.T, obj client.Object) {
+				u, ok := obj.(*unstructured.Unstructured)
+				require.True(t, ok)
+				ports, _, _ := unstructured.NestedSlice(u.Object, "spec", "ports")
+				var kafkaPorts []any
+				for _, p := range ports {
+					pm, ok := p.(map[string]any)
+					if ok && pm["name"] == "kafka" {
+						kafkaPorts = append(kafkaPorts, pm)
+					}
+				}
+				require.Len(t, kafkaPorts, 1, "expected exactly one port named 'kafka'")
+				portNum, _, _ := unstructured.NestedInt64(kafkaPorts[0].(map[string]any), "port")
+				assert.Equal(t, int64(19092), portNum)
 			},
 		},
 		{
