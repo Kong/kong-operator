@@ -48,12 +48,18 @@ func (r *KonnectEntityReconciler[T, TEnt]) handleGeneratedTypeReferences(
 ) (bool, ctrl.Result, error) {
 	for _, handler := range _generatedTypeReferenceHandlers() {
 		res, err := handler(ctx, r.Client, ent)
-		stop, res, err := handleRefResult(ctx, r.Client, ent, res, err)
-		if stop || err != nil {
+		if err != nil {
+			// Only UnsupportedGeneratedReferenceTypeError are handled here
+			// to continue to the next handler.
+			// All other errors should be handled in handleRefResult.
 			if _, ok := errors.AsType[*UnsupportedGeneratedReferenceTypeError](err); ok {
 				// This handler is not applicable to the given type, continue to the next handler.
 				continue
 			}
+		}
+
+		stop, res, err := handleRefResult(ctx, r.Client, ent, res, err)
+		if stop || err != nil {
 			return true, res, err
 		}
 	}
