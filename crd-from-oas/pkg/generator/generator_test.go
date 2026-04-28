@@ -582,6 +582,37 @@ func TestGenerateCRDFuncs_GeneratesKonnectFuncs(t *testing.T) {
 		assert.Contains(t, content, `return obj.Spec.PortalRef`)
 	})
 
+	t.Run("event gateway child entities get event gateway ref accessor alias", func(t *testing.T) {
+		g := NewGenerator(Config{
+			APIGroup:   "konnect.konghq.com",
+			APIVersion: "v1alpha1",
+			CommonTypes: &config.CommonTypesConfig{
+				ObjectRef: &config.ObjectRefConfig{
+					Import: &config.ImportConfig{
+						Path:  "github.com/kong/kong-operator/v2/api/common/v1alpha1",
+						Alias: "commonv1alpha1",
+					},
+				},
+			},
+		})
+
+		schemaWithDependency := &parser.Schema{
+			Name: "CreateEventGatewayDataPlaneCertificate",
+			Dependencies: []*parser.Dependency{{
+				EntityName:         "Gateway",
+				AccessorEntityName: "EventGateway",
+				FieldName:          "GatewayRef",
+				JSONName:           "gateway_ref",
+			}},
+		}
+
+		content, err := g.generateCRDFuncs("CreateEventGatewayDataPlaneCertificate", schemaWithDependency)
+		require.NoError(t, err)
+		assert.Contains(t, content, `func (obj *EventGatewayDataPlaneCertificate) GetGatewayRef() commonv1alpha1.ObjectRef {`)
+		assert.Contains(t, content, `func (obj *EventGatewayDataPlaneCertificate) GetEventGatewayRef() commonv1alpha1.ObjectRef {`)
+		assert.Contains(t, content, `return obj.Spec.GatewayRef`)
+	})
+
 	t.Run("root ref accessor uses first dependency", func(t *testing.T) {
 		g := NewGenerator(Config{
 			APIGroup:   "x-konnect.konghq.com",

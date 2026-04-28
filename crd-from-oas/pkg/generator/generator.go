@@ -671,6 +671,7 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		KonnectLabelsField                 *konnectLabelsField
 		Dependencies                       []*parser.Dependency
 		RootRefDependency                  *parser.Dependency
+		RootRefAccessorEntityName          string
 		RootRefTypeName                    string
 		IsReconcilerRoot                   bool
 		KonnectAPIAuthConfigurationRefType string
@@ -682,6 +683,7 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		KonnectLabelsField:                 g.konnectLabelsField(schema),
 		Dependencies:                       schema.Dependencies,
 		RootRefDependency:                  rootRefDependency,
+		RootRefAccessorEntityName:          rootRefAccessorEntityName(rootRefDependency),
 		RootRefTypeName:                    g.objectRefTypeName(),
 		IsReconcilerRoot:                   isReconcilerRoot,
 		KonnectAPIAuthConfigurationRefType: defaultKonnectStatusAlias + ".ControlPlaneKonnectAPIAuthConfigurationRef",
@@ -699,6 +701,16 @@ func rootRefDependency(schema *parser.Schema) *parser.Dependency {
 		return nil
 	}
 	return schema.Dependencies[0]
+}
+
+func rootRefAccessorEntityName(dep *parser.Dependency) string {
+	if dep == nil {
+		return ""
+	}
+	if dep.AccessorEntityName != "" {
+		return dep.AccessorEntityName
+	}
+	return dep.EntityName
 }
 
 // EntityFilePrefix converts a PascalCase entity name to a lowercase file name
