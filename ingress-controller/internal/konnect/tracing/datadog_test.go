@@ -2,6 +2,7 @@ package tracing_test
 
 import (
 	"bytes"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -96,4 +97,43 @@ func TestDoRequest(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDoRequest_SyncHeaders(t *testing.T) {
+	var (
+		testInstanceID     = "test-instance-id"
+		testSerialNumber   = uint32(42)
+		testStartTimestamp = int64(1700000000)
+		testSyncRoundID    = "test-sync-round-id"
+	)
+
+	var receivedHeaders http.Header
+	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedHeaders = r.Header.Clone()
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(testServer.Close)
+
+	client := testServer.Client()
+	request, err := http.NewRequest(http.MethodGet, testServer.URL, nil)
+	require.NoError(t, err)
+
+	loggerBuf := &bytes.Buffer{}
+	logger := buflogr.NewWithBuffer(loggerBuf)
+	ctx := ctrllog.IntoContext(t.Context(), logger)
+	ctx = context.WithValue(ctx, tracing.SynchronizerIDKey, testInstanceID)
+	ctx = context.WithValue(ctx, tracing.SyncSerialNumberKey, testSerialNumber)
+	ctx = context.WithValue(ctx, tracing.SyncStartTimestampKey, testStartTimestamp)
+	ctx = context.WithValue(ctx, tracing.SyncRoundIDKey, testSyncRoundID)
+
+	resp, err := tracing.DoRequest(ctx, client, request)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_ = resp.Body.Close()
+	})
+
+	require.Equal(t, testInstanceID, receivedHeaders.Get(tracing.InstanceIDHeader))
+	require.Equal(t, "42", receivedHeaders.Get(tracing.SyncSerialNumberHeader))
+	require.Equal(t, "1700000000", receivedHeaders.Get(tracing.SyncStartTimestampHeader))
+	require.Equal(t, testSyncRoundID, receivedHeaders.Get(tracing.SyncRoundIDHeader))
 }
