@@ -15,13 +15,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/kong/kong-operator/v2/api/common/consts"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
-	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
-	"github.com/kong/kong-operator/v2/internal/utils/crossnamespace"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
@@ -35,6 +32,7 @@ func handlePortalRef(
 	type TObj interface {
 		k8sutils.ConditionsAwareObject
 		portalRefAccessor
+		GetTypeName() string
 		GetPortalID() string
 		SetPortalID(id string)
 	}
@@ -46,11 +44,11 @@ func handlePortalRef(
 		}
 	}
 
-	if res, err := ensureKongReferenceGrantForPortalRef(ctx, cl, o); err != nil || !res.IsZero() {
+	portalRef := o.GetPortalRef()
+	if res, err := ensureKongReferenceGrantForParentRef(ctx, cl, o, portalRef); err != nil || !res.IsZero() {
 		return res, err
 	}
 
-	portalRef := o.GetPortalRef()
 	portal, nn, err := getPortalForRef(ctx, cl, portalRef, o.GetNamespace())
 	if err != nil {
 		if res, errStatus := patch.StatusWithCondition(
@@ -129,76 +127,6 @@ func handlePortalRef(
 		metav1.ConditionTrue,
 		konnectv1alpha1.PortalRefReasonValid,
 		fmt.Sprintf("Referenced Portal %s is programmed", nn),
-	); errStatus != nil || !res.IsZero() {
-		return res, errStatus
-	}
-
-	return ctrl.Result{}, nil
-}
-
-func ensureKongReferenceGrantForPortalRef[T interface {
-	client.Object
-	k8sutils.ConditionsAware
-	portalRefAccessor
-}](
-	ctx context.Context,
-	cl client.Client,
-	ent T,
-) (ctrl.Result, error) {
-	portalRef := ent.GetPortalRef()
-	if portalRef.Type != commonv1alpha1.ObjectRefTypeNamespacedRef ||
-		portalRef.NamespacedRef == nil ||
-		portalRef.NamespacedRef.Namespace == nil ||
-		*portalRef.NamespacedRef.Namespace == ent.GetNamespace() {
-		if res, errStatus := patch.StatusWithoutCondition(
-			ctx, cl, ent,
-			configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs,
-		); errStatus != nil || !res.IsZero() {
-			return res, errStatus
-		}
-		return ctrl.Result{}, nil
-	}
-
-	targetNamespace := *portalRef.NamespacedRef.Namespace
-	err := crossnamespace.CheckKongReferenceGrantForResource(
-		ctx,
-		cl,
-		ent.GetNamespace(),
-		targetNamespace,
-		portalRef.NamespacedRef.Name,
-		metav1.GroupVersionKind(ent.GetObjectKind().GroupVersionKind()),
-		metav1.GroupVersionKind(konnectv1alpha1.GroupVersion.WithKind("Portal")),
-	)
-	if crossnamespace.IsReferenceNotGranted(err) {
-		if res, errStatus := patch.StatusWithCondition(
-			ctx, cl, ent,
-			consts.ConditionType(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs),
-			metav1.ConditionFalse,
-			configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted,
-			fmt.Sprintf(
-				"KongReferenceGrants do not allow access to Portal %s/%s",
-				targetNamespace,
-				portalRef.NamespacedRef.Name,
-			),
-		); errStatus != nil || !res.IsZero() {
-			return res, errStatus
-		}
-		return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
-	}
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	if res, errStatus := patch.StatusWithCondition(
-		ctx, cl, ent,
-		consts.ConditionType(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs),
-		metav1.ConditionTrue,
-		configurationv1alpha1.KongReferenceGrantReasonResolvedRefs,
-		fmt.Sprintf(
-			"KongReferenceGrants allow access to Portal %s/%s",
-			targetNamespace,
-			portalRef.NamespacedRef.Name,
-		),
 	); errStatus != nil || !res.IsZero() {
 		return res, errStatus
 	}
