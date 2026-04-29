@@ -354,6 +354,7 @@ func New(
 			updateStrategyResolver,
 			configStatusNotifier,
 			metricsRecorder,
+			instanceID,
 		)
 		if err != nil {
 			setupLog.Error(err, "Failed to setup Konnect configuration synchronizer with manager, skipping")

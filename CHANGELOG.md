@@ -46,6 +46,14 @@
 
 ### Added
 
+- Add the following headers in requests of `ingress-controller` sent to Konnect
+  for uploading configuration for tracing:
+  - `X-Kic-Konnect-Sync-Instance-Id` for instance ID of Konnect config synchronizer.
+    It is set to use the `ControlPlane`'s instance ID.
+  - `X-Kic-Konnect-Sync-Serial-Number` for serial number ot config sync round.
+  - `X-Kic-Konnect-Sync-Start-Timestamp` for the timestamp of starting the config sync round.
+  - `X-Kic-Konnect-Sync-Round-Id` for the ID to mark the config sync round.
+  [#4058](https://github.com/Kong/kong-operator/pull/4058)
 - Add `spec.konnect.configUploadConcurrency` to set the concurrency of uploading
   configuration to Konnect in the on-prem gateway integration wit Konnect and
   decrease the default concurrency to `4` to reduce the possibility of triggering

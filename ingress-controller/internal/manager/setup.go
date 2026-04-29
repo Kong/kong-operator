@@ -499,6 +499,7 @@ func setupKonnectConfigSynchronizerWithMgr(
 	updateStrategyResolver sendconfig.UpdateStrategyResolver,
 	configStatusNotifier clients.ConfigStatusNotifier,
 	metricsRecorder metrics.Recorder,
+	instanceID InstanceID,
 ) (*konnect.ConfigSynchronizer, error) {
 	s := konnect.NewConfigSynchronizer(
 		konnect.ConfigSynchronizerParams{
@@ -510,6 +511,7 @@ func setupKonnectConfigSynchronizerWithMgr(
 			ConfigChangeDetector:   sendconfig.NewKonnectConfigurationChangeDetector(),
 			ConfigStatusNotifier:   configStatusNotifier,
 			MetricsRecorder:        metricsRecorder,
+			SynchronizerID:         instanceID.String(),
 		},
 	)
 	err := mgr.Add(s)
