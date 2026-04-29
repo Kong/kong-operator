@@ -1151,7 +1151,38 @@ func get{{.Entity}}ForUID(
 		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "{{.ParentEntityName}}", Op: GetOp}
 	}
 {{- end}}
-{{- if .HasLabels}}
+{{- if .UseUIDTagFilter}}
+
+{{- if .ParentEntityName}}
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
+		{{.ParentIDField}}: parentID,
+		Tags: new(UIDLabelForObject(obj)),
+	})
+{{- else}}
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
+		Tags: new(UIDLabelForObject(obj)),
+	})
+{{- end}}
+	if err != nil {
+		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
+	}
+	if resp == nil || resp.{{.ListResponseField}} == nil {
+		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
+	}
+
+	for _, entry := range resp.{{.ListResponseField}}.Data {
+		switch id := any(entry.GetID()).(type) {
+		case string:
+			if id != "" {
+				return id, nil
+			}
+		case *string:
+			if id != nil && *id != "" {
+				return *id, nil
+			}
+		}
+	}
+{{- else if .HasLabels}}
 
 	// TODO: pass a Filter to {{.ListSDKMethod}} (e.g. by name/labels) so we
 	// do not page through every entity in the tenant. Filter types and

@@ -85,6 +85,29 @@ apiGroupVersions:
 		)
 	})
 
+	t.Run("valid config with ops uid tag filter", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    types:
+      - path: /services
+        ops:
+          useUIDTagFilter: true
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.ServiceInput
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		cfg, err := LoadProjectConfig(path)
+		require.NoError(t, err)
+
+		konnect := cfg.APIGroupVersions["konnect.konghq.com/v1alpha1"]
+		require.NotNil(t, konnect)
+		require.Len(t, konnect.Types, 1)
+		assert.True(t, konnect.Types[0].OpsUseUIDTagFilter)
+	})
+
 	t.Run("valid config with commonTypes import", func(t *testing.T) {
 		content := `
 apiGroupVersions:
@@ -474,6 +497,24 @@ func TestAPIGroupVersionConfig_OpsConfig(t *testing.T) {
 		require.Len(t, oc, 2)
 		assert.True(t, oc["KonnectEventDataPlaneCertificate"].RequireClient)
 		assert.True(t, oc["Portal"].RequireClient)
+	})
+
+	t.Run("uid tag filter is propagated", func(t *testing.T) {
+		agv := &APIGroupVersionConfig{
+			Types: []*TypeConfig{
+				{
+					Path: "/services",
+					Ops: map[string]*OpConfig{
+						"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.ServiceInput"},
+					},
+					OpsUseUIDTagFilter: true,
+				},
+			},
+		}
+
+		oc := agv.OpsConfig(map[string]string{"/services": "KongService"})
+		require.Len(t, oc, 1)
+		assert.True(t, oc["KongService"].UseUIDTagFilter)
 	})
 
 	t.Run("no ops configured", func(t *testing.T) {
