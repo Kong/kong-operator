@@ -16,6 +16,10 @@ type Dependency struct {
 	ParamName string
 	// EntityName is the entity name derived from the parameter (e.g., "Portal")
 	EntityName string
+	// AccessorEntityName is the entity name inferred from the parent resource
+	// segment for generated ref accessors (e.g. "event-gateways" ->
+	// "EventGateway").
+	AccessorEntityName string
 	// FieldName is the Go field name for the reference (e.g., "PortalRef")
 	FieldName string
 	// JSONName is the JSON tag name (e.g., "portal_ref")
@@ -94,9 +98,10 @@ type Schema struct {
 	DeleteQueryParamCount int      // number of query parameters on the DELETE operation (each becomes a nil arg)
 
 	// GET operation hints for getForUID ops generation.
-	ListOperationID string   // GET operationId on the collection path (e.g. "list-portals")
-	ListTags        []string // GET tags (used to derive SDK interface name)
-	ListPathParams  []string // ordered path params from the GET collection path (parent params only)
+	ListOperationID        string   // GET operationId on the collection path (e.g. "list-portals")
+	ListTags               []string // GET tags (used to derive SDK interface name)
+	ListPathParams         []string // ordered path params from the GET collection path (parent params only)
+	ListSuccessResponseRef string   // ref name of the 2xx success response for the list op (e.g. "ListBackendClustersResponse"); names the nested field on the SDK operations response wrapper
 }
 
 // ParsedSpec is the result of parsing an OpenAPI spec via ParsePaths.
@@ -335,6 +340,7 @@ func (p *Parser) extractListOp(targetPath string, schema *Schema) {
 	schema.ListOperationID = listOp.OperationID
 	schema.ListTags = append([]string(nil), listOp.Tags...)
 	schema.ListPathParams = extractPathParams(targetPath)
+	schema.ListSuccessResponseRef = extractSuccessResponseRef(listOp.Responses)
 }
 
 // findListOperation returns the GET operation on targetPath (the collection
@@ -373,11 +379,13 @@ func (p *Parser) extractPathDependencies(path string) []*Dependency {
 	// so portalId is a dependency
 	for _, match := range matches {
 		paramName := match[1] // e.g., "portalId"
+		entityName := getEntityNameFromParam(paramName)
 		dep := &Dependency{
-			ParamName:  paramName,
-			EntityName: getEntityNameFromParam(paramName),
-			FieldName:  getEntityNameFromParam(paramName) + "Ref",
-			JSONName:   toSnakeCase(getEntityNameFromParam(paramName)) + "_ref",
+			ParamName:          paramName,
+			EntityName:         entityName,
+			AccessorEntityName: getAccessorEntityNameFromPath(path, paramName),
+			FieldName:          entityName + "Ref",
+			JSONName:           toSnakeCase(entityName) + "_ref",
 		}
 		deps = append(deps, dep)
 	}
@@ -400,6 +408,55 @@ func getEntityNameFromParam(paramName string) string {
 	}
 
 	return name
+}
+
+func getAccessorEntityNameFromPath(path, paramName string) string {
+	segments := strings.Split(strings.Trim(path, "/"), "/")
+	target := "{" + paramName + "}"
+	for i, segment := range segments {
+		if segment != target {
+			continue
+		}
+		if i == 0 {
+			break
+		}
+		if name := getEntityNameFromResourceSegment(segments[i-1]); name != "" {
+			return name
+		}
+		break
+	}
+	return getEntityNameFromParam(paramName)
+}
+
+func getEntityNameFromResourceSegment(segment string) string {
+	if segment == "" {
+		return ""
+	}
+
+	parts := strings.Split(segment, "-")
+	var result strings.Builder
+	for _, part := range parts {
+		if part == "" {
+			continue
+		}
+		word := singularizeResourceWord(part)
+		result.WriteString(toTitleCase(word))
+	}
+
+	return result.String()
+}
+
+func singularizeResourceWord(word string) string {
+	switch {
+	case strings.HasSuffix(word, "ies") && len(word) > 3:
+		return strings.TrimSuffix(word, "ies") + "y"
+	case strings.HasSuffix(word, "sses") && len(word) > 4:
+		return strings.TrimSuffix(word, "es")
+	case strings.HasSuffix(word, "s") && !strings.HasSuffix(word, "ss"):
+		return strings.TrimSuffix(word, "s")
+	default:
+		return word
+	}
 }
 
 // toSnakeCase converts a string to snake_case.

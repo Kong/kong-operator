@@ -321,7 +321,7 @@ func (c *httpRouteConverter) HandleOrphanedResource(ctx context.Context, logger 
 	am.RemoveRouteFromAnnotation(resource, c.route)
 
 	// If other Routes are still present in the annotation, we just need to update the resource.
-	if len(am.GetRoutes(resource)) > 0 {
+	if len(am.GetRoutesWithKind(resource, "HTTPRoute")) > 0 {
 		log.Debug(logger, "Updating hybrid-routes annotation", "kind", resource.GetKind(), "obj", client.ObjectKeyFromObject(resource))
 		if err := c.Patch(ctx, resource, client.MergeFrom(oldResource)); err != nil && !apierrors.IsNotFound(err) {
 			return true, fmt.Errorf("failed to update resource: %w", err)

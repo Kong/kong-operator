@@ -85,6 +85,29 @@ apiGroupVersions:
 		)
 	})
 
+	t.Run("valid config with ops uid tag filter", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    types:
+      - path: /services
+        ops:
+          useUIDTagFilter: true
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.ServiceInput
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		cfg, err := LoadProjectConfig(path)
+		require.NoError(t, err)
+
+		konnect := cfg.APIGroupVersions["konnect.konghq.com/v1alpha1"]
+		require.NotNil(t, konnect)
+		require.Len(t, konnect.Types, 1)
+		assert.True(t, konnect.Types[0].OpsUseUIDTagFilter)
+	})
+
 	t.Run("valid config with commonTypes import", func(t *testing.T) {
 		content := `
 apiGroupVersions:
@@ -411,6 +434,50 @@ func TestAPIGroupVersionConfig_FieldConfig(t *testing.T) {
 		require.NotNil(t, fc)
 		assert.Empty(t, fc.Entities)
 	})
+
+	t.Run("nested cel validations parsed correctly", func(t *testing.T) {
+		agv := &APIGroupVersionConfig{
+			Types: []*TypeConfig{
+				{
+					Path: "/v1/entities/{entityId}/sub",
+					CEL: map[string]*FieldConfig{
+						"tls": {
+							Fields: map[string]*FieldConfig{
+								"client_identity": {
+									Fields: map[string]*FieldConfig{
+										"certificate": {
+											Validations: []string{"+kubebuilder:validation:MaxLength=1024"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		pathToEntity := map[string]string{
+			"/v1/entities/{entityId}/sub": "SubEntity",
+		}
+
+		fc := agv.FieldConfig(pathToEntity)
+		require.NotNil(t, fc)
+
+		// GetFieldConfig with single segment returns the tls FieldConfig with sub-fields.
+		tlsCfg := fc.GetFieldConfig("SubEntity", "tls")
+		require.NotNil(t, tlsCfg)
+		assert.Empty(t, tlsCfg.Validations, "tls has no direct validations")
+		require.NotNil(t, tlsCfg.Sub("client_identity"))
+
+		// Multi-segment path resolves to the leaf.
+		certCfg := fc.GetFieldConfig("SubEntity", "tls", "client_identity", "certificate")
+		require.NotNil(t, certCfg)
+		assert.Equal(t, []string{"+kubebuilder:validation:MaxLength=1024"}, certCfg.Validations)
+
+		// Single-segment lookup returns nil for a non-leaf path segment without Validations.
+		assert.Nil(t, fc.GetFieldValidations("SubEntity", "tls"))
+	})
 }
 
 func TestAPIGroupVersionConfig_OpsConfig(t *testing.T) {
@@ -474,6 +541,24 @@ func TestAPIGroupVersionConfig_OpsConfig(t *testing.T) {
 		require.Len(t, oc, 2)
 		assert.True(t, oc["KonnectEventDataPlaneCertificate"].RequireClient)
 		assert.True(t, oc["Portal"].RequireClient)
+	})
+
+	t.Run("uid tag filter is propagated", func(t *testing.T) {
+		agv := &APIGroupVersionConfig{
+			Types: []*TypeConfig{
+				{
+					Path: "/services",
+					Ops: map[string]*OpConfig{
+						"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.ServiceInput"},
+					},
+					OpsUseUIDTagFilter: true,
+				},
+			},
+		}
+
+		oc := agv.OpsConfig(map[string]string{"/services": "KongService"})
+		require.Len(t, oc, 1)
+		assert.True(t, oc["KongService"].UseUIDTagFilter)
 	})
 
 	t.Run("no ops configured", func(t *testing.T) {

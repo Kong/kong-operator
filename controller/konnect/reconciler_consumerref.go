@@ -161,7 +161,8 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 			return res, errStatus
 		}
 
-		return ctrl.Result{Requeue: true}, nil
+		// Don't requeue. The referenced entity's changes will trigger the reconciliation.
+		return ctrl.Result{}, nil
 	}
 
 	if resource, ok := any(ent).(EntityWithControlPlaneRef); ok {

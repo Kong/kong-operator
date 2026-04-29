@@ -22,6 +22,13 @@ import (
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
+var (
+	httpRouteTypeMeta = metav1.TypeMeta{
+		Kind:       "HTTPRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
+	}
+)
+
 func TestAppendHTTPRouteToAnnotations(t *testing.T) {
 	logger := logr.Discard()
 
@@ -36,6 +43,7 @@ func TestAppendHTTPRouteToAnnotations(t *testing.T) {
 			name:                "no existing annotations",
 			existingAnnotations: nil,
 			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-route",
 					Namespace: "test-namespace",
@@ -47,9 +55,10 @@ func TestAppendHTTPRouteToAnnotations(t *testing.T) {
 		{
 			name: "empty hybrid-routes annotation",
 			existingAnnotations: map[string]string{
-				consts.GatewayOperatorHybridRoutesAnnotation: "",
+				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-route",
 					Namespace: "test-namespace",
@@ -61,9 +70,10 @@ func TestAppendHTTPRouteToAnnotations(t *testing.T) {
 		{
 			name: "existing different route in annotation",
 			existingAnnotations: map[string]string{
-				consts.GatewayOperatorHybridRoutesAnnotation: "other-namespace/other-route",
+				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "other-namespace/other-route",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-route",
 					Namespace: "test-namespace",
@@ -75,9 +85,10 @@ func TestAppendHTTPRouteToAnnotations(t *testing.T) {
 		{
 			name: "route already exists in annotation",
 			existingAnnotations: map[string]string{
-				consts.GatewayOperatorHybridRoutesAnnotation: "test-namespace/test-route",
+				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "test-namespace/test-route",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-route",
 					Namespace: "test-namespace",
@@ -89,9 +100,10 @@ func TestAppendHTTPRouteToAnnotations(t *testing.T) {
 		{
 			name: "multiple existing routes, adding new one",
 			existingAnnotations: map[string]string{
-				consts.GatewayOperatorHybridRoutesAnnotation: "ns1/route1,ns2/route2",
+				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1,ns2/route2",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "route3",
 					Namespace: "ns3",
@@ -114,7 +126,7 @@ func TestAppendHTTPRouteToAnnotations(t *testing.T) {
 
 			am := metadata.NewAnnotationManager(logger)
 			am.AppendRouteToAnnotation(upstream, tt.httpRoute)
-			actualAnnotation := upstream.Annotations[consts.GatewayOperatorHybridRoutesAnnotation]
+			actualAnnotation := upstream.Annotations[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation]
 			assert.Equal(t, tt.expectedAnnotation, actualAnnotation)
 		})
 	}
@@ -135,6 +147,7 @@ func TestRemoveHTTPRouteFromAnnotations(t *testing.T) {
 			name:                "no annotations",
 			existingAnnotations: nil,
 			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-route",
 					Namespace: "test-namespace",
@@ -146,9 +159,10 @@ func TestRemoveHTTPRouteFromAnnotations(t *testing.T) {
 		{
 			name: "route not in annotation",
 			existingAnnotations: map[string]string{
-				consts.GatewayOperatorHybridRoutesAnnotation: "other-namespace/other-route",
+				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "other-namespace/other-route",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-route",
 					Namespace: "test-namespace",
@@ -160,9 +174,10 @@ func TestRemoveHTTPRouteFromAnnotations(t *testing.T) {
 		{
 			name: "remove only route - annotation should be deleted",
 			existingAnnotations: map[string]string{
-				consts.GatewayOperatorHybridRoutesAnnotation: "test-namespace/test-route",
+				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "test-namespace/test-route",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-route",
 					Namespace: "test-namespace",
@@ -175,9 +190,10 @@ func TestRemoveHTTPRouteFromAnnotations(t *testing.T) {
 		{
 			name: "remove first route from multiple",
 			existingAnnotations: map[string]string{
-				consts.GatewayOperatorHybridRoutesAnnotation: "test-namespace/test-route,ns2/route2",
+				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "test-namespace/test-route,ns2/route2",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-route",
 					Namespace: "test-namespace",
@@ -189,9 +205,10 @@ func TestRemoveHTTPRouteFromAnnotations(t *testing.T) {
 		{
 			name: "remove middle route from multiple",
 			existingAnnotations: map[string]string{
-				consts.GatewayOperatorHybridRoutesAnnotation: "ns1/route1,test-namespace/test-route,ns3/route3",
+				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1,test-namespace/test-route,ns3/route3",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-route",
 					Namespace: "test-namespace",
@@ -199,6 +216,22 @@ func TestRemoveHTTPRouteFromAnnotations(t *testing.T) {
 			},
 			expectedAnnotation: "ns1/route1,ns3/route3",
 			expectModification: true,
+		},
+		{
+			name: "same namespace and name but different kind",
+			existingAnnotations: map[string]string{
+				consts.GatewayOperatorHybridRoutesTLSRouteAnnotation:  "test-namespace/test-route,ns1/route1",
+				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "other-namespace/other-route",
+			},
+			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-route",
+					Namespace: "test-namespace",
+				},
+			},
+			expectedAnnotation: "other-namespace/other-route",
+			expectModification: false,
 		},
 	}
 
@@ -222,10 +255,10 @@ func TestRemoveHTTPRouteFromAnnotations(t *testing.T) {
 			assert.Equal(t, tt.expectModification, modified)
 
 			if tt.expectAnnotationDeleted {
-				_, exists := upstream.Annotations[consts.GatewayOperatorHybridRoutesAnnotation]
+				_, exists := upstream.Annotations[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation]
 				assert.False(t, exists, "annotation should be deleted")
 			} else if tt.expectedAnnotation != "" {
-				actualAnnotation := upstream.Annotations[consts.GatewayOperatorHybridRoutesAnnotation]
+				actualAnnotation := upstream.Annotations[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation]
 				assert.Equal(t, tt.expectedAnnotation, actualAnnotation)
 			}
 		})
@@ -241,6 +274,7 @@ func TestUpstreamForRule_NewUpstream(t *testing.T) {
 	ctx := context.Background()
 
 	httpRoute := &gwtypes.HTTPRoute{
+		TypeMeta: httpRouteTypeMeta,
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-route",
 			Namespace: "test-namespace",
@@ -278,7 +312,7 @@ func TestUpstreamForRule_NewUpstream(t *testing.T) {
 
 	// Verify the upstream has the expected annotation
 	expectedAnnotation := "test-namespace/test-route"
-	actualAnnotation := upstream.Annotations[consts.GatewayOperatorHybridRoutesAnnotation]
+	actualAnnotation := upstream.Annotations[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation]
 	assert.Equal(t, expectedAnnotation, actualAnnotation)
 }
 

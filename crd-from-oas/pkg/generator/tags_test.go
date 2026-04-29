@@ -168,7 +168,7 @@ func TestKubebuilderTags(t *testing.T) {
 			expected: []string{
 				"+optional",
 				"+kubebuilder:validation:MaxLength=253",
-				"+kubebuilder:default=https",
+				`+kubebuilder:default="https"`,
 			},
 		},
 		{
@@ -182,6 +182,30 @@ func TestKubebuilderTags(t *testing.T) {
 			expected: []string{
 				"+optional",
 				"+kubebuilder:default={\"email\",\"openid\",\"profile\"}",
+			},
+		},
+		{
+			name: "float64 default (integer value)",
+			prop: &parser.Property{
+				Name:    "port",
+				Type:    "number",
+				Default: float64(9092),
+			},
+			expected: []string{
+				"+optional",
+				"+kubebuilder:default=9092",
+			},
+		},
+		{
+			name: "float64 default (fractional value)",
+			prop: &parser.Property{
+				Name:    "ratio",
+				Type:    "number",
+				Default: float64(1.5),
+			},
+			expected: []string{
+				"+optional",
+				"+kubebuilder:default=1.5",
 			},
 		},
 		{
@@ -555,27 +579,77 @@ func TestKubebuilderTags_WithFieldConfig(t *testing.T) {
 	}
 }
 
-func TestKubebuilderTags_DefaultPanic(t *testing.T) {
+func TestKubebuilderTags_OverrideMaxLength(t *testing.T) {
+	prop := &parser.Property{
+		Name:     "certificate",
+		Type:     "string",
+		Required: true,
+	}
+	fieldConfig := &config.Config{
+		Entities: map[string]*config.EntityConfig{
+			"ClientIdentity": {
+				Fields: map[string]*config.FieldConfig{
+					"certificate": {
+						Validations: []string{"+kubebuilder:validation:MaxLength=1024"},
+					},
+				},
+			},
+		},
+	}
+	result := KubebuilderTags(prop, "ClientIdentity", fieldConfig)
+	assert.Contains(t, result, "+kubebuilder:validation:MaxLength=1024", "user-provided MaxLength should be present")
+	assert.NotContains(t, result, "+kubebuilder:validation:MaxLength=253", "default MaxLength should be removed")
+}
+
+func TestKubebuilderTags_DefaultInt(t *testing.T) {
 	prop := &parser.Property{
 		Name:     "count",
 		Type:     "integer",
 		Required: false,
-		Default:  123, // int type, not bool or string
+		Default:  123,
 	}
-
-	assert.Panics(t, func() {
-		KubebuilderTags(prop, "Test", nil)
-	})
+	result := KubebuilderTags(prop, "Test", nil)
+	assert.Contains(t, result, "+kubebuilder:default=123")
 }
 
-func TestKubebuilderTags_ArrayDefaultItemPanic(t *testing.T) {
-	prop := &parser.Property{
-		Name:     "scopes",
-		Type:     "array",
-		Required: false,
-		Default:  []any{"email", 1},
+func TestKubebuilderTags_DefaultFloat(t *testing.T) {
+	tests := []struct {
+		name     string
+		value    float64
+		expected string
+	}{
+		{"integer-valued float", 5.0, "+kubebuilder:default=5"},
+		{"fractional float", 1.5, "+kubebuilder:default=1.5"},
 	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			prop := &parser.Property{
+				Name:    "ratio",
+				Type:    "number",
+				Default: tt.value,
+			}
+			result := KubebuilderTags(prop, "Test", nil)
+			assert.Contains(t, result, tt.expected)
+		})
+	}
+}
 
+func TestKubebuilderTags_ArrayDefaultWithNumeric(t *testing.T) {
+	prop := &parser.Property{
+		Name:    "scopes",
+		Type:    "array",
+		Default: []any{"email", float64(1)},
+	}
+	result := KubebuilderTags(prop, "Test", nil)
+	assert.Contains(t, result, `+kubebuilder:default={"email",1}`)
+}
+
+func TestKubebuilderTags_DefaultUnsupportedTypePanic(t *testing.T) {
+	prop := &parser.Property{
+		Name:    "weird",
+		Type:    "object",
+		Default: map[string]any{"key": "value"},
+	}
 	assert.Panics(t, func() {
 		KubebuilderTags(prop, "Test", nil)
 	})

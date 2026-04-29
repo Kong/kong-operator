@@ -79,6 +79,9 @@ type TypeConfig struct {
 	OpsRequireClient bool `yaml:"-"`
 	// OpsSkipGetForUID skips generation of the getForUID function for this entity.
 	OpsSkipGetForUID bool `yaml:"-"`
+	// OpsUseUIDTagFilter enables generated getForUID code to pass the object's
+	// Kubernetes UID tag as a list query filter when the API supports it.
+	OpsUseUIDTagFilter bool `yaml:"-"`
 	// OpsSDK holds SDK interface and field name for SDK factory generation.
 	OpsSDK *OpSDKConfig `yaml:"-"`
 	// OptionalSecretReference enables generation of a union type field on the
@@ -130,6 +133,9 @@ type typeOpsYAML struct {
 	// Use when the SDK list endpoint does not support UID-label filtering, or
 	// when the hand-written implementation already exists.
 	SkipGetForUID bool `yaml:"skipGetForUID,omitempty"`
+	// UseUIDTagFilter enables generated getForUID code to pass the object's
+	// Kubernetes UID tag as a list query filter when the API supports it.
+	UseUIDTagFilter bool `yaml:"useUIDTagFilter,omitempty"`
 	// SDK holds the SDK interface and field name for SDK factory generation.
 	SDK *OpSDKConfig `yaml:"sdk,omitempty"`
 	// Operations maps operation names (e.g. "create", "update") to SDK type configs.
@@ -165,6 +171,7 @@ func (tc *TypeConfig) UnmarshalYAML(value *yaml.Node) error {
 		tc.Ops = raw.Ops.Operations
 		tc.OpsRequireClient = raw.Ops.RequireClient
 		tc.OpsSkipGetForUID = raw.Ops.SkipGetForUID
+		tc.OpsUseUIDTagFilter = raw.Ops.UseUIDTagFilter
 		tc.OpsSDK = raw.Ops.SDK
 	}
 
@@ -180,6 +187,9 @@ type EntityOpsConfig struct {
 	RequireClient bool
 	// SkipGetForUID skips generation of the getForUID function for this entity.
 	SkipGetForUID bool
+	// UseUIDTagFilter enables generated getForUID code to pass the object's
+	// Kubernetes UID tag as a list query filter when the API supports it.
+	UseUIDTagFilter bool
 	// SDK holds SDK interface and field name for SDK factory generation.
 	SDK *OpSDKConfig
 }
@@ -271,10 +281,11 @@ func (c *APIGroupVersionConfig) OpsConfig(pathToEntityName map[string]string) ma
 		}
 		requireClient := tc.OpsRequireClient || tc.OptionalSecretReference
 		result[entityName] = &EntityOpsConfig{
-			Ops:           tc.Ops,
-			RequireClient: requireClient,
-			SkipGetForUID: tc.OpsSkipGetForUID,
-			SDK:           tc.OpsSDK,
+			Ops:             tc.Ops,
+			RequireClient:   requireClient,
+			SkipGetForUID:   tc.OpsSkipGetForUID,
+			UseUIDTagFilter: tc.OpsUseUIDTagFilter,
+			SDK:             tc.OpsSDK,
 		}
 	}
 	return result
@@ -328,10 +339,23 @@ func ParseAPIGroupVersion(gv string) (group, version string, err error) {
 	return parts[0], parts[1], nil
 }
 
-// FieldConfig holds configuration for a single field
+// FieldConfig holds configuration for a single field, optionally with nested sub-field configs.
+// Sub-fields are decoded from the same YAML map via the inline tag so that deeply nested
+// paths like `cel.tls.client_identity.certificate._validations` work transparently.
 type FieldConfig struct {
-	// Validations are additional kubebuilder markers to add to the field
+	// Validations are additional kubebuilder markers to add to the field.
 	Validations []string `yaml:"_validations,omitempty"`
+	// Fields maps child field names to their own FieldConfig, allowing
+	// multi-segment CEL paths that traverse referenced schema types.
+	Fields map[string]*FieldConfig `yaml:",inline"`
+}
+
+// Sub returns the child FieldConfig for the given name, or nil if none exists.
+func (fc *FieldConfig) Sub(name string) *FieldConfig {
+	if fc == nil {
+		return nil
+	}
+	return fc.Fields[name]
 }
 
 // EntityConfig holds configuration for a single entity (CRD type)
@@ -369,23 +393,37 @@ func LoadConfig(path string) (*Config, error) {
 	return &cfg, nil
 }
 
-// GetFieldValidations returns the additional validations for a field
-func (c *Config) GetFieldValidations(entityName, fieldName string) []string {
-	if c == nil || c.Entities == nil {
+// GetFieldConfig returns the FieldConfig reached by walking the given path
+// (one or more field name segments) starting from the entity's top-level fields.
+// Returns nil if any segment is missing.
+func (c *Config) GetFieldConfig(entityName string, path ...string) *FieldConfig {
+	if c == nil || c.Entities == nil || len(path) == 0 {
 		return nil
 	}
-
 	entityCfg, ok := c.Entities[entityName]
 	if !ok || entityCfg == nil || entityCfg.Fields == nil {
 		return nil
 	}
-
-	fieldCfg, ok := entityCfg.Fields[fieldName]
-	if !ok || fieldCfg == nil {
+	fc, ok := entityCfg.Fields[path[0]]
+	if !ok || fc == nil {
 		return nil
 	}
+	for _, segment := range path[1:] {
+		fc = fc.Sub(segment)
+		if fc == nil {
+			return nil
+		}
+	}
+	return fc
+}
 
-	return fieldCfg.Validations
+// GetFieldValidations returns the additional validations for a field.
+func (c *Config) GetFieldValidations(entityName, fieldName string) []string {
+	fc := c.GetFieldConfig(entityName, fieldName)
+	if fc == nil {
+		return nil
+	}
+	return fc.Validations
 }
 
 // ValidateAgainstSchema validates that all fields in the config exist in the schema

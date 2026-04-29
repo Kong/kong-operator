@@ -247,7 +247,7 @@ func TestHandleCertificateRef(t *testing.T) {
 				testKongCertNotProgrammed,
 			},
 			expectError:  false,
-			expectResult: ctrl.Result{Requeue: true},
+			expectResult: ctrl.Result{},
 			updatedEntAssertions: []func(*configurationv1alpha1.KongSNI) (bool, string){
 				func(ks *configurationv1alpha1.KongSNI) (bool, string) {
 					return lo.ContainsBy(ks.GetConditions(), func(c metav1.Condition) bool {

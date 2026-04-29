@@ -89,7 +89,40 @@ func buildKafkaService(
 // generateBaseKafkaService returns the operator defaults for the Kafka Service:
 // the pod selector and a default Kafka port. These are used only when the user
 // has not provided conflicting values in ServiceOptions.
+//
+// Service.spec.ports is a list-map keyed by [port, protocol], so SSA merges
+// ports by port number. Two ports with different port numbers but the same
+// name would both be kept after the merge, causing Kubernetes to reject the
+// Service (port names must be unique). To prevent this, any base port whose
+// name is already used by a user-provided port is omitted here so the user's
+// port wins cleanly.
 func generateBaseKafkaService(egdp *eventgatewayv1alpha1.KegDataPlane) *corev1.Service {
+	// Collect user-provided port names so we can skip conflicting base ports.
+	userPortNames := make(map[string]struct{})
+	if egdp.Spec.Network != nil &&
+		egdp.Spec.Network.Services != nil &&
+		egdp.Spec.Network.Services.Kafka != nil {
+		for _, p := range egdp.Spec.Network.Services.Kafka.Ports {
+			if p.Name != nil {
+				userPortNames[*p.Name] = struct{}{}
+			}
+		}
+	}
+
+	basePorts := []corev1.ServicePort{
+		{
+			Name:       "kafka",
+			Port:       DefaultKafkaPort,
+			TargetPort: intstr.FromInt32(DefaultKafkaPort),
+			Protocol:   corev1.ProtocolTCP,
+		},
+	}
+	var ports []corev1.ServicePort
+	for _, bp := range basePorts {
+		if _, clash := userPortNames[bp.Name]; !clash {
+			ports = append(ports, bp)
+		}
+	}
 	svc := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -104,14 +137,7 @@ func generateBaseKafkaService(egdp *eventgatewayv1alpha1.KegDataPlane) *corev1.S
 				consts.GatewayOperatorManagedByLabel:     consts.DataPlaneManagedByLabelValue,
 				consts.GatewayOperatorManagedByNameLabel: egdp.Name,
 			},
-			Ports: []corev1.ServicePort{
-				{
-					Name:       "kafka",
-					Port:       DefaultKafkaPort,
-					TargetPort: intstr.FromInt32(DefaultKafkaPort),
-					Protocol:   corev1.ProtocolTCP,
-				},
-			},
+			Ports: ports,
 		},
 	}
 	k8sutils.SetOwnerForObject(svc, egdp)
