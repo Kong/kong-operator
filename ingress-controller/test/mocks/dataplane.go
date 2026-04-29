@@ -18,6 +18,18 @@ type Dataplane struct {
 	ObjectsStatuses map[string]map[string]k8sobj.ConfigurationStatus
 }
 
+// SetObjectStatus sets the mock dataplane report status for a single object.
+// It creates internal maps as needed.
+func (d *Dataplane) SetObjectStatus(namespace, name string, status string) {
+	if d.ObjectsStatuses == nil {
+		d.ObjectsStatuses = make(map[string]map[string]k8sobj.ConfigurationStatus)
+	}
+	if d.ObjectsStatuses[namespace] == nil {
+		d.ObjectsStatuses[namespace] = make(map[string]k8sobj.ConfigurationStatus)
+	}
+	d.ObjectsStatuses[namespace][name] = k8sobj.ConfigurationStatus(status)
+}
+
 func (d Dataplane) UpdateObject(_ client.Object) error {
 	return nil
 }
