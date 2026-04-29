@@ -11,7 +11,6 @@ import (
 
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
-	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
 // VerifyAndUpdate verifies if the object passaed as parameter already exists or not in the cluster.
@@ -54,7 +53,10 @@ func VerifyAndUpdate[T client.Object](
 	}
 
 	// Update: verify and update the hybrid-routes annotation
-	routesCSV := existingObj.GetAnnotations()[consts.GatewayOperatorHybridRoutesAnnotation]
+	routeKind := route.GetObjectKind().GroupVersionKind().Kind
+	am := metadata.NewAnnotationManager(logger)
+	routeAnnotationKey := am.RouteAnnotationKeyForKind(routeKind)
+	routesCSV := existingObj.GetAnnotations()[routeAnnotationKey]
 	routes := strings.Split(routesCSV, ",")
 	if len(routes) == 0 {
 		err = fmt.Errorf("existing %s object %s/%s has empty hybrid-routes annotation",
@@ -68,7 +70,7 @@ func VerifyAndUpdate[T client.Object](
 	// See https://github.com/Kong/kong-operator/blob/main/docs/internal/hybridgateway/autogen-resource-naming.md for more details of
 	// how the resource are generated and associated with routes.
 	if exclusiveRoute {
-		if len(routes) > 1 || strings.TrimSpace(routes[0]) != metadata.ObjectToNameString(route) {
+		if len(routes) > 1 || !metadata.RouteAnnotationMatch(routes[0], route) {
 			err = fmt.Errorf("existing %s object %s/%s is associated with multiple routes %s",
 				obj.GetObjectKind().GroupVersionKind().Kind, existingObj.GetNamespace(), existingObj.GetName(), routesCSV)
 			log.Error(logger, err, "Tracking annotation exclusive source Route check failed")
@@ -77,8 +79,7 @@ func VerifyAndUpdate[T client.Object](
 	}
 
 	// Object exists, update annotation to include current route
-	am := metadata.NewAnnotationManager(logger)
-	am.SetRoutes(obj, am.GetRoutes(existingObj))
+	am.SetRoutesWithKind(obj, routeKind, am.GetRoutesWithKind(existingObj, routeKind))
 	am.AppendRouteToAnnotation(obj, route)
 
 	return true, nil
