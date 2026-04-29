@@ -218,7 +218,7 @@ spec:
                           expression.
                           The value is stored and returned by the API as-is, not treated as sensitive
                           information.
-                        maxLength: 253
+                        maxLength: 4096
                         minLength: 1
                         type: string
                       client_identity:

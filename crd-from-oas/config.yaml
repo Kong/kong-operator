@@ -60,6 +60,9 @@ apiGroupVersions:
         name: EventGatewayBackendCluster
         cel:
           tls:
+            ca_bundle:
+               _validations:
+                - "+kubebuilder:validation:MaxLength=4096"
             client_identity:
               certificate:
                  _validations:

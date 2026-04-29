@@ -106,7 +106,7 @@ type BackendClusterTLS struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:MaxLength=4096
 	CaBundle GatewaySecretReferenceOrLiteral `json:"ca_bundle,omitempty"`
 	// Client mTLS configuration.
 	//
