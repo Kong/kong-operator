@@ -108,12 +108,15 @@ func (s *IdentityProviderRequestAPISpec) marshalSDKOpsPayload() ([]byte, error) 
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal IdentityProviderRequestAPISpec: %w", err)
 	}
-	var payload map[string]any
+	var payload any
 	if err := json.Unmarshal(data, &payload); err != nil {
 		return nil, fmt.Errorf("failed to decode IdentityProviderRequestAPISpec: %w", err)
 	}
-	if err := normalizeIdentityProviderRequestSDKOpsBoolFields(payload); err != nil {
-		return nil, fmt.Errorf("failed to normalize IdentityProviderRequestAPISpec SDK payload: %w", err)
+	payload = flattenSDKUnions(payload)
+	if pm, ok := payload.(map[string]any); ok {
+		if err := normalizeIdentityProviderRequestSDKOpsBoolFields(pm); err != nil {
+			return nil, fmt.Errorf("failed to normalize IdentityProviderRequestAPISpec SDK payload: %w", err)
+		}
 	}
 	data, err = json.Marshal(payload)
 	if err != nil {
@@ -131,38 +134,6 @@ func (s *IdentityProviderRequestAPISpec) ToCreateIdentityProvider() (*sdkkonnect
 	if err != nil {
 		return nil, err
 	}
-	var payload map[string]any
-	if err := json.Unmarshal(data, &payload); err != nil {
-		return nil, fmt.Errorf("failed to decode IdentityProviderRequestAPISpec SDK payload: %w", err)
-	}
-	rawConfig, ok := payload["config"]
-	if ok && rawConfig != nil {
-		objectConfig, ok := rawConfig.(map[string]any)
-		if !ok {
-			return nil, fmt.Errorf("IdentityProviderRequest config payload has unexpected type %T", rawConfig)
-		}
-		typeConfig, ok := objectConfig["type"].(string)
-		if !ok || typeConfig == "" {
-			return nil, fmt.Errorf("IdentityProviderRequest config payload missing type")
-		}
-		var selectedConfig any
-		switch typeConfig {
-		case "OIDC":
-			selectedConfig = objectConfig["oidc"]
-		case "SAML":
-			selectedConfig = objectConfig["saml"]
-		default:
-			return nil, fmt.Errorf("unsupported IdentityProviderRequest config type %q", typeConfig)
-		}
-		if selectedConfig == nil {
-			return nil, fmt.Errorf("IdentityProviderRequest config payload missing for type %q", typeConfig)
-		}
-		payload["config"] = selectedConfig
-	}
-	data, err = json.Marshal(payload)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal normalized IdentityProviderRequestAPISpec: %w", err)
-	}
 	var target sdkkonnectcomp.CreateIdentityProvider
 	if err := json.Unmarshal(data, &target); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal into CreateIdentityProvider: %w", err)
@@ -178,38 +149,6 @@ func (s *IdentityProviderRequestAPISpec) ToUpdateIdentityProvider() (*sdkkonnect
 	data, err := s.marshalSDKOpsPayload()
 	if err != nil {
 		return nil, err
-	}
-	var payload map[string]any
-	if err := json.Unmarshal(data, &payload); err != nil {
-		return nil, fmt.Errorf("failed to decode IdentityProviderRequestAPISpec SDK payload: %w", err)
-	}
-	rawConfig, ok := payload["config"]
-	if ok && rawConfig != nil {
-		objectConfig, ok := rawConfig.(map[string]any)
-		if !ok {
-			return nil, fmt.Errorf("IdentityProviderRequest config payload has unexpected type %T", rawConfig)
-		}
-		typeConfig, ok := objectConfig["type"].(string)
-		if !ok || typeConfig == "" {
-			return nil, fmt.Errorf("IdentityProviderRequest config payload missing type")
-		}
-		var selectedConfig any
-		switch typeConfig {
-		case "OIDC":
-			selectedConfig = objectConfig["oidc"]
-		case "SAML":
-			selectedConfig = objectConfig["saml"]
-		default:
-			return nil, fmt.Errorf("unsupported IdentityProviderRequest config type %q", typeConfig)
-		}
-		if selectedConfig == nil {
-			return nil, fmt.Errorf("IdentityProviderRequest config payload missing for type %q", typeConfig)
-		}
-		payload["config"] = selectedConfig
-	}
-	data, err = json.Marshal(payload)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal normalized IdentityProviderRequestAPISpec: %w", err)
 	}
 	var target sdkkonnectcomp.UpdateIdentityProvider
 	if err := json.Unmarshal(data, &target); err != nil {

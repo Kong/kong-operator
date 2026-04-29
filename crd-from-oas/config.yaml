@@ -82,6 +82,20 @@ apiGroupVersions:
         reconciler:
           isRoot: false
           parentEntityType: KonnectEventGateway
+      - path: /v1/event-gateways/{gatewayId}/virtual-clusters
+        name: EventGatewayVirtualCluster
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.EventGatewayVirtualClustersSDK
+            fieldName: EventGatewayVirtualClusters
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateVirtualClusterRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdateVirtualClusterRequest
+          delete: {}
+        reconciler:
+          isRoot: false
+          parentEntityType: KonnectEventGateway
 
       # Portal APIs
       - path: /v3/portals

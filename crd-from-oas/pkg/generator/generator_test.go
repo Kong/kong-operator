@@ -1469,7 +1469,9 @@ func TestGenerateSDKOps_NormalizesBooleanFields(t *testing.T) {
 	assert.NotContains(t, content, "}\n\n\n// ToCreate")
 	assert.Contains(t, content, "}\n\tvar target")
 	assert.Contains(t, content, "}\n\n// ToCreate")
-	assert.Contains(t, content, "if err := normalizePortalSDKOpsBoolFields(payload); err != nil {")
+	assert.Contains(t, content, "payload = flattenSDKUnions(payload)")
+	assert.Contains(t, content, "if pm, ok := payload.(map[string]any); ok {")
+	assert.Contains(t, content, "if err := normalizePortalSDKOpsBoolFields(pm); err != nil {")
 }
 
 func TestGenerateSDKOps_RootUnionUsesSelectedVariantPayload(t *testing.T) {
@@ -1596,14 +1598,11 @@ func TestGenerateSDKOps_NestedUnionFlattensSelectedPayload(t *testing.T) {
 
 	content, err := g.generateSDKOps("IdentityProviderRequest", schema, opsConfig)
 	require.NoError(t, err)
-	assert.Contains(t, content, `rawConfig, ok := payload["config"]`)
-	assert.Contains(t, content, `typeConfig, ok := objectConfig["type"].(string)`)
-	assert.Contains(t, content, `case "OIDC":`)
-	assert.Contains(t, content, `selectedConfig = objectConfig["oidc"]`)
-	assert.Contains(t, content, `case "SAML":`)
-	assert.Contains(t, content, `selectedConfig = objectConfig["saml"]`)
-	assert.Contains(t, content, `payload["config"] = selectedConfig`)
-	assert.Contains(t, content, `data, err = json.Marshal(payload)`)
+	// Generic walker handles all nested union shapes — no per-field codegen.
+	assert.Contains(t, content, "payload = flattenSDKUnions(payload)")
+	assert.NotContains(t, content, `rawConfig, ok := payload["config"]`)
+	assert.NotContains(t, content, `objectConfig["type"]`)
+	assert.NotContains(t, content, `selectedConfig = objectConfig["oidc"]`)
 }
 
 func TestFindRootUnionUpdatePayloadProperty(t *testing.T) {

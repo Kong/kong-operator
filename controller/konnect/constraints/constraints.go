@@ -65,6 +65,7 @@ type SupportedKonnectEntityType interface {
 		konnectv1alpha1.KonnectEventGateway |
 		konnectv1alpha1.KonnectEventDataPlaneCertificate |
 		konnectv1alpha1.EventGatewayBackendCluster |
+		konnectv1alpha1.EventGatewayVirtualCluster |
 		konnectv1alpha1.EventGatewayListener |
 		konnectv1alpha1.Portal |
 		konnectv1alpha1.PortalPage |

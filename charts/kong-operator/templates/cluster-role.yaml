@@ -437,6 +437,7 @@ rules:
     resources:
       - eventgatewaybackendclusters
       - eventgatewaylisteners
+      - eventgatewayvirtualclusters
       - identityproviderrequests
       - konnectapiauthconfigurations
       - konnectcloudgatewaydataplanegroupconfigurations
@@ -460,6 +461,8 @@ rules:
       - eventgatewaybackendclusters/status
       - eventgatewaylisteners/finalizers
       - eventgatewaylisteners/status
+      - eventgatewayvirtualclusters/finalizers
+      - eventgatewayvirtualclusters/status
       - identityproviderrequests/finalizers
       - identityproviderrequests/status
       - konnectapiauthconfigurations/finalizers

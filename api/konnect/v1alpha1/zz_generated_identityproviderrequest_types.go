@@ -3,6 +3,8 @@
 package v1alpha1
 
 import (
+	"encoding/json"
+	"fmt"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 )
@@ -127,11 +129,11 @@ type IdentityProviderRequestConfig struct {
 	// OIDC configuration.
 	//
 	// +optional
-	OIDC *OIDCIdentityProviderConfig `json:"oidc,omitempty"`
+	OIDC *OIDCIdentityProviderConfig `json:"OIDC,omitempty"`
 	// SAML configuration.
 	//
 	// +optional
-	SAML *SAMLIdentityProviderConfig `json:"saml,omitempty"`
+	SAML *SAMLIdentityProviderConfig `json:"SAML,omitempty"`
 }
 
 // IdentityProviderRequestConfigType represents the type of config.
@@ -142,3 +144,67 @@ const (
 	IdentityProviderRequestConfigTypeOIDC IdentityProviderRequestConfigType = "OIDC"
 	IdentityProviderRequestConfigTypeSAML IdentityProviderRequestConfigType = "SAML"
 )
+
+// MarshalJSON implements json.Marshaler.
+func (u IdentityProviderRequestConfig) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, _ := json.Marshal(string(u.Type))
+	m["type"] = typeBytes
+	switch u.Type {
+	case "OIDC":
+		if u.OIDC != nil {
+			raw, err := json.Marshal(u.OIDC)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling IdentityProviderRequestConfig OIDC: %w", err)
+			}
+			m["OIDC"] = raw
+		}
+	case "SAML":
+		if u.SAML != nil {
+			raw, err := json.Marshal(u.SAML)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling IdentityProviderRequestConfig SAML: %w", err)
+			}
+			m["SAML"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *IdentityProviderRequestConfig) UnmarshalJSON(data []byte) error {
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = IdentityProviderRequestConfigType(probe.Type)
+	switch probe.Type {
+	case "OIDC":
+		payload, ok := raw["OIDC"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val OIDCIdentityProviderConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling IdentityProviderRequestConfig OIDC: %w", err)
+		}
+		u.OIDC = &val
+	case "SAML":
+		payload, ok := raw["SAML"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val SAMLIdentityProviderConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling IdentityProviderRequestConfig SAML: %w", err)
+		}
+		u.SAML = &val
+	}
+	return nil
+}

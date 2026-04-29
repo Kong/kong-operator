@@ -1,0 +1,67 @@
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth
+  namespace: default
+spec:
+  type: token
+  token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  # For a complete list of available API URLs see:https://docs.konghq.com/konnect/network/#kong-gateway-hostnames
+  serverURL: eu.api.konghq.com
+---
+kind: KonnectEventGateway
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: cp-event-1
+  namespace: default
+spec:
+  apiSpec:
+    name: cp-event-1
+    description: Test Event Gateway CP
+    labels:
+      app: test1
+      key1: test1
+  konnect:
+    authRef:
+      name: konnect-api-auth
+---
+kind: EventGatewayVirtualCluster
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: cp-event-1-virtual-cluster-1
+  namespace: default
+spec:
+  apiSpec:
+    name: cp-event-1-virtual-cluster-1
+    description: Test Event Gateway Virtual Cluster
+    labels:
+      app: test1
+      env: test
+    acl_mode: enforce_on_gateway
+    authentication:
+      - type: anonymous
+    destination:
+      # TODO: name matches EventGatewayBackendCluster but should be an
+      # in cluster reference to it.
+      # TODO: https://github.com/Kong/kong-operator/issues/4069
+      # name: cp-event-1-backend-cluster-1
+      id: 019dd9f3-a23f-786f-b3ba-111111111
+    dns_label: virtual-cluster-1
+    namespace:
+      mode: enforce_prefix
+      prefix: prefix-1
+      additional:
+        consumer_groups:
+          - type: glob
+            glob:
+              glob: group-*
+              type: consumer_group
+        topics:
+          - type: glob
+            glob:
+              glob: topic-*
+              type: topic
+  gateway_ref:
+    type: namespacedRef
+    namespacedRef:
+      name: cp-event-1

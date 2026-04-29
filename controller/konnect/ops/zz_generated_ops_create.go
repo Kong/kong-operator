@@ -30,6 +30,8 @@ func CreateGeneratedOps[
 		return createEventGatewayBackendCluster(ctx, sdk.GetEventGatewayBackendClustersSDK(), ent)
 	case *konnectv1alpha1.EventGatewayListener:
 		return createEventGatewayListener(ctx, sdk.GetEventGatewayListenersSDK(), ent)
+	case *konnectv1alpha1.EventGatewayVirtualCluster:
+		return createEventGatewayVirtualCluster(ctx, sdk.GetEventGatewayVirtualClustersSDK(), ent)
 	case *konnectv1alpha1.IdentityProviderRequest:
 		return createIdentityProviderRequest(ctx, sdk.GetPortalAuthSettingsSDK(), ent)
 	case *konnectv1alpha1.KonnectEventDataPlaneCertificate:
