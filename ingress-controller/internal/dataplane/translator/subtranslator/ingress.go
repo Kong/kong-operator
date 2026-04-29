@@ -3,12 +3,14 @@ package subtranslator
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"time"
 	"unicode"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -76,6 +78,20 @@ const (
 	defaultHTTPPort = 80
 	defaultRetries  = 5
 )
+
+func ingressRouteProtocols(a map[string]string) []*string {
+	protocolsFromAnnotation := annotations.ExtractProtocolNames(a)
+	slices.Sort(protocolsFromAnnotation)
+	if len(protocolsFromAnnotation) == 0 {
+		return nil
+	}
+
+	return lo.Map(
+		protocolsFromAnnotation, func(protocol string, _ int) *string {
+			return new(protocol)
+		},
+	)
+}
 
 // defaultServiceTimeoutKongFormat returns the defaultServiceTimeout in format
 // expected by Kong (pointer to an integer representing milliseconds).
@@ -421,7 +437,7 @@ func (m *ingressTranslationMeta) translateIntoKongRoute() *kongstate.Route {
 			Name:              new(routeName),
 			StripPath:         new(false),
 			PreserveHost:      new(true),
-			Protocols:         kong.StringSlice("http", "https"),
+			Protocols:         ingressRouteProtocols(m.parentIngress.GetAnnotations()),
 			RegexPriority:     new(0),
 			RequestBuffering:  new(true),
 			ResponseBuffering: new(true),

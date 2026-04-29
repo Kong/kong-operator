@@ -1,3 +1,5 @@
+//go:build integration_tests
+
 package isolated
 
 import (
@@ -79,9 +81,11 @@ func TestCustomEntityExample(t *testing.T) {
 			return ctx
 		}).
 		Assess("degraphql plugin works as expected", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
-			proxyURL := GetHTTPURLFromCtx(ctx)
+			proxyURL := GetHTTPSURLFromCtx(ctx)
 			t.Log("Waiting for graphQL service to be available")
-			helpers.EventuallyGETPath(t, proxyURL, proxyURL.Host, "/healthz", nil, http.StatusOK, "OK", nil, consts.IngressWait, consts.WaitTick)
+			helpers.EventuallyGETPath(
+				t, proxyURL, proxyURL.String(), "/healthz", &helpers.HTTPSOptions{InsecureSkipVerify: true}, http.StatusOK, "OK", nil, consts.IngressWait, consts.WaitTick,
+			)
 
 			t.Log("injecting data for graphQL service")
 			injectDataURL := proxyURL.String() + "/v2/query"
@@ -95,7 +99,7 @@ func TestCustomEntityExample(t *testing.T) {
 			require.NoError(t, err)
 			req.Header.Add("Content-Type", "application/json")
 			req.Header.Add("X-Hasura-Role", "admin")
-			resp, err := helpers.DefaultHTTPClient().Do(req)
+			resp, err := helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Do(req)
 			require.NoError(t, err)
 			resp.Body.Close()
 			require.Equal(t, http.StatusOK, resp.StatusCode)
@@ -110,7 +114,7 @@ func TestCustomEntityExample(t *testing.T) {
 			require.NoError(t, err)
 			req.Header.Add("Content-Type", "application/json")
 			req.Header.Add("X-Hasura-Role", "admin")
-			resp, err = helpers.DefaultHTTPClient().Do(req)
+			resp, err = helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Do(req)
 			require.NoError(t, err)
 			resp.Body.Close()
 			require.Equal(t, http.StatusOK, resp.StatusCode)
@@ -127,14 +131,14 @@ func TestCustomEntityExample(t *testing.T) {
 			require.NoError(t, err)
 			req.Header.Add("Content-Type", "application/json")
 			req.Header.Add("X-Hasura-Role", "admin")
-			resp, err = helpers.DefaultHTTPClient().Do(req)
+			resp, err = helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Do(req)
 			require.NoError(t, err)
 			resp.Body.Close()
 			require.Equal(t, http.StatusOK, resp.StatusCode)
 
 			t.Log("verifying degraphQL plugin and degraphql_routes entity works")
 			// The ingress providing graphQL service has a different host, so we need to set the `Host` header.
-			helpers.EventuallyGETPath(t, proxyURL, "graphql.service.example", "/contacts", nil, http.StatusOK, `"name":"Alice"`, map[string]string{"Host": "graphql.service.example"}, consts.IngressWait, consts.WaitTick)
+			helpers.EventuallyGETPath(t, proxyURL, "https://graphql.service.example", "/contacts", &helpers.HTTPSOptions{InsecureSkipVerify: true}, http.StatusOK, `"name":"Alice"`, map[string]string{"Host": "graphql.service.example"}, consts.IngressWait, consts.WaitTick)
 
 			return ctx
 		}).
@@ -192,8 +196,8 @@ func TestCustomEntityExample(t *testing.T) {
 			require.NoError(t, r.Create(ctx, alterIngress))
 
 			t.Log("verifying degraphQL plugin and degraphql_routes entity works")
-			proxyURL := GetHTTPURLFromCtx(ctx)
-			helpers.EventuallyGETPath(t, proxyURL, "alter-graphql.service.example", "/contacts", nil, http.StatusOK, `"name":"Alice"`, map[string]string{"Host": "graphql.service.example"}, consts.IngressWait, consts.WaitTick)
+			proxyURL := GetHTTPSURLFromCtx(ctx)
+			helpers.EventuallyGETPath(t, proxyURL, "https://alter-graphql.service.example", "/contacts", &helpers.HTTPSOptions{InsecureSkipVerify: true}, http.StatusOK, `"name":"Alice"`, map[string]string{"Host": "graphql.service.example"}, consts.IngressWait, consts.WaitTick)
 
 			return ctx
 		}).
@@ -252,9 +256,9 @@ func TestCustomEntityExample(t *testing.T) {
 			}
 
 			t.Log("verifying degraphQL plugin was excluded from the configuration as it was failing schema validation")
-			proxyURL := GetHTTPURLFromCtx(ctx)
+			proxyURL := GetHTTPSURLFromCtx(ctx)
 			// The ingress providing graphQL service has a different host, so we need to set the `Host` header.
-			helpers.EventuallyGETPath(t, proxyURL, "graphql.service.example", "/contacts", nil, http.StatusNotFound, `{"message":"Not Found"}`, map[string]string{"Host": "graphql.service.example"}, consts.IngressWait, consts.WaitTick)
+			helpers.EventuallyGETPath(t, proxyURL, "https://graphql.service.example", "/contacts", &helpers.HTTPSOptions{InsecureSkipVerify: true}, http.StatusNotFound, `{"message":"Not Found"}`, map[string]string{"Host": "graphql.service.example"}, consts.IngressWait, consts.WaitTick)
 
 			return ctx
 		}).
