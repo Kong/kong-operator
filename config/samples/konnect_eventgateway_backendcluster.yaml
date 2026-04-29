@@ -1,0 +1,88 @@
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth
+  namespace: default
+spec:
+  type: token
+  token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  # For a complete list of available API URLs see:https://docs.konghq.com/konnect/network/#kong-gateway-hostnames
+  serverURL: eu.api.konghq.com
+---
+kind: KonnectEventGateway
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: cp-event-1
+  namespace: default
+spec:
+  apiSpec:
+    name: cp-event-1
+    description: Test Event Gateway CP
+    labels:
+      app: test1
+      key1: test1
+  konnect:
+    authRef:
+      name: konnect-api-auth
+---
+kind: EventGatewayBackendCluster
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: cp-event-1-listener-1
+  namespace: default
+spec:
+  apiSpec:
+    name: cp-event-1-bakend-cluster-1
+    description: Test Event Gateway Backend Cluster
+    authentication:
+      type: Anonymous
+      # TODO: prevent duplicating nested fields
+      # https://github.com/Kong/kong-operator/issues/3972
+      anonymous:
+        type: anonymous
+    bootstrap_servers:
+      - "kafka1:9092"
+      - "kafka2:9092"
+    insecure_allow_anonymous_virtual_cluster_auth: Enabled
+    labels:
+      app: test1
+      env: test
+    metadata_update_interval_seconds: 60
+    tls:
+      enabled: Disabled
+      client_identity:
+        # TODO: this needs to be a secret reference or a literal with certificate data.
+        # https://github.com/Kong/kong-operator/issues/4063
+        certificate: |
+          -----BEGIN CERTIFICATE-----
+          MIICZTCCAg+gAwIBAgIUH5F0R2UxFW2j3ITJgLhFjhaEqwIwDQYJKoZIhvcNAQEL
+          BQAwgYYxCzAJBgNVBAYTAlhYMRIwEAYDVQQIDAlTdGF0ZU5hbWUxETAPBgNVBAcM
+          CENpdHlOYW1lMRQwEgYDVQQKDAtDb21wYW55TmFtZTEbMBkGA1UECwwSQ29tcGFu
+          eVNlY3Rpb25OYW1lMR0wGwYDVQQDDBRDb21tb25OYW1lT3JIb3N0bmFtZTAeFw0y
+          NjA0MjkwOTE4MDNaFw0zNjA0MjYwOTE4MDNaMIGGMQswCQYDVQQGEwJYWDESMBAG
+          A1UECAwJU3RhdGVOYW1lMREwDwYDVQQHDAhDaXR5TmFtZTEUMBIGA1UECgwLQ29t
+          cGFueU5hbWUxGzAZBgNVBAsMEkNvbXBhbnlTZWN0aW9uTmFtZTEdMBsGA1UEAwwU
+          Q29tbW9uTmFtZU9ySG9zdG5hbWUwXDANBgkqhkiG9w0BAQEFAANLADBIAkEAqYsa
+          GEDdy0SQKIrONyM/WAzxKqdT1bbztxb5YyGE/9gnXGZT5odbdlw+3oA0L27wtBQA
+          TBhKa96aG3tg6i5ELQIDAQABo1MwUTAdBgNVHQ4EFgQUBtKSjzk4AFv1E5hgWyXT
+          TAAvnXcwHwYDVR0jBBgwFoAUBtKSjzk4AFv1E5hgWyXTTAAvnXcwDwYDVR0TAQH/
+          BAUwAwEB/zANBgkqhkiG9w0BAQsFAANBADJXeBawDRHHeE6wjRR1vuvn8Jo0Mzys
+          tt6WtIOrzb5K5viyZwgybw4+/Zz2AQ0OWe4SjXNh8MacQSqSP9LsETQ=
+          -----END CERTIFICATE-----
+        # TODO: this needs to be a secret reference or a literal with certificate data.
+        # https://github.com/Kong/kong-operator/issues/4063
+        key: |
+          LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUJWd0lCQURBTkJna3Foa2lHOXcwQkFRRUZB
+          QVNDQVVFd2dnRTlBZ0VBQWtFQXFZc2FHRURkeTBTUUtJck8KTnlNL1dBenhLcWRUMWJienR4YjVZ
+          eUdFLzlnblhHWlQ1b2RiZGx3KzNvQTBMMjd3dEJRQVRCaEthOTZhRzN0Zwo2aTVFTFFJREFRQUJB
+          a0VBbWxlY2VNbk1YM2hhTjk0czNuc0M5bGhKejhlbUJSOVkvS3M0ZXFzUUZZc281TUl6Citvb2pp
+          cy9KVW5kTXNOUmh1a2I3L1FGQ1F1QjZqTXhZNVc1RXJRSWhBTk91Q0VZbTNBbng2WncycDJDWDYw
+          eGsKWWQ0OUxCRGJQL2tmV2lWTlY0YlRBaUVBelFxUjc2ekJIc1RjalRlWkwvZE14cDkxOXZwRDUz
+          aDhBTy9oTklpYQpLUDhDSVFDWjZuQS91aC9DNTNESzBuNnY0S2NKMisvQnJjOHR6bzVjc1d4VnRV
+          QVFXd0loQU10QWNCdTdEeEQyCktuOGVIdzhxUVFRZmJDdHdPRUhLOEhscFVML25yWkYzQWlFQXUx
+          NlI0alQvcno2Nkx0TlNTVG9WNmt3YU9EVjAKTm1Ub2lwQmx6MVlNQ3BzPQotLS0tLUVORCBQUklW
+          QVRFIEtFWS0tLS0tCg==
+  gateway_ref:
+    type: namespacedRef
+    namespacedRef:
+      name: cp-event-1

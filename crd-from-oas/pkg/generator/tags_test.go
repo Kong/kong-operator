@@ -579,6 +579,28 @@ func TestKubebuilderTags_WithFieldConfig(t *testing.T) {
 	}
 }
 
+func TestKubebuilderTags_OverrideMaxLength(t *testing.T) {
+	prop := &parser.Property{
+		Name:     "certificate",
+		Type:     "string",
+		Required: true,
+	}
+	fieldConfig := &config.Config{
+		Entities: map[string]*config.EntityConfig{
+			"ClientIdentity": {
+				Fields: map[string]*config.FieldConfig{
+					"certificate": {
+						Validations: []string{"+kubebuilder:validation:MaxLength=1024"},
+					},
+				},
+			},
+		},
+	}
+	result := KubebuilderTags(prop, "ClientIdentity", fieldConfig)
+	assert.Contains(t, result, "+kubebuilder:validation:MaxLength=1024", "user-provided MaxLength should be present")
+	assert.NotContains(t, result, "+kubebuilder:validation:MaxLength=253", "default MaxLength should be removed")
+}
+
 func TestKubebuilderTags_DefaultInt(t *testing.T) {
 	prop := &parser.Property{
 		Name:     "count",

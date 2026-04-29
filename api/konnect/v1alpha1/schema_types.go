@@ -146,7 +146,7 @@ type ClientIdentity struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:MaxLength=4096
 	Certificate GatewaySecretReferenceOrLiteral `json:"certificate,omitempty"`
 	// A sensitive value containing the secret or a reference to a secret as a
 	// template string expression.
@@ -158,7 +158,7 @@ type ClientIdentity struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:MaxLength=4096
 	Key GatewaySecret `json:"key,omitempty"`
 }
 

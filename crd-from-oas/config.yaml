@@ -58,6 +58,15 @@ apiGroupVersions:
           parentEntityType: KonnectEventGateway
       - path: /v1/event-gateways/{gatewayId}/backend-clusters
         name: EventGatewayBackendCluster
+        cel:
+          tls:
+            client_identity:
+              certificate:
+                 _validations:
+                  - "+kubebuilder:validation:MaxLength=4096"
+              key:
+                 _validations:
+                  - "+kubebuilder:validation:MaxLength=4096"
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayBackendClustersSDK
