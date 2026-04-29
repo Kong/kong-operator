@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -140,7 +139,7 @@ func TestTLSRouteReconcilerTranslatesAndUpdatesProgrammedCondition(t *testing.T)
 				},
 				SupportedKinds: []gatewayapi.RouteGroupKind{
 					{
-						Group: lo.ToPtr(gatewayapi.Group(gatewayv1.GroupVersion.Group)),
+						Group: new(gatewayapi.Group(gatewayv1.GroupVersion.Group)),
 						Kind:  gatewayapi.Kind("TLSRoute"),
 					},
 				},
@@ -150,6 +149,10 @@ func TestTLSRouteReconcilerTranslatesAndUpdatesProgrammedCondition(t *testing.T)
 	require.NoError(t, client.Status().Patch(ctx, &gw, ctrlclient.MergeFrom(gwOld)))
 
 	route := gatewayapi.TLSRoute{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: gatewayv1.GroupVersion.String(),
+			Kind:       "TLSRoute",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ns.Name,
 			Name:      "tlsroute-1",
@@ -160,7 +163,7 @@ func TestTLSRouteReconcilerTranslatesAndUpdatesProgrammedCondition(t *testing.T)
 				ParentRefs: []gatewayapi.ParentReference{
 					{
 						Name:      gatewayapi.ObjectName(gw.Name),
-						Namespace: lo.ToPtr(gatewayapi.Namespace(ns.Name)),
+						Namespace: new(gatewayapi.Namespace(ns.Name)),
 					},
 				},
 			},
@@ -169,9 +172,9 @@ func TestTLSRouteReconcilerTranslatesAndUpdatesProgrammedCondition(t *testing.T)
 					BackendRefs: []gatewayapi.BackendRef{
 						{
 							BackendObjectReference: gatewayapi.BackendObjectReference{
-								Kind: lo.ToPtr(gatewayapi.Kind("Service")),
+								Kind: new(gatewayapi.Kind("Service")),
 								Name: gatewayapi.ObjectName(svc.Name),
-								Port: lo.ToPtr(gatewayapi.PortNumber(443)),
+								Port: new(gatewayapi.PortNumber(443)),
 							},
 						},
 					},
@@ -186,10 +189,12 @@ func TestTLSRouteReconcilerTranslatesAndUpdatesProgrammedCondition(t *testing.T)
 		metav1.Condition{
 			Type:   string(gatewayapi.RouteConditionAccepted),
 			Status: metav1.ConditionTrue,
+			Reason: "Accepted",
 		},
 		metav1.Condition{
 			Type:   "Programmed",
 			Status: metav1.ConditionTrue,
+			Reason: "ConfiguredInGateway",
 		},
 	)
 
