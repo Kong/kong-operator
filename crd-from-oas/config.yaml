@@ -56,6 +56,20 @@ apiGroupVersions:
         reconciler:
           isRoot: false
           parentEntityType: KonnectEventGateway
+      - path: /v1/event-gateways/{gatewayId}/backend-clusters
+        name: EventGatewayBackendCluster
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.EventGatewayBackendClustersSDK
+            fieldName: EventGatewayBackendClusters
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateBackendClusterRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdateBackendClusterRequest
+          delete: {}
+        reconciler:
+          isRoot: false
+          parentEntityType: KonnectEventGateway
 
       # Portal APIs
       - path: /v3/portals

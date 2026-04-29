@@ -19,7 +19,7 @@ func TestEventGatewayListenerAPISpec_ToCreateEventGatewayListenerRequest(t *test
 	require.NoError(t, err)
 	require.NotNil(t, result)
 
-	data, err := json.Marshal(result)
+	data, err := spec.marshalSDKOpsPayload()
 	require.NoError(t, err)
 
 	var payload map[string]any
@@ -40,7 +40,7 @@ func TestEventGatewayListenerAPISpec_ToUpdateEventGatewayListenerRequest(t *test
 	require.NoError(t, err)
 	require.NotNil(t, result)
 
-	data, err := json.Marshal(result)
+	data, err := spec.marshalSDKOpsPayload()
 	require.NoError(t, err)
 
 	var payload map[string]any
