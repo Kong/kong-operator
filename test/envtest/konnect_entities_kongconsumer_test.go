@@ -163,6 +163,8 @@ func TestKongConsumer(t *testing.T) {
 				))
 			}, waitTime, tickTime,
 		)
+
+		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
 	})
 
 	cgWatch := setupWatch[configurationv1beta1.KongConsumerGroupList](t, ctx, cl, client.InNamespace(ns.Name))
@@ -305,6 +307,9 @@ func TestKongConsumer(t *testing.T) {
 		consumerToPatch := createdConsumer.DeepCopy()
 		consumerToPatch.Username = "user-2-updated"
 		require.NoError(t, clientNamespaced.Patch(ctx, consumerToPatch, client.MergeFrom(createdConsumer)))
+
+		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumerGroupSDK, waitTime, tickTime)
 	})
 
 	t.Run("should handle conflict in creation correctly", func(t *testing.T) {
@@ -491,21 +496,23 @@ func TestKongConsumer(t *testing.T) {
 				cpNew.Name = cp.Name
 			},
 		)
-		t.Log("Setting up SDK expectation on KongConsumerGroups listing")
-		sdk.ConsumersSDK.EXPECT().
-			ListConsumerGroupsForConsumer(mock.Anything, sdkkonnectops.ListConsumerGroupsForConsumerRequest{
-				ConsumerID:     id,
-				ControlPlaneID: cp.GetKonnectStatus().GetKonnectID(),
-			}).Return(&sdkkonnectops.ListConsumerGroupsForConsumerResponse{}, nil)
+
+		t.Log("Patching KongConsumer to attach to new ControlPlane")
+		consumerToPatch := created.DeepCopy()
+		consumerToPatch.Spec.ControlPlaneRef.KonnectNamespacedRef.Name = cp.Name
+		require.NoError(t, clientNamespaced.Patch(ctx, consumerToPatch, client.MergeFrom(created)))
 
 		t.Log("Waiting for object to be get Programmed with status=True and konnect cleanup finalizer re added")
 		watchFor(t, ctx, w, apiwatch.Modified,
 			assertsAnd(
+				objectMatchesName(created),
 				objectHasConditionProgrammedSetToTrue[*configurationv1.KongConsumer](),
 				objectHasFinalizer[*configurationv1.KongConsumer](konnect.KonnectCleanupFinalizer),
 			),
 			"Object didn't get Programmed set to True",
 		)
+
+		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
 	})
 }
 

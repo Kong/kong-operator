@@ -232,7 +232,7 @@ func TestHandleKeySetRef(t *testing.T) {
 				},
 			},
 			objects:      []client.Object{notProgrammedKeySet},
-			expectResult: ctrl.Result{Requeue: true},
+			expectResult: ctrl.Result{},
 			updatedEntAssertions: []func(*configurationv1alpha1.KongKey) (ok bool, message string){
 				keySetIDIsEmpty,
 				keySetRefConditionIs(metav1.ConditionFalse),
