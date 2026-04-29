@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -19,6 +20,12 @@ import (
 
 // This file is for map functions shared by all supported routes in gateway APIs.
 
+const (
+	// REVIEW: define the kinds in some common packages?
+	kindHTTPRoute = "HTTPRoute"
+	kindTLSRoute  = "TLSRoute"
+)
+
 // kongResource is a type constraint that encompasses all Kong resource types
 // that can be mapped back to routes with supported type via annotations.
 type kongResource interface {
@@ -33,7 +40,7 @@ type kongResource interface {
 // MapRouteForKongResource returns a handler.MapFunc that, given a Kong resource object of type T,
 // retrieves the routes referenced in its annotations. It returns a slice of reconcile.Requests
 // for each matching route.
-func MapRouteForKongResource[T kongResource](cl client.Client) handler.MapFunc {
+func MapRouteForKongResource[T kongResource](kind string) handler.MapFunc {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
 		_, ok := obj.(T)
 		if !ok {
@@ -41,18 +48,17 @@ func MapRouteForKongResource[T kongResource](cl client.Client) handler.MapFunc {
 		}
 
 		am := metadata.NewAnnotationManager(logr.Discard())
-		routes := am.GetRoutes(obj)
+		routes := am.GetRoutesWithKind(obj, kind)
 		if len(routes) == 0 {
 			return nil
 		}
 
-		var requests []reconcile.Request
-		for _, r := range routes {
-			requests = append(requests, reconcile.Request{
-				NamespacedName: metadata.NameStringToObjectKey(r),
-			})
-		}
-		return requests
+		return lo.Map(routes, func(routeKey string, _ int) reconcile.Request {
+			return reconcile.Request{
+				NamespacedName: metadata.NameStringToObjectKey(routeKey),
+			}
+		})
+
 	}
 }
 

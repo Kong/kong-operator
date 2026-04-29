@@ -20,6 +20,11 @@ import (
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
+var httpRouteTypeMeta = metav1.TypeMeta{
+	Kind:       "HTTPRoute",
+	APIVersion: "gateway.networking.k8s.io/v1",
+}
+
 func TestRoutesForRule(t *testing.T) {
 	ctx := context.Background()
 	logger := logr.Discard()
@@ -30,6 +35,7 @@ func TestRoutesForRule(t *testing.T) {
 
 	// Create test HTTPRoute
 	httpRoute := &gwtypes.HTTPRoute{
+		TypeMeta: httpRouteTypeMeta,
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-route",
 			Namespace: "test-namespace",
@@ -136,7 +142,7 @@ func TestRoutesForRule(t *testing.T) {
 
 				// Verify HTTPRoute annotation
 				expectedAnnotation := httpRoute.Namespace + "/" + httpRoute.Name
-				assert.Contains(t, result.Annotations[consts.GatewayOperatorHybridRoutesAnnotation], expectedAnnotation)
+				assert.Contains(t, result.Annotations[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation], expectedAnnotation)
 
 				// Verify at least one path/header/method is set based on the match.
 				// For the first match with path, we expect Paths to be non-empty.

@@ -2,14 +2,197 @@
 
 package v1alpha1
 
+import (
+	intstr "k8s.io/apimachinery/pkg/util/intstr"
+)
+
+// BackendClusterAuthenticationAnonymous Anonymous authentication scheme for the
+// backend cluster.
+type BackendClusterAuthenticationAnonymous struct {
+	// The type of authentication scheme.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Type string `json:"type,omitempty"`
+}
+
+// BackendClusterAuthenticationSaslPlain SASL/PLAIN authentication scheme for
+// the backend cluster.
+type BackendClusterAuthenticationSaslPlain struct {
+	// A sensitive value containing the secret or a reference to a secret as a
+	// template string expression.
+	// If the value is provided as plain text, it is encrypted at rest and omitted
+	// from API responses.
+	// If provided as an expression, the expression itself is stored and returned
+	// by the API.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Password GatewaySecret `json:"password,omitempty"`
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Type string `json:"type,omitempty"`
+	// A literal value or a reference to an existing secret as a template string
+	// expression.
+	// The value is stored and returned by the API as-is, not treated as sensitive
+	// information.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Username GatewaySecretReferenceOrLiteral `json:"username,omitempty"`
+}
+
+// BackendClusterAuthenticationSaslScram SASL/SCRAM authentication scheme for
+// the backend cluster.
+type BackendClusterAuthenticationSaslScram struct {
+	// The algorithm used for SASL/SCRAM authentication.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=sha256;sha512
+	Algorithm string `json:"algorithm,omitempty"`
+	// A sensitive value containing the secret or a reference to a secret as a
+	// template string expression.
+	// If the value is provided as plain text, it is encrypted at rest and omitted
+	// from API responses.
+	// If provided as an expression, the expression itself is stored and returned
+	// by the API.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Password GatewaySecret `json:"password,omitempty"`
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Type string `json:"type,omitempty"`
+	// A literal value or a reference to an existing secret as a template string
+	// expression.
+	// The value is stored and returned by the API as-is, not treated as sensitive
+	// information.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Username GatewaySecretReferenceOrLiteral `json:"username,omitempty"`
+}
+
+// BackendClusterAuthenticationScheme is a type alias.
+type BackendClusterAuthenticationScheme map[string]string
+
+// BackendClusterName The unique name of the backend cluster.
+type BackendClusterName string
+
+// BackendClusterTLS is a type alias.
+type BackendClusterTLS struct {
+	// A literal value or a reference to an existing secret as a template string
+	// expression.
+	// The value is stored and returned by the API as-is, not treated as sensitive
+	// information.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	CaBundle GatewaySecretReferenceOrLiteral `json:"ca_bundle,omitempty"`
+	// Client mTLS configuration.
+	//
+	// **Requires a minimum runtime version of `1.1`**.
+	//
+	// +optional
+	ClientIdentity ClientIdentity `json:"client_identity,omitempty"`
+	// If true, TLS is enabled for connections to this backend cluster.
+	// If false, TLS is explicitly disabled.
+	//
+	// +required
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Enabled string `json:"enabled,omitempty"`
+	// If true, skip certificate verification.
+	// It's not secure to use for production.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	// +kubebuilder:default=Disabled
+	InsecureSkipVerify string `json:"insecure_skip_verify,omitempty"`
+	// List of supported TLS versions.
+	//
+	// +optional
+	// +kubebuilder:default={"tls12","tls13"}
+	TLSVersions []string `json:"tls_versions,omitempty"`
+}
+
+// ClientIdentity Client mTLS configuration.
+//
+// **Requires a minimum runtime version of `1.1`**.
+type ClientIdentity struct {
+	// A literal value or a reference to an existing secret as a template string
+	// expression.
+	// The value is stored and returned by the API as-is, not treated as sensitive
+	// information.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Certificate GatewaySecretReferenceOrLiteral `json:"certificate,omitempty"`
+	// A sensitive value containing the secret or a reference to a secret as a
+	// template string expression.
+	// If the value is provided as plain text, it is encrypted at rest and omitted
+	// from API responses.
+	// If provided as an expression, the expression itself is stored and returned
+	// by the API.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Key GatewaySecret `json:"key,omitempty"`
+}
+
+// BackendMetadataUpdateIntervalSeconds The interval at which metadata is
+// updated in seconds.
+type BackendMetadataUpdateIntervalSeconds int
+
 // Description is a type alias.
 type Description string
+
+// EventGatewayListenerPort is a type alias.
+//
+// +kubebuilder:validation:XIntOrString
+type EventGatewayListenerPort = intstr.IntOrString
 
 // GatewayDescription A human-readable description of the Gateway.
 type GatewayDescription string
 
 // GatewayName The name of the Gateway.
 type GatewayName string
+
+// GatewaySecret A sensitive value containing the secret or a reference to a
+// secret as a template string expression.
+// If the value is provided as plain text, it is encrypted at rest and omitted
+// from API responses.
+// If provided as an expression, the expression itself is stored and returned by
+// the API.
+type GatewaySecret string
+
+// GatewaySecretReferenceOrLiteral A literal value or a reference to an existing
+// secret as a template string expression.
+// The value is stored and returned by the API as-is, not treated as sensitive
+// information.
+type GatewaySecretReferenceOrLiteral string
 
 // IdentityProviderEnabled Indicates whether the identity provider is enabled.
 // Only one identity provider can be active at a time, such as SAML or OIDC.
@@ -76,19 +259,19 @@ type OIDCIdentityProviderClaimMappings struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:default=email
+	// +kubebuilder:default="email"
 	Email string `json:"email,omitempty"`
 	// The claim mapping for the user's group membership information.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:default=groups
+	// +kubebuilder:default="groups"
 	Groups string `json:"groups,omitempty"`
 	// The claim mapping for the user's name.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:default=name
+	// +kubebuilder:default="name"
 	Name string `json:"name,omitempty"`
 }
 
@@ -133,16 +316,12 @@ type OIDCIdentityProviderConfig struct {
 	//
 	// +optional
 	// +kubebuilder:default={"email","openid","profile"}
-	Scopes OIDCIdentityProviderScopes `json:"scopes,omitempty"`
+	Scopes []string `json:"scopes,omitempty"`
 }
 
 // OIDCIdentityProviderIssuer The issuer URI of the identity provider.
 // This is the URL where the provider's metadata can be obtained.
 type OIDCIdentityProviderIssuer string
-
-// OIDCIdentityProviderScopes The scopes requested by your application when
-// authenticating with the identity provider.
-type OIDCIdentityProviderScopes []string
 
 // PageContent The renderable markdown content of a page in a portal.
 type PageContent string

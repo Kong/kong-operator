@@ -22,15 +22,12 @@ import (
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
-func TestHandleEventGatewayRefResult(t *testing.T) {
+func TestHandleRefResult(t *testing.T) {
 	t.Run("zero result and nil error continues reconciliation", func(t *testing.T) {
 		ent := testKonnectEventDataPlaneCertificateForEventGatewayRefResult()
-		r := &KonnectEntityReconciler[
-			konnectv1alpha1.KonnectEventDataPlaneCertificate,
-			*konnectv1alpha1.KonnectEventDataPlaneCertificate,
-		]{}
 
-		stop, result, err := r.handleEventGatewayRefResult(t.Context(), ent, ctrl.Result{}, nil)
+		cl := fake.NewClientBuilder().Build()
+		stop, result, err := handleRefResult(t.Context(), cl, ent, ctrl.Result{}, nil)
 
 		require.NoError(t, err)
 		assert.False(t, stop)
@@ -39,14 +36,11 @@ func TestHandleEventGatewayRefResult(t *testing.T) {
 
 	t.Run("referenced object being deleted requeues until its deletion timestamp", func(t *testing.T) {
 		ent := testKonnectEventDataPlaneCertificateForEventGatewayRefResult()
-		r := &KonnectEntityReconciler[
-			konnectv1alpha1.KonnectEventDataPlaneCertificate,
-			*konnectv1alpha1.KonnectEventDataPlaneCertificate,
-		]{}
 
 		deletionTime := time.Now().Add(time.Minute)
-		stop, result, err := r.handleEventGatewayRefResult(
+		stop, result, err := handleRefResult(
 			t.Context(),
+			fake.NewClientBuilder().Build(),
 			ent,
 			ctrl.Result{},
 			ReferencedObjectIsBeingDeletedError{
@@ -70,15 +64,9 @@ func TestHandleEventGatewayRefResult(t *testing.T) {
 			WithObjects(ent).
 			Build()
 
-		r := &KonnectEntityReconciler[
-			konnectv1alpha1.KonnectEventDataPlaneCertificate,
-			*konnectv1alpha1.KonnectEventDataPlaneCertificate,
-		]{
-			Client: cl,
-		}
-
-		stop, result, err := r.handleEventGatewayRefResult(
+		stop, result, err := handleRefResult(
 			t.Context(),
+			cl,
 			ent,
 			ctrl.Result{},
 			ReferencedObjectDoesNotExistError{
@@ -131,15 +119,9 @@ func TestHandleEventGatewayRefResult(t *testing.T) {
 			}).
 			Build()
 
-		r := &KonnectEntityReconciler[
-			konnectv1alpha1.KonnectEventDataPlaneCertificate,
-			*konnectv1alpha1.KonnectEventDataPlaneCertificate,
-		]{
-			Client: cl,
-		}
-
-		stop, result, err := r.handleEventGatewayRefResult(
+		stop, result, err := handleRefResult(
 			t.Context(),
+			cl,
 			ent,
 			ctrl.Result{},
 			ReferencedObjectDoesNotExistError{
@@ -161,6 +143,23 @@ func TestHandleEventGatewayRefResult(t *testing.T) {
 		assert.True(t, stop)
 		assert.Equal(t, ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, result)
 	})
+
+	t.Run("requeue causes stop to be set to true", func(t *testing.T) {
+		ent := testKonnectEventDataPlaneCertificateForEventGatewayRefResult()
+
+		stop, result, err := handleRefResult(
+			t.Context(),
+			fake.NewClientBuilder().Build(),
+			ent,
+			ctrl.Result{RequeueAfter: time.Minute},
+			nil,
+		)
+
+		require.NoError(t, err)
+		assert.True(t, stop)
+		assert.False(t, result.IsZero())
+	})
+
 }
 
 func testKonnectEventDataPlaneCertificateForEventGatewayRefResult() *konnectv1alpha1.KonnectEventDataPlaneCertificate {

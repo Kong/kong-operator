@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -82,7 +83,16 @@ func KubebuilderTags(prop *parser.Property, entityName string, fieldConfig *conf
 				tags = append(tags, markerDefaultString("Disabled"))
 			}
 		case string:
-			tags = append(tags, markerDefaultString(v))
+			// Always quote string defaults so empty strings produce `=""` not `=`.
+			tags = append(tags, markerDefaultString(strconv.Quote(v)))
+		case float64:
+			tags = append(tags, markerDefaultString(formatNumericDefault(v)))
+		case int:
+			tags = append(tags, markerDefaultString(strconv.Itoa(v)))
+		case int64:
+			tags = append(tags, markerDefaultString(strconv.FormatInt(v, 10)))
+		case json.Number:
+			tags = append(tags, markerDefaultString(v.String()))
 		case []any:
 			tags = append(tags, markerDefaultString(formatArrayDefaultValue(v)))
 		default:
@@ -112,11 +122,23 @@ func formatArrayDefaultValue(values []any) string {
 			formatted = append(formatted, strconv.Quote(v))
 		case bool:
 			formatted = append(formatted, strconv.FormatBool(v))
+		case float64:
+			formatted = append(formatted, formatNumericDefault(v))
+		case int:
+			formatted = append(formatted, strconv.Itoa(v))
+		case int64:
+			formatted = append(formatted, strconv.FormatInt(v, 10))
+		case json.Number:
+			formatted = append(formatted, v.String())
 		default:
 			panic("unsupported array default item type: " + fmt.Sprintf("%T", v))
 		}
 	}
 	return "{" + strings.Join(formatted, ",") + "}"
+}
+
+func formatNumericDefault(v float64) string {
+	return strconv.FormatFloat(v, 'f', -1, 64)
 }
 
 // valueTypeMarkers generates kubebuilder validation markers for a map value type

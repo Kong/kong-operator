@@ -291,7 +291,7 @@ func TestCleanOrphanedResources(t *testing.T) {
 						if annotations == nil {
 							annotations = make(map[string]string)
 						}
-						annotations[consts.GatewayOperatorHybridRoutesAnnotation] = "ns/httproute-owner"
+						annotations[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation] = "ns/httproute-owner"
 						obj.SetAnnotations(annotations)
 
 						if extraFields {
@@ -386,7 +386,7 @@ func (f *fakeHTTPRouteConverter) HandleOrphanedResource(ctx context.Context, log
 		return true, nil
 	}
 
-	annotationValue, exists := annotations[consts.GatewayOperatorHybridRoutesAnnotation]
+	annotationValue, exists := annotations[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation]
 	if !exists {
 		return true, nil
 	}

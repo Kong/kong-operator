@@ -771,6 +771,50 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 		}, waitTime, tickTime)
 	})
 
+	t.Run("Kafka Service: user port with same name as base port replaces it (no duplicate port names)", func(t *testing.T) {
+		t.Parallel()
+
+		// This tests the port-name clash: when the user provides a port named
+		// "kafka" at a different port number than the base (9092), the base port
+		// must be suppressed so the Service does not end up with two ports sharing
+		// the name "kafka", which the Kubernetes API server rejects.
+		egdp := setupProgrammedKEGDP(t, ctx, cl, ns.Name,
+			"kep-svc-name-clash", "konnect-id-svc-name-clash", "egdp-svc-name-clash",
+			eventgatewayv1alpha1.KegDataPlaneSpec{
+				Network: &eventgatewayv1alpha1.NetworkOptions{
+					Services: &eventgatewayv1alpha1.Services{
+						Kafka: &eventgatewayv1alpha1.ServiceOptions{
+							Ports: []eventgatewayv1alpha1.ServicePort{
+								{Name: new("kafka"), Port: 19092},
+							},
+						},
+					},
+				},
+			},
+		)
+
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			var svc corev1.Service
+			if !assert.NoError(ct, cl.Get(ctx, client.ObjectKey{
+				Name: fmt.Sprintf("%s-kafka", egdp.Name), Namespace: ns.Name,
+			}, &svc)) {
+				return
+			}
+			var kafkaPorts []corev1.ServicePort
+			for _, p := range svc.Spec.Ports {
+				if p.Name == "kafka" {
+					kafkaPorts = append(kafkaPorts, p)
+				}
+			}
+			// Exactly one port named "kafka", no duplicate from the base.
+			if !assert.Len(ct, kafkaPorts, 1, "expected exactly one port named 'kafka'") {
+				return
+			}
+			// The user's port number (19092) wins; the base port (9092) is gone.
+			assert.EqualValues(ct, 19092, kafkaPorts[0].Port)
+		}, waitTime, tickTime)
+	})
+
 	t.Run("Kafka Service: annotations propagated; operator-owned selector and default port preserved", func(t *testing.T) {
 		t.Parallel()
 

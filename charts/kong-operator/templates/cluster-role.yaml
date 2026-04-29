@@ -435,6 +435,8 @@ rules:
   - apiGroups:
       - konnect.konghq.com
     resources:
+      - eventgatewaybackendclusters
+      - eventgatewaylisteners
       - identityproviderrequests
       - konnectapiauthconfigurations
       - konnectcloudgatewaydataplanegroupconfigurations
@@ -454,6 +456,10 @@ rules:
   - apiGroups:
       - konnect.konghq.com
     resources:
+      - eventgatewaybackendclusters/finalizers
+      - eventgatewaybackendclusters/status
+      - eventgatewaylisteners/finalizers
+      - eventgatewaylisteners/status
       - identityproviderrequests/finalizers
       - identityproviderrequests/status
       - konnectapiauthconfigurations/finalizers

@@ -22,6 +22,13 @@ import (
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
+var (
+	httpRouteTypeMeta = metav1.TypeMeta{
+		Kind:       "HTTPRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
+	}
+)
+
 func TestServiceForRule(t *testing.T) {
 	ctx := context.Background()
 	logger := zap.New()
@@ -33,6 +40,7 @@ func TestServiceForRule(t *testing.T) {
 
 	// Create test HTTPRoute
 	httpRoute := &gwtypes.HTTPRoute{
+		TypeMeta: httpRouteTypeMeta,
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-route",
 			Namespace: "test-namespace",
@@ -100,7 +108,7 @@ func TestServiceForRule(t *testing.T) {
 					Name:      serviceName,
 					Namespace: "test-namespace",
 					Annotations: map[string]string{
-						consts.GatewayOperatorHybridRoutesAnnotation: "other-namespace/other-route",
+						consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "other-namespace/other-route",
 					},
 				},
 			},
@@ -115,7 +123,7 @@ func TestServiceForRule(t *testing.T) {
 					Name:      serviceName,
 					Namespace: "test-namespace",
 					Annotations: map[string]string{
-						consts.GatewayOperatorHybridRoutesAnnotation: "test-namespace/test-route",
+						consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "test-namespace/test-route",
 					},
 				},
 			},
@@ -130,7 +138,7 @@ func TestServiceForRule(t *testing.T) {
 					Name:      serviceName,
 					Namespace: "test-namespace",
 					Annotations: map[string]string{
-						consts.GatewayOperatorHybridRoutesAnnotation: "ns1/route1,ns2/route2",
+						consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1,ns2/route2",
 					},
 				},
 			},
@@ -164,7 +172,7 @@ func TestServiceForRule(t *testing.T) {
 			// Check annotation
 			annotations := service.GetAnnotations()
 			assert.NotNil(t, annotations)
-			assert.Equal(t, tt.expectedAnnotation, annotations[consts.GatewayOperatorHybridRoutesAnnotation])
+			assert.Equal(t, tt.expectedAnnotation, annotations[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation])
 		})
 	}
 }
