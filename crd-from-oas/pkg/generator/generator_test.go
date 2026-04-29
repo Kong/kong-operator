@@ -1910,6 +1910,73 @@ func TestGenerateKonnectIndexOptionsDispatcher(t *testing.T) {
 	assert.Equal(t, string(formatted), file.Content)
 }
 
+func TestGenerateKonnectConstraintsDispatcher(t *testing.T) {
+	infos := []*WatchFileInfo{
+		{
+			Entity:         "Portal",
+			APIAlias:       "konnectv1alpha1",
+			APIPackagePath: "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		},
+		{
+			Entity:         "IdentityProviderRequest",
+			APIAlias:       "konnectv1alpha1",
+			APIPackagePath: "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		},
+	}
+
+	file, err := GenerateKonnectConstraintsDispatcher(infos)
+	require.NoError(t, err)
+	require.NotNil(t, file)
+
+	assert.Equal(t, "zz_generated_supported_types.go", file.Name)
+	assert.Equal(t, "controller/konnect/constraints", file.RelativeDir)
+	assert.Contains(t, file.Content, "package constraints")
+	assert.Contains(t, file.Content, "type SupportedGeneratedKonnectEntityType interface")
+	assert.Contains(t, file.Content, "konnectv1alpha1.IdentityProviderRequest")
+	assert.Contains(t, file.Content, "konnectv1alpha1.Portal")
+
+	formatted, err := format.Source([]byte(file.Content))
+	require.NoError(t, err)
+	assert.Equal(t, string(formatted), file.Content)
+}
+
+func TestGenerateKonnectAPIAuthWatchDispatcher(t *testing.T) {
+	infos := []*WatchFileInfo{
+		{
+			Entity:         "Portal",
+			APIAlias:       "konnectv1alpha1",
+			APIPackagePath: "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+			IsRoot:         true,
+		},
+		{
+			Entity:         "IdentityProviderRequest",
+			APIAlias:       "konnectv1alpha1",
+			APIPackagePath: "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		},
+		{
+			Entity:         "KonnectEventGateway",
+			APIAlias:       "konnectv1alpha1",
+			APIPackagePath: "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+			IsRoot:         true,
+		},
+	}
+
+	file, err := GenerateKonnectAPIAuthWatchDispatcher(infos)
+	require.NoError(t, err)
+	require.NotNil(t, file)
+
+	assert.Equal(t, "zz_generated_konnectapiauth_watch.go", file.Name)
+	assert.Equal(t, "controller/konnect", file.RelativeDir)
+	assert.Contains(t, file.Content, "generatedKonnectAPIAuthReferencingTypes")
+	assert.Contains(t, file.Content, "&konnectv1alpha1.KonnectEventGateway{}")
+	assert.Contains(t, file.Content, "&konnectv1alpha1.Portal{}")
+	assert.NotContains(t, file.Content, "IdentityProviderRequest")
+
+	formatted, err := format.Source([]byte(file.Content))
+	require.NoError(t, err)
+	assert.Equal(t, string(formatted), file.Content)
+}
+
 func TestGenerateSDKFactoryDispatcher(t *testing.T) {
 	infos := []*SDKFactoryFileInfo{
 		{
@@ -2500,6 +2567,37 @@ func TestGenerateEntityOpsFile_GetForUIDUsesUIDTagFilter_Golden(t *testing.T) {
 	want, err := os.ReadFile(filepath.Join("testdata", "zz_generated_ops_kongservice_getforuid_uid_tag_filter.golden.go"))
 	require.NoError(t, err)
 	assert.Equal(t, string(want), string(got))
+}
+
+func TestGenerateEntityOpsFile_ManualGetForUIDStillEmitsDispatcherInfo(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"KonnectEventDataPlaneCertificate": {IsRoot: false, ParentEntityType: "KonnectEventGateway"},
+		},
+		ManualGetForUIDEntities: map[string]bool{
+			"KonnectEventDataPlaneCertificate": true,
+		},
+	})
+
+	schema := &parser.Schema{
+		Dependencies: []*parser.Dependency{
+			{ParamName: "gatewayId", EntityName: "KonnectEventGateway"},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		SkipGetForUID: true,
+		SDK: &config.OpSDKConfig{
+			Interface: "github.com/Kong/sdk-konnect-go.EventGatewayDataPlaneCertificatesSDK",
+			FieldName: "EventGatewayDataPlaneCertificates",
+		},
+	}
+
+	res, err := g.generateEntityOpsFile("KonnectEventDataPlaneCertificate", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, res.GetForUIDInfo)
+	assert.Equal(t, "GetEventGatewayDataPlaneCertificatesSDK", res.GetForUIDInfo.SDKGetter)
 }
 
 func TestGenerateOpsUpdate_RootEntity(t *testing.T) {

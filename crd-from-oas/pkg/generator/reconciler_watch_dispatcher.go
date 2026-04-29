@@ -6,6 +6,7 @@ type WatchFileInfo struct {
 	Entity         string // PascalCase entity name, e.g. "Portal"
 	APIAlias       string // Go import alias, e.g. "konnectv1alpha1"
 	APIPackagePath string // Go import path for the API types package
+	IsRoot         bool   // Whether the entity directly references KonnectAPIAuthConfiguration
 }
 
 // GenerateWatchDispatcher emits controller/konnect/zz_generated_watch.go with

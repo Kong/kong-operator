@@ -48,6 +48,10 @@ type Config struct {
 	// generation should be skipped (e.g. because a hand-written implementation
 	// already exists in an ops_<entity>_manual.go file).
 	SkipGetForUIDEntities map[string]bool
+	// ManualGetForUIDEntities is the set of entity names for which a manual
+	// getForUID function already exists and should still be included in the
+	// generated cross-entity dispatcher.
+	ManualGetForUIDEntities map[string]bool
 }
 
 // Generator generates Go CRD types from parsed OpenAPI schemas.

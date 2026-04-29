@@ -98,15 +98,21 @@ func (r *Runner) Run(
 			generateGVI = *agvConfig.GenerateGroupVersionInfo
 		}
 
-		// Detect which entities have a hand-written _manual.go ops file.
-		// These already contain a getForUID implementation; skip generation to
-		// avoid a duplicate function declaration in the generated ops file.
+		// Detect which entities have a fully hand-written ops file or a
+		// getForUID helper in a _manual.go file.
 		opsDir := filepath.Join(r.projectRoot, "controller/konnect/ops")
 		skipGetForUIDEntities := make(map[string]bool)
+		manualGetForUIDEntities := make(map[string]bool)
 		for _, entityName := range pathToEntityName {
 			for _, candidate := range handWrittenGetForUIDFileNames(entityName) {
 				if _, err := os.Stat(filepath.Join(opsDir, candidate)); err == nil {
 					skipGetForUIDEntities[entityName] = true
+					break
+				}
+			}
+			for _, candidate := range handWrittenGetForUIDHelperFileNames(entityName) {
+				if _, err := os.Stat(filepath.Join(opsDir, candidate)); err == nil {
+					manualGetForUIDEntities[entityName] = true
 					break
 				}
 			}
@@ -126,6 +132,7 @@ func (r *Runner) Run(
 			APIGroupPackagePath:      apiGroupPackagePath,
 			APIGroupPackageAlias:     apiGroupPackageAlias,
 			SkipGetForUIDEntities:    skipGetForUIDEntities,
+			ManualGetForUIDEntities:  manualGetForUIDEntities,
 		})
 
 		files, err := gen.Generate(parsed)
@@ -305,6 +312,32 @@ func (r *Runner) Run(
 		return err
 	}
 
+	// Emit generated constraints dispatcher.
+	if err := emitDispatcherFile(
+		r.projectRoot,
+		logger,
+		"controller/konnect/constraints",
+		"zz_generated_supported_types.go",
+		func() (*generator.GeneratedFile, error) {
+			return generator.GenerateKonnectConstraintsDispatcher(allWatchInfos)
+		},
+	); err != nil {
+		return err
+	}
+
+	// Emit generated KonnectAPIAuth watcher registrations.
+	if err := emitDispatcherFile(
+		r.projectRoot,
+		logger,
+		"controller/konnect",
+		"zz_generated_konnectapiauth_watch.go",
+		func() (*generator.GeneratedFile, error) {
+			return generator.GenerateKonnectAPIAuthWatchDispatcher(allWatchInfos)
+		},
+	); err != nil {
+		return err
+	}
+
 	// Emit manager controller setup dispatcher.
 	if err := emitDispatcherFile(
 		r.projectRoot,
@@ -415,6 +448,17 @@ func handWrittenOpsFileNames(entity string) []string {
 // skipGetForUID flag instead.
 func handWrittenGetForUIDFileNames(entity string) []string {
 	return handWrittenOpsFileNames(entity)
+}
+
+// handWrittenGetForUIDHelperFileNames returns candidate hand-written helper file
+// names for entities whose getForUID function lives in an ops_*_manual.go file.
+func handWrittenGetForUIDHelperFileNames(entity string) []string {
+	prefix := generator.EntityFilePrefix(entity)
+	legacy := strings.ToLower(entity)
+	if prefix == legacy {
+		return []string{"ops_" + prefix + "_manual.go"}
+	}
+	return []string{"ops_" + prefix + "_manual.go", "ops_" + legacy + "_manual.go"}
 }
 
 // generatedOpsFileName returns the generated ops file name for an entity,

@@ -44,6 +44,17 @@ func TestHandWrittenOpsFileNamesIncludesLegacyKonnectName(t *testing.T) {
 	)
 }
 
+func TestHandWrittenGetForUIDHelperFileNamesIncludesLegacyKonnectName(t *testing.T) {
+	require.Equal(
+		t,
+		[]string{
+			"ops_konnect_eventdataplanecertificate_manual.go",
+			"ops_konnecteventdataplanecertificate_manual.go",
+		},
+		handWrittenGetForUIDHelperFileNames("KonnectEventDataPlaneCertificate"),
+	)
+}
+
 func TestGeneratedOpsFileNameMatchesGeneratorConvention(t *testing.T) {
 	require.Equal(t, "zz_generated_ops_portal.go", generatedOpsFileName("Portal"))
 	require.Equal(
@@ -93,4 +104,46 @@ func TestEmitDispatcherFileWritesManagerIndexOptionsDispatcher(t *testing.T) {
 	))
 
 	require.FileExists(t, filepath.Join(projectRoot, "modules/manager", "zz_generated_konnect_index_options.go"))
+}
+
+func TestEmitDispatcherFileWritesGeneratedConstraintsDispatcher(t *testing.T) {
+	projectRoot := t.TempDir()
+	logger := slog.New(slog.DiscardHandler)
+
+	require.NoError(t, emitDispatcherFile(
+		projectRoot,
+		logger,
+		"controller/konnect/constraints",
+		"zz_generated_supported_types.go",
+		func() (*generator.GeneratedFile, error) {
+			return &generator.GeneratedFile{
+				Name:        "zz_generated_supported_types.go",
+				Content:     "package constraints\n",
+				RelativeDir: "controller/konnect/constraints",
+			}, nil
+		},
+	))
+
+	require.FileExists(t, filepath.Join(projectRoot, "controller/konnect/constraints", "zz_generated_supported_types.go"))
+}
+
+func TestEmitDispatcherFileWritesGeneratedKonnectAPIAuthDispatcher(t *testing.T) {
+	projectRoot := t.TempDir()
+	logger := slog.New(slog.DiscardHandler)
+
+	require.NoError(t, emitDispatcherFile(
+		projectRoot,
+		logger,
+		"controller/konnect",
+		"zz_generated_konnectapiauth_watch.go",
+		func() (*generator.GeneratedFile, error) {
+			return &generator.GeneratedFile{
+				Name:        "zz_generated_konnectapiauth_watch.go",
+				Content:     "package konnect\n",
+				RelativeDir: "controller/konnect",
+			}, nil
+		},
+	))
+
+	require.FileExists(t, filepath.Join(projectRoot, "controller/konnect", "zz_generated_konnectapiauth_watch.go"))
 }
