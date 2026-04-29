@@ -3,6 +3,8 @@ package generator
 import (
 	"fmt"
 	"go/format"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -2317,6 +2319,42 @@ func TestGenerateEntityOpsFile_GetForUIDUsesUIDTagFilter(t *testing.T) {
 	assert.Contains(t, res.File.Content, "PortalID: parentID")
 	assert.Contains(t, res.File.Content, "switch id := any(entry.GetID()).(type)")
 	assert.NotContains(t, res.File.Content, "entry.GetLabels()[KubernetesUIDLabelKey]")
+}
+
+func TestGenerateEntityOpsFile_GetForUIDUsesUIDTagFilter_Golden(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/configuration/v1alpha1",
+		APIGroupPackageAlias: "configurationv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"KongService": {IsRoot: false, ParentEntityType: "KonnectGatewayControlPlane"},
+		},
+	})
+
+	schema := &parser.Schema{
+		ListOperationID: "list-service",
+		ListTags:        []string{"Services"},
+		Dependencies: []*parser.Dependency{
+			{ParamName: "controlPlaneId", EntityName: "ControlPlane"},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		UseUIDTagFilter: true,
+		SDK: &config.OpSDKConfig{
+			Interface: "github.com/Kong/sdk-konnect-go.ServicesSDK",
+			FieldName: "Services",
+		},
+	}
+
+	res, err := g.generateEntityOpsFile("KongService", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, res.File)
+
+	got, err := format.Source([]byte(res.File.Content))
+	require.NoError(t, err)
+
+	want, err := os.ReadFile(filepath.Join("testdata", "zz_generated_ops_kongservice_getforuid_uid_tag_filter.golden.go"))
+	require.NoError(t, err)
+	assert.Equal(t, string(want), string(got))
 }
 
 func TestGenerateOpsUpdate_RootEntity(t *testing.T) {
