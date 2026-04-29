@@ -114,7 +114,8 @@ func handleKongKeySetRef[T constraints.SupportedKonnectEntityType, TEnt constrai
 		); err != nil || !res.IsZero() {
 			return ctrl.Result{}, err
 		}
-		return ctrl.Result{Requeue: true}, nil
+		// Don't requeue. The referenced entity's changes will trigger the reconciliation.
+		return ctrl.Result{}, nil
 	}
 
 	old := ent.DeepCopyObject().(TEnt)
