@@ -1,0 +1,8 @@
+apiVersion: configuration.konghq.com/v1beta1
+kind: KongUpstreamPolicy
+metadata:
+  name: test-upstream-policy
+  namespace: ($namespace)
+spec:
+  algorithm: least-connections
+  slots: 100
