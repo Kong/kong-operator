@@ -832,11 +832,103 @@ func TestGenerateSchemaTypes_AddsKubebuilderTags(t *testing.T) {
 		},
 	}
 
-	content := g.generateSchemaTypes(map[string]bool{"CreateDcrProviderRequestOkta": true}, parsed)
+	content := g.generateSchemaTypes(map[string]bool{"CreateDcrProviderRequestOkta": true}, parsed, nil)
 
 	assert.Contains(t, content, "// +optional")
 	assert.Contains(t, content, fmt.Sprintf("// +kubebuilder:validation:MaxLength=%d", defaultMaxLength))
 	assert.Contains(t, content, "ProviderType string `json:\"provider_type,omitempty\"`")
+}
+
+func TestBuildSchemaTypeFieldConfig_NestedInlineObject(t *testing.T) {
+	certProp := &parser.Property{Name: "certificate", Type: "string", Required: true}
+	ciProp := &parser.Property{
+		Name: "client_identity", Type: "object",
+		Properties: []*parser.Property{certProp},
+	}
+	tlsProp := &parser.Property{Name: "tls", Type: "object", RefName: "BackendClusterTLS"}
+	entitySchema := &parser.Schema{
+		Name:       "CreateEventGatewayBackendCluster",
+		Properties: []*parser.Property{tlsProp},
+	}
+	bctSchema := &parser.Schema{
+		Name:       "BackendClusterTLS",
+		Properties: []*parser.Property{ciProp},
+	}
+
+	parsed := &parser.ParsedSpec{
+		RequestBodies: map[string]*parser.Schema{
+			"CreateEventGatewayBackendCluster": entitySchema,
+		},
+		Schemas: map[string]*parser.Schema{
+			"BackendClusterTLS": bctSchema,
+		},
+	}
+
+	fieldCfg := &config.Config{
+		Entities: map[string]*config.EntityConfig{
+			"EventGatewayBackendCluster": {
+				Fields: map[string]*config.FieldConfig{
+					"tls": {
+						Fields: map[string]*config.FieldConfig{
+							"client_identity": {
+								Fields: map[string]*config.FieldConfig{
+									"certificate": {
+										Validations: []string{"+kubebuilder:validation:MaxLength=1024"},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	gen := NewGenerator(Config{APIVersion: "v1alpha1", FieldConfig: fieldCfg})
+	stfc := gen.buildSchemaTypeFieldConfig(parsed)
+	require.NotNil(t, stfc)
+	vals := stfc.GetFieldValidations("ClientIdentity", "certificate")
+	assert.Equal(t, []string{"+kubebuilder:validation:MaxLength=1024"}, vals)
+}
+
+func TestGenerateSchemaTypes_NestedInlineOverride(t *testing.T) {
+	certProp := &parser.Property{Name: "certificate", Type: "string", Required: true}
+	ciProp := &parser.Property{
+		Name: "client_identity", Type: "object",
+		Properties: []*parser.Property{certProp},
+	}
+	bctSchema := &parser.Schema{
+		Name:       "BackendClusterTLS",
+		Properties: []*parser.Property{ciProp},
+	}
+
+	parsed := &parser.ParsedSpec{
+		RequestBodies: map[string]*parser.Schema{},
+		Schemas:       map[string]*parser.Schema{"BackendClusterTLS": bctSchema},
+	}
+
+	schemaTypeFieldConfig := &config.Config{
+		Entities: map[string]*config.EntityConfig{
+			"ClientIdentity": {
+				Fields: map[string]*config.FieldConfig{
+					"certificate": {
+						Validations: []string{"+kubebuilder:validation:MaxLength=1024"},
+					},
+				},
+			},
+		},
+	}
+
+	gen := NewGenerator(Config{APIVersion: "v1alpha1"})
+	content := gen.generateSchemaTypes(
+		map[string]bool{"BackendClusterTLS": true},
+		parsed,
+		schemaTypeFieldConfig,
+	)
+	assert.Contains(t, content, "// +kubebuilder:validation:MaxLength=1024",
+		"user-provided MaxLength should appear in generated type")
+	assert.NotContains(t, content, "// +kubebuilder:validation:MaxLength=253",
+		"default MaxLength should be replaced by user-provided override")
 }
 
 func TestObjectRefNamespaced(t *testing.T) {
@@ -1956,7 +2048,7 @@ func TestGenerateSchemaTypes_MapWithValueTypes(t *testing.T) {
 		"LabelsUpdate": true,
 	}
 
-	content := g.generateSchemaTypes(refs, parsed)
+	content := g.generateSchemaTypes(refs, parsed, nil)
 
 	// Labels should generate a value type with native markers, then a map type using it
 	assert.Contains(t, content, "type LabelsValue string")
@@ -1993,7 +2085,7 @@ func TestGenerateSchemaTypes_NoValueTypeForNonMapTypes(t *testing.T) {
 		"GatewayName": true,
 	}
 
-	content := g.generateSchemaTypes(refs, parsed)
+	content := g.generateSchemaTypes(refs, parsed, nil)
 
 	assert.Contains(t, content, "type GatewayName string")
 	assert.NotContains(t, content, "Value")
@@ -2967,7 +3059,7 @@ func TestGenerateSchemaTypes_ScalarOneOfEmitsIntOrString(t *testing.T) {
 		},
 	}
 
-	content := g.generateSchemaTypes(map[string]bool{"EventGatewayListenerPort": true}, parsed)
+	content := g.generateSchemaTypes(map[string]bool{"EventGatewayListenerPort": true}, parsed, nil)
 
 	assert.Contains(t, content, `type EventGatewayListenerPort = intstr.IntOrString`)
 	assert.Contains(t, content, `+kubebuilder:validation:XIntOrString`)
@@ -2988,7 +3080,7 @@ func TestGenerateSchemaTypes_ArrayItemsRefEmitsTypedSlice(t *testing.T) {
 		},
 	}
 
-	content := g.generateSchemaTypes(map[string]bool{"EventGatewayListenerPorts": true}, parsed)
+	content := g.generateSchemaTypes(map[string]bool{"EventGatewayListenerPorts": true}, parsed, nil)
 
 	assert.Contains(t, content, `type EventGatewayListenerPorts []EventGatewayListenerPort`)
 	assert.NotContains(t, content, `[]any`)
@@ -3011,7 +3103,7 @@ func TestGenerateSchemaTypes_NonScalarOneOfFallsBack(t *testing.T) {
 		},
 	}
 
-	content := g.generateSchemaTypes(map[string]bool{"AuthMethod": true}, parsed)
+	content := g.generateSchemaTypes(map[string]bool{"AuthMethod": true}, parsed, nil)
 
 	assert.NotContains(t, content, `intstr.IntOrString`)
 	assert.NotContains(t, content, `XIntOrString`)

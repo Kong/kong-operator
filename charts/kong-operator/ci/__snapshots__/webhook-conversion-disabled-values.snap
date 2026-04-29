@@ -11000,7 +11000,7 @@ spec:
                           expression.
                           The value is stored and returned by the API as-is, not treated as sensitive
                           information.
-                        maxLength: 253
+                        maxLength: 4096
                         minLength: 1
                         type: string
                       client_identity:
@@ -11015,7 +11015,7 @@ spec:
                               expression.
                               The value is stored and returned by the API as-is, not treated as sensitive
                               information.
-                            maxLength: 253
+                            maxLength: 4096
                             minLength: 1
                             type: string
                           key:
@@ -11026,7 +11026,7 @@ spec:
                               from API responses.
                               If provided as an expression, the expression itself is stored and returned
                               by the API.
-                            maxLength: 253
+                            maxLength: 4096
                             minLength: 1
                             type: string
                         required:

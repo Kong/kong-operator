@@ -434,6 +434,50 @@ func TestAPIGroupVersionConfig_FieldConfig(t *testing.T) {
 		require.NotNil(t, fc)
 		assert.Empty(t, fc.Entities)
 	})
+
+	t.Run("nested cel validations parsed correctly", func(t *testing.T) {
+		agv := &APIGroupVersionConfig{
+			Types: []*TypeConfig{
+				{
+					Path: "/v1/entities/{entityId}/sub",
+					CEL: map[string]*FieldConfig{
+						"tls": {
+							Fields: map[string]*FieldConfig{
+								"client_identity": {
+									Fields: map[string]*FieldConfig{
+										"certificate": {
+											Validations: []string{"+kubebuilder:validation:MaxLength=1024"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		pathToEntity := map[string]string{
+			"/v1/entities/{entityId}/sub": "SubEntity",
+		}
+
+		fc := agv.FieldConfig(pathToEntity)
+		require.NotNil(t, fc)
+
+		// GetFieldConfig with single segment returns the tls FieldConfig with sub-fields.
+		tlsCfg := fc.GetFieldConfig("SubEntity", "tls")
+		require.NotNil(t, tlsCfg)
+		assert.Empty(t, tlsCfg.Validations, "tls has no direct validations")
+		require.NotNil(t, tlsCfg.Sub("client_identity"))
+
+		// Multi-segment path resolves to the leaf.
+		certCfg := fc.GetFieldConfig("SubEntity", "tls", "client_identity", "certificate")
+		require.NotNil(t, certCfg)
+		assert.Equal(t, []string{"+kubebuilder:validation:MaxLength=1024"}, certCfg.Validations)
+
+		// Single-segment lookup returns nil for a non-leaf path segment without Validations.
+		assert.Nil(t, fc.GetFieldValidations("SubEntity", "tls"))
+	})
 }
 
 func TestAPIGroupVersionConfig_OpsConfig(t *testing.T) {

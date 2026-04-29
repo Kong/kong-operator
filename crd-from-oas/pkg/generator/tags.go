@@ -3,6 +3,7 @@ package generator
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -105,13 +106,32 @@ func KubebuilderTags(prop *parser.Property, entityName string, fieldConfig *conf
 		tags = append(tags, markerValidationMaxProperties(int(*prop.MaxProperties)))
 	}
 
-	// Add custom validations from config
+	// Apply custom validations from config, overriding any auto-generated
+	// marker that shares the same key (text before the first '=').
 	if fieldConfig != nil {
 		customValidations := fieldConfig.GetFieldValidations(entityName, prop.Name)
-		tags = append(tags, customValidations...)
+		if len(customValidations) > 0 {
+			overrideKeys := make(map[string]struct{}, len(customValidations))
+			for _, v := range customValidations {
+				overrideKeys[markerKey(v)] = struct{}{}
+			}
+			tags = slices.DeleteFunc(tags, func(t string) bool {
+				_, replaced := overrideKeys[markerKey(t)]
+				return replaced
+			})
+			tags = append(tags, customValidations...)
+		}
 	}
 
 	return tags
+}
+
+// markerKey returns the portion of a kubebuilder marker before the first '=',
+// which acts as the unique key for override matching.
+// For markers without '=' the whole string is the key (e.g. "+optional").
+func markerKey(marker string) string {
+	key, _, _ := strings.Cut(marker, "=")
+	return key
 }
 
 func formatArrayDefaultValue(values []any) string {
