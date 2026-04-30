@@ -31,9 +31,14 @@ apiGroupVersions:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayDataPlaneCertificatesSDK
             fieldName: EventGatewayDataPlaneCertificates
           requireClient: true
-          # SDK list response items lack GetLabels(); getForUID is hand-written in
-          # ops_konnecteventdataplanecertificate_manual.go using spec comparison.
-          skipGetForUID: true
+          getForUID:
+            matchFields:
+              - objectField: Spec.APISpec.Certificate
+                responseField: Certificate
+              - objectField: Spec.APISpec.Name
+                responseField: Name
+              - objectField: Spec.APISpec.Description
+                responseField: Description
           create:
             path: github.com/Kong/sdk-konnect-go/models/components.CreateEventGatewayDataPlaneCertificateRequest
           update:
@@ -149,7 +154,7 @@ apiGroupVersions:
             interface: github.com/Kong/sdk-konnect-go.PortalAuthSettingsSDK
             fieldName: PortalAuthSettings
           # The SDK list endpoint uses positional args and response items lack
-          # UID labels, so getForUID cannot be generated automatically.
+          # labels/tags, and there is no deterministic field-match strategy yet.
           skipGetForUID: true
           create:
             path: github.com/Kong/sdk-konnect-go/models/components.CreateIdentityProvider

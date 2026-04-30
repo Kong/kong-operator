@@ -2795,6 +2795,59 @@ func TestGenerateEntityOpsFile_GetForUIDUsesUIDTagFilter_Golden(t *testing.T) {
 	assert.Equal(t, string(want), string(got))
 }
 
+func TestGenerateEntityOpsFile_GetForUIDUsesConfiguredMatchFields(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"KonnectEventDataPlaneCertificate": {IsRoot: false, ParentEntityType: "KonnectEventGateway"},
+		},
+	})
+
+	schema := &parser.Schema{
+		ListOperationID:        "list-event-gateway-data-plane-certificates",
+		ListTags:               []string{"EventGatewayDataPlaneCertificates"},
+		ListSuccessResponseRef: "ListEventGatewayDataPlaneCertificatesResponse",
+		Dependencies: []*parser.Dependency{
+			{ParamName: "gatewayId", EntityName: "KonnectEventGateway"},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		GetForUID: &config.GetForUIDConfig{
+			MatchFields: []config.GetForUIDMatchField{
+				{
+					ObjectField:   "Spec.APISpec.Certificate",
+					ResponseField: "Certificate",
+				},
+				{
+					ObjectField:   "Spec.APISpec.Name",
+					ResponseField: "Name",
+				},
+				{
+					ObjectField:   "Spec.APISpec.Description",
+					ResponseField: "Description",
+				},
+			},
+		},
+		SDK: &config.OpSDKConfig{
+			Interface: "github.com/Kong/sdk-konnect-go.EventGatewayDataPlaneCertificatesSDK",
+			FieldName: "EventGatewayDataPlaneCertificates",
+		},
+	}
+
+	res, err := g.generateEntityOpsFile("KonnectEventDataPlaneCertificate", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, res.File)
+	require.NotNil(t, res.GetForUIDInfo)
+
+	assert.Contains(t, res.File.Content, "if !matchStringField(obj.Spec.APISpec.Certificate, entry.Certificate)")
+	assert.Contains(t, res.File.Content, "if !matchStringField(obj.Spec.APISpec.Name, entry.Name)")
+	assert.Contains(t, res.File.Content, "if !matchStringField(obj.Spec.APISpec.Description, entry.Description)")
+	assert.Contains(t, res.File.Content, "switch id := any(entry.GetID()).(type)")
+	assert.NotContains(t, res.File.Content, "entry.GetLabels()[KubernetesUIDLabelKey]")
+	assert.NotContains(t, res.File.Content, "entry.GetName()")
+}
+
 func TestGenerateEntityOpsFile_ManualGetForUIDStillEmitsDispatcherInfo(t *testing.T) {
 	g := NewGenerator(Config{
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
