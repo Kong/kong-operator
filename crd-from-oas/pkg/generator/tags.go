@@ -96,6 +96,12 @@ func KubebuilderTags(prop *parser.Property, entityName string, fieldConfig *conf
 			tags = append(tags, markerDefaultString(v.String()))
 		case []any:
 			tags = append(tags, markerDefaultString(formatArrayDefaultValue(v)))
+		case map[string]any:
+			b, err := json.Marshal(v)
+			if err != nil {
+				panic("unsupported default value type: " + fmt.Sprintf("%T", v))
+			}
+			tags = append(tags, markerDefaultString(string(b)))
 		default:
 			panic("unsupported default value type: " + fmt.Sprintf("%T", v))
 		}

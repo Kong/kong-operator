@@ -219,6 +219,9 @@ func (u EventGatewayBackendClusterAuthentication) MarshalJSON() ([]byte, error) 
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (u *EventGatewayBackendClusterAuthentication) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayBackendClusterAuthentication: nil receiver")
+	}
 	var probe struct {
 		Type string `json:"type"`
 	}
@@ -264,3 +267,22 @@ func (u *EventGatewayBackendClusterAuthentication) UnmarshalJSON(data []byte) er
 	}
 	return nil
 }
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *EventGatewayBackendClusterAPISpec) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling EventGatewayBackendClusterAPISpec: nil receiver")
+	}
+	type alias EventGatewayBackendClusterAPISpec
+	aux := alias{}
+	aux.Authentication = &EventGatewayBackendClusterAuthentication{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling EventGatewayBackendClusterAPISpec: %w", err)
+	}
+	if aux.Authentication != nil && aux.Authentication.Type == "" && aux.Authentication.Anonymous == nil && aux.Authentication.SaslPlain == nil && aux.Authentication.SaslScram == nil {
+		aux.Authentication = nil
+	}
+	*s = EventGatewayBackendClusterAPISpec(aux)
+	return nil
+}
+

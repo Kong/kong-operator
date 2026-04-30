@@ -30,9 +30,15 @@ type opsCreateFuncData struct {
 	HasTags              bool
 	HasLabels            bool
 	LabelsPointer        bool
-	ParentEntityName     string
-	ParentIDGetter       string
-	RespIDIsPointer      bool
+	// Parents holds metadata for each parent dependency (outermost first).
+	// Single-parent entities have len(Parents)==1; root entities have len==0.
+	Parents []parentInfo
+	// CreateFullyWrapped is true when the create.path is a fully-wrapped
+	// operations.XxxRequest struct (multi-parent case). When true, the generated
+	// code sets the parent ID fields on the returned request object instead of
+	// passing parentID as a positional argument.
+	CreateFullyWrapped bool
+	RespIDIsPointer    bool
 }
 
 // generateOpsCreateFuncBody renders the create<Entity> function body (no file header).
@@ -69,10 +75,15 @@ func (g *Generator) generateOpsCreateFuncBody(
 	hasTags, hasLabels, labelsPointer := metadataFields(schema)
 	needsClient := opsConfig.RequireClient
 
-	parentEntityName, parentIDGetter, err := g.resolveParentEntity(entityName, schema)
+	parents, err := g.resolveParents(entityName, schema)
 	if err != nil {
 		return nil, err
 	}
+
+	// createFullyWrapped is true when create.path is in the operations package
+	// (i.e. the full request struct with path params included), which occurs for
+	// entities with multiple parent dependencies in the URL path.
+	createFullyWrapped := len(parents) >= 2
 
 	return &opsCreateFuncData{
 		Entity:               entityName,
@@ -86,8 +97,8 @@ func (g *Generator) generateOpsCreateFuncBody(
 		HasTags:              hasTags,
 		HasLabels:            hasLabels,
 		LabelsPointer:        labelsPointer,
-		ParentEntityName:     parentEntityName,
-		ParentIDGetter:       parentIDGetter,
+		Parents:              parents,
+		CreateFullyWrapped:   createFullyWrapped,
 		RespIDIsPointer:      schema.RespIDIsPointer,
 	}, nil
 }

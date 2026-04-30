@@ -11,6 +11,7 @@ import (
 type SupportedGeneratedKonnectEntityType interface {
 	konnectv1alpha1.EventGatewayBackendCluster |
 		konnectv1alpha1.EventGatewayListener |
+		konnectv1alpha1.EventGatewayListenerPolicy |
 		konnectv1alpha1.EventGatewayVirtualCluster |
 		konnectv1alpha1.IdentityProviderRequest |
 		konnectv1alpha1.KonnectEventDataPlaneCertificate |

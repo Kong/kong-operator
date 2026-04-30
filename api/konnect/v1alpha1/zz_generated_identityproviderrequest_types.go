@@ -173,6 +173,9 @@ func (u IdentityProviderRequestConfig) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (u *IdentityProviderRequestConfig) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling IdentityProviderRequestConfig: nil receiver")
+	}
 	var probe struct {
 		Type string `json:"type"`
 	}
@@ -208,3 +211,22 @@ func (u *IdentityProviderRequestConfig) UnmarshalJSON(data []byte) error {
 	}
 	return nil
 }
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *IdentityProviderRequestAPISpec) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling IdentityProviderRequestAPISpec: nil receiver")
+	}
+	type alias IdentityProviderRequestAPISpec
+	aux := alias{}
+	aux.Config = &IdentityProviderRequestConfig{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling IdentityProviderRequestAPISpec: %w", err)
+	}
+	if aux.Config != nil && aux.Config.Type == "" && aux.Config.OIDC == nil && aux.Config.SAML == nil {
+		aux.Config = nil
+	}
+	*s = IdentityProviderRequestAPISpec(aux)
+	return nil
+}
+

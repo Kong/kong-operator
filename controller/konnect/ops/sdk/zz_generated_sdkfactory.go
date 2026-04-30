@@ -10,6 +10,7 @@ import (
 type GeneratedSDK interface {
 	GetEventGatewayBackendClustersSDK() sdkkonnectgo.EventGatewayBackendClustersSDK
 	GetEventGatewayListenersSDK() sdkkonnectgo.EventGatewayListenersSDK
+	GetEventGatewayListenerPoliciesSDK() sdkkonnectgo.EventGatewayListenerPoliciesSDK
 	GetEventGatewayVirtualClustersSDK() sdkkonnectgo.EventGatewayVirtualClustersSDK
 	GetPortalAuthSettingsSDK() sdkkonnectgo.PortalAuthSettingsSDK
 	GetEventGatewayDataPlaneCertificatesSDK() sdkkonnectgo.EventGatewayDataPlaneCertificatesSDK
@@ -27,6 +28,11 @@ func (w sdkWrapper) GetEventGatewayBackendClustersSDK() sdkkonnectgo.EventGatewa
 // GetEventGatewayListenersSDK returns the SDK to operate EventGatewayListener.
 func (w sdkWrapper) GetEventGatewayListenersSDK() sdkkonnectgo.EventGatewayListenersSDK {
 	return w.sdk.EventGatewayListeners
+}
+
+// GetEventGatewayListenerPoliciesSDK returns the SDK to operate EventGatewayListenerPolicy.
+func (w sdkWrapper) GetEventGatewayListenerPoliciesSDK() sdkkonnectgo.EventGatewayListenerPoliciesSDK {
+	return w.sdk.EventGatewayListenerPolicies
 }
 
 // GetEventGatewayVirtualClustersSDK returns the SDK to operate EventGatewayVirtualCluster.

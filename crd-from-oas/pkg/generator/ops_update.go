@@ -19,22 +19,33 @@ type OpsUpdateFileInfo struct {
 
 // opsUpdateFuncData holds template data for a single update<Entity> function.
 type opsUpdateFuncData struct {
-	Entity               string
-	APIAlias             string
-	UpdateSDKInterface   string
-	UpdateSDKMethod      string
-	UpdateReqType        string
-	HasTags              bool
-	HasLabels            bool
-	LabelsPointer        bool
-	ParentEntityName     string
-	ParentIDGetter       string
-	UpdateWrapped        bool   // true when SDK call uses a request-struct (non-root)
-	ParentIDField        string // e.g. "PortalID" — only set when UpdateWrapped
-	EntityIDField        string // e.g. "ID" — only set when UpdateWrapped
-	UpdateBodyField      string // e.g. "UpdateIdentityProvider" — only set when UpdateWrapped
-	UpdateReqBodyPointer bool   // true when SDK body param is a pointer
-	NeedsClient          bool   // true when the generated update function needs client.Client (e.g. to build the request body)
+	Entity             string
+	APIAlias           string
+	UpdateSDKInterface string
+	UpdateSDKMethod    string
+	UpdateReqType      string
+	HasTags            bool
+	HasLabels          bool
+	LabelsPointer      bool
+	// Parents holds metadata for each parent dependency (outermost first).
+	Parents []parentInfo
+	// UpdateWrapped is true when the SDK call uses a request-struct (non-root).
+	UpdateWrapped bool
+	// UpdateFullyWrapped is true when the update.path is a fully-wrapped
+	// operations.XxxRequest struct (multi-parent case). In this case the generated
+	// code sets parent IDs and the entity ID on the returned request object and
+	// passes it directly to the SDK, instead of constructing a manual struct literal.
+	UpdateFullyWrapped bool
+	// ParentIDField is used only for single-parent wrapped updates (UpdateWrapped &&
+	// !UpdateFullyWrapped). e.g. "PortalID".
+	ParentIDField string
+	// EntityIDField is the SDK request-struct field name for the entity's own ID.
+	// Used for both single-parent and multi-parent wrapped updates.
+	EntityIDField string
+	// UpdateBodyField is used only for single-parent wrapped updates. e.g. "UpdateIdentityProvider".
+	UpdateBodyField      string
+	UpdateReqBodyPointer bool // true when SDK body param is a pointer
+	NeedsClient          bool // true when the generated update function needs client.Client
 }
 
 // generateOpsUpdateFuncBody renders the update<Entity> function body (no file header).
@@ -68,21 +79,29 @@ func (g *Generator) generateOpsUpdateFuncBody(
 	hasTags, hasLabels, labelsPointer := metadataFields(schema)
 	needsClient := opsConfig.RequireClient
 
-	parentEntityName, parentIDGetter, err := g.resolveParentEntity(entityName, schema)
+	parents, err := g.resolveParents(entityName, schema)
 	if err != nil {
 		return nil, err
 	}
 
 	// Determine SDK call shape based on number of path params in the PATCH path.
-	// ≥2 params → wrapped operations.XxxRequest struct (parent ID + entity ID).
+	// ≥2 params → wrapped operations.XxxRequest struct.
 	// 1 param → positional (entity ID only, root entity).
 	wrapped := len(schema.UpdatePathParams) >= 2
+	// updateFullyWrapped is true for multi-parent entities (≥3 update path params):
+	// their update.path is a fully-wrapped operations.XxxRequest that already
+	// contains all path-param fields. We set them directly on the returned struct.
+	updateFullyWrapped := len(schema.UpdatePathParams) >= 3
+
 	var parentIDField, entityIDField, updateBodyField string
 	if wrapped {
 		params := schema.UpdatePathParams
-		parentIDField = pathParamToFieldName(params[len(params)-2])
 		entityIDField = pathParamToFieldName(params[len(params)-1])
-		updateBodyField = updateReqType
+		if !updateFullyWrapped {
+			// Single-parent wrapped: derive parent field name from second-to-last param.
+			parentIDField = pathParamToFieldName(params[len(params)-2])
+			updateBodyField = updateReqType
+		}
 	}
 
 	return &opsUpdateFuncData{
@@ -94,9 +113,9 @@ func (g *Generator) generateOpsUpdateFuncBody(
 		HasTags:              hasTags,
 		HasLabels:            hasLabels,
 		LabelsPointer:        labelsPointer,
-		ParentEntityName:     parentEntityName,
-		ParentIDGetter:       parentIDGetter,
+		Parents:              parents,
 		UpdateWrapped:        wrapped,
+		UpdateFullyWrapped:   updateFullyWrapped,
 		ParentIDField:        parentIDField,
 		EntityIDField:        entityIDField,
 		UpdateBodyField:      updateBodyField,

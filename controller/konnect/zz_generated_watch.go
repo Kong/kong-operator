@@ -24,6 +24,8 @@ func reconciliationWatchOptionsForEntity[
 		return EventGatewayBackendClusterReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.EventGatewayListener:
 		return EventGatewayListenerReconciliationWatchOptions(cl)
+	case *konnectv1alpha1.EventGatewayListenerPolicy:
+		return EventGatewayListenerPolicyReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.EventGatewayVirtualCluster:
 		return EventGatewayVirtualClusterReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.IdentityProviderRequest:

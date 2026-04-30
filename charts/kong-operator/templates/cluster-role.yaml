@@ -436,6 +436,7 @@ rules:
       - konnect.konghq.com
     resources:
       - eventgatewaybackendclusters
+      - eventgatewaylistenerpolicies
       - eventgatewaylisteners
       - eventgatewayvirtualclusters
       - identityproviderrequests
@@ -459,6 +460,8 @@ rules:
     resources:
       - eventgatewaybackendclusters/finalizers
       - eventgatewaybackendclusters/status
+      - eventgatewaylistenerpolicies/finalizers
+      - eventgatewaylistenerpolicies/status
       - eventgatewaylisteners/finalizers
       - eventgatewaylisteners/status
       - eventgatewayvirtualclusters/finalizers
