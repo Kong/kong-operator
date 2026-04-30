@@ -24,8 +24,8 @@ type eventGatewayRefHandledObject interface {
 func TestHandleEventGatewayRef_HandlesGeneratedEventGatewayChildren(t *testing.T) {
 	tests := []struct {
 		name    string
-		ent     client.Object
-		updated client.Object
+		ent     k8sutils.ConditionsAwareObject
+		updated eventGatewayRefHandledObject
 	}{
 		{
 			name: "event gateway listener",
@@ -92,17 +92,15 @@ func TestHandleEventGatewayRef_HandlesGeneratedEventGatewayChildren(t *testing.T
 				WithObjects(gateway, tc.ent).
 				Build()
 
-			res, err := handleEventGatewayRef(t.Context(), cl, tc.ent.(k8sutils.ConditionsAwareObject))
+			res, err := handleEventGatewayRef(t.Context(), cl, tc.ent)
 			require.NoError(t, err)
 			require.True(t, res.IsZero())
 
 			require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(tc.ent), tc.updated))
 
-			updated, ok := tc.updated.(eventGatewayRefHandledObject)
-			require.True(t, ok)
-			require.Equal(t, "gateway-konnect-id", updated.GetGatewayID())
+			require.Equal(t, "gateway-konnect-id", tc.updated.GetGatewayID())
 
-			cond, ok := k8sutils.GetCondition(konnectv1alpha1.EventGatewayRefValidConditionType, updated)
+			cond, ok := k8sutils.GetCondition(konnectv1alpha1.EventGatewayRefValidConditionType, tc.updated)
 			require.True(t, ok)
 			require.Equal(t, metav1.ConditionTrue, cond.Status)
 			require.Equal(t, konnectv1alpha1.EventGatewayRefReasonValid, cond.Reason)
