@@ -23,9 +23,17 @@ type opsGetForUIDFuncData struct {
 	ListSDKInterface  string
 	ListSDKMethod     string
 	ListResponseField string
-	ParentEntityName  string
-	ParentIDGetter    string
-	// ParentIDField is the SDK request struct field name for the parent ID,
+	// Parents holds metadata for each parent dependency (outermost first).
+	Parents []parentInfo
+	// GetForUIDFullyWrapped is true for multi-parent entities. The SDK list
+	// method takes a single request struct with all parent fields rather than
+	// a single positional parentID.
+	GetForUIDFullyWrapped bool
+	// GetForUIDWrappedType is the SDK operations struct type name for fully-wrapped
+	// list, e.g. "ListEventGatewayListenerPoliciesRequest".
+	GetForUIDWrappedType string
+	// ParentIDField is the SDK request struct field name for the (single) parent ID,
+	// used only when GetForUIDFullyWrapped is false (single-parent case).
 	// e.g. "PortalID" for an entity nested under Portal.
 	ParentIDField string
 	// HasLabels indicates the entity's request schema declares a "labels"
@@ -69,15 +77,20 @@ func (g *Generator) generateOpsGetForUIDFuncBody(
 		return nil, fmt.Errorf("entity %q: resolve list SDK interface: %w", entityName, err)
 	}
 
-	parentEntityName, parentIDGetter, err := g.resolveParentEntity(entityName, schema)
+	parents, err := g.resolveParents(entityName, schema)
 	if err != nil {
 		return nil, err
 	}
 
-	var parentIDField string
-	if parentEntityName != "" && len(schema.Dependencies) > 0 {
-		// Derive the SDK request field name from the last path parameter, e.g.
-		// "portalId" → "PortalID" using pathParamToFieldName.
+	// Multi-parent entities use a fully-wrapped list request struct.
+	getForUIDFullyWrapped := len(parents) >= 2
+
+	var parentIDField, getForUIDWrappedType string
+	if getForUIDFullyWrapped {
+		// Wrapped type: "<PascalCaseListMethod>Request".
+		getForUIDWrappedType = listMethod + "Request"
+	} else if len(parents) == 1 {
+		// Single-parent: derive the SDK request field name from the last path parameter.
 		parentDep := schema.Dependencies[len(schema.Dependencies)-1]
 		parentIDField = pathParamToFieldName(parentDep.ParamName)
 	}
@@ -97,17 +110,18 @@ func (g *Generator) generateOpsGetForUIDFuncBody(
 	hasName := schemaHasNameProperty(schema)
 
 	return &opsGetForUIDFuncData{
-		Entity:            entityName,
-		APIAlias:          g.config.APIGroupPackageAlias,
-		ListSDKInterface:  listInterface,
-		ListSDKMethod:     listMethod,
-		ListResponseField: listResponseField,
-		ParentEntityName:  parentEntityName,
-		ParentIDGetter:    parentIDGetter,
-		ParentIDField:     parentIDField,
-		HasLabels:         hasLabels,
-		UseUIDTagFilter:   opsConfig != nil && opsConfig.UseUIDTagFilter,
-		HasName:           hasName,
+		Entity:                entityName,
+		APIAlias:              g.config.APIGroupPackageAlias,
+		ListSDKInterface:      listInterface,
+		ListSDKMethod:         listMethod,
+		ListResponseField:     listResponseField,
+		Parents:               parents,
+		GetForUIDFullyWrapped: getForUIDFullyWrapped,
+		GetForUIDWrappedType:  getForUIDWrappedType,
+		ParentIDField:         parentIDField,
+		HasLabels:             hasLabels,
+		UseUIDTagFilter:       opsConfig != nil && opsConfig.UseUIDTagFilter,
+		HasName:               hasName,
 	}, nil
 }
 

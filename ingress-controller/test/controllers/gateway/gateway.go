@@ -7,6 +7,7 @@ import (
 
 type GatewayReconciler = internal.GatewayReconciler
 type HTTPRouteReconciler = internal.HTTPRouteReconciler
+type TLSRouteReconciler = internal.TLSRouteReconciler
 
 func GetControllerName() internalgatewayapi.GatewayController {
 	return internal.GetControllerName()

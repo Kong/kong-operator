@@ -317,6 +317,7 @@ func (g *Generator) generateReconcilerFiles(entityNames []string, entitySchemas 
 			Entity:         entityName,
 			APIAlias:       g.config.APIGroupPackageAlias,
 			APIPackagePath: g.config.APIGroupPackagePath,
+			IsRoot:         rc.IsRoot,
 		})
 
 		// Index file → internal/utils/index/

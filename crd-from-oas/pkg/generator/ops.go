@@ -49,69 +49,73 @@ func (g *Generator) generateEntityOpsFile(
 		return entityOpsFileResult{}, fmt.Errorf("failed getForUID op for %s: %w", entityName, err)
 	}
 
-	if createData == nil && updateData == nil && deleteData == nil && getForUIDData == nil {
+	manualGetForUID := g.config.ManualGetForUIDEntities[entityName] && opsConfig != nil && opsConfig.SDK != nil
+	if createData == nil && updateData == nil && deleteData == nil && getForUIDData == nil && !manualGetForUID {
 		return entityOpsFileResult{}, nil
 	}
 
-	// Determine whether we need the sdkkonnectops import (wrapped request structs
-	// are used by update and getForUID).
-	needsOpsImport := (updateData != nil && updateData.UpdateWrapped) || getForUIDData != nil
-	needsClientImport := (createData != nil && createData.NeedsClient) || (updateData != nil && updateData.NeedsClient)
+	var file *GeneratedFile
+	if createData != nil || updateData != nil || deleteData != nil || getForUIDData != nil {
+		// Determine whether we need the sdkkonnectops import (wrapped request structs
+		// are used by update and getForUID).
+		needsOpsImport := (updateData != nil && updateData.UpdateWrapped) || getForUIDData != nil
+		needsClientImport := (createData != nil && createData.NeedsClient) || (updateData != nil && updateData.NeedsClient)
 
-	// Render file header.
-	headerData := struct {
-		APIAlias          string
-		APIPackagePath    string
-		NeedsOpsImport    bool
-		NeedsClientImport bool
-	}{
-		APIAlias:          g.config.APIGroupPackageAlias,
-		APIPackagePath:    g.config.APIGroupPackagePath,
-		NeedsOpsImport:    needsOpsImport,
-		NeedsClientImport: needsClientImport,
-	}
-	var content strings.Builder
-	headerTmpl := template.Must(template.New("opsheader").Parse(opsPerEntityFileHeaderTemplate))
-	if err := headerTmpl.Execute(&content, headerData); err != nil {
-		return entityOpsFileResult{}, err
-	}
-
-	// Render create function body.
-	if createData != nil {
-		createTmpl := template.Must(template.New("opscreatefunc").Parse(opsCreateFuncTemplate))
-		if err := createTmpl.Execute(&content, createData); err != nil {
+		// Render file header.
+		headerData := struct {
+			APIAlias          string
+			APIPackagePath    string
+			NeedsOpsImport    bool
+			NeedsClientImport bool
+		}{
+			APIAlias:          g.config.APIGroupPackageAlias,
+			APIPackagePath:    g.config.APIGroupPackagePath,
+			NeedsOpsImport:    needsOpsImport,
+			NeedsClientImport: needsClientImport,
+		}
+		var content strings.Builder
+		headerTmpl := template.Must(template.New("opsheader").Parse(opsPerEntityFileHeaderTemplate))
+		if err := headerTmpl.Execute(&content, headerData); err != nil {
 			return entityOpsFileResult{}, err
 		}
-	}
 
-	// Render update function body.
-	if updateData != nil {
-		updateTmpl := template.Must(template.New("opsupdatefunc").Parse(opsUpdateFuncTemplate))
-		if err := updateTmpl.Execute(&content, updateData); err != nil {
-			return entityOpsFileResult{}, err
+		// Render create function body.
+		if createData != nil {
+			createTmpl := template.Must(template.New("opscreatefunc").Parse(opsCreateFuncTemplate))
+			if err := createTmpl.Execute(&content, createData); err != nil {
+				return entityOpsFileResult{}, err
+			}
 		}
-	}
 
-	// Render delete function body.
-	if deleteData != nil {
-		deleteTmpl := template.Must(template.New("opsdeletefunc").Parse(opsDeleteFuncTemplate))
-		if err := deleteTmpl.Execute(&content, deleteData); err != nil {
-			return entityOpsFileResult{}, err
+		// Render update function body.
+		if updateData != nil {
+			updateTmpl := template.Must(template.New("opsupdatefunc").Parse(opsUpdateFuncTemplate))
+			if err := updateTmpl.Execute(&content, updateData); err != nil {
+				return entityOpsFileResult{}, err
+			}
 		}
-	}
 
-	// Render getForUID function body.
-	if getForUIDData != nil {
-		getForUIDTmpl := template.Must(template.New("opsgetforuidfunc").Parse(opsGetForUIDFuncTemplate))
-		if err := getForUIDTmpl.Execute(&content, getForUIDData); err != nil {
-			return entityOpsFileResult{}, err
+		// Render delete function body.
+		if deleteData != nil {
+			deleteTmpl := template.Must(template.New("opsdeletefunc").Parse(opsDeleteFuncTemplate))
+			if err := deleteTmpl.Execute(&content, deleteData); err != nil {
+				return entityOpsFileResult{}, err
+			}
 		}
-	}
 
-	file := &GeneratedFile{
-		Name:        "zz_generated_ops_" + EntityFilePrefix(entityName) + ".go",
-		Content:     content.String(),
-		RelativeDir: "controller/konnect/ops",
+		// Render getForUID function body.
+		if getForUIDData != nil {
+			getForUIDTmpl := template.Must(template.New("opsgetforuidfunc").Parse(opsGetForUIDFuncTemplate))
+			if err := getForUIDTmpl.Execute(&content, getForUIDData); err != nil {
+				return entityOpsFileResult{}, err
+			}
+		}
+
+		file = &GeneratedFile{
+			Name:        "zz_generated_ops_" + EntityFilePrefix(entityName) + ".go",
+			Content:     content.String(),
+			RelativeDir: "controller/konnect/ops",
+		}
 	}
 
 	var createInfo *OpsCreateFileInfo
@@ -157,6 +161,13 @@ func (g *Generator) generateEntityOpsFile(
 			APIAlias:       g.config.APIGroupPackageAlias,
 			APIPackagePath: g.config.APIGroupPackagePath,
 			SDKGetter:      sdkGetter,
+		}
+	} else if manualGetForUID {
+		getForUIDInfo = &OpsGetForUIDFileInfo{
+			Entity:         entityName,
+			APIAlias:       g.config.APIGroupPackageAlias,
+			APIPackagePath: g.config.APIGroupPackagePath,
+			SDKGetter:      "Get" + opsConfig.SDK.FieldName + "SDK",
 		}
 	}
 
@@ -273,25 +284,63 @@ func buildDispatcherFile(
 	}, nil
 }
 
-// resolveParentEntity returns the parent entity name and the ID getter method
-// name for a non-root entity, deriving them from the schema's last dependency
-// and the reconciler config's optional ParentEntityType override.
-// Returns empty strings for root entities.
-func (g *Generator) resolveParentEntity(entityName string, schema *parser.Schema) (parentEntityName, parentIDGetter string, err error) {
+// parentInfo holds per-parent metadata used by the op generator templates.
+type parentInfo struct {
+	// EntityName is the Go type name of the parent entity, e.g. "KonnectEventGateway".
+	// For the immediate (last) parent it may be overridden by ReconcilerConfig.ParentEntityType.
+	EntityName string
+	// IDGetter is the method name to fetch the parent's Konnect ID from the child object,
+	// e.g. "GetGatewayID". Derived from the raw dependency EntityName (before ParentEntityType override).
+	IDGetter string
+	// VarName is the Go local variable name to use in generated code, e.g. "gatewayID".
+	VarName string
+	// SDKFieldName is the field name in the SDK operations request struct for this parent param,
+	// e.g. "GatewayID" or "ListenerID". Derived from pathParamToFieldName or config override.
+	SDKFieldName string
+}
+
+// resolveParents returns parent info for all parent dependencies of a non-root entity,
+// ordered from outermost (first URL param) to innermost (immediate parent, last URL param).
+// Returns nil for root entities.
+func (g *Generator) resolveParents(entityName string, schema *parser.Schema) ([]parentInfo, error) {
 	rc := g.config.ReconcilerConfig[entityName]
 	if rc == nil || rc.IsRoot {
-		return "", "", nil
+		return nil, nil
 	}
 	if len(schema.Dependencies) == 0 {
-		return "", "", fmt.Errorf("non-root entity %q has no parent dependency in OAS path", entityName)
+		return nil, fmt.Errorf("non-root entity %q has no parent dependency in OAS path", entityName)
 	}
-	parentDep := schema.Dependencies[len(schema.Dependencies)-1]
-	parentEntityName = parentDep.EntityName
-	if rc.ParentEntityType != "" {
-		parentEntityName = rc.ParentEntityType
+
+	parents := make([]parentInfo, len(schema.Dependencies))
+	for i, dep := range schema.Dependencies {
+		name := dep.EntityName
+		// ParentEntityType overrides only the immediate (last) parent entity name.
+		if i == len(schema.Dependencies)-1 && rc.ParentEntityType != "" {
+			name = rc.ParentEntityType
+		}
+
+		sdkField := pathParamToFieldName(dep.ParamName)
+		if i < len(rc.ParentSDKFields) && rc.ParentSDKFields[i] != "" {
+			sdkField = rc.ParentSDKFields[i]
+		}
+
+		// VarName: entity-specific name for multi-parent, generic "parentID" for single-parent.
+		rawName := dep.EntityName
+		varName := strings.ToLower(rawName[:1]) + rawName[1:] + "ID"
+
+		parents[i] = parentInfo{
+			EntityName:   name,
+			IDGetter:     "Get" + dep.EntityName + "ID",
+			VarName:      varName,
+			SDKFieldName: sdkField,
+		}
 	}
-	parentIDGetter = "Get" + parentDep.EntityName + "ID"
-	return parentEntityName, parentIDGetter, nil
+	// Single-parent entities use the generic "parentID" var name for backwards compatibility
+	// with existing generated code and templates. Multi-parent entities use entity-specific names.
+	if len(parents) == 1 {
+		parents[0].VarName = "parentID"
+	}
+	return parents, nil
 }
 
 func resolveSDKInterfaceTypeName(opsConfig *config.EntityOpsConfig, fallbackTypeName string) (string, error) {

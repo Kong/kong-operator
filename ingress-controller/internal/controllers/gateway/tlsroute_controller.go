@@ -453,3 +453,8 @@ func (r *TLSRouteReconciler) ensureGatewayReferenceStatusAdded(
 	// the status needed an update and it was updated successfully
 	return true, ctrl.Result{}, nil
 }
+
+// SetLogger sets the logger.
+func (r *TLSRouteReconciler) SetLogger(l logr.Logger) {
+	r.Log = l
+}

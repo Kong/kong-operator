@@ -4944,6 +4944,7 @@ Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1al
 
 - [EventGatewayBackendCluster](#konnect-konghq-com-v1alpha1-eventgatewaybackendcluster)
 - [EventGatewayListener](#konnect-konghq-com-v1alpha1-eventgatewaylistener)
+- [EventGatewayListenerPolicy](#konnect-konghq-com-v1alpha1-eventgatewaylistenerpolicy)
 - [EventGatewayVirtualCluster](#konnect-konghq-com-v1alpha1-eventgatewayvirtualcluster)
 - [IdentityProviderRequest](#konnect-konghq-com-v1alpha1-identityproviderrequest)
 - [KonnectAPIAuthConfiguration](#konnect-konghq-com-v1alpha1-konnectapiauthconfiguration)
@@ -4988,6 +4989,21 @@ EventGatewayListener is the Schema for the eventgatewaylisteners API.
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[EventGatewayListenerSpec](#konnect-konghq-com-v1alpha1-types-eventgatewaylistenerspec)_ |  |
 | `status` _[EventGatewayListenerStatus](#konnect-konghq-com-v1alpha1-types-eventgatewaylistenerstatus)_ |  |
+
+### EventGatewayListenerPolicy
+
+
+EventGatewayListenerPolicy is the Schema for the eventgatewaylistenerpolicys API.
+
+<!-- event_gateway_listener_policy description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `EventGatewayListenerPolicy`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[EventGatewayListenerPolicySpec](#konnect-konghq-com-v1alpha1-types-eventgatewaylistenerpolicyspec)_ |  |
+| `status` _[EventGatewayListenerPolicyStatus](#konnect-konghq-com-v1alpha1-types-eventgatewaylistenerpolicystatus)_ |  |
 
 ### EventGatewayVirtualCluster
 
@@ -5425,6 +5441,27 @@ _Appears in:_
 
 - [EventGatewayBackendClusterAPISpec](#konnect-konghq-com-v1alpha1-types-eventgatewaybackendclusterapispec)
 
+#### BrokerHostFormat
+
+
+BrokerHostFormat Configures DNS names assigned to brokers in virtual
+clusters.<br /><br />- `per_cluster_suffix` is the default and allocates one level in the
+hierarchy for virtual clusters:
+`broker-{node_id}.{virtual_cluster}.{sni_suffix}`
+- `shared_suffix` puts all brokers from every virtual clusters into the same
+level: `broker-{node_id}-{virtual_cluster}.{sni_suffix}`.
+This makes it easier to manage certificates for this listener.<br /><br />**Requires a minimum runtime version of `1.1`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _string_ |  |
+
+_Appears in:_
+
+- [ForwardToClusterBySNIConfig](#konnect-konghq-com-v1alpha1-types-forwardtoclusterbysniconfig)
+
 #### CertificateSecret
 
 
@@ -5440,6 +5477,27 @@ CertificateSecret contains the information to access the client certificate.
 _Appears in:_
 
 - [KonnectExtensionClientAuth](#konnect-konghq-com-v1alpha1-types-konnectextensionclientauth)
+
+#### ClientAuthentication
+
+
+ClientAuthentication Configures mutual TLS (mTLS) client certificate
+verification.
+When set, the gateway
+requests or requires clients to present a certificate during the TLS
+handshake.<br /><br />**Requires a minimum runtime version of `1.1`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `mode` _string_ | * required - Reject TLS connections without a valid client certificate. * requested - Request a client certificate during the TLS handshake, but allow connections without one (falls back to other configured authentication methods). If a certificate is presented but cannot be verified, the connection is closed. |
+| `principal_mapping` _string_ | An expression that extracts a principal identifier from a verified client certificate. This expression must evaluate to a string.<br /><br />**Requires a minimum runtime version of `1.1`**. |
+| `tls_trust_bundles` _[TLSTrustBundleReference](#konnect-konghq-com-v1alpha1-types-tlstrustbundlereference)_ | TLS trust bundles contain CA certificate bundles used to verify client certificates. All bundles are merged into a single trust store; a client certificate is accepted if it chains to any trusted CA across all bundles. |
+
+_Appears in:_
+
+- [EventGatewayTLSListenerPolicyConfig](#konnect-konghq-com-v1alpha1-types-eventgatewaytlslistenerpolicyconfig)
 
 #### ClientIdentity
 
@@ -5722,6 +5780,92 @@ _Appears in:_
 
 - [EventGatewayListenerSpec](#konnect-konghq-com-v1alpha1-types-eventgatewaylistenerspec)
 
+#### EventGatewayListenerPolicyAPISpec
+
+
+EventGatewayListenerPolicyAPISpec defines the API spec fields for EventGatewayListenerPolicy.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayListenerPolicySpec](#konnect-konghq-com-v1alpha1-types-eventgatewaylistenerpolicyspec)
+
+#### EventGatewayListenerPolicyConfig
+
+
+EventGatewayListenerPolicyConfig represents a union type for EventGatewayListenerPolicyConfig.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[EventGatewayListenerPolicyConfigType](#konnect-konghq-com-v1alpha1-types-eventgatewaylistenerpolicyconfigtype)_ | Type designates the type of configuration. |
+| `forward_to_virtual_cluster` _[ForwardToVirtualClusterPolicy](#konnect-konghq-com-v1alpha1-types-forwardtovirtualclusterpolicy)_ | ForwardToVirtualClust configuration. |
+| `tls_server` _[EventGatewayTLSListenerPolicy](#konnect-konghq-com-v1alpha1-types-eventgatewaytlslistenerpolicy)_ | EventGatewayTLSListen configuration. |
+
+_Appears in:_
+
+- [EventGatewayListenerPolicyAPISpec](#konnect-konghq-com-v1alpha1-types-eventgatewaylistenerpolicyapispec)
+
+#### EventGatewayListenerPolicyConfigType
+
+_Underlying type:_ `string`
+
+EventGatewayListenerPolicyConfigType represents the type of EventGatewayListenerPolicyConfig.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayListenerPolicyConfig](#konnect-konghq-com-v1alpha1-types-eventgatewaylistenerpolicyconfig)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `forward_to_virtual_cluster` |  |
+| `tls_server` |  |
+
+
+
+#### EventGatewayListenerPolicySpec
+
+
+EventGatewayListenerPolicySpec defines the desired state of EventGatewayListenerPolicy.
+
+
+
+| Field | Description |
+| --- | --- |
+| `event_gateway_listener_ref` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | EventGatewayListenerRef is the reference to the parent EventGatewayListener object. |
+| `apiSpec` _[EventGatewayListenerPolicyAPISpec](#konnect-konghq-com-v1alpha1-types-eventgatewaylistenerpolicyapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [EventGatewayListenerPolicy](#konnect-konghq-com-v1alpha1-eventgatewaylistenerpolicy)
+
+#### EventGatewayListenerPolicyStatus
+
+
+EventGatewayListenerPolicyStatus defines the observed state of EventGatewayListenerPolicy.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `eventgatewaylistenerID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | EventGatewayListenerID is the Konnect ID of the parent EventGatewayListener. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [EventGatewayListenerPolicy](#konnect-konghq-com-v1alpha1-eventgatewaylistenerpolicy)
+
 
 
 #### EventGatewayListenerSpec
@@ -5756,6 +5900,47 @@ EventGatewayListenerStatus defines the observed state of EventGatewayListener.
 _Appears in:_
 
 - [EventGatewayListener](#konnect-konghq-com-v1alpha1-eventgatewaylistener)
+
+#### EventGatewayTLSListenerPolicy
+
+
+EventGatewayTLSListenerPolicy The TLS Server policy defines the certificates
+and keys used by the gateway server when the client connects
+to the gateway over TLS.<br /><br />While it is possible to have multiple TLS policies on a listener, only one
+can be active at a time.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[EventGatewayTLSListenerPolicyConfig](#konnect-konghq-com-v1alpha1-types-eventgatewaytlslistenerpolicyconfig)_ | The configuration of the policy. |
+| `description` _string_ | A human-readable description of the policy. |
+| `enabled` _string_ | Whether the policy is enabled. |
+| `labels` _[Labels](#konnect-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _string_ | A unique user-defined name of the policy. |
+| `type` _string_ | The type name of the policy. |
+
+_Appears in:_
+
+- [EventGatewayListenerPolicyConfig](#konnect-konghq-com-v1alpha1-types-eventgatewaylistenerpolicyconfig)
+
+#### EventGatewayTLSListenerPolicyConfig
+
+
+EventGatewayTLSListenerPolicyConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `allow_plaintext` _string_ | If false, only TLS connections are allowed. If true, both TLS and plaintext connections are allowed. |
+| `certificates` _[TLSCertificate](#konnect-konghq-com-v1alpha1-types-tlscertificate)_ |  |
+| `client_authentication` _[ClientAuthentication](#konnect-konghq-com-v1alpha1-types-clientauthentication)_ | Configures mutual TLS (mTLS) client certificate verification. When set, the gateway requests or requires clients to present a certificate during the TLS handshake.<br /><br />**Requires a minimum runtime version of `1.1`**. |
+| `versions` _[TLSVersionRange](#konnect-konghq-com-v1alpha1-types-tlsversionrange)_ | A range of TLS versions. |
+
+_Appears in:_
+
+- [EventGatewayTLSListenerPolicy](#konnect-konghq-com-v1alpha1-types-eventgatewaytlslistenerpolicy)
 
 #### EventGatewayVirtualClusterAPISpec
 
@@ -5812,6 +5997,126 @@ _Appears in:_
 
 - [EventGatewayVirtualCluster](#konnect-konghq-com-v1alpha1-eventgatewayvirtualcluster)
 
+#### ForwardToClusterByPortMappingConfig
+
+
+ForwardToClusterByPortMappingConfig The configuration to forward request to
+`destination` and rewrite ports accordingly.
+All broker ids must fit in the range of ports defined in the listener, if it
+doesn't the metadata request will
+return an error.<br /><br />For example with ports: [9000, "9092-9094", "9100"] and `bootstrap_port:
+at_start` and brokers with ids
+1, 2, 3, 4 we will map: bootstrap to 9000 broker 1 to 9001, broker 2 to 9002,
+broker 3 to 9003, and broker 4
+to 9004 and fail the metadata request as these ports are not open.<br /><br />However, with the same configuration but with brokers with ids: 92,93,94,100
+we will map: bootstrap to 9000,
+broker 92 to 9092, broker 93 to 9093, broker 94 to 9094, and broker 100 to
+9100.<br /><br />In most cases users should use a single range `["9090-9094"] ` and
+`bootstrap_port: at_start` and connect with
+`<host>:9090` as bootstrap server.
+Being able to use multiple ranges is only useful when when dealing with
+gaps in broker ids.<br /><br />It is strongly discouraged to use port mapping in production.
+
+
+
+| Field | Description |
+| --- | --- |
+| `advertised_host` _string_ | Virtual brokers are advertised to clients using this host. Any kind of host supported by kafka can be used. If not defined, it's listen_address. If listen_address is `0.0.0.0` it's the destination IP of the TCP connection. |
+| `bootstrap_port` _string_ | If set to `at_start`, the first port will be used as a bootstrap port. It provides a stable endpoint to use as the bootstrap server for clients, regardless of broker IDs in the cluster.<br /><br />Additionally, it offsets all ports by one, so for example, if there are 3 brokers (id=1, id=2, id=3) then we will use 4 ports: 9092 (bootstrap), 9093 (id=1), 9094 (id=2), 9095 (id=3) With `none` we will use 3 ports: 9092 (id=1), 9093 (id=2), 9094 (id=3). |
+| `destination` _[VirtualClusterReference](#konnect-konghq-com-v1alpha1-types-virtualclusterreference)_ | A reference to a virtual cluster. |
+| `min_broker_id` _int_ | The lowest broker node ID in the cluster. |
+| `type` _string_ |  |
+
+_Appears in:_
+
+- [ForwardToVirtualClusterPolicyConfig](#konnect-konghq-com-v1alpha1-types-forwardtovirtualclusterpolicyconfig)
+
+#### ForwardToClusterBySNIConfig
+
+
+ForwardToClusterBySNIConfig The configuration to forward requests to virtual
+clusters configured with SNI routing.
+
+
+
+| Field | Description |
+| --- | --- |
+| `advertised_port` _int_ | Virtual brokers are advertised to clients with this port instead of listen_port. Useful when proxy is behind loadbalancer listening on different port. |
+| `broker_host_format` _[BrokerHostFormat](#konnect-konghq-com-v1alpha1-types-brokerhostformat)_ | Configures DNS names assigned to brokers in virtual clusters.<br /><br />- `per_cluster_suffix` is the default and allocates one level in the hierarchy for virtual clusters: `broker-{node_id}.{virtual_cluster}.{sni_suffix}` - `shared_suffix` puts all brokers from every virtual clusters into the same level: `broker-{node_id}-{virtual_cluster}.{sni_suffix}`. This makes it easier to manage certificates for this listener.<br /><br />**Requires a minimum runtime version of `1.1`**. |
+| `sni_suffix` _string_ | Optional suffix for TLS SNI validation.<br /><br />This suffix is concatenated with the virtual cluster "dns.label" label to form the base name for the SNI. If not provided, the virtual cluster "dns.label" label alone is used as the base name for the SNI. For example with sni_suffix: `.example.com` and virtual cluster "dns.label" label: `my-cluster`, the SNI suffix for it is `my-cluster.example.com`. If "dns.label" label is absent on the virtual cluster, the traffic won't be routed there.<br /><br />The bootstrap host is `bootstrap.my-cluster.example.com` and then each broker is addressable at `broker-0.my-cluster.example.com`, `broker-1.my-cluster.example.com`, etc. This means that your deployment needs to have a wildcard certificate for the domain and a DNS resolver that routes `*.my-cluster.example.com` to the proxy.<br /><br />The accepted format is a DNS subdomain starting with either `.` or `-`. For example, `-keg.example.com`, `.keg.example.com`, `.namespace.svc.cluster.local`, and `.localhost` are all valid, while `keg.example.com` is not. |
+| `type` _string_ |  |
+
+_Appears in:_
+
+- [ForwardToVirtualClusterPolicyConfig](#konnect-konghq-com-v1alpha1-types-forwardtovirtualclusterpolicyconfig)
+
+#### ForwardToVirtualClusterPolicy
+
+
+ForwardToVirtualClusterPolicy Forwards requests to virtual clusters
+configured with port routing or SNI routing.
+While there can be multiple of these policies configured on a listener, there
+can only be one instance of
+`port_mapping`.
+When multiple policies are configured, the first one that matches the
+connection is used.
+If no policy matches, the connection is rejected.<br /><br />When using `port_mapping`, there must be a mapping port for each broker on
+the backend cluster see
+`ForwardToClusterBySNIConfig` for more details.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[ForwardToVirtualClusterPolicyConfig](#konnect-konghq-com-v1alpha1-types-forwardtovirtualclusterpolicyconfig)_ | The configuration of the policy. |
+| `description` _string_ | A human-readable description of the policy. |
+| `enabled` _string_ | Whether the policy is enabled. |
+| `labels` _[Labels](#konnect-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _string_ | A unique user-defined name of the policy. |
+| `type` _string_ | The type name of the policy. |
+
+_Appears in:_
+
+- [EventGatewayListenerPolicyConfig](#konnect-konghq-com-v1alpha1-types-eventgatewaylistenerpolicyconfig)
+
+#### ForwardToVirtualClusterPolicyConfig
+
+
+ForwardToVirtualClusterPolicyConfig represents a union type for config.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[ForwardToVirtualClusterPolicyConfigType](#konnect-konghq-com-v1alpha1-types-forwardtovirtualclusterpolicyconfigtype)_ | Type designates the type of configuration. |
+| `port_mapping` _[ForwardToClusterByPortMappingConfig](#konnect-konghq-com-v1alpha1-types-forwardtoclusterbyportmappingconfig)_ | PortMapping configuration. |
+| `sni` _[ForwardToClusterBySNIConfig](#konnect-konghq-com-v1alpha1-types-forwardtoclusterbysniconfig)_ | SNI configuration. |
+
+_Appears in:_
+
+- [ForwardToVirtualClusterPolicy](#konnect-konghq-com-v1alpha1-types-forwardtovirtualclusterpolicy)
+
+#### ForwardToVirtualClusterPolicyConfigType
+
+_Underlying type:_ `string`
+
+ForwardToVirtualClusterPolicyConfigType represents the type of config.
+
+
+
+
+_Appears in:_
+
+- [ForwardToVirtualClusterPolicyConfig](#konnect-konghq-com-v1alpha1-types-forwardtovirtualclusterpolicyconfig)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `port_mapping` |  |
+| `sni` |  |
+
 #### GatewayDescription
 
 _Underlying type:_ `string`
@@ -5857,6 +6162,7 @@ _Appears in:_
 - [BackendClusterAuthenticationSaslPlain](#konnect-konghq-com-v1alpha1-types-backendclusterauthenticationsaslplain)
 - [BackendClusterAuthenticationSaslScram](#konnect-konghq-com-v1alpha1-types-backendclusterauthenticationsaslscram)
 - [ClientIdentity](#konnect-konghq-com-v1alpha1-types-clientidentity)
+- [TLSCertificate](#konnect-konghq-com-v1alpha1-types-tlscertificate)
 - [VirtualClusterAuthenticationPrincipal](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationprincipal)
 
 #### GatewaySecretReferenceOrLiteral
@@ -5877,6 +6183,7 @@ _Appears in:_
 - [BackendClusterAuthenticationSaslScram](#konnect-konghq-com-v1alpha1-types-backendclusterauthenticationsaslscram)
 - [BackendClusterTLS](#konnect-konghq-com-v1alpha1-types-backendclustertls)
 - [ClientIdentity](#konnect-konghq-com-v1alpha1-types-clientidentity)
+- [TLSCertificate](#konnect-konghq-com-v1alpha1-types-tlscertificate)
 - [VirtualClusterAuthenticationPrincipal](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationprincipal)
 
 #### IdentityProviderEnabled
@@ -6265,6 +6572,7 @@ KonnectEntityRef is a reference to a Konnect entity.
 _Appears in:_
 
 - [EventGatewayBackendClusterStatus](#konnect-konghq-com-v1alpha1-types-eventgatewaybackendclusterstatus)
+- [EventGatewayListenerPolicyStatus](#konnect-konghq-com-v1alpha1-types-eventgatewaylistenerpolicystatus)
 - [EventGatewayListenerStatus](#konnect-konghq-com-v1alpha1-types-eventgatewaylistenerstatus)
 - [EventGatewayVirtualClusterStatus](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterstatus)
 - [IdentityProviderRequestStatus](#konnect-konghq-com-v1alpha1-types-identityproviderrequeststatus)
@@ -6592,7 +6900,9 @@ _Appears in:_
 
 - [EventGatewayBackendClusterAPISpec](#konnect-konghq-com-v1alpha1-types-eventgatewaybackendclusterapispec)
 - [EventGatewayListenerAPISpec](#konnect-konghq-com-v1alpha1-types-eventgatewaylistenerapispec)
+- [EventGatewayTLSListenerPolicy](#konnect-konghq-com-v1alpha1-types-eventgatewaytlslistenerpolicy)
 - [EventGatewayVirtualClusterAPISpec](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterapispec)
+- [ForwardToVirtualClusterPolicy](#konnect-konghq-com-v1alpha1-types-forwardtovirtualclusterpolicy)
 - [KonnectEventGatewayAPISpec](#konnect-konghq-com-v1alpha1-types-konnecteventgatewayapispec)
 
 #### LabelsUpdate
@@ -7169,6 +7479,72 @@ Allowed values:
 | `inline` | SensitiveDataSourceTypeInline indicates that the data is provided inline in the APISpec.<br /> |
 | `secretRef` | SensitiveDataSourceTypeSecretRef indicates that the data is sourced from a Kubernetes Secret.<br /> |
 
+#### TLSCertificate
+
+
+TLSCertificate A TLS certificate and its associated private key.
+
+
+
+| Field | Description |
+| --- | --- |
+| `certificate` _[GatewaySecretReferenceOrLiteral](#konnect-konghq-com-v1alpha1-types-gatewaysecretreferenceorliteral)_ | A literal value or a reference to an existing secret as a template string expression. The value is stored and returned by the API as-is, not treated as sensitive information. |
+| `key` _[GatewaySecret](#konnect-konghq-com-v1alpha1-types-gatewaysecret)_ | A sensitive value containing the secret or a reference to a secret as a template string expression. If the value is provided as plain text, it is encrypted at rest and omitted from API responses. If provided as an expression, the expression itself is stored and returned by the API. |
+
+_Appears in:_
+
+- [EventGatewayTLSListenerPolicyConfig](#konnect-konghq-com-v1alpha1-types-eventgatewaytlslistenerpolicyconfig)
+
+#### TLSTrustBundleName
+
+_Underlying type:_ `string`
+
+TLSTrustBundleName The unique name of the TLS trust bundle.
+
+
+
+
+_Appears in:_
+
+- [TLSTrustBundleReference](#konnect-konghq-com-v1alpha1-types-tlstrustbundlereference)
+- [TLSTrustBundleReferenceByName](#konnect-konghq-com-v1alpha1-types-tlstrustbundlereferencebyname)
+
+#### TLSTrustBundleReference
+
+
+TLSTrustBundleReference is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `id` _*string_ |  |
+| `name` _[TLSTrustBundleName](#konnect-konghq-com-v1alpha1-types-tlstrustbundlename)_ |  |
+
+_Appears in:_
+
+- [ClientAuthentication](#konnect-konghq-com-v1alpha1-types-clientauthentication)
+
+
+
+
+
+#### TLSVersionRange
+
+
+TLSVersionRange A range of TLS versions.
+
+
+
+| Field | Description |
+| --- | --- |
+| `max` _string_ | Maximum TLS version to use. |
+| `min` _string_ | Minimum TLS version to use. |
+
+_Appears in:_
+
+- [EventGatewayTLSListenerPolicyConfig](#konnect-konghq-com-v1alpha1-types-eventgatewaytlslistenerpolicyconfig)
+
 #### TransitGatewayDNSConfig
 
 
@@ -7466,6 +7842,8 @@ VirtualClusterName The name of the virtual cluster.
 _Appears in:_
 
 - [EventGatewayVirtualClusterAPISpec](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterapispec)
+- [VirtualClusterReference](#konnect-konghq-com-v1alpha1-types-virtualclusterreference)
+- [VirtualClusterReferenceByName](#konnect-konghq-com-v1alpha1-types-virtualclusterreferencebyname)
 
 #### VirtualClusterNamespace
 
@@ -7609,6 +7987,26 @@ Allowed values:
 | --- | --- |
 | `exact_list` |  |
 | `glob` |  |
+
+#### VirtualClusterReference
+
+
+VirtualClusterReference is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `id` _*string_ |  |
+| `name` _[VirtualClusterName](#konnect-konghq-com-v1alpha1-types-virtualclustername)_ |  |
+
+_Appears in:_
+
+- [ForwardToClusterByPortMappingConfig](#konnect-konghq-com-v1alpha1-types-forwardtoclusterbyportmappingconfig)
+
+
+
+
 
 ## konnect.konghq.com/v1alpha2
 

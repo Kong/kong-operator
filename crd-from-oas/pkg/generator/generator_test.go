@@ -615,7 +615,10 @@ func TestGenerateCRDFuncs_GeneratesKonnectFuncs(t *testing.T) {
 		assert.Contains(t, content, `return obj.Spec.GatewayRef`)
 	})
 
-	t.Run("root ref accessor uses first dependency", func(t *testing.T) {
+	t.Run("root ref accessor uses last (immediate) dependency", func(t *testing.T) {
+		// For multi-parent entities, only the immediate (last) parent is exposed
+		// in Spec as a Ref field. Transitive parents (earlier in URL order) have
+		// their IDs cached in Status and are NOT exposed as Ref accessors.
 		g := NewGenerator(Config{
 			APIGroup:   "x-konnect.konghq.com",
 			APIVersion: "v1alpha1",
@@ -639,8 +642,10 @@ func TestGenerateCRDFuncs_GeneratesKonnectFuncs(t *testing.T) {
 
 		content, err := g.generateCRDFuncs("CreatePortalTeamDeveloper", schemaWithDependencies)
 		require.NoError(t, err)
-		assert.Contains(t, content, `func (obj *PortalTeamDeveloper) GetPortalRef() ObjectRef {`)
-		assert.NotContains(t, content, `func (obj *PortalTeamDeveloper) GetTeamRef() ObjectRef {`)
+		// Team is the immediate (last) parent → its Ref accessor is generated.
+		assert.Contains(t, content, `func (obj *PortalTeamDeveloper) GetTeamRef() ObjectRef {`)
+		// Portal is a transitive parent → no GetPortalRef accessor.
+		assert.NotContains(t, content, `func (obj *PortalTeamDeveloper) GetPortalRef() ObjectRef {`)
 	})
 }
 
@@ -670,6 +675,138 @@ func TestGenerate_GeneratesFuncsFile(t *testing.T) {
 
 	assert.Contains(t, fileNames, "zz_generated_portal_types.go")
 	assert.Contains(t, fileNames, "zz_generated_portal_funcs.go")
+}
+
+func TestGenerateCRDType_WithRootUnionGeneratesSafeUnmarshal(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroup:   "konnect.konghq.com",
+		APIVersion: "v1alpha1",
+	})
+
+	schema := &parser.Schema{
+		Name:          "CreateEventGatewayListenerPolicy",
+		Discriminator: "type",
+		OneOf: []*parser.Property{
+			{RefName: "EventGatewayTLSListenerPolicy"},
+			{RefName: "ForwardToVirtualClusterPolicy"},
+		},
+		DiscriminatorMapping: map[string]string{
+			"EventGatewayTLSListen": "EventGatewayTLSListenerPolicy",
+			"ForwardToVirtualClust": "ForwardToVirtualClusterPolicy",
+		},
+	}
+
+	content, err := g.generateCRDType("CreateEventGatewayListenerPolicy", schema)
+	require.NoError(t, err)
+
+	assert.Contains(t, content, "func (u *EventGatewayListenerPolicyConfig) UnmarshalJSON(data []byte) error {")
+	assert.Contains(t, content, `return fmt.Errorf("unmarshaling EventGatewayListenerPolicyConfig: nil receiver")`)
+	assert.Contains(t, content, "func (s *EventGatewayListenerPolicyAPISpec) MarshalJSON() ([]byte, error) {")
+	assert.Contains(t, content, `return []byte("{}"), nil`)
+	assert.Contains(t, content, `return nil, fmt.Errorf("marshaling EventGatewayListenerPolicyAPISpec: %w", err)`)
+	assert.Contains(t, content, "func (s *EventGatewayListenerPolicyAPISpec) UnmarshalJSON(data []byte) error {")
+	assert.Contains(t, content, "aux.EventGatewayListenerPolicyConfig = &EventGatewayListenerPolicyConfig{}")
+	assert.Contains(t, content, "aux.EventGatewayListenerPolicyConfig = nil")
+	assert.Contains(t, content, `return fmt.Errorf("unmarshaling EventGatewayListenerPolicyAPISpec: %w", err)`)
+
+	_, err = format.Source([]byte(content))
+	require.NoError(t, err)
+}
+
+func TestGenerateEntityFiles_GeneratesUnionTypeTests(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroup:   "konnect.konghq.com",
+		APIVersion: "v1alpha1",
+	})
+
+	schema := &parser.Schema{
+		Name:          "CreateEventGatewayListenerPolicy",
+		Discriminator: "type",
+		OneOf: []*parser.Property{
+			{RefName: "EventGatewayTLSListenerPolicy"},
+			{RefName: "ForwardToVirtualClusterPolicy"},
+		},
+		DiscriminatorMapping: map[string]string{
+			"EventGatewayTLSListen": "EventGatewayTLSListenerPolicy",
+			"ForwardToVirtualClust": "ForwardToVirtualClusterPolicy",
+		},
+	}
+
+	files, err := g.generateEntityFiles("CreateEventGatewayListenerPolicy", "EventGatewayListenerPolicy", schema)
+	require.NoError(t, err)
+
+	var testFile GeneratedFile
+	for _, file := range files {
+		if file.Name == "zz_generated_eventgatewaylistenerpolicy_types_test.go" {
+			testFile = file
+			break
+		}
+	}
+	require.NotEmpty(t, testFile.Name)
+	assert.Contains(t, testFile.Content, "func TestEventGatewayListenerPolicyConfigUnmarshalJSON_NilReceiver")
+	assert.Contains(t, testFile.Content, "func TestEventGatewayListenerPolicyAPISpecMarshalJSON_NilInlineUnion")
+	assert.Contains(t, testFile.Content, "func TestEventGatewayListenerPolicyAPISpecUnmarshalJSON_DecodesUnionFields")
+	assert.Contains(t, testFile.Content, "json.Unmarshal(tt.payload, &target)")
+	assert.Contains(t, testFile.Content, "payload, err := json.Marshal(target)")
+
+	_, err = format.Source([]byte(testFile.Content))
+	require.NoError(t, err)
+}
+
+func TestGenerateSharedFiles_GeneratesSchemaUnionTests(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroup:   "konnect.konghq.com",
+		APIVersion: "v1alpha1",
+	})
+
+	parsed := &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"ForwardToVirtualClusterPolicy": {
+				Name: "ForwardToVirtualClusterPolicy",
+				Properties: []*parser.Property{
+					{
+						Name: "config",
+						OneOf: []*parser.Property{
+							{RefName: "ForwardToClusterByPortMappingConfig"},
+							{RefName: "ForwardToClusterBySNIConfig"},
+						},
+						Discriminator: "type",
+						DiscriminatorMapping: map[string]string{
+							"port_mapping": "ForwardToClusterByPortMappingConfig",
+							"sni":          "ForwardToClusterBySNIConfig",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	files, err := g.generateSharedFiles(parsed, map[string]bool{"ForwardToVirtualClusterPolicy": true}, nil)
+	require.NoError(t, err)
+
+	var schemaFile GeneratedFile
+	var schemaTestFile GeneratedFile
+	for _, file := range files {
+		switch file.Name {
+		case "schema_types.go":
+			schemaFile = file
+		case "schema_types_test.go":
+			schemaTestFile = file
+		}
+	}
+
+	require.NotEmpty(t, schemaFile.Name)
+	require.NotEmpty(t, schemaTestFile.Name)
+	assert.Contains(t, schemaFile.Content, "func (s *ForwardToVirtualClusterPolicy) UnmarshalJSON(data []byte) error {")
+	assert.Contains(t, schemaFile.Content, "aux.Config = &ForwardToVirtualClusterPolicyConfig{}")
+	assert.Contains(t, schemaTestFile.Content, "func TestForwardToVirtualClusterPolicyConfigUnmarshalJSON_NilReceiver")
+	assert.Contains(t, schemaTestFile.Content, "func TestForwardToVirtualClusterPolicyUnmarshalJSON_DecodesUnionFields")
+
+	_, err = format.Source([]byte(schemaFile.Content))
+	require.NoError(t, err)
+
+	_, err = format.Source([]byte(schemaTestFile.Content))
+	require.NoError(t, err)
 }
 
 func TestEntityFilePrefix(t *testing.T) {
@@ -889,6 +1026,95 @@ func TestBuildSchemaTypeFieldConfig_NestedInlineObject(t *testing.T) {
 	require.NotNil(t, stfc)
 	vals := stfc.GetFieldValidations("ClientIdentity", "certificate")
 	assert.Equal(t, []string{"+kubebuilder:validation:MaxLength=1024"}, vals)
+}
+
+func TestBuildSchemaTypeFieldConfig_RootOneOfVariant(t *testing.T) {
+	// Entity schema is a discriminated oneOf (no Properties). Config keys address
+	// variant ref names. Validations on a prop inside the variant must propagate.
+	// Note: entity name must not contain prefixes stripped by GetEntityNameFromType
+	// (Add/Create/Update/Delete/Get/List), e.g. "ListenerPolicy" contains "List".
+	certProp := &parser.Property{Name: "certificate", Type: "string", Required: true}
+	variantSchema := &parser.Schema{
+		Name:       "TLSChannelPolicy",
+		Properties: []*parser.Property{certProp},
+	}
+	entitySchema := &parser.Schema{
+		Name: "CreateChannelPolicy",
+		OneOf: []*parser.Property{
+			{Name: "TLSChannelPolicy", RefName: "TLSChannelPolicy"},
+		},
+	}
+
+	parsed := &parser.ParsedSpec{
+		RequestBodies: map[string]*parser.Schema{"CreateChannelPolicy": entitySchema},
+		Schemas:       map[string]*parser.Schema{"TLSChannelPolicy": variantSchema},
+	}
+
+	fieldCfg := &config.Config{
+		Entities: map[string]*config.EntityConfig{
+			"ChannelPolicy": {
+				Fields: map[string]*config.FieldConfig{
+					"TLSChannelPolicy": {
+						Fields: map[string]*config.FieldConfig{
+							"certificate": {
+								Validations: []string{"+kubebuilder:validation:MaxLength=4096"},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	gen := NewGenerator(Config{APIVersion: "v1alpha1", FieldConfig: fieldCfg})
+	stfc := gen.buildSchemaTypeFieldConfig(parsed)
+	require.NotNil(t, stfc)
+	vals := stfc.GetFieldValidations("TLSChannelPolicy", "certificate")
+	assert.Equal(t, []string{"+kubebuilder:validation:MaxLength=4096"}, vals)
+}
+
+func TestBuildSchemaTypeFieldConfig_ArrayOfRefItems(t *testing.T) {
+	// Config descends through an array-of-$ref property into the item schema.
+	certProp := &parser.Property{Name: "certificate", Type: "string", Required: true}
+	itemSchema := &parser.Schema{
+		Name:       "TLSCertificate",
+		Properties: []*parser.Property{certProp},
+	}
+	certsProp := &parser.Property{
+		Name: "certificates", Type: "array",
+		Items: &parser.Property{RefName: "TLSCertificate"},
+	}
+	entitySchema := &parser.Schema{
+		Name:       "CreateTLSEntity",
+		Properties: []*parser.Property{certsProp},
+	}
+
+	parsed := &parser.ParsedSpec{
+		RequestBodies: map[string]*parser.Schema{"CreateTLSEntity": entitySchema},
+		Schemas:       map[string]*parser.Schema{"TLSCertificate": itemSchema},
+	}
+
+	fieldCfg := &config.Config{
+		Entities: map[string]*config.EntityConfig{
+			"TLSEntity": {
+				Fields: map[string]*config.FieldConfig{
+					"certificates": {
+						Fields: map[string]*config.FieldConfig{
+							"certificate": {
+								Validations: []string{"+kubebuilder:validation:MaxLength=4096"},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	gen := NewGenerator(Config{APIVersion: "v1alpha1", FieldConfig: fieldCfg})
+	stfc := gen.buildSchemaTypeFieldConfig(parsed)
+	require.NotNil(t, stfc)
+	vals := stfc.GetFieldValidations("TLSCertificate", "certificate")
+	assert.Equal(t, []string{"+kubebuilder:validation:MaxLength=4096"}, vals)
 }
 
 func TestGenerateSchemaTypes_NestedInlineOverride(t *testing.T) {
@@ -1910,6 +2136,73 @@ func TestGenerateKonnectIndexOptionsDispatcher(t *testing.T) {
 	assert.Equal(t, string(formatted), file.Content)
 }
 
+func TestGenerateKonnectConstraintsDispatcher(t *testing.T) {
+	infos := []*WatchFileInfo{
+		{
+			Entity:         "Portal",
+			APIAlias:       "konnectv1alpha1",
+			APIPackagePath: "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		},
+		{
+			Entity:         "IdentityProviderRequest",
+			APIAlias:       "konnectv1alpha1",
+			APIPackagePath: "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		},
+	}
+
+	file, err := GenerateKonnectConstraintsDispatcher(infos)
+	require.NoError(t, err)
+	require.NotNil(t, file)
+
+	assert.Equal(t, "zz_generated_supported_types.go", file.Name)
+	assert.Equal(t, "controller/konnect/constraints", file.RelativeDir)
+	assert.Contains(t, file.Content, "package constraints")
+	assert.Contains(t, file.Content, "type SupportedGeneratedKonnectEntityType interface")
+	assert.Contains(t, file.Content, "konnectv1alpha1.IdentityProviderRequest")
+	assert.Contains(t, file.Content, "konnectv1alpha1.Portal")
+
+	formatted, err := format.Source([]byte(file.Content))
+	require.NoError(t, err)
+	assert.Equal(t, string(formatted), file.Content)
+}
+
+func TestGenerateKonnectAPIAuthWatchDispatcher(t *testing.T) {
+	infos := []*WatchFileInfo{
+		{
+			Entity:         "Portal",
+			APIAlias:       "konnectv1alpha1",
+			APIPackagePath: "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+			IsRoot:         true,
+		},
+		{
+			Entity:         "IdentityProviderRequest",
+			APIAlias:       "konnectv1alpha1",
+			APIPackagePath: "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		},
+		{
+			Entity:         "KonnectEventGateway",
+			APIAlias:       "konnectv1alpha1",
+			APIPackagePath: "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+			IsRoot:         true,
+		},
+	}
+
+	file, err := GenerateKonnectAPIAuthWatchDispatcher(infos)
+	require.NoError(t, err)
+	require.NotNil(t, file)
+
+	assert.Equal(t, "zz_generated_konnectapiauth_watch.go", file.Name)
+	assert.Equal(t, "controller/konnect", file.RelativeDir)
+	assert.Contains(t, file.Content, "generatedKonnectAPIAuthReferencingTypes")
+	assert.Contains(t, file.Content, "&konnectv1alpha1.KonnectEventGateway{}")
+	assert.Contains(t, file.Content, "&konnectv1alpha1.Portal{}")
+	assert.NotContains(t, file.Content, "IdentityProviderRequest")
+
+	formatted, err := format.Source([]byte(file.Content))
+	require.NoError(t, err)
+	assert.Equal(t, string(formatted), file.Content)
+}
+
 func TestGenerateSDKFactoryDispatcher(t *testing.T) {
 	infos := []*SDKFactoryFileInfo{
 		{
@@ -2500,6 +2793,37 @@ func TestGenerateEntityOpsFile_GetForUIDUsesUIDTagFilter_Golden(t *testing.T) {
 	want, err := os.ReadFile(filepath.Join("testdata", "zz_generated_ops_kongservice_getforuid_uid_tag_filter.golden.go"))
 	require.NoError(t, err)
 	assert.Equal(t, string(want), string(got))
+}
+
+func TestGenerateEntityOpsFile_ManualGetForUIDStillEmitsDispatcherInfo(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"KonnectEventDataPlaneCertificate": {IsRoot: false, ParentEntityType: "KonnectEventGateway"},
+		},
+		ManualGetForUIDEntities: map[string]bool{
+			"KonnectEventDataPlaneCertificate": true,
+		},
+	})
+
+	schema := &parser.Schema{
+		Dependencies: []*parser.Dependency{
+			{ParamName: "gatewayId", EntityName: "KonnectEventGateway"},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		SkipGetForUID: true,
+		SDK: &config.OpSDKConfig{
+			Interface: "github.com/Kong/sdk-konnect-go.EventGatewayDataPlaneCertificatesSDK",
+			FieldName: "EventGatewayDataPlaneCertificates",
+		},
+	}
+
+	res, err := g.generateEntityOpsFile("KonnectEventDataPlaneCertificate", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, res.GetForUIDInfo)
+	assert.Equal(t, "GetEventGatewayDataPlaneCertificatesSDK", res.GetForUIDInfo.SDKGetter)
 }
 
 func TestGenerateOpsUpdate_RootEntity(t *testing.T) {

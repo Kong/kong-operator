@@ -33,9 +33,9 @@ type KongCredential[T SupportedCredentialType] interface {
 	SetConditions([]metav1.Condition)
 }
 
-// SupportedKonnectEntityType is an interface that all Konnect entity types
-// must implement.
-type SupportedKonnectEntityType interface {
+// SupportedHandwrittenKonnectEntityType is the handwritten subset of Konnect
+// entity types supported by the generic reconciler.
+type SupportedHandwrittenKonnectEntityType interface {
 	konnectv1alpha2.KonnectGatewayControlPlane |
 		konnectv1alpha1.KonnectCloudGatewayNetwork |
 		konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration |
@@ -59,20 +59,13 @@ type SupportedKonnectEntityType interface {
 		configurationv1alpha1.KongKeySet |
 		configurationv1alpha1.KongSNI |
 		configurationv1alpha1.KongDataPlaneClientCertificate |
-		konnectv1alpha1.MCPServer |
-		// TODO: auto-generate SupportedKonnectEntityType entries for generated Konnect entities.
-		// https://github.com/Kong/kong-operator/issues/3785
-		konnectv1alpha1.KonnectEventGateway |
-		konnectv1alpha1.KonnectEventDataPlaneCertificate |
-		konnectv1alpha1.EventGatewayBackendCluster |
-		konnectv1alpha1.EventGatewayVirtualCluster |
-		konnectv1alpha1.EventGatewayListener |
-		konnectv1alpha1.Portal |
-		konnectv1alpha1.PortalPage |
-		konnectv1alpha1.IdentityProviderRequest |
-		konnectv1alpha1.PortalTeam
-	// TODO: add other types
+		konnectv1alpha1.MCPServer
+}
 
+// SupportedKonnectEntityType is an interface that all Konnect entity types
+// must implement.
+type SupportedKonnectEntityType interface {
+	SupportedHandwrittenKonnectEntityType | SupportedGeneratedKonnectEntityType
 	GetTypeName() string
 }
 

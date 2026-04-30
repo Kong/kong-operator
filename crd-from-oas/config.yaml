@@ -56,6 +56,35 @@ apiGroupVersions:
         reconciler:
           isRoot: false
           parentEntityType: KonnectEventGateway
+      - path: /v1/event-gateways/{gatewayId}/listeners/{eventGatewayListenerId}/policies
+        name: EventGatewayListenerPolicy
+        cel:
+          EventGatewayTLSListenerPolicy:
+            config:
+              certificates:
+                certificate:
+                   _validations:
+                    - "+kubebuilder:validation:MaxLength=4096"
+                key:
+                   _validations:
+                    - "+kubebuilder:validation:MaxLength=4096"
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.EventGatewayListenerPoliciesSDK
+            fieldName: EventGatewayListenerPolicies
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/operations.CreateEventGatewayListenerPolicyRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/operations.UpdateEventGatewayListenerPolicyRequest
+          delete: {}
+        reconciler:
+          isRoot: false
+          parentEntityType: EventGatewayListener
+          # Speakeasy SDK uses "ListenerID" (not "EventGatewayListenerID") for the
+          # eventGatewayListenerId path param when it appears as a parent (not entity ID).
+          parentSDKFields:
+            - GatewayID
+            - ListenerID
       - path: /v1/event-gateways/{gatewayId}/backend-clusters
         name: EventGatewayBackendCluster
         cel:

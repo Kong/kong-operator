@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -648,9 +649,19 @@ func TestKubebuilderTags_DefaultUnsupportedTypePanic(t *testing.T) {
 	prop := &parser.Property{
 		Name:    "weird",
 		Type:    "object",
-		Default: map[string]any{"key": "value"},
+		Default: struct{ X int }{X: 1},
 	}
 	assert.Panics(t, func() {
 		KubebuilderTags(prop, "Test", nil)
 	})
+}
+
+func TestKubebuilderTags_DefaultMapType(t *testing.T) {
+	prop := &parser.Property{
+		Name:    "config",
+		Type:    "object",
+		Default: map[string]any{"key": "value"},
+	}
+	tags := KubebuilderTags(prop, "Test", nil)
+	assert.Contains(t, strings.Join(tags, " "), `+kubebuilder:default={"key":"value"}`)
 }
