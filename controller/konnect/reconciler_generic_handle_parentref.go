@@ -22,13 +22,13 @@ func ensureKongReferenceGrantForParentRef[
 	T interface {
 		client.Object
 		k8sutils.ConditionsAware
-		GetTypeName() string
 	},
 ](
 	ctx context.Context,
 	cl client.Client,
 	ent T,
 	ref commonv1alpha1.ObjectRef,
+	parentTypeName string,
 ) (ctrl.Result, error) {
 	if ref.Type != commonv1alpha1.ObjectRefTypeNamespacedRef ||
 		ref.NamespacedRef == nil ||
@@ -43,7 +43,6 @@ func ensureKongReferenceGrantForParentRef[
 		return ctrl.Result{}, nil
 	}
 
-	typeName := ent.GetTypeName()
 	targetNamespace := *ref.NamespacedRef.Namespace
 	err := crossnamespace.CheckKongReferenceGrantForResource(
 		ctx,
@@ -52,7 +51,7 @@ func ensureKongReferenceGrantForParentRef[
 		targetNamespace,
 		ref.NamespacedRef.Name,
 		metav1.GroupVersionKind(ent.GetObjectKind().GroupVersionKind()),
-		metav1.GroupVersionKind(konnectv1alpha1.GroupVersion.WithKind(typeName)),
+		metav1.GroupVersionKind(konnectv1alpha1.GroupVersion.WithKind(parentTypeName)),
 	)
 
 	if crossnamespace.IsReferenceNotGranted(err) {
@@ -63,7 +62,7 @@ func ensureKongReferenceGrantForParentRef[
 			configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted,
 			fmt.Sprintf(
 				"KongReferenceGrants do not allow access to %s %s/%s",
-				typeName,
+				parentTypeName,
 				targetNamespace,
 				ref.NamespacedRef.Name,
 			),
@@ -83,7 +82,7 @@ func ensureKongReferenceGrantForParentRef[
 		configurationv1alpha1.KongReferenceGrantReasonResolvedRefs,
 		fmt.Sprintf(
 			"KongReferenceGrants allow access to %s %s/%s",
-			typeName,
+			parentTypeName,
 			targetNamespace,
 			ref.NamespacedRef.Name,
 		),

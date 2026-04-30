@@ -32,7 +32,6 @@ func handlePortalRef(
 	type TObj interface {
 		k8sutils.ConditionsAwareObject
 		portalRefAccessor
-		GetTypeName() string
 		GetPortalID() string
 		SetPortalID(id string)
 	}
@@ -45,7 +44,7 @@ func handlePortalRef(
 	}
 
 	portalRef := o.GetPortalRef()
-	if res, err := ensureKongReferenceGrantForParentRef(ctx, cl, o, portalRef); err != nil || !res.IsZero() {
+	if res, err := ensureKongReferenceGrantForParentRef(ctx, cl, o, portalRef, "Portal"); err != nil || !res.IsZero() {
 		return res, err
 	}
 

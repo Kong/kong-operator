@@ -32,7 +32,6 @@ func handleEventGatewayRef(
 	type TObj interface {
 		k8sutils.ConditionsAwareObject
 		eventGatewayRefAccessor
-		GetTypeName() string
 		GetGatewayID() string
 		SetGatewayID(id string)
 	}
@@ -44,7 +43,7 @@ func handleEventGatewayRef(
 	}
 
 	gatewayRef := o.GetEventGatewayRef()
-	if res, err := ensureKongReferenceGrantForParentRef(ctx, cl, o, gatewayRef); err != nil || !res.IsZero() {
+	if res, err := ensureKongReferenceGrantForParentRef(ctx, cl, o, gatewayRef, "KonnectEventGateway"); err != nil || !res.IsZero() {
 		return res, err
 	}
 
