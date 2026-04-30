@@ -18,6 +18,15 @@ func (s *KonnectEventDataPlaneCertificateAPISpec) marshalSDKOpsPayload() ([]byte
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal KonnectEventDataPlaneCertificateAPISpec: %w", err)
 	}
+	var payload any
+	if err := json.Unmarshal(data, &payload); err != nil {
+		return nil, fmt.Errorf("failed to decode KonnectEventDataPlaneCertificateAPISpec: %w", err)
+	}
+	payload = flattenSDKUnions(payload)
+	data, err = json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal normalized KonnectEventDataPlaneCertificateAPISpec: %w", err)
+	}
 	return data, nil
 }
 

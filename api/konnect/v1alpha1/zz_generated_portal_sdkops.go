@@ -132,12 +132,15 @@ func (s *PortalAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal PortalAPISpec: %w", err)
 	}
-	var payload map[string]any
+	var payload any
 	if err := json.Unmarshal(data, &payload); err != nil {
 		return nil, fmt.Errorf("failed to decode PortalAPISpec: %w", err)
 	}
-	if err := normalizePortalSDKOpsBoolFields(payload); err != nil {
-		return nil, fmt.Errorf("failed to normalize PortalAPISpec SDK payload: %w", err)
+	payload = flattenSDKUnions(payload)
+	if pm, ok := payload.(map[string]any); ok {
+		if err := normalizePortalSDKOpsBoolFields(pm); err != nil {
+			return nil, fmt.Errorf("failed to normalize PortalAPISpec SDK payload: %w", err)
+		}
 	}
 	data, err = json.Marshal(payload)
 	if err != nil {

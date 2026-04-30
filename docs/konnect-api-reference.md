@@ -11,6 +11,7 @@ Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1al
 
 - [EventGatewayBackendCluster](#konnect-konghq-com-v1alpha1-eventgatewaybackendcluster)
 - [EventGatewayListener](#konnect-konghq-com-v1alpha1-eventgatewaylistener)
+- [EventGatewayVirtualCluster](#konnect-konghq-com-v1alpha1-eventgatewayvirtualcluster)
 - [IdentityProviderRequest](#konnect-konghq-com-v1alpha1-identityproviderrequest)
 - [KonnectAPIAuthConfiguration](#konnect-konghq-com-v1alpha1-konnectapiauthconfiguration)
 - [KonnectCloudGatewayDataPlaneGroupConfiguration](#konnect-konghq-com-v1alpha1-konnectcloudgatewaydataplanegroupconfiguration)
@@ -54,6 +55,21 @@ EventGatewayListener is the Schema for the eventgatewaylisteners API.
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[EventGatewayListenerSpec](#konnect-konghq-com-v1alpha1-types-eventgatewaylistenerspec)_ |  |
 | `status` _[EventGatewayListenerStatus](#konnect-konghq-com-v1alpha1-types-eventgatewaylistenerstatus)_ |  |
+
+### EventGatewayVirtualCluster
+
+
+EventGatewayVirtualCluster is the Schema for the eventgatewayvirtualclusters API.
+
+<!-- event_gateway_virtual_cluster description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `EventGatewayVirtualCluster`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[EventGatewayVirtualClusterSpec](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterspec)_ |  |
+| `status` _[EventGatewayVirtualClusterStatus](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterstatus)_ |  |
 
 ### IdentityProviderRequest
 
@@ -343,6 +359,7 @@ backend cluster.
 
 _Appears in:_
 
+- [BackendClusterAuthenticationScheme](#konnect-konghq-com-v1alpha1-types-backendclusterauthenticationscheme)
 - [EventGatewayBackendClusterAuthentication](#konnect-konghq-com-v1alpha1-types-eventgatewaybackendclusterauthentication)
 
 #### BackendClusterAuthenticationSaslPlain
@@ -361,6 +378,7 @@ the backend cluster.
 
 _Appears in:_
 
+- [BackendClusterAuthenticationScheme](#konnect-konghq-com-v1alpha1-types-backendclusterauthenticationscheme)
 - [EventGatewayBackendClusterAuthentication](#konnect-konghq-com-v1alpha1-types-eventgatewaybackendclusterauthentication)
 
 #### BackendClusterAuthenticationSaslScram
@@ -380,9 +398,31 @@ the backend cluster.
 
 _Appears in:_
 
+- [BackendClusterAuthenticationScheme](#konnect-konghq-com-v1alpha1-types-backendclusterauthenticationscheme)
 - [EventGatewayBackendClusterAuthentication](#konnect-konghq-com-v1alpha1-types-eventgatewaybackendclusterauthentication)
 
 
+
+#### BackendClusterAuthenticationSchemeType
+
+_Underlying type:_ `string`
+
+BackendClusterAuthenticationSchemeType represents the type of BackendClusterAuthenticationScheme.
+
+
+
+
+_Appears in:_
+
+- [BackendClusterAuthenticationScheme](#konnect-konghq-com-v1alpha1-types-backendclusterauthenticationscheme)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `anonymous` |  |
+| `sasl_plain` |  |
+| `sasl_scram` |  |
 
 #### BackendClusterName
 
@@ -395,7 +435,29 @@ BackendClusterName The unique name of the backend cluster.
 
 _Appears in:_
 
+- [BackendClusterReferenceByName](#konnect-konghq-com-v1alpha1-types-backendclusterreferencebyname)
+- [BackendClusterReferenceModify](#konnect-konghq-com-v1alpha1-types-backendclusterreferencemodify)
 - [EventGatewayBackendClusterAPISpec](#konnect-konghq-com-v1alpha1-types-eventgatewaybackendclusterapispec)
+
+
+
+
+
+#### BackendClusterReferenceModify
+
+
+BackendClusterReferenceModify is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `id` _*string_ |  |
+| `name` _[BackendClusterName](#konnect-konghq-com-v1alpha1-types-backendclustername)_ |  |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterAPISpec](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterapispec)
 
 #### BackendClusterTLS
 
@@ -645,8 +707,8 @@ Only one of the fields should be set based on the Type.
 | --- | --- |
 | `type` _[EventGatewayBackendClusterAuthenticationType](#konnect-konghq-com-v1alpha1-types-eventgatewaybackendclusterauthenticationtype)_ | Type designates the type of configuration. |
 | `anonymous` _[BackendClusterAuthenticationAnonymous](#konnect-konghq-com-v1alpha1-types-backendclusterauthenticationanonymous)_ | Anonymous configuration. |
-| `saslplain` _[BackendClusterAuthenticationSaslPlain](#konnect-konghq-com-v1alpha1-types-backendclusterauthenticationsaslplain)_ | SaslPlain configuration. |
-| `saslscram` _[BackendClusterAuthenticationSaslScram](#konnect-konghq-com-v1alpha1-types-backendclusterauthenticationsaslscram)_ | SaslScram configuration. |
+| `sasl_plain` _[BackendClusterAuthenticationSaslPlain](#konnect-konghq-com-v1alpha1-types-backendclusterauthenticationsaslplain)_ | SaslPlain configuration. |
+| `sasl_scram` _[BackendClusterAuthenticationSaslScram](#konnect-konghq-com-v1alpha1-types-backendclusterauthenticationsaslscram)_ | SaslScram configuration. |
 
 _Appears in:_
 
@@ -669,9 +731,9 @@ Allowed values:
 
 | Value | Description |
 | --- | --- |
-| `Anonymous` |  |
-| `SaslPlain` |  |
-| `SaslScram` |  |
+| `anonymous` |  |
+| `sasl_plain` |  |
+| `sasl_scram` |  |
 
 
 
@@ -762,6 +824,61 @@ _Appears in:_
 
 - [EventGatewayListener](#konnect-konghq-com-v1alpha1-eventgatewaylistener)
 
+#### EventGatewayVirtualClusterAPISpec
+
+
+EventGatewayVirtualClusterAPISpec defines the API spec fields for EventGatewayVirtualCluster.
+
+
+
+| Field | Description |
+| --- | --- |
+| `acl_mode` _[VirtualClusterACLMode](#konnect-konghq-com-v1alpha1-types-virtualclusteraclmode)_ | Configures whether or not ACL policies are enforced on the gateway. - `enforce_on_gateway` means the gateway enforces its own ACL policies for this virtual cluster<br /><br />and does not forward ACL-related commands to the backend cluster. Note that if there are no ACL policies configured, all access is denied. - `passthrough` tells the gateway to forward all ACL-related commands. |
+| `authentication` _[VirtualClusterAuthenticationScheme](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationscheme)_ | How to handle authentication from clients.<br /><br />It tries to authenticate with every rule sequentially one by one. It succeeds on the first match, and fails if no rule matches. |
+| `description` _string_ | A human-readable description of the virtual cluster. |
+| `destination` _[BackendClusterReferenceModify](#konnect-konghq-com-v1alpha1-types-backendclusterreferencemodify)_ | The backend cluster associated with the virtual cluster.<br /><br />Either `id` or `name` must be provided. Following changes to the backend cluster name won't affect the reference, as the system will create the entities relationship by `id`. |
+| `dns_label` _[VirtualClusterDNSLabel](#konnect-konghq-com-v1alpha1-types-virtualclusterdnslabel)_ | The DNS label used in the bootstrap server URL to identify the virtual cluster when using SNI routing. The format follows the RFC1035: 1-63 chars, lowercase alphanumeric or '-', must start and end with an alphanumeric character. |
+| `labels` _[Labels](#konnect-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _[VirtualClusterName](#konnect-konghq-com-v1alpha1-types-virtualclustername)_ | The name of the virtual cluster. |
+| `namespace` _[VirtualClusterNamespace](#konnect-konghq-com-v1alpha1-types-virtualclusternamespace)_ | Namespace allows to implement multitenancy using a single backend cluster. It allows to either hide or enforce a static prefix on resources (topics, consumer group IDs, transaction IDs). |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterSpec](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterspec)
+
+#### EventGatewayVirtualClusterSpec
+
+
+EventGatewayVirtualClusterSpec defines the desired state of EventGatewayVirtualCluster.
+
+
+
+| Field | Description |
+| --- | --- |
+| `gateway_ref` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. |
+| `apiSpec` _[EventGatewayVirtualClusterAPISpec](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [EventGatewayVirtualCluster](#konnect-konghq-com-v1alpha1-eventgatewayvirtualcluster)
+
+#### EventGatewayVirtualClusterStatus
+
+
+EventGatewayVirtualClusterStatus defines the observed state of EventGatewayVirtualCluster.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [EventGatewayVirtualCluster](#konnect-konghq-com-v1alpha1-eventgatewayvirtualcluster)
+
 #### GatewayDescription
 
 _Underlying type:_ `string`
@@ -807,6 +924,7 @@ _Appears in:_
 - [BackendClusterAuthenticationSaslPlain](#konnect-konghq-com-v1alpha1-types-backendclusterauthenticationsaslplain)
 - [BackendClusterAuthenticationSaslScram](#konnect-konghq-com-v1alpha1-types-backendclusterauthenticationsaslscram)
 - [ClientIdentity](#konnect-konghq-com-v1alpha1-types-clientidentity)
+- [VirtualClusterAuthenticationPrincipal](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationprincipal)
 
 #### GatewaySecretReferenceOrLiteral
 
@@ -826,6 +944,7 @@ _Appears in:_
 - [BackendClusterAuthenticationSaslScram](#konnect-konghq-com-v1alpha1-types-backendclusterauthenticationsaslscram)
 - [BackendClusterTLS](#konnect-konghq-com-v1alpha1-types-backendclustertls)
 - [ClientIdentity](#konnect-konghq-com-v1alpha1-types-clientidentity)
+- [VirtualClusterAuthenticationPrincipal](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationprincipal)
 
 #### IdentityProviderEnabled
 
@@ -891,8 +1010,8 @@ Only one of the fields should be set based on the Type.
 | Field | Description |
 | --- | --- |
 | `type` _[IdentityProviderRequestConfigType](#konnect-konghq-com-v1alpha1-types-identityproviderrequestconfigtype)_ | Type designates the type of configuration. |
-| `oidc` _[OIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderconfig)_ | OIDC configuration. |
-| `saml` _[SAMLIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-samlidentityproviderconfig)_ | SAML configuration. |
+| `OIDC` _[OIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderconfig)_ | OIDC configuration. |
+| `SAML` _[SAMLIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-samlidentityproviderconfig)_ | SAML configuration. |
 
 _Appears in:_
 
@@ -965,6 +1084,8 @@ IdentityProviderType Specifies the type of identity provider.
 _Appears in:_
 
 - [IdentityProviderRequestAPISpec](#konnect-konghq-com-v1alpha1-types-identityproviderrequestapispec)
+
+
 
 #### KonnectAPIAuthConfigurationSpec
 
@@ -1212,6 +1333,7 @@ _Appears in:_
 
 - [EventGatewayBackendClusterStatus](#konnect-konghq-com-v1alpha1-types-eventgatewaybackendclusterstatus)
 - [EventGatewayListenerStatus](#konnect-konghq-com-v1alpha1-types-eventgatewaylistenerstatus)
+- [EventGatewayVirtualClusterStatus](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterstatus)
 - [IdentityProviderRequestStatus](#konnect-konghq-com-v1alpha1-types-identityproviderrequeststatus)
 - [KonnectEventDataPlaneCertificateStatus](#konnect-konghq-com-v1alpha1-types-konnecteventdataplanecertificatestatus)
 - [PortalPageStatus](#konnect-konghq-com-v1alpha1-types-portalpagestatus)
@@ -1537,6 +1659,7 @@ _Appears in:_
 
 - [EventGatewayBackendClusterAPISpec](#konnect-konghq-com-v1alpha1-types-eventgatewaybackendclusterapispec)
 - [EventGatewayListenerAPISpec](#konnect-konghq-com-v1alpha1-types-eventgatewaylistenerapispec)
+- [EventGatewayVirtualClusterAPISpec](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterapispec)
 - [KonnectEventGatewayAPISpec](#konnect-konghq-com-v1alpha1-types-konnecteventgatewayapispec)
 
 #### LabelsUpdate
@@ -1680,6 +1803,8 @@ _Appears in:_
 
 - [KonnectGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanespec)
 - [MCPServerSpec](#konnect-konghq-com-v1alpha1-types-mcpserverspec)
+
+
 
 #### OIDCIdentityProviderClaimMappings
 
@@ -2147,6 +2272,409 @@ Allowed values:
 | --- | --- |
 | `AWSTransitGateway` | TransitGatewayTypeAWSTransitGateway defines the AWS transit gateway type.<br /> |
 | `AzureTransitGateway` | TransitGatewayTypeAzureTransitGateway defines the Azure transit gateway type.<br /> |
+
+#### VirtualClusterACLMode
+
+_Underlying type:_ `string`
+
+VirtualClusterACLMode Configures whether or not ACL policies are enforced on
+the gateway.
+- `enforce_on_gateway` means the gateway enforces its own ACL policies for
+this virtual cluster<br /><br />and does not forward ACL-related commands to the backend cluster.
+Note that if there are no ACL policies configured, all access is denied.
+- `passthrough` tells the gateway to forward all ACL-related commands.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterAPISpec](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterapispec)
+
+#### VirtualClusterAuthenticationAnonymous
+
+
+VirtualClusterAuthenticationAnonymous is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _string_ |  |
+
+_Appears in:_
+
+- [VirtualClusterAuthenticationScheme](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationscheme)
+
+#### VirtualClusterAuthenticationAudience
+
+
+VirtualClusterAuthenticationAudience is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ |  |
+
+_Appears in:_
+
+- [VirtualClusterAuthenticationValidate](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationvalidate)
+
+#### VirtualClusterAuthenticationClaimsMapping
+
+
+VirtualClusterAuthenticationClaimsMapping Maps JWT claims in the case when
+sub and scope are presented as different claims in your JWT token.
+
+
+
+| Field | Description |
+| --- | --- |
+| `scope` _string_ | Maps the scope claim. |
+| `sub` _string_ | Maps the subject claim. |
+
+_Appears in:_
+
+- [VirtualClusterAuthenticationOauthBearer](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationoauthbearer)
+
+#### VirtualClusterAuthenticationClientCertificate
+
+
+VirtualClusterAuthenticationClientCertificate Client certificate (mTLS)
+authentication scheme for the virtual cluster.<br /><br />**Requires a minimum runtime version of `1.1`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _string_ |  |
+
+_Appears in:_
+
+- [VirtualClusterAuthenticationScheme](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationscheme)
+
+#### VirtualClusterAuthenticationJWKS
+
+
+VirtualClusterAuthenticationJWKS JSON Web Key Set configuration for verifying
+token signatures.
+
+
+
+| Field | Description |
+| --- | --- |
+| `cache_expiration` _string_ | Duration after which the gateway will fetch and cache JWKS. |
+| `endpoint` _string_ | URL for JWKS endpoint. |
+| `timeout` _string_ | Total time from establishing connection to receive a response from JWKS endpoint. |
+
+_Appears in:_
+
+- [VirtualClusterAuthenticationOauthBearer](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationoauthbearer)
+
+#### VirtualClusterAuthenticationOauthBearer
+
+
+VirtualClusterAuthenticationOauthBearer Oauth Bearer authentication scheme
+for the virtual cluster.
+
+
+
+| Field | Description |
+| --- | --- |
+| `claims_mapping` _[VirtualClusterAuthenticationClaimsMapping](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationclaimsmapping)_ | Maps JWT claims in the case when sub and scope are presented as different claims in your JWT token. |
+| `jwks` _[VirtualClusterAuthenticationJWKS](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationjwks)_ | JSON Web Key Set configuration for verifying token signatures. |
+| `mediation` _string_ | Methods to mediate authentication: * passthrough - pass authentication from the client through proxy to the backend cluster without any kind of<br /><br />validation * validate_forward - pass authentication from the client through proxy to the backend cluster.<br /><br />Proxy does the validation before forwarding it to the client. * terminate - terminate authentication at the proxy level and originate authentication to the backend cluster<br /><br />using the configuration defined at BackendCluster's authentication. SASL auth is not originated if authentication on the backend_cluster is not configured. |
+| `type` _string_ |  |
+| `validate` _[VirtualClusterAuthenticationValidate](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationvalidate)_ | Validation rules. |
+
+_Appears in:_
+
+- [VirtualClusterAuthenticationScheme](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationscheme)
+
+#### VirtualClusterAuthenticationPrincipal
+
+
+VirtualClusterAuthenticationPrincipal A principal for authentication
+containing username and password.
+
+
+
+| Field | Description |
+| --- | --- |
+| `password` _[GatewaySecret](#konnect-konghq-com-v1alpha1-types-gatewaysecret)_ | A sensitive value containing the secret or a reference to a secret as a template string expression. If the value is provided as plain text, it is encrypted at rest and omitted from API responses. If provided as an expression, the expression itself is stored and returned by the API. |
+| `username` _[GatewaySecretReferenceOrLiteral](#konnect-konghq-com-v1alpha1-types-gatewaysecretreferenceorliteral)_ | A literal value or a reference to an existing secret as a template string expression. The value is stored and returned by the API as-is, not treated as sensitive information. |
+
+_Appears in:_
+
+- [VirtualClusterAuthenticationSaslPlain](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationsaslplain)
+
+#### VirtualClusterAuthenticationSaslPlain
+
+
+VirtualClusterAuthenticationSaslPlain SASL/PLAIN authentication scheme for
+the virtual cluster containing principals with username and password.
+
+
+
+| Field | Description |
+| --- | --- |
+| `mediation` _string_ | The mediation type for SASL/PLAIN authentication. |
+| `principals` _[VirtualClusterAuthenticationPrincipal](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationprincipal)_ | List of principals to be able to authenticate with, used with `terminate` mediation. |
+| `type` _string_ |  |
+
+_Appears in:_
+
+- [VirtualClusterAuthenticationScheme](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationscheme)
+
+#### VirtualClusterAuthenticationSaslScram
+
+
+VirtualClusterAuthenticationSaslScram SASL/SCRAM authentication scheme for
+the virtual cluster.
+
+
+
+| Field | Description |
+| --- | --- |
+| `algorithm` _string_ | The algorithm used for SASL/SCRAM authentication. |
+| `type` _string_ |  |
+
+_Appears in:_
+
+- [VirtualClusterAuthenticationScheme](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationscheme)
+
+#### VirtualClusterAuthenticationScheme
+
+
+VirtualClusterAuthenticationScheme represents a union type for VirtualClusterAuthenticationScheme.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[VirtualClusterAuthenticationSchemeType](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationschemetype)_ | Type designates the type of configuration. |
+| `anonymous` _[VirtualClusterAuthenticationAnonymous](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationanonymous)_ | Anonymous configuration. |
+| `client_certificate` _[VirtualClusterAuthenticationClientCertificate](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationclientcertificate)_ | ClientCertificate configuration. |
+| `oauth_bearer` _[VirtualClusterAuthenticationOauthBearer](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationoauthbearer)_ | OauthBearer configuration. |
+| `sasl_plain` _[VirtualClusterAuthenticationSaslPlain](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationsaslplain)_ | SaslPlain configuration. |
+| `sasl_scram` _[VirtualClusterAuthenticationSaslScram](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationsaslscram)_ | SaslScram configuration. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterAPISpec](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterapispec)
+
+#### VirtualClusterAuthenticationSchemeType
+
+_Underlying type:_ `string`
+
+VirtualClusterAuthenticationSchemeType represents the type of VirtualClusterAuthenticationScheme.
+
+
+
+
+_Appears in:_
+
+- [VirtualClusterAuthenticationScheme](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationscheme)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `anonymous` |  |
+| `client_certificate` |  |
+| `oauth_bearer` |  |
+| `sasl_plain` |  |
+| `sasl_scram` |  |
+
+#### VirtualClusterAuthenticationValidate
+
+
+VirtualClusterAuthenticationValidate Validation rules.
+
+
+
+| Field | Description |
+| --- | --- |
+| `audiences` _[VirtualClusterAuthenticationAudience](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationaudience)_ | List of expected audience values. One of them has to match the audience claim in the token. |
+| `issuer` _string_ | Expected token issuer in the token. |
+
+_Appears in:_
+
+- [VirtualClusterAuthenticationOauthBearer](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationoauthbearer)
+
+#### VirtualClusterDNSLabel
+
+_Underlying type:_ `string`
+
+VirtualClusterDNSLabel The DNS label used in the bootstrap server URL to
+identify the virtual cluster when using SNI routing.
+The format follows the RFC1035: 1-63 chars, lowercase alphanumeric or '-',
+must start and end with an alphanumeric character.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterAPISpec](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterapispec)
+
+#### VirtualClusterName
+
+_Underlying type:_ `string`
+
+VirtualClusterName The name of the virtual cluster.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterAPISpec](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterapispec)
+
+#### VirtualClusterNamespace
+
+
+VirtualClusterNamespace Namespace allows to implement multitenancy using a
+single backend cluster.
+It allows to either hide or enforce a static prefix on resources (topics,
+consumer group IDs, transaction IDs).
+
+
+
+| Field | Description |
+| --- | --- |
+| `additional` _[VirtualClusterNamespaceAdditionalProperties](#konnect-konghq-com-v1alpha1-types-virtualclusternamespaceadditionalproperties)_ |  |
+| `mode` _string_ | * hide_prefix - the configured prefix is hidden from clients for topics and IDs when reading.<br /><br />Created resources are written with the prefix on the backend cluster. * enforce_prefix - the configured prefix remains visible to clients.<br /><br />Created resources must include the prefix or the request will fail. |
+| `prefix` _string_ | The namespace is differentiated by this chosen prefix. For example, if the prefix is set to "analytics_" the topic named "analytics_user_clicks" is available to the clients of the virtual cluster. Topics without the prefix will be ignored unless added via `additional.topics`. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterAPISpec](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterapispec)
+
+#### VirtualClusterNamespaceAdditionalProperties
+
+
+VirtualClusterNamespaceAdditionalProperties is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `consumer_groups` _[VirtualClusterNamespaceIDSelector](#konnect-konghq-com-v1alpha1-types-virtualclusternamespaceidselector)_ | Consumer group IDs to expose even if they don't start with the namespace prefix. |
+| `topics` _[VirtualClusterNamespaceTopicSelector](#konnect-konghq-com-v1alpha1-types-virtualclusternamespacetopicselector)_ | Additional backend topics to expose even if they don't match the namespace prefix. The topics are not affected by the hide/enforce prefix mode. If the client tries to create a topic that matches this list, the request is rejected. |
+
+_Appears in:_
+
+- [VirtualClusterNamespace](#konnect-konghq-com-v1alpha1-types-virtualclusternamespace)
+
+#### VirtualClusterNamespaceIDSelector
+
+
+VirtualClusterNamespaceIDSelector represents a union type for VirtualClusterNamespaceIDSelector.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[VirtualClusterNamespaceIDSelectorType](#konnect-konghq-com-v1alpha1-types-virtualclusternamespaceidselectortype)_ | Type designates the type of configuration. |
+| `glob` _[VirtualClusterNamespaceIDSelectorGlob](#konnect-konghq-com-v1alpha1-types-virtualclusternamespaceidselectorglob)_ | Glob configuration. |
+
+_Appears in:_
+
+- [VirtualClusterNamespaceAdditionalProperties](#konnect-konghq-com-v1alpha1-types-virtualclusternamespaceadditionalproperties)
+
+#### VirtualClusterNamespaceIDSelectorGlob
+
+
+VirtualClusterNamespaceIDSelectorGlob is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `glob` _string_ | Expose any id that matches this glob pattern (e.g., `my_id_*`). |
+| `type` _string_ |  |
+
+_Appears in:_
+
+- [VirtualClusterNamespaceIDSelector](#konnect-konghq-com-v1alpha1-types-virtualclusternamespaceidselector)
+
+#### VirtualClusterNamespaceIDSelectorType
+
+_Underlying type:_ `string`
+
+VirtualClusterNamespaceIDSelectorType represents the type of VirtualClusterNamespaceIDSelector.
+
+
+
+
+_Appears in:_
+
+- [VirtualClusterNamespaceIDSelector](#konnect-konghq-com-v1alpha1-types-virtualclusternamespaceidselector)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `exact_list` |  |
+| `glob` |  |
+
+#### VirtualClusterNamespaceTopicSelector
+
+
+VirtualClusterNamespaceTopicSelector represents a union type for VirtualClusterNamespaceTopicSelector.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[VirtualClusterNamespaceTopicSelectorType](#konnect-konghq-com-v1alpha1-types-virtualclusternamespacetopicselectortype)_ | Type designates the type of configuration. |
+| `glob` _[VirtualClusterNamespaceTopicSelectorGlob](#konnect-konghq-com-v1alpha1-types-virtualclusternamespacetopicselectorglob)_ | Glob configuration. |
+
+_Appears in:_
+
+- [VirtualClusterNamespaceAdditionalProperties](#konnect-konghq-com-v1alpha1-types-virtualclusternamespaceadditionalproperties)
+
+#### VirtualClusterNamespaceTopicSelectorGlob
+
+
+VirtualClusterNamespaceTopicSelectorGlob is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conflict` _string_ | How to inform the user about conflicts where multiple backend topics would map to the same virtual topic name. * warn - log in the Event Gateway logs. Additionally, it sets knep_namespace_topic_conflict to 1. * ignore - do not do anything. It does not cause knep_namespace_topic_conflict metric to be set to 1. |
+| `glob` _string_ | Expose any backend topic that matches this glob pattern (e.g., `operations_data_*`). |
+| `type` _string_ |  |
+
+_Appears in:_
+
+- [VirtualClusterNamespaceTopicSelector](#konnect-konghq-com-v1alpha1-types-virtualclusternamespacetopicselector)
+
+#### VirtualClusterNamespaceTopicSelectorType
+
+_Underlying type:_ `string`
+
+VirtualClusterNamespaceTopicSelectorType represents the type of VirtualClusterNamespaceTopicSelector.
+
+
+
+
+_Appears in:_
+
+- [VirtualClusterNamespaceTopicSelector](#konnect-konghq-com-v1alpha1-types-virtualclusternamespacetopicselector)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `exact_list` |  |
+| `glob` |  |
 
 ## konnect.konghq.com/v1alpha2
 

@@ -14,6 +14,15 @@ func (s *PortalPageAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal PortalPageAPISpec: %w", err)
 	}
+	var payload any
+	if err := json.Unmarshal(data, &payload); err != nil {
+		return nil, fmt.Errorf("failed to decode PortalPageAPISpec: %w", err)
+	}
+	payload = flattenSDKUnions(payload)
+	data, err = json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal normalized PortalPageAPISpec: %w", err)
+	}
 	return data, nil
 }
 

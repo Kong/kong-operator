@@ -10,6 +10,7 @@ import (
 type GeneratedSDK interface {
 	GetEventGatewayBackendClustersSDK() sdkkonnectgo.EventGatewayBackendClustersSDK
 	GetEventGatewayListenersSDK() sdkkonnectgo.EventGatewayListenersSDK
+	GetEventGatewayVirtualClustersSDK() sdkkonnectgo.EventGatewayVirtualClustersSDK
 	GetPortalAuthSettingsSDK() sdkkonnectgo.PortalAuthSettingsSDK
 	GetEventGatewayDataPlaneCertificatesSDK() sdkkonnectgo.EventGatewayDataPlaneCertificatesSDK
 	GetEventGatewaysSDK() sdkkonnectgo.EventGatewaysSDK
@@ -26,6 +27,11 @@ func (w sdkWrapper) GetEventGatewayBackendClustersSDK() sdkkonnectgo.EventGatewa
 // GetEventGatewayListenersSDK returns the SDK to operate EventGatewayListener.
 func (w sdkWrapper) GetEventGatewayListenersSDK() sdkkonnectgo.EventGatewayListenersSDK {
 	return w.sdk.EventGatewayListeners
+}
+
+// GetEventGatewayVirtualClustersSDK returns the SDK to operate EventGatewayVirtualCluster.
+func (w sdkWrapper) GetEventGatewayVirtualClustersSDK() sdkkonnectgo.EventGatewayVirtualClustersSDK {
+	return w.sdk.EventGatewayVirtualClusters
 }
 
 // GetPortalAuthSettingsSDK returns the SDK to operate IdentityProviderRequest.

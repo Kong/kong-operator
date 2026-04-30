@@ -8,6 +8,9 @@ package konnect
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=eventgatewaylisteners,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=eventgatewaylisteners/status,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=eventgatewaylisteners/finalizers,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=eventgatewayvirtualclusters,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=eventgatewayvirtualclusters/status,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=eventgatewayvirtualclusters/finalizers,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=identityproviderrequests,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=identityproviderrequests/status,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=identityproviderrequests/finalizers,verbs=update;patch

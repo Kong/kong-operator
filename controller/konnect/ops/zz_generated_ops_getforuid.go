@@ -44,6 +44,8 @@ func getForUID[
 		return getEventGatewayBackendClusterForUID(ctx, sdk.GetEventGatewayBackendClustersSDK(), ent)
 	case *konnectv1alpha1.EventGatewayListener:
 		return getEventGatewayListenerForUID(ctx, sdk.GetEventGatewayListenersSDK(), ent)
+	case *konnectv1alpha1.EventGatewayVirtualCluster:
+		return getEventGatewayVirtualClusterForUID(ctx, sdk.GetEventGatewayVirtualClustersSDK(), ent)
 	case *konnectv1alpha1.KonnectEventGateway:
 		return getKonnectEventGatewayForUID(ctx, sdk.GetEventGatewaysSDK(), ent)
 	case *konnectv1alpha1.Portal:

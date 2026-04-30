@@ -78,7 +78,7 @@ spec:
                         required:
                         - type
                         type: object
-                      saslplain:
+                      sasl_plain:
                         description: SaslPlain configuration.
                         properties:
                           password:
@@ -110,7 +110,7 @@ spec:
                         - type
                         - username
                         type: object
-                      saslscram:
+                      sasl_scram:
                         description: SaslScram configuration.
                         properties:
                           algorithm:
@@ -154,9 +154,9 @@ spec:
                       type:
                         description: Type designates the type of configuration.
                         enum:
-                        - Anonymous
-                        - SaslPlain
-                        - SaslScram
+                        - anonymous
+                        - sasl_plain
+                        - sasl_scram
                         minLength: 1
                         type: string
                     required:

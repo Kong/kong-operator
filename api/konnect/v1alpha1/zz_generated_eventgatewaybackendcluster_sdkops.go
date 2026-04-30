@@ -122,12 +122,15 @@ func (s *EventGatewayBackendClusterAPISpec) marshalSDKOpsPayload() ([]byte, erro
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal EventGatewayBackendClusterAPISpec: %w", err)
 	}
-	var payload map[string]any
+	var payload any
 	if err := json.Unmarshal(data, &payload); err != nil {
 		return nil, fmt.Errorf("failed to decode EventGatewayBackendClusterAPISpec: %w", err)
 	}
-	if err := normalizeEventGatewayBackendClusterSDKOpsBoolFields(payload); err != nil {
-		return nil, fmt.Errorf("failed to normalize EventGatewayBackendClusterAPISpec SDK payload: %w", err)
+	payload = flattenSDKUnions(payload)
+	if pm, ok := payload.(map[string]any); ok {
+		if err := normalizeEventGatewayBackendClusterSDKOpsBoolFields(pm); err != nil {
+			return nil, fmt.Errorf("failed to normalize EventGatewayBackendClusterAPISpec SDK payload: %w", err)
+		}
 	}
 	data, err = json.Marshal(payload)
 	if err != nil {
@@ -145,40 +148,6 @@ func (s *EventGatewayBackendClusterAPISpec) ToCreateBackendClusterRequest() (*sd
 	if err != nil {
 		return nil, err
 	}
-	var payload map[string]any
-	if err := json.Unmarshal(data, &payload); err != nil {
-		return nil, fmt.Errorf("failed to decode EventGatewayBackendClusterAPISpec SDK payload: %w", err)
-	}
-	rawAuthentication, ok := payload["authentication"]
-	if ok && rawAuthentication != nil {
-		objectAuthentication, ok := rawAuthentication.(map[string]any)
-		if !ok {
-			return nil, fmt.Errorf("EventGatewayBackendCluster authentication payload has unexpected type %T", rawAuthentication)
-		}
-		typeAuthentication, ok := objectAuthentication["type"].(string)
-		if !ok || typeAuthentication == "" {
-			return nil, fmt.Errorf("EventGatewayBackendCluster authentication payload missing type")
-		}
-		var selectedAuthentication any
-		switch typeAuthentication {
-		case "Anonymous":
-			selectedAuthentication = objectAuthentication["anonymous"]
-		case "SaslPlain":
-			selectedAuthentication = objectAuthentication["saslplain"]
-		case "SaslScram":
-			selectedAuthentication = objectAuthentication["saslscram"]
-		default:
-			return nil, fmt.Errorf("unsupported EventGatewayBackendCluster authentication type %q", typeAuthentication)
-		}
-		if selectedAuthentication == nil {
-			return nil, fmt.Errorf("EventGatewayBackendCluster authentication payload missing for type %q", typeAuthentication)
-		}
-		payload["authentication"] = selectedAuthentication
-	}
-	data, err = json.Marshal(payload)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal normalized EventGatewayBackendClusterAPISpec: %w", err)
-	}
 	var target sdkkonnectcomp.CreateBackendClusterRequest
 	if err := json.Unmarshal(data, &target); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal into CreateBackendClusterRequest: %w", err)
@@ -194,40 +163,6 @@ func (s *EventGatewayBackendClusterAPISpec) ToUpdateBackendClusterRequest() (*sd
 	data, err := s.marshalSDKOpsPayload()
 	if err != nil {
 		return nil, err
-	}
-	var payload map[string]any
-	if err := json.Unmarshal(data, &payload); err != nil {
-		return nil, fmt.Errorf("failed to decode EventGatewayBackendClusterAPISpec SDK payload: %w", err)
-	}
-	rawAuthentication, ok := payload["authentication"]
-	if ok && rawAuthentication != nil {
-		objectAuthentication, ok := rawAuthentication.(map[string]any)
-		if !ok {
-			return nil, fmt.Errorf("EventGatewayBackendCluster authentication payload has unexpected type %T", rawAuthentication)
-		}
-		typeAuthentication, ok := objectAuthentication["type"].(string)
-		if !ok || typeAuthentication == "" {
-			return nil, fmt.Errorf("EventGatewayBackendCluster authentication payload missing type")
-		}
-		var selectedAuthentication any
-		switch typeAuthentication {
-		case "Anonymous":
-			selectedAuthentication = objectAuthentication["anonymous"]
-		case "SaslPlain":
-			selectedAuthentication = objectAuthentication["saslplain"]
-		case "SaslScram":
-			selectedAuthentication = objectAuthentication["saslscram"]
-		default:
-			return nil, fmt.Errorf("unsupported EventGatewayBackendCluster authentication type %q", typeAuthentication)
-		}
-		if selectedAuthentication == nil {
-			return nil, fmt.Errorf("EventGatewayBackendCluster authentication payload missing for type %q", typeAuthentication)
-		}
-		payload["authentication"] = selectedAuthentication
-	}
-	data, err = json.Marshal(payload)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal normalized EventGatewayBackendClusterAPISpec: %w", err)
 	}
 	var target sdkkonnectcomp.UpdateBackendClusterRequest
 	if err := json.Unmarshal(data, &target); err != nil {

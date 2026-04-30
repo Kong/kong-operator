@@ -9,6 +9,10 @@ const crdTypeTemplate = sharedGeneratedFilePreamble + `
 package {{.APIVersion}}
 
 import (
+{{- if .HasUnionTypes}}
+	"encoding/json"
+	"fmt"
+{{- end}}
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 {{- if .NeedsJSONImport}}
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -390,19 +394,22 @@ func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal {{$.EntityName}}APISpec: %w", err)
 	}
-	{{- if $.BoolFields}}
-	var payload map[string]any
+	var payload any
 	if err := json.Unmarshal(data, &payload); err != nil {
 		return nil, fmt.Errorf("failed to decode {{$.EntityName}}APISpec: %w", err)
 	}
-	if err := normalize{{$.EntityName}}SDKOpsBoolFields(payload); err != nil {
-		return nil, fmt.Errorf("failed to normalize {{$.EntityName}}APISpec SDK payload: %w", err)
+	payload = flattenSDKUnions(payload)
+	{{- if $.BoolFields}}
+	if pm, ok := payload.(map[string]any); ok {
+		if err := normalize{{$.EntityName}}SDKOpsBoolFields(pm); err != nil {
+			return nil, fmt.Errorf("failed to normalize {{$.EntityName}}APISpec SDK payload: %w", err)
+		}
 	}
+	{{- end}}
 	data, err = json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal normalized {{$.EntityName}}APISpec: %w", err)
 	}
-	{{- end }}
 	return data, nil
 }
 {{range .Methods}}
@@ -415,43 +422,6 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 	if err != nil {
 		return nil, err
 	}
-{{- if .NestedUnionFields}}
-	var payload map[string]any
-	if err := json.Unmarshal(data, &payload); err != nil {
-		return nil, fmt.Errorf("failed to decode {{$.EntityName}}APISpec SDK payload: %w", err)
-	}
-{{- range .NestedUnionFields}}
-	{{- $fieldName := .FieldName}}
-	raw{{.FieldName}}, ok := payload["{{.JSONName}}"]
-	if ok && raw{{.FieldName}} != nil {
-		object{{.FieldName}}, ok := raw{{.FieldName}}.(map[string]any)
-		if !ok {
-			return nil, fmt.Errorf("{{$.EntityName}} {{.JSONName}} payload has unexpected type %T", raw{{.FieldName}})
-		}
-		type{{.FieldName}}, ok := object{{.FieldName}}["type"].(string)
-		if !ok || type{{.FieldName}} == "" {
-			return nil, fmt.Errorf("{{$.EntityName}} {{.JSONName}} payload missing type")
-		}
-		var selected{{.FieldName}} any
-		switch type{{.FieldName}} {
-{{- range .Variants}}
-		case "{{.TypeValue}}":
-			selected{{$fieldName}} = object{{$fieldName}}["{{.JSONName}}"]
-{{- end}}
-		default:
-			return nil, fmt.Errorf("unsupported {{$.EntityName}} {{.JSONName}} type %q", type{{.FieldName}})
-		}
-		if selected{{.FieldName}} == nil {
-			return nil, fmt.Errorf("{{$.EntityName}} {{.JSONName}} payload missing for type %q", type{{.FieldName}})
-		}
-		payload["{{.JSONName}}"] = selected{{.FieldName}}
-	}
-{{- end}}
-	data, err = json.Marshal(payload)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal normalized {{$.EntityName}}APISpec: %w", err)
-	}
-{{- end}}
 	var target {{.ImportAlias}}.{{.TypeName}}
 	if err := json.Unmarshal(data, &target); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal into {{.TypeName}}: %w", err)
@@ -849,6 +819,8 @@ import (
 
 ` + sensitiveDataSourceType + `
 {{- end}}
+
+` + flattenSDKUnionsHelper + `
 `
 
 // opsPerEntityFileHeaderTemplate renders the shared file header (preamble,

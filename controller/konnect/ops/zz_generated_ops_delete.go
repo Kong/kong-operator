@@ -28,6 +28,8 @@ func DeleteGeneratedOps[
 		return deleteEventGatewayBackendCluster(ctx, sdk.GetEventGatewayBackendClustersSDK(), ent)
 	case *konnectv1alpha1.EventGatewayListener:
 		return deleteEventGatewayListener(ctx, sdk.GetEventGatewayListenersSDK(), ent)
+	case *konnectv1alpha1.EventGatewayVirtualCluster:
+		return deleteEventGatewayVirtualCluster(ctx, sdk.GetEventGatewayVirtualClustersSDK(), ent)
 	case *konnectv1alpha1.IdentityProviderRequest:
 		return deleteIdentityProviderRequest(ctx, sdk.GetPortalAuthSettingsSDK(), ent)
 	case *konnectv1alpha1.KonnectEventDataPlaneCertificate:

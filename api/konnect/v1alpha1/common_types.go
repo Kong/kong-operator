@@ -73,3 +73,37 @@ const (
 	// SensitiveDataSourceTypeSecretRef indicates that the data is sourced from a Kubernetes Secret.
 	SensitiveDataSourceTypeSecretRef SensitiveDataSourceType = "secretRef"
 )
+
+// flattenSDKUnions recursively flattens nested discriminated-union shapes
+// {"type": "X", "X": {...}} into the flat shape {"type": "X", ...} expected
+// by the Konnect SDK request types.
+func flattenSDKUnions(v any) any {
+	switch x := v.(type) {
+	case map[string]any:
+		for k, val := range x {
+			x[k] = flattenSDKUnions(val)
+		}
+		t, ok := x["type"].(string)
+		if !ok || t == "" {
+			return x
+		}
+		inner, ok := x[t].(map[string]any)
+		if !ok {
+			return x
+		}
+		delete(x, t)
+		for k, vv := range inner {
+			if k == "type" {
+				continue
+			}
+			x[k] = vv
+		}
+		return x
+	case []any:
+		for i, val := range x {
+			x[i] = flattenSDKUnions(val)
+		}
+		return x
+	}
+	return v
+}
