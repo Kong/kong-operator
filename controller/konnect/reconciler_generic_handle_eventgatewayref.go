@@ -15,13 +15,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/kong/kong-operator/v2/api/common/consts"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
-	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
-	"github.com/kong/kong-operator/v2/internal/utils/crossnamespace"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
@@ -31,21 +28,29 @@ func handleEventGatewayRef(
 	cl client.Client,
 	obj k8sutils.ConditionsAwareObject,
 ) (ctrl.Result, error) {
-	cert, ok := any(obj).(*konnectv1alpha1.KonnectEventDataPlaneCertificate)
+	// TODO: refactor this to be more generic and reusable for other types of references.
+	type TObj interface {
+		k8sutils.ConditionsAwareObject
+		eventGatewayRefAccessor
+		GetGatewayID() string
+		SetGatewayID(id string)
+	}
+	o, ok := any(obj).(TObj)
 	if !ok {
 		return ctrl.Result{}, &UnsupportedGeneratedReferenceTypeError{
 			TypeName: fmt.Sprintf("%T", obj),
 		}
 	}
 
-	if res, err := ensureKongReferenceGrantForEventGatewayRef(ctx, cl, cert); err != nil || !res.IsZero() {
+	gatewayRef := o.GetEventGatewayRef()
+	if res, err := ensureKongReferenceGrantForParentRef(ctx, cl, o, gatewayRef, "KonnectEventGateway"); err != nil || !res.IsZero() {
 		return res, err
 	}
 
-	gateway, nn, err := getEventGatewayForRef(ctx, cl, cert.Spec.GatewayRef, cert.GetNamespace())
+	gateway, nn, err := getEventGatewayForRef(ctx, cl, gatewayRef, o.GetNamespace())
 	if err != nil {
 		if res, errStatus := patch.StatusWithCondition(
-			ctx, cl, cert,
+			ctx, cl, o,
 			konnectv1alpha1.EventGatewayRefValidConditionType,
 			metav1.ConditionFalse,
 			konnectv1alpha1.EventGatewayRefReasonInvalid,
@@ -59,7 +64,7 @@ func handleEventGatewayRef(
 	if delTimestamp := gateway.GetDeletionTimestamp(); !delTimestamp.IsZero() {
 		msg := fmt.Sprintf("Referenced KonnectEventGateway %s is being deleted", nn)
 		if res, errStatus := patch.StatusWithCondition(
-			ctx, cl, cert,
+			ctx, cl, o,
 			konnectv1alpha1.EventGatewayRefValidConditionType,
 			metav1.ConditionFalse,
 			konnectv1alpha1.EventGatewayRefReasonInvalid,
@@ -76,7 +81,7 @@ func handleEventGatewayRef(
 	cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, gateway)
 	if !ok || cond.Status != metav1.ConditionTrue {
 		if res, errStatus := patch.StatusWithCondition(
-			ctx, cl, cert,
+			ctx, cl, o,
 			konnectv1alpha1.EventGatewayRefValidConditionType,
 			metav1.ConditionFalse,
 			konnectv1alpha1.EventGatewayRefReasonNotProgrammed,
@@ -93,7 +98,7 @@ func handleEventGatewayRef(
 			Msg:       "Referenced KonnectEventGateway does not have a Konnect ID yet",
 		}
 		if res, errStatus := patch.StatusWithCondition(
-			ctx, cl, cert,
+			ctx, cl, o,
 			konnectv1alpha1.EventGatewayRefValidConditionType,
 			metav1.ConditionFalse,
 			konnectv1alpha1.EventGatewayRefReasonInvalid,
@@ -104,12 +109,9 @@ func handleEventGatewayRef(
 		return ctrl.Result{}, err
 	}
 
-	old := cert.DeepCopy()
-	if cert.Status.GatewayID == nil {
-		cert.Status.GatewayID = &konnectv1alpha1.KonnectEntityRef{}
-	}
-	cert.Status.GatewayID.ID = gateway.GetKonnectID()
-	_, err = patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), cert, old)
+	old := o.DeepCopyObject().(TObj)
+	o.SetGatewayID(gateway.GetKonnectID())
+	_, err = patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), o, old)
 	if err != nil {
 		if apierrors.IsConflict(err) {
 			return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
@@ -118,77 +120,11 @@ func handleEventGatewayRef(
 	}
 
 	if res, errStatus := patch.StatusWithCondition(
-		ctx, cl, cert,
+		ctx, cl, o,
 		konnectv1alpha1.EventGatewayRefValidConditionType,
 		metav1.ConditionTrue,
 		konnectv1alpha1.EventGatewayRefReasonValid,
 		fmt.Sprintf("Referenced KonnectEventGateway %s is programmed", nn),
-	); errStatus != nil || !res.IsZero() {
-		return res, errStatus
-	}
-
-	return ctrl.Result{}, nil
-}
-
-func ensureKongReferenceGrantForEventGatewayRef(
-	ctx context.Context,
-	cl client.Client,
-	ent *konnectv1alpha1.KonnectEventDataPlaneCertificate,
-) (ctrl.Result, error) {
-	ref := ent.Spec.GatewayRef
-	if ref.Type != commonv1alpha1.ObjectRefTypeNamespacedRef ||
-		ref.NamespacedRef == nil ||
-		ref.NamespacedRef.Namespace == nil ||
-		*ref.NamespacedRef.Namespace == ent.GetNamespace() {
-		if res, errStatus := patch.StatusWithoutCondition(
-			ctx, cl, ent,
-			configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs,
-		); errStatus != nil || !res.IsZero() {
-			return res, errStatus
-		}
-		return ctrl.Result{}, nil
-	}
-
-	targetNamespace := *ref.NamespacedRef.Namespace
-	err := crossnamespace.CheckKongReferenceGrantForResource(
-		ctx,
-		cl,
-		ent.GetNamespace(),
-		targetNamespace,
-		ref.NamespacedRef.Name,
-		metav1.GroupVersionKind(ent.GetObjectKind().GroupVersionKind()),
-		metav1.GroupVersionKind(konnectv1alpha1.GroupVersion.WithKind("KonnectEventGateway")),
-	)
-	if crossnamespace.IsReferenceNotGranted(err) {
-		if res, errStatus := patch.StatusWithCondition(
-			ctx, cl, ent,
-			consts.ConditionType(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs),
-			metav1.ConditionFalse,
-			configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted,
-			fmt.Sprintf(
-				"KongReferenceGrants do not allow access to KonnectEventGateway %s/%s",
-				targetNamespace,
-				ref.NamespacedRef.Name,
-			),
-		); errStatus != nil || !res.IsZero() {
-			return res, errStatus
-		}
-		return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
-	}
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	if res, errStatus := patch.StatusWithCondition(
-		ctx, cl, ent,
-		consts.ConditionType(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs),
-		metav1.ConditionTrue,
-		configurationv1alpha1.KongReferenceGrantReasonResolvedRefs,
-		fmt.Sprintf(
-			"KongReferenceGrants allow access to KonnectEventGateway %s/%s",
-			targetNamespace,
-			ref.NamespacedRef.Name,
-		),
 	); errStatus != nil || !res.IsZero() {
 		return res, errStatus
 	}
