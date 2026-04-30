@@ -297,6 +297,108 @@ func TestEnqueueObjectForKonnectGatewayControlPlane(t *testing.T) {
 	})
 }
 
+func TestEnqueueEventGatewayBackendClusterForKonnectEventGateway(t *testing.T) {
+	parent := &konnectv1alpha1.KonnectEventGateway{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: konnectv1alpha1.GroupVersion.String(),
+			Kind:       "KonnectEventGateway",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "event-gateway",
+			Namespace: "default",
+		},
+	}
+
+	tests := []struct {
+		name     string
+		objects  []client.Object
+		expected []ctrl.Request
+	}{
+		{
+			name: "no matching backend clusters",
+			objects: []client.Object{
+				&konnectv1alpha1.EventGatewayBackendCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "backend-cluster-1",
+						Namespace: "default",
+					},
+				},
+				&konnectv1alpha1.EventGatewayBackendCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "backend-cluster-2",
+						Namespace: "default",
+					},
+					Spec: konnectv1alpha1.EventGatewayBackendClusterSpec{
+						GatewayRef: commonv1alpha1.ObjectRef{
+							Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+							NamespacedRef: &commonv1alpha1.NamespacedRef{
+								Name: "other-event-gateway",
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "matching backend cluster",
+			objects: []client.Object{
+				&konnectv1alpha1.EventGatewayBackendCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "backend-cluster-1",
+						Namespace: "default",
+					},
+					Spec: konnectv1alpha1.EventGatewayBackendClusterSpec{
+						GatewayRef: commonv1alpha1.ObjectRef{
+							Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+							NamespacedRef: &commonv1alpha1.NamespacedRef{
+								Name: parent.Name,
+							},
+						},
+					},
+				},
+				&konnectv1alpha1.EventGatewayBackendCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "backend-cluster-2",
+						Namespace: "default",
+					},
+					Spec: konnectv1alpha1.EventGatewayBackendClusterSpec{
+						GatewayRef: commonv1alpha1.ObjectRef{
+							Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+							NamespacedRef: &commonv1alpha1.NamespacedRef{
+								Name: "other-event-gateway",
+							},
+						},
+					},
+				},
+			},
+			expected: []ctrl.Request{
+				{
+					NamespacedName: types.NamespacedName{
+						Name:      "backend-cluster-1",
+						Namespace: "default",
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			builder := fakectrlruntimeclient.NewClientBuilder().
+				WithScheme(scheme.Get()).
+				WithObjects(append(tt.objects, parent)...)
+			for _, opt := range index.OptionsForEventGatewayBackendCluster() {
+				builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+			}
+			cl := builder.Build()
+			require.NotNil(t, cl)
+
+			requests := enqueueEventGatewayBackendClusterForKonnectEventGateway(cl)(t.Context(), parent)
+			require.ElementsMatch(t, tt.expected, requests)
+		})
+	}
+}
+
 func TestEnqueueObjectForKongReferenceGrant(t *testing.T) {
 	t.Run("KongService", func(t *testing.T) {
 		tests := []struct {
