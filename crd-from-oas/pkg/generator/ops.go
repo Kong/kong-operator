@@ -49,69 +49,73 @@ func (g *Generator) generateEntityOpsFile(
 		return entityOpsFileResult{}, fmt.Errorf("failed getForUID op for %s: %w", entityName, err)
 	}
 
-	if createData == nil && updateData == nil && deleteData == nil && getForUIDData == nil {
+	manualGetForUID := g.config.ManualGetForUIDEntities[entityName] && opsConfig != nil && opsConfig.SDK != nil
+	if createData == nil && updateData == nil && deleteData == nil && getForUIDData == nil && !manualGetForUID {
 		return entityOpsFileResult{}, nil
 	}
 
-	// Determine whether we need the sdkkonnectops import (wrapped request structs
-	// are used by update and getForUID).
-	needsOpsImport := (updateData != nil && updateData.UpdateWrapped) || getForUIDData != nil
-	needsClientImport := (createData != nil && createData.NeedsClient) || (updateData != nil && updateData.NeedsClient)
+	var file *GeneratedFile
+	if createData != nil || updateData != nil || deleteData != nil || getForUIDData != nil {
+		// Determine whether we need the sdkkonnectops import (wrapped request structs
+		// are used by update and getForUID).
+		needsOpsImport := (updateData != nil && updateData.UpdateWrapped) || getForUIDData != nil
+		needsClientImport := (createData != nil && createData.NeedsClient) || (updateData != nil && updateData.NeedsClient)
 
-	// Render file header.
-	headerData := struct {
-		APIAlias          string
-		APIPackagePath    string
-		NeedsOpsImport    bool
-		NeedsClientImport bool
-	}{
-		APIAlias:          g.config.APIGroupPackageAlias,
-		APIPackagePath:    g.config.APIGroupPackagePath,
-		NeedsOpsImport:    needsOpsImport,
-		NeedsClientImport: needsClientImport,
-	}
-	var content strings.Builder
-	headerTmpl := template.Must(template.New("opsheader").Parse(opsPerEntityFileHeaderTemplate))
-	if err := headerTmpl.Execute(&content, headerData); err != nil {
-		return entityOpsFileResult{}, err
-	}
-
-	// Render create function body.
-	if createData != nil {
-		createTmpl := template.Must(template.New("opscreatefunc").Parse(opsCreateFuncTemplate))
-		if err := createTmpl.Execute(&content, createData); err != nil {
+		// Render file header.
+		headerData := struct {
+			APIAlias          string
+			APIPackagePath    string
+			NeedsOpsImport    bool
+			NeedsClientImport bool
+		}{
+			APIAlias:          g.config.APIGroupPackageAlias,
+			APIPackagePath:    g.config.APIGroupPackagePath,
+			NeedsOpsImport:    needsOpsImport,
+			NeedsClientImport: needsClientImport,
+		}
+		var content strings.Builder
+		headerTmpl := template.Must(template.New("opsheader").Parse(opsPerEntityFileHeaderTemplate))
+		if err := headerTmpl.Execute(&content, headerData); err != nil {
 			return entityOpsFileResult{}, err
 		}
-	}
 
-	// Render update function body.
-	if updateData != nil {
-		updateTmpl := template.Must(template.New("opsupdatefunc").Parse(opsUpdateFuncTemplate))
-		if err := updateTmpl.Execute(&content, updateData); err != nil {
-			return entityOpsFileResult{}, err
+		// Render create function body.
+		if createData != nil {
+			createTmpl := template.Must(template.New("opscreatefunc").Parse(opsCreateFuncTemplate))
+			if err := createTmpl.Execute(&content, createData); err != nil {
+				return entityOpsFileResult{}, err
+			}
 		}
-	}
 
-	// Render delete function body.
-	if deleteData != nil {
-		deleteTmpl := template.Must(template.New("opsdeletefunc").Parse(opsDeleteFuncTemplate))
-		if err := deleteTmpl.Execute(&content, deleteData); err != nil {
-			return entityOpsFileResult{}, err
+		// Render update function body.
+		if updateData != nil {
+			updateTmpl := template.Must(template.New("opsupdatefunc").Parse(opsUpdateFuncTemplate))
+			if err := updateTmpl.Execute(&content, updateData); err != nil {
+				return entityOpsFileResult{}, err
+			}
 		}
-	}
 
-	// Render getForUID function body.
-	if getForUIDData != nil {
-		getForUIDTmpl := template.Must(template.New("opsgetforuidfunc").Parse(opsGetForUIDFuncTemplate))
-		if err := getForUIDTmpl.Execute(&content, getForUIDData); err != nil {
-			return entityOpsFileResult{}, err
+		// Render delete function body.
+		if deleteData != nil {
+			deleteTmpl := template.Must(template.New("opsdeletefunc").Parse(opsDeleteFuncTemplate))
+			if err := deleteTmpl.Execute(&content, deleteData); err != nil {
+				return entityOpsFileResult{}, err
+			}
 		}
-	}
 
-	file := &GeneratedFile{
-		Name:        "zz_generated_ops_" + EntityFilePrefix(entityName) + ".go",
-		Content:     content.String(),
-		RelativeDir: "controller/konnect/ops",
+		// Render getForUID function body.
+		if getForUIDData != nil {
+			getForUIDTmpl := template.Must(template.New("opsgetforuidfunc").Parse(opsGetForUIDFuncTemplate))
+			if err := getForUIDTmpl.Execute(&content, getForUIDData); err != nil {
+				return entityOpsFileResult{}, err
+			}
+		}
+
+		file = &GeneratedFile{
+			Name:        "zz_generated_ops_" + EntityFilePrefix(entityName) + ".go",
+			Content:     content.String(),
+			RelativeDir: "controller/konnect/ops",
+		}
 	}
 
 	var createInfo *OpsCreateFileInfo
@@ -157,6 +161,13 @@ func (g *Generator) generateEntityOpsFile(
 			APIAlias:       g.config.APIGroupPackageAlias,
 			APIPackagePath: g.config.APIGroupPackagePath,
 			SDKGetter:      sdkGetter,
+		}
+	} else if manualGetForUID {
+		getForUIDInfo = &OpsGetForUIDFileInfo{
+			Entity:         entityName,
+			APIAlias:       g.config.APIGroupPackageAlias,
+			APIPackagePath: g.config.APIGroupPackagePath,
+			SDKGetter:      "Get" + opsConfig.SDK.FieldName + "SDK",
 		}
 	}
 
