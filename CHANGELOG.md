@@ -49,7 +49,10 @@
 
 - TLSRoute readiness by preserving TLSServerName when a ready Admin API client
   is demoted back to pending
-  [#4025](https://github.com/Kong/kong-operator/pull/4024) [#4028](https://github.com/Kong/kong-operator/pull/4028)
+  [#4024](https://github.com/Kong/kong-operator/pull/4024) [#4028](https://github.com/Kong/kong-operator/pull/4028)
+- Fix endless reconciliation in Konnect controllers when referenced parent objects
+  are not marked as Ready yet.
+  [#4048](https://github.com/Kong/kong-operator/pull/4048) [#4060](https://github.com/Kong/kong-operator/pull/4060)
 
 ## [v2.1.5]
 
