@@ -65,7 +65,7 @@ type {{.EntityName}}Spec struct {
 	// +required
 	KonnectConfiguration konnectv1alpha2.KonnectConfiguration ` + "`" + `json:"konnect"` + "`" + `
 {{end}}
-{{- range .Schema.Dependencies}}
+{{- with .ImmediateParentDependency}}
 	// {{.FieldName}} is the reference to the parent {{.EntityName}} object.
 	//
 	// +required
@@ -647,13 +647,27 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 	}
 {{- if .IsCreate}}
 	data, variant, err := s.selectedSDKOpsPayload(payload)
-{{- else}}
-	data, variant, err := s.selectedSDKOpsPayload(payload)
-{{- end}}
 	if err != nil {
 		return nil, err
 	}
-{{- if .IsCreate}}
+{{- if .IsOperationsWrapped}}
+	{{$opsAlias := .ImportAlias}}{{$compAlias := .ComponentsImportAlias}}{{$bodyField := .BodyFieldName}}{{$typeName := .TypeName}}
+	switch variant {
+{{- range $.Variants}}
+	case "{{.FieldName}}":
+		var member {{$compAlias}}.{{.CreateVariantTypeName}}
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into {{.CreateVariantTypeName}}: %w", err)
+		}
+		body := {{$compAlias}}.{{.WrappedCreateConstructorName}}(member)
+		return &{{$opsAlias}}.{{$typeName}}{
+			{{$bodyField}}: body,
+		}, nil
+{{- end}}
+	default:
+		return nil, fmt.Errorf("unsupported {{$.EntityName}} config variant %q", variant)
+	}
+{{- else}}
 	{{$importAlias := .ImportAlias}}
 	switch variant {
 {{- range $.Variants}}
@@ -668,6 +682,22 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 	default:
 		return nil, fmt.Errorf("unsupported {{$.EntityName}} config variant %q", variant)
 	}
+{{- end}}
+{{- else}}
+	data, variant, err := s.selectedSDKOpsPayload(payload)
+	if err != nil {
+		return nil, err
+	}
+{{- if .IsOperationsWrapped}}
+	{{$compAlias := .ComponentsImportAlias}}{{$opsAlias := .ImportAlias}}{{$bodyField := .BodyFieldName}}{{$bodyType := .BodyTypeName}}{{$typeName := .TypeName}}
+	_ = variant
+	var body {{$compAlias}}.{{$bodyType}}
+	if err := json.Unmarshal(data, &body); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal into {{$bodyType}}: %w", err)
+	}
+	return &{{$opsAlias}}.{{$typeName}}{
+		{{$bodyField}}: body,
+	}, nil
 {{- else}}
 	{{$importAlias := .ImportAlias}}
 	var selected map[string]any
@@ -700,6 +730,7 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 	default:
 		return nil, fmt.Errorf("unsupported {{$.EntityName}} config variant %q", variant)
 	}
+{{- end}}
 {{- end}}
 }
 {{end}}
@@ -753,7 +784,9 @@ const sdkOpsTestTemplate = sharedGeneratedFilePreamble + `
 package {{.APIVersion}}
 
 import (
+{{- if .NeedsJSON}}
 	"encoding/json"
+{{- end}}
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -769,8 +802,7 @@ func Test{{$.EntityName}}APISpec_{{.MethodName}}(t *testing.T) {
 {{- if .ExpectError}}
 	require.Error(t, err)
 	require.Nil(t, result)
-	return
-{{- end}}
+{{- else}}
 	require.NoError(t, err)
 	require.NotNil(t, result)
 
@@ -782,6 +814,7 @@ func Test{{$.EntityName}}APISpec_{{.MethodName}}(t *testing.T) {
 	require.NoError(t, err)
 {{- range .TestFields}}
 	require.Equal(t, {{.ExpectedValue}}, payload["{{.JSONName}}"])
+{{- end}}
 {{- end}}
 }
 {{end}}`
@@ -857,10 +890,10 @@ func create{{.Entity}}(
 	sdk sdkkonnectgo.{{.SDKInterface}},
 	obj *{{.APIAlias}}.{{.Entity}},
 ) error {
-{{- if .ParentEntityName}}
-	parentID := obj.{{.ParentIDGetter}}()
-	if parentID == "" {
-		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "{{.ParentEntityName}}", Op: CreateOp}
+{{- range .Parents}}
+	{{.VarName}} := obj.{{.IDGetter}}()
+	if {{.VarName}} == "" {
+		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "{{.EntityName}}", Op: CreateOp}
 	}
 {{- end}}
 	{{- if .NeedsClient}}
@@ -880,9 +913,15 @@ func create{{.Entity}}(
 	req.Labels = WithKubernetesMetadataLabels(obj, req.Labels)
 {{- end}}
 {{- end}}
-{{- if .ParentEntityName}}
+{{- if .CreateFullyWrapped}}
+{{- range .Parents}}
+	req.{{.SDKFieldName}} = {{.VarName}}
+{{- end}}
 
-	resp, err := sdk.{{.SDKMethod}}(ctx, parentID, {{if .CreateReqBodyPointer}}req{{else}}*req{{end}})
+	resp, err := sdk.{{.SDKMethod}}(ctx, {{if .CreateReqBodyPointer}}req{{else}}*req{{end}})
+{{- else if .Parents}}
+
+	resp, err := sdk.{{.SDKMethod}}(ctx, {{(index .Parents 0).VarName}}, {{if .CreateReqBodyPointer}}req{{else}}*req{{end}})
 {{- else}}
 
 	resp, err := sdk.{{.SDKMethod}}(ctx, {{if .CreateReqBodyPointer}}req{{else}}*req{{end}})
@@ -919,10 +958,10 @@ func update{{.Entity}}(
 	sdk sdkkonnectgo.{{.UpdateSDKInterface}},
 	obj *{{.APIAlias}}.{{.Entity}},
 ) error {
-{{- if .ParentEntityName}}
-	parentID := obj.{{.ParentIDGetter}}()
-	if parentID == "" {
-		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "{{.ParentEntityName}}", Op: UpdateOp}
+{{- range .Parents}}
+	{{.VarName}} := obj.{{.IDGetter}}()
+	if {{.VarName}} == "" {
+		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "{{.EntityName}}", Op: UpdateOp}
 	}
 {{- end}}
 	id := obj.GetKonnectStatus().GetKonnectID()
@@ -943,10 +982,17 @@ func update{{.Entity}}(
 	req.Labels = WithKubernetesMetadataLabels(obj, req.Labels)
 {{- end}}
 {{- end}}
-{{- if .UpdateWrapped}}
+{{- if .UpdateFullyWrapped}}
+{{- range .Parents}}
+	req.{{.SDKFieldName}} = {{.VarName}}
+{{- end}}
+	req.{{.EntityIDField}} = id
+
+	_, err = sdk.{{.UpdateSDKMethod}}(ctx, {{if .UpdateReqBodyPointer}}req{{else}}*req{{end}})
+{{- else if .UpdateWrapped}}
 
 	_, err = sdk.{{.UpdateSDKMethod}}(ctx, sdkkonnectops.{{.UpdateSDKMethod}}Request{
-		{{.ParentIDField}}: parentID,
+		{{.ParentIDField}}: {{(index .Parents 0).VarName}},
 		{{.EntityIDField}}: id,
 		{{.UpdateBodyField}}: {{if .UpdateReqBodyPointer}}req{{else}}*req{{end}},
 	})
@@ -965,7 +1011,8 @@ func update{{.Entity}}(
 
 // opsDeleteFuncTemplate renders a single delete<Entity> function body.
 // It is concatenated after the file header and any create/update functions.
-// SDK delete methods always use positional arguments (no wrapped request struct).
+// Single-parent SDK delete methods use positional arguments.
+// Multi-parent SDK delete methods use a fully-wrapped request struct.
 // Optional query parameters (e.g. force) are passed as nil.
 const opsDeleteFuncTemplate = `
 func delete{{.Entity}}(
@@ -973,16 +1020,24 @@ func delete{{.Entity}}(
 	sdk sdkkonnectgo.{{.DeleteSDKInterface}},
 	obj *{{.APIAlias}}.{{.Entity}},
 ) error {
-{{- if .ParentEntityName}}
-	parentID := obj.{{.ParentIDGetter}}()
-	if parentID == "" {
-		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "{{.ParentEntityName}}", Op: DeleteOp}
+{{- range .Parents}}
+	{{.VarName}} := obj.{{.IDGetter}}()
+	if {{.VarName}} == "" {
+		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "{{.EntityName}}", Op: DeleteOp}
 	}
 {{- end}}
 	id := obj.GetKonnectStatus().GetKonnectID()
-{{- if .ParentEntityName}}
+{{- if .DeleteFullyWrapped}}
 
-	_, err := sdk.{{.DeleteSDKMethod}}(ctx, parentID, id{{range .DeleteNilArgs}}, nil{{end}})
+	_, err := sdk.{{.DeleteSDKMethod}}(ctx, sdkkonnectops.{{.DeleteWrappedType}}{
+		{{- range .Parents}}
+		{{.SDKFieldName}}: {{.VarName}},
+		{{- end}}
+		{{.DeleteEntityIDField}}: id,
+	})
+{{- else if .Parents}}
+
+	_, err := sdk.{{.DeleteSDKMethod}}(ctx, {{(index .Parents 0).VarName}}, id{{range .DeleteNilArgs}}, nil{{end}})
 {{- else}}
 
 	_, err := sdk.{{.DeleteSDKMethod}}(ctx, id{{range .DeleteNilArgs}}, nil{{end}})
@@ -1117,17 +1172,24 @@ func get{{.Entity}}ForUID(
 	sdk sdkkonnectgo.{{.ListSDKInterface}},
 	obj *{{.APIAlias}}.{{.Entity}},
 ) (string, error) {
-{{- if .ParentEntityName}}
-	parentID := obj.{{.ParentIDGetter}}()
-	if parentID == "" {
-		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "{{.ParentEntityName}}", Op: GetOp}
+{{- range .Parents}}
+	{{.VarName}} := obj.{{.IDGetter}}()
+	if {{.VarName}} == "" {
+		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "{{.EntityName}}", Op: GetOp}
 	}
 {{- end}}
 {{- if .UseUIDTagFilter}}
 
-{{- if .ParentEntityName}}
+{{- if .GetForUIDFullyWrapped}}
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.GetForUIDWrappedType}}{
+		{{- range .Parents}}
+		{{.SDKFieldName}}: {{.VarName}},
+		{{- end}}
+		Tags: new(UIDLabelForObject(obj)),
+	})
+{{- else if .Parents}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
-		{{.ParentIDField}}: parentID,
+		{{.ParentIDField}}: {{(index .Parents 0).VarName}},
 		Tags: new(UIDLabelForObject(obj)),
 	})
 {{- else}}
@@ -1159,9 +1221,15 @@ func get{{.Entity}}ForUID(
 	// TODO: pass a Filter to {{.ListSDKMethod}} (e.g. by name/labels) so we
 	// do not page through every entity in the tenant. Filter types and
 	// fields are entity-specific; derive from OpenAPI schema.
-{{- if .ParentEntityName}}
+{{- if .GetForUIDFullyWrapped}}
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.GetForUIDWrappedType}}{
+		{{- range .Parents}}
+		{{.SDKFieldName}}: {{.VarName}},
+		{{- end}}
+	})
+{{- else if .Parents}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
-		{{.ParentIDField}}: parentID,
+		{{.ParentIDField}}: {{(index .Parents 0).VarName}},
 	})
 {{- else}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{})
@@ -1188,9 +1256,15 @@ func get{{.Entity}}ForUID(
 	// false positives when multiple entities share a name and cannot be
 	// improved here until Konnect exposes labels/tags on this type. Tracked in
 	// https://github.com/Kong/kong-operator/issues/3987
-{{- if .ParentEntityName}}
+{{- if .GetForUIDFullyWrapped}}
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.GetForUIDWrappedType}}{
+		{{- range .Parents}}
+		{{.SDKFieldName}}: {{.VarName}},
+		{{- end}}
+	})
+{{- else if .Parents}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
-		{{.ParentIDField}}: parentID,
+		{{.ParentIDField}}: {{(index .Parents 0).VarName}},
 	})
 {{- else}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{})

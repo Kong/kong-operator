@@ -22,11 +22,21 @@ type opsDeleteFuncData struct {
 	APIAlias           string
 	DeleteSDKInterface string
 	DeleteSDKMethod    string
-	ParentEntityName   string
-	ParentIDGetter     string
+	// Parents holds metadata for each parent dependency (outermost first).
+	Parents []parentInfo
+	// DeleteFullyWrapped is true for multi-parent entities. The SDK delete method
+	// takes a single operations.DeleteXxxRequest struct rather than positional args.
+	DeleteFullyWrapped bool
+	// DeleteWrappedType is the SDK operations struct type name for fully-wrapped
+	// delete, e.g. "DeleteEventGatewayListenerPolicyRequest".
+	DeleteWrappedType string
+	// DeleteEntityIDField is the SDK request field name for the entity's own ID,
+	// e.g. "PolicyID". Used only when DeleteFullyWrapped is true.
+	DeleteEntityIDField string
 	// DeleteNilArgs holds one entry per optional query parameter on the DELETE
 	// operation. The SDK codegen promotes query params to positional args before
 	// the variadic opts; we pass nil for each since they are all optional.
+	// Only used when DeleteFullyWrapped is false.
 	DeleteNilArgs []struct{}
 }
 
@@ -54,21 +64,37 @@ func (g *Generator) generateOpsDeleteFuncBody(
 		return nil, fmt.Errorf("entity %q: resolve delete SDK interface: %w", entityName, err)
 	}
 
-	parentEntityName, parentIDGetter, err := g.resolveParentEntity(entityName, schema)
+	parents, err := g.resolveParents(entityName, schema)
 	if err != nil {
 		return nil, err
+	}
+
+	// Multi-parent entities use a fully-wrapped delete request struct.
+	deleteFullyWrapped := len(parents) >= 2
+
+	var deleteWrappedType, deleteEntityIDField string
+	if deleteFullyWrapped {
+		// The wrapped request type name follows the SDK convention:
+		// "<PascalCaseDeleteMethod>Request", e.g. "DeleteEventGatewayListenerPolicyRequest".
+		deleteWrappedType = sdkMethod + "Request"
+		// Entity ID field is derived from the last delete path param.
+		if len(schema.DeletePathParams) > 0 {
+			deleteEntityIDField = pathParamToFieldName(schema.DeletePathParams[len(schema.DeletePathParams)-1])
+		}
 	}
 
 	nilArgs := make([]struct{}, schema.DeleteQueryParamCount)
 
 	return &opsDeleteFuncData{
-		Entity:             entityName,
-		APIAlias:           g.config.APIGroupPackageAlias,
-		DeleteSDKInterface: sdkInterface,
-		DeleteSDKMethod:    sdkMethod,
-		ParentEntityName:   parentEntityName,
-		ParentIDGetter:     parentIDGetter,
-		DeleteNilArgs:      nilArgs,
+		Entity:              entityName,
+		APIAlias:            g.config.APIGroupPackageAlias,
+		DeleteSDKInterface:  sdkInterface,
+		DeleteSDKMethod:     sdkMethod,
+		Parents:             parents,
+		DeleteFullyWrapped:  deleteFullyWrapped,
+		DeleteWrappedType:   deleteWrappedType,
+		DeleteEntityIDField: deleteEntityIDField,
+		DeleteNilArgs:       nilArgs,
 	}, nil
 }
 

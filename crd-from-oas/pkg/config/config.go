@@ -105,6 +105,13 @@ type ReconcilerConfig struct {
 	// child reconciler watch/index generation. When unset, the immediate parent
 	// dependency name is inferred from the OpenAPI path parameter.
 	ParentEntityType string `yaml:"parentEntityType,omitempty"`
+	// ParentSDKFields optionally overrides the SDK request-struct field names for
+	// each parent dependency (in URL order). When the list is shorter than the
+	// number of dependencies, missing entries fall back to pathParamToFieldName.
+	// Only needed when the Speakeasy SDK uses a shortened field name that differs
+	// from the one derived from the raw path-parameter name (e.g. "ListenerID"
+	// for the path param "eventGatewayListenerId").
+	ParentSDKFields []string `yaml:"parentSDKFields,omitempty"`
 }
 
 // OpConfig holds configuration for a single SDK operation.

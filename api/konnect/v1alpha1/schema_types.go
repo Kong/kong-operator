@@ -163,6 +163,9 @@ func (u BackendClusterAuthenticationScheme) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (u *BackendClusterAuthenticationScheme) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling BackendClusterAuthenticationScheme: nil receiver")
+	}
 	var probe struct {
 		Type string `json:"type"`
 	}
@@ -312,6 +315,444 @@ type Description string
 //
 // +kubebuilder:validation:XIntOrString
 type EventGatewayListenerPort = intstr.IntOrString
+
+// EventGatewayTLSListenerPolicy The TLS Server policy defines the certificates
+// and keys used by the gateway server when the client connects
+// to the gateway over TLS.
+//
+// While it is possible to have multiple TLS policies on a listener, only one
+// can be active at a time.
+type EventGatewayTLSListenerPolicy struct {
+	// The configuration of the policy.
+	//
+	// +required
+	Config EventGatewayTLSListenerPolicyConfig `json:"config,omitempty"`
+	// A human-readable description of the policy.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=512
+	// +kubebuilder:default=""
+	Description string `json:"description,omitempty"`
+	// Whether the policy is enabled.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	// +kubebuilder:default=Enabled
+	Enabled string `json:"enabled,omitempty"`
+	// Labels store metadata of an entity that can be used for filtering an entity
+	// list or for searching across entity types.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels Labels `json:"labels,omitempty"`
+	// A unique user-defined name of the policy.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=255
+	Name string `json:"name,omitempty"`
+	// The type name of the policy.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=255
+	Type string `json:"type,omitempty"`
+}
+
+// EventGatewayTLSListenerPolicyConfig is a type alias.
+type EventGatewayTLSListenerPolicyConfig struct {
+	// If false, only TLS connections are allowed.
+	// If true, both TLS and plaintext connections are allowed.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	// +kubebuilder:default=Disabled
+	AllowPlaintext string `json:"allow_plaintext,omitempty"`
+	//
+	//
+	// +required
+	Certificates []TLSCertificate `json:"certificates,omitempty"`
+	// Configures mutual TLS (mTLS) client certificate verification.
+	// When set, the gateway
+	// requests or requires clients to present a certificate during the TLS
+	// handshake.
+	//
+	// **Requires a minimum runtime version of `1.1`**.
+	//
+	// +optional
+	ClientAuthentication ClientAuthentication `json:"client_authentication,omitempty"`
+	// A range of TLS versions.
+	//
+	// +optional
+	// +kubebuilder:default={"max":"TLSv1.3","min":"TLSv1.2"}
+	Versions TLSVersionRange `json:"versions,omitempty"`
+}
+
+// ClientAuthentication Configures mutual TLS (mTLS) client certificate
+// verification.
+// When set, the gateway
+// requests or requires clients to present a certificate during the TLS
+// handshake.
+//
+// **Requires a minimum runtime version of `1.1`**.
+type ClientAuthentication struct {
+	// * required - Reject TLS connections without a valid client certificate.
+	// * requested - Request a client certificate during the TLS handshake, but
+	// allow connections without one (falls back to other configured authentication
+	// methods).
+	// If a certificate is presented but cannot be verified, the connection is
+	// closed.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=required;requested
+	Mode string `json:"mode,omitempty"`
+	// An expression that extracts a principal identifier from a verified client
+	// certificate.
+	// This expression must evaluate to a string.
+	//
+	// **Requires a minimum runtime version of `1.1`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	PrincipalMapping string `json:"principal_mapping,omitempty"`
+	// TLS trust bundles contain CA certificate bundles used to verify client
+	// certificates.
+	// All bundles are merged into a single trust store; a client certificate is
+	// accepted if it
+	// chains to any trusted CA across all bundles.
+	//
+	//
+	// +required
+	TLSTrustBundles []TLSTrustBundleReference `json:"tls_trust_bundles,omitempty"`
+}
+
+// ForwardToClusterByPortMappingConfig The configuration to forward request to
+// `destination` and rewrite ports accordingly.
+// All broker ids must fit in the range of ports defined in the listener, if it
+// doesn't the metadata request will
+// return an error.
+//
+// For example with ports: [9000, "9092-9094", "9100"] and `bootstrap_port:
+// at_start` and brokers with ids
+// 1, 2, 3, 4 we will map: bootstrap to 9000 broker 1 to 9001, broker 2 to 9002,
+// broker 3 to 9003, and broker 4
+// to 9004 and fail the metadata request as these ports are not open.
+//
+// However, with the same configuration but with brokers with ids: 92,93,94,100
+// we will map: bootstrap to 9000,
+// broker 92 to 9092, broker 93 to 9093, broker 94 to 9094, and broker 100 to
+// 9100.
+//
+// In most cases users should use a single range `["9090-9094"] ` and
+// `bootstrap_port: at_start` and connect with
+// `<host>:9090` as bootstrap server.
+// Being able to use multiple ranges is only useful when when dealing with
+// gaps in broker ids.
+//
+// It is strongly discouraged to use port mapping in production.
+type ForwardToClusterByPortMappingConfig struct {
+	// Virtual brokers are advertised to clients using this host.
+	// Any kind of host supported by kafka can be used.
+	// If not defined, it's listen_address.
+	// If listen_address is `0.0.0.0` it's the destination IP of the TCP
+	// connection.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?)*$`
+	AdvertisedHost string `json:"advertised_host,omitempty"`
+	// If set to `at_start`, the first port will be used as a bootstrap port.
+	// It provides a stable endpoint to use as the bootstrap server for clients,
+	// regardless of broker
+	// IDs in the cluster.
+	//
+	// Additionally, it offsets all ports by one, so for example, if there are 3
+	// brokers (id=1, id=2, id=3)
+	// then we will use 4 ports: 9092 (bootstrap), 9093 (id=1), 9094 (id=2), 9095
+	// (id=3)
+	// With `none` we will use 3 ports: 9092 (id=1), 9093 (id=2), 9094 (id=3).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=none;at_start
+	// +kubebuilder:default="at_start"
+	BootstrapPort string `json:"bootstrap_port,omitempty"`
+	// A reference to a virtual cluster.
+	//
+	// +required
+	Destination *VirtualClusterReference `json:"destination,omitempty"`
+	// The lowest broker node ID in the cluster.
+	//
+	// +optional
+	// +kubebuilder:default=0
+	MinBrokerID int `json:"min_broker_id,omitempty"`
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Type string `json:"type,omitempty"`
+}
+
+// ForwardToClusterBySNIConfig The configuration to forward requests to virtual
+// clusters configured with SNI routing.
+type ForwardToClusterBySNIConfig struct {
+	// Virtual brokers are advertised to clients with this port instead of
+	// listen_port.
+	// Useful when proxy is
+	// behind loadbalancer listening on different port.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=65535
+	AdvertisedPort int `json:"advertised_port,omitempty"`
+	// Configures DNS names assigned to brokers in virtual clusters.
+	//
+	// - `per_cluster_suffix` is the default and allocates one level in the
+	// hierarchy for virtual clusters:
+	// `broker-{node_id}.{virtual_cluster}.{sni_suffix}`
+	// - `shared_suffix` puts all brokers from every virtual clusters into the same
+	// level: `broker-{node_id}-{virtual_cluster}.{sni_suffix}`.
+	// This makes it easier to manage certificates for this listener.
+	//
+	// **Requires a minimum runtime version of `1.1`**.
+	//
+	// +optional
+	BrokerHostFormat BrokerHostFormat `json:"broker_host_format,omitempty"`
+	// Optional suffix for TLS SNI validation.
+	//
+	// This suffix is concatenated with the virtual cluster "dns.label" label to
+	// form the base name for the SNI.
+	// If not provided, the virtual cluster "dns.label" label alone is used as the
+	// base name for the SNI.
+	// For example with sni_suffix: `.example.com` and virtual cluster "dns.label"
+	// label: `my-cluster`,
+	// the SNI suffix for it is `my-cluster.example.com`.
+	// If "dns.label" label is absent on the virtual cluster, the traffic won't be
+	// routed there.
+	//
+	// The bootstrap host is `bootstrap.my-cluster.example.com` and then each
+	// broker is addressable at `broker-0.my-cluster.example.com`,
+	// `broker-1.my-cluster.example.com`, etc.
+	// This means that your deployment needs to have a wildcard certificate for the
+	// domain and a DNS resolver that routes `*.my-cluster.example.com` to the
+	// proxy.
+	//
+	// The accepted format is a DNS subdomain starting with either `.` or `-`.
+	// For example, `-keg.example.com`, `.keg.example.com`,
+	// `.namespace.svc.cluster.local`, and `.localhost` are all valid,
+	// while `keg.example.com` is not.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[\.-]([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)*([a-z0-9-]*[a-z0-9])$`
+	SniSuffix string `json:"sni_suffix,omitempty"`
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Type string `json:"type,omitempty"`
+}
+
+// BrokerHostFormat Configures DNS names assigned to brokers in virtual
+// clusters.
+//
+// - `per_cluster_suffix` is the default and allocates one level in the
+// hierarchy for virtual clusters:
+// `broker-{node_id}.{virtual_cluster}.{sni_suffix}`
+// - `shared_suffix` puts all brokers from every virtual clusters into the same
+// level: `broker-{node_id}-{virtual_cluster}.{sni_suffix}`.
+// This makes it easier to manage certificates for this listener.
+//
+// **Requires a minimum runtime version of `1.1`**.
+type BrokerHostFormat struct {
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=per_cluster_suffix;shared_suffix
+	// +kubebuilder:default="per_cluster_suffix"
+	Type string `json:"type,omitempty"`
+}
+
+// ForwardToVirtualClusterPolicy Forwards requests to virtual clusters
+// configured with port routing or SNI routing.
+// While there can be multiple of these policies configured on a listener, there
+// can only be one instance of
+// `port_mapping`.
+// When multiple policies are configured, the first one that matches the
+// connection is used.
+// If no policy matches, the connection is rejected.
+//
+// When using `port_mapping`, there must be a mapping port for each broker on
+// the backend cluster see
+// `ForwardToClusterBySNIConfig` for more details.
+type ForwardToVirtualClusterPolicy struct {
+	// The configuration of the policy.
+	//
+	// +required
+	Config *ForwardToVirtualClusterPolicyConfig `json:"config,omitempty"`
+	// A human-readable description of the policy.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=512
+	// +kubebuilder:default=""
+	Description string `json:"description,omitempty"`
+	// Whether the policy is enabled.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	// +kubebuilder:default=Enabled
+	Enabled string `json:"enabled,omitempty"`
+	// Labels store metadata of an entity that can be used for filtering an entity
+	// list or for searching across entity types.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels Labels `json:"labels,omitempty"`
+	// A unique user-defined name of the policy.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=255
+	Name string `json:"name,omitempty"`
+	// The type name of the policy.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=255
+	Type string `json:"type,omitempty"`
+}
+
+// ForwardToVirtualClusterPolicyConfig represents a union type for config.
+// Only one of the fields should be set based on the Type.
+//
+type ForwardToVirtualClusterPolicyConfig struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=port_mapping;sni
+	Type ForwardToVirtualClusterPolicyConfigType `json:"type,omitempty"`
+
+	// PortMapping configuration.
+	//
+	// +optional
+	PortMapping *ForwardToClusterByPortMappingConfig `json:"port_mapping,omitempty"`
+	// SNI configuration.
+	//
+	// +optional
+	SNI *ForwardToClusterBySNIConfig `json:"sni,omitempty"`
+}
+
+// ForwardToVirtualClusterPolicyConfigType represents the type of config.
+type ForwardToVirtualClusterPolicyConfigType string
+
+// ForwardToVirtualClusterPolicyConfigType values.
+const (
+	ForwardToVirtualClusterPolicyConfigTypePortMapping ForwardToVirtualClusterPolicyConfigType = "port_mapping"
+	ForwardToVirtualClusterPolicyConfigTypeSNI ForwardToVirtualClusterPolicyConfigType = "sni"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u ForwardToVirtualClusterPolicyConfig) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, _ := json.Marshal(string(u.Type))
+	m["type"] = typeBytes
+	switch u.Type {
+	case "port_mapping":
+		if u.PortMapping != nil {
+			raw, err := json.Marshal(u.PortMapping)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling ForwardToVirtualClusterPolicyConfig port_mapping: %w", err)
+			}
+			m["port_mapping"] = raw
+		}
+	case "sni":
+		if u.SNI != nil {
+			raw, err := json.Marshal(u.SNI)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling ForwardToVirtualClusterPolicyConfig sni: %w", err)
+			}
+			m["sni"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *ForwardToVirtualClusterPolicyConfig) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling ForwardToVirtualClusterPolicyConfig: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = ForwardToVirtualClusterPolicyConfigType(probe.Type)
+	switch probe.Type {
+	case "port_mapping":
+		payload, ok := raw["port_mapping"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val ForwardToClusterByPortMappingConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling ForwardToVirtualClusterPolicyConfig port_mapping: %w", err)
+		}
+		u.PortMapping = &val
+	case "sni":
+		payload, ok := raw["sni"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val ForwardToClusterBySNIConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling ForwardToVirtualClusterPolicyConfig sni: %w", err)
+		}
+		u.SNI = &val
+	}
+	return nil
+}
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *ForwardToVirtualClusterPolicy) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling ForwardToVirtualClusterPolicy: nil receiver")
+	}
+	type alias ForwardToVirtualClusterPolicy
+	aux := alias{}
+	aux.Config = &ForwardToVirtualClusterPolicyConfig{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling ForwardToVirtualClusterPolicy: %w", err)
+	}
+	if aux.Config != nil && aux.Config.Type == "" && aux.Config.PortMapping == nil && aux.Config.SNI == nil {
+		aux.Config = nil
+	}
+	*s = ForwardToVirtualClusterPolicy(aux)
+	return nil
+}
 
 // GatewayDescription A human-readable description of the Gateway.
 type GatewayDescription string
@@ -524,6 +965,77 @@ type SAMLIdentityProviderMetadata string
 // SAMLIdentityProviderMetadataURL The identity provider's metadata URL where
 // the identity provider's metadata can be obtained.
 type SAMLIdentityProviderMetadataURL string
+
+// TLSCertificate A TLS certificate and its associated private key.
+type TLSCertificate struct {
+	// A literal value or a reference to an existing secret as a template string
+	// expression.
+	// The value is stored and returned by the API as-is, not treated as sensitive
+	// information.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=4096
+	Certificate GatewaySecretReferenceOrLiteral `json:"certificate,omitempty"`
+	// A sensitive value containing the secret or a reference to a secret as a
+	// template string expression.
+	// If the value is provided as plain text, it is encrypted at rest and omitted
+	// from API responses.
+	// If provided as an expression, the expression itself is stored and returned
+	// by the API.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=4096
+	Key GatewaySecret `json:"key,omitempty"`
+}
+
+// TLSTrustBundleName The unique name of the TLS trust bundle.
+type TLSTrustBundleName string
+
+// TLSTrustBundleReference is a type alias.
+//
+// +kubebuilder:validation:MinProperties=1
+// +kubebuilder:validation:MaxProperties=1
+type TLSTrustBundleReference struct {
+	// +optional
+	ID *string `json:"id,omitempty"`
+	// +optional
+	Name *TLSTrustBundleName `json:"name,omitempty"`
+}
+// TLSTrustBundleReferenceByID is a type alias.
+type TLSTrustBundleReferenceByID struct {
+}
+
+// TLSTrustBundleReferenceByName is a type alias.
+type TLSTrustBundleReferenceByName struct {
+	// The unique name of the TLS trust bundle.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=255
+	Name TLSTrustBundleName `json:"name,omitempty"`
+}
+
+// TLSVersionRange A range of TLS versions.
+type TLSVersionRange struct {
+	// Maximum TLS version to use.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=TLSv1.2;TLSv1.3
+	// +kubebuilder:default="TLSv1.3"
+	Max string `json:"max,omitempty"`
+	// Minimum TLS version to use.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=TLSv1.2;TLSv1.3
+	// +kubebuilder:default="TLSv1.2"
+	Min string `json:"min,omitempty"`
+}
 
 // VirtualClusterACLMode Configures whether or not ACL policies are enforced on
 // the gateway.
@@ -824,6 +1336,9 @@ func (u VirtualClusterAuthenticationScheme) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (u *VirtualClusterAuthenticationScheme) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling VirtualClusterAuthenticationScheme: nil receiver")
+	}
 	var probe struct {
 		Type string `json:"type"`
 	}
@@ -1029,6 +1544,9 @@ func (u VirtualClusterNamespaceIDSelector) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (u *VirtualClusterNamespaceIDSelector) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling VirtualClusterNamespaceIDSelector: nil receiver")
+	}
 	var probe struct {
 		Type string `json:"type"`
 	}
@@ -1163,6 +1681,9 @@ func (u VirtualClusterNamespaceTopicSelector) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (u *VirtualClusterNamespaceTopicSelector) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling VirtualClusterNamespaceTopicSelector: nil receiver")
+	}
 	var probe struct {
 		Type string `json:"type"`
 	}
@@ -1254,4 +1775,29 @@ type VirtualClusterNamespaceTopicSelectorGlob struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	Type string `json:"type,omitempty"`
+}
+
+// VirtualClusterReference is a type alias.
+//
+// +kubebuilder:validation:MinProperties=1
+// +kubebuilder:validation:MaxProperties=1
+type VirtualClusterReference struct {
+	// +optional
+	ID *string `json:"id,omitempty"`
+	// +optional
+	Name *VirtualClusterName `json:"name,omitempty"`
+}
+// VirtualClusterReferenceByID Reference a virtual cluster by its unique
+// identifier.
+type VirtualClusterReferenceByID struct {
+}
+
+// VirtualClusterReferenceByName Reference a virtual cluster by its unique name.
+type VirtualClusterReferenceByName struct {
+	// The name of the virtual cluster.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=255
+	Name VirtualClusterName `json:"name,omitempty"`
 }
