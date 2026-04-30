@@ -2579,6 +2579,63 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 			ExpectedError:  []error{nil},
 		},
 		{
+			Name: "TLS listener with duplicate TLSRoute kind in AllowedRoutes does not double-count",
+			Gateway: gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: gatewayv1.GroupVersion.String(),
+					Kind:       "Gateway",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gw",
+					Namespace: "test-namespace",
+				},
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
+						{
+							Name:     gatewayv1.SectionName("tls"),
+							Protocol: gwtypes.TLSProtocolType,
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Namespaces: &gwtypes.RouteNamespaces{
+									From: new(gwtypes.NamespacesFromSame),
+								},
+								Kinds: []gwtypes.RouteGroupKind{
+									{
+										Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+										Kind:  "TLSRoute",
+									},
+									{
+										Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+										Kind:  "TLSRoute",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			Objects: []client.Object{
+				&gwtypes.TLSRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "tls-route-1",
+						Namespace: "test-namespace",
+					},
+					Spec: gwtypes.TLSRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Name:  gwtypes.ObjectName("test-gw"),
+									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:  new(gwtypes.Kind("Gateway")),
+								},
+							},
+						},
+					},
+				},
+			},
+			ExpectedRoutes: []int32{1},
+			ExpectedError:  []error{nil},
+		},
+		{
 			Name: "TLS listener with namespace label selector matching TLSRoute",
 			Gateway: gwtypes.Gateway{
 				TypeMeta: metav1.TypeMeta{
