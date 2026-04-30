@@ -1043,66 +1043,41 @@ func countAttachedRoutesForGatewayListener(ctx context.Context, g *gwtypes.Gatew
 	}
 
 	kindsForProtocol, protocolSupported := supportedRoutesByProtocol()[listener.Protocol]
-	switch len(allowedRoutes.Kinds) {
-	// When the Kinds field is not specified, all route kinds supported for the listener's protocol are allowed.
-	case 0:
-		if protocolSupported {
-			for k := range kindsForProtocol {
-				// NOTE: Count other types of routes when they are supported.
-
-				switch k {
-				case "HTTPRoute":
-					httpRoutes, err := gatewayutils.ListHTTPRoutesForGateway(ctx, cl, g, opts...)
-					if err != nil {
-						return 0, fmt.Errorf(
-							"failed to list HTTPRoutes for Gateway %s when counting AttachedRoutes: %w",
-							client.ObjectKeyFromObject(g), err,
-						)
-					}
-					count += countAttachedHTTPRoutes(listener, httpRoutes)
-				case "TLSRoute":
-					tlsRoutes, err := gatewayutils.ListTLSRoutesForGateway(ctx, cl, g, opts...)
-					if err != nil {
-						return 0, fmt.Errorf(
-							"failed to list TLSRoutes for Gateway %s when counting AttachedRoutes: %w",
-							client.ObjectKeyFromObject(g), err,
-						)
-					}
-					count += countAttachedTLSRoutes(listener, tlsRoutes)
-				default:
-					return 0, fmt.Errorf("unsupported route kind: %s", k)
-				}
-			}
+	// Return early if the listener's protocol is not supported, as no routes can be attached.
+	if !protocolSupported {
+		return 0, nil
+	}
+	for k := range kindsForProtocol {
+		if len(allowedRoutes.Kinds) > 0 && lo.NoneBy(allowedRoutes.Kinds, func(gvk gatewayv1.RouteGroupKind) bool {
+			return gvk.Kind == k && (gvk.Group == nil || *gvk.Group == gatewayv1.Group(gatewayv1.GroupVersion.Group))
+		}) {
+			// If the listener's protocol supports a route kind but it's not included in the AllowedRoutes.Kinds,
+			// then the routes with the given kind is not supported so we skip it.
+			continue
 		}
-	// Otherwise, only the route kinds explicitly specified in the Kinds field and supported for the listener's protocol are allowed.
-	default:
-		for _, gvk := range allowedRoutes.Kinds {
-			if _, ok := kindsForProtocol[gvk.Kind]; !ok {
-				continue
+		// Otherwise, the kind of routes are supported and we need to count the attached routes of that kind for the listener.
+		switch k {
+		case "HTTPRoute":
+			httpRoutes, err := gatewayutils.ListHTTPRoutesForGateway(ctx, cl, g, opts...)
+			if err != nil {
+				return 0, fmt.Errorf(
+					"failed to list HTTPRoutes for Gateway %s when counting AttachedRoutes: %w",
+					client.ObjectKeyFromObject(g), err,
+				)
 			}
-			if gvk.Group == nil || *gvk.Group != gatewayv1.Group(gatewayv1.GroupVersion.Group) {
-				continue
+			count += countAttachedHTTPRoutes(listener, httpRoutes)
+		case "TLSRoute":
+			tlsRoutes, err := gatewayutils.ListTLSRoutesForGateway(ctx, cl, g, opts...)
+			if err != nil {
+				return 0, fmt.Errorf(
+					"failed to list TLSRoutes for Gateway %s when counting AttachedRoutes: %w",
+					client.ObjectKeyFromObject(g), err,
+				)
 			}
-			switch gvk.Kind {
-			case "HTTPRoute":
-				httpRoutes, err := gatewayutils.ListHTTPRoutesForGateway(ctx, cl, g, opts...)
-				if err != nil {
-					return 0, fmt.Errorf(
-						"failed to list HTTPRoutes for Gateway %s when counting AttachedRoutes: %w",
-						client.ObjectKeyFromObject(g), err,
-					)
-				}
-				count += countAttachedHTTPRoutes(listener, httpRoutes)
-			case "TLSRoute":
-				tlsRoutes, err := gatewayutils.ListTLSRoutesForGateway(ctx, cl, g, opts...)
-				if err != nil {
-					return 0, fmt.Errorf(
-						"failed to list TLSRoutes for Gateway %s when counting AttachedRoutes: %w",
-						client.ObjectKeyFromObject(g), err,
-					)
-				}
-				count += countAttachedTLSRoutes(listener, tlsRoutes)
-			}
+			count += countAttachedTLSRoutes(listener, tlsRoutes)
+		// Unsupported route kinds. Should be unreachable.
+		default:
+			return 0, fmt.Errorf("unsupported route kind: %s", k)
 		}
 	}
 
