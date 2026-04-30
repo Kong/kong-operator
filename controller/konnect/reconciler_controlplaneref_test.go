@@ -230,7 +230,7 @@ func TestHandleControlPlaneRef(t *testing.T) {
 			objects: []client.Object{
 				cpNotProgrammed,
 			},
-			expectResult: ctrl.Result{Requeue: true},
+			expectResult: ctrl.Result{},
 			expectError:  false,
 			updatedEntAssertions: []func(svc *configurationv1alpha1.KongService) (ok bool, message string){
 				func(svc *configurationv1alpha1.KongService) (bool, string) {

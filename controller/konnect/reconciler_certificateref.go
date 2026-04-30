@@ -91,7 +91,8 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 		); err != nil || !res.IsZero() {
 			return ctrl.Result{}, err
 		}
-		return ctrl.Result{Requeue: true}, nil
+		// Don't requeue. The referenced entity's changes will trigger the reconciliation.
+		return ctrl.Result{}, nil
 	}
 
 	// TODO: make this more generic.
