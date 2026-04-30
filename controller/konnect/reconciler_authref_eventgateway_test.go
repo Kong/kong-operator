@@ -12,10 +12,49 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
 func TestGetAPIAuthRef_EventGatewayChildren(t *testing.T) {
+	t.Run("KonnectEventDataPlaneCertificate", func(t *testing.T) {
+		testGetAPIAuthRefForEventGatewayChild(t, func(ref commonv1alpha1.ObjectRef) *konnectv1alpha1.KonnectEventDataPlaneCertificate {
+			return &konnectv1alpha1.KonnectEventDataPlaneCertificate{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "event-cert",
+					Namespace: "default",
+				},
+				Spec: konnectv1alpha1.KonnectEventDataPlaneCertificateSpec{
+					GatewayRef: ref,
+				},
+			}
+		})
+	})
+
+	t.Run("EventGatewayBackendCluster", func(t *testing.T) {
+		testGetAPIAuthRefForEventGatewayChild(t, func(ref commonv1alpha1.ObjectRef) *konnectv1alpha1.EventGatewayBackendCluster {
+			return &konnectv1alpha1.EventGatewayBackendCluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "backend-cluster",
+					Namespace: "default",
+				},
+				Spec: konnectv1alpha1.EventGatewayBackendClusterSpec{
+					GatewayRef: ref,
+				},
+			}
+		})
+	})
+}
+
+func testGetAPIAuthRefForEventGatewayChild[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](
+	t *testing.T,
+	builder func(commonv1alpha1.ObjectRef) TEnt,
+) {
+	t.Helper()
+
 	tests := []struct {
 		name string
 		ref  commonv1alpha1.ObjectRef
@@ -69,17 +108,8 @@ func TestGetAPIAuthRef_EventGatewayChildren(t *testing.T) {
 					},
 				).Build()
 
-			cert := &konnectv1alpha1.KonnectEventDataPlaneCertificate{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "event-cert",
-					Namespace: "default",
-				},
-				Spec: konnectv1alpha1.KonnectEventDataPlaneCertificateSpec{
-					GatewayRef: tc.ref,
-				},
-			}
-
-			nn, err := getAPIAuthRef(context.Background(), cl, cert)
+			ent := builder(tc.ref)
+			nn, err := getAPIAuthRef(t.Context(), cl, ent)
 			require.NoError(t, err)
 			require.Equal(t, types.NamespacedName{Name: "api-auth", Namespace: "default"}, nn)
 		})
