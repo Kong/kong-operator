@@ -329,7 +329,14 @@
   [#3206](https://github.com/Kong/kong-operator/pull/3206) [#3836](https://github.com/Kong/kong-operator/pull/3836)
 - Fix incorrect Konnect API used for target lookup
   [#3910](https://github.com/Kong/kong-operator/pull/3910) [#3938](https://github.com/Kong/kong-operator/pull/3938)
-  [#3754](https://github.com/Kong/kong-operator/pull/3754)
+- HybridGateway: fix `HTTPRoute` hostname intersection with `Gateway`
+  listeners to follow Gateway API semantics. Routes that specify no
+  hostnames now inherit the matching listeners' hostnames instead of being
+  dropped, wildcard hostnames (`*` and `*.example.com`) are supported and
+  intersected with listener hostnames, and wildcards no longer match the
+  bare apex domain. This enables the `HTTPRouteHostnameIntersection`
+  Gateway API conformance test for Hybrid mode.
+  [#4077](https://github.com/Kong/kong-operator/pull/4077)
 
 ## [v2.1.3]
 
