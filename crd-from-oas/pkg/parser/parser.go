@@ -55,8 +55,13 @@ type Property struct {
 	Properties           []*Property // For object types
 	AdditionalProperties *Property   // For map types
 
-	// Union types (oneOf)
+	// Union types (oneOf / anyOf)
 	OneOf []*Property // For oneOf types - each represents a variant
+	AnyOf []*Property // For anyOf types - each represents a variant
+
+	// Discriminator info (OAS discriminator object, or derived from variant type consts)
+	Discriminator        string            // discriminator.propertyName (e.g. "type")
+	DiscriminatorMapping map[string]string // discriminator value → ref name (e.g. "anonymous" → "VirtualClusterAuthenticationAnonymous")
 }
 
 // Schema represents a parsed OpenAPI schema.
@@ -70,7 +75,12 @@ type Schema struct {
 	Required     []string
 	Dependencies []*Dependency // Parent resource dependencies from path parameters
 	OneOf        []*Property   // Root-level oneOf variants (for union type schemas)
+	AnyOf        []*Property   // Root-level anyOf variants (for union type schemas without discriminator)
 	Items        *Property     // For array-type schemas, the items type
+
+	// Discriminator info from the OAS discriminator object.
+	Discriminator        string            // discriminator.propertyName (e.g. "type")
+	DiscriminatorMapping map[string]string // discriminator value → ref name
 
 	// Map type support
 	AdditionalProperties *Property // For object types with additionalProperties (map value schema)
@@ -515,6 +525,10 @@ func (p *Parser) collectReferencedSchemas(schema *Schema, refs map[string]bool) 
 	for _, variant := range schema.OneOf {
 		p.collectRefsFromProperty(variant, refs)
 	}
+	// Also collect refs from root-level anyOf variants
+	for _, variant := range schema.AnyOf {
+		p.collectRefsFromProperty(variant, refs)
+	}
 }
 
 func (p *Parser) collectRefsFromProperty(prop *Property, refs map[string]bool) {
@@ -536,6 +550,13 @@ func (p *Parser) collectRefsFromProperty(prop *Property, refs map[string]bool) {
 	}
 	// Collect refs from oneOf variants
 	for _, variant := range prop.OneOf {
+		if variant.RefName != "" {
+			refs[variant.RefName] = true
+		}
+		p.collectRefsFromProperty(variant, refs)
+	}
+	// Collect refs from anyOf variants
+	for _, variant := range prop.AnyOf {
 		if variant.RefName != "" {
 			refs[variant.RefName] = true
 		}
@@ -578,6 +599,29 @@ func (p *Parser) parseSchema(name string, schemaValue *openapi3.Schema) *Schema 
 			}
 			variantProp := ParseProperty(variantName, oneOfRef, 0, p.visited)
 			schema.OneOf = append(schema.OneOf, variantProp)
+		}
+	}
+
+	// Handle root-level anyOf (union type schemas without discriminator)
+	if len(schemaValue.AnyOf) > 0 {
+		for _, anyOfRef := range schemaValue.AnyOf {
+			variantName := fmt.Sprintf("variant%d", len(schema.AnyOf))
+			if anyOfRef.Ref != "" {
+				variantName = extractRefName(anyOfRef.Ref)
+			}
+			variantProp := ParseProperty(variantName, anyOfRef, 0, p.visited)
+			schema.AnyOf = append(schema.AnyOf, variantProp)
+		}
+	}
+
+	// Capture discriminator info from the OAS discriminator object.
+	if schemaValue.Discriminator != nil {
+		schema.Discriminator = schemaValue.Discriminator.PropertyName
+		if len(schemaValue.Discriminator.Mapping) > 0 {
+			schema.DiscriminatorMapping = make(map[string]string, len(schemaValue.Discriminator.Mapping))
+			for value, mappingRef := range schemaValue.Discriminator.Mapping {
+				schema.DiscriminatorMapping[value] = extractRefName(mappingRef.Ref)
+			}
 		}
 	}
 

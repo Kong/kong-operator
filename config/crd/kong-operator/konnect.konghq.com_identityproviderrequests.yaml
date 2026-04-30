@@ -67,7 +67,7 @@ spec:
                       IdentityProviderRequestConfig represents a union type for config.
                       Only one of the fields should be set based on the Type.
                     properties:
-                      oidc:
+                      OIDC:
                         description: OIDC configuration.
                         properties:
                           claim_mappings:
@@ -127,7 +127,7 @@ spec:
                         - client_id
                         - issuer_url
                         type: object
-                      saml:
+                      SAML:
                         description: SAML configuration.
                         properties:
                           idp_metadata_url:

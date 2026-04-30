@@ -125,3 +125,55 @@ type KonnectEntityRef struct {
 	// +kubebuilder:validation:MaxLength=256
 	ID string ` + "`json:\"id,omitempty\"`" + `
 }`
+
+// flattenSDKUnionsHelper is a runtime helper used by the per-entity
+// marshalSDKOpsPayload methods to bridge the wire-shape gap between the
+// CRD and the Konnect SDK.
+//
+// CRD storage uses the nested wrapper shape that mirrors the Go struct
+// layout for discriminated unions:
+//
+//	{"type": "X", "X": {... variant fields ...}}
+//
+// The Konnect SDK request types instead expect the flat shape from the
+// OpenAPI spec, with the discriminator and variant fields as siblings:
+//
+//	{"type": "X", ... variant fields ...}
+//
+// flattenSDKUnions walks a JSON-decoded value tree and rewrites every
+// object matching the nested pattern into the flat one. The walk is
+// recursive so it also fixes unions buried inside arrays or under other
+// nested properties.
+const flattenSDKUnionsHelper = `// flattenSDKUnions recursively flattens nested discriminated-union shapes
+// {"type": "X", "X": {...}} into the flat shape {"type": "X", ...} expected
+// by the Konnect SDK request types.
+func flattenSDKUnions(v any) any {
+	switch x := v.(type) {
+	case map[string]any:
+		for k, val := range x {
+			x[k] = flattenSDKUnions(val)
+		}
+		t, ok := x["type"].(string)
+		if !ok || t == "" {
+			return x
+		}
+		inner, ok := x[t].(map[string]any)
+		if !ok {
+			return x
+		}
+		delete(x, t)
+		for k, vv := range inner {
+			if k == "type" {
+				continue
+			}
+			x[k] = vv
+		}
+		return x
+	case []any:
+		for i, val := range x {
+			x[i] = flattenSDKUnions(val)
+		}
+		return x
+	}
+	return v
+}`

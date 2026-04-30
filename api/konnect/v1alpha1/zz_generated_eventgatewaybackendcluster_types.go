@@ -3,6 +3,8 @@
 package v1alpha1
 
 import (
+	"encoding/json"
+	"fmt"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 )
@@ -154,7 +156,7 @@ type EventGatewayBackendClusterAuthentication struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=Anonymous;SaslPlain;SaslScram
+	// +kubebuilder:validation:Enum=anonymous;sasl_plain;sasl_scram
 	Type EventGatewayBackendClusterAuthenticationType `json:"type,omitempty"`
 
 	// Anonymous configuration.
@@ -164,11 +166,11 @@ type EventGatewayBackendClusterAuthentication struct {
 	// SaslPlain configuration.
 	//
 	// +optional
-	SaslPlain *BackendClusterAuthenticationSaslPlain `json:"saslplain,omitempty"`
+	SaslPlain *BackendClusterAuthenticationSaslPlain `json:"sasl_plain,omitempty"`
 	// SaslScram configuration.
 	//
 	// +optional
-	SaslScram *BackendClusterAuthenticationSaslScram `json:"saslscram,omitempty"`
+	SaslScram *BackendClusterAuthenticationSaslScram `json:"sasl_scram,omitempty"`
 }
 
 // EventGatewayBackendClusterAuthenticationType represents the type of authentication.
@@ -176,7 +178,89 @@ type EventGatewayBackendClusterAuthenticationType string
 
 // EventGatewayBackendClusterAuthenticationType values.
 const (
-	EventGatewayBackendClusterAuthenticationTypeAnonymous EventGatewayBackendClusterAuthenticationType = "Anonymous"
-	EventGatewayBackendClusterAuthenticationTypeSaslPlain EventGatewayBackendClusterAuthenticationType = "SaslPlain"
-	EventGatewayBackendClusterAuthenticationTypeSaslScram EventGatewayBackendClusterAuthenticationType = "SaslScram"
+	EventGatewayBackendClusterAuthenticationTypeAnonymous EventGatewayBackendClusterAuthenticationType = "anonymous"
+	EventGatewayBackendClusterAuthenticationTypeSaslPlain EventGatewayBackendClusterAuthenticationType = "sasl_plain"
+	EventGatewayBackendClusterAuthenticationTypeSaslScram EventGatewayBackendClusterAuthenticationType = "sasl_scram"
 )
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayBackendClusterAuthentication) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, _ := json.Marshal(string(u.Type))
+	m["type"] = typeBytes
+	switch u.Type {
+	case "anonymous":
+		if u.Anonymous != nil {
+			raw, err := json.Marshal(u.Anonymous)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayBackendClusterAuthentication anonymous: %w", err)
+			}
+			m["anonymous"] = raw
+		}
+	case "sasl_plain":
+		if u.SaslPlain != nil {
+			raw, err := json.Marshal(u.SaslPlain)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayBackendClusterAuthentication sasl_plain: %w", err)
+			}
+			m["sasl_plain"] = raw
+		}
+	case "sasl_scram":
+		if u.SaslScram != nil {
+			raw, err := json.Marshal(u.SaslScram)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayBackendClusterAuthentication sasl_scram: %w", err)
+			}
+			m["sasl_scram"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayBackendClusterAuthentication) UnmarshalJSON(data []byte) error {
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = EventGatewayBackendClusterAuthenticationType(probe.Type)
+	switch probe.Type {
+	case "anonymous":
+		payload, ok := raw["anonymous"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val BackendClusterAuthenticationAnonymous
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayBackendClusterAuthentication anonymous: %w", err)
+		}
+		u.Anonymous = &val
+	case "sasl_plain":
+		payload, ok := raw["sasl_plain"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val BackendClusterAuthenticationSaslPlain
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayBackendClusterAuthentication sasl_plain: %w", err)
+		}
+		u.SaslPlain = &val
+	case "sasl_scram":
+		payload, ok := raw["sasl_scram"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val BackendClusterAuthenticationSaslScram
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayBackendClusterAuthentication sasl_scram: %w", err)
+		}
+		u.SaslScram = &val
+	}
+	return nil
+}

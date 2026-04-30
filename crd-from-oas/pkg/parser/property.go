@@ -112,5 +112,28 @@ func ParseProperty(name string, schemaRef *openapi3.SchemaRef, depth int, visite
 		}
 	}
 
+	// Handle anyOf (union types without discriminator).
+	if len(schemaValue.AnyOf) > 0 {
+		for _, anyOfRef := range schemaValue.AnyOf {
+			variantName := "Variant"
+			if anyOfRef.Ref != "" {
+				variantName = extractRefName(anyOfRef.Ref)
+			}
+			variantProp := ParseProperty(variantName, anyOfRef, depth+1, visited)
+			prop.AnyOf = append(prop.AnyOf, variantProp)
+		}
+	}
+
+	// Capture discriminator info.
+	if schemaValue.Discriminator != nil {
+		prop.Discriminator = schemaValue.Discriminator.PropertyName
+		if len(schemaValue.Discriminator.Mapping) > 0 {
+			prop.DiscriminatorMapping = make(map[string]string, len(schemaValue.Discriminator.Mapping))
+			for value, mappingRef := range schemaValue.Discriminator.Mapping {
+				prop.DiscriminatorMapping[value] = extractRefName(mappingRef.Ref)
+			}
+		}
+	}
+
 	return prop
 }
