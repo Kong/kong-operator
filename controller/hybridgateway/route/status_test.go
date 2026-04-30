@@ -1516,6 +1516,13 @@ func Test_FilterListenersByHostnames(t *testing.T) {
 			wantLen:   1,
 			wantCond:  false,
 		},
+		{
+			name:      "empty route hostnames match all listeners",
+			listeners: []gwtypes.Listener{listenerMismatch, listenerExact},
+			hostnames: []gwtypes.Hostname{},
+			wantLen:   2,
+			wantCond:  false,
+		},
 	}
 
 	for _, tt := range tests {

@@ -56,10 +56,40 @@ func TestHostnameIntersection(t *testing.T) {
 			expected:         "web.example.com",
 		},
 		{
+			name:             "wildcard does not match apex",
+			listenerHostname: "*.example.com",
+			routeHostname:    "example.com",
+			expected:         "",
+		},
+		{
 			name:             "both wildcards - no intersection",
 			listenerHostname: "*.example.com",
 			routeHostname:    "*.other.com",
 			expected:         "",
+		},
+		{
+			name:             "wildcard overlap returns more specific",
+			listenerHostname: "*.com",
+			routeHostname:    "*.example.com",
+			expected:         "*.example.com",
+		},
+		{
+			name:             "match-any listener",
+			listenerHostname: "*",
+			routeHostname:    "api.example.com",
+			expected:         "api.example.com",
+		},
+		{
+			name:             "match-any route",
+			listenerHostname: "api.example.com",
+			routeHostname:    "*",
+			expected:         "api.example.com",
+		},
+		{
+			name:             "both match-any",
+			listenerHostname: "*",
+			routeHostname:    "*",
+			expected:         "*",
 		},
 	}
 

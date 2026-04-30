@@ -6,30 +6,83 @@ import "strings"
 // Returns the most specific hostname that satisfies both constraints, or an empty string if
 // there is no intersection.
 func HostnameIntersection(listenerHostname, routeHostname string) string {
-	// Exact match - return the common hostname
-	if listenerHostname == routeHostname {
+	// Treat empty hostnames as the special match-any "*".
+	if listenerHostname == "" {
 		return routeHostname
 	}
+	if routeHostname == "" {
+		return listenerHostname
+	}
 
-	// Listener is wildcard (*.example.com), route is specific (api.example.com)
-	if strings.HasPrefix(listenerHostname, "*.") {
-		wildcardDomain := listenerHostname[1:] // Remove "*"
+	if listenerHostname == routeHostname {
+		return listenerHostname
+	}
 
-		// Route hostname must end with the wildcard domain
-		if strings.HasSuffix(routeHostname, wildcardDomain) {
-			return routeHostname // Return the more specific route hostname
+	// Listener wildcard, route precise.
+	if isWildcard(listenerHostname) && isPrecise(routeHostname) {
+		if wildcardMatches(listenerHostname, routeHostname) {
+			return routeHostname
 		}
 	}
 
-	// Route is wildcard (*.example.com), listener is specific (api.example.com)
-	if strings.HasPrefix(routeHostname, "*.") {
-		wildcardDomain := routeHostname[1:] // Remove "*"
-
-		// Listener hostname must end with the wildcard domain
-		if strings.HasSuffix(listenerHostname, wildcardDomain) {
-			return listenerHostname // Return the more specific listener hostname
+	// Route wildcard, listener precise.
+	if isWildcard(routeHostname) && isPrecise(listenerHostname) {
+		if wildcardMatches(routeHostname, listenerHostname) {
+			return listenerHostname
 		}
 	}
 
-	return "" // No intersection
+	// Wildcard vs wildcard overlap: return the more specific wildcard if they intersect.
+	if isWildcard(listenerHostname) && isWildcard(routeHostname) {
+		if wildcardOverlaps(listenerHostname, routeHostname) {
+			return moreSpecificWildcard(listenerHostname, routeHostname)
+		}
+	}
+
+	return ""
+}
+
+func isWildcard(hostname string) bool {
+	return hostname == "*" || strings.HasPrefix(hostname, "*.")
+}
+
+func isPrecise(hostname string) bool {
+	return hostname != "" && !isWildcard(hostname)
+}
+
+func wildcardMatches(wildcard, hostname string) bool {
+	if wildcard == "*" {
+		return hostname != ""
+	}
+	if !strings.HasPrefix(wildcard, "*.") {
+		return false
+	}
+	suffix := wildcard[1:] // includes leading dot
+	if !strings.HasSuffix(hostname, suffix) {
+		return false
+	}
+	// Ensure at least one label exists before the wildcard suffix.
+	return len(hostname) > len(suffix)
+}
+
+func wildcardOverlaps(a, b string) bool {
+	if a == "*" || b == "*" {
+		return true
+	}
+	suffixA := a[1:]
+	suffixB := b[1:]
+	return strings.HasSuffix(suffixA, suffixB) || strings.HasSuffix(suffixB, suffixA)
+}
+
+func moreSpecificWildcard(a, b string) string {
+	if a == "*" {
+		return b
+	}
+	if b == "*" {
+		return a
+	}
+	if len(a) >= len(b) {
+		return a
+	}
+	return b
 }
