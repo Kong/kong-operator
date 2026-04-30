@@ -50,7 +50,7 @@
   for uploading configuration for tracing:
   - `X-Kic-Konnect-Sync-Instance-Id` for instance ID of Konnect config synchronizer.
     It is set to use the `ControlPlane`'s instance ID.
-  - `X-Kic-Konnect-Sync-Serial-Number` for serial number ot config sync round.
+  - `X-Kic-Konnect-Sync-Serial-Number` for serial number of config sync round.
   - `X-Kic-Konnect-Sync-Start-Timestamp` for the timestamp of starting the config sync round.
   - `X-Kic-Konnect-Sync-Round-Id` for the ID to mark the config sync round.
   [#4062](https://github.com/Kong/kong-operator/pull/4062)
