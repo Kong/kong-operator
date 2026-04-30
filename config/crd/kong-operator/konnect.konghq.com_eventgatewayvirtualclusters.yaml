@@ -90,23 +90,9 @@ spec:
                       properties:
                         anonymous:
                           description: Anonymous configuration.
-                          properties:
-                            type:
-                              maxLength: 253
-                              minLength: 1
-                              type: string
-                          required:
-                          - type
                           type: object
                         client_certificate:
                           description: ClientCertificate configuration.
-                          properties:
-                            type:
-                              maxLength: 253
-                              minLength: 1
-                              type: string
-                          required:
-                          - type
                           type: object
                         oauth_bearer:
                           description: OauthBearer configuration.
@@ -176,10 +162,6 @@ spec:
                               maxLength: 253
                               minLength: 1
                               type: string
-                            type:
-                              maxLength: 253
-                              minLength: 1
-                              type: string
                             validate:
                               description: Validation rules.
                               properties:
@@ -207,7 +189,6 @@ spec:
                               type: object
                           required:
                           - mediation
-                          - type
                           type: object
                         sasl_plain:
                           description: SaslPlain configuration.
@@ -254,13 +235,8 @@ spec:
                                 - username
                                 type: object
                               type: array
-                            type:
-                              maxLength: 253
-                              minLength: 1
-                              type: string
                           required:
                           - mediation
-                          - type
                           type: object
                         sasl_scram:
                           description: SaslScram configuration.
@@ -273,13 +249,8 @@ spec:
                               maxLength: 253
                               minLength: 1
                               type: string
-                            type:
-                              maxLength: 253
-                              minLength: 1
-                              type: string
                           required:
                           - algorithm
-                          - type
                           type: object
                         type:
                           description: Type designates the type of configuration.
@@ -380,12 +351,6 @@ spec:
                                         - value
                                         type: object
                                       type: array
-                                    type:
-                                      maxLength: 253
-                                      minLength: 1
-                                      type: string
-                                  required:
-                                  - type
                                   type: object
                                 glob:
                                   description: Glob configuration.
@@ -397,13 +362,8 @@ spec:
                                       minLength: 1
                                       pattern: ^[A-Za-z0-9._?*-]+$
                                       type: string
-                                    type:
-                                      maxLength: 253
-                                      minLength: 1
-                                      type: string
                                   required:
                                   - glob
-                                  - type
                                   type: object
                                 type:
                                   description: Type designates the type of configuration.
@@ -460,12 +420,6 @@ spec:
                                         - backend
                                         type: object
                                       type: array
-                                    type:
-                                      maxLength: 253
-                                      minLength: 1
-                                      type: string
-                                  required:
-                                  - type
                                   type: object
                                 glob:
                                   description: Glob configuration.
@@ -492,13 +446,8 @@ spec:
                                       minLength: 1
                                       pattern: ^[A-Za-z0-9._?*-]+$
                                       type: string
-                                    type:
-                                      maxLength: 253
-                                      minLength: 1
-                                      type: string
                                   required:
                                   - glob
-                                  - type
                                   type: object
                                 type:
                                   description: Type designates the type of configuration.
