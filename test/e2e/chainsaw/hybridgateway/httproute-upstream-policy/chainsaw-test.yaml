@@ -130,7 +130,7 @@ spec:
 
     # Step 11: Create KongUpstreamPolicy.
     - name: Create-kong-upstream-policy
-      description: Create KongUpstreamPolicy with algorithm=least-connections.
+      description: Create KongUpstreamPolicy with consistent-hashing, hashOn, and healthchecks.
       try:
         - apply:
             file: 01-kong-upstream-policy.yaml
@@ -142,8 +142,26 @@ spec:
                 namespace: ($namespace)
                 name: test-upstream-policy
               spec:
-                algorithm: least-connections
+                algorithm: consistent-hashing
                 slots: 100
+                hashOn:
+                  input: ip
+                healthchecks:
+                  active:
+                    type: tcp
+                    concurrency: 20
+                    healthy:
+                      interval: 5
+                      successes: 5
+                    unhealthy:
+                      timeouts: 5
+                      interval: 10
+                  passive:
+                    type: http
+                    healthy:
+                      successes: 5
+                    unhealthy:
+                      timeouts: 10
 
     # Step 12: Create Service with upstream-policy annotation.
     - name: Create-service-with-policy
@@ -205,9 +223,9 @@ spec:
       use:
         template: ../../common/_step_templates/assert-kongUpstream.yaml
 
-    # Step 17: Verify KongUpstream has policy fields (algorithm, slots).
+    # Step 17: Verify KongUpstream has policy fields (algorithm, slots, hashOn, healthchecks).
     - name: Verify-upstream-policy-applied
-      description: Verify KongUpstream spec has algorithm=least-connections and slots=100.
+      description: Verify KongUpstream spec has consistent-hashing, slots=100, hashOn=ip, healthchecks.
       try:
         - script:
             env:
@@ -222,9 +240,27 @@ spec:
               - name: HTTP_ROUTE_NAMESPACE
                 value: ($http_route_namespace)
               - name: EXPECTED_ALGORITHM
-                value: "least-connections"
+                value: "consistent-hashing"
               - name: EXPECTED_SLOTS
                 value: "100"
+              - name: EXPECTED_HASHON_INPUT
+                value: "ip"
+              - name: EXPECTED_HC_ACTIVE_TYPE
+                value: "tcp"
+              - name: EXPECTED_HC_ACTIVE_CONCURRENCY
+                value: "20"
+              - name: EXPECTED_HC_ACTIVE_HEALTHY_INTERVAL
+                value: "5"
+              - name: EXPECTED_HC_ACTIVE_UNHEALTHY_TIMEOUTS
+                value: "5"
+              - name: EXPECTED_HC_ACTIVE_UNHEALTHY_INTERVAL
+                value: "10"
+              - name: EXPECTED_HC_PASSIVE_TYPE
+                value: "http"
+              - name: EXPECTED_HC_PASSIVE_HEALTHY_SUCCESSES
+                value: "5"
+              - name: EXPECTED_HC_PASSIVE_UNHEALTHY_TIMEOUTS
+                value: "10"
             content: |
               bash ../../common/scripts/verify_kong_upstream_policy.sh
 
@@ -244,6 +280,19 @@ spec:
       description: Verify HTTP traffic with upstream policy.
       use:
         template: ../../common/_step_templates/verify-http-traffic-from-host.yaml
+      bindings:
+        - name: route_path
+          value: "/echo"
+        - name: listener_http_port
+          value: "80"
+        - name: host_header
+          value: ($fqdn)
+
+    # Step 19: Verify HTTP traffic works with policy applied.
+    - name: Verify-HTTP-traffic-from-host-to-same-upstream
+      description: Verify HTTP traffic with upstream policy.
+      use:
+        template: ../../common/_step_templates/verify-http-traffic-from-host-to-same-upstream.yaml
       bindings:
         - name: route_path
           value: "/echo"
