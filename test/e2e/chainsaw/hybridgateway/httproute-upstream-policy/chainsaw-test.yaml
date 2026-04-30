@@ -223,6 +223,37 @@ spec:
       use:
         template: ../../common/_step_templates/assert-kongUpstream.yaml
 
+    # Step 16.1: Assert KongUpstream has the correct specs.
+    - name: Assert-kong-upstream-spec
+      description: Assert KongUpstream spec.
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongUpstream
+              metadata:
+                namespace: ($namespace)
+              spec:
+                  algorithm: consistent-hashing
+                  slots: 100
+                  hash_on: ip
+                  healthchecks:
+                    active:
+                      type: tcp
+                      concurrency: 20
+                      healthy:
+                        interval: 5
+                        successes: 5
+                      unhealthy:
+                        timeouts: 5
+                        interval: 10
+                    passive:
+                      type: http
+                      healthy:
+                        successes: 5
+                      unhealthy:
+                        timeouts: 10
+
     # Step 17: Verify KongUpstream has policy fields (algorithm, slots, hashOn, healthchecks).
     - name: Verify-upstream-policy-applied
       description: Verify KongUpstream spec has consistent-hashing, slots=100, hashOn=ip, healthchecks.
