@@ -3,6 +3,8 @@ package generator
 import (
 	"fmt"
 	"go/format"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -582,6 +584,37 @@ func TestGenerateCRDFuncs_GeneratesKonnectFuncs(t *testing.T) {
 		assert.Contains(t, content, `return obj.Spec.PortalRef`)
 	})
 
+	t.Run("event gateway child entities get event gateway ref accessor alias", func(t *testing.T) {
+		g := NewGenerator(Config{
+			APIGroup:   "konnect.konghq.com",
+			APIVersion: "v1alpha1",
+			CommonTypes: &config.CommonTypesConfig{
+				ObjectRef: &config.ObjectRefConfig{
+					Import: &config.ImportConfig{
+						Path:  "github.com/kong/kong-operator/v2/api/common/v1alpha1",
+						Alias: "commonv1alpha1",
+					},
+				},
+			},
+		})
+
+		schemaWithDependency := &parser.Schema{
+			Name: "CreateEventGatewayDataPlaneCertificate",
+			Dependencies: []*parser.Dependency{{
+				EntityName:         "Gateway",
+				AccessorEntityName: "EventGateway",
+				FieldName:          "GatewayRef",
+				JSONName:           "gateway_ref",
+			}},
+		}
+
+		content, err := g.generateCRDFuncs("CreateEventGatewayDataPlaneCertificate", schemaWithDependency)
+		require.NoError(t, err)
+		assert.Contains(t, content, `func (obj *EventGatewayDataPlaneCertificate) GetGatewayRef() commonv1alpha1.ObjectRef {`)
+		assert.Contains(t, content, `func (obj *EventGatewayDataPlaneCertificate) GetEventGatewayRef() commonv1alpha1.ObjectRef {`)
+		assert.Contains(t, content, `return obj.Spec.GatewayRef`)
+	})
+
 	t.Run("root ref accessor uses first dependency", func(t *testing.T) {
 		g := NewGenerator(Config{
 			APIGroup:   "x-konnect.konghq.com",
@@ -729,6 +762,60 @@ func TestGenerate_GroupVersionInfo(t *testing.T) {
 	})
 }
 
+func TestGenerate_OmitsUnusedArrayRefAliases(t *testing.T) {
+	// EntityScopes is a $ref whose schema is type:array. goType inlines it as
+	// []string so the alias is never referenced — it must not be emitted.
+	// EntityConfig is a $ref whose schema is type:object — it IS referenced by
+	// name and must be emitted, along with any named refs it transitively uses.
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+
+	files, err := g.Generate(&parser.ParsedSpec{
+		RequestBodies: map[string]*parser.Schema{
+			"CreateEntity": {
+				Name: "CreateEntity",
+				Properties: []*parser.Property{
+					{
+						Name:    "config",
+						RefName: "EntityConfig",
+						Type:    "object",
+					},
+					{
+						Name:    "scopes",
+						RefName: "EntityScopes",
+						Type:    "array",
+						Items:   &parser.Property{Type: "string"},
+					},
+				},
+			},
+		},
+		Schemas: map[string]*parser.Schema{
+			"EntityConfig": {
+				Name: "EntityConfig",
+				Properties: []*parser.Property{
+					{Name: "name", Type: "string"},
+				},
+			},
+			"EntityScopes": {
+				Name:  "EntityScopes",
+				Type:  "array",
+				Items: &parser.Property{Type: "string"},
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	var schemaContent string
+	for _, f := range files {
+		if f.Name == "schema_types.go" {
+			schemaContent = f.Content
+			break
+		}
+	}
+	require.NotEmpty(t, schemaContent, "schema_types.go should be generated")
+	assert.Contains(t, schemaContent, "type EntityConfig struct")
+	assert.NotContains(t, schemaContent, "EntityScopes", "array-typed $ref alias must not be emitted")
+}
+
 func TestGenerateSchemaTypes_AddsKubebuilderTags(t *testing.T) {
 	g := NewGenerator(Config{APIVersion: "v1alpha1"})
 	parsed := &parser.ParsedSpec{
@@ -745,11 +832,103 @@ func TestGenerateSchemaTypes_AddsKubebuilderTags(t *testing.T) {
 		},
 	}
 
-	content := g.generateSchemaTypes(map[string]bool{"CreateDcrProviderRequestOkta": true}, parsed)
+	content := g.generateSchemaTypes(map[string]bool{"CreateDcrProviderRequestOkta": true}, parsed, nil)
 
 	assert.Contains(t, content, "// +optional")
 	assert.Contains(t, content, fmt.Sprintf("// +kubebuilder:validation:MaxLength=%d", defaultMaxLength))
 	assert.Contains(t, content, "ProviderType string `json:\"provider_type,omitempty\"`")
+}
+
+func TestBuildSchemaTypeFieldConfig_NestedInlineObject(t *testing.T) {
+	certProp := &parser.Property{Name: "certificate", Type: "string", Required: true}
+	ciProp := &parser.Property{
+		Name: "client_identity", Type: "object",
+		Properties: []*parser.Property{certProp},
+	}
+	tlsProp := &parser.Property{Name: "tls", Type: "object", RefName: "BackendClusterTLS"}
+	entitySchema := &parser.Schema{
+		Name:       "CreateEventGatewayBackendCluster",
+		Properties: []*parser.Property{tlsProp},
+	}
+	bctSchema := &parser.Schema{
+		Name:       "BackendClusterTLS",
+		Properties: []*parser.Property{ciProp},
+	}
+
+	parsed := &parser.ParsedSpec{
+		RequestBodies: map[string]*parser.Schema{
+			"CreateEventGatewayBackendCluster": entitySchema,
+		},
+		Schemas: map[string]*parser.Schema{
+			"BackendClusterTLS": bctSchema,
+		},
+	}
+
+	fieldCfg := &config.Config{
+		Entities: map[string]*config.EntityConfig{
+			"EventGatewayBackendCluster": {
+				Fields: map[string]*config.FieldConfig{
+					"tls": {
+						Fields: map[string]*config.FieldConfig{
+							"client_identity": {
+								Fields: map[string]*config.FieldConfig{
+									"certificate": {
+										Validations: []string{"+kubebuilder:validation:MaxLength=1024"},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	gen := NewGenerator(Config{APIVersion: "v1alpha1", FieldConfig: fieldCfg})
+	stfc := gen.buildSchemaTypeFieldConfig(parsed)
+	require.NotNil(t, stfc)
+	vals := stfc.GetFieldValidations("ClientIdentity", "certificate")
+	assert.Equal(t, []string{"+kubebuilder:validation:MaxLength=1024"}, vals)
+}
+
+func TestGenerateSchemaTypes_NestedInlineOverride(t *testing.T) {
+	certProp := &parser.Property{Name: "certificate", Type: "string", Required: true}
+	ciProp := &parser.Property{
+		Name: "client_identity", Type: "object",
+		Properties: []*parser.Property{certProp},
+	}
+	bctSchema := &parser.Schema{
+		Name:       "BackendClusterTLS",
+		Properties: []*parser.Property{ciProp},
+	}
+
+	parsed := &parser.ParsedSpec{
+		RequestBodies: map[string]*parser.Schema{},
+		Schemas:       map[string]*parser.Schema{"BackendClusterTLS": bctSchema},
+	}
+
+	schemaTypeFieldConfig := &config.Config{
+		Entities: map[string]*config.EntityConfig{
+			"ClientIdentity": {
+				Fields: map[string]*config.FieldConfig{
+					"certificate": {
+						Validations: []string{"+kubebuilder:validation:MaxLength=1024"},
+					},
+				},
+			},
+		},
+	}
+
+	gen := NewGenerator(Config{APIVersion: "v1alpha1"})
+	content := gen.generateSchemaTypes(
+		map[string]bool{"BackendClusterTLS": true},
+		parsed,
+		schemaTypeFieldConfig,
+	)
+	assert.Contains(t, content, "// +kubebuilder:validation:MaxLength=1024",
+		"user-provided MaxLength should appear in generated type")
+	assert.NotContains(t, content, "// +kubebuilder:validation:MaxLength=253",
+		"default MaxLength should be replaced by user-provided override")
 }
 
 func TestObjectRefNamespaced(t *testing.T) {
@@ -1869,7 +2048,7 @@ func TestGenerateSchemaTypes_MapWithValueTypes(t *testing.T) {
 		"LabelsUpdate": true,
 	}
 
-	content := g.generateSchemaTypes(refs, parsed)
+	content := g.generateSchemaTypes(refs, parsed, nil)
 
 	// Labels should generate a value type with native markers, then a map type using it
 	assert.Contains(t, content, "type LabelsValue string")
@@ -1906,7 +2085,7 @@ func TestGenerateSchemaTypes_NoValueTypeForNonMapTypes(t *testing.T) {
 		"GatewayName": true,
 	}
 
-	content := g.generateSchemaTypes(refs, parsed)
+	content := g.generateSchemaTypes(refs, parsed, nil)
 
 	assert.Contains(t, content, "type GatewayName string")
 	assert.NotContains(t, content, "Value")
@@ -2136,7 +2315,7 @@ func TestGenerateOpsCreate_NonRootEntityWithParentTypeOverride(t *testing.T) {
 	assert.True(t, info.NeedsClient)
 	assert.Contains(t, file.Content, `"sigs.k8s.io/controller-runtime/pkg/client"`)
 	assert.Contains(t, file.Content, "cl client.Client")
-	assert.Contains(t, file.Content, "kongEventDataPlaneCertificateCreateRequest(ctx, cl, obj)")
+	assert.Contains(t, file.Content, "obj.ToCreateEventGatewayDataPlaneCertificateRequest(ctx, cl)")
 	assert.Contains(t, file.Content, "sdk.CreateEventGatewayDataPlaneCertificate(ctx, parentID, req)")
 }
 
@@ -2251,6 +2430,77 @@ func TestGenerateEntityOpsFile_UsesConfiguredSDKInterface(t *testing.T) {
 	assert.NotNil(t, res.SDKFactoryInfo)
 	assert.Equal(t, "PortalPagesSDK", res.SDKFactoryInfo.SDKInterfaceTypeName)
 	assert.Equal(t, "PortalPages", res.SDKFactoryInfo.SDKFieldName)
+}
+
+func TestGenerateEntityOpsFile_GetForUIDUsesUIDTagFilter(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"PortalPage": {IsRoot: false},
+		},
+	})
+
+	schema := &parser.Schema{
+		ListOperationID: "list-portal-pages",
+		ListTags:        []string{"Pages"},
+		Dependencies: []*parser.Dependency{
+			{ParamName: "portalId", EntityName: "Portal"},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		UseUIDTagFilter: true,
+		SDK: &config.OpSDKConfig{
+			Interface: "github.com/Kong/sdk-konnect-go.PortalPagesSDK",
+			FieldName: "PortalPages",
+		},
+	}
+
+	res, err := g.generateEntityOpsFile("PortalPage", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, res.File)
+	require.NotNil(t, res.GetForUIDInfo)
+
+	assert.Contains(t, res.File.Content, "Tags: new(UIDLabelForObject(obj))")
+	assert.Contains(t, res.File.Content, "PortalID: parentID")
+	assert.Contains(t, res.File.Content, "switch id := any(entry.GetID()).(type)")
+	assert.NotContains(t, res.File.Content, "entry.GetLabels()[KubernetesUIDLabelKey]")
+}
+
+func TestGenerateEntityOpsFile_GetForUIDUsesUIDTagFilter_Golden(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/configuration/v1alpha1",
+		APIGroupPackageAlias: "configurationv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"KongService": {IsRoot: false, ParentEntityType: "KonnectGatewayControlPlane"},
+		},
+	})
+
+	schema := &parser.Schema{
+		ListOperationID: "list-service",
+		ListTags:        []string{"Services"},
+		Dependencies: []*parser.Dependency{
+			{ParamName: "controlPlaneId", EntityName: "ControlPlane"},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		UseUIDTagFilter: true,
+		SDK: &config.OpSDKConfig{
+			Interface: "github.com/Kong/sdk-konnect-go.ServicesSDK",
+			FieldName: "Services",
+		},
+	}
+
+	res, err := g.generateEntityOpsFile("KongService", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, res.File)
+
+	got, err := format.Source([]byte(res.File.Content))
+	require.NoError(t, err)
+
+	want, err := os.ReadFile(filepath.Join("testdata", "zz_generated_ops_kongservice_getforuid_uid_tag_filter.golden.go"))
+	require.NoError(t, err)
+	assert.Equal(t, string(want), string(got))
 }
 
 func TestGenerateOpsUpdate_RootEntity(t *testing.T) {
@@ -2400,8 +2650,43 @@ func TestGenerateOpsUpdate_NonRootEntityWithParentTypeOverride(t *testing.T) {
 	assert.Contains(t, file.Content, "GatewayID: parentID,")
 	assert.Contains(t, file.Content, "CertificateID: id,")
 	assert.Contains(t, file.Content, "cl client.Client")
-	assert.Contains(t, file.Content, "kongEventDataPlaneCertificateUpdateRequest(ctx, cl, obj)")
+	assert.Contains(t, file.Content, "obj.ToUpdateEventGatewayDataPlaneCertificateRequest(ctx, cl)")
 	assert.Contains(t, file.Content, "UpdateEventGatewayDataPlaneCertificateRequest: req,")
+}
+
+func TestGenerateSDKOps_ClientRequestMethodsResolveSecretRef(t *testing.T) {
+	g := NewGenerator(Config{
+		APIVersion:        "v1alpha1",
+		SecretRefEntities: map[string]bool{"KonnectEventDataPlaneCertificate": true},
+	})
+	schema := &parser.Schema{
+		Properties: []*parser.Property{
+			{Name: "certificate", Type: "string"},
+			{Name: "description", Type: "string"},
+			{Name: "name", Type: "string"},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		RequireClient: true,
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateEventGatewayDataPlaneCertificateRequest"},
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateEventGatewayDataPlaneCertificateRequest"},
+		},
+	}
+
+	content, err := g.generateSDKOps("KonnectEventDataPlaneCertificate", schema, opsConfig)
+	require.NoError(t, err)
+	assert.Contains(t, content, `"context"`)
+	assert.Contains(t, content, `corev1 "k8s.io/api/core/v1"`)
+	assert.Contains(t, content, `"sigs.k8s.io/controller-runtime/pkg/client"`)
+	assert.Contains(t, content, "func (obj *KonnectEventDataPlaneCertificate) sdkOpsAPISpec(ctx context.Context, cl client.Client)")
+	assert.Contains(t, content, "if obj.Spec.Type != nil && *obj.Spec.Type == SensitiveDataSourceTypeSecretRef {")
+	assert.Contains(t, content, `secretBytes, ok := secret.Data["tls.crt"]`)
+	assert.Contains(t, content, "apiSpec.Certificate = string(secretBytes)")
+	assert.Contains(t, content, "func (obj *KonnectEventDataPlaneCertificate) ToCreateEventGatewayDataPlaneCertificateRequest(ctx context.Context, cl client.Client)")
+	assert.Contains(t, content, "return spec.ToCreateEventGatewayDataPlaneCertificateRequest()")
+	assert.Contains(t, content, "func (obj *KonnectEventDataPlaneCertificate) ToUpdateEventGatewayDataPlaneCertificateRequest(ctx context.Context, cl client.Client)")
+	assert.Contains(t, content, "return spec.ToUpdateEventGatewayDataPlaneCertificateRequest()")
 }
 
 func TestGenerateOpsUpdate_PointerBody(t *testing.T) {
@@ -2757,4 +3042,69 @@ func TestPathParamToFieldName(t *testing.T) {
 	for _, tc := range tests {
 		assert.Equal(t, tc.want, pathParamToFieldName(tc.param), "param=%q", tc.param)
 	}
+}
+
+func TestGenerateSchemaTypes_ScalarOneOfEmitsIntOrString(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	parsed := &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"EventGatewayListenerPort": {
+				Name:        "EventGatewayListenerPort",
+				Description: "A port or a range of ports.",
+				OneOf: []*parser.Property{
+					{Name: "variant0", Type: "string"},
+					{Name: "variant1", Type: "integer"},
+				},
+			},
+		},
+	}
+
+	content := g.generateSchemaTypes(map[string]bool{"EventGatewayListenerPort": true}, parsed, nil)
+
+	assert.Contains(t, content, `type EventGatewayListenerPort = intstr.IntOrString`)
+	assert.Contains(t, content, `+kubebuilder:validation:XIntOrString`)
+	assert.Contains(t, content, `intstr "k8s.io/apimachinery/pkg/util/intstr"`)
+	assert.NotContains(t, content, `map[string]string`)
+}
+
+func TestGenerateSchemaTypes_ArrayItemsRefEmitsTypedSlice(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	parsed := &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"EventGatewayListenerPorts": {
+				Name:        "EventGatewayListenerPorts",
+				Description: "Which port or ports to listen on.",
+				Type:        "array",
+				Items:       &parser.Property{RefName: "EventGatewayListenerPort"},
+			},
+		},
+	}
+
+	content := g.generateSchemaTypes(map[string]bool{"EventGatewayListenerPorts": true}, parsed, nil)
+
+	assert.Contains(t, content, `type EventGatewayListenerPorts []EventGatewayListenerPort`)
+	assert.NotContains(t, content, `[]any`)
+}
+
+func TestGenerateSchemaTypes_NonScalarOneOfFallsBack(t *testing.T) {
+	// A oneOf where variants have RefName must NOT be consumed by the scalar arm;
+	// it falls through to default (map[string]string) until a dedicated follow-up
+	// handles ref-bearing root oneOf.
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	parsed := &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"AuthMethod": {
+				Name: "AuthMethod",
+				OneOf: []*parser.Property{
+					{Name: "OIDCConfig", RefName: "OIDCConfig"},
+					{Name: "SAMLConfig", RefName: "SAMLConfig"},
+				},
+			},
+		},
+	}
+
+	content := g.generateSchemaTypes(map[string]bool{"AuthMethod": true}, parsed, nil)
+
+	assert.NotContains(t, content, `intstr.IntOrString`)
+	assert.NotContains(t, content, `XIntOrString`)
 }

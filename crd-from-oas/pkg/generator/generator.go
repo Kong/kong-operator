@@ -153,7 +153,34 @@ func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error)
 			}
 		}
 
-		g.collectReferencedSchemas(schema, referencedSchemas)
+		g.collectNamedReferencedSchemas(schema, referencedSchemas)
+	}
+
+	// Fixed-point expansion: schemas chosen for emission may themselves reference
+	// further named schemas via their own properties / oneOf variants.
+	worklist := make([]string, 0, len(referencedSchemas))
+	for name := range referencedSchemas {
+		worklist = append(worklist, name)
+	}
+	for len(worklist) > 0 {
+		name := worklist[len(worklist)-1]
+		worklist = worklist[:len(worklist)-1]
+		schema, ok := parsed.Schemas[name]
+		if !ok {
+			continue
+		}
+		before := len(referencedSchemas)
+		for _, prop := range schema.Properties {
+			g.collectNamedRefsFromProperty(prop, referencedSchemas)
+		}
+		for _, variant := range schema.OneOf {
+			g.collectNamedRefsFromProperty(variant, referencedSchemas)
+		}
+		if len(referencedSchemas) > before {
+			for n := range referencedSchemas {
+				worklist = append(worklist, n)
+			}
+		}
 	}
 
 	reconcilerFiles, err := g.generateReconcilerEntityFiles(reconcilerEntities, parsed)
@@ -162,13 +189,136 @@ func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error)
 	}
 	files = append(files, reconcilerFiles...)
 
-	sharedFiles, err := g.generateSharedFiles(parsed, referencedSchemas)
+	// Resolve nested CEL paths (e.g. tls.client_identity.certificate) into a
+	// schema-type-level field config so that generateSchemaTypes can apply
+	// user-provided markers to fields on referenced shared types.
+	schemaTypeFieldConfig := g.buildSchemaTypeFieldConfig(parsed)
+
+	sharedFiles, err := g.generateSharedFiles(parsed, referencedSchemas, schemaTypeFieldConfig)
 	if err != nil {
 		return nil, err
 	}
 	files = append(files, sharedFiles...)
 
 	return files, nil
+}
+
+// buildSchemaTypeFieldConfig resolves nested CEL config paths from entity configs into
+// a flat schema-type-keyed Config. For example, an entity config entry
+// `EventGatewayBackendCluster.cel.tls.client_identity.certificate._validations`
+// resolves — by walking the parsed OAS schemas via $ref chains — to
+// `ClientIdentity.certificate._validations` in the returned Config, which
+// generateSchemaTypes can then apply when emitting the shared ClientIdentity struct.
+func (g *Generator) buildSchemaTypeFieldConfig(parsed *parser.ParsedSpec) *config.Config {
+	if g.config.FieldConfig == nil {
+		return nil
+	}
+	entities := make(map[string]*config.EntityConfig)
+	for entityName, entityCfg := range g.config.FieldConfig.Entities {
+		if entityCfg == nil || len(entityCfg.Fields) == 0 {
+			continue
+		}
+		// Find the entity's schema in the parsed request bodies.
+		var entitySchema *parser.Schema
+		for _, schema := range parsed.RequestBodies {
+			if parser.GetEntityNameFromType(schema.Name) == entityName {
+				entitySchema = schema
+				break
+			}
+		}
+		if entitySchema == nil {
+			continue
+		}
+		// Entity-level fields (e.g. "tls") that have sub-config but no own Validations
+		// are path-segment nodes pointing into referenced schema types. Descend into
+		// any referenced schema to collect leaf validations there.
+		collectSchemaTypeValidations(entityCfg.Fields, entitySchema.Properties, parsed.Schemas, entities)
+	}
+	if len(entities) == 0 {
+		return nil
+	}
+	return &config.Config{Entities: entities}
+}
+
+// collectSchemaTypeValidations walks cfgFields alongside the matching props slice.
+// When a config field has sub-fields and its matching prop points to a referenced
+// schema ($ref), it recurses into that schema via addSchemaFieldValidations.
+// Entity-level validations (on top-level entity template fields) are NOT recorded
+// here because they are already handled by the entity template config.
+func collectSchemaTypeValidations(
+	cfgFields map[string]*config.FieldConfig,
+	props []*parser.Property,
+	schemas map[string]*parser.Schema,
+	out map[string]*config.EntityConfig,
+) {
+	for fieldName, fieldCfg := range cfgFields {
+		if fieldCfg == nil || len(fieldCfg.Fields) == 0 {
+			continue
+		}
+		prop := findPropertyByName(props, fieldName)
+		if prop == nil || prop.RefName == "" {
+			continue
+		}
+		refSchema, ok := schemas[prop.RefName]
+		if !ok || refSchema == nil {
+			continue
+		}
+		addSchemaFieldValidations(prop.RefName, fieldCfg.Fields, refSchema.Properties, schemas, out)
+	}
+}
+
+// addSchemaFieldValidations records leaf validations from cfgFields into out,
+// keyed by schemaName. Sub-fields that themselves point into further referenced
+// schemas are recursed into.
+func addSchemaFieldValidations(
+	schemaName string,
+	cfgFields map[string]*config.FieldConfig,
+	props []*parser.Property,
+	schemas map[string]*parser.Schema,
+	out map[string]*config.EntityConfig,
+) {
+	for fieldName, fieldCfg := range cfgFields {
+		if fieldCfg == nil {
+			continue
+		}
+		prop := findPropertyByName(props, fieldName)
+		if prop == nil {
+			continue
+		}
+		if len(fieldCfg.Validations) > 0 {
+			entityCfg, ok := out[schemaName]
+			if !ok {
+				entityCfg = &config.EntityConfig{Fields: make(map[string]*config.FieldConfig)}
+				out[schemaName] = entityCfg
+			}
+			entityCfg.Fields[fieldName] = &config.FieldConfig{Validations: fieldCfg.Validations}
+		}
+		if len(fieldCfg.Fields) > 0 {
+			switch {
+			case prop.RefName != "":
+				// $ref prop: descend into the referenced schema.
+				refSchema, ok := schemas[prop.RefName]
+				if ok && refSchema != nil {
+					addSchemaFieldValidations(prop.RefName, fieldCfg.Fields, refSchema.Properties, schemas, out)
+				}
+			case prop.Type == "object" && len(prop.Properties) > 0:
+				// Inline anonymous object: the generator emits it as a named Go struct
+				// using the Pascal-case field name (e.g. client_identity → ClientIdentity).
+				inlineTypeName := goFieldName(prop.Name)
+				addSchemaFieldValidations(inlineTypeName, fieldCfg.Fields, prop.Properties, schemas, out)
+			}
+		}
+	}
+}
+
+// findPropertyByName returns the property with the given name from a slice, or nil.
+func findPropertyByName(props []*parser.Property, name string) *parser.Property {
+	for _, p := range props {
+		if p.Name == name {
+			return p
+		}
+	}
+	return nil
 }
 
 // generateEntityFiles produces all generated files for a single CRD entity:
@@ -295,7 +445,7 @@ func (g *Generator) generateReconcilerEntityFiles(reconcilerEntities []string, p
 
 // generateSharedFiles generates files shared across all entities:
 // groupversion_info.go, doc.go, common_types.go, and schema_types.go.
-func (g *Generator) generateSharedFiles(parsed *parser.ParsedSpec, referencedSchemas map[string]bool) ([]GeneratedFile, error) {
+func (g *Generator) generateSharedFiles(parsed *parser.ParsedSpec, referencedSchemas map[string]bool, schemaTypeFieldConfig *config.Config) ([]GeneratedFile, error) {
 	var files []GeneratedFile
 
 	if g.config.GenerateGroupVersionInfo {
@@ -326,52 +476,57 @@ func (g *Generator) generateSharedFiles(parsed *parser.ParsedSpec, referencedSch
 	if len(referencedSchemas) > 0 {
 		files = append(files, GeneratedFile{
 			Name:    "schema_types.go",
-			Content: g.generateSchemaTypes(referencedSchemas, parsed),
+			Content: g.generateSchemaTypes(referencedSchemas, parsed, schemaTypeFieldConfig),
 		})
 	}
 
 	return files, nil
 }
 
-// collectReferencedSchemas collects all schema names referenced by properties.
-func (g *Generator) collectReferencedSchemas(schema *parser.Schema, refs map[string]bool) {
+// collectNamedReferencedSchemas collects refs whose names will appear in
+// generated Go code, skipping array-typed $ref properties that goType inlines
+// as []<element> (leaving the alias unused).
+func (g *Generator) collectNamedReferencedSchemas(schema *parser.Schema, refs map[string]bool) {
 	for _, prop := range schema.Properties {
-		g.collectRefsFromProperty(prop, refs)
+		g.collectNamedRefsFromProperty(prop, refs)
 	}
-	// Also collect refs from root-level oneOf variants
 	for _, variant := range schema.OneOf {
-		g.collectRefsFromProperty(variant, refs)
+		g.collectNamedRefsFromProperty(variant, refs)
 	}
 }
 
-func (g *Generator) collectRefsFromProperty(prop *parser.Property, refs map[string]bool) {
-	// Don't collect refs for properties that will be skipped
+// collectNamedRefsFromProperty mirrors goType's naming decisions: array-typed
+// $ref properties are inlined as []<element> so the array ref itself is not
+// recorded — only its item ref (via recursion) is.
+func (g *Generator) collectNamedRefsFromProperty(prop *parser.Property, refs map[string]bool) {
 	if skipProperty(prop) {
 		return
 	}
 	if prop.RefName != "" && !prop.IsReference {
-		refs[prop.RefName] = true
+		// goType inlines array-typed $refs as []<element>; the alias is never used.
+		if prop.Type != "array" || prop.Items == nil {
+			refs[prop.RefName] = true
+		}
 	}
 	if prop.Items != nil {
-		g.collectRefsFromProperty(prop.Items, refs)
+		g.collectNamedRefsFromProperty(prop.Items, refs)
 	}
-	for _, nestedProp := range prop.Properties {
-		g.collectRefsFromProperty(nestedProp, refs)
+	for _, nested := range prop.Properties {
+		g.collectNamedRefsFromProperty(nested, refs)
 	}
 	if prop.AdditionalProperties != nil {
-		g.collectRefsFromProperty(prop.AdditionalProperties, refs)
+		g.collectNamedRefsFromProperty(prop.AdditionalProperties, refs)
 	}
-	// Collect refs from oneOf variants
 	for _, variant := range prop.OneOf {
 		if variant.RefName != "" {
 			refs[variant.RefName] = true
 		}
-		g.collectRefsFromProperty(variant, refs)
+		g.collectNamedRefsFromProperty(variant, refs)
 	}
 }
 
 // generateSchemaTypes generates Go type definitions for referenced schemas.
-func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.ParsedSpec) string {
+func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.ParsedSpec, schemaTypeFieldConfig *config.Config) string {
 	var buf strings.Builder
 	fmt.Fprintf(&buf, "%s\n\npackage %s\n\n", sharedGeneratedFilePreamble, g.config.APIVersion)
 
@@ -382,10 +537,13 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 	}
 	sort.Strings(refNames)
 
-	if needsJSONImport, objectRefImport := g.schemaTypesImports(refNames, parsed); needsJSONImport || objectRefImport != nil {
+	if needsJSONImport, needsIntStrImport, objectRefImport := g.schemaTypesImports(refNames, parsed); needsJSONImport || needsIntStrImport || objectRefImport != nil {
 		buf.WriteString("import (\n")
 		if needsJSONImport {
 			buf.WriteString("\tapiextensionsv1 \"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1\"\n")
+		}
+		if needsIntStrImport {
+			buf.WriteString("\tintstr \"k8s.io/apimachinery/pkg/util/intstr\"\n")
 		}
 		if objectRefImport != nil {
 			if objectRefImport.Alias != "" {
@@ -395,6 +553,13 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 			}
 		}
 		buf.WriteString(")\n\n")
+	}
+
+	// emittedNested tracks inline-object type names already emitted, so a field
+	// shape reused across multiple parent schemas only produces one definition.
+	emittedNested := make(map[string]bool)
+	for _, refName := range refNames {
+		emittedNested[fixInitialisms(refName)] = true
 	}
 
 	for _, refName := range refNames {
@@ -414,9 +579,10 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 					if skipProperty(prop) {
 						continue
 					}
-					g.writeSchemaTypeField(&buf, prop)
+					g.writeSchemaTypeField(&buf, prop, goName, schemaTypeFieldConfig)
 				}
 				buf.WriteString("}\n\n")
+				g.writeNestedInlineTypes(&buf, schema.Properties, emittedNested, schemaTypeFieldConfig)
 			case schema.Type == "boolean":
 				// Per K8s API convention (nobools), boolean schemas become string
 				// types with Enabled/Disabled enum constants.
@@ -429,6 +595,14 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 				fmt.Fprintf(&buf, "\t// %sDisabled sets %s as disabled.\n", goName, goName)
 				fmt.Fprintf(&buf, "\t%sDisabled %s = \"Disabled\"\n", goName, goName)
 				fmt.Fprintf(&buf, ")\n\n")
+
+			case isScalarStringIntOneOf(schema.OneOf):
+				// Root-level oneOf of exactly {string, integer} — emit a Go type alias for
+				// intstr.IntOrString. Alias (not named type) ensures controller-gen recognises
+				// it as IntOrString and emits anyOf:[integer,string] in the CRD schema.
+				buf.WriteString(comment)
+				buf.WriteString("//\n// +kubebuilder:validation:XIntOrString\n")
+				fmt.Fprintf(&buf, "type %s = intstr.IntOrString\n\n", goName)
 
 			case schema.AdditionalProperties != nil:
 				// Map type with value constraints: generate a dedicated value type
@@ -462,8 +636,9 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 	return strings.TrimRight(buf.String(), "\n") + "\n"
 }
 
-func (g *Generator) schemaTypesImports(refNames []string, parsed *parser.ParsedSpec) (bool, *config.ImportConfig) {
+func (g *Generator) schemaTypesImports(refNames []string, parsed *parser.ParsedSpec) (bool, bool, *config.ImportConfig) {
 	needsJSONImport := false
+	needsIntStrImport := false
 	var objectRefImport *config.ImportConfig
 
 	for _, refName := range refNames {
@@ -475,26 +650,91 @@ func (g *Generator) schemaTypesImports(refNames []string, parsed *parser.ParsedS
 		if !needsJSONImport && schemaUsesJSON(g, schema) {
 			needsJSONImport = true
 		}
+		if !needsIntStrImport && isScalarStringIntOneOf(schema.OneOf) {
+			needsIntStrImport = true
+		}
 		if objectRefImport == nil {
 			objectRefImport = g.objectRefImportIfNeeded(schema)
 		}
 
-		if needsJSONImport && objectRefImport != nil {
+		if needsJSONImport && needsIntStrImport && objectRefImport != nil {
 			break
 		}
 	}
 
-	return needsJSONImport, objectRefImport
+	return needsJSONImport, needsIntStrImport, objectRefImport
 }
 
-func (g *Generator) writeSchemaTypeField(buf *strings.Builder, prop *parser.Property) {
+func (g *Generator) writeSchemaTypeField(buf *strings.Builder, prop *parser.Property, typeName string, fieldConfig *config.Config) {
 	buf.WriteString(formatComment(prop.Description))
 	buf.WriteString("\n")
 	buf.WriteString("\t//\n")
-	for _, tag := range KubebuilderTags(prop, "", nil) {
+	for _, tag := range KubebuilderTags(prop, typeName, fieldConfig) {
 		fmt.Fprintf(buf, "\t// %s\n", tag)
 	}
 	fmt.Fprintf(buf, "\t%s %s `json:\"%s\"`\n", goFieldName(prop.Name), g.goType(prop), jsonTag(prop))
+}
+
+// writeNestedInlineTypes emits Go type definitions for any property that is an
+// inline object (Type=="object" with sub-Properties and no $ref). This covers
+// schemas like BackendClusterTLS.client_identity, where the OpenAPI spec
+// declares the nested object inline rather than via $ref. Without this,
+// generateSchemaTypes would reference the type by name (e.g. ClientIdentity)
+// without ever defining it, producing uncompilable Go.
+//
+// emitted is a shared set used to dedupe across all parent schemas: a type
+// name is only emitted once per package. Recurses into nested objects so
+// arbitrarily deep inline shapes are handled.
+func (g *Generator) writeNestedInlineTypes(buf *strings.Builder, props []*parser.Property, emitted map[string]bool, schemaTypeFieldConfig *config.Config) {
+	for _, prop := range props {
+		if skipProperty(prop) || prop == nil {
+			continue
+		}
+		if prop.Items != nil {
+			g.writeNestedInlineTypes(buf, []*parser.Property{prop.Items}, emitted, schemaTypeFieldConfig)
+		}
+		if !isInlineObjectWithProperties(prop) {
+			continue
+		}
+		typeName := goFieldName(prop.Name)
+		if emitted[typeName] {
+			g.writeNestedInlineTypes(buf, prop.Properties, emitted, schemaTypeFieldConfig)
+			continue
+		}
+		emitted[typeName] = true
+
+		buf.WriteString(formatSchemaComment(typeName, prop.Description))
+		fmt.Fprintf(buf, "type %s struct {\n", typeName)
+		for _, nested := range prop.Properties {
+			if skipProperty(nested) {
+				continue
+			}
+			g.writeSchemaTypeField(buf, nested, typeName, schemaTypeFieldConfig)
+		}
+		buf.WriteString("}\n\n")
+
+		g.writeNestedInlineTypes(buf, prop.Properties, emitted, schemaTypeFieldConfig)
+	}
+}
+
+// isInlineObjectWithProperties returns true for object-typed properties whose
+// shape is declared inline (sub-properties present) rather than via a $ref or
+// a oneOf union. These need a generated Go struct definition because goType
+// returns the field name as the type name.
+func isInlineObjectWithProperties(prop *parser.Property) bool {
+	if prop.Type != "object" {
+		return false
+	}
+	if prop.RefName != "" {
+		return false
+	}
+	if len(prop.OneOf) > 0 {
+		return false
+	}
+	if prop.AdditionalProperties != nil {
+		return false
+	}
+	return len(prop.Properties) > 0
 }
 
 // schemaToGoType converts a parsed Schema's type info to the appropriate Go type string.
@@ -510,7 +750,10 @@ func schemaToGoType(schema *parser.Schema) string {
 	case "number":
 		return "float64"
 	case "array":
-		if schema.Items != nil && schema.Items.Type != "" {
+		if schema.Items != nil {
+			if schema.Items.RefName != "" {
+				return "[]" + fixInitialisms(schema.Items.RefName)
+			}
 			switch schema.Items.Type {
 			case "string":
 				return "[]string"
@@ -527,6 +770,24 @@ func schemaToGoType(schema *parser.Schema) string {
 		// For object types without properties or unknown types, default to map[string]string
 		return "map[string]string"
 	}
+}
+
+// isScalarStringIntOneOf reports whether variants form the narrow {string, integer}
+// scalar union for which intstr.IntOrString is the idiomatic K8s representation.
+// Returns true only when there are exactly two variants, their types are exactly
+// "string" and "integer" (in either order), and neither has a $ref or sub-properties.
+func isScalarStringIntOneOf(variants []*parser.Property) bool {
+	if len(variants) != 2 {
+		return false
+	}
+	types := make(map[string]bool, 2)
+	for _, v := range variants {
+		if v.RefName != "" || len(v.Properties) > 0 {
+			return false
+		}
+		types[v.Type] = true
+	}
+	return types["string"] && types["integer"]
 }
 
 func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string, error) {
@@ -671,6 +932,7 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		KonnectLabelsField                 *konnectLabelsField
 		Dependencies                       []*parser.Dependency
 		RootRefDependency                  *parser.Dependency
+		RootRefAccessorEntityName          string
 		RootRefTypeName                    string
 		IsReconcilerRoot                   bool
 		KonnectAPIAuthConfigurationRefType string
@@ -682,6 +944,7 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		KonnectLabelsField:                 g.konnectLabelsField(schema),
 		Dependencies:                       schema.Dependencies,
 		RootRefDependency:                  rootRefDependency,
+		RootRefAccessorEntityName:          rootRefAccessorEntityName(rootRefDependency),
 		RootRefTypeName:                    g.objectRefTypeName(),
 		IsReconcilerRoot:                   isReconcilerRoot,
 		KonnectAPIAuthConfigurationRefType: defaultKonnectStatusAlias + ".ControlPlaneKonnectAPIAuthConfigurationRef",
@@ -699,6 +962,16 @@ func rootRefDependency(schema *parser.Schema) *parser.Dependency {
 		return nil
 	}
 	return schema.Dependencies[0]
+}
+
+func rootRefAccessorEntityName(dep *parser.Dependency) string {
+	if dep == nil {
+		return ""
+	}
+	if dep.AccessorEntityName != "" {
+		return dep.AccessorEntityName
+	}
+	return dep.EntityName
 }
 
 // EntityFilePrefix converts a PascalCase entity name to a lowercase file name
@@ -1229,7 +1502,7 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 	boolFields := g.collectSDKOpsBoolFields(schema)
 
 	if hasRootOneOf(schema) {
-		return g.generateRootUnionSDKOps(entityName, schema, imports, methods, boolFields)
+		return g.generateRootUnionSDKOps(entityName, schema, opsConfig, imports, methods, boolFields)
 	}
 
 	standardMethods := make([]sdkOpsMethod, 0, len(methods))
@@ -1241,17 +1514,21 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 	tmpl := template.Must(template.New("sdkops").Parse(sdkOpsTemplate))
 	var buf strings.Builder
 	data := struct {
-		APIVersion string
-		EntityName string
-		Imports    []*sdkOpsImport
-		BoolFields []sdkOpsBoolField
-		Methods    []sdkOpsMethod
+		APIVersion   string
+		EntityName   string
+		Imports      []*sdkOpsImport
+		BoolFields   []sdkOpsBoolField
+		Methods      []sdkOpsMethod
+		NeedsClient  bool
+		HasSecretRef bool
 	}{
-		APIVersion: g.config.APIVersion,
-		EntityName: entityName,
-		Imports:    imports,
-		BoolFields: boolFields,
-		Methods:    standardMethods,
+		APIVersion:   g.config.APIVersion,
+		EntityName:   entityName,
+		Imports:      imports,
+		BoolFields:   boolFields,
+		Methods:      standardMethods,
+		NeedsClient:  opsConfig.RequireClient,
+		HasSecretRef: g.config.SecretRefEntities[entityName],
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
@@ -1309,6 +1586,7 @@ func (g *Generator) buildSDKOpsNestedUnionFields(
 func (g *Generator) generateRootUnionSDKOps(
 	entityName string,
 	schema *parser.Schema,
+	opsConfig *config.EntityOpsConfig,
 	imports []*sdkOpsImport,
 	methods []sdkOpsMethod,
 	boolFields []sdkOpsBoolField,
@@ -1385,6 +1663,8 @@ func (g *Generator) generateRootUnionSDKOps(
 		BoolFields    []sdkOpsBoolField
 		Methods       []sdkOpsRootUnionMethod
 		Variants      []sdkOpsRootUnionVariant
+		NeedsClient   bool
+		HasSecretRef  bool
 	}{
 		APIVersion:    g.config.APIVersion,
 		EntityName:    entityName,
@@ -1393,6 +1673,8 @@ func (g *Generator) generateRootUnionSDKOps(
 		BoolFields:    boolFields,
 		Methods:       rootUnionMethods,
 		Variants:      variants,
+		NeedsClient:   opsConfig.RequireClient,
+		HasSecretRef:  g.config.SecretRefEntities[entityName],
 	}
 	if err := tmpl.Execute(&buf, data); err != nil {
 		return "", err
@@ -1663,6 +1945,10 @@ func (g *Generator) goType(prop *parser.Property) string {
 
 	// Handle $ref
 	if prop.RefName != "" {
+		// For array-typed refs, inline the slice so fields use []ElementType directly.
+		if prop.Type == "array" && prop.Items != nil {
+			return "[]" + g.goType(prop.Items)
+		}
 		return fixInitialisms(prop.RefName)
 	}
 

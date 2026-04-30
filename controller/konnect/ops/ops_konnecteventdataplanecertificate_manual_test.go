@@ -112,7 +112,7 @@ func TestGetKonnectEventDataPlaneCertificateForUID(t *testing.T) {
 	assert.Equal(t, "cert-1", id)
 }
 
-func TestKongEventDataPlaneCertificateCreateRequestFromSecretRef(t *testing.T) {
+func TestKonnectEventDataPlaneCertificate_ToCreateEventGatewayDataPlaneCertificateRequest_FromSecretRef(t *testing.T) {
 	ctx := t.Context()
 	sourceType := konnectv1alpha1.SensitiveDataSourceTypeSecretRef
 	cert := testKonnectEventDataPlaneCertificate()
@@ -133,7 +133,35 @@ func TestKongEventDataPlaneCertificateCreateRequestFromSecretRef(t *testing.T) {
 		}).
 		Build()
 
-	req, err := kongEventDataPlaneCertificateCreateRequest(ctx, cl, cert)
+	req, err := cert.ToCreateEventGatewayDataPlaneCertificateRequest(ctx, cl)
+	require.NoError(t, err)
+	require.NotNil(t, req)
+	assert.Equal(t, "secret-cert", req.Certificate)
+	assert.Equal(t, cert.Spec.APISpec.Name, *req.Name)
+}
+
+func TestKonnectEventDataPlaneCertificate_ToUpdateEventGatewayDataPlaneCertificateRequest_FromSecretRef(t *testing.T) {
+	ctx := t.Context()
+	sourceType := konnectv1alpha1.SensitiveDataSourceTypeSecretRef
+	cert := testKonnectEventDataPlaneCertificate()
+	cert.Spec.Type = &sourceType
+	cert.Spec.SecretRef = &commonv1alpha1.NamespacedRef{Name: "tls-secret"}
+	cert.Spec.APISpec.Certificate = ""
+
+	cl := fake.NewClientBuilder().
+		WithScheme(scheme.Get()).
+		WithObjects(&corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "tls-secret",
+				Namespace: "default",
+			},
+			Data: map[string][]byte{
+				"tls.crt": []byte("secret-cert"),
+			},
+		}).
+		Build()
+
+	req, err := cert.ToUpdateEventGatewayDataPlaneCertificateRequest(ctx, cl)
 	require.NoError(t, err)
 	require.NotNil(t, req)
 	assert.Equal(t, "secret-cert", req.Certificate)

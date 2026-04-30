@@ -1,9 +1,5 @@
 package konnect
 
-// TODO: this file contains manually maintained reference handling for generated Konnect types.
-// This is a temporary solution until we have a more generic way of handling
-// references for generated types, e.g. by generating reference handling code in the future with crd-from-oas.
-
 import (
 	"context"
 	"errors"
@@ -12,24 +8,19 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
-func (r *KonnectEntityReconciler[T, TEnt]) handleGeneratedPortalRef(
+// handleRefResult handles the generic reconciler flow after handle<TYPE>Ref
+// resolved the <TYPE> reference.
+func handleRefResult(
 	ctx context.Context,
-	ent TEnt,
-) (bool, ctrl.Result, error) {
-	res, err := handlePortalRef(ctx, r.Client, ent)
-	return r.handlePortalRefResult(ctx, ent, res, err)
-}
-
-// handlePortalRefResult handles the generic reconciler flow after
-// handlePortalRef resolved the Portal reference.
-func (r *KonnectEntityReconciler[T, TEnt]) handlePortalRefResult(
-	ctx context.Context,
-	ent TEnt,
+	cl client.Client,
+	ent k8sutils.ConditionsAwareObject,
 	res ctrl.Result,
 	err error,
 ) (bool, ctrl.Result, error) {
@@ -43,7 +34,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) handlePortalRefResult(
 
 		if _, ok := errors.AsType[ReferencedObjectDoesNotExistError](err); ok {
 			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
-				if err := r.Client.Update(ctx, ent); err != nil {
+				if err := cl.Update(ctx, ent); err != nil {
 					if apierrors.IsConflict(err) {
 						return true, ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 					}
@@ -58,7 +49,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) handlePortalRefResult(
 			return true, ctrl.Result{}, nil
 		}
 
-		res, err = patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
+		res, err = patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, cl, ent)
 		return true, res, err
 	}
 
@@ -66,7 +57,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) handlePortalRefResult(
 		return false, ctrl.Result{}, nil
 	}
 
-	if _, errStatus := patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent); errStatus != nil {
+	if _, errStatus := patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, cl, ent); errStatus != nil {
 		return true, ctrl.Result{}, errStatus
 	}
 

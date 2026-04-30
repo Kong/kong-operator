@@ -162,6 +162,12 @@
 
 ### Changed
 
+- HybridGateway: Changed the annotation on generate Kubernetes resources
+  (Konnect entities) to mark the parent route. Now the format of the annotation
+  key is changed to `konghq.com/hybrid-route-<routeKind>` to support multiple
+  kinds of routes. If the route kind is `HTTPRoute`, the key format remains
+  unchanged.
+  [#3905](https://github.com/Kong/kong-operator/pull/3905)
 - Increase default interval of uploading configuration and node status to the
   read-only Konnect control plane (The legacy KIC type CP) to 3 minutes to
   decrease the API calls to Konnect.

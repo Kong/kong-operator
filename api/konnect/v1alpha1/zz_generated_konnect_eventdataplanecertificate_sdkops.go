@@ -3,8 +3,12 @@
 package v1alpha1
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 )
@@ -47,4 +51,50 @@ func (s *KonnectEventDataPlaneCertificateAPISpec) ToUpdateEventGatewayDataPlaneC
 		return nil, fmt.Errorf("failed to unmarshal into UpdateEventGatewayDataPlaneCertificateRequest: %w", err)
 	}
 	return &target, nil
+}
+
+func (obj *KonnectEventDataPlaneCertificate) sdkOpsAPISpec(ctx context.Context, cl client.Client) (*KonnectEventDataPlaneCertificateAPISpec, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("KonnectEventDataPlaneCertificate is nil")
+	}
+
+	apiSpec := obj.Spec.APISpec
+	if obj.Spec.Type != nil && *obj.Spec.Type == SensitiveDataSourceTypeSecretRef {
+		if obj.Spec.SecretRef == nil {
+			return nil, fmt.Errorf("secretRef is nil")
+		}
+
+		namespace := obj.GetNamespace()
+		if obj.Spec.SecretRef.Namespace != nil && *obj.Spec.SecretRef.Namespace != "" {
+			namespace = *obj.Spec.SecretRef.Namespace
+		}
+
+		var secret corev1.Secret
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: obj.Spec.SecretRef.Name}, &secret); err != nil {
+			return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, obj.Spec.SecretRef.Name, err)
+		}
+
+		secretBytes, ok := secret.Data["tls.crt"]
+		if !ok {
+			return nil, fmt.Errorf("secret %s/%s is missing key 'tls.crt'", namespace, obj.Spec.SecretRef.Name)
+		}
+		apiSpec.Certificate = string(secretBytes)
+	}
+	return &apiSpec, nil
+}
+
+func (obj *KonnectEventDataPlaneCertificate) ToCreateEventGatewayDataPlaneCertificateRequest(ctx context.Context, cl client.Client) (*sdkkonnectcomp.CreateEventGatewayDataPlaneCertificateRequest, error) {
+	spec, err := obj.sdkOpsAPISpec(ctx, cl)
+	if err != nil {
+		return nil, err
+	}
+	return spec.ToCreateEventGatewayDataPlaneCertificateRequest()
+}
+
+func (obj *KonnectEventDataPlaneCertificate) ToUpdateEventGatewayDataPlaneCertificateRequest(ctx context.Context, cl client.Client) (*sdkkonnectcomp.UpdateEventGatewayDataPlaneCertificateRequest, error) {
+	spec, err := obj.sdkOpsAPISpec(ctx, cl)
+	if err != nil {
+		return nil, err
+	}
+	return spec.ToUpdateEventGatewayDataPlaneCertificateRequest()
 }

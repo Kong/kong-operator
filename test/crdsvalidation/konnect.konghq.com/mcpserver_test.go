@@ -66,11 +66,19 @@ func TestMCPServer(t *testing.T) {
 				TestObject: func() *konnectv1alpha1.MCPServer {
 					obj := validMCPServer(ns.Name)
 					obj.Spec.ControlPlaneRef = commonv1alpha1.ControlPlaneRef{
-						Type: commonv1alpha1.ControlPlaneRefKonnectID,
+						Type:                 commonv1alpha1.ControlPlaneRefKonnectID,
+						KonnectNamespacedRef: nil, // Override CP ref.
 					}
 					return obj
 				}(),
-				ExpectedErrorMessage: new("Unsupported value: \"konnectID\""),
+				ExpectedErrorMessage: new("konnectID"),
+			},
+			{
+				Name: "konnectNamespacedRef is accepted",
+				TestObject: func() *konnectv1alpha1.MCPServer {
+					obj := validMCPServer(ns.Name)
+					return obj
+				}(),
 			},
 		}.RunWithConfig(t, cfg, scheme)
 	})

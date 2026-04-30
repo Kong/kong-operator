@@ -18,7 +18,6 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	"github.com/kong/kong-operator/v2/controller/pkg/controlplane"
-	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
@@ -93,16 +92,15 @@ func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 			fmt.Sprintf("Referenced KongUpstream %s is not programmed yet", nn),
 		)
 
-		res, err := patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), ent, old)
+		_, err := patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), ent, old)
 		if err != nil {
 			if apierrors.IsConflict(err) {
 				return ctrl.Result{Requeue: true}, nil
 			}
 			return ctrl.Result{}, err
 		}
-		if res == op.Updated {
-			return ctrl.Result{}, nil
-		}
+		// Don't requeue. The referenced entity's changes will trigger the reconciliation.
+		return ctrl.Result{}, nil
 	}
 
 	// TODO: make this more generic.

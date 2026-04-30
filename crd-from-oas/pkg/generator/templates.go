@@ -249,6 +249,13 @@ func (obj *{{$.EntityName}}) Set{{.EntityName}}ID(id string) {
 func (obj *{{.EntityName}}) Get{{.RootRefDependency.EntityName}}Ref() {{.RootRefTypeName}} {
 	return obj.Spec.{{.RootRefDependency.FieldName}}
 }
+{{- if and .RootRefAccessorEntityName (ne .RootRefAccessorEntityName .RootRefDependency.EntityName)}}
+
+// Get{{.RootRefAccessorEntityName}}Ref returns the reference to the root {{.RootRefAccessorEntityName}}.
+func (obj *{{.EntityName}}) Get{{.RootRefAccessorEntityName}}Ref() {{.RootRefTypeName}} {
+	return obj.Spec.{{.RootRefDependency.FieldName}}
+}
+{{- end}}
 {{- end}}
 {{- if .IsReconcilerRoot}}
 
@@ -266,12 +273,19 @@ const sdkOpsTemplate = sharedGeneratedFilePreamble + `
 package {{.APIVersion}}
 
 import (
+{{- if .NeedsClient}}
+	"context"
+{{- end}}
 	"encoding/json"
 	"fmt"
-{{range .Imports}}
-	{{.Alias}} "{{.Path}}"
+{{- if .NeedsClient}}
+
+{{if .HasSecretRef}}	corev1 "k8s.io/api/core/v1"
+{{end}}	"sigs.k8s.io/controller-runtime/pkg/client"
 {{- end}}
-)
+
+{{range .Imports}}	{{.Alias}} "{{.Path}}"
+{{end}})
 {{if .BoolFields}}
 type {{$.EntityName}}SDKOpsBoolField struct {
 	Label string
@@ -444,15 +458,65 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 	}
 	return &target, nil
 }
-{{end}}`
+{{end}}
+{{- if .NeedsClient}}
+func (obj *{{$.EntityName}}) sdkOpsAPISpec(ctx context.Context, cl client.Client) (*{{$.EntityName}}APISpec, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("{{$.EntityName}} is nil")
+	}
+
+	apiSpec := obj.Spec.APISpec
+{{- if .HasSecretRef}}
+	if obj.Spec.Type != nil && *obj.Spec.Type == SensitiveDataSourceTypeSecretRef {
+		if obj.Spec.SecretRef == nil {
+			return nil, fmt.Errorf("secretRef is nil")
+		}
+
+		namespace := obj.GetNamespace()
+		if obj.Spec.SecretRef.Namespace != nil && *obj.Spec.SecretRef.Namespace != "" {
+			namespace = *obj.Spec.SecretRef.Namespace
+		}
+
+		var secret corev1.Secret
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: obj.Spec.SecretRef.Name}, &secret); err != nil {
+			return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, obj.Spec.SecretRef.Name, err)
+		}
+
+		secretBytes, ok := secret.Data["tls.crt"]
+		if !ok {
+			return nil, fmt.Errorf("secret %s/%s is missing key 'tls.crt'", namespace, obj.Spec.SecretRef.Name)
+		}
+		apiSpec.Certificate = string(secretBytes)
+	}
+{{- end}}
+	return &apiSpec, nil
+}
+{{range .Methods}}
+func (obj *{{$.EntityName}}) {{.MethodName}}(ctx context.Context, cl client.Client) (*{{.ImportAlias}}.{{.TypeName}}, error) {
+	spec, err := obj.sdkOpsAPISpec(ctx, cl)
+	if err != nil {
+		return nil, err
+	}
+	return spec.{{.MethodName}}()
+}
+{{end}}
+{{- end}}`
 
 const sdkOpsRootUnionTemplate = sharedGeneratedFilePreamble + `
 
 package {{.APIVersion}}
 
 import (
+{{- if .NeedsClient}}
+	"context"
+{{- end}}
 	"encoding/json"
 	"fmt"
+{{- if .NeedsClient}}
+
+{{if .HasSecretRef}}	corev1 "k8s.io/api/core/v1"
+{{end}}	"sigs.k8s.io/controller-runtime/pkg/client"
+{{- end}}
 
 {{range .Imports}}	{{.Alias}} "{{.Path}}"
 {{end}})
@@ -668,7 +732,51 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 	}
 {{- end}}
 }
-{{end}}`
+{{end}}
+{{- if .NeedsClient}}
+
+func (obj *{{$.EntityName}}) sdkOpsAPISpec(ctx context.Context, cl client.Client) (*{{$.EntityName}}APISpec, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("{{$.EntityName}} is nil")
+	}
+
+	apiSpec := obj.Spec.APISpec
+{{- if .HasSecretRef}}
+	if obj.Spec.Type != nil && *obj.Spec.Type == SensitiveDataSourceTypeSecretRef {
+		if obj.Spec.SecretRef == nil {
+			return nil, fmt.Errorf("secretRef is nil")
+		}
+
+		namespace := obj.GetNamespace()
+		if obj.Spec.SecretRef.Namespace != nil && *obj.Spec.SecretRef.Namespace != "" {
+			namespace = *obj.Spec.SecretRef.Namespace
+		}
+
+		var secret corev1.Secret
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: obj.Spec.SecretRef.Name}, &secret); err != nil {
+			return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, obj.Spec.SecretRef.Name, err)
+		}
+
+		secretBytes, ok := secret.Data["tls.crt"]
+		if !ok {
+			return nil, fmt.Errorf("secret %s/%s is missing key 'tls.crt'", namespace, obj.Spec.SecretRef.Name)
+		}
+		apiSpec.Certificate = string(secretBytes)
+	}
+{{- end}}
+	return &apiSpec, nil
+}
+{{range .Methods}}
+
+func (obj *{{$.EntityName}}) {{.MethodName}}(ctx context.Context, cl client.Client) (*{{.ImportAlias}}.{{.TypeName}}, error) {
+	spec, err := obj.sdkOpsAPISpec(ctx, cl)
+	if err != nil {
+		return nil, err
+	}
+	return spec.{{.MethodName}}()
+}
+{{end}}
+{{- end}}`
 
 const sdkOpsTestTemplate = sharedGeneratedFilePreamble + `
 
@@ -696,7 +804,7 @@ func Test{{$.EntityName}}APISpec_{{.MethodName}}(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, result)
 
-	data, err := json.Marshal(result)
+	data, err := spec.marshalSDKOpsPayload()
 	require.NoError(t, err)
 
 	var payload map[string]any
@@ -784,7 +892,7 @@ func create{{.Entity}}(
 	}
 {{- end}}
 	{{- if .NeedsClient}}
-	req, err := {{.CreateRequestBuilder}}(ctx, cl, obj)
+	req, err := obj.To{{.CreateReqType}}(ctx, cl)
 	{{- else}}
 	req, err := obj.Spec.APISpec.To{{.CreateReqType}}()
 	{{- end}}
@@ -847,7 +955,7 @@ func update{{.Entity}}(
 {{- end}}
 	id := obj.GetKonnectStatus().GetKonnectID()
 	{{- if .NeedsClient}}
-	req, err := {{.UpdateRequestBuilder}}(ctx, cl, obj)
+	req, err := obj.To{{.UpdateReqType}}(ctx, cl)
 	{{- else}}
 	req, err := obj.Spec.APISpec.To{{.UpdateReqType}}()
 	{{- end}}
@@ -1043,7 +1151,38 @@ func get{{.Entity}}ForUID(
 		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "{{.ParentEntityName}}", Op: GetOp}
 	}
 {{- end}}
-{{- if .HasLabels}}
+{{- if .UseUIDTagFilter}}
+
+{{- if .ParentEntityName}}
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
+		{{.ParentIDField}}: parentID,
+		Tags: new(UIDLabelForObject(obj)),
+	})
+{{- else}}
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
+		Tags: new(UIDLabelForObject(obj)),
+	})
+{{- end}}
+	if err != nil {
+		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
+	}
+	if resp == nil || resp.{{.ListResponseField}} == nil {
+		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
+	}
+
+	for _, entry := range resp.{{.ListResponseField}}.Data {
+		switch id := any(entry.GetID()).(type) {
+		case string:
+			if id != "" {
+				return id, nil
+			}
+		case *string:
+			if id != nil && *id != "" {
+				return *id, nil
+			}
+		}
+	}
+{{- else if .HasLabels}}
 
 	// TODO: pass a Filter to {{.ListSDKMethod}} (e.g. by name/labels) so we
 	// do not page through every entity in the tenant. Filter types and

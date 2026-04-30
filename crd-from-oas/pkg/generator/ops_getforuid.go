@@ -32,6 +32,9 @@ type opsGetForUIDFuncData struct {
 	// field, so list response items are expected to expose GetLabels() and
 	// the generator can match by the Kubernetes UID label.
 	HasLabels bool
+	// UseUIDTagFilter indicates the API supports filtering list requests by the
+	// Kubernetes UID tag, so getForUID can avoid full scans.
+	UseUIDTagFilter bool
 	// HasName indicates the entity's request schema declares a "name" field,
 	// used as a fallback UID-matching strategy when HasLabels is false.
 	HasName bool
@@ -79,9 +82,16 @@ func (g *Generator) generateOpsGetForUIDFuncBody(
 		parentIDField = pathParamToFieldName(parentDep.ParamName)
 	}
 
-	// Derive response field name: SDK codegen wraps list responses as
-	// <ListSDKMethod>Response on the outer struct (e.g. ListPortalsResponse).
-	listResponseField := listMethod + "Response"
+	// SDK codegen names the nested field on the operations response wrapper after
+	// the components response type. Most entities have those names matching, e.g.
+	// ListPortalsResponse → ListPortalsResponse, but some don't, e.g.
+	// ListEventGatewayBackendClusters → ListBackendClustersResponse. Prefer the
+	// ref name from the OpenAPI spec; fall back to the method-derived name when
+	// the spec does not declare one.
+	listResponseField := schema.ListSuccessResponseRef
+	if listResponseField == "" {
+		listResponseField = listMethod + "Response"
+	}
 
 	_, hasLabels, _ := metadataFields(schema)
 	hasName := schemaHasNameProperty(schema)
@@ -96,6 +106,7 @@ func (g *Generator) generateOpsGetForUIDFuncBody(
 		ParentIDGetter:    parentIDGetter,
 		ParentIDField:     parentIDField,
 		HasLabels:         hasLabels,
+		UseUIDTagFilter:   opsConfig != nil && opsConfig.UseUIDTagFilter,
 		HasName:           hasName,
 	}, nil
 }

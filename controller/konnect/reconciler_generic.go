@@ -764,10 +764,7 @@ func setStatusServerURLAndOrgID(
 }
 
 func patchWithProgrammedStatusConditionBasedOnOtherConditions[
-	T interface {
-		client.Object
-		k8sutils.ConditionsAware
-	},
+	T k8sutils.ConditionsAwareObject,
 ](
 	ctx context.Context,
 	cl client.Client,

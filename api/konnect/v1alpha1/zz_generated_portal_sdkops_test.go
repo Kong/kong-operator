@@ -27,7 +27,7 @@ func TestPortalAPISpec_ToCreatePortal(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, result)
 
-	data, err := json.Marshal(result)
+	data, err := spec.marshalSDKOpsPayload()
 	require.NoError(t, err)
 
 	var payload map[string]any
@@ -64,7 +64,7 @@ func TestPortalAPISpec_ToUpdatePortal(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, result)
 
-	data, err := json.Marshal(result)
+	data, err := spec.marshalSDKOpsPayload()
 	require.NoError(t, err)
 
 	var payload map[string]any

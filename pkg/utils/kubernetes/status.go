@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
@@ -26,6 +27,14 @@ type ConditionsAndGenerationAware interface {
 
 // ConditionsAware is a CRD that has Conditions.
 type ConditionsAware interface {
+	GetConditions() []metav1.Condition
+	SetConditions(conditions []metav1.Condition)
+}
+
+// ConditionsAwareObject is a CRD that has Conditions and is also a client.Object.
+type ConditionsAwareObject interface {
+	client.Object
+
 	GetConditions() []metav1.Condition
 	SetConditions(conditions []metav1.Condition)
 }

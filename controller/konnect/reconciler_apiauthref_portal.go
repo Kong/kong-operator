@@ -16,8 +16,8 @@ import (
 )
 
 type portalRefAccessor interface {
+	client.Object
 	GetPortalRef() commonv1alpha1.ObjectRef
-	GetNamespace() string
 }
 
 func getAPIAuthConfigurationRefFromPortal(

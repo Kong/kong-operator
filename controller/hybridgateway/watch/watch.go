@@ -43,19 +43,19 @@ func Watches(obj client.Object, cl client.Client) []Watcher {
 				&discoveryv1.EndpointSlice{},
 			},
 			{
-				MapRouteForKongResource[*configurationv1alpha1.KongUpstream](cl),
+				MapRouteForKongResource[*configurationv1alpha1.KongUpstream](kindHTTPRoute),
 				&configurationv1alpha1.KongUpstream{},
 			},
 			{
-				MapRouteForKongResource[*configurationv1alpha1.KongTarget](cl),
+				MapRouteForKongResource[*configurationv1alpha1.KongTarget](kindHTTPRoute),
 				&configurationv1alpha1.KongTarget{},
 			},
 			{
-				MapRouteForKongResource[*configurationv1alpha1.KongService](cl),
+				MapRouteForKongResource[*configurationv1alpha1.KongService](kindHTTPRoute),
 				&configurationv1alpha1.KongService{},
 			},
 			{
-				MapRouteForKongResource[*configurationv1alpha1.KongRoute](cl),
+				MapRouteForKongResource[*configurationv1alpha1.KongRoute](kindHTTPRoute),
 				&configurationv1alpha1.KongRoute{},
 			},
 			{
@@ -63,7 +63,7 @@ func Watches(obj client.Object, cl client.Client) []Watcher {
 				&configurationv1.KongPlugin{},
 			},
 			{
-				MapRouteForKongResource[*configurationv1alpha1.KongPluginBinding](cl),
+				MapRouteForKongResource[*configurationv1alpha1.KongPluginBinding](kindHTTPRoute),
 				&configurationv1alpha1.KongPluginBinding{},
 			},
 			{
@@ -94,19 +94,19 @@ func Watches(obj client.Object, cl client.Client) []Watcher {
 				&discoveryv1.EndpointSlice{},
 			},
 			{
-				MapRouteForKongResource[*configurationv1alpha1.KongUpstream](cl),
+				MapRouteForKongResource[*configurationv1alpha1.KongUpstream](kindTLSRoute),
 				&configurationv1alpha1.KongUpstream{},
 			},
 			{
-				MapRouteForKongResource[*configurationv1alpha1.KongTarget](cl),
+				MapRouteForKongResource[*configurationv1alpha1.KongTarget](kindTLSRoute),
 				&configurationv1alpha1.KongTarget{},
 			},
 			{
-				MapRouteForKongResource[*configurationv1alpha1.KongService](cl),
+				MapRouteForKongResource[*configurationv1alpha1.KongService](kindTLSRoute),
 				&configurationv1alpha1.KongService{},
 			},
 			{
-				MapRouteForKongResource[*configurationv1alpha1.KongRoute](cl),
+				MapRouteForKongResource[*configurationv1alpha1.KongRoute](kindTLSRoute),
 				&configurationv1alpha1.KongRoute{},
 			},
 			{

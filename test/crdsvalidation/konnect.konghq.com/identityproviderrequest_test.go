@@ -53,7 +53,7 @@ func TestIdentityProviderRequest(t *testing.T) {
 					require.NotNil(t, obj.Spec.APISpec.Config.OIDC)
 					require.Equal(t, konnectv1alpha1.IdentityProviderEnabledDisabled, obj.Spec.APISpec.Enabled)
 					require.Equal(t,
-						konnectv1alpha1.OIDCIdentityProviderScopes{"email", "openid", "profile"},
+						[]string{"email", "openid", "profile"},
 						obj.Spec.APISpec.Config.OIDC.Scopes,
 					)
 					require.Equal(t, "email", obj.Spec.APISpec.Config.OIDC.ClaimMappings.Email)
