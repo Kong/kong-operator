@@ -109,7 +109,7 @@ func testGetAPIAuthRefForEventGatewayChild[
 				).Build()
 
 			ent := builder(tc.ref)
-			nn, err := getAPIAuthRef(context.Background(), cl, ent)
+			nn, err := getAPIAuthRef(t.Context(), cl, ent)
 			require.NoError(t, err)
 			require.Equal(t, types.NamespacedName{Name: "api-auth", Namespace: "default"}, nn)
 		})
