@@ -85,3 +85,74 @@ func TestGetAPIAuthRef_EventGatewayChildren(t *testing.T) {
 		})
 	}
 }
+
+func TestGetAPIAuthRef_EventGatewayVirtualCluster(t *testing.T) {
+	tests := []struct {
+		name string
+		ref  commonv1alpha1.ObjectRef
+	}{
+		{
+			name: "namespaced ref",
+			ref: commonv1alpha1.ObjectRef{
+				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{
+					Name: "event-gateway",
+				},
+			},
+		},
+		{
+			name: "konnect id ref",
+			ref: commonv1alpha1.ObjectRef{
+				Type:      commonv1alpha1.ObjectRefTypeKonnectID,
+				KonnectID: new("gateway-konnect-id"),
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			cl := fake.NewClientBuilder().
+				WithScheme(scheme.Get()).
+				WithObjects(
+					&konnectv1alpha1.KonnectAPIAuthConfiguration{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "api-auth",
+							Namespace: "default",
+						},
+					},
+					&konnectv1alpha1.KonnectEventGateway{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "event-gateway",
+							Namespace: "default",
+						},
+						Spec: konnectv1alpha1.KonnectEventGatewaySpec{
+							KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+								APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+									Name: "api-auth",
+								},
+							},
+						},
+						Status: konnectv1alpha1.KonnectEventGatewayStatus{
+							KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+								ID: "gateway-konnect-id",
+							},
+						},
+					},
+				).Build()
+
+			virtualCluster := &konnectv1alpha1.EventGatewayVirtualCluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "event-virtual-cluster",
+					Namespace: "default",
+				},
+				Spec: konnectv1alpha1.EventGatewayVirtualClusterSpec{
+					GatewayRef: tc.ref,
+				},
+			}
+
+			nn, err := getAPIAuthRef(context.Background(), cl, virtualCluster)
+			require.NoError(t, err)
+			require.Equal(t, types.NamespacedName{Name: "api-auth", Namespace: "default"}, nn)
+		})
+	}
+}
