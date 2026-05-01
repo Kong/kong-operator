@@ -2,6 +2,7 @@ package generator
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"text/template"
 	"unicode"
@@ -266,6 +267,30 @@ func {{.EntityNameLowerCamel}}On{{.ParentEntityName}}Ref(object client.Object) [
 }
 `
 
+const reconcilerConditionsTemplate = sharedGeneratedFilePreamble + `
+
+package {{.APIVersion}}
+
+const (
+{{ range $i, $group := .ConditionGroups }}{{ if $i }}
+{{ end }}	// {{$group.Prefix}}RefValidConditionType is the type of the condition that indicates
+	// whether the {{$group.Prefix}} reference is valid and points to an existing
+	// {{$group.ReferencedEntityName}}.
+	{{$group.Prefix}}RefValidConditionType = "{{$group.Prefix}}RefValid"
+
+	// {{$group.Prefix}}RefReasonValid is the reason used with the {{$group.Prefix}}RefValid
+	// condition type indicating that the {{$group.Prefix}} reference is valid.
+	{{$group.Prefix}}RefReasonValid = "Valid"
+	// {{$group.Prefix}}RefReasonInvalid is the reason used with the {{$group.Prefix}}RefValid
+	// condition type indicating that the {{$group.Prefix}} reference is invalid.
+	{{$group.Prefix}}RefReasonInvalid = "Invalid"
+	// {{$group.Prefix}}RefReasonNotProgrammed is the reason used with the {{$group.Prefix}}RefValid
+	// condition type indicating that the referenced {{$group.ReferencedEntityName}} exists but is not
+	// yet programmed in Konnect.
+	{{$group.Prefix}}RefReasonNotProgrammed = "NotProgrammed"
+{{ end }})
+`
+
 type reconcilerEntityMetadata struct {
 	EntityName           string
 	EntityNameLowerCamel string
@@ -273,6 +298,11 @@ type reconcilerEntityMetadata struct {
 	ParentRefFieldName   string
 	APIGroupPackagePath  string
 	APIGroupPackageAlias string
+}
+
+type reconcilerConditionGroup struct {
+	Prefix               string
+	ReferencedEntityName string
 }
 
 // generateReconcilerFiles generates all reconciler wiring files for the given entities.
@@ -333,6 +363,97 @@ func (g *Generator) generateReconcilerFiles(entityNames []string, entitySchemas 
 	}
 
 	return files, nil
+}
+
+// generateReconcilerConditions emits shared ref condition constants for
+// non-root reconciler entities, deduplicated by generated ref prefix.
+func (g *Generator) generateReconcilerConditions(parsed *parser.ParsedSpec) (*GeneratedFile, error) {
+	if len(g.config.ReconcilerConfig) == 0 {
+		return nil, nil
+	}
+
+	groupMap := make(map[string]reconcilerConditionGroup)
+	requestBodyNames := make([]string, 0, len(parsed.RequestBodies))
+	for name := range parsed.RequestBodies {
+		requestBodyNames = append(requestBodyNames, name)
+	}
+	sort.Strings(requestBodyNames)
+
+	for _, name := range requestBodyNames {
+		schema := parsed.RequestBodies[name]
+		entityName := parser.GetEntityNameFromType(name)
+
+		rc, ok := g.config.ReconcilerConfig[entityName]
+		if !ok || rc.IsRoot {
+			continue
+		}
+
+		metadata, err := g.reconcilerEntityMetadata(entityName, schema, rc)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build reconciler metadata for %s: %w", entityName, err)
+		}
+
+		parentDep := rootRefDependency(schema)
+		if parentDep == nil {
+			return nil, fmt.Errorf("non-root entity %s has no parent dependency", entityName)
+		}
+		prefix := refConditionEntityName(parentDep)
+		if prefix == "" {
+			return nil, fmt.Errorf("failed to derive condition prefix for %s", entityName)
+		}
+
+		group := reconcilerConditionGroup{
+			Prefix:               prefix,
+			ReferencedEntityName: metadata.ParentEntityName,
+		}
+		if existing, ok := groupMap[prefix]; ok {
+			if existing.ReferencedEntityName != group.ReferencedEntityName {
+				return nil, fmt.Errorf(
+					"condition prefix %q maps to both %q and %q",
+					prefix,
+					existing.ReferencedEntityName,
+					group.ReferencedEntityName,
+				)
+			}
+			continue
+		}
+		groupMap[prefix] = group
+	}
+
+	if len(groupMap) == 0 {
+		return nil, nil
+	}
+
+	// Sort prefixes to keep generated output deterministic while preserving the
+	// map-based deduplication above.
+	prefixes := make([]string, 0, len(groupMap))
+	for prefix := range groupMap {
+		prefixes = append(prefixes, prefix)
+	}
+	sort.Strings(prefixes)
+
+	conditionGroups := make([]reconcilerConditionGroup, 0, len(prefixes))
+	for _, prefix := range prefixes {
+		conditionGroups = append(conditionGroups, groupMap[prefix])
+	}
+
+	tmpl := template.Must(template.New("reconcilerConditions").Parse(reconcilerConditionsTemplate))
+	var buf strings.Builder
+	data := struct {
+		APIVersion      string
+		ConditionGroups []reconcilerConditionGroup
+	}{
+		APIVersion:      g.config.APIVersion,
+		ConditionGroups: conditionGroups,
+	}
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return nil, err
+	}
+
+	return &GeneratedFile{
+		Name:    "zz_generated_reconciler_conditions.go",
+		Content: buf.String(),
+	}, nil
 }
 
 func (g *Generator) generateWatch(metadata reconcilerEntityMetadata, rc *config.ReconcilerConfig) (string, error) {

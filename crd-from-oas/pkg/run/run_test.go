@@ -16,10 +16,12 @@ func TestCleanupLegacyGeneratedFiles(t *testing.T) {
 	dir := t.TempDir()
 	legacyFuncs := filepath.Join(dir, "portal_funcs.go")
 	sharedReconcilerFuncs := filepath.Join(dir, "zz_generated_reconciler_funcs.go")
+	reconcilerConditions := filepath.Join(dir, "zz_generated_reconciler_conditions.go")
 	keepFile := filepath.Join(dir, "zz_generated_portal_funcs.go")
 
 	require.NoError(t, os.WriteFile(legacyFuncs, []byte("legacy"), 0o600))
 	require.NoError(t, os.WriteFile(sharedReconcilerFuncs, []byte("legacy"), 0o600))
+	require.NoError(t, os.WriteFile(reconcilerConditions, []byte("legacy"), 0o600))
 	require.NoError(t, os.WriteFile(keepFile, []byte("current"), 0o600))
 
 	parsed := &parser.ParsedSpec{
@@ -33,6 +35,7 @@ func TestCleanupLegacyGeneratedFiles(t *testing.T) {
 	require.NoError(t, cleanupLegacyGeneratedFiles(t.TempDir(), dir, parsed))
 	require.NoFileExists(t, legacyFuncs)
 	require.NoFileExists(t, sharedReconcilerFuncs)
+	require.NoFileExists(t, reconcilerConditions)
 	require.FileExists(t, keepFile)
 }
 
