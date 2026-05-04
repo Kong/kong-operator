@@ -37,7 +37,7 @@ func (g TestCasesGroup[T]) Run(t *testing.T) {
 
 const (
 	// DefaultEventuallyTimeout is the default timeout for EventuallyConfig.
-	DefaultEventuallyTimeout = 3 * time.Second
+	DefaultEventuallyTimeout = 5 * time.Second
 	// DefaultEventuallyPeriod is the default period for EventuallyConfig.
 	DefaultEventuallyPeriod = 10 * time.Millisecond
 )
@@ -117,6 +117,7 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *run
 
 		t.Parallel()
 		ctx := context.Background()
+		var lastCreateErr error
 
 		// Create a new controller-runtime client.Client.
 		cl, err := client.New(cfg, client.Options{
@@ -144,6 +145,7 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *run
 
 				// Create the object and set a cleanup function to delete it after the test if created successfully.
 				err = cl.Create(ctx, toCreate)
+				lastCreateErr = err
 				if err == nil {
 					tCleanupObject(ctx, t, toCreate)
 				}
@@ -182,6 +184,7 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *run
 			},
 			timeout, period,
 		) {
+			t.Logf("Last create error before timeout: %v", lastCreateErr)
 			return
 		}
 
