@@ -912,6 +912,113 @@ func TestGenerateSharedFiles_GeneratesSchemaUnionTests(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestGenerateSchemaTypes_OmitsDiscriminatorFieldOnUnionMembersOnly(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroup:   "konnect.konghq.com",
+		APIVersion: "v1alpha1",
+	})
+
+	parsed := &parser.ParsedSpec{
+		RequestBodies: map[string]*parser.Schema{
+			"CreateRootUnion": {
+				Name:          "CreateRootUnion",
+				Discriminator: "type",
+				OneOf: []*parser.Property{
+					{RefName: "RootVariantAlpha"},
+					{RefName: "RootVariantBeta"},
+				},
+				DiscriminatorMapping: map[string]string{
+					"alpha": "RootVariantAlpha",
+					"beta":  "RootVariantBeta",
+				},
+			},
+			"CreatePropertyUnion": {
+				Name: "CreatePropertyUnion",
+				Properties: []*parser.Property{
+					{
+						Name:          "config",
+						Discriminator: "type",
+						OneOf: []*parser.Property{
+							{RefName: "PropertyVariantAlpha"},
+							{RefName: "PropertyVariantBeta"},
+						},
+						DiscriminatorMapping: map[string]string{
+							"alpha": "PropertyVariantAlpha",
+							"beta":  "PropertyVariantBeta",
+						},
+					},
+				},
+			},
+		},
+		Schemas: map[string]*parser.Schema{
+			"RootVariantAlpha": {
+				Name: "RootVariantAlpha",
+				Properties: []*parser.Property{
+					{Name: "name", Type: "string"},
+					{Name: "type", Type: "string"},
+				},
+			},
+			"RootVariantBeta": {
+				Name: "RootVariantBeta",
+				Properties: []*parser.Property{
+					{Name: "count", Type: "integer"},
+					{Name: "type", Type: "string"},
+				},
+			},
+			"PropertyVariantAlpha": {
+				Name: "PropertyVariantAlpha",
+				Properties: []*parser.Property{
+					{Name: "enabled", Type: "boolean"},
+					{Name: "type", Type: "string"},
+				},
+			},
+			"PropertyVariantBeta": {
+				Name: "PropertyVariantBeta",
+				Properties: []*parser.Property{
+					{Name: "labels", Type: "string"},
+					{Name: "type", Type: "string"},
+				},
+			},
+			"StandaloneTypeCarrier": {
+				Name: "StandaloneTypeCarrier",
+				Properties: []*parser.Property{
+					{Name: "label", Type: "string"},
+					{Name: "type", Type: "string"},
+				},
+			},
+		},
+	}
+
+	content := g.generateSchemaTypes(map[string]bool{
+		"RootVariantAlpha":      true,
+		"RootVariantBeta":       true,
+		"PropertyVariantAlpha":  true,
+		"PropertyVariantBeta":   true,
+		"StandaloneTypeCarrier": true,
+	}, parsed, nil)
+
+	assert.NotContains(t, generatedStructBlock(t, content, "RootVariantAlpha"), "Type string `json:\"type,omitempty\"`")
+	assert.NotContains(t, generatedStructBlock(t, content, "RootVariantBeta"), "Type string `json:\"type,omitempty\"`")
+	assert.NotContains(t, generatedStructBlock(t, content, "PropertyVariantAlpha"), "Type string `json:\"type,omitempty\"`")
+	assert.NotContains(t, generatedStructBlock(t, content, "PropertyVariantBeta"), "Type string `json:\"type,omitempty\"`")
+	assert.Contains(t, generatedStructBlock(t, content, "StandaloneTypeCarrier"), "Type string `json:\"type,omitempty\"`")
+
+	_, err := format.Source([]byte(content))
+	require.NoError(t, err)
+}
+
+func generatedStructBlock(t *testing.T, content, typeName string) string {
+	t.Helper()
+
+	start := strings.Index(content, "type "+typeName+" struct {")
+	require.NotEqual(t, -1, start, "type %s struct not found", typeName)
+
+	end := strings.Index(content[start:], "\n}\n")
+	require.NotEqual(t, -1, end, "type %s struct end not found", typeName)
+
+	return content[start : start+end+3]
+}
+
 func TestEntityFilePrefix(t *testing.T) {
 	tests := []struct {
 		name     string

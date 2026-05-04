@@ -11,12 +11,6 @@ import (
 // BackendClusterAuthenticationAnonymous Anonymous authentication scheme for the
 // backend cluster.
 type BackendClusterAuthenticationAnonymous struct {
-	// The type of authentication scheme.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	Type string `json:"type,omitempty"`
 }
 
 // BackendClusterAuthenticationSaslPlain SASL/PLAIN authentication scheme for
@@ -34,12 +28,6 @@ type BackendClusterAuthenticationSaslPlain struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	Password GatewaySecret `json:"password,omitempty"`
-	//
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	Type string `json:"type,omitempty"`
 	// A literal value or a reference to an existing secret as a template string
 	// expression.
 	// The value is stored and returned by the API as-is, not treated as sensitive
@@ -74,12 +62,6 @@ type BackendClusterAuthenticationSaslScram struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	Password GatewaySecret `json:"password,omitempty"`
-	//
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	Type string `json:"type,omitempty"`
 	// A literal value or a reference to an existing secret as a template string
 	// expression.
 	// The value is stored and returned by the API as-is, not treated as sensitive
@@ -354,12 +336,6 @@ type EventGatewayTLSListenerPolicy struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=255
 	Name string `json:"name,omitempty"`
-	// The type name of the policy.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=255
-	Type string `json:"type,omitempty"`
 }
 
 // EventGatewayTLSListenerPolicyConfig is a type alias.
@@ -495,12 +471,6 @@ type ForwardToClusterByPortMappingConfig struct {
 	// +optional
 	// +kubebuilder:default=0
 	MinBrokerID int `json:"min_broker_id,omitempty"`
-	//
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	Type string `json:"type,omitempty"`
 }
 
 // ForwardToClusterBySNIConfig The configuration to forward requests to virtual
@@ -558,12 +528,6 @@ type ForwardToClusterBySNIConfig struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[\.-]([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)*([a-z0-9-]*[a-z0-9])$`
 	SniSuffix string `json:"sni_suffix,omitempty"`
-	//
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	Type string `json:"type,omitempty"`
 }
 
 // BrokerHostFormat Configures DNS names assigned to brokers in virtual
@@ -632,12 +596,6 @@ type ForwardToVirtualClusterPolicy struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=255
 	Name string `json:"name,omitempty"`
-	// The type name of the policy.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=255
-	Type string `json:"type,omitempty"`
 }
 
 // ForwardToVirtualClusterPolicyConfig represents a union type for config.
@@ -1050,12 +1008,6 @@ type VirtualClusterACLMode string
 
 // VirtualClusterAuthenticationAnonymous is a type alias.
 type VirtualClusterAuthenticationAnonymous struct {
-	//
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	Type string `json:"type,omitempty"`
 }
 
 // VirtualClusterAuthenticationAudience is a type alias.
@@ -1090,12 +1042,6 @@ type VirtualClusterAuthenticationClaimsMapping struct {
 //
 // **Requires a minimum runtime version of `1.1`**.
 type VirtualClusterAuthenticationClientCertificate struct {
-	//
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	Type string `json:"type,omitempty"`
 }
 
 // VirtualClusterAuthenticationJWKS JSON Web Key Set configuration for verifying
@@ -1159,12 +1105,6 @@ type VirtualClusterAuthenticationOauthBearer struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=passthrough;validate_forward;terminate
 	Mediation string `json:"mediation,omitempty"`
-	//
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	Type string `json:"type,omitempty"`
 	// Validation rules.
 	//
 	// +optional
@@ -1213,12 +1153,6 @@ type VirtualClusterAuthenticationSaslPlain struct {
 	//
 	// +optional
 	Principals []VirtualClusterAuthenticationPrincipal `json:"principals,omitempty"`
-	//
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	Type string `json:"type,omitempty"`
 }
 
 // VirtualClusterAuthenticationSaslScram SASL/SCRAM authentication scheme for
@@ -1231,12 +1165,6 @@ type VirtualClusterAuthenticationSaslScram struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=sha256;sha512
 	Algorithm string `json:"algorithm,omitempty"`
-	//
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	Type string `json:"type,omitempty"`
 }
 
 // VirtualClusterAuthenticationScheme represents a union type for VirtualClusterAuthenticationScheme.
@@ -1588,12 +1516,6 @@ type VirtualClusterNamespaceIDSelectorExactList struct {
 	//
 	// +optional
 	ExactList []Items `json:"exact_list,omitempty"`
-	//
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	Type string `json:"type,omitempty"`
 }
 
 // Items is a type alias.
@@ -1615,12 +1537,6 @@ type VirtualClusterNamespaceIDSelectorGlob struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._?*-]+$`
 	Glob string `json:"glob,omitempty"`
-	//
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	Type string `json:"type,omitempty"`
 }
 
 // VirtualClusterNamespaceTopicSelector represents a union type for VirtualClusterNamespaceTopicSelector.
@@ -1738,12 +1654,6 @@ type VirtualClusterNamespaceTopicSelectorExactList struct {
 	//
 	// +optional
 	ExactList []NamespaceExactAllowListItem `json:"exact_list,omitempty"`
-	//
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	Type string `json:"type,omitempty"`
 }
 
 // VirtualClusterNamespaceTopicSelectorGlob is a type alias.
@@ -1769,12 +1679,6 @@ type VirtualClusterNamespaceTopicSelectorGlob struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._?*-]+$`
 	Glob string `json:"glob,omitempty"`
-	//
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	Type string `json:"type,omitempty"`
 }
 
 // VirtualClusterReference is a type alias.
