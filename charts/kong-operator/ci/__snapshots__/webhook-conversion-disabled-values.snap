@@ -10852,14 +10852,6 @@ spec:
                     properties:
                       anonymous:
                         description: Anonymous configuration.
-                        properties:
-                          type:
-                            description: The type of authentication scheme.
-                            maxLength: 253
-                            minLength: 1
-                            type: string
-                        required:
-                        - type
                         type: object
                       sasl_plain:
                         description: SaslPlain configuration.
@@ -10875,10 +10867,6 @@ spec:
                             maxLength: 253
                             minLength: 1
                             type: string
-                          type:
-                            maxLength: 253
-                            minLength: 1
-                            type: string
                           username:
                             description: |-
                               A literal value or a reference to an existing secret as a template string
@@ -10890,7 +10878,6 @@ spec:
                             type: string
                         required:
                         - password
-                        - type
                         - username
                         type: object
                       sasl_scram:
@@ -10915,10 +10902,6 @@ spec:
                             maxLength: 253
                             minLength: 1
                             type: string
-                          type:
-                            maxLength: 253
-                            minLength: 1
-                            type: string
                           username:
                             description: |-
                               A literal value or a reference to an existing secret as a template string
@@ -10931,7 +10914,6 @@ spec:
                         required:
                         - algorithm
                         - password
-                        - type
                         - username
                         type: object
                       type:
@@ -11337,14 +11319,9 @@ spec:
                                 default: 0
                                 description: The lowest broker node ID in the cluster.
                                 type: integer
-                              type:
-                                maxLength: 253
-                                minLength: 1
-                                type: string
                             required:
                             - advertised_host
                             - destination
-                            - type
                             type: object
                           sni:
                             description: SNI configuration.
@@ -11410,12 +11387,6 @@ spec:
                                 maxLength: 253
                                 pattern: ^[\.-]([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)*([a-z0-9-]*[a-z0-9])$
                                 type: string
-                              type:
-                                maxLength: 253
-                                minLength: 1
-                                type: string
-                            required:
-                            - type
                             type: object
                           type:
                             description: Type designates the type of configuration.
@@ -11457,14 +11428,8 @@ spec:
                         description: A unique user-defined name of the policy.
                         maxLength: 255
                         type: string
-                      type:
-                        description: The type name of the policy.
-                        maxLength: 255
-                        minLength: 1
-                        type: string
                     required:
                     - config
-                    - type
                     type: object
                   tls_server:
                     description: EventGatewayTLSListen configuration.
@@ -11621,14 +11586,8 @@ spec:
                         description: A unique user-defined name of the policy.
                         maxLength: 255
                         type: string
-                      type:
-                        description: The type name of the policy.
-                        maxLength: 255
-                        minLength: 1
-                        type: string
                     required:
                     - config
-                    - type
                     type: object
                   type:
                     description: Type designates the type of configuration.
@@ -12167,23 +12126,9 @@ spec:
                       properties:
                         anonymous:
                           description: Anonymous configuration.
-                          properties:
-                            type:
-                              maxLength: 253
-                              minLength: 1
-                              type: string
-                          required:
-                          - type
                           type: object
                         client_certificate:
                           description: ClientCertificate configuration.
-                          properties:
-                            type:
-                              maxLength: 253
-                              minLength: 1
-                              type: string
-                          required:
-                          - type
                           type: object
                         oauth_bearer:
                           description: OauthBearer configuration.
@@ -12251,10 +12196,6 @@ spec:
                               maxLength: 253
                               minLength: 1
                               type: string
-                            type:
-                              maxLength: 253
-                              minLength: 1
-                              type: string
                             validate:
                               description: Validation rules.
                               properties:
@@ -12281,7 +12222,6 @@ spec:
                               type: object
                           required:
                           - mediation
-                          - type
                           type: object
                         sasl_plain:
                           description: SaslPlain configuration.
@@ -12328,13 +12268,8 @@ spec:
                                 - username
                                 type: object
                               type: array
-                            type:
-                              maxLength: 253
-                              minLength: 1
-                              type: string
                           required:
                           - mediation
-                          - type
                           type: object
                         sasl_scram:
                           description: SaslScram configuration.
@@ -12347,13 +12282,8 @@ spec:
                               maxLength: 253
                               minLength: 1
                               type: string
-                            type:
-                              maxLength: 253
-                              minLength: 1
-                              type: string
                           required:
                           - algorithm
-                          - type
                           type: object
                         type:
                           description: Type designates the type of configuration.
@@ -12452,12 +12382,6 @@ spec:
                                         - value
                                         type: object
                                       type: array
-                                    type:
-                                      maxLength: 253
-                                      minLength: 1
-                                      type: string
-                                  required:
-                                  - type
                                   type: object
                                 glob:
                                   description: Glob configuration.
@@ -12468,13 +12392,8 @@ spec:
                                       minLength: 1
                                       pattern: ^[A-Za-z0-9._?*-]+$
                                       type: string
-                                    type:
-                                      maxLength: 253
-                                      minLength: 1
-                                      type: string
                                   required:
                                   - glob
-                                  - type
                                   type: object
                                 type:
                                   description: Type designates the type of configuration.
@@ -12529,12 +12448,6 @@ spec:
                                         - backend
                                         type: object
                                       type: array
-                                    type:
-                                      maxLength: 253
-                                      minLength: 1
-                                      type: string
-                                  required:
-                                  - type
                                   type: object
                                 glob:
                                   description: Glob configuration.
@@ -12561,13 +12474,8 @@ spec:
                                       minLength: 1
                                       pattern: ^[A-Za-z0-9._?*-]+$
                                       type: string
-                                    type:
-                                      maxLength: 253
-                                      minLength: 1
-                                      type: string
                                   required:
                                   - glob
-                                  - type
                                   type: object
                                 type:
                                   description: Type designates the type of configuration.
