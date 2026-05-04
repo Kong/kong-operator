@@ -503,7 +503,8 @@ func (g *Generator) generateReconcilerEntityFiles(reconcilerEntities []string, p
 }
 
 // generateSharedFiles generates files shared across all entities:
-// groupversion_info.go, doc.go, common_types.go, and schema_types.go.
+// groupversion_info.go, doc.go, common_types.go, reconciler condition constants,
+// and schema_types.go.
 func (g *Generator) generateSharedFiles(parsed *parser.ParsedSpec, referencedSchemas map[string]bool, schemaTypeFieldConfig *config.Config) ([]GeneratedFile, error) {
 	var files []GeneratedFile
 
@@ -531,6 +532,14 @@ func (g *Generator) generateSharedFiles(parsed *parser.ParsedSpec, referencedSch
 		Name:    "common_types.go",
 		Content: commonContent,
 	})
+
+	reconcilerConditionsFile, err := g.generateReconcilerConditions(parsed)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate reconciler condition constants: %w", err)
+	}
+	if reconcilerConditionsFile != nil {
+		files = append(files, *reconcilerConditionsFile)
+	}
 
 	if len(referencedSchemas) > 0 {
 		files = append(files, GeneratedFile{
@@ -1194,6 +1203,22 @@ func rootRefAccessorEntityName(dep *parser.Dependency) string {
 		return dep.AccessorEntityName
 	}
 	return dep.EntityName
+}
+
+// refConditionEntityName picks the prefix used for generated ref-condition
+// constants from a parent dependency. It prefers the accessor alias (e.g.
+// "EventGateway" instead of the raw spec entity "Gateway"), but falls back to
+// the entity name when the entity already embeds the accessor as a prefix or
+// suffix (e.g. EntityName "EventGatewayListener" with accessor "Listener" stays
+// as "EventGatewayListener").
+func refConditionEntityName(dep *parser.Dependency) string {
+	if dep.AccessorEntityName == "" || dep.AccessorEntityName == dep.EntityName {
+		return dep.EntityName
+	}
+	if strings.HasSuffix(dep.EntityName, dep.AccessorEntityName) || strings.HasPrefix(dep.EntityName, dep.AccessorEntityName) {
+		return dep.EntityName
+	}
+	return dep.AccessorEntityName
 }
 
 // EntityFilePrefix converts a PascalCase entity name to a lowercase file name

@@ -191,6 +191,109 @@ func TestGenerateWatchAndIndex_ForChildEntity(t *testing.T) {
 	})
 }
 
+func TestGenerateReconcilerConditions(t *testing.T) {
+	g := NewGenerator(Config{
+		APIVersion: "v1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"Portal":                           {IsRoot: true},
+			"PortalTeam":                       {IsRoot: false},
+			"KonnectEventGateway":              {IsRoot: true},
+			"KonnectEventDataPlaneCertificate": {IsRoot: false, ParentEntityType: "KonnectEventGateway"},
+			"EventGatewayListenerPolicy":       {IsRoot: false, ParentEntityType: "EventGatewayListener"},
+		},
+	})
+
+	parsed := &parser.ParsedSpec{
+		RequestBodies: map[string]*parser.Schema{
+			"CreatePortal": {
+				Name: "CreatePortal",
+			},
+			"CreatePortalTeam": {
+				Name: "CreatePortalTeam",
+				Dependencies: []*parser.Dependency{{
+					EntityName:         "Portal",
+					AccessorEntityName: "Portal",
+					FieldName:          "PortalRef",
+					JSONName:           "portal_ref",
+				}},
+			},
+			"CreateKonnectEventGateway": {
+				Name: "CreateKonnectEventGateway",
+			},
+			"CreateKonnectEventDataPlaneCertificate": {
+				Name: "CreateKonnectEventDataPlaneCertificate",
+				Dependencies: []*parser.Dependency{{
+					EntityName:         "Gateway",
+					AccessorEntityName: "EventGateway",
+					FieldName:          "GatewayRef",
+					JSONName:           "gateway_ref",
+				}},
+			},
+			"CreateEventGatewayListenerPolicy": {
+				Name: "CreateEventGatewayListenerPolicy",
+				Dependencies: []*parser.Dependency{{
+					EntityName:         "EventGatewayListener",
+					AccessorEntityName: "Listener",
+					FieldName:          "EventGatewayListenerRef",
+					JSONName:           "event_gateway_listener_ref",
+				}},
+			},
+		},
+	}
+
+	file, err := g.generateReconcilerConditions(parsed)
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	assert.Equal(t, "zz_generated_reconciler_conditions.go", file.Name)
+	assert.Contains(t, file.Content, `package v1alpha1`)
+	assert.Contains(t, file.Content, `EventGatewayRefValidConditionType = "EventGatewayRefValid"`)
+	assert.Contains(t, file.Content, `EventGatewayRefReasonNotProgrammed = "NotProgrammed"`)
+	assert.Contains(t, file.Content, `EventGatewayListenerRefValidConditionType = "EventGatewayListenerRefValid"`)
+	assert.Contains(t, file.Content, `PortalRefValidConditionType = "PortalRefValid"`)
+	assert.NotContains(t, file.Content, `KonnectEventGatewayRefValidConditionType`)
+	assert.NotContains(t, file.Content, "\n\tListenerRefValidConditionType = \"ListenerRefValid\"")
+
+	_, err = format.Source([]byte(file.Content))
+	require.NoError(t, err, "generated file must be valid gofmt'd Go source")
+}
+
+func TestGenerate_EmitsReconcilerConditionsFile(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroup:   "konnect.konghq.com",
+		APIVersion: "v1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"Portal":     {IsRoot: true},
+			"PortalTeam": {IsRoot: false},
+		},
+	})
+
+	files, err := g.Generate(&parser.ParsedSpec{
+		RequestBodies: map[string]*parser.Schema{
+			"CreatePortal": {
+				Name: "CreatePortal",
+			},
+			"CreatePortalTeam": {
+				Name: "CreatePortalTeam",
+				Dependencies: []*parser.Dependency{{
+					EntityName:         "Portal",
+					AccessorEntityName: "Portal",
+					FieldName:          "PortalRef",
+					JSONName:           "portal_ref",
+				}},
+			},
+		},
+		Schemas: map[string]*parser.Schema{},
+	})
+	require.NoError(t, err)
+
+	var fileNames []string
+	for _, file := range files {
+		fileNames = append(fileNames, file.Name)
+	}
+
+	assert.Contains(t, fileNames, "zz_generated_reconciler_conditions.go")
+}
+
 func TestGenerateCommonTypes(t *testing.T) {
 	t.Run("without import includes union ObjectRef types", func(t *testing.T) {
 		g := NewGenerator(Config{APIVersion: "v1alpha1"})

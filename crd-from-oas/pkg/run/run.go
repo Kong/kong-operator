@@ -513,6 +513,10 @@ func cleanupLegacyGeneratedFiles(projectRoot, dir string, parsed *parser.ParsedS
 	if err := removeFileIfExists(sharedReconcilerFuncsPath); err != nil {
 		return err
 	}
+	reconcilerConditionsPath := filepath.Join(dir, "zz_generated_reconciler_conditions.go")
+	if err := removeFileIfExists(reconcilerConditionsPath); err != nil {
+		return err
+	}
 
 	return nil
 }
