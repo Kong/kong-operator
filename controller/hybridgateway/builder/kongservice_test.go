@@ -244,9 +244,6 @@ func TestKongServiceBuilder_WithProtocol(t *testing.T) {
 	}
 }
 
-//go:fix inline
-func int64Ptr(v int64) *int64 { return new(v) }
-
 func TestKongServiceBuilder_WithReadTimeout(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -254,8 +251,8 @@ func TestKongServiceBuilder_WithReadTimeout(t *testing.T) {
 		expected *int64
 	}{
 		{name: "nil leaves field unset", input: nil, expected: nil},
-		{name: "zero sets field", input: int64Ptr(0), expected: int64Ptr(0)},
-		{name: "positive sets field", input: int64Ptr(30000), expected: int64Ptr(30000)},
+		{name: "zero sets field", input: new(int64(0)), expected: new(int64(0))},
+		{name: "positive sets field", input: new(int64(30000)), expected: new(int64(30000))},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
