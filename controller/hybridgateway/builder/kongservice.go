@@ -105,12 +105,12 @@ func (b *KongServiceBuilder) WithOwner(owner client.Object) *KongServiceBuilder 
 }
 
 // WithWriteTimeout sets the write timeout (milliseconds) for the KongService being built.
-// If ok is false the field is left unset.
-func (b *KongServiceBuilder) WithWriteTimeout(timeout int64, ok bool) *KongServiceBuilder {
-	if !ok {
+// A nil pointer leaves the field unset.
+func (b *KongServiceBuilder) WithWriteTimeout(v *int64) *KongServiceBuilder {
+	if v == nil {
 		return b
 	}
-	b.service.Spec.WriteTimeout = &timeout
+	b.service.Spec.WriteTimeout = v
 	return b
 }
 
