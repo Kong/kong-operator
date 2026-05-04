@@ -1,5 +1,7 @@
 package ops
 
+import "reflect"
+
 // matchStringField compares string-like values without reflection.
 // Nil pointers are treated as empty strings to mirror the previous behavior.
 func matchStringField[
@@ -20,7 +22,20 @@ func stringValueGeneric[
 			return ""
 		}
 		return *value
-	default:
+	}
+
+	rv := reflect.ValueOf(v)
+	if !rv.IsValid() {
 		return ""
 	}
+	if rv.Kind() == reflect.Pointer {
+		if rv.IsNil() {
+			return ""
+		}
+		rv = rv.Elem()
+	}
+	if rv.Kind() != reflect.String {
+		return ""
+	}
+	return rv.String()
 }
