@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -950,24 +951,28 @@ func TestExtractProtocol(t *testing.T) {
 }
 
 func TestExtractTLSVerify(t *testing.T) {
+	boolPtr := func(b bool) *bool { return &b }
 	tests := []struct {
 		name        string
 		annotations map[string]string
-		expected    bool
-		expectedOK  bool
+		expected    *bool
 	}{
-		{name: "nil annotations", annotations: nil, expected: false, expectedOK: false},
-		{name: "empty annotations", annotations: map[string]string{}, expected: false, expectedOK: false},
-		{name: "tls-verify true", annotations: map[string]string{"konghq.com/tls-verify": "true"}, expected: true, expectedOK: true},
-		{name: "tls-verify false", annotations: map[string]string{"konghq.com/tls-verify": "false"}, expected: false, expectedOK: true},
-		{name: "invalid value", annotations: map[string]string{"konghq.com/tls-verify": "invalid"}, expected: false, expectedOK: false},
-		{name: "empty value", annotations: map[string]string{"konghq.com/tls-verify": ""}, expected: false, expectedOK: false},
+		{name: "nil annotations", annotations: nil, expected: nil},
+		{name: "empty annotations", annotations: map[string]string{}, expected: nil},
+		{name: "tls-verify true", annotations: map[string]string{"konghq.com/tls-verify": "true"}, expected: boolPtr(true)},
+		{name: "tls-verify false", annotations: map[string]string{"konghq.com/tls-verify": "false"}, expected: boolPtr(false)},
+		{name: "invalid value", annotations: map[string]string{"konghq.com/tls-verify": "invalid"}, expected: nil},
+		{name: "empty value", annotations: map[string]string{"konghq.com/tls-verify": ""}, expected: nil},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v, ok := ExtractTLSVerify(tt.annotations)
-			assert.Equal(t, tt.expectedOK, ok)
-			assert.Equal(t, tt.expected, v)
+			got := ExtractTLSVerify(tt.annotations)
+			if tt.expected == nil {
+				assert.Nil(t, got)
+			} else {
+				require.NotNil(t, got)
+				assert.Equal(t, *tt.expected, *got)
+			}
 		})
 	}
 }

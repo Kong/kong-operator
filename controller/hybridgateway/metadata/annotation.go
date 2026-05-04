@@ -62,10 +62,15 @@ func ExtractProtocol(anns map[string]string) string {
 }
 
 // ExtractTLSVerify extracts the tls-verify annotation value.
-// Returns (value, true) when the annotation is present and parseable as a boolean.
+// Returns a *bool set to the parsed value when the annotation is present and parseable,
+// or nil when absent or unparseable.
 // This mirrors ingress-controller/internal/annotations.ExtractTLSVerify.
-func ExtractTLSVerify(anns map[string]string) (bool, bool) {
-	return parseAnnotationBool(anns, tlsVerifyKey)
+func ExtractTLSVerify(anns map[string]string) *bool {
+	v, ok := parseAnnotationBool(anns, tlsVerifyKey)
+	if !ok {
+		return nil
+	}
+	return &v
 }
 
 // IsValidProtocol returns true if the provided protocol is a valid Kong upstream protocol.

@@ -62,8 +62,7 @@ func ServiceForRule[
 
 	var serviceName string
 	var protocol string
-	var tlsVerify bool
-	var tlsVerifySet bool
+	var tlsVerify *bool
 
 	switch r := any(parentRoute).(type) {
 	case *gwtypes.HTTPRoute:
@@ -73,7 +72,7 @@ func ServiceForRule[
 		}
 		serviceName = namegen.NewKongServiceNameForHTTPRouteRule(r, cp, httpRule)
 		protocol = resolveProtocolFromHTTPRouteBackendRefs(ctx, cl, r, httpRule, "http", logger)
-		tlsVerify, tlsVerifySet = resolveTLSVerifyFromHTTPRouteBackendRefs(ctx, cl, r, httpRule, logger)
+		tlsVerify = resolveTLSVerifyFromHTTPRouteBackendRefs(ctx, cl, r, httpRule, logger)
 	case *gwtypes.TLSRoute:
 		tlsRule, ok := any(rule).(gwtypes.TLSRouteRule)
 		if !ok {
@@ -81,7 +80,7 @@ func ServiceForRule[
 		}
 		serviceName = namegen.NewKongServiceNameForTLSRouteRule(r, cp, tlsRule)
 		protocol = resolveProtocolFromTLSRouteBackendRefs(ctx, cl, r, tlsRule, logger)
-		tlsVerify, tlsVerifySet = resolveTLSVerifyFromTLSRouteBackendRefs(ctx, cl, r, tlsRule, logger)
+		tlsVerify = resolveTLSVerifyFromTLSRouteBackendRefs(ctx, cl, r, tlsRule, logger)
 
 	// TODO: add other types of routes and rules when we support them.
 
@@ -100,7 +99,7 @@ func ServiceForRule[
 		WithSpecName(serviceName).
 		WithSpecHost(upstreamName).
 		WithProtocol(protocol).
-		WithTLSVerify(tlsVerify, tlsVerifySet).
+		WithTLSVerify(tlsVerify).
 		WithControlPlaneRef(*cp).Build()
 	if err != nil {
 		log.Error(logger, err, "Failed to build KongService resource")
@@ -209,13 +208,13 @@ func resolveTLSVerifyFromHTTPRouteBackendRefs(
 	httpRoute *gwtypes.HTTPRoute,
 	rule gwtypes.HTTPRouteRule,
 	logger logr.Logger,
-) (bool, bool) {
+) *bool {
 	for _, backendRef := range rule.BackendRefs {
-		if v, ok := extractTLSVerifyFromBackendRef(ctx, cl, logger, httpRoute.Namespace, backendRef.BackendRef); ok {
-			return v, true
+		if v := extractTLSVerifyFromBackendRef(ctx, cl, logger, httpRoute.Namespace, backendRef.BackendRef); v != nil {
+			return v
 		}
 	}
-	return false, false
+	return nil
 }
 
 // resolveTLSVerifyFromTLSRouteBackendRefs returns the tls-verify value taken from
@@ -226,13 +225,13 @@ func resolveTLSVerifyFromTLSRouteBackendRefs(
 	tlsRoute *gwtypes.TLSRoute,
 	rule gwtypes.TLSRouteRule,
 	logger logr.Logger,
-) (bool, bool) {
+) *bool {
 	for _, backendRef := range rule.BackendRefs {
-		if v, ok := extractTLSVerifyFromBackendRef(ctx, cl, logger, tlsRoute.Namespace, backendRef); ok {
-			return v, true
+		if v := extractTLSVerifyFromBackendRef(ctx, cl, logger, tlsRoute.Namespace, backendRef); v != nil {
+			return v
 		}
 	}
-	return false, false
+	return nil
 }
 
 // extractTLSVerifyFromBackendRef returns the tls-verify value from the konghq.com/tls-verify
@@ -243,9 +242,9 @@ func extractTLSVerifyFromBackendRef(
 	logger logr.Logger,
 	namespace string,
 	backendRef gwtypes.BackendRef,
-) (bool, bool) {
+) *bool {
 	if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
-		return false, false
+		return nil
 	}
 
 	bRefNamespace := namespace
@@ -257,15 +256,15 @@ func extractTLSVerifyFromBackendRef(
 	if err := cl.Get(ctx, client.ObjectKey{Namespace: bRefNamespace, Name: string(backendRef.Name)}, svc); err != nil {
 		log.Debug(logger, "Failed to fetch backend Service for tls-verify annotation check",
 			"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "error", err)
-		return false, false
+		return nil
 	}
 
-	v, ok := metadata.ExtractTLSVerify(svc.GetAnnotations())
-	if !ok {
-		return false, false
+	v := metadata.ExtractTLSVerify(svc.GetAnnotations())
+	if v == nil {
+		return nil
 	}
 
 	log.Debug(logger, "Using tls-verify from backend Service annotation",
-		"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "tls-verify", v)
-	return v, true
+		"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "tls-verify", *v)
+	return v
 }

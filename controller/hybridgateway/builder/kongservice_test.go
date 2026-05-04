@@ -245,19 +245,19 @@ func TestKongServiceBuilder_WithProtocol(t *testing.T) {
 }
 
 func TestKongServiceBuilder_WithTLSVerify(t *testing.T) {
+	boolPtr := func(b bool) *bool { return &b }
 	tests := []struct {
 		name     string
-		verify   bool
-		ok       bool
+		v        *bool
 		expected *bool
 	}{
-		{name: "ok=false leaves field unset", verify: false, ok: false, expected: nil},
-		{name: "ok=true with true", verify: true, ok: true, expected: &[]bool{true}[0]},
-		{name: "ok=true with false", verify: false, ok: true, expected: &[]bool{false}[0]},
+		{name: "nil leaves field unset", v: nil, expected: nil},
+		{name: "true sets field", v: boolPtr(true), expected: boolPtr(true)},
+		{name: "false sets field", v: boolPtr(false), expected: boolPtr(false)},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			service, err := NewKongService().WithTLSVerify(tt.verify, tt.ok).Build()
+			service, err := NewKongService().WithTLSVerify(tt.v).Build()
 			require.NoError(t, err)
 			if tt.expected == nil {
 				assert.Nil(t, service.Spec.TLSVerify)

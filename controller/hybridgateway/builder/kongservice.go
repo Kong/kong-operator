@@ -105,12 +105,12 @@ func (b *KongServiceBuilder) WithOwner(owner client.Object) *KongServiceBuilder 
 }
 
 // WithTLSVerify sets the tls-verify flag for the KongService being built.
-// If ok is false the field is left unset.
-func (b *KongServiceBuilder) WithTLSVerify(verify bool, ok bool) *KongServiceBuilder {
-	if !ok {
+// Nil leaves the field unset.
+func (b *KongServiceBuilder) WithTLSVerify(v *bool) *KongServiceBuilder {
+	if v == nil {
 		return b
 	}
-	b.service.Spec.TLSVerify = &verify
+	b.service.Spec.TLSVerify = v
 	return b
 }
 
