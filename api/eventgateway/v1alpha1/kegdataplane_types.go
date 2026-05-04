@@ -23,10 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func init() {
-	SchemeBuilder.Register(&KegDataPlane{}, &KegDataPlaneList{})
-}
-
 // KegDataPlane is the Schema for the EventGateway data planes API.
 // It manages a keg binary Deployment that connects to Konnect via a
 // referenced KonnectEventGateway resource.

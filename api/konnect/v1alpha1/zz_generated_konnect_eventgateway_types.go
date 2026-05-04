@@ -4,6 +4,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 )
 
@@ -112,8 +113,4 @@ type KonnectEventGatewayStatus struct {
 	//
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
-}
-
-func init() {
-	SchemeBuilder.Register(&KonnectEventGateway{}, &KonnectEventGatewayList{})
 }

@@ -64,7 +64,3 @@ type IngressClassParametersSpec struct {
 	// +kubebuilder:default:=false
 	EnableLegacyRegexDetection bool `json:"enableLegacyRegexDetection,omitempty"`
 }
-
-func init() {
-	SchemeBuilder.Register(&IngressClassParameters{}, &IngressClassParametersList{})
-}
