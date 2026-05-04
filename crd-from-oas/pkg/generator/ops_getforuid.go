@@ -43,9 +43,17 @@ type opsGetForUIDFuncData struct {
 	// UseUIDTagFilter indicates the API supports filtering list requests by the
 	// Kubernetes UID tag, so getForUID can avoid full scans.
 	UseUIDTagFilter bool
+	// MatchFields configures generated field comparisons for entities whose
+	// list responses do not expose labels/tags.
+	MatchFields []opsGetForUIDMatchFieldData
 	// HasName indicates the entity's request schema declares a "name" field,
 	// used as a fallback UID-matching strategy when HasLabels is false.
 	HasName bool
+}
+
+type opsGetForUIDMatchFieldData struct {
+	ObjectField   string
+	ResponseField string
 }
 
 // generateOpsGetForUIDFuncBody renders the get<Entity>ForUID function body
@@ -108,6 +116,16 @@ func (g *Generator) generateOpsGetForUIDFuncBody(
 
 	_, hasLabels, _ := metadataFields(schema)
 	hasName := schemaHasNameProperty(schema)
+	matchFields := make([]opsGetForUIDMatchFieldData, 0)
+	if opsConfig != nil && opsConfig.GetForUID != nil {
+		matchFields = make([]opsGetForUIDMatchFieldData, 0, len(opsConfig.GetForUID.MatchFields))
+		for _, field := range opsConfig.GetForUID.MatchFields {
+			matchFields = append(matchFields, opsGetForUIDMatchFieldData{
+				ObjectField:   field.ObjectField,
+				ResponseField: field.ResponseField,
+			})
+		}
+	}
 
 	return &opsGetForUIDFuncData{
 		Entity:                entityName,
@@ -121,6 +139,7 @@ func (g *Generator) generateOpsGetForUIDFuncBody(
 		ParentIDField:         parentIDField,
 		HasLabels:             hasLabels,
 		UseUIDTagFilter:       opsConfig != nil && opsConfig.UseUIDTagFilter,
+		MatchFields:           matchFields,
 		HasName:               hasName,
 	}, nil
 }

@@ -86,3 +86,47 @@ func deleteKonnectEventDataPlaneCertificate(
 	}
 	return nil
 }
+
+func getKonnectEventDataPlaneCertificateForUID(
+	ctx context.Context,
+	sdk sdkkonnectgo.EventGatewayDataPlaneCertificatesSDK,
+	obj *konnectv1alpha1.KonnectEventDataPlaneCertificate,
+) (string, error) {
+	parentID := obj.GetGatewayID()
+	if parentID == "" {
+		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectEventGateway", Op: GetOp}
+	}
+	resp, err := sdk.ListEventGatewayDataPlaneCertificates(ctx, sdkkonnectops.ListEventGatewayDataPlaneCertificatesRequest{
+		GatewayID: parentID,
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
+	}
+	if resp == nil || resp.ListEventGatewayDataPlaneCertificatesResponse == nil {
+		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
+	}
+
+	for _, entry := range resp.ListEventGatewayDataPlaneCertificatesResponse.Data {
+		if !matchStringField(obj.Spec.APISpec.Certificate, entry.Certificate) {
+			continue
+		}
+		if !matchStringField(obj.Spec.APISpec.Name, entry.Name) {
+			continue
+		}
+		if !matchStringField(obj.Spec.APISpec.Description, entry.Description) {
+			continue
+		}
+		switch id := any(entry.GetID()).(type) {
+		case string:
+			if id != "" {
+				return id, nil
+			}
+		case *string:
+			if id != nil && *id != "" {
+				return *id, nil
+			}
+		}
+	}
+
+	return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+}
