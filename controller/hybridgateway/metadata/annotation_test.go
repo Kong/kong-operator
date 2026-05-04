@@ -950,7 +950,8 @@ func TestExtractProtocol(t *testing.T) {
 	}
 }
 
-func int64Ptr(v int64) *int64 { return &v }
+//go:fix inline
+func int64Ptr(v int64) *int64 { return new(v) }
 
 func TestExtractRetries(t *testing.T) {
 	tests := []struct {
@@ -960,8 +961,8 @@ func TestExtractRetries(t *testing.T) {
 	}{
 		{name: "nil annotations", annotations: nil, expected: nil},
 		{name: "empty annotations", annotations: map[string]string{}, expected: nil},
-		{name: "valid retries", annotations: map[string]string{"konghq.com/retries": "5"}, expected: int64Ptr(5)},
-		{name: "zero retries", annotations: map[string]string{"konghq.com/retries": "0"}, expected: int64Ptr(0)},
+		{name: "valid retries", annotations: map[string]string{"konghq.com/retries": "5"}, expected: new(int64(5))},
+		{name: "zero retries", annotations: map[string]string{"konghq.com/retries": "0"}, expected: new(int64(0))},
 		{name: "negative invalid", annotations: map[string]string{"konghq.com/retries": "-1"}, expected: nil},
 		{name: "non-numeric", annotations: map[string]string{"konghq.com/retries": "abc"}, expected: nil},
 		{name: "empty value", annotations: map[string]string{"konghq.com/retries": ""}, expected: nil},
