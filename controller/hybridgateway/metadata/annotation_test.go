@@ -951,7 +951,6 @@ func TestExtractProtocol(t *testing.T) {
 }
 
 func TestExtractTLSVerifyDepth(t *testing.T) {
-	int64Ptr := func(i int64) *int64 { return &i }
 	tests := []struct {
 		name        string
 		annotations map[string]string
@@ -959,8 +958,8 @@ func TestExtractTLSVerifyDepth(t *testing.T) {
 	}{
 		{name: "nil annotations", annotations: nil, expected: nil},
 		{name: "empty annotations", annotations: map[string]string{}, expected: nil},
-		{name: "valid depth", annotations: map[string]string{"konghq.com/tls-verify-depth": "3"}, expected: int64Ptr(3)},
-		{name: "zero depth", annotations: map[string]string{"konghq.com/tls-verify-depth": "0"}, expected: int64Ptr(0)},
+		{name: "valid depth", annotations: map[string]string{"konghq.com/tls-verify-depth": "3"}, expected: new(int64(3))},
+		{name: "zero depth", annotations: map[string]string{"konghq.com/tls-verify-depth": "0"}, expected: new(int64(0))},
 		{name: "negative depth treated as invalid", annotations: map[string]string{"konghq.com/tls-verify-depth": "-1"}, expected: nil},
 		{name: "non-numeric value", annotations: map[string]string{"konghq.com/tls-verify-depth": "abc"}, expected: nil},
 		{name: "empty value", annotations: map[string]string{"konghq.com/tls-verify-depth": ""}, expected: nil},

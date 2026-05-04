@@ -245,15 +245,14 @@ func TestKongServiceBuilder_WithProtocol(t *testing.T) {
 }
 
 func TestKongServiceBuilder_WithTLSVerifyDepth(t *testing.T) {
-	int64Ptr := func(i int64) *int64 { return &i }
 	tests := []struct {
 		name     string
 		v        *int64
 		expected *int64
 	}{
 		{name: "nil leaves field unset", v: nil, expected: nil},
-		{name: "zero sets field", v: int64Ptr(0), expected: int64Ptr(0)},
-		{name: "positive sets field", v: int64Ptr(3), expected: int64Ptr(3)},
+		{name: "zero sets field", v: new(int64(0)), expected: new(int64(0))},
+		{name: "positive sets field", v: new(int64(3)), expected: new(int64(3))},
 	}
 
 	for _, tt := range tests {
