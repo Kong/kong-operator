@@ -16,12 +16,13 @@ import (
 
 const (
 	// Annotation constants matching those in the ingress controller.
-	annotationPrefix = "konghq.com"
-	stripPathKey     = "/strip-path"
-	preserveHostKey  = "/preserve-host"
-	protocolKey      = "/protocol"
-	kindHTTPRoute    = "HTTPRoute"
-	kindTLSRoute     = "TLSRoute"
+	annotationPrefix  = "konghq.com"
+	stripPathKey      = "/strip-path"
+	preserveHostKey   = "/preserve-host"
+	protocolKey       = "/protocol"
+	tlsVerifyDepthKey = "/tls-verify-depth"
+	kindHTTPRoute     = "HTTPRoute"
+	kindTLSRoute      = "TLSRoute"
 )
 
 // Defaults for the annotations when not specified that match the behavior of on-prem.
@@ -58,6 +59,24 @@ func ExtractPreserveHost(anns map[string]string) bool {
 // This mirrors ingress-controller/internal/annotations.ExtractProtocolName.
 func ExtractProtocol(anns map[string]string) string {
 	return anns[annotationPrefix+protocolKey]
+}
+
+// ExtractTLSVerifyDepth extracts the tls-verify-depth annotation value.
+// Returns (depth, true) when the annotation is present and parseable as a non-negative integer.
+// This mirrors ingress-controller/internal/annotations.ExtractTLSVerifyDepth.
+func ExtractTLSVerifyDepth(anns map[string]string) (int64, bool) {
+	if anns == nil {
+		return 0, false
+	}
+	val, ok := anns[annotationPrefix+tlsVerifyDepthKey]
+	if !ok || val == "" {
+		return 0, false
+	}
+	depth, err := strconv.ParseInt(val, 10, 64)
+	if err != nil || depth < 0 {
+		return 0, false
+	}
+	return depth, true
 }
 
 // IsValidProtocol returns true if the provided protocol is a valid Kong upstream protocol.

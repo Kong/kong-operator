@@ -104,6 +104,16 @@ func (b *KongServiceBuilder) WithOwner(owner client.Object) *KongServiceBuilder 
 	return b
 }
 
+// WithTLSVerifyDepth sets the TLS verify depth for the KongService being built.
+// If ok is false the field is left unset.
+func (b *KongServiceBuilder) WithTLSVerifyDepth(depth int64, ok bool) *KongServiceBuilder {
+	if !ok {
+		return b
+	}
+	b.service.Spec.TLSVerifyDepth = &depth
+	return b
+}
+
 // WithProtocol sets the protocol for the KongService being built.
 // Supported protocols match the Kong Gateway upstream protocol set.
 func (b *KongServiceBuilder) WithProtocol(protocol string) *KongServiceBuilder {
