@@ -62,6 +62,8 @@ func ServiceForRule[
 
 	var serviceName string
 	var protocol string
+	var readTimeout int64
+	var readTimeoutSet bool
 
 	switch r := any(parentRoute).(type) {
 	case *gwtypes.HTTPRoute:
@@ -71,6 +73,7 @@ func ServiceForRule[
 		}
 		serviceName = namegen.NewKongServiceNameForHTTPRouteRule(r, cp, httpRule)
 		protocol = resolveProtocolFromHTTPRouteBackendRefs(ctx, cl, r, httpRule, "http", logger)
+		readTimeout, readTimeoutSet = resolveReadTimeoutFromHTTPRouteBackendRefs(ctx, cl, r, httpRule, logger)
 	case *gwtypes.TLSRoute:
 		tlsRule, ok := any(rule).(gwtypes.TLSRouteRule)
 		if !ok {
@@ -78,6 +81,7 @@ func ServiceForRule[
 		}
 		serviceName = namegen.NewKongServiceNameForTLSRouteRule(r, cp, tlsRule)
 		protocol = resolveProtocolFromTLSRouteBackendRefs(ctx, cl, r, tlsRule, logger)
+		readTimeout, readTimeoutSet = resolveReadTimeoutFromTLSRouteBackendRefs(ctx, cl, r, tlsRule, logger)
 
 	// TODO: add other types of routes and rules when we support them.
 
@@ -96,6 +100,7 @@ func ServiceForRule[
 		WithSpecName(serviceName).
 		WithSpecHost(upstreamName).
 		WithProtocol(protocol).
+		WithReadTimeout(readTimeout, readTimeoutSet).
 		WithControlPlaneRef(*cp).Build()
 	if err != nil {
 		log.Error(logger, err, "Failed to build KongService resource")
@@ -194,4 +199,73 @@ func extractProtocolFromBackendRef(
 	log.Debug(logger, "Using protocol from backend Service annotation",
 		"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "protocol", protocol)
 	return protocol, true
+}
+
+// resolveReadTimeoutFromHTTPRouteBackendRefs returns the read-timeout value taken from
+// the first HTTPRoute backend Service that carries the konghq.com/read-timeout annotation.
+func resolveReadTimeoutFromHTTPRouteBackendRefs(
+	ctx context.Context,
+	cl client.Client,
+	httpRoute *gwtypes.HTTPRoute,
+	rule gwtypes.HTTPRouteRule,
+	logger logr.Logger,
+) (int64, bool) {
+	for _, backendRef := range rule.BackendRefs {
+		if v, ok := extractReadTimeoutFromBackendRef(ctx, cl, logger, httpRoute.Namespace, backendRef.BackendRef); ok {
+			return v, true
+		}
+	}
+	return 0, false
+}
+
+// resolveReadTimeoutFromTLSRouteBackendRefs returns the read-timeout value taken from
+// the first TLSRoute backend Service that carries the konghq.com/read-timeout annotation.
+func resolveReadTimeoutFromTLSRouteBackendRefs(
+	ctx context.Context,
+	cl client.Client,
+	tlsRoute *gwtypes.TLSRoute,
+	rule gwtypes.TLSRouteRule,
+	logger logr.Logger,
+) (int64, bool) {
+	for _, backendRef := range rule.BackendRefs {
+		if v, ok := extractReadTimeoutFromBackendRef(ctx, cl, logger, tlsRoute.Namespace, backendRef); ok {
+			return v, true
+		}
+	}
+	return 0, false
+}
+
+// extractReadTimeoutFromBackendRef returns the read-timeout value from the
+// konghq.com/read-timeout annotation on the backend Service referenced by the BackendRef.
+func extractReadTimeoutFromBackendRef(
+	ctx context.Context,
+	cl client.Client,
+	logger logr.Logger,
+	namespace string,
+	backendRef gwtypes.BackendRef,
+) (int64, bool) {
+	if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
+		return 0, false
+	}
+
+	bRefNamespace := namespace
+	if backendRef.Namespace != nil && *backendRef.Namespace != "" {
+		bRefNamespace = string(*backendRef.Namespace)
+	}
+
+	svc := &corev1.Service{}
+	if err := cl.Get(ctx, client.ObjectKey{Namespace: bRefNamespace, Name: string(backendRef.Name)}, svc); err != nil {
+		log.Debug(logger, "Failed to fetch backend Service for read-timeout annotation check",
+			"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "error", err)
+		return 0, false
+	}
+
+	v, ok := metadata.ExtractReadTimeout(svc.GetAnnotations())
+	if !ok {
+		return 0, false
+	}
+
+	log.Debug(logger, "Using read-timeout from backend Service annotation",
+		"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "read-timeout", v)
+	return v, true
 }
