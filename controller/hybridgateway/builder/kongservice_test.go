@@ -244,20 +244,21 @@ func TestKongServiceBuilder_WithProtocol(t *testing.T) {
 	}
 }
 
+func int64Ptr(v int64) *int64 { return &v }
+
 func TestKongServiceBuilder_WithReadTimeout(t *testing.T) {
 	tests := []struct {
 		name     string
-		timeout  int64
-		ok       bool
+		input    *int64
 		expected *int64
 	}{
-		{name: "ok=false leaves field unset", timeout: 0, ok: false, expected: nil},
-		{name: "ok=true with zero", timeout: 0, ok: true, expected: &[]int64{0}[0]},
-		{name: "ok=true with positive", timeout: 30000, ok: true, expected: &[]int64{30000}[0]},
+		{name: "nil leaves field unset", input: nil, expected: nil},
+		{name: "zero sets field", input: int64Ptr(0), expected: int64Ptr(0)},
+		{name: "positive sets field", input: int64Ptr(30000), expected: int64Ptr(30000)},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			service, err := NewKongService().WithReadTimeout(tt.timeout, tt.ok).Build()
+			service, err := NewKongService().WithReadTimeout(tt.input).Build()
 			require.NoError(t, err)
 			if tt.expected == nil {
 				assert.Nil(t, service.Spec.ReadTimeout)

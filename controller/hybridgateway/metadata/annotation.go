@@ -62,21 +62,21 @@ func ExtractProtocol(anns map[string]string) string {
 }
 
 // ExtractReadTimeout extracts the read-timeout annotation value (milliseconds).
-// Returns (timeout, true) when the annotation is present and parseable as a non-negative integer.
+// Returns a non-nil pointer when the annotation is present and parseable as a non-negative integer.
 // This mirrors ingress-controller/internal/annotations.ExtractReadTimeout.
-func ExtractReadTimeout(anns map[string]string) (int64, bool) {
+func ExtractReadTimeout(anns map[string]string) *int64 {
 	if anns == nil {
-		return 0, false
+		return nil
 	}
 	val, ok := anns[annotationPrefix+readTimeoutKey]
 	if !ok || val == "" {
-		return 0, false
+		return nil
 	}
 	timeout, err := strconv.ParseInt(val, 10, 64)
 	if err != nil || timeout < 0 {
-		return 0, false
+		return nil
 	}
-	return timeout, true
+	return &timeout
 }
 
 // IsValidProtocol returns true if the provided protocol is a valid Kong upstream protocol.

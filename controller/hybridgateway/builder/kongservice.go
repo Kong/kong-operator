@@ -105,12 +105,12 @@ func (b *KongServiceBuilder) WithOwner(owner client.Object) *KongServiceBuilder 
 }
 
 // WithReadTimeout sets the read timeout (milliseconds) for the KongService being built.
-// If ok is false the field is left unset.
-func (b *KongServiceBuilder) WithReadTimeout(timeout int64, ok bool) *KongServiceBuilder {
-	if !ok {
+// A nil pointer leaves the field unset.
+func (b *KongServiceBuilder) WithReadTimeout(v *int64) *KongServiceBuilder {
+	if v == nil {
 		return b
 	}
-	b.service.Spec.ReadTimeout = &timeout
+	b.service.Spec.ReadTimeout = v
 	return b
 }
 

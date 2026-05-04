@@ -62,8 +62,7 @@ func ServiceForRule[
 
 	var serviceName string
 	var protocol string
-	var readTimeout int64
-	var readTimeoutSet bool
+	var readTimeout *int64
 
 	switch r := any(parentRoute).(type) {
 	case *gwtypes.HTTPRoute:
@@ -73,7 +72,7 @@ func ServiceForRule[
 		}
 		serviceName = namegen.NewKongServiceNameForHTTPRouteRule(r, cp, httpRule)
 		protocol = resolveProtocolFromHTTPRouteBackendRefs(ctx, cl, r, httpRule, "http", logger)
-		readTimeout, readTimeoutSet = resolveReadTimeoutFromHTTPRouteBackendRefs(ctx, cl, r, httpRule, logger)
+		readTimeout = resolveReadTimeoutFromHTTPRouteBackendRefs(ctx, cl, r, httpRule, logger)
 	case *gwtypes.TLSRoute:
 		tlsRule, ok := any(rule).(gwtypes.TLSRouteRule)
 		if !ok {
@@ -81,7 +80,7 @@ func ServiceForRule[
 		}
 		serviceName = namegen.NewKongServiceNameForTLSRouteRule(r, cp, tlsRule)
 		protocol = resolveProtocolFromTLSRouteBackendRefs(ctx, cl, r, tlsRule, logger)
-		readTimeout, readTimeoutSet = resolveReadTimeoutFromTLSRouteBackendRefs(ctx, cl, r, tlsRule, logger)
+		readTimeout = resolveReadTimeoutFromTLSRouteBackendRefs(ctx, cl, r, tlsRule, logger)
 
 	// TODO: add other types of routes and rules when we support them.
 
@@ -100,7 +99,7 @@ func ServiceForRule[
 		WithSpecName(serviceName).
 		WithSpecHost(upstreamName).
 		WithProtocol(protocol).
-		WithReadTimeout(readTimeout, readTimeoutSet).
+		WithReadTimeout(readTimeout).
 		WithControlPlaneRef(*cp).Build()
 	if err != nil {
 		log.Error(logger, err, "Failed to build KongService resource")
@@ -209,13 +208,13 @@ func resolveReadTimeoutFromHTTPRouteBackendRefs(
 	httpRoute *gwtypes.HTTPRoute,
 	rule gwtypes.HTTPRouteRule,
 	logger logr.Logger,
-) (int64, bool) {
+) *int64 {
 	for _, backendRef := range rule.BackendRefs {
-		if v, ok := extractReadTimeoutFromBackendRef(ctx, cl, logger, httpRoute.Namespace, backendRef.BackendRef); ok {
-			return v, true
+		if v := extractReadTimeoutFromBackendRef(ctx, cl, logger, httpRoute.Namespace, backendRef.BackendRef); v != nil {
+			return v
 		}
 	}
-	return 0, false
+	return nil
 }
 
 // resolveReadTimeoutFromTLSRouteBackendRefs returns the read-timeout value taken from
@@ -226,13 +225,13 @@ func resolveReadTimeoutFromTLSRouteBackendRefs(
 	tlsRoute *gwtypes.TLSRoute,
 	rule gwtypes.TLSRouteRule,
 	logger logr.Logger,
-) (int64, bool) {
+) *int64 {
 	for _, backendRef := range rule.BackendRefs {
-		if v, ok := extractReadTimeoutFromBackendRef(ctx, cl, logger, tlsRoute.Namespace, backendRef); ok {
-			return v, true
+		if v := extractReadTimeoutFromBackendRef(ctx, cl, logger, tlsRoute.Namespace, backendRef); v != nil {
+			return v
 		}
 	}
-	return 0, false
+	return nil
 }
 
 // extractReadTimeoutFromBackendRef returns the read-timeout value from the
@@ -243,9 +242,9 @@ func extractReadTimeoutFromBackendRef(
 	logger logr.Logger,
 	namespace string,
 	backendRef gwtypes.BackendRef,
-) (int64, bool) {
+) *int64 {
 	if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
-		return 0, false
+		return nil
 	}
 
 	bRefNamespace := namespace
@@ -257,15 +256,15 @@ func extractReadTimeoutFromBackendRef(
 	if err := cl.Get(ctx, client.ObjectKey{Namespace: bRefNamespace, Name: string(backendRef.Name)}, svc); err != nil {
 		log.Debug(logger, "Failed to fetch backend Service for read-timeout annotation check",
 			"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "error", err)
-		return 0, false
+		return nil
 	}
 
-	v, ok := metadata.ExtractReadTimeout(svc.GetAnnotations())
-	if !ok {
-		return 0, false
+	v := metadata.ExtractReadTimeout(svc.GetAnnotations())
+	if v == nil {
+		return nil
 	}
 
 	log.Debug(logger, "Using read-timeout from backend Service annotation",
-		"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "read-timeout", v)
-	return v, true
+		"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "read-timeout", *v)
+	return v
 }
