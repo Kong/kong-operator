@@ -104,6 +104,16 @@ func (b *KongServiceBuilder) WithOwner(owner client.Object) *KongServiceBuilder 
 	return b
 }
 
+// WithRetries sets the retries count for the KongService being built.
+// If ok is false the field is left unset.
+func (b *KongServiceBuilder) WithRetries(retries int64, ok bool) *KongServiceBuilder {
+	if !ok {
+		return b
+	}
+	b.service.Spec.Retries = &retries
+	return b
+}
+
 // WithProtocol sets the protocol for the KongService being built.
 // Supported protocols match the Kong Gateway upstream protocol set.
 func (b *KongServiceBuilder) WithProtocol(protocol string) *KongServiceBuilder {

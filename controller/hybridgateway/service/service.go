@@ -62,6 +62,8 @@ func ServiceForRule[
 
 	var serviceName string
 	var protocol string
+	var retries int64
+	var retriesSet bool
 
 	switch r := any(parentRoute).(type) {
 	case *gwtypes.HTTPRoute:
@@ -71,6 +73,7 @@ func ServiceForRule[
 		}
 		serviceName = namegen.NewKongServiceNameForHTTPRouteRule(r, cp, httpRule)
 		protocol = resolveProtocolFromHTTPRouteBackendRefs(ctx, cl, r, httpRule, "http", logger)
+		retries, retriesSet = resolveRetriesFromHTTPRouteBackendRefs(ctx, cl, r, httpRule, logger)
 	case *gwtypes.TLSRoute:
 		tlsRule, ok := any(rule).(gwtypes.TLSRouteRule)
 		if !ok {
@@ -78,6 +81,7 @@ func ServiceForRule[
 		}
 		serviceName = namegen.NewKongServiceNameForTLSRouteRule(r, cp, tlsRule)
 		protocol = resolveProtocolFromTLSRouteBackendRefs(ctx, cl, r, tlsRule, logger)
+		retries, retriesSet = resolveRetriesFromTLSRouteBackendRefs(ctx, cl, r, tlsRule, logger)
 
 	// TODO: add other types of routes and rules when we support them.
 
@@ -96,6 +100,7 @@ func ServiceForRule[
 		WithSpecName(serviceName).
 		WithSpecHost(upstreamName).
 		WithProtocol(protocol).
+		WithRetries(retries, retriesSet).
 		WithControlPlaneRef(*cp).Build()
 	if err != nil {
 		log.Error(logger, err, "Failed to build KongService resource")
@@ -194,4 +199,73 @@ func extractProtocolFromBackendRef(
 	log.Debug(logger, "Using protocol from backend Service annotation",
 		"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "protocol", protocol)
 	return protocol, true
+}
+
+// resolveRetriesFromHTTPRouteBackendRefs returns the retries value taken from
+// the first HTTPRoute backend Service that carries the konghq.com/retries annotation.
+func resolveRetriesFromHTTPRouteBackendRefs(
+	ctx context.Context,
+	cl client.Client,
+	httpRoute *gwtypes.HTTPRoute,
+	rule gwtypes.HTTPRouteRule,
+	logger logr.Logger,
+) (int64, bool) {
+	for _, backendRef := range rule.BackendRefs {
+		if v, ok := extractRetriesFromBackendRef(ctx, cl, logger, httpRoute.Namespace, backendRef.BackendRef); ok {
+			return v, true
+		}
+	}
+	return 0, false
+}
+
+// resolveRetriesFromTLSRouteBackendRefs returns the retries value taken from
+// the first TLSRoute backend Service that carries the konghq.com/retries annotation.
+func resolveRetriesFromTLSRouteBackendRefs(
+	ctx context.Context,
+	cl client.Client,
+	tlsRoute *gwtypes.TLSRoute,
+	rule gwtypes.TLSRouteRule,
+	logger logr.Logger,
+) (int64, bool) {
+	for _, backendRef := range rule.BackendRefs {
+		if v, ok := extractRetriesFromBackendRef(ctx, cl, logger, tlsRoute.Namespace, backendRef); ok {
+			return v, true
+		}
+	}
+	return 0, false
+}
+
+// extractRetriesFromBackendRef returns the retries value from the konghq.com/retries
+// annotation on the backend Service referenced by the BackendRef.
+func extractRetriesFromBackendRef(
+	ctx context.Context,
+	cl client.Client,
+	logger logr.Logger,
+	namespace string,
+	backendRef gwtypes.BackendRef,
+) (int64, bool) {
+	if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
+		return 0, false
+	}
+
+	bRefNamespace := namespace
+	if backendRef.Namespace != nil && *backendRef.Namespace != "" {
+		bRefNamespace = string(*backendRef.Namespace)
+	}
+
+	svc := &corev1.Service{}
+	if err := cl.Get(ctx, client.ObjectKey{Namespace: bRefNamespace, Name: string(backendRef.Name)}, svc); err != nil {
+		log.Debug(logger, "Failed to fetch backend Service for retries annotation check",
+			"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "error", err)
+		return 0, false
+	}
+
+	v, ok := metadata.ExtractRetries(svc.GetAnnotations())
+	if !ok {
+		return 0, false
+	}
+
+	log.Debug(logger, "Using retries from backend Service annotation",
+		"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "retries", v)
+	return v, true
 }

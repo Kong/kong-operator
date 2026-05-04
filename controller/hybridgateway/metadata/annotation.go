@@ -20,6 +20,7 @@ const (
 	stripPathKey     = "/strip-path"
 	preserveHostKey  = "/preserve-host"
 	protocolKey      = "/protocol"
+	retriesKey       = "/retries"
 	kindHTTPRoute    = "HTTPRoute"
 	kindTLSRoute     = "TLSRoute"
 )
@@ -58,6 +59,24 @@ func ExtractPreserveHost(anns map[string]string) bool {
 // This mirrors ingress-controller/internal/annotations.ExtractProtocolName.
 func ExtractProtocol(anns map[string]string) string {
 	return anns[annotationPrefix+protocolKey]
+}
+
+// ExtractRetries extracts the retries annotation value.
+// Returns (retries, true) when the annotation is present and parseable as a non-negative integer.
+// This mirrors ingress-controller/internal/annotations.ExtractRetries.
+func ExtractRetries(anns map[string]string) (int64, bool) {
+	if anns == nil {
+		return 0, false
+	}
+	val, ok := anns[annotationPrefix+retriesKey]
+	if !ok || val == "" {
+		return 0, false
+	}
+	retries, err := strconv.ParseInt(val, 10, 64)
+	if err != nil || retries < 0 {
+		return 0, false
+	}
+	return retries, true
 }
 
 // IsValidProtocol returns true if the provided protocol is a valid Kong upstream protocol.
