@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Fixes
+
+- Allow `fullnameOverride` to control the webhook cert-manager `Certificate`
+  and `Issuer` resource names.
+
 ### Changed
 
 - Bootstrapping CA certificate (that is used for signing certificates for
