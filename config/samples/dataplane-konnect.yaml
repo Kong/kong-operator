@@ -25,6 +25,10 @@ metadata:
 spec:
   deployment:
     replicas: 3
+    labels:
+      dataplane-deployment-label: konnect-example
+    annotations:
+      dataplane-deployment-annotation: konnect-example
     podTemplateSpec:
       metadata:
         labels:

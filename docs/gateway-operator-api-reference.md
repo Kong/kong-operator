@@ -744,6 +744,8 @@ resource "Deployment") which are created and managed for the DataPlane resource.
 | `replicas` _*int32_ | Replicas describes the number of desired pods. This is a pointer to distinguish between explicit zero and not specified. This is effectively shorthand for setting a scaling minimum and maximum to the same value. This field and the scaling field are mutually exclusive: You can only configure one or the other. |
 | `scaling` _[Scaling](#gateway-operator-konghq-com-v1beta1-types-scaling)_ | Scaling defines the scaling options for the deployment. |
 | `podTemplateSpec` _[PodTemplateSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#podtemplatespec-v1-core)_ | PodTemplateSpec defines PodTemplateSpec for Deployment's pods. It's being applied on top of the generated Deployments using [StrategicMergePatch](https://pkg.go.dev/k8s.io/apimachinery/pkg/util/strategicpatch#StrategicMergePatch). |
+| `annotations` _map[string]string_ | Annotations are custom annotations that are propagated to the DataPlane Deployment metadata by the operator. |
+| `labels` _map[string]string_ | Labels are custom labels that are propagated to the DataPlane Deployment metadata by the operator. |
 | `rollout` _[Rollout](#gateway-operator-konghq-com-v1beta1-types-rollout)_ | Rollout describes a custom rollout strategy. |
 
 _Appears in:_
@@ -965,6 +967,8 @@ version, as well as Env variable overrides.
 | `replicas` _*int32_ | Replicas describes the number of desired pods. This is a pointer to distinguish between explicit zero and not specified. This is effectively shorthand for setting a scaling minimum and maximum to the same value. This field and the scaling field are mutually exclusive: You can only configure one or the other. |
 | `scaling` _[Scaling](#gateway-operator-konghq-com-v1beta1-types-scaling)_ | Scaling defines the scaling options for the deployment. |
 | `podTemplateSpec` _[PodTemplateSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#podtemplatespec-v1-core)_ | PodTemplateSpec defines PodTemplateSpec for Deployment's pods. It's being applied on top of the generated Deployments using [StrategicMergePatch](https://pkg.go.dev/k8s.io/apimachinery/pkg/util/strategicpatch#StrategicMergePatch). |
+| `annotations` _map[string]string_ | Annotations are custom annotations that are propagated to the DataPlane Deployment metadata by the operator. |
+| `labels` _map[string]string_ | Labels are custom labels that are propagated to the DataPlane Deployment metadata by the operator. |
 
 _Appears in:_
 
@@ -2063,6 +2067,8 @@ resource "Deployment") which are created and managed for the DataPlane resource.
 | `replicas` _*int32_ | Replicas describes the number of desired pods. This is a pointer to distinguish between explicit zero and not specified. This is effectively shorthand for setting a scaling minimum and maximum to the same value. This field and the scaling field are mutually exclusive: You can only configure one or the other. |
 | `scaling` _[Scaling](#gateway-operator-konghq-com-v2beta1-types-scaling)_ | Scaling defines the scaling options for the deployment. |
 | `podTemplateSpec` _[PodTemplateSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#podtemplatespec-v1-core)_ | PodTemplateSpec defines PodTemplateSpec for Deployment's pods. It's being applied on top of the generated Deployments using [StrategicMergePatch](https://pkg.go.dev/k8s.io/apimachinery/pkg/util/strategicpatch#StrategicMergePatch). |
+| `annotations` _map[string]string_ | Annotations are custom annotations that are propagated to the DataPlane Deployment metadata by the operator. |
+| `labels` _map[string]string_ | Labels are custom labels that are propagated to the DataPlane Deployment metadata by the operator. |
 | `rollout` _[Rollout](#gateway-operator-konghq-com-v2beta1-types-rollout)_ | Rollout describes a custom rollout strategy. |
 
 _Appears in:_
@@ -2085,6 +2091,8 @@ version, as well as Env variable overrides.
 | `replicas` _*int32_ | Replicas describes the number of desired pods. This is a pointer to distinguish between explicit zero and not specified. This is effectively shorthand for setting a scaling minimum and maximum to the same value. This field and the scaling field are mutually exclusive: You can only configure one or the other. |
 | `scaling` _[Scaling](#gateway-operator-konghq-com-v2beta1-types-scaling)_ | Scaling defines the scaling options for the deployment. |
 | `podTemplateSpec` _[PodTemplateSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#podtemplatespec-v1-core)_ | PodTemplateSpec defines PodTemplateSpec for Deployment's pods. It's being applied on top of the generated Deployments using [StrategicMergePatch](https://pkg.go.dev/k8s.io/apimachinery/pkg/util/strategicpatch#StrategicMergePatch). |
+| `annotations` _map[string]string_ | Annotations are custom annotations that are propagated to the DataPlane Deployment metadata by the operator. |
+| `labels` _map[string]string_ | Labels are custom labels that are propagated to the DataPlane Deployment metadata by the operator. |
 
 _Appears in:_
 

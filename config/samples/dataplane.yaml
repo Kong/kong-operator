@@ -4,6 +4,10 @@ metadata:
   name: dataplane-example
 spec:
   deployment:
+    labels:
+      dataplane-deployment-label: example
+    annotations:
+      dataplane-deployment-annotation: example
     podTemplateSpec:
       metadata:
         labels:

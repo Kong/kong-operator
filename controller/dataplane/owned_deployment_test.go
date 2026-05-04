@@ -741,3 +741,44 @@ func TestIsRecentDeploymentRestart(t *testing.T) {
 		})
 	}
 }
+
+func TestEnsureDataPlaneDeploymentObjectMetaUpdated(t *testing.T) {
+	t.Run("removes outdated managed keys and preserves external keys", func(t *testing.T) {
+		existing := metav1.ObjectMeta{
+			Annotations: map[string]string{
+				"managed-ann-keep":   "v1",
+				"managed-ann-remove": "gone",
+				"external-ann":       "external",
+				consts.AnnotationLastAppliedDeploymentAnnotations: `{"managed-ann-keep":"v1","managed-ann-remove":"gone"}`,
+				consts.AnnotationLastAppliedDeploymentLabels:      `{"managed-label-keep":"v1","managed-label-remove":"gone"}`,
+			},
+			Labels: map[string]string{
+				"managed-label-keep":   "v1",
+				"managed-label-remove": "gone",
+				"external-label":       "external",
+			},
+		}
+
+		desired := metav1.ObjectMeta{
+			Annotations: map[string]string{
+				"managed-ann-keep": "v2",
+				consts.AnnotationLastAppliedDeploymentAnnotations: `{"managed-ann-keep":"v2"}`,
+				consts.AnnotationLastAppliedDeploymentLabels:      `{"managed-label-keep":"v2"}`,
+			},
+			Labels: map[string]string{
+				"managed-label-keep": "v2",
+			},
+		}
+
+		updated := ensureDataPlaneDeploymentObjectMetaUpdated(&existing, desired)
+		require.True(t, updated)
+
+		require.Equal(t, "v2", existing.Annotations["managed-ann-keep"])
+		require.NotContains(t, existing.Annotations, "managed-ann-remove")
+		require.Equal(t, "external", existing.Annotations["external-ann"])
+
+		require.Equal(t, "v2", existing.Labels["managed-label-keep"])
+		require.NotContains(t, existing.Labels, "managed-label-remove")
+		require.Equal(t, "external", existing.Labels["external-label"])
+	})
+}
