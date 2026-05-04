@@ -156,13 +156,35 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *run
 			}
 		}
 
-		var createdObj T
+		warningFound := func() bool {
+			if tc.WarningCollector == nil || tc.ExpectedWarningMessage == nil {
+				return false
+			}
+
+			for _, msg := range tc.WarningCollector.GetWarnings() {
+				if strings.Contains(msg, *tc.ExpectedWarningMessage) {
+					return true
+				}
+			}
+
+			return false
+		}
+
+		var (
+			createdObj    T
+			hasCreatedObj bool
+		)
 		waitForCondition(func() (bool, string) {
+			if hasCreatedObj && warningFound() {
+				return true, ""
+			}
+
 			toCreate := templateObj.DeepCopyObject().(T)
 
 			createErr := cl.Create(ctx, toCreate)
 			if createErr == nil {
 				createdObj = toCreate
+				hasCreatedObj = true
 				tCleanupObject(ctx, t, toCreate)
 			}
 
@@ -177,21 +199,16 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *run
 				return false, fmt.Sprintf("Create error: %v", createErr)
 			}
 
-			return true, ""
-		}, "create condition not satisfied before timeout")
-
-		if tc.WarningCollector != nil && tc.ExpectedWarningMessage != nil {
-			waitForCondition(func() (bool, string) {
-				msgs := tc.WarningCollector.GetWarnings()
-				for _, msg := range msgs {
-					if strings.Contains(msg, *tc.ExpectedWarningMessage) {
-						return true, ""
-					}
+			if tc.WarningCollector != nil && tc.ExpectedWarningMessage != nil {
+				if warningFound() {
+					return true, ""
 				}
 
-				return false, fmt.Sprintf("expected warning containing: %q, got: %#v", *tc.ExpectedWarningMessage, msgs)
-			}, "expected warning not found before timeout")
-		}
+				return false, fmt.Sprintf("expected warning containing: %q, got: %#v", *tc.ExpectedWarningMessage, tc.WarningCollector.GetWarnings())
+			}
+
+			return true, ""
+		}, "create condition not satisfied before timeout")
 
 		if tc.ExpectedErrorMessage != nil {
 			return
