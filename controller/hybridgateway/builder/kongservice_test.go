@@ -244,9 +244,6 @@ func TestKongServiceBuilder_WithProtocol(t *testing.T) {
 	}
 }
 
-//go:fix inline
-func int64Ptr(v int64) *int64 { return new(v) }
-
 func TestKongServiceBuilder_WithRetries(t *testing.T) {
 	tests := []struct {
 		name     string
