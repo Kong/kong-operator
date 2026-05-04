@@ -36,10 +36,7 @@ spec:
     description: Test Event Gateway Backend Cluster
     authentication:
       type: anonymous
-      # NOTE: the nested type field is still required by the variant struct.
-      # Tracked for removal in https://github.com/Kong/kong-operator/issues/3972
-      anonymous:
-        type: anonymous
+      anonymous: {}
     bootstrap_servers:
       - "kafka1:9092"
       - "kafka2:9092"

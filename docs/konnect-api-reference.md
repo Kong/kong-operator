@@ -369,9 +369,6 @@ backend cluster.
 
 
 
-| Field | Description |
-| --- | --- |
-| `type` _string_ | The type of authentication scheme. |
 
 _Appears in:_
 
@@ -389,7 +386,6 @@ the backend cluster.
 | Field | Description |
 | --- | --- |
 | `password` _[GatewaySecret](#konnect-konghq-com-v1alpha1-types-gatewaysecret)_ | A sensitive value containing the secret or a reference to a secret as a template string expression. If the value is provided as plain text, it is encrypted at rest and omitted from API responses. If provided as an expression, the expression itself is stored and returned by the API. |
-| `type` _string_ |  |
 | `username` _[GatewaySecretReferenceOrLiteral](#konnect-konghq-com-v1alpha1-types-gatewaysecretreferenceorliteral)_ | A literal value or a reference to an existing secret as a template string expression. The value is stored and returned by the API as-is, not treated as sensitive information. |
 
 _Appears in:_
@@ -409,7 +405,6 @@ the backend cluster.
 | --- | --- |
 | `algorithm` _string_ | The algorithm used for SASL/SCRAM authentication. |
 | `password` _[GatewaySecret](#konnect-konghq-com-v1alpha1-types-gatewaysecret)_ | A sensitive value containing the secret or a reference to a secret as a template string expression. If the value is provided as plain text, it is encrypted at rest and omitted from API responses. If provided as an expression, the expression itself is stored and returned by the API. |
-| `type` _string_ |  |
 | `username` _[GatewaySecretReferenceOrLiteral](#konnect-konghq-com-v1alpha1-types-gatewaysecretreferenceorliteral)_ | A literal value or a reference to an existing secret as a template string expression. The value is stored and returned by the API as-is, not treated as sensitive information. |
 
 _Appears in:_
@@ -985,7 +980,6 @@ can be active at a time.
 | `enabled` _string_ | Whether the policy is enabled. |
 | `labels` _[Labels](#konnect-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `name` _string_ | A unique user-defined name of the policy. |
-| `type` _string_ | The type name of the policy. |
 
 _Appears in:_
 
@@ -1092,7 +1086,6 @@ gaps in broker ids.<br /><br />It is strongly discouraged to use port mapping in
 | `bootstrap_port` _string_ | If set to `at_start`, the first port will be used as a bootstrap port. It provides a stable endpoint to use as the bootstrap server for clients, regardless of broker IDs in the cluster.<br /><br />Additionally, it offsets all ports by one, so for example, if there are 3 brokers (id=1, id=2, id=3) then we will use 4 ports: 9092 (bootstrap), 9093 (id=1), 9094 (id=2), 9095 (id=3) With `none` we will use 3 ports: 9092 (id=1), 9093 (id=2), 9094 (id=3). |
 | `destination` _[VirtualClusterReference](#konnect-konghq-com-v1alpha1-types-virtualclusterreference)_ | A reference to a virtual cluster. |
 | `min_broker_id` _int_ | The lowest broker node ID in the cluster. |
-| `type` _string_ |  |
 
 _Appears in:_
 
@@ -1111,7 +1104,6 @@ clusters configured with SNI routing.
 | `advertised_port` _int_ | Virtual brokers are advertised to clients with this port instead of listen_port. Useful when proxy is behind loadbalancer listening on different port. |
 | `broker_host_format` _[BrokerHostFormat](#konnect-konghq-com-v1alpha1-types-brokerhostformat)_ | Configures DNS names assigned to brokers in virtual clusters.<br /><br />- `per_cluster_suffix` is the default and allocates one level in the hierarchy for virtual clusters: `broker-{node_id}.{virtual_cluster}.{sni_suffix}` - `shared_suffix` puts all brokers from every virtual clusters into the same level: `broker-{node_id}-{virtual_cluster}.{sni_suffix}`. This makes it easier to manage certificates for this listener.<br /><br />**Requires a minimum runtime version of `1.1`**. |
 | `sni_suffix` _string_ | Optional suffix for TLS SNI validation.<br /><br />This suffix is concatenated with the virtual cluster "dns.label" label to form the base name for the SNI. If not provided, the virtual cluster "dns.label" label alone is used as the base name for the SNI. For example with sni_suffix: `.example.com` and virtual cluster "dns.label" label: `my-cluster`, the SNI suffix for it is `my-cluster.example.com`. If "dns.label" label is absent on the virtual cluster, the traffic won't be routed there.<br /><br />The bootstrap host is `bootstrap.my-cluster.example.com` and then each broker is addressable at `broker-0.my-cluster.example.com`, `broker-1.my-cluster.example.com`, etc. This means that your deployment needs to have a wildcard certificate for the domain and a DNS resolver that routes `*.my-cluster.example.com` to the proxy.<br /><br />The accepted format is a DNS subdomain starting with either `.` or `-`. For example, `-keg.example.com`, `.keg.example.com`, `.namespace.svc.cluster.local`, and `.localhost` are all valid, while `keg.example.com` is not. |
-| `type` _string_ |  |
 
 _Appears in:_
 
@@ -1140,7 +1132,6 @@ the backend cluster see
 | `enabled` _string_ | Whether the policy is enabled. |
 | `labels` _[Labels](#konnect-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `name` _string_ | A unique user-defined name of the policy. |
-| `type` _string_ | The type name of the policy. |
 
 _Appears in:_
 
@@ -2674,9 +2665,6 @@ VirtualClusterAuthenticationAnonymous is a type alias.
 
 
 
-| Field | Description |
-| --- | --- |
-| `type` _string_ |  |
 
 _Appears in:_
 
@@ -2722,9 +2710,6 @@ authentication scheme for the virtual cluster.<br /><br />**Requires a minimum r
 
 
 
-| Field | Description |
-| --- | --- |
-| `type` _string_ |  |
 
 _Appears in:_
 
@@ -2761,7 +2746,6 @@ for the virtual cluster.
 | `claims_mapping` _[VirtualClusterAuthenticationClaimsMapping](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationclaimsmapping)_ | Maps JWT claims in the case when sub and scope are presented as different claims in your JWT token. |
 | `jwks` _[VirtualClusterAuthenticationJWKS](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationjwks)_ | JSON Web Key Set configuration for verifying token signatures. |
 | `mediation` _string_ | Methods to mediate authentication: * passthrough - pass authentication from the client through proxy to the backend cluster without any kind of<br /><br />validation * validate_forward - pass authentication from the client through proxy to the backend cluster.<br /><br />Proxy does the validation before forwarding it to the client. * terminate - terminate authentication at the proxy level and originate authentication to the backend cluster<br /><br />using the configuration defined at BackendCluster's authentication. SASL auth is not originated if authentication on the backend_cluster is not configured. |
-| `type` _string_ |  |
 | `validate` _[VirtualClusterAuthenticationValidate](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationvalidate)_ | Validation rules. |
 
 _Appears in:_
@@ -2797,7 +2781,6 @@ the virtual cluster containing principals with username and password.
 | --- | --- |
 | `mediation` _string_ | The mediation type for SASL/PLAIN authentication. |
 | `principals` _[VirtualClusterAuthenticationPrincipal](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationprincipal)_ | List of principals to be able to authenticate with, used with `terminate` mediation. |
-| `type` _string_ |  |
 
 _Appears in:_
 
@@ -2814,7 +2797,6 @@ the virtual cluster.
 | Field | Description |
 | --- | --- |
 | `algorithm` _string_ | The algorithm used for SASL/SCRAM authentication. |
-| `type` _string_ |  |
 
 _Appears in:_
 
@@ -2974,7 +2956,6 @@ VirtualClusterNamespaceIDSelectorGlob is a type alias.
 | Field | Description |
 | --- | --- |
 | `glob` _string_ | Expose any id that matches this glob pattern (e.g., `my_id_*`). |
-| `type` _string_ |  |
 
 _Appears in:_
 
@@ -3028,7 +3009,6 @@ VirtualClusterNamespaceTopicSelectorGlob is a type alias.
 | --- | --- |
 | `conflict` _string_ | How to inform the user about conflicts where multiple backend topics would map to the same virtual topic name. * warn - log in the Event Gateway logs. Additionally, it sets knep_namespace_topic_conflict to 1. * ignore - do not do anything. It does not cause knep_namespace_topic_conflict metric to be set to 1. |
 | `glob` _string_ | Expose any backend topic that matches this glob pattern (e.g., `operations_data_*`). |
-| `type` _string_ |  |
 
 _Appears in:_
 
