@@ -105,12 +105,12 @@ func (b *KongServiceBuilder) WithOwner(owner client.Object) *KongServiceBuilder 
 }
 
 // WithTLSVerifyDepth sets the TLS verify depth for the KongService being built.
-// If ok is false the field is left unset.
-func (b *KongServiceBuilder) WithTLSVerifyDepth(depth int64, ok bool) *KongServiceBuilder {
-	if !ok {
+// Nil leaves the field unset.
+func (b *KongServiceBuilder) WithTLSVerifyDepth(v *int64) *KongServiceBuilder {
+	if v == nil {
 		return b
 	}
-	b.service.Spec.TLSVerifyDepth = &depth
+	b.service.Spec.TLSVerifyDepth = v
 	return b
 }
 

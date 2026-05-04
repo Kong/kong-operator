@@ -245,20 +245,20 @@ func TestKongServiceBuilder_WithProtocol(t *testing.T) {
 }
 
 func TestKongServiceBuilder_WithTLSVerifyDepth(t *testing.T) {
+	int64Ptr := func(i int64) *int64 { return &i }
 	tests := []struct {
 		name     string
-		depth    int64
-		ok       bool
+		v        *int64
 		expected *int64
 	}{
-		{name: "ok=false leaves field unset", depth: 0, ok: false, expected: nil},
-		{name: "ok=true with zero depth", depth: 0, ok: true, expected: &[]int64{0}[0]},
-		{name: "ok=true with positive depth", depth: 3, ok: true, expected: &[]int64{3}[0]},
+		{name: "nil leaves field unset", v: nil, expected: nil},
+		{name: "zero sets field", v: int64Ptr(0), expected: int64Ptr(0)},
+		{name: "positive sets field", v: int64Ptr(3), expected: int64Ptr(3)},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			service, err := NewKongService().WithTLSVerifyDepth(tt.depth, tt.ok).Build()
+			service, err := NewKongService().WithTLSVerifyDepth(tt.v).Build()
 			require.NoError(t, err)
 			if tt.expected == nil {
 				assert.Nil(t, service.Spec.TLSVerifyDepth)

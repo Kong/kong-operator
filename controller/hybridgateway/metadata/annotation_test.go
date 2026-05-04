@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -950,79 +951,31 @@ func TestExtractProtocol(t *testing.T) {
 }
 
 func TestExtractTLSVerifyDepth(t *testing.T) {
+	int64Ptr := func(i int64) *int64 { return &i }
 	tests := []struct {
 		name        string
 		annotations map[string]string
-		expected    int64
-		expectedOK  bool
+		expected    *int64
 	}{
-		{
-			name:        "nil annotations",
-			annotations: nil,
-			expected:    0,
-			expectedOK:  false,
-		},
-		{
-			name:        "empty annotations",
-			annotations: map[string]string{},
-			expected:    0,
-			expectedOK:  false,
-		},
-		{
-			name: "valid depth",
-			annotations: map[string]string{
-				"konghq.com/tls-verify-depth": "3",
-			},
-			expected:   3,
-			expectedOK: true,
-		},
-		{
-			name: "zero depth",
-			annotations: map[string]string{
-				"konghq.com/tls-verify-depth": "0",
-			},
-			expected:   0,
-			expectedOK: true,
-		},
-		{
-			name: "negative depth treated as invalid",
-			annotations: map[string]string{
-				"konghq.com/tls-verify-depth": "-1",
-			},
-			expected:   0,
-			expectedOK: false,
-		},
-		{
-			name: "non-numeric value",
-			annotations: map[string]string{
-				"konghq.com/tls-verify-depth": "abc",
-			},
-			expected:   0,
-			expectedOK: false,
-		},
-		{
-			name: "empty value",
-			annotations: map[string]string{
-				"konghq.com/tls-verify-depth": "",
-			},
-			expected:   0,
-			expectedOK: false,
-		},
-		{
-			name: "other annotations only",
-			annotations: map[string]string{
-				"konghq.com/protocol": "https",
-			},
-			expected:   0,
-			expectedOK: false,
-		},
+		{name: "nil annotations", annotations: nil, expected: nil},
+		{name: "empty annotations", annotations: map[string]string{}, expected: nil},
+		{name: "valid depth", annotations: map[string]string{"konghq.com/tls-verify-depth": "3"}, expected: int64Ptr(3)},
+		{name: "zero depth", annotations: map[string]string{"konghq.com/tls-verify-depth": "0"}, expected: int64Ptr(0)},
+		{name: "negative depth treated as invalid", annotations: map[string]string{"konghq.com/tls-verify-depth": "-1"}, expected: nil},
+		{name: "non-numeric value", annotations: map[string]string{"konghq.com/tls-verify-depth": "abc"}, expected: nil},
+		{name: "empty value", annotations: map[string]string{"konghq.com/tls-verify-depth": ""}, expected: nil},
+		{name: "other annotations only", annotations: map[string]string{"konghq.com/protocol": "https"}, expected: nil},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			depth, ok := ExtractTLSVerifyDepth(tt.annotations)
-			assert.Equal(t, tt.expectedOK, ok)
-			assert.Equal(t, tt.expected, depth)
+			got := ExtractTLSVerifyDepth(tt.annotations)
+			if tt.expected == nil {
+				assert.Nil(t, got)
+			} else {
+				require.NotNil(t, got)
+				assert.Equal(t, *tt.expected, *got)
+			}
 		})
 	}
 }

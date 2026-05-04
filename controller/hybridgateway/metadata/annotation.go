@@ -62,21 +62,22 @@ func ExtractProtocol(anns map[string]string) string {
 }
 
 // ExtractTLSVerifyDepth extracts the tls-verify-depth annotation value.
-// Returns (depth, true) when the annotation is present and parseable as a non-negative integer.
+// Returns a *int64 set to the parsed value when the annotation is present and parseable as a
+// non-negative integer, or nil when absent or unparseable.
 // This mirrors ingress-controller/internal/annotations.ExtractTLSVerifyDepth.
-func ExtractTLSVerifyDepth(anns map[string]string) (int64, bool) {
+func ExtractTLSVerifyDepth(anns map[string]string) *int64 {
 	if anns == nil {
-		return 0, false
+		return nil
 	}
 	val, ok := anns[annotationPrefix+tlsVerifyDepthKey]
 	if !ok || val == "" {
-		return 0, false
+		return nil
 	}
 	depth, err := strconv.ParseInt(val, 10, 64)
 	if err != nil || depth < 0 {
-		return 0, false
+		return nil
 	}
-	return depth, true
+	return &depth
 }
 
 // IsValidProtocol returns true if the provided protocol is a valid Kong upstream protocol.
