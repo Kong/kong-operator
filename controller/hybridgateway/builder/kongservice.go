@@ -104,6 +104,16 @@ func (b *KongServiceBuilder) WithOwner(owner client.Object) *KongServiceBuilder 
 	return b
 }
 
+// WithPath sets the path for the KongService being built.
+// An empty path leaves Spec.Path unset.
+func (b *KongServiceBuilder) WithPath(path string) *KongServiceBuilder {
+	if path == "" {
+		return b
+	}
+	b.service.Spec.Path = &path
+	return b
+}
+
 // WithProtocol sets the protocol for the KongService being built.
 // Supported protocols match the Kong Gateway upstream protocol set.
 func (b *KongServiceBuilder) WithProtocol(protocol string) *KongServiceBuilder {

@@ -949,6 +949,25 @@ func TestExtractProtocol(t *testing.T) {
 	}
 }
 
+func TestExtractPath(t *testing.T) {
+	tests := []struct {
+		name        string
+		annotations map[string]string
+		expected    string
+	}{
+		{name: "nil annotations", annotations: nil, expected: ""},
+		{name: "empty annotations", annotations: map[string]string{}, expected: ""},
+		{name: "path present", annotations: map[string]string{"konghq.com/path": "/api/v1"}, expected: "/api/v1"},
+		{name: "empty path value", annotations: map[string]string{"konghq.com/path": ""}, expected: ""},
+		{name: "other annotations only", annotations: map[string]string{"konghq.com/protocol": "http"}, expected: ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, ExtractPath(tt.annotations))
+		})
+	}
+}
+
 func TestIsValidProtocol(t *testing.T) {
 	validProtocols := []string{"http", "https", "grpc", "grpcs", "ws", "wss", "tls", "tcp", "tls_passthrough"}
 	for _, p := range validProtocols {

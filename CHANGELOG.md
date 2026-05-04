@@ -46,6 +46,8 @@
 
 ### Added
 
+- Hybridgateway: add support for `konghq.com/path` service annotation
+  [#4100](https://github.com/Kong/kong-operator/pull/4100)
 - Add the following headers in requests of `ingress-controller` sent to Konnect
   for uploading configuration for tracing:
   - `X-Kic-Konnect-Sync-Instance-Id` for instance ID of Konnect config synchronizer.
