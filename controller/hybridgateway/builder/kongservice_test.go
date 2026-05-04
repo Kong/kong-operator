@@ -244,6 +244,31 @@ func TestKongServiceBuilder_WithProtocol(t *testing.T) {
 	}
 }
 
+func TestKongServiceBuilder_WithWriteTimeout(t *testing.T) {
+	tests := []struct {
+		name     string
+		timeout  int64
+		ok       bool
+		expected *int64
+	}{
+		{name: "ok=false leaves field unset", timeout: 0, ok: false, expected: nil},
+		{name: "ok=true with zero", timeout: 0, ok: true, expected: &[]int64{0}[0]},
+		{name: "ok=true with positive", timeout: 60000, ok: true, expected: &[]int64{60000}[0]},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			service, err := NewKongService().WithWriteTimeout(tt.timeout, tt.ok).Build()
+			require.NoError(t, err)
+			if tt.expected == nil {
+				assert.Nil(t, service.Spec.WriteTimeout)
+			} else {
+				require.NotNil(t, service.Spec.WriteTimeout)
+				assert.Equal(t, *tt.expected, *service.Spec.WriteTimeout)
+			}
+		})
+	}
+}
+
 func TestKongServiceBuilder_Build(t *testing.T) {
 	t.Run("successful build", func(t *testing.T) {
 		builder := NewKongService().

@@ -104,6 +104,16 @@ func (b *KongServiceBuilder) WithOwner(owner client.Object) *KongServiceBuilder 
 	return b
 }
 
+// WithWriteTimeout sets the write timeout (milliseconds) for the KongService being built.
+// If ok is false the field is left unset.
+func (b *KongServiceBuilder) WithWriteTimeout(timeout int64, ok bool) *KongServiceBuilder {
+	if !ok {
+		return b
+	}
+	b.service.Spec.WriteTimeout = &timeout
+	return b
+}
+
 // WithProtocol sets the protocol for the KongService being built.
 // Supported protocols match the Kong Gateway upstream protocol set.
 func (b *KongServiceBuilder) WithProtocol(protocol string) *KongServiceBuilder {

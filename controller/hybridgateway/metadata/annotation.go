@@ -20,6 +20,7 @@ const (
 	stripPathKey     = "/strip-path"
 	preserveHostKey  = "/preserve-host"
 	protocolKey      = "/protocol"
+	writeTimeoutKey  = "/write-timeout"
 	kindHTTPRoute    = "HTTPRoute"
 	kindTLSRoute     = "TLSRoute"
 )
@@ -58,6 +59,24 @@ func ExtractPreserveHost(anns map[string]string) bool {
 // This mirrors ingress-controller/internal/annotations.ExtractProtocolName.
 func ExtractProtocol(anns map[string]string) string {
 	return anns[annotationPrefix+protocolKey]
+}
+
+// ExtractWriteTimeout extracts the write-timeout annotation value (milliseconds).
+// Returns (timeout, true) when the annotation is present and parseable as a non-negative integer.
+// This mirrors ingress-controller/internal/annotations.ExtractWriteTimeout.
+func ExtractWriteTimeout(anns map[string]string) (int64, bool) {
+	if anns == nil {
+		return 0, false
+	}
+	val, ok := anns[annotationPrefix+writeTimeoutKey]
+	if !ok || val == "" {
+		return 0, false
+	}
+	timeout, err := strconv.ParseInt(val, 10, 64)
+	if err != nil || timeout < 0 {
+		return 0, false
+	}
+	return timeout, true
 }
 
 // IsValidProtocol returns true if the provided protocol is a valid Kong upstream protocol.

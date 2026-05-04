@@ -62,6 +62,8 @@ func ServiceForRule[
 
 	var serviceName string
 	var protocol string
+	var writeTimeout int64
+	var writeTimeoutSet bool
 
 	switch r := any(parentRoute).(type) {
 	case *gwtypes.HTTPRoute:
@@ -71,6 +73,7 @@ func ServiceForRule[
 		}
 		serviceName = namegen.NewKongServiceNameForHTTPRouteRule(r, cp, httpRule)
 		protocol = resolveProtocolFromHTTPRouteBackendRefs(ctx, cl, r, httpRule, "http", logger)
+		writeTimeout, writeTimeoutSet = resolveWriteTimeoutFromHTTPRouteBackendRefs(ctx, cl, r, httpRule, logger)
 	case *gwtypes.TLSRoute:
 		tlsRule, ok := any(rule).(gwtypes.TLSRouteRule)
 		if !ok {
@@ -78,6 +81,7 @@ func ServiceForRule[
 		}
 		serviceName = namegen.NewKongServiceNameForTLSRouteRule(r, cp, tlsRule)
 		protocol = resolveProtocolFromTLSRouteBackendRefs(ctx, cl, r, tlsRule, logger)
+		writeTimeout, writeTimeoutSet = resolveWriteTimeoutFromTLSRouteBackendRefs(ctx, cl, r, tlsRule, logger)
 
 	// TODO: add other types of routes and rules when we support them.
 
@@ -96,6 +100,7 @@ func ServiceForRule[
 		WithSpecName(serviceName).
 		WithSpecHost(upstreamName).
 		WithProtocol(protocol).
+		WithWriteTimeout(writeTimeout, writeTimeoutSet).
 		WithControlPlaneRef(*cp).Build()
 	if err != nil {
 		log.Error(logger, err, "Failed to build KongService resource")
@@ -194,4 +199,73 @@ func extractProtocolFromBackendRef(
 	log.Debug(logger, "Using protocol from backend Service annotation",
 		"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "protocol", protocol)
 	return protocol, true
+}
+
+// resolveWriteTimeoutFromHTTPRouteBackendRefs returns the write-timeout value taken from
+// the first HTTPRoute backend Service that carries the konghq.com/write-timeout annotation.
+func resolveWriteTimeoutFromHTTPRouteBackendRefs(
+	ctx context.Context,
+	cl client.Client,
+	httpRoute *gwtypes.HTTPRoute,
+	rule gwtypes.HTTPRouteRule,
+	logger logr.Logger,
+) (int64, bool) {
+	for _, backendRef := range rule.BackendRefs {
+		if v, ok := extractWriteTimeoutFromBackendRef(ctx, cl, logger, httpRoute.Namespace, backendRef.BackendRef); ok {
+			return v, true
+		}
+	}
+	return 0, false
+}
+
+// resolveWriteTimeoutFromTLSRouteBackendRefs returns the write-timeout value taken from
+// the first TLSRoute backend Service that carries the konghq.com/write-timeout annotation.
+func resolveWriteTimeoutFromTLSRouteBackendRefs(
+	ctx context.Context,
+	cl client.Client,
+	tlsRoute *gwtypes.TLSRoute,
+	rule gwtypes.TLSRouteRule,
+	logger logr.Logger,
+) (int64, bool) {
+	for _, backendRef := range rule.BackendRefs {
+		if v, ok := extractWriteTimeoutFromBackendRef(ctx, cl, logger, tlsRoute.Namespace, backendRef); ok {
+			return v, true
+		}
+	}
+	return 0, false
+}
+
+// extractWriteTimeoutFromBackendRef returns the write-timeout value from the
+// konghq.com/write-timeout annotation on the backend Service referenced by the BackendRef.
+func extractWriteTimeoutFromBackendRef(
+	ctx context.Context,
+	cl client.Client,
+	logger logr.Logger,
+	namespace string,
+	backendRef gwtypes.BackendRef,
+) (int64, bool) {
+	if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
+		return 0, false
+	}
+
+	bRefNamespace := namespace
+	if backendRef.Namespace != nil && *backendRef.Namespace != "" {
+		bRefNamespace = string(*backendRef.Namespace)
+	}
+
+	svc := &corev1.Service{}
+	if err := cl.Get(ctx, client.ObjectKey{Namespace: bRefNamespace, Name: string(backendRef.Name)}, svc); err != nil {
+		log.Debug(logger, "Failed to fetch backend Service for write-timeout annotation check",
+			"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "error", err)
+		return 0, false
+	}
+
+	v, ok := metadata.ExtractWriteTimeout(svc.GetAnnotations())
+	if !ok {
+		return 0, false
+	}
+
+	log.Debug(logger, "Using write-timeout from backend Service annotation",
+		"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "write-timeout", v)
+	return v, true
 }
