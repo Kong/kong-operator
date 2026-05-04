@@ -950,9 +950,6 @@ func TestExtractProtocol(t *testing.T) {
 	}
 }
 
-//go:fix inline
-func int64Ptr(v int64) *int64 { return new(v) }
-
 func TestExtractConnectTimeout(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -961,8 +958,8 @@ func TestExtractConnectTimeout(t *testing.T) {
 	}{
 		{name: "nil annotations", annotations: nil, expected: nil},
 		{name: "empty annotations", annotations: map[string]string{}, expected: nil},
-		{name: "valid timeout", annotations: map[string]string{"konghq.com/connect-timeout": "5000"}, expected: int64Ptr(5000)},
-		{name: "zero timeout", annotations: map[string]string{"konghq.com/connect-timeout": "0"}, expected: int64Ptr(0)},
+		{name: "valid timeout", annotations: map[string]string{"konghq.com/connect-timeout": "5000"}, expected: new(int64(5000))},
+		{name: "zero timeout", annotations: map[string]string{"konghq.com/connect-timeout": "0"}, expected: new(int64(0))},
 		{name: "negative invalid", annotations: map[string]string{"konghq.com/connect-timeout": "-1"}, expected: nil},
 		{name: "non-numeric", annotations: map[string]string{"konghq.com/connect-timeout": "abc"}, expected: nil},
 		{name: "empty value", annotations: map[string]string{"konghq.com/connect-timeout": ""}, expected: nil},
