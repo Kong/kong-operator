@@ -1079,7 +1079,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 
 	hasRootReconciler := false
 	if rc := g.config.ReconcilerConfig[entityName]; rc != nil {
-		hasRootReconciler = rc.IsRoot
+		hasRootReconciler = rc.GetIsRoot()
 	}
 
 	// Detect whether the entity schema has property-level oneOf unions (which
@@ -1207,7 +1207,7 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 	entityName := parser.GetEntityNameFromType(name)
 	isReconcilerRoot := false
 	if rc := g.config.ReconcilerConfig[entityName]; rc != nil {
-		isReconcilerRoot = rc.IsRoot
+		isReconcilerRoot = rc.GetIsRoot()
 	}
 	rootRefDependency := rootRefDependency(schema)
 
