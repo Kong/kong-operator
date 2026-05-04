@@ -104,6 +104,16 @@ func (b *KongServiceBuilder) WithOwner(owner client.Object) *KongServiceBuilder 
 	return b
 }
 
+// WithTLSVerify sets the tls-verify flag for the KongService being built.
+// If ok is false the field is left unset.
+func (b *KongServiceBuilder) WithTLSVerify(verify bool, ok bool) *KongServiceBuilder {
+	if !ok {
+		return b
+	}
+	b.service.Spec.TLSVerify = &verify
+	return b
+}
+
 // WithProtocol sets the protocol for the KongService being built.
 // Supported protocols match the Kong Gateway upstream protocol set.
 func (b *KongServiceBuilder) WithProtocol(protocol string) *KongServiceBuilder {

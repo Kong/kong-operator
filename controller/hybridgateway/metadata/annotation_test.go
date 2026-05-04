@@ -949,6 +949,29 @@ func TestExtractProtocol(t *testing.T) {
 	}
 }
 
+func TestExtractTLSVerify(t *testing.T) {
+	tests := []struct {
+		name        string
+		annotations map[string]string
+		expected    bool
+		expectedOK  bool
+	}{
+		{name: "nil annotations", annotations: nil, expected: false, expectedOK: false},
+		{name: "empty annotations", annotations: map[string]string{}, expected: false, expectedOK: false},
+		{name: "tls-verify true", annotations: map[string]string{"konghq.com/tls-verify": "true"}, expected: true, expectedOK: true},
+		{name: "tls-verify false", annotations: map[string]string{"konghq.com/tls-verify": "false"}, expected: false, expectedOK: true},
+		{name: "invalid value", annotations: map[string]string{"konghq.com/tls-verify": "invalid"}, expected: false, expectedOK: false},
+		{name: "empty value", annotations: map[string]string{"konghq.com/tls-verify": ""}, expected: false, expectedOK: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v, ok := ExtractTLSVerify(tt.annotations)
+			assert.Equal(t, tt.expectedOK, ok)
+			assert.Equal(t, tt.expected, v)
+		})
+	}
+}
+
 func TestIsValidProtocol(t *testing.T) {
 	validProtocols := []string{"http", "https", "grpc", "grpcs", "ws", "wss", "tls", "tcp", "tls_passthrough"}
 	for _, p := range validProtocols {
