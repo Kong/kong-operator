@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -949,26 +950,31 @@ func TestExtractProtocol(t *testing.T) {
 	}
 }
 
+func int64Ptr(v int64) *int64 { return &v }
+
 func TestExtractConnectTimeout(t *testing.T) {
 	tests := []struct {
 		name        string
 		annotations map[string]string
-		expected    int64
-		expectedOK  bool
+		expected    *int64
 	}{
-		{name: "nil annotations", annotations: nil, expected: 0, expectedOK: false},
-		{name: "empty annotations", annotations: map[string]string{}, expected: 0, expectedOK: false},
-		{name: "valid timeout", annotations: map[string]string{"konghq.com/connect-timeout": "5000"}, expected: 5000, expectedOK: true},
-		{name: "zero timeout", annotations: map[string]string{"konghq.com/connect-timeout": "0"}, expected: 0, expectedOK: true},
-		{name: "negative invalid", annotations: map[string]string{"konghq.com/connect-timeout": "-1"}, expected: 0, expectedOK: false},
-		{name: "non-numeric", annotations: map[string]string{"konghq.com/connect-timeout": "abc"}, expected: 0, expectedOK: false},
-		{name: "empty value", annotations: map[string]string{"konghq.com/connect-timeout": ""}, expected: 0, expectedOK: false},
+		{name: "nil annotations", annotations: nil, expected: nil},
+		{name: "empty annotations", annotations: map[string]string{}, expected: nil},
+		{name: "valid timeout", annotations: map[string]string{"konghq.com/connect-timeout": "5000"}, expected: int64Ptr(5000)},
+		{name: "zero timeout", annotations: map[string]string{"konghq.com/connect-timeout": "0"}, expected: int64Ptr(0)},
+		{name: "negative invalid", annotations: map[string]string{"konghq.com/connect-timeout": "-1"}, expected: nil},
+		{name: "non-numeric", annotations: map[string]string{"konghq.com/connect-timeout": "abc"}, expected: nil},
+		{name: "empty value", annotations: map[string]string{"konghq.com/connect-timeout": ""}, expected: nil},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v, ok := ExtractConnectTimeout(tt.annotations)
-			assert.Equal(t, tt.expectedOK, ok)
-			assert.Equal(t, tt.expected, v)
+			v := ExtractConnectTimeout(tt.annotations)
+			if tt.expected == nil {
+				assert.Nil(t, v)
+			} else {
+				require.NotNil(t, v)
+				assert.Equal(t, *tt.expected, *v)
+			}
 		})
 	}
 }
