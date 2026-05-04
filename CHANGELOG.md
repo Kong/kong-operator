@@ -46,6 +46,8 @@
 
 ### Added
 
+- Hybridgateway: add support for `konghq.com/host-header` upstream annotation
+  [#4108](https://github.com/Kong/kong-operator/pull/4108)
 - Add the following headers in requests of `ingress-controller` sent to Konnect
   for uploading configuration for tracing:
   - `X-Kic-Konnect-Sync-Instance-Id` for instance ID of Konnect config synchronizer.

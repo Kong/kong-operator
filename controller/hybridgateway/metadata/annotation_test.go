@@ -1022,3 +1022,57 @@ func TestGenericObjectTypes(t *testing.T) {
 		})
 	}
 }
+
+func TestExtractHostHeader(t *testing.T) {
+	tests := []struct {
+		name        string
+		annotations map[string]string
+		wantValue   string
+		wantOK      bool
+	}{
+		{
+			name:        "nil annotations",
+			annotations: nil,
+			wantValue:   "",
+			wantOK:      false,
+		},
+		{
+			name:        "empty annotations",
+			annotations: map[string]string{},
+			wantValue:   "",
+			wantOK:      false,
+		},
+		{
+			name:        "annotation missing",
+			annotations: map[string]string{"other": "value"},
+			wantValue:   "",
+			wantOK:      false,
+		},
+		{
+			name:        "annotation present with empty value",
+			annotations: map[string]string{"konghq.com/host-header": ""},
+			wantValue:   "",
+			wantOK:      false,
+		},
+		{
+			name:        "annotation present with valid hostname",
+			annotations: map[string]string{"konghq.com/host-header": "my-service.example.com"},
+			wantValue:   "my-service.example.com",
+			wantOK:      true,
+		},
+		{
+			name:        "annotation present with IP address",
+			annotations: map[string]string{"konghq.com/host-header": "10.0.0.1"},
+			wantValue:   "10.0.0.1",
+			wantOK:      true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotValue, gotOK := ExtractHostHeader(tt.annotations)
+			assert.Equal(t, tt.wantValue, gotValue)
+			assert.Equal(t, tt.wantOK, gotOK)
+		})
+	}
+}

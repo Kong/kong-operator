@@ -20,6 +20,8 @@ const (
 	stripPathKey     = "/strip-path"
 	preserveHostKey  = "/preserve-host"
 	protocolKey      = "/protocol"
+	tlsVerifyKey     = "/tls-verify"
+	hostHeaderKey    = "/host-header"
 	kindHTTPRoute    = "HTTPRoute"
 	kindTLSRoute     = "TLSRoute"
 )
@@ -58,6 +60,17 @@ func ExtractPreserveHost(anns map[string]string) bool {
 // This mirrors ingress-controller/internal/annotations.ExtractProtocolName.
 func ExtractProtocol(anns map[string]string) string {
 	return anns[annotationPrefix+protocolKey]
+}
+
+// ExtractHostHeader extracts the host-header annotation value.
+// Returns (value, true) when the annotation is present and non-empty.
+// This mirrors ingress-controller/internal/annotations.ExtractHostHeader.
+func ExtractHostHeader(anns map[string]string) (string, bool) {
+	val := anns[annotationPrefix+hostHeaderKey]
+	if val == "" {
+		return "", false
+	}
+	return val, true
 }
 
 // IsValidProtocol returns true if the provided protocol is a valid Kong upstream protocol.

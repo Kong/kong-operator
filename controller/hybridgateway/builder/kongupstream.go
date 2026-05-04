@@ -85,6 +85,16 @@ func (b *KongUpstreamBuilder) WithControlPlaneRef(cpr commonv1alpha1.ControlPlan
 	return b
 }
 
+// WithHostHeader sets the host-header field in the KongUpstream spec when ok is true.
+// When ok is false the field is left unset (nil pointer).
+func (b *KongUpstreamBuilder) WithHostHeader(value string, ok bool) *KongUpstreamBuilder {
+	if !ok {
+		return b
+	}
+	b.upstream.Spec.HostHeader = &value
+	return b
+}
+
 // Build returns the constructed KongUpstream resource and any accumulated errors.
 func (b *KongUpstreamBuilder) Build() (configurationv1alpha1.KongUpstream, error) {
 	if len(b.errors) > 0 {
