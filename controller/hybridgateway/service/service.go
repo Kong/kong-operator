@@ -62,8 +62,7 @@ func ServiceForRule[
 
 	var serviceName string
 	var protocol string
-	var retries int64
-	var retriesSet bool
+	var retries *int64
 
 	switch r := any(parentRoute).(type) {
 	case *gwtypes.HTTPRoute:
@@ -73,7 +72,7 @@ func ServiceForRule[
 		}
 		serviceName = namegen.NewKongServiceNameForHTTPRouteRule(r, cp, httpRule)
 		protocol = resolveProtocolFromHTTPRouteBackendRefs(ctx, cl, r, httpRule, "http", logger)
-		retries, retriesSet = resolveRetriesFromHTTPRouteBackendRefs(ctx, cl, r, httpRule, logger)
+		retries = resolveRetriesFromHTTPRouteBackendRefs(ctx, cl, r, httpRule, logger)
 	case *gwtypes.TLSRoute:
 		tlsRule, ok := any(rule).(gwtypes.TLSRouteRule)
 		if !ok {
@@ -81,7 +80,7 @@ func ServiceForRule[
 		}
 		serviceName = namegen.NewKongServiceNameForTLSRouteRule(r, cp, tlsRule)
 		protocol = resolveProtocolFromTLSRouteBackendRefs(ctx, cl, r, tlsRule, logger)
-		retries, retriesSet = resolveRetriesFromTLSRouteBackendRefs(ctx, cl, r, tlsRule, logger)
+		retries = resolveRetriesFromTLSRouteBackendRefs(ctx, cl, r, tlsRule, logger)
 
 	// TODO: add other types of routes and rules when we support them.
 
@@ -100,7 +99,7 @@ func ServiceForRule[
 		WithSpecName(serviceName).
 		WithSpecHost(upstreamName).
 		WithProtocol(protocol).
-		WithRetries(retries, retriesSet).
+		WithRetries(retries).
 		WithControlPlaneRef(*cp).Build()
 	if err != nil {
 		log.Error(logger, err, "Failed to build KongService resource")
@@ -209,13 +208,13 @@ func resolveRetriesFromHTTPRouteBackendRefs(
 	httpRoute *gwtypes.HTTPRoute,
 	rule gwtypes.HTTPRouteRule,
 	logger logr.Logger,
-) (int64, bool) {
+) *int64 {
 	for _, backendRef := range rule.BackendRefs {
-		if v, ok := extractRetriesFromBackendRef(ctx, cl, logger, httpRoute.Namespace, backendRef.BackendRef); ok {
-			return v, true
+		if v := extractRetriesFromBackendRef(ctx, cl, logger, httpRoute.Namespace, backendRef.BackendRef); v != nil {
+			return v
 		}
 	}
-	return 0, false
+	return nil
 }
 
 // resolveRetriesFromTLSRouteBackendRefs returns the retries value taken from
@@ -226,13 +225,13 @@ func resolveRetriesFromTLSRouteBackendRefs(
 	tlsRoute *gwtypes.TLSRoute,
 	rule gwtypes.TLSRouteRule,
 	logger logr.Logger,
-) (int64, bool) {
+) *int64 {
 	for _, backendRef := range rule.BackendRefs {
-		if v, ok := extractRetriesFromBackendRef(ctx, cl, logger, tlsRoute.Namespace, backendRef); ok {
-			return v, true
+		if v := extractRetriesFromBackendRef(ctx, cl, logger, tlsRoute.Namespace, backendRef); v != nil {
+			return v
 		}
 	}
-	return 0, false
+	return nil
 }
 
 // extractRetriesFromBackendRef returns the retries value from the konghq.com/retries
@@ -243,9 +242,9 @@ func extractRetriesFromBackendRef(
 	logger logr.Logger,
 	namespace string,
 	backendRef gwtypes.BackendRef,
-) (int64, bool) {
+) *int64 {
 	if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
-		return 0, false
+		return nil
 	}
 
 	bRefNamespace := namespace
@@ -257,15 +256,15 @@ func extractRetriesFromBackendRef(
 	if err := cl.Get(ctx, client.ObjectKey{Namespace: bRefNamespace, Name: string(backendRef.Name)}, svc); err != nil {
 		log.Debug(logger, "Failed to fetch backend Service for retries annotation check",
 			"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "error", err)
-		return 0, false
+		return nil
 	}
 
-	v, ok := metadata.ExtractRetries(svc.GetAnnotations())
-	if !ok {
-		return 0, false
+	v := metadata.ExtractRetries(svc.GetAnnotations())
+	if v == nil {
+		return nil
 	}
 
 	log.Debug(logger, "Using retries from backend Service annotation",
-		"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "retries", v)
-	return v, true
+		"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "retries", *v)
+	return v
 }

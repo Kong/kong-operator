@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -949,26 +950,31 @@ func TestExtractProtocol(t *testing.T) {
 	}
 }
 
+func int64Ptr(v int64) *int64 { return &v }
+
 func TestExtractRetries(t *testing.T) {
 	tests := []struct {
 		name        string
 		annotations map[string]string
-		expected    int64
-		expectedOK  bool
+		expected    *int64
 	}{
-		{name: "nil annotations", annotations: nil, expected: 0, expectedOK: false},
-		{name: "empty annotations", annotations: map[string]string{}, expected: 0, expectedOK: false},
-		{name: "valid retries", annotations: map[string]string{"konghq.com/retries": "5"}, expected: 5, expectedOK: true},
-		{name: "zero retries", annotations: map[string]string{"konghq.com/retries": "0"}, expected: 0, expectedOK: true},
-		{name: "negative invalid", annotations: map[string]string{"konghq.com/retries": "-1"}, expected: 0, expectedOK: false},
-		{name: "non-numeric", annotations: map[string]string{"konghq.com/retries": "abc"}, expected: 0, expectedOK: false},
-		{name: "empty value", annotations: map[string]string{"konghq.com/retries": ""}, expected: 0, expectedOK: false},
+		{name: "nil annotations", annotations: nil, expected: nil},
+		{name: "empty annotations", annotations: map[string]string{}, expected: nil},
+		{name: "valid retries", annotations: map[string]string{"konghq.com/retries": "5"}, expected: int64Ptr(5)},
+		{name: "zero retries", annotations: map[string]string{"konghq.com/retries": "0"}, expected: int64Ptr(0)},
+		{name: "negative invalid", annotations: map[string]string{"konghq.com/retries": "-1"}, expected: nil},
+		{name: "non-numeric", annotations: map[string]string{"konghq.com/retries": "abc"}, expected: nil},
+		{name: "empty value", annotations: map[string]string{"konghq.com/retries": ""}, expected: nil},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v, ok := ExtractRetries(tt.annotations)
-			assert.Equal(t, tt.expectedOK, ok)
-			assert.Equal(t, tt.expected, v)
+			v := ExtractRetries(tt.annotations)
+			if tt.expected == nil {
+				assert.Nil(t, v)
+			} else {
+				require.NotNil(t, v)
+				assert.Equal(t, *tt.expected, *v)
+			}
 		})
 	}
 }

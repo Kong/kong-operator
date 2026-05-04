@@ -105,12 +105,12 @@ func (b *KongServiceBuilder) WithOwner(owner client.Object) *KongServiceBuilder 
 }
 
 // WithRetries sets the retries count for the KongService being built.
-// If ok is false the field is left unset.
-func (b *KongServiceBuilder) WithRetries(retries int64, ok bool) *KongServiceBuilder {
-	if !ok {
+// A nil pointer leaves the field unset.
+func (b *KongServiceBuilder) WithRetries(v *int64) *KongServiceBuilder {
+	if v == nil {
 		return b
 	}
-	b.service.Spec.Retries = &retries
+	b.service.Spec.Retries = v
 	return b
 }
 

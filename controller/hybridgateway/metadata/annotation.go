@@ -62,21 +62,21 @@ func ExtractProtocol(anns map[string]string) string {
 }
 
 // ExtractRetries extracts the retries annotation value.
-// Returns (retries, true) when the annotation is present and parseable as a non-negative integer.
+// Returns a non-nil pointer when the annotation is present and parseable as a non-negative integer.
 // This mirrors ingress-controller/internal/annotations.ExtractRetries.
-func ExtractRetries(anns map[string]string) (int64, bool) {
+func ExtractRetries(anns map[string]string) *int64 {
 	if anns == nil {
-		return 0, false
+		return nil
 	}
 	val, ok := anns[annotationPrefix+retriesKey]
 	if !ok || val == "" {
-		return 0, false
+		return nil
 	}
 	retries, err := strconv.ParseInt(val, 10, 64)
 	if err != nil || retries < 0 {
-		return 0, false
+		return nil
 	}
-	return retries, true
+	return &retries
 }
 
 // IsValidProtocol returns true if the provided protocol is a valid Kong upstream protocol.
