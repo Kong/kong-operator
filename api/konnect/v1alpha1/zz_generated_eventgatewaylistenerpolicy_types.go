@@ -46,7 +46,7 @@ type EventGatewayListenerPolicySpec struct {
 	// EventGatewayListenerRef is the reference to the parent EventGatewayListener object.
 	//
 	// +required
-	EventGatewayListenerRef commonv1alpha1.ObjectRef `json:"event_gateway_listener_ref,omitzero"`
+	EventGatewayListenerRef commonv1alpha1.ObjectRef `json:"eventGatewayListenerRef,omitzero"`
 
 	// APISpec defines the desired state of the resource's API spec fields.
 	//
@@ -103,17 +103,17 @@ type EventGatewayListenerPolicyConfig struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=forward_to_virtual_cluster;tls_server
+	// +kubebuilder:validation:Enum=forwardToVirtualCluster;tlsServer
 	Type EventGatewayListenerPolicyConfigType `json:"type,omitempty"`
 
 	// ForwardToVirtualClust configuration.
 	//
 	// +optional
-	ForwardToVirtualClust *ForwardToVirtualClusterPolicy `json:"forward_to_virtual_cluster,omitempty"`
+	ForwardToVirtualClust *ForwardToVirtualClusterPolicy `json:"forwardToVirtualCluster,omitempty"`
 	// EventGatewayTLSListen configuration.
 	//
 	// +optional
-	EventGatewayTLSListen *EventGatewayTLSListenerPolicy `json:"tls_server,omitempty"`
+	EventGatewayTLSListen *EventGatewayTLSListenerPolicy `json:"tlsServer,omitempty"`
 }
 
 // EventGatewayListenerPolicyConfigType represents the type of EventGatewayListenerPolicyConfig.
@@ -121,8 +121,8 @@ type EventGatewayListenerPolicyConfigType string
 
 // EventGatewayListenerPolicyConfigType values.
 const (
-	EventGatewayListenerPolicyConfigTypeForwardToVirtualClust EventGatewayListenerPolicyConfigType = "forward_to_virtual_cluster"
-	EventGatewayListenerPolicyConfigTypeEventGatewayTLSListen EventGatewayListenerPolicyConfigType = "tls_server"
+	EventGatewayListenerPolicyConfigTypeForwardToVirtualClust EventGatewayListenerPolicyConfigType = "forwardToVirtualCluster"
+	EventGatewayListenerPolicyConfigTypeEventGatewayTLSListen EventGatewayListenerPolicyConfigType = "tlsServer"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -131,21 +131,21 @@ func (u EventGatewayListenerPolicyConfig) MarshalJSON() ([]byte, error) {
 	typeBytes, _ := json.Marshal(string(u.Type))
 	m["type"] = typeBytes
 	switch u.Type {
-	case "forward_to_virtual_cluster":
+	case "forwardToVirtualCluster":
 		if u.ForwardToVirtualClust != nil {
 			raw, err := json.Marshal(u.ForwardToVirtualClust)
 			if err != nil {
 				return nil, fmt.Errorf("marshaling EventGatewayListenerPolicyConfig forward_to_virtual_cluster: %w", err)
 			}
-			m["forward_to_virtual_cluster"] = raw
+			m["forwardToVirtualCluster"] = raw
 		}
-	case "tls_server":
+	case "tlsServer":
 		if u.EventGatewayTLSListen != nil {
 			raw, err := json.Marshal(u.EventGatewayTLSListen)
 			if err != nil {
 				return nil, fmt.Errorf("marshaling EventGatewayListenerPolicyConfig tls_server: %w", err)
 			}
-			m["tls_server"] = raw
+			m["tlsServer"] = raw
 		}
 	}
 	return json.Marshal(m)
@@ -168,8 +168,8 @@ func (u *EventGatewayListenerPolicyConfig) UnmarshalJSON(data []byte) error {
 	}
 	u.Type = EventGatewayListenerPolicyConfigType(probe.Type)
 	switch probe.Type {
-	case "forward_to_virtual_cluster":
-		payload, ok := raw["forward_to_virtual_cluster"]
+	case "forwardToVirtualCluster":
+		payload, ok := raw["forwardToVirtualCluster"]
 		if !ok || len(payload) == 0 {
 			return nil
 		}
@@ -178,8 +178,8 @@ func (u *EventGatewayListenerPolicyConfig) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("unmarshaling EventGatewayListenerPolicyConfig forward_to_virtual_cluster: %w", err)
 		}
 		u.ForwardToVirtualClust = &val
-	case "tls_server":
-		payload, ok := raw["tls_server"]
+	case "tlsServer":
+		payload, ok := raw["tlsServer"]
 		if !ok || len(payload) == 0 {
 			return nil
 		}

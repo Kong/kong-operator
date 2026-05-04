@@ -62,16 +62,16 @@ spec:
                 description: APISpec defines the desired state of the resource's API
                   spec fields.
                 properties:
-                  forward_to_virtual_cluster:
+                  forwardToVirtualCluster:
                     description: ForwardToVirtualClust configuration.
                     properties:
                       config:
                         description: The configuration of the policy.
                         properties:
-                          port_mapping:
+                          portMapping:
                             description: PortMapping configuration.
                             properties:
-                              advertised_host:
+                              advertisedHost:
                                 description: |-
                                   Virtual brokers are advertised to clients using this host.
                                   Any kind of host supported by kafka can be used.
@@ -82,7 +82,7 @@ spec:
                                 minLength: 1
                                 pattern: ^[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?)*$
                                 type: string
-                              bootstrap_port:
+                              bootstrapPort:
                                 default: at_start
                                 description: |-
                                   If set to `at_start`, the first port will be used as a bootstrap port.
@@ -112,18 +112,18 @@ spec:
                                       virtual cluster.
                                     type: string
                                 type: object
-                              min_broker_id:
+                              minBrokerID:
                                 default: 0
                                 description: The lowest broker node ID in the cluster.
                                 type: integer
                             required:
-                            - advertised_host
+                            - advertisedHost
                             - destination
                             type: object
                           sni:
                             description: SNI configuration.
                             properties:
-                              advertised_port:
+                              advertisedPort:
                                 description: |-
                                   Virtual brokers are advertised to clients with this port instead of
                                   listen_port.
@@ -132,7 +132,7 @@ spec:
                                 maximum: 65535
                                 minimum: 1
                                 type: integer
-                              broker_host_format:
+                              brokerHostFormat:
                                 description: |-
                                   Configures DNS names assigned to brokers in virtual clusters.
 
@@ -156,7 +156,7 @@ spec:
                                 required:
                                 - type
                                 type: object
-                              sni_suffix:
+                              sniSuffix:
                                 description: |-
                                   Optional suffix for TLS SNI validation.
 
@@ -188,7 +188,7 @@ spec:
                           type:
                             description: Type designates the type of configuration.
                             enum:
-                            - port_mapping
+                            - portMapping
                             - sni
                             minLength: 1
                             type: string
@@ -228,13 +228,13 @@ spec:
                     required:
                     - config
                     type: object
-                  tls_server:
+                  tlsServer:
                     description: EventGatewayTLSListen configuration.
                     properties:
                       config:
                         description: The configuration of the policy.
                         properties:
-                          allow_plaintext:
+                          allowPlaintext:
                             default: Disabled
                             description: |-
                               If false, only TLS connections are allowed.
@@ -273,7 +273,7 @@ spec:
                               - key
                               type: object
                             type: array
-                          client_authentication:
+                          clientAuthentication:
                             description: |-
                               Configures mutual TLS (mTLS) client certificate verification.
                               When set, the gateway
@@ -296,7 +296,7 @@ spec:
                                 maxLength: 253
                                 minLength: 1
                                 type: string
-                              principal_mapping:
+                              principalMapping:
                                 description: |-
                                   An expression that extracts a principal identifier from a verified client
                                   certificate.
@@ -305,7 +305,7 @@ spec:
                                   **Requires a minimum runtime version of `1.1`**.
                                 maxLength: 253
                                 type: string
-                              tls_trust_bundles:
+                              tlsTrustBundles:
                                 description: |-
                                   TLS trust bundles contain CA certificate bundles used to verify client
                                   certificates.
@@ -327,7 +327,7 @@ spec:
                                 type: array
                             required:
                             - mode
-                            - tls_trust_bundles
+                            - tlsTrustBundles
                             type: object
                           versions:
                             default:
@@ -391,14 +391,14 @@ spec:
                   type:
                     description: Type designates the type of configuration.
                     enum:
-                    - forward_to_virtual_cluster
-                    - tls_server
+                    - forwardToVirtualCluster
+                    - tlsServer
                     minLength: 1
                     type: string
                 required:
                 - type
                 type: object
-              event_gateway_listener_ref:
+              eventGatewayListenerRef:
                 description: EventGatewayListenerRef is the reference to the parent
                   EventGatewayListener object.
                 properties:
@@ -455,7 +455,7 @@ spec:
                 - message: when type is konnectID, namespacedRef must not be set
                   rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
             required:
-            - event_gateway_listener_ref
+            - eventGatewayListenerRef
             type: object
           status:
             description: EventGatewayListenerPolicyStatus defines the observed state

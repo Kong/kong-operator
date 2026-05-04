@@ -170,7 +170,7 @@ apiGroupVersions:
           parent_page_id:
               _validations:
                 # TODO: https://github.com/Kong/kong-operator/issues/4008
-                - "+kubebuilder:validation:XValidation:rule=\"self == null\",message=\"cannot set parent_page_id_ref\""
+                - "+kubebuilder:validation:XValidation:rule=\"self == null\",message=\"cannot set parentPageIDRef\""
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.PortalPagesSDK

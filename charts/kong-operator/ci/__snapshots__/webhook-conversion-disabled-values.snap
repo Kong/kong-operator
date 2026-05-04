@@ -10852,7 +10852,7 @@ spec:
                       anonymous:
                         description: Anonymous configuration.
                         type: object
-                      sasl_plain:
+                      saslPlain:
                         description: SaslPlain configuration.
                         properties:
                           password:
@@ -10879,7 +10879,7 @@ spec:
                         - password
                         - username
                         type: object
-                      sasl_scram:
+                      saslScram:
                         description: SaslScram configuration.
                         properties:
                           algorithm:
@@ -10919,14 +10919,14 @@ spec:
                         description: Type designates the type of configuration.
                         enum:
                         - anonymous
-                        - sasl_plain
-                        - sasl_scram
+                        - saslPlain
+                        - saslScram
                         minLength: 1
                         type: string
                     required:
                     - type
                     type: object
-                  bootstrap_servers:
+                  bootstrapServers:
                     description: A list of cluster bootstrap servers in the format address:port.
                     items:
                       type: string
@@ -10936,7 +10936,7 @@ spec:
                     description: A human-readable description of the backend cluster.
                     maxLength: 512
                     type: string
-                  insecure_allow_anonymous_virtual_cluster_auth:
+                  insecureAllowAnonymousVirtualClusterAuth:
                     default: Disabled
                     description: |-
                       If true, virtual clusters can have allow anonymous authentication and use
@@ -10961,7 +10961,7 @@ spec:
                       Keys must be of length 1-63 characters, and cannot start with "kong",
                       "konnect", "mesh", "kic", or "_".
                     type: object
-                  metadata_update_interval_seconds:
+                  metadataUpdateIntervalSeconds:
                     default: 60
                     description: The interval at which metadata is updated in seconds.
                     maximum: 43200
@@ -10975,7 +10975,7 @@ spec:
                   tls:
                     description: BackendClusterTLS is a type alias.
                     properties:
-                      ca_bundle:
+                      caBundle:
                         description: |-
                           A literal value or a reference to an existing secret as a template string
                           expression.
@@ -10984,7 +10984,7 @@ spec:
                         maxLength: 4096
                         minLength: 1
                         type: string
-                      client_identity:
+                      clientIdentity:
                         description: |-
                           Client mTLS configuration.
 
@@ -11022,7 +11022,7 @@ spec:
                         - Enabled
                         - Disabled
                         type: string
-                      insecure_skip_verify:
+                      insecureSkipVerify:
                         default: Disabled
                         description: |-
                           If true, skip certificate verification.
@@ -11031,7 +11031,7 @@ spec:
                         - Enabled
                         - Disabled
                         type: string
-                      tls_versions:
+                      tlsVersions:
                         default:
                         - tls12
                         - tls13
@@ -11044,11 +11044,11 @@ spec:
                     type: object
                 required:
                 - authentication
-                - bootstrap_servers
+                - bootstrapServers
                 - name
                 - tls
                 type: object
-              gateway_ref:
+              gatewayRef:
                 description: GatewayRef is the reference to the parent Gateway object.
                 properties:
                   konnectID:
@@ -11103,7 +11103,7 @@ spec:
                 - message: when type is konnectID, namespacedRef must not be set
                   rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
             required:
-            - gateway_ref
+            - gatewayRef
             type: object
           status:
             description: EventGatewayBackendClusterStatus defines the observed state of EventGatewayBackendCluster.
@@ -11265,16 +11265,16 @@ spec:
               apiSpec:
                 description: APISpec defines the desired state of the resource's API spec fields.
                 properties:
-                  forward_to_virtual_cluster:
+                  forwardToVirtualCluster:
                     description: ForwardToVirtualClust configuration.
                     properties:
                       config:
                         description: The configuration of the policy.
                         properties:
-                          port_mapping:
+                          portMapping:
                             description: PortMapping configuration.
                             properties:
-                              advertised_host:
+                              advertisedHost:
                                 description: |-
                                   Virtual brokers are advertised to clients using this host.
                                   Any kind of host supported by kafka can be used.
@@ -11285,7 +11285,7 @@ spec:
                                 minLength: 1
                                 pattern: ^[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?)*$
                                 type: string
-                              bootstrap_port:
+                              bootstrapPort:
                                 default: at_start
                                 description: |-
                                   If set to `at_start`, the first port will be used as a bootstrap port.
@@ -11314,18 +11314,18 @@ spec:
                                     description: VirtualClusterName The name of the virtual cluster.
                                     type: string
                                 type: object
-                              min_broker_id:
+                              minBrokerID:
                                 default: 0
                                 description: The lowest broker node ID in the cluster.
                                 type: integer
                             required:
-                            - advertised_host
+                            - advertisedHost
                             - destination
                             type: object
                           sni:
                             description: SNI configuration.
                             properties:
-                              advertised_port:
+                              advertisedPort:
                                 description: |-
                                   Virtual brokers are advertised to clients with this port instead of
                                   listen_port.
@@ -11334,7 +11334,7 @@ spec:
                                 maximum: 65535
                                 minimum: 1
                                 type: integer
-                              broker_host_format:
+                              brokerHostFormat:
                                 description: |-
                                   Configures DNS names assigned to brokers in virtual clusters.
 
@@ -11358,7 +11358,7 @@ spec:
                                 required:
                                 - type
                                 type: object
-                              sni_suffix:
+                              sniSuffix:
                                 description: |-
                                   Optional suffix for TLS SNI validation.
 
@@ -11390,7 +11390,7 @@ spec:
                           type:
                             description: Type designates the type of configuration.
                             enum:
-                            - port_mapping
+                            - portMapping
                             - sni
                             minLength: 1
                             type: string
@@ -11430,13 +11430,13 @@ spec:
                     required:
                     - config
                     type: object
-                  tls_server:
+                  tlsServer:
                     description: EventGatewayTLSListen configuration.
                     properties:
                       config:
                         description: The configuration of the policy.
                         properties:
-                          allow_plaintext:
+                          allowPlaintext:
                             default: Disabled
                             description: |-
                               If false, only TLS connections are allowed.
@@ -11474,7 +11474,7 @@ spec:
                               - key
                               type: object
                             type: array
-                          client_authentication:
+                          clientAuthentication:
                             description: |-
                               Configures mutual TLS (mTLS) client certificate verification.
                               When set, the gateway
@@ -11497,7 +11497,7 @@ spec:
                                 maxLength: 253
                                 minLength: 1
                                 type: string
-                              principal_mapping:
+                              principalMapping:
                                 description: |-
                                   An expression that extracts a principal identifier from a verified client
                                   certificate.
@@ -11506,7 +11506,7 @@ spec:
                                   **Requires a minimum runtime version of `1.1`**.
                                 maxLength: 253
                                 type: string
-                              tls_trust_bundles:
+                              tlsTrustBundles:
                                 description: |-
                                   TLS trust bundles contain CA certificate bundles used to verify client
                                   certificates.
@@ -11527,7 +11527,7 @@ spec:
                                 type: array
                             required:
                             - mode
-                            - tls_trust_bundles
+                            - tlsTrustBundles
                             type: object
                           versions:
                             default:
@@ -11591,14 +11591,14 @@ spec:
                   type:
                     description: Type designates the type of configuration.
                     enum:
-                    - forward_to_virtual_cluster
-                    - tls_server
+                    - forwardToVirtualCluster
+                    - tlsServer
                     minLength: 1
                     type: string
                 required:
                 - type
                 type: object
-              event_gateway_listener_ref:
+              eventGatewayListenerRef:
                 description: EventGatewayListenerRef is the reference to the parent EventGatewayListener object.
                 properties:
                   konnectID:
@@ -11653,7 +11653,7 @@ spec:
                 - message: when type is konnectID, namespacedRef must not be set
                   rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
             required:
-            - event_gateway_listener_ref
+            - eventGatewayListenerRef
             type: object
           status:
             description: EventGatewayListenerPolicyStatus defines the observed state of EventGatewayListenerPolicy.
@@ -11880,7 +11880,7 @@ spec:
                 - name
                 - ports
                 type: object
-              gateway_ref:
+              gatewayRef:
                 description: GatewayRef is the reference to the parent Gateway object.
                 properties:
                   konnectID:
@@ -11935,7 +11935,7 @@ spec:
                 - message: when type is konnectID, namespacedRef must not be set
                   rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
             required:
-            - gateway_ref
+            - gatewayRef
             type: object
           status:
             description: EventGatewayListenerStatus defines the observed state of EventGatewayListener.
@@ -12097,7 +12097,7 @@ spec:
               apiSpec:
                 description: APISpec defines the desired state of the resource's API spec fields.
                 properties:
-                  acl_mode:
+                  aclMode:
                     description: |-
                       Configures whether or not ACL policies are enforced on the gateway.
                       - `enforce_on_gateway` means the gateway enforces its own ACL policies for
@@ -12126,13 +12126,13 @@ spec:
                         anonymous:
                           description: Anonymous configuration.
                           type: object
-                        client_certificate:
+                        clientCertificate:
                           description: ClientCertificate configuration.
                           type: object
-                        oauth_bearer:
+                        oauthBearer:
                           description: OauthBearer configuration.
                           properties:
-                            claims_mapping:
+                            claimsMapping:
                               description: |-
                                 Maps JWT claims in the case when sub and scope are presented as different
                                 claims in your JWT token.
@@ -12151,7 +12151,7 @@ spec:
                             jwks:
                               description: JSON Web Key Set configuration for verifying token signatures.
                               properties:
-                                cache_expiration:
+                                cacheExpiration:
                                   default: 1h
                                   description: Duration after which the gateway will fetch and cache JWKS.
                                   maxLength: 253
@@ -12222,7 +12222,7 @@ spec:
                           required:
                           - mediation
                           type: object
-                        sasl_plain:
+                        saslPlain:
                           description: SaslPlain configuration.
                           properties:
                             mediation:
@@ -12270,7 +12270,7 @@ spec:
                           required:
                           - mediation
                           type: object
-                        sasl_scram:
+                        saslScram:
                           description: SaslScram configuration.
                           properties:
                             algorithm:
@@ -12288,10 +12288,10 @@ spec:
                           description: Type designates the type of configuration.
                           enum:
                           - anonymous
-                          - client_certificate
-                          - oauth_bearer
-                          - sasl_plain
-                          - sasl_scram
+                          - clientCertificate
+                          - oauthBearer
+                          - saslPlain
+                          - saslScram
                           minLength: 1
                           type: string
                       required:
@@ -12319,7 +12319,7 @@ spec:
                         description: BackendClusterName The unique name of the backend cluster.
                         type: string
                     type: object
-                  dns_label:
+                  dnsLabel:
                     description: |-
                       The DNS label used in the bootstrap server URL to identify the virtual
                       cluster when using SNI routing.
@@ -12357,7 +12357,7 @@ spec:
                       additional:
                         description: VirtualClusterNamespaceAdditionalProperties is a type alias.
                         properties:
-                          consumer_groups:
+                          consumerGroups:
                             description: |-
                               Consumer group IDs to expose even if they don't start with the namespace
                               prefix.
@@ -12366,10 +12366,10 @@ spec:
                                 VirtualClusterNamespaceIDSelector represents a union type for VirtualClusterNamespaceIDSelector.
                                 Only one of the fields should be set based on the Type.
                               properties:
-                                exact_list:
+                                exactList:
                                   description: ExactList configuration.
                                   properties:
-                                    exact_list:
+                                    exactList:
                                       items:
                                         description: Items is a type alias.
                                         properties:
@@ -12397,7 +12397,7 @@ spec:
                                 type:
                                   description: Type designates the type of configuration.
                                   enum:
-                                  - exact_list
+                                  - exactList
                                   - glob
                                   minLength: 1
                                   type: string
@@ -12417,7 +12417,7 @@ spec:
                                 VirtualClusterNamespaceTopicSelector represents a union type for VirtualClusterNamespaceTopicSelector.
                                 Only one of the fields should be set based on the Type.
                               properties:
-                                exact_list:
+                                exactList:
                                   description: ExactList configuration.
                                   properties:
                                     conflict:
@@ -12434,7 +12434,7 @@ spec:
                                       - ignore
                                       maxLength: 253
                                       type: string
-                                    exact_list:
+                                    exactList:
                                       description: Explicit allow-list of backend topic names.
                                       items:
                                         description: NamespaceExactAllowListItem is a type alias.
@@ -12479,7 +12479,7 @@ spec:
                                 type:
                                   description: Type designates the type of configuration.
                                   enum:
-                                  - exact_list
+                                  - exactList
                                   - glob
                                   minLength: 1
                                   type: string
@@ -12519,13 +12519,13 @@ spec:
                     - prefix
                     type: object
                 required:
-                - acl_mode
+                - aclMode
                 - authentication
                 - destination
-                - dns_label
+                - dnsLabel
                 - name
                 type: object
-              gateway_ref:
+              gatewayRef:
                 description: GatewayRef is the reference to the parent Gateway object.
                 properties:
                   konnectID:
@@ -12580,7 +12580,7 @@ spec:
                 - message: when type is konnectID, namespacedRef must not be set
                   rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
             required:
-            - gateway_ref
+            - gatewayRef
             type: object
           status:
             description: EventGatewayVirtualClusterStatus defines the observed state of EventGatewayVirtualCluster.
@@ -22335,10 +22335,10 @@ spec:
                       IdentityProviderRequestConfig represents a union type for config.
                       Only one of the fields should be set based on the Type.
                     properties:
-                      OIDC:
+                      oIDC:
                         description: OIDC configuration.
                         properties:
-                          claim_mappings:
+                          claimMappings:
                             description: |-
                               Defines the mappings between OpenID Connect (OIDC) claims and local claims
                               used by your application for
@@ -22360,16 +22360,16 @@ spec:
                                 maxLength: 253
                                 type: string
                             type: object
-                          client_id:
+                          clientID:
                             description: The client ID assigned to your application by the identity provider.
                             maxLength: 253
                             minLength: 1
                             type: string
-                          client_secret:
+                          clientSecret:
                             description: The Client Secret assigned to your application by the identity provider.
                             maxLength: 253
                             type: string
-                          issuer_url:
+                          issuerURL:
                             description: |-
                               The issuer URI of the identity provider.
                               This is the URL where the provider's metadata can be obtained.
@@ -22388,19 +22388,19 @@ spec:
                               type: string
                             type: array
                         required:
-                        - client_id
-                        - issuer_url
+                        - clientID
+                        - issuerURL
                         type: object
-                      SAML:
+                      sAML:
                         description: SAML configuration.
                         properties:
-                          idp_metadata_url:
+                          idpMetadataURL:
                             description: |-
                               The identity provider's metadata URL where the identity provider's metadata
                               can be obtained.
                             maxLength: 253
                             type: string
-                          idp_metadata_xml:
+                          idpMetadataXML:
                             description: |-
                               The identity provider's SAML metadata.
                               If the identity provider supports a metadata URL, you can use the
@@ -22411,8 +22411,8 @@ spec:
                       type:
                         description: Type designates the type of configuration.
                         enum:
-                        - OIDC
-                        - SAML
+                        - oIDC
+                        - sAML
                         minLength: 1
                         type: string
                     required:
@@ -22427,7 +22427,7 @@ spec:
                     - Enabled
                     - Disabled
                     type: string
-                  login_path:
+                  loginPath:
                     description: The path used for initiating login requests with the identity provider.
                     maxLength: 253
                     type: string
@@ -22439,7 +22439,7 @@ spec:
                     maxLength: 253
                     type: string
                 type: object
-              portal_ref:
+              portalRef:
                 description: PortalRef is the reference to the parent Portal object.
                 properties:
                   konnectID:
@@ -22494,7 +22494,7 @@ spec:
                 - message: when type is konnectID, namespacedRef must not be set
                   rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
             required:
-            - portal_ref
+            - portalRef
             type: object
           status:
             description: IdentityProviderRequestStatus defines the observed state of IdentityProviderRequest.
@@ -41403,7 +41403,7 @@ spec:
                 required:
                 - certificate
                 type: object
-              gateway_ref:
+              gatewayRef:
                 description: GatewayRef is the reference to the parent Gateway object.
                 properties:
                   konnectID:
@@ -41491,7 +41491,7 @@ spec:
                 - secretRef
                 type: string
             required:
-            - gateway_ref
+            - gatewayRef
             type: object
           status:
             description: KonnectEventDataPlaneCertificateStatus defines the observed state of KonnectEventDataPlaneCertificate.
@@ -41671,7 +41671,7 @@ spec:
                       Keys must be of length 1-63 characters, and cannot start with "kong",
                       "konnect", "mesh", "kic", or "_".
                     type: object
-                  min_runtime_version:
+                  minRuntimeVersion:
                     description: |-
                       The minimum runtime version supported by the API.
                       This is the lowest version of the data plane
@@ -42858,7 +42858,7 @@ spec:
                     description: Description is a type alias.
                     maxLength: 160
                     type: string
-                  parent_page_id_ref:
+                  parentPageIDRef:
                     description: |-
                       Pages may be rendered as a tree of files.
 
@@ -42908,7 +42908,7 @@ spec:
                     - type
                     type: object
                     x-kubernetes-validations:
-                    - message: cannot set parent_page_id_ref
+                    - message: cannot set parentPageIDRef
                       rule: self == null
                     - message: when type is namespacedRef, namespacedRef must be set
                       rule: 'self.type == ''namespacedRef'' ? has(self.namespacedRef) : true'
@@ -42955,7 +42955,7 @@ spec:
                 - content
                 - slug
                 type: object
-              portal_ref:
+              portalRef:
                 description: PortalRef is the reference to the parent Portal object.
                 properties:
                   konnectID:
@@ -43010,7 +43010,7 @@ spec:
                 - message: when type is konnectID, namespacedRef must not be set
                   rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
             required:
-            - portal_ref
+            - portalRef
             type: object
           status:
             description: PortalPageStatus defines the observed state of PortalPage.
@@ -43172,7 +43172,7 @@ spec:
               apiSpec:
                 description: APISpec defines the desired state of the resource's API spec fields.
                 properties:
-                  authentication_enabled:
+                  authenticationEnabled:
                     default: Enabled
                     description: |-
                       Whether the portal supports developer authentication.
@@ -43181,7 +43181,7 @@ spec:
                     - Enabled
                     - Disabled
                     type: string
-                  auto_approve_applications:
+                  autoApproveApplications:
                     default: Disabled
                     description: |-
                       Whether requests from applications to register for APIs will be
@@ -43191,7 +43191,7 @@ spec:
                     - Enabled
                     - Disabled
                     type: string
-                  auto_approve_developers:
+                  autoApproveDevelopers:
                     default: Disabled
                     description: |-
                       Whether developer account registrations will be automatically approved, or
@@ -43200,7 +43200,7 @@ spec:
                     - Enabled
                     - Disabled
                     type: string
-                  default_api_visibility:
+                  defaultAPIVisibility:
                     description: |-
                       The default visibility of APIs in the portal.
                       If set to `public`, newly published APIs are visible to unauthenticated
@@ -43212,7 +43212,7 @@ spec:
                     - private
                     maxLength: 253
                     type: string
-                  default_application_auth_strategy_id_ref:
+                  defaultApplicationAuthStrategyIDRef:
                     description: |-
                       The default authentication strategy for APIs published to the portal.
                       Newly published APIs will use this authentication strategy unless overridden
@@ -43271,7 +43271,7 @@ spec:
                       rule: 'self.type == ''konnectID'' ? has(self.konnectID) : true'
                     - message: when type is konnectID, namespacedRef must not be set
                       rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
-                  default_page_visibility:
+                  defaultPageVisibility:
                     description: |-
                       The default visibility of pages in the portal.
                       If set to `public`, newly created pages are visible to unauthenticated
@@ -43287,7 +43287,7 @@ spec:
                     description: A description of the portal.
                     maxLength: 512
                     type: string
-                  display_name:
+                  displayName:
                     description: |-
                       The display name of the portal.
                       This value will be the portal's `name` in Portal API.
@@ -43320,7 +43320,7 @@ spec:
                     x-kubernetes-validations:
                     - message: name is immutable
                       rule: self == oldSelf
-                  rbac_enabled:
+                  rbacEnabled:
                     default: Disabled
                     description: |-
                       Whether the portal resources are protected by Role Based Access Control
@@ -43332,7 +43332,7 @@ spec:
                     - Enabled
                     - Disabled
                     type: string
-                  sipr_enabled:
+                  siprEnabled:
                     default: Disabled
                     description: Whether ip allow list is enabled for the portal.
                     enum:
@@ -43515,7 +43515,7 @@ spec:
               apiSpec:
                 description: APISpec defines the desired state of the resource's API spec fields.
                 properties:
-                  can_own_applications:
+                  canOwnApplications:
                     default: Disabled
                     description: Whether the team is allowed to own applications
                     enum:
@@ -43533,7 +43533,7 @@ spec:
                 required:
                 - name
                 type: object
-              portal_ref:
+              portalRef:
                 description: PortalRef is the reference to the parent Portal object.
                 properties:
                   konnectID:
@@ -43588,7 +43588,7 @@ spec:
                 - message: when type is konnectID, namespacedRef must not be set
                   rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
             required:
-            - portal_ref
+            - portalRef
             type: object
           status:
             description: PortalTeamStatus defines the observed state of PortalTeam.

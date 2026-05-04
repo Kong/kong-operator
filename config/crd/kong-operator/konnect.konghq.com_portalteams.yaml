@@ -60,7 +60,7 @@ spec:
                 description: APISpec defines the desired state of the resource's API
                   spec fields.
                 properties:
-                  can_own_applications:
+                  canOwnApplications:
                     default: Disabled
                     description: Whether the team is allowed to own applications
                     enum:
@@ -78,7 +78,7 @@ spec:
                 required:
                 - name
                 type: object
-              portal_ref:
+              portalRef:
                 description: PortalRef is the reference to the parent Portal object.
                 properties:
                   konnectID:
@@ -134,7 +134,7 @@ spec:
                 - message: when type is konnectID, namespacedRef must not be set
                   rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
             required:
-            - portal_ref
+            - portalRef
             type: object
           status:
             description: PortalTeamStatus defines the observed state of PortalTeam.

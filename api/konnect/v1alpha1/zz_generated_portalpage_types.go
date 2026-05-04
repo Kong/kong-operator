@@ -44,7 +44,7 @@ type PortalPageSpec struct {
 	// PortalRef is the reference to the parent Portal object.
 	//
 	// +required
-	PortalRef commonv1alpha1.ObjectRef `json:"portal_ref,omitzero"`
+	PortalRef commonv1alpha1.ObjectRef `json:"portalRef,omitzero"`
 
 	// APISpec defines the desired state of the resource's API spec fields.
 	//
@@ -74,8 +74,8 @@ type PortalPageAPISpec struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:XValidation:rule="self == null",message="cannot set parent_page_id_ref"
-	ParentPageIDRef *commonv1alpha1.ObjectRef `json:"parent_page_id_ref,omitempty"`
+	// +kubebuilder:validation:XValidation:rule="self == null",message="cannot set parentPageIDRef"
+	ParentPageIDRef *commonv1alpha1.ObjectRef `json:"parentPageIDRef,omitempty"`
 
 	// The slug of a page in a portal, used to compute its full URL path within the
 	// portal hierarchy.
