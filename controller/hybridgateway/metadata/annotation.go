@@ -63,14 +63,14 @@ func ExtractProtocol(anns map[string]string) string {
 }
 
 // ExtractHostHeader extracts the host-header annotation value.
-// Returns (value, true) when the annotation is present and non-empty.
+// Returns a non-nil pointer when the annotation is present and non-empty.
 // This mirrors ingress-controller/internal/annotations.ExtractHostHeader.
-func ExtractHostHeader(anns map[string]string) (string, bool) {
+func ExtractHostHeader(anns map[string]string) *string {
 	val := anns[annotationPrefix+hostHeaderKey]
 	if val == "" {
-		return "", false
+		return nil
 	}
-	return val, true
+	return &val
 }
 
 // IsValidProtocol returns true if the provided protocol is a valid Kong upstream protocol.

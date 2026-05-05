@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -1023,56 +1024,55 @@ func TestGenericObjectTypes(t *testing.T) {
 	}
 }
 
+func strPtr(v string) *string { return &v }
+
 func TestExtractHostHeader(t *testing.T) {
 	tests := []struct {
 		name        string
 		annotations map[string]string
-		wantValue   string
-		wantOK      bool
+		want        *string
 	}{
 		{
 			name:        "nil annotations",
 			annotations: nil,
-			wantValue:   "",
-			wantOK:      false,
+			want:        nil,
 		},
 		{
 			name:        "empty annotations",
 			annotations: map[string]string{},
-			wantValue:   "",
-			wantOK:      false,
+			want:        nil,
 		},
 		{
 			name:        "annotation missing",
 			annotations: map[string]string{"other": "value"},
-			wantValue:   "",
-			wantOK:      false,
+			want:        nil,
 		},
 		{
 			name:        "annotation present with empty value",
 			annotations: map[string]string{"konghq.com/host-header": ""},
-			wantValue:   "",
-			wantOK:      false,
+			want:        nil,
 		},
 		{
 			name:        "annotation present with valid hostname",
 			annotations: map[string]string{"konghq.com/host-header": "my-service.example.com"},
-			wantValue:   "my-service.example.com",
-			wantOK:      true,
+			want:        strPtr("my-service.example.com"),
 		},
 		{
 			name:        "annotation present with IP address",
 			annotations: map[string]string{"konghq.com/host-header": "10.0.0.1"},
-			wantValue:   "10.0.0.1",
-			wantOK:      true,
+			want:        strPtr("10.0.0.1"),
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotValue, gotOK := ExtractHostHeader(tt.annotations)
-			assert.Equal(t, tt.wantValue, gotValue)
-			assert.Equal(t, tt.wantOK, gotOK)
+			got := ExtractHostHeader(tt.annotations)
+			if tt.want == nil {
+				assert.Nil(t, got)
+			} else {
+				require.NotNil(t, got)
+				assert.Equal(t, *tt.want, *got)
+			}
 		})
 	}
 }

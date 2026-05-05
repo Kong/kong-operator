@@ -631,6 +631,8 @@ func TestUpstreamForRule_HostHeaderFirstWins(t *testing.T) {
 	assert.Equal(t, "first.example.com", *upstream.Spec.HostHeader)
 }
 
+func strPtr(v string) *string { return &v }
+
 func TestResolveHostHeaderFromBackendRefs(t *testing.T) {
 	ctx := context.Background()
 	logger := logr.Discard()
@@ -643,8 +645,7 @@ func TestResolveHostHeaderFromBackendRefs(t *testing.T) {
 		namespace       string
 		backendRefs     []gwtypes.BackendRef
 		backendServices []corev1.Service
-		expectedValue   string
-		expectedOk      bool
+		expected        *string
 	}{
 		{
 			name:      "service with host-header annotation returns value",
@@ -655,11 +656,10 @@ func TestResolveHostHeaderFromBackendRefs(t *testing.T) {
 			backendServices: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-header", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/host-header": "api.example.com"}}},
 			},
-			expectedValue: "api.example.com",
-			expectedOk:    true,
+			expected: strPtr("api.example.com"),
 		},
 		{
-			name:      "service without annotation returns empty and false",
+			name:      "service without annotation returns nil",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
 				{BackendObjectReference: gwtypes.BackendObjectReference{Name: "plain-svc"}},
@@ -667,8 +667,7 @@ func TestResolveHostHeaderFromBackendRefs(t *testing.T) {
 			backendServices: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "plain-svc", Namespace: "test-namespace"}},
 			},
-			expectedValue: "",
-			expectedOk:    false,
+			expected: nil,
 		},
 		{
 			name:      "first backend ref with annotation wins",
@@ -681,29 +680,26 @@ func TestResolveHostHeaderFromBackendRefs(t *testing.T) {
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-first", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/host-header": "first.example.com"}}},
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-second", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/host-header": "second.example.com"}}},
 			},
-			expectedValue: "first.example.com",
-			expectedOk:    true,
+			expected: strPtr("first.example.com"),
 		},
 		{
-			name:            "no backend refs returns empty and false",
+			name:            "no backend refs returns nil",
 			namespace:       "test-namespace",
 			backendRefs:     []gwtypes.BackendRef{},
 			backendServices: []corev1.Service{},
-			expectedValue:   "",
-			expectedOk:      false,
+			expected:        nil,
 		},
 		{
-			name:      "service does not exist returns empty and false",
+			name:      "service does not exist returns nil",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
 				{BackendObjectReference: gwtypes.BackendObjectReference{Name: "nonexistent-svc"}},
 			},
 			backendServices: []corev1.Service{},
-			expectedValue:   "",
-			expectedOk:      false,
+			expected:        nil,
 		},
 		{
-			name:      "unsupported backend ref returns empty and false",
+			name:      "unsupported backend ref returns nil",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
 				{BackendObjectReference: gwtypes.BackendObjectReference{
@@ -713,8 +709,7 @@ func TestResolveHostHeaderFromBackendRefs(t *testing.T) {
 				}},
 			},
 			backendServices: []corev1.Service{},
-			expectedValue:   "",
-			expectedOk:      false,
+			expected:        nil,
 		},
 		{
 			name:      "cross-namespace backend ref",
@@ -728,8 +723,7 @@ func TestResolveHostHeaderFromBackendRefs(t *testing.T) {
 			backendServices: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/host-header": "other.example.com"}}},
 			},
-			expectedValue: "other.example.com",
-			expectedOk:    true,
+			expected: strPtr("other.example.com"),
 		},
 	}
 
@@ -741,9 +735,13 @@ func TestResolveHostHeaderFromBackendRefs(t *testing.T) {
 			}
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
-			value, ok := resolveHostHeaderFromBackendRefs(ctx, cl, tt.namespace, tt.backendRefs, logger)
-			assert.Equal(t, tt.expectedOk, ok)
-			assert.Equal(t, tt.expectedValue, value)
+			got := resolveHostHeaderFromBackendRefs(ctx, cl, tt.namespace, tt.backendRefs, logger)
+			if tt.expected == nil {
+				assert.Nil(t, got)
+			} else {
+				require.NotNil(t, got)
+				assert.Equal(t, *tt.expected, *got)
+			}
 		})
 	}
 }
@@ -756,12 +754,11 @@ func TestExtractHostHeaderFromBackendRef(t *testing.T) {
 	require.NoError(t, corev1.AddToScheme(scheme))
 
 	tests := []struct {
-		name          string
-		namespace     string
-		backendRef    gwtypes.BackendRef
-		services      []corev1.Service
-		expectedValue string
-		expectedOk    bool
+		name       string
+		namespace  string
+		backendRef gwtypes.BackendRef
+		services   []corev1.Service
+		expected   *string
 	}{
 		{
 			name:      "supported backend ref with host-header annotation",
@@ -772,8 +769,7 @@ func TestExtractHostHeaderFromBackendRef(t *testing.T) {
 			services: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-header", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/host-header": "api.example.com"}}},
 			},
-			expectedValue: "api.example.com",
-			expectedOk:    true,
+			expected: strPtr("api.example.com"),
 		},
 		{
 			name:      "supported backend ref without annotation",
@@ -784,11 +780,10 @@ func TestExtractHostHeaderFromBackendRef(t *testing.T) {
 			services: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-no-header", Namespace: "test-namespace"}},
 			},
-			expectedValue: "",
-			expectedOk:    false,
+			expected: nil,
 		},
 		{
-			name:      "empty annotation value returns false",
+			name:      "empty annotation value returns nil",
 			namespace: "test-namespace",
 			backendRef: gwtypes.BackendRef{
 				BackendObjectReference: gwtypes.BackendObjectReference{Name: "svc-empty-header"},
@@ -796,8 +791,7 @@ func TestExtractHostHeaderFromBackendRef(t *testing.T) {
 			services: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-empty-header", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/host-header": ""}}},
 			},
-			expectedValue: "",
-			expectedOk:    false,
+			expected: nil,
 		},
 		{
 			name:      "unsupported backend ref group",
@@ -808,8 +802,7 @@ func TestExtractHostHeaderFromBackendRef(t *testing.T) {
 					Group: &[]gwtypes.Group{gwtypes.Group("example.com")}[0],
 				},
 			},
-			expectedValue: "",
-			expectedOk:    false,
+			expected: nil,
 		},
 		{
 			name:      "unsupported backend ref kind",
@@ -820,8 +813,7 @@ func TestExtractHostHeaderFromBackendRef(t *testing.T) {
 					Kind: &[]gwtypes.Kind{gwtypes.Kind("NotService")}[0],
 				},
 			},
-			expectedValue: "",
-			expectedOk:    false,
+			expected: nil,
 		},
 		{
 			name:      "backend service does not exist",
@@ -829,8 +821,7 @@ func TestExtractHostHeaderFromBackendRef(t *testing.T) {
 			backendRef: gwtypes.BackendRef{
 				BackendObjectReference: gwtypes.BackendObjectReference{Name: "nonexistent-svc"},
 			},
-			expectedValue: "",
-			expectedOk:    false,
+			expected: nil,
 		},
 		{
 			name:      "cross-namespace backend ref",
@@ -844,8 +835,7 @@ func TestExtractHostHeaderFromBackendRef(t *testing.T) {
 			services: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/host-header": "other.example.com"}}},
 			},
-			expectedValue: "other.example.com",
-			expectedOk:    true,
+			expected: strPtr("other.example.com"),
 		},
 	}
 
@@ -857,9 +847,13 @@ func TestExtractHostHeaderFromBackendRef(t *testing.T) {
 			}
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
-			value, ok := extractHostHeaderFromBackendRef(ctx, cl, logger, tt.namespace, tt.backendRef)
-			assert.Equal(t, tt.expectedOk, ok)
-			assert.Equal(t, tt.expectedValue, value)
+			got := extractHostHeaderFromBackendRef(ctx, cl, logger, tt.namespace, tt.backendRef)
+			if tt.expected == nil {
+				assert.Nil(t, got)
+			} else {
+				require.NotNil(t, got)
+				assert.Equal(t, *tt.expected, *got)
+			}
 		})
 	}
 }

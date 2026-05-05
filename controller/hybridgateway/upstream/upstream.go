@@ -58,8 +58,7 @@ func UpstreamForRule[
 
 	var upstreamName string
 	var policy *configurationv1beta1.KongUpstreamPolicy
-	var hostHeader string
-	var hostHeaderSet bool
+	var hostHeader *string
 
 	switch r := any(parentRoute).(type) {
 	case *gwtypes.HTTPRoute:
@@ -70,7 +69,7 @@ func UpstreamForRule[
 		upstreamName = namegen.NewKongUpstreamNameForHTTPRouteRule(r, cp, httpRule)
 		policy = upstreamPolicyForRouteRule(ctx, logger, cl, parentRoute.GetNamespace(), httpRule)
 		backendRefs := lo.Map(httpRule.BackendRefs, func(ref gwtypes.HTTPBackendRef, _ int) gwtypes.BackendRef { return ref.BackendRef })
-		hostHeader, hostHeaderSet = resolveHostHeaderFromBackendRefs(ctx, cl, r.Namespace, backendRefs, logger)
+		hostHeader = resolveHostHeaderFromBackendRefs(ctx, cl, r.Namespace, backendRefs, logger)
 	case *gwtypes.TLSRoute:
 		tlsRule, ok := any(rule).(gwtypes.TLSRouteRule)
 		if !ok {
@@ -78,7 +77,7 @@ func UpstreamForRule[
 		}
 		upstreamName = namegen.NewKongUpstreamNameForTLSRouteRule(r, cp, tlsRule)
 		policy = upstreamPolicyForRouteRule(ctx, logger, cl, parentRoute.GetNamespace(), tlsRule)
-		hostHeader, hostHeaderSet = resolveHostHeaderFromBackendRefs(ctx, cl, r.Namespace, tlsRule.BackendRefs, logger)
+		hostHeader = resolveHostHeaderFromBackendRefs(ctx, cl, r.Namespace, tlsRule.BackendRefs, logger)
 	// TODO: add other types of rules when we support them.
 
 	// Should be unreachable.
@@ -94,7 +93,7 @@ func UpstreamForRule[
 		WithLabels(parentRoute, pRef).
 		WithAnnotations(parentRoute, pRef).
 		WithSpecName(upstreamName).
-		WithHostHeader(hostHeader, hostHeaderSet).
+		WithHostHeader(hostHeader).
 		WithControlPlaneRef(*cp).
 		Build()
 	if err != nil {
@@ -120,13 +119,13 @@ func resolveHostHeaderFromBackendRefs(
 	namespace string,
 	backendRefs []gwtypes.BackendRef,
 	logger logr.Logger,
-) (string, bool) {
+) *string {
 	for _, backendRef := range backendRefs {
-		if v, ok := extractHostHeaderFromBackendRef(ctx, cl, logger, namespace, backendRef); ok {
-			return v, true
+		if v := extractHostHeaderFromBackendRef(ctx, cl, logger, namespace, backendRef); v != nil {
+			return v
 		}
 	}
-	return "", false
+	return nil
 }
 
 // extractHostHeaderFromBackendRef returns the konghq.com/host-header annotation value from the
@@ -137,9 +136,9 @@ func extractHostHeaderFromBackendRef(
 	logger logr.Logger,
 	namespace string,
 	backendRef gwtypes.BackendRef,
-) (string, bool) {
+) *string {
 	if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
-		return "", false
+		return nil
 	}
 
 	bRefNamespace := namespace
@@ -151,15 +150,15 @@ func extractHostHeaderFromBackendRef(
 	if err := cl.Get(ctx, client.ObjectKey{Namespace: bRefNamespace, Name: string(backendRef.Name)}, svc); err != nil {
 		log.Debug(logger, "Failed to fetch backend Service for host-header annotation check",
 			"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "error", err)
-		return "", false
+		return nil
 	}
 
-	v, ok := metadata.ExtractHostHeader(svc.GetAnnotations())
-	if !ok {
-		return "", false
+	v := metadata.ExtractHostHeader(svc.GetAnnotations())
+	if v == nil {
+		return nil
 	}
 
 	log.Debug(logger, "Using host-header from backend Service annotation",
-		"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "host-header", v)
-	return v, true
+		"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "host-header", *v)
+	return v
 }
