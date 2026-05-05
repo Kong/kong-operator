@@ -20,7 +20,6 @@ limitations under the License.
 package ssa
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -354,7 +353,7 @@ func ownedFieldSetForSubresource(obj client.Object, fieldManager, subresource st
 		return &fieldpath.Set{}, nil
 	}
 	set := &fieldpath.Set{}
-	if err := set.FromJSON(bytes.NewReader(entry.FieldsV1.Raw)); err != nil {
+	if err := set.FromJSON(entry.FieldsV1.GetRawReader()); err != nil {
 		return nil, fmt.Errorf("failed to decode managed fields for manager %q subresource %q: %w", fieldManager, subresource, err)
 	}
 	return set, nil

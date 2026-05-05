@@ -395,7 +395,7 @@ func (p *Parser) extractPathDependencies(path string) []*Dependency {
 			EntityName:         entityName,
 			AccessorEntityName: getAccessorEntityNameFromPath(path, paramName),
 			FieldName:          entityName + "Ref",
-			JSONName:           toSnakeCase(entityName) + "_ref",
+			JSONName:           strings.ToLower(entityName[:1]) + entityName[1:] + "Ref",
 		}
 		deps = append(deps, dep)
 	}

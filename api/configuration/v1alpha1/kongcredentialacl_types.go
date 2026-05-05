@@ -97,7 +97,3 @@ type KongCredentialACLList struct {
 
 	Items []KongCredentialACL `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&KongCredentialACL{}, &KongCredentialACLList{})
-}

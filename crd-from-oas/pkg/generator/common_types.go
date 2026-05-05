@@ -177,3 +177,52 @@ func flattenSDKUnions(v any) any {
 	}
 	return v
 }`
+
+// renameKeysToSDKHelper provides camelCase → snake_case key translation so
+// that the camelCase K8s wire-format JSON produced by generated CRD types can
+// be consumed by Konnect SDK request structs that expect snake_case keys.
+const renameKeysToSDKHelper = `
+// camelToSnakeCase converts a camelCase string to snake_case.
+// e.g. "bootstrapServers" → "bootstrap_servers", "defaultAPIVisibility" → "default_api_visibility"
+func camelToSnakeCase(s string) string {
+	var buf []byte
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if c >= 'A' && c <= 'Z' {
+			if i > 0 && (s[i-1] >= 'a' && s[i-1] <= 'z' ||
+				(i+1 < len(s) && s[i+1] >= 'a' && s[i+1] <= 'z')) {
+				buf = append(buf, '_')
+			}
+			buf = append(buf, c+('a'-'A'))
+		} else {
+			buf = append(buf, c)
+		}
+	}
+	return string(buf)
+}
+
+// renameKeysToSDK converts all map keys and discriminator "type" values from
+// camelCase (CRD K8s wire format) to snake_case (Konnect SDK wire format).
+func renameKeysToSDK(v any) any {
+	switch x := v.(type) {
+	case map[string]any:
+		result := make(map[string]any, len(x))
+		for k, val := range x {
+			newKey := camelToSnakeCase(k)
+			// Discriminator type string values must also be snake_case for the SDK.
+			if k == "type" {
+				if s, ok := val.(string); ok {
+					val = camelToSnakeCase(s)
+				}
+			}
+			result[newKey] = renameKeysToSDK(val)
+		}
+		return result
+	case []any:
+		for i, val := range x {
+			x[i] = renameKeysToSDK(val)
+		}
+		return x
+	}
+	return v
+}`

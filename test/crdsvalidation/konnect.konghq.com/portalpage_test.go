@@ -57,7 +57,7 @@ func TestPortalPage(t *testing.T) {
 			},
 			{
 				// TODO: https://github.com/Kong/kong-operator/issues/4008
-				Name: "parent_page_id_ref cannot be set",
+				Name: "parentPageIDRef cannot be set",
 				TestObject: &konnectv1alpha1.PortalPage{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.PortalPageSpec{
@@ -74,7 +74,7 @@ func TestPortalPage(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: new("cannot set parent_page_id_ref"),
+				ExpectedErrorMessage: new("cannot set parentPageIDRef"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)

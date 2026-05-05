@@ -9,6 +9,9 @@ metadata:
 spec:
   group: konnect.konghq.com
   names:
+    categories:
+    - konnect
+    - kong
     kind: EventGatewayVirtualCluster
     listKind: EventGatewayVirtualClusterList
     plural: eventgatewayvirtualclusters
@@ -62,7 +65,7 @@ spec:
                 description: APISpec defines the desired state of the resource's API
                   spec fields.
                 properties:
-                  acl_mode:
+                  aclMode:
                     description: |-
                       Configures whether or not ACL policies are enforced on the gateway.
                       - `enforce_on_gateway` means the gateway enforces its own ACL policies for
@@ -91,13 +94,13 @@ spec:
                         anonymous:
                           description: Anonymous configuration.
                           type: object
-                        client_certificate:
+                        clientCertificate:
                           description: ClientCertificate configuration.
                           type: object
-                        oauth_bearer:
+                        oauthBearer:
                           description: OauthBearer configuration.
                           properties:
-                            claims_mapping:
+                            claimsMapping:
                               description: |-
                                 Maps JWT claims in the case when sub and scope are presented as different
                                 claims in your JWT token.
@@ -117,7 +120,7 @@ spec:
                               description: JSON Web Key Set configuration for verifying
                                 token signatures.
                               properties:
-                                cache_expiration:
+                                cacheExpiration:
                                   default: 1h
                                   description: Duration after which the gateway will
                                     fetch and cache JWKS.
@@ -190,7 +193,7 @@ spec:
                           required:
                           - mediation
                           type: object
-                        sasl_plain:
+                        saslPlain:
                           description: SaslPlain configuration.
                           properties:
                             mediation:
@@ -238,7 +241,7 @@ spec:
                           required:
                           - mediation
                           type: object
-                        sasl_scram:
+                        saslScram:
                           description: SaslScram configuration.
                           properties:
                             algorithm:
@@ -256,10 +259,10 @@ spec:
                           description: Type designates the type of configuration.
                           enum:
                           - anonymous
-                          - client_certificate
-                          - oauth_bearer
-                          - sasl_plain
-                          - sasl_scram
+                          - clientCertificate
+                          - oauthBearer
+                          - saslPlain
+                          - saslScram
                           minLength: 1
                           type: string
                       required:
@@ -288,7 +291,7 @@ spec:
                           cluster.
                         type: string
                     type: object
-                  dns_label:
+                  dnsLabel:
                     description: |-
                       The DNS label used in the bootstrap server URL to identify the virtual
                       cluster when using SNI routing.
@@ -327,7 +330,7 @@ spec:
                         description: VirtualClusterNamespaceAdditionalProperties is
                           a type alias.
                         properties:
-                          consumer_groups:
+                          consumerGroups:
                             description: |-
                               Consumer group IDs to expose even if they don't start with the namespace
                               prefix.
@@ -336,10 +339,10 @@ spec:
                                 VirtualClusterNamespaceIDSelector represents a union type for VirtualClusterNamespaceIDSelector.
                                 Only one of the fields should be set based on the Type.
                               properties:
-                                exact_list:
+                                exactList:
                                   description: ExactList configuration.
                                   properties:
-                                    exact_list:
+                                    exactList:
                                       items:
                                         description: Items is a type alias.
                                         properties:
@@ -368,7 +371,7 @@ spec:
                                 type:
                                   description: Type designates the type of configuration.
                                   enum:
-                                  - exact_list
+                                  - exactList
                                   - glob
                                   minLength: 1
                                   type: string
@@ -388,7 +391,7 @@ spec:
                                 VirtualClusterNamespaceTopicSelector represents a union type for VirtualClusterNamespaceTopicSelector.
                                 Only one of the fields should be set based on the Type.
                               properties:
-                                exact_list:
+                                exactList:
                                   description: ExactList configuration.
                                   properties:
                                     conflict:
@@ -405,7 +408,7 @@ spec:
                                       - ignore
                                       maxLength: 253
                                       type: string
-                                    exact_list:
+                                    exactList:
                                       description: Explicit allow-list of backend
                                         topic names.
                                       items:
@@ -452,7 +455,7 @@ spec:
                                 type:
                                   description: Type designates the type of configuration.
                                   enum:
-                                  - exact_list
+                                  - exactList
                                   - glob
                                   minLength: 1
                                   type: string
@@ -492,13 +495,13 @@ spec:
                     - prefix
                     type: object
                 required:
-                - acl_mode
+                - aclMode
                 - authentication
                 - destination
-                - dns_label
+                - dnsLabel
                 - name
                 type: object
-              gateway_ref:
+              gatewayRef:
                 description: GatewayRef is the reference to the parent Gateway object.
                 properties:
                   konnectID:
@@ -554,7 +557,7 @@ spec:
                 - message: when type is konnectID, namespacedRef must not be set
                   rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
             required:
-            - gateway_ref
+            - gatewayRef
             type: object
           status:
             description: EventGatewayVirtualClusterStatus defines the observed state

@@ -1,0 +1,26 @@
+apiVersion: configuration.konghq.com/v1beta1
+kind: KongUpstreamPolicy
+metadata:
+  name: test-upstream-policy
+  namespace: ($namespace)
+spec:
+  algorithm: consistent-hashing
+  slots: 100
+  hashOn:
+    input: ip
+  healthchecks:
+    active:
+      type: tcp
+      concurrency: 20
+      healthy:
+        interval: 5
+        successes: 5
+      unhealthy:
+        timeouts: 5
+        interval: 10
+    passive:
+      type: http
+      healthy:
+        successes: 5
+      unhealthy:
+        timeouts: 10
