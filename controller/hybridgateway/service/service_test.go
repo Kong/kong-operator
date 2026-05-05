@@ -567,7 +567,7 @@ func TestResolveReadTimeoutFromHTTPRouteBackendRefs(t *testing.T) {
 			backendServices: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "30000"}}},
 			},
-			expected: int64Ptr(30000),
+			expected: new(int64(30000)),
 		},
 		{
 			name: "service without annotation returns nil",
@@ -589,7 +589,7 @@ func TestResolveReadTimeoutFromHTTPRouteBackendRefs(t *testing.T) {
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "1000"}}},
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-b", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "2000"}}},
 			},
-			expected: int64Ptr(1000),
+			expected: new(int64(1000)),
 		},
 		{
 			name:            "no backend refs returns nil",
@@ -630,7 +630,7 @@ func TestResolveReadTimeoutFromHTTPRouteBackendRefs(t *testing.T) {
 			backendServices: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "3000"}}},
 			},
-			expected: int64Ptr(3000),
+			expected: new(int64(3000)),
 		},
 	}
 
@@ -679,7 +679,7 @@ func TestResolveReadTimeoutFromTLSRouteBackendRefs(t *testing.T) {
 			backendServices: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "30000"}}},
 			},
-			expected: int64Ptr(30000),
+			expected: new(int64(30000)),
 		},
 		{
 			name: "service without annotation returns nil",
@@ -701,7 +701,7 @@ func TestResolveReadTimeoutFromTLSRouteBackendRefs(t *testing.T) {
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-first", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "1000"}}},
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-second", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "2000"}}},
 			},
-			expected: int64Ptr(1000),
+			expected: new(int64(1000)),
 		},
 		{
 			name:            "no backend refs returns nil",
@@ -780,7 +780,7 @@ func TestExtractReadTimeoutFromBackendRef(t *testing.T) {
 			services: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "30000"}}},
 			},
-			expected: int64Ptr(30000),
+			expected: new(int64(30000)),
 		},
 		{
 			name:      "supported backend ref without annotation",
@@ -802,7 +802,7 @@ func TestExtractReadTimeoutFromBackendRef(t *testing.T) {
 			services: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-zero-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "0"}}},
 			},
-			expected: int64Ptr(0),
+			expected: new(int64(0)),
 		},
 		{
 			name:      "negative value returns nil",
@@ -871,7 +871,7 @@ func TestExtractReadTimeoutFromBackendRef(t *testing.T) {
 			services: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "3000"}}},
 			},
-			expected: int64Ptr(3000),
+			expected: new(int64(3000)),
 		},
 	}
 
