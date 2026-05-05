@@ -166,7 +166,7 @@ func TestParsePaths_WithPathDependencies(t *testing.T) {
 	assert.Equal(t, "portalId", dep.ParamName)
 	assert.Equal(t, "Portal", dep.EntityName)
 	assert.Equal(t, "PortalRef", dep.FieldName)
-	assert.Equal(t, "portal_ref", dep.JSONName)
+	assert.Equal(t, "portalRef", dep.JSONName)
 }
 
 func TestParsePaths_MultiplePaths(t *testing.T) {
@@ -805,7 +805,7 @@ func TestExtractPathDependencies(t *testing.T) {
 					EntityName:         "Portal",
 					AccessorEntityName: "Portal",
 					FieldName:          "PortalRef",
-					JSONName:           "portal_ref",
+					JSONName:           "portalRef",
 				},
 			},
 		},
@@ -818,7 +818,7 @@ func TestExtractPathDependencies(t *testing.T) {
 					EntityName:         "Gateway",
 					AccessorEntityName: "EventGateway",
 					FieldName:          "GatewayRef",
-					JSONName:           "gateway_ref",
+					JSONName:           "gatewayRef",
 				},
 			},
 		},
@@ -831,14 +831,14 @@ func TestExtractPathDependencies(t *testing.T) {
 					EntityName:         "Portal",
 					AccessorEntityName: "Portal",
 					FieldName:          "PortalRef",
-					JSONName:           "portal_ref",
+					JSONName:           "portalRef",
 				},
 				{
 					ParamName:          "teamId",
 					EntityName:         "Team",
 					AccessorEntityName: "Team",
 					FieldName:          "TeamRef",
-					JSONName:           "team_ref",
+					JSONName:           "teamRef",
 				},
 			},
 		},

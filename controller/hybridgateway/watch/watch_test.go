@@ -11,6 +11,7 @@ import (
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
@@ -25,7 +26,7 @@ func TestWatches(t *testing.T) {
 		{
 			name:    "HTTPRoute with ReferenceGrant enabled",
 			obj:     &gwtypes.HTTPRoute{},
-			wantLen: 11,
+			wantLen: 12,
 			wantType: []any{
 				&gwtypes.Gateway{},
 				&gwtypes.GatewayClass{},
@@ -38,6 +39,7 @@ func TestWatches(t *testing.T) {
 				&configurationv1.KongPlugin{},
 				&configurationv1alpha1.KongPluginBinding{},
 				&gwtypes.ReferenceGrant{},
+				&configurationv1beta1.KongUpstreamPolicy{},
 			},
 		},
 		{

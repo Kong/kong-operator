@@ -13,7 +13,7 @@ import (
 //
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Namespaced
+// +kubebuilder:resource:scope=Namespaced,categories=konnect;kong
 // +kubebuilder:printcolumn:name="ID",description="Konnect ID",type="string",JSONPath=".status.id"
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
 // +kubebuilder:printcolumn:name="OrgID",description="Konnect Organization ID this resource belongs to.",type=string,JSONPath=`.status.organizationID`
@@ -46,7 +46,7 @@ type IdentityProviderRequestSpec struct {
 	// PortalRef is the reference to the parent Portal object.
 	//
 	// +required
-	PortalRef commonv1alpha1.ObjectRef `json:"portal_ref,omitzero"`
+	PortalRef commonv1alpha1.ObjectRef `json:"portalRef,omitzero"`
 
 	// APISpec defines the desired state of the resource's API spec fields.
 	//
@@ -73,7 +73,7 @@ type IdentityProviderRequestAPISpec struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	LoginPath IdentityProviderLoginPath `json:"login_path,omitempty"`
+	LoginPath IdentityProviderLoginPath `json:"loginPath,omitempty"`
 
 	// Specifies the type of identity provider.
 	//
@@ -111,10 +111,6 @@ type IdentityProviderRequestStatus struct {
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
 
-func init() {
-	SchemeBuilder.Register(&IdentityProviderRequest{}, &IdentityProviderRequestList{})
-}
-
 // IdentityProviderRequestConfig represents a union type for config.
 // Only one of the fields should be set based on the Type.
 //
@@ -123,17 +119,17 @@ type IdentityProviderRequestConfig struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=OIDC;SAML
+	// +kubebuilder:validation:Enum=oIDC;sAML
 	Type IdentityProviderRequestConfigType `json:"type,omitempty"`
 
 	// OIDC configuration.
 	//
 	// +optional
-	OIDC *OIDCIdentityProviderConfig `json:"OIDC,omitempty"`
+	OIDC *OIDCIdentityProviderConfig `json:"oIDC,omitempty"`
 	// SAML configuration.
 	//
 	// +optional
-	SAML *SAMLIdentityProviderConfig `json:"SAML,omitempty"`
+	SAML *SAMLIdentityProviderConfig `json:"sAML,omitempty"`
 }
 
 // IdentityProviderRequestConfigType represents the type of config.
@@ -141,8 +137,8 @@ type IdentityProviderRequestConfigType string
 
 // IdentityProviderRequestConfigType values.
 const (
-	IdentityProviderRequestConfigTypeOIDC IdentityProviderRequestConfigType = "OIDC"
-	IdentityProviderRequestConfigTypeSAML IdentityProviderRequestConfigType = "SAML"
+	IdentityProviderRequestConfigTypeOIDC IdentityProviderRequestConfigType = "oIDC"
+	IdentityProviderRequestConfigTypeSAML IdentityProviderRequestConfigType = "sAML"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -151,21 +147,21 @@ func (u IdentityProviderRequestConfig) MarshalJSON() ([]byte, error) {
 	typeBytes, _ := json.Marshal(string(u.Type))
 	m["type"] = typeBytes
 	switch u.Type {
-	case "OIDC":
+	case "oIDC":
 		if u.OIDC != nil {
 			raw, err := json.Marshal(u.OIDC)
 			if err != nil {
 				return nil, fmt.Errorf("marshaling IdentityProviderRequestConfig OIDC: %w", err)
 			}
-			m["OIDC"] = raw
+			m["oIDC"] = raw
 		}
-	case "SAML":
+	case "sAML":
 		if u.SAML != nil {
 			raw, err := json.Marshal(u.SAML)
 			if err != nil {
 				return nil, fmt.Errorf("marshaling IdentityProviderRequestConfig SAML: %w", err)
 			}
-			m["SAML"] = raw
+			m["sAML"] = raw
 		}
 	}
 	return json.Marshal(m)
@@ -188,8 +184,8 @@ func (u *IdentityProviderRequestConfig) UnmarshalJSON(data []byte) error {
 	}
 	u.Type = IdentityProviderRequestConfigType(probe.Type)
 	switch probe.Type {
-	case "OIDC":
-		payload, ok := raw["OIDC"]
+	case "oIDC":
+		payload, ok := raw["oIDC"]
 		if !ok || len(payload) == 0 {
 			return nil
 		}
@@ -198,8 +194,8 @@ func (u *IdentityProviderRequestConfig) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("unmarshaling IdentityProviderRequestConfig OIDC: %w", err)
 		}
 		u.OIDC = &val
-	case "SAML":
-		payload, ok := raw["SAML"]
+	case "sAML":
+		payload, ok := raw["sAML"]
 		if !ok || len(payload) == 0 {
 			return nil
 		}

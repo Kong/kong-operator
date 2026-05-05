@@ -304,7 +304,7 @@ type parentInfo struct {
 // Returns nil for root entities.
 func (g *Generator) resolveParents(entityName string, schema *parser.Schema) ([]parentInfo, error) {
 	rc := g.config.ReconcilerConfig[entityName]
-	if rc == nil || rc.IsRoot {
+	if rc == nil || rc.GetIsRoot() {
 		return nil, nil
 	}
 	if len(schema.Dependencies) == 0 {

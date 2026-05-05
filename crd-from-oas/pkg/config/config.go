@@ -24,6 +24,11 @@ type APIGroupVersionConfig struct {
 	// Defaults to true when not specified.
 	GenerateGroupVersionInfo *bool `yaml:"generateGroupVersionInfo,omitempty"`
 
+	// Categories are applied via +kubebuilder:resource:categories= to every root
+	// CRD type generated for this API group-version. Non-root types do not receive
+	// the marker.
+	Categories []string `yaml:"categories,omitempty"`
+
 	Types []*TypeConfig `yaml:"types"`
 }
 
@@ -103,7 +108,10 @@ type TypeConfig struct {
 type ReconcilerConfig struct {
 	// IsRoot indicates this is a root entity that directly references
 	// KonnectAPIAuthConfiguration. Child entities inherit auth from their parent.
-	IsRoot bool `yaml:"isRoot"`
+	// When nil (not set in YAML), it is inferred from the OpenAPI path: true when
+	// no path parameters are present (e.g. /v1/gateways), false otherwise
+	// (e.g. /v1/gateways/{gatewayId}/listeners).
+	IsRoot *bool `yaml:"isRoot,omitempty"`
 	// ParentEntityType overrides the generated parent entity type name used for
 	// child reconciler watch/index generation. When unset, the immediate parent
 	// dependency name is inferred from the OpenAPI path parameter.
@@ -115,6 +123,12 @@ type ReconcilerConfig struct {
 	// from the one derived from the raw path-parameter name (e.g. "ListenerID"
 	// for the path param "eventGatewayListenerId").
 	ParentSDKFields []string `yaml:"parentSDKFields,omitempty"`
+}
+
+// GetIsRoot returns the resolved value of IsRoot, treating nil (not explicitly
+// set and inference not yet applied) as false.
+func (rc *ReconcilerConfig) GetIsRoot() bool {
+	return rc.IsRoot != nil && *rc.IsRoot
 }
 
 // OpConfig holds configuration for a single SDK operation.

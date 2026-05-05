@@ -201,7 +201,3 @@ type KongPluginBindingList struct {
 
 	Items []KongPluginBinding `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&KongPluginBinding{}, &KongPluginBindingList{})
-}

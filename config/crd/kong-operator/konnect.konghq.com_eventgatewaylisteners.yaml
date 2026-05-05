@@ -9,6 +9,9 @@ metadata:
 spec:
   group: konnect.konghq.com
   names:
+    categories:
+    - konnect
+    - kong
     kind: EventGatewayListener
     listKind: EventGatewayListenerList
     plural: eventgatewaylisteners
@@ -118,7 +121,7 @@ spec:
                 - name
                 - ports
                 type: object
-              gateway_ref:
+              gatewayRef:
                 description: GatewayRef is the reference to the parent Gateway object.
                 properties:
                   konnectID:
@@ -174,7 +177,7 @@ spec:
                 - message: when type is konnectID, namespacedRef must not be set
                   rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
             required:
-            - gateway_ref
+            - gatewayRef
             type: object
           status:
             description: EventGatewayListenerStatus defines the observed state of

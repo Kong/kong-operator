@@ -4,10 +4,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func init() {
-	SchemeBuilder.Register(&WatchNamespaceGrant{}, &WatchNamespaceGrantList{})
-}
-
 // WatchNamespaceGrant is a grant that allows a trusted namespace to watch
 // resources in the namespace this grant exists in.
 //

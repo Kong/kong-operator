@@ -12,7 +12,7 @@ import (
 //
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Namespaced
+// +kubebuilder:resource:scope=Namespaced,categories=konnect;kong
 // +kubebuilder:printcolumn:name="ID",description="Konnect ID",type="string",JSONPath=".status.id"
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
 // +kubebuilder:printcolumn:name="OrgID",description="Konnect Organization ID this resource belongs to.",type=string,JSONPath=`.status.organizationID`
@@ -61,7 +61,7 @@ type PortalAPISpec struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	// +kubebuilder:default=Enabled
-	AuthenticationEnabled string `json:"authentication_enabled,omitempty"`
+	AuthenticationEnabled string `json:"authenticationEnabled,omitempty"`
 
 	// Whether requests from applications to register for APIs will be
 	// automatically approved, or if they will be set to pending until approved by
@@ -70,7 +70,7 @@ type PortalAPISpec struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	// +kubebuilder:default=Disabled
-	AutoApproveApplications string `json:"auto_approve_applications,omitempty"`
+	AutoApproveApplications string `json:"autoApproveApplications,omitempty"`
 
 	// Whether developer account registrations will be automatically approved, or
 	// if they will be set to pending until approved by an admin.
@@ -78,7 +78,7 @@ type PortalAPISpec struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	// +kubebuilder:default=Disabled
-	AutoApproveDevelopers string `json:"auto_approve_developers,omitempty"`
+	AutoApproveDevelopers string `json:"autoApproveDevelopers,omitempty"`
 
 	// The default visibility of APIs in the portal.
 	// If set to `public`, newly published APIs are visible to unauthenticated
@@ -89,7 +89,7 @@ type PortalAPISpec struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=public;private
-	DefaultAPIVisibility string `json:"default_api_visibility,omitempty"`
+	DefaultAPIVisibility string `json:"defaultAPIVisibility,omitempty"`
 
 	// The default authentication strategy for APIs published to the portal.
 	// Newly published APIs will use this authentication strategy unless overridden
@@ -98,7 +98,7 @@ type PortalAPISpec struct {
 	// unless set during publication.
 	//
 	// +optional
-	DefaultApplicationAuthStrategyIDRef *commonv1alpha1.ObjectRef `json:"default_application_auth_strategy_id_ref,omitempty"`
+	DefaultApplicationAuthStrategyIDRef *commonv1alpha1.ObjectRef `json:"defaultApplicationAuthStrategyIDRef,omitempty"`
 
 	// The default visibility of pages in the portal.
 	// If set to `public`, newly created pages are visible to unauthenticated
@@ -109,7 +109,7 @@ type PortalAPISpec struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=public;private
-	DefaultPageVisibility string `json:"default_page_visibility,omitempty"`
+	DefaultPageVisibility string `json:"defaultPageVisibility,omitempty"`
 
 	// A description of the portal.
 	//
@@ -123,7 +123,7 @@ type PortalAPISpec struct {
 	// +optional
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=255
-	DisplayName string `json:"display_name,omitempty"`
+	DisplayName string `json:"displayName,omitempty"`
 
 	// Labels store metadata of an entity that can be used for filtering an entity
 	// list or for searching across entity types.
@@ -156,14 +156,14 @@ type PortalAPISpec struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	// +kubebuilder:default=Disabled
-	RBACEnabled string `json:"rbac_enabled,omitempty"`
+	RBACEnabled string `json:"rbacEnabled,omitempty"`
 
 	// Whether ip allow list is enabled for the portal.
 	//
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	// +kubebuilder:default=Disabled
-	SiprEnabled string `json:"sipr_enabled,omitempty"`
+	SiprEnabled string `json:"siprEnabled,omitempty"`
 }
 
 // PortalStatus defines the observed state of Portal.
@@ -187,8 +187,4 @@ type PortalStatus struct {
 	//
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
-}
-
-func init() {
-	SchemeBuilder.Register(&Portal{}, &PortalList{})
 }

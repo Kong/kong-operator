@@ -9,6 +9,9 @@ metadata:
 spec:
   group: konnect.konghq.com
   names:
+    categories:
+    - konnect
+    - kong
     kind: KonnectEventDataPlaneCertificate
     listKind: KonnectEventDataPlaneCertificateList
     plural: konnecteventdataplanecertificates
@@ -78,7 +81,7 @@ spec:
                 required:
                 - certificate
                 type: object
-              gateway_ref:
+              gatewayRef:
                 description: GatewayRef is the reference to the parent Gateway object.
                 properties:
                   konnectID:
@@ -167,7 +170,7 @@ spec:
                 - secretRef
                 type: string
             required:
-            - gateway_ref
+            - gatewayRef
             type: object
           status:
             description: KonnectEventDataPlaneCertificateStatus defines the observed

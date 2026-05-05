@@ -133,6 +133,7 @@ func (r *Runner) Run(
 			APIGroupPackageAlias:     apiGroupPackageAlias,
 			SkipGetForUIDEntities:    skipGetForUIDEntities,
 			ManualGetForUIDEntities:  manualGetForUIDEntities,
+			Categories:               agvConfig.Categories,
 		})
 
 		files, err := gen.Generate(parsed)

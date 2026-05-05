@@ -97,7 +97,3 @@ type KongCredentialAPIKeyList struct {
 
 	Items []KongCredentialAPIKey `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&KongCredentialAPIKey{}, &KongCredentialAPIKeyList{})
-}

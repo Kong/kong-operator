@@ -96,7 +96,3 @@ type KongKeySetList struct {
 
 	Items []KongKeySet `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&KongKeySet{}, &KongKeySetList{})
-}

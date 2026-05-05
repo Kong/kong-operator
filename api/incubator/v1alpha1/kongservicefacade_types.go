@@ -9,10 +9,6 @@ const (
 	KongServiceFacadeKind = "KongServiceFacade"
 )
 
-func init() {
-	SchemeBuilder.Register(&KongServiceFacade{}, &KongServiceFacadeList{})
-}
-
 // KongServiceFacade allows creating separate Kong Services for a single Kubernetes
 // Service. It can be used as Kubernetes Ingress' backend (via its path's `backend.resource`
 // field). It's designed to enable creating two "virtual" Services in Kong that will point

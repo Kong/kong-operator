@@ -23,6 +23,9 @@ func (s *KonnectEventDataPlaneCertificateAPISpec) marshalSDKOpsPayload() ([]byte
 		return nil, fmt.Errorf("failed to decode KonnectEventDataPlaneCertificateAPISpec: %w", err)
 	}
 	payload = flattenSDKUnions(payload)
+	// Convert camelCase CRD wire-format keys and discriminator values to
+	// snake_case for the Konnect SDK request types.
+	payload = renameKeysToSDK(payload)
 	data, err = json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal normalized KonnectEventDataPlaneCertificateAPISpec: %w", err)

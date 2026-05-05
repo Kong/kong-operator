@@ -95,10 +95,10 @@ func TestPortal(t *testing.T) {
 			RunWithConfig(t, cfg, scheme)
 	})
 
-	t.Run("display_name field validation", func(t *testing.T) {
+	t.Run("displayName field validation", func(t *testing.T) {
 		common.TestCasesGroup[*konnectv1alpha1.Portal]{
 			{
-				Name: "display_name with valid value passes validation",
+				Name: "displayName with valid value passes validation",
 				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.PortalSpec{
@@ -115,7 +115,7 @@ func TestPortal(t *testing.T) {
 				},
 			},
 			{
-				Name: "display_name at max length (255) passes validation",
+				Name: "displayName at max length (255) passes validation",
 				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.PortalSpec{
@@ -132,7 +132,7 @@ func TestPortal(t *testing.T) {
 				},
 			},
 			{
-				Name: "display_name exceeding max length (256) fails validation",
+				Name: "displayName exceeding max length (256) fails validation",
 				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.PortalSpec{
@@ -149,7 +149,7 @@ func TestPortal(t *testing.T) {
 				},
 				// NOTE: Different versions of k8s return a different error
 				// message hence this trying to match on the common part of the message.
-				ExpectedErrorMessage: new("spec.apiSpec.display_name: Too long: may not be"),
+				ExpectedErrorMessage: new("spec.apiSpec.displayName: Too long: may not be"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -198,10 +198,10 @@ func TestPortal(t *testing.T) {
 			RunWithConfig(t, cfg, scheme)
 	})
 
-	t.Run("default_api_visibility field validation", func(t *testing.T) {
+	t.Run("defaultAPIVisibility field validation", func(t *testing.T) {
 		common.TestCasesGroup[*konnectv1alpha1.Portal]{
 			{
-				Name: "default_api_visibility set to public passes validation",
+				Name: "defaultAPIVisibility set to public passes validation",
 				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.PortalSpec{
@@ -218,7 +218,7 @@ func TestPortal(t *testing.T) {
 				},
 			},
 			{
-				Name: "default_api_visibility set to private passes validation",
+				Name: "defaultAPIVisibility set to private passes validation",
 				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.PortalSpec{
@@ -235,7 +235,7 @@ func TestPortal(t *testing.T) {
 				},
 			},
 			{
-				Name: "default_api_visibility with invalid value fails validation",
+				Name: "defaultAPIVisibility with invalid value fails validation",
 				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.PortalSpec{
@@ -250,16 +250,16 @@ func TestPortal(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: new(`spec.apiSpec.default_api_visibility: Unsupported value: "invalid"`),
+				ExpectedErrorMessage: new(`spec.apiSpec.defaultAPIVisibility: Unsupported value: "invalid"`),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
 	})
 
-	t.Run("default_page_visibility field validation", func(t *testing.T) {
+	t.Run("defaultPageVisibility field validation", func(t *testing.T) {
 		common.TestCasesGroup[*konnectv1alpha1.Portal]{
 			{
-				Name: "default_page_visibility set to public passes validation",
+				Name: "defaultPageVisibility set to public passes validation",
 				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.PortalSpec{
@@ -276,7 +276,7 @@ func TestPortal(t *testing.T) {
 				},
 			},
 			{
-				Name: "default_page_visibility set to private passes validation",
+				Name: "defaultPageVisibility set to private passes validation",
 				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.PortalSpec{
@@ -293,7 +293,7 @@ func TestPortal(t *testing.T) {
 				},
 			},
 			{
-				Name: "default_page_visibility with invalid value fails validation",
+				Name: "defaultPageVisibility with invalid value fails validation",
 				TestObject: &konnectv1alpha1.Portal{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.PortalSpec{
@@ -308,7 +308,7 @@ func TestPortal(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: new(`spec.apiSpec.default_page_visibility: Unsupported value: "invalid"`),
+				ExpectedErrorMessage: new(`spec.apiSpec.defaultPageVisibility: Unsupported value: "invalid"`),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)

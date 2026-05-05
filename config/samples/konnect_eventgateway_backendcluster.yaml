@@ -36,25 +36,22 @@ spec:
     description: Test Event Gateway Backend Cluster
     authentication:
       type: anonymous
-      # NOTE: the nested type field is still required by the variant struct.
-      # Tracked for removal in https://github.com/Kong/kong-operator/issues/3972
-      anonymous:
-        type: anonymous
-    bootstrap_servers:
+      anonymous: {}
+    bootstrapServers:
       - "kafka1:9092"
       - "kafka2:9092"
-    insecure_allow_anonymous_virtual_cluster_auth: Enabled
+    insecureAllowAnonymousVirtualClusterAuth: Enabled
     labels:
       app: test1
       env: test
-    metadata_update_interval_seconds: 60
+    metadataUpdateIntervalSeconds: 60
     tls:
       enabled: Disabled
-      tls_versions:
+      tlsVersions:
       - tls13
       # TODO: this needs to be a secret reference or a literal with certificate data.
       # https://github.com/Kong/kong-operator/issues/4063
-      ca_bundle: |
+      caBundle: |
         -----BEGIN CERTIFICATE-----
         MIICwDCCAimgAwIBAgIUc4PDW5VuLWNsM+3Mcnk66T5E3P0wDQYJKoZIhvcNAQEL
         BQAwajELMAkGA1UEBhMCWFgxEjAQBgNVBAgMCVN0YXRlTmFtZTERMA8GA1UEBwwI
@@ -72,7 +69,7 @@ spec:
         MRyBAKUDlpA+5oOV/HzdOEC7LbRU04+pD95CkvQfu2u5wkOCUFIY3eVTXBhhUMMo
         i9cMhVYP4Xeq7z1NGiu/VB36Pbr4hHDY/t9YAj0DtrYRW5sa
         -----END CERTIFICATE-----
-      client_identity:
+      clientIdentity:
         # TODO: this needs to be a secret reference or a literal with certificate data.
         # https://github.com/Kong/kong-operator/issues/4063
         certificate: |
@@ -113,7 +110,7 @@ spec:
           Q1FRQ3krL3BLCjR0cmdpMm5NY3pIUEZ2b3MycS9XelJEeDE5akRrSldPT0NSOUlyUGFNU3JrNFFw
           blJVbWpXdWcrUWhrVDR5MjEKZTJDcUNnSUNRTVhXUmpQdwotLS0tLUVORCBQUklWQVRFIEtFWS0t
           LS0tCg==
-  gateway_ref:
+  gatewayRef:
     type: namespacedRef
     namespacedRef:
       name: cp-event-1

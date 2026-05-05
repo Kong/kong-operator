@@ -9,7 +9,7 @@ spec:
       name: konnect-api-auth
   apiSpec:
     name: portal1
-    authentication_enabled: Enabled
+    authenticationEnabled: Enabled
 ---
 kind: PortalTeam
 apiVersion: konnect.konghq.com/v1alpha1
@@ -17,7 +17,7 @@ metadata:
   name: portal1
   namespace: default
 spec:
-  portal_ref:
+  portalRef:
     type: namespacedRef
     namespacedRef:
       name: portal1
