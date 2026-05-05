@@ -9,6 +9,9 @@ metadata:
 spec:
   group: konnect.konghq.com
   names:
+    categories:
+    - konnect
+    - kong
     kind: EventGatewayListenerPolicy
     listKind: EventGatewayListenerPolicyList
     plural: eventgatewaylistenerpolicies

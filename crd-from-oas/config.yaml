@@ -1,5 +1,8 @@
 apiGroupVersions:
   konnect.konghq.com/v1alpha1:
+    categories:
+      - konnect
+      - kong
     # Don't generate GroupVersionInfo for this API group, as it already has it defined.
     # We might do this in the future to replace the manually defined one.
     generateGroupVersionInfo: false

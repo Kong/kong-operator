@@ -3743,3 +3743,43 @@ func TestJSONName(t *testing.T) {
 		})
 	}
 }
+
+func TestGenerateCRDType_Categories(t *testing.T) {
+	schema := &parser.Schema{Name: "CreatePortal"}
+
+	t.Run("type with categories emits categories marker", func(t *testing.T) {
+		g := NewGenerator(Config{
+			APIGroup:   "konnect.konghq.com",
+			APIVersion: "v1alpha1",
+			Categories: []string{"konnect", "kong"},
+		})
+		content, err := g.generateCRDType("CreatePortal", schema)
+		require.NoError(t, err)
+		assert.Contains(t, content, "+kubebuilder:resource:scope=Namespaced,categories=konnect;kong")
+	})
+
+	t.Run("non-root type also receives categories marker", func(t *testing.T) {
+		g := NewGenerator(Config{
+			APIGroup:   "konnect.konghq.com",
+			APIVersion: "v1alpha1",
+			ReconcilerConfig: map[string]*config.ReconcilerConfig{
+				"Portal": {IsRoot: new(false)},
+			},
+			Categories: []string{"konnect", "kong"},
+		})
+		content, err := g.generateCRDType("CreatePortal", schema)
+		require.NoError(t, err)
+		assert.Contains(t, content, "+kubebuilder:resource:scope=Namespaced,categories=konnect;kong")
+	})
+
+	t.Run("empty categories omits categories from marker", func(t *testing.T) {
+		g := NewGenerator(Config{
+			APIGroup:   "konnect.konghq.com",
+			APIVersion: "v1alpha1",
+		})
+		content, err := g.generateCRDType("CreatePortal", schema)
+		require.NoError(t, err)
+		assert.Contains(t, content, "+kubebuilder:resource:scope=Namespaced\n")
+		assert.NotContains(t, content, "categories=")
+	})
+}
