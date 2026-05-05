@@ -89,7 +89,3 @@ type KongCustomEntityList struct {
 
 	Items []KongCustomEntity `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&KongCustomEntity{}, &KongCustomEntityList{})
-}

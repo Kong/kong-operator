@@ -188,7 +188,3 @@ type PortalStatus struct {
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
-
-func init() {
-	SchemeBuilder.Register(&Portal{}, &PortalList{})
-}

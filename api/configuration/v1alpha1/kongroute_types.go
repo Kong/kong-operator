@@ -141,7 +141,3 @@ type KongRouteList struct {
 
 	Items []KongRoute `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&KongRoute{}, &KongRouteList{})
-}

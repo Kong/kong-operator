@@ -69,14 +69,6 @@ spec:
                     properties:
                       anonymous:
                         description: Anonymous configuration.
-                        properties:
-                          type:
-                            description: The type of authentication scheme.
-                            maxLength: 253
-                            minLength: 1
-                            type: string
-                        required:
-                        - type
                         type: object
                       sasl_plain:
                         description: SaslPlain configuration.
@@ -92,10 +84,6 @@ spec:
                             maxLength: 253
                             minLength: 1
                             type: string
-                          type:
-                            maxLength: 253
-                            minLength: 1
-                            type: string
                           username:
                             description: |-
                               A literal value or a reference to an existing secret as a template string
@@ -107,7 +95,6 @@ spec:
                             type: string
                         required:
                         - password
-                        - type
                         - username
                         type: object
                       sasl_scram:
@@ -132,10 +119,6 @@ spec:
                             maxLength: 253
                             minLength: 1
                             type: string
-                          type:
-                            maxLength: 253
-                            minLength: 1
-                            type: string
                           username:
                             description: |-
                               A literal value or a reference to an existing secret as a template string
@@ -148,7 +131,6 @@ spec:
                         required:
                         - algorithm
                         - password
-                        - type
                         - username
                         type: object
                       type:

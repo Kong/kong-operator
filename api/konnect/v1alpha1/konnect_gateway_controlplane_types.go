@@ -9,10 +9,6 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 )
 
-func init() {
-	SchemeBuilder.Register(&KonnectGatewayControlPlane{}, &KonnectGatewayControlPlaneList{})
-}
-
 // KonnectGatewayControlPlane is the Schema for the KonnectGatewayControlplanes API.
 //
 // +genclient

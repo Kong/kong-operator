@@ -111,10 +111,6 @@ type IdentityProviderRequestStatus struct {
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
 
-func init() {
-	SchemeBuilder.Register(&IdentityProviderRequest{}, &IdentityProviderRequestList{})
-}
-
 // IdentityProviderRequestConfig represents a union type for config.
 // Only one of the fields should be set based on the Type.
 //

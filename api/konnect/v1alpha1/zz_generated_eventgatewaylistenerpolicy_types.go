@@ -95,10 +95,6 @@ type EventGatewayListenerPolicyStatus struct {
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
 
-func init() {
-	SchemeBuilder.Register(&EventGatewayListenerPolicy{}, &EventGatewayListenerPolicyList{})
-}
-
 // EventGatewayListenerPolicyConfig represents a union type for EventGatewayListenerPolicyConfig.
 // Only one of the fields should be set based on the Type.
 //

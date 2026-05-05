@@ -3325,7 +3325,6 @@ spec:
                                         procMount denotes the type of proc mount to use for the containers.
                                         The default value is Default which uses the container runtime defaults for
                                         readonly paths and masked paths.
-                                        This requires the ProcMountType feature flag to be enabled.
                                         Note that this field cannot be set when spec.os.name is windows.
                                       type: string
                                     readOnlyRootFilesystem:
@@ -4820,7 +4819,6 @@ spec:
                                         procMount denotes the type of proc mount to use for the containers.
                                         The default value is Default which uses the container runtime defaults for
                                         readonly paths and masked paths.
-                                        This requires the ProcMountType feature flag to be enabled.
                                         Note that this field cannot be set when spec.os.name is windows.
                                       type: string
                                     readOnlyRootFilesystem:
@@ -5286,7 +5284,6 @@ spec:
                               When set to false, a new userns is created for the pod. Setting false is useful for
                               mitigating container breakout vulnerabilities even allowing users to run their
                               containers as root without actually having root privileges on the host.
-                              This field is alpha-level and is only honored by servers that enable the UserNamespacesSupport feature.
                             type: boolean
                           hostname:
                             description: |-
@@ -6400,7 +6397,6 @@ spec:
                                         procMount denotes the type of proc mount to use for the containers.
                                         The default value is Default which uses the container runtime defaults for
                                         readonly paths and masked paths.
-                                        This requires the ProcMountType feature flag to be enabled.
                                         Note that this field cannot be set when spec.os.name is windows.
                                       type: string
                                     readOnlyRootFilesystem:
@@ -6949,6 +6945,14 @@ spec:
 
                                 It adds a name to it that uniquely identifies the ResourceClaim inside the Pod.
                                 Containers that need access to the ResourceClaim reference it with this name.
+
+                                When the DRAWorkloadResourceClaims feature gate is enabled and this Pod
+                                belongs to a PodGroup, a PodResourceClaim is matched to a
+                                PodGroupResourceClaim if all of their fields are equal (Name,
+                                ResourceClaimName, and ResourceClaimTemplateName). A matched claim references
+                                a single ResourceClaim shared across all Pods in the PodGroup, reserved for
+                                the PodGroup in ResourceClaimStatus.ReservedFor rather than for individual
+                                Pods.
                               properties:
                                 name:
                                   description: |-
@@ -6973,6 +6977,16 @@ spec:
                                     will also be deleted. The pod name and resource name, along with a
                                     generated component, will be used to form a unique name for the
                                     ResourceClaim, which will be recorded in pod.status.resourceClaimStatuses.
+
+                                    When the DRAWorkloadResourceClaims feature gate is enabled and the pod
+                                    belongs to a PodGroup that defines a PodGroupResourceClaim with the same
+                                    Name and ResourceClaimTemplateName, this PodResourceClaim resolves to the
+                                    ResourceClaim generated for the PodGroup. All pods in the group that
+                                    define an equivalent PodResourceClaim matching the
+                                    PodGroupResourceClaim's Name and ResourceClaimTemplateName share the same
+                                    generated ResourceClaim. ResourceClaims generated for a PodGroup are
+                                    owned by the PodGroup and their lifecycles are tied to the PodGroup
+                                    instead of any individual pod.
 
                                     This field is immutable and no changes will be made to the
                                     corresponding ResourceClaim by the control plane after creating the
@@ -7098,6 +7112,28 @@ spec:
                             x-kubernetes-list-map-keys:
                             - name
                             x-kubernetes-list-type: map
+                          schedulingGroup:
+                            description: |-
+                              SchedulingGroup provides a reference to the immediate scheduling runtime
+                              grouping object that this Pod belongs to.
+                              This field is used by the scheduler to identify the group and apply the
+                              correct group scheduling policies. The association with a group also
+                              impacts other lifecycle aspects of a Pod that are relevant in a wider context
+                              of scheduling like preemption, resource attachment, etc. If not specified,
+                              the Pod is treated as a single unit in all of these aspects.
+                              The group object referenced by this field may not exist at the time the
+                              Pod is created.
+                              This field is immutable, but a group object with the same name may be
+                              recreated with different policies. Doing this during pod scheduling
+                              may result in the placement not conforming to the expected policies.
+                            properties:
+                              podGroupName:
+                                description: |-
+                                  PodGroupName specifies the name of the standalone PodGroup object
+                                  that represents the runtime instance of this group.
+                                  Must be a DNS subdomain.
+                                type: string
+                            type: object
                           securityContext:
                             description: |-
                               SecurityContext holds pod-level security attributes and common container settings.
@@ -8484,7 +8520,7 @@ spec:
                                     A failure to resolve or pull the image during pod startup will block containers from starting and may add significant latency. Failures will be retried using normal volume backoff and will be reported on the pod reason and message.
                                     The types of objects that may be mounted by this volume are defined by the container runtime implementation on a host machine and at minimum must include all valid types supported by the container image field.
                                     The OCI object gets mounted in a single directory (spec.containers[*].volumeMounts.mountPath) by merging the manifest layers in the same way as for container images.
-                                    The volume will be mounted read-only (ro) and non-executable files (noexec).
+                                    The volume will be mounted read-only (ro).
                                     Sub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath) before 1.33.
                                     The field spec.securityContext.fsGroupChangePolicy has no effect on this volume type.
                                   properties:
@@ -8652,8 +8688,7 @@ spec:
                                   description: |-
                                     portworxVolume represents a portworx volume attached and mounted on kubelets host machine.
                                     Deprecated: PortworxVolume is deprecated. All operations for the in-tree portworxVolume type
-                                    are redirected to the pxd.portworx.com CSI driver when the CSIMigrationPortworx feature-gate
-                                    is on.
+                                    are redirected to the pxd.portworx.com CSI driver.
                                   properties:
                                     fsType:
                                       description: |-
@@ -9427,42 +9462,6 @@ spec:
                             x-kubernetes-list-map-keys:
                             - name
                             x-kubernetes-list-type: map
-                          workloadRef:
-                            description: |-
-                              WorkloadRef provides a reference to the Workload object that this Pod belongs to.
-                              This field is used by the scheduler to identify the PodGroup and apply the
-                              correct group scheduling policies. The Workload object referenced
-                              by this field may not exist at the time the Pod is created.
-                              This field is immutable, but a Workload object with the same name
-                              may be recreated with different policies. Doing this during pod scheduling
-                              may result in the placement not conforming to the expected policies.
-                            properties:
-                              name:
-                                description: |-
-                                  Name defines the name of the Workload object this Pod belongs to.
-                                  Workload must be in the same namespace as the Pod.
-                                  If it doesn't match any existing Workload, the Pod will remain unschedulable
-                                  until a Workload object is created and observed by the kube-scheduler.
-                                  It must be a DNS subdomain.
-                                type: string
-                              podGroup:
-                                description: |-
-                                  PodGroup is the name of the PodGroup within the Workload that this Pod
-                                  belongs to. If it doesn't match any existing PodGroup within the Workload,
-                                  the Pod will remain unschedulable until the Workload object is recreated
-                                  and observed by the kube-scheduler. It must be a DNS label.
-                                type: string
-                              podGroupReplicaKey:
-                                description: |-
-                                  PodGroupReplicaKey specifies the replica key of the PodGroup to which this
-                                  Pod belongs. It is used to distinguish pods belonging to different replicas
-                                  of the same pod group. The pod group policy is applied separately to each replica.
-                                  When set, it must be a DNS label.
-                                type: string
-                            required:
-                            - name
-                            - podGroup
-                            type: object
                         required:
                         - containers
                         type: object
@@ -10827,14 +10826,6 @@ spec:
                     properties:
                       anonymous:
                         description: Anonymous configuration.
-                        properties:
-                          type:
-                            description: The type of authentication scheme.
-                            maxLength: 253
-                            minLength: 1
-                            type: string
-                        required:
-                        - type
                         type: object
                       sasl_plain:
                         description: SaslPlain configuration.
@@ -10850,10 +10841,6 @@ spec:
                             maxLength: 253
                             minLength: 1
                             type: string
-                          type:
-                            maxLength: 253
-                            minLength: 1
-                            type: string
                           username:
                             description: |-
                               A literal value or a reference to an existing secret as a template string
@@ -10865,7 +10852,6 @@ spec:
                             type: string
                         required:
                         - password
-                        - type
                         - username
                         type: object
                       sasl_scram:
@@ -10890,10 +10876,6 @@ spec:
                             maxLength: 253
                             minLength: 1
                             type: string
-                          type:
-                            maxLength: 253
-                            minLength: 1
-                            type: string
                           username:
                             description: |-
                               A literal value or a reference to an existing secret as a template string
@@ -10906,7 +10888,6 @@ spec:
                         required:
                         - algorithm
                         - password
-                        - type
                         - username
                         type: object
                       type:
@@ -11312,14 +11293,9 @@ spec:
                                 default: 0
                                 description: The lowest broker node ID in the cluster.
                                 type: integer
-                              type:
-                                maxLength: 253
-                                minLength: 1
-                                type: string
                             required:
                             - advertised_host
                             - destination
-                            - type
                             type: object
                           sni:
                             description: SNI configuration.
@@ -11385,12 +11361,6 @@ spec:
                                 maxLength: 253
                                 pattern: ^[\.-]([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)*([a-z0-9-]*[a-z0-9])$
                                 type: string
-                              type:
-                                maxLength: 253
-                                minLength: 1
-                                type: string
-                            required:
-                            - type
                             type: object
                           type:
                             description: Type designates the type of configuration.
@@ -11432,14 +11402,8 @@ spec:
                         description: A unique user-defined name of the policy.
                         maxLength: 255
                         type: string
-                      type:
-                        description: The type name of the policy.
-                        maxLength: 255
-                        minLength: 1
-                        type: string
                     required:
                     - config
-                    - type
                     type: object
                   tls_server:
                     description: EventGatewayTLSListen configuration.
@@ -11596,14 +11560,8 @@ spec:
                         description: A unique user-defined name of the policy.
                         maxLength: 255
                         type: string
-                      type:
-                        description: The type name of the policy.
-                        maxLength: 255
-                        minLength: 1
-                        type: string
                     required:
                     - config
-                    - type
                     type: object
                   type:
                     description: Type designates the type of configuration.
@@ -12142,23 +12100,9 @@ spec:
                       properties:
                         anonymous:
                           description: Anonymous configuration.
-                          properties:
-                            type:
-                              maxLength: 253
-                              minLength: 1
-                              type: string
-                          required:
-                          - type
                           type: object
                         client_certificate:
                           description: ClientCertificate configuration.
-                          properties:
-                            type:
-                              maxLength: 253
-                              minLength: 1
-                              type: string
-                          required:
-                          - type
                           type: object
                         oauth_bearer:
                           description: OauthBearer configuration.
@@ -12226,10 +12170,6 @@ spec:
                               maxLength: 253
                               minLength: 1
                               type: string
-                            type:
-                              maxLength: 253
-                              minLength: 1
-                              type: string
                             validate:
                               description: Validation rules.
                               properties:
@@ -12256,7 +12196,6 @@ spec:
                               type: object
                           required:
                           - mediation
-                          - type
                           type: object
                         sasl_plain:
                           description: SaslPlain configuration.
@@ -12303,13 +12242,8 @@ spec:
                                 - username
                                 type: object
                               type: array
-                            type:
-                              maxLength: 253
-                              minLength: 1
-                              type: string
                           required:
                           - mediation
-                          - type
                           type: object
                         sasl_scram:
                           description: SaslScram configuration.
@@ -12322,13 +12256,8 @@ spec:
                               maxLength: 253
                               minLength: 1
                               type: string
-                            type:
-                              maxLength: 253
-                              minLength: 1
-                              type: string
                           required:
                           - algorithm
-                          - type
                           type: object
                         type:
                           description: Type designates the type of configuration.
@@ -12427,12 +12356,6 @@ spec:
                                         - value
                                         type: object
                                       type: array
-                                    type:
-                                      maxLength: 253
-                                      minLength: 1
-                                      type: string
-                                  required:
-                                  - type
                                   type: object
                                 glob:
                                   description: Glob configuration.
@@ -12443,13 +12366,8 @@ spec:
                                       minLength: 1
                                       pattern: ^[A-Za-z0-9._?*-]+$
                                       type: string
-                                    type:
-                                      maxLength: 253
-                                      minLength: 1
-                                      type: string
                                   required:
                                   - glob
-                                  - type
                                   type: object
                                 type:
                                   description: Type designates the type of configuration.
@@ -12504,12 +12422,6 @@ spec:
                                         - backend
                                         type: object
                                       type: array
-                                    type:
-                                      maxLength: 253
-                                      minLength: 1
-                                      type: string
-                                  required:
-                                  - type
                                   type: object
                                 glob:
                                   description: Glob configuration.
@@ -12536,13 +12448,8 @@ spec:
                                       minLength: 1
                                       pattern: ^[A-Za-z0-9._?*-]+$
                                       type: string
-                                    type:
-                                      maxLength: 253
-                                      minLength: 1
-                                      type: string
                                   required:
                                   - glob
-                                  - type
                                   type: object
                                 type:
                                   description: Type designates the type of configuration.
@@ -15089,7 +14996,6 @@ spec:
                                             procMount denotes the type of proc mount to use for the containers.
                                             The default value is Default which uses the container runtime defaults for
                                             readonly paths and masked paths.
-                                            This requires the ProcMountType feature flag to be enabled.
                                             Note that this field cannot be set when spec.os.name is windows.
                                           type: string
                                         readOnlyRootFilesystem:
@@ -16584,7 +16490,6 @@ spec:
                                             procMount denotes the type of proc mount to use for the containers.
                                             The default value is Default which uses the container runtime defaults for
                                             readonly paths and masked paths.
-                                            This requires the ProcMountType feature flag to be enabled.
                                             Note that this field cannot be set when spec.os.name is windows.
                                           type: string
                                         readOnlyRootFilesystem:
@@ -17050,7 +16955,6 @@ spec:
                                   When set to false, a new userns is created for the pod. Setting false is useful for
                                   mitigating container breakout vulnerabilities even allowing users to run their
                                   containers as root without actually having root privileges on the host.
-                                  This field is alpha-level and is only honored by servers that enable the UserNamespacesSupport feature.
                                 type: boolean
                               hostname:
                                 description: |-
@@ -18164,7 +18068,6 @@ spec:
                                             procMount denotes the type of proc mount to use for the containers.
                                             The default value is Default which uses the container runtime defaults for
                                             readonly paths and masked paths.
-                                            This requires the ProcMountType feature flag to be enabled.
                                             Note that this field cannot be set when spec.os.name is windows.
                                           type: string
                                         readOnlyRootFilesystem:
@@ -18713,6 +18616,14 @@ spec:
 
                                     It adds a name to it that uniquely identifies the ResourceClaim inside the Pod.
                                     Containers that need access to the ResourceClaim reference it with this name.
+
+                                    When the DRAWorkloadResourceClaims feature gate is enabled and this Pod
+                                    belongs to a PodGroup, a PodResourceClaim is matched to a
+                                    PodGroupResourceClaim if all of their fields are equal (Name,
+                                    ResourceClaimName, and ResourceClaimTemplateName). A matched claim references
+                                    a single ResourceClaim shared across all Pods in the PodGroup, reserved for
+                                    the PodGroup in ResourceClaimStatus.ReservedFor rather than for individual
+                                    Pods.
                                   properties:
                                     name:
                                       description: |-
@@ -18737,6 +18648,16 @@ spec:
                                         will also be deleted. The pod name and resource name, along with a
                                         generated component, will be used to form a unique name for the
                                         ResourceClaim, which will be recorded in pod.status.resourceClaimStatuses.
+
+                                        When the DRAWorkloadResourceClaims feature gate is enabled and the pod
+                                        belongs to a PodGroup that defines a PodGroupResourceClaim with the same
+                                        Name and ResourceClaimTemplateName, this PodResourceClaim resolves to the
+                                        ResourceClaim generated for the PodGroup. All pods in the group that
+                                        define an equivalent PodResourceClaim matching the
+                                        PodGroupResourceClaim's Name and ResourceClaimTemplateName share the same
+                                        generated ResourceClaim. ResourceClaims generated for a PodGroup are
+                                        owned by the PodGroup and their lifecycles are tied to the PodGroup
+                                        instead of any individual pod.
 
                                         This field is immutable and no changes will be made to the
                                         corresponding ResourceClaim by the control plane after creating the
@@ -18862,6 +18783,28 @@ spec:
                                 x-kubernetes-list-map-keys:
                                 - name
                                 x-kubernetes-list-type: map
+                              schedulingGroup:
+                                description: |-
+                                  SchedulingGroup provides a reference to the immediate scheduling runtime
+                                  grouping object that this Pod belongs to.
+                                  This field is used by the scheduler to identify the group and apply the
+                                  correct group scheduling policies. The association with a group also
+                                  impacts other lifecycle aspects of a Pod that are relevant in a wider context
+                                  of scheduling like preemption, resource attachment, etc. If not specified,
+                                  the Pod is treated as a single unit in all of these aspects.
+                                  The group object referenced by this field may not exist at the time the
+                                  Pod is created.
+                                  This field is immutable, but a group object with the same name may be
+                                  recreated with different policies. Doing this during pod scheduling
+                                  may result in the placement not conforming to the expected policies.
+                                properties:
+                                  podGroupName:
+                                    description: |-
+                                      PodGroupName specifies the name of the standalone PodGroup object
+                                      that represents the runtime instance of this group.
+                                      Must be a DNS subdomain.
+                                    type: string
+                                type: object
                               securityContext:
                                 description: |-
                                   SecurityContext holds pod-level security attributes and common container settings.
@@ -20248,7 +20191,7 @@ spec:
                                         A failure to resolve or pull the image during pod startup will block containers from starting and may add significant latency. Failures will be retried using normal volume backoff and will be reported on the pod reason and message.
                                         The types of objects that may be mounted by this volume are defined by the container runtime implementation on a host machine and at minimum must include all valid types supported by the container image field.
                                         The OCI object gets mounted in a single directory (spec.containers[*].volumeMounts.mountPath) by merging the manifest layers in the same way as for container images.
-                                        The volume will be mounted read-only (ro) and non-executable files (noexec).
+                                        The volume will be mounted read-only (ro).
                                         Sub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath) before 1.33.
                                         The field spec.securityContext.fsGroupChangePolicy has no effect on this volume type.
                                       properties:
@@ -20416,8 +20359,7 @@ spec:
                                       description: |-
                                         portworxVolume represents a portworx volume attached and mounted on kubelets host machine.
                                         Deprecated: PortworxVolume is deprecated. All operations for the in-tree portworxVolume type
-                                        are redirected to the pxd.portworx.com CSI driver when the CSIMigrationPortworx feature-gate
-                                        is on.
+                                        are redirected to the pxd.portworx.com CSI driver.
                                       properties:
                                         fsType:
                                           description: |-
@@ -21191,42 +21133,6 @@ spec:
                                 x-kubernetes-list-map-keys:
                                 - name
                                 x-kubernetes-list-type: map
-                              workloadRef:
-                                description: |-
-                                  WorkloadRef provides a reference to the Workload object that this Pod belongs to.
-                                  This field is used by the scheduler to identify the PodGroup and apply the
-                                  correct group scheduling policies. The Workload object referenced
-                                  by this field may not exist at the time the Pod is created.
-                                  This field is immutable, but a Workload object with the same name
-                                  may be recreated with different policies. Doing this during pod scheduling
-                                  may result in the placement not conforming to the expected policies.
-                                properties:
-                                  name:
-                                    description: |-
-                                      Name defines the name of the Workload object this Pod belongs to.
-                                      Workload must be in the same namespace as the Pod.
-                                      If it doesn't match any existing Workload, the Pod will remain unschedulable
-                                      until a Workload object is created and observed by the kube-scheduler.
-                                      It must be a DNS subdomain.
-                                    type: string
-                                  podGroup:
-                                    description: |-
-                                      PodGroup is the name of the PodGroup within the Workload that this Pod
-                                      belongs to. If it doesn't match any existing PodGroup within the Workload,
-                                      the Pod will remain unschedulable until the Workload object is recreated
-                                      and observed by the kube-scheduler. It must be a DNS label.
-                                    type: string
-                                  podGroupReplicaKey:
-                                    description: |-
-                                      PodGroupReplicaKey specifies the replica key of the PodGroup to which this
-                                      Pod belongs. It is used to distinguish pods belonging to different replicas
-                                      of the same pod group. The pod group policy is applied separately to each replica.
-                                      When set, it must be a DNS label.
-                                    type: string
-                                required:
-                                - name
-                                - podGroup
-                                type: object
                             required:
                             - containers
                             type: object
@@ -24914,7 +24820,6 @@ spec:
                                         procMount denotes the type of proc mount to use for the containers.
                                         The default value is Default which uses the container runtime defaults for
                                         readonly paths and masked paths.
-                                        This requires the ProcMountType feature flag to be enabled.
                                         Note that this field cannot be set when spec.os.name is windows.
                                       type: string
                                     readOnlyRootFilesystem:
@@ -26409,7 +26314,6 @@ spec:
                                         procMount denotes the type of proc mount to use for the containers.
                                         The default value is Default which uses the container runtime defaults for
                                         readonly paths and masked paths.
-                                        This requires the ProcMountType feature flag to be enabled.
                                         Note that this field cannot be set when spec.os.name is windows.
                                       type: string
                                     readOnlyRootFilesystem:
@@ -26875,7 +26779,6 @@ spec:
                               When set to false, a new userns is created for the pod. Setting false is useful for
                               mitigating container breakout vulnerabilities even allowing users to run their
                               containers as root without actually having root privileges on the host.
-                              This field is alpha-level and is only honored by servers that enable the UserNamespacesSupport feature.
                             type: boolean
                           hostname:
                             description: |-
@@ -27989,7 +27892,6 @@ spec:
                                         procMount denotes the type of proc mount to use for the containers.
                                         The default value is Default which uses the container runtime defaults for
                                         readonly paths and masked paths.
-                                        This requires the ProcMountType feature flag to be enabled.
                                         Note that this field cannot be set when spec.os.name is windows.
                                       type: string
                                     readOnlyRootFilesystem:
@@ -28538,6 +28440,14 @@ spec:
 
                                 It adds a name to it that uniquely identifies the ResourceClaim inside the Pod.
                                 Containers that need access to the ResourceClaim reference it with this name.
+
+                                When the DRAWorkloadResourceClaims feature gate is enabled and this Pod
+                                belongs to a PodGroup, a PodResourceClaim is matched to a
+                                PodGroupResourceClaim if all of their fields are equal (Name,
+                                ResourceClaimName, and ResourceClaimTemplateName). A matched claim references
+                                a single ResourceClaim shared across all Pods in the PodGroup, reserved for
+                                the PodGroup in ResourceClaimStatus.ReservedFor rather than for individual
+                                Pods.
                               properties:
                                 name:
                                   description: |-
@@ -28562,6 +28472,16 @@ spec:
                                     will also be deleted. The pod name and resource name, along with a
                                     generated component, will be used to form a unique name for the
                                     ResourceClaim, which will be recorded in pod.status.resourceClaimStatuses.
+
+                                    When the DRAWorkloadResourceClaims feature gate is enabled and the pod
+                                    belongs to a PodGroup that defines a PodGroupResourceClaim with the same
+                                    Name and ResourceClaimTemplateName, this PodResourceClaim resolves to the
+                                    ResourceClaim generated for the PodGroup. All pods in the group that
+                                    define an equivalent PodResourceClaim matching the
+                                    PodGroupResourceClaim's Name and ResourceClaimTemplateName share the same
+                                    generated ResourceClaim. ResourceClaims generated for a PodGroup are
+                                    owned by the PodGroup and their lifecycles are tied to the PodGroup
+                                    instead of any individual pod.
 
                                     This field is immutable and no changes will be made to the
                                     corresponding ResourceClaim by the control plane after creating the
@@ -28687,6 +28607,28 @@ spec:
                             x-kubernetes-list-map-keys:
                             - name
                             x-kubernetes-list-type: map
+                          schedulingGroup:
+                            description: |-
+                              SchedulingGroup provides a reference to the immediate scheduling runtime
+                              grouping object that this Pod belongs to.
+                              This field is used by the scheduler to identify the group and apply the
+                              correct group scheduling policies. The association with a group also
+                              impacts other lifecycle aspects of a Pod that are relevant in a wider context
+                              of scheduling like preemption, resource attachment, etc. If not specified,
+                              the Pod is treated as a single unit in all of these aspects.
+                              The group object referenced by this field may not exist at the time the
+                              Pod is created.
+                              This field is immutable, but a group object with the same name may be
+                              recreated with different policies. Doing this during pod scheduling
+                              may result in the placement not conforming to the expected policies.
+                            properties:
+                              podGroupName:
+                                description: |-
+                                  PodGroupName specifies the name of the standalone PodGroup object
+                                  that represents the runtime instance of this group.
+                                  Must be a DNS subdomain.
+                                type: string
+                            type: object
                           securityContext:
                             description: |-
                               SecurityContext holds pod-level security attributes and common container settings.
@@ -30073,7 +30015,7 @@ spec:
                                     A failure to resolve or pull the image during pod startup will block containers from starting and may add significant latency. Failures will be retried using normal volume backoff and will be reported on the pod reason and message.
                                     The types of objects that may be mounted by this volume are defined by the container runtime implementation on a host machine and at minimum must include all valid types supported by the container image field.
                                     The OCI object gets mounted in a single directory (spec.containers[*].volumeMounts.mountPath) by merging the manifest layers in the same way as for container images.
-                                    The volume will be mounted read-only (ro) and non-executable files (noexec).
+                                    The volume will be mounted read-only (ro).
                                     Sub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath) before 1.33.
                                     The field spec.securityContext.fsGroupChangePolicy has no effect on this volume type.
                                   properties:
@@ -30241,8 +30183,7 @@ spec:
                                   description: |-
                                     portworxVolume represents a portworx volume attached and mounted on kubelets host machine.
                                     Deprecated: PortworxVolume is deprecated. All operations for the in-tree portworxVolume type
-                                    are redirected to the pxd.portworx.com CSI driver when the CSIMigrationPortworx feature-gate
-                                    is on.
+                                    are redirected to the pxd.portworx.com CSI driver.
                                   properties:
                                     fsType:
                                       description: |-
@@ -31016,42 +30957,6 @@ spec:
                             x-kubernetes-list-map-keys:
                             - name
                             x-kubernetes-list-type: map
-                          workloadRef:
-                            description: |-
-                              WorkloadRef provides a reference to the Workload object that this Pod belongs to.
-                              This field is used by the scheduler to identify the PodGroup and apply the
-                              correct group scheduling policies. The Workload object referenced
-                              by this field may not exist at the time the Pod is created.
-                              This field is immutable, but a Workload object with the same name
-                              may be recreated with different policies. Doing this during pod scheduling
-                              may result in the placement not conforming to the expected policies.
-                            properties:
-                              name:
-                                description: |-
-                                  Name defines the name of the Workload object this Pod belongs to.
-                                  Workload must be in the same namespace as the Pod.
-                                  If it doesn't match any existing Workload, the Pod will remain unschedulable
-                                  until a Workload object is created and observed by the kube-scheduler.
-                                  It must be a DNS subdomain.
-                                type: string
-                              podGroup:
-                                description: |-
-                                  PodGroup is the name of the PodGroup within the Workload that this Pod
-                                  belongs to. If it doesn't match any existing PodGroup within the Workload,
-                                  the Pod will remain unschedulable until the Workload object is recreated
-                                  and observed by the kube-scheduler. It must be a DNS label.
-                                type: string
-                              podGroupReplicaKey:
-                                description: |-
-                                  PodGroupReplicaKey specifies the replica key of the PodGroup to which this
-                                  Pod belongs. It is used to distinguish pods belonging to different replicas
-                                  of the same pod group. The pod group policy is applied separately to each replica.
-                                  When set, it must be a DNS label.
-                                type: string
-                            required:
-                            - name
-                            - podGroup
-                            type: object
                         required:
                         - containers
                         type: object

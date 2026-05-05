@@ -19,10 +19,6 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 )
 
-func init() {
-	SchemeBuilder.Register(&KonnectExtension{}, &KonnectExtensionList{})
-}
-
 const (
 	// KonnectExtensionKind holds the kind for the KonnectExtension.
 	KonnectExtensionKind = "KonnectExtension"

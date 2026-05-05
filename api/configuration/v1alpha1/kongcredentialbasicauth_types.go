@@ -102,7 +102,3 @@ type KongCredentialBasicAuthList struct {
 
 	Items []KongCredentialBasicAuth `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&KongCredentialBasicAuth{}, &KongCredentialBasicAuthList{})
-}

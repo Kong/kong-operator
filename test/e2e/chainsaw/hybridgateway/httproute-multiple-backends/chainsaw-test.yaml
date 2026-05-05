@@ -69,6 +69,8 @@ spec:
       value: echo
     - name: echo_deployment_namespace
       value: ($namespace)
+    - name: echo_deployment_replicas
+      value: 1
     - name: echo_secondary_deployment_name
       value: echo-secondary
     - name: echo_secondary_deployment_namespace
@@ -160,6 +162,8 @@ spec:
         value: ($echo_secondary_deployment_name)
       - name: echo_deployment_namespace
         value: ($echo_secondary_deployment_namespace)
+      - name: echo_deployment_replicas
+        value: 1
 
   # Step 6: Create HTTPRoute with equal weights.
   - name: 6-create-httproute-equal-weights
