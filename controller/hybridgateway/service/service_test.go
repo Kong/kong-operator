@@ -549,9 +549,6 @@ func TestServiceForRule_TLSVerifyAnnotation(t *testing.T) {
 	}
 }
 
-//go:fix inline
-func boolPtr(v bool) *bool { return new(v) }
-
 func TestResolveTLSVerifyFromHTTPRouteBackendRefs(t *testing.T) {
 	ctx := context.Background()
 	logger := zap.New()
