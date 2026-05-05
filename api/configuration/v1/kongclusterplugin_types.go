@@ -125,7 +125,3 @@ type KongClusterPluginStatus struct {
 	// +kubebuilder:default={{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
-
-func init() {
-	SchemeBuilder.Register(&KongClusterPlugin{}, &KongClusterPluginList{})
-}

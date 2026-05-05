@@ -130,7 +130,3 @@ type KongKeyList struct {
 
 	Items []KongKey `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&KongKey{}, &KongKeyList{})
-}

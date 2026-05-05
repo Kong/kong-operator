@@ -91,7 +91,3 @@ type KongSNIList struct {
 
 	Items []KongSNI `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&KongSNI{}, &KongSNIList{})
-}

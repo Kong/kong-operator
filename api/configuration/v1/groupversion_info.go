@@ -17,19 +17,25 @@ limitations under the License.
 package v1
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/controller-runtime/pkg/scheme"
+)
+
+const (
+	// GroupName is the group name used in this package.
+	GroupName = "configuration.konghq.com"
 )
 
 var (
 	// GroupVersion is group version used to register these objects.
-	GroupVersion = schema.GroupVersion{Group: "configuration.konghq.com", Version: "v1"}
+	GroupVersion = schema.GroupVersion{Group: GroupName, Version: "v1"}
 
 	// SchemeGroupVersion is a convenience var for generated clientsets.
 	SchemeGroupVersion = GroupVersion
 
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme.
-	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}
+	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
 
 	// AddToScheme adds the types in this group-version to the given scheme.
 	AddToScheme = SchemeBuilder.AddToScheme
@@ -37,5 +43,19 @@ var (
 
 // Resource takes an unqualified resource and returns a Group qualified GroupResource.
 func Resource(resource string) schema.GroupResource {
-	return SchemeGroupVersion.WithResource(resource).GroupResource()
+	return GroupVersion.WithResource(resource).GroupResource()
+}
+
+func addKnownTypes(scheme *runtime.Scheme) error {
+	scheme.AddKnownTypes(GroupVersion,
+		&KongConsumer{},
+		&KongConsumerList{},
+		&KongClusterPlugin{},
+		&KongClusterPluginList{},
+		&KongPlugin{},
+		&KongPluginList{},
+	)
+
+	metav1.AddToGroupVersion(scheme, GroupVersion)
+	return nil
 }

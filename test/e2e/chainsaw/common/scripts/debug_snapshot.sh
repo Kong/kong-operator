@@ -98,7 +98,7 @@ for ns in ${ALL_NAMESPACES}; do
 
   # Kong Configuration resources
   capture_resource_group "${RESOURCES_FILE}" "${ns}" "Kong Configuration Resources" \
-    "kongcertificates.configuration.konghq.com,kongsnis.configuration.konghq.com,kongroutes.configuration.konghq.com,kongservices.configuration.konghq.com,kongupstreams.configuration.konghq.com,kongtargets.configuration.konghq.com,kongreferencegrants.configuration.konghq.com,kongplugins.configuration.konghq.com,kongclusterplugins.configuration.konghq.com,kongconsumers.configuration.konghq.com,kongconsumergroups.configuration.konghq.com"
+    "kongcertificates.configuration.konghq.com,kongsnis.configuration.konghq.com,kongroutes.configuration.konghq.com,kongservices.configuration.konghq.com,kongupstreams.configuration.konghq.com,kongtargets.configuration.konghq.com,kongreferencegrants.configuration.konghq.com,kongplugins.configuration.konghq.com,kongclusterplugins.configuration.konghq.com,kongconsumers.configuration.konghq.com,kongconsumergroups.configuration.konghq.com,kongupstreampolicies.configuration.konghq.com"
 
   # Konnect resources (excluding KonnectAPIAuthConfiguration - captured separately with redaction)
   capture_resource_group "${RESOURCES_FILE}" "${ns}" "Konnect Resources" \

@@ -116,14 +116,9 @@ spec:
                                 default: 0
                                 description: The lowest broker node ID in the cluster.
                                 type: integer
-                              type:
-                                maxLength: 253
-                                minLength: 1
-                                type: string
                             required:
                             - advertised_host
                             - destination
-                            - type
                             type: object
                           sni:
                             description: SNI configuration.
@@ -189,12 +184,6 @@ spec:
                                 maxLength: 253
                                 pattern: ^[\.-]([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)*([a-z0-9-]*[a-z0-9])$
                                 type: string
-                              type:
-                                maxLength: 253
-                                minLength: 1
-                                type: string
-                            required:
-                            - type
                             type: object
                           type:
                             description: Type designates the type of configuration.
@@ -236,14 +225,8 @@ spec:
                         description: A unique user-defined name of the policy.
                         maxLength: 255
                         type: string
-                      type:
-                        description: The type name of the policy.
-                        maxLength: 255
-                        minLength: 1
-                        type: string
                     required:
                     - config
-                    - type
                     type: object
                   tls_server:
                     description: EventGatewayTLSListen configuration.
@@ -402,14 +385,8 @@ spec:
                         description: A unique user-defined name of the policy.
                         maxLength: 255
                         type: string
-                      type:
-                        description: The type name of the policy.
-                        maxLength: 255
-                        minLength: 1
-                        type: string
                     required:
                     - config
-                    - type
                     type: object
                   type:
                     description: Type designates the type of configuration.

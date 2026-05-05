@@ -52,6 +52,8 @@ spec:
       value: (join('-', [($test_name), 'echo']))
     - name: echo_deployment_namespace
       value: ($namespace)
+    - name: echo_deployment_replicas
+      value: 1
     - name: httpbin_deployment_name
       value: (join('-', [($test_name), 'httpbin']))
     - name: httpbin_deployment_namespace

@@ -139,7 +139,3 @@ type ReferenceGrantTo struct {
 	// +optional
 	Name *ObjectName `json:"name,omitempty"`
 }
-
-func init() {
-	SchemeBuilder.Register(&KongReferenceGrant{}, &KongReferenceGrantList{})
-}
