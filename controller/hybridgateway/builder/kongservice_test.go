@@ -88,12 +88,12 @@ func TestKongServiceBuilder_WithSpecName(t *testing.T) {
 		{
 			name:     "with spec name",
 			specName: "test-service-spec",
-			expected: &[]string{"test-service-spec"}[0],
+			expected: new("test-service-spec"),
 		},
 		{
 			name:     "empty spec name",
 			specName: "",
-			expected: &[]string{""}[0],
+			expected: new(""),
 		},
 	}
 
