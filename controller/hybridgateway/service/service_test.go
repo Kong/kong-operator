@@ -636,9 +636,6 @@ func TestServiceForRule_TLSVerifyDepthAnnotation(t *testing.T) {
 	}
 }
 
-//go:fix inline
-func int64Ptr(v int64) *int64 { return new(v) }
-
 func TestResolveTLSVerifyDepthFromHTTPRouteBackendRefs(t *testing.T) {
 	ctx := context.Background()
 	logger := zap.New()
