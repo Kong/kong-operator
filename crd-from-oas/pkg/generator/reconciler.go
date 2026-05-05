@@ -347,7 +347,7 @@ func (g *Generator) generateReconcilerFiles(entityNames []string, entitySchemas 
 			Entity:         entityName,
 			APIAlias:       g.config.APIGroupPackageAlias,
 			APIPackagePath: g.config.APIGroupPackagePath,
-			IsRoot:         rc.IsRoot,
+			IsRoot:         rc.GetIsRoot(),
 		})
 
 		// Index file → internal/utils/index/
@@ -384,7 +384,7 @@ func (g *Generator) generateReconcilerConditions(parsed *parser.ParsedSpec) (*Ge
 		entityName := parser.GetEntityNameFromType(name)
 
 		rc, ok := g.config.ReconcilerConfig[entityName]
-		if !ok || rc.IsRoot {
+		if !ok || (rc.IsRoot != nil && *rc.IsRoot) {
 			continue
 		}
 
@@ -458,7 +458,7 @@ func (g *Generator) generateReconcilerConditions(parsed *parser.ParsedSpec) (*Ge
 
 func (g *Generator) generateWatch(metadata reconcilerEntityMetadata, rc *config.ReconcilerConfig) (string, error) {
 	tmpl := template.Must(template.New("watch").Parse(watchTemplate))
-	if !rc.IsRoot {
+	if !rc.GetIsRoot() {
 		tmpl = template.Must(template.New("childWatch").Parse(childWatchTemplate))
 	}
 
@@ -499,7 +499,7 @@ func (g *Generator) generateWatch(metadata reconcilerEntityMetadata, rc *config.
 
 func (g *Generator) generateIndex(metadata reconcilerEntityMetadata, rc *config.ReconcilerConfig) (string, error) {
 	tmpl := template.Must(template.New("index").Parse(indexTemplate))
-	if !rc.IsRoot {
+	if !rc.GetIsRoot() {
 		tmpl = template.Must(template.New("childIndex").Parse(childIndexTemplate))
 	}
 
@@ -538,7 +538,7 @@ func (g *Generator) reconcilerEntityMetadata(
 		APIGroupPackageAlias: g.config.APIGroupPackageAlias,
 	}
 
-	if rc.IsRoot {
+	if rc.GetIsRoot() {
 		return metadata, nil
 	}
 	if len(schema.Dependencies) == 0 {
