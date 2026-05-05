@@ -119,7 +119,7 @@ jobs:
 
       - name: Send slack notification if job fails.
         if: failure() && env.SEND_SLACK_NOTIFICATION == 'true'
-        uses: slackapi/slack-github-action@af78098f536edbc4de71162a307590698245be95 # v3.0.1
+        uses: slackapi/slack-github-action@45a88b9581bfab2566dc881e2cd66d334e621e2c # v3.0.3
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.slack-webhook-url }}
           SLACK_TEAM_ID: ${{ secrets.slack-team-id }}
