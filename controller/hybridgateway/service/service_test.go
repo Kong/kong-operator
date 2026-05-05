@@ -662,7 +662,7 @@ func TestResolveTLSVerifyDepthFromHTTPRouteBackendRefs(t *testing.T) {
 			backendServices: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-depth", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "3"}}},
 			},
-			expected: int64Ptr(3),
+			expected: new(int64(3)),
 		},
 		{
 			name: "service without annotation returns nil",
@@ -684,7 +684,7 @@ func TestResolveTLSVerifyDepthFromHTTPRouteBackendRefs(t *testing.T) {
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "2"}}},
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-b", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "5"}}},
 			},
-			expected: int64Ptr(2),
+			expected: new(int64(2)),
 		},
 		{
 			name:            "no backend refs returns nil",
@@ -725,7 +725,7 @@ func TestResolveTLSVerifyDepthFromHTTPRouteBackendRefs(t *testing.T) {
 			backendServices: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "4"}}},
 			},
-			expected: int64Ptr(4),
+			expected: new(int64(4)),
 		},
 	}
 
@@ -774,7 +774,7 @@ func TestResolveTLSVerifyDepthFromTLSRouteBackendRefs(t *testing.T) {
 			backendServices: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-depth", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "3"}}},
 			},
-			expected: int64Ptr(3),
+			expected: new(int64(3)),
 		},
 		{
 			name: "service without annotation returns nil",
@@ -796,7 +796,7 @@ func TestResolveTLSVerifyDepthFromTLSRouteBackendRefs(t *testing.T) {
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-first", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "2"}}},
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-second", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "5"}}},
 			},
-			expected: int64Ptr(2),
+			expected: new(int64(2)),
 		},
 		{
 			name:            "no backend refs returns nil",
@@ -875,7 +875,7 @@ func TestExtractTLSVerifyDepthFromBackendRef(t *testing.T) {
 			services: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-depth", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "3"}}},
 			},
-			expected: int64Ptr(3),
+			expected: new(int64(3)),
 		},
 		{
 			name:      "supported backend ref without annotation",
@@ -897,7 +897,7 @@ func TestExtractTLSVerifyDepthFromBackendRef(t *testing.T) {
 			services: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-zero-depth", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "0"}}},
 			},
-			expected: int64Ptr(0),
+			expected: new(int64(0)),
 		},
 		{
 			name:      "negative value returns nil",
@@ -966,7 +966,7 @@ func TestExtractTLSVerifyDepthFromBackendRef(t *testing.T) {
 			services: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "4"}}},
 			},
-			expected: int64Ptr(4),
+			expected: new(int64(4)),
 		},
 	}
 
