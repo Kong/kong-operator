@@ -1496,7 +1496,6 @@ const groupVersionInfoTemplate = sharedGeneratedFilePreamble + `
 package {{.APIVersion}}
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -1526,6 +1525,20 @@ func Resource(resource string) schema.GroupResource {
 }
 
 func addKnownTypes(scheme *runtime.Scheme) error {
+	return addKnownTypesGenerated(scheme)
+}
+`
+
+const groupVersionInfoGeneratedTemplate = sharedGeneratedFilePreamble + `
+
+package {{.APIVersion}}
+
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+)
+
+func addKnownTypesGenerated(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(GroupVersion,
 {{- range .EntityNames}}
 		&{{.}}{},
