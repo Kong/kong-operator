@@ -548,3 +548,365 @@ func TestServiceForRule_TLSVerifyAnnotation(t *testing.T) {
 		})
 	}
 }
+
+//go:fix inline
+func boolPtr(v bool) *bool { return new(v) }
+
+func TestResolveTLSVerifyFromHTTPRouteBackendRefs(t *testing.T) {
+	ctx := context.Background()
+	logger := zap.New()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	port80 := gatewayv1.PortNumber(80)
+
+	tests := []struct {
+		name            string
+		backendRefs     []gatewayv1.HTTPBackendRef
+		backendServices []corev1.Service
+		expected        *bool
+	}{
+		{
+			name: "service with tls-verify=true annotation returns true",
+			backendRefs: []gatewayv1.HTTPBackendRef{
+				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-verify-true", Port: &port80}}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-verify-true", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "true"}}},
+			},
+			expected: new(true),
+		},
+		{
+			name: "service with tls-verify=false annotation returns false",
+			backendRefs: []gatewayv1.HTTPBackendRef{
+				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-verify-false", Port: &port80}}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-verify-false", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "false"}}},
+			},
+			expected: new(false),
+		},
+		{
+			name: "service without annotation returns nil",
+			backendRefs: []gatewayv1.HTTPBackendRef{
+				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "plain-svc", Port: &port80}}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "plain-svc", Namespace: "test-namespace"}},
+			},
+			expected: nil,
+		},
+		{
+			name: "first backend ref with annotation wins",
+			backendRefs: []gatewayv1.HTTPBackendRef{
+				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-a", Port: &port80}}},
+				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-b", Port: &port80}}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "true"}}},
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-b", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "false"}}},
+			},
+			expected: new(true),
+		},
+		{
+			name:            "no backend refs returns nil",
+			backendRefs:     []gatewayv1.HTTPBackendRef{},
+			backendServices: []corev1.Service{},
+			expected:        nil,
+		},
+		{
+			name: "service does not exist returns nil",
+			backendRefs: []gatewayv1.HTTPBackendRef{
+				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "nonexistent-svc", Port: &port80}}},
+			},
+			backendServices: []corev1.Service{},
+			expected:        nil,
+		},
+		{
+			name: "unsupported backend ref returns nil",
+			backendRefs: []gatewayv1.HTTPBackendRef{
+				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{
+					Name:  "some-ref",
+					Port:  &port80,
+					Group: &[]gatewayv1.Group{gatewayv1.Group("example.com")}[0],
+					Kind:  &[]gatewayv1.Kind{gatewayv1.Kind("NotService")}[0],
+				}}},
+			},
+			backendServices: []corev1.Service{},
+			expected:        nil,
+		},
+		{
+			name: "cross-namespace backend ref",
+			backendRefs: []gatewayv1.HTTPBackendRef{
+				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{
+					Name:      "svc-other-ns",
+					Port:      &port80,
+					Namespace: &[]gatewayv1.Namespace{"other-namespace"}[0],
+				}}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "true"}}},
+			},
+			expected: new(true),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			httpRoute := &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-route", Namespace: "test-namespace"},
+			}
+			rule := gwtypes.HTTPRouteRule{BackendRefs: tt.backendRefs}
+
+			var objects []client.Object
+			for i := range tt.backendServices {
+				objects = append(objects, &tt.backendServices[i])
+			}
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
+
+			result := resolveTLSVerifyFromHTTPRouteBackendRefs(ctx, cl, httpRoute, rule, logger)
+			if tt.expected == nil {
+				assert.Nil(t, result)
+			} else {
+				require.NotNil(t, result)
+				assert.Equal(t, *tt.expected, *result)
+			}
+		})
+	}
+}
+
+func TestResolveTLSVerifyFromTLSRouteBackendRefs(t *testing.T) {
+	ctx := context.Background()
+	logger := zap.New()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	tests := []struct {
+		name            string
+		backendRefs     []gwtypes.BackendRef
+		backendServices []corev1.Service
+		expected        *bool
+	}{
+		{
+			name: "service with tls-verify=true annotation returns true",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-verify-true"}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-verify-true", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "true"}}},
+			},
+			expected: new(true),
+		},
+		{
+			name: "service with tls-verify=false annotation returns false",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-verify-false"}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-verify-false", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "false"}}},
+			},
+			expected: new(false),
+		},
+		{
+			name: "service without annotation returns nil",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-no-verify"}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-no-verify", Namespace: "test-namespace"}},
+			},
+			expected: nil,
+		},
+		{
+			name: "first backend ref with annotation wins",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-first"}},
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-second"}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-first", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "true"}}},
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-second", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "false"}}},
+			},
+			expected: new(true),
+		},
+		{
+			name:            "no backend refs returns nil",
+			backendRefs:     []gwtypes.BackendRef{},
+			backendServices: []corev1.Service{},
+			expected:        nil,
+		},
+		{
+			name: "service does not exist returns nil",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "nonexistent-svc"}},
+			},
+			backendServices: []corev1.Service{},
+			expected:        nil,
+		},
+		{
+			name: "unsupported backend ref returns nil",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{
+					Name:  "some-ref",
+					Group: &[]gatewayv1.Group{gatewayv1.Group("example.com")}[0],
+					Kind:  &[]gatewayv1.Kind{gatewayv1.Kind("NotService")}[0],
+				}},
+			},
+			backendServices: []corev1.Service{},
+			expected:        nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tlsRoute := &gwtypes.TLSRoute{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-tls-route", Namespace: "test-namespace"},
+			}
+			rule := gwtypes.TLSRouteRule{BackendRefs: tt.backendRefs}
+
+			var objects []client.Object
+			for i := range tt.backendServices {
+				objects = append(objects, &tt.backendServices[i])
+			}
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
+
+			result := resolveTLSVerifyFromTLSRouteBackendRefs(ctx, cl, tlsRoute, rule, logger)
+			if tt.expected == nil {
+				assert.Nil(t, result)
+			} else {
+				require.NotNil(t, result)
+				assert.Equal(t, *tt.expected, *result)
+			}
+		})
+	}
+}
+
+func TestExtractTLSVerifyFromBackendRef(t *testing.T) {
+	ctx := context.Background()
+	logger := zap.New()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	port80 := gatewayv1.PortNumber(80)
+
+	tests := []struct {
+		name       string
+		namespace  string
+		backendRef gwtypes.BackendRef
+		services   []corev1.Service
+		expected   *bool
+	}{
+		{
+			name:      "supported backend ref with tls-verify=true annotation",
+			namespace: "test-namespace",
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-verify-true", Port: &port80},
+			},
+			services: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-verify-true", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "true"}}},
+			},
+			expected: new(true),
+		},
+		{
+			name:      "supported backend ref with tls-verify=false annotation",
+			namespace: "test-namespace",
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-verify-false", Port: &port80},
+			},
+			services: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-verify-false", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "false"}}},
+			},
+			expected: new(false),
+		},
+		{
+			name:      "supported backend ref without annotation",
+			namespace: "test-namespace",
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-no-verify", Port: &port80},
+			},
+			services: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-no-verify", Namespace: "test-namespace"}},
+			},
+			expected: nil,
+		},
+		{
+			name:      "invalid annotation value returns nil",
+			namespace: "test-namespace",
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-bad-verify", Port: &port80},
+			},
+			services: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-bad-verify", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "maybe"}}},
+			},
+			expected: nil,
+		},
+		{
+			name:      "unsupported backend ref group",
+			namespace: "test-namespace",
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gatewayv1.BackendObjectReference{
+					Name:  "some-ref",
+					Port:  &port80,
+					Group: &[]gatewayv1.Group{gatewayv1.Group("example.com")}[0],
+				},
+			},
+			expected: nil,
+		},
+		{
+			name:      "unsupported backend ref kind",
+			namespace: "test-namespace",
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gatewayv1.BackendObjectReference{
+					Name: "some-ref",
+					Port: &port80,
+					Kind: &[]gatewayv1.Kind{gatewayv1.Kind("NotService")}[0],
+				},
+			},
+			expected: nil,
+		},
+		{
+			name:      "backend service does not exist",
+			namespace: "test-namespace",
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "nonexistent-svc", Port: &port80},
+			},
+			expected: nil,
+		},
+		{
+			name:      "cross-namespace backend ref",
+			namespace: "test-namespace",
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gatewayv1.BackendObjectReference{
+					Name:      "svc-other-ns",
+					Port:      &port80,
+					Namespace: &[]gatewayv1.Namespace{"other-namespace"}[0],
+				},
+			},
+			services: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "true"}}},
+			},
+			expected: new(true),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var objects []client.Object
+			for i := range tt.services {
+				objects = append(objects, &tt.services[i])
+			}
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
+
+			result := extractTLSVerifyFromBackendRef(ctx, cl, logger, tt.namespace, tt.backendRef)
+			if tt.expected == nil {
+				assert.Nil(t, result)
+			} else {
+				require.NotNil(t, result)
+				assert.Equal(t, *tt.expected, *result)
+			}
+		})
+	}
+}
