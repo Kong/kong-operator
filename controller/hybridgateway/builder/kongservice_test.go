@@ -88,12 +88,12 @@ func TestKongServiceBuilder_WithSpecName(t *testing.T) {
 		{
 			name:     "with spec name",
 			specName: "test-service-spec",
-			expected: &[]string{"test-service-spec"}[0],
+			expected: new("test-service-spec"),
 		},
 		{
 			name:     "empty spec name",
 			specName: "",
-			expected: &[]string{""}[0],
+			expected: new(""),
 		},
 	}
 
@@ -251,8 +251,8 @@ func TestKongServiceBuilder_WithPath(t *testing.T) {
 		expected *string
 	}{
 		{name: "empty path leaves field unset", path: "", expected: nil},
-		{name: "non-empty path sets field", path: "/api/v1", expected: &[]string{"/api/v1"}[0]},
-		{name: "root path sets field", path: "/", expected: &[]string{"/"}[0]},
+		{name: "non-empty path sets field", path: "/api/v1", expected: new("/api/v1")},
+		{name: "root path sets field", path: "/", expected: new("/")},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

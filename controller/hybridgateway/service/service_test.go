@@ -57,7 +57,7 @@ func TestServiceForRule(t *testing.T) {
 	// Create test rule
 	rule := gwtypes.HTTPRouteRule{
 		Matches: []gatewayv1.HTTPRouteMatch{
-			{Path: &gatewayv1.HTTPPathMatch{Type: &[]gatewayv1.PathMatchType{gatewayv1.PathMatchPathPrefix}[0], Value: &[]string{"/test"}[0]}},
+			{Path: &gatewayv1.HTTPPathMatch{Type: &[]gatewayv1.PathMatchType{gatewayv1.PathMatchPathPrefix}[0], Value: new("/test")}},
 		},
 	}
 
@@ -426,7 +426,7 @@ func TestServiceForRule_ProtocolAnnotation(t *testing.T) {
 			rule := gwtypes.HTTPRouteRule{
 				BackendRefs: tt.backendRefs,
 				Matches: []gatewayv1.HTTPRouteMatch{
-					{Path: &gatewayv1.HTTPPathMatch{Type: &[]gatewayv1.PathMatchType{gatewayv1.PathMatchPathPrefix}[0], Value: &[]string{"/test"}[0]}},
+					{Path: &gatewayv1.HTTPPathMatch{Type: &[]gatewayv1.PathMatchType{gatewayv1.PathMatchPathPrefix}[0], Value: new("/test")}},
 				},
 			}
 
@@ -479,7 +479,7 @@ func TestServiceForRule_PathAnnotation(t *testing.T) {
 			backendServices: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "my-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/path": "/api/v1"}}},
 			},
-			expected: &[]string{"/api/v1"}[0],
+			expected: new("/api/v1"),
 		},
 		{
 			name: "service without annotation leaves field unset",
@@ -501,7 +501,7 @@ func TestServiceForRule_PathAnnotation(t *testing.T) {
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/path": "/first"}}},
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-b", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/path": "/second"}}},
 			},
-			expected: &[]string{"/first"}[0],
+			expected: new("/first"),
 		},
 	}
 
@@ -516,7 +516,7 @@ func TestServiceForRule_PathAnnotation(t *testing.T) {
 			rule := gwtypes.HTTPRouteRule{
 				BackendRefs: tt.backendRefs,
 				Matches: []gatewayv1.HTTPRouteMatch{
-					{Path: &gatewayv1.HTTPPathMatch{Type: &[]gatewayv1.PathMatchType{gatewayv1.PathMatchPathPrefix}[0], Value: &[]string{"/test"}[0]}},
+					{Path: &gatewayv1.HTTPPathMatch{Type: &[]gatewayv1.PathMatchType{gatewayv1.PathMatchPathPrefix}[0], Value: new("/test")}},
 				},
 			}
 			var objects []client.Object
