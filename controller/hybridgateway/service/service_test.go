@@ -541,9 +541,6 @@ func TestServiceForRule_WriteTimeoutAnnotation(t *testing.T) {
 	}
 }
 
-//go:fix inline
-func int64Ptr(v int64) *int64 { return new(v) }
-
 func TestResolveWriteTimeoutFromHTTPRouteBackendRefs(t *testing.T) {
 	ctx := context.Background()
 	logger := zap.New()
@@ -567,7 +564,7 @@ func TestResolveWriteTimeoutFromHTTPRouteBackendRefs(t *testing.T) {
 			backendServices: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "30000"}}},
 			},
-			expected: int64Ptr(30000),
+			expected: new(int64(30000)),
 		},
 		{
 			name: "service without annotation returns nil",
@@ -589,7 +586,7 @@ func TestResolveWriteTimeoutFromHTTPRouteBackendRefs(t *testing.T) {
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "1000"}}},
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-b", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "2000"}}},
 			},
-			expected: int64Ptr(1000),
+			expected: new(int64(1000)),
 		},
 		{
 			name:            "no backend refs returns nil",
@@ -630,7 +627,7 @@ func TestResolveWriteTimeoutFromHTTPRouteBackendRefs(t *testing.T) {
 			backendServices: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "3000"}}},
 			},
-			expected: int64Ptr(3000),
+			expected: new(int64(3000)),
 		},
 	}
 
@@ -679,7 +676,7 @@ func TestResolveWriteTimeoutFromTLSRouteBackendRefs(t *testing.T) {
 			backendServices: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "30000"}}},
 			},
-			expected: int64Ptr(30000),
+			expected: new(int64(30000)),
 		},
 		{
 			name: "service without annotation returns nil",
@@ -701,7 +698,7 @@ func TestResolveWriteTimeoutFromTLSRouteBackendRefs(t *testing.T) {
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-first", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "1000"}}},
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-second", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "2000"}}},
 			},
-			expected: int64Ptr(1000),
+			expected: new(int64(1000)),
 		},
 		{
 			name:            "no backend refs returns nil",
@@ -780,7 +777,7 @@ func TestExtractWriteTimeoutFromBackendRef(t *testing.T) {
 			services: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "30000"}}},
 			},
-			expected: int64Ptr(30000),
+			expected: new(int64(30000)),
 		},
 		{
 			name:      "supported backend ref without annotation",
@@ -802,7 +799,7 @@ func TestExtractWriteTimeoutFromBackendRef(t *testing.T) {
 			services: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-zero-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "0"}}},
 			},
-			expected: int64Ptr(0),
+			expected: new(int64(0)),
 		},
 		{
 			name:      "negative value returns nil",
@@ -871,7 +868,7 @@ func TestExtractWriteTimeoutFromBackendRef(t *testing.T) {
 			services: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "3000"}}},
 			},
-			expected: int64Ptr(3000),
+			expected: new(int64(3000)),
 		},
 	}
 
