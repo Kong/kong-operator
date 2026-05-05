@@ -287,6 +287,6 @@ func schemeWithAll() *runtime.Scheme {
 	_ = configurationv1.AddToScheme(s)
 	_ = configurationv1alpha1.AddToScheme(s)
 	_ = configurationv1beta1.AddToScheme(s)
-	_ = gatewayv1.AddToScheme(s)
+	_ = gatewayv1.Install(s)
 	return s
 }
