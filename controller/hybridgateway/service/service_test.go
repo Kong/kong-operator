@@ -57,7 +57,7 @@ func TestServiceForRule(t *testing.T) {
 	// Create test rule
 	rule := gwtypes.HTTPRouteRule{
 		Matches: []gatewayv1.HTTPRouteMatch{
-			{Path: &gatewayv1.HTTPPathMatch{Type: &[]gatewayv1.PathMatchType{gatewayv1.PathMatchPathPrefix}[0], Value: &[]string{"/test"}[0]}},
+			{Path: &gatewayv1.HTTPPathMatch{Type: &[]gatewayv1.PathMatchType{gatewayv1.PathMatchPathPrefix}[0], Value: new("/test")}},
 		},
 	}
 
@@ -426,7 +426,7 @@ func TestServiceForRule_ProtocolAnnotation(t *testing.T) {
 			rule := gwtypes.HTTPRouteRule{
 				BackendRefs: tt.backendRefs,
 				Matches: []gatewayv1.HTTPRouteMatch{
-					{Path: &gatewayv1.HTTPPathMatch{Type: &[]gatewayv1.PathMatchType{gatewayv1.PathMatchPathPrefix}[0], Value: &[]string{"/test"}[0]}},
+					{Path: &gatewayv1.HTTPPathMatch{Type: &[]gatewayv1.PathMatchType{gatewayv1.PathMatchPathPrefix}[0], Value: new("/test")}},
 				},
 			}
 
@@ -519,7 +519,7 @@ func TestServiceForRule_ConnectTimeoutAnnotation(t *testing.T) {
 			rule := gwtypes.HTTPRouteRule{
 				BackendRefs: tt.backendRefs,
 				Matches: []gatewayv1.HTTPRouteMatch{
-					{Path: &gatewayv1.HTTPPathMatch{Type: &[]gatewayv1.PathMatchType{gatewayv1.PathMatchPathPrefix}[0], Value: &[]string{"/test"}[0]}},
+					{Path: &gatewayv1.HTTPPathMatch{Type: &[]gatewayv1.PathMatchType{gatewayv1.PathMatchPathPrefix}[0], Value: new("/test")}},
 				},
 			}
 			var objects []client.Object
