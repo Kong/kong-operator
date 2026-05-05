@@ -116,7 +116,3 @@ type KonnectEventDataPlaneCertificateStatus struct {
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
-
-func init() {
-	SchemeBuilder.Register(&KonnectEventDataPlaneCertificate{}, &KonnectEventDataPlaneCertificateList{})
-}

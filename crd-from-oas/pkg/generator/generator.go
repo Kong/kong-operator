@@ -2013,6 +2013,7 @@ func (g *Generator) generateGroupVersionInfo(parsed *parser.ParsedSpec) (string,
 	for name := range parsed.RequestBodies {
 		entityNames = append(entityNames, parser.GetEntityNameFromType(name))
 	}
+	sort.Strings(entityNames)
 
 	var buf strings.Builder
 	data := struct {

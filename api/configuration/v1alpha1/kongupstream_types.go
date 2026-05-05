@@ -146,7 +146,3 @@ type KongUpstreamList struct {
 
 	Items []KongUpstream `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&KongUpstream{}, &KongUpstreamList{})
-}

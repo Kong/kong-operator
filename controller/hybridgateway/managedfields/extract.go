@@ -1,7 +1,6 @@
 package managedfields
 
 import (
-	"bytes"
 	"fmt"
 
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -35,7 +34,7 @@ func ExtractAsUnstructured(obj runtime.Object, fieldManager string, subresource 
 		return nil, nil
 	}
 	fieldset := &fieldpath.Set{}
-	err = fieldset.FromJSON(bytes.NewReader(fieldsEntry.FieldsV1.Raw))
+	err = fieldset.FromJSON(fieldsEntry.FieldsV1.GetRawReader())
 	if err != nil {
 		return nil, fmt.Errorf("error marshalling FieldsV1 to JSON: %w", err)
 	}
