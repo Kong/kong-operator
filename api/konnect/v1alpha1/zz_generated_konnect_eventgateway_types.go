@@ -81,7 +81,7 @@ type KonnectEventGatewayAPISpec struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^\d+\.\d+$`
-	MinRuntimeVersion MinRuntimeVersion `json:"min_runtime_version,omitempty"`
+	MinRuntimeVersion MinRuntimeVersion `json:"minRuntimeVersion,omitempty"`
 
 	// The name of the Gateway.
 	//

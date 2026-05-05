@@ -44,7 +44,7 @@ type KonnectEventDataPlaneCertificateSpec struct {
 	// GatewayRef is the reference to the parent Gateway object.
 	//
 	// +required
-	GatewayRef commonv1alpha1.ObjectRef `json:"gateway_ref,omitzero"`
+	GatewayRef commonv1alpha1.ObjectRef `json:"gatewayRef,omitzero"`
 
 	// Type indicates the source of the sensitive data.
 	// Can be 'inline' or 'secretRef'.

@@ -67,10 +67,10 @@ spec:
                       IdentityProviderRequestConfig represents a union type for config.
                       Only one of the fields should be set based on the Type.
                     properties:
-                      OIDC:
+                      oIDC:
                         description: OIDC configuration.
                         properties:
-                          claim_mappings:
+                          claimMappings:
                             description: |-
                               Defines the mappings between OpenID Connect (OIDC) claims and local claims
                               used by your application for
@@ -94,18 +94,18 @@ spec:
                                 maxLength: 253
                                 type: string
                             type: object
-                          client_id:
+                          clientID:
                             description: The client ID assigned to your application
                               by the identity provider.
                             maxLength: 253
                             minLength: 1
                             type: string
-                          client_secret:
+                          clientSecret:
                             description: The Client Secret assigned to your application
                               by the identity provider.
                             maxLength: 253
                             type: string
-                          issuer_url:
+                          issuerURL:
                             description: |-
                               The issuer URI of the identity provider.
                               This is the URL where the provider's metadata can be obtained.
@@ -124,19 +124,19 @@ spec:
                               type: string
                             type: array
                         required:
-                        - client_id
-                        - issuer_url
+                        - clientID
+                        - issuerURL
                         type: object
-                      SAML:
+                      sAML:
                         description: SAML configuration.
                         properties:
-                          idp_metadata_url:
+                          idpMetadataURL:
                             description: |-
                               The identity provider's metadata URL where the identity provider's metadata
                               can be obtained.
                             maxLength: 253
                             type: string
-                          idp_metadata_xml:
+                          idpMetadataXML:
                             description: |-
                               The identity provider's SAML metadata.
                               If the identity provider supports a metadata URL, you can use the
@@ -147,8 +147,8 @@ spec:
                       type:
                         description: Type designates the type of configuration.
                         enum:
-                        - OIDC
-                        - SAML
+                        - oIDC
+                        - sAML
                         minLength: 1
                         type: string
                     required:
@@ -163,7 +163,7 @@ spec:
                     - Enabled
                     - Disabled
                     type: string
-                  login_path:
+                  loginPath:
                     description: The path used for initiating login requests with
                       the identity provider.
                     maxLength: 253
@@ -176,7 +176,7 @@ spec:
                     maxLength: 253
                     type: string
                 type: object
-              portal_ref:
+              portalRef:
                 description: PortalRef is the reference to the parent Portal object.
                 properties:
                   konnectID:
@@ -232,7 +232,7 @@ spec:
                 - message: when type is konnectID, namespacedRef must not be set
                   rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
             required:
-            - portal_ref
+            - portalRef
             type: object
           status:
             description: IdentityProviderRequestStatus defines the observed state

@@ -79,7 +79,7 @@ spec:
                       Keys must be of length 1-63 characters, and cannot start with "kong",
                       "konnect", "mesh", "kic", or "_".
                     type: object
-                  min_runtime_version:
+                  minRuntimeVersion:
                     description: |-
                       The minimum runtime version supported by the API.
                       This is the lowest version of the data plane

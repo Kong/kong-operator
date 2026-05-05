@@ -15,8 +15,8 @@ func TestEventGatewayBackendClusterAuthenticationUnmarshalJSON_NilReceiver(t *te
 		payload []byte
 	}{
 		{name: "anonymous", payload: []byte("{\"type\":\"anonymous\",\"anonymous\":{}}")},
-		{name: "sasl_plain", payload: []byte("{\"type\":\"sasl_plain\",\"sasl_plain\":{}}")},
-		{name: "sasl_scram", payload: []byte("{\"type\":\"sasl_scram\",\"sasl_scram\":{}}")},
+		{name: "sasl_plain", payload: []byte("{\"type\":\"saslPlain\",\"saslPlain\":{}}")},
+		{name: "sasl_scram", payload: []byte("{\"type\":\"saslScram\",\"saslScram\":{}}")},
 	}
 
 	for _, tt := range tests {
@@ -62,7 +62,7 @@ func TestEventGatewayBackendClusterAPISpecUnmarshalJSON_DecodesUnionFields(t *te
 		},
 		{
 			name: "Authentication/sasl_plain",
-			payload: []byte("{\"authentication\":{\"type\":\"sasl_plain\",\"sasl_plain\":{}}}"),
+			payload: []byte("{\"authentication\":{\"type\":\"saslPlain\",\"saslPlain\":{}}}"),
 			assert: func(t *testing.T, target EventGatewayBackendClusterAPISpec) {
 				t.Helper()
 				if target.Authentication == nil {
@@ -78,7 +78,7 @@ func TestEventGatewayBackendClusterAPISpecUnmarshalJSON_DecodesUnionFields(t *te
 		},
 		{
 			name: "Authentication/sasl_scram",
-			payload: []byte("{\"authentication\":{\"type\":\"sasl_scram\",\"sasl_scram\":{}}}"),
+			payload: []byte("{\"authentication\":{\"type\":\"saslScram\",\"saslScram\":{}}}"),
 			assert: func(t *testing.T, target EventGatewayBackendClusterAPISpec) {
 				t.Helper()
 				if target.Authentication == nil {

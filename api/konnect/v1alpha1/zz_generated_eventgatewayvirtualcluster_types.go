@@ -44,7 +44,7 @@ type EventGatewayVirtualClusterSpec struct {
 	// GatewayRef is the reference to the parent Gateway object.
 	//
 	// +required
-	GatewayRef commonv1alpha1.ObjectRef `json:"gateway_ref,omitzero"`
+	GatewayRef commonv1alpha1.ObjectRef `json:"gatewayRef,omitzero"`
 
 	// APISpec defines the desired state of the resource's API spec fields.
 	//
@@ -68,7 +68,7 @@ type EventGatewayVirtualClusterAPISpec struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=enforce_on_gateway;passthrough
-	AclMode VirtualClusterACLMode `json:"acl_mode,omitempty"`
+	AclMode VirtualClusterACLMode `json:"aclMode,omitempty"`
 
 	// How to handle authentication from clients.
 	//
@@ -105,7 +105,7 @@ type EventGatewayVirtualClusterAPISpec struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=63
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
-	DNSLabel VirtualClusterDNSLabel `json:"dns_label,omitempty"`
+	DNSLabel VirtualClusterDNSLabel `json:"dnsLabel,omitempty"`
 
 	// Labels store metadata of an entity that can be used for filtering an entity
 	// list or for searching across entity types.

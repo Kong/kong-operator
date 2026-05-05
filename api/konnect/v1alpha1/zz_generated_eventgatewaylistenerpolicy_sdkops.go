@@ -127,9 +127,16 @@ func (s *EventGatewayListenerPolicyAPISpec) marshalSDKOpsPayload() (map[string]a
 		return nil, fmt.Errorf("failed to marshal EventGatewayListenerPolicyAPISpec: %w", err)
 	}
 
-	var payload map[string]any
-	if err := json.Unmarshal(data, &payload); err != nil {
+	var rawPayload any
+	if err := json.Unmarshal(data, &rawPayload); err != nil {
 		return nil, fmt.Errorf("failed to decode EventGatewayListenerPolicyAPISpec: %w", err)
+	}
+	// Convert camelCase CRD wire-format keys and discriminator values to
+	// snake_case for the Konnect SDK request types.
+	renamed := renameKeysToSDK(rawPayload)
+	payload, ok := renamed.(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("failed to convert EventGatewayListenerPolicyAPISpec SDK payload to map")
 	}
 	if err := normalizeEventGatewayListenerPolicySDKOpsBoolFields(payload); err != nil {
 		return nil, fmt.Errorf("failed to normalize EventGatewayListenerPolicyAPISpec SDK payload: %w", err)

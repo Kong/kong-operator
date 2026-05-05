@@ -1190,7 +1190,7 @@ func TestGenerateSchemaTypes_AddsKubebuilderTags(t *testing.T) {
 
 	assert.Contains(t, content, "// +optional")
 	assert.Contains(t, content, fmt.Sprintf("// +kubebuilder:validation:MaxLength=%d", defaultMaxLength))
-	assert.Contains(t, content, "ProviderType string `json:\"provider_type,omitempty\"`")
+	assert.Contains(t, content, "ProviderType string `json:\"providerType,omitempty\"`")
 }
 
 func TestBuildSchemaTypeFieldConfig_NestedInlineObject(t *testing.T) {
@@ -3700,4 +3700,46 @@ func TestGenerateSchemaTypes_NonScalarOneOfFallsBack(t *testing.T) {
 
 	assert.NotContains(t, content, `intstr.IntOrString`)
 	assert.NotContains(t, content, `XIntOrString`)
+}
+
+func TestJSONName(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		// Single segment stays lowercase.
+		{"enabled", "enabled"},
+		{"id", "id"},
+		// First segment always lowercase, even if an acronym.
+		{"rbac_enabled", "rbacEnabled"},
+		{"id_token", "idToken"},
+		{"dns_label", "dnsLabel"},
+		{"tls_server", "tlsServer"},
+		// Subsequent segments: acronym caps applied.
+		{"organization_id", "organizationID"},
+		{"default_api_visibility", "defaultAPIVisibility"},
+		{"parent_page_id_ref", "parentPageIDRef"},
+		{"default_application_auth_strategy_id_ref", "defaultApplicationAuthStrategyIDRef"},
+		{"event_gateway_listener_ref", "eventGatewayListenerRef"},
+		// Multi-word plain fields.
+		{"display_name", "displayName"},
+		{"bootstrap_servers", "bootstrapServers"},
+		{"min_runtime_version", "minRuntimeVersion"},
+		// Discriminator values.
+		{"sasl_plain", "saslPlain"},
+		{"sasl_scram", "saslScram"},
+		{"forward_to_virtual_cluster", "forwardToVirtualCluster"},
+		// Already-camelCase input is idempotent (no underscores).
+		{"displayName", "displayName"},
+		// Empty string.
+		{"", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := jsonName(tt.input)
+			if got != tt.want {
+				t.Errorf("jsonName(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
 }

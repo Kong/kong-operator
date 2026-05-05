@@ -44,7 +44,7 @@ type PortalTeamSpec struct {
 	// PortalRef is the reference to the parent Portal object.
 	//
 	// +required
-	PortalRef commonv1alpha1.ObjectRef `json:"portal_ref,omitzero"`
+	PortalRef commonv1alpha1.ObjectRef `json:"portalRef,omitzero"`
 
 	// APISpec defines the desired state of the resource's API spec fields.
 	//
@@ -59,7 +59,7 @@ type PortalTeamAPISpec struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	// +kubebuilder:default=Disabled
-	CanOwnApplications string `json:"can_own_applications,omitempty"`
+	CanOwnApplications string `json:"canOwnApplications,omitempty"`
 
 	//
 	//
