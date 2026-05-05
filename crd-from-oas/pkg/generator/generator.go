@@ -44,6 +44,9 @@ type Config struct {
 	// APIGroupPackageAlias is the import alias for the generated API types package
 	// (e.g. "xkonnectv1alpha1").
 	APIGroupPackageAlias string
+	// Categories are kubebuilder resource categories applied to root CRD
+	// types via +kubebuilder:resource:categories=...
+	Categories []string
 	// SkipGetForUIDEntities is the set of entity names for which getForUID
 	// generation should be skipped (e.g. because a hand-written implementation
 	// already exists in an ops_<entity>_manual.go file).
@@ -1067,6 +1070,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		"hasRootOneOf":          hasRootOneOf,
 		"objectRefTypeName":     func() string { return g.objectRefTypeName() },
 		"namespacedRefTypeName": func() string { return g.namespacedRefTypeName() },
+		"join":                  strings.Join,
 	}
 
 	tmpl := template.Must(template.New("crd").Funcs(funcMap).Parse(crdTypeTemplate))
@@ -1082,6 +1086,8 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 	if rc := g.config.ReconcilerConfig[entityName]; rc != nil {
 		hasRootReconciler = rc.GetIsRoot()
 	}
+
+	categories := g.config.Categories
 
 	// Detect whether the entity schema has property-level oneOf unions (which
 	// produce MarshalJSON/UnmarshalJSON methods that need encoding/json + fmt).
@@ -1107,6 +1113,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		HasOptionalSecretRef      bool
 		HasRootReconciler         bool
 		ImmediateParentDependency *parser.Dependency
+		Categories                []string
 	}{
 		EntityName:                entityName,
 		Schema:                    schema,
@@ -1118,6 +1125,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		HasOptionalSecretRef:      hasOptionalSecretRef,
 		HasRootReconciler:         hasRootReconciler,
 		ImmediateParentDependency: rootRefDependency(schema),
+		Categories:                categories,
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {

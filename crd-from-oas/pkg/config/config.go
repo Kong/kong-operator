@@ -24,6 +24,11 @@ type APIGroupVersionConfig struct {
 	// Defaults to true when not specified.
 	GenerateGroupVersionInfo *bool `yaml:"generateGroupVersionInfo,omitempty"`
 
+	// Categories are applied via +kubebuilder:resource:categories= to every root
+	// CRD type generated for this API group-version. Non-root types do not receive
+	// the marker.
+	Categories []string `yaml:"categories,omitempty"`
+
 	Types []*TypeConfig `yaml:"types"`
 }
 

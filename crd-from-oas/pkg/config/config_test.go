@@ -660,6 +660,49 @@ func TestAPIGroupVersionConfig_OpsConfig(t *testing.T) {
 	})
 }
 
+func TestAPIGroupVersionConfig_Categories(t *testing.T) {
+	t.Run("categories parsed from YAML", func(t *testing.T) {
+		yaml := `
+apiGroupVersions:
+  test/v1:
+    categories:
+      - konnect
+      - kong
+    types:
+      - path: /v1/gateways
+        reconciler: {}
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(yaml), 0o600))
+
+		cfg, err := LoadProjectConfig(path)
+		require.NoError(t, err)
+
+		agv := cfg.APIGroupVersions["test/v1"]
+		require.NotNil(t, agv)
+		assert.Equal(t, []string{"konnect", "kong"}, agv.Categories)
+	})
+
+	t.Run("categories absent when not set", func(t *testing.T) {
+		yaml := `
+apiGroupVersions:
+  test/v1:
+    types:
+      - path: /v1/gateways
+        reconciler: {}
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(yaml), 0o600))
+
+		cfg, err := LoadProjectConfig(path)
+		require.NoError(t, err)
+
+		agv := cfg.APIGroupVersions["test/v1"]
+		require.NotNil(t, agv)
+		assert.Empty(t, agv.Categories)
+	})
+}
+
 func TestReconcilerConfig_IsRootInference(t *testing.T) {
 	tests := []struct {
 		name       string

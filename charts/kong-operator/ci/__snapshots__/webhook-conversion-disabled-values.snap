@@ -10794,6 +10794,9 @@ metadata:
 spec:
   group: konnect.konghq.com
   names:
+    categories:
+    - konnect
+    - kong
     kind: EventGatewayBackendCluster
     listKind: EventGatewayBackendClusterList
     plural: eventgatewaybackendclusters
@@ -11215,6 +11218,9 @@ metadata:
 spec:
   group: konnect.konghq.com
   names:
+    categories:
+    - konnect
+    - kong
     kind: EventGatewayListenerPolicy
     listKind: EventGatewayListenerPolicyList
     plural: eventgatewaylistenerpolicies
@@ -11773,6 +11779,9 @@ metadata:
 spec:
   group: konnect.konghq.com
   names:
+    categories:
+    - konnect
+    - kong
     kind: EventGatewayListener
     listKind: EventGatewayListenerList
     plural: eventgatewaylisteners
@@ -12047,6 +12056,9 @@ metadata:
 spec:
   group: konnect.konghq.com
   names:
+    categories:
+    - konnect
+    - kong
     kind: EventGatewayVirtualCluster
     listKind: EventGatewayVirtualClusterList
     plural: eventgatewayvirtualclusters
@@ -22280,6 +22292,9 @@ metadata:
 spec:
   group: konnect.konghq.com
   names:
+    categories:
+    - konnect
+    - kong
     kind: IdentityProviderRequest
     listKind: IdentityProviderRequestList
     plural: identityproviderrequests
@@ -41337,6 +41352,9 @@ metadata:
 spec:
   group: konnect.konghq.com
   names:
+    categories:
+    - konnect
+    - kong
     kind: KonnectEventDataPlaneCertificate
     listKind: KonnectEventDataPlaneCertificateList
     plural: konnecteventdataplanecertificates
@@ -41603,6 +41621,9 @@ metadata:
 spec:
   group: konnect.konghq.com
   names:
+    categories:
+    - konnect
+    - kong
     kind: KonnectEventGateway
     listKind: KonnectEventGatewayList
     plural: konnecteventgateways
@@ -42799,6 +42820,9 @@ metadata:
 spec:
   group: konnect.konghq.com
   names:
+    categories:
+    - konnect
+    - kong
     kind: PortalPage
     listKind: PortalPageList
     plural: portalpages
@@ -43122,6 +43146,9 @@ metadata:
 spec:
   group: konnect.konghq.com
   names:
+    categories:
+    - konnect
+    - kong
     kind: Portal
     listKind: PortalList
     plural: portals
@@ -43465,6 +43492,9 @@ metadata:
 spec:
   group: konnect.konghq.com
   names:
+    categories:
+    - konnect
+    - kong
     kind: PortalTeam
     listKind: PortalTeamList
     plural: portalteams
