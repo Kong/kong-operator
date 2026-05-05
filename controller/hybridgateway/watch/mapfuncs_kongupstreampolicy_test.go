@@ -10,13 +10,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	index "github.com/kong/kong-operator/v2/internal/utils/index"
-	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 func TestMapHTTPRouteForKongUpstreamPolicy(t *testing.T) {
@@ -270,7 +270,7 @@ func TestMapHTTPRouteForKongUpstreamPolicy(t *testing.T) {
 			if len(tc.wantNames) > 0 {
 				names := make([]string, 0, len(result))
 				for _, r := range result {
-					names = append(names, r.NamespacedName.Name)
+					names = append(names, r.Name)
 				}
 				for _, want := range tc.wantNames {
 					require.Contains(t, names, want)
