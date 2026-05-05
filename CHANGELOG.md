@@ -56,6 +56,8 @@
   - `X-Kic-Konnect-Sync-Start-Timestamp` for the timestamp of starting the config sync round.
   - `X-Kic-Konnect-Sync-Round-Id` for the ID to mark the config sync round.
   [#4062](https://github.com/Kong/kong-operator/pull/4062)
+- Hybridgateway: support `konghq.com/upstream-policy` service annotation to set `KongUpstream` specs
+  [#4040](https://github.com/Kong/kong-operator/pull/4040)
 - Add `spec.konnect.configUploadConcurrency` to set the concurrency of uploading
   configuration to Konnect in the on-prem gateway integration wit Konnect and
   decrease the default concurrency to `4` to reduce the possibility of triggering
