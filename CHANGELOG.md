@@ -2,6 +2,8 @@
 
 ## Table of Contents
 
+- [v2.1.5](#v215)
+- [v2.1.4](#v214)
 - [v2.1.3](#v213)
 - [v2.1.2](#v212)
 - [v2.1.1](#v211)
@@ -56,6 +58,8 @@
   - `X-Kic-Konnect-Sync-Start-Timestamp` for the timestamp of starting the config sync round.
   - `X-Kic-Konnect-Sync-Round-Id` for the ID to mark the config sync round.
   [#4062](https://github.com/Kong/kong-operator/pull/4062)
+- Hybridgateway: support `konghq.com/upstream-policy` service annotation to set `KongUpstream` specs
+  [#4040](https://github.com/Kong/kong-operator/pull/4040)
 - Add `spec.konnect.configUploadConcurrency` to set the concurrency of uploading
   configuration to Konnect in the on-prem gateway integration wit Konnect and
   decrease the default concurrency to `4` to reduce the possibility of triggering
@@ -193,35 +197,50 @@
 
 ### Fixes
 
+## [v2.1.5]
+
+> Release date: 2026-04-24
+
+### Fixes
+
 - Fix Gateway reconcile storm on topologies with multiple listeners sharing the
   same port and HTTPRoutes with multiple `sectionName`-scoped `parentRefs`.
   The HTTPRoute watch on the Gateway controller now uses
   `GenerationChangedPredicate` to ignore status-only updates.
-  [#4005](https://github.com/Kong/kong-operator/pull/4005)
+  [#4005](https://github.com/Kong/kong-operator/pull/4005) [#4017](https://github.com/Kong/kong-operator/pull/4017)
+- Fix counting of route attached to a listener by taking into account hostname intersection between the listener and the route.
+  [#3490](https://github.com/Kong/kong-operator/pull/3490) [4020](https://github.com/Kong/kong-operator/pull/4020)
+
+## [v2.1.4]
+
+> Release date: 2026-04-23
+
+### Fixes
+
 - Fix a hot loop in the `KonnectExtension` reconciler when two
   `KonnectExtension`s share the same client-certificate `Secret`: the
   `KongDataPlaneClientCertificate` CR is now named after the `KonnectExtension`
   instead of the `Secret`, so each extension gets its own CR in its own Konnect
   ControlPlane and the reconciler no longer retries `Create` on every loop or
   falls back to Konnect's `dp-client-certificates` List API.
-  [#3961](https://github.com/Kong/kong-operator/pull/3961)
-- Fix `ResolvedRefs` status condition on `HTTPRoute` not being updated when a
-  referenced `KongPlugin` is deleted in self-managed ControlPlane mode.
-  [#3206](https://github.com/Kong/kong-operator/pull/3206)
-- Fix counting of route attached to a listener by taking into account hostname intersection between the listener and the route.
-  [#3490](https://github.com/Kong/kong-operator/pull/3490)
+  [#3961](https://github.com/Kong/kong-operator/pull/3961) [#3973](https://github.com/Kong/kong-operator/pull/3973)
 - Fix the hybrid gateway translator to set `protocols` in translated KongRoutes
   to `http,https` to avoid 426 errors from Konnect hybrid gateways.
-  [#3753](https://github.com/Kong/kong-operator/pull/3753)
+  [#3753](https://github.com/Kong/kong-operator/pull/3753) [3759](https://github.com/Kong/kong-operator/pull/3759)
 - Revert change in configuring SNIs in ingress-controller when running with local controlplane.
-  [#3761](https://github.com/Kong/kong-operator/pull/3761)
+  [#3761](https://github.com/Kong/kong-operator/pull/3761) [3764](https://github.com/Kong/kong-operator/pull/3764)
 - Fix `KongPlugin` admission validation when multiple Kong Gateway Admin API
   clients are discovered: probe plugin schema on every gateway (order-independent),
   validate only on gateways that expose the plugin, and fall back to the previous
   single-client behavior when none match. Partial probe failures on one gateway do
   not reject admission if another gateway exposes the plugin. Avoids false rejections
   when plugin bundles differ across gateways.
-  [#3754](https://github.com/Kong/kong-operator/pull/3754)
+  [#3754](https://github.com/Kong/kong-operator/pull/3754) [#3835](https://github.com/Kong/kong-operator/pull/3835)
+- Fix `ResolvedRefs` status condition on `HTTPRoute` not being updated when a
+  referenced `KongPlugin` is deleted in self-managed ControlPlane mode.
+  [#3206](https://github.com/Kong/kong-operator/pull/3206) [#3836](https://github.com/Kong/kong-operator/pull/3836)
+- Fix incorrect Konnect API used for target lookup
+  [#3910](https://github.com/Kong/kong-operator/pull/3910) [#3938](https://github.com/Kong/kong-operator/pull/3938)
 
 ## [v2.1.3]
 
@@ -1995,6 +2014,8 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.1.5]: https://github.com/Kong/kong-operator/compare/v2.1.4..v2.1.5
+[v2.1.4]: https://github.com/Kong/kong-operator/compare/v2.1.3..v2.1.4
 [v2.1.3]: https://github.com/Kong/kong-operator/compare/v2.1.2..v2.1.3
 [v2.1.2]: https://github.com/Kong/kong-operator/compare/v2.1.1..v2.1.2
 [v2.1.1]: https://github.com/Kong/kong-operator/compare/v2.1.0..v2.1.1

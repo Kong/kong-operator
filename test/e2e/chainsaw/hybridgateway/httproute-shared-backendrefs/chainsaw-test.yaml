@@ -72,6 +72,8 @@ spec:
 
     - name: echo_deployment_namespace
       value: ($namespace)
+    - name: echo_deployment_replicas
+      value: 1
 
   steps:
     # Step 1: Create the TLS secret that will be referenced by the Gateway TLS listener.

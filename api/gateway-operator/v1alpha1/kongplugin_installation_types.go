@@ -21,10 +21,6 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
-func init() {
-	SchemeBuilder.Register(&KongPluginInstallation{}, &KongPluginInstallationList{})
-}
-
 // KongPluginInstallation allows using a custom Kong Plugin distributed as a container image available in a registry.
 // Such a plugin can be associated with GatewayConfiguration or DataPlane to be available for particular Kong Gateway
 // and configured with KongPlugin CRD.

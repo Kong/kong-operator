@@ -1,0 +1,19 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ($http_route_name)
+  namespace: ($namespace)
+spec:
+  parentRefs:
+    - name: ($gateway_name)
+      namespace: ($gateway_namespace)
+  hostnames:
+    - ($fqdn)
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /echo
+      backendRefs:
+        - name: echo-with-policy
+          port: 80

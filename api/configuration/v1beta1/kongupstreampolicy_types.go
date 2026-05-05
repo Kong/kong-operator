@@ -11,10 +11,6 @@ const (
 	KongUpstreamPolicyAnnotationKey = "konghq.com/upstream-policy"
 )
 
-func init() {
-	SchemeBuilder.Register(&KongUpstreamPolicy{}, &KongUpstreamPolicyList{})
-}
-
 // KongUpstreamPolicy allows configuring algorithm that should be used for load balancing traffic between Kong
 // Upstream's Targets. It also allows configuring health checks for Kong Upstream's Targets.
 //
