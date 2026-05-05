@@ -260,8 +260,6 @@ func TestKongUpstreamBuilder_ErrorAccumulation(t *testing.T) {
 	assert.Equal(t, "test-spec", builder.upstream.Spec.Name)
 }
 
-func strPtr(v string) *string { return &v }
-
 func TestKongUpstreamBuilder_WithHostHeader(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -269,8 +267,8 @@ func TestKongUpstreamBuilder_WithHostHeader(t *testing.T) {
 		expected *string
 	}{
 		{name: "nil leaves field unset", input: nil, expected: nil},
-		{name: "hostname sets field", input: strPtr("my-service.example.com"), expected: strPtr("my-service.example.com")},
-		{name: "IP sets field", input: strPtr("10.0.0.1"), expected: strPtr("10.0.0.1")},
+		{name: "hostname sets field", input: new("my-service.example.com"), expected: new("my-service.example.com")},
+		{name: "IP sets field", input: new("10.0.0.1"), expected: new("10.0.0.1")},
 	}
 
 	for _, tt := range tests {

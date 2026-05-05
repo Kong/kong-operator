@@ -1024,8 +1024,6 @@ func TestGenericObjectTypes(t *testing.T) {
 	}
 }
 
-func strPtr(v string) *string { return &v }
-
 func TestExtractHostHeader(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -1055,12 +1053,12 @@ func TestExtractHostHeader(t *testing.T) {
 		{
 			name:        "annotation present with valid hostname",
 			annotations: map[string]string{"konghq.com/host-header": "my-service.example.com"},
-			want:        strPtr("my-service.example.com"),
+			want:        new("my-service.example.com"),
 		},
 		{
 			name:        "annotation present with IP address",
 			annotations: map[string]string{"konghq.com/host-header": "10.0.0.1"},
-			want:        strPtr("10.0.0.1"),
+			want:        new("10.0.0.1"),
 		},
 	}
 

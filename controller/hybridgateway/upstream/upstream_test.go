@@ -631,8 +631,6 @@ func TestUpstreamForRule_HostHeaderFirstWins(t *testing.T) {
 	assert.Equal(t, "first.example.com", *upstream.Spec.HostHeader)
 }
 
-func strPtr(v string) *string { return &v }
-
 func TestResolveHostHeaderFromBackendRefs(t *testing.T) {
 	ctx := context.Background()
 	logger := logr.Discard()
@@ -656,7 +654,7 @@ func TestResolveHostHeaderFromBackendRefs(t *testing.T) {
 			backendServices: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-header", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/host-header": "api.example.com"}}},
 			},
-			expected: strPtr("api.example.com"),
+			expected: new("api.example.com"),
 		},
 		{
 			name:      "service without annotation returns nil",
@@ -680,7 +678,7 @@ func TestResolveHostHeaderFromBackendRefs(t *testing.T) {
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-first", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/host-header": "first.example.com"}}},
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-second", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/host-header": "second.example.com"}}},
 			},
-			expected: strPtr("first.example.com"),
+			expected: new("first.example.com"),
 		},
 		{
 			name:            "no backend refs returns nil",
@@ -723,7 +721,7 @@ func TestResolveHostHeaderFromBackendRefs(t *testing.T) {
 			backendServices: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/host-header": "other.example.com"}}},
 			},
-			expected: strPtr("other.example.com"),
+			expected: new("other.example.com"),
 		},
 	}
 
@@ -769,7 +767,7 @@ func TestExtractHostHeaderFromBackendRef(t *testing.T) {
 			services: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-header", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/host-header": "api.example.com"}}},
 			},
-			expected: strPtr("api.example.com"),
+			expected: new("api.example.com"),
 		},
 		{
 			name:      "supported backend ref without annotation",
@@ -835,7 +833,7 @@ func TestExtractHostHeaderFromBackendRef(t *testing.T) {
 			services: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/host-header": "other.example.com"}}},
 			},
-			expected: strPtr("other.example.com"),
+			expected: new("other.example.com"),
 		},
 	}
 
