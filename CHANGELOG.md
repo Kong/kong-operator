@@ -2010,6 +2010,8 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.1.5]: https://github.com/Kong/kong-operator/compare/v2.1.4..v2.1.5
+[v2.1.4]: https://github.com/Kong/kong-operator/compare/v2.1.3..v2.1.4
 [v2.1.3]: https://github.com/Kong/kong-operator/compare/v2.1.2..v2.1.3
 [v2.1.2]: https://github.com/Kong/kong-operator/compare/v2.1.1..v2.1.2
 [v2.1.1]: https://github.com/Kong/kong-operator/compare/v2.1.0..v2.1.1
