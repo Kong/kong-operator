@@ -113,7 +113,3 @@ type KongVaultList struct {
 
 	Items []KongVault `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&KongVault{}, &KongVaultList{})
-}

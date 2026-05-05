@@ -151,10 +151,6 @@ type {{.EntityName}}Status struct {
 	// +optional
 	ObservedGeneration int64 ` + "`" + `json:"observedGeneration,omitempty"` + "`" + `
 }
-
-func init() {
-	SchemeBuilder.Register(&{{.EntityName}}{}, &{{.EntityName}}List{})
-}
 `
 
 const crdFuncsTemplate = sharedGeneratedFilePreamble + `
@@ -1216,6 +1212,45 @@ func get{{.Entity}}ForUID(
 			}
 		}
 	}
+{{- else if .MatchFields}}
+
+{{- if .GetForUIDFullyWrapped}}
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.GetForUIDWrappedType}}{
+		{{- range .Parents}}
+		{{.SDKFieldName}}: {{.VarName}},
+		{{- end}}
+	})
+{{- else if .Parents}}
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
+		{{.ParentIDField}}: {{(index .Parents 0).VarName}},
+	})
+{{- else}}
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{})
+{{- end}}
+	if err != nil {
+		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
+	}
+	if resp == nil || resp.{{.ListResponseField}} == nil {
+		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
+	}
+
+	for _, entry := range resp.{{.ListResponseField}}.Data {
+		{{- range .MatchFields}}
+		if !matchStringField(obj.{{.ObjectField}}, entry.{{.ResponseField}}) {
+			continue
+		}
+		{{- end}}
+		switch id := any(entry.GetID()).(type) {
+		case string:
+			if id != "" {
+				return id, nil
+			}
+		case *string:
+			if id != nil && *id != "" {
+				return *id, nil
+			}
+		}
+	}
 {{- else if .HasLabels}}
 
 	// TODO: pass a Filter to {{.ListSDKMethod}} (e.g. by name/labels) so we
@@ -1449,19 +1484,25 @@ const groupVersionInfoTemplate = sharedGeneratedFilePreamble + `
 package {{.APIVersion}}
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/controller-runtime/pkg/scheme"
+)
+
+const (
+	// GroupName is the group name used in this package.
+	GroupName = "{{.APIGroup}}"
 )
 
 var (
-	// GroupVersion is group version used to register these objects.
-	GroupVersion = schema.GroupVersion{Group: "{{.APIGroup}}", Version: "{{.APIVersion}}"}
+	// GroupVersion is a convenience var for generated clientsets.
+	GroupVersion = schema.GroupVersion{Group: GroupName, Version: "{{.APIVersion}}"}
 
 	// SchemeGroupVersion is a convenience var for generated clientsets.
 	SchemeGroupVersion = GroupVersion
 
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme.
-	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}
+	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
 
 	// AddToScheme adds the types in this group-version to the given scheme.
 	AddToScheme = SchemeBuilder.AddToScheme
@@ -1469,7 +1510,19 @@ var (
 
 // Resource takes an unqualified resource and returns a Group qualified GroupResource.
 func Resource(resource string) schema.GroupResource {
-	return SchemeGroupVersion.WithResource(resource).GroupResource()
+	return GroupVersion.WithResource(resource).GroupResource()
+}
+
+func addKnownTypes(scheme *runtime.Scheme) error {
+	scheme.AddKnownTypes(GroupVersion,
+{{- range .EntityNames}}
+		&{{.}}{},
+		&{{.}}List{},
+{{- end}}
+	)
+
+	metav1.AddToGroupVersion(scheme, GroupVersion)
+	return nil
 }
 `
 

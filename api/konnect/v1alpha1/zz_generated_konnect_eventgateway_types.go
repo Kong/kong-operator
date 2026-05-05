@@ -113,7 +113,3 @@ type KonnectEventGatewayStatus struct {
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
-
-func init() {
-	SchemeBuilder.Register(&KonnectEventGateway{}, &KonnectEventGatewayList{})
-}

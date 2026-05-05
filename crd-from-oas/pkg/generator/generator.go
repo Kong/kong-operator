@@ -503,7 +503,8 @@ func (g *Generator) generateReconcilerEntityFiles(reconcilerEntities []string, p
 }
 
 // generateSharedFiles generates files shared across all entities:
-// groupversion_info.go, doc.go, common_types.go, and schema_types.go.
+// groupversion_info.go, doc.go, common_types.go, reconciler condition constants,
+// and schema_types.go.
 func (g *Generator) generateSharedFiles(parsed *parser.ParsedSpec, referencedSchemas map[string]bool, schemaTypeFieldConfig *config.Config) ([]GeneratedFile, error) {
 	var files []GeneratedFile
 
@@ -531,6 +532,14 @@ func (g *Generator) generateSharedFiles(parsed *parser.ParsedSpec, referencedSch
 		Name:    "common_types.go",
 		Content: commonContent,
 	})
+
+	reconcilerConditionsFile, err := g.generateReconcilerConditions(parsed)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate reconciler condition constants: %w", err)
+	}
+	if reconcilerConditionsFile != nil {
+		files = append(files, *reconcilerConditionsFile)
+	}
 
 	if len(referencedSchemas) > 0 {
 		files = append(files, GeneratedFile{
@@ -600,10 +609,90 @@ func (g *Generator) collectNamedRefsFromProperty(prop *parser.Property, refs map
 	}
 }
 
+func collectUnionMemberDiscriminators(parsed *parser.ParsedSpec) map[string]map[string]struct{} {
+	unionMemberDiscriminators := make(map[string]map[string]struct{})
+
+	for _, schema := range parsed.RequestBodies {
+		collectSchemaUnionMemberDiscriminators(schema, unionMemberDiscriminators)
+	}
+	for _, schema := range parsed.Schemas {
+		collectSchemaUnionMemberDiscriminators(schema, unionMemberDiscriminators)
+	}
+
+	return unionMemberDiscriminators
+}
+
+func collectSchemaUnionMemberDiscriminators(schema *parser.Schema, unionMemberDiscriminators map[string]map[string]struct{}) {
+	if schema == nil {
+		return
+	}
+
+	addUnionMemberDiscriminators(schema.Discriminator, schema.OneOf, unionMemberDiscriminators)
+	addUnionMemberDiscriminators(schema.Discriminator, schema.AnyOf, unionMemberDiscriminators)
+
+	for _, prop := range schema.Properties {
+		collectPropertyUnionMemberDiscriminators(prop, unionMemberDiscriminators)
+	}
+	collectPropertyUnionMemberDiscriminators(schema.Items, unionMemberDiscriminators)
+	collectPropertyUnionMemberDiscriminators(schema.AdditionalProperties, unionMemberDiscriminators)
+}
+
+func collectPropertyUnionMemberDiscriminators(prop *parser.Property, unionMemberDiscriminators map[string]map[string]struct{}) {
+	if prop == nil {
+		return
+	}
+
+	addUnionMemberDiscriminators(prop.Discriminator, prop.OneOf, unionMemberDiscriminators)
+	addUnionMemberDiscriminators(prop.Discriminator, prop.AnyOf, unionMemberDiscriminators)
+
+	for _, nested := range prop.Properties {
+		collectPropertyUnionMemberDiscriminators(nested, unionMemberDiscriminators)
+	}
+	collectPropertyUnionMemberDiscriminators(prop.Items, unionMemberDiscriminators)
+	collectPropertyUnionMemberDiscriminators(prop.AdditionalProperties, unionMemberDiscriminators)
+	for _, variant := range prop.OneOf {
+		collectPropertyUnionMemberDiscriminators(variant, unionMemberDiscriminators)
+	}
+	for _, variant := range prop.AnyOf {
+		collectPropertyUnionMemberDiscriminators(variant, unionMemberDiscriminators)
+	}
+}
+
+func addUnionMemberDiscriminators(discriminator string, variants []*parser.Property, unionMemberDiscriminators map[string]map[string]struct{}) {
+	if discriminator == "" {
+		return
+	}
+
+	for _, variant := range variants {
+		if variant == nil || variant.RefName == "" {
+			continue
+		}
+		if _, ok := unionMemberDiscriminators[variant.RefName]; !ok {
+			unionMemberDiscriminators[variant.RefName] = make(map[string]struct{})
+		}
+		unionMemberDiscriminators[variant.RefName][discriminator] = struct{}{}
+	}
+}
+
+func shouldSkipUnionMemberDiscriminator(refName string, prop *parser.Property, unionMemberDiscriminators map[string]map[string]struct{}) bool {
+	if prop == nil || prop.Name == "" {
+		return false
+	}
+
+	discriminators, ok := unionMemberDiscriminators[refName]
+	if !ok {
+		return false
+	}
+
+	_, ok = discriminators[prop.Name]
+	return ok
+}
+
 // generateSchemaTypes generates Go type definitions for referenced schemas.
 func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.ParsedSpec, schemaTypeFieldConfig *config.Config) string {
 	var buf strings.Builder
 	fmt.Fprintf(&buf, "%s\n\npackage %s\n\n", sharedGeneratedFilePreamble, g.config.APIVersion)
+	unionMemberDiscriminators := collectUnionMemberDiscriminators(parsed)
 
 	// Sort keys to ensure deterministic output order
 	refNames := make([]string, 0, len(refs))
@@ -655,7 +744,7 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 				buf.WriteString(comment)
 				fmt.Fprintf(&buf, "type %s struct {\n", goName)
 				for _, prop := range schema.Properties {
-					if skipProperty(prop) {
+					if skipProperty(prop) || shouldSkipUnionMemberDiscriminator(refName, prop, unionMemberDiscriminators) {
 						continue
 					}
 					g.writeSchemaTypeField(&buf, prop, goName, schemaTypeFieldConfig)
@@ -990,7 +1079,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 
 	hasRootReconciler := false
 	if rc := g.config.ReconcilerConfig[entityName]; rc != nil {
-		hasRootReconciler = rc.IsRoot
+		hasRootReconciler = rc.GetIsRoot()
 	}
 
 	// Detect whether the entity schema has property-level oneOf unions (which
@@ -1118,7 +1207,7 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 	entityName := parser.GetEntityNameFromType(name)
 	isReconcilerRoot := false
 	if rc := g.config.ReconcilerConfig[entityName]; rc != nil {
-		isReconcilerRoot = rc.IsRoot
+		isReconcilerRoot = rc.GetIsRoot()
 	}
 	rootRefDependency := rootRefDependency(schema)
 
@@ -1194,6 +1283,22 @@ func rootRefAccessorEntityName(dep *parser.Dependency) string {
 		return dep.AccessorEntityName
 	}
 	return dep.EntityName
+}
+
+// refConditionEntityName picks the prefix used for generated ref-condition
+// constants from a parent dependency. It prefers the accessor alias (e.g.
+// "EventGateway" instead of the raw spec entity "Gateway"), but falls back to
+// the entity name when the entity already embeds the accessor as a prefix or
+// suffix (e.g. EntityName "EventGatewayListener" with accessor "Listener" stays
+// as "EventGatewayListener").
+func refConditionEntityName(dep *parser.Dependency) string {
+	if dep.AccessorEntityName == "" || dep.AccessorEntityName == dep.EntityName {
+		return dep.EntityName
+	}
+	if strings.HasSuffix(dep.EntityName, dep.AccessorEntityName) || strings.HasPrefix(dep.EntityName, dep.AccessorEntityName) {
+		return dep.EntityName
+	}
+	return dep.AccessorEntityName
 }
 
 // EntityFilePrefix converts a PascalCase entity name to a lowercase file name
@@ -1908,6 +2013,7 @@ func (g *Generator) generateGroupVersionInfo(parsed *parser.ParsedSpec) (string,
 	for name := range parsed.RequestBodies {
 		entityNames = append(entityNames, parser.GetEntityNameFromType(name))
 	}
+	sort.Strings(entityNames)
 
 	var buf strings.Builder
 	data := struct {

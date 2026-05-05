@@ -252,7 +252,3 @@ type AIGatewayStatus struct {
 // -----------------------------------------------------------------------------
 // AIGateway API - Setup
 // -----------------------------------------------------------------------------
-
-func init() {
-	SchemeBuilder.Register(&AIGateway{}, &AIGatewayList{})
-}

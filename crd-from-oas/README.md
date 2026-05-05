@@ -40,6 +40,22 @@ Generated ops infer that a controller-runtime client is needed when
 read cluster state while building SDK requests, set `ops.requireClient: true`
 under the type configuration.
 
+For reconciler-enabled child entities, `crd-from-oas` also generates shared
+`<ParentAccessor>Ref*` condition constants in the target API package. The
+prefix follows the immediate parent accessor alias derived from the path (for
+example `EventGatewayRef*` for `/v1/event-gateways/{gatewayId}/...` children).
+
+The prefix derivation prefers the accessor alias over the raw OAS entity name
+(e.g. accessor `EventGateway` is chosen over entity `Gateway`), but keeps the
+entity name when it already embeds the accessor as a prefix or suffix
+(e.g. entity `EventGatewayListener` with accessor `Listener` stays
+`EventGatewayListener`). If a future entity name combines an unrelated prefix
+with an accessor that should drive the condition (e.g. entity `KongPortal`
+with accessor `Portal`), the heuristic will pick the entity name and emit
+`KongPortalRef*` rather than `PortalRef*`. When that conflicts with an
+existing convention, prefer to align the OAS accessor alias instead of layering
+overrides here.
+
 ### TODOs
 
 - Generated conversion functions unit tests have to check the actual conversion logic, not just the presence of the functions and that not error has been returned.

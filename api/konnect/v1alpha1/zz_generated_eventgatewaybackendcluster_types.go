@@ -144,10 +144,6 @@ type EventGatewayBackendClusterStatus struct {
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
 
-func init() {
-	SchemeBuilder.Register(&EventGatewayBackendCluster{}, &EventGatewayBackendClusterList{})
-}
-
 // EventGatewayBackendClusterAuthentication represents a union type for authentication.
 // Only one of the fields should be set based on the Type.
 //

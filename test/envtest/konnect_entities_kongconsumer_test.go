@@ -466,6 +466,8 @@ func TestKongConsumer(t *testing.T) {
 		watchFor(t, ctx, w, apiwatch.Modified, conditionProgrammedIsSetToTrueAndCPRefIsKonnectNamespacedRef(created, id),
 			fmt.Sprintf("Consumer didn't get Programmed status condition or didn't get the correct %s Konnect ID assigned", id))
 
+		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
+
 		t.Log("Deleting KonnectGatewayControlPlane")
 		require.NoError(t, clientNamespaced.Delete(ctx, cp))
 
@@ -489,6 +491,13 @@ func TestKongConsumer(t *testing.T) {
 					ID: new(id2),
 				},
 			}, nil)
+
+		t.Log("Setting up SDK expectation on KongConsumerGroups listing after KonnectGatewayControlPlane reattachment")
+		sdk.ConsumersSDK.EXPECT().
+			ListConsumerGroupsForConsumer(mock.Anything, mock.MatchedBy(func(req sdkkonnectops.ListConsumerGroupsForConsumerRequest) bool {
+				return req.ConsumerID == id
+			})).
+			Return(&sdkkonnectops.ListConsumerGroupsForConsumerResponse{}, nil)
 
 		cp = deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth,
 			func(obj client.Object) {

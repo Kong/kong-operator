@@ -21,8 +21,7 @@ apiGroupVersions:
           update:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdateGatewayRequest
           delete: {}
-        reconciler:
-          isRoot: true
+        reconciler: {}
       - path: /v1/event-gateways/{gatewayId}/data-plane-certificates
         name: KonnectEventDataPlaneCertificate
         optionalSecretReference: true
@@ -31,16 +30,20 @@ apiGroupVersions:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayDataPlaneCertificatesSDK
             fieldName: EventGatewayDataPlaneCertificates
           requireClient: true
-          # SDK list response items lack GetLabels(); getForUID is hand-written in
-          # ops_konnecteventdataplanecertificate_manual.go using spec comparison.
-          skipGetForUID: true
+          getForUID:
+            matchFields:
+              - objectField: Spec.APISpec.Certificate
+                responseField: Certificate
+              - objectField: Spec.APISpec.Name
+                responseField: Name
+              - objectField: Spec.APISpec.Description
+                responseField: Description
           create:
             path: github.com/Kong/sdk-konnect-go/models/components.CreateEventGatewayDataPlaneCertificateRequest
           update:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdateEventGatewayDataPlaneCertificateRequest
           delete: {}
         reconciler:
-          isRoot: false
           parentEntityType: KonnectEventGateway
       - path: /v1/event-gateways/{gatewayId}/listeners
         name: EventGatewayListener
@@ -54,7 +57,6 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdateEventGatewayListenerRequest
           delete: {}
         reconciler:
-          isRoot: false
           parentEntityType: KonnectEventGateway
       - path: /v1/event-gateways/{gatewayId}/listeners/{eventGatewayListenerId}/policies
         name: EventGatewayListenerPolicy
@@ -78,7 +80,6 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/operations.UpdateEventGatewayListenerPolicyRequest
           delete: {}
         reconciler:
-          isRoot: false
           parentEntityType: EventGatewayListener
           # Speakeasy SDK uses "ListenerID" (not "EventGatewayListenerID") for the
           # eventGatewayListenerId path param when it appears as a parent (not entity ID).
@@ -109,7 +110,6 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdateBackendClusterRequest
           delete: {}
         reconciler:
-          isRoot: false
           parentEntityType: KonnectEventGateway
       - path: /v1/event-gateways/{gatewayId}/virtual-clusters
         name: EventGatewayVirtualCluster
@@ -123,7 +123,6 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdateVirtualClusterRequest
           delete: {}
         reconciler:
-          isRoot: false
           parentEntityType: KonnectEventGateway
 
       # Portal APIs
@@ -141,23 +140,21 @@ apiGroupVersions:
           update:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdatePortal
           delete: {}
-        reconciler:
-          isRoot: true
+        reconciler: {}
       - path: /v3/portals/{portalId}/identity-providers
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.PortalAuthSettingsSDK
             fieldName: PortalAuthSettings
           # The SDK list endpoint uses positional args and response items lack
-          # UID labels, so getForUID cannot be generated automatically.
+          # labels/tags, and there is no deterministic field-match strategy yet.
           skipGetForUID: true
           create:
             path: github.com/Kong/sdk-konnect-go/models/components.CreateIdentityProvider
           update:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdateIdentityProvider
           delete: {}
-        reconciler:
-          isRoot: false
+        reconciler: {}
       - path: /v3/portals/{portalId}/teams
         ops:
           sdk:
@@ -167,8 +164,7 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/components.PortalCreateTeamRequest
           update:
             path: github.com/Kong/sdk-konnect-go/models/components.PortalUpdateTeamRequest
-        reconciler:
-          isRoot: false
+        reconciler: {}
       - path: /v3/portals/{portalId}/pages
         cel:
           parent_page_id:
@@ -184,5 +180,4 @@ apiGroupVersions:
           update:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdatePortalPageRequest
           delete: {}
-        reconciler:
-          isRoot: false
+        reconciler: {}

@@ -23,10 +23,6 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 )
 
-func init() {
-	SchemeBuilder.Register(&GatewayConfiguration{}, &GatewayConfigurationList{})
-}
-
 // GatewayConfiguration is the Schema for the gatewayconfigurations API.
 //
 // +genclient

@@ -82,6 +82,9 @@ type TypeConfig struct {
 	// OpsUseUIDTagFilter enables generated getForUID code to pass the object's
 	// Kubernetes UID tag as a list query filter when the API supports it.
 	OpsUseUIDTagFilter bool `yaml:"-"`
+	// OpsGetForUID holds declarative matching rules for generated getForUID logic
+	// when labels, UID tags, or spec.name are insufficient.
+	OpsGetForUID *GetForUIDConfig `yaml:"-"`
 	// OpsSDK holds SDK interface and field name for SDK factory generation.
 	OpsSDK *OpSDKConfig `yaml:"-"`
 	// OptionalSecretReference enables generation of a union type field on the
@@ -100,7 +103,10 @@ type TypeConfig struct {
 type ReconcilerConfig struct {
 	// IsRoot indicates this is a root entity that directly references
 	// KonnectAPIAuthConfiguration. Child entities inherit auth from their parent.
-	IsRoot bool `yaml:"isRoot"`
+	// When nil (not set in YAML), it is inferred from the OpenAPI path: true when
+	// no path parameters are present (e.g. /v1/gateways), false otherwise
+	// (e.g. /v1/gateways/{gatewayId}/listeners).
+	IsRoot *bool `yaml:"isRoot,omitempty"`
 	// ParentEntityType overrides the generated parent entity type name used for
 	// child reconciler watch/index generation. When unset, the immediate parent
 	// dependency name is inferred from the OpenAPI path parameter.
@@ -112,6 +118,12 @@ type ReconcilerConfig struct {
 	// from the one derived from the raw path-parameter name (e.g. "ListenerID"
 	// for the path param "eventGatewayListenerId").
 	ParentSDKFields []string `yaml:"parentSDKFields,omitempty"`
+}
+
+// GetIsRoot returns the resolved value of IsRoot, treating nil (not explicitly
+// set and inference not yet applied) as false.
+func (rc *ReconcilerConfig) GetIsRoot() bool {
+	return rc.IsRoot != nil && *rc.IsRoot
 }
 
 // OpConfig holds configuration for a single SDK operation.
@@ -132,6 +144,24 @@ type OpSDKConfig struct {
 	FieldName string `yaml:"fieldName"`
 }
 
+// GetForUIDConfig configures generated getForUID lookup logic for an entity.
+type GetForUIDConfig struct {
+	// MatchFields lists object/response field pairs that must all match for a
+	// list response item to be considered the same entity.
+	MatchFields []GetForUIDMatchField `yaml:"matchFields,omitempty"`
+}
+
+// GetForUIDMatchField configures a single equality check in generated
+// getForUID logic.
+type GetForUIDMatchField struct {
+	// ObjectField is the Go field path relative to obj, e.g.
+	// "Spec.APISpec.Certificate".
+	ObjectField string `yaml:"objectField"`
+	// ResponseField is the Go field path relative to the list entry, e.g.
+	// "Certificate" or "GetName()".
+	ResponseField string `yaml:"responseField"`
+}
+
 type typeOpsYAML struct {
 	// RequireClient indicates that generated ops for this entity need a
 	// controller-runtime client to fetch cluster data such as Secrets.
@@ -143,6 +173,9 @@ type typeOpsYAML struct {
 	// UseUIDTagFilter enables generated getForUID code to pass the object's
 	// Kubernetes UID tag as a list query filter when the API supports it.
 	UseUIDTagFilter bool `yaml:"useUIDTagFilter,omitempty"`
+	// GetForUID holds custom field-matching configuration for generated
+	// getForUID logic.
+	GetForUID *GetForUIDConfig `yaml:"getForUID,omitempty"`
 	// SDK holds the SDK interface and field name for SDK factory generation.
 	SDK *OpSDKConfig `yaml:"sdk,omitempty"`
 	// Operations maps operation names (e.g. "create", "update") to SDK type configs.
@@ -179,6 +212,7 @@ func (tc *TypeConfig) UnmarshalYAML(value *yaml.Node) error {
 		tc.OpsRequireClient = raw.Ops.RequireClient
 		tc.OpsSkipGetForUID = raw.Ops.SkipGetForUID
 		tc.OpsUseUIDTagFilter = raw.Ops.UseUIDTagFilter
+		tc.OpsGetForUID = raw.Ops.GetForUID
 		tc.OpsSDK = raw.Ops.SDK
 	}
 
@@ -197,6 +231,9 @@ type EntityOpsConfig struct {
 	// UseUIDTagFilter enables generated getForUID code to pass the object's
 	// Kubernetes UID tag as a list query filter when the API supports it.
 	UseUIDTagFilter bool
+	// GetForUID holds custom field-matching configuration for generated
+	// getForUID logic.
+	GetForUID *GetForUIDConfig
 	// SDK holds SDK interface and field name for SDK factory generation.
 	SDK *OpSDKConfig
 }
@@ -292,6 +329,7 @@ func (c *APIGroupVersionConfig) OpsConfig(pathToEntityName map[string]string) ma
 			RequireClient:   requireClient,
 			SkipGetForUID:   tc.OpsSkipGetForUID,
 			UseUIDTagFilter: tc.OpsUseUIDTagFilter,
+			GetForUID:       tc.OpsGetForUID,
 			SDK:             tc.OpsSDK,
 		}
 	}
@@ -334,6 +372,22 @@ func (c *APIGroupVersionConfig) validate() error {
 }
 
 func (tc *TypeConfig) validate() error {
+	if tc.OpsSkipGetForUID && tc.OpsGetForUID != nil {
+		return fmt.Errorf("ops.skipGetForUID and ops.getForUID are mutually exclusive")
+	}
+	if tc.OpsGetForUID != nil {
+		if len(tc.OpsGetForUID.MatchFields) == 0 {
+			return fmt.Errorf("ops.getForUID.matchFields is required when ops.getForUID is set")
+		}
+		for i, field := range tc.OpsGetForUID.MatchFields {
+			if field.ObjectField == "" {
+				return fmt.Errorf("ops.getForUID.matchFields[%d].objectField is required", i)
+			}
+			if field.ResponseField == "" {
+				return fmt.Errorf("ops.getForUID.matchFields[%d].responseField is required", i)
+			}
+		}
+	}
 	return nil
 }
 

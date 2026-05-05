@@ -270,7 +270,7 @@ rows:
     default: ""
   - flag: '`--zap-log-level`'
     type: '`string`'
-    description: "Zap Level to configure the verbosity of logging. Can be one of 'debug', 'info', 'error', 'panic'or any integer value > 0 which corresponds to custom debug levels of increasing verbosity"
+    description: "Zap Level to configure the verbosity of logging. Can be one of 'debug', 'info', 'error', 'panic' or any integer value > 0 which corresponds to custom debug levels of increasing verbosity"
     default: ""
   - flag: '`--zap-stacktrace-level`'
     type: '`string`'
