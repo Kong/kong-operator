@@ -88,12 +88,12 @@ func TestKongServiceBuilder_WithSpecName(t *testing.T) {
 		{
 			name:     "with spec name",
 			specName: "test-service-spec",
-			expected: &[]string{"test-service-spec"}[0],
+			expected: new("test-service-spec"),
 		},
 		{
 			name:     "empty spec name",
 			specName: "",
-			expected: &[]string{""}[0],
+			expected: new(""),
 		},
 	}
 
@@ -239,6 +239,30 @@ func TestKongServiceBuilder_WithProtocol(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				assert.Equal(t, tt.expectedProtocol, service.Spec.Protocol)
+			}
+		})
+	}
+}
+
+func TestKongServiceBuilder_WithPath(t *testing.T) {
+	tests := []struct {
+		name     string
+		path     string
+		expected *string
+	}{
+		{name: "empty path leaves field unset", path: "", expected: nil},
+		{name: "non-empty path sets field", path: "/api/v1", expected: new("/api/v1")},
+		{name: "root path sets field", path: "/", expected: new("/")},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			service, err := NewKongService().WithPath(tt.path).Build()
+			require.NoError(t, err)
+			if tt.expected == nil {
+				assert.Nil(t, service.Spec.Path)
+			} else {
+				require.NotNil(t, service.Spec.Path)
+				assert.Equal(t, *tt.expected, *service.Spec.Path)
 			}
 		})
 	}

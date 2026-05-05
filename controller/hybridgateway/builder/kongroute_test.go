@@ -286,12 +286,12 @@ func TestKongRouteBuilder_WithSpecName(t *testing.T) {
 		{
 			name:     "with spec name",
 			specName: "test-route-spec",
-			expected: &[]string{"test-route-spec"}[0],
+			expected: new("test-route-spec"),
 		},
 		{
 			name:     "empty spec name",
 			specName: "",
-			expected: &[]string{""}[0],
+			expected: new(""),
 		},
 	}
 

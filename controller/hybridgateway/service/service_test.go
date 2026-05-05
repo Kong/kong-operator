@@ -57,7 +57,7 @@ func TestServiceForRule(t *testing.T) {
 	// Create test rule
 	rule := gwtypes.HTTPRouteRule{
 		Matches: []gatewayv1.HTTPRouteMatch{
-			{Path: &gatewayv1.HTTPPathMatch{Type: &[]gatewayv1.PathMatchType{gatewayv1.PathMatchPathPrefix}[0], Value: &[]string{"/test"}[0]}},
+			{Path: &gatewayv1.HTTPPathMatch{Type: &[]gatewayv1.PathMatchType{gatewayv1.PathMatchPathPrefix}[0], Value: new("/test")}},
 		},
 	}
 
@@ -426,7 +426,7 @@ func TestServiceForRule_ProtocolAnnotation(t *testing.T) {
 			rule := gwtypes.HTTPRouteRule{
 				BackendRefs: tt.backendRefs,
 				Matches: []gatewayv1.HTTPRouteMatch{
-					{Path: &gatewayv1.HTTPPathMatch{Type: &[]gatewayv1.PathMatchType{gatewayv1.PathMatchPathPrefix}[0], Value: &[]string{"/test"}[0]}},
+					{Path: &gatewayv1.HTTPPathMatch{Type: &[]gatewayv1.PathMatchType{gatewayv1.PathMatchPathPrefix}[0], Value: new("/test")}},
 				},
 			}
 
@@ -445,6 +445,414 @@ func TestServiceForRule_ProtocolAnnotation(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, service)
 			assert.Equal(t, tt.expectedProtocol, service.Spec.Protocol)
+		})
+	}
+}
+
+func TestServiceForRule_PathAnnotation(t *testing.T) {
+	ctx := context.Background()
+	logger := zap.New()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	cp := &commonv1alpha1.ControlPlaneRef{
+		Type:                 commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{Name: "test-cp"},
+	}
+	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
+	upstreamName := "test-upstream"
+	port80 := gatewayv1.PortNumber(80)
+
+	tests := []struct {
+		name            string
+		backendRefs     []gatewayv1.HTTPBackendRef
+		backendServices []corev1.Service
+		expected        *string
+	}{
+		{
+			name: "service with path annotation",
+			backendRefs: []gatewayv1.HTTPBackendRef{
+				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "my-svc", Port: &port80}}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "my-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/path": "/api/v1"}}},
+			},
+			expected: new("/api/v1"),
+		},
+		{
+			name: "service without annotation leaves field unset",
+			backendRefs: []gatewayv1.HTTPBackendRef{
+				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "plain-svc", Port: &port80}}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "plain-svc", Namespace: "test-namespace"}},
+			},
+			expected: nil,
+		},
+		{
+			name: "first backend ref with annotation wins",
+			backendRefs: []gatewayv1.HTTPBackendRef{
+				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-a", Port: &port80}}},
+				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-b", Port: &port80}}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/path": "/first"}}},
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-b", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/path": "/second"}}},
+			},
+			expected: new("/first"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			httpRoute := &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-route", Namespace: "test-namespace"},
+				Spec: gatewayv1.HTTPRouteSpec{
+					CommonRouteSpec: gatewayv1.CommonRouteSpec{ParentRefs: []gatewayv1.ParentReference{{Name: "test-gateway"}}},
+				},
+			}
+			rule := gwtypes.HTTPRouteRule{
+				BackendRefs: tt.backendRefs,
+				Matches: []gatewayv1.HTTPRouteMatch{
+					{Path: &gatewayv1.HTTPPathMatch{Type: &[]gatewayv1.PathMatchType{gatewayv1.PathMatchPathPrefix}[0], Value: new("/test")}},
+				},
+			}
+			var objects []client.Object
+			for i := range tt.backendServices {
+				objects = append(objects, &tt.backendServices[i])
+			}
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
+
+			service, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, upstreamName)
+			require.NoError(t, err)
+			require.NotNil(t, service)
+			if tt.expected == nil {
+				assert.Nil(t, service.Spec.Path)
+			} else {
+				require.NotNil(t, service.Spec.Path)
+				assert.Equal(t, *tt.expected, *service.Spec.Path)
+			}
+		})
+	}
+}
+
+func TestResolvePathFromHTTPRouteBackendRefs(t *testing.T) {
+	ctx := context.Background()
+	logger := zap.New()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	port80 := gatewayv1.PortNumber(80)
+
+	tests := []struct {
+		name            string
+		backendRefs     []gatewayv1.HTTPBackendRef
+		backendServices []corev1.Service
+		expectedPath    string
+	}{
+		{
+			name: "service with path annotation returns path",
+			backendRefs: []gatewayv1.HTTPBackendRef{
+				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-with-path", Port: &port80}}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-path", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/path": "/api/v1"}}},
+			},
+			expectedPath: "/api/v1",
+		},
+		{
+			name: "service without path annotation returns empty",
+			backendRefs: []gatewayv1.HTTPBackendRef{
+				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-no-path", Port: &port80}}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-no-path", Namespace: "test-namespace"}},
+			},
+			expectedPath: "",
+		},
+		{
+			name: "first backend ref with annotation wins",
+			backendRefs: []gatewayv1.HTTPBackendRef{
+				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-first", Port: &port80}}},
+				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-second", Port: &port80}}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-first", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/path": "/first"}}},
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-second", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/path": "/second"}}},
+			},
+			expectedPath: "/first",
+		},
+		{
+			name:            "no backend refs returns empty",
+			backendRefs:     []gatewayv1.HTTPBackendRef{},
+			backendServices: []corev1.Service{},
+			expectedPath:    "",
+		},
+		{
+			name: "service does not exist returns empty",
+			backendRefs: []gatewayv1.HTTPBackendRef{
+				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "nonexistent-svc", Port: &port80}}},
+			},
+			backendServices: []corev1.Service{},
+			expectedPath:    "",
+		},
+		{
+			name: "unsupported backend ref returns empty",
+			backendRefs: []gatewayv1.HTTPBackendRef{
+				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{
+					Name:  "some-ref",
+					Port:  &port80,
+					Group: &[]gatewayv1.Group{gatewayv1.Group("example.com")}[0],
+					Kind:  &[]gatewayv1.Kind{gatewayv1.Kind("NotService")}[0],
+				}}},
+			},
+			backendServices: []corev1.Service{},
+			expectedPath:    "",
+		},
+		{
+			name: "cross-namespace backend ref",
+			backendRefs: []gatewayv1.HTTPBackendRef{
+				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{
+					Name:      "svc-other-ns",
+					Port:      &port80,
+					Namespace: &[]gatewayv1.Namespace{"other-namespace"}[0],
+				}}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/path": "/other"}}},
+			},
+			expectedPath: "/other",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			httpRoute := &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-route", Namespace: "test-namespace"},
+			}
+			rule := gwtypes.HTTPRouteRule{BackendRefs: tt.backendRefs}
+
+			var objects []client.Object
+			for i := range tt.backendServices {
+				objects = append(objects, &tt.backendServices[i])
+			}
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
+
+			path := resolvePathFromHTTPRouteBackendRefs(ctx, cl, httpRoute, rule, logger)
+			assert.Equal(t, tt.expectedPath, path)
+		})
+	}
+}
+
+func TestResolvePathFromTLSRouteBackendRefs(t *testing.T) {
+	ctx := context.Background()
+	logger := zap.New()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	tests := []struct {
+		name            string
+		backendRefs     []gwtypes.BackendRef
+		backendServices []corev1.Service
+		expectedPath    string
+	}{
+		{
+			name: "service with path annotation returns path",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-with-path"}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-path", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/path": "/tls-path"}}},
+			},
+			expectedPath: "/tls-path",
+		},
+		{
+			name: "service without path annotation returns empty",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-no-path"}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-no-path", Namespace: "test-namespace"}},
+			},
+			expectedPath: "",
+		},
+		{
+			name: "first backend ref with annotation wins",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-first"}},
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-second"}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-first", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/path": "/first"}}},
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-second", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/path": "/second"}}},
+			},
+			expectedPath: "/first",
+		},
+		{
+			name:            "no backend refs returns empty",
+			backendRefs:     []gwtypes.BackendRef{},
+			backendServices: []corev1.Service{},
+			expectedPath:    "",
+		},
+		{
+			name: "service does not exist returns empty",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "nonexistent-svc"}},
+			},
+			backendServices: []corev1.Service{},
+			expectedPath:    "",
+		},
+		{
+			name: "unsupported backend ref returns empty",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{
+					Name:  "some-ref",
+					Group: &[]gatewayv1.Group{gatewayv1.Group("example.com")}[0],
+					Kind:  &[]gatewayv1.Kind{gatewayv1.Kind("NotService")}[0],
+				}},
+			},
+			backendServices: []corev1.Service{},
+			expectedPath:    "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tlsRoute := &gwtypes.TLSRoute{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-tls-route", Namespace: "test-namespace"},
+			}
+			rule := gwtypes.TLSRouteRule{BackendRefs: tt.backendRefs}
+
+			var objects []client.Object
+			for i := range tt.backendServices {
+				objects = append(objects, &tt.backendServices[i])
+			}
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
+
+			path := resolvePathFromTLSRouteBackendRefs(ctx, cl, tlsRoute, rule, logger)
+			assert.Equal(t, tt.expectedPath, path)
+		})
+	}
+}
+
+func TestExtractPathFromBackendRef(t *testing.T) {
+	ctx := context.Background()
+	logger := zap.New()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	port80 := gatewayv1.PortNumber(80)
+
+	tests := []struct {
+		name         string
+		namespace    string
+		backendRef   gwtypes.BackendRef
+		services     []corev1.Service
+		expectedPath string
+		expectedOk   bool
+	}{
+		{
+			name:      "supported backend ref with path annotation",
+			namespace: "test-namespace",
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-with-path", Port: &port80},
+			},
+			services: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-path", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/path": "/extracted"}}},
+			},
+			expectedPath: "/extracted",
+			expectedOk:   true,
+		},
+		{
+			name:      "supported backend ref without path annotation",
+			namespace: "test-namespace",
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-no-path", Port: &port80},
+			},
+			services:   []corev1.Service{{ObjectMeta: metav1.ObjectMeta{Name: "svc-no-path", Namespace: "test-namespace"}}},
+			expectedOk: false,
+		},
+		{
+			name:      "unsupported backend ref group",
+			namespace: "test-namespace",
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gatewayv1.BackendObjectReference{
+					Name:  "some-ref",
+					Port:  &port80,
+					Group: &[]gatewayv1.Group{gatewayv1.Group("example.com")}[0],
+				},
+			},
+			expectedOk: false,
+		},
+		{
+			name:      "unsupported backend ref kind",
+			namespace: "test-namespace",
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gatewayv1.BackendObjectReference{
+					Name: "some-ref",
+					Port: &port80,
+					Kind: &[]gatewayv1.Kind{gatewayv1.Kind("NotService")}[0],
+				},
+			},
+			expectedOk: false,
+		},
+		{
+			name:      "backend service does not exist",
+			namespace: "test-namespace",
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "nonexistent-svc", Port: &port80},
+			},
+			expectedOk: false,
+		},
+		{
+			name:      "cross-namespace backend ref",
+			namespace: "test-namespace",
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gatewayv1.BackendObjectReference{
+					Name:      "svc-other-ns",
+					Port:      &port80,
+					Namespace: &[]gatewayv1.Namespace{"other-namespace"}[0],
+				},
+			},
+			services: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/path": "/other-ns"}}},
+			},
+			expectedPath: "/other-ns",
+			expectedOk:   true,
+		},
+		{
+			name:      "empty path annotation value",
+			namespace: "test-namespace",
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-empty-path", Port: &port80},
+			},
+			services: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-empty-path", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/path": ""}}},
+			},
+			expectedOk: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var objects []client.Object
+			for i := range tt.services {
+				objects = append(objects, &tt.services[i])
+			}
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
+
+			path, ok := extractPathFromBackendRef(ctx, cl, logger, tt.namespace, tt.backendRef)
+			assert.Equal(t, tt.expectedOk, ok)
+			if tt.expectedOk {
+				assert.Equal(t, tt.expectedPath, path)
+			} else {
+				assert.Empty(t, path)
+			}
 		})
 	}
 }
