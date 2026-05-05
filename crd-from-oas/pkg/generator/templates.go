@@ -972,7 +972,9 @@ func update{{.Entity}}(
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "{{.EntityName}}", Op: UpdateOp}
 	}
 {{- end}}
+{{- if not .UpdateOmitsEntityID}}
 	id := obj.GetKonnectStatus().GetKonnectID()
+{{- end}}
 	{{- if .NeedsClient}}
 	req, err := obj.To{{.UpdateReqType}}(ctx, cl)
 	{{- else}}
@@ -1004,6 +1006,9 @@ func update{{.Entity}}(
 		{{.EntityIDField}}: id,
 		{{.UpdateBodyField}}: {{if .UpdateReqBodyPointer}}req{{else}}*req{{end}},
 	})
+{{- else if .UpdateOmitsEntityID}}
+
+	_, err = sdk.{{.UpdateSDKMethod}}(ctx, {{(index .Parents 0).VarName}}, {{if .UpdateReqBodyPointer}}req{{else}}*req{{end}})
 {{- else}}
 
 	_, err = sdk.{{.UpdateSDKMethod}}(ctx, id, {{if .UpdateReqBodyPointer}}req{{else}}*req{{end}})
@@ -1019,8 +1024,9 @@ func update{{.Entity}}(
 
 // opsDeleteFuncTemplate renders a single delete<Entity> function body.
 // It is concatenated after the file header and any create/update functions.
-// Single-parent SDK delete methods use positional arguments.
 // Multi-parent SDK delete methods use a fully-wrapped request struct.
+// Parent-scoped singletons omit the entity ID (not in path).
+// Single-parent SDK delete methods use positional arguments.
 // Optional query parameters (e.g. force) are passed as nil.
 const opsDeleteFuncTemplate = `
 func delete{{.Entity}}(
@@ -1034,7 +1040,9 @@ func delete{{.Entity}}(
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "{{.EntityName}}", Op: DeleteOp}
 	}
 {{- end}}
+{{- if not .DeleteOmitsEntityID}}
 	id := obj.GetKonnectStatus().GetKonnectID()
+{{- end}}
 {{- if .DeleteFullyWrapped}}
 
 	_, err := sdk.{{.DeleteSDKMethod}}(ctx, sdkkonnectops.{{.DeleteWrappedType}}{
@@ -1043,6 +1051,9 @@ func delete{{.Entity}}(
 		{{- end}}
 		{{.DeleteEntityIDField}}: id,
 	})
+{{- else if .DeleteOmitsEntityID}}
+
+	_, err := sdk.{{.DeleteSDKMethod}}(ctx, {{(index .Parents 0).VarName}}{{range .DeleteNilArgs}}, nil{{end}})
 {{- else if .Parents}}
 
 	_, err := sdk.{{.DeleteSDKMethod}}(ctx, {{(index .Parents 0).VarName}}, id{{range .DeleteNilArgs}}, nil{{end}})

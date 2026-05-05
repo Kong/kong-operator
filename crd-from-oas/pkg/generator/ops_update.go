@@ -36,6 +36,12 @@ type opsUpdateFuncData struct {
 	// code sets parent IDs and the entity ID on the returned request object and
 	// passes it directly to the SDK, instead of constructing a manual struct literal.
 	UpdateFullyWrapped bool
+	// UpdateOmitsEntityID is true for parent-scoped singleton resources whose
+	// PATCH path contains only parent path params and no entity-specific ID (e.g.
+	// PATCH /portals/{portalId}/email-config). The SDK method takes the parent ID
+	// directly instead of a separate entity ID, so neither the id local variable
+	// nor an entity ID argument should be emitted.
+	UpdateOmitsEntityID bool
 	// ParentIDField is used only for single-parent wrapped updates (UpdateWrapped &&
 	// !UpdateFullyWrapped). e.g. "PortalID".
 	ParentIDField string
@@ -92,6 +98,10 @@ func (g *Generator) generateOpsUpdateFuncBody(
 	// their update.path is a fully-wrapped operations.XxxRequest that already
 	// contains all path-param fields. We set them directly on the returned struct.
 	updateFullyWrapped := len(schema.UpdatePathParams) >= 3
+	// updateOmitsEntityID is true for parent-scoped singletons: the PATCH path
+	// contains only parent path params (no entity-specific ID). The SDK method
+	// takes the parent ID positionally; no entity ID is emitted.
+	updateOmitsEntityID := !wrapped && len(parents) > 0
 
 	var parentIDField, entityIDField, updateBodyField string
 	if wrapped {
@@ -121,6 +131,7 @@ func (g *Generator) generateOpsUpdateFuncBody(
 		UpdateBodyField:      updateBodyField,
 		UpdateReqBodyPointer: schema.UpdateReqBodyPointer,
 		NeedsClient:          needsClient,
+		UpdateOmitsEntityID:  updateOmitsEntityID,
 	}, nil
 }
 

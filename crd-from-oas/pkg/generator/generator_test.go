@@ -3116,6 +3116,119 @@ func TestGenerateEntityOpsFile_ManualGetForUIDStillEmitsDispatcherInfo(t *testin
 	assert.Equal(t, "GetEventGatewayDataPlaneCertificatesSDK", res.GetForUIDInfo.SDKGetter)
 }
 
+// TestGenerateEntityOpsFile_GetForUIDWithNoMatchStrategy verifies that
+// sdkkonnectops is NOT imported when the getForUID function falls into the
+// fallback else-branch (no labels, no name, no match fields, no UID tag
+// filter). The else-branch emits no SDK list call and therefore does not
+// reference the operations package.
+func TestGenerateEntityOpsFile_GetForUIDWithNoMatchStrategy(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"PortalEmailConfig": {IsRoot: ptr(false)},
+		},
+	})
+
+	// Schema has a list operation but no labels/name/matchFields on the response,
+	// so the generator falls into the else-branch of opsGetForUIDFuncTemplate.
+	// No update or delete ops are configured so the only source of an sdkkonnectops
+	// import would be the getForUID list call — which is absent in the else-branch.
+	schema := &parser.Schema{
+		OperationID:        "create-portal-email-config",
+		Tags:               []string{"Portal Email Config"},
+		SuccessResponseRef: "PortalEmailConfig",
+		Dependencies: []*parser.Dependency{
+			{ParamName: "portalId", EntityName: "Portal"},
+		},
+		ListOperationID: "list-portal-email-configs",
+		ListTags:        []string{"Portal Email Config"},
+		// No Properties with labels or name → HasLabels=false, HasName=false.
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreatePortalEmailConfig"},
+		},
+		SDK: &config.OpSDKConfig{
+			Interface: "github.com/Kong/sdk-konnect-go.PortalEmailsSDK",
+			FieldName: "PortalEmails",
+		},
+	}
+
+	res, err := g.generateEntityOpsFile("PortalEmailConfig", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, res.File)
+	require.NotNil(t, res.GetForUIDInfo)
+
+	// The else-branch emits a TODO comment and early return — no SDK list call.
+	assert.Contains(t, res.File.Content, "EntityWithMatchingUIDNotFoundError{Entity: obj}")
+	assert.NotContains(t, res.File.Content, "sdk.ListPortalEmailConfigs")
+
+	// sdkkonnectops must NOT be imported: getForUID's else-branch emits no SDK
+	// list call and therefore never references the operations package.
+	assert.NotContains(t, res.File.Content, `sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"`)
+}
+
+// TestGenerateEntityOpsFile_ParentScopedSingleton verifies correct code
+// generation for resources like PortalEmailConfig whose PATCH and DELETE paths
+// contain only the parent ID (no entity-specific ID). The generated update call
+// must use the parent ID, and the generated delete call must omit the entity ID.
+func TestGenerateEntityOpsFile_ParentScopedSingleton(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"PortalEmailConfig": {IsRoot: ptr(false)},
+		},
+	})
+
+	// PATCH /portals/{portalId}/email-config — only parent ID, no entity ID.
+	// DELETE /portals/{portalId}/email-config — only parent ID, no entity ID.
+	schema := &parser.Schema{
+		OperationID:        "create-portal-email-config",
+		Tags:               []string{"Portal Email Config"},
+		SuccessResponseRef: "PortalEmailConfig",
+		Dependencies: []*parser.Dependency{
+			{ParamName: "portalId", EntityName: "Portal"},
+		},
+		UpdateOperationID: "update-portal-email-config",
+		UpdateTags:        []string{"Portal Email Config"},
+		UpdatePathParams:  []string{"portalId"}, // singleton: only parent ID
+		DeleteOperationID: "delete-portal-email-config",
+		DeleteTags:        []string{"Portal Email Config"},
+		DeletePathParams:  []string{"portalId"}, // singleton: only parent ID
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.PostPortalEmailConfig"},
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.PatchPortalEmailConfig"},
+			"delete": {},
+		},
+		SDK: &config.OpSDKConfig{
+			Interface: "github.com/Kong/sdk-konnect-go.PortalEmailsSDK",
+			FieldName: "PortalEmails",
+		},
+	}
+
+	res, err := g.generateEntityOpsFile("PortalEmailConfig", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, res.File)
+
+	content := res.File.Content
+
+	// Update: parent ID passed, no entity ID local variable or argument.
+	assert.Contains(t, content, "sdk.UpdatePortalEmailConfig(ctx, parentID,")
+	assert.NotContains(t, content, "sdk.UpdatePortalEmailConfig(ctx, id,")
+
+	// Delete: parent ID only, no entity ID.
+	assert.Contains(t, content, "sdk.DeletePortalEmailConfig(ctx, parentID)")
+	assert.NotContains(t, content, "sdk.DeletePortalEmailConfig(ctx, parentID, id)")
+
+	// No entity ID variable in the generated delete or update functions.
+	// (id would be declared but unused, causing a compile error.)
+	assert.NotContains(t, content, "id := obj.GetKonnectStatus().GetKonnectID()")
+}
+
 func TestGenerateOpsUpdate_RootEntity(t *testing.T) {
 	g := NewGenerator(Config{
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
