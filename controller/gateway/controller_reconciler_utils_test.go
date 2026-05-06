@@ -1902,9 +1902,10 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
 								{
-									Name:  gwtypes.ObjectName("test-gw"),
-									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
-									Kind:  new(gwtypes.Kind("Gateway")),
+									Name:      gwtypes.ObjectName("test-gw"),
+									Namespace: (*gwtypes.Namespace)(new("test-namespace")),
+									Group:     (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:      new(gwtypes.Kind("Gateway")),
 								},
 							},
 						},
@@ -2013,9 +2014,10 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
 								{
-									Name:  gwtypes.ObjectName("test-gw"),
-									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
-									Kind:  new(gwtypes.Kind("Gateway")),
+									Name:      gwtypes.ObjectName("test-gw"),
+									Namespace: (*gwtypes.Namespace)(new("test-namespace")),
+									Group:     (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:      new(gwtypes.Kind("Gateway")),
 								},
 							},
 						},
@@ -2030,9 +2032,10 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
 								{
-									Name:  gwtypes.ObjectName("test-gw"),
-									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
-									Kind:  new(gwtypes.Kind("Gateway")),
+									Name:      gwtypes.ObjectName("test-gw"),
+									Namespace: (*gwtypes.Namespace)(new("test-namespace")),
+									Group:     (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:      new(gwtypes.Kind("Gateway")),
 								},
 							},
 						},
@@ -2209,9 +2212,10 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
 								{
-									Name:  gwtypes.ObjectName("test-gw"),
-									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
-									Kind:  new(gwtypes.Kind("Gateway")),
+									Name:      gwtypes.ObjectName("test-gw"),
+									Namespace: (*gwtypes.Namespace)(new("test-namespace")),
+									Group:     (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:      new(gwtypes.Kind("Gateway")),
 								},
 							},
 						},
@@ -2303,9 +2307,10 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
 								{
-									Name:  gwtypes.ObjectName("test-gw"),
-									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
-									Kind:  new(gwtypes.Kind("Gateway")),
+									Name:      gwtypes.ObjectName("test-gw"),
+									Namespace: (*gwtypes.Namespace)(new("test-namespace")),
+									Group:     (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:      new(gwtypes.Kind("Gateway")),
 								},
 							},
 						},
@@ -2350,9 +2355,10 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
 								{
-									Name:  gwtypes.ObjectName("test-gw"),
-									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
-									Kind:  new(gwtypes.Kind("Gateway")),
+									Name:      gwtypes.ObjectName("test-gw"),
+									Namespace: (*gwtypes.Namespace)(new("test-namespace")),
+									Group:     (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:      new(gwtypes.Kind("Gateway")),
 								},
 							},
 						},
@@ -2683,9 +2689,10 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
 								{
-									Name:  gwtypes.ObjectName("test-gw"),
-									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
-									Kind:  new(gwtypes.Kind("Gateway")),
+									Name:      gwtypes.ObjectName("test-gw"),
+									Namespace: (*gwtypes.Namespace)(new("test-namespace")),
+									Group:     (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:      new(gwtypes.Kind("Gateway")),
 								},
 							},
 						},
@@ -2694,6 +2701,176 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 			},
 			ExpectedRoutes: []int32{1},
 			ExpectedError:  []error{nil},
+		},
+		{
+			Name: "Multiple ParentRefs: parentRef pointing to a different Gateway with same listener sectionName should not be counted",
+			// Gateway A — the one we reconcile.
+			// Has two HTTP listeners: "l1" and "l2".
+			Gateway: gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: gatewayv1.GroupVersion.String(),
+					Kind:       "Gateway",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gw-a",
+					Namespace: "default",
+				},
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
+						{
+							Name:     gatewayv1.SectionName("l1"),
+							Protocol: gwtypes.HTTPProtocolType,
+							Port:     80,
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Namespaces: &gwtypes.RouteNamespaces{
+									From: new(gwtypes.NamespacesFromSame),
+								},
+							},
+						},
+						{
+							Name:     gatewayv1.SectionName("l2"),
+							Protocol: gwtypes.HTTPProtocolType,
+							Port:     81,
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Namespaces: &gwtypes.RouteNamespaces{
+									From: new(gwtypes.NamespacesFromSame),
+								},
+							},
+						},
+					},
+				},
+			},
+			Objects: []client.Object{
+				&gwtypes.Gateway{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: gatewayv1.GroupVersion.String(),
+						Kind:       "Gateway",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gw-b",
+						Namespace: "default",
+					},
+					Spec: gwtypes.GatewaySpec{
+						Listeners: []gwtypes.Listener{
+							{
+								Name:     gatewayv1.SectionName("l2"),
+								Protocol: gwtypes.HTTPProtocolType,
+								Port:     82,
+							},
+						},
+					},
+				},
+
+				// Multi-parent HTTPRoute:
+				//   - parentRef[0] → gw-a, sectionName=l1
+				//   - parentRef[1] → gw-b, sectionName=l2  (NOT gw-a)
+				// So this route should contribute exactly 1 to gw-a.l1 and 0 to gw-a.l2.
+				&gwtypes.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "multi-parent-route",
+						Namespace: "default",
+					},
+					Spec: gwtypes.HTTPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Group:       (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:        new(gwtypes.Kind("Gateway")),
+									Name:        gatewayv1.ObjectName("gw-a"),
+									SectionName: new(gatewayv1.SectionName("l1")),
+								},
+								{
+									Group:       (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:        new(gwtypes.Kind("Gateway")),
+									Name:        gatewayv1.ObjectName("gw-b"),
+									SectionName: new(gatewayv1.SectionName("l2")),
+								},
+							},
+						},
+					},
+				},
+			},
+			ExpectedRoutes: []int32{1, 0},
+			ExpectedError:  []error{nil, nil},
+		},
+		{
+			Name: "Multiple ParentRefs: parentRef pointing to a different Gateway with same name but different namespace should not be counted",
+			Gateway: gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: gatewayv1.GroupVersion.String(),
+					Kind:       "Gateway",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gw-1",
+					Namespace: "ns-a",
+				},
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
+						{
+							Name:     gatewayv1.SectionName("http"),
+							Protocol: gwtypes.HTTPProtocolType,
+							Port:     80,
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Namespaces: &gwtypes.RouteNamespaces{
+									From: new(gwtypes.NamespacesFromAll),
+								},
+							},
+						},
+					},
+				},
+			},
+			Objects: []client.Object{
+				// gw-1 in namespace "ns-b" — a *different* Gateway that happens to share the name.
+				&gwtypes.Gateway{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: gatewayv1.GroupVersion.String(),
+						Kind:       "Gateway",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gw-1",
+						Namespace: "ns-b",
+					},
+					Spec: gwtypes.GatewaySpec{
+						Listeners: []gwtypes.Listener{
+							{
+								Name:     gatewayv1.SectionName("http-1"),
+								Protocol: gwtypes.HTTPProtocolType,
+								Port:     80,
+							},
+						},
+					},
+				},
+
+				// Route lives in ns-b, parentRef has no explicit Namespace, so per Gateway API
+				// spec it defaults to the Route's namespace (ns-b). It targets ns-b/gw-1, NOT ns-a/gw-1.
+				&gwtypes.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "route-targeting-ns-b-gw",
+						Namespace: "ns-b",
+					},
+					Spec: gwtypes.HTTPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:  new(gwtypes.Kind("Gateway")),
+									Name:  gatewayv1.ObjectName("gw-1"),
+									// Namespace intentionally omitted — defaults to "ns-b".
+								},
+								{
+									Group:       (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:        new(gwtypes.Kind("Gateway")),
+									Name:        gatewayv1.ObjectName("gw-1"),
+									Namespace:   (*gwtypes.Namespace)(new("ns-a")),
+									SectionName: new(gatewayv1.SectionName("http-1")),
+								},
+							},
+						},
+					},
+				},
+			},
+			ExpectedRoutes: []int32{0, 0},
+			ExpectedError:  []error{nil, nil},
 		},
 	}
 

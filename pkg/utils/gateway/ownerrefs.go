@@ -160,12 +160,19 @@ func ListKonnectExtensionsForGateway(
 // parentRefMatchGateway is a helper function that checks if a ParentReference matches a given Gateway.
 // It compares the Group, Kind, Name, and optionally SectionName and Port of the ParentReference
 // with the corresponding fields of the Gateway and its Listeners.
-func parentRefMatchGateway(parentRef gwtypes.ParentReference, gateway *gwtypes.Gateway) bool {
+func parentRefMatchGateway(routeNamespace string, parentRef gwtypes.ParentReference, gateway *gwtypes.Gateway) bool {
 	gwGVK := gateway.GroupVersionKind()
 	if parentRef.Group != nil && string(*parentRef.Group) != gwGVK.Group {
 		return false
 	}
 	if parentRef.Kind != nil && string(*parentRef.Kind) != gwGVK.Kind {
+		return false
+	}
+	parentRefNamespace := routeNamespace
+	if parentRef.Namespace != nil {
+		parentRefNamespace = string(*parentRef.Namespace)
+	}
+	if parentRefNamespace != gateway.Namespace {
 		return false
 	}
 	if string(parentRef.Name) != gateway.Name {
@@ -174,7 +181,7 @@ func parentRefMatchGateway(parentRef gwtypes.ParentReference, gateway *gwtypes.G
 
 	if parentRef.SectionName != nil {
 		if !lo.ContainsBy(gateway.Spec.Listeners, func(listener gwtypes.Listener) bool {
-			if listener.Name != *parentRef.SectionName {
+			if string(parentRef.Name) != gateway.Name || listener.Name != *parentRef.SectionName {
 				return false
 			}
 			if parentRef.Port != nil && listener.Port != *parentRef.Port {
@@ -213,7 +220,7 @@ func ListHTTPRoutesForGateway(
 
 	return lo.Filter(httpRoutesList.Items, func(r gwtypes.HTTPRoute, _ int) bool {
 		return lo.ContainsBy(r.Spec.ParentRefs, func(parentRef gwtypes.ParentReference) bool {
-			return parentRefMatchGateway(parentRef, gateway)
+			return parentRefMatchGateway(r.Namespace, parentRef, gateway)
 		})
 	}), nil
 }
@@ -237,7 +244,7 @@ func ListTLSRoutesForGateway(
 	}
 	return lo.Filter(tlsRouteList.Items, func(r gwtypes.TLSRoute, _ int) bool {
 		return lo.ContainsBy(r.Spec.ParentRefs, func(parentRef gwtypes.ParentReference) bool {
-			return parentRefMatchGateway(parentRef, gateway)
+			return parentRefMatchGateway(r.Namespace, parentRef, gateway)
 		})
 	}), nil
 }
