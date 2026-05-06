@@ -199,6 +199,7 @@ spec:
                 namespace: ($namespace)
               spec:
                 path: "/echo"
+                protocol: "https"
                 tls_verify: true
 
     # Step 15: Assert KongUpstream is created.
