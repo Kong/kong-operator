@@ -69,6 +69,8 @@ jobs:
           ${{ env.GO_CACHE_KEY_2 }}
 
     - name: Run the crds validation tests
+      env:
+        GO_TEST_PARALLEL: 2
       run: |
         VERSION="${{ matrix.kubernetes-node-version }}"
         # Remove leading 'v'
