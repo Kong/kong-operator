@@ -11,6 +11,8 @@ spec:
     the annotations on Services referenced by HTTPRoute.
     When a Service is annotated with:
     - konghq.com/path: <path>
+    - konghq.com/protocol: <protocol>
+    - konghq.com/tls-verify: <bool>
     the value should be applied to the generated KongService.
 
   bindings:
@@ -144,6 +146,8 @@ spec:
                 name: echo-with-annotations
                 annotations:
                   konghq.com/path: "/echo"
+                  konghq.com/protocol: "https"
+                  konghq.com/tls-verify: "true"
 
     # Step 12: Create HTTPRoute to route traffic.
     - name: Create-httproute
@@ -195,6 +199,8 @@ spec:
                 namespace: ($namespace)
               spec:
                 path: "/echo"
+                protocol: "https"
+                tls_verify: true
 
     # Step 15: Assert KongUpstream is created.
     - name: Assert-kong-upstream

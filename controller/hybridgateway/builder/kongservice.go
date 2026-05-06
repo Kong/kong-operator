@@ -114,6 +114,16 @@ func (b *KongServiceBuilder) WithPath(path string) *KongServiceBuilder {
 	return b
 }
 
+// WithTLSVerify sets the tls-verify flag for the KongService being built.
+// Nil leaves the field unset.
+func (b *KongServiceBuilder) WithTLSVerify(v *bool) *KongServiceBuilder {
+	if v == nil {
+		return b
+	}
+	b.service.Spec.TLSVerify = v
+	return b
+}
+
 // WithProtocol sets the protocol for the KongService being built.
 // Supported protocols match the Kong Gateway upstream protocol set.
 func (b *KongServiceBuilder) WithProtocol(protocol string) *KongServiceBuilder {

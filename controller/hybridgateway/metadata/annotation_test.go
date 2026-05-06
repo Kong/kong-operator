@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -964,6 +965,32 @@ func TestExtractPath(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, tt.expected, ExtractPath(tt.annotations))
+		})
+	}
+}
+
+func TestExtractTLSVerify(t *testing.T) {
+	tests := []struct {
+		name        string
+		annotations map[string]string
+		expected    *bool
+	}{
+		{name: "nil annotations", annotations: nil, expected: nil},
+		{name: "empty annotations", annotations: map[string]string{}, expected: nil},
+		{name: "tls-verify true", annotations: map[string]string{"konghq.com/tls-verify": "true"}, expected: new(true)},
+		{name: "tls-verify false", annotations: map[string]string{"konghq.com/tls-verify": "false"}, expected: new(false)},
+		{name: "invalid value", annotations: map[string]string{"konghq.com/tls-verify": "invalid"}, expected: nil},
+		{name: "empty value", annotations: map[string]string{"konghq.com/tls-verify": ""}, expected: nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ExtractTLSVerify(tt.annotations)
+			if tt.expected == nil {
+				assert.Nil(t, got)
+			} else {
+				require.NotNil(t, got)
+				assert.Equal(t, *tt.expected, *got)
+			}
 		})
 	}
 }
