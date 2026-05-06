@@ -16,15 +16,8 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 )
 
-type parentRefAccessor interface {
-	client.Object
-	parentRefGetter
-}
-
 func getAPIAuthConfigurationRefFromParent[
-	ParentT interface {
-		GetTypeName() string
-	},
+	ParentT parentT,
 	ParentTPtr interface {
 		*ParentT
 		client.Object
@@ -33,7 +26,7 @@ func getAPIAuthConfigurationRefFromParent[
 ](
 	ctx context.Context,
 	cl client.Client,
-	obj parentRefAccessor,
+	obj objectWithParentRef,
 ) (types.NamespacedName, error) {
 	parentRef := obj.GetParentRef()
 	if parentRef.Type != commonv1alpha1.ObjectRefTypeNamespacedRef ||
