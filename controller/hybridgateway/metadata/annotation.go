@@ -16,15 +16,15 @@ import (
 
 const (
 	// Annotation constants matching those in the ingress controller.
-	annotationPrefix = "konghq.com"
-	stripPathKey     = "/strip-path"
-	preserveHostKey  = "/preserve-host"
-	protocolKey      = "/protocol"
-	pathKey          = "/path"
-	tlsVerifyKey     = "/tls-verify"
+	annotationPrefix  = "konghq.com"
+	stripPathKey      = "/strip-path"
+	preserveHostKey   = "/preserve-host"
+	protocolKey       = "/protocol"
+	pathKey           = "/path"
+	tlsVerifyKey      = "/tls-verify"
 	tlsVerifyDepthKey = "/tls-verify-depth"
-	kindHTTPRoute    = "HTTPRoute"
-	kindTLSRoute     = "TLSRoute"
+	kindHTTPRoute     = "HTTPRoute"
+	kindTLSRoute      = "TLSRoute"
 )
 
 // Defaults for the annotations when not specified that match the behavior of on-prem.
