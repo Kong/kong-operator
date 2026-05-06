@@ -45,6 +45,12 @@ jobs:
         install_args: github:Kong/kubernetes-testing-framework http:helm
 
     - name: Create k8s KinD Cluster with ktf
+      env:
+        # NOTE: add GITHUB_TOKEN to env to allow ktf to query GitHub API without
+        # hitting unauthenticated rate limits.
+        # This token is being used e.g. in here:
+        # https://github.com/Kong/kubernetes-testing-framework/blob/f233236e89ebcaf79575c5084053e4196c037165/pkg/utils/github/release.go#L46
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         ktf environments create \
           --name ${{ env.CLUSTER_NAME }} \
