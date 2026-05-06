@@ -33,7 +33,7 @@ func (e *eventRecorderWithID) AnnotatedEventf(
 }
 
 func (e *eventRecorderWithID) Event(object runtime.Object, eventtype string, reason string, message string) {
-	e.eventRecorder.AnnotatedEventf(object, e.idAnnotation, eventtype, reason, message)
+	e.eventRecorder.AnnotatedEventf(object, e.idAnnotation, eventtype, reason, "%s", message)
 }
 
 func (e *eventRecorderWithID) Eventf(object runtime.Object, eventtype string, reason string, messageFmt string, args ...any) {

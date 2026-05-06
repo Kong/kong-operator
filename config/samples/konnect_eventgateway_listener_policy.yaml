@@ -42,7 +42,7 @@ spec:
     labels:
       app: test1
       env: test
-  gateway_ref:
+  gatewayRef:
     type: namespacedRef
     namespacedRef:
       name: cp-event-1
@@ -54,11 +54,8 @@ metadata:
   namespace: default
 spec:
   apiSpec:
-    type: EventGatewayTLSListen
-    EventGatewayTLSListen:
-      # NOTE: the nested type field is still required by the variant struct.
-      # Tracked for removal in https://github.com/Kong/kong-operator/issues/3972
-      type: EventGatewayTLSListen
+    type: tlsServer
+    tlsServer:
       name: cp-event-1-listener-1-policy-1
       description: Test Event Gateway Listener Policy
       enabled: Disabled
@@ -66,7 +63,7 @@ spec:
         app: test1
         env: test
       config:
-        allow_plaintext: Enabled
+        allowPlaintext: Enabled
         versions:
           min: TLSv1.2
           max: TLSv1.3
@@ -111,7 +108,7 @@ spec:
               Q1FRQ3krL3BLCjR0cmdpMm5NY3pIUEZ2b3MycS9XelJEeDE5akRrSldPT0NSOUlyUGFNU3JrNFFw
               blJVbWpXdWcrUWhrVDR5MjEKZTJDcUNnSUNRTVhXUmpQdwotLS0tLUVORCBQUklWQVRFIEtFWS0t
               LS0tCg==
-  event_gateway_listener_ref:
+  eventGatewayListenerRef:
     type: namespacedRef
     namespacedRef:
       name: cp-event-1

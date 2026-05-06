@@ -5,10 +5,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func init() {
-	SchemeBuilder.Register(&KonnectAPIAuthConfiguration{}, &KonnectAPIAuthConfigurationList{})
-}
-
 // KonnectAPIAuthConfiguration is the Schema for the Konnect configuration type.
 //
 // +genclient

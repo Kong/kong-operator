@@ -244,6 +244,30 @@ func TestKongServiceBuilder_WithProtocol(t *testing.T) {
 	}
 }
 
+func TestKongServiceBuilder_WithPath(t *testing.T) {
+	tests := []struct {
+		name     string
+		path     string
+		expected *string
+	}{
+		{name: "empty path leaves field unset", path: "", expected: nil},
+		{name: "non-empty path sets field", path: "/api/v1", expected: new("/api/v1")},
+		{name: "root path sets field", path: "/", expected: new("/")},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			service, err := NewKongService().WithPath(tt.path).Build()
+			require.NoError(t, err)
+			if tt.expected == nil {
+				assert.Nil(t, service.Spec.Path)
+			} else {
+				require.NotNil(t, service.Spec.Path)
+				assert.Equal(t, *tt.expected, *service.Spec.Path)
+			}
+		})
+	}
+}
+
 func TestKongServiceBuilder_WithTLSVerify(t *testing.T) {
 	boolPtr := func(b bool) *bool { return &b }
 	tests := []struct {

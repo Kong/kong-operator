@@ -1,7 +1,10 @@
 apiGroupVersions:
   konnect.konghq.com/v1alpha1:
-    # Don't generate GroupVersionInfo for this API group, as it already has it defined.
-    # We might do this in the future to replace the manually defined one.
+    categories:
+      - konnect
+      - kong
+    # Don't generate groupversion_info.go for this API group — it is hand-written.
+    # zz_generated_groupversion_info.go (addKnownTypesGenerated) is still emitted.
     generateGroupVersionInfo: false
     commonTypes:
       objectRef:
@@ -21,8 +24,7 @@ apiGroupVersions:
           update:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdateGatewayRequest
           delete: {}
-        reconciler:
-          isRoot: true
+        reconciler: {}
       - path: /v1/event-gateways/{gatewayId}/data-plane-certificates
         name: KonnectEventDataPlaneCertificate
         optionalSecretReference: true
@@ -45,7 +47,6 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdateEventGatewayDataPlaneCertificateRequest
           delete: {}
         reconciler:
-          isRoot: false
           parentEntityType: KonnectEventGateway
       - path: /v1/event-gateways/{gatewayId}/listeners
         name: EventGatewayListener
@@ -59,7 +60,6 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdateEventGatewayListenerRequest
           delete: {}
         reconciler:
-          isRoot: false
           parentEntityType: KonnectEventGateway
       - path: /v1/event-gateways/{gatewayId}/listeners/{eventGatewayListenerId}/policies
         name: EventGatewayListenerPolicy
@@ -83,7 +83,6 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/operations.UpdateEventGatewayListenerPolicyRequest
           delete: {}
         reconciler:
-          isRoot: false
           parentEntityType: EventGatewayListener
           # Speakeasy SDK uses "ListenerID" (not "EventGatewayListenerID") for the
           # eventGatewayListenerId path param when it appears as a parent (not entity ID).
@@ -114,7 +113,6 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdateBackendClusterRequest
           delete: {}
         reconciler:
-          isRoot: false
           parentEntityType: KonnectEventGateway
       - path: /v1/event-gateways/{gatewayId}/virtual-clusters
         name: EventGatewayVirtualCluster
@@ -128,7 +126,6 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdateVirtualClusterRequest
           delete: {}
         reconciler:
-          isRoot: false
           parentEntityType: KonnectEventGateway
 
       # Portal APIs
@@ -146,8 +143,7 @@ apiGroupVersions:
           update:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdatePortal
           delete: {}
-        reconciler:
-          isRoot: true
+        reconciler: {}
       - path: /v3/portals/{portalId}/identity-providers
         ops:
           sdk:
@@ -161,8 +157,7 @@ apiGroupVersions:
           update:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdateIdentityProvider
           delete: {}
-        reconciler:
-          isRoot: false
+        reconciler: {}
       - path: /v3/portals/{portalId}/teams
         ops:
           sdk:
@@ -172,14 +167,13 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/components.PortalCreateTeamRequest
           update:
             path: github.com/Kong/sdk-konnect-go/models/components.PortalUpdateTeamRequest
-        reconciler:
-          isRoot: false
+        reconciler: {}
       - path: /v3/portals/{portalId}/pages
         cel:
           parent_page_id:
               _validations:
                 # TODO: https://github.com/Kong/kong-operator/issues/4008
-                - "+kubebuilder:validation:XValidation:rule=\"self == null\",message=\"cannot set parent_page_id_ref\""
+                - "+kubebuilder:validation:XValidation:rule=\"self == null\",message=\"cannot set parentPageIDRef\""
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.PortalPagesSDK
@@ -189,5 +183,4 @@ apiGroupVersions:
           update:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdatePortalPageRequest
           delete: {}
-        reconciler:
-          isRoot: false
+        reconciler: {}

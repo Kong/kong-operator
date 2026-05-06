@@ -48,6 +48,8 @@ spec:
       value: echo
     - name: echo_deployment_namespace
       value: ($namespace)
+    - name: echo_deployment_replicas
+      value: 1
     - name: http_method
       value: "GET"
     - name: host_header

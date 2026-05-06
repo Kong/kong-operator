@@ -62,6 +62,8 @@ spec:
     value: (join('-', [($test_name), 'echo']))
   - name: echo_deployment_namespace
     value: ($namespace)
+  - name: echo_deployment_replicas
+    value: 1
   - name: http_method
     value: "GET"
   
@@ -72,6 +74,8 @@ spec:
     value: (join('-', [($test_name), 'xns-echo']))
   - name: xns_echo_deployment_namespace
     value: ($xns_namespace)
+  - name: xns_echo_deployment_replicas
+    value: ($echo_deployment_replicas)
 
   steps:
     # Step 1: Create the TLS secret that will be referenced by the Gateway TLS listener.
@@ -156,6 +160,8 @@ spec:
           value: ($xns_echo_deployment_name)
         - name: echo_deployment_namespace
           value: ($xns_echo_deployment_namespace)
+        - name: xns_echo_deployment_replicas
+          value: ($xns_echo_deployment_replicas)
     
     # Step 12: Create a KongPlugin for ExtensionRef testing.
     - name: Create-kong-plugin

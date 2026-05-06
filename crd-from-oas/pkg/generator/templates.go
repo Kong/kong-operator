@@ -29,7 +29,7 @@ import (
 //
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Namespaced
+// +kubebuilder:resource:scope=Namespaced{{if .Categories}},categories={{join .Categories ";"}}{{end}}
 // +kubebuilder:printcolumn:name="ID",description="Konnect ID",type="string",JSONPath=".status.id"
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=` + "`" + `.status.conditions[?(@.type=='Programmed')].status` + "`" + `
 // +kubebuilder:printcolumn:name="OrgID",description="Konnect Organization ID this resource belongs to.",type=string,JSONPath=` + "`" + `.status.organizationID` + "`" + `
@@ -111,7 +111,7 @@ type {{.EntityName}}APISpec struct {
 	// {{.}}
 {{- end}}
 {{- if isRefProperty $prop}}
-	{{goFieldName $prop.Name}}Ref {{goType $prop}} ` + "`" + `json:"{{$prop.Name}}_ref,omitempty"` + "`" + `
+	{{goFieldName $prop.Name}}Ref {{goType $prop}} ` + "`" + `json:"{{refJSONTag $prop}},omitempty"` + "`" + `
 {{- else}}
 	{{goFieldName $prop.Name}} {{goType $prop}} ` + "`" + `json:"{{jsonTag $prop}}"` + "`" + `
 {{- end}}
@@ -150,10 +150,6 @@ type {{.EntityName}}Status struct {
 	//
 	// +optional
 	ObservedGeneration int64 ` + "`" + `json:"observedGeneration,omitempty"` + "`" + `
-}
-
-func init() {
-	SchemeBuilder.Register(&{{.EntityName}}{}, &{{.EntityName}}List{})
 }
 `
 
@@ -399,6 +395,9 @@ func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() ([]byte, error) {
 		return nil, fmt.Errorf("failed to decode {{$.EntityName}}APISpec: %w", err)
 	}
 	payload = flattenSDKUnions(payload)
+	// Convert camelCase CRD wire-format keys and discriminator values to
+	// snake_case for the Konnect SDK request types.
+	payload = renameKeysToSDK(payload)
 	{{- if $.BoolFields}}
 	if pm, ok := payload.(map[string]any); ok {
 		if err := normalize{{$.EntityName}}SDKOpsBoolFields(pm); err != nil {
@@ -596,9 +595,16 @@ func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() (map[string]any, error)
 		return nil, fmt.Errorf("failed to marshal {{$.EntityName}}APISpec: %w", err)
 	}
 
-	var payload map[string]any
-	if err := json.Unmarshal(data, &payload); err != nil {
+	var rawPayload any
+	if err := json.Unmarshal(data, &rawPayload); err != nil {
 		return nil, fmt.Errorf("failed to decode {{$.EntityName}}APISpec: %w", err)
+	}
+	// Convert camelCase CRD wire-format keys and discriminator values to
+	// snake_case for the Konnect SDK request types.
+	renamed := renameKeysToSDK(rawPayload)
+	payload, ok := renamed.(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("failed to convert {{$.EntityName}}APISpec SDK payload to map")
 	}
 	{{- if $.BoolFields}}
 	if err := normalize{{$.EntityName}}SDKOpsBoolFields(payload); err != nil {
@@ -854,6 +860,8 @@ import (
 {{- end}}
 
 ` + flattenSDKUnionsHelper + `
+
+` + renameKeysToSDKHelper + `
 `
 
 // opsPerEntityFileHeaderTemplate renders the shared file header (preamble,
@@ -1488,19 +1496,24 @@ const groupVersionInfoTemplate = sharedGeneratedFilePreamble + `
 package {{.APIVersion}}
 
 import (
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/controller-runtime/pkg/scheme"
+)
+
+const (
+	// GroupName is the group name used in this package.
+	GroupName = "{{.APIGroup}}"
 )
 
 var (
-	// GroupVersion is group version used to register these objects.
-	GroupVersion = schema.GroupVersion{Group: "{{.APIGroup}}", Version: "{{.APIVersion}}"}
+	// GroupVersion is a convenience var for generated clientsets.
+	GroupVersion = schema.GroupVersion{Group: GroupName, Version: "{{.APIVersion}}"}
 
 	// SchemeGroupVersion is a convenience var for generated clientsets.
 	SchemeGroupVersion = GroupVersion
 
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme.
-	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}
+	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
 
 	// AddToScheme adds the types in this group-version to the given scheme.
 	AddToScheme = SchemeBuilder.AddToScheme
@@ -1508,7 +1521,33 @@ var (
 
 // Resource takes an unqualified resource and returns a Group qualified GroupResource.
 func Resource(resource string) schema.GroupResource {
-	return SchemeGroupVersion.WithResource(resource).GroupResource()
+	return GroupVersion.WithResource(resource).GroupResource()
+}
+
+func addKnownTypes(scheme *runtime.Scheme) error {
+	return addKnownTypesGenerated(scheme)
+}
+`
+
+const groupVersionInfoGeneratedTemplate = sharedGeneratedFilePreamble + `
+
+package {{.APIVersion}}
+
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+)
+
+func addKnownTypesGenerated(scheme *runtime.Scheme) error {
+	scheme.AddKnownTypes(GroupVersion,
+{{- range .EntityNames}}
+		&{{.}}{},
+		&{{.}}List{},
+{{- end}}
+	)
+
+	metav1.AddToGroupVersion(scheme, GroupVersion)
+	return nil
 }
 `
 
