@@ -293,6 +293,7 @@
   - For `HTTPRoute`, protocol now matches the attached Gateway listener protocol (and when `parentRef.sectionName` is set, it must match that specific listener). When `parentRef.sectionName` is not specified it binds to all `Gateway`s listeners.
   - For `Ingress`, default protocol relies on Kong Gateway, can be set explicitly via `konghq.com/protocols: "http"` (or `https`)
     annotation on particular `Ingress`.
+  [#4067](https://github.com/Kong/kong-operator/pull/4067)
 
 ## [v2.1.3]
 

@@ -99,7 +99,7 @@ func getHostnamesByParentRef[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRou
 				// This listener doesn't match the section reference, skip it
 				continue
 			}
-			if listener.Port != lo.FromPtr(pRef.Port) {
+			if pRef.Port != nil && listener.Port != *pRef.Port {
 				// This listener doesn't match the port reference, skip it
 				continue
 			}

@@ -24,6 +24,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
+	gatewayutils "github.com/kong/kong-operator/v2/pkg/utils/gateway"
 )
 
 // HTTPRoutesTranslationResult is the result of translating HTTPRoutes to Kong gateway services.
@@ -833,19 +834,8 @@ func protocolsFromHTTPRoutesGatewayListeners(storer store.Storer, routes []*gate
 			if err != nil {
 				continue // Gateway not found, skip this parentRef.
 			}
-			for _, l := range gw.Spec.Listeners {
-				if pr.SectionName != nil && *pr.SectionName != l.Name {
-					continue
-				}
-				switch l.Protocol {
-				case gatewayapi.HTTPProtocolType:
-					protoSet["http"] = struct{}{}
-				case gatewayapi.HTTPSProtocolType:
-					protoSet["https"] = struct{}{}
-				default:
-					// Unsupported protocol, skip.
-					continue
-				}
+			for _, p := range gatewayutils.ProtocolsFromListeners(gw, pr.SectionName) {
+				protoSet[p] = struct{}{}
 			}
 		}
 	}
