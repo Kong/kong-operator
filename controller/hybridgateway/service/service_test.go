@@ -541,7 +541,7 @@ func TestServiceForRule_RetriesAnnotation(t *testing.T) {
 	}
 }
 
-func TestResolveRetriesFromHTTPRouteBackendRefs(t *testing.T) {
+func TestResolveRetriesFromBackendRefs(t *testing.T) {
 	ctx := context.Background()
 	logger := zap.New()
 
@@ -552,14 +552,16 @@ func TestResolveRetriesFromHTTPRouteBackendRefs(t *testing.T) {
 
 	tests := []struct {
 		name            string
-		backendRefs     []gatewayv1.HTTPBackendRef
+		namespace       string
+		backendRefs     []gwtypes.BackendRef
 		backendServices []corev1.Service
 		expected        *int64
 	}{
 		{
-			name: "service with retries annotation returns value",
-			backendRefs: []gatewayv1.HTTPBackendRef{
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-with-retries", Port: &port80}}},
+			name:      "service with retries annotation returns value",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-with-retries", Port: &port80}},
 			},
 			backendServices: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-retries", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "5"}}},
@@ -567,9 +569,10 @@ func TestResolveRetriesFromHTTPRouteBackendRefs(t *testing.T) {
 			expected: new(int64(5)),
 		},
 		{
-			name: "service without annotation returns nil",
-			backendRefs: []gatewayv1.HTTPBackendRef{
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "plain-svc", Port: &port80}}},
+			name:      "service without annotation returns nil",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "plain-svc", Port: &port80}},
 			},
 			backendServices: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "plain-svc", Namespace: "test-namespace"}},
@@ -577,10 +580,11 @@ func TestResolveRetriesFromHTTPRouteBackendRefs(t *testing.T) {
 			expected: nil,
 		},
 		{
-			name: "first backend ref with annotation wins",
-			backendRefs: []gatewayv1.HTTPBackendRef{
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-a", Port: &port80}}},
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-b", Port: &port80}}},
+			name:      "first backend ref with annotation wins",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-a", Port: &port80}},
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-b", Port: &port80}},
 			},
 			backendServices: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "3"}}},
@@ -590,135 +594,27 @@ func TestResolveRetriesFromHTTPRouteBackendRefs(t *testing.T) {
 		},
 		{
 			name:            "no backend refs returns nil",
-			backendRefs:     []gatewayv1.HTTPBackendRef{},
-			backendServices: []corev1.Service{},
-			expected:        nil,
-		},
-		{
-			name: "service does not exist returns nil",
-			backendRefs: []gatewayv1.HTTPBackendRef{
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "nonexistent-svc", Port: &port80}}},
-			},
-			backendServices: []corev1.Service{},
-			expected:        nil,
-		},
-		{
-			name: "unsupported backend ref returns nil",
-			backendRefs: []gatewayv1.HTTPBackendRef{
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{
-					Name:  "some-ref",
-					Port:  &port80,
-					Group: &[]gatewayv1.Group{gatewayv1.Group("example.com")}[0],
-					Kind:  &[]gatewayv1.Kind{gatewayv1.Kind("NotService")}[0],
-				}}},
-			},
-			backendServices: []corev1.Service{},
-			expected:        nil,
-		},
-		{
-			name: "cross-namespace backend ref",
-			backendRefs: []gatewayv1.HTTPBackendRef{
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{
-					Name:      "svc-other-ns",
-					Port:      &port80,
-					Namespace: &[]gatewayv1.Namespace{"other-namespace"}[0],
-				}}},
-			},
-			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/retries": "7"}}},
-			},
-			expected: new(int64(7)),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			httpRoute := &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-route", Namespace: "test-namespace"},
-			}
-			rule := gwtypes.HTTPRouteRule{BackendRefs: tt.backendRefs}
-
-			var objects []client.Object
-			for i := range tt.backendServices {
-				objects = append(objects, &tt.backendServices[i])
-			}
-			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
-
-			result := resolveRetriesFromHTTPRouteBackendRefs(ctx, cl, httpRoute, rule, logger)
-			if tt.expected == nil {
-				assert.Nil(t, result)
-			} else {
-				require.NotNil(t, result)
-				assert.Equal(t, *tt.expected, *result)
-			}
-		})
-	}
-}
-
-func TestResolveRetriesFromTLSRouteBackendRefs(t *testing.T) {
-	ctx := context.Background()
-	logger := zap.New()
-
-	scheme := runtime.NewScheme()
-	require.NoError(t, corev1.AddToScheme(scheme))
-
-	tests := []struct {
-		name            string
-		backendRefs     []gwtypes.BackendRef
-		backendServices []corev1.Service
-		expected        *int64
-	}{
-		{
-			name: "service with retries annotation returns value",
-			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-with-retries"}},
-			},
-			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-retries", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "5"}}},
-			},
-			expected: new(int64(5)),
-		},
-		{
-			name: "service without annotation returns nil",
-			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-no-retries"}},
-			},
-			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-no-retries", Namespace: "test-namespace"}},
-			},
-			expected: nil,
-		},
-		{
-			name: "first backend ref with annotation wins",
-			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-first"}},
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-second"}},
-			},
-			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-first", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "3"}}},
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-second", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "9"}}},
-			},
-			expected: new(int64(3)),
-		},
-		{
-			name:            "no backend refs returns nil",
+			namespace:       "test-namespace",
 			backendRefs:     []gwtypes.BackendRef{},
 			backendServices: []corev1.Service{},
 			expected:        nil,
 		},
 		{
-			name: "service does not exist returns nil",
+			name:      "service does not exist returns nil",
+			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "nonexistent-svc"}},
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "nonexistent-svc", Port: &port80}},
 			},
 			backendServices: []corev1.Service{},
 			expected:        nil,
 		},
 		{
-			name: "unsupported backend ref returns nil",
+			name:      "unsupported backend ref returns nil",
+			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
 				{BackendObjectReference: gatewayv1.BackendObjectReference{
 					Name:  "some-ref",
+					Port:  &port80,
 					Group: &[]gatewayv1.Group{gatewayv1.Group("example.com")}[0],
 					Kind:  &[]gatewayv1.Kind{gatewayv1.Kind("NotService")}[0],
 				}},
@@ -726,22 +622,43 @@ func TestResolveRetriesFromTLSRouteBackendRefs(t *testing.T) {
 			backendServices: []corev1.Service{},
 			expected:        nil,
 		},
+		{
+			name:      "cross-namespace backend ref",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{
+					Name:      "svc-other-ns",
+					Port:      &port80,
+					Namespace: &[]gatewayv1.Namespace{"other-namespace"}[0],
+				}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/retries": "7"}}},
+			},
+			expected: new(int64(7)),
+		},
+		{
+			name:      "tls-style backend ref without port",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-tls"}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-tls", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "2"}}},
+			},
+			expected: new(int64(2)),
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tlsRoute := &gwtypes.TLSRoute{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-tls-route", Namespace: "test-namespace"},
-			}
-			rule := gwtypes.TLSRouteRule{BackendRefs: tt.backendRefs}
-
 			var objects []client.Object
 			for i := range tt.backendServices {
 				objects = append(objects, &tt.backendServices[i])
 			}
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
-			result := resolveRetriesFromTLSRouteBackendRefs(ctx, cl, tlsRoute, rule, logger)
+			result := resolveRetriesFromBackendRefs(ctx, cl, tt.namespace, tt.backendRefs, logger)
 			if tt.expected == nil {
 				assert.Nil(t, result)
 			} else {
