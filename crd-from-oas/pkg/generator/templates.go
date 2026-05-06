@@ -256,6 +256,15 @@ func (obj *{{.EntityName}}) Get{{.RootRefAccessorEntityName}}Ref() {{.RootRefTyp
 	return obj.Spec.{{.RootRefDependency.FieldName}}
 }
 {{- end}}
+
+// GetParentRef returns the reference to the parent entity.
+func (obj *{{.EntityName}}) GetParentRef() {{.RootRefTypeName}} {
+{{- if gt (len .RootRefAccessorEntityName) (len .RootRefDependency.EntityName)}}
+	return obj.Get{{.RootRefAccessorEntityName}}Ref()
+{{- else}}
+	return obj.Get{{.RootRefDependency.EntityName}}Ref()
+{{- end}}
+}
 {{- end}}
 {{- if .IsReconcilerRoot}}
 
