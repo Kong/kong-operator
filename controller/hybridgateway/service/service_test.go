@@ -541,7 +541,7 @@ func TestServiceForRule_ReadTimeoutAnnotation(t *testing.T) {
 	}
 }
 
-func TestResolveReadTimeoutFromHTTPRouteBackendRefs(t *testing.T) {
+func TestResolveReadTimeoutFromBackendRefs(t *testing.T) {
 	ctx := context.Background()
 	logger := zap.New()
 
@@ -552,14 +552,16 @@ func TestResolveReadTimeoutFromHTTPRouteBackendRefs(t *testing.T) {
 
 	tests := []struct {
 		name            string
-		backendRefs     []gatewayv1.HTTPBackendRef
+		namespace       string
+		backendRefs     []gwtypes.BackendRef
 		backendServices []corev1.Service
 		expected        *int64
 	}{
 		{
-			name: "service with read-timeout annotation returns value",
-			backendRefs: []gatewayv1.HTTPBackendRef{
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-with-timeout", Port: &port80}}},
+			name:      "service with read-timeout annotation returns value",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-with-timeout", Port: &port80}},
 			},
 			backendServices: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "30000"}}},
@@ -567,9 +569,10 @@ func TestResolveReadTimeoutFromHTTPRouteBackendRefs(t *testing.T) {
 			expected: new(int64(30000)),
 		},
 		{
-			name: "service without annotation returns nil",
-			backendRefs: []gatewayv1.HTTPBackendRef{
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "plain-svc", Port: &port80}}},
+			name:      "service without annotation returns nil",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "plain-svc", Port: &port80}},
 			},
 			backendServices: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "plain-svc", Namespace: "test-namespace"}},
@@ -577,10 +580,11 @@ func TestResolveReadTimeoutFromHTTPRouteBackendRefs(t *testing.T) {
 			expected: nil,
 		},
 		{
-			name: "first backend ref with annotation wins",
-			backendRefs: []gatewayv1.HTTPBackendRef{
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-a", Port: &port80}}},
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-b", Port: &port80}}},
+			name:      "first backend ref with annotation wins",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-a", Port: &port80}},
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-b", Port: &port80}},
 			},
 			backendServices: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "1000"}}},
@@ -590,135 +594,27 @@ func TestResolveReadTimeoutFromHTTPRouteBackendRefs(t *testing.T) {
 		},
 		{
 			name:            "no backend refs returns nil",
-			backendRefs:     []gatewayv1.HTTPBackendRef{},
-			backendServices: []corev1.Service{},
-			expected:        nil,
-		},
-		{
-			name: "service does not exist returns nil",
-			backendRefs: []gatewayv1.HTTPBackendRef{
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "nonexistent-svc", Port: &port80}}},
-			},
-			backendServices: []corev1.Service{},
-			expected:        nil,
-		},
-		{
-			name: "unsupported backend ref returns nil",
-			backendRefs: []gatewayv1.HTTPBackendRef{
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{
-					Name:  "some-ref",
-					Port:  &port80,
-					Group: &[]gatewayv1.Group{gatewayv1.Group("example.com")}[0],
-					Kind:  &[]gatewayv1.Kind{gatewayv1.Kind("NotService")}[0],
-				}}},
-			},
-			backendServices: []corev1.Service{},
-			expected:        nil,
-		},
-		{
-			name: "cross-namespace backend ref",
-			backendRefs: []gatewayv1.HTTPBackendRef{
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{
-					Name:      "svc-other-ns",
-					Port:      &port80,
-					Namespace: &[]gatewayv1.Namespace{"other-namespace"}[0],
-				}}},
-			},
-			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "3000"}}},
-			},
-			expected: new(int64(3000)),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			httpRoute := &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-route", Namespace: "test-namespace"},
-			}
-			rule := gwtypes.HTTPRouteRule{BackendRefs: tt.backendRefs}
-
-			var objects []client.Object
-			for i := range tt.backendServices {
-				objects = append(objects, &tt.backendServices[i])
-			}
-			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
-
-			result := resolveReadTimeoutFromHTTPRouteBackendRefs(ctx, cl, httpRoute, rule, logger)
-			if tt.expected == nil {
-				assert.Nil(t, result)
-			} else {
-				require.NotNil(t, result)
-				assert.Equal(t, *tt.expected, *result)
-			}
-		})
-	}
-}
-
-func TestResolveReadTimeoutFromTLSRouteBackendRefs(t *testing.T) {
-	ctx := context.Background()
-	logger := zap.New()
-
-	scheme := runtime.NewScheme()
-	require.NoError(t, corev1.AddToScheme(scheme))
-
-	tests := []struct {
-		name            string
-		backendRefs     []gwtypes.BackendRef
-		backendServices []corev1.Service
-		expected        *int64
-	}{
-		{
-			name: "service with read-timeout annotation returns value",
-			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-with-timeout"}},
-			},
-			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "30000"}}},
-			},
-			expected: new(int64(30000)),
-		},
-		{
-			name: "service without annotation returns nil",
-			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-no-timeout"}},
-			},
-			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-no-timeout", Namespace: "test-namespace"}},
-			},
-			expected: nil,
-		},
-		{
-			name: "first backend ref with annotation wins",
-			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-first"}},
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-second"}},
-			},
-			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-first", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "1000"}}},
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-second", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "2000"}}},
-			},
-			expected: new(int64(1000)),
-		},
-		{
-			name:            "no backend refs returns nil",
+			namespace:       "test-namespace",
 			backendRefs:     []gwtypes.BackendRef{},
 			backendServices: []corev1.Service{},
 			expected:        nil,
 		},
 		{
-			name: "service does not exist returns nil",
+			name:      "service does not exist returns nil",
+			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "nonexistent-svc"}},
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "nonexistent-svc", Port: &port80}},
 			},
 			backendServices: []corev1.Service{},
 			expected:        nil,
 		},
 		{
-			name: "unsupported backend ref returns nil",
+			name:      "unsupported backend ref returns nil",
+			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
 				{BackendObjectReference: gatewayv1.BackendObjectReference{
 					Name:  "some-ref",
+					Port:  &port80,
 					Group: &[]gatewayv1.Group{gatewayv1.Group("example.com")}[0],
 					Kind:  &[]gatewayv1.Kind{gatewayv1.Kind("NotService")}[0],
 				}},
@@ -726,22 +622,44 @@ func TestResolveReadTimeoutFromTLSRouteBackendRefs(t *testing.T) {
 			backendServices: []corev1.Service{},
 			expected:        nil,
 		},
+		{
+			name:      "cross-namespace backend ref",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{
+					Name:      "svc-other-ns",
+					Port:      &port80,
+					Namespace: &[]gatewayv1.Namespace{"other-namespace"}[0],
+				}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "3000"}}},
+			},
+			expected: new(int64(3000)),
+		},
+		// TLS-style backend refs (no port, same BackendRef type)
+		{
+			name:      "tls-style backend ref with annotation returns value",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "tls-svc"}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "tls-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "30000"}}},
+			},
+			expected: new(int64(30000)),
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tlsRoute := &gwtypes.TLSRoute{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-tls-route", Namespace: "test-namespace"},
-			}
-			rule := gwtypes.TLSRouteRule{BackendRefs: tt.backendRefs}
-
 			var objects []client.Object
 			for i := range tt.backendServices {
 				objects = append(objects, &tt.backendServices[i])
 			}
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
-			result := resolveReadTimeoutFromTLSRouteBackendRefs(ctx, cl, tlsRoute, rule, logger)
+			result := resolveReadTimeoutFromBackendRefs(ctx, cl, tt.namespace, tt.backendRefs, logger)
 			if tt.expected == nil {
 				assert.Nil(t, result)
 			} else {

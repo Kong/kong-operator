@@ -61,8 +61,9 @@ func ServiceForRule[
 ) (kongService *configurationv1alpha1.KongService, err error) {
 
 	var serviceName string
-	var protocol string
-	var readTimeout *int64
+	var namespace string
+	var backendRefs []gwtypes.BackendRef
+	var defaultProtocol string
 
 	switch r := any(parentRoute).(type) {
 	case *gwtypes.HTTPRoute:
@@ -71,16 +72,19 @@ func ServiceForRule[
 			return nil, fmt.Errorf("failed to build KongService : unmatched route type and rule type: %T and %T", parentRoute, rule)
 		}
 		serviceName = namegen.NewKongServiceNameForHTTPRouteRule(r, cp, httpRule)
-		protocol = resolveProtocolFromHTTPRouteBackendRefs(ctx, cl, r, httpRule, "http", logger)
-		readTimeout = resolveReadTimeoutFromHTTPRouteBackendRefs(ctx, cl, r, httpRule, logger)
+		namespace = r.Namespace
+		backendRefs = httpBackendRefsToBackendRefs(httpRule.BackendRefs)
+		defaultProtocol = "http"
+
 	case *gwtypes.TLSRoute:
 		tlsRule, ok := any(rule).(gwtypes.TLSRouteRule)
 		if !ok {
 			return nil, fmt.Errorf("failed to build KongService : unmatched route type and rule type: %T and %T", parentRoute, rule)
 		}
 		serviceName = namegen.NewKongServiceNameForTLSRouteRule(r, cp, tlsRule)
-		protocol = resolveProtocolFromTLSRouteBackendRefs(ctx, cl, r, tlsRule, logger)
-		readTimeout = resolveReadTimeoutFromTLSRouteBackendRefs(ctx, cl, r, tlsRule, logger)
+		namespace = r.Namespace
+		backendRefs = tlsRule.BackendRefs
+		defaultProtocol = "tcp"
 
 	// TODO: add other types of routes and rules when we support them.
 
@@ -88,6 +92,11 @@ func ServiceForRule[
 	default:
 		return nil, fmt.Errorf("failed to build KongService: unsupported route type: %T", parentRoute)
 	}
+
+	// Resolve service attributes once, outside the switch — future route types only add a case above.
+	protocol := resolveProtocolFromBackendRefs(ctx, cl, namespace, backendRefs, defaultProtocol, logger)
+	readTimeout := resolveReadTimeoutFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
+
 	logger = logger.WithValues("kongservice", serviceName)
 	log.Debug(logger, fmt.Sprintf("Generating KongService for %s rule", parentRoute.GetObjectKind().GroupVersionKind().Kind))
 
@@ -113,47 +122,33 @@ func ServiceForRule[
 	return &service, nil
 }
 
+// httpBackendRefsToBackendRefs unwraps []HTTPBackendRef to []BackendRef.
+func httpBackendRefsToBackendRefs(refs []gwtypes.HTTPBackendRef) []gwtypes.BackendRef {
+	out := make([]gwtypes.BackendRef, len(refs))
+	for i, r := range refs {
+		out[i] = r.BackendRef
+	}
+	return out
+}
+
 // resolveProtocolFromBackendRefs inspects the Kubernetes Service annotations of the
-// HTTPRoute's backend references to determine the upstream protocol. If any backend
-// Service has a valid konghq.com/protocol annotation, that protocol is returned.
-// Otherwise, defaultProtocol is returned.
-func resolveProtocolFromHTTPRouteBackendRefs(
+// backend references to determine the upstream protocol. If any backend Service has a
+// valid konghq.com/protocol annotation, that protocol is returned. Otherwise,
+// defaultProtocol is returned.
+func resolveProtocolFromBackendRefs(
 	ctx context.Context,
 	cl client.Client,
-	httpRoute *gwtypes.HTTPRoute,
-	rule gwtypes.HTTPRouteRule,
+	namespace string,
+	backendRefs []gwtypes.BackendRef,
 	defaultProtocol string,
 	logger logr.Logger,
 ) string {
-	for _, backendRef := range rule.BackendRefs {
-		if protocol, ok := extractProtocolFromBackendRef(ctx, cl, logger, httpRoute.Namespace, backendRef.BackendRef); ok {
+	for _, backendRef := range backendRefs {
+		if protocol, ok := extractProtocolFromBackendRef(ctx, cl, logger, namespace, backendRef); ok {
 			return protocol
 		}
 	}
-
 	return defaultProtocol
-}
-
-func resolveProtocolFromTLSRouteBackendRefs(
-	ctx context.Context,
-	cl client.Client,
-	tlSRoute *gwtypes.TLSRoute,
-	rule gwtypes.TLSRouteRule,
-	logger logr.Logger,
-) string {
-	// As specified in Kong gateway documents, either TLS passthrough or TLS terminate should set `tcp` as the service protocol:
-	// For TLS passthrogh, we should use `tls_passthrough` for protocols of routes and `tcp` for protocols of services:
-	// https://developer.konghq.com/gateway/entities/route/#proxying-tls-passthrough-traffic
-	// For TLS terminate, we should set `tls` for routes and `tcp` for services:
-	// https://developer.konghq.com/gateway/traffic-control/proxying/#proxy-tcp-tls-traffic
-	// So here we set the default service protocol to `tcp`.
-	protocol := "tcp"
-	for _, backendRef := range rule.BackendRefs {
-		if protocol, ok := extractProtocolFromBackendRef(ctx, cl, logger, tlSRoute.Namespace, backendRef); ok {
-			return protocol
-		}
-	}
-	return protocol
 }
 
 // extractProtocolFromBackendRef returns the protocol in the annotation konghq.com/protocol
@@ -202,32 +197,17 @@ func extractProtocolFromBackendRef(
 
 // resolveReadTimeoutFromHTTPRouteBackendRefs returns the read-timeout value taken from
 // the first HTTPRoute backend Service that carries the konghq.com/read-timeout annotation.
-func resolveReadTimeoutFromHTTPRouteBackendRefs(
+// resolveReadTimeoutFromBackendRefs returns the read-timeout value taken from
+// the first backend Service that carries the konghq.com/read-timeout annotation.
+func resolveReadTimeoutFromBackendRefs(
 	ctx context.Context,
 	cl client.Client,
-	httpRoute *gwtypes.HTTPRoute,
-	rule gwtypes.HTTPRouteRule,
+	namespace string,
+	backendRefs []gwtypes.BackendRef,
 	logger logr.Logger,
 ) *int64 {
-	for _, backendRef := range rule.BackendRefs {
-		if v := extractReadTimeoutFromBackendRef(ctx, cl, logger, httpRoute.Namespace, backendRef.BackendRef); v != nil {
-			return v
-		}
-	}
-	return nil
-}
-
-// resolveReadTimeoutFromTLSRouteBackendRefs returns the read-timeout value taken from
-// the first TLSRoute backend Service that carries the konghq.com/read-timeout annotation.
-func resolveReadTimeoutFromTLSRouteBackendRefs(
-	ctx context.Context,
-	cl client.Client,
-	tlsRoute *gwtypes.TLSRoute,
-	rule gwtypes.TLSRouteRule,
-	logger logr.Logger,
-) *int64 {
-	for _, backendRef := range rule.BackendRefs {
-		if v := extractReadTimeoutFromBackendRef(ctx, cl, logger, tlsRoute.Namespace, backendRef); v != nil {
+	for _, backendRef := range backendRefs {
+		if v := extractReadTimeoutFromBackendRef(ctx, cl, logger, namespace, backendRef); v != nil {
 			return v
 		}
 	}
