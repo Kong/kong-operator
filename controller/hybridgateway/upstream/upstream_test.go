@@ -702,8 +702,8 @@ func TestResolveHostHeaderFromBackendRefs(t *testing.T) {
 			backendRefs: []gwtypes.BackendRef{
 				{BackendObjectReference: gwtypes.BackendObjectReference{
 					Name:  "some-ref",
-					Group: &[]gwtypes.Group{gwtypes.Group("example.com")}[0],
-					Kind:  &[]gwtypes.Kind{gwtypes.Kind("NotService")}[0],
+					Group: new(gwtypes.Group("example.com")),
+					Kind:  new(gwtypes.Kind("NotService")),
 				}},
 			},
 			backendServices: []corev1.Service{},
@@ -715,7 +715,7 @@ func TestResolveHostHeaderFromBackendRefs(t *testing.T) {
 			backendRefs: []gwtypes.BackendRef{
 				{BackendObjectReference: gwtypes.BackendObjectReference{
 					Name:      "svc-other-ns",
-					Namespace: &[]gwtypes.Namespace{"other-namespace"}[0],
+					Namespace: new(gwtypes.Namespace("other-namespace")),
 				}},
 			},
 			backendServices: []corev1.Service{
@@ -797,7 +797,7 @@ func TestExtractHostHeaderFromBackendRef(t *testing.T) {
 			backendRef: gwtypes.BackendRef{
 				BackendObjectReference: gwtypes.BackendObjectReference{
 					Name:  "some-ref",
-					Group: &[]gwtypes.Group{gwtypes.Group("example.com")}[0],
+					Group: new(gwtypes.Group("example.com")),
 				},
 			},
 			expected: nil,
@@ -808,7 +808,7 @@ func TestExtractHostHeaderFromBackendRef(t *testing.T) {
 			backendRef: gwtypes.BackendRef{
 				BackendObjectReference: gwtypes.BackendObjectReference{
 					Name: "some-ref",
-					Kind: &[]gwtypes.Kind{gwtypes.Kind("NotService")}[0],
+					Kind: new(gwtypes.Kind("NotService")),
 				},
 			},
 			expected: nil,
@@ -827,7 +827,7 @@ func TestExtractHostHeaderFromBackendRef(t *testing.T) {
 			backendRef: gwtypes.BackendRef{
 				BackendObjectReference: gwtypes.BackendObjectReference{
 					Name:      "svc-other-ns",
-					Namespace: &[]gwtypes.Namespace{"other-namespace"}[0],
+					Namespace: new(gwtypes.Namespace("other-namespace")),
 				},
 			},
 			services: []corev1.Service{
