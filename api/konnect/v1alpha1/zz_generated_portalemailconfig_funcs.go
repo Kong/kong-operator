@@ -58,3 +58,8 @@ func (obj *PortalEmailConfig) SetPortalID(id string) {
 func (obj *PortalEmailConfig) GetPortalRef() commonv1alpha1.ObjectRef {
 	return obj.Spec.PortalRef
 }
+
+// GetParentRef returns the reference to the parent entity.
+func (obj *PortalEmailConfig) GetParentRef() commonv1alpha1.ObjectRef {
+	return obj.GetPortalRef()
+}
