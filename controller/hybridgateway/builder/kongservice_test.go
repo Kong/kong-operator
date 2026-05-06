@@ -269,15 +269,14 @@ func TestKongServiceBuilder_WithPath(t *testing.T) {
 }
 
 func TestKongServiceBuilder_WithTLSVerify(t *testing.T) {
-	boolPtr := func(b bool) *bool { return &b }
 	tests := []struct {
 		name     string
 		v        *bool
 		expected *bool
 	}{
 		{name: "nil leaves field unset", v: nil, expected: nil},
-		{name: "true sets field", v: boolPtr(true), expected: boolPtr(true)},
-		{name: "false sets field", v: boolPtr(false), expected: boolPtr(false)},
+		{name: "true sets field", v: new(true), expected: new(true)},
+		{name: "false sets field", v: new(false), expected: new(false)},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

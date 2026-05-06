@@ -885,7 +885,7 @@ func TestServiceForRule_TLSVerifyAnnotation(t *testing.T) {
 			backendServices: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "my-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "true"}}},
 			},
-			expected: &[]bool{true}[0],
+			expected: new(true),
 		},
 		{
 			name:        "service with tls-verify=false annotation",
@@ -921,7 +921,7 @@ func TestServiceForRule_TLSVerifyAnnotation(t *testing.T) {
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "true"}}},
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-b", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "false"}}},
 			},
-			expected: &[]bool{true}[0],
+			expected: new(true),
 		},
 	}
 	for _, tt := range tests {
