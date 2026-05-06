@@ -85,12 +85,10 @@ dir = "./{{env.DIR}}"
 run = "go build -o ../bin/{{env.DIR}} main.go"
 
 [tasks.clean]
-# TODO: This hardcodes the x-konnect API group. Removing this hardcode would cause
-# the removal of other non generated APIs to be removed.
 description = "Clean generated files"
 run = '''
 rm -rf \
-       ./api/konnect/zz_generated_* \
+       ./api/konnect/v1alpha1/zz_generated_* \
        ./config/crd/kong-operator/x-konnect.konghq.com_* \
        ./controller/konnect/zz_generated_reconciler_generic_rbac_* \
        ./modules/manager/zz_generated_* \

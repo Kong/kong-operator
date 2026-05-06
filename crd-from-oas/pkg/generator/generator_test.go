@@ -687,6 +687,8 @@ func TestGenerateCRDFuncs_GeneratesKonnectFuncs(t *testing.T) {
 		assert.Contains(t, content, `commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"`)
 		assert.Contains(t, content, `func (obj *PortalTeam) GetPortalRef() commonv1alpha1.ObjectRef {`)
 		assert.Contains(t, content, `return obj.Spec.PortalRef`)
+		assert.Contains(t, content, `func (obj *PortalTeam) GetParentRef() commonv1alpha1.ObjectRef {`)
+		assert.Contains(t, content, `return obj.GetPortalRef()`)
 	})
 
 	t.Run("event gateway child entities get event gateway ref accessor alias", func(t *testing.T) {
@@ -718,6 +720,8 @@ func TestGenerateCRDFuncs_GeneratesKonnectFuncs(t *testing.T) {
 		assert.Contains(t, content, `func (obj *EventGatewayDataPlaneCertificate) GetGatewayRef() commonv1alpha1.ObjectRef {`)
 		assert.Contains(t, content, `func (obj *EventGatewayDataPlaneCertificate) GetEventGatewayRef() commonv1alpha1.ObjectRef {`)
 		assert.Contains(t, content, `return obj.Spec.GatewayRef`)
+		assert.Contains(t, content, `func (obj *EventGatewayDataPlaneCertificate) GetParentRef() commonv1alpha1.ObjectRef {`)
+		assert.Contains(t, content, `return obj.GetEventGatewayRef()`)
 	})
 
 	t.Run("root ref accessor uses last (immediate) dependency", func(t *testing.T) {
@@ -751,6 +755,8 @@ func TestGenerateCRDFuncs_GeneratesKonnectFuncs(t *testing.T) {
 		assert.Contains(t, content, `func (obj *PortalTeamDeveloper) GetTeamRef() ObjectRef {`)
 		// Portal is a transitive parent → no GetPortalRef accessor.
 		assert.NotContains(t, content, `func (obj *PortalTeamDeveloper) GetPortalRef() ObjectRef {`)
+		assert.Contains(t, content, `func (obj *PortalTeamDeveloper) GetParentRef() ObjectRef {`)
+		assert.Contains(t, content, `return obj.GetTeamRef()`)
 	})
 }
 
