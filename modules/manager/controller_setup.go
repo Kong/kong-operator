@@ -32,6 +32,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/cpextensions/metricsscraper"
 	"github.com/kong/kong-operator/v2/controller/dataplane"
 	egdataplane "github.com/kong/kong-operator/v2/controller/eventgateway/dataplane"
+	egpoc "github.com/kong/kong-operator/v2/controller/eventgateway/poc"
 	"github.com/kong/kong-operator/v2/controller/gateway"
 	"github.com/kong/kong-operator/v2/controller/gatewayclass"
 	hybridgateway "github.com/kong/kong-operator/v2/controller/hybridgateway"
@@ -804,6 +805,24 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		controllers = append(
 			controllers,
 			generatedControllersForKonnectEntities(controllerFactory)...,
+		)
+
+		// PoC stubs: skip Konnect SDK calls and just mark these entities Programmed.
+		controllers = append(controllers,
+			ControllerDef{
+				Enabled: true,
+				Controller: &egpoc.EventGatewayStubReconciler{
+					Client:      mgr.GetClient(),
+					LoggingMode: c.LoggingMode,
+				},
+			},
+			ControllerDef{
+				Enabled: true,
+				Controller: &egpoc.EventDataPlaneCertificateStubReconciler{
+					Client:      mgr.GetClient(),
+					LoggingMode: c.LoggingMode,
+				},
+			},
 		)
 
 		controllers = append(controllers,

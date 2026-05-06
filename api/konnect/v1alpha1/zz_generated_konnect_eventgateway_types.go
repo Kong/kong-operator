@@ -3,8 +3,8 @@
 package v1alpha1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // KonnectEventGateway is the Schema for the konnecteventgateways API.
@@ -43,7 +43,7 @@ type KonnectEventGatewayList struct {
 type KonnectEventGatewaySpec struct {
 	// KonnectConfiguration is the Konnect configuration for this entity.
 	//
-	// +required
+	// +optional
 	KonnectConfiguration konnectv1alpha2.KonnectConfiguration `json:"konnect"`
 
 	// APISpec defines the desired state of the resource's API spec fields.

@@ -117,8 +117,6 @@ spec:
                 required:
                 - authRef
                 type: object
-            required:
-            - konnect
             type: object
           status:
             description: KonnectEventGatewayStatus defines the observed state of KonnectEventGateway.

@@ -194,11 +194,6 @@ func generateBaseDeployment(
 		},
 		VolumeMounts: []corev1.VolumeMount{
 			{
-				Name:      KonnectCertVolumeName,
-				MountPath: KonnectCertMountPath,
-				ReadOnly:  true,
-			},
-			{
 				Name:      "tmp",
 				MountPath: "/tmp",
 			},
@@ -223,14 +218,6 @@ func generateBaseDeployment(
 
 	tmpSizeLimit := resource.MustParse("1Gi")
 	volumes := []corev1.Volume{
-		{
-			Name: KonnectCertVolumeName,
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName: certSecretName,
-				},
-			},
-		},
 		{
 			Name: "tmp",
 			VolumeSource: corev1.VolumeSource{
@@ -306,8 +293,6 @@ func buildKEGEnvVars(
 	envVars := []corev1.EnvVar{
 		{Name: EnvKonnectRegion, Value: region},
 		{Name: EnvKonnectGatewayClusterID, Value: keg.Status.ID},
-		{Name: EnvKonnectClientCertPath, Value: KonnectCertMountPath + "tls.crt"},
-		{Name: EnvKonnectClientKeyPath, Value: KonnectCertMountPath + "tls.key"},
 		{Name: EnvKonnectDomain, Value: domain},
 		// Bind the health endpoint to all interfaces so Kubernetes probes can reach it.
 		{Name: EnvRuntimeHealthAddr, Value: healthAddr},
