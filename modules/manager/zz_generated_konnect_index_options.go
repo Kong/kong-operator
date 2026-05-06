@@ -22,6 +22,7 @@ func generatedIndexOptionsForKonnectEntities(
 		index.OptionsForKonnectEventDataPlaneCertificate(),
 		index.OptionsForKonnectEventGateway(),
 		index.OptionsForPortal(),
+		index.OptionsForPortalCustomDomain(),
 		index.OptionsForPortalEmailConfig(),
 		index.OptionsForPortalIPAllowList(),
 		index.OptionsForPortalPage(),

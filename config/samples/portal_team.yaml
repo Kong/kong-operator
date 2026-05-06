@@ -17,7 +17,7 @@ spec:
 kind: PortalTeam
 apiVersion: konnect.konghq.com/v1alpha1
 metadata:
-  name: portal1
+  name: portal1-team
   namespace: default
 spec:
   portalRef:

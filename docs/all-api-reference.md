@@ -4958,6 +4958,7 @@ Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1al
 - [KonnectGatewayControlPlane](#konnect-konghq-com-v1alpha1-konnectgatewaycontrolplane)
 - [MCPServer](#konnect-konghq-com-v1alpha1-mcpserver)
 - [Portal](#konnect-konghq-com-v1alpha1-portal)
+- [PortalCustomDomain](#konnect-konghq-com-v1alpha1-portalcustomdomain)
 - [PortalEmailConfig](#konnect-konghq-com-v1alpha1-portalemailconfig)
 - [PortalPage](#konnect-konghq-com-v1alpha1-portalpage)
 - [PortalTeam](#konnect-konghq-com-v1alpha1-portalteam)
@@ -5189,6 +5190,21 @@ Portal is the Schema for the portals API.
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[PortalSpec](#konnect-konghq-com-v1alpha1-types-portalspec)_ |  |
 | `status` _[PortalStatus](#konnect-konghq-com-v1alpha1-types-portalstatus)_ |  |
+
+### PortalCustomDomain
+
+
+PortalCustomDomain is the Schema for the portalcustomdomains API.
+
+<!-- portal_custom_domain description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `PortalCustomDomain`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[PortalCustomDomainSpec](#konnect-konghq-com-v1alpha1-types-portalcustomdomainspec)_ |  |
+| `status` _[PortalCustomDomainStatus](#konnect-konghq-com-v1alpha1-types-portalcustomdomainstatus)_ |  |
 
 ### PortalEmailConfig
 
@@ -5634,6 +5650,41 @@ CreateControlPlaneRequest - The request schema for the create control plane requ
 _Appears in:_
 
 - [KonnectGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanespec)
+
+
+
+#### CreatePortalCustomDomainSSLStandard
+
+
+CreatePortalCustomDomainSSLStandard is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `domainVerificationMethod` _string_ |  |
+
+_Appears in:_
+
+- [PortalCustomDomainSSL](#konnect-konghq-com-v1alpha1-types-portalcustomdomainssl)
+
+#### CreatePortalCustomDomainSSLWithCustomCertificate
+
+
+CreatePortalCustomDomainSSLWithCustomCertificate is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `customCertificate` _string_ | Custom certificate to be used for the SSL termination. |
+| `customPrivateKey` _string_ | Custom certificate private key to be used for the SSL termination. |
+| `domainVerificationMethod` _string_ |  |
+| `skipCaCheck` _string_ | Advanced option. If true, the custom certificate is served exactly as provided, without attempting to bundle against a public trust store. Required for certificates issued by an internal/private CA. |
+
+_Appears in:_
+
+- [PortalCustomDomainSSL](#konnect-konghq-com-v1alpha1-types-portalcustomdomainssl)
 
 #### DataPlaneClientAuthStatus
 
@@ -6586,6 +6637,7 @@ _Appears in:_
 - [EventGatewayVirtualClusterStatus](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterstatus)
 - [IdentityProviderRequestStatus](#konnect-konghq-com-v1alpha1-types-identityproviderrequeststatus)
 - [KonnectEventDataPlaneCertificateStatus](#konnect-konghq-com-v1alpha1-types-konnecteventdataplanecertificatestatus)
+- [PortalCustomDomainStatus](#konnect-konghq-com-v1alpha1-types-portalcustomdomainstatus)
 - [PortalEmailConfigStatus](#konnect-konghq-com-v1alpha1-types-portalemailconfigstatus)
 - [PortalIPAllowListStatus](#konnect-konghq-com-v1alpha1-types-portalipallowliststatus)
 - [PortalPageStatus](#konnect-konghq-com-v1alpha1-types-portalpagestatus)
@@ -7228,6 +7280,96 @@ PortalAPISpec defines the API spec fields for Portal.
 _Appears in:_
 
 - [PortalSpec](#konnect-konghq-com-v1alpha1-types-portalspec)
+
+#### PortalCustomDomainAPISpec
+
+
+PortalCustomDomainAPISpec defines the API spec fields for PortalCustomDomain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `enabled` _string_ |  |
+| `hostname` _string_ |  |
+| `ssl` _[PortalCustomDomainSSL](#konnect-konghq-com-v1alpha1-types-portalcustomdomainssl)_ |  |
+
+_Appears in:_
+
+- [PortalCustomDomainSpec](#konnect-konghq-com-v1alpha1-types-portalcustomdomainspec)
+
+
+
+#### PortalCustomDomainSSL
+
+
+PortalCustomDomainSSL represents a union type for ssl.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[PortalCustomDomainSSLType](#konnect-konghq-com-v1alpha1-types-portalcustomdomainssltype)_ | Type designates the type of configuration. |
+| `withCustomCertificate` _[CreatePortalCustomDomainSSLWithCustomCertificate](#konnect-konghq-com-v1alpha1-types-createportalcustomdomainsslwithcustomcertificate)_ | WithCustomCertificate configuration. |
+| `standard` _[CreatePortalCustomDomainSSLStandard](#konnect-konghq-com-v1alpha1-types-createportalcustomdomainsslstandard)_ | Standard configuration. |
+
+_Appears in:_
+
+- [PortalCustomDomainAPISpec](#konnect-konghq-com-v1alpha1-types-portalcustomdomainapispec)
+
+#### PortalCustomDomainSSLType
+
+_Underlying type:_ `string`
+
+PortalCustomDomainSSLType represents the type of ssl.
+
+
+
+
+_Appears in:_
+
+- [PortalCustomDomainSSL](#konnect-konghq-com-v1alpha1-types-portalcustomdomainssl)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `withCustomCertificate` |  |
+| `standard` |  |
+
+#### PortalCustomDomainSpec
+
+
+PortalCustomDomainSpec defines the desired state of PortalCustomDomain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `portalRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | PortalRef is the reference to the parent Portal object. |
+| `apiSpec` _[PortalCustomDomainAPISpec](#konnect-konghq-com-v1alpha1-types-portalcustomdomainapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [PortalCustomDomain](#konnect-konghq-com-v1alpha1-portalcustomdomain)
+
+#### PortalCustomDomainStatus
+
+
+PortalCustomDomainStatus defines the observed state of PortalCustomDomain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `portalID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | PortalID is the Konnect ID of the parent Portal. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [PortalCustomDomain](#konnect-konghq-com-v1alpha1-portalcustomdomain)
 
 #### PortalEmailConfigAPISpec
 

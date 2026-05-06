@@ -91,6 +91,7 @@ type Schema struct {
 	Tags                 []string // POST tags (e.g. ["portals"])
 	SuccessResponseRef   string   // ref name of the 2xx success response schema (e.g. "Portal", "EventGatewayInfo")
 	RespIDIsPointer      bool     // true when the 2xx response schema's "id" field is not in required (i.e. *string in SDK codegen)
+	RespHasID            bool     // true when the 2xx response schema declares any "id" property (required or optional)
 	CreateReqBodyPointer bool     // true when POST requestBody is not marked required (SDK emits pointer)
 
 	// PATCH/PUT operation hints for update ops generation.
@@ -228,6 +229,7 @@ func (p *Parser) parsePath(targetPath string) (string, *Schema, error) {
 		schema.Tags = append([]string(nil), operation.Tags...)
 		schema.SuccessResponseRef = extractSuccessResponseRef(operation.Responses)
 		schema.RespIDIsPointer = p.successResponseIDIsPointer(operation.Responses)
+		schema.RespHasID = p.successResponseHasID(operation.Responses)
 		schema.CreateReqBodyPointer = !reqBody.Required
 		p.extractUpdateOp(targetPath, schema)
 		p.extractDeleteOp(targetPath, schema)
@@ -693,6 +695,41 @@ func (p *Parser) successResponseIDIsPointer(responses *openapi3.Responses) bool 
 				return false
 			}
 			// "id" field exists but is not required → SDK emits *string
+			if _, ok := schemaVal.Properties["id"]; ok {
+				return true
+			}
+			return false
+		}
+	}
+	return false
+}
+
+// successResponseHasID reports whether the 2xx response schema declares an "id"
+// property at all (required or optional). Returns false when the response
+// schema cannot be resolved.
+func (p *Parser) successResponseHasID(responses *openapi3.Responses) bool {
+	if responses == nil {
+		return false
+	}
+	for _, code := range []string{"201", "200"} {
+		respRef := responses.Value(code)
+		if respRef == nil || respRef.Value == nil {
+			continue
+		}
+		for _, mt := range respRef.Value.Content {
+			if mt == nil || mt.Schema == nil {
+				continue
+			}
+			schemaVal := mt.Schema.Value
+			if mt.Schema.Ref != "" {
+				refName := extractRefName(mt.Schema.Ref)
+				if s, ok := p.doc.Components.Schemas[refName]; ok && s != nil && s.Value != nil {
+					schemaVal = s.Value
+				}
+			}
+			if schemaVal == nil {
+				continue
+			}
 			if _, ok := schemaVal.Properties["id"]; ok {
 				return true
 			}

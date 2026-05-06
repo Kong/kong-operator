@@ -39,6 +39,9 @@ type opsCreateFuncData struct {
 	// passing parentID as a positional argument.
 	CreateFullyWrapped bool
 	RespIDIsPointer    bool
+	// SingletonNoID is true when the create response schema has no "id" field.
+	// Generated code skips the SetKonnectID call entirely for these entities.
+	SingletonNoID bool
 }
 
 // generateOpsCreateFuncBody renders the create<Entity> function body (no file header).
@@ -100,6 +103,7 @@ func (g *Generator) generateOpsCreateFuncBody(
 		Parents:              parents,
 		CreateFullyWrapped:   createFullyWrapped,
 		RespIDIsPointer:      schema.RespIDIsPointer,
+		SingletonNoID:        isSingletonNoID(schema),
 	}, nil
 }
 

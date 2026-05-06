@@ -288,6 +288,52 @@ type ClientIdentity struct {
 // updated in seconds.
 type BackendMetadataUpdateIntervalSeconds int
 
+// CreatePortalCustomDomainSSL is a type alias.
+type CreatePortalCustomDomainSSL map[string]string
+
+// CreatePortalCustomDomainSSLStandard is a type alias.
+type CreatePortalCustomDomainSSLStandard struct {
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=http
+	DomainVerificationMethod string `json:"domainVerificationMethod,omitempty"`
+}
+
+// CreatePortalCustomDomainSSLWithCustomCertificate is a type alias.
+type CreatePortalCustomDomainSSLWithCustomCertificate struct {
+	// Custom certificate to be used for the SSL termination.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	CustomCertificate string `json:"customCertificate,omitempty"`
+	// Custom certificate private key to be used for the SSL termination.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	CustomPrivateKey string `json:"customPrivateKey,omitempty"`
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=custom_certificate
+	DomainVerificationMethod string `json:"domainVerificationMethod,omitempty"`
+	// Advanced option.
+	// If true, the custom certificate is served exactly as provided, without
+	// attempting to bundle against a public trust store.
+	// Required for certificates issued by an internal/private CA.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SkipCaCheck string `json:"skipCaCheck,omitempty"`
+}
+
 // Description is a type alias.
 type Description string
 
