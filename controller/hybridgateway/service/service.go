@@ -97,6 +97,7 @@ func ServiceForRule[
 	protocol := resolveProtocolFromBackendRefs(ctx, cl, namespace, backendRefs, defaultProtocol, logger)
 	path := resolvePathFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
 	tlsVerify := resolveTLSVerifyFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
+	tlsVerifyDepth := resolveTLSVerifyDepthFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
 
 	logger = logger.WithValues("kongservice", serviceName)
 	log.Debug(logger, fmt.Sprintf("Generating KongService for %s rule", parentRoute.GetObjectKind().GroupVersionKind().Kind))
@@ -111,6 +112,7 @@ func ServiceForRule[
 		WithProtocol(protocol).
 		WithPath(path).
 		WithTLSVerify(tlsVerify).
+		WithTLSVerifyDepth(tlsVerifyDepth).
 		WithControlPlaneRef(*cp).Build()
 	if err != nil {
 		log.Error(logger, err, "Failed to build KongService resource")
@@ -298,5 +300,57 @@ func extractTLSVerifyFromBackendRef(
 
 	log.Debug(logger, "Using tls-verify from backend Service annotation",
 		"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "tls-verify", *v)
+	return v
+}
+
+// resolveTLSVerifyDepthFromBackendRefs returns the tls-verify-depth value taken from
+// the first backend Service that carries the konghq.com/tls-verify-depth annotation.
+func resolveTLSVerifyDepthFromBackendRefs(
+	ctx context.Context,
+	cl client.Client,
+	namespace string,
+	backendRefs []gwtypes.BackendRef,
+	logger logr.Logger,
+) *int64 {
+	for _, backendRef := range backendRefs {
+		if v := extractTLSVerifyDepthFromBackendRef(ctx, cl, logger, namespace, backendRef); v != nil {
+			return v
+		}
+	}
+	return nil
+}
+
+// extractTLSVerifyDepthFromBackendRef returns the tls-verify-depth value from the
+// konghq.com/tls-verify-depth annotation on the backend Service referenced by the BackendRef.
+func extractTLSVerifyDepthFromBackendRef(
+	ctx context.Context,
+	cl client.Client,
+	logger logr.Logger,
+	namespace string,
+	backendRef gwtypes.BackendRef,
+) *int64 {
+	if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
+		return nil
+	}
+
+	bRefNamespace := namespace
+	if backendRef.Namespace != nil && *backendRef.Namespace != "" {
+		bRefNamespace = string(*backendRef.Namespace)
+	}
+
+	svc := &corev1.Service{}
+	if err := cl.Get(ctx, client.ObjectKey{Namespace: bRefNamespace, Name: string(backendRef.Name)}, svc); err != nil {
+		log.Debug(logger, "Failed to fetch backend Service for tls-verify-depth annotation check",
+			"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "error", err)
+		return nil
+	}
+
+	v := metadata.ExtractTLSVerifyDepth(svc.GetAnnotations())
+	if v == nil {
+		return nil
+	}
+
+	log.Debug(logger, "Using tls-verify-depth from backend Service annotation",
+		"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "tls-verify-depth", *v)
 	return v
 }

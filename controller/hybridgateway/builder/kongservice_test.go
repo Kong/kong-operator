@@ -292,6 +292,31 @@ func TestKongServiceBuilder_WithTLSVerify(t *testing.T) {
 	}
 }
 
+func TestKongServiceBuilder_WithTLSVerifyDepth(t *testing.T) {
+	tests := []struct {
+		name     string
+		v        *int64
+		expected *int64
+	}{
+		{name: "nil leaves field unset", v: nil, expected: nil},
+		{name: "zero sets field", v: new(int64(0)), expected: new(int64(0))},
+		{name: "positive sets field", v: new(int64(3)), expected: new(int64(3))},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			service, err := NewKongService().WithTLSVerifyDepth(tt.v).Build()
+			require.NoError(t, err)
+			if tt.expected == nil {
+				assert.Nil(t, service.Spec.TLSVerifyDepth)
+			} else {
+				require.NotNil(t, service.Spec.TLSVerifyDepth)
+				assert.Equal(t, *tt.expected, *service.Spec.TLSVerifyDepth)
+			}
+		})
+	}
+}
+
 func TestKongServiceBuilder_Build(t *testing.T) {
 	t.Run("successful build", func(t *testing.T) {
 		builder := NewKongService().

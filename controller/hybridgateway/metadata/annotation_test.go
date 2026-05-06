@@ -995,6 +995,35 @@ func TestExtractTLSVerify(t *testing.T) {
 	}
 }
 
+func TestExtractTLSVerifyDepth(t *testing.T) {
+	tests := []struct {
+		name        string
+		annotations map[string]string
+		expected    *int64
+	}{
+		{name: "nil annotations", annotations: nil, expected: nil},
+		{name: "empty annotations", annotations: map[string]string{}, expected: nil},
+		{name: "valid depth", annotations: map[string]string{"konghq.com/tls-verify-depth": "3"}, expected: new(int64(3))},
+		{name: "zero depth", annotations: map[string]string{"konghq.com/tls-verify-depth": "0"}, expected: new(int64(0))},
+		{name: "negative depth treated as invalid", annotations: map[string]string{"konghq.com/tls-verify-depth": "-1"}, expected: nil},
+		{name: "non-numeric value", annotations: map[string]string{"konghq.com/tls-verify-depth": "abc"}, expected: nil},
+		{name: "empty value", annotations: map[string]string{"konghq.com/tls-verify-depth": ""}, expected: nil},
+		{name: "other annotations only", annotations: map[string]string{"konghq.com/protocol": "https"}, expected: nil},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ExtractTLSVerifyDepth(tt.annotations)
+			if tt.expected == nil {
+				assert.Nil(t, got)
+			} else {
+				require.NotNil(t, got)
+				assert.Equal(t, *tt.expected, *got)
+			}
+		})
+	}
+}
+
 func TestIsValidProtocol(t *testing.T) {
 	validProtocols := []string{"http", "https", "grpc", "grpcs", "ws", "wss", "tls", "tcp", "tls_passthrough"}
 	for _, p := range validProtocols {

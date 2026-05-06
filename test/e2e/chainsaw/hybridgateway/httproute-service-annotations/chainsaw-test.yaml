@@ -13,6 +13,7 @@ spec:
     - konghq.com/path: <path>
     - konghq.com/protocol: <protocol>
     - konghq.com/tls-verify: <bool>
+    - konghq.com/tls-verify-depth: <depth>
     the value should be applied to the generated KongService.
 
   bindings:
@@ -148,6 +149,7 @@ spec:
                   konghq.com/path: "/echo"
                   konghq.com/protocol: "https"
                   konghq.com/tls-verify: "true"
+                  konghq.com/tls-verify-depth: "2"
 
     # Step 12: Create HTTPRoute to route traffic.
     - name: Create-httproute
@@ -201,6 +203,7 @@ spec:
                 path: "/echo"
                 protocol: "https"
                 tls_verify: true
+                tls_verify_depth: 2
 
     # Step 15: Assert KongUpstream is created.
     - name: Assert-kong-upstream
