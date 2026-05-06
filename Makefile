@@ -607,6 +607,7 @@ _test.envtest: gotestsum setup-envtest
 		-timeout $(ENVTEST_TIMEOUT) \
 		-covermode=atomic \
 		-coverpkg=$(PKG_LIST) \
+		-parallel $(GO_TEST_PARALLEL) \
 		-coverprofile=coverage.envtest.out \
 		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS)" \
 		$(ENVTEST_TEST_PATHS)
@@ -621,11 +622,15 @@ test.envtest.pretty:
 
 .PHONY: test.crds-validation
 test.crds-validation:
-	$(MAKE) _test.envtest GOTESTSUM_FORMAT=standard-verbose ENVTEST_TEST_PATHS=./test/crdsvalidation/...
+	$(MAKE) _test.envtest \
+		GOTESTSUM_FORMAT=standard-verbose \
+		ENVTEST_TEST_PATHS=./test/crdsvalidation/...
 
 .PHONY: test.crds-validation.pretty
 test.crds-validation.pretty:
-	$(MAKE) _test.envtest GOTESTSUM_FORMAT=testname ENVTEST_TEST_PATHS=./test/crdsvalidation/...
+	$(MAKE) _test.envtest \
+		GOTESTSUM_FORMAT=testname \
+		ENVTEST_TEST_PATHS=./test/crdsvalidation/...
 
 # Define a constant list of channels
 CHANNELS := ingress-controller-incubator gateway-operator kong-operator
@@ -806,7 +811,7 @@ test.e2e.chainsaw: chainsaw ## Run chainsaw e2e tests.
 	$(CHAINSAW) test --config $(CHAINSAW_CONFIG) --quiet --test-dir $(CHAINSAW_TEST_DIR)
 
 NCPU := $(shell getconf _NPROCESSORS_ONLN)
-PARALLEL := $(if $(PARALLEL),$(PARALLEL),$(NCPU))
+GO_TEST_PARALLEL := $(if $(GO_TEST_PARALLEL),$(GO_TEST_PARALLEL),$(NCPU))
 
 .PHONY: _test.conformance
 _test.conformance: gotestsum download.telepresence
@@ -817,7 +822,7 @@ _test.conformance: gotestsum download.telepresence
 		-timeout $(CONFORMANCE_TEST_TIMEOUT) \
 		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS) $(LDFLAGS_METADATA)" \
 		-race \
-		-parallel $(PARALLEL) \
+		-parallel $(GO_TEST_PARALLEL) \
 		$(TEST_SUITE_PATH)
 
 .PHONY: test.conformance
