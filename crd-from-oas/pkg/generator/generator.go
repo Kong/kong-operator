@@ -44,6 +44,9 @@ type Config struct {
 	// APIGroupPackageAlias is the import alias for the generated API types package
 	// (e.g. "xkonnectv1alpha1").
 	APIGroupPackageAlias string
+	// Categories are kubebuilder resource categories applied to root CRD
+	// types via +kubebuilder:resource:categories=...
+	Categories []string
 	// SkipGetForUIDEntities is the set of entity names for which getForUID
 	// generation should be skipped (e.g. because a hand-written implementation
 	// already exists in an ops_<entity>_manual.go file).
@@ -508,8 +511,17 @@ func (g *Generator) generateReconcilerEntityFiles(reconcilerEntities []string, p
 func (g *Generator) generateSharedFiles(parsed *parser.ParsedSpec, referencedSchemas map[string]bool, schemaTypeFieldConfig *config.Config) ([]GeneratedFile, error) {
 	var files []GeneratedFile
 
+	gviGeneratedContent, err := g.generateGroupVersionInfoGenerated(parsed)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate zz_generated_groupversion_info file: %w", err)
+	}
+	files = append(files, GeneratedFile{
+		Name:    "zz_generated_groupversion_info.go",
+		Content: gviGeneratedContent,
+	})
+
 	if g.config.GenerateGroupVersionInfo {
-		gviContent, err := g.generateGroupVersionInfo(parsed)
+		gviContent, err := g.generateGroupVersionInfo()
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate groupversion_info file: %w", err)
 		}
@@ -1057,6 +1069,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		"goType":                goTypeInCRD,
 		"goFieldName":           goFieldName,
 		"jsonTag":               jsonTag,
+		"refJSONTag":            func(p *parser.Property) string { return jsonName(p.Name) + "Ref" },
 		"kubebuilderTags":       kubebuilderTagsWithConfig,
 		"isRefProperty":         isRefProperty,
 		"refEntityName":         parser.GetRefEntityName,
@@ -1066,6 +1079,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		"hasRootOneOf":          hasRootOneOf,
 		"objectRefTypeName":     func() string { return g.objectRefTypeName() },
 		"namespacedRefTypeName": func() string { return g.namespacedRefTypeName() },
+		"join":                  strings.Join,
 	}
 
 	tmpl := template.Must(template.New("crd").Funcs(funcMap).Parse(crdTypeTemplate))
@@ -1079,8 +1093,10 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 
 	hasRootReconciler := false
 	if rc := g.config.ReconcilerConfig[entityName]; rc != nil {
-		hasRootReconciler = rc.IsRoot
+		hasRootReconciler = rc.GetIsRoot()
 	}
+
+	categories := g.config.Categories
 
 	// Detect whether the entity schema has property-level oneOf unions (which
 	// produce MarshalJSON/UnmarshalJSON methods that need encoding/json + fmt).
@@ -1106,6 +1122,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		HasOptionalSecretRef      bool
 		HasRootReconciler         bool
 		ImmediateParentDependency *parser.Dependency
+		Categories                []string
 	}{
 		EntityName:                entityName,
 		Schema:                    schema,
@@ -1117,6 +1134,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		HasOptionalSecretRef:      hasOptionalSecretRef,
 		HasRootReconciler:         hasRootReconciler,
 		ImmediateParentDependency: rootRefDependency(schema),
+		Categories:                categories,
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
@@ -1207,7 +1225,7 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 	entityName := parser.GetEntityNameFromType(name)
 	isReconcilerRoot := false
 	if rc := g.config.ReconcilerConfig[entityName]; rc != nil {
-		isReconcilerRoot = rc.IsRoot
+		isReconcilerRoot = rc.GetIsRoot()
 	}
 	rootRefDependency := rootRefDependency(schema)
 
@@ -1651,7 +1669,8 @@ func emitUnionTests(pkgName string, unionSpecs []unionFieldSpec, wrapperSpecs []
 		buf.WriteString("\t\tpayload []byte\n")
 		buf.WriteString("\t}{\n")
 		for _, variant := range unionSpec.Variants {
-			payload := fmt.Sprintf(`{"type":%q,%q:{}}`, variant.DiscValue, variant.DiscValue)
+			camelDiscValue := jsonName(variant.DiscValue)
+			payload := fmt.Sprintf(`{"type":%q,%q:{}}`, camelDiscValue, camelDiscValue)
 			fmt.Fprintf(&buf, "\t\t{name: %q, payload: []byte(%q)},\n", variant.DiscValue, payload)
 		}
 		buf.WriteString("\t}\n\n")
@@ -1699,10 +1718,11 @@ func emitUnionTests(pkgName string, unionSpecs []unionFieldSpec, wrapperSpecs []
 		buf.WriteString("\t}{\n")
 		for _, field := range wrapperSpec.Fields {
 			for _, variant := range field.Variants {
-				variantPayload := fmt.Sprintf(`{"type":%q,%q:{}}`, variant.DiscValue, variant.DiscValue)
+				camelDiscValue := jsonName(variant.DiscValue)
+				variantPayload := fmt.Sprintf(`{"type":%q,%q:{}}`, camelDiscValue, camelDiscValue)
 				payload := variantPayload
 				if !field.Inline {
-					payload = fmt.Sprintf(`{%q:%s}`, field.JSONName, variantPayload)
+					payload = fmt.Sprintf(`{%q:%s}`, jsonName(field.JSONName), variantPayload)
 				}
 				fmt.Fprintf(&buf, "\t\t{\n")
 				fmt.Fprintf(&buf, "\t\t\tname: %q,\n", field.FieldName+"/"+variant.DiscValue)
@@ -1757,7 +1777,7 @@ func emitDiscriminatedUnionCode(typeName, propName string, variants []unionVaria
 
 	discValues := make([]string, 0, len(variants))
 	for _, v := range variants {
-		discValues = append(discValues, v.discValue)
+		discValues = append(discValues, jsonName(v.discValue))
 	}
 
 	var buf strings.Builder
@@ -1779,7 +1799,7 @@ func emitDiscriminatedUnionCode(typeName, propName string, variants []unionVaria
 		fmt.Fprintf(&buf, "\t// %s configuration.\n", fieldName)
 		buf.WriteString("\t//\n")
 		buf.WriteString("\t// +optional\n")
-		fmt.Fprintf(&buf, "\t%s *%s `json:\"%s,omitempty\"`\n", fieldName, refTypeName, v.discValue)
+		fmt.Fprintf(&buf, "\t%s *%s `json:\"%s,omitempty\"`\n", fieldName, refTypeName, jsonName(v.discValue))
 	}
 	buf.WriteString("}\n\n")
 
@@ -1790,7 +1810,7 @@ func emitDiscriminatedUnionCode(typeName, propName string, variants []unionVaria
 	buf.WriteString("const (\n")
 	for i, v := range variants {
 		fieldSuffix := fixInitialisms(cleanFieldNames[i])
-		fmt.Fprintf(&buf, "\t%sType%s %sType = \"%s\"\n", typeName, fieldSuffix, typeName, v.discValue)
+		fmt.Fprintf(&buf, "\t%sType%s %sType = \"%s\"\n", typeName, fieldSuffix, typeName, jsonName(v.discValue))
 	}
 	buf.WriteString(")\n\n")
 
@@ -1804,13 +1824,14 @@ func emitDiscriminatedUnionCode(typeName, propName string, variants []unionVaria
 	buf.WriteString("\tswitch u.Type {\n")
 	for i, v := range variants {
 		fieldName := fixInitialisms(cleanFieldNames[i])
-		fmt.Fprintf(&buf, "\tcase \"%s\":\n", v.discValue)
+		camelDiscValue := jsonName(v.discValue)
+		fmt.Fprintf(&buf, "\tcase \"%s\":\n", camelDiscValue)
 		fmt.Fprintf(&buf, "\t\tif u.%s != nil {\n", fieldName)
 		fmt.Fprintf(&buf, "\t\t\traw, err := json.Marshal(u.%s)\n", fieldName)
 		buf.WriteString("\t\t\tif err != nil {\n")
 		fmt.Fprintf(&buf, "\t\t\t\treturn nil, fmt.Errorf(\"marshaling %s %s: %%w\", err)\n", typeName, v.discValue)
 		buf.WriteString("\t\t\t}\n")
-		fmt.Fprintf(&buf, "\t\t\tm[\"%s\"] = raw\n", v.discValue)
+		fmt.Fprintf(&buf, "\t\t\tm[\"%s\"] = raw\n", camelDiscValue)
 		buf.WriteString("\t\t}\n")
 	}
 	buf.WriteString("\t}\n")
@@ -1839,8 +1860,9 @@ func emitDiscriminatedUnionCode(typeName, propName string, variants []unionVaria
 	for i, v := range variants {
 		fieldName := fixInitialisms(cleanFieldNames[i])
 		refTypeName := fixInitialisms(v.refName)
-		fmt.Fprintf(&buf, "\tcase \"%s\":\n", v.discValue)
-		fmt.Fprintf(&buf, "\t\tpayload, ok := raw[\"%s\"]\n", v.discValue)
+		camelDiscValue := jsonName(v.discValue)
+		fmt.Fprintf(&buf, "\tcase \"%s\":\n", camelDiscValue)
+		fmt.Fprintf(&buf, "\t\tpayload, ok := raw[\"%s\"]\n", camelDiscValue)
 		buf.WriteString("\t\tif !ok || len(payload) == 0 {\n")
 		buf.WriteString("\t\t\treturn nil\n")
 		buf.WriteString("\t\t}\n")
@@ -1979,13 +2001,13 @@ func (g *Generator) emitAnyOfUnionType(goName string, schema *parser.Schema) str
 			fieldGoType := g.goType(p)
 			fieldGoType = "*" + fieldGoType
 			fmt.Fprintf(&buf, "\t// +optional\n")
-			fmt.Fprintf(&buf, "\t%s %s `json:\"%s,omitempty\"`\n", fieldGoName, fieldGoType, p.Name)
+			fmt.Fprintf(&buf, "\t%s %s `json:\"%s,omitempty\"`\n", fieldGoName, fieldGoType, jsonName(p.Name))
 		} else {
 			// Multi-property variant: embed as a pointer.
 			fieldGoName := fixInitialisms(cleanSingleVariantName(refName))
 			refTypeName := fixInitialisms(refName)
 			fmt.Fprintf(&buf, "\t// +optional\n")
-			fmt.Fprintf(&buf, "\t%s *%s `json:\"%s,omitempty\"`\n", fieldGoName, refTypeName, strings.ToLower(fieldGoName))
+			fmt.Fprintf(&buf, "\t%s *%s `json:\"%s,omitempty\"`\n", fieldGoName, refTypeName, lowerCamelCase(fieldGoName))
 		}
 	}
 	buf.WriteString("}\n")
@@ -2006,23 +2028,44 @@ func fixTrailingEmptyLines(s string) string {
 	return strings.Join(result, "\n")
 }
 
-func (g *Generator) generateGroupVersionInfo(parsed *parser.ParsedSpec) (string, error) {
-	tmpl := template.Must(template.New("groupVersionInfo").Parse(groupVersionInfoTemplate))
-
+func (g *Generator) collectEntityNames(parsed *parser.ParsedSpec) []string {
 	var entityNames []string
 	for name := range parsed.RequestBodies {
 		entityNames = append(entityNames, parser.GetEntityNameFromType(name))
 	}
+	sort.Strings(entityNames)
+	return entityNames
+}
+
+func (g *Generator) generateGroupVersionInfo() (string, error) {
+	tmpl := template.Must(template.New("groupVersionInfo").Parse(groupVersionInfoTemplate))
 
 	var buf strings.Builder
 	data := struct {
-		APIGroup    string
+		APIGroup   string
+		APIVersion string
+	}{
+		APIGroup:   g.config.APIGroup,
+		APIVersion: g.config.APIVersion,
+	}
+
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
+}
+
+func (g *Generator) generateGroupVersionInfoGenerated(parsed *parser.ParsedSpec) (string, error) {
+	tmpl := template.Must(template.New("groupVersionInfoGenerated").Parse(groupVersionInfoGeneratedTemplate))
+
+	var buf strings.Builder
+	data := struct {
 		APIVersion  string
 		EntityNames []string
 	}{
-		APIGroup:    g.config.APIGroup,
 		APIVersion:  g.config.APIVersion,
-		EntityNames: entityNames,
+		EntityNames: g.collectEntityNames(parsed),
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
@@ -2990,9 +3033,54 @@ func isCommonAcronym(s string) bool {
 	return acronyms[s]
 }
 
-// jsonTag generates the json struct tag.
+// jsonName converts an OAS snake_case property name to camelCase for K8s JSON wire format.
+// Rule: first segment always lowercase; subsequent segments use the acronym table
+// (ID, URL, API, DNS, TLS, etc.) or PascalCase.
+// Examples: "gateway_ref" → "gatewayRef", "default_api_visibility" → "defaultAPIVisibility",
+// "organization_id" → "organizationID", "dns_label" → "dnsLabel".
+func jsonName(s string) string {
+	if s == "" {
+		return s
+	}
+	// No underscores: already camelCase or single word — only lowercase first char.
+	if !strings.Contains(s, "_") {
+		return strings.ToLower(s[:1]) + s[1:]
+	}
+	parts := strings.Split(s, "_")
+	result := make([]string, len(parts))
+	// First segment always lowercase (no acronym caps for first position).
+	result[0] = strings.ToLower(parts[0])
+	// Subsequent segments: acronym caps if in table, else PascalCase first letter.
+	for i, part := range parts[1:] {
+		if len(part) == 0 {
+			continue
+		}
+		upper := strings.ToUpper(part)
+		if isCommonAcronym(upper) {
+			result[i+1] = upper
+		} else {
+			result[i+1] = strings.ToUpper(part[:1]) + part[1:]
+		}
+	}
+	return strings.Join(result, "")
+}
+
+// lowerCamelCase converts a PascalCase or ALL_CAPS string to lowerCamelCase.
+// ALL-caps strings (acronyms like "OIDC", "SAML") become fully lowercase.
+// Mixed-case strings get only their first letter lowercased.
+func lowerCamelCase(s string) string {
+	if s == "" {
+		return s
+	}
+	if strings.ToUpper(s) == s {
+		return strings.ToLower(s)
+	}
+	return strings.ToLower(s[:1]) + s[1:]
+}
+
+// jsonTag generates the json struct tag using camelCase for K8s wire format.
 func jsonTag(prop *parser.Property) string {
-	tag := prop.Name
+	tag := jsonName(prop.Name)
 	// K8s API best practice: all fields should have omitempty
 	tag += ",omitempty"
 	return tag

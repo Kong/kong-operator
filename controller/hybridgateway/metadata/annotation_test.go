@@ -950,6 +950,51 @@ func TestExtractProtocol(t *testing.T) {
 	}
 }
 
+func TestExtractPath(t *testing.T) {
+	tests := []struct {
+		name        string
+		annotations map[string]string
+		expected    string
+	}{
+		{name: "nil annotations", annotations: nil, expected: ""},
+		{name: "empty annotations", annotations: map[string]string{}, expected: ""},
+		{name: "path present", annotations: map[string]string{"konghq.com/path": "/api/v1"}, expected: "/api/v1"},
+		{name: "empty path value", annotations: map[string]string{"konghq.com/path": ""}, expected: ""},
+		{name: "other annotations only", annotations: map[string]string{"konghq.com/protocol": "http"}, expected: ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, ExtractPath(tt.annotations))
+		})
+	}
+}
+
+func TestExtractTLSVerify(t *testing.T) {
+	tests := []struct {
+		name        string
+		annotations map[string]string
+		expected    *bool
+	}{
+		{name: "nil annotations", annotations: nil, expected: nil},
+		{name: "empty annotations", annotations: map[string]string{}, expected: nil},
+		{name: "tls-verify true", annotations: map[string]string{"konghq.com/tls-verify": "true"}, expected: new(true)},
+		{name: "tls-verify false", annotations: map[string]string{"konghq.com/tls-verify": "false"}, expected: new(false)},
+		{name: "invalid value", annotations: map[string]string{"konghq.com/tls-verify": "invalid"}, expected: nil},
+		{name: "empty value", annotations: map[string]string{"konghq.com/tls-verify": ""}, expected: nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ExtractTLSVerify(tt.annotations)
+			if tt.expected == nil {
+				assert.Nil(t, got)
+			} else {
+				require.NotNil(t, got)
+				assert.Equal(t, *tt.expected, *got)
+			}
+		})
+	}
+}
+
 func TestExtractTLSVerifyDepth(t *testing.T) {
 	tests := []struct {
 		name        string

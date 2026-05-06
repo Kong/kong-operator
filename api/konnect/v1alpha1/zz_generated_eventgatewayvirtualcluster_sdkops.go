@@ -19,6 +19,9 @@ func (s *EventGatewayVirtualClusterAPISpec) marshalSDKOpsPayload() ([]byte, erro
 		return nil, fmt.Errorf("failed to decode EventGatewayVirtualClusterAPISpec: %w", err)
 	}
 	payload = flattenSDKUnions(payload)
+	// Convert camelCase CRD wire-format keys and discriminator values to
+	// snake_case for the Konnect SDK request types.
+	payload = renameKeysToSDK(payload)
 	data, err = json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal normalized EventGatewayVirtualClusterAPISpec: %w", err)

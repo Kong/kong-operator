@@ -16,13 +16,15 @@ import (
 
 const (
 	// Annotation constants matching those in the ingress controller.
-	annotationPrefix  = "konghq.com"
-	stripPathKey      = "/strip-path"
-	preserveHostKey   = "/preserve-host"
-	protocolKey       = "/protocol"
+	annotationPrefix = "konghq.com"
+	stripPathKey     = "/strip-path"
+	preserveHostKey  = "/preserve-host"
+	protocolKey      = "/protocol"
+	pathKey          = "/path"
+	tlsVerifyKey     = "/tls-verify"
 	tlsVerifyDepthKey = "/tls-verify-depth"
-	kindHTTPRoute     = "HTTPRoute"
-	kindTLSRoute      = "TLSRoute"
+	kindHTTPRoute    = "HTTPRoute"
+	kindTLSRoute     = "TLSRoute"
 )
 
 // Defaults for the annotations when not specified that match the behavior of on-prem.
@@ -59,6 +61,25 @@ func ExtractPreserveHost(anns map[string]string) bool {
 // This mirrors ingress-controller/internal/annotations.ExtractProtocolName.
 func ExtractProtocol(anns map[string]string) string {
 	return anns[annotationPrefix+protocolKey]
+}
+
+// ExtractPath extracts the konghq.com/path annotation value.
+// Returns an empty string if the annotation is not present.
+// This mirrors ingress-controller/internal/annotations.ExtractPath.
+func ExtractPath(anns map[string]string) string {
+	return anns[annotationPrefix+pathKey]
+}
+
+// ExtractTLSVerify extracts the tls-verify annotation value.
+// Returns a *bool set to the parsed value when the annotation is present and parseable,
+// or nil when absent or unparseable.
+// This mirrors ingress-controller/internal/annotations.ExtractTLSVerify.
+func ExtractTLSVerify(anns map[string]string) *bool {
+	v, ok := parseAnnotationBool(anns, tlsVerifyKey)
+	if !ok {
+		return nil
+	}
+	return &v
 }
 
 // ExtractTLSVerifyDepth extracts the tls-verify-depth annotation value.

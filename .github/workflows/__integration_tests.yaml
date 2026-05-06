@@ -7,6 +7,20 @@ on:
         description: "The Kubernetes cluster version to use for envtest"
         type: string
         required: true
+      kong-image-repo:
+        description: "Kong Gateway Docker image repository override. If not set,
+          defaults are used."
+        type: string
+        required: false
+      kong-image-tag:
+        description: "Kong Gateway Docker image tag override."
+        type: string
+        required: false
+      kong-effective-version:
+        description: "Effective semantic version of Kong Gateway. If not given, parsed
+          from the image tag."
+        type: string
+        required: false
 
 permissions:
   contents: read
@@ -33,7 +47,7 @@ jobs:
             router_flavor: expressions
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2.19.0
+      uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450 # v2.19.1
       with:
         egress-policy: audit
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -99,6 +113,9 @@ jobs:
         KONG_TEST_KONNECT_ACCESS_TOKEN: ${{ secrets.KONG_TEST_KONNECT_ACCESS_TOKEN }}
         KONG_TEST_KONNECT_SERVER_URL: us.api.konghq.tech
         KONG_CLUSTER_VERSION: ${{ inputs.cluster_version }}
+        TEST_KONG_IMAGE: ${{ inputs.kong-image-repo }}
+        TEST_KONG_TAG: ${{ inputs.kong-image-tag }}
+        TEST_KONG_EFFECTIVE_VERSION: ${{ inputs.kong-effective-version }}
         # This is needed for ktf to find latest releases of addons.
         # This could be changed so that ktf addons have their versions pinned
         # in the test Makefile instead.

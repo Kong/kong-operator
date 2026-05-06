@@ -8,6 +8,7 @@ import (
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
@@ -68,6 +69,10 @@ func Watches(obj client.Object, cl client.Client) []Watcher {
 			{
 				MapHTTPRouteForReferenceGrant(cl),
 				&gwtypes.ReferenceGrant{},
+			},
+			{
+				MapHTTPRouteForKongUpstreamPolicy(cl),
+				&configurationv1beta1.KongUpstreamPolicy{},
 			},
 		}
 	case *gwtypes.TLSRoute:

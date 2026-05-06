@@ -95,6 +95,8 @@ func ServiceForRule[
 
 	// Resolve service attributes once, outside the switch — future route types only add a case above.
 	protocol := resolveProtocolFromBackendRefs(ctx, cl, namespace, backendRefs, defaultProtocol, logger)
+	path := resolvePathFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
+	tlsVerify := resolveTLSVerifyFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
 	tlsVerifyDepth := resolveTLSVerifyDepthFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
 
 	logger = logger.WithValues("kongservice", serviceName)
@@ -108,6 +110,8 @@ func ServiceForRule[
 		WithSpecName(serviceName).
 		WithSpecHost(upstreamName).
 		WithProtocol(protocol).
+		WithPath(path).
+		WithTLSVerify(tlsVerify).
 		WithTLSVerifyDepth(tlsVerifyDepth).
 		WithControlPlaneRef(*cp).Build()
 	if err != nil {
@@ -193,6 +197,110 @@ func extractProtocolFromBackendRef(
 	log.Debug(logger, "Using protocol from backend Service annotation",
 		"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "protocol", protocol)
 	return protocol, true
+}
+
+// resolvePathFromBackendRefs returns the path taken from the first backend Service
+// that carries the konghq.com/path annotation. Empty string if none.
+func resolvePathFromBackendRefs(
+	ctx context.Context,
+	cl client.Client,
+	namespace string,
+	backendRefs []gwtypes.BackendRef,
+	logger logr.Logger,
+) string {
+	for _, backendRef := range backendRefs {
+		if path, ok := extractPathFromBackendRef(ctx, cl, logger, namespace, backendRef); ok {
+			return path
+		}
+	}
+	return ""
+}
+
+// extractPathFromBackendRef returns the path from the konghq.com/path annotation on the
+// backend Service referenced by the BackendRef.
+func extractPathFromBackendRef(
+	ctx context.Context,
+	cl client.Client,
+	logger logr.Logger,
+	namespace string,
+	backendRef gwtypes.BackendRef,
+) (string, bool) {
+	if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
+		return "", false
+	}
+
+	bRefNamespace := namespace
+	if backendRef.Namespace != nil && *backendRef.Namespace != "" {
+		bRefNamespace = string(*backendRef.Namespace)
+	}
+
+	svc := &corev1.Service{}
+	if err := cl.Get(ctx, client.ObjectKey{Namespace: bRefNamespace, Name: string(backendRef.Name)}, svc); err != nil {
+		log.Debug(logger, "Failed to fetch backend Service for path annotation check",
+			"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "error", err)
+		return "", false
+	}
+
+	path := metadata.ExtractPath(svc.GetAnnotations())
+	if path == "" {
+		return "", false
+	}
+
+	log.Debug(logger, "Using path from backend Service annotation",
+		"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "path", path)
+	return path, true
+}
+
+// resolveTLSVerifyFromBackendRefs returns the tls-verify value taken from
+// the first backend Service that carries the konghq.com/tls-verify annotation.
+func resolveTLSVerifyFromBackendRefs(
+	ctx context.Context,
+	cl client.Client,
+	namespace string,
+	backendRefs []gwtypes.BackendRef,
+	logger logr.Logger,
+) *bool {
+	for _, backendRef := range backendRefs {
+		if v := extractTLSVerifyFromBackendRef(ctx, cl, logger, namespace, backendRef); v != nil {
+			return v
+		}
+	}
+	return nil
+}
+
+// extractTLSVerifyFromBackendRef returns the tls-verify value from the konghq.com/tls-verify
+// annotation on the backend Service referenced by the BackendRef.
+func extractTLSVerifyFromBackendRef(
+	ctx context.Context,
+	cl client.Client,
+	logger logr.Logger,
+	namespace string,
+	backendRef gwtypes.BackendRef,
+) *bool {
+	if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
+		return nil
+	}
+
+	bRefNamespace := namespace
+	if backendRef.Namespace != nil && *backendRef.Namespace != "" {
+		bRefNamespace = string(*backendRef.Namespace)
+	}
+
+	svc := &corev1.Service{}
+	if err := cl.Get(ctx, client.ObjectKey{Namespace: bRefNamespace, Name: string(backendRef.Name)}, svc); err != nil {
+		log.Debug(logger, "Failed to fetch backend Service for tls-verify annotation check",
+			"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "error", err)
+		return nil
+	}
+
+	v := metadata.ExtractTLSVerify(svc.GetAnnotations())
+	if v == nil {
+		return nil
+	}
+
+	log.Debug(logger, "Using tls-verify from backend Service annotation",
+		"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "tls-verify", *v)
+	return v
 }
 
 // resolveTLSVerifyDepthFromBackendRefs returns the tls-verify-depth value taken from

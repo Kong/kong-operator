@@ -8,10 +8,6 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 )
 
-func init() {
-	SchemeBuilder.Register(&KonnectCloudGatewayDataPlaneGroupConfiguration{}, &KonnectCloudGatewayDataPlaneGroupConfigurationList{})
-}
-
 // KonnectCloudGatewayDataPlaneGroupConfiguration is the Schema for the Konnect Network API.
 //
 // +genclient

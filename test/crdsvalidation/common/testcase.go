@@ -2,6 +2,7 @@ package common
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -117,7 +118,6 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *run
 
 		t.Parallel()
 		ctx := context.Background()
-		var lastCreateErr error
 
 		// Create a new controller-runtime client.Client.
 		cl, err := client.New(cfg, client.Options{
@@ -125,10 +125,12 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *run
 		})
 		require.NoError(t, err)
 
+		templateObj := tc.TestObject.DeepCopyObject().(T)
+
 		// Take a copy so that we can update the status field if needed. Without copying, the Create call
 		// overwrites the status field in tc.TestObject with the default server returns, and we lose the status
 		// set in the test case.
-		desiredObj := tc.TestObject.DeepCopyObject().(T)
+		desiredObj := templateObj.DeepCopyObject().(T)
 
 		tCleanupObject := func(ctx context.Context, t *testing.T, obj client.Object) {
 			// NOTE: Deep copy the object as without this we end up causing a data race:
@@ -138,55 +140,81 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *run
 			})
 		}
 
-		if !assert.EventuallyWithT(
-			t,
-			func(c *assert.CollectT) {
-				toCreate := tc.TestObject.DeepCopyObject().(T)
-
-				// Create the object and set a cleanup function to delete it after the test if created successfully.
-				err = cl.Create(ctx, toCreate)
-				lastCreateErr = err
-				if err == nil {
-					tCleanupObject(ctx, t, toCreate)
+		waitForCondition := func(condition func() (bool, string), failureTitle string) {
+			deadline := time.Now().Add(timeout)
+			for {
+				matched, details := condition()
+				if matched {
+					return
 				}
 
-				// If the error message is expected, check if the error message contains the expected message and return.
-				if tc.ExpectedErrorMessage != nil {
-					if !assert.ErrorContains(c, err, *tc.ExpectedErrorMessage) {
-						t.Logf("Create error: %v; expected: %q\n", err, *tc.ExpectedErrorMessage)
-						return
-					}
-				} else {
-					if !assert.NoError(c, err) {
-						t.Logf("Create error: %v\n", err)
-						return
-					}
+				if !time.Now().Before(deadline) {
+					require.FailNowf(t, failureTitle, "%s", details)
 				}
 
-				// If warnings are expected, verify at least one collected warning matches.
-				if tc.WarningCollector != nil && tc.ExpectedWarningMessage != nil {
-					msgs := tc.WarningCollector.GetWarnings()
-					matched := false
-					for _, m := range msgs {
-						if assert.Contains(c, m, *tc.ExpectedWarningMessage) {
-							matched = true
-							break
-						}
-					}
-					if !matched {
-						// Fail the attempt, Eventually will allow a bit of time in case messages are delayed.
-						assert.Failf(c, "expected warning not found", "expected warning containing: %q, got: %#v", *tc.ExpectedWarningMessage, msgs)
-						return
-					}
+				time.Sleep(period)
+			}
+		}
+
+		warningFound := func() bool {
+			if tc.WarningCollector == nil || tc.ExpectedWarningMessage == nil {
+				return false
+			}
+
+			for _, msg := range tc.WarningCollector.GetWarnings() {
+				if strings.Contains(msg, *tc.ExpectedWarningMessage) {
+					return true
+				}
+			}
+
+			return false
+		}
+
+		var (
+			createdObj    T
+			hasCreatedObj bool
+		)
+		waitForCondition(func() (bool, string) {
+			if hasCreatedObj && warningFound() {
+				return true, ""
+			}
+
+			toCreate := templateObj.DeepCopyObject().(T)
+
+			createErr := cl.Create(ctx, toCreate)
+			if createErr == nil {
+				createdObj = toCreate
+				hasCreatedObj = true
+				tCleanupObject(ctx, t, toCreate)
+			}
+
+			if tc.ExpectedErrorMessage != nil {
+				if createErr != nil && strings.Contains(createErr.Error(), *tc.ExpectedErrorMessage) {
+					return true, ""
+				}
+				return false, fmt.Sprintf("Create error: %v; expected: %q", createErr, *tc.ExpectedErrorMessage)
+			}
+
+			if createErr != nil {
+				return false, fmt.Sprintf("Create error: %v", createErr)
+			}
+
+			if tc.WarningCollector != nil && tc.ExpectedWarningMessage != nil {
+				if warningFound() {
+					return true, ""
 				}
 
-				tc.TestObject = toCreate
-			},
-			timeout, period,
-		) {
-			t.Logf("Last create error before timeout: %v", lastCreateErr)
+				return false, fmt.Sprintf("expected warning containing: %q, got: %#v", *tc.ExpectedWarningMessage, tc.WarningCollector.GetWarnings())
+			}
+
+			return true, ""
+		}, "create condition not satisfied before timeout")
+
+		if tc.ExpectedErrorMessage != nil {
 			return
 		}
+
+		tc.TestObject = createdObj
 
 		// Check with reflect if the status field is set and Update the status if so before updating the object.
 		// That's required to populate Status that is not set on Create.
