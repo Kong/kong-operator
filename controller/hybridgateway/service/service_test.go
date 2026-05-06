@@ -636,7 +636,7 @@ func TestServiceForRule_TLSVerifyDepthAnnotation(t *testing.T) {
 	}
 }
 
-func TestResolveTLSVerifyDepthFromHTTPRouteBackendRefs(t *testing.T) {
+func TestResolveTLSVerifyDepthFromBackendRefs(t *testing.T) {
 	ctx := context.Background()
 	logger := zap.New()
 
@@ -647,14 +647,16 @@ func TestResolveTLSVerifyDepthFromHTTPRouteBackendRefs(t *testing.T) {
 
 	tests := []struct {
 		name            string
-		backendRefs     []gatewayv1.HTTPBackendRef
+		namespace       string
+		backendRefs     []gwtypes.BackendRef
 		backendServices []corev1.Service
 		expected        *int64
 	}{
 		{
-			name: "service with tls-verify-depth annotation returns value",
-			backendRefs: []gatewayv1.HTTPBackendRef{
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-with-depth", Port: &port80}}},
+			name:      "service with tls-verify-depth annotation returns value",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-with-depth", Port: &port80}},
 			},
 			backendServices: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-depth", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "3"}}},
@@ -662,9 +664,10 @@ func TestResolveTLSVerifyDepthFromHTTPRouteBackendRefs(t *testing.T) {
 			expected: new(int64(3)),
 		},
 		{
-			name: "service without annotation returns nil",
-			backendRefs: []gatewayv1.HTTPBackendRef{
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "plain-svc", Port: &port80}}},
+			name:      "service without annotation returns nil",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "plain-svc", Port: &port80}},
 			},
 			backendServices: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "plain-svc", Namespace: "test-namespace"}},
@@ -672,10 +675,11 @@ func TestResolveTLSVerifyDepthFromHTTPRouteBackendRefs(t *testing.T) {
 			expected: nil,
 		},
 		{
-			name: "first backend ref with annotation wins",
-			backendRefs: []gatewayv1.HTTPBackendRef{
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-a", Port: &port80}}},
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-b", Port: &port80}}},
+			name:      "first backend ref with annotation wins",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-a", Port: &port80}},
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-b", Port: &port80}},
 			},
 			backendServices: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "2"}}},
@@ -685,135 +689,27 @@ func TestResolveTLSVerifyDepthFromHTTPRouteBackendRefs(t *testing.T) {
 		},
 		{
 			name:            "no backend refs returns nil",
-			backendRefs:     []gatewayv1.HTTPBackendRef{},
-			backendServices: []corev1.Service{},
-			expected:        nil,
-		},
-		{
-			name: "service does not exist returns nil",
-			backendRefs: []gatewayv1.HTTPBackendRef{
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "nonexistent-svc", Port: &port80}}},
-			},
-			backendServices: []corev1.Service{},
-			expected:        nil,
-		},
-		{
-			name: "unsupported backend ref returns nil",
-			backendRefs: []gatewayv1.HTTPBackendRef{
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{
-					Name:  "some-ref",
-					Port:  &port80,
-					Group: &[]gatewayv1.Group{gatewayv1.Group("example.com")}[0],
-					Kind:  &[]gatewayv1.Kind{gatewayv1.Kind("NotService")}[0],
-				}}},
-			},
-			backendServices: []corev1.Service{},
-			expected:        nil,
-		},
-		{
-			name: "cross-namespace backend ref",
-			backendRefs: []gatewayv1.HTTPBackendRef{
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{
-					Name:      "svc-other-ns",
-					Port:      &port80,
-					Namespace: &[]gatewayv1.Namespace{"other-namespace"}[0],
-				}}},
-			},
-			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "4"}}},
-			},
-			expected: new(int64(4)),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			httpRoute := &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-route", Namespace: "test-namespace"},
-			}
-			rule := gwtypes.HTTPRouteRule{BackendRefs: tt.backendRefs}
-
-			var objects []client.Object
-			for i := range tt.backendServices {
-				objects = append(objects, &tt.backendServices[i])
-			}
-			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
-
-			result := resolveTLSVerifyDepthFromHTTPRouteBackendRefs(ctx, cl, httpRoute, rule, logger)
-			if tt.expected == nil {
-				assert.Nil(t, result)
-			} else {
-				require.NotNil(t, result)
-				assert.Equal(t, *tt.expected, *result)
-			}
-		})
-	}
-}
-
-func TestResolveTLSVerifyDepthFromTLSRouteBackendRefs(t *testing.T) {
-	ctx := context.Background()
-	logger := zap.New()
-
-	scheme := runtime.NewScheme()
-	require.NoError(t, corev1.AddToScheme(scheme))
-
-	tests := []struct {
-		name            string
-		backendRefs     []gwtypes.BackendRef
-		backendServices []corev1.Service
-		expected        *int64
-	}{
-		{
-			name: "service with tls-verify-depth annotation returns value",
-			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-with-depth"}},
-			},
-			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-depth", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "3"}}},
-			},
-			expected: new(int64(3)),
-		},
-		{
-			name: "service without annotation returns nil",
-			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-no-depth"}},
-			},
-			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-no-depth", Namespace: "test-namespace"}},
-			},
-			expected: nil,
-		},
-		{
-			name: "first backend ref with annotation wins",
-			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-first"}},
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-second"}},
-			},
-			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-first", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "2"}}},
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-second", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "5"}}},
-			},
-			expected: new(int64(2)),
-		},
-		{
-			name:            "no backend refs returns nil",
+			namespace:       "test-namespace",
 			backendRefs:     []gwtypes.BackendRef{},
 			backendServices: []corev1.Service{},
 			expected:        nil,
 		},
 		{
-			name: "service does not exist returns nil",
+			name:      "service does not exist returns nil",
+			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "nonexistent-svc"}},
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "nonexistent-svc", Port: &port80}},
 			},
 			backendServices: []corev1.Service{},
 			expected:        nil,
 		},
 		{
-			name: "unsupported backend ref returns nil",
+			name:      "unsupported backend ref returns nil",
+			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
 				{BackendObjectReference: gatewayv1.BackendObjectReference{
 					Name:  "some-ref",
+					Port:  &port80,
 					Group: &[]gatewayv1.Group{gatewayv1.Group("example.com")}[0],
 					Kind:  &[]gatewayv1.Kind{gatewayv1.Kind("NotService")}[0],
 				}},
@@ -821,22 +717,44 @@ func TestResolveTLSVerifyDepthFromTLSRouteBackendRefs(t *testing.T) {
 			backendServices: []corev1.Service{},
 			expected:        nil,
 		},
+		{
+			name:      "cross-namespace backend ref",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{
+					Name:      "svc-other-ns",
+					Port:      &port80,
+					Namespace: &[]gatewayv1.Namespace{"other-namespace"}[0],
+				}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "4"}}},
+			},
+			expected: new(int64(4)),
+		},
+		// TLS-style backend refs (no port, same BackendRef type)
+		{
+			name:      "tls-style backend ref with annotation returns value",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "tls-svc"}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "tls-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "3"}}},
+			},
+			expected: new(int64(3)),
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tlsRoute := &gwtypes.TLSRoute{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-tls-route", Namespace: "test-namespace"},
-			}
-			rule := gwtypes.TLSRouteRule{BackendRefs: tt.backendRefs}
-
 			var objects []client.Object
 			for i := range tt.backendServices {
 				objects = append(objects, &tt.backendServices[i])
 			}
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
-			result := resolveTLSVerifyDepthFromTLSRouteBackendRefs(ctx, cl, tlsRoute, rule, logger)
+			result := resolveTLSVerifyDepthFromBackendRefs(ctx, cl, tt.namespace, tt.backendRefs, logger)
 			if tt.expected == nil {
 				assert.Nil(t, result)
 			} else {
