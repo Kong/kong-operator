@@ -5,6 +5,8 @@ metadata:
   namespace: ($namespace)
   annotations:
     konghq.com/path: "/echo"
+    konghq.com/protocol: "https"
+    konghq.com/tls-verify: "true"
 spec:
   selector:
     app: ($echo_deployment_name)
