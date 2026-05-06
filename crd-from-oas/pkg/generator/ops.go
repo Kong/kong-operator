@@ -56,9 +56,19 @@ func (g *Generator) generateEntityOpsFile(
 
 	var file *GeneratedFile
 	if createData != nil || updateData != nil || deleteData != nil || getForUIDData != nil {
-		// Determine whether we need the sdkkonnectops import (wrapped request structs
-		// are used by update and getForUID).
-		needsOpsImport := (updateData != nil && updateData.UpdateWrapped) || getForUIDData != nil
+		// Determine whether we need the sdkkonnectops import. The package is only
+		// referenced when:
+		//   - update uses a wrapped request struct (UpdateWrapped, not UpdateFullyWrapped)
+		//   - delete uses a fully-wrapped request struct (multi-parent entities)
+		//   - getForUID actually calls the list SDK method (i.e. has a viable
+		//     match strategy: labels, name, match fields, or UID tag filter).
+		//     The fallback else-branch emits no SDK call and therefore no import.
+		getForUIDNeedsOpsImport := getForUIDData != nil &&
+			(getForUIDData.UseUIDTagFilter || len(getForUIDData.MatchFields) > 0 ||
+				getForUIDData.HasLabels || getForUIDData.HasName)
+		needsOpsImport := (updateData != nil && updateData.UpdateWrapped) ||
+			(deleteData != nil && deleteData.DeleteFullyWrapped) ||
+			getForUIDNeedsOpsImport
 		needsClientImport := (createData != nil && createData.NeedsClient) || (updateData != nil && updateData.NeedsClient)
 
 		// Render file header.

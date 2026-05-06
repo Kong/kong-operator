@@ -24,6 +24,7 @@ Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1al
 - [KonnectGatewayControlPlane](#konnect-konghq-com-v1alpha1-konnectgatewaycontrolplane)
 - [MCPServer](#konnect-konghq-com-v1alpha1-mcpserver)
 - [Portal](#konnect-konghq-com-v1alpha1-portal)
+- [PortalEmailConfig](#konnect-konghq-com-v1alpha1-portalemailconfig)
 - [PortalPage](#konnect-konghq-com-v1alpha1-portalpage)
 - [PortalTeam](#konnect-konghq-com-v1alpha1-portalteam)
 
@@ -254,6 +255,21 @@ Portal is the Schema for the portals API.
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[PortalSpec](#konnect-konghq-com-v1alpha1-types-portalspec)_ |  |
 | `status` _[PortalStatus](#konnect-konghq-com-v1alpha1-types-portalstatus)_ |  |
+
+### PortalEmailConfig
+
+
+PortalEmailConfig is the Schema for the portalemailconfigs API.
+
+<!-- portal_email_config description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `PortalEmailConfig`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[PortalEmailConfigSpec](#konnect-konghq-com-v1alpha1-types-portalemailconfigspec)_ |  |
+| `status` _[PortalEmailConfigStatus](#konnect-konghq-com-v1alpha1-types-portalemailconfigstatus)_ |  |
 
 ### PortalPage
 
@@ -1635,6 +1651,7 @@ _Appears in:_
 - [EventGatewayVirtualClusterStatus](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterstatus)
 - [IdentityProviderRequestStatus](#konnect-konghq-com-v1alpha1-types-identityproviderrequeststatus)
 - [KonnectEventDataPlaneCertificateStatus](#konnect-konghq-com-v1alpha1-types-konnecteventdataplanecertificatestatus)
+- [PortalEmailConfigStatus](#konnect-konghq-com-v1alpha1-types-portalemailconfigstatus)
 - [PortalPageStatus](#konnect-konghq-com-v1alpha1-types-portalpagestatus)
 - [PortalTeamStatus](#konnect-konghq-com-v1alpha1-types-portalteamstatus)
 
@@ -2274,6 +2291,57 @@ PortalAPISpec defines the API spec fields for Portal.
 _Appears in:_
 
 - [PortalSpec](#konnect-konghq-com-v1alpha1-types-portalspec)
+
+#### PortalEmailConfigAPISpec
+
+
+PortalEmailConfigAPISpec defines the API spec fields for PortalEmailConfig.
+
+
+
+| Field | Description |
+| --- | --- |
+| `domainName` _*string_ | The domain name to use for sending emails. Null means default. |
+| `fromEmail` _*string_ | The email address to use in the 'From' field. |
+| `fromName` _*string_ | The name to display in the 'From' field of emails. |
+| `replyToEmail` _*string_ | The email address to use in the 'Reply-To' field. 'Reply-To' header is omitted if omitted or null. |
+
+_Appears in:_
+
+- [PortalEmailConfigSpec](#konnect-konghq-com-v1alpha1-types-portalemailconfigspec)
+
+#### PortalEmailConfigSpec
+
+
+PortalEmailConfigSpec defines the desired state of PortalEmailConfig.
+
+
+
+| Field | Description |
+| --- | --- |
+| `portalRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | PortalRef is the reference to the parent Portal object. |
+| `apiSpec` _[PortalEmailConfigAPISpec](#konnect-konghq-com-v1alpha1-types-portalemailconfigapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [PortalEmailConfig](#konnect-konghq-com-v1alpha1-portalemailconfig)
+
+#### PortalEmailConfigStatus
+
+
+PortalEmailConfigStatus defines the observed state of PortalEmailConfig.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `portalID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | PortalID is the Konnect ID of the parent Portal. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [PortalEmailConfig](#konnect-konghq-com-v1alpha1-portalemailconfig)
 
 #### PortalPageAPISpec
 

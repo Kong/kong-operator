@@ -184,3 +184,15 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdatePortalPageRequest
           delete: {}
         reconciler: {}
+      - path: /v3/portals/{portalId}/email-config
+        name: PortalEmailConfig
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.PortalEmailsSDK
+            fieldName: PortalEmails
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.PostPortalEmailConfig
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.PatchPortalEmailConfig
+          delete: {}
+        reconciler: {}
