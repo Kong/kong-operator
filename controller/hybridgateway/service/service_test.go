@@ -57,7 +57,7 @@ func TestServiceForRule(t *testing.T) {
 	// Create test rule
 	rule := gwtypes.HTTPRouteRule{
 		Matches: []gatewayv1.HTTPRouteMatch{
-			{Path: &gatewayv1.HTTPPathMatch{Type: &[]gatewayv1.PathMatchType{gatewayv1.PathMatchPathPrefix}[0], Value: new("/test")}},
+			{Path: &gatewayv1.HTTPPathMatch{Type: new(gatewayv1.PathMatchPathPrefix), Value: new("/test")}},
 		},
 	}
 
@@ -426,7 +426,7 @@ func TestServiceForRule_ProtocolAnnotation(t *testing.T) {
 			rule := gwtypes.HTTPRouteRule{
 				BackendRefs: tt.backendRefs,
 				Matches: []gatewayv1.HTTPRouteMatch{
-					{Path: &gatewayv1.HTTPPathMatch{Type: &[]gatewayv1.PathMatchType{gatewayv1.PathMatchPathPrefix}[0], Value: new("/test")}},
+					{Path: &gatewayv1.HTTPPathMatch{Type: new(gatewayv1.PathMatchPathPrefix), Value: new("/test")}},
 				},
 			}
 
@@ -477,7 +477,7 @@ func TestServiceForRule_ConnectTimeoutAnnotation(t *testing.T) {
 			backendServices: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "my-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/connect-timeout": "5000"}}},
 			},
-			expected: &[]int64{5000}[0],
+			expected: new(int64(5000)),
 		},
 		{
 			name:        "service without annotation leaves field unset",
@@ -505,7 +505,7 @@ func TestServiceForRule_ConnectTimeoutAnnotation(t *testing.T) {
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/connect-timeout": "1000"}}},
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-b", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/connect-timeout": "2000"}}},
 			},
-			expected: &[]int64{1000}[0],
+			expected: new(int64(1000)),
 		},
 	}
 	for _, tt := range tests {
@@ -519,7 +519,7 @@ func TestServiceForRule_ConnectTimeoutAnnotation(t *testing.T) {
 			rule := gwtypes.HTTPRouteRule{
 				BackendRefs: tt.backendRefs,
 				Matches: []gatewayv1.HTTPRouteMatch{
-					{Path: &gatewayv1.HTTPPathMatch{Type: &[]gatewayv1.PathMatchType{gatewayv1.PathMatchPathPrefix}[0], Value: new("/test")}},
+					{Path: &gatewayv1.HTTPPathMatch{Type: new(gatewayv1.PathMatchPathPrefix), Value: new("/test")}},
 				},
 			}
 			var objects []client.Object
@@ -615,8 +615,8 @@ func TestResolveConnectTimeoutFromBackendRefs(t *testing.T) {
 				{BackendObjectReference: gatewayv1.BackendObjectReference{
 					Name:  "some-ref",
 					Port:  &port80,
-					Group: &[]gatewayv1.Group{gatewayv1.Group("example.com")}[0],
-					Kind:  &[]gatewayv1.Kind{gatewayv1.Kind("NotService")}[0],
+					Group: new(gatewayv1.Group("example.com")),
+					Kind:  new(gatewayv1.Kind("NotService")),
 				}},
 			},
 			backendServices: []corev1.Service{},
@@ -629,7 +629,7 @@ func TestResolveConnectTimeoutFromBackendRefs(t *testing.T) {
 				{BackendObjectReference: gatewayv1.BackendObjectReference{
 					Name:      "svc-other-ns",
 					Port:      &port80,
-					Namespace: &[]gatewayv1.Namespace{"other-namespace"}[0],
+					Namespace: new(gatewayv1.Namespace("other-namespace")),
 				}},
 			},
 			backendServices: []corev1.Service{
@@ -748,7 +748,7 @@ func TestExtractConnectTimeoutFromBackendRef(t *testing.T) {
 				BackendObjectReference: gatewayv1.BackendObjectReference{
 					Name:  "some-ref",
 					Port:  &port80,
-					Group: &[]gatewayv1.Group{gatewayv1.Group("example.com")}[0],
+					Group: new(gatewayv1.Group("example.com")),
 				},
 			},
 			expected: nil,
@@ -760,7 +760,7 @@ func TestExtractConnectTimeoutFromBackendRef(t *testing.T) {
 				BackendObjectReference: gatewayv1.BackendObjectReference{
 					Name: "some-ref",
 					Port: &port80,
-					Kind: &[]gatewayv1.Kind{gatewayv1.Kind("NotService")}[0],
+					Kind: new(gatewayv1.Kind("NotService")),
 				},
 			},
 			expected: nil,
@@ -780,7 +780,7 @@ func TestExtractConnectTimeoutFromBackendRef(t *testing.T) {
 				BackendObjectReference: gatewayv1.BackendObjectReference{
 					Name:      "svc-other-ns",
 					Port:      &port80,
-					Namespace: &[]gatewayv1.Namespace{"other-namespace"}[0],
+					Namespace: new(gatewayv1.Namespace("other-namespace")),
 				},
 			},
 			services: []corev1.Service{
