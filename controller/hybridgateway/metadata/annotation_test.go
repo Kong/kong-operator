@@ -1163,6 +1163,33 @@ func TestExtractReadTimeout(t *testing.T) {
 	}
 }
 
+func TestExtractWriteTimeout(t *testing.T) {
+	tests := []struct {
+		name        string
+		annotations map[string]string
+		expected    *int64
+	}{
+		{name: "nil annotations", annotations: nil, expected: nil},
+		{name: "empty annotations", annotations: map[string]string{}, expected: nil},
+		{name: "valid timeout", annotations: map[string]string{"konghq.com/write-timeout": "60000"}, expected: new(int64(60000))},
+		{name: "zero timeout", annotations: map[string]string{"konghq.com/write-timeout": "0"}, expected: new(int64(0))},
+		{name: "negative invalid", annotations: map[string]string{"konghq.com/write-timeout": "-1"}, expected: nil},
+		{name: "non-numeric", annotations: map[string]string{"konghq.com/write-timeout": "abc"}, expected: nil},
+		{name: "empty value", annotations: map[string]string{"konghq.com/write-timeout": ""}, expected: nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := ExtractWriteTimeout(tt.annotations)
+			if tt.expected == nil {
+				assert.Nil(t, v)
+			} else {
+				require.NotNil(t, v)
+				assert.Equal(t, *tt.expected, *v)
+			}
+		})
+	}
+}
+
 func TestIsValidProtocol(t *testing.T) {
 	validProtocols := []string{"http", "https", "grpc", "grpcs", "ws", "wss", "tls", "tcp", "tls_passthrough"}
 	for _, p := range validProtocols {

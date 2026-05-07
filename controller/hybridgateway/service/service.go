@@ -100,6 +100,7 @@ func ServiceForRule[
 	tlsVerifyDepth := resolveTLSVerifyDepthFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
 	connectTimeout := resolveConnectTimeoutFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
 	readTimeout := resolveReadTimeoutFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
+	writeTimeout := resolveWriteTimeoutFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
 
 	logger = logger.WithValues("kongservice", serviceName)
 	log.Debug(logger, fmt.Sprintf("Generating KongService for %s rule", parentRoute.GetObjectKind().GroupVersionKind().Kind))
@@ -117,6 +118,7 @@ func ServiceForRule[
 		WithTLSVerifyDepth(tlsVerifyDepth).
 		WithConnectTimeout(connectTimeout).
 		WithReadTimeout(readTimeout).
+		WithWriteTimeout(writeTimeout).
 		WithControlPlaneRef(*cp).Build()
 	if err != nil {
 		log.Error(logger, err, "Failed to build KongService resource")
@@ -464,5 +466,57 @@ func extractReadTimeoutFromBackendRef(
 
 	log.Debug(logger, "Using read-timeout from backend Service annotation",
 		"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "read-timeout", *v)
+	return v
+}
+
+// resolveWriteTimeoutFromBackendRefs returns the write-timeout value taken from
+// the first backend Service that carries the konghq.com/write-timeout annotation.
+func resolveWriteTimeoutFromBackendRefs(
+	ctx context.Context,
+	cl client.Client,
+	namespace string,
+	backendRefs []gwtypes.BackendRef,
+	logger logr.Logger,
+) *int64 {
+	for _, backendRef := range backendRefs {
+		if v := extractWriteTimeoutFromBackendRef(ctx, cl, logger, namespace, backendRef); v != nil {
+			return v
+		}
+	}
+	return nil
+}
+
+// extractWriteTimeoutFromBackendRef returns the write-timeout value from the
+// konghq.com/write-timeout annotation on the backend Service referenced by the BackendRef.
+func extractWriteTimeoutFromBackendRef(
+	ctx context.Context,
+	cl client.Client,
+	logger logr.Logger,
+	namespace string,
+	backendRef gwtypes.BackendRef,
+) *int64 {
+	if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
+		return nil
+	}
+
+	bRefNamespace := namespace
+	if backendRef.Namespace != nil && *backendRef.Namespace != "" {
+		bRefNamespace = string(*backendRef.Namespace)
+	}
+
+	svc := &corev1.Service{}
+	if err := cl.Get(ctx, client.ObjectKey{Namespace: bRefNamespace, Name: string(backendRef.Name)}, svc); err != nil {
+		log.Debug(logger, "Failed to fetch backend Service for write-timeout annotation check",
+			"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "error", err)
+		return nil
+	}
+
+	v := metadata.ExtractWriteTimeout(svc.GetAnnotations())
+	if v == nil {
+		return nil
+	}
+
+	log.Debug(logger, "Using write-timeout from backend Service annotation",
+		"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "write-timeout", *v)
 	return v
 }
