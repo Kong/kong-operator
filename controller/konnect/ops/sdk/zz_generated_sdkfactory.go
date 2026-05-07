@@ -16,6 +16,7 @@ type GeneratedSDK interface {
 	GetEventGatewayDataPlaneCertificatesSDK() sdkkonnectgo.EventGatewayDataPlaneCertificatesSDK
 	GetEventGatewaysSDK() sdkkonnectgo.EventGatewaysSDK
 	GetPortalsSDK() sdkkonnectgo.PortalsSDK
+	GetPortalEmailsSDK() sdkkonnectgo.PortalEmailsSDK
 	GetPortalPagesSDK() sdkkonnectgo.PortalPagesSDK
 	GetPortalTeamsSDK() sdkkonnectgo.PortalTeamsSDK
 }
@@ -58,6 +59,11 @@ func (w sdkWrapper) GetEventGatewaysSDK() sdkkonnectgo.EventGatewaysSDK {
 // GetPortalsSDK returns the SDK to operate Portal.
 func (w sdkWrapper) GetPortalsSDK() sdkkonnectgo.PortalsSDK {
 	return w.sdk.Portals
+}
+
+// GetPortalEmailsSDK returns the SDK to operate PortalEmailConfig.
+func (w sdkWrapper) GetPortalEmailsSDK() sdkkonnectgo.PortalEmailsSDK {
+	return w.sdk.PortalEmails
 }
 
 // GetPortalPagesSDK returns the SDK to operate PortalPage.

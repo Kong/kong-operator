@@ -1,7 +1,6 @@
 package konnect
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -56,8 +55,9 @@ func testGetAPIAuthRefForEventGatewayChild[
 	t.Helper()
 
 	tests := []struct {
-		name string
-		ref  commonv1alpha1.ObjectRef
+		name      string
+		ref       commonv1alpha1.ObjectRef
+		expectErr bool
 	}{
 		{
 			name: "namespaced ref",
@@ -69,11 +69,12 @@ func testGetAPIAuthRefForEventGatewayChild[
 			},
 		},
 		{
-			name: "konnect id ref",
+			name: "konnect id ref is unsupported",
 			ref: commonv1alpha1.ObjectRef{
 				Type:      commonv1alpha1.ObjectRefTypeKonnectID,
 				KonnectID: new("gateway-konnect-id"),
 			},
+			expectErr: true,
 		},
 	}
 
@@ -110,6 +111,10 @@ func testGetAPIAuthRefForEventGatewayChild[
 
 			ent := builder(tc.ref)
 			nn, err := getAPIAuthRef(t.Context(), cl, ent)
+			if tc.expectErr {
+				require.Error(t, err)
+				return
+			}
 			require.NoError(t, err)
 			require.Equal(t, types.NamespacedName{Name: "api-auth", Namespace: "default"}, nn)
 		})
@@ -118,8 +123,9 @@ func testGetAPIAuthRefForEventGatewayChild[
 
 func TestGetAPIAuthRef_EventGatewayVirtualCluster(t *testing.T) {
 	tests := []struct {
-		name string
-		ref  commonv1alpha1.ObjectRef
+		name      string
+		ref       commonv1alpha1.ObjectRef
+		expectErr bool
 	}{
 		{
 			name: "namespaced ref",
@@ -131,11 +137,12 @@ func TestGetAPIAuthRef_EventGatewayVirtualCluster(t *testing.T) {
 			},
 		},
 		{
-			name: "konnect id ref",
+			name: "konnect id ref is unsupported",
 			ref: commonv1alpha1.ObjectRef{
 				Type:      commonv1alpha1.ObjectRefTypeKonnectID,
 				KonnectID: new("gateway-konnect-id"),
 			},
+			expectErr: true,
 		},
 	}
 
@@ -180,7 +187,11 @@ func TestGetAPIAuthRef_EventGatewayVirtualCluster(t *testing.T) {
 				},
 			}
 
-			nn, err := getAPIAuthRef(context.Background(), cl, virtualCluster)
+			nn, err := getAPIAuthRef(t.Context(), cl, virtualCluster)
+			if tc.expectErr {
+				require.Error(t, err)
+				return
+			}
 			require.NoError(t, err)
 			require.Equal(t, types.NamespacedName{Name: "api-auth", Namespace: "default"}, nn)
 		})

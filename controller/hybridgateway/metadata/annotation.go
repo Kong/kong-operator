@@ -20,6 +20,9 @@ const (
 	stripPathKey      = "/strip-path"
 	preserveHostKey   = "/preserve-host"
 	protocolKey       = "/protocol"
+	pathKey           = "/path"
+	tlsVerifyKey      = "/tls-verify"
+	tlsVerifyDepthKey = "/tls-verify-depth"
 	connectTimeoutKey = "/connect-timeout"
 	kindHTTPRoute     = "HTTPRoute"
 	kindTLSRoute      = "TLSRoute"
@@ -59,6 +62,44 @@ func ExtractPreserveHost(anns map[string]string) bool {
 // This mirrors ingress-controller/internal/annotations.ExtractProtocolName.
 func ExtractProtocol(anns map[string]string) string {
 	return anns[annotationPrefix+protocolKey]
+}
+
+// ExtractPath extracts the konghq.com/path annotation value.
+// Returns an empty string if the annotation is not present.
+// This mirrors ingress-controller/internal/annotations.ExtractPath.
+func ExtractPath(anns map[string]string) string {
+	return anns[annotationPrefix+pathKey]
+}
+
+// ExtractTLSVerify extracts the tls-verify annotation value.
+// Returns a *bool set to the parsed value when the annotation is present and parseable,
+// or nil when absent or unparseable.
+// This mirrors ingress-controller/internal/annotations.ExtractTLSVerify.
+func ExtractTLSVerify(anns map[string]string) *bool {
+	v, ok := parseAnnotationBool(anns, tlsVerifyKey)
+	if !ok {
+		return nil
+	}
+	return &v
+}
+
+// ExtractTLSVerifyDepth extracts the tls-verify-depth annotation value.
+// Returns a *int64 set to the parsed value when the annotation is present and parseable as a
+// non-negative integer, or nil when absent or unparseable.
+// This mirrors ingress-controller/internal/annotations.ExtractTLSVerifyDepth.
+func ExtractTLSVerifyDepth(anns map[string]string) *int64 {
+	if anns == nil {
+		return nil
+	}
+	val, ok := anns[annotationPrefix+tlsVerifyDepthKey]
+	if !ok || val == "" {
+		return nil
+	}
+	depth, err := strconv.ParseInt(val, 10, 64)
+	if err != nil || depth < 0 {
+		return nil
+	}
+	return &depth
 }
 
 // ExtractConnectTimeout extracts the connect-timeout annotation value (milliseconds).

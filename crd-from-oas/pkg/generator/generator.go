@@ -511,8 +511,17 @@ func (g *Generator) generateReconcilerEntityFiles(reconcilerEntities []string, p
 func (g *Generator) generateSharedFiles(parsed *parser.ParsedSpec, referencedSchemas map[string]bool, schemaTypeFieldConfig *config.Config) ([]GeneratedFile, error) {
 	var files []GeneratedFile
 
+	gviGeneratedContent, err := g.generateGroupVersionInfoGenerated(parsed)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate zz_generated_groupversion_info file: %w", err)
+	}
+	files = append(files, GeneratedFile{
+		Name:    "zz_generated_groupversion_info.go",
+		Content: gviGeneratedContent,
+	})
+
 	if g.config.GenerateGroupVersionInfo {
-		gviContent, err := g.generateGroupVersionInfo(parsed)
+		gviContent, err := g.generateGroupVersionInfo()
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate groupversion_info file: %w", err)
 		}
@@ -2019,24 +2028,44 @@ func fixTrailingEmptyLines(s string) string {
 	return strings.Join(result, "\n")
 }
 
-func (g *Generator) generateGroupVersionInfo(parsed *parser.ParsedSpec) (string, error) {
-	tmpl := template.Must(template.New("groupVersionInfo").Parse(groupVersionInfoTemplate))
-
+func (g *Generator) collectEntityNames(parsed *parser.ParsedSpec) []string {
 	var entityNames []string
 	for name := range parsed.RequestBodies {
 		entityNames = append(entityNames, parser.GetEntityNameFromType(name))
 	}
 	sort.Strings(entityNames)
+	return entityNames
+}
+
+func (g *Generator) generateGroupVersionInfo() (string, error) {
+	tmpl := template.Must(template.New("groupVersionInfo").Parse(groupVersionInfoTemplate))
 
 	var buf strings.Builder
 	data := struct {
-		APIGroup    string
+		APIGroup   string
+		APIVersion string
+	}{
+		APIGroup:   g.config.APIGroup,
+		APIVersion: g.config.APIVersion,
+	}
+
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
+}
+
+func (g *Generator) generateGroupVersionInfoGenerated(parsed *parser.ParsedSpec) (string, error) {
+	tmpl := template.Must(template.New("groupVersionInfoGenerated").Parse(groupVersionInfoGeneratedTemplate))
+
+	var buf strings.Builder
+	data := struct {
 		APIVersion  string
 		EntityNames []string
 	}{
-		APIGroup:    g.config.APIGroup,
 		APIVersion:  g.config.APIVersion,
-		EntityNames: entityNames,
+		EntityNames: g.collectEntityNames(parsed),
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {

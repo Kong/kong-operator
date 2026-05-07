@@ -48,6 +48,12 @@
 
 ### Added
 
+- Hybridgateway: add support for `konghq.com/path` service annotation
+  [#4100](https://github.com/Kong/kong-operator/pull/4100)
+- Hybridgateway: add support for `konghq.com/tls-verify` service annotation
+  [#4105](https://github.com/Kong/kong-operator/pull/4105)
+- Hybridgateway: add support for `konghq.com/tls-verify-depth` service annotation
+  [#4099](https://github.com/Kong/kong-operator/pull/4099)
 - Hybridgateway: add support for `konghq.com/connect-timeout` service annotation
   [#4101](https://github.com/Kong/kong-operator/pull/4101)
 - Add the following headers in requests of `ingress-controller` sent to Konnect
@@ -196,6 +202,10 @@
   [#3599](https://github.com/Kong/kong-operator/pull/3599)
 
 ### Fixes
+
+- More robust validation for `HTTPRoute`, when an unsupported feature is used, and the route refers
+  to existing and non-existing `Gateway`, it will be rejected.
+  [#4131](https://github.com/Kong/kong-operator/pull/4131)
 
 ## [v2.1.5]
 

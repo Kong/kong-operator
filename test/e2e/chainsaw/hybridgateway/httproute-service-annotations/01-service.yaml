@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: echo-with-annotations
+  namespace: ($namespace)
+  annotations:
+    konghq.com/path: "/echo"
+    konghq.com/protocol: "https"
+    konghq.com/tls-verify: "true"
+    konghq.com/tls-verify-depth: "2"
+spec:
+  selector:
+    app: ($echo_deployment_name)
+  ports:
+    - port: 80
+      targetPort: 1027
+      protocol: TCP
