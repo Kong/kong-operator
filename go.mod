@@ -68,7 +68,7 @@ require (
 	k8s.io/client-go v0.36.0
 	k8s.io/kubectl v0.35.2
 	k8s.io/kubernetes v1.36.0
-	k8s.io/utils v0.0.0-20260319190234-28399d86e0b5
+	k8s.io/utils v0.0.0-20260319190234-28399d86e0b5 // indirect
 	oras.land/oras-go/v2 v2.6.0
 	sigs.k8s.io/controller-runtime v0.24.0
 	sigs.k8s.io/controller-tools v0.20.1
