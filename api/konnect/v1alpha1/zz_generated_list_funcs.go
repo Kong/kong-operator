@@ -31,3 +31,8 @@ func (obj MCPServerList) GetItems() []MCPServer {
 func (obj KonnectCloudGatewayTransitGatewayList) GetItems() []KonnectCloudGatewayTransitGateway {
 	return obj.Items
 }
+
+// GetItems returns the list of Portal items.
+func (obj PortalList) GetItems() []Portal {
+	return obj.Items
+}
