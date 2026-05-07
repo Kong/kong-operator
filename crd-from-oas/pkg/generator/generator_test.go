@@ -594,6 +594,7 @@ func TestGenerateCRDFuncs_GeneratesKonnectFuncs(t *testing.T) {
 		assert.Contains(t, content, `func (obj Portal) GetTypeName() string {`)
 		assert.Contains(t, content, `func (obj *Portal) GetConditions() []metav1.Condition {`)
 		assert.Contains(t, content, `func (obj *Portal) SetConditions(conditions []metav1.Condition) {`)
+		assert.NotContains(t, content, `SetParentID(id string)`)
 	})
 
 	t.Run("reconciler entities include lifecycle helpers in the same file", func(t *testing.T) {
@@ -657,6 +658,8 @@ func TestGenerateCRDFuncs_GeneratesKonnectFuncs(t *testing.T) {
 		require.NoError(t, err)
 		assert.Contains(t, content, `func (obj *PortalTeam) GetPortalID() string {`)
 		assert.Contains(t, content, `func (obj *PortalTeam) SetPortalID(id string) {`)
+		assert.Contains(t, content, `func (obj *PortalTeam) SetParentID(id string) {`)
+		assert.Contains(t, content, `obj.SetPortalID(id)`)
 	})
 
 	t.Run("dependency-backed child entities get root ref accessor", func(t *testing.T) {
@@ -689,6 +692,16 @@ func TestGenerateCRDFuncs_GeneratesKonnectFuncs(t *testing.T) {
 		assert.Contains(t, content, `return obj.Spec.PortalRef`)
 		assert.Contains(t, content, `func (obj *PortalTeam) GetParentRef() commonv1alpha1.ObjectRef {`)
 		assert.Contains(t, content, `return obj.GetPortalRef()`)
+		assert.Contains(t, content, `func (obj *PortalTeam) SetParentID(id string) {`)
+		assert.Contains(t, content, `obj.SetPortalID(id)`)
+		assert.Contains(t, content, `func (obj *PortalTeam) GetStatusConditionTypeParentRefValid() string {`)
+		assert.Contains(t, content, `return PortalRefValidConditionType`)
+		assert.Contains(t, content, `func (obj *PortalTeam) GetStatusConditionReasonParentRefValid() string {`)
+		assert.Contains(t, content, `return PortalRefReasonValid`)
+		assert.Contains(t, content, `func (obj *PortalTeam) GetStatusConditionReasonParentRefInvalid() string {`)
+		assert.Contains(t, content, `return PortalRefReasonInvalid`)
+		assert.Contains(t, content, `func (obj *PortalTeam) GetStatusConditionReasonParentRefNotProgrammed() string {`)
+		assert.Contains(t, content, `return PortalRefReasonNotProgrammed`)
 	})
 
 	t.Run("event gateway child entities get event gateway ref accessor alias", func(t *testing.T) {
@@ -722,6 +735,16 @@ func TestGenerateCRDFuncs_GeneratesKonnectFuncs(t *testing.T) {
 		assert.Contains(t, content, `return obj.Spec.GatewayRef`)
 		assert.Contains(t, content, `func (obj *EventGatewayDataPlaneCertificate) GetParentRef() commonv1alpha1.ObjectRef {`)
 		assert.Contains(t, content, `return obj.GetEventGatewayRef()`)
+		assert.Contains(t, content, `func (obj *EventGatewayDataPlaneCertificate) SetParentID(id string) {`)
+		assert.Contains(t, content, `obj.SetGatewayID(id)`)
+		assert.Contains(t, content, `func (obj *EventGatewayDataPlaneCertificate) GetStatusConditionTypeParentRefValid() string {`)
+		assert.Contains(t, content, `return EventGatewayRefValidConditionType`)
+		assert.Contains(t, content, `func (obj *EventGatewayDataPlaneCertificate) GetStatusConditionReasonParentRefValid() string {`)
+		assert.Contains(t, content, `return EventGatewayRefReasonValid`)
+		assert.Contains(t, content, `func (obj *EventGatewayDataPlaneCertificate) GetStatusConditionReasonParentRefInvalid() string {`)
+		assert.Contains(t, content, `return EventGatewayRefReasonInvalid`)
+		assert.Contains(t, content, `func (obj *EventGatewayDataPlaneCertificate) GetStatusConditionReasonParentRefNotProgrammed() string {`)
+		assert.Contains(t, content, `return EventGatewayRefReasonNotProgrammed`)
 	})
 
 	t.Run("root ref accessor uses last (immediate) dependency", func(t *testing.T) {
@@ -757,6 +780,35 @@ func TestGenerateCRDFuncs_GeneratesKonnectFuncs(t *testing.T) {
 		assert.NotContains(t, content, `func (obj *PortalTeamDeveloper) GetPortalRef() ObjectRef {`)
 		assert.Contains(t, content, `func (obj *PortalTeamDeveloper) GetParentRef() ObjectRef {`)
 		assert.Contains(t, content, `return obj.GetTeamRef()`)
+		// SetParentID delegates to the immediate (last) parent only.
+		assert.Contains(t, content, `func (obj *PortalTeamDeveloper) SetParentID(id string) {`)
+		assert.Contains(t, content, `obj.SetTeamID(id)`)
+		assert.NotContains(t, content, `obj.SetPortalID(id)`)
+		// Condition methods use the immediate parent prefix (Team, not Portal).
+		assert.Contains(t, content, `return TeamRefValidConditionType`)
+		assert.Contains(t, content, `return TeamRefReasonValid`)
+		assert.Contains(t, content, `return TeamRefReasonInvalid`)
+		assert.Contains(t, content, `return TeamRefReasonNotProgrammed`)
+		assert.NotContains(t, content, `return PortalRefValidConditionType`)
+	})
+
+	t.Run("root entity without parent gets no status condition methods", func(t *testing.T) {
+		g := NewGenerator(Config{
+			APIGroup:   "x-konnect.konghq.com",
+			APIVersion: "v1alpha1",
+		})
+
+		rootSchema := &parser.Schema{
+			Name:         "CreatePortal",
+			Dependencies: []*parser.Dependency{},
+		}
+
+		content, err := g.generateCRDFuncs("CreatePortal", rootSchema)
+		require.NoError(t, err)
+		assert.NotContains(t, content, `GetStatusConditionTypeParentRefValid`)
+		assert.NotContains(t, content, `GetStatusConditionReasonParentRefValid`)
+		assert.NotContains(t, content, `GetStatusConditionReasonParentRefInvalid`)
+		assert.NotContains(t, content, `GetStatusConditionReasonParentRefNotProgrammed`)
 	})
 }
 

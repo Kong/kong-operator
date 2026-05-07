@@ -1705,3 +1705,53 @@ type VirtualClusterReferenceByName struct {
 	// +kubebuilder:validation:MaxLength=255
 	Name VirtualClusterName `json:"name,omitempty"`
 }
+
+// VirtualClusterTopicAlias **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// A topic alias maps an alias name to a namespace-visible topic name.
+// Clients can produce to, consume from, and discover the topic under the alias
+// name.
+// The original topic name remains accessible.
+//
+// **Requires a minimum runtime version of `1.2`**.
+type VirtualClusterTopicAlias struct {
+	// The client-visible topic name.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Alias string `json:"alias,omitempty"`
+	// How to handle conflicts where an alias shadows a physical topic.
+	// * warn - activate the alias but log a warning and set the conflict metric to
+	// 1.
+	// * ignore - activate the alias silently.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=warn;ignore
+	// +kubebuilder:default="warn"
+	Conflict VirtualClusterTopicAliasConflict `json:"conflict,omitempty"`
+	// CEL expression evaluated against the connection's auth context.
+	// If omitted or empty, the alias is active for all connections.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:default=""
+	Match string `json:"match,omitempty"`
+	// The namespace-visible topic name this alias resolves to.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Topic string `json:"topic,omitempty"`
+}
+
+// VirtualClusterTopicAliasConflict How to handle conflicts where an alias
+// shadows a physical topic.
+// * warn - activate the alias but log a warning and set the conflict metric to
+// 1.
+// * ignore - activate the alias silently.
+type VirtualClusterTopicAliasConflict string
