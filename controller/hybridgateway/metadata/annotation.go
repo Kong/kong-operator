@@ -1,6 +1,7 @@
 package metadata
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -88,36 +89,22 @@ func ExtractTLSVerify(anns map[string]string) *bool {
 // non-negative integer, or nil when absent or unparseable.
 // This mirrors ingress-controller/internal/annotations.ExtractTLSVerifyDepth.
 func ExtractTLSVerifyDepth(anns map[string]string) *int64 {
-	if anns == nil {
+	depth, err := parseAnnotationInt(anns, tlsVerifyDepthKey)
+	if err != nil {
 		return nil
 	}
-	val, ok := anns[annotationPrefix+tlsVerifyDepthKey]
-	if !ok || val == "" {
-		return nil
-	}
-	depth, err := strconv.ParseInt(val, 10, 64)
-	if err != nil || depth < 0 {
-		return nil
-	}
-	return &depth
+	return depth
 }
 
 // ExtractConnectTimeout extracts the connect-timeout annotation value (milliseconds).
 // Returns a non-nil pointer when the annotation is present and parseable as a non-negative integer.
 // This mirrors ingress-controller/internal/annotations.ExtractConnectTimeout.
 func ExtractConnectTimeout(anns map[string]string) *int64 {
-	if anns == nil {
+	timeout, err := parseAnnotationInt(anns, connectTimeoutKey)
+	if err != nil {
 		return nil
 	}
-	val, ok := anns[annotationPrefix+connectTimeoutKey]
-	if !ok || val == "" {
-		return nil
-	}
-	timeout, err := strconv.ParseInt(val, 10, 64)
-	if err != nil || timeout < 0 {
-		return nil
-	}
-	return &timeout
+	return timeout
 }
 
 // IsValidProtocol returns true if the provided protocol is a valid Kong upstream protocol.
@@ -147,6 +134,24 @@ func parseAnnotationBool(anns map[string]string, key string) (enabled bool, ok b
 	}
 
 	return parsedVal, true
+}
+
+func parseAnnotationInt(anns map[string]string, key string) (*int64, error) {
+	if anns == nil {
+		return nil, nil
+	}
+	val, ok := anns[annotationPrefix+key]
+	if !ok || val == "" {
+		return nil, nil
+	}
+	parsed, err := strconv.ParseInt(val, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	if parsed < 0 {
+		return nil, fmt.Errorf("annotation %s%s must be non-negative, got %d", annotationPrefix, key, parsed)
+	}
+	return &parsed, nil
 }
 
 // BuildAnnotations creates the standard annotations map for Kong resources managed by Gateway API objects.

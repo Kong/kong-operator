@@ -1051,6 +1051,91 @@ func TestExtractConnectTimeout(t *testing.T) {
 	}
 }
 
+func TestParseAnnotationInt(t *testing.T) {
+	tests := []struct {
+		name        string
+		annotations map[string]string
+		key         string
+		expectedVal *int64
+		expectErr   bool
+	}{
+		{
+			name:        "nil annotations",
+			annotations: nil,
+			key:         connectTimeoutKey,
+			expectedVal: nil,
+			expectErr:   false,
+		},
+		{
+			name:        "empty annotations",
+			annotations: map[string]string{},
+			key:         connectTimeoutKey,
+			expectedVal: nil,
+			expectErr:   false,
+		},
+		{
+			name:        "key absent",
+			annotations: map[string]string{"konghq.com/protocol": "https"},
+			key:         connectTimeoutKey,
+			expectedVal: nil,
+			expectErr:   false,
+		},
+		{
+			name:        "empty value",
+			annotations: map[string]string{annotationPrefix + connectTimeoutKey: ""},
+			key:         connectTimeoutKey,
+			expectedVal: nil,
+			expectErr:   false,
+		},
+		{
+			name:        "valid positive value",
+			annotations: map[string]string{annotationPrefix + connectTimeoutKey: "5000"},
+			key:         connectTimeoutKey,
+			expectedVal: new(int64(5000)),
+			expectErr:   false,
+		},
+		{
+			name:        "zero value",
+			annotations: map[string]string{annotationPrefix + connectTimeoutKey: "0"},
+			key:         connectTimeoutKey,
+			expectedVal: new(int64(0)),
+			expectErr:   false,
+		},
+		{
+			name:        "negative value",
+			annotations: map[string]string{annotationPrefix + connectTimeoutKey: "-1"},
+			key:         connectTimeoutKey,
+			expectedVal: nil,
+			expectErr:   true,
+		},
+		{
+			name:        "non-numeric value",
+			annotations: map[string]string{annotationPrefix + connectTimeoutKey: "abc"},
+			key:         connectTimeoutKey,
+			expectedVal: nil,
+			expectErr:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := parseAnnotationInt(tt.annotations, tt.key)
+			if tt.expectErr {
+				require.Error(t, err)
+				assert.Nil(t, got)
+			} else {
+				require.NoError(t, err)
+				if tt.expectedVal == nil {
+					assert.Nil(t, got)
+				} else {
+					require.NotNil(t, got)
+					assert.Equal(t, *tt.expectedVal, *got)
+				}
+			}
+		})
+	}
+}
+
 func TestIsValidProtocol(t *testing.T) {
 	validProtocols := []string{"http", "https", "grpc", "grpcs", "ws", "wss", "tls", "tcp", "tls_passthrough"}
 	for _, p := range validProtocols {
