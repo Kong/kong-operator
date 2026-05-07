@@ -1308,7 +1308,11 @@ func get{{.Entity}}ForUID(
 
 	for _, entry := range resp.{{.ListResponseField}}.Data {
 		{{- range .MatchFields}}
+		{{- if .SliceMatch}}
+		if !matchSliceField(obj.{{.ObjectField}}, entry.{{.ResponseField}}) {
+		{{- else}}
 		if !matchStringField(obj.{{.ObjectField}}, entry.{{.ResponseField}}) {
+		{{- end}}
 			continue
 		}
 		{{- end}}

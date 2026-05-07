@@ -1,6 +1,9 @@
 package ops
 
-import "reflect"
+import (
+	"reflect"
+	"slices"
+)
 
 // matchStringField compares string-like values without reflection.
 // Nil pointers are treated as empty strings to mirror the previous behavior.
@@ -9,6 +12,11 @@ func matchStringField[
 	TGot ~string | ~*string,
 ](want TWant, got TGot) bool {
 	return stringValueGeneric(want) == stringValueGeneric(got)
+}
+
+// matchSliceField compares two string slices for equality.
+func matchSliceField(want, got []string) bool {
+	return slices.Equal(want, got)
 }
 
 func stringValueGeneric[
