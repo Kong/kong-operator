@@ -229,6 +229,8 @@ func getParentForRef[
 			Name:      ref.NamespacedRef.Name,
 			Namespace: namespace,
 		}
+		// When the namespace in the parentRef field is an empty string, then
+		// we are going to use the namespace of the resource that contains the parentRef.
 		if ref.NamespacedRef.Namespace != nil && *ref.NamespacedRef.Namespace != "" {
 			nn.Namespace = *ref.NamespacedRef.Namespace
 		}
