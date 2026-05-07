@@ -11,7 +11,7 @@ import (
 //
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Namespaced
+// +kubebuilder:resource:scope=Namespaced,categories=konnect;kong
 // +kubebuilder:printcolumn:name="ID",description="Konnect ID",type="string",JSONPath=".status.id"
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
 // +kubebuilder:printcolumn:name="OrgID",description="Konnect Organization ID this resource belongs to.",type=string,JSONPath=`.status.organizationID`
@@ -44,7 +44,7 @@ type EventGatewayVirtualClusterSpec struct {
 	// GatewayRef is the reference to the parent Gateway object.
 	//
 	// +required
-	GatewayRef commonv1alpha1.ObjectRef `json:"gateway_ref,omitzero"`
+	GatewayRef commonv1alpha1.ObjectRef `json:"gatewayRef,omitzero"`
 
 	// APISpec defines the desired state of the resource's API spec fields.
 	//
@@ -68,7 +68,7 @@ type EventGatewayVirtualClusterAPISpec struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=enforce_on_gateway;passthrough
-	AclMode VirtualClusterACLMode `json:"acl_mode,omitempty"`
+	AclMode VirtualClusterACLMode `json:"aclMode,omitempty"`
 
 	// How to handle authentication from clients.
 	//
@@ -105,7 +105,7 @@ type EventGatewayVirtualClusterAPISpec struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=63
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
-	DNSLabel VirtualClusterDNSLabel `json:"dns_label,omitempty"`
+	DNSLabel VirtualClusterDNSLabel `json:"dnsLabel,omitempty"`
 
 	// Labels store metadata of an entity that can be used for filtering an entity
 	// list or for searching across entity types.
@@ -132,6 +132,20 @@ type EventGatewayVirtualClusterAPISpec struct {
 	//
 	// +optional
 	Namespace VirtualClusterNamespace `json:"namespace,omitempty"`
+
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
+	// Topic aliases allow exposing backend topics under additional names.
+	// An alias creates a new entry point to the same physical data.
+	// The alias `topic` field references namespace-visible names (if namespace is
+	// configured).
+	// Aliases are independent of namespace and can be used without it.
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +optional
+	TopicAliases []VirtualClusterTopicAlias `json:"topicAliases,omitempty"`
 }
 
 // EventGatewayVirtualClusterStatus defines the observed state of EventGatewayVirtualCluster.

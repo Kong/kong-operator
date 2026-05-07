@@ -9,6 +9,9 @@ metadata:
 spec:
   group: konnect.konghq.com
   names:
+    categories:
+    - konnect
+    - kong
     kind: PortalPage
     listKind: PortalPageList
     plural: portalpages
@@ -69,7 +72,7 @@ spec:
                     description: Description is a type alias.
                     maxLength: 160
                     type: string
-                  parent_page_id_ref:
+                  parentPageIDRef:
                     description: |-
                       Pages may be rendered as a tree of files.
 
@@ -119,7 +122,7 @@ spec:
                     - type
                     type: object
                     x-kubernetes-validations:
-                    - message: cannot set parent_page_id_ref
+                    - message: cannot set parentPageIDRef
                       rule: self == null
                     - message: when type is namespacedRef, namespacedRef must be set
                       rule: 'self.type == ''namespacedRef'' ? has(self.namespacedRef)
@@ -170,7 +173,7 @@ spec:
                 - content
                 - slug
                 type: object
-              portal_ref:
+              portalRef:
                 description: PortalRef is the reference to the parent Portal object.
                 properties:
                   konnectID:
@@ -226,7 +229,7 @@ spec:
                 - message: when type is konnectID, namespacedRef must not be set
                   rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
             required:
-            - portal_ref
+            - portalRef
             type: object
           status:
             description: PortalPageStatus defines the observed state of PortalPage.

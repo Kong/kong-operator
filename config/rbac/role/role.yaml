@@ -446,6 +446,7 @@ rules:
   - konnectcloudgatewaytransitgateways
   - konnecteventdataplanecertificates
   - konnecteventgateways
+  - portalemailconfigs
   - portalpages
   - portals
   - portalteams
@@ -485,6 +486,8 @@ rules:
   - konnectgatewaycontrolplanes/finalizers
   - konnectgatewaycontrolplanes/status
   - mcpservers/status
+  - portalemailconfigs/finalizers
+  - portalemailconfigs/status
   - portalpages/finalizers
   - portalpages/status
   - portals/finalizers

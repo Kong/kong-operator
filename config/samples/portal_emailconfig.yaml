@@ -9,17 +9,20 @@ spec:
       name: konnect-api-auth
   apiSpec:
     name: portal1
-    authentication_enabled: Enabled
+    authenticationEnabled: Enabled
 ---
-kind: PortalTeam
+kind: PortalEmailConfig
 apiVersion: konnect.konghq.com/v1alpha1
 metadata:
   name: portal1
   namespace: default
 spec:
-  portal_ref:
+  portalRef:
     type: namespacedRef
     namespacedRef:
       name: portal1
   apiSpec:
-    name: team1
+    domainName: example.com
+    fromEmail: noreply@example.com
+    fromName: Example Developer Portal
+    replyToEmail: support@example.com

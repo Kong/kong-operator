@@ -14,8 +14,8 @@ func TestEventGatewayListenerPolicyConfigUnmarshalJSON_NilReceiver(t *testing.T)
 		name    string
 		payload []byte
 	}{
-		{name: "forward_to_virtual_cluster", payload: []byte("{\"type\":\"forward_to_virtual_cluster\",\"forward_to_virtual_cluster\":{}}")},
-		{name: "tls_server", payload: []byte("{\"type\":\"tls_server\",\"tls_server\":{}}")},
+		{name: "forward_to_virtual_cluster", payload: []byte("{\"type\":\"forwardToVirtualCluster\",\"forwardToVirtualCluster\":{}}")},
+		{name: "tls_server", payload: []byte("{\"type\":\"tlsServer\",\"tlsServer\":{}}")},
 	}
 
 	for _, tt := range tests {
@@ -61,7 +61,7 @@ func TestEventGatewayListenerPolicyAPISpecUnmarshalJSON_DecodesUnionFields(t *te
 	}{
 		{
 			name: "EventGatewayListenerPolicyConfig/forward_to_virtual_cluster",
-			payload: []byte("{\"type\":\"forward_to_virtual_cluster\",\"forward_to_virtual_cluster\":{}}"),
+			payload: []byte("{\"type\":\"forwardToVirtualCluster\",\"forwardToVirtualCluster\":{}}"),
 			assert: func(t *testing.T, target EventGatewayListenerPolicyAPISpec) {
 				t.Helper()
 				if target.EventGatewayListenerPolicyConfig == nil {
@@ -77,7 +77,7 @@ func TestEventGatewayListenerPolicyAPISpecUnmarshalJSON_DecodesUnionFields(t *te
 		},
 		{
 			name: "EventGatewayListenerPolicyConfig/tls_server",
-			payload: []byte("{\"type\":\"tls_server\",\"tls_server\":{}}"),
+			payload: []byte("{\"type\":\"tlsServer\",\"tlsServer\":{}}"),
 			assert: func(t *testing.T, target EventGatewayListenerPolicyAPISpec) {
 				t.Helper()
 				if target.EventGatewayListenerPolicyConfig == nil {

@@ -38,6 +38,11 @@ type opsDeleteFuncData struct {
 	// the variadic opts; we pass nil for each since they are all optional.
 	// Only used when DeleteFullyWrapped is false.
 	DeleteNilArgs []struct{}
+	// DeleteOmitsEntityID is true for parent-scoped singleton resources whose
+	// DELETE path contains only parent path params and no entity-specific ID (e.g.
+	// DELETE /portals/{portalId}/email-config). The SDK method takes the parent ID
+	// directly; no entity ID local variable or argument is emitted.
+	DeleteOmitsEntityID bool
 }
 
 // generateOpsDeleteFuncBody renders the delete<Entity> function body (no file header).
@@ -71,6 +76,10 @@ func (g *Generator) generateOpsDeleteFuncBody(
 
 	// Multi-parent entities use a fully-wrapped delete request struct.
 	deleteFullyWrapped := len(parents) >= 2
+	// deleteOmitsEntityID is true for parent-scoped singletons: the DELETE path
+	// contains only parent path params (no entity-specific ID). The SDK method
+	// takes the parent ID positionally; no entity ID is emitted.
+	deleteOmitsEntityID := !deleteFullyWrapped && len(parents) > 0 && len(schema.DeletePathParams) <= len(parents)
 
 	var deleteWrappedType, deleteEntityIDField string
 	if deleteFullyWrapped {
@@ -95,6 +104,7 @@ func (g *Generator) generateOpsDeleteFuncBody(
 		DeleteWrappedType:   deleteWrappedType,
 		DeleteEntityIDField: deleteEntityIDField,
 		DeleteNilArgs:       nilArgs,
+		DeleteOmitsEntityID: deleteOmitsEntityID,
 	}, nil
 }
 

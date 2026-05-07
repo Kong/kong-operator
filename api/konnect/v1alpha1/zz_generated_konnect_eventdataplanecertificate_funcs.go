@@ -63,3 +63,38 @@ func (obj *KonnectEventDataPlaneCertificate) GetGatewayRef() commonv1alpha1.Obje
 func (obj *KonnectEventDataPlaneCertificate) GetEventGatewayRef() commonv1alpha1.ObjectRef {
 	return obj.Spec.GatewayRef
 }
+
+// GetParentRef returns the reference to the parent entity.
+func (obj *KonnectEventDataPlaneCertificate) GetParentRef() commonv1alpha1.ObjectRef {
+	return obj.GetEventGatewayRef()
+}
+
+// SetParentID sets the Konnect ID of the immediate parent entity.
+func (obj *KonnectEventDataPlaneCertificate) SetParentID(id string) {
+	obj.SetGatewayID(id)
+}
+
+// GetStatusConditionTypeParentRefValid returns the status condition type
+// indicating whether the parent reference is valid.
+func (obj *KonnectEventDataPlaneCertificate) GetStatusConditionTypeParentRefValid() string {
+	return EventGatewayRefValidConditionType
+}
+
+// GetStatusConditionReasonParentRefValid returns the status condition reason
+// indicating that the parent reference is valid.
+func (obj *KonnectEventDataPlaneCertificate) GetStatusConditionReasonParentRefValid() string {
+	return EventGatewayRefReasonValid
+}
+
+// GetStatusConditionReasonParentRefInvalid returns the status condition reason
+// indicating that the parent reference is invalid.
+func (obj *KonnectEventDataPlaneCertificate) GetStatusConditionReasonParentRefInvalid() string {
+	return EventGatewayRefReasonInvalid
+}
+
+// GetStatusConditionReasonParentRefNotProgrammed returns the status condition
+// reason indicating that the referenced parent exists but is not yet
+// programmed in Konnect.
+func (obj *KonnectEventDataPlaneCertificate) GetStatusConditionReasonParentRefNotProgrammed() string {
+	return EventGatewayRefReasonNotProgrammed
+}

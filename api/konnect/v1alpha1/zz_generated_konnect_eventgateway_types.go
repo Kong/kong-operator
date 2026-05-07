@@ -11,7 +11,7 @@ import (
 //
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Namespaced
+// +kubebuilder:resource:scope=Namespaced,categories=konnect;kong
 // +kubebuilder:printcolumn:name="ID",description="Konnect ID",type="string",JSONPath=".status.id"
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
 // +kubebuilder:printcolumn:name="OrgID",description="Konnect Organization ID this resource belongs to.",type=string,JSONPath=`.status.organizationID`
@@ -81,7 +81,7 @@ type KonnectEventGatewayAPISpec struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^\d+\.\d+$`
-	MinRuntimeVersion MinRuntimeVersion `json:"min_runtime_version,omitempty"`
+	MinRuntimeVersion MinRuntimeVersion `json:"minRuntimeVersion,omitempty"`
 
 	// The name of the Gateway.
 	//

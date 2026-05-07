@@ -82,7 +82,7 @@ type BackendClusterAuthenticationScheme struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=anonymous;sasl_plain;sasl_scram
+	// +kubebuilder:validation:Enum=anonymous;saslPlain;saslScram
 	Type BackendClusterAuthenticationSchemeType `json:"type,omitempty"`
 
 	// Anonymous configuration.
@@ -92,11 +92,11 @@ type BackendClusterAuthenticationScheme struct {
 	// SaslPlain configuration.
 	//
 	// +optional
-	SaslPlain *BackendClusterAuthenticationSaslPlain `json:"sasl_plain,omitempty"`
+	SaslPlain *BackendClusterAuthenticationSaslPlain `json:"saslPlain,omitempty"`
 	// SaslScram configuration.
 	//
 	// +optional
-	SaslScram *BackendClusterAuthenticationSaslScram `json:"sasl_scram,omitempty"`
+	SaslScram *BackendClusterAuthenticationSaslScram `json:"saslScram,omitempty"`
 }
 
 // BackendClusterAuthenticationSchemeType represents the type of BackendClusterAuthenticationScheme.
@@ -105,8 +105,8 @@ type BackendClusterAuthenticationSchemeType string
 // BackendClusterAuthenticationSchemeType values.
 const (
 	BackendClusterAuthenticationSchemeTypeAnonymous BackendClusterAuthenticationSchemeType = "anonymous"
-	BackendClusterAuthenticationSchemeTypeSaslPlain BackendClusterAuthenticationSchemeType = "sasl_plain"
-	BackendClusterAuthenticationSchemeTypeSaslScram BackendClusterAuthenticationSchemeType = "sasl_scram"
+	BackendClusterAuthenticationSchemeTypeSaslPlain BackendClusterAuthenticationSchemeType = "saslPlain"
+	BackendClusterAuthenticationSchemeTypeSaslScram BackendClusterAuthenticationSchemeType = "saslScram"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -123,21 +123,21 @@ func (u BackendClusterAuthenticationScheme) MarshalJSON() ([]byte, error) {
 			}
 			m["anonymous"] = raw
 		}
-	case "sasl_plain":
+	case "saslPlain":
 		if u.SaslPlain != nil {
 			raw, err := json.Marshal(u.SaslPlain)
 			if err != nil {
 				return nil, fmt.Errorf("marshaling BackendClusterAuthenticationScheme sasl_plain: %w", err)
 			}
-			m["sasl_plain"] = raw
+			m["saslPlain"] = raw
 		}
-	case "sasl_scram":
+	case "saslScram":
 		if u.SaslScram != nil {
 			raw, err := json.Marshal(u.SaslScram)
 			if err != nil {
 				return nil, fmt.Errorf("marshaling BackendClusterAuthenticationScheme sasl_scram: %w", err)
 			}
-			m["sasl_scram"] = raw
+			m["saslScram"] = raw
 		}
 	}
 	return json.Marshal(m)
@@ -170,8 +170,8 @@ func (u *BackendClusterAuthenticationScheme) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("unmarshaling BackendClusterAuthenticationScheme anonymous: %w", err)
 		}
 		u.Anonymous = &val
-	case "sasl_plain":
-		payload, ok := raw["sasl_plain"]
+	case "saslPlain":
+		payload, ok := raw["saslPlain"]
 		if !ok || len(payload) == 0 {
 			return nil
 		}
@@ -180,8 +180,8 @@ func (u *BackendClusterAuthenticationScheme) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("unmarshaling BackendClusterAuthenticationScheme sasl_plain: %w", err)
 		}
 		u.SaslPlain = &val
-	case "sasl_scram":
-		payload, ok := raw["sasl_scram"]
+	case "saslScram":
+		payload, ok := raw["saslScram"]
 		if !ok || len(payload) == 0 {
 			return nil
 		}
@@ -231,13 +231,13 @@ type BackendClusterTLS struct {
 	// +optional
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=4096
-	CaBundle GatewaySecretReferenceOrLiteral `json:"ca_bundle,omitempty"`
+	CaBundle GatewaySecretReferenceOrLiteral `json:"caBundle,omitempty"`
 	// Client mTLS configuration.
 	//
 	// **Requires a minimum runtime version of `1.1`**.
 	//
 	// +optional
-	ClientIdentity ClientIdentity `json:"client_identity,omitempty"`
+	ClientIdentity ClientIdentity `json:"clientIdentity,omitempty"`
 	// If true, TLS is enabled for connections to this backend cluster.
 	// If false, TLS is explicitly disabled.
 	//
@@ -250,12 +250,12 @@ type BackendClusterTLS struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	// +kubebuilder:default=Disabled
-	InsecureSkipVerify string `json:"insecure_skip_verify,omitempty"`
+	InsecureSkipVerify string `json:"insecureSkipVerify,omitempty"`
 	// List of supported TLS versions.
 	//
 	// +optional
 	// +kubebuilder:default={"tls12","tls13"}
-	TLSVersions []string `json:"tls_versions,omitempty"`
+	TLSVersions []string `json:"tlsVersions,omitempty"`
 }
 
 // ClientIdentity Client mTLS configuration.
@@ -347,7 +347,7 @@ type EventGatewayTLSListenerPolicyConfig struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	// +kubebuilder:default=Disabled
-	AllowPlaintext string `json:"allow_plaintext,omitempty"`
+	AllowPlaintext string `json:"allowPlaintext,omitempty"`
 	//
 	//
 	// +required
@@ -360,7 +360,7 @@ type EventGatewayTLSListenerPolicyConfig struct {
 	// **Requires a minimum runtime version of `1.1`**.
 	//
 	// +optional
-	ClientAuthentication ClientAuthentication `json:"client_authentication,omitempty"`
+	ClientAuthentication ClientAuthentication `json:"clientAuthentication,omitempty"`
 	// A range of TLS versions.
 	//
 	// +optional
@@ -397,7 +397,7 @@ type ClientAuthentication struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	PrincipalMapping string `json:"principal_mapping,omitempty"`
+	PrincipalMapping string `json:"principalMapping,omitempty"`
 	// TLS trust bundles contain CA certificate bundles used to verify client
 	// certificates.
 	// All bundles are merged into a single trust store; a client certificate is
@@ -406,7 +406,7 @@ type ClientAuthentication struct {
 	//
 	//
 	// +required
-	TLSTrustBundles []TLSTrustBundleReference `json:"tls_trust_bundles,omitempty"`
+	TLSTrustBundles []TLSTrustBundleReference `json:"tlsTrustBundles,omitempty"`
 }
 
 // ForwardToClusterByPortMappingConfig The configuration to forward request to
@@ -444,7 +444,7 @@ type ForwardToClusterByPortMappingConfig struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?)*$`
-	AdvertisedHost string `json:"advertised_host,omitempty"`
+	AdvertisedHost string `json:"advertisedHost,omitempty"`
 	// If set to `at_start`, the first port will be used as a bootstrap port.
 	// It provides a stable endpoint to use as the bootstrap server for clients,
 	// regardless of broker
@@ -461,7 +461,7 @@ type ForwardToClusterByPortMappingConfig struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=none;at_start
 	// +kubebuilder:default="at_start"
-	BootstrapPort string `json:"bootstrap_port,omitempty"`
+	BootstrapPort string `json:"bootstrapPort,omitempty"`
 	// A reference to a virtual cluster.
 	//
 	// +required
@@ -470,7 +470,7 @@ type ForwardToClusterByPortMappingConfig struct {
 	//
 	// +optional
 	// +kubebuilder:default=0
-	MinBrokerID int `json:"min_broker_id,omitempty"`
+	MinBrokerID int `json:"minBrokerID,omitempty"`
 }
 
 // ForwardToClusterBySNIConfig The configuration to forward requests to virtual
@@ -485,7 +485,7 @@ type ForwardToClusterBySNIConfig struct {
 	// +optional
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=65535
-	AdvertisedPort int `json:"advertised_port,omitempty"`
+	AdvertisedPort int `json:"advertisedPort,omitempty"`
 	// Configures DNS names assigned to brokers in virtual clusters.
 	//
 	// - `per_cluster_suffix` is the default and allocates one level in the
@@ -498,7 +498,7 @@ type ForwardToClusterBySNIConfig struct {
 	// **Requires a minimum runtime version of `1.1`**.
 	//
 	// +optional
-	BrokerHostFormat BrokerHostFormat `json:"broker_host_format,omitempty"`
+	BrokerHostFormat BrokerHostFormat `json:"brokerHostFormat,omitempty"`
 	// Optional suffix for TLS SNI validation.
 	//
 	// This suffix is concatenated with the virtual cluster "dns.label" label to
@@ -527,7 +527,7 @@ type ForwardToClusterBySNIConfig struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[\.-]([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)*([a-z0-9-]*[a-z0-9])$`
-	SniSuffix string `json:"sni_suffix,omitempty"`
+	SniSuffix string `json:"sniSuffix,omitempty"`
 }
 
 // BrokerHostFormat Configures DNS names assigned to brokers in virtual
@@ -606,13 +606,13 @@ type ForwardToVirtualClusterPolicyConfig struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=port_mapping;sni
+	// +kubebuilder:validation:Enum=portMapping;sni
 	Type ForwardToVirtualClusterPolicyConfigType `json:"type,omitempty"`
 
 	// PortMapping configuration.
 	//
 	// +optional
-	PortMapping *ForwardToClusterByPortMappingConfig `json:"port_mapping,omitempty"`
+	PortMapping *ForwardToClusterByPortMappingConfig `json:"portMapping,omitempty"`
 	// SNI configuration.
 	//
 	// +optional
@@ -624,7 +624,7 @@ type ForwardToVirtualClusterPolicyConfigType string
 
 // ForwardToVirtualClusterPolicyConfigType values.
 const (
-	ForwardToVirtualClusterPolicyConfigTypePortMapping ForwardToVirtualClusterPolicyConfigType = "port_mapping"
+	ForwardToVirtualClusterPolicyConfigTypePortMapping ForwardToVirtualClusterPolicyConfigType = "portMapping"
 	ForwardToVirtualClusterPolicyConfigTypeSNI ForwardToVirtualClusterPolicyConfigType = "sni"
 )
 
@@ -634,13 +634,13 @@ func (u ForwardToVirtualClusterPolicyConfig) MarshalJSON() ([]byte, error) {
 	typeBytes, _ := json.Marshal(string(u.Type))
 	m["type"] = typeBytes
 	switch u.Type {
-	case "port_mapping":
+	case "portMapping":
 		if u.PortMapping != nil {
 			raw, err := json.Marshal(u.PortMapping)
 			if err != nil {
 				return nil, fmt.Errorf("marshaling ForwardToVirtualClusterPolicyConfig port_mapping: %w", err)
 			}
-			m["port_mapping"] = raw
+			m["portMapping"] = raw
 		}
 	case "sni":
 		if u.SNI != nil {
@@ -671,8 +671,8 @@ func (u *ForwardToVirtualClusterPolicyConfig) UnmarshalJSON(data []byte) error {
 	}
 	u.Type = ForwardToVirtualClusterPolicyConfigType(probe.Type)
 	switch probe.Type {
-	case "port_mapping":
-		payload, ok := raw["port_mapping"]
+	case "portMapping":
+		payload, ok := raw["portMapping"]
 		if !ok || len(payload) == 0 {
 			return nil
 		}
@@ -840,25 +840,25 @@ type OIDCIdentityProviderConfig struct {
 	//
 	//
 	// +optional
-	ClaimMappings OIDCIdentityProviderClaimMappings `json:"claim_mappings,omitempty"`
+	ClaimMappings OIDCIdentityProviderClaimMappings `json:"claimMappings,omitempty"`
 	// The client ID assigned to your application by the identity provider.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
-	ClientID OIDCIdentityProviderClientID `json:"client_id,omitempty"`
+	ClientID OIDCIdentityProviderClientID `json:"clientID,omitempty"`
 	// The Client Secret assigned to your application by the identity provider.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	ClientSecret OIDCIdentityProviderClientSecret `json:"client_secret,omitempty"`
+	ClientSecret OIDCIdentityProviderClientSecret `json:"clientSecret,omitempty"`
 	// The issuer URI of the identity provider.
 	// This is the URL where the provider's metadata can be obtained.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
-	IssuerURL OIDCIdentityProviderIssuer `json:"issuer_url,omitempty"`
+	IssuerURL OIDCIdentityProviderIssuer `json:"issuerURL,omitempty"`
 	// The scopes requested by your application when authenticating with the
 	// identity provider.
 	//
@@ -904,7 +904,7 @@ type SAMLIdentityProviderConfig struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	IdpMetadataURL SAMLIdentityProviderMetadataURL `json:"idp_metadata_url,omitempty"`
+	IdpMetadataURL SAMLIdentityProviderMetadataURL `json:"idpMetadataURL,omitempty"`
 	// The identity provider's SAML metadata.
 	// If the identity provider supports a metadata URL, you can use the
 	// `idp_metadata_url` field instead.
@@ -912,7 +912,7 @@ type SAMLIdentityProviderConfig struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	IdpMetadataXML SAMLIdentityProviderMetadata `json:"idp_metadata_xml,omitempty"`
+	IdpMetadataXML SAMLIdentityProviderMetadata `json:"idpMetadataXML,omitempty"`
 }
 
 // SAMLIdentityProviderMetadata The identity provider's SAML metadata.
@@ -1052,7 +1052,7 @@ type VirtualClusterAuthenticationJWKS struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:default="1h"
-	CacheExpiration string `json:"cache_expiration,omitempty"`
+	CacheExpiration string `json:"cacheExpiration,omitempty"`
 	// URL for JWKS endpoint.
 	//
 	// +required
@@ -1075,7 +1075,7 @@ type VirtualClusterAuthenticationOauthBearer struct {
 	// claims in your JWT token.
 	//
 	// +optional
-	ClaimsMapping VirtualClusterAuthenticationClaimsMapping `json:"claims_mapping,omitempty"`
+	ClaimsMapping VirtualClusterAuthenticationClaimsMapping `json:"claimsMapping,omitempty"`
 	// JSON Web Key Set configuration for verifying token signatures.
 	//
 	// +optional
@@ -1175,7 +1175,7 @@ type VirtualClusterAuthenticationScheme struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=anonymous;client_certificate;oauth_bearer;sasl_plain;sasl_scram
+	// +kubebuilder:validation:Enum=anonymous;clientCertificate;oauthBearer;saslPlain;saslScram
 	Type VirtualClusterAuthenticationSchemeType `json:"type,omitempty"`
 
 	// Anonymous configuration.
@@ -1185,19 +1185,19 @@ type VirtualClusterAuthenticationScheme struct {
 	// ClientCertificate configuration.
 	//
 	// +optional
-	ClientCertificate *VirtualClusterAuthenticationClientCertificate `json:"client_certificate,omitempty"`
+	ClientCertificate *VirtualClusterAuthenticationClientCertificate `json:"clientCertificate,omitempty"`
 	// OauthBearer configuration.
 	//
 	// +optional
-	OauthBearer *VirtualClusterAuthenticationOauthBearer `json:"oauth_bearer,omitempty"`
+	OauthBearer *VirtualClusterAuthenticationOauthBearer `json:"oauthBearer,omitempty"`
 	// SaslPlain configuration.
 	//
 	// +optional
-	SaslPlain *VirtualClusterAuthenticationSaslPlain `json:"sasl_plain,omitempty"`
+	SaslPlain *VirtualClusterAuthenticationSaslPlain `json:"saslPlain,omitempty"`
 	// SaslScram configuration.
 	//
 	// +optional
-	SaslScram *VirtualClusterAuthenticationSaslScram `json:"sasl_scram,omitempty"`
+	SaslScram *VirtualClusterAuthenticationSaslScram `json:"saslScram,omitempty"`
 }
 
 // VirtualClusterAuthenticationSchemeType represents the type of VirtualClusterAuthenticationScheme.
@@ -1206,10 +1206,10 @@ type VirtualClusterAuthenticationSchemeType string
 // VirtualClusterAuthenticationSchemeType values.
 const (
 	VirtualClusterAuthenticationSchemeTypeAnonymous VirtualClusterAuthenticationSchemeType = "anonymous"
-	VirtualClusterAuthenticationSchemeTypeClientCertificate VirtualClusterAuthenticationSchemeType = "client_certificate"
-	VirtualClusterAuthenticationSchemeTypeOauthBearer VirtualClusterAuthenticationSchemeType = "oauth_bearer"
-	VirtualClusterAuthenticationSchemeTypeSaslPlain VirtualClusterAuthenticationSchemeType = "sasl_plain"
-	VirtualClusterAuthenticationSchemeTypeSaslScram VirtualClusterAuthenticationSchemeType = "sasl_scram"
+	VirtualClusterAuthenticationSchemeTypeClientCertificate VirtualClusterAuthenticationSchemeType = "clientCertificate"
+	VirtualClusterAuthenticationSchemeTypeOauthBearer VirtualClusterAuthenticationSchemeType = "oauthBearer"
+	VirtualClusterAuthenticationSchemeTypeSaslPlain VirtualClusterAuthenticationSchemeType = "saslPlain"
+	VirtualClusterAuthenticationSchemeTypeSaslScram VirtualClusterAuthenticationSchemeType = "saslScram"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -1226,37 +1226,37 @@ func (u VirtualClusterAuthenticationScheme) MarshalJSON() ([]byte, error) {
 			}
 			m["anonymous"] = raw
 		}
-	case "client_certificate":
+	case "clientCertificate":
 		if u.ClientCertificate != nil {
 			raw, err := json.Marshal(u.ClientCertificate)
 			if err != nil {
 				return nil, fmt.Errorf("marshaling VirtualClusterAuthenticationScheme client_certificate: %w", err)
 			}
-			m["client_certificate"] = raw
+			m["clientCertificate"] = raw
 		}
-	case "oauth_bearer":
+	case "oauthBearer":
 		if u.OauthBearer != nil {
 			raw, err := json.Marshal(u.OauthBearer)
 			if err != nil {
 				return nil, fmt.Errorf("marshaling VirtualClusterAuthenticationScheme oauth_bearer: %w", err)
 			}
-			m["oauth_bearer"] = raw
+			m["oauthBearer"] = raw
 		}
-	case "sasl_plain":
+	case "saslPlain":
 		if u.SaslPlain != nil {
 			raw, err := json.Marshal(u.SaslPlain)
 			if err != nil {
 				return nil, fmt.Errorf("marshaling VirtualClusterAuthenticationScheme sasl_plain: %w", err)
 			}
-			m["sasl_plain"] = raw
+			m["saslPlain"] = raw
 		}
-	case "sasl_scram":
+	case "saslScram":
 		if u.SaslScram != nil {
 			raw, err := json.Marshal(u.SaslScram)
 			if err != nil {
 				return nil, fmt.Errorf("marshaling VirtualClusterAuthenticationScheme sasl_scram: %w", err)
 			}
-			m["sasl_scram"] = raw
+			m["saslScram"] = raw
 		}
 	}
 	return json.Marshal(m)
@@ -1289,8 +1289,8 @@ func (u *VirtualClusterAuthenticationScheme) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("unmarshaling VirtualClusterAuthenticationScheme anonymous: %w", err)
 		}
 		u.Anonymous = &val
-	case "client_certificate":
-		payload, ok := raw["client_certificate"]
+	case "clientCertificate":
+		payload, ok := raw["clientCertificate"]
 		if !ok || len(payload) == 0 {
 			return nil
 		}
@@ -1299,8 +1299,8 @@ func (u *VirtualClusterAuthenticationScheme) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("unmarshaling VirtualClusterAuthenticationScheme client_certificate: %w", err)
 		}
 		u.ClientCertificate = &val
-	case "oauth_bearer":
-		payload, ok := raw["oauth_bearer"]
+	case "oauthBearer":
+		payload, ok := raw["oauthBearer"]
 		if !ok || len(payload) == 0 {
 			return nil
 		}
@@ -1309,8 +1309,8 @@ func (u *VirtualClusterAuthenticationScheme) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("unmarshaling VirtualClusterAuthenticationScheme oauth_bearer: %w", err)
 		}
 		u.OauthBearer = &val
-	case "sasl_plain":
-		payload, ok := raw["sasl_plain"]
+	case "saslPlain":
+		payload, ok := raw["saslPlain"]
 		if !ok || len(payload) == 0 {
 			return nil
 		}
@@ -1319,8 +1319,8 @@ func (u *VirtualClusterAuthenticationScheme) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("unmarshaling VirtualClusterAuthenticationScheme sasl_plain: %w", err)
 		}
 		u.SaslPlain = &val
-	case "sasl_scram":
-		payload, ok := raw["sasl_scram"]
+	case "saslScram":
+		payload, ok := raw["saslScram"]
 		if !ok || len(payload) == 0 {
 			return nil
 		}
@@ -1402,7 +1402,7 @@ type VirtualClusterNamespaceAdditionalProperties struct {
 	//
 	//
 	// +optional
-	ConsumerGroups []VirtualClusterNamespaceIDSelector `json:"consumer_groups,omitempty"`
+	ConsumerGroups []VirtualClusterNamespaceIDSelector `json:"consumerGroups,omitempty"`
 	// Additional backend topics to expose even if they don't match the namespace
 	// prefix.
 	// The topics are not affected by the hide/enforce prefix mode.
@@ -1422,13 +1422,13 @@ type VirtualClusterNamespaceIDSelector struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=exact_list;glob
+	// +kubebuilder:validation:Enum=exactList;glob
 	Type VirtualClusterNamespaceIDSelectorType `json:"type,omitempty"`
 
 	// ExactList configuration.
 	//
 	// +optional
-	ExactList *VirtualClusterNamespaceIDSelectorExactList `json:"exact_list,omitempty"`
+	ExactList *VirtualClusterNamespaceIDSelectorExactList `json:"exactList,omitempty"`
 	// Glob configuration.
 	//
 	// +optional
@@ -1440,7 +1440,7 @@ type VirtualClusterNamespaceIDSelectorType string
 
 // VirtualClusterNamespaceIDSelectorType values.
 const (
-	VirtualClusterNamespaceIDSelectorTypeExactList VirtualClusterNamespaceIDSelectorType = "exact_list"
+	VirtualClusterNamespaceIDSelectorTypeExactList VirtualClusterNamespaceIDSelectorType = "exactList"
 	VirtualClusterNamespaceIDSelectorTypeGlob VirtualClusterNamespaceIDSelectorType = "glob"
 )
 
@@ -1450,13 +1450,13 @@ func (u VirtualClusterNamespaceIDSelector) MarshalJSON() ([]byte, error) {
 	typeBytes, _ := json.Marshal(string(u.Type))
 	m["type"] = typeBytes
 	switch u.Type {
-	case "exact_list":
+	case "exactList":
 		if u.ExactList != nil {
 			raw, err := json.Marshal(u.ExactList)
 			if err != nil {
 				return nil, fmt.Errorf("marshaling VirtualClusterNamespaceIDSelector exact_list: %w", err)
 			}
-			m["exact_list"] = raw
+			m["exactList"] = raw
 		}
 	case "glob":
 		if u.Glob != nil {
@@ -1487,8 +1487,8 @@ func (u *VirtualClusterNamespaceIDSelector) UnmarshalJSON(data []byte) error {
 	}
 	u.Type = VirtualClusterNamespaceIDSelectorType(probe.Type)
 	switch probe.Type {
-	case "exact_list":
-		payload, ok := raw["exact_list"]
+	case "exactList":
+		payload, ok := raw["exactList"]
 		if !ok || len(payload) == 0 {
 			return nil
 		}
@@ -1515,7 +1515,7 @@ type VirtualClusterNamespaceIDSelectorExactList struct {
 	//
 	//
 	// +optional
-	ExactList []Items `json:"exact_list,omitempty"`
+	ExactList []Items `json:"exactList,omitempty"`
 }
 
 // Items is a type alias.
@@ -1547,13 +1547,13 @@ type VirtualClusterNamespaceTopicSelector struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=exact_list;glob
+	// +kubebuilder:validation:Enum=exactList;glob
 	Type VirtualClusterNamespaceTopicSelectorType `json:"type,omitempty"`
 
 	// ExactList configuration.
 	//
 	// +optional
-	ExactList *VirtualClusterNamespaceTopicSelectorExactList `json:"exact_list,omitempty"`
+	ExactList *VirtualClusterNamespaceTopicSelectorExactList `json:"exactList,omitempty"`
 	// Glob configuration.
 	//
 	// +optional
@@ -1565,7 +1565,7 @@ type VirtualClusterNamespaceTopicSelectorType string
 
 // VirtualClusterNamespaceTopicSelectorType values.
 const (
-	VirtualClusterNamespaceTopicSelectorTypeExactList VirtualClusterNamespaceTopicSelectorType = "exact_list"
+	VirtualClusterNamespaceTopicSelectorTypeExactList VirtualClusterNamespaceTopicSelectorType = "exactList"
 	VirtualClusterNamespaceTopicSelectorTypeGlob VirtualClusterNamespaceTopicSelectorType = "glob"
 )
 
@@ -1575,13 +1575,13 @@ func (u VirtualClusterNamespaceTopicSelector) MarshalJSON() ([]byte, error) {
 	typeBytes, _ := json.Marshal(string(u.Type))
 	m["type"] = typeBytes
 	switch u.Type {
-	case "exact_list":
+	case "exactList":
 		if u.ExactList != nil {
 			raw, err := json.Marshal(u.ExactList)
 			if err != nil {
 				return nil, fmt.Errorf("marshaling VirtualClusterNamespaceTopicSelector exact_list: %w", err)
 			}
-			m["exact_list"] = raw
+			m["exactList"] = raw
 		}
 	case "glob":
 		if u.Glob != nil {
@@ -1612,8 +1612,8 @@ func (u *VirtualClusterNamespaceTopicSelector) UnmarshalJSON(data []byte) error 
 	}
 	u.Type = VirtualClusterNamespaceTopicSelectorType(probe.Type)
 	switch probe.Type {
-	case "exact_list":
-		payload, ok := raw["exact_list"]
+	case "exactList":
+		payload, ok := raw["exactList"]
 		if !ok || len(payload) == 0 {
 			return nil
 		}
@@ -1653,7 +1653,7 @@ type VirtualClusterNamespaceTopicSelectorExactList struct {
 	// Explicit allow-list of backend topic names.
 	//
 	// +optional
-	ExactList []NamespaceExactAllowListItem `json:"exact_list,omitempty"`
+	ExactList []NamespaceExactAllowListItem `json:"exactList,omitempty"`
 }
 
 // VirtualClusterNamespaceTopicSelectorGlob is a type alias.
@@ -1705,3 +1705,53 @@ type VirtualClusterReferenceByName struct {
 	// +kubebuilder:validation:MaxLength=255
 	Name VirtualClusterName `json:"name,omitempty"`
 }
+
+// VirtualClusterTopicAlias **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// A topic alias maps an alias name to a namespace-visible topic name.
+// Clients can produce to, consume from, and discover the topic under the alias
+// name.
+// The original topic name remains accessible.
+//
+// **Requires a minimum runtime version of `1.2`**.
+type VirtualClusterTopicAlias struct {
+	// The client-visible topic name.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Alias string `json:"alias,omitempty"`
+	// How to handle conflicts where an alias shadows a physical topic.
+	// * warn - activate the alias but log a warning and set the conflict metric to
+	// 1.
+	// * ignore - activate the alias silently.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=warn;ignore
+	// +kubebuilder:default="warn"
+	Conflict VirtualClusterTopicAliasConflict `json:"conflict,omitempty"`
+	// CEL expression evaluated against the connection's auth context.
+	// If omitted or empty, the alias is active for all connections.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:default=""
+	Match string `json:"match,omitempty"`
+	// The namespace-visible topic name this alias resolves to.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Topic string `json:"topic,omitempty"`
+}
+
+// VirtualClusterTopicAliasConflict How to handle conflicts where an alias
+// shadows a physical topic.
+// * warn - activate the alias but log a warning and set the conflict metric to
+// 1.
+// * ignore - activate the alias silently.
+type VirtualClusterTopicAliasConflict string

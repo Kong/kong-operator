@@ -1,7 +1,10 @@
 apiGroupVersions:
   konnect.konghq.com/v1alpha1:
-    # Don't generate GroupVersionInfo for this API group, as it already has it defined.
-    # We might do this in the future to replace the manually defined one.
+    categories:
+      - konnect
+      - kong
+    # Don't generate groupversion_info.go for this API group — it is hand-written.
+    # zz_generated_groupversion_info.go (addKnownTypesGenerated) is still emitted.
     generateGroupVersionInfo: false
     commonTypes:
       objectRef:
@@ -170,7 +173,7 @@ apiGroupVersions:
           parent_page_id:
               _validations:
                 # TODO: https://github.com/Kong/kong-operator/issues/4008
-                - "+kubebuilder:validation:XValidation:rule=\"self == null\",message=\"cannot set parent_page_id_ref\""
+                - "+kubebuilder:validation:XValidation:rule=\"self == null\",message=\"cannot set parentPageIDRef\""
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.PortalPagesSDK
@@ -179,5 +182,17 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/components.CreatePortalPageRequest
           update:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdatePortalPageRequest
+          delete: {}
+        reconciler: {}
+      - path: /v3/portals/{portalId}/email-config
+        name: PortalEmailConfig
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.PortalEmailsSDK
+            fieldName: PortalEmails
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.PostPortalEmailConfig
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.PatchPortalEmailConfig
           delete: {}
         reconciler: {}

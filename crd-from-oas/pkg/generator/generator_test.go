@@ -594,6 +594,7 @@ func TestGenerateCRDFuncs_GeneratesKonnectFuncs(t *testing.T) {
 		assert.Contains(t, content, `func (obj Portal) GetTypeName() string {`)
 		assert.Contains(t, content, `func (obj *Portal) GetConditions() []metav1.Condition {`)
 		assert.Contains(t, content, `func (obj *Portal) SetConditions(conditions []metav1.Condition) {`)
+		assert.NotContains(t, content, `SetParentID(id string)`)
 	})
 
 	t.Run("reconciler entities include lifecycle helpers in the same file", func(t *testing.T) {
@@ -657,6 +658,8 @@ func TestGenerateCRDFuncs_GeneratesKonnectFuncs(t *testing.T) {
 		require.NoError(t, err)
 		assert.Contains(t, content, `func (obj *PortalTeam) GetPortalID() string {`)
 		assert.Contains(t, content, `func (obj *PortalTeam) SetPortalID(id string) {`)
+		assert.Contains(t, content, `func (obj *PortalTeam) SetParentID(id string) {`)
+		assert.Contains(t, content, `obj.SetPortalID(id)`)
 	})
 
 	t.Run("dependency-backed child entities get root ref accessor", func(t *testing.T) {
@@ -687,6 +690,18 @@ func TestGenerateCRDFuncs_GeneratesKonnectFuncs(t *testing.T) {
 		assert.Contains(t, content, `commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"`)
 		assert.Contains(t, content, `func (obj *PortalTeam) GetPortalRef() commonv1alpha1.ObjectRef {`)
 		assert.Contains(t, content, `return obj.Spec.PortalRef`)
+		assert.Contains(t, content, `func (obj *PortalTeam) GetParentRef() commonv1alpha1.ObjectRef {`)
+		assert.Contains(t, content, `return obj.GetPortalRef()`)
+		assert.Contains(t, content, `func (obj *PortalTeam) SetParentID(id string) {`)
+		assert.Contains(t, content, `obj.SetPortalID(id)`)
+		assert.Contains(t, content, `func (obj *PortalTeam) GetStatusConditionTypeParentRefValid() string {`)
+		assert.Contains(t, content, `return PortalRefValidConditionType`)
+		assert.Contains(t, content, `func (obj *PortalTeam) GetStatusConditionReasonParentRefValid() string {`)
+		assert.Contains(t, content, `return PortalRefReasonValid`)
+		assert.Contains(t, content, `func (obj *PortalTeam) GetStatusConditionReasonParentRefInvalid() string {`)
+		assert.Contains(t, content, `return PortalRefReasonInvalid`)
+		assert.Contains(t, content, `func (obj *PortalTeam) GetStatusConditionReasonParentRefNotProgrammed() string {`)
+		assert.Contains(t, content, `return PortalRefReasonNotProgrammed`)
 	})
 
 	t.Run("event gateway child entities get event gateway ref accessor alias", func(t *testing.T) {
@@ -718,6 +733,18 @@ func TestGenerateCRDFuncs_GeneratesKonnectFuncs(t *testing.T) {
 		assert.Contains(t, content, `func (obj *EventGatewayDataPlaneCertificate) GetGatewayRef() commonv1alpha1.ObjectRef {`)
 		assert.Contains(t, content, `func (obj *EventGatewayDataPlaneCertificate) GetEventGatewayRef() commonv1alpha1.ObjectRef {`)
 		assert.Contains(t, content, `return obj.Spec.GatewayRef`)
+		assert.Contains(t, content, `func (obj *EventGatewayDataPlaneCertificate) GetParentRef() commonv1alpha1.ObjectRef {`)
+		assert.Contains(t, content, `return obj.GetEventGatewayRef()`)
+		assert.Contains(t, content, `func (obj *EventGatewayDataPlaneCertificate) SetParentID(id string) {`)
+		assert.Contains(t, content, `obj.SetGatewayID(id)`)
+		assert.Contains(t, content, `func (obj *EventGatewayDataPlaneCertificate) GetStatusConditionTypeParentRefValid() string {`)
+		assert.Contains(t, content, `return EventGatewayRefValidConditionType`)
+		assert.Contains(t, content, `func (obj *EventGatewayDataPlaneCertificate) GetStatusConditionReasonParentRefValid() string {`)
+		assert.Contains(t, content, `return EventGatewayRefReasonValid`)
+		assert.Contains(t, content, `func (obj *EventGatewayDataPlaneCertificate) GetStatusConditionReasonParentRefInvalid() string {`)
+		assert.Contains(t, content, `return EventGatewayRefReasonInvalid`)
+		assert.Contains(t, content, `func (obj *EventGatewayDataPlaneCertificate) GetStatusConditionReasonParentRefNotProgrammed() string {`)
+		assert.Contains(t, content, `return EventGatewayRefReasonNotProgrammed`)
 	})
 
 	t.Run("root ref accessor uses last (immediate) dependency", func(t *testing.T) {
@@ -751,6 +778,37 @@ func TestGenerateCRDFuncs_GeneratesKonnectFuncs(t *testing.T) {
 		assert.Contains(t, content, `func (obj *PortalTeamDeveloper) GetTeamRef() ObjectRef {`)
 		// Portal is a transitive parent → no GetPortalRef accessor.
 		assert.NotContains(t, content, `func (obj *PortalTeamDeveloper) GetPortalRef() ObjectRef {`)
+		assert.Contains(t, content, `func (obj *PortalTeamDeveloper) GetParentRef() ObjectRef {`)
+		assert.Contains(t, content, `return obj.GetTeamRef()`)
+		// SetParentID delegates to the immediate (last) parent only.
+		assert.Contains(t, content, `func (obj *PortalTeamDeveloper) SetParentID(id string) {`)
+		assert.Contains(t, content, `obj.SetTeamID(id)`)
+		assert.NotContains(t, content, `obj.SetPortalID(id)`)
+		// Condition methods use the immediate parent prefix (Team, not Portal).
+		assert.Contains(t, content, `return TeamRefValidConditionType`)
+		assert.Contains(t, content, `return TeamRefReasonValid`)
+		assert.Contains(t, content, `return TeamRefReasonInvalid`)
+		assert.Contains(t, content, `return TeamRefReasonNotProgrammed`)
+		assert.NotContains(t, content, `return PortalRefValidConditionType`)
+	})
+
+	t.Run("root entity without parent gets no status condition methods", func(t *testing.T) {
+		g := NewGenerator(Config{
+			APIGroup:   "x-konnect.konghq.com",
+			APIVersion: "v1alpha1",
+		})
+
+		rootSchema := &parser.Schema{
+			Name:         "CreatePortal",
+			Dependencies: []*parser.Dependency{},
+		}
+
+		content, err := g.generateCRDFuncs("CreatePortal", rootSchema)
+		require.NoError(t, err)
+		assert.NotContains(t, content, `GetStatusConditionTypeParentRefValid`)
+		assert.NotContains(t, content, `GetStatusConditionReasonParentRefValid`)
+		assert.NotContains(t, content, `GetStatusConditionReasonParentRefInvalid`)
+		assert.NotContains(t, content, `GetStatusConditionReasonParentRefNotProgrammed`)
 	})
 }
 
@@ -1064,7 +1122,7 @@ func TestGenerate_GroupVersionInfo(t *testing.T) {
 		},
 	}
 
-	t.Run("enabled by default generates groupversion_info.go", func(t *testing.T) {
+	t.Run("enabled generates groupversion_info.go and zz_generated_groupversion_info.go", func(t *testing.T) {
 		g := NewGenerator(Config{
 			APIGroup:                 "x-konnect.konghq.com",
 			APIVersion:               "v1alpha1",
@@ -1075,28 +1133,40 @@ func TestGenerate_GroupVersionInfo(t *testing.T) {
 		require.NoError(t, err)
 
 		var fileNames []string
-		var gviContent string
+		var gviContent, gviGeneratedContent string
 		for _, file := range files {
 			fileNames = append(fileNames, file.Name)
 			if file.Name == "groupversion_info.go" {
 				gviContent = file.Content
 			}
+			if file.Name == "zz_generated_groupversion_info.go" {
+				gviGeneratedContent = file.Content
+			}
 		}
 
 		assert.Contains(t, fileNames, "groupversion_info.go")
+		assert.Contains(t, fileNames, "zz_generated_groupversion_info.go")
 		assert.NotContains(t, fileNames, "register.go")
+
+		// Full file: group/version vars, scheme wiring, delegation to generated func.
 		assert.Contains(t, gviContent, `GroupVersion = schema.GroupVersion{Group: GroupName, Version: "v1alpha1"}`)
 		assert.Contains(t, gviContent, `GroupName = "x-konnect.konghq.com"`)
 		assert.Contains(t, gviContent, "SchemeGroupVersion = GroupVersion")
 		assert.Contains(t, gviContent, "SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)")
 		assert.Contains(t, gviContent, "func Resource(resource string) schema.GroupResource {")
 		assert.Contains(t, gviContent, "func addKnownTypes(scheme *runtime.Scheme) error {")
-		assert.Contains(t, gviContent, "&Portal{}")
-		assert.Contains(t, gviContent, "&PortalList{}")
+		assert.Contains(t, gviContent, "return addKnownTypesGenerated(scheme)")
+		assert.NotContains(t, gviContent, "&Portal{}")
 		assert.Contains(t, gviContent, "Code generated by CRD generation pipeline. DO NOT EDIT.")
+
+		// Additive file: entity list in addKnownTypesGenerated only.
+		assert.Contains(t, gviGeneratedContent, "func addKnownTypesGenerated(scheme *runtime.Scheme) error {")
+		assert.Contains(t, gviGeneratedContent, "&Portal{}")
+		assert.Contains(t, gviGeneratedContent, "&PortalList{}")
+		assert.Contains(t, gviGeneratedContent, "Code generated by CRD generation pipeline. DO NOT EDIT.")
 	})
 
-	t.Run("disabled skips both registration files", func(t *testing.T) {
+	t.Run("disabled skips groupversion_info.go but still emits zz_generated_groupversion_info.go", func(t *testing.T) {
 		g := NewGenerator(Config{
 			APIGroup:                 "konnect.konghq.com",
 			APIVersion:               "v1alpha1",
@@ -1107,12 +1177,20 @@ func TestGenerate_GroupVersionInfo(t *testing.T) {
 		require.NoError(t, err)
 
 		var fileNames []string
+		var gviGeneratedContent string
 		for _, file := range files {
 			fileNames = append(fileNames, file.Name)
+			if file.Name == "zz_generated_groupversion_info.go" {
+				gviGeneratedContent = file.Content
+			}
 		}
 
 		assert.NotContains(t, fileNames, "groupversion_info.go")
 		assert.NotContains(t, fileNames, "register.go")
+		assert.Contains(t, fileNames, "zz_generated_groupversion_info.go")
+		assert.Contains(t, gviGeneratedContent, "func addKnownTypesGenerated(scheme *runtime.Scheme) error {")
+		assert.Contains(t, gviGeneratedContent, "&Portal{}")
+		assert.Contains(t, gviGeneratedContent, "&PortalList{}")
 	})
 }
 
@@ -1190,7 +1268,7 @@ func TestGenerateSchemaTypes_AddsKubebuilderTags(t *testing.T) {
 
 	assert.Contains(t, content, "// +optional")
 	assert.Contains(t, content, fmt.Sprintf("// +kubebuilder:validation:MaxLength=%d", defaultMaxLength))
-	assert.Contains(t, content, "ProviderType string `json:\"provider_type,omitempty\"`")
+	assert.Contains(t, content, "ProviderType string `json:\"providerType,omitempty\"`")
 }
 
 func TestBuildSchemaTypeFieldConfig_NestedInlineObject(t *testing.T) {
@@ -3096,6 +3174,119 @@ func TestGenerateEntityOpsFile_ManualGetForUIDStillEmitsDispatcherInfo(t *testin
 	assert.Equal(t, "GetEventGatewayDataPlaneCertificatesSDK", res.GetForUIDInfo.SDKGetter)
 }
 
+// TestGenerateEntityOpsFile_GetForUIDWithNoMatchStrategy verifies that
+// sdkkonnectops is NOT imported when the getForUID function falls into the
+// fallback else-branch (no labels, no name, no match fields, no UID tag
+// filter). The else-branch emits no SDK list call and therefore does not
+// reference the operations package.
+func TestGenerateEntityOpsFile_GetForUIDWithNoMatchStrategy(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"PortalEmailConfig": {IsRoot: ptr(false)},
+		},
+	})
+
+	// Schema has a list operation but no labels/name/matchFields on the response,
+	// so the generator falls into the else-branch of opsGetForUIDFuncTemplate.
+	// No update or delete ops are configured so the only source of an sdkkonnectops
+	// import would be the getForUID list call — which is absent in the else-branch.
+	schema := &parser.Schema{
+		OperationID:        "create-portal-email-config",
+		Tags:               []string{"Portal Email Config"},
+		SuccessResponseRef: "PortalEmailConfig",
+		Dependencies: []*parser.Dependency{
+			{ParamName: "portalId", EntityName: "Portal"},
+		},
+		ListOperationID: "list-portal-email-configs",
+		ListTags:        []string{"Portal Email Config"},
+		// No Properties with labels or name → HasLabels=false, HasName=false.
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreatePortalEmailConfig"},
+		},
+		SDK: &config.OpSDKConfig{
+			Interface: "github.com/Kong/sdk-konnect-go.PortalEmailsSDK",
+			FieldName: "PortalEmails",
+		},
+	}
+
+	res, err := g.generateEntityOpsFile("PortalEmailConfig", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, res.File)
+	require.NotNil(t, res.GetForUIDInfo)
+
+	// The else-branch emits a TODO comment and early return — no SDK list call.
+	assert.Contains(t, res.File.Content, "EntityWithMatchingUIDNotFoundError{Entity: obj}")
+	assert.NotContains(t, res.File.Content, "sdk.ListPortalEmailConfigs")
+
+	// sdkkonnectops must NOT be imported: getForUID's else-branch emits no SDK
+	// list call and therefore never references the operations package.
+	assert.NotContains(t, res.File.Content, `sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"`)
+}
+
+// TestGenerateEntityOpsFile_ParentScopedSingleton verifies correct code
+// generation for resources like PortalEmailConfig whose PATCH and DELETE paths
+// contain only the parent ID (no entity-specific ID). The generated update call
+// must use the parent ID, and the generated delete call must omit the entity ID.
+func TestGenerateEntityOpsFile_ParentScopedSingleton(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"PortalEmailConfig": {IsRoot: ptr(false)},
+		},
+	})
+
+	// PATCH /portals/{portalId}/email-config — only parent ID, no entity ID.
+	// DELETE /portals/{portalId}/email-config — only parent ID, no entity ID.
+	schema := &parser.Schema{
+		OperationID:        "create-portal-email-config",
+		Tags:               []string{"Portal Email Config"},
+		SuccessResponseRef: "PortalEmailConfig",
+		Dependencies: []*parser.Dependency{
+			{ParamName: "portalId", EntityName: "Portal"},
+		},
+		UpdateOperationID: "update-portal-email-config",
+		UpdateTags:        []string{"Portal Email Config"},
+		UpdatePathParams:  []string{"portalId"}, // singleton: only parent ID
+		DeleteOperationID: "delete-portal-email-config",
+		DeleteTags:        []string{"Portal Email Config"},
+		DeletePathParams:  []string{"portalId"}, // singleton: only parent ID
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.PostPortalEmailConfig"},
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.PatchPortalEmailConfig"},
+			"delete": {},
+		},
+		SDK: &config.OpSDKConfig{
+			Interface: "github.com/Kong/sdk-konnect-go.PortalEmailsSDK",
+			FieldName: "PortalEmails",
+		},
+	}
+
+	res, err := g.generateEntityOpsFile("PortalEmailConfig", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, res.File)
+
+	content := res.File.Content
+
+	// Update: parent ID passed, no entity ID local variable or argument.
+	assert.Contains(t, content, "sdk.UpdatePortalEmailConfig(ctx, parentID,")
+	assert.NotContains(t, content, "sdk.UpdatePortalEmailConfig(ctx, id,")
+
+	// Delete: parent ID only, no entity ID.
+	assert.Contains(t, content, "sdk.DeletePortalEmailConfig(ctx, parentID)")
+	assert.NotContains(t, content, "sdk.DeletePortalEmailConfig(ctx, parentID, id)")
+
+	// No entity ID variable in the generated delete or update functions.
+	// (id would be declared but unused, causing a compile error.)
+	assert.NotContains(t, content, "id := obj.GetKonnectStatus().GetKonnectID()")
+}
+
 func TestGenerateOpsUpdate_RootEntity(t *testing.T) {
 	g := NewGenerator(Config{
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
@@ -3700,4 +3891,86 @@ func TestGenerateSchemaTypes_NonScalarOneOfFallsBack(t *testing.T) {
 
 	assert.NotContains(t, content, `intstr.IntOrString`)
 	assert.NotContains(t, content, `XIntOrString`)
+}
+
+func TestJSONName(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		// Single segment stays lowercase.
+		{"enabled", "enabled"},
+		{"id", "id"},
+		// First segment always lowercase, even if an acronym.
+		{"rbac_enabled", "rbacEnabled"},
+		{"id_token", "idToken"},
+		{"dns_label", "dnsLabel"},
+		{"tls_server", "tlsServer"},
+		// Subsequent segments: acronym caps applied.
+		{"organization_id", "organizationID"},
+		{"default_api_visibility", "defaultAPIVisibility"},
+		{"parent_page_id_ref", "parentPageIDRef"},
+		{"default_application_auth_strategy_id_ref", "defaultApplicationAuthStrategyIDRef"},
+		{"event_gateway_listener_ref", "eventGatewayListenerRef"},
+		// Multi-word plain fields.
+		{"display_name", "displayName"},
+		{"bootstrap_servers", "bootstrapServers"},
+		{"min_runtime_version", "minRuntimeVersion"},
+		// Discriminator values.
+		{"sasl_plain", "saslPlain"},
+		{"sasl_scram", "saslScram"},
+		{"forward_to_virtual_cluster", "forwardToVirtualCluster"},
+		// Already-camelCase input is idempotent (no underscores).
+		{"displayName", "displayName"},
+		// Empty string.
+		{"", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := jsonName(tt.input)
+			if got != tt.want {
+				t.Errorf("jsonName(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGenerateCRDType_Categories(t *testing.T) {
+	schema := &parser.Schema{Name: "CreatePortal"}
+
+	t.Run("type with categories emits categories marker", func(t *testing.T) {
+		g := NewGenerator(Config{
+			APIGroup:   "konnect.konghq.com",
+			APIVersion: "v1alpha1",
+			Categories: []string{"konnect", "kong"},
+		})
+		content, err := g.generateCRDType("CreatePortal", schema)
+		require.NoError(t, err)
+		assert.Contains(t, content, "+kubebuilder:resource:scope=Namespaced,categories=konnect;kong")
+	})
+
+	t.Run("non-root type also receives categories marker", func(t *testing.T) {
+		g := NewGenerator(Config{
+			APIGroup:   "konnect.konghq.com",
+			APIVersion: "v1alpha1",
+			ReconcilerConfig: map[string]*config.ReconcilerConfig{
+				"Portal": {IsRoot: new(false)},
+			},
+			Categories: []string{"konnect", "kong"},
+		})
+		content, err := g.generateCRDType("CreatePortal", schema)
+		require.NoError(t, err)
+		assert.Contains(t, content, "+kubebuilder:resource:scope=Namespaced,categories=konnect;kong")
+	})
+
+	t.Run("empty categories omits categories from marker", func(t *testing.T) {
+		g := NewGenerator(Config{
+			APIGroup:   "konnect.konghq.com",
+			APIVersion: "v1alpha1",
+		})
+		content, err := g.generateCRDType("CreatePortal", schema)
+		require.NoError(t, err)
+		assert.Contains(t, content, "+kubebuilder:resource:scope=Namespaced\n")
+		assert.NotContains(t, content, "categories=")
+	})
 }

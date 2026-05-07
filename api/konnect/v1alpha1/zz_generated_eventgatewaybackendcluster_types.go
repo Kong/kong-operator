@@ -13,7 +13,7 @@ import (
 //
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Namespaced
+// +kubebuilder:resource:scope=Namespaced,categories=konnect;kong
 // +kubebuilder:printcolumn:name="ID",description="Konnect ID",type="string",JSONPath=".status.id"
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
 // +kubebuilder:printcolumn:name="OrgID",description="Konnect Organization ID this resource belongs to.",type=string,JSONPath=`.status.organizationID`
@@ -46,7 +46,7 @@ type EventGatewayBackendClusterSpec struct {
 	// GatewayRef is the reference to the parent Gateway object.
 	//
 	// +required
-	GatewayRef commonv1alpha1.ObjectRef `json:"gateway_ref,omitzero"`
+	GatewayRef commonv1alpha1.ObjectRef `json:"gatewayRef,omitzero"`
 
 	// APISpec defines the desired state of the resource's API spec fields.
 	//
@@ -64,7 +64,7 @@ type EventGatewayBackendClusterAPISpec struct {
 	// A list of cluster bootstrap servers in the format address:port.
 	//
 	// +required
-	BootstrapServers []string `json:"bootstrap_servers,omitempty"`
+	BootstrapServers []string `json:"bootstrapServers,omitempty"`
 
 	// A human-readable description of the backend cluster.
 	//
@@ -82,7 +82,7 @@ type EventGatewayBackendClusterAPISpec struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	// +kubebuilder:default=Disabled
-	InsecureAllowAnonymousVirtualClusterAuth string `json:"insecure_allow_anonymous_virtual_cluster_auth,omitempty"`
+	InsecureAllowAnonymousVirtualClusterAuth string `json:"insecureAllowAnonymousVirtualClusterAuth,omitempty"`
 
 	// Labels store metadata of an entity that can be used for filtering an entity
 	// list or for searching across entity types.
@@ -101,7 +101,7 @@ type EventGatewayBackendClusterAPISpec struct {
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=43200
 	// +kubebuilder:default=60
-	MetadataUpdateIntervalSeconds BackendMetadataUpdateIntervalSeconds `json:"metadata_update_interval_seconds,omitempty"`
+	MetadataUpdateIntervalSeconds BackendMetadataUpdateIntervalSeconds `json:"metadataUpdateIntervalSeconds,omitempty"`
 
 	// The unique name of the backend cluster.
 	//
@@ -152,7 +152,7 @@ type EventGatewayBackendClusterAuthentication struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=anonymous;sasl_plain;sasl_scram
+	// +kubebuilder:validation:Enum=anonymous;saslPlain;saslScram
 	Type EventGatewayBackendClusterAuthenticationType `json:"type,omitempty"`
 
 	// Anonymous configuration.
@@ -162,11 +162,11 @@ type EventGatewayBackendClusterAuthentication struct {
 	// SaslPlain configuration.
 	//
 	// +optional
-	SaslPlain *BackendClusterAuthenticationSaslPlain `json:"sasl_plain,omitempty"`
+	SaslPlain *BackendClusterAuthenticationSaslPlain `json:"saslPlain,omitempty"`
 	// SaslScram configuration.
 	//
 	// +optional
-	SaslScram *BackendClusterAuthenticationSaslScram `json:"sasl_scram,omitempty"`
+	SaslScram *BackendClusterAuthenticationSaslScram `json:"saslScram,omitempty"`
 }
 
 // EventGatewayBackendClusterAuthenticationType represents the type of authentication.
@@ -175,8 +175,8 @@ type EventGatewayBackendClusterAuthenticationType string
 // EventGatewayBackendClusterAuthenticationType values.
 const (
 	EventGatewayBackendClusterAuthenticationTypeAnonymous EventGatewayBackendClusterAuthenticationType = "anonymous"
-	EventGatewayBackendClusterAuthenticationTypeSaslPlain EventGatewayBackendClusterAuthenticationType = "sasl_plain"
-	EventGatewayBackendClusterAuthenticationTypeSaslScram EventGatewayBackendClusterAuthenticationType = "sasl_scram"
+	EventGatewayBackendClusterAuthenticationTypeSaslPlain EventGatewayBackendClusterAuthenticationType = "saslPlain"
+	EventGatewayBackendClusterAuthenticationTypeSaslScram EventGatewayBackendClusterAuthenticationType = "saslScram"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -193,21 +193,21 @@ func (u EventGatewayBackendClusterAuthentication) MarshalJSON() ([]byte, error) 
 			}
 			m["anonymous"] = raw
 		}
-	case "sasl_plain":
+	case "saslPlain":
 		if u.SaslPlain != nil {
 			raw, err := json.Marshal(u.SaslPlain)
 			if err != nil {
 				return nil, fmt.Errorf("marshaling EventGatewayBackendClusterAuthentication sasl_plain: %w", err)
 			}
-			m["sasl_plain"] = raw
+			m["saslPlain"] = raw
 		}
-	case "sasl_scram":
+	case "saslScram":
 		if u.SaslScram != nil {
 			raw, err := json.Marshal(u.SaslScram)
 			if err != nil {
 				return nil, fmt.Errorf("marshaling EventGatewayBackendClusterAuthentication sasl_scram: %w", err)
 			}
-			m["sasl_scram"] = raw
+			m["saslScram"] = raw
 		}
 	}
 	return json.Marshal(m)
@@ -240,8 +240,8 @@ func (u *EventGatewayBackendClusterAuthentication) UnmarshalJSON(data []byte) er
 			return fmt.Errorf("unmarshaling EventGatewayBackendClusterAuthentication anonymous: %w", err)
 		}
 		u.Anonymous = &val
-	case "sasl_plain":
-		payload, ok := raw["sasl_plain"]
+	case "saslPlain":
+		payload, ok := raw["saslPlain"]
 		if !ok || len(payload) == 0 {
 			return nil
 		}
@@ -250,8 +250,8 @@ func (u *EventGatewayBackendClusterAuthentication) UnmarshalJSON(data []byte) er
 			return fmt.Errorf("unmarshaling EventGatewayBackendClusterAuthentication sasl_plain: %w", err)
 		}
 		u.SaslPlain = &val
-	case "sasl_scram":
-		payload, ok := raw["sasl_scram"]
+	case "saslScram":
+		payload, ok := raw["saslScram"]
 		if !ok || len(payload) == 0 {
 			return nil
 		}
