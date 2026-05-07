@@ -134,6 +134,16 @@ func (b *KongServiceBuilder) WithTLSVerifyDepth(v *int64) *KongServiceBuilder {
 	return b
 }
 
+// WithConnectTimeout sets the connect timeout (milliseconds) for the KongService being built.
+// A nil pointer leaves the field unset.
+func (b *KongServiceBuilder) WithConnectTimeout(v *int64) *KongServiceBuilder {
+	if v == nil {
+		return b
+	}
+	b.service.Spec.ConnectTimeout = v
+	return b
+}
+
 // WithProtocol sets the protocol for the KongService being built.
 // Supported protocols match the Kong Gateway upstream protocol set.
 func (b *KongServiceBuilder) WithProtocol(protocol string) *KongServiceBuilder {

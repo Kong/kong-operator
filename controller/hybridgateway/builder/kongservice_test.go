@@ -317,6 +317,30 @@ func TestKongServiceBuilder_WithTLSVerifyDepth(t *testing.T) {
 	}
 }
 
+func TestKongServiceBuilder_WithConnectTimeout(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    *int64
+		expected *int64
+	}{
+		{name: "nil leaves field unset", input: nil, expected: nil},
+		{name: "zero sets field", input: new(int64(0)), expected: new(int64(0))},
+		{name: "positive sets field", input: new(int64(5000)), expected: new(int64(5000))},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			service, err := NewKongService().WithConnectTimeout(tt.input).Build()
+			require.NoError(t, err)
+			if tt.expected == nil {
+				assert.Nil(t, service.Spec.ConnectTimeout)
+			} else {
+				require.NotNil(t, service.Spec.ConnectTimeout)
+				assert.Equal(t, *tt.expected, *service.Spec.ConnectTimeout)
+			}
+		})
+	}
+}
+
 func TestKongServiceBuilder_Build(t *testing.T) {
 	t.Run("successful build", func(t *testing.T) {
 		builder := NewKongService().
