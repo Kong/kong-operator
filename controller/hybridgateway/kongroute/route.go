@@ -6,7 +6,6 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/go-logr/logr"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -94,7 +93,7 @@ func RoutesForHTTPRouteRule(
 	// Kong requires at least one matcher; use "/" path to represent catch-all.
 	if len(rule.Matches) == 0 {
 		match := gatewayv1.HTTPRouteMatch{
-			Path: &gatewayv1.HTTPPathMatch{Type: ptr.To(gatewayv1.PathMatchPathPrefix), Value: new("/")},
+			Path: &gatewayv1.HTTPPathMatch{Type: new(gatewayv1.PathMatchPathPrefix), Value: new("/")},
 		}
 		rule.Matches = append(rule.Matches, match)
 	}

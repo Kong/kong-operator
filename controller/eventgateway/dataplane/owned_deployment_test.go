@@ -13,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/managedfields"
 	"k8s.io/client-go/tools/events"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -219,7 +218,7 @@ func Test_buildKEGEnvVars(t *testing.T) {
 				Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 					Config: &eventgatewayv1alpha1.KegDataPlaneConfiguration{
 						Konnect: &eventgatewayv1alpha1.KonnectConfig{
-							InsecureSkipVerify: ptr.To(eventgatewayv1alpha1.TLSVerificationStateEnabled),
+							InsecureSkipVerify: new(eventgatewayv1alpha1.TLSVerificationStateEnabled),
 						},
 					},
 				},
@@ -235,7 +234,7 @@ func Test_buildKEGEnvVars(t *testing.T) {
 				Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 					Config: &eventgatewayv1alpha1.KegDataPlaneConfiguration{
 						Konnect: &eventgatewayv1alpha1.KonnectConfig{
-							InsecureSkipVerify: ptr.To(eventgatewayv1alpha1.TLSVerificationStateDisabled),
+							InsecureSkipVerify: new(eventgatewayv1alpha1.TLSVerificationStateDisabled),
 						},
 					},
 				},
@@ -264,7 +263,7 @@ func Test_buildKEGEnvVars(t *testing.T) {
 			egdp: &eventgatewayv1alpha1.KegDataPlane{
 				Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 					Config: &eventgatewayv1alpha1.KegDataPlaneConfiguration{
-						EnableDebugEndpoints: ptr.To(eventgatewayv1alpha1.DebugEndpointsStateEnabled),
+						EnableDebugEndpoints: new(eventgatewayv1alpha1.DebugEndpointsStateEnabled),
 					},
 				},
 			},
@@ -278,7 +277,7 @@ func Test_buildKEGEnvVars(t *testing.T) {
 			egdp: &eventgatewayv1alpha1.KegDataPlane{
 				Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 					Config: &eventgatewayv1alpha1.KegDataPlaneConfiguration{
-						EnableDebugEndpoints: ptr.To(eventgatewayv1alpha1.DebugEndpointsStateDisabled),
+						EnableDebugEndpoints: new(eventgatewayv1alpha1.DebugEndpointsStateDisabled),
 					},
 				},
 			},
