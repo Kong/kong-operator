@@ -17,19 +17,13 @@ import (
 )
 
 type eventGatewayRefAccessor interface {
-	client.Object
+	objectWithParentRef
 	GetEventGatewayRef() commonv1alpha1.ObjectRef
-	parentRefGetter
 }
 
 type portalRefAccessor interface {
-	client.Object
+	objectWithParentRef
 	GetPortalRef() commonv1alpha1.ObjectRef
-	parentRefGetter
-}
-
-type parentRefGetter interface {
-	GetParentRef() commonv1alpha1.ObjectRef
 }
 
 func getAPIAuthRef[

@@ -84,3 +84,33 @@ func (obj *EventGatewayListenerPolicy) GetListenerRef() commonv1alpha1.ObjectRef
 func (obj *EventGatewayListenerPolicy) GetParentRef() commonv1alpha1.ObjectRef {
 	return obj.GetEventGatewayListenerRef()
 }
+
+// SetParentID sets the Konnect ID of the immediate parent entity.
+func (obj *EventGatewayListenerPolicy) SetParentID(id string) {
+	obj.SetEventGatewayListenerID(id)
+}
+
+// GetStatusConditionTypeParentRefValid returns the status condition type
+// indicating whether the parent reference is valid.
+func (obj *EventGatewayListenerPolicy) GetStatusConditionTypeParentRefValid() string {
+	return EventGatewayListenerRefValidConditionType
+}
+
+// GetStatusConditionReasonParentRefValid returns the status condition reason
+// indicating that the parent reference is valid.
+func (obj *EventGatewayListenerPolicy) GetStatusConditionReasonParentRefValid() string {
+	return EventGatewayListenerRefReasonValid
+}
+
+// GetStatusConditionReasonParentRefInvalid returns the status condition reason
+// indicating that the parent reference is invalid.
+func (obj *EventGatewayListenerPolicy) GetStatusConditionReasonParentRefInvalid() string {
+	return EventGatewayListenerRefReasonInvalid
+}
+
+// GetStatusConditionReasonParentRefNotProgrammed returns the status condition
+// reason indicating that the referenced parent exists but is not yet
+// programmed in Konnect.
+func (obj *EventGatewayListenerPolicy) GetStatusConditionReasonParentRefNotProgrammed() string {
+	return EventGatewayListenerRefReasonNotProgrammed
+}

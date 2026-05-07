@@ -96,3 +96,33 @@ func (obj *EventGatewayVirtualCluster) GetEventGatewayRef() commonv1alpha1.Objec
 func (obj *EventGatewayVirtualCluster) GetParentRef() commonv1alpha1.ObjectRef {
 	return obj.GetEventGatewayRef()
 }
+
+// SetParentID sets the Konnect ID of the immediate parent entity.
+func (obj *EventGatewayVirtualCluster) SetParentID(id string) {
+	obj.SetGatewayID(id)
+}
+
+// GetStatusConditionTypeParentRefValid returns the status condition type
+// indicating whether the parent reference is valid.
+func (obj *EventGatewayVirtualCluster) GetStatusConditionTypeParentRefValid() string {
+	return EventGatewayRefValidConditionType
+}
+
+// GetStatusConditionReasonParentRefValid returns the status condition reason
+// indicating that the parent reference is valid.
+func (obj *EventGatewayVirtualCluster) GetStatusConditionReasonParentRefValid() string {
+	return EventGatewayRefReasonValid
+}
+
+// GetStatusConditionReasonParentRefInvalid returns the status condition reason
+// indicating that the parent reference is invalid.
+func (obj *EventGatewayVirtualCluster) GetStatusConditionReasonParentRefInvalid() string {
+	return EventGatewayRefReasonInvalid
+}
+
+// GetStatusConditionReasonParentRefNotProgrammed returns the status condition
+// reason indicating that the referenced parent exists but is not yet
+// programmed in Konnect.
+func (obj *EventGatewayVirtualCluster) GetStatusConditionReasonParentRefNotProgrammed() string {
+	return EventGatewayRefReasonNotProgrammed
+}

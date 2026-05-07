@@ -1258,18 +1258,25 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		RootRefDependency                  *parser.Dependency
 		RootRefAccessorEntityName          string
 		RootRefTypeName                    string
+		RefConditionPrefix                 string
 		IsReconcilerRoot                   bool
 		KonnectAPIAuthConfigurationRefType string
 	}{
-		EntityName:                         entityName,
-		APIVersion:                         g.config.APIVersion,
-		Imports:                            imports,
-		KonnectStatusType:                  defaultKonnectStatusQualifiedTypeName(),
-		KonnectLabelsField:                 g.konnectLabelsField(schema),
-		Dependencies:                       schema.Dependencies,
-		RootRefDependency:                  rootRefDependency,
-		RootRefAccessorEntityName:          rootRefAccessorEntityName(rootRefDependency),
-		RootRefTypeName:                    g.objectRefTypeName(),
+		EntityName:                entityName,
+		APIVersion:                g.config.APIVersion,
+		Imports:                   imports,
+		KonnectStatusType:         defaultKonnectStatusQualifiedTypeName(),
+		KonnectLabelsField:        g.konnectLabelsField(schema),
+		Dependencies:              schema.Dependencies,
+		RootRefDependency:         rootRefDependency,
+		RootRefAccessorEntityName: rootRefAccessorEntityName(rootRefDependency),
+		RootRefTypeName:           g.objectRefTypeName(),
+		RefConditionPrefix: func() string {
+			if rootRefDependency == nil {
+				return ""
+			}
+			return refConditionEntityName(rootRefDependency)
+		}(),
 		IsReconcilerRoot:                   isReconcilerRoot,
 		KonnectAPIAuthConfigurationRefType: defaultKonnectStatusAlias + ".ControlPlaneKonnectAPIAuthConfigurationRef",
 	}

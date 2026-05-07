@@ -265,6 +265,36 @@ func (obj *{{.EntityName}}) GetParentRef() {{.RootRefTypeName}} {
 	return obj.Get{{.RootRefDependency.EntityName}}Ref()
 {{- end}}
 }
+
+// SetParentID sets the Konnect ID of the immediate parent entity.
+func (obj *{{.EntityName}}) SetParentID(id string) {
+	obj.Set{{.RootRefDependency.EntityName}}ID(id)
+}
+
+// GetStatusConditionTypeParentRefValid returns the status condition type
+// indicating whether the parent reference is valid.
+func (obj *{{.EntityName}}) GetStatusConditionTypeParentRefValid() string {
+	return {{.RefConditionPrefix}}RefValidConditionType
+}
+
+// GetStatusConditionReasonParentRefValid returns the status condition reason
+// indicating that the parent reference is valid.
+func (obj *{{.EntityName}}) GetStatusConditionReasonParentRefValid() string {
+	return {{.RefConditionPrefix}}RefReasonValid
+}
+
+// GetStatusConditionReasonParentRefInvalid returns the status condition reason
+// indicating that the parent reference is invalid.
+func (obj *{{.EntityName}}) GetStatusConditionReasonParentRefInvalid() string {
+	return {{.RefConditionPrefix}}RefReasonInvalid
+}
+
+// GetStatusConditionReasonParentRefNotProgrammed returns the status condition
+// reason indicating that the referenced parent exists but is not yet
+// programmed in Konnect.
+func (obj *{{.EntityName}}) GetStatusConditionReasonParentRefNotProgrammed() string {
+	return {{.RefConditionPrefix}}RefReasonNotProgrammed
+}
 {{- end}}
 {{- if .IsReconcilerRoot}}
 
