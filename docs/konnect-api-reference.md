@@ -1020,6 +1020,7 @@ EventGatewayVirtualClusterAPISpec defines the API spec fields for EventGatewayVi
 | `labels` _[Labels](#konnect-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `name` _[VirtualClusterName](#konnect-konghq-com-v1alpha1-types-virtualclustername)_ | The name of the virtual cluster. |
 | `namespace` _[VirtualClusterNamespace](#konnect-konghq-com-v1alpha1-types-virtualclusternamespace)_ | Namespace allows to implement multitenancy using a single backend cluster. It allows to either hide or enforce a static prefix on resources (topics, consumer group IDs, transaction IDs). |
+| `topicAliases` _[VirtualClusterTopicAlias](#konnect-konghq-com-v1alpha1-types-virtualclustertopicalias)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Topic aliases allow exposing backend topics under additional names. An alias creates a new entry point to the same physical data. The alias `topic` field references namespace-visible names (if namespace is configured). Aliases are independent of namespace and can be used without it.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 
 _Appears in:_
 
@@ -3053,6 +3054,45 @@ _Appears in:_
 
 
 
+
+#### VirtualClusterTopicAlias
+
+
+VirtualClusterTopicAlias **Pre-release Feature**
+This feature is currently in beta and is subject to change.<br /><br />A topic alias maps an alias name to a namespace-visible topic name.
+Clients can produce to, consume from, and discover the topic under the alias
+name.
+The original topic name remains accessible.<br /><br />**Requires a minimum runtime version of `1.2`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `alias` _string_ | The client-visible topic name. |
+| `conflict` _[VirtualClusterTopicAliasConflict](#konnect-konghq-com-v1alpha1-types-virtualclustertopicaliasconflict)_ | How to handle conflicts where an alias shadows a physical topic. * warn - activate the alias but log a warning and set the conflict metric to 1. * ignore - activate the alias silently. |
+| `match` _string_ | CEL expression evaluated against the connection's auth context. If omitted or empty, the alias is active for all connections. |
+| `topic` _string_ | The namespace-visible topic name this alias resolves to. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterAPISpec](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterapispec)
+
+#### VirtualClusterTopicAliasConflict
+
+_Underlying type:_ `string`
+
+VirtualClusterTopicAliasConflict How to handle conflicts where an alias
+shadows a physical topic.
+* warn - activate the alias but log a warning and set the conflict metric to
+1.
+* ignore - activate the alias silently.
+
+
+
+
+_Appears in:_
+
+- [VirtualClusterTopicAlias](#konnect-konghq-com-v1alpha1-types-virtualclustertopicalias)
 
 ## konnect.konghq.com/v1alpha2
 

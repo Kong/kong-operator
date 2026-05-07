@@ -12505,6 +12505,64 @@ spec:
                     - mode
                     - prefix
                     type: object
+                  topicAliases:
+                    description: |-
+                      **Pre-release Feature**
+                      This feature is currently in beta and is subject to change.
+
+                      Topic aliases allow exposing backend topics under additional names.
+                      An alias creates a new entry point to the same physical data.
+                      The alias `topic` field references namespace-visible names (if namespace is
+                      configured).
+                      Aliases are independent of namespace and can be used without it.
+
+                      **Requires a minimum runtime version of `1.2`**.
+                    items:
+                      description: |-
+                        VirtualClusterTopicAlias **Pre-release Feature**
+                        This feature is currently in beta and is subject to change.
+
+                        A topic alias maps an alias name to a namespace-visible topic name.
+                        Clients can produce to, consume from, and discover the topic under the alias
+                        name.
+                        The original topic name remains accessible.
+
+                        **Requires a minimum runtime version of `1.2`**.
+                      properties:
+                        alias:
+                          description: The client-visible topic name.
+                          maxLength: 253
+                          minLength: 1
+                          type: string
+                        conflict:
+                          default: warn
+                          description: |-
+                            How to handle conflicts where an alias shadows a physical topic.
+                            * warn - activate the alias but log a warning and set the conflict metric to
+                            1.
+                            * ignore - activate the alias silently.
+                          enum:
+                          - warn
+                          - ignore
+                          maxLength: 253
+                          type: string
+                        match:
+                          default: ""
+                          description: |-
+                            CEL expression evaluated against the connection's auth context.
+                            If omitted or empty, the alias is active for all connections.
+                          maxLength: 253
+                          type: string
+                        topic:
+                          description: The namespace-visible topic name this alias resolves to.
+                          maxLength: 253
+                          minLength: 1
+                          type: string
+                      required:
+                      - alias
+                      - topic
+                      type: object
+                    type: array
                 required:
                 - aclMode
                 - authentication
