@@ -96,7 +96,11 @@ func adoptConsumerGroup(
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: group, Op: AdoptOp}
 	}
 	konnectID := adoptOptions.Konnect.ID
-	resp, err := sdk.GetConsumerGroup(ctx, konnectID, cpID)
+	req := sdkkonnectops.GetConsumerGroupRequest{
+		ControlPlaneID:  cpID,
+		ConsumerGroupID: konnectID,
+	}
+	resp, err := sdk.GetConsumerGroup(ctx, req)
 	if err != nil {
 		return KonnectEntityAdoptionFetchError{
 			KonnectID: konnectID,

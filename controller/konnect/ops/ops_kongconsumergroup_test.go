@@ -85,7 +85,10 @@ func TestAdoptKongConsumerGroupOverride(t *testing.T) {
 	}
 
 	sdk.EXPECT().
-		GetConsumerGroup(ctx, "group-1", "cp-1").
+		GetConsumerGroup(ctx, sdkkonnectops.GetConsumerGroupRequest{
+			ConsumerGroupID: "group-1",
+			ControlPlaneID:  "cp-1",
+		}).
 		Return(&sdkkonnectops.GetConsumerGroupResponse{
 			ConsumerGroupInsideWrapper: &sdkkonnectcomp.ConsumerGroupInsideWrapper{
 				ConsumerGroup: &sdkkonnectcomp.ConsumerGroup{Name: "group-override"},
@@ -129,7 +132,10 @@ func TestAdoptKongConsumerGroupMatch(t *testing.T) {
 	}
 
 	sdk.EXPECT().
-		GetConsumerGroup(ctx, "group-2", "cp-1").
+		GetConsumerGroup(ctx, sdkkonnectops.GetConsumerGroupRequest{
+			ConsumerGroupID: "group-2",
+			ControlPlaneID:  "cp-1",
+		}).
 		Return(&sdkkonnectops.GetConsumerGroupResponse{
 			ConsumerGroupInsideWrapper: &sdkkonnectcomp.ConsumerGroupInsideWrapper{
 				ConsumerGroup: &sdkkonnectcomp.ConsumerGroup{Name: "group-match"},
@@ -168,7 +174,10 @@ func TestAdoptKongConsumerGroupMatchNotMatching(t *testing.T) {
 	}
 
 	sdk.EXPECT().
-		GetConsumerGroup(ctx, "group-3", "cp-1").
+		GetConsumerGroup(ctx, sdkkonnectops.GetConsumerGroupRequest{
+			ConsumerGroupID: "group-3",
+			ControlPlaneID:  "cp-1",
+		}).
 		Return(&sdkkonnectops.GetConsumerGroupResponse{
 			ConsumerGroupInsideWrapper: &sdkkonnectcomp.ConsumerGroupInsideWrapper{
 				ConsumerGroup: &sdkkonnectcomp.ConsumerGroup{Name: "actual-name"},
@@ -208,7 +217,10 @@ func TestAdoptKongConsumerGroupUIDConflict(t *testing.T) {
 	}
 
 	sdk.EXPECT().
-		GetConsumerGroup(ctx, "group-4", "cp-1").
+		GetConsumerGroup(ctx, sdkkonnectops.GetConsumerGroupRequest{
+			ConsumerGroupID: "group-4",
+			ControlPlaneID:  "cp-1",
+		}).
 		Return(&sdkkonnectops.GetConsumerGroupResponse{
 			ConsumerGroupInsideWrapper: &sdkkonnectcomp.ConsumerGroupInsideWrapper{
 				ConsumerGroup: &sdkkonnectcomp.ConsumerGroup{
@@ -251,7 +263,10 @@ func TestAdoptKongConsumerGroupFetchError(t *testing.T) {
 	}
 
 	sdk.EXPECT().
-		GetConsumerGroup(ctx, "group-err", "cp-1").
+		GetConsumerGroup(ctx, sdkkonnectops.GetConsumerGroupRequest{
+			ConsumerGroupID: "group-err",
+			ControlPlaneID:  "cp-1",
+		}).
 		Return(nil, errors.New("boom"))
 
 	err := adoptConsumerGroup(ctx, sdk, group, adoptOptions)

@@ -132,6 +132,20 @@ type EventGatewayVirtualClusterAPISpec struct {
 	//
 	// +optional
 	Namespace VirtualClusterNamespace `json:"namespace,omitempty"`
+
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
+	// Topic aliases allow exposing backend topics under additional names.
+	// An alias creates a new entry point to the same physical data.
+	// The alias `topic` field references namespace-visible names (if namespace is
+	// configured).
+	// Aliases are independent of namespace and can be used without it.
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +optional
+	TopicAliases []VirtualClusterTopicAlias `json:"topicAliases,omitempty"`
 }
 
 // EventGatewayVirtualClusterStatus defines the observed state of EventGatewayVirtualCluster.
