@@ -91,3 +91,8 @@ func (obj *EventGatewayVirtualCluster) GetGatewayRef() commonv1alpha1.ObjectRef 
 func (obj *EventGatewayVirtualCluster) GetEventGatewayRef() commonv1alpha1.ObjectRef {
 	return obj.Spec.GatewayRef
 }
+
+// GetParentRef returns the reference to the parent entity.
+func (obj *EventGatewayVirtualCluster) GetParentRef() commonv1alpha1.ObjectRef {
+	return obj.GetEventGatewayRef()
+}

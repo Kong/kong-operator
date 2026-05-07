@@ -104,6 +104,46 @@ func (b *KongServiceBuilder) WithOwner(owner client.Object) *KongServiceBuilder 
 	return b
 }
 
+// WithPath sets the path for the KongService being built.
+// An empty path leaves Spec.Path unset.
+func (b *KongServiceBuilder) WithPath(path string) *KongServiceBuilder {
+	if path == "" {
+		return b
+	}
+	b.service.Spec.Path = &path
+	return b
+}
+
+// WithTLSVerify sets the tls-verify flag for the KongService being built.
+// Nil leaves the field unset.
+func (b *KongServiceBuilder) WithTLSVerify(v *bool) *KongServiceBuilder {
+	if v == nil {
+		return b
+	}
+	b.service.Spec.TLSVerify = v
+	return b
+}
+
+// WithTLSVerifyDepth sets the TLS verify depth for the KongService being built.
+// Nil leaves the field unset.
+func (b *KongServiceBuilder) WithTLSVerifyDepth(v *int64) *KongServiceBuilder {
+	if v == nil {
+		return b
+	}
+	b.service.Spec.TLSVerifyDepth = v
+	return b
+}
+
+// WithConnectTimeout sets the connect timeout (milliseconds) for the KongService being built.
+// A nil pointer leaves the field unset.
+func (b *KongServiceBuilder) WithConnectTimeout(v *int64) *KongServiceBuilder {
+	if v == nil {
+		return b
+	}
+	b.service.Spec.ConnectTimeout = v
+	return b
+}
+
 // WithReadTimeout sets the read timeout (milliseconds) for the KongService being built.
 // A nil pointer leaves the field unset.
 func (b *KongServiceBuilder) WithReadTimeout(v *int64) *KongServiceBuilder {

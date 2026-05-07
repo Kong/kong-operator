@@ -109,7 +109,3 @@ type KongCACertificateList struct {
 
 	Items []KongCACertificate `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&KongCACertificate{}, &KongCACertificateList{})
-}

@@ -36,6 +36,8 @@ func reconciliationWatchOptionsForEntity[
 		return KonnectEventGatewayReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.Portal:
 		return PortalReconciliationWatchOptions(cl)
+	case *konnectv1alpha1.PortalEmailConfig:
+		return PortalEmailConfigReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.PortalPage:
 		return PortalPageReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.PortalTeam:

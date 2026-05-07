@@ -42,7 +42,7 @@ spec:
     labels:
       app: test1
       env: test
-  gateway_ref:
+  gatewayRef:
     type: namespacedRef
     namespacedRef:
       name: cp-event-1

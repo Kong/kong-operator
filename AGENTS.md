@@ -1,10 +1,12 @@
 # AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to AI agents like Claude Code or Copilot when working with code in this repository.
 
 ## Project Overview
 
-Kong Operator is a Kubernetes Operator (Kubebuilder v4, multigroup layout) that manages Kong Gateway deployments and Kong Kubernetes Ingress Controllers. Domain: `gateway-operator.konghq.com`.
+Kong Operator is a Kubernetes Operator (Kubebuilder v4, multigroup layout) that manages Kong Gateway deployments, in process ingress controller instances and integrates with Konnect cloud.
+It provides a Kubernetes-native way to deploy and manage Kong Gateway and its configuration.
+Domain: `gateway-operator.konghq.com`.
 
 ## Build Commands
 
@@ -147,6 +149,11 @@ Helm chart for deploying the operator.
 
 ## Code Conventions
 
+### Go Code Conventions
+
+- Follow standard Go conventions (gofmt, goimports)
+- Use `new()` for in place literal initialization, e.g. `new("dummy-string")` instead of `ptrTo("dummy-string")`, `new(true)` instead of `ptrTo(true)`, etc.
+
 ### Naming (Enforced by Linter)
 
 - Use `DataPlane` not `Dataplane`
@@ -176,6 +183,7 @@ make tools    # Install: controller-gen, kustomize, client-gen, golangci-lint, g
 3. Run `make generate` to regenerate CRDs, deepcopy, docs
 4. Run `make test.charts.golden.update` if chart templates change
 5. Add type specific CRD validation tests in `test/crdsvalidation/`
+6. Add sample YAML in `config/samples/` and test applying it in `test/crdsvalidation/`
 
 ## Development Workflow
 

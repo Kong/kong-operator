@@ -24,6 +24,7 @@ Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1al
 - [KonnectGatewayControlPlane](#konnect-konghq-com-v1alpha1-konnectgatewaycontrolplane)
 - [MCPServer](#konnect-konghq-com-v1alpha1-mcpserver)
 - [Portal](#konnect-konghq-com-v1alpha1-portal)
+- [PortalEmailConfig](#konnect-konghq-com-v1alpha1-portalemailconfig)
 - [PortalPage](#konnect-konghq-com-v1alpha1-portalpage)
 - [PortalTeam](#konnect-konghq-com-v1alpha1-portalteam)
 
@@ -255,6 +256,21 @@ Portal is the Schema for the portals API.
 | `spec` _[PortalSpec](#konnect-konghq-com-v1alpha1-types-portalspec)_ |  |
 | `status` _[PortalStatus](#konnect-konghq-com-v1alpha1-types-portalstatus)_ |  |
 
+### PortalEmailConfig
+
+
+PortalEmailConfig is the Schema for the portalemailconfigs API.
+
+<!-- portal_email_config description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `PortalEmailConfig`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[PortalEmailConfigSpec](#konnect-konghq-com-v1alpha1-types-portalemailconfigspec)_ |  |
+| `status` _[PortalEmailConfigStatus](#konnect-konghq-com-v1alpha1-types-portalemailconfigstatus)_ |  |
+
 ### PortalPage
 
 
@@ -369,9 +385,6 @@ backend cluster.
 
 
 
-| Field | Description |
-| --- | --- |
-| `type` _string_ | The type of authentication scheme. |
 
 _Appears in:_
 
@@ -389,7 +402,6 @@ the backend cluster.
 | Field | Description |
 | --- | --- |
 | `password` _[GatewaySecret](#konnect-konghq-com-v1alpha1-types-gatewaysecret)_ | A sensitive value containing the secret or a reference to a secret as a template string expression. If the value is provided as plain text, it is encrypted at rest and omitted from API responses. If provided as an expression, the expression itself is stored and returned by the API. |
-| `type` _string_ |  |
 | `username` _[GatewaySecretReferenceOrLiteral](#konnect-konghq-com-v1alpha1-types-gatewaysecretreferenceorliteral)_ | A literal value or a reference to an existing secret as a template string expression. The value is stored and returned by the API as-is, not treated as sensitive information. |
 
 _Appears in:_
@@ -409,7 +421,6 @@ the backend cluster.
 | --- | --- |
 | `algorithm` _string_ | The algorithm used for SASL/SCRAM authentication. |
 | `password` _[GatewaySecret](#konnect-konghq-com-v1alpha1-types-gatewaysecret)_ | A sensitive value containing the secret or a reference to a secret as a template string expression. If the value is provided as plain text, it is encrypted at rest and omitted from API responses. If provided as an expression, the expression itself is stored and returned by the API. |
-| `type` _string_ |  |
 | `username` _[GatewaySecretReferenceOrLiteral](#konnect-konghq-com-v1alpha1-types-gatewaysecretreferenceorliteral)_ | A literal value or a reference to an existing secret as a template string expression. The value is stored and returned by the API as-is, not treated as sensitive information. |
 
 _Appears in:_
@@ -437,8 +448,8 @@ Allowed values:
 | Value | Description |
 | --- | --- |
 | `anonymous` |  |
-| `sasl_plain` |  |
-| `sasl_scram` |  |
+| `saslPlain` |  |
+| `saslScram` |  |
 
 #### BackendClusterName
 
@@ -484,11 +495,11 @@ BackendClusterTLS is a type alias.
 
 | Field | Description |
 | --- | --- |
-| `ca_bundle` _[GatewaySecretReferenceOrLiteral](#konnect-konghq-com-v1alpha1-types-gatewaysecretreferenceorliteral)_ | A literal value or a reference to an existing secret as a template string expression. The value is stored and returned by the API as-is, not treated as sensitive information. |
-| `client_identity` _[ClientIdentity](#konnect-konghq-com-v1alpha1-types-clientidentity)_ | Client mTLS configuration.<br /><br />**Requires a minimum runtime version of `1.1`**. |
+| `caBundle` _[GatewaySecretReferenceOrLiteral](#konnect-konghq-com-v1alpha1-types-gatewaysecretreferenceorliteral)_ | A literal value or a reference to an existing secret as a template string expression. The value is stored and returned by the API as-is, not treated as sensitive information. |
+| `clientIdentity` _[ClientIdentity](#konnect-konghq-com-v1alpha1-types-clientidentity)_ | Client mTLS configuration.<br /><br />**Requires a minimum runtime version of `1.1`**. |
 | `enabled` _string_ | If true, TLS is enabled for connections to this backend cluster. If false, TLS is explicitly disabled. |
-| `insecure_skip_verify` _string_ | If true, skip certificate verification. It's not secure to use for production. |
-| `tls_versions` _[]string_ | List of supported TLS versions. |
+| `insecureSkipVerify` _string_ | If true, skip certificate verification. It's not secure to use for production. |
+| `tlsVersions` _[]string_ | List of supported TLS versions. |
 
 _Appears in:_
 
@@ -559,8 +570,8 @@ handshake.<br /><br />**Requires a minimum runtime version of `1.1`**.
 | Field | Description |
 | --- | --- |
 | `mode` _string_ | * required - Reject TLS connections without a valid client certificate. * requested - Request a client certificate during the TLS handshake, but allow connections without one (falls back to other configured authentication methods). If a certificate is presented but cannot be verified, the connection is closed. |
-| `principal_mapping` _string_ | An expression that extracts a principal identifier from a verified client certificate. This expression must evaluate to a string.<br /><br />**Requires a minimum runtime version of `1.1`**. |
-| `tls_trust_bundles` _[TLSTrustBundleReference](#konnect-konghq-com-v1alpha1-types-tlstrustbundlereference)_ | TLS trust bundles contain CA certificate bundles used to verify client certificates. All bundles are merged into a single trust store; a client certificate is accepted if it chains to any trusted CA across all bundles. |
+| `principalMapping` _string_ | An expression that extracts a principal identifier from a verified client certificate. This expression must evaluate to a string.<br /><br />**Requires a minimum runtime version of `1.1`**. |
+| `tlsTrustBundles` _[TLSTrustBundleReference](#konnect-konghq-com-v1alpha1-types-tlstrustbundlereference)_ | TLS trust bundles contain CA certificate bundles used to verify client certificates. All bundles are merged into a single trust store; a client certificate is accepted if it chains to any trusted CA across all bundles. |
 
 _Appears in:_
 
@@ -741,11 +752,11 @@ EventGatewayBackendClusterAPISpec defines the API spec fields for EventGatewayBa
 | Field | Description |
 | --- | --- |
 | `authentication` _[EventGatewayBackendClusterAuthentication](#konnect-konghq-com-v1alpha1-types-eventgatewaybackendclusterauthentication)_ |  |
-| `bootstrap_servers` _[]string_ | A list of cluster bootstrap servers in the format address:port. |
+| `bootstrapServers` _[]string_ | A list of cluster bootstrap servers in the format address:port. |
 | `description` _string_ | A human-readable description of the backend cluster. |
-| `insecure_allow_anonymous_virtual_cluster_auth` _string_ | If true, virtual clusters can have allow anonymous authentication and use this backend cluster. This setting is not recommended for production use as it may create privilege escalation vulnerabilities. |
+| `insecureAllowAnonymousVirtualClusterAuth` _string_ | If true, virtual clusters can have allow anonymous authentication and use this backend cluster. This setting is not recommended for production use as it may create privilege escalation vulnerabilities. |
 | `labels` _[Labels](#konnect-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
-| `metadata_update_interval_seconds` _[BackendMetadataUpdateIntervalSeconds](#konnect-konghq-com-v1alpha1-types-backendmetadataupdateintervalseconds)_ | The interval at which metadata is updated in seconds. |
+| `metadataUpdateIntervalSeconds` _[BackendMetadataUpdateIntervalSeconds](#konnect-konghq-com-v1alpha1-types-backendmetadataupdateintervalseconds)_ | The interval at which metadata is updated in seconds. |
 | `name` _[BackendClusterName](#konnect-konghq-com-v1alpha1-types-backendclustername)_ | The unique name of the backend cluster. |
 | `tls` _[BackendClusterTLS](#konnect-konghq-com-v1alpha1-types-backendclustertls)_ |  |
 
@@ -765,8 +776,8 @@ Only one of the fields should be set based on the Type.
 | --- | --- |
 | `type` _[EventGatewayBackendClusterAuthenticationType](#konnect-konghq-com-v1alpha1-types-eventgatewaybackendclusterauthenticationtype)_ | Type designates the type of configuration. |
 | `anonymous` _[BackendClusterAuthenticationAnonymous](#konnect-konghq-com-v1alpha1-types-backendclusterauthenticationanonymous)_ | Anonymous configuration. |
-| `sasl_plain` _[BackendClusterAuthenticationSaslPlain](#konnect-konghq-com-v1alpha1-types-backendclusterauthenticationsaslplain)_ | SaslPlain configuration. |
-| `sasl_scram` _[BackendClusterAuthenticationSaslScram](#konnect-konghq-com-v1alpha1-types-backendclusterauthenticationsaslscram)_ | SaslScram configuration. |
+| `saslPlain` _[BackendClusterAuthenticationSaslPlain](#konnect-konghq-com-v1alpha1-types-backendclusterauthenticationsaslplain)_ | SaslPlain configuration. |
+| `saslScram` _[BackendClusterAuthenticationSaslScram](#konnect-konghq-com-v1alpha1-types-backendclusterauthenticationsaslscram)_ | SaslScram configuration. |
 
 _Appears in:_
 
@@ -790,8 +801,8 @@ Allowed values:
 | Value | Description |
 | --- | --- |
 | `anonymous` |  |
-| `sasl_plain` |  |
-| `sasl_scram` |  |
+| `saslPlain` |  |
+| `saslScram` |  |
 
 
 
@@ -804,7 +815,7 @@ EventGatewayBackendClusterSpec defines the desired state of EventGatewayBackendC
 
 | Field | Description |
 | --- | --- |
-| `gateway_ref` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. |
+| `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. |
 | `apiSpec` _[EventGatewayBackendClusterAPISpec](#konnect-konghq-com-v1alpha1-types-eventgatewaybackendclusterapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -870,8 +881,8 @@ Only one of the fields should be set based on the Type.
 | Field | Description |
 | --- | --- |
 | `type` _[EventGatewayListenerPolicyConfigType](#konnect-konghq-com-v1alpha1-types-eventgatewaylistenerpolicyconfigtype)_ | Type designates the type of configuration. |
-| `forward_to_virtual_cluster` _[ForwardToVirtualClusterPolicy](#konnect-konghq-com-v1alpha1-types-forwardtovirtualclusterpolicy)_ | ForwardToVirtualClust configuration. |
-| `tls_server` _[EventGatewayTLSListenerPolicy](#konnect-konghq-com-v1alpha1-types-eventgatewaytlslistenerpolicy)_ | EventGatewayTLSListen configuration. |
+| `forwardToVirtualCluster` _[ForwardToVirtualClusterPolicy](#konnect-konghq-com-v1alpha1-types-forwardtovirtualclusterpolicy)_ | ForwardToVirtualClust configuration. |
+| `tlsServer` _[EventGatewayTLSListenerPolicy](#konnect-konghq-com-v1alpha1-types-eventgatewaytlslistenerpolicy)_ | EventGatewayTLSListen configuration. |
 
 _Appears in:_
 
@@ -894,8 +905,8 @@ Allowed values:
 
 | Value | Description |
 | --- | --- |
-| `forward_to_virtual_cluster` |  |
-| `tls_server` |  |
+| `forwardToVirtualCluster` |  |
+| `tlsServer` |  |
 
 
 
@@ -908,7 +919,7 @@ EventGatewayListenerPolicySpec defines the desired state of EventGatewayListener
 
 | Field | Description |
 | --- | --- |
-| `event_gateway_listener_ref` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | EventGatewayListenerRef is the reference to the parent EventGatewayListener object. |
+| `eventGatewayListenerRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | EventGatewayListenerRef is the reference to the parent EventGatewayListener object. |
 | `apiSpec` _[EventGatewayListenerPolicyAPISpec](#konnect-konghq-com-v1alpha1-types-eventgatewaylistenerpolicyapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -944,7 +955,7 @@ EventGatewayListenerSpec defines the desired state of EventGatewayListener.
 
 | Field | Description |
 | --- | --- |
-| `gateway_ref` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. |
+| `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. |
 | `apiSpec` _[EventGatewayListenerAPISpec](#konnect-konghq-com-v1alpha1-types-eventgatewaylistenerapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -985,7 +996,6 @@ can be active at a time.
 | `enabled` _string_ | Whether the policy is enabled. |
 | `labels` _[Labels](#konnect-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `name` _string_ | A unique user-defined name of the policy. |
-| `type` _string_ | The type name of the policy. |
 
 _Appears in:_
 
@@ -1000,9 +1010,9 @@ EventGatewayTLSListenerPolicyConfig is a type alias.
 
 | Field | Description |
 | --- | --- |
-| `allow_plaintext` _string_ | If false, only TLS connections are allowed. If true, both TLS and plaintext connections are allowed. |
+| `allowPlaintext` _string_ | If false, only TLS connections are allowed. If true, both TLS and plaintext connections are allowed. |
 | `certificates` _[TLSCertificate](#konnect-konghq-com-v1alpha1-types-tlscertificate)_ |  |
-| `client_authentication` _[ClientAuthentication](#konnect-konghq-com-v1alpha1-types-clientauthentication)_ | Configures mutual TLS (mTLS) client certificate verification. When set, the gateway requests or requires clients to present a certificate during the TLS handshake.<br /><br />**Requires a minimum runtime version of `1.1`**. |
+| `clientAuthentication` _[ClientAuthentication](#konnect-konghq-com-v1alpha1-types-clientauthentication)_ | Configures mutual TLS (mTLS) client certificate verification. When set, the gateway requests or requires clients to present a certificate during the TLS handshake.<br /><br />**Requires a minimum runtime version of `1.1`**. |
 | `versions` _[TLSVersionRange](#konnect-konghq-com-v1alpha1-types-tlsversionrange)_ | A range of TLS versions. |
 
 _Appears in:_
@@ -1018,11 +1028,11 @@ EventGatewayVirtualClusterAPISpec defines the API spec fields for EventGatewayVi
 
 | Field | Description |
 | --- | --- |
-| `acl_mode` _[VirtualClusterACLMode](#konnect-konghq-com-v1alpha1-types-virtualclusteraclmode)_ | Configures whether or not ACL policies are enforced on the gateway. - `enforce_on_gateway` means the gateway enforces its own ACL policies for this virtual cluster<br /><br />and does not forward ACL-related commands to the backend cluster. Note that if there are no ACL policies configured, all access is denied. - `passthrough` tells the gateway to forward all ACL-related commands. |
+| `aclMode` _[VirtualClusterACLMode](#konnect-konghq-com-v1alpha1-types-virtualclusteraclmode)_ | Configures whether or not ACL policies are enforced on the gateway. - `enforce_on_gateway` means the gateway enforces its own ACL policies for this virtual cluster<br /><br />and does not forward ACL-related commands to the backend cluster. Note that if there are no ACL policies configured, all access is denied. - `passthrough` tells the gateway to forward all ACL-related commands. |
 | `authentication` _[VirtualClusterAuthenticationScheme](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationscheme)_ | How to handle authentication from clients.<br /><br />It tries to authenticate with every rule sequentially one by one. It succeeds on the first match, and fails if no rule matches. |
 | `description` _string_ | A human-readable description of the virtual cluster. |
 | `destination` _[BackendClusterReferenceModify](#konnect-konghq-com-v1alpha1-types-backendclusterreferencemodify)_ | The backend cluster associated with the virtual cluster.<br /><br />Either `id` or `name` must be provided. Following changes to the backend cluster name won't affect the reference, as the system will create the entities relationship by `id`. |
-| `dns_label` _[VirtualClusterDNSLabel](#konnect-konghq-com-v1alpha1-types-virtualclusterdnslabel)_ | The DNS label used in the bootstrap server URL to identify the virtual cluster when using SNI routing. The format follows the RFC1035: 1-63 chars, lowercase alphanumeric or '-', must start and end with an alphanumeric character. |
+| `dnsLabel` _[VirtualClusterDNSLabel](#konnect-konghq-com-v1alpha1-types-virtualclusterdnslabel)_ | The DNS label used in the bootstrap server URL to identify the virtual cluster when using SNI routing. The format follows the RFC1035: 1-63 chars, lowercase alphanumeric or '-', must start and end with an alphanumeric character. |
 | `labels` _[Labels](#konnect-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `name` _[VirtualClusterName](#konnect-konghq-com-v1alpha1-types-virtualclustername)_ | The name of the virtual cluster. |
 | `namespace` _[VirtualClusterNamespace](#konnect-konghq-com-v1alpha1-types-virtualclusternamespace)_ | Namespace allows to implement multitenancy using a single backend cluster. It allows to either hide or enforce a static prefix on resources (topics, consumer group IDs, transaction IDs). |
@@ -1040,7 +1050,7 @@ EventGatewayVirtualClusterSpec defines the desired state of EventGatewayVirtualC
 
 | Field | Description |
 | --- | --- |
-| `gateway_ref` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. |
+| `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. |
 | `apiSpec` _[EventGatewayVirtualClusterAPISpec](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -1088,11 +1098,10 @@ gaps in broker ids.<br /><br />It is strongly discouraged to use port mapping in
 
 | Field | Description |
 | --- | --- |
-| `advertised_host` _string_ | Virtual brokers are advertised to clients using this host. Any kind of host supported by kafka can be used. If not defined, it's listen_address. If listen_address is `0.0.0.0` it's the destination IP of the TCP connection. |
-| `bootstrap_port` _string_ | If set to `at_start`, the first port will be used as a bootstrap port. It provides a stable endpoint to use as the bootstrap server for clients, regardless of broker IDs in the cluster.<br /><br />Additionally, it offsets all ports by one, so for example, if there are 3 brokers (id=1, id=2, id=3) then we will use 4 ports: 9092 (bootstrap), 9093 (id=1), 9094 (id=2), 9095 (id=3) With `none` we will use 3 ports: 9092 (id=1), 9093 (id=2), 9094 (id=3). |
+| `advertisedHost` _string_ | Virtual brokers are advertised to clients using this host. Any kind of host supported by kafka can be used. If not defined, it's listen_address. If listen_address is `0.0.0.0` it's the destination IP of the TCP connection. |
+| `bootstrapPort` _string_ | If set to `at_start`, the first port will be used as a bootstrap port. It provides a stable endpoint to use as the bootstrap server for clients, regardless of broker IDs in the cluster.<br /><br />Additionally, it offsets all ports by one, so for example, if there are 3 brokers (id=1, id=2, id=3) then we will use 4 ports: 9092 (bootstrap), 9093 (id=1), 9094 (id=2), 9095 (id=3) With `none` we will use 3 ports: 9092 (id=1), 9093 (id=2), 9094 (id=3). |
 | `destination` _[VirtualClusterReference](#konnect-konghq-com-v1alpha1-types-virtualclusterreference)_ | A reference to a virtual cluster. |
-| `min_broker_id` _int_ | The lowest broker node ID in the cluster. |
-| `type` _string_ |  |
+| `minBrokerID` _int_ | The lowest broker node ID in the cluster. |
 
 _Appears in:_
 
@@ -1108,10 +1117,9 @@ clusters configured with SNI routing.
 
 | Field | Description |
 | --- | --- |
-| `advertised_port` _int_ | Virtual brokers are advertised to clients with this port instead of listen_port. Useful when proxy is behind loadbalancer listening on different port. |
-| `broker_host_format` _[BrokerHostFormat](#konnect-konghq-com-v1alpha1-types-brokerhostformat)_ | Configures DNS names assigned to brokers in virtual clusters.<br /><br />- `per_cluster_suffix` is the default and allocates one level in the hierarchy for virtual clusters: `broker-{node_id}.{virtual_cluster}.{sni_suffix}` - `shared_suffix` puts all brokers from every virtual clusters into the same level: `broker-{node_id}-{virtual_cluster}.{sni_suffix}`. This makes it easier to manage certificates for this listener.<br /><br />**Requires a minimum runtime version of `1.1`**. |
-| `sni_suffix` _string_ | Optional suffix for TLS SNI validation.<br /><br />This suffix is concatenated with the virtual cluster "dns.label" label to form the base name for the SNI. If not provided, the virtual cluster "dns.label" label alone is used as the base name for the SNI. For example with sni_suffix: `.example.com` and virtual cluster "dns.label" label: `my-cluster`, the SNI suffix for it is `my-cluster.example.com`. If "dns.label" label is absent on the virtual cluster, the traffic won't be routed there.<br /><br />The bootstrap host is `bootstrap.my-cluster.example.com` and then each broker is addressable at `broker-0.my-cluster.example.com`, `broker-1.my-cluster.example.com`, etc. This means that your deployment needs to have a wildcard certificate for the domain and a DNS resolver that routes `*.my-cluster.example.com` to the proxy.<br /><br />The accepted format is a DNS subdomain starting with either `.` or `-`. For example, `-keg.example.com`, `.keg.example.com`, `.namespace.svc.cluster.local`, and `.localhost` are all valid, while `keg.example.com` is not. |
-| `type` _string_ |  |
+| `advertisedPort` _int_ | Virtual brokers are advertised to clients with this port instead of listen_port. Useful when proxy is behind loadbalancer listening on different port. |
+| `brokerHostFormat` _[BrokerHostFormat](#konnect-konghq-com-v1alpha1-types-brokerhostformat)_ | Configures DNS names assigned to brokers in virtual clusters.<br /><br />- `per_cluster_suffix` is the default and allocates one level in the hierarchy for virtual clusters: `broker-{node_id}.{virtual_cluster}.{sni_suffix}` - `shared_suffix` puts all brokers from every virtual clusters into the same level: `broker-{node_id}-{virtual_cluster}.{sni_suffix}`. This makes it easier to manage certificates for this listener.<br /><br />**Requires a minimum runtime version of `1.1`**. |
+| `sniSuffix` _string_ | Optional suffix for TLS SNI validation.<br /><br />This suffix is concatenated with the virtual cluster "dns.label" label to form the base name for the SNI. If not provided, the virtual cluster "dns.label" label alone is used as the base name for the SNI. For example with sni_suffix: `.example.com` and virtual cluster "dns.label" label: `my-cluster`, the SNI suffix for it is `my-cluster.example.com`. If "dns.label" label is absent on the virtual cluster, the traffic won't be routed there.<br /><br />The bootstrap host is `bootstrap.my-cluster.example.com` and then each broker is addressable at `broker-0.my-cluster.example.com`, `broker-1.my-cluster.example.com`, etc. This means that your deployment needs to have a wildcard certificate for the domain and a DNS resolver that routes `*.my-cluster.example.com` to the proxy.<br /><br />The accepted format is a DNS subdomain starting with either `.` or `-`. For example, `-keg.example.com`, `.keg.example.com`, `.namespace.svc.cluster.local`, and `.localhost` are all valid, while `keg.example.com` is not. |
 
 _Appears in:_
 
@@ -1140,7 +1148,6 @@ the backend cluster see
 | `enabled` _string_ | Whether the policy is enabled. |
 | `labels` _[Labels](#konnect-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `name` _string_ | A unique user-defined name of the policy. |
-| `type` _string_ | The type name of the policy. |
 
 _Appears in:_
 
@@ -1157,7 +1164,7 @@ Only one of the fields should be set based on the Type.
 | Field | Description |
 | --- | --- |
 | `type` _[ForwardToVirtualClusterPolicyConfigType](#konnect-konghq-com-v1alpha1-types-forwardtovirtualclusterpolicyconfigtype)_ | Type designates the type of configuration. |
-| `port_mapping` _[ForwardToClusterByPortMappingConfig](#konnect-konghq-com-v1alpha1-types-forwardtoclusterbyportmappingconfig)_ | PortMapping configuration. |
+| `portMapping` _[ForwardToClusterByPortMappingConfig](#konnect-konghq-com-v1alpha1-types-forwardtoclusterbyportmappingconfig)_ | PortMapping configuration. |
 | `sni` _[ForwardToClusterBySNIConfig](#konnect-konghq-com-v1alpha1-types-forwardtoclusterbysniconfig)_ | SNI configuration. |
 
 _Appears in:_
@@ -1181,7 +1188,7 @@ Allowed values:
 
 | Value | Description |
 | --- | --- |
-| `port_mapping` |  |
+| `portMapping` |  |
 | `sni` |  |
 
 #### GatewayDescription
@@ -1299,7 +1306,7 @@ IdentityProviderRequestAPISpec defines the API spec fields for IdentityProviderR
 | --- | --- |
 | `config` _[IdentityProviderRequestConfig](#konnect-konghq-com-v1alpha1-types-identityproviderrequestconfig)_ |  |
 | `enabled` _[IdentityProviderEnabled](#konnect-konghq-com-v1alpha1-types-identityproviderenabled)_ | Indicates whether the identity provider is enabled. Only one identity provider can be active at a time, such as SAML or OIDC. |
-| `login_path` _[IdentityProviderLoginPath](#konnect-konghq-com-v1alpha1-types-identityproviderloginpath)_ | The path used for initiating login requests with the identity provider. |
+| `loginPath` _[IdentityProviderLoginPath](#konnect-konghq-com-v1alpha1-types-identityproviderloginpath)_ | The path used for initiating login requests with the identity provider. |
 | `type` _[IdentityProviderType](#konnect-konghq-com-v1alpha1-types-identityprovidertype)_ | Specifies the type of identity provider. |
 
 _Appears in:_
@@ -1317,8 +1324,8 @@ Only one of the fields should be set based on the Type.
 | Field | Description |
 | --- | --- |
 | `type` _[IdentityProviderRequestConfigType](#konnect-konghq-com-v1alpha1-types-identityproviderrequestconfigtype)_ | Type designates the type of configuration. |
-| `OIDC` _[OIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderconfig)_ | OIDC configuration. |
-| `SAML` _[SAMLIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-samlidentityproviderconfig)_ | SAML configuration. |
+| `oIDC` _[OIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderconfig)_ | OIDC configuration. |
+| `sAML` _[SAMLIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-samlidentityproviderconfig)_ | SAML configuration. |
 
 _Appears in:_
 
@@ -1341,8 +1348,8 @@ Allowed values:
 
 | Value | Description |
 | --- | --- |
-| `OIDC` |  |
-| `SAML` |  |
+| `oIDC` |  |
+| `sAML` |  |
 
 
 
@@ -1355,7 +1362,7 @@ IdentityProviderRequestSpec defines the desired state of IdentityProviderRequest
 
 | Field | Description |
 | --- | --- |
-| `portal_ref` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | PortalRef is the reference to the parent Portal object. |
+| `portalRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | PortalRef is the reference to the parent Portal object. |
 | `apiSpec` _[IdentityProviderRequestAPISpec](#konnect-konghq-com-v1alpha1-types-identityproviderrequestapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -1644,6 +1651,7 @@ _Appears in:_
 - [EventGatewayVirtualClusterStatus](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterstatus)
 - [IdentityProviderRequestStatus](#konnect-konghq-com-v1alpha1-types-identityproviderrequeststatus)
 - [KonnectEventDataPlaneCertificateStatus](#konnect-konghq-com-v1alpha1-types-konnecteventdataplanecertificatestatus)
+- [PortalEmailConfigStatus](#konnect-konghq-com-v1alpha1-types-portalemailconfigstatus)
 - [PortalPageStatus](#konnect-konghq-com-v1alpha1-types-portalpagestatus)
 - [PortalTeamStatus](#konnect-konghq-com-v1alpha1-types-portalteamstatus)
 
@@ -1675,7 +1683,7 @@ KonnectEventDataPlaneCertificateSpec defines the desired state of KonnectEventDa
 
 | Field | Description |
 | --- | --- |
-| `gateway_ref` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. |
+| `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. |
 | `type` _[SensitiveDataSourceType](#konnect-konghq-com-v1alpha1-types-sensitivedatasourcetype)_ | Type indicates the source of the sensitive data. Can be 'inline' or 'secretRef'. |
 | `apiSpec` _[KonnectEventDataPlaneCertificateAPISpec](#konnect-konghq-com-v1alpha1-types-konnecteventdataplanecertificateapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 | `secretRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | SecretRef is a reference to a Kubernetes Secret containing the sensitive data. This field is used when type is 'secretRef'. The Secret must contain the relevant data keys for this resource. |
@@ -1712,7 +1720,7 @@ KonnectEventGatewayAPISpec defines the API spec fields for KonnectEventGateway.
 | --- | --- |
 | `description` _[GatewayDescription](#konnect-konghq-com-v1alpha1-types-gatewaydescription)_ | A human-readable description of the Gateway. |
 | `labels` _[Labels](#konnect-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
-| `min_runtime_version` _[MinRuntimeVersion](#konnect-konghq-com-v1alpha1-types-minruntimeversion)_ | The minimum runtime version supported by the API. This is the lowest version of the data plane release that can be used with the entity model. When not specified, the minimum runtime version will be pinned to the latest available release. |
+| `minRuntimeVersion` _[MinRuntimeVersion](#konnect-konghq-com-v1alpha1-types-minruntimeversion)_ | The minimum runtime version supported by the API. This is the lowest version of the data plane release that can be used with the entity model. When not specified, the minimum runtime version will be pinned to the latest available release. |
 | `name` _[GatewayName](#konnect-konghq-com-v1alpha1-types-gatewayname)_ | The name of the Gateway. |
 
 _Appears in:_
@@ -2173,10 +2181,10 @@ data for the OIDC authentication integration.
 
 | Field | Description |
 | --- | --- |
-| `claim_mappings` _[OIDCIdentityProviderClaimMappings](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclaimmappings)_ | Defines the mappings between OpenID Connect (OIDC) claims and local claims used by your application for authentication. |
-| `client_id` _[OIDCIdentityProviderClientID](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclientid)_ | The client ID assigned to your application by the identity provider. |
-| `client_secret` _[OIDCIdentityProviderClientSecret](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclientsecret)_ | The Client Secret assigned to your application by the identity provider. |
-| `issuer_url` _[OIDCIdentityProviderIssuer](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderissuer)_ | The issuer URI of the identity provider. This is the URL where the provider's metadata can be obtained. |
+| `claimMappings` _[OIDCIdentityProviderClaimMappings](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclaimmappings)_ | Defines the mappings between OpenID Connect (OIDC) claims and local claims used by your application for authentication. |
+| `clientID` _[OIDCIdentityProviderClientID](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclientid)_ | The client ID assigned to your application by the identity provider. |
+| `clientSecret` _[OIDCIdentityProviderClientSecret](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclientsecret)_ | The Client Secret assigned to your application by the identity provider. |
+| `issuerURL` _[OIDCIdentityProviderIssuer](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderissuer)_ | The issuer URI of the identity provider. This is the URL where the provider's metadata can be obtained. |
 | `scopes` _[]string_ | The scopes requested by your application when authenticating with the identity provider. |
 
 _Appears in:_
@@ -2267,22 +2275,73 @@ PortalAPISpec defines the API spec fields for Portal.
 
 | Field | Description |
 | --- | --- |
-| `authentication_enabled` _string_ | Whether the portal supports developer authentication. If disabled, developers cannot register for accounts or create applications. |
-| `auto_approve_applications` _string_ | Whether requests from applications to register for APIs will be automatically approved, or if they will be set to pending until approved by an admin. |
-| `auto_approve_developers` _string_ | Whether developer account registrations will be automatically approved, or if they will be set to pending until approved by an admin. |
-| `default_api_visibility` _string_ | The default visibility of APIs in the portal. If set to `public`, newly published APIs are visible to unauthenticated developers. If set to `private`, newly published APIs are hidden from unauthenticated developers. |
-| `default_application_auth_strategy_id_ref` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | The default authentication strategy for APIs published to the portal. Newly published APIs will use this authentication strategy unless overridden during publication. If set to `null`, API publications will not use an authentication strategy unless set during publication. |
-| `default_page_visibility` _string_ | The default visibility of pages in the portal. If set to `public`, newly created pages are visible to unauthenticated developers. If set to `private`, newly created pages are hidden from unauthenticated developers. |
+| `authenticationEnabled` _string_ | Whether the portal supports developer authentication. If disabled, developers cannot register for accounts or create applications. |
+| `autoApproveApplications` _string_ | Whether requests from applications to register for APIs will be automatically approved, or if they will be set to pending until approved by an admin. |
+| `autoApproveDevelopers` _string_ | Whether developer account registrations will be automatically approved, or if they will be set to pending until approved by an admin. |
+| `defaultAPIVisibility` _string_ | The default visibility of APIs in the portal. If set to `public`, newly published APIs are visible to unauthenticated developers. If set to `private`, newly published APIs are hidden from unauthenticated developers. |
+| `defaultApplicationAuthStrategyIDRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | The default authentication strategy for APIs published to the portal. Newly published APIs will use this authentication strategy unless overridden during publication. If set to `null`, API publications will not use an authentication strategy unless set during publication. |
+| `defaultPageVisibility` _string_ | The default visibility of pages in the portal. If set to `public`, newly created pages are visible to unauthenticated developers. If set to `private`, newly created pages are hidden from unauthenticated developers. |
 | `description` _*string_ | A description of the portal. |
-| `display_name` _string_ | The display name of the portal. This value will be the portal's `name` in Portal API. |
+| `displayName` _string_ | The display name of the portal. This value will be the portal's `name` in Portal API. |
 | `labels` _[LabelsUpdate](#konnect-konghq-com-v1alpha1-types-labelsupdate)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Labels are intended to store **INTERNAL** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `name` _string_ | The name of the portal, used to distinguish it from other portals. Name must be unique. |
-| `rbac_enabled` _string_ | Whether the portal resources are protected by Role Based Access Control (RBAC). If enabled, developers view or register for APIs until unless assigned to teams with access to view and consume specific APIs. Authentication must be enabled to use RBAC. |
-| `sipr_enabled` _string_ | Whether ip allow list is enabled for the portal. |
+| `rbacEnabled` _string_ | Whether the portal resources are protected by Role Based Access Control (RBAC). If enabled, developers view or register for APIs until unless assigned to teams with access to view and consume specific APIs. Authentication must be enabled to use RBAC. |
+| `siprEnabled` _string_ | Whether ip allow list is enabled for the portal. |
 
 _Appears in:_
 
 - [PortalSpec](#konnect-konghq-com-v1alpha1-types-portalspec)
+
+#### PortalEmailConfigAPISpec
+
+
+PortalEmailConfigAPISpec defines the API spec fields for PortalEmailConfig.
+
+
+
+| Field | Description |
+| --- | --- |
+| `domainName` _*string_ | The domain name to use for sending emails. Null means default. |
+| `fromEmail` _*string_ | The email address to use in the 'From' field. |
+| `fromName` _*string_ | The name to display in the 'From' field of emails. |
+| `replyToEmail` _*string_ | The email address to use in the 'Reply-To' field. 'Reply-To' header is omitted if omitted or null. |
+
+_Appears in:_
+
+- [PortalEmailConfigSpec](#konnect-konghq-com-v1alpha1-types-portalemailconfigspec)
+
+#### PortalEmailConfigSpec
+
+
+PortalEmailConfigSpec defines the desired state of PortalEmailConfig.
+
+
+
+| Field | Description |
+| --- | --- |
+| `portalRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | PortalRef is the reference to the parent Portal object. |
+| `apiSpec` _[PortalEmailConfigAPISpec](#konnect-konghq-com-v1alpha1-types-portalemailconfigapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [PortalEmailConfig](#konnect-konghq-com-v1alpha1-portalemailconfig)
+
+#### PortalEmailConfigStatus
+
+
+PortalEmailConfigStatus defines the observed state of PortalEmailConfig.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `portalID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | PortalID is the Konnect ID of the parent Portal. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [PortalEmailConfig](#konnect-konghq-com-v1alpha1-portalemailconfig)
 
 #### PortalPageAPISpec
 
@@ -2295,7 +2354,7 @@ PortalPageAPISpec defines the API spec fields for PortalPage.
 | --- | --- |
 | `content` _[PageContent](#konnect-konghq-com-v1alpha1-types-pagecontent)_ | The renderable markdown content of a page in a portal. |
 | `description` _[Description](#konnect-konghq-com-v1alpha1-types-description)_ |  |
-| `parent_page_id_ref` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | Pages may be rendered as a tree of files.<br /><br />Specify the `id` of another page as the `parent_page_id` to add some hierarchy to your pages. |
+| `parentPageIDRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | Pages may be rendered as a tree of files.<br /><br />Specify the `id` of another page as the `parent_page_id` to add some hierarchy to your pages. |
 | `slug` _[PageSlug](#konnect-konghq-com-v1alpha1-types-pageslug)_ | The slug of a page in a portal, used to compute its full URL path within the portal hierarchy. When a page has a `parent_page_id`, its full path is built by joining the parent’s slug with its own. For example, if a parent page has the slug `slug1` and this page’s slug is `slug2`, the resulting path will be `/slug1/slug2`. This enables nested page structures like `/slug1/slug2/slug3`. |
 | `status` _[PublishedStatus](#konnect-konghq-com-v1alpha1-types-publishedstatus)_ | Whether the resource is visible on a given portal. Defaults to unpublished. |
 | `title` _[PageTitle](#konnect-konghq-com-v1alpha1-types-pagetitle)_ | The title of a page in a portal. |
@@ -2314,7 +2373,7 @@ PortalPageSpec defines the desired state of PortalPage.
 
 | Field | Description |
 | --- | --- |
-| `portal_ref` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | PortalRef is the reference to the parent Portal object. |
+| `portalRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | PortalRef is the reference to the parent Portal object. |
 | `apiSpec` _[PortalPageAPISpec](#konnect-konghq-com-v1alpha1-types-portalpageapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -2384,7 +2443,7 @@ PortalTeamAPISpec defines the API spec fields for PortalTeam.
 
 | Field | Description |
 | --- | --- |
-| `can_own_applications` _string_ | Whether the team is allowed to own applications |
+| `canOwnApplications` _string_ | Whether the team is allowed to own applications |
 | `description` _string_ |  |
 | `name` _string_ |  |
 
@@ -2403,7 +2462,7 @@ PortalTeamSpec defines the desired state of PortalTeam.
 
 | Field | Description |
 | --- | --- |
-| `portal_ref` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | PortalRef is the reference to the parent Portal object. |
+| `portalRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | PortalRef is the reference to the parent Portal object. |
 | `apiSpec` _[PortalTeamAPISpec](#konnect-konghq-com-v1alpha1-types-portalteamapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -2471,8 +2530,8 @@ data for the SAML authentication integration.
 
 | Field | Description |
 | --- | --- |
-| `idp_metadata_url` _[SAMLIdentityProviderMetadataURL](#konnect-konghq-com-v1alpha1-types-samlidentityprovidermetadataurl)_ | The identity provider's metadata URL where the identity provider's metadata can be obtained. |
-| `idp_metadata_xml` _[SAMLIdentityProviderMetadata](#konnect-konghq-com-v1alpha1-types-samlidentityprovidermetadata)_ | The identity provider's SAML metadata. If the identity provider supports a metadata URL, you can use the `idp_metadata_url` field instead. |
+| `idpMetadataURL` _[SAMLIdentityProviderMetadataURL](#konnect-konghq-com-v1alpha1-types-samlidentityprovidermetadataurl)_ | The identity provider's metadata URL where the identity provider's metadata can be obtained. |
+| `idpMetadataXML` _[SAMLIdentityProviderMetadata](#konnect-konghq-com-v1alpha1-types-samlidentityprovidermetadata)_ | The identity provider's SAML metadata. If the identity provider supports a metadata URL, you can use the `idp_metadata_url` field instead. |
 
 _Appears in:_
 
@@ -2674,9 +2733,6 @@ VirtualClusterAuthenticationAnonymous is a type alias.
 
 
 
-| Field | Description |
-| --- | --- |
-| `type` _string_ |  |
 
 _Appears in:_
 
@@ -2722,9 +2778,6 @@ authentication scheme for the virtual cluster.<br /><br />**Requires a minimum r
 
 
 
-| Field | Description |
-| --- | --- |
-| `type` _string_ |  |
 
 _Appears in:_
 
@@ -2740,7 +2793,7 @@ token signatures.
 
 | Field | Description |
 | --- | --- |
-| `cache_expiration` _string_ | Duration after which the gateway will fetch and cache JWKS. |
+| `cacheExpiration` _string_ | Duration after which the gateway will fetch and cache JWKS. |
 | `endpoint` _string_ | URL for JWKS endpoint. |
 | `timeout` _string_ | Total time from establishing connection to receive a response from JWKS endpoint. |
 
@@ -2758,10 +2811,9 @@ for the virtual cluster.
 
 | Field | Description |
 | --- | --- |
-| `claims_mapping` _[VirtualClusterAuthenticationClaimsMapping](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationclaimsmapping)_ | Maps JWT claims in the case when sub and scope are presented as different claims in your JWT token. |
+| `claimsMapping` _[VirtualClusterAuthenticationClaimsMapping](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationclaimsmapping)_ | Maps JWT claims in the case when sub and scope are presented as different claims in your JWT token. |
 | `jwks` _[VirtualClusterAuthenticationJWKS](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationjwks)_ | JSON Web Key Set configuration for verifying token signatures. |
 | `mediation` _string_ | Methods to mediate authentication: * passthrough - pass authentication from the client through proxy to the backend cluster without any kind of<br /><br />validation * validate_forward - pass authentication from the client through proxy to the backend cluster.<br /><br />Proxy does the validation before forwarding it to the client. * terminate - terminate authentication at the proxy level and originate authentication to the backend cluster<br /><br />using the configuration defined at BackendCluster's authentication. SASL auth is not originated if authentication on the backend_cluster is not configured. |
-| `type` _string_ |  |
 | `validate` _[VirtualClusterAuthenticationValidate](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationvalidate)_ | Validation rules. |
 
 _Appears in:_
@@ -2797,7 +2849,6 @@ the virtual cluster containing principals with username and password.
 | --- | --- |
 | `mediation` _string_ | The mediation type for SASL/PLAIN authentication. |
 | `principals` _[VirtualClusterAuthenticationPrincipal](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationprincipal)_ | List of principals to be able to authenticate with, used with `terminate` mediation. |
-| `type` _string_ |  |
 
 _Appears in:_
 
@@ -2814,7 +2865,6 @@ the virtual cluster.
 | Field | Description |
 | --- | --- |
 | `algorithm` _string_ | The algorithm used for SASL/SCRAM authentication. |
-| `type` _string_ |  |
 
 _Appears in:_
 
@@ -2832,10 +2882,10 @@ Only one of the fields should be set based on the Type.
 | --- | --- |
 | `type` _[VirtualClusterAuthenticationSchemeType](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationschemetype)_ | Type designates the type of configuration. |
 | `anonymous` _[VirtualClusterAuthenticationAnonymous](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationanonymous)_ | Anonymous configuration. |
-| `client_certificate` _[VirtualClusterAuthenticationClientCertificate](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationclientcertificate)_ | ClientCertificate configuration. |
-| `oauth_bearer` _[VirtualClusterAuthenticationOauthBearer](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationoauthbearer)_ | OauthBearer configuration. |
-| `sasl_plain` _[VirtualClusterAuthenticationSaslPlain](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationsaslplain)_ | SaslPlain configuration. |
-| `sasl_scram` _[VirtualClusterAuthenticationSaslScram](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationsaslscram)_ | SaslScram configuration. |
+| `clientCertificate` _[VirtualClusterAuthenticationClientCertificate](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationclientcertificate)_ | ClientCertificate configuration. |
+| `oauthBearer` _[VirtualClusterAuthenticationOauthBearer](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationoauthbearer)_ | OauthBearer configuration. |
+| `saslPlain` _[VirtualClusterAuthenticationSaslPlain](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationsaslplain)_ | SaslPlain configuration. |
+| `saslScram` _[VirtualClusterAuthenticationSaslScram](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationsaslscram)_ | SaslScram configuration. |
 
 _Appears in:_
 
@@ -2859,10 +2909,10 @@ Allowed values:
 | Value | Description |
 | --- | --- |
 | `anonymous` |  |
-| `client_certificate` |  |
-| `oauth_bearer` |  |
-| `sasl_plain` |  |
-| `sasl_scram` |  |
+| `clientCertificate` |  |
+| `oauthBearer` |  |
+| `saslPlain` |  |
+| `saslScram` |  |
 
 #### VirtualClusterAuthenticationValidate
 
@@ -2940,7 +2990,7 @@ VirtualClusterNamespaceAdditionalProperties is a type alias.
 
 | Field | Description |
 | --- | --- |
-| `consumer_groups` _[VirtualClusterNamespaceIDSelector](#konnect-konghq-com-v1alpha1-types-virtualclusternamespaceidselector)_ | Consumer group IDs to expose even if they don't start with the namespace prefix. |
+| `consumerGroups` _[VirtualClusterNamespaceIDSelector](#konnect-konghq-com-v1alpha1-types-virtualclusternamespaceidselector)_ | Consumer group IDs to expose even if they don't start with the namespace prefix. |
 | `topics` _[VirtualClusterNamespaceTopicSelector](#konnect-konghq-com-v1alpha1-types-virtualclusternamespacetopicselector)_ | Additional backend topics to expose even if they don't match the namespace prefix. The topics are not affected by the hide/enforce prefix mode. If the client tries to create a topic that matches this list, the request is rejected. |
 
 _Appears in:_
@@ -2974,7 +3024,6 @@ VirtualClusterNamespaceIDSelectorGlob is a type alias.
 | Field | Description |
 | --- | --- |
 | `glob` _string_ | Expose any id that matches this glob pattern (e.g., `my_id_*`). |
-| `type` _string_ |  |
 
 _Appears in:_
 
@@ -2997,7 +3046,7 @@ Allowed values:
 
 | Value | Description |
 | --- | --- |
-| `exact_list` |  |
+| `exactList` |  |
 | `glob` |  |
 
 #### VirtualClusterNamespaceTopicSelector
@@ -3028,7 +3077,6 @@ VirtualClusterNamespaceTopicSelectorGlob is a type alias.
 | --- | --- |
 | `conflict` _string_ | How to inform the user about conflicts where multiple backend topics would map to the same virtual topic name. * warn - log in the Event Gateway logs. Additionally, it sets knep_namespace_topic_conflict to 1. * ignore - do not do anything. It does not cause knep_namespace_topic_conflict metric to be set to 1. |
 | `glob` _string_ | Expose any backend topic that matches this glob pattern (e.g., `operations_data_*`). |
-| `type` _string_ |  |
 
 _Appears in:_
 
@@ -3051,7 +3099,7 @@ Allowed values:
 
 | Value | Description |
 | --- | --- |
-| `exact_list` |  |
+| `exactList` |  |
 | `glob` |  |
 
 #### VirtualClusterReference

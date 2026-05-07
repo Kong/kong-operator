@@ -15,8 +15,8 @@ func TestBackendClusterAuthenticationSchemeUnmarshalJSON_NilReceiver(t *testing.
 		payload []byte
 	}{
 		{name: "anonymous", payload: []byte("{\"type\":\"anonymous\",\"anonymous\":{}}")},
-		{name: "sasl_plain", payload: []byte("{\"type\":\"sasl_plain\",\"sasl_plain\":{}}")},
-		{name: "sasl_scram", payload: []byte("{\"type\":\"sasl_scram\",\"sasl_scram\":{}}")},
+		{name: "sasl_plain", payload: []byte("{\"type\":\"saslPlain\",\"saslPlain\":{}}")},
+		{name: "sasl_scram", payload: []byte("{\"type\":\"saslScram\",\"saslScram\":{}}")},
 	}
 
 	for _, tt := range tests {
@@ -43,7 +43,7 @@ func TestForwardToVirtualClusterPolicyConfigUnmarshalJSON_NilReceiver(t *testing
 		name    string
 		payload []byte
 	}{
-		{name: "port_mapping", payload: []byte("{\"type\":\"port_mapping\",\"port_mapping\":{}}")},
+		{name: "port_mapping", payload: []byte("{\"type\":\"portMapping\",\"portMapping\":{}}")},
 		{name: "sni", payload: []byte("{\"type\":\"sni\",\"sni\":{}}")},
 	}
 
@@ -72,10 +72,10 @@ func TestVirtualClusterAuthenticationSchemeUnmarshalJSON_NilReceiver(t *testing.
 		payload []byte
 	}{
 		{name: "anonymous", payload: []byte("{\"type\":\"anonymous\",\"anonymous\":{}}")},
-		{name: "client_certificate", payload: []byte("{\"type\":\"client_certificate\",\"client_certificate\":{}}")},
-		{name: "oauth_bearer", payload: []byte("{\"type\":\"oauth_bearer\",\"oauth_bearer\":{}}")},
-		{name: "sasl_plain", payload: []byte("{\"type\":\"sasl_plain\",\"sasl_plain\":{}}")},
-		{name: "sasl_scram", payload: []byte("{\"type\":\"sasl_scram\",\"sasl_scram\":{}}")},
+		{name: "client_certificate", payload: []byte("{\"type\":\"clientCertificate\",\"clientCertificate\":{}}")},
+		{name: "oauth_bearer", payload: []byte("{\"type\":\"oauthBearer\",\"oauthBearer\":{}}")},
+		{name: "sasl_plain", payload: []byte("{\"type\":\"saslPlain\",\"saslPlain\":{}}")},
+		{name: "sasl_scram", payload: []byte("{\"type\":\"saslScram\",\"saslScram\":{}}")},
 	}
 
 	for _, tt := range tests {
@@ -102,7 +102,7 @@ func TestVirtualClusterNamespaceIDSelectorUnmarshalJSON_NilReceiver(t *testing.T
 		name    string
 		payload []byte
 	}{
-		{name: "exact_list", payload: []byte("{\"type\":\"exact_list\",\"exact_list\":{}}")},
+		{name: "exact_list", payload: []byte("{\"type\":\"exactList\",\"exactList\":{}}")},
 		{name: "glob", payload: []byte("{\"type\":\"glob\",\"glob\":{}}")},
 	}
 
@@ -130,7 +130,7 @@ func TestVirtualClusterNamespaceTopicSelectorUnmarshalJSON_NilReceiver(t *testin
 		name    string
 		payload []byte
 	}{
-		{name: "exact_list", payload: []byte("{\"type\":\"exact_list\",\"exact_list\":{}}")},
+		{name: "exact_list", payload: []byte("{\"type\":\"exactList\",\"exactList\":{}}")},
 		{name: "glob", payload: []byte("{\"type\":\"glob\",\"glob\":{}}")},
 	}
 
@@ -161,7 +161,7 @@ func TestForwardToVirtualClusterPolicyUnmarshalJSON_DecodesUnionFields(t *testin
 	}{
 		{
 			name: "Config/port_mapping",
-			payload: []byte("{\"config\":{\"type\":\"port_mapping\",\"port_mapping\":{}}}"),
+			payload: []byte("{\"config\":{\"type\":\"portMapping\",\"portMapping\":{}}}"),
 			assert: func(t *testing.T, target ForwardToVirtualClusterPolicy) {
 				t.Helper()
 				if target.Config == nil {

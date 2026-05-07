@@ -1,6 +1,7 @@
 package metadata
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -16,13 +17,17 @@ import (
 
 const (
 	// Annotation constants matching those in the ingress controller.
-	annotationPrefix = "konghq.com"
-	stripPathKey     = "/strip-path"
-	preserveHostKey  = "/preserve-host"
-	protocolKey      = "/protocol"
+	annotationPrefix  = "konghq.com"
+	stripPathKey      = "/strip-path"
+	preserveHostKey   = "/preserve-host"
+	protocolKey       = "/protocol"
+	pathKey           = "/path"
+	tlsVerifyKey      = "/tls-verify"
+	tlsVerifyDepthKey = "/tls-verify-depth"
+	connectTimeoutKey = "/connect-timeout"
 	readTimeoutKey   = "/read-timeout"
-	kindHTTPRoute    = "HTTPRoute"
-	kindTLSRoute     = "TLSRoute"
+	kindHTTPRoute     = "HTTPRoute"
+	kindTLSRoute      = "TLSRoute"
 )
 
 // Defaults for the annotations when not specified that match the behavior of on-prem.
@@ -61,22 +66,57 @@ func ExtractProtocol(anns map[string]string) string {
 	return anns[annotationPrefix+protocolKey]
 }
 
+// ExtractPath extracts the konghq.com/path annotation value.
+// Returns an empty string if the annotation is not present.
+// This mirrors ingress-controller/internal/annotations.ExtractPath.
+func ExtractPath(anns map[string]string) string {
+	return anns[annotationPrefix+pathKey]
+}
+
+// ExtractTLSVerify extracts the tls-verify annotation value.
+// Returns a *bool set to the parsed value when the annotation is present and parseable,
+// or nil when absent or unparseable.
+// This mirrors ingress-controller/internal/annotations.ExtractTLSVerify.
+func ExtractTLSVerify(anns map[string]string) *bool {
+	v, ok := parseAnnotationBool(anns, tlsVerifyKey)
+	if !ok {
+		return nil
+	}
+	return &v
+}
+
+// ExtractTLSVerifyDepth extracts the tls-verify-depth annotation value.
+// Returns a *int64 set to the parsed value when the annotation is present and parseable as a
+// non-negative integer, or nil when absent or unparseable.
+// This mirrors ingress-controller/internal/annotations.ExtractTLSVerifyDepth.
+func ExtractTLSVerifyDepth(anns map[string]string) *int64 {
+	depth, err := parseAnnotationInt(anns, tlsVerifyDepthKey)
+	if err != nil {
+		return nil
+	}
+	return depth
+}
+
+// ExtractConnectTimeout extracts the connect-timeout annotation value (milliseconds).
+// Returns a non-nil pointer when the annotation is present and parseable as a non-negative integer.
+// This mirrors ingress-controller/internal/annotations.ExtractConnectTimeout.
+func ExtractConnectTimeout(anns map[string]string) *int64 {
+	timeout, err := parseAnnotationInt(anns, connectTimeoutKey)
+	if err != nil {
+		return nil
+	}
+	return timeout
+}
+
 // ExtractReadTimeout extracts the read-timeout annotation value (milliseconds).
 // Returns a non-nil pointer when the annotation is present and parseable as a non-negative integer.
 // This mirrors ingress-controller/internal/annotations.ExtractReadTimeout.
 func ExtractReadTimeout(anns map[string]string) *int64 {
-	if anns == nil {
+	timeout, err := parseAnnotationInt(anns, connectTimeoutKey)
+	if err != nil {
 		return nil
 	}
-	val, ok := anns[annotationPrefix+readTimeoutKey]
-	if !ok || val == "" {
-		return nil
-	}
-	timeout, err := strconv.ParseInt(val, 10, 64)
-	if err != nil || timeout < 0 {
-		return nil
-	}
-	return &timeout
+	return timeout
 }
 
 // IsValidProtocol returns true if the provided protocol is a valid Kong upstream protocol.
@@ -106,6 +146,24 @@ func parseAnnotationBool(anns map[string]string, key string) (enabled bool, ok b
 	}
 
 	return parsedVal, true
+}
+
+func parseAnnotationInt(anns map[string]string, key string) (*int64, error) {
+	if anns == nil {
+		return nil, nil
+	}
+	val, ok := anns[annotationPrefix+key]
+	if !ok || val == "" {
+		return nil, nil
+	}
+	parsed, err := strconv.ParseInt(val, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	if parsed < 0 {
+		return nil, fmt.Errorf("annotation %s%s must be non-negative, got %d", annotationPrefix, key, parsed)
+	}
+	return &parsed, nil
 }
 
 // BuildAnnotations creates the standard annotations map for Kong resources managed by Gateway API objects.

@@ -79,3 +79,8 @@ func (obj *EventGatewayListenerPolicy) GetEventGatewayListenerRef() commonv1alph
 func (obj *EventGatewayListenerPolicy) GetListenerRef() commonv1alpha1.ObjectRef {
 	return obj.Spec.EventGatewayListenerRef
 }
+
+// GetParentRef returns the reference to the parent entity.
+func (obj *EventGatewayListenerPolicy) GetParentRef() commonv1alpha1.ObjectRef {
+	return obj.GetEventGatewayListenerRef()
+}

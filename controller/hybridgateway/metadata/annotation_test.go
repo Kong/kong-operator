@@ -950,6 +950,192 @@ func TestExtractProtocol(t *testing.T) {
 	}
 }
 
+func TestExtractPath(t *testing.T) {
+	tests := []struct {
+		name        string
+		annotations map[string]string
+		expected    string
+	}{
+		{name: "nil annotations", annotations: nil, expected: ""},
+		{name: "empty annotations", annotations: map[string]string{}, expected: ""},
+		{name: "path present", annotations: map[string]string{"konghq.com/path": "/api/v1"}, expected: "/api/v1"},
+		{name: "empty path value", annotations: map[string]string{"konghq.com/path": ""}, expected: ""},
+		{name: "other annotations only", annotations: map[string]string{"konghq.com/protocol": "http"}, expected: ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, ExtractPath(tt.annotations))
+		})
+	}
+}
+
+func TestExtractTLSVerify(t *testing.T) {
+	tests := []struct {
+		name        string
+		annotations map[string]string
+		expected    *bool
+	}{
+		{name: "nil annotations", annotations: nil, expected: nil},
+		{name: "empty annotations", annotations: map[string]string{}, expected: nil},
+		{name: "tls-verify true", annotations: map[string]string{"konghq.com/tls-verify": "true"}, expected: new(true)},
+		{name: "tls-verify false", annotations: map[string]string{"konghq.com/tls-verify": "false"}, expected: new(false)},
+		{name: "invalid value", annotations: map[string]string{"konghq.com/tls-verify": "invalid"}, expected: nil},
+		{name: "empty value", annotations: map[string]string{"konghq.com/tls-verify": ""}, expected: nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ExtractTLSVerify(tt.annotations)
+			if tt.expected == nil {
+				assert.Nil(t, got)
+			} else {
+				require.NotNil(t, got)
+				assert.Equal(t, *tt.expected, *got)
+			}
+		})
+	}
+}
+
+func TestExtractTLSVerifyDepth(t *testing.T) {
+	tests := []struct {
+		name        string
+		annotations map[string]string
+		expected    *int64
+	}{
+		{name: "nil annotations", annotations: nil, expected: nil},
+		{name: "empty annotations", annotations: map[string]string{}, expected: nil},
+		{name: "valid depth", annotations: map[string]string{"konghq.com/tls-verify-depth": "3"}, expected: new(int64(3))},
+		{name: "zero depth", annotations: map[string]string{"konghq.com/tls-verify-depth": "0"}, expected: new(int64(0))},
+		{name: "negative depth treated as invalid", annotations: map[string]string{"konghq.com/tls-verify-depth": "-1"}, expected: nil},
+		{name: "non-numeric value", annotations: map[string]string{"konghq.com/tls-verify-depth": "abc"}, expected: nil},
+		{name: "empty value", annotations: map[string]string{"konghq.com/tls-verify-depth": ""}, expected: nil},
+		{name: "other annotations only", annotations: map[string]string{"konghq.com/protocol": "https"}, expected: nil},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ExtractTLSVerifyDepth(tt.annotations)
+			if tt.expected == nil {
+				assert.Nil(t, got)
+			} else {
+				require.NotNil(t, got)
+				assert.Equal(t, *tt.expected, *got)
+			}
+		})
+	}
+}
+
+func TestExtractConnectTimeout(t *testing.T) {
+	tests := []struct {
+		name        string
+		annotations map[string]string
+		expected    *int64
+	}{
+		{name: "nil annotations", annotations: nil, expected: nil},
+		{name: "empty annotations", annotations: map[string]string{}, expected: nil},
+		{name: "valid timeout", annotations: map[string]string{"konghq.com/connect-timeout": "5000"}, expected: new(int64(5000))},
+		{name: "zero timeout", annotations: map[string]string{"konghq.com/connect-timeout": "0"}, expected: new(int64(0))},
+		{name: "negative invalid", annotations: map[string]string{"konghq.com/connect-timeout": "-1"}, expected: nil},
+		{name: "non-numeric", annotations: map[string]string{"konghq.com/connect-timeout": "abc"}, expected: nil},
+		{name: "empty value", annotations: map[string]string{"konghq.com/connect-timeout": ""}, expected: nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := ExtractConnectTimeout(tt.annotations)
+			if tt.expected == nil {
+				assert.Nil(t, v)
+			} else {
+				require.NotNil(t, v)
+				assert.Equal(t, *tt.expected, *v)
+			}
+		})
+	}
+}
+
+func TestParseAnnotationInt(t *testing.T) {
+	tests := []struct {
+		name        string
+		annotations map[string]string
+		key         string
+		expectedVal *int64
+		expectErr   bool
+	}{
+		{
+			name:        "nil annotations",
+			annotations: nil,
+			key:         connectTimeoutKey,
+			expectedVal: nil,
+			expectErr:   false,
+		},
+		{
+			name:        "empty annotations",
+			annotations: map[string]string{},
+			key:         connectTimeoutKey,
+			expectedVal: nil,
+			expectErr:   false,
+		},
+		{
+			name:        "key absent",
+			annotations: map[string]string{"konghq.com/protocol": "https"},
+			key:         connectTimeoutKey,
+			expectedVal: nil,
+			expectErr:   false,
+		},
+		{
+			name:        "empty value",
+			annotations: map[string]string{annotationPrefix + connectTimeoutKey: ""},
+			key:         connectTimeoutKey,
+			expectedVal: nil,
+			expectErr:   false,
+		},
+		{
+			name:        "valid positive value",
+			annotations: map[string]string{annotationPrefix + connectTimeoutKey: "5000"},
+			key:         connectTimeoutKey,
+			expectedVal: new(int64(5000)),
+			expectErr:   false,
+		},
+		{
+			name:        "zero value",
+			annotations: map[string]string{annotationPrefix + connectTimeoutKey: "0"},
+			key:         connectTimeoutKey,
+			expectedVal: new(int64(0)),
+			expectErr:   false,
+		},
+		{
+			name:        "negative value",
+			annotations: map[string]string{annotationPrefix + connectTimeoutKey: "-1"},
+			key:         connectTimeoutKey,
+			expectedVal: nil,
+			expectErr:   true,
+		},
+		{
+			name:        "non-numeric value",
+			annotations: map[string]string{annotationPrefix + connectTimeoutKey: "abc"},
+			key:         connectTimeoutKey,
+			expectedVal: nil,
+			expectErr:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := parseAnnotationInt(tt.annotations, tt.key)
+			if tt.expectErr {
+				require.Error(t, err)
+				assert.Nil(t, got)
+			} else {
+				require.NoError(t, err)
+				if tt.expectedVal == nil {
+					assert.Nil(t, got)
+				} else {
+					require.NotNil(t, got)
+					assert.Equal(t, *tt.expectedVal, *got)
+				}
+			}
+		})
+	}
+}
+
 func TestExtractReadTimeout(t *testing.T) {
 	tests := []struct {
 		name        string

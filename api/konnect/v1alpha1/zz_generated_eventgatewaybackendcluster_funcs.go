@@ -91,3 +91,8 @@ func (obj *EventGatewayBackendCluster) GetGatewayRef() commonv1alpha1.ObjectRef 
 func (obj *EventGatewayBackendCluster) GetEventGatewayRef() commonv1alpha1.ObjectRef {
 	return obj.Spec.GatewayRef
 }
+
+// GetParentRef returns the reference to the parent entity.
+func (obj *EventGatewayBackendCluster) GetParentRef() commonv1alpha1.ObjectRef {
+	return obj.GetEventGatewayRef()
+}

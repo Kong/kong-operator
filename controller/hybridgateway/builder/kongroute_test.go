@@ -315,7 +315,7 @@ func TestKongRouteBuilder_WithStripPath(t *testing.T) {
 		{
 			name:      "strip path true",
 			stripPath: true,
-			expected:  &[]bool{true}[0],
+			expected:  new(true),
 		},
 		{
 			name:      "strip path false",

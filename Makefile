@@ -607,6 +607,7 @@ _test.envtest: gotestsum setup-envtest
 		-timeout $(ENVTEST_TIMEOUT) \
 		-covermode=atomic \
 		-coverpkg=$(PKG_LIST) \
+		-parallel $(GO_TEST_PARALLEL) \
 		-coverprofile=coverage.envtest.out \
 		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS)" \
 		$(ENVTEST_TEST_PATHS)
@@ -621,11 +622,15 @@ test.envtest.pretty:
 
 .PHONY: test.crds-validation
 test.crds-validation:
-	$(MAKE) _test.envtest GOTESTSUM_FORMAT=standard-verbose ENVTEST_TEST_PATHS=./test/crdsvalidation/...
+	$(MAKE) _test.envtest \
+		GOTESTSUM_FORMAT=standard-verbose \
+		ENVTEST_TEST_PATHS=./test/crdsvalidation/...
 
 .PHONY: test.crds-validation.pretty
 test.crds-validation.pretty:
-	$(MAKE) _test.envtest GOTESTSUM_FORMAT=testname ENVTEST_TEST_PATHS=./test/crdsvalidation/...
+	$(MAKE) _test.envtest \
+		GOTESTSUM_FORMAT=testname \
+		ENVTEST_TEST_PATHS=./test/crdsvalidation/...
 
 # Define a constant list of channels
 CHANNELS := ingress-controller-incubator gateway-operator kong-operator
@@ -806,7 +811,7 @@ test.e2e.chainsaw: chainsaw ## Run chainsaw e2e tests.
 	$(CHAINSAW) test --config $(CHAINSAW_CONFIG) --quiet --test-dir $(CHAINSAW_TEST_DIR)
 
 NCPU := $(shell getconf _NPROCESSORS_ONLN)
-PARALLEL := $(if $(PARALLEL),$(PARALLEL),$(NCPU))
+GO_TEST_PARALLEL := $(if $(GO_TEST_PARALLEL),$(GO_TEST_PARALLEL),$(NCPU))
 
 .PHONY: _test.conformance
 _test.conformance: gotestsum download.telepresence
@@ -817,7 +822,7 @@ _test.conformance: gotestsum download.telepresence
 		-timeout $(CONFORMANCE_TEST_TIMEOUT) \
 		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS) $(LDFLAGS_METADATA)" \
 		-race \
-		-parallel $(PARALLEL) \
+		-parallel $(GO_TEST_PARALLEL) \
 		$(TEST_SUITE_PATH)
 
 .PHONY: test.conformance
@@ -950,6 +955,19 @@ endif
 .PHONY: _ensure-kong-system-namespace
 _ensure-kong-system-namespace:
 	@kubectl create ns kong-system 2>/dev/null || true
+
+.PHONY: _ensure-kong-operator-ca
+_ensure-kong-operator-ca: _ensure-kong-system-namespace
+	@kubectl get secret kong-operator-ca -n kong-system >/dev/null 2>&1 || \
+	(openssl genrsa -out /tmp/ko-makefile-ca.key 4096 2>/dev/null && \
+	openssl req -x509 -new -key /tmp/ko-makefile-ca.key -days 3650 -out /tmp/ko-makefile-ca.crt -subj "/CN=Kong Operator CA" 2>/dev/null && \
+	kubectl create secret tls kong-operator-ca \
+		--cert=/tmp/ko-makefile-ca.crt \
+		--key=/tmp/ko-makefile-ca.key \
+		--namespace kong-system \
+		--dry-run=client -o yaml | \
+		kubectl label -f - konghq.com/secret=internal --overwrite --local -o yaml | \
+		kubectl apply -f -)
 
 # Run a controller from your host.
 # TODO: https://github.com/Kong/kong-operator/issues/1989

@@ -22,10 +22,6 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 )
 
-func init() {
-	SchemeBuilder.Register(&DataPlaneMetricsExtension{}, &DataPlaneMetricsExtensionList{})
-}
-
 const (
 	// DataPlaneMetricsExtensionKind holds the kind for the DataPlaneMetricsExtension.
 	DataPlaneMetricsExtensionKind = "DataPlaneMetricsExtension"

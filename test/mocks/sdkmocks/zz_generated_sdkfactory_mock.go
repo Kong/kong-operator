@@ -18,6 +18,7 @@ type generatedMockSDKWrapper struct {
 	EventGatewayDataPlaneCertificatesSDK *mocks.MockEventGatewayDataPlaneCertificatesSDK
 	EventGatewaysSDK                     *mocks.MockEventGatewaysSDK
 	PortalsSDK                           *mocks.MockPortalsSDK
+	PortalEmailsSDK                      *mocks.MockPortalEmailsSDK
 	PortalPagesSDK                       *mocks.MockPortalPagesSDK
 	PortalTeamsSDK                       *mocks.MockPortalTeamsSDK
 }
@@ -32,6 +33,7 @@ func newGeneratedMockSDKWrapper(t *testing.T) generatedMockSDKWrapper {
 		EventGatewayDataPlaneCertificatesSDK: mocks.NewMockEventGatewayDataPlaneCertificatesSDK(t),
 		EventGatewaysSDK:                     mocks.NewMockEventGatewaysSDK(t),
 		PortalsSDK:                           mocks.NewMockPortalsSDK(t),
+		PortalEmailsSDK:                      mocks.NewMockPortalEmailsSDK(t),
 		PortalPagesSDK:                       mocks.NewMockPortalPagesSDK(t),
 		PortalTeamsSDK:                       mocks.NewMockPortalTeamsSDK(t),
 	}
@@ -75,6 +77,11 @@ func (m generatedMockSDKWrapper) GetEventGatewaysSDK() sdkkonnectgo.EventGateway
 // GetPortalsSDK returns the SDK to operate Portal.
 func (m generatedMockSDKWrapper) GetPortalsSDK() sdkkonnectgo.PortalsSDK {
 	return m.PortalsSDK
+}
+
+// GetPortalEmailsSDK returns the SDK to operate PortalEmailConfig.
+func (m generatedMockSDKWrapper) GetPortalEmailsSDK() sdkkonnectgo.PortalEmailsSDK {
+	return m.PortalEmailsSDK
 }
 
 // GetPortalPagesSDK returns the SDK to operate PortalPage.

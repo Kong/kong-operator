@@ -35,6 +35,13 @@ mise r test-unit
 mise r test-crdsvalidation # Run tests to validate generated CRDs against Kubernetes API server using envtest
 ```
 
+## Code Conventions
+
+### Go Code Conventions
+
+- Follow standard Go conventions (gofmt, goimports)
+- Use `new()` for in place literal initialization, e.g. `new("dummy-string")` instead of `ptrTo("dummy-string")`, `new(true)` instead of `ptrTo(true)`, etc.
+
 ## Instructions
 
 - Prefer to use `mise r generate-api` to generate Kubernetes API types from OpenAPI Specifications

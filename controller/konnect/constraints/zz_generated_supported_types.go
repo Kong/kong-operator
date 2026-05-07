@@ -17,6 +17,7 @@ type SupportedGeneratedKonnectEntityType interface {
 		konnectv1alpha1.KonnectEventDataPlaneCertificate |
 		konnectv1alpha1.KonnectEventGateway |
 		konnectv1alpha1.Portal |
+		konnectv1alpha1.PortalEmailConfig |
 		konnectv1alpha1.PortalPage |
 		konnectv1alpha1.PortalTeam
 }

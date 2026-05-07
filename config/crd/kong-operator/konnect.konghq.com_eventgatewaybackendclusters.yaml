@@ -9,6 +9,9 @@ metadata:
 spec:
   group: konnect.konghq.com
   names:
+    categories:
+    - konnect
+    - kong
     kind: EventGatewayBackendCluster
     listKind: EventGatewayBackendClusterList
     plural: eventgatewaybackendclusters
@@ -69,16 +72,8 @@ spec:
                     properties:
                       anonymous:
                         description: Anonymous configuration.
-                        properties:
-                          type:
-                            description: The type of authentication scheme.
-                            maxLength: 253
-                            minLength: 1
-                            type: string
-                        required:
-                        - type
                         type: object
-                      sasl_plain:
+                      saslPlain:
                         description: SaslPlain configuration.
                         properties:
                           password:
@@ -89,10 +84,6 @@ spec:
                               from API responses.
                               If provided as an expression, the expression itself is stored and returned
                               by the API.
-                            maxLength: 253
-                            minLength: 1
-                            type: string
-                          type:
                             maxLength: 253
                             minLength: 1
                             type: string
@@ -107,10 +98,9 @@ spec:
                             type: string
                         required:
                         - password
-                        - type
                         - username
                         type: object
-                      sasl_scram:
+                      saslScram:
                         description: SaslScram configuration.
                         properties:
                           algorithm:
@@ -132,10 +122,6 @@ spec:
                             maxLength: 253
                             minLength: 1
                             type: string
-                          type:
-                            maxLength: 253
-                            minLength: 1
-                            type: string
                           username:
                             description: |-
                               A literal value or a reference to an existing secret as a template string
@@ -148,21 +134,20 @@ spec:
                         required:
                         - algorithm
                         - password
-                        - type
                         - username
                         type: object
                       type:
                         description: Type designates the type of configuration.
                         enum:
                         - anonymous
-                        - sasl_plain
-                        - sasl_scram
+                        - saslPlain
+                        - saslScram
                         minLength: 1
                         type: string
                     required:
                     - type
                     type: object
-                  bootstrap_servers:
+                  bootstrapServers:
                     description: A list of cluster bootstrap servers in the format
                       address:port.
                     items:
@@ -173,7 +158,7 @@ spec:
                     description: A human-readable description of the backend cluster.
                     maxLength: 512
                     type: string
-                  insecure_allow_anonymous_virtual_cluster_auth:
+                  insecureAllowAnonymousVirtualClusterAuth:
                     default: Disabled
                     description: |-
                       If true, virtual clusters can have allow anonymous authentication and use
@@ -198,7 +183,7 @@ spec:
                       Keys must be of length 1-63 characters, and cannot start with "kong",
                       "konnect", "mesh", "kic", or "_".
                     type: object
-                  metadata_update_interval_seconds:
+                  metadataUpdateIntervalSeconds:
                     default: 60
                     description: The interval at which metadata is updated in seconds.
                     maximum: 43200
@@ -212,7 +197,7 @@ spec:
                   tls:
                     description: BackendClusterTLS is a type alias.
                     properties:
-                      ca_bundle:
+                      caBundle:
                         description: |-
                           A literal value or a reference to an existing secret as a template string
                           expression.
@@ -221,7 +206,7 @@ spec:
                         maxLength: 4096
                         minLength: 1
                         type: string
-                      client_identity:
+                      clientIdentity:
                         description: |-
                           Client mTLS configuration.
 
@@ -259,7 +244,7 @@ spec:
                         - Enabled
                         - Disabled
                         type: string
-                      insecure_skip_verify:
+                      insecureSkipVerify:
                         default: Disabled
                         description: |-
                           If true, skip certificate verification.
@@ -268,7 +253,7 @@ spec:
                         - Enabled
                         - Disabled
                         type: string
-                      tls_versions:
+                      tlsVersions:
                         default:
                         - tls12
                         - tls13
@@ -281,11 +266,11 @@ spec:
                     type: object
                 required:
                 - authentication
-                - bootstrap_servers
+                - bootstrapServers
                 - name
                 - tls
                 type: object
-              gateway_ref:
+              gatewayRef:
                 description: GatewayRef is the reference to the parent Gateway object.
                 properties:
                   konnectID:
@@ -341,7 +326,7 @@ spec:
                 - message: when type is konnectID, namespacedRef must not be set
                   rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
             required:
-            - gateway_ref
+            - gatewayRef
             type: object
           status:
             description: EventGatewayBackendClusterStatus defines the observed state

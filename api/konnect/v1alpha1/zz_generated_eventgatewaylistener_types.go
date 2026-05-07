@@ -11,7 +11,7 @@ import (
 //
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Namespaced
+// +kubebuilder:resource:scope=Namespaced,categories=konnect;kong
 // +kubebuilder:printcolumn:name="ID",description="Konnect ID",type="string",JSONPath=".status.id"
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
 // +kubebuilder:printcolumn:name="OrgID",description="Konnect Organization ID this resource belongs to.",type=string,JSONPath=`.status.organizationID`
@@ -44,7 +44,7 @@ type EventGatewayListenerSpec struct {
 	// GatewayRef is the reference to the parent Gateway object.
 	//
 	// +required
-	GatewayRef commonv1alpha1.ObjectRef `json:"gateway_ref,omitzero"`
+	GatewayRef commonv1alpha1.ObjectRef `json:"gatewayRef,omitzero"`
 
 	// APISpec defines the desired state of the resource's API spec fields.
 	//
@@ -131,8 +131,4 @@ type EventGatewayListenerStatus struct {
 	//
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
-}
-
-func init() {
-	SchemeBuilder.Register(&EventGatewayListener{}, &EventGatewayListenerList{})
 }

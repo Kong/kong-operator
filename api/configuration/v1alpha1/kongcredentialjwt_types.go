@@ -105,7 +105,3 @@ type KongCredentialJWTList struct {
 
 	Items []KongCredentialJWT `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&KongCredentialJWT{}, &KongCredentialJWTList{})
-}

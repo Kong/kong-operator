@@ -63,3 +63,8 @@ func (obj *KonnectEventDataPlaneCertificate) GetGatewayRef() commonv1alpha1.Obje
 func (obj *KonnectEventDataPlaneCertificate) GetEventGatewayRef() commonv1alpha1.ObjectRef {
 	return obj.Spec.GatewayRef
 }
+
+// GetParentRef returns the reference to the parent entity.
+func (obj *KonnectEventDataPlaneCertificate) GetParentRef() commonv1alpha1.ObjectRef {
+	return obj.GetEventGatewayRef()
+}
