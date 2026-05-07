@@ -13,16 +13,11 @@ import (
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
-	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 )
 
 func getAPIAuthConfigurationRefFromParent[
 	ParentT parentT,
-	ParentTPtr interface {
-		*ParentT
-		client.Object
-		GetKonnectAPIAuthConfigurationRef() konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef
-	},
+	ParentTPtr parentTPtr[ParentT],
 ](
 	ctx context.Context,
 	cl client.Client,

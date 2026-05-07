@@ -158,12 +158,13 @@ func (prh parentRefHandler[p, pPTr]) handleParentRef(
 
 	cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, parent)
 	if !ok || cond.Status != metav1.ConditionTrue {
+		msg := fmt.Sprintf("Referenced %s %s is not programmed yet", parentType, nn)
 		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, obj,
 			consts.ConditionType(obj.GetStatusConditionTypeParentRefValid()),
 			metav1.ConditionFalse,
 			consts.ConditionReason(obj.GetStatusConditionReasonParentRefNotProgrammed()),
-			fmt.Sprintf("Referenced %s %s is not programmed yet", parentType, nn),
+			msg,
 		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
 		}
