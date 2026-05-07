@@ -341,6 +341,30 @@ func TestKongServiceBuilder_WithConnectTimeout(t *testing.T) {
 	}
 }
 
+func TestKongServiceBuilder_WithReadTimeout(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    *int64
+		expected *int64
+	}{
+		{name: "nil leaves field unset", input: nil, expected: nil},
+		{name: "zero sets field", input: new(int64(0)), expected: new(int64(0))},
+		{name: "positive sets field", input: new(int64(30000)), expected: new(int64(30000))},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			service, err := NewKongService().WithReadTimeout(tt.input).Build()
+			require.NoError(t, err)
+			if tt.expected == nil {
+				assert.Nil(t, service.Spec.ReadTimeout)
+			} else {
+				require.NotNil(t, service.Spec.ReadTimeout)
+				assert.Equal(t, *tt.expected, *service.Spec.ReadTimeout)
+			}
+		})
+	}
+}
+
 func TestKongServiceBuilder_Build(t *testing.T) {
 	t.Run("successful build", func(t *testing.T) {
 		builder := NewKongService().

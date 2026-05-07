@@ -144,6 +144,16 @@ func (b *KongServiceBuilder) WithConnectTimeout(v *int64) *KongServiceBuilder {
 	return b
 }
 
+// WithReadTimeout sets the read timeout (milliseconds) for the KongService being built.
+// A nil pointer leaves the field unset.
+func (b *KongServiceBuilder) WithReadTimeout(v *int64) *KongServiceBuilder {
+	if v == nil {
+		return b
+	}
+	b.service.Spec.ReadTimeout = v
+	return b
+}
+
 // WithProtocol sets the protocol for the KongService being built.
 // Supported protocols match the Kong Gateway upstream protocol set.
 func (b *KongServiceBuilder) WithProtocol(protocol string) *KongServiceBuilder {

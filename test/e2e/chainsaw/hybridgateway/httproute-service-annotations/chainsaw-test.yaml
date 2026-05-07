@@ -15,6 +15,7 @@ spec:
     - konghq.com/tls-verify: <bool>
     - konghq.com/tls-verify-depth: <depth>
     - konghq.com/connect-timeout: <timeout>
+    - konghq.com/read-timeout: <timeout>
     the value should be applied to the generated KongService.
 
   bindings:
@@ -152,6 +153,7 @@ spec:
                   konghq.com/tls-verify: "true"
                   konghq.com/tls-verify-depth: "2"
                   konghq.com/connect-timeout: "5000"
+                  konghq.com/read-timeout: "5000"
 
     # Step 12: Create HTTPRoute to route traffic.
     - name: Create-httproute
@@ -207,6 +209,7 @@ spec:
                 tls_verify: true
                 tls_verify_depth: 2
                 connect_timeout: 5000
+                read_timeout: 5000
 
     # Step 15: Assert KongUpstream is created.
     - name: Assert-kong-upstream

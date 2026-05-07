@@ -25,6 +25,7 @@ const (
 	tlsVerifyKey      = "/tls-verify"
 	tlsVerifyDepthKey = "/tls-verify-depth"
 	connectTimeoutKey = "/connect-timeout"
+	readTimeoutKey    = "/read-timeout"
 	kindHTTPRoute     = "HTTPRoute"
 	kindTLSRoute      = "TLSRoute"
 )
@@ -101,6 +102,17 @@ func ExtractTLSVerifyDepth(anns map[string]string) *int64 {
 // This mirrors ingress-controller/internal/annotations.ExtractConnectTimeout.
 func ExtractConnectTimeout(anns map[string]string) *int64 {
 	timeout, err := parseAnnotationInt(anns, connectTimeoutKey)
+	if err != nil {
+		return nil
+	}
+	return timeout
+}
+
+// ExtractReadTimeout extracts the read-timeout annotation value (milliseconds).
+// Returns a non-nil pointer when the annotation is present and parseable as a non-negative integer.
+// This mirrors ingress-controller/internal/annotations.ExtractReadTimeout.
+func ExtractReadTimeout(anns map[string]string) *int64 {
+	timeout, err := parseAnnotationInt(anns, readTimeoutKey)
 	if err != nil {
 		return nil
 	}
