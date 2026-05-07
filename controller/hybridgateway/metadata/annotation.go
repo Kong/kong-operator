@@ -112,7 +112,7 @@ func ExtractConnectTimeout(anns map[string]string) *int64 {
 // Returns a non-nil pointer when the annotation is present and parseable as a non-negative integer.
 // This mirrors ingress-controller/internal/annotations.ExtractReadTimeout.
 func ExtractReadTimeout(anns map[string]string) *int64 {
-	timeout, err := parseAnnotationInt(anns, connectTimeoutKey)
+	timeout, err := parseAnnotationInt(anns, readTimeoutKey)
 	if err != nil {
 		return nil
 	}
