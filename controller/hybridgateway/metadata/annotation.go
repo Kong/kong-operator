@@ -25,7 +25,7 @@ const (
 	tlsVerifyKey      = "/tls-verify"
 	tlsVerifyDepthKey = "/tls-verify-depth"
 	connectTimeoutKey = "/connect-timeout"
-	readTimeoutKey   = "/read-timeout"
+	readTimeoutKey    = "/read-timeout"
 	kindHTTPRoute     = "HTTPRoute"
 	kindTLSRoute      = "TLSRoute"
 )
