@@ -10,14 +10,10 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
-	admregv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -143,12 +139,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	// controlplane is deleted, just run garbage collection for cluster wide resources.
 	if !cp.DeletionTimestamp.IsZero() {
-		// If the CP is deleted, ensure that we cleaned up all the old resources
-		// that were managed by older versions of the operator.
-		if err := r.cleanupOldManagedResources(ctx, cp); err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to cleanup old managed resources: %w", err)
-		}
-
 		// wait for termination grace period before cleaning up roles and bindings
 		if cp.DeletionTimestamp.After(metav1.Now().Time) {
 			log.Debug(logger, "control plane deletion still under grace period")
@@ -425,13 +415,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if err != nil {
 		log.Debug(logger, "unable to patch ControlPlane status", "error", err)
 		return ctrl.Result{}, err
-	}
-
-	// At this point, the ControlPlane instance is ready and its config matches the spec.
-	// We can now safely delete the old resources that are no longer managed
-	// by the ControlPlane instance.
-	if err := r.cleanupOldManagedResources(ctx, cp); err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to cleanup old managed resources: %w", err)
 	}
 
 	if !result.IsZero() {
@@ -816,119 +799,4 @@ func controlPlaneStatusEqual(
 		reflect.DeepEqual(b.Status.Controllers, a.Status.Controllers) &&
 		reflect.DeepEqual(b.Status.FeatureGates, a.Status.FeatureGates) &&
 		reflect.DeepEqual(b.Status.DataPlane, a.Status.DataPlane)
-}
-
-// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=deletecollection
-// +kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=deletecollection
-// +kubebuilder:rbac:groups=core,resources=services,verbs=deletecollection
-// +kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=validatingwebhookconfigurations,verbs=deletecollection
-// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles,verbs=deletecollection
-// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterrolebindings,verbs=deletecollection
-
-// cleanupOldManagedResources cleans up resources that were managed by
-// older versions of the Kong Gateway Operator. This includes Deployments,
-// Services, NetworkPolicies, ValidatingWebhookConfigurations, ClusterRoles,
-// NOTE: This will be removed as part of https://github.com/Kong/kong-operator/issues/2228
-// in a future release.
-func (r *Reconciler) cleanupOldManagedResources(ctx context.Context, cp *ControlPlane) error {
-	if v, ok := cp.Annotations[consts.ControlPlaneKGOCleanupAnnotation]; ok && v == "true" {
-		return nil
-	}
-
-	var deployment appsv1.Deployment
-	err := r.DeleteAllOf(ctx, &deployment, &client.DeleteAllOfOptions{
-		ListOptions: client.ListOptions{
-			Namespace: cp.Namespace,
-			LabelSelector: labels.SelectorFromSet(labels.Set{
-				consts.GatewayOperatorManagedByLabel: "controlplane",
-			}),
-		},
-	})
-	if err != nil && !apierrors.IsNotFound(err) {
-		return fmt.Errorf("failed to delete old ControlPlane deployment %w", err)
-	}
-
-	var networkPolicy networkingv1.NetworkPolicy
-	err = r.DeleteAllOf(ctx, &networkPolicy, &client.DeleteAllOfOptions{
-		ListOptions: client.ListOptions{
-			Namespace: cp.Namespace,
-			LabelSelector: labels.SelectorFromSet(labels.Set{
-				consts.GatewayOperatorManagedByLabel: "gateway",
-			}),
-		},
-	})
-	if err != nil && !apierrors.IsNotFound(err) {
-		return fmt.Errorf("failed to delete old ControlPlane NetworkPolicy %w", err)
-	}
-
-	var service corev1.Service
-	err = r.DeleteAllOf(ctx, &service, &client.DeleteAllOfOptions{
-		ListOptions: client.ListOptions{
-			Namespace: cp.Namespace,
-			LabelSelector: labels.SelectorFromSet(labels.Set{
-				consts.GatewayOperatorManagedByLabel: "controlplane",
-			}),
-		},
-	})
-	if err != nil && !apierrors.IsNotFound(err) {
-		return fmt.Errorf("failed to delete old ControlPlane Service %w", err)
-	}
-
-	var webhook admregv1.ValidatingWebhookConfiguration
-	err = r.DeleteAllOf(ctx, &webhook, &client.DeleteAllOfOptions{
-		ListOptions: client.ListOptions{
-			LabelSelector: labels.SelectorFromSet(labels.Set{
-				consts.GatewayOperatorManagedByLabel:          "controlplane",
-				consts.GatewayOperatorManagedByNameLabel:      cp.Name,
-				consts.GatewayOperatorManagedByNamespaceLabel: cp.Namespace,
-			}),
-		},
-	})
-	if err != nil && !apierrors.IsNotFound(err) {
-		return fmt.Errorf("failed to delete old ControlPlane ValidatingWebhookConfiguration %w", err)
-	}
-
-	var clusterRole rbacv1.ClusterRole
-	err = r.DeleteAllOf(ctx, &clusterRole, &client.DeleteAllOfOptions{
-		ListOptions: client.ListOptions{
-			LabelSelector: labels.SelectorFromSet(labels.Set{
-				consts.GatewayOperatorManagedByLabel:          "controlplane",
-				consts.GatewayOperatorManagedByNameLabel:      cp.Name,
-				consts.GatewayOperatorManagedByNamespaceLabel: cp.Namespace,
-			}),
-		},
-	})
-	if err != nil && !apierrors.IsNotFound(err) {
-		return fmt.Errorf("failed to delete old ControlPlane ClusterRole %w", err)
-	}
-
-	var clusterRoleBinding rbacv1.ClusterRoleBinding
-	err = r.DeleteAllOf(ctx, &clusterRoleBinding, &client.DeleteAllOfOptions{
-		ListOptions: client.ListOptions{
-			LabelSelector: labels.SelectorFromSet(labels.Set{
-				consts.GatewayOperatorManagedByLabel:          "controlplane",
-				consts.GatewayOperatorManagedByNameLabel:      cp.Name,
-				consts.GatewayOperatorManagedByNamespaceLabel: cp.Namespace,
-			}),
-		},
-	})
-	if err != nil && !apierrors.IsNotFound(err) {
-		return fmt.Errorf("failed to delete old ControlPlane ClusterRoleBinding %w", err)
-	}
-
-	old := cp.DeepCopy()
-	// Cleanup finalizers that were used to manage the above resources.
-	controllerutil.RemoveFinalizer(cp, "gateway-operator.konghq.com/cleanup-clusterrole")
-	controllerutil.RemoveFinalizer(cp, "gateway-operator.konghq.com/cleanup-clusterrolebinding")
-	controllerutil.RemoveFinalizer(cp, "gateway-operator.konghq.com/cleanup-validatingwebhookconfiguration")
-
-	if cp.Annotations == nil {
-		cp.Annotations = map[string]string{}
-	}
-	cp.Annotations[consts.ControlPlaneKGOCleanupAnnotation] = "true"
-	if err := r.Patch(ctx, cp, client.MergeFrom(old)); err != nil {
-		return fmt.Errorf("failed to patch ControlPlane with cleanup annotation %w", err)
-	}
-
-	return nil
 }

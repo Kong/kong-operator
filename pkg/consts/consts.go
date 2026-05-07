@@ -86,12 +86,6 @@ const (
 	// CertPurposeLabel indicates the purpose of a certificate.
 	CertPurposeLabel = OperatorLabelPrefix + "cert-purpose"
 
-	// ControlPlaneKGOCleanupAnnotation indicates that the clean up KGO related resources
-	// has been performed for this ControlPlane.
-	// NOTE: This will be removed together with the logic that performs the cleanup
-	// as part of https://github.com/Kong/kong-operator/issues/2228.
-	ControlPlaneKGOCleanupAnnotation = OperatorAnnotationPrefix + "kgo-cleanup"
-
 	// GatewayStaticNamingAnnotation indicates that the gateway uses static naming for its resources.
 	// This means that the DataPlane, ControlPlane and KonnectGatewayControlPlane resources
 	// are named as the Gateway resource.
