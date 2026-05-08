@@ -18,6 +18,7 @@ spec:
     - konghq.com/read-timeout: <timeout>
     - konghq.com/write-timeout: <timeout>
     - konghq.com/retries: <retries>
+    - konghq.com/host-header: <host>
     the value should be applied to the generated KongService.
 
   bindings:
@@ -158,6 +159,7 @@ spec:
                   konghq.com/read-timeout: "5000"
                   konghq.com/write-timeout: "5000"
                   konghq.com/retries: "3"
+                  konghq.com/host-header: "fake.com"
 
     # Step 12: Create HTTPRoute to route traffic.
     - name: Create-httproute
@@ -222,6 +224,19 @@ spec:
       description: Assert KongUpstream.
       use:
         template: ../../common/_step_templates/assert-kongUpstream.yaml
+
+    # Step 15.1: Assert KongUpstream has the correct specs.
+    - name: Assert-kong-upstream-spec
+      description: Assert KongUpstream spec.
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongUpstream
+              metadata:
+                namespace: ($namespace)
+              spec:
+                host_header: "fake.com"
 
   catch:
     # Capture debug snapshot on test failure.
