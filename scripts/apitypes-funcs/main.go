@@ -6,9 +6,8 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
-
-	"github.com/Masterminds/sprig/v3"
 )
 
 type supportedTypesT struct {
@@ -150,7 +149,17 @@ func renderTemplate(
 ) error {
 	log := slog.With("packageName", packagename, "outputFile", outputFile)
 
-	tpl, err := template.New("tpl").Funcs(sprig.TxtFuncMap()).Parse(templateContent)
+	tpl, err := template.New("tpl").Funcs(template.FuncMap{
+		"hasPrefix": func(prefix, value string) bool {
+			return strings.HasPrefix(value, prefix)
+		},
+		"trimPrefix": func(prefix, value string) string {
+			return strings.TrimPrefix(value, prefix)
+		},
+		"hasSuffix": func(suffix, value string) bool {
+			return strings.HasSuffix(value, suffix)
+		},
+	}).Parse(templateContent)
 	if err != nil {
 		return fmt.Errorf("failed to parse template for %s: %w", outputFile, err)
 	}

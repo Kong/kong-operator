@@ -4,9 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"strings"
 	"text/template"
-
-	"github.com/Masterminds/sprig/v3"
 )
 
 // -----------------------------------------------------------------------------
@@ -389,8 +388,16 @@ type ProgrammedConditionConfiguration struct {
 	CustomUnknownMessage string
 }
 
+func parseTemplate(name, contents string) (*template.Template, error) {
+	return template.New(name).Funcs(template.FuncMap{
+		"join": func(separator string, values []string) string {
+			return strings.Join(values, separator)
+		},
+	}).Parse(contents)
+}
+
 func (t *typeNeeded) generate(contents *bytes.Buffer) error {
-	tmpl, err := template.New("controller").Funcs(sprig.TxtFuncMap()).Parse(controllerTemplate)
+	tmpl, err := parseTemplate("controller", controllerTemplate)
 	if err != nil {
 		return err
 	}
@@ -405,7 +412,7 @@ type rbacNeeded struct {
 }
 
 func (r *rbacNeeded) generate(contents *bytes.Buffer) error {
-	tmpl, err := template.New("rbac").Funcs(sprig.TxtFuncMap()).Parse(rbacTemplate)
+	tmpl, err := parseTemplate("rbac", rbacTemplate)
 	if err != nil {
 		return err
 	}

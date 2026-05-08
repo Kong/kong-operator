@@ -6,7 +6,6 @@ require (
 	cloud.google.com/go/container v1.50.0
 	dario.cat/mergo v1.0.2
 	github.com/Kong/sdk-konnect-go v0.35.0
-	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/avast/retry-go/v4 v4.7.0
 	github.com/blang/semver/v4 v4.0.0
 	github.com/cert-manager/cert-manager v1.20.2
@@ -96,8 +95,6 @@ require (
 	github.com/Kong/go-diff v1.2.2 // indirect
 	github.com/Kong/gojsondiff v1.3.2 // indirect
 	github.com/MakeNowJust/heredoc v1.0.0 // indirect
-	github.com/Masterminds/goutils v1.1.1 // indirect
-	github.com/Masterminds/semver/v3 v3.4.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/adrg/strutil v0.3.0 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
@@ -210,7 +207,6 @@ require (
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
 	github.com/hexops/gotextdiff v1.0.3 // indirect
 	github.com/homeport/dyff v1.6.0 // indirect
-	github.com/huandu/xstrings v1.5.0 // indirect
 	github.com/imdario/mergo v0.3.16 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/itchyny/gojq v0.12.17 // indirect
@@ -233,12 +229,10 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-zglob v0.0.2-0.20190814121620-e3c945676326 // indirect
 	github.com/miekg/dns v1.1.72 // indirect
-	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/go-ps v1.0.0 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
 	github.com/mitchellh/hashstructure v1.1.0 // indirect
-	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/go-archive v0.2.0 // indirect
 	github.com/moby/moby/client v0.4.0 // indirect
@@ -269,9 +263,7 @@ require (
 	github.com/shirou/gopsutil/v3 v3.24.5 // indirect
 	github.com/shirou/gopsutil/v4 v4.26.3 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
-	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/sirupsen/logrus v1.9.4 // indirect
-	github.com/spf13/cast v1.10.0 // indirect
 	github.com/spf13/cobra v1.10.2 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/spyzhov/ajson v0.8.0 // indirect
