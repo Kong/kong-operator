@@ -444,6 +444,89 @@ func Portal(
 	return &obj
 }
 
+// KonnectEventGateway deploys a KonnectEventGateway resource and returns it.
+func KonnectEventGateway(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
+	opts ...ObjOption,
+) *konnectv1alpha1.KonnectEventGateway {
+	t.Helper()
+	name := "event-gateway-" + randomSuffix()
+	obj := konnectv1alpha1.KonnectEventGateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: konnectv1alpha1.KonnectEventGatewaySpec{
+			KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+				APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+					Name: apiAuth.Name,
+				},
+			},
+			APISpec: konnectv1alpha1.KonnectEventGatewayAPISpec{
+				Name: konnectv1alpha1.GatewayName(name),
+			},
+		},
+	}
+
+	for _, opt := range opts {
+		opt(&obj)
+	}
+
+	require.NoError(t, cl.Create(ctx, &obj))
+	logObjectCreate(t, &obj)
+	return &obj
+}
+
+// EventGatewayBackendCluster deploys an EventGatewayBackendCluster resource and returns it.
+func EventGatewayBackendCluster(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	gateway *konnectv1alpha1.KonnectEventGateway,
+	opts ...ObjOption,
+) *konnectv1alpha1.EventGatewayBackendCluster {
+	t.Helper()
+	name := "backend-cluster-" + randomSuffix()
+	obj := konnectv1alpha1.EventGatewayBackendCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: konnectv1alpha1.EventGatewayBackendClusterSpec{
+			GatewayRef: commonv1alpha1.ObjectRef{
+				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{
+					Name: gateway.Name,
+				},
+			},
+			APISpec: konnectv1alpha1.EventGatewayBackendClusterAPISpec{
+				Authentication: &konnectv1alpha1.EventGatewayBackendClusterAuthentication{
+					Type:      konnectv1alpha1.EventGatewayBackendClusterAuthenticationTypeAnonymous,
+					Anonymous: &konnectv1alpha1.BackendClusterAuthenticationAnonymous{},
+				},
+				BootstrapServers: []string{"broker.example.com:9092"},
+				Name:             konnectv1alpha1.BackendClusterName(name),
+				TLS: konnectv1alpha1.BackendClusterTLS{
+					Enabled: "Disabled",
+					ClientIdentity: konnectv1alpha1.ClientIdentity{
+						Certificate: "dummy-cert",
+						Key:         "dummy-key",
+					},
+				},
+			},
+		},
+	}
+
+	for _, opt := range opts {
+		opt(&obj)
+	}
+
+	require.NoError(t, cl.Create(ctx, &obj))
+	logObjectCreate(t, &obj)
+	return &obj
+}
+
 // KonnectCloudGatewayNetwork deploys a KonnectCloudGatewayNetwork resource and returns it.
 func KonnectCloudGatewayNetwork(
 	t *testing.T,
