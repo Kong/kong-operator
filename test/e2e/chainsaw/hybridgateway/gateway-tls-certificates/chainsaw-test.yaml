@@ -53,6 +53,8 @@ spec:
       value: (join('-', [($test_name), 'echo']))
     - name: echo_deployment_namespace
       value: ($namespace)
+    - name: echo_deployment_replicas
+      value: 1
     - name: http_method
       value: "GET"
 

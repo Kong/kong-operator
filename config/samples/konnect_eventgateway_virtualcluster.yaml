@@ -37,7 +37,7 @@ spec:
     labels:
       app: test1
       env: test
-    acl_mode: enforce_on_gateway
+    aclMode: enforce_on_gateway
     authentication:
       - type: anonymous
     destination:
@@ -46,12 +46,12 @@ spec:
       # TODO: https://github.com/Kong/kong-operator/issues/4069
       # name: cp-event-1-backend-cluster-1
       id: 019dd9f3-a23f-786f-b3ba-111111111
-    dns_label: virtual-cluster-1
+    dnsLabel: virtual-cluster-1
     namespace:
       mode: enforce_prefix
       prefix: prefix-1
       additional:
-        consumer_groups:
+        consumerGroups:
           - type: glob
             glob:
               glob: group-*
@@ -61,7 +61,7 @@ spec:
             glob:
               glob: topic-*
               type: topic
-  gateway_ref:
+  gatewayRef:
     type: namespacedRef
     namespacedRef:
       name: cp-event-1

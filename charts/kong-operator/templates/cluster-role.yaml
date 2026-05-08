@@ -12,6 +12,7 @@ rules:
       - configmaps
       - secrets
       - serviceaccounts
+      - services
     verbs:
       - create
       - delete
@@ -53,19 +54,6 @@ rules:
   - apiGroups:
       - ""
     resources:
-      - services
-    verbs:
-      - create
-      - delete
-      - deletecollection
-      - get
-      - list
-      - patch
-      - update
-      - watch
-  - apiGroups:
-      - ""
-    resources:
       - services/status
     verbs:
       - get
@@ -78,7 +66,6 @@ rules:
     verbs:
       - create
       - delete
-      - deletecollection
       - get
       - list
       - patch
@@ -98,7 +85,6 @@ rules:
     verbs:
       - create
       - delete
-      - deletecollection
       - get
       - list
       - patch
@@ -446,6 +432,7 @@ rules:
       - konnectcloudgatewaytransitgateways
       - konnecteventdataplanecertificates
       - konnecteventgateways
+      - portalemailconfigs
       - portalpages
       - portals
       - portalteams
@@ -485,6 +472,8 @@ rules:
       - konnectgatewaycontrolplanes/finalizers
       - konnectgatewaycontrolplanes/status
       - mcpservers/status
+      - portalemailconfigs/finalizers
+      - portalemailconfigs/status
       - portalpages/finalizers
       - portalpages/status
       - portals/finalizers
@@ -538,7 +527,6 @@ rules:
     verbs:
       - create
       - delete
-      - deletecollection
       - get
       - list
       - patch
@@ -556,13 +544,6 @@ rules:
       - patch
       - update
       - watch
-  - apiGroups:
-      - rbac.authorization.k8s.io
-    resources:
-      - clusterrolebindings
-      - clusterroles
-    verbs:
-      - deletecollection
   - apiGroups:
       - rbac.authorization.k8s.io
     resources:

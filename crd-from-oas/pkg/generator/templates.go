@@ -29,7 +29,7 @@ import (
 //
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Namespaced
+// +kubebuilder:resource:scope=Namespaced{{if .Categories}},categories={{join .Categories ";"}}{{end}}
 // +kubebuilder:printcolumn:name="ID",description="Konnect ID",type="string",JSONPath=".status.id"
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=` + "`" + `.status.conditions[?(@.type=='Programmed')].status` + "`" + `
 // +kubebuilder:printcolumn:name="OrgID",description="Konnect Organization ID this resource belongs to.",type=string,JSONPath=` + "`" + `.status.organizationID` + "`" + `
@@ -111,7 +111,7 @@ type {{.EntityName}}APISpec struct {
 	// {{.}}
 {{- end}}
 {{- if isRefProperty $prop}}
-	{{goFieldName $prop.Name}}Ref {{goType $prop}} ` + "`" + `json:"{{$prop.Name}}_ref,omitempty"` + "`" + `
+	{{goFieldName $prop.Name}}Ref {{goType $prop}} ` + "`" + `json:"{{refJSONTag $prop}},omitempty"` + "`" + `
 {{- else}}
 	{{goFieldName $prop.Name}} {{goType $prop}} ` + "`" + `json:"{{jsonTag $prop}}"` + "`" + `
 {{- end}}
@@ -150,10 +150,6 @@ type {{.EntityName}}Status struct {
 	//
 	// +optional
 	ObservedGeneration int64 ` + "`" + `json:"observedGeneration,omitempty"` + "`" + `
-}
-
-func init() {
-	SchemeBuilder.Register(&{{.EntityName}}{}, &{{.EntityName}}List{})
 }
 `
 
@@ -260,6 +256,45 @@ func (obj *{{.EntityName}}) Get{{.RootRefAccessorEntityName}}Ref() {{.RootRefTyp
 	return obj.Spec.{{.RootRefDependency.FieldName}}
 }
 {{- end}}
+
+// GetParentRef returns the reference to the parent entity.
+func (obj *{{.EntityName}}) GetParentRef() {{.RootRefTypeName}} {
+{{- if gt (len .RootRefAccessorEntityName) (len .RootRefDependency.EntityName)}}
+	return obj.Get{{.RootRefAccessorEntityName}}Ref()
+{{- else}}
+	return obj.Get{{.RootRefDependency.EntityName}}Ref()
+{{- end}}
+}
+
+// SetParentID sets the Konnect ID of the immediate parent entity.
+func (obj *{{.EntityName}}) SetParentID(id string) {
+	obj.Set{{.RootRefDependency.EntityName}}ID(id)
+}
+
+// GetStatusConditionTypeParentRefValid returns the status condition type
+// indicating whether the parent reference is valid.
+func (obj *{{.EntityName}}) GetStatusConditionTypeParentRefValid() string {
+	return {{.RefConditionPrefix}}RefValidConditionType
+}
+
+// GetStatusConditionReasonParentRefValid returns the status condition reason
+// indicating that the parent reference is valid.
+func (obj *{{.EntityName}}) GetStatusConditionReasonParentRefValid() string {
+	return {{.RefConditionPrefix}}RefReasonValid
+}
+
+// GetStatusConditionReasonParentRefInvalid returns the status condition reason
+// indicating that the parent reference is invalid.
+func (obj *{{.EntityName}}) GetStatusConditionReasonParentRefInvalid() string {
+	return {{.RefConditionPrefix}}RefReasonInvalid
+}
+
+// GetStatusConditionReasonParentRefNotProgrammed returns the status condition
+// reason indicating that the referenced parent exists but is not yet
+// programmed in Konnect.
+func (obj *{{.EntityName}}) GetStatusConditionReasonParentRefNotProgrammed() string {
+	return {{.RefConditionPrefix}}RefReasonNotProgrammed
+}
 {{- end}}
 {{- if .IsReconcilerRoot}}
 
@@ -399,6 +434,9 @@ func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() ([]byte, error) {
 		return nil, fmt.Errorf("failed to decode {{$.EntityName}}APISpec: %w", err)
 	}
 	payload = flattenSDKUnions(payload)
+	// Convert camelCase CRD wire-format keys and discriminator values to
+	// snake_case for the Konnect SDK request types.
+	payload = renameKeysToSDK(payload)
 	{{- if $.BoolFields}}
 	if pm, ok := payload.(map[string]any); ok {
 		if err := normalize{{$.EntityName}}SDKOpsBoolFields(pm); err != nil {
@@ -596,9 +634,16 @@ func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() (map[string]any, error)
 		return nil, fmt.Errorf("failed to marshal {{$.EntityName}}APISpec: %w", err)
 	}
 
-	var payload map[string]any
-	if err := json.Unmarshal(data, &payload); err != nil {
+	var rawPayload any
+	if err := json.Unmarshal(data, &rawPayload); err != nil {
 		return nil, fmt.Errorf("failed to decode {{$.EntityName}}APISpec: %w", err)
+	}
+	// Convert camelCase CRD wire-format keys and discriminator values to
+	// snake_case for the Konnect SDK request types.
+	renamed := renameKeysToSDK(rawPayload)
+	payload, ok := renamed.(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("failed to convert {{$.EntityName}}APISpec SDK payload to map")
 	}
 	{{- if $.BoolFields}}
 	if err := normalize{{$.EntityName}}SDKOpsBoolFields(payload); err != nil {
@@ -854,6 +899,8 @@ import (
 {{- end}}
 
 ` + flattenSDKUnionsHelper + `
+
+` + renameKeysToSDKHelper + `
 `
 
 // opsPerEntityFileHeaderTemplate renders the shared file header (preamble,
@@ -964,7 +1011,9 @@ func update{{.Entity}}(
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "{{.EntityName}}", Op: UpdateOp}
 	}
 {{- end}}
+{{- if not .UpdateOmitsEntityID}}
 	id := obj.GetKonnectStatus().GetKonnectID()
+{{- end}}
 	{{- if .NeedsClient}}
 	req, err := obj.To{{.UpdateReqType}}(ctx, cl)
 	{{- else}}
@@ -996,6 +1045,9 @@ func update{{.Entity}}(
 		{{.EntityIDField}}: id,
 		{{.UpdateBodyField}}: {{if .UpdateReqBodyPointer}}req{{else}}*req{{end}},
 	})
+{{- else if .UpdateOmitsEntityID}}
+
+	_, err = sdk.{{.UpdateSDKMethod}}(ctx, {{(index .Parents 0).VarName}}, {{if .UpdateReqBodyPointer}}req{{else}}*req{{end}})
 {{- else}}
 
 	_, err = sdk.{{.UpdateSDKMethod}}(ctx, id, {{if .UpdateReqBodyPointer}}req{{else}}*req{{end}})
@@ -1011,8 +1063,9 @@ func update{{.Entity}}(
 
 // opsDeleteFuncTemplate renders a single delete<Entity> function body.
 // It is concatenated after the file header and any create/update functions.
-// Single-parent SDK delete methods use positional arguments.
 // Multi-parent SDK delete methods use a fully-wrapped request struct.
+// Parent-scoped singletons omit the entity ID (not in path).
+// Single-parent SDK delete methods use positional arguments.
 // Optional query parameters (e.g. force) are passed as nil.
 const opsDeleteFuncTemplate = `
 func delete{{.Entity}}(
@@ -1026,7 +1079,9 @@ func delete{{.Entity}}(
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "{{.EntityName}}", Op: DeleteOp}
 	}
 {{- end}}
+{{- if not .DeleteOmitsEntityID}}
 	id := obj.GetKonnectStatus().GetKonnectID()
+{{- end}}
 {{- if .DeleteFullyWrapped}}
 
 	_, err := sdk.{{.DeleteSDKMethod}}(ctx, sdkkonnectops.{{.DeleteWrappedType}}{
@@ -1035,6 +1090,9 @@ func delete{{.Entity}}(
 		{{- end}}
 		{{.DeleteEntityIDField}}: id,
 	})
+{{- else if .DeleteOmitsEntityID}}
+
+	_, err := sdk.{{.DeleteSDKMethod}}(ctx, {{(index .Parents 0).VarName}}{{range .DeleteNilArgs}}, nil{{end}})
 {{- else if .Parents}}
 
 	_, err := sdk.{{.DeleteSDKMethod}}(ctx, {{(index .Parents 0).VarName}}, id{{range .DeleteNilArgs}}, nil{{end}})
@@ -1488,19 +1546,24 @@ const groupVersionInfoTemplate = sharedGeneratedFilePreamble + `
 package {{.APIVersion}}
 
 import (
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/controller-runtime/pkg/scheme"
+)
+
+const (
+	// GroupName is the group name used in this package.
+	GroupName = "{{.APIGroup}}"
 )
 
 var (
-	// GroupVersion is group version used to register these objects.
-	GroupVersion = schema.GroupVersion{Group: "{{.APIGroup}}", Version: "{{.APIVersion}}"}
+	// GroupVersion is a convenience var for generated clientsets.
+	GroupVersion = schema.GroupVersion{Group: GroupName, Version: "{{.APIVersion}}"}
 
 	// SchemeGroupVersion is a convenience var for generated clientsets.
 	SchemeGroupVersion = GroupVersion
 
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme.
-	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}
+	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
 
 	// AddToScheme adds the types in this group-version to the given scheme.
 	AddToScheme = SchemeBuilder.AddToScheme
@@ -1508,7 +1571,33 @@ var (
 
 // Resource takes an unqualified resource and returns a Group qualified GroupResource.
 func Resource(resource string) schema.GroupResource {
-	return SchemeGroupVersion.WithResource(resource).GroupResource()
+	return GroupVersion.WithResource(resource).GroupResource()
+}
+
+func addKnownTypes(scheme *runtime.Scheme) error {
+	return addKnownTypesGenerated(scheme)
+}
+`
+
+const groupVersionInfoGeneratedTemplate = sharedGeneratedFilePreamble + `
+
+package {{.APIVersion}}
+
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+)
+
+func addKnownTypesGenerated(scheme *runtime.Scheme) error {
+	scheme.AddKnownTypes(GroupVersion,
+{{- range .EntityNames}}
+		&{{.}}{},
+		&{{.}}List{},
+{{- end}}
+	)
+
+	metav1.AddToGroupVersion(scheme, GroupVersion)
+	return nil
 }
 `
 

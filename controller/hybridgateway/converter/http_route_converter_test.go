@@ -15,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -466,7 +465,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 								BackendRef: gwtypes.BackendRef{
 									BackendObjectReference: gwtypes.BackendObjectReference{
 										Name:      v2Name,
-										Namespace: ptr.To(gwtypes.Namespace("app-backend")),
+										Namespace: new(gwtypes.Namespace("app-backend")),
 										Kind:      &serviceKind,
 										Group:     &serviceGroup,
 										Port:      new(gwtypes.PortNumber(80)),
@@ -485,7 +484,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 								BackendRef: gwtypes.BackendRef{
 									BackendObjectReference: gwtypes.BackendObjectReference{
 										Name:      v1Name,
-										Namespace: ptr.To(gwtypes.Namespace("app-backend")),
+										Namespace: new(gwtypes.Namespace("app-backend")),
 										Kind:      &serviceKind,
 										Group:     &serviceGroup,
 										Port:      new(gwtypes.PortNumber(80)),

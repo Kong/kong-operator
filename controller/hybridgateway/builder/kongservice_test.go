@@ -244,6 +244,151 @@ func TestKongServiceBuilder_WithProtocol(t *testing.T) {
 	}
 }
 
+func TestKongServiceBuilder_WithPath(t *testing.T) {
+	tests := []struct {
+		name     string
+		path     string
+		expected *string
+	}{
+		{name: "empty path leaves field unset", path: "", expected: nil},
+		{name: "non-empty path sets field", path: "/api/v1", expected: new("/api/v1")},
+		{name: "root path sets field", path: "/", expected: new("/")},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			service, err := NewKongService().WithPath(tt.path).Build()
+			require.NoError(t, err)
+			if tt.expected == nil {
+				assert.Nil(t, service.Spec.Path)
+			} else {
+				require.NotNil(t, service.Spec.Path)
+				assert.Equal(t, *tt.expected, *service.Spec.Path)
+			}
+		})
+	}
+}
+
+func TestKongServiceBuilder_WithTLSVerify(t *testing.T) {
+	tests := []struct {
+		name     string
+		v        *bool
+		expected *bool
+	}{
+		{name: "nil leaves field unset", v: nil, expected: nil},
+		{name: "true sets field", v: new(true), expected: new(true)},
+		{name: "false sets field", v: new(false), expected: new(false)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			service, err := NewKongService().WithTLSVerify(tt.v).Build()
+			require.NoError(t, err)
+			if tt.expected == nil {
+				assert.Nil(t, service.Spec.TLSVerify)
+			} else {
+				require.NotNil(t, service.Spec.TLSVerify)
+				assert.Equal(t, *tt.expected, *service.Spec.TLSVerify)
+			}
+		})
+	}
+}
+
+func TestKongServiceBuilder_WithTLSVerifyDepth(t *testing.T) {
+	tests := []struct {
+		name     string
+		v        *int64
+		expected *int64
+	}{
+		{name: "nil leaves field unset", v: nil, expected: nil},
+		{name: "zero sets field", v: new(int64(0)), expected: new(int64(0))},
+		{name: "positive sets field", v: new(int64(3)), expected: new(int64(3))},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			service, err := NewKongService().WithTLSVerifyDepth(tt.v).Build()
+			require.NoError(t, err)
+			if tt.expected == nil {
+				assert.Nil(t, service.Spec.TLSVerifyDepth)
+			} else {
+				require.NotNil(t, service.Spec.TLSVerifyDepth)
+				assert.Equal(t, *tt.expected, *service.Spec.TLSVerifyDepth)
+			}
+		})
+	}
+}
+
+func TestKongServiceBuilder_WithConnectTimeout(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    *int64
+		expected *int64
+	}{
+		{name: "nil leaves field unset", input: nil, expected: nil},
+		{name: "zero sets field", input: new(int64(0)), expected: new(int64(0))},
+		{name: "positive sets field", input: new(int64(5000)), expected: new(int64(5000))},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			service, err := NewKongService().WithConnectTimeout(tt.input).Build()
+			require.NoError(t, err)
+			if tt.expected == nil {
+				assert.Nil(t, service.Spec.ConnectTimeout)
+			} else {
+				require.NotNil(t, service.Spec.ConnectTimeout)
+				assert.Equal(t, *tt.expected, *service.Spec.ConnectTimeout)
+			}
+		})
+	}
+}
+
+func TestKongServiceBuilder_WithReadTimeout(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    *int64
+		expected *int64
+	}{
+		{name: "nil leaves field unset", input: nil, expected: nil},
+		{name: "zero sets field", input: new(int64(0)), expected: new(int64(0))},
+		{name: "positive sets field", input: new(int64(30000)), expected: new(int64(30000))},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			service, err := NewKongService().WithReadTimeout(tt.input).Build()
+			require.NoError(t, err)
+			if tt.expected == nil {
+				assert.Nil(t, service.Spec.ReadTimeout)
+			} else {
+				require.NotNil(t, service.Spec.ReadTimeout)
+				assert.Equal(t, *tt.expected, *service.Spec.ReadTimeout)
+			}
+		})
+	}
+}
+
+func TestKongServiceBuilder_WithWriteTimeout(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    *int64
+		expected *int64
+	}{
+		{name: "nil leaves field unset", input: nil, expected: nil},
+		{name: "zero sets field", input: new(int64(0)), expected: new(int64(0))},
+		{name: "positive sets field", input: new(int64(60000)), expected: new(int64(60000))},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			service, err := NewKongService().WithWriteTimeout(tt.input).Build()
+			require.NoError(t, err)
+			if tt.expected == nil {
+				assert.Nil(t, service.Spec.WriteTimeout)
+			} else {
+				require.NotNil(t, service.Spec.WriteTimeout)
+				assert.Equal(t, *tt.expected, *service.Spec.WriteTimeout)
+			}
+		})
+	}
+}
+
 func TestKongServiceBuilder_WithRetries(t *testing.T) {
 	tests := []struct {
 		name     string

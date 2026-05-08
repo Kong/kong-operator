@@ -1,7 +1,22 @@
 name: kong integration tests
 
 on:
-  workflow_call: {}
+  workflow_call:
+    inputs:
+      kong-image-repo:
+        description: "Kong Gateway Docker image repository override. If not set,
+          defaults are used from test_dependencies.yaml."
+        type: string
+        required: false
+      kong-image-tag:
+        description: "Kong Gateway Docker image tag override."
+        type: string
+        required: false
+      kong-effective-version:
+        description: "Effective semantic version of Kong Gateway. If not given, parsed
+          from the image tag."
+        type: string
+        required: false
 
 permissions:
   contents: read
@@ -40,25 +55,39 @@ jobs:
           op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
 
       - name: set kong oss version
-        if: ${{ !matrix.enterprise }}
+        if: ${{ !matrix.enterprise && inputs.kong-image-repo == '' }}
         run: |
           echo "TEST_KONG_IMAGE=kong" >> $GITHUB_ENV
           echo "TEST_KONG_TAG=$(yq -ojson -r '.kongintegration.kong-oss' < test/test_dependencies.yaml )" >> $GITHUB_ENV
 
       - name: set kong ee version
-        if: ${{ matrix.enterprise }}
+        if: ${{ matrix.enterprise && inputs.kong-image-repo == '' }}
         run: |
           echo "TEST_KONG_IMAGE=kong/kong-gateway" >> $GITHUB_ENV
           echo "TEST_KONG_TAG=$(yq -ojson -r '.kongintegration.kong-ee' < test/test_dependencies.yaml )" >> $GITHUB_ENV
+
+      - name: set kong image override
+        if: ${{ inputs.kong-image-repo != '' }}
+        run: |
+          echo "TEST_KONG_IMAGE=${{ inputs.kong-image-repo }}" >> $GITHUB_ENV
+          echo "TEST_KONG_TAG=${{ inputs.kong-image-tag }}" >> $GITHUB_ENV
+
+      - name: set kong effective version
+        if: ${{ inputs.kong-effective-version != '' }}
+        run: |
+          echo "TEST_KONG_EFFECTIVE_VERSION=${{ inputs.kong-effective-version }}" >> $GITHUB_ENV
 
       - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
         with:
           install: false
 
-      - run: echo "GOTESTSUM_JUNITFILE=kongintegration-${{ matrix.name }}-tests.xml" >> $GITHUB_ENV
+      - run: echo "GOTESTSUM_JUNITFILE=kongintegration-${{ matrix.name }}-tests.xml" >>
+          $GITHUB_ENV
       # Share the cache key across all kongintegration tests since they all use the same dependencies.
-      - run: echo "GO_CACHE_KEY=go-kongintegration-${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.mod') }}" >> $GITHUB_ENV
-      - run: echo "GO_CACHE_KEY_2=go-kongintegration-${{ runner.os }}-${{ runner.arch }}-go-" >> $GITHUB_ENV
+      - run: echo "GO_CACHE_KEY=go-kongintegration-${{ runner.os }}-${{ runner.arch
+          }}-go-${{ hashFiles('**/go.mod') }}" >> $GITHUB_ENV
+      - run: echo "GO_CACHE_KEY_2=go-kongintegration-${{ runner.os }}-${{ runner.arch
+          }}-go-" >> $GITHUB_ENV
 
       - name: Go cache main branch
         if: ${{ github.ref == 'refs/heads/main' }}

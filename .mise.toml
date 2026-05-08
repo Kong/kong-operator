@@ -66,7 +66,7 @@ macos-arm64 = { url = "https://get.helm.sh/helm-v{{version}}-darwin-arm64.tar.gz
 
 [tools."go:sigs.k8s.io/kube-api-linter/cmd/golangci-lint-kube-api-linter"]
 # renovate: datasource=git-refs packageName=https://github.com/kubernetes-sigs/kube-api-linter.git
-version = "2b3d1fe145786b26f649cc3a14fe38ebf195d774"
+version = "3fa174937a6b9f0c1c2203efb312fff4ac8477c8"
 
 [tools."yq"]
 # renovate: datasource=github-releases depName=mikefarah/yq
@@ -85,12 +85,10 @@ dir = "./{{env.DIR}}"
 run = "go build -o ../bin/{{env.DIR}} main.go"
 
 [tasks.clean]
-# TODO: This hardcodes the x-konnect API group. Removing this hardcode would cause
-# the removal of other non generated APIs to be removed.
 description = "Clean generated files"
 run = '''
 rm -rf \
-       ./api/konnect/zz_generated_* \
+       ./api/konnect/v1alpha1/zz_generated_* \
        ./config/crd/kong-operator/x-konnect.konghq.com_* \
        ./controller/konnect/zz_generated_reconciler_generic_rbac_* \
        ./modules/manager/zz_generated_* \

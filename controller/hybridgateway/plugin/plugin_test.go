@@ -10,7 +10,6 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -160,7 +159,7 @@ func TestPluginForFilter(t *testing.T) {
 				Matches: []gatewayv1.HTTPRouteMatch{
 					{
 						Path: &gatewayv1.HTTPPathMatch{
-							Type:  ptr.To(gatewayv1.PathMatchPathPrefix),
+							Type:  new(gatewayv1.PathMatchPathPrefix),
 							Value: new("/test"),
 						},
 					},

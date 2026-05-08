@@ -9,6 +9,9 @@ metadata:
 spec:
   group: konnect.konghq.com
   names:
+    categories:
+    - konnect
+    - kong
     kind: EventGatewayVirtualCluster
     listKind: EventGatewayVirtualClusterList
     plural: eventgatewayvirtualclusters
@@ -62,7 +65,7 @@ spec:
                 description: APISpec defines the desired state of the resource's API
                   spec fields.
                 properties:
-                  acl_mode:
+                  aclMode:
                     description: |-
                       Configures whether or not ACL policies are enforced on the gateway.
                       - `enforce_on_gateway` means the gateway enforces its own ACL policies for
@@ -90,28 +93,14 @@ spec:
                       properties:
                         anonymous:
                           description: Anonymous configuration.
-                          properties:
-                            type:
-                              maxLength: 253
-                              minLength: 1
-                              type: string
-                          required:
-                          - type
                           type: object
-                        client_certificate:
+                        clientCertificate:
                           description: ClientCertificate configuration.
-                          properties:
-                            type:
-                              maxLength: 253
-                              minLength: 1
-                              type: string
-                          required:
-                          - type
                           type: object
-                        oauth_bearer:
+                        oauthBearer:
                           description: OauthBearer configuration.
                           properties:
-                            claims_mapping:
+                            claimsMapping:
                               description: |-
                                 Maps JWT claims in the case when sub and scope are presented as different
                                 claims in your JWT token.
@@ -131,7 +120,7 @@ spec:
                               description: JSON Web Key Set configuration for verifying
                                 token signatures.
                               properties:
-                                cache_expiration:
+                                cacheExpiration:
                                   default: 1h
                                   description: Duration after which the gateway will
                                     fetch and cache JWKS.
@@ -176,10 +165,6 @@ spec:
                               maxLength: 253
                               minLength: 1
                               type: string
-                            type:
-                              maxLength: 253
-                              minLength: 1
-                              type: string
                             validate:
                               description: Validation rules.
                               properties:
@@ -207,9 +192,8 @@ spec:
                               type: object
                           required:
                           - mediation
-                          - type
                           type: object
-                        sasl_plain:
+                        saslPlain:
                           description: SaslPlain configuration.
                           properties:
                             mediation:
@@ -254,15 +238,10 @@ spec:
                                 - username
                                 type: object
                               type: array
-                            type:
-                              maxLength: 253
-                              minLength: 1
-                              type: string
                           required:
                           - mediation
-                          - type
                           type: object
-                        sasl_scram:
+                        saslScram:
                           description: SaslScram configuration.
                           properties:
                             algorithm:
@@ -273,22 +252,17 @@ spec:
                               maxLength: 253
                               minLength: 1
                               type: string
-                            type:
-                              maxLength: 253
-                              minLength: 1
-                              type: string
                           required:
                           - algorithm
-                          - type
                           type: object
                         type:
                           description: Type designates the type of configuration.
                           enum:
                           - anonymous
-                          - client_certificate
-                          - oauth_bearer
-                          - sasl_plain
-                          - sasl_scram
+                          - clientCertificate
+                          - oauthBearer
+                          - saslPlain
+                          - saslScram
                           minLength: 1
                           type: string
                       required:
@@ -317,7 +291,7 @@ spec:
                           cluster.
                         type: string
                     type: object
-                  dns_label:
+                  dnsLabel:
                     description: |-
                       The DNS label used in the bootstrap server URL to identify the virtual
                       cluster when using SNI routing.
@@ -356,7 +330,7 @@ spec:
                         description: VirtualClusterNamespaceAdditionalProperties is
                           a type alias.
                         properties:
-                          consumer_groups:
+                          consumerGroups:
                             description: |-
                               Consumer group IDs to expose even if they don't start with the namespace
                               prefix.
@@ -365,10 +339,10 @@ spec:
                                 VirtualClusterNamespaceIDSelector represents a union type for VirtualClusterNamespaceIDSelector.
                                 Only one of the fields should be set based on the Type.
                               properties:
-                                exact_list:
+                                exactList:
                                   description: ExactList configuration.
                                   properties:
-                                    exact_list:
+                                    exactList:
                                       items:
                                         description: Items is a type alias.
                                         properties:
@@ -380,12 +354,6 @@ spec:
                                         - value
                                         type: object
                                       type: array
-                                    type:
-                                      maxLength: 253
-                                      minLength: 1
-                                      type: string
-                                  required:
-                                  - type
                                   type: object
                                 glob:
                                   description: Glob configuration.
@@ -397,18 +365,13 @@ spec:
                                       minLength: 1
                                       pattern: ^[A-Za-z0-9._?*-]+$
                                       type: string
-                                    type:
-                                      maxLength: 253
-                                      minLength: 1
-                                      type: string
                                   required:
                                   - glob
-                                  - type
                                   type: object
                                 type:
                                   description: Type designates the type of configuration.
                                   enum:
-                                  - exact_list
+                                  - exactList
                                   - glob
                                   minLength: 1
                                   type: string
@@ -428,7 +391,7 @@ spec:
                                 VirtualClusterNamespaceTopicSelector represents a union type for VirtualClusterNamespaceTopicSelector.
                                 Only one of the fields should be set based on the Type.
                               properties:
-                                exact_list:
+                                exactList:
                                   description: ExactList configuration.
                                   properties:
                                     conflict:
@@ -445,7 +408,7 @@ spec:
                                       - ignore
                                       maxLength: 253
                                       type: string
-                                    exact_list:
+                                    exactList:
                                       description: Explicit allow-list of backend
                                         topic names.
                                       items:
@@ -460,12 +423,6 @@ spec:
                                         - backend
                                         type: object
                                       type: array
-                                    type:
-                                      maxLength: 253
-                                      minLength: 1
-                                      type: string
-                                  required:
-                                  - type
                                   type: object
                                 glob:
                                   description: Glob configuration.
@@ -492,18 +449,13 @@ spec:
                                       minLength: 1
                                       pattern: ^[A-Za-z0-9._?*-]+$
                                       type: string
-                                    type:
-                                      maxLength: 253
-                                      minLength: 1
-                                      type: string
                                   required:
                                   - glob
-                                  - type
                                   type: object
                                 type:
                                   description: Type designates the type of configuration.
                                   enum:
-                                  - exact_list
+                                  - exactList
                                   - glob
                                   minLength: 1
                                   type: string
@@ -542,14 +494,73 @@ spec:
                     - mode
                     - prefix
                     type: object
+                  topicAliases:
+                    description: |-
+                      **Pre-release Feature**
+                      This feature is currently in beta and is subject to change.
+
+                      Topic aliases allow exposing backend topics under additional names.
+                      An alias creates a new entry point to the same physical data.
+                      The alias `topic` field references namespace-visible names (if namespace is
+                      configured).
+                      Aliases are independent of namespace and can be used without it.
+
+                      **Requires a minimum runtime version of `1.2`**.
+                    items:
+                      description: |-
+                        VirtualClusterTopicAlias **Pre-release Feature**
+                        This feature is currently in beta and is subject to change.
+
+                        A topic alias maps an alias name to a namespace-visible topic name.
+                        Clients can produce to, consume from, and discover the topic under the alias
+                        name.
+                        The original topic name remains accessible.
+
+                        **Requires a minimum runtime version of `1.2`**.
+                      properties:
+                        alias:
+                          description: The client-visible topic name.
+                          maxLength: 253
+                          minLength: 1
+                          type: string
+                        conflict:
+                          default: warn
+                          description: |-
+                            How to handle conflicts where an alias shadows a physical topic.
+                            * warn - activate the alias but log a warning and set the conflict metric to
+                            1.
+                            * ignore - activate the alias silently.
+                          enum:
+                          - warn
+                          - ignore
+                          maxLength: 253
+                          type: string
+                        match:
+                          default: ""
+                          description: |-
+                            CEL expression evaluated against the connection's auth context.
+                            If omitted or empty, the alias is active for all connections.
+                          maxLength: 253
+                          type: string
+                        topic:
+                          description: The namespace-visible topic name this alias
+                            resolves to.
+                          maxLength: 253
+                          minLength: 1
+                          type: string
+                      required:
+                      - alias
+                      - topic
+                      type: object
+                    type: array
                 required:
-                - acl_mode
+                - aclMode
                 - authentication
                 - destination
-                - dns_label
+                - dnsLabel
                 - name
                 type: object
-              gateway_ref:
+              gatewayRef:
                 description: GatewayRef is the reference to the parent Gateway object.
                 properties:
                   konnectID:
@@ -605,7 +616,7 @@ spec:
                 - message: when type is konnectID, namespacedRef must not be set
                   rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
             required:
-            - gateway_ref
+            - gatewayRef
             type: object
           status:
             description: EventGatewayVirtualClusterStatus defines the observed state

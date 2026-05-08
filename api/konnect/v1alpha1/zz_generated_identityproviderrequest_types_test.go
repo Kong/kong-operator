@@ -14,8 +14,8 @@ func TestIdentityProviderRequestConfigUnmarshalJSON_NilReceiver(t *testing.T) {
 		name    string
 		payload []byte
 	}{
-		{name: "OIDC", payload: []byte("{\"type\":\"OIDC\",\"OIDC\":{}}")},
-		{name: "SAML", payload: []byte("{\"type\":\"SAML\",\"SAML\":{}}")},
+		{name: "OIDC", payload: []byte("{\"type\":\"oIDC\",\"oIDC\":{}}")},
+		{name: "SAML", payload: []byte("{\"type\":\"sAML\",\"sAML\":{}}")},
 	}
 
 	for _, tt := range tests {
@@ -45,7 +45,7 @@ func TestIdentityProviderRequestAPISpecUnmarshalJSON_DecodesUnionFields(t *testi
 	}{
 		{
 			name: "Config/OIDC",
-			payload: []byte("{\"config\":{\"type\":\"OIDC\",\"OIDC\":{}}}"),
+			payload: []byte("{\"config\":{\"type\":\"oIDC\",\"oIDC\":{}}}"),
 			assert: func(t *testing.T, target IdentityProviderRequestAPISpec) {
 				t.Helper()
 				if target.Config == nil {
@@ -61,7 +61,7 @@ func TestIdentityProviderRequestAPISpecUnmarshalJSON_DecodesUnionFields(t *testi
 		},
 		{
 			name: "Config/SAML",
-			payload: []byte("{\"config\":{\"type\":\"SAML\",\"SAML\":{}}}"),
+			payload: []byte("{\"config\":{\"type\":\"sAML\",\"sAML\":{}}}"),
 			assert: func(t *testing.T, target IdentityProviderRequestAPISpec) {
 				t.Helper()
 				if target.Config == nil {

@@ -99,7 +99,3 @@ type KongCredentialHMACList struct {
 
 	Items []KongCredentialHMAC `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&KongCredentialHMAC{}, &KongCredentialHMACList{})
-}

@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -24,10 +25,23 @@ func LoadProjectConfig(path string) (*ProjectConfig, error) {
 	}
 
 	for gv, agv := range cfg.APIGroupVersions {
+		inferIsRootForGroup(agv)
 		if err := agv.validate(); err != nil {
 			return nil, fmt.Errorf("apiGroupVersion %q: %w", gv, err)
 		}
 	}
 
 	return &cfg, nil
+}
+
+// inferIsRootForGroup sets IsRoot on every ReconcilerConfig that did not
+// explicitly set it in YAML, based on whether the path has URL parameters.
+func inferIsRootForGroup(agv *APIGroupVersionConfig) {
+	for _, tc := range agv.Types {
+		if tc.Reconciler == nil || tc.Reconciler.IsRoot != nil {
+			continue
+		}
+		v := !strings.Contains(tc.Path, "{")
+		tc.Reconciler.IsRoot = &v
+	}
 }

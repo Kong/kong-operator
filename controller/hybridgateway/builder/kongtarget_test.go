@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
@@ -116,22 +115,22 @@ func TestKongTargetBuilder_WithWeight(t *testing.T) {
 	}{
 		{
 			name:           "with weight 50",
-			weight:         ptr.To[int32](50),
+			weight:         new(int32(50)),
 			expectedWeight: 50,
 		},
 		{
 			name:           "with weight 100",
-			weight:         ptr.To[int32](100),
+			weight:         new(int32(100)),
 			expectedWeight: 100,
 		},
 		{
 			name:           "with weight 0",
-			weight:         ptr.To[int32](0),
+			weight:         new(int32(0)),
 			expectedWeight: 0,
 		},
 		{
 			name:           "with weight 1000",
-			weight:         ptr.To[int32](1000),
+			weight:         new(int32(1000)),
 			expectedWeight: 1000,
 		},
 		{
@@ -286,7 +285,7 @@ func TestKongTargetBuilder_Chaining(t *testing.T) {
 		WithName("test-target").
 		WithNamespace("test-namespace").
 		WithTarget("192.168.1.10", 8080).
-		WithWeight(ptr.To[int32](50)).
+		WithWeight(new(int32(50))).
 		WithUpstreamRef("test-upstream").
 		WithOwner(httpRoute).
 		WithLabels(httpRoute, parentRef).

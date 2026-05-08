@@ -659,3 +659,117 @@ func TestAPIGroupVersionConfig_OpsConfig(t *testing.T) {
 		assert.Empty(t, oc)
 	})
 }
+
+func TestAPIGroupVersionConfig_Categories(t *testing.T) {
+	t.Run("categories parsed from YAML", func(t *testing.T) {
+		yaml := `
+apiGroupVersions:
+  test/v1:
+    categories:
+      - konnect
+      - kong
+    types:
+      - path: /v1/gateways
+        reconciler: {}
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(yaml), 0o600))
+
+		cfg, err := LoadProjectConfig(path)
+		require.NoError(t, err)
+
+		agv := cfg.APIGroupVersions["test/v1"]
+		require.NotNil(t, agv)
+		assert.Equal(t, []string{"konnect", "kong"}, agv.Categories)
+	})
+
+	t.Run("categories absent when not set", func(t *testing.T) {
+		yaml := `
+apiGroupVersions:
+  test/v1:
+    types:
+      - path: /v1/gateways
+        reconciler: {}
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(yaml), 0o600))
+
+		cfg, err := LoadProjectConfig(path)
+		require.NoError(t, err)
+
+		agv := cfg.APIGroupVersions["test/v1"]
+		require.NotNil(t, agv)
+		assert.Empty(t, agv.Categories)
+	})
+}
+
+func TestReconcilerConfig_IsRootInference(t *testing.T) {
+	tests := []struct {
+		name       string
+		yaml       string
+		wantIsRoot bool
+	}{
+		{
+			name: "root path without params infers isRoot true",
+			yaml: `
+apiGroupVersions:
+  test/v1:
+    types:
+      - path: /v1/gateways
+        reconciler: {}
+`,
+			wantIsRoot: true,
+		},
+		{
+			name: "child path with params infers isRoot false",
+			yaml: `
+apiGroupVersions:
+  test/v1:
+    types:
+      - path: /v1/gateways/{gatewayId}/listeners
+        reconciler: {}
+`,
+			wantIsRoot: false,
+		},
+		{
+			name: "explicit isRoot true overrides inferred false on child path",
+			yaml: `
+apiGroupVersions:
+  test/v1:
+    types:
+      - path: /v1/gateways/{gatewayId}/listeners
+        reconciler:
+          isRoot: true
+`,
+			wantIsRoot: true,
+		},
+		{
+			name: "explicit isRoot false overrides inferred true on root path",
+			yaml: `
+apiGroupVersions:
+  test/v1:
+    types:
+      - path: /v1/gateways
+        reconciler:
+          isRoot: false
+`,
+			wantIsRoot: false,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "config.yaml")
+			require.NoError(t, os.WriteFile(path, []byte(tc.yaml), 0o600))
+
+			cfg, err := LoadProjectConfig(path)
+			require.NoError(t, err)
+
+			agv := cfg.APIGroupVersions["test/v1"]
+			require.NotNil(t, agv)
+			require.Len(t, agv.Types, 1)
+			require.NotNil(t, agv.Types[0].Reconciler)
+			require.NotNil(t, agv.Types[0].Reconciler.IsRoot)
+			assert.Equal(t, tc.wantIsRoot, *agv.Types[0].Reconciler.IsRoot)
+		})
+	}
+}
