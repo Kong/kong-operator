@@ -11,8 +11,8 @@ MODS=($(
     sed -n 's|.*k8s.io/\(.*\) => ./staging/src/k8s.io/.*|k8s.io/\1|p'
 ))
 
-# Set concurrency level to the number of available CPU cores
-CONCURRENCY=$(nproc)
+# Set concurrency level to the number of available CPU cores (portable across Linux/macOS).
+CONCURRENCY=$(getconf _NPROCESSORS_ONLN)
 export VERSION
 
 # Create an empty array to store replace directives
