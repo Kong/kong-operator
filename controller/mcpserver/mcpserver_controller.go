@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
@@ -74,6 +75,8 @@ func (r *MCPServerReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Man
 		Owns(&corev1.Service{}).
 		Owns(&configurationv1alpha1.KongService{}).
 		Owns(&configurationv1alpha1.KongRoute{}).
+		Owns(&configurationv1.KongPlugin{}).
+		Owns(&configurationv1alpha1.KongPluginBinding{}).
 		WatchesRawSource(
 			source.Channel(
 				r.ReconcileEventCh,

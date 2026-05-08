@@ -12,3 +12,5 @@ package mcpserver
 // +kubebuilder:rbac:groups=core,resources=secrets,verbs=get
 // +kubebuilder:rbac:groups=configuration.konghq.com,resources=kongservices,verbs=create;get;list;watch;update;patch;delete
 // +kubebuilder:rbac:groups=configuration.konghq.com,resources=kongroutes,verbs=create;get;list;watch;update;patch;delete
+// +kubebuilder:rbac:groups=configuration.konghq.com,resources=kongplugins,verbs=create;get;list;watch;update;patch;delete
+// +kubebuilder:rbac:groups=configuration.konghq.com,resources=kongpluginbindings,verbs=create;get;list;watch;update;patch;delete

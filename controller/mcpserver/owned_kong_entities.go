@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
@@ -99,6 +100,17 @@ func (r *MCPServerReconciler) ensureKongEntities(
 		return err
 	}
 
+	// ------------------------------------------------------------------
+	// Ensure KongPlugin and KongPluginBinding CRs
+	// ------------------------------------------------------------------
+	if _, err := r.ensureKongPlugins(ctx, mcpServer); err != nil {
+		return err
+	}
+
+	if err := r.ensureKongPluginBindings(ctx, mcpServer, desiredServiceNames); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -130,7 +142,7 @@ func (r *MCPServerReconciler) ensureKongService(
 		return op.Created, nn, nil
 	}
 
-	// TODO: enforce the KongService Spec
+	// TODO: enforce the KongService Spec https://github.com/Kong/kong-operator/issues/3979
 
 	return op.Noop, nn, nil
 }
@@ -191,7 +203,7 @@ func (r *MCPServerReconciler) ensureKongRoute(
 		return op.Created, nn, nil
 	}
 
-	// TODO: enforce the KongRoute Spec
+	// TODO: enforce the KongRoute Spec https://github.com/Kong/kong-operator/issues/3979
 
 	return op.Noop, nn, nil
 }
@@ -279,6 +291,18 @@ func extractItems(list client.ObjectList) []client.Object {
 		}
 		return items
 	case *configurationv1alpha1.KongRouteList:
+		items := make([]client.Object, len(l.Items))
+		for i := range l.Items {
+			items[i] = &l.Items[i]
+		}
+		return items
+	case *configurationv1.KongPluginList:
+		items := make([]client.Object, len(l.Items))
+		for i := range l.Items {
+			items[i] = &l.Items[i]
+		}
+		return items
+	case *configurationv1alpha1.KongPluginBindingList:
 		items := make([]client.Object, len(l.Items))
 		for i := range l.Items {
 			items[i] = &l.Items[i]

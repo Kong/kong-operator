@@ -187,6 +187,9 @@
   runner container images (`kong/mcp-server-init`, `kong/mcp-server-runner`) to
   the versions returned by Konnect.
   [#3943](https://github.com/Kong/kong-operator/pull/3943)
+- `MCPServer`: provision the `ai-mcp-proxy` `KongPlugin` and attach it to the
+  owned `KongService` via a dedicated `KongPluginBinding`.
+  [#4188](https://github.com/Kong/kong-operator/pull/4188)
 
 ### Changed
 
