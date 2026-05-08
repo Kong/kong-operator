@@ -91,7 +91,7 @@ func (r *MCPServerReconciler) ensureKongPlugin(
 		return op.Created, nn, nil
 	}
 
-	// TODO: enforce the KongPlugin Spec
+	// TODO: enforce the KongPlugin Spec https://github.com/Kong/kong-operator/issues/3979
 
 	return op.Noop, nn, nil
 }
@@ -163,7 +163,7 @@ func (r *MCPServerReconciler) ensureKongPluginBinding(
 		return op.Created, nn, nil
 	}
 
-	// TODO: enforce the KongPluginBinding Spec
+	// TODO: enforce the KongPluginBinding Spec https://github.com/Kong/kong-operator/issues/3979
 
 	return op.Noop, nn, nil
 }

@@ -142,7 +142,7 @@ func (r *MCPServerReconciler) ensureKongService(
 		return op.Created, nn, nil
 	}
 
-	// TODO: enforce the KongService Spec
+	// TODO: enforce the KongService Spec https://github.com/Kong/kong-operator/issues/3979
 
 	return op.Noop, nn, nil
 }
@@ -203,7 +203,7 @@ func (r *MCPServerReconciler) ensureKongRoute(
 		return op.Created, nn, nil
 	}
 
-	// TODO: enforce the KongRoute Spec
+	// TODO: enforce the KongRoute Spec https://github.com/Kong/kong-operator/issues/3979
 
 	return op.Noop, nn, nil
 }
