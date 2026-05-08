@@ -27,7 +27,7 @@ const (
 	connectTimeoutKey = "/connect-timeout"
 	readTimeoutKey    = "/read-timeout"
 	writeTimeoutKey   = "/write-timeout"
-	retriesKey       = "/retries"
+	retriesKey        = "/retries"
 	kindHTTPRoute     = "HTTPRoute"
 	kindTLSRoute      = "TLSRoute"
 )
