@@ -34,7 +34,6 @@ import (
 
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
-	"github.com/kong/kong-operator/v2/controller/konnect/server"
 	log "github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
@@ -272,28 +271,28 @@ func buildKEGEnvVars(
 	egdp *eventgatewayv1alpha1.KegDataPlane,
 	keg *konnectv1alpha1.KonnectEventGateway,
 ) ([]corev1.EnvVar, error) {
-	srv, err := server.NewServer[konnectv1alpha1.KonnectEventGateway](keg.Status.ServerURL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse Konnect server URL %q: %w", keg.Status.ServerURL, err)
-	}
-	region := srv.Region().String()
-	domain := srv.Domain()
+	// srv, err := server.NewServer[konnectv1alpha1.KonnectEventGateway](keg.Status.ServerURL)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("failed to parse Konnect server URL %q: %w", keg.Status.ServerURL, err)
+	// }
+	// region := srv.Region().String()
+	// domain := srv.Domain()
 	healthAddr := fmt.Sprintf("0.0.0.0:%d", DefaultHealthPort)
 
 	cfg := egdp.Spec.Config
 	if cfg != nil {
-		if cfg.Konnect != nil && cfg.Konnect.Domain != nil {
-			domain = *cfg.Konnect.Domain
-		}
+		// if cfg.Konnect != nil && cfg.Konnect.Domain != nil {
+		// 	domain = *cfg.Konnect.Domain
+		// }
 		if cfg.Runtime != nil && cfg.Runtime.HealthListenerAddressPort != nil {
 			healthAddr = *cfg.Runtime.HealthListenerAddressPort
 		}
 	}
 
 	envVars := []corev1.EnvVar{
-		{Name: EnvKonnectRegion, Value: region},
+		//{Name: EnvKonnectRegion, Value: region},
 		{Name: EnvKonnectGatewayClusterID, Value: keg.Status.ID},
-		{Name: EnvKonnectDomain, Value: domain},
+		{Name: EnvKonnectDomain, Value: "gw-admin.default.svc.cluster.local:8099"}, // Use a fixed domain since the PoC stub doesn't have real Konnect connectivity.
 		// Bind the health endpoint to all interfaces so Kubernetes probes can reach it.
 		{Name: EnvRuntimeHealthAddr, Value: healthAddr},
 	}

@@ -31,7 +31,9 @@ import (
 	"github.com/kong/kong-operator/v2/controller/cpextensions"
 	"github.com/kong/kong-operator/v2/controller/cpextensions/metricsscraper"
 	"github.com/kong/kong-operator/v2/controller/dataplane"
+	egadmin "github.com/kong/kong-operator/v2/controller/eventgateway/admin"
 	egdataplane "github.com/kong/kong-operator/v2/controller/eventgateway/dataplane"
+	eggeneric "github.com/kong/kong-operator/v2/controller/eventgateway/generic"
 	egpoc "github.com/kong/kong-operator/v2/controller/eventgateway/poc"
 	"github.com/kong/kong-operator/v2/controller/gateway"
 	"github.com/kong/kong-operator/v2/controller/gatewayclass"
@@ -808,6 +810,8 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		)
 
 		// PoC stubs: skip Konnect SDK calls and just mark these entities Programmed.
+		eventGatewaySnapshotClient := egadmin.New()
+		eventGatewayChildCache := eggeneric.NewObjectCache(eventGatewaySnapshotClient)
 		controllers = append(controllers,
 			ControllerDef{
 				Enabled: true,
@@ -818,9 +822,46 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			},
 			ControllerDef{
 				Enabled: true,
-				Controller: &egpoc.EventDataPlaneCertificateStubReconciler{
+				Controller: &eggeneric.Reconciler[
+					konnectv1alpha1.EventGatewayListener,
+					*konnectv1alpha1.EventGatewayListener,
+				]{
 					Client:      mgr.GetClient(),
 					LoggingMode: c.LoggingMode,
+					Cache:       eventGatewayChildCache,
+				},
+			},
+			ControllerDef{
+				Enabled: true,
+				Controller: &eggeneric.Reconciler[
+					konnectv1alpha1.EventGatewayBackendCluster,
+					*konnectv1alpha1.EventGatewayBackendCluster,
+				]{
+					Client:      mgr.GetClient(),
+					LoggingMode: c.LoggingMode,
+					Cache:       eventGatewayChildCache,
+				},
+			},
+			ControllerDef{
+				Enabled: true,
+				Controller: &eggeneric.Reconciler[
+					konnectv1alpha1.EventGatewayVirtualCluster,
+					*konnectv1alpha1.EventGatewayVirtualCluster,
+				]{
+					Client:      mgr.GetClient(),
+					LoggingMode: c.LoggingMode,
+					Cache:       eventGatewayChildCache,
+				},
+			},
+			ControllerDef{
+				Enabled: true,
+				Controller: &eggeneric.Reconciler[
+					konnectv1alpha1.EventGatewayListenerPolicy,
+					*konnectv1alpha1.EventGatewayListenerPolicy,
+				]{
+					Client:      mgr.GetClient(),
+					LoggingMode: c.LoggingMode,
+					Cache:       eventGatewayChildCache,
 				},
 			},
 		)
