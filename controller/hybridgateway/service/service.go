@@ -16,6 +16,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/route"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/translator"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
@@ -73,7 +74,7 @@ func ServiceForRule[
 		}
 		serviceName = namegen.NewKongServiceNameForHTTPRouteRule(r, cp, httpRule)
 		namespace = r.Namespace
-		backendRefs = httpBackendRefsToBackendRefs(httpRule.BackendRefs)
+		backendRefs = utils.HTTPBackendRefsToBackendRefs(httpRule.BackendRefs)
 		defaultProtocol = "http"
 
 	case *gwtypes.TLSRoute:
@@ -132,15 +133,6 @@ func ServiceForRule[
 	}
 
 	return &service, nil
-}
-
-// httpBackendRefsToBackendRefs unwraps []HTTPBackendRef to []BackendRef.
-func httpBackendRefsToBackendRefs(refs []gwtypes.HTTPBackendRef) []gwtypes.BackendRef {
-	out := make([]gwtypes.BackendRef, len(refs))
-	for i, r := range refs {
-		out[i] = r.BackendRef
-	}
-	return out
 }
 
 // resolveProtocolFromBackendRefs inspects the Kubernetes Service annotations of the

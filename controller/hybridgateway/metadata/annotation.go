@@ -28,6 +28,7 @@ const (
 	readTimeoutKey    = "/read-timeout"
 	writeTimeoutKey   = "/write-timeout"
 	retriesKey        = "/retries"
+	hostHeaderKey     = "/host-header"
 	kindHTTPRoute     = "HTTPRoute"
 	kindTLSRoute      = "TLSRoute"
 )
@@ -141,6 +142,17 @@ func ExtractRetries(anns map[string]string) *int64 {
 		return nil
 	}
 	return retries
+}
+
+// ExtractHostHeader extracts the host-header annotation value.
+// Returns a non-nil pointer when the annotation is present and non-empty.
+// This mirrors ingress-controller/internal/annotations.ExtractHostHeader.
+func ExtractHostHeader(anns map[string]string) *string {
+	val := anns[annotationPrefix+hostHeaderKey]
+	if val == "" {
+		return nil
+	}
+	return &val
 }
 
 // IsValidProtocol returns true if the provided protocol is a valid Kong upstream protocol.

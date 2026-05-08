@@ -12,6 +12,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -265,6 +267,14 @@ func TestRemoveHTTPRouteFromAnnotations(t *testing.T) {
 	}
 }
 
+func newTestScheme(t *testing.T) *runtime.Scheme {
+	t.Helper()
+	s := runtime.NewScheme()
+	require.NoError(t, clientgoscheme.AddToScheme(s))
+	require.NoError(t, configurationv1alpha1.AddToScheme(s))
+	return s
+}
+
 func TestUpstreamForRule_NewUpstream(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
@@ -467,4 +477,381 @@ func TestUpstreamForRule_InconsistentUpstreamPolicies(t *testing.T) {
 	// Policy must not be applied when annotations are inconsistent.
 	assert.Nil(t, upstream.Spec.Algorithm)
 	assert.Nil(t, upstream.Spec.Slots)
+}
+
+func TestUpstreamForRule_HostHeaderAnnotation(t *testing.T) {
+	cp := &commonv1alpha1.ControlPlaneRef{
+		Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+			Name:      "test-cp",
+			Namespace: "test-namespace",
+		},
+	}
+	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
+
+	httpRoute := &gwtypes.HTTPRoute{
+		TypeMeta: httpRouteTypeMeta,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-route",
+			Namespace: "test-namespace",
+		},
+	}
+
+	makeRule := func(svcName string) gwtypes.HTTPRouteRule {
+		return gwtypes.HTTPRouteRule{
+			BackendRefs: []gwtypes.HTTPBackendRef{
+				{
+					BackendRef: gwtypes.BackendRef{
+						BackendObjectReference: gwtypes.BackendObjectReference{
+							Name: gwtypes.ObjectName(svcName),
+							Port: func() *gwtypes.PortNumber { p := gwtypes.PortNumber(80); return &p }(),
+						},
+					},
+				},
+			},
+		}
+	}
+
+	makeSvc := func(name, namespace string, anns map[string]string) *corev1.Service {
+		return &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        name,
+				Namespace:   namespace,
+				Annotations: anns,
+			},
+		}
+	}
+
+	tests := []struct {
+		name           string
+		backendSvc     *corev1.Service
+		expectedHeader *string
+	}{
+		{
+			name: "annotation present",
+			backendSvc: makeSvc("test-svc", "test-namespace", map[string]string{
+				"konghq.com/host-header": "my-service.example.com",
+			}),
+			expectedHeader: func() *string { s := "my-service.example.com"; return &s }(),
+		},
+		{
+			name:           "annotation absent",
+			backendSvc:     makeSvc("test-svc", "test-namespace", nil),
+			expectedHeader: nil,
+		},
+		{
+			name: "annotation empty value",
+			backendSvc: makeSvc("test-svc", "test-namespace", map[string]string{
+				"konghq.com/host-header": "",
+			}),
+			expectedHeader: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := newTestScheme(t)
+			cl := fake.NewClientBuilder().WithScheme(s).WithObjects(tt.backendSvc).Build()
+
+			upstream, err := UpstreamForRule(context.Background(), logr.Discard(), cl, httpRoute, makeRule("test-svc"), pRef, cp)
+			require.NoError(t, err)
+			require.NotNil(t, upstream)
+
+			if tt.expectedHeader == nil {
+				assert.Nil(t, upstream.Spec.HostHeader)
+			} else {
+				require.NotNil(t, upstream.Spec.HostHeader)
+				assert.Equal(t, *tt.expectedHeader, *upstream.Spec.HostHeader)
+			}
+		})
+	}
+}
+
+func TestUpstreamForRule_HostHeaderFirstWins(t *testing.T) {
+	cp := &commonv1alpha1.ControlPlaneRef{
+		Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+			Name:      "test-cp",
+			Namespace: "test-namespace",
+		},
+	}
+	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
+
+	httpRoute := &gwtypes.HTTPRoute{
+		TypeMeta: httpRouteTypeMeta,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-route",
+			Namespace: "test-namespace",
+		},
+	}
+
+	rule := gwtypes.HTTPRouteRule{
+		BackendRefs: []gwtypes.HTTPBackendRef{
+			{
+				BackendRef: gwtypes.BackendRef{
+					BackendObjectReference: gwtypes.BackendObjectReference{
+						Name: "svc-first",
+						Port: func() *gwtypes.PortNumber { p := gwtypes.PortNumber(80); return &p }(),
+					},
+				},
+			},
+			{
+				BackendRef: gwtypes.BackendRef{
+					BackendObjectReference: gwtypes.BackendObjectReference{
+						Name: "svc-second",
+						Port: func() *gwtypes.PortNumber { p := gwtypes.PortNumber(80); return &p }(),
+					},
+				},
+			},
+		},
+	}
+
+	svcFirst := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "svc-first",
+			Namespace:   "test-namespace",
+			Annotations: map[string]string{"konghq.com/host-header": "first.example.com"},
+		},
+	}
+	svcSecond := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "svc-second",
+			Namespace:   "test-namespace",
+			Annotations: map[string]string{"konghq.com/host-header": "second.example.com"},
+		},
+	}
+
+	s := newTestScheme(t)
+	cl := fake.NewClientBuilder().WithScheme(s).WithObjects(svcFirst, svcSecond).Build()
+
+	upstream, err := UpstreamForRule(context.Background(), logr.Discard(), cl, httpRoute, rule, pRef, cp)
+	require.NoError(t, err)
+	require.NotNil(t, upstream)
+	require.NotNil(t, upstream.Spec.HostHeader)
+	assert.Equal(t, "first.example.com", *upstream.Spec.HostHeader)
+}
+
+func TestResolveHostHeaderFromBackendRefs(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	tests := []struct {
+		name            string
+		namespace       string
+		backendRefs     []gwtypes.BackendRef
+		backendServices []corev1.Service
+		expected        *string
+	}{
+		{
+			name:      "service with host-header annotation returns value",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gwtypes.BackendObjectReference{Name: "svc-with-header"}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-header", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/host-header": "api.example.com"}}},
+			},
+			expected: new("api.example.com"),
+		},
+		{
+			name:      "service without annotation returns nil",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gwtypes.BackendObjectReference{Name: "plain-svc"}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "plain-svc", Namespace: "test-namespace"}},
+			},
+			expected: nil,
+		},
+		{
+			name:      "first backend ref with annotation wins",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gwtypes.BackendObjectReference{Name: "svc-first"}},
+				{BackendObjectReference: gwtypes.BackendObjectReference{Name: "svc-second"}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-first", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/host-header": "first.example.com"}}},
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-second", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/host-header": "second.example.com"}}},
+			},
+			expected: new("first.example.com"),
+		},
+		{
+			name:            "no backend refs returns nil",
+			namespace:       "test-namespace",
+			backendRefs:     []gwtypes.BackendRef{},
+			backendServices: []corev1.Service{},
+			expected:        nil,
+		},
+		{
+			name:      "service does not exist returns nil",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gwtypes.BackendObjectReference{Name: "nonexistent-svc"}},
+			},
+			backendServices: []corev1.Service{},
+			expected:        nil,
+		},
+		{
+			name:      "unsupported backend ref returns nil",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gwtypes.BackendObjectReference{
+					Name:  "some-ref",
+					Group: new(gwtypes.Group("example.com")),
+					Kind:  new(gwtypes.Kind("NotService")),
+				}},
+			},
+			backendServices: []corev1.Service{},
+			expected:        nil,
+		},
+		{
+			name:      "cross-namespace backend ref",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gwtypes.BackendObjectReference{
+					Name:      "svc-other-ns",
+					Namespace: new(gwtypes.Namespace("other-namespace")),
+				}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/host-header": "other.example.com"}}},
+			},
+			expected: new("other.example.com"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var objects []client.Object
+			for i := range tt.backendServices {
+				objects = append(objects, &tt.backendServices[i])
+			}
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
+
+			got := resolveHostHeaderFromBackendRefs(ctx, cl, tt.namespace, tt.backendRefs, logger)
+			if tt.expected == nil {
+				assert.Nil(t, got)
+			} else {
+				require.NotNil(t, got)
+				assert.Equal(t, *tt.expected, *got)
+			}
+		})
+	}
+}
+
+func TestExtractHostHeaderFromBackendRef(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	tests := []struct {
+		name       string
+		namespace  string
+		backendRef gwtypes.BackendRef
+		services   []corev1.Service
+		expected   *string
+	}{
+		{
+			name:      "supported backend ref with host-header annotation",
+			namespace: "test-namespace",
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gwtypes.BackendObjectReference{Name: "svc-with-header"},
+			},
+			services: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-header", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/host-header": "api.example.com"}}},
+			},
+			expected: new("api.example.com"),
+		},
+		{
+			name:      "supported backend ref without annotation",
+			namespace: "test-namespace",
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gwtypes.BackendObjectReference{Name: "svc-no-header"},
+			},
+			services: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-no-header", Namespace: "test-namespace"}},
+			},
+			expected: nil,
+		},
+		{
+			name:      "empty annotation value returns nil",
+			namespace: "test-namespace",
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gwtypes.BackendObjectReference{Name: "svc-empty-header"},
+			},
+			services: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-empty-header", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/host-header": ""}}},
+			},
+			expected: nil,
+		},
+		{
+			name:      "unsupported backend ref group",
+			namespace: "test-namespace",
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gwtypes.BackendObjectReference{
+					Name:  "some-ref",
+					Group: new(gwtypes.Group("example.com")),
+				},
+			},
+			expected: nil,
+		},
+		{
+			name:      "unsupported backend ref kind",
+			namespace: "test-namespace",
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gwtypes.BackendObjectReference{
+					Name: "some-ref",
+					Kind: new(gwtypes.Kind("NotService")),
+				},
+			},
+			expected: nil,
+		},
+		{
+			name:      "backend service does not exist",
+			namespace: "test-namespace",
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gwtypes.BackendObjectReference{Name: "nonexistent-svc"},
+			},
+			expected: nil,
+		},
+		{
+			name:      "cross-namespace backend ref",
+			namespace: "test-namespace",
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gwtypes.BackendObjectReference{
+					Name:      "svc-other-ns",
+					Namespace: new(gwtypes.Namespace("other-namespace")),
+				},
+			},
+			services: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/host-header": "other.example.com"}}},
+			},
+			expected: new("other.example.com"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var objects []client.Object
+			for i := range tt.services {
+				objects = append(objects, &tt.services[i])
+			}
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
+
+			got := extractHostHeaderFromBackendRef(ctx, cl, logger, tt.namespace, tt.backendRef)
+			if tt.expected == nil {
+				assert.Nil(t, got)
+			} else {
+				require.NotNil(t, got)
+				assert.Equal(t, *tt.expected, *got)
+			}
+		})
+	}
 }

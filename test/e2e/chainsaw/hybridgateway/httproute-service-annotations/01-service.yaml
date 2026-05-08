@@ -12,6 +12,7 @@ metadata:
     konghq.com/read-timeout: "5000"
     konghq.com/write-timeout: "5000"
     konghq.com/retries: "3"
+    konghq.com/host-header: "fake.com"
 spec:
   selector:
     app: ($echo_deployment_name)
