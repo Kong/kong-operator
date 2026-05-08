@@ -66,6 +66,24 @@ func updatePortalTeam(
 	return nil
 }
 
+func deletePortalTeam(
+	ctx context.Context,
+	sdk sdkkonnectgo.PortalTeamsSDK,
+	obj *konnectv1alpha1.PortalTeam,
+) error {
+	parentID := obj.GetPortalID()
+	if parentID == "" {
+		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "Portal", Op: DeleteOp}
+	}
+	id := obj.GetKonnectStatus().GetKonnectID()
+
+	_, err := sdk.DeletePortalTeam(ctx, parentID, id)
+	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, obj); errWrap != nil {
+		return handleDeleteError(ctx, errWrap, obj)
+	}
+	return nil
+}
+
 func getPortalTeamForUID(
 	ctx context.Context,
 	sdk sdkkonnectgo.PortalTeamsSDK,
