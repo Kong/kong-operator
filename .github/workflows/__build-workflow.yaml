@@ -74,6 +74,13 @@ on:
           When set to true, specify the slack-webhook-url and slack-team-id secrets.
         default: false
         type: boolean
+      nightly-tags:
+        description: |
+          When true, also produce 'nightly' and YYYYMMDD tags on non-schedule events
+          (e.g. workflow_dispatch). Intended to let the nightly workflow's manual
+          dispatch produce the same tags as its scheduled run.
+        default: false
+        type: boolean
 
     outputs:
       full_tag:
@@ -212,6 +219,8 @@ jobs:
           tags: |
             type=schedule,pattern=nightly
             type=schedule,pattern={{date 'YYYYMMDD'}}
+            type=raw,value=nightly,enable=${{ inputs.nightly-tags && github.event_name != 'schedule' }}
+            type=raw,value={{date 'YYYYMMDD'}},enable=${{ inputs.nightly-tags && github.event_name != 'schedule' }}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
@@ -356,6 +365,8 @@ jobs:
           tags: |
             type=schedule,pattern=nightly
             type=schedule,pattern={{date 'YYYYMMDD'}}
+            type=raw,value=nightly,enable=${{ inputs.nightly-tags && github.event_name != 'schedule' }}
+            type=raw,value={{date 'YYYYMMDD'}},enable=${{ inputs.nightly-tags && github.event_name != 'schedule' }}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
@@ -387,11 +398,12 @@ jobs:
             ${{ inputs.registry }}/${{ inputs.image-name }}:${{ needs.semver.outputs.fullversion }}-amd64
             ${{ inputs.registry }}/${{ inputs.image-name }}:${{ needs.semver.outputs.fullversion }}-arm64
 
-      # When building on schedule, `steps.meta.outputs.tags` contains multiple entries, so it cannot be used
+      # When building on schedule (or on workflow_dispatch with nightly-tags enabled),
+      # `steps.meta.outputs.tags` contains multiple entries, so it cannot be used
       # directly in sources. Instead, the sources are constructed using the `inputs.registry`, `inputs.image-name` and
       # the current date.
       - uses: int128/docker-manifest-create-action@fa55f72001a6c74b0f4997dca65c70d334905180 # v2.20.0
-        if: ${{ inputs.tag == '' && github.event_name == 'schedule' }}
+        if: ${{ inputs.tag == '' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.nightly-tags)) }}
         with:
           tags: ${{ steps.meta.outputs.tags }}
           sources: |
