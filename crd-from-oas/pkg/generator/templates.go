@@ -216,6 +216,11 @@ func (obj {{.EntityName}}) GetTypeName() string {
 	return "{{.EntityName}}"
 }
 
+// HasParent returns true if the {{.EntityName}} has a parent entity.
+func (obj {{.EntityName}}) HasParent() bool {
+	return {{if .RootRefDependency}}true{{else}}false{{end}}
+}
+
 // GetConditions returns the Status Conditions.
 func (obj *{{.EntityName}}) GetConditions() []metav1.Condition {
 	return obj.Status.Conditions
@@ -269,6 +274,11 @@ func (obj *{{.EntityName}}) GetParentRef() {{.RootRefTypeName}} {
 // SetParentID sets the Konnect ID of the immediate parent entity.
 func (obj *{{.EntityName}}) SetParentID(id string) {
 	obj.Set{{.RootRefDependency.EntityName}}ID(id)
+}
+
+// GetParentGVK returns the GroupVersionKind of the parent entity.
+func (obj *{{.EntityName}}) GetParentGVK() schema.GroupVersionKind {
+	return GroupVersion.WithKind("{{.ParentKind}}")
 }
 
 // GetStatusConditionTypeParentRefValid returns the status condition type

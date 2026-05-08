@@ -55,6 +55,11 @@ func (obj KonnectEventGateway) GetTypeName() string {
 	return "KonnectEventGateway"
 }
 
+// HasParent returns true if the KonnectEventGateway has a parent entity.
+func (obj KonnectEventGateway) HasParent() bool {
+	return false
+}
+
 // GetConditions returns the Status Conditions.
 func (obj *KonnectEventGateway) GetConditions() []metav1.Condition {
 	return obj.Status.Conditions

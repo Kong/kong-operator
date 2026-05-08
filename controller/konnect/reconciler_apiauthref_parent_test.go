@@ -98,7 +98,7 @@ func TestGetAPIAuthConfigurationRefFromParent_EventGateway(t *testing.T) {
 
 func testGetAPIAuthConfigurationRefFromParent[
 	ParentT parentT,
-	ParentTPtr parentTPtr[ParentT],
+	ParentTPtr parentWithAPIAuthTPtr[ParentT],
 ](
 	t *testing.T,
 	childBuilder func(commonv1alpha1.ObjectRef) objectWithParentRef,

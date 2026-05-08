@@ -17,7 +17,7 @@ import (
 
 func getAPIAuthConfigurationRefFromParent[
 	ParentT parentT,
-	ParentTPtr parentTPtr[ParentT],
+	ParentTPtr parentWithAPIAuthTPtr[ParentT],
 ](
 	ctx context.Context,
 	cl client.Client,

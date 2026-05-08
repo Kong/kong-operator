@@ -55,6 +55,11 @@ func (obj Portal) GetTypeName() string {
 	return "Portal"
 }
 
+// HasParent returns true if the Portal has a parent entity.
+func (obj Portal) HasParent() bool {
+	return false
+}
+
 // GetConditions returns the Status Conditions.
 func (obj *Portal) GetConditions() []metav1.Condition {
 	return obj.Status.Conditions

@@ -10,6 +10,9 @@ spec:
   apiSpec:
     name: portal1
     authenticationEnabled: Enabled
+    labels:
+      env: production
+      team: team1
 ---
 kind: PortalTeam
 apiVersion: konnect.konghq.com/v1alpha1
