@@ -63,6 +63,7 @@ func TestGenerateSDKOps_RootUnionUsesDiscriminatorJSONNames(t *testing.T) {
 	assert.Contains(t, content, `"tls_server",`)
 	assert.Contains(t, content, `"forward_to_virtual_cluster",`)
 	assert.Contains(t, content, `withType["type"] = typeValue`)
+	assert.NotContains(t, content, `len(selectedMap)+1`)
 	assert.Contains(t, content, `var body sdkkonnectcomp.EventGatewayListenerPolicyUpdate`)
 	assert.Contains(t, content, `failed to unmarshal into EventGatewayListenerPolicyUpdate`)
 	assert.Contains(t, content, `failed to unmarshal into EventGatewayTLSListenerPolicy`)

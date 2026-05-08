@@ -676,7 +676,7 @@ func (s *{{$.EntityName}}APISpec) selectedSDKOpsPayload(payload map[string]any) 
 	if selectedMap, ok := selected.(map[string]any); ok {
 		if typeValue, ok := payload["type"]; ok {
 			if _, hasType := selectedMap["type"]; !hasType {
-				withType := make(map[string]any, len(selectedMap)+1)
+				withType := make(map[string]any)
 				for key, value := range selectedMap {
 					withType[key] = value
 				}
