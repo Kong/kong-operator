@@ -407,6 +407,43 @@ func KonnectCloudGatewayDataPlaneGroupConfiguration(
 	return &obj
 }
 
+// Portal deploys a Portal resource and returns it.
+func Portal(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
+	opts ...ObjOption,
+) *konnectv1alpha1.Portal {
+	t.Helper()
+	name := "portal-" + randomSuffix()
+	obj := konnectv1alpha1.Portal{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: konnectv1alpha1.PortalSpec{
+			KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+				APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+					Name: apiAuth.Name,
+				},
+			},
+			APISpec: konnectv1alpha1.PortalAPISpec{
+				Name:                  name,
+				DisplayName:           name,
+				AuthenticationEnabled: "Enabled",
+			},
+		},
+	}
+
+	for _, opt := range opts {
+		opt(&obj)
+	}
+
+	require.NoError(t, cl.Create(ctx, &obj))
+	logObjectCreate(t, &obj)
+	return &obj
+}
+
 // KonnectCloudGatewayNetwork deploys a KonnectCloudGatewayNetwork resource and returns it.
 func KonnectCloudGatewayNetwork(
 	t *testing.T,
