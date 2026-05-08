@@ -5,18 +5,17 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
-	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/builder"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/route"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/translator"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
@@ -57,8 +56,8 @@ func UpstreamForRule[
 ) (kongUpstream *configurationv1alpha1.KongUpstream, err error) {
 
 	var upstreamName string
-	var policy *configurationv1beta1.KongUpstreamPolicy
-	var hostHeader *string
+	var namespace string
+	var backendRefs []gwtypes.BackendRef
 
 	switch r := any(parentRoute).(type) {
 	case *gwtypes.HTTPRoute:
@@ -67,23 +66,25 @@ func UpstreamForRule[
 			return nil, fmt.Errorf("failed to build KongUpstream: unmatched route type and rule type: %T and %T", parentRoute, rule)
 		}
 		upstreamName = namegen.NewKongUpstreamNameForHTTPRouteRule(r, cp, httpRule)
-		policy = upstreamPolicyForRouteRule(ctx, logger, cl, parentRoute.GetNamespace(), httpRule)
-		backendRefs := lo.Map(httpRule.BackendRefs, func(ref gwtypes.HTTPBackendRef, _ int) gwtypes.BackendRef { return ref.BackendRef })
-		hostHeader = resolveHostHeaderFromBackendRefs(ctx, cl, r.Namespace, backendRefs, logger)
+		namespace = r.Namespace
+		backendRefs = utils.HTTPBackendRefsToBackendRefs(httpRule.BackendRefs)
 	case *gwtypes.TLSRoute:
 		tlsRule, ok := any(rule).(gwtypes.TLSRouteRule)
 		if !ok {
 			return nil, fmt.Errorf("failed to build KongUpstream: unmatched route type and rule type: %T and %T", parentRoute, rule)
 		}
 		upstreamName = namegen.NewKongUpstreamNameForTLSRouteRule(r, cp, tlsRule)
-		policy = upstreamPolicyForRouteRule(ctx, logger, cl, parentRoute.GetNamespace(), tlsRule)
-		hostHeader = resolveHostHeaderFromBackendRefs(ctx, cl, r.Namespace, tlsRule.BackendRefs, logger)
+		namespace = r.Namespace
+		backendRefs = tlsRule.BackendRefs
 	// TODO: add other types of rules when we support them.
 
 	// Should be unreachable.
 	default:
 		return nil, fmt.Errorf("failed to build KongUpstream: unsupported route type: %T", parentRoute)
 	}
+
+	policy := upstreamPolicyForRouteRule(ctx, logger, cl, parentRoute.GetNamespace(), rule)
+	hostHeader := resolveHostHeaderFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
 	logger = logger.WithValues("kongupstream", upstreamName)
 	log.Debug(logger, fmt.Sprintf("Creating KongUpstream for %s rule", parentRoute.GetObjectKind().GroupVersionKind().Kind))
 

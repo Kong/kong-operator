@@ -12,6 +12,7 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/route"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
@@ -37,10 +38,7 @@ func upstreamPolicyForRouteRule[R gwtypes.SupportedRouteRule](
 	var backendRefs []gwtypes.BackendRef
 	switch r := any(rule).(type) {
 	case gwtypes.HTTPRouteRule:
-		backendRefs = make([]gwtypes.BackendRef, 0, len(r.BackendRefs))
-		for _, backendRef := range r.BackendRefs {
-			backendRefs = append(backendRefs, gwtypes.GetBackendRef(backendRef))
-		}
+		backendRefs = utils.HTTPBackendRefsToBackendRefs(r.BackendRefs)
 	case gwtypes.TLSRouteRule:
 		backendRefs = r.BackendRefs
 	default:
