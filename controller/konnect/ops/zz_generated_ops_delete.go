@@ -44,6 +44,8 @@ func DeleteGeneratedOps[
 		return deletePortalEmailConfig(ctx, sdk.GetPortalEmailsSDK(), ent)
 	case *konnectv1alpha1.PortalPage:
 		return deletePortalPage(ctx, sdk.GetPortalPagesSDK(), ent)
+	case *konnectv1alpha1.PortalTeam:
+		return deletePortalTeam(ctx, sdk.GetPortalTeamsSDK(), ent)
 	default:
 		return fmt.Errorf("unsupported entity type %T", ent)
 	}

@@ -167,6 +167,7 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/components.PortalCreateTeamRequest
           update:
             path: github.com/Kong/sdk-konnect-go/models/components.PortalUpdateTeamRequest
+          delete: {}
         reconciler: {}
       - path: /v3/portals/{portalId}/pages
         cel:
