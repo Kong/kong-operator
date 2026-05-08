@@ -6,6 +6,7 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // GetKonnectStatus returns the Konnect status contained in the IdentityProviderRequest status.
@@ -26,6 +27,11 @@ func (obj *IdentityProviderRequest) GetKonnectID() string {
 // GetTypeName returns the IdentityProviderRequest Kind name.
 func (obj IdentityProviderRequest) GetTypeName() string {
 	return "IdentityProviderRequest"
+}
+
+// HasParent returns true if the IdentityProviderRequest has a parent entity.
+func (obj IdentityProviderRequest) HasParent() bool {
+	return true
 }
 
 // GetConditions returns the Status Conditions.
@@ -67,6 +73,11 @@ func (obj *IdentityProviderRequest) GetParentRef() commonv1alpha1.ObjectRef {
 // SetParentID sets the Konnect ID of the immediate parent entity.
 func (obj *IdentityProviderRequest) SetParentID(id string) {
 	obj.SetPortalID(id)
+}
+
+// GetParentGVK returns the GroupVersionKind of the parent entity.
+func (obj *IdentityProviderRequest) GetParentGVK() schema.GroupVersionKind {
+	return GroupVersion.WithKind("Portal")
 }
 
 // GetStatusConditionTypeParentRefValid returns the status condition type

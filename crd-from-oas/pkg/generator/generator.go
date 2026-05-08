@@ -1238,6 +1238,11 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 	if rootRefDependency != nil && g.objectRefImported() {
 		imports = appendUniqueImportConfig(imports, g.config.CommonTypes.ObjectRef.Import)
 	}
+	if rootRefDependency != nil {
+		imports = appendUniqueImportConfig(imports, &config.ImportConfig{
+			Path: "k8s.io/apimachinery/pkg/runtime/schema",
+		})
+	}
 	if isReconcilerRoot {
 		imports = appendUniqueImportConfig(imports, &config.ImportConfig{
 			Alias: defaultKonnectStatusAlias,
@@ -1261,6 +1266,7 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		RefConditionPrefix                 string
 		IsReconcilerRoot                   bool
 		KonnectAPIAuthConfigurationRefType string
+		ParentKind                         string
 	}{
 		EntityName:                entityName,
 		APIVersion:                g.config.APIVersion,
@@ -1279,6 +1285,15 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		}(),
 		IsReconcilerRoot:                   isReconcilerRoot,
 		KonnectAPIAuthConfigurationRefType: defaultKonnectStatusAlias + ".ControlPlaneKonnectAPIAuthConfigurationRef",
+		ParentKind: func() string {
+			if rootRefDependency == nil {
+				return ""
+			}
+			if rc := g.config.ReconcilerConfig[entityName]; rc != nil && rc.ParentEntityType != "" {
+				return rc.ParentEntityType
+			}
+			return refConditionEntityName(rootRefDependency)
+		}(),
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {

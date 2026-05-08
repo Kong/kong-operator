@@ -6,7 +6,6 @@ package konnect
 
 import (
 	"context"
-	"errors"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -25,24 +24,42 @@ type parentTPtr[T parentT] interface {
 	k8sutils.ConditionsAwareObject
 	GetKonnectID() string
 	GetTypeName() string
+	GetNamespace() string
+}
+
+type parentWithAPIAuthTPtr[T parentT] interface {
+	parentTPtr[T]
 	GetKonnectAPIAuthConfigurationRef() konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef
 }
 
 type generatedParentRefHandler interface {
 	handleParentRef(context.Context, client.Client, objectWithParentRef) (ctrl.Result, error)
+	parentTypeName() string
 }
 
-var _generatedHandlers []generatedParentRefHandler
+var (
+	_generatedHandlers        []generatedParentRefHandler
+	_generatedHandlersPerKind map[string]generatedParentRefHandler
+)
 
 func init() {
 	_generatedHandlers = []generatedParentRefHandler{
+		parentRefHandler[konnectv1alpha1.EventGatewayListener, *konnectv1alpha1.EventGatewayListener]{},
 		parentRefHandler[konnectv1alpha1.KonnectEventGateway, *konnectv1alpha1.KonnectEventGateway]{},
 		parentRefHandler[konnectv1alpha1.Portal, *konnectv1alpha1.Portal]{},
 	}
+
+	_generatedHandlersPerKind = make(map[string]generatedParentRefHandler)
+	for _, handler := range _generatedHandlers {
+		_generatedHandlersPerKind[handler.parentTypeName()] = handler
+	}
 }
 
-func _generatedTypeReferenceHandlers() []generatedParentRefHandler {
-	return _generatedHandlers
+// _generatedTypeReferenceHandlers returns a map of generated reference handlers
+// keyed by the Kind of the parent type they handle, for example:
+// "Portal" for handlers that handle references to Portal parents.
+func _generatedTypeReferenceHandlers() map[string]generatedParentRefHandler {
+	return _generatedHandlersPerKind
 }
 
 // UnsupportedGeneratedReferenceTypeError is returned by generated reference handlers
@@ -62,26 +79,24 @@ func (r *KonnectEntityReconciler[T, TEnt]) handleGeneratedTypeReferences(
 	ctx context.Context,
 	ent TEnt,
 ) (bool, ctrl.Result, error) {
-	for _, handler := range _generatedTypeReferenceHandlers() {
-		obj, ok := any(ent).(objectWithParentRef)
-		if !ok {
-			continue
-		}
-		res, err := handler.handleParentRef(ctx, r.Client, obj)
-		if err != nil {
-			// Only UnsupportedGeneratedReferenceTypeError are handled here
-			// to continue to the next handler.
-			// All other errors should be handled in handleRefResult.
-			if _, ok := errors.AsType[*UnsupportedGeneratedReferenceTypeError](err); ok {
-				// This handler is not applicable to the given type, continue to the next handler.
-				continue
-			}
-		}
+	obj, ok := any(ent).(objectWithParentRef)
+	if !ok {
+		return false, ctrl.Result{}, nil
+	}
 
-		stop, res, err := handleRefResult(ctx, r.Client, ent, res, err)
-		if stop || err != nil {
-			return true, res, err
+	// TODO: This only compares the Kind and doesn't consider the Group or API Version.
+	handler, ok := _generatedTypeReferenceHandlers()[obj.GetParentGVK().Kind]
+	if !ok || handler.parentTypeName() != obj.GetParentGVK().Kind {
+		return false, ctrl.Result{}, &UnsupportedGeneratedReferenceTypeError{
+			TypeName: obj.GetParentGVK().Kind,
 		}
+	}
+
+	res, err := handler.handleParentRef(ctx, r.Client, obj)
+
+	stop, res, err := handleRefResult(ctx, r.Client, ent, res, err)
+	if stop || err != nil {
+		return true, res, err
 	}
 
 	return false, ctrl.Result{}, nil

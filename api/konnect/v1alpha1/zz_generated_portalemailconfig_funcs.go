@@ -6,6 +6,7 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // GetKonnectStatus returns the Konnect status contained in the PortalEmailConfig status.
@@ -26,6 +27,11 @@ func (obj *PortalEmailConfig) GetKonnectID() string {
 // GetTypeName returns the PortalEmailConfig Kind name.
 func (obj PortalEmailConfig) GetTypeName() string {
 	return "PortalEmailConfig"
+}
+
+// HasParent returns true if the PortalEmailConfig has a parent entity.
+func (obj PortalEmailConfig) HasParent() bool {
+	return true
 }
 
 // GetConditions returns the Status Conditions.
@@ -67,6 +73,11 @@ func (obj *PortalEmailConfig) GetParentRef() commonv1alpha1.ObjectRef {
 // SetParentID sets the Konnect ID of the immediate parent entity.
 func (obj *PortalEmailConfig) SetParentID(id string) {
 	obj.SetPortalID(id)
+}
+
+// GetParentGVK returns the GroupVersionKind of the parent entity.
+func (obj *PortalEmailConfig) GetParentGVK() schema.GroupVersionKind {
+	return GroupVersion.WithKind("Portal")
 }
 
 // GetStatusConditionTypeParentRefValid returns the status condition type

@@ -6,6 +6,7 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 // GetKonnectLabels gets the Konnect labels from the object's API spec.
 func (obj *EventGatewayListener) GetKonnectLabels() map[string]string {
@@ -56,6 +57,11 @@ func (obj EventGatewayListener) GetTypeName() string {
 	return "EventGatewayListener"
 }
 
+// HasParent returns true if the EventGatewayListener has a parent entity.
+func (obj EventGatewayListener) HasParent() bool {
+	return true
+}
+
 // GetConditions returns the Status Conditions.
 func (obj *EventGatewayListener) GetConditions() []metav1.Condition {
 	return obj.Status.Conditions
@@ -100,6 +106,11 @@ func (obj *EventGatewayListener) GetParentRef() commonv1alpha1.ObjectRef {
 // SetParentID sets the Konnect ID of the immediate parent entity.
 func (obj *EventGatewayListener) SetParentID(id string) {
 	obj.SetGatewayID(id)
+}
+
+// GetParentGVK returns the GroupVersionKind of the parent entity.
+func (obj *EventGatewayListener) GetParentGVK() schema.GroupVersionKind {
+	return GroupVersion.WithKind("KonnectEventGateway")
 }
 
 // GetStatusConditionTypeParentRefValid returns the status condition type

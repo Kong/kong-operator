@@ -6,6 +6,7 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // GetKonnectStatus returns the Konnect status contained in the KonnectEventDataPlaneCertificate status.
@@ -26,6 +27,11 @@ func (obj *KonnectEventDataPlaneCertificate) GetKonnectID() string {
 // GetTypeName returns the KonnectEventDataPlaneCertificate Kind name.
 func (obj KonnectEventDataPlaneCertificate) GetTypeName() string {
 	return "KonnectEventDataPlaneCertificate"
+}
+
+// HasParent returns true if the KonnectEventDataPlaneCertificate has a parent entity.
+func (obj KonnectEventDataPlaneCertificate) HasParent() bool {
+	return true
 }
 
 // GetConditions returns the Status Conditions.
@@ -72,6 +78,11 @@ func (obj *KonnectEventDataPlaneCertificate) GetParentRef() commonv1alpha1.Objec
 // SetParentID sets the Konnect ID of the immediate parent entity.
 func (obj *KonnectEventDataPlaneCertificate) SetParentID(id string) {
 	obj.SetGatewayID(id)
+}
+
+// GetParentGVK returns the GroupVersionKind of the parent entity.
+func (obj *KonnectEventDataPlaneCertificate) GetParentGVK() schema.GroupVersionKind {
+	return GroupVersion.WithKind("KonnectEventGateway")
 }
 
 // GetStatusConditionTypeParentRefValid returns the status condition type

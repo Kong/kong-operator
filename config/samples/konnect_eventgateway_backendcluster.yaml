@@ -31,6 +31,10 @@ metadata:
   name: cp-event-1-listener-1
   namespace: default
 spec:
+  gatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: cp-event-1
   apiSpec:
     name: cp-event-1-backend-cluster-1
     description: Test Event Gateway Backend Cluster
@@ -110,7 +114,3 @@ spec:
           Q1FRQ3krL3BLCjR0cmdpMm5NY3pIUEZ2b3MycS9XelJEeDE5akRrSldPT0NSOUlyUGFNU3JrNFFw
           blJVbWpXdWcrUWhrVDR5MjEKZTJDcUNnSUNRTVhXUmpQdwotLS0tLUVORCBQUklWQVRFIEtFWS0t
           LS0tCg==
-  gatewayRef:
-    type: namespacedRef
-    namespacedRef:
-      name: cp-event-1

@@ -6,6 +6,7 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,6 +32,7 @@ type objectWithParentRef interface {
 	GetStatusConditionReasonParentRefValid() string
 	GetStatusConditionReasonParentRefInvalid() string
 	GetStatusConditionReasonParentRefNotProgrammed() string
+	GetParentGVK() schema.GroupVersionKind
 }
 
 func ensureKongReferenceGrantForParentRef[
@@ -109,6 +111,10 @@ type parentRefHandler[
 	ParentT parentT,
 	ParentTPtr parentTPtr[ParentT],
 ] struct{}
+
+func (prh parentRefHandler[p, pPTr]) parentTypeName() string {
+	return constraints.EntityTypeName[p]()
+}
 
 // handleParentRef handles the parent refercence for an entity.
 // It ensures that the referenced parent object exists, is programmed, and has a Konnect ID,
