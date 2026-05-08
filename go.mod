@@ -41,7 +41,6 @@ require (
 	github.com/prometheus/common v0.67.5
 	github.com/samber/lo v1.53.0
 	github.com/samber/mo v1.16.0
-	github.com/sourcegraph/conc v0.3.1-0.20240121214520-5f936abd7ae8
 	github.com/stretchr/testify v1.11.1
 	// TODO: update to v0.42.0 or v0.41.2 when they are released.
 	// This version will include the migration from github.com/docker/docker to github.com/moby/moby,
