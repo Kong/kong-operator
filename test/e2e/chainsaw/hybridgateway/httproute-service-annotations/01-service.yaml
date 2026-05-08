@@ -11,6 +11,7 @@ metadata:
     konghq.com/connect-timeout: "5000"
     konghq.com/read-timeout: "5000"
     konghq.com/write-timeout: "5000"
+    konghq.com/retries: "3"
 spec:
   selector:
     app: ($echo_deployment_name)

@@ -17,6 +17,7 @@ spec:
     - konghq.com/connect-timeout: <timeout>
     - konghq.com/read-timeout: <timeout>
     - konghq.com/write-timeout: <timeout>
+    - konghq.com/retries: <retries>
     the value should be applied to the generated KongService.
 
   bindings:
@@ -156,6 +157,7 @@ spec:
                   konghq.com/connect-timeout: "5000"
                   konghq.com/read-timeout: "5000"
                   konghq.com/write-timeout: "5000"
+                  konghq.com/retries: "3"
 
     # Step 12: Create HTTPRoute to route traffic.
     - name: Create-httproute
@@ -213,6 +215,7 @@ spec:
                 connect_timeout: 5000
                 read_timeout: 5000
                 write_timeout: 5000
+                retries: 3
 
     # Step 15: Assert KongUpstream is created.
     - name: Assert-kong-upstream

@@ -27,6 +27,7 @@ const (
 	connectTimeoutKey = "/connect-timeout"
 	readTimeoutKey    = "/read-timeout"
 	writeTimeoutKey   = "/write-timeout"
+	retriesKey        = "/retries"
 	kindHTTPRoute     = "HTTPRoute"
 	kindTLSRoute      = "TLSRoute"
 )
@@ -129,6 +130,17 @@ func ExtractWriteTimeout(anns map[string]string) *int64 {
 		return nil
 	}
 	return timeout
+}
+
+// ExtractRetries extracts the retries annotation value.
+// Returns a non-nil pointer when the annotation is present and parseable as a non-negative integer.
+// This mirrors ingress-controller/internal/annotations.ExtractRetries.
+func ExtractRetries(anns map[string]string) *int64 {
+	retries, err := parseAnnotationInt(anns, retriesKey)
+	if err != nil {
+		return nil
+	}
+	return retries
 }
 
 // IsValidProtocol returns true if the provided protocol is a valid Kong upstream protocol.

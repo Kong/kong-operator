@@ -2781,3 +2781,362 @@ func TestExtractWriteTimeoutFromBackendRef(t *testing.T) {
 		})
 	}
 }
+
+func TestServiceForRule_RetriesAnnotation(t *testing.T) {
+	ctx := context.Background()
+	logger := zap.New()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	cp := &commonv1alpha1.ControlPlaneRef{
+		Type:                 commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{Name: "test-cp"},
+	}
+	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
+	upstreamName := "test-upstream"
+	port80 := gatewayv1.PortNumber(80)
+
+	tests := []struct {
+		name            string
+		backendRefs     []gatewayv1.HTTPBackendRef
+		backendServices []corev1.Service
+		expected        *int64
+	}{
+		{
+			name:        "service with retries annotation",
+			backendRefs: []gatewayv1.HTTPBackendRef{{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "my-svc", Port: &port80}}}},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "my-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "5"}}},
+			},
+			expected: new(int64(5)),
+		},
+		{
+			name:        "service without annotation leaves field unset",
+			backendRefs: []gatewayv1.HTTPBackendRef{{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "plain-svc", Port: &port80}}}},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "plain-svc", Namespace: "test-namespace"}},
+			},
+			expected: nil,
+		},
+		{
+			name:        "invalid value leaves field unset",
+			backendRefs: []gatewayv1.HTTPBackendRef{{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "bad-svc", Port: &port80}}}},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "bad-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "abc"}}},
+			},
+			expected: nil,
+		},
+		{
+			name: "first backend ref with annotation wins",
+			backendRefs: []gatewayv1.HTTPBackendRef{
+				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-a", Port: &port80}}},
+				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-b", Port: &port80}}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "3"}}},
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-b", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "9"}}},
+			},
+			expected: new(int64(3)),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			httpRoute := &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-route", Namespace: "test-namespace"},
+				Spec: gatewayv1.HTTPRouteSpec{
+					CommonRouteSpec: gatewayv1.CommonRouteSpec{ParentRefs: []gatewayv1.ParentReference{{Name: "test-gateway"}}},
+				},
+			}
+			rule := gwtypes.HTTPRouteRule{
+				BackendRefs: tt.backendRefs,
+				Matches: []gatewayv1.HTTPRouteMatch{
+					{Path: &gatewayv1.HTTPPathMatch{Type: new(gatewayv1.PathMatchPathPrefix), Value: new("/test")}},
+				},
+			}
+			var objects []client.Object
+			for i := range tt.backendServices {
+				objects = append(objects, &tt.backendServices[i])
+			}
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
+
+			service, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, upstreamName)
+			require.NoError(t, err)
+			require.NotNil(t, service)
+			if tt.expected == nil {
+				assert.Nil(t, service.Spec.Retries)
+			} else {
+				require.NotNil(t, service.Spec.Retries)
+				assert.Equal(t, *tt.expected, *service.Spec.Retries)
+			}
+		})
+	}
+}
+
+func TestResolveRetriesFromBackendRefs(t *testing.T) {
+	ctx := context.Background()
+	logger := zap.New()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	port80 := gatewayv1.PortNumber(80)
+
+	tests := []struct {
+		name            string
+		namespace       string
+		backendRefs     []gwtypes.BackendRef
+		backendServices []corev1.Service
+		expected        *int64
+	}{
+		{
+			name:      "service with retries annotation returns value",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-with-retries", Port: &port80}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-retries", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "5"}}},
+			},
+			expected: new(int64(5)),
+		},
+		{
+			name:      "service without annotation returns nil",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "plain-svc", Port: &port80}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "plain-svc", Namespace: "test-namespace"}},
+			},
+			expected: nil,
+		},
+		{
+			name:      "first backend ref with annotation wins",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-a", Port: &port80}},
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-b", Port: &port80}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "3"}}},
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-b", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "9"}}},
+			},
+			expected: new(int64(3)),
+		},
+		{
+			name:            "no backend refs returns nil",
+			namespace:       "test-namespace",
+			backendRefs:     []gwtypes.BackendRef{},
+			backendServices: []corev1.Service{},
+			expected:        nil,
+		},
+		{
+			name:      "service does not exist returns nil",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "nonexistent-svc", Port: &port80}},
+			},
+			backendServices: []corev1.Service{},
+			expected:        nil,
+		},
+		{
+			name:      "unsupported backend ref returns nil",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{
+					Name:  "some-ref",
+					Port:  &port80,
+					Group: new(gatewayv1.Group("example.com")),
+					Kind:  new(gatewayv1.Kind("NotService")),
+				}},
+			},
+			backendServices: []corev1.Service{},
+			expected:        nil,
+		},
+		{
+			name:      "cross-namespace backend ref",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{
+					Name:      "svc-other-ns",
+					Port:      &port80,
+					Namespace: new(gatewayv1.Namespace("other-namespace")),
+				}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/retries": "7"}}},
+			},
+			expected: new(int64(7)),
+		},
+		{
+			name:      "tls-style backend ref without port",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-tls"}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-tls", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "2"}}},
+			},
+			expected: new(int64(2)),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var objects []client.Object
+			for i := range tt.backendServices {
+				objects = append(objects, &tt.backendServices[i])
+			}
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
+
+			result := resolveRetriesFromBackendRefs(ctx, cl, tt.namespace, tt.backendRefs, logger)
+			if tt.expected == nil {
+				assert.Nil(t, result)
+			} else {
+				require.NotNil(t, result)
+				assert.Equal(t, *tt.expected, *result)
+			}
+		})
+	}
+}
+
+func TestExtractRetriesFromBackendRef(t *testing.T) {
+	ctx := context.Background()
+	logger := zap.New()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	port80 := gatewayv1.PortNumber(80)
+
+	tests := []struct {
+		name       string
+		namespace  string
+		backendRef gwtypes.BackendRef
+		services   []corev1.Service
+		expected   *int64
+	}{
+		{
+			name:      "supported backend ref with retries annotation",
+			namespace: "test-namespace",
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-with-retries", Port: &port80},
+			},
+			services: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-retries", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "5"}}},
+			},
+			expected: new(int64(5)),
+		},
+		{
+			name:      "supported backend ref without annotation",
+			namespace: "test-namespace",
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-no-retries", Port: &port80},
+			},
+			services: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-no-retries", Namespace: "test-namespace"}},
+			},
+			expected: nil,
+		},
+		{
+			name:      "zero value is valid",
+			namespace: "test-namespace",
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-zero-retries", Port: &port80},
+			},
+			services: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-zero-retries", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "0"}}},
+			},
+			expected: new(int64(0)),
+		},
+		{
+			name:      "negative value returns nil",
+			namespace: "test-namespace",
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-neg-retries", Port: &port80},
+			},
+			services: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-neg-retries", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "-1"}}},
+			},
+			expected: nil,
+		},
+		{
+			name:      "non-numeric value returns nil",
+			namespace: "test-namespace",
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-bad-retries", Port: &port80},
+			},
+			services: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-bad-retries", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "abc"}}},
+			},
+			expected: nil,
+		},
+		{
+			name:      "unsupported backend ref group",
+			namespace: "test-namespace",
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gatewayv1.BackendObjectReference{
+					Name:  "some-ref",
+					Port:  &port80,
+					Group: new(gatewayv1.Group("example.com")),
+				},
+			},
+			expected: nil,
+		},
+		{
+			name:      "unsupported backend ref kind",
+			namespace: "test-namespace",
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gatewayv1.BackendObjectReference{
+					Name: "some-ref",
+					Port: &port80,
+					Kind: new(gatewayv1.Kind("NotService")),
+				},
+			},
+			expected: nil,
+		},
+		{
+			name:      "backend service does not exist",
+			namespace: "test-namespace",
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "nonexistent-svc", Port: &port80},
+			},
+			expected: nil,
+		},
+		{
+			name:      "cross-namespace backend ref",
+			namespace: "test-namespace",
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gatewayv1.BackendObjectReference{
+					Name:      "svc-other-ns",
+					Port:      &port80,
+					Namespace: new(gatewayv1.Namespace("other-namespace")),
+				},
+			},
+			services: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/retries": "7"}}},
+			},
+			expected: new(int64(7)),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var objects []client.Object
+			for i := range tt.services {
+				objects = append(objects, &tt.services[i])
+			}
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
+
+			result := extractRetriesFromBackendRef(ctx, cl, logger, tt.namespace, tt.backendRef)
+			if tt.expected == nil {
+				assert.Nil(t, result)
+			} else {
+				require.NotNil(t, result)
+				assert.Equal(t, *tt.expected, *result)
+			}
+		})
+	}
+}

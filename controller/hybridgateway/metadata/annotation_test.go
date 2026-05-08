@@ -1190,6 +1190,33 @@ func TestExtractWriteTimeout(t *testing.T) {
 	}
 }
 
+func TestExtractRetries(t *testing.T) {
+	tests := []struct {
+		name        string
+		annotations map[string]string
+		expected    *int64
+	}{
+		{name: "nil annotations", annotations: nil, expected: nil},
+		{name: "empty annotations", annotations: map[string]string{}, expected: nil},
+		{name: "valid retries", annotations: map[string]string{"konghq.com/retries": "5"}, expected: new(int64(5))},
+		{name: "zero retries", annotations: map[string]string{"konghq.com/retries": "0"}, expected: new(int64(0))},
+		{name: "negative invalid", annotations: map[string]string{"konghq.com/retries": "-1"}, expected: nil},
+		{name: "non-numeric", annotations: map[string]string{"konghq.com/retries": "abc"}, expected: nil},
+		{name: "empty value", annotations: map[string]string{"konghq.com/retries": ""}, expected: nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := ExtractRetries(tt.annotations)
+			if tt.expected == nil {
+				assert.Nil(t, v)
+			} else {
+				require.NotNil(t, v)
+				assert.Equal(t, *tt.expected, *v)
+			}
+		})
+	}
+}
+
 func TestIsValidProtocol(t *testing.T) {
 	validProtocols := []string{"http", "https", "grpc", "grpcs", "ws", "wss", "tls", "tcp", "tls_passthrough"}
 	for _, p := range validProtocols {

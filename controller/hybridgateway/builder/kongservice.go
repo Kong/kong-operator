@@ -164,6 +164,16 @@ func (b *KongServiceBuilder) WithWriteTimeout(v *int64) *KongServiceBuilder {
 	return b
 }
 
+// WithRetries sets the retries count for the KongService being built.
+// A nil pointer leaves the field unset.
+func (b *KongServiceBuilder) WithRetries(v *int64) *KongServiceBuilder {
+	if v == nil {
+		return b
+	}
+	b.service.Spec.Retries = v
+	return b
+}
+
 // WithProtocol sets the protocol for the KongService being built.
 // Supported protocols match the Kong Gateway upstream protocol set.
 func (b *KongServiceBuilder) WithProtocol(protocol string) *KongServiceBuilder {
