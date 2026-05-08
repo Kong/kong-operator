@@ -53,6 +53,8 @@
 - Fix endless reconciliation in Konnect controllers when referenced parent objects
   are not marked as Ready yet.
   [#4048](https://github.com/Kong/kong-operator/pull/4048) [#4060](https://github.com/Kong/kong-operator/pull/4060)
+- Sanitize the plugin configuration when `ControlPlane`'s `configDump.dumpSensitive` isn't enabled.
+  [#4119](https://github.com/Kong/kong-operator/pull/4119) [#4194](https://github.com/Kong/kong-operator/pull/4194)
 
 ## [v2.1.5]
 
