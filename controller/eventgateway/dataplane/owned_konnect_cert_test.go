@@ -98,8 +98,6 @@ func newTestCertSecret() *corev1.Secret {
 }
 
 func TestEnsureKonnectCertificate(t *testing.T) {
-	oldID := "old-gateway-id"
-	programmedGatewayID := testKonnectGatewayID
 	secretRefType := konnectv1alpha1.SensitiveDataSourceTypeSecretRef
 
 	tests := []struct {
@@ -121,9 +119,10 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 			wantCondReason: string(eventgatewayv1alpha1.KonnectCertificateNotProgrammedReason),
 			verifyCert: func(t *testing.T, cert konnectv1alpha1.KonnectEventDataPlaneCertificate) {
 				t.Helper()
-				assert.Equal(t, commonv1alpha1.ObjectRefTypeKonnectID, cert.Spec.GatewayRef.Type)
-				require.NotNil(t, cert.Spec.GatewayRef.KonnectID)
-				assert.Equal(t, testKonnectGatewayID, *cert.Spec.GatewayRef.KonnectID)
+				assert.Equal(t, commonv1alpha1.ObjectRefTypeNamespacedRef, cert.Spec.GatewayRef.Type)
+				require.NotNil(t, cert.Spec.GatewayRef.NamespacedRef)
+				assert.Equal(t, "test-keg", cert.Spec.GatewayRef.NamespacedRef.Name)
+				assert.Nil(t, cert.Spec.GatewayRef.KonnectID)
 				require.NotNil(t, cert.Spec.Type)
 				assert.Equal(t, konnectv1alpha1.SensitiveDataSourceTypeSecretRef, *cert.Spec.Type)
 				require.NotNil(t, cert.Spec.SecretRef)
@@ -142,34 +141,6 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 			wantCondReason: string(eventgatewayv1alpha1.KonnectCertificateNotProgrammedReason),
 		},
 		{
-			name: "updates cert when gateway ID changes",
-			extraObjs: []client.Object{
-				&konnectv1alpha1.KonnectEventDataPlaneCertificate{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: konnectv1alpha1.GroupVersion.String(),
-						Kind:       "KonnectEventDataPlaneCertificate",
-					},
-					ObjectMeta: metav1.ObjectMeta{Name: "test-dp", Namespace: "default"},
-					Spec: konnectv1alpha1.KonnectEventDataPlaneCertificateSpec{
-						GatewayRef: commonv1alpha1.ObjectRef{
-							Type:      commonv1alpha1.ObjectRefTypeKonnectID,
-							KonnectID: &oldID,
-						},
-						Type:      &secretRefType,
-						SecretRef: &commonv1alpha1.NamespacedRef{Name: testCertSecretName},
-					},
-				},
-			},
-			wantProgrammed: false,
-			wantCondStatus: metav1.ConditionFalse,
-			wantCondReason: string(eventgatewayv1alpha1.KonnectCertificateNotProgrammedReason),
-			verifyCert: func(t *testing.T, cert konnectv1alpha1.KonnectEventDataPlaneCertificate) {
-				t.Helper()
-				require.NotNil(t, cert.Spec.GatewayRef.KonnectID)
-				assert.Equal(t, testKonnectGatewayID, *cert.Spec.GatewayRef.KonnectID)
-			},
-		},
-		{
 			name: "cert already programmed by Konnect sets KonnectCertificateRegistered=True", extraObjs: []client.Object{
 				&konnectv1alpha1.KonnectEventDataPlaneCertificate{
 					TypeMeta: metav1.TypeMeta{
@@ -179,8 +150,8 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Name: "test-dp", Namespace: "default"},
 					Spec: konnectv1alpha1.KonnectEventDataPlaneCertificateSpec{
 						GatewayRef: commonv1alpha1.ObjectRef{
-							Type:      commonv1alpha1.ObjectRefTypeKonnectID,
-							KonnectID: &programmedGatewayID,
+							Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
+							NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "test-keg"},
 						},
 						Type:      &secretRefType,
 						SecretRef: &commonv1alpha1.NamespacedRef{Name: testCertSecretName},
@@ -224,8 +195,8 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Name: "test-dp", Namespace: "default"},
 					Spec: konnectv1alpha1.KonnectEventDataPlaneCertificateSpec{
 						GatewayRef: commonv1alpha1.ObjectRef{
-							Type:      commonv1alpha1.ObjectRefTypeKonnectID,
-							KonnectID: &programmedGatewayID,
+							Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
+							NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "test-keg"},
 						},
 						Type:      &secretRefType,
 						SecretRef: &commonv1alpha1.NamespacedRef{Name: testCertSecretName},

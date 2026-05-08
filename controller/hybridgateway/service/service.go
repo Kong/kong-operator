@@ -61,7 +61,9 @@ func ServiceForRule[
 ) (kongService *configurationv1alpha1.KongService, err error) {
 
 	var serviceName string
-	var protocol string
+	var namespace string
+	var backendRefs []gwtypes.BackendRef
+	var defaultProtocol string
 
 	switch r := any(parentRoute).(type) {
 	case *gwtypes.HTTPRoute:
@@ -70,14 +72,19 @@ func ServiceForRule[
 			return nil, fmt.Errorf("failed to build KongService : unmatched route type and rule type: %T and %T", parentRoute, rule)
 		}
 		serviceName = namegen.NewKongServiceNameForHTTPRouteRule(r, cp, httpRule)
-		protocol = resolveProtocolFromHTTPRouteBackendRefs(ctx, cl, r, httpRule, "http", logger)
+		namespace = r.Namespace
+		backendRefs = httpBackendRefsToBackendRefs(httpRule.BackendRefs)
+		defaultProtocol = "http"
+
 	case *gwtypes.TLSRoute:
 		tlsRule, ok := any(rule).(gwtypes.TLSRouteRule)
 		if !ok {
 			return nil, fmt.Errorf("failed to build KongService : unmatched route type and rule type: %T and %T", parentRoute, rule)
 		}
 		serviceName = namegen.NewKongServiceNameForTLSRouteRule(r, cp, tlsRule)
-		protocol = resolveProtocolFromTLSRouteBackendRefs(ctx, cl, r, tlsRule, logger)
+		namespace = r.Namespace
+		backendRefs = tlsRule.BackendRefs
+		defaultProtocol = "tcp"
 
 	// TODO: add other types of routes and rules when we support them.
 
@@ -85,6 +92,17 @@ func ServiceForRule[
 	default:
 		return nil, fmt.Errorf("failed to build KongService: unsupported route type: %T", parentRoute)
 	}
+
+	// Resolve service attributes once, outside the switch — future route types only add a case above.
+	protocol := resolveProtocolFromBackendRefs(ctx, cl, namespace, backendRefs, defaultProtocol, logger)
+	path := resolvePathFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
+	tlsVerify := resolveTLSVerifyFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
+	tlsVerifyDepth := resolveTLSVerifyDepthFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
+	connectTimeout := resolveConnectTimeoutFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
+	readTimeout := resolveReadTimeoutFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
+	writeTimeout := resolveWriteTimeoutFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
+	retries := resolveRetriesFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
+
 	logger = logger.WithValues("kongservice", serviceName)
 	log.Debug(logger, fmt.Sprintf("Generating KongService for %s rule", parentRoute.GetObjectKind().GroupVersionKind().Kind))
 
@@ -96,6 +114,13 @@ func ServiceForRule[
 		WithSpecName(serviceName).
 		WithSpecHost(upstreamName).
 		WithProtocol(protocol).
+		WithPath(path).
+		WithTLSVerify(tlsVerify).
+		WithTLSVerifyDepth(tlsVerifyDepth).
+		WithConnectTimeout(connectTimeout).
+		WithReadTimeout(readTimeout).
+		WithWriteTimeout(writeTimeout).
+		WithRetries(retries).
 		WithControlPlaneRef(*cp).Build()
 	if err != nil {
 		log.Error(logger, err, "Failed to build KongService resource")
@@ -109,47 +134,33 @@ func ServiceForRule[
 	return &service, nil
 }
 
+// httpBackendRefsToBackendRefs unwraps []HTTPBackendRef to []BackendRef.
+func httpBackendRefsToBackendRefs(refs []gwtypes.HTTPBackendRef) []gwtypes.BackendRef {
+	out := make([]gwtypes.BackendRef, len(refs))
+	for i, r := range refs {
+		out[i] = r.BackendRef
+	}
+	return out
+}
+
 // resolveProtocolFromBackendRefs inspects the Kubernetes Service annotations of the
-// HTTPRoute's backend references to determine the upstream protocol. If any backend
-// Service has a valid konghq.com/protocol annotation, that protocol is returned.
-// Otherwise, defaultProtocol is returned.
-func resolveProtocolFromHTTPRouteBackendRefs(
+// backend references to determine the upstream protocol. If any backend Service has a
+// valid konghq.com/protocol annotation, that protocol is returned. Otherwise,
+// defaultProtocol is returned.
+func resolveProtocolFromBackendRefs(
 	ctx context.Context,
 	cl client.Client,
-	httpRoute *gwtypes.HTTPRoute,
-	rule gwtypes.HTTPRouteRule,
+	namespace string,
+	backendRefs []gwtypes.BackendRef,
 	defaultProtocol string,
 	logger logr.Logger,
 ) string {
-	for _, backendRef := range rule.BackendRefs {
-		if protocol, ok := extractProtocolFromBackendRef(ctx, cl, logger, httpRoute.Namespace, backendRef.BackendRef); ok {
+	for _, backendRef := range backendRefs {
+		if protocol, ok := extractProtocolFromBackendRef(ctx, cl, logger, namespace, backendRef); ok {
 			return protocol
 		}
 	}
-
 	return defaultProtocol
-}
-
-func resolveProtocolFromTLSRouteBackendRefs(
-	ctx context.Context,
-	cl client.Client,
-	tlSRoute *gwtypes.TLSRoute,
-	rule gwtypes.TLSRouteRule,
-	logger logr.Logger,
-) string {
-	// As specified in Kong gateway documents, either TLS passthrough or TLS terminate should set `tcp` as the service protocol:
-	// For TLS passthrogh, we should use `tls_passthrough` for protocols of routes and `tcp` for protocols of services:
-	// https://developer.konghq.com/gateway/entities/route/#proxying-tls-passthrough-traffic
-	// For TLS terminate, we should set `tls` for routes and `tcp` for services:
-	// https://developer.konghq.com/gateway/traffic-control/proxying/#proxy-tcp-tls-traffic
-	// So here we set the default service protocol to `tcp`.
-	protocol := "tcp"
-	for _, backendRef := range rule.BackendRefs {
-		if protocol, ok := extractProtocolFromBackendRef(ctx, cl, logger, tlSRoute.Namespace, backendRef); ok {
-			return protocol
-		}
-	}
-	return protocol
 }
 
 // extractProtocolFromBackendRef returns the protocol in the annotation konghq.com/protocol
@@ -194,4 +205,372 @@ func extractProtocolFromBackendRef(
 	log.Debug(logger, "Using protocol from backend Service annotation",
 		"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "protocol", protocol)
 	return protocol, true
+}
+
+// resolvePathFromBackendRefs returns the path taken from the first backend Service
+// that carries the konghq.com/path annotation. Empty string if none.
+func resolvePathFromBackendRefs(
+	ctx context.Context,
+	cl client.Client,
+	namespace string,
+	backendRefs []gwtypes.BackendRef,
+	logger logr.Logger,
+) string {
+	for _, backendRef := range backendRefs {
+		if path, ok := extractPathFromBackendRef(ctx, cl, logger, namespace, backendRef); ok {
+			return path
+		}
+	}
+	return ""
+}
+
+// extractPathFromBackendRef returns the path from the konghq.com/path annotation on the
+// backend Service referenced by the BackendRef.
+func extractPathFromBackendRef(
+	ctx context.Context,
+	cl client.Client,
+	logger logr.Logger,
+	namespace string,
+	backendRef gwtypes.BackendRef,
+) (string, bool) {
+	if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
+		return "", false
+	}
+
+	bRefNamespace := namespace
+	if backendRef.Namespace != nil && *backendRef.Namespace != "" {
+		bRefNamespace = string(*backendRef.Namespace)
+	}
+
+	svc := &corev1.Service{}
+	if err := cl.Get(ctx, client.ObjectKey{Namespace: bRefNamespace, Name: string(backendRef.Name)}, svc); err != nil {
+		log.Debug(logger, "Failed to fetch backend Service for path annotation check",
+			"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "error", err)
+		return "", false
+	}
+
+	path := metadata.ExtractPath(svc.GetAnnotations())
+	if path == "" {
+		return "", false
+	}
+
+	log.Debug(logger, "Using path from backend Service annotation",
+		"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "path", path)
+	return path, true
+}
+
+// resolveTLSVerifyFromBackendRefs returns the tls-verify value taken from
+// the first backend Service that carries the konghq.com/tls-verify annotation.
+func resolveTLSVerifyFromBackendRefs(
+	ctx context.Context,
+	cl client.Client,
+	namespace string,
+	backendRefs []gwtypes.BackendRef,
+	logger logr.Logger,
+) *bool {
+	for _, backendRef := range backendRefs {
+		if v := extractTLSVerifyFromBackendRef(ctx, cl, logger, namespace, backendRef); v != nil {
+			return v
+		}
+	}
+	return nil
+}
+
+// extractTLSVerifyFromBackendRef returns the tls-verify value from the konghq.com/tls-verify
+// annotation on the backend Service referenced by the BackendRef.
+func extractTLSVerifyFromBackendRef(
+	ctx context.Context,
+	cl client.Client,
+	logger logr.Logger,
+	namespace string,
+	backendRef gwtypes.BackendRef,
+) *bool {
+	if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
+		return nil
+	}
+
+	bRefNamespace := namespace
+	if backendRef.Namespace != nil && *backendRef.Namespace != "" {
+		bRefNamespace = string(*backendRef.Namespace)
+	}
+
+	svc := &corev1.Service{}
+	if err := cl.Get(ctx, client.ObjectKey{Namespace: bRefNamespace, Name: string(backendRef.Name)}, svc); err != nil {
+		log.Debug(logger, "Failed to fetch backend Service for tls-verify annotation check",
+			"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "error", err)
+		return nil
+	}
+
+	v := metadata.ExtractTLSVerify(svc.GetAnnotations())
+	if v == nil {
+		return nil
+	}
+
+	log.Debug(logger, "Using tls-verify from backend Service annotation",
+		"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "tls-verify", *v)
+	return v
+}
+
+// resolveTLSVerifyDepthFromBackendRefs returns the tls-verify-depth value taken from
+// the first backend Service that carries the konghq.com/tls-verify-depth annotation.
+func resolveTLSVerifyDepthFromBackendRefs(
+	ctx context.Context,
+	cl client.Client,
+	namespace string,
+	backendRefs []gwtypes.BackendRef,
+	logger logr.Logger,
+) *int64 {
+	for _, backendRef := range backendRefs {
+		if v := extractTLSVerifyDepthFromBackendRef(ctx, cl, logger, namespace, backendRef); v != nil {
+			return v
+		}
+	}
+	return nil
+}
+
+// extractTLSVerifyDepthFromBackendRef returns the tls-verify-depth value from the
+// konghq.com/tls-verify-depth annotation on the backend Service referenced by the BackendRef.
+func extractTLSVerifyDepthFromBackendRef(
+	ctx context.Context,
+	cl client.Client,
+	logger logr.Logger,
+	namespace string,
+	backendRef gwtypes.BackendRef,
+) *int64 {
+	if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
+		return nil
+	}
+
+	bRefNamespace := namespace
+	if backendRef.Namespace != nil && *backendRef.Namespace != "" {
+		bRefNamespace = string(*backendRef.Namespace)
+	}
+
+	svc := &corev1.Service{}
+	if err := cl.Get(ctx, client.ObjectKey{Namespace: bRefNamespace, Name: string(backendRef.Name)}, svc); err != nil {
+		log.Debug(logger, "Failed to fetch backend Service for tls-verify-depth annotation check",
+			"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "error", err)
+		return nil
+	}
+
+	v := metadata.ExtractTLSVerifyDepth(svc.GetAnnotations())
+	if v == nil {
+		return nil
+	}
+
+	log.Debug(logger, "Using tls-verify-depth from backend Service annotation",
+		"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "tls-verify-depth", *v)
+	return v
+}
+
+// resolveConnectTimeoutFromHTTPRouteBackendRefs returns the connect-timeout value taken from
+// the first HTTPRoute backend Service that carries the konghq.com/connect-timeout annotation.
+// resolveConnectTimeoutFromBackendRefs returns the connect-timeout value taken from
+// the first backend Service that carries the konghq.com/connect-timeout annotation.
+func resolveConnectTimeoutFromBackendRefs(
+	ctx context.Context,
+	cl client.Client,
+	namespace string,
+	backendRefs []gwtypes.BackendRef,
+	logger logr.Logger,
+) *int64 {
+	for _, backendRef := range backendRefs {
+		if v := extractConnectTimeoutFromBackendRef(ctx, cl, logger, namespace, backendRef); v != nil {
+			return v
+		}
+	}
+	return nil
+}
+
+// extractConnectTimeoutFromBackendRef returns the connect-timeout value from the
+// konghq.com/connect-timeout annotation on the backend Service referenced by the BackendRef.
+func extractConnectTimeoutFromBackendRef(
+	ctx context.Context,
+	cl client.Client,
+	logger logr.Logger,
+	namespace string,
+	backendRef gwtypes.BackendRef,
+) *int64 {
+	if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
+		return nil
+	}
+
+	bRefNamespace := namespace
+	if backendRef.Namespace != nil && *backendRef.Namespace != "" {
+		bRefNamespace = string(*backendRef.Namespace)
+	}
+
+	svc := &corev1.Service{}
+	if err := cl.Get(ctx, client.ObjectKey{Namespace: bRefNamespace, Name: string(backendRef.Name)}, svc); err != nil {
+		log.Debug(logger, "Failed to fetch backend Service for connect-timeout annotation check",
+			"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "error", err)
+		return nil
+	}
+
+	v := metadata.ExtractConnectTimeout(svc.GetAnnotations())
+	if v == nil {
+		return nil
+	}
+
+	log.Debug(logger, "Using connect-timeout from backend Service annotation",
+		"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "connect-timeout", *v)
+	return v
+}
+
+// resolveReadTimeoutFromHTTPRouteBackendRefs returns the read-timeout value taken from
+// the first HTTPRoute backend Service that carries the konghq.com/read-timeout annotation.
+// resolveReadTimeoutFromBackendRefs returns the read-timeout value taken from
+// the first backend Service that carries the konghq.com/read-timeout annotation.
+func resolveReadTimeoutFromBackendRefs(
+	ctx context.Context,
+	cl client.Client,
+	namespace string,
+	backendRefs []gwtypes.BackendRef,
+	logger logr.Logger,
+) *int64 {
+	for _, backendRef := range backendRefs {
+		if v := extractReadTimeoutFromBackendRef(ctx, cl, logger, namespace, backendRef); v != nil {
+			return v
+		}
+	}
+	return nil
+}
+
+// extractReadTimeoutFromBackendRef returns the read-timeout value from the
+// konghq.com/read-timeout annotation on the backend Service referenced by the BackendRef.
+func extractReadTimeoutFromBackendRef(
+	ctx context.Context,
+	cl client.Client,
+	logger logr.Logger,
+	namespace string,
+	backendRef gwtypes.BackendRef,
+) *int64 {
+	if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
+		return nil
+	}
+
+	bRefNamespace := namespace
+	if backendRef.Namespace != nil && *backendRef.Namespace != "" {
+		bRefNamespace = string(*backendRef.Namespace)
+	}
+
+	svc := &corev1.Service{}
+	if err := cl.Get(ctx, client.ObjectKey{Namespace: bRefNamespace, Name: string(backendRef.Name)}, svc); err != nil {
+		log.Debug(logger, "Failed to fetch backend Service for read-timeout annotation check",
+			"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "error", err)
+		return nil
+	}
+
+	v := metadata.ExtractReadTimeout(svc.GetAnnotations())
+	if v == nil {
+		return nil
+	}
+
+	log.Debug(logger, "Using read-timeout from backend Service annotation",
+		"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "read-timeout", *v)
+	return v
+}
+
+// resolveWriteTimeoutFromBackendRefs returns the write-timeout value taken from
+// the first backend Service that carries the konghq.com/write-timeout annotation.
+func resolveWriteTimeoutFromBackendRefs(
+	ctx context.Context,
+	cl client.Client,
+	namespace string,
+	backendRefs []gwtypes.BackendRef,
+	logger logr.Logger,
+) *int64 {
+	for _, backendRef := range backendRefs {
+		if v := extractWriteTimeoutFromBackendRef(ctx, cl, logger, namespace, backendRef); v != nil {
+			return v
+		}
+	}
+	return nil
+}
+
+// extractWriteTimeoutFromBackendRef returns the write-timeout value from the
+// konghq.com/write-timeout annotation on the backend Service referenced by the BackendRef.
+func extractWriteTimeoutFromBackendRef(
+	ctx context.Context,
+	cl client.Client,
+	logger logr.Logger,
+	namespace string,
+	backendRef gwtypes.BackendRef,
+) *int64 {
+	if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
+		return nil
+	}
+
+	bRefNamespace := namespace
+	if backendRef.Namespace != nil && *backendRef.Namespace != "" {
+		bRefNamespace = string(*backendRef.Namespace)
+	}
+
+	svc := &corev1.Service{}
+	if err := cl.Get(ctx, client.ObjectKey{Namespace: bRefNamespace, Name: string(backendRef.Name)}, svc); err != nil {
+		log.Debug(logger, "Failed to fetch backend Service for write-timeout annotation check",
+			"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "error", err)
+		return nil
+	}
+
+	v := metadata.ExtractWriteTimeout(svc.GetAnnotations())
+	if v == nil {
+		return nil
+	}
+
+	log.Debug(logger, "Using write-timeout from backend Service annotation",
+		"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "write-timeout", *v)
+	return v
+}
+
+// resolveRetriesFromBackendRefs returns the retries value taken from
+// the first backend Service that carries the konghq.com/retries annotation.
+func resolveRetriesFromBackendRefs(
+	ctx context.Context,
+	cl client.Client,
+	namespace string,
+	backendRefs []gwtypes.BackendRef,
+	logger logr.Logger,
+) *int64 {
+	for _, backendRef := range backendRefs {
+		if v := extractRetriesFromBackendRef(ctx, cl, logger, namespace, backendRef); v != nil {
+			return v
+		}
+	}
+	return nil
+}
+
+// extractRetriesFromBackendRef returns the retries value from the konghq.com/retries
+// annotation on the backend Service referenced by the BackendRef.
+func extractRetriesFromBackendRef(
+	ctx context.Context,
+	cl client.Client,
+	logger logr.Logger,
+	namespace string,
+	backendRef gwtypes.BackendRef,
+) *int64 {
+	if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
+		return nil
+	}
+
+	bRefNamespace := namespace
+	if backendRef.Namespace != nil && *backendRef.Namespace != "" {
+		bRefNamespace = string(*backendRef.Namespace)
+	}
+
+	svc := &corev1.Service{}
+	if err := cl.Get(ctx, client.ObjectKey{Namespace: bRefNamespace, Name: string(backendRef.Name)}, svc); err != nil {
+		log.Debug(logger, "Failed to fetch backend Service for retries annotation check",
+			"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "error", err)
+		return nil
+	}
+
+	v := metadata.ExtractRetries(svc.GetAnnotations())
+	if v == nil {
+		return nil
+	}
+
+	log.Debug(logger, "Using retries from backend Service annotation",
+		"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "retries", *v)
+	return v
 }

@@ -1,9 +1,9 @@
 module github.com/kong/kong-operator/v2/crd-from-oas
 
-go 1.26.2
+go 1.26.3
 
 require (
-	github.com/caarlos0/env/v11 v11.4.0
+	github.com/caarlos0/env/v11 v11.4.1
 	github.com/getkin/kin-openapi v0.137.0
 	github.com/stretchr/testify v1.11.1
 	gopkg.in/yaml.v3 v3.0.1

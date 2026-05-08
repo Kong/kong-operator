@@ -11,21 +11,37 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
-type generatedReferenceHandler func(context.Context, client.Client, k8sutils.ConditionsAwareObject) (ctrl.Result, error)
+type parentT interface {
+	GetTypeName() string
+}
 
-var _generatedHandlers []generatedReferenceHandler
+type parentTPtr[T parentT] interface {
+	*T
+	k8sutils.ConditionsAwareObject
+	GetKonnectID() string
+	GetTypeName() string
+	GetKonnectAPIAuthConfigurationRef() konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef
+}
+
+type generatedParentRefHandler interface {
+	handleParentRef(context.Context, client.Client, objectWithParentRef) (ctrl.Result, error)
+}
+
+var _generatedHandlers []generatedParentRefHandler
 
 func init() {
-	_generatedHandlers = []generatedReferenceHandler{
-		handleEventGatewayRef,
-		handlePortalRef,
+	_generatedHandlers = []generatedParentRefHandler{
+		parentRefHandler[konnectv1alpha1.KonnectEventGateway, *konnectv1alpha1.KonnectEventGateway]{},
+		parentRefHandler[konnectv1alpha1.Portal, *konnectv1alpha1.Portal]{},
 	}
 }
 
-func _generatedTypeReferenceHandlers() []generatedReferenceHandler {
+func _generatedTypeReferenceHandlers() []generatedParentRefHandler {
 	return _generatedHandlers
 }
 
@@ -47,7 +63,11 @@ func (r *KonnectEntityReconciler[T, TEnt]) handleGeneratedTypeReferences(
 	ent TEnt,
 ) (bool, ctrl.Result, error) {
 	for _, handler := range _generatedTypeReferenceHandlers() {
-		res, err := handler(ctx, r.Client, ent)
+		obj, ok := any(ent).(objectWithParentRef)
+		if !ok {
+			continue
+		}
+		res, err := handler.handleParentRef(ctx, r.Client, obj)
 		if err != nil {
 			// Only UnsupportedGeneratedReferenceTypeError are handled here
 			// to continue to the next handler.

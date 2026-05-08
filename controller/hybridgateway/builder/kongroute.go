@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -63,7 +62,7 @@ func (b *KongRouteBuilder) WithHTTPRouteMatch(match gwtypes.HTTPRouteMatch, setC
 			// setRegexPriority is set to true when the match path is a prefix match, is not root ("/") and requires a
 			// capture group for filters. We need to set regex_priority > 1 to ensure that a root path match ("/") in
 			// another KongRoute does not take precedence becoming a catch-all rule.
-			b.route.Spec.RegexPriority = ptr.To[int64](1)
+			b.route.Spec.RegexPriority = new(int64(1))
 		}
 	}
 

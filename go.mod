@@ -1,11 +1,11 @@
 module github.com/kong/kong-operator/v2
 
-go 1.26.2
+go 1.26.3
 
 require (
 	cloud.google.com/go/container v1.50.0
 	dario.cat/mergo v1.0.2
-	github.com/Kong/sdk-konnect-go v0.34.1
+	github.com/Kong/sdk-konnect-go v0.34.3
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/avast/retry-go/v4 v4.7.0
 	github.com/blang/semver/v4 v4.0.0
@@ -28,7 +28,7 @@ require (
 	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/jpillora/backoff v1.0.0
 	github.com/kong/go-database-reconciler v1.36.2
-	github.com/kong/go-kong v0.75.0
+	github.com/kong/go-kong v0.75.1
 	github.com/kong/kubernetes-telemetry v0.1.13
 	github.com/kong/kubernetes-testing-framework v0.49.0
 	github.com/kong/semver/v4 v4.0.1
@@ -68,7 +68,7 @@ require (
 	k8s.io/client-go v0.36.0
 	k8s.io/kubectl v0.35.2
 	k8s.io/kubernetes v1.36.0
-	k8s.io/utils v0.0.0-20260319190234-28399d86e0b5
+	k8s.io/utils v0.0.0-20260319190234-28399d86e0b5 // indirect
 	oras.land/oras-go/v2 v2.6.0
 	sigs.k8s.io/controller-runtime v0.24.0
 	sigs.k8s.io/controller-tools v0.20.1

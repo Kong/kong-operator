@@ -58,3 +58,38 @@ func (obj *PortalPage) SetPortalID(id string) {
 func (obj *PortalPage) GetPortalRef() commonv1alpha1.ObjectRef {
 	return obj.Spec.PortalRef
 }
+
+// GetParentRef returns the reference to the parent entity.
+func (obj *PortalPage) GetParentRef() commonv1alpha1.ObjectRef {
+	return obj.GetPortalRef()
+}
+
+// SetParentID sets the Konnect ID of the immediate parent entity.
+func (obj *PortalPage) SetParentID(id string) {
+	obj.SetPortalID(id)
+}
+
+// GetStatusConditionTypeParentRefValid returns the status condition type
+// indicating whether the parent reference is valid.
+func (obj *PortalPage) GetStatusConditionTypeParentRefValid() string {
+	return PortalRefValidConditionType
+}
+
+// GetStatusConditionReasonParentRefValid returns the status condition reason
+// indicating that the parent reference is valid.
+func (obj *PortalPage) GetStatusConditionReasonParentRefValid() string {
+	return PortalRefReasonValid
+}
+
+// GetStatusConditionReasonParentRefInvalid returns the status condition reason
+// indicating that the parent reference is invalid.
+func (obj *PortalPage) GetStatusConditionReasonParentRefInvalid() string {
+	return PortalRefReasonInvalid
+}
+
+// GetStatusConditionReasonParentRefNotProgrammed returns the status condition
+// reason indicating that the referenced parent exists but is not yet
+// programmed in Konnect.
+func (obj *PortalPage) GetStatusConditionReasonParentRefNotProgrammed() string {
+	return PortalRefReasonNotProgrammed
+}

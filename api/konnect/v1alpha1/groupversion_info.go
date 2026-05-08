@@ -47,17 +47,8 @@ func Resource(resource string) schema.GroupResource {
 }
 
 func addKnownTypes(scheme *runtime.Scheme) error {
+	// This is a manually maintained list of not generated CRD types.
 	scheme.AddKnownTypes(GroupVersion,
-		&EventGatewayBackendCluster{},
-		&EventGatewayBackendClusterList{},
-		&EventGatewayListener{},
-		&EventGatewayListenerList{},
-		&EventGatewayListenerPolicy{},
-		&EventGatewayListenerPolicyList{},
-		&EventGatewayVirtualCluster{},
-		&EventGatewayVirtualClusterList{},
-		&IdentityProviderRequest{},
-		&IdentityProviderRequestList{},
 		&KonnectAPIAuthConfiguration{},
 		&KonnectAPIAuthConfigurationList{},
 		&KonnectCloudGatewayDataPlaneGroupConfiguration{},
@@ -66,23 +57,17 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&KonnectCloudGatewayNetworkList{},
 		&KonnectCloudGatewayTransitGateway{},
 		&KonnectCloudGatewayTransitGatewayList{},
-		&KonnectEventDataPlaneCertificate{},
-		&KonnectEventDataPlaneCertificateList{},
-		&KonnectEventGateway{},
-		&KonnectEventGatewayList{},
 		&KonnectExtension{},
 		&KonnectExtensionList{},
 		&KonnectGatewayControlPlane{},
 		&KonnectGatewayControlPlaneList{},
 		&MCPServer{},
 		&MCPServerList{},
-		&Portal{},
-		&PortalList{},
-		&PortalPage{},
-		&PortalPageList{},
-		&PortalTeam{},
-		&PortalTeamList{},
 	)
+
+	if err := addKnownTypesGenerated(scheme); err != nil {
+		return err
+	}
 
 	metav1.AddToGroupVersion(scheme, GroupVersion)
 	return nil

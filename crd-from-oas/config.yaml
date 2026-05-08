@@ -3,8 +3,8 @@ apiGroupVersions:
     categories:
       - konnect
       - kong
-    # Don't generate GroupVersionInfo for this API group, as it already has it defined.
-    # We might do this in the future to replace the manually defined one.
+    # Don't generate groupversion_info.go for this API group — it is hand-written.
+    # zz_generated_groupversion_info.go (addKnownTypesGenerated) is still emitted.
     generateGroupVersionInfo: false
     commonTypes:
       objectRef:
@@ -182,5 +182,17 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/components.CreatePortalPageRequest
           update:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdatePortalPageRequest
+          delete: {}
+        reconciler: {}
+      - path: /v3/portals/{portalId}/email-config
+        name: PortalEmailConfig
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.PortalEmailsSDK
+            fieldName: PortalEmails
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.PostPortalEmailConfig
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.PatchPortalEmailConfig
           delete: {}
         reconciler: {}

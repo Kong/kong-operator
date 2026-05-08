@@ -256,8 +256,11 @@ func TestKongConsumerGroup(t *testing.T) {
 		t.Log("Setting up SDK expectations for getting and updating consumer groups")
 		sdk.ConsumerGroupSDK.EXPECT().GetConsumerGroup(
 			mock.Anything,
-			cgID,
-			cp.GetKonnectID(),
+			mock.MatchedBy(func(req sdkkonnectops.GetConsumerGroupRequest) bool {
+				return req.ConsumerGroupID == cgID &&
+					req.ControlPlaneID == cp.GetKonnectID() &&
+					req.ListConsumers == nil
+			}),
 		).Return(&sdkkonnectops.GetConsumerGroupResponse{
 			ConsumerGroupInsideWrapper: &sdkkonnectcomp.ConsumerGroupInsideWrapper{
 				ConsumerGroup: &sdkkonnectcomp.ConsumerGroup{
@@ -271,7 +274,7 @@ func TestKongConsumerGroup(t *testing.T) {
 			mock.MatchedBy(func(req sdkkonnectops.UpsertConsumerGroupRequest) bool {
 				return req.ConsumerGroupID == cgID && req.ControlPlaneID == cp.GetKonnectID()
 			}),
-		).Return(nil, nil)
+		).Return(&sdkkonnectops.UpsertConsumerGroupResponse{}, nil)
 
 		t.Log("Creating a KongConsumerGroup to adopt the existing consumer group")
 		createdConsumerGroup := deploy.KongConsumerGroupAttachedToCP(t, ctx, clientNamespaced,
