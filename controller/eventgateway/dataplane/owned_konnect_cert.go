@@ -37,7 +37,7 @@ import (
 
 // ensureKonnectCertificate ensures a KonnectEventDataPlaneCertificate resource
 // exists for the given DataPlane, referencing the provisioned mTLS Secret and the
-// resolved KonnectEventGateway's Konnect ID.
+// resolved KonnectEventGateway.
 func (r *Reconciler) ensureKonnectCertificate(
 	ctx context.Context,
 	logger logr.Logger,
@@ -57,8 +57,10 @@ func (r *Reconciler) ensureKonnectCertificate(
 		},
 		Spec: konnectv1alpha1.KonnectEventDataPlaneCertificateSpec{
 			GatewayRef: commonv1alpha1.ObjectRef{
-				Type:      commonv1alpha1.ObjectRefTypeKonnectID,
-				KonnectID: &keg.Status.ID,
+				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{
+					Name: keg.Name,
+				},
 			},
 			Type: &secretRefType,
 			SecretRef: &commonv1alpha1.NamespacedRef{
