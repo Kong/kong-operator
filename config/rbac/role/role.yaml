@@ -430,7 +430,6 @@ rules:
   - konnectcloudgatewaydataplanegroupconfigurations
   - konnectcloudgatewaynetworks
   - konnectcloudgatewaytransitgateways
-  - konnecteventdataplanecertificates
   - konnecteventgateways
   - portalemailconfigs
   - portalpages
@@ -486,6 +485,7 @@ rules:
 - apiGroups:
   - konnect.konghq.com
   resources:
+  - konnecteventdataplanecertificates
   - konnectextensions
   - konnectgatewaycontrolplanes
   - mcpservers
