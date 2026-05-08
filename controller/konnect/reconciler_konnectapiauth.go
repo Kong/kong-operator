@@ -300,7 +300,7 @@ func GetTokenFromKonnectAPIAuthConfiguration(
 							client.ObjectKeyFromObject(apiAuth), nn,
 						),
 						"WARNING: referencing Secret in a different namespace. "+
-							"This will require a KongReferenceGrant in Secret's namespace in future versions.",
+							"This will require a KongReferenceGrant in Secret's namespace in KO 2.3 and later.",
 					)
 			}
 		}
