@@ -212,6 +212,8 @@
 - More robust validation for `HTTPRoute`, when an unsupported feature is used, and the route refers
   to existing and non-existing `Gateway`, it will be rejected.
   [#4131](https://github.com/Kong/kong-operator/pull/4131)
+- Sanitize the plugin configuration when `ControlPlane`'s `configDump.dumpSensitive` isn't enabled.
+  [#4045](https://github.com/Kong/kong-operator/pull/4045)
 
 ## [v2.1.5]
 
