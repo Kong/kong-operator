@@ -1431,11 +1431,12 @@ func getSupportedKindsWithResolvedRefsCondition(ctx context.Context, c client.Cl
 			resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidCertificateRef)
 			message = conditionMessage(message, "Only Terminate mode is supported")
 		}
-		// We currently do not support more that one listener certificate.
-		if len(listener.TLS.CertificateRefs) != 1 {
+		// We currently do not support more that one listener certificates.
+		// TODO: https://github.com/Kong/kong-operator/issues/3510
+		if len(listener.TLS.CertificateRefs) > 1 {
 			resolvedRefsCondition.Reason = string(kcfggateway.ListenerReasonTooManyTLSSecrets)
 			message = conditionMessage(message, "Only one certificate per listener is supported")
-		} else {
+		} else if len(listener.TLS.CertificateRefs) == 1 {
 			isValidGroupKind := true
 			certificateRef := listener.TLS.CertificateRefs[0]
 			gatewayNamespace := gatewayv1.Namespace(gateway.Namespace)
@@ -1483,6 +1484,9 @@ func getSupportedKindsWithResolvedRefsCondition(ctx context.Context, c client.Cl
 				}
 			}
 		}
+		// For the case of 0 certificate refs:
+		// If the listener's TLSMode is Terminate, this cannot happen because it is rejected by gateway API's validation.
+		// If the listener's TLSMode is not Terminate, this is valid and means that the listener will be used for passthrough TLS, so no certificate is needed.
 	}
 
 	if listener.AllowedRoutes == nil || len(listener.AllowedRoutes.Kinds) == 0 {
