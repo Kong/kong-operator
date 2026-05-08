@@ -6,7 +6,6 @@ import (
 	"os"
 	"text/template"
 
-	"github.com/Masterminds/sprig/v3"
 	"github.com/samber/lo"
 )
 
@@ -35,8 +34,19 @@ func main() {
 	lo.Must0(renderTemplate(cacheStoresTestTemplate, cacheStoresTestOutputFile))
 }
 
+func parseTemplate(templateContent string) (*template.Template, error) {
+	return template.New("tpl").Funcs(template.FuncMap{
+		"default": func(defaultValue, value string) string {
+			if value == "" {
+				return defaultValue
+			}
+			return value
+		},
+	}).Parse(templateContent)
+}
+
 func renderTemplate(templateContent string, outputFile string) error {
-	tpl, err := template.New("tpl").Funcs(sprig.TxtFuncMap()).Parse(templateContent)
+	tpl, err := parseTemplate(templateContent)
 	if err != nil {
 		return fmt.Errorf("failed to parse template for %s: %w", outputFile, err)
 	}
