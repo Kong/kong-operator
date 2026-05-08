@@ -1,6 +1,6 @@
 module github.com/kong/kong-operator/v2
 
-go 1.26.2
+go 1.26.3
 
 require (
 	cloud.google.com/go/container v1.50.0
@@ -28,7 +28,7 @@ require (
 	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/jpillora/backoff v1.0.0
 	github.com/kong/go-database-reconciler v1.36.2
-	github.com/kong/go-kong v0.75.0
+	github.com/kong/go-kong v0.75.1
 	github.com/kong/kubernetes-telemetry v0.1.13
 	github.com/kong/kubernetes-testing-framework v0.49.0
 	github.com/kong/semver/v4 v4.0.1
