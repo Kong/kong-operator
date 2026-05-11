@@ -292,6 +292,8 @@ func GetTokenFromKonnectAPIAuthConfiguration(
 		if nn.Namespace != apiAuth.Namespace {
 			gvkAPIAuth := metav1.GroupVersionKind(apiAuth.GetObjectKind().GroupVersionKind())
 			gvkSecret := metav1.GroupVersionKind(corev1.SchemeGroupVersion.WithKind("Secret"))
+			// TODO: Require a KongReferenceGrant for cross-namespace references in KO 2.3 and later:
+			// https://github.com/Kong/kong-operator/issues/2908
 			err := crossnamespace.CheckKongReferenceGrantForResource(ctx, cl, apiAuth.Namespace, nn.Namespace, nn.Name, gvkAPIAuth, gvkSecret)
 			if err != nil {
 				ctrllog.FromContext(ctx).
@@ -300,7 +302,7 @@ func GetTokenFromKonnectAPIAuthConfiguration(
 							client.ObjectKeyFromObject(apiAuth), nn,
 						),
 						"WARNING: referencing Secret in a different namespace. "+
-							"This will require a KongReferenceGrant in Secret's namespace in future versions.",
+							"This will require a KongReferenceGrant in Secret's namespace in KO 2.3 and later.",
 					)
 			}
 		}
