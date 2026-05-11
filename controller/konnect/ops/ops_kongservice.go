@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"slices"
 	"strconv"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
@@ -182,11 +183,14 @@ func kongServiceToSDKServiceInput(
 	if svc.Spec.Protocol != "" {
 		s.Protocol = new(svc.Spec.Protocol)
 	}
-	if svc.Status.Konnect != nil && svc.Status.Konnect.CertificateID != "" {
-		s.ClientCertificate = &sdkkonnectcomp.ClientCertificate{ID: &svc.Status.Konnect.CertificateID}
-	}
-	if svc.Status.Konnect != nil && len(svc.Status.Konnect.CACertificateIDs) > 0 {
-		s.CaCertificates = append([]string(nil), svc.Status.Konnect.CACertificateIDs...)
+	if svc.Status.Konnect != nil {
+		if svc.Status.Konnect.CertificateID != "" {
+			certID := svc.Status.Konnect.CertificateID
+			s.ClientCertificate = &sdkkonnectcomp.ClientCertificate{ID: &certID}
+		}
+		if len(svc.Status.Konnect.CACertificateIDs) > 0 {
+			s.CaCertificates = slices.Clone(svc.Status.Konnect.CACertificateIDs)
+		}
 	}
 	return s
 }
