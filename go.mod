@@ -48,7 +48,7 @@ require (
 	// dependency in our go.mod file.
 	github.com/testcontainers/testcontainers-go v0.42.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.42.0
-	github.com/tidwall/gjson v1.18.0
+	github.com/tidwall/gjson v1.19.0
 	github.com/tidwall/pretty v1.2.1
 	github.com/tonglil/buflogr v1.1.1
 	go.uber.org/goleak v1.3.0
