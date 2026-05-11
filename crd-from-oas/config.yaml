@@ -197,3 +197,21 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/components.PatchPortalEmailConfig
           delete: {}
         reconciler: {}
+      - path: /v3/portals/{portalId}/ip-allow-list
+        name: PortalIPAllowList
+        ops:
+          getForUID:
+            # Designates the field on the object to compare when using a fallback
+            # because this type in Konnect doesn't support tags or labels.
+            matchFields:
+              - objectField: Spec.APISpec.AllowedIps 
+                responseField: AllowedIps
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.PortalsIPAllowListSDK
+            fieldName: PortalsIPAllowList
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreatePortalSourceIPRestriction
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/operations.PutPortalIPAllowListRequest
+          delete: {}
+        reconciler: {}

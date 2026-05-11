@@ -29,6 +29,9 @@ package konnect
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=portalemailconfigs,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=portalemailconfigs/status,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=portalemailconfigs/finalizers,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=portalipallowlists,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=portalipallowlists/status,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=portalipallowlists/finalizers,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=portalpages,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=portalpages/status,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=portalpages/finalizers,verbs=update;patch

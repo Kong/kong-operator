@@ -2,6 +2,7 @@ package generator
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/config"
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/parser"
@@ -71,7 +72,7 @@ func (g *Generator) generateOpsUpdateFuncBody(
 		return nil, fmt.Errorf("entity %q: missing OpenAPI tags for update op", entityName)
 	}
 
-	_, updateReqType, err := ParseSDKTypePath(updateOp.Path)
+	updateImportPath, updateReqType, err := ParseSDKTypePath(updateOp.Path)
 	if err != nil {
 		return nil, fmt.Errorf("entity %q: %w", entityName, err)
 	}
@@ -94,10 +95,12 @@ func (g *Generator) generateOpsUpdateFuncBody(
 	// ≥2 params → wrapped operations.XxxRequest struct.
 	// 1 param → positional (entity ID only, root entity).
 	wrapped := len(schema.UpdatePathParams) >= 2
-	// updateFullyWrapped is true for multi-parent entities (≥3 update path params):
-	// their update.path is a fully-wrapped operations.XxxRequest that already
-	// contains all path-param fields. We set them directly on the returned struct.
-	updateFullyWrapped := len(schema.UpdatePathParams) >= 3
+	// updateFullyWrapped is true for multi-parent entities (≥3 update path params)
+	// OR when update.path is itself an operations.XxxRequest wrapper type — in that
+	// case To<X>() already returns the full request struct (path params + body) and
+	// we set path params on it directly instead of constructing a manual struct literal.
+	updateFullyWrapped := len(schema.UpdatePathParams) >= 3 ||
+		strings.HasSuffix(updateImportPath, "/operations")
 	// updateOmitsEntityID is true for parent-scoped singletons: the PATCH path
 	// contains only parent path params (no entity-specific ID). The SDK method
 	// takes the parent ID positionally; no entity ID is emitted.
@@ -112,6 +115,14 @@ func (g *Generator) generateOpsUpdateFuncBody(
 			parentIDField = pathParamToFieldName(params[len(params)-2])
 			updateBodyField = updateReqType
 		}
+	}
+
+	// When the update path is a fully-wrapped operations.XxxRequest, the SDK
+	// method always takes the struct by value — override any OAS-derived pointer
+	// flag so the template emits *req (dereference) unconditionally.
+	updateReqBodyPointer := schema.UpdateReqBodyPointer
+	if updateFullyWrapped && strings.HasSuffix(updateImportPath, "/operations") {
+		updateReqBodyPointer = false
 	}
 
 	return &opsUpdateFuncData{
@@ -129,7 +140,7 @@ func (g *Generator) generateOpsUpdateFuncBody(
 		ParentIDField:        parentIDField,
 		EntityIDField:        entityIDField,
 		UpdateBodyField:      updateBodyField,
-		UpdateReqBodyPointer: schema.UpdateReqBodyPointer,
+		UpdateReqBodyPointer: updateReqBodyPointer,
 		NeedsClient:          needsClient,
 		UpdateOmitsEntityID:  updateOmitsEntityID,
 	}, nil

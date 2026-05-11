@@ -11,6 +11,7 @@ import (
 
 func TestEventGatewayListenerAPISpec_ToCreateEventGatewayListenerRequest(t *testing.T) {
 	spec := &EventGatewayListenerAPISpec{
+		Addresses: []string{"test-value"},
 		Description: "test-value",
 		Labels: Labels{"test-key": "test-value"},
 		Name: "test-value",
@@ -25,6 +26,7 @@ func TestEventGatewayListenerAPISpec_ToCreateEventGatewayListenerRequest(t *test
 	var payload map[string]any
 	err = json.Unmarshal(data, &payload)
 	require.NoError(t, err)
+	require.Equal(t, []any{"test-value"}, payload["addresses"])
 	require.Equal(t, "test-value", payload["description"])
 	require.Equal(t, map[string]any{"test-key": "test-value"}, payload["labels"])
 	require.Equal(t, "test-value", payload["name"])
@@ -32,6 +34,7 @@ func TestEventGatewayListenerAPISpec_ToCreateEventGatewayListenerRequest(t *test
 
 func TestEventGatewayListenerAPISpec_ToUpdateEventGatewayListenerRequest(t *testing.T) {
 	spec := &EventGatewayListenerAPISpec{
+		Addresses: []string{"test-value"},
 		Description: "test-value",
 		Labels: Labels{"test-key": "test-value"},
 		Name: "test-value",
@@ -46,6 +49,7 @@ func TestEventGatewayListenerAPISpec_ToUpdateEventGatewayListenerRequest(t *test
 	var payload map[string]any
 	err = json.Unmarshal(data, &payload)
 	require.NoError(t, err)
+	require.Equal(t, []any{"test-value"}, payload["addresses"])
 	require.Equal(t, "test-value", payload["description"])
 	require.Equal(t, map[string]any{"test-key": "test-value"}, payload["labels"])
 	require.Equal(t, "test-value", payload["name"])
