@@ -64,7 +64,7 @@ require (
 	k8s.io/apimachinery v0.36.0
 	k8s.io/cli-runtime v0.36.0
 	k8s.io/client-go v0.36.0
-	k8s.io/kubectl v0.35.2
+	k8s.io/kubectl v0.35.4
 	k8s.io/kubernetes v1.36.0
 	k8s.io/utils v0.0.0-20260319190234-28399d86e0b5 // indirect
 	oras.land/oras-go/v2 v2.6.0
@@ -358,7 +358,7 @@ replace (
 	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.36.0
 	k8s.io/kubectl => k8s.io/kubectl v0.36.0
 	k8s.io/kubelet => k8s.io/kubelet v0.36.0
-	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.30.3
+	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.30.14
 	k8s.io/metrics => k8s.io/metrics v0.36.0
 	k8s.io/mount-utils => k8s.io/mount-utils v0.36.0
 	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.36.0
