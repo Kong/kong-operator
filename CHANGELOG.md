@@ -214,6 +214,12 @@
 
 ### Fixes
 
+- Use the ControlPlane's own namespace when resolving its `KonnectAPIAuthConfiguration`
+  reference and when checking the `KongReferenceGrant`. Previously the namespace of the
+  requesting entity was used, which caused resources that resolve their CP through a
+  parent ref (`KongRoute` via `serviceRef`, `KongCredential*` via `consumerRef`) to
+  silently fail when the parent's `controlPlaneRef` was cross-namespace.
+  [#4210](https://github.com/Kong/kong-operator/pull/4210)
 - More robust validation for `HTTPRoute`, when an unsupported feature is used, and the route refers
   to existing and non-existing `Gateway`, it will be rejected.
   [#4131](https://github.com/Kong/kong-operator/pull/4131)
