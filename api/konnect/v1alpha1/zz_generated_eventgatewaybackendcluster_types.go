@@ -70,7 +70,6 @@ type EventGatewayBackendClusterAPISpec struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=512
-	// +kubebuilder:default=""
 	Description string `json:"description,omitempty"`
 
 	// If true, virtual clusters can have allow anonymous authentication and use
@@ -81,7 +80,6 @@ type EventGatewayBackendClusterAPISpec struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
-	// +kubebuilder:default=Disabled
 	InsecureAllowAnonymousVirtualClusterAuth string `json:"insecureAllowAnonymousVirtualClusterAuth,omitempty"`
 
 	// Labels store metadata of an entity that can be used for filtering an entity
@@ -100,7 +98,6 @@ type EventGatewayBackendClusterAPISpec struct {
 	// +optional
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=43200
-	// +kubebuilder:default=60
 	MetadataUpdateIntervalSeconds BackendMetadataUpdateIntervalSeconds `json:"metadataUpdateIntervalSeconds,omitempty"`
 
 	// The unique name of the backend cluster.

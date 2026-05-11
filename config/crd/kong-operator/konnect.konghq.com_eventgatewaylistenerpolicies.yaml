@@ -86,7 +86,6 @@ spec:
                                 pattern: ^[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?)*$
                                 type: string
                               bootstrapPort:
-                                default: at_start
                                 description: |-
                                   If set to `at_start`, the first port will be used as a bootstrap port.
                                   It provides a stable endpoint to use as the bootstrap server for clients,
@@ -116,7 +115,6 @@ spec:
                                     type: string
                                 type: object
                               minBrokerID:
-                                default: 0
                                 description: The lowest broker node ID in the cluster.
                                 type: integer
                             required:
@@ -149,7 +147,6 @@ spec:
                                   **Requires a minimum runtime version of `1.1`**.
                                 properties:
                                   type:
-                                    default: per_cluster_suffix
                                     enum:
                                     - per_cluster_suffix
                                     - shared_suffix
@@ -199,12 +196,10 @@ spec:
                         - type
                         type: object
                       description:
-                        default: ""
                         description: A human-readable description of the policy.
                         maxLength: 512
                         type: string
                       enabled:
-                        default: Enabled
                         description: Whether the policy is enabled.
                         enum:
                         - Enabled
@@ -238,7 +233,6 @@ spec:
                         description: The configuration of the policy.
                         properties:
                           allowPlaintext:
-                            default: Disabled
                             description: |-
                               If false, only TLS connections are allowed.
                               If true, both TLS and plaintext connections are allowed.
@@ -333,13 +327,9 @@ spec:
                             - tlsTrustBundles
                             type: object
                           versions:
-                            default:
-                              max: TLSv1.3
-                              min: TLSv1.2
                             description: A range of TLS versions.
                             properties:
                               max:
-                                default: TLSv1.3
                                 description: Maximum TLS version to use.
                                 enum:
                                 - TLSv1.2
@@ -347,7 +337,6 @@ spec:
                                 maxLength: 253
                                 type: string
                               min:
-                                default: TLSv1.2
                                 description: Minimum TLS version to use.
                                 enum:
                                 - TLSv1.2
@@ -359,12 +348,10 @@ spec:
                         - certificates
                         type: object
                       description:
-                        default: ""
                         description: A human-readable description of the policy.
                         maxLength: 512
                         type: string
                       enabled:
-                        default: Enabled
                         description: Whether the policy is enabled.
                         enum:
                         - Enabled

@@ -64,7 +64,6 @@ spec:
                   spec fields.
                 properties:
                   authenticationEnabled:
-                    default: Enabled
                     description: |-
                       Whether the portal supports developer authentication.
                       If disabled, developers cannot register for accounts or create applications.
@@ -73,7 +72,6 @@ spec:
                     - Disabled
                     type: string
                   autoApproveApplications:
-                    default: Disabled
                     description: |-
                       Whether requests from applications to register for APIs will be
                       automatically approved, or if they will be set to pending until approved by
@@ -83,7 +81,6 @@ spec:
                     - Disabled
                     type: string
                   autoApproveDevelopers:
-                    default: Disabled
                     description: |-
                       Whether developer account registrations will be automatically approved, or
                       if they will be set to pending until approved by an admin.
@@ -215,7 +212,6 @@ spec:
                     - message: name is immutable
                       rule: self == oldSelf
                   rbacEnabled:
-                    default: Disabled
                     description: |-
                       Whether the portal resources are protected by Role Based Access Control
                       (RBAC).
@@ -227,7 +223,6 @@ spec:
                     - Disabled
                     type: string
                   siprEnabled:
-                    default: Disabled
                     description: Whether ip allow list is enabled for the portal.
                     enum:
                     - Enabled
