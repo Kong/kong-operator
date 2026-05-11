@@ -33,6 +33,12 @@ type DeploymentOptions struct {
 	//
 	// +optional
 	PodTemplateSpec *corev1.PodTemplateSpec `json:"podTemplateSpec,omitempty"`
+
+	// IgnoredAnnotations is a list of annotation keys that the operator will ignore when comparing the spec of the managed Deployment with the desired spec.
+	//  This is useful for annotations that are added by other controllers or processes and should not trigger a rollout when they change.
+	//
+	// +optional
+	IgnoredAnnotations []string `json:"ignoredAnnotations,omitempty"`
 }
 
 // Scaling defines the scaling options for the deployment.

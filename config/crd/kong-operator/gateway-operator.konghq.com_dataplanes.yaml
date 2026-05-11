@@ -58,6 +58,13 @@ spec:
                   DataPlaneDeploymentOptions specifies options for the Deployments (as in the Kubernetes
                   resource "Deployment") which are created and managed for the DataPlane resource.
                 properties:
+                  ignoredAnnotations:
+                    description: |-
+                      IgnoredAnnotations is a list of annotation keys that the operator will ignore when comparing the spec of the managed Deployment with the desired spec.
+                       This is useful for annotations that are added by other controllers or processes and should not trigger a rollout when they change.
+                    items:
+                      type: string
+                    type: array
                   podTemplateSpec:
                     description: |-
                       PodTemplateSpec defines PodTemplateSpec for Deployment's pods.

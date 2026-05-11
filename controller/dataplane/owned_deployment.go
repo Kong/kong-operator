@@ -348,9 +348,11 @@ func reconcileDataPlaneDeployment(
 		updated, existing.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existing.ObjectMeta, desired.ObjectMeta)
 
 		// some custom comparison rules are needed for some PodTemplateSpec sub-attributes
+		ignoredAnnotationKeys := []string{restartAnnotationKey}
+		ignoredAnnotationKeys = append(ignoredAnnotationKeys, dataplane.Spec.Deployment.IgnoredAnnotations...)
 		opts := []cmp.Option{
 			cmp.Comparer(k8sresources.ResourceRequirementsEqual),
-			utils.IgnoreAnnotationKeysComparer(restartAnnotationKey),
+			utils.IgnoreAnnotationKeysComparer(ignoredAnnotationKeys...),
 		}
 
 		if !cmp.Equal(existing.Spec.Template, desired.Spec.Template, opts...) {
