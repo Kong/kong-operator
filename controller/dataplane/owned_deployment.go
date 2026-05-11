@@ -299,8 +299,14 @@ func podTemplateSpecHasRestartAnnotation(template *corev1.PodTemplateSpec) (stri
 	return v, ok && v != ""
 }
 
-// envVarExistsInPodTemplateSpec checks if an environment variable with the given name exists in the proxy container of the PodTemplateSpec in the DataPlane.
-func envVarExistsInPodTemplateSpec(ctx context.Context, envVarName string, dataplane *operatorv1beta1.DataPlane, cl client.Client) (bool, error) {
+// envVarExistsInPodTemplateSpec checks if an environment variable with the given name
+// exists in the proxy container of the PodTemplateSpec in the DataPlane.
+func envVarExistsInPodTemplateSpec(
+	ctx context.Context,
+	envVarName string,
+	dataplane *operatorv1beta1.DataPlane,
+	cl client.Client,
+) (bool, error) {
 	templateSpec := dataplane.Spec.Deployment.PodTemplateSpec
 	if templateSpec == nil {
 		return false, nil
