@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -840,8 +841,8 @@ func supportedRoutesByProtocol() map[gatewayv1.ProtocolType]map[gatewayv1.Kind]s
 		gatewayv1.HTTPProtocolType:  {"HTTPRoute": {}, "GRPCRoute": {}},
 		gatewayv1.HTTPSProtocolType: {"HTTPRoute": {}, "GRPCRoute": {}},
 		gatewayv1.TLSProtocolType:   {"TLSRoute": {}},
-		// TCPRoutes ad UDPRoutes are not supported yet
-		// gatewayv1.TCPProtocolType:   {"TCPRoute": {}},
+		gatewayv1.TCPProtocolType:   {"TCPRoute": {}},
+		// UDPRoutes are not supported yet
 		// gatewayv1.UDPProtocolType:   {"UDPRoute": {}},
 	}
 }
@@ -1079,6 +1080,15 @@ func countAttachedRoutesForGatewayListener(ctx context.Context, g *gwtypes.Gatew
 				)
 			}
 			count += countAttachedGRPCRoutes(g, listener, grpcRoutes)
+		case "TCPRoute":
+			tcpRoutes, err := gatewayutils.ListTCPRoutesForGateway(ctx, cl, g, opts...)
+			if err != nil {
+				return 0, fmt.Errorf(
+					"failed to list TCPRoutes for Gateway %s when counting AttachedRoutes: %w",
+					client.ObjectKeyFromObject(g), err,
+				)
+			}
+			count += countAttachedTCPRoutes(listener, tcpRoutes)
 		// Unsupported route kinds. Should be unreachable.
 		default:
 			return 0, fmt.Errorf("unsupported route kind: %s", k)
@@ -1128,6 +1138,23 @@ func countAttachedGRPCRoutes(gateway *gwtypes.Gateway, listener gwtypes.Listener
 		})
 	})
 	return int32(count)
+}
+
+// countAttachedTCPRoutes counts the number of attached TCPRoutes for a given listener,
+// taking into account the ParentRefs' sectionName between the listener and the route.
+// TCPRoute has no hostnames, so only sectionName matching applies.
+func countAttachedTCPRoutes(listener gwtypes.Listener, tcpRoutes []gatewayv1alpha2.TCPRoute) int32 {
+	var count int32
+
+	for _, tcpRoute := range tcpRoutes {
+		if lo.ContainsBy(tcpRoute.Spec.ParentRefs, func(parentRef gatewayv1.ParentReference) bool {
+			return parentRef.SectionName == nil || *parentRef.SectionName == listener.Name
+		}) {
+			count++
+		}
+	}
+
+	return count
 }
 
 func listenerHostnameIntersectsRouteHostnames(
@@ -1277,13 +1304,34 @@ func setDataPlaneDeploymentListenPorts(
 		consts.DataPlaneAdminAPIPort: {},
 	}
 
-	// Extract listeners with TLS ports.
+	// Extract listeners with TLS or TCP ports. Both protocols are served by Kong's
+	// stream proxy; the difference is whether the entry carries the `ssl` flag.
 	tlsPorts := []int{}
+	tcpPorts := []int{}
 	var errs error
 	// assignedPortNumber and assignedPortMax defines the interval of ports to assign to listen on Kong stream proxy
 	// if the specified port in the listener is already occupied on Kong DataPlane.
 	assignedPortNumber := consts.DataPlaneAssignedPortStart
 	assignedPortMax := consts.DataPlaneAssignedPortStart + 1024
+
+	assignStreamPort := func(i int, portNumber int) {
+		_, occupied := kongPortOccupied[portNumber]
+		if isKnownPort(portNumber) || occupied {
+			for ; assignedPortNumber < assignedPortMax; assignedPortNumber++ {
+				if _, occupied := kongPortOccupied[assignedPortNumber]; !occupied {
+					listenerPortToKongListenPort[portNumber] = assignedPortNumber
+					kongPortOccupied[assignedPortNumber] = struct{}{}
+					break
+				}
+			}
+			if assignedPortNumber >= assignedPortMax {
+				errs = errors.Join(errs, fmt.Errorf("listener %d's port %d already occupied and no available ports can be assigned", i, portNumber))
+			}
+		} else {
+			listenerPortToKongListenPort[portNumber] = portNumber
+			kongPortOccupied[portNumber] = struct{}{}
+		}
+	}
 
 	for i, l := range listeners {
 		switch l.Protocol {
@@ -1296,27 +1344,11 @@ func setDataPlaneDeploymentListenPorts(
 			// TODO: support multiple listeners using the same port:
 			// https://github.com/Kong/kong-operator/issues/3511
 			tlsPorts = append(tlsPorts, portNumber)
-			// Assign another port if the listener's port is already allocated on Kong DP.
-			// Also re-assign a port if known ports (<1024) are used because we usually cannot listen on those port on Kong DP.
-			_, occupied := kongPortOccupied[portNumber]
-			if isKnownPort(portNumber) || occupied {
-				for ; assignedPortNumber < assignedPortMax; assignedPortNumber++ {
-					if _, occupied := kongPortOccupied[assignedPortNumber]; !occupied {
-						listenerPortToKongListenPort[portNumber] = assignedPortNumber
-						kongPortOccupied[assignedPortNumber] = struct{}{}
-						break
-					}
-				}
-				// Although it should not happen where no ports can be assigned for the listener,
-				// we attach an error if the case really happens.
-				if assignedPortNumber >= assignedPortMax {
-					errs = errors.Join(errs, fmt.Errorf("listener %d's port %d already occupied and no available ports can be assigned", i, portNumber))
-				}
-
-			} else {
-				listenerPortToKongListenPort[portNumber] = portNumber
-				kongPortOccupied[portNumber] = struct{}{}
-			}
+			assignStreamPort(i, portNumber)
+		case gatewayv1.TCPProtocolType:
+			portNumber := int(l.Port)
+			tcpPorts = append(tcpPorts, portNumber)
+			assignStreamPort(i, portNumber)
 		default:
 			errs = errors.Join(errs, fmt.Errorf("listener %d uses unsupported protocol %s", i, l.Protocol))
 		}
@@ -1326,11 +1358,16 @@ func setDataPlaneDeploymentListenPorts(
 		return nil, errs
 	}
 
-	// Configure env `KONG_STREAM_LISTEN` if there are TLS listeners.
-	// To make the value of the env stable when listener not changed, we sort the ports here.
-	if len(tlsPorts) > 0 {
+	// Configure env `KONG_STREAM_LISTEN` if there are TLS or TCP listeners.
+	// TLS entries carry `ssl`; TCP entries do not.
+	// To make the value of the env stable when listeners are unchanged, sort each list.
+	if len(tlsPorts) > 0 || len(tcpPorts) > 0 {
 		sort.Ints(tlsPorts)
-		streamListenEnvs := make([]string, 0, len(tlsPorts))
+		sort.Ints(tcpPorts)
+		streamListenEnvs := make([]string, 0, len(tlsPorts)+len(tcpPorts))
+		for _, portNumber := range tcpPorts {
+			streamListenEnvs = append(streamListenEnvs, fmt.Sprintf("0.0.0.0:%d reuseport", listenerPortToKongListenPort[portNumber]))
+		}
 		for _, portNumber := range tlsPorts {
 			streamListenEnvs = append(streamListenEnvs, fmt.Sprintf("0.0.0.0:%d ssl reuseport", listenerPortToKongListenPort[portNumber]))
 		}
@@ -1407,7 +1444,7 @@ func setDataPlaneIngressServicePorts(
 			port.TargetPort = intstr.FromInt(consts.DataPlaneProxySSLPort)
 		case gatewayv1.HTTPProtocolType:
 			port.TargetPort = intstr.FromInt(consts.DataPlaneProxyPort)
-		case gatewayv1.TLSProtocolType:
+		case gatewayv1.TLSProtocolType, gatewayv1.TCPProtocolType:
 			targetPort, ok := servicePortMap[int(l.Port)]
 			if !ok {
 				errs = errors.Join(errs, fmt.Errorf("no target port assigned listener %s on port %d", l.Name, l.Port))
