@@ -7,6 +7,7 @@ import (
 	"github.com/samber/lo"
 	networkingv1 "k8s.io/api/networking/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
@@ -279,6 +280,60 @@ func ListGRPCRoutesForGateway(
 			return parentRefMatchGateway(r.Namespace, parentRef, gateway)
 		})
 	}), nil
+}
+
+func ListTCPRoutesForGateway(
+	ctx context.Context,
+	c client.Client,
+	gateway *gwtypes.Gateway,
+	opts ...client.ListOption,
+) ([]gatewayv1alpha2.TCPRoute, error) {
+	if gateway.Namespace == "" {
+		return nil, fmt.Errorf("can't list TCPRoutes for gateway: Gateway %s was missing namespace", gateway.Name)
+	}
+
+	var tcpRoutesList gatewayv1alpha2.TCPRouteList
+	if err := c.List(ctx, &tcpRoutesList, opts...); err != nil {
+		return nil, fmt.Errorf("can't list TCPRoutes for gateway: %w", err)
+	}
+
+	var tcpRoutes []gatewayv1alpha2.TCPRoute
+	for _, tcpRoute := range tcpRoutesList.Items {
+		if !lo.ContainsBy(tcpRoute.Spec.ParentRefs, func(parentRef gwtypes.ParentReference) bool {
+			gwGVK := gateway.GroupVersionKind()
+			if parentRef.Group != nil && string(*parentRef.Group) != gwGVK.Group {
+				return false
+			}
+			if parentRef.Kind != nil && string(*parentRef.Kind) != gwGVK.Kind {
+				return false
+			}
+			if string(parentRef.Name) != gateway.Name {
+				return false
+			}
+
+			if parentRef.SectionName != nil {
+				if !lo.ContainsBy(gateway.Spec.Listeners, func(listener gwtypes.Listener) bool {
+					if listener.Name != *parentRef.SectionName {
+						return false
+					}
+					if parentRef.Port != nil && listener.Port != *parentRef.Port {
+						return false
+					}
+					return true
+				}) {
+					return false
+				}
+			}
+
+			return true
+		}) {
+			continue
+		}
+
+		tcpRoutes = append(tcpRoutes, tcpRoute)
+	}
+
+	return tcpRoutes, nil
 }
 
 // GetDataPlaneServiceName is a helper function that retrieves the name of the service owned by provided dataplane.

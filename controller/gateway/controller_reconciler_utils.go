@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -840,8 +841,8 @@ func supportedRoutesByProtocol() map[gatewayv1.ProtocolType]map[gatewayv1.Kind]s
 		gatewayv1.HTTPProtocolType:  {"HTTPRoute": {}, "GRPCRoute": {}},
 		gatewayv1.HTTPSProtocolType: {"HTTPRoute": {}, "GRPCRoute": {}},
 		gatewayv1.TLSProtocolType:   {"TLSRoute": {}},
-		// TCPRoutes ad UDPRoutes are not supported yet
-		// gatewayv1.TCPProtocolType:   {"TCPRoute": {}},
+		gatewayv1.TCPProtocolType:   {"TCPRoute": {}},
+		// UDPRoutes are not supported yet
 		// gatewayv1.UDPProtocolType:   {"UDPRoute": {}},
 	}
 }
@@ -1079,6 +1080,15 @@ func countAttachedRoutesForGatewayListener(ctx context.Context, g *gwtypes.Gatew
 				)
 			}
 			count += countAttachedGRPCRoutes(g, listener, grpcRoutes)
+		case "TCPRoute":
+			tcpRoutes, err := gatewayutils.ListTCPRoutesForGateway(ctx, cl, g, opts...)
+			if err != nil {
+				return 0, fmt.Errorf(
+					"failed to list TCPRoutes for Gateway %s when counting AttachedRoutes: %w",
+					client.ObjectKeyFromObject(g), err,
+				)
+			}
+			count += countAttachedTCPRoutes(listener, tcpRoutes)
 		// Unsupported route kinds. Should be unreachable.
 		default:
 			return 0, fmt.Errorf("unsupported route kind: %s", k)
@@ -1128,6 +1138,23 @@ func countAttachedGRPCRoutes(gateway *gwtypes.Gateway, listener gwtypes.Listener
 		})
 	})
 	return int32(count)
+}
+
+// countAttachedTCPRoutes counts the number of attached TCPRoutes for a given listener,
+// taking into account the ParentRefs' sectionName between the listener and the route.
+// TCPRoute has no hostnames, so only sectionName matching applies.
+func countAttachedTCPRoutes(listener gwtypes.Listener, tcpRoutes []gatewayv1alpha2.TCPRoute) int32 {
+	var count int32
+
+	for _, tcpRoute := range tcpRoutes {
+		if lo.ContainsBy(tcpRoute.Spec.ParentRefs, func(parentRef gatewayv1.ParentReference) bool {
+			return parentRef.SectionName == nil || *parentRef.SectionName == listener.Name
+		}) {
+			count++
+		}
+	}
+
+	return count
 }
 
 func listenerHostnameIntersectsRouteHostnames(
@@ -1437,7 +1464,7 @@ func setDataPlaneIngressServicePorts(
 			port.TargetPort = intstr.FromInt(consts.DataPlaneProxySSLPort)
 		case gatewayv1.HTTPProtocolType:
 			port.TargetPort = intstr.FromInt(consts.DataPlaneProxyPort)
-		case gatewayv1.TLSProtocolType:
+		case gatewayv1.TLSProtocolType, gatewayv1.TCPProtocolType:
 			targetPort, ok := servicePortMap[int(l.Port)]
 			if !ok {
 				errs = errors.Join(errs, fmt.Errorf("no target port assigned listener %s on port %d", l.Name, l.Port))

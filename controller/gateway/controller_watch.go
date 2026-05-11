@@ -15,6 +15,7 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
@@ -468,6 +469,46 @@ func (r *Reconciler) listGatewaysAttachedByGRPCRoute(ctx context.Context, obj cl
 		return nil
 	}
 	return listGatewaysAttachedByRoute(grpcRoute)
+}
+
+// listGatewaysAttachedByTCPRoute is a watch predicate which finds all Gateways mentioned
+// in TCPRoutes' ParentRefs. TCPRoute lives in gateway-api v1alpha2, which is not part of
+// the generic gwtypes.SupportedRoute union, so this function is specialized rather than
+// delegating to listGatewaysAttachedByRoute.
+func (r *Reconciler) listGatewaysAttachedByTCPRoute(ctx context.Context, obj client.Object) []reconcile.Request {
+	logger := ctrllog.FromContext(ctx)
+
+	tcpRoute, ok := obj.(*gatewayv1alpha2.TCPRoute)
+	if !ok {
+		logger.Error(
+			fmt.Errorf("unexpected object type"),
+			"TCPRoute watch predicate received unexpected object type",
+			"expected", "*gatewayapi.TCPRoute", "found", reflect.TypeOf(obj),
+		)
+		return nil
+	}
+
+	gateways := &gatewayv1.GatewayList{}
+	if err := r.List(ctx, gateways); err != nil {
+		logger.Error(err, "Failed to list gateways in watch", "tcproute", client.ObjectKeyFromObject(tcpRoute))
+		return nil
+	}
+	var recs []reconcile.Request
+	for _, gateway := range gateways.Items {
+		for _, parentRef := range tcpRoute.Spec.ParentRefs {
+			if parentRef.Group != nil && string(*parentRef.Group) == gatewayv1.GroupName &&
+				parentRef.Kind != nil && string(*parentRef.Kind) == "Gateway" &&
+				string(parentRef.Name) == gateway.Name {
+				recs = append(recs, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Namespace: gateway.Namespace,
+						Name:      gateway.Name,
+					},
+				})
+			}
+		}
+	}
+	return recs
 }
 
 // -----------------------------------------------------------------------------
