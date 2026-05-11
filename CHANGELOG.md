@@ -225,6 +225,8 @@
   [#4131](https://github.com/Kong/kong-operator/pull/4131)
 - Sanitize the plugin configuration when `ControlPlane`'s `configDump.dumpSensitive` isn't enabled.
   [#4045](https://github.com/Kong/kong-operator/pull/4045)
+- More robust validation for `GatewayConfiguration` - fields `konnect` and `extensions` are mutually exclusive.
+  [#4213](https://github.com/Kong/kong-operator/pull/4213)
 
 ## [v2.1.5]
 

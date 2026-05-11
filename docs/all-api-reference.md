@@ -4515,6 +4515,7 @@ _Appears in:_
 
 
 GatewayConfigurationSpec defines the desired state of GatewayConfiguration
+Only one of 'konnect' or 'extensions' can be specified.
 
 
 

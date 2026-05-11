@@ -22262,6 +22262,8 @@ spec:
                   rule: self.all(l1, !has(l1.nodePort) || self.exists_one(l2, l1.nodePort == l2.nodePort))
             type: object
             x-kubernetes-validations:
+            - message: Only one of 'konnect' or 'extensions' can be specified
+              rule: '!(has(self.konnect) && has(self.extensions))'
             - message: Can only specify listener's NodePort when the type of service for dataplane to receive ingress traffic ('spec.dataPlaneOptions.network.services.ingress') is NodePort or LoadBalancer
               rule: '(has(self.dataPlaneOptions) && has(self.dataPlaneOptions.network) && has(self.dataPlaneOptions.network.services) &&  has(self.dataPlaneOptions.network.services.ingress) && (self.dataPlaneOptions.network.services.ingress.type == ''LoadBalancer'' || self.dataPlaneOptions.network.services.ingress.type == ''NodePort'')) ? true : (!has(self.listenersOptions) || self.listenersOptions.all(l,!has(l.nodePort)))'
           status:
@@ -31995,7 +31997,8 @@ spec:
                   konnectNamespacedRef:
                     description: |-
                       KonnectNamespacedRef is a reference to a Konnect Control Plane entity inside the cluster.
-                      It contains the name of the Konnect Control Plane.
+                      It contains the name of the Konnect Control Plane. It can't reference Control Plane Groups,
+                      because they are read-only.
                       This field is required when the Type is konnectNamespacedRef.
                     properties:
                       name:
@@ -32338,7 +32341,8 @@ spec:
                   konnectNamespacedRef:
                     description: |-
                       KonnectNamespacedRef is a reference to a Konnect Control Plane entity inside the cluster.
-                      It contains the name of the Konnect Control Plane.
+                      It contains the name of the Konnect Control Plane. It can't reference Control Plane Groups,
+                      because they are read-only.
                       This field is required when the Type is konnectNamespacedRef.
                     properties:
                       name:
@@ -33018,7 +33022,8 @@ spec:
                   konnectNamespacedRef:
                     description: |-
                       KonnectNamespacedRef is a reference to a Konnect Control Plane entity inside the cluster.
-                      It contains the name of the Konnect Control Plane.
+                      It contains the name of the Konnect Control Plane. It can't reference Control Plane Groups,
+                      because they are read-only.
                       This field is required when the Type is konnectNamespacedRef.
                     properties:
                       name:
@@ -33340,7 +33345,8 @@ spec:
                   konnectNamespacedRef:
                     description: |-
                       KonnectNamespacedRef is a reference to a Konnect Control Plane entity inside the cluster.
-                      It contains the name of the Konnect Control Plane.
+                      It contains the name of the Konnect Control Plane. It can't reference Control Plane Groups,
+                      because they are read-only.
                       This field is required when the Type is konnectNamespacedRef.
                     properties:
                       name:
@@ -35109,7 +35115,8 @@ spec:
                   konnectNamespacedRef:
                     description: |-
                       KonnectNamespacedRef is a reference to a Konnect Control Plane entity inside the cluster.
-                      It contains the name of the Konnect Control Plane.
+                      It contains the name of the Konnect Control Plane. It can't reference Control Plane Groups,
+                      because they are read-only.
                       This field is required when the Type is konnectNamespacedRef.
                     properties:
                       name:
@@ -35386,7 +35393,8 @@ spec:
                   konnectNamespacedRef:
                     description: |-
                       KonnectNamespacedRef is a reference to a Konnect Control Plane entity inside the cluster.
-                      It contains the name of the Konnect Control Plane.
+                      It contains the name of the Konnect Control Plane. It can't reference Control Plane Groups,
+                      because they are read-only.
                       This field is required when the Type is konnectNamespacedRef.
                     properties:
                       name:
@@ -35750,7 +35758,8 @@ spec:
                   konnectNamespacedRef:
                     description: |-
                       KonnectNamespacedRef is a reference to a Konnect Control Plane entity inside the cluster.
-                      It contains the name of the Konnect Control Plane.
+                      It contains the name of the Konnect Control Plane. It can't reference Control Plane Groups,
+                      because they are read-only.
                       This field is required when the Type is konnectNamespacedRef.
                     properties:
                       name:
@@ -36242,7 +36251,8 @@ spec:
                   konnectNamespacedRef:
                     description: |-
                       KonnectNamespacedRef is a reference to a Konnect Control Plane entity inside the cluster.
-                      It contains the name of the Konnect Control Plane.
+                      It contains the name of the Konnect Control Plane. It can't reference Control Plane Groups,
+                      because they are read-only.
                       This field is required when the Type is konnectNamespacedRef.
                     properties:
                       name:
@@ -37318,7 +37328,8 @@ spec:
                   konnectNamespacedRef:
                     description: |-
                       KonnectNamespacedRef is a reference to a Konnect Control Plane entity inside the cluster.
-                      It contains the name of the Konnect Control Plane.
+                      It contains the name of the Konnect Control Plane. It can't reference Control Plane Groups,
+                      because they are read-only.
                       This field is required when the Type is konnectNamespacedRef.
                     properties:
                       name:
@@ -37754,7 +37765,8 @@ spec:
                   konnectNamespacedRef:
                     description: |-
                       KonnectNamespacedRef is a reference to a Konnect Control Plane entity inside the cluster.
-                      It contains the name of the Konnect Control Plane.
+                      It contains the name of the Konnect Control Plane. It can't reference Control Plane Groups,
+                      because they are read-only.
                       This field is required when the Type is konnectNamespacedRef.
                     properties:
                       name:
@@ -39287,7 +39299,8 @@ spec:
                   konnectNamespacedRef:
                     description: |-
                       KonnectNamespacedRef is a reference to a Konnect Control Plane entity inside the cluster.
-                      It contains the name of the Konnect Control Plane.
+                      It contains the name of the Konnect Control Plane. It can't reference Control Plane Groups,
+                      because they are read-only.
                       This field is required when the Type is konnectNamespacedRef.
                     properties:
                       name:
@@ -39801,7 +39814,8 @@ spec:
                   konnectNamespacedRef:
                     description: |-
                       KonnectNamespacedRef is a reference to a Konnect Control Plane entity inside the cluster.
-                      It contains the name of the Konnect Control Plane.
+                      It contains the name of the Konnect Control Plane. It can't reference Control Plane Groups,
+                      because they are read-only.
                       This field is required when the Type is konnectNamespacedRef.
                     properties:
                       name:
@@ -40331,7 +40345,8 @@ spec:
                   konnectNamespacedRef:
                     description: |-
                       KonnectNamespacedRef is a reference to a Konnect Control Plane entity inside the cluster.
-                      It contains the name of the Konnect Control Plane.
+                      It contains the name of the Konnect Control Plane. It can't reference Control Plane Groups,
+                      because they are read-only.
                       This field is required when the Type is konnectNamespacedRef.
                     properties:
                       name:
@@ -42674,7 +42689,8 @@ spec:
                   konnectNamespacedRef:
                     description: |-
                       KonnectNamespacedRef is a reference to a Konnect Control Plane entity inside the cluster.
-                      It contains the name of the Konnect Control Plane.
+                      It contains the name of the Konnect Control Plane. It can't reference Control Plane Groups,
+                      because they are read-only.
                       This field is required when the Type is konnectNamespacedRef.
                     properties:
                       name:
