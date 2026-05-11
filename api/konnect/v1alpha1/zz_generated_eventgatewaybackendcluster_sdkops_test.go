@@ -11,6 +11,7 @@ import (
 
 func TestEventGatewayBackendClusterAPISpec_ToCreateBackendClusterRequest(t *testing.T) {
 	spec := &EventGatewayBackendClusterAPISpec{
+		BootstrapServers: []string{"test-value"},
 		Description: "test-value",
 		InsecureAllowAnonymousVirtualClusterAuth: "Enabled",
 		Labels: Labels{"test-key": "test-value"},
@@ -26,6 +27,7 @@ func TestEventGatewayBackendClusterAPISpec_ToCreateBackendClusterRequest(t *test
 	var payload map[string]any
 	err = json.Unmarshal(data, &payload)
 	require.NoError(t, err)
+	require.Equal(t, []any{"test-value"}, payload["bootstrap_servers"])
 	require.Equal(t, "test-value", payload["description"])
 	require.Equal(t, true, payload["insecure_allow_anonymous_virtual_cluster_auth"])
 	require.Equal(t, map[string]any{"test-key": "test-value"}, payload["labels"])
@@ -34,6 +36,7 @@ func TestEventGatewayBackendClusterAPISpec_ToCreateBackendClusterRequest(t *test
 
 func TestEventGatewayBackendClusterAPISpec_ToUpdateBackendClusterRequest(t *testing.T) {
 	spec := &EventGatewayBackendClusterAPISpec{
+		BootstrapServers: []string{"test-value"},
 		Description: "test-value",
 		InsecureAllowAnonymousVirtualClusterAuth: "Enabled",
 		Labels: Labels{"test-key": "test-value"},
@@ -49,6 +52,7 @@ func TestEventGatewayBackendClusterAPISpec_ToUpdateBackendClusterRequest(t *test
 	var payload map[string]any
 	err = json.Unmarshal(data, &payload)
 	require.NoError(t, err)
+	require.Equal(t, []any{"test-value"}, payload["bootstrap_servers"])
 	require.Equal(t, "test-value", payload["description"])
 	require.Equal(t, true, payload["insecure_allow_anonymous_virtual_cluster_auth"])
 	require.Equal(t, map[string]any{"test-key": "test-value"}, payload["labels"])

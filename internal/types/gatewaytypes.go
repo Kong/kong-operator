@@ -50,6 +50,8 @@ type (
 	SectionName            = gatewayv1.SectionName
 	TLSRoute               = gatewayv1.TLSRoute
 	TLSRouteList           = gatewayv1.TLSRouteList
+	TLSRouteSpec           = gatewayv1.TLSRouteSpec
+	TLSRouteStatus         = gatewayv1.TLSRouteStatus
 	TLSRouteRule           = gatewayv1.TLSRouteRule
 )
 

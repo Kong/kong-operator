@@ -44,6 +44,8 @@ func UpdateGeneratedOps[
 		return updatePortal(ctx, sdk.GetPortalsSDK(), ent)
 	case *konnectv1alpha1.PortalEmailConfig:
 		return updatePortalEmailConfig(ctx, sdk.GetPortalEmailsSDK(), ent)
+	case *konnectv1alpha1.PortalIPAllowList:
+		return updatePortalIPAllowList(ctx, sdk.GetPortalsIPAllowListSDK(), ent)
 	case *konnectv1alpha1.PortalPage:
 		return updatePortalPage(ctx, sdk.GetPortalPagesSDK(), ent)
 	case *konnectv1alpha1.PortalTeam:

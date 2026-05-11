@@ -394,7 +394,7 @@ func pascalFromKebab(s string) string {
 		b.WriteString(strings.ToUpper(part[:1]))
 		b.WriteString(part[1:])
 	}
-	return b.String()
+	return fixInitialisms(b.String())
 }
 
 // metadataFields reports whether the request body schema declares a "tags"

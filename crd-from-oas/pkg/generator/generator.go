@@ -2819,6 +2819,8 @@ func testValuesForProperty(prop *parser.Property, goType string) (string, string
 		return "1", "float64(1)"
 	case "float32", "float64":
 		return "1.0", "1.0"
+	case "[]string":
+		return `[]string{"test-value"}`, `[]any{"test-value"}`
 	}
 
 	if prop.RefName != "" {

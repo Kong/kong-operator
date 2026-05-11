@@ -54,6 +54,10 @@ type opsGetForUIDFuncData struct {
 type opsGetForUIDMatchFieldData struct {
 	ObjectField   string
 	ResponseField string
+	// SliceMatch is true when the field is a []string slice rather than a plain
+	// string/pointer, causing the template to emit matchSliceField instead of
+	// matchStringField.
+	SliceMatch bool
 }
 
 // generateOpsGetForUIDFuncBody renders the get<Entity>ForUID function body
@@ -123,6 +127,7 @@ func (g *Generator) generateOpsGetForUIDFuncBody(
 			matchFields = append(matchFields, opsGetForUIDMatchFieldData{
 				ObjectField:   field.ObjectField,
 				ResponseField: field.ResponseField,
+				SliceMatch:    isArrayMatchField(schema, field.ResponseField),
 			})
 		}
 	}
@@ -142,6 +147,21 @@ func (g *Generator) generateOpsGetForUIDFuncBody(
 		MatchFields:           matchFields,
 		HasName:               hasName,
 	}, nil
+}
+
+// isArrayMatchField reports whether the schema property matching the given Go
+// field name (e.g. "AllowedIps") is an array type, so the template emits
+// matchSliceField instead of matchStringField.
+func isArrayMatchField(schema *parser.Schema, goName string) bool {
+	if schema == nil {
+		return false
+	}
+	for _, prop := range schema.Properties {
+		if goFieldName(prop.Name) == goName && prop.Type == "array" {
+			return true
+		}
+	}
+	return false
 }
 
 // schemaHasNameProperty reports whether the request body schema declares a

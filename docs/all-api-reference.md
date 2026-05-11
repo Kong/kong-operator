@@ -6586,6 +6586,7 @@ _Appears in:_
 - [IdentityProviderRequestStatus](#konnect-konghq-com-v1alpha1-types-identityproviderrequeststatus)
 - [KonnectEventDataPlaneCertificateStatus](#konnect-konghq-com-v1alpha1-types-konnecteventdataplanecertificatestatus)
 - [PortalEmailConfigStatus](#konnect-konghq-com-v1alpha1-types-portalemailconfigstatus)
+- [PortalIPAllowListStatus](#konnect-konghq-com-v1alpha1-types-portalipallowliststatus)
 - [PortalPageStatus](#konnect-konghq-com-v1alpha1-types-portalpagestatus)
 - [PortalTeamStatus](#konnect-konghq-com-v1alpha1-types-portalteamstatus)
 
@@ -7277,6 +7278,25 @@ PortalEmailConfigStatus defines the observed state of PortalEmailConfig.
 _Appears in:_
 
 - [PortalEmailConfig](#konnect-konghq-com-v1alpha1-portalemailconfig)
+
+#### PortalIPAllowListAPISpec
+
+
+PortalIPAllowListAPISpec defines the API spec fields for PortalIPAllowList.
+
+
+
+| Field | Description |
+| --- | --- |
+| `allowedIps` _[]string_ | The list of allowed ips for the portal. |
+
+_Appears in:_
+
+- [PortalIPAllowListSpec](#konnect-konghq-com-v1alpha1-types-portalipallowlistspec)
+
+
+
+
 
 #### PortalPageAPISpec
 

@@ -56,6 +56,8 @@ func getForUID[
 		return getPortalForUID(ctx, sdk.GetPortalsSDK(), ent)
 	case *konnectv1alpha1.PortalEmailConfig:
 		return getPortalEmailConfigForUID(ctx, sdk.GetPortalEmailsSDK(), ent)
+	case *konnectv1alpha1.PortalIPAllowList:
+		return getPortalIPAllowListForUID(ctx, sdk.GetPortalsIPAllowListSDK(), ent)
 	case *konnectv1alpha1.PortalPage:
 		return getPortalPageForUID(ctx, sdk.GetPortalPagesSDK(), ent)
 	case *konnectv1alpha1.PortalTeam:
