@@ -49,7 +49,7 @@ func TestHandleKongCACertificateRefs(t *testing.T) {
 					CACertificateRefs: refs,
 				},
 				ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
-					Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+					Type:                 configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 					KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{Name: "cp-ok"},
 				},
 			},
@@ -72,7 +72,7 @@ func TestHandleKongCACertificateRefs(t *testing.T) {
 				Cert: "===== BEGIN CERTIFICATE",
 			},
 			ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
-				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				Type:                 configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 				KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{Name: "cp-ok"},
 			},
 		},

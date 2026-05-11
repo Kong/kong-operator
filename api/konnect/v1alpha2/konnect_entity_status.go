@@ -212,9 +212,8 @@ type KonnectEntityStatusWithControlPlaneAndCertificateRefs struct {
 	CertificateID string `json:"certificateID,omitempty"`
 }
 
-// KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs
-// represents the status of a Konnect entity with references to a
-// ControlPlane, a (client) Certificate, and a list of CA Certificates.
+// KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs represents the status of a Konnect entity
+// with references to a ControlPlane, a (client) Certificate, and a list of CA Certificates.
 type KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs struct {
 	KonnectEntityStatus `json:",inline"`
 

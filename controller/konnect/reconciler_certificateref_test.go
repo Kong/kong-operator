@@ -413,7 +413,7 @@ func TestHandleCertificateRefKongService(t *testing.T) {
 						Host:                 "example.com",
 					},
 					ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
-						Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						Type:                 configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 						KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{Name: "cp-ok"},
 					},
 				},
@@ -442,7 +442,7 @@ func TestHandleCertificateRefKongService(t *testing.T) {
 						Host:                 "example.com",
 					},
 					ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
-						Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						Type:                 configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 						KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{Name: "cp-ok"},
 					},
 				},
@@ -510,7 +510,7 @@ func TestHandleCertificateRefKongServiceCrossNS(t *testing.T) {
 					Host: "example.com",
 				},
 				ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
-					Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+					Type:                 configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 					KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{Name: "cp-ok"},
 				},
 			},

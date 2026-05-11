@@ -1602,6 +1602,8 @@ KongServiceAPISpec defines the specification of a Kong Service.
 
 | Field | Description |
 | --- | --- |
+| `clientCertificateRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | ClientCertificateRef is a reference to a KongCertificate used as the client certificate when proxying to the upstream over TLS. The referenced KongCertificate MUST belong to the same Konnect ControlPlane as this KongService. Cross-namespace references require a KongReferenceGrant in the target namespace. |
+| `caCertificateRefs` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | CACertificateRefs is the list of references to KongCACertificates used to verify the upstream server's TLS certificate. Each referenced KongCACertificate MUST belong to the same Konnect ControlPlane as this KongService. Cross-namespace references require a KongReferenceGrant in the target namespace. |
 | `id` _*string_ | ID is the unique identifier for the Service. Can be specified when creating a Service, but not updatable. If not specified, Kong will generate one. |
 | `url` _*string_ | Helper field to set `protocol`, `host`, `port` and `path` using a URL. This field is write-only and is not returned in responses. |
 | `connect_timeout` _*int64_ | The timeout in milliseconds for establishing a connection to the upstream server. |
@@ -1631,6 +1633,8 @@ KongServiceSpec defines specification of a Kong Service.
 
 | Field | Description |
 | --- | --- |
+| `clientCertificateRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | ClientCertificateRef is a reference to a KongCertificate used as the client certificate when proxying to the upstream over TLS. The referenced KongCertificate MUST belong to the same Konnect ControlPlane as this KongService. Cross-namespace references require a KongReferenceGrant in the target namespace. |
+| `caCertificateRefs` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | CACertificateRefs is the list of references to KongCACertificates used to verify the upstream server's TLS certificate. Each referenced KongCACertificate MUST belong to the same Konnect ControlPlane as this KongService. Cross-namespace references require a KongReferenceGrant in the target namespace. |
 | `id` _*string_ | ID is the unique identifier for the Service. Can be specified when creating a Service, but not updatable. If not specified, Kong will generate one. |
 | `url` _*string_ | Helper field to set `protocol`, `host`, `port` and `path` using a URL. This field is write-only and is not returned in responses. |
 | `connect_timeout` _*int64_ | The timeout in milliseconds for establishing a connection to the upstream server. |
@@ -1662,7 +1666,7 @@ KongServiceStatus represents the current status of the Kong Service resource.
 
 | Field | Description |
 | --- | --- |
-| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `konnect` _[KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandcertificateandcacertificatesrefs)_ | Konnect contains the Konnect entity status. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
@@ -8285,6 +8289,7 @@ _Appears in:_
 - [KonnectCloudGatewayDataPlaneGroupConfigurationStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaydataplanegroupconfigurationstatus)
 - [KonnectCloudGatewayNetworkStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaynetworkstatus)
 - [KonnectCloudGatewayTransitGatewayStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewaystatus)
+- [KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandcertificateandcacertificatesrefs)
 - [KonnectEntityStatusWithControlPlaneAndCertificateRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandcertificaterefs)
 - [KonnectEntityStatusWithControlPlaneAndConsumerRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandconsumerrefs)
 - [KonnectEntityStatusWithControlPlaneAndKeySetRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandkeysetref)
@@ -8297,6 +8302,27 @@ _Appears in:_
 - [KonnectGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha2-types-konnectgatewaycontrolplanestatus)
 - [MCPServerStatus](#konnect-konghq-com-v1alpha1-types-mcpserverstatus)
 - [PortalStatus](#konnect-konghq-com-v1alpha1-types-portalstatus)
+
+#### KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs
+
+
+KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs represents the status of a Konnect entity
+with references to a ControlPlane, a (client) Certificate, and a list of CA Certificates.
+
+
+
+| Field | Description |
+| --- | --- |
+| `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
+| `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
+| `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
+| `controlPlaneID` _string_ | ControlPlaneID is the Konnect ID of the ControlPlane this entity is associated with. |
+| `certificateID` _string_ | CertificateID is the Konnect ID of the client Certificate referenced by this entity. |
+| `caCertificateIDs` _[]string_ | CACertificateIDs lists the Konnect IDs of the CA Certificates referenced by this entity. |
+
+_Appears in:_
+
+- [KongServiceStatus](#configuration-konghq-com-v1alpha1-types-kongservicestatus)
 
 #### KonnectEntityStatusWithControlPlaneAndCertificateRefs
 
@@ -8426,7 +8452,6 @@ _Appears in:_
 - [KongDataPlaneClientCertificateStatus](#configuration-konghq-com-v1alpha1-types-kongdataplaneclientcertificatestatus)
 - [KongKeySetStatus](#configuration-konghq-com-v1alpha1-types-kongkeysetstatus)
 - [KongPluginBindingStatus](#configuration-konghq-com-v1alpha1-types-kongpluginbindingstatus)
-- [KongServiceStatus](#configuration-konghq-com-v1alpha1-types-kongservicestatus)
 - [KongUpstreamStatus](#configuration-konghq-com-v1alpha1-types-kongupstreamstatus)
 - [KongVaultStatus](#configuration-konghq-com-v1alpha1-types-kongvaultstatus)
 - [KonnectCloudGatewayDataPlaneGroupConfigurationStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaydataplanegroupconfigurationstatus)

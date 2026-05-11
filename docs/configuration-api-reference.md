@@ -1596,6 +1596,8 @@ KongServiceAPISpec defines the specification of a Kong Service.
 
 | Field | Description |
 | --- | --- |
+| `clientCertificateRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | ClientCertificateRef is a reference to a KongCertificate used as the client certificate when proxying to the upstream over TLS. The referenced KongCertificate MUST belong to the same Konnect ControlPlane as this KongService. Cross-namespace references require a KongReferenceGrant in the target namespace. |
+| `caCertificateRefs` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | CACertificateRefs is the list of references to KongCACertificates used to verify the upstream server's TLS certificate. Each referenced KongCACertificate MUST belong to the same Konnect ControlPlane as this KongService. Cross-namespace references require a KongReferenceGrant in the target namespace. |
 | `id` _*string_ | ID is the unique identifier for the Service. Can be specified when creating a Service, but not updatable. If not specified, Kong will generate one. |
 | `url` _*string_ | Helper field to set `protocol`, `host`, `port` and `path` using a URL. This field is write-only and is not returned in responses. |
 | `connect_timeout` _*int64_ | The timeout in milliseconds for establishing a connection to the upstream server. |
@@ -1625,6 +1627,8 @@ KongServiceSpec defines specification of a Kong Service.
 
 | Field | Description |
 | --- | --- |
+| `clientCertificateRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | ClientCertificateRef is a reference to a KongCertificate used as the client certificate when proxying to the upstream over TLS. The referenced KongCertificate MUST belong to the same Konnect ControlPlane as this KongService. Cross-namespace references require a KongReferenceGrant in the target namespace. |
+| `caCertificateRefs` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | CACertificateRefs is the list of references to KongCACertificates used to verify the upstream server's TLS certificate. Each referenced KongCACertificate MUST belong to the same Konnect ControlPlane as this KongService. Cross-namespace references require a KongReferenceGrant in the target namespace. |
 | `id` _*string_ | ID is the unique identifier for the Service. Can be specified when creating a Service, but not updatable. If not specified, Kong will generate one. |
 | `url` _*string_ | Helper field to set `protocol`, `host`, `port` and `path` using a URL. This field is write-only and is not returned in responses. |
 | `connect_timeout` _*int64_ | The timeout in milliseconds for establishing a connection to the upstream server. |
@@ -1656,7 +1660,7 @@ KongServiceStatus represents the current status of the Kong Service resource.
 
 | Field | Description |
 | --- | --- |
-| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `konnect` _[KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandcertificateandcacertificatesrefs)_ | Konnect contains the Konnect entity status. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_

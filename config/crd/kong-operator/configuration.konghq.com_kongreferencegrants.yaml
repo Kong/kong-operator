@@ -157,10 +157,11 @@ spec:
                       kinds are supported for 'konnect.konghq.com' group
                     rule: .self.group != 'konnect.konghq.com' || .self.kind in ['KonnectGatewayControlPlane',
                       'KonnectAPIAuthConfiguration']
-                  - message: Only 'KongPlugin' and 'KongService' kinds are supported
-                      for 'configuration.konghq.com' group
+                  - message: Only 'KongPlugin', 'KongService', 'KongCertificate' and
+                      'KongCACertificate' kinds are supported for 'configuration.konghq.com'
+                      group
                     rule: .self.group != 'configuration.konghq.com' || .self.kind
-                      in ['KongPlugin', 'KongService']
+                      in ['KongPlugin', 'KongService', 'KongCertificate', 'KongCACertificate']
                 maxItems: 16
                 minItems: 1
                 type: array
