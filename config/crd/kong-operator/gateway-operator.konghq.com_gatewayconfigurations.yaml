@@ -28796,6 +28796,8 @@ spec:
                     == l2.nodePort))
             type: object
             x-kubernetes-validations:
+            - message: Only one of 'konnect' or 'extensions' can be specified
+              rule: '!(has(self.konnect) && has(self.extensions))'
             - message: Can only specify listener's NodePort when the type of service
                 for dataplane to receive ingress traffic ('spec.dataPlaneOptions.network.services.ingress')
                 is NodePort or LoadBalancer

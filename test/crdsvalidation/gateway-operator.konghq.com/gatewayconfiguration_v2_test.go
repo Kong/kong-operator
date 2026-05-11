@@ -362,6 +362,29 @@ func TestGatewayConfigurationV2(t *testing.T) {
 				},
 				ExpectedErrorMessage: new("mirror field must be set for type Mirror"),
 			},
+			{
+				Name: "it is invalid to specify both konnect and extensions",
+				TestObject: &operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						Konnect: &operatorv2beta1.KonnectOptions{
+							APIAuthConfigurationRef: &konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
+								Name: "my-konnect-auth-config",
+							},
+						},
+						Extensions: []commonv1alpha1.ExtensionRef{
+							{
+								Group: "konnect.konghq.com",
+								Kind:  "KonnectExtension",
+								NamespacedRef: commonv1alpha1.NamespacedRef{
+									Name: "my-konnect-extension",
+								},
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: new("Only one of 'konnect' or 'extensions' can be specified"),
+			},
 		}.
 			RunWithConfig(t, cfg, scheme)
 	})
