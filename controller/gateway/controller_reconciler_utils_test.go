@@ -1258,6 +1258,29 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 			},
 		},
 		{
+			name:             "tls passthrough, TLS protocol, no certificate refs",
+			gatewayNamespace: "default",
+			listener: gwtypes.Listener{
+				Protocol: gatewayv1.TLSProtocolType,
+				TLS: &gatewayv1.ListenerTLSConfig{
+					Mode: new(gatewayv1.TLSModePassthrough),
+				},
+			},
+			expectedSupportedKinds: []gwtypes.RouteGroupKind{
+				{
+					Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+					Kind:  "TLSRoute",
+				},
+			},
+			expectedResolvedRefsCondition: metav1.Condition{
+				Type:               string(gatewayv1.ListenerConditionResolvedRefs),
+				Status:             metav1.ConditionTrue,
+				Reason:             string(gatewayv1.ListenerReasonResolvedRefs),
+				Message:            "Listeners' references are accepted.",
+				ObservedGeneration: generation,
+			},
+		},
+		{
 			name:             "tls bad-formed, no tls secret, no cross-namespace reference",
 			gatewayNamespace: "default",
 			listener: gwtypes.Listener{
