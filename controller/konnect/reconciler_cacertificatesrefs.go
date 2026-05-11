@@ -42,6 +42,9 @@ func handleKongCACertificateRefs[T constraints.SupportedKonnectEntityType, TEnt 
 ) (ctrl.Result, error) {
 	refs := getKongCACertificateRefs[T, TEnt](ent)
 	if len(refs) == 0 {
+		if svc, ok := any(ent).(*configurationv1alpha1.KongService); ok && svc.Status.Konnect != nil {
+			svc.Status.Konnect.CACertificateIDs = nil
+		}
 		return ctrl.Result{}, nil
 	}
 

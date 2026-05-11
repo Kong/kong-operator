@@ -50,6 +50,9 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 ) (ctrl.Result, error) {
 	certRef, ok := getKongCertificateRef(ent).Get()
 	if !ok {
+		if svc, ok := any(ent).(*configurationv1alpha1.KongService); ok && svc.Status.Konnect != nil {
+			svc.Status.Konnect.CertificateID = ""
+		}
 		return ctrl.Result{}, nil
 	}
 
