@@ -41,3 +41,8 @@ func (obj EventGatewayBackendClusterList) GetItems() []EventGatewayBackendCluste
 func (obj PortalList) GetItems() []Portal {
 	return obj.Items
 }
+
+// GetItems returns the list of PortalPage items.
+func (obj PortalPageList) GetItems() []PortalPage {
+	return obj.Items
+}

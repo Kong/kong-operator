@@ -296,6 +296,9 @@ var supportedKonnectV1Alpha1TypesGeneratedFromOAS = []supportedTypesT{
 			{
 				Type: "Portal",
 			},
+			{
+				Type: "PortalPage",
+			},
 		},
 	},
 }
