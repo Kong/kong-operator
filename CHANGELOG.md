@@ -81,6 +81,11 @@
   handler are also fixed to use the service's namespace, ensuring cross-namespace routes are
   re-queued immediately when the referenced service changes rather than waiting for a full resync.
   [#4212](https://github.com/Kong/kong-operator/pull/4212)
+- Add `KongReferenceGrant` watch to `KongVault` and `KongConsumerGroup` reconcilers.
+  Previously, creating or deleting a grant would not trigger re-reconciliation of these
+  resources until the next full resync cycle. Grant changes now immediately re-queue
+  affected objects.
+  [#4219](https://github.com/Kong/kong-operator/pull/4219)
   
 ## [v2.1.6]
 
