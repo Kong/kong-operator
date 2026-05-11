@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
+	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,6 +38,17 @@ import (
 //
 //godoclint:disable max-len
 const restartAnnotationKey = "kubectl.kubernetes.io/restartedAt"
+
+// environment variable keys that are generated from the DataPlane configuration and need to be preserved across user patches.
+const (
+	envKongClusterCert    = "KONG_CLUSTER_CERT"
+	envKongClusterCertKey = "KONG_CLUSTER_CERT_KEY"
+)
+
+var operatorManangedEnvVars = []string{
+	envKongClusterCert,
+	envKongClusterCertKey,
+}
 
 // DeploymentBuilder builds a Deployment for a DataPlane.
 type DeploymentBuilder struct {
@@ -126,6 +138,16 @@ func (d *DeploymentBuilder) BuildAndDeploy(
 
 	if err := certificates.MountAndUseKonnectCert(ctx, d.logger, dataplane, d.client, desiredDeployment); err != nil {
 		return nil, op.Noop, fmt.Errorf("failed to mount konnect cert: %w", err)
+	}
+
+	// Genreate an error log if the user is trying to set environment variables that are managed by the operator, as this may cause unexpected behavior.
+	for _, envVar := range operatorManangedEnvVars {
+		if envVarExistsInPodTemplateSpec(envVar, dataplane.Spec.Deployment.PodTemplateSpec) {
+			d.logger.Error(fmt.Errorf("operator maanged environment variable %s exists in DataPlane spec", envVar),
+				"DataPlane contains operator managed environment variable. This may cause unexpected behavior as the operator also manages this variable.",
+				"envVar", envVar, "dataPlane", client.ObjectKeyFromObject(dataplane).String(),
+			)
+		}
 	}
 
 	// TODO https://github.com/kong/kong-operator/issues/128
@@ -272,6 +294,21 @@ func podTemplateSpecHasRestartAnnotation(template *corev1.PodTemplateSpec) (stri
 	}
 	v, ok := template.Annotations[restartAnnotationKey]
 	return v, ok && v != ""
+}
+
+// envVarExistsInPodTemplateSpec checks if an environment variable with the given name exists in any container of the provided PodTemplateSpec.
+func envVarExistsInPodTemplateSpec(envVarName string, template *corev1.PodTemplateSpec) bool {
+	if template == nil {
+		return false
+	}
+	for _, container := range template.Spec.Containers {
+		if lo.ContainsBy(container.Env, func(env corev1.EnvVar) bool {
+			return env.Name == envVarName
+		}) {
+			return true
+		}
+	}
+	return false
 }
 
 // isRecentDeploymentRestart detects if a deployment is undergoing a recent restart operation.
