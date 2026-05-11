@@ -214,6 +214,14 @@
 
 ### Fixes
 
+- Fix cross-namespace `KongRoute → KongService` reference resolution: `handleKongServiceRef`
+  and `GetAPIAuthRefNN` (serviceRef branch) now derive the `KongService` namespace from
+  `serviceRef.namespace` instead of always using the route's namespace, so a cross-namespace
+  serviceRef with a valid `KongReferenceGrant` correctly reaches `Programmed=True`.
+  The `kongRouteRefersToKongService` index key and `enqueueKongRouteForKongService` watch
+  handler are also fixed to use the service's namespace, ensuring cross-namespace routes are
+  re-queued immediately when the referenced service changes rather than waiting for a full resync.
+  [#4212](https://github.com/Kong/kong-operator/pull/4212)
 - Use the ControlPlane's own namespace when resolving its `KonnectAPIAuthConfiguration`
   reference and when checking the `KongReferenceGrant`. Previously the namespace of the
   requesting entity was used, which caused resources that resolve their CP through a
