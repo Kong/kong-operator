@@ -293,7 +293,10 @@ func extractTLSVerifyFromBackendRef(
 		return nil
 	}
 
-	v := metadata.ExtractTLSVerify(svc.GetAnnotations())
+	v, err := metadata.ExtractTLSVerify(svc.GetAnnotations())
+	if err != nil {
+		log.Debug(logger, "Failed to parse tls-verify annotation, ignoring annotation value", "error", err)
+	}
 	if v == nil {
 		return nil
 	}
@@ -345,7 +348,10 @@ func extractTLSVerifyDepthFromBackendRef(
 		return nil
 	}
 
-	v := metadata.ExtractTLSVerifyDepth(svc.GetAnnotations())
+	v, err := metadata.ExtractTLSVerifyDepth(svc.GetAnnotations())
+	if err != nil {
+		log.Debug(logger, "Failed to parse tls-verify-depth annotation, ignoring annotation value", "error", err)
+	}
 	if v == nil {
 		return nil
 	}
@@ -399,7 +405,10 @@ func extractConnectTimeoutFromBackendRef(
 		return nil
 	}
 
-	v := metadata.ExtractConnectTimeout(svc.GetAnnotations())
+	v, err := metadata.ExtractConnectTimeout(svc.GetAnnotations())
+	if err != nil {
+		log.Debug(logger, "Failed to parse connect-timeout annotation, ignoring annotation value", "error", err)
+	}
 	if v == nil {
 		return nil
 	}
@@ -453,7 +462,10 @@ func extractReadTimeoutFromBackendRef(
 		return nil
 	}
 
-	v := metadata.ExtractReadTimeout(svc.GetAnnotations())
+	v, err := metadata.ExtractReadTimeout(svc.GetAnnotations())
+	if err != nil {
+		log.Debug(logger, "Failed to parse read-timeout annotation, ignoring annotation value", "error", err)
+	}
 	if v == nil {
 		return nil
 	}
@@ -505,7 +517,10 @@ func extractWriteTimeoutFromBackendRef(
 		return nil
 	}
 
-	v := metadata.ExtractWriteTimeout(svc.GetAnnotations())
+	v, err := metadata.ExtractWriteTimeout(svc.GetAnnotations())
+	if err != nil {
+		log.Debug(logger, "Failed to parse write-timeout annotation, ignoring annotation value", "error", err)
+	}
 	if v == nil {
 		return nil
 	}
@@ -557,7 +572,10 @@ func extractRetriesFromBackendRef(
 		return nil
 	}
 
-	v := metadata.ExtractRetries(svc.GetAnnotations())
+	v, err := metadata.ExtractRetries(svc.GetAnnotations())
+	if err != nil {
+		log.Debug(logger, "Failed to parse retries annotation, ignoring annotation value", "error", err)
+	}
 	if v == nil {
 		return nil
 	}

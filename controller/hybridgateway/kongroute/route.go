@@ -88,7 +88,7 @@ func RoutesForHTTPRouteRule(
 	cp *commonv1alpha1.ControlPlaneRef,
 	serviceName string,
 	hostnames []string,
-) (kongRoutes []*configurationv1alpha1.KongRoute, err error) {
+) (kongRoutes []*configurationv1alpha1.KongRoute, _ error) {
 	// If the rule has no matches, create a single catch-all route.
 	// Kong requires at least one matcher; use "/" path to represent catch-all.
 	if len(rule.Matches) == 0 {
@@ -100,6 +100,15 @@ func RoutesForHTTPRouteRule(
 
 	// Check filters to determine if we need capture groups in paths.
 	setCaptureGroup := needsCaptureGroup(rule)
+
+	stripPath, err := metadata.ExtractStripPath(httpRoute.Annotations)
+	if err != nil {
+		log.Error(logger, err, fmt.Sprintf("Failed to extract strip path annotation, defaulting to %t", stripPath))
+	}
+	preserveHost, err := metadata.ExtractPreserveHost(httpRoute.Annotations)
+	if err != nil {
+		log.Error(logger, err, fmt.Sprintf("Failed to extract preserve host annotation, defaulting to %t", preserveHost))
+	}
 
 	for i, match := range rule.Matches {
 		routeName := namegen.NewKongRouteNameForMatch(httpRoute, cp, match, i)
@@ -117,8 +126,8 @@ func RoutesForHTTPRouteRule(
 				sdkkonnectcomp.RouteJSONProtocols("https"),
 			).
 			WithHosts(hostnames).
-			WithStripPath(metadata.ExtractStripPath(httpRoute.Annotations)).
-			WithPreserveHost(metadata.ExtractPreserveHost(httpRoute.Annotations)).
+			WithStripPath(stripPath).
+			WithPreserveHost(preserveHost).
 			WithKongService(serviceName).
 			WithHTTPRouteMatch(match, setCaptureGroup)
 
