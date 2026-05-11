@@ -18,6 +18,8 @@ import (
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
+	"github.com/kong/kong-operator/v2/internal/utils/crossnamespace"
+	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
 type handleCertRefTestCase[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]] struct {
@@ -397,4 +399,184 @@ func testHandleCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 			require.Equal(t, tc.expectResult, res)
 		})
 	}
+}
+
+func TestHandleCertificateRefKongService(t *testing.T) {
+	testCases := []handleCertRefTestCase[configurationv1alpha1.KongService, *configurationv1alpha1.KongService]{
+		{
+			name: "same-NS cert ref, cert found",
+			ent: &configurationv1alpha1.KongService{
+				ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"},
+				Spec: configurationv1alpha1.KongServiceSpec{
+					KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
+						ClientCertificateRef: &commonv1alpha1.NamespacedRef{Name: "cert-ok"},
+						Host:                 "example.com",
+					},
+					ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+						Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{Name: "cp-ok"},
+					},
+				},
+			},
+			objects: []client.Object{
+				testKongCertOK,
+				testControlPlaneOK,
+			},
+			expectResult: ctrl.Result{},
+			expectError:  false,
+			updatedEntAssertions: []func(*configurationv1alpha1.KongService) (bool, string){
+				func(svc *configurationv1alpha1.KongService) (bool, string) {
+					return lo.ContainsBy(svc.Status.Conditions, func(c metav1.Condition) bool {
+						return c.Type == konnectv1alpha1.KongCertificateRefValidConditionType && c.Status == metav1.ConditionTrue
+					}), "KongService does not have KongCertificateRefValid condition set to True"
+				},
+			},
+		},
+		{
+			name: "cert not found",
+			ent: &configurationv1alpha1.KongService{
+				ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"},
+				Spec: configurationv1alpha1.KongServiceSpec{
+					KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
+						ClientCertificateRef: &commonv1alpha1.NamespacedRef{Name: "cert-nonexist"},
+						Host:                 "example.com",
+					},
+					ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+						Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{Name: "cp-ok"},
+					},
+				},
+			},
+			expectError:         true,
+			expectErrorContains: "does not exist",
+			updatedEntAssertions: []func(*configurationv1alpha1.KongService) (bool, string){
+				func(svc *configurationv1alpha1.KongService) (bool, string) {
+					return lo.ContainsBy(svc.Status.Conditions, func(c metav1.Condition) bool {
+						return c.Type == konnectv1alpha1.KongCertificateRefValidConditionType && c.Status == metav1.ConditionFalse
+					}), "KongService does not have KongCertificateRefValid condition set to False"
+				},
+			},
+		},
+	}
+
+	testHandleCertificateRef(t, testCases)
+}
+
+func TestHandleCertificateRefKongServiceCrossNS(t *testing.T) {
+	s := scheme.Get()
+
+	certInOtherNS := &configurationv1alpha1.KongCertificate{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cert-ok",
+			Namespace: "other-ns",
+		},
+		Spec: configurationv1alpha1.KongCertificateSpec{
+			ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+					Name: "cp-ok",
+				},
+			},
+			KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
+				Cert: "===== BEGIN CERTIFICATE",
+				Key:  "===== BEGIN PRIVATE KEY",
+			},
+		},
+		Status: configurationv1alpha1.KongCertificateStatus{
+			Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+				KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
+					ID: "cross-ns-cert-id",
+				},
+				ControlPlaneID: "123456789",
+			},
+			Conditions: []metav1.Condition{
+				{
+					Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
+					Status: metav1.ConditionTrue,
+				},
+			},
+		},
+	}
+
+	svcEntity := func() *configurationv1alpha1.KongService {
+		return &configurationv1alpha1.KongService{
+			ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"},
+			Spec: configurationv1alpha1.KongServiceSpec{
+				KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
+					ClientCertificateRef: &commonv1alpha1.NamespacedRef{
+						Name:      "cert-ok",
+						Namespace: new("other-ns"),
+					},
+					Host: "example.com",
+				},
+				ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+					Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+					KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{Name: "cp-ok"},
+				},
+			},
+		}
+	}
+
+	grant := &configurationv1alpha1.KongReferenceGrant{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "svc-to-cert",
+			Namespace: "other-ns",
+		},
+		Spec: configurationv1alpha1.KongReferenceGrantSpec{
+			From: []configurationv1alpha1.ReferenceGrantFrom{
+				{
+					Group:     configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+					Kind:      "KongService",
+					Namespace: configurationv1alpha1.Namespace("default"),
+				},
+			},
+			To: []configurationv1alpha1.ReferenceGrantTo{
+				{
+					Group: configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+					Kind:  "KongCertificate",
+				},
+			},
+		},
+	}
+
+	cpOKInDefault := testControlPlaneOK.DeepCopy()
+
+	t.Run("cross-NS cert ref without KongReferenceGrant", func(t *testing.T) {
+		ent := svcEntity()
+		cl := fake.NewClientBuilder().
+			WithScheme(s).
+			WithObjects(ent, certInOtherNS).
+			WithStatusSubresource(ent).
+			WithInterceptorFuncs(populateGVKOnGet(s)).
+			Build()
+		// Re-fetch ent through the interceptor so its GVK is populated (required for cross-NS checks).
+		require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(ent), ent))
+
+		_, err := handleKongCertificateRef(t.Context(), cl, ent)
+		require.Error(t, err)
+		require.True(t, crossnamespace.IsReferenceNotGranted(err), "expected ReferenceNotGranted error, got: %v", err)
+	})
+
+	t.Run("cross-NS cert ref with valid KongReferenceGrant", func(t *testing.T) {
+		ent := svcEntity()
+		cl := fake.NewClientBuilder().
+			WithScheme(s).
+			WithObjects(ent, certInOtherNS, grant, cpOKInDefault).
+			WithStatusSubresource(ent).
+			WithInterceptorFuncs(populateGVKOnGet(s)).
+			Build()
+		// Re-fetch ent through the interceptor so its GVK is populated (required for cross-NS checks).
+		require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(ent), ent))
+
+		res, err := handleKongCertificateRef(t.Context(), cl, ent)
+		require.NoError(t, err)
+		require.Equal(t, ctrl.Result{}, res)
+
+		updatedSvc := &configurationv1alpha1.KongService{}
+		require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(ent), updatedSvc))
+		require.True(t, lo.ContainsBy(updatedSvc.Status.Conditions, func(c metav1.Condition) bool {
+			return c.Type == konnectv1alpha1.KongCertificateRefValidConditionType && c.Status == metav1.ConditionTrue
+		}), "KongService does not have KongCertificateRefValid condition set to True")
+	})
+
 }
