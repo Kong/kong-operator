@@ -44,7 +44,6 @@ for ATTEMPT in $(seq 1 $MAX_RETRIES); do
   "sni": "$SNI",
   "retry_attempt": $ATTEMPT,
   "max_retries": $MAX_RETRIES,
-  "output": "$OUTPUT",
   "openssl_command": "$OPENSSL_CMD"
 }
 EOF
