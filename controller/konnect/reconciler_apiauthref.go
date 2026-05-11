@@ -28,13 +28,14 @@ func getCPAuthRefForRef(
 		return types.NamespacedName{}, err
 	}
 
-	apiAuthNamespace := namespace
-	if cp.GetKonnectAPIAuthConfigurationRef().Namespace != nil && *cp.GetKonnectAPIAuthConfigurationRef().Namespace != namespace {
+	cpNamespace := cp.GetNamespace()
+	apiAuthNamespace := cpNamespace
+	if cp.GetKonnectAPIAuthConfigurationRef().Namespace != nil && *cp.GetKonnectAPIAuthConfigurationRef().Namespace != cpNamespace {
 		apiAuthNamespace = *cp.GetKonnectAPIAuthConfigurationRef().Namespace
 		if err := crossnamespace.CheckKongReferenceGrantForResource(
 			ctx,
 			cl,
-			namespace,
+			cpNamespace,
 			apiAuthNamespace,
 			cp.GetKonnectAPIAuthConfigurationRef().Name,
 			metav1.GroupVersionKind(cp.GetObjectKind().GroupVersionKind()),
