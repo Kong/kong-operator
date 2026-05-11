@@ -284,6 +284,37 @@ func TestHandleKongCACertificateRefs(t *testing.T) {
 		require.ErrorAs(t, err, &wrongCPErr)
 	})
 
+	t.Run("multiple refs: first valid, second not found — fails on second", func(t *testing.T) {
+		// ca1 exists and is programmed; ca-missing does not exist.
+		ca1 := caCertOK.DeepCopy()
+		ca1.Name = "ca1"
+
+		svc := makeSvc(
+			commonv1alpha1.NamespacedRef{Name: "ca1"},
+			commonv1alpha1.NamespacedRef{Name: "ca-missing"},
+		)
+		sc := runtime.NewScheme()
+		require.NoError(t, configurationv1alpha1.AddToScheme(sc))
+		require.NoError(t, konnectv1alpha1.AddToScheme(sc))
+		require.NoError(t, konnectv1alpha2.AddToScheme(sc))
+		cl := fake.NewClientBuilder().WithScheme(sc).
+			WithObjects(svc, ca1).
+			WithStatusSubresource(svc).
+			Build()
+		require.NoError(t, cl.SubResource("status").Update(t.Context(), svc))
+
+		_, err := handleKongCACertificateRefs(t.Context(), cl, svc)
+		require.Error(t, err)
+		var notFoundErr ReferencedKongCACertificateDoesNotExistError
+		require.ErrorAs(t, err, &notFoundErr)
+
+		updatedSvc := &configurationv1alpha1.KongService{}
+		require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(svc), updatedSvc))
+		require.True(t, lo.ContainsBy(updatedSvc.Status.Conditions, func(c metav1.Condition) bool {
+			return c.Type == konnectv1alpha1.KongCACertificateRefsValidConditionType && c.Status == metav1.ConditionFalse
+		}), "KongService does not have KongCACertificateRefsValid condition set to False")
+	})
+
 	t.Run("cross-NS without KongReferenceGrant returns ReferenceNotGranted error", func(t *testing.T) {
 		caCertInOtherNS := caCertOK.DeepCopy()
 		caCertInOtherNS.Namespace = certNS
