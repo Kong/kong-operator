@@ -709,7 +709,7 @@ func (obj *KongPluginBinding) GetControlPlaneRef() *commonv1alpha1.ControlPlaneR
 }
 
 func (obj *KongService) initKonnectStatus() {
-	obj.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{}
+	obj.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{}
 }
 
 // GetKonnectStatus returns the Konnect status contained in the KongService status.

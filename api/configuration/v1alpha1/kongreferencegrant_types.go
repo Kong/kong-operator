@@ -118,7 +118,7 @@ type ReferenceGrantFrom struct {
 //
 // +kubebuilder:validation:XValidation:rule=".self.group != 'core' || .self.kind == 'Secret'",message="Only 'Secret' kind is supported for 'core' group"
 // +kubebuilder:validation:XValidation:rule=".self.group != 'konnect.konghq.com' || .self.kind in ['KonnectGatewayControlPlane', 'KonnectAPIAuthConfiguration']",message="Only 'KonnectGatewayControlPlane' and 'KonnectAPIAuthConfiguration' kinds are supported for 'konnect.konghq.com' group"
-// +kubebuilder:validation:XValidation:rule=".self.group != 'configuration.konghq.com' || .self.kind in ['KongPlugin', 'KongService']",message="Only 'KongPlugin' and 'KongService' kinds are supported for 'configuration.konghq.com' group"
+// +kubebuilder:validation:XValidation:rule=".self.group != 'configuration.konghq.com' || .self.kind in ['KongPlugin', 'KongService', 'KongCertificate', 'KongCACertificate']",message="Only 'KongPlugin', 'KongService', 'KongCertificate' and 'KongCACertificate' kinds are supported for 'configuration.konghq.com' group"
 type ReferenceGrantTo struct {
 	// Group is the group of the referent.
 	//

@@ -58,7 +58,7 @@ func updateKongServiceStatusWithProgrammed(
 	id string,
 	cpID string,
 ) {
-	obj.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+	obj.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
 		ControlPlaneID:      cpID,
 		KonnectEntityStatus: konnectEntityStatus(id),
 	}

@@ -212,6 +212,39 @@ type KonnectEntityStatusWithControlPlaneAndCertificateRefs struct {
 	CertificateID string `json:"certificateID,omitempty"`
 }
 
+// KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs
+// represents the status of a Konnect entity with references to a
+// ControlPlane, a (client) Certificate, and a list of CA Certificates.
+type KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs struct {
+	KonnectEntityStatus `json:",inline"`
+
+	// ControlPlaneID is the Konnect ID of the ControlPlane this entity is associated with.
+	//
+	// +optional
+	ControlPlaneID string `json:"controlPlaneID,omitempty"`
+
+	// CertificateID is the Konnect ID of the client Certificate referenced by this entity.
+	//
+	// +optional
+	CertificateID string `json:"certificateID,omitempty"`
+
+	// CACertificateIDs lists the Konnect IDs of the CA Certificates referenced by this entity.
+	//
+	// +optional
+	// +listType=set
+	CACertificateIDs []string `json:"caCertificateIDs,omitempty"`
+}
+
+// SetControlPlaneID sets the ControlPlane ID of the KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs struct.
+func (in *KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs) SetControlPlaneID(id string) {
+	in.ControlPlaneID = id
+}
+
+// GetControlPlaneID returns the ControlPlane ID of the KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs struct.
+func (in *KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs) GetControlPlaneID() string {
+	return in.ControlPlaneID
+}
+
 // KonnectEntityStatusWithNetworkRef represents the status of a Konnect entity
 // with reference to a Konnect cloud gateway network.
 type KonnectEntityStatusWithNetworkRef struct {

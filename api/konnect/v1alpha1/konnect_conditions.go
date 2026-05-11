@@ -269,3 +269,16 @@ const (
 	// indicating that the spec of the object does not match the entity in Konnect when adopted in match mode.
 	KonnectEntityAdoptedReasonNotMatch = "NotMatch"
 )
+
+const (
+	// KongCACertificateRefsValidConditionType is the type of the condition that indicates
+	// whether the KongCACertificate references are valid and point to existing KongCACertificates.
+	KongCACertificateRefsValidConditionType = "KongCACertificateRefsValid"
+
+	// KongCACertificateRefsReasonValid is the reason used with the KongCACertificateRefsValid
+	// condition type indicating that all KongCACertificate references are valid.
+	KongCACertificateRefsReasonValid = "Valid"
+	// KongCACertificateRefsReasonInvalid is the reason used with the KongCACertificateRefsValid
+	// condition type indicating that one or more KongCACertificate references are invalid.
+	KongCACertificateRefsReasonInvalid = "Invalid"
+)
