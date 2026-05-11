@@ -214,6 +214,11 @@
 
 ### Fixes
 
+- Add `KongReferenceGrant` watch to `KongVault` and `KongConsumerGroup` reconcilers.
+  Previously, creating or deleting a grant would not trigger re-reconciliation of these
+  resources until the next full resync cycle. Grant changes now immediately re-queue
+  affected objects.
+  [#4219](https://github.com/Kong/kong-operator/pull/4219)
 - Fix cross-namespace `KongRoute → KongService` reference resolution: `handleKongServiceRef`
   and `GetAPIAuthRefNN` (serviceRef branch) now derive the `KongService` namespace from
   `serviceRef.namespace` instead of always using the route's namespace, so a cross-namespace
