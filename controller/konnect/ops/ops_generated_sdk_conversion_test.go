@@ -141,6 +141,102 @@ func TestDeleteIdentityProviderRequest_UsesParentAndKonnectID(t *testing.T) {
 	require.NoError(t, deleteIdentityProviderRequest(ctx, sdk, idp))
 }
 
+func TestCreatePortalIPAllowList_UsesSDKOpsConversion(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	sdk := mocks.NewMockPortalsIPAllowListSDK(t)
+	ipAllowList := testGeneratedPortalIPAllowList()
+	ipAllowList.SetPortalID("portal-1")
+
+	expectedRequest, err := ipAllowList.Spec.APISpec.ToCreatePortalSourceIPRestriction()
+	require.NoError(t, err)
+
+	sdk.EXPECT().
+		CreatePortalIPAllowList(mock.Anything, "portal-1", expectedRequest).
+		Return(&sdkkonnectops.CreatePortalIPAllowListResponse{
+			IPEntry: &sdkkonnectcomp.IPEntry{
+				ID: "allow-list-1",
+			},
+		}, nil).
+		Once()
+
+	require.NoError(t, createPortalIPAllowList(ctx, sdk, ipAllowList))
+	assert.Equal(t, "allow-list-1", ipAllowList.GetKonnectID())
+}
+
+func TestUpdatePortalIPAllowList_UsesSDKOpsConversion(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	sdk := mocks.NewMockPortalsIPAllowListSDK(t)
+	ipAllowList := testGeneratedPortalIPAllowList()
+	ipAllowList.SetPortalID("portal-1")
+	ipAllowList.SetKonnectID("allow-list-1")
+
+	expectedRequest, err := ipAllowList.Spec.APISpec.ToPutPortalIPAllowListRequest()
+	require.NoError(t, err)
+	expectedRequest.PortalID = "portal-1"
+	expectedRequest.ID = "allow-list-1"
+
+	sdk.EXPECT().
+		PutPortalIPAllowList(mock.Anything, *expectedRequest).
+		Return(&sdkkonnectops.PutPortalIPAllowListResponse{}, nil).
+		Once()
+
+	require.NoError(t, updatePortalIPAllowList(ctx, sdk, ipAllowList))
+}
+
+func TestDeletePortalIPAllowList_UsesParentAndKonnectID(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	sdk := mocks.NewMockPortalsIPAllowListSDK(t)
+	ipAllowList := testGeneratedPortalIPAllowList()
+	ipAllowList.SetPortalID("portal-1")
+	ipAllowList.SetKonnectID("allow-list-1")
+
+	sdk.EXPECT().
+		DeletePortalIPAllowList(mock.Anything, "portal-1", "allow-list-1").
+		Return(&sdkkonnectops.DeletePortalIPAllowListResponse{}, nil).
+		Once()
+
+	require.NoError(t, deletePortalIPAllowList(ctx, sdk, ipAllowList))
+}
+
+func TestGetPortalIPAllowListForUID_MatchesAllowedIPs(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	sdk := mocks.NewMockPortalsIPAllowListSDK(t)
+	ipAllowList := testGeneratedPortalIPAllowList()
+	ipAllowList.SetPortalID("portal-1")
+
+	sdk.EXPECT().
+		ListPortalIPAllowList(mock.Anything, sdkkonnectops.ListPortalIPAllowListRequest{
+			PortalID: "portal-1",
+		}).
+		Return(&sdkkonnectops.ListPortalIPAllowListResponse{
+			PortalSourceIPRestrictionPaginatedResponse: &sdkkonnectcomp.PortalSourceIPRestrictionPaginatedResponse{
+				Data: []sdkkonnectcomp.IPEntry{
+					{
+						ID:         "allow-list-other",
+						AllowedIps: []string{"10.0.1.0/24"},
+					},
+					{
+						ID:         "allow-list-1",
+						AllowedIps: []string{"10.0.0.0/24", "2001:db8::/32"},
+					},
+				},
+			},
+		}, nil).
+		Once()
+
+	id, err := getPortalIPAllowListForUID(ctx, sdk, ipAllowList)
+	require.NoError(t, err)
+	assert.Equal(t, "allow-list-1", id)
+}
+
 func testGeneratedPortal() *konnectv1alpha1.Portal {
 	description := "Developer portal"
 	return &konnectv1alpha1.Portal{
@@ -189,6 +285,25 @@ func testGeneratedIdentityProviderRequest() *konnectv1alpha1.IdentityProviderReq
 				Enabled:   konnectv1alpha1.IdentityProviderEnabledEnabled,
 				LoginPath: konnectv1alpha1.IdentityProviderLoginPath("/login"),
 				Type:      konnectv1alpha1.IdentityProviderType("oidc"),
+			},
+		},
+	}
+}
+
+func testGeneratedPortalIPAllowList() *konnectv1alpha1.PortalIPAllowList {
+	return &konnectv1alpha1.PortalIPAllowList{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: konnectv1alpha1.GroupVersion.String(),
+			Kind:       "PortalIPAllowList",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "portal-ip-allow-list",
+			Namespace: "default",
+			UID:       "portal-ip-allow-list-uid",
+		},
+		Spec: konnectv1alpha1.PortalIPAllowListSpec{
+			APISpec: konnectv1alpha1.PortalIPAllowListAPISpec{
+				AllowedIps: []string{"10.0.0.0/24", "2001:db8::/32"},
 			},
 		},
 	}

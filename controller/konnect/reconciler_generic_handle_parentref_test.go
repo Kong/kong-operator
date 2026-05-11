@@ -352,6 +352,16 @@ func TestHandleParentRef_PortalChildren(t *testing.T) {
 			},
 		},
 		{
+			name: "PortalIPAllowList",
+			obj: &konnectv1alpha1.PortalIPAllowList{
+				ObjectMeta: metav1.ObjectMeta{Name: "child", Namespace: childNS},
+				Spec:       konnectv1alpha1.PortalIPAllowListSpec{PortalRef: portalRef(parentName)},
+			},
+			getParentID: func(o client.Object) string {
+				return o.(*konnectv1alpha1.PortalIPAllowList).GetPortalID()
+			},
+		},
+		{
 			name: "IdentityProviderRequest",
 			obj: &konnectv1alpha1.IdentityProviderRequest{
 				ObjectMeta: metav1.ObjectMeta{Name: "child", Namespace: childNS},
