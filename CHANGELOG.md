@@ -73,6 +73,14 @@
   parent ref (`KongRoute` via `serviceRef`, `KongCredential*` via `consumerRef`) to
   silently fail when the parent's `controlPlaneRef` was cross-namespace.
   [#4210](https://github.com/Kong/kong-operator/pull/4210)
+- Fix cross-namespace `KongRoute → KongService` reference resolution: `handleKongServiceRef`
+  and `GetAPIAuthRefNN` (serviceRef branch) now derive the `KongService` namespace from
+  `serviceRef.namespace` instead of always using the route's namespace, so a cross-namespace
+  serviceRef with a valid `KongReferenceGrant` correctly reaches `Programmed=True`.
+  The `kongRouteRefersToKongService` index key and `enqueueKongRouteForKongService` watch
+  handler are also fixed to use the service's namespace, ensuring cross-namespace routes are
+  re-queued immediately when the referenced service changes rather than waiting for a full resync.
+  [#4212](https://github.com/Kong/kong-operator/pull/4212)
   
 ## [v2.1.6]
 
