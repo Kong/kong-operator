@@ -233,6 +233,10 @@ func ListTLSRoutesForGateway(
 	gateway *gwtypes.Gateway,
 	opts ...client.ListOption,
 ) ([]gwtypes.TLSRoute, error) {
+	if gateway.Namespace == "" {
+		return nil, fmt.Errorf("can't list TLSRoutes for gateway: Gateway %s was missing namespace", gateway.Name)
+	}
+
 	var tlsRouteList gwtypes.TLSRouteList
 	err := c.List(
 		ctx,
