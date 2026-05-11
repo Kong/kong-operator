@@ -13,6 +13,7 @@ set -o pipefail
 #   RETRY_DELAY: (optional) Seconds to wait between attempts. Default: 1.
 
 PROXY_IP="${PROXY_IP}"
+PROXY_PORT="${PROXY_PORT:-443}"
 SNI_HOSTNAME="${SNI_HOSTNAME}"
 SECRET_NAME="${SECRET_NAME}"
 SECRET_NAMESPACE="${SECRET_NAMESPACE}"
@@ -33,7 +34,7 @@ echo "$SECRET_DATA" | base64 --decode > "$TMP_DIR/secret.crt"
 SECRET_FP=$(openssl x509 -in "$TMP_DIR/secret.crt" -noout -fingerprint 2>/dev/null)
 
 # Build openssl command.
-OPENSSL_CMD="openssl s_client -connect ${PROXY_IP}:443 -servername ${SNI_HOSTNAME}"
+OPENSSL_CMD="openssl s_client -connect ${PROXY_IP}:${PROXY_PORT} -servername ${SNI_HOSTNAME}"
 
 # Retry loop to compare fingerprints.
 SERVER_FP="none"

@@ -1,0 +1,153 @@
+# Basic TLSRoute test scenario.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: basic-tlsroute
+spec:
+  description: |
+    This test validates that the hybrid gateway controller correctly
+    processes a basic TLSRoute with a single service backend.
+
+  bindings:
+    # Common bindings.
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_api_auth_namespace
+      value: ($namespace)
+    - name: tls_mode
+      value: "Passthrough"
+    - name: listener_tls_port
+      value: 8899
+    - name: sni_hostname
+      value: (join('.', ['*', ($test_name), 'example.com']))
+    - name: fqdn
+      value: (join('.', ['echo', ($test_name), 'example.com']))
+    - name: cert_secret_name
+      value: test-tls-secret
+    - name: cert_secret_namespace
+      value: ($namespace)
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: gateway_image
+      value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.12')
+    - name: gateway_name
+      value: (join('-', [($test_name), 'gateway']))
+    - name: gateway_namespace
+      value: ($namespace)
+    - name: echo_deployment_name
+      value: (join('-', [($test_name), 'echo']))
+    - name: echo_deployment_namespace
+      value: ($namespace)
+
+  steps:
+    # Step 1: Create the TLS secret that will be referenced by the Gateway TLS listener.
+    - name: Create-tls-secret
+      description: Create TLS Secret for the Gateway TLS listener.
+      use:
+        template: ../../common/_step_templates/apply-assert-tlsSecret.yaml
+
+    # Step 2a: Create the secret for Konnect authentication.
+    - name: Create-auth-secret
+      description: Create Secret with Konnect token for KonnectAPIAuthConfiguration.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+
+    # Step 2b: Create the KonnectAPIAuthConfiguration to authenticate with Konnect.
+    - name: Create-konnect-api-auth
+      description: Create KonnectAPIAuthConfiguration for the test.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+
+    # Step 3: Create the GatewayConfiguration that defines the hybrid gateway setup.
+    - name: Create-gateway-configuration
+      description: Create GatewayConfiguration for the test.
+      use:
+        template: ../../common/_step_templates/apply-assert-gatewayConfiguration.yaml
+
+    # Step 4: Create the GatewayClass that will be used by the Gateway.
+    - name: Create-gateway-class
+      description: Create GatewayClass for the test.
+      use:
+        template: ../../common/_step_templates/apply-assert-gatewayClass.yaml
+
+    # Step 5: Create the Gateway with a TLS listener that references the TLS secret.
+    - name: Create-gateway
+      description: Create Gateway with TLS listener for the test.
+      use:
+        template: ../../common/_step_templates/apply-assert-gateway-tls-listener.yaml
+
+    # Step 6: Verify that the KonnectGatewayControlPlane is created and synchronized with Konnect.
+    - name: Assert-konnect-gateway-control-plane
+      description: Assert that the KonnectGatewayControlplane resource is created and synchronized.
+      use:
+        template: ../../common/_step_templates/assert-konnectGatewayControlPlane.yaml
+
+    # Step 7: Verify that the KongCertificate resource is created from the TLS secret.
+    - name: Assert-kong-certificate
+      description: Assert that the KongCertificate resource is created for the TLS secret.
+      use:
+       template: ../../common/_step_templates/assert-kongCertificate-tls-listener.yaml
+  
+    # Step 8: Verify that the KongSNI resource is created for the SNI hostname.
+    - name: Assert-kong-sni
+      description: Assert that the KongSNI resource is created for the SNI hostname.
+      use:
+       template: ../../common/_step_templates/assert-kongSNI-tls-listener.yaml
+      bindings:
+        - name: resource_type
+          value: "kongcertificates.configuration.konghq.com"
+  
+    # Step 9: Create the echo service that will receive the routed traffic.
+    - name: Create-echo-service
+      description: Create and assert an echo service to route traffic to.
+      use:
+        template: ../../common/_step_templates/apply-assert-echoService-with-tls.yaml
+
+    # Step 10: Create the TLSRoute that routes traffic to the echo service.
+    - name: Create-tlsroute-echo
+      description: Create TLSRoute to route traffic to the echo service.
+      try:
+        - apply:
+            file: 01-tlsRoute-echo.yaml
+        - assert:
+            file: 02-tlsRoute-echo-assert.yaml
+      bindings:
+        - name: route_hosts
+          value:
+            - ($fqdn)
+
+    # TODO: modify the scripts for checking Kong resource and check generated Konnect entities for the TLSRoute. 
+
+    # Since TLS passthrough is used, the certificate provided here when accessing the proxy IP and port is the cert from the backend service.
+    # So we skip the verification of TLS certificate here,
+    # Step 12: Verify TLS traffic from host.
+    - name: Verify-TLS-traffic-from-host
+      description: Verify that TLS traffic can be routed through the gateway to the echo service from the host.
+      use:
+        template: ../../common/_step_templates/verify-tls-traffic-from-host.yaml
+      bindings:
+        - name: request_sni
+          value: ($fqdn)
+  catch:
+    # Capture debug snapshot on test failure for CI debugging.
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: hybridgateway-basic-tlsroute
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
