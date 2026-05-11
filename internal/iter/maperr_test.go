@@ -3,6 +3,7 @@ package iter
 import (
 	"errors"
 	"fmt"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -138,5 +139,57 @@ func TestMapErr(t *testing.T) {
 				require.ErrorIs(t, res.err, wantErr)
 			}
 		})
+	}
+}
+
+func TestMapErr_capsConcurrentMappersToGOMAXPROCS(t *testing.T) {
+	previous := runtime.GOMAXPROCS(2)
+	t.Cleanup(func() {
+		runtime.GOMAXPROCS(previous)
+	})
+
+	input := []int{1, 2, 3, 4}
+	limit := runtime.GOMAXPROCS(0)
+	started := make(chan struct{}, len(input))
+	release := make(chan struct{})
+	done := make(chan struct {
+		values []string
+		err    error
+	}, 1)
+
+	go func() {
+		got, err := MapErr(input, func(value *int) (string, error) {
+			started <- struct{}{}
+			<-release
+			return fmt.Sprintf("value-%d", *value), nil
+		})
+		done <- struct {
+			values []string
+			err    error
+		}{values: got, err: err}
+	}()
+
+	for range limit {
+		select {
+		case <-started:
+		case <-time.After(time.Second):
+			t.Fatal("timed out waiting for capped workers to start")
+		}
+	}
+
+	select {
+	case <-started:
+		t.Fatalf("mapper exceeded concurrency cap of %d before any worker was released", limit)
+	default:
+	}
+
+	close(release)
+
+	select {
+	case res := <-done:
+		require.NoError(t, res.err)
+		assert.ElementsMatch(t, []string{"value-1", "value-2", "value-3", "value-4"}, res.values)
+	case <-time.After(time.Second):
+		t.Fatal("MapErr did not finish after releasing capped workers")
 	}
 }
