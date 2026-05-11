@@ -74,8 +74,7 @@ func handleKongServiceRef[T constraints.SupportedKonnectEntityType, TEnt constra
 	nsEnt := ent.GetNamespace()
 	kongSvc := configurationv1alpha1.KongService{}
 	nn := types.NamespacedName{
-		Name: kongServiceRef.NamespacedRef.Name,
-		// TODO: handle cross namespace refs
+		Name:      kongServiceRef.NamespacedRef.Name,
 		Namespace: nsEnt,
 	}
 	ref := kongServiceRef.NamespacedRef

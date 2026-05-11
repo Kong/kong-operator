@@ -82,7 +82,7 @@ func TestKongPluginBindingToSDKPluginInput_Tags(t *testing.T) {
 				Namespace: "default",
 			},
 			Status: configurationv1alpha1.KongServiceStatus{
-				Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+				Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
 					KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 						ID: "12345",
 					},
@@ -182,7 +182,7 @@ func TestKongPluginWithTargetsToKongPluginInput(t *testing.T) {
 						Namespace: "default",
 					},
 					Status: configurationv1alpha1.KongServiceStatus{
-						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
 							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 								ID: "service-id-123",
 							},
@@ -275,7 +275,7 @@ func TestKongPluginWithTargetsToKongPluginInput(t *testing.T) {
 				&configurationv1alpha1.KongService{
 					ObjectMeta: metav1.ObjectMeta{Name: "service-1"},
 					Status: configurationv1alpha1.KongServiceStatus{
-						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
 							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{ID: "service-id-123"},
 						},
 					},
@@ -332,7 +332,7 @@ func TestKongPluginWithTargetsToKongPluginInput(t *testing.T) {
 						Namespace: "default",
 					},
 					Status: configurationv1alpha1.KongServiceStatus{
-						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
 							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 								ID: "service-id-123",
 							},
@@ -399,7 +399,7 @@ func TestAdoptKongPluginBindingOverride(t *testing.T) {
 			Namespace: "default",
 		},
 		Status: configurationv1alpha1.KongServiceStatus{
-			Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+			Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
 				KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 					ID: serviceKonnectID,
 				},
@@ -498,7 +498,7 @@ func TestAdoptKongPluginBindingMatch(t *testing.T) {
 			Namespace: "default",
 		},
 		Status: configurationv1alpha1.KongServiceStatus{
-			Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+			Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
 				KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 					ID: serviceKonnectID,
 				},

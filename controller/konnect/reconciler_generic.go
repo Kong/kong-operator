@@ -359,6 +359,19 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			}
 		}
 
+		if crossnamespace.IsReferenceNotGranted(err) {
+			if res, errStatus := patch.StatusWithCondition(
+				ctx, r.Client, ent,
+				apiconsts.ConditionType(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs),
+				metav1.ConditionFalse,
+				configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted,
+				err.Error(),
+			); errStatus != nil || !res.IsZero() {
+				return res, errStatus
+			}
+			return ctrl.Result{}, err
+		}
+
 		return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 	} else if !res.IsZero() {
 		// If the result is not zero (e.g., requeue), we still need to update the Programmed
