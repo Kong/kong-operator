@@ -164,7 +164,7 @@ var testKongServiceCrossNs = &configurationv1alpha1.KongService{
 		},
 	},
 	Status: configurationv1alpha1.KongServiceStatus{
-		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
 			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 				ID: "svc-cross-ns-id",
 			},
