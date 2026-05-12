@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	"github.com/samber/lo"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -613,7 +612,7 @@ func (c *httpRouteConverter) getHostnamesByParentRef(ctx context.Context, logger
 				// This listener doesn't match the section reference, skip it
 				continue
 			}
-			if listener.Port != lo.FromPtr(pRef.Port) {
+			if pRef.Port != nil && listener.Port != *pRef.Port {
 				// This listener doesn't match the port reference, skip it
 				continue
 			}

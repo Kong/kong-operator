@@ -1210,7 +1210,9 @@ func TestKongExpressionRouteFromHTTPRouteMatchWithPriority(t *testing.T) {
 				Priority: tc.priority,
 			}
 
-			route, err := kongExpressionRouteFromHTTPRouteMatchWithPriority(matchWithPriority, tc.supportRedirectPlugin)
+			route, err := kongExpressionRouteFromHTTPRouteMatchWithPriority(matchWithPriority, TranslateHTTPRouteRulesToKongRouteOptions{
+				SupportRedirectPlugin: tc.supportRedirectPlugin,
+			})
 			if tc.hasError {
 				require.Error(t, err)
 				return
@@ -1218,7 +1220,6 @@ func TestKongExpressionRouteFromHTTPRouteMatchWithPriority(t *testing.T) {
 
 			require.NoError(t, err)
 			require.Equal(t, tc.routeName, *route.Name, "Should have expected route name")
-			require.ElementsMatch(t, []string{"http", "https"}, lo.FromSlicePtr(route.Protocols), "Protocols should be http,https")
 			require.True(t, route.ExpressionRoutes, "Should be expression route")
 			require.Equal(t, tc.routeExpression, *route.Expression, "Should translate to expected expression")
 			require.Equal(t, tc.priority, *route.Priority, "Should have expected priority")

@@ -28,8 +28,7 @@ services:
   read_timeout: 60000
   retries: 5
   routes:
-  - expression: (http.path ^= "/") && ((net.protocol == "http") || (net.protocol ==
-      "https"))
+  - expression: http.path ^= "/"
     https_redirect_status_code: 426
     id: 95255daa-88f8-504b-9098-9300d404c741
     name: default.beta
@@ -70,9 +69,6 @@ services:
     name: default.beta..svc-facade-beta.svc.facade
     preserve_host: true
     priority: 54975581454341
-    protocols:
-    - http
-    - https
     request_buffering: true
     response_buffering: true
     strip_path: false
@@ -105,9 +101,6 @@ services:
     name: default.alpha..svc-facade-alpha.svc.facade
     preserve_host: true
     priority: 54975581454342
-    protocols:
-    - http
-    - https
     request_buffering: true
     response_buffering: true
     strip_path: false

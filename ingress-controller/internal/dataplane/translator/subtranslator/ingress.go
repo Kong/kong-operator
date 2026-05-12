@@ -3,6 +3,7 @@ package subtranslator
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -77,6 +78,20 @@ const (
 	defaultHTTPPort = 80
 	defaultRetries  = 5
 )
+
+func ingressRouteProtocols(a map[string]string) []*string {
+	protocolsFromAnnotation := annotations.ExtractProtocolNames(a)
+	slices.Sort(protocolsFromAnnotation)
+	if len(protocolsFromAnnotation) == 0 {
+		return nil
+	}
+
+	return lo.Map(
+		protocolsFromAnnotation, func(protocol string, _ int) *string {
+			return lo.ToPtr(protocol)
+		},
+	)
+}
 
 // defaultServiceTimeoutKongFormat returns the defaultServiceTimeout in format
 // expected by Kong (pointer to an integer representing milliseconds).
@@ -419,13 +434,13 @@ func (m *ingressTranslationMeta) translateIntoKongRoute() *kongstate.Route {
 	route := &kongstate.Route{
 		Ingress: util.FromK8sObject(m.parentIngress),
 		Route: kong.Route{
-			Name:              kong.String(routeName),
-			StripPath:         kong.Bool(false),
-			PreserveHost:      kong.Bool(true),
-			Protocols:         kong.StringSlice("http", "https"),
-			RegexPriority:     kong.Int(0),
-			RequestBuffering:  kong.Bool(true),
-			ResponseBuffering: kong.Bool(true),
+			Name:              lo.ToPtr(routeName),
+			StripPath:         lo.ToPtr(false),
+			PreserveHost:      lo.ToPtr(true),
+			Protocols:         ingressRouteProtocols(m.parentIngress.GetAnnotations()),
+			RegexPriority:     lo.ToPtr(0),
+			RequestBuffering:  lo.ToPtr(true),
+			ResponseBuffering: lo.ToPtr(true),
 			Tags:              m.ingressTags,
 		},
 	}
