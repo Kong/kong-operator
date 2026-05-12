@@ -1,6 +1,8 @@
 package gateway
 
 import (
+	"slices"
+
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
@@ -36,5 +38,7 @@ func ProtocolsFromListeners(gw *gatewayv1.Gateway, sectionName *gatewayv1.Sectio
 	for p := range protoSet {
 		protocols = append(protocols, p)
 	}
+	slices.Sort(protocols)
+
 	return protocols
 }
