@@ -1202,11 +1202,11 @@ func TestKongRouteAnnotations(t *testing.T) {
 			Hosts:             kong.StringSlice("example.com"),
 			PreserveHost:      kong.Bool(true),
 			Paths:             kong.StringSlice("/"),
-			Protocols:         kong.StringSlice("http", "https"),
-			RegexPriority:     kong.Int(0),
-			ResponseBuffering: kong.Bool(true),
-			RequestBuffering:  kong.Bool(true),
-			ID:                kong.String("3a26af2b-40ec-579c-81b0-dd6dc0072417"),
+			Protocols:         nil,
+			RegexPriority:     lo.ToPtr(0),
+			ResponseBuffering: lo.ToPtr(true),
+			RequestBuffering:  lo.ToPtr(true),
+			ID:                lo.ToPtr("3a26af2b-40ec-579c-81b0-dd6dc0072417"),
 		}, state.Services[0].Routes[0].Route)
 	})
 	t.Run("strip-path annotation is correctly processed (false)", func(t *testing.T) {
@@ -1291,11 +1291,11 @@ func TestKongRouteAnnotations(t *testing.T) {
 			Hosts:             kong.StringSlice("example.com"),
 			PreserveHost:      kong.Bool(true),
 			Paths:             kong.StringSlice("/"),
-			Protocols:         kong.StringSlice("http", "https"),
-			RegexPriority:     kong.Int(0),
-			ResponseBuffering: kong.Bool(true),
-			RequestBuffering:  kong.Bool(true),
-			ID:                kong.String("3a26af2b-40ec-579c-81b0-dd6dc0072417"),
+			Protocols:         nil,
+			RegexPriority:     lo.ToPtr(0),
+			ResponseBuffering: lo.ToPtr(true),
+			RequestBuffering:  lo.ToPtr(true),
+			ID:                lo.ToPtr("3a26af2b-40ec-579c-81b0-dd6dc0072417"),
 		}, state.Services[0].Routes[0].Route)
 	})
 	t.Run("https-redirect-status-code annotation is correctly processed", func(t *testing.T) {
@@ -1381,11 +1381,11 @@ func TestKongRouteAnnotations(t *testing.T) {
 			Hosts:                   kong.StringSlice("example.com"),
 			PreserveHost:            kong.Bool(true),
 			Paths:                   kong.StringSlice("/"),
-			Protocols:               kong.StringSlice("http", "https"),
-			RegexPriority:           kong.Int(0),
-			ResponseBuffering:       kong.Bool(true),
-			RequestBuffering:        kong.Bool(true),
-			ID:                      kong.String("3a26af2b-40ec-579c-81b0-dd6dc0072417"),
+			Protocols:               nil,
+			RegexPriority:           lo.ToPtr(0),
+			ResponseBuffering:       lo.ToPtr(true),
+			RequestBuffering:        lo.ToPtr(true),
+			ID:                      lo.ToPtr("3a26af2b-40ec-579c-81b0-dd6dc0072417"),
 		}, state.Services[0].Routes[0].Route)
 	})
 
@@ -1472,11 +1472,11 @@ func TestKongRouteAnnotations(t *testing.T) {
 				Hosts:             kong.StringSlice("example.com"),
 				PreserveHost:      kong.Bool(true),
 				Paths:             kong.StringSlice("/"),
-				Protocols:         kong.StringSlice("http", "https"),
-				RegexPriority:     kong.Int(0),
-				ResponseBuffering: kong.Bool(true),
-				RequestBuffering:  kong.Bool(true),
-				ID:                kong.String("3a26af2b-40ec-579c-81b0-dd6dc0072417"),
+				Protocols:         nil,
+				RegexPriority:     lo.ToPtr(0),
+				ResponseBuffering: lo.ToPtr(true),
+				RequestBuffering:  lo.ToPtr(true),
+				ID:                lo.ToPtr("3a26af2b-40ec-579c-81b0-dd6dc0072417"),
 			}, state.Services[0].Routes[0].Route)
 		})
 	t.Run("preserve-host annotation is correctly processed", func(t *testing.T) {
@@ -1561,11 +1561,11 @@ func TestKongRouteAnnotations(t *testing.T) {
 			Hosts:             kong.StringSlice("example.com"),
 			PreserveHost:      kong.Bool(false),
 			Paths:             kong.StringSlice("/"),
-			Protocols:         kong.StringSlice("http", "https"),
-			RegexPriority:     kong.Int(0),
-			ResponseBuffering: kong.Bool(true),
-			RequestBuffering:  kong.Bool(true),
-			ID:                kong.String("3a26af2b-40ec-579c-81b0-dd6dc0072417"),
+			Protocols:         nil,
+			RegexPriority:     lo.ToPtr(0),
+			ResponseBuffering: lo.ToPtr(true),
+			RequestBuffering:  lo.ToPtr(true),
+			ID:                lo.ToPtr("3a26af2b-40ec-579c-81b0-dd6dc0072417"),
 		}, state.Services[0].Routes[0].Route)
 	})
 
@@ -1652,11 +1652,11 @@ func TestKongRouteAnnotations(t *testing.T) {
 			Hosts:             kong.StringSlice("example.com"),
 			PreserveHost:      kong.Bool(true),
 			Paths:             kong.StringSlice("/"),
-			Protocols:         kong.StringSlice("http", "https"),
-			RegexPriority:     kong.Int(0),
-			ResponseBuffering: kong.Bool(true),
-			RequestBuffering:  kong.Bool(true),
-			ID:                kong.String("3a26af2b-40ec-579c-81b0-dd6dc0072417"),
+			Protocols:         nil,
+			RegexPriority:     lo.ToPtr(0),
+			ResponseBuffering: lo.ToPtr(true),
+			RequestBuffering:  lo.ToPtr(true),
+			ID:                lo.ToPtr("3a26af2b-40ec-579c-81b0-dd6dc0072417"),
 		}, state.Services[0].Routes[0].Route)
 	})
 
@@ -1742,11 +1742,11 @@ func TestKongRouteAnnotations(t *testing.T) {
 			Hosts:             kong.StringSlice("example.com"),
 			PreserveHost:      kong.Bool(true),
 			Paths:             kong.StringSlice("/"),
-			Protocols:         kong.StringSlice("http", "https"),
-			RegexPriority:     kong.Int(10),
-			ResponseBuffering: kong.Bool(true),
-			RequestBuffering:  kong.Bool(true),
-			ID:                kong.String("3a26af2b-40ec-579c-81b0-dd6dc0072417"),
+			Protocols:         nil,
+			RegexPriority:     lo.ToPtr(10),
+			ResponseBuffering: lo.ToPtr(true),
+			RequestBuffering:  lo.ToPtr(true),
+			ID:                lo.ToPtr("3a26af2b-40ec-579c-81b0-dd6dc0072417"),
 		}, state.Services[0].Routes[0].Route)
 	})
 
@@ -1833,10 +1833,10 @@ func TestKongRouteAnnotations(t *testing.T) {
 			Hosts:             kong.StringSlice("example.com"),
 			PreserveHost:      kong.Bool(true),
 			Paths:             kong.StringSlice("/"),
-			Protocols:         kong.StringSlice("http", "https"),
-			ResponseBuffering: kong.Bool(true),
-			RequestBuffering:  kong.Bool(true),
-			ID:                kong.String("3a26af2b-40ec-579c-81b0-dd6dc0072417"),
+			Protocols:         nil,
+			ResponseBuffering: lo.ToPtr(true),
+			RequestBuffering:  lo.ToPtr(true),
+			ID:                lo.ToPtr("3a26af2b-40ec-579c-81b0-dd6dc0072417"),
 		}, state.Services[0].Routes[0].Route)
 	})
 
@@ -1924,10 +1924,10 @@ func TestKongRouteAnnotations(t *testing.T) {
 			Hosts:             kong.StringSlice("example.com"),
 			PreserveHost:      kong.Bool(true),
 			Paths:             kong.StringSlice("/"),
-			Protocols:         kong.StringSlice("http", "https"),
-			RequestBuffering:  kong.Bool(true),
-			ResponseBuffering: kong.Bool(true),
-			ID:                kong.String("9fc167fb-bfe7-53b4-a0e2-7d36cf4bb5d4"),
+			Protocols:         nil,
+			RequestBuffering:  lo.ToPtr(true),
+			ResponseBuffering: lo.ToPtr(true),
+			ID:                lo.ToPtr("9fc167fb-bfe7-53b4-a0e2-7d36cf4bb5d4"),
 		}, state.Services[0].Routes[0].Route)
 	})
 	t.Run("route buffering options are processed (false)", func(t *testing.T) {
@@ -2014,10 +2014,10 @@ func TestKongRouteAnnotations(t *testing.T) {
 			Hosts:             kong.StringSlice("example.com"),
 			PreserveHost:      kong.Bool(true),
 			Paths:             kong.StringSlice("/"),
-			Protocols:         kong.StringSlice("http", "https"),
-			RequestBuffering:  kong.Bool(false),
-			ResponseBuffering: kong.Bool(false),
-			ID:                kong.String("9fc167fb-bfe7-53b4-a0e2-7d36cf4bb5d4"),
+			Protocols:         nil,
+			RequestBuffering:  lo.ToPtr(false),
+			ResponseBuffering: lo.ToPtr(false),
+			ID:                lo.ToPtr("9fc167fb-bfe7-53b4-a0e2-7d36cf4bb5d4"),
 		}, state.Services[0].Routes[0].Route)
 	})
 	t.Run("route buffering options are not processed with bad annotation values", func(t *testing.T) {
@@ -2289,11 +2289,11 @@ func TestKongServiceAnnotations(t *testing.T) {
 			Hosts:             kong.StringSlice("example.com"),
 			PreserveHost:      kong.Bool(true),
 			Paths:             kong.StringSlice("/"),
-			Protocols:         kong.StringSlice("http", "https"),
-			RegexPriority:     kong.Int(0),
-			ResponseBuffering: kong.Bool(true),
-			RequestBuffering:  kong.Bool(true),
-			ID:                kong.String("3a26af2b-40ec-579c-81b0-dd6dc0072417"),
+			Protocols:         nil,
+			RegexPriority:     lo.ToPtr(0),
+			ResponseBuffering: lo.ToPtr(true),
+			RequestBuffering:  lo.ToPtr(true),
+			ID:                lo.ToPtr("3a26af2b-40ec-579c-81b0-dd6dc0072417"),
 		}, state.Services[0].Routes[0].Route)
 	})
 
@@ -2389,11 +2389,11 @@ func TestKongServiceAnnotations(t *testing.T) {
 			Hosts:             kong.StringSlice("example.com"),
 			PreserveHost:      kong.Bool(true),
 			Paths:             kong.StringSlice("/"),
-			Protocols:         kong.StringSlice("http", "https"),
-			RegexPriority:     kong.Int(0),
-			ResponseBuffering: kong.Bool(true),
-			RequestBuffering:  kong.Bool(true),
-			ID:                kong.String("3a26af2b-40ec-579c-81b0-dd6dc0072417"),
+			Protocols:         nil,
+			RegexPriority:     lo.ToPtr(0),
+			ResponseBuffering: lo.ToPtr(true),
+			RequestBuffering:  lo.ToPtr(true),
+			ID:                lo.ToPtr("3a26af2b-40ec-579c-81b0-dd6dc0072417"),
 		}, state.Services[0].Routes[0].Route)
 	})
 
@@ -2481,7 +2481,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 			Hosts:             kong.StringSlice("example.com"),
 			PreserveHost:      kong.Bool(true),
 			Paths:             kong.StringSlice("/"),
-			Protocols:         kong.StringSlice("http", "https"),
+			Protocols:         nil,
 			Methods:           kong.StringSlice("POST", "GET"),
 			ID:                kong.String("3a26af2b-40ec-579c-81b0-dd6dc0072417"),
 			Tags: []*string{
@@ -3157,8 +3157,8 @@ func TestTranslatorSNI(t *testing.T) {
 					Hosts:             kong.StringSlice("example.com"),
 					PreserveHost:      kong.Bool(true),
 					Paths:             kong.StringSlice("/"),
-					Protocols:         kong.StringSlice("http", "https"),
-					ID:                kong.String("99296cc1-ab30-59f8-b204-7b1a45e64cac"),
+					Protocols:         nil,
+					ID:                lo.ToPtr("99296cc1-ab30-59f8-b204-7b1a45e64cac"),
 				}, route.Route)
 			}
 		}
@@ -3179,8 +3179,8 @@ func TestTranslatorSNI(t *testing.T) {
 					SNIs:              nil,
 					PreserveHost:      kong.Bool(true),
 					Paths:             kong.StringSlice("/"),
-					Protocols:         kong.StringSlice("http", "https"),
-					ID:                kong.String("cbdfe994-15d4-5336-909a-e302ed66e19a"),
+					Protocols:         nil,
+					ID:                lo.ToPtr("cbdfe994-15d4-5336-909a-e302ed66e19a"),
 				}, route.Route)
 			}
 		}
@@ -3244,8 +3244,8 @@ func TestTranslatorSNI(t *testing.T) {
 			SNIs:              nil,
 			PreserveHost:      kong.Bool(true),
 			Paths:             kong.StringSlice("/"),
-			Protocols:         kong.StringSlice("http", "https"),
-			ID:                kong.String("99296cc1-ab30-59f8-b204-7b1a45e64cac"),
+			Protocols:         nil,
+			ID:                lo.ToPtr("99296cc1-ab30-59f8-b204-7b1a45e64cac"),
 		}, state.Services[0].Routes[0].Route)
 	})
 }
@@ -3310,8 +3310,8 @@ func TestTranslatorHostAliases(t *testing.T) {
 			Hosts:             kong.StringSlice("example.com", "*.example.com", "*.sample.com", "*.illustration.com"),
 			PreserveHost:      kong.Bool(true),
 			Paths:             kong.StringSlice("/"),
-			Protocols:         kong.StringSlice("http", "https"),
-			ID:                kong.String("99296cc1-ab30-59f8-b204-7b1a45e64cac"),
+			Protocols:         nil,
+			ID:                lo.ToPtr("99296cc1-ab30-59f8-b204-7b1a45e64cac"),
 		}, state.Services[0].Routes[0].Route)
 	})
 	t.Run("route Hosts remain unmodified when Host-Aliases are not present", func(t *testing.T) {
@@ -3371,8 +3371,8 @@ func TestTranslatorHostAliases(t *testing.T) {
 			Hosts:             kong.StringSlice("example.com"),
 			PreserveHost:      kong.Bool(true),
 			Paths:             kong.StringSlice("/"),
-			Protocols:         kong.StringSlice("http", "https"),
-			ID:                kong.String("99296cc1-ab30-59f8-b204-7b1a45e64cac"),
+			Protocols:         nil,
+			ID:                lo.ToPtr("99296cc1-ab30-59f8-b204-7b1a45e64cac"),
 		}, state.Services[0].Routes[0].Route)
 	})
 	t.Run("route Hosts will not contain duplicates when Host-Aliases duplicates the host", func(t *testing.T) {
@@ -3433,8 +3433,8 @@ func TestTranslatorHostAliases(t *testing.T) {
 			Hosts:             kong.StringSlice("example.com", "*.example.com"),
 			PreserveHost:      kong.Bool(true),
 			Paths:             kong.StringSlice("/"),
-			Protocols:         kong.StringSlice("http", "https"),
-			ID:                kong.String("99296cc1-ab30-59f8-b204-7b1a45e64cac"),
+			Protocols:         nil,
+			ID:                lo.ToPtr("99296cc1-ab30-59f8-b204-7b1a45e64cac"),
 		}, state.Services[0].Routes[0].Route)
 	})
 }

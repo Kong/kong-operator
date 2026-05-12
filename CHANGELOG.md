@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [v2.1.6](#v216)
 - [v2.1.5](#v215)
 - [v2.1.4](#v214)
 - [v2.1.3](#v213)
@@ -43,7 +44,7 @@
 
 ## [v2.1.6]
 
-> Release date: TBD
+> Release date: 2026-05-12
 
 ### Fixes
 
@@ -55,6 +56,14 @@
   [#4048](https://github.com/Kong/kong-operator/pull/4048) [#4060](https://github.com/Kong/kong-operator/pull/4060)
 - Sanitize the plugin configuration when `ControlPlane`'s `configDump.dumpSensitive` isn't enabled.
   [#4119](https://github.com/Kong/kong-operator/pull/4119) [#4194](https://github.com/Kong/kong-operator/pull/4194)
+- **Changed (potentially breaking):** As part of our secure-by-default initiative, everything out of the box relies on
+  defaults from Kong Gateway. It may break existing configurations that relied on previous implicit protocol behavior
+  (access via http will result `426` status code.), when version of Kong Gateway changes.
+  - For `HTTPRoute`, protocol now matches the attached Gateway listener protocol (and when `parentRef.sectionName` is set, it must match that specific listener). When `parentRef.sectionName` is not specified it binds to all `Gateway`s listeners.
+  - For `Ingress`, default protocol relies on Kong Gateway, can be set explicitly via `konghq.com/protocols: "http"` (or `https`)
+    annotation on particular `Ingress`.
+  [#4067](https://github.com/Kong/kong-operator/pull/4067)
+  [#4245](https://github.com/Kong/kong-operator/pull/4245)
 
 ## [v2.1.5]
 

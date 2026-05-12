@@ -17,6 +17,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/translator"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	gatewayutils "github.com/kong/kong-operator/v2/pkg/utils/gateway"
 )
 
 // RouteForRule creates or updates a KongRoute for the given HTTPRoute rule.
@@ -57,12 +58,19 @@ func RouteForRule(
 	logger = logger.WithValues("kongroute", routeName)
 	log.Debug(logger, "Creating KongRoute for HTTPRoute rule")
 
+	// Derive protocols from the parent Gateway listener(s).
+	protocols, err := protocolsFromGatewayListener(ctx, cl, httpRoute, pRef)
+	if err != nil {
+		return nil, err
+	}
+
 	routeBuilder := builder.NewKongRoute().
 		WithName(routeName).
 		WithNamespace(metadata.NamespaceFromParentRef(httpRoute, pRef)).
 		WithLabels(httpRoute, pRef).
 		WithAnnotations(httpRoute, pRef).
 		WithSpecName(routeName).
+		WithProtocols(protocols...).
 		WithHosts(hostnames).
 		WithStripPath(metadata.ExtractStripPath(httpRoute.Annotations)).
 		WithPreserveHost(metadata.ExtractPreserveHost(httpRoute.Annotations)).
@@ -71,11 +79,6 @@ func RouteForRule(
 	// Check if the rule contains a URLRewrite or RequestRedirect filter with ReplacePrefixMatch:
 	// if so, we need to set a capture group on the KongRoute paths.
 	setCaptureGroup := needsCaptureGroup(rule)
-
-	routeBuilder = routeBuilder.WithProtocols(
-		sdkkonnectcomp.RouteJSONProtocols("http"),
-		sdkkonnectcomp.RouteJSONProtocols("https"),
-	)
 
 	// Add HTTPRoute matches
 	for _, match := range rule.Matches {
@@ -113,4 +116,36 @@ func needsCaptureGroup(rule gwtypes.HTTPRouteRule) bool {
 		}
 	}
 	return false
+}
+
+// protocolsFromGatewayListener derives Kong route protocols from the Gateway listener
+// referenced by the HTTPRoute's parentRef. It inspects the listener protocol and maps:
+//   - HTTP  → "http"
+//   - HTTPS → "https"
+//
+// Returns nil when no matching listeners are found (relies on Kong Gateway defaults).
+func protocolsFromGatewayListener(
+	ctx context.Context, cl client.Client, httpRoute *gwtypes.HTTPRoute, parentRef *gwtypes.ParentReference,
+) ([]sdkkonnectcomp.RouteJSONProtocols, error) {
+	ns := httpRoute.Namespace
+	if parentRef.Namespace != nil && *parentRef.Namespace != "" {
+		ns = string(*parentRef.Namespace)
+	}
+
+	gw := &gwtypes.Gateway{}
+	if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: string(parentRef.Name)}, gw); err != nil {
+		return nil, fmt.Errorf("failed to get parent Gateway %s/%s for HTTPRoute %s/%s: %w",
+			ns, parentRef.Name, httpRoute.Namespace, httpRoute.Name, err)
+	}
+
+	protos := gatewayutils.ProtocolsFromListeners(gw, parentRef.SectionName)
+	if len(protos) == 0 {
+		return nil, nil
+	}
+
+	protocols := make([]sdkkonnectcomp.RouteJSONProtocols, 0, len(protos))
+	for _, p := range protos {
+		protocols = append(protocols, sdkkonnectcomp.RouteJSONProtocols(p))
+	}
+	return protocols, nil
 }

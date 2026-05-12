@@ -6,6 +6,7 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/go-logr/logr"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,6 +30,7 @@ func TestRouteForRule(t *testing.T) {
 	// Create a scheme with the necessary types
 	scheme := runtime.NewScheme()
 	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, gatewayv1.Install(scheme))
 
 	// Create test HTTPRoute
 	httpRoute := &gwtypes.HTTPRoute{
@@ -71,31 +73,85 @@ func TestRouteForRule(t *testing.T) {
 		},
 	}
 
+	// Gateway with both HTTP and HTTPS listeners.
+	gateway := &gatewayv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-gateway",
+			Namespace: "test-namespace",
+		},
+		Spec: gatewayv1.GatewaySpec{
+			GatewayClassName: "test-class",
+			Listeners: []gatewayv1.Listener{
+				{Name: "http", Protocol: gatewayv1.HTTPProtocolType, Port: 80},
+				{Name: "https", Protocol: gatewayv1.HTTPSProtocolType, Port: 443},
+			},
+		},
+	}
+
+	httpSectionName := gatewayv1.SectionName("http")
+	httpsSectionName := gatewayv1.SectionName("https")
+
 	tests := []struct {
-		name          string
-		existingRoute *configurationv1alpha1.KongRoute
-		serviceName   string
-		hostnames     []string
-		expectError   bool
-		expectUpdate  bool
+		name            string
+		existingRoute   *configurationv1alpha1.KongRoute
+		parentRef       *gwtypes.ParentReference
+		serviceName     string
+		hostnames       []string
+		expectError     bool
+		expectRoutes    int
+		expectProtocols []sdkkonnectcomp.RouteJSONProtocols
 	}{
 		{
-			name:        "create new route",
-			serviceName: "test-service",
-			hostnames:   []string{"example.com"},
-			expectError: false,
+			name:         "no sectionName - both protocols from all listeners",
+			parentRef:    pRef,
+			serviceName:  "test-service",
+			hostnames:    []string{"example.com"},
+			expectRoutes: 2,
+			expectProtocols: []sdkkonnectcomp.RouteJSONProtocols{
+				sdkkonnectcomp.RouteJSONProtocols("http"),
+				sdkkonnectcomp.RouteJSONProtocols("https"),
+			},
+		},
+		{
+			name: "sectionName=http - only http protocol",
+			parentRef: &gwtypes.ParentReference{
+				Name:        "test-gateway",
+				Namespace:   (*gatewayv1.Namespace)(lo.ToPtr("test-namespace")),
+				SectionName: &httpSectionName,
+			},
+			serviceName:  "test-service",
+			hostnames:    []string{"example.com"},
+			expectRoutes: 2,
+			expectProtocols: []sdkkonnectcomp.RouteJSONProtocols{
+				sdkkonnectcomp.RouteJSONProtocols("http"),
+			},
+		},
+		{
+			name: "sectionName=https - only https protocol",
+			parentRef: &gwtypes.ParentReference{
+				Name:        "test-gateway",
+				Namespace:   (*gatewayv1.Namespace)(lo.ToPtr("test-namespace")),
+				SectionName: &httpsSectionName,
+			},
+			serviceName:  "test-service",
+			hostnames:    []string{"example.com"},
+			expectRoutes: 2,
+			expectProtocols: []sdkkonnectcomp.RouteJSONProtocols{
+				sdkkonnectcomp.RouteJSONProtocols("https"),
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var objects []client.Object
+			objects = append(objects, gateway)
 			if tt.existingRoute != nil {
 				objects = append(objects, tt.existingRoute)
 			}
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
-			result, err := RouteForRule(ctx, logger, fakeClient, httpRoute, rule, pRef, cpRef, tt.serviceName, tt.hostnames)
+			result, err := RouteForRule(ctx, logger, fakeClient, httpRoute, rule, tt.parentRef, cpRef, tt.serviceName, tt.hostnames)
 
 			if tt.expectError {
 				assert.Error(t, err)
@@ -110,13 +166,7 @@ func TestRouteForRule(t *testing.T) {
 			assert.Equal(t, "test-namespace", result.Namespace)
 			assert.NotEmpty(t, result.Name)
 			assert.Equal(t, tt.hostnames, result.Spec.Hosts)
-			assert.Equal(t,
-				[]sdkkonnectcomp.RouteJSONProtocols{
-					sdkkonnectcomp.RouteJSONProtocols("http"),
-					sdkkonnectcomp.RouteJSONProtocols("https"),
-				},
-				result.Spec.Protocols,
-			)
+			assert.ElementsMatch(t, tt.expectProtocols, result.Spec.Protocols)
 
 			// Verify service reference
 			if tt.serviceName != "" {

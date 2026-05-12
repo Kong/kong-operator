@@ -80,10 +80,10 @@ func TestTranslateIngressATC(t *testing.T) {
 							GroupVersionKind: ingressGVK,
 						},
 						Route: kong.Route{
-							Name:       kong.String("default.test-ingress.test-service.konghq.com.80"),
-							Protocols:  kong.StringSlice("http", "https"),
-							Expression: kong.String(`(http.host == "konghq.com") && ((http.path == "/api") || (http.path ^= "/api/"))`),
-							Priority: kong.Uint64(IngressRoutePriorityTraits{
+							Name:       lo.ToPtr("default.test-ingress.test-service.konghq.com.80"),
+							Protocols:  nil,
+							Expression: lo.ToPtr(`(http.host == "konghq.com") && ((http.path == "/api") || (http.path ^= "/api/"))`),
+							Priority: lo.ToPtr(IngressRoutePriorityTraits{
 								MatchFields:   2,
 								PlainHostOnly: true,
 								MaxPathLength: 5,
@@ -157,10 +157,10 @@ func TestTranslateIngressATC(t *testing.T) {
 							GroupVersionKind: ingressGVK,
 						},
 						Route: kong.Route{
-							Name:       kong.String("default.test-ingress.test-service.konghq.com.80"),
-							Protocols:  kong.StringSlice("http", "https"),
-							Expression: kong.String(`(http.host == "konghq.com") && (http.path ^= "/api/")`),
-							Priority: kong.Uint64(IngressRoutePriorityTraits{
+							Name:       lo.ToPtr("default.test-ingress.test-service.konghq.com.80"),
+							Protocols:  nil,
+							Expression: lo.ToPtr(`(http.host == "konghq.com") && (http.path ^= "/api/")`),
+							Priority: lo.ToPtr(IngressRoutePriorityTraits{
 								MatchFields:   2,
 								PlainHostOnly: true,
 								MaxPathLength: 5,
@@ -244,10 +244,10 @@ func TestTranslateIngressATC(t *testing.T) {
 							GroupVersionKind: ingressGVK,
 						},
 						Route: kong.Route{
-							Name:       kong.String("default.test-ingress-annotations.test-service.konghq.com.80"),
-							Protocols:  kong.StringSlice("http", "https"),
-							Expression: kong.String(`(http.host == "konghq.com") && (http.path ^= "/api/") && (http.headers.foo == "bar") && (http.method == "GET")`),
-							Priority: kong.Uint64(IngressRoutePriorityTraits{
+							Name:       lo.ToPtr("default.test-ingress-annotations.test-service.konghq.com.80"),
+							Protocols:  kong.StringSlice("http"),
+							Expression: lo.ToPtr(`(http.host == "konghq.com") && (http.path ^= "/api/") && (http.headers.foo == "bar") && (http.method == "GET")`),
+							Priority: lo.ToPtr(IngressRoutePriorityTraits{
 								MatchFields:   4,
 								PlainHostOnly: true,
 								MaxPathLength: 5,
@@ -349,10 +349,10 @@ func TestTranslateIngressATC(t *testing.T) {
 							GroupVersionKind: ingressGVK,
 						},
 						Route: kong.Route{
-							Name:       kong.String("default.test-ingress.konghq.com.svc-facade.svc.facade"),
-							Protocols:  kong.StringSlice("http", "https"),
-							Expression: kong.String(`(http.host == "konghq.com") && (http.path ^= "/api/")`),
-							Priority: kong.Uint64(IngressRoutePriorityTraits{
+							Name:       lo.ToPtr("default.test-ingress.konghq.com.svc-facade.svc.facade"),
+							Protocols:  nil,
+							Expression: lo.ToPtr(`(http.host == "konghq.com") && (http.path ^= "/api/")`),
+							Priority: lo.ToPtr(IngressRoutePriorityTraits{
 								MatchFields:   2,
 								PlainHostOnly: true,
 								MaxPathLength: 5,

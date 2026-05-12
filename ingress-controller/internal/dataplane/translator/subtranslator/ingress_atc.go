@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	netv1 "k8s.io/api/networking/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
@@ -41,12 +42,12 @@ func (m *ingressTranslationMeta) translateIntoKongExpressionRoute() *kongstate.R
 	route := &kongstate.Route{
 		Ingress: util.FromK8sObject(m.parentIngress),
 		Route: kong.Route{
-			Name:              kong.String(routeName),
-			Protocols:         kong.StringSlice("http", "https"),
-			StripPath:         kong.Bool(false),
-			PreserveHost:      kong.Bool(true),
-			RequestBuffering:  kong.Bool(true),
-			ResponseBuffering: kong.Bool(true),
+			Name:              lo.ToPtr(routeName),
+			Protocols:         ingressRouteProtocols(m.parentIngress.GetAnnotations()),
+			StripPath:         lo.ToPtr(false),
+			PreserveHost:      lo.ToPtr(true),
+			RequestBuffering:  lo.ToPtr(true),
+			ResponseBuffering: lo.ToPtr(true),
 			Tags:              m.ingressTags,
 		},
 		ExpressionRoutes: true,
