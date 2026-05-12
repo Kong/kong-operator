@@ -38,6 +38,14 @@ func KongSNIReconciliationWatchOptions(cl client.Client,
 				),
 			)
 		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&configurationv1alpha1.KongReferenceGrant{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueObjectsForKongReferenceGrant[configurationv1alpha1.KongSNIList](cl),
+				),
+			)
+		},
 	}
 }
 
@@ -50,8 +58,12 @@ func kongSNIRefersToKonnectGatewayControlPlane(
 			return false
 		}
 
+		certNamespace := sni.Namespace
+		if sni.Spec.CertificateRef.Namespace != nil && *sni.Spec.CertificateRef.Namespace != "" {
+			certNamespace = *sni.Spec.CertificateRef.Namespace
+		}
 		certNN := types.NamespacedName{
-			Namespace: sni.Namespace,
+			Namespace: certNamespace,
 			Name:      sni.Spec.CertificateRef.Name,
 		}
 		cert := configurationv1alpha1.KongCertificate{}
@@ -77,9 +89,9 @@ func enqueueKongSNIForKongCertificate(
 		}
 
 		sniList := configurationv1alpha1.KongSNIList{}
-		if err := cl.List(ctx, &sniList, client.InNamespace(cert.Namespace),
+		if err := cl.List(ctx, &sniList,
 			client.MatchingFields{
-				index.IndexFieldKongSNIOnCertificateRefName: cert.Name,
+				index.IndexFieldKongSNIOnCertificateRefName: cert.Namespace + "/" + cert.Name,
 			},
 		); err != nil {
 			return nil

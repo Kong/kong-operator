@@ -1383,7 +1383,7 @@ func KongSNIAttachedToCertificate(
 			Name: name,
 		},
 		Spec: configurationv1alpha1.KongSNISpec{
-			CertificateRef: commonv1alpha1.NameRef{
+			CertificateRef: commonv1alpha1.NamespacedRef{
 				Name: cert.Name,
 			},
 			KongSNIAPISpec: configurationv1alpha1.KongSNIAPISpec{
