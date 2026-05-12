@@ -289,7 +289,7 @@
   [#3754](https://github.com/Kong/kong-operator/pull/3754)
 - **Changed (potentially breaking):** As part of our secure-by-default initiative, everything out of the box relies on
   defaults from Kong Gateway. It may break existing configurations that relied on previous implicit protocol behavior
-  (access via http will result `426` status code.), when version of Kong Gateway will change.
+  (access via http will result `426` status code.), when version of Kong Gateway changes.
   - For `HTTPRoute`, protocol now matches the attached Gateway listener protocol (and when `parentRef.sectionName` is set, it must match that specific listener). When `parentRef.sectionName` is not specified it binds to all `Gateway`s listeners.
   - For `Ingress`, default protocol relies on Kong Gateway, can be set explicitly via `konghq.com/protocols: "http"` (or `https`)
     annotation on particular `Ingress`.
