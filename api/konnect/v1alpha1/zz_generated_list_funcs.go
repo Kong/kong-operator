@@ -47,6 +47,11 @@ func (obj PortalList) GetItems() []Portal {
 	return obj.Items
 }
 
+// GetItems returns the list of PortalEmailConfig items.
+func (obj PortalEmailConfigList) GetItems() []PortalEmailConfig {
+	return obj.Items
+}
+
 // GetItems returns the list of PortalPage items.
 func (obj PortalPageList) GetItems() []PortalPage {
 	return obj.Items
