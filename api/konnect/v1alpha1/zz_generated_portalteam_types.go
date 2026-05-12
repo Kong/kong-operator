@@ -58,13 +58,13 @@ type PortalTeamAPISpec struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
-	CanOwnApplications string `json:"canOwnApplications,omitempty"`
+	CanOwnApplications string `json:"canOwnApplications,omitzero"`
 
 	//
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=250
-	Description string `json:"description,omitempty"`
+	Description string `json:"description,omitzero"`
 
 	//
 	//
@@ -72,7 +72,7 @@ type PortalTeamAPISpec struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[\w \W]+$`
-	Name string `json:"name,omitempty"`
+	Name string `json:"name,omitzero"`
 }
 
 // PortalTeamStatus defines the observed state of PortalTeam.
@@ -100,5 +100,5 @@ type PortalTeamStatus struct {
 	// ObservedGeneration is the most recent generation observed
 	//
 	// +optional
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	ObservedGeneration int64 `json:"observedGeneration,omitzero"`
 }

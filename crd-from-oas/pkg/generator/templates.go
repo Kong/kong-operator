@@ -113,7 +113,7 @@ type {{.EntityName}}APISpec struct {
 {{- if isRefProperty $prop}}
 	{{goFieldName $prop.Name}}Ref {{goType $prop}} ` + "`" + `json:"{{refJSONTag $prop}},omitempty"` + "`" + `
 {{- else}}
-	{{goFieldName $prop.Name}} {{goType $prop}} ` + "`" + `json:"{{jsonTag $prop}}"` + "`" + `
+	{{goFieldName $prop.Name}} {{goType $prop}} ` + "`" + `json:"{{jsonTag $prop (goType $prop)}}"` + "`" + `
 {{- end}}
 {{end}}
 {{- end}}
@@ -149,7 +149,7 @@ type {{.EntityName}}Status struct {
 	// ObservedGeneration is the most recent generation observed
 	//
 	// +optional
-	ObservedGeneration int64 ` + "`" + `json:"observedGeneration,omitempty"` + "`" + `
+	ObservedGeneration int64 ` + "`" + `json:"observedGeneration,omitzero"` + "`" + `
 }
 `
 

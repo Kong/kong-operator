@@ -880,7 +880,7 @@ func (g *Generator) writeSchemaTypeField(buf *strings.Builder, prop *parser.Prop
 	if len(prop.OneOf) > 0 {
 		goType = "*" + typeName + goFieldName(prop.Name)
 	}
-	fmt.Fprintf(buf, "\t%s %s `json:\"%s\"`\n", goFieldName(prop.Name), goType, jsonTag(prop))
+	fmt.Fprintf(buf, "\t%s %s `json:\"%s\"`\n", goFieldName(prop.Name), goType, jsonTag(prop, goType))
 }
 
 // writeNestedInlineTypes emits Go type definitions for any property that is an
@@ -1167,14 +1167,14 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 
 func (g *Generator) generateCRDTypeTests(entityName string, schema *parser.Schema) string {
 	unionSpecs := buildCRDAPISpecUnionFieldSpecs(schema)
-	if len(unionSpecs) == 0 {
-		return ""
+	var wrapperSpecs []unionWrapperTestSpec
+	if len(unionSpecs) > 0 {
+		wrapperSpecs = []unionWrapperTestSpec{{
+			StructTypeName: entityName + "APISpec",
+			Fields:         unionSpecs,
+		}}
 	}
-
-	return emitUnionTests(g.config.APIVersion, unionSpecs, []unionWrapperTestSpec{{
-		StructTypeName: entityName + "APISpec",
-		Fields:         unionSpecs,
-	}})
+	return emitUnionTests(g.config.APIVersion, unionSpecs, wrapperSpecs, []string{entityName + "APISpec"})
 }
 
 func (g *Generator) generateSchemaTypesTests(refs map[string]bool, parsed *parser.ParsedSpec) string {
@@ -1187,6 +1187,7 @@ func (g *Generator) generateSchemaTypesTests(refs map[string]bool, parsed *parse
 	unionSpecs := make([]unionFieldSpec, 0)
 	seenUnionTypes := make(map[string]struct{})
 	wrapperSpecs := make([]unionWrapperTestSpec, 0)
+	var marshalTestTypes []string
 
 	for _, refName := range refNames {
 		schema, ok := parsed.Schemas[refName]
@@ -1195,6 +1196,11 @@ func (g *Generator) generateSchemaTypesTests(refs map[string]bool, parsed *parse
 		}
 
 		goName := fixInitialisms(refName)
+
+		if len(schema.Properties) > 0 {
+			marshalTestTypes = append(marshalTestTypes, goName)
+		}
+
 		if hasRefVariants(schema.OneOf) && schema.Discriminator != "" {
 			rootSpec := buildUnionFieldSpec(goName, goName, refName, &parser.Property{
 				Name:                 goName,
@@ -1218,7 +1224,7 @@ func (g *Generator) generateSchemaTypesTests(refs map[string]bool, parsed *parse
 		})
 	}
 
-	return emitUnionTests(g.config.APIVersion, unionSpecs, wrapperSpecs)
+	return emitUnionTests(g.config.APIVersion, unionSpecs, wrapperSpecs, marshalTestTypes)
 }
 
 func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string, error) {
@@ -1669,19 +1675,33 @@ func emitUnionWrapperUnmarshalJSON(structTypeName string, fields []unionFieldSpe
 	return buf.String()
 }
 
-func emitUnionTests(pkgName string, unionSpecs []unionFieldSpec, wrapperSpecs []unionWrapperTestSpec) string {
-	if len(unionSpecs) == 0 && len(wrapperSpecs) == 0 {
+func emitUnionTests(pkgName string, unionSpecs []unionFieldSpec, wrapperSpecs []unionWrapperTestSpec, marshalTestTypes []string) string {
+	if len(unionSpecs) == 0 && len(wrapperSpecs) == 0 && len(marshalTestTypes) == 0 {
 		return ""
 	}
 
 	var buf strings.Builder
 	fmt.Fprintf(&buf, "%s\n\npackage %s\n\n", sharedGeneratedFilePreamble, pkgName)
 	buf.WriteString("import (\n")
-	if len(wrapperSpecs) > 0 {
+	if len(wrapperSpecs) > 0 || len(marshalTestTypes) > 0 {
 		buf.WriteString("\t\"encoding/json\"\n")
 	}
 	buf.WriteString("\t\"testing\"\n")
 	buf.WriteString(")\n\n")
+
+	for _, typeName := range marshalTestTypes {
+		fmt.Fprintf(&buf, "func Test%s_MarshalEmpty(t *testing.T) {\n", typeName)
+		buf.WriteString("\tt.Parallel()\n\n")
+		fmt.Fprintf(&buf, "\tvar spec %s\n", typeName)
+		buf.WriteString("\tout, err := json.Marshal(spec)\n")
+		buf.WriteString("\tif err != nil {\n")
+		buf.WriteString("\t\tt.Fatalf(\"json.Marshal() error = %v\", err)\n")
+		buf.WriteString("\t}\n")
+		buf.WriteString("\tif got, want := string(out), \"{}\"; got != want {\n")
+		buf.WriteString("\t\tt.Fatalf(\"empty spec must marshal to {}: got %q, want %q\", got, want)\n")
+		buf.WriteString("\t}\n")
+		buf.WriteString("}\n\n")
+	}
 
 	for _, unionSpec := range unionSpecs {
 		fmt.Fprintf(&buf, "func Test%sUnmarshalJSON_NilReceiver(t *testing.T) {\n", unionSpec.TypeName)
@@ -3116,12 +3136,24 @@ func lowerCamelCase(s string) string {
 	return strings.ToLower(s[:1]) + s[1:]
 }
 
+// tagOmitSuffix returns the JSON tag omit suffix appropriate for a resolved Go type.
+// Pointer, slice, and map types use omitempty (zero value is nil/empty, omitempty works).
+// All other types (named structs, primitives, type aliases) use omitzero — omitempty
+// has no effect on struct types, producing {"namespace":{}} for zero-valued struct fields.
+func tagOmitSuffix(resolvedGoType string) string {
+	if strings.HasPrefix(resolvedGoType, "*") ||
+		strings.HasPrefix(resolvedGoType, "[]") ||
+		strings.HasPrefix(resolvedGoType, "map[") {
+		return ",omitempty"
+	}
+	return ",omitzero"
+}
+
 // jsonTag generates the json struct tag using camelCase for K8s wire format.
-func jsonTag(prop *parser.Property) string {
-	tag := jsonName(prop.Name)
-	// K8s API best practice: all fields should have omitempty
-	tag += ",omitempty"
-	return tag
+// resolvedGoType is the Go type string as it appears in the emitted field declaration
+// (e.g. "string", "*KonnectEntityRef", "[]Foo", "VirtualClusterNamespace").
+func jsonTag(prop *parser.Property, resolvedGoType string) string {
+	return jsonName(prop.Name) + tagOmitSuffix(resolvedGoType)
 }
 
 // isRefProperty checks if a property is a reference.

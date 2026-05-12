@@ -72,7 +72,7 @@ type EventGatewayListenerAPISpec struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=512
-	Description string `json:"description,omitempty"`
+	Description string `json:"description,omitzero"`
 
 	// Labels store metadata of an entity that can be used for filtering an entity
 	// list or for searching across entity types.
@@ -83,14 +83,14 @@ type EventGatewayListenerAPISpec struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxProperties=50
-	Labels Labels `json:"labels,omitempty"`
+	Labels Labels `json:"labels,omitzero"`
 
 	// The unique name of the listener.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=255
-	Name string `json:"name,omitempty"`
+	Name string `json:"name,omitzero"`
 
 	// Which port or ports to listen on.
 	// There can be multiple ways to define ports:
@@ -129,5 +129,5 @@ type EventGatewayListenerStatus struct {
 	// ObservedGeneration is the most recent generation observed
 	//
 	// +optional
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	ObservedGeneration int64 `json:"observedGeneration,omitzero"`
 }

@@ -74,19 +74,19 @@ type KonnectEventDataPlaneCertificateAPISpec struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
-	Certificate string `json:"certificate,omitempty"`
+	Certificate string `json:"certificate,omitzero"`
 
 	// A description of the certificate.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	Description string `json:"description,omitempty"`
+	Description string `json:"description,omitzero"`
 
 	// The name to identify of the certificate.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	Name string `json:"name,omitempty"`
+	Name string `json:"name,omitzero"`
 }
 
 // KonnectEventDataPlaneCertificateStatus defines the observed state of KonnectEventDataPlaneCertificate.
@@ -114,5 +114,5 @@ type KonnectEventDataPlaneCertificateStatus struct {
 	// ObservedGeneration is the most recent generation observed
 	//
 	// +optional
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	ObservedGeneration int64 `json:"observedGeneration,omitzero"`
 }

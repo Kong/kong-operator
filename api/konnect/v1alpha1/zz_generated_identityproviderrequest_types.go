@@ -66,20 +66,20 @@ type IdentityProviderRequestAPISpec struct {
 	//
 	//
 	// +optional
-	Enabled IdentityProviderEnabled `json:"enabled,omitempty"`
+	Enabled IdentityProviderEnabled `json:"enabled,omitzero"`
 
 	// The path used for initiating login requests with the identity provider.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	LoginPath IdentityProviderLoginPath `json:"loginPath,omitempty"`
+	LoginPath IdentityProviderLoginPath `json:"loginPath,omitzero"`
 
 	// Specifies the type of identity provider.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=oidc;saml
-	Type IdentityProviderType `json:"type,omitempty"`
+	Type IdentityProviderType `json:"type,omitzero"`
 }
 
 // IdentityProviderRequestStatus defines the observed state of IdentityProviderRequest.
@@ -107,7 +107,7 @@ type IdentityProviderRequestStatus struct {
 	// ObservedGeneration is the most recent generation observed
 	//
 	// +optional
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	ObservedGeneration int64 `json:"observedGeneration,omitzero"`
 }
 
 // IdentityProviderRequestConfig represents a union type for config.
