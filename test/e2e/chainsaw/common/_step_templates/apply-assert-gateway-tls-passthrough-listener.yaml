@@ -1,18 +1,15 @@
-# Template for creating and asserting a Gateway with a TLS (L4) listener.
+# Template for creating and asserting a Gateway with a TLS passthrough (L4) listener.
 #
 # Required bindings:
 #   - gateway_name: Name of the gateway to create.
 #   - test_name: Test name used to compose the gateway class name.
 #   - namespace: Namespace where the gateway will be created.
 #   - listener_tls_port: TLS listener port (e.g., "8899").
-#   - tls_mode: the mode of decrypting TLS connection, "Passthrough" or "Terminate".
 #   - sni_hostname: SNI hostname for the TLS listener (e.g., "*.example.com").
-#   - cert_secret_name: Name of the TLS secret.
-#   - cert_secret_namespace: Namespace of the TLS secret.
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: StepTemplate
 metadata:
-  name: apply-assert-gateway-tls-listener
+  name: apply-assert-gateway-tls-passthrough-listener
 spec:
   try:
     - apply:
@@ -25,15 +22,13 @@ spec:
           spec:
             gatewayClassName: (join('-', [($test_name), 'gateway-class']))
             listeners:
-            - name: tls
+            - name: tls-passthrough
               protocol: TLS
               port: (to_number($listener_tls_port))
               hostname: ($sni_hostname)
               tls:
-                mode: ($tls_mode)
-                certificateRefs:
-                - name: ($cert_secret_name)
-                  namespace: ($cert_secret_namespace)
+                mode: Passthrough
+                # Passthrough mode does not require certificate references.
 
     - assert:
         resource:
