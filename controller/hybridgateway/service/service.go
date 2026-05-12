@@ -296,7 +296,7 @@ func extractTLSVerifyFromBackendRef(
 	v, err := metadata.ExtractTLSVerify(svc.GetAnnotations())
 	if err != nil {
 		log.Error(logger, err, "Failed to parse tls-verify annotation, ignoring annotation value",
-			"WARNING", "The malformed annotations will be treated as errors in future versions, please fix the annotation value to be a valid boolean")
+			"WARNING", "The malformed annotations will be treated as errors in versions from KO 2.3, please fix the annotation value to be a valid boolean")
 	}
 	if v == nil {
 		return nil
@@ -352,7 +352,7 @@ func extractTLSVerifyDepthFromBackendRef(
 	v, err := metadata.ExtractTLSVerifyDepth(svc.GetAnnotations())
 	if err != nil {
 		log.Error(logger, err, "Failed to parse tls-verify-depth annotation, ignoring annotation value",
-			"WARNING", "The malformed annotations will be treated as errors in future versions, please fix the annotation value to be a non-negative int")
+			"WARNING", "The malformed annotations will be treated as errors in versions from KO 2.3, please fix the annotation value to be a non-negative integer")
 	}
 	if v == nil {
 		return nil
@@ -410,7 +410,7 @@ func extractConnectTimeoutFromBackendRef(
 	v, err := metadata.ExtractConnectTimeout(svc.GetAnnotations())
 	if err != nil {
 		log.Error(logger, err, "Failed to parse connect-timeout annotation, ignoring annotation value",
-			"WARNING", "The malformed annotations will be treated as errors in future versions, please fix the annotation value to be a non-negative int")
+			"WARNING", "The malformed annotations will be treated as errors in versions from KO 2.3, please fix the annotation value to be a non-negative integer")
 	}
 	if v == nil {
 		return nil
@@ -468,7 +468,7 @@ func extractReadTimeoutFromBackendRef(
 	v, err := metadata.ExtractReadTimeout(svc.GetAnnotations())
 	if err != nil {
 		log.Error(logger, err, "Failed to parse read-timeout annotation, ignoring annotation value",
-			"WARNING", "The malformed annotations will be treated as errors in future versions, please fix the annotation value to be a non-negative int")
+			"WARNING", "The malformed annotations will be treated as errors in versions from KO 2.3, please fix the annotation value to be a non-negative integer")
 	}
 	if v == nil {
 		return nil
@@ -524,7 +524,7 @@ func extractWriteTimeoutFromBackendRef(
 	v, err := metadata.ExtractWriteTimeout(svc.GetAnnotations())
 	if err != nil {
 		log.Error(logger, err, "Failed to parse write-timeout annotation, ignoring annotation value",
-			"WARNING", "The malformed annotations will be treated as errors in future versions, please fix the annotation value to be a non-negative int")
+			"WARNING", "The malformed annotations will be treated as errors in versions from KO 2.3, please fix the annotation value to be a non-negative integer")
 	}
 	if v == nil {
 		return nil
@@ -580,7 +580,7 @@ func extractRetriesFromBackendRef(
 	v, err := metadata.ExtractRetries(svc.GetAnnotations())
 	if err != nil {
 		log.Error(logger, err, "Failed to parse retries annotation, ignoring annotation value",
-			"WARNING", "The malformed annotations will be treated as errors in future versions, please fix the annotation value to be a non-negative int")
+			"WARNING", "The malformed annotations will be treated as errors in versions from KO 2.3, please fix the annotation value to be a non-negative integer")
 	}
 	if v == nil {
 		return nil

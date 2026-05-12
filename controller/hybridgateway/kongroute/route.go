@@ -88,7 +88,9 @@ func RoutesForHTTPRouteRule(
 	cp *commonv1alpha1.ControlPlaneRef,
 	serviceName string,
 	hostnames []string,
-) (kongRoutes []*configurationv1alpha1.KongRoute, _ error) {
+) ([]*configurationv1alpha1.KongRoute, error) {
+	var kongRoutes []*configurationv1alpha1.KongRoute
+
 	// If the rule has no matches, create a single catch-all route.
 	// Kong requires at least one matcher; use "/" path to represent catch-all.
 	if len(rule.Matches) == 0 {

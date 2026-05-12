@@ -80,8 +80,8 @@ func ExtractPath(anns map[string]string) string {
 
 // ExtractTLSVerify extracts the tls-verify annotation value.
 // Returns a *bool set to the parsed value when the annotation is present and parseable,
-// or nil when absent or unparseable.
-// and an optional error
+// or nil when absent or unparseable,
+// and a non-nil error when the annotation cannot be parsed.
 // This mirrors ingress-controller/internal/annotations.ExtractTLSVerify.
 func ExtractTLSVerify(anns map[string]string) (*bool, error) {
 	v, err := parseAnnotationBool(anns, tlsVerifyKey)
@@ -94,7 +94,7 @@ func ExtractTLSVerify(anns map[string]string) (*bool, error) {
 // ExtractTLSVerifyDepth extracts the tls-verify-depth annotation value.
 // Returns a *int64 set to the parsed value when the annotation is present and parseable as a
 // non-negative integer, or nil when absent or unparseable,
-// and an optional error.
+// and a non-nil error when the annotation cannot be parsed.
 // This mirrors ingress-controller/internal/annotations.ExtractTLSVerifyDepth.
 func ExtractTLSVerifyDepth(anns map[string]string) (*int64, error) {
 	depth, err := parseAnnotationInt(anns, tlsVerifyDepthKey)
@@ -106,7 +106,7 @@ func ExtractTLSVerifyDepth(anns map[string]string) (*int64, error) {
 
 // ExtractConnectTimeout extracts the connect-timeout annotation value (milliseconds).
 // Returns a non-nil pointer when the annotation is present and parseable as a non-negative integer,
-// and an optional error.
+// and a non-nil error when the annotation cannot be parsed.
 // This mirrors ingress-controller/internal/annotations.ExtractConnectTimeout.
 func ExtractConnectTimeout(anns map[string]string) (*int64, error) {
 	timeout, err := parseAnnotationInt(anns, connectTimeoutKey)
@@ -118,7 +118,7 @@ func ExtractConnectTimeout(anns map[string]string) (*int64, error) {
 
 // ExtractReadTimeout extracts the read-timeout annotation value (milliseconds).
 // Returns a non-nil pointer when the annotation is present and parseable as a non-negative integer,
-// and an optional error.
+// and a non-nil error when the annotation cannot be parsed.
 // This mirrors ingress-controller/internal/annotations.ExtractReadTimeout.
 func ExtractReadTimeout(anns map[string]string) (*int64, error) {
 	timeout, err := parseAnnotationInt(anns, readTimeoutKey)
@@ -141,7 +141,7 @@ func ExtractWriteTimeout(anns map[string]string) (*int64, error) {
 
 // ExtractRetries extracts the retries annotation value.
 // Returns a non-nil pointer when the annotation is present and parseable as a non-negative integer,
-// and an optional error.
+// and a non-nil error when the annotation cannot be parsed.
 // This mirrors ingress-controller/internal/annotations.ExtractRetries.
 func ExtractRetries(anns map[string]string) (*int64, error) {
 	retries, err := parseAnnotationInt(anns, retriesKey)
@@ -176,7 +176,7 @@ func IsValidProtocol(protocol string) bool {
 // parseAnnotationBool extracts the key from annotations.
 // Returns a *bool set to the parsed value when the annotation is present and parseable,
 // or nil when absent or unparseable,
-// and an optional error.
+// and a non-nil error when the annotation cannot be parsed.
 func parseAnnotationBool(anns map[string]string, key string) (*bool, error) {
 	if anns == nil {
 		return nil, nil
