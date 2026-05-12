@@ -14,7 +14,7 @@ spec:
 kind: PortalEmailConfig
 apiVersion: konnect.konghq.com/v1alpha1
 metadata:
-  name: portal1
+  name: portal1-email-config
   namespace: default
 spec:
   portalRef:

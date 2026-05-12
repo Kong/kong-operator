@@ -3343,6 +3343,86 @@ func TestGenerateEntityOpsFile_ParentScopedSingleton(t *testing.T) {
 	assert.NotContains(t, content, "id := obj.GetKonnectStatus().GetKonnectID()")
 }
 
+// TestGenerateEntityOpsFile_SingletonNoID verifies correct code generation for
+// singleton sub-resources whose Konnect response has no "id" field (e.g.
+// PortalCustomDomain). Create must not call SetKonnectID. getForUID must call
+// the singular GET and match via configured matchFields.
+func TestGenerateEntityOpsFile_SingletonNoID(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"PortalCustomDomain": {IsRoot: new(false)},
+		},
+	})
+
+	// DELETE /portals/{portalId}/custom-domain and PATCH /portals/{portalId}/custom-domain
+	// both have only the parent ID — no per-resource ID segment.
+	// RespHasID=false because the response component has no "id" field.
+	schema := &parser.Schema{
+		OperationID:        "create-portal-custom-domain",
+		Tags:               []string{"Portal Custom Domains"},
+		SuccessResponseRef: "PortalCustomDomain",
+		RespHasID:          false,
+		Dependencies: []*parser.Dependency{
+			{ParamName: "portalId", EntityName: "Portal"},
+		},
+		UpdateOperationID:      "update-portal-custom-domain",
+		UpdateTags:             []string{"Portal Custom Domains"},
+		UpdatePathParams:       []string{"portalId"},
+		DeleteOperationID:      "delete-portal-custom-domain",
+		DeleteTags:             []string{"Portal Custom Domains"},
+		DeletePathParams:       []string{"portalId"},
+		ListOperationID:        "get-portal-custom-domain",
+		ListTags:               []string{"Portal Custom Domains"},
+		ListSuccessResponseRef: "PortalCustomDomain",
+	}
+	opsConfig := &config.EntityOpsConfig{
+		GetForUID: &config.GetForUIDConfig{
+			MatchFields: []config.GetForUIDMatchField{
+				{
+					ObjectField:   "Spec.APISpec.Hostname",
+					ResponseField: "Hostname",
+				},
+			},
+		},
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreatePortalCustomDomainRequest"},
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.UpdatePortalCustomDomainRequest"},
+			"delete": {},
+		},
+		SDK: &config.OpSDKConfig{
+			Interface: "github.com/Kong/sdk-konnect-go.PortalCustomDomainsSDK",
+			FieldName: "PortalCustomDomains",
+		},
+	}
+
+	res, err := g.generateEntityOpsFile("PortalCustomDomain", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, res.File)
+
+	content := res.File.Content
+
+	// Create: nil-response guard present but no SetKonnectID.
+	assert.Contains(t, content, "resp.PortalCustomDomain == nil")
+	assert.NotContains(t, content, "SetKonnectID")
+
+	// getForUID: calls singular GET not a list, matches hostname, returns hostname.
+	assert.Contains(t, content, "sdk.GetPortalCustomDomain(ctx, parentID)")
+	assert.Contains(t, content, "matchStringField(obj.Spec.APISpec.Hostname, entry.Hostname)")
+	assert.Contains(t, content, "return entry.Hostname, nil")
+
+	// No list-style collection iteration.
+	assert.NotContains(t, content, "for _, entry := range")
+	assert.NotContains(t, content, "entry.GetID()")
+
+	// No sdkkonnectops import (singleton GET uses positional args, not a request struct).
+	assert.NotContains(t, content, `sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"`)
+
+	// No unreachable fallback after early return.
+	assert.NotContains(t, content, "return entry.Hostname, nil\n\n\treturn \"\", EntityWithMatchingUIDNotFoundError")
+}
+
 func TestGenerateOpsUpdate_RootEntity(t *testing.T) {
 	g := NewGenerator(Config{
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",

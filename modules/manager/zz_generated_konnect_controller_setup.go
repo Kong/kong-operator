@@ -18,6 +18,7 @@ func generatedControllersForKonnectEntities(
 		newKonnectEntityController[konnectv1alpha1.KonnectEventDataPlaneCertificate](controllerFactory),
 		newKonnectEntityController[konnectv1alpha1.KonnectEventGateway](controllerFactory),
 		newKonnectEntityController[konnectv1alpha1.Portal](controllerFactory),
+		newKonnectEntityController[konnectv1alpha1.PortalCustomDomain](controllerFactory),
 		newKonnectEntityController[konnectv1alpha1.PortalEmailConfig](controllerFactory),
 		newKonnectEntityController[konnectv1alpha1.PortalIPAllowList](controllerFactory),
 		newKonnectEntityController[konnectv1alpha1.PortalPage](controllerFactory),

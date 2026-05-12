@@ -64,6 +64,7 @@ func (g *Generator) generateEntityOpsFile(
 		//     match strategy: labels, name, match fields, or UID tag filter).
 		//     The fallback else-branch emits no SDK call and therefore no import.
 		getForUIDNeedsOpsImport := getForUIDData != nil &&
+			!getForUIDData.SingletonNoID &&
 			(getForUIDData.UseUIDTagFilter || len(getForUIDData.MatchFields) > 0 ||
 				getForUIDData.HasLabels || getForUIDData.HasName)
 		needsOpsImport := (updateData != nil && updateData.UpdateWrapped) ||
@@ -395,6 +396,34 @@ func pascalFromKebab(s string) string {
 		b.WriteString(part[1:])
 	}
 	return fixInitialisms(b.String())
+}
+
+// isSingletonNoID reports whether the entity is a singleton sub-resource whose
+// Konnect create/get response does not carry an "id" field. These are resources
+// at paths where the DELETE and UPDATE operations omit the per-resource ID
+// segment (i.e. keyed solely by parent ID) AND the 2xx create response has no
+// "id" property.
+//
+// We require DeletePathParams to be non-empty so that schemas constructed
+// without parser output (e.g. in unit tests) are not erroneously treated as
+// singletons.
+func isSingletonNoID(schema *parser.Schema) bool {
+	if len(schema.Dependencies) == 0 {
+		return false
+	}
+	// A non-empty DeletePathParams must not exceed the number of parent
+	// dependencies — if it does, there is a per-resource ID in the DELETE path,
+	// meaning this is a normal collection resource.
+	if len(schema.DeletePathParams) == 0 {
+		return false
+	}
+	if len(schema.DeletePathParams) > len(schema.Dependencies) {
+		return false
+	}
+	if len(schema.UpdatePathParams) > len(schema.Dependencies) {
+		return false
+	}
+	return !schema.RespHasID
 }
 
 // metadataFields reports whether the request body schema declares a "tags"

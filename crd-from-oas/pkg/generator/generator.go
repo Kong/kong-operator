@@ -1123,6 +1123,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		HasRootReconciler         bool
 		ImmediateParentDependency *parser.Dependency
 		Categories                []string
+		SingletonNoID             bool
 	}{
 		EntityName:                entityName,
 		Schema:                    schema,
@@ -1135,6 +1136,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		HasRootReconciler:         hasRootReconciler,
 		ImmediateParentDependency: rootRefDependency(schema),
 		Categories:                categories,
+		SingletonNoID:             isSingletonNoID(schema),
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
