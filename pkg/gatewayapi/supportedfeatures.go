@@ -40,6 +40,9 @@ var commonSupportedFeatures = sets.New(
 	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/5868
 	// Temporarily disabled and tracking through the following issue.
 	// features.SupportHTTPRouteBackendTimeout,
+
+	// TLSRoute extended.
+	features.SupportTLSRouteModeTerminate,
 )
 
 // GetSupportedFeatures returns the supported features for the given router type.
