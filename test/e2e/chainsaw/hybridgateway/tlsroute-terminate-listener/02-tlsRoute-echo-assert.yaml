@@ -1,0 +1,37 @@
+---
+# Assert TLSRoute is accepted and programmed.
+#
+# Required bindings:
+#   - test_name: The test name label to match.
+#   - gateway_name: The Gateway the TLSRoute is attached to.
+apiVersion: gateway.networking.k8s.io/v1
+kind: TLSRoute
+metadata:
+  (labels."chainsaw/test" == ($test_name)): true
+  namespace: ($namespace)
+status:
+  parents:
+    - parentRef:
+        name: ($gateway_name)
+        group: gateway.networking.k8s.io
+        kind: Gateway
+      controllerName: konghq.com/gateway-operator
+      # Filter conditions array to check for all required conditions.
+      (conditions[?type == 'Accepted']):
+        - status: "True"
+          reason: Accepted
+      (conditions[?type == 'ResolvedRefs']):
+        - status: "True"
+          reason: ResolvedRefs
+      (conditions[?type == 'KongRouteProgrammed']):
+        - status: "True"
+          reason: KongRouteProgrammed
+      (conditions[?type == 'KongServiceProgrammed']):
+        - status: "True"
+          reason: KongServiceProgrammed
+      (conditions[?type == 'KongUpstreamProgrammed']):
+        - status: "True"
+          reason: KongUpstreamProgrammed
+      (conditions[?type == 'KongTargetProgrammed']):
+        - status: "True"
+          reason: KongTargetProgrammed
