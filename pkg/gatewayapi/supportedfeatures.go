@@ -25,6 +25,7 @@ var commonSupportedFeatures = sets.New(
 	// Core features.
 	features.SupportGateway,
 	features.SupportHTTPRoute,
+	features.SupportTLSRoute,
 	features.SupportGRPCRoute,
 	features.SupportReferenceGrant,
 
