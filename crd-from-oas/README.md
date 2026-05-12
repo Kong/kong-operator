@@ -10,7 +10,7 @@ they stay up-to-date with the API changes.
 
 ```yaml
 apiGroupVersions:
-  x-konnect.konghq.com/v1alpha1:
+  konnect.konghq.com/v1alpha1:
     commonTypes:
       objectRef:
         import:
