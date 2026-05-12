@@ -66,7 +66,6 @@ type IdentityProviderRequestAPISpec struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:default=Disabled
 	Enabled IdentityProviderEnabled `json:"enabled,omitempty"`
 
 	// The path used for initiating login requests with the identity provider.

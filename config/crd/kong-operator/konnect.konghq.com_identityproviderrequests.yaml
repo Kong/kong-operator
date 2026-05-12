@@ -80,19 +80,16 @@ spec:
                               authentication.
                             properties:
                               email:
-                                default: email
                                 description: The claim mapping for the user's email
                                   address.
                                 maxLength: 253
                                 type: string
                               groups:
-                                default: groups
                                 description: The claim mapping for the user's group
                                   membership information.
                                 maxLength: 253
                                 type: string
                               name:
-                                default: name
                                 description: The claim mapping for the user's name.
                                 maxLength: 253
                                 type: string
@@ -116,10 +113,6 @@ spec:
                             minLength: 1
                             type: string
                           scopes:
-                            default:
-                            - email
-                            - openid
-                            - profile
                             description: |-
                               The scopes requested by your application when authenticating with the
                               identity provider.
@@ -158,7 +151,6 @@ spec:
                     - type
                     type: object
                   enabled:
-                    default: Disabled
                     description: |-
                       Indicates whether the identity provider is enabled.
                       Only one identity provider can be active at a time, such as SAML or OIDC.

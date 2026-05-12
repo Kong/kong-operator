@@ -83,7 +83,6 @@ type EventGatewayVirtualClusterAPISpec struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=512
-	// +kubebuilder:default=""
 	Description string `json:"description,omitempty"`
 
 	// The backend cluster associated with the virtual cluster.
