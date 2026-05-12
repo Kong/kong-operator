@@ -1057,11 +1057,11 @@ func TestGenerateSchemaTypes_OmitsDiscriminatorFieldOnUnionMembersOnly(t *testin
 		"StandaloneTypeCarrier": true,
 	}, parsed, nil)
 
-	assert.NotContains(t, generatedStructBlock(t, content, "RootVariantAlpha"), "Type string `json:\"type,omitempty\"`")
-	assert.NotContains(t, generatedStructBlock(t, content, "RootVariantBeta"), "Type string `json:\"type,omitempty\"`")
-	assert.NotContains(t, generatedStructBlock(t, content, "PropertyVariantAlpha"), "Type string `json:\"type,omitempty\"`")
-	assert.NotContains(t, generatedStructBlock(t, content, "PropertyVariantBeta"), "Type string `json:\"type,omitempty\"`")
-	assert.Contains(t, generatedStructBlock(t, content, "StandaloneTypeCarrier"), "Type string `json:\"type,omitempty\"`")
+	assert.NotContains(t, generatedStructBlock(t, content, "RootVariantAlpha"), "Type string")
+	assert.NotContains(t, generatedStructBlock(t, content, "RootVariantBeta"), "Type string")
+	assert.NotContains(t, generatedStructBlock(t, content, "PropertyVariantAlpha"), "Type string")
+	assert.NotContains(t, generatedStructBlock(t, content, "PropertyVariantBeta"), "Type string")
+	assert.Contains(t, generatedStructBlock(t, content, "StandaloneTypeCarrier"), "Type string `json:\"type,omitzero\"`")
 
 	_, err := format.Source([]byte(content))
 	require.NoError(t, err)
@@ -1077,6 +1077,62 @@ func generatedStructBlock(t *testing.T, content, typeName string) string {
 	require.NotEqual(t, -1, end, "type %s struct end not found", typeName)
 
 	return content[start : start+end+3]
+}
+
+func TestTagOmitSuffix(t *testing.T) {
+	tests := []struct {
+		goType string
+		want   string
+	}{
+		{"string", ",omitzero"},
+		{"int64", ",omitzero"},
+		{"float64", ",omitzero"},
+		{"VirtualClusterNamespace", ",omitzero"},
+		{"VirtualClusterName", ",omitzero"},
+		{"apiextensionsv1.JSON", ",omitzero"},
+		{"*string", ",omitempty"},
+		{"*KonnectEntityRef", ",omitempty"},
+		{"[]VirtualClusterTopicAlias", ",omitempty"},
+		{"[]metav1.Condition", ",omitempty"},
+		{"map[string]Labels", ",omitempty"},
+		{"map[string]string", ",omitempty"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.goType, func(t *testing.T) {
+			assert.Equal(t, tc.want, tagOmitSuffix(tc.goType))
+		})
+	}
+}
+
+func TestGenerateSchemaTypes_EmitsOmitzeroForStructFields(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	parsed := &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"VirtualClusterNamespace": {
+				Name: "VirtualClusterNamespace",
+				Properties: []*parser.Property{
+					{Name: "prefix", Type: "string"},
+					{Name: "mode", Type: "string"},
+				},
+			},
+			"ParentSchema": {
+				Name: "ParentSchema",
+				Properties: []*parser.Property{
+					{Name: "namespace", RefName: "VirtualClusterNamespace"},
+				},
+			},
+		},
+	}
+
+	content := g.generateSchemaTypes(map[string]bool{
+		"VirtualClusterNamespace": true,
+		"ParentSchema":            true,
+	}, parsed, nil)
+
+	assert.Contains(t, content, "Namespace VirtualClusterNamespace `json:\"namespace,omitzero\"`")
+	assert.NotContains(t, content, "Namespace VirtualClusterNamespace `json:\"namespace,omitempty\"`")
+	_, err := format.Source([]byte(content))
+	require.NoError(t, err)
 }
 
 func TestEntityFilePrefix(t *testing.T) {
@@ -1268,7 +1324,7 @@ func TestGenerateSchemaTypes_AddsKubebuilderTags(t *testing.T) {
 
 	assert.Contains(t, content, "// +optional")
 	assert.Contains(t, content, fmt.Sprintf("// +kubebuilder:validation:MaxLength=%d", defaultMaxLength))
-	assert.Contains(t, content, "ProviderType string `json:\"providerType,omitempty\"`")
+	assert.Contains(t, content, "ProviderType string `json:\"providerType,omitzero\"`")
 }
 
 func TestBuildSchemaTypeFieldConfig_NestedInlineObject(t *testing.T) {

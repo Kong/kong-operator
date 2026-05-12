@@ -60,7 +60,7 @@ type PortalAPISpec struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
-	AuthenticationEnabled string `json:"authenticationEnabled,omitempty"`
+	AuthenticationEnabled string `json:"authenticationEnabled,omitzero"`
 
 	// Whether requests from applications to register for APIs will be
 	// automatically approved, or if they will be set to pending until approved by
@@ -68,14 +68,14 @@ type PortalAPISpec struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
-	AutoApproveApplications string `json:"autoApproveApplications,omitempty"`
+	AutoApproveApplications string `json:"autoApproveApplications,omitzero"`
 
 	// Whether developer account registrations will be automatically approved, or
 	// if they will be set to pending until approved by an admin.
 	//
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
-	AutoApproveDevelopers string `json:"autoApproveDevelopers,omitempty"`
+	AutoApproveDevelopers string `json:"autoApproveDevelopers,omitzero"`
 
 	// The default visibility of APIs in the portal.
 	// If set to `public`, newly published APIs are visible to unauthenticated
@@ -86,7 +86,7 @@ type PortalAPISpec struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=public;private
-	DefaultAPIVisibility string `json:"defaultAPIVisibility,omitempty"`
+	DefaultAPIVisibility string `json:"defaultAPIVisibility,omitzero"`
 
 	// The default authentication strategy for APIs published to the portal.
 	// Newly published APIs will use this authentication strategy unless overridden
@@ -106,7 +106,7 @@ type PortalAPISpec struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=public;private
-	DefaultPageVisibility string `json:"defaultPageVisibility,omitempty"`
+	DefaultPageVisibility string `json:"defaultPageVisibility,omitzero"`
 
 	// A description of the portal.
 	//
@@ -120,7 +120,7 @@ type PortalAPISpec struct {
 	// +optional
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=255
-	DisplayName string `json:"displayName,omitempty"`
+	DisplayName string `json:"displayName,omitzero"`
 
 	// Labels store metadata of an entity that can be used for filtering an entity
 	// list or for searching across entity types.
@@ -133,7 +133,7 @@ type PortalAPISpec struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxProperties=50
-	Labels LabelsUpdate `json:"labels,omitempty"`
+	Labels LabelsUpdate `json:"labels,omitzero"`
 
 	// The name of the portal, used to distinguish it from other portals.
 	// Name must be unique.
@@ -142,7 +142,7 @@ type PortalAPISpec struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=255
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="name is immutable"
-	Name string `json:"name,omitempty"`
+	Name string `json:"name,omitzero"`
 
 	// Whether the portal resources are protected by Role Based Access Control
 	// (RBAC).
@@ -152,13 +152,13 @@ type PortalAPISpec struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
-	RBACEnabled string `json:"rbacEnabled,omitempty"`
+	RBACEnabled string `json:"rbacEnabled,omitzero"`
 
 	// Whether ip allow list is enabled for the portal.
 	//
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
-	SiprEnabled string `json:"siprEnabled,omitempty"`
+	SiprEnabled string `json:"siprEnabled,omitzero"`
 }
 
 // PortalStatus defines the observed state of Portal.
@@ -181,5 +181,5 @@ type PortalStatus struct {
 	// ObservedGeneration is the most recent generation observed
 	//
 	// +optional
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	ObservedGeneration int64 `json:"observedGeneration,omitzero"`
 }

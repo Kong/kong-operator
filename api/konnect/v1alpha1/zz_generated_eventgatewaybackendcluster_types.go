@@ -70,7 +70,7 @@ type EventGatewayBackendClusterAPISpec struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=512
-	Description string `json:"description,omitempty"`
+	Description string `json:"description,omitzero"`
 
 	// If true, virtual clusters can have allow anonymous authentication and use
 	// this backend cluster.
@@ -80,7 +80,7 @@ type EventGatewayBackendClusterAPISpec struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
-	InsecureAllowAnonymousVirtualClusterAuth string `json:"insecureAllowAnonymousVirtualClusterAuth,omitempty"`
+	InsecureAllowAnonymousVirtualClusterAuth string `json:"insecureAllowAnonymousVirtualClusterAuth,omitzero"`
 
 	// Labels store metadata of an entity that can be used for filtering an entity
 	// list or for searching across entity types.
@@ -91,26 +91,26 @@ type EventGatewayBackendClusterAPISpec struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxProperties=50
-	Labels Labels `json:"labels,omitempty"`
+	Labels Labels `json:"labels,omitzero"`
 
 	// The interval at which metadata is updated in seconds.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=43200
-	MetadataUpdateIntervalSeconds BackendMetadataUpdateIntervalSeconds `json:"metadataUpdateIntervalSeconds,omitempty"`
+	MetadataUpdateIntervalSeconds BackendMetadataUpdateIntervalSeconds `json:"metadataUpdateIntervalSeconds,omitzero"`
 
 	// The unique name of the backend cluster.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=255
-	Name BackendClusterName `json:"name,omitempty"`
+	Name BackendClusterName `json:"name,omitzero"`
 
 	//
 	//
 	// +required
-	TLS BackendClusterTLS `json:"tls,omitempty"`
+	TLS BackendClusterTLS `json:"tls,omitzero"`
 }
 
 // EventGatewayBackendClusterStatus defines the observed state of EventGatewayBackendCluster.
@@ -138,7 +138,7 @@ type EventGatewayBackendClusterStatus struct {
 	// ObservedGeneration is the most recent generation observed
 	//
 	// +optional
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	ObservedGeneration int64 `json:"observedGeneration,omitzero"`
 }
 
 // EventGatewayBackendClusterAuthentication represents a union type for authentication.

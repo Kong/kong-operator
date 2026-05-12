@@ -58,7 +58,7 @@ type KonnectEventGatewayAPISpec struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=512
-	Description GatewayDescription `json:"description,omitempty"`
+	Description GatewayDescription `json:"description,omitzero"`
 
 	// Labels store metadata of an entity that can be used for filtering an entity
 	// list or for searching across entity types.
@@ -69,7 +69,7 @@ type KonnectEventGatewayAPISpec struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxProperties=50
-	Labels Labels `json:"labels,omitempty"`
+	Labels Labels `json:"labels,omitzero"`
 
 	// The minimum runtime version supported by the API.
 	// This is the lowest version of the data plane
@@ -81,14 +81,14 @@ type KonnectEventGatewayAPISpec struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^\d+\.\d+$`
-	MinRuntimeVersion MinRuntimeVersion `json:"minRuntimeVersion,omitempty"`
+	MinRuntimeVersion MinRuntimeVersion `json:"minRuntimeVersion,omitzero"`
 
 	// The name of the Gateway.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=255
-	Name GatewayName `json:"name,omitempty"`
+	Name GatewayName `json:"name,omitzero"`
 }
 
 // KonnectEventGatewayStatus defines the observed state of KonnectEventGateway.
@@ -111,5 +111,5 @@ type KonnectEventGatewayStatus struct {
 	// ObservedGeneration is the most recent generation observed
 	//
 	// +optional
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	ObservedGeneration int64 `json:"observedGeneration,omitzero"`
 }

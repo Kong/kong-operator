@@ -13,20 +13,20 @@ type SecretKeyRef struct {
 	// +required
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:MinLength=1
-	Name string `json:"name,omitempty"`
+	Name string `json:"name,omitzero"`
 
 	// Key is the key within the Secret
 	//
 	// +required
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:MinLength=1
-	Key string `json:"key,omitempty"`
+	Key string `json:"key,omitzero"`
 
 	// Namespace is the namespace of the Secret
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=63
-	Namespace string `json:"namespace,omitempty"`
+	Namespace string `json:"namespace,omitzero"`
 }
 
 // ConfigMapKeyRef is a reference to a key in a ConfigMap
@@ -36,20 +36,20 @@ type ConfigMapKeyRef struct {
 	// +required
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:MinLength=1
-	Name string `json:"name,omitempty"`
+	Name string `json:"name,omitzero"`
 
 	// Key is the key within the ConfigMap
 	//
 	// +required
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:MinLength=1
-	Key string `json:"key,omitempty"`
+	Key string `json:"key,omitzero"`
 
 	// Namespace is the namespace of the ConfigMap
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=63
-	Namespace string `json:"namespace,omitempty"`
+	Namespace string `json:"namespace,omitzero"`
 }
 
 // KonnectEntityStatus represents the status of a Konnect entity.
@@ -61,7 +61,7 @@ type KonnectEntityRef struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=256
-	ID string `json:"id,omitempty"`
+	ID string `json:"id,omitzero"`
 }
 
 // SensitiveDataSourceType is the type of source for the sensitive data.
