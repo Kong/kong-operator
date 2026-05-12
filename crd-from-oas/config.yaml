@@ -77,6 +77,9 @@ apiGroupVersions:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayListenerPoliciesSDK
             fieldName: EventGatewayListenerPolicies
+          # SDK list responses are returned as a bare slice, so getForUID is
+          # hand-written in ops_eventgatewaylistenerpolicy_manual.go.
+          skipGetForUID: true
           create:
             path: github.com/Kong/sdk-konnect-go/models/operations.CreateEventGatewayListenerPolicyRequest
           update:

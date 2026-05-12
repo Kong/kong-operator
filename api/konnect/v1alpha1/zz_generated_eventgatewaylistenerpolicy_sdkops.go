@@ -18,24 +18,24 @@ type EventGatewayListenerPolicySDKOpsBoolField struct {
 
 var EventGatewayListenerPolicySDKOpsBoolFields = []EventGatewayListenerPolicySDKOpsBoolField{
 	{
-		Label: "eventgatewaytlslisten.config.allow_plaintext",
+		Label: "forward_to_virtual_cluster.enabled",
 		Path: []string{
-			"eventgatewaytlslisten",
+			"forward_to_virtual_cluster",
+			"enabled",
+		},
+	},
+	{
+		Label: "tls_server.config.allow_plaintext",
+		Path: []string{
+			"tls_server",
 			"config",
 			"allow_plaintext",
 		},
 	},
 	{
-		Label: "eventgatewaytlslisten.enabled",
+		Label: "tls_server.enabled",
 		Path: []string{
-			"eventgatewaytlslisten",
-			"enabled",
-		},
-	},
-	{
-		Label: "forwardtovirtualclust.enabled",
-		Path: []string{
-			"forwardtovirtualclust",
+			"tls_server",
 			"enabled",
 		},
 	},
@@ -153,10 +153,10 @@ func (s *EventGatewayListenerPolicyAPISpec) selectedSDKOpsPayload(payload map[st
 	var variant string
 	switch s.EventGatewayListenerPolicyConfig.Type {
 	case EventGatewayListenerPolicyConfigTypeEventGatewayTLSListen:
-		selected = payload["eventgatewaytlslisten"]
+		selected = payload["tls_server"]
 		variant = "EventGatewayTLSListen"
 	case EventGatewayListenerPolicyConfigTypeForwardToVirtualClust:
-		selected = payload["forwardtovirtualclust"]
+		selected = payload["forward_to_virtual_cluster"]
 		variant = "ForwardToVirtualClust"
 	default:
 		return nil, "", fmt.Errorf("unsupported EventGatewayListenerPolicy config type %q", s.EventGatewayListenerPolicyConfig.Type)
@@ -164,6 +164,18 @@ func (s *EventGatewayListenerPolicyAPISpec) selectedSDKOpsPayload(payload map[st
 
 	if selected == nil {
 		return nil, "", fmt.Errorf("EventGatewayListenerPolicy config payload missing for type %q", s.EventGatewayListenerPolicyConfig.Type)
+	}
+	if selectedMap, ok := selected.(map[string]any); ok {
+		if typeValue, ok := payload["type"]; ok {
+			if _, hasType := selectedMap["type"]; !hasType {
+				withType := make(map[string]any)
+				for key, value := range selectedMap {
+					withType[key] = value
+				}
+				withType["type"] = typeValue
+				selected = withType
+			}
+		}
 	}
 
 	data, err := json.Marshal(selected)

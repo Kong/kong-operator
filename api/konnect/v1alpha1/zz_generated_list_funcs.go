@@ -32,7 +32,17 @@ func (obj KonnectCloudGatewayTransitGatewayList) GetItems() []KonnectCloudGatewa
 	return obj.Items
 }
 
+// GetItems returns the list of EventGatewayBackendCluster items.
+func (obj EventGatewayBackendClusterList) GetItems() []EventGatewayBackendCluster {
+	return obj.Items
+}
+
 // GetItems returns the list of Portal items.
 func (obj PortalList) GetItems() []Portal {
+	return obj.Items
+}
+
+// GetItems returns the list of PortalPage items.
+func (obj PortalPageList) GetItems() []PortalPage {
 	return obj.Items
 }

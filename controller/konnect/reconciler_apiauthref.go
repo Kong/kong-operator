@@ -103,10 +103,15 @@ func GetAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.
 		if svcRef.Type != configurationv1alpha1.ServiceRefNamespacedRef {
 			return types.NamespacedName{}, fmt.Errorf("unsupported KongService ref type %q", svcRef.Type)
 		}
-		// TODO(pmalek): handle cross namespace refs
+		// Cross-namespace grant validation for the serviceRef is performed by
+		// handleKongServiceRef before this function is reached; see reconciler_generic.go.
+		svcNamespace := ent.GetNamespace()
+		if svcRef.NamespacedRef.Namespace != nil {
+			svcNamespace = *svcRef.NamespacedRef.Namespace
+		}
 		nn := types.NamespacedName{
 			Name:      svcRef.NamespacedRef.Name,
-			Namespace: ent.GetNamespace(),
+			Namespace: svcNamespace,
 		}
 
 		var svc configurationv1alpha1.KongService
@@ -118,7 +123,7 @@ func GetAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.
 		if !ok {
 			return types.NamespacedName{}, fmt.Errorf("KongService %s does not have a ControlPlaneRef", nn)
 		}
-		return getCPAuthRefForRef(ctx, cl, cpRef, ent.GetNamespace())
+		return getCPAuthRefForRef(ctx, cl, cpRef, svc.Namespace)
 	}
 
 	// If the entity has a KongConsumerRef, get the KonnectAPIAuthConfiguration
