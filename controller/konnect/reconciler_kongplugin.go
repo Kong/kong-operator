@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
@@ -96,27 +97,21 @@ func (r *KongPluginReconciler) SetupWithManager(_ context.Context, mgr ctrl.Mana
 				predicate.NewPredicateFuncs(objRefersToKonnectGatewayControlPlane[configurationv1beta1.KongConsumerGroup]),
 			),
 		).
-		Complete(r)
+		Complete(reconcile.AsReconciler[*configurationv1.KongPlugin](r.client, r))
 }
 
 // Reconcile reconciles a KongPlugin object.
 // The purpose of this reconciler is to handle annotations on Kong entities objects that reference KongPlugin objects.
 // As a result of such annotations, KongPluginBinding objects are created and managed by the controller.
-func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *KongPluginReconciler) Reconcile(ctx context.Context, kongPlugin *configurationv1.KongPlugin) (ctrl.Result, error) {
 	var (
 		entityTypeName = "KongPlugin"
 		logger         = log.GetLogger(ctx, entityTypeName, r.loggingMode)
 	)
 
-	// Fetch the KongPlugin instance
-	var kongPlugin configurationv1.KongPlugin
-	if err := r.client.Get(ctx, req.NamespacedName, &kongPlugin); err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
-
 	log.Debug(logger, "reconciling")
 	clientWithNamespace := client.NewNamespacedClient(r.client, kongPlugin.Namespace)
-	kongPluginNN := client.ObjectKeyFromObject(&kongPlugin)
+	kongPluginNN := client.ObjectKeyFromObject(kongPlugin)
 
 	// Get the pluginBindings that use this KongPlugin
 	kongPluginBindingList := configurationv1alpha1.KongPluginBindingList{}
@@ -144,8 +139,8 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	groupedCombinations := grouped.GetCombinations()
 
 	// Delete the KongPluginBindings that are not used anymore.
-	if err := deleteUnusedKongPluginBindings(ctx, logger, clientWithNamespace, &kongPlugin, groupedCombinations, kongPluginBindingList.Items); err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed deleting unused KongPluginBindings for %s KongPlugin: %w", client.ObjectKeyFromObject(&kongPlugin), err)
+	if err := deleteUnusedKongPluginBindings(ctx, logger, clientWithNamespace, kongPlugin, groupedCombinations, kongPluginBindingList.Items); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed deleting unused KongPluginBindings for %s KongPlugin: %w", client.ObjectKeyFromObject(kongPlugin), err)
 	}
 
 	// pluginReferenceFound represents whether the plugin is referenced by any resource.
@@ -196,7 +191,7 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 				builder.WithConsumerGroupTarget(rel.ConsumerGroup)
 			}
 
-			builder, err = builder.WithOwnerReference(&kongPlugin, clientWithNamespace.Scheme())
+			builder, err = builder.WithOwnerReference(kongPlugin, clientWithNamespace.Scheme())
 			if err != nil {
 				return ctrl.Result{}, fmt.Errorf("failed to set owner reference: %w", err)
 			}
@@ -245,7 +240,7 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// The KongPlugin cannot be deleted until all objects that reference it are
 	// deleted or do not reference it anymore.
 	if pluginReferenceFound {
-		updated, res, err := patch.WithFinalizer(ctx, r.client, &kongPlugin, consts.PluginInUseFinalizer)
+		updated, res, err := patch.WithFinalizer(ctx, r.client, kongPlugin, consts.PluginInUseFinalizer)
 		if err != nil || !res.IsZero() {
 			return res, err
 		}
@@ -254,8 +249,8 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			return ctrl.Result{}, nil
 		}
 	} else { //nolint:gocritic
-		if controllerutil.RemoveFinalizer(&kongPlugin, consts.PluginInUseFinalizer) {
-			if err = r.client.Update(ctx, &kongPlugin); err != nil {
+		if controllerutil.RemoveFinalizer(kongPlugin, consts.PluginInUseFinalizer) {
+			if err = r.client.Update(ctx, kongPlugin); err != nil {
 				if apierrors.IsConflict(err) {
 					return ctrl.Result{Requeue: true}, nil
 				}

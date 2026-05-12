@@ -137,7 +137,7 @@ func (r *KongCredentialSecretReconciler) SetupWithManager(_ context.Context, mgr
 		Owns(&configurationv1alpha1.KongCredentialACL{}, builder.MatchEveryOwner).
 		Owns(&configurationv1alpha1.KongCredentialJWT{}, builder.MatchEveryOwner).
 		Owns(&configurationv1alpha1.KongCredentialHMAC{}, builder.MatchEveryOwner).
-		Complete(r)
+		Complete(reconcile.AsReconciler[*corev1.Secret](r.client, r))
 }
 
 func enqueueSecretsForKongConsumer(ctx context.Context, obj client.Object) []reconcile.Request {
@@ -195,12 +195,7 @@ func secretIsUsedByConsumerAttachedToKonnectControlPlane(cl client.Client) func(
 }
 
 // Reconcile reconciles a Secrets that are used as Consumers credentials.
-func (r *KongCredentialSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	var secret corev1.Secret
-	if err := r.client.Get(ctx, req.NamespacedName, &secret); err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
-
+func (r *KongCredentialSecretReconciler) Reconcile(ctx context.Context, secret *corev1.Secret) (ctrl.Result, error) {
 	logger := log.GetLogger(ctx, "Secret", r.loggingMode)
 	log.Debug(logger, "reconciling")
 
@@ -211,13 +206,13 @@ func (r *KongCredentialSecretReconciler) Reconcile(ctx context.Context, req ctrl
 
 	cl := client.NewNamespacedClient(r.client, secret.Namespace)
 
-	credType, err := extractKongCredentialType(&secret)
+	credType, err := extractKongCredentialType(secret)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
 	// Validate the Secret using the credential type label.
-	if err := validateSecret(&secret, credType); err != nil {
+	if err := validateSecret(secret, credType); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -238,13 +233,13 @@ func (r *KongCredentialSecretReconciler) Reconcile(ctx context.Context, req ctrl
 	case 0:
 		// If there are no Consumers that use the Secret then remove all the managed
 		// Credentials that use this Secret.
-		if err := deleteAllCredentialsUsingSecret(ctx, cl, &secret, credType); err != nil {
+		if err := deleteAllCredentialsUsingSecret(ctx, cl, secret, credType); err != nil {
 			return ctrl.Result{}, err
 		}
 
 	default:
 		for _, kongConsumer := range kongConsumerList.Items {
-			if res, err := r.handleConsumerUsingCredentialSecret(ctx, &secret, credType, &kongConsumer); err != nil || !res.IsZero() {
+			if res, err := r.handleConsumerUsingCredentialSecret(ctx, secret, credType, &kongConsumer); err != nil || !res.IsZero() {
 				return ctrl.Result{}, err
 			} else if !res.IsZero() {
 				return res, nil

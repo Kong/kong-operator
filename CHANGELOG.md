@@ -198,6 +198,8 @@
 - `MCPServer`: provision the `ai-mcp-proxy` `KongPlugin` and attach it to the
   owned `KongService` via a dedicated `KongPluginBinding`.
   [#4188](https://github.com/Kong/kong-operator/pull/4188)
+- Implemented controller-runtime's ObjectReconciler to simplify codes in reconcilers
+  [#4253](https://github.com/Kong/kong-operator/pull/4253)
 
 ### Changed
 

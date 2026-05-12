@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	eventconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/events"
 	finalizerconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/finalizers"
@@ -104,19 +105,13 @@ func (r *HybridGatewayReconciler[t, tPtr]) SetupWithManager(ctx context.Context,
 		builder = builder.Watches(w.Object, handler.EnqueueRequestsFromMapFunc(w.MapFunc))
 	}
 
-	return builder.Complete(r)
+	return builder.Complete(reconcile.AsReconciler[tPtr](r.Client, r))
 }
 
 // Reconcile reconciles the state of a custom resource by fetching the object,
 // converting it to the expected type, translating it, and enforcing its desired state.
-func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	var obj tPtr = new(t)
-
+func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, obj tPtr) (ctrl.Result, error) {
 	logger := ctrllog.FromContext(ctx).WithName(ControllerName)
-
-	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
 
 	rootObj, ok := any(*obj).(t)
 	if !ok {

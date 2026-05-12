@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -116,18 +117,14 @@ func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error
 		)
 	}
 
-	return builder.Complete(r)
+	return builder.Complete(reconcile.AsReconciler[*ControlPlane](r.Client, r))
 }
 
 // Reconcile moves the current state of an object to the intended state.
-func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, cp *ControlPlane) (ctrl.Result, error) {
 	logger := log.GetLogger(ctx, "controlplane", r.LoggingMode)
 
 	log.Trace(logger, "reconciling ControlPlane resource")
-	cp := new(ControlPlane)
-	if err := r.Get(ctx, req.NamespacedName, cp); err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
 
 	// The mgrID is used to identify the ControlPlane instance in the multi-instance manager.
 	// It is also used as UUID for the ControlPlane instance in Konnect. If changing the UUID format,

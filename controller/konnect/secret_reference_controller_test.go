@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -517,7 +518,20 @@ func TestKonnectSecretReferenceController_Reconcile(t *testing.T) {
 				},
 			}
 
-			result, err := controller.Reconcile(context.Background(), req)
+			secret := new(corev1.Secret)
+			getErr := fakeClient.Get(context.Background(), req.NamespacedName, secret)
+			var (
+				result ctrl.Result
+				err    error
+			)
+			switch {
+			case apierrors.IsNotFound(getErr):
+				result, err = ctrl.Result{}, nil
+			case getErr != nil:
+				result, err = ctrl.Result{}, getErr
+			default:
+				result, err = controller.Reconcile(context.Background(), secret)
+			}
 
 			if tc.expectError {
 				assert.Error(t, err)
