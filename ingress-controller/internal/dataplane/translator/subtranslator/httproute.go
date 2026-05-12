@@ -4,7 +4,9 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"maps"
 	pathlib "path"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -22,6 +24,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
+	gatewayutils "github.com/kong/kong-operator/v2/pkg/utils/gateway"
 )
 
 // HTTPRoutesTranslationResult is the result of translating HTTPRoutes to Kong gateway services.
@@ -190,6 +193,9 @@ func httpBackendRefsToBackendRefs(httpBackendRef []gatewayapi.HTTPBackendRef, pa
 type TranslateHTTPRouteRulesToKongRouteOptions struct {
 	ExpressionRoutes      bool
 	SupportRedirectPlugin bool
+	// Protocols is the list of Kong route protocols to set on translated routes.
+	// When empty, it relies on Kong Gateway defaults.
+	Protocols []*string
 }
 
 // translateHTTPRouteRulesMetaToKongstateService translates a set of rules sharing the same backends to a `kongstate.Service`.
@@ -202,6 +208,10 @@ func translateHTTPRouteRulesMetaToKongstateService(
 	matchesWithPriorities []SplitHTTPRouteMatchToKongRoutePriority,
 	options TranslateHTTPRouteRulesToKongRouteOptions,
 ) (kongstate.Service, error) {
+	// Derive protocols from Gateway listeners referenced by the HTTPRoutes in this rule group.
+	// This is computed here (once per service group) and threaded down to route generation.
+	options.Protocols = protocolsFromHTTPRoutesGatewayListeners(storer, extractUniqueHTTPRoutes(rulesMeta))
+
 	// Fill in the common fields of the kongstate.Service.
 	service := kongstate.Service{
 		Service: kong.Service{
@@ -273,7 +283,7 @@ func translateHTTPRouteRulesMetaToKongstateService(
 	}
 
 	if options.ExpressionRoutes {
-		routes, err := translateSplitHTTPRouteMatchesToKongstateRoutesWithExpression(matchesWithPriorities, options.SupportRedirectPlugin)
+		routes, err := translateSplitHTTPRouteMatchesToKongstateRoutesWithExpression(matchesWithPriorities, options)
 		if err != nil {
 			return kongstate.Service{}, err
 		}
@@ -721,7 +731,7 @@ func GenerateKongRoutesFromHTTPRouteMatches(
 			Ingress: ingressObjectInfo,
 			Route: kong.Route{
 				Name:         new(routeName),
-				Protocols:    kong.StringSlice("http", "https"),
+				Protocols:    options.Protocols,
 				PreserveHost: new(true),
 				Tags:         tags,
 			},
@@ -731,7 +741,7 @@ func GenerateKongRoutesFromHTTPRouteMatches(
 		return []kongstate.Route{r}, nil
 	}
 
-	r := generateKongstateHTTPRoute(routeName, ingressObjectInfo, hostnames)
+	r := generateKongstateHTTPRoute(routeName, ingressObjectInfo, hostnames, options.Protocols)
 	r.Tags = tags
 
 	// convert header matching from HTTPRoute to Route format
@@ -788,13 +798,13 @@ func GenerateKongRoutesFromHTTPRouteMatches(
 	return routes, nil
 }
 
-func generateKongstateHTTPRoute(routeName string, ingressObjectInfo util.K8sObjectInfo, hostnames []*string) kongstate.Route {
+func generateKongstateHTTPRoute(routeName string, ingressObjectInfo util.K8sObjectInfo, hostnames []*string, protocols []*string) kongstate.Route {
 	// build the route object using the method and pathing information
 	r := kongstate.Route{
 		Ingress: ingressObjectInfo,
 		Route: kong.Route{
 			Name:         new(routeName),
-			Protocols:    kong.StringSlice("http", "https"),
+			Protocols:    protocols,
 			PreserveHost: new(true),
 			// metadata tags aren't added here, they're added by the caller
 		},
@@ -806,6 +816,31 @@ func generateKongstateHTTPRoute(routeName string, ingressObjectInfo util.K8sObje
 	}
 
 	return r
+}
+
+// protocolsFromHTTPRoutesGatewayListeners derives Kong route protocols from the Gateway listeners
+// referenced by all provided HTTPRoutes' parentRefs.
+// It collects unique protocols from all matching listeners.
+// It returns nil (relies on Kong Gateway defaults) as a fallback when no matching Gateway listeners are found.
+func protocolsFromHTTPRoutesGatewayListeners(storer store.Storer, routes []*gatewayapi.HTTPRoute) []*string {
+	protoSet := make(map[string]struct{})
+	for _, route := range routes {
+		for _, pr := range route.Spec.ParentRefs {
+			ns := route.Namespace
+			if pr.Namespace != nil && string(*pr.Namespace) != "" {
+				ns = string(*pr.Namespace)
+			}
+			gw, err := storer.GetGateway(ns, string(pr.Name))
+			if err != nil {
+				continue // Gateway not found, skip this parentRef.
+			}
+			for _, p := range gatewayutils.ProtocolsFromListeners(gw, pr.SectionName) {
+				protoSet[p] = struct{}{}
+			}
+		}
+	}
+
+	return kong.StringSlice(slices.Sorted(maps.Keys(protoSet))...)
 }
 
 // convertGatewayMatchHeadersToKongRouteMatchHeaders takes an input list of Gateway APIs HTTPHeaderMatch

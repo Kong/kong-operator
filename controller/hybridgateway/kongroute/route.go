@@ -17,6 +17,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/translator"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	gatewayutils "github.com/kong/kong-operator/v2/pkg/utils/gateway"
 )
 
 // RoutesForRule creates or updates KongRoutes for the given rule.
@@ -98,6 +99,12 @@ func RoutesForHTTPRouteRule(
 		rule.Matches = append(rule.Matches, match)
 	}
 
+	// Derive protocols from the parent Gateway listener(s).
+	protocols, err := protocolsFromGatewayListener(ctx, cl, httpRoute, pRef)
+	if err != nil {
+		return nil, err
+	}
+
 	// Check filters to determine if we need capture groups in paths.
 	setCaptureGroup := needsCaptureGroup(rule)
 
@@ -112,10 +119,7 @@ func RoutesForHTTPRouteRule(
 			WithLabels(httpRoute, pRef).
 			WithAnnotations(httpRoute, pRef).
 			WithSpecName(routeName).
-			WithProtocols(
-				sdkkonnectcomp.RouteJSONProtocols("http"),
-				sdkkonnectcomp.RouteJSONProtocols("https"),
-			).
+			WithProtocols(protocols...).
 			WithHosts(hostnames).
 			WithStripPath(metadata.ExtractStripPath(httpRoute.Annotations)).
 			WithPreserveHost(metadata.ExtractPreserveHost(httpRoute.Annotations)).
@@ -212,6 +216,38 @@ func routesForTLSRouteRule(
 	}
 
 	return []*configurationv1alpha1.KongRoute{kongRoute.DeepCopy()}, nil
+}
+
+// protocolsFromGatewayListener derives Kong route protocols from the Gateway listener
+// referenced by the HTTPRoute's parentRef. It inspects the listener protocol and maps:
+//   - HTTP  → "http"
+//   - HTTPS → "https"
+//
+// Returns nil when no matching listeners are found (relies on Kong Gateway defaults).
+func protocolsFromGatewayListener(
+	ctx context.Context, cl client.Client, httpRoute *gwtypes.HTTPRoute, parentRef *gwtypes.ParentReference,
+) ([]sdkkonnectcomp.RouteJSONProtocols, error) {
+	ns := httpRoute.Namespace
+	if parentRef.Namespace != nil && *parentRef.Namespace != "" {
+		ns = string(*parentRef.Namespace)
+	}
+
+	gw := &gwtypes.Gateway{}
+	if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: string(parentRef.Name)}, gw); err != nil {
+		return nil, fmt.Errorf("failed to get parent Gateway %s/%s for HTTPRoute %s/%s: %w",
+			ns, parentRef.Name, httpRoute.Namespace, httpRoute.Name, err)
+	}
+
+	protos := gatewayutils.ProtocolsFromListeners(gw, parentRef.SectionName)
+	if len(protos) == 0 {
+		return nil, nil
+	}
+
+	protocols := make([]sdkkonnectcomp.RouteJSONProtocols, 0, len(protos))
+	for _, p := range protos {
+		protocols = append(protocols, sdkkonnectcomp.RouteJSONProtocols(p))
+	}
+	return protocols, nil
 }
 
 // isTLSRoutePassthrough checks if the TLSRoute's parent Gateway listener uses TLS passthrough mode

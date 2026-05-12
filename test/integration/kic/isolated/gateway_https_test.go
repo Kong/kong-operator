@@ -190,7 +190,9 @@ func TestGatewayHTTPSMultipleCertificates(t *testing.T) {
 						GetHTTPSURLFromCtx(ctx),
 						url,
 						"",
-						GetCertPoolFromCtx(ctx),
+						&helpers.HTTPSOptions{
+							CertPool: GetCertPoolFromCtx(ctx),
+						},
 						http.StatusOK,
 						"echo",
 						nil,
