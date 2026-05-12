@@ -49,6 +49,12 @@
 
 ### Added
 
+- `KongSNI`: support cross-namespace `spec.certificateRef` to reference a
+  `KongCertificate` in a different namespace. A `KongReferenceGrant` in the
+  target namespace is required to permit the reference. The `KongSNI` status
+  reflects `ResolvedRefs=False/RefNotPermitted` when no grant is present and
+  `ResolvedRefs=True` once the grant is in place.
+  [#4235](https://github.com/Kong/kong-operator/pull/4235)
 - Hybridgateway: add support for `konghq.com/path` service annotation
   [#4100](https://github.com/Kong/kong-operator/pull/4100)
 - Hybridgateway: add support for `konghq.com/tls-verify` service annotation

@@ -62,7 +62,7 @@ type KongSNISpec struct {
 	KongSNIAPISpec `json:",inline"`
 
 	// CertificateRef is the reference to the certificate to which the KongSNI is attached.
-	CertificateRef commonv1alpha1.NameRef `json:"certificateRef"`
+	CertificateRef commonv1alpha1.NamespacedRef `json:"certificateRef"`
 
 	// Adopt is the options for adopting an SNI from an existing SNI in Konnect.
 	// +optional

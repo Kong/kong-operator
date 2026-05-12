@@ -1570,7 +1570,7 @@ KongSNISpec defines specification of a Kong SNI.
 | --- | --- |
 | `name` _string_ | Name is the name of the SNI. Required and must be a host or wildcard host. |
 | `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of strings associated with the SNI for grouping and filtering. |
-| `certificateRef` _[NameRef](#common-konghq-com-v1alpha1-types-nameref)_ | CertificateRef is the reference to the certificate to which the KongSNI is attached. |
+| `certificateRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | CertificateRef is the reference to the certificate to which the KongSNI is attached. |
 | `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting an SNI from an existing SNI in Konnect. |
 
 _Appears in:_
