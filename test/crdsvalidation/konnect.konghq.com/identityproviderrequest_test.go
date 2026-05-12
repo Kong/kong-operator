@@ -46,19 +46,11 @@ func TestIdentityProviderRequest(t *testing.T) {
 	t.Run("OIDC config validation and defaults", func(t *testing.T) {
 		common.TestCasesGroup[*konnectv1alpha1.IdentityProviderRequest]{
 			{
-				Name:       "valid OIDC identity provider request passes validation and applies defaults",
+				Name:       "valid OIDC identity provider request passes validation",
 				TestObject: validOIDCIdentityProviderRequest(),
 				Assert: func(t *testing.T, obj *konnectv1alpha1.IdentityProviderRequest) {
 					require.NotNil(t, obj.Spec.APISpec.Config)
 					require.NotNil(t, obj.Spec.APISpec.Config.OIDC)
-					require.Equal(t, konnectv1alpha1.IdentityProviderEnabledDisabled, obj.Spec.APISpec.Enabled)
-					require.Equal(t,
-						[]string{"email", "openid", "profile"},
-						obj.Spec.APISpec.Config.OIDC.Scopes,
-					)
-					require.Equal(t, "email", obj.Spec.APISpec.Config.OIDC.ClaimMappings.Email)
-					require.Equal(t, "groups", obj.Spec.APISpec.Config.OIDC.ClaimMappings.Groups)
-					require.Equal(t, "name", obj.Spec.APISpec.Config.OIDC.ClaimMappings.Name)
 				},
 			},
 			{

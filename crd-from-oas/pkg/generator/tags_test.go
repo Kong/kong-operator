@@ -1,7 +1,6 @@
 package generator
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -128,85 +127,6 @@ func TestKubebuilderTags(t *testing.T) {
 			expected: []string{
 				"+optional",
 				"+kubebuilder:validation:Minimum=0",
-			},
-		},
-		{
-			name: "boolean with default true",
-			prop: &parser.Property{
-				Name:     "enabled",
-				Type:     "boolean",
-				Required: false,
-				Default:  true,
-			},
-			expected: []string{
-				"+optional",
-				"+kubebuilder:validation:Enum=Enabled;Disabled",
-				"+kubebuilder:default=Enabled",
-			},
-		},
-		{
-			name: "boolean with default false",
-			prop: &parser.Property{
-				Name:     "disabled",
-				Type:     "boolean",
-				Required: false,
-				Default:  false,
-			},
-			expected: []string{
-				"+optional",
-				"+kubebuilder:validation:Enum=Enabled;Disabled",
-				"+kubebuilder:default=Disabled",
-			},
-		},
-		{
-			name: "string with default value",
-			prop: &parser.Property{
-				Name:     "protocol",
-				Type:     "string",
-				Required: false,
-				Default:  "https",
-			},
-			expected: []string{
-				"+optional",
-				"+kubebuilder:validation:MaxLength=253",
-				`+kubebuilder:default="https"`,
-			},
-		},
-		{
-			name: "array with string defaults",
-			prop: &parser.Property{
-				Name:     "scopes",
-				Type:     "array",
-				Required: false,
-				Default:  []any{"email", "openid", "profile"},
-			},
-			expected: []string{
-				"+optional",
-				"+kubebuilder:default={\"email\",\"openid\",\"profile\"}",
-			},
-		},
-		{
-			name: "float64 default (integer value)",
-			prop: &parser.Property{
-				Name:    "port",
-				Type:    "number",
-				Default: float64(9092),
-			},
-			expected: []string{
-				"+optional",
-				"+kubebuilder:default=9092",
-			},
-		},
-		{
-			name: "float64 default (fractional value)",
-			prop: &parser.Property{
-				Name:    "ratio",
-				Type:    "number",
-				Default: float64(1.5),
-			},
-			expected: []string{
-				"+optional",
-				"+kubebuilder:default=1.5",
 			},
 		},
 		{
@@ -600,68 +520,4 @@ func TestKubebuilderTags_OverrideMaxLength(t *testing.T) {
 	result := KubebuilderTags(prop, "ClientIdentity", fieldConfig)
 	assert.Contains(t, result, "+kubebuilder:validation:MaxLength=1024", "user-provided MaxLength should be present")
 	assert.NotContains(t, result, "+kubebuilder:validation:MaxLength=253", "default MaxLength should be removed")
-}
-
-func TestKubebuilderTags_DefaultInt(t *testing.T) {
-	prop := &parser.Property{
-		Name:     "count",
-		Type:     "integer",
-		Required: false,
-		Default:  123,
-	}
-	result := KubebuilderTags(prop, "Test", nil)
-	assert.Contains(t, result, "+kubebuilder:default=123")
-}
-
-func TestKubebuilderTags_DefaultFloat(t *testing.T) {
-	tests := []struct {
-		name     string
-		value    float64
-		expected string
-	}{
-		{"integer-valued float", 5.0, "+kubebuilder:default=5"},
-		{"fractional float", 1.5, "+kubebuilder:default=1.5"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			prop := &parser.Property{
-				Name:    "ratio",
-				Type:    "number",
-				Default: tt.value,
-			}
-			result := KubebuilderTags(prop, "Test", nil)
-			assert.Contains(t, result, tt.expected)
-		})
-	}
-}
-
-func TestKubebuilderTags_ArrayDefaultWithNumeric(t *testing.T) {
-	prop := &parser.Property{
-		Name:    "scopes",
-		Type:    "array",
-		Default: []any{"email", float64(1)},
-	}
-	result := KubebuilderTags(prop, "Test", nil)
-	assert.Contains(t, result, `+kubebuilder:default={"email",1}`)
-}
-
-func TestKubebuilderTags_DefaultUnsupportedTypePanic(t *testing.T) {
-	prop := &parser.Property{
-		Name:    "weird",
-		Type:    "object",
-		Default: struct{ X int }{X: 1},
-	}
-	assert.Panics(t, func() {
-		KubebuilderTags(prop, "Test", nil)
-	})
-}
-
-func TestKubebuilderTags_DefaultMapType(t *testing.T) {
-	prop := &parser.Property{
-		Name:    "config",
-		Type:    "object",
-		Default: map[string]any{"key": "value"},
-	}
-	tags := KubebuilderTags(prop, "Test", nil)
-	assert.Contains(t, strings.Join(tags, " "), `+kubebuilder:default={"key":"value"}`)
 }

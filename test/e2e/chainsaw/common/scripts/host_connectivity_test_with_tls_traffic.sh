@@ -34,7 +34,10 @@ for ATTEMPT in $(seq 1 $MAX_RETRIES); do
   if OUTPUT=$(eval $OPENSSL_CMD 2>&1 | tr '\n' ' '); then
     LAST_OUTPUT="$OUTPUT"
     # Check if the output contains the welcome message from the echo pod.
-    if [[ $OUTPUT =~ "Running on Pod" && $OUTPUT =~ "Through TLS connection" ]]; then
+    # Only "Running on Pod" is required: with TLS Passthrough the backend itself
+    # terminates TLS and also emits "Through TLS connection", but with TLS Terminate
+    # at the gateway the backend speaks plain TCP and never emits that substring.
+    if [[ $OUTPUT =~ "Running on Pod" ]]; then
       # Success! Got the welcome message.
       cat <<EOF
 {

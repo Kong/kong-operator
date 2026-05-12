@@ -10910,12 +10910,10 @@ spec:
                       type: string
                     type: array
                   description:
-                    default: ""
                     description: A human-readable description of the backend cluster.
                     maxLength: 512
                     type: string
                   insecureAllowAnonymousVirtualClusterAuth:
-                    default: Disabled
                     description: |-
                       If true, virtual clusters can have allow anonymous authentication and use
                       this backend cluster.
@@ -10940,7 +10938,6 @@ spec:
                       "konnect", "mesh", "kic", or "_".
                     type: object
                   metadataUpdateIntervalSeconds:
-                    default: 60
                     description: The interval at which metadata is updated in seconds.
                     maximum: 43200
                     minimum: 1
@@ -11001,7 +10998,6 @@ spec:
                         - Disabled
                         type: string
                       insecureSkipVerify:
-                        default: Disabled
                         description: |-
                           If true, skip certificate verification.
                           It's not secure to use for production.
@@ -11010,9 +11006,6 @@ spec:
                         - Disabled
                         type: string
                       tlsVersions:
-                        default:
-                        - tls12
-                        - tls13
                         description: List of supported TLS versions.
                         items:
                           type: string
@@ -11267,7 +11260,6 @@ spec:
                                 pattern: ^[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?)*$
                                 type: string
                               bootstrapPort:
-                                default: at_start
                                 description: |-
                                   If set to `at_start`, the first port will be used as a bootstrap port.
                                   It provides a stable endpoint to use as the bootstrap server for clients,
@@ -11296,7 +11288,6 @@ spec:
                                     type: string
                                 type: object
                               minBrokerID:
-                                default: 0
                                 description: The lowest broker node ID in the cluster.
                                 type: integer
                             required:
@@ -11329,7 +11320,6 @@ spec:
                                   **Requires a minimum runtime version of `1.1`**.
                                 properties:
                                   type:
-                                    default: per_cluster_suffix
                                     enum:
                                     - per_cluster_suffix
                                     - shared_suffix
@@ -11379,12 +11369,10 @@ spec:
                         - type
                         type: object
                       description:
-                        default: ""
                         description: A human-readable description of the policy.
                         maxLength: 512
                         type: string
                       enabled:
-                        default: Enabled
                         description: Whether the policy is enabled.
                         enum:
                         - Enabled
@@ -11418,7 +11406,6 @@ spec:
                         description: The configuration of the policy.
                         properties:
                           allowPlaintext:
-                            default: Disabled
                             description: |-
                               If false, only TLS connections are allowed.
                               If true, both TLS and plaintext connections are allowed.
@@ -11511,13 +11498,9 @@ spec:
                             - tlsTrustBundles
                             type: object
                           versions:
-                            default:
-                              max: TLSv1.3
-                              min: TLSv1.2
                             description: A range of TLS versions.
                             properties:
                               max:
-                                default: TLSv1.3
                                 description: Maximum TLS version to use.
                                 enum:
                                 - TLSv1.2
@@ -11525,7 +11508,6 @@ spec:
                                 maxLength: 253
                                 type: string
                               min:
-                                default: TLSv1.2
                                 description: Minimum TLS version to use.
                                 enum:
                                 - TLSv1.2
@@ -11537,12 +11519,10 @@ spec:
                         - certificates
                         type: object
                       description:
-                        default: ""
                         description: A human-readable description of the policy.
                         maxLength: 512
                         type: string
                       enabled:
-                        default: Enabled
                         description: Whether the policy is enabled.
                         enum:
                         - Enabled
@@ -11822,7 +11802,6 @@ spec:
                       type: string
                     type: array
                   description:
-                    default: ""
                     description: A human-readable description of the listener.
                     maxLength: 512
                     type: string
@@ -12139,7 +12118,6 @@ spec:
                               description: JSON Web Key Set configuration for verifying token signatures.
                               properties:
                                 cacheExpiration:
-                                  default: 1h
                                   description: Duration after which the gateway will fetch and cache JWKS.
                                   maxLength: 253
                                   type: string
@@ -12149,7 +12127,6 @@ spec:
                                   minLength: 1
                                   type: string
                                 timeout:
-                                  default: 10s
                                   description: |-
                                     Total time from establishing connection to receive a response from JWKS
                                     endpoint.
@@ -12286,7 +12263,6 @@ spec:
                       type: object
                     type: array
                   description:
-                    default: ""
                     description: A human-readable description of the virtual cluster.
                     maxLength: 512
                     type: string
@@ -12408,7 +12384,6 @@ spec:
                                   description: ExactList configuration.
                                   properties:
                                     conflict:
-                                      default: warn
                                       description: |-
                                         How to inform the user about conflicts where multiple backend topics would
                                         map to the same virtual topic name.
@@ -12439,7 +12414,6 @@ spec:
                                   description: Glob configuration.
                                   properties:
                                     conflict:
-                                      default: warn
                                       description: |-
                                         How to inform the user about conflicts where multiple backend topics would
                                         map to the same virtual topic name.
@@ -12535,7 +12509,6 @@ spec:
                           minLength: 1
                           type: string
                         conflict:
-                          default: warn
                           description: |-
                             How to handle conflicts where an alias shadows a physical topic.
                             * warn - activate the alias but log a warning and set the conflict metric to
@@ -12547,7 +12520,6 @@ spec:
                           maxLength: 253
                           type: string
                         match:
-                          default: ""
                           description: |-
                             CEL expression evaluated against the connection's auth context.
                             If omitted or empty, the alias is active for all connections.
@@ -22395,17 +22367,14 @@ spec:
                               authentication.
                             properties:
                               email:
-                                default: email
                                 description: The claim mapping for the user's email address.
                                 maxLength: 253
                                 type: string
                               groups:
-                                default: groups
                                 description: The claim mapping for the user's group membership information.
                                 maxLength: 253
                                 type: string
                               name:
-                                default: name
                                 description: The claim mapping for the user's name.
                                 maxLength: 253
                                 type: string
@@ -22427,10 +22396,6 @@ spec:
                             minLength: 1
                             type: string
                           scopes:
-                            default:
-                            - email
-                            - openid
-                            - profile
                             description: |-
                               The scopes requested by your application when authenticating with the
                               identity provider.
@@ -22469,7 +22434,6 @@ spec:
                     - type
                     type: object
                   enabled:
-                    default: Disabled
                     description: |-
                       Indicates whether the identity provider is enabled.
                       Only one identity provider can be active at a time, such as SAML or OIDC.
@@ -43716,7 +43680,6 @@ spec:
                 description: APISpec defines the desired state of the resource's API spec fields.
                 properties:
                   authenticationEnabled:
-                    default: Enabled
                     description: |-
                       Whether the portal supports developer authentication.
                       If disabled, developers cannot register for accounts or create applications.
@@ -43725,7 +43688,6 @@ spec:
                     - Disabled
                     type: string
                   autoApproveApplications:
-                    default: Disabled
                     description: |-
                       Whether requests from applications to register for APIs will be
                       automatically approved, or if they will be set to pending until approved by
@@ -43735,7 +43697,6 @@ spec:
                     - Disabled
                     type: string
                   autoApproveDevelopers:
-                    default: Disabled
                     description: |-
                       Whether developer account registrations will be automatically approved, or
                       if they will be set to pending until approved by an admin.
@@ -43864,7 +43825,6 @@ spec:
                     - message: name is immutable
                       rule: self == oldSelf
                   rbacEnabled:
-                    default: Disabled
                     description: |-
                       Whether the portal resources are protected by Role Based Access Control
                       (RBAC).
@@ -43876,7 +43836,6 @@ spec:
                     - Disabled
                     type: string
                   siprEnabled:
-                    default: Disabled
                     description: Whether ip allow list is enabled for the portal.
                     enum:
                     - Enabled
@@ -44062,7 +44021,6 @@ spec:
                 description: APISpec defines the desired state of the resource's API spec fields.
                 properties:
                   canOwnApplications:
-                    default: Disabled
                     description: Whether the team is allowed to own applications
                     enum:
                     - Enabled

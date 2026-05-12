@@ -58,7 +58,6 @@ type PortalTeamAPISpec struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
-	// +kubebuilder:default=Disabled
 	CanOwnApplications string `json:"canOwnApplications,omitempty"`
 
 	//
