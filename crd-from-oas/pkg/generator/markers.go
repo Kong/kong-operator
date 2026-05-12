@@ -13,8 +13,6 @@ const (
 	kbValidationMaximumFmt       = "+kubebuilder:validation:Maximum=%v"
 	kbValidationEnumFmt          = "+kubebuilder:validation:Enum=%s"
 	kbValidationMaxPropertiesFmt = "+kubebuilder:validation:MaxProperties=%d"
-
-	kbDefaultStringFmt = "+kubebuilder:default=%s"
 )
 
 func markerOptional() string { return kbOptional }
@@ -27,5 +25,3 @@ func markerValidationMinimum(v any) string       { return fmt.Sprintf(kbValidati
 func markerValidationMaximum(v any) string       { return fmt.Sprintf(kbValidationMaximumFmt, v) }
 func markerValidationEnum(v string) string       { return fmt.Sprintf(kbValidationEnumFmt, v) }
 func markerValidationMaxProperties(v int) string { return fmt.Sprintf(kbValidationMaxPropertiesFmt, v) }
-
-func markerDefaultString(v string) string { return fmt.Sprintf(kbDefaultStringFmt, v) }

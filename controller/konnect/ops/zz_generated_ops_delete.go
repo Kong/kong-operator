@@ -42,6 +42,8 @@ func DeleteGeneratedOps[
 		return deletePortal(ctx, sdk.GetPortalsSDK(), ent)
 	case *konnectv1alpha1.PortalEmailConfig:
 		return deletePortalEmailConfig(ctx, sdk.GetPortalEmailsSDK(), ent)
+	case *konnectv1alpha1.PortalIPAllowList:
+		return deletePortalIPAllowList(ctx, sdk.GetPortalsIPAllowListSDK(), ent)
 	case *konnectv1alpha1.PortalPage:
 		return deletePortalPage(ctx, sdk.GetPortalPagesSDK(), ent)
 	case *konnectv1alpha1.PortalTeam:

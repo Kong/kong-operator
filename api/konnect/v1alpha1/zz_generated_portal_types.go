@@ -60,7 +60,6 @@ type PortalAPISpec struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
-	// +kubebuilder:default=Enabled
 	AuthenticationEnabled string `json:"authenticationEnabled,omitempty"`
 
 	// Whether requests from applications to register for APIs will be
@@ -69,7 +68,6 @@ type PortalAPISpec struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
-	// +kubebuilder:default=Disabled
 	AutoApproveApplications string `json:"autoApproveApplications,omitempty"`
 
 	// Whether developer account registrations will be automatically approved, or
@@ -77,7 +75,6 @@ type PortalAPISpec struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
-	// +kubebuilder:default=Disabled
 	AutoApproveDevelopers string `json:"autoApproveDevelopers,omitempty"`
 
 	// The default visibility of APIs in the portal.
@@ -155,14 +152,12 @@ type PortalAPISpec struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
-	// +kubebuilder:default=Disabled
 	RBACEnabled string `json:"rbacEnabled,omitempty"`
 
 	// Whether ip allow list is enabled for the portal.
 	//
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
-	// +kubebuilder:default=Disabled
 	SiprEnabled string `json:"siprEnabled,omitempty"`
 }
 

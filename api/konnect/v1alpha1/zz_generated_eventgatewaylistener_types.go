@@ -72,7 +72,6 @@ type EventGatewayListenerAPISpec struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=512
-	// +kubebuilder:default=""
 	Description string `json:"description,omitempty"`
 
 	// Labels store metadata of an entity that can be used for filtering an entity

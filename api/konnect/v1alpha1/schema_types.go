@@ -249,12 +249,10 @@ type BackendClusterTLS struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
-	// +kubebuilder:default=Disabled
 	InsecureSkipVerify string `json:"insecureSkipVerify,omitempty"`
 	// List of supported TLS versions.
 	//
 	// +optional
-	// +kubebuilder:default={"tls12","tls13"}
 	TLSVersions []string `json:"tlsVersions,omitempty"`
 }
 
@@ -313,13 +311,11 @@ type EventGatewayTLSListenerPolicy struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=512
-	// +kubebuilder:default=""
 	Description string `json:"description,omitempty"`
 	// Whether the policy is enabled.
 	//
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
-	// +kubebuilder:default=Enabled
 	Enabled string `json:"enabled,omitempty"`
 	// Labels store metadata of an entity that can be used for filtering an entity
 	// list or for searching across entity types.
@@ -346,7 +342,6 @@ type EventGatewayTLSListenerPolicyConfig struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
-	// +kubebuilder:default=Disabled
 	AllowPlaintext string `json:"allowPlaintext,omitempty"`
 	//
 	//
@@ -364,7 +359,6 @@ type EventGatewayTLSListenerPolicyConfig struct {
 	// A range of TLS versions.
 	//
 	// +optional
-	// +kubebuilder:default={"max":"TLSv1.3","min":"TLSv1.2"}
 	Versions TLSVersionRange `json:"versions,omitempty"`
 }
 
@@ -460,7 +454,6 @@ type ForwardToClusterByPortMappingConfig struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=none;at_start
-	// +kubebuilder:default="at_start"
 	BootstrapPort string `json:"bootstrapPort,omitempty"`
 	// A reference to a virtual cluster.
 	//
@@ -469,7 +462,6 @@ type ForwardToClusterByPortMappingConfig struct {
 	// The lowest broker node ID in the cluster.
 	//
 	// +optional
-	// +kubebuilder:default=0
 	MinBrokerID int `json:"minBrokerID,omitempty"`
 }
 
@@ -548,7 +540,6 @@ type BrokerHostFormat struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=per_cluster_suffix;shared_suffix
-	// +kubebuilder:default="per_cluster_suffix"
 	Type string `json:"type,omitempty"`
 }
 
@@ -573,13 +564,11 @@ type ForwardToVirtualClusterPolicy struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=512
-	// +kubebuilder:default=""
 	Description string `json:"description,omitempty"`
 	// Whether the policy is enabled.
 	//
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
-	// +kubebuilder:default=Enabled
 	Enabled string `json:"enabled,omitempty"`
 	// Labels store metadata of an entity that can be used for filtering an entity
 	// list or for searching across entity types.
@@ -807,19 +796,16 @@ type OIDCIdentityProviderClaimMappings struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:default="email"
 	Email string `json:"email,omitempty"`
 	// The claim mapping for the user's group membership information.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:default="groups"
 	Groups string `json:"groups,omitempty"`
 	// The claim mapping for the user's name.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:default="name"
 	Name string `json:"name,omitempty"`
 }
 
@@ -863,7 +849,6 @@ type OIDCIdentityProviderConfig struct {
 	// identity provider.
 	//
 	// +optional
-	// +kubebuilder:default={"email","openid","profile"}
 	Scopes []string `json:"scopes,omitempty"`
 }
 
@@ -984,14 +969,12 @@ type TLSVersionRange struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=TLSv1.2;TLSv1.3
-	// +kubebuilder:default="TLSv1.3"
 	Max string `json:"max,omitempty"`
 	// Minimum TLS version to use.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=TLSv1.2;TLSv1.3
-	// +kubebuilder:default="TLSv1.2"
 	Min string `json:"min,omitempty"`
 }
 
@@ -1051,7 +1034,6 @@ type VirtualClusterAuthenticationJWKS struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:default="1h"
 	CacheExpiration string `json:"cacheExpiration,omitempty"`
 	// URL for JWKS endpoint.
 	//
@@ -1064,7 +1046,6 @@ type VirtualClusterAuthenticationJWKS struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:default="10s"
 	Timeout string `json:"timeout,omitempty"`
 }
 
@@ -1648,7 +1629,6 @@ type VirtualClusterNamespaceTopicSelectorExactList struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=warn;ignore
-	// +kubebuilder:default="warn"
 	Conflict string `json:"conflict,omitempty"`
 	// Explicit allow-list of backend topic names.
 	//
@@ -1669,7 +1649,6 @@ type VirtualClusterNamespaceTopicSelectorGlob struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=warn;ignore
-	// +kubebuilder:default="warn"
 	Conflict string `json:"conflict,omitempty"`
 	// Expose any backend topic that matches this glob pattern (e.g.,
 	// `operations_data_*`).
@@ -1731,7 +1710,6 @@ type VirtualClusterTopicAlias struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=warn;ignore
-	// +kubebuilder:default="warn"
 	Conflict VirtualClusterTopicAliasConflict `json:"conflict,omitempty"`
 	// CEL expression evaluated against the connection's auth context.
 	// If omitted or empty, the alias is active for all connections.
@@ -1739,7 +1717,6 @@ type VirtualClusterTopicAlias struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:default=""
 	Match string `json:"match,omitempty"`
 	// The namespace-visible topic name this alias resolves to.
 	//

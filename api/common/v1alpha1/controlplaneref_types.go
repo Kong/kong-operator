@@ -33,7 +33,8 @@ type ControlPlaneRef struct {
 	Type string `json:"type,omitempty"`
 
 	// KonnectNamespacedRef is a reference to a Konnect Control Plane entity inside the cluster.
-	// It contains the name of the Konnect Control Plane.
+	// It contains the name of the Konnect Control Plane. It can't reference Control Plane Groups,
+	// because they are read-only.
 	// This field is required when the Type is konnectNamespacedRef.
 	// +optional
 	KonnectNamespacedRef *KonnectNamespacedRef `json:"konnectNamespacedRef,omitempty"`

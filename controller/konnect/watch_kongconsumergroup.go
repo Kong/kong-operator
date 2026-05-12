@@ -7,6 +7,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
@@ -51,6 +52,14 @@ func KongConsumerGroupReconciliationWatchOptions(
 					enqueueObjectForKonnectGatewayControlPlane[configurationv1beta1.KongConsumerGroupList](
 						cl, index.IndexFieldKongConsumerGroupOnKonnectGatewayControlPlane,
 					),
+				),
+			)
+		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&configurationv1alpha1.KongReferenceGrant{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueObjectsForKongReferenceGrant[configurationv1beta1.KongConsumerGroupList](cl),
 				),
 			)
 		},

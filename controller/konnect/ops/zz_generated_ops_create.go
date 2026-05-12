@@ -44,6 +44,8 @@ func CreateGeneratedOps[
 		return createPortal(ctx, sdk.GetPortalsSDK(), ent)
 	case *konnectv1alpha1.PortalEmailConfig:
 		return createPortalEmailConfig(ctx, sdk.GetPortalEmailsSDK(), ent)
+	case *konnectv1alpha1.PortalIPAllowList:
+		return createPortalIPAllowList(ctx, sdk.GetPortalsIPAllowListSDK(), ent)
 	case *konnectv1alpha1.PortalPage:
 		return createPortalPage(ctx, sdk.GetPortalPagesSDK(), ent)
 	case *konnectv1alpha1.PortalTeam:

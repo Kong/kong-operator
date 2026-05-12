@@ -1,10 +1,7 @@
 package generator
 
 import (
-	"encoding/json"
-	"fmt"
 	"slices"
-	"strconv"
 	"strings"
 
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/config"
@@ -73,40 +70,6 @@ func KubebuilderTags(prop *parser.Property, entityName string, fieldConfig *conf
 		}
 	}
 
-	// Default value
-	if prop.Default != nil {
-		switch v := prop.Default.(type) {
-		case bool:
-			// Bool defaults map to Enabled/Disabled to match the string enum.
-			if v {
-				tags = append(tags, markerDefaultString("Enabled"))
-			} else {
-				tags = append(tags, markerDefaultString("Disabled"))
-			}
-		case string:
-			// Always quote string defaults so empty strings produce `=""` not `=`.
-			tags = append(tags, markerDefaultString(strconv.Quote(v)))
-		case float64:
-			tags = append(tags, markerDefaultString(formatNumericDefault(v)))
-		case int:
-			tags = append(tags, markerDefaultString(strconv.Itoa(v)))
-		case int64:
-			tags = append(tags, markerDefaultString(strconv.FormatInt(v, 10)))
-		case json.Number:
-			tags = append(tags, markerDefaultString(v.String()))
-		case []any:
-			tags = append(tags, markerDefaultString(formatArrayDefaultValue(v)))
-		case map[string]any:
-			b, err := json.Marshal(v)
-			if err != nil {
-				panic("unsupported default value type: " + fmt.Sprintf("%T", v))
-			}
-			tags = append(tags, markerDefaultString(string(b)))
-		default:
-			panic("unsupported default value type: " + fmt.Sprintf("%T", v))
-		}
-	}
-
 	// Map MaxProperties constraint (applies to both ref and inline map types)
 	if prop.MaxProperties != nil {
 		tags = append(tags, markerValidationMaxProperties(int(*prop.MaxProperties)))
@@ -138,33 +101,6 @@ func KubebuilderTags(prop *parser.Property, entityName string, fieldConfig *conf
 func markerKey(marker string) string {
 	key, _, _ := strings.Cut(marker, "=")
 	return key
-}
-
-func formatArrayDefaultValue(values []any) string {
-	formatted := make([]string, 0, len(values))
-	for _, value := range values {
-		switch v := value.(type) {
-		case string:
-			formatted = append(formatted, strconv.Quote(v))
-		case bool:
-			formatted = append(formatted, strconv.FormatBool(v))
-		case float64:
-			formatted = append(formatted, formatNumericDefault(v))
-		case int:
-			formatted = append(formatted, strconv.Itoa(v))
-		case int64:
-			formatted = append(formatted, strconv.FormatInt(v, 10))
-		case json.Number:
-			formatted = append(formatted, v.String())
-		default:
-			panic("unsupported array default item type: " + fmt.Sprintf("%T", v))
-		}
-	}
-	return "{" + strings.Join(formatted, ",") + "}"
-}
-
-func formatNumericDefault(v float64) string {
-	return strconv.FormatFloat(v, 'f', -1, 64)
 }
 
 // valueTypeMarkers generates kubebuilder validation markers for a map value type

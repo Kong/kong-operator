@@ -1043,37 +1043,21 @@ func countAttachedRoutesForGatewayListener(ctx context.Context, g *gwtypes.Gatew
 	}
 
 	kindsForProtocol, protocolSupported := supportedRoutesByProtocol()[listener.Protocol]
-	switch len(allowedRoutes.Kinds) {
-	case 0:
-		if protocolSupported {
-			for k := range kindsForProtocol {
-				// NOTE: Count other types of routes when they are supported.
-
-				switch k {
-				case "HTTPRoute":
-					httpRoutes, err := gatewayutils.ListHTTPRoutesForGateway(ctx, cl, g, opts...)
-					if err != nil {
-						return 0, fmt.Errorf(
-							"failed to list HTTPRoutes for Gateway %s when counting AttachedRoutes: %w",
-							client.ObjectKeyFromObject(g), err,
-						)
-					}
-					count += countAttachedHTTPRoutes(listener, httpRoutes)
-				case "TLSRoute":
-					// TODO: implement ListTLSRoute
-					return 0, nil
-				default:
-					return 0, fmt.Errorf("unsupported route kind: %s", k)
-				}
-			}
-		}
-	default:
-		if lo.ContainsBy(allowedRoutes.Kinds, func(gvk gatewayv1.RouteGroupKind) bool {
-			if _, ok := kindsForProtocol[gvk.Kind]; !ok {
-				return false
-			}
-			return gvk.Group != nil && *gvk.Group == gatewayv1.Group(gatewayv1.GroupVersion.Group)
+	// Return early if the listener's protocol is not supported, as no routes can be attached.
+	if !protocolSupported {
+		return 0, nil
+	}
+	for k := range kindsForProtocol {
+		if len(allowedRoutes.Kinds) > 0 && lo.NoneBy(allowedRoutes.Kinds, func(gvk gatewayv1.RouteGroupKind) bool {
+			return gvk.Kind == k && (gvk.Group == nil || *gvk.Group == gatewayv1.Group(gatewayv1.GroupVersion.Group))
 		}) {
+			// If the listener's protocol supports a route kind but it's not included in the AllowedRoutes.Kinds,
+			// then the routes with the given kind is not supported so we skip it.
+			continue
+		}
+		// Otherwise, the kind of routes are supported and we need to count the attached routes of that kind for the listener.
+		switch k {
+		case "HTTPRoute":
 			httpRoutes, err := gatewayutils.ListHTTPRoutesForGateway(ctx, cl, g, opts...)
 			if err != nil {
 				return 0, fmt.Errorf(
@@ -1081,8 +1065,19 @@ func countAttachedRoutesForGatewayListener(ctx context.Context, g *gwtypes.Gatew
 					client.ObjectKeyFromObject(g), err,
 				)
 			}
-
-			count += countAttachedHTTPRoutes(listener, httpRoutes)
+			count += countAttachedHTTPRoutes(g, listener, httpRoutes)
+		case "TLSRoute":
+			tlsRoutes, err := gatewayutils.ListTLSRoutesForGateway(ctx, cl, g, opts...)
+			if err != nil {
+				return 0, fmt.Errorf(
+					"failed to list TLSRoutes for Gateway %s when counting AttachedRoutes: %w",
+					client.ObjectKeyFromObject(g), err,
+				)
+			}
+			count += countAttachedTLSRoutes(g, listener, tlsRoutes)
+		// Unsupported route kinds. Should be unreachable.
+		default:
+			return 0, fmt.Errorf("unsupported route kind: %s", k)
 		}
 	}
 
@@ -1091,12 +1086,13 @@ func countAttachedRoutesForGatewayListener(ctx context.Context, g *gwtypes.Gatew
 
 // countAttachedHTTPRoutes counts the number of attached HTTPRoutes for a given listener,
 // taking into account the ParentRefs' sectionName and hostname intersections between the listener and the route.
-func countAttachedHTTPRoutes(listener gwtypes.Listener, httpRoutes []gatewayv1.HTTPRoute) int32 {
+func countAttachedHTTPRoutes(gateway *gwtypes.Gateway, listener gwtypes.Listener, httpRoutes []gatewayv1.HTTPRoute) int32 {
 	var count int32
 
 	for _, httpRoute := range httpRoutes {
 		if lo.ContainsBy(httpRoute.Spec.ParentRefs, func(parentRef gatewayv1.ParentReference) bool {
-			return (parentRef.SectionName == nil || *parentRef.SectionName == listener.Name) &&
+			return string(parentRef.Name) == gateway.Name &&
+				(parentRef.SectionName == nil || *parentRef.SectionName == listener.Name) &&
 				listenerHostnameIntersectsRouteHostnames(listener.Hostname, httpRoute.Spec.Hostnames)
 		}) {
 			count++
@@ -1104,6 +1100,17 @@ func countAttachedHTTPRoutes(listener gwtypes.Listener, httpRoutes []gatewayv1.H
 	}
 
 	return count
+}
+
+func countAttachedTLSRoutes(gateway *gwtypes.Gateway, listener gwtypes.Listener, tlsRoutes []gatewayv1.TLSRoute) int32 {
+	count := lo.CountBy(tlsRoutes, func(r gatewayv1.TLSRoute) bool {
+		return lo.ContainsBy(r.Spec.ParentRefs, func(parentRef gatewayv1.ParentReference) bool {
+			return string(parentRef.Name) == gateway.Name &&
+				(parentRef.SectionName == nil || *parentRef.SectionName == listener.Name) &&
+				listenerHostnameIntersectsRouteHostnames(listener.Hostname, r.Spec.Hostnames)
+		})
+	})
+	return int32(count)
 }
 
 func listenerHostnameIntersectsRouteHostnames(
@@ -1424,11 +1431,12 @@ func getSupportedKindsWithResolvedRefsCondition(ctx context.Context, c client.Cl
 			resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidCertificateRef)
 			message = conditionMessage(message, "Only Terminate mode is supported")
 		}
-		// We currently do not support more that one listener certificate.
-		if len(listener.TLS.CertificateRefs) != 1 {
+		// We currently do not support more that one listener certificates.
+		// TODO: https://github.com/Kong/kong-operator/issues/3510
+		if len(listener.TLS.CertificateRefs) > 1 {
 			resolvedRefsCondition.Reason = string(kcfggateway.ListenerReasonTooManyTLSSecrets)
 			message = conditionMessage(message, "Only one certificate per listener is supported")
-		} else {
+		} else if len(listener.TLS.CertificateRefs) == 1 {
 			isValidGroupKind := true
 			certificateRef := listener.TLS.CertificateRefs[0]
 			gatewayNamespace := gatewayv1.Namespace(gateway.Namespace)
@@ -1476,6 +1484,9 @@ func getSupportedKindsWithResolvedRefsCondition(ctx context.Context, c client.Cl
 				}
 			}
 		}
+		// For the case of 0 certificate refs:
+		// If the listener's TLSMode is Terminate, this cannot happen because it is rejected by gateway API's validation.
+		// If the listener's TLSMode is not Terminate, this is valid and means that the listener will be used for passthrough TLS, so no certificate is needed.
 	}
 
 	if listener.AllowedRoutes == nil || len(listener.AllowedRoutes.Kinds) == 0 {

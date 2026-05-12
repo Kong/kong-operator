@@ -38,6 +38,17 @@ import (
 //godoclint:disable max-len
 const restartAnnotationKey = "kubectl.kubernetes.io/restartedAt"
 
+// environment variable keys that are generated from the DataPlane configuration and need to be preserved across user patches.
+const (
+	envKongClusterCert    = "KONG_CLUSTER_CERT"
+	envKongClusterCertKey = "KONG_CLUSTER_CERT_KEY"
+)
+
+var operatorManangedEnvVars = []string{
+	envKongClusterCert,
+	envKongClusterCertKey,
+}
+
 // DeploymentBuilder builds a Deployment for a DataPlane.
 type DeploymentBuilder struct {
 	clusterCertificateName string
@@ -126,6 +137,20 @@ func (d *DeploymentBuilder) BuildAndDeploy(
 
 	if err := certificates.MountAndUseKonnectCert(ctx, d.logger, dataplane, d.client, desiredDeployment); err != nil {
 		return nil, op.Noop, fmt.Errorf("failed to mount konnect cert: %w", err)
+	}
+
+	// Genreate an error log if the user is trying to set environment variables that are managed by the operator, as this may cause unexpected behavior.
+	for _, envVar := range operatorManangedEnvVars {
+		found, err := envVarExistsInPodTemplateSpec(ctx, envVar, dataplane, d.client)
+		if err != nil {
+			return nil, op.Noop, fmt.Errorf("failed to check if env var %s exists in PodTemplateSpec: %w", envVar, err)
+		}
+		if found {
+			d.logger.Error(fmt.Errorf("operator maanged environment variable %s exists in DataPlane spec", envVar),
+				"DataPlane contains operator managed environment variable. This may cause unexpected behavior as the operator also manages this variable.",
+				"envVar", envVar, "dataPlane", client.ObjectKeyFromObject(dataplane).String(),
+			)
+		}
 	}
 
 	// TODO https://github.com/kong/kong-operator/issues/128
@@ -272,6 +297,31 @@ func podTemplateSpecHasRestartAnnotation(template *corev1.PodTemplateSpec) (stri
 	}
 	v, ok := template.Annotations[restartAnnotationKey]
 	return v, ok && v != ""
+}
+
+// envVarExistsInPodTemplateSpec checks if an environment variable with the given name
+// exists in the proxy container of the PodTemplateSpec in the DataPlane.
+func envVarExistsInPodTemplateSpec(
+	ctx context.Context,
+	envVarName string,
+	dataplane *operatorv1beta1.DataPlane,
+	cl client.Client,
+) (bool, error) {
+	templateSpec := dataplane.Spec.Deployment.PodTemplateSpec
+	if templateSpec == nil {
+		return false, nil
+	}
+	container := k8sutils.GetPodContainerByName(&templateSpec.Spec, consts.DataPlaneProxyContainerName)
+	if container == nil {
+		return false, nil
+	}
+
+	// go through the env vars in the container and check if any of them has the same name as the given env var name. If found, return true.
+	_, found, err := k8sutils.GetEnvValueFromContainer(ctx, container, dataplane.Namespace, envVarName, cl)
+	if err != nil {
+		return false, err
+	}
+	return found, nil
 }
 
 // isRecentDeploymentRestart detects if a deployment is undergoing a recent restart operation.

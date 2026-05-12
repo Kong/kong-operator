@@ -100,28 +100,3 @@ func deleteEventGatewayListenerPolicy(
 	}
 	return nil
 }
-
-func getEventGatewayListenerPolicyForUID(
-	ctx context.Context,
-	sdk sdkkonnectgo.EventGatewayListenerPoliciesSDK,
-	obj *konnectv1alpha1.EventGatewayListenerPolicy,
-) (string, error) {
-	gatewayID := obj.GetGatewayID()
-	if gatewayID == "" {
-		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "Gateway", Op: GetOp}
-	}
-	eventGatewayListenerID := obj.GetEventGatewayListenerID()
-	if eventGatewayListenerID == "" {
-		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "EventGatewayListener", Op: GetOp}
-	}
-
-	// TODO: EventGatewayListenerPolicy's Konnect list response lacks labels/tags and no
-	// usable name field is available on the spec, so UID matching cannot be
-	// performed here. This can be revisited once Konnect exposes labels/tags
-	// on this type (tracked in
-	// https://github.com/Kong/kong-operator/issues/3987) or by customizing
-	// this function for a type-specific match strategy.
-	_ = obj
-
-	return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
-}

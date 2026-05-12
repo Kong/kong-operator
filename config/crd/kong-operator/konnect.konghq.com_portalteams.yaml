@@ -64,7 +64,6 @@ spec:
                   spec fields.
                 properties:
                   canOwnApplications:
-                    default: Disabled
                     description: Whether the team is allowed to own applications
                     enum:
                     - Enabled

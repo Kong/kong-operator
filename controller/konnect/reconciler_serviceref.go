@@ -198,7 +198,7 @@ func handleKongServiceRef[T constraints.SupportedKonnectEntityType, TEnt constra
 			client.ObjectKeyFromObject(&kongSvc),
 		)
 	}
-	cp, err := controlplane.GetCPForRef(ctx, cl, kongSvcCPRef, ent.GetNamespace())
+	cp, err := controlplane.GetCPForRef(ctx, cl, kongSvcCPRef, kongSvc.GetNamespace())
 	if err != nil {
 		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, ent,

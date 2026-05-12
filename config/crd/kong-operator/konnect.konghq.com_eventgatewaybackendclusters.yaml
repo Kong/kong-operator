@@ -154,12 +154,10 @@ spec:
                       type: string
                     type: array
                   description:
-                    default: ""
                     description: A human-readable description of the backend cluster.
                     maxLength: 512
                     type: string
                   insecureAllowAnonymousVirtualClusterAuth:
-                    default: Disabled
                     description: |-
                       If true, virtual clusters can have allow anonymous authentication and use
                       this backend cluster.
@@ -184,7 +182,6 @@ spec:
                       "konnect", "mesh", "kic", or "_".
                     type: object
                   metadataUpdateIntervalSeconds:
-                    default: 60
                     description: The interval at which metadata is updated in seconds.
                     maximum: 43200
                     minimum: 1
@@ -245,7 +242,6 @@ spec:
                         - Disabled
                         type: string
                       insecureSkipVerify:
-                        default: Disabled
                         description: |-
                           If true, skip certificate verification.
                           It's not secure to use for production.
@@ -254,9 +250,6 @@ spec:
                         - Disabled
                         type: string
                       tlsVersions:
-                        default:
-                        - tls12
-                        - tls13
                         description: List of supported TLS versions.
                         items:
                           type: string

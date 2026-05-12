@@ -2504,6 +2504,10 @@ func (g *Generator) generateRootUnionSDKOps(
 		if variant.RefName != "" {
 			variantRefName = variant.RefName
 		}
+		discValue := discValueForRef[variantRefName]
+		if discValue == "" {
+			discValue = strings.ToLower(variantNames[i])
+		}
 		updatePayloadJSONName := ""
 		updateTargetFieldName := ""
 		updateVariantTypeName := ""
@@ -2525,7 +2529,6 @@ func (g *Generator) generateRootUnionSDKOps(
 		// For operations-wrapped: compute wrapped constructor names using disc value.
 		wrappedCreateConstructorName := ""
 		if isOperationsWrapped {
-			discValue := discValueForRef[variantRefName]
 			discPascal := fixInitialisms(pascalFromKebab(discValue))
 			wrappedCreateConstructorName = "Create" + entityName + "Create" + discPascal
 		}
@@ -2533,7 +2536,7 @@ func (g *Generator) generateRootUnionSDKOps(
 		fieldName := fixInitialisms(variantNames[i])
 		variants = append(variants, sdkOpsRootUnionVariant{
 			FieldName:                    fieldName,
-			JSONName:                     strings.ToLower(variantNames[i]),
+			JSONName:                     discValue,
 			TypeConstName:                fmt.Sprintf("%sType%s", rootUnionTypeName, fieldName),
 			CreateVariantTypeName:        fixInitialisms(variantRefName),
 			CreateConstructorName:        "Create" + fixInitialisms(variantRefName),
@@ -2711,8 +2714,19 @@ func (g *Generator) collectSDKOpsBoolFields(schema *parser.Schema) []sdkOpsBoolF
 			rawVariantNames = append(rawVariantNames, variantName)
 		}
 		variantNames := extractVariantNames(rawVariantNames)
+		discValueForRef := make(map[string]string, len(schema.DiscriminatorMapping))
+		for discValue, refName := range schema.DiscriminatorMapping {
+			discValueForRef[refName] = discValue
+		}
 		for i, variant := range schema.OneOf {
-			variantJSONName := strings.ToLower(variantNames[i])
+			variantRefName := variant.Name
+			if variant.RefName != "" {
+				variantRefName = variant.RefName
+			}
+			variantJSONName := discValueForRef[variantRefName]
+			if variantJSONName == "" {
+				variantJSONName = strings.ToLower(variantNames[i])
+			}
 			for _, nestedProp := range variant.Properties {
 				g.collectSDKOpsBoolFieldsFromProperty(nestedProp, []string{variantJSONName, nestedProp.Name}, &fields)
 			}
@@ -2819,6 +2833,8 @@ func testValuesForProperty(prop *parser.Property, goType string) (string, string
 		return "1", "float64(1)"
 	case "float32", "float64":
 		return "1.0", "1.0"
+	case "[]string":
+		return `[]string{"test-value"}`, `[]any{"test-value"}`
 	}
 
 	if prop.RefName != "" {

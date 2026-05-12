@@ -683,6 +683,18 @@ func (s *{{$.EntityName}}APISpec) selectedSDKOpsPayload(payload map[string]any) 
 	if selected == nil {
 		return nil, "", fmt.Errorf("{{$.EntityName}} config payload missing for type %q", s.{{$.UnionTypeName}}.Type)
 	}
+	if selectedMap, ok := selected.(map[string]any); ok {
+		if typeValue, ok := payload["type"]; ok {
+			if _, hasType := selectedMap["type"]; !hasType {
+				withType := make(map[string]any)
+				for key, value := range selectedMap {
+					withType[key] = value
+				}
+				withType["type"] = typeValue
+				selected = withType
+			}
+		}
+	}
 
 	data, err := json.Marshal(selected)
 	if err != nil {
@@ -1308,7 +1320,11 @@ func get{{.Entity}}ForUID(
 
 	for _, entry := range resp.{{.ListResponseField}}.Data {
 		{{- range .MatchFields}}
+		{{- if .SliceMatch}}
+		if !matchSliceField(obj.{{.ObjectField}}, entry.{{.ResponseField}}) {
+		{{- else}}
 		if !matchStringField(obj.{{.ObjectField}}, entry.{{.ResponseField}}) {
+		{{- end}}
 			continue
 		}
 		{{- end}}

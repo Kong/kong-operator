@@ -8,6 +8,7 @@
 - [v2.1.2](#v212)
 - [v2.1.1](#v211)
 - [v2.1.0](#v210)
+- [v2.0.9](#v209)
 - [v2.0.8](#v208)
 - [v2.0.7](#v207)
 - [v2.0.6](#v206)
@@ -214,6 +215,19 @@
 
 ### Fixes
 
+- Add `KongReferenceGrant` watch to `KongVault` and `KongConsumerGroup` reconcilers.
+  Previously, creating or deleting a grant would not trigger re-reconciliation of these
+  resources until the next full resync cycle. Grant changes now immediately re-queue
+  affected objects.
+  [#4219](https://github.com/Kong/kong-operator/pull/4219)
+- Fix cross-namespace `KongRoute → KongService` reference resolution: `handleKongServiceRef`
+  and `GetAPIAuthRefNN` (serviceRef branch) now derive the `KongService` namespace from
+  `serviceRef.namespace` instead of always using the route's namespace, so a cross-namespace
+  serviceRef with a valid `KongReferenceGrant` correctly reaches `Programmed=True`.
+  The `kongRouteRefersToKongService` index key and `enqueueKongRouteForKongService` watch
+  handler are also fixed to use the service's namespace, ensuring cross-namespace routes are
+  re-queued immediately when the referenced service changes rather than waiting for a full resync.
+  [#4212](https://github.com/Kong/kong-operator/pull/4212)
 - Use the ControlPlane's own namespace when resolving its `KonnectAPIAuthConfiguration`
   reference and when checking the `KongReferenceGrant`. Previously the namespace of the
   requesting entity was used, which caused resources that resolve their CP through a
@@ -225,6 +239,8 @@
   [#4131](https://github.com/Kong/kong-operator/pull/4131)
 - Sanitize the plugin configuration when `ControlPlane`'s `configDump.dumpSensitive` isn't enabled.
   [#4045](https://github.com/Kong/kong-operator/pull/4045)
+- More robust validation for `GatewayConfiguration` - fields `konnect` and `extensions` are mutually exclusive.
+  [#4213](https://github.com/Kong/kong-operator/pull/4213)
 
 ## [v2.1.5]
 
@@ -641,6 +657,22 @@
   `spec.listeners.tls.certificateRef`, ensuring Gateway status conditions
   are updated when referenced certificates change.
   [#2661](https://github.com/Kong/kong-operator/pull/2661)
+
+## [v2.0.9]
+
+> Release date: 2026-04-23
+
+### Fixed
+
+- Fix a hot loop in the `KonnectExtension` reconciler when two
+  `KonnectExtension`s share the same client-certificate `Secret`: the
+  `KongDataPlaneClientCertificate` CR is now named after the `KonnectExtension`
+  instead of the `Secret`, so each extension gets its own CR in its own Konnect
+  ControlPlane and the reconciler no longer retries `Create` on every loop or
+  falls back to Konnect's `dp-client-certificates` List API.
+  [#3961](https://github.com/Kong/kong-operator/pull/3961) [#3978](https://github.com/Kong/kong-operator/pull/3978)
+- Fix incorrect Konnect API used for target lookup
+  [#3910](https://github.com/Kong/kong-operator/pull/3910) [#3939](https://github.com/Kong/kong-operator/pull/3939)
 
 ## [v2.0.8]
 
@@ -2049,6 +2081,7 @@ re-installing the operator through the bundle.
 [v2.1.2]: https://github.com/Kong/kong-operator/compare/v2.1.1..v2.1.2
 [v2.1.1]: https://github.com/Kong/kong-operator/compare/v2.1.0..v2.1.1
 [v2.1.0]: https://github.com/Kong/kong-operator/compare/v2.0.5..v2.1.0
+[v2.0.9]: https://github.com/Kong/kong-operator/compare/v2.0.8..v2.0.9
 [v2.0.8]: https://github.com/Kong/kong-operator/compare/v2.0.7..v2.0.8
 [v2.0.7]: https://github.com/Kong/kong-operator/compare/v2.0.6..v2.0.7
 [v2.0.6]: https://github.com/Kong/kong-operator/compare/v2.0.5..v2.0.6

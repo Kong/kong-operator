@@ -291,7 +291,13 @@ var supportedKonnectV1Alpha1TypesGeneratedFromOAS = []supportedTypesT{
 		PackageVersion: "v1alpha1",
 		Types: []templateDataT{
 			{
+				Type: "EventGatewayBackendCluster",
+			},
+			{
 				Type: "Portal",
+			},
+			{
+				Type: "PortalPage",
 			},
 		},
 	},
