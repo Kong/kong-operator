@@ -1,0 +1,51 @@
+# Template for creating/updating and asserting a KongService that references
+# a KongCertificate (client cert) and a KongCACertificate (upstream CA verify).
+#
+# Required bindings:
+#   - kong_service_name: Name of the KongService to create.
+#   - kong_service_namespace: Namespace where the KongService will be created.
+#   - konnect_cp_name: Name of the KonnectGatewayControlPlane to reference.
+#   - upstream_host: Host of the upstream server.
+#   - upstream_port: Port of the upstream server (number).
+#   - kong_certificate_name: Name of the KongCertificate used as client certificate.
+#   - kong_ca_certificate_name: Name of the KongCACertificate used to verify the upstream.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-kong-service-with-cert-refs
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: KongService
+          metadata:
+            name: ($kong_service_name)
+            namespace: ($kong_service_namespace)
+          spec:
+            name: ($kong_service_name)
+            host: ($upstream_host)
+            port: ($upstream_port)
+            protocol: https
+            controlPlaneRef:
+              type: konnectNamespacedRef
+              konnectNamespacedRef:
+                name: ($konnect_cp_name)
+            clientCertificateRef:
+              name: ($kong_certificate_name)
+            caCertificateRefs:
+              - name: ($kong_ca_certificate_name)
+    - assert:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: KongService
+          metadata:
+            name: ($kong_service_name)
+            namespace: ($kong_service_namespace)
+          status:
+            (conditions[?type == 'Programmed']):
+              - status: 'True'
+                reason: Programmed
+            (konnect.id != null): true
+            (konnect.certificateID != ''): true
+            (length(konnect.caCertificateIDs) > `0`): true

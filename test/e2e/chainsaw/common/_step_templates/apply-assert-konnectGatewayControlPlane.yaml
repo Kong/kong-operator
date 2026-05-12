@@ -1,0 +1,43 @@
+# Template for creating and asserting a KonnectGatewayControlPlane.
+#
+# Required bindings:
+#   - konnect_cp_name: Name of the KonnectGatewayControlPlane to create.
+#   - konnect_cp_namespace: Namespace where the KonnectGatewayControlPlane will be created.
+#   - konnect_auth_name: Name of the KonnectAPIAuthConfiguration to reference.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-konnect-gateway-control-plane
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: konnect.konghq.com/v1alpha2
+          kind: KonnectGatewayControlPlane
+          metadata:
+            name: ($konnect_cp_name)
+            namespace: ($konnect_cp_namespace)
+          spec:
+            createControlPlaneRequest:
+              name: ($konnect_cp_name)
+              labels:
+                app: ($konnect_cp_name)
+            konnect:
+              authRef:
+                name: ($konnect_auth_name)
+    - assert:
+        resource:
+          apiVersion: konnect.konghq.com/v1alpha2
+          kind: KonnectGatewayControlPlane
+          metadata:
+            name: ($konnect_cp_name)
+            namespace: ($konnect_cp_namespace)
+          status:
+            clusterType: CLUSTER_TYPE_CONTROL_PLANE
+            (conditions[?type == 'Programmed']):
+              - status: 'True'
+            (conditions[?type == 'APIAuthValid']):
+              - status: 'True'
+            (conditions[?type == 'APIAuthResolvedRef']):
+              - status: 'True'
+            (id != null): true

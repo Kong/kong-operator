@@ -1,0 +1,44 @@
+# Template for creating and asserting a KongCACertificate sourced from a Secret.
+#
+# The referenced Secret must contain a key named 'ca.crt'.
+#
+# Required bindings:
+#   - kong_ca_certificate_name: Name of the KongCACertificate to create.
+#   - kong_ca_certificate_namespace: Namespace where the KongCACertificate will be created.
+#   - ca_secret_name: Name of the Secret holding the CA certificate (under key 'ca.crt').
+#   - ca_secret_namespace: Namespace of the Secret.
+#   - konnect_cp_name: Name of the KonnectGatewayControlPlane to reference.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-kong-ca-certificate
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: KongCACertificate
+          metadata:
+            name: ($kong_ca_certificate_name)
+            namespace: ($kong_ca_certificate_namespace)
+          spec:
+            type: secretRef
+            controlPlaneRef:
+              type: konnectNamespacedRef
+              konnectNamespacedRef:
+                name: ($konnect_cp_name)
+            secretRef:
+              name: ($ca_secret_name)
+              namespace: ($ca_secret_namespace)
+    - assert:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: KongCACertificate
+          metadata:
+            name: ($kong_ca_certificate_name)
+            namespace: ($kong_ca_certificate_namespace)
+          status:
+            (conditions[?type == 'Programmed']):
+              - status: 'True'
+                reason: Programmed
+            (konnect.id != null): true
