@@ -175,7 +175,11 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 	}
 
-	if stop, res, err := r.handleGeneratedTypeReferences(ctx, ent); stop || err != nil {
+	if stop, res, err := r.handleGeneratedTypeParentReferences(ctx, ent); stop || err != nil {
+		return res, err
+	}
+
+	if stop, res, err := r.handleCrossReferences(ctx, ent); stop || err != nil {
 		return res, err
 	}
 

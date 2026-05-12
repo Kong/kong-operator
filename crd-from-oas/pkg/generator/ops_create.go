@@ -26,6 +26,7 @@ type opsCreateFuncData struct {
 	CreateReqType        string
 	CreateReqBodyPointer bool
 	NeedsClient          bool
+	HasReferences        bool
 	RespField            string
 	HasTags              bool
 	HasLabels            bool
@@ -96,6 +97,7 @@ func (g *Generator) generateOpsCreateFuncBody(
 		CreateReqType:        createReqType,
 		CreateReqBodyPointer: schema.CreateReqBodyPointer,
 		NeedsClient:          needsClient,
+		HasReferences:        g.entityHasReferences(entityName),
 		RespField:            schema.SuccessResponseRef,
 		HasTags:              hasTags,
 		HasLabels:            hasLabels,

@@ -202,6 +202,16 @@ func {{.EntityName}}ReconciliationWatchOptions(
 				),
 			)
 		},
+		{{- range .CrossRefs}}
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&{{$.APIGroupPackageAlias}}.{{.RefKind}}{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueue{{$.EntityName}}For{{.RefKind}}(cl),
+				),
+			)
+		},
+		{{- end}}
 	}
 }
 
@@ -226,7 +236,29 @@ func enqueue{{.EntityName}}For{{.ParentEntityName}}(
 		return objectListToReconcileRequests(l.Items)
 	}
 }
-`
+{{range .CrossRefs}}
+func enqueue{{$.EntityName}}For{{.RefKind}}(
+	cl client.Client,
+) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		ref, ok := obj.(*{{$.APIGroupPackageAlias}}.{{.RefKind}})
+		if !ok {
+			return nil
+		}
+		var l {{$.APIGroupPackageAlias}}.{{$.EntityName}}List
+		if err := cl.List(ctx, &l,
+			// TODO: change this when cross namespace refs are allowed.
+			client.InNamespace(ref.GetNamespace()),
+			client.MatchingFields{
+				index.IndexField{{$.EntityName}}On{{.RefKind}}Ref: ref.Name,
+			},
+		); err != nil {
+			return nil
+		}
+		return objectListToReconcileRequests(l.Items)
+	}
+}
+{{end}}`
 
 const childIndexTemplate = sharedGeneratedFilePreamble + `
 
@@ -241,6 +273,10 @@ import (
 const (
 	// IndexField{{.EntityName}}On{{.ParentEntityName}}Ref is the index field for {{.EntityName}} -> {{.ParentEntityName}}.
 	IndexField{{.EntityName}}On{{.ParentEntityName}}Ref = "{{.EntityNameLowerCamel}}On{{.ParentEntityName}}Ref"
+	{{- range .CrossRefs}}
+	// IndexField{{$.EntityName}}On{{.RefKind}}Ref is the index field for {{$.EntityName}} -> {{.RefKind}}.
+	IndexField{{$.EntityName}}On{{.RefKind}}Ref = "{{$.EntityNameLowerCamel}}On{{.RefKind}}Ref"
+	{{- end}}
 )
 
 // OptionsFor{{.EntityName}} returns required Index options for {{.EntityName}} reconciler.
@@ -251,6 +287,13 @@ func OptionsFor{{.EntityName}}() []Option {
 			Field:          IndexField{{.EntityName}}On{{.ParentEntityName}}Ref,
 			ExtractValueFn: {{.EntityNameLowerCamel}}On{{.ParentEntityName}}Ref,
 		},
+		{{- range .CrossRefs}}
+		{
+			Object:         &{{$.APIGroupPackageAlias}}.{{$.EntityName}}{},
+			Field:          IndexField{{$.EntityName}}On{{.RefKind}}Ref,
+			ExtractValueFn: {{$.EntityNameLowerCamel}}On{{.RefKind}}Ref,
+		},
+		{{- end}}
 	}
 }
 
@@ -265,7 +308,18 @@ func {{.EntityNameLowerCamel}}On{{.ParentEntityName}}Ref(object client.Object) [
 
 	return []string{ent.Spec.{{.ParentRefFieldName}}.NamespacedRef.Name}
 }
-`
+{{range .CrossRefs}}
+func {{$.EntityNameLowerCamel}}On{{.RefKind}}Ref(object client.Object) []string {
+	ent, ok := object.(*{{$.APIGroupPackageAlias}}.{{$.EntityName}})
+	if !ok {
+		return nil
+	}
+	if ent.{{.GoFieldPath}} == nil || ent.{{.GoFieldPath}}.NamespacedRef == nil {
+		return nil
+	}
+	return []string{ent.{{.GoFieldPath}}.NamespacedRef.Name}
+}
+{{end}}`
 
 const reconcilerConditionsTemplate = sharedGeneratedFilePreamble + `
 
@@ -290,6 +344,15 @@ const (
 	{{$group.Prefix}}RefReasonNotProgrammed = "NotProgrammed"
 {{ end }})
 `
+
+// crossRefWatchData holds per-cross-reference metadata for watch/index templates.
+type crossRefWatchData struct {
+	// RefKind is the referenced entity kind, e.g. "EventGatewayBackendCluster".
+	RefKind string
+	// GoFieldPath is the Go struct field accessor from the entity root,
+	// e.g. "Spec.APISpec.Destination".
+	GoFieldPath string
+}
 
 type reconcilerEntityMetadata struct {
 	EntityName           string
@@ -420,6 +483,29 @@ func (g *Generator) generateReconcilerConditions(parsed *parser.ParsedSpec) (*Ge
 		groupMap[prefix] = group
 	}
 
+	// Also add condition groups for cross-reference kinds (references: config).
+	// Each unique referenced kind gets its own condition prefix.
+	for entityName, refs := range g.config.References {
+		_ = entityName
+		for _, ref := range refs {
+			if existing, ok := groupMap[ref.Kind]; ok {
+				if existing.ReferencedEntityName != ref.Kind {
+					return nil, fmt.Errorf(
+						"cross-reference condition prefix %q maps to both %q and %q",
+						ref.Kind,
+						existing.ReferencedEntityName,
+						ref.Kind,
+					)
+				}
+				continue
+			}
+			groupMap[ref.Kind] = reconcilerConditionGroup{
+				Prefix:               ref.Kind,
+				ReferencedEntityName: ref.Kind,
+			}
+		}
+	}
+
 	if len(groupMap) == 0 {
 		return nil, nil
 	}
@@ -470,6 +556,8 @@ func (g *Generator) generateWatch(metadata reconcilerEntityMetadata, rc *config.
 		apiAuthPackageAlias = "konnectapiauthv1alpha1"
 	}
 
+	crossRefs := g.buildCrossRefWatchData(metadata.EntityName)
+
 	var buf strings.Builder
 	data := struct {
 		EntityName                 string
@@ -480,6 +568,7 @@ func (g *Generator) generateWatch(metadata reconcilerEntityMetadata, rc *config.
 		NeedsSeparateAPIAuthImport bool
 		APIGroupPackagePath        string
 		APIGroupPackageAlias       string
+		CrossRefs                  []crossRefWatchData
 	}{
 		EntityName:                 metadata.EntityName,
 		EntityNameLowerCamel:       metadata.EntityNameLowerCamel,
@@ -489,6 +578,7 @@ func (g *Generator) generateWatch(metadata reconcilerEntityMetadata, rc *config.
 		NeedsSeparateAPIAuthImport: needsSeparateAPIAuthImport,
 		APIGroupPackagePath:        metadata.APIGroupPackagePath,
 		APIGroupPackageAlias:       metadata.APIGroupPackageAlias,
+		CrossRefs:                  crossRefs,
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
@@ -503,6 +593,8 @@ func (g *Generator) generateIndex(metadata reconcilerEntityMetadata, rc *config.
 		tmpl = template.Must(template.New("childIndex").Parse(childIndexTemplate))
 	}
 
+	crossRefs := g.buildCrossRefWatchData(metadata.EntityName)
+
 	var buf strings.Builder
 	data := struct {
 		EntityName           string
@@ -511,6 +603,7 @@ func (g *Generator) generateIndex(metadata reconcilerEntityMetadata, rc *config.
 		ParentRefFieldName   string
 		APIGroupPackagePath  string
 		APIGroupPackageAlias string
+		CrossRefs            []crossRefWatchData
 	}{
 		EntityName:           metadata.EntityName,
 		EntityNameLowerCamel: metadata.EntityNameLowerCamel,
@@ -518,12 +611,36 @@ func (g *Generator) generateIndex(metadata reconcilerEntityMetadata, rc *config.
 		ParentRefFieldName:   metadata.ParentRefFieldName,
 		APIGroupPackagePath:  metadata.APIGroupPackagePath,
 		APIGroupPackageAlias: metadata.APIGroupPackageAlias,
+		CrossRefs:            crossRefs,
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
 		return "", err
 	}
 	return buf.String(), nil
+}
+
+// buildCrossRefWatchData builds crossRefWatchData entries for an entity's references.
+func (g *Generator) buildCrossRefWatchData(entityName string) []crossRefWatchData {
+	refs := g.templateReferences(entityName)
+	if len(refs) == 0 {
+		return nil
+	}
+	result := make([]crossRefWatchData, len(refs))
+	for i, ref := range refs {
+		// Convert path like "spec.apiSpec.destination" to Go field accessor "Spec.APISpec.Destination".
+		// goFieldName handles "_" separators; fixInitialisms corrects initialisms like "Api" → "API".
+		segments := strings.Split(ref.Path, ".")
+		goSegments := make([]string, len(segments))
+		for j, seg := range segments {
+			goSegments[j] = fixInitialisms(goFieldName(seg))
+		}
+		result[i] = crossRefWatchData{
+			RefKind:     ref.Kind,
+			GoFieldPath: strings.Join(goSegments, "."),
+		}
+	}
+	return result
 }
 
 func (g *Generator) reconcilerEntityMetadata(

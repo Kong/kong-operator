@@ -60,3 +60,60 @@ func (s *EventGatewayVirtualClusterAPISpec) ToUpdateVirtualClusterRequest() (*sd
 	}
 	return &target, nil
 }
+
+
+// ToCreateVirtualClusterRequest converts the EventGatewayVirtualCluster to the SDK type
+// sdkkonnectcomp.CreateVirtualClusterRequest, injecting resolved cross-reference IDs from status.
+func (obj *EventGatewayVirtualCluster) ToCreateVirtualClusterRequest() (*sdkkonnectcomp.CreateVirtualClusterRequest, error) {
+	data, err := obj.Spec.APISpec.marshalSDKOpsPayload()
+	if err != nil {
+		return nil, err
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(data, &payload); err != nil {
+		return nil, fmt.Errorf("failed to decode EventGatewayVirtualCluster SDK payload: %w", err)
+	}
+	if payload == nil {
+		payload = map[string]any{}
+	}
+	if id := obj.GetEventGatewayBackendClusterID(); id != "" {
+		payload["destination"] = map[string]any{"id": id}
+	}
+	data, err = json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal EventGatewayVirtualCluster SDK payload with references: %w", err)
+	}
+	var target sdkkonnectcomp.CreateVirtualClusterRequest
+	if err := json.Unmarshal(data, &target); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal into CreateVirtualClusterRequest: %w", err)
+	}
+	return &target, nil
+}
+
+// ToUpdateVirtualClusterRequest converts the EventGatewayVirtualCluster to the SDK type
+// sdkkonnectcomp.UpdateVirtualClusterRequest, injecting resolved cross-reference IDs from status.
+func (obj *EventGatewayVirtualCluster) ToUpdateVirtualClusterRequest() (*sdkkonnectcomp.UpdateVirtualClusterRequest, error) {
+	data, err := obj.Spec.APISpec.marshalSDKOpsPayload()
+	if err != nil {
+		return nil, err
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(data, &payload); err != nil {
+		return nil, fmt.Errorf("failed to decode EventGatewayVirtualCluster SDK payload: %w", err)
+	}
+	if payload == nil {
+		payload = map[string]any{}
+	}
+	if id := obj.GetEventGatewayBackendClusterID(); id != "" {
+		payload["destination"] = map[string]any{"id": id}
+	}
+	data, err = json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal EventGatewayVirtualCluster SDK payload with references: %w", err)
+	}
+	var target sdkkonnectcomp.UpdateVirtualClusterRequest
+	if err := json.Unmarshal(data, &target); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal into UpdateVirtualClusterRequest: %w", err)
+	}
+	return &target, nil
+}

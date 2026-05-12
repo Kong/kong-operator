@@ -21,7 +21,7 @@ func createEventGatewayVirtualCluster(
 	if parentID == "" {
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectEventGateway", Op: CreateOp}
 	}
-	req, err := obj.Spec.APISpec.ToCreateVirtualClusterRequest()
+	req, err := obj.ToCreateVirtualClusterRequest()
 	if err != nil {
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
 	}
@@ -49,7 +49,7 @@ func updateEventGatewayVirtualCluster(
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectEventGateway", Op: UpdateOp}
 	}
 	id := obj.GetKonnectStatus().GetKonnectID()
-	req, err := obj.Spec.APISpec.ToUpdateVirtualClusterRequest()
+	req, err := obj.ToUpdateVirtualClusterRequest()
 	if err != nil {
 		return fmt.Errorf("failed building %s SDK update request: %w", obj.GetTypeName(), err)
 	}

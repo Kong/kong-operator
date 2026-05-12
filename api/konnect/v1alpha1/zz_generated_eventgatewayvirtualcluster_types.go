@@ -93,7 +93,7 @@ type EventGatewayVirtualClusterAPISpec struct {
 	//
 	//
 	// +required
-	Destination *BackendClusterReferenceModify `json:"destination,omitempty"`
+	Destination *commonv1alpha1.ObjectRef `json:"destination,omitempty"`
 
 	// The DNS label used in the bootstrap server URL to identify the virtual
 	// cluster when using SNI routing.
@@ -168,6 +168,11 @@ type EventGatewayVirtualClusterStatus struct {
 	//
 	// +optional
 	GatewayID *KonnectEntityRef `json:"gatewayID,omitempty"`
+
+	// EventGatewayBackendCluster is the Konnect entity reference resolved from spec.apiSpec.destination.
+	//
+	// +optional
+	EventGatewayBackendCluster *KonnectEntityRef `json:"eventGatewayBackendCluster,omitempty"`
 
 	// ObservedGeneration is the most recent generation observed
 	//

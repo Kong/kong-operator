@@ -112,7 +112,9 @@ type {{.EntityName}}APISpec struct {
 {{- range kubebuilderTags $prop}}
 	// {{.}}
 {{- end}}
-{{- if isRefProperty $prop}}
+{{- if isRefConfigField $prop}}
+	{{goFieldName $prop.Name}} *{{objectRefTypeName}} ` + "`" + `json:"{{jsonPropName $prop}},omitempty"` + "`" + `
+{{- else if isRefProperty $prop}}
 	{{goFieldName $prop.Name}}Ref {{goType $prop}} ` + "`" + `json:"{{refJSONTag $prop}},omitempty"` + "`" + `
 {{- else}}
 	{{goFieldName $prop.Name}} {{goType $prop}} ` + "`" + `json:"{{jsonTag $prop (goType $prop)}}"` + "`" + `
@@ -141,13 +143,17 @@ type {{.EntityName}}Status struct {
 	konnectv1alpha2.KonnectEntityStatus ` + "`" + `json:",inline"` + "`" + `
 {{- else}}
 	KonnectEntityStatus ` + "`" + `json:",inline"` + "`" + `
-{{- end}}
-{{range .Schema.Dependencies}}
+{{- end}}{{- if or .Schema.Dependencies .References}}{{"\n"}}{{range .Schema.Dependencies}}
 	// {{.EntityName}}ID is the Konnect ID of the parent {{.EntityName}}.
 	//
 	// +optional
 	{{.EntityName}}ID *KonnectEntityRef ` + "`" + `json:"{{.EntityName | lower}}ID,omitempty"` + "`" + `
-{{end}}
+{{end}}{{range .References}}
+	// {{.Kind}} is the Konnect entity reference resolved from {{.Path}}.
+	//
+	// +optional
+	{{.Kind}} *KonnectEntityRef ` + "`" + `json:"{{lowerCamel .Kind}},omitempty"` + "`" + `
+{{end}}{{- else}}{{"\n"}}{{- end}}
 	// ObservedGeneration is the most recent generation observed
 	//
 	// +optional
@@ -314,6 +320,51 @@ func (obj *{{.EntityName}}) GetStatusConditionReasonParentRefNotProgrammed() str
 func (obj *{{.EntityName}}) GetKonnectAPIAuthConfigurationRef() {{.KonnectAPIAuthConfigurationRefType}} {
 	return {{.KonnectAPIAuthConfigurationRefType}}{
 		Name: obj.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name,
+	}
+}
+{{- end}}
+{{- range .References}}
+
+// Get{{.Kind}}ID returns the Konnect ID resolved for the referenced {{.Kind}}.
+func (obj *{{$.EntityName}}) Get{{.Kind}}ID() string {
+	if obj.Status.{{.Kind}} == nil {
+		return ""
+	}
+	return obj.Status.{{.Kind}}.ID
+}
+
+// Set{{.Kind}}ID sets the resolved Konnect ID for the referenced {{.Kind}}.
+func (obj *{{$.EntityName}}) Set{{.Kind}}ID(id string) {
+	if obj.Status.{{.Kind}} == nil {
+		obj.Status.{{.Kind}} = &KonnectEntityRef{}
+	}
+	obj.Status.{{.Kind}}.ID = id
+}
+{{- end}}
+{{- if .References}}
+
+// GetCrossReferences returns inter-CR references configured on {{.EntityName}}.
+func (obj *{{.EntityName}}) GetCrossReferences() []CrossReference {
+	refs := make([]CrossReference, 0, {{len .References}})
+{{- range .References}}
+	if obj.Spec.APISpec.{{.GoFieldName}} != nil {
+		refs = append(refs, CrossReference{
+			Kind:     "{{.Kind}}",
+			SpecPath: "{{.Path}}",
+			Ref:      obj.Spec.APISpec.{{.GoFieldName}},
+		})
+	}
+{{- end}}
+	return refs
+}
+
+// SetCrossReferenceID sets the resolved Konnect ID for the cross-reference identified by kind.
+func (obj *{{.EntityName}}) SetCrossReferenceID(kind, id string) {
+	switch kind {
+{{- range .References}}
+	case "{{.Kind}}":
+		obj.Set{{.Kind}}ID(id)
+{{- end}}
 	}
 }
 {{- end}}
@@ -518,6 +569,39 @@ func (obj *{{$.EntityName}}) {{.MethodName}}(ctx context.Context, cl client.Clie
 		return nil, err
 	}
 	return spec.{{.MethodName}}()
+}
+{{end}}
+{{- end}}
+{{- if .HasReferences}}
+{{range .Methods}}
+// {{.MethodName}} converts the {{$.EntityName}} to the SDK type
+// {{.ImportAlias}}.{{.TypeName}}, injecting resolved cross-reference IDs from status.
+func (obj *{{$.EntityName}}) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeName}}, error) {
+	data, err := obj.Spec.APISpec.marshalSDKOpsPayload()
+	if err != nil {
+		return nil, err
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(data, &payload); err != nil {
+		return nil, fmt.Errorf("failed to decode {{$.EntityName}} SDK payload: %w", err)
+	}
+	if payload == nil {
+		payload = map[string]any{}
+	}
+	{{- range $.References}}
+	if id := obj.Get{{.Kind}}ID(); id != "" {
+		payload["{{.JSONFieldName}}"] = map[string]any{"id": id}
+	}
+	{{- end}}
+	data, err = json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal {{$.EntityName}} SDK payload with references: %w", err)
+	}
+	var target {{.ImportAlias}}.{{.TypeName}}
+	if err := json.Unmarshal(data, &target); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal into {{.TypeName}}: %w", err)
+	}
+	return &target, nil
 }
 {{end}}
 {{- end}}`
@@ -969,6 +1053,8 @@ func create{{.Entity}}(
 {{- end}}
 	{{- if .NeedsClient}}
 	req, err := obj.To{{.CreateReqType}}(ctx, cl)
+	{{- else if .HasReferences}}
+	req, err := obj.To{{.CreateReqType}}()
 	{{- else}}
 	req, err := obj.Spec.APISpec.To{{.CreateReqType}}()
 	{{- end}}
@@ -1044,6 +1130,8 @@ func update{{.Entity}}(
 {{- end}}
 	{{- if .NeedsClient}}
 	req, err := obj.To{{.UpdateReqType}}(ctx, cl)
+	{{- else if .HasReferences}}
+	req, err := obj.To{{.UpdateReqType}}()
 	{{- else}}
 	req, err := obj.Spec.APISpec.To{{.UpdateReqType}}()
 	{{- end}}

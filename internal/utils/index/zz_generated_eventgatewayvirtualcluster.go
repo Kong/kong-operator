@@ -11,6 +11,8 @@ import (
 const (
 	// IndexFieldEventGatewayVirtualClusterOnKonnectEventGatewayRef is the index field for EventGatewayVirtualCluster -> KonnectEventGateway.
 	IndexFieldEventGatewayVirtualClusterOnKonnectEventGatewayRef = "eventGatewayVirtualClusterOnKonnectEventGatewayRef"
+	// IndexFieldEventGatewayVirtualClusterOnEventGatewayBackendClusterRef is the index field for EventGatewayVirtualCluster -> EventGatewayBackendCluster.
+	IndexFieldEventGatewayVirtualClusterOnEventGatewayBackendClusterRef = "eventGatewayVirtualClusterOnEventGatewayBackendClusterRef"
 )
 
 // OptionsForEventGatewayVirtualCluster returns required Index options for EventGatewayVirtualCluster reconciler.
@@ -20,6 +22,11 @@ func OptionsForEventGatewayVirtualCluster() []Option {
 			Object:         &konnectv1alpha1.EventGatewayVirtualCluster{},
 			Field:          IndexFieldEventGatewayVirtualClusterOnKonnectEventGatewayRef,
 			ExtractValueFn: eventGatewayVirtualClusterOnKonnectEventGatewayRef,
+		},
+		{
+			Object:         &konnectv1alpha1.EventGatewayVirtualCluster{},
+			Field:          IndexFieldEventGatewayVirtualClusterOnEventGatewayBackendClusterRef,
+			ExtractValueFn: eventGatewayVirtualClusterOnEventGatewayBackendClusterRef,
 		},
 	}
 }
@@ -34,4 +41,15 @@ func eventGatewayVirtualClusterOnKonnectEventGatewayRef(object client.Object) []
 	}
 
 	return []string{ent.Spec.GatewayRef.NamespacedRef.Name}
+}
+
+func eventGatewayVirtualClusterOnEventGatewayBackendClusterRef(object client.Object) []string {
+	ent, ok := object.(*konnectv1alpha1.EventGatewayVirtualCluster)
+	if !ok {
+		return nil
+	}
+	if ent.Spec.APISpec.Destination == nil || ent.Spec.APISpec.Destination.NamespacedRef == nil {
+		return nil
+	}
+	return []string{ent.Spec.APISpec.Destination.NamespacedRef.Name}
 }

@@ -132,6 +132,9 @@ apiGroupVersions:
           update:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdateVirtualClusterRequest
           delete: {}
+        references:
+          - kind: EventGatewayBackendCluster
+            path: spec.apiSpec.destination
         reconciler:
           parentEntityType: KonnectEventGateway
 

@@ -56,6 +56,10 @@ type Config struct {
 	// getForUID function already exists and should still be included in the
 	// generated cross-entity dispatcher.
 	ManualGetForUIDEntities map[string]bool
+	// References maps entity names to their inter-CR reference configurations.
+	// When set, the matching spec field is replaced with *commonv1alpha1.ObjectRef
+	// and a resolved-ID status field is emitted.
+	References map[string][]config.ReferenceConfig
 }
 
 // Generator generates Go CRD types from parsed OpenAPI schemas.
@@ -1146,12 +1150,15 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		"goType":                goTypeInCRD,
 		"goFieldName":           goFieldName,
 		"jsonTag":               jsonTag,
+		"jsonPropName":          func(p *parser.Property) string { return jsonName(p.Name) },
 		"refJSONTag":            func(p *parser.Property) string { return jsonName(p.Name) + "Ref" },
 		"kubebuilderTags":       kubebuilderTagsWithConfig,
 		"isRefProperty":         isRefProperty,
+		"isRefConfigField":      func(prop *parser.Property) bool { return g.referenceForField(entityName, prop.Name) != nil },
 		"refEntityName":         parser.GetRefEntityName,
 		"skipProperty":          skipProperty,
 		"lower":                 strings.ToLower,
+		"lowerCamel":            lowerCamelCase,
 		"formatComment":         formatComment,
 		"hasRootOneOf":          hasRootOneOf,
 		"objectRefTypeName":     func() string { return g.objectRefTypeName() },
@@ -1161,10 +1168,13 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 
 	tmpl := template.Must(template.New("crd").Funcs(funcMap).Parse(crdTypeTemplate))
 
-	// Determine whether we need the ObjectRef import: either for dependencies/refs
-	// or for the optional secret ref's NamespacedRef type.
+	// Determine whether we need the ObjectRef import: either for dependencies/refs,
+	// optional secret ref's NamespacedRef type, or configured inter-CR references.
 	objectRefImport := g.objectRefImportIfNeeded(schema)
 	if objectRefImport == nil && hasOptionalSecretRef && g.objectRefImported() {
+		objectRefImport = g.config.CommonTypes.ObjectRef.Import
+	}
+	if objectRefImport == nil && g.entityHasReferences(entityName) && g.objectRefImported() {
 		objectRefImport = g.config.CommonTypes.ObjectRef.Import
 	}
 
@@ -1201,6 +1211,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		ImmediateParentDependency *parser.Dependency
 		Categories                []string
 		SingletonNoID             bool
+		References                []TemplateReferenceConfig
 	}{
 		EntityName:                entityName,
 		Schema:                    schema,
@@ -1214,6 +1225,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		ImmediateParentDependency: rootRefDependency(schema),
 		Categories:                categories,
 		SingletonNoID:             isSingletonNoID(schema),
+		References:                g.templateReferences(entityName),
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
@@ -1334,8 +1346,15 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 			Path:  defaultKonnectStatusPackage,
 		})
 	}
+	if g.entityHasReferences(entityName) && g.objectRefImported() {
+		imports = appendUniqueImportConfig(imports, g.config.CommonTypes.ObjectRef.Import)
+	}
 
-	tmpl := template.Must(template.New("crdFuncs").Parse(crdFuncsTemplate))
+	funcsFuncMap := template.FuncMap{
+		"lowerCamel":  lowerCamelCase,
+		"goFieldName": goFieldName,
+	}
+	tmpl := template.Must(template.New("crdFuncs").Funcs(funcsFuncMap).Parse(crdFuncsTemplate))
 
 	var buf strings.Builder
 	data := struct {
@@ -1352,6 +1371,8 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		IsReconcilerRoot                   bool
 		KonnectAPIAuthConfigurationRefType string
 		ParentKind                         string
+		References                         []TemplateReferenceConfig
+		ObjectRefTypeName                  string
 	}{
 		EntityName:                entityName,
 		APIVersion:                g.config.APIVersion,
@@ -1379,6 +1400,8 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 			}
 			return refConditionEntityName(rootRefDependency)
 		}(),
+		References:        g.templateReferences(entityName),
+		ObjectRefTypeName: g.objectRefTypeName(),
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
@@ -2290,6 +2313,61 @@ func (g *Generator) objectRefImportIfNeeded(schema *parser.Schema) *config.Impor
 	return nil
 }
 
+// TemplateReferenceConfig extends ReferenceConfig with Go-code computed fields
+// suitable for use in templates.
+type TemplateReferenceConfig struct {
+	config.ReferenceConfig
+
+	// GoFieldName is the Go struct field name derived from the last path segment,
+	// e.g. "spec.apiSpec.destination" → "Destination".
+	GoFieldName string
+	// JSONFieldName is the JSON key used in the SDK payload after renameKeysToSDK,
+	// e.g. "destination". Derived from the last segment of Path.
+	JSONFieldName string
+}
+
+// templateReferences returns the references for an entity with computed Go field names.
+func (g *Generator) templateReferences(entityName string) []TemplateReferenceConfig {
+	refs := g.config.References[entityName]
+	if len(refs) == 0 {
+		return nil
+	}
+	result := make([]TemplateReferenceConfig, len(refs))
+	for i, ref := range refs {
+		tail := ref.Path
+		if idx := strings.LastIndex(tail, "."); idx >= 0 {
+			tail = tail[idx+1:]
+		}
+		result[i] = TemplateReferenceConfig{
+			ReferenceConfig: ref,
+			GoFieldName:     goFieldName(tail),
+			JSONFieldName:   tail,
+		}
+	}
+	return result
+}
+
+// referenceForField returns the ReferenceConfig for the given entity+field if
+// that field is configured as an inter-CR reference, or nil otherwise.
+// propName is the JSON/OpenAPI property name (e.g. "destination").
+func (g *Generator) referenceForField(entityName, propName string) *config.ReferenceConfig {
+	for i, ref := range g.config.References[entityName] {
+		tail := ref.Path
+		if idx := strings.LastIndex(tail, "."); idx >= 0 {
+			tail = tail[idx+1:]
+		}
+		if tail == propName {
+			return &g.config.References[entityName][i]
+		}
+	}
+	return nil
+}
+
+// entityHasReferences returns true if the entity has at least one configured reference.
+func (g *Generator) entityHasReferences(entityName string) bool {
+	return len(g.config.References[entityName]) > 0
+}
+
 // schemaUsesObjectRef returns true if the schema has dependencies or reference
 // properties that will generate ObjectRef fields.
 func schemaUsesObjectRef(schema *parser.Schema) bool {
@@ -2449,21 +2527,25 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 	tmpl := template.Must(template.New("sdkops").Parse(sdkOpsTemplate))
 	var buf strings.Builder
 	data := struct {
-		APIVersion   string
-		EntityName   string
-		Imports      []*sdkOpsImport
-		BoolFields   []sdkOpsBoolField
-		Methods      []sdkOpsMethod
-		NeedsClient  bool
-		HasSecretRef bool
+		APIVersion    string
+		EntityName    string
+		Imports       []*sdkOpsImport
+		BoolFields    []sdkOpsBoolField
+		Methods       []sdkOpsMethod
+		NeedsClient   bool
+		HasSecretRef  bool
+		HasReferences bool
+		References    []TemplateReferenceConfig
 	}{
-		APIVersion:   g.config.APIVersion,
-		EntityName:   entityName,
-		Imports:      imports,
-		BoolFields:   boolFields,
-		Methods:      standardMethods,
-		NeedsClient:  opsConfig.RequireClient,
-		HasSecretRef: g.config.SecretRefEntities[entityName],
+		APIVersion:    g.config.APIVersion,
+		EntityName:    entityName,
+		Imports:       imports,
+		BoolFields:    boolFields,
+		Methods:       standardMethods,
+		NeedsClient:   opsConfig.RequireClient,
+		HasSecretRef:  g.config.SecretRefEntities[entityName],
+		HasReferences: g.entityHasReferences(entityName),
+		References:    g.templateReferences(entityName),
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {

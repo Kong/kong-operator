@@ -137,3 +137,40 @@ func (obj *EventGatewayVirtualCluster) GetStatusConditionReasonParentRefInvalid(
 func (obj *EventGatewayVirtualCluster) GetStatusConditionReasonParentRefNotProgrammed() string {
 	return EventGatewayRefReasonNotProgrammed
 }
+
+// GetEventGatewayBackendClusterID returns the Konnect ID resolved for the referenced EventGatewayBackendCluster.
+func (obj *EventGatewayVirtualCluster) GetEventGatewayBackendClusterID() string {
+	if obj.Status.EventGatewayBackendCluster == nil {
+		return ""
+	}
+	return obj.Status.EventGatewayBackendCluster.ID
+}
+
+// SetEventGatewayBackendClusterID sets the resolved Konnect ID for the referenced EventGatewayBackendCluster.
+func (obj *EventGatewayVirtualCluster) SetEventGatewayBackendClusterID(id string) {
+	if obj.Status.EventGatewayBackendCluster == nil {
+		obj.Status.EventGatewayBackendCluster = &KonnectEntityRef{}
+	}
+	obj.Status.EventGatewayBackendCluster.ID = id
+}
+
+// GetCrossReferences returns inter-CR references configured on EventGatewayVirtualCluster.
+func (obj *EventGatewayVirtualCluster) GetCrossReferences() []CrossReference {
+	refs := make([]CrossReference, 0, 1)
+	if obj.Spec.APISpec.Destination != nil {
+		refs = append(refs, CrossReference{
+			Kind:     "EventGatewayBackendCluster",
+			SpecPath: "spec.apiSpec.destination",
+			Ref:      obj.Spec.APISpec.Destination,
+		})
+	}
+	return refs
+}
+
+// SetCrossReferenceID sets the resolved Konnect ID for the cross-reference identified by kind.
+func (obj *EventGatewayVirtualCluster) SetCrossReferenceID(kind, id string) {
+	switch kind {
+	case "EventGatewayBackendCluster":
+		obj.SetEventGatewayBackendClusterID(id)
+	}
+}

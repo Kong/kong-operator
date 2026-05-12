@@ -7,13 +7,17 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/controller/konnect"
 	"github.com/kong/kong-operator/v2/controller/konnect/ops"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
@@ -57,16 +61,32 @@ func TestEventGatewayVirtualCluster(t *testing.T) {
 
 	t.Run("should create, update and delete EventGatewayVirtualCluster successfully", func(t *testing.T) {
 		const (
-			virtualClusterID   = "virtual-cluster-12345"
-			backendClusterName = "backend-cluster-a"
-			initialVirtualName = "payments"
-			updatedVirtualName = "payments-updated"
-			initialDescription = "virtual cluster created from envtest"
-			updatedDescription = "virtual cluster updated from envtest"
-			initialDNSLabel    = "payments"
+			virtualClusterID        = "virtual-cluster-12345"
+			backendClusterKonnectID = "backend-cluster-konnect-12345"
+			backendClusterName      = "backend-cluster-a"
+			initialVirtualName      = "payments"
+			updatedVirtualName      = "payments-updated"
+			initialDescription      = "virtual cluster created from envtest"
+			updatedDescription      = "virtual cluster updated from envtest"
+			initialDNSLabel         = "payments"
 		)
 
 		w := setupWatch[konnectv1alpha1.EventGatewayVirtualClusterList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Creating EventGatewayBackendCluster and setting its status to programmed")
+		backendCluster := deploy.EventGatewayBackendCluster(t, ctx, clientNamespaced, eventGateway, deploy.WithName(backendClusterName))
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			if !assert.NoError(ct, clientNamespaced.Get(ctx, client.ObjectKeyFromObject(backendCluster), backendCluster)) {
+				return
+			}
+			backendCluster.Status.Conditions = []metav1.Condition{programmedCondition(backendCluster.GetGeneration())}
+			backendCluster.Status.KonnectEntityStatus = konnectv1alpha2.KonnectEntityStatus{
+				ID:        backendClusterKonnectID,
+				ServerURL: sdkmocks.SDKServerURL,
+				OrgID:     "org-id",
+			}
+			require.NoError(ct, clientNamespaced.Status().Update(ctx, backendCluster))
+		}, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on EventGatewayVirtualCluster creation")
 		sdk.EventGatewayVirtualClustersSDK.EXPECT().
@@ -75,8 +95,8 @@ func TestEventGatewayVirtualCluster(t *testing.T) {
 					req.Name == initialVirtualName &&
 					req.Description != nil && *req.Description == initialDescription &&
 					req.DNSLabel == initialDNSLabel &&
-					req.Destination.BackendClusterReferenceByName != nil &&
-					req.Destination.BackendClusterReferenceByName.Name == backendClusterName &&
+					req.Destination.BackendClusterReferenceByID != nil &&
+					req.Destination.BackendClusterReferenceByID.GetID() == backendClusterKonnectID &&
 					len(req.Authentication) == 1 &&
 					req.Labels != nil &&
 					req.Labels["team"] == "platform" &&
@@ -94,15 +114,17 @@ func TestEventGatewayVirtualCluster(t *testing.T) {
 			if !ok {
 				return
 			}
-			backendClusterRefName := konnectv1alpha1.BackendClusterName(backendClusterName)
 			vc.Spec.APISpec.Name = initialVirtualName
 			vc.Spec.APISpec.Description = initialDescription
 			vc.Spec.APISpec.DNSLabel = initialDNSLabel
 			vc.Spec.APISpec.Labels = konnectv1alpha1.Labels{
 				"team": "platform",
 			}
-			vc.Spec.APISpec.Destination = &konnectv1alpha1.BackendClusterReferenceModify{
-				Name: new(backendClusterRefName),
+			vc.Spec.APISpec.Destination = &commonv1alpha1.ObjectRef{
+				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{
+					Name: backendClusterName,
+				},
 			}
 		})
 
@@ -172,9 +194,27 @@ func TestEventGatewayVirtualCluster(t *testing.T) {
 	})
 
 	t.Run("should create EventGatewayVirtualCluster successfully on conflict when virtual cluster with matching uid tag exists", func(t *testing.T) {
-		const virtualClusterID = "virtual-cluster-conflict-id"
+		const (
+			virtualClusterID                = "virtual-cluster-conflict-id"
+			conflictBackendClusterKonnectID = "backend-cluster-conflict-konnect-id"
+		)
 
 		w := setupWatch[konnectv1alpha1.EventGatewayVirtualClusterList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Creating EventGatewayBackendCluster 'backend-cluster' and setting its status to programmed")
+		conflictBackendCluster := deploy.EventGatewayBackendCluster(t, ctx, clientNamespaced, eventGateway, deploy.WithName("backend-cluster"))
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			if !assert.NoError(ct, clientNamespaced.Get(ctx, client.ObjectKeyFromObject(conflictBackendCluster), conflictBackendCluster)) {
+				return
+			}
+			conflictBackendCluster.Status.Conditions = []metav1.Condition{programmedCondition(conflictBackendCluster.GetGeneration())}
+			conflictBackendCluster.Status.KonnectEntityStatus = konnectv1alpha2.KonnectEntityStatus{
+				ID:        conflictBackendClusterKonnectID,
+				ServerURL: sdkmocks.SDKServerURL,
+				OrgID:     "org-id",
+			}
+			assert.NoError(ct, clientNamespaced.Status().Update(ctx, conflictBackendCluster))
+		}, waitTime, tickTime)
 
 		var virtualCluster *konnectv1alpha1.EventGatewayVirtualCluster
 
