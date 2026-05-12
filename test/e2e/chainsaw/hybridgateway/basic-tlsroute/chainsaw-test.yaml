@@ -16,8 +16,6 @@ spec:
       value: (env('KONNECT_TOKEN'))
     - name: konnect_api_auth_namespace
       value: ($namespace)
-    - name: tls_mode
-      value: "Passthrough"
     - name: listener_tls_port
       value: 8899
     - name: sni_hostname
@@ -80,11 +78,11 @@ spec:
       use:
         template: ../../common/_step_templates/apply-assert-gatewayClass.yaml
 
-    # Step 5: Create the Gateway with a TLS listener that references the TLS secret.
+    # Step 5: Create the Gateway with a TLS passthrough listener.
     - name: Create-gateway
       description: Create Gateway with TLS listener for the test.
       use:
-        template: ../../common/_step_templates/apply-assert-gateway-tls-listener.yaml
+        template: ../../common/_step_templates/apply-assert-gateway-tls-passthrough-listener.yaml
 
     # Step 6: Verify that the KonnectGatewayControlPlane is created and synchronized with Konnect.
     - name: Assert-konnect-gateway-control-plane
