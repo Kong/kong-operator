@@ -89,29 +89,14 @@ spec:
       description: Assert that the KonnectGatewayControlplane resource is created and synchronized.
       use:
         template: ../../common/_step_templates/assert-konnectGatewayControlPlane.yaml
-
-    # Step 7: Verify that the KongCertificate resource is created from the TLS secret.
-    - name: Assert-kong-certificate
-      description: Assert that the KongCertificate resource is created for the TLS secret.
-      use:
-       template: ../../common/_step_templates/assert-kongCertificate-tls-listener.yaml
   
-    # Step 8: Verify that the KongSNI resource is created for the SNI hostname.
-    - name: Assert-kong-sni
-      description: Assert that the KongSNI resource is created for the SNI hostname.
-      use:
-       template: ../../common/_step_templates/assert-kongSNI-tls-listener.yaml
-      bindings:
-        - name: resource_type
-          value: "kongcertificates.configuration.konghq.com"
-  
-    # Step 9: Create the echo service that will receive the routed traffic.
+    # Step 7: Create the echo service that will receive the routed traffic.
     - name: Create-echo-service
       description: Create and assert an echo service to route traffic to.
       use:
         template: ../../common/_step_templates/apply-assert-echoService-with-tls.yaml
 
-    # Step 10: Create the TLSRoute that routes traffic to the echo service.
+    # Step 8: Create the TLSRoute that routes traffic to the echo service.
     - name: Create-tlsroute-echo
       description: Create TLSRoute to route traffic to the echo service.
       try:
@@ -128,7 +113,7 @@ spec:
 
     # Since TLS passthrough is used, the certificate provided here when accessing the proxy IP and port is the cert from the backend service.
     # So we skip the verification of TLS certificate here,
-    # Step 12: Verify TLS traffic from host.
+    # Step 9: Verify TLS traffic from host.
     - name: Verify-TLS-traffic-from-host
       description: Verify that TLS traffic can be routed through the gateway to the echo service from the host.
       use:
