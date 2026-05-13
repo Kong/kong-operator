@@ -51,7 +51,7 @@ type KongTargetSpec struct {
 	KongTargetAPISpec `json:",inline"`
 
 	// UpstreamRef is a reference to a KongUpstream this KongTarget is attached to.
-	UpstreamRef commonv1alpha1.NameRef `json:"upstreamRef"`
+	UpstreamRef commonv1alpha1.NamespacedRef `json:"upstreamRef"`
 
 	// Adopt is the options for adopting a target from an existing target in Konnect.
 	// +optional

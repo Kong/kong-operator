@@ -37,6 +37,14 @@ func KongTargetReconciliationWatchOptions(cl client.Client,
 				handler.EnqueueRequestsFromMapFunc(enqueueKongTargetForKongUpstream(cl)),
 			)
 		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&configurationv1alpha1.KongReferenceGrant{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueObjectsForKongReferenceGrant[configurationv1alpha1.KongTargetList](cl),
+				),
+			)
+		},
 	}
 }
 
@@ -54,9 +62,13 @@ func kongTargetRefersToKonnectGatewayControlPlane(cl client.Client) func(obj cli
 			return false
 		}
 
+		upstreamNamespace := kongTarget.Namespace
+		if kongTarget.Spec.UpstreamRef.Namespace != nil && *kongTarget.Spec.UpstreamRef.Namespace != "" {
+			upstreamNamespace = *kongTarget.Spec.UpstreamRef.Namespace
+		}
 		upstream := configurationv1alpha1.KongUpstream{}
 		nn := types.NamespacedName{
-			Namespace: kongTarget.Namespace,
+			Namespace: upstreamNamespace,
 			Name:      kongTarget.Spec.UpstreamRef.Name,
 		}
 		if err := cl.Get(context.Background(), nn, &upstream); client.IgnoreNotFound(err) != nil {
@@ -79,10 +91,8 @@ func enqueueKongTargetForKongUpstream(cl client.Client,
 
 		var l configurationv1alpha1.KongTargetList
 		if err := cl.List(ctx, &l,
-			// TODO: change this when cross namespace refs are allowed.
-			client.InNamespace(kongUpstream.GetNamespace()),
 			client.MatchingFields{
-				index.IndexFieldKongTargetOnReferencedUpstream: kongUpstream.Name,
+				index.IndexFieldKongTargetOnReferencedUpstream: kongUpstream.Namespace + "/" + kongUpstream.Name,
 			},
 		); err != nil {
 			return nil

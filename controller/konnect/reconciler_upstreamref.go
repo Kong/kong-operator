@@ -2,6 +2,7 @@ package konnect
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/samber/mo"
@@ -16,22 +17,24 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	"github.com/kong/kong-operator/v2/controller/pkg/controlplane"
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
+	"github.com/kong/kong-operator/v2/internal/utils/crossnamespace"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 // getKongUpstreamRef gets the reference of KongUpstream.
 func getKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
 	e TEnt,
-) mo.Option[commonv1alpha1.NameRef] {
+) mo.Option[commonv1alpha1.NamespacedRef] {
 	switch e := any(e).(type) {
 	case *configurationv1alpha1.KongTarget:
 		// Since upstreamRef is required for KongTarget, we directly return spec.UpstreamRef here.
 		return mo.Some(e.Spec.UpstreamRef)
 	default:
-		return mo.None[commonv1alpha1.NameRef]()
+		return mo.None[commonv1alpha1.NamespacedRef]()
 	}
 }
 
@@ -41,30 +44,64 @@ func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 	ctx context.Context,
 	cl client.Client,
 	ent TEnt,
-) (ctrl.Result, error) {
+) (result ctrl.Result, err error) {
 	upstreamRef, ok := getKongUpstreamRef(ent).Get()
 	if !ok {
 		return ctrl.Result{}, nil
 	}
 
-	kongUpstream := &configurationv1alpha1.KongUpstream{}
-	nn := types.NamespacedName{
-		Name: upstreamRef.Name,
-		// TODO: handle cross namespace refs
-		Namespace: ent.GetNamespace(),
+	// Snapshot current status. All condition writes below are in-memory only.
+	// A single status patch is issued on exit regardless of exit path.
+	old := ent.DeepCopyObject().(TEnt)
+	defer func() {
+		if _, patchErr := patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), ent, old); patchErr != nil {
+			err = errors.Join(err, patchErr)
+		}
+	}()
+
+	upstreamNamespace := ent.GetNamespace()
+	if upstreamRef.Namespace != nil && *upstreamRef.Namespace != "" {
+		upstreamNamespace = *upstreamRef.Namespace
 	}
-	err := cl.Get(ctx, nn, kongUpstream)
-	if err != nil {
-		if res, errStatus := patch.StatusWithCondition(
-			ctx, cl, ent,
+
+	nn := types.NamespacedName{
+		Name:      upstreamRef.Name,
+		Namespace: upstreamNamespace,
+	}
+
+	crossNamespaceRef := upstreamNamespace != ent.GetNamespace()
+	if crossNamespaceRef {
+		if err := crossnamespace.CheckKongReferenceGrantForResource(
+			ctx,
+			cl,
+			ent.GetNamespace(),
+			upstreamNamespace,
+			upstreamRef.Name,
+			metav1.GroupVersionKind(ent.GetObjectKind().GroupVersionKind()),
+			metav1.GroupVersionKind(configurationv1alpha1.GroupVersion.WithKind("KongUpstream")),
+		); err != nil {
+			if crossnamespace.IsReferenceNotGranted(err) {
+				msg := fmt.Sprintf("KongReferenceGrants do not allow access to KongUpstream %s/%s", upstreamNamespace, upstreamRef.Name)
+				_ = patch.SetStatusWithConditionIfDifferent(ent,
+					konnectv1alpha1.KongUpstreamRefValidConditionType,
+					metav1.ConditionFalse,
+					konnectv1alpha1.KongUpstreamRefReasonRefNotPermitted,
+					msg,
+				)
+				return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+			}
+			return ctrl.Result{}, err
+		}
+	}
+
+	kongUpstream := &configurationv1alpha1.KongUpstream{}
+	if err := cl.Get(ctx, nn, kongUpstream); err != nil {
+		_ = patch.SetStatusWithConditionIfDifferent(ent,
 			konnectv1alpha1.KongUpstreamRefValidConditionType,
 			metav1.ConditionFalse,
 			konnectv1alpha1.KongUpstreamRefReasonInvalid,
 			err.Error(),
-		); errStatus != nil || !res.IsZero() {
-			return res, errStatus
-		}
-
+		)
 		return ctrl.Result{}, ReferencedKongUpstreamDoesNotExistError{
 			Reference: nn,
 			Err:       err,
@@ -80,25 +117,16 @@ func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		}
 	}
 
-	old := ent.DeepCopyObject().(TEnt)
-
 	cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, kongUpstream)
 	if !ok || cond.Status != metav1.ConditionTrue {
 		ent.SetKonnectID("")
+		notProgrammedMsg := fmt.Sprintf("Referenced KongUpstream %s is not programmed yet", nn)
 		_ = patch.SetStatusWithConditionIfDifferent(ent,
 			konnectv1alpha1.KongUpstreamRefValidConditionType,
 			metav1.ConditionFalse,
 			konnectv1alpha1.KongUpstreamRefReasonInvalid,
-			fmt.Sprintf("Referenced KongUpstream %s is not programmed yet", nn),
+			notProgrammedMsg,
 		)
-
-		_, err := patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), ent, old)
-		if err != nil {
-			if apierrors.IsConflict(err) {
-				return ctrl.Result{Requeue: true}, nil
-			}
-			return ctrl.Result{}, err
-		}
 		// Don't requeue. The referenced entity's changes will trigger the reconciliation.
 		return ctrl.Result{}, nil
 	}
@@ -111,15 +139,13 @@ func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		target.Status.Konnect.UpstreamID = kongUpstream.GetKonnectID()
 	}
 
-	if res, errStatus := patch.StatusWithCondition(
-		ctx, cl, ent,
+	upstreamValidMsg := fmt.Sprintf("Referenced KongUpstream %s programmed", nn)
+	_ = patch.SetStatusWithConditionIfDifferent(ent,
 		konnectv1alpha1.KongUpstreamRefValidConditionType,
 		metav1.ConditionTrue,
 		konnectv1alpha1.KongUpstreamRefReasonValid,
-		fmt.Sprintf("Referenced KongUpstream %s programmed", nn),
-	); errStatus != nil || !res.IsZero() {
-		return res, errStatus
-	}
+		upstreamValidMsg,
+	)
 
 	// Check and handle the ControlPlaneRef of the referenced KongUpstream.
 	cpRef, ok := controlplane.GetControlPlaneRef(kongUpstream).Get()
@@ -129,17 +155,15 @@ func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 			client.ObjectKeyFromObject(kongUpstream),
 		)
 	}
-	cp, err := controlplane.GetCPForRef(ctx, cl, cpRef, ent.GetNamespace())
+
+	cp, err := controlplane.GetCPForRef(ctx, cl, cpRef, kongUpstream.GetNamespace())
 	if err != nil {
-		if res, errStatus := patch.StatusWithCondition(
-			ctx, cl, ent,
+		_ = patch.SetStatusWithConditionIfDifferent(ent,
 			konnectv1alpha1.ControlPlaneRefValidConditionType,
 			metav1.ConditionFalse,
 			konnectv1alpha1.ControlPlaneRefReasonInvalid,
 			err.Error(),
-		); errStatus != nil || !res.IsZero() {
-			return res, errStatus
-		}
+		)
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{}, controlplane.ReferencedControlPlaneDoesNotExistError{
 				Reference: cpRef,
@@ -151,16 +175,13 @@ func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 
 	cond, ok = k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, cp)
 	if !ok || cond.Status != metav1.ConditionTrue || cond.ObservedGeneration != cp.GetGeneration() {
-		if res, errStatus := patch.StatusWithCondition(
-			ctx, cl, ent,
+		msg := fmt.Sprintf("Referenced ControlPlane %s is not programmed yet", nn)
+		_ = patch.SetStatusWithConditionIfDifferent(ent,
 			konnectv1alpha1.ControlPlaneRefValidConditionType,
 			metav1.ConditionFalse,
 			konnectv1alpha1.ControlPlaneRefReasonInvalid,
-			fmt.Sprintf("Referenced ControlPlane %s is not programmed yet", nn),
-		); errStatus != nil || !res.IsZero() {
-			return res, errStatus
-		}
-
+			msg,
+		)
 		return ctrl.Result{Requeue: true}, nil
 	}
 
@@ -168,15 +189,12 @@ func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		resource.SetControlPlaneID(cp.Status.ID)
 	}
 
-	if res, errStatus := patch.StatusWithCondition(
-		ctx, cl, ent,
+	cpValidMsg := fmt.Sprintf("Referenced ControlPlane %s is programmed", nn)
+	_ = patch.SetStatusWithConditionIfDifferent(ent,
 		konnectv1alpha1.ControlPlaneRefValidConditionType,
 		metav1.ConditionTrue,
 		konnectv1alpha1.ControlPlaneRefReasonValid,
-		fmt.Sprintf("Referenced ControlPlane %s is programmed", nn),
-	); errStatus != nil || !res.IsZero() {
-		return res, errStatus
-	}
-
+		cpValidMsg,
+	)
 	return ctrl.Result{}, nil
 }

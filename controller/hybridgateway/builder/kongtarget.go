@@ -76,7 +76,7 @@ func (b *KongTargetBuilder) WithWeight(weight *int32) *KongTargetBuilder {
 
 // WithUpstreamRef sets the upstream reference for the KongTarget.
 func (b *KongTargetBuilder) WithUpstreamRef(upstreamRef string) *KongTargetBuilder {
-	b.target.Spec.UpstreamRef = commonv1alpha1.NameRef{
+	b.target.Spec.UpstreamRef = commonv1alpha1.NamespacedRef{
 		Name: upstreamRef,
 	}
 	return b
