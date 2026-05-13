@@ -348,3 +348,131 @@ func TestGetAPIAuthRefNN_ServiceRef(t *testing.T) {
 		})
 	}
 }
+
+// TestGetAPIAuthRefNN_UpstreamRef covers the KongUpstreamRef branch of GetAPIAuthRefNN.
+// It verifies that when a KongTarget has a cross-namespace upstreamRef, the upstream
+// is fetched from the correct namespace and the auth ref is resolved via the upstream's CP.
+func TestGetAPIAuthRefNN_UpstreamRef(t *testing.T) {
+	const (
+		targetNs     = "target-ns"
+		upstreamNs   = "upstream-ns"
+		cpName       = "cp"
+		upstreamName = "upstream"
+		authName     = "konnect-api-auth"
+	)
+
+	makeCP := func(ns string) *konnectv1alpha2.KonnectGatewayControlPlane {
+		return &konnectv1alpha2.KonnectGatewayControlPlane{
+			ObjectMeta: metav1.ObjectMeta{Name: cpName, Namespace: ns},
+			Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
+				KonnectConfiguration: konnectv1alpha2.ControlPlaneKonnectConfiguration{
+					APIAuthConfigurationRef: konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
+						Name: authName,
+					},
+				},
+			},
+		}
+	}
+
+	makeUpstream := func(ns string) *configurationv1alpha1.KongUpstream {
+		return &configurationv1alpha1.KongUpstream{
+			ObjectMeta: metav1.ObjectMeta{Name: upstreamName, Namespace: ns},
+			Spec: configurationv1alpha1.KongUpstreamSpec{
+				ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+					Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+					KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+						Name:      cpName,
+						Namespace: ns,
+					},
+				},
+			},
+		}
+	}
+
+	makeTarget := func(upstreamRefNs *string) *configurationv1alpha1.KongTarget {
+		return &configurationv1alpha1.KongTarget{
+			ObjectMeta: metav1.ObjectMeta{Name: "target", Namespace: targetNs},
+			Spec: configurationv1alpha1.KongTargetSpec{
+				UpstreamRef: commonv1alpha1.NamespacedRef{
+					Name:      upstreamName,
+					Namespace: upstreamRefNs,
+				},
+				KongTargetAPISpec: configurationv1alpha1.KongTargetAPISpec{
+					Target: "10.0.0.1",
+					Weight: 100,
+				},
+			},
+		}
+	}
+
+	testCases := []struct {
+		name              string
+		target            *configurationv1alpha1.KongTarget
+		objects           []client.Object
+		wantNN            types.NamespacedName
+		wantErrorContains string
+	}{
+		{
+			name:   "cross-namespace upstreamRef resolves auth from upstream's namespace",
+			target: makeTarget(new(upstreamNs)),
+			objects: []client.Object{
+				makeUpstream(upstreamNs),
+				makeCP(upstreamNs),
+			},
+			wantNN: types.NamespacedName{
+				Name:      authName,
+				Namespace: upstreamNs,
+			},
+		},
+		{
+			name:   "same-namespace upstreamRef (Namespace nil) falls back to target's namespace",
+			target: makeTarget(nil),
+			objects: []client.Object{
+				makeUpstream(targetNs),
+				makeCP(targetNs),
+			},
+			wantNN: types.NamespacedName{
+				Name:      authName,
+				Namespace: targetNs,
+			},
+		},
+		{
+			name:              "upstream not found returns error",
+			target:            makeTarget(new(upstreamNs)),
+			objects:           nil,
+			wantErrorContains: "failed to get KongUpstream",
+		},
+		{
+			name:   "upstream without ControlPlaneRef returns error",
+			target: makeTarget(new(upstreamNs)),
+			objects: []client.Object{
+				&configurationv1alpha1.KongUpstream{
+					ObjectMeta: metav1.ObjectMeta{Name: upstreamName, Namespace: upstreamNs},
+				},
+			},
+			wantErrorContains: "does not have a ControlPlaneRef",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			s := scheme.Get()
+			cl := fake.NewClientBuilder().
+				WithScheme(s).
+				WithObjects(append(tc.objects, tc.target)...).
+				WithInterceptorFuncs(populateGVKOnGet(s)).
+				Build()
+
+			nn, err := GetAPIAuthRefNN(t.Context(), cl, tc.target)
+
+			if tc.wantErrorContains != "" {
+				require.Error(t, err)
+				require.ErrorContains(t, err, tc.wantErrorContains)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tc.wantNN, nn)
+		})
+	}
+}

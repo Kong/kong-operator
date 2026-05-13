@@ -95,14 +95,14 @@ spec:
                   x-kubernetes-validations:
                   - message: Only KongConsumer, KongConsumerGroup, KongRoute, KongCertificate,
                       KongCACertificate, KongDataPlaneClientCertificate, KongService,
-                      KongUpstream, KongKey, KongKeySet, KongVault, KongPluginBinding
+                      KongUpstream, KongTarget, KongKey, KongKeySet, KongVault, KongPluginBinding
                       and KongSNI kinds are supported for 'configuration.konghq.com'
                       group
                     rule: self.group != 'configuration.konghq.com' || self.kind in
                       [ 'KongConsumer', 'KongConsumerGroup', 'KongRoute', 'KongService',
                       'KongCertificate', 'KongCACertificate', 'KongDataPlaneClientCertificate',
-                      'KongUpstream', 'KongKey', 'KongKeySet', 'KongVault', 'KongPluginBinding',
-                      'KongSNI']
+                      'KongUpstream', 'KongTarget', 'KongKey', 'KongKeySet', 'KongVault',
+                      'KongPluginBinding', 'KongSNI']
                   - message: Only GatewayConfiguration kind is supported for 'gateway-operator.konghq.com'
                       group
                     rule: self.group != 'gateway-operator.konghq.com' || self.kind
@@ -159,10 +159,11 @@ spec:
                       kinds are supported for 'konnect.konghq.com' group
                     rule: .self.group != 'konnect.konghq.com' || .self.kind in ['KonnectGatewayControlPlane',
                       'KonnectAPIAuthConfiguration']
-                  - message: Only 'KongPlugin', 'KongService' and 'KongCertificate'
-                      kinds are supported for 'configuration.konghq.com' group
+                  - message: Only 'KongPlugin', 'KongService', 'KongCertificate' and
+                      'KongUpstream' kinds are supported for 'configuration.konghq.com'
+                      group
                     rule: .self.group != 'configuration.konghq.com' || .self.kind
-                      in ['KongPlugin', 'KongService', 'KongCertificate']
+                      in ['KongPlugin', 'KongService', 'KongCertificate', 'KongUpstream']
                 maxItems: 16
                 minItems: 1
                 type: array

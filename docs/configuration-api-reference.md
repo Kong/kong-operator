@@ -1692,7 +1692,7 @@ KongTargetSpec defines the spec of KongTarget.
 | `target` _string_ | Target is the target address of the upstream. |
 | `weight` _int_ | Weight is the weight this target gets within the upstream loadbalancer. |
 | `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of strings associated with the Target for grouping and filtering. |
-| `upstreamRef` _[NameRef](#common-konghq-com-v1alpha1-types-nameref)_ | UpstreamRef is a reference to a KongUpstream this KongTarget is attached to. |
+| `upstreamRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | UpstreamRef is a reference to a KongUpstream this KongTarget is attached to. |
 | `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a target from an existing target in Konnect. |
 
 _Appears in:_

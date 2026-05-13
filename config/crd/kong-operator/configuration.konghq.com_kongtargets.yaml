@@ -127,9 +127,19 @@ spec:
                   is attached to.
                 properties:
                   name:
-                    description: Name is the name of the entity.
+                    description: Name is the name of the referred resource.
                     maxLength: 253
                     minLength: 1
+                    type: string
+                  namespace:
+                    description: |-
+                      Namespace is the namespace of the referred resource.
+
+                      For namespace-scoped resources if no Namespace is provided then the
+                      namespace of the parent object MUST be used.
+
+                      This field MUST not be set when referring to cluster-scoped resources.
+                    maxLength: 253
                     type: string
                 required:
                 - name
