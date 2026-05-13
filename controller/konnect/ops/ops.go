@@ -46,6 +46,17 @@ const (
 	AdoptOp Op = "adopt"
 )
 
+// EntitySupportsKonnectIDlessLifecycle reports whether an entity can be
+// reconciled, finalized, and deleted without a persisted status Konnect ID.
+func EntitySupportsKonnectIDlessLifecycle(obj client.Object) bool {
+	switch obj.(type) {
+	case *konnectv1alpha1.PortalCustomDomain:
+		return true
+	default:
+		return false
+	}
+}
+
 // Create creates a Konnect entity.
 func Create[
 	T constraints.SupportedKonnectEntityType,
@@ -260,7 +271,7 @@ func Delete[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
 ](ctx context.Context, sdk sdkops.SDKWrapper, cl client.Client, metricRecorder metrics.Recorder, ent TEnt) error {
-	if ent.GetKonnectStatus().GetKonnectID() == "" {
+	if ent.GetKonnectStatus().GetKonnectID() == "" && !EntitySupportsKonnectIDlessLifecycle(ent) {
 		cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, ent)
 		if ok && cond.Status == metav1.ConditionTrue {
 			return fmt.Errorf(
@@ -422,7 +433,7 @@ func Update[
 		return res, nil
 	}
 
-	if e.GetKonnectStatus().GetKonnectID() == "" {
+	if e.GetKonnectStatus().GetKonnectID() == "" && !EntitySupportsKonnectIDlessLifecycle(e) {
 		return ctrl.Result{}, fmt.Errorf(
 			"can't update %T %s when it does not have the Konnect ID",
 			e, client.ObjectKeyFromObject(e),
