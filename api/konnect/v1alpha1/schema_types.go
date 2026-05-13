@@ -308,13 +308,13 @@ type CreatePortalCustomDomainSSLWithCustomCertificate struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:MaxLength=4096
 	CustomCertificate string `json:"customCertificate,omitzero"`
 	// Custom certificate private key to be used for the SSL termination.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:MaxLength=4096
 	CustomPrivateKey string `json:"customPrivateKey,omitzero"`
 	//
 	//

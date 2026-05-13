@@ -42955,12 +42955,12 @@ spec:
                         properties:
                           customCertificate:
                             description: Custom certificate to be used for the SSL termination.
-                            maxLength: 253
+                            maxLength: 4096
                             minLength: 1
                             type: string
                           customPrivateKey:
                             description: Custom certificate private key to be used for the SSL termination.
-                            maxLength: 253
+                            maxLength: 4096
                             minLength: 1
                             type: string
                           domainVerificationMethod:

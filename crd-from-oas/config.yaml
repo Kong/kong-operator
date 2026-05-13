@@ -64,15 +64,17 @@ apiGroupVersions:
       - path: /v1/event-gateways/{gatewayId}/listeners/{eventGatewayListenerId}/policies
         name: EventGatewayListenerPolicy
         cel:
-          EventGatewayTLSListenerPolicy:
-            config:
-              certificates:
-                certificate:
-                   _validations:
-                    - "+kubebuilder:validation:MaxLength=4096"
-                key:
-                   _validations:
-                    - "+kubebuilder:validation:MaxLength=4096"
+          spec:
+            apiSpec:
+              tlsServer:
+                config:
+                  certificates:
+                    certificate:
+                       _validations:
+                        - "+kubebuilder:validation:MaxLength=4096"
+                    key:
+                       _validations:
+                        - "+kubebuilder:validation:MaxLength=4096"
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayListenerPoliciesSDK
@@ -95,17 +97,19 @@ apiGroupVersions:
       - path: /v1/event-gateways/{gatewayId}/backend-clusters
         name: EventGatewayBackendCluster
         cel:
-          tls:
-            ca_bundle:
-               _validations:
-                - "+kubebuilder:validation:MaxLength=4096"
-            client_identity:
-              certificate:
-                 _validations:
-                  - "+kubebuilder:validation:MaxLength=4096"
-              key:
-                 _validations:
-                  - "+kubebuilder:validation:MaxLength=4096"
+          spec:
+            apiSpec:
+              tls:
+                caBundle:
+                   _validations:
+                    - "+kubebuilder:validation:MaxLength=4096"
+                clientIdentity:
+                  certificate:
+                     _validations:
+                      - "+kubebuilder:validation:MaxLength=4096"
+                  key:
+                     _validations:
+                      - "+kubebuilder:validation:MaxLength=4096"
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayBackendClustersSDK
@@ -134,9 +138,11 @@ apiGroupVersions:
       # Portal APIs
       - path: /v3/portals
         cel:
-          name:
-            _validations:
-              - "+kubebuilder:validation:XValidation:rule=\"self == oldSelf\",message=\"name is immutable\""
+          spec:
+            apiSpec:
+              name:
+                _validations:
+                  - "+kubebuilder:validation:XValidation:rule=\"self == oldSelf\",message=\"name is immutable\""
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.PortalsSDK
@@ -174,10 +180,12 @@ apiGroupVersions:
         reconciler: {}
       - path: /v3/portals/{portalId}/pages
         cel:
-          parent_page_id:
-              _validations:
-                # TODO: https://github.com/Kong/kong-operator/issues/4008
-                - "+kubebuilder:validation:XValidation:rule=\"self == null\",message=\"cannot set parentPageIDRef\""
+          spec:
+            apiSpec:
+              parentPageIDRef:
+                _validations:
+                  # TODO: https://github.com/Kong/kong-operator/issues/4008
+                  - "+kubebuilder:validation:XValidation:rule=\"self == null\",message=\"cannot set parentPageIDRef\""
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.PortalPagesSDK
@@ -220,6 +228,17 @@ apiGroupVersions:
         reconciler: {}
       - path: /v3/portals/{portalId}/custom-domain
         name: PortalCustomDomain
+        cel:
+          spec:
+            apiSpec:
+              ssl:
+                withCustomCertificate:
+                  customCertificate:
+                     _validations:
+                      - "+kubebuilder:validation:MaxLength=4096"
+                  customPrivateKey:
+                     _validations:
+                      - "+kubebuilder:validation:MaxLength=4096"
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.PortalCustomDomainsSDK

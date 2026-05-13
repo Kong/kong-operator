@@ -1327,7 +1327,9 @@ func TestGenerateSchemaTypes_AddsKubebuilderTags(t *testing.T) {
 	assert.Contains(t, content, "ProviderType string `json:\"providerType,omitzero\"`")
 }
 
-func TestBuildSchemaTypeFieldConfig_NestedInlineObject(t *testing.T) {
+func TestBuildSchemaCursors_NestedInlineObject(t *testing.T) {
+	// Cursor for an inline-object property nested inside a $ref schema.
+	// Config path uses JSON tags: spec.apiSpec.tls.clientIdentity.certificate
 	certProp := &parser.Property{Name: "certificate", Type: "string", Required: true}
 	ciProp := &parser.Property{
 		Name: "client_identity", Type: "object",
@@ -1356,12 +1358,20 @@ func TestBuildSchemaTypeFieldConfig_NestedInlineObject(t *testing.T) {
 		Entities: map[string]*config.EntityConfig{
 			"EventGatewayBackendCluster": {
 				Fields: map[string]*config.FieldConfig{
-					"tls": {
+					"spec": {
 						Fields: map[string]*config.FieldConfig{
-							"client_identity": {
+							"apiSpec": {
 								Fields: map[string]*config.FieldConfig{
-									"certificate": {
-										Validations: []string{"+kubebuilder:validation:MaxLength=1024"},
+									"tls": {
+										Fields: map[string]*config.FieldConfig{
+											"clientIdentity": {
+												Fields: map[string]*config.FieldConfig{
+													"certificate": {
+														Validations: []string{"+kubebuilder:validation:MaxLength=1024"},
+													},
+												},
+											},
+										},
 									},
 								},
 							},
@@ -1373,17 +1383,21 @@ func TestBuildSchemaTypeFieldConfig_NestedInlineObject(t *testing.T) {
 	}
 
 	gen := NewGenerator(Config{APIVersion: "v1alpha1", FieldConfig: fieldCfg})
-	stfc := gen.buildSchemaTypeFieldConfig(parsed)
-	require.NotNil(t, stfc)
-	vals := stfc.GetFieldValidations("ClientIdentity", "certificate")
-	assert.Equal(t, []string{"+kubebuilder:validation:MaxLength=1024"}, vals)
+	cursors, err := gen.buildSchemaCursors(parsed)
+	require.NoError(t, err)
+	require.NotNil(t, cursors)
+
+	ciCursor := cursors["ClientIdentity"]
+	require.NotNil(t, ciCursor, "cursor for ClientIdentity must be present")
+	certCursor := ciCursor.Fields["certificate"]
+	require.NotNil(t, certCursor, "cursor for certificate must be present under ClientIdentity")
+	assert.Equal(t, []string{"+kubebuilder:validation:MaxLength=1024"}, certCursor.Validations)
 }
 
-func TestBuildSchemaTypeFieldConfig_RootOneOfVariant(t *testing.T) {
-	// Entity schema is a discriminated oneOf (no Properties). Config keys address
-	// variant ref names. Validations on a prop inside the variant must propagate.
-	// Note: entity name must not contain prefixes stripped by GetEntityNameFromType
-	// (Add/Create/Update/Delete/Get/List), e.g. "ListenerPolicy" contains "List".
+func TestBuildSchemaCursors_RootOneOfVariant(t *testing.T) {
+	// Root-level oneOf: variant tags come from jsonName(discValue) directly under apiSpec.
+	// For a single-variant oneOf with refName "TLSChannelPolicy", discValue = "TLSChannelPolicy"
+	// and variantTag = jsonName("TLSChannelPolicy") = "tlsChannelPolicy".
 	certProp := &parser.Property{Name: "certificate", Type: "string", Required: true}
 	variantSchema := &parser.Schema{
 		Name:       "TLSChannelPolicy",
@@ -1401,14 +1415,24 @@ func TestBuildSchemaTypeFieldConfig_RootOneOfVariant(t *testing.T) {
 		Schemas:       map[string]*parser.Schema{"TLSChannelPolicy": variantSchema},
 	}
 
+	// jsonName("TLSChannelPolicy") = "tLSChannelPolicy" (only first char lowercased,
+	// no underscore conversion for PascalCase without underscores).
 	fieldCfg := &config.Config{
 		Entities: map[string]*config.EntityConfig{
 			"ChannelPolicy": {
 				Fields: map[string]*config.FieldConfig{
-					"TLSChannelPolicy": {
+					"spec": {
 						Fields: map[string]*config.FieldConfig{
-							"certificate": {
-								Validations: []string{"+kubebuilder:validation:MaxLength=4096"},
+							"apiSpec": {
+								Fields: map[string]*config.FieldConfig{
+									"tLSChannelPolicy": {
+										Fields: map[string]*config.FieldConfig{
+											"certificate": {
+												Validations: []string{"+kubebuilder:validation:MaxLength=4096"},
+											},
+										},
+									},
+								},
 							},
 						},
 					},
@@ -1418,14 +1442,20 @@ func TestBuildSchemaTypeFieldConfig_RootOneOfVariant(t *testing.T) {
 	}
 
 	gen := NewGenerator(Config{APIVersion: "v1alpha1", FieldConfig: fieldCfg})
-	stfc := gen.buildSchemaTypeFieldConfig(parsed)
-	require.NotNil(t, stfc)
-	vals := stfc.GetFieldValidations("TLSChannelPolicy", "certificate")
-	assert.Equal(t, []string{"+kubebuilder:validation:MaxLength=4096"}, vals)
+	cursors, err := gen.buildSchemaCursors(parsed)
+	require.NoError(t, err)
+	require.NotNil(t, cursors)
+
+	variantCursor := cursors["TLSChannelPolicy"]
+	require.NotNil(t, variantCursor, "cursor for TLSChannelPolicy must be present")
+	certCursor := variantCursor.Fields["certificate"]
+	require.NotNil(t, certCursor, "cursor for certificate must be present under TLSChannelPolicy")
+	assert.Equal(t, []string{"+kubebuilder:validation:MaxLength=4096"}, certCursor.Validations)
 }
 
-func TestBuildSchemaTypeFieldConfig_ArrayOfRefItems(t *testing.T) {
-	// Config descends through an array-of-$ref property into the item schema.
+func TestBuildSchemaCursors_ArrayOfRefItems(t *testing.T) {
+	// Array-of-$ref: cursor is transparent through the array; item schema gets the
+	// array property's cursor (spec.apiSpec.certificates.*).
 	certProp := &parser.Property{Name: "certificate", Type: "string", Required: true}
 	itemSchema := &parser.Schema{
 		Name:       "TLSCertificate",
@@ -1449,10 +1479,18 @@ func TestBuildSchemaTypeFieldConfig_ArrayOfRefItems(t *testing.T) {
 		Entities: map[string]*config.EntityConfig{
 			"TLSEntity": {
 				Fields: map[string]*config.FieldConfig{
-					"certificates": {
+					"spec": {
 						Fields: map[string]*config.FieldConfig{
-							"certificate": {
-								Validations: []string{"+kubebuilder:validation:MaxLength=4096"},
+							"apiSpec": {
+								Fields: map[string]*config.FieldConfig{
+									"certificates": {
+										Fields: map[string]*config.FieldConfig{
+											"certificate": {
+												Validations: []string{"+kubebuilder:validation:MaxLength=4096"},
+											},
+										},
+									},
+								},
 							},
 						},
 					},
@@ -1462,13 +1500,186 @@ func TestBuildSchemaTypeFieldConfig_ArrayOfRefItems(t *testing.T) {
 	}
 
 	gen := NewGenerator(Config{APIVersion: "v1alpha1", FieldConfig: fieldCfg})
-	stfc := gen.buildSchemaTypeFieldConfig(parsed)
-	require.NotNil(t, stfc)
-	vals := stfc.GetFieldValidations("TLSCertificate", "certificate")
-	assert.Equal(t, []string{"+kubebuilder:validation:MaxLength=4096"}, vals)
+	cursors, err := gen.buildSchemaCursors(parsed)
+	require.NoError(t, err)
+	require.NotNil(t, cursors)
+
+	itemCursor := cursors["TLSCertificate"]
+	require.NotNil(t, itemCursor, "cursor for TLSCertificate must be present")
+	certCursor := itemCursor.Fields["certificate"]
+	require.NotNil(t, certCursor, "cursor for certificate must be present under TLSCertificate")
+	assert.Equal(t, []string{"+kubebuilder:validation:MaxLength=4096"}, certCursor.Validations)
+}
+
+func TestBuildSchemaCursors_RejectsWrongSnakeCasePath(t *testing.T) {
+	// Passing a snake_case segment ("client_identity") instead of the JSON tag
+	// ("clientIdentity") must produce an error so misconfigured config.yaml is caught.
+	certProp := &parser.Property{Name: "certificate", Type: "string", Required: true}
+	ciProp := &parser.Property{
+		Name: "client_identity", Type: "object",
+		Properties: []*parser.Property{certProp},
+	}
+	entitySchema := &parser.Schema{
+		Name:       "CreateMyEntity",
+		Properties: []*parser.Property{{Name: "tls", Type: "object", RefName: "BackendClusterTLS"}},
+	}
+	bctSchema := &parser.Schema{
+		Name:       "BackendClusterTLS",
+		Properties: []*parser.Property{ciProp},
+	}
+
+	parsed := &parser.ParsedSpec{
+		RequestBodies: map[string]*parser.Schema{"CreateMyEntity": entitySchema},
+		Schemas:       map[string]*parser.Schema{"BackendClusterTLS": bctSchema},
+	}
+
+	fieldCfg := &config.Config{
+		Entities: map[string]*config.EntityConfig{
+			"MyEntity": {
+				Fields: map[string]*config.FieldConfig{
+					"spec": {Fields: map[string]*config.FieldConfig{
+						"apiSpec": {Fields: map[string]*config.FieldConfig{
+							"tls": {Fields: map[string]*config.FieldConfig{
+								"client_identity": {Fields: map[string]*config.FieldConfig{ // wrong: snake_case
+									"certificate": {Validations: []string{"+kubebuilder:validation:MaxLength=4096"}},
+								}},
+							}},
+						}},
+					}},
+				},
+			},
+		},
+	}
+
+	gen := NewGenerator(Config{APIVersion: "v1alpha1", FieldConfig: fieldCfg})
+	_, err := gen.buildSchemaCursors(parsed)
+	require.Error(t, err, "expected error for snake_case segment where JSON tag is camelCase")
+	assert.Contains(t, err.Error(), "client_identity")
+}
+
+func TestBuildSchemaCursors_DuplicateSharedSchemaSameCursorAllowed(t *testing.T) {
+	sharedSchema := &parser.Schema{
+		Name:       "SharedSchema",
+		Properties: []*parser.Property{{Name: "name", Type: "string", Required: true}},
+	}
+	parsed := &parser.ParsedSpec{
+		RequestBodies: map[string]*parser.Schema{
+			"CreateFirstEntity": {
+				Name:       "CreateFirstEntity",
+				Properties: []*parser.Property{{Name: "shared", Type: "object", RefName: "SharedSchema"}},
+			},
+			"CreateSecondEntity": {
+				Name:       "CreateSecondEntity",
+				Properties: []*parser.Property{{Name: "shared", Type: "object", RefName: "SharedSchema"}},
+			},
+		},
+		Schemas: map[string]*parser.Schema{
+			"SharedSchema": sharedSchema,
+		},
+	}
+
+	sharedFieldConfig := map[string]*config.FieldConfig{
+		"spec": {Fields: map[string]*config.FieldConfig{
+			"apiSpec": {Fields: map[string]*config.FieldConfig{
+				"shared": {Fields: map[string]*config.FieldConfig{
+					"name": {Validations: []string{"+kubebuilder:validation:MaxLength=1024"}},
+				}},
+			}},
+		}},
+	}
+	fieldCfg := &config.Config{
+		Entities: map[string]*config.EntityConfig{
+			"FirstEntity":  {Fields: sharedFieldConfig},
+			"SecondEntity": {Fields: sharedFieldConfig},
+		},
+	}
+
+	gen := NewGenerator(Config{APIVersion: "v1alpha1", FieldConfig: fieldCfg})
+	cursors, err := gen.buildSchemaCursors(parsed)
+	require.NoError(t, err)
+	require.NotNil(t, cursors)
+
+	sharedCursor := cursors["SharedSchema"]
+	require.NotNil(t, sharedCursor)
+	require.Contains(t, sharedCursor.Fields, "name")
+	assert.Equal(t, []string{"+kubebuilder:validation:MaxLength=1024"}, sharedCursor.Fields["name"].Validations)
+}
+
+func TestBuildSchemaCursors_DuplicateSharedSchemaConflictReturnsError(t *testing.T) {
+	sharedSchema := &parser.Schema{
+		Name:       "SharedSchema",
+		Properties: []*parser.Property{{Name: "name", Type: "string", Required: true}},
+	}
+	parsed := &parser.ParsedSpec{
+		RequestBodies: map[string]*parser.Schema{
+			"CreateFirstEntity": {
+				Name:       "CreateFirstEntity",
+				Properties: []*parser.Property{{Name: "shared", Type: "object", RefName: "SharedSchema"}},
+			},
+			"CreateSecondEntity": {
+				Name:       "CreateSecondEntity",
+				Properties: []*parser.Property{{Name: "shared", Type: "object", RefName: "SharedSchema"}},
+			},
+		},
+		Schemas: map[string]*parser.Schema{
+			"SharedSchema": sharedSchema,
+		},
+	}
+
+	fieldCfg := &config.Config{
+		Entities: map[string]*config.EntityConfig{
+			"FirstEntity": {Fields: map[string]*config.FieldConfig{
+				"spec": {Fields: map[string]*config.FieldConfig{
+					"apiSpec": {Fields: map[string]*config.FieldConfig{
+						"shared": {Fields: map[string]*config.FieldConfig{
+							"name": {Validations: []string{"+kubebuilder:validation:MaxLength=1024"}},
+						}},
+					}},
+				}},
+			}},
+			"SecondEntity": {Fields: map[string]*config.FieldConfig{
+				"spec": {Fields: map[string]*config.FieldConfig{
+					"apiSpec": {Fields: map[string]*config.FieldConfig{
+						"shared": {Fields: map[string]*config.FieldConfig{
+							"name": {Validations: []string{"+kubebuilder:validation:MaxLength=2048"}},
+						}},
+					}},
+				}},
+			}},
+		},
+	}
+
+	gen := NewGenerator(Config{APIVersion: "v1alpha1", FieldConfig: fieldCfg})
+	_, err := gen.buildSchemaCursors(parsed)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "schema cursor conflict for \"SharedSchema\"")
+	assert.Contains(t, err.Error(), "entity \"FirstEntity\" path \"spec.apiSpec.shared\"")
+	assert.Contains(t, err.Error(), "entity \"SecondEntity\" path \"spec.apiSpec.shared\"")
+}
+
+func TestRecordSchemaCursor_ConflictDoesNotOverwriteExisting(t *testing.T) {
+	gen := NewGenerator(Config{APIVersion: "v1alpha1"})
+	existing := &config.FieldConfig{
+		Fields: map[string]*config.FieldConfig{
+			"name": {Validations: []string{"+kubebuilder:validation:MaxLength=1024"}},
+		},
+	}
+	replacement := &config.FieldConfig{
+		Fields: map[string]*config.FieldConfig{
+			"name": {Validations: []string{"+kubebuilder:validation:MaxLength=2048"}},
+		},
+	}
+	out := map[string]*config.FieldConfig{"SharedSchema": existing}
+	origins := map[string]string{"SharedSchema": "entity \"FirstEntity\" path \"spec.apiSpec.shared\""}
+
+	err := gen.recordSchemaCursor("SharedSchema", "SecondEntity", "spec.apiSpec.shared", replacement, out, origins)
+	require.Error(t, err)
+	assert.Same(t, existing, out["SharedSchema"])
+	assert.Equal(t, "entity \"FirstEntity\" path \"spec.apiSpec.shared\"", origins["SharedSchema"])
 }
 
 func TestGenerateSchemaTypes_NestedInlineOverride(t *testing.T) {
+	// Cursor map built manually: cursor for "ClientIdentity" has the certificate override.
 	certProp := &parser.Property{Name: "certificate", Type: "string", Required: true}
 	ciProp := &parser.Property{
 		Name: "client_identity", Type: "object",
@@ -1484,12 +1695,17 @@ func TestGenerateSchemaTypes_NestedInlineOverride(t *testing.T) {
 		Schemas:       map[string]*parser.Schema{"BackendClusterTLS": bctSchema},
 	}
 
-	schemaTypeFieldConfig := &config.Config{
-		Entities: map[string]*config.EntityConfig{
-			"ClientIdentity": {
-				Fields: map[string]*config.FieldConfig{
-					"certificate": {
-						Validations: []string{"+kubebuilder:validation:MaxLength=1024"},
+	// Cursor is keyed by the schema's Go name. generateSchemaTypes advances it into
+	// nested inline types via writeNestedInlineTypes, so the cursor for BackendClusterTLS
+	// must contain the clientIdentity sub-cursor (not a separate "ClientIdentity" entry).
+	schemaCursors := map[string]*config.FieldConfig{
+		"BackendClusterTLS": {
+			Fields: map[string]*config.FieldConfig{
+				"clientIdentity": {
+					Fields: map[string]*config.FieldConfig{
+						"certificate": {
+							Validations: []string{"+kubebuilder:validation:MaxLength=1024"},
+						},
 					},
 				},
 			},
@@ -1500,7 +1716,7 @@ func TestGenerateSchemaTypes_NestedInlineOverride(t *testing.T) {
 	content := gen.generateSchemaTypes(
 		map[string]bool{"BackendClusterTLS": true},
 		parsed,
-		schemaTypeFieldConfig,
+		schemaCursors,
 	)
 	assert.Contains(t, content, "// +kubebuilder:validation:MaxLength=1024",
 		"user-provided MaxLength should appear in generated type")
