@@ -55,12 +55,10 @@ spec:
           - type: glob
             glob:
               glob: group-*
-              type: consumer_group
         topics:
           - type: glob
             glob:
               glob: topic-*
-              type: topic
   gatewayRef:
     type: namespacedRef
     namespacedRef:

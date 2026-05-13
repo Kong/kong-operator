@@ -2,12 +2,14 @@
 
 ## Table of Contents
 
+- [v2.1.6](#v216)
 - [v2.1.5](#v215)
 - [v2.1.4](#v214)
 - [v2.1.3](#v213)
 - [v2.1.2](#v212)
 - [v2.1.1](#v211)
 - [v2.1.0](#v210)
+- [v2.0.9](#v209)
 - [v2.0.8](#v208)
 - [v2.0.7](#v207)
 - [v2.0.6](#v206)
@@ -48,6 +50,12 @@
 
 ### Added
 
+- `KongSNI`: support cross-namespace `spec.certificateRef` to reference a
+  `KongCertificate` in a different namespace. A `KongReferenceGrant` in the
+  target namespace is required to permit the reference. The `KongSNI` status
+  reflects `ResolvedRefs=False/RefNotPermitted` when no grant is present and
+  `ResolvedRefs=True` once the grant is in place.
+  [#4235](https://github.com/Kong/kong-operator/pull/4235)
 - Hybridgateway: add support for `konghq.com/path` service annotation
   [#4100](https://github.com/Kong/kong-operator/pull/4100)
 - Hybridgateway: add support for `konghq.com/tls-verify` service annotation
@@ -243,6 +251,29 @@
 - More robust validation for `GatewayConfiguration` - fields `konnect` and `extensions` are mutually exclusive.
   [#4213](https://github.com/Kong/kong-operator/pull/4213)
 
+## [v2.1.6]
+
+> Release date: 2026-05-12
+
+### Fixes
+
+- TLSRoute readiness by preserving TLSServerName when a ready Admin API client
+  is demoted back to pending
+  [#4024](https://github.com/Kong/kong-operator/pull/4024) [#4028](https://github.com/Kong/kong-operator/pull/4028)
+- Fix endless reconciliation in Konnect controllers when referenced parent objects
+  are not marked as Ready yet.
+  [#4048](https://github.com/Kong/kong-operator/pull/4048) [#4060](https://github.com/Kong/kong-operator/pull/4060)
+- Sanitize the plugin configuration when `ControlPlane`'s `configDump.dumpSensitive` isn't enabled.
+  [#4119](https://github.com/Kong/kong-operator/pull/4119) [#4194](https://github.com/Kong/kong-operator/pull/4194)
+- **Changed (potentially breaking):** As part of our secure-by-default initiative, everything out of the box relies on
+  defaults from Kong Gateway. It may break existing configurations that relied on previous implicit protocol behavior
+  (access via http will result `426` status code.), when version of Kong Gateway changes.
+  - For `HTTPRoute`, protocol now matches the attached Gateway listener protocol (and when `parentRef.sectionName` is set, it must match that specific listener). When `parentRef.sectionName` is not specified it binds to all `Gateway`s listeners.
+  - For `Ingress`, default protocol relies on Kong Gateway, can be set explicitly via `konghq.com/protocols: "http"` (or `https`)
+    annotation on particular `Ingress`.
+  [#4067](https://github.com/Kong/kong-operator/pull/4067)
+  [#4245](https://github.com/Kong/kong-operator/pull/4245)
+
 ## [v2.1.5]
 
 > Release date: 2026-04-24
@@ -287,6 +318,7 @@
   [#3206](https://github.com/Kong/kong-operator/pull/3206) [#3836](https://github.com/Kong/kong-operator/pull/3836)
 - Fix incorrect Konnect API used for target lookup
   [#3910](https://github.com/Kong/kong-operator/pull/3910) [#3938](https://github.com/Kong/kong-operator/pull/3938)
+  [#3754](https://github.com/Kong/kong-operator/pull/3754)
 
 ## [v2.1.3]
 
@@ -658,6 +690,22 @@
   `spec.listeners.tls.certificateRef`, ensuring Gateway status conditions
   are updated when referenced certificates change.
   [#2661](https://github.com/Kong/kong-operator/pull/2661)
+
+## [v2.0.9]
+
+> Release date: 2026-04-23
+
+### Fixed
+
+- Fix a hot loop in the `KonnectExtension` reconciler when two
+  `KonnectExtension`s share the same client-certificate `Secret`: the
+  `KongDataPlaneClientCertificate` CR is now named after the `KonnectExtension`
+  instead of the `Secret`, so each extension gets its own CR in its own Konnect
+  ControlPlane and the reconciler no longer retries `Create` on every loop or
+  falls back to Konnect's `dp-client-certificates` List API.
+  [#3961](https://github.com/Kong/kong-operator/pull/3961) [#3978](https://github.com/Kong/kong-operator/pull/3978)
+- Fix incorrect Konnect API used for target lookup
+  [#3910](https://github.com/Kong/kong-operator/pull/3910) [#3939](https://github.com/Kong/kong-operator/pull/3939)
 
 ## [v2.0.8]
 
@@ -2060,12 +2108,14 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.1.6]: https://github.com/Kong/kong-operator/compare/v2.1.5..v2.1.6
 [v2.1.5]: https://github.com/Kong/kong-operator/compare/v2.1.4..v2.1.5
 [v2.1.4]: https://github.com/Kong/kong-operator/compare/v2.1.3..v2.1.4
 [v2.1.3]: https://github.com/Kong/kong-operator/compare/v2.1.2..v2.1.3
 [v2.1.2]: https://github.com/Kong/kong-operator/compare/v2.1.1..v2.1.2
 [v2.1.1]: https://github.com/Kong/kong-operator/compare/v2.1.0..v2.1.1
 [v2.1.0]: https://github.com/Kong/kong-operator/compare/v2.0.5..v2.1.0
+[v2.0.9]: https://github.com/Kong/kong-operator/compare/v2.0.8..v2.0.9
 [v2.0.8]: https://github.com/Kong/kong-operator/compare/v2.0.7..v2.0.8
 [v2.0.7]: https://github.com/Kong/kong-operator/compare/v2.0.6..v2.0.7
 [v2.0.6]: https://github.com/Kong/kong-operator/compare/v2.0.5..v2.0.6

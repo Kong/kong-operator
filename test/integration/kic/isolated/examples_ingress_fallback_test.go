@@ -46,7 +46,7 @@ func TestIngressWithBrokenPluginFallback(t *testing.T) {
 			func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 				cleaner := GetFromCtxForT[*clusters.Cleaner](ctx, t)
 				cluster := GetClusterFromCtx(ctx)
-				proxyURL := GetHTTPURLFromCtx(ctx)
+				proxyURL := GetHTTPSURLFromCtx(ctx)
 
 				t.Logf("applying yaml manifest %s", ingressWithBrokenPluginFallback)
 				b, err := os.ReadFile(ingressWithBrokenPluginFallback)
@@ -59,9 +59,11 @@ func TestIngressWithBrokenPluginFallback(t *testing.T) {
 				helpers.EventuallyGETPath(
 					t,
 					proxyURL,
-					proxyURL.Host,
+					proxyURL.String(),
 					"/ingress-testing",
-					nil,
+					&helpers.HTTPSOptions{
+						InsecureSkipVerify: true,
+					},
 					http.StatusOK,
 					"Running on Pod",
 					nil,
@@ -86,15 +88,17 @@ func TestIngressWithBrokenPluginFallback(t *testing.T) {
 			return ctx
 		}).
 		Assess("verify that route with misconfigured plugin is not operational", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
-			proxyURL := GetHTTPURLFromCtx(ctx)
+			proxyURL := GetHTTPSURLFromCtx(ctx)
 			t.Logf("verifying that Kong gateway response is returned instead of desired site")
 
 			helpers.EventuallyGETPath(
 				t,
 				proxyURL,
-				proxyURL.Host,
+				proxyURL.String(),
 				"/for-auth-users",
-				nil,
+				&helpers.HTTPSOptions{
+					InsecureSkipVerify: true,
+				},
 				http.StatusNotFound,
 				"no Route matched with those values",
 				nil,

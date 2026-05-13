@@ -3,6 +3,7 @@ package isolated
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"io"
 	"net/http"
 	"strconv"
@@ -221,7 +222,8 @@ func TestIngressVerifyUpstreamTLS(t *testing.T) {
 			return ctx
 		}).
 		Assess("verify that if the verify-depth is lower than chain length, TLS handshake fails", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
-			proxyURL := GetHTTPURLFromCtx(ctx)
+			proxyURL := GetHTTPSURLFromCtx(ctx)
+			insecureClient := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}} //nolint:gosec
 			require.EventuallyWithT(t, func(t *assert.CollectT) {
 				req, err := http.NewRequest("GET", proxyURL.String()+echoRoute, nil)
 				if !assert.NoError(t, err) {
@@ -229,7 +231,7 @@ func TestIngressVerifyUpstreamTLS(t *testing.T) {
 				}
 				req.Host = goEchoServerHostname
 
-				resp, err := http.DefaultClient.Do(req)
+				resp, err := insecureClient.Do(req)
 				if !assert.NoError(t, err) {
 					return
 				}
@@ -247,7 +249,8 @@ func TestIngressVerifyUpstreamTLS(t *testing.T) {
 			_, err := cluster.Client().CoreV1().Services(service.Namespace).Update(ctx, service, metav1.UpdateOptions{})
 			require.NoError(t, err)
 
-			proxyURL := GetHTTPURLFromCtx(ctx)
+			proxyURL := GetHTTPSURLFromCtx(ctx)
+			insecureClient := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}} //nolint:gosec
 			require.EventuallyWithT(t, func(t *assert.CollectT) {
 				req, err := http.NewRequest("GET", proxyURL.String()+echoRoute, nil)
 				if !assert.NoError(t, err) {
@@ -255,7 +258,7 @@ func TestIngressVerifyUpstreamTLS(t *testing.T) {
 				}
 				req.Host = goEchoServerHostname
 
-				resp, err := http.DefaultClient.Do(req)
+				resp, err := insecureClient.Do(req)
 				if !assert.NoError(t, err) {
 					return
 				}

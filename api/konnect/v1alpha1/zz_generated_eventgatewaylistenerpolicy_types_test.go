@@ -7,6 +7,19 @@ import (
 	"testing"
 )
 
+func TestEventGatewayListenerPolicyAPISpec_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayListenerPolicyAPISpec
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestEventGatewayListenerPolicyConfigUnmarshalJSON_NilReceiver(t *testing.T) {
 	t.Parallel()
 

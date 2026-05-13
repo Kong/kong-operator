@@ -1,7 +1,8 @@
-**/zz_generated.*.go linguist-generated=true
+**/zz_generated*.go linguist-generated=true
 controller/konnect/ops/*_mock_test.go linguist-generated=true
 docs/api-reference.md linguist-generated=true
 ingress-controller/internal/dataplane/testdata/golden/**/*_golden.yaml linguist-generated=true
 charts/kong-operator/ci/__snapshots__/*.snap linguist-generated=true
+
 # Mark all generated code in the API directory as not generated, since it should be reviewed.
-api/**/zz_generated.*.go linguist-generated=false
+api/** linguist-generated=false

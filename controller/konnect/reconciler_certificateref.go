@@ -12,26 +12,29 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/kong/kong-operator/v2/api/common/consts"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	"github.com/kong/kong-operator/v2/controller/pkg/controlplane"
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
+	"github.com/kong/kong-operator/v2/internal/utils/crossnamespace"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 // getKongCertificateRef gets the reference of KongCertificate.
 func getKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
 	e TEnt,
-) mo.Option[commonv1alpha1.NameRef] {
+) mo.Option[commonv1alpha1.NamespacedRef] {
 	switch e := any(e).(type) {
 	case *configurationv1alpha1.KongSNI:
 		// Since certificateRef is required for KongSNI, we directly return spec.CertificateRef here.
 		return mo.Some(e.Spec.CertificateRef)
 	default:
-		return mo.None[commonv1alpha1.NameRef]()
+		return mo.None[commonv1alpha1.NamespacedRef]()
 	}
 }
 
@@ -45,11 +48,53 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 		return ctrl.Result{}, nil
 	}
 
+	certNamespace := ent.GetNamespace()
+	var crossNamespaceRef bool
+	if certRef.Namespace != nil && *certRef.Namespace != "" && *certRef.Namespace != certNamespace {
+		certNamespace = *certRef.Namespace
+		crossNamespaceRef = true
+	}
+
+	if crossNamespaceRef {
+		if err := crossnamespace.CheckKongReferenceGrantForResource(
+			ctx,
+			cl,
+			ent.GetNamespace(),
+			certNamespace,
+			certRef.Name,
+			metav1.GroupVersionKind(ent.GetObjectKind().GroupVersionKind()),
+			metav1.GroupVersionKind(configurationv1alpha1.GroupVersion.WithKind("KongCertificate")),
+		); err != nil {
+			if crossnamespace.IsReferenceNotGranted(err) {
+				if res, errStatus := patch.StatusWithCondition(
+					ctx, cl, ent,
+					consts.ConditionType(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs),
+					metav1.ConditionFalse,
+					configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted,
+					fmt.Sprintf("KongReferenceGrants do not allow access to KongCertificate %s/%s", certNamespace, certRef.Name),
+				); errStatus != nil || !res.IsZero() {
+					return res, errStatus
+				}
+				return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+			}
+			return ctrl.Result{}, err
+		}
+
+		if res, errStatus := patch.StatusWithCondition(
+			ctx, cl, ent,
+			consts.ConditionType(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs),
+			metav1.ConditionTrue,
+			configurationv1alpha1.KongReferenceGrantReasonResolvedRefs,
+			"KongReferenceGrants allow access to KongCertificate",
+		); errStatus != nil || !res.IsZero() {
+			return res, errStatus
+		}
+	}
+
 	cert := &configurationv1alpha1.KongCertificate{}
 	nn := types.NamespacedName{
-		Name: certRef.Name,
-		// TODO: handle cross namespace refs
-		Namespace: ent.GetNamespace(),
+		Name:      certRef.Name,
+		Namespace: certNamespace,
 	}
 	err := cl.Get(ctx, nn, cert)
 	if err != nil {
@@ -123,7 +168,7 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 			ent, client.ObjectKeyFromObject(cert),
 		)
 	}
-	cp, err := controlplane.GetCPForRef(ctx, cl, cpRef, ent.GetNamespace())
+	cp, err := controlplane.GetCPForRef(ctx, cl, cpRef, cert.GetNamespace())
 	if err != nil {
 		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, ent,

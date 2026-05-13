@@ -218,3 +218,19 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/operations.PutPortalIPAllowListRequest
           delete: {}
         reconciler: {}
+      - path: /v3/portals/{portalId}/custom-domain
+        name: PortalCustomDomain
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.PortalCustomDomainsSDK
+            fieldName: PortalCustomDomains
+          getForUID:
+            matchFields:
+              - objectField: Spec.APISpec.Hostname
+                responseField: Hostname
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreatePortalCustomDomainRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdatePortalCustomDomainRequest
+          delete: {}
+        reconciler: {}

@@ -1057,11 +1057,11 @@ func TestGenerateSchemaTypes_OmitsDiscriminatorFieldOnUnionMembersOnly(t *testin
 		"StandaloneTypeCarrier": true,
 	}, parsed, nil)
 
-	assert.NotContains(t, generatedStructBlock(t, content, "RootVariantAlpha"), "Type string `json:\"type,omitempty\"`")
-	assert.NotContains(t, generatedStructBlock(t, content, "RootVariantBeta"), "Type string `json:\"type,omitempty\"`")
-	assert.NotContains(t, generatedStructBlock(t, content, "PropertyVariantAlpha"), "Type string `json:\"type,omitempty\"`")
-	assert.NotContains(t, generatedStructBlock(t, content, "PropertyVariantBeta"), "Type string `json:\"type,omitempty\"`")
-	assert.Contains(t, generatedStructBlock(t, content, "StandaloneTypeCarrier"), "Type string `json:\"type,omitempty\"`")
+	assert.NotContains(t, generatedStructBlock(t, content, "RootVariantAlpha"), "Type string")
+	assert.NotContains(t, generatedStructBlock(t, content, "RootVariantBeta"), "Type string")
+	assert.NotContains(t, generatedStructBlock(t, content, "PropertyVariantAlpha"), "Type string")
+	assert.NotContains(t, generatedStructBlock(t, content, "PropertyVariantBeta"), "Type string")
+	assert.Contains(t, generatedStructBlock(t, content, "StandaloneTypeCarrier"), "Type string `json:\"type,omitzero\"`")
 
 	_, err := format.Source([]byte(content))
 	require.NoError(t, err)
@@ -1077,6 +1077,62 @@ func generatedStructBlock(t *testing.T, content, typeName string) string {
 	require.NotEqual(t, -1, end, "type %s struct end not found", typeName)
 
 	return content[start : start+end+3]
+}
+
+func TestTagOmitSuffix(t *testing.T) {
+	tests := []struct {
+		goType string
+		want   string
+	}{
+		{"string", ",omitzero"},
+		{"int64", ",omitzero"},
+		{"float64", ",omitzero"},
+		{"VirtualClusterNamespace", ",omitzero"},
+		{"VirtualClusterName", ",omitzero"},
+		{"apiextensionsv1.JSON", ",omitzero"},
+		{"*string", ",omitempty"},
+		{"*KonnectEntityRef", ",omitempty"},
+		{"[]VirtualClusterTopicAlias", ",omitempty"},
+		{"[]metav1.Condition", ",omitempty"},
+		{"map[string]Labels", ",omitempty"},
+		{"map[string]string", ",omitempty"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.goType, func(t *testing.T) {
+			assert.Equal(t, tc.want, tagOmitSuffix(tc.goType))
+		})
+	}
+}
+
+func TestGenerateSchemaTypes_EmitsOmitzeroForStructFields(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	parsed := &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"VirtualClusterNamespace": {
+				Name: "VirtualClusterNamespace",
+				Properties: []*parser.Property{
+					{Name: "prefix", Type: "string"},
+					{Name: "mode", Type: "string"},
+				},
+			},
+			"ParentSchema": {
+				Name: "ParentSchema",
+				Properties: []*parser.Property{
+					{Name: "namespace", RefName: "VirtualClusterNamespace"},
+				},
+			},
+		},
+	}
+
+	content := g.generateSchemaTypes(map[string]bool{
+		"VirtualClusterNamespace": true,
+		"ParentSchema":            true,
+	}, parsed, nil)
+
+	assert.Contains(t, content, "Namespace VirtualClusterNamespace `json:\"namespace,omitzero\"`")
+	assert.NotContains(t, content, "Namespace VirtualClusterNamespace `json:\"namespace,omitempty\"`")
+	_, err := format.Source([]byte(content))
+	require.NoError(t, err)
 }
 
 func TestEntityFilePrefix(t *testing.T) {
@@ -1268,7 +1324,7 @@ func TestGenerateSchemaTypes_AddsKubebuilderTags(t *testing.T) {
 
 	assert.Contains(t, content, "// +optional")
 	assert.Contains(t, content, fmt.Sprintf("// +kubebuilder:validation:MaxLength=%d", defaultMaxLength))
-	assert.Contains(t, content, "ProviderType string `json:\"providerType,omitempty\"`")
+	assert.Contains(t, content, "ProviderType string `json:\"providerType,omitzero\"`")
 }
 
 func TestBuildSchemaTypeFieldConfig_NestedInlineObject(t *testing.T) {
@@ -3285,6 +3341,86 @@ func TestGenerateEntityOpsFile_ParentScopedSingleton(t *testing.T) {
 	// No entity ID variable in the generated delete or update functions.
 	// (id would be declared but unused, causing a compile error.)
 	assert.NotContains(t, content, "id := obj.GetKonnectStatus().GetKonnectID()")
+}
+
+// TestGenerateEntityOpsFile_SingletonNoID verifies correct code generation for
+// singleton sub-resources whose Konnect response has no "id" field (e.g.
+// PortalCustomDomain). Create must not call SetKonnectID. getForUID must call
+// the singular GET and match via configured matchFields.
+func TestGenerateEntityOpsFile_SingletonNoID(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"PortalCustomDomain": {IsRoot: new(false)},
+		},
+	})
+
+	// DELETE /portals/{portalId}/custom-domain and PATCH /portals/{portalId}/custom-domain
+	// both have only the parent ID — no per-resource ID segment.
+	// RespHasID=false because the response component has no "id" field.
+	schema := &parser.Schema{
+		OperationID:        "create-portal-custom-domain",
+		Tags:               []string{"Portal Custom Domains"},
+		SuccessResponseRef: "PortalCustomDomain",
+		RespHasID:          false,
+		Dependencies: []*parser.Dependency{
+			{ParamName: "portalId", EntityName: "Portal"},
+		},
+		UpdateOperationID:      "update-portal-custom-domain",
+		UpdateTags:             []string{"Portal Custom Domains"},
+		UpdatePathParams:       []string{"portalId"},
+		DeleteOperationID:      "delete-portal-custom-domain",
+		DeleteTags:             []string{"Portal Custom Domains"},
+		DeletePathParams:       []string{"portalId"},
+		ListOperationID:        "get-portal-custom-domain",
+		ListTags:               []string{"Portal Custom Domains"},
+		ListSuccessResponseRef: "PortalCustomDomain",
+	}
+	opsConfig := &config.EntityOpsConfig{
+		GetForUID: &config.GetForUIDConfig{
+			MatchFields: []config.GetForUIDMatchField{
+				{
+					ObjectField:   "Spec.APISpec.Hostname",
+					ResponseField: "Hostname",
+				},
+			},
+		},
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreatePortalCustomDomainRequest"},
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.UpdatePortalCustomDomainRequest"},
+			"delete": {},
+		},
+		SDK: &config.OpSDKConfig{
+			Interface: "github.com/Kong/sdk-konnect-go.PortalCustomDomainsSDK",
+			FieldName: "PortalCustomDomains",
+		},
+	}
+
+	res, err := g.generateEntityOpsFile("PortalCustomDomain", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, res.File)
+
+	content := res.File.Content
+
+	// Create: nil-response guard present but no SetKonnectID.
+	assert.Contains(t, content, "resp.PortalCustomDomain == nil")
+	assert.NotContains(t, content, "SetKonnectID")
+
+	// getForUID: calls singular GET not a list, matches hostname, returns hostname.
+	assert.Contains(t, content, "sdk.GetPortalCustomDomain(ctx, parentID)")
+	assert.Contains(t, content, "matchStringField(obj.Spec.APISpec.Hostname, entry.Hostname)")
+	assert.Contains(t, content, "return entry.Hostname, nil")
+
+	// No list-style collection iteration.
+	assert.NotContains(t, content, "for _, entry := range")
+	assert.NotContains(t, content, "entry.GetID()")
+
+	// No sdkkonnectops import (singleton GET uses positional args, not a request struct).
+	assert.NotContains(t, content, `sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"`)
+
+	// No unreachable fallback after early return.
+	assert.NotContains(t, content, "return entry.Hostname, nil\n\n\treturn \"\", EntityWithMatchingUIDNotFoundError")
 }
 
 func TestGenerateOpsUpdate_RootEntity(t *testing.T) {

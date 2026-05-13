@@ -30,7 +30,9 @@ import (
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Namespaced{{if .Categories}},categories={{join .Categories ";"}}{{end}}
+{{- if not .SingletonNoID}}
 // +kubebuilder:printcolumn:name="ID",description="Konnect ID",type="string",JSONPath=".status.id"
+{{- end}}
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=` + "`" + `.status.conditions[?(@.type=='Programmed')].status` + "`" + `
 // +kubebuilder:printcolumn:name="OrgID",description="Konnect Organization ID this resource belongs to.",type=string,JSONPath=` + "`" + `.status.organizationID` + "`" + `
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
@@ -113,7 +115,7 @@ type {{.EntityName}}APISpec struct {
 {{- if isRefProperty $prop}}
 	{{goFieldName $prop.Name}}Ref {{goType $prop}} ` + "`" + `json:"{{refJSONTag $prop}},omitempty"` + "`" + `
 {{- else}}
-	{{goFieldName $prop.Name}} {{goType $prop}} ` + "`" + `json:"{{jsonTag $prop}}"` + "`" + `
+	{{goFieldName $prop.Name}} {{goType $prop}} ` + "`" + `json:"{{jsonTag $prop (goType $prop)}}"` + "`" + `
 {{- end}}
 {{end}}
 {{- end}}
@@ -149,7 +151,7 @@ type {{.EntityName}}Status struct {
 	// ObservedGeneration is the most recent generation observed
 	//
 	// +optional
-	ObservedGeneration int64 ` + "`" + `json:"observedGeneration,omitempty"` + "`" + `
+	ObservedGeneration int64 ` + "`" + `json:"observedGeneration,omitzero"` + "`" + `
 }
 `
 
@@ -999,7 +1001,11 @@ func create{{.Entity}}(
 		return errWrap
 	}
 
-{{- if .RespIDIsPointer}}
+{{- if .SingletonNoID}}
+	if resp == nil || resp.{{.RespField}} == nil {
+		return fmt.Errorf("failed creating %s: %w", obj.GetTypeName(), ErrNilResponse)
+	}
+{{- else if .RespIDIsPointer}}
 	if resp == nil || resp.{{.RespField}} == nil || resp.{{.RespField}}.ID == nil || *resp.{{.RespField}}.ID == "" {
 		return fmt.Errorf("failed creating %s: %w", obj.GetTypeName(), ErrNilResponse)
 	}
@@ -1258,7 +1264,23 @@ func get{{.Entity}}ForUID(
 		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "{{.EntityName}}", Op: GetOp}
 	}
 {{- end}}
-{{- if .UseUIDTagFilter}}
+{{- if .SingletonNoID}}
+
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, {{(index .Parents 0).VarName}})
+	if err != nil {
+		return "", fmt.Errorf("failed getting %s: %w", obj.GetTypeName(), err)
+	}
+	if resp == nil || resp.{{.ListResponseField}} == nil {
+		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+	}
+	entry := resp.{{.ListResponseField}}
+{{- range .MatchFields}}
+	if !matchStringField(obj.{{.ObjectField}}, entry.{{.ResponseField}}) {
+		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+	}
+{{- end}}
+	return entry.{{(index .MatchFields 0).ResponseField}}, nil
+{{- else if .UseUIDTagFilter}}
 
 {{- if .GetForUIDFullyWrapped}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.GetForUIDWrappedType}}{
@@ -1420,8 +1442,10 @@ func get{{.Entity}}ForUID(
 	// this function for a type-specific match strategy.
 	_ = obj
 {{- end}}
+{{- if not .SingletonNoID}}
 
 	return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+{{- end}}
 }
 `
 

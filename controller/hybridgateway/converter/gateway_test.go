@@ -218,7 +218,7 @@ func TestBuildKongSNI(t *testing.T) {
 			listener: &gwtypes.Listener{
 				Name:     "https",
 				Port:     443,
-				Hostname: ptrTo(gatewayv1.Hostname("example.com")),
+				Hostname: new(gatewayv1.Hostname("example.com")),
 			},
 			kongCert: &configurationv1alpha1.KongCertificate{
 				ObjectMeta: metav1.ObjectMeta{
@@ -261,7 +261,7 @@ func TestBuildKongSNI(t *testing.T) {
 			listener: &gwtypes.Listener{
 				Name:     "listener",
 				Port:     443,
-				Hostname: ptrTo(gatewayv1.Hostname("")),
+				Hostname: new(gatewayv1.Hostname("")),
 			},
 			kongCert: &configurationv1alpha1.KongCertificate{
 				ObjectMeta: metav1.ObjectMeta{
@@ -283,7 +283,7 @@ func TestBuildKongSNI(t *testing.T) {
 			listener: &gwtypes.Listener{
 				Name:     "wildcard-listener",
 				Port:     443,
-				Hostname: ptrTo(gatewayv1.Hostname("*.example.com")),
+				Hostname: new(gatewayv1.Hostname("*.example.com")),
 			},
 			kongCert: &configurationv1alpha1.KongCertificate{
 				ObjectMeta: metav1.ObjectMeta{
@@ -346,7 +346,7 @@ func TestProcessListenerCertificate(t *testing.T) {
 			listener: &gwtypes.Listener{
 				Name:     "https",
 				Port:     443,
-				Hostname: ptrTo(gatewayv1.Hostname("example.com")),
+				Hostname: new(gatewayv1.Hostname("example.com")),
 			},
 			certRef: gatewayv1.SecretObjectReference{
 				Name: "tls-secret",
@@ -402,7 +402,7 @@ func TestProcessListenerCertificate(t *testing.T) {
 				Port: 443,
 			},
 			certRef: gatewayv1.SecretObjectReference{
-				Group: ptrTo(gatewayv1.Group("custom.example.com")),
+				Group: new(gatewayv1.Group("custom.example.com")),
 				Name:  "custom-cert",
 			},
 			setupMocks: func(t *testing.T, cl client.Client) {
@@ -432,7 +432,7 @@ func TestProcessListenerCertificate(t *testing.T) {
 				Port: 443,
 			},
 			certRef: gatewayv1.SecretObjectReference{
-				Kind: ptrTo(gatewayv1.Kind("ConfigMap")),
+				Kind: new(gatewayv1.Kind("ConfigMap")),
 				Name: "custom-cert",
 			},
 			setupMocks: func(t *testing.T, cl client.Client) {
@@ -531,7 +531,7 @@ func TestProcessListenerCertificate(t *testing.T) {
 				Port: 443,
 			},
 			certRef: gatewayv1.SecretObjectReference{
-				Group: ptrTo(gatewayv1.Group("")),
+				Group: new(gatewayv1.Group("")),
 				Name:  "tls-secret",
 			},
 			setupMocks: func(t *testing.T, cl client.Client) {
@@ -573,7 +573,7 @@ func TestProcessListenerCertificate(t *testing.T) {
 			},
 			certRef: gatewayv1.SecretObjectReference{
 				Name:      "tls-secret",
-				Namespace: ptrTo(gatewayv1.Namespace("cert-namespace")),
+				Namespace: new(gatewayv1.Namespace("cert-namespace")),
 			},
 			setupMocks: func(t *testing.T, cl client.Client) {
 				secret := &corev1.Secret{
@@ -653,7 +653,7 @@ func TestProcessListenerCertificate(t *testing.T) {
 			certRef: gatewayv1.SecretObjectReference{
 				Name: "tls-secret",
 				// Cross-namespace to trigger ReferenceGrant check.
-				Namespace: ptrTo(gatewayv1.Namespace("other-namespace")),
+				Namespace: new(gatewayv1.Namespace("other-namespace")),
 			},
 			setupMocks: func(t *testing.T, cl client.Client) {
 				secret := &corev1.Secret{
@@ -1724,13 +1724,6 @@ func TestGatewayConverter_GetOutputStore(t *testing.T) {
 			})
 		})
 	}
-}
-
-// Helper function to create pointer to value.
-//
-//go:fix inline
-func ptrTo[T any](v T) *T {
-	return new(v)
 }
 
 func TestHandleOrphanedResource(t *testing.T) {

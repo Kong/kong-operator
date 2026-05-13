@@ -50,7 +50,7 @@ func (b *KongSNIBuilder) WithSNIName(hostname string) *KongSNIBuilder {
 
 // WithCertificateRef sets the certificate reference for the KongSNI.
 func (b *KongSNIBuilder) WithCertificateRef(certName string) *KongSNIBuilder {
-	b.sni.Spec.CertificateRef = commonv1alpha1.NameRef{
+	b.sni.Spec.CertificateRef = commonv1alpha1.NamespacedRef{
 		Name: certName,
 	}
 	return b

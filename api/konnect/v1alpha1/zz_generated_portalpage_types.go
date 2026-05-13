@@ -59,13 +59,13 @@ type PortalPageAPISpec struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=1000000
-	Content PageContent `json:"content,omitempty"`
+	Content PageContent `json:"content,omitzero"`
 
 	//
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=160
-	Description Description `json:"description,omitempty"`
+	Description Description `json:"description,omitzero"`
 
 	// Pages may be rendered as a tree of files.
 	//
@@ -89,20 +89,20 @@ type PortalPageAPISpec struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=512
-	Slug PageSlug `json:"slug,omitempty"`
+	Slug PageSlug `json:"slug,omitzero"`
 
 	// Whether the resource is visible on a given portal. Defaults to unpublished.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=published;unpublished
-	Status PublishedStatus `json:"status,omitempty"`
+	Status PublishedStatus `json:"status,omitzero"`
 
 	// The title of a page in a portal.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=512
-	Title PageTitle `json:"title,omitempty"`
+	Title PageTitle `json:"title,omitzero"`
 
 	// Whether a page is publicly accessible to non-authenticated users.
 	// If not provided, the default_page_visibility value of the portal will be
@@ -112,7 +112,7 @@ type PortalPageAPISpec struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=public;private
-	Visibility PageVisibilityStatus `json:"visibility,omitempty"`
+	Visibility PageVisibilityStatus `json:"visibility,omitzero"`
 }
 
 // PortalPageStatus defines the observed state of PortalPage.
@@ -140,5 +140,5 @@ type PortalPageStatus struct {
 	// ObservedGeneration is the most recent generation observed
 	//
 	// +optional
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	ObservedGeneration int64 `json:"observedGeneration,omitzero"`
 }

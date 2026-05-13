@@ -66,6 +66,9 @@ func ParseProperty(name string, schemaRef *openapi3.SchemaRef, depth int, visite
 	}
 	if len(schemaValue.Enum) > 0 {
 		prop.Enum = schemaValue.Enum
+	} else if schemaValue.Const != nil {
+		// OAS 3.1 const: treat as a single-element enum for kubebuilder validation.
+		prop.Enum = []any{schemaValue.Const}
 	}
 	if schemaValue.Default != nil {
 		prop.Default = schemaValue.Default

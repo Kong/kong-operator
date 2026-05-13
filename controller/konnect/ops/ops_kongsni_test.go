@@ -49,7 +49,7 @@ func TestAdoptKongSNIOverride(t *testing.T) {
 			UID:       "uid-1",
 		},
 		Spec: configurationv1alpha1.KongSNISpec{
-			CertificateRef: commonv1alpha1.NameRef{Name: "cert"},
+			CertificateRef: commonv1alpha1.NamespacedRef{Name: "cert"},
 			Adopt: &commonv1alpha1.AdoptOptions{
 				Mode: commonv1alpha1.AdoptModeOverride,
 				Konnect: &commonv1alpha1.AdoptKonnectOptions{
@@ -95,7 +95,7 @@ func TestAdoptKongSNIMatchSuccess(t *testing.T) {
 			UID:       "uid-1",
 		},
 		Spec: configurationv1alpha1.KongSNISpec{
-			CertificateRef: commonv1alpha1.NameRef{Name: "cert"},
+			CertificateRef: commonv1alpha1.NamespacedRef{Name: "cert"},
 			Adopt: &commonv1alpha1.AdoptOptions{
 				Mode: commonv1alpha1.AdoptModeMatch,
 				Konnect: &commonv1alpha1.AdoptKonnectOptions{
@@ -141,7 +141,7 @@ func TestAdoptKongSNIMatchMismatch(t *testing.T) {
 			UID:       "uid-1",
 		},
 		Spec: configurationv1alpha1.KongSNISpec{
-			CertificateRef: commonv1alpha1.NameRef{Name: "cert"},
+			CertificateRef: commonv1alpha1.NamespacedRef{Name: "cert"},
 			Adopt: &commonv1alpha1.AdoptOptions{
 				Mode: commonv1alpha1.AdoptModeMatch,
 				Konnect: &commonv1alpha1.AdoptKonnectOptions{
@@ -190,7 +190,7 @@ func TestAdoptKongSNIUIDConflict(t *testing.T) {
 			UID:       "uid-1",
 		},
 		Spec: configurationv1alpha1.KongSNISpec{
-			CertificateRef: commonv1alpha1.NameRef{Name: "cert"},
+			CertificateRef: commonv1alpha1.NamespacedRef{Name: "cert"},
 			Adopt: &commonv1alpha1.AdoptOptions{
 				Mode: commonv1alpha1.AdoptModeOverride,
 				Konnect: &commonv1alpha1.AdoptKonnectOptions{
@@ -231,7 +231,7 @@ func TestAdoptKongSNIFetchFailure(t *testing.T) {
 			UID:       "uid-1",
 		},
 		Spec: configurationv1alpha1.KongSNISpec{
-			CertificateRef: commonv1alpha1.NameRef{Name: "cert"},
+			CertificateRef: commonv1alpha1.NamespacedRef{Name: "cert"},
 			Adopt: &commonv1alpha1.AdoptOptions{
 				Mode: commonv1alpha1.AdoptModeOverride,
 				Konnect: &commonv1alpha1.AdoptKonnectOptions{
@@ -268,7 +268,7 @@ func TestAdoptKongSNIMissingCertificateID(t *testing.T) {
 			UID:       "uid-1",
 		},
 		Spec: configurationv1alpha1.KongSNISpec{
-			CertificateRef: commonv1alpha1.NameRef{Name: "cert"},
+			CertificateRef: commonv1alpha1.NamespacedRef{Name: "cert"},
 			Adopt: &commonv1alpha1.AdoptOptions{
 				Mode: commonv1alpha1.AdoptModeOverride,
 				Konnect: &commonv1alpha1.AdoptKonnectOptions{

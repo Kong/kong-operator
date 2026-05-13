@@ -7,6 +7,526 @@ import (
 	"testing"
 )
 
+func TestBackendClusterAuthenticationAnonymous_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec BackendClusterAuthenticationAnonymous
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestBackendClusterAuthenticationSaslPlain_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec BackendClusterAuthenticationSaslPlain
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestBackendClusterAuthenticationSaslScram_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec BackendClusterAuthenticationSaslScram
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestBackendClusterReferenceByID_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec BackendClusterReferenceByID
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestBackendClusterReferenceByName_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec BackendClusterReferenceByName
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestBackendClusterTLS_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec BackendClusterTLS
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestCreatePortalCustomDomainSSLStandard_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec CreatePortalCustomDomainSSLStandard
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestCreatePortalCustomDomainSSLWithCustomCertificate_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec CreatePortalCustomDomainSSLWithCustomCertificate
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayTLSListenerPolicy_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayTLSListenerPolicy
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayTLSListenerPolicyConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayTLSListenerPolicyConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestForwardToClusterByPortMappingConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec ForwardToClusterByPortMappingConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestForwardToClusterBySNIConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec ForwardToClusterBySNIConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestForwardToVirtualClusterPolicy_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec ForwardToVirtualClusterPolicy
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestNamespaceExactAllowListItem_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec NamespaceExactAllowListItem
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestOIDCIdentityProviderClaimMappings_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec OIDCIdentityProviderClaimMappings
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestOIDCIdentityProviderConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec OIDCIdentityProviderConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestSAMLIdentityProviderConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec SAMLIdentityProviderConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestTLSCertificate_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec TLSCertificate
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestTLSTrustBundleReferenceByID_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec TLSTrustBundleReferenceByID
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestTLSTrustBundleReferenceByName_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec TLSTrustBundleReferenceByName
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestTLSVersionRange_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec TLSVersionRange
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestVirtualClusterAuthenticationAnonymous_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec VirtualClusterAuthenticationAnonymous
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestVirtualClusterAuthenticationAudience_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec VirtualClusterAuthenticationAudience
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestVirtualClusterAuthenticationClaimsMapping_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec VirtualClusterAuthenticationClaimsMapping
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestVirtualClusterAuthenticationClientCertificate_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec VirtualClusterAuthenticationClientCertificate
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestVirtualClusterAuthenticationJWKS_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec VirtualClusterAuthenticationJWKS
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestVirtualClusterAuthenticationOauthBearer_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec VirtualClusterAuthenticationOauthBearer
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestVirtualClusterAuthenticationPrincipal_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec VirtualClusterAuthenticationPrincipal
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestVirtualClusterAuthenticationSaslPlain_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec VirtualClusterAuthenticationSaslPlain
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestVirtualClusterAuthenticationSaslScram_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec VirtualClusterAuthenticationSaslScram
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestVirtualClusterAuthenticationValidate_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec VirtualClusterAuthenticationValidate
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestVirtualClusterNamespace_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec VirtualClusterNamespace
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestVirtualClusterNamespaceAdditionalProperties_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec VirtualClusterNamespaceAdditionalProperties
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestVirtualClusterNamespaceIDSelectorExactList_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec VirtualClusterNamespaceIDSelectorExactList
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestVirtualClusterNamespaceIDSelectorGlob_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec VirtualClusterNamespaceIDSelectorGlob
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestVirtualClusterNamespaceTopicSelectorExactList_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec VirtualClusterNamespaceTopicSelectorExactList
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestVirtualClusterNamespaceTopicSelectorGlob_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec VirtualClusterNamespaceTopicSelectorGlob
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestVirtualClusterReferenceByID_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec VirtualClusterReferenceByID
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestVirtualClusterReferenceByName_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec VirtualClusterReferenceByName
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestVirtualClusterTopicAlias_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec VirtualClusterTopicAlias
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestBackendClusterAuthenticationSchemeUnmarshalJSON_NilReceiver(t *testing.T) {
 	t.Parallel()
 
