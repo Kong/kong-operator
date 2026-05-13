@@ -994,7 +994,7 @@ func FilterListenersByHostnames(logger logr.Logger, listeners []gwtypes.Listener
 		// Check if any of the route hostnames match the listener hostname.
 		for _, hostname := range hostnames {
 			routeHostname := string(hostname)
-			if intersection := utils.HostnameIntersection(string(*listener.Hostname), routeHostname); intersection != "" {
+			if _, ok := utils.HostnameIntersection(string(*listener.Hostname), routeHostname); ok {
 				log.Debug(logger, "Listener matches route hostname", "listener", listener.Name, "listenerHostname", *listener.Hostname, "routeHostname", routeHostname)
 				matchingListeners = append(matchingListeners, listener)
 				break

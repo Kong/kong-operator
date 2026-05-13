@@ -2,44 +2,47 @@ package utils
 
 import "strings"
 
-// HostnameIntersection returns the intersection of listener and route hostnames.
-// Returns the most specific hostname that satisfies both constraints, or an empty string if
-// there is no intersection.
-func HostnameIntersection(listenerHostname, routeHostname string) string {
+// HostnameIntersection returns the most specific hostname that satisfies both constraints
+// and whether an intersection exists.
+// Empty input hostnames are treated as the Gateway API match-any wildcard ("*").
+func HostnameIntersection(listenerHostname, routeHostname string) (string, bool) {
 	// Treat empty hostnames as the special match-any "*".
+	if listenerHostname == "" && routeHostname == "" {
+		return "*", true
+	}
 	if listenerHostname == "" {
-		return routeHostname
+		return routeHostname, true
 	}
 	if routeHostname == "" {
-		return listenerHostname
+		return listenerHostname, true
 	}
 
 	if listenerHostname == routeHostname {
-		return listenerHostname
+		return listenerHostname, true
 	}
 
 	// Listener wildcard, route precise.
 	if isWildcard(listenerHostname) && isPrecise(routeHostname) {
 		if wildcardMatches(listenerHostname, routeHostname) {
-			return routeHostname
+			return routeHostname, true
 		}
 	}
 
 	// Route wildcard, listener precise.
 	if isWildcard(routeHostname) && isPrecise(listenerHostname) {
 		if wildcardMatches(routeHostname, listenerHostname) {
-			return listenerHostname
+			return listenerHostname, true
 		}
 	}
 
 	// Wildcard vs wildcard overlap: return the more specific wildcard if they intersect.
 	if isWildcard(listenerHostname) && isWildcard(routeHostname) {
 		if wildcardOverlaps(listenerHostname, routeHostname) {
-			return moreSpecificWildcard(listenerHostname, routeHostname)
+			return moreSpecificWildcard(listenerHostname, routeHostname), true
 		}
 	}
 
-	return ""
+	return "", false
 }
 
 func isWildcard(hostname string) bool {
@@ -58,11 +61,8 @@ func wildcardMatches(wildcard, hostname string) bool {
 		return false
 	}
 	suffix := wildcard[1:] // includes leading dot
-	if !strings.HasSuffix(hostname, suffix) {
-		return false
-	}
 	// Ensure at least one label exists before the wildcard suffix.
-	return len(hostname) > len(suffix)
+	return strings.HasSuffix(hostname, suffix) && len(hostname) > len(suffix)
 }
 
 func wildcardOverlaps(a, b string) bool {

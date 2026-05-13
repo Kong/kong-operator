@@ -122,7 +122,7 @@ func getHostnamesByParentRef[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRou
 		// Handle wildcard hostnames - get intersection
 		log.Debug(logger, "Processing listener with hostname", "listener", listener.Name, "listenerHostname", *listener.Hostname)
 		for _, host := range routeHostnames {
-			if intersection := utils.HostnameIntersection(string(*listener.Hostname), host); intersection != "" {
+			if intersection, ok := utils.HostnameIntersection(string(*listener.Hostname), host); ok {
 				log.Trace(logger, "Found hostname intersection", "listenerHostname", *listener.Hostname, "routeHostname", host, "intersection", intersection)
 				hostnames = append(hostnames, intersection)
 			}
@@ -131,6 +131,8 @@ func getHostnamesByParentRef[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRou
 
 	hostnames = lo.Uniq(hostnames)
 	if len(hostnames) == 0 {
+		// Returning nil tells the caller to skip this parent entirely. An empty slice
+		// would flow into WithHosts() and create a host-less KongRoute that matches any host.
 		log.Debug(logger, "No hostname intersection found for ParentRef")
 		return nil, nil
 	}
