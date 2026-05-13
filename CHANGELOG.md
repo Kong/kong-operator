@@ -50,6 +50,12 @@
 
 ### Added
 
+- `KongTarget`: support cross-namespace `spec.upstreamRef` to reference a
+  `KongUpstream` in a different namespace. A `KongReferenceGrant` in the
+  upstream's namespace is required to permit the reference. The `KongTarget`
+  status reflects `KongUpstreamRefValid=False/RefNotPermitted` when no grant
+  is present and clears once the grant is in place.
+  [#4263](https://github.com/Kong/kong-operator/pull/4263)
 - `KongSNI`: support cross-namespace `spec.certificateRef` to reference a
   `KongCertificate` in a different namespace. A `KongReferenceGrant` in the
   target namespace is required to permit the reference. The `KongSNI` status
