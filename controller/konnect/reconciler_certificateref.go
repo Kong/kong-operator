@@ -210,7 +210,7 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 		konnectv1alpha1.ControlPlaneRefValidConditionType,
 		metav1.ConditionTrue,
 		konnectv1alpha1.ControlPlaneRefReasonValid,
-		fmt.Sprintf("Referenced ControlPlane %s is programmed", nn),
+		fmt.Sprintf("Referenced ControlPlane %s is programmed", cpRef.String()),
 	); errStatus != nil || !res.IsZero() {
 		return res, errStatus
 	}
