@@ -35,6 +35,20 @@ type objectWithParentRef interface {
 	GetParentGVK() schema.GroupVersionKind
 }
 
+// objectExposingAncestorIDs is implemented by a parent entity that can
+// publish its transitively-resolved ancestor Konnect IDs (keyed by ancestor
+// Kind) so that a child entity can absorb them in a single hop.
+type objectExposingAncestorIDs interface {
+	GetAncestorIDs() map[string]string
+}
+
+// objectAcceptingAncestorIDs is implemented by a child entity that can
+// receive ancestor Konnect IDs published by its immediate parent, keyed by
+// ancestor Kind.
+type objectAcceptingAncestorIDs interface {
+	SetAncestorID(kind, id string)
+}
+
 func ensureKongReferenceGrantForParentRef[
 	T objectWithParentRef,
 ](
@@ -202,6 +216,27 @@ func (prh parentRefHandler[p, pPTr]) handleParentRef(
 			return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 		}
 		return ctrl.Result{}, err
+	}
+
+	if pa, ok := any(parent).(objectExposingAncestorIDs); ok {
+		if cs, ok := any(obj).(objectAcceptingAncestorIDs); ok {
+			ancestors := pa.GetAncestorIDs()
+			for _, id := range ancestors {
+				if id == "" {
+					return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+				}
+			}
+			old := obj.DeepCopyObject().(objectWithParentRef)
+			for kind, id := range ancestors {
+				cs.SetAncestorID(kind, id)
+			}
+			if _, err = patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), obj, old); err != nil {
+				if apierrors.IsConflict(err) {
+					return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+				}
+				return ctrl.Result{}, err
+			}
+		}
 	}
 
 	if res, errStatus := patch.StatusWithCondition(

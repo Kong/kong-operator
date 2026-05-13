@@ -15,7 +15,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/controller/konnect"
@@ -85,6 +84,7 @@ func TestEventGatewayVirtualCluster(t *testing.T) {
 				ServerURL: sdkmocks.SDKServerURL,
 				OrgID:     "org-id",
 			}
+			backendCluster.Status.GatewayID = &konnectv1alpha1.KonnectEntityRef{ID: expectedParentGateway}
 			require.NoError(ct, clientNamespaced.Status().Update(ctx, backendCluster))
 		}, waitTime, tickTime)
 
@@ -109,7 +109,7 @@ func TestEventGatewayVirtualCluster(t *testing.T) {
 			}, nil)
 
 		t.Log("Creating EventGatewayVirtualCluster")
-		virtualCluster := deploy.EventGatewayVirtualCluster(t, ctx, clientNamespaced, eventGateway, func(o client.Object) {
+		virtualCluster := deploy.EventGatewayVirtualCluster(t, ctx, clientNamespaced, backendCluster, func(o client.Object) {
 			vc, ok := o.(*konnectv1alpha1.EventGatewayVirtualCluster)
 			if !ok {
 				return
@@ -119,12 +119,6 @@ func TestEventGatewayVirtualCluster(t *testing.T) {
 			vc.Spec.APISpec.DNSLabel = initialDNSLabel
 			vc.Spec.APISpec.Labels = konnectv1alpha1.Labels{
 				"team": "platform",
-			}
-			vc.Spec.APISpec.Destination = &commonv1alpha1.ObjectRef{
-				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
-				NamespacedRef: &commonv1alpha1.NamespacedRef{
-					Name: backendClusterName,
-				},
 			}
 		})
 
@@ -213,6 +207,7 @@ func TestEventGatewayVirtualCluster(t *testing.T) {
 				ServerURL: sdkmocks.SDKServerURL,
 				OrgID:     "org-id",
 			}
+			conflictBackendCluster.Status.GatewayID = &konnectv1alpha1.KonnectEntityRef{ID: expectedParentGateway}
 			assert.NoError(ct, clientNamespaced.Status().Update(ctx, conflictBackendCluster))
 		}, waitTime, tickTime)
 
@@ -245,7 +240,7 @@ func TestEventGatewayVirtualCluster(t *testing.T) {
 			})
 
 		t.Log("Creating EventGatewayVirtualCluster")
-		virtualCluster = deploy.EventGatewayVirtualCluster(t, ctx, clientNamespaced, eventGateway)
+		virtualCluster = deploy.EventGatewayVirtualCluster(t, ctx, clientNamespaced, conflictBackendCluster)
 
 		t.Log("Waiting for EventGatewayVirtualCluster to be programmed after UID conflict lookup")
 		watchFor(t, ctx, w, apiwatch.Modified,

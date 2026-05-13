@@ -484,7 +484,7 @@ func EventGatewayVirtualCluster(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
-	gateway *konnectv1alpha1.KonnectEventGateway,
+	backendCluster *konnectv1alpha1.EventGatewayBackendCluster,
 	opts ...ObjOption,
 ) *konnectv1alpha1.EventGatewayVirtualCluster {
 	t.Helper()
@@ -494,10 +494,10 @@ func EventGatewayVirtualCluster(
 			Name: name,
 		},
 		Spec: konnectv1alpha1.EventGatewayVirtualClusterSpec{
-			GatewayRef: commonv1alpha1.ObjectRef{
+			EventGatewayBackendClusterRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 				NamespacedRef: &commonv1alpha1.NamespacedRef{
-					Name: gateway.Name,
+					Name: backendCluster.Name,
 				},
 			},
 			APISpec: konnectv1alpha1.EventGatewayVirtualClusterAPISpec{
@@ -506,12 +506,6 @@ func EventGatewayVirtualCluster(
 					{
 						Type:      konnectv1alpha1.VirtualClusterAuthenticationSchemeTypeAnonymous,
 						Anonymous: &konnectv1alpha1.VirtualClusterAuthenticationAnonymous{},
-					},
-				},
-				Destination: &commonv1alpha1.ObjectRef{
-					Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
-					NamespacedRef: &commonv1alpha1.NamespacedRef{
-						Name: "backend-cluster",
 					},
 				},
 				DNSLabel: konnectv1alpha1.VirtualClusterDNSLabel("vc-" + randomSuffix()),

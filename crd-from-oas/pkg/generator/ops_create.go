@@ -27,10 +27,14 @@ type opsCreateFuncData struct {
 	CreateReqBodyPointer bool
 	NeedsClient          bool
 	HasReferences        bool
-	RespField            string
-	HasTags              bool
-	HasLabels            bool
-	LabelsPointer        bool
+	// HasParentRefReplacement is true when a ParentRef.ReplacesAPISpecField is
+	// configured, meaning the SDK request body needs the replaced field injected
+	// from the resolved parent status ID.
+	HasParentRefReplacement bool
+	RespField               string
+	HasTags                 bool
+	HasLabels               bool
+	LabelsPointer           bool
 	// Parents holds metadata for each parent dependency (outermost first).
 	// Single-parent entities have len(Parents)==1; root entities have len==0.
 	Parents []parentInfo
@@ -97,7 +101,7 @@ func (g *Generator) generateOpsCreateFuncBody(
 		CreateReqType:        createReqType,
 		CreateReqBodyPointer: schema.CreateReqBodyPointer,
 		NeedsClient:          needsClient,
-		HasReferences:        g.entityHasReferences(entityName),
+		HasReferences:        g.entityHasReferences(entityName) || g.entityHasParentRefReplacement(entityName),
 		RespField:            schema.SuccessResponseRef,
 		HasTags:              hasTags,
 		HasLabels:            hasLabels,

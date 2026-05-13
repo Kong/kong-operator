@@ -53,7 +53,7 @@ type opsUpdateFuncData struct {
 	UpdateBodyField      string
 	UpdateReqBodyPointer bool // true when SDK body param is a pointer
 	NeedsClient          bool // true when the generated update function needs client.Client
-	HasReferences        bool // true when cross-CR references need ID injection
+	HasReferences        bool // true when cross-CR references or parent ref replacement need ID injection
 }
 
 // generateOpsUpdateFuncBody renders the update<Entity> function body (no file header).
@@ -143,7 +143,7 @@ func (g *Generator) generateOpsUpdateFuncBody(
 		UpdateBodyField:      updateBodyField,
 		UpdateReqBodyPointer: updateReqBodyPointer,
 		NeedsClient:          needsClient,
-		HasReferences:        g.entityHasReferences(entityName),
+		HasReferences:        g.entityHasReferences(entityName) || g.entityHasParentRefReplacement(entityName),
 		UpdateOmitsEntityID:  updateOmitsEntityID,
 	}, nil
 }

@@ -173,16 +173,6 @@ func TestHandleParentRef_EventGatewayChildren(t *testing.T) {
 				return o.(*konnectv1alpha1.EventGatewayBackendCluster).GetGatewayID()
 			},
 		},
-		{
-			name: "EventGatewayVirtualCluster",
-			obj: &konnectv1alpha1.EventGatewayVirtualCluster{
-				ObjectMeta: metav1.ObjectMeta{Name: "child", Namespace: childNS},
-				Spec:       konnectv1alpha1.EventGatewayVirtualClusterSpec{GatewayRef: gatewayRef(parentName)},
-			},
-			getParentID: func(o client.Object) string {
-				return o.(*konnectv1alpha1.EventGatewayVirtualCluster).GetGatewayID()
-			},
-		},
 	}
 
 	handler := parentRefHandler[konnectv1alpha1.KonnectEventGateway, *konnectv1alpha1.KonnectEventGateway]{}
@@ -231,6 +221,146 @@ func TestHandleParentRef_EventGatewayChildren(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestHandleParentRef_EventGatewayVirtualCluster(t *testing.T) {
+	const (
+		parentName = "backend-cluster"
+		parentNS   = "default"
+		parentID   = "backend-cluster-konnect-id"
+		gatewayID  = "gateway-konnect-id"
+		childNS    = "default"
+	)
+
+	newProgrammedBackendCluster := func() *konnectv1alpha1.EventGatewayBackendCluster {
+		return &konnectv1alpha1.EventGatewayBackendCluster{
+			ObjectMeta: metav1.ObjectMeta{Name: parentName, Namespace: parentNS},
+			Status: konnectv1alpha1.EventGatewayBackendClusterStatus{
+				Conditions: []metav1.Condition{{
+					Type:               string(konnectv1alpha1.KonnectEntityProgrammedConditionType),
+					Status:             metav1.ConditionTrue,
+					Reason:             "Programmed",
+					LastTransitionTime: metav1.Now(),
+				}},
+				KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{ID: parentID},
+				GatewayID:           &konnectv1alpha1.KonnectEntityRef{ID: gatewayID},
+			},
+		}
+	}
+
+	scenarios := []parentRefScenario{
+		{
+			name:             "parent programmed with Konnect ID and gateway ancestor ID set",
+			setupParent:      func(o client.Object) {},
+			wantCondStatus:   metav1.ConditionTrue,
+			wantCondReason:   konnectv1alpha1.EventGatewayBackendClusterRefReasonValid,
+			wantResultIsZero: true,
+			wantParentID:     parentID,
+		},
+		{
+			name:             "parent not found",
+			setupParent:      nil,
+			wantCondStatus:   metav1.ConditionFalse,
+			wantCondReason:   konnectv1alpha1.EventGatewayBackendClusterRefReasonInvalid,
+			wantResultIsZero: true,
+		},
+		{
+			name: "parent being deleted",
+			setupParent: func(o client.Object) {
+				now := metav1.NewTime(time.Now())
+				o.SetDeletionTimestamp(&now)
+				o.SetFinalizers([]string{"test-finalizer"})
+			},
+			wantCondStatus:   metav1.ConditionFalse,
+			wantCondReason:   konnectv1alpha1.EventGatewayBackendClusterRefReasonInvalid,
+			wantResultIsZero: true,
+		},
+		{
+			name: "parent not programmed",
+			setupParent: func(o client.Object) {
+				bc := o.(*konnectv1alpha1.EventGatewayBackendCluster)
+				bc.Status.Conditions = []metav1.Condition{{
+					Type:               string(konnectv1alpha1.KonnectEntityProgrammedConditionType),
+					Status:             metav1.ConditionFalse,
+					Reason:             "Pending",
+					LastTransitionTime: metav1.Now(),
+				}}
+				bc.Status.KonnectEntityStatus = konnectv1alpha1.KonnectEntityStatus{ID: parentID}
+			},
+			wantCondStatus: metav1.ConditionFalse,
+			wantCondReason: konnectv1alpha1.EventGatewayBackendClusterRefReasonNotProgrammed,
+			wantRequeue:    true,
+		},
+		{
+			name: "parent has no Konnect ID",
+			setupParent: func(o client.Object) {
+				bc := o.(*konnectv1alpha1.EventGatewayBackendCluster)
+				bc.Status.Conditions = []metav1.Condition{{
+					Type:               string(konnectv1alpha1.KonnectEntityProgrammedConditionType),
+					Status:             metav1.ConditionTrue,
+					Reason:             "Programmed",
+					LastTransitionTime: metav1.Now(),
+				}}
+				bc.Status.KonnectEntityStatus = konnectv1alpha1.KonnectEntityStatus{}
+				bc.Status.GatewayID = &konnectv1alpha1.KonnectEntityRef{ID: gatewayID}
+			},
+			wantCondStatus:   metav1.ConditionFalse,
+			wantCondReason:   konnectv1alpha1.EventGatewayBackendClusterRefReasonInvalid,
+			wantResultIsZero: true,
+		},
+	}
+
+	child := &konnectv1alpha1.EventGatewayVirtualCluster{
+		ObjectMeta: metav1.ObjectMeta{Name: "vc", Namespace: childNS},
+		Spec: konnectv1alpha1.EventGatewayVirtualClusterSpec{
+			EventGatewayBackendClusterRef: gatewayRef(parentName),
+		},
+	}
+
+	handler := parentRefHandler[konnectv1alpha1.EventGatewayBackendCluster, *konnectv1alpha1.EventGatewayBackendCluster]{}
+
+	for _, sc := range scenarios {
+		t.Run(sc.name, func(t *testing.T) {
+			freshChild := child.DeepCopy()
+
+			builder := fake.NewClientBuilder().
+				WithScheme(scheme.Get()).
+				WithStatusSubresource(freshChild)
+
+			if sc.setupParent != nil {
+				bc := newProgrammedBackendCluster()
+				sc.setupParent(bc)
+				builder = builder.WithObjects(bc)
+			}
+
+			builder = builder.WithObjects(freshChild)
+			cl := builder.Build()
+
+			res, err := handler.handleParentRef(t.Context(), cl, freshChild)
+
+			if sc.wantResultIsZero {
+				assert.True(t, res.IsZero(), "expected zero result")
+			}
+			if sc.wantRequeue {
+				assert.Greater(t, res.RequeueAfter, time.Duration(0), "expected non-zero requeue")
+			}
+
+			updated := &konnectv1alpha1.EventGatewayVirtualCluster{}
+			require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(freshChild), updated))
+
+			condType := freshChild.GetStatusConditionTypeParentRefValid()
+			cond, ok := k8sutils.GetCondition(kcfgconsts.ConditionType(condType), updated)
+			require.True(t, ok, "condition %q not found", condType)
+			assert.Equal(t, sc.wantCondStatus, cond.Status)
+			assert.Equal(t, sc.wantCondReason, cond.Reason)
+
+			if sc.wantParentID != "" {
+				require.NoError(t, err)
+				assert.Equal(t, sc.wantParentID, updated.GetEventGatewayBackendClusterID())
+				assert.Equal(t, gatewayID, updated.GetGatewayID(), "ancestor gateway ID must be propagated")
+			}
+		})
 	}
 }
 

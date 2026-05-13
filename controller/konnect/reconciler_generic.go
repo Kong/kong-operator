@@ -179,10 +179,6 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		return res, err
 	}
 
-	if stop, res, err := r.handleCrossReferences(ctx, ent); stop || err != nil {
-		return res, err
-	}
-
 	// If a type has a KongService ref, handle it.
 	res, err = handleKongServiceRef(ctx, r.Client, ent)
 	if err != nil {

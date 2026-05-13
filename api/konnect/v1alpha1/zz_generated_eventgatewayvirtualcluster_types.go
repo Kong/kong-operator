@@ -41,11 +41,10 @@ type EventGatewayVirtualClusterList struct {
 
 // EventGatewayVirtualClusterSpec defines the desired state of EventGatewayVirtualCluster.
 type EventGatewayVirtualClusterSpec struct {
-	// GatewayRef is the reference to the parent Gateway object.
+	// EventGatewayBackendClusterRef is the reference to the parent EventGatewayBackendCluster object.
 	//
 	// +required
-	GatewayRef commonv1alpha1.ObjectRef `json:"gatewayRef,omitzero"`
-
+	EventGatewayBackendClusterRef commonv1alpha1.ObjectRef `json:"eventGatewayBackendClusterRef,omitzero"`
 	// APISpec defines the desired state of the resource's API spec fields.
 	//
 	// +optional
@@ -84,16 +83,6 @@ type EventGatewayVirtualClusterAPISpec struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=512
 	Description string `json:"description,omitzero"`
-
-	// The backend cluster associated with the virtual cluster.
-	//
-	// Either `id` or `name` must be provided.
-	// Following changes to the backend cluster name won't affect the
-	// reference, as the system will create the entities relationship by `id`.
-	//
-	//
-	// +required
-	Destination *commonv1alpha1.ObjectRef `json:"destination,omitempty"`
 
 	// The DNS label used in the bootstrap server URL to identify the virtual
 	// cluster when using SNI routing.
@@ -169,7 +158,7 @@ type EventGatewayVirtualClusterStatus struct {
 	// +optional
 	GatewayID *KonnectEntityRef `json:"gatewayID,omitempty"`
 
-	// EventGatewayBackendCluster is the Konnect entity reference resolved from spec.apiSpec.destination.
+	// EventGatewayBackendCluster is the Konnect entity reference for the parent EventGatewayBackendCluster.
 	//
 	// +optional
 	EventGatewayBackendCluster *KonnectEntityRef `json:"eventGatewayBackendCluster,omitempty"`

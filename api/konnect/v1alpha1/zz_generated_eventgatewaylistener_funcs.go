@@ -137,3 +137,14 @@ func (obj *EventGatewayListener) GetStatusConditionReasonParentRefInvalid() stri
 func (obj *EventGatewayListener) GetStatusConditionReasonParentRefNotProgrammed() string {
 	return EventGatewayRefReasonNotProgrammed
 }
+
+// GetAncestorIDs returns the Konnect IDs of the ancestor entities keyed by their Kind.
+func (obj *EventGatewayListener) GetAncestorIDs() map[string]string {
+	m := make(map[string]string, 1)
+	if obj.Status.GatewayID != nil {
+		m["KonnectEventGateway"] = obj.Status.GatewayID.ID
+	} else {
+		m["KonnectEventGateway"] = ""
+	}
+	return m
+}

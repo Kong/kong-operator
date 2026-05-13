@@ -67,12 +67,19 @@ type {{.EntityName}}Spec struct {
 	// +required
 	KonnectConfiguration konnectv1alpha2.KonnectConfiguration ` + "`" + `json:"konnect"` + "`" + `
 {{end}}
+{{- if .ParentRef}}
+	// {{.ParentRefGoFieldName}} is the reference to the parent {{.SetParentIDEntityName}} object.
+	//
+	// +required
+	{{.ParentRefGoFieldName}} {{objectRefTypeName}} ` + "`" + `json:"{{.ParentRefJSONFieldName}},omitzero"` + "`" + `
+{{- else}}
 {{- with .ImmediateParentDependency}}
 	// {{.FieldName}} is the reference to the parent {{.EntityName}} object.
 	//
 	// +required
 	{{.FieldName}} {{objectRefTypeName}} ` + "`" + `json:"{{.JSONName}},omitzero"` + "`" + `
 {{end}}
+{{- end}}
 {{- if .HasOptionalSecretRef}}
 	// Type indicates the source of the sensitive data.
 	// Can be 'inline' or 'secretRef'.
@@ -107,6 +114,7 @@ type {{.EntityName}}APISpec struct {
 {{- else}}
 {{- range $i, $prop := .Schema.Properties}}
 {{- if not (skipProperty $prop)}}
+{{- if not (isParentRefReplacedField $prop.Name)}}
 {{formatComment $prop.Description}}
 	//
 {{- range kubebuilderTags $prop}}
@@ -120,6 +128,7 @@ type {{.EntityName}}APISpec struct {
 	{{goFieldName $prop.Name}} {{goType $prop}} ` + "`" + `json:"{{jsonTag $prop (goType $prop)}}"` + "`" + `
 {{- end}}
 {{end}}
+{{- end}}
 {{- end}}
 {{- end}}
 }
@@ -143,7 +152,7 @@ type {{.EntityName}}Status struct {
 	konnectv1alpha2.KonnectEntityStatus ` + "`" + `json:",inline"` + "`" + `
 {{- else}}
 	KonnectEntityStatus ` + "`" + `json:",inline"` + "`" + `
-{{- end}}{{- if or .Schema.Dependencies .References}}{{"\n"}}{{range .Schema.Dependencies}}
+{{- end}}{{- if or .Schema.Dependencies .References .ParentRef}}{{"\n"}}{{range .Schema.Dependencies}}
 	// {{.EntityName}}ID is the Konnect ID of the parent {{.EntityName}}.
 	//
 	// +optional
@@ -153,6 +162,11 @@ type {{.EntityName}}Status struct {
 	//
 	// +optional
 	{{.Kind}} *KonnectEntityRef ` + "`" + `json:"{{lowerCamel .Kind}},omitempty"` + "`" + `
+{{end}}{{- if .ParentRef}}
+	// {{.SetParentIDEntityName}} is the Konnect entity reference for the parent {{.SetParentIDEntityName}}.
+	//
+	// +optional
+	{{.SetParentIDEntityName}} *KonnectEntityRef ` + "`" + `json:"{{lowerCamel .SetParentIDEntityName}},omitempty"` + "`" + `
 {{end}}{{- else}}{{"\n"}}{{- end}}
 	// ObservedGeneration is the most recent generation observed
 	//
@@ -257,6 +271,23 @@ func (obj *{{$.EntityName}}) Set{{.EntityName}}ID(id string) {
 }
 {{- end}}
 {{- if .RootRefDependency}}
+{{- if .ParentRef}}
+
+// Get{{.SetParentIDEntityName}}Ref returns the reference to the parent {{.SetParentIDEntityName}}.
+func (obj *{{.EntityName}}) Get{{.SetParentIDEntityName}}Ref() {{.RootRefTypeName}} {
+	return obj.Spec.{{.ParentRefGoFieldName}}
+}
+
+// GetParentRef returns the reference to the parent entity.
+func (obj *{{.EntityName}}) GetParentRef() {{.RootRefTypeName}} {
+	return obj.Get{{.SetParentIDEntityName}}Ref()
+}
+
+// SetParentID sets the Konnect ID of the immediate parent entity.
+func (obj *{{.EntityName}}) SetParentID(id string) {
+	obj.Set{{.SetParentIDEntityName}}ID(id)
+}
+{{- else}}
 
 // Get{{.RootRefDependency.EntityName}}Ref returns the reference to the root {{.RootRefDependency.EntityName}}.
 func (obj *{{.EntityName}}) Get{{.RootRefDependency.EntityName}}Ref() {{.RootRefTypeName}} {
@@ -283,6 +314,7 @@ func (obj *{{.EntityName}}) GetParentRef() {{.RootRefTypeName}} {
 func (obj *{{.EntityName}}) SetParentID(id string) {
 	obj.Set{{.RootRefDependency.EntityName}}ID(id)
 }
+{{- end}}
 
 // GetParentGVK returns the GroupVersionKind of the parent entity.
 func (obj *{{.EntityName}}) GetParentGVK() schema.GroupVersionKind {
@@ -313,6 +345,24 @@ func (obj *{{.EntityName}}) GetStatusConditionReasonParentRefInvalid() string {
 func (obj *{{.EntityName}}) GetStatusConditionReasonParentRefNotProgrammed() string {
 	return {{.RefConditionPrefix}}RefReasonNotProgrammed
 }
+{{- if .ParentRef}}
+
+// Get{{.SetParentIDEntityName}}ID returns the Konnect ID resolved for the parent {{.SetParentIDEntityName}}.
+func (obj *{{.EntityName}}) Get{{.SetParentIDEntityName}}ID() string {
+	if obj.Status.{{.SetParentIDEntityName}} == nil {
+		return ""
+	}
+	return obj.Status.{{.SetParentIDEntityName}}.ID
+}
+
+// Set{{.SetParentIDEntityName}}ID sets the resolved Konnect ID for the parent {{.SetParentIDEntityName}}.
+func (obj *{{.EntityName}}) Set{{.SetParentIDEntityName}}ID(id string) {
+	if obj.Status.{{.SetParentIDEntityName}} == nil {
+		obj.Status.{{.SetParentIDEntityName}} = &KonnectEntityRef{}
+	}
+	obj.Status.{{.SetParentIDEntityName}}.ID = id
+}
+{{- end}}
 {{- end}}
 {{- if .IsReconcilerRoot}}
 
@@ -365,6 +415,33 @@ func (obj *{{.EntityName}}) SetCrossReferenceID(kind, id string) {
 	case "{{.Kind}}":
 		obj.Set{{.Kind}}ID(id)
 {{- end}}
+	}
+}
+{{- end}}
+{{- if .AncestorDependencies}}
+
+// GetAncestorIDs returns the Konnect IDs of the ancestor entities keyed by their Kind.
+func (obj *{{.EntityName}}) GetAncestorIDs() map[string]string {
+	m := make(map[string]string, {{len .AncestorDependencies}})
+	{{- range $i, $dep := .AncestorDependencies}}
+	if obj.Status.{{$dep.EntityName}}ID != nil {
+		m["{{index $.AncestorEntityTypes $i}}"] = obj.Status.{{$dep.EntityName}}ID.ID
+	} else {
+		m["{{index $.AncestorEntityTypes $i}}"] = ""
+	}
+	{{- end}}
+	return m
+}
+{{- end}}
+{{- if and .ParentRef .AncestorDependencies}}
+
+// SetAncestorID sets the Konnect ID for the ancestor entity identified by kind.
+func (obj *{{.EntityName}}) SetAncestorID(kind, id string) {
+	switch kind {
+	{{- range $i, $dep := .AncestorDependencies}}
+	case "{{index $.AncestorEntityTypes $i}}":
+		obj.Set{{$dep.EntityName}}ID(id)
+	{{- end}}
 	}
 }
 {{- end}}
@@ -596,6 +673,37 @@ func (obj *{{$.EntityName}}) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeName}},
 	data, err = json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal {{$.EntityName}} SDK payload with references: %w", err)
+	}
+	var target {{.ImportAlias}}.{{.TypeName}}
+	if err := json.Unmarshal(data, &target); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal into {{.TypeName}}: %w", err)
+	}
+	return &target, nil
+}
+{{end}}
+{{- end}}
+{{- if .HasParentRefReplacement}}
+{{range .Methods}}
+// {{.MethodName}} converts the {{$.EntityName}} to the SDK type
+// {{.ImportAlias}}.{{.TypeName}}, injecting the resolved parent ID as {{$.ParentRefReplacesField}}.
+func (obj *{{$.EntityName}}) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeName}}, error) {
+	data, err := obj.Spec.APISpec.marshalSDKOpsPayload()
+	if err != nil {
+		return nil, err
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(data, &payload); err != nil {
+		return nil, fmt.Errorf("failed to decode {{$.EntityName}} SDK payload: %w", err)
+	}
+	if payload == nil {
+		payload = map[string]any{}
+	}
+	if id := obj.Get{{$.SetParentIDEntityName}}ID(); id != "" {
+		payload["{{$.ParentRefReplacesField}}"] = map[string]any{"id": id}
+	}
+	data, err = json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal {{$.EntityName}} SDK payload with parent ref: %w", err)
 	}
 	var target {{.ImportAlias}}.{{.TypeName}}
 	if err := json.Unmarshal(data, &target); err != nil {

@@ -19,7 +19,7 @@ func createEventGatewayVirtualCluster(
 ) error {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
-		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectEventGateway", Op: CreateOp}
+		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "EventGatewayBackendCluster", Op: CreateOp}
 	}
 	req, err := obj.ToCreateVirtualClusterRequest()
 	if err != nil {
@@ -46,7 +46,7 @@ func updateEventGatewayVirtualCluster(
 ) error {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
-		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectEventGateway", Op: UpdateOp}
+		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "EventGatewayBackendCluster", Op: UpdateOp}
 	}
 	id := obj.GetKonnectStatus().GetKonnectID()
 	req, err := obj.ToUpdateVirtualClusterRequest()
@@ -75,7 +75,7 @@ func deleteEventGatewayVirtualCluster(
 ) error {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
-		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectEventGateway", Op: DeleteOp}
+		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "EventGatewayBackendCluster", Op: DeleteOp}
 	}
 	id := obj.GetKonnectStatus().GetKonnectID()
 
@@ -93,7 +93,7 @@ func getEventGatewayVirtualClusterForUID(
 ) (string, error) {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
-		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectEventGateway", Op: GetOp}
+		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "EventGatewayBackendCluster", Op: GetOp}
 	}
 
 	// TODO: pass a Filter to ListEventGatewayVirtualClusters (e.g. by name/labels) so we

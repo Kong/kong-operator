@@ -63,7 +63,7 @@ func (s *EventGatewayVirtualClusterAPISpec) ToUpdateVirtualClusterRequest() (*sd
 
 
 // ToCreateVirtualClusterRequest converts the EventGatewayVirtualCluster to the SDK type
-// sdkkonnectcomp.CreateVirtualClusterRequest, injecting resolved cross-reference IDs from status.
+// sdkkonnectcomp.CreateVirtualClusterRequest, injecting the resolved parent ID as destination.
 func (obj *EventGatewayVirtualCluster) ToCreateVirtualClusterRequest() (*sdkkonnectcomp.CreateVirtualClusterRequest, error) {
 	data, err := obj.Spec.APISpec.marshalSDKOpsPayload()
 	if err != nil {
@@ -81,7 +81,7 @@ func (obj *EventGatewayVirtualCluster) ToCreateVirtualClusterRequest() (*sdkkonn
 	}
 	data, err = json.Marshal(payload)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal EventGatewayVirtualCluster SDK payload with references: %w", err)
+		return nil, fmt.Errorf("failed to marshal EventGatewayVirtualCluster SDK payload with parent ref: %w", err)
 	}
 	var target sdkkonnectcomp.CreateVirtualClusterRequest
 	if err := json.Unmarshal(data, &target); err != nil {
@@ -91,7 +91,7 @@ func (obj *EventGatewayVirtualCluster) ToCreateVirtualClusterRequest() (*sdkkonn
 }
 
 // ToUpdateVirtualClusterRequest converts the EventGatewayVirtualCluster to the SDK type
-// sdkkonnectcomp.UpdateVirtualClusterRequest, injecting resolved cross-reference IDs from status.
+// sdkkonnectcomp.UpdateVirtualClusterRequest, injecting the resolved parent ID as destination.
 func (obj *EventGatewayVirtualCluster) ToUpdateVirtualClusterRequest() (*sdkkonnectcomp.UpdateVirtualClusterRequest, error) {
 	data, err := obj.Spec.APISpec.marshalSDKOpsPayload()
 	if err != nil {
@@ -109,7 +109,7 @@ func (obj *EventGatewayVirtualCluster) ToUpdateVirtualClusterRequest() (*sdkkonn
 	}
 	data, err = json.Marshal(payload)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal EventGatewayVirtualCluster SDK payload with references: %w", err)
+		return nil, fmt.Errorf("failed to marshal EventGatewayVirtualCluster SDK payload with parent ref: %w", err)
 	}
 	var target sdkkonnectcomp.UpdateVirtualClusterRequest
 	if err := json.Unmarshal(data, &target); err != nil {

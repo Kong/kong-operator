@@ -461,6 +461,13 @@ func (g *Generator) generateReconcilerConditions(parsed *parser.ParsedSpec) (*Ge
 			return nil, fmt.Errorf("non-root entity %s has no parent dependency", entityName)
 		}
 		prefix := refConditionEntityName(parentDep)
+		// When parentRef overrides the immediate parent, use the configured
+		// ParentEntityType as the condition prefix so that condition constants
+		// reflect the actual referenced type (e.g. EventGatewayBackendCluster)
+		// rather than the OpenAPI-derived ancestor (e.g. EventGateway).
+		if rc.ParentRef != nil && rc.ParentEntityType != "" {
+			prefix = rc.ParentEntityType
+		}
 		if prefix == "" {
 			return nil, fmt.Errorf("failed to derive condition prefix for %s", entityName)
 		}
@@ -667,6 +674,9 @@ func (g *Generator) reconcilerEntityMetadata(
 	metadata.ParentEntityName = parentDep.EntityName
 	if rc.ParentEntityType != "" {
 		metadata.ParentEntityName = rc.ParentEntityType
+	}
+	if rc.ParentRef != nil {
+		metadata.ParentRefFieldName = goFieldName(rc.ParentRef.FieldName)
 	}
 
 	return metadata, nil

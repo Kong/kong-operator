@@ -9,8 +9,6 @@ import (
 )
 
 const (
-	// IndexFieldEventGatewayVirtualClusterOnKonnectEventGatewayRef is the index field for EventGatewayVirtualCluster -> KonnectEventGateway.
-	IndexFieldEventGatewayVirtualClusterOnKonnectEventGatewayRef = "eventGatewayVirtualClusterOnKonnectEventGatewayRef"
 	// IndexFieldEventGatewayVirtualClusterOnEventGatewayBackendClusterRef is the index field for EventGatewayVirtualCluster -> EventGatewayBackendCluster.
 	IndexFieldEventGatewayVirtualClusterOnEventGatewayBackendClusterRef = "eventGatewayVirtualClusterOnEventGatewayBackendClusterRef"
 )
@@ -20,27 +18,10 @@ func OptionsForEventGatewayVirtualCluster() []Option {
 	return []Option{
 		{
 			Object:         &konnectv1alpha1.EventGatewayVirtualCluster{},
-			Field:          IndexFieldEventGatewayVirtualClusterOnKonnectEventGatewayRef,
-			ExtractValueFn: eventGatewayVirtualClusterOnKonnectEventGatewayRef,
-		},
-		{
-			Object:         &konnectv1alpha1.EventGatewayVirtualCluster{},
 			Field:          IndexFieldEventGatewayVirtualClusterOnEventGatewayBackendClusterRef,
 			ExtractValueFn: eventGatewayVirtualClusterOnEventGatewayBackendClusterRef,
 		},
 	}
-}
-
-func eventGatewayVirtualClusterOnKonnectEventGatewayRef(object client.Object) []string {
-	ent, ok := object.(*konnectv1alpha1.EventGatewayVirtualCluster)
-	if !ok {
-		return nil
-	}
-	if ent.Spec.GatewayRef.NamespacedRef == nil {
-		return nil
-	}
-
-	return []string{ent.Spec.GatewayRef.NamespacedRef.Name}
 }
 
 func eventGatewayVirtualClusterOnEventGatewayBackendClusterRef(object client.Object) []string {
@@ -48,8 +29,9 @@ func eventGatewayVirtualClusterOnEventGatewayBackendClusterRef(object client.Obj
 	if !ok {
 		return nil
 	}
-	if ent.Spec.APISpec.Destination == nil || ent.Spec.APISpec.Destination.NamespacedRef == nil {
+	if ent.Spec.EventGatewayBackendClusterRef.NamespacedRef == nil {
 		return nil
 	}
-	return []string{ent.Spec.APISpec.Destination.NamespacedRef.Name}
+
+	return []string{ent.Spec.EventGatewayBackendClusterRef.NamespacedRef.Name}
 }

@@ -104,3 +104,14 @@ func (obj *IdentityProviderRequest) GetStatusConditionReasonParentRefInvalid() s
 func (obj *IdentityProviderRequest) GetStatusConditionReasonParentRefNotProgrammed() string {
 	return PortalRefReasonNotProgrammed
 }
+
+// GetAncestorIDs returns the Konnect IDs of the ancestor entities keyed by their Kind.
+func (obj *IdentityProviderRequest) GetAncestorIDs() map[string]string {
+	m := make(map[string]string, 1)
+	if obj.Status.PortalID != nil {
+		m["Portal"] = obj.Status.PortalID.ID
+	} else {
+		m["Portal"] = ""
+	}
+	return m
+}

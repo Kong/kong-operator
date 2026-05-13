@@ -12291,65 +12291,6 @@ spec:
                     description: A human-readable description of the virtual cluster.
                     maxLength: 512
                     type: string
-                  destination:
-                    description: |-
-                      The backend cluster associated with the virtual cluster.
-
-                      Either `id` or `name` must be provided.
-                      Following changes to the backend cluster name won't affect the
-                      reference, as the system will create the entities relationship by `id`.
-                    properties:
-                      konnectID:
-                        description: |-
-                          KonnectID is the schema for the KonnectID type.
-                          This field is required when the Type is konnectID.
-                        maxLength: 36
-                        type: string
-                      namespacedRef:
-                        description: |-
-                          NamespacedRef is a reference to a KeySet entity inside the cluster.
-                          This field is required when the Type is namespacedRef.
-                        properties:
-                          name:
-                            description: Name is the name of the referred resource.
-                            maxLength: 253
-                            minLength: 1
-                            type: string
-                          namespace:
-                            description: |-
-                              Namespace is the namespace of the referred resource.
-
-                              For namespace-scoped resources if no Namespace is provided then the
-                              namespace of the parent object MUST be used.
-
-                              This field MUST not be set when referring to cluster-scoped resources.
-                            maxLength: 253
-                            type: string
-                        required:
-                        - name
-                        type: object
-                      type:
-                        description: |-
-                          Type defines type of the object which is referenced. It can be one of:
-
-                          - konnectID
-                          - namespacedRef
-                        enum:
-                        - konnectID
-                        - namespacedRef
-                        type: string
-                    required:
-                    - type
-                    type: object
-                    x-kubernetes-validations:
-                    - message: when type is namespacedRef, namespacedRef must be set
-                      rule: 'self.type == ''namespacedRef'' ? has(self.namespacedRef) : true'
-                    - message: when type is namespacedRef, konnectID must not be set
-                      rule: 'self.type == ''namespacedRef'' ? !has(self.konnectID) : true'
-                    - message: when type is konnectID, konnectID must be set
-                      rule: 'self.type == ''konnectID'' ? has(self.konnectID) : true'
-                    - message: when type is konnectID, namespacedRef must not be set
-                      rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
                   dnsLabel:
                     description: |-
                       The DNS label used in the bootstrap server URL to identify the virtual
@@ -12606,12 +12547,11 @@ spec:
                 required:
                 - aclMode
                 - authentication
-                - destination
                 - dnsLabel
                 - name
                 type: object
-              gatewayRef:
-                description: GatewayRef is the reference to the parent Gateway object.
+              eventGatewayBackendClusterRef:
+                description: EventGatewayBackendClusterRef is the reference to the parent EventGatewayBackendCluster object.
                 properties:
                   konnectID:
                     description: |-
@@ -12665,7 +12605,7 @@ spec:
                 - message: when type is konnectID, namespacedRef must not be set
                   rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
             required:
-            - gatewayRef
+            - eventGatewayBackendClusterRef
             type: object
           status:
             description: EventGatewayVirtualClusterStatus defines the observed state of EventGatewayVirtualCluster.
@@ -12731,7 +12671,7 @@ spec:
                 - type
                 x-kubernetes-list-type: map
               eventGatewayBackendCluster:
-                description: EventGatewayBackendCluster is the Konnect entity reference resolved from spec.apiSpec.destination.
+                description: EventGatewayBackendCluster is the Konnect entity reference for the parent EventGatewayBackendCluster.
                 properties:
                   id:
                     description: ID is the unique identifier of the Konnect entity as assigned by Konnect API.

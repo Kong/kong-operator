@@ -118,6 +118,19 @@ type TypeConfig struct {
 	Reconciler *ReconcilerConfig `yaml:"reconciler,omitempty"`
 }
 
+// ParentRefConfig overrides the spec field for the parent reference when the
+// OpenAPI-derived parent dependency should be replaced with a higher-level
+// parent entity. When set, the OpenAPI-derived Spec.<GatewayRef> field is
+// suppressed and a new top-level Spec.<FieldName> ObjectRef field is emitted.
+type ParentRefConfig struct {
+	// FieldName is the lowerCamelCase JSON name for the top-level spec ref
+	// field, e.g. "eventGatewayBackendClusterRef".
+	FieldName string `yaml:"fieldName"`
+	// ReplacesAPISpecField is the JSON name of the apiSpec property to suppress
+	// in favour of the new top-level field, e.g. "destination".
+	ReplacesAPISpecField string `yaml:"replacesAPISpecField"`
+}
+
 // ReconcilerConfig holds configuration for reconciler code generation.
 type ReconcilerConfig struct {
 	// IsRoot indicates this is a root entity that directly references
@@ -130,6 +143,18 @@ type ReconcilerConfig struct {
 	// child reconciler watch/index generation. When unset, the immediate parent
 	// dependency name is inferred from the OpenAPI path parameter.
 	ParentEntityType string `yaml:"parentEntityType,omitempty"`
+	// ParentRef, when set, replaces the OpenAPI-derived parent spec field with a
+	// new top-level ObjectRef field and changes what GetParentRef / SetParentID
+	// operate on. Requires ParentEntityType to also be set.
+	ParentRef *ParentRefConfig `yaml:"parentRef,omitempty"`
+	// AncestorEntityTypes lists the Konnect entity type names (GVK Kind strings)
+	// for each OpenAPI-derived path-parameter dependency in URL order
+	// (outermost first). Only required when ParentRef is set, to provide the
+	// Kind keys used in SetAncestorID / GetAncestorIDs.
+	// E.g. for a path /event-gateways/{gatewayId}/virtual-clusters with
+	// parentRef overriding the immediate parent to EventGatewayBackendCluster,
+	// set to ["KonnectEventGateway"] so the gateway ancestry is preserved.
+	AncestorEntityTypes []string `yaml:"ancestorEntityTypes,omitempty"`
 	// ParentSDKFields optionally overrides the SDK request-struct field names for
 	// each parent dependency (in URL order). When the list is shorter than the
 	// number of dependencies, missing entries fall back to pathParamToFieldName.

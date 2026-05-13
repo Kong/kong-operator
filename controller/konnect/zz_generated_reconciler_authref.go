@@ -21,6 +21,11 @@ type eventGatewayRefAccessor interface {
 	GetEventGatewayRef() commonv1alpha1.ObjectRef
 }
 
+type eventGatewayBackendClusterRefAccessor interface {
+	objectWithParentRef
+	GetEventGatewayBackendClusterRef() commonv1alpha1.ObjectRef
+}
+
 type portalRefAccessor interface {
 	objectWithParentRef
 	GetPortalRef() commonv1alpha1.ObjectRef
@@ -42,7 +47,31 @@ func getAPIAuthRef[
 	if obj, ok := any(ent).(eventGatewayRefAccessor); ok {
 		return getAPIAuthConfigurationRefFromParent[konnectv1alpha1.KonnectEventGateway](ctx, cl, obj)
 	}
+	if obj, ok := any(ent).(eventGatewayBackendClusterRefAccessor); ok {
+		return getAPIAuthRefViaBackendCluster(ctx, cl, obj)
+	}
 
 	return types.NamespacedName{},
 		fmt.Errorf("unsupported entity type %T for getting APIAuthRef", ent)
+}
+
+// getAPIAuthRefViaBackendCluster resolves the APIAuth for an entity whose immediate
+// parent is EventGatewayBackendCluster (e.g. EventGatewayVirtualCluster).
+// It performs a two-hop lookup: entity → EGBC → KonnectEventGateway → APIAuth.
+func getAPIAuthRefViaBackendCluster(
+	ctx context.Context,
+	cl client.Client,
+	obj eventGatewayBackendClusterRefAccessor,
+) (types.NamespacedName, error) {
+	bcRef := obj.GetEventGatewayBackendClusterRef()
+	if bcRef.Type != commonv1alpha1.ObjectRefTypeNamespacedRef || bcRef.NamespacedRef == nil {
+		return types.NamespacedName{},
+			fmt.Errorf("invalid EventGatewayBackendCluster reference: must be a NamespacedRef with a non-nil NamespacedRef field")
+	}
+	nn := types.NamespacedName{Name: bcRef.NamespacedRef.Name, Namespace: obj.GetNamespace()}
+	var bc konnectv1alpha1.EventGatewayBackendCluster
+	if err := cl.Get(ctx, nn, &bc); err != nil {
+		return types.NamespacedName{}, fmt.Errorf("failed to get EventGatewayBackendCluster %s: %w", nn, err)
+	}
+	return getAPIAuthConfigurationRefFromParent[konnectv1alpha1.KonnectEventGateway](ctx, cl, &bc)
 }

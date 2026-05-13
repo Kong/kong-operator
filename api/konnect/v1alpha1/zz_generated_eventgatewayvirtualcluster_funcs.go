@@ -88,57 +88,52 @@ func (obj *EventGatewayVirtualCluster) SetGatewayID(id string) {
 	obj.Status.GatewayID.ID = id
 }
 
-// GetGatewayRef returns the reference to the root Gateway.
-func (obj *EventGatewayVirtualCluster) GetGatewayRef() commonv1alpha1.ObjectRef {
-	return obj.Spec.GatewayRef
-}
-
-// GetEventGatewayRef returns the reference to the root EventGateway.
-func (obj *EventGatewayVirtualCluster) GetEventGatewayRef() commonv1alpha1.ObjectRef {
-	return obj.Spec.GatewayRef
+// GetEventGatewayBackendClusterRef returns the reference to the parent EventGatewayBackendCluster.
+func (obj *EventGatewayVirtualCluster) GetEventGatewayBackendClusterRef() commonv1alpha1.ObjectRef {
+	return obj.Spec.EventGatewayBackendClusterRef
 }
 
 // GetParentRef returns the reference to the parent entity.
 func (obj *EventGatewayVirtualCluster) GetParentRef() commonv1alpha1.ObjectRef {
-	return obj.GetEventGatewayRef()
+	return obj.GetEventGatewayBackendClusterRef()
 }
 
 // SetParentID sets the Konnect ID of the immediate parent entity.
 func (obj *EventGatewayVirtualCluster) SetParentID(id string) {
-	obj.SetGatewayID(id)
+	obj.SetEventGatewayBackendClusterID(id)
 }
 
 // GetParentGVK returns the GroupVersionKind of the parent entity.
 func (obj *EventGatewayVirtualCluster) GetParentGVK() schema.GroupVersionKind {
-	return GroupVersion.WithKind("KonnectEventGateway")
+	return GroupVersion.WithKind("EventGatewayBackendCluster")
 }
 
 // GetStatusConditionTypeParentRefValid returns the status condition type
 // indicating whether the parent reference is valid.
 func (obj *EventGatewayVirtualCluster) GetStatusConditionTypeParentRefValid() string {
-	return EventGatewayRefValidConditionType
+	return EventGatewayBackendClusterRefValidConditionType
 }
 
 // GetStatusConditionReasonParentRefValid returns the status condition reason
 // indicating that the parent reference is valid.
 func (obj *EventGatewayVirtualCluster) GetStatusConditionReasonParentRefValid() string {
-	return EventGatewayRefReasonValid
+	return EventGatewayBackendClusterRefReasonValid
 }
 
 // GetStatusConditionReasonParentRefInvalid returns the status condition reason
 // indicating that the parent reference is invalid.
 func (obj *EventGatewayVirtualCluster) GetStatusConditionReasonParentRefInvalid() string {
-	return EventGatewayRefReasonInvalid
+	return EventGatewayBackendClusterRefReasonInvalid
 }
 
 // GetStatusConditionReasonParentRefNotProgrammed returns the status condition
 // reason indicating that the referenced parent exists but is not yet
 // programmed in Konnect.
 func (obj *EventGatewayVirtualCluster) GetStatusConditionReasonParentRefNotProgrammed() string {
-	return EventGatewayRefReasonNotProgrammed
+	return EventGatewayBackendClusterRefReasonNotProgrammed
 }
 
-// GetEventGatewayBackendClusterID returns the Konnect ID resolved for the referenced EventGatewayBackendCluster.
+// GetEventGatewayBackendClusterID returns the Konnect ID resolved for the parent EventGatewayBackendCluster.
 func (obj *EventGatewayVirtualCluster) GetEventGatewayBackendClusterID() string {
 	if obj.Status.EventGatewayBackendCluster == nil {
 		return ""
@@ -146,7 +141,7 @@ func (obj *EventGatewayVirtualCluster) GetEventGatewayBackendClusterID() string 
 	return obj.Status.EventGatewayBackendCluster.ID
 }
 
-// SetEventGatewayBackendClusterID sets the resolved Konnect ID for the referenced EventGatewayBackendCluster.
+// SetEventGatewayBackendClusterID sets the resolved Konnect ID for the parent EventGatewayBackendCluster.
 func (obj *EventGatewayVirtualCluster) SetEventGatewayBackendClusterID(id string) {
 	if obj.Status.EventGatewayBackendCluster == nil {
 		obj.Status.EventGatewayBackendCluster = &KonnectEntityRef{}
@@ -154,23 +149,21 @@ func (obj *EventGatewayVirtualCluster) SetEventGatewayBackendClusterID(id string
 	obj.Status.EventGatewayBackendCluster.ID = id
 }
 
-// GetCrossReferences returns inter-CR references configured on EventGatewayVirtualCluster.
-func (obj *EventGatewayVirtualCluster) GetCrossReferences() []CrossReference {
-	refs := make([]CrossReference, 0, 1)
-	if obj.Spec.APISpec.Destination != nil {
-		refs = append(refs, CrossReference{
-			Kind:     "EventGatewayBackendCluster",
-			SpecPath: "spec.apiSpec.destination",
-			Ref:      obj.Spec.APISpec.Destination,
-		})
+// GetAncestorIDs returns the Konnect IDs of the ancestor entities keyed by their Kind.
+func (obj *EventGatewayVirtualCluster) GetAncestorIDs() map[string]string {
+	m := make(map[string]string, 1)
+	if obj.Status.GatewayID != nil {
+		m["KonnectEventGateway"] = obj.Status.GatewayID.ID
+	} else {
+		m["KonnectEventGateway"] = ""
 	}
-	return refs
+	return m
 }
 
-// SetCrossReferenceID sets the resolved Konnect ID for the cross-reference identified by kind.
-func (obj *EventGatewayVirtualCluster) SetCrossReferenceID(kind, id string) {
+// SetAncestorID sets the Konnect ID for the ancestor entity identified by kind.
+func (obj *EventGatewayVirtualCluster) SetAncestorID(kind, id string) {
 	switch kind {
-	case "EventGatewayBackendCluster":
-		obj.SetEventGatewayBackendClusterID(id)
+	case "KonnectEventGateway":
+		obj.SetGatewayID(id)
 	}
 }
