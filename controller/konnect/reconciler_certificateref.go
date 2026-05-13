@@ -149,18 +149,24 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 		return ctrl.Result{}, nil
 	}
 
+	// Save the certificate Konnect ID now (cert is confirmed programmed).
+	// We intentionally write it to ent.Status AFTER all patch.StatusWithCondition calls
+	// below to avoid clobbering: each merge-patch only carries condition diffs (CertificateID
+	// is identical in old and ent at snapshot time), so the server keeps its stored ""
+	// and overwrites ent.Status in the response, losing the in-memory value.
+	certKonnectID := cert.GetKonnectID()
+
 	// TODO: make this more generic.
+	// Initialise ent.Status.Konnect if nil so subsequent patches do not panic.
 	switch ent := any(ent).(type) {
 	case *configurationv1alpha1.KongSNI:
 		if ent.Status.Konnect == nil {
 			ent.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{}
 		}
-		ent.Status.Konnect.CertificateID = cert.GetKonnectID()
 	case *configurationv1alpha1.KongService:
 		if ent.Status.Konnect == nil {
 			ent.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{}
 		}
-		ent.Status.Konnect.CertificateID = cert.GetKonnectID()
 	}
 
 	if res, errStatus := patch.StatusWithCondition(
@@ -240,5 +246,19 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 		return res, errStatus
 	}
 
+	// Set CertificateID after all patches so the server-response from each merge patch
+	// cannot clobber it (see comment above near certKonnectID declaration).
+	switch ent := any(ent).(type) {
+	case *configurationv1alpha1.KongSNI:
+		if ent.Status.Konnect == nil {
+			ent.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{}
+		}
+		ent.Status.Konnect.CertificateID = certKonnectID
+	case *configurationv1alpha1.KongService:
+		if ent.Status.Konnect == nil {
+			ent.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{}
+		}
+		ent.Status.Konnect.CertificateID = certKonnectID
+	}
 	return ctrl.Result{}, nil
 }

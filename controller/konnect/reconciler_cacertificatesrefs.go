@@ -165,8 +165,12 @@ func handleKongCACertificateRefs[T constraints.SupportedKonnectEntityType, TEnt 
 	if svc.Status.Konnect == nil {
 		svc.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{}
 	}
-	svc.Status.Konnect.CACertificateIDs = collectedIDs
 
+	// Patch the condition first, then assign CACertificateIDs.
+	// Setting CACertificateIDs before the patch would cause it to be clobbered: the merge
+	// patch only carries condition diffs (CACertificateIDs is identical in old and ent at
+	// snapshot time), so the server keeps its stored [] and overwrites ent.Status in the
+	// response, losing the in-memory value.
 	if res, errStatus := patch.StatusWithCondition(
 		ctx, cl, ent,
 		konnectv1alpha1.KongCACertificateRefsValidConditionType,
@@ -176,6 +180,9 @@ func handleKongCACertificateRefs[T constraints.SupportedKonnectEntityType, TEnt 
 	); errStatus != nil || !res.IsZero() {
 		return res, errStatus
 	}
+
+	// Set CACertificateIDs after the patch so the server response cannot overwrite it.
+	svc.Status.Konnect.CACertificateIDs = collectedIDs
 
 	return ctrl.Result{}, nil
 }

@@ -64,6 +64,13 @@ func KongServiceReconciliationWatchOptions(
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueKongServiceForKongRoute(),
 				),
+				// Only re-enqueue the KongService when the KongRoute spec changes
+				// (Create / Delete / generation-bumping Update). Status-only updates
+				// must NOT trigger KongService reconciliation: without this predicate,
+				// every KongRoute status patch causes a KongService reconcile, whose
+				// own status update then re-triggers KongRoute reconciliation, forming
+				// an infinite loop.
+				builder.WithPredicates(predicate.GenerationChangedPredicate{}),
 			)
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
