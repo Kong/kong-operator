@@ -210,7 +210,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	}, testutils.DefaultTLSRouteWait, testutils.WaitTLSRouteTick)
 }
 
-func TestTLSTerminate(t *testing.T) {
+func TestTLSRouteTerminate(t *testing.T) {
 	t.Parallel()
 	ctx := t.Context()
 	clients := integration.GetClients()
