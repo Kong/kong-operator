@@ -42,24 +42,26 @@ const (
 	defaultPreserveHost = true
 )
 
-// ExtractStripPath extracts the strip-path annotation value and returns a boolean.
-// Returns false by default if the annotation is not present or cannot be parsed.
-func ExtractStripPath(anns map[string]string) bool {
-	parseStripPath, ok := parseAnnotationBool(anns, stripPathKey)
-	if !ok {
-		return defaultStripPath
+// ExtractStripPath extracts the strip-path annotation value and returns a boolean and an optional error.
+// Returns false by default if the annotation is not present or cannot be parsed
+// and non-nil error if the annotation cannot be parsed.
+func ExtractStripPath(anns map[string]string) (bool, error) {
+	stripPath, err := parseAnnotationBool(anns, stripPathKey)
+	if err != nil || stripPath == nil {
+		return defaultStripPath, err
 	}
-	return parseStripPath
+	return *stripPath, nil
 }
 
-// ExtractPreserveHost extracts the preserve-host annotation value and returns a boolean.
-// Returns true by default if the annotation is not present or cannot be parsed.
-func ExtractPreserveHost(anns map[string]string) bool {
-	parsePreserveHost, ok := parseAnnotationBool(anns, preserveHostKey)
-	if !ok {
-		return defaultPreserveHost
+// ExtractPreserveHost extracts the preserve-host annotation value and returns a boolean and an optional error.
+// Returns true by default if the annotation is not present or cannot be parsed
+// and non-nil error if the annotation cannot be parsed.
+func ExtractPreserveHost(anns map[string]string) (bool, error) {
+	preserveHost, err := parseAnnotationBool(anns, preserveHostKey)
+	if err != nil || preserveHost == nil {
+		return defaultPreserveHost, err
 	}
-	return parsePreserveHost
+	return *preserveHost, nil
 }
 
 // ExtractProtocol extracts the protocol supplied in the konghq.com/protocol annotation.
@@ -78,70 +80,75 @@ func ExtractPath(anns map[string]string) string {
 
 // ExtractTLSVerify extracts the tls-verify annotation value.
 // Returns a *bool set to the parsed value when the annotation is present and parseable,
-// or nil when absent or unparseable.
+// or nil when absent or unparseable,
+// and a non-nil error when the annotation cannot be parsed.
 // This mirrors ingress-controller/internal/annotations.ExtractTLSVerify.
-func ExtractTLSVerify(anns map[string]string) *bool {
-	v, ok := parseAnnotationBool(anns, tlsVerifyKey)
-	if !ok {
-		return nil
+func ExtractTLSVerify(anns map[string]string) (*bool, error) {
+	v, err := parseAnnotationBool(anns, tlsVerifyKey)
+	if err != nil {
+		return nil, err
 	}
-	return &v
+	return v, nil
 }
 
 // ExtractTLSVerifyDepth extracts the tls-verify-depth annotation value.
 // Returns a *int64 set to the parsed value when the annotation is present and parseable as a
-// non-negative integer, or nil when absent or unparseable.
+// non-negative integer, or nil when absent or unparseable,
+// and a non-nil error when the annotation cannot be parsed.
 // This mirrors ingress-controller/internal/annotations.ExtractTLSVerifyDepth.
-func ExtractTLSVerifyDepth(anns map[string]string) *int64 {
+func ExtractTLSVerifyDepth(anns map[string]string) (*int64, error) {
 	depth, err := parseAnnotationInt(anns, tlsVerifyDepthKey)
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return depth
+	return depth, nil
 }
 
 // ExtractConnectTimeout extracts the connect-timeout annotation value (milliseconds).
-// Returns a non-nil pointer when the annotation is present and parseable as a non-negative integer.
+// Returns a non-nil pointer when the annotation is present and parseable as a non-negative integer,
+// and a non-nil error when the annotation cannot be parsed.
 // This mirrors ingress-controller/internal/annotations.ExtractConnectTimeout.
-func ExtractConnectTimeout(anns map[string]string) *int64 {
+func ExtractConnectTimeout(anns map[string]string) (*int64, error) {
 	timeout, err := parseAnnotationInt(anns, connectTimeoutKey)
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return timeout
+	return timeout, nil
 }
 
 // ExtractReadTimeout extracts the read-timeout annotation value (milliseconds).
-// Returns a non-nil pointer when the annotation is present and parseable as a non-negative integer.
+// Returns a non-nil pointer when the annotation is present and parseable as a non-negative integer,
+// and a non-nil error when the annotation cannot be parsed.
 // This mirrors ingress-controller/internal/annotations.ExtractReadTimeout.
-func ExtractReadTimeout(anns map[string]string) *int64 {
+func ExtractReadTimeout(anns map[string]string) (*int64, error) {
 	timeout, err := parseAnnotationInt(anns, readTimeoutKey)
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return timeout
+	return timeout, nil
 }
 
 // ExtractWriteTimeout extracts the write-timeout annotation value (milliseconds).
 // Returns a non-nil pointer when the annotation is present and parseable as a non-negative integer.
 // This mirrors ingress-controller/internal/annotations.ExtractWriteTimeout.
-func ExtractWriteTimeout(anns map[string]string) *int64 {
+func ExtractWriteTimeout(anns map[string]string) (*int64, error) {
 	timeout, err := parseAnnotationInt(anns, writeTimeoutKey)
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return timeout
+	return timeout, nil
 }
 
 // ExtractRetries extracts the retries annotation value.
-// Returns a non-nil pointer when the annotation is present and parseable as a non-negative integer.
+// Returns a non-nil pointer when the annotation is present and parseable as a non-negative integer,
+// and a non-nil error when the annotation cannot be parsed.
 // This mirrors ingress-controller/internal/annotations.ExtractRetries.
-func ExtractRetries(anns map[string]string) *int64 {
+func ExtractRetries(anns map[string]string) (*int64, error) {
 	retries, err := parseAnnotationInt(anns, retriesKey)
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return retries
+	return retries, nil
 }
 
 // ExtractHostHeader extracts the host-header annotation value.
@@ -166,22 +173,26 @@ func IsValidProtocol(protocol string) bool {
 	}
 }
 
-func parseAnnotationBool(anns map[string]string, key string) (enabled bool, ok bool) {
+// parseAnnotationBool extracts the key from annotations.
+// Returns a *bool set to the parsed value when the annotation is present and parseable,
+// or nil when absent or unparseable,
+// and a non-nil error when the annotation cannot be parsed.
+func parseAnnotationBool(anns map[string]string, key string) (*bool, error) {
 	if anns == nil {
-		return false, false
+		return nil, nil
 	}
 
 	val := anns[annotationPrefix+key]
 	if val == "" {
-		return false, false // Annotation not present.
+		return nil, nil // Annotation not present.
 	}
 
 	parsedVal, err := strconv.ParseBool(val)
 	if err != nil {
-		return false, false // Invalid value.
+		return nil, err // Invalid value.
 	}
 
-	return parsedVal, true
+	return &parsedVal, nil
 }
 
 func parseAnnotationInt(anns map[string]string, key string) (*int64, error) {

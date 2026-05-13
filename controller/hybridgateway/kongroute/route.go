@@ -89,7 +89,9 @@ func RoutesForHTTPRouteRule(
 	cp *commonv1alpha1.ControlPlaneRef,
 	serviceName string,
 	hostnames []string,
-) (kongRoutes []*configurationv1alpha1.KongRoute, err error) {
+) ([]*configurationv1alpha1.KongRoute, error) {
+	var kongRoutes []*configurationv1alpha1.KongRoute
+
 	// If the rule has no matches, create a single catch-all route.
 	// Kong requires at least one matcher; use "/" path to represent catch-all.
 	if len(rule.Matches) == 0 {
@@ -108,6 +110,19 @@ func RoutesForHTTPRouteRule(
 	// Check filters to determine if we need capture groups in paths.
 	setCaptureGroup := needsCaptureGroup(rule)
 
+	stripPath, err := metadata.ExtractStripPath(httpRoute.Annotations)
+	if err != nil {
+		log.Error(logger, err, fmt.Sprintf("Failed to extract strip path annotation, defaulting to %t", stripPath),
+			"httpRoute", fmt.Sprintf("%s/%s", httpRoute.GetNamespace(), httpRoute.GetName()),
+			"WARNING", "The malformed annotations will be treated as errors in future versions, please fix the annotation value to be a valid boolean")
+	}
+	preserveHost, err := metadata.ExtractPreserveHost(httpRoute.Annotations)
+	if err != nil {
+		log.Error(logger, err, fmt.Sprintf("Failed to extract preserve host annotation, defaulting to %t", preserveHost),
+			"httpRoute", fmt.Sprintf("%s/%s", httpRoute.GetNamespace(), httpRoute.GetName()),
+			"WARNING", "The malformed annotations will be treated as errors in future versions, please fix the annotation value to be a valid boolean")
+	}
+
 	for i, match := range rule.Matches {
 		routeName := namegen.NewKongRouteNameForMatch(httpRoute, cp, match, i)
 		mLog := logger.WithValues("kongroute", routeName, "matchIndex", i)
@@ -121,8 +136,8 @@ func RoutesForHTTPRouteRule(
 			WithSpecName(routeName).
 			WithProtocols(protocols...).
 			WithHosts(hostnames).
-			WithStripPath(metadata.ExtractStripPath(httpRoute.Annotations)).
-			WithPreserveHost(metadata.ExtractPreserveHost(httpRoute.Annotations)).
+			WithStripPath(stripPath).
+			WithPreserveHost(preserveHost).
 			WithKongService(serviceName).
 			WithHTTPRouteMatch(match, setCaptureGroup)
 

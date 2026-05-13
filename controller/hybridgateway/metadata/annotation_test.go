@@ -29,47 +29,54 @@ var (
 
 func TestExtractStripPath(t *testing.T) {
 	tests := []struct {
-		name        string
-		annotations map[string]string
-		expected    bool
+		name             string
+		annotations      map[string]string
+		expectedVal      bool
+		expectedErrExist bool
 	}{
 		{
-			name:        "nil annotations",
-			annotations: nil,
-			expected:    false,
+			name:             "nil annotations",
+			annotations:      nil,
+			expectedVal:      false,
+			expectedErrExist: false,
 		},
 		{
-			name:        "empty annotations",
-			annotations: map[string]string{},
-			expected:    false,
+			name:             "empty annotations",
+			annotations:      map[string]string{},
+			expectedVal:      false,
+			expectedErrExist: false,
 		},
 		{
 			name: "strip-path true",
 			annotations: map[string]string{
 				"konghq.com/strip-path": "true",
 			},
-			expected: true,
+			expectedVal:      true,
+			expectedErrExist: false,
 		},
 		{
 			name: "strip-path false",
 			annotations: map[string]string{
 				"konghq.com/strip-path": "false",
 			},
-			expected: false,
+			expectedVal:      false,
+			expectedErrExist: false,
 		},
 		{
 			name: "strip-path invalid value",
 			annotations: map[string]string{
 				"konghq.com/strip-path": "invalid",
 			},
-			expected: false,
+			expectedVal:      false,
+			expectedErrExist: true,
 		},
 		{
 			name: "strip-path empty value",
 			annotations: map[string]string{
 				"konghq.com/strip-path": "",
 			},
-			expected: false,
+			expectedVal:      false,
+			expectedErrExist: false,
 		},
 		{
 			name: "other annotations present",
@@ -77,61 +84,70 @@ func TestExtractStripPath(t *testing.T) {
 				"other-annotation":      "value",
 				"konghq.com/strip-path": "false",
 			},
-			expected: false,
+			expectedVal:      false,
+			expectedErrExist: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := ExtractStripPath(tt.annotations)
-			assert.Equal(t, tt.expected, result)
+			result, err := ExtractStripPath(tt.annotations)
+			assert.Equal(t, tt.expectedVal, result)
+			assert.Equal(t, tt.expectedErrExist, err != nil)
 		})
 	}
 }
 
 func TestExtractPreserveHost(t *testing.T) {
 	tests := []struct {
-		name        string
-		annotations map[string]string
-		expected    bool
+		name             string
+		annotations      map[string]string
+		expectedVal      bool
+		expectedErrExist bool
 	}{
 		{
-			name:        "nil annotations",
-			annotations: nil,
-			expected:    true,
+			name:             "nil annotations",
+			annotations:      nil,
+			expectedVal:      true,
+			expectedErrExist: false,
 		},
 		{
-			name:        "empty annotations",
-			annotations: map[string]string{},
-			expected:    true,
+			name:             "empty annotations",
+			annotations:      map[string]string{},
+			expectedVal:      true,
+			expectedErrExist: false,
 		},
 		{
 			name: "preserve-host true",
 			annotations: map[string]string{
 				"konghq.com/preserve-host": "true",
 			},
-			expected: true,
+			expectedVal:      true,
+			expectedErrExist: false,
 		},
 		{
 			name: "preserve-host false",
 			annotations: map[string]string{
 				"konghq.com/preserve-host": "false",
 			},
-			expected: false,
+			expectedVal:      false,
+			expectedErrExist: false,
 		},
 		{
 			name: "preserve-host invalid value",
 			annotations: map[string]string{
 				"konghq.com/preserve-host": "invalid",
 			},
-			expected: true,
+			expectedVal:      true,
+			expectedErrExist: true,
 		},
 		{
 			name: "preserve-host empty value",
 			annotations: map[string]string{
 				"konghq.com/preserve-host": "",
 			},
-			expected: true,
+			expectedVal:      true,
+			expectedErrExist: false,
 		},
 		{
 			name: "other annotations present",
@@ -139,14 +155,16 @@ func TestExtractPreserveHost(t *testing.T) {
 				"other-annotation":         "value",
 				"konghq.com/preserve-host": "false",
 			},
-			expected: false,
+			expectedVal:      false,
+			expectedErrExist: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := ExtractPreserveHost(tt.annotations)
-			assert.Equal(t, tt.expected, result)
+			result, err := ExtractPreserveHost(tt.annotations)
+			assert.Equal(t, tt.expectedVal, result)
+			assert.Equal(t, tt.expectedErrExist, err != nil)
 		})
 	}
 }
@@ -971,25 +989,27 @@ func TestExtractPath(t *testing.T) {
 
 func TestExtractTLSVerify(t *testing.T) {
 	tests := []struct {
-		name        string
-		annotations map[string]string
-		expected    *bool
+		name             string
+		annotations      map[string]string
+		expectedVal      *bool
+		expectedErrExist bool
 	}{
-		{name: "nil annotations", annotations: nil, expected: nil},
-		{name: "empty annotations", annotations: map[string]string{}, expected: nil},
-		{name: "tls-verify true", annotations: map[string]string{"konghq.com/tls-verify": "true"}, expected: new(true)},
-		{name: "tls-verify false", annotations: map[string]string{"konghq.com/tls-verify": "false"}, expected: new(false)},
-		{name: "invalid value", annotations: map[string]string{"konghq.com/tls-verify": "invalid"}, expected: nil},
-		{name: "empty value", annotations: map[string]string{"konghq.com/tls-verify": ""}, expected: nil},
+		{name: "nil annotations", annotations: nil, expectedVal: nil, expectedErrExist: false},
+		{name: "empty annotations", annotations: map[string]string{}, expectedVal: nil, expectedErrExist: false},
+		{name: "tls-verify true", annotations: map[string]string{"konghq.com/tls-verify": "true"}, expectedVal: new(true), expectedErrExist: false},
+		{name: "tls-verify false", annotations: map[string]string{"konghq.com/tls-verify": "false"}, expectedVal: new(false), expectedErrExist: false},
+		{name: "invalid value", annotations: map[string]string{"konghq.com/tls-verify": "invalid"}, expectedVal: nil, expectedErrExist: true},
+		{name: "empty value", annotations: map[string]string{"konghq.com/tls-verify": ""}, expectedVal: nil, expectedErrExist: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ExtractTLSVerify(tt.annotations)
-			if tt.expected == nil {
+			got, err := ExtractTLSVerify(tt.annotations)
+			assert.Equal(t, tt.expectedErrExist, err != nil)
+			if tt.expectedVal == nil {
 				assert.Nil(t, got)
 			} else {
 				require.NotNil(t, got)
-				assert.Equal(t, *tt.expected, *got)
+				assert.Equal(t, *tt.expectedVal, *got)
 			}
 		})
 	}
@@ -997,28 +1017,30 @@ func TestExtractTLSVerify(t *testing.T) {
 
 func TestExtractTLSVerifyDepth(t *testing.T) {
 	tests := []struct {
-		name        string
-		annotations map[string]string
-		expected    *int64
+		name             string
+		annotations      map[string]string
+		expectedVal      *int64
+		expectedErrExist bool
 	}{
-		{name: "nil annotations", annotations: nil, expected: nil},
-		{name: "empty annotations", annotations: map[string]string{}, expected: nil},
-		{name: "valid depth", annotations: map[string]string{"konghq.com/tls-verify-depth": "3"}, expected: new(int64(3))},
-		{name: "zero depth", annotations: map[string]string{"konghq.com/tls-verify-depth": "0"}, expected: new(int64(0))},
-		{name: "negative depth treated as invalid", annotations: map[string]string{"konghq.com/tls-verify-depth": "-1"}, expected: nil},
-		{name: "non-numeric value", annotations: map[string]string{"konghq.com/tls-verify-depth": "abc"}, expected: nil},
-		{name: "empty value", annotations: map[string]string{"konghq.com/tls-verify-depth": ""}, expected: nil},
-		{name: "other annotations only", annotations: map[string]string{"konghq.com/protocol": "https"}, expected: nil},
+		{name: "nil annotations", annotations: nil, expectedVal: nil, expectedErrExist: false},
+		{name: "empty annotations", annotations: map[string]string{}, expectedVal: nil, expectedErrExist: false},
+		{name: "valid depth", annotations: map[string]string{"konghq.com/tls-verify-depth": "3"}, expectedVal: new(int64(3)), expectedErrExist: false},
+		{name: "zero depth", annotations: map[string]string{"konghq.com/tls-verify-depth": "0"}, expectedVal: new(int64(0)), expectedErrExist: false},
+		{name: "negative depth treated as invalid", annotations: map[string]string{"konghq.com/tls-verify-depth": "-1"}, expectedVal: nil, expectedErrExist: true},
+		{name: "non-numeric value", annotations: map[string]string{"konghq.com/tls-verify-depth": "abc"}, expectedVal: nil, expectedErrExist: true},
+		{name: "empty value", annotations: map[string]string{"konghq.com/tls-verify-depth": ""}, expectedVal: nil, expectedErrExist: false},
+		{name: "other annotations only", annotations: map[string]string{"konghq.com/protocol": "https"}, expectedVal: nil, expectedErrExist: false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ExtractTLSVerifyDepth(tt.annotations)
-			if tt.expected == nil {
+			got, err := ExtractTLSVerifyDepth(tt.annotations)
+			assert.Equal(t, tt.expectedErrExist, err != nil)
+			if tt.expectedVal == nil {
 				assert.Nil(t, got)
 			} else {
 				require.NotNil(t, got)
-				assert.Equal(t, *tt.expected, *got)
+				assert.Equal(t, *tt.expectedVal, *got)
 			}
 		})
 	}
@@ -1026,26 +1048,28 @@ func TestExtractTLSVerifyDepth(t *testing.T) {
 
 func TestExtractConnectTimeout(t *testing.T) {
 	tests := []struct {
-		name        string
-		annotations map[string]string
-		expected    *int64
+		name             string
+		annotations      map[string]string
+		expectedVal      *int64
+		expectedErrExist bool
 	}{
-		{name: "nil annotations", annotations: nil, expected: nil},
-		{name: "empty annotations", annotations: map[string]string{}, expected: nil},
-		{name: "valid timeout", annotations: map[string]string{"konghq.com/connect-timeout": "5000"}, expected: new(int64(5000))},
-		{name: "zero timeout", annotations: map[string]string{"konghq.com/connect-timeout": "0"}, expected: new(int64(0))},
-		{name: "negative invalid", annotations: map[string]string{"konghq.com/connect-timeout": "-1"}, expected: nil},
-		{name: "non-numeric", annotations: map[string]string{"konghq.com/connect-timeout": "abc"}, expected: nil},
-		{name: "empty value", annotations: map[string]string{"konghq.com/connect-timeout": ""}, expected: nil},
+		{name: "nil annotations", annotations: nil, expectedVal: nil, expectedErrExist: false},
+		{name: "empty annotations", annotations: map[string]string{}, expectedVal: nil, expectedErrExist: false},
+		{name: "valid timeout", annotations: map[string]string{"konghq.com/connect-timeout": "5000"}, expectedVal: new(int64(5000)), expectedErrExist: false},
+		{name: "zero timeout", annotations: map[string]string{"konghq.com/connect-timeout": "0"}, expectedVal: new(int64(0)), expectedErrExist: false},
+		{name: "negative invalid", annotations: map[string]string{"konghq.com/connect-timeout": "-1"}, expectedVal: nil, expectedErrExist: true},
+		{name: "non-numeric", annotations: map[string]string{"konghq.com/connect-timeout": "abc"}, expectedVal: nil, expectedErrExist: true},
+		{name: "empty value", annotations: map[string]string{"konghq.com/connect-timeout": ""}, expectedVal: nil, expectedErrExist: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := ExtractConnectTimeout(tt.annotations)
-			if tt.expected == nil {
+			v, err := ExtractConnectTimeout(tt.annotations)
+			assert.Equal(t, tt.expectedErrExist, err != nil)
+			if tt.expectedVal == nil {
 				assert.Nil(t, v)
 			} else {
 				require.NotNil(t, v)
-				assert.Equal(t, *tt.expected, *v)
+				assert.Equal(t, *tt.expectedVal, *v)
 			}
 		})
 	}
@@ -1138,26 +1162,28 @@ func TestParseAnnotationInt(t *testing.T) {
 
 func TestExtractReadTimeout(t *testing.T) {
 	tests := []struct {
-		name        string
-		annotations map[string]string
-		expected    *int64
+		name             string
+		annotations      map[string]string
+		expectedVal      *int64
+		expectedErrExist bool
 	}{
-		{name: "nil annotations", annotations: nil, expected: nil},
-		{name: "empty annotations", annotations: map[string]string{}, expected: nil},
-		{name: "valid timeout", annotations: map[string]string{"konghq.com/read-timeout": "30000"}, expected: new(int64(30000))},
-		{name: "zero timeout", annotations: map[string]string{"konghq.com/read-timeout": "0"}, expected: new(int64(0))},
-		{name: "negative invalid", annotations: map[string]string{"konghq.com/read-timeout": "-1"}, expected: nil},
-		{name: "non-numeric", annotations: map[string]string{"konghq.com/read-timeout": "abc"}, expected: nil},
-		{name: "empty value", annotations: map[string]string{"konghq.com/read-timeout": ""}, expected: nil},
+		{name: "nil annotations", annotations: nil, expectedVal: nil, expectedErrExist: false},
+		{name: "empty annotations", annotations: map[string]string{}, expectedVal: nil, expectedErrExist: false},
+		{name: "valid timeout", annotations: map[string]string{"konghq.com/read-timeout": "30000"}, expectedVal: new(int64(30000)), expectedErrExist: false},
+		{name: "zero timeout", annotations: map[string]string{"konghq.com/read-timeout": "0"}, expectedVal: new(int64(0)), expectedErrExist: false},
+		{name: "negative invalid", annotations: map[string]string{"konghq.com/read-timeout": "-1"}, expectedVal: nil, expectedErrExist: true},
+		{name: "non-numeric", annotations: map[string]string{"konghq.com/read-timeout": "abc"}, expectedVal: nil, expectedErrExist: true},
+		{name: "empty value", annotations: map[string]string{"konghq.com/read-timeout": ""}, expectedVal: nil, expectedErrExist: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := ExtractReadTimeout(tt.annotations)
-			if tt.expected == nil {
+			v, err := ExtractReadTimeout(tt.annotations)
+			assert.Equal(t, tt.expectedErrExist, err != nil)
+			if tt.expectedVal == nil {
 				assert.Nil(t, v)
 			} else {
 				require.NotNil(t, v)
-				assert.Equal(t, *tt.expected, *v)
+				assert.Equal(t, *tt.expectedVal, *v)
 			}
 		})
 	}
@@ -1165,26 +1191,28 @@ func TestExtractReadTimeout(t *testing.T) {
 
 func TestExtractWriteTimeout(t *testing.T) {
 	tests := []struct {
-		name        string
-		annotations map[string]string
-		expected    *int64
+		name             string
+		annotations      map[string]string
+		expectedVal      *int64
+		expectedErrExist bool
 	}{
-		{name: "nil annotations", annotations: nil, expected: nil},
-		{name: "empty annotations", annotations: map[string]string{}, expected: nil},
-		{name: "valid timeout", annotations: map[string]string{"konghq.com/write-timeout": "60000"}, expected: new(int64(60000))},
-		{name: "zero timeout", annotations: map[string]string{"konghq.com/write-timeout": "0"}, expected: new(int64(0))},
-		{name: "negative invalid", annotations: map[string]string{"konghq.com/write-timeout": "-1"}, expected: nil},
-		{name: "non-numeric", annotations: map[string]string{"konghq.com/write-timeout": "abc"}, expected: nil},
-		{name: "empty value", annotations: map[string]string{"konghq.com/write-timeout": ""}, expected: nil},
+		{name: "nil annotations", annotations: nil, expectedVal: nil, expectedErrExist: false},
+		{name: "empty annotations", annotations: map[string]string{}, expectedVal: nil, expectedErrExist: false},
+		{name: "valid timeout", annotations: map[string]string{"konghq.com/write-timeout": "60000"}, expectedVal: new(int64(60000)), expectedErrExist: false},
+		{name: "zero timeout", annotations: map[string]string{"konghq.com/write-timeout": "0"}, expectedVal: new(int64(0)), expectedErrExist: false},
+		{name: "negative invalid", annotations: map[string]string{"konghq.com/write-timeout": "-1"}, expectedVal: nil, expectedErrExist: true},
+		{name: "non-numeric", annotations: map[string]string{"konghq.com/write-timeout": "abc"}, expectedVal: nil, expectedErrExist: true},
+		{name: "empty value", annotations: map[string]string{"konghq.com/write-timeout": ""}, expectedVal: nil, expectedErrExist: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := ExtractWriteTimeout(tt.annotations)
-			if tt.expected == nil {
+			v, err := ExtractWriteTimeout(tt.annotations)
+			assert.Equal(t, tt.expectedErrExist, err != nil)
+			if tt.expectedVal == nil {
 				assert.Nil(t, v)
 			} else {
 				require.NotNil(t, v)
-				assert.Equal(t, *tt.expected, *v)
+				assert.Equal(t, *tt.expectedVal, *v)
 			}
 		})
 	}
@@ -1192,26 +1220,28 @@ func TestExtractWriteTimeout(t *testing.T) {
 
 func TestExtractRetries(t *testing.T) {
 	tests := []struct {
-		name        string
-		annotations map[string]string
-		expected    *int64
+		name             string
+		annotations      map[string]string
+		expectedVal      *int64
+		expectedErrExist bool
 	}{
-		{name: "nil annotations", annotations: nil, expected: nil},
-		{name: "empty annotations", annotations: map[string]string{}, expected: nil},
-		{name: "valid retries", annotations: map[string]string{"konghq.com/retries": "5"}, expected: new(int64(5))},
-		{name: "zero retries", annotations: map[string]string{"konghq.com/retries": "0"}, expected: new(int64(0))},
-		{name: "negative invalid", annotations: map[string]string{"konghq.com/retries": "-1"}, expected: nil},
-		{name: "non-numeric", annotations: map[string]string{"konghq.com/retries": "abc"}, expected: nil},
-		{name: "empty value", annotations: map[string]string{"konghq.com/retries": ""}, expected: nil},
+		{name: "nil annotations", annotations: nil, expectedVal: nil, expectedErrExist: false},
+		{name: "empty annotations", annotations: map[string]string{}, expectedVal: nil, expectedErrExist: false},
+		{name: "valid retries", annotations: map[string]string{"konghq.com/retries": "5"}, expectedVal: new(int64(5)), expectedErrExist: false},
+		{name: "zero retries", annotations: map[string]string{"konghq.com/retries": "0"}, expectedVal: new(int64(0)), expectedErrExist: false},
+		{name: "negative invalid", annotations: map[string]string{"konghq.com/retries": "-1"}, expectedVal: nil, expectedErrExist: true},
+		{name: "non-numeric", annotations: map[string]string{"konghq.com/retries": "abc"}, expectedVal: nil, expectedErrExist: true},
+		{name: "empty value", annotations: map[string]string{"konghq.com/retries": ""}, expectedVal: nil, expectedErrExist: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := ExtractRetries(tt.annotations)
-			if tt.expected == nil {
+			v, err := ExtractRetries(tt.annotations)
+			assert.Equal(t, tt.expectedErrExist, err != nil)
+			if tt.expectedVal == nil {
 				assert.Nil(t, v)
 			} else {
 				require.NotNil(t, v)
-				assert.Equal(t, *tt.expected, *v)
+				assert.Equal(t, *tt.expectedVal, *v)
 			}
 		})
 	}
@@ -1337,6 +1367,84 @@ func TestExtractHostHeader(t *testing.T) {
 			} else {
 				require.NotNil(t, got)
 				assert.Equal(t, *tt.want, *got)
+			}
+		})
+	}
+}
+
+func TestParseAnnotationBool(t *testing.T) {
+	tests := []struct {
+		name           string
+		annotations    map[string]string
+		key            string
+		expectedVal    *bool
+		expectErrExist bool
+	}{
+		{
+			name:           "nil annotations",
+			annotations:    nil,
+			key:            stripPathKey,
+			expectedVal:    nil,
+			expectErrExist: false,
+		},
+		{
+			name:           "empty annotations",
+			annotations:    map[string]string{},
+			key:            stripPathKey,
+			expectedVal:    nil,
+			expectErrExist: false,
+		},
+		{
+			name:           "key absent",
+			annotations:    map[string]string{"konghq.com/protocol": "https"},
+			key:            stripPathKey,
+			expectedVal:    nil,
+			expectErrExist: false,
+		},
+		{
+			name:           "empty value",
+			annotations:    map[string]string{annotationPrefix + stripPathKey: ""},
+			key:            stripPathKey,
+			expectedVal:    nil,
+			expectErrExist: false,
+		},
+		{
+			name:           "valid true value",
+			annotations:    map[string]string{annotationPrefix + stripPathKey: "true"},
+			key:            stripPathKey,
+			expectedVal:    new(true),
+			expectErrExist: false,
+		},
+		{
+			name:           "valid false value",
+			annotations:    map[string]string{annotationPrefix + stripPathKey: "false"},
+			key:            stripPathKey,
+			expectedVal:    new(false),
+			expectErrExist: false,
+		},
+		{
+			name:           "invalid value",
+			annotations:    map[string]string{annotationPrefix + stripPathKey: "abc"},
+			key:            stripPathKey,
+			expectedVal:    nil,
+			expectErrExist: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := parseAnnotationBool(tt.annotations, tt.key)
+			if tt.expectErrExist {
+				require.Error(t, err)
+				assert.Nil(t, got)
+			} else {
+				require.NoError(t, err)
+				if tt.expectedVal == nil {
+					assert.Nil(t, got)
+				} else {
+					require.NotNil(t, got)
+					assert.Equal(t, *tt.expectedVal, *got)
+				}
 			}
 		})
 	}

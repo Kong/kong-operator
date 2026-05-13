@@ -72,6 +72,8 @@
   [#4104](https://github.com/Kong/kong-operator/pull/4104)
 - Hybridgateway: add support for `konghq.com/host-header` service annotation
   [#4108](https://github.com/Kong/kong-operator/pull/4108)
+- Hybridgateway: add error logs when annotations are malformed
+  [#4143](https://github.com/Kong/kong-operator/issues/4143)
 - Add the following headers in requests of `ingress-controller` sent to Konnect
   for uploading configuration for tracing:
   - `X-Kic-Konnect-Sync-Instance-Id` for instance ID of Konnect config synchronizer.
