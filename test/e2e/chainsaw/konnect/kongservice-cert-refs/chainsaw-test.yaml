@@ -21,21 +21,21 @@ metadata:
 spec:
   bindings:
     # Konnect environment.
-    - name: konnect_token
+    - name: token
       value: (env('KONNECT_TOKEN'))
-    - name: konnect_url
+    - name: url
       value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
 
     # Names derived from the auto-generated test namespace.
     - name: test_name
       value: ($namespace)
-    - name: konnect_auth_secret_name
+    - name: auth_secret_name
       value: (join('-', [($test_name), 'konnect-auth-secret']))
-    - name: konnect_auth_name
+    - name: auth_name
       value: (join('-', [($test_name), 'konnect-auth']))
-    - name: konnect_cp_name
+    - name: cp_name
       value: (join('-', [($test_name), 'cp']))
-    - name: konnect_extension_name
+    - name: extension_name
       value: (join('-', [($test_name), 'ext']))
     - name: dataplane_name
       value: (join('-', [($test_name), 'dp']))
@@ -75,27 +75,27 @@ spec:
         with:
           bindings:
             - name: auth_secret_name
-              value: ($konnect_auth_secret_name)
+              value: ($auth_secret_name)
             - name: auth_secret_namespace
               value: ($namespace)
             - name: konnect_token
-              value: ($konnect_token)
+              value: ($token)
 
     - name: Create-konnect-api-auth
       use:
         template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
         with:
           bindings:
-            - name: konnect_auth_name
-              value: ($konnect_auth_name)
-            - name: konnect_auth_namespace
+            - name: auth_name
+              value: ($auth_name)
+            - name: auth_namespace
               value: ($namespace)
             - name: auth_secret_name
-              value: ($konnect_auth_secret_name)
+              value: ($auth_secret_name)
             - name: auth_secret_namespace
               value: ($namespace)
-            - name: konnect_url
-              value: ($konnect_url)
+            - name: url
+              value: ($url)
 
     # Step 2: KonnectGatewayControlPlane + KonnectExtension + DataPlane.
     - name: Create-konnect-control-plane
@@ -103,24 +103,24 @@ spec:
         template: ../../common/_step_templates/apply-assert-konnectGatewayControlPlane.yaml
         with:
           bindings:
-            - name: konnect_cp_name
-              value: ($konnect_cp_name)
-            - name: konnect_cp_namespace
+            - name: cp_name
+              value: ($cp_name)
+            - name: cp_namespace
               value: ($namespace)
-            - name: konnect_auth_name
-              value: ($konnect_auth_name)
+            - name: auth_name
+              value: ($auth_name)
 
     - name: Create-konnect-extension
       use:
         template: ../../common/_step_templates/apply-assert-konnectExtension.yaml
         with:
           bindings:
-            - name: konnect_extension_name
-              value: ($konnect_extension_name)
-            - name: konnect_extension_namespace
+            - name: extension_name
+              value: ($extension_name)
+            - name: extension_namespace
               value: ($namespace)
-            - name: konnect_cp_name
-              value: ($konnect_cp_name)
+            - name: cp_name
+              value: ($cp_name)
 
     - name: Create-data-plane
       use:
@@ -133,8 +133,8 @@ spec:
               value: ($namespace)
             - name: dataplane_image
               value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.12')
-            - name: konnect_extension_name
-              value: ($konnect_extension_name)
+            - name: extension_name
+              value: ($extension_name)
 
     # Step 3: Generate cert chain and create three Kubernetes Secrets.
     - name: Generate-mtls-cert-chain-and-secrets
@@ -228,32 +228,36 @@ spec:
         template: ../../common/_step_templates/apply-assert-kongCertificate.yaml
         with:
           bindings:
-            - name: kong_certificate_name
+            - name: cert_name
               value: ($kong_certificate_name)
-            - name: kong_certificate_namespace
+            - name: cert_namespace
               value: ($namespace)
-            - name: cert_secret_name
+            - name: secret_name
               value: ($client_secret_name)
-            - name: cert_secret_namespace
+            - name: secret_namespace
               value: ($namespace)
-            - name: konnect_cp_name
-              value: ($konnect_cp_name)
+            - name: cp_name
+              value: ($cp_name)
+            - name: cp_ref_namespace
+              value: ($namespace)
 
     - name: Create-kong-ca-certificate
       use:
         template: ../../common/_step_templates/apply-assert-kongCACertificate.yaml
         with:
           bindings:
-            - name: kong_ca_certificate_name
+            - name: ca_cert_name
               value: ($kong_ca_certificate_name)
-            - name: kong_ca_certificate_namespace
+            - name: ca_cert_namespace
               value: ($namespace)
-            - name: ca_secret_name
+            - name: secret_name
               value: ($ca_secret_name)
-            - name: ca_secret_namespace
+            - name: secret_namespace
               value: ($namespace)
-            - name: konnect_cp_name
-              value: ($konnect_cp_name)
+            - name: cp_name
+              value: ($cp_name)
+            - name: cp_ref_namespace
+              value: ($namespace)
 
     # Step 6: KongService (no cert refs) + KongRoute.
     - name: Create-kong-service-without-cert-refs
@@ -265,8 +269,8 @@ spec:
               value: ($kong_service_name)
             - name: kong_service_namespace
               value: ($namespace)
-            - name: konnect_cp_name
-              value: ($konnect_cp_name)
+            - name: cp_name
+              value: ($cp_name)
             - name: upstream_host
               value: ($upstream_host)
             - name: upstream_port
@@ -321,8 +325,8 @@ spec:
               value: ($kong_service_name)
             - name: kong_service_namespace
               value: ($namespace)
-            - name: konnect_cp_name
-              value: ($konnect_cp_name)
+            - name: cp_name
+              value: ($cp_name)
             - name: upstream_host
               value: ($upstream_host)
             - name: upstream_port

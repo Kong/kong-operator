@@ -3,7 +3,7 @@
 # Required bindings:
 #   - kong_service_name: Name of the KongService to create.
 #   - kong_service_namespace: Namespace where the KongService will be created.
-#   - konnect_cp_name: Name of the KonnectGatewayControlPlane to reference.
+#   - cp_name: Name of the KonnectGatewayControlPlane to reference.
 #   - upstream_host: Host of the upstream server.
 #   - upstream_port: Port of the upstream server (number).
 apiVersion: chainsaw.kyverno.io/v1alpha1
@@ -27,7 +27,7 @@ spec:
             controlPlaneRef:
               type: konnectNamespacedRef
               konnectNamespacedRef:
-                name: ($konnect_cp_name)
+                name: ($cp_name)
     - assert:
         resource:
           apiVersion: configuration.konghq.com/v1alpha1

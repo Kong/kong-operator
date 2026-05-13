@@ -1,52 +1,20 @@
-# Template for generating a TLS certificate, storing it in a Kubernetes Secret, and creating
-# a KongCertificate that references that Secret via spec.secretRef.
+# Template for creating and asserting a KongCertificate sourced from an existing Secret.
+#
+# The referenced Secret must be of type kubernetes.io/tls and contain keys tls.crt and tls.key.
 #
 # Required bindings:
-#   - cert_name: Name of the KongCertificate to create. The TLS Secret is named "$cert_name-tls".
-#   - cert_namespace: Namespace for both the KongCertificate and the TLS Secret.
+#   - cert_name: Name of the KongCertificate to create.
+#   - cert_namespace: Namespace where the KongCertificate will be created.
+#   - secret_name: Name of the existing kubernetes.io/tls Secret.
+#   - secret_namespace: Namespace of the Secret.
 #   - cp_name: Name of the KonnectGatewayControlPlane to reference.
-#   - cp_ref_namespace: Namespace of the KonnectGatewayControlPlane. May equal cert_namespace
-#       for same-namespace references (no KongReferenceGrant required in that case).
+#   - cp_ref_namespace: Namespace of the KonnectGatewayControlPlane.
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: StepTemplate
 metadata:
   name: apply-assert-kong-certificate
 spec:
   try:
-    - script:
-        env:
-          - name: HOSTNAME
-            value: ($cert_name)
-        content: |
-          bash ../../common/scripts/generate_tls_certificate.sh
-        outputs:
-          - name: cert_data
-            value: (json_parse($stdout).cert)
-          - name: key_data
-            value: (json_parse($stdout).key)
-    - apply:
-        resource:
-          apiVersion: v1
-          kind: Secret
-          metadata:
-            name: (join('-', [$cert_name, 'tls']))
-            namespace: ($cert_namespace)
-            labels:
-              konghq.com/secret: "true"
-          type: kubernetes.io/tls
-          stringData:
-            tls.crt: ($cert_data)
-            tls.key: ($key_data)
-    - assert:
-        resource:
-          apiVersion: v1
-          kind: Secret
-          metadata:
-            name: (join('-', [$cert_name, 'tls']))
-            namespace: ($cert_namespace)
-            labels:
-              konghq.com/secret: "true"
-          type: kubernetes.io/tls
     - apply:
         resource:
           apiVersion: configuration.konghq.com/v1alpha1
@@ -57,9 +25,21 @@ spec:
           spec:
             type: secretRef
             secretRef:
-              name: (join('-', [$cert_name, 'tls']))
+              name: ($secret_name)
             controlPlaneRef:
               type: konnectNamespacedRef
               konnectNamespacedRef:
                 name: ($cp_name)
                 namespace: ($cp_ref_namespace)
+    - assert:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: KongCertificate
+          metadata:
+            name: ($cert_name)
+            namespace: ($cert_namespace)
+          status:
+            (conditions[?type == 'Programmed']):
+              - status: 'True'
+                reason: Programmed
+            (konnect.id != null): true

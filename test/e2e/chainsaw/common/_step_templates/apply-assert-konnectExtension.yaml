@@ -1,9 +1,9 @@
 # Template for creating and asserting a KonnectExtension.
 #
 # Required bindings:
-#   - konnect_extension_name: Name of the KonnectExtension to create.
-#   - konnect_extension_namespace: Namespace where the KonnectExtension will be created.
-#   - konnect_cp_name: Name of the KonnectGatewayControlPlane to reference.
+#   - extension_name: Name of the KonnectExtension to create.
+#   - extension_namespace: Namespace where the KonnectExtension will be created.
+#   - cp_name: Name of the KonnectGatewayControlPlane to reference.
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: StepTemplate
 metadata:
@@ -15,22 +15,22 @@ spec:
           apiVersion: konnect.konghq.com/v1alpha2
           kind: KonnectExtension
           metadata:
-            name: ($konnect_extension_name)
-            namespace: ($konnect_extension_namespace)
+            name: ($extension_name)
+            namespace: ($extension_namespace)
           spec:
             konnect:
               controlPlane:
                 ref:
                   type: konnectNamespacedRef
                   konnectNamespacedRef:
-                    name: ($konnect_cp_name)
+                    name: ($cp_name)
     - assert:
         resource:
           apiVersion: konnect.konghq.com/v1alpha2
           kind: KonnectExtension
           metadata:
-            name: ($konnect_extension_name)
-            namespace: ($konnect_extension_namespace)
+            name: ($extension_name)
+            namespace: ($extension_namespace)
           status:
             (conditions[?type == 'Ready']):
               - status: 'True'

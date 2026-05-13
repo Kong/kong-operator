@@ -164,7 +164,7 @@ spec:
         - name: cp_ref_namespace
           value: ($namespace)
       use:
-        template: ../../common/_step_templates/apply-assert-kongCertificate.yaml
+        template: ../../common/_step_templates/apply-assert-kongCertificate-and-Secret.yaml
 
     - name: 4-create-sni0-same-ns
       description: Create KongSNI sni0 in the test namespace.
@@ -323,7 +323,7 @@ spec:
         - name: cp_ref_namespace
           value: ($cp_namespace)
       use:
-        template: ../../common/_step_templates/apply-assert-kongCertificate.yaml
+        template: ../../common/_step_templates/apply-assert-kongCertificate-and-Secret.yaml
 
     - name: 11-create-sni-no-grant
       description: Create KongSNI before any KongReferenceGrant exists.
@@ -567,7 +567,7 @@ spec:
         - name: cp_ref_namespace
           value: ($cp_namespace)
       use:
-        template: ../../common/_step_templates/apply-assert-kongCertificate.yaml
+        template: ../../common/_step_templates/apply-assert-kongCertificate-and-Secret.yaml
 
     - name: 21-create-sni2-no-grant
       description: Create KongSNI sni2 before any Certificate->CP grant exists.
@@ -869,7 +869,7 @@ spec:
         - name: cp_ref_namespace
           value: ($cp_namespace)
       use:
-        template: ../../common/_step_templates/apply-assert-kongCertificate.yaml
+        template: ../../common/_step_templates/apply-assert-kongCertificate-and-Secret.yaml
 
     - name: 32-create-sni3-same-ns-as-cp
       description: Create KongSNI sni3 in cp_namespace.
@@ -1104,7 +1104,7 @@ spec:
         - name: cp_ref_namespace
           value: ($cp_namespace)
       use:
-        template: ../../common/_step_templates/apply-assert-kongCertificate.yaml
+        template: ../../common/_step_templates/apply-assert-kongCertificate-and-Secret.yaml
 
     - name: 40-assert-cert4-programmed
       description: Assert cert4 is Programmed before creating the cross-namespace SNI.
@@ -1364,7 +1364,7 @@ spec:
         - name: cp_ref_namespace
           value: ($cp_namespace)
       use:
-        template: ../../common/_step_templates/apply-assert-kongCertificate.yaml
+        template: ../../common/_step_templates/apply-assert-kongCertificate-and-Secret.yaml
 
     - name: 51-create-sni5-no-grants
       description: |

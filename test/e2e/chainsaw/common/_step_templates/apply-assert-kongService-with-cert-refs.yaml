@@ -4,7 +4,7 @@
 # Required bindings:
 #   - kong_service_name: Name of the KongService to create.
 #   - kong_service_namespace: Namespace where the KongService will be created.
-#   - konnect_cp_name: Name of the KonnectGatewayControlPlane to reference.
+#   - cp_name: Name of the KonnectGatewayControlPlane to reference.
 #   - upstream_host: Host of the upstream server.
 #   - upstream_port: Port of the upstream server (number).
 #   - kong_certificate_name: Name of the KongCertificate used as client certificate.
@@ -30,7 +30,7 @@ spec:
             controlPlaneRef:
               type: konnectNamespacedRef
               konnectNamespacedRef:
-                name: ($konnect_cp_name)
+                name: ($cp_name)
             clientCertificateRef:
               name: ($kong_certificate_name)
             caCertificateRefs:

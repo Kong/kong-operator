@@ -3,7 +3,7 @@
 # Required bindings:
 #   - dataplane_name: Name of the DataPlane to create.
 #   - dataplane_namespace: Namespace where the DataPlane will be created.
-#   - konnect_extension_name: Name of the KonnectExtension to reference.
+#   - extension_name: Name of the KonnectExtension to reference.
 #   - dataplane_image: (optional) Container image for the proxy. Default: "kong/kong-gateway:3.13".
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: StepTemplate
@@ -21,7 +21,7 @@ spec:
           spec:
             extensions:
               - kind: KonnectExtension
-                name: ($konnect_extension_name)
+                name: ($extension_name)
                 group: konnect.konghq.com
             deployment:
               replicas: 1
