@@ -2640,7 +2640,7 @@ func (in *KongTargetList) DeepCopyObject() runtime.Object {
 func (in *KongTargetSpec) DeepCopyInto(out *KongTargetSpec) {
 	*out = *in
 	in.KongTargetAPISpec.DeepCopyInto(&out.KongTargetAPISpec)
-	out.UpstreamRef = in.UpstreamRef
+	in.UpstreamRef.DeepCopyInto(&out.UpstreamRef)
 	if in.Adopt != nil {
 		in, out := &in.Adopt, &out.Adopt
 		*out = new(commonv1alpha1.AdoptOptions)

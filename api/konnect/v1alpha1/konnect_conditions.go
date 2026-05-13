@@ -140,6 +140,10 @@ const (
 	// KongUpstreamRefReasonInvalid is the reason used with the KongUpstreamRefValid
 	// condition type indicating that the KongUpstream reference is invalid.
 	KongUpstreamRefReasonInvalid = "Invalid"
+	// KongUpstreamRefReasonRefNotPermitted is the reason used with the KongUpstreamRefValid
+	// condition type indicating that a KongReferenceGrant is missing or invalid for
+	// a cross-namespace upstreamRef.
+	KongUpstreamRefReasonRefNotPermitted = "RefNotPermitted"
 )
 
 const (
