@@ -131,6 +131,8 @@ spec:
               value: ($dataplane_name)
             - name: dataplane_namespace
               value: ($namespace)
+            - name: dataplane_image
+              value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.12')
             - name: konnect_extension_name
               value: ($konnect_extension_name)
 
@@ -213,6 +215,8 @@ spec:
               value: ($namespace)
             - name: upstream_port
               value: ($upstream_port)
+            - name: kong_sidecar_image
+              value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.12')
             - name: server_secret_name
               value: ($server_secret_name)
             - name: client_ca_secret_name
@@ -254,8 +258,9 @@ spec:
     - name: Verify-https-fails-without-cert-refs
       description: |
         Without clientCertificateRef on KongService, the DataPlane cannot present
-        a client cert when talking HTTPS to the upstream. Kong sidecar's
-        ssl_verify_client=on rejects the handshake. Kong DataPlane returns 5xx.
+        a client cert when talking HTTPS to the upstream. The upstream Kong sidecar's
+        ssl_verify_client=on causes nginx to return HTTP 400 (No required SSL
+        certificate was sent) when no client cert is presented.
       use:
         template: ../../common/_step_templates/verify-https-status-code.yaml
         with:
@@ -267,9 +272,9 @@ spec:
             - name: route_path
               value: ($route_path)
             - name: expected_status_regex
-              value: ^5..$
+              value: ^4..$
             - name: proxy_port
-              value: 443
+              value: "443"
             - name: host_header
               value: ""
 
@@ -347,7 +352,7 @@ spec:
             - name: expected_status_regex
               value: ^200$
             - name: proxy_port
-              value: 443
+              value: "443"
             - name: host_header
               value: ""
 

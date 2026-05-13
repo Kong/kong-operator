@@ -47,5 +47,5 @@ spec:
               - status: 'True'
                 reason: Programmed
             (konnect.id != null): true
-            (konnect.certificateID != ''): true
-            (length(konnect.caCertificateIDs) > `0`): true
+            (konnect.certificateID != null): true
+            (konnect.caCertificateIDs != null): true
