@@ -31,9 +31,8 @@ func getKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt constr
 ) mo.Option[commonv1alpha1.NamespacedRef] {
 	switch e := any(e).(type) {
 	case *configurationv1alpha1.KongSNI:
-		// Since certificateRef is required for KongSNI, we directly return spec.CertificateRef here.
-		// Namespace stays nil = same namespace.
-		return mo.Some(commonv1alpha1.NamespacedRef{Name: e.Spec.CertificateRef.Name})
+		// Return the full CertificateRef including the optional Namespace for cross-namespace refs.
+		return mo.Some(e.Spec.CertificateRef)
 	case *configurationv1alpha1.KongService:
 		if e.Spec.ClientCertificateRef != nil {
 			return mo.Some(*e.Spec.ClientCertificateRef)

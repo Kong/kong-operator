@@ -19,7 +19,6 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
-	"github.com/kong/kong-operator/v2/internal/utils/crossnamespace"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
@@ -692,7 +691,10 @@ func TestHandleCertificateRefKongServiceCrossNS(t *testing.T) {
 		},
 	}
 
-	cpOKInDefault := testControlPlaneOK.DeepCopy()
+	// certInOtherNS references a CP named "cp-ok" with no namespace set, so GetCPForRef
+	// resolves the namespace from cert.GetNamespace() = "other-ns".
+	cpOKInOtherNS := testControlPlaneOK.DeepCopy()
+	cpOKInOtherNS.Namespace = "other-ns"
 
 	t.Run("cross-NS cert ref without KongReferenceGrant", func(t *testing.T) {
 		ent := svcEntity()
@@ -705,16 +707,26 @@ func TestHandleCertificateRefKongServiceCrossNS(t *testing.T) {
 		// Re-fetch ent through the interceptor so its GVK is populated (required for cross-NS checks).
 		require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(ent), ent))
 
-		_, err := handleKongCertificateRef(t.Context(), cl, ent)
-		require.Error(t, err)
-		require.True(t, crossnamespace.IsReferenceNotGranted(err), "expected ReferenceNotGranted error, got: %v", err)
+		res, err := handleKongCertificateRef(t.Context(), cl, ent)
+		// When no KongReferenceGrant covers the cross-namespace ref, the handler patches
+		// ResolvedRefs=False/RefNotPermitted and returns a non-error requeue (no error propagated).
+		require.NoError(t, err)
+		require.Equal(t, ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, res)
+
+		updatedSvc := &configurationv1alpha1.KongService{}
+		require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(ent), updatedSvc))
+		require.True(t, lo.ContainsBy(updatedSvc.Status.Conditions, func(c metav1.Condition) bool {
+			return c.Type == configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs &&
+				c.Status == metav1.ConditionFalse &&
+				c.Reason == configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted
+		}), "KongService does not have ResolvedRefs=False/RefNotPermitted condition")
 	})
 
 	t.Run("cross-NS cert ref with valid KongReferenceGrant", func(t *testing.T) {
 		ent := svcEntity()
 		cl := fake.NewClientBuilder().
 			WithScheme(s).
-			WithObjects(ent, certInOtherNS, grant, cpOKInDefault).
+			WithObjects(ent, certInOtherNS, grant, cpOKInOtherNS).
 			WithStatusSubresource(ent).
 			WithInterceptorFuncs(populateGVKOnGet(s)).
 			Build()
