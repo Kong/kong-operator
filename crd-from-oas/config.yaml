@@ -79,9 +79,23 @@ apiGroupVersions:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayListenerPoliciesSDK
             fieldName: EventGatewayListenerPolicies
-          # SDK list responses are returned as a bare slice, so getForUID is
-          # hand-written in ops_eventgatewaylistenerpolicy_manual.go.
-          skipGetForUID: true
+          getForUID:
+            listItemsSource: slice
+            rootUnion:
+              unionField: Spec.APISpec.EventGatewayListenerPolicyConfig
+              cases:
+                - typeValue: tlsServer
+                  variantField: EventGatewayTLSListen
+                  responseTypeValue: tls_server
+                  matchFields:
+                    - objectField: Name
+                      responseField: GetName()
+                - typeValue: forwardToVirtualCluster
+                  variantField: ForwardToVirtualClust
+                  responseTypeValue: forward_to_virtual_cluster
+                  matchFields:
+                    - objectField: Name
+                      responseField: GetName()
           create:
             path: github.com/Kong/sdk-konnect-go/models/operations.CreateEventGatewayListenerPolicyRequest
           update:

@@ -1302,11 +1302,11 @@ func get{{.Entity}}ForUID(
 	if err != nil {
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
 	}
-	if resp == nil || resp.{{.ListResponseField}} == nil {
+	if {{.ListResponseNilCheck}} {
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
 	}
 
-	for _, entry := range resp.{{.ListResponseField}}.Data {
+	for _, entry := range {{.ListResponseItemsExpr}} {
 		switch id := any(entry.GetID()).(type) {
 		case string:
 			if id != "" {
@@ -1336,11 +1336,11 @@ func get{{.Entity}}ForUID(
 	if err != nil {
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
 	}
-	if resp == nil || resp.{{.ListResponseField}} == nil {
+	if {{.ListResponseNilCheck}} {
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
 	}
 
-	for _, entry := range resp.{{.ListResponseField}}.Data {
+	for _, entry := range {{.ListResponseItemsExpr}} {
 		{{- range .MatchFields}}
 		{{- if .SliceMatch}}
 		if !matchSliceField(obj.{{.ObjectField}}, entry.{{.ResponseField}}) {
@@ -1360,6 +1360,68 @@ func get{{.Entity}}ForUID(
 				return *id, nil
 			}
 		}
+	}
+{{- else if .RootUnion}}
+
+{{- if .GetForUIDFullyWrapped}}
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.GetForUIDWrappedType}}{
+		{{- range .Parents}}
+		{{.SDKFieldName}}: {{.VarName}},
+		{{- end}}
+	})
+{{- else if .Parents}}
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
+		{{.ParentIDField}}: {{(index .Parents 0).VarName}},
+	})
+{{- else}}
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{})
+{{- end}}
+	if err != nil {
+		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
+	}
+	if {{.ListResponseNilCheck}} {
+		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
+	}
+
+	unionField := obj.{{.RootUnion.UnionField}}
+	if unionField == nil {
+		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+	}
+
+	switch unionField.Type {
+	{{- range .RootUnion.Cases}}
+	case "{{.TypeValue}}":
+		selected := unionField.{{.VariantField}}
+		if selected == nil {
+			return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+		}
+		for _, entry := range {{$.ListResponseItemsExpr}} {
+			if entry.{{$.RootUnion.ResponseTypeField}} != "{{.ResponseTypeValue}}" {
+				continue
+			}
+			{{- range .MatchFields}}
+			{{- if .SliceMatch}}
+			if !matchSliceField(selected.{{.ObjectField}}, entry.{{.ResponseField}}) {
+			{{- else}}
+			if !matchStringField(selected.{{.ObjectField}}, entry.{{.ResponseField}}) {
+			{{- end}}
+				continue
+			}
+			{{- end}}
+			switch id := any(entry.GetID()).(type) {
+			case string:
+				if id != "" {
+					return id, nil
+				}
+			case *string:
+				if id != nil && *id != "" {
+					return *id, nil
+				}
+			}
+		}
+	{{- end}}
+	default:
+		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 	}
 {{- else if .HasLabels}}
 
@@ -1382,11 +1444,11 @@ func get{{.Entity}}ForUID(
 	if err != nil {
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
 	}
-	if resp == nil || resp.{{.ListResponseField}} == nil {
+	if {{.ListResponseNilCheck}} {
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
 	}
 
-	for _, entry := range resp.{{.ListResponseField}}.Data {
+	for _, entry := range {{.ListResponseItemsExpr}} {
 		if entry.GetLabels()[KubernetesUIDLabelKey] != string(obj.GetUID()) {
 			continue
 		}
@@ -1417,11 +1479,11 @@ func get{{.Entity}}ForUID(
 	if err != nil {
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
 	}
-	if resp == nil || resp.{{.ListResponseField}} == nil {
+	if {{.ListResponseNilCheck}} {
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
 	}
 
-	for _, entry := range resp.{{.ListResponseField}}.Data {
+	for _, entry := range {{.ListResponseItemsExpr}} {
 		name := entry.GetName()
 		if name == nil || *name != obj.Spec.APISpec.Name {
 			continue

@@ -151,9 +151,16 @@ type OpSDKConfig struct {
 
 // GetForUIDConfig configures generated getForUID lookup logic for an entity.
 type GetForUIDConfig struct {
+	// ListItemsSource controls how generated getForUID code iterates the SDK list
+	// response payload. The default ("data") expects resp.<field>.Data; "slice"
+	// expects resp.<field> itself to be the item slice.
+	ListItemsSource GetForUIDListItemsSource `yaml:"listItemsSource,omitempty"`
 	// MatchFields lists object/response field pairs that must all match for a
 	// list response item to be considered the same entity.
 	MatchFields []GetForUIDMatchField `yaml:"matchFields,omitempty"`
+	// RootUnion configures variant-aware matching for entities whose identity is
+	// derived from a root-union-backed spec field.
+	RootUnion *GetForUIDRootUnionConfig `yaml:"rootUnion,omitempty"`
 }
 
 // GetForUIDMatchField configures a single equality check in generated
@@ -165,6 +172,44 @@ type GetForUIDMatchField struct {
 	// ResponseField is the Go field path relative to the list entry, e.g.
 	// "Certificate" or "GetName()".
 	ResponseField string `yaml:"responseField"`
+}
+
+// GetForUIDListItemsSource controls how list response items are extracted in
+// generated getForUID code.
+type GetForUIDListItemsSource string
+
+const (
+	// GetForUIDListItemsSourceData expects resp.<field>.Data to hold the items.
+	GetForUIDListItemsSourceData GetForUIDListItemsSource = "data"
+	// GetForUIDListItemsSourceSlice expects resp.<field> itself to be the items slice.
+	GetForUIDListItemsSourceSlice GetForUIDListItemsSource = "slice"
+)
+
+// GetForUIDRootUnionConfig configures variant-aware matching for a root union.
+type GetForUIDRootUnionConfig struct {
+	// UnionField is the Go field path, relative to obj, that references the root
+	// union container (for example "Spec.APISpec.EventGatewayListenerPolicyConfig").
+	UnionField string `yaml:"unionField"`
+	// ResponseTypeField is the Go field or getter path, relative to the list
+	// entry, that returns the SDK discriminator value. Defaults to "GetType()".
+	ResponseTypeField string `yaml:"responseTypeField,omitempty"`
+	// Cases enumerates the supported CRD union variants.
+	Cases []GetForUIDRootUnionCase `yaml:"cases,omitempty"`
+}
+
+// GetForUIDRootUnionCase configures matching for a single root-union variant.
+type GetForUIDRootUnionCase struct {
+	// TypeValue is the CRD union discriminator value (for example "tlsServer").
+	TypeValue string `yaml:"typeValue"`
+	// VariantField is the Go field on the union container that holds the selected
+	// variant payload (for example "EventGatewayTLSListen").
+	VariantField string `yaml:"variantField"`
+	// ResponseTypeValue is the SDK discriminator value expected on the list entry
+	// (for example "tls_server").
+	ResponseTypeValue string `yaml:"responseTypeValue"`
+	// MatchFields lists the fields, relative to the selected variant payload and
+	// the list entry respectively, that must match.
+	MatchFields []GetForUIDMatchField `yaml:"matchFields,omitempty"`
 }
 
 type typeOpsYAML struct {
@@ -381,16 +426,55 @@ func (tc *TypeConfig) validate() error {
 		return fmt.Errorf("ops.skipGetForUID and ops.getForUID are mutually exclusive")
 	}
 	if tc.OpsGetForUID != nil {
-		if len(tc.OpsGetForUID.MatchFields) == 0 {
-			return fmt.Errorf("ops.getForUID.matchFields is required when ops.getForUID is set")
+		if tc.OpsGetForUID.ListItemsSource != "" &&
+			tc.OpsGetForUID.ListItemsSource != GetForUIDListItemsSourceData &&
+			tc.OpsGetForUID.ListItemsSource != GetForUIDListItemsSourceSlice {
+			return fmt.Errorf("ops.getForUID.listItemsSource must be one of %q or %q", GetForUIDListItemsSourceData, GetForUIDListItemsSourceSlice)
 		}
-		for i, field := range tc.OpsGetForUID.MatchFields {
-			if field.ObjectField == "" {
-				return fmt.Errorf("ops.getForUID.matchFields[%d].objectField is required", i)
+		if len(tc.OpsGetForUID.MatchFields) > 0 && tc.OpsGetForUID.RootUnion != nil {
+			return fmt.Errorf("ops.getForUID.matchFields and ops.getForUID.rootUnion are mutually exclusive")
+		}
+		if tc.OpsGetForUID.RootUnion != nil {
+			if tc.OpsGetForUID.RootUnion.UnionField == "" {
+				return fmt.Errorf("ops.getForUID.rootUnion.unionField is required")
 			}
-			if field.ResponseField == "" {
-				return fmt.Errorf("ops.getForUID.matchFields[%d].responseField is required", i)
+			if len(tc.OpsGetForUID.RootUnion.Cases) == 0 {
+				return fmt.Errorf("ops.getForUID.rootUnion.cases is required when ops.getForUID.rootUnion is set")
 			}
+			for i, c := range tc.OpsGetForUID.RootUnion.Cases {
+				if c.TypeValue == "" {
+					return fmt.Errorf("ops.getForUID.rootUnion.cases[%d].typeValue is required", i)
+				}
+				if c.VariantField == "" {
+					return fmt.Errorf("ops.getForUID.rootUnion.cases[%d].variantField is required", i)
+				}
+				if c.ResponseTypeValue == "" {
+					return fmt.Errorf("ops.getForUID.rootUnion.cases[%d].responseTypeValue is required", i)
+				}
+				if err := validateGetForUIDMatchFields(
+					fmt.Sprintf("ops.getForUID.rootUnion.cases[%d].matchFields", i),
+					c.MatchFields,
+				); err != nil {
+					return err
+				}
+			}
+		} else if err := validateGetForUIDMatchFields("ops.getForUID.matchFields", tc.OpsGetForUID.MatchFields); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateGetForUIDMatchFields(prefix string, fields []GetForUIDMatchField) error {
+	if len(fields) == 0 {
+		return fmt.Errorf("%s is required", prefix)
+	}
+	for i, field := range fields {
+		if field.ObjectField == "" {
+			return fmt.Errorf("%s[%d].objectField is required", prefix, i)
+		}
+		if field.ResponseField == "" {
+			return fmt.Errorf("%s[%d].responseField is required", prefix, i)
 		}
 	}
 	return nil
@@ -491,4 +575,3 @@ func (c *Config) GetFieldValidations(entityName, fieldName string) []string {
 	}
 	return fc.Validations
 }
-
