@@ -59,14 +59,14 @@ type PortalCustomDomainAPISpec struct {
 	//
 	// +required
 	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Enabled string `json:"enabled,omitempty"`
+	Enabled string `json:"enabled,omitzero"`
 
 	//
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
-	Hostname string `json:"hostname,omitempty"`
+	Hostname string `json:"hostname,omitzero"`
 
 	//
 	//
@@ -99,7 +99,7 @@ type PortalCustomDomainStatus struct {
 	// ObservedGeneration is the most recent generation observed
 	//
 	// +optional
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	ObservedGeneration int64 `json:"observedGeneration,omitzero"`
 }
 
 // PortalCustomDomainSSL represents a union type for ssl.

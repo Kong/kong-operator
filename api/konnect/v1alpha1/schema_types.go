@@ -299,7 +299,7 @@ type CreatePortalCustomDomainSSLStandard struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=http
-	DomainVerificationMethod string `json:"domainVerificationMethod,omitempty"`
+	DomainVerificationMethod string `json:"domainVerificationMethod,omitzero"`
 }
 
 // CreatePortalCustomDomainSSLWithCustomCertificate is a type alias.
@@ -309,20 +309,20 @@ type CreatePortalCustomDomainSSLWithCustomCertificate struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
-	CustomCertificate string `json:"customCertificate,omitempty"`
+	CustomCertificate string `json:"customCertificate,omitzero"`
 	// Custom certificate private key to be used for the SSL termination.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
-	CustomPrivateKey string `json:"customPrivateKey,omitempty"`
+	CustomPrivateKey string `json:"customPrivateKey,omitzero"`
 	//
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=custom_certificate
-	DomainVerificationMethod string `json:"domainVerificationMethod,omitempty"`
+	DomainVerificationMethod string `json:"domainVerificationMethod,omitzero"`
 	// Advanced option.
 	// If true, the custom certificate is served exactly as provided, without
 	// attempting to bundle against a public trust store.
@@ -331,7 +331,7 @@ type CreatePortalCustomDomainSSLWithCustomCertificate struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
-	SkipCaCheck string `json:"skipCaCheck,omitempty"`
+	SkipCaCheck string `json:"skipCaCheck,omitzero"`
 }
 
 // Description is a type alias.
