@@ -1057,11 +1057,11 @@ func TestGenerateSchemaTypes_OmitsDiscriminatorFieldOnUnionMembersOnly(t *testin
 		"StandaloneTypeCarrier": true,
 	}, parsed, nil)
 
-	assert.NotContains(t, generatedStructBlock(t, content, "RootVariantAlpha"), "Type string `json:\"type,omitempty\"`")
-	assert.NotContains(t, generatedStructBlock(t, content, "RootVariantBeta"), "Type string `json:\"type,omitempty\"`")
-	assert.NotContains(t, generatedStructBlock(t, content, "PropertyVariantAlpha"), "Type string `json:\"type,omitempty\"`")
-	assert.NotContains(t, generatedStructBlock(t, content, "PropertyVariantBeta"), "Type string `json:\"type,omitempty\"`")
-	assert.Contains(t, generatedStructBlock(t, content, "StandaloneTypeCarrier"), "Type string `json:\"type,omitempty\"`")
+	assert.NotContains(t, generatedStructBlock(t, content, "RootVariantAlpha"), "Type string")
+	assert.NotContains(t, generatedStructBlock(t, content, "RootVariantBeta"), "Type string")
+	assert.NotContains(t, generatedStructBlock(t, content, "PropertyVariantAlpha"), "Type string")
+	assert.NotContains(t, generatedStructBlock(t, content, "PropertyVariantBeta"), "Type string")
+	assert.Contains(t, generatedStructBlock(t, content, "StandaloneTypeCarrier"), "Type string `json:\"type,omitzero\"`")
 
 	_, err := format.Source([]byte(content))
 	require.NoError(t, err)
@@ -1077,6 +1077,62 @@ func generatedStructBlock(t *testing.T, content, typeName string) string {
 	require.NotEqual(t, -1, end, "type %s struct end not found", typeName)
 
 	return content[start : start+end+3]
+}
+
+func TestTagOmitSuffix(t *testing.T) {
+	tests := []struct {
+		goType string
+		want   string
+	}{
+		{"string", ",omitzero"},
+		{"int64", ",omitzero"},
+		{"float64", ",omitzero"},
+		{"VirtualClusterNamespace", ",omitzero"},
+		{"VirtualClusterName", ",omitzero"},
+		{"apiextensionsv1.JSON", ",omitzero"},
+		{"*string", ",omitempty"},
+		{"*KonnectEntityRef", ",omitempty"},
+		{"[]VirtualClusterTopicAlias", ",omitempty"},
+		{"[]metav1.Condition", ",omitempty"},
+		{"map[string]Labels", ",omitempty"},
+		{"map[string]string", ",omitempty"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.goType, func(t *testing.T) {
+			assert.Equal(t, tc.want, tagOmitSuffix(tc.goType))
+		})
+	}
+}
+
+func TestGenerateSchemaTypes_EmitsOmitzeroForStructFields(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	parsed := &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"VirtualClusterNamespace": {
+				Name: "VirtualClusterNamespace",
+				Properties: []*parser.Property{
+					{Name: "prefix", Type: "string"},
+					{Name: "mode", Type: "string"},
+				},
+			},
+			"ParentSchema": {
+				Name: "ParentSchema",
+				Properties: []*parser.Property{
+					{Name: "namespace", RefName: "VirtualClusterNamespace"},
+				},
+			},
+		},
+	}
+
+	content := g.generateSchemaTypes(map[string]bool{
+		"VirtualClusterNamespace": true,
+		"ParentSchema":            true,
+	}, parsed, nil)
+
+	assert.Contains(t, content, "Namespace VirtualClusterNamespace `json:\"namespace,omitzero\"`")
+	assert.NotContains(t, content, "Namespace VirtualClusterNamespace `json:\"namespace,omitempty\"`")
+	_, err := format.Source([]byte(content))
+	require.NoError(t, err)
 }
 
 func TestEntityFilePrefix(t *testing.T) {
@@ -1268,10 +1324,12 @@ func TestGenerateSchemaTypes_AddsKubebuilderTags(t *testing.T) {
 
 	assert.Contains(t, content, "// +optional")
 	assert.Contains(t, content, fmt.Sprintf("// +kubebuilder:validation:MaxLength=%d", defaultMaxLength))
-	assert.Contains(t, content, "ProviderType string `json:\"providerType,omitempty\"`")
+	assert.Contains(t, content, "ProviderType string `json:\"providerType,omitzero\"`")
 }
 
-func TestBuildSchemaTypeFieldConfig_NestedInlineObject(t *testing.T) {
+func TestBuildSchemaCursors_NestedInlineObject(t *testing.T) {
+	// Cursor for an inline-object property nested inside a $ref schema.
+	// Config path uses JSON tags: spec.apiSpec.tls.clientIdentity.certificate
 	certProp := &parser.Property{Name: "certificate", Type: "string", Required: true}
 	ciProp := &parser.Property{
 		Name: "client_identity", Type: "object",
@@ -1300,12 +1358,20 @@ func TestBuildSchemaTypeFieldConfig_NestedInlineObject(t *testing.T) {
 		Entities: map[string]*config.EntityConfig{
 			"EventGatewayBackendCluster": {
 				Fields: map[string]*config.FieldConfig{
-					"tls": {
+					"spec": {
 						Fields: map[string]*config.FieldConfig{
-							"client_identity": {
+							"apiSpec": {
 								Fields: map[string]*config.FieldConfig{
-									"certificate": {
-										Validations: []string{"+kubebuilder:validation:MaxLength=1024"},
+									"tls": {
+										Fields: map[string]*config.FieldConfig{
+											"clientIdentity": {
+												Fields: map[string]*config.FieldConfig{
+													"certificate": {
+														Validations: []string{"+kubebuilder:validation:MaxLength=1024"},
+													},
+												},
+											},
+										},
 									},
 								},
 							},
@@ -1317,17 +1383,21 @@ func TestBuildSchemaTypeFieldConfig_NestedInlineObject(t *testing.T) {
 	}
 
 	gen := NewGenerator(Config{APIVersion: "v1alpha1", FieldConfig: fieldCfg})
-	stfc := gen.buildSchemaTypeFieldConfig(parsed)
-	require.NotNil(t, stfc)
-	vals := stfc.GetFieldValidations("ClientIdentity", "certificate")
-	assert.Equal(t, []string{"+kubebuilder:validation:MaxLength=1024"}, vals)
+	cursors, err := gen.buildSchemaCursors(parsed)
+	require.NoError(t, err)
+	require.NotNil(t, cursors)
+
+	ciCursor := cursors["ClientIdentity"]
+	require.NotNil(t, ciCursor, "cursor for ClientIdentity must be present")
+	certCursor := ciCursor.Fields["certificate"]
+	require.NotNil(t, certCursor, "cursor for certificate must be present under ClientIdentity")
+	assert.Equal(t, []string{"+kubebuilder:validation:MaxLength=1024"}, certCursor.Validations)
 }
 
-func TestBuildSchemaTypeFieldConfig_RootOneOfVariant(t *testing.T) {
-	// Entity schema is a discriminated oneOf (no Properties). Config keys address
-	// variant ref names. Validations on a prop inside the variant must propagate.
-	// Note: entity name must not contain prefixes stripped by GetEntityNameFromType
-	// (Add/Create/Update/Delete/Get/List), e.g. "ListenerPolicy" contains "List".
+func TestBuildSchemaCursors_RootOneOfVariant(t *testing.T) {
+	// Root-level oneOf: variant tags come from jsonName(discValue) directly under apiSpec.
+	// For a single-variant oneOf with refName "TLSChannelPolicy", discValue = "TLSChannelPolicy"
+	// and variantTag = jsonName("TLSChannelPolicy") = "tlsChannelPolicy".
 	certProp := &parser.Property{Name: "certificate", Type: "string", Required: true}
 	variantSchema := &parser.Schema{
 		Name:       "TLSChannelPolicy",
@@ -1345,14 +1415,24 @@ func TestBuildSchemaTypeFieldConfig_RootOneOfVariant(t *testing.T) {
 		Schemas:       map[string]*parser.Schema{"TLSChannelPolicy": variantSchema},
 	}
 
+	// jsonName("TLSChannelPolicy") = "tLSChannelPolicy" (only first char lowercased,
+	// no underscore conversion for PascalCase without underscores).
 	fieldCfg := &config.Config{
 		Entities: map[string]*config.EntityConfig{
 			"ChannelPolicy": {
 				Fields: map[string]*config.FieldConfig{
-					"TLSChannelPolicy": {
+					"spec": {
 						Fields: map[string]*config.FieldConfig{
-							"certificate": {
-								Validations: []string{"+kubebuilder:validation:MaxLength=4096"},
+							"apiSpec": {
+								Fields: map[string]*config.FieldConfig{
+									"tLSChannelPolicy": {
+										Fields: map[string]*config.FieldConfig{
+											"certificate": {
+												Validations: []string{"+kubebuilder:validation:MaxLength=4096"},
+											},
+										},
+									},
+								},
 							},
 						},
 					},
@@ -1362,14 +1442,20 @@ func TestBuildSchemaTypeFieldConfig_RootOneOfVariant(t *testing.T) {
 	}
 
 	gen := NewGenerator(Config{APIVersion: "v1alpha1", FieldConfig: fieldCfg})
-	stfc := gen.buildSchemaTypeFieldConfig(parsed)
-	require.NotNil(t, stfc)
-	vals := stfc.GetFieldValidations("TLSChannelPolicy", "certificate")
-	assert.Equal(t, []string{"+kubebuilder:validation:MaxLength=4096"}, vals)
+	cursors, err := gen.buildSchemaCursors(parsed)
+	require.NoError(t, err)
+	require.NotNil(t, cursors)
+
+	variantCursor := cursors["TLSChannelPolicy"]
+	require.NotNil(t, variantCursor, "cursor for TLSChannelPolicy must be present")
+	certCursor := variantCursor.Fields["certificate"]
+	require.NotNil(t, certCursor, "cursor for certificate must be present under TLSChannelPolicy")
+	assert.Equal(t, []string{"+kubebuilder:validation:MaxLength=4096"}, certCursor.Validations)
 }
 
-func TestBuildSchemaTypeFieldConfig_ArrayOfRefItems(t *testing.T) {
-	// Config descends through an array-of-$ref property into the item schema.
+func TestBuildSchemaCursors_ArrayOfRefItems(t *testing.T) {
+	// Array-of-$ref: cursor is transparent through the array; item schema gets the
+	// array property's cursor (spec.apiSpec.certificates.*).
 	certProp := &parser.Property{Name: "certificate", Type: "string", Required: true}
 	itemSchema := &parser.Schema{
 		Name:       "TLSCertificate",
@@ -1393,10 +1479,18 @@ func TestBuildSchemaTypeFieldConfig_ArrayOfRefItems(t *testing.T) {
 		Entities: map[string]*config.EntityConfig{
 			"TLSEntity": {
 				Fields: map[string]*config.FieldConfig{
-					"certificates": {
+					"spec": {
 						Fields: map[string]*config.FieldConfig{
-							"certificate": {
-								Validations: []string{"+kubebuilder:validation:MaxLength=4096"},
+							"apiSpec": {
+								Fields: map[string]*config.FieldConfig{
+									"certificates": {
+										Fields: map[string]*config.FieldConfig{
+											"certificate": {
+												Validations: []string{"+kubebuilder:validation:MaxLength=4096"},
+											},
+										},
+									},
+								},
 							},
 						},
 					},
@@ -1406,13 +1500,186 @@ func TestBuildSchemaTypeFieldConfig_ArrayOfRefItems(t *testing.T) {
 	}
 
 	gen := NewGenerator(Config{APIVersion: "v1alpha1", FieldConfig: fieldCfg})
-	stfc := gen.buildSchemaTypeFieldConfig(parsed)
-	require.NotNil(t, stfc)
-	vals := stfc.GetFieldValidations("TLSCertificate", "certificate")
-	assert.Equal(t, []string{"+kubebuilder:validation:MaxLength=4096"}, vals)
+	cursors, err := gen.buildSchemaCursors(parsed)
+	require.NoError(t, err)
+	require.NotNil(t, cursors)
+
+	itemCursor := cursors["TLSCertificate"]
+	require.NotNil(t, itemCursor, "cursor for TLSCertificate must be present")
+	certCursor := itemCursor.Fields["certificate"]
+	require.NotNil(t, certCursor, "cursor for certificate must be present under TLSCertificate")
+	assert.Equal(t, []string{"+kubebuilder:validation:MaxLength=4096"}, certCursor.Validations)
+}
+
+func TestBuildSchemaCursors_RejectsWrongSnakeCasePath(t *testing.T) {
+	// Passing a snake_case segment ("client_identity") instead of the JSON tag
+	// ("clientIdentity") must produce an error so misconfigured config.yaml is caught.
+	certProp := &parser.Property{Name: "certificate", Type: "string", Required: true}
+	ciProp := &parser.Property{
+		Name: "client_identity", Type: "object",
+		Properties: []*parser.Property{certProp},
+	}
+	entitySchema := &parser.Schema{
+		Name:       "CreateMyEntity",
+		Properties: []*parser.Property{{Name: "tls", Type: "object", RefName: "BackendClusterTLS"}},
+	}
+	bctSchema := &parser.Schema{
+		Name:       "BackendClusterTLS",
+		Properties: []*parser.Property{ciProp},
+	}
+
+	parsed := &parser.ParsedSpec{
+		RequestBodies: map[string]*parser.Schema{"CreateMyEntity": entitySchema},
+		Schemas:       map[string]*parser.Schema{"BackendClusterTLS": bctSchema},
+	}
+
+	fieldCfg := &config.Config{
+		Entities: map[string]*config.EntityConfig{
+			"MyEntity": {
+				Fields: map[string]*config.FieldConfig{
+					"spec": {Fields: map[string]*config.FieldConfig{
+						"apiSpec": {Fields: map[string]*config.FieldConfig{
+							"tls": {Fields: map[string]*config.FieldConfig{
+								"client_identity": {Fields: map[string]*config.FieldConfig{ // wrong: snake_case
+									"certificate": {Validations: []string{"+kubebuilder:validation:MaxLength=4096"}},
+								}},
+							}},
+						}},
+					}},
+				},
+			},
+		},
+	}
+
+	gen := NewGenerator(Config{APIVersion: "v1alpha1", FieldConfig: fieldCfg})
+	_, err := gen.buildSchemaCursors(parsed)
+	require.Error(t, err, "expected error for snake_case segment where JSON tag is camelCase")
+	assert.Contains(t, err.Error(), "client_identity")
+}
+
+func TestBuildSchemaCursors_DuplicateSharedSchemaSameCursorAllowed(t *testing.T) {
+	sharedSchema := &parser.Schema{
+		Name:       "SharedSchema",
+		Properties: []*parser.Property{{Name: "name", Type: "string", Required: true}},
+	}
+	parsed := &parser.ParsedSpec{
+		RequestBodies: map[string]*parser.Schema{
+			"CreateFirstEntity": {
+				Name:       "CreateFirstEntity",
+				Properties: []*parser.Property{{Name: "shared", Type: "object", RefName: "SharedSchema"}},
+			},
+			"CreateSecondEntity": {
+				Name:       "CreateSecondEntity",
+				Properties: []*parser.Property{{Name: "shared", Type: "object", RefName: "SharedSchema"}},
+			},
+		},
+		Schemas: map[string]*parser.Schema{
+			"SharedSchema": sharedSchema,
+		},
+	}
+
+	sharedFieldConfig := map[string]*config.FieldConfig{
+		"spec": {Fields: map[string]*config.FieldConfig{
+			"apiSpec": {Fields: map[string]*config.FieldConfig{
+				"shared": {Fields: map[string]*config.FieldConfig{
+					"name": {Validations: []string{"+kubebuilder:validation:MaxLength=1024"}},
+				}},
+			}},
+		}},
+	}
+	fieldCfg := &config.Config{
+		Entities: map[string]*config.EntityConfig{
+			"FirstEntity":  {Fields: sharedFieldConfig},
+			"SecondEntity": {Fields: sharedFieldConfig},
+		},
+	}
+
+	gen := NewGenerator(Config{APIVersion: "v1alpha1", FieldConfig: fieldCfg})
+	cursors, err := gen.buildSchemaCursors(parsed)
+	require.NoError(t, err)
+	require.NotNil(t, cursors)
+
+	sharedCursor := cursors["SharedSchema"]
+	require.NotNil(t, sharedCursor)
+	require.Contains(t, sharedCursor.Fields, "name")
+	assert.Equal(t, []string{"+kubebuilder:validation:MaxLength=1024"}, sharedCursor.Fields["name"].Validations)
+}
+
+func TestBuildSchemaCursors_DuplicateSharedSchemaConflictReturnsError(t *testing.T) {
+	sharedSchema := &parser.Schema{
+		Name:       "SharedSchema",
+		Properties: []*parser.Property{{Name: "name", Type: "string", Required: true}},
+	}
+	parsed := &parser.ParsedSpec{
+		RequestBodies: map[string]*parser.Schema{
+			"CreateFirstEntity": {
+				Name:       "CreateFirstEntity",
+				Properties: []*parser.Property{{Name: "shared", Type: "object", RefName: "SharedSchema"}},
+			},
+			"CreateSecondEntity": {
+				Name:       "CreateSecondEntity",
+				Properties: []*parser.Property{{Name: "shared", Type: "object", RefName: "SharedSchema"}},
+			},
+		},
+		Schemas: map[string]*parser.Schema{
+			"SharedSchema": sharedSchema,
+		},
+	}
+
+	fieldCfg := &config.Config{
+		Entities: map[string]*config.EntityConfig{
+			"FirstEntity": {Fields: map[string]*config.FieldConfig{
+				"spec": {Fields: map[string]*config.FieldConfig{
+					"apiSpec": {Fields: map[string]*config.FieldConfig{
+						"shared": {Fields: map[string]*config.FieldConfig{
+							"name": {Validations: []string{"+kubebuilder:validation:MaxLength=1024"}},
+						}},
+					}},
+				}},
+			}},
+			"SecondEntity": {Fields: map[string]*config.FieldConfig{
+				"spec": {Fields: map[string]*config.FieldConfig{
+					"apiSpec": {Fields: map[string]*config.FieldConfig{
+						"shared": {Fields: map[string]*config.FieldConfig{
+							"name": {Validations: []string{"+kubebuilder:validation:MaxLength=2048"}},
+						}},
+					}},
+				}},
+			}},
+		},
+	}
+
+	gen := NewGenerator(Config{APIVersion: "v1alpha1", FieldConfig: fieldCfg})
+	_, err := gen.buildSchemaCursors(parsed)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "schema cursor conflict for \"SharedSchema\"")
+	assert.Contains(t, err.Error(), "entity \"FirstEntity\" path \"spec.apiSpec.shared\"")
+	assert.Contains(t, err.Error(), "entity \"SecondEntity\" path \"spec.apiSpec.shared\"")
+}
+
+func TestRecordSchemaCursor_ConflictDoesNotOverwriteExisting(t *testing.T) {
+	gen := NewGenerator(Config{APIVersion: "v1alpha1"})
+	existing := &config.FieldConfig{
+		Fields: map[string]*config.FieldConfig{
+			"name": {Validations: []string{"+kubebuilder:validation:MaxLength=1024"}},
+		},
+	}
+	replacement := &config.FieldConfig{
+		Fields: map[string]*config.FieldConfig{
+			"name": {Validations: []string{"+kubebuilder:validation:MaxLength=2048"}},
+		},
+	}
+	out := map[string]*config.FieldConfig{"SharedSchema": existing}
+	origins := map[string]string{"SharedSchema": "entity \"FirstEntity\" path \"spec.apiSpec.shared\""}
+
+	err := gen.recordSchemaCursor("SharedSchema", "SecondEntity", "spec.apiSpec.shared", replacement, out, origins)
+	require.Error(t, err)
+	assert.Same(t, existing, out["SharedSchema"])
+	assert.Equal(t, "entity \"FirstEntity\" path \"spec.apiSpec.shared\"", origins["SharedSchema"])
 }
 
 func TestGenerateSchemaTypes_NestedInlineOverride(t *testing.T) {
+	// Cursor map built manually: cursor for "ClientIdentity" has the certificate override.
 	certProp := &parser.Property{Name: "certificate", Type: "string", Required: true}
 	ciProp := &parser.Property{
 		Name: "client_identity", Type: "object",
@@ -1428,12 +1695,17 @@ func TestGenerateSchemaTypes_NestedInlineOverride(t *testing.T) {
 		Schemas:       map[string]*parser.Schema{"BackendClusterTLS": bctSchema},
 	}
 
-	schemaTypeFieldConfig := &config.Config{
-		Entities: map[string]*config.EntityConfig{
-			"ClientIdentity": {
-				Fields: map[string]*config.FieldConfig{
-					"certificate": {
-						Validations: []string{"+kubebuilder:validation:MaxLength=1024"},
+	// Cursor is keyed by the schema's Go name. generateSchemaTypes advances it into
+	// nested inline types via writeNestedInlineTypes, so the cursor for BackendClusterTLS
+	// must contain the clientIdentity sub-cursor (not a separate "ClientIdentity" entry).
+	schemaCursors := map[string]*config.FieldConfig{
+		"BackendClusterTLS": {
+			Fields: map[string]*config.FieldConfig{
+				"clientIdentity": {
+					Fields: map[string]*config.FieldConfig{
+						"certificate": {
+							Validations: []string{"+kubebuilder:validation:MaxLength=1024"},
+						},
 					},
 				},
 			},
@@ -1444,7 +1716,7 @@ func TestGenerateSchemaTypes_NestedInlineOverride(t *testing.T) {
 	content := gen.generateSchemaTypes(
 		map[string]bool{"BackendClusterTLS": true},
 		parsed,
-		schemaTypeFieldConfig,
+		schemaCursors,
 	)
 	assert.Contains(t, content, "// +kubebuilder:validation:MaxLength=1024",
 		"user-provided MaxLength should appear in generated type")
@@ -3285,6 +3557,86 @@ func TestGenerateEntityOpsFile_ParentScopedSingleton(t *testing.T) {
 	// No entity ID variable in the generated delete or update functions.
 	// (id would be declared but unused, causing a compile error.)
 	assert.NotContains(t, content, "id := obj.GetKonnectStatus().GetKonnectID()")
+}
+
+// TestGenerateEntityOpsFile_SingletonNoID verifies correct code generation for
+// singleton sub-resources whose Konnect response has no "id" field (e.g.
+// PortalCustomDomain). Create must not call SetKonnectID. getForUID must call
+// the singular GET and match via configured matchFields.
+func TestGenerateEntityOpsFile_SingletonNoID(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"PortalCustomDomain": {IsRoot: new(false)},
+		},
+	})
+
+	// DELETE /portals/{portalId}/custom-domain and PATCH /portals/{portalId}/custom-domain
+	// both have only the parent ID — no per-resource ID segment.
+	// RespHasID=false because the response component has no "id" field.
+	schema := &parser.Schema{
+		OperationID:        "create-portal-custom-domain",
+		Tags:               []string{"Portal Custom Domains"},
+		SuccessResponseRef: "PortalCustomDomain",
+		RespHasID:          false,
+		Dependencies: []*parser.Dependency{
+			{ParamName: "portalId", EntityName: "Portal"},
+		},
+		UpdateOperationID:      "update-portal-custom-domain",
+		UpdateTags:             []string{"Portal Custom Domains"},
+		UpdatePathParams:       []string{"portalId"},
+		DeleteOperationID:      "delete-portal-custom-domain",
+		DeleteTags:             []string{"Portal Custom Domains"},
+		DeletePathParams:       []string{"portalId"},
+		ListOperationID:        "get-portal-custom-domain",
+		ListTags:               []string{"Portal Custom Domains"},
+		ListSuccessResponseRef: "PortalCustomDomain",
+	}
+	opsConfig := &config.EntityOpsConfig{
+		GetForUID: &config.GetForUIDConfig{
+			MatchFields: []config.GetForUIDMatchField{
+				{
+					ObjectField:   "Spec.APISpec.Hostname",
+					ResponseField: "Hostname",
+				},
+			},
+		},
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreatePortalCustomDomainRequest"},
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.UpdatePortalCustomDomainRequest"},
+			"delete": {},
+		},
+		SDK: &config.OpSDKConfig{
+			Interface: "github.com/Kong/sdk-konnect-go.PortalCustomDomainsSDK",
+			FieldName: "PortalCustomDomains",
+		},
+	}
+
+	res, err := g.generateEntityOpsFile("PortalCustomDomain", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, res.File)
+
+	content := res.File.Content
+
+	// Create: nil-response guard present but no SetKonnectID.
+	assert.Contains(t, content, "resp.PortalCustomDomain == nil")
+	assert.NotContains(t, content, "SetKonnectID")
+
+	// getForUID: calls singular GET not a list, matches hostname, returns hostname.
+	assert.Contains(t, content, "sdk.GetPortalCustomDomain(ctx, parentID)")
+	assert.Contains(t, content, "matchStringField(obj.Spec.APISpec.Hostname, entry.Hostname)")
+	assert.Contains(t, content, "return entry.Hostname, nil")
+
+	// No list-style collection iteration.
+	assert.NotContains(t, content, "for _, entry := range")
+	assert.NotContains(t, content, "entry.GetID()")
+
+	// No sdkkonnectops import (singleton GET uses positional args, not a request struct).
+	assert.NotContains(t, content, `sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"`)
+
+	// No unreachable fallback after early return.
+	assert.NotContains(t, content, "return entry.Hostname, nil\n\n\treturn \"\", EntityWithMatchingUIDNotFoundError")
 }
 
 func TestGenerateOpsUpdate_RootEntity(t *testing.T) {

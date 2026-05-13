@@ -17,6 +17,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/translator"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	gatewayutils "github.com/kong/kong-operator/v2/pkg/utils/gateway"
 )
 
 // RoutesForRule creates or updates KongRoutes for the given rule.
@@ -88,7 +89,9 @@ func RoutesForHTTPRouteRule(
 	cp *commonv1alpha1.ControlPlaneRef,
 	serviceName string,
 	hostnames []string,
-) (kongRoutes []*configurationv1alpha1.KongRoute, err error) {
+) ([]*configurationv1alpha1.KongRoute, error) {
+	var kongRoutes []*configurationv1alpha1.KongRoute
+
 	// If the rule has no matches, create a single catch-all route.
 	// Kong requires at least one matcher; use "/" path to represent catch-all.
 	if len(rule.Matches) == 0 {
@@ -98,8 +101,27 @@ func RoutesForHTTPRouteRule(
 		rule.Matches = append(rule.Matches, match)
 	}
 
+	// Derive protocols from the parent Gateway listener(s).
+	protocols, err := protocolsFromGatewayListener(ctx, cl, httpRoute, pRef)
+	if err != nil {
+		return nil, err
+	}
+
 	// Check filters to determine if we need capture groups in paths.
 	setCaptureGroup := needsCaptureGroup(rule)
+
+	stripPath, err := metadata.ExtractStripPath(httpRoute.Annotations)
+	if err != nil {
+		log.Error(logger, err, fmt.Sprintf("Failed to extract strip path annotation, defaulting to %t", stripPath),
+			"httpRoute", fmt.Sprintf("%s/%s", httpRoute.GetNamespace(), httpRoute.GetName()),
+			"WARNING", "The malformed annotations will be treated as errors in future versions, please fix the annotation value to be a valid boolean")
+	}
+	preserveHost, err := metadata.ExtractPreserveHost(httpRoute.Annotations)
+	if err != nil {
+		log.Error(logger, err, fmt.Sprintf("Failed to extract preserve host annotation, defaulting to %t", preserveHost),
+			"httpRoute", fmt.Sprintf("%s/%s", httpRoute.GetNamespace(), httpRoute.GetName()),
+			"WARNING", "The malformed annotations will be treated as errors in future versions, please fix the annotation value to be a valid boolean")
+	}
 
 	for i, match := range rule.Matches {
 		routeName := namegen.NewKongRouteNameForMatch(httpRoute, cp, match, i)
@@ -112,13 +134,10 @@ func RoutesForHTTPRouteRule(
 			WithLabels(httpRoute, pRef).
 			WithAnnotations(httpRoute, pRef).
 			WithSpecName(routeName).
-			WithProtocols(
-				sdkkonnectcomp.RouteJSONProtocols("http"),
-				sdkkonnectcomp.RouteJSONProtocols("https"),
-			).
+			WithProtocols(protocols...).
 			WithHosts(hostnames).
-			WithStripPath(metadata.ExtractStripPath(httpRoute.Annotations)).
-			WithPreserveHost(metadata.ExtractPreserveHost(httpRoute.Annotations)).
+			WithStripPath(stripPath).
+			WithPreserveHost(preserveHost).
 			WithKongService(serviceName).
 			WithHTTPRouteMatch(match, setCaptureGroup)
 
@@ -212,6 +231,38 @@ func routesForTLSRouteRule(
 	}
 
 	return []*configurationv1alpha1.KongRoute{kongRoute.DeepCopy()}, nil
+}
+
+// protocolsFromGatewayListener derives Kong route protocols from the Gateway listener
+// referenced by the HTTPRoute's parentRef. It inspects the listener protocol and maps:
+//   - HTTP  → "http"
+//   - HTTPS → "https"
+//
+// Returns nil when no matching listeners are found (relies on Kong Gateway defaults).
+func protocolsFromGatewayListener(
+	ctx context.Context, cl client.Client, httpRoute *gwtypes.HTTPRoute, parentRef *gwtypes.ParentReference,
+) ([]sdkkonnectcomp.RouteJSONProtocols, error) {
+	ns := httpRoute.Namespace
+	if parentRef.Namespace != nil && *parentRef.Namespace != "" {
+		ns = string(*parentRef.Namespace)
+	}
+
+	gw := &gwtypes.Gateway{}
+	if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: string(parentRef.Name)}, gw); err != nil {
+		return nil, fmt.Errorf("failed to get parent Gateway %s/%s for HTTPRoute %s/%s: %w",
+			ns, parentRef.Name, httpRoute.Namespace, httpRoute.Name, err)
+	}
+
+	protos := gatewayutils.ProtocolsFromListeners(gw, parentRef.SectionName)
+	if len(protos) == 0 {
+		return nil, nil
+	}
+
+	protocols := make([]sdkkonnectcomp.RouteJSONProtocols, 0, len(protos))
+	for _, p := range protos {
+		protocols = append(protocols, sdkkonnectcomp.RouteJSONProtocols(p))
+	}
+	return protocols, nil
 }
 
 // isTLSRoutePassthrough checks if the TLSRoute's parent Gateway listener uses TLS passthrough mode

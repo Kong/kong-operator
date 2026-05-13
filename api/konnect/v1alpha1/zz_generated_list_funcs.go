@@ -37,8 +37,18 @@ func (obj EventGatewayBackendClusterList) GetItems() []EventGatewayBackendCluste
 	return obj.Items
 }
 
+// GetItems returns the list of EventGatewayVirtualCluster items.
+func (obj EventGatewayVirtualClusterList) GetItems() []EventGatewayVirtualCluster {
+	return obj.Items
+}
+
 // GetItems returns the list of Portal items.
 func (obj PortalList) GetItems() []Portal {
+	return obj.Items
+}
+
+// GetItems returns the list of PortalEmailConfig items.
+func (obj PortalEmailConfigList) GetItems() []PortalEmailConfig {
 	return obj.Items
 }
 

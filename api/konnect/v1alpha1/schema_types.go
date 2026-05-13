@@ -27,7 +27,7 @@ type BackendClusterAuthenticationSaslPlain struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
-	Password GatewaySecret `json:"password,omitempty"`
+	Password GatewaySecret `json:"password,omitzero"`
 	// A literal value or a reference to an existing secret as a template string
 	// expression.
 	// The value is stored and returned by the API as-is, not treated as sensitive
@@ -37,7 +37,7 @@ type BackendClusterAuthenticationSaslPlain struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
-	Username GatewaySecretReferenceOrLiteral `json:"username,omitempty"`
+	Username GatewaySecretReferenceOrLiteral `json:"username,omitzero"`
 }
 
 // BackendClusterAuthenticationSaslScram SASL/SCRAM authentication scheme for
@@ -49,7 +49,7 @@ type BackendClusterAuthenticationSaslScram struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=sha256;sha512
-	Algorithm string `json:"algorithm,omitempty"`
+	Algorithm string `json:"algorithm,omitzero"`
 	// A sensitive value containing the secret or a reference to a secret as a
 	// template string expression.
 	// If the value is provided as plain text, it is encrypted at rest and omitted
@@ -61,7 +61,7 @@ type BackendClusterAuthenticationSaslScram struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
-	Password GatewaySecret `json:"password,omitempty"`
+	Password GatewaySecret `json:"password,omitzero"`
 	// A literal value or a reference to an existing secret as a template string
 	// expression.
 	// The value is stored and returned by the API as-is, not treated as sensitive
@@ -71,7 +71,7 @@ type BackendClusterAuthenticationSaslScram struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
-	Username GatewaySecretReferenceOrLiteral `json:"username,omitempty"`
+	Username GatewaySecretReferenceOrLiteral `json:"username,omitzero"`
 }
 
 // BackendClusterAuthenticationScheme represents a union type for BackendClusterAuthenticationScheme.
@@ -207,7 +207,7 @@ type BackendClusterReferenceByName struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=255
-	Name BackendClusterName `json:"name,omitempty"`
+	Name BackendClusterName `json:"name,omitzero"`
 }
 
 // BackendClusterReferenceModify is a type alias.
@@ -231,25 +231,25 @@ type BackendClusterTLS struct {
 	// +optional
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=4096
-	CaBundle GatewaySecretReferenceOrLiteral `json:"caBundle,omitempty"`
+	CaBundle GatewaySecretReferenceOrLiteral `json:"caBundle,omitzero"`
 	// Client mTLS configuration.
 	//
 	// **Requires a minimum runtime version of `1.1`**.
 	//
 	// +optional
-	ClientIdentity ClientIdentity `json:"clientIdentity,omitempty"`
+	ClientIdentity ClientIdentity `json:"clientIdentity,omitzero"`
 	// If true, TLS is enabled for connections to this backend cluster.
 	// If false, TLS is explicitly disabled.
 	//
 	// +required
 	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Enabled string `json:"enabled,omitempty"`
+	Enabled string `json:"enabled,omitzero"`
 	// If true, skip certificate verification.
 	// It's not secure to use for production.
 	//
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
-	InsecureSkipVerify string `json:"insecureSkipVerify,omitempty"`
+	InsecureSkipVerify string `json:"insecureSkipVerify,omitzero"`
 	// List of supported TLS versions.
 	//
 	// +optional
@@ -269,7 +269,7 @@ type ClientIdentity struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=4096
-	Certificate GatewaySecretReferenceOrLiteral `json:"certificate,omitempty"`
+	Certificate GatewaySecretReferenceOrLiteral `json:"certificate,omitzero"`
 	// A sensitive value containing the secret or a reference to a secret as a
 	// template string expression.
 	// If the value is provided as plain text, it is encrypted at rest and omitted
@@ -281,12 +281,58 @@ type ClientIdentity struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=4096
-	Key GatewaySecret `json:"key,omitempty"`
+	Key GatewaySecret `json:"key,omitzero"`
 }
 
 // BackendMetadataUpdateIntervalSeconds The interval at which metadata is
 // updated in seconds.
 type BackendMetadataUpdateIntervalSeconds int
+
+// CreatePortalCustomDomainSSL is a type alias.
+type CreatePortalCustomDomainSSL map[string]string
+
+// CreatePortalCustomDomainSSLStandard is a type alias.
+type CreatePortalCustomDomainSSLStandard struct {
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=http
+	DomainVerificationMethod string `json:"domainVerificationMethod,omitzero"`
+}
+
+// CreatePortalCustomDomainSSLWithCustomCertificate is a type alias.
+type CreatePortalCustomDomainSSLWithCustomCertificate struct {
+	// Custom certificate to be used for the SSL termination.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=4096
+	CustomCertificate string `json:"customCertificate,omitzero"`
+	// Custom certificate private key to be used for the SSL termination.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=4096
+	CustomPrivateKey string `json:"customPrivateKey,omitzero"`
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=custom_certificate
+	DomainVerificationMethod string `json:"domainVerificationMethod,omitzero"`
+	// Advanced option.
+	// If true, the custom certificate is served exactly as provided, without
+	// attempting to bundle against a public trust store.
+	// Required for certificates issued by an internal/private CA.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SkipCaCheck string `json:"skipCaCheck,omitzero"`
+}
 
 // Description is a type alias.
 type Description string
@@ -306,17 +352,17 @@ type EventGatewayTLSListenerPolicy struct {
 	// The configuration of the policy.
 	//
 	// +required
-	Config EventGatewayTLSListenerPolicyConfig `json:"config,omitempty"`
+	Config EventGatewayTLSListenerPolicyConfig `json:"config,omitzero"`
 	// A human-readable description of the policy.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=512
-	Description string `json:"description,omitempty"`
+	Description string `json:"description,omitzero"`
 	// Whether the policy is enabled.
 	//
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Enabled string `json:"enabled,omitempty"`
+	Enabled string `json:"enabled,omitzero"`
 	// Labels store metadata of an entity that can be used for filtering an entity
 	// list or for searching across entity types.
 	//
@@ -326,12 +372,12 @@ type EventGatewayTLSListenerPolicy struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxProperties=50
-	Labels Labels `json:"labels,omitempty"`
+	Labels Labels `json:"labels,omitzero"`
 	// A unique user-defined name of the policy.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=255
-	Name string `json:"name,omitempty"`
+	Name string `json:"name,omitzero"`
 }
 
 // EventGatewayTLSListenerPolicyConfig is a type alias.
@@ -342,7 +388,7 @@ type EventGatewayTLSListenerPolicyConfig struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
-	AllowPlaintext string `json:"allowPlaintext,omitempty"`
+	AllowPlaintext string `json:"allowPlaintext,omitzero"`
 	//
 	//
 	// +required
@@ -355,11 +401,11 @@ type EventGatewayTLSListenerPolicyConfig struct {
 	// **Requires a minimum runtime version of `1.1`**.
 	//
 	// +optional
-	ClientAuthentication ClientAuthentication `json:"clientAuthentication,omitempty"`
+	ClientAuthentication ClientAuthentication `json:"clientAuthentication,omitzero"`
 	// A range of TLS versions.
 	//
 	// +optional
-	Versions TLSVersionRange `json:"versions,omitempty"`
+	Versions TLSVersionRange `json:"versions,omitzero"`
 }
 
 // ClientAuthentication Configures mutual TLS (mTLS) client certificate
@@ -382,7 +428,7 @@ type ClientAuthentication struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=required;requested
-	Mode string `json:"mode,omitempty"`
+	Mode string `json:"mode,omitzero"`
 	// An expression that extracts a principal identifier from a verified client
 	// certificate.
 	// This expression must evaluate to a string.
@@ -391,7 +437,7 @@ type ClientAuthentication struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	PrincipalMapping string `json:"principalMapping,omitempty"`
+	PrincipalMapping string `json:"principalMapping,omitzero"`
 	// TLS trust bundles contain CA certificate bundles used to verify client
 	// certificates.
 	// All bundles are merged into a single trust store; a client certificate is
@@ -438,7 +484,7 @@ type ForwardToClusterByPortMappingConfig struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?)*$`
-	AdvertisedHost string `json:"advertisedHost,omitempty"`
+	AdvertisedHost string `json:"advertisedHost,omitzero"`
 	// If set to `at_start`, the first port will be used as a bootstrap port.
 	// It provides a stable endpoint to use as the bootstrap server for clients,
 	// regardless of broker
@@ -454,7 +500,7 @@ type ForwardToClusterByPortMappingConfig struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=none;at_start
-	BootstrapPort string `json:"bootstrapPort,omitempty"`
+	BootstrapPort string `json:"bootstrapPort,omitzero"`
 	// A reference to a virtual cluster.
 	//
 	// +required
@@ -462,7 +508,7 @@ type ForwardToClusterByPortMappingConfig struct {
 	// The lowest broker node ID in the cluster.
 	//
 	// +optional
-	MinBrokerID int `json:"minBrokerID,omitempty"`
+	MinBrokerID int `json:"minBrokerID,omitzero"`
 }
 
 // ForwardToClusterBySNIConfig The configuration to forward requests to virtual
@@ -477,7 +523,7 @@ type ForwardToClusterBySNIConfig struct {
 	// +optional
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=65535
-	AdvertisedPort int `json:"advertisedPort,omitempty"`
+	AdvertisedPort int `json:"advertisedPort,omitzero"`
 	// Configures DNS names assigned to brokers in virtual clusters.
 	//
 	// - `per_cluster_suffix` is the default and allocates one level in the
@@ -490,7 +536,7 @@ type ForwardToClusterBySNIConfig struct {
 	// **Requires a minimum runtime version of `1.1`**.
 	//
 	// +optional
-	BrokerHostFormat BrokerHostFormat `json:"brokerHostFormat,omitempty"`
+	BrokerHostFormat BrokerHostFormat `json:"brokerHostFormat,omitzero"`
 	// Optional suffix for TLS SNI validation.
 	//
 	// This suffix is concatenated with the virtual cluster "dns.label" label to
@@ -519,7 +565,7 @@ type ForwardToClusterBySNIConfig struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[\.-]([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)*([a-z0-9-]*[a-z0-9])$`
-	SniSuffix string `json:"sniSuffix,omitempty"`
+	SniSuffix string `json:"sniSuffix,omitzero"`
 }
 
 // BrokerHostFormat Configures DNS names assigned to brokers in virtual
@@ -540,7 +586,7 @@ type BrokerHostFormat struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=per_cluster_suffix;shared_suffix
-	Type string `json:"type,omitempty"`
+	Type string `json:"type,omitzero"`
 }
 
 // ForwardToVirtualClusterPolicy Forwards requests to virtual clusters
@@ -564,12 +610,12 @@ type ForwardToVirtualClusterPolicy struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=512
-	Description string `json:"description,omitempty"`
+	Description string `json:"description,omitzero"`
 	// Whether the policy is enabled.
 	//
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Enabled string `json:"enabled,omitempty"`
+	Enabled string `json:"enabled,omitzero"`
 	// Labels store metadata of an entity that can be used for filtering an entity
 	// list or for searching across entity types.
 	//
@@ -579,12 +625,12 @@ type ForwardToVirtualClusterPolicy struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxProperties=50
-	Labels Labels `json:"labels,omitempty"`
+	Labels Labels `json:"labels,omitzero"`
 	// A unique user-defined name of the policy.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=255
-	Name string `json:"name,omitempty"`
+	Name string `json:"name,omitzero"`
 }
 
 // ForwardToVirtualClusterPolicyConfig represents a union type for config.
@@ -785,7 +831,7 @@ type NamespaceExactAllowListItem struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
-	Backend string `json:"backend,omitempty"`
+	Backend string `json:"backend,omitzero"`
 }
 
 // OIDCIdentityProviderClaimMappings Defines the mappings between OpenID Connect
@@ -796,17 +842,17 @@ type OIDCIdentityProviderClaimMappings struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	Email string `json:"email,omitempty"`
+	Email string `json:"email,omitzero"`
 	// The claim mapping for the user's group membership information.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	Groups string `json:"groups,omitempty"`
+	Groups string `json:"groups,omitzero"`
 	// The claim mapping for the user's name.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	Name string `json:"name,omitempty"`
+	Name string `json:"name,omitzero"`
 }
 
 // OIDCIdentityProviderClientID The client ID assigned to your application by
@@ -826,25 +872,25 @@ type OIDCIdentityProviderConfig struct {
 	//
 	//
 	// +optional
-	ClaimMappings OIDCIdentityProviderClaimMappings `json:"claimMappings,omitempty"`
+	ClaimMappings OIDCIdentityProviderClaimMappings `json:"claimMappings,omitzero"`
 	// The client ID assigned to your application by the identity provider.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
-	ClientID OIDCIdentityProviderClientID `json:"clientID,omitempty"`
+	ClientID OIDCIdentityProviderClientID `json:"clientID,omitzero"`
 	// The Client Secret assigned to your application by the identity provider.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	ClientSecret OIDCIdentityProviderClientSecret `json:"clientSecret,omitempty"`
+	ClientSecret OIDCIdentityProviderClientSecret `json:"clientSecret,omitzero"`
 	// The issuer URI of the identity provider.
 	// This is the URL where the provider's metadata can be obtained.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
-	IssuerURL OIDCIdentityProviderIssuer `json:"issuerURL,omitempty"`
+	IssuerURL OIDCIdentityProviderIssuer `json:"issuerURL,omitzero"`
 	// The scopes requested by your application when authenticating with the
 	// identity provider.
 	//
@@ -889,7 +935,7 @@ type SAMLIdentityProviderConfig struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	IdpMetadataURL SAMLIdentityProviderMetadataURL `json:"idpMetadataURL,omitempty"`
+	IdpMetadataURL SAMLIdentityProviderMetadataURL `json:"idpMetadataURL,omitzero"`
 	// The identity provider's SAML metadata.
 	// If the identity provider supports a metadata URL, you can use the
 	// `idp_metadata_url` field instead.
@@ -897,7 +943,7 @@ type SAMLIdentityProviderConfig struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	IdpMetadataXML SAMLIdentityProviderMetadata `json:"idpMetadataXML,omitempty"`
+	IdpMetadataXML SAMLIdentityProviderMetadata `json:"idpMetadataXML,omitzero"`
 }
 
 // SAMLIdentityProviderMetadata The identity provider's SAML metadata.
@@ -920,7 +966,7 @@ type TLSCertificate struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=4096
-	Certificate GatewaySecretReferenceOrLiteral `json:"certificate,omitempty"`
+	Certificate GatewaySecretReferenceOrLiteral `json:"certificate,omitzero"`
 	// A sensitive value containing the secret or a reference to a secret as a
 	// template string expression.
 	// If the value is provided as plain text, it is encrypted at rest and omitted
@@ -932,7 +978,7 @@ type TLSCertificate struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=4096
-	Key GatewaySecret `json:"key,omitempty"`
+	Key GatewaySecret `json:"key,omitzero"`
 }
 
 // TLSTrustBundleName The unique name of the TLS trust bundle.
@@ -959,7 +1005,7 @@ type TLSTrustBundleReferenceByName struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=255
-	Name TLSTrustBundleName `json:"name,omitempty"`
+	Name TLSTrustBundleName `json:"name,omitzero"`
 }
 
 // TLSVersionRange A range of TLS versions.
@@ -969,13 +1015,13 @@ type TLSVersionRange struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=TLSv1.2;TLSv1.3
-	Max string `json:"max,omitempty"`
+	Max string `json:"max,omitzero"`
 	// Minimum TLS version to use.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=TLSv1.2;TLSv1.3
-	Min string `json:"min,omitempty"`
+	Min string `json:"min,omitzero"`
 }
 
 // VirtualClusterACLMode Configures whether or not ACL policies are enforced on
@@ -1000,7 +1046,7 @@ type VirtualClusterAuthenticationAudience struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
-	Name string `json:"name,omitempty"`
+	Name string `json:"name,omitzero"`
 }
 
 // VirtualClusterAuthenticationClaimsMapping Maps JWT claims in the case when
@@ -1011,13 +1057,13 @@ type VirtualClusterAuthenticationClaimsMapping struct {
 	// +optional
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
-	Scope string `json:"scope,omitempty"`
+	Scope string `json:"scope,omitzero"`
 	// Maps the subject claim.
 	//
 	// +optional
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
-	Sub string `json:"sub,omitempty"`
+	Sub string `json:"sub,omitzero"`
 }
 
 // VirtualClusterAuthenticationClientCertificate Client certificate (mTLS)
@@ -1034,19 +1080,19 @@ type VirtualClusterAuthenticationJWKS struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	CacheExpiration string `json:"cacheExpiration,omitempty"`
+	CacheExpiration string `json:"cacheExpiration,omitzero"`
 	// URL for JWKS endpoint.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
-	Endpoint string `json:"endpoint,omitempty"`
+	Endpoint string `json:"endpoint,omitzero"`
 	// Total time from establishing connection to receive a response from JWKS
 	// endpoint.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	Timeout string `json:"timeout,omitempty"`
+	Timeout string `json:"timeout,omitzero"`
 }
 
 // VirtualClusterAuthenticationOauthBearer Oauth Bearer authentication scheme
@@ -1056,11 +1102,11 @@ type VirtualClusterAuthenticationOauthBearer struct {
 	// claims in your JWT token.
 	//
 	// +optional
-	ClaimsMapping VirtualClusterAuthenticationClaimsMapping `json:"claimsMapping,omitempty"`
+	ClaimsMapping VirtualClusterAuthenticationClaimsMapping `json:"claimsMapping,omitzero"`
 	// JSON Web Key Set configuration for verifying token signatures.
 	//
 	// +optional
-	Jwks VirtualClusterAuthenticationJWKS `json:"jwks,omitempty"`
+	Jwks VirtualClusterAuthenticationJWKS `json:"jwks,omitzero"`
 	// Methods to mediate authentication:
 	// * passthrough - pass authentication from the client through proxy to the
 	// backend cluster without any kind of
@@ -1085,11 +1131,11 @@ type VirtualClusterAuthenticationOauthBearer struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=passthrough;validate_forward;terminate
-	Mediation string `json:"mediation,omitempty"`
+	Mediation string `json:"mediation,omitzero"`
 	// Validation rules.
 	//
 	// +optional
-	Validate VirtualClusterAuthenticationValidate `json:"validate,omitempty"`
+	Validate VirtualClusterAuthenticationValidate `json:"validate,omitzero"`
 }
 
 // VirtualClusterAuthenticationPrincipal A principal for authentication
@@ -1106,7 +1152,7 @@ type VirtualClusterAuthenticationPrincipal struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
-	Password GatewaySecret `json:"password,omitempty"`
+	Password GatewaySecret `json:"password,omitzero"`
 	// A literal value or a reference to an existing secret as a template string
 	// expression.
 	// The value is stored and returned by the API as-is, not treated as sensitive
@@ -1116,7 +1162,7 @@ type VirtualClusterAuthenticationPrincipal struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
-	Username GatewaySecretReferenceOrLiteral `json:"username,omitempty"`
+	Username GatewaySecretReferenceOrLiteral `json:"username,omitzero"`
 }
 
 // VirtualClusterAuthenticationSaslPlain SASL/PLAIN authentication scheme for
@@ -1128,7 +1174,7 @@ type VirtualClusterAuthenticationSaslPlain struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=passthrough;terminate
-	Mediation string `json:"mediation,omitempty"`
+	Mediation string `json:"mediation,omitzero"`
 	// List of principals to be able to authenticate with, used with `terminate`
 	// mediation.
 	//
@@ -1145,7 +1191,7 @@ type VirtualClusterAuthenticationSaslScram struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=sha256;sha512
-	Algorithm string `json:"algorithm,omitempty"`
+	Algorithm string `json:"algorithm,omitzero"`
 }
 
 // VirtualClusterAuthenticationScheme represents a union type for VirtualClusterAuthenticationScheme.
@@ -1325,7 +1371,7 @@ type VirtualClusterAuthenticationValidate struct {
 	// +optional
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
-	Issuer string `json:"issuer,omitempty"`
+	Issuer string `json:"issuer,omitzero"`
 }
 
 // VirtualClusterDNSLabel The DNS label used in the bootstrap server URL to
@@ -1345,7 +1391,7 @@ type VirtualClusterNamespace struct {
 	//
 	//
 	// +optional
-	Additional VirtualClusterNamespaceAdditionalProperties `json:"additional,omitempty"`
+	Additional VirtualClusterNamespaceAdditionalProperties `json:"additional,omitzero"`
 	// * hide_prefix - the configured prefix is hidden from clients for topics and
 	// IDs when reading.
 	//
@@ -1361,7 +1407,7 @@ type VirtualClusterNamespace struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=hide_prefix;enforce_prefix
-	Mode string `json:"mode,omitempty"`
+	Mode string `json:"mode,omitzero"`
 	// The namespace is differentiated by this chosen prefix.
 	// For example, if the prefix is set to "analytics_" the topic named
 	// "analytics_user_clicks" is available to the clients
@@ -1373,7 +1419,7 @@ type VirtualClusterNamespace struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
-	Prefix string `json:"prefix,omitempty"`
+	Prefix string `json:"prefix,omitzero"`
 }
 
 // VirtualClusterNamespaceAdditionalProperties is a type alias.
@@ -1506,7 +1552,7 @@ type Items struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
-	Value string `json:"value,omitempty"`
+	Value string `json:"value,omitzero"`
 }
 
 // VirtualClusterNamespaceIDSelectorGlob is a type alias.
@@ -1517,7 +1563,7 @@ type VirtualClusterNamespaceIDSelectorGlob struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._?*-]+$`
-	Glob string `json:"glob,omitempty"`
+	Glob string `json:"glob,omitzero"`
 }
 
 // VirtualClusterNamespaceTopicSelector represents a union type for VirtualClusterNamespaceTopicSelector.
@@ -1629,7 +1675,7 @@ type VirtualClusterNamespaceTopicSelectorExactList struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=warn;ignore
-	Conflict string `json:"conflict,omitempty"`
+	Conflict string `json:"conflict,omitzero"`
 	// Explicit allow-list of backend topic names.
 	//
 	// +optional
@@ -1649,7 +1695,7 @@ type VirtualClusterNamespaceTopicSelectorGlob struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=warn;ignore
-	Conflict string `json:"conflict,omitempty"`
+	Conflict string `json:"conflict,omitzero"`
 	// Expose any backend topic that matches this glob pattern (e.g.,
 	// `operations_data_*`).
 	//
@@ -1657,7 +1703,7 @@ type VirtualClusterNamespaceTopicSelectorGlob struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._?*-]+$`
-	Glob string `json:"glob,omitempty"`
+	Glob string `json:"glob,omitzero"`
 }
 
 // VirtualClusterReference is a type alias.
@@ -1682,7 +1728,7 @@ type VirtualClusterReferenceByName struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=255
-	Name VirtualClusterName `json:"name,omitempty"`
+	Name VirtualClusterName `json:"name,omitzero"`
 }
 
 // VirtualClusterTopicAlias **Pre-release Feature**
@@ -1700,7 +1746,7 @@ type VirtualClusterTopicAlias struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
-	Alias string `json:"alias,omitempty"`
+	Alias string `json:"alias,omitzero"`
 	// How to handle conflicts where an alias shadows a physical topic.
 	// * warn - activate the alias but log a warning and set the conflict metric to
 	// 1.
@@ -1710,20 +1756,20 @@ type VirtualClusterTopicAlias struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=warn;ignore
-	Conflict VirtualClusterTopicAliasConflict `json:"conflict,omitempty"`
+	Conflict VirtualClusterTopicAliasConflict `json:"conflict,omitzero"`
 	// CEL expression evaluated against the connection's auth context.
 	// If omitted or empty, the alias is active for all connections.
 	//
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	Match string `json:"match,omitempty"`
+	Match string `json:"match,omitzero"`
 	// The namespace-visible topic name this alias resolves to.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
-	Topic string `json:"topic,omitempty"`
+	Topic string `json:"topic,omitzero"`
 }
 
 // VirtualClusterTopicAliasConflict How to handle conflicts where an alias

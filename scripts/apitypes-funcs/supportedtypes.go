@@ -294,7 +294,13 @@ var supportedKonnectV1Alpha1TypesGeneratedFromOAS = []supportedTypesT{
 				Type: "EventGatewayBackendCluster",
 			},
 			{
+				Type: "EventGatewayVirtualCluster",
+			},
+			{
 				Type: "Portal",
+			},
+			{
+				Type: "PortalEmailConfig",
 			},
 			{
 				Type: "PortalPage",

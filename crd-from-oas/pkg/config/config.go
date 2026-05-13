@@ -492,22 +492,3 @@ func (c *Config) GetFieldValidations(entityName, fieldName string) []string {
 	return fc.Validations
 }
 
-// ValidateAgainstSchema validates that all fields in the config exist in the schema
-func (c *Config) ValidateAgainstSchema(entityName string, validFields map[string]struct{}) error {
-	if c == nil || c.Entities == nil {
-		return nil
-	}
-
-	entityCfg, ok := c.Entities[entityName]
-	if !ok || entityCfg == nil || entityCfg.Fields == nil {
-		return nil
-	}
-
-	for fieldName := range entityCfg.Fields {
-		if _, ok := validFields[fieldName]; !ok {
-			return fmt.Errorf("field %q in config does not exist in entity %q", fieldName, entityName)
-		}
-	}
-
-	return nil
-}

@@ -17,6 +17,7 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	"github.com/kong/kong-operator/v2/controller/pkg/controlplane"
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
@@ -56,19 +57,38 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 		return ctrl.Result{}, nil
 	}
 
-	cert := &configurationv1alpha1.KongCertificate{}
-	nn := types.NamespacedName{
-		Name:      certRef.Name,
-		Namespace: ent.GetNamespace(),
+	certNamespace := ent.GetNamespace()
+	var crossNamespaceRef bool
+	if certRef.Namespace != nil && *certRef.Namespace != "" && *certRef.Namespace != certNamespace {
+		certNamespace = *certRef.Namespace
+		crossNamespaceRef = true
 	}
-	if certRef.Namespace != nil && *certRef.Namespace != ent.GetNamespace() {
-		err := crossnamespace.CheckKongReferenceGrantForResource(ctx, cl, ent.GetNamespace(), *certRef.Namespace, certRef.Name,
+
+	if crossNamespaceRef {
+		if err := crossnamespace.CheckKongReferenceGrantForResource(
+			ctx,
+			cl,
+			ent.GetNamespace(),
+			certNamespace,
+			certRef.Name,
 			metav1.GroupVersionKind(ent.GetObjectKind().GroupVersionKind()),
 			metav1.GroupVersionKind(configurationv1alpha1.GroupVersion.WithKind("KongCertificate")),
-		)
-		if err != nil {
+		); err != nil {
+			if crossnamespace.IsReferenceNotGranted(err) {
+				if res, errStatus := patch.StatusWithCondition(
+					ctx, cl, ent,
+					consts.ConditionType(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs),
+					metav1.ConditionFalse,
+					configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted,
+					fmt.Sprintf("KongReferenceGrants do not allow access to KongCertificate %s/%s", certNamespace, certRef.Name),
+				); errStatus != nil || !res.IsZero() {
+					return res, errStatus
+				}
+				return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+			}
 			return ctrl.Result{}, err
 		}
+
 		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, ent,
 			consts.ConditionType(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs),
@@ -78,7 +98,12 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
 		}
-		nn.Namespace = *certRef.Namespace
+	}
+
+	cert := &configurationv1alpha1.KongCertificate{}
+	nn := types.NamespacedName{
+		Name:      certRef.Name,
+		Namespace: certNamespace,
 	}
 	err := cl.Get(ctx, nn, cert)
 	if err != nil {
@@ -158,7 +183,7 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 			ent, client.ObjectKeyFromObject(cert),
 		)
 	}
-	cp, err := controlplane.GetCPForRef(ctx, cl, cpRef, ent.GetNamespace())
+	cp, err := controlplane.GetCPForRef(ctx, cl, cpRef, cert.GetNamespace())
 	if err != nil {
 		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, ent,
@@ -210,7 +235,7 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 		konnectv1alpha1.ControlPlaneRefValidConditionType,
 		metav1.ConditionTrue,
 		konnectv1alpha1.ControlPlaneRefReasonValid,
-		fmt.Sprintf("Referenced ControlPlane %s is programmed", cpRef.String()),
+		fmt.Sprintf("Referenced ControlPlane %s is programmed", nn),
 	); errStatus != nil || !res.IsZero() {
 		return res, errStatus
 	}

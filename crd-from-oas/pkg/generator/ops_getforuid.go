@@ -49,6 +49,10 @@ type opsGetForUIDFuncData struct {
 	// HasName indicates the entity's request schema declares a "name" field,
 	// used as a fallback UID-matching strategy when HasLabels is false.
 	HasName bool
+	// SingletonNoID is true when the entity is a singleton sub-resource whose
+	// response has no "id" field. getForUID calls the singular GET (not a list)
+	// and matches via MatchFields.
+	SingletonNoID bool
 }
 
 type opsGetForUIDMatchFieldData struct {
@@ -146,6 +150,7 @@ func (g *Generator) generateOpsGetForUIDFuncBody(
 		UseUIDTagFilter:       opsConfig != nil && opsConfig.UseUIDTagFilter,
 		MatchFields:           matchFields,
 		HasName:               hasName,
+		SingletonNoID:         isSingletonNoID(schema),
 	}, nil
 }
 

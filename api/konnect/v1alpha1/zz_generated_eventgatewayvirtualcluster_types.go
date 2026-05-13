@@ -68,7 +68,7 @@ type EventGatewayVirtualClusterAPISpec struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=enforce_on_gateway;passthrough
-	AclMode VirtualClusterACLMode `json:"aclMode,omitempty"`
+	AclMode VirtualClusterACLMode `json:"aclMode,omitzero"`
 
 	// How to handle authentication from clients.
 	//
@@ -83,7 +83,7 @@ type EventGatewayVirtualClusterAPISpec struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=512
-	Description string `json:"description,omitempty"`
+	Description string `json:"description,omitzero"`
 
 	// The backend cluster associated with the virtual cluster.
 	//
@@ -104,7 +104,7 @@ type EventGatewayVirtualClusterAPISpec struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=63
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
-	DNSLabel VirtualClusterDNSLabel `json:"dnsLabel,omitempty"`
+	DNSLabel VirtualClusterDNSLabel `json:"dnsLabel,omitzero"`
 
 	// Labels store metadata of an entity that can be used for filtering an entity
 	// list or for searching across entity types.
@@ -115,14 +115,14 @@ type EventGatewayVirtualClusterAPISpec struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxProperties=50
-	Labels Labels `json:"labels,omitempty"`
+	Labels Labels `json:"labels,omitzero"`
 
 	// The name of the virtual cluster.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=255
-	Name VirtualClusterName `json:"name,omitempty"`
+	Name VirtualClusterName `json:"name,omitzero"`
 
 	// Namespace allows to implement multitenancy using a single backend cluster.
 	// It allows to either hide or enforce a static prefix on resources (topics,
@@ -130,7 +130,7 @@ type EventGatewayVirtualClusterAPISpec struct {
 	//
 	//
 	// +optional
-	Namespace VirtualClusterNamespace `json:"namespace,omitempty"`
+	Namespace VirtualClusterNamespace `json:"namespace,omitzero"`
 
 	// **Pre-release Feature**
 	// This feature is currently in beta and is subject to change.
@@ -172,5 +172,5 @@ type EventGatewayVirtualClusterStatus struct {
 	// ObservedGeneration is the most recent generation observed
 	//
 	// +optional
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	ObservedGeneration int64 `json:"observedGeneration,omitzero"`
 }

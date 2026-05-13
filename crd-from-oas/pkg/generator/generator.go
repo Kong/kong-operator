@@ -2,6 +2,7 @@ package generator
 
 import (
 	"fmt"
+	"reflect"
 	"sort"
 	"strings"
 	"text/template"
@@ -39,7 +40,7 @@ type Config struct {
 	// Defaults to true.
 	GenerateGroupVersionInfo bool
 	// APIGroupPackagePath is the full Go import path for the generated API types package
-	// (e.g. "github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1").
+	// (e.g. "github.com/kong/kong-operator/v2/api/konnect/v1alpha1").
 	APIGroupPackagePath string
 	// APIGroupPackageAlias is the import alias for the generated API types package
 	// (e.g. "xkonnectv1alpha1").
@@ -208,12 +209,15 @@ func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error)
 	}
 	files = append(files, reconcilerFiles...)
 
-	// Resolve nested CEL paths (e.g. tls.client_identity.certificate) into a
-	// schema-type-level field config so that generateSchemaTypes can apply
+	// Build per-schema cursors by walking each entity's CEL config against the
+	// parsed schema tree using JSON-tag paths, so generateSchemaTypes can apply
 	// user-provided markers to fields on referenced shared types.
-	schemaTypeFieldConfig := g.buildSchemaTypeFieldConfig(parsed)
+	schemaCursors, err := g.buildSchemaCursors(parsed)
+	if err != nil {
+		return nil, err
+	}
 
-	sharedFiles, err := g.generateSharedFiles(parsed, referencedSchemas, schemaTypeFieldConfig)
+	sharedFiles, err := g.generateSharedFiles(parsed, referencedSchemas, schemaCursors)
 	if err != nil {
 		return nil, err
 	}
@@ -222,155 +226,244 @@ func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error)
 	return files, nil
 }
 
-// buildSchemaTypeFieldConfig resolves nested CEL config paths from entity configs into
-// a flat schema-type-keyed Config. For example, an entity config entry
-// `EventGatewayBackendCluster.cel.tls.client_identity.certificate._validations`
-// resolves — by walking the parsed OAS schemas via $ref chains — to
-// `ClientIdentity.certificate._validations` in the returned Config, which
-// generateSchemaTypes can then apply when emitting the shared ClientIdentity struct.
-func (g *Generator) buildSchemaTypeFieldConfig(parsed *parser.ParsedSpec) *config.Config {
+// getAPISpecCursor returns the *config.FieldConfig cursor narrowed to the
+// spec.apiSpec level for the given CRD root entity name. Returns nil when no
+// CEL config is defined for the entity or when the spec/apiSpec path is absent.
+func (g *Generator) getAPISpecCursor(entityName string) *config.FieldConfig {
 	if g.config.FieldConfig == nil {
 		return nil
 	}
-	entities := make(map[string]*config.EntityConfig)
-	for entityName, entityCfg := range g.config.FieldConfig.Entities {
-		if entityCfg == nil || len(entityCfg.Fields) == 0 {
-			continue
-		}
-		// Find the entity's schema in the parsed request bodies.
-		var entitySchema *parser.Schema
-		for _, schema := range parsed.RequestBodies {
-			if parser.GetEntityNameFromType(schema.Name) == entityName {
-				entitySchema = schema
-				break
-			}
-		}
-		if entitySchema == nil {
-			continue
-		}
-		// Entity-level fields (e.g. "tls") that have sub-config but no own Validations
-		// are path-segment nodes pointing into referenced schema types. Descend into
-		// any referenced schema to collect leaf validations there.
-		collectSchemaTypeValidations(entityCfg.Fields, entitySchema.Properties, parsed.Schemas, entities)
-
-		// Also handle root-level oneOf/anyOf variants (entity is a discriminated union).
-		// Config keys that match a variant ref name (e.g. "EventGatewayTLSListenerPolicy")
-		// are treated as descents into that variant's schema.
-		for _, variant := range append(entitySchema.OneOf, entitySchema.AnyOf...) {
-			if variant.RefName == "" {
-				continue
-			}
-			fieldCfg, ok := entityCfg.Fields[variant.RefName]
-			if !ok || fieldCfg == nil || len(fieldCfg.Fields) == 0 {
-				continue
-			}
-			variantSchema, ok := parsed.Schemas[variant.RefName]
-			if !ok || variantSchema == nil {
-				continue
-			}
-			// Use addSchemaFieldValidations (not collectSchemaTypeValidations) so that
-			// leaf validations directly on variant properties are recorded.
-			addSchemaFieldValidations(variant.RefName, fieldCfg.Fields, variantSchema.Properties, parsed.Schemas, entities)
-		}
-	}
-	if len(entities) == 0 {
+	entityCfg := g.config.FieldConfig.Entities[entityName]
+	if entityCfg == nil {
 		return nil
 	}
-	return &config.Config{Entities: entities}
+	root := &config.FieldConfig{Fields: entityCfg.Fields}
+	return root.Sub("spec").Sub("apiSpec")
 }
 
-// collectSchemaTypeValidations walks cfgFields alongside the matching props slice.
-// When a config field has sub-fields and its matching prop points to a referenced
-// schema ($ref or array-of-$ref), it recurses into that schema via addSchemaFieldValidations.
-// Entity-level validations (on top-level entity template fields) are NOT recorded
-// here because they are already handled by the entity template config.
-func collectSchemaTypeValidations(
-	cfgFields map[string]*config.FieldConfig,
-	props []*parser.Property,
+// buildSchemaCursors walks each entity's CEL config from the spec.apiSpec cursor
+// downward through the parsed OAS schema tree, building a map from each referenced
+// schema's Go type name to the *config.FieldConfig cursor at that schema level.
+// The cursor is later passed to writeSchemaTypeField so KubebuilderTags can look
+// up per-field custom validations. Returns an error for any CEL path that does
+// not correspond to a valid JSON-tag field at the resolved schema level.
+func (g *Generator) buildSchemaCursors(parsed *parser.ParsedSpec) (map[string]*config.FieldConfig, error) {
+	if g.config.FieldConfig == nil {
+		return nil, nil
+	}
+	cursors := make(map[string]*config.FieldConfig)
+	origins := make(map[string]string)
+	for name, schema := range parsed.RequestBodies {
+		entityName := parser.GetEntityNameFromType(name)
+		cursor := g.getAPISpecCursor(entityName)
+		if cursor == nil {
+			continue
+		}
+		if err := g.collectSchemaCursors(entityName, "spec.apiSpec", schema, cursor, parsed.Schemas, cursors, origins); err != nil {
+			return nil, fmt.Errorf("entity %q: %w", entityName, err)
+		}
+	}
+	return cursors, nil
+}
+
+// recordSchemaCursor stores the cursor for a generated schema type name and
+// rejects conflicting duplicate writes from different entity/path traversals.
+// Identical cursor trees are allowed so shared schemas can be reused safely.
+func (g *Generator) recordSchemaCursor(
+	typeName string,
+	entityName string,
+	path string,
+	cursor *config.FieldConfig,
+	out map[string]*config.FieldConfig,
+	origins map[string]string,
+) error {
+	source := fmt.Sprintf("entity %q path %q", entityName, path)
+	existing, ok := out[typeName]
+	if !ok {
+		out[typeName] = cursor
+		origins[typeName] = source
+		return nil
+	}
+	if fieldConfigsEqual(existing, cursor) {
+		return nil
+	}
+	return fmt.Errorf(
+		"schema cursor conflict for %q: %s conflicts with %s",
+		typeName,
+		origins[typeName],
+		source,
+	)
+}
+
+// fieldConfigsEqual reports whether two field-config trees are semantically
+// equivalent, treating nil and recursively-empty configs as the same value.
+func fieldConfigsEqual(a, b *config.FieldConfig) bool {
+	if isEmptyFieldConfig(a) && isEmptyFieldConfig(b) {
+		return true
+	}
+	return reflect.DeepEqual(a, b)
+}
+
+// isEmptyFieldConfig reports whether a field config carries no validations and
+// no non-empty descendants, which makes it equivalent to an absent cursor.
+func isEmptyFieldConfig(fc *config.FieldConfig) bool {
+	if fc == nil {
+		return true
+	}
+	if len(fc.Validations) > 0 {
+		return false
+	}
+	for _, child := range fc.Fields {
+		if !isEmptyFieldConfig(child) {
+			return false
+		}
+	}
+	return true
+}
+
+// collectSchemaCursors recursively walks schema properties and union variants,
+// recording the cursor for each referenced or inline schema type. It also
+// validates that all config keys at each level correspond to real JSON-tag fields.
+func (g *Generator) collectSchemaCursors(
+	entityName string, //nolint:unparam
+	path string,
+	schema *parser.Schema,
+	cursor *config.FieldConfig,
 	schemas map[string]*parser.Schema,
-	out map[string]*config.EntityConfig,
-) {
-	for fieldName, fieldCfg := range cfgFields {
-		if fieldCfg == nil || len(fieldCfg.Fields) == 0 {
+	out map[string]*config.FieldConfig,
+	origins map[string]string,
+) error {
+	if err := g.validateCursorAtLevel(path, cursor, schema); err != nil {
+		return err
+	}
+
+	// Walk regular properties.
+	for _, prop := range schema.Properties {
+		if skipProperty(prop) {
 			continue
 		}
-		prop := findPropertyByName(props, fieldName)
-		if prop == nil {
-			continue
-		}
+		jsonTag := jsonTagForProperty(prop)
+		propCursor := cursor.Sub(jsonTag)
+		propPath := path + "." + jsonTag
+
 		switch {
-		case prop.RefName != "":
-			refSchema, ok := schemas[prop.RefName]
-			if !ok || refSchema == nil {
+		case prop.RefName != "" && !prop.IsReference:
+			refSchema := schemas[prop.RefName]
+			if refSchema == nil {
 				continue
 			}
-			addSchemaFieldValidations(prop.RefName, fieldCfg.Fields, refSchema.Properties, schemas, out)
+			if err := g.recordSchemaCursor(fixInitialisms(prop.RefName), entityName, propPath, propCursor, out, origins); err != nil {
+				return err
+			}
+			if propCursor != nil {
+				if err := g.collectSchemaCursors(entityName, propPath, refSchema, propCursor, schemas, out, origins); err != nil {
+					return err
+				}
+			}
+
+		case isInlineObjectWithProperties(prop):
+			inlineTypeName := goFieldName(prop.Name)
+			if err := g.recordSchemaCursor(inlineTypeName, entityName, propPath, propCursor, out, origins); err != nil {
+				return err
+			}
+			inlineSchema := &parser.Schema{Properties: prop.Properties}
+			if propCursor != nil {
+				if err := g.collectSchemaCursors(entityName, propPath, inlineSchema, propCursor, schemas, out, origins); err != nil {
+					return err
+				}
+			}
+
 		case prop.Type == "array" && prop.Items != nil && prop.Items.RefName != "":
-			refSchema, ok := schemas[prop.Items.RefName]
-			if !ok || refSchema == nil {
+			// Array is transparent to the cursor: validations address the item's fields.
+			refSchema := schemas[prop.Items.RefName]
+			if refSchema == nil {
 				continue
 			}
-			addSchemaFieldValidations(prop.Items.RefName, fieldCfg.Fields, refSchema.Properties, schemas, out)
-		}
-	}
-}
-
-// addSchemaFieldValidations records leaf validations from cfgFields into out,
-// keyed by schemaName. Sub-fields that themselves point into further referenced
-// schemas are recursed into.
-func addSchemaFieldValidations(
-	schemaName string,
-	cfgFields map[string]*config.FieldConfig,
-	props []*parser.Property,
-	schemas map[string]*parser.Schema,
-	out map[string]*config.EntityConfig,
-) {
-	for fieldName, fieldCfg := range cfgFields {
-		if fieldCfg == nil {
-			continue
-		}
-		prop := findPropertyByName(props, fieldName)
-		if prop == nil {
-			continue
-		}
-		if len(fieldCfg.Validations) > 0 {
-			entityCfg, ok := out[schemaName]
-			if !ok {
-				entityCfg = &config.EntityConfig{Fields: make(map[string]*config.FieldConfig)}
-				out[schemaName] = entityCfg
+			if err := g.recordSchemaCursor(fixInitialisms(prop.Items.RefName), entityName, propPath, propCursor, out, origins); err != nil {
+				return err
 			}
-			entityCfg.Fields[fieldName] = &config.FieldConfig{Validations: fieldCfg.Validations}
-		}
-		if len(fieldCfg.Fields) > 0 {
-			switch {
-			case prop.RefName != "":
-				// $ref prop: descend into the referenced schema.
-				refSchema, ok := schemas[prop.RefName]
-				if ok && refSchema != nil {
-					addSchemaFieldValidations(prop.RefName, fieldCfg.Fields, refSchema.Properties, schemas, out)
+			if propCursor != nil {
+				if err := g.collectSchemaCursors(entityName, propPath, refSchema, propCursor, schemas, out, origins); err != nil {
+					return err
 				}
-			case prop.Type == "object" && len(prop.Properties) > 0:
-				// Inline anonymous object: the generator emits it as a named Go struct
-				// using the Pascal-case field name (e.g. client_identity → ClientIdentity).
-				inlineTypeName := goFieldName(prop.Name)
-				addSchemaFieldValidations(inlineTypeName, fieldCfg.Fields, prop.Properties, schemas, out)
-			case prop.Type == "array" && prop.Items != nil && prop.Items.RefName != "":
-				// Array of $ref items: descend into the item schema. Validations are keyed
-				// by the item ref name, matching the generated Go slice element type name.
-				refSchema, ok := schemas[prop.Items.RefName]
-				if ok && refSchema != nil {
-					addSchemaFieldValidations(prop.Items.RefName, fieldCfg.Fields, refSchema.Properties, schemas, out)
+			}
+
+		case len(prop.OneOf) > 0:
+			// Property-level discriminated union: variants are accessed via their
+			// discriminator-value JSON tag under the property's own JSON tag.
+			for _, variant := range buildUnionVariants(prop) {
+				variantTag := jsonName(variant.discValue)
+				variantCursor := propCursor.Sub(variantTag)
+				variantPath := propPath + "." + variantTag
+				variantSchema := schemas[variant.refName]
+				if variantSchema == nil {
+					continue
+				}
+				if err := g.recordSchemaCursor(fixInitialisms(variant.refName), entityName, variantPath, variantCursor, out, origins); err != nil {
+					return err
+				}
+				if variantCursor != nil {
+					if err := g.collectSchemaCursors(entityName, variantPath, variantSchema, variantCursor, schemas, out, origins); err != nil {
+						return err
+					}
 				}
 			}
 		}
 	}
+
+	// Handle root-level oneOf (entity is a discriminated union with inline embedding).
+	// Variant fields are flattened directly under apiSpec (no intermediate key).
+	if len(schema.OneOf) > 0 {
+		rootProp := buildRootUnionProperty(schema)
+		for _, variant := range buildUnionVariants(rootProp) {
+			variantTag := jsonName(variant.discValue)
+			variantCursor := cursor.Sub(variantTag)
+			variantPath := path + "." + variantTag
+			variantSchema := schemas[variant.refName]
+			if variantSchema == nil {
+				continue
+			}
+			if err := g.recordSchemaCursor(fixInitialisms(variant.refName), entityName, variantPath, variantCursor, out, origins); err != nil {
+				return err
+			}
+			if variantCursor != nil {
+				if err := g.collectSchemaCursors(entityName, variantPath, variantSchema, variantCursor, schemas, out, origins); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
-// findPropertyByName returns the property with the given name from a slice, or nil.
-func findPropertyByName(props []*parser.Property, name string) *parser.Property {
-	for _, p := range props {
-		if p.Name == name {
-			return p
+// validateCursorAtLevel checks that every key in cursor.Fields corresponds to a
+// valid JSON-tag field at the current schema level (properties or union variants).
+// Returns an error naming the offending path segment so the user can fix config.yaml.
+func (g *Generator) validateCursorAtLevel(path string, cursor *config.FieldConfig, schema *parser.Schema) error {
+	if cursor == nil || len(cursor.Fields) == 0 {
+		return nil
+	}
+
+	validTags := make(map[string]bool)
+	for _, prop := range schema.Properties {
+		if !skipProperty(prop) {
+			validTags[jsonTagForProperty(prop)] = true
+			// Property-level oneOf: variant tags are valid under the property's tag.
+			// Validation at the variant level happens during the next recursion.
+		}
+	}
+	// Root-level oneOf: variant tags are valid directly at this level.
+	if len(schema.OneOf) > 0 {
+		rootProp := buildRootUnionProperty(schema)
+		for _, variant := range buildUnionVariants(rootProp) {
+			validTags[jsonName(variant.discValue)] = true
+		}
+	}
+
+	for tag := range cursor.Fields {
+		if !validTags[tag] {
+			return fmt.Errorf("CEL config path %q: segment %q does not match any field", path, tag)
 		}
 	}
 	return nil
@@ -508,7 +601,7 @@ func (g *Generator) generateReconcilerEntityFiles(reconcilerEntities []string, p
 // generateSharedFiles generates files shared across all entities:
 // groupversion_info.go, doc.go, common_types.go, reconciler condition constants,
 // and schema_types.go.
-func (g *Generator) generateSharedFiles(parsed *parser.ParsedSpec, referencedSchemas map[string]bool, schemaTypeFieldConfig *config.Config) ([]GeneratedFile, error) {
+func (g *Generator) generateSharedFiles(parsed *parser.ParsedSpec, referencedSchemas map[string]bool, schemaCursors map[string]*config.FieldConfig) ([]GeneratedFile, error) {
 	var files []GeneratedFile
 
 	gviGeneratedContent, err := g.generateGroupVersionInfoGenerated(parsed)
@@ -556,7 +649,7 @@ func (g *Generator) generateSharedFiles(parsed *parser.ParsedSpec, referencedSch
 	if len(referencedSchemas) > 0 {
 		files = append(files, GeneratedFile{
 			Name:    "schema_types.go",
-			Content: g.generateSchemaTypes(referencedSchemas, parsed, schemaTypeFieldConfig),
+			Content: g.generateSchemaTypes(referencedSchemas, parsed, schemaCursors),
 		})
 
 		if testsContent := g.generateSchemaTypesTests(referencedSchemas, parsed); testsContent != "" {
@@ -701,7 +794,9 @@ func shouldSkipUnionMemberDiscriminator(refName string, prop *parser.Property, u
 }
 
 // generateSchemaTypes generates Go type definitions for referenced schemas.
-func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.ParsedSpec, schemaTypeFieldConfig *config.Config) string {
+// schemaCursors maps each schema's Go type name to the *config.FieldConfig cursor
+// at that schema's level, used to apply custom kubebuilder validation markers.
+func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.ParsedSpec, schemaCursors map[string]*config.FieldConfig) string {
 	var buf strings.Builder
 	fmt.Fprintf(&buf, "%s\n\npackage %s\n\n", sharedGeneratedFilePreamble, g.config.APIVersion)
 	unionMemberDiscriminators := collectUnionMemberDiscriminators(parsed)
@@ -746,6 +841,12 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 		if schema, ok := parsed.Schemas[refName]; ok {
 			goName := fixInitialisms(refName)
 
+			// Look up the cursor for this schema (may be nil if no CEL config).
+			var schemaCursor *config.FieldConfig
+			if schemaCursors != nil {
+				schemaCursor = schemaCursors[goName]
+			}
+
 			// Format the description as a proper comment
 			comment := formatSchemaComment(goName, schema.Description)
 
@@ -759,10 +860,10 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 					if skipProperty(prop) || shouldSkipUnionMemberDiscriminator(refName, prop, unionMemberDiscriminators) {
 						continue
 					}
-					g.writeSchemaTypeField(&buf, prop, goName, schemaTypeFieldConfig)
+					g.writeSchemaTypeField(&buf, prop, goName, schemaCursor)
 				}
 				buf.WriteString("}\n\n")
-				g.writeNestedInlineTypes(&buf, schema.Properties, emittedNested, schemaTypeFieldConfig)
+				g.writeNestedInlineTypes(&buf, schema.Properties, emittedNested, schemaCursor)
 				// Emit union type definitions for any property-level oneOf.
 				for _, prop := range schema.Properties {
 					if skipProperty(prop) || len(prop.OneOf) == 0 {
@@ -864,11 +965,11 @@ func (g *Generator) schemaTypesImports(refNames []string, parsed *parser.ParsedS
 	return
 }
 
-func (g *Generator) writeSchemaTypeField(buf *strings.Builder, prop *parser.Property, typeName string, fieldConfig *config.Config) {
+func (g *Generator) writeSchemaTypeField(buf *strings.Builder, prop *parser.Property, typeName string, fieldCursor *config.FieldConfig) {
 	buf.WriteString(formatComment(prop.Description))
 	buf.WriteString("\n")
 	buf.WriteString("\t//\n")
-	for _, tag := range KubebuilderTags(prop, typeName, fieldConfig) {
+	for _, tag := range KubebuilderTags(prop, fieldCursor) {
 		fmt.Fprintf(buf, "\t// %s\n", tag)
 	}
 	goType := g.goType(prop)
@@ -880,7 +981,7 @@ func (g *Generator) writeSchemaTypeField(buf *strings.Builder, prop *parser.Prop
 	if len(prop.OneOf) > 0 {
 		goType = "*" + typeName + goFieldName(prop.Name)
 	}
-	fmt.Fprintf(buf, "\t%s %s `json:\"%s\"`\n", goFieldName(prop.Name), goType, jsonTag(prop))
+	fmt.Fprintf(buf, "\t%s %s `json:\"%s\"`\n", goFieldName(prop.Name), goType, jsonTag(prop, goType))
 }
 
 // writeNestedInlineTypes emits Go type definitions for any property that is an
@@ -893,20 +994,22 @@ func (g *Generator) writeSchemaTypeField(buf *strings.Builder, prop *parser.Prop
 // emitted is a shared set used to dedupe across all parent schemas: a type
 // name is only emitted once per package. Recurses into nested objects so
 // arbitrarily deep inline shapes are handled.
-func (g *Generator) writeNestedInlineTypes(buf *strings.Builder, props []*parser.Property, emitted map[string]bool, schemaTypeFieldConfig *config.Config) {
+func (g *Generator) writeNestedInlineTypes(buf *strings.Builder, props []*parser.Property, emitted map[string]bool, parentCursor *config.FieldConfig) {
 	for _, prop := range props {
 		if skipProperty(prop) || prop == nil {
 			continue
 		}
 		if prop.Items != nil {
-			g.writeNestedInlineTypes(buf, []*parser.Property{prop.Items}, emitted, schemaTypeFieldConfig)
+			g.writeNestedInlineTypes(buf, []*parser.Property{prop.Items}, emitted, parentCursor)
 		}
 		if !isInlineObjectWithProperties(prop) {
 			continue
 		}
 		typeName := goFieldName(prop.Name)
+		// Advance cursor to the inline struct level.
+		inlineCursor := parentCursor.Sub(jsonTagForProperty(prop))
 		if emitted[typeName] {
-			g.writeNestedInlineTypes(buf, prop.Properties, emitted, schemaTypeFieldConfig)
+			g.writeNestedInlineTypes(buf, prop.Properties, emitted, inlineCursor)
 			continue
 		}
 		emitted[typeName] = true
@@ -917,11 +1020,11 @@ func (g *Generator) writeNestedInlineTypes(buf *strings.Builder, props []*parser
 			if skipProperty(nested) {
 				continue
 			}
-			g.writeSchemaTypeField(buf, nested, typeName, schemaTypeFieldConfig)
+			g.writeSchemaTypeField(buf, nested, typeName, inlineCursor)
 		}
 		buf.WriteString("}\n\n")
 
-		g.writeNestedInlineTypes(buf, prop.Properties, emitted, schemaTypeFieldConfig)
+		g.writeNestedInlineTypes(buf, prop.Properties, emitted, inlineCursor)
 	}
 }
 
@@ -1013,39 +1116,13 @@ func isScalarStringIntOneOf(variants []*parser.Property) bool {
 func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string, error) {
 	entityName := parser.GetEntityNameFromType(name)
 
-	// Build a map of valid field names for validation
-	validFields := make(map[string]struct{})
-	for _, prop := range schema.Properties {
-		if !skipProperty(prop) {
-			validFields[prop.Name] = struct{}{}
-		}
-	}
-	// Also include dependency fields
-	for _, dep := range schema.Dependencies {
-		validFields[dep.JSONName] = struct{}{}
-	}
-	// Also include root oneOf/anyOf variant ref names (discriminated unions).
-	for _, v := range schema.OneOf {
-		if v.RefName != "" {
-			validFields[v.RefName] = struct{}{}
-		}
-	}
-	for _, v := range schema.AnyOf {
-		if v.RefName != "" {
-			validFields[v.RefName] = struct{}{}
-		}
-	}
+	// apiSpecCursor is the FieldConfig cursor pre-advanced to the spec.apiSpec level
+	// for this entity. KubebuilderTags advances it further by each property's JSON tag.
+	apiSpecCursor := g.getAPISpecCursor(entityName)
 
-	// Validate that all configured fields exist
-	if g.config.FieldConfig != nil {
-		if err := g.config.FieldConfig.ValidateAgainstSchema(entityName, validFields); err != nil {
-			return "", err
-		}
-	}
-
-	// Create a closure that captures entityName and fieldConfig for KubebuilderTags
+	// Create a closure that passes the apiSpec-level cursor to KubebuilderTags.
 	kubebuilderTagsWithConfig := func(prop *parser.Property) []string {
-		return KubebuilderTags(prop, entityName, g.config.FieldConfig)
+		return KubebuilderTags(prop, apiSpecCursor)
 	}
 
 	hasOptionalSecretRef := g.config.SecretRefEntities[entityName]
@@ -1123,6 +1200,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		HasRootReconciler         bool
 		ImmediateParentDependency *parser.Dependency
 		Categories                []string
+		SingletonNoID             bool
 	}{
 		EntityName:                entityName,
 		Schema:                    schema,
@@ -1135,6 +1213,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		HasRootReconciler:         hasRootReconciler,
 		ImmediateParentDependency: rootRefDependency(schema),
 		Categories:                categories,
+		SingletonNoID:             isSingletonNoID(schema),
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
@@ -1167,14 +1246,14 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 
 func (g *Generator) generateCRDTypeTests(entityName string, schema *parser.Schema) string {
 	unionSpecs := buildCRDAPISpecUnionFieldSpecs(schema)
-	if len(unionSpecs) == 0 {
-		return ""
+	var wrapperSpecs []unionWrapperTestSpec
+	if len(unionSpecs) > 0 {
+		wrapperSpecs = []unionWrapperTestSpec{{
+			StructTypeName: entityName + "APISpec",
+			Fields:         unionSpecs,
+		}}
 	}
-
-	return emitUnionTests(g.config.APIVersion, unionSpecs, []unionWrapperTestSpec{{
-		StructTypeName: entityName + "APISpec",
-		Fields:         unionSpecs,
-	}})
+	return emitUnionTests(g.config.APIVersion, unionSpecs, wrapperSpecs, []string{entityName + "APISpec"})
 }
 
 func (g *Generator) generateSchemaTypesTests(refs map[string]bool, parsed *parser.ParsedSpec) string {
@@ -1187,6 +1266,7 @@ func (g *Generator) generateSchemaTypesTests(refs map[string]bool, parsed *parse
 	unionSpecs := make([]unionFieldSpec, 0)
 	seenUnionTypes := make(map[string]struct{})
 	wrapperSpecs := make([]unionWrapperTestSpec, 0)
+	var marshalTestTypes []string
 
 	for _, refName := range refNames {
 		schema, ok := parsed.Schemas[refName]
@@ -1195,6 +1275,11 @@ func (g *Generator) generateSchemaTypesTests(refs map[string]bool, parsed *parse
 		}
 
 		goName := fixInitialisms(refName)
+
+		if len(schema.Properties) > 0 {
+			marshalTestTypes = append(marshalTestTypes, goName)
+		}
+
 		if hasRefVariants(schema.OneOf) && schema.Discriminator != "" {
 			rootSpec := buildUnionFieldSpec(goName, goName, refName, &parser.Property{
 				Name:                 goName,
@@ -1218,7 +1303,7 @@ func (g *Generator) generateSchemaTypesTests(refs map[string]bool, parsed *parse
 		})
 	}
 
-	return emitUnionTests(g.config.APIVersion, unionSpecs, wrapperSpecs)
+	return emitUnionTests(g.config.APIVersion, unionSpecs, wrapperSpecs, marshalTestTypes)
 }
 
 func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string, error) {
@@ -1669,19 +1754,33 @@ func emitUnionWrapperUnmarshalJSON(structTypeName string, fields []unionFieldSpe
 	return buf.String()
 }
 
-func emitUnionTests(pkgName string, unionSpecs []unionFieldSpec, wrapperSpecs []unionWrapperTestSpec) string {
-	if len(unionSpecs) == 0 && len(wrapperSpecs) == 0 {
+func emitUnionTests(pkgName string, unionSpecs []unionFieldSpec, wrapperSpecs []unionWrapperTestSpec, marshalTestTypes []string) string {
+	if len(unionSpecs) == 0 && len(wrapperSpecs) == 0 && len(marshalTestTypes) == 0 {
 		return ""
 	}
 
 	var buf strings.Builder
 	fmt.Fprintf(&buf, "%s\n\npackage %s\n\n", sharedGeneratedFilePreamble, pkgName)
 	buf.WriteString("import (\n")
-	if len(wrapperSpecs) > 0 {
+	if len(wrapperSpecs) > 0 || len(marshalTestTypes) > 0 {
 		buf.WriteString("\t\"encoding/json\"\n")
 	}
 	buf.WriteString("\t\"testing\"\n")
 	buf.WriteString(")\n\n")
+
+	for _, typeName := range marshalTestTypes {
+		fmt.Fprintf(&buf, "func Test%s_MarshalEmpty(t *testing.T) {\n", typeName)
+		buf.WriteString("\tt.Parallel()\n\n")
+		fmt.Fprintf(&buf, "\tvar spec %s\n", typeName)
+		buf.WriteString("\tout, err := json.Marshal(spec)\n")
+		buf.WriteString("\tif err != nil {\n")
+		buf.WriteString("\t\tt.Fatalf(\"json.Marshal() error = %v\", err)\n")
+		buf.WriteString("\t}\n")
+		buf.WriteString("\tif got, want := string(out), \"{}\"; got != want {\n")
+		buf.WriteString("\t\tt.Fatalf(\"empty spec must marshal to {}: got %q, want %q\", got, want)\n")
+		buf.WriteString("\t}\n")
+		buf.WriteString("}\n\n")
+	}
 
 	for _, unionSpec := range unionSpecs {
 		fmt.Fprintf(&buf, "func Test%sUnmarshalJSON_NilReceiver(t *testing.T) {\n", unionSpec.TypeName)
@@ -3116,12 +3215,24 @@ func lowerCamelCase(s string) string {
 	return strings.ToLower(s[:1]) + s[1:]
 }
 
+// tagOmitSuffix returns the JSON tag omit suffix appropriate for a resolved Go type.
+// Pointer, slice, and map types use omitempty (zero value is nil/empty, omitempty works).
+// All other types (named structs, primitives, type aliases) use omitzero — omitempty
+// has no effect on struct types, producing {"namespace":{}} for zero-valued struct fields.
+func tagOmitSuffix(resolvedGoType string) string {
+	if strings.HasPrefix(resolvedGoType, "*") ||
+		strings.HasPrefix(resolvedGoType, "[]") ||
+		strings.HasPrefix(resolvedGoType, "map[") {
+		return ",omitempty"
+	}
+	return ",omitzero"
+}
+
 // jsonTag generates the json struct tag using camelCase for K8s wire format.
-func jsonTag(prop *parser.Property) string {
-	tag := jsonName(prop.Name)
-	// K8s API best practice: all fields should have omitempty
-	tag += ",omitempty"
-	return tag
+// resolvedGoType is the Go type string as it appears in the emitted field declaration
+// (e.g. "string", "*KonnectEntityRef", "[]Foo", "VirtualClusterNamespace").
+func jsonTag(prop *parser.Property, resolvedGoType string) string {
+	return jsonName(prop.Name) + tagOmitSuffix(resolvedGoType)
 }
 
 // isRefProperty checks if a property is a reference.

@@ -92,7 +92,7 @@ type EventGatewayListenerPolicyStatus struct {
 	// ObservedGeneration is the most recent generation observed
 	//
 	// +optional
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	ObservedGeneration int64 `json:"observedGeneration,omitzero"`
 }
 
 // EventGatewayListenerPolicyConfig represents a union type for EventGatewayListenerPolicyConfig.

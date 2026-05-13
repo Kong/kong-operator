@@ -2313,7 +2313,7 @@ func (in *KongSNIList) DeepCopyObject() runtime.Object {
 func (in *KongSNISpec) DeepCopyInto(out *KongSNISpec) {
 	*out = *in
 	in.KongSNIAPISpec.DeepCopyInto(&out.KongSNIAPISpec)
-	out.CertificateRef = in.CertificateRef
+	in.CertificateRef.DeepCopyInto(&out.CertificateRef)
 	if in.Adopt != nil {
 		in, out := &in.Adopt, &out.Adopt
 		*out = new(commonv1alpha1.AdoptOptions)

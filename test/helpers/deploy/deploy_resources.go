@@ -479,6 +479,58 @@ func KonnectEventGateway(
 	return &obj
 }
 
+// EventGatewayVirtualCluster deploys an EventGatewayVirtualCluster resource and returns it.
+func EventGatewayVirtualCluster(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	gateway *konnectv1alpha1.KonnectEventGateway,
+	opts ...ObjOption,
+) *konnectv1alpha1.EventGatewayVirtualCluster {
+	t.Helper()
+	name := "virtual-cluster-" + randomSuffix()
+	backendClusterName := konnectv1alpha1.BackendClusterName("backend-cluster")
+	obj := konnectv1alpha1.EventGatewayVirtualCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: konnectv1alpha1.EventGatewayVirtualClusterSpec{
+			GatewayRef: commonv1alpha1.ObjectRef{
+				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{
+					Name: gateway.Name,
+				},
+			},
+			APISpec: konnectv1alpha1.EventGatewayVirtualClusterAPISpec{
+				AclMode: konnectv1alpha1.VirtualClusterACLMode("enforce_on_gateway"),
+				Authentication: []konnectv1alpha1.VirtualClusterAuthenticationScheme{
+					{
+						Type:      konnectv1alpha1.VirtualClusterAuthenticationSchemeTypeAnonymous,
+						Anonymous: &konnectv1alpha1.VirtualClusterAuthenticationAnonymous{},
+					},
+				},
+				Destination: &konnectv1alpha1.BackendClusterReferenceModify{
+					Name: new(backendClusterName),
+				},
+				DNSLabel: konnectv1alpha1.VirtualClusterDNSLabel("vc-" + randomSuffix()),
+				Name:     konnectv1alpha1.VirtualClusterName(name),
+				Namespace: konnectv1alpha1.VirtualClusterNamespace{
+					Mode:   "hide_prefix",
+					Prefix: "tenant_",
+				},
+			},
+		},
+	}
+
+	for _, opt := range opts {
+		opt(&obj)
+	}
+
+	require.NoError(t, cl.Create(ctx, &obj))
+	logObjectCreate(t, &obj)
+	return &obj
+}
+
 // EventGatewayBackendCluster deploys an EventGatewayBackendCluster resource and returns it.
 func EventGatewayBackendCluster(
 	t *testing.T,
@@ -1331,7 +1383,7 @@ func KongSNIAttachedToCertificate(
 			Name: name,
 		},
 		Spec: configurationv1alpha1.KongSNISpec{
-			CertificateRef: commonv1alpha1.NameRef{
+			CertificateRef: commonv1alpha1.NamespacedRef{
 				Name: cert.Name,
 			},
 			KongSNIAPISpec: configurationv1alpha1.KongSNIAPISpec{

@@ -298,8 +298,14 @@ func GetRetryAfterFromRateLimitError(err error) (time.Duration, bool) {
 	return DefaultRateLimitRetryAfter, true
 }
 
-// ErrorIsConflictError returns true if the provided error is a 409 ConflictError.
-// This can happen when the entity already exists.
+// ErrorIsSDKBadRequestError returns true if the provided error is a BadRequestError.
+func ErrorIsSDKBadRequestError(err error) bool {
+	_, ok := errors.AsType[*sdkkonnecterrs.BadRequestError](err)
+	return ok
+}
+
+// ErrorIsCreateConflict returns true if the provided error is a Konnect conflict error.
+//
 // Example error body:
 //
 //	{
@@ -308,35 +314,6 @@ func GetRetryAfterFromRateLimitError(err error) (time.Duration, bool) {
 //		"instance": "kong:trace:14893476519012495000",
 //		"detail": "Key (org_id, name)=(8a6e97b1-1111-1111-1111-111111111111, test1) already exists."
 //	}
-func ErrorIsConflictError(err error) bool {
-	errConflict, ok := errors.AsType[*sdkkonnecterrs.ConflictError](err)
-	if !ok {
-		return false
-	}
-
-	if !errConflictHasStatusCode(errConflict, 409) {
-		return false
-	}
-
-	return true
-}
-
-func errConflictHasStatusCode(err *sdkkonnecterrs.ConflictError, n int) bool {
-	if err == nil {
-		return false
-	}
-	// NOTE: Status contains a float64 value, so we need to cast it to int to deterministically compare.
-	floatStatus, okStatus := (err.Status).(float64)
-	return okStatus && int(floatStatus) == n
-}
-
-// ErrorIsSDKBadRequestError returns true if the provided error is a BadRequestError.
-func ErrorIsSDKBadRequestError(err error) bool {
-	_, ok := errors.AsType[*sdkkonnecterrs.BadRequestError](err)
-	return ok
-}
-
-// ErrorIsCreateConflict returns true if the provided error is a Konnect conflict error.
 //
 // NOTE: Konnect APIs specific for Konnect only APIs like Gateway Control Planes
 // return 409 conflict for already existing entities and return ConflictError.
@@ -375,6 +352,10 @@ func ErrorIsCreateConflict(err error) bool {
 //	]
 //	}
 func SDKErrorIsConflict(sdkError *sdkkonnecterrs.SDKError) bool {
+	if sdkError.StatusCode == http.StatusConflict {
+		return true
+	}
+
 	sdkErrorBody, err := ParseSDKErrorBody(sdkError.Body)
 	if err != nil {
 		return false
@@ -476,7 +457,7 @@ func IgnoreUnrecoverableAPIErr(err error, logger logr.Logger) error {
 	if ErrorIsSDKBadRequestError(err) ||
 		ErrorIsSDKError400(err) ||
 		ErrorIsForbiddenError(err) ||
-		ErrorIsConflictError(err) {
+		ErrorIsCreateConflict(err) {
 		log.Debug(logger, "ignoring unrecoverable API error, consult object's status for details", "err", err)
 		return nil
 	}
@@ -525,6 +506,15 @@ func errorIsDataPlaneGroupConflictProposedConfigIsTheSame(err error) bool {
 	}
 
 	return true
+}
+
+func errConflictHasStatusCode(err *sdkkonnecterrs.ConflictError, n int) bool {
+	if err == nil {
+		return false
+	}
+	// NOTE: Status contains a float64 value, so we need to cast it to int to deterministically compare.
+	floatStatus, okStatus := (err.Status).(float64)
+	return okStatus && int(floatStatus) == n
 }
 
 func errorIsDataPlaneGroupBadRequestPreviousConfigNotFinishedProvisioning(err error) bool {
