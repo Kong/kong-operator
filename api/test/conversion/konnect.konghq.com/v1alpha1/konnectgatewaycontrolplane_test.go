@@ -3,12 +3,14 @@ package v1alpha1_test
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
@@ -30,12 +32,13 @@ func TestKonnectGatewayControlPlane_ConvertTo(t *testing.T) {
 	cases := []struct {
 		name             string
 		spec             v1alpha1.KonnectGatewayControlPlaneSpec
+		status           v1alpha1.KonnectGatewayControlPlaneStatus
 		mirror           *v1alpha1.MirrorSpec
 		expectsCreateReq bool
 		expectError      bool
 	}{
 		{
-			name: "Origin with all fields",
+			name: "Origin with all fields and status",
 			spec: v1alpha1.KonnectGatewayControlPlaneSpec{
 				CreateControlPlaneRequest: v1alpha1.CreateControlPlaneRequest{
 					Name:         new("test-name"),
@@ -56,7 +59,45 @@ func TestKonnectGatewayControlPlane_ConvertTo(t *testing.T) {
 				},
 				KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{},
 			},
+			status: v1alpha1.KonnectGatewayControlPlaneStatus{
+				Conditions: []metav1.Condition{
+					{
+						Type:               "Programmed",
+						Status:             metav1.ConditionTrue,
+						Reason:             "Valid",
+						Message:            "Resource is programmed",
+						LastTransitionTime: metav1.NewTime(time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)),
+					},
+				},
+				KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
+					ID:        "konnect-id-123",
+					ServerURL: "https://us.api.konghq.com",
+					OrgID:     "org-456",
+				},
+				Endpoints: &v1alpha1.KonnectEndpoints{
+					TelemetryEndpoint:    "https://telemetry.konghq.com",
+					ControlPlaneEndpoint: "https://cp.konghq.com",
+				},
+			},
 			mirror:           nil,
+			expectsCreateReq: true,
+		},
+		{
+			name: "Status with nil endpoints",
+			spec: v1alpha1.KonnectGatewayControlPlaneSpec{
+				CreateControlPlaneRequest: v1alpha1.CreateControlPlaneRequest{
+					Name: new("test-name"),
+				},
+				Source:               new(commonv1alpha1.EntitySourceOrigin),
+				KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{},
+			},
+			status: v1alpha1.KonnectGatewayControlPlaneStatus{
+				KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
+					ID:        "konnect-id-789",
+					ServerURL: "https://eu.api.konghq.com",
+					OrgID:     "org-789",
+				},
+			},
 			expectsCreateReq: true,
 		},
 		{
@@ -76,7 +117,8 @@ func TestKonnectGatewayControlPlane_ConvertTo(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			obj := &v1alpha1.KonnectGatewayControlPlane{
-				Spec: tc.spec,
+				Spec:   tc.spec,
+				Status: tc.status,
 			}
 			obj.Spec.Mirror = tc.mirror
 			if tc.expectError {
@@ -110,6 +152,17 @@ func TestKonnectGatewayControlPlane_ConvertTo(t *testing.T) {
 			assert.Equal(t, tc.spec.Source, dst.Spec.Source)
 			assert.Equal(t, tc.spec.Members, dst.Spec.Members)
 			assert.Equal(t, tc.spec.KonnectConfiguration.APIAuthConfigurationRef.Name, dst.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name)
+
+			// Verify status conversion.
+			assert.Equal(t, tc.status.Conditions, dst.Status.Conditions)
+			assert.Equal(t, tc.status.KonnectEntityStatus, dst.Status.KonnectEntityStatus)
+			if tc.status.Endpoints != nil {
+				require.NotNil(t, dst.Status.Endpoints)
+				assert.Equal(t, tc.status.Endpoints.TelemetryEndpoint, dst.Status.Endpoints.TelemetryEndpoint)
+				assert.Equal(t, tc.status.Endpoints.ControlPlaneEndpoint, dst.Status.Endpoints.ControlPlaneEndpoint)
+			} else {
+				assert.Nil(t, dst.Status.Endpoints)
+			}
 		})
 	}
 }
@@ -132,6 +185,7 @@ func TestKonnectGatewayControlPlane_ConvertFrom(t *testing.T) {
 	cases := []struct {
 		name             string
 		src              konnectv1alpha2.KonnectGatewayControlPlaneSpec
+		status           konnectv1alpha2.KonnectGatewayControlPlaneStatus
 		mirror           *konnectv1alpha2.MirrorSpec
 		expectsCreateReq bool
 		expectError      bool
@@ -152,13 +206,40 @@ func TestKonnectGatewayControlPlane_ConvertFrom(t *testing.T) {
 				Members:              members,
 				KonnectConfiguration: konnectConfig,
 			},
+			status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
+				Conditions: []metav1.Condition{
+					{
+						Type:               "Programmed",
+						Status:             metav1.ConditionTrue,
+						Reason:             "Valid",
+						Message:            "Resource is programmed",
+						LastTransitionTime: metav1.NewTime(time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)),
+					},
+				},
+				KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
+					ID:        "konnect-id-123",
+					ServerURL: "https://us.api.konghq.com",
+					OrgID:     "org-456",
+				},
+				Endpoints: &konnectv1alpha2.KonnectEndpoints{
+					TelemetryEndpoint:    "https://telemetry.konghq.com",
+					ControlPlaneEndpoint: "https://cp.konghq.com",
+				},
+			},
 			mirror:           &konnectv1alpha2.MirrorSpec{Konnect: konnectv1alpha2.MirrorKonnect{ID: commonv1alpha1.KonnectIDType("mirror-id")}},
 			expectsCreateReq: true,
 		},
 		{
-			name: "No CreateControlPlaneRequest, no Mirror",
+			name: "Status with nil endpoints",
 			src: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 				Source: new(source),
+			},
+			status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
+				KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
+					ID:        "konnect-id-789",
+					ServerURL: "https://eu.api.konghq.com",
+					OrgID:     "org-789",
+				},
 			},
 			mirror:           nil,
 			expectsCreateReq: false,
@@ -180,7 +261,8 @@ func TestKonnectGatewayControlPlane_ConvertFrom(t *testing.T) {
 				return
 			}
 			src := &konnectv1alpha2.KonnectGatewayControlPlane{
-				Spec: tc.src,
+				Spec:   tc.src,
+				Status: tc.status,
 			}
 			src.Spec.Mirror = tc.mirror
 			require.NoError(t, obj.ConvertFrom(src))
@@ -205,6 +287,17 @@ func TestKonnectGatewayControlPlane_ConvertFrom(t *testing.T) {
 			assert.Equal(t, tc.src.Source, obj.Spec.Source)
 			assert.Equal(t, tc.src.Members, obj.Spec.Members)
 			assert.Equal(t, tc.src.KonnectConfiguration.APIAuthConfigurationRef.Name, obj.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name)
+
+			// Verify status conversion.
+			assert.Equal(t, tc.status.Conditions, obj.Status.Conditions)
+			assert.Equal(t, tc.status.KonnectEntityStatus, obj.Status.KonnectEntityStatus)
+			if tc.status.Endpoints != nil {
+				require.NotNil(t, obj.Status.Endpoints)
+				assert.Equal(t, tc.status.Endpoints.TelemetryEndpoint, obj.Status.Endpoints.TelemetryEndpoint)
+				assert.Equal(t, tc.status.Endpoints.ControlPlaneEndpoint, obj.Status.Endpoints.ControlPlaneEndpoint)
+			} else {
+				assert.Nil(t, obj.Status.Endpoints)
+			}
 		})
 	}
 }
