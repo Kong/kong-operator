@@ -2,6 +2,7 @@ package generator
 
 import (
 	"fmt"
+	"reflect"
 	"sort"
 	"strings"
 	"text/template"
@@ -251,17 +252,73 @@ func (g *Generator) buildSchemaCursors(parsed *parser.ParsedSpec) (map[string]*c
 		return nil, nil
 	}
 	cursors := make(map[string]*config.FieldConfig)
+	origins := make(map[string]string)
 	for name, schema := range parsed.RequestBodies {
 		entityName := parser.GetEntityNameFromType(name)
 		cursor := g.getAPISpecCursor(entityName)
 		if cursor == nil {
 			continue
 		}
-		if err := g.collectSchemaCursors(entityName, "spec.apiSpec", schema, cursor, parsed.Schemas, cursors); err != nil {
+		if err := g.collectSchemaCursors(entityName, "spec.apiSpec", schema, cursor, parsed.Schemas, cursors, origins); err != nil {
 			return nil, fmt.Errorf("entity %q: %w", entityName, err)
 		}
 	}
 	return cursors, nil
+}
+
+// recordSchemaCursor stores the cursor for a generated schema type name and
+// rejects conflicting duplicate writes from different entity/path traversals.
+// Identical cursor trees are allowed so shared schemas can be reused safely.
+func (g *Generator) recordSchemaCursor(
+	typeName string,
+	entityName string,
+	path string,
+	cursor *config.FieldConfig,
+	out map[string]*config.FieldConfig,
+	origins map[string]string,
+) error {
+	source := fmt.Sprintf("entity %q path %q", entityName, path)
+	existing, ok := out[typeName]
+	if !ok {
+		out[typeName] = cursor
+		origins[typeName] = source
+		return nil
+	}
+	if fieldConfigsEqual(existing, cursor) {
+		return nil
+	}
+	return fmt.Errorf(
+		"schema cursor conflict for %q: %s conflicts with %s",
+		typeName,
+		origins[typeName],
+		source,
+	)
+}
+
+// fieldConfigsEqual reports whether two field-config trees are semantically
+// equivalent, treating nil and recursively-empty configs as the same value.
+func fieldConfigsEqual(a, b *config.FieldConfig) bool {
+	if isEmptyFieldConfig(a) && isEmptyFieldConfig(b) {
+		return true
+	}
+	return reflect.DeepEqual(a, b)
+}
+
+// isEmptyFieldConfig reports whether a field config carries no validations and
+// no non-empty descendants, which makes it equivalent to an absent cursor.
+func isEmptyFieldConfig(fc *config.FieldConfig) bool {
+	if fc == nil {
+		return true
+	}
+	if len(fc.Validations) > 0 {
+		return false
+	}
+	for _, child := range fc.Fields {
+		if !isEmptyFieldConfig(child) {
+			return false
+		}
+	}
+	return true
 }
 
 // collectSchemaCursors recursively walks schema properties and union variants,
@@ -274,6 +331,7 @@ func (g *Generator) collectSchemaCursors(
 	cursor *config.FieldConfig,
 	schemas map[string]*parser.Schema,
 	out map[string]*config.FieldConfig,
+	origins map[string]string,
 ) error {
 	if err := g.validateCursorAtLevel(path, cursor, schema); err != nil {
 		return err
@@ -294,19 +352,23 @@ func (g *Generator) collectSchemaCursors(
 			if refSchema == nil {
 				continue
 			}
-			out[fixInitialisms(prop.RefName)] = propCursor
+			if err := g.recordSchemaCursor(fixInitialisms(prop.RefName), entityName, propPath, propCursor, out, origins); err != nil {
+				return err
+			}
 			if propCursor != nil {
-				if err := g.collectSchemaCursors(entityName, propPath, refSchema, propCursor, schemas, out); err != nil {
+				if err := g.collectSchemaCursors(entityName, propPath, refSchema, propCursor, schemas, out, origins); err != nil {
 					return err
 				}
 			}
 
 		case isInlineObjectWithProperties(prop):
 			inlineTypeName := goFieldName(prop.Name)
-			out[inlineTypeName] = propCursor
+			if err := g.recordSchemaCursor(inlineTypeName, entityName, propPath, propCursor, out, origins); err != nil {
+				return err
+			}
 			inlineSchema := &parser.Schema{Properties: prop.Properties}
 			if propCursor != nil {
-				if err := g.collectSchemaCursors(entityName, propPath, inlineSchema, propCursor, schemas, out); err != nil {
+				if err := g.collectSchemaCursors(entityName, propPath, inlineSchema, propCursor, schemas, out, origins); err != nil {
 					return err
 				}
 			}
@@ -317,9 +379,11 @@ func (g *Generator) collectSchemaCursors(
 			if refSchema == nil {
 				continue
 			}
-			out[fixInitialisms(prop.Items.RefName)] = propCursor
+			if err := g.recordSchemaCursor(fixInitialisms(prop.Items.RefName), entityName, propPath, propCursor, out, origins); err != nil {
+				return err
+			}
 			if propCursor != nil {
-				if err := g.collectSchemaCursors(entityName, propPath, refSchema, propCursor, schemas, out); err != nil {
+				if err := g.collectSchemaCursors(entityName, propPath, refSchema, propCursor, schemas, out, origins); err != nil {
 					return err
 				}
 			}
@@ -335,9 +399,11 @@ func (g *Generator) collectSchemaCursors(
 				if variantSchema == nil {
 					continue
 				}
-				out[fixInitialisms(variant.refName)] = variantCursor
+				if err := g.recordSchemaCursor(fixInitialisms(variant.refName), entityName, variantPath, variantCursor, out, origins); err != nil {
+					return err
+				}
 				if variantCursor != nil {
-					if err := g.collectSchemaCursors(entityName, variantPath, variantSchema, variantCursor, schemas, out); err != nil {
+					if err := g.collectSchemaCursors(entityName, variantPath, variantSchema, variantCursor, schemas, out, origins); err != nil {
 						return err
 					}
 				}
@@ -357,9 +423,11 @@ func (g *Generator) collectSchemaCursors(
 			if variantSchema == nil {
 				continue
 			}
-			out[fixInitialisms(variant.refName)] = variantCursor
+			if err := g.recordSchemaCursor(fixInitialisms(variant.refName), entityName, variantPath, variantCursor, out, origins); err != nil {
+				return err
+			}
 			if variantCursor != nil {
-				if err := g.collectSchemaCursors(entityName, variantPath, variantSchema, variantCursor, schemas, out); err != nil {
+				if err := g.collectSchemaCursors(entityName, variantPath, variantSchema, variantCursor, schemas, out, origins); err != nil {
 					return err
 				}
 			}

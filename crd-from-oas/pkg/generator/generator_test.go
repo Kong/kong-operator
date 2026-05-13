@@ -1557,6 +1557,127 @@ func TestBuildSchemaCursors_RejectsWrongSnakeCasePath(t *testing.T) {
 	assert.Contains(t, err.Error(), "client_identity")
 }
 
+func TestBuildSchemaCursors_DuplicateSharedSchemaSameCursorAllowed(t *testing.T) {
+	sharedSchema := &parser.Schema{
+		Name:       "SharedSchema",
+		Properties: []*parser.Property{{Name: "name", Type: "string", Required: true}},
+	}
+	parsed := &parser.ParsedSpec{
+		RequestBodies: map[string]*parser.Schema{
+			"CreateFirstEntity": {
+				Name:       "CreateFirstEntity",
+				Properties: []*parser.Property{{Name: "shared", Type: "object", RefName: "SharedSchema"}},
+			},
+			"CreateSecondEntity": {
+				Name:       "CreateSecondEntity",
+				Properties: []*parser.Property{{Name: "shared", Type: "object", RefName: "SharedSchema"}},
+			},
+		},
+		Schemas: map[string]*parser.Schema{
+			"SharedSchema": sharedSchema,
+		},
+	}
+
+	sharedFieldConfig := map[string]*config.FieldConfig{
+		"spec": {Fields: map[string]*config.FieldConfig{
+			"apiSpec": {Fields: map[string]*config.FieldConfig{
+				"shared": {Fields: map[string]*config.FieldConfig{
+					"name": {Validations: []string{"+kubebuilder:validation:MaxLength=1024"}},
+				}},
+			}},
+		}},
+	}
+	fieldCfg := &config.Config{
+		Entities: map[string]*config.EntityConfig{
+			"FirstEntity":  {Fields: sharedFieldConfig},
+			"SecondEntity": {Fields: sharedFieldConfig},
+		},
+	}
+
+	gen := NewGenerator(Config{APIVersion: "v1alpha1", FieldConfig: fieldCfg})
+	cursors, err := gen.buildSchemaCursors(parsed)
+	require.NoError(t, err)
+	require.NotNil(t, cursors)
+
+	sharedCursor := cursors["SharedSchema"]
+	require.NotNil(t, sharedCursor)
+	require.Contains(t, sharedCursor.Fields, "name")
+	assert.Equal(t, []string{"+kubebuilder:validation:MaxLength=1024"}, sharedCursor.Fields["name"].Validations)
+}
+
+func TestBuildSchemaCursors_DuplicateSharedSchemaConflictReturnsError(t *testing.T) {
+	sharedSchema := &parser.Schema{
+		Name:       "SharedSchema",
+		Properties: []*parser.Property{{Name: "name", Type: "string", Required: true}},
+	}
+	parsed := &parser.ParsedSpec{
+		RequestBodies: map[string]*parser.Schema{
+			"CreateFirstEntity": {
+				Name:       "CreateFirstEntity",
+				Properties: []*parser.Property{{Name: "shared", Type: "object", RefName: "SharedSchema"}},
+			},
+			"CreateSecondEntity": {
+				Name:       "CreateSecondEntity",
+				Properties: []*parser.Property{{Name: "shared", Type: "object", RefName: "SharedSchema"}},
+			},
+		},
+		Schemas: map[string]*parser.Schema{
+			"SharedSchema": sharedSchema,
+		},
+	}
+
+	fieldCfg := &config.Config{
+		Entities: map[string]*config.EntityConfig{
+			"FirstEntity": {Fields: map[string]*config.FieldConfig{
+				"spec": {Fields: map[string]*config.FieldConfig{
+					"apiSpec": {Fields: map[string]*config.FieldConfig{
+						"shared": {Fields: map[string]*config.FieldConfig{
+							"name": {Validations: []string{"+kubebuilder:validation:MaxLength=1024"}},
+						}},
+					}},
+				}},
+			}},
+			"SecondEntity": {Fields: map[string]*config.FieldConfig{
+				"spec": {Fields: map[string]*config.FieldConfig{
+					"apiSpec": {Fields: map[string]*config.FieldConfig{
+						"shared": {Fields: map[string]*config.FieldConfig{
+							"name": {Validations: []string{"+kubebuilder:validation:MaxLength=2048"}},
+						}},
+					}},
+				}},
+			}},
+		},
+	}
+
+	gen := NewGenerator(Config{APIVersion: "v1alpha1", FieldConfig: fieldCfg})
+	_, err := gen.buildSchemaCursors(parsed)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "schema cursor conflict for \"SharedSchema\"")
+	assert.Contains(t, err.Error(), "entity \"FirstEntity\" path \"spec.apiSpec.shared\"")
+	assert.Contains(t, err.Error(), "entity \"SecondEntity\" path \"spec.apiSpec.shared\"")
+}
+
+func TestRecordSchemaCursor_ConflictDoesNotOverwriteExisting(t *testing.T) {
+	gen := NewGenerator(Config{APIVersion: "v1alpha1"})
+	existing := &config.FieldConfig{
+		Fields: map[string]*config.FieldConfig{
+			"name": {Validations: []string{"+kubebuilder:validation:MaxLength=1024"}},
+		},
+	}
+	replacement := &config.FieldConfig{
+		Fields: map[string]*config.FieldConfig{
+			"name": {Validations: []string{"+kubebuilder:validation:MaxLength=2048"}},
+		},
+	}
+	out := map[string]*config.FieldConfig{"SharedSchema": existing}
+	origins := map[string]string{"SharedSchema": "entity \"FirstEntity\" path \"spec.apiSpec.shared\""}
+
+	err := gen.recordSchemaCursor("SharedSchema", "SecondEntity", "spec.apiSpec.shared", replacement, out, origins)
+	require.Error(t, err)
+	assert.Same(t, existing, out["SharedSchema"])
+	assert.Equal(t, "entity \"FirstEntity\" path \"spec.apiSpec.shared\"", origins["SharedSchema"])
+}
+
 func TestGenerateSchemaTypes_NestedInlineOverride(t *testing.T) {
 	// Cursor map built manually: cursor for "ClientIdentity" has the certificate override.
 	certProp := &parser.Property{Name: "certificate", Type: "string", Required: true}
