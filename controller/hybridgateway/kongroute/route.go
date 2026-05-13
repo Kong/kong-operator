@@ -106,11 +106,13 @@ func RoutesForHTTPRouteRule(
 	stripPath, err := metadata.ExtractStripPath(httpRoute.Annotations)
 	if err != nil {
 		log.Error(logger, err, fmt.Sprintf("Failed to extract strip path annotation, defaulting to %t", stripPath),
+			"httpRoute", fmt.Sprintf("%s/%s", httpRoute.GetNamespace(), httpRoute.GetName()),
 			"WARNING", "The malformed annotations will be treated as errors in future versions, please fix the annotation value to be a valid boolean")
 	}
 	preserveHost, err := metadata.ExtractPreserveHost(httpRoute.Annotations)
 	if err != nil {
 		log.Error(logger, err, fmt.Sprintf("Failed to extract preserve host annotation, defaulting to %t", preserveHost),
+			"httpRoute", fmt.Sprintf("%s/%s", httpRoute.GetNamespace(), httpRoute.GetName()),
 			"WARNING", "The malformed annotations will be treated as errors in future versions, please fix the annotation value to be a valid boolean")
 	}
 
