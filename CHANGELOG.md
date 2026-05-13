@@ -256,6 +256,9 @@
   [#4045](https://github.com/Kong/kong-operator/pull/4045)
 - More robust validation for `GatewayConfiguration` - fields `konnect` and `extensions` are mutually exclusive.
   [#4213](https://github.com/Kong/kong-operator/pull/4213)
+- Deletion of obsolete `KonnectControlPlane` in version `v1alpha1` (available only when conversion webhook is enabled)
+  does not leave orphaned `KonnectGatewayControlPlane` in Konnect.
+  [#4267](https://github.com/Kong/kong-operator/pull/4267)
 
 ## [v2.1.6]
 
