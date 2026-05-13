@@ -5,7 +5,7 @@ go 1.26.3
 require (
 	cloud.google.com/go/container v1.51.0
 	dario.cat/mergo v1.0.2
-	github.com/Kong/sdk-konnect-go v0.35.0
+	github.com/Kong/sdk-konnect-go v0.36.0
 	github.com/avast/retry-go/v4 v4.7.0
 	github.com/blang/semver/v4 v4.0.0
 	github.com/cert-manager/cert-manager v1.20.2
