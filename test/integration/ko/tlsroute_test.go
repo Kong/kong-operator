@@ -317,13 +317,13 @@ func TestTLSTerminate(t *testing.T) {
 	certPool := x509.NewCertPool()
 	require.True(t, certPool.AppendCertsFromPEM(cert), "Should add certificate to cert pool successfully")
 	require.Eventually(t, func() bool {
-		err := helpers.EchoResponds(t, helpers.ProtocolTLS, fmt.Sprintf("%s:%d", gatewayIPAddress, tcpEchoPort), "test-tls-terminate-echo",
+		err := helpers.EchoResponds(t, helpers.ProtocolTLS, fmt.Sprintf("%s:%d", gatewayIPAddress, tlsPort), "test-tls-terminate-echo",
 			helpers.TLSOpt{
 				Hostname: host,
 				CertPool: certPool,
 			})
 		if err != nil {
-			t.Logf("failed to access TLSRoute on %s:%d, error %+v", gatewayIPAddress, tcpEchoPort, err)
+			t.Logf("failed to access TLSRoute on %s:%d, error %+v", gatewayIPAddress, tlsPort, err)
 			return false
 		}
 		return true
