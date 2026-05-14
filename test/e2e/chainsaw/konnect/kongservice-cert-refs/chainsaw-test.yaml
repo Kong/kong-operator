@@ -23,7 +23,7 @@ spec:
     # Konnect environment.
     - name: token
       value: (env('KONNECT_TOKEN'))
-    - name: url
+    - name: konnect_url
       value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
 
     # Names derived from the auto-generated test namespace.
@@ -86,16 +86,16 @@ spec:
         template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
         with:
           bindings:
-            - name: auth_name
+            - name: konnect_auth_name
               value: ($auth_name)
-            - name: auth_namespace
+            - name: konnect_auth_namespace
               value: ($namespace)
             - name: auth_secret_name
               value: ($auth_secret_name)
             - name: auth_secret_namespace
               value: ($namespace)
-            - name: url
-              value: ($url)
+            - name: konnect_url
+              value: ($konnect_url)
 
     # Step 2: KonnectGatewayControlPlane + KonnectExtension + DataPlane.
     - name: Create-konnect-control-plane
