@@ -12,9 +12,21 @@ import (
 // the OpenAPI spec does not declare an explicit maxLength constraint.
 const defaultMaxLength = 253
 
+// jsonTagForProperty returns the JSON tag segment for a property, mirroring
+// the logic the CRD type template uses: reference properties get a "Ref" suffix,
+// all others use the lowerCamelCase form of the OAS property name.
+func jsonTagForProperty(prop *parser.Property) string {
+	if prop.IsReference {
+		return jsonName(prop.Name) + "Ref"
+	}
+	return jsonName(prop.Name)
+}
+
 // KubebuilderTags generates kubebuilder validation tags for a property.
-// It takes an optional fieldConfig for custom validations.
-func KubebuilderTags(prop *parser.Property, entityName string, fieldConfig *config.Config) []string {
+// fieldCursor is the *config.FieldConfig for the struct that contains prop
+// (i.e. the parent-level cursor); the function advances it by the property's
+// JSON tag to locate any custom validations for that specific field.
+func KubebuilderTags(prop *parser.Property, fieldCursor *config.FieldConfig) []string {
 	var tags []string
 
 	// Required validation
@@ -77,19 +89,17 @@ func KubebuilderTags(prop *parser.Property, entityName string, fieldConfig *conf
 
 	// Apply custom validations from config, overriding any auto-generated
 	// marker that shares the same key (text before the first '=').
-	if fieldConfig != nil {
-		customValidations := fieldConfig.GetFieldValidations(entityName, prop.Name)
-		if len(customValidations) > 0 {
-			overrideKeys := make(map[string]struct{}, len(customValidations))
-			for _, v := range customValidations {
-				overrideKeys[markerKey(v)] = struct{}{}
-			}
-			tags = slices.DeleteFunc(tags, func(t string) bool {
-				_, replaced := overrideKeys[markerKey(t)]
-				return replaced
-			})
-			tags = append(tags, customValidations...)
+	propCursor := fieldCursor.Sub(jsonTagForProperty(prop))
+	if propCursor != nil && len(propCursor.Validations) > 0 {
+		overrideKeys := make(map[string]struct{}, len(propCursor.Validations))
+		for _, v := range propCursor.Validations {
+			overrideKeys[markerKey(v)] = struct{}{}
 		}
+		tags = slices.DeleteFunc(tags, func(t string) bool {
+			_, replaced := overrideKeys[markerKey(t)]
+			return replaced
+		})
+		tags = append(tags, propCursor.Validations...)
 	}
 
 	return tags

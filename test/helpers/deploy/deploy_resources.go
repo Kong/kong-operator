@@ -1078,7 +1078,7 @@ func KongTargetAttachedToUpstream(
 			GenerateName: "upstream-",
 		},
 		Spec: configurationv1alpha1.KongTargetSpec{
-			UpstreamRef: commonv1alpha1.NameRef{
+			UpstreamRef: commonv1alpha1.NamespacedRef{
 				Name: upstream.Name,
 			},
 		},

@@ -85,6 +85,32 @@ func TestBackendClusterTLS_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestCreatePortalCustomDomainSSLStandard_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec CreatePortalCustomDomainSSLStandard
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestCreatePortalCustomDomainSSLWithCustomCertificate_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec CreatePortalCustomDomainSSLWithCustomCertificate
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestEventGatewayTLSListenerPolicy_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 

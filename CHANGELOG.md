@@ -50,6 +50,12 @@
 
 ### Added
 
+- `KongTarget`: support cross-namespace `spec.upstreamRef` to reference a
+  `KongUpstream` in a different namespace. A `KongReferenceGrant` in the
+  upstream's namespace is required to permit the reference. The `KongTarget`
+  status reflects `KongUpstreamRefValid=False/RefNotPermitted` when no grant
+  is present and clears once the grant is in place.
+  [#4263](https://github.com/Kong/kong-operator/pull/4263)
 - `KongSNI`: support cross-namespace `spec.certificateRef` to reference a
   `KongCertificate` in a different namespace. A `KongReferenceGrant` in the
   target namespace is required to permit the reference. The `KongSNI` status
@@ -72,6 +78,8 @@
   [#4104](https://github.com/Kong/kong-operator/pull/4104)
 - Hybridgateway: add support for `konghq.com/host-header` service annotation
   [#4108](https://github.com/Kong/kong-operator/pull/4108)
+- Hybridgateway: add error logs when annotations are malformed
+  [#4143](https://github.com/Kong/kong-operator/issues/4143)
 - Add the following headers in requests of `ingress-controller` sent to Konnect
   for uploading configuration for tracing:
   - `X-Kic-Konnect-Sync-Instance-Id` for instance ID of Konnect config synchronizer.
@@ -250,6 +258,9 @@
   [#4045](https://github.com/Kong/kong-operator/pull/4045)
 - More robust validation for `GatewayConfiguration` - fields `konnect` and `extensions` are mutually exclusive.
   [#4213](https://github.com/Kong/kong-operator/pull/4213)
+- Deletion of obsolete `KonnectControlPlane` in version `v1alpha1` (available only when conversion webhook is enabled)
+  does not leave orphaned `KonnectGatewayControlPlane` in Konnect.
+  [#4267](https://github.com/Kong/kong-operator/pull/4267)
 
 ## [v2.1.6]
 

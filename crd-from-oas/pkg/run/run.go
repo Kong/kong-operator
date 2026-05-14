@@ -87,7 +87,7 @@ func (r *Runner) Run(
 		}
 
 		// Build API package path and alias for reconciler generation.
-		// e.g. group "x-konnect.konghq.com" → prefix "x-konnect", alias "xkonnectv1alpha1"
+		// e.g. group "konnect.konghq.com" → prefix "konnect", alias "xkonnectv1alpha1"
 		groupPrefix := strings.Split(apiGroup, ".")[0]
 		apiGroupPackagePath := fmt.Sprintf("github.com/kong/kong-operator/v2/api/%s/%s", groupPrefix, apiVersion)
 		apiGroupPackageAlias := strings.ReplaceAll(groupPrefix, "-", "") + apiVersion

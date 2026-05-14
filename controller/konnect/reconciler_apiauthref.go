@@ -152,9 +152,13 @@ func GetAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.
 	// ref from the referenced KongUpstream.
 	upstreamRef, ok := getKongUpstreamRef(ent).Get()
 	if ok {
+		upstreamNamespace := ent.GetNamespace()
+		if upstreamRef.Namespace != nil && *upstreamRef.Namespace != "" {
+			upstreamNamespace = *upstreamRef.Namespace
+		}
 		nn := types.NamespacedName{
 			Name:      upstreamRef.Name,
-			Namespace: ent.GetNamespace(),
+			Namespace: upstreamNamespace,
 		}
 
 		var upstream configurationv1alpha1.KongUpstream
@@ -166,7 +170,7 @@ func GetAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.
 		if !ok {
 			return types.NamespacedName{}, fmt.Errorf("KongUpstream %s does not have a ControlPlaneRef", nn)
 		}
-		return getCPAuthRefForRef(ctx, cl, cpRef, ent.GetNamespace())
+		return getCPAuthRefForRef(ctx, cl, cpRef, upstreamNamespace)
 	}
 
 	// If the entity has a KongCertificateRef, get the KonnectAPIAuthConfiguration
