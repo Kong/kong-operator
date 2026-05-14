@@ -32,10 +32,6 @@ spec:
       value: (join('.', ['*', ($test_name), 'example.com']))
     - name: fqdn
       value: (join('.', ['echo', ($test_name), 'example.com']))
-    - name: cert_secret_name
-      value: test-tls-secret
-    - name: cert_secret_namespace
-      value: ($namespace)
     - name: konnect_url
       value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
     - name: auth_secret_name
@@ -64,51 +60,50 @@ spec:
       value: echo-service-tls-reference-grant
     - name: reference_grant_namespace
       value: ($echo_deployment_namespace)
+    - name: cert_secret_name
+      value: test-tls-secret
+    # The TLS secret needs to be in the same namespace as the echo backend deployment since it's used for TLS passthrough.
+    - name: cert_secret_namespace
+      value: ($echo_deployment_namespace)
 
   steps:
-    # Step 1: Create the TLS secret used by the echo backend (TLS passthrough).
-    - name: Create-tls-secret
-      description: Create TLS Secret for the echo backend.
-      use:
-        template: ../../common/_step_templates/apply-assert-tlsSecret.yaml
-
-    # Step 2a: Create the secret for Konnect authentication.
+    # Step 1a: Create the secret for Konnect authentication.
     - name: Create-auth-secret
       description: Create Secret with Konnect token for KonnectAPIAuthConfiguration.
       use:
         template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
 
-    # Step 2b: Create the KonnectAPIAuthConfiguration.
+    # Step 1b: Create the KonnectAPIAuthConfiguration.
     - name: Create-konnect-api-auth
       description: Create KonnectAPIAuthConfiguration for the test.
       use:
         template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
 
-    # Step 3: Create the GatewayConfiguration.
+    # Step 2: Create the GatewayConfiguration.
     - name: Create-gateway-configuration
       description: Create GatewayConfiguration for the test.
       use:
         template: ../../common/_step_templates/apply-assert-gatewayConfiguration.yaml
 
-    # Step 4: Create the GatewayClass.
+    # Step 3: Create the GatewayClass.
     - name: Create-gateway-class
       description: Create GatewayClass for the test.
       use:
         template: ../../common/_step_templates/apply-assert-gatewayClass.yaml
 
-    # Step 5: Create the Gateway with a TLS passthrough listener.
+    # Step 4: Create the Gateway with a TLS passthrough listener.
     - name: Create-gateway
       description: Create Gateway with a TLS passthrough listener.
       use:
         template: ../../common/_step_templates/apply-assert-gateway-tls-passthrough-listener.yaml
 
-    # Step 6: Assert the KonnectGatewayControlPlane is created and synchronized.
+    # Step 5: Assert the KonnectGatewayControlPlane is created and synchronized.
     - name: Assert-konnect-gateway-control-plane
       description: Assert that the KonnectGatewayControlplane resource is created and synchronized.
       use:
         template: ../../common/_step_templates/assert-konnectGatewayControlPlane.yaml
 
-    # Step 7: Create the cross-namespace where the backend Service will live.
+    # Step 6: Create the cross-namespace where the backend Service will live.
     - name: Create-backend-namespace
       description: Create a separate namespace for the backend Service.
       use:
@@ -116,6 +111,12 @@ spec:
       bindings:
         - name: namespace_name
           value: ($echo_deployment_namespace)
+
+    # Step 7: Create the TLS secret used by the echo backend (TLS passthrough).
+    - name: Create-tls-secret
+      description: Create TLS Secret for the echo backend.
+      use:
+        template: ../../common/_step_templates/apply-assert-tlsSecret.yaml
 
     # Step 8: Create the echo Service (TLS-capable) in the cross-namespace.
     - name: Create-echo-service
