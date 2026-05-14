@@ -46,15 +46,18 @@ const (
 	AdoptOp Op = "adopt"
 )
 
-// EntitySupportsKonnectIDlessLifecycle reports whether an entity can be
-// reconciled, finalized, and deleted without a persisted status Konnect ID.
-func EntitySupportsKonnectIDlessLifecycle(obj client.Object) bool {
-	switch obj.(type) {
-	case *konnectv1alpha1.PortalCustomDomain:
-		return true
-	default:
-		return false
-	}
+type konnectIDPersister interface {
+	PersistsKonnectID() bool
+}
+
+// EntityPersistsKonnectID reports whether an entity persists a Konnect ID in status.
+// Entities that persist a Konnect ID require it to be present for update and delete
+// operations, while non-persisting entities (e.g. singleton sub-resources) are
+// reconciled, finalized, and deleted without one.
+// Types that do not implement the optional PersistsKonnectID capability default to true.
+func EntityPersistsKonnectID(obj client.Object) bool {
+	persister, ok := obj.(konnectIDPersister)
+	return !ok || persister.PersistsKonnectID()
 }
 
 // Create creates a Konnect entity.
@@ -271,7 +274,7 @@ func Delete[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
 ](ctx context.Context, sdk sdkops.SDKWrapper, cl client.Client, metricRecorder metrics.Recorder, ent TEnt) error {
-	if ent.GetKonnectStatus().GetKonnectID() == "" && !EntitySupportsKonnectIDlessLifecycle(ent) {
+	if ent.GetKonnectStatus().GetKonnectID() == "" && EntityPersistsKonnectID(ent) {
 		cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, ent)
 		if ok && cond.Status == metav1.ConditionTrue {
 			return fmt.Errorf(
@@ -433,7 +436,7 @@ func Update[
 		return res, nil
 	}
 
-	if e.GetKonnectStatus().GetKonnectID() == "" && !EntitySupportsKonnectIDlessLifecycle(e) {
+	if e.GetKonnectStatus().GetKonnectID() == "" && EntityPersistsKonnectID(e) {
 		return ctrl.Result{}, fmt.Errorf(
 			"can't update %T %s when it does not have the Konnect ID",
 			e, client.ObjectKeyFromObject(e),

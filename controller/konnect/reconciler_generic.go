@@ -757,7 +757,7 @@ func shouldCreateKonnectEntity[
 	if status.GetKonnectID() != "" {
 		return false
 	}
-	if !ops.EntitySupportsKonnectIDlessLifecycle(ent) {
+	if ops.EntityPersistsKonnectID(ent) {
 		return true
 	}
 	return !entityHasProgrammedStatusTrue(ent)
@@ -771,7 +771,7 @@ func shouldAttachKonnectFinalizerAfterCreate[
 	if status != nil && status.GetKonnectID() != "" {
 		return true
 	}
-	return ops.EntitySupportsKonnectIDlessLifecycle(ent) && entityHasProgrammedStatusTrue(ent)
+	return !ops.EntityPersistsKonnectID(ent) && entityHasProgrammedStatusTrue(ent)
 }
 
 func entityHasProgrammedStatusTrue[

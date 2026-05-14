@@ -65,6 +65,13 @@ func TestDeletePortalCustomDomain(t *testing.T) {
 	require.NoError(t, deletePortalCustomDomain(ctx, sdk, domain))
 }
 
+func TestPortalCustomDomainPersistsKonnectID(t *testing.T) {
+	t.Parallel()
+
+	assert.False(t, EntityPersistsKonnectID(&konnectv1alpha1.PortalCustomDomain{}))
+	assert.True(t, EntityPersistsKonnectID(&konnectv1alpha1.Portal{}))
+}
+
 func TestGetPortalCustomDomainForUID(t *testing.T) {
 	ctx := t.Context()
 	sdk := sdkmocks.NewMockPortalCustomDomainsSDK(t)
