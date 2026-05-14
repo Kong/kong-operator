@@ -1,6 +1,6 @@
 ---
 kind: TLSRoute
-apiVersion: gateway.networking.k8s.io/v1alpha2
+apiVersion: gateway.networking.k8s.io/v1
 metadata:
   name: ($tls_route_name)
   namespace: ($tls_route_namespace)

@@ -2,7 +2,7 @@
 # Assert that, after the ReferenceGrant is removed, the TLSRoute's
 # ResolvedRefs condition flips to False with reason RefNotPermitted while
 # Accepted remains True.
-apiVersion: gateway.networking.k8s.io/v1alpha2
+apiVersion: gateway.networking.k8s.io/v1
 kind: TLSRoute
 metadata:
   name: ($tls_route_name)
