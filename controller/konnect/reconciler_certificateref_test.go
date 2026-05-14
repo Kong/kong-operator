@@ -745,3 +745,340 @@ func TestHandleCertificateRefKongServiceCrossNS(t *testing.T) {
 	})
 
 }
+
+func TestHandleCertificateRefKongUpstream(t *testing.T) {
+	testCases := []handleCertRefTestCase[configurationv1alpha1.KongUpstream, *configurationv1alpha1.KongUpstream]{
+		{
+			name: "same-NS cert ref, cert found",
+			ent: &configurationv1alpha1.KongUpstream{
+				ObjectMeta: metav1.ObjectMeta{Name: "upstream", Namespace: "default"},
+				Spec: configurationv1alpha1.KongUpstreamSpec{
+					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
+						ClientCertificateRef: &commonv1alpha1.NamespacedRef{Name: "cert-ok"},
+					},
+					ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+						Type:                 configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{Name: "cp-ok"},
+					},
+				},
+			},
+			objects: []client.Object{
+				testKongCertOK,
+				testControlPlaneOK,
+			},
+			expectResult: ctrl.Result{},
+			expectError:  false,
+			updatedEntAssertions: []func(*configurationv1alpha1.KongUpstream) (bool, string){
+				func(u *configurationv1alpha1.KongUpstream) (bool, string) {
+					return lo.ContainsBy(u.Status.Conditions, func(c metav1.Condition) bool {
+						return c.Type == konnectv1alpha1.KongCertificateRefValidConditionType && c.Status == metav1.ConditionTrue
+					}), "KongUpstream does not have KongCertificateRefValid condition set to True"
+				},
+			},
+		},
+		{
+			name: "cert not found",
+			ent: &configurationv1alpha1.KongUpstream{
+				ObjectMeta: metav1.ObjectMeta{Name: "upstream", Namespace: "default"},
+				Spec: configurationv1alpha1.KongUpstreamSpec{
+					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
+						ClientCertificateRef: &commonv1alpha1.NamespacedRef{Name: "cert-nonexist"},
+					},
+					ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+						Type:                 configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{Name: "cp-ok"},
+					},
+				},
+			},
+			expectError:         true,
+			expectErrorContains: fmt.Sprintf("referenced Kong Certificate default/cert-nonexist does not exist"),
+			updatedEntAssertions: []func(*configurationv1alpha1.KongUpstream) (bool, string){
+				func(u *configurationv1alpha1.KongUpstream) (bool, string) {
+					return lo.ContainsBy(u.Status.Conditions, func(c metav1.Condition) bool {
+						return c.Type == konnectv1alpha1.KongCertificateRefValidConditionType && c.Status == metav1.ConditionFalse
+					}), "KongUpstream does not have KongCertificateRefValid condition set to False"
+				},
+			},
+		},
+		{
+			name: "cert ref nil — no conditions set",
+			ent: &configurationv1alpha1.KongUpstream{
+				ObjectMeta: metav1.ObjectMeta{Name: "upstream", Namespace: "default"},
+				Spec: configurationv1alpha1.KongUpstreamSpec{
+					ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+						Type:                 configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{Name: "cp-ok"},
+					},
+				},
+			},
+			expectResult: ctrl.Result{},
+			expectError:  false,
+			updatedEntAssertions: []func(*configurationv1alpha1.KongUpstream) (bool, string){
+				func(u *configurationv1alpha1.KongUpstream) (bool, string) {
+					return !lo.ContainsBy(u.Status.Conditions, func(c metav1.Condition) bool {
+						return c.Type == konnectv1alpha1.KongCertificateRefValidConditionType
+					}), "KongUpstream should not have KongCertificateRefValid condition when ref is nil"
+				},
+			},
+		},
+		{
+			name: "referenced KongCertificate not programmed",
+			ent: &configurationv1alpha1.KongUpstream{
+				ObjectMeta: metav1.ObjectMeta{Name: "upstream", Namespace: "default"},
+				Spec: configurationv1alpha1.KongUpstreamSpec{
+					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
+						ClientCertificateRef: &commonv1alpha1.NamespacedRef{Name: "cert-not-programmed"},
+					},
+					ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+						Type:                 configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{Name: "cp-ok"},
+					},
+				},
+			},
+			objects:      []client.Object{testKongCertNotProgrammed},
+			expectResult: ctrl.Result{},
+			expectError:  false,
+			updatedEntAssertions: []func(*configurationv1alpha1.KongUpstream) (bool, string){
+				func(u *configurationv1alpha1.KongUpstream) (bool, string) {
+					return lo.ContainsBy(u.Status.Conditions, func(c metav1.Condition) bool {
+						return c.Type == konnectv1alpha1.KongCertificateRefValidConditionType && c.Status == metav1.ConditionFalse
+					}), "KongUpstream does not have KongCertificateRefValid condition set to False"
+				},
+			},
+		},
+		{
+			name: "referenced KongCertificate is being deleted",
+			ent: &configurationv1alpha1.KongUpstream{
+				ObjectMeta: metav1.ObjectMeta{Name: "upstream", Namespace: "default"},
+				Spec: configurationv1alpha1.KongUpstreamSpec{
+					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
+						ClientCertificateRef: &commonv1alpha1.NamespacedRef{Name: "cert-being-deleted"},
+					},
+					ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+						Type:                 configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{Name: "cp-ok"},
+					},
+				},
+			},
+			objects:             []client.Object{testKongCertBeingDeleted},
+			expectError:         true,
+			expectErrorContains: fmt.Sprintf("referenced Kong Certificate %s/%s is being deleted", testKongCertBeingDeleted.Namespace, testKongCertBeingDeleted.Name),
+			updatedEntAssertions: []func(*configurationv1alpha1.KongUpstream) (bool, string){
+				func(u *configurationv1alpha1.KongUpstream) (bool, string) {
+					return lo.ContainsBy(u.Status.Conditions, func(c metav1.Condition) bool {
+						return c.Type == konnectv1alpha1.KongCertificateRefValidConditionType && c.Status == metav1.ConditionFalse
+					}), "KongUpstream does not have KongCertificateRefValid condition set to False"
+				},
+			},
+		},
+		{
+			name: "referenced KongCertificate has no ControlPlaneRef",
+			ent: &configurationv1alpha1.KongUpstream{
+				ObjectMeta: metav1.ObjectMeta{Name: "upstream", Namespace: "default"},
+				Spec: configurationv1alpha1.KongUpstreamSpec{
+					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
+						ClientCertificateRef: &commonv1alpha1.NamespacedRef{Name: "cert-no-cp-ref"},
+					},
+					ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+						Type:                 configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{Name: "cp-ok"},
+					},
+				},
+			},
+			objects:     []client.Object{testKongCertNoControlPlaneRef},
+			expectError: true,
+			expectErrorContains: fmt.Sprintf("references a KongCertificate %s/%s which does not have a ControlPlane ref",
+				testKongCertNoControlPlaneRef.Namespace, testKongCertNoControlPlaneRef.Name),
+			updatedEntAssertions: []func(*configurationv1alpha1.KongUpstream) (bool, string){
+				func(u *configurationv1alpha1.KongUpstream) (bool, string) {
+					return lo.ContainsBy(u.Status.Conditions, func(c metav1.Condition) bool {
+						return c.Type == konnectv1alpha1.KongCertificateRefValidConditionType && c.Status == metav1.ConditionTrue
+					}), "KongUpstream does not have KongCertificateRefValid condition set to True"
+				},
+			},
+		},
+		{
+			name: "ControlPlaneRef not found",
+			ent: &configurationv1alpha1.KongUpstream{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "upstream-cp-not-found"},
+				Spec: configurationv1alpha1.KongUpstreamSpec{
+					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
+						ClientCertificateRef: &commonv1alpha1.NamespacedRef{Name: "cert-cpref-not-found"},
+					},
+					ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+						Type:                 configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{Name: "cp-ok"},
+					},
+				},
+			},
+			objects:     []client.Object{testKongCertificateControlPlaneRefNotFound},
+			expectError: true,
+			expectErrorContains: fmt.Sprintf("referenced Control Plane %q does not exist",
+				testKongCertificateControlPlaneRefNotFound.Spec.ControlPlaneRef.String()),
+		},
+		{
+			name: "ControlPlaneRef not programmed",
+			ent: &configurationv1alpha1.KongUpstream{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "upstream-cp-not-programmed"},
+				Spec: configurationv1alpha1.KongUpstreamSpec{
+					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
+						ClientCertificateRef: &commonv1alpha1.NamespacedRef{Name: "cert-cpref-not-programmed"},
+					},
+					ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+						Type:                 configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{Name: "cp-ok"},
+					},
+				},
+			},
+			objects:      []client.Object{testKongCertControlPlaneRefNotProgrammed, testControlPlaneNotProgrammed},
+			expectError:  false,
+			expectResult: ctrl.Result{Requeue: true},
+			updatedEntAssertions: []func(*configurationv1alpha1.KongUpstream) (bool, string){
+				func(u *configurationv1alpha1.KongUpstream) (bool, string) {
+					return lo.ContainsBy(u.Status.Conditions, func(c metav1.Condition) bool {
+						return c.Type == konnectv1alpha1.KongCertificateRefValidConditionType && c.Status == metav1.ConditionTrue
+					}), "KongUpstream does not have KongCertificateRefValid condition set to True"
+				},
+				func(u *configurationv1alpha1.KongUpstream) (bool, string) {
+					return lo.ContainsBy(u.Status.Conditions, func(c metav1.Condition) bool {
+						return c.Type == konnectv1alpha1.ControlPlaneRefValidConditionType && c.Status == metav1.ConditionFalse
+					}), "KongUpstream does not have ControlPlaneRefValid condition set to False"
+				},
+			},
+		},
+	}
+	testHandleCertificateRef(t, testCases)
+}
+
+func TestHandleCertificateRefKongUpstreamCrossNS(t *testing.T) {
+	s := scheme.Get()
+
+	certInOtherNS := &configurationv1alpha1.KongCertificate{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cert-ok",
+			Namespace: "other-ns",
+		},
+		Spec: configurationv1alpha1.KongCertificateSpec{
+			ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+					Name: "cp-ok",
+				},
+			},
+			KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
+				Cert: "===== BEGIN CERTIFICATE",
+				Key:  "===== BEGIN PRIVATE KEY",
+			},
+		},
+		Status: configurationv1alpha1.KongCertificateStatus{
+			Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+				KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
+					ID: "cross-ns-cert-id",
+				},
+				ControlPlaneID: "123456789",
+			},
+			Conditions: []metav1.Condition{
+				{
+					Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
+					Status: metav1.ConditionTrue,
+				},
+			},
+		},
+	}
+
+	upstreamEntity := func() *configurationv1alpha1.KongUpstream {
+		return &configurationv1alpha1.KongUpstream{
+			ObjectMeta: metav1.ObjectMeta{Name: "upstream", Namespace: "default"},
+			Spec: configurationv1alpha1.KongUpstreamSpec{
+				KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
+					ClientCertificateRef: &commonv1alpha1.NamespacedRef{
+						Name:      "cert-ok",
+						Namespace: new("other-ns"),
+					},
+				},
+				ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+					Type:                 configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+					KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{Name: "cp-ok"},
+				},
+			},
+		}
+	}
+
+	grant := &configurationv1alpha1.KongReferenceGrant{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "upstream-to-cert",
+			Namespace: "other-ns",
+		},
+		Spec: configurationv1alpha1.KongReferenceGrantSpec{
+			From: []configurationv1alpha1.ReferenceGrantFrom{
+				{
+					Group:     configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+					Kind:      "KongUpstream",
+					Namespace: configurationv1alpha1.Namespace("default"),
+				},
+			},
+			To: []configurationv1alpha1.ReferenceGrantTo{
+				{
+					Group: configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+					Kind:  "KongCertificate",
+				},
+			},
+		},
+	}
+
+	cpOKInOtherNS := testControlPlaneOK.DeepCopy()
+	cpOKInOtherNS.Namespace = "other-ns"
+
+	t.Run("cross-NS cert ref without KongReferenceGrant", func(t *testing.T) {
+		ent := upstreamEntity()
+		cl := fake.NewClientBuilder().
+			WithScheme(s).
+			WithObjects(ent, certInOtherNS).
+			WithStatusSubresource(ent).
+			WithInterceptorFuncs(populateGVKOnGet(s)).
+			Build()
+		require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(ent), ent))
+
+		res, err := handleKongCertificateRef(t.Context(), cl, ent)
+		require.NoError(t, err)
+		require.Equal(t, ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, res)
+
+		updatedUpstream := &configurationv1alpha1.KongUpstream{}
+		require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(ent), updatedUpstream))
+		require.True(t, lo.ContainsBy(updatedUpstream.Status.Conditions, func(c metav1.Condition) bool {
+			return c.Type == configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs &&
+				c.Status == metav1.ConditionFalse &&
+				c.Reason == configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted
+		}), "KongUpstream does not have ResolvedRefs=False/RefNotPermitted condition")
+	})
+
+	t.Run("cross-NS cert ref with valid KongReferenceGrant", func(t *testing.T) {
+		ent := upstreamEntity()
+		cl := fake.NewClientBuilder().
+			WithScheme(s).
+			WithObjects(ent, certInOtherNS, grant, cpOKInOtherNS).
+			WithStatusSubresource(ent).
+			WithInterceptorFuncs(populateGVKOnGet(s)).
+			Build()
+		require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(ent), ent))
+
+		res, err := handleKongCertificateRef(t.Context(), cl, ent)
+		require.NoError(t, err)
+		require.Equal(t, ctrl.Result{}, res)
+
+		updatedUpstream := &configurationv1alpha1.KongUpstream{}
+		require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(ent), updatedUpstream))
+		require.True(t, lo.ContainsBy(updatedUpstream.Status.Conditions, func(c metav1.Condition) bool {
+			return c.Type == konnectv1alpha1.KongCertificateRefValidConditionType && c.Status == metav1.ConditionTrue
+		}), "KongUpstream does not have KongCertificateRefValid condition set to True")
+		require.True(t, lo.ContainsBy(updatedUpstream.Status.Conditions, func(c metav1.Condition) bool {
+			return c.Type == configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs &&
+				c.Status == metav1.ConditionTrue &&
+				c.Reason == configurationv1alpha1.KongReferenceGrantReasonResolvedRefs
+		}), "KongUpstream does not have ResolvedRefs=True condition")
+
+		// CertificateID is set in-memory on ent after the final patch; it is not re-fetched.
+		require.NotNil(t, ent.Status.Konnect)
+		require.Equal(t, "cross-ns-cert-id", ent.Status.Konnect.CertificateID)
+	})
+}
