@@ -54,10 +54,8 @@ type konnectIDPersister interface {
 // Entities that persist a Konnect ID require it to be present for update and delete
 // operations, while non-persisting entities (e.g. singleton sub-resources) are
 // reconciled, finalized, and deleted without one.
-// Types that do not implement the optional PersistsKonnectID capability default to true.
-func EntityPersistsKonnectID(obj client.Object) bool {
-	persister, ok := obj.(konnectIDPersister)
-	return !ok || persister.PersistsKonnectID()
+func EntityPersistsKonnectID(obj konnectIDPersister) bool {
+	return obj.PersistsKonnectID()
 }
 
 // Create creates a Konnect entity.

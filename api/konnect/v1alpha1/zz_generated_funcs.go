@@ -24,6 +24,11 @@ func (obj *KonnectCloudGatewayDataPlaneGroupConfiguration) SetKonnectID(id strin
 	obj.Status.ID = id
 }
 
+// PersistsKonnectID reports whether the KonnectCloudGatewayDataPlaneGroupConfiguration persists a Konnect ID in status.
+func (*KonnectCloudGatewayDataPlaneGroupConfiguration) PersistsKonnectID() bool {
+	return true
+}
+
 // GetControlPlaneID returns the ControlPlane ID in the KonnectCloudGatewayDataPlaneGroupConfiguration status.
 func (obj *KonnectCloudGatewayDataPlaneGroupConfiguration) GetControlPlaneID() string {
 	return obj.Status.ControlPlaneID
@@ -76,6 +81,11 @@ func (obj *MCPServer) GetKonnectID() string {
 // SetKonnectID sets the Konnect ID in the MCPServer status.
 func (obj *MCPServer) SetKonnectID(id string) {
 	obj.Status.ID = id
+}
+
+// PersistsKonnectID reports whether the MCPServer persists a Konnect ID in status.
+func (*MCPServer) PersistsKonnectID() bool {
+	return true
 }
 
 // GetControlPlaneID returns the ControlPlane ID in the MCPServer status.

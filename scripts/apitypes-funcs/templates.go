@@ -65,6 +65,11 @@ func (obj *{{ .Type }}) SetKonnectID(id string) {
 {{- end }}
 }
 
+// PersistsKonnectID reports whether the {{ .Type }} persists a Konnect ID in status.
+func (*{{ .Type }}) PersistsKonnectID() bool {
+	return true
+}
+
 // GetControlPlaneID returns the ControlPlane ID in the {{ .Type }} status.
 func (obj *{{ .Type }}) GetControlPlaneID() string {
 {{- if .KonnectStatusType | hasPrefix "*" }}
@@ -197,6 +202,11 @@ func (obj *{{ .Type }}) SetKonnectID(id string) {
 	obj.Status.ID = id
 }
 
+// PersistsKonnectID reports whether the {{ .Type }} persists a Konnect ID in status.
+func (*{{ .Type }}) PersistsKonnectID() bool {
+	return true
+}
+
 {{- end }}
 // GetTypeName returns the {{ .Type }} Kind name.
 func (obj {{ .Type }}) GetTypeName() string {
@@ -250,6 +260,11 @@ func (obj *{{ .Type }}) GetKonnectID() string {
 // SetKonnectID sets the Konnect ID in the {{ .Type }} status.
 func (obj *{{ .Type }}) SetKonnectID(id string) {
 	obj.Status.ID = id
+}
+
+// PersistsKonnectID reports whether the {{ .Type }} persists a Konnect ID in status.
+func (*{{ .Type }}) PersistsKonnectID() bool {
+	return true
 }
 
 {{- end }}
