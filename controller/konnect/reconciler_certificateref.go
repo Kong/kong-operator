@@ -125,6 +125,15 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 	// If referenced KongCertificate is being deleted, return an error so that we
 	// can remove the entity from Konnect first.
 	if delTimestamp := cert.GetDeletionTimestamp(); !delTimestamp.IsZero() {
+		if res, errStatus := patch.StatusWithCondition(
+			ctx, cl, ent,
+			konnectv1alpha1.KongCertificateRefValidConditionType,
+			metav1.ConditionFalse,
+			konnectv1alpha1.KongCertificateRefReasonInvalid,
+			fmt.Sprintf("Referenced KongCertificate %s is being deleted", nn),
+		); errStatus != nil || !res.IsZero() {
+			return res, errStatus
+		}
 		return ctrl.Result{}, ReferencedKongCertificateIsBeingDeletedError{
 			Reference:         nn,
 			DeletionTimestamp: delTimestamp.Time,
@@ -208,6 +217,11 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 		return ctrl.Result{}, err
 	}
 
+	cpnn := types.NamespacedName{
+		Name:      cp.Name,
+		Namespace: cp.Namespace,
+	}
+
 	cond, ok = k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, cp)
 	if !ok || cond.Status != metav1.ConditionTrue || cond.ObservedGeneration != cp.GetGeneration() {
 		if res, errStatus := patch.StatusWithCondition(
@@ -215,7 +229,7 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 			konnectv1alpha1.ControlPlaneRefValidConditionType,
 			metav1.ConditionFalse,
 			konnectv1alpha1.ControlPlaneRefReasonInvalid,
-			fmt.Sprintf("Referenced ControlPlane %s is not programmed yet", nn),
+			fmt.Sprintf("Referenced ControlPlane %s is not programmed yet", cpnn),
 		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
 		}
@@ -240,23 +254,18 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 		konnectv1alpha1.ControlPlaneRefValidConditionType,
 		metav1.ConditionTrue,
 		konnectv1alpha1.ControlPlaneRefReasonValid,
-		fmt.Sprintf("Referenced ControlPlane %s is programmed", nn),
+		fmt.Sprintf("Referenced ControlPlane %s is programmed", cpnn),
 	); errStatus != nil || !res.IsZero() {
 		return res, errStatus
 	}
 
 	// Set CertificateID after all patches so the server-response from each merge patch
 	// cannot clobber it (see comment above near certKonnectID declaration).
+	// Status.Konnect is already initialised above so nil-guards are not needed here.
 	switch ent := any(ent).(type) {
 	case *configurationv1alpha1.KongSNI:
-		if ent.Status.Konnect == nil {
-			ent.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{}
-		}
 		ent.Status.Konnect.CertificateID = certKonnectID
 	case *configurationv1alpha1.KongService:
-		if ent.Status.Konnect == nil {
-			ent.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{}
-		}
 		ent.Status.Konnect.CertificateID = certKonnectID
 	}
 	return ctrl.Result{}, nil
