@@ -22617,7 +22617,12 @@ spec:
     singular: ingressclassparameters
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: IngressClassParameters is the Schema for the IngressClassParameters API.
@@ -22657,6 +22662,7 @@ spec:
         type: object
     served: true
     storage: true
+    subresources: {}
 ---
 # Source: kong-operator/charts/ko-crds/templates/ko-crds.yaml
 apiVersion: apiextensions.k8s.io/v1
@@ -31832,6 +31838,10 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed
       type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -32168,6 +32178,10 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed
       type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -33478,6 +33492,10 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed
       type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -33727,6 +33745,10 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed
       type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -33976,6 +33998,10 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed
       type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -34229,6 +34255,10 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed
       type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -34484,6 +34514,10 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed
       type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -34949,6 +34983,10 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed
       type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -35233,6 +35271,10 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed
       type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -35598,6 +35640,10 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed
       type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -36091,6 +36137,10 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed
       type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -37163,6 +37213,10 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed
       type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -37601,6 +37655,10 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed
       type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -37940,6 +37998,10 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed
       type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -38197,6 +38259,10 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed
       type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -38459,7 +38525,12 @@ spec:
     singular: kongupstreampolicy
   scope: Namespaced
   versions:
-  - name: v1beta1
+  - additionalPrinterColumns:
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1beta1
     schema:
       openAPIV3Schema:
         description: |-
@@ -39150,6 +39221,10 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed
       type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -42606,6 +42681,10 @@ spec:
       jsonPath: .status.konnectSpec.name
       name: Konnect Name
       type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:

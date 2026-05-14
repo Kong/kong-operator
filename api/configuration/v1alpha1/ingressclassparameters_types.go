@@ -41,6 +41,7 @@ type IngressClassParametersList struct {
 // +kubebuilder:storageversion
 // +kubebuilder:resource:categories=kong
 // +kubebuilder:resource:path=ingressclassparameterses
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 
 // IngressClassParameters is the Schema for the IngressClassParameters API.
 // +kong:channels=kong-operator
