@@ -31,7 +31,7 @@ func (obj *{{ .Type }}) GetKonnectStatus() {{ .GetKonnectStatusReturnType }} {
 	}
 {{- end }}
 {{- if .KonnectStatusEmbedded }}
-	return &obj.Status.{{ .KonnectStatusType }}.KonnectEntityStatus
+	return &obj.Status.KonnectEntityStatus
 {{- else }}
 	return &obj.Status.Konnect.KonnectEntityStatus
 {{- end }}
@@ -179,7 +179,7 @@ func (obj *{{ .Type }}) GetConsumerRefName() string {
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-{{- range .AdditionalImports }}
+{{ range .AdditionalImports }}
 	{{ . }}
 {{- end }}
 )
@@ -230,7 +230,7 @@ func (obj *{{ .Type }}) SetConditions(conditions []metav1.Condition) {
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-{{- range .AdditionalImports }}
+{{ range .AdditionalImports }}
 	{{ . }}
 {{- end }}
 )
@@ -247,7 +247,7 @@ func (obj *{{ .Type }}) GetKonnectStatus() {{ .GetKonnectStatusReturnType }} {
 	}
 {{- end }}
 {{- if .KonnectStatusEmbedded }}
-	return &obj.Status.{{ .KonnectStatusType }}.KonnectEntityStatus
+	return &obj.Status.KonnectEntityStatus
 {{- else }}
 	return &obj.Status.Konnect.KonnectEntityStatus
 {{- end }}
