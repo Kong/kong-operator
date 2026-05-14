@@ -27,7 +27,6 @@ var skippedTestsShared = []string{
 	tests.TLSRouteInvalidBackendRefUnknownKind.ShortName,
 	tests.TLSRouteInvalidNoMatchingListener.ShortName,
 	tests.TLSRouteInvalidReferenceGrant.ShortName,
-	tests.TLSRouteTerminateSimpleSameNamespace.ShortName,
 	tests.TLSRouteListenerMixedTerminationNotSupported.ShortName,
 }
 
