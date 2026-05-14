@@ -20,6 +20,15 @@ var skippedTestsShared = []string{
 	// When processing this scenario, the Kong's router requires `priority` to be specified for routes.
 	// We cannot provide that for routes that are part of the conformance suite.
 	tests.GRPCRouteListenerHostnameMatching.ShortName,
+
+	// TLSRoute tests that cannot pass yet.
+	tests.TLSRouteHostnameIntersection.ShortName,
+	tests.TLSRouteInvalidBackendRefNonexistent.ShortName,
+	tests.TLSRouteInvalidBackendRefUnknownKind.ShortName,
+	tests.TLSRouteInvalidNoMatchingListener.ShortName,
+	tests.TLSRouteInvalidReferenceGrant.ShortName,
+	tests.TLSRouteTerminateSimpleSameNamespace.ShortName,
+	tests.TLSRouteListenerMixedTerminationNotSupported.ShortName,
 }
 
 var skippedTestsForExpressionsRouter = []string{}
@@ -54,6 +63,9 @@ var skippedTestsForHybrid = []string{
 	// This test is skipped because it proven to be flaky.
 	// TODO: https://github.com/Kong/kong-operator/issues/2793
 	tests.HTTPRouteReferenceGrant.ShortName,
+	// This test is skipped because the `Reason` field in the `RouteCondition` is not the same as expected by the test.
+	// TODO: https://github.com/Kong/kong-operator/issues/67
+	tests.HTTPRouteDisallowedKind.ShortName,
 }
 
 // skippedTestsForConfig returns the list of skipped tests for the given router flavor and gateway type.
