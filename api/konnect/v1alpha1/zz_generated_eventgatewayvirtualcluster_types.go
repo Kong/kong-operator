@@ -45,6 +45,7 @@ type EventGatewayVirtualClusterSpec struct {
 	//
 	// +required
 	EventGatewayBackendClusterRef commonv1alpha1.ObjectRef `json:"eventGatewayBackendClusterRef,omitzero"`
+
 	// APISpec defines the desired state of the resource's API spec fields.
 	//
 	// +optional

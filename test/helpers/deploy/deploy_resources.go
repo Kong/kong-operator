@@ -558,8 +558,14 @@ func EventGatewayBackendCluster(
 				TLS: konnectv1alpha1.BackendClusterTLS{
 					Enabled: "Disabled",
 					ClientIdentity: konnectv1alpha1.ClientIdentity{
-						Certificate: "dummy-cert",
-						Key:         "dummy-key",
+						Certificate: konnectv1alpha1.SensitiveDataSource{
+							Type:  konnectv1alpha1.SensitiveDataSourceTypeInline,
+							Value: new("dummy-cert"),
+						},
+						Key: konnectv1alpha1.SensitiveDataSource{
+							Type:  konnectv1alpha1.SensitiveDataSourceTypeInline,
+							Value: new("dummy-key"),
+						},
 					},
 				},
 			},

@@ -117,6 +117,30 @@ const (
 	SensitiveDataSourceTypeSecretRef SensitiveDataSourceType = "secretRef"
 )`
 
+const sensitiveDataSourceStructType = `// SensitiveDataSource holds a sensitive string value that can be provided
+// either inline or sourced from a Kubernetes Secret.
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'inline' ? has(self.value) : has(self.secretRef)",message="value required when type=inline; secretRef required when type=secretRef"
+type SensitiveDataSource struct {
+	// Type indicates the source of the sensitive data: 'inline' or 'secretRef'.
+	//
+	// +kubebuilder:validation:Enum=inline;secretRef
+	// +kubebuilder:default=inline
+	Type SensitiveDataSourceType ` + "`" + `json:"type"` + "`" + `
+
+	// Value contains the sensitive data provided inline.
+	// Required when type is 'inline'.
+	//
+	// +optional
+	Value *string ` + "`" + `json:"value,omitempty"` + "`" + `
+
+	// SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+	// Required when type is 'secretRef'.
+	//
+	// +optional
+	SecretRef *{{.NamespacedRefTypeName}} ` + "`" + `json:"secretRef,omitempty"` + "`" + `
+}`
+
 const konnectEntityRefType = `// KonnectEntityRef is a reference to a Konnect entity.
 type KonnectEntityRef struct {
 	// ID is the unique identifier of the Konnect entity as assigned by Konnect API.
@@ -124,6 +148,40 @@ type KonnectEntityRef struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=256
 	ID string ` + "`json:\"id,omitzero\"`" + `
+}`
+
+// flattenSensitiveDataHelper is a runtime helper emitted into common_types.go.
+// It replaces every JSON object matching the SensitiveDataSource wire shape
+// {"type": "inline"|"secretRef", "value": "<string>", ...} with just the bare
+// string value, so the Konnect SDK receives a plain string instead of the
+// structured CRD representation.
+const flattenSensitiveDataHelper = `// flattenSensitiveData recursively replaces any SensitiveDataSource JSON
+// object shape {"type": "inline|secretRef", "value": "X", ...} with the
+// bare string "X", translating the CRD wire format to the Konnect SDK
+// wire format which expects plain strings for sensitive fields.
+func flattenSensitiveData(v any) any {
+	switch x := v.(type) {
+	case map[string]any:
+		for k, val := range x {
+			x[k] = flattenSensitiveData(val)
+		}
+		typ, _ := x["type"].(string)
+		if typ != "inline" && typ != "secretRef" {
+			return x
+		}
+		rawVal, hasVal := x["value"]
+		val, isString := rawVal.(string)
+		if hasVal && isString {
+			return val
+		}
+		return x
+	case []any:
+		for i, val := range x {
+			x[i] = flattenSensitiveData(val)
+		}
+		return x
+	}
+	return v
 }`
 
 // flattenSDKUnionsHelper is a runtime helper used by the per-entity

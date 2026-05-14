@@ -3,6 +3,8 @@ package ops
 import (
 	"reflect"
 	"slices"
+
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 )
 
 // matchStringField compares string-like values without reflection.
@@ -17,6 +19,21 @@ func matchStringField[
 // matchSliceField compares two string slices for equality.
 func matchSliceField(want, got []string) bool {
 	return slices.Equal(want, got)
+}
+
+// matchSensitiveDataSourceField compares a SensitiveDataSource against a
+// string-like SDK response field. When the source is inline, the Value is
+// compared; when it is a secretRef (Value is nil), the comparison is skipped
+// and the function returns true so the field does not block a UID match.
+func matchSensitiveDataSourceField[TGot ~string | ~*string](
+	want konnectv1alpha1.SensitiveDataSource,
+	got TGot,
+) bool {
+	if want.Value == nil {
+		// secretRef: resolved value is not available here — skip match.
+		return true
+	}
+	return *want.Value == stringValueGeneric(got)
 }
 
 func stringValueGeneric[

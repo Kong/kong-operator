@@ -98,7 +98,7 @@ func TestGetKonnectEventDataPlaneCertificateForUID(t *testing.T) {
 					},
 					{
 						ID:          "cert-1",
-						Certificate: cert.Spec.APISpec.Certificate,
+						Certificate: *cert.Spec.APISpec.Certificate.Value,
 						Name:        new(cert.Spec.APISpec.Name),
 						Description: new(cert.Spec.APISpec.Description),
 					},
@@ -114,11 +114,11 @@ func TestGetKonnectEventDataPlaneCertificateForUID(t *testing.T) {
 
 func TestKonnectEventDataPlaneCertificate_ToCreateEventGatewayDataPlaneCertificateRequest_FromSecretRef(t *testing.T) {
 	ctx := t.Context()
-	sourceType := konnectv1alpha1.SensitiveDataSourceTypeSecretRef
 	cert := testKonnectEventDataPlaneCertificate()
-	cert.Spec.Type = &sourceType
-	cert.Spec.SecretRef = &commonv1alpha1.NamespacedRef{Name: "tls-secret"}
-	cert.Spec.APISpec.Certificate = ""
+	cert.Spec.APISpec.Certificate = konnectv1alpha1.SensitiveDataSource{
+		Type:      konnectv1alpha1.SensitiveDataSourceTypeSecretRef,
+		SecretRef: &commonv1alpha1.NamespacedRef{Name: "tls-secret"},
+	}
 
 	cl := fake.NewClientBuilder().
 		WithScheme(scheme.Get()).
@@ -142,11 +142,11 @@ func TestKonnectEventDataPlaneCertificate_ToCreateEventGatewayDataPlaneCertifica
 
 func TestKonnectEventDataPlaneCertificate_ToUpdateEventGatewayDataPlaneCertificateRequest_FromSecretRef(t *testing.T) {
 	ctx := t.Context()
-	sourceType := konnectv1alpha1.SensitiveDataSourceTypeSecretRef
 	cert := testKonnectEventDataPlaneCertificate()
-	cert.Spec.Type = &sourceType
-	cert.Spec.SecretRef = &commonv1alpha1.NamespacedRef{Name: "tls-secret"}
-	cert.Spec.APISpec.Certificate = ""
+	cert.Spec.APISpec.Certificate = konnectv1alpha1.SensitiveDataSource{
+		Type:      konnectv1alpha1.SensitiveDataSourceTypeSecretRef,
+		SecretRef: &commonv1alpha1.NamespacedRef{Name: "tls-secret"},
+	}
 
 	cl := fake.NewClientBuilder().
 		WithScheme(scheme.Get()).
@@ -187,7 +187,10 @@ func testKonnectEventDataPlaneCertificate() *konnectv1alpha1.KonnectEventDataPla
 				},
 			},
 			APISpec: konnectv1alpha1.KonnectEventDataPlaneCertificateAPISpec{
-				Certificate: "inline-cert",
+				Certificate: konnectv1alpha1.SensitiveDataSource{
+					Type:  konnectv1alpha1.SensitiveDataSourceTypeInline,
+					Value: new("inline-cert"),
+				},
 				Name:        "client-cert",
 				Description: "certificate description",
 			},

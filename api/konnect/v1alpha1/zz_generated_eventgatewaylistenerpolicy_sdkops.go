@@ -10,7 +10,6 @@ import (
 	sdkkonnectoper "github.com/Kong/sdk-konnect-go/models/operations"
 )
 
-
 type EventGatewayListenerPolicySDKOpsBoolField struct {
 	Label string
 	Path  []string
@@ -120,6 +119,7 @@ func normalizeEventGatewayListenerPolicySDKOpsBoolField(value any, path []string
 		return object, nil
 	}
 }
+
 
 func (s *EventGatewayListenerPolicyAPISpec) marshalSDKOpsPayload() (map[string]any, error) {
 	data, err := json.Marshal(s)

@@ -3,8 +3,13 @@
 package v1alpha1
 
 import (
+	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 )
@@ -117,6 +122,65 @@ func normalizeEventGatewayBackendClusterSDKOpsBoolField(value any, path []string
 	}
 }
 
+
+type EventGatewayBackendClusterSDKOpsBase64Field struct {
+	Label string
+	Path  []string
+}
+
+var EventGatewayBackendClusterSDKOpsBase64Fields = []EventGatewayBackendClusterSDKOpsBase64Field{
+	{
+		Label: "spec.apiSpec.tls.clientIdentity.key",
+		Path: []string{
+			"tls",
+			"clientIdentity",
+			"key",
+		},
+	},
+}
+
+func encodeEventGatewayBackendClusterSDKOpsBase64Fields(payload map[string]any) error {
+	for _, field := range EventGatewayBackendClusterSDKOpsBase64Fields {
+		if _, err := encodeEventGatewayBackendClusterSDKOpsBase64Field(payload, field.Path); err != nil {
+			return fmt.Errorf("%s: %w", field.Label, err)
+		}
+	}
+	return nil
+}
+
+func encodeEventGatewayBackendClusterSDKOpsBase64Field(value any, path []string) (any, error) {
+	if len(path) == 0 {
+		switch typed := value.(type) {
+		case nil:
+			return nil, nil
+		case string:
+			return base64.StdEncoding.WithPadding(base64.NoPadding).EncodeToString([]byte(typed)), nil
+		default:
+			return nil, fmt.Errorf("expected string, got %T", value)
+		}
+	}
+
+	if value == nil {
+		return nil, nil
+	}
+
+	object, ok := value.(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("expected object, got %T", value)
+	}
+	child, ok := object[path[0]]
+	if !ok {
+		return value, nil
+	}
+	encoded, err := encodeEventGatewayBackendClusterSDKOpsBase64Field(child, path[1:])
+	if err != nil {
+		return nil, err
+	}
+	object[path[0]] = encoded
+	return object, nil
+}
+
+
 func (s *EventGatewayBackendClusterAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 	data, err := json.Marshal(s)
 	if err != nil {
@@ -127,6 +191,12 @@ func (s *EventGatewayBackendClusterAPISpec) marshalSDKOpsPayload() ([]byte, erro
 		return nil, fmt.Errorf("failed to decode EventGatewayBackendClusterAPISpec: %w", err)
 	}
 	payload = flattenSDKUnions(payload)
+	payload = flattenSensitiveData(payload)
+	if pm, ok := payload.(map[string]any); ok {
+		if err := encodeEventGatewayBackendClusterSDKOpsBase64Fields(pm); err != nil {
+			return nil, fmt.Errorf("failed to base64 encode EventGatewayBackendClusterAPISpec SDK payload: %w", err)
+		}
+	}
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
 	payload = renameKeysToSDK(payload)
@@ -172,4 +242,95 @@ func (s *EventGatewayBackendClusterAPISpec) ToUpdateBackendClusterRequest() (*sd
 		return nil, fmt.Errorf("failed to unmarshal into UpdateBackendClusterRequest: %w", err)
 	}
 	return &target, nil
+}
+
+func (obj *EventGatewayBackendCluster) sdkOpsAPISpec(ctx context.Context, cl client.Client) (*EventGatewayBackendClusterAPISpec, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("EventGatewayBackendCluster is nil")
+	}
+
+	apiSpec := obj.Spec.APISpec
+	// Resolve spec.apiSpec.tls.clientIdentity.certificate
+	{
+		src := apiSpec.TLS.ClientIdentity.Certificate
+		if src.Type == SensitiveDataSourceTypeSecretRef {
+			if src.SecretRef == nil {
+				return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.tls.clientIdentity.certificate")
+			}
+			namespace := obj.GetNamespace()
+			if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+				namespace = *src.SecretRef.Namespace
+			}
+			var secret corev1.Secret
+			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+			}
+			secretBytes, ok := secret.Data["tls.crt"]
+			if !ok {
+				return nil, fmt.Errorf("secret %s/%s is missing key 'tls.crt'", namespace, src.SecretRef.Name)
+			}
+			resolved := string(secretBytes)
+			apiSpec.TLS.ClientIdentity.Certificate.Value = &resolved
+		}
+	}
+	// Resolve spec.apiSpec.tls.clientIdentity.key
+	{
+		src := apiSpec.TLS.ClientIdentity.Key
+		if src.Type == SensitiveDataSourceTypeSecretRef {
+			if src.SecretRef == nil {
+				return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.tls.clientIdentity.key")
+			}
+			namespace := obj.GetNamespace()
+			if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+				namespace = *src.SecretRef.Namespace
+			}
+			var secret corev1.Secret
+			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+			}
+			secretBytes, ok := secret.Data["tls.key"]
+			if !ok {
+				return nil, fmt.Errorf("secret %s/%s is missing key 'tls.key'", namespace, src.SecretRef.Name)
+			}
+			resolved := string(secretBytes)
+			apiSpec.TLS.ClientIdentity.Key.Value = &resolved
+		}
+	}
+	return &apiSpec, nil
+}
+
+func (obj *EventGatewayBackendCluster) GetSensitiveDataSecretRefs() []SensitiveDataSecretRef {
+	if obj == nil {
+		return nil
+	}
+	var refs []SensitiveDataSecretRef
+	if obj.Spec.APISpec.TLS.ClientIdentity.Certificate.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.TLS.ClientIdentity.Certificate.SecretRef != nil {
+		refs = append(refs, SensitiveDataSecretRef{
+			Ref: *obj.Spec.APISpec.TLS.ClientIdentity.Certificate.SecretRef,
+			Key: "tls.crt",
+		})
+	}
+	if obj.Spec.APISpec.TLS.ClientIdentity.Key.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.TLS.ClientIdentity.Key.SecretRef != nil {
+		refs = append(refs, SensitiveDataSecretRef{
+			Ref: *obj.Spec.APISpec.TLS.ClientIdentity.Key.SecretRef,
+			Key: "tls.key",
+		})
+	}
+	return refs
+}
+
+func (obj *EventGatewayBackendCluster) ToCreateBackendClusterRequest(ctx context.Context, cl client.Client) (*sdkkonnectcomp.CreateBackendClusterRequest, error) {
+	spec, err := obj.sdkOpsAPISpec(ctx, cl)
+	if err != nil {
+		return nil, err
+	}
+	return spec.ToCreateBackendClusterRequest()
+}
+
+func (obj *EventGatewayBackendCluster) ToUpdateBackendClusterRequest(ctx context.Context, cl client.Client) (*sdkkonnectcomp.UpdateBackendClusterRequest, error) {
+	spec, err := obj.sdkOpsAPISpec(ctx, cl)
+	if err != nil {
+		return nil, err
+	}
+	return spec.ToUpdateBackendClusterRequest()
 }

@@ -10996,9 +10996,48 @@ spec:
                               expression.
                               The value is stored and returned by the API as-is, not treated as sensitive
                               information.
-                            maxLength: 4096
-                            minLength: 1
-                            type: string
+                            properties:
+                              secretRef:
+                                description: |-
+                                  SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+                                  Required when type is 'secretRef'.
+                                properties:
+                                  name:
+                                    description: Name is the name of the referred resource.
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                  namespace:
+                                    description: |-
+                                      Namespace is the namespace of the referred resource.
+
+                                      For namespace-scoped resources if no Namespace is provided then the
+                                      namespace of the parent object MUST be used.
+
+                                      This field MUST not be set when referring to cluster-scoped resources.
+                                    maxLength: 253
+                                    type: string
+                                required:
+                                - name
+                                type: object
+                              type:
+                                default: inline
+                                description: 'Type indicates the source of the sensitive data: ''inline'' or ''secretRef''.'
+                                enum:
+                                - inline
+                                - secretRef
+                                type: string
+                              value:
+                                description: |-
+                                  Value contains the sensitive data provided inline.
+                                  Required when type is 'inline'.
+                                type: string
+                            required:
+                            - type
+                            type: object
+                            x-kubernetes-validations:
+                            - message: value required when type=inline; secretRef required when type=secretRef
+                              rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
                           key:
                             description: |-
                               A sensitive value containing the secret or a reference to a secret as a
@@ -11007,9 +11046,48 @@ spec:
                               from API responses.
                               If provided as an expression, the expression itself is stored and returned
                               by the API.
-                            maxLength: 4096
-                            minLength: 1
-                            type: string
+                            properties:
+                              secretRef:
+                                description: |-
+                                  SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+                                  Required when type is 'secretRef'.
+                                properties:
+                                  name:
+                                    description: Name is the name of the referred resource.
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                  namespace:
+                                    description: |-
+                                      Namespace is the namespace of the referred resource.
+
+                                      For namespace-scoped resources if no Namespace is provided then the
+                                      namespace of the parent object MUST be used.
+
+                                      This field MUST not be set when referring to cluster-scoped resources.
+                                    maxLength: 253
+                                    type: string
+                                required:
+                                - name
+                                type: object
+                              type:
+                                default: inline
+                                description: 'Type indicates the source of the sensitive data: ''inline'' or ''secretRef''.'
+                                enum:
+                                - inline
+                                - secretRef
+                                type: string
+                              value:
+                                description: |-
+                                  Value contains the sensitive data provided inline.
+                                  Required when type is 'inline'.
+                                type: string
+                            required:
+                            - type
+                            type: object
+                            x-kubernetes-validations:
+                            - message: value required when type=inline; secretRef required when type=secretRef
+                              rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
                         required:
                         - certificate
                         - key
@@ -41597,9 +41675,48 @@ spec:
                 properties:
                   certificate:
                     description: JSON escaped string of the certificate.
-                    maxLength: 253
-                    minLength: 1
-                    type: string
+                    properties:
+                      secretRef:
+                        description: |-
+                          SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+                          Required when type is 'secretRef'.
+                        properties:
+                          name:
+                            description: Name is the name of the referred resource.
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          namespace:
+                            description: |-
+                              Namespace is the namespace of the referred resource.
+
+                              For namespace-scoped resources if no Namespace is provided then the
+                              namespace of the parent object MUST be used.
+
+                              This field MUST not be set when referring to cluster-scoped resources.
+                            maxLength: 253
+                            type: string
+                        required:
+                        - name
+                        type: object
+                      type:
+                        default: inline
+                        description: 'Type indicates the source of the sensitive data: ''inline'' or ''secretRef''.'
+                        enum:
+                        - inline
+                        - secretRef
+                        type: string
+                      value:
+                        description: |-
+                          Value contains the sensitive data provided inline.
+                          Required when type is 'inline'.
+                        type: string
+                    required:
+                    - type
+                    type: object
+                    x-kubernetes-validations:
+                    - message: value required when type=inline; secretRef required when type=secretRef
+                      rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
                   description:
                     description: A description of the certificate.
                     maxLength: 253
@@ -41665,39 +41782,6 @@ spec:
                   rule: 'self.type == ''konnectID'' ? has(self.konnectID) : true'
                 - message: when type is konnectID, namespacedRef must not be set
                   rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
-              secretRef:
-                description: |-
-                  SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
-                  This field is used when type is 'secretRef'.
-                  The Secret must contain the relevant data keys for this resource.
-                properties:
-                  name:
-                    description: Name is the name of the referred resource.
-                    maxLength: 253
-                    minLength: 1
-                    type: string
-                  namespace:
-                    description: |-
-                      Namespace is the namespace of the referred resource.
-
-                      For namespace-scoped resources if no Namespace is provided then the
-                      namespace of the parent object MUST be used.
-
-                      This field MUST not be set when referring to cluster-scoped resources.
-                    maxLength: 253
-                    type: string
-                required:
-                - name
-                type: object
-              type:
-                default: inline
-                description: |-
-                  Type indicates the source of the sensitive data.
-                  Can be 'inline' or 'secretRef'.
-                enum:
-                - inline
-                - secretRef
-                type: string
             required:
             - gatewayRef
             type: object

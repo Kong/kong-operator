@@ -66,7 +66,7 @@ type {{.EntityName}}Spec struct {
 	//
 	// +required
 	KonnectConfiguration konnectv1alpha2.KonnectConfiguration ` + "`" + `json:"konnect"` + "`" + `
-{{end}}
+{{- end}}
 {{- if .ParentRef}}
 	// {{.ParentRefGoFieldName}} is the reference to the parent {{.SetParentIDEntityName}} object.
 	//
@@ -78,30 +78,13 @@ type {{.EntityName}}Spec struct {
 	//
 	// +required
 	{{.FieldName}} {{objectRefTypeName}} ` + "`" + `json:"{{.JSONName}},omitzero"` + "`" + `
-{{end}}
 {{- end}}
-{{- if .HasOptionalSecretRef}}
-	// Type indicates the source of the sensitive data.
-	// Can be 'inline' or 'secretRef'.
-	//
-	// +kubebuilder:validation:Enum=inline;secretRef
-	// +kubebuilder:default=inline
-	// +optional
-	Type *SensitiveDataSourceType ` + "`" + `json:"type,omitempty"` + "`" + `
-{{end}}
+{{- end}}
+
 	// APISpec defines the desired state of the resource's API spec fields.
 	//
 	// +optional
 	APISpec {{.EntityName}}APISpec ` + "`" + `json:"apiSpec,omitzero"` + "`" + `
-{{- if .HasOptionalSecretRef}}
-
-	// SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
-	// This field is used when type is 'secretRef'.
-	// The Secret must contain the relevant data keys for this resource.
-	//
-	// +optional
-	SecretRef *{{namespacedRefTypeName}} ` + "`" + `json:"secretRef,omitempty"` + "`" + `
-{{- end}}
 }
 
 // {{.EntityName}}APISpec defines the API spec fields for {{.EntityName}}.
@@ -455,17 +438,20 @@ import (
 {{- if .NeedsClient}}
 	"context"
 {{- end}}
+	{{- if .Base64Fields}}
+	"encoding/base64"
+	{{- end}}
 	"encoding/json"
 	"fmt"
 {{- if .NeedsClient}}
 
-{{if .HasSecretRef}}	corev1 "k8s.io/api/core/v1"
+{{if .SecretReferences}}	corev1 "k8s.io/api/core/v1"
 {{end}}	"sigs.k8s.io/controller-runtime/pkg/client"
 {{- end}}
 
 {{range .Imports}}	{{.Alias}} "{{.Path}}"
-{{end}})
-{{if .BoolFields}}
+{{end}}){{if .BoolFields}}
+
 type {{$.EntityName}}SDKOpsBoolField struct {
 	Label string
 	Path  []string
@@ -563,7 +549,68 @@ func normalize{{$.EntityName}}SDKOpsBoolField(value any, path []string) (any, er
 		return object, nil
 	}
 }
+{{end}}{{if .Base64Fields}}
+
+type {{$.EntityName}}SDKOpsBase64Field struct {
+	Label string
+	Path  []string
+}
+
+var {{$.EntityName}}SDKOpsBase64Fields = []{{$.EntityName}}SDKOpsBase64Field{
+{{- range .Base64Fields}}
+	{
+		Label: "{{.Label}}",
+		Path: []string{
+{{- range .Path}}
+			"{{.}}",
+{{- end}}
+		},
+	},
+{{- end}}
+}
+
+func encode{{$.EntityName}}SDKOpsBase64Fields(payload map[string]any) error {
+	for _, field := range {{$.EntityName}}SDKOpsBase64Fields {
+		if _, err := encode{{$.EntityName}}SDKOpsBase64Field(payload, field.Path); err != nil {
+			return fmt.Errorf("%s: %w", field.Label, err)
+		}
+	}
+	return nil
+}
+
+func encode{{$.EntityName}}SDKOpsBase64Field(value any, path []string) (any, error) {
+	if len(path) == 0 {
+		switch typed := value.(type) {
+		case nil:
+			return nil, nil
+		case string:
+			return base64.StdEncoding.WithPadding(base64.NoPadding).EncodeToString([]byte(typed)), nil
+		default:
+			return nil, fmt.Errorf("expected string, got %T", value)
+		}
+	}
+
+	if value == nil {
+		return nil, nil
+	}
+
+	object, ok := value.(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("expected object, got %T", value)
+	}
+	child, ok := object[path[0]]
+	if !ok {
+		return value, nil
+	}
+	encoded, err := encode{{$.EntityName}}SDKOpsBase64Field(child, path[1:])
+	if err != nil {
+		return nil, err
+	}
+	object[path[0]] = encoded
+	return object, nil
+}
 {{end}}
+
 func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() ([]byte, error) {
 	data, err := json.Marshal(s)
 	if err != nil {
@@ -574,6 +621,16 @@ func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() ([]byte, error) {
 		return nil, fmt.Errorf("failed to decode {{$.EntityName}}APISpec: %w", err)
 	}
 	payload = flattenSDKUnions(payload)
+	{{- if $.SecretReferences}}
+	payload = flattenSensitiveData(payload)
+	{{- end}}
+	{{- if $.Base64Fields}}
+	if pm, ok := payload.(map[string]any); ok {
+		if err := encode{{$.EntityName}}SDKOpsBase64Fields(pm); err != nil {
+			return nil, fmt.Errorf("failed to base64 encode {{$.EntityName}}APISpec SDK payload: %w", err)
+		}
+	}
+	{{- end}}
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
 	payload = renameKeysToSDK(payload)
@@ -614,30 +671,48 @@ func (obj *{{$.EntityName}}) sdkOpsAPISpec(ctx context.Context, cl client.Client
 	}
 
 	apiSpec := obj.Spec.APISpec
-{{- if .HasSecretRef}}
-	if obj.Spec.Type != nil && *obj.Spec.Type == SensitiveDataSourceTypeSecretRef {
-		if obj.Spec.SecretRef == nil {
-			return nil, fmt.Errorf("secretRef is nil")
+{{- range .SecretReferences}}
+	// Resolve {{.Path}}
+	{
+		src := apiSpec.{{.GoFieldSelector}}
+		if src.Type == SensitiveDataSourceTypeSecretRef {
+			if src.SecretRef == nil {
+				return nil, fmt.Errorf("secretRef is nil for {{.Path}}")
+			}
+			namespace := obj.GetNamespace()
+			if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+				namespace = *src.SecretRef.Namespace
+			}
+			var secret corev1.Secret
+			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+			}
+			secretBytes, ok := secret.Data["{{.SecretKey}}"]
+			if !ok {
+				return nil, fmt.Errorf("secret %s/%s is missing key '{{.SecretKey}}'", namespace, src.SecretRef.Name)
+			}
+			resolved := string(secretBytes)
+			apiSpec.{{.GoFieldSelector}}.Value = &resolved
 		}
-
-		namespace := obj.GetNamespace()
-		if obj.Spec.SecretRef.Namespace != nil && *obj.Spec.SecretRef.Namespace != "" {
-			namespace = *obj.Spec.SecretRef.Namespace
-		}
-
-		var secret corev1.Secret
-		if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: obj.Spec.SecretRef.Name}, &secret); err != nil {
-			return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, obj.Spec.SecretRef.Name, err)
-		}
-
-		secretBytes, ok := secret.Data["tls.crt"]
-		if !ok {
-			return nil, fmt.Errorf("secret %s/%s is missing key 'tls.crt'", namespace, obj.Spec.SecretRef.Name)
-		}
-		apiSpec.Certificate = string(secretBytes)
 	}
 {{- end}}
 	return &apiSpec, nil
+}
+
+func (obj *{{$.EntityName}}) GetSensitiveDataSecretRefs() []SensitiveDataSecretRef {
+	if obj == nil {
+		return nil
+	}
+	var refs []SensitiveDataSecretRef
+{{- range .SecretReferences}}
+	if obj.Spec.APISpec.{{.GoFieldSelector}}.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.{{.GoFieldSelector}}.SecretRef != nil {
+		refs = append(refs, SensitiveDataSecretRef{
+			Ref: *obj.Spec.APISpec.{{.GoFieldSelector}}.SecretRef,
+			Key: "{{.SecretKey}}",
+		})
+	}
+{{- end}}
+	return refs
 }
 {{range .Methods}}
 func (obj *{{$.EntityName}}) {{.MethodName}}(ctx context.Context, cl client.Client) (*{{.ImportAlias}}.{{.TypeName}}, error) {
@@ -722,18 +797,20 @@ import (
 {{- if .NeedsClient}}
 	"context"
 {{- end}}
+	{{- if .Base64Fields}}
+	"encoding/base64"
+	{{- end}}
 	"encoding/json"
 	"fmt"
 {{- if .NeedsClient}}
 
-{{if .HasSecretRef}}	corev1 "k8s.io/api/core/v1"
+{{if .SecretReferences}}	corev1 "k8s.io/api/core/v1"
 {{end}}	"sigs.k8s.io/controller-runtime/pkg/client"
 {{- end}}
 
 {{range .Imports}}	{{.Alias}} "{{.Path}}"
-{{end}})
+{{end}}){{if .BoolFields}}
 
-{{if .BoolFields}}
 type {{$.EntityName}}SDKOpsBoolField struct {
 	Label string
 	Path  []string
@@ -831,7 +908,67 @@ func normalize{{$.EntityName}}SDKOpsBoolField(value any, path []string) (any, er
 		return object, nil
 	}
 }
+{{end}}{{if .Base64Fields}}
+type {{$.EntityName}}SDKOpsBase64Field struct {
+	Label string
+	Path  []string
+}
+
+var {{$.EntityName}}SDKOpsBase64Fields = []{{$.EntityName}}SDKOpsBase64Field{
+{{- range .Base64Fields}}
+	{
+		Label: "{{.Label}}",
+		Path: []string{
+{{- range .Path}}
+			"{{.}}",
+{{- end}}
+		},
+	},
+{{- end}}
+}
+
+func encode{{$.EntityName}}SDKOpsBase64Fields(payload map[string]any) error {
+	for _, field := range {{$.EntityName}}SDKOpsBase64Fields {
+		if _, err := encode{{$.EntityName}}SDKOpsBase64Field(payload, field.Path); err != nil {
+			return fmt.Errorf("%s: %w", field.Label, err)
+		}
+	}
+	return nil
+}
+
+func encode{{$.EntityName}}SDKOpsBase64Field(value any, path []string) (any, error) {
+	if len(path) == 0 {
+		switch typed := value.(type) {
+		case nil:
+			return nil, nil
+		case string:
+			return base64.StdEncoding.WithPadding(base64.NoPadding).EncodeToString([]byte(typed)), nil
+		default:
+			return nil, fmt.Errorf("expected string, got %T", value)
+		}
+	}
+
+	if value == nil {
+		return nil, nil
+	}
+
+	object, ok := value.(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("expected object, got %T", value)
+	}
+	child, ok := object[path[0]]
+	if !ok {
+		return value, nil
+	}
+	encoded, err := encode{{$.EntityName}}SDKOpsBase64Field(child, path[1:])
+	if err != nil {
+		return nil, err
+	}
+	object[path[0]] = encoded
+	return object, nil
+}
 {{end}}
+
 func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() (map[string]any, error) {
 	data, err := json.Marshal(s)
 	if err != nil {
@@ -842,6 +979,16 @@ func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() (map[string]any, error)
 	if err := json.Unmarshal(data, &rawPayload); err != nil {
 		return nil, fmt.Errorf("failed to decode {{$.EntityName}}APISpec: %w", err)
 	}
+	{{- if $.SecretReferences}}
+	rawPayload = flattenSensitiveData(rawPayload)
+	{{- end}}
+	{{- if $.Base64Fields}}
+	if pm, ok := rawPayload.(map[string]any); ok {
+		if err := encode{{$.EntityName}}SDKOpsBase64Fields(pm); err != nil {
+			return nil, fmt.Errorf("failed to base64 encode {{$.EntityName}}APISpec SDK payload: %w", err)
+		}
+	}
+	{{- end}}
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
 	renamed := renameKeysToSDK(rawPayload)
@@ -1003,30 +1150,48 @@ func (obj *{{$.EntityName}}) sdkOpsAPISpec(ctx context.Context, cl client.Client
 	}
 
 	apiSpec := obj.Spec.APISpec
-{{- if .HasSecretRef}}
-	if obj.Spec.Type != nil && *obj.Spec.Type == SensitiveDataSourceTypeSecretRef {
-		if obj.Spec.SecretRef == nil {
-			return nil, fmt.Errorf("secretRef is nil")
+{{- range .SecretReferences}}
+	// Resolve {{.Path}}
+	{
+		src := apiSpec.{{.GoFieldSelector}}
+		if src.Type == SensitiveDataSourceTypeSecretRef {
+			if src.SecretRef == nil {
+				return nil, fmt.Errorf("secretRef is nil for {{.Path}}")
+			}
+			namespace := obj.GetNamespace()
+			if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+				namespace = *src.SecretRef.Namespace
+			}
+			var secret corev1.Secret
+			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+			}
+			secretBytes, ok := secret.Data["{{.SecretKey}}"]
+			if !ok {
+				return nil, fmt.Errorf("secret %s/%s is missing key '{{.SecretKey}}'", namespace, src.SecretRef.Name)
+			}
+			resolved := string(secretBytes)
+			apiSpec.{{.GoFieldSelector}}.Value = &resolved
 		}
-
-		namespace := obj.GetNamespace()
-		if obj.Spec.SecretRef.Namespace != nil && *obj.Spec.SecretRef.Namespace != "" {
-			namespace = *obj.Spec.SecretRef.Namespace
-		}
-
-		var secret corev1.Secret
-		if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: obj.Spec.SecretRef.Name}, &secret); err != nil {
-			return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, obj.Spec.SecretRef.Name, err)
-		}
-
-		secretBytes, ok := secret.Data["tls.crt"]
-		if !ok {
-			return nil, fmt.Errorf("secret %s/%s is missing key 'tls.crt'", namespace, obj.Spec.SecretRef.Name)
-		}
-		apiSpec.Certificate = string(secretBytes)
 	}
 {{- end}}
 	return &apiSpec, nil
+}
+
+func (obj *{{$.EntityName}}) GetSensitiveDataSecretRefs() []SensitiveDataSecretRef {
+	if obj == nil {
+		return nil
+	}
+	var refs []SensitiveDataSecretRef
+{{- range .SecretReferences}}
+	if obj.Spec.APISpec.{{.GoFieldSelector}}.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.{{.GoFieldSelector}}.SecretRef != nil {
+		refs = append(refs, SensitiveDataSecretRef{
+			Ref: *obj.Spec.APISpec.{{.GoFieldSelector}}.SecretRef,
+			Key: "{{.SecretKey}}",
+		})
+	}
+{{- end}}
+	return refs
 }
 {{range .Methods}}
 
@@ -1083,16 +1248,20 @@ func Test{{$.EntityName}}APISpec_{{.MethodName}}(t *testing.T) {
 const commonTypesTemplate = sharedGeneratedFilePreamble + `
 
 package {{.APIVersion}}
-{{- if .KonnectStatusImport}}
 
 import (
+{{- if .KonnectStatusImport}}
 {{- if .KonnectStatusImport.Alias}}
 	{{.KonnectStatusImport.Alias}} "{{.KonnectStatusImport.Path}}"
 {{- else}}
 	"{{.KonnectStatusImport.Path}}"
 {{- end}}
-)
 {{- end}}
+{{- if and .HasSecretRefEntities .ObjectRefImported}}
+	{{.ObjectRefImport.Alias}} "{{.ObjectRefImport.Path}}"
+{{- end}}
+)
+
 {{- if not .ObjectRefImported}}
 
 ` + objectRefTypeEnum + `
@@ -1112,9 +1281,13 @@ import (
 {{- if .HasSecretRefEntities}}
 
 ` + sensitiveDataSourceType + `
+
+` + sensitiveDataSourceStructType + `
 {{- end}}
 
 ` + flattenSDKUnionsHelper + `
+
+` + flattenSensitiveDataHelper + `
 
 ` + renameKeysToSDKHelper + `
 `
@@ -1471,7 +1644,7 @@ func get{{.Entity}}ForUID(
 	}
 	entry := resp.{{.ListResponseField}}
 {{- range .MatchFields}}
-	if !matchStringField(obj.{{.ObjectField}}, entry.{{.ResponseField}}) {
+	if !{{if .SensitiveMatch}}matchSensitiveDataSourceField{{else}}matchStringField{{end}}(obj.{{.ObjectField}}, entry.{{.ResponseField}}) {
 		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 	}
 {{- end}}
@@ -1538,11 +1711,7 @@ func get{{.Entity}}ForUID(
 
 	for _, entry := range {{.ListResponseItemsExpr}} {
 		{{- range .MatchFields}}
-		{{- if .SliceMatch}}
-		if !matchSliceField(obj.{{.ObjectField}}, entry.{{.ResponseField}}) {
-		{{- else}}
-		if !matchStringField(obj.{{.ObjectField}}, entry.{{.ResponseField}}) {
-		{{- end}}
+		if !{{if .SliceMatch}}matchSliceField{{else if .SensitiveMatch}}matchSensitiveDataSourceField{{else}}matchStringField{{end}}(obj.{{.ObjectField}}, entry.{{.ResponseField}}) {
 			continue
 		}
 		{{- end}}

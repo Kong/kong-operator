@@ -61,7 +61,10 @@ apiGroupVersions:
   konnect.konghq.com/v1alpha1:
     types:
       - path: /v1/event-gateways/{gatewayId}/data-plane-certificates
-        optionalSecretReference: true
+        secretReferences:
+          - path: spec.apiSpec.certificate
+            type: Secret
+            key: tls.crt
         ops:
           requireClient: true
           create:
@@ -76,13 +79,48 @@ apiGroupVersions:
 		konnect := cfg.APIGroupVersions["konnect.konghq.com/v1alpha1"]
 		require.NotNil(t, konnect)
 		require.Len(t, konnect.Types, 1)
-		assert.True(t, konnect.Types[0].OptionalSecretReference)
+		require.Len(t, konnect.Types[0].SecretReferences, 1)
+		assert.Equal(t, "spec.apiSpec.certificate", konnect.Types[0].SecretReferences[0].Path)
+		assert.Equal(t, "Secret", konnect.Types[0].SecretReferences[0].Type)
+		assert.Equal(t, "tls.crt", konnect.Types[0].SecretReferences[0].Key)
+		assert.False(t, konnect.Types[0].SecretReferences[0].Base64Encoding)
 		assert.True(t, konnect.Types[0].OpsRequireClient)
 		require.NotNil(t, konnect.Types[0].Ops)
 		assert.Equal(t,
 			"github.com/Kong/sdk-konnect-go/models/components.CreateEventGatewayDataPlaneCertificateRequest",
 			konnect.Types[0].Ops["create"].Path,
 		)
+	})
+
+	t.Run("valid config with base64-encoded secret reference", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    types:
+      - path: /v1/event-gateways/{gatewayId}/backend-clusters
+        secretReferences:
+          - path: spec.apiSpec.tls.clientIdentity.key
+            type: Secret
+            key: tls.key
+            base64Encoding: true
+        ops:
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateBackendClusterRequest
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		cfg, err := LoadProjectConfig(path)
+		require.NoError(t, err)
+
+		konnect := cfg.APIGroupVersions["konnect.konghq.com/v1alpha1"]
+		require.NotNil(t, konnect)
+		require.Len(t, konnect.Types, 1)
+		require.Len(t, konnect.Types[0].SecretReferences, 1)
+		assert.Equal(t, "spec.apiSpec.tls.clientIdentity.key", konnect.Types[0].SecretReferences[0].Path)
+		assert.Equal(t, "Secret", konnect.Types[0].SecretReferences[0].Type)
+		assert.Equal(t, "tls.key", konnect.Types[0].SecretReferences[0].Key)
+		assert.True(t, konnect.Types[0].SecretReferences[0].Base64Encoding)
 	})
 
 	t.Run("valid config with ops uid tag filter", func(t *testing.T) {
@@ -685,7 +723,9 @@ func TestAPIGroupVersionConfig_OpsConfig(t *testing.T) {
 					Ops: map[string]*OpConfig{
 						"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateEventGatewayDataPlaneCertificateRequest"},
 					},
-					OptionalSecretReference: true,
+					SecretReferences: []SecretReferenceConfig{
+						{Path: "spec.apiSpec.certificate", Type: "Secret", Key: "tls.crt"},
+					},
 				},
 				{
 					Path: "/v3/portals",

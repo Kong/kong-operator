@@ -107,7 +107,7 @@ func getKonnectEventDataPlaneCertificateForUID(
 	}
 
 	for _, entry := range resp.ListEventGatewayDataPlaneCertificatesResponse.Data {
-		if !matchStringField(obj.Spec.APISpec.Certificate, entry.Certificate) {
+		if !matchSensitiveDataSourceField(obj.Spec.APISpec.Certificate, entry.Certificate) {
 			continue
 		}
 		if !matchStringField(obj.Spec.APISpec.Name, entry.Name) {

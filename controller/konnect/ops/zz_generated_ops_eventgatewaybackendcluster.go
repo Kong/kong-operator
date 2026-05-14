@@ -5,6 +5,7 @@ package ops
 import (
 	"context"
 	"fmt"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
@@ -14,6 +15,7 @@ import (
 
 func createEventGatewayBackendCluster(
 	ctx context.Context,
+	cl client.Client,
 	sdk sdkkonnectgo.EventGatewayBackendClustersSDK,
 	obj *konnectv1alpha1.EventGatewayBackendCluster,
 ) error {
@@ -21,7 +23,7 @@ func createEventGatewayBackendCluster(
 	if parentID == "" {
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectEventGateway", Op: CreateOp}
 	}
-	req, err := obj.Spec.APISpec.ToCreateBackendClusterRequest()
+	req, err := obj.ToCreateBackendClusterRequest(ctx, cl)
 	if err != nil {
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
 	}
@@ -41,6 +43,7 @@ func createEventGatewayBackendCluster(
 
 func updateEventGatewayBackendCluster(
 	ctx context.Context,
+	cl client.Client,
 	sdk sdkkonnectgo.EventGatewayBackendClustersSDK,
 	obj *konnectv1alpha1.EventGatewayBackendCluster,
 ) error {
@@ -49,7 +52,7 @@ func updateEventGatewayBackendCluster(
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectEventGateway", Op: UpdateOp}
 	}
 	id := obj.GetKonnectStatus().GetKonnectID()
-	req, err := obj.Spec.APISpec.ToUpdateBackendClusterRequest()
+	req, err := obj.ToUpdateBackendClusterRequest(ctx, cl)
 	if err != nil {
 		return fmt.Errorf("failed building %s SDK update request: %w", obj.GetTypeName(), err)
 	}
@@ -62,7 +65,7 @@ func updateEventGatewayBackendCluster(
 	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {
 		return handleUpdateError(ctx, err, obj, func(ctx context.Context) error {
-			return createEventGatewayBackendCluster(ctx, sdk, obj)
+			return createEventGatewayBackendCluster(ctx, cl, sdk, obj)
 		})
 	}
 	return nil
