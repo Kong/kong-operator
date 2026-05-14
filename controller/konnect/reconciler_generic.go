@@ -421,7 +421,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	// If a type has KongCACertificate refs (KongService), handle them.
 	res, err = handleKongCACertificateRefs(ctx, r.Client, ent)
 	if err != nil {
-		if errDel, ok := errors.AsType[ReferencedKongCACertificateIsBeingDeletedError](err); ok &&
+		if errDel, ok := errors.AsType[ReferencedObjectIsBeingDeletedError](err); ok &&
 			ent.GetDeletionTimestamp().IsZero() {
 			return ctrl.Result{
 				RequeueAfter: time.Until(errDel.DeletionTimestamp),

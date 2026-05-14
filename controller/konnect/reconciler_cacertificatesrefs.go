@@ -105,7 +105,7 @@ func handleKongCACertificateRefs[T constraints.SupportedKonnectEntityType, TEnt 
 			); errStatus != nil || !res.IsZero() {
 				return res, errStatus
 			}
-			return ctrl.Result{}, ReferencedKongCACertificateIsBeingDeletedError{
+			return ctrl.Result{}, ReferencedObjectIsBeingDeletedError{
 				Reference:         nn,
 				DeletionTimestamp: delTimestamp.Time,
 			}

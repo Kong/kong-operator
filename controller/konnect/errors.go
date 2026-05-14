@@ -179,19 +179,6 @@ func (e ReferencedKongCACertificateDoesNotExistError) Error() string {
 	return fmt.Sprintf("referenced KongCACertificate %s does not exist: %v", e.Reference, e.Err)
 }
 
-// ReferencedKongCACertificateIsBeingDeletedError is an error type that is returned when
-// a Konnect entity references a KongCACertificate which is being deleted.
-type ReferencedKongCACertificateIsBeingDeletedError struct {
-	Reference         types.NamespacedName
-	DeletionTimestamp time.Time
-}
-
-// Error implements the error interface.
-func (e ReferencedKongCACertificateIsBeingDeletedError) Error() string {
-	return fmt.Sprintf("referenced KongCACertificate %s is being deleted (deletion timestamp: %s)",
-		e.Reference, e.DeletionTimestamp)
-}
-
 // ReferencedKongCACertificateBelongsToWrongControlPlaneError is returned when
 // a referenced KongCACertificate belongs to a different ControlPlane.
 type ReferencedKongCACertificateBelongsToWrongControlPlaneError struct {

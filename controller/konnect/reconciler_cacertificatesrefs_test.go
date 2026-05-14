@@ -153,7 +153,7 @@ func TestHandleKongCACertificateRefs(t *testing.T) {
 		}), "KongService does not have KongCACertificateRefsValid condition set to False")
 	})
 
-	t.Run("CA cert being deleted returns ReferencedKongCACertificateIsBeingDeletedError", func(t *testing.T) {
+	t.Run("CA cert being deleted returns ReferencedObjectIsBeingDeletedError", func(t *testing.T) {
 		caCertBeingDeleted := &configurationv1alpha1.KongCACertificate{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:              certName,
@@ -172,7 +172,7 @@ func TestHandleKongCACertificateRefs(t *testing.T) {
 
 		_, err := handleKongCACertificateRefs(t.Context(), cl, svc)
 		require.Error(t, err)
-		var beingDeletedErr ReferencedKongCACertificateIsBeingDeletedError
+		var beingDeletedErr ReferencedObjectIsBeingDeletedError
 		require.ErrorAs(t, err, &beingDeletedErr)
 	})
 
