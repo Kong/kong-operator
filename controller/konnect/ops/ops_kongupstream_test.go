@@ -13,6 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/pkg/metadata"
@@ -398,6 +399,91 @@ func TestUpdateKongUpstream(t *testing.T) {
 			}
 
 			require.NoError(t, err)
+		})
+	}
+}
+
+func TestResolveUpstreamClientCertificate(t *testing.T) {
+	deprecatedCert := &sdkkonnectcomp.UpstreamClientCertificate{ID: new("deprecated-id")}
+
+	tests := []struct {
+		name     string
+		upstream *configurationv1alpha1.KongUpstream
+		expected *sdkkonnectcomp.UpstreamClientCertificate
+	}{
+		{
+			name: "ClientCertificateRef set and status has CertificateID",
+			upstream: &configurationv1alpha1.KongUpstream{
+				Spec: configurationv1alpha1.KongUpstreamSpec{
+					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
+						ClientCertificateRef: &commonv1alpha1.NamespacedRef{Name: "cert-ref"},
+					},
+				},
+				Status: configurationv1alpha1.KongUpstreamStatus{
+					Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{
+						CertificateID: "cert-123",
+					},
+				},
+			},
+			expected: &sdkkonnectcomp.UpstreamClientCertificate{ID: new("cert-123")},
+		},
+		{
+			name: "ClientCertificateRef set and Status.Konnect is nil",
+			upstream: &configurationv1alpha1.KongUpstream{
+				Spec: configurationv1alpha1.KongUpstreamSpec{
+					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
+						ClientCertificateRef: &commonv1alpha1.NamespacedRef{Name: "cert-ref"},
+					},
+				},
+			},
+			expected: nil,
+		},
+		{
+			name: "ClientCertificateRef set and Status.Konnect.CertificateID is empty",
+			upstream: &configurationv1alpha1.KongUpstream{
+				Spec: configurationv1alpha1.KongUpstreamSpec{
+					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
+						ClientCertificateRef: &commonv1alpha1.NamespacedRef{Name: "cert-ref"},
+					},
+				},
+				Status: configurationv1alpha1.KongUpstreamStatus{
+					Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{
+						CertificateID: "",
+					},
+				},
+			},
+			expected: nil,
+		},
+		{
+			name: "ClientCertificateRef nil and deprecated Spec.ClientCertificate set",
+			upstream: &configurationv1alpha1.KongUpstream{
+				Spec: configurationv1alpha1.KongUpstreamSpec{
+					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
+						ClientCertificate: deprecatedCert,
+					},
+				},
+			},
+			expected: deprecatedCert,
+		},
+		{
+			name: "both ClientCertificateRef and deprecated Spec.ClientCertificate nil",
+			upstream: &configurationv1alpha1.KongUpstream{
+				Spec: configurationv1alpha1.KongUpstreamSpec{
+					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{},
+				},
+			},
+			expected: nil,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := resolveUpstreamClientCertificate(tc.upstream)
+			if tc.name == "ClientCertificateRef nil and deprecated Spec.ClientCertificate set" {
+				assert.Same(t, tc.expected, result)
+			} else {
+				assert.Equal(t, tc.expected, result)
+			}
 		})
 	}
 }
