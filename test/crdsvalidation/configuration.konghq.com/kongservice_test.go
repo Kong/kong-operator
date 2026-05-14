@@ -149,6 +149,52 @@ func TestKongService(t *testing.T) {
 			RunWithConfig(t, cfg, scheme)
 	})
 
+	t.Run("cert refs", func(t *testing.T) {
+		common.TestCasesGroup[*configurationv1alpha1.KongService]{
+			{
+				Name: "clientCertificateRef with name is accepted",
+				TestObject: &configurationv1alpha1.KongService{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongServiceSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+								Name: "test-cp",
+							},
+						},
+						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
+							Host: "example.com",
+							ClientCertificateRef: &commonv1alpha1.NamespacedRef{
+								Name: "my-cert",
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "caCertificateRefs with multiple entries is accepted",
+				TestObject: &configurationv1alpha1.KongService{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongServiceSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+								Name: "test-cp",
+							},
+						},
+						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
+							Host: "example.com",
+							CACertificateRefs: []commonv1alpha1.NamespacedRef{
+								{Name: "ca1"},
+								{Name: "ca2"},
+							},
+						},
+					},
+				},
+			},
+		}.RunWithConfig(t, cfg, scheme)
+	})
+
 	t.Run("tags validation", func(t *testing.T) {
 		common.TestCasesGroup[*configurationv1alpha1.KongService]{
 			{

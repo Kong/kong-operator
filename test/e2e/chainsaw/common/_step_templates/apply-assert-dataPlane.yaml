@@ -1,0 +1,51 @@
+# Template for creating and asserting a DataPlane backed by a KonnectExtension.
+#
+# Required bindings:
+#   - dataplane_name: Name of the DataPlane to create.
+#   - dataplane_namespace: Namespace where the DataPlane will be created.
+#   - extension_name: Name of the KonnectExtension to reference.
+#   - dataplane_image: (optional) Container image for the proxy. Default: "kong/kong-gateway:3.13".
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-dataplane
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: gateway-operator.konghq.com/v1beta1
+          kind: DataPlane
+          metadata:
+            name: ($dataplane_name)
+            namespace: ($dataplane_namespace)
+          spec:
+            extensions:
+              - kind: KonnectExtension
+                name: ($extension_name)
+                group: konnect.konghq.com
+            deployment:
+              replicas: 1
+              podTemplateSpec:
+                spec:
+                  containers:
+                    - name: proxy
+                      image: ($dataplane_image)
+                      readinessProbe:
+                        initialDelaySeconds: 1
+                        periodSeconds: 1
+            network:
+              services:
+                ingress:
+                  type: LoadBalancer
+    - assert:
+        resource:
+          apiVersion: gateway-operator.konghq.com/v1beta1
+          kind: DataPlane
+          metadata:
+            name: ($dataplane_name)
+            namespace: ($dataplane_namespace)
+          status:
+            (conditions[?type == 'Ready']):
+              - status: 'True'
+            (addresses[0].value != null): true
+            (addresses[0].value != ''): true

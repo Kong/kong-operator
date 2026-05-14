@@ -69,6 +69,11 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		return ctrl.Result{}, err
 	}
 
+	cpnn := types.NamespacedName{
+		Name:      cp.Name,
+		Namespace: cp.Namespace,
+	}
+
 	// Do not continue reconciling of the control plane has incompatible cluster type to prevent repeated failure of creation.
 	// Only CLUSTER_TYPE_CONTROL_PLANE is supported.
 	// The configuration in control plane group type are read only so they are unsupported to attach entities to them:
@@ -85,7 +90,7 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 			konnectv1alpha1.ControlPlaneRefValidConditionType,
 			metav1.ConditionFalse,
 			konnectv1alpha1.ControlPlaneRefReasonInvalid,
-			fmt.Sprintf("Attaching to ControlPlane %s with cluster type %s is not supported", cpRef.String(), *cp.GetKonnectClusterType()),
+			fmt.Sprintf("Attaching to ControlPlane %s with cluster type %s is not supported", cpnn, *cp.GetKonnectClusterType()),
 		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
 		}
@@ -99,7 +104,7 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 			konnectv1alpha1.ControlPlaneRefValidConditionType,
 			metav1.ConditionFalse,
 			konnectv1alpha1.ControlPlaneRefReasonNotProgrammed,
-			fmt.Sprintf("Referenced ControlPlane %s is not programmed yet", cpRef.String()),
+			fmt.Sprintf("Referenced ControlPlane %s is not programmed yet", cpnn),
 		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
 		}
@@ -125,7 +130,7 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		konnectv1alpha1.ControlPlaneRefValidConditionType,
 		metav1.ConditionTrue,
 		konnectv1alpha1.ControlPlaneRefReasonValid,
-		fmt.Sprintf("Referenced ControlPlane %s is programmed", cpRef.String()),
+		fmt.Sprintf("Referenced ControlPlane %s is programmed", cpnn),
 	); errStatus != nil || !res.IsZero() {
 		return res, errStatus
 	}
