@@ -62,12 +62,44 @@ func KongUpstreamReconciliationWatchOptions(
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
+				&configurationv1alpha1.KongCertificate{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueKongUpstreamForKongCertificate(cl),
+				),
+			)
+		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
 				&configurationv1alpha1.KongReferenceGrant{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueObjectsForKongReferenceGrant[configurationv1alpha1.KongUpstreamList](cl),
 				),
 			)
 		},
+	}
+}
+
+// enqueueKongUpstreamForKongCertificate returns a mapper that re-enqueues all
+// KongUpstreams that reference the changed KongCertificate via spec.clientCertificateRef.
+func enqueueKongUpstreamForKongCertificate(
+	cl client.Client,
+) func(context.Context, client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		cert, ok := obj.(*configurationv1alpha1.KongCertificate)
+		if !ok {
+			return nil
+		}
+		upstreamList := configurationv1alpha1.KongUpstreamList{}
+		if err := cl.List(ctx, &upstreamList,
+			client.MatchingFields{
+				index.IndexFieldKongUpstreamOnReferencedKongCertificate: cert.Namespace + "/" + cert.Name,
+			},
+		); err != nil {
+			ctrllog.FromContext(ctx).Error(err, "Failed to list KongUpstreams for KongCertificate",
+				"KongCertificate", cert.Namespace+"/"+cert.Name)
+			return nil
+		}
+		return objectListToReconcileRequests(upstreamList.Items)
 	}
 }
 

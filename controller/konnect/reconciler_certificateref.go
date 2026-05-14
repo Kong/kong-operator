@@ -38,6 +38,11 @@ func getKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt constr
 			return mo.Some(*e.Spec.ClientCertificateRef)
 		}
 		return mo.None[commonv1alpha1.NamespacedRef]()
+	case *configurationv1alpha1.KongUpstream:
+		if e.Spec.ClientCertificateRef != nil {
+			return mo.Some(*e.Spec.ClientCertificateRef)
+		}
+		return mo.None[commonv1alpha1.NamespacedRef]()
 	default:
 		return mo.None[commonv1alpha1.NamespacedRef]()
 	}
@@ -52,6 +57,9 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 	if !ok {
 		if svc, ok := any(ent).(*configurationv1alpha1.KongService); ok && svc.Status.Konnect != nil {
 			svc.Status.Konnect.CertificateID = ""
+		}
+		if upstream, ok := any(ent).(*configurationv1alpha1.KongUpstream); ok && upstream.Status.Konnect != nil {
+			upstream.Status.Konnect.CertificateID = ""
 		}
 		return ctrl.Result{}, nil
 	}
@@ -175,6 +183,10 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 		if ent.Status.Konnect == nil {
 			ent.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{}
 		}
+	case *configurationv1alpha1.KongUpstream:
+		if ent.Status.Konnect == nil {
+			ent.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{}
+		}
 	}
 
 	if res, errStatus := patch.StatusWithCondition(
@@ -266,6 +278,8 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 	case *configurationv1alpha1.KongSNI:
 		ent.Status.Konnect.CertificateID = certKonnectID
 	case *configurationv1alpha1.KongService:
+		ent.Status.Konnect.CertificateID = certKonnectID
+	case *configurationv1alpha1.KongUpstream:
 		ent.Status.Konnect.CertificateID = certKonnectID
 	}
 	return ctrl.Result{}, nil
