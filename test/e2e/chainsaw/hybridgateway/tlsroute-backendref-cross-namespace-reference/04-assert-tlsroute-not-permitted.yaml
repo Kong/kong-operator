@@ -1,0 +1,22 @@
+---
+# Assert that, after the ReferenceGrant is removed, the TLSRoute's
+# ResolvedRefs condition flips to False with reason RefNotPermitted while
+# Accepted remains True.
+apiVersion: gateway.networking.k8s.io/v1
+kind: TLSRoute
+metadata:
+  name: ($tls_route_name)
+  namespace: ($tls_route_namespace)
+status:
+  parents:
+    - parentRef:
+        name: ($gateway_name)
+        group: gateway.networking.k8s.io
+        kind: Gateway
+      controllerName: konghq.com/gateway-operator
+      (conditions[?type == 'Accepted']):
+        - status: "True"
+          reason: Accepted
+      (conditions[?type == 'ResolvedRefs']):
+        - status: "False"
+          reason: RefNotPermitted
