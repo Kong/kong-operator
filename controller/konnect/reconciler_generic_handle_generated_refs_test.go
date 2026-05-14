@@ -39,7 +39,7 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 					Client: fake.NewClientBuilder().WithScheme(scheme.Get()).Build(),
 				}
 
-				stop, res, err := r.handleGeneratedTypeReferences(t.Context(), ent)
+				stop, res, err := r.handleGeneratedTypeParentReferences(t.Context(), ent)
 
 				require.NoError(t, err)
 				assert.False(t, stop)
@@ -94,7 +94,7 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 					Client: cl,
 				}
 
-				stop, res, err := r.handleGeneratedTypeReferences(t.Context(), ent)
+				stop, res, err := r.handleGeneratedTypeParentReferences(t.Context(), ent)
 
 				require.NoError(t, err)
 				assert.False(t, stop)
@@ -154,7 +154,7 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 					konnectv1alpha1.EventGatewayBackendCluster, *konnectv1alpha1.EventGatewayBackendCluster,
 				]{Client: cl}
 
-				stop, res, err := r.handleGeneratedTypeReferences(t.Context(), ent)
+				stop, res, err := r.handleGeneratedTypeParentReferences(t.Context(), ent)
 
 				require.NoError(t, err)
 				assert.False(t, stop)
@@ -214,7 +214,7 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 					konnectv1alpha1.EventGatewayBackendCluster, *konnectv1alpha1.EventGatewayBackendCluster,
 				]{Client: cl}
 
-				stop, res, err := r.handleGeneratedTypeReferences(t.Context(), ent)
+				stop, res, err := r.handleGeneratedTypeParentReferences(t.Context(), ent)
 
 				require.NoError(t, err)
 				assert.True(t, stop)
@@ -257,7 +257,7 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 					konnectv1alpha1.PortalPage, *konnectv1alpha1.PortalPage,
 				]{Client: cl}
 
-				stop, res, err := r.handleGeneratedTypeReferences(t.Context(), ent)
+				stop, res, err := r.handleGeneratedTypeParentReferences(t.Context(), ent)
 
 				require.NoError(t, err)
 				assert.True(t, stop)

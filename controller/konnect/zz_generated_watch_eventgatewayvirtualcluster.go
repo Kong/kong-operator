@@ -25,20 +25,20 @@ func EventGatewayVirtualClusterReconciliationWatchOptions(
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
-				&konnectv1alpha1.KonnectEventGateway{},
+				&konnectv1alpha1.EventGatewayBackendCluster{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueEventGatewayVirtualClusterForKonnectEventGateway(cl),
+					enqueueEventGatewayVirtualClusterForEventGatewayBackendCluster(cl),
 				),
 			)
 		},
 	}
 }
 
-func enqueueEventGatewayVirtualClusterForKonnectEventGateway(
+func enqueueEventGatewayVirtualClusterForEventGatewayBackendCluster(
 	cl client.Client,
 ) func(ctx context.Context, obj client.Object) []reconcile.Request {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		parent, ok := obj.(*konnectv1alpha1.KonnectEventGateway)
+		parent, ok := obj.(*konnectv1alpha1.EventGatewayBackendCluster)
 		if !ok {
 			return nil
 		}
@@ -47,7 +47,7 @@ func enqueueEventGatewayVirtualClusterForKonnectEventGateway(
 			// TODO: change this when cross namespace refs are allowed.
 			client.InNamespace(parent.GetNamespace()),
 			client.MatchingFields{
-				index.IndexFieldEventGatewayVirtualClusterOnKonnectEventGatewayRef: parent.Name,
+				index.IndexFieldEventGatewayVirtualClusterOnEventGatewayBackendClusterRef: parent.Name,
 			},
 		); err != nil {
 			return nil

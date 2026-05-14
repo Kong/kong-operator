@@ -65,6 +65,16 @@ type ImportConfig struct {
 	Alias string `yaml:"alias,omitempty"`
 }
 
+// ReferenceConfig configures a single inter-CR reference field.
+type ReferenceConfig struct {
+	// Kind is the Go type name of the referenced CRD (e.g. "EventGatewayBackendCluster").
+	// Used to name the resolved-ID status field: status.<lowerCamelCase(Kind)>.id.
+	Kind string `yaml:"kind"`
+	// Path is the dot-separated field path on the referring CR that holds the
+	// reference (e.g. "spec.apiSpec.destination"). Must start with "spec.apiSpec.".
+	Path string `yaml:"path"`
+}
+
 // TypeConfig holds configuration for a single CRD type (identified by its OpenAPI path).
 type TypeConfig struct {
 	// Path is the OpenAPI path that identifies the resource (e.g. "/services").
@@ -76,6 +86,10 @@ type TypeConfig struct {
 	// CEL maps field names to their configurations, allowing additional
 	// kubebuilder validation markers to be attached to specific fields.
 	CEL map[string]*FieldConfig `yaml:"cel,omitempty"`
+	// References lists inter-CR reference fields on this entity's spec.
+	// Each entry replaces the OpenAPI-derived field with a *commonv1alpha1.ObjectRef
+	// and emits a corresponding resolved-ID field on the status.
+	References []ReferenceConfig `yaml:"-"`
 	// Ops maps operation names (e.g. "create", "update") to SDK type configurations.
 	// When set, conversion methods are generated on the entity's APISpec type.
 	Ops map[string]*OpConfig `yaml:"-"`
@@ -104,6 +118,19 @@ type TypeConfig struct {
 	Reconciler *ReconcilerConfig `yaml:"reconciler,omitempty"`
 }
 
+// ParentRefConfig overrides the spec field for the parent reference when the
+// OpenAPI-derived parent dependency should be replaced with a higher-level
+// parent entity. When set, the OpenAPI-derived Spec.<GatewayRef> field is
+// suppressed and a new top-level Spec.<FieldName> ObjectRef field is emitted.
+type ParentRefConfig struct {
+	// FieldName is the lowerCamelCase JSON name for the top-level spec ref
+	// field, e.g. "eventGatewayBackendClusterRef".
+	FieldName string `yaml:"fieldName"`
+	// ReplacesAPISpecField is the JSON name of the apiSpec property to suppress
+	// in favour of the new top-level field, e.g. "destination".
+	ReplacesAPISpecField string `yaml:"replacesAPISpecField"`
+}
+
 // ReconcilerConfig holds configuration for reconciler code generation.
 type ReconcilerConfig struct {
 	// IsRoot indicates this is a root entity that directly references
@@ -116,6 +143,18 @@ type ReconcilerConfig struct {
 	// child reconciler watch/index generation. When unset, the immediate parent
 	// dependency name is inferred from the OpenAPI path parameter.
 	ParentEntityType string `yaml:"parentEntityType,omitempty"`
+	// ParentRef, when set, replaces the OpenAPI-derived parent spec field with a
+	// new top-level ObjectRef field and changes what GetParentRef / SetParentID
+	// operate on. Requires ParentEntityType to also be set.
+	ParentRef *ParentRefConfig `yaml:"parentRef,omitempty"`
+	// AncestorEntityTypes lists the Konnect entity type names (GVK Kind strings)
+	// for each OpenAPI-derived path-parameter dependency in URL order
+	// (outermost first). Only required when ParentRef is set, to provide the
+	// Kind keys used in SetAncestorID / GetAncestorIDs.
+	// E.g. for a path /event-gateways/{gatewayId}/virtual-clusters with
+	// parentRef overriding the immediate parent to EventGatewayBackendCluster,
+	// set to ["KonnectEventGateway"] so the gateway ancestry is preserved.
+	AncestorEntityTypes []string `yaml:"ancestorEntityTypes,omitempty"`
 	// ParentSDKFields optionally overrides the SDK request-struct field names for
 	// each parent dependency (in URL order). When the list is shorter than the
 	// number of dependencies, missing entries fall back to pathParamToFieldName.
@@ -191,6 +230,7 @@ type typeConfigYAML struct {
 	Path                    string                  `yaml:"path"`
 	Name                    string                  `yaml:"name,omitempty"`
 	CEL                     map[string]*FieldConfig `yaml:"cel,omitempty"`
+	References              []ReferenceConfig       `yaml:"references,omitempty"`
 	Ops                     *typeOpsYAML            `yaml:"ops,omitempty"`
 	OptionalSecretReference bool                    `yaml:"optionalSecretReference,omitempty"`
 	Reconciler              *ReconcilerConfig       `yaml:"reconciler,omitempty"`
@@ -208,6 +248,7 @@ func (tc *TypeConfig) UnmarshalYAML(value *yaml.Node) error {
 		Path:                    raw.Path,
 		Name:                    raw.Name,
 		CEL:                     raw.CEL,
+		References:              raw.References,
 		OptionalSecretReference: raw.OptionalSecretReference,
 		Reconciler:              raw.Reconciler,
 	}
@@ -341,6 +382,23 @@ func (c *APIGroupVersionConfig) OpsConfig(pathToEntityName map[string]string) ma
 	return result
 }
 
+// ReferencesConfig builds a mapping from entity name to reference configs using the provided
+// pathToEntityName mapping (built after parsing the OpenAPI spec).
+func (c *APIGroupVersionConfig) ReferencesConfig(pathToEntityName map[string]string) map[string][]ReferenceConfig {
+	result := make(map[string][]ReferenceConfig)
+	for _, tc := range c.Types {
+		if len(tc.References) == 0 {
+			continue
+		}
+		entityName, ok := pathToEntityName[tc.Path]
+		if !ok {
+			continue
+		}
+		result[entityName] = tc.References
+	}
+	return result
+}
+
 func (c *APIGroupVersionConfig) validate() error {
 	if c.CommonTypes == nil || c.CommonTypes.ObjectRef == nil {
 		for _, tc := range c.Types {
@@ -377,6 +435,19 @@ func (c *APIGroupVersionConfig) validate() error {
 }
 
 func (tc *TypeConfig) validate() error {
+	seenRefKinds := make(map[string]bool)
+	for i, ref := range tc.References {
+		if ref.Kind == "" {
+			return fmt.Errorf("references[%d].kind is required", i)
+		}
+		if !strings.HasPrefix(ref.Path, "spec.apiSpec.") {
+			return fmt.Errorf("references[%d].path must start with \"spec.apiSpec.\", got %q", i, ref.Path)
+		}
+		if seenRefKinds[ref.Kind] {
+			return fmt.Errorf("references[%d]: duplicate kind %q (each kind must appear at most once per type)", i, ref.Kind)
+		}
+		seenRefKinds[ref.Kind] = true
+	}
 	if tc.OpsSkipGetForUID && tc.OpsGetForUID != nil {
 		return fmt.Errorf("ops.skipGetForUID and ops.getForUID are mutually exclusive")
 	}

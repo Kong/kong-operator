@@ -95,14 +95,14 @@ func TestObjectListToReconcileRequests(t *testing.T) {
 	})
 }
 
-func TestEnqueueEventGatewayVirtualClusterForKonnectEventGateway(t *testing.T) {
-	gateway := &konnectv1alpha1.KonnectEventGateway{
+func TestEnqueueEventGatewayVirtualClusterForEventGatewayBackendCluster(t *testing.T) {
+	backendCluster := &konnectv1alpha1.EventGatewayBackendCluster{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: konnectv1alpha1.GroupVersion.String(),
-			Kind:       "KonnectEventGateway",
+			Kind:       "EventGatewayBackendCluster",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "event-gateway",
+			Name:      "backend-cluster",
 			Namespace: "default",
 		},
 	}
@@ -113,10 +113,10 @@ func TestEnqueueEventGatewayVirtualClusterForKonnectEventGateway(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: konnectv1alpha1.EventGatewayVirtualClusterSpec{
-			GatewayRef: commonv1alpha1.ObjectRef{
+			EventGatewayBackendClusterRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 				NamespacedRef: &commonv1alpha1.NamespacedRef{
-					Name: gateway.Name,
+					Name: backendCluster.Name,
 				},
 			},
 		},
@@ -127,10 +127,10 @@ func TestEnqueueEventGatewayVirtualClusterForKonnectEventGateway(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: konnectv1alpha1.EventGatewayVirtualClusterSpec{
-			GatewayRef: commonv1alpha1.ObjectRef{
+			EventGatewayBackendClusterRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 				NamespacedRef: &commonv1alpha1.NamespacedRef{
-					Name: "different-event-gateway",
+					Name: "different-backend-cluster",
 				},
 			},
 		},
@@ -141,7 +141,7 @@ func TestEnqueueEventGatewayVirtualClusterForKonnectEventGateway(t *testing.T) {
 	) *fakectrlruntimeclient.ClientBuilder {
 		return fakectrlruntimeclient.NewClientBuilder().
 			WithScheme(scheme.Get()).
-			WithObjects(append(objs, gateway)...)
+			WithObjects(append(objs, backendCluster)...)
 	}
 
 	clForIndices := builderFunc(matching, nonMatching).Build()
@@ -154,7 +154,7 @@ func TestEnqueueEventGatewayVirtualClusterForKonnectEventGateway(t *testing.T) {
 	cl := builder.Build()
 	require.NotNil(t, cl)
 
-	requests := enqueueEventGatewayVirtualClusterForKonnectEventGateway(cl)(t.Context(), gateway)
+	requests := enqueueEventGatewayVirtualClusterForEventGatewayBackendCluster(cl)(t.Context(), backendCluster)
 	require.Equal(t, []ctrl.Request{
 		{
 			NamespacedName: types.NamespacedName{

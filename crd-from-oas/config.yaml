@@ -133,7 +133,12 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdateVirtualClusterRequest
           delete: {}
         reconciler:
-          parentEntityType: KonnectEventGateway
+          parentEntityType: EventGatewayBackendCluster
+          parentRef:
+            fieldName: eventGatewayBackendClusterRef
+            replacesAPISpecField: destination
+          ancestorEntityTypes:
+            - KonnectEventGateway
 
       # Portal APIs
       - path: /v3/portals

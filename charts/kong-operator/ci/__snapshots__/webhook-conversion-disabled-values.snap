@@ -12291,22 +12291,6 @@ spec:
                     description: A human-readable description of the virtual cluster.
                     maxLength: 512
                     type: string
-                  destination:
-                    description: |-
-                      The backend cluster associated with the virtual cluster.
-
-                      Either `id` or `name` must be provided.
-                      Following changes to the backend cluster name won't affect the
-                      reference, as the system will create the entities relationship by `id`.
-                    maxProperties: 1
-                    minProperties: 1
-                    properties:
-                      id:
-                        type: string
-                      name:
-                        description: BackendClusterName The unique name of the backend cluster.
-                        type: string
-                    type: object
                   dnsLabel:
                     description: |-
                       The DNS label used in the bootstrap server URL to identify the virtual
@@ -12563,12 +12547,11 @@ spec:
                 required:
                 - aclMode
                 - authentication
-                - destination
                 - dnsLabel
                 - name
                 type: object
-              gatewayRef:
-                description: GatewayRef is the reference to the parent Gateway object.
+              eventGatewayBackendClusterRef:
+                description: EventGatewayBackendClusterRef is the reference to the parent EventGatewayBackendCluster object.
                 properties:
                   konnectID:
                     description: |-
@@ -12622,7 +12605,7 @@ spec:
                 - message: when type is konnectID, namespacedRef must not be set
                   rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
             required:
-            - gatewayRef
+            - eventGatewayBackendClusterRef
             type: object
           status:
             description: EventGatewayVirtualClusterStatus defines the observed state of EventGatewayVirtualCluster.
@@ -12687,6 +12670,14 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              eventGatewayBackendCluster:
+                description: EventGatewayBackendCluster is the Konnect entity reference for the parent EventGatewayBackendCluster.
+                properties:
+                  id:
+                    description: ID is the unique identifier of the Konnect entity as assigned by Konnect API.
+                    maxLength: 256
+                    type: string
+                type: object
               gatewayID:
                 description: GatewayID is the Konnect ID of the parent Gateway.
                 properties:
