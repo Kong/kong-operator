@@ -9,11 +9,13 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 )
 
+// IdentityProviderRequestSDKOpsBoolField describes a boolean enum field that must be normalized for SDK payloads.
 type IdentityProviderRequestSDKOpsBoolField struct {
 	Label string
 	Path  []string
 }
 
+// IdentityProviderRequestSDKOpsBoolFields lists all boolean enum fields that must be normalized for SDK payloads.
 var IdentityProviderRequestSDKOpsBoolFields = []IdentityProviderRequestSDKOpsBoolField{
 	{
 		Label: "enabled",

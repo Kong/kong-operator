@@ -179,10 +179,13 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayBackendClusterAuthentication) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, _ := json.Marshal(string(u.Type))
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayBackendClusterAuthentication type: %w", err)
+	}
 	m["type"] = typeBytes
 	switch u.Type {
-	case "anonymous":
+	case EventGatewayBackendClusterAuthenticationTypeAnonymous:
 		if u.Anonymous != nil {
 			raw, err := json.Marshal(u.Anonymous)
 			if err != nil {
@@ -190,7 +193,7 @@ func (u EventGatewayBackendClusterAuthentication) MarshalJSON() ([]byte, error) 
 			}
 			m["anonymous"] = raw
 		}
-	case "saslPlain":
+	case EventGatewayBackendClusterAuthenticationTypeSaslPlain:
 		if u.SaslPlain != nil {
 			raw, err := json.Marshal(u.SaslPlain)
 			if err != nil {
@@ -198,7 +201,7 @@ func (u EventGatewayBackendClusterAuthentication) MarshalJSON() ([]byte, error) 
 			}
 			m["saslPlain"] = raw
 		}
-	case "saslScram":
+	case EventGatewayBackendClusterAuthenticationTypeSaslScram:
 		if u.SaslScram != nil {
 			raw, err := json.Marshal(u.SaslScram)
 			if err != nil {
@@ -261,7 +264,7 @@ func (u *EventGatewayBackendClusterAuthentication) UnmarshalJSON(data []byte) er
 	return nil
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
+// UnmarshalJSON implements [json.Unmarshaler].
 func (s *EventGatewayBackendClusterAPISpec) UnmarshalJSON(data []byte) error {
 	if s == nil {
 		return fmt.Errorf("unmarshaling EventGatewayBackendClusterAPISpec: nil receiver")

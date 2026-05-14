@@ -71,7 +71,7 @@ func (g *Generator) generateEntityOpsFile(
 		//     match strategy: labels, name, match fields, or UID tag filter).
 		//     The fallback else-branch emits no SDK call and therefore no import.
 		getForUIDNeedsOpsImport := getForUIDData != nil &&
-			!getForUIDData.SingletonNoID &&
+			!getForUIDData.SingletonByParent &&
 			(getForUIDData.UseUIDTagFilter || len(getForUIDData.MatchFields) > 0 || getForUIDData.RootUnion != nil ||
 				getForUIDData.HasLabels || getForUIDData.HasName)
 		deleteNeedsOpsImport := deleteData != nil &&
@@ -421,15 +421,14 @@ func pascalFromKebab(s string) string {
 	return fixInitialisms(b.String())
 }
 
-// isSingletonNoID reports whether the entity is a singleton sub-resource whose
-// Konnect create/get response does not carry an "id" field. These are resources
-// at paths where the DELETE and UPDATE operations omit the per-resource ID
-// segment (i.e. keyed solely by parent ID) AND the 2xx create response has no
-// "id" property.
+// isParentScopedSingleton reports whether the entity is a singleton sub-resource
+// whose update/delete operations are keyed solely by parent ID, without a
+// dedicated per-entity path parameter.
 //
-// When DELETE is not defined for a singleton resource, UpdatePathParams still
-// identifies the parent-scoped shape for generated create/get logic.
-func isSingletonNoID(schema *parser.Schema) bool {
+// We require DeletePathParams to be non-empty so that schemas constructed
+// without parser output (e.g. in unit tests) are not erroneously treated as
+// singletons.
+func isParentScopedSingleton(schema *parser.Schema) bool {
 	if len(schema.Dependencies) == 0 {
 		return false
 	}
@@ -449,7 +448,13 @@ func isSingletonNoID(schema *parser.Schema) bool {
 	if len(schema.UpdatePathParams) > len(schema.Dependencies) {
 		return false
 	}
-	return !schema.RespHasID
+	return true
+}
+
+// isSingletonNoID reports whether the entity is a parent-scoped singleton whose
+// Konnect create/get response does not carry an "id" field.
+func isSingletonNoID(schema *parser.Schema) bool {
+	return isParentScopedSingleton(schema) && !schema.RespHasID
 }
 
 // metadataFields reports whether the request body schema declares a "tags"

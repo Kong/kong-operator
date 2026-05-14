@@ -128,10 +128,13 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayListenerPolicyConfig) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, _ := json.Marshal(string(u.Type))
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayListenerPolicyConfig type: %w", err)
+	}
 	m["type"] = typeBytes
 	switch u.Type {
-	case "forwardToVirtualCluster":
+	case EventGatewayListenerPolicyConfigTypeForwardToVirtualClust:
 		if u.ForwardToVirtualClust != nil {
 			raw, err := json.Marshal(u.ForwardToVirtualClust)
 			if err != nil {
@@ -139,7 +142,7 @@ func (u EventGatewayListenerPolicyConfig) MarshalJSON() ([]byte, error) {
 			}
 			m["forwardToVirtualCluster"] = raw
 		}
-	case "tlsServer":
+	case EventGatewayListenerPolicyConfigTypeEventGatewayTLSListen:
 		if u.EventGatewayTLSListen != nil {
 			raw, err := json.Marshal(u.EventGatewayTLSListen)
 			if err != nil {
@@ -192,7 +195,7 @@ func (u *EventGatewayListenerPolicyConfig) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// MarshalJSON implements json.Marshaler.
+// MarshalJSON implements [json.Marshaler].
 func (s *EventGatewayListenerPolicyAPISpec) MarshalJSON() ([]byte, error) {
 	if s == nil {
 		return []byte("null"), nil
@@ -208,7 +211,7 @@ func (s *EventGatewayListenerPolicyAPISpec) MarshalJSON() ([]byte, error) {
 }
 
 
-// UnmarshalJSON implements json.Unmarshaler.
+// UnmarshalJSON implements [json.Unmarshaler].
 func (s *EventGatewayListenerPolicyAPISpec) UnmarshalJSON(data []byte) error {
 	if s == nil {
 		return fmt.Errorf("unmarshaling EventGatewayListenerPolicyAPISpec: nil receiver")

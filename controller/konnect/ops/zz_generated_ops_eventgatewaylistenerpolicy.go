@@ -152,6 +152,8 @@ func getEventGatewayListenerPolicyForUID(
 				if id != nil && *id != "" {
 					return *id, nil
 				}
+			default:
+				return "", fmt.Errorf("list %s: %w (got %T)", obj.GetTypeName(), ErrUnexpectedIDType, id)
 			}
 		}
 	case "forwardToVirtualCluster":
@@ -175,6 +177,8 @@ func getEventGatewayListenerPolicyForUID(
 				if id != nil && *id != "" {
 					return *id, nil
 				}
+			default:
+				return "", fmt.Errorf("list %s: %w (got %T)", obj.GetTypeName(), ErrUnexpectedIDType, id)
 			}
 		}
 	default:

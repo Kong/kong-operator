@@ -14,11 +14,13 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 )
 
+// EventGatewayBackendClusterSDKOpsBoolField describes a boolean enum field that must be normalized for SDK payloads.
 type EventGatewayBackendClusterSDKOpsBoolField struct {
 	Label string
 	Path  []string
 }
 
+// EventGatewayBackendClusterSDKOpsBoolFields lists all boolean enum fields that must be normalized for SDK payloads.
 var EventGatewayBackendClusterSDKOpsBoolFields = []EventGatewayBackendClusterSDKOpsBoolField{
 	{
 		Label: "insecure_allow_anonymous_virtual_cluster_auth",
@@ -123,11 +125,13 @@ func normalizeEventGatewayBackendClusterSDKOpsBoolField(value any, path []string
 }
 
 
+// EventGatewayBackendClusterSDKOpsBase64Field describes a field that must be base64-encoded for SDK payloads.
 type EventGatewayBackendClusterSDKOpsBase64Field struct {
 	Label string
 	Path  []string
 }
 
+// EventGatewayBackendClusterSDKOpsBase64Fields lists all fields that must be base64-encoded for SDK payloads.
 var EventGatewayBackendClusterSDKOpsBase64Fields = []EventGatewayBackendClusterSDKOpsBase64Field{
 	{
 		Label: "spec.apiSpec.tls.clientIdentity.key",
@@ -299,6 +303,7 @@ func (obj *EventGatewayBackendCluster) sdkOpsAPISpec(ctx context.Context, cl cli
 	return &apiSpec, nil
 }
 
+// GetSensitiveDataSecretRefs returns all Secret references used to populate sensitive SDK payload fields.
 func (obj *EventGatewayBackendCluster) GetSensitiveDataSecretRefs() []SensitiveDataSecretRef {
 	if obj == nil {
 		return nil
@@ -319,6 +324,8 @@ func (obj *EventGatewayBackendCluster) GetSensitiveDataSecretRefs() []SensitiveD
 	return refs
 }
 
+// ToCreateBackendClusterRequest converts the EventGatewayBackendCluster to the SDK type
+// sdkkonnectcomp.CreateBackendClusterRequest, resolving referenced Secrets via the provided client.
 func (obj *EventGatewayBackendCluster) ToCreateBackendClusterRequest(ctx context.Context, cl client.Client) (*sdkkonnectcomp.CreateBackendClusterRequest, error) {
 	spec, err := obj.sdkOpsAPISpec(ctx, cl)
 	if err != nil {
@@ -327,6 +334,8 @@ func (obj *EventGatewayBackendCluster) ToCreateBackendClusterRequest(ctx context
 	return spec.ToCreateBackendClusterRequest()
 }
 
+// ToUpdateBackendClusterRequest converts the EventGatewayBackendCluster to the SDK type
+// sdkkonnectcomp.UpdateBackendClusterRequest, resolving referenced Secrets via the provided client.
 func (obj *EventGatewayBackendCluster) ToUpdateBackendClusterRequest(ctx context.Context, cl client.Client) (*sdkkonnectcomp.UpdateBackendClusterRequest, error) {
 	spec, err := obj.sdkOpsAPISpec(ctx, cl)
 	if err != nil {

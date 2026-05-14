@@ -2500,7 +2500,7 @@ func emitInlineUnionWrapperMarshalJSON(structTypeName string, fields []unionFiel
 	}
 
 	var buf strings.Builder
-	buf.WriteString("// MarshalJSON implements json.Marshaler.\n")
+	buf.WriteString("// MarshalJSON implements [json.Marshaler].\n")
 	fmt.Fprintf(&buf, "func (s *%s) MarshalJSON() ([]byte, error) {\n", structTypeName)
 	buf.WriteString("\tif s == nil {\n")
 	buf.WriteString("\t\treturn []byte(\"null\"), nil\n")
@@ -2524,7 +2524,7 @@ func emitUnionWrapperUnmarshalJSON(structTypeName string, fields []unionFieldSpe
 	}
 
 	var buf strings.Builder
-	fmt.Fprintf(&buf, "// UnmarshalJSON implements json.Unmarshaler.\n")
+	fmt.Fprintf(&buf, "// UnmarshalJSON implements [json.Unmarshaler].\n")
 	fmt.Fprintf(&buf, "func (s *%s) UnmarshalJSON(data []byte) error {\n", structTypeName)
 	fmt.Fprintf(&buf, "\tif s == nil {\n")
 	fmt.Fprintf(&buf, "\t\treturn fmt.Errorf(\"unmarshaling %s: nil receiver\")\n", structTypeName)
@@ -2747,13 +2747,16 @@ func emitDiscriminatedUnionCode(typeName, propName, discriminatorJSONName string
 	fmt.Fprintf(&buf, "// MarshalJSON implements json.Marshaler.\n")
 	fmt.Fprintf(&buf, "func (u %s) MarshalJSON() ([]byte, error) {\n", typeName)
 	buf.WriteString("\tm := map[string]json.RawMessage{}\n")
-	fmt.Fprintf(&buf, "\ttypeBytes, _ := json.Marshal(string(u.%s))\n", discriminatorFieldName)
+	fmt.Fprintf(&buf, "\ttypeBytes, err := json.Marshal(string(u.%s))\n", discriminatorFieldName)
+	buf.WriteString("\tif err != nil {\n")
+	fmt.Fprintf(&buf, "\t\treturn nil, fmt.Errorf(\"marshaling %s %s: %%w\", err)\n", typeName, discriminatorJSONName)
+	buf.WriteString("\t}\n")
 	fmt.Fprintf(&buf, "\tm[%q] = typeBytes\n", discriminatorJSONName)
 	fmt.Fprintf(&buf, "\tswitch u.%s {\n", discriminatorFieldName)
 	for i, v := range variants {
 		fieldName := fixInitialisms(cleanFieldNames[i])
 		camelDiscValue := jsonName(v.discValue)
-		fmt.Fprintf(&buf, "\tcase \"%s\":\n", camelDiscValue)
+		fmt.Fprintf(&buf, "\tcase %sType%s:\n", typeName, fieldName)
 		fmt.Fprintf(&buf, "\t\tif u.%s != nil {\n", fieldName)
 		fmt.Fprintf(&buf, "\t\t\traw, err := json.Marshal(u.%s)\n", fieldName)
 		buf.WriteString("\t\t\tif err != nil {\n")

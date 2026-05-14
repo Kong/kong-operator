@@ -9,11 +9,13 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 )
 
+// PortalTeamSDKOpsBoolField describes a boolean enum field that must be normalized for SDK payloads.
 type PortalTeamSDKOpsBoolField struct {
 	Label string
 	Path  []string
 }
 
+// PortalTeamSDKOpsBoolFields lists all boolean enum fields that must be normalized for SDK payloads.
 var PortalTeamSDKOpsBoolFields = []PortalTeamSDKOpsBoolField{
 	{
 		Label: "can_own_applications",

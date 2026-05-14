@@ -113,10 +113,13 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u BackendClusterAuthenticationScheme) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, _ := json.Marshal(string(u.Type))
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling BackendClusterAuthenticationScheme type: %w", err)
+	}
 	m["type"] = typeBytes
 	switch u.Type {
-	case "anonymous":
+	case BackendClusterAuthenticationSchemeTypeAnonymous:
 		if u.Anonymous != nil {
 			raw, err := json.Marshal(u.Anonymous)
 			if err != nil {
@@ -124,7 +127,7 @@ func (u BackendClusterAuthenticationScheme) MarshalJSON() ([]byte, error) {
 			}
 			m["anonymous"] = raw
 		}
-	case "saslPlain":
+	case BackendClusterAuthenticationSchemeTypeSaslPlain:
 		if u.SaslPlain != nil {
 			raw, err := json.Marshal(u.SaslPlain)
 			if err != nil {
@@ -132,7 +135,7 @@ func (u BackendClusterAuthenticationScheme) MarshalJSON() ([]byte, error) {
 			}
 			m["saslPlain"] = raw
 		}
-	case "saslScram":
+	case BackendClusterAuthenticationSchemeTypeSaslScram:
 		if u.SaslScram != nil {
 			raw, err := json.Marshal(u.SaslScram)
 			if err != nil {
@@ -627,10 +630,13 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, _ := json.Marshal(string(u.Type))
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry type: %w", err)
+	}
 	m["type"] = typeBytes
 	switch u.Type {
-	case "id":
+	case EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistryTypeID:
 		if u.ID != nil {
 			raw, err := json.Marshal(u.ID)
 			if err != nil {
@@ -638,7 +644,7 @@ func (u EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry) MarshalJS
 			}
 			m["id"] = raw
 		}
-	case "name":
+	case EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistryTypeName:
 		if u.Name != nil {
 			raw, err := json.Marshal(u.Name)
 			if err != nil {
@@ -690,7 +696,7 @@ func (u *EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry) Unmarsha
 	}
 	return nil
 }
-// UnmarshalJSON implements json.Unmarshaler.
+// UnmarshalJSON implements [json.Unmarshaler].
 func (s *EventGatewayConsumeSchemaValidationPolicyConfig) UnmarshalJSON(data []byte) error {
 	if s == nil {
 		return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicyConfig: nil receiver")
@@ -986,10 +992,13 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayKeySource) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, _ := json.Marshal(string(u.Type))
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayKeySource type: %w", err)
+	}
 	m["type"] = typeBytes
 	switch u.Type {
-	case "aws":
+	case EventGatewayKeySourceTypeAWS:
 		if u.AWS != nil {
 			raw, err := json.Marshal(u.AWS)
 			if err != nil {
@@ -997,7 +1006,7 @@ func (u EventGatewayKeySource) MarshalJSON() ([]byte, error) {
 			}
 			m["aws"] = raw
 		}
-	case "static":
+	case EventGatewayKeySourceTypeStatic:
 		if u.Static != nil {
 			raw, err := json.Marshal(u.Static)
 			if err != nil {
@@ -1087,10 +1096,13 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayModifyHeaderAction) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, _ := json.Marshal(string(u.Op))
+	typeBytes, err := json.Marshal(string(u.Op))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayModifyHeaderAction op: %w", err)
+	}
 	m["op"] = typeBytes
 	switch u.Op {
-	case "remove":
+	case EventGatewayModifyHeaderActionTypeRemove:
 		if u.Remove != nil {
 			raw, err := json.Marshal(u.Remove)
 			if err != nil {
@@ -1098,7 +1110,7 @@ func (u EventGatewayModifyHeaderAction) MarshalJSON() ([]byte, error) {
 			}
 			m["remove"] = raw
 		}
-	case "set":
+	case EventGatewayModifyHeaderActionTypeSet:
 		if u.Set != nil {
 			raw, err := json.Marshal(u.Set)
 			if err != nil {
@@ -2056,10 +2068,13 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u ForwardToVirtualClusterPolicyConfig) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, _ := json.Marshal(string(u.Type))
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling ForwardToVirtualClusterPolicyConfig type: %w", err)
+	}
 	m["type"] = typeBytes
 	switch u.Type {
-	case "portMapping":
+	case ForwardToVirtualClusterPolicyConfigTypePortMapping:
 		if u.PortMapping != nil {
 			raw, err := json.Marshal(u.PortMapping)
 			if err != nil {
@@ -2067,7 +2082,7 @@ func (u ForwardToVirtualClusterPolicyConfig) MarshalJSON() ([]byte, error) {
 			}
 			m["portMapping"] = raw
 		}
-	case "sni":
+	case ForwardToVirtualClusterPolicyConfigTypeSNI:
 		if u.SNI != nil {
 			raw, err := json.Marshal(u.SNI)
 			if err != nil {
@@ -2119,7 +2134,7 @@ func (u *ForwardToVirtualClusterPolicyConfig) UnmarshalJSON(data []byte) error {
 	}
 	return nil
 }
-// UnmarshalJSON implements json.Unmarshaler.
+// UnmarshalJSON implements [json.Unmarshaler].
 func (s *ForwardToVirtualClusterPolicy) UnmarshalJSON(data []byte) error {
 	if s == nil {
 		return fmt.Errorf("unmarshaling ForwardToVirtualClusterPolicy: nil receiver")
@@ -2714,10 +2729,13 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u VirtualClusterAuthenticationScheme) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, _ := json.Marshal(string(u.Type))
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling VirtualClusterAuthenticationScheme type: %w", err)
+	}
 	m["type"] = typeBytes
 	switch u.Type {
-	case "anonymous":
+	case VirtualClusterAuthenticationSchemeTypeAnonymous:
 		if u.Anonymous != nil {
 			raw, err := json.Marshal(u.Anonymous)
 			if err != nil {
@@ -2725,7 +2743,7 @@ func (u VirtualClusterAuthenticationScheme) MarshalJSON() ([]byte, error) {
 			}
 			m["anonymous"] = raw
 		}
-	case "clientCertificate":
+	case VirtualClusterAuthenticationSchemeTypeClientCertificate:
 		if u.ClientCertificate != nil {
 			raw, err := json.Marshal(u.ClientCertificate)
 			if err != nil {
@@ -2733,7 +2751,7 @@ func (u VirtualClusterAuthenticationScheme) MarshalJSON() ([]byte, error) {
 			}
 			m["clientCertificate"] = raw
 		}
-	case "oauthBearer":
+	case VirtualClusterAuthenticationSchemeTypeOauthBearer:
 		if u.OauthBearer != nil {
 			raw, err := json.Marshal(u.OauthBearer)
 			if err != nil {
@@ -2741,7 +2759,7 @@ func (u VirtualClusterAuthenticationScheme) MarshalJSON() ([]byte, error) {
 			}
 			m["oauthBearer"] = raw
 		}
-	case "saslPlain":
+	case VirtualClusterAuthenticationSchemeTypeSaslPlain:
 		if u.SaslPlain != nil {
 			raw, err := json.Marshal(u.SaslPlain)
 			if err != nil {
@@ -2749,7 +2767,7 @@ func (u VirtualClusterAuthenticationScheme) MarshalJSON() ([]byte, error) {
 			}
 			m["saslPlain"] = raw
 		}
-	case "saslScram":
+	case VirtualClusterAuthenticationSchemeTypeSaslScram:
 		if u.SaslScram != nil {
 			raw, err := json.Marshal(u.SaslScram)
 			if err != nil {
@@ -2946,10 +2964,13 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u VirtualClusterNamespaceIDSelector) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, _ := json.Marshal(string(u.Type))
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling VirtualClusterNamespaceIDSelector type: %w", err)
+	}
 	m["type"] = typeBytes
 	switch u.Type {
-	case "exactList":
+	case VirtualClusterNamespaceIDSelectorTypeExactList:
 		if u.ExactList != nil {
 			raw, err := json.Marshal(u.ExactList)
 			if err != nil {
@@ -2957,7 +2978,7 @@ func (u VirtualClusterNamespaceIDSelector) MarshalJSON() ([]byte, error) {
 			}
 			m["exactList"] = raw
 		}
-	case "glob":
+	case VirtualClusterNamespaceIDSelectorTypeGlob:
 		if u.Glob != nil {
 			raw, err := json.Marshal(u.Glob)
 			if err != nil {
@@ -3071,10 +3092,13 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u VirtualClusterNamespaceTopicSelector) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, _ := json.Marshal(string(u.Type))
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling VirtualClusterNamespaceTopicSelector type: %w", err)
+	}
 	m["type"] = typeBytes
 	switch u.Type {
-	case "exactList":
+	case VirtualClusterNamespaceTopicSelectorTypeExactList:
 		if u.ExactList != nil {
 			raw, err := json.Marshal(u.ExactList)
 			if err != nil {
@@ -3082,7 +3106,7 @@ func (u VirtualClusterNamespaceTopicSelector) MarshalJSON() ([]byte, error) {
 			}
 			m["exactList"] = raw
 		}
-	case "glob":
+	case VirtualClusterNamespaceTopicSelectorTypeGlob:
 		if u.Glob != nil {
 			raw, err := json.Marshal(u.Glob)
 			if err != nil {

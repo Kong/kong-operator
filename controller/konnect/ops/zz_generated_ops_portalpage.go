@@ -93,14 +93,37 @@ func getPortalPageForUID(
 	if parentID == "" {
 		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "Portal", Op: GetOp}
 	}
+	resp, err := sdk.ListPortalPages(ctx, sdkkonnectops.ListPortalPagesRequest{
+		PortalID: parentID,
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
+	}
+	if resp == nil || resp.ListPortalPagesResponse == nil {
+		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
+	}
 
-	// TODO: PortalPage's Konnect list response lacks labels/tags and no
-	// usable name field is available on the spec, so UID matching cannot be
-	// performed here. This can be revisited once Konnect exposes labels/tags
-	// on this type (tracked in
-	// https://github.com/Kong/kong-operator/issues/3987) or by customizing
-	// this function for a type-specific match strategy.
-	_ = obj
+	// TODO: only the first page of results is scanned. When the parent has more
+	// entries than the SDK's default page size, a matching entry on a later
+	// page is missed and getForUID returns NotFound. Tracked in
+	// https://github.com/Kong/kong-operator/issues/3987.
+	for _, entry := range resp.ListPortalPagesResponse.Data {
+		if !matchStringField(obj.Spec.APISpec.Slug, entry.GetSlug()) {
+			continue
+		}
+		switch id := any(entry.GetID()).(type) {
+		case string:
+			if id != "" {
+				return id, nil
+			}
+		case *string:
+			if id != nil && *id != "" {
+				return *id, nil
+			}
+		default:
+			return "", fmt.Errorf("list %s: %w (got %T)", obj.GetTypeName(), ErrUnexpectedIDType, id)
+		}
+	}
 
 	return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 }

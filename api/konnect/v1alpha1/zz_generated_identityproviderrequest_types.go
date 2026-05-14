@@ -143,10 +143,13 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u IdentityProviderRequestConfig) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, _ := json.Marshal(string(u.Type))
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling IdentityProviderRequestConfig type: %w", err)
+	}
 	m["type"] = typeBytes
 	switch u.Type {
-	case "oIDC":
+	case IdentityProviderRequestConfigTypeOIDC:
 		if u.OIDC != nil {
 			raw, err := json.Marshal(u.OIDC)
 			if err != nil {
@@ -154,7 +157,7 @@ func (u IdentityProviderRequestConfig) MarshalJSON() ([]byte, error) {
 			}
 			m["oIDC"] = raw
 		}
-	case "sAML":
+	case IdentityProviderRequestConfigTypeSAML:
 		if u.SAML != nil {
 			raw, err := json.Marshal(u.SAML)
 			if err != nil {
@@ -207,7 +210,7 @@ func (u *IdentityProviderRequestConfig) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
+// UnmarshalJSON implements [json.Unmarshaler].
 func (s *IdentityProviderRequestAPISpec) UnmarshalJSON(data []byte) error {
 	if s == nil {
 		return fmt.Errorf("unmarshaling IdentityProviderRequestAPISpec: nil receiver")
