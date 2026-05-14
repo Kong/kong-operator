@@ -3415,6 +3415,77 @@ func TestGenerateEntityOpsFile_GetForUIDUsesConfiguredMatchFields(t *testing.T) 
 	assert.NotContains(t, res.File.Content, "entry.GetName()")
 }
 
+func TestGenerateEntityOpsFile_GetForUIDUsesRootUnionCases(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"EventGatewayListenerPolicy": {IsRoot: ptr(false), ParentEntityType: "EventGatewayListener"},
+		},
+	})
+
+	schema := &parser.Schema{
+		ListOperationID:        "list-event-gateway-listener-policies",
+		ListTags:               []string{"EventGatewayListenerPolicies"},
+		ListSuccessResponseRef: "ListEventGatewayListenerPoliciesResponse",
+		Dependencies: []*parser.Dependency{
+			{ParamName: "gatewayId", EntityName: "KonnectEventGateway"},
+			{ParamName: "eventGatewayListenerId", EntityName: "EventGatewayListener"},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		GetForUID: &config.GetForUIDConfig{
+			ListItemsSource: config.GetForUIDListItemsSourceSlice,
+			RootUnion: &config.GetForUIDRootUnionConfig{
+				UnionField: "Spec.APISpec.EventGatewayListenerPolicyConfig",
+				Cases: []config.GetForUIDRootUnionCase{
+					{
+						TypeValue:         "tlsServer",
+						VariantField:      "EventGatewayTLSListen",
+						ResponseTypeValue: "tls_server",
+						MatchFields: []config.GetForUIDMatchField{
+							{
+								ObjectField:   "Name",
+								ResponseField: "GetName()",
+							},
+						},
+					},
+					{
+						TypeValue:         "forwardToVirtualCluster",
+						VariantField:      "ForwardToVirtualClust",
+						ResponseTypeValue: "forward_to_virtual_cluster",
+						MatchFields: []config.GetForUIDMatchField{
+							{
+								ObjectField:   "Name",
+								ResponseField: "GetName()",
+							},
+						},
+					},
+				},
+			},
+		},
+		SDK: &config.OpSDKConfig{
+			Interface: "github.com/Kong/sdk-konnect-go.EventGatewayListenerPoliciesSDK",
+			FieldName: "EventGatewayListenerPolicies",
+		},
+	}
+
+	res, err := g.generateEntityOpsFile("EventGatewayListenerPolicy", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, res.File)
+	require.NotNil(t, res.GetForUIDInfo)
+
+	content := res.File.Content
+	assert.Contains(t, content, "for _, entry := range resp.ListEventGatewayListenerPoliciesResponse {")
+	assert.NotContains(t, content, "resp.ListEventGatewayListenerPoliciesResponse.Data")
+	assert.Contains(t, content, "unionField := obj.Spec.APISpec.EventGatewayListenerPolicyConfig")
+	assert.Contains(t, content, `case "tlsServer":`)
+	assert.Contains(t, content, `if entry.GetType() != "tls_server" {`)
+	assert.Contains(t, content, "if !matchStringField(selected.Name, entry.GetName()) {")
+	assert.Contains(t, content, `case "forwardToVirtualCluster":`)
+	assert.Contains(t, content, `if entry.GetType() != "forward_to_virtual_cluster" {`)
+}
+
 func TestGenerateEntityOpsFile_ManualGetForUIDStillEmitsDispatcherInfo(t *testing.T) {
 	g := NewGenerator(Config{
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",

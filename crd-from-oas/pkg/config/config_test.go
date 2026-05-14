@@ -137,6 +137,52 @@ apiGroupVersions:
 		assert.Equal(t, "Certificate", konnect.Types[0].OpsGetForUID.MatchFields[0].ResponseField)
 	})
 
+	t.Run("valid config with getForUID root union", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    types:
+      - path: /v1/event-gateways/{gatewayId}/listeners/{eventGatewayListenerId}/policies
+        ops:
+          getForUID:
+            listItemsSource: slice
+            rootUnion:
+              unionField: Spec.APISpec.EventGatewayListenerPolicyConfig
+              cases:
+                - typeValue: tlsServer
+                  variantField: EventGatewayTLSListen
+                  responseTypeValue: tls_server
+                  matchFields:
+                    - objectField: Name
+                      responseField: GetName()
+                - typeValue: forwardToVirtualCluster
+                  variantField: ForwardToVirtualClust
+                  responseTypeValue: forward_to_virtual_cluster
+                  matchFields:
+                    - objectField: Name
+                      responseField: GetName()
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		cfg, err := LoadProjectConfig(path)
+		require.NoError(t, err)
+
+		konnect := cfg.APIGroupVersions["konnect.konghq.com/v1alpha1"]
+		require.NotNil(t, konnect)
+		require.Len(t, konnect.Types, 1)
+		require.NotNil(t, konnect.Types[0].OpsGetForUID)
+		assert.Equal(t, GetForUIDListItemsSourceSlice, konnect.Types[0].OpsGetForUID.ListItemsSource)
+		require.NotNil(t, konnect.Types[0].OpsGetForUID.RootUnion)
+		assert.Equal(t, "Spec.APISpec.EventGatewayListenerPolicyConfig", konnect.Types[0].OpsGetForUID.RootUnion.UnionField)
+		require.Len(t, konnect.Types[0].OpsGetForUID.RootUnion.Cases, 2)
+		assert.Equal(t, "tlsServer", konnect.Types[0].OpsGetForUID.RootUnion.Cases[0].TypeValue)
+		assert.Equal(t, "EventGatewayTLSListen", konnect.Types[0].OpsGetForUID.RootUnion.Cases[0].VariantField)
+		assert.Equal(t, "tls_server", konnect.Types[0].OpsGetForUID.RootUnion.Cases[0].ResponseTypeValue)
+		assert.Equal(t, "Name", konnect.Types[0].OpsGetForUID.RootUnion.Cases[0].MatchFields[0].ObjectField)
+		assert.Equal(t, "GetName()", konnect.Types[0].OpsGetForUID.RootUnion.Cases[0].MatchFields[0].ResponseField)
+	})
+
 	t.Run("valid config with commonTypes import", func(t *testing.T) {
 		content := `
 apiGroupVersions:
@@ -317,6 +363,75 @@ apiGroupVersions:
 		_, err := LoadProjectConfig(path)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "ops.skipGetForUID and ops.getForUID are mutually exclusive")
+	})
+
+	t.Run("invalid getForUID listItemsSource", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    types:
+      - path: /services
+        ops:
+          getForUID:
+            listItemsSource: banana
+            matchFields:
+              - objectField: Spec.APISpec.Name
+                responseField: Name
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		_, err := LoadProjectConfig(path)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "ops.getForUID.listItemsSource must be one of")
+	})
+
+	t.Run("invalid getForUID matchFields with rootUnion", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    types:
+      - path: /services
+        ops:
+          getForUID:
+            matchFields:
+              - objectField: Spec.APISpec.Name
+                responseField: Name
+            rootUnion:
+              unionField: Spec.APISpec.SomeUnion
+              cases:
+                - typeValue: foo
+                  variantField: Foo
+                  responseTypeValue: foo
+                  matchFields:
+                    - objectField: Name
+                      responseField: GetName()
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		_, err := LoadProjectConfig(path)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "ops.getForUID.matchFields and ops.getForUID.rootUnion are mutually exclusive")
+	})
+
+	t.Run("invalid getForUID rootUnion without cases", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    types:
+      - path: /services
+        ops:
+          getForUID:
+            rootUnion:
+              unionField: Spec.APISpec.SomeUnion
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		_, err := LoadProjectConfig(path)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "ops.getForUID.rootUnion.cases is required")
 	})
 }
 
@@ -639,6 +754,49 @@ func TestAPIGroupVersionConfig_OpsConfig(t *testing.T) {
 		require.Len(t, oc["KonnectEventDataPlaneCertificate"].GetForUID.MatchFields, 1)
 		assert.Equal(t, "Spec.APISpec.Certificate", oc["KonnectEventDataPlaneCertificate"].GetForUID.MatchFields[0].ObjectField)
 		assert.Equal(t, "Certificate", oc["KonnectEventDataPlaneCertificate"].GetForUID.MatchFields[0].ResponseField)
+	})
+
+	t.Run("getForUID rootUnion config is propagated", func(t *testing.T) {
+		agv := &APIGroupVersionConfig{
+			Types: []*TypeConfig{
+				{
+					Path: "/v1/event-gateways/{gatewayId}/listeners/{eventGatewayListenerId}/policies",
+					Ops: map[string]*OpConfig{
+						"create": {Path: "github.com/Kong/sdk-konnect-go/models/operations.CreateEventGatewayListenerPolicyRequest"},
+					},
+					OpsGetForUID: &GetForUIDConfig{
+						ListItemsSource: GetForUIDListItemsSourceSlice,
+						RootUnion: &GetForUIDRootUnionConfig{
+							UnionField: "Spec.APISpec.EventGatewayListenerPolicyConfig",
+							Cases: []GetForUIDRootUnionCase{
+								{
+									TypeValue:         "tlsServer",
+									VariantField:      "EventGatewayTLSListen",
+									ResponseTypeValue: "tls_server",
+									MatchFields: []GetForUIDMatchField{
+										{
+											ObjectField:   "Name",
+											ResponseField: "GetName()",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		oc := agv.OpsConfig(map[string]string{
+			"/v1/event-gateways/{gatewayId}/listeners/{eventGatewayListenerId}/policies": "EventGatewayListenerPolicy",
+		})
+		require.Len(t, oc, 1)
+		require.NotNil(t, oc["EventGatewayListenerPolicy"].GetForUID)
+		assert.Equal(t, GetForUIDListItemsSourceSlice, oc["EventGatewayListenerPolicy"].GetForUID.ListItemsSource)
+		require.NotNil(t, oc["EventGatewayListenerPolicy"].GetForUID.RootUnion)
+		assert.Equal(t, "Spec.APISpec.EventGatewayListenerPolicyConfig", oc["EventGatewayListenerPolicy"].GetForUID.RootUnion.UnionField)
+		require.Len(t, oc["EventGatewayListenerPolicy"].GetForUID.RootUnion.Cases, 1)
+		assert.Equal(t, "tlsServer", oc["EventGatewayListenerPolicy"].GetForUID.RootUnion.Cases[0].TypeValue)
 	})
 
 	t.Run("no ops configured", func(t *testing.T) {

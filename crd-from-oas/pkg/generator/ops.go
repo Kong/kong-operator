@@ -65,7 +65,7 @@ func (g *Generator) generateEntityOpsFile(
 		//     The fallback else-branch emits no SDK call and therefore no import.
 		getForUIDNeedsOpsImport := getForUIDData != nil &&
 			!getForUIDData.SingletonNoID &&
-			(getForUIDData.UseUIDTagFilter || len(getForUIDData.MatchFields) > 0 ||
+			(getForUIDData.UseUIDTagFilter || len(getForUIDData.MatchFields) > 0 || getForUIDData.RootUnion != nil ||
 				getForUIDData.HasLabels || getForUIDData.HasName)
 		needsOpsImport := (updateData != nil && updateData.UpdateWrapped) ||
 			(deleteData != nil && deleteData.DeleteFullyWrapped) ||

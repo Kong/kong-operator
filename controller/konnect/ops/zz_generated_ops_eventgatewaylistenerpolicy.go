@@ -100,3 +100,86 @@ func deleteEventGatewayListenerPolicy(
 	}
 	return nil
 }
+
+func getEventGatewayListenerPolicyForUID(
+	ctx context.Context,
+	sdk sdkkonnectgo.EventGatewayListenerPoliciesSDK,
+	obj *konnectv1alpha1.EventGatewayListenerPolicy,
+) (string, error) {
+	gatewayID := obj.GetGatewayID()
+	if gatewayID == "" {
+		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "Gateway", Op: GetOp}
+	}
+	eventGatewayListenerID := obj.GetEventGatewayListenerID()
+	if eventGatewayListenerID == "" {
+		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "EventGatewayListener", Op: GetOp}
+	}
+	resp, err := sdk.ListEventGatewayListenerPolicies(ctx, sdkkonnectops.ListEventGatewayListenerPoliciesRequest{
+		GatewayID: gatewayID,
+		ListenerID: eventGatewayListenerID,
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
+	}
+	if resp == nil {
+		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
+	}
+
+	unionField := obj.Spec.APISpec.EventGatewayListenerPolicyConfig
+	if unionField == nil {
+		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+	}
+
+	switch unionField.Type {
+	case "tlsServer":
+		selected := unionField.EventGatewayTLSListen
+		if selected == nil {
+			return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+		}
+		for _, entry := range resp.ListEventGatewayListenerPoliciesResponse {
+			if entry.GetType() != "tls_server" {
+				continue
+			}
+			if !matchStringField(selected.Name, entry.GetName()) {
+				continue
+			}
+			switch id := any(entry.GetID()).(type) {
+			case string:
+				if id != "" {
+					return id, nil
+				}
+			case *string:
+				if id != nil && *id != "" {
+					return *id, nil
+				}
+			}
+		}
+	case "forwardToVirtualCluster":
+		selected := unionField.ForwardToVirtualClust
+		if selected == nil {
+			return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+		}
+		for _, entry := range resp.ListEventGatewayListenerPoliciesResponse {
+			if entry.GetType() != "forward_to_virtual_cluster" {
+				continue
+			}
+			if !matchStringField(selected.Name, entry.GetName()) {
+				continue
+			}
+			switch id := any(entry.GetID()).(type) {
+			case string:
+				if id != "" {
+					return id, nil
+				}
+			case *string:
+				if id != nil && *id != "" {
+					return *id, nil
+				}
+			}
+		}
+	default:
+		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+	}
+
+	return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+}
