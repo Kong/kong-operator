@@ -50,6 +50,8 @@
 
 ### Added
 
+- Konnect: support `KongCertificate` ref in `KongUpstream`
+  [#4305](https://github.com/Kong/kong-operator/pull/4305)
 - `KongTarget`: support cross-namespace `spec.upstreamRef` to reference a
   `KongUpstream` in a different namespace. A `KongReferenceGrant` in the
   upstream's namespace is required to permit the reference. The `KongTarget`
