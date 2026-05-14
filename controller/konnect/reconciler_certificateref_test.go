@@ -791,7 +791,7 @@ func TestHandleCertificateRefKongUpstream(t *testing.T) {
 				},
 			},
 			expectError:         true,
-			expectErrorContains: fmt.Sprintf("referenced Kong Certificate default/cert-nonexist does not exist"),
+			expectErrorContains: "referenced Kong Certificate default/cert-nonexist does not exist",
 			updatedEntAssertions: []func(*configurationv1alpha1.KongUpstream) (bool, string){
 				func(u *configurationv1alpha1.KongUpstream) (bool, string) {
 					return lo.ContainsBy(u.Status.Conditions, func(c metav1.Condition) bool {
