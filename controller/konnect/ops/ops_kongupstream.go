@@ -143,7 +143,7 @@ func kongUpstreamToSDKUpstreamInput(
 ) sdkkonnectcomp.Upstream {
 	return sdkkonnectcomp.Upstream{
 		Algorithm:                upstream.Spec.Algorithm,
-		ClientCertificate:        upstream.Spec.ClientCertificate,
+		ClientCertificate:        upstream.Spec.ClientCertificate, //nolint:staticcheck // ClientCertificate is deprecated; kept for backward compatibility until removed
 		HashFallback:             upstream.Spec.HashFallback,
 		HashFallbackHeader:       upstream.Spec.HashFallbackHeader,
 		HashFallbackQueryArg:     upstream.Spec.HashFallbackQueryArg,

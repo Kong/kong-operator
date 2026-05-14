@@ -862,7 +862,7 @@ func (obj *KongRoute) GetServiceRef() *ServiceRef {
 }
 
 func (obj *KongUpstream) initKonnectStatus() {
-	obj.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{}
+	obj.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{}
 }
 
 // GetKonnectStatus returns the Konnect status contained in the KongUpstream status.

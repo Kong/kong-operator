@@ -160,7 +160,7 @@ var supportedKonnectTypesWithControlPlaneConfig = []supportedTypesT{
 			},
 			{
 				Type:                       "KongUpstream",
-				KonnectStatusType:          "*konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef",
+				KonnectStatusType:          "*konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs",
 				GetKonnectStatusReturnType: "*konnectv1alpha2.KonnectEntityStatus",
 				ControlPlaneRefType:        "commonv1alpha1.ControlPlaneRef",
 			},

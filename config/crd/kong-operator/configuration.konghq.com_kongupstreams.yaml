@@ -117,11 +117,37 @@ spec:
                 description: Which load balancing algorithm to use.
                 type: string
               client_certificate:
-                description: If set, the certificate to be used as client certificate
-                  while TLS handshaking to the upstream server.
+                description: 'Deprecated: use clientCertificateRef instead. If set,
+                  the certificate to be used as client certificate while TLS handshaking
+                  to the upstream server.'
                 properties:
                   id:
                     type: string
+                type: object
+              clientCertificateRef:
+                description: |-
+                  ClientCertificateRef is a reference to a KongCertificate used as the client certificate
+                  during TLS handshaking to the upstream server. Mutually exclusive with the deprecated
+                  client_certificate field. Cross-namespace references require a KongReferenceGrant
+                  in the target namespace.
+                properties:
+                  name:
+                    description: Name is the name of the referred resource.
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                  namespace:
+                    description: |-
+                      Namespace is the namespace of the referred resource.
+
+                      For namespace-scoped resources if no Namespace is provided then the
+                      namespace of the parent object MUST be used.
+
+                      This field MUST not be set when referring to cluster-scoped resources.
+                    maxLength: 253
+                    type: string
+                required:
+                - name
                 type: object
               controlPlaneRef:
                 description: ControlPlaneRef is a reference to a ControlPlane this
@@ -437,6 +463,8 @@ spec:
             - message: Cannot set or unset spec.adopt in updates
               rule: (has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt)
                 && !has(self.adopt))
+            - message: client_certificate and clientCertificateRef are mutually exclusive
+              rule: '!(has(self.client_certificate) && has(self.clientCertificateRef))'
           status:
             default:
               conditions:
@@ -513,9 +541,13 @@ spec:
               konnect:
                 description: Konnect contains the Konnect entity status.
                 properties:
+                  certificateID:
+                    description: CertificateID is the Konnect ID of the Certificate
+                      this entity is associated with.
+                    type: string
                   controlPlaneID:
                     description: ControlPlaneID is the Konnect ID of the ControlPlane
-                      this Route is associated with.
+                      this entity is associated with.
                     type: string
                   id:
                     description: |-

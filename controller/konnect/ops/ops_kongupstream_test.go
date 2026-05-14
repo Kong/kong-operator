@@ -41,7 +41,7 @@ func TestCreateKongUpstream(t *testing.T) {
 						},
 					},
 					Status: configurationv1alpha1.KongUpstreamStatus{
-						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{
 							ControlPlaneID: "123456789",
 						},
 					},
@@ -105,7 +105,7 @@ func TestCreateKongUpstream(t *testing.T) {
 						},
 					},
 					Status: configurationv1alpha1.KongUpstreamStatus{
-						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{
 							ControlPlaneID: "123456789",
 						},
 					},
@@ -168,7 +168,7 @@ func TestDeleteKongUpstream(t *testing.T) {
 						},
 					},
 					Status: configurationv1alpha1.KongUpstreamStatus{
-						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{
 							ControlPlaneID: "12345",
 							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 								ID: "123456789",
@@ -200,7 +200,7 @@ func TestDeleteKongUpstream(t *testing.T) {
 						},
 					},
 					Status: configurationv1alpha1.KongUpstreamStatus{
-						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{
 							ControlPlaneID: "12345",
 							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 								ID: "123456789",
@@ -234,7 +234,7 @@ func TestDeleteKongUpstream(t *testing.T) {
 						},
 					},
 					Status: configurationv1alpha1.KongUpstreamStatus{
-						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{
 							ControlPlaneID: "12345",
 							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 								ID: "123456789",
@@ -297,7 +297,7 @@ func TestUpdateKongUpstream(t *testing.T) {
 						},
 					},
 					Status: configurationv1alpha1.KongUpstreamStatus{
-						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{
 							ControlPlaneID: "12345",
 							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 								ID: "123456789",
@@ -346,7 +346,7 @@ func TestUpdateKongUpstream(t *testing.T) {
 						},
 					},
 					Status: configurationv1alpha1.KongUpstreamStatus{
-						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{
 							ControlPlaneID: "12345",
 							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 								ID: "123456789",
@@ -418,7 +418,7 @@ func TestCreateAndUpdateKongUpstream_KubernetesMetadataConsistency(t *testing.T)
 			},
 		},
 		Status: configurationv1alpha1.KongUpstreamStatus{
-			Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+			Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{
 				ControlPlaneID: uuid.NewString(),
 			},
 		},
