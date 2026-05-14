@@ -1,0 +1,216 @@
+# Scenario for TLSRoute referencing a Service as backendRef in another namespace
+# granted by a ReferenceGrant, then validating that the orphaned Kong resources
+# are cleaned up when the ReferenceGrant is removed (regression for the case
+# where stale KongTargets were left in the cluster after a cross-namespace
+# backend became unpermitted).
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: tlsroute-backendref-cross-namespace-reference
+spec:
+  description: |
+    Validates that a TLSRoute with a cross-namespace backendRef:
+    1. Translates correctly into Kong resources (KongUpstream, KongService,
+       KongRoute, KongTarget) when a permissive ReferenceGrant exists.
+    2. On ReferenceGrant deletion, the TLSRoute's status correctly flips to
+       ResolvedRefs=False/RefNotPermitted AND the orphaned KongTarget for the
+       cross-namespace backend is removed via orphan cleanup.
+    3. Re-applying the ReferenceGrant restores ResolvedRefs=True and the
+       KongTarget is re-created.
+
+  bindings:
+    # Common bindings.
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_api_auth_namespace
+      value: ($namespace)
+    - name: listener_tls_port
+      value: 8899
+    - name: sni_hostname
+      value: (join('.', ['*', ($test_name), 'example.com']))
+    - name: fqdn
+      value: (join('.', ['echo', ($test_name), 'example.com']))
+    - name: cert_secret_name
+      value: test-tls-secret
+    - name: cert_secret_namespace
+      value: ($namespace)
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: gateway_image
+      value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.12')
+    - name: gateway_name
+      value: (join('-', [($test_name), 'gateway']))
+    - name: gateway_namespace
+      value: ($namespace)
+    - name: tls_route_name
+      value: (join('-', [($test_name), 'echo-tls-route']))
+    - name: tls_route_namespace
+      value: ($namespace)
+    - name: echo_deployment_name
+      value: (join('-', [($test_name), 'echo']))
+    - name: echo_deployment_namespace
+      value: (join('-', [($namespace), 'echo-backend']))
+    - name: reference_grant_name
+      value: echo-service-tls-reference-grant
+    - name: reference_grant_namespace
+      value: ($echo_deployment_namespace)
+
+  steps:
+    # Step 1: Create the TLS secret used by the echo backend (TLS passthrough).
+    - name: Create-tls-secret
+      description: Create TLS Secret for the echo backend.
+      use:
+        template: ../../common/_step_templates/apply-assert-tlsSecret.yaml
+
+    # Step 2a: Create the secret for Konnect authentication.
+    - name: Create-auth-secret
+      description: Create Secret with Konnect token for KonnectAPIAuthConfiguration.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+
+    # Step 2b: Create the KonnectAPIAuthConfiguration.
+    - name: Create-konnect-api-auth
+      description: Create KonnectAPIAuthConfiguration for the test.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+
+    # Step 3: Create the GatewayConfiguration.
+    - name: Create-gateway-configuration
+      description: Create GatewayConfiguration for the test.
+      use:
+        template: ../../common/_step_templates/apply-assert-gatewayConfiguration.yaml
+
+    # Step 4: Create the GatewayClass.
+    - name: Create-gateway-class
+      description: Create GatewayClass for the test.
+      use:
+        template: ../../common/_step_templates/apply-assert-gatewayClass.yaml
+
+    # Step 5: Create the Gateway with a TLS passthrough listener.
+    - name: Create-gateway
+      description: Create Gateway with a TLS passthrough listener.
+      use:
+        template: ../../common/_step_templates/apply-assert-gateway-tls-passthrough-listener.yaml
+
+    # Step 6: Assert the KonnectGatewayControlPlane is created and synchronized.
+    - name: Assert-konnect-gateway-control-plane
+      description: Assert that the KonnectGatewayControlplane resource is created and synchronized.
+      use:
+        template: ../../common/_step_templates/assert-konnectGatewayControlPlane.yaml
+
+    # Step 7: Create the cross-namespace where the backend Service will live.
+    - name: Create-backend-namespace
+      description: Create a separate namespace for the backend Service.
+      use:
+        template: ../../common/_step_templates/apply-assert-namespace.yaml
+      bindings:
+        - name: namespace_name
+          value: ($echo_deployment_namespace)
+
+    # Step 8: Create the echo Service (TLS-capable) in the cross-namespace.
+    - name: Create-echo-service
+      description: Create and assert an echo service in the cross-namespace.
+      use:
+        template: ../../common/_step_templates/apply-assert-echoService-with-tls.yaml
+
+    # Step 9: Apply the TLSRoute together with a permissive ReferenceGrant,
+    # and assert the TLSRoute reaches ResolvedRefs=True and is Programmed.
+    - name: Create-tlsroute-with-grant
+      description: Apply TLSRoute and ReferenceGrant; assert programmed.
+      try:
+        - apply:
+            file: 01-tlsroute-with-grant.yaml
+        - assert:
+            file: 02-assert-tlsroute-resolved.yaml
+
+    # Step 10: Assert that a KongTarget owned by the TLSRoute exists for the
+    # cross-namespace backend Service.
+    - name: Assert-kongtarget-exists
+      description: Assert that the KongTarget was created for the cross-namespace backend.
+      try:
+        - assert:
+            file: 03-assert-kongtarget-exists.yaml
+
+    # Step 11: Verify TLS traffic flows end-to-end through the gateway to the
+    # cross-namespace backend while the ReferenceGrant is in place.
+    - name: Verify-TLS-traffic-from-host
+      description: Verify that TLS traffic can be routed through the gateway to the cross-namespace echo service.
+      use:
+        template: ../../common/_step_templates/verify-tls-traffic-from-host.yaml
+      bindings:
+        - name: request_sni
+          value: ($fqdn)
+
+    # Step 12: Delete the ReferenceGrant. This is the trigger for the bug:
+    # the TLSRoute's ResolvedRefs becomes False/RefNotPermitted and (before
+    # the fix) the previously-created KongTarget was not cleaned up.
+    - name: Delete-referencegrant
+      description: Delete the ReferenceGrant to make the cross-namespace ref unpermitted.
+      use:
+        template: ../../common/_step_templates/delete-resource-non-blocking.yaml
+      bindings:
+        - name: resource_type
+          value: referencegrant.gateway.networking.k8s.io
+        - name: resource_name
+          value: ($reference_grant_name)
+        - name: resource_namespace
+          value: ($reference_grant_namespace)
+
+    # Step 13: Assert the TLSRoute's ResolvedRefs condition flips to
+    # False/RefNotPermitted, and that the previously-created KongTarget is
+    # removed by orphan cleanup. This is the regression assertion.
+    - name: Assert-tlsroute-not-permitted-and-kongtarget-gone
+      description: Assert ResolvedRefs=False/RefNotPermitted and KongTarget orphan was cleaned up.
+      try:
+        - assert:
+            file: 04-assert-tlsroute-not-permitted.yaml
+        - error:
+            file: 05-assert-kongtarget-absent.yaml
+
+    # Step 14: Re-apply the ReferenceGrant. The TLSRoute should recover and
+    # the KongTarget should be re-created.
+    - name: Reapply-referencegrant
+      description: Re-create the ReferenceGrant and assert recovery.
+      try:
+        - apply:
+            file: 06-referencegrant.yaml
+        - assert:
+            file: 02-assert-tlsroute-resolved.yaml
+        - assert:
+            file: 03-assert-kongtarget-exists.yaml
+
+    # Step 15: Verify TLS traffic flows end-to-end through the gateway to the
+    # cross-namespace backend again while the ReferenceGrant is re-created.
+    - name: Verify-TLS-traffic-from-host-referencegrant-recreated
+      description: Verify that TLS traffic can be routed through the gateway to the cross-namespace echo service when the ReferenceGrant is recreated.
+      use:
+        template: ../../common/_step_templates/verify-tls-traffic-from-host.yaml
+      bindings:
+        - name: request_sni
+          value: ($fqdn)
+
+  catch:
+    # Capture debug snapshot on test failure for CI debugging.
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: hybridgateway-tlsroute-backendref-cross-namespace-reference
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: ADDITIONAL_NAMESPACES
+            value: ($echo_deployment_namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
