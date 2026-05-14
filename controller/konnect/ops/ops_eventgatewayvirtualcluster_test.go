@@ -116,10 +116,10 @@ func testEventGatewayVirtualCluster() *konnectv1alpha1.EventGatewayVirtualCluste
 			Generation: 2,
 		},
 		Spec: konnectv1alpha1.EventGatewayVirtualClusterSpec{
-			GatewayRef: commonv1alpha1.ObjectRef{
+			EventGatewayBackendClusterRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 				NamespacedRef: &commonv1alpha1.NamespacedRef{
-					Name: "event-gateway",
+					Name: "backend-cluster",
 				},
 			},
 			APISpec: konnectv1alpha1.EventGatewayVirtualClusterAPISpec{

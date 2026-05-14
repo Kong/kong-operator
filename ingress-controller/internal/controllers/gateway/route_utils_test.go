@@ -1177,7 +1177,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 			},
 			{
-				name:  "basic TLSRoute does not get accepted because there is no listener with TLS in passthrough mode",
+				name:  "basic TLSRouteget accepted because there is a listener with TLS in terminate mode",
 				route: basicTLSRoute(),
 				objects: []client.Object{
 					func() *gatewayapi.Gateway {
@@ -1195,7 +1195,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: []expected{
 					{
-						condition: routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNoMatchingParent),
+						condition: routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
 					},
 				},
 			},

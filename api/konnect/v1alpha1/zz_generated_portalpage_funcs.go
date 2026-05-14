@@ -104,3 +104,14 @@ func (obj *PortalPage) GetStatusConditionReasonParentRefInvalid() string {
 func (obj *PortalPage) GetStatusConditionReasonParentRefNotProgrammed() string {
 	return PortalRefReasonNotProgrammed
 }
+
+// GetAncestorIDs returns the Konnect IDs of the ancestor entities keyed by their Kind.
+func (obj *PortalPage) GetAncestorIDs() map[string]string {
+	m := make(map[string]string, 1)
+	if obj.Status.PortalID != nil {
+		m["Portal"] = obj.Status.PortalID.ID
+	} else {
+		m["Portal"] = ""
+	}
+	return m
+}

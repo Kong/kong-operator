@@ -38,21 +38,27 @@ type generatedParentRefHandler interface {
 }
 
 var (
-	_generatedHandlers        []generatedParentRefHandler
 	_generatedHandlersPerKind map[string]generatedParentRefHandler
 )
 
 func init() {
-	_generatedHandlers = []generatedParentRefHandler{
+	// _generatedHandlers contains the list of generated reference handlers to
+	// be used in handleGeneratedTypeReferences.
+	// Each handler is responsible for handling references to a specific parent type, for example:
+	// - parentRefHandler[konnectv1alpha1.Portal, *konnectv1alpha1.Portal] for handling references to Portal parents.
+	// This list is manually maintained for now, but in the future we may want to
+	// generate this list based on the generated types and their reference configurations.
+	_generatedHandlers := []generatedParentRefHandler{
+		parentRefHandler[konnectv1alpha1.EventGatewayBackendCluster, *konnectv1alpha1.EventGatewayBackendCluster]{},
 		parentRefHandler[konnectv1alpha1.EventGatewayListener, *konnectv1alpha1.EventGatewayListener]{},
 		parentRefHandler[konnectv1alpha1.KonnectEventGateway, *konnectv1alpha1.KonnectEventGateway]{},
 		parentRefHandler[konnectv1alpha1.Portal, *konnectv1alpha1.Portal]{},
 	}
-
 	_generatedHandlersPerKind = make(map[string]generatedParentRefHandler)
 	for _, handler := range _generatedHandlers {
 		_generatedHandlersPerKind[handler.parentTypeName()] = handler
 	}
+
 }
 
 // _generatedTypeReferenceHandlers returns a map of generated reference handlers
@@ -73,9 +79,9 @@ func (e *UnsupportedGeneratedReferenceTypeError) Error() string {
 	return "unsupported generated reference type: " + e.TypeName
 }
 
-// handleGeneratedTypeReferences runs reference handling that is specific to
+// handleGeneratedTypeParentReferences runs reference handling that is specific to
 // generated Konnect types.
-func (r *KonnectEntityReconciler[T, TEnt]) handleGeneratedTypeReferences(
+func (r *KonnectEntityReconciler[T, TEnt]) handleGeneratedTypeParentReferences(
 	ctx context.Context,
 	ent TEnt,
 ) (bool, ctrl.Result, error) {

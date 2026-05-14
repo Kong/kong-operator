@@ -46,6 +46,15 @@ func (kgcp *KonnectGatewayControlPlane) ConvertTo(dstRaw conversion.Hub) error {
 		},
 	}
 
+	dst.Status.Conditions = kgcp.Status.Conditions
+	dst.Status.KonnectEntityStatus = kgcp.Status.KonnectEntityStatus
+	if kgcp.Status.Endpoints != nil {
+		dst.Status.Endpoints = &konnectv1alpha2.KonnectEndpoints{
+			TelemetryEndpoint:    kgcp.Status.Endpoints.TelemetryEndpoint,
+			ControlPlaneEndpoint: kgcp.Status.Endpoints.ControlPlaneEndpoint,
+		}
+	}
+
 	return nil
 }
 
@@ -76,6 +85,15 @@ func (kgcp *KonnectGatewayControlPlane) ConvertFrom(srcRaw conversion.Hub) error
 		APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 			Name: src.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name,
 		},
+	}
+
+	kgcp.Status.Conditions = src.Status.Conditions
+	kgcp.Status.KonnectEntityStatus = src.Status.KonnectEntityStatus
+	if src.Status.Endpoints != nil {
+		kgcp.Status.Endpoints = &KonnectEndpoints{
+			TelemetryEndpoint:    src.Status.Endpoints.TelemetryEndpoint,
+			ControlPlaneEndpoint: src.Status.Endpoints.ControlPlaneEndpoint,
+		}
 	}
 
 	return nil

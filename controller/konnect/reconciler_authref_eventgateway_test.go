@@ -124,23 +124,23 @@ func testGetAPIAuthRefForEventGatewayChild[
 func TestGetAPIAuthRef_EventGatewayVirtualCluster(t *testing.T) {
 	tests := []struct {
 		name      string
-		ref       commonv1alpha1.ObjectRef
+		bcRef     commonv1alpha1.ObjectRef
 		expectErr bool
 	}{
 		{
 			name: "namespaced ref",
-			ref: commonv1alpha1.ObjectRef{
+			bcRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 				NamespacedRef: &commonv1alpha1.NamespacedRef{
-					Name: "event-gateway",
+					Name: "backend-cluster",
 				},
 			},
 		},
 		{
 			name: "konnect id ref is unsupported",
-			ref: commonv1alpha1.ObjectRef{
+			bcRef: commonv1alpha1.ObjectRef{
 				Type:      commonv1alpha1.ObjectRefTypeKonnectID,
-				KonnectID: new("gateway-konnect-id"),
+				KonnectID: new("backend-cluster-konnect-id"),
 			},
 			expectErr: true,
 		},
@@ -169,9 +169,18 @@ func TestGetAPIAuthRef_EventGatewayVirtualCluster(t *testing.T) {
 								},
 							},
 						},
-						Status: konnectv1alpha1.KonnectEventGatewayStatus{
-							KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
-								ID: "gateway-konnect-id",
+					},
+					&konnectv1alpha1.EventGatewayBackendCluster{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "backend-cluster",
+							Namespace: "default",
+						},
+						Spec: konnectv1alpha1.EventGatewayBackendClusterSpec{
+							GatewayRef: commonv1alpha1.ObjectRef{
+								Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+								NamespacedRef: &commonv1alpha1.NamespacedRef{
+									Name: "event-gateway",
+								},
 							},
 						},
 					},
@@ -183,7 +192,7 @@ func TestGetAPIAuthRef_EventGatewayVirtualCluster(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: konnectv1alpha1.EventGatewayVirtualClusterSpec{
-					GatewayRef: tc.ref,
+					EventGatewayBackendClusterRef: tc.bcRef,
 				},
 			}
 

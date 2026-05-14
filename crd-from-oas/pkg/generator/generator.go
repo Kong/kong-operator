@@ -56,6 +56,10 @@ type Config struct {
 	// getForUID function already exists and should still be included in the
 	// generated cross-entity dispatcher.
 	ManualGetForUIDEntities map[string]bool
+	// References maps entity names to their inter-CR reference configurations.
+	// When set, the matching spec field is replaced with *commonv1alpha1.ObjectRef
+	// and a resolved-ID status field is emitted.
+	References map[string][]config.ReferenceConfig
 }
 
 // Generator generates Go CRD types from parsed OpenAPI schemas.
@@ -1142,34 +1146,64 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		return g.goType(prop)
 	}
 
+	rc := g.config.ReconcilerConfig[entityName]
+
+	var (
+		parentRef             *config.ParentRefConfig
+		parentRefGoFieldName  string
+		parentRefJSONName     string
+		setParentIDEntityName string
+	)
+	if rc != nil && rc.ParentRef != nil {
+		parentRef = rc.ParentRef
+		parentRefGoFieldName = goFieldName(rc.ParentRef.FieldName)
+		parentRefJSONName = rc.ParentRef.FieldName
+		setParentIDEntityName = rc.ParentEntityType
+	}
+
+	isParentRefReplacedField := func(propName string) bool {
+		return parentRef != nil && propName == parentRef.ReplacesAPISpecField
+	}
+
 	funcMap := template.FuncMap{
-		"goType":                goTypeInCRD,
-		"goFieldName":           goFieldName,
-		"jsonTag":               jsonTag,
-		"refJSONTag":            func(p *parser.Property) string { return jsonName(p.Name) + "Ref" },
-		"kubebuilderTags":       kubebuilderTagsWithConfig,
-		"isRefProperty":         isRefProperty,
-		"refEntityName":         parser.GetRefEntityName,
-		"skipProperty":          skipProperty,
-		"lower":                 strings.ToLower,
-		"formatComment":         formatComment,
-		"hasRootOneOf":          hasRootOneOf,
-		"objectRefTypeName":     func() string { return g.objectRefTypeName() },
-		"namespacedRefTypeName": func() string { return g.namespacedRefTypeName() },
-		"join":                  strings.Join,
+		"goType":                   goTypeInCRD,
+		"goFieldName":              goFieldName,
+		"jsonTag":                  jsonTag,
+		"jsonPropName":             func(p *parser.Property) string { return jsonName(p.Name) },
+		"refJSONTag":               func(p *parser.Property) string { return jsonName(p.Name) + "Ref" },
+		"kubebuilderTags":          kubebuilderTagsWithConfig,
+		"isRefProperty":            isRefProperty,
+		"isRefConfigField":         func(prop *parser.Property) bool { return g.referenceForField(entityName, prop.Name) != nil },
+		"isParentRefReplacedField": func(propName string) bool { return isParentRefReplacedField(propName) },
+		"refEntityName":            parser.GetRefEntityName,
+		"skipProperty":             skipProperty,
+		"lower":                    strings.ToLower,
+		"lowerCamel":               lowerCamelCase,
+		"formatComment":            formatComment,
+		"hasRootOneOf":             hasRootOneOf,
+		"objectRefTypeName":        func() string { return g.objectRefTypeName() },
+		"namespacedRefTypeName":    func() string { return g.namespacedRefTypeName() },
+		"join":                     strings.Join,
 	}
 
 	tmpl := template.Must(template.New("crd").Funcs(funcMap).Parse(crdTypeTemplate))
 
-	// Determine whether we need the ObjectRef import: either for dependencies/refs
-	// or for the optional secret ref's NamespacedRef type.
+	// Determine whether we need the ObjectRef import: either for dependencies/refs,
+	// optional secret ref's NamespacedRef type, configured inter-CR references, or
+	// a parentRef override field.
 	objectRefImport := g.objectRefImportIfNeeded(schema)
 	if objectRefImport == nil && hasOptionalSecretRef && g.objectRefImported() {
 		objectRefImport = g.config.CommonTypes.ObjectRef.Import
 	}
+	if objectRefImport == nil && g.entityHasReferences(entityName) && g.objectRefImported() {
+		objectRefImport = g.config.CommonTypes.ObjectRef.Import
+	}
+	if objectRefImport == nil && parentRef != nil && g.objectRefImported() {
+		objectRefImport = g.config.CommonTypes.ObjectRef.Import
+	}
 
 	hasRootReconciler := false
-	if rc := g.config.ReconcilerConfig[entityName]; rc != nil {
+	if rc != nil {
 		hasRootReconciler = rc.GetIsRoot()
 	}
 
@@ -1187,6 +1221,14 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		}
 	}
 
+	// When ParentRef is configured, suppress the OpenAPI-derived spec ref field
+	// (e.g. GatewayRef) so only the configured field (e.g. EventGatewayBackendClusterRef)
+	// is emitted.
+	immediateParentDep := rootRefDependency(schema)
+	if parentRef != nil {
+		immediateParentDep = nil
+	}
+
 	var buf strings.Builder
 	data := struct {
 		EntityName                string
@@ -1201,6 +1243,11 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		ImmediateParentDependency *parser.Dependency
 		Categories                []string
 		SingletonNoID             bool
+		References                []TemplateReferenceConfig
+		ParentRef                 *config.ParentRefConfig
+		ParentRefGoFieldName      string
+		ParentRefJSONFieldName    string
+		SetParentIDEntityName     string
 	}{
 		EntityName:                entityName,
 		Schema:                    schema,
@@ -1211,9 +1258,14 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		ObjectRefImport:           objectRefImport,
 		HasOptionalSecretRef:      hasOptionalSecretRef,
 		HasRootReconciler:         hasRootReconciler,
-		ImmediateParentDependency: rootRefDependency(schema),
+		ImmediateParentDependency: immediateParentDep,
 		Categories:                categories,
 		SingletonNoID:             isSingletonNoID(schema),
+		References:                g.templateReferences(entityName),
+		ParentRef:                 parentRef,
+		ParentRefGoFieldName:      parentRefGoFieldName,
+		ParentRefJSONFieldName:    parentRefJSONName,
+		SetParentIDEntityName:     setParentIDEntityName,
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
@@ -1308,11 +1360,23 @@ func (g *Generator) generateSchemaTypesTests(refs map[string]bool, parsed *parse
 
 func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string, error) {
 	entityName := parser.GetEntityNameFromType(name)
+	rc := g.config.ReconcilerConfig[entityName]
 	isReconcilerRoot := false
-	if rc := g.config.ReconcilerConfig[entityName]; rc != nil {
+	if rc != nil {
 		isReconcilerRoot = rc.GetIsRoot()
 	}
 	rootRefDependency := rootRefDependency(schema)
+
+	var (
+		funcsParentRef             *config.ParentRefConfig
+		funcsParentRefGoFieldName  string
+		funcsSetParentIDEntityName string
+	)
+	if rc != nil && rc.ParentRef != nil {
+		funcsParentRef = rc.ParentRef
+		funcsParentRefGoFieldName = goFieldName(rc.ParentRef.FieldName)
+		funcsSetParentIDEntityName = rc.ParentEntityType
+	}
 
 	imports := make([]*config.ImportConfig, 0, 3)
 	imports = appendUniqueImportConfig(imports, defaultKonnectStatusImport())
@@ -1320,7 +1384,7 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		Alias: "metav1",
 		Path:  "k8s.io/apimachinery/pkg/apis/meta/v1",
 	})
-	if rootRefDependency != nil && g.objectRefImported() {
+	if (rootRefDependency != nil || funcsParentRef != nil) && g.objectRefImported() {
 		imports = appendUniqueImportConfig(imports, g.config.CommonTypes.ObjectRef.Import)
 	}
 	if rootRefDependency != nil {
@@ -1334,8 +1398,46 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 			Path:  defaultKonnectStatusPackage,
 		})
 	}
+	if g.entityHasReferences(entityName) && g.objectRefImported() {
+		imports = appendUniqueImportConfig(imports, g.config.CommonTypes.ObjectRef.Import)
+	}
 
-	tmpl := template.Must(template.New("crdFuncs").Parse(crdFuncsTemplate))
+	funcsFuncMap := template.FuncMap{
+		"lowerCamel":  lowerCamelCase,
+		"goFieldName": goFieldName,
+	}
+	tmpl := template.Must(template.New("crdFuncs").Funcs(funcsFuncMap).Parse(crdFuncsTemplate))
+
+	// Compute ancestor-chain data for GetAncestorIDs / SetAncestorID.
+	// AncestorEntityTypes maps each OpenAPI-derived dependency (in URL order)
+	// to its GVK Kind string. For single-dep entities without a parentRef override,
+	// this defaults to [ParentKind]. For entities with a parentRef override, the
+	// caller must supply AncestorEntityTypes in the reconciler config.
+	parentKindForFuncs := func() string {
+		if rootRefDependency == nil {
+			return ""
+		}
+		if rc != nil && rc.ParentEntityType != "" {
+			return rc.ParentEntityType
+		}
+		return refConditionEntityName(rootRefDependency)
+	}()
+	ancestorEntityTypes := func() []string {
+		if len(schema.Dependencies) == 0 {
+			return nil
+		}
+		if rc != nil && len(rc.AncestorEntityTypes) > 0 {
+			return rc.AncestorEntityTypes
+		}
+		if len(schema.Dependencies) == 1 {
+			return []string{parentKindForFuncs}
+		}
+		return nil
+	}()
+	var ancestorDependencies []*parser.Dependency
+	if len(ancestorEntityTypes) > 0 && len(ancestorEntityTypes) <= len(schema.Dependencies) {
+		ancestorDependencies = schema.Dependencies[:len(ancestorEntityTypes)]
+	}
 
 	var buf strings.Builder
 	data := struct {
@@ -1352,6 +1454,13 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		IsReconcilerRoot                   bool
 		KonnectAPIAuthConfigurationRefType string
 		ParentKind                         string
+		References                         []TemplateReferenceConfig
+		ObjectRefTypeName                  string
+		ParentRef                          *config.ParentRefConfig
+		ParentRefGoFieldName               string
+		SetParentIDEntityName              string
+		AncestorDependencies               []*parser.Dependency
+		AncestorEntityTypes                []string
 	}{
 		EntityName:                entityName,
 		APIVersion:                g.config.APIVersion,
@@ -1366,19 +1475,21 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 			if rootRefDependency == nil {
 				return ""
 			}
-			return refConditionEntityName(rootRefDependency)
-		}(),
-		IsReconcilerRoot:                   isReconcilerRoot,
-		KonnectAPIAuthConfigurationRefType: defaultKonnectStatusAlias + ".ControlPlaneKonnectAPIAuthConfigurationRef",
-		ParentKind: func() string {
-			if rootRefDependency == nil {
-				return ""
-			}
-			if rc := g.config.ReconcilerConfig[entityName]; rc != nil && rc.ParentEntityType != "" {
+			if funcsParentRef != nil && rc != nil && rc.ParentEntityType != "" {
 				return rc.ParentEntityType
 			}
 			return refConditionEntityName(rootRefDependency)
 		}(),
+		IsReconcilerRoot:                   isReconcilerRoot,
+		KonnectAPIAuthConfigurationRefType: defaultKonnectStatusAlias + ".ControlPlaneKonnectAPIAuthConfigurationRef",
+		ParentKind:                         parentKindForFuncs,
+		References:                         g.templateReferences(entityName),
+		ObjectRefTypeName:                  g.objectRefTypeName(),
+		ParentRef:                          funcsParentRef,
+		ParentRefGoFieldName:               funcsParentRefGoFieldName,
+		SetParentIDEntityName:              funcsSetParentIDEntityName,
+		AncestorDependencies:               ancestorDependencies,
+		AncestorEntityTypes:                ancestorEntityTypes,
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
@@ -2290,6 +2401,75 @@ func (g *Generator) objectRefImportIfNeeded(schema *parser.Schema) *config.Impor
 	return nil
 }
 
+// TemplateReferenceConfig extends ReferenceConfig with Go-code computed fields
+// suitable for use in templates.
+type TemplateReferenceConfig struct {
+	config.ReferenceConfig
+
+	// GoFieldName is the Go struct field name derived from the last path segment,
+	// e.g. "spec.apiSpec.destination" → "Destination".
+	GoFieldName string
+	// JSONFieldName is the JSON key used in the SDK payload after renameKeysToSDK,
+	// e.g. "destination". Derived from the last segment of Path.
+	JSONFieldName string
+}
+
+// templateReferences returns the references for an entity with computed Go field names.
+func (g *Generator) templateReferences(entityName string) []TemplateReferenceConfig {
+	refs := g.config.References[entityName]
+	if len(refs) == 0 {
+		return nil
+	}
+	result := make([]TemplateReferenceConfig, len(refs))
+	for i, ref := range refs {
+		tail := ref.Path
+		if idx := strings.LastIndex(tail, "."); idx >= 0 {
+			tail = tail[idx+1:]
+		}
+		result[i] = TemplateReferenceConfig{
+			ReferenceConfig: ref,
+			GoFieldName:     goFieldName(tail),
+			JSONFieldName:   tail,
+		}
+	}
+	return result
+}
+
+// referenceForField returns the ReferenceConfig for the given entity+field if
+// that field is configured as an inter-CR reference, or nil otherwise.
+// propName is the JSON/OpenAPI property name (e.g. "destination").
+func (g *Generator) referenceForField(entityName, propName string) *config.ReferenceConfig {
+	for i, ref := range g.config.References[entityName] {
+		tail := ref.Path
+		if idx := strings.LastIndex(tail, "."); idx >= 0 {
+			tail = tail[idx+1:]
+		}
+		if tail == propName {
+			return &g.config.References[entityName][i]
+		}
+	}
+	return nil
+}
+
+// entityHasReferences returns true if the entity has at least one configured reference.
+func (g *Generator) entityHasReferences(entityName string) bool {
+	return len(g.config.References[entityName]) > 0
+}
+
+// entityHasParentRefReplacement returns true when the entity is configured with
+// a ParentRef that replaces an API spec field. In that case the SDK request body
+// builder must inject the replaced field from the resolved parent status ID.
+func (g *Generator) entityHasParentRefReplacement(entityName string) bool {
+	if g.config.ReconcilerConfig == nil {
+		return false
+	}
+	rc, ok := g.config.ReconcilerConfig[entityName]
+	if !ok || rc == nil || rc.ParentRef == nil {
+		return false
+	}
+	return rc.ParentRef.ReplacesAPISpecField != ""
+}
+
 // schemaUsesObjectRef returns true if the schema has dependencies or reference
 // properties that will generate ObjectRef fields.
 func schemaUsesObjectRef(schema *parser.Schema) bool {
@@ -2448,22 +2628,40 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 
 	tmpl := template.Must(template.New("sdkops").Parse(sdkOpsTemplate))
 	var buf strings.Builder
+	rc := g.config.ReconcilerConfig[entityName]
+	hasParentRefReplacement := rc != nil && rc.ParentRef != nil && rc.ParentRef.ReplacesAPISpecField != ""
+	var parentRefReplacesField, sdkopsSetParentIDEntityName string
+	if hasParentRefReplacement {
+		parentRefReplacesField = rc.ParentRef.ReplacesAPISpecField
+		sdkopsSetParentIDEntityName = rc.ParentEntityType
+	}
+
 	data := struct {
-		APIVersion   string
-		EntityName   string
-		Imports      []*sdkOpsImport
-		BoolFields   []sdkOpsBoolField
-		Methods      []sdkOpsMethod
-		NeedsClient  bool
-		HasSecretRef bool
+		APIVersion              string
+		EntityName              string
+		Imports                 []*sdkOpsImport
+		BoolFields              []sdkOpsBoolField
+		Methods                 []sdkOpsMethod
+		NeedsClient             bool
+		HasSecretRef            bool
+		HasReferences           bool
+		References              []TemplateReferenceConfig
+		HasParentRefReplacement bool
+		ParentRefReplacesField  string
+		SetParentIDEntityName   string
 	}{
-		APIVersion:   g.config.APIVersion,
-		EntityName:   entityName,
-		Imports:      imports,
-		BoolFields:   boolFields,
-		Methods:      standardMethods,
-		NeedsClient:  opsConfig.RequireClient,
-		HasSecretRef: g.config.SecretRefEntities[entityName],
+		APIVersion:              g.config.APIVersion,
+		EntityName:              entityName,
+		Imports:                 imports,
+		BoolFields:              boolFields,
+		Methods:                 standardMethods,
+		NeedsClient:             opsConfig.RequireClient,
+		HasSecretRef:            g.config.SecretRefEntities[entityName],
+		HasReferences:           g.entityHasReferences(entityName),
+		References:              g.templateReferences(entityName),
+		HasParentRefReplacement: hasParentRefReplacement,
+		ParentRefReplacesField:  parentRefReplacesField,
+		SetParentIDEntityName:   sdkopsSetParentIDEntityName,
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {

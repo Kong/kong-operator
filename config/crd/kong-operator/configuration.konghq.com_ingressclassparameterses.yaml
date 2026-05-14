@@ -15,7 +15,12 @@ spec:
     singular: ingressclassparameters
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: IngressClassParameters is the Schema for the IngressClassParameters
@@ -56,3 +61,4 @@ spec:
         type: object
     served: true
     storage: true
+    subresources: {}

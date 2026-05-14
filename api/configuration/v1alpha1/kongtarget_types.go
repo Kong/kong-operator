@@ -33,6 +33,7 @@ import (
 // +kubebuilder:storageversion
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 // +kubebuilder:validation:XValidation:rule="oldSelf.spec.upstreamRef == self.spec.upstreamRef", message="spec.upstreamRef is immutable"
 // +kong:channels=kong-operator
 type KongTarget struct {

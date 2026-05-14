@@ -484,21 +484,20 @@ func EventGatewayVirtualCluster(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
-	gateway *konnectv1alpha1.KonnectEventGateway,
+	backendCluster *konnectv1alpha1.EventGatewayBackendCluster,
 	opts ...ObjOption,
 ) *konnectv1alpha1.EventGatewayVirtualCluster {
 	t.Helper()
 	name := "virtual-cluster-" + randomSuffix()
-	backendClusterName := konnectv1alpha1.BackendClusterName("backend-cluster")
 	obj := konnectv1alpha1.EventGatewayVirtualCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
 		Spec: konnectv1alpha1.EventGatewayVirtualClusterSpec{
-			GatewayRef: commonv1alpha1.ObjectRef{
+			EventGatewayBackendClusterRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 				NamespacedRef: &commonv1alpha1.NamespacedRef{
-					Name: gateway.Name,
+					Name: backendCluster.Name,
 				},
 			},
 			APISpec: konnectv1alpha1.EventGatewayVirtualClusterAPISpec{
@@ -508,9 +507,6 @@ func EventGatewayVirtualCluster(
 						Type:      konnectv1alpha1.VirtualClusterAuthenticationSchemeTypeAnonymous,
 						Anonymous: &konnectv1alpha1.VirtualClusterAuthenticationAnonymous{},
 					},
-				},
-				Destination: &konnectv1alpha1.BackendClusterReferenceModify{
-					Name: new(backendClusterName),
 				},
 				DNSLabel: konnectv1alpha1.VirtualClusterDNSLabel("vc-" + randomSuffix()),
 				Name:     konnectv1alpha1.VirtualClusterName(name),
