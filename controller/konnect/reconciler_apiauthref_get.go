@@ -68,7 +68,16 @@ func getAPIAuthRefViaBackendCluster(
 		return types.NamespacedName{},
 			fmt.Errorf("invalid EventGatewayBackendCluster reference: must be a NamespacedRef with a non-nil NamespacedRef field")
 	}
-	nn := types.NamespacedName{Name: bcRef.NamespacedRef.Name, Namespace: obj.GetNamespace()}
+	if bcRef.NamespacedRef.Namespace != nil && *bcRef.NamespacedRef.Namespace != obj.GetNamespace() {
+		// TODO https://github.com/Kong/kong-operator/issues/4134
+		return types.NamespacedName{},
+			fmt.Errorf("invalid EventGatewayBackendCluster reference: cross-namespace reference is not supported")
+	}
+	nn := types.NamespacedName{
+		Name: bcRef.NamespacedRef.Name,
+		// TODO https://github.com/Kong/kong-operator/issues/4134
+		Namespace: obj.GetNamespace(),
+	}
 	var bc konnectv1alpha1.EventGatewayBackendCluster
 	if err := cl.Get(ctx, nn, &bc); err != nil {
 		return types.NamespacedName{}, fmt.Errorf("failed to get EventGatewayBackendCluster %s: %w", nn, err)
