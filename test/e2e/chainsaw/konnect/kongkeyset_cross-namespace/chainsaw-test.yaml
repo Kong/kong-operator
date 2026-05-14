@@ -1,0 +1,656 @@
+# KongKeySet cross-namespace ControlPlaneRef test.
+#
+# Scenario A: All resources in the same namespace — baseline, no grants needed.
+#
+# Scenario B: CP and AuthConfig co-located in ns-B, KongKeySet in ns-A.
+#   Only a KeySet->CP grant is needed.
+#
+# Scenario C: CP in ns-B, AuthConfig in ns-C (separate namespace), KongKeySet in ns-A.
+#   Both KeySet->CP AND CP->AuthConfig grants are required.
+#
+# Scenario D: starting from Scenario B (Programmed=True), deleting the
+#   KongReferenceGrant reverts the KeySet to ResolvedRefs=False/RefNotPermitted.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: kongkeyset-cross-namespace
+spec:
+  description: |
+    Scenario A: All resources (KongKeySet, KonnectGatewayControlPlane,
+    KonnectAPIAuthConfiguration) in the same namespace. No grants needed; baseline sanity check.
+
+    Scenario B: KongKeySet (ns-A) -> KonnectGatewayControlPlane (ns-B) -> KonnectAPIAuthConfiguration (ns-B).
+    CP and AuthConfig co-located: only one KeySet->CP grant is needed.
+
+    Steps:
+      1. Create ns-B and provision KonnectAPIAuthConfiguration + KonnectGatewayControlPlane there.
+      2. Create KongKeySet in ns-A pointing to the cross-namespace CP.
+      3. Assert it has a negative condition (no grant yet).
+      4. Create the KongReferenceGrant in ns-B.
+      5. Assert it becomes Programmed.
+      6. Explicitly delete Konnect-registered resources before chainsaw tears down the auth namespace.
+
+    Scenario C: KongKeySet (ns-A) -> KonnectGatewayControlPlane (ns-B) -> KonnectAPIAuthConfiguration (ns-C).
+    CP and AuthConfig in different namespaces: both KeySet->CP AND CP->AuthConfig grants are required.
+
+    Steps:
+      1. Create ns-C; provision AuthConfig in ns-C, CP in ns-B with cross-namespace authRef.
+      2. Assert CP has APIAuthResolvedRef=False (missing CP->AuthConfig grant).
+      3. Create KongKeySet in ns-A; add KeySet->CP grant.
+      4. Assert KeySet is not Programmed (CP not programmed yet).
+      5. Add CP->AuthConfig grant; assert CP and KeySet both become Programmed.
+      6. Explicitly delete Konnect-registered resources before chainsaw tears down the auth namespaces.
+
+    Scenario D: starting from Scenario B (Programmed=True), deleting the
+    KongReferenceGrant reverts the KeySet to ResolvedRefs=False/RefNotPermitted
+    immediately, validating that the KongReferenceGrant watch is in place.
+
+  bindings:
+    # Common bindings.
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    # Namespace bindings (Scenario B and C).
+    - name: cp_namespace
+      value: (join('-', [$namespace, 'cp']))
+    - name: auth_namespace
+      value: (join('-', [$namespace, 'auth']))
+    # Scenario A resource names (same namespace as test).
+    - name: cp0_name
+      value: (join('-', [$namespace, 'cp0']))
+    - name: auth0_name
+      value: (join('-', [$namespace, 'auth0-konnect-api-auth']))
+    - name: ks0_name
+      value: (join('-', [$namespace, 'ks0']))
+    # Scenario B resource names (KeySet in test namespace, CP+AuthConfig in cp_namespace).
+    - name: cp_name
+      value: (join('-', [$namespace, 'cp']))
+    - name: auth_name
+      value: (join('-', [$namespace, 'konnect-api-auth']))
+    - name: ks_name
+      value: (join('-', [$namespace, 'ks']))
+    # Scenario C resource names (CP in cp_namespace, AuthConfig in auth_namespace).
+    - name: cp2_name
+      value: (join('-', [$namespace, 'cp2']))
+    - name: auth2_name
+      value: (join('-', [$namespace, 'auth2-konnect-api-auth']))
+    - name: ks2_name
+      value: (join('-', [$namespace, 'ks2']))
+
+  steps:
+    # =========================================================================
+    # Scenario A: All resources in the same namespace. No grants needed.
+    # =========================================================================
+
+    # Step 1: Create KonnectAPIAuthConfiguration in the test namespace.
+    - name: 1-create-auth-config-same-ns
+      description: Create KonnectAPIAuthConfiguration in the test namespace.
+      bindings:
+        - name: test_name
+          value: (join('-', [$namespace, 'auth0']))
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+    # Step 2: Create KonnectGatewayControlPlane in the test namespace.
+    - name: 2-create-control-plane-same-ns
+      description: Create KonnectGatewayControlPlane in the test namespace referencing auth config in the same namespace.
+      bindings:
+        - name: cp_name
+          value: ($cp0_name)
+        - name: cp_namespace
+          value: ($namespace)
+        - name: auth_name
+          value: ($auth0_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectGatewayControlPlane.yaml
+
+    # Step 3: Create KongKeySet in the test namespace.
+    # No grants are required since all resources share the same namespace.
+    - name: 3-create-keyset-same-ns
+      description: Create KongKeySet in the test namespace (no grants needed).
+      try:
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongKeySet
+              metadata:
+                name: ($ks0_name)
+                namespace: ($namespace)
+              spec:
+                name: ($ks0_name)
+                controlPlaneRef:
+                  type: konnectNamespacedRef
+                  konnectNamespacedRef:
+                    name: ($cp0_name)
+
+    # Step 4: Assert KeySet is Programmed without any grants.
+    - name: 4-assert-keyset-programmed-same-ns
+      description: Assert KongKeySet is Programmed (no grants needed for same namespace).
+      timeouts:
+        assert: 90s
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongKeySet
+              metadata:
+                name: ($ks0_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'ControlPlaneRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (konnect.controlPlaneID != null): true
+                (konnect.id != null): true
+
+    # Step 5: Cleanup scenario A resources in dependency order.
+    - name: 5-cleanup-scenario-a
+      description: Delete ks0 and CP0 in order; wait for each to be gone before proceeding.
+      timeouts:
+        delete: 120s
+        error: 120s
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongKeySet
+              name: ($ks0_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongKeySet
+              metadata:
+                name: ($ks0_name)
+                namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              name: ($cp0_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp0_name)
+                namespace: ($namespace)
+
+    # =========================================================================
+    # Scenario B: CP and AuthConfig in the same namespace (ns-B), KeySet in ns-A.
+    # Only the KeySet->CP grant is needed.
+    # =========================================================================
+
+    # Step 6: Create namespace for KonnectGatewayControlPlane and KonnectAPIAuthConfiguration.
+    - name: 6-create-cp-namespace
+      description: Create namespace for KonnectGatewayControlPlane and KonnectAPIAuthConfiguration.
+      bindings:
+        - name: namespace_name
+          value: ($cp_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-namespace.yaml
+
+    # Step 7: Create KonnectAPIAuthConfiguration in the CP namespace.
+    - name: 7-create-auth-config
+      description: Create KonnectAPIAuthConfiguration in the CP namespace.
+      bindings:
+        - name: test_name
+          value: ($namespace)
+        - name: namespace
+          value: ($cp_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+    # Step 8: Create KonnectGatewayControlPlane in the CP namespace.
+    - name: 8-create-control-plane
+      description: Create KonnectGatewayControlPlane in the CP namespace referencing auth config in the same namespace.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectGatewayControlPlane.yaml
+
+    # Step 9: Create KongKeySet before any KongReferenceGrant exists.
+    - name: 9-create-keyset-no-grant
+      description: Create KongKeySet before any grant exists.
+      try:
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongKeySet
+              metadata:
+                name: ($ks_name)
+                namespace: ($namespace)
+              spec:
+                name: ($ks_name)
+                controlPlaneRef:
+                  type: konnectNamespacedRef
+                  konnectNamespacedRef:
+                    name: ($cp_name)
+                    namespace: ($cp_namespace)
+
+    # Step 10: Assert negative condition — KeySet ResolvedRefs=False.
+    - name: 10-assert-negative-no-grant
+      description: Assert KeySet ResolvedRefs=False/RefNotPermitted (no grant yet).
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongKeySet
+              metadata:
+                name: ($ks_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+
+    # Step 11: Create KongReferenceGrant allowing KongKeySet (ns-A) -> KonnectGatewayControlPlane (ns-B).
+    - name: 11-create-reference-grant
+      description: Create KongReferenceGrant in cp_namespace allowing KongKeySet from test namespace to reference KonnectGatewayControlPlane.
+      bindings:
+        - name: kong_reference_grant_name
+          value: (join('-', [$namespace, 'ks-to-cp']))
+        - name: kong_reference_grant_namespace
+          value: ($cp_namespace)
+        - name: from
+          value:
+            - group: configuration.konghq.com
+              kind: KongKeySet
+              namespace: ($namespace)
+        - name: to
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectGatewayControlPlane
+      use:
+        template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+
+    # Step 12: Assert KeySet becomes Programmed after the grant is in place.
+    - name: 12-assert-keyset-programmed
+      description: Assert KongKeySet is Programmed after the grant is added.
+      timeouts:
+        assert: 90s
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongKeySet
+              metadata:
+                name: ($ks_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'True'
+                    reason: ResolvedRefs
+                (conditions[?type == 'ControlPlaneRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (konnect.controlPlaneID != null): true
+                (konnect.id != null): true
+
+    # =========================================================================
+    # Scenario D: delete the KeySet->CP grant and verify the KeySet
+    # reverts to ResolvedRefs=False/RefNotPermitted (validates grant watch).
+    # =========================================================================
+
+    - name: 13-delete-ks-to-cp-grant
+      description: Delete the KeySet->CP grant to verify the KeySet reverts to RefNotPermitted.
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              name: (join('-', [$namespace, 'ks-to-cp']))
+              namespace: ($cp_namespace)
+
+    - name: 14-assert-keyset-reverts-to-not-permitted
+      description: Assert KeySet transitions back to ResolvedRefs=False/RefNotPermitted after grant deletion.
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongKeySet
+              metadata:
+                name: ($ks_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+
+    - name: 15-recreate-ks-to-cp-grant
+      description: Recreate the KeySet->CP grant so the keyset can be deprovisioned cleanly during cleanup.
+      bindings:
+        - name: kong_reference_grant_name
+          value: (join('-', [$namespace, 'ks-to-cp']))
+        - name: kong_reference_grant_namespace
+          value: ($cp_namespace)
+        - name: from
+          value:
+            - group: configuration.konghq.com
+              kind: KongKeySet
+              namespace: ($namespace)
+        - name: to
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectGatewayControlPlane
+      use:
+        template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+
+    # Step 16: Explicitly delete Konnect-registered resources in dependency order before chainsaw
+    # tears down the namespace containing the KonnectAPIAuthConfiguration.
+    # The ks-to-cp grant is deleted before the CP wait so it cannot be skipped
+    # if the CP wait times out — it does not affect CP auth deprovisioning.
+    - name: 16-cleanup-scenario-b
+      description: |
+        Delete ks and CP in order; wait for each to be gone.
+        ks-to-cp grant is deleted before the CP wait (safe — does not affect CP auth deprovisioning).
+      timeouts:
+        delete: 120s
+        error: 120s
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongKeySet
+              name: ($ks_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongKeySet
+              metadata:
+                name: ($ks_name)
+                namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              name: (join('-', [$namespace, 'ks-to-cp']))
+              namespace: ($cp_namespace)
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              name: ($cp_name)
+              namespace: ($cp_namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp_name)
+                namespace: ($cp_namespace)
+
+    # =========================================================================
+    # Scenario C: CP in cp_namespace (ns-B), AuthConfig in auth_namespace (ns-C).
+    # Both KeySet->CP AND CP->AuthConfig grants are required.
+    # =========================================================================
+
+    # Step 17: Create a separate namespace for KonnectAPIAuthConfiguration (ns-C).
+    - name: 17-create-auth-namespace
+      description: Create separate auth namespace for KonnectAPIAuthConfiguration (different from CP namespace).
+      bindings:
+        - name: namespace_name
+          value: ($auth_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-namespace.yaml
+
+    # Step 18: Create KonnectAPIAuthConfiguration in the auth namespace (ns-C).
+    - name: 18-create-auth-config-cross-ns
+      description: Create KonnectAPIAuthConfiguration in auth_namespace (ns-C, separate from CP namespace).
+      bindings:
+        - name: test_name
+          value: (join('-', [$namespace, 'auth2']))
+        - name: namespace
+          value: ($auth_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+    # Step 19: Create CP2 in cp_namespace with cross-namespace authRef to auth_namespace.
+    # Without a CP->AuthConfig grant this CP should not become Programmed.
+    - name: 19-create-cp2-cross-ns-auth
+      description: Create KonnectGatewayControlPlane in cp_namespace with cross-namespace authRef to auth_namespace.
+      try:
+        - apply:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp2_name)
+                namespace: ($cp_namespace)
+              spec:
+                createControlPlaneRequest:
+                  name: ($cp2_name)
+                konnect:
+                  authRef:
+                    name: ($auth2_name)
+                    namespace: ($auth_namespace)
+
+    # Step 20: Assert CP2 has APIAuthResolvedRef=False/RefNotPermitted (no CP->AuthConfig grant).
+    - name: 20-assert-cp2-auth-grant-missing
+      description: Assert CP2 has APIAuthResolvedRef=False/RefNotPermitted because no CP->AuthConfig grant exists.
+      try:
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp2_name)
+                namespace: ($cp_namespace)
+              status:
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+
+    # Step 21: Create KongKeySet2 before CP2 is programmed.
+    - name: 21-create-keyset2
+      description: Create KongKeySet2 referencing cp2.
+      try:
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongKeySet
+              metadata:
+                name: ($ks2_name)
+                namespace: ($namespace)
+              spec:
+                name: ($ks2_name)
+                controlPlaneRef:
+                  type: konnectNamespacedRef
+                  konnectNamespacedRef:
+                    name: ($cp2_name)
+                    namespace: ($cp_namespace)
+
+    # Step 22: Add KeySet2->CP2 grant so ks2 can reference cp2 across namespaces.
+    - name: 22-create-ks2-to-cp2-grant
+      description: Create KongReferenceGrant in cp_namespace allowing ks2 from test namespace to reference cp2.
+      bindings:
+        - name: kong_reference_grant_name
+          value: (join('-', [$namespace, 'ks2-to-cp2']))
+        - name: kong_reference_grant_namespace
+          value: ($cp_namespace)
+        - name: from
+          value:
+            - group: configuration.konghq.com
+              kind: KongKeySet
+              namespace: ($namespace)
+        - name: to
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectGatewayControlPlane
+      use:
+        template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+
+    # Step 23: Assert ks2 is still not Programmed.
+    # CP2 is not Programmed (CP->AuthConfig grant missing), so ks2 is not Programmed.
+    - name: 23-assert-ks2-not-programmed
+      description: Assert ks2 ControlPlaneRefValid=False/NotProgrammed because CP->AuthConfig grant is still missing.
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongKeySet
+              metadata:
+                name: ($ks2_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'False'
+                (conditions[?type == 'ControlPlaneRefValid']):
+                  - status: 'False'
+                    reason: NotProgrammed
+
+    # Step 24: Create CP2->AuthConfig2 grant in auth_namespace.
+    - name: 24-create-cp2-to-auth2-grant
+      description: Create KongReferenceGrant in auth_namespace allowing cp2 from cp_namespace to reference auth2.
+      bindings:
+        - name: kong_reference_grant_name
+          value: (join('-', [$namespace, 'cp2-to-auth2']))
+        - name: kong_reference_grant_namespace
+          value: ($auth_namespace)
+        - name: from
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectGatewayControlPlane
+              namespace: ($cp_namespace)
+        - name: to
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectAPIAuthConfiguration
+      use:
+        template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+
+    # Step 25: Assert CP2 and ks2 both become Programmed.
+    - name: 25-assert-all-programmed
+      description: Assert CP2 and ks2 are both Programmed after both grants are in place.
+      timeouts:
+        assert: 90s
+      try:
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp2_name)
+                namespace: ($cp_namespace)
+              status:
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongKeySet
+              metadata:
+                name: ($ks2_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'True'
+                    reason: ResolvedRefs
+                (conditions[?type == 'ControlPlaneRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (konnect.controlPlaneID != null): true
+                (konnect.id != null): true
+
+    # Step 26: Explicitly delete Konnect-registered resources in dependency order before chainsaw
+    # tears down the namespaces containing the KonnectAPIAuthConfigurations.
+    # ks2-to-cp2 is deleted before the CP wait (safe — does not affect CP auth deprovisioning).
+    # cp2-to-auth2 is deleted last, after CP2 is fully deprovisioned.
+    - name: 26-cleanup-scenario-c
+      description: |
+        Delete ks2 and CP2 in order; wait for each to be gone.
+        ks2-to-cp2 grant is deleted before the CP wait (safe — does not affect CP auth deprovisioning).
+        cp2-to-auth2 is deleted last, after CP2 is fully deprovisioned.
+      timeouts:
+        delete: 120s
+        error: 120s
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongKeySet
+              name: ($ks2_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongKeySet
+              metadata:
+                name: ($ks2_name)
+                namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              name: (join('-', [$namespace, 'ks2-to-cp2']))
+              namespace: ($cp_namespace)
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              name: ($cp2_name)
+              namespace: ($cp_namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp2_name)
+                namespace: ($cp_namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              name: (join('-', [$namespace, 'cp2-to-auth2']))
+              namespace: ($auth_namespace)
+
+  catch:
+    # Capture debug snapshot on test failure for CI debugging.
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: kongkeyset-cross-namespace
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: ADDITIONAL_NAMESPACES
+            value: (join(',', [$cp_namespace, $auth_namespace]))
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
