@@ -1,0 +1,38 @@
+# Template for generating a TLS certificate and creating a KongDataPlaneClientCertificate
+# with an inline spec.cert field (Konnect form — no Kubernetes Secret).
+#
+# Required bindings:
+#   - dpcc_name:        Name of the KongDataPlaneClientCertificate to create.
+#   - dpcc_namespace:   Namespace for the KongDataPlaneClientCertificate.
+#   - cp_name:          Name of the KonnectGatewayControlPlane to reference.
+#   - cp_ref_namespace: Namespace of the KonnectGatewayControlPlane. May equal dpcc_namespace
+#       for same-namespace references (no KongReferenceGrant required in that case).
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-kong-data-plane-client-certificate-inline
+spec:
+  try:
+    - script:
+        env:
+          - name: HOSTNAME
+            value: ($dpcc_name)
+        content: |
+          bash ../../common/scripts/generate_tls_certificate.sh
+        outputs:
+          - name: cert_data
+            value: (json_parse($stdout).cert)
+    - apply:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: KongDataPlaneClientCertificate
+          metadata:
+            name: ($dpcc_name)
+            namespace: ($dpcc_namespace)
+          spec:
+            controlPlaneRef:
+              type: konnectNamespacedRef
+              konnectNamespacedRef:
+                name: ($cp_name)
+                namespace: ($cp_ref_namespace)
+            cert: ($cert_data)
