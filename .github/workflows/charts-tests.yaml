@@ -142,7 +142,7 @@ jobs:
 
       - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
         with:
-          install_args: kind github:Kong/kubernetes-testing-framework http:helm
+          install_args: kind github:Kong/kubernetes-testing-framework aqua:helm/helm
 
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
