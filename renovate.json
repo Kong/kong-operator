@@ -15,6 +15,11 @@
      "gomod",
      "dockerfile"
   ],
+  "postUpdateOptions": [
+    // Run `go mod tidy` after updating Go modules to ensure go.sum is updated and tidy up any indirect dependencies.
+    // https://docs.renovatebot.com/modules/manager/gomod/#post-update-options
+    "gomodTidy"
+  ],
   "dockerfile": {
     "fileMatch": ["^Dockerfile$", "^debug\\.Dockerfile$"]
   },
@@ -135,6 +140,20 @@
     }
   ],
   "packageRules": [
+    {
+      "description": "Group all k8s.io/* module updates into one PR",
+      "matchManagers": ["gomod"],
+      "matchPackageNames": ["/^k8s\\.io\\/.*/"],
+      "excludePackageNames": [
+        "k8s.io/utils",
+        "k8s.io/kube-openapi"
+      ],
+      "excludePackagePatterns": [
+        "^k8s\\.io/klog/.*$"
+      ],
+      "groupName": "k8s.io modules",
+      "groupSlug": "k8s-io-modules"
+    },
     {
       "description": "Strip kustomize/ version prefix",
       "matchBaseBranches": ["$default"],
