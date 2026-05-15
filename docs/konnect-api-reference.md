@@ -486,21 +486,7 @@ _Appears in:_
 
 
 
-#### BackendClusterReferenceModify
 
-
-BackendClusterReferenceModify is a type alias.
-
-
-
-| Field | Description |
-| --- | --- |
-| `id` _*string_ |  |
-| `name` _[BackendClusterName](#konnect-konghq-com-v1alpha1-types-backendclustername)_ |  |
-
-_Appears in:_
-
-- [EventGatewayVirtualClusterAPISpec](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterapispec)
 
 #### BackendClusterTLS
 
@@ -1082,7 +1068,6 @@ EventGatewayVirtualClusterAPISpec defines the API spec fields for EventGatewayVi
 | `aclMode` _[VirtualClusterACLMode](#konnect-konghq-com-v1alpha1-types-virtualclusteraclmode)_ | Configures whether or not ACL policies are enforced on the gateway. - `enforce_on_gateway` means the gateway enforces its own ACL policies for this virtual cluster<br /><br />and does not forward ACL-related commands to the backend cluster. Note that if there are no ACL policies configured, all access is denied. - `passthrough` tells the gateway to forward all ACL-related commands. |
 | `authentication` _[VirtualClusterAuthenticationScheme](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationscheme)_ | How to handle authentication from clients.<br /><br />It tries to authenticate with every rule sequentially one by one. It succeeds on the first match, and fails if no rule matches. |
 | `description` _string_ | A human-readable description of the virtual cluster. |
-| `destination` _[BackendClusterReferenceModify](#konnect-konghq-com-v1alpha1-types-backendclusterreferencemodify)_ | The backend cluster associated with the virtual cluster.<br /><br />Either `id` or `name` must be provided. Following changes to the backend cluster name won't affect the reference, as the system will create the entities relationship by `id`. |
 | `dnsLabel` _[VirtualClusterDNSLabel](#konnect-konghq-com-v1alpha1-types-virtualclusterdnslabel)_ | The DNS label used in the bootstrap server URL to identify the virtual cluster when using SNI routing. The format follows the RFC1035: 1-63 chars, lowercase alphanumeric or '-', must start and end with an alphanumeric character. |
 | `labels` _[Labels](#konnect-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `name` _[VirtualClusterName](#konnect-konghq-com-v1alpha1-types-virtualclustername)_ | The name of the virtual cluster. |
@@ -1102,7 +1087,7 @@ EventGatewayVirtualClusterSpec defines the desired state of EventGatewayVirtualC
 
 | Field | Description |
 | --- | --- |
-| `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. |
+| `eventGatewayBackendClusterRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | EventGatewayBackendClusterRef is the reference to the parent EventGatewayBackendCluster object. |
 | `apiSpec` _[EventGatewayVirtualClusterAPISpec](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -1120,6 +1105,7 @@ EventGatewayVirtualClusterStatus defines the observed state of EventGatewayVirtu
 | --- | --- |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
 | `gatewayID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `eventGatewayBackendCluster` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | EventGatewayBackendCluster is the Konnect entity reference for the parent EventGatewayBackendCluster. |
 | `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
 
 _Appears in:_
@@ -3512,6 +3498,7 @@ _Appears in:_
 - [KonnectCloudGatewayDataPlaneGroupConfigurationStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaydataplanegroupconfigurationstatus)
 - [KonnectCloudGatewayNetworkStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaynetworkstatus)
 - [KonnectCloudGatewayTransitGatewayStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewaystatus)
+- [KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandcertificateandcacertificatesrefs)
 - [KonnectEntityStatusWithControlPlaneAndCertificateRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandcertificaterefs)
 - [KonnectEntityStatusWithControlPlaneAndConsumerRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandconsumerrefs)
 - [KonnectEntityStatusWithControlPlaneAndKeySetRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandkeysetref)
@@ -3524,6 +3511,8 @@ _Appears in:_
 - [KonnectGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha2-types-konnectgatewaycontrolplanestatus)
 - [MCPServerStatus](#konnect-konghq-com-v1alpha1-types-mcpserverstatus)
 - [PortalStatus](#konnect-konghq-com-v1alpha1-types-portalstatus)
+
+
 
 
 

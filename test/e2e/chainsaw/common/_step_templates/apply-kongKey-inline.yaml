@@ -1,0 +1,39 @@
+# Template for generating an RSA key pair and creating a KongKey with inline PEM.
+#
+# Required bindings:
+#   - key_name:        Name of the KongKey (also used as the KID).
+#   - key_namespace:   Namespace for the KongKey.
+#   - cp_name:         Name of the KonnectGatewayControlPlane to reference.
+#   - cp_ref_namespace: Namespace of the KonnectGatewayControlPlane. May equal key_namespace
+#       for same-namespace references (no KongReferenceGrant required in that case).
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-kong-key-inline
+spec:
+  try:
+    - script:
+        content: |
+          bash ../../common/scripts/generate_rsa_keypair.sh
+        outputs:
+          - name: private_key_data
+            value: (json_parse($stdout).private_key)
+          - name: public_key_data
+            value: (json_parse($stdout).public_key)
+    - apply:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: KongKey
+          metadata:
+            name: ($key_name)
+            namespace: ($key_namespace)
+          spec:
+            kid: ($key_name)
+            controlPlaneRef:
+              type: konnectNamespacedRef
+              konnectNamespacedRef:
+                name: ($cp_name)
+                namespace: ($cp_ref_namespace)
+            pem:
+              private_key: ($private_key_data)
+              public_key: ($public_key_data)

@@ -23,6 +23,12 @@ type opsGetForUIDFuncData struct {
 	ListSDKInterface  string
 	ListSDKMethod     string
 	ListResponseField string
+	// ListResponseItemsExpr is the Go expression, relative to resp, that yields
+	// the iterable list items.
+	ListResponseItemsExpr string
+	// ListResponseNilCheck is the Go expression, relative to resp, that detects
+	// a nil/invalid list payload before iterating items.
+	ListResponseNilCheck string
 	// Parents holds metadata for each parent dependency (outermost first).
 	Parents []parentInfo
 	// GetForUIDFullyWrapped is true for multi-parent entities. The SDK list
@@ -46,6 +52,8 @@ type opsGetForUIDFuncData struct {
 	// MatchFields configures generated field comparisons for entities whose
 	// list responses do not expose labels/tags.
 	MatchFields []opsGetForUIDMatchFieldData
+	// RootUnion configures variant-aware matching for root-union-backed specs.
+	RootUnion *opsGetForUIDRootUnionData
 	// HasName indicates the entity's request schema declares a "name" field,
 	// used as a fallback UID-matching strategy when HasLabels is false.
 	HasName bool
@@ -62,6 +70,19 @@ type opsGetForUIDMatchFieldData struct {
 	// string/pointer, causing the template to emit matchSliceField instead of
 	// matchStringField.
 	SliceMatch bool
+}
+
+type opsGetForUIDRootUnionData struct {
+	UnionField        string
+	ResponseTypeField string
+	Cases             []opsGetForUIDRootUnionCaseData
+}
+
+type opsGetForUIDRootUnionCaseData struct {
+	TypeValue         string
+	VariantField      string
+	ResponseTypeValue string
+	MatchFields       []opsGetForUIDMatchFieldData
 }
 
 // generateOpsGetForUIDFuncBody renders the get<Entity>ForUID function body
@@ -121,10 +142,18 @@ func (g *Generator) generateOpsGetForUIDFuncBody(
 	if listResponseField == "" {
 		listResponseField = listMethod + "Response"
 	}
+	listResponseItemsExpr := fmt.Sprintf("resp.%s.Data", listResponseField)
+	listResponseNilCheck := fmt.Sprintf("resp == nil || resp.%s == nil", listResponseField)
+	if opsConfig != nil && opsConfig.GetForUID != nil &&
+		opsConfig.GetForUID.ListItemsSource == config.GetForUIDListItemsSourceSlice {
+		listResponseItemsExpr = fmt.Sprintf("resp.%s", listResponseField)
+		listResponseNilCheck = "resp == nil"
+	}
 
 	_, hasLabels, _ := metadataFields(schema)
 	hasName := schemaHasNameProperty(schema)
 	matchFields := make([]opsGetForUIDMatchFieldData, 0)
+	var rootUnion *opsGetForUIDRootUnionData
 	if opsConfig != nil && opsConfig.GetForUID != nil {
 		matchFields = make([]opsGetForUIDMatchFieldData, 0, len(opsConfig.GetForUID.MatchFields))
 		for _, field := range opsConfig.GetForUID.MatchFields {
@@ -134,6 +163,32 @@ func (g *Generator) generateOpsGetForUIDFuncBody(
 				SliceMatch:    isArrayMatchField(schema, field.ResponseField),
 			})
 		}
+		if opsConfig.GetForUID.RootUnion != nil {
+			responseTypeField := opsConfig.GetForUID.RootUnion.ResponseTypeField
+			if responseTypeField == "" {
+				responseTypeField = "GetType()"
+			}
+			rootUnion = &opsGetForUIDRootUnionData{
+				UnionField:        opsConfig.GetForUID.RootUnion.UnionField,
+				ResponseTypeField: responseTypeField,
+				Cases:             make([]opsGetForUIDRootUnionCaseData, 0, len(opsConfig.GetForUID.RootUnion.Cases)),
+			}
+			for _, c := range opsConfig.GetForUID.RootUnion.Cases {
+				caseData := opsGetForUIDRootUnionCaseData{
+					TypeValue:         c.TypeValue,
+					VariantField:      c.VariantField,
+					ResponseTypeValue: c.ResponseTypeValue,
+					MatchFields:       make([]opsGetForUIDMatchFieldData, 0, len(c.MatchFields)),
+				}
+				for _, field := range c.MatchFields {
+					caseData.MatchFields = append(caseData.MatchFields, opsGetForUIDMatchFieldData{
+						ObjectField:   field.ObjectField,
+						ResponseField: field.ResponseField,
+					})
+				}
+				rootUnion.Cases = append(rootUnion.Cases, caseData)
+			}
+		}
 	}
 
 	return &opsGetForUIDFuncData{
@@ -142,6 +197,8 @@ func (g *Generator) generateOpsGetForUIDFuncBody(
 		ListSDKInterface:      listInterface,
 		ListSDKMethod:         listMethod,
 		ListResponseField:     listResponseField,
+		ListResponseItemsExpr: listResponseItemsExpr,
+		ListResponseNilCheck:  listResponseNilCheck,
 		Parents:               parents,
 		GetForUIDFullyWrapped: getForUIDFullyWrapped,
 		GetForUIDWrappedType:  getForUIDWrappedType,
@@ -149,6 +206,7 @@ func (g *Generator) generateOpsGetForUIDFuncBody(
 		HasLabels:             hasLabels,
 		UseUIDTagFilter:       opsConfig != nil && opsConfig.UseUIDTagFilter,
 		MatchFields:           matchFields,
+		RootUnion:             rootUnion,
 		HasName:               hasName,
 		SingletonNoID:         isSingletonNoID(schema),
 	}, nil

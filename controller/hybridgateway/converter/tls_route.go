@@ -121,8 +121,11 @@ func (c *tlsRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger l
 		if err != nil {
 			return false, stop, fmt.Errorf("failed to build accepted condition for parentRef %s: %w", pRef.Name, err)
 		}
-		// If the Accepted or ResolvedRefs condition is False, we should stop further processing.
-		if acceptedCondition.Status == metav1.ConditionFalse || resolvedRefsCond.Status == metav1.ConditionFalse {
+		// Unresolved backend references should still translate so the desired state is
+		// recomputed (no KongTargets for unpermitted refs) and orphan cleanup can remove
+		// resources from a previous reconciliation. Only an unaccepted route halts state
+		// enforcement.
+		if acceptedCondition.Status == metav1.ConditionFalse {
 			stop = true
 		}
 

@@ -68,12 +68,72 @@ func KongServiceReconciliationWatchOptions(
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
+				&configurationv1alpha1.KongCertificate{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueKongServiceForKongCertificate(cl),
+				),
+			)
+		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&configurationv1alpha1.KongCACertificate{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueKongServiceForKongCACertificate(cl),
+				),
+			)
+		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
 				&configurationv1alpha1.KongReferenceGrant{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueObjectsForKongReferenceGrant[configurationv1alpha1.KongServiceList](cl),
 				),
 			)
 		},
+	}
+}
+
+// enqueueKongServiceForKongCertificate returns a mapper that re-enqueues all
+// KongServices that reference the changed KongCertificate via spec.clientCertificateRef.
+func enqueueKongServiceForKongCertificate(
+	cl client.Client,
+) func(context.Context, client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		cert, ok := obj.(*configurationv1alpha1.KongCertificate)
+		if !ok {
+			return nil
+		}
+		svcList := configurationv1alpha1.KongServiceList{}
+		if err := cl.List(ctx, &svcList,
+			client.MatchingFields{
+				index.IndexFieldKongServiceOnReferencedKongCertificate: cert.Namespace + "/" + cert.Name,
+			},
+		); err != nil {
+			return nil
+		}
+		return objectListToReconcileRequests(svcList.Items)
+	}
+}
+
+// enqueueKongServiceForKongCACertificate returns a mapper that re-enqueues all
+// KongServices that reference the changed KongCACertificate via spec.caCertificateRefs.
+func enqueueKongServiceForKongCACertificate(
+	cl client.Client,
+) func(context.Context, client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		cacert, ok := obj.(*configurationv1alpha1.KongCACertificate)
+		if !ok {
+			return nil
+		}
+		svcList := configurationv1alpha1.KongServiceList{}
+		if err := cl.List(ctx, &svcList,
+			client.MatchingFields{
+				index.IndexFieldKongServiceOnReferencedKongCACertificates: cacert.Namespace + "/" + cacert.Name,
+			},
+		); err != nil {
+			return nil
+		}
+		return objectListToReconcileRequests(svcList.Items)
 	}
 }
 

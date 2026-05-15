@@ -1,0 +1,177 @@
+# Template for deploying an mTLS-protected upstream.
+#
+# Deploys a Pod with two containers:
+#   - kong: terminates TLS on ($upstream_port) requiring a client certificate, proxies
+#     to the local go-echo on 127.0.0.1:1027 via a tiny declarative config.
+#   - go-echo: serves plain HTTP on port 1027.
+#
+# A ConfigMap holds the Kong declarative config and a Service fronts the Pod
+# on ($upstream_port) over ClusterIP.
+#
+# Required bindings:
+#   - upstream_name: Name used for ConfigMap, Deployment, Service and selector label.
+#   - upstream_namespace: Namespace where the resources will be created.
+#   - upstream_port: ClusterIP Service port (number) exposing the mTLS endpoint.
+#   - server_secret_name: Name of the TLS Secret (type: kubernetes.io/tls) with the server cert/key.
+#   - client_ca_secret_name: Name of the Secret holding the client CA under key 'ca.crt'.
+#   - kong_sidecar_image: (optional) Image for the kong sidecar. Default: "kong:3.9".
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-mtls-upstream
+spec:
+  try:
+    # 1. ConfigMap with the Kong declarative config.
+    - apply:
+        resource:
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: (join('-', [($upstream_name), 'config']))
+            namespace: ($upstream_namespace)
+          data:
+            kong.yaml: |
+              _format_version: "3.0"
+              services:
+                - name: echo
+                  url: http://127.0.0.1:1027
+                  routes:
+                    - name: root
+                      paths:
+                        - /
+                      strip_path: false
+
+    # 2. Deployment: kong (mTLS terminator) + go-echo (upstream).
+    - apply:
+        resource:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            labels:
+              app: ($upstream_name)
+            name: ($upstream_name)
+            namespace: ($upstream_namespace)
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: ($upstream_name)
+            template:
+              metadata:
+                labels:
+                  app: ($upstream_name)
+              spec:
+                containers:
+                  - name: kong
+                    image: ($kong_sidecar_image)
+                    env:
+                      - name: KONG_DATABASE
+                        value: "off"
+                      - name: KONG_DECLARATIVE_CONFIG
+                        value: /kong/config/kong.yaml
+                      - name: KONG_PROXY_LISTEN
+                        value: "0.0.0.0:8443 ssl"
+                      - name: KONG_SSL_CERT
+                        value: /kong/tls/tls.crt
+                      - name: KONG_SSL_CERT_KEY
+                        value: /kong/tls/tls.key
+                      - name: KONG_NGINX_PROXY_SSL_VERIFY_CLIENT
+                        value: "on"
+                      - name: KONG_NGINX_PROXY_SSL_CLIENT_CERTIFICATE
+                        value: /kong/client-ca/ca.crt
+                      - name: KONG_NGINX_PROXY_SSL_VERIFY_DEPTH
+                        value: "2"
+                      - name: KONG_PROXY_ACCESS_LOG
+                        value: /dev/stdout
+                      - name: KONG_PROXY_ERROR_LOG
+                        value: /dev/stderr
+                      - name: KONG_ADMIN_LISTEN
+                        value: "off"
+                      - name: KONG_STATUS_LISTEN
+                        value: "0.0.0.0:8100"
+                    ports:
+                      - containerPort: 8443
+                        protocol: TCP
+                    volumeMounts:
+                      - name: kong-config
+                        mountPath: /kong/config
+                      - name: kong-tls
+                        mountPath: /kong/tls
+                      - name: kong-client-ca
+                        mountPath: /kong/client-ca
+                    readinessProbe:
+                      httpGet:
+                        path: /status
+                        port: 8100
+                      initialDelaySeconds: 5
+                      periodSeconds: 5
+                  - name: go-echo
+                    image: kong/go-echo:latest
+                    ports:
+                      - containerPort: 1027
+                        protocol: TCP
+                    env:
+                      - name: NODE_NAME
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: spec.nodeName
+                      - name: POD_NAME
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: metadata.name
+                      - name: POD_NAMESPACE
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: metadata.namespace
+                      - name: POD_IP
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: status.podIP
+                    readinessProbe:
+                      httpGet:
+                        path: /
+                        port: 1027
+                      initialDelaySeconds: 5
+                      periodSeconds: 5
+                volumes:
+                  - name: kong-config
+                    configMap:
+                      name: (join('-', [($upstream_name), 'config']))
+                  - name: kong-tls
+                    secret:
+                      secretName: ($server_secret_name)
+                  - name: kong-client-ca
+                    secret:
+                      secretName: ($client_ca_secret_name)
+
+    # 3. ClusterIP Service fronting the mTLS endpoint.
+    - apply:
+        resource:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            labels:
+              app: ($upstream_name)
+            name: ($upstream_name)
+            namespace: ($upstream_namespace)
+          spec:
+            type: ClusterIP
+            ports:
+              - port: ($upstream_port)
+                name: https
+                protocol: TCP
+                targetPort: 8443
+            selector:
+              app: ($upstream_name)
+
+    # 4. Assert the Deployment is ready.
+    - assert:
+        resource:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: ($upstream_name)
+            namespace: ($upstream_namespace)
+          status:
+            availableReplicas: 1
+            readyReplicas: 1

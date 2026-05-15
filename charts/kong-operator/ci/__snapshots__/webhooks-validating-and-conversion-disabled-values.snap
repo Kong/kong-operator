@@ -12266,22 +12266,6 @@ spec:
                     description: A human-readable description of the virtual cluster.
                     maxLength: 512
                     type: string
-                  destination:
-                    description: |-
-                      The backend cluster associated with the virtual cluster.
-
-                      Either `id` or `name` must be provided.
-                      Following changes to the backend cluster name won't affect the
-                      reference, as the system will create the entities relationship by `id`.
-                    maxProperties: 1
-                    minProperties: 1
-                    properties:
-                      id:
-                        type: string
-                      name:
-                        description: BackendClusterName The unique name of the backend cluster.
-                        type: string
-                    type: object
                   dnsLabel:
                     description: |-
                       The DNS label used in the bootstrap server URL to identify the virtual
@@ -12538,12 +12522,11 @@ spec:
                 required:
                 - aclMode
                 - authentication
-                - destination
                 - dnsLabel
                 - name
                 type: object
-              gatewayRef:
-                description: GatewayRef is the reference to the parent Gateway object.
+              eventGatewayBackendClusterRef:
+                description: EventGatewayBackendClusterRef is the reference to the parent EventGatewayBackendCluster object.
                 properties:
                   konnectID:
                     description: |-
@@ -12597,7 +12580,7 @@ spec:
                 - message: when type is konnectID, namespacedRef must not be set
                   rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
             required:
-            - gatewayRef
+            - eventGatewayBackendClusterRef
             type: object
           status:
             description: EventGatewayVirtualClusterStatus defines the observed state of EventGatewayVirtualCluster.
@@ -12662,6 +12645,14 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              eventGatewayBackendCluster:
+                description: EventGatewayBackendCluster is the Konnect entity reference for the parent EventGatewayBackendCluster.
+                properties:
+                  id:
+                    description: ID is the unique identifier of the Konnect entity as assigned by Konnect API.
+                    maxLength: 256
+                    type: string
+                type: object
               gatewayID:
                 description: GatewayID is the Konnect ID of the parent Gateway.
                 properties:
@@ -22626,7 +22617,12 @@ spec:
     singular: ingressclassparameters
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: IngressClassParameters is the Schema for the IngressClassParameters API.
@@ -22666,6 +22662,7 @@ spec:
         type: object
     served: true
     storage: true
+    subresources: {}
 ---
 # Source: kong-operator/charts/ko-crds/templates/ko-crds.yaml
 apiVersion: apiextensions.k8s.io/v1
@@ -31841,6 +31838,10 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed
       type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -32177,6 +32178,10 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed
       type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -33487,6 +33492,10 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed
       type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -33736,6 +33745,10 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed
       type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -33985,6 +33998,10 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed
       type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -34238,6 +34255,10 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed
       type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -34493,6 +34514,10 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed
       type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -34958,6 +34983,10 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed
       type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -35242,6 +35271,10 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed
       type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -35607,6 +35640,10 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed
       type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -36100,6 +36137,10 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed
       type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -37132,8 +37173,8 @@ spec:
                     rule: .self.group != 'core' || .self.kind == 'Secret'
                   - message: Only 'KonnectGatewayControlPlane' and 'KonnectAPIAuthConfiguration' kinds are supported for 'konnect.konghq.com' group
                     rule: .self.group != 'konnect.konghq.com' || .self.kind in ['KonnectGatewayControlPlane', 'KonnectAPIAuthConfiguration']
-                  - message: Only 'KongPlugin', 'KongService', 'KongCertificate' and 'KongUpstream' kinds are supported for 'configuration.konghq.com' group
-                    rule: .self.group != 'configuration.konghq.com' || .self.kind in ['KongPlugin', 'KongService', 'KongCertificate', 'KongUpstream']
+                  - message: Only 'KongPlugin', 'KongService', 'KongCertificate', 'KongCACertificate' and 'KongUpstream' kinds are supported for 'configuration.konghq.com' group
+                    rule: .self.group != 'configuration.konghq.com' || .self.kind in ['KongPlugin', 'KongService', 'KongCertificate', 'KongCACertificate', 'KongUpstream']
                 maxItems: 16
                 minItems: 1
                 type: array
@@ -37172,6 +37213,10 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed
       type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -37610,6 +37655,10 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed
       type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -37694,6 +37743,64 @@ spec:
                   rule: 'self.from == ''konnect'' ? has(self.konnect) : true'
                 - message: konnect.id is immutable
                   rule: 'has(self.konnect) ? (self.konnect.id == oldSelf.konnect.id) : true'
+              caCertificateRefs:
+                description: |-
+                  CACertificateRefs is the list of references to KongCACertificates used
+                  to verify the upstream server's TLS certificate.
+                  Each referenced KongCACertificate MUST belong to the same Konnect
+                  ControlPlane as this KongService.
+                  Cross-namespace references require a KongReferenceGrant in the target
+                  namespace.
+                items:
+                  description: NamespacedRef is a reference to a namespaced resource.
+                  properties:
+                    name:
+                      description: Name is the name of the referred resource.
+                      maxLength: 253
+                      minLength: 1
+                      type: string
+                    namespace:
+                      description: |-
+                        Namespace is the namespace of the referred resource.
+
+                        For namespace-scoped resources if no Namespace is provided then the
+                        namespace of the parent object MUST be used.
+
+                        This field MUST not be set when referring to cluster-scoped resources.
+                      maxLength: 253
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
+                x-kubernetes-list-type: atomic
+              clientCertificateRef:
+                description: |-
+                  ClientCertificateRef is a reference to a KongCertificate used as the
+                  client certificate when proxying to the upstream over TLS.
+                  The referenced KongCertificate MUST belong to the same Konnect
+                  ControlPlane as this KongService.
+                  Cross-namespace references require a KongReferenceGrant in the target
+                  namespace.
+                properties:
+                  name:
+                    description: Name is the name of the referred resource.
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                  namespace:
+                    description: |-
+                      Namespace is the namespace of the referred resource.
+
+                      For namespace-scoped resources if no Namespace is provided then the
+                      namespace of the parent object MUST be used.
+
+                      This field MUST not be set when referring to cluster-scoped resources.
+                    maxLength: 253
+                    type: string
+                required:
+                - name
+                type: object
               connect_timeout:
                 description: The timeout in milliseconds for establishing a connection to the upstream server.
                 format: int64
@@ -37890,8 +37997,17 @@ spec:
               konnect:
                 description: Konnect contains the Konnect entity status.
                 properties:
+                  caCertificateIDs:
+                    description: CACertificateIDs lists the Konnect IDs of the CA Certificates referenced by this entity.
+                    items:
+                      type: string
+                    type: array
+                    x-kubernetes-list-type: set
+                  certificateID:
+                    description: CertificateID is the Konnect ID of the client Certificate referenced by this entity.
+                    type: string
                   controlPlaneID:
-                    description: ControlPlaneID is the Konnect ID of the ControlPlane this Route is associated with.
+                    description: ControlPlaneID is the Konnect ID of the ControlPlane this entity is associated with.
                     type: string
                   id:
                     description: |-
@@ -37949,6 +38065,10 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed
       type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -38206,6 +38326,10 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed
       type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -38468,7 +38592,12 @@ spec:
     singular: kongupstreampolicy
   scope: Namespaced
   versions:
-  - name: v1beta1
+  - additionalPrinterColumns:
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1beta1
     schema:
       openAPIV3Schema:
         description: |-
@@ -39159,6 +39288,10 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed
       type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -42615,6 +42748,10 @@ spec:
       jsonPath: .status.konnectSpec.name
       name: Konnect Name
       type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:

@@ -36,6 +36,7 @@ import (
 // +kubebuilder:printcolumn:name="Host",type=string,JSONPath=`.spec.host`,description="Host of the service"
 // +kubebuilder:printcolumn:name="Protocol",type=string,JSONPath=`.spec.protocol`,description="Protocol of the service"
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.spec.controlPlaneRef) || has(self.spec.controlPlaneRef)", message="controlPlaneRef is required once set"
 // +kubebuilder:validation:XValidation:rule="(!has(self.spec.controlPlaneRef)) ? true : (!has(self.status) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable when an entity is already Programmed"
 // +kubebuilder:validation:XValidation:rule="(!has(self.spec.id) && !has(oldSelf.spec.id)) || (has(self.spec.id) && has(oldSelf.spec.id) && self.spec.id == oldSelf.spec.id)", message="spec.id is immutable"
@@ -69,8 +70,24 @@ type KongServiceSpec struct {
 
 // KongServiceAPISpec defines the specification of a Kong Service.
 type KongServiceAPISpec struct {
-	// TODO(pmalek): client certificate implement ref
-	// TODO(pmalek): ca_certificates implement ref
+	// ClientCertificateRef is a reference to a KongCertificate used as the
+	// client certificate when proxying to the upstream over TLS.
+	// The referenced KongCertificate MUST belong to the same Konnect
+	// ControlPlane as this KongService.
+	// Cross-namespace references require a KongReferenceGrant in the target
+	// namespace.
+	// +optional
+	ClientCertificateRef *commonv1alpha1.NamespacedRef `json:"clientCertificateRef,omitempty"`
+
+	// CACertificateRefs is the list of references to KongCACertificates used
+	// to verify the upstream server's TLS certificate.
+	// Each referenced KongCACertificate MUST belong to the same Konnect
+	// ControlPlane as this KongService.
+	// Cross-namespace references require a KongReferenceGrant in the target
+	// namespace.
+	// +optional
+	// +listType=atomic
+	CACertificateRefs []commonv1alpha1.NamespacedRef `json:"caCertificateRefs,omitempty"`
 
 	// TODO(pmalek): field below are basically copy pasted from sdkkonnectcomp.CreateService
 	// The reason for this is that Service creation request contains a Konnect ID
@@ -118,7 +135,7 @@ type KongServiceAPISpec struct {
 type KongServiceStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
-	Konnect *konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef `json:"konnect,omitempty"`
+	Konnect *konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs `json:"konnect,omitempty"`
 
 	// Conditions describe the status of the Konnect entity.
 	// +listType=map

@@ -67,12 +67,19 @@ type {{.EntityName}}Spec struct {
 	// +required
 	KonnectConfiguration konnectv1alpha2.KonnectConfiguration ` + "`" + `json:"konnect"` + "`" + `
 {{end}}
+{{- if .ParentRef}}
+	// {{.ParentRefGoFieldName}} is the reference to the parent {{.SetParentIDEntityName}} object.
+	//
+	// +required
+	{{.ParentRefGoFieldName}} {{objectRefTypeName}} ` + "`" + `json:"{{.ParentRefJSONFieldName}},omitzero"` + "`" + `
+{{- else}}
 {{- with .ImmediateParentDependency}}
 	// {{.FieldName}} is the reference to the parent {{.EntityName}} object.
 	//
 	// +required
 	{{.FieldName}} {{objectRefTypeName}} ` + "`" + `json:"{{.JSONName}},omitzero"` + "`" + `
 {{end}}
+{{- end}}
 {{- if .HasOptionalSecretRef}}
 	// Type indicates the source of the sensitive data.
 	// Can be 'inline' or 'secretRef'.
@@ -107,17 +114,21 @@ type {{.EntityName}}APISpec struct {
 {{- else}}
 {{- range $i, $prop := .Schema.Properties}}
 {{- if not (skipProperty $prop)}}
+{{- if not (isParentRefReplacedField $prop.Name)}}
 {{formatComment $prop.Description}}
 	//
 {{- range kubebuilderTags $prop}}
 	// {{.}}
 {{- end}}
-{{- if isRefProperty $prop}}
+{{- if isRefConfigField $prop}}
+	{{goFieldName $prop.Name}} *{{objectRefTypeName}} ` + "`" + `json:"{{jsonPropName $prop}},omitempty"` + "`" + `
+{{- else if isRefProperty $prop}}
 	{{goFieldName $prop.Name}}Ref {{goType $prop}} ` + "`" + `json:"{{refJSONTag $prop}},omitempty"` + "`" + `
 {{- else}}
 	{{goFieldName $prop.Name}} {{goType $prop}} ` + "`" + `json:"{{jsonTag $prop (goType $prop)}}"` + "`" + `
 {{- end}}
 {{end}}
+{{- end}}
 {{- end}}
 {{- end}}
 }
@@ -141,13 +152,22 @@ type {{.EntityName}}Status struct {
 	konnectv1alpha2.KonnectEntityStatus ` + "`" + `json:",inline"` + "`" + `
 {{- else}}
 	KonnectEntityStatus ` + "`" + `json:",inline"` + "`" + `
-{{- end}}
-{{range .Schema.Dependencies}}
+{{- end}}{{- if or .Schema.Dependencies .References .ParentRef}}{{"\n"}}{{range .Schema.Dependencies}}
 	// {{.EntityName}}ID is the Konnect ID of the parent {{.EntityName}}.
 	//
 	// +optional
 	{{.EntityName}}ID *KonnectEntityRef ` + "`" + `json:"{{.EntityName | lower}}ID,omitempty"` + "`" + `
-{{end}}
+{{end}}{{range .References}}
+	// {{.Kind}} is the Konnect entity reference resolved from {{.Path}}.
+	//
+	// +optional
+	{{.Kind}} *KonnectEntityRef ` + "`" + `json:"{{lowerCamel .Kind}},omitempty"` + "`" + `
+{{end}}{{- if .ParentRef}}
+	// {{.SetParentIDEntityName}} is the Konnect entity reference for the parent {{.SetParentIDEntityName}}.
+	//
+	// +optional
+	{{.SetParentIDEntityName}} *KonnectEntityRef ` + "`" + `json:"{{lowerCamel .SetParentIDEntityName}},omitempty"` + "`" + `
+{{end}}{{- else}}{{"\n"}}{{- end}}
 	// ObservedGeneration is the most recent generation observed
 	//
 	// +optional
@@ -251,6 +271,23 @@ func (obj *{{$.EntityName}}) Set{{.EntityName}}ID(id string) {
 }
 {{- end}}
 {{- if .RootRefDependency}}
+{{- if .ParentRef}}
+
+// Get{{.SetParentIDEntityName}}Ref returns the reference to the parent {{.SetParentIDEntityName}}.
+func (obj *{{.EntityName}}) Get{{.SetParentIDEntityName}}Ref() {{.RootRefTypeName}} {
+	return obj.Spec.{{.ParentRefGoFieldName}}
+}
+
+// GetParentRef returns the reference to the parent entity.
+func (obj *{{.EntityName}}) GetParentRef() {{.RootRefTypeName}} {
+	return obj.Get{{.SetParentIDEntityName}}Ref()
+}
+
+// SetParentID sets the Konnect ID of the immediate parent entity.
+func (obj *{{.EntityName}}) SetParentID(id string) {
+	obj.Set{{.SetParentIDEntityName}}ID(id)
+}
+{{- else}}
 
 // Get{{.RootRefDependency.EntityName}}Ref returns the reference to the root {{.RootRefDependency.EntityName}}.
 func (obj *{{.EntityName}}) Get{{.RootRefDependency.EntityName}}Ref() {{.RootRefTypeName}} {
@@ -277,6 +314,7 @@ func (obj *{{.EntityName}}) GetParentRef() {{.RootRefTypeName}} {
 func (obj *{{.EntityName}}) SetParentID(id string) {
 	obj.Set{{.RootRefDependency.EntityName}}ID(id)
 }
+{{- end}}
 
 // GetParentGVK returns the GroupVersionKind of the parent entity.
 func (obj *{{.EntityName}}) GetParentGVK() schema.GroupVersionKind {
@@ -307,6 +345,24 @@ func (obj *{{.EntityName}}) GetStatusConditionReasonParentRefInvalid() string {
 func (obj *{{.EntityName}}) GetStatusConditionReasonParentRefNotProgrammed() string {
 	return {{.RefConditionPrefix}}RefReasonNotProgrammed
 }
+{{- if .ParentRef}}
+
+// Get{{.SetParentIDEntityName}}ID returns the Konnect ID resolved for the parent {{.SetParentIDEntityName}}.
+func (obj *{{.EntityName}}) Get{{.SetParentIDEntityName}}ID() string {
+	if obj.Status.{{.SetParentIDEntityName}} == nil {
+		return ""
+	}
+	return obj.Status.{{.SetParentIDEntityName}}.ID
+}
+
+// Set{{.SetParentIDEntityName}}ID sets the resolved Konnect ID for the parent {{.SetParentIDEntityName}}.
+func (obj *{{.EntityName}}) Set{{.SetParentIDEntityName}}ID(id string) {
+	if obj.Status.{{.SetParentIDEntityName}} == nil {
+		obj.Status.{{.SetParentIDEntityName}} = &KonnectEntityRef{}
+	}
+	obj.Status.{{.SetParentIDEntityName}}.ID = id
+}
+{{- end}}
 {{- end}}
 {{- if .IsReconcilerRoot}}
 
@@ -314,6 +370,78 @@ func (obj *{{.EntityName}}) GetStatusConditionReasonParentRefNotProgrammed() str
 func (obj *{{.EntityName}}) GetKonnectAPIAuthConfigurationRef() {{.KonnectAPIAuthConfigurationRefType}} {
 	return {{.KonnectAPIAuthConfigurationRefType}}{
 		Name: obj.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name,
+	}
+}
+{{- end}}
+{{- range .References}}
+
+// Get{{.Kind}}ID returns the Konnect ID resolved for the referenced {{.Kind}}.
+func (obj *{{$.EntityName}}) Get{{.Kind}}ID() string {
+	if obj.Status.{{.Kind}} == nil {
+		return ""
+	}
+	return obj.Status.{{.Kind}}.ID
+}
+
+// Set{{.Kind}}ID sets the resolved Konnect ID for the referenced {{.Kind}}.
+func (obj *{{$.EntityName}}) Set{{.Kind}}ID(id string) {
+	if obj.Status.{{.Kind}} == nil {
+		obj.Status.{{.Kind}} = &KonnectEntityRef{}
+	}
+	obj.Status.{{.Kind}}.ID = id
+}
+{{- end}}
+{{- if .References}}
+
+// GetCrossReferences returns inter-CR references configured on {{.EntityName}}.
+func (obj *{{.EntityName}}) GetCrossReferences() []CrossReference {
+	refs := make([]CrossReference, 0, {{len .References}})
+{{- range .References}}
+	if obj.Spec.APISpec.{{.GoFieldName}} != nil {
+		refs = append(refs, CrossReference{
+			Kind:     "{{.Kind}}",
+			SpecPath: "{{.Path}}",
+			Ref:      obj.Spec.APISpec.{{.GoFieldName}},
+		})
+	}
+{{- end}}
+	return refs
+}
+
+// SetCrossReferenceID sets the resolved Konnect ID for the cross-reference identified by kind.
+func (obj *{{.EntityName}}) SetCrossReferenceID(kind, id string) {
+	switch kind {
+{{- range .References}}
+	case "{{.Kind}}":
+		obj.Set{{.Kind}}ID(id)
+{{- end}}
+	}
+}
+{{- end}}
+{{- if .AncestorDependencies}}
+
+// GetAncestorIDs returns the Konnect IDs of the ancestor entities keyed by their Kind.
+func (obj *{{.EntityName}}) GetAncestorIDs() map[string]string {
+	m := make(map[string]string, {{len .AncestorDependencies}})
+	{{- range $i, $dep := .AncestorDependencies}}
+	if obj.Status.{{$dep.EntityName}}ID != nil {
+		m["{{index $.AncestorEntityTypes $i}}"] = obj.Status.{{$dep.EntityName}}ID.ID
+	} else {
+		m["{{index $.AncestorEntityTypes $i}}"] = ""
+	}
+	{{- end}}
+	return m
+}
+{{- end}}
+{{- if and .ParentRef .AncestorDependencies}}
+
+// SetAncestorID sets the Konnect ID for the ancestor entity identified by kind.
+func (obj *{{.EntityName}}) SetAncestorID(kind, id string) {
+	switch kind {
+	{{- range $i, $dep := .AncestorDependencies}}
+	case "{{index $.AncestorEntityTypes $i}}":
+		obj.Set{{$dep.EntityName}}ID(id)
+	{{- end}}
 	}
 }
 {{- end}}
@@ -518,6 +646,70 @@ func (obj *{{$.EntityName}}) {{.MethodName}}(ctx context.Context, cl client.Clie
 		return nil, err
 	}
 	return spec.{{.MethodName}}()
+}
+{{end}}
+{{- end}}
+{{- if .HasReferences}}
+{{range .Methods}}
+// {{.MethodName}} converts the {{$.EntityName}} to the SDK type
+// {{.ImportAlias}}.{{.TypeName}}, injecting resolved cross-reference IDs from status.
+func (obj *{{$.EntityName}}) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeName}}, error) {
+	data, err := obj.Spec.APISpec.marshalSDKOpsPayload()
+	if err != nil {
+		return nil, err
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(data, &payload); err != nil {
+		return nil, fmt.Errorf("failed to decode {{$.EntityName}} SDK payload: %w", err)
+	}
+	if payload == nil {
+		payload = map[string]any{}
+	}
+	{{- range $.References}}
+	if id := obj.Get{{.Kind}}ID(); id != "" {
+		payload["{{.JSONFieldName}}"] = map[string]any{"id": id}
+	}
+	{{- end}}
+	data, err = json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal {{$.EntityName}} SDK payload with references: %w", err)
+	}
+	var target {{.ImportAlias}}.{{.TypeName}}
+	if err := json.Unmarshal(data, &target); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal into {{.TypeName}}: %w", err)
+	}
+	return &target, nil
+}
+{{end}}
+{{- end}}
+{{- if .HasParentRefReplacement}}
+{{range .Methods}}
+// {{.MethodName}} converts the {{$.EntityName}} to the SDK type
+// {{.ImportAlias}}.{{.TypeName}}, injecting the resolved parent ID as {{$.ParentRefReplacesField}}.
+func (obj *{{$.EntityName}}) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeName}}, error) {
+	data, err := obj.Spec.APISpec.marshalSDKOpsPayload()
+	if err != nil {
+		return nil, err
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(data, &payload); err != nil {
+		return nil, fmt.Errorf("failed to decode {{$.EntityName}} SDK payload: %w", err)
+	}
+	if payload == nil {
+		payload = map[string]any{}
+	}
+	if id := obj.Get{{$.SetParentIDEntityName}}ID(); id != "" {
+		payload["{{$.ParentRefReplacesField}}"] = map[string]any{"id": id}
+	}
+	data, err = json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal {{$.EntityName}} SDK payload with parent ref: %w", err)
+	}
+	var target {{.ImportAlias}}.{{.TypeName}}
+	if err := json.Unmarshal(data, &target); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal into {{.TypeName}}: %w", err)
+	}
+	return &target, nil
 }
 {{end}}
 {{- end}}`
@@ -969,6 +1161,8 @@ func create{{.Entity}}(
 {{- end}}
 	{{- if .NeedsClient}}
 	req, err := obj.To{{.CreateReqType}}(ctx, cl)
+	{{- else if .HasReferences}}
+	req, err := obj.To{{.CreateReqType}}()
 	{{- else}}
 	req, err := obj.Spec.APISpec.To{{.CreateReqType}}()
 	{{- end}}
@@ -1044,6 +1238,8 @@ func update{{.Entity}}(
 {{- end}}
 	{{- if .NeedsClient}}
 	req, err := obj.To{{.UpdateReqType}}(ctx, cl)
+	{{- else if .HasReferences}}
+	req, err := obj.To{{.UpdateReqType}}()
 	{{- else}}
 	req, err := obj.Spec.APISpec.To{{.UpdateReqType}}()
 	{{- end}}
@@ -1302,11 +1498,11 @@ func get{{.Entity}}ForUID(
 	if err != nil {
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
 	}
-	if resp == nil || resp.{{.ListResponseField}} == nil {
+	if {{.ListResponseNilCheck}} {
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
 	}
 
-	for _, entry := range resp.{{.ListResponseField}}.Data {
+	for _, entry := range {{.ListResponseItemsExpr}} {
 		switch id := any(entry.GetID()).(type) {
 		case string:
 			if id != "" {
@@ -1336,11 +1532,11 @@ func get{{.Entity}}ForUID(
 	if err != nil {
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
 	}
-	if resp == nil || resp.{{.ListResponseField}} == nil {
+	if {{.ListResponseNilCheck}} {
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
 	}
 
-	for _, entry := range resp.{{.ListResponseField}}.Data {
+	for _, entry := range {{.ListResponseItemsExpr}} {
 		{{- range .MatchFields}}
 		{{- if .SliceMatch}}
 		if !matchSliceField(obj.{{.ObjectField}}, entry.{{.ResponseField}}) {
@@ -1360,6 +1556,68 @@ func get{{.Entity}}ForUID(
 				return *id, nil
 			}
 		}
+	}
+{{- else if .RootUnion}}
+
+{{- if .GetForUIDFullyWrapped}}
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.GetForUIDWrappedType}}{
+		{{- range .Parents}}
+		{{.SDKFieldName}}: {{.VarName}},
+		{{- end}}
+	})
+{{- else if .Parents}}
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
+		{{.ParentIDField}}: {{(index .Parents 0).VarName}},
+	})
+{{- else}}
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{})
+{{- end}}
+	if err != nil {
+		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
+	}
+	if {{.ListResponseNilCheck}} {
+		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
+	}
+
+	unionField := obj.{{.RootUnion.UnionField}}
+	if unionField == nil {
+		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+	}
+
+	switch unionField.Type {
+	{{- range .RootUnion.Cases}}
+	case "{{.TypeValue}}":
+		selected := unionField.{{.VariantField}}
+		if selected == nil {
+			return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+		}
+		for _, entry := range {{$.ListResponseItemsExpr}} {
+			if entry.{{$.RootUnion.ResponseTypeField}} != "{{.ResponseTypeValue}}" {
+				continue
+			}
+			{{- range .MatchFields}}
+			{{- if .SliceMatch}}
+			if !matchSliceField(selected.{{.ObjectField}}, entry.{{.ResponseField}}) {
+			{{- else}}
+			if !matchStringField(selected.{{.ObjectField}}, entry.{{.ResponseField}}) {
+			{{- end}}
+				continue
+			}
+			{{- end}}
+			switch id := any(entry.GetID()).(type) {
+			case string:
+				if id != "" {
+					return id, nil
+				}
+			case *string:
+				if id != nil && *id != "" {
+					return *id, nil
+				}
+			}
+		}
+	{{- end}}
+	default:
+		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 	}
 {{- else if .HasLabels}}
 
@@ -1382,11 +1640,11 @@ func get{{.Entity}}ForUID(
 	if err != nil {
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
 	}
-	if resp == nil || resp.{{.ListResponseField}} == nil {
+	if {{.ListResponseNilCheck}} {
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
 	}
 
-	for _, entry := range resp.{{.ListResponseField}}.Data {
+	for _, entry := range {{.ListResponseItemsExpr}} {
 		if entry.GetLabels()[KubernetesUIDLabelKey] != string(obj.GetUID()) {
 			continue
 		}
@@ -1417,11 +1675,11 @@ func get{{.Entity}}ForUID(
 	if err != nil {
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
 	}
-	if resp == nil || resp.{{.ListResponseField}} == nil {
+	if {{.ListResponseNilCheck}} {
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
 	}
 
-	for _, entry := range resp.{{.ListResponseField}}.Data {
+	for _, entry := range {{.ListResponseItemsExpr}} {
 		name := entry.GetName()
 		if name == nil || *name != obj.Spec.APISpec.Name {
 			continue

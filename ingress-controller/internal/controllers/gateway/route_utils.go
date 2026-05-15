@@ -419,12 +419,6 @@ func routeTypeMatchesListenerType[T gatewayapi.RouteT](route T, listener gateway
 		if listener.Protocol != gatewayapi.TLSProtocolType {
 			return false
 		}
-		// TLSRoutes currently support Passthrough only
-		// Note: this is a guess we are doing as the upstream documentation is unclear at the moment.
-		// see https://github.com/kubernetes-sigs/gateway-api/issues/1474
-		if listener.TLS != nil && *listener.TLS.Mode != gatewayapi.TLSModePassthrough {
-			return false
-		}
 	case *gatewayapi.GRPCRoute:
 		if listener.Protocol != gatewayapi.HTTPSProtocolType && listener.Protocol != gatewayapi.HTTPProtocolType {
 			return false

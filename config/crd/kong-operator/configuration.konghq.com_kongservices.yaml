@@ -30,6 +30,10 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed
       type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -117,6 +121,64 @@ spec:
                 - message: konnect.id is immutable
                   rule: 'has(self.konnect) ? (self.konnect.id == oldSelf.konnect.id)
                     : true'
+              caCertificateRefs:
+                description: |-
+                  CACertificateRefs is the list of references to KongCACertificates used
+                  to verify the upstream server's TLS certificate.
+                  Each referenced KongCACertificate MUST belong to the same Konnect
+                  ControlPlane as this KongService.
+                  Cross-namespace references require a KongReferenceGrant in the target
+                  namespace.
+                items:
+                  description: NamespacedRef is a reference to a namespaced resource.
+                  properties:
+                    name:
+                      description: Name is the name of the referred resource.
+                      maxLength: 253
+                      minLength: 1
+                      type: string
+                    namespace:
+                      description: |-
+                        Namespace is the namespace of the referred resource.
+
+                        For namespace-scoped resources if no Namespace is provided then the
+                        namespace of the parent object MUST be used.
+
+                        This field MUST not be set when referring to cluster-scoped resources.
+                      maxLength: 253
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
+                x-kubernetes-list-type: atomic
+              clientCertificateRef:
+                description: |-
+                  ClientCertificateRef is a reference to a KongCertificate used as the
+                  client certificate when proxying to the upstream over TLS.
+                  The referenced KongCertificate MUST belong to the same Konnect
+                  ControlPlane as this KongService.
+                  Cross-namespace references require a KongReferenceGrant in the target
+                  namespace.
+                properties:
+                  name:
+                    description: Name is the name of the referred resource.
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                  namespace:
+                    description: |-
+                      Namespace is the namespace of the referred resource.
+
+                      For namespace-scoped resources if no Namespace is provided then the
+                      namespace of the parent object MUST be used.
+
+                      This field MUST not be set when referring to cluster-scoped resources.
+                    maxLength: 253
+                    type: string
+                required:
+                - name
+                type: object
               connect_timeout:
                 description: The timeout in milliseconds for establishing a connection
                   to the upstream server.
@@ -334,9 +396,20 @@ spec:
               konnect:
                 description: Konnect contains the Konnect entity status.
                 properties:
+                  caCertificateIDs:
+                    description: CACertificateIDs lists the Konnect IDs of the CA
+                      Certificates referenced by this entity.
+                    items:
+                      type: string
+                    type: array
+                    x-kubernetes-list-type: set
+                  certificateID:
+                    description: CertificateID is the Konnect ID of the client Certificate
+                      referenced by this entity.
+                    type: string
                   controlPlaneID:
                     description: ControlPlaneID is the Konnect ID of the ControlPlane
-                      this Route is associated with.
+                      this entity is associated with.
                     type: string
                   id:
                     description: |-

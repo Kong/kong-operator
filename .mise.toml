@@ -88,7 +88,11 @@ run = "go build -o ../bin/{{env.DIR}} main.go"
 description = "Clean generated files"
 run = '''
 rm -rf \
-       ./api/konnect/v1alpha1/zz_generated_* \
+       ./api/konnect/v1alpha1/zz_generated_*_sdkops.go \
+       ./api/konnect/v1alpha1/zz_generated_*_sdkops_test.go \
+       ./api/konnect/v1alpha1/zz_generated_*_types.go \
+       ./api/konnect/v1alpha1/zz_generated_*_types_test.go \
+       ./api/konnect/v1alpha1/zz_generated_*_conditions.go \
        ./controller/konnect/zz_generated_reconciler_generic_rbac_* \
        ./modules/manager/zz_generated_* \
        ./internal/utils/index/zz_generated_konnect_*

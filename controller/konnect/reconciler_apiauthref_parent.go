@@ -30,9 +30,15 @@ func getAPIAuthConfigurationRefFromParent[
 			fmt.Errorf("invalid parent reference: must be a NamespacedRef with a non-nil NamespacedRef field")
 	}
 
+	if parentRef.NamespacedRef.Namespace != nil && *parentRef.NamespacedRef.Namespace != obj.GetNamespace() {
+		// TODO https://github.com/Kong/kong-operator/issues/4134
+		return types.NamespacedName{},
+			fmt.Errorf("invalid reference: cross-namespace reference is not supported")
+	}
+
 	nnParent := types.NamespacedName{
 		Name: parentRef.NamespacedRef.Name,
-		// TODO: handle cross namespace refs
+		// TODO https://github.com/Kong/kong-operator/issues/4134
 		Namespace: obj.GetNamespace(),
 	}
 
