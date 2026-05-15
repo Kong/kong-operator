@@ -179,6 +179,16 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		return res, err
 	}
 
+	// For KongPluginBinding, verify the pluginRef early: check plugin existence for all refs,
+	// and additionally check the KongReferenceGrant for cross-namespace refs. Running this
+	// before the Konnect SDK ops layer ensures that grant/plugin changes are reflected
+	// immediately via the watch-triggered enqueue rather than waiting for the sync period.
+	if res, stop, err := handlePluginRef(ctx, r.Client, ent); err != nil || !res.IsZero() {
+		return res, err
+	} else if stop {
+		return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
+	}
+
 	// If a type has a KongService ref, handle it.
 	res, err = handleKongServiceRef(ctx, r.Client, ent)
 	if err != nil {
