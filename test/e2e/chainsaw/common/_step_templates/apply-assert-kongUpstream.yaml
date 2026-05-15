@@ -1,0 +1,37 @@
+# Template for creating and asserting a KongUpstream with a controlPlaneRef.
+#
+# Required bindings:
+#   - kong_upstream_name: Name of the KongUpstream to create.
+#   - kong_upstream_namespace: Namespace where the KongUpstream will be created.
+#   - cp_name: Name of the KonnectGatewayControlPlane to reference.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-kong-upstream
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: KongUpstream
+          metadata:
+            name: ($kong_upstream_name)
+            namespace: ($kong_upstream_namespace)
+          spec:
+            name: ($kong_upstream_name)
+            controlPlaneRef:
+              type: konnectNamespacedRef
+              konnectNamespacedRef:
+                name: ($cp_name)
+    - assert:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: KongUpstream
+          metadata:
+            name: ($kong_upstream_name)
+            namespace: ($kong_upstream_namespace)
+          status:
+            (conditions[?type == 'Programmed']):
+              - status: 'True'
+                reason: Programmed
+            (konnect.id != null): true
