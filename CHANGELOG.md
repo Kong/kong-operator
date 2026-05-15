@@ -232,6 +232,10 @@
 
 ### Fixes
 
+- Add `ResolvedRefs` condition update for `TLSRoute`s and enable `ReferenceGrant`
+  to control the cross-namespace reference from `TLSRoute`s to their backendRefs
+  in on-prem `TLSRoute` controller.
+  [#4292](https://github.com/Kong/kong-operator/pull/4292)
 - Add `KongReferenceGrant` watch to `KongVault` and `KongConsumerGroup` reconcilers.
   Previously, creating or deleting a grant would not trigger re-reconciliation of these
   resources until the next full resync cycle. Grant changes now immediately re-queue
