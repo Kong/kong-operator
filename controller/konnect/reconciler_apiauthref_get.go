@@ -26,6 +26,11 @@ type eventGatewayBackendClusterRefAccessor interface {
 	GetEventGatewayBackendClusterRef() commonv1alpha1.ObjectRef
 }
 
+type eventGatewayVirtualClusterRefAccessor interface {
+	objectWithParentRef
+	GetEventGatewayVirtualClusterRef() commonv1alpha1.ObjectRef
+}
+
 type portalRefAccessor interface {
 	objectWithParentRef
 	GetPortalRef() commonv1alpha1.ObjectRef
@@ -49,6 +54,9 @@ func getAPIAuthRef[
 	}
 	if obj, ok := any(ent).(eventGatewayBackendClusterRefAccessor); ok {
 		return getAPIAuthRefViaBackendCluster(ctx, cl, obj)
+	}
+	if obj, ok := any(ent).(eventGatewayVirtualClusterRefAccessor); ok {
+		return getAPIAuthRefViaVirtualCluster(ctx, cl, obj)
 	}
 
 	return types.NamespacedName{},
@@ -83,4 +91,34 @@ func getAPIAuthRefViaBackendCluster(
 		return types.NamespacedName{}, fmt.Errorf("failed to get EventGatewayBackendCluster %s: %w", nn, err)
 	}
 	return getAPIAuthConfigurationRefFromParent[konnectv1alpha1.KonnectEventGateway](ctx, cl, &bc)
+}
+
+// getAPIAuthRefViaVirtualCluster resolves the APIAuth for an entity whose immediate
+// parent is EventGatewayVirtualCluster (e.g. EventGatewayVirtualCluster).
+// It performs a 3-hop lookup: entity → EGVC → EGBC → KonnectEventGateway → APIAuth.
+func getAPIAuthRefViaVirtualCluster(
+	ctx context.Context,
+	cl client.Client,
+	obj eventGatewayVirtualClusterRefAccessor,
+) (types.NamespacedName, error) {
+	bcRef := obj.GetEventGatewayVirtualClusterRef()
+	if bcRef.Type != commonv1alpha1.ObjectRefTypeNamespacedRef || bcRef.NamespacedRef == nil {
+		return types.NamespacedName{},
+			fmt.Errorf("invalid EventGatewayVirtualCluster reference: must be a NamespacedRef with a non-nil NamespacedRef field")
+	}
+	if bcRef.NamespacedRef.Namespace != nil && *bcRef.NamespacedRef.Namespace != obj.GetNamespace() {
+		// TODO https://github.com/Kong/kong-operator/issues/4134
+		return types.NamespacedName{},
+			fmt.Errorf("invalid EventGatewayVirtualCluster reference: cross-namespace reference is not supported")
+	}
+	nn := types.NamespacedName{
+		Name: bcRef.NamespacedRef.Name,
+		// TODO https://github.com/Kong/kong-operator/issues/4134
+		Namespace: obj.GetNamespace(),
+	}
+	var bc konnectv1alpha1.EventGatewayVirtualCluster
+	if err := cl.Get(ctx, nn, &bc); err != nil {
+		return types.NamespacedName{}, fmt.Errorf("failed to get EventGatewayVirtualCluster %s: %w", nn, err)
+	}
+	return getAPIAuthRefViaBackendCluster(ctx, cl, &bc)
 }

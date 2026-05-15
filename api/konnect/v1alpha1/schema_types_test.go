@@ -111,6 +111,123 @@ func TestCreatePortalCustomDomainSSLWithCustomCertificate_MarshalEmpty(t *testin
 	}
 }
 
+func TestEventGatewayAWSKeySource_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayAWSKeySource
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayConsumeSchemaValidationPolicy_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayConsumeSchemaValidationPolicy
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayDecryptPolicy_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayDecryptPolicy
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayDecryptPolicyConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayDecryptPolicyConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayModifyHeaderRemoveAction_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayModifyHeaderRemoveAction
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayModifyHeaderSetAction_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayModifyHeaderSetAction
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayModifyHeadersPolicyCreate_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayModifyHeadersPolicyCreate
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewaySkipRecordPolicyCreate_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewaySkipRecordPolicyCreate
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayStaticKeySource_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayStaticKeySource
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestEventGatewayTLSListenerPolicy_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -245,6 +362,32 @@ func TestSAMLIdentityProviderConfig_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
 	var spec SAMLIdentityProviderConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestSchemaRegistryReferenceByID_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec SchemaRegistryReferenceByID
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestSchemaRegistryReferenceByName_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec SchemaRegistryReferenceByName
 	out, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
@@ -576,6 +719,62 @@ func TestBackendClusterAuthenticationSchemeUnmarshalJSON_NilReceiver(t *testing.
 				t.Fatal("expected error for nil receiver")
 			}
 			if got, want := err.Error(), "unmarshaling BackendClusterAuthenticationScheme: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestEventGatewayKeySourceUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "aws", payload: []byte("{\"type\":\"aws\",\"aws\":{}}")},
+		{name: "static", payload: []byte("{\"type\":\"static\",\"static\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *EventGatewayKeySource
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling EventGatewayKeySource: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestEventGatewayModifyHeaderActionUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "remove", payload: []byte("{\"op\":\"remove\",\"remove\":{}}")},
+		{name: "set", payload: []byte("{\"op\":\"set\",\"set\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *EventGatewayModifyHeaderAction
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling EventGatewayModifyHeaderAction: nil receiver"; got != want {
 				t.Fatalf("unexpected error: got %q want %q", got, want)
 			}
 		})

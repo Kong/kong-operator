@@ -49,6 +49,7 @@ func init() {
 	// This list is manually maintained for now, but in the future we may want to
 	// generate this list based on the generated types and their reference configurations.
 	_generatedHandlers := []generatedParentRefHandler{
+		parentRefHandler[konnectv1alpha1.EventGatewayVirtualCluster, *konnectv1alpha1.EventGatewayVirtualCluster]{},
 		parentRefHandler[konnectv1alpha1.EventGatewayBackendCluster, *konnectv1alpha1.EventGatewayBackendCluster]{},
 		parentRefHandler[konnectv1alpha1.EventGatewayListener, *konnectv1alpha1.EventGatewayListener]{},
 		parentRefHandler[konnectv1alpha1.KonnectEventGateway, *konnectv1alpha1.KonnectEventGateway]{},

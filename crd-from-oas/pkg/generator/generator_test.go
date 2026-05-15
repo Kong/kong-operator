@@ -500,6 +500,44 @@ func TestGenerateCRDType_DoesNotGenerateHelperMethods(t *testing.T) {
 	assert.NotContains(t, content, "konnectv1alpha2")
 }
 
+func TestGenerateCRDType_ParentRefWithoutReplacementReusesImmediateParentStatusField(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroup:   "konnect.konghq.com",
+		APIVersion: "v1alpha1",
+		CommonTypes: &config.CommonTypesConfig{
+			ObjectRef: &config.ObjectRefConfig{
+				Import: &config.ImportConfig{
+					Path:  "github.com/kong/kong-operator/v2/api/common/v1alpha1",
+					Alias: "commonv1alpha1",
+				},
+			},
+		},
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"EventGatewayVirtualClusterConsumePolicy": {
+				ParentEntityType: "EventGatewayVirtualCluster",
+				ParentRef: &config.ParentRefConfig{
+					FieldName: "eventGatewayVirtualClusterRef",
+				},
+			},
+		},
+	})
+
+	schema := &parser.Schema{
+		Name: "CreateEventGatewayVirtualClusterConsumePolicy",
+		Dependencies: []*parser.Dependency{
+			{ParamName: "gatewayId", EntityName: "Gateway", AccessorEntityName: "EventGateway", FieldName: "GatewayRef", JSONName: "gateway_ref"},
+			{ParamName: "virtualClusterId", EntityName: "VirtualCluster", AccessorEntityName: "EventGatewayVirtualCluster", FieldName: "VirtualClusterRef", JSONName: "virtual_cluster_ref"},
+		},
+	}
+
+	content, err := g.generateCRDType("CreateEventGatewayVirtualClusterConsumePolicy", schema)
+	require.NoError(t, err)
+	assert.Contains(t, content, "EventGatewayVirtualClusterRef commonv1alpha1.ObjectRef")
+	assert.Contains(t, content, "GatewayID *KonnectEntityRef")
+	assert.Contains(t, content, "VirtualClusterID *KonnectEntityRef")
+	assert.NotContains(t, content, "EventGatewayVirtualCluster *KonnectEntityRef")
+}
+
 func TestGenerateCRDType_EmitsInlineAPISpecTypes(t *testing.T) {
 	schema := &parser.Schema{
 		Name: "CreatePortalCustomization",
@@ -825,6 +863,49 @@ func TestGenerateCRDFuncs_GeneratesKonnectFuncs(t *testing.T) {
 		assert.Contains(t, content, `return EventGatewayRefReasonInvalid`)
 		assert.Contains(t, content, `func (obj *EventGatewayDataPlaneCertificate) GetStatusConditionReasonParentRefNotProgrammed() string {`)
 		assert.Contains(t, content, `return EventGatewayRefReasonNotProgrammed`)
+	})
+
+	t.Run("parent ref without replacement reuses immediate parent status field", func(t *testing.T) {
+		g := NewGenerator(Config{
+			APIGroup:   "konnect.konghq.com",
+			APIVersion: "v1alpha1",
+			CommonTypes: &config.CommonTypesConfig{
+				ObjectRef: &config.ObjectRefConfig{
+					Import: &config.ImportConfig{
+						Path:  "github.com/kong/kong-operator/v2/api/common/v1alpha1",
+						Alias: "commonv1alpha1",
+					},
+				},
+			},
+			ReconcilerConfig: map[string]*config.ReconcilerConfig{
+				"EventGatewayVirtualClusterConsumePolicy": {
+					ParentEntityType: "EventGatewayVirtualCluster",
+					ParentRef: &config.ParentRefConfig{
+						FieldName: "eventGatewayVirtualClusterRef",
+					},
+				},
+			},
+		})
+
+		schemaWithDependencies := &parser.Schema{
+			Name: "CreateEventGatewayVirtualClusterConsumePolicy",
+			Dependencies: []*parser.Dependency{
+				{EntityName: "Gateway", AccessorEntityName: "EventGateway", FieldName: "GatewayRef", JSONName: "gateway_ref"},
+				{EntityName: "VirtualCluster", AccessorEntityName: "EventGatewayVirtualCluster", FieldName: "VirtualClusterRef", JSONName: "virtual_cluster_ref"},
+			},
+		}
+
+		content, err := g.generateCRDFuncs("CreateEventGatewayVirtualClusterConsumePolicy", schemaWithDependencies)
+		require.NoError(t, err)
+		assert.Contains(t, content, `func (obj *EventGatewayVirtualClusterConsumePolicy) GetEventGatewayVirtualClusterRef() commonv1alpha1.ObjectRef {`)
+		assert.Contains(t, content, `return obj.Spec.EventGatewayVirtualClusterRef`)
+		assert.Contains(t, content, `func (obj *EventGatewayVirtualClusterConsumePolicy) GetParentRef() commonv1alpha1.ObjectRef {`)
+		assert.Contains(t, content, `return obj.GetEventGatewayVirtualClusterRef()`)
+		assert.Contains(t, content, `func (obj *EventGatewayVirtualClusterConsumePolicy) SetParentID(id string) {`)
+		assert.Contains(t, content, `obj.SetVirtualClusterID(id)`)
+		assert.Contains(t, content, `return EventGatewayVirtualClusterRefValidConditionType`)
+		assert.NotContains(t, content, `func (obj *EventGatewayVirtualClusterConsumePolicy) GetEventGatewayVirtualClusterID() string {`)
+		assert.NotContains(t, content, `func (obj *EventGatewayVirtualClusterConsumePolicy) SetEventGatewayVirtualClusterID(id string) {`)
 	})
 
 	t.Run("root ref accessor uses last (immediate) dependency", func(t *testing.T) {
@@ -1405,6 +1486,104 @@ func TestGenerateSchemaTypes_AddsKubebuilderTags(t *testing.T) {
 	assert.Contains(t, content, "// +optional")
 	assert.Contains(t, content, fmt.Sprintf("// +kubebuilder:validation:MaxLength=%d", defaultMaxLength))
 	assert.Contains(t, content, "ProviderType string `json:\"providerType,omitzero\"`")
+}
+
+func TestGenerateSchemaTypes_QualifiesAmbiguousInlineTypesAndEmitsNestedUnionTypes(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	parsed := &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"EventGatewayConsumeSchemaValidationPolicy": {
+				Name: "EventGatewayConsumeSchemaValidationPolicy",
+				Properties: []*parser.Property{
+					{
+						Name: "config",
+						Type: "object",
+						Properties: []*parser.Property{
+							{
+								Name: "schema_registry",
+								OneOf: []*parser.Property{
+									{RefName: "SchemaRegistryReferenceByID"},
+									{RefName: "SchemaRegistryReferenceByName"},
+								},
+							},
+						},
+					},
+				},
+			},
+			"EventGatewayModifyHeadersPolicyCreate": {
+				Name: "EventGatewayModifyHeadersPolicyCreate",
+				Properties: []*parser.Property{
+					{
+						Name: "config",
+						Type: "object",
+						Properties: []*parser.Property{
+							{Name: "headers", Type: "array", Items: &parser.Property{Type: "string"}},
+						},
+					},
+				},
+			},
+			"SchemaRegistryReferenceByID": {
+				Name:       "SchemaRegistryReferenceByID",
+				Properties: []*parser.Property{{Name: "id", Type: "string"}},
+			},
+			"SchemaRegistryReferenceByName": {
+				Name:       "SchemaRegistryReferenceByName",
+				Properties: []*parser.Property{{Name: "name", Type: "string"}},
+			},
+		},
+	}
+
+	content := g.generateSchemaTypes(map[string]bool{
+		"EventGatewayConsumeSchemaValidationPolicy": true,
+		"EventGatewayModifyHeadersPolicyCreate":     true,
+		"SchemaRegistryReferenceByID":               true,
+		"SchemaRegistryReferenceByName":             true,
+	}, parsed, nil)
+
+	assert.Contains(t, content, "Config EventGatewayConsumeSchemaValidationPolicyConfig `json:\"config,omitzero\"`")
+	assert.Contains(t, content, "Config EventGatewayModifyHeadersPolicyCreateConfig `json:\"config,omitzero\"`")
+	assert.Contains(t, content, "type EventGatewayConsumeSchemaValidationPolicyConfig struct {")
+	assert.Contains(t, content, "type EventGatewayModifyHeadersPolicyCreateConfig struct {")
+	assert.Contains(t, content, "SchemaRegistry *EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry `json:\"schemaRegistry,omitempty\"`")
+	assert.Contains(t, content, "type EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry struct {")
+}
+
+func TestGenerateSchemaTypes_UsesActualDiscriminatorFieldName(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	parsed := &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"EventGatewayModifyHeaderAction": {
+				Name:          "EventGatewayModifyHeaderAction",
+				Discriminator: "op",
+				OneOf: []*parser.Property{
+					{RefName: "EventGatewayModifyHeaderRemoveAction"},
+					{RefName: "EventGatewayModifyHeaderSetAction"},
+				},
+				DiscriminatorMapping: map[string]string{
+					"remove": "EventGatewayModifyHeaderRemoveAction",
+					"set":    "EventGatewayModifyHeaderSetAction",
+				},
+			},
+			"EventGatewayModifyHeaderRemoveAction": {
+				Name:       "EventGatewayModifyHeaderRemoveAction",
+				Properties: []*parser.Property{{Name: "key", Type: "string"}},
+			},
+			"EventGatewayModifyHeaderSetAction": {
+				Name:       "EventGatewayModifyHeaderSetAction",
+				Properties: []*parser.Property{{Name: "key", Type: "string"}, {Name: "value", Type: "string"}},
+			},
+		},
+	}
+
+	content := g.generateSchemaTypes(map[string]bool{
+		"EventGatewayModifyHeaderAction":       true,
+		"EventGatewayModifyHeaderRemoveAction": true,
+		"EventGatewayModifyHeaderSetAction":    true,
+	}, parsed, nil)
+
+	assert.Contains(t, content, "Op EventGatewayModifyHeaderActionType `json:\"op,omitempty\"`")
+	assert.Contains(t, content, "Op string `json:\"op\"`")
+	assert.NotContains(t, content, "Type EventGatewayModifyHeaderActionType `json:\"type,omitempty\"`")
 }
 
 func TestBuildSchemaCursors_NestedInlineObject(t *testing.T) {
@@ -2544,6 +2723,62 @@ func TestGenerateSDKOps_RootUnionUsesSelectedVariantPayload(t *testing.T) {
 	assert.NotContains(t, content, "target.DcrConfig = &unionValue")
 }
 
+func TestGenerateSDKOps_RootUnionUsesWrappedOperationsBodyMetadata(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	schema := &parser.Schema{
+		OneOf: []*parser.Property{
+			{
+				Name:    "EventGatewayConsumeSchemaValidationPolicy",
+				RefName: "EventGatewayConsumeSchemaValidationPolicy",
+			},
+			{
+				Name:    "EventGatewayModifyHeadersPolicyCreate",
+				RefName: "EventGatewayModifyHeadersPolicyCreate",
+			},
+			{
+				Name:    "EventGatewayDecryptPolicy",
+				RefName: "EventGatewayDecryptPolicy",
+			},
+			{
+				Name:    "EventGatewaySkipRecordPolicyCreate",
+				RefName: "EventGatewaySkipRecordPolicyCreate",
+			},
+		},
+		Properties: []*parser.Property{
+			{Name: "schema_validation", Type: "object"},
+			{Name: "modify_headers", Type: "object"},
+			{Name: "decrypt", Type: "object"},
+			{Name: "skip_record", Type: "object"},
+		},
+		DiscriminatorMapping: map[string]string{
+			"schema_validation": "EventGatewayConsumeSchemaValidationPolicy",
+			"modify_headers":    "EventGatewayModifyHeadersPolicyCreate",
+			"decrypt":           "EventGatewayDecryptPolicy",
+			"skip_record":       "EventGatewaySkipRecordPolicyCreate",
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {
+				Path: "github.com/Kong/sdk-konnect-go/models/operations.CreateEventGatewayVirtualClusterConsumePolicyRequest",
+			},
+			"update": {
+				Path: "github.com/Kong/sdk-konnect-go/models/operations.UpdateEventGatewayVirtualClusterConsumePolicyRequest",
+			},
+		},
+	}
+
+	content, err := g.generateSDKOps("EventGatewayVirtualClusterConsumePolicy", schema, opsConfig)
+	require.NoError(t, err)
+	assert.Contains(t, content, "body := sdkkonnectcomp.CreateEventGatewayConsumePolicyCreateSchemaValidation(member)")
+	assert.Contains(t, content, "EventGatewayConsumePolicyCreate: &body")
+	assert.Contains(t, content, "var body sdkkonnectcomp.EventGatewayConsumePolicyUpdate")
+	assert.Contains(t, content, "EventGatewayConsumePolicyUpdate: &body")
+	assert.NotContains(t, content, "CreateEventGatewayVirtualClusterConsumePolicyCreateSchemaValidation")
+	assert.NotContains(t, content, "EventGatewayVirtualClusterConsumePolicyCreate:")
+	assert.NotContains(t, content, "EventGatewayVirtualClusterConsumePolicyUpdate:")
+}
+
 func TestGenerateSDKOps_RootUnionOmitsDoubleBlankLineBeforeMarshalPayload(t *testing.T) {
 	g := NewGenerator(Config{APIVersion: "v1alpha1"})
 	schema := &parser.Schema{
@@ -2923,6 +3158,44 @@ func TestParseSDKTypePath(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, tc.wantImport, importPath)
 			assert.Equal(t, tc.wantType, typeName)
+		})
+	}
+}
+
+func TestParseSDKRequestBodyInfo(t *testing.T) {
+	tests := []struct {
+		name       string
+		importPath string
+		typeName   string
+		wantField  string
+		wantType   string
+		wantPtr    bool
+	}{
+		{
+			name:       "create consume policy request",
+			importPath: "github.com/Kong/sdk-konnect-go/models/operations",
+			typeName:   "CreateEventGatewayVirtualClusterConsumePolicyRequest",
+			wantField:  "EventGatewayConsumePolicyCreate",
+			wantType:   "EventGatewayConsumePolicyCreate",
+			wantPtr:    true,
+		},
+		{
+			name:       "update consume policy request",
+			importPath: "github.com/Kong/sdk-konnect-go/models/operations",
+			typeName:   "UpdateEventGatewayVirtualClusterConsumePolicyRequest",
+			wantField:  "EventGatewayConsumePolicyUpdate",
+			wantType:   "EventGatewayConsumePolicyUpdate",
+			wantPtr:    true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			info, err := ParseSDKRequestBodyInfo(tc.importPath, tc.typeName)
+			require.NoError(t, err)
+			assert.Equal(t, tc.wantField, info.FieldName)
+			assert.Equal(t, tc.wantType, info.TypeName)
+			assert.Equal(t, tc.wantPtr, info.Pointer)
 		})
 	}
 }

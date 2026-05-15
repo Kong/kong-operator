@@ -34,6 +34,8 @@ func UpdateGeneratedOps[
 		return updateEventGatewayListenerPolicy(ctx, sdk.GetEventGatewayListenerPoliciesSDK(), ent)
 	case *konnectv1alpha1.EventGatewayVirtualCluster:
 		return updateEventGatewayVirtualCluster(ctx, sdk.GetEventGatewayVirtualClustersSDK(), ent)
+	case *konnectv1alpha1.EventGatewayVirtualClusterConsumePolicy:
+		return updateEventGatewayVirtualClusterConsumePolicy(ctx, sdk.GetEventGatewayVirtualClusterConsumePoliciesSDK(), ent)
 	case *konnectv1alpha1.IdentityProviderRequest:
 		return updateIdentityProviderRequest(ctx, sdk.GetPortalAuthSettingsSDK(), ent)
 	case *konnectv1alpha1.KonnectEventDataPlaneCertificate:

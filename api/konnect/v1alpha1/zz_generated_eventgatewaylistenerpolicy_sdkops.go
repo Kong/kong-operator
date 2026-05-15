@@ -165,6 +165,7 @@ func (s *EventGatewayListenerPolicyAPISpec) selectedSDKOpsPayload(payload map[st
 	if selected == nil {
 		return nil, "", fmt.Errorf("EventGatewayListenerPolicy config payload missing for type %q", s.EventGatewayListenerPolicyConfig.Type)
 	}
+	selected = flattenSDKUnions(selected)
 	if selectedMap, ok := selected.(map[string]any); ok {
 		if typeValue, ok := payload["type"]; ok {
 			if _, hasType := selectedMap["type"]; !hasType {

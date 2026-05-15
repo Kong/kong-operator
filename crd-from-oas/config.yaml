@@ -159,6 +159,23 @@ apiGroupVersions:
             replacesAPISpecField: destination
           ancestorEntityTypes:
             - KonnectEventGateway
+      - path: /v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/consume-policies
+        name: EventGatewayVirtualClusterConsumePolicy
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.EventGatewayVirtualClusterConsumePoliciesSDK
+            fieldName: EventGatewayVirtualClusterConsumePolicies
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/operations.CreateEventGatewayVirtualClusterConsumePolicyRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/operations.UpdateEventGatewayVirtualClusterConsumePolicyRequest
+          delete: {}
+        reconciler:
+          parentEntityType: EventGatewayVirtualCluster
+          parentRef:
+            fieldName: eventGatewayVirtualClusterRef
+          ancestorEntityTypes:
+            - KonnectEventGateway
 
       # Portal APIs
       - path: /v3/portals

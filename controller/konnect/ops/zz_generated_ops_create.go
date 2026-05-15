@@ -34,6 +34,8 @@ func CreateGeneratedOps[
 		return createEventGatewayListenerPolicy(ctx, sdk.GetEventGatewayListenerPoliciesSDK(), ent)
 	case *konnectv1alpha1.EventGatewayVirtualCluster:
 		return createEventGatewayVirtualCluster(ctx, sdk.GetEventGatewayVirtualClustersSDK(), ent)
+	case *konnectv1alpha1.EventGatewayVirtualClusterConsumePolicy:
+		return createEventGatewayVirtualClusterConsumePolicy(ctx, sdk.GetEventGatewayVirtualClusterConsumePoliciesSDK(), ent)
 	case *konnectv1alpha1.IdentityProviderRequest:
 		return createIdentityProviderRequest(ctx, sdk.GetPortalAuthSettingsSDK(), ent)
 	case *konnectv1alpha1.KonnectEventDataPlaneCertificate:
