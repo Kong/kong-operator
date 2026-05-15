@@ -102,6 +102,7 @@ type EntityType[T any] interface {
 
 	// Additional methods which are used in reconciling Konnect entities.
 
+	PersistsKonnectID() bool
 	SetKonnectID(string)
 	GetKonnectStatus() *konnectv1alpha2.KonnectEntityStatus
 }

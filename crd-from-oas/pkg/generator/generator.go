@@ -3,6 +3,7 @@ package generator
 import (
 	"encoding/base64"
 	"fmt"
+	"go/format"
 	"reflect"
 	"sort"
 	"strings"
@@ -836,7 +837,7 @@ func (g *Generator) generateReconcilerEntityFiles(reconcilerEntities []string, p
 
 // generateSharedFiles generates files shared across all entities:
 // groupversion_info.go, doc.go, common_types.go, reconciler condition constants,
-// and schema_types.go.
+// konnect entity persistence helpers, and schema_types.go.
 func (g *Generator) generateSharedFiles(parsed *parser.ParsedSpec, referencedSchemas map[string]bool, schemaCursors map[string]*config.FieldConfig) ([]GeneratedFile, error) {
 	var files []GeneratedFile
 
@@ -882,6 +883,14 @@ func (g *Generator) generateSharedFiles(parsed *parser.ParsedSpec, referencedSch
 		files = append(files, *reconcilerConditionsFile)
 	}
 
+	konnectEntityPersistenceFile, err := g.generateKonnectEntityPersistenceFile(parsed)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate Konnect entity persistence file: %w", err)
+	}
+	if konnectEntityPersistenceFile != nil {
+		files = append(files, *konnectEntityPersistenceFile)
+	}
+
 	if len(referencedSchemas) > 0 {
 		files = append(files, GeneratedFile{
 			Name:    "schema_types.go",
@@ -897,6 +906,53 @@ func (g *Generator) generateSharedFiles(parsed *parser.ParsedSpec, referencedSch
 	}
 
 	return files, nil
+}
+
+func (g *Generator) generateKonnectEntityPersistenceFile(parsed *parser.ParsedSpec) (*GeneratedFile, error) {
+	if g.config.ReconcilerConfig == nil {
+		return nil, nil
+	}
+
+	entityNames := make([]string, 0, len(g.config.ReconcilerConfig))
+	singletonNoID := make(map[string]bool, len(g.config.ReconcilerConfig))
+	for requestBodyName, schema := range parsed.RequestBodies {
+		entityName := parser.GetEntityNameFromType(requestBodyName)
+		if _, ok := g.config.ReconcilerConfig[entityName]; !ok {
+			continue
+		}
+		entityNames = append(entityNames, entityName)
+		singletonNoID[entityName] = isSingletonNoID(schema)
+	}
+	if len(entityNames) == 0 {
+		return nil, nil
+	}
+	sort.Strings(entityNames)
+
+	var buf strings.Builder
+	fmt.Fprintf(&buf, "%s\n\npackage %s\n\n", sharedGeneratedFilePreamble, g.config.APIVersion)
+	for _, entityName := range entityNames {
+		fmt.Fprintf(
+			&buf,
+			"// PersistsKonnectID reports whether %s persists a Konnect ID in status.\n", entityName,
+		)
+		fmt.Fprintf(&buf, "func (*%s) PersistsKonnectID() bool {\n", entityName)
+		if singletonNoID[entityName] {
+			buf.WriteString("\treturn false\n")
+		} else {
+			buf.WriteString("\treturn true\n")
+		}
+		buf.WriteString("}\n\n")
+	}
+
+	formatted, err := format.Source([]byte(buf.String()))
+	if err != nil {
+		return nil, fmt.Errorf("failed to format generated zz_generated_konnect_entity_persistence.go: %w", err)
+	}
+
+	return &GeneratedFile{
+		Name:    "zz_generated_konnect_entity_persistence.go",
+		Content: string(formatted),
+	}, nil
 }
 
 // collectNamedReferencedSchemas collects refs whose names will appear in
@@ -1716,6 +1772,7 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		SetParentIDEntityName              string
 		AncestorDependencies               []*parser.Dependency
 		AncestorEntityTypes                []string
+		SingletonNoID                      bool
 	}{
 		EntityName:                entityName,
 		APIVersion:                g.config.APIVersion,
@@ -1745,6 +1802,7 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		SetParentIDEntityName:              funcsSetParentIDEntityName,
 		AncestorDependencies:               ancestorDependencies,
 		AncestorEntityTypes:                ancestorEntityTypes,
+		SingletonNoID:                      isSingletonNoID(schema),
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {

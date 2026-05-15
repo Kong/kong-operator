@@ -662,6 +662,43 @@ func TestGenerateCRDFuncs_GeneratesKonnectFuncs(t *testing.T) {
 		assert.Contains(t, content, `obj.SetPortalID(id)`)
 	})
 
+	t.Run("shared persistence file emits singleton no-ID override", func(t *testing.T) {
+		g := NewGenerator(Config{
+			APIGroup:   "x-konnect.konghq.com",
+			APIVersion: "v1alpha1",
+			ReconcilerConfig: map[string]*config.ReconcilerConfig{
+				"Portal":             {},
+				"PortalCustomDomain": {},
+			},
+		})
+
+		parsed := &parser.ParsedSpec{
+			RequestBodies: map[string]*parser.Schema{
+				"CreatePortal": {
+					Name:      "CreatePortal",
+					RespHasID: true,
+				},
+				"CreatePortalCustomDomain": {
+					Name: "CreatePortalCustomDomain",
+					Dependencies: []*parser.Dependency{{
+						EntityName: "Portal",
+						ParamName:  "portalId",
+					}},
+					DeletePathParams: []string{"portalId"},
+					UpdatePathParams: []string{"portalId"},
+					RespHasID:        false,
+				},
+			},
+		}
+
+		file, err := g.generateKonnectEntityPersistenceFile(parsed)
+		require.NoError(t, err)
+		require.NotNil(t, file)
+		assert.Equal(t, "zz_generated_konnect_entity_persistence.go", file.Name)
+		assert.Contains(t, file.Content, "func (*Portal) PersistsKonnectID() bool {\n\treturn true\n}")
+		assert.Contains(t, file.Content, "func (*PortalCustomDomain) PersistsKonnectID() bool {\n\treturn false\n}")
+	})
+
 	t.Run("dependency-backed child entities get root ref accessor", func(t *testing.T) {
 		g := NewGenerator(Config{
 			APIGroup:   "konnect.konghq.com",

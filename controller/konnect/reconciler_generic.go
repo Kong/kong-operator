@@ -625,7 +625,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	//
 	// We should look at the "expectations" for this:
 	// https://github.com/kubernetes/kubernetes/blob/master/pkg/controller/controller_utils.go
-	if status := ent.GetKonnectStatus(); status == nil || status.GetKonnectID() == "" {
+	if shouldCreateKonnectEntity(ent) {
 
 		// Check if the object is adopting an existing Konnect entity.
 		if adoptable, ok := any(ent).(constraints.KonnectEntityTypeSupportingAdoption); ok {
@@ -645,7 +645,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// Regardless of the error reported from Create(), if the Konnect ID has been
 		// set then:
 		// - add the finalizer so that the resource can be cleaned up from Konnect on deletion...
-		if status := ent.GetKonnectStatus(); status != nil && status.ID != "" {
+		if shouldAttachKonnectFinalizerAfterCreate(ent) {
 			if _, res, err := patch.WithFinalizer(ctx, r.Client, ent, KonnectCleanupFinalizer); err != nil || !res.IsZero() {
 				return res, err
 			}
@@ -744,6 +744,42 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	return ctrl.Result{
 		RequeueAfter: r.SyncPeriod,
 	}, nil
+}
+
+func shouldCreateKonnectEntity[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](ent TEnt) bool {
+	status := ent.GetKonnectStatus()
+	if status == nil {
+		return true
+	}
+	if status.GetKonnectID() != "" {
+		return false
+	}
+	if ops.EntityPersistsKonnectID(ent) {
+		return true
+	}
+	return !entityHasProgrammedStatusTrue(ent)
+}
+
+func shouldAttachKonnectFinalizerAfterCreate[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](ent TEnt) bool {
+	status := ent.GetKonnectStatus()
+	if status != nil && status.GetKonnectID() != "" {
+		return true
+	}
+	return !ops.EntityPersistsKonnectID(ent) && entityHasProgrammedStatusTrue(ent)
+}
+
+func entityHasProgrammedStatusTrue[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](ent TEnt) bool {
+	cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, ent)
+	return ok && cond.Status == metav1.ConditionTrue
 }
 
 // adoptFromExistingEntity adopts the existing entity from Konnect based on reconciled object
