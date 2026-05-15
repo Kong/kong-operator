@@ -971,6 +971,20 @@ func FilterListenersByAllowedRoutes(logger logr.Logger, gw *gwtypes.Gateway, pRe
 // The returned condition will have status "False" with reason "NoMatchingListenerHostname" if no listeners
 // have hostname intersection with the route. If matching listeners are found, the condition will be nil.
 func FilterListenersByHostnames(logger logr.Logger, listeners []gwtypes.Listener, hostnames []gwtypes.Hostname) ([]gwtypes.Listener, *metav1.Condition) {
+	if len(hostnames) == 0 {
+		if len(listeners) == 0 {
+			log.Debug(logger, "No listeners available for route hostnames")
+			return nil, &metav1.Condition{
+				Type:    string(gwtypes.RouteConditionAccepted),
+				Status:  metav1.ConditionFalse,
+				Reason:  string(gwtypes.RouteReasonNoMatchingListenerHostname),
+				Message: "No Gateway Listener hostname matches this route",
+			}
+		}
+		log.Debug(logger, "Route has no hostnames; all listeners match", "listenerCount", len(listeners))
+		return listeners, nil
+	}
+
 	var matchingListeners []gwtypes.Listener
 	for _, listener := range listeners {
 		// If the listener has no hostname, it matches all hostnames.
@@ -983,7 +997,7 @@ func FilterListenersByHostnames(logger logr.Logger, listeners []gwtypes.Listener
 		// Check if any of the route hostnames match the listener hostname.
 		for _, hostname := range hostnames {
 			routeHostname := string(hostname)
-			if intersection := utils.HostnameIntersection(string(*listener.Hostname), routeHostname); intersection != "" {
+			if _, ok := utils.HostnameIntersection(string(*listener.Hostname), routeHostname); ok {
 				log.Debug(logger, "Listener matches route hostname", "listener", listener.Name, "listenerHostname", *listener.Hostname, "routeHostname", routeHostname)
 				matchingListeners = append(matchingListeners, listener)
 				break
