@@ -163,6 +163,252 @@ func TestEnforceState_DependencyGating(t *testing.T) {
 	})
 }
 
+func TestTranslate(t *testing.T) {
+	tests := []struct {
+		name          string
+		translateRet  int
+		translateErr  error
+		expectedCount int
+		expectError   bool
+	}{
+		{
+			name:          "returns translated count",
+			translateRet:  3,
+			expectedCount: 3,
+		},
+		{
+			name:         "propagates translate error",
+			translateErr: assert.AnError,
+			expectError:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			conv := &fakeHTTPRouteConverter{translateRet: tt.translateRet, translateErr: tt.translateErr}
+
+			count, err := translate[gwtypes.HTTPRoute](conv, context.Background(), logr.Discard())
+
+			if tt.expectError {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.expectedCount, count)
+		})
+	}
+}
+
+func TestEnforceStatus(t *testing.T) {
+	tests := []struct {
+		name           string
+		statusUpdated  bool
+		statusStop     bool
+		statusErr      error
+		expectedUpdate bool
+		expectedStop   bool
+		expectError    bool
+	}{
+		{
+			name:           "returns converter status result",
+			statusUpdated:  true,
+			statusStop:     true,
+			expectedUpdate: true,
+			expectedStop:   true,
+		},
+		{
+			name:        "propagates status error",
+			statusErr:   assert.AnError,
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			conv := &fakeHTTPRouteConverter{statusUpdated: tt.statusUpdated, statusStop: tt.statusStop, statusErr: tt.statusErr}
+
+			updated, stop, err := enforceStatus[gwtypes.HTTPRoute](context.Background(), logr.Discard(), conv)
+
+			if tt.expectError {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.expectedUpdate, updated)
+			assert.Equal(t, tt.expectedStop, stop)
+		})
+	}
+}
+
+func TestEnforceState_CoreAndErrorPaths(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+	kongServiceGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongService"}
+
+	makeDesiredService := func(name string, host any) unstructured.Unstructured {
+		u := newUnstructured("default", name, kongServiceGVK, nil)
+		_ = unstructured.SetNestedField(u.Object, host, "spec", "host")
+		_ = unstructured.SetNestedField(u.Object, int64(80), "spec", "port")
+		_ = unstructured.SetNestedField(u.Object, "httproute", "spec", "protocol")
+		return u
+	}
+
+	tests := []struct {
+		name            string
+		scheme          *runtime.Scheme
+		desired         []unstructured.Unstructured
+		outputStoreErr  error
+		preexisting     []client.Object
+		setupClient     func(t *testing.T, cl client.Client)
+		interceptor     *interceptor.Funcs
+		wantApplied     bool
+		wantWaiting     bool
+		wantErrContains string
+	}{
+		{
+			name:            "returns error when output store retrieval fails",
+			scheme:          scheme.Get(),
+			desired:         nil,
+			outputStoreErr:  assert.AnError,
+			wantApplied:     false,
+			wantWaiting:     false,
+			wantErrContains: "failed to get desired objects from converter",
+		},
+		{
+			name:        "returns without changes for empty desired list",
+			scheme:      scheme.Get(),
+			desired:     nil,
+			wantApplied: false,
+			wantWaiting: false,
+		},
+		{
+			name:        "creates object when not found",
+			scheme:      scheme.Get(),
+			desired:     []unstructured.Unstructured{makeDesiredService("svc-create", "create.example")},
+			wantApplied: true,
+			wantWaiting: false,
+		},
+		{
+			name:    "returns get error for existing lookup failures",
+			scheme:  scheme.Get(),
+			desired: []unstructured.Unstructured{makeDesiredService("svc-get-err", "err.example")},
+			interceptor: &interceptor.Funcs{
+				Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					if key.Name == "svc-get-err" {
+						return assert.AnError
+					}
+					return c.Get(ctx, key, obj, opts...)
+				},
+			},
+			wantApplied:     false,
+			wantWaiting:     false,
+			wantErrContains: "failed to get object kind KongService obj default/svc-get-err",
+		},
+		{
+			name:    "waits when existing object is marked for deletion",
+			scheme:  scheme.Get(),
+			desired: []unstructured.Unstructured{makeDesiredService("svc-deleting", "deleting.example")},
+			preexisting: []client.Object{func() client.Object {
+				u := makeDesiredService("svc-deleting", "old.example")
+				ts := metav1.Now()
+				u.SetDeletionTimestamp(&ts)
+				u.SetFinalizers([]string{"test-finalizer"})
+				return &u
+			}()},
+			wantApplied: false,
+			wantWaiting: true,
+		},
+		{
+			name:    "applies update when managed fields are missing for field manager",
+			scheme:  scheme.Get(),
+			desired: []unstructured.Unstructured{makeDesiredService("svc-no-managed", "new.example")},
+			preexisting: []client.Object{func() client.Object {
+				u := makeDesiredService("svc-no-managed", "old.example")
+				return &u
+			}()},
+			wantApplied: true,
+			wantWaiting: false,
+		},
+		{
+			name:    "returns extract managed fields error for unsupported group",
+			scheme:  scheme.Get(),
+			desired: []unstructured.Unstructured{newUnstructured("default", "bad-group", schema.GroupVersionKind{Group: "invalid.group", Version: "v1", Kind: "Bad"}, nil)},
+			preexisting: []client.Object{func() client.Object {
+				u := newUnstructured("default", "bad-group", schema.GroupVersionKind{Group: "invalid.group", Version: "v1", Kind: "Bad"}, nil)
+				return &u
+			}()},
+			wantApplied:     false,
+			wantWaiting:     false,
+			wantErrContains: "failed to extract managed fields",
+		},
+		{
+			name:   "returns conversion error for invalid desired payload",
+			scheme: scheme.Get(),
+			desired: []unstructured.Unstructured{func() unstructured.Unstructured {
+				u := makeDesiredService("svc-convert", "ok.example")
+				u.Object["spec"] = map[string]any{"host": make(chan int), "port": int64(80), "protocol": "httproute"}
+				return u
+			}()},
+			wantApplied:     false,
+			wantWaiting:     false,
+			wantErrContains: "failed to create object kind KongService obj default/svc-convert",
+		},
+		{
+			name:    "returns conflict error during create apply",
+			scheme:  scheme.Get(),
+			desired: []unstructured.Unstructured{makeDesiredService("svc-create-conflict", "conflict.example")},
+			interceptor: &interceptor.Funcs{
+				Apply: func(ctx context.Context, c client.WithWatch, obj runtime.ApplyConfiguration, opts ...client.ApplyOption) error {
+					return apierrors.NewConflict(schema.GroupResource{Group: "configuration.konghq.com", Resource: "kongservices"}, "svc-create-conflict", assert.AnError)
+				},
+			},
+			wantErrContains: "conflict during create of object kind KongService obj default/svc-create-conflict",
+		},
+		{
+			name:        "returns update error when apply fails on diff",
+			scheme:      scheme.Get(),
+			desired:     []unstructured.Unstructured{makeDesiredService("svc-update-err", "new.example")},
+			preexisting: []client.Object{func() client.Object { u := makeDesiredService("svc-update-err", "old.example"); return &u }()},
+			interceptor: &interceptor.Funcs{
+				Apply: func(ctx context.Context, c client.WithWatch, obj runtime.ApplyConfiguration, opts ...client.ApplyOption) error {
+					return assert.AnError
+				},
+			},
+			wantErrContains: "failed to create object kind KongService obj default/svc-update-err",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			builder := fake.NewClientBuilder().WithScheme(tt.scheme)
+			if len(tt.preexisting) > 0 {
+				builder = builder.WithObjects(tt.preexisting...)
+			}
+			if tt.interceptor != nil {
+				builder = builder.WithInterceptorFuncs(*tt.interceptor)
+			}
+			cl := builder.Build()
+
+			if tt.setupClient != nil {
+				tt.setupClient(t, cl)
+			}
+
+			conv := &fakeHTTPRouteConverter{desired: tt.desired, outputStoreErr: tt.outputStoreErr}
+			applied, waiting, err := enforceState(ctx, cl, logger, conv)
+
+			if tt.wantErrContains != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErrContains)
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantApplied, applied)
+			assert.Equal(t, tt.wantWaiting, waiting)
+		})
+	}
+}
+
 func TestCleanOrphanedResources(t *testing.T) {
 	gvks := []schema.GroupVersionKind{
 		{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongRoute"},
@@ -353,12 +599,21 @@ func TestCleanOrphanedResources(t *testing.T) {
 // Minimal fake converter for HTTPRoute
 
 type fakeHTTPRouteConverter struct {
-	desired []unstructured.Unstructured
-	gvks    []schema.GroupVersionKind
-	root    gwtypes.HTTPRoute
+	desired        []unstructured.Unstructured
+	gvks           []schema.GroupVersionKind
+	root           gwtypes.HTTPRoute
+	outputStoreErr error
+	translateRet   int
+	translateErr   error
+	statusUpdated  bool
+	statusStop     bool
+	statusErr      error
 }
 
 func (f *fakeHTTPRouteConverter) GetOutputStore(ctx context.Context, logger logr.Logger) ([]unstructured.Unstructured, error) {
+	if f.outputStoreErr != nil {
+		return nil, f.outputStoreErr
+	}
 	return f.desired, nil
 }
 func (f *fakeHTTPRouteConverter) GetOutputStoreLen(ctx context.Context, logger logr.Logger) int {
@@ -367,6 +622,12 @@ func (f *fakeHTTPRouteConverter) GetOutputStoreLen(ctx context.Context, logger l
 func (f *fakeHTTPRouteConverter) GetExpectedGVKs() []schema.GroupVersionKind { return f.gvks }
 func (f *fakeHTTPRouteConverter) GetRootObject() gwtypes.HTTPRoute           { return f.root }
 func (f *fakeHTTPRouteConverter) Translate(ctx context.Context, logger logr.Logger) (int, error) {
+	if f.translateErr != nil {
+		return 0, f.translateErr
+	}
+	if f.translateRet != 0 {
+		return f.translateRet, nil
+	}
 	return len(f.desired), nil
 }
 func (f *fakeHTTPRouteConverter) ListExistingObjects(ctx context.Context) ([]unstructured.Unstructured, error) {
@@ -377,7 +638,10 @@ func (f *fakeHTTPRouteConverter) UpdateSharedRouteStatus([]unstructured.Unstruct
 }
 
 func (f *fakeHTTPRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (updated bool, stop bool, err error) {
-	return false, false, nil
+	if f.statusErr != nil {
+		return false, false, f.statusErr
+	}
+	return f.statusUpdated, f.statusStop, nil
 }
 
 func (f *fakeHTTPRouteConverter) HandleOrphanedResource(ctx context.Context, logger logr.Logger, resource *unstructured.Unstructured) (bool, error) {
