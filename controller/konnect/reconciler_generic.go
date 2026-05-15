@@ -614,9 +614,21 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		if errURL, ok := errors.AsType[*url.Error](err); ok {
 			return r.handleOpsErr(ctx, ent, errURL)
 		}
-		return ctrl.Result{}, err
+		if errMatchingIDNotFound, ok := errors.AsType[ops.EntityWithMatchingIDNotFoundError](err); ok {
+			// If the error is that the entity with the matching ID was not found,
+			// in Konnect, it means that it was deleted from Konnect.
+			// We continue with the reconciliation which will recreate the entity on Konnect
+			// and update the status with the new Konnect ID.
+			logger.Info(
+				"Konnect entity with matching ID not found on Konnect, it might have been deleted. Continuing reconciliation to recreate it.",
+				"konnect_id", errMatchingIDNotFound.ID,
+			)
+			ent.SetKonnectID("")
+		} else {
+			return ctrl.Result{}, err
+		}
 	} else if !res.IsZero() || stop {
-		return res, err
+		return res, nil
 	}
 
 	// TODO: relying on status ID is OK but we need to rethink this because
