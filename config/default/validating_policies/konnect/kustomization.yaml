@@ -3,3 +3,4 @@ kind: Kustomization
 
 resources:
 - konnect_validation_admission_policy.yaml
+- kongupstream_client_certificate_deprecation_policy.yaml
