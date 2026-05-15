@@ -865,7 +865,9 @@ test.samples: kustomize
 	@$(KUSTOMIZE) build config/crd | kubectl apply --server-side --force-conflicts --field-manager=kong-operator-tests -f -
 	@kubectl apply --server-side --force-conflicts --field-manager=kong-operator-tests -f charts/kong-operator/charts/gwapi-standard-crds/crds/gwapi-crds.yaml || true
 	@kubectl get crd -ojsonpath='{.items[*].metadata.name}' | xargs -n1 kubectl wait --for condition=established crd
-	@cd config/samples/ && find . -maxdepth 1 -name "*.yaml" -exec bash -c "echo; echo {}; kubectl apply -f {} && kubectl delete -f {}" \;
+	@find config/samples/ -maxdepth 1 -name "*.yaml" -print0 | while IFS= read -r -d '' file; do \
+		echo && echo $$file && kubectl apply -f $$file && kubectl delete -f $$file; \
+	done
 
 .PHONY: test.charts.golden
 test.charts.golden:
