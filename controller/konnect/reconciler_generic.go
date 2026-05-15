@@ -215,7 +215,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			); errStatus != nil || !res.IsZero() {
 				return res, errStatus
 			}
-			return ctrl.Result{}, err
+			return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 
 		default:
 			log.Error(logger, err, "error handling KongService ref")
