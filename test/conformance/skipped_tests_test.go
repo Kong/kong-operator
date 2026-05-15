@@ -22,7 +22,6 @@ var skippedTestsShared = []string{
 	tests.GRPCRouteListenerHostnameMatching.ShortName,
 
 	// TLSRoute tests that cannot pass yet.
-	tests.TLSRouteHostnameIntersection.ShortName,
 	tests.TLSRouteListenerMixedTerminationNotSupported.ShortName,
 }
 
