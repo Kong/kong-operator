@@ -85,6 +85,8 @@ type Generator struct {
 	entityDirectSensitiveLeaves map[string]map[string]config.SecretReferenceConfig
 }
 
+const sensitiveDataSourceTypeName = "SensitiveDataSource"
+
 // NewGenerator creates a new generator.
 func NewGenerator(config Config) *Generator {
 	return &Generator{config: config}
@@ -446,9 +448,9 @@ func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error)
 	}
 	files = append(files, reconcilerFiles...)
 
-	// Build per-schema cursors by walking each entity's CEL config against the
-	// parsed schema tree using JSON-tag paths, so generateSchemaTypes can apply
-	// user-provided markers to fields on referenced shared types.
+	// Build per-type cursors by walking each entity's CEL config against the
+	// parsed schema tree using JSON-tag paths, so shared generated types can
+	// apply user-provided markers to their nested fields.
 	schemaCursors, err := g.buildSchemaCursors(parsed)
 	if err != nil {
 		return nil, err
@@ -496,16 +498,17 @@ func (g *Generator) buildSchemaCursors(parsed *parser.ParsedSpec) (map[string]*c
 		if cursor == nil {
 			continue
 		}
-		if err := g.collectSchemaCursors(entityName, "spec.apiSpec", schema, cursor, parsed.Schemas, cursors, origins); err != nil {
+		if err := g.collectSchemaCursors(entityName, entityName+"APISpec", "spec.apiSpec", schema, cursor, parsed.Schemas, cursors, origins); err != nil {
 			return nil, fmt.Errorf("entity %q: %w", entityName, err)
 		}
 	}
 	return cursors, nil
 }
 
-// recordSchemaCursor stores the cursor for a generated schema type name and
+// recordSchemaCursor stores the cursor for a generated shared type name and
 // rejects conflicting duplicate writes from different entity/path traversals.
-// Identical cursor trees are allowed so shared schemas can be reused safely.
+// Identical cursor trees are allowed so shared generated types can be reused
+// safely.
 func (g *Generator) recordSchemaCursor(
 	typeName string,
 	entityName string,
@@ -558,11 +561,83 @@ func isEmptyFieldConfig(fc *config.FieldConfig) bool {
 	return true
 }
 
+// childFieldConfig returns a deep copy of fc containing only descendant field
+// configuration. Direct validations on the current field are intentionally
+// dropped because they are applied at the field site, not on the nested shared
+// type reached through that field.
+func childFieldConfig(fc *config.FieldConfig) *config.FieldConfig {
+	if fc == nil || len(fc.Fields) == 0 {
+		return nil
+	}
+
+	fields := cloneFieldConfigMap(fc.Fields)
+	if len(fields) == 0 {
+		return nil
+	}
+
+	return &config.FieldConfig{Fields: fields}
+}
+
+func cloneFieldConfigMap(fields map[string]*config.FieldConfig) map[string]*config.FieldConfig {
+	if len(fields) == 0 {
+		return nil
+	}
+
+	cloned := make(map[string]*config.FieldConfig, len(fields))
+	for name, fc := range fields {
+		fcClone := cloneFieldConfig(fc)
+		if fcClone == nil {
+			continue
+		}
+		cloned[name] = fcClone
+	}
+	if len(cloned) == 0 {
+		return nil
+	}
+	return cloned
+}
+
+func cloneFieldConfig(fc *config.FieldConfig) *config.FieldConfig {
+	if fc == nil {
+		return nil
+	}
+
+	clone := &config.FieldConfig{}
+	if len(fc.Validations) > 0 {
+		clone.Validations = append([]string(nil), fc.Validations...)
+	}
+	if len(fc.Fields) > 0 {
+		clone.Fields = cloneFieldConfigMap(fc.Fields)
+	}
+	if isEmptyFieldConfig(clone) {
+		return nil
+	}
+	return clone
+}
+
+func sensitiveDataSourceSchema() *parser.Schema {
+	return &parser.Schema{
+		Properties: []*parser.Property{
+			{Name: "type", Type: "string"},
+			{Name: "value", Type: "string"},
+			{Name: "secret_ref", Type: "object"},
+		},
+	}
+}
+
+func (g *Generator) isSensitiveLeafAtLevel(entityName, schemaGoTypeName, jsonFieldName string) bool {
+	if schemaGoTypeName == entityName+"APISpec" {
+		return g.isEntityAPISpecFieldSensitiveLeaf(entityName, jsonFieldName)
+	}
+	return g.isSchemaFieldSensitiveLeaf(schemaGoTypeName, jsonFieldName)
+}
+
 // collectSchemaCursors recursively walks schema properties and union variants,
 // recording the cursor for each referenced or inline schema type. It also
 // validates that all config keys at each level correspond to real JSON-tag fields.
 func (g *Generator) collectSchemaCursors(
 	entityName string, //nolint:unparam
+	schemaGoTypeName string,
 	path string,
 	schema *parser.Schema,
 	cursor *config.FieldConfig,
@@ -583,31 +658,50 @@ func (g *Generator) collectSchemaCursors(
 		propCursor := cursor.Sub(jsonTag)
 		propPath := path + "." + jsonTag
 
+		if g.isSensitiveLeafAtLevel(entityName, schemaGoTypeName, jsonTag) {
+			sensitiveCursor := childFieldConfig(propCursor)
+			if sensitiveCursor == nil {
+				continue
+			}
+			if err := g.recordSchemaCursor(sensitiveDataSourceTypeName, entityName, propPath, sensitiveCursor, out, origins); err != nil {
+				return err
+			}
+			if err := g.collectSchemaCursors(entityName, sensitiveDataSourceTypeName, propPath, sensitiveDataSourceSchema(), sensitiveCursor, schemas, out, origins); err != nil {
+				return err
+			}
+			continue
+		}
+
 		switch {
 		case prop.RefName != "" && !prop.IsReference:
 			refSchema := schemas[prop.RefName]
 			if refSchema == nil {
 				continue
 			}
-			if err := g.recordSchemaCursor(fixInitialisms(prop.RefName), entityName, propPath, propCursor, out, origins); err != nil {
+			refCursor := childFieldConfig(propCursor)
+			if refCursor == nil {
+				continue
+			}
+			refTypeName := fixInitialisms(prop.RefName)
+			if err := g.recordSchemaCursor(refTypeName, entityName, propPath, refCursor, out, origins); err != nil {
 				return err
 			}
-			if propCursor != nil {
-				if err := g.collectSchemaCursors(entityName, propPath, refSchema, propCursor, schemas, out, origins); err != nil {
-					return err
-				}
+			if err := g.collectSchemaCursors(entityName, refTypeName, propPath, refSchema, refCursor, schemas, out, origins); err != nil {
+				return err
 			}
 
 		case isInlineObjectWithProperties(prop):
 			inlineTypeName := goFieldName(prop.Name)
-			if err := g.recordSchemaCursor(inlineTypeName, entityName, propPath, propCursor, out, origins); err != nil {
+			inlineCursor := childFieldConfig(propCursor)
+			if inlineCursor == nil {
+				continue
+			}
+			if err := g.recordSchemaCursor(inlineTypeName, entityName, propPath, inlineCursor, out, origins); err != nil {
 				return err
 			}
 			inlineSchema := &parser.Schema{Properties: prop.Properties}
-			if propCursor != nil {
-				if err := g.collectSchemaCursors(entityName, propPath, inlineSchema, propCursor, schemas, out, origins); err != nil {
-					return err
-				}
+			if err := g.collectSchemaCursors(entityName, inlineTypeName, propPath, inlineSchema, inlineCursor, schemas, out, origins); err != nil {
+				return err
 			}
 
 		case prop.Type == "array" && prop.Items != nil && prop.Items.RefName != "":
@@ -616,13 +710,16 @@ func (g *Generator) collectSchemaCursors(
 			if refSchema == nil {
 				continue
 			}
-			if err := g.recordSchemaCursor(fixInitialisms(prop.Items.RefName), entityName, propPath, propCursor, out, origins); err != nil {
+			itemCursor := childFieldConfig(propCursor)
+			if itemCursor == nil {
+				continue
+			}
+			itemTypeName := fixInitialisms(prop.Items.RefName)
+			if err := g.recordSchemaCursor(itemTypeName, entityName, propPath, itemCursor, out, origins); err != nil {
 				return err
 			}
-			if propCursor != nil {
-				if err := g.collectSchemaCursors(entityName, propPath, refSchema, propCursor, schemas, out, origins); err != nil {
-					return err
-				}
+			if err := g.collectSchemaCursors(entityName, itemTypeName, propPath, refSchema, itemCursor, schemas, out, origins); err != nil {
+				return err
 			}
 
 		case len(prop.OneOf) > 0:
@@ -636,13 +733,16 @@ func (g *Generator) collectSchemaCursors(
 				if variantSchema == nil {
 					continue
 				}
-				if err := g.recordSchemaCursor(fixInitialisms(variant.refName), entityName, variantPath, variantCursor, out, origins); err != nil {
+				variantCursor = childFieldConfig(variantCursor)
+				if variantCursor == nil {
+					continue
+				}
+				variantTypeName := fixInitialisms(variant.refName)
+				if err := g.recordSchemaCursor(variantTypeName, entityName, variantPath, variantCursor, out, origins); err != nil {
 					return err
 				}
-				if variantCursor != nil {
-					if err := g.collectSchemaCursors(entityName, variantPath, variantSchema, variantCursor, schemas, out, origins); err != nil {
-						return err
-					}
+				if err := g.collectSchemaCursors(entityName, variantTypeName, variantPath, variantSchema, variantCursor, schemas, out, origins); err != nil {
+					return err
 				}
 			}
 		}
@@ -660,13 +760,16 @@ func (g *Generator) collectSchemaCursors(
 			if variantSchema == nil {
 				continue
 			}
-			if err := g.recordSchemaCursor(fixInitialisms(variant.refName), entityName, variantPath, variantCursor, out, origins); err != nil {
+			variantCursor = childFieldConfig(variantCursor)
+			if variantCursor == nil {
+				continue
+			}
+			variantTypeName := fixInitialisms(variant.refName)
+			if err := g.recordSchemaCursor(variantTypeName, entityName, variantPath, variantCursor, out, origins); err != nil {
 				return err
 			}
-			if variantCursor != nil {
-				if err := g.collectSchemaCursors(entityName, variantPath, variantSchema, variantCursor, schemas, out, origins); err != nil {
-					return err
-				}
+			if err := g.collectSchemaCursors(entityName, variantTypeName, variantPath, variantSchema, variantCursor, schemas, out, origins); err != nil {
+				return err
 			}
 		}
 	}
@@ -866,7 +969,7 @@ func (g *Generator) generateSharedFiles(parsed *parser.ParsedSpec, referencedSch
 		})
 	}
 
-	commonContent, err := g.generateCommonTypes()
+	commonContent, err := g.generateCommonTypes(schemaCursors)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate common types: %w", err)
 	}
@@ -2648,7 +2751,7 @@ package %s
 `, sharedGeneratedFilePreamble, year, g.config.APIVersion, g.config.APIGroup, g.config.APIVersion, g.config.APIGroup, g.config.APIVersion)
 }
 
-func (g *Generator) generateCommonTypes() (string, error) {
+func (g *Generator) generateCommonTypes(typeCursors map[string]*config.FieldConfig) (string, error) {
 	tmpl := template.Must(template.New("commonTypes").Parse(commonTypesTemplate))
 
 	var buf strings.Builder
@@ -2663,24 +2766,44 @@ func (g *Generator) generateCommonTypes() (string, error) {
 	if g.objectRefImported() && objectRefImport != nil {
 		namedRefTypeName = objectRefImport.Alias + ".NamespacedRef"
 	}
+	var sensitiveCursor *config.FieldConfig
+	if typeCursors != nil {
+		sensitiveCursor = typeCursors[sensitiveDataSourceTypeName]
+	}
+	fieldValidations := func(fc *config.FieldConfig, fieldName string) []string {
+		if fc == nil {
+			return nil
+		}
+		child := fc.Sub(fieldName)
+		if child == nil || len(child.Validations) == 0 {
+			return nil
+		}
+		return append([]string(nil), child.Validations...)
+	}
 	data := struct {
-		APIVersion            string
-		KonnectStatusImport   *config.ImportConfig
-		KonnectStatusType     string
-		ObjectRefImported     bool
-		ObjectRefImport       *config.ImportConfig
-		Namespaced            bool
-		HasSecretRefEntities  bool
-		NamespacedRefTypeName string
+		APIVersion                              string
+		KonnectStatusImport                     *config.ImportConfig
+		KonnectStatusType                       string
+		ObjectRefImported                       bool
+		ObjectRefImport                         *config.ImportConfig
+		Namespaced                              bool
+		HasSecretRefEntities                    bool
+		NamespacedRefTypeName                   string
+		SensitiveDataSourceTypeValidations      []string
+		SensitiveDataSourceValueValidations     []string
+		SensitiveDataSourceSecretRefValidations []string
 	}{
-		APIVersion:            g.config.APIVersion,
-		KonnectStatusImport:   defaultKonnectStatusImport(),
-		KonnectStatusType:     defaultKonnectStatusQualifiedTypeName(),
-		ObjectRefImported:     g.objectRefImported(),
-		ObjectRefImport:       objectRefImport,
-		Namespaced:            g.objectRefNamespaced(),
-		HasSecretRefEntities:  hasSecretRefs,
-		NamespacedRefTypeName: namedRefTypeName,
+		APIVersion:                              g.config.APIVersion,
+		KonnectStatusImport:                     defaultKonnectStatusImport(),
+		KonnectStatusType:                       defaultKonnectStatusQualifiedTypeName(),
+		ObjectRefImported:                       g.objectRefImported(),
+		ObjectRefImport:                         objectRefImport,
+		Namespaced:                              g.objectRefNamespaced(),
+		HasSecretRefEntities:                    hasSecretRefs,
+		NamespacedRefTypeName:                   namedRefTypeName,
+		SensitiveDataSourceTypeValidations:      fieldValidations(sensitiveCursor, "type"),
+		SensitiveDataSourceValueValidations:     fieldValidations(sensitiveCursor, "value"),
+		SensitiveDataSourceSecretRefValidations: fieldValidations(sensitiveCursor, "secretRef"),
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {

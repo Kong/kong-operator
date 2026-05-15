@@ -125,19 +125,22 @@ type SensitiveDataSource struct {
 	// Type indicates the source of the sensitive data: 'inline' or 'secretRef'.
 	//
 	// +kubebuilder:validation:Enum=inline;secretRef
-	// +kubebuilder:default=inline
+	// +kubebuilder:default=inline{{range .SensitiveDataSourceTypeValidations}}
+	// {{ . }}{{end}}
 	Type SensitiveDataSourceType ` + "`" + `json:"type"` + "`" + `
 
 	// Value contains the sensitive data provided inline.
 	// Required when type is 'inline'.
 	//
-	// +optional
+	// +optional{{range .SensitiveDataSourceValueValidations}}
+	// {{ . }}{{end}}
 	Value *string ` + "`" + `json:"value,omitempty"` + "`" + `
 
 	// SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
 	// Required when type is 'secretRef'.
 	//
-	// +optional
+	// +optional{{range .SensitiveDataSourceSecretRefValidations}}
+	// {{ . }}{{end}}
 	SecretRef *{{.NamespacedRefTypeName}} ` + "`" + `json:"secretRef,omitempty"` + "`" + `
 }`
 
