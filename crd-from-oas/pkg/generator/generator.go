@@ -1368,8 +1368,8 @@ func (g *Generator) writeSchemaTypeField(buf *strings.Builder, prop *parser.Prop
 	buf.WriteString("\n")
 	buf.WriteString("\t//\n")
 	if isSensitive {
-		// Sensitive leaf: emit only required/optional; string validation tags move
-		// to the SensitiveDataSource.Value sub-field via the common type definition.
+		// Sensitive leaf: emit only required/optional; SensitiveDataSource carries
+		// the shared validation for its inline value representation.
 		if prop.Required && !prop.Nullable {
 			fmt.Fprintf(buf, "\t// %s\n", markerRequired())
 		} else {
@@ -2789,8 +2789,8 @@ func (g *Generator) generateCommonTypes(typeCursors map[string]*config.FieldConf
 		Namespaced                              bool
 		HasSecretRefEntities                    bool
 		NamespacedRefTypeName                   string
+		SensitiveDataSourceValueMaxLength       int
 		SensitiveDataSourceTypeValidations      []string
-		SensitiveDataSourceValueValidations     []string
 		SensitiveDataSourceSecretRefValidations []string
 	}{
 		APIVersion:                              g.config.APIVersion,
@@ -2801,8 +2801,8 @@ func (g *Generator) generateCommonTypes(typeCursors map[string]*config.FieldConf
 		Namespaced:                              g.objectRefNamespaced(),
 		HasSecretRefEntities:                    hasSecretRefs,
 		NamespacedRefTypeName:                   namedRefTypeName,
+		SensitiveDataSourceValueMaxLength:       sensitiveDataSourceValueMaxLength,
 		SensitiveDataSourceTypeValidations:      fieldValidations(sensitiveCursor, "type"),
-		SensitiveDataSourceValueValidations:     fieldValidations(sensitiveCursor, "value"),
 		SensitiveDataSourceSecretRefValidations: fieldValidations(sensitiveCursor, "secretRef"),
 	}
 

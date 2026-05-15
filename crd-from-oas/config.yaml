@@ -120,15 +120,6 @@ apiGroupVersions:
                 caBundle:
                   _validations:
                     - "+kubebuilder:validation:MaxLength=4096"
-                clientIdentity:
-                  certificate:
-                    value:
-                      _validations:
-                        - "+kubebuilder:validation:MaxLength=4096"
-                  key:
-                    value:
-                      _validations:
-                        - "+kubebuilder:validation:MaxLength=4096"
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayBackendClustersSDK
