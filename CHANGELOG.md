@@ -240,6 +240,13 @@
   because the reconciler returned early before calling
   `patchWithProgrammedStatusConditionBasedOnOtherConditions`.
   [#4318](https://github.com/Kong/kong-operator/pull/4318)
+- `KongPluginBinding`: the `PluginRefValid` status condition is now set promptly
+  when the referenced `KongPlugin` does not exist (same-namespace or cross-namespace)
+  or when a cross-namespace `KongReferenceGrant` is deleted. Previously the binding
+  could take up to the full sync period (~60 s) to reflect these changes because the
+  check lived in the Konnect SDK ops layer. The check is now a pre-ops handler that
+  runs early in the reconcile loop and reacts immediately to watch-triggered enqueues.
+  [#4312](https://github.com/Kong/kong-operator/pull/4312)
 - Add `KongReferenceGrant` watch to `KongVault` and `KongConsumerGroup` reconcilers.
   Previously, creating or deleting a grant would not trigger re-reconciliation of these
   resources until the next full resync cycle. Grant changes now immediately re-queue

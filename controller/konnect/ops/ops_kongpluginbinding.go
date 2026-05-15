@@ -12,17 +12,13 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/samber/lo"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kong-operator/v2/api/common/consts"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
-	"github.com/kong/kong-operator/v2/controller/pkg/patch"
-	"github.com/kong/kong-operator/v2/internal/utils/crossnamespace"
 	"github.com/kong/kong-operator/v2/pkg/metadata"
 )
 
@@ -308,55 +304,11 @@ func getReferencedPlugin(
 
 	var (
 		plugin    configurationv1.KongPlugin
-		pluginGVK = metav1.GroupVersionKind{
-			Group: configurationv1.SchemeGroupVersion.Group,
-			Kind:  "KongPlugin",
-		}
 		pluginRef = pluginBinding.Spec.PluginReference
 	)
 	plugin.SetName(pluginRef.Name)
 	if ns := pluginRef.Namespace; ns != "" && ns != pluginBinding.GetNamespace() {
-
-		err := crossnamespace.CheckKongReferenceGrantForResource(
-			ctx,
-			cl,
-			pluginBinding.Namespace,
-			ns,
-			pluginRef.Name,
-			metav1.GroupVersionKind(pluginBinding.GetObjectKind().GroupVersionKind()),
-			pluginGVK,
-		)
-		if err != nil {
-			msg := err.Error()
-			if crossnamespace.IsReferenceNotGranted(err) {
-				msg = fmt.Sprintf("KongReferenceGrants do not allow access to KongPlugin %s/%s", ns, pluginRef.Name)
-			}
-
-			if _, errStatus := patch.StatusWithCondition(
-				ctx, cl, pluginBinding,
-				consts.ConditionType(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs),
-				metav1.ConditionFalse,
-				configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted,
-				msg,
-			); errStatus != nil {
-				return nil, errStatus
-			}
-			return nil, err
-		}
-
-		// Grant allows access.
-		if _, errStatus := patch.StatusWithCondition(
-			ctx, cl, pluginBinding,
-			consts.ConditionType(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs),
-			metav1.ConditionTrue,
-			configurationv1alpha1.KongReferenceGrantReasonResolvedRefs,
-			fmt.Sprintf("KongReferenceGrants allow access to KongPlugin %s/%s", ns, pluginRef.Name),
-		); errStatus != nil {
-			return nil, errStatus
-		}
-
 		plugin.SetNamespace(pluginRef.Namespace)
-
 	} else {
 		plugin.SetNamespace(pluginBinding.GetNamespace())
 	}
