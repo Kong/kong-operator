@@ -215,6 +215,32 @@ func TestOIDCIdentityProviderConfig_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestPortalFooterMenuSection_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec PortalFooterMenuSection
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestPortalMenuItem_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec PortalMenuItem
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestSAMLIdentityProviderConfig_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 

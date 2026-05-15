@@ -20,6 +20,11 @@ type entityOpsFileResult struct {
 	SDKFactoryInfo *SDKFactoryFileInfo
 }
 
+type opsFileImport struct {
+	Alias string
+	Path  string
+}
+
 // generateEntityOpsFile emits a zz_generated_ops_<entity>.go file containing
 // create<Entity>, update<Entity>, delete<Entity>, and get<Entity>ForUID
 // functions (whichever are configured). It returns the file plus metadata for
@@ -60,6 +65,8 @@ func (g *Generator) generateEntityOpsFile(
 		// referenced when:
 		//   - update uses a wrapped request struct (UpdateWrapped, not UpdateFullyWrapped)
 		//   - delete uses a fully-wrapped request struct (multi-parent entities)
+		//   - delete is implemented via update/PUT and the update call shape uses
+		//     operations request structs
 		//   - getForUID actually calls the list SDK method (i.e. has a viable
 		//     match strategy: labels, name, match fields, or UID tag filter).
 		//     The fallback else-branch emits no SDK call and therefore no import.
@@ -67,10 +74,24 @@ func (g *Generator) generateEntityOpsFile(
 			!getForUIDData.SingletonNoID &&
 			(getForUIDData.UseUIDTagFilter || len(getForUIDData.MatchFields) > 0 || getForUIDData.RootUnion != nil ||
 				getForUIDData.HasLabels || getForUIDData.HasName)
+		deleteNeedsOpsImport := deleteData != nil &&
+			(deleteData.DeleteFullyWrapped ||
+				(deleteData.DeleteAsUpdate && (deleteData.DeletePutWrapped || deleteData.DeletePutFullyWrapped)))
 		needsOpsImport := (updateData != nil && updateData.UpdateWrapped) ||
-			(deleteData != nil && deleteData.DeleteFullyWrapped) ||
+			deleteNeedsOpsImport ||
 			getForUIDNeedsOpsImport
 		needsClientImport := (createData != nil && createData.NeedsClient) || (updateData != nil && updateData.NeedsClient)
+
+		extraImportSet := make(map[string]string)
+		if deleteData != nil && deleteData.DeleteAsUpdate && deleteData.DeletePutReqImportPath != "" &&
+			!strings.HasSuffix(deleteData.DeletePutReqImportPath, "/operations") {
+			extraImportSet[deleteData.DeletePutReqImportPath] = sdkImportAlias(deleteData.DeletePutReqImportPath)
+		}
+		extraImports := make([]opsFileImport, 0, len(extraImportSet))
+		for path, alias := range extraImportSet {
+			extraImports = append(extraImports, opsFileImport{Alias: alias, Path: path})
+		}
+		sort.Slice(extraImports, func(i, j int) bool { return extraImports[i].Path < extraImports[j].Path })
 
 		// Render file header.
 		headerData := struct {
@@ -78,11 +99,13 @@ func (g *Generator) generateEntityOpsFile(
 			APIPackagePath    string
 			NeedsOpsImport    bool
 			NeedsClientImport bool
+			ExtraImports      []opsFileImport
 		}{
 			APIAlias:          g.config.APIGroupPackageAlias,
 			APIPackagePath:    g.config.APIGroupPackagePath,
 			NeedsOpsImport:    needsOpsImport,
 			NeedsClientImport: needsClientImport,
+			ExtraImports:      extraImports,
 		}
 		var content strings.Builder
 		headerTmpl := template.Must(template.New("opsheader").Parse(opsPerEntityFileHeaderTemplate))
@@ -404,20 +427,23 @@ func pascalFromKebab(s string) string {
 // segment (i.e. keyed solely by parent ID) AND the 2xx create response has no
 // "id" property.
 //
-// We require DeletePathParams to be non-empty so that schemas constructed
-// without parser output (e.g. in unit tests) are not erroneously treated as
-// singletons.
+// When DELETE is not defined for a singleton resource, UpdatePathParams still
+// identifies the parent-scoped shape for generated create/get logic.
 func isSingletonNoID(schema *parser.Schema) bool {
 	if len(schema.Dependencies) == 0 {
 		return false
 	}
-	// A non-empty DeletePathParams must not exceed the number of parent
-	// dependencies — if it does, there is a per-resource ID in the DELETE path,
-	// meaning this is a normal collection resource.
-	if len(schema.DeletePathParams) == 0 {
+	pathParams := schema.DeletePathParams
+	if len(pathParams) == 0 {
+		pathParams = schema.UpdatePathParams
+	}
+	// A non-empty singleton path must not exceed the number of parent
+	// dependencies — if it does, there is a per-resource ID segment, meaning this
+	// is a normal collection resource.
+	if len(pathParams) == 0 {
 		return false
 	}
-	if len(schema.DeletePathParams) > len(schema.Dependencies) {
+	if len(pathParams) > len(schema.Dependencies) {
 		return false
 	}
 	if len(schema.UpdatePathParams) > len(schema.Dependencies) {

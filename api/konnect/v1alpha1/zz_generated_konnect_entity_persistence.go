@@ -47,6 +47,11 @@ func (*PortalCustomDomain) PersistsKonnectID() bool {
 	return false
 }
 
+// PersistsKonnectID reports whether PortalCustomization persists a Konnect ID in status.
+func (*PortalCustomization) PersistsKonnectID() bool {
+	return false
+}
+
 // PersistsKonnectID reports whether PortalEmailConfig persists a Konnect ID in status.
 func (*PortalEmailConfig) PersistsKonnectID() bool {
 	return true

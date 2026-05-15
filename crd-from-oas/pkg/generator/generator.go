@@ -1686,6 +1686,13 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		return "", err
 	}
 
+	var nestedInlineTypes strings.Builder
+	g.writeNestedInlineTypes(&nestedInlineTypes, schema.Properties, make(map[string]bool), apiSpecCursor)
+	if nestedInlineTypes.Len() > 0 {
+		buf.WriteString("\n")
+		buf.WriteString(nestedInlineTypes.String())
+	}
+
 	// Generate union types for any oneOf properties
 	unionTypes := g.generateUnionTypes(schema, entityName)
 	if unionTypes != "" {
@@ -3424,10 +3431,74 @@ func shouldSkipSDKOpsTestField(prop *parser.Property, method sdkOpsMethod) bool 
 	return strings.HasPrefix(method.MethodName, "ToUpdate") && prop.Name == "type"
 }
 
+func buildSDKOpsMethodNames(opsConfig *config.EntityOpsConfig) (map[string]string, error) {
+	methodNames := make(map[string]string)
+	if opsConfig == nil {
+		return methodNames, nil
+	}
+
+	opPaths := make(map[string]string)
+	pathCounts := make(map[string]int)
+	opNames := make([]string, 0, len(opsConfig.Ops))
+	for opName := range opsConfig.Ops {
+		if opName == "delete" {
+			continue
+		}
+		opNames = append(opNames, opName)
+	}
+	sort.Strings(opNames)
+
+	for _, opName := range opNames {
+		opCfg := opsConfig.Ops[opName]
+		if opCfg == nil {
+			continue
+		}
+		if _, _, err := ParseSDKTypePath(opCfg.Path); err != nil {
+			return nil, fmt.Errorf("operation %q: %w", opName, err)
+		}
+		opPaths[opName] = opCfg.Path
+		pathCounts[opCfg.Path]++
+	}
+
+	for _, opName := range opNames {
+		path, ok := opPaths[opName]
+		if !ok {
+			continue
+		}
+		_, typeName, err := ParseSDKTypePath(path)
+		if err != nil {
+			return nil, fmt.Errorf("operation %q: %w", opName, err)
+		}
+		methodName := "To" + typeName
+		if pathCounts[path] > 1 {
+			methodName = "To" + pascalFromKebab(opName) + typeName
+		}
+		methodNames[opName] = methodName
+	}
+
+	return methodNames, nil
+}
+
+func sdkOpsMethodNameForOp(opsConfig *config.EntityOpsConfig, opName string) (string, error) {
+	methodNames, err := buildSDKOpsMethodNames(opsConfig)
+	if err != nil {
+		return "", err
+	}
+	methodName, ok := methodNames[opName]
+	if !ok {
+		return "", fmt.Errorf("operation %q has no SDK conversion method", opName)
+	}
+	return methodName, nil
+}
+
 // buildSDKOpsMethods parses the ops config and returns sorted imports and methods.
 func (g *Generator) buildSDKOpsMethods(opsConfig *config.EntityOpsConfig) ([]*sdkOpsImport, []sdkOpsMethod, error) {
 	imports := make(map[string]*sdkOpsImport)
 	var methods []sdkOpsMethod
+	methodNames, err := buildSDKOpsMethodNames(opsConfig)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	opNames := make([]string, 0, len(opsConfig.Ops))
 	for opName := range opsConfig.Ops {
@@ -3441,6 +3512,9 @@ func (g *Generator) buildSDKOpsMethods(opsConfig *config.EntityOpsConfig) ([]*sd
 			continue
 		}
 		opCfg := opsConfig.Ops[opName]
+		if opCfg == nil {
+			continue
+		}
 		importPath, typeName, err := ParseSDKTypePath(opCfg.Path)
 		if err != nil {
 			return nil, nil, fmt.Errorf("operation %q: %w", opName, err)
@@ -3453,7 +3527,7 @@ func (g *Generator) buildSDKOpsMethods(opsConfig *config.EntityOpsConfig) ([]*sd
 		}
 
 		methods = append(methods, sdkOpsMethod{
-			MethodName:  "To" + typeName,
+			MethodName:  methodNames[opName],
 			TypeName:    typeName,
 			ImportAlias: alias,
 		})

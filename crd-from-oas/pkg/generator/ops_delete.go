@@ -22,6 +22,7 @@ type opsDeleteFuncData struct {
 	APIAlias           string
 	DeleteSDKInterface string
 	DeleteSDKMethod    string
+	DeleteAsUpdate     bool
 	// Parents holds metadata for each parent dependency (outermost first).
 	Parents []parentInfo
 	// DeleteFullyWrapped is true for multi-parent entities. The SDK delete method
@@ -43,6 +44,29 @@ type opsDeleteFuncData struct {
 	// DELETE /portals/{portalId}/email-config). The SDK method takes the parent ID
 	// directly; no entity ID local variable or argument is emitted.
 	DeleteOmitsEntityID bool
+	// DeletePutReqImportPath is the Go import path for the SDK type used when
+	// delete is implemented via the update/PUT operation.
+	DeletePutReqImportPath string
+	// DeletePutReqQualifiedType is the fully qualified SDK type used for the empty
+	// request body (or fully wrapped request) when delete is implemented via PUT.
+	DeletePutReqQualifiedType string
+	// DeletePutWrapped mirrors the update op's wrapped-request call shape.
+	DeletePutWrapped bool
+	// DeletePutFullyWrapped mirrors the update op's fully-wrapped request shape.
+	DeletePutFullyWrapped bool
+	// DeletePutOmitsEntityID mirrors the update op's parent-scoped singleton shape.
+	DeletePutOmitsEntityID bool
+	// DeletePutParentIDField is the parent ID field on the synthetic operations
+	// request struct for single-parent wrapped PUT calls.
+	DeletePutParentIDField string
+	// DeletePutEntityIDField is the entity ID field on wrapped PUT calls.
+	DeletePutEntityIDField string
+	// DeletePutBodyField is the request body field on the synthetic operations
+	// request struct for single-parent wrapped PUT calls.
+	DeletePutBodyField string
+	// DeletePutReqBodyPointer indicates whether the update/PUT SDK method expects
+	// the request body by pointer.
+	DeletePutReqBodyPointer bool
 }
 
 // generateOpsDeleteFuncBody renders the delete<Entity> function body (no file header).
@@ -54,6 +78,32 @@ func (g *Generator) generateOpsDeleteFuncBody(
 	deleteOp, ok := opsConfig.Ops["delete"]
 	if !ok || deleteOp == nil {
 		return nil, nil
+	}
+	if deleteOp.AsPUT {
+		callShape, err := g.resolveUpdateOpCallShape(entityName, schema, opsConfig)
+		if err != nil {
+			return nil, err
+		}
+		if callShape == nil {
+			return nil, fmt.Errorf("entity %q: ops.delete.asPUT requires update op", entityName)
+		}
+		return &opsDeleteFuncData{
+			Entity:                    entityName,
+			APIAlias:                  g.config.APIGroupPackageAlias,
+			DeleteSDKInterface:        callShape.SDKInterface,
+			DeleteSDKMethod:           callShape.SDKMethod,
+			DeleteAsUpdate:            true,
+			Parents:                   callShape.Parents,
+			DeletePutReqImportPath:    callShape.ReqImportPath,
+			DeletePutReqQualifiedType: callShape.ReqQualifiedType,
+			DeletePutWrapped:          callShape.Wrapped,
+			DeletePutFullyWrapped:     callShape.FullyWrapped,
+			DeletePutOmitsEntityID:    callShape.OmitsEntityID,
+			DeletePutParentIDField:    callShape.ParentIDField,
+			DeletePutEntityIDField:    callShape.EntityIDField,
+			DeletePutBodyField:        callShape.BodyField,
+			DeletePutReqBodyPointer:   callShape.ReqBodyPointer,
+		}, nil
 	}
 	if schema.DeleteOperationID == "" {
 		return nil, fmt.Errorf("entity %q: missing OpenAPI operationId for delete op (no DELETE found)", entityName)
