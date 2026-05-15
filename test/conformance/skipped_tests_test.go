@@ -23,9 +23,6 @@ var skippedTestsShared = []string{
 
 	// TLSRoute tests that cannot pass yet.
 	tests.TLSRouteHostnameIntersection.ShortName,
-	tests.TLSRouteInvalidBackendRefNonexistent.ShortName,
-	tests.TLSRouteInvalidBackendRefUnknownKind.ShortName,
-	tests.TLSRouteInvalidNoMatchingListener.ShortName,
 	tests.TLSRouteListenerMixedTerminationNotSupported.ShortName,
 }
 
