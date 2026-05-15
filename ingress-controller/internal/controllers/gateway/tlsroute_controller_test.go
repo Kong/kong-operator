@@ -1,7 +1,6 @@
 package gateway
 
 import (
-	"context"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -14,7 +13,7 @@ import (
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
-	"github.com/kong/kong-operator/v2/pkg/clientset/scheme"
+	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
 func newTLSRoute(backendRef gatewayapi.BackendRef) gatewayapi.TLSRoute {
@@ -44,7 +43,7 @@ func serviceBackendRef(namespace *gatewayapi.Namespace) gatewayapi.BackendRef {
 }
 
 func TestGetTLSRouteRuleReason(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	logger := logr.Discard()
 
 	otherNS := gatewayapi.Namespace("other")
@@ -185,7 +184,7 @@ func TestGetTLSRouteRuleReason(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			cl := fakeclient.NewClientBuilder().
-				WithScheme(scheme.Scheme).
+				WithScheme(scheme.Get()).
 				WithObjects(tc.objects...).
 				Build()
 			reconciler := &TLSRouteReconciler{
@@ -205,7 +204,7 @@ func TestGetTLSRouteRuleReason(t *testing.T) {
 }
 
 func TestSetRouteConditionResolvedRefsCondition_TLSRoute(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	logger := logr.Discard()
 
 	otherNS := gatewayapi.Namespace("other")
@@ -223,7 +222,7 @@ func TestSetRouteConditionResolvedRefsCondition_TLSRoute(t *testing.T) {
 
 	t.Run("inserts new condition when missing", func(t *testing.T) {
 		cl := fakeclient.NewClientBuilder().
-			WithScheme(scheme.Scheme).
+			WithScheme(scheme.Get()).
 			WithObjects(&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"}}).
 			Build()
 		r := &TLSRouteReconciler{Client: cl, Log: logger}
@@ -244,7 +243,7 @@ func TestSetRouteConditionResolvedRefsCondition_TLSRoute(t *testing.T) {
 
 	t.Run("updates existing condition when reason changes", func(t *testing.T) {
 		cl := fakeclient.NewClientBuilder().
-			WithScheme(scheme.Scheme).
+			WithScheme(scheme.Get()).
 			Build()
 		r := &TLSRouteReconciler{Client: cl, Log: logger}
 		route := newTLSRoute(serviceBackendRef(nil))
@@ -266,7 +265,7 @@ func TestSetRouteConditionResolvedRefsCondition_TLSRoute(t *testing.T) {
 
 	t.Run("no-op when condition already matches", func(t *testing.T) {
 		cl := fakeclient.NewClientBuilder().
-			WithScheme(scheme.Scheme).
+			WithScheme(scheme.Get()).
 			WithObjects(&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"}}).
 			Build()
 		r := &TLSRouteReconciler{Client: cl, Log: logger}
@@ -286,7 +285,7 @@ func TestSetRouteConditionResolvedRefsCondition_TLSRoute(t *testing.T) {
 	// is correctly threaded through.
 	t.Run("cross-namespace without grant flips condition to false", func(t *testing.T) {
 		cl := fakeclient.NewClientBuilder().
-			WithScheme(scheme.Scheme).
+			WithScheme(scheme.Get()).
 			WithObjects(&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "other"}}).
 			Build()
 		r := &TLSRouteReconciler{Client: cl, Log: logger, enableReferenceGrant: true}
