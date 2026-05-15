@@ -1,0 +1,22 @@
+# Parameterized KongService manifest used by the kongroute_cross-namespace test.
+#
+# Required bindings:
+#   - svc_name: Name of the KongService.
+#   - svc_namespace: Namespace of the KongService.
+#   - cp_name: Name of the referenced KonnectGatewayControlPlane.
+#   - cp_namespace: Namespace of the referenced KonnectGatewayControlPlane (set equal
+#     to svc_namespace for the same-namespace case; the operator treats it as same-ns
+#     because nsRef == nsEnt).
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongService
+metadata:
+  name: ($svc_name)
+  namespace: ($svc_namespace)
+spec:
+  name: ($svc_name)
+  host: example.com
+  controlPlaneRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
+      name: ($cp_name)
+      namespace: ($cp_namespace)
