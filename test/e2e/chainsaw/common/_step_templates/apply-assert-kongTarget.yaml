@@ -1,0 +1,53 @@
+# Template for creating and asserting a KongTarget with an upstreamRef.
+#
+# Required bindings:
+#   - kong_target_name: Name of the KongTarget to create.
+#   - kong_target_namespace: Namespace where the KongTarget will be created.
+#   - kong_upstream_name: Name of the KongUpstream to reference.
+#   - pod_label_selector: Label selector for the pod to reference.
+#   - pod_namespace: Namespace where the pod is located.
+#   - target_port: The target address (host:port) for the KongTarget.
+#   - target_weight: The weight for the KongTarget (e.g., 100).
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-kong-target
+spec:
+  try:
+    - script:
+        env:
+          - name: POD_NAMESPACE
+            value: ($pod_namespace)
+          - name: POD_LABEL_SELECTOR
+            value: ($pod_label_selector)
+        content: |
+          kubectl wait pods --for=condition=Ready=True -l $POD_LABEL_SELECTOR -n $POD_NAMESPACE --timeout 5m0s 2>&1 > /dev/null
+          kubectl get pod -l $POD_LABEL_SELECTOR -n $POD_NAMESPACE -o json
+        outputs:
+          - name: upstream_pod_ip
+            # json_parse converts $stdout into an object we can instantly query via JMESPath
+            value: (json_parse($stdout).items[0].status.podIP)
+    - apply:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: KongTarget
+          metadata:
+            name: ($kong_target_name)
+            namespace: ($kong_target_namespace)
+          spec:
+            upstreamRef:
+              name: ($kong_upstream_name)
+            target: (join(':', [($upstream_pod_ip), (to_string($target_port))]))
+            weight: ($target_weight)
+    - assert:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: KongTarget
+          metadata:
+            name: ($kong_target_name)
+            namespace: ($kong_target_namespace)
+          status:
+            (conditions[?type == 'Programmed']):
+              - status: 'True'
+                reason: Programmed
+            (konnect.id != null): true

@@ -2725,6 +2725,11 @@ func (in *KongUpstreamAPISpec) DeepCopyInto(out *KongUpstreamAPISpec) {
 		*out = new(components.UpstreamClientCertificate)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.ClientCertificateRef != nil {
+		in, out := &in.ClientCertificateRef, &out.ClientCertificateRef
+		*out = new(commonv1alpha1.NamespacedRef)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.HashFallback != nil {
 		in, out := &in.HashFallback, &out.HashFallback
 		*out = new(components.HashFallback)
@@ -2885,7 +2890,7 @@ func (in *KongUpstreamStatus) DeepCopyInto(out *KongUpstreamStatus) {
 	*out = *in
 	if in.Konnect != nil {
 		in, out := &in.Konnect, &out.Konnect
-		*out = new(v1alpha2.KonnectEntityStatusWithControlPlaneRef)
+		*out = new(v1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs)
 		**out = **in
 	}
 	if in.Conditions != nil {

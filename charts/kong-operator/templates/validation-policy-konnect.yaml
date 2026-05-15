@@ -32,6 +32,38 @@ spec:
   validationActions:
   - Warn
   - Audit
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: client-certificate.kongupstream.configuration.konghq.com
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups:
+      - configuration.konghq.com
+      apiVersions:
+      - v1alpha1
+      operations:
+      - CREATE
+      - UPDATE
+      resources:
+      - kongupstreams
+  validations:
+  - expression: '!has(object.spec.client_certificate)'
+    message: spec.client_certificate is deprecated, use spec.clientCertificateRef
+      instead.
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: binding-client-certificate.kongupstream.configuration.konghq.com
+spec:
+  policyName: client-certificate.kongupstream.configuration.konghq.com
+  validationActions:
+  - Warn
+  - Audit
 
 {{- end -}}
 

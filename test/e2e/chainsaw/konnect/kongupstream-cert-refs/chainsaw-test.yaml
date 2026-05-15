@@ -1,0 +1,439 @@
+# KongUpstream cert refs end-to-end test.
+#
+# Verifies that the clientCertificateRef field on KongUpstream actually drives
+# Konnect to attach the client cert to the upstream targets.
+#
+# Flow:
+#   1. Stand up Konnect auth + KonnectGatewayControlPlane + KonnectExtension + DataPlane.
+#   2. Generate a CA + CA-signed server and client certs.
+#   3. Deploy an mTLS-protected upstream: Kong sidecar terminating TLS with
+#      ssl_verify_client on, proxying to kong/go-echo behind it.
+#   4. Retrieve the mTLS upstream pod IP for KongTarget.
+#   5. Apply a KongCertificate + KongCACertificate from the generated material.
+#   6. Apply a KongService (with caCertificateRefs but no clientCertificateRef) + KongRoute.
+#   7. Apply a KongUpstream (no cert refs) + KongTarget pointing to the pod IP.
+#   8. Verify HTTPS proxy call returns 4xx because the DataPlane has no client cert to present.
+#   9. Apply KongUpstream with clientCertificateRef.
+#  10. Verify HTTPS proxy call now returns 200.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: kongupstream-cert-refs
+spec:
+  bindings:
+    # Konnect environment.
+    - name: token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+
+    # Names derived from the auto-generated test namespace.
+    - name: test_name
+      value: ($namespace)
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_name
+      value: (join('-', [($test_name), 'konnect-auth']))
+    - name: cp_name
+      value: (join('-', [($test_name), 'cp']))
+    - name: extension_name
+      value: (join('-', [($test_name), 'ext']))
+    - name: dataplane_name
+      value: (join('-', [($test_name), 'dp']))
+
+    # mTLS upstream + cert material.
+    - name: upstream_name
+      value: mtls-upstream
+    - name: upstream_port
+      value: 8443
+    - name: upstream_host
+      value: (join('.', ['mtls-upstream', ($namespace), 'svc.cluster.local']))
+    - name: server_secret_name
+      value: mtls-server
+    - name: client_secret_name
+      value: mtls-client
+    - name: ca_secret_name
+      value: mtls-ca
+
+    # KongService / KongRoute / KongCertificate / KongCACertificate.
+    - name: kong_service_name
+      value: (join('-', [($test_name), 'service']))
+    - name: kong_route_name
+      value: (join('-', [($test_name), 'route']))
+    - name: kong_certificate_name
+      value: (join('-', [($test_name), 'kong-cert']))
+    - name: kong_ca_certificate_name
+      value: (join('-', [($test_name), 'kong-ca-cert']))
+
+    # KongUpstream / KongTarget.
+    - name: kong_upstream_name
+      value: ($upstream_host)
+    - name: kong_target_name
+      value: (join('-', [($test_name), 'target']))
+
+    - name: route_path
+      value: /echo
+
+  steps:
+    # Step 1: Konnect auth secret + KonnectAPIAuthConfiguration.
+    - name: Create-konnect-auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+        with:
+          bindings:
+            - name: auth_secret_name
+              value: ($auth_secret_name)
+            - name: auth_secret_namespace
+              value: ($namespace)
+            - name: konnect_token
+              value: ($token)
+
+    - name: Create-konnect-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+        with:
+          bindings:
+            - name: konnect_auth_name
+              value: ($auth_name)
+            - name: konnect_auth_namespace
+              value: ($namespace)
+            - name: auth_secret_name
+              value: ($auth_secret_name)
+            - name: auth_secret_namespace
+              value: ($namespace)
+            - name: konnect_url
+              value: ($konnect_url)
+
+    # Step 2: KonnectGatewayControlPlane + KonnectExtension + DataPlane.
+    - name: Create-konnect-control-plane
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectGatewayControlPlane.yaml
+        with:
+          bindings:
+            - name: cp_name
+              value: ($cp_name)
+            - name: cp_namespace
+              value: ($namespace)
+            - name: auth_name
+              value: ($auth_name)
+
+    - name: Create-konnect-extension
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectExtension.yaml
+        with:
+          bindings:
+            - name: extension_name
+              value: ($extension_name)
+            - name: extension_namespace
+              value: ($namespace)
+            - name: cp_name
+              value: ($cp_name)
+
+    - name: Create-data-plane
+      use:
+        template: ../../common/_step_templates/apply-assert-dataPlane.yaml
+        with:
+          bindings:
+            - name: dataplane_name
+              value: ($dataplane_name)
+            - name: dataplane_namespace
+              value: ($namespace)
+            - name: dataplane_image
+              value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.12')
+            - name: extension_name
+              value: ($extension_name)
+
+    # Step 3: Generate cert chain and create three Kubernetes Secrets.
+    - name: Generate-mtls-cert-chain-and-secrets
+      try:
+        - script:
+            env:
+              - name: CA_COMMON_NAME
+                value: kongupstream-cert-refs-ca
+              - name: SERVER_COMMON_NAME
+                value: ($upstream_host)
+              - name: SERVER_SANS
+                value: ($upstream_name)
+              - name: CLIENT_COMMON_NAME
+                value: konnect-dataplane-client
+            content: |
+              bash ../../common/scripts/generate_mtls_certificate_chain.sh
+            outputs:
+              - name: ca_cert
+                value: (json_parse($stdout).ca_cert)
+              - name: server_cert
+                value: (json_parse($stdout).server_cert)
+              - name: server_key
+                value: (json_parse($stdout).server_key)
+              - name: client_cert
+                value: (json_parse($stdout).client_cert)
+              - name: client_key
+                value: (json_parse($stdout).client_key)
+        # Server cert/key for Kong sidecar (TLS termination).
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: ($server_secret_name)
+                namespace: ($namespace)
+                labels:
+                  konghq.com/secret: "true"
+              type: kubernetes.io/tls
+              stringData:
+                tls.crt: ($server_cert)
+                tls.key: ($server_key)
+        # Client cert/key for the DataPlane (consumed via KongCertificate).
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: ($client_secret_name)
+                namespace: ($namespace)
+                labels:
+                  konghq.com/secret: "true"
+              type: kubernetes.io/tls
+              stringData:
+                tls.crt: ($client_cert)
+                tls.key: ($client_key)
+        # CA bundle for both Kong sidecar (client verification) and KongCACertificate.
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: ($ca_secret_name)
+                namespace: ($namespace)
+                labels:
+                  konghq.com/secret: "true"
+              stringData:
+                ca.crt: ($ca_cert)
+
+    # Step 4: Deploy the mTLS upstream (Kong sidecar + go-echo).
+    - name: Deploy-mtls-upstream
+      use:
+        template: ../../common/_step_templates/apply-assert-mtls-upstream.yaml
+        with:
+          bindings:
+            - name: upstream_name
+              value: ($upstream_name)
+            - name: upstream_namespace
+              value: ($namespace)
+            - name: upstream_port
+              value: ($upstream_port)
+            - name: kong_sidecar_image
+              value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.12')
+            - name: server_secret_name
+              value: ($server_secret_name)
+            - name: client_ca_secret_name
+              value: ($ca_secret_name)
+
+    # Step 6: Create KongCertificate + KongCACertificate from the chain.
+    - name: Create-kong-certificate
+      use:
+        template: ../../common/_step_templates/apply-assert-kongCertificate.yaml
+        with:
+          bindings:
+            - name: cert_name
+              value: ($kong_certificate_name)
+            - name: cert_namespace
+              value: ($namespace)
+            - name: secret_name
+              value: ($client_secret_name)
+            - name: secret_namespace
+              value: ($namespace)
+            - name: cp_name
+              value: ($cp_name)
+            - name: cp_ref_namespace
+              value: ($namespace)
+
+    - name: Create-kong-ca-certificate
+      use:
+        template: ../../common/_step_templates/apply-assert-kongCACertificate.yaml
+        with:
+          bindings:
+            - name: ca_cert_name
+              value: ($kong_ca_certificate_name)
+            - name: ca_cert_namespace
+              value: ($namespace)
+            - name: secret_name
+              value: ($ca_secret_name)
+            - name: secret_namespace
+              value: ($namespace)
+            - name: cp_name
+              value: ($cp_name)
+            - name: cp_ref_namespace
+              value: ($namespace)
+
+    # Step 7: KongService (with caCertificateRefs, no clientCertificateRef) + KongRoute.
+    - name: Create-kong-service-with-ca-cert-refs
+      try:
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongService
+              metadata:
+                name: ($kong_service_name)
+                namespace: ($namespace)
+              spec:
+                name: ($kong_service_name)
+                host: ($upstream_host)
+                port: ($upstream_port)
+                protocol: https
+                controlPlaneRef:
+                  type: konnectNamespacedRef
+                  konnectNamespacedRef:
+                    name: ($cp_name)
+                caCertificateRefs:
+                  - name: ($kong_ca_certificate_name)
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongService
+              metadata:
+                name: ($kong_service_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (konnect.id != null): true
+                (konnect.caCertificateIDs != null): true
+
+    - name: Create-kong-route
+      use:
+        template: ../../common/_step_templates/apply-assert-kongRoute.yaml
+        with:
+          bindings:
+            - name: kong_route_name
+              value: ($kong_route_name)
+            - name: kong_route_namespace
+              value: ($namespace)
+            - name: kong_service_name
+              value: ($kong_service_name)
+            - name: route_paths
+              value:
+                - ($route_path)
+
+    # Step 8: KongUpstream (no cert refs) + KongTarget.
+    - name: Create-kong-upstream-without-cert-refs
+      use:
+        template: ../../common/_step_templates/apply-assert-kongUpstream.yaml
+        with:
+          bindings:
+            - name: kong_upstream_name
+              value: ($kong_upstream_name)
+            - name: kong_upstream_namespace
+              value: ($namespace)
+            - name: cp_name
+              value: ($cp_name)
+
+    - name: Create-kong-target
+      use:
+        template: ../../common/_step_templates/apply-assert-kongTarget.yaml
+        with:
+          bindings:
+            - name: kong_target_name
+              value: ($kong_target_name)
+            - name: kong_target_namespace
+              value: ($namespace)
+            - name: kong_upstream_name
+              value: ($kong_upstream_name)
+            - name: pod_label_selector
+              value: (join('', ['app=', ($upstream_name)]))
+            - name: pod_namespace
+              value: ($namespace)
+            - name: target_port
+              value: ($upstream_port)
+            - name: target_weight
+              value: 100
+
+    # Step 9: Verify HTTPS proxy call FAILS (4xx) because DataPlane has no client cert.
+    - name: Verify-https-fails-without-cert-refs
+      description: |
+        Without clientCertificateRef on KongUpstream, the DataPlane cannot present
+        a client cert when talking to the upstream target. The upstream Kong sidecar's
+        ssl_verify_client=on causes nginx to return HTTP 400 (No required SSL
+        certificate was sent) when no client cert is presented.
+      use:
+        template: ../../common/_step_templates/verify-https-status-code.yaml
+        with:
+          bindings:
+            - name: dataplane_name
+              value: ($dataplane_name)
+            - name: dataplane_namespace
+              value: ($namespace)
+            - name: route_path
+              value: ($route_path)
+            - name: expected_status_regex
+              value: ^4..$
+            - name: proxy_port
+              value: "443"
+            - name: host_header
+              value: ""
+
+    # Step 10: Re-apply KongUpstream with clientCertificateRef.
+    - name: Update-kong-upstream-with-cert-ref
+      try:
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongUpstream
+              metadata:
+                name: ($kong_upstream_name)
+                namespace: ($namespace)
+              spec:
+                clientCertificateRef:
+                  name: ($kong_certificate_name)
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongUpstream
+              metadata:
+                name: ($kong_upstream_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (konnect.id != null): true
+                (konnect.certificateID != null): true
+
+    # Step 11: Verify HTTPS proxy call now SUCCEEDS (200).
+    - name: Verify-https-succeeds-with-cert-ref
+      description: |
+        With clientCertificateRef set on KongUpstream, the DataPlane now presents
+        the client cert when talking to the upstream target. The mTLS handshake
+        succeeds and the request is proxied through to go-echo, which returns 200
+        with its welcome body.
+      use:
+        template: ../../common/_step_templates/verify-https-status-code.yaml
+        with:
+          bindings:
+            - name: dataplane_name
+              value: ($dataplane_name)
+            - name: dataplane_namespace
+              value: ($namespace)
+            - name: route_path
+              value: ($route_path)
+            - name: expected_status_regex
+              value: ^200$
+            - name: proxy_port
+              value: "443"
+            - name: host_header
+              value: ""
+
+  catch:
+    # Capture debug snapshot on test failure for CI debugging.
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: konnect-kongupstream-cert-refs
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
