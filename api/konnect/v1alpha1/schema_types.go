@@ -267,9 +267,7 @@ type ClientIdentity struct {
 	//
 	//
 	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=4096
-	Certificate GatewaySecretReferenceOrLiteral `json:"certificate,omitzero"`
+	Certificate SensitiveDataSource `json:"certificate,omitzero"`
 	// A sensitive value containing the secret or a reference to a secret as a
 	// template string expression.
 	// If the value is provided as plain text, it is encrypted at rest and omitted
@@ -279,9 +277,7 @@ type ClientIdentity struct {
 	//
 	//
 	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=4096
-	Key GatewaySecret `json:"key,omitzero"`
+	Key SensitiveDataSource `json:"key,omitzero"`
 }
 
 // BackendMetadataUpdateIntervalSeconds The interval at which metadata is

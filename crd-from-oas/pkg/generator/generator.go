@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"encoding/base64"
 	"fmt"
 	"reflect"
 	"sort"
@@ -29,9 +30,10 @@ type Config struct {
 	// When ObjectRef has an Import config, it will be imported from an external
 	// package instead of being generated locally.
 	CommonTypes *config.CommonTypesConfig
-	// SecretRefEntities is the set of entity names that should generate an
-	// optional secret reference on the Spec (SourceType discriminator + SecretRef field).
-	SecretRefEntities map[string]bool
+	// SecretReferences maps entity names to their per-path secret reference configurations.
+	// When set, the designated OAS-derived string fields are replaced with SensitiveDataSource
+	// structs and per-entity resolvers are generated in the sdkops file.
+	SecretReferences map[string][]config.SecretReferenceConfig
 	// ReconcilerConfig maps entity names to reconciler generation configurations.
 	// When set, reconciler wiring files are generated for the entity.
 	ReconcilerConfig map[string]*config.ReconcilerConfig
@@ -74,6 +76,12 @@ type Generator struct {
 	// anyOfSchemaNames holds schema names whose Go type is an anyOf union struct.
 	// Fields referencing these schemas must be pointers so omitempty omits zero values.
 	anyOfSchemaNames map[string]bool
+	// sensitiveSchemaLeaves maps schema Go type name → JSON field name → secret reference config
+	// for leaf fields inside $ref'd schema types that become SensitiveDataSource.
+	sensitiveSchemaLeaves map[string]map[string]config.SecretReferenceConfig
+	// entityDirectSensitiveLeaves maps entity name → JSON field name → secret reference config
+	// for leaf fields that are direct children of the entity's apiSpec (depth 1 paths).
+	entityDirectSensitiveLeaves map[string]map[string]config.SecretReferenceConfig
 }
 
 // NewGenerator creates a new generator.
@@ -146,6 +154,225 @@ const (
 	defaultKonnectStatusType    = "KonnectEntityStatus"
 )
 
+// hasSecretRefs returns true if the entity has at least one configured SecretReference.
+func (g *Generator) hasSecretRefs(entityName string) bool {
+	return len(g.config.SecretReferences[entityName]) > 0
+}
+
+// hasAnySecretRefs returns true if any entity in the config has SecretReferences.
+func (g *Generator) hasAnySecretRefs() bool {
+	return len(g.config.SecretReferences) > 0
+}
+
+// buildSensitiveLeaves pre-computes per-schema and per-entity maps of sensitive
+// leaf fields so writeSchemaTypeField and generateCRDType can substitute the
+// correct SensitiveDataSource type for the right fields.
+func (g *Generator) buildSensitiveLeaves(parsed *parser.ParsedSpec) error {
+	g.sensitiveSchemaLeaves = make(map[string]map[string]config.SecretReferenceConfig)
+	g.entityDirectSensitiveLeaves = make(map[string]map[string]config.SecretReferenceConfig)
+
+	for entityName, refs := range g.config.SecretReferences {
+		for _, ref := range refs {
+			remainder := strings.TrimPrefix(ref.Path, "spec.apiSpec.")
+			segments := strings.Split(remainder, ".")
+
+			if len(segments) == 1 {
+				// Direct apiSpec field (e.g. "certificate")
+				if g.entityDirectSensitiveLeaves[entityName] == nil {
+					g.entityDirectSensitiveLeaves[entityName] = make(map[string]config.SecretReferenceConfig)
+				}
+				g.entityDirectSensitiveLeaves[entityName][segments[0]] = ref
+				continue
+			}
+
+			// Nested field — walk entity schema to find the containing schema type
+			entitySchema := findEntitySchema(parsed, entityName)
+			if entitySchema == nil {
+				return fmt.Errorf("entity %q: schema not found for secretReferences path %q", entityName, ref.Path)
+			}
+			if err := g.walkSensitiveLeafPath(entityName+"APISpec", entitySchema, segments, ref, parsed.Schemas); err != nil {
+				return fmt.Errorf("entity %q path %q: %w", entityName, ref.Path, err)
+			}
+		}
+	}
+	return nil
+}
+
+// walkSensitiveLeafPath walks the OAS schema tree to find the schema type that
+// contains the leaf field, then records it in g.sensitiveSchemaLeaves.
+// schemaGoTypeName is the Go type name of the current schema level.
+func (g *Generator) walkSensitiveLeafPath(
+	schemaGoTypeName string,
+	schema *parser.Schema,
+	segments []string,
+	ref config.SecretReferenceConfig,
+	schemas map[string]*parser.Schema,
+) error {
+	targetJSON := segments[0]
+
+	// Find the property matching the first segment
+	var targetProp *parser.Property
+	for i, prop := range schema.Properties {
+		if jsonName(prop.Name) == targetJSON || prop.Name == targetJSON {
+			targetProp = schema.Properties[i]
+			break
+		}
+	}
+	if targetProp == nil {
+		return fmt.Errorf("field %q not found in schema %q", targetJSON, schemaGoTypeName)
+	}
+
+	if len(segments) == 1 {
+		// Leaf — record against the containing schema
+		if g.sensitiveSchemaLeaves[schemaGoTypeName] == nil {
+			g.sensitiveSchemaLeaves[schemaGoTypeName] = make(map[string]config.SecretReferenceConfig)
+		}
+		g.sensitiveSchemaLeaves[schemaGoTypeName][targetJSON] = ref
+		return nil
+	}
+
+	// Navigate deeper
+	if targetProp.RefName != "" && !targetProp.IsReference {
+		refSchema := schemas[targetProp.RefName]
+		if refSchema == nil {
+			return fmt.Errorf("schema %q not found", targetProp.RefName)
+		}
+		return g.walkSensitiveLeafPath(fixInitialisms(targetProp.RefName), refSchema, segments[1:], ref, schemas)
+	}
+
+	if len(targetProp.Properties) > 0 {
+		// Inline object — type name is goFieldName of the property
+		inlineSchema := &parser.Schema{Properties: targetProp.Properties}
+		return g.walkSensitiveLeafPath(goFieldName(targetProp.Name), inlineSchema, segments[1:], ref, schemas)
+	}
+
+	return fmt.Errorf("cannot navigate through non-ref, non-inline field %q", targetJSON)
+}
+
+// findEntitySchema finds the request body schema for the given entity name.
+func findEntitySchema(parsed *parser.ParsedSpec, entityName string) *parser.Schema {
+	for name, schema := range parsed.RequestBodies {
+		if parser.GetEntityNameFromType(name) == entityName {
+			return schema
+		}
+	}
+	return nil
+}
+
+// isSchemaFieldSensitiveLeaf returns true if the given JSON field name within
+// the given schema Go type name is a configured sensitive leaf.
+func (g *Generator) isSchemaFieldSensitiveLeaf(schemaGoTypeName, jsonFieldName string) bool {
+	leaves, ok := g.sensitiveSchemaLeaves[schemaGoTypeName]
+	if !ok {
+		return false
+	}
+	_, found := leaves[jsonFieldName]
+	return found
+}
+
+// isEntityAPISpecFieldSensitiveLeaf returns true if the given JSON field name
+// is a direct apiSpec-level sensitive leaf for the given entity.
+func (g *Generator) isEntityAPISpecFieldSensitiveLeaf(entityName, jsonFieldName string) bool {
+	_, found := g.entityAPISpecSensitiveLeaf(entityName, jsonFieldName)
+	return found
+}
+
+// isSensitiveMatchField returns true if the given getForUID objectField path
+// (e.g. "Spec.APISpec.Certificate") resolves to a SensitiveDataSource leaf
+// for the given entity, so the template can emit matchSensitiveDataSourceField
+// instead of matchStringField.
+func (g *Generator) isSensitiveMatchField(entityName, objectField string) bool {
+	// Strip "Spec.APISpec." prefix and convert last segment to JSON name.
+	const prefix = "Spec.APISpec."
+	if !strings.HasPrefix(objectField, prefix) {
+		return false
+	}
+	remainder := strings.TrimPrefix(objectField, prefix)
+	segments := strings.Split(remainder, ".")
+	if len(segments) == 1 {
+		return g.isEntityAPISpecFieldSensitiveLeaf(entityName, jsonName(segments[0]))
+	}
+	// Nested: last segment is the leaf field; parent is a schema type.
+	// Use sensitiveSchemaLeaves keyed by the parent's Go type name.
+	parentGoType := goFieldName(segments[len(segments)-2])
+	leafJSON := jsonName(segments[len(segments)-1])
+	return g.isSchemaFieldSensitiveLeaf(parentGoType, leafJSON)
+}
+
+// pathToGoSelector converts a secretReference path (e.g. "spec.apiSpec.tls.clientIdentity.certificate")
+// into a Go field selector string (e.g. "TLS.ClientIdentity.Certificate") by stripping the
+// "spec.apiSpec." prefix and applying goFieldName to each remaining segment.
+func pathToGoSelector(path string) string {
+	remainder := strings.TrimPrefix(path, "spec.apiSpec.")
+	segments := strings.Split(remainder, ".")
+	for i, seg := range segments {
+		segments[i] = goFieldName(seg)
+	}
+	return strings.Join(segments, ".")
+}
+
+func pathToJSONSegments(path string) []string {
+	remainder := strings.TrimPrefix(path, "spec.apiSpec.")
+	if remainder == "" {
+		return nil
+	}
+	return strings.Split(remainder, ".")
+}
+
+// SecretReferenceForTemplate holds per-path secret reference data rendered inside
+// the sdkOpsTemplate and sdkOpsRootUnionTemplate.
+type SecretReferenceForTemplate struct {
+	// GoFieldSelector is the Go selector string relative to obj.Spec.APISpec,
+	// e.g. "TLS.ClientIdentity.Certificate".
+	GoFieldSelector string
+	// SecretKey is the data key to read from the referenced Kubernetes Secret.
+	SecretKey string
+	// Path is the original dot-separated config path, e.g. "spec.apiSpec.tls.clientIdentity.certificate".
+	Path string
+}
+
+// templateSecretReferences returns the list of SecretReferenceForTemplate for the
+// given entity, ready for use inside Go text/templates.
+func (g *Generator) templateSecretReferences(entityName string) []SecretReferenceForTemplate {
+	refs := g.config.SecretReferences[entityName]
+	result := make([]SecretReferenceForTemplate, 0, len(refs))
+	for _, ref := range refs {
+		result = append(result, SecretReferenceForTemplate{
+			GoFieldSelector: pathToGoSelector(ref.Path),
+			SecretKey:       ref.Key,
+			Path:            ref.Path,
+		})
+	}
+	return result
+}
+
+// buildSDKOpsBase64Fields returns the list of sdkOpsBase64Field for the given entity.
+// TODO: Remove Base64 encoding when API starts accepting raw values.
+// TODO: https://github.com/Kong/kong-operator/issues/4304
+func (g *Generator) buildSDKOpsBase64Fields(entityName string) []sdkOpsBase64Field {
+	refs := g.config.SecretReferences[entityName]
+	result := make([]sdkOpsBase64Field, 0, len(refs))
+	for _, ref := range refs {
+		if !ref.Base64Encoding {
+			continue
+		}
+		result = append(result, sdkOpsBase64Field{
+			Label: ref.Path,
+			Path:  pathToJSONSegments(ref.Path),
+		})
+	}
+	return result
+}
+
+func (g *Generator) entityAPISpecSensitiveLeaf(entityName, jsonFieldName string) (config.SecretReferenceConfig, bool) {
+	leaves, ok := g.entityDirectSensitiveLeaves[entityName]
+	if !ok {
+		return config.SecretReferenceConfig{}, false
+	}
+	ref, found := leaves[jsonFieldName]
+	return ref, found
+}
+
 // Generate generates Go CRD types from parsed schemas.
 func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error) {
 	var files []GeneratedFile
@@ -159,6 +386,11 @@ func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error)
 		if len(schema.AnyOf) > 0 {
 			g.anyOfSchemaNames[name] = true
 		}
+	}
+
+	// Pre-compute sensitive leaf maps so field emission can substitute types.
+	if err := g.buildSensitiveLeaves(parsed); err != nil {
+		return nil, fmt.Errorf("failed to build sensitive leaf maps: %w", err)
 	}
 
 	// Generate types for each request body (these are the main CRD types).
@@ -970,19 +1202,34 @@ func (g *Generator) schemaTypesImports(refNames []string, parsed *parser.ParsedS
 }
 
 func (g *Generator) writeSchemaTypeField(buf *strings.Builder, prop *parser.Property, typeName string, fieldCursor *config.FieldConfig) {
+	jsonFieldName := jsonName(prop.Name)
+	isSensitive := g.isSchemaFieldSensitiveLeaf(typeName, jsonFieldName)
+
 	buf.WriteString(formatComment(prop.Description))
 	buf.WriteString("\n")
 	buf.WriteString("\t//\n")
-	for _, tag := range KubebuilderTags(prop, fieldCursor) {
-		fmt.Fprintf(buf, "\t// %s\n", tag)
+	if isSensitive {
+		// Sensitive leaf: emit only required/optional; string validation tags move
+		// to the SensitiveDataSource.Value sub-field via the common type definition.
+		if prop.Required && !prop.Nullable {
+			fmt.Fprintf(buf, "\t// %s\n", markerRequired())
+		} else {
+			fmt.Fprintf(buf, "\t// %s\n", markerOptional())
+		}
+	} else {
+		for _, tag := range KubebuilderTags(prop, fieldCursor) {
+			fmt.Fprintf(buf, "\t// %s\n", tag)
+		}
 	}
 	goType := g.goType(prop)
-	if prop.RefName != "" && g.anyOfSchemaNames[prop.RefName] {
+	switch {
+	case isSensitive:
+		goType = "SensitiveDataSource"
+	case prop.RefName != "" && g.anyOfSchemaNames[prop.RefName]:
 		goType = "*" + fixInitialisms(prop.RefName)
-	}
-	// For schema types, oneOf properties use entity-prefixed type names to avoid
-	// package-scoped collisions (e.g. bare "Config" would clash across entities).
-	if len(prop.OneOf) > 0 {
+	case len(prop.OneOf) > 0:
+		// For schema types, oneOf properties use entity-prefixed type names to avoid
+		// package-scoped collisions (e.g. bare "Config" would clash across entities).
 		goType = "*" + typeName + goFieldName(prop.Name)
 	}
 	fmt.Fprintf(buf, "\t%s %s `json:\"%s\"`\n", goFieldName(prop.Name), goType, jsonTag(prop, goType))
@@ -1125,18 +1372,28 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 	apiSpecCursor := g.getAPISpecCursor(entityName)
 
 	// Create a closure that passes the apiSpec-level cursor to KubebuilderTags.
+	// For sensitive leaf fields the OAS string markers are suppressed since the
+	// SensitiveDataSource struct carries its own validation.
 	kubebuilderTagsWithConfig := func(prop *parser.Property) []string {
+		if g.isEntityAPISpecFieldSensitiveLeaf(entityName, jsonName(prop.Name)) {
+			if prop.Required && !prop.Nullable {
+				return []string{markerRequired()}
+			}
+			return []string{markerOptional()}
+		}
 		return KubebuilderTags(prop, apiSpecCursor)
 	}
-
-	hasOptionalSecretRef := g.config.SecretRefEntities[entityName]
 
 	// In the CRD APISpec, property-level oneOf types are rendered as a pointer
 	// to a generated union type. The union type is emitted in the same package,
 	// so its name must be prefixed with the entity name to avoid package-scoped
 	// collisions (e.g. a bare "Config" type would clash across entities).
 	// anyOf union refs also need pointer treatment so omitempty omits zero values.
+	// Sensitive leaf fields are emitted as SensitiveDataSource regardless of their OAS type.
 	goTypeInCRD := func(prop *parser.Property) string {
+		if g.isEntityAPISpecFieldSensitiveLeaf(entityName, jsonName(prop.Name)) {
+			return "SensitiveDataSource"
+		}
 		if len(prop.OneOf) > 0 {
 			return "*" + entityName + goFieldName(prop.Name)
 		}
@@ -1189,10 +1446,10 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 	tmpl := template.Must(template.New("crd").Funcs(funcMap).Parse(crdTypeTemplate))
 
 	// Determine whether we need the ObjectRef import: either for dependencies/refs,
-	// optional secret ref's NamespacedRef type, configured inter-CR references, or
+	// sensitive data source SecretRef type, configured inter-CR references, or
 	// a parentRef override field.
 	objectRefImport := g.objectRefImportIfNeeded(schema)
-	if objectRefImport == nil && hasOptionalSecretRef && g.objectRefImported() {
+	if objectRefImport == nil && g.hasSecretRefs(entityName) && g.objectRefImported() {
 		objectRefImport = g.config.CommonTypes.ObjectRef.Import
 	}
 	if objectRefImport == nil && g.entityHasReferences(entityName) && g.objectRefImported() {
@@ -1238,7 +1495,6 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		NeedsJSONImport           bool
 		HasUnionTypes             bool
 		ObjectRefImport           *config.ImportConfig
-		HasOptionalSecretRef      bool
 		HasRootReconciler         bool
 		ImmediateParentDependency *parser.Dependency
 		Categories                []string
@@ -1256,7 +1512,6 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		NeedsJSONImport:           schemaUsesJSON(g, schema),
 		HasUnionTypes:             hasUnionTypes,
 		ObjectRefImport:           objectRefImport,
-		HasOptionalSecretRef:      hasOptionalSecretRef,
 		HasRootReconciler:         hasRootReconciler,
 		ImmediateParentDependency: immediateParentDep,
 		Categories:                categories,
@@ -2339,20 +2594,35 @@ func (g *Generator) generateCommonTypes() (string, error) {
 	tmpl := template.Must(template.New("commonTypes").Parse(commonTypesTemplate))
 
 	var buf strings.Builder
+	hasSecretRefs := g.hasAnySecretRefs()
+	var objectRefImport *config.ImportConfig
+	if g.objectRefImported() && g.config.CommonTypes != nil && g.config.CommonTypes.ObjectRef != nil {
+		objectRefImport = g.config.CommonTypes.ObjectRef.Import
+	}
+	// NamespacedRefTypeName is the qualified Go type for *NamespacedRef used inside
+	// the SensitiveDataSource struct. When ObjectRef is imported it needs the alias prefix.
+	namedRefTypeName := "NamespacedRef"
+	if g.objectRefImported() && objectRefImport != nil {
+		namedRefTypeName = objectRefImport.Alias + ".NamespacedRef"
+	}
 	data := struct {
-		APIVersion           string
-		KonnectStatusImport  *config.ImportConfig
-		KonnectStatusType    string
-		ObjectRefImported    bool
-		Namespaced           bool
-		HasSecretRefEntities bool
+		APIVersion            string
+		KonnectStatusImport   *config.ImportConfig
+		KonnectStatusType     string
+		ObjectRefImported     bool
+		ObjectRefImport       *config.ImportConfig
+		Namespaced            bool
+		HasSecretRefEntities  bool
+		NamespacedRefTypeName string
 	}{
-		APIVersion:           g.config.APIVersion,
-		KonnectStatusImport:  defaultKonnectStatusImport(),
-		KonnectStatusType:    defaultKonnectStatusQualifiedTypeName(),
-		ObjectRefImported:    g.objectRefImported(),
-		Namespaced:           g.objectRefNamespaced(),
-		HasSecretRefEntities: len(g.config.SecretRefEntities) > 0,
+		APIVersion:            g.config.APIVersion,
+		KonnectStatusImport:   defaultKonnectStatusImport(),
+		KonnectStatusType:     defaultKonnectStatusQualifiedTypeName(),
+		ObjectRefImported:     g.objectRefImported(),
+		ObjectRefImport:       objectRefImport,
+		Namespaced:            g.objectRefNamespaced(),
+		HasSecretRefEntities:  hasSecretRefs,
+		NamespacedRefTypeName: namedRefTypeName,
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
@@ -2565,6 +2835,16 @@ type sdkOpsBoolField struct {
 	Path  []string
 }
 
+// sdkOpsBase64Field represents a sensitive field path that must be base64
+// encoded before the SDK request is unmarshaled into its target type.
+//
+// TODO: Remove Base64 encoding when API starts accepting raw values.
+// TODO: https://github.com/Kong/kong-operator/issues/4304
+type sdkOpsBase64Field struct {
+	Label string
+	Path  []string
+}
+
 // sdkOpsTestField represents a field to populate in the generated test.
 type sdkOpsTestField struct {
 	FieldName     string
@@ -2641,9 +2921,10 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		EntityName              string
 		Imports                 []*sdkOpsImport
 		BoolFields              []sdkOpsBoolField
+		Base64Fields            []sdkOpsBase64Field
 		Methods                 []sdkOpsMethod
 		NeedsClient             bool
-		HasSecretRef            bool
+		SecretReferences        []SecretReferenceForTemplate
 		HasReferences           bool
 		References              []TemplateReferenceConfig
 		HasParentRefReplacement bool
@@ -2654,9 +2935,10 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		EntityName:              entityName,
 		Imports:                 imports,
 		BoolFields:              boolFields,
+		Base64Fields:            g.buildSDKOpsBase64Fields(entityName),
 		Methods:                 standardMethods,
 		NeedsClient:             opsConfig.RequireClient,
-		HasSecretRef:            g.config.SecretRefEntities[entityName],
+		SecretReferences:        g.templateSecretReferences(entityName),
 		HasReferences:           g.entityHasReferences(entityName),
 		References:              g.templateReferences(entityName),
 		HasParentRefReplacement: hasParentRefReplacement,
@@ -2848,25 +3130,27 @@ func (g *Generator) generateRootUnionSDKOps(
 	tmpl := template.Must(template.New("sdkops-root-union").Parse(sdkOpsRootUnionTemplate))
 	var buf strings.Builder
 	data := struct {
-		APIVersion    string
-		EntityName    string
-		UnionTypeName string
-		Imports       []*sdkOpsImport
-		BoolFields    []sdkOpsBoolField
-		Methods       []sdkOpsRootUnionMethod
-		Variants      []sdkOpsRootUnionVariant
-		NeedsClient   bool
-		HasSecretRef  bool
+		APIVersion       string
+		EntityName       string
+		UnionTypeName    string
+		Imports          []*sdkOpsImport
+		BoolFields       []sdkOpsBoolField
+		Base64Fields     []sdkOpsBase64Field
+		Methods          []sdkOpsRootUnionMethod
+		Variants         []sdkOpsRootUnionVariant
+		NeedsClient      bool
+		SecretReferences []SecretReferenceForTemplate
 	}{
-		APIVersion:    g.config.APIVersion,
-		EntityName:    entityName,
-		UnionTypeName: rootUnionTypeName,
-		Imports:       imports,
-		BoolFields:    boolFields,
-		Methods:       rootUnionMethods,
-		Variants:      variants,
-		NeedsClient:   opsConfig.RequireClient,
-		HasSecretRef:  g.config.SecretRefEntities[entityName],
+		APIVersion:       g.config.APIVersion,
+		EntityName:       entityName,
+		UnionTypeName:    rootUnionTypeName,
+		Imports:          imports,
+		BoolFields:       boolFields,
+		Base64Fields:     g.buildSDKOpsBase64Fields(entityName),
+		Methods:          rootUnionMethods,
+		Variants:         variants,
+		NeedsClient:      opsConfig.RequireClient,
+		SecretReferences: g.templateSecretReferences(entityName),
 	}
 	if err := tmpl.Execute(&buf, data); err != nil {
 		return "", err
@@ -2883,7 +3167,7 @@ func (g *Generator) generateSDKOpsTest(entityName string, schema *parser.Schema,
 
 	testMethods := make([]sdkOpsTestMethod, 0, len(methods))
 	for _, method := range methods {
-		testFields := g.buildSDKOpsTestFields(schema.Properties, method)
+		testFields := g.buildSDKOpsTestFields(entityName, schema.Properties, method)
 		testMethods = append(testMethods, sdkOpsTestMethod{
 			sdkOpsMethod: method,
 			ExpectError:  len(testFields) == 0,
@@ -2919,10 +3203,25 @@ func (g *Generator) generateSDKOpsTest(entityName string, schema *parser.Schema,
 	return buf.String(), nil
 }
 
-func (g *Generator) buildSDKOpsTestFields(props []*parser.Property, method sdkOpsMethod) []sdkOpsTestField {
+func (g *Generator) buildSDKOpsTestFields(entityName string, props []*parser.Property, method sdkOpsMethod) []sdkOpsTestField {
 	testFields := make([]sdkOpsTestField, 0, len(props))
 	for _, prop := range props {
 		if skipProperty(prop) || prop.IsReference || shouldSkipSDKOpsTestField(prop, method) {
+			continue
+		}
+		if ref, ok := g.entityAPISpecSensitiveLeaf(entityName, jsonName(prop.Name)); ok {
+			expectedValue := "test-value"
+			if ref.Base64Encoding {
+				expectedValue = base64.StdEncoding.EncodeToString([]byte(expectedValue))
+			}
+			// SensitiveDataSource field: emit an inline value; after flattenSensitiveData
+			// the JSON payload contains just the plain string.
+			testFields = append(testFields, sdkOpsTestField{
+				FieldName:     goFieldName(prop.Name),
+				JSONName:      jsonName(prop.Name),
+				TestValue:     `SensitiveDataSource{Type: SensitiveDataSourceTypeInline, Value: new("test-value")}`,
+				ExpectedValue: fmt.Sprintf("%q", expectedValue),
+			})
 			continue
 		}
 		goType := g.goType(prop)

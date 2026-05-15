@@ -98,8 +98,6 @@ func newTestCertSecret() *corev1.Secret {
 }
 
 func TestEnsureKonnectCertificate(t *testing.T) {
-	secretRefType := konnectv1alpha1.SensitiveDataSourceTypeSecretRef
-
 	tests := []struct {
 		name         string
 		extraObjs    []client.Object
@@ -123,10 +121,9 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 				require.NotNil(t, cert.Spec.GatewayRef.NamespacedRef)
 				assert.Equal(t, "test-keg", cert.Spec.GatewayRef.NamespacedRef.Name)
 				assert.Nil(t, cert.Spec.GatewayRef.KonnectID)
-				require.NotNil(t, cert.Spec.Type)
-				assert.Equal(t, konnectv1alpha1.SensitiveDataSourceTypeSecretRef, *cert.Spec.Type)
-				require.NotNil(t, cert.Spec.SecretRef)
-				assert.Equal(t, testCertSecretName, cert.Spec.SecretRef.Name)
+				assert.Equal(t, konnectv1alpha1.SensitiveDataSourceTypeSecretRef, cert.Spec.APISpec.Certificate.Type)
+				require.NotNil(t, cert.Spec.APISpec.Certificate.SecretRef)
+				assert.Equal(t, testCertSecretName, cert.Spec.APISpec.Certificate.SecretRef.Name)
 				require.Len(t, cert.OwnerReferences, 1)
 				assert.Equal(t, "test-dp", cert.OwnerReferences[0].Name)
 				assert.Equal(t, types.UID("egdp-uid-123"), cert.OwnerReferences[0].UID)
@@ -153,8 +150,12 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 							Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
 							NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "test-keg"},
 						},
-						Type:      &secretRefType,
-						SecretRef: &commonv1alpha1.NamespacedRef{Name: testCertSecretName},
+						APISpec: konnectv1alpha1.KonnectEventDataPlaneCertificateAPISpec{
+							Certificate: konnectv1alpha1.SensitiveDataSource{
+								Type:      konnectv1alpha1.SensitiveDataSourceTypeSecretRef,
+								SecretRef: &commonv1alpha1.NamespacedRef{Name: testCertSecretName},
+							},
+						},
 					},
 					Status: konnectv1alpha1.KonnectEventDataPlaneCertificateStatus{
 						Conditions: []metav1.Condition{
@@ -198,8 +199,12 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 							Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
 							NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "test-keg"},
 						},
-						Type:      &secretRefType,
-						SecretRef: &commonv1alpha1.NamespacedRef{Name: testCertSecretName},
+						APISpec: konnectv1alpha1.KonnectEventDataPlaneCertificateAPISpec{
+							Certificate: konnectv1alpha1.SensitiveDataSource{
+								Type:      konnectv1alpha1.SensitiveDataSourceTypeSecretRef,
+								SecretRef: &commonv1alpha1.NamespacedRef{Name: testCertSecretName},
+							},
+						},
 					},
 					Status: konnectv1alpha1.KonnectEventDataPlaneCertificateStatus{
 						Conditions: []metav1.Condition{

@@ -2267,6 +2267,30 @@ func TestGenerateSDKOps_NormalizesBooleanFields(t *testing.T) {
 	assert.Contains(t, content, "if err := normalizePortalSDKOpsBoolFields(pm); err != nil {")
 }
 
+func TestGenerateSDKOps_OmitsDoubleBlankLineBeforeMarshalPayload(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	schema := &parser.Schema{
+		Properties: []*parser.Property{
+			{
+				Name: "name",
+				Type: "string",
+			},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {
+				Path: "github.com/Kong/sdk-konnect-go/models/components.CreateEventGatewayListenerRequest",
+			},
+		},
+	}
+
+	content, err := g.generateSDKOps("EventGatewayListener", schema, opsConfig)
+	require.NoError(t, err)
+	assert.Contains(t, content, ")\n\nfunc (s *EventGatewayListenerAPISpec) marshalSDKOpsPayload() ([]byte, error) {")
+	assert.NotContains(t, content, ")\n\n\nfunc (s *EventGatewayListenerAPISpec) marshalSDKOpsPayload() ([]byte, error) {")
+}
+
 func TestGenerateSDKOps_RootUnionUsesSelectedVariantPayload(t *testing.T) {
 	g := NewGenerator(Config{APIVersion: "v1alpha1"})
 	schema := &parser.Schema{
@@ -2356,6 +2380,85 @@ func TestGenerateSDKOps_RootUnionUsesSelectedVariantPayload(t *testing.T) {
 	assert.Contains(t, content, "}\n\n// ToCreate")
 	assert.NotContains(t, content, `selected["dcr_config"]`)
 	assert.NotContains(t, content, "target.DcrConfig = &unionValue")
+}
+
+func TestGenerateSDKOps_RootUnionOmitsDoubleBlankLineBeforeMarshalPayload(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	schema := &parser.Schema{
+		OneOf: []*parser.Property{
+			{
+				Name:    "CreateDcrProviderRequestAuth0",
+				RefName: "CreateDcrProviderRequestAuth0",
+				Properties: []*parser.Property{
+					{
+						Name:     "provider_config",
+						RefName:  "CreateDcrConfigAuth0InRequest",
+						Required: true,
+					},
+				},
+			},
+			{
+				Name:    "CreateDcrProviderRequestHttp",
+				RefName: "CreateDcrProviderRequestHttp",
+				Properties: []*parser.Property{
+					{
+						Name:     "provider_config",
+						RefName:  "CreateDcrConfigHTTPInRequest",
+						Required: true,
+					},
+				},
+			},
+		},
+		Properties: []*parser.Property{
+			{
+				Name: "auth0",
+				Type: "object",
+				Properties: []*parser.Property{
+					{
+						Name: "provider_config",
+						Type: "object",
+						Properties: []*parser.Property{
+							{
+								Name: "issuer",
+								Type: "string",
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "http",
+				Type: "object",
+				Properties: []*parser.Property{
+					{
+						Name: "provider_config",
+						Type: "object",
+						Properties: []*parser.Property{
+							{
+								Name: "endpoint",
+								Type: "string",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {
+				Path: "github.com/Kong/sdk-konnect-go/models/components.CreateDcrProviderRequest",
+			},
+			"update": {
+				Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateDcrProviderRequest",
+			},
+		},
+	}
+
+	content, err := g.generateSDKOps("DcrProvider", schema, opsConfig)
+	require.NoError(t, err)
+	assert.Contains(t, content, ")\n\nfunc (s *DcrProviderAPISpec) marshalSDKOpsPayload() (map[string]any, error) {")
+	assert.NotContains(t, content, ")\n\n\nfunc (s *DcrProviderAPISpec) marshalSDKOpsPayload() (map[string]any, error) {")
 }
 
 func TestGenerateSDKOps_NestedUnionFlattensSelectedPayload(t *testing.T) {
@@ -2476,6 +2579,49 @@ func TestGenerateSDKOpsTest_AssertsNormalizedPayload(t *testing.T) {
 	assert.Contains(t, content, `RBACEnabled: "Enabled"`)
 	assert.Contains(t, content, `require.Equal(t, true, payload["rbac_enabled"])`)
 	assert.Contains(t, content, `require.Equal(t, "test-value", payload["name"])`)
+}
+
+func TestGenerateSDKOpsTest_Base64EncodesConfiguredSensitiveFields(t *testing.T) {
+	g := NewGenerator(Config{
+		APIVersion: "v1alpha1",
+		SecretReferences: map[string][]config.SecretReferenceConfig{
+			"EventGatewayBackendCluster": {
+				{
+					Path:           "spec.apiSpec.key",
+					Type:           "Secret",
+					Key:            "tls.key",
+					Base64Encoding: true,
+				},
+			},
+		},
+	})
+	schema := &parser.Schema{
+		Properties: []*parser.Property{
+			{
+				Name: "key",
+				Type: "string",
+			},
+		},
+	}
+	parsed := &parser.ParsedSpec{
+		RequestBodies: map[string]*parser.Schema{
+			"CreateEventGatewayBackendClusterRequest": schema,
+		},
+		Schemas: map[string]*parser.Schema{},
+	}
+	require.NoError(t, g.buildSensitiveLeaves(parsed))
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {
+				Path: "github.com/Kong/sdk-konnect-go/models/components.CreateBackendClusterRequest",
+			},
+		},
+	}
+
+	content, err := g.generateSDKOpsTest("EventGatewayBackendCluster", schema, opsConfig)
+	require.NoError(t, err)
+	assert.Contains(t, content, `Key: SensitiveDataSource{Type: SensitiveDataSourceTypeInline, Value: new("test-value")}`)
+	assert.Contains(t, content, `require.Equal(t, "dGVzdC12YWx1ZQ==", payload["key"])`)
 }
 
 func TestGenerateSDKOpsTest_SupportsPointerAndNamedFields(t *testing.T) {
@@ -3863,12 +4009,18 @@ func TestGenerateOpsUpdate_NonRootEntityWithParentTypeOverride(t *testing.T) {
 
 func TestGenerateSDKOps_ClientRequestMethodsResolveSecretRef(t *testing.T) {
 	g := NewGenerator(Config{
-		APIVersion:        "v1alpha1",
-		SecretRefEntities: map[string]bool{"KonnectEventDataPlaneCertificate": true},
+		APIVersion: "v1alpha1",
+		SecretReferences: map[string][]config.SecretReferenceConfig{
+			"KonnectEventDataPlaneCertificate": {
+				{Path: "spec.apiSpec.certificate", Type: "Secret", Key: "tls.crt"},
+				{Path: "spec.apiSpec.key", Type: "Secret", Key: "tls.key", Base64Encoding: true},
+			},
+		},
 	})
 	schema := &parser.Schema{
 		Properties: []*parser.Property{
 			{Name: "certificate", Type: "string"},
+			{Name: "key", Type: "string"},
 			{Name: "description", Type: "string"},
 			{Name: "name", Type: "string"},
 		},
@@ -3884,12 +4036,23 @@ func TestGenerateSDKOps_ClientRequestMethodsResolveSecretRef(t *testing.T) {
 	content, err := g.generateSDKOps("KonnectEventDataPlaneCertificate", schema, opsConfig)
 	require.NoError(t, err)
 	assert.Contains(t, content, `"context"`)
+	assert.Contains(t, content, `"encoding/base64"`)
 	assert.Contains(t, content, `corev1 "k8s.io/api/core/v1"`)
 	assert.Contains(t, content, `"sigs.k8s.io/controller-runtime/pkg/client"`)
+	assert.Contains(t, content, "var KonnectEventDataPlaneCertificateSDKOpsBase64Fields = []KonnectEventDataPlaneCertificateSDKOpsBase64Field")
+	assert.Contains(t, content, `Label: "spec.apiSpec.key"`)
+	assert.Contains(t, content, `return base64.StdEncoding.WithPadding(base64.NoPadding).EncodeToString([]byte(typed)), nil`)
 	assert.Contains(t, content, "func (obj *KonnectEventDataPlaneCertificate) sdkOpsAPISpec(ctx context.Context, cl client.Client)")
-	assert.Contains(t, content, "if obj.Spec.Type != nil && *obj.Spec.Type == SensitiveDataSourceTypeSecretRef {")
+	assert.Contains(t, content, "src := apiSpec.Certificate")
+	assert.Contains(t, content, "src := apiSpec.Key")
+	assert.Contains(t, content, "if src.Type == SensitiveDataSourceTypeSecretRef {")
 	assert.Contains(t, content, `secretBytes, ok := secret.Data["tls.crt"]`)
-	assert.Contains(t, content, "apiSpec.Certificate = string(secretBytes)")
+	assert.Contains(t, content, `secretBytes, ok := secret.Data["tls.key"]`)
+	assert.Contains(t, content, "apiSpec.Certificate.Value = &resolved")
+	assert.Contains(t, content, "apiSpec.Key.Value = &resolved")
+	assert.Contains(t, content, "payload = flattenSensitiveData(payload)")
+	assert.Contains(t, content, "if err := encodeKonnectEventDataPlaneCertificateSDKOpsBase64Fields(pm); err != nil {")
+	assert.Contains(t, content, "failed to base64 encode KonnectEventDataPlaneCertificateAPISpec SDK payload")
 	assert.Contains(t, content, "func (obj *KonnectEventDataPlaneCertificate) ToCreateEventGatewayDataPlaneCertificateRequest(ctx context.Context, cl client.Client)")
 	assert.Contains(t, content, "return spec.ToCreateEventGatewayDataPlaneCertificateRequest()")
 	assert.Contains(t, content, "func (obj *KonnectEventDataPlaneCertificate) ToUpdateEventGatewayDataPlaneCertificateRequest(ctx context.Context, cl client.Client)")

@@ -11,7 +11,7 @@ import (
 
 func TestKonnectEventDataPlaneCertificateAPISpec_ToCreateEventGatewayDataPlaneCertificateRequest(t *testing.T) {
 	spec := &KonnectEventDataPlaneCertificateAPISpec{
-		Certificate: "test-value",
+		Certificate: SensitiveDataSource{Type: SensitiveDataSourceTypeInline, Value: new("test-value")},
 		Description: "test-value",
 		Name: "test-value",
 	}
@@ -32,7 +32,7 @@ func TestKonnectEventDataPlaneCertificateAPISpec_ToCreateEventGatewayDataPlaneCe
 
 func TestKonnectEventDataPlaneCertificateAPISpec_ToUpdateEventGatewayDataPlaneCertificateRequest(t *testing.T) {
 	spec := &KonnectEventDataPlaneCertificateAPISpec{
-		Certificate: "test-value",
+		Certificate: SensitiveDataSource{Type: SensitiveDataSourceTypeInline, Value: new("test-value")},
 		Description: "test-value",
 		Name: "test-value",
 	}

@@ -45,7 +45,6 @@ func (r *Reconciler) ensureKonnectCertificate(
 	keg *konnectv1alpha1.KonnectEventGateway,
 	certSecret *corev1.Secret,
 ) (programmed bool, err error) {
-	secretRefType := konnectv1alpha1.SensitiveDataSourceTypeSecretRef
 	desired := &konnectv1alpha1.KonnectEventDataPlaneCertificate{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: konnectv1alpha1.GroupVersion.String(),
@@ -62,9 +61,13 @@ func (r *Reconciler) ensureKonnectCertificate(
 					Name: keg.Name,
 				},
 			},
-			Type: &secretRefType,
-			SecretRef: &commonv1alpha1.NamespacedRef{
-				Name: certSecret.Name,
+			APISpec: konnectv1alpha1.KonnectEventDataPlaneCertificateAPISpec{
+				Certificate: konnectv1alpha1.SensitiveDataSource{
+					Type: konnectv1alpha1.SensitiveDataSourceTypeSecretRef,
+					SecretRef: &commonv1alpha1.NamespacedRef{
+						Name: certSecret.Name,
+					},
+				},
 			},
 		},
 	}

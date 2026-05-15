@@ -588,8 +588,8 @@ ClientIdentity Client mTLS configuration.<br /><br />**Requires a minimum runtim
 
 | Field | Description |
 | --- | --- |
-| `certificate` _[GatewaySecretReferenceOrLiteral](#konnect-konghq-com-v1alpha1-types-gatewaysecretreferenceorliteral)_ | A literal value or a reference to an existing secret as a template string expression. The value is stored and returned by the API as-is, not treated as sensitive information. |
-| `key` _[GatewaySecret](#konnect-konghq-com-v1alpha1-types-gatewaysecret)_ | A sensitive value containing the secret or a reference to a secret as a template string expression. If the value is provided as plain text, it is encrypted at rest and omitted from API responses. If provided as an expression, the expression itself is stored and returned by the API. |
+| `certificate` _[SensitiveDataSource](#konnect-konghq-com-v1alpha1-types-sensitivedatasource)_ | A literal value or a reference to an existing secret as a template string expression. The value is stored and returned by the API as-is, not treated as sensitive information. |
+| `key` _[SensitiveDataSource](#konnect-konghq-com-v1alpha1-types-sensitivedatasource)_ | A sensitive value containing the secret or a reference to a secret as a template string expression. If the value is provided as plain text, it is encrypted at rest and omitted from API responses. If provided as an expression, the expression itself is stored and returned by the API. |
 
 _Appears in:_
 
@@ -840,6 +840,8 @@ Allowed values:
 | `anonymous` |  |
 | `saslPlain` |  |
 | `saslScram` |  |
+
+
 
 
 
@@ -1273,7 +1275,6 @@ _Appears in:_
 
 - [BackendClusterAuthenticationSaslPlain](#konnect-konghq-com-v1alpha1-types-backendclusterauthenticationsaslplain)
 - [BackendClusterAuthenticationSaslScram](#konnect-konghq-com-v1alpha1-types-backendclusterauthenticationsaslscram)
-- [ClientIdentity](#konnect-konghq-com-v1alpha1-types-clientidentity)
 - [TLSCertificate](#konnect-konghq-com-v1alpha1-types-tlscertificate)
 - [VirtualClusterAuthenticationPrincipal](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationprincipal)
 
@@ -1294,7 +1295,6 @@ _Appears in:_
 - [BackendClusterAuthenticationSaslPlain](#konnect-konghq-com-v1alpha1-types-backendclusterauthenticationsaslplain)
 - [BackendClusterAuthenticationSaslScram](#konnect-konghq-com-v1alpha1-types-backendclusterauthenticationsaslscram)
 - [BackendClusterTLS](#konnect-konghq-com-v1alpha1-types-backendclustertls)
-- [ClientIdentity](#konnect-konghq-com-v1alpha1-types-clientidentity)
 - [TLSCertificate](#konnect-konghq-com-v1alpha1-types-tlscertificate)
 - [VirtualClusterAuthenticationPrincipal](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationprincipal)
 
@@ -1706,7 +1706,7 @@ KonnectEventDataPlaneCertificateAPISpec defines the API spec fields for KonnectE
 
 | Field | Description |
 | --- | --- |
-| `certificate` _string_ | JSON escaped string of the certificate. |
+| `certificate` _[SensitiveDataSource](#konnect-konghq-com-v1alpha1-types-sensitivedatasource)_ | JSON escaped string of the certificate. |
 | `description` _string_ | A description of the certificate. |
 | `name` _string_ | The name to identify of the certificate. |
 
@@ -1724,9 +1724,7 @@ KonnectEventDataPlaneCertificateSpec defines the desired state of KonnectEventDa
 | Field | Description |
 | --- | --- |
 | `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. |
-| `type` _[SensitiveDataSourceType](#konnect-konghq-com-v1alpha1-types-sensitivedatasourcetype)_ | Type indicates the source of the sensitive data. Can be 'inline' or 'secretRef'. |
 | `apiSpec` _[KonnectEventDataPlaneCertificateAPISpec](#konnect-konghq-com-v1alpha1-types-konnecteventdataplanecertificateapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
-| `secretRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | SecretRef is a reference to a Kubernetes Secret containing the sensitive data. This field is used when type is 'secretRef'. The Secret must contain the relevant data keys for this resource. |
 
 _Appears in:_
 
@@ -2733,6 +2731,27 @@ _Appears in:_
 - [CertificateSecret](#konnect-konghq-com-v1alpha1-types-certificatesecret)
 - [DataPlaneClientAuthStatus](#konnect-konghq-com-v1alpha1-types-dataplaneclientauthstatus)
 
+
+
+#### SensitiveDataSource
+
+
+SensitiveDataSource holds a sensitive string value that can be provided
+either inline or sourced from a Kubernetes Secret.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[SensitiveDataSourceType](#konnect-konghq-com-v1alpha1-types-sensitivedatasourcetype)_ | Type indicates the source of the sensitive data: 'inline' or 'secretRef'. |
+| `value` _*string_ | Value contains the sensitive data provided inline. Required when type is 'inline'. |
+| `secretRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | SecretRef is a reference to a Kubernetes Secret containing the sensitive data. Required when type is 'secretRef'. |
+
+_Appears in:_
+
+- [ClientIdentity](#konnect-konghq-com-v1alpha1-types-clientidentity)
+- [KonnectEventDataPlaneCertificateAPISpec](#konnect-konghq-com-v1alpha1-types-konnecteventdataplanecertificateapispec)
+
 #### SensitiveDataSourceType
 
 _Underlying type:_ `string`
@@ -2744,7 +2763,7 @@ SensitiveDataSourceType is the type of source for the sensitive data.
 
 _Appears in:_
 
-- [KonnectEventDataPlaneCertificateSpec](#konnect-konghq-com-v1alpha1-types-konnecteventdataplanecertificatespec)
+- [SensitiveDataSource](#konnect-konghq-com-v1alpha1-types-sensitivedatasource)
 
 Allowed values:
 

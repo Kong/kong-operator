@@ -127,6 +127,7 @@ func normalizePortalSDKOpsBoolField(value any, path []string) (any, error) {
 	}
 }
 
+
 func (s *PortalAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 	data, err := json.Marshal(s)
 	if err != nil {

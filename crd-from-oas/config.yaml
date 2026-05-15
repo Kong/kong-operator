@@ -27,7 +27,10 @@ apiGroupVersions:
         reconciler: {}
       - path: /v1/event-gateways/{gatewayId}/data-plane-certificates
         name: KonnectEventDataPlaneCertificate
-        optionalSecretReference: true
+        secretReferences:
+          - path: spec.apiSpec.certificate
+            type: Secret
+            key: tls.crt
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayDataPlaneCertificatesSDK
@@ -135,6 +138,16 @@ apiGroupVersions:
           delete: {}
         reconciler:
           parentEntityType: KonnectEventGateway
+        secretReferences:
+          - path: spec.apiSpec.tls.clientIdentity.certificate
+            type: Secret
+            key: tls.crt
+          - path: spec.apiSpec.tls.clientIdentity.key
+            type: Secret
+            key: tls.key
+            # TODO: Remove Base64 encoding when API starts accepting raw values.
+            # TODO: https://github.com/Kong/kong-operator/issues/4304
+            base64Encoding: true
       - path: /v1/event-gateways/{gatewayId}/virtual-clusters
         name: EventGatewayVirtualCluster
         ops:
