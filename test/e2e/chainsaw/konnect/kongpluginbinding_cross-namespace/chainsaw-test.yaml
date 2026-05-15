@@ -1,0 +1,498 @@
+# KongPluginBinding cross-namespace pluginRef test.
+#
+# KongPluginBinding's controlPlaneRef cannot specify a namespace (CRD validation prevents it),
+# so the cross-namespace axis tested here is pluginRef.namespace — a KongPlugin in a different
+# namespace from the KongPluginBinding.
+#
+# Scenario A: All resources in the same namespace — baseline, no grants needed.
+#   PluginRefValid condition is absent (same-namespace pluginRef removes it).
+#
+# Scenario B: KongPlugin in plugin_namespace, KongPluginBinding+CP+Auth in test namespace.
+#   One pluginRef grant (in plugin_namespace) is needed to allow the cross-namespace plugin reference.
+#   Includes an intermediate assertion that shows the binding fails when the grant is missing.
+#
+# Scenario C: starting from Scenario B (Programmed=True), deleting the
+#   KongPlugin itself reverts the KongPluginBinding to PluginRefValid=False/Invalid.
+#
+# Scenario D: starting from Scenario B (Programmed=True), deleting the
+#   KongReferenceGrant reverts the KongPluginBinding to PluginRefValid=False/RefNotPermitted.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: kongpluginbinding-cross-namespace
+spec:
+  description: |
+    Tests cross-namespace pluginRef behaviour for KongPluginBinding.
+
+    KongPluginBinding's controlPlaneRef cannot specify a namespace (prevented by CRD validation),
+    so the cross-namespace axis is the pluginRef.namespace field.
+
+    Scenario A: KongPlugin, KongPluginBinding, KonnectGatewayControlPlane, and
+    KonnectAPIAuthConfiguration all in the same namespace. No grants needed; baseline sanity check.
+
+    Scenario B: KongPlugin (plugin_namespace), KongPluginBinding+CP+Auth all in test namespace.
+    Binding fails until a KongReferenceGrant in plugin_namespace permits the cross-namespace ref.
+
+    Scenario C: starting from Scenario B (Programmed=True), deleting the
+    KongPlugin itself reverts the KongPluginBinding to
+    PluginRefValid=False/Invalid immediately, validating that the
+    KongPlugin watch is wired correctly. The plugin is then recreated to
+    restore the Programmed state.
+
+    Scenario D: starting from Scenario B (Programmed=True), deleting the
+    KongReferenceGrant reverts the KongPluginBinding to
+    PluginRefValid=False/RefNotPermitted immediately, validating that the
+    KongReferenceGrant watch is wired correctly. The grant is then
+    recreated to allow clean Konnect deprovisioning.
+
+  bindings:
+    # Common bindings.
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    # Namespace bindings.
+    - name: plugin_namespace
+      value: (join('-', [$namespace, 'plugin']))
+    # Scenario A resource names (all in test namespace).
+    - name: cp0_name
+      value: (join('-', [$namespace, 'cp0']))
+    - name: auth0_name
+      value: (join('-', [$namespace, 'auth0-konnect-api-auth']))
+    - name: plugin0_name
+      value: (join('-', [$namespace, 'plugin0']))
+    - name: pb0_name
+      value: (join('-', [$namespace, 'pb0']))
+    # Scenario B resource names (KongPlugin in plugin_namespace, binding+CP+Auth in test namespace).
+    - name: cp_name
+      value: (join('-', [$namespace, 'cp']))
+    - name: auth_name
+      value: (join('-', [$namespace, 'konnect-api-auth']))
+    - name: plugin_name
+      value: (join('-', [$namespace, 'plugin']))
+    - name: pb_name
+      value: (join('-', [$namespace, 'pb']))
+
+  steps:
+    # =========================================================================
+    # Scenario A: All resources in the same namespace. No grants needed.
+    # PluginRefValid condition is absent for same-namespace pluginRef.
+    # =========================================================================
+
+    - name: 1-create-auth-config-same-ns
+      description: Create KonnectAPIAuthConfiguration in the test namespace.
+      bindings:
+        - name: test_name
+          value: (join('-', [$namespace, 'auth0']))
+        - name: namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+    - name: 2-create-control-plane-same-ns
+      description: Create KonnectGatewayControlPlane in the test namespace.
+      bindings:
+        - name: cp_name
+          value: ($cp0_name)
+        - name: cp_namespace
+          value: ($namespace)
+        - name: auth_name
+          value: ($auth0_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectGatewayControlPlane.yaml
+
+    - name: 3-create-plugin-same-ns
+      description: Create KongPlugin in the test namespace.
+      bindings:
+        - name: kong_plugin_name
+          value: ($plugin0_name)
+        - name: kong_plugin_namespace
+          value: ($namespace)
+        - name: plugin_type
+          value: rate-limiting
+        - name: plugin_config
+          value: '{"minute": 5, "policy": "local"}'
+      use:
+        template: ../../common/_step_templates/apply-assert-kongPlugin.yaml
+
+    - name: 4-create-binding-same-ns
+      description: Create KongPluginBinding in test namespace with same-namespace pluginRef and CPRef. No grants needed.
+      try:
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongPluginBinding
+              metadata:
+                name: ($pb0_name)
+                namespace: ($namespace)
+              spec:
+                controlPlaneRef:
+                  type: konnectNamespacedRef
+                  konnectNamespacedRef:
+                    name: ($cp0_name)
+                pluginRef:
+                  name: ($plugin0_name)
+                scope: GlobalInControlPlane
+
+    - name: 5-assert-binding-programmed-same-ns
+      description: Assert KongPluginBinding is Programmed. No PluginRefValid condition for same-namespace pluginRef.
+      timeouts:
+        assert: 90s
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongPluginBinding
+              metadata:
+                name: ($pb0_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'ControlPlaneRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (konnect.controlPlaneID != null): true
+                (konnect.id != null): true
+
+    - name: 6-cleanup-scenario-a
+      description: Delete binding and CP in order; wait for each to be gone before proceeding.
+      timeouts:
+        delete: 120s
+        error: 120s
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongPluginBinding
+              name: ($pb0_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongPluginBinding
+              metadata:
+                name: ($pb0_name)
+                namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              name: ($cp0_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp0_name)
+                namespace: ($namespace)
+
+    # =========================================================================
+    # Scenario B: KongPlugin in plugin_namespace, KongPluginBinding+CP+Auth in test namespace.
+    # A pluginRef grant in plugin_namespace is needed.
+    # =========================================================================
+
+    - name: 7-create-plugin-namespace
+      description: Create separate namespace for the KongPlugin.
+      bindings:
+        - name: namespace_name
+          value: ($plugin_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-namespace.yaml
+
+    - name: 8-create-auth-config
+      description: Create KonnectAPIAuthConfiguration in the test namespace for scenario B.
+      bindings:
+        - name: test_name
+          value: ($namespace)
+        - name: namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+    - name: 9-create-control-plane
+      description: Create KonnectGatewayControlPlane in the test namespace for scenario B.
+      bindings:
+        - name: cp_namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectGatewayControlPlane.yaml
+
+    - name: 10-create-plugin-cross-ns
+      description: Create KongPlugin in plugin_namespace.
+      bindings:
+        - name: kong_plugin_name
+          value: ($plugin_name)
+        - name: kong_plugin_namespace
+          value: ($plugin_namespace)
+        - name: plugin_type
+          value: rate-limiting
+        - name: plugin_config
+          value: '{"minute": 5, "policy": "local"}'
+      use:
+        template: ../../common/_step_templates/apply-assert-kongPlugin.yaml
+
+    - name: 11-create-binding-no-grant
+      description: Create KongPluginBinding in test namespace referencing KongPlugin in plugin_namespace (no grant yet).
+      try:
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongPluginBinding
+              metadata:
+                name: ($pb_name)
+                namespace: ($namespace)
+              spec:
+                controlPlaneRef:
+                  type: konnectNamespacedRef
+                  konnectNamespacedRef:
+                    name: ($cp_name)
+                pluginRef:
+                  name: ($plugin_name)
+                  namespace: ($plugin_namespace)
+                scope: GlobalInControlPlane
+
+    - name: 12-assert-binding-grant-missing
+      description: Assert KongPluginBinding has PluginRefValid=False/RefNotPermitted because no grant exists.
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongPluginBinding
+              metadata:
+                name: ($pb_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'PluginRefValid']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+
+    - name: 13-create-binding-to-plugin-grant
+      description: Create KongReferenceGrant in plugin_namespace allowing KongPluginBinding from test namespace to reference KongPlugin.
+      bindings:
+        - name: kong_reference_grant_name
+          value: (join('-', [$namespace, 'pb-to-plugin']))
+        - name: kong_reference_grant_namespace
+          value: ($plugin_namespace)
+        - name: from
+          value:
+            - group: configuration.konghq.com
+              kind: KongPluginBinding
+              namespace: ($namespace)
+        - name: to
+          value:
+            - group: configuration.konghq.com
+              kind: KongPlugin
+      use:
+        template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+
+    - name: 14-assert-binding-programmed
+      description: Assert KongPluginBinding is Programmed after the pluginRef grant is in place.
+      timeouts:
+        assert: 90s
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongPluginBinding
+              metadata:
+                name: ($pb_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'PluginRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'ControlPlaneRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (konnect.controlPlaneID != null): true
+                (konnect.id != null): true
+
+    # =========================================================================
+    # Scenario C: delete the KongPlugin and verify the KongPluginBinding
+    # reverts to PluginRefValid=False/Invalid (validates KongPlugin watch).
+    # =========================================================================
+
+    - name: 15-delete-plugin
+      description: Delete the KongPlugin to verify the KongPluginBinding reverts to Invalid.
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1
+              kind: KongPlugin
+              name: ($plugin_name)
+              namespace: ($plugin_namespace)
+
+    - name: 16-assert-binding-plugin-not-found
+      description: Assert KongPluginBinding transitions to PluginRefValid=False/Invalid after plugin deletion.
+      timeouts:
+        assert: 30s
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongPluginBinding
+              metadata:
+                name: ($pb_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'PluginRefValid']):
+                  - status: 'False'
+                    reason: Invalid
+
+    - name: 17-recreate-plugin
+      description: Recreate the KongPlugin to restore the binding to Programmed.
+      bindings:
+        - name: kong_plugin_name
+          value: ($plugin_name)
+        - name: kong_plugin_namespace
+          value: ($plugin_namespace)
+        - name: plugin_type
+          value: rate-limiting
+        - name: plugin_config
+          value: '{"minute": 5, "policy": "local"}'
+      use:
+        template: ../../common/_step_templates/apply-assert-kongPlugin.yaml
+
+    - name: 18-assert-binding-programmed-after-plugin-recreated
+      description: Assert KongPluginBinding is Programmed again after the KongPlugin is recreated.
+      timeouts:
+        assert: 90s
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongPluginBinding
+              metadata:
+                name: ($pb_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'PluginRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (konnect.id != null): true
+
+    # =========================================================================
+    # Scenario D: delete the binding->plugin grant and verify the KongPluginBinding
+    # reverts to PluginRefValid=False/RefNotPermitted (validates grant watch).
+    # =========================================================================
+
+    - name: 19-delete-pb-to-plugin-grant
+      description: Delete the binding->plugin grant to verify the KongPluginBinding reverts to RefNotPermitted.
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              name: (join('-', [$namespace, 'pb-to-plugin']))
+              namespace: ($plugin_namespace)
+
+    - name: 20-assert-binding-reverts-to-not-permitted
+      description: Assert KongPluginBinding transitions back to PluginRefValid=False/RefNotPermitted after grant deletion.
+      timeouts:
+        assert: 30s
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongPluginBinding
+              metadata:
+                name: ($pb_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'PluginRefValid']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+
+    - name: 21-recreate-pb-to-plugin-grant
+      description: Recreate the binding->plugin grant so the binding can be deprovisioned cleanly during cleanup.
+      bindings:
+        - name: kong_reference_grant_name
+          value: (join('-', [$namespace, 'pb-to-plugin']))
+        - name: kong_reference_grant_namespace
+          value: ($plugin_namespace)
+        - name: from
+          value:
+            - group: configuration.konghq.com
+              kind: KongPluginBinding
+              namespace: ($namespace)
+        - name: to
+          value:
+            - group: configuration.konghq.com
+              kind: KongPlugin
+      use:
+        template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+
+    - name: 22-cleanup-scenario-b
+      description: Delete binding and CP in order; wait for each to be gone before proceeding.
+      timeouts:
+        delete: 120s
+        error: 120s
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongPluginBinding
+              name: ($pb_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongPluginBinding
+              metadata:
+                name: ($pb_name)
+                namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              name: (join('-', [$namespace, 'pb-to-plugin']))
+              namespace: ($plugin_namespace)
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              name: ($cp_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp_name)
+                namespace: ($namespace)
+
+  catch:
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: kongpluginbinding-cross-namespace
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: ADDITIONAL_NAMESPACES
+            value: ($plugin_namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
