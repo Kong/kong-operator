@@ -300,6 +300,9 @@ var supportedKonnectV1Alpha1TypesGeneratedFromOAS = []supportedTypesT{
 				Type: "Portal",
 			},
 			{
+				Type: "PortalCustomDomain",
+			},
+			{
 				Type: "PortalEmailConfig",
 			},
 			{

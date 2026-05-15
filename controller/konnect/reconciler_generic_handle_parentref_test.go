@@ -482,6 +482,16 @@ func TestHandleParentRef_PortalChildren(t *testing.T) {
 			},
 		},
 		{
+			name: "PortalCustomDomain",
+			obj: &konnectv1alpha1.PortalCustomDomain{
+				ObjectMeta: metav1.ObjectMeta{Name: "child", Namespace: childNS},
+				Spec:       konnectv1alpha1.PortalCustomDomainSpec{PortalRef: portalRef(parentName)},
+			},
+			getParentID: func(o client.Object) string {
+				return o.(*konnectv1alpha1.PortalCustomDomain).GetPortalID()
+			},
+		},
+		{
 			name: "PortalIPAllowList",
 			obj: &konnectv1alpha1.PortalIPAllowList{
 				ObjectMeta: metav1.ObjectMeta{Name: "child", Namespace: childNS},

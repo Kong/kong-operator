@@ -23,6 +23,7 @@ func (s *KonnectEventDataPlaneCertificateAPISpec) marshalSDKOpsPayload() ([]byte
 		return nil, fmt.Errorf("failed to decode KonnectEventDataPlaneCertificateAPISpec: %w", err)
 	}
 	payload = flattenSDKUnions(payload)
+	payload = flattenSensitiveData(payload)
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
 	payload = renameKeysToSDK(payload)
@@ -71,28 +72,44 @@ func (obj *KonnectEventDataPlaneCertificate) sdkOpsAPISpec(ctx context.Context, 
 	}
 
 	apiSpec := obj.Spec.APISpec
-	if obj.Spec.Type != nil && *obj.Spec.Type == SensitiveDataSourceTypeSecretRef {
-		if obj.Spec.SecretRef == nil {
-			return nil, fmt.Errorf("secretRef is nil")
+	// Resolve spec.apiSpec.certificate
+	{
+		src := apiSpec.Certificate
+		if src.Type == SensitiveDataSourceTypeSecretRef {
+			if src.SecretRef == nil {
+				return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.certificate")
+			}
+			namespace := obj.GetNamespace()
+			if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+				namespace = *src.SecretRef.Namespace
+			}
+			var secret corev1.Secret
+			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+			}
+			secretBytes, ok := secret.Data["tls.crt"]
+			if !ok {
+				return nil, fmt.Errorf("secret %s/%s is missing key 'tls.crt'", namespace, src.SecretRef.Name)
+			}
+			resolved := string(secretBytes)
+			apiSpec.Certificate.Value = &resolved
 		}
-
-		namespace := obj.GetNamespace()
-		if obj.Spec.SecretRef.Namespace != nil && *obj.Spec.SecretRef.Namespace != "" {
-			namespace = *obj.Spec.SecretRef.Namespace
-		}
-
-		var secret corev1.Secret
-		if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: obj.Spec.SecretRef.Name}, &secret); err != nil {
-			return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, obj.Spec.SecretRef.Name, err)
-		}
-
-		secretBytes, ok := secret.Data["tls.crt"]
-		if !ok {
-			return nil, fmt.Errorf("secret %s/%s is missing key 'tls.crt'", namespace, obj.Spec.SecretRef.Name)
-		}
-		apiSpec.Certificate = string(secretBytes)
 	}
 	return &apiSpec, nil
+}
+
+func (obj *KonnectEventDataPlaneCertificate) GetSensitiveDataSecretRefs() []SensitiveDataSecretRef {
+	if obj == nil {
+		return nil
+	}
+	var refs []SensitiveDataSecretRef
+	if obj.Spec.APISpec.Certificate.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.Certificate.SecretRef != nil {
+		refs = append(refs, SensitiveDataSecretRef{
+			Ref: *obj.Spec.APISpec.Certificate.SecretRef,
+			Key: "tls.crt",
+		})
+	}
+	return refs
 }
 
 func (obj *KonnectEventDataPlaneCertificate) ToCreateEventGatewayDataPlaneCertificateRequest(ctx context.Context, cl client.Client) (*sdkkonnectcomp.CreateEventGatewayDataPlaneCertificateRequest, error) {

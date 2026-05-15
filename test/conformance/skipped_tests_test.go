@@ -62,9 +62,6 @@ var skippedTestsForHybrid = []string{
 	// This test is skipped because it proven to be flaky.
 	// TODO: https://github.com/Kong/kong-operator/issues/2793
 	tests.HTTPRouteReferenceGrant.ShortName,
-	// This test is skipped because the `Reason` field in the `RouteCondition` is not the same as expected by the test.
-	// TODO: https://github.com/Kong/kong-operator/issues/67
-	tests.HTTPRouteDisallowedKind.ShortName,
 }
 
 // skippedTestsForConfig returns the list of skipped tests for the given router flavor and gateway type.

@@ -103,6 +103,7 @@ func normalizeIdentityProviderRequestSDKOpsBoolField(value any, path []string) (
 	}
 }
 
+
 func (s *IdentityProviderRequestAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 	data, err := json.Marshal(s)
 	if err != nil {

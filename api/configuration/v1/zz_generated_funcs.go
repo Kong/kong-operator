@@ -37,6 +37,11 @@ func (obj *KongConsumer) SetKonnectID(id string) {
 	obj.Status.Konnect.ID = id
 }
 
+// PersistsKonnectID reports whether the KongConsumer persists a Konnect ID in status.
+func (*KongConsumer) PersistsKonnectID() bool {
+	return true
+}
+
 // GetControlPlaneID returns the ControlPlane ID in the KongConsumer status.
 func (obj *KongConsumer) GetControlPlaneID() string {
 	if obj.Status.Konnect == nil {

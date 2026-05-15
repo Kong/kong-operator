@@ -75,6 +75,26 @@ type ReferenceConfig struct {
 	Path string `yaml:"path"`
 }
 
+// SecretReferenceConfig configures a single sensitive field that can be provided
+// inline or sourced from a Kubernetes Secret.
+type SecretReferenceConfig struct {
+	// Path is the dot-separated field path within the spec
+	// (e.g. "spec.apiSpec.tls.clientIdentity.certificate").
+	// Must start with "spec.apiSpec.".
+	Path string `yaml:"path"`
+	// Type is the Kubernetes resource type that holds the sensitive data.
+	// Currently only "Secret" is supported.
+	Type string `yaml:"type"`
+	// Key is the data key inside the referenced resource (e.g. "tls.crt").
+	Key string `yaml:"key"`
+	// Base64Encoding indicates that the resolved sensitive value must be base64
+	// encoded before being sent to Konnect.
+	//
+	// TODO: Remove Base64 encoding when API starts accepting raw values.
+	// TODO: https://github.com/Kong/kong-operator/issues/4304
+	Base64Encoding bool `yaml:"base64Encoding,omitempty"`
+}
+
 // TypeConfig holds configuration for a single CRD type (identified by its OpenAPI path).
 type TypeConfig struct {
 	// Path is the OpenAPI path that identifies the resource (e.g. "/services").
@@ -106,12 +126,11 @@ type TypeConfig struct {
 	OpsGetForUID *GetForUIDConfig `yaml:"-"`
 	// OpsSDK holds SDK interface and field name for SDK factory generation.
 	OpsSDK *OpSDKConfig `yaml:"-"`
-	// OptionalSecretReference enables generation of a union type field on the
-	// Spec that allows the user to provide sensitive data either inline in the
-	// APISpec or via a Kubernetes Secret reference. When true the generated Spec
-	// will include a SourceType discriminator (inline / secretRef), and a
-	// SecretRef field of type NamespacedRef.
-	OptionalSecretReference bool `yaml:"optionalSecretReference,omitempty"`
+	// SecretReferences lists sensitive field paths whose values can be provided
+	// either inline or sourced from a Kubernetes Secret. Each entry causes the
+	// OAS-derived string field at Path to become a SensitiveDataSource struct
+	// supporting inline and secretRef variants at runtime.
+	SecretReferences []SecretReferenceConfig `yaml:"secretReferences,omitempty"`
 	// Reconciler holds configuration for reconciler code generation.
 	// When set, reconciler wiring files (interface methods, watch options,
 	// index files) are generated for this entity.
@@ -272,13 +291,13 @@ type typeOpsYAML struct {
 }
 
 type typeConfigYAML struct {
-	Path                    string                  `yaml:"path"`
-	Name                    string                  `yaml:"name,omitempty"`
-	CEL                     map[string]*FieldConfig `yaml:"cel,omitempty"`
-	References              []ReferenceConfig       `yaml:"references,omitempty"`
-	Ops                     *typeOpsYAML            `yaml:"ops,omitempty"`
-	OptionalSecretReference bool                    `yaml:"optionalSecretReference,omitempty"`
-	Reconciler              *ReconcilerConfig       `yaml:"reconciler,omitempty"`
+	Path             string                  `yaml:"path"`
+	Name             string                  `yaml:"name,omitempty"`
+	CEL              map[string]*FieldConfig `yaml:"cel,omitempty"`
+	References       []ReferenceConfig       `yaml:"references,omitempty"`
+	SecretReferences []SecretReferenceConfig `yaml:"secretReferences,omitempty"`
+	Ops              *typeOpsYAML            `yaml:"ops,omitempty"`
+	Reconciler       *ReconcilerConfig       `yaml:"reconciler,omitempty"`
 }
 
 // UnmarshalYAML preserves the in-memory Ops map shape while allowing
@@ -290,12 +309,12 @@ func (tc *TypeConfig) UnmarshalYAML(value *yaml.Node) error {
 	}
 
 	*tc = TypeConfig{
-		Path:                    raw.Path,
-		Name:                    raw.Name,
-		CEL:                     raw.CEL,
-		References:              raw.References,
-		OptionalSecretReference: raw.OptionalSecretReference,
-		Reconciler:              raw.Reconciler,
+		Path:             raw.Path,
+		Name:             raw.Name,
+		CEL:              raw.CEL,
+		References:       raw.References,
+		SecretReferences: raw.SecretReferences,
+		Reconciler:       raw.Reconciler,
 	}
 
 	if raw.Ops != nil {
@@ -368,12 +387,12 @@ func (c *APIGroupVersionConfig) FieldConfig(pathToEntityName map[string]string) 
 	return &Config{Entities: entities}
 }
 
-// SecretRefEntities returns the set of entity names that have
-// OptionalSecretReference enabled, using the provided pathToEntityName mapping.
+// SecretRefEntities returns the set of entity names that have at least one
+// SecretReference configured, using the provided pathToEntityName mapping.
 func (c *APIGroupVersionConfig) SecretRefEntities(pathToEntityName map[string]string) map[string]bool {
 	result := make(map[string]bool)
 	for _, tc := range c.Types {
-		if !tc.OptionalSecretReference {
+		if len(tc.SecretReferences) == 0 {
 			continue
 		}
 		entityName, ok := pathToEntityName[tc.Path]
@@ -381,6 +400,23 @@ func (c *APIGroupVersionConfig) SecretRefEntities(pathToEntityName map[string]st
 			continue
 		}
 		result[entityName] = true
+	}
+	return result
+}
+
+// SecretReferencesConfig builds a mapping from entity name to secret reference configs using the
+// provided pathToEntityName mapping (built after parsing the OpenAPI spec).
+func (c *APIGroupVersionConfig) SecretReferencesConfig(pathToEntityName map[string]string) map[string][]SecretReferenceConfig {
+	result := make(map[string][]SecretReferenceConfig)
+	for _, tc := range c.Types {
+		if len(tc.SecretReferences) == 0 {
+			continue
+		}
+		entityName, ok := pathToEntityName[tc.Path]
+		if !ok {
+			continue
+		}
+		result[entityName] = tc.SecretReferences
 	}
 	return result
 }
@@ -414,7 +450,7 @@ func (c *APIGroupVersionConfig) OpsConfig(pathToEntityName map[string]string) ma
 		if !ok {
 			continue
 		}
-		requireClient := tc.OpsRequireClient || tc.OptionalSecretReference
+		requireClient := tc.OpsRequireClient || len(tc.SecretReferences) > 0
 		result[entityName] = &EntityOpsConfig{
 			Ops:             tc.Ops,
 			RequireClient:   requireClient,
@@ -492,6 +528,22 @@ func (tc *TypeConfig) validate() error {
 			return fmt.Errorf("references[%d]: duplicate kind %q (each kind must appear at most once per type)", i, ref.Kind)
 		}
 		seenRefKinds[ref.Kind] = true
+	}
+	seenSecretPaths := make(map[string]bool)
+	for i, sr := range tc.SecretReferences {
+		if !strings.HasPrefix(sr.Path, "spec.apiSpec.") {
+			return fmt.Errorf("secretReferences[%d].path must start with \"spec.apiSpec.\", got %q", i, sr.Path)
+		}
+		if sr.Key == "" {
+			return fmt.Errorf("secretReferences[%d].key is required", i)
+		}
+		if sr.Type != "Secret" {
+			return fmt.Errorf("secretReferences[%d].type %q is not supported; only \"Secret\" is currently allowed", i, sr.Type)
+		}
+		if seenSecretPaths[sr.Path] {
+			return fmt.Errorf("secretReferences[%d]: duplicate path %q", i, sr.Path)
+		}
+		seenSecretPaths[sr.Path] = true
 	}
 	if tc.OpsSkipGetForUID && tc.OpsGetForUID != nil {
 		return fmt.Errorf("ops.skipGetForUID and ops.getForUID are mutually exclusive")

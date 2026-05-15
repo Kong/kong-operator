@@ -173,7 +173,6 @@ func drainEvents(recorder *events.FakeRecorder) []string {
 // newProgrammedKonnectCert builds a KonnectEventDataPlaneCertificate with Programmed=True,
 // modelling the state after the Konnect controller has registered it.
 func newProgrammedKonnectCert() *konnectv1alpha1.KonnectEventDataPlaneCertificate {
-	secretRefType := konnectv1alpha1.SensitiveDataSourceTypeSecretRef
 	return &konnectv1alpha1.KonnectEventDataPlaneCertificate{
 		ObjectMeta: metav1.ObjectMeta{Namespace: reconcileTestNS, Name: reconcileTestDPName},
 		Spec: konnectv1alpha1.KonnectEventDataPlaneCertificateSpec{
@@ -181,8 +180,12 @@ func newProgrammedKonnectCert() *konnectv1alpha1.KonnectEventDataPlaneCertificat
 				Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
 				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: reconcileTestKEGName},
 			},
-			Type:      &secretRefType,
-			SecretRef: &commonv1alpha1.NamespacedRef{Name: reconcileTestDPName},
+			APISpec: konnectv1alpha1.KonnectEventDataPlaneCertificateAPISpec{
+				Certificate: konnectv1alpha1.SensitiveDataSource{
+					Type:      konnectv1alpha1.SensitiveDataSourceTypeSecretRef,
+					SecretRef: &commonv1alpha1.NamespacedRef{Name: reconcileTestDPName},
+				},
+			},
 		},
 		Status: konnectv1alpha1.KonnectEventDataPlaneCertificateStatus{
 			Conditions: []metav1.Condition{

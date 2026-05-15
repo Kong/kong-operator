@@ -27,7 +27,7 @@ func UpdateGeneratedOps[
 ) error {
 	switch ent := any(e).(type) {
 	case *konnectv1alpha1.EventGatewayBackendCluster:
-		return updateEventGatewayBackendCluster(ctx, sdk.GetEventGatewayBackendClustersSDK(), ent)
+		return updateEventGatewayBackendCluster(ctx, cl, sdk.GetEventGatewayBackendClustersSDK(), ent)
 	case *konnectv1alpha1.EventGatewayListener:
 		return updateEventGatewayListener(ctx, sdk.GetEventGatewayListenersSDK(), ent)
 	case *konnectv1alpha1.EventGatewayListenerPolicy:

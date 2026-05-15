@@ -46,25 +46,10 @@ type KonnectEventDataPlaneCertificateSpec struct {
 	// +required
 	GatewayRef commonv1alpha1.ObjectRef `json:"gatewayRef,omitzero"`
 
-	// Type indicates the source of the sensitive data.
-	// Can be 'inline' or 'secretRef'.
-	//
-	// +kubebuilder:validation:Enum=inline;secretRef
-	// +kubebuilder:default=inline
-	// +optional
-	Type *SensitiveDataSourceType `json:"type,omitempty"`
-
 	// APISpec defines the desired state of the resource's API spec fields.
 	//
 	// +optional
 	APISpec KonnectEventDataPlaneCertificateAPISpec `json:"apiSpec,omitzero"`
-
-	// SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
-	// This field is used when type is 'secretRef'.
-	// The Secret must contain the relevant data keys for this resource.
-	//
-	// +optional
-	SecretRef *commonv1alpha1.NamespacedRef `json:"secretRef,omitempty"`
 }
 
 // KonnectEventDataPlaneCertificateAPISpec defines the API spec fields for KonnectEventDataPlaneCertificate.
@@ -72,9 +57,7 @@ type KonnectEventDataPlaneCertificateAPISpec struct {
 	// JSON escaped string of the certificate.
 	//
 	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	Certificate string `json:"certificate,omitzero"`
+	Certificate SensitiveDataSource `json:"certificate,omitzero"`
 
 	// A description of the certificate.
 	//

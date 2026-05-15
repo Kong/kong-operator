@@ -70,6 +70,10 @@ type opsGetForUIDMatchFieldData struct {
 	// string/pointer, causing the template to emit matchSliceField instead of
 	// matchStringField.
 	SliceMatch bool
+	// SensitiveMatch is true when the object field is a SensitiveDataSource
+	// rather than a plain string, causing the template to emit
+	// matchSensitiveDataSourceField instead of matchStringField.
+	SensitiveMatch bool
 }
 
 type opsGetForUIDRootUnionData struct {
@@ -157,10 +161,12 @@ func (g *Generator) generateOpsGetForUIDFuncBody(
 	if opsConfig != nil && opsConfig.GetForUID != nil {
 		matchFields = make([]opsGetForUIDMatchFieldData, 0, len(opsConfig.GetForUID.MatchFields))
 		for _, field := range opsConfig.GetForUID.MatchFields {
+			sensitive := g.isSensitiveMatchField(entityName, field.ObjectField)
 			matchFields = append(matchFields, opsGetForUIDMatchFieldData{
-				ObjectField:   field.ObjectField,
-				ResponseField: field.ResponseField,
-				SliceMatch:    isArrayMatchField(schema, field.ResponseField),
+				ObjectField:    field.ObjectField,
+				ResponseField:  field.ResponseField,
+				SliceMatch:     !sensitive && isArrayMatchField(schema, field.ResponseField),
+				SensitiveMatch: sensitive,
 			})
 		}
 		if opsConfig.GetForUID.RootUnion != nil {

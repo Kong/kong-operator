@@ -769,10 +769,6 @@ func FilterMatchingListeners(logger logr.Logger, gw *gwtypes.Gateway, routeKind 
 			continue
 		}
 
-		if !isListenerValidForKind(routeKind, listener) {
-			continue
-		}
-
 		// At this point, the listener matches the parent reference.
 		log.Debug(logger, "Listener matches ParentReference criteria", "listener", listener.Name, "parentRef", pRef)
 		// Now check if the listener is ready.
@@ -860,6 +856,13 @@ func FilterListenersByAllowedRoutes(logger logr.Logger, gw *gwtypes.Gateway, pRe
 	var matchingListeners []gwtypes.Listener
 
 	for _, listener := range listeners {
+		// Check if the listener is valid for the route kind. If not, skip this listener.
+		// We check the whether the listener is valid for the route here because the conformance tests requires
+		// the Accepted condition to have "NotAllowedByListeners" reason.
+		if !isListenerValidForKind(string(rgk.Kind), listener) {
+			continue
+		}
+
 		if listener.AllowedRoutes == nil {
 			// If AllowedRoutes is nil, all routes are allowed.
 			log.Debug(logger, "Listener allows all routes (AllowedRoutes is nil)", "listener", listener.Name)
