@@ -17,11 +17,11 @@ import (
 	"github.com/kong/kong-operator/v2/pkg/clientset/scheme"
 )
 
-func newTLSRoute(namespace string, backendRef gatewayapi.BackendRef) gatewayapi.TLSRoute {
+func newTLSRoute(backendRef gatewayapi.BackendRef) gatewayapi.TLSRoute {
 	return gatewayapi.TLSRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:       "route",
-			Namespace:  namespace,
+			Namespace:  "default",
 			Generation: 1,
 		},
 		Spec: gatewayapi.TLSRouteSpec{
@@ -32,10 +32,10 @@ func newTLSRoute(namespace string, backendRef gatewayapi.BackendRef) gatewayapi.
 	}
 }
 
-func serviceBackendRef(name string, namespace *gatewayapi.Namespace) gatewayapi.BackendRef {
+func serviceBackendRef(namespace *gatewayapi.Namespace) gatewayapi.BackendRef {
 	return gatewayapi.BackendRef{
 		BackendObjectReference: gatewayapi.BackendObjectReference{
-			Name:      gatewayapi.ObjectName(name),
+			Name:      gatewayapi.ObjectName("svc"),
 			Namespace: namespace,
 			Kind:      util.StringToGatewayAPIKindPtr("Service"),
 			Group:     util.StringToTypedPtr[*gatewayapi.Group](""),
@@ -77,14 +77,14 @@ func TestGetTLSRouteRuleReason(t *testing.T) {
 			objects: []client.Object{
 				&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"}},
 			},
-			route:      newTLSRoute("default", serviceBackendRef("svc", nil)),
+			route:      newTLSRoute(serviceBackendRef(nil)),
 			wantReason: gatewayapi.RouteReasonResolvedRefs,
 		},
 		{
 			name:               "backend service missing",
 			enableRefGrant:     true,
 			objects:            []client.Object{},
-			route:              newTLSRoute("default", serviceBackendRef("svc", nil)),
+			route:              newTLSRoute(serviceBackendRef(nil)),
 			wantReason:         gatewayapi.RouteReasonBackendNotFound,
 			wantMessageContain: "target default/svc",
 		},
@@ -92,7 +92,7 @@ func TestGetTLSRouteRuleReason(t *testing.T) {
 			name:           "unsupported backend kind",
 			enableRefGrant: true,
 			objects:        []client.Object{},
-			route: newTLSRoute("default", gatewayapi.BackendRef{
+			route: newTLSRoute(gatewayapi.BackendRef{
 				BackendObjectReference: gatewayapi.BackendObjectReference{
 					Name:  "svc",
 					Kind:  util.StringToGatewayAPIKindPtr("Foo"),
@@ -108,7 +108,7 @@ func TestGetTLSRouteRuleReason(t *testing.T) {
 			objects: []client.Object{
 				&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "other"}},
 			},
-			route:              newTLSRoute("default", serviceBackendRef("svc", &otherNS)),
+			route:              newTLSRoute(serviceBackendRef(&otherNS)),
 			wantReason:         gatewayapi.RouteReasonRefNotPermitted,
 			wantMessageContain: "install ReferenceGrant CRD and configure a proper grant",
 		},
@@ -118,7 +118,7 @@ func TestGetTLSRouteRuleReason(t *testing.T) {
 			objects: []client.Object{
 				&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "other"}},
 			},
-			route:              newTLSRoute("default", serviceBackendRef("svc", &otherNS)),
+			route:              newTLSRoute(serviceBackendRef(&otherNS)),
 			wantReason:         gatewayapi.RouteReasonRefNotPermitted,
 			wantMessageContain: "no ReferenceGrant allowing reference is configured",
 		},
@@ -129,7 +129,7 @@ func TestGetTLSRouteRuleReason(t *testing.T) {
 				&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "other"}},
 				grantFromTLSRouteToService.DeepCopy(),
 			},
-			route:      newTLSRoute("default", serviceBackendRef("svc", &otherNS)),
+			route:      newTLSRoute(serviceBackendRef(&otherNS)),
 			wantReason: gatewayapi.RouteReasonResolvedRefs,
 		},
 		{
@@ -152,7 +152,7 @@ func TestGetTLSRouteRuleReason(t *testing.T) {
 					},
 				},
 			},
-			route:              newTLSRoute("default", serviceBackendRef("svc", &otherNS)),
+			route:              newTLSRoute(serviceBackendRef(&otherNS)),
 			wantReason:         gatewayapi.RouteReasonRefNotPermitted,
 			wantMessageContain: "no ReferenceGrant allowing reference is configured",
 		},
@@ -176,7 +176,7 @@ func TestGetTLSRouteRuleReason(t *testing.T) {
 					},
 				},
 			},
-			route:              newTLSRoute("default", serviceBackendRef("svc", &otherNS)),
+			route:              newTLSRoute(serviceBackendRef(&otherNS)),
 			wantReason:         gatewayapi.RouteReasonRefNotPermitted,
 			wantMessageContain: "no ReferenceGrant allowing reference is configured",
 		},
@@ -227,7 +227,7 @@ func TestSetRouteConditionResolvedRefsCondition_TLSRoute(t *testing.T) {
 			WithObjects(&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"}}).
 			Build()
 		r := &TLSRouteReconciler{Client: cl, Log: logger}
-		route := newTLSRoute("default", serviceBackendRef("svc", nil))
+		route := newTLSRoute(serviceBackendRef(nil))
 		parentStatuses := newParentStatuses()
 
 		_, changed, err := r.setRouteConditionResolvedRefsCondition(ctx, &route, parentStatuses)
@@ -247,7 +247,7 @@ func TestSetRouteConditionResolvedRefsCondition_TLSRoute(t *testing.T) {
 			WithScheme(scheme.Scheme).
 			Build()
 		r := &TLSRouteReconciler{Client: cl, Log: logger}
-		route := newTLSRoute("default", serviceBackendRef("svc", nil))
+		route := newTLSRoute(serviceBackendRef(nil))
 		parentStatuses := newParentStatuses(metav1.Condition{
 			Type:   string(gatewayapi.RouteConditionResolvedRefs),
 			Status: metav1.ConditionTrue,
@@ -270,7 +270,7 @@ func TestSetRouteConditionResolvedRefsCondition_TLSRoute(t *testing.T) {
 			WithObjects(&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"}}).
 			Build()
 		r := &TLSRouteReconciler{Client: cl, Log: logger}
-		route := newTLSRoute("default", serviceBackendRef("svc", nil))
+		route := newTLSRoute(serviceBackendRef(nil))
 		parentStatuses := newParentStatuses(metav1.Condition{
 			Type:   string(gatewayapi.RouteConditionResolvedRefs),
 			Status: metav1.ConditionTrue,
@@ -290,7 +290,7 @@ func TestSetRouteConditionResolvedRefsCondition_TLSRoute(t *testing.T) {
 			WithObjects(&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "other"}}).
 			Build()
 		r := &TLSRouteReconciler{Client: cl, Log: logger, enableReferenceGrant: true}
-		route := newTLSRoute("default", serviceBackendRef("svc", &otherNS))
+		route := newTLSRoute(serviceBackendRef(&otherNS))
 		parentStatuses := newParentStatuses()
 
 		_, changed, err := r.setRouteConditionResolvedRefsCondition(ctx, &route, parentStatuses)
@@ -326,10 +326,10 @@ func TestIsTLSReferenceGranted(t *testing.T) {
 	}
 
 	tests := []struct {
-		name      string
-		spec      gatewayapi.ReferenceGrantSpec
-		fromNS    string
-		want      bool
+		name   string
+		spec   gatewayapi.ReferenceGrantSpec
+		fromNS string
+		want   bool
 	}{
 		{
 			name: "matching grant (any name)",
