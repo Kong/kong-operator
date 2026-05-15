@@ -51,6 +51,7 @@ resources:
   - konnect.konghq.com_konnectgatewaycontrolplanes.yaml
   - konnect.konghq.com_mcpservers.yaml
   - konnect.konghq.com_portalcustomdomains.yaml
+  - konnect.konghq.com_portalcustomizations.yaml
   - konnect.konghq.com_portalemailconfigs.yaml
   - konnect.konghq.com_portalipallowlists.yaml
   - konnect.konghq.com_portalpages.yaml

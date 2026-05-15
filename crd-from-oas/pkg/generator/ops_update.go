@@ -18,12 +18,30 @@ type OpsUpdateFileInfo struct {
 	NeedsClient    bool
 }
 
+type updateOpCallShape struct {
+	SDKInterface     string
+	SDKMethod        string
+	ReqImportPath    string
+	ReqQualifiedType string
+	ReqMethod        string
+	ReqType          string
+	ReqBodyPointer   bool
+	Parents          []parentInfo
+	Wrapped          bool
+	FullyWrapped     bool
+	OmitsEntityID    bool
+	ParentIDField    string
+	EntityIDField    string
+	BodyField        string
+}
+
 // opsUpdateFuncData holds template data for a single update<Entity> function.
 type opsUpdateFuncData struct {
 	Entity             string
 	APIAlias           string
 	UpdateSDKInterface string
 	UpdateSDKMethod    string
+	UpdateReqMethod    string
 	UpdateReqType      string
 	HasTags            bool
 	HasLabels          bool
@@ -56,12 +74,18 @@ type opsUpdateFuncData struct {
 	HasReferences        bool // true when cross-CR references or parent ref replacement need ID injection
 }
 
-// generateOpsUpdateFuncBody renders the update<Entity> function body (no file header).
-func (g *Generator) generateOpsUpdateFuncBody(
+func qualifiedSDKTypeName(importPath, typeName string) string {
+	if strings.HasSuffix(importPath, "/operations") {
+		return "sdkkonnectops." + typeName
+	}
+	return sdkImportAlias(importPath) + "." + typeName
+}
+
+func (g *Generator) resolveUpdateOpCallShape(
 	entityName string,
 	schema *parser.Schema,
 	opsConfig *config.EntityOpsConfig,
-) (*opsUpdateFuncData, error) {
+) (*updateOpCallShape, error) {
 	updateOp, ok := opsConfig.Ops["update"]
 	if !ok || updateOp == nil {
 		return nil, nil
@@ -77,6 +101,10 @@ func (g *Generator) generateOpsUpdateFuncBody(
 	if err != nil {
 		return nil, fmt.Errorf("entity %q: %w", entityName, err)
 	}
+	updateReqMethod, err := sdkOpsMethodNameForOp(opsConfig, "update")
+	if err != nil {
+		return nil, fmt.Errorf("entity %q: resolve update SDK conversion method: %w", entityName, err)
+	}
 
 	sdkMethod := pascalFromKebab(schema.UpdateOperationID)
 	sdkInterface := pascalFromKebab(schema.UpdateTags[0]) + "SDK"
@@ -84,27 +112,15 @@ func (g *Generator) generateOpsUpdateFuncBody(
 	if err != nil {
 		return nil, fmt.Errorf("entity %q: resolve update SDK interface: %w", entityName, err)
 	}
-	hasTags, hasLabels, labelsPointer := metadataFields(schema)
-	needsClient := opsConfig.RequireClient
 
 	parents, err := g.resolveParents(entityName, schema)
 	if err != nil {
 		return nil, err
 	}
 
-	// Determine SDK call shape based on number of path params in the PATCH path.
-	// ≥2 params → wrapped operations.XxxRequest struct.
-	// 1 param → positional (entity ID only, root entity).
 	wrapped := len(schema.UpdatePathParams) >= 2
-	// updateFullyWrapped is true for multi-parent entities (≥3 update path params)
-	// OR when update.path is itself an operations.XxxRequest wrapper type — in that
-	// case To<X>() already returns the full request struct (path params + body) and
-	// we set path params on it directly instead of constructing a manual struct literal.
 	updateFullyWrapped := len(schema.UpdatePathParams) >= 3 ||
 		strings.HasSuffix(updateImportPath, "/operations")
-	// updateOmitsEntityID is true for parent-scoped singletons: the PATCH path
-	// contains only parent path params (no entity-specific ID). The SDK method
-	// takes the parent ID positionally; no entity ID is emitted.
 	updateOmitsEntityID := !wrapped && len(parents) > 0
 
 	var parentIDField, entityIDField, updateBodyField string
@@ -112,39 +128,70 @@ func (g *Generator) generateOpsUpdateFuncBody(
 		params := schema.UpdatePathParams
 		entityIDField = pathParamToFieldName(params[len(params)-1])
 		if !updateFullyWrapped {
-			// Single-parent wrapped: derive parent field name from second-to-last param.
 			parentIDField = pathParamToFieldName(params[len(params)-2])
 			updateBodyField = updateReqType
 		}
 	}
 
-	// When the update path is a fully-wrapped operations.XxxRequest, the SDK
-	// method always takes the struct by value — override any OAS-derived pointer
-	// flag so the template emits *req (dereference) unconditionally.
 	updateReqBodyPointer := schema.UpdateReqBodyPointer
 	if updateFullyWrapped && strings.HasSuffix(updateImportPath, "/operations") {
 		updateReqBodyPointer = false
 	}
 
+	return &updateOpCallShape{
+		SDKInterface:     sdkInterface,
+		SDKMethod:        sdkMethod,
+		ReqImportPath:    updateImportPath,
+		ReqQualifiedType: qualifiedSDKTypeName(updateImportPath, updateReqType),
+		ReqMethod:        updateReqMethod,
+		ReqType:          updateReqType,
+		ReqBodyPointer:   updateReqBodyPointer,
+		Parents:          parents,
+		Wrapped:          wrapped,
+		FullyWrapped:     updateFullyWrapped,
+		OmitsEntityID:    updateOmitsEntityID,
+		ParentIDField:    parentIDField,
+		EntityIDField:    entityIDField,
+		BodyField:        updateBodyField,
+	}, nil
+}
+
+// generateOpsUpdateFuncBody renders the update<Entity> function body (no file header).
+func (g *Generator) generateOpsUpdateFuncBody(
+	entityName string,
+	schema *parser.Schema,
+	opsConfig *config.EntityOpsConfig,
+) (*opsUpdateFuncData, error) {
+	callShape, err := g.resolveUpdateOpCallShape(entityName, schema, opsConfig)
+	if err != nil {
+		return nil, err
+	}
+	if callShape == nil {
+		return nil, nil
+	}
+	hasTags, hasLabels, labelsPointer := metadataFields(schema)
+	needsClient := opsConfig.RequireClient
+
 	return &opsUpdateFuncData{
 		Entity:               entityName,
 		APIAlias:             g.config.APIGroupPackageAlias,
-		UpdateSDKInterface:   sdkInterface,
-		UpdateSDKMethod:      sdkMethod,
-		UpdateReqType:        updateReqType,
+		UpdateSDKInterface:   callShape.SDKInterface,
+		UpdateSDKMethod:      callShape.SDKMethod,
+		UpdateReqMethod:      callShape.ReqMethod,
+		UpdateReqType:        callShape.ReqType,
 		HasTags:              hasTags,
 		HasLabels:            hasLabels,
 		LabelsPointer:        labelsPointer,
-		Parents:              parents,
-		UpdateWrapped:        wrapped,
-		UpdateFullyWrapped:   updateFullyWrapped,
-		ParentIDField:        parentIDField,
-		EntityIDField:        entityIDField,
-		UpdateBodyField:      updateBodyField,
-		UpdateReqBodyPointer: updateReqBodyPointer,
+		Parents:              callShape.Parents,
+		UpdateWrapped:        callShape.Wrapped,
+		UpdateFullyWrapped:   callShape.FullyWrapped,
+		ParentIDField:        callShape.ParentIDField,
+		EntityIDField:        callShape.EntityIDField,
+		UpdateBodyField:      callShape.BodyField,
+		UpdateReqBodyPointer: callShape.ReqBodyPointer,
 		NeedsClient:          needsClient,
 		HasReferences:        g.entityHasReferences(entityName) || g.entityHasParentRefReplacement(entityName),
-		UpdateOmitsEntityID:  updateOmitsEntityID,
+		UpdateOmitsEntityID:  callShape.OmitsEntityID,
 	}, nil
 }
 

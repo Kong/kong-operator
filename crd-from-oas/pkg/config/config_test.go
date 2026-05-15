@@ -123,6 +123,54 @@ apiGroupVersions:
 		assert.True(t, konnect.Types[0].SecretReferences[0].Base64Encoding)
 	})
 
+	t.Run("valid config with delete asPUT", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    types:
+      - path: /v3/portals/{portalId}/customization
+        ops:
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.PortalCustomization
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.PortalCustomization
+          delete:
+            asPUT: true
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		cfg, err := LoadProjectConfig(path)
+		require.NoError(t, err)
+
+		konnect := cfg.APIGroupVersions["konnect.konghq.com/v1alpha1"]
+		require.NotNil(t, konnect)
+		require.Len(t, konnect.Types, 1)
+		require.NotNil(t, konnect.Types[0].Ops)
+		require.NotNil(t, konnect.Types[0].Ops["delete"])
+		assert.True(t, konnect.Types[0].Ops["delete"].AsPUT)
+	})
+
+	t.Run("invalid config with delete asPUT but no update path", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    types:
+      - path: /v3/portals/{portalId}/customization
+        ops:
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.PortalCustomization
+          delete:
+            asPUT: true
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		_, err := LoadProjectConfig(path)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "ops.delete.asPUT requires ops.update.path")
+	})
+
 	t.Run("valid config with ops uid tag filter", func(t *testing.T) {
 		content := `
 apiGroupVersions:

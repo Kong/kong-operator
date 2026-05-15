@@ -500,6 +500,35 @@ func TestGenerateCRDType_DoesNotGenerateHelperMethods(t *testing.T) {
 	assert.NotContains(t, content, "konnectv1alpha2")
 }
 
+func TestGenerateCRDType_EmitsInlineAPISpecTypes(t *testing.T) {
+	schema := &parser.Schema{
+		Name: "CreatePortalCustomization",
+		Properties: []*parser.Property{
+			{
+				Name: "menu",
+				Type: "object",
+				Properties: []*parser.Property{
+					{
+						Name: "title",
+						Type: "string",
+					},
+				},
+			},
+		},
+	}
+
+	g := NewGenerator(Config{
+		APIGroup:   "konnect.konghq.com",
+		APIVersion: "v1alpha1",
+	})
+
+	content, err := g.generateCRDType("CreatePortalCustomization", schema)
+	require.NoError(t, err)
+	assert.Contains(t, content, "Menu Menu `json:\"menu,omitzero\"`") //nolint:dupword
+	assert.Contains(t, content, "type Menu struct {")
+	assert.Contains(t, content, "Title string `json:\"title,omitzero\"`")
+}
+
 func TestGenerateCRDFuncs_GeneratesKonnectLabelAccessors(t *testing.T) {
 	t.Run("referenced labels map type", func(t *testing.T) {
 		schema := &parser.Schema{
@@ -2396,6 +2425,34 @@ func TestGenerateSDKOps_OmitsDoubleBlankLineBeforeMarshalPayload(t *testing.T) {
 	assert.NotContains(t, content, ")\n\n\nfunc (s *EventGatewayListenerAPISpec) marshalSDKOpsPayload() ([]byte, error) {")
 }
 
+func TestGenerateSDKOps_DuplicateRequestTypeUsesOpSpecificMethods(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	schema := &parser.Schema{
+		Properties: []*parser.Property{
+			{
+				Name: "title",
+				Type: "string",
+			},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {
+				Path: "github.com/Kong/sdk-konnect-go/models/components.PortalCustomization",
+			},
+			"update": {
+				Path: "github.com/Kong/sdk-konnect-go/models/components.PortalCustomization",
+			},
+		},
+	}
+
+	content, err := g.generateSDKOps("PortalCustomization", schema, opsConfig)
+	require.NoError(t, err)
+	assert.Contains(t, content, "func (s *PortalCustomizationAPISpec) ToCreatePortalCustomization()")
+	assert.Contains(t, content, "func (s *PortalCustomizationAPISpec) ToUpdatePortalCustomization()")
+	assert.NotContains(t, content, "func (s *PortalCustomizationAPISpec) ToPortalCustomization()")
+}
+
 func TestGenerateSDKOps_RootUnionUsesSelectedVariantPayload(t *testing.T) {
 	g := NewGenerator(Config{APIVersion: "v1alpha1"})
 	schema := &parser.Schema{
@@ -3821,6 +3878,52 @@ func TestGenerateEntityOpsFile_GetForUIDWithNoMatchStrategy(t *testing.T) {
 	assert.NotContains(t, res.File.Content, `sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"`)
 }
 
+func TestGenerateEntityOpsFile_GetForUIDSingletonNoIDWithoutMatchStrategy(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"PortalCustomization": {IsRoot: ptr(false)},
+		},
+	})
+
+	schema := &parser.Schema{
+		OperationID:        "create-portal-customization",
+		Tags:               []string{"Portal Customization"},
+		SuccessResponseRef: "PortalCustomization",
+		RespHasID:          false,
+		Dependencies: []*parser.Dependency{
+			{ParamName: "portalId", EntityName: "Portal"},
+		},
+		UpdateOperationID:      "replace-portal-customization",
+		UpdateTags:             []string{"Portal Customization"},
+		UpdatePathParams:       []string{"portalId"},
+		ListOperationID:        "get-portal-customization",
+		ListTags:               []string{"Portal Customization"},
+		ListSuccessResponseRef: "PortalCustomization",
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.PortalCustomization"},
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.PortalCustomization"},
+			"delete": {AsPUT: true},
+		},
+		SDK: &config.OpSDKConfig{
+			Interface: "github.com/Kong/sdk-konnect-go.PortalCustomizationSDK",
+			FieldName: "PortalCustomization",
+		},
+	}
+
+	res, err := g.generateEntityOpsFile("PortalCustomization", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, res.File)
+	require.NotNil(t, res.GetForUIDInfo)
+
+	assert.Contains(t, res.File.Content, "singleton sub-resource without a persistent Konnect")
+	assert.Contains(t, res.File.Content, `return "", EntityWithMatchingUIDNotFoundError{Entity: obj}`)
+	assert.NotContains(t, res.File.Content, "sdk.GetPortalCustomization(ctx, parentID)")
+}
+
 // TestGenerateEntityOpsFile_ParentScopedSingleton verifies correct code
 // generation for resources like PortalEmailConfig whose PATCH and DELETE paths
 // contain only the parent ID (no entity-specific ID). The generated update call
@@ -4430,6 +4533,56 @@ func TestGenerateOpsDelete_NonRootEntityWithParentTypeOverride(t *testing.T) {
 
 	// Positional call: sdk.DeleteEventGatewayDataPlaneCertificate(ctx, parentID, id).
 	assert.Contains(t, file.Content, "sdk.DeleteEventGatewayDataPlaneCertificate(ctx, parentID, id)")
+}
+
+func TestGenerateOpsDelete_AsPUTUsesUpdateMethod(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"PortalCustomization": {IsRoot: ptr(false)},
+		},
+	})
+
+	schema := &parser.Schema{
+		OperationID:        "create-portal-customization",
+		Tags:               []string{"Portal Customization"},
+		SuccessResponseRef: "PortalCustomization",
+		RespHasID:          false,
+		Dependencies: []*parser.Dependency{
+			{ParamName: "portalId", EntityName: "Portal"},
+		},
+		UpdateOperationID:    "replace-portal-customization",
+		UpdateTags:           []string{"Portal Customization"},
+		UpdatePathParams:     []string{"portalId"},
+		UpdateReqBodyPointer: false,
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.PortalCustomization"},
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.PortalCustomization"},
+			"delete": {AsPUT: true},
+		},
+	}
+
+	file, info, err := g.generateOpsDelete("PortalCustomization", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotNil(t, info)
+
+	assert.Equal(t, "zz_generated_ops_portalcustomization.go", file.Name)
+	assert.Equal(t, "GetPortalCustomizationSDK", info.SDKGetter)
+	assert.Contains(t, file.Content, `sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"`)
+	assert.Contains(t, file.Content, "obj.Spec.APISpec.ToCreatePortalCustomization()")
+	assert.Contains(t, file.Content, "obj.Spec.APISpec.ToUpdatePortalCustomization()")
+	assert.Contains(t, file.Content, "func deletePortalCustomization(")
+	assert.Contains(t, file.Content, "parentID := obj.GetPortalID()")
+	assert.Contains(t, file.Content, `CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "Portal", Op: DeleteOp}`)
+	assert.Contains(t, file.Content, "req := &sdkkonnectcomp.PortalCustomization{}")
+	assert.Contains(t, file.Content, "sdk.ReplacePortalCustomization(ctx, parentID, *req)")
+	assert.NotContains(t, file.Content, "SetKonnectID")
+	assert.NotContains(t, file.Content, "obj.GetKonnectStatus().GetKonnectID()")
+	assert.Contains(t, file.Content, "wrapErrIfKonnectOpFailed(err, DeleteOp, obj)")
 }
 
 func TestGenerateOpsDelete_NoDeleteOp_Skipped(t *testing.T) {

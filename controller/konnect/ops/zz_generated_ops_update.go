@@ -44,6 +44,8 @@ func UpdateGeneratedOps[
 		return updatePortal(ctx, sdk.GetPortalsSDK(), ent)
 	case *konnectv1alpha1.PortalCustomDomain:
 		return updatePortalCustomDomain(ctx, sdk.GetPortalCustomDomainsSDK(), ent)
+	case *konnectv1alpha1.PortalCustomization:
+		return updatePortalCustomization(ctx, sdk.GetPortalCustomizationSDK(), ent)
 	case *konnectv1alpha1.PortalEmailConfig:
 		return updatePortalEmailConfig(ctx, sdk.GetPortalEmailsSDK(), ent)
 	case *konnectv1alpha1.PortalIPAllowList:
