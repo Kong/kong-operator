@@ -1157,10 +1157,8 @@ func Test_FilterMatchingListeners(t *testing.T) {
 	}
 	listenerReady := gwtypes.Listener{Name: "listener1", Port: 80, Protocol: gwtypes.HTTPProtocolType}
 	listenerNotReady := gwtypes.Listener{Name: "listener2", Port: 80, Protocol: gwtypes.HTTPProtocolType}
-	listenerProtocolTCP := gwtypes.Listener{Name: "listener1", Port: 80, Protocol: "TCP"}
 	tlsModePassthrough := gatewayv1.TLSModePassthrough
 	tlsModeTerminate := gatewayv1.TLSModeTerminate
-	listenerTLSPassthrough := gwtypes.Listener{Name: "listener1", Port: 80, Protocol: gwtypes.HTTPSProtocolType, TLS: &gatewayv1.ListenerTLSConfig{Mode: &tlsModePassthrough}}
 	listenerNotReadyTLS := gwtypes.Listener{Name: "listener2", Port: 80, Protocol: gwtypes.TLSProtocolType, TLS: &gatewayv1.ListenerTLSConfig{Mode: &tlsModeTerminate}}
 	listenerProtocolTLS := gwtypes.Listener{Name: "listener1", Port: 80, Protocol: gwtypes.TLSProtocolType, TLS: &gatewayv1.ListenerTLSConfig{Mode: &tlsModePassthrough}}
 
@@ -1196,24 +1194,6 @@ func Test_FilterMatchingListeners(t *testing.T) {
 			pRef:      gwtypes.ParentReference{Name: "listener1", Port: new(int32(81))},
 			routeKind: "HTTPRoute",
 			listeners: []gwtypes.Listener{listenerReady},
-			wantLen:   0,
-			wantCond:  true,
-			condMsg:   string(gwtypes.RouteReasonNoMatchingParent),
-		},
-		{
-			name:      "protocol mismatch",
-			pRef:      pRef,
-			routeKind: "HTTPRoute",
-			listeners: []gwtypes.Listener{listenerProtocolTCP},
-			wantLen:   0,
-			wantCond:  true,
-			condMsg:   string(gwtypes.RouteReasonNoMatchingParent),
-		},
-		{
-			name:      "TLS mode mismatch",
-			pRef:      pRef,
-			routeKind: "HTTPRoute",
-			listeners: []gwtypes.Listener{listenerTLSPassthrough},
 			wantLen:   0,
 			wantCond:  true,
 			condMsg:   string(gwtypes.RouteReasonNoMatchingParent),
@@ -1260,15 +1240,6 @@ func Test_FilterMatchingListeners(t *testing.T) {
 			wantLen:   1,
 			wantCond:  false,
 		},
-		{
-			name:      "TLSRoute - protocol mismatch",
-			pRef:      pRef,
-			routeKind: "TLSRoute",
-			listeners: []gwtypes.Listener{listenerProtocolTCP},
-			wantLen:   0,
-			wantCond:  true,
-			condMsg:   string(gwtypes.RouteReasonNoMatchingParent),
-		},
 	}
 
 	for _, tt := range tests {
@@ -1288,6 +1259,7 @@ func Test_FilterListenersByAllowedRoutes(t *testing.T) {
 	pRef := gwtypes.ParentReference{Name: "listener1"}
 	listener := gwtypes.Listener{Name: "listener1", Port: 80, Protocol: gwtypes.HTTPProtocolType}
 	kind := gwtypes.RouteGroupKind{Group: groupPtr(gwtypes.GroupName), Kind: "HTTPRoute"}
+	kindTLSRoute := gwtypes.RouteGroupKind{Group: groupPtr(gwtypes.GroupName), Kind: "TLSRoute"}
 	routeNS := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "default"}}
 
 	selector := &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}}
@@ -1317,6 +1289,10 @@ func Test_FilterListenersByAllowedRoutes(t *testing.T) {
 	listenerNSSelectorInvalid := listener
 	listenerNSSelectorInvalid.AllowedRoutes = &gwtypes.AllowedRoutes{Namespaces: &gwtypes.RouteNamespaces{From: new(gwtypes.NamespacesFromSelector), Selector: invalidSelector}}
 
+	listenerTLSPassthrough := listener
+	listenerTLSPassthrough.Protocol = gwtypes.HTTPSProtocolType
+	listenerTLSPassthrough.TLS = &gatewayv1.ListenerTLSConfig{Mode: new(gwtypes.TLSModePassthrough)}
+
 	unknownFrom := gwtypes.NamespacesFromAll
 	listenerNSUnknown := listener
 	listenerNSUnknown.AllowedRoutes = &gwtypes.AllowedRoutes{Namespaces: &gwtypes.RouteNamespaces{From: &unknownFrom}}
@@ -1331,6 +1307,22 @@ func Test_FilterListenersByAllowedRoutes(t *testing.T) {
 		wantCond  bool
 		wantErr   bool
 	}{
+		{
+			name:      "TLSRoute - protocol mismatch",
+			kind:      kindTLSRoute,
+			listeners: []gwtypes.Listener{listener},
+			routeNS:   routeNS,
+			wantLen:   0,
+			wantCond:  true,
+		},
+		{
+			name:      "TLS mode mismatch",
+			kind:      kind,
+			listeners: []gwtypes.Listener{listenerTLSPassthrough},
+			routeNS:   routeNS,
+			wantLen:   0,
+			wantCond:  true,
+		},
 		{
 			name:      "AllowedRoutes nil (all allowed)",
 			listeners: []gwtypes.Listener{listener},

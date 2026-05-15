@@ -79,4 +79,5 @@ const (
 	RouteReasonRefNotPermitted            = gatewayv1.RouteReasonRefNotPermitted
 	RouteReasonResolvedRefs               = gatewayv1.RouteReasonResolvedRefs
 	TLSModeTerminate                      = gatewayv1.TLSModeTerminate
+	TLSModePassthrough                    = gatewayv1.TLSModePassthrough
 )
