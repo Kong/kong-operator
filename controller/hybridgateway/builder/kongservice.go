@@ -208,6 +208,17 @@ func (b *KongServiceBuilder) WithProtocol(protocol string) *KongServiceBuilder {
 	return b
 }
 
+// WithClientCertificateRef sets the clientCertificateRef on the KongService.
+// name is the metadata.name of the KongCertificate in the same namespace.
+// No-op when name is empty.
+func (b *KongServiceBuilder) WithClientCertificateRef(name string) *KongServiceBuilder {
+	if name == "" {
+		return b
+	}
+	b.service.Spec.ClientCertificateRef = &commonv1alpha1.NamespacedRef{Name: name}
+	return b
+}
+
 // Build returns the constructed KongService resource and any accumulated errors.
 func (b *KongServiceBuilder) Build() (configurationv1alpha1.KongService, error) {
 	if len(b.errors) > 0 {
