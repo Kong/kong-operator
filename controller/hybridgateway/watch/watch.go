@@ -74,6 +74,14 @@ func Watches(obj client.Object, cl client.Client) []Watcher {
 				MapHTTPRouteForKongUpstreamPolicy(cl),
 				&configurationv1beta1.KongUpstreamPolicy{},
 			},
+			{
+				MapHTTPRouteForClientCertSecret(cl),
+				&corev1.Secret{},
+			},
+			{
+				MapRouteForKongResource[*configurationv1alpha1.KongCertificate](kindHTTPRoute),
+				&configurationv1alpha1.KongCertificate{},
+			},
 		}
 	case *gwtypes.TLSRoute:
 		return []Watcher{
@@ -112,6 +120,14 @@ func Watches(obj client.Object, cl client.Client) []Watcher {
 			{
 				MapTLSRouteForReferenceGrant(cl),
 				&gwtypes.ReferenceGrant{},
+			},
+			{
+				MapTLSRouteForClientCertSecret(cl),
+				&corev1.Secret{},
+			},
+			{
+				MapRouteForKongResource[*configurationv1alpha1.KongCertificate](kindTLSRoute),
+				&configurationv1alpha1.KongCertificate{},
 			},
 		}
 	case *gwtypes.Gateway:
