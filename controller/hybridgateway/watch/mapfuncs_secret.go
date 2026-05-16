@@ -10,8 +10,6 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 )
 
-const clientCertAnnotation = "konghq.com/client-cert"
-
 // MapHTTPRouteForClientCertSecret returns a handler.MapFunc that, given a Secret, lists all
 // Services in the same namespace that reference it via the konghq.com/client-cert annotation,
 // then returns reconcile.Requests for all HTTPRoutes backed by those Services.

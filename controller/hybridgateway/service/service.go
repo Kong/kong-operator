@@ -173,17 +173,15 @@ func buildClientCertificate[
 		return nil
 	}
 
-	if isNonTLSProtocol(strings.ToLower(effectiveProtocol)) {
+	if isNonTLSProtocol(effectiveProtocol) {
 		log.Info(logger, "Skipping client certificate for non-TLS service protocol",
 			"protocol", effectiveProtocol,
 			"secretName", secretName)
 		return nil
 	}
 
-	secretNamespace := serviceNamespace
-	if ownerSvc != nil {
-		secretNamespace = ownerSvc.Namespace
-	}
+	// ownerSvc is guaranteed non-nil by resolveClientCertFromBackendRefs when secretName != "".
+	secretNamespace := ownerSvc.Namespace
 
 	// Verify the Secret exists; skip on failure (KongService still built without ref).
 	secret := &corev1.Secret{}
@@ -444,8 +442,6 @@ func extractTLSVerifyDepthFromBackendRef(
 	return v
 }
 
-// resolveConnectTimeoutFromHTTPRouteBackendRefs returns the connect-timeout value taken from
-// the first HTTPRoute backend Service that carries the konghq.com/connect-timeout annotation.
 // resolveConnectTimeoutFromBackendRefs returns the connect-timeout value taken from
 // the first backend Service that carries the konghq.com/connect-timeout annotation.
 func resolveConnectTimeoutFromBackendRefs(
@@ -503,8 +499,6 @@ func extractConnectTimeoutFromBackendRef(
 	return v
 }
 
-// resolveReadTimeoutFromHTTPRouteBackendRefs returns the read-timeout value taken from
-// the first HTTPRoute backend Service that carries the konghq.com/read-timeout annotation.
 // resolveReadTimeoutFromBackendRefs returns the read-timeout value taken from
 // the first backend Service that carries the konghq.com/read-timeout annotation.
 func resolveReadTimeoutFromBackendRefs(

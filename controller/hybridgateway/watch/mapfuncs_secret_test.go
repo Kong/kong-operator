@@ -58,60 +58,71 @@ func TestMapHTTPRouteForClientCertSecret(t *testing.T) {
 		},
 	}
 
+	httpRouteIndexer := func(obj client.Object) []string {
+		route, ok := obj.(*gwtypes.HTTPRoute)
+		if !ok {
+			return nil
+		}
+		var keys []string
+		for _, rule := range route.Spec.Rules {
+			for _, ref := range rule.BackendRefs {
+				keys = append(keys, route.Namespace+"/"+string(ref.Name))
+			}
+		}
+		return keys
+	}
+
 	tests := []struct {
-		name      string
-		input     client.Object
-		objects   []client.Object
-		wantLen   int
-		wantNames []string
-		wantNil   bool
+		name       string
+		input      client.Object
+		objects    []client.Object
+		setupIndex bool
+		wantLen    int
+		wantNames  []string
+		wantNil    bool
 	}{
+		{
+			name:    "nil input returns nil",
+			input:   nil,
+			wantNil: true,
+		},
 		{
 			name:    "wrong type returns nil",
 			input:   &corev1.Service{},
 			wantNil: true,
 		},
 		{
-			name:    "secret not referenced by any service returns empty",
-			input:   secret,
-			objects: []client.Object{},
-			wantLen: 0,
+			name:       "secret not referenced by any service returns empty",
+			input:      secret,
+			setupIndex: true,
+			objects:    []client.Object{},
+			wantLen:    0,
 		},
 		{
-			name:    "secret referenced by service with HTTPRoute returns request",
-			input:   secret,
-			objects: []client.Object{svcWithAnnotation, route1},
-			wantLen: 1,
-			wantNames: []string{"route1"},
+			name:       "secret referenced by service with HTTPRoute returns request",
+			input:      secret,
+			objects:    []client.Object{svcWithAnnotation, route1},
+			setupIndex: true,
+			wantLen:    1,
+			wantNames:  []string{"route1"},
 		},
 		{
-			name:    "service annotation references different secret - no match",
-			input:   secret,
-			objects: []client.Object{svcOtherAnnotation},
-			wantLen: 0,
+			name:       "service annotation references different secret - no match",
+			input:      secret,
+			objects:    []client.Object{svcOtherAnnotation},
+			setupIndex: true,
+			wantLen:    0,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var cl client.Client
-			if tt.input != nil && tt.input == secret {
+			if tt.setupIndex {
 				cl = fake.NewClientBuilder().
 					WithScheme(scheme).
 					WithObjects(tt.objects...).
-					WithIndex(&gwtypes.HTTPRoute{}, index.BackendServicesOnHTTPRouteIndex, func(obj client.Object) []string {
-						route, ok := obj.(*gwtypes.HTTPRoute)
-						if !ok {
-							return nil
-						}
-						var keys []string
-						for _, rule := range route.Spec.Rules {
-							for _, ref := range rule.BackendRefs {
-								keys = append(keys, route.Namespace+"/"+string(ref.BackendRef.Name))
-							}
-						}
-						return keys
-					}).
+					WithIndex(&gwtypes.HTTPRoute{}, index.BackendServicesOnHTTPRouteIndex, httpRouteIndexer).
 					Build()
 			} else {
 				cl = fake.NewClientBuilder().WithScheme(scheme).Build()
@@ -169,54 +180,64 @@ func TestMapTLSRouteForClientCertSecret(t *testing.T) {
 		},
 	}
 
+	tlsRouteIndexer := func(obj client.Object) []string {
+		route, ok := obj.(*gwtypes.TLSRoute)
+		if !ok {
+			return nil
+		}
+		var keys []string
+		for _, rule := range route.Spec.Rules {
+			for _, ref := range rule.BackendRefs {
+				keys = append(keys, route.Namespace+"/"+string(ref.Name))
+			}
+		}
+		return keys
+	}
+
 	tests := []struct {
-		name      string
-		input     client.Object
-		objects   []client.Object
-		wantLen   int
-		wantNames []string
-		wantNil   bool
+		name       string
+		input      client.Object
+		objects    []client.Object
+		setupIndex bool
+		wantLen    int
+		wantNames  []string
+		wantNil    bool
 	}{
+		{
+			name:    "nil input returns nil",
+			input:   nil,
+			wantNil: true,
+		},
 		{
 			name:    "wrong type returns nil",
 			input:   &corev1.Service{},
 			wantNil: true,
 		},
 		{
-			name:    "secret not referenced returns empty",
-			input:   secret,
-			objects: []client.Object{},
-			wantLen: 0,
+			name:       "secret not referenced returns empty",
+			input:      secret,
+			objects:    []client.Object{},
+			setupIndex: true,
+			wantLen:    0,
 		},
 		{
-			name:      "secret referenced by service with TLSRoute returns request",
-			input:     secret,
-			objects:   []client.Object{svcWithAnnotation, tlsRoute1},
-			wantLen:   1,
-			wantNames: []string{"tlsroute1"},
+			name:       "secret referenced by service with TLSRoute returns request",
+			input:      secret,
+			objects:    []client.Object{svcWithAnnotation, tlsRoute1},
+			setupIndex: true,
+			wantLen:    1,
+			wantNames:  []string{"tlsroute1"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var cl client.Client
-			if tt.input != nil && tt.input == secret {
+			if tt.setupIndex {
 				cl = fake.NewClientBuilder().
 					WithScheme(scheme).
 					WithObjects(tt.objects...).
-					WithIndex(&gwtypes.TLSRoute{}, index.BackendServicesOnTLSRouteIndex, func(obj client.Object) []string {
-						route, ok := obj.(*gwtypes.TLSRoute)
-						if !ok {
-							return nil
-						}
-						var keys []string
-						for _, rule := range route.Spec.Rules {
-							for _, ref := range rule.BackendRefs {
-								keys = append(keys, route.Namespace+"/"+string(ref.Name))
-							}
-						}
-						return keys
-					}).
+					WithIndex(&gwtypes.TLSRoute{}, index.BackendServicesOnTLSRouteIndex, tlsRouteIndexer).
 					Build()
 			} else {
 				cl = fake.NewClientBuilder().WithScheme(scheme).Build()
