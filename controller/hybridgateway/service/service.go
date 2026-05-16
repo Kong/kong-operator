@@ -59,7 +59,7 @@ func ServiceForRule[
 	pRef *gwtypes.ParentReference,
 	cp *commonv1alpha1.ControlPlaneRef,
 	upstreamName string,
-) (kongService *configurationv1alpha1.KongService, err error) {
+) (kongService *configurationv1alpha1.KongService, kongCertificate *configurationv1alpha1.KongCertificate, err error) {
 
 	var serviceName string
 	var namespace string
@@ -70,7 +70,7 @@ func ServiceForRule[
 	case *gwtypes.HTTPRoute:
 		httpRule, ok := any(rule).(gwtypes.HTTPRouteRule)
 		if !ok {
-			return nil, fmt.Errorf("failed to build KongService : unmatched route type and rule type: %T and %T", parentRoute, rule)
+			return nil, nil, fmt.Errorf("failed to build KongService : unmatched route type and rule type: %T and %T", parentRoute, rule)
 		}
 		serviceName = namegen.NewKongServiceNameForHTTPRouteRule(r, cp, httpRule)
 		namespace = r.Namespace
@@ -80,7 +80,7 @@ func ServiceForRule[
 	case *gwtypes.TLSRoute:
 		tlsRule, ok := any(rule).(gwtypes.TLSRouteRule)
 		if !ok {
-			return nil, fmt.Errorf("failed to build KongService : unmatched route type and rule type: %T and %T", parentRoute, rule)
+			return nil, nil, fmt.Errorf("failed to build KongService : unmatched route type and rule type: %T and %T", parentRoute, rule)
 		}
 		serviceName = namegen.NewKongServiceNameForTLSRouteRule(r, cp, tlsRule)
 		namespace = r.Namespace
@@ -91,7 +91,7 @@ func ServiceForRule[
 
 	// Should be unreachable.
 	default:
-		return nil, fmt.Errorf("failed to build KongService: unsupported route type: %T", parentRoute)
+		return nil, nil, fmt.Errorf("failed to build KongService: unsupported route type: %T", parentRoute)
 	}
 
 	// Resolve service attributes once, outside the switch — future route types only add a case above.
@@ -106,6 +106,13 @@ func ServiceForRule[
 
 	logger = logger.WithValues("kongservice", serviceName)
 	log.Debug(logger, fmt.Sprintf("Generating KongService for %s rule", parentRoute.GetObjectKind().GroupVersionKind().Kind))
+
+	// Resolve client certificate from the backend Service annotations (first-wins).
+	certSecretName, certOwnerSvc := resolveClientCertFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
+	kongCertificate = buildClientCertificate(
+		ctx, logger, cl, parentRoute, pRef, cp,
+		serviceName, namespace, certSecretName, certOwnerSvc, protocol,
+	)
 
 	service, err := builder.NewKongService().
 		WithName(serviceName).
@@ -122,17 +129,89 @@ func ServiceForRule[
 		WithReadTimeout(readTimeout).
 		WithWriteTimeout(writeTimeout).
 		WithRetries(retries).
+		WithClientCertificateRef(clientCertRefName(kongCertificate)).
 		WithControlPlaneRef(*cp).Build()
 	if err != nil {
 		log.Error(logger, err, "Failed to build KongService resource")
-		return nil, fmt.Errorf("failed to build KongService %s: %w", serviceName, err)
+		return nil, nil, fmt.Errorf("failed to build KongService %s: %w", serviceName, err)
 	}
 
 	if _, err = translator.VerifyAndUpdate(ctx, logger, cl, &service, parentRoute, false); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return &service, nil
+	return &service, kongCertificate, nil
+}
+
+// clientCertRefName returns the cert's metadata.name or "" when cert is nil.
+func clientCertRefName(cert *configurationv1alpha1.KongCertificate) string {
+	if cert == nil {
+		return ""
+	}
+	return cert.Name
+}
+
+// buildClientCertificate creates or updates a KongCertificate for the given service's client-cert annotation.
+// Returns the KongCertificate when built, or nil when skipped (no annotation, protocol mismatch, Secret missing).
+func buildClientCertificate[
+	T gwtypes.SupportedRoute,
+	TPtr gwtypes.SupportedRoutePtr[T],
+](
+	ctx context.Context,
+	logger logr.Logger,
+	cl client.Client,
+	parentRoute TPtr,
+	pRef *gwtypes.ParentReference,
+	cp *commonv1alpha1.ControlPlaneRef,
+	serviceName string,
+	serviceNamespace string,
+	secretName string,
+	ownerSvc *corev1.Service,
+	effectiveProtocol string,
+) *configurationv1alpha1.KongCertificate {
+	if secretName == "" {
+		return nil
+	}
+
+	if isNonTLSProtocol(strings.ToLower(effectiveProtocol)) {
+		log.Info(logger, "Skipping client certificate for non-TLS service protocol",
+			"protocol", effectiveProtocol,
+			"secretName", secretName)
+		return nil
+	}
+
+	secretNamespace := serviceNamespace
+	if ownerSvc != nil {
+		secretNamespace = ownerSvc.Namespace
+	}
+
+	// Verify the Secret exists; skip on failure (KongService still built without ref).
+	secret := &corev1.Secret{}
+	if err := cl.Get(ctx, client.ObjectKey{Namespace: secretNamespace, Name: secretName}, secret); err != nil {
+		log.Error(logger, err, "Failed to fetch client-cert Secret; skipping certificate",
+			"secret", secretNamespace+"/"+secretName)
+		return nil
+	}
+
+	cert, err := builder.NewKongCertificate().
+		WithName(serviceName).
+		WithNamespace(serviceNamespace).
+		WithSecretRef(secretName, secretNamespace).
+		WithControlPlaneRef(*cp).
+		WithLabelsForRoute(parentRoute, pRef).
+		WithAnnotationsForRoute(parentRoute, pRef).
+		Build()
+	if err != nil {
+		log.Error(logger, err, "Failed to build KongCertificate resource", "cert", serviceName)
+		return nil
+	}
+
+	if _, err = translator.VerifyAndUpdate(ctx, logger, cl, &cert, parentRoute, false); err != nil {
+		log.Error(logger, err, "Failed to verify/update KongCertificate", "cert", serviceName)
+		return nil
+	}
+
+	return &cert
 }
 
 // resolveProtocolFromBackendRefs inspects the Kubernetes Service annotations of the
