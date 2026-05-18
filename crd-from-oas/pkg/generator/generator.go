@@ -1414,6 +1414,11 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 					if skipProperty(prop) || len(prop.OneOf) == 0 {
 						continue
 					}
+					unionTypeName := generatedUnionTypeName(prop, goName)
+					if emittedNested[unionTypeName] {
+						continue
+					}
+					emittedNested[unionTypeName] = true
 					buf.WriteString(g.generateUnionType(prop, goName))
 				}
 				if wrapper := emitUnionWrapperUnmarshalJSON(goName, buildUnionFieldSpecs(schema.Properties, goName)); wrapper != "" {
@@ -1588,6 +1593,11 @@ func (g *Generator) writeNestedInlineTypes(buf *strings.Builder, props []*parser
 				if skipProperty(nested) || len(nested.OneOf) == 0 {
 					continue
 				}
+				unionTypeName := generatedUnionTypeName(nested, typeName)
+				if emitted[unionTypeName] {
+					continue
+				}
+				emitted[unionTypeName] = true
 				buf.WriteString(g.generateUnionType(nested, typeName))
 			}
 			if wrapper := emitUnionWrapperUnmarshalJSON(typeName, buildUnionFieldSpecs(prop.Items.Properties, typeName)); wrapper != "" {
@@ -1626,6 +1636,11 @@ func (g *Generator) writeNestedInlineTypes(buf *strings.Builder, props []*parser
 			if skipProperty(nested) || len(nested.OneOf) == 0 {
 				continue
 			}
+			unionTypeName := generatedUnionTypeName(nested, typeName)
+			if emitted[unionTypeName] {
+				continue
+			}
+			emitted[unionTypeName] = true
 			buf.WriteString(g.generateUnionType(nested, typeName))
 		}
 		if wrapper := emitUnionWrapperUnmarshalJSON(typeName, buildUnionFieldSpecs(prop.Properties, typeName)); wrapper != "" {

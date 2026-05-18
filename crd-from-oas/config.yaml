@@ -176,6 +176,8 @@ apiGroupVersions:
             fieldName: eventGatewayVirtualClusterRef
           ancestorEntityTypes:
             - KonnectEventGateway
+      - path: /v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/produce-policies
+        name: EventGatewayVirtualClusterProducePolicy
 
       # Portal APIs
       - path: /v3/portals

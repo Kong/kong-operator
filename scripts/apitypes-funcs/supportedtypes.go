@@ -300,6 +300,9 @@ var supportedKonnectV1Alpha1TypesGeneratedFromOAS = []supportedTypesT{
 				Type: "EventGatewayVirtualClusterConsumePolicy",
 			},
 			{
+				Type: "EventGatewayVirtualClusterProducePolicy",
+			},
+			{
 				Type: "Portal",
 			},
 			{

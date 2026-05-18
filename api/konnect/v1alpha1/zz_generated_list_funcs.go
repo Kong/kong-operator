@@ -47,6 +47,11 @@ func (obj EventGatewayVirtualClusterConsumePolicyList) GetItems() []EventGateway
 	return obj.Items
 }
 
+// GetItems returns the list of EventGatewayVirtualClusterProducePolicy items.
+func (obj EventGatewayVirtualClusterProducePolicyList) GetItems() []EventGatewayVirtualClusterProducePolicy {
+	return obj.Items
+}
+
 // GetItems returns the list of Portal items.
 func (obj PortalList) GetItems() []Portal {
 	return obj.Items
