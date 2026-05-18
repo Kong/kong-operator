@@ -118,15 +118,8 @@ apiGroupVersions:
             apiSpec:
               tls:
                 caBundle:
-                   _validations:
+                  _validations:
                     - "+kubebuilder:validation:MaxLength=4096"
-                clientIdentity:
-                  certificate:
-                     _validations:
-                      - "+kubebuilder:validation:MaxLength=4096"
-                  key:
-                     _validations:
-                      - "+kubebuilder:validation:MaxLength=4096"
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayBackendClustersSDK
@@ -284,4 +277,17 @@ apiGroupVersions:
           update:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdatePortalCustomDomainRequest
           delete: {}
+        reconciler: {}
+      - path: /v3/portals/{portalId}/customization
+        name: PortalCustomization
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.PortalCustomizationSDK
+            fieldName: PortalCustomization
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.PortalCustomization
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.PortalCustomization
+          delete:
+            asPUT: true
         reconciler: {}

@@ -116,7 +116,7 @@ func updateKongUpstreamStatusWithProgrammed(
 	id string,
 	cpID string,
 ) {
-	obj.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+	obj.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{
 		ControlPlaneID:      cpID,
 		KonnectEntityStatus: konnectEntityStatus(id),
 	}

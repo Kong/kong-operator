@@ -193,7 +193,11 @@ func (rc *ReconcilerConfig) GetIsRoot() bool {
 type OpConfig struct {
 	// Path is the fully qualified Go type path in the form "importpath.TypeName",
 	// e.g. "github.com/Kong/sdk-konnect-go/models/components.CreatePortal".
-	Path string `yaml:"path"`
+	// Required for create/update ops.
+	Path string `yaml:"path,omitempty"`
+	// AsPUT makes generated delete ops call the configured update/PUT SDK method
+	// with an empty request body instead of requiring an OpenAPI DELETE operation.
+	AsPUT bool `yaml:"asPUT,omitempty"`
 }
 
 // OpSDKConfig identifies the SDK interface and factory field name used by
@@ -544,6 +548,12 @@ func (tc *TypeConfig) validate() error {
 			return fmt.Errorf("secretReferences[%d]: duplicate path %q", i, sr.Path)
 		}
 		seenSecretPaths[sr.Path] = true
+	}
+	if deleteOp, ok := tc.Ops["delete"]; ok && deleteOp != nil && deleteOp.AsPUT {
+		updateOp, ok := tc.Ops["update"]
+		if !ok || updateOp == nil || updateOp.Path == "" {
+			return fmt.Errorf("ops.delete.asPUT requires ops.update.path")
+		}
 	}
 	if tc.OpsSkipGetForUID && tc.OpsGetForUID != nil {
 		return fmt.Errorf("ops.skipGetForUID and ops.getForUID are mutually exclusive")

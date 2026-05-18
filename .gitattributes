@@ -6,3 +6,5 @@ charts/kong-operator/ci/__snapshots__/*.snap linguist-generated=true
 
 # Mark all generated code in the API directory as not generated, since it should be reviewed.
 api/** linguist-generated=false
+# Deepcopy functions are generated and do not require review, so we mark them as generated.
+api/*/*/zz_generated.deepcopy.go linguist-generated=true

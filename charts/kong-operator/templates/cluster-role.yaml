@@ -432,6 +432,7 @@ rules:
       - konnectcloudgatewaytransitgateways
       - konnecteventgateways
       - portalcustomdomains
+      - portalcustomizations
       - portalemailconfigs
       - portalipallowlists
       - portalpages
@@ -475,6 +476,8 @@ rules:
       - mcpservers/status
       - portalcustomdomains/finalizers
       - portalcustomdomains/status
+      - portalcustomizations/finalizers
+      - portalcustomizations/status
       - portalemailconfigs/finalizers
       - portalemailconfigs/status
       - portalipallowlists/finalizers

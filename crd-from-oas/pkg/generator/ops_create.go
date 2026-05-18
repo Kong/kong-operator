@@ -23,6 +23,7 @@ type opsCreateFuncData struct {
 	APIAlias             string
 	SDKInterface         string
 	SDKMethod            string
+	CreateReqMethod      string
 	CreateReqType        string
 	CreateReqBodyPointer bool
 	NeedsClient          bool
@@ -73,6 +74,10 @@ func (g *Generator) generateOpsCreateFuncBody(
 	if err != nil {
 		return nil, fmt.Errorf("entity %q: %w", entityName, err)
 	}
+	createReqMethod, err := sdkOpsMethodNameForOp(opsConfig, "create")
+	if err != nil {
+		return nil, fmt.Errorf("entity %q: resolve create SDK conversion method: %w", entityName, err)
+	}
 
 	sdkMethod := pascalFromKebab(schema.OperationID)
 	sdkInterface := pascalFromKebab(schema.Tags[0]) + "SDK"
@@ -98,6 +103,7 @@ func (g *Generator) generateOpsCreateFuncBody(
 		APIAlias:             g.config.APIGroupPackageAlias,
 		SDKInterface:         sdkInterface,
 		SDKMethod:            sdkMethod,
+		CreateReqMethod:      createReqMethod,
 		CreateReqType:        createReqType,
 		CreateReqBodyPointer: schema.CreateReqBodyPointer,
 		NeedsClient:          needsClient,

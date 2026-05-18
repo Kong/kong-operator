@@ -1,5 +1,11 @@
 package generator
 
+// sensitiveDataSourceValueMaxLength defines the maximum length for string values
+// in the SensitiveDataSource struct.
+// When needed this can be considered to be made configurable via config.yaml,
+// but for now it's a constant since it applies uniformly to all string fields in the SensitiveDataSource struct.
+const sensitiveDataSourceValueMaxLength = 4096
+
 const objectRefTypeEnum = `// ObjectRefType is the enum type for the ObjectRef.
 //
 // +kubebuilder:validation:Enum=namespacedRef
@@ -125,19 +131,22 @@ type SensitiveDataSource struct {
 	// Type indicates the source of the sensitive data: 'inline' or 'secretRef'.
 	//
 	// +kubebuilder:validation:Enum=inline;secretRef
-	// +kubebuilder:default=inline
+	// +kubebuilder:default=inline{{range .SensitiveDataSourceTypeValidations}}
+	// {{ . }}{{end}}
 	Type SensitiveDataSourceType ` + "`" + `json:"type"` + "`" + `
 
 	// Value contains the sensitive data provided inline.
 	// Required when type is 'inline'.
 	//
 	// +optional
+	// +kubebuilder:validation:MaxLength={{ .SensitiveDataSourceValueMaxLength }}
 	Value *string ` + "`" + `json:"value,omitempty"` + "`" + `
 
 	// SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
 	// Required when type is 'secretRef'.
 	//
-	// +optional
+	// +optional{{range .SensitiveDataSourceSecretRefValidations}}
+	// {{ . }}{{end}}
 	SecretRef *{{.NamespacedRefTypeName}} ` + "`" + `json:"secretRef,omitempty"` + "`" + `
 }`
 

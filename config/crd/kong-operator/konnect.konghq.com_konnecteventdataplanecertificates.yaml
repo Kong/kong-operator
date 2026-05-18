@@ -103,6 +103,7 @@ spec:
                         description: |-
                           Value contains the sensitive data provided inline.
                           Required when type is 'inline'.
+                        maxLength: 4096
                         type: string
                     required:
                     - type

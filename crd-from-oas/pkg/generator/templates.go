@@ -1310,6 +1310,9 @@ import (
 {{- if .NeedsOpsImport}}
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 {{- end}}
+{{- range .ExtraImports}}
+	{{.Alias}} "{{.Path}}"
+{{- end}}
 
 	{{.APIAlias}} "{{.APIPackagePath}}"
 )
@@ -1333,11 +1336,11 @@ func create{{.Entity}}(
 	}
 {{- end}}
 	{{- if .NeedsClient}}
-	req, err := obj.To{{.CreateReqType}}(ctx, cl)
+	req, err := obj.{{.CreateReqMethod}}(ctx, cl)
 	{{- else if .HasReferences}}
-	req, err := obj.To{{.CreateReqType}}()
+	req, err := obj.{{.CreateReqMethod}}()
 	{{- else}}
-	req, err := obj.Spec.APISpec.To{{.CreateReqType}}()
+	req, err := obj.Spec.APISpec.{{.CreateReqMethod}}()
 	{{- end}}
 	if err != nil {
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
@@ -1410,11 +1413,11 @@ func update{{.Entity}}(
 	id := obj.GetKonnectStatus().GetKonnectID()
 {{- end}}
 	{{- if .NeedsClient}}
-	req, err := obj.To{{.UpdateReqType}}(ctx, cl)
+	req, err := obj.{{.UpdateReqMethod}}(ctx, cl)
 	{{- else if .HasReferences}}
-	req, err := obj.To{{.UpdateReqType}}()
+	req, err := obj.{{.UpdateReqMethod}}()
 	{{- else}}
-	req, err := obj.Spec.APISpec.To{{.UpdateReqType}}()
+	req, err := obj.Spec.APISpec.{{.UpdateReqMethod}}()
 	{{- end}}
 	if err != nil {
 		return fmt.Errorf("failed building %s SDK update request: %w", obj.GetTypeName(), err)
@@ -1476,10 +1479,40 @@ func delete{{.Entity}}(
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "{{.EntityName}}", Op: DeleteOp}
 	}
 {{- end}}
-{{- if not .DeleteOmitsEntityID}}
+{{- if .DeleteAsUpdate}}
+{{- if not .DeletePutOmitsEntityID}}
 	id := obj.GetKonnectStatus().GetKonnectID()
 {{- end}}
-{{- if .DeleteFullyWrapped}}
+	req := &{{.DeletePutReqQualifiedType}}{}
+{{- if .DeletePutFullyWrapped}}
+{{- range .Parents}}
+	req.{{.SDKFieldName}} = {{.VarName}}
+{{- end}}
+{{- if not .DeletePutOmitsEntityID}}
+	req.{{.DeletePutEntityIDField}} = id
+{{- end}}
+
+	_, err := sdk.{{.DeleteSDKMethod}}(ctx, {{if .DeletePutReqBodyPointer}}req{{else}}*req{{end}})
+{{- else if .DeletePutWrapped}}
+
+	_, err := sdk.{{.DeleteSDKMethod}}(ctx, sdkkonnectops.{{.DeleteSDKMethod}}Request{
+		{{.DeletePutParentIDField}}: {{(index .Parents 0).VarName}},
+		{{- if not .DeletePutOmitsEntityID}}
+		{{.DeletePutEntityIDField}}: id,
+		{{- end}}
+		{{.DeletePutBodyField}}: {{if .DeletePutReqBodyPointer}}req{{else}}*req{{end}},
+	})
+{{- else if .DeletePutOmitsEntityID}}
+
+	_, err := sdk.{{.DeleteSDKMethod}}(ctx, {{(index .Parents 0).VarName}}, {{if .DeletePutReqBodyPointer}}req{{else}}*req{{end}})
+{{- else}}
+
+	_, err := sdk.{{.DeleteSDKMethod}}(ctx, id, {{if .DeletePutReqBodyPointer}}req{{else}}*req{{end}})
+{{- end}}
+{{- else if not .DeleteOmitsEntityID}}
+	id := obj.GetKonnectStatus().GetKonnectID()
+{{- end}}
+{{- if and (not .DeleteAsUpdate) .DeleteFullyWrapped}}
 
 	_, err := sdk.{{.DeleteSDKMethod}}(ctx, sdkkonnectops.{{.DeleteWrappedType}}{
 		{{- range .Parents}}
@@ -1487,13 +1520,13 @@ func delete{{.Entity}}(
 		{{- end}}
 		{{.DeleteEntityIDField}}: id,
 	})
-{{- else if .DeleteOmitsEntityID}}
+{{- else if and (not .DeleteAsUpdate) .DeleteOmitsEntityID}}
 
 	_, err := sdk.{{.DeleteSDKMethod}}(ctx, {{(index .Parents 0).VarName}}{{range .DeleteNilArgs}}, nil{{end}})
-{{- else if .Parents}}
+{{- else if and (not .DeleteAsUpdate) .Parents}}
 
 	_, err := sdk.{{.DeleteSDKMethod}}(ctx, {{(index .Parents 0).VarName}}, id{{range .DeleteNilArgs}}, nil{{end}})
-{{- else}}
+{{- else if not .DeleteAsUpdate}}
 
 	_, err := sdk.{{.DeleteSDKMethod}}(ctx, id{{range .DeleteNilArgs}}, nil{{end}})
 {{- end}}
@@ -1633,7 +1666,7 @@ func get{{.Entity}}ForUID(
 		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "{{.EntityName}}", Op: GetOp}
 	}
 {{- end}}
-{{- if .SingletonNoID}}
+{{- if and .SingletonNoID .MatchFields}}
 
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, {{(index .Parents 0).VarName}})
 	if err != nil {
@@ -1649,6 +1682,13 @@ func get{{.Entity}}ForUID(
 	}
 {{- end}}
 	return entry.{{(index .MatchFields 0).ResponseField}}, nil
+{{- else if .SingletonNoID}}
+
+	// TODO: {{.Entity}} is a singleton sub-resource without a persistent Konnect
+	// ID, but no getForUID match strategy is configured. This can be revisited
+	// once the API exposes a stable identity field for matching or a custom
+	// getForUID implementation is added.
+	return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 {{- else if .UseUIDTagFilter}}
 
 {{- if .GetForUIDFullyWrapped}}

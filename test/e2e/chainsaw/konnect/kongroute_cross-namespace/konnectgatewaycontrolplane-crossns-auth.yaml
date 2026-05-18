@@ -1,0 +1,23 @@
+# Parameterized KonnectGatewayControlPlane manifest with a cross-namespace authRef.
+# Used by scenarios that need to assert the CP's APIAuthResolvedRef state before
+# the CP->Auth KongReferenceGrant exists. The shared step template only supports
+# same-namespace authRef and asserts the CP is Programmed, neither of which fits
+# these scenarios.
+#
+# Required bindings:
+#   - cp_name: Name of the KonnectGatewayControlPlane.
+#   - cp_namespace: Namespace where the CP lives.
+#   - auth_name: Name of the referenced KonnectAPIAuthConfiguration.
+#   - auth_namespace: Namespace of the referenced KonnectAPIAuthConfiguration.
+apiVersion: konnect.konghq.com/v1alpha2
+kind: KonnectGatewayControlPlane
+metadata:
+  name: ($cp_name)
+  namespace: ($cp_namespace)
+spec:
+  createControlPlaneRequest:
+    name: ($cp_name)
+  konnect:
+    authRef:
+      name: ($auth_name)
+      namespace: ($auth_namespace)

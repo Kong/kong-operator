@@ -27,6 +27,8 @@ func addKnownTypesGenerated(scheme *runtime.Scheme) error {
 		&PortalList{},
 		&PortalCustomDomain{},
 		&PortalCustomDomainList{},
+		&PortalCustomization{},
+		&PortalCustomizationList{},
 		&PortalEmailConfig{},
 		&PortalEmailConfigList{},
 		&PortalIPAllowList{},

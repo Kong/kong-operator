@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"go/format"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -169,9 +170,13 @@ func renderTemplate(
 		if err := tpl.Execute(contents, st); err != nil {
 			return fmt.Errorf("%s: failed to execute template for %s: %w", path, outputFile, err)
 		}
+		formatted, err := format.Source(contents.Bytes())
+		if err != nil {
+			return fmt.Errorf("%s: failed to format rendered output for %s: %w", path, outputFile, err)
+		}
 
 		log.Info("Writing to file", "path", path)
-		if err := os.WriteFile(path, contents.Bytes(), 0o600); err != nil {
+		if err := os.WriteFile(path, formatted, 0o600); err != nil {
 			return fmt.Errorf("%s: failed to write file %s: %w", path, outputFile, err)
 		}
 	}

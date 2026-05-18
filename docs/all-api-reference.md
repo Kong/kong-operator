@@ -1735,7 +1735,8 @@ KongUpstreamAPISpec defines specification of a Kong Upstream.
 | Field | Description |
 | --- | --- |
 | `algorithm` _*github.com/Kong/sdk-konnect-go/models/components.UpstreamAlgorithm_ | Which load balancing algorithm to use. |
-| `client_certificate` _*github.com/Kong/sdk-konnect-go/models/components.UpstreamClientCertificate_ | If set, the certificate to be used as client certificate while TLS handshaking to the upstream server. |
+| `client_certificate` _*github.com/Kong/sdk-konnect-go/models/components.UpstreamClientCertificate_ | Deprecated: use clientCertificateRef instead. If set, the certificate to be used as client certificate while TLS handshaking to the upstream server. |
+| `clientCertificateRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | ClientCertificateRef is a reference to a KongCertificate used as the client certificate during TLS handshaking to the upstream server. Mutually exclusive with the deprecated client_certificate field. Cross-namespace references require a KongReferenceGrant in the target namespace. |
 | `hash_fallback` _*github.com/Kong/sdk-konnect-go/models/components.HashFallback_ | What to use as hashing input if the primary `hash_on` does not return a hash (eg. header is missing, or no Consumer identified). Not available if `hash_on` is set to `cookie`. |
 | `hash_fallback_header` _*string_ | The header name to take the value from as hash input. Only required when `hash_fallback` is set to `header`. |
 | `hash_fallback_query_arg` _*string_ | The name of the query string argument to take the value from as hash input. Only required when `hash_fallback` is set to `query_arg`. |
@@ -1769,7 +1770,8 @@ KongUpstreamSpec defines the spec of Kong Upstream.
 | Field | Description |
 | --- | --- |
 | `algorithm` _*github.com/Kong/sdk-konnect-go/models/components.UpstreamAlgorithm_ | Which load balancing algorithm to use. |
-| `client_certificate` _*github.com/Kong/sdk-konnect-go/models/components.UpstreamClientCertificate_ | If set, the certificate to be used as client certificate while TLS handshaking to the upstream server. |
+| `client_certificate` _*github.com/Kong/sdk-konnect-go/models/components.UpstreamClientCertificate_ | Deprecated: use clientCertificateRef instead. If set, the certificate to be used as client certificate while TLS handshaking to the upstream server. |
+| `clientCertificateRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | ClientCertificateRef is a reference to a KongCertificate used as the client certificate during TLS handshaking to the upstream server. Mutually exclusive with the deprecated client_certificate field. Cross-namespace references require a KongReferenceGrant in the target namespace. |
 | `hash_fallback` _*github.com/Kong/sdk-konnect-go/models/components.HashFallback_ | What to use as hashing input if the primary `hash_on` does not return a hash (eg. header is missing, or no Consumer identified). Not available if `hash_on` is set to `cookie`. |
 | `hash_fallback_header` _*string_ | The header name to take the value from as hash input. Only required when `hash_fallback` is set to `header`. |
 | `hash_fallback_query_arg` _*string_ | The name of the query string argument to take the value from as hash input. Only required when `hash_fallback` is set to `query_arg`. |
@@ -1804,7 +1806,7 @@ KongUpstreamStatus represents the current status of the Kong Upstream resource.
 
 | Field | Description |
 | --- | --- |
-| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `konnect` _[KonnectEntityStatusWithControlPlaneAndCertificateRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandcertificaterefs)_ | Konnect contains the Konnect entity status. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
@@ -4963,6 +4965,7 @@ Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1al
 - [MCPServer](#konnect-konghq-com-v1alpha1-mcpserver)
 - [Portal](#konnect-konghq-com-v1alpha1-portal)
 - [PortalCustomDomain](#konnect-konghq-com-v1alpha1-portalcustomdomain)
+- [PortalCustomization](#konnect-konghq-com-v1alpha1-portalcustomization)
 - [PortalEmailConfig](#konnect-konghq-com-v1alpha1-portalemailconfig)
 - [PortalPage](#konnect-konghq-com-v1alpha1-portalpage)
 - [PortalTeam](#konnect-konghq-com-v1alpha1-portalteam)
@@ -5209,6 +5212,21 @@ PortalCustomDomain is the Schema for the portalcustomdomains API.
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[PortalCustomDomainSpec](#konnect-konghq-com-v1alpha1-types-portalcustomdomainspec)_ |  |
 | `status` _[PortalCustomDomainStatus](#konnect-konghq-com-v1alpha1-types-portalcustomdomainstatus)_ |  |
+
+### PortalCustomization
+
+
+PortalCustomization is the Schema for the portalcustomizations API.
+
+<!-- portal_customization description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `PortalCustomization`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[PortalCustomizationSpec](#konnect-konghq-com-v1alpha1-types-portalcustomizationspec)_ |  |
+| `status` _[PortalCustomizationStatus](#konnect-konghq-com-v1alpha1-types-portalcustomizationstatus)_ |  |
 
 ### PortalEmailConfig
 
@@ -5532,6 +5550,21 @@ ClientIdentity Client mTLS configuration.<br /><br />**Requires a minimum runtim
 _Appears in:_
 
 - [BackendClusterTLS](#konnect-konghq-com-v1alpha1-types-backendclustertls)
+
+#### Colors
+
+
+Colors is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `primary` _string_ |  |
+
+_Appears in:_
+
+- [Theme](#konnect-konghq-com-v1alpha1-types-theme)
 
 
 
@@ -6628,6 +6661,7 @@ _Appears in:_
 - [IdentityProviderRequestStatus](#konnect-konghq-com-v1alpha1-types-identityproviderrequeststatus)
 - [KonnectEventDataPlaneCertificateStatus](#konnect-konghq-com-v1alpha1-types-konnecteventdataplanecertificatestatus)
 - [PortalCustomDomainStatus](#konnect-konghq-com-v1alpha1-types-portalcustomdomainstatus)
+- [PortalCustomizationStatus](#konnect-konghq-com-v1alpha1-types-portalcustomizationstatus)
 - [PortalEmailConfigStatus](#konnect-konghq-com-v1alpha1-types-portalemailconfigstatus)
 - [PortalIPAllowListStatus](#konnect-konghq-com-v1alpha1-types-portalipallowliststatus)
 - [PortalPageStatus](#konnect-konghq-com-v1alpha1-types-portalpagestatus)
@@ -7050,6 +7084,23 @@ _Appears in:_
 
 - [MCPServer](#konnect-konghq-com-v1alpha1-mcpserver)
 
+#### Menu
+
+
+Menu is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `footerBottom` _[PortalMenuItem](#konnect-konghq-com-v1alpha1-types-portalmenuitem)_ |  |
+| `footerSections` _[PortalFooterMenuSection](#konnect-konghq-com-v1alpha1-types-portalfootermenusection)_ |  |
+| `main` _[PortalMenuItem](#konnect-konghq-com-v1alpha1-types-portalmenuitem)_ |  |
+
+_Appears in:_
+
+- [PortalCustomizationAPISpec](#konnect-konghq-com-v1alpha1-types-portalcustomizationapispec)
+
 #### MinRuntimeVersion
 
 _Underlying type:_ `string`
@@ -7359,6 +7410,61 @@ _Appears in:_
 
 - [PortalCustomDomain](#konnect-konghq-com-v1alpha1-portalcustomdomain)
 
+#### PortalCustomizationAPISpec
+
+
+PortalCustomizationAPISpec defines the API spec fields for PortalCustomization.
+
+
+
+| Field | Description |
+| --- | --- |
+| `css` _*string_ |  |
+| `layout` _string_ |  |
+| `menu` _[Menu](#konnect-konghq-com-v1alpha1-types-menu)_ |  |
+| `robots` _*string_ |  |
+| `specRenderer` _[SpecRenderer](#konnect-konghq-com-v1alpha1-types-specrenderer)_ |  |
+| `theme` _[Theme](#konnect-konghq-com-v1alpha1-types-theme)_ |  |
+
+_Appears in:_
+
+- [PortalCustomizationSpec](#konnect-konghq-com-v1alpha1-types-portalcustomizationspec)
+
+
+
+#### PortalCustomizationSpec
+
+
+PortalCustomizationSpec defines the desired state of PortalCustomization.
+
+
+
+| Field | Description |
+| --- | --- |
+| `portalRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | PortalRef is the reference to the parent Portal object. |
+| `apiSpec` _[PortalCustomizationAPISpec](#konnect-konghq-com-v1alpha1-types-portalcustomizationapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [PortalCustomization](#konnect-konghq-com-v1alpha1-portalcustomization)
+
+#### PortalCustomizationStatus
+
+
+PortalCustomizationStatus defines the observed state of PortalCustomization.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `portalID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | PortalID is the Konnect ID of the parent Portal. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [PortalCustomization](#konnect-konghq-com-v1alpha1-portalcustomization)
+
 #### PortalEmailConfigAPISpec
 
 
@@ -7410,6 +7516,22 @@ _Appears in:_
 
 - [PortalEmailConfig](#konnect-konghq-com-v1alpha1-portalemailconfig)
 
+#### PortalFooterMenuSection
+
+
+PortalFooterMenuSection is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `items` _[PortalMenuItem](#konnect-konghq-com-v1alpha1-types-portalmenuitem)_ |  |
+| `title` _string_ | The footer menu section title |
+
+_Appears in:_
+
+- [Menu](#konnect-konghq-com-v1alpha1-types-menu)
+
 #### PortalIPAllowListAPISpec
 
 
@@ -7428,6 +7550,25 @@ _Appears in:_
 
 
 
+
+#### PortalMenuItem
+
+
+PortalMenuItem is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `external` _string_ | When clicked, open the link in a new window |
+| `path` _string_ | The absolute path of a page in a portal with a leading slash. |
+| `title` _string_ | The link display text |
+| `visibility` _string_ | Whether a menu item is public or private. Private menu items are only accessible to authenticated users. |
+
+_Appears in:_
+
+- [Menu](#konnect-konghq-com-v1alpha1-types-menu)
+- [PortalFooterMenuSection](#konnect-konghq-com-v1alpha1-types-portalfootermenusection)
 
 #### PortalPageAPISpec
 
@@ -7711,6 +7852,27 @@ Allowed values:
 | `inline` | SensitiveDataSourceTypeInline indicates that the data is provided inline in the APISpec.<br /> |
 | `secretRef` | SensitiveDataSourceTypeSecretRef indicates that the data is sourced from a Kubernetes Secret.<br /> |
 
+#### SpecRenderer
+
+
+SpecRenderer is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `allowCustomServerUrls` _string_ | Let users define a custom server URL for endpoints. This will be used to generate code snippets and to test the API. The URL is client-side only and is not saved. |
+| `hideDeprecated` _string_ | Manage visibility of deprecated endpoints and models. |
+| `hideInternal` _string_ | Manage visibility of internal endpoints and models. |
+| `infiniteScroll` _string_ | Display the full spec on a single, scrollable page. If disabled, documentation, endpoints, and schemas appear on separate pages. |
+| `showSchemas` _string_ | Control whether schemas are visible in your API specs. When enabled, schemas appear in the side navigation below the endpoints. |
+| `tryItInsomnia` _string_ | Enables users to open API specifications in Insomnia to explore and send requests with the native client. Only public API specifications are supported. |
+| `tryItUi` _string_ | Enable in-browser testing for your APIs. All linked gateways must have the CORS plugin configured. |
+
+_Appears in:_
+
+- [PortalCustomizationAPISpec](#konnect-konghq-com-v1alpha1-types-portalcustomizationapispec)
+
 #### TLSCertificate
 
 
@@ -7776,6 +7938,23 @@ TLSVersionRange A range of TLS versions.
 _Appears in:_
 
 - [EventGatewayTLSListenerPolicyConfig](#konnect-konghq-com-v1alpha1-types-eventgatewaytlslistenerpolicyconfig)
+
+#### Theme
+
+
+Theme is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `colors` _[Colors](#konnect-konghq-com-v1alpha1-types-colors)_ |  |
+| `mode` _string_ |  |
+| `name` _string_ |  |
+
+_Appears in:_
+
+- [PortalCustomizationAPISpec](#konnect-konghq-com-v1alpha1-types-portalcustomizationapispec)
 
 #### TransitGatewayDNSConfig
 
@@ -8511,6 +8690,7 @@ of a Konnect entity with references to a ControlPlane and a Certificate.
 _Appears in:_
 
 - [KongSNIStatus](#configuration-konghq-com-v1alpha1-types-kongsnistatus)
+- [KongUpstreamStatus](#configuration-konghq-com-v1alpha1-types-kongupstreamstatus)
 
 #### KonnectEntityStatusWithControlPlaneAndConsumerRefs
 
@@ -8620,7 +8800,6 @@ _Appears in:_
 - [KongDataPlaneClientCertificateStatus](#configuration-konghq-com-v1alpha1-types-kongdataplaneclientcertificatestatus)
 - [KongKeySetStatus](#configuration-konghq-com-v1alpha1-types-kongkeysetstatus)
 - [KongPluginBindingStatus](#configuration-konghq-com-v1alpha1-types-kongpluginbindingstatus)
-- [KongUpstreamStatus](#configuration-konghq-com-v1alpha1-types-kongupstreamstatus)
 - [KongVaultStatus](#configuration-konghq-com-v1alpha1-types-kongvaultstatus)
 - [KonnectCloudGatewayDataPlaneGroupConfigurationStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaydataplanegroupconfigurationstatus)
 - [MCPServerStatus](#konnect-konghq-com-v1alpha1-types-mcpserverstatus)

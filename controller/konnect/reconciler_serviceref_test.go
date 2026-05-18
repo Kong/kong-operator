@@ -556,3 +556,80 @@ func testHandleServiceRef[
 		})
 	}
 }
+
+// TestReconcile_CrossNamespaceServiceRefWithoutGrant verifies that when a KongRoute
+// uses a cross-namespace serviceRef and no KongReferenceGrant permits it, the full
+// Reconcile loop sets ResolvedRefs=False/RefNotPermitted AND Programmed=False.
+//
+// This is a regression test for the bug where Reconcile returned early with
+// `return ctrl.Result{}, err` after setting ResolvedRefs, skipping the call to
+// patchWithProgrammedStatusConditionBasedOnOtherConditions and leaving
+// Programmed=Unknown instead of False.
+func TestReconcile_CrossNamespaceServiceRefWithoutGrant(t *testing.T) {
+	route := &configurationv1alpha1.KongRoute{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: configurationv1alpha1.GroupVersion.String(),
+			Kind:       "KongRoute",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "route-cross-ns-no-grant",
+			Namespace: "default",
+		},
+		Spec: configurationv1alpha1.KongRouteSpec{
+			ServiceRef: &configurationv1alpha1.ServiceRef{
+				Type: configurationv1alpha1.ServiceRefNamespacedRef,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{
+					Name:      "svc-cross-ns",
+					Namespace: new(svcNamespace),
+				},
+			},
+		},
+	}
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, konnectv1alpha1.AddToScheme(scheme))
+	require.NoError(t, konnectv1alpha2.AddToScheme(scheme))
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(route, testKongServiceCrossNs, testControlPlaneCrossNs).
+		// no KongReferenceGrant
+		WithStatusSubresource(route).
+		Build()
+
+	// Restore GVK stripped by the fake client builder.
+	gvk, err := apiutil.GVKForObject(route, scheme)
+	require.NoError(t, err)
+	route.GetObjectKind().SetGroupVersionKind(gvk)
+
+	r := &KonnectEntityReconciler[
+		configurationv1alpha1.KongRoute, *configurationv1alpha1.KongRoute,
+	]{
+		Client: fakeClient,
+	}
+
+	res, err := r.Reconcile(t.Context(), ctrl.Request{
+		NamespacedName: client.ObjectKeyFromObject(route),
+	})
+	require.NoError(t, err)
+	require.Equal(t, ctrl.Result{}, res)
+
+	var updated configurationv1alpha1.KongRoute
+	require.NoError(t, fakeClient.Get(t.Context(), client.ObjectKeyFromObject(route), &updated))
+
+	resolvedRefs, ok := lo.Find(updated.Status.Conditions, func(c metav1.Condition) bool {
+		return c.Type == string(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs)
+	})
+	require.True(t, ok, "expected ResolvedRefs condition to be set")
+	require.Equal(t, metav1.ConditionFalse, resolvedRefs.Status)
+	require.Equal(t, string(configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted), resolvedRefs.Reason)
+
+	programmed, ok := lo.Find(updated.Status.Conditions, func(c metav1.Condition) bool {
+		return c.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType
+	})
+	require.True(t, ok, "expected Programmed condition to be set")
+	require.Equal(t, metav1.ConditionFalse, programmed.Status,
+		"Programmed must be False, not Unknown, when ResolvedRefs=False/RefNotPermitted")
+	require.Equal(t, string(konnectv1alpha1.KonnectEntityProgrammedReasonConditionWithStatusFalseExists), programmed.Reason)
+}

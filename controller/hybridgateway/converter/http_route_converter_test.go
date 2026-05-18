@@ -1402,6 +1402,26 @@ func TestHTTPRouteConverter_GetHostnamesByParentRef(t *testing.T) {
 			wantHosts: []string{"api.example.com", "web.example.com"},
 		},
 		{
+			name: "returns nil when no hostname intersection",
+			setup: func() (*httpRouteConverter, gwtypes.ParentReference) {
+				route := newHTTPRouteWithHostnames("api.example.com")
+				gateway := newGatewayWithListenerHostnames("other.example.com")
+				gateway.UID = types.UID("gateway-uid")
+				objects := newKonnectGatewayStandardObjects(gateway)
+				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
+				converter := newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				port := gwtypes.PortNumber(80)
+				pRef := gwtypes.ParentReference{
+					Name:  "test-gateway",
+					Port:  &port,
+					Group: new(gwtypes.Group(gwtypes.GroupName)),
+					Kind:  new(gwtypes.Kind("Gateway")),
+				}
+				return converter, pRef
+			},
+			wantNil: true,
+		},
+		{
 			name: "returns nil when port mismatches",
 			setup: func() (*httpRouteConverter, gwtypes.ParentReference) {
 				route := newHTTPRouteWithHostnames("api.example.com")
@@ -1428,6 +1448,26 @@ func TestHTTPRouteConverter_GetHostnamesByParentRef(t *testing.T) {
 			setup: func() (*httpRouteConverter, gwtypes.ParentReference) {
 				route := newHTTPRouteWithHostnames("api.example.com", "web.example.com")
 				gateway := newGatewayWithListenerHostnames()
+				gateway.UID = types.UID("gateway-uid")
+				objects := newKonnectGatewayStandardObjects(gateway)
+				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
+				converter := newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				port := gwtypes.PortNumber(80)
+				pRef := gwtypes.ParentReference{
+					Name:  "test-gateway",
+					Port:  &port,
+					Group: new(gwtypes.Group(gwtypes.GroupName)),
+					Kind:  new(gwtypes.Kind("Gateway")),
+				}
+				return converter, pRef
+			},
+			wantHosts: []string{"api.example.com", "web.example.com"},
+		},
+		{
+			name: "route without hostnames uses listener hostnames",
+			setup: func() (*httpRouteConverter, gwtypes.ParentReference) {
+				route := newHTTPRouteWithHostnames()
+				gateway := newGatewayWithListenerHostnames("api.example.com", "web.example.com")
 				gateway.UID = types.UID("gateway-uid")
 				objects := newKonnectGatewayStandardObjects(gateway)
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()

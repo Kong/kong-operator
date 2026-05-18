@@ -50,6 +50,8 @@
 
 ### Added
 
+- Konnect: support `KongCertificate` ref in `KongUpstream`
+  [#4305](https://github.com/Kong/kong-operator/pull/4305)
 - `KongTarget`: support cross-namespace `spec.upstreamRef` to reference a
   `KongUpstream` in a different namespace. A `KongReferenceGrant` in the
   upstream's namespace is required to permit the reference. The `KongTarget`
@@ -236,6 +238,19 @@
   to control the cross-namespace reference from `TLSRoute`s to their backendRefs
   in on-prem `TLSRoute` controller.
   [#4292](https://github.com/Kong/kong-operator/pull/4292)
+- `KongRoute`: when a cross-namespace `serviceRef` has no `KongReferenceGrant`, the
+  `Programmed` condition now transitions to `False` in the same reconcile pass that sets
+  `ResolvedRefs=False/RefNotPermitted`. Previously `Programmed` remained `Unknown`
+  because the reconciler returned early before calling
+  `patchWithProgrammedStatusConditionBasedOnOtherConditions`.
+  [#4318](https://github.com/Kong/kong-operator/pull/4318)
+- `KongPluginBinding`: the `PluginRefValid` status condition is now set promptly
+  when the referenced `KongPlugin` does not exist (same-namespace or cross-namespace)
+  or when a cross-namespace `KongReferenceGrant` is deleted. Previously the binding
+  could take up to the full sync period (~60 s) to reflect these changes because the
+  check lived in the Konnect SDK ops layer. The check is now a pre-ops handler that
+  runs early in the reconcile loop and reacts immediately to watch-triggered enqueues.
+  [#4312](https://github.com/Kong/kong-operator/pull/4312)
 - Add `KongReferenceGrant` watch to `KongVault` and `KongConsumerGroup` reconcilers.
   Previously, creating or deleting a grant would not trigger re-reconciliation of these
   resources until the next full resync cycle. Grant changes now immediately re-queue
@@ -333,7 +348,14 @@
   [#3206](https://github.com/Kong/kong-operator/pull/3206) [#3836](https://github.com/Kong/kong-operator/pull/3836)
 - Fix incorrect Konnect API used for target lookup
   [#3910](https://github.com/Kong/kong-operator/pull/3910) [#3938](https://github.com/Kong/kong-operator/pull/3938)
-  [#3754](https://github.com/Kong/kong-operator/pull/3754)
+- HybridGateway: fix `HTTPRoute` hostname intersection with `Gateway`
+  listeners to follow Gateway API semantics. Routes that specify no
+  hostnames now inherit the matching listeners' hostnames instead of being
+  dropped, wildcard hostnames (`*` and `*.example.com`) are supported and
+  intersected with listener hostnames, and wildcards no longer match the
+  bare apex domain. This enables the `HTTPRouteHostnameIntersection`
+  Gateway API conformance test for Hybrid mode.
+  [#4077](https://github.com/Kong/kong-operator/pull/4077)
 
 ## [v2.1.3]
 

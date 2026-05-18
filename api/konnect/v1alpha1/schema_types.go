@@ -919,6 +919,49 @@ type PageTitle string
 // used.
 type PageVisibilityStatus string
 
+// PortalFooterMenuSection is a type alias.
+type PortalFooterMenuSection struct {
+	//
+	//
+	// +required
+	Items []PortalMenuItem `json:"items,omitempty"`
+	// The footer menu section title
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=512
+	Title string `json:"title,omitzero"`
+}
+
+// PortalMenuItem is a type alias.
+type PortalMenuItem struct {
+	// When clicked, open the link in a new window
+	//
+	// +required
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	External string `json:"external,omitzero"`
+	// The absolute path of a page in a portal with a leading slash.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=512
+	Path string `json:"path,omitzero"`
+	// The link display text
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Title string `json:"title,omitzero"`
+	// Whether a menu item is public or private.
+	// Private menu items are only accessible to authenticated users.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=public;private
+	Visibility string `json:"visibility,omitzero"`
+}
+
 // PublishedStatus Whether the resource is visible on a given portal.
 // Defaults to unpublished.
 type PublishedStatus string

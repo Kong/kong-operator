@@ -21,6 +21,11 @@ func (obj *KonnectGatewayControlPlane) SetKonnectID(id string) {
 	obj.Status.ID = id
 }
 
+// PersistsKonnectID reports whether the KonnectGatewayControlPlane persists a Konnect ID in status.
+func (*KonnectGatewayControlPlane) PersistsKonnectID() bool {
+	return true
+}
+
 // GetTypeName returns the KonnectGatewayControlPlane Kind name.
 func (obj KonnectGatewayControlPlane) GetTypeName() string {
 	return "KonnectGatewayControlPlane"
