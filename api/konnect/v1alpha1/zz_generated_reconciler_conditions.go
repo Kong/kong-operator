@@ -51,6 +51,22 @@ const (
 	// yet programmed in Konnect.
 	EventGatewayListenerRefReasonNotProgrammed = "NotProgrammed"
 
+	// EventGatewayVirtualClusterRefValidConditionType is the type of the condition that indicates
+	// whether the EventGatewayVirtualCluster reference is valid and points to an existing
+	// EventGatewayVirtualCluster.
+	EventGatewayVirtualClusterRefValidConditionType = "EventGatewayVirtualClusterRefValid"
+
+	// EventGatewayVirtualClusterRefReasonValid is the reason used with the EventGatewayVirtualClusterRefValid
+	// condition type indicating that the EventGatewayVirtualCluster reference is valid.
+	EventGatewayVirtualClusterRefReasonValid = "Valid"
+	// EventGatewayVirtualClusterRefReasonInvalid is the reason used with the EventGatewayVirtualClusterRefValid
+	// condition type indicating that the EventGatewayVirtualCluster reference is invalid.
+	EventGatewayVirtualClusterRefReasonInvalid = "Invalid"
+	// EventGatewayVirtualClusterRefReasonNotProgrammed is the reason used with the EventGatewayVirtualClusterRefValid
+	// condition type indicating that the referenced EventGatewayVirtualCluster exists but is not
+	// yet programmed in Konnect.
+	EventGatewayVirtualClusterRefReasonNotProgrammed = "NotProgrammed"
+
 	// PortalRefValidConditionType is the type of the condition that indicates
 	// whether the Portal reference is valid and points to an existing
 	// Portal.

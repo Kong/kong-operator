@@ -74,7 +74,7 @@ func TestEventGatewayBackendCluster(t *testing.T) {
 					obj := validBackendCluster(ns.Name)
 					obj.Spec.APISpec.TLS = konnectv1alpha1.BackendClusterTLS{
 						Enabled: "Enabled",
-						ClientIdentity: konnectv1alpha1.ClientIdentity{
+						ClientIdentity: konnectv1alpha1.BackendClusterTLSClientIdentity{
 							Certificate: inlineSDS("cert-pem-data"),
 							Key:         inlineSDS("key-pem-data"),
 						},
@@ -88,7 +88,7 @@ func TestEventGatewayBackendCluster(t *testing.T) {
 					obj := validBackendCluster(ns.Name)
 					obj.Spec.APISpec.TLS = konnectv1alpha1.BackendClusterTLS{
 						Enabled: "Enabled",
-						ClientIdentity: konnectv1alpha1.ClientIdentity{
+						ClientIdentity: konnectv1alpha1.BackendClusterTLSClientIdentity{
 							Certificate: secretRefSDS("my-cert-secret"),
 							Key:         secretRefSDS("my-key-secret"),
 						},
@@ -102,7 +102,7 @@ func TestEventGatewayBackendCluster(t *testing.T) {
 					obj := validBackendCluster(ns.Name)
 					obj.Spec.APISpec.TLS = konnectv1alpha1.BackendClusterTLS{
 						Enabled: "Enabled",
-						ClientIdentity: konnectv1alpha1.ClientIdentity{
+						ClientIdentity: konnectv1alpha1.BackendClusterTLSClientIdentity{
 							Certificate: inlineSDS("cert-data"),
 							Key:         secretRefSDS("my-tls-secret"),
 						},
@@ -116,7 +116,7 @@ func TestEventGatewayBackendCluster(t *testing.T) {
 					obj := validBackendCluster(ns.Name)
 					obj.Spec.APISpec.TLS = konnectv1alpha1.BackendClusterTLS{
 						Enabled: "Enabled",
-						ClientIdentity: konnectv1alpha1.ClientIdentity{
+						ClientIdentity: konnectv1alpha1.BackendClusterTLSClientIdentity{
 							Certificate: konnectv1alpha1.SensitiveDataSource{
 								Type: konnectv1alpha1.SensitiveDataSourceTypeInline,
 							},
@@ -133,7 +133,7 @@ func TestEventGatewayBackendCluster(t *testing.T) {
 					obj := validBackendCluster(ns.Name)
 					obj.Spec.APISpec.TLS = konnectv1alpha1.BackendClusterTLS{
 						Enabled: "Enabled",
-						ClientIdentity: konnectv1alpha1.ClientIdentity{
+						ClientIdentity: konnectv1alpha1.BackendClusterTLSClientIdentity{
 							Certificate: konnectv1alpha1.SensitiveDataSource{
 								Type: konnectv1alpha1.SensitiveDataSourceTypeSecretRef,
 							},

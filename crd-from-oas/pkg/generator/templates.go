@@ -139,17 +139,17 @@ type {{.EntityName}}Status struct {
 	// {{.EntityName}}ID is the Konnect ID of the parent {{.EntityName}}.
 	//
 	// +optional
-	{{.EntityName}}ID *KonnectEntityRef ` + "`" + `json:"{{.EntityName | lower}}ID,omitempty"` + "`" + `
+	{{.EntityName}}ID *KonnectEntityRef ` + "`" + `json:"{{statusIDJSONName .EntityName}},omitempty"` + "`" + `
 {{end}}{{range .References}}
 	// {{.Kind}} is the Konnect entity reference resolved from {{.Path}}.
 	//
 	// +optional
 	{{.Kind}} *KonnectEntityRef ` + "`" + `json:"{{lowerCamel .Kind}},omitempty"` + "`" + `
-{{end}}{{- if .ParentRef}}
-	// {{.SetParentIDEntityName}} is the Konnect entity reference for the parent {{.SetParentIDEntityName}}.
+{{end}}{{- if .EmitParentRefStatusField}}
+	// {{.ParentStatusEntityName}} is the Konnect entity reference for the parent {{.ParentStatusEntityName}}.
 	//
 	// +optional
-	{{.SetParentIDEntityName}} *KonnectEntityRef ` + "`" + `json:"{{lowerCamel .SetParentIDEntityName}},omitempty"` + "`" + `
+	{{.ParentStatusEntityName}} *KonnectEntityRef ` + "`" + `json:"{{lowerCamel .ParentStatusEntityName}},omitempty"` + "`" + `
 {{end}}{{- else}}{{"\n"}}{{- end}}
 	// ObservedGeneration is the most recent generation observed
 	//
@@ -268,7 +268,7 @@ func (obj *{{.EntityName}}) GetParentRef() {{.RootRefTypeName}} {
 
 // SetParentID sets the Konnect ID of the immediate parent entity.
 func (obj *{{.EntityName}}) SetParentID(id string) {
-	obj.Set{{.SetParentIDEntityName}}ID(id)
+	obj.Set{{.ParentStatusEntityName}}ID(id)
 }
 {{- else}}
 
@@ -328,22 +328,22 @@ func (obj *{{.EntityName}}) GetStatusConditionReasonParentRefInvalid() string {
 func (obj *{{.EntityName}}) GetStatusConditionReasonParentRefNotProgrammed() string {
 	return {{.RefConditionPrefix}}RefReasonNotProgrammed
 }
-{{- if .ParentRef}}
+{{- if .EmitParentRefStatusField}}
 
-// Get{{.SetParentIDEntityName}}ID returns the Konnect ID resolved for the parent {{.SetParentIDEntityName}}.
-func (obj *{{.EntityName}}) Get{{.SetParentIDEntityName}}ID() string {
-	if obj.Status.{{.SetParentIDEntityName}} == nil {
+// Get{{.ParentStatusEntityName}}ID returns the Konnect ID resolved for the parent {{.ParentStatusEntityName}}.
+func (obj *{{.EntityName}}) Get{{.ParentStatusEntityName}}ID() string {
+	if obj.Status.{{.ParentStatusEntityName}} == nil {
 		return ""
 	}
-	return obj.Status.{{.SetParentIDEntityName}}.ID
+	return obj.Status.{{.ParentStatusEntityName}}.ID
 }
 
-// Set{{.SetParentIDEntityName}}ID sets the resolved Konnect ID for the parent {{.SetParentIDEntityName}}.
-func (obj *{{.EntityName}}) Set{{.SetParentIDEntityName}}ID(id string) {
-	if obj.Status.{{.SetParentIDEntityName}} == nil {
-		obj.Status.{{.SetParentIDEntityName}} = &KonnectEntityRef{}
+// Set{{.ParentStatusEntityName}}ID sets the resolved Konnect ID for the parent {{.ParentStatusEntityName}}.
+func (obj *{{.EntityName}}) Set{{.ParentStatusEntityName}}ID(id string) {
+	if obj.Status.{{.ParentStatusEntityName}} == nil {
+		obj.Status.{{.ParentStatusEntityName}} = &KonnectEntityRef{}
 	}
-	obj.Status.{{.SetParentIDEntityName}}.ID = id
+	obj.Status.{{.ParentStatusEntityName}}.ID = id
 }
 {{- end}}
 {{- end}}
@@ -773,7 +773,7 @@ func (obj *{{$.EntityName}}) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeName}},
 	if payload == nil {
 		payload = map[string]any{}
 	}
-	if id := obj.Get{{$.SetParentIDEntityName}}ID(); id != "" {
+	if id := obj.Get{{$.ParentStatusEntityName}}ID(); id != "" {
 		payload["{{$.ParentRefReplacesField}}"] = map[string]any{"id": id}
 	}
 	data, err = json.Marshal(payload)
@@ -1024,6 +1024,7 @@ func (s *{{$.EntityName}}APISpec) selectedSDKOpsPayload(payload map[string]any) 
 	if selected == nil {
 		return nil, "", fmt.Errorf("{{$.EntityName}} config payload missing for type %q", s.{{$.UnionTypeName}}.Type)
 	}
+	selected = flattenSDKUnions(selected)
 	if selectedMap, ok := selected.(map[string]any); ok {
 		if typeValue, ok := payload["type"]; ok {
 			if _, hasType := selectedMap["type"]; !hasType {
@@ -1059,7 +1060,7 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 		return nil, err
 	}
 {{- if .IsOperationsWrapped}}
-	{{$opsAlias := .ImportAlias}}{{$compAlias := .ComponentsImportAlias}}{{$bodyField := .BodyFieldName}}{{$typeName := .TypeName}}
+	{{$opsAlias := .ImportAlias}}{{$compAlias := .ComponentsImportAlias}}{{$bodyField := .BodyFieldName}}{{$typeName := .TypeName}}{{$bodyFieldPointer := .BodyFieldPointer}}
 	switch variant {
 {{- range $.Variants}}
 	case "{{.FieldName}}":
@@ -1069,7 +1070,7 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 		}
 		body := {{$compAlias}}.{{.WrappedCreateConstructorName}}(member)
 		return &{{$opsAlias}}.{{$typeName}}{
-			{{$bodyField}}: body,
+			{{$bodyField}}: {{if $bodyFieldPointer}}&body{{else}}body{{end}},
 		}, nil
 {{- end}}
 	default:
@@ -1097,14 +1098,14 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 		return nil, err
 	}
 {{- if .IsOperationsWrapped}}
-	{{$compAlias := .ComponentsImportAlias}}{{$opsAlias := .ImportAlias}}{{$bodyField := .BodyFieldName}}{{$bodyType := .BodyTypeName}}{{$typeName := .TypeName}}
+	{{$compAlias := .ComponentsImportAlias}}{{$opsAlias := .ImportAlias}}{{$bodyField := .BodyFieldName}}{{$bodyType := .BodyTypeName}}{{$typeName := .TypeName}}{{$bodyFieldPointer := .BodyFieldPointer}}
 	_ = variant
 	var body {{$compAlias}}.{{$bodyType}}
 	if err := json.Unmarshal(data, &body); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal into {{$bodyType}}: %w", err)
 	}
 	return &{{$opsAlias}}.{{$typeName}}{
-		{{$bodyField}}: body,
+		{{$bodyField}}: {{if $bodyFieldPointer}}&body{{else}}body{{end}},
 	}, nil
 {{- else}}
 	{{$importAlias := .ImportAlias}}
@@ -1359,7 +1360,7 @@ func create{{.Entity}}(
 	req.{{.SDKFieldName}} = {{.VarName}}
 {{- end}}
 
-	resp, err := sdk.{{.SDKMethod}}(ctx, {{if .CreateReqBodyPointer}}req{{else}}*req{{end}})
+	resp, err := sdk.{{.SDKMethod}}(ctx, *req)
 {{- else if .Parents}}
 
 	resp, err := sdk.{{.SDKMethod}}(ctx, {{(index .Parents 0).VarName}}, {{if .CreateReqBodyPointer}}req{{else}}*req{{end}})
@@ -1437,7 +1438,7 @@ func update{{.Entity}}(
 {{- end}}
 	req.{{.EntityIDField}} = id
 
-	_, err = sdk.{{.UpdateSDKMethod}}(ctx, {{if .UpdateReqBodyPointer}}req{{else}}*req{{end}})
+	_, err = sdk.{{.UpdateSDKMethod}}(ctx, *req)
 {{- else if .UpdateWrapped}}
 
 	_, err = sdk.{{.UpdateSDKMethod}}(ctx, sdkkonnectops.{{.UpdateSDKMethod}}Request{

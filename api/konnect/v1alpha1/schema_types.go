@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	intstr "k8s.io/apimachinery/pkg/util/intstr"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 )
 
 // BackendClusterAuthenticationAnonymous Anonymous authentication scheme for the
@@ -237,7 +238,7 @@ type BackendClusterTLS struct {
 	// **Requires a minimum runtime version of `1.1`**.
 	//
 	// +optional
-	ClientIdentity ClientIdentity `json:"clientIdentity,omitzero"`
+	ClientIdentity BackendClusterTLSClientIdentity `json:"clientIdentity,omitzero"`
 	// If true, TLS is enabled for connections to this backend cluster.
 	// If false, TLS is explicitly disabled.
 	//
@@ -256,10 +257,10 @@ type BackendClusterTLS struct {
 	TLSVersions []string `json:"tlsVersions,omitempty"`
 }
 
-// ClientIdentity Client mTLS configuration.
+// BackendClusterTLSClientIdentity Client mTLS configuration.
 //
 // **Requires a minimum runtime version of `1.1`**.
-type ClientIdentity struct {
+type BackendClusterTLSClientIdentity struct {
 	// A literal value or a reference to an existing secret as a template string
 	// expression.
 	// The value is stored and returned by the API as-is, not treated as sensitive
@@ -283,6 +284,19 @@ type ClientIdentity struct {
 // BackendMetadataUpdateIntervalSeconds The interval at which metadata is
 // updated in seconds.
 type BackendMetadataUpdateIntervalSeconds int
+
+// ConsumeKeyValidationAction Defines a behavior when record key is not valid.
+// * mark - marks a record with kong/server header and client ID value
+// to help to identify the clients violating schema.
+// * skip - skips delivering a record.
+type ConsumeKeyValidationAction string
+
+// ConsumeValueValidationAction Defines a behavior when record value is not
+// valid.
+// * mark - marks a record with kong/server header and client ID value
+// to help to identify the clients violating schema.
+// * skip - skips delivering a record.
+type ConsumeValueValidationAction string
 
 // CreatePortalCustomDomainSSL is a type alias.
 type CreatePortalCustomDomainSSL map[string]string
@@ -330,13 +344,617 @@ type CreatePortalCustomDomainSSLWithCustomCertificate struct {
 	SkipCaCheck string `json:"skipCaCheck,omitzero"`
 }
 
+// DecryptionRecordPart * key - decrypt the record key
+// * value - decrypt the record value
+type DecryptionRecordPart string
+
 // Description is a type alias.
 type Description string
 
+// EncryptionFailureMode Describes how to handle failing encryption or
+// decryption.
+// Use `error` if the record should be rejected if encryption or decryption
+// fails.
+// Use `passthrough` to ignore encryption or decryption failure and continue
+// proxying the record.
+type EncryptionFailureMode string
+
+// EventGatewayAWSKeySource A key source that uses an AWS KMS to find a
+// symmetric key.
+// Load KMS credentials from the environment.
+//
+// See [aws
+// docs](https://docs.aws.amazon.com/sdk-for-rust/latest/dg/credproviders.html#credproviders-default-credentials-provider-chain)
+// for more information about how credential retrieval.
+type EventGatewayAWSKeySource struct {
+}
+
+// EventGatewayConsumeSchemaValidationPolicy A policy that validates consume
+// messages against a schema registry.
+type EventGatewayConsumeSchemaValidationPolicy struct {
+	// A string containing the boolean expression that determines whether the
+	// policy is applied.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=1000
+	Condition string `json:"condition,omitzero"`
+	// The configuration of the schema validation policy.
+	//
+	// +required
+	Config EventGatewayConsumeSchemaValidationPolicyConfig `json:"config,omitzero"`
+	// A human-readable description of the policy.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=512
+	Description string `json:"description,omitzero"`
+	// Whether the policy is enabled.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Enabled string `json:"enabled,omitzero"`
+	// Labels store metadata of an entity that can be used for filtering an entity
+	// list or for searching across entity types.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels Labels `json:"labels,omitzero"`
+	// A unique user-defined name of the policy.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=255
+	Name string `json:"name,omitzero"`
+}
+
+// EventGatewayConsumeSchemaValidationPolicyConfig The configuration of the
+// schema validation policy.
+type EventGatewayConsumeSchemaValidationPolicyConfig struct {
+	// Defines a behavior when record key is not valid.
+	// * mark - marks a record with kong/server header and client ID value
+	// to help to identify the clients violating schema.
+	// * skip - skips delivering a record.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=mark;skip
+	KeyValidationAction ConsumeKeyValidationAction `json:"keyValidationAction,omitzero"`
+	// A reference to a schema Registry.
+	//
+	// +optional
+	SchemaRegistry *EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry `json:"schemaRegistry,omitempty"`
+	// How to validate the schema and parse the record.
+	// * confluent_schema_registry - validates against confluent schema registry.
+	// * json - simple JSON parsing without the schema.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=confluent_schema_registry;json
+	Type SchemaValidationType `json:"type,omitzero"`
+	// Defines a behavior when record value is not valid.
+	// * mark - marks a record with kong/server header and client ID value
+	// to help to identify the clients violating schema.
+	// * skip - skips delivering a record.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=mark;skip
+	ValueValidationAction ConsumeValueValidationAction `json:"valueValidationAction,omitzero"`
+}
+
+// EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry represents a union type for schema_registry.
+// Only one of the fields should be set based on the Type.
+//
+type EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=id;name
+	Type EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistryType `json:"type,omitempty"`
+
+	// ID configuration.
+	//
+	// +optional
+	ID *SchemaRegistryReferenceByID `json:"id,omitempty"`
+	// Name configuration.
+	//
+	// +optional
+	Name *SchemaRegistryReferenceByName `json:"name,omitempty"`
+}
+
+// EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistryType represents the type of schema_registry.
+type EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistryType string
+
+// EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistryType values.
+const (
+	EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistryTypeID EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistryType = "id"
+	EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistryTypeName EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistryType = "name"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, _ := json.Marshal(string(u.Type))
+	m["type"] = typeBytes
+	switch u.Type {
+	case "id":
+		if u.ID != nil {
+			raw, err := json.Marshal(u.ID)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry Id: %w", err)
+			}
+			m["id"] = raw
+		}
+	case "name":
+		if u.Name != nil {
+			raw, err := json.Marshal(u.Name)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry Name: %w", err)
+			}
+			m["name"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistryType(probe.Type)
+	switch probe.Type {
+	case "id":
+		payload, ok := raw["id"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val SchemaRegistryReferenceByID
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry Id: %w", err)
+		}
+		u.ID = &val
+	case "name":
+		payload, ok := raw["name"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val SchemaRegistryReferenceByName
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry Name: %w", err)
+		}
+		u.Name = &val
+	}
+	return nil
+}
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *EventGatewayConsumeSchemaValidationPolicyConfig) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicyConfig: nil receiver")
+	}
+	type alias EventGatewayConsumeSchemaValidationPolicyConfig
+	aux := alias{}
+	aux.SchemaRegistry = &EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicyConfig: %w", err)
+	}
+	if aux.SchemaRegistry != nil && aux.SchemaRegistry.Type == "" && aux.SchemaRegistry.ID == nil && aux.SchemaRegistry.Name == nil {
+		aux.SchemaRegistry = nil
+	}
+	*s = EventGatewayConsumeSchemaValidationPolicyConfig(aux)
+	return nil
+}
+
+// EventGatewayDecryptPolicy Decrypts Kafka records or keys using AES_256_GCM.
+// Keys are therefore 256 bits long.
+type EventGatewayDecryptPolicy struct {
+	// A string containing the boolean expression that determines whether the
+	// policy is applied.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=1000
+	Condition string `json:"condition,omitzero"`
+	// The configuration of the policy.
+	//
+	// +required
+	Config EventGatewayDecryptPolicyConfig `json:"config,omitzero"`
+	// A human-readable description of the policy.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=512
+	Description string `json:"description,omitzero"`
+	// Whether the policy is enabled.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Enabled string `json:"enabled,omitzero"`
+	// Labels store metadata of an entity that can be used for filtering an entity
+	// list or for searching across entity types.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels Labels `json:"labels,omitzero"`
+	// A unique user-defined name of the policy.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=255
+	Name string `json:"name,omitzero"`
+}
+
+// EventGatewayDecryptPolicyConfig The configuration of the decrypt policy.
+type EventGatewayDecryptPolicyConfig struct {
+	// Describes how to handle failing encryption or decryption.
+	// Use `error` if the record should be rejected if encryption or decryption
+	// fails.
+	// Use `passthrough` to ignore encryption or decryption failure and continue
+	// proxying the record.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=error;passthrough
+	FailureMode EncryptionFailureMode `json:"failureMode,omitzero"`
+	// Describes how to find a symmetric key for decryption.
+	//
+	// +required
+	KeySources []EventGatewayKeySource `json:"keySources,omitempty"`
+	// Describes the parts of a record to decrypt.
+	//
+	// +required
+	PartOfRecord []DecryptionRecordPart `json:"partOfRecord,omitempty"`
+}
+
+// EventGatewayKeySource represents a union type for EventGatewayKeySource.
+// Only one of the fields should be set based on the Type.
+//
+type EventGatewayKeySource struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=aws;static
+	Type EventGatewayKeySourceType `json:"type,omitempty"`
+
+	// AWS configuration.
+	//
+	// +optional
+	AWS *EventGatewayAWSKeySource `json:"aws,omitempty"`
+	// Static configuration.
+	//
+	// +optional
+	Static *EventGatewayStaticKeySource `json:"static,omitempty"`
+}
+
+// EventGatewayKeySourceType represents the type of EventGatewayKeySource.
+type EventGatewayKeySourceType string
+
+// EventGatewayKeySourceType values.
+const (
+	EventGatewayKeySourceTypeAWS EventGatewayKeySourceType = "aws"
+	EventGatewayKeySourceTypeStatic EventGatewayKeySourceType = "static"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayKeySource) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, _ := json.Marshal(string(u.Type))
+	m["type"] = typeBytes
+	switch u.Type {
+	case "aws":
+		if u.AWS != nil {
+			raw, err := json.Marshal(u.AWS)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayKeySource aws: %w", err)
+			}
+			m["aws"] = raw
+		}
+	case "static":
+		if u.Static != nil {
+			raw, err := json.Marshal(u.Static)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayKeySource static: %w", err)
+			}
+			m["static"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayKeySource) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayKeySource: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = EventGatewayKeySourceType(probe.Type)
+	switch probe.Type {
+	case "aws":
+		payload, ok := raw["aws"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayAWSKeySource
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayKeySource aws: %w", err)
+		}
+		u.AWS = &val
+	case "static":
+		payload, ok := raw["static"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayStaticKeySource
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayKeySource static: %w", err)
+		}
+		u.Static = &val
+	}
+	return nil
+}
 // EventGatewayListenerPort is a type alias.
 //
 // +kubebuilder:validation:XIntOrString
 type EventGatewayListenerPort = intstr.IntOrString
+
+// EventGatewayModifyHeaderAction represents a union type for EventGatewayModifyHeaderAction.
+// Only one of the fields should be set based on the Op.
+//
+type EventGatewayModifyHeaderAction struct {
+	// Op designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=remove;set
+	Op EventGatewayModifyHeaderActionType `json:"op,omitempty"`
+
+	// Remove configuration.
+	//
+	// +optional
+	Remove *EventGatewayModifyHeaderRemoveAction `json:"remove,omitempty"`
+	// Set configuration.
+	//
+	// +optional
+	Set *EventGatewayModifyHeaderSetAction `json:"set,omitempty"`
+}
+
+// EventGatewayModifyHeaderActionType represents the type of EventGatewayModifyHeaderAction.
+type EventGatewayModifyHeaderActionType string
+
+// EventGatewayModifyHeaderActionType values.
+const (
+	EventGatewayModifyHeaderActionTypeRemove EventGatewayModifyHeaderActionType = "remove"
+	EventGatewayModifyHeaderActionTypeSet EventGatewayModifyHeaderActionType = "set"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayModifyHeaderAction) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, _ := json.Marshal(string(u.Op))
+	m["op"] = typeBytes
+	switch u.Op {
+	case "remove":
+		if u.Remove != nil {
+			raw, err := json.Marshal(u.Remove)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayModifyHeaderAction remove: %w", err)
+			}
+			m["remove"] = raw
+		}
+	case "set":
+		if u.Set != nil {
+			raw, err := json.Marshal(u.Set)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayModifyHeaderAction set: %w", err)
+			}
+			m["set"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayModifyHeaderAction) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayModifyHeaderAction: nil receiver")
+	}
+	var probe struct {
+		Op string `json:"op"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Op = EventGatewayModifyHeaderActionType(probe.Op)
+	switch probe.Op {
+	case "remove":
+		payload, ok := raw["remove"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayModifyHeaderRemoveAction
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayModifyHeaderAction remove: %w", err)
+		}
+		u.Remove = &val
+	case "set":
+		payload, ok := raw["set"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayModifyHeaderSetAction
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayModifyHeaderAction set: %w", err)
+		}
+		u.Set = &val
+	}
+	return nil
+}
+// EventGatewayModifyHeaderRemoveAction An action that removes a header by key.
+type EventGatewayModifyHeaderRemoveAction struct {
+	// The key of the header to remove.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Key string `json:"key,omitzero"`
+}
+
+// EventGatewayModifyHeaderSetAction An action that sets a header key and value.
+type EventGatewayModifyHeaderSetAction struct {
+	// The key of the header to set.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Key string `json:"key,omitzero"`
+	// The value of the header to set.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Value string `json:"value,omitzero"`
+}
+
+// EventGatewayModifyHeadersPolicyCreate A policy that modifies headers for
+// requests.
+type EventGatewayModifyHeadersPolicyCreate struct {
+	// A string containing the boolean expression that determines whether the
+	// policy is applied.
+	//
+	// When the policy is applied as a child policy of schema_validation, the
+	// expression can also reference
+	// `record.value` fields.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=1000
+	Condition string `json:"condition,omitzero"`
+	// The configuration of the modify headers policy.
+	//
+	// +required
+	Config EventGatewayModifyHeadersPolicyCreateConfig `json:"config,omitzero"`
+	// A human-readable description of the policy.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=512
+	Description string `json:"description,omitzero"`
+	// Whether the policy is enabled.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Enabled string `json:"enabled,omitzero"`
+	// Labels store metadata of an entity that can be used for filtering an entity
+	// list or for searching across entity types.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels Labels `json:"labels,omitzero"`
+	// A unique user-defined name of the policy.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=255
+	Name string `json:"name,omitzero"`
+	// The unique identifier of the parent schema validation policy, if any.
+	//
+	// +optional
+	ParentPolicyID *commonv1alpha1.ObjectRef `json:"parentPolicyID,omitempty"`
+}
+
+// EventGatewayModifyHeadersPolicyCreateConfig The configuration of the modify
+// headers policy.
+type EventGatewayModifyHeadersPolicyCreateConfig struct {
+	// Actions are run in sequential order and act on individual headers.
+	//
+	// +optional
+	Actions []EventGatewayModifyHeaderAction `json:"actions,omitempty"`
+}
+
+// EventGatewaySkipRecordPolicyCreate A policy that skips processing of a
+// record.
+type EventGatewaySkipRecordPolicyCreate struct {
+	// A string containing the boolean expression that determines whether the
+	// policy is applied.
+	//
+	// When the policy is applied as a child policy of schema_validation, the
+	// expression can also reference
+	// `record.value` fields.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=1000
+	Condition string `json:"condition,omitzero"`
+	// A human-readable description of the policy.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=512
+	Description string `json:"description,omitzero"`
+	// Whether the policy is enabled.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Enabled string `json:"enabled,omitzero"`
+	// Labels store metadata of an entity that can be used for filtering an entity
+	// list or for searching across entity types.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels Labels `json:"labels,omitzero"`
+	// A unique user-defined name of the policy.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=255
+	Name string `json:"name,omitzero"`
+	// The unique identifier of the parent schema validation policy, if any.
+	//
+	// +optional
+	ParentPolicyID *commonv1alpha1.ObjectRef `json:"parentPolicyID,omitempty"`
+}
+
+// EventGatewayStaticKeySource A key source that uses static symmetric keys.
+type EventGatewayStaticKeySource struct {
+}
 
 // EventGatewayTLSListenerPolicy The TLS Server policy defines the certificates
 // and keys used by the gateway server when the client connects
@@ -397,21 +1015,21 @@ type EventGatewayTLSListenerPolicyConfig struct {
 	// **Requires a minimum runtime version of `1.1`**.
 	//
 	// +optional
-	ClientAuthentication ClientAuthentication `json:"clientAuthentication,omitzero"`
+	ClientAuthentication EventGatewayTLSListenerPolicyConfigClientAuthentication `json:"clientAuthentication,omitzero"`
 	// A range of TLS versions.
 	//
 	// +optional
 	Versions TLSVersionRange `json:"versions,omitzero"`
 }
 
-// ClientAuthentication Configures mutual TLS (mTLS) client certificate
-// verification.
+// EventGatewayTLSListenerPolicyConfigClientAuthentication Configures mutual TLS
+// (mTLS) client certificate verification.
 // When set, the gateway
 // requests or requires clients to present a certificate during the TLS
 // handshake.
 //
 // **Requires a minimum runtime version of `1.1`**.
-type ClientAuthentication struct {
+type EventGatewayTLSListenerPolicyConfigClientAuthentication struct {
 	// * required - Reject TLS connections without a valid client certificate.
 	// * requested - Request a client certificate during the TLS handshake, but
 	// allow connections without one (falls back to other configured authentication
@@ -532,7 +1150,7 @@ type ForwardToClusterBySNIConfig struct {
 	// **Requires a minimum runtime version of `1.1`**.
 	//
 	// +optional
-	BrokerHostFormat BrokerHostFormat `json:"brokerHostFormat,omitzero"`
+	BrokerHostFormat ForwardToClusterBySNIConfigBrokerHostFormat `json:"brokerHostFormat,omitzero"`
 	// Optional suffix for TLS SNI validation.
 	//
 	// This suffix is concatenated with the virtual cluster "dns.label" label to
@@ -564,8 +1182,8 @@ type ForwardToClusterBySNIConfig struct {
 	SniSuffix string `json:"sniSuffix,omitzero"`
 }
 
-// BrokerHostFormat Configures DNS names assigned to brokers in virtual
-// clusters.
+// ForwardToClusterBySNIConfigBrokerHostFormat Configures DNS names assigned to
+// brokers in virtual clusters.
 //
 // - `per_cluster_suffix` is the default and allocates one level in the
 // hierarchy for virtual clusters:
@@ -575,7 +1193,7 @@ type ForwardToClusterBySNIConfig struct {
 // This makes it easier to manage certificates for this listener.
 //
 // **Requires a minimum runtime version of `1.1`**.
-type BrokerHostFormat struct {
+type ForwardToClusterBySNIConfigBrokerHostFormat struct {
 	//
 	//
 	// +required
@@ -993,6 +1611,28 @@ type SAMLIdentityProviderMetadata string
 // SAMLIdentityProviderMetadataURL The identity provider's metadata URL where
 // the identity provider's metadata can be obtained.
 type SAMLIdentityProviderMetadataURL string
+
+// SchemaRegistryReference A reference to a schema Registry.
+type SchemaRegistryReference map[string]string
+
+// SchemaRegistryReferenceByID is a type alias.
+type SchemaRegistryReferenceByID struct {
+}
+
+// SchemaRegistryReferenceByName Reference a schema registry by its unique name.
+type SchemaRegistryReferenceByName struct {
+	// The unique name of the schema registry.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=255
+	Name string `json:"name,omitzero"`
+}
+
+// SchemaValidationType How to validate the schema and parse the record.
+// * confluent_schema_registry - validates against confluent schema registry.
+// * json - simple JSON parsing without the schema.
+type SchemaValidationType string
 
 // TLSCertificate A TLS certificate and its associated private key.
 type TLSCertificate struct {
@@ -1581,11 +2221,11 @@ type VirtualClusterNamespaceIDSelectorExactList struct {
 	//
 	//
 	// +optional
-	ExactList []Items `json:"exactList,omitempty"`
+	ExactList []VirtualClusterNamespaceIDSelectorExactListExactList `json:"exactList,omitempty"`
 }
 
-// Items is a type alias.
-type Items struct {
+// VirtualClusterNamespaceIDSelectorExactListExactList is a type alias.
+type VirtualClusterNamespaceIDSelectorExactListExactList struct {
 	//
 	//
 	// +required

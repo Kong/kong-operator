@@ -87,7 +87,7 @@ type EventGatewayListenerPolicyStatus struct {
 	// EventGatewayListenerID is the Konnect ID of the parent EventGatewayListener.
 	//
 	// +optional
-	EventGatewayListenerID *KonnectEntityRef `json:"eventgatewaylistenerID,omitempty"`
+	EventGatewayListenerID *KonnectEntityRef `json:"eventGatewayListenerID,omitempty"`
 
 	// ObservedGeneration is the most recent generation observed
 	//

@@ -147,7 +147,7 @@ func testEventGatewayListenerPolicy() *konnectv1alpha1.EventGatewayListenerPolic
 									Key:         "-----BEGIN PRIVATE KEY-----test-----END PRIVATE KEY-----",
 								},
 							},
-							ClientAuthentication: konnectv1alpha1.ClientAuthentication{
+							ClientAuthentication: konnectv1alpha1.EventGatewayTLSListenerPolicyConfigClientAuthentication{
 								Mode: "requested",
 								TLSTrustBundles: []konnectv1alpha1.TLSTrustBundleReference{
 									{

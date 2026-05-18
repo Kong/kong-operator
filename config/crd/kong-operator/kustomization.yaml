@@ -39,6 +39,7 @@ resources:
   - konnect.konghq.com_eventgatewaybackendclusters.yaml
   - konnect.konghq.com_eventgatewaylistenerpolicies.yaml
   - konnect.konghq.com_eventgatewaylisteners.yaml
+  - konnect.konghq.com_eventgatewayvirtualclusterconsumepolicies.yaml
   - konnect.konghq.com_eventgatewayvirtualclusters.yaml
   - konnect.konghq.com_identityproviderrequests.yaml
   - konnect.konghq.com_konnectapiauthconfigurations.yaml

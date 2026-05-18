@@ -557,7 +557,7 @@ func EventGatewayBackendCluster(
 				Name:             konnectv1alpha1.BackendClusterName(name),
 				TLS: konnectv1alpha1.BackendClusterTLS{
 					Enabled: "Disabled",
-					ClientIdentity: konnectv1alpha1.ClientIdentity{
+					ClientIdentity: konnectv1alpha1.BackendClusterTLSClientIdentity{
 						Certificate: konnectv1alpha1.SensitiveDataSource{
 							Type:  konnectv1alpha1.SensitiveDataSourceTypeInline,
 							Value: new("dummy-cert"),

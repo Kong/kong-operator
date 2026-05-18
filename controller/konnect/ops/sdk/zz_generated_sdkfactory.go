@@ -12,6 +12,7 @@ type GeneratedSDK interface {
 	GetEventGatewayListenersSDK() sdkkonnectgo.EventGatewayListenersSDK
 	GetEventGatewayListenerPoliciesSDK() sdkkonnectgo.EventGatewayListenerPoliciesSDK
 	GetEventGatewayVirtualClustersSDK() sdkkonnectgo.EventGatewayVirtualClustersSDK
+	GetEventGatewayVirtualClusterConsumePoliciesSDK() sdkkonnectgo.EventGatewayVirtualClusterConsumePoliciesSDK
 	GetPortalAuthSettingsSDK() sdkkonnectgo.PortalAuthSettingsSDK
 	GetEventGatewayDataPlaneCertificatesSDK() sdkkonnectgo.EventGatewayDataPlaneCertificatesSDK
 	GetEventGatewaysSDK() sdkkonnectgo.EventGatewaysSDK
@@ -42,6 +43,11 @@ func (w sdkWrapper) GetEventGatewayListenerPoliciesSDK() sdkkonnectgo.EventGatew
 // GetEventGatewayVirtualClustersSDK returns the SDK to operate EventGatewayVirtualCluster.
 func (w sdkWrapper) GetEventGatewayVirtualClustersSDK() sdkkonnectgo.EventGatewayVirtualClustersSDK {
 	return w.sdk.EventGatewayVirtualClusters
+}
+
+// GetEventGatewayVirtualClusterConsumePoliciesSDK returns the SDK to operate EventGatewayVirtualClusterConsumePolicy.
+func (w sdkWrapper) GetEventGatewayVirtualClusterConsumePoliciesSDK() sdkkonnectgo.EventGatewayVirtualClusterConsumePoliciesSDK {
+	return w.sdk.EventGatewayVirtualClusterConsumePolicies
 }
 
 // GetPortalAuthSettingsSDK returns the SDK to operate IdentityProviderRequest.
