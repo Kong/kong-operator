@@ -234,6 +234,10 @@
 
 ### Fixes
 
+- Add `ResolvedRefs` condition update for `TLSRoute`s and enable `ReferenceGrant`
+  to control the cross-namespace reference from `TLSRoute`s to their backendRefs
+  in on-prem `TLSRoute` controller.
+  [#4292](https://github.com/Kong/kong-operator/pull/4292)
 - `KongRoute`: when a cross-namespace `serviceRef` has no `KongReferenceGrant`, the
   `Programmed` condition now transitions to `False` in the same reconcile pass that sets
   `ResolvedRefs=False/RefNotPermitted`. Previously `Programmed` remained `Unknown`
