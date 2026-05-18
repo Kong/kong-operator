@@ -535,6 +535,7 @@ func TestGenerateCRDType_ParentRefWithoutReplacementReusesImmediateParentStatusF
 	assert.Contains(t, content, "EventGatewayVirtualClusterRef commonv1alpha1.ObjectRef")
 	assert.Contains(t, content, "GatewayID *KonnectEntityRef")
 	assert.Contains(t, content, "VirtualClusterID *KonnectEntityRef")
+	assert.Contains(t, content, "VirtualClusterID *KonnectEntityRef `json:\"virtualClusterID,omitempty\"`")
 	assert.NotContains(t, content, "EventGatewayVirtualCluster *KonnectEntityRef")
 }
 

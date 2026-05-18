@@ -87,7 +87,7 @@ type EventGatewayVirtualClusterConsumePolicyStatus struct {
 	// VirtualClusterID is the Konnect ID of the parent VirtualCluster.
 	//
 	// +optional
-	VirtualClusterID *KonnectEntityRef `json:"virtualclusterID,omitempty"`
+	VirtualClusterID *KonnectEntityRef `json:"virtualClusterID,omitempty"`
 
 	// ObservedGeneration is the most recent generation observed
 	//

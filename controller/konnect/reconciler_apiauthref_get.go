@@ -94,7 +94,7 @@ func getAPIAuthRefViaBackendCluster(
 }
 
 // getAPIAuthRefViaVirtualCluster resolves the APIAuth for an entity whose immediate
-// parent is EventGatewayVirtualCluster (e.g. EventGatewayVirtualCluster).
+// parent is EventGatewayVirtualCluster (e.g. EventGatewayVirtualClusterConsumePolicy).
 // It performs a 3-hop lookup: entity → EGVC → EGBC → KonnectEventGateway → APIAuth.
 func getAPIAuthRefViaVirtualCluster(
 	ctx context.Context,

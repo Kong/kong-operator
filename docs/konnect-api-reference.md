@@ -1216,7 +1216,7 @@ EventGatewayListenerPolicyStatus defines the observed state of EventGatewayListe
 | --- | --- |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
 | `gatewayID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
-| `eventgatewaylistenerID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | EventGatewayListenerID is the Konnect ID of the parent EventGatewayListener. |
+| `eventGatewayListenerID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | EventGatewayListenerID is the Konnect ID of the parent EventGatewayListener. |
 | `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
 
 _Appears in:_
@@ -1564,7 +1564,7 @@ EventGatewayVirtualClusterConsumePolicyStatus defines the observed state of Even
 | --- | --- |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
 | `gatewayID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
-| `virtualclusterID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | VirtualClusterID is the Konnect ID of the parent VirtualCluster. |
+| `virtualClusterID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | VirtualClusterID is the Konnect ID of the parent VirtualCluster. |
 | `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
 
 _Appears in:_

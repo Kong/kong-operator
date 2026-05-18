@@ -13,6 +13,7 @@ import (
 	"strings"
 	"unicode"
 
+	"golang.org/x/mod/semver"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -154,7 +155,7 @@ func resolveGoPackageDirFromModuleCache(importPath string) (string, error) {
 		if len(matches) == 0 {
 			continue
 		}
-		sort.Strings(matches)
+		sortModuleCacheMatches(matches)
 		for _, v := range slices.Backward(matches) {
 			candidate := v
 			if len(subdirParts) > 0 {
@@ -182,6 +183,24 @@ func escapeModuleCachePath(path string) string {
 		builder.WriteRune(r)
 	}
 	return builder.String()
+}
+
+func sortModuleCacheMatches(matches []string) {
+	sort.SliceStable(matches, func(i, j int) bool {
+		vi, vj := moduleCachePathVersion(matches[i]), moduleCachePathVersion(matches[j])
+		if semver.IsValid(vi) && semver.IsValid(vj) && vi != vj {
+			return semver.Compare(vi, vj) < 0
+		}
+		return matches[i] < matches[j]
+	})
+}
+
+func moduleCachePathVersion(path string) string {
+	idx := strings.LastIndex(path, "@")
+	if idx == -1 || idx == len(path)-1 {
+		return ""
+	}
+	return path[idx+1:]
 }
 
 func extractSDKRequestBodyInfo(structType *ast.StructType) (sdkRequestBodyInfo, error) {

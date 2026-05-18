@@ -11784,7 +11784,7 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
-              eventgatewaylistenerID:
+              eventGatewayListenerID:
                 description: EventGatewayListenerID is the Konnect ID of the parent EventGatewayListener.
                 properties:
                   id:
@@ -12769,7 +12769,7 @@ spec:
                 description: ServerURL is the URL of the Konnect server in which the entity exists.
                 maxLength: 512
                 type: string
-              virtualclusterID:
+              virtualClusterID:
                 description: VirtualClusterID is the Konnect ID of the parent VirtualCluster.
                 properties:
                   id:

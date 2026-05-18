@@ -139,7 +139,7 @@ type {{.EntityName}}Status struct {
 	// {{.EntityName}}ID is the Konnect ID of the parent {{.EntityName}}.
 	//
 	// +optional
-	{{.EntityName}}ID *KonnectEntityRef ` + "`" + `json:"{{.EntityName | lower}}ID,omitempty"` + "`" + `
+	{{.EntityName}}ID *KonnectEntityRef ` + "`" + `json:"{{statusIDJSONName .EntityName}},omitempty"` + "`" + `
 {{end}}{{range .References}}
 	// {{.Kind}} is the Konnect entity reference resolved from {{.Path}}.
 	//
