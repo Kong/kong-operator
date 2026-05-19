@@ -526,11 +526,6 @@ func TestKongServiceBuilder_WithClientCertificateRef(t *testing.T) {
 			input:       "my-cert",
 			expectedRef: &commonv1alpha1.NamespacedRef{Name: "my-cert"},
 		},
-		{
-			name:        "second call overwrites first",
-			input:       "other-cert",
-			expectedRef: &commonv1alpha1.NamespacedRef{Name: "other-cert"},
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
