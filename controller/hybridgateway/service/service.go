@@ -59,7 +59,7 @@ func ServiceForRule[
 	pRef *gwtypes.ParentReference,
 	cp *commonv1alpha1.ControlPlaneRef,
 	upstreamName string,
-) (kongService *configurationv1alpha1.KongService, kongCertificate *configurationv1alpha1.KongCertificate, err error) {
+) (kongService *configurationv1alpha1.KongService, kongCertificate *configurationv1alpha1.KongCertificate, kongReferenceGrant *configurationv1alpha1.KongReferenceGrant, err error) {
 
 	var serviceName string
 	var namespace string
@@ -70,7 +70,7 @@ func ServiceForRule[
 	case *gwtypes.HTTPRoute:
 		httpRule, ok := any(rule).(gwtypes.HTTPRouteRule)
 		if !ok {
-			return nil, nil, fmt.Errorf("failed to build KongService : unmatched route type and rule type: %T and %T", parentRoute, rule)
+			return nil, nil, nil, fmt.Errorf("failed to build KongService : unmatched route type and rule type: %T and %T", parentRoute, rule)
 		}
 		serviceName = namegen.NewKongServiceNameForHTTPRouteRule(r, cp, httpRule)
 		namespace = r.Namespace
@@ -80,7 +80,7 @@ func ServiceForRule[
 	case *gwtypes.TLSRoute:
 		tlsRule, ok := any(rule).(gwtypes.TLSRouteRule)
 		if !ok {
-			return nil, nil, fmt.Errorf("failed to build KongService : unmatched route type and rule type: %T and %T", parentRoute, rule)
+			return nil, nil, nil, fmt.Errorf("failed to build KongService : unmatched route type and rule type: %T and %T", parentRoute, rule)
 		}
 		serviceName = namegen.NewKongServiceNameForTLSRouteRule(r, cp, tlsRule)
 		namespace = r.Namespace
@@ -91,7 +91,7 @@ func ServiceForRule[
 
 	// Should be unreachable.
 	default:
-		return nil, nil, fmt.Errorf("failed to build KongService: unsupported route type: %T", parentRoute)
+		return nil, nil, nil, fmt.Errorf("failed to build KongService: unsupported route type: %T", parentRoute)
 	}
 
 	// Resolve service attributes once, outside the switch — future route types only add a case above.
@@ -116,6 +116,15 @@ func ServiceForRule[
 		serviceName, pRefNamespace, certSecretName, certOwnerSvc, protocol,
 	)
 
+	// When the KongCertificate lives in a different namespace than the Secret it references,
+	// create a KongReferenceGrant in the Secret's namespace to permit the cross-namespace reference.
+	if kongCertificate != nil {
+		kongReferenceGrant = buildClientCertReferenceGrant(
+			ctx, logger, cl, parentRoute, pRef,
+			serviceName, pRefNamespace, certSecretName, certOwnerSvc.Namespace,
+		)
+	}
+
 	service, err := builder.NewKongService().
 		WithName(serviceName).
 		WithNamespace(pRefNamespace).
@@ -135,14 +144,14 @@ func ServiceForRule[
 		WithControlPlaneRef(*cp).Build()
 	if err != nil {
 		log.Error(logger, err, "Failed to build KongService resource")
-		return nil, nil, fmt.Errorf("failed to build KongService %s: %w", serviceName, err)
+		return nil, nil, nil, fmt.Errorf("failed to build KongService %s: %w", serviceName, err)
 	}
 
 	if _, err = translator.VerifyAndUpdate(ctx, logger, cl, &service, parentRoute, false); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	return &service, kongCertificate, nil
+	return &service, kongCertificate, kongReferenceGrant, nil
 }
 
 // clientCertRefName returns the cert's metadata.name or "" when cert is nil.

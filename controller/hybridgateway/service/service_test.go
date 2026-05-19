@@ -161,7 +161,7 @@ func TestServiceForRule(t *testing.T) {
 				WithObjects(objects...).
 				Build()
 
-			service, _, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, upstreamName)
+			service, _, _, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, upstreamName)
 
 			assert.NoError(t, err)
 			assert.NotNil(t, service)
@@ -440,7 +440,7 @@ func TestServiceForRule_ProtocolAnnotation(t *testing.T) {
 				WithObjects(objects...).
 				Build()
 
-			service, _, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, upstreamName)
+			service, _, _, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, upstreamName)
 
 			require.NoError(t, err)
 			require.NotNil(t, service)
@@ -525,7 +525,7 @@ func TestServiceForRule_PathAnnotation(t *testing.T) {
 			}
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
-			service, _, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, upstreamName)
+			service, _, _, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, upstreamName)
 			require.NoError(t, err)
 			require.NotNil(t, service)
 			if tt.expected == nil {
@@ -867,7 +867,7 @@ func TestServiceForRule_TLSVerifyAnnotation(t *testing.T) {
 			}
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
-			service, _, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, upstreamName)
+			service, _, _, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, upstreamName)
 			require.NoError(t, err)
 			require.NotNil(t, service)
 			if tt.expected == nil {
@@ -1321,7 +1321,7 @@ func TestServiceForRule_TLSVerifyDepthAnnotation(t *testing.T) {
 				WithObjects(objects...).
 				Build()
 
-			service, _, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, upstreamName)
+			service, _, _, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, upstreamName)
 
 			require.NoError(t, err)
 			require.NotNil(t, service)
@@ -1682,7 +1682,7 @@ func TestServiceForRule_ConnectTimeoutAnnotation(t *testing.T) {
 			}
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
-			service, _, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, upstreamName)
+			service, _, _, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, upstreamName)
 			require.NoError(t, err)
 			require.NotNil(t, service)
 			if tt.expected == nil {
@@ -2042,7 +2042,7 @@ func TestServiceForRule_ReadTimeoutAnnotation(t *testing.T) {
 			}
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
-			service, _, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, upstreamName)
+			service, _, _, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, upstreamName)
 			require.NoError(t, err)
 			require.NotNil(t, service)
 			if tt.expected == nil {
@@ -2402,7 +2402,7 @@ func TestServiceForRule_WriteTimeoutAnnotation(t *testing.T) {
 			}
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
-			service, _, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, upstreamName)
+			service, _, _, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, upstreamName)
 			require.NoError(t, err)
 			require.NotNil(t, service)
 			if tt.expected == nil {
@@ -2761,7 +2761,7 @@ func TestServiceForRule_RetriesAnnotation(t *testing.T) {
 			}
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
-			service, _, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, upstreamName)
+			service, _, _, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, upstreamName)
 			require.NoError(t, err)
 			require.NotNil(t, service)
 			if tt.expected == nil {
