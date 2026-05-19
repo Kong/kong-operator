@@ -26,7 +26,7 @@ func TestWatches(t *testing.T) {
 		{
 			name:    "HTTPRoute with ReferenceGrant enabled",
 			obj:     &gwtypes.HTTPRoute{},
-			wantLen: 14,
+			wantLen: 15,
 			wantType: []any{
 				&gwtypes.Gateway{},
 				&gwtypes.GatewayClass{},
@@ -42,12 +42,13 @@ func TestWatches(t *testing.T) {
 				&configurationv1beta1.KongUpstreamPolicy{},
 				&corev1.Secret{},
 				&configurationv1alpha1.KongCertificate{},
+				&configurationv1alpha1.KongReferenceGrant{},
 			},
 		},
 		{
 			name:    "TLSRoute",
 			obj:     &gwtypes.TLSRoute{},
-			wantLen: 11,
+			wantLen: 12,
 			wantType: []any{
 				&gwtypes.Gateway{},
 				&gwtypes.GatewayClass{},
@@ -60,6 +61,7 @@ func TestWatches(t *testing.T) {
 				&gwtypes.ReferenceGrant{},
 				&corev1.Secret{},
 				&configurationv1alpha1.KongCertificate{},
+				&configurationv1alpha1.KongReferenceGrant{},
 			},
 		},
 		{
