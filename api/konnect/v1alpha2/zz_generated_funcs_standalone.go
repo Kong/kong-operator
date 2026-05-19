@@ -20,6 +20,7 @@ func (obj *KonnectGatewayControlPlane) GetKonnectID() string {
 func (obj *KonnectGatewayControlPlane) SetKonnectID(id string) {
 	obj.Status.ID = id
 }
+
 // PersistsKonnectID reports whether the KonnectGatewayControlPlane persists a Konnect ID in status.
 func (*KonnectGatewayControlPlane) PersistsKonnectID() bool {
 	return true
@@ -30,12 +31,12 @@ func (obj KonnectGatewayControlPlane) GetTypeName() string {
 	return "KonnectGatewayControlPlane"
 }
 
-// GetConditions returns the Status Conditions
+// GetConditions returns the Status Conditions.
 func (obj *KonnectGatewayControlPlane) GetConditions() []metav1.Condition {
 	return obj.Status.Conditions
 }
 
-// SetConditions sets the Status Conditions
+// SetConditions sets the Status Conditions.
 func (obj *KonnectGatewayControlPlane) SetConditions(conditions []metav1.Condition) {
 	obj.Status.Conditions = conditions
 }
