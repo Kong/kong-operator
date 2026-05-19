@@ -811,9 +811,9 @@ func TestSNIMatcherFromSNIs(t *testing.T) {
 			expression: `(tls.sni == "docs.konghq.com") || (tls.sni == "apis.konghq.com")`,
 		},
 		{
-			name:       "multiple SNIs with wildcard SNI, which should be omitted",
+			name:       "multiple SNIs with wildcard SNI,",
 			snis:       []string{"foo.com", "*.bar.com"},
-			expression: `tls.sni == "foo.com"`,
+			expression: `(tls.sni == "foo.com") || (tls.sni =^ ".bar.com")`,
 		},
 		{
 			name:       "multiple SNIs with invalid SNI",
