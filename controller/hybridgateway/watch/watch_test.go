@@ -26,7 +26,7 @@ func TestWatches(t *testing.T) {
 		{
 			name:    "HTTPRoute with ReferenceGrant enabled",
 			obj:     &gwtypes.HTTPRoute{},
-			wantLen: 12,
+			wantLen: 15,
 			wantType: []any{
 				&gwtypes.Gateway{},
 				&gwtypes.GatewayClass{},
@@ -40,6 +40,28 @@ func TestWatches(t *testing.T) {
 				&configurationv1alpha1.KongPluginBinding{},
 				&gwtypes.ReferenceGrant{},
 				&configurationv1beta1.KongUpstreamPolicy{},
+				&corev1.Secret{},
+				&configurationv1alpha1.KongCertificate{},
+				&configurationv1alpha1.KongReferenceGrant{},
+			},
+		},
+		{
+			name:    "TLSRoute",
+			obj:     &gwtypes.TLSRoute{},
+			wantLen: 12,
+			wantType: []any{
+				&gwtypes.Gateway{},
+				&gwtypes.GatewayClass{},
+				&corev1.Service{},
+				&discoveryv1.EndpointSlice{},
+				&configurationv1alpha1.KongUpstream{},
+				&configurationv1alpha1.KongTarget{},
+				&configurationv1alpha1.KongService{},
+				&configurationv1alpha1.KongRoute{},
+				&gwtypes.ReferenceGrant{},
+				&corev1.Secret{},
+				&configurationv1alpha1.KongCertificate{},
+				&configurationv1alpha1.KongReferenceGrant{},
 			},
 		},
 		{

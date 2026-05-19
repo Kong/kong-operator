@@ -161,6 +161,71 @@ func TestEnforceState_DependencyGating(t *testing.T) {
 		assert.False(t, applied)
 		assert.True(t, waiting)
 	})
+
+	// Case 4: KongService waits for referenced KongCertificate not Programmed.
+	t.Run("service waits for not programmed certificate", func(t *testing.T) {
+		svcGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongService"}
+		desired := newUnstructured(ns, "svc1", svcGVK, nil)
+		_ = unstructured.SetNestedField(desired.Object, map[string]any{
+			"clientCertificateRef": map[string]any{"name": "cert1"},
+		}, "spec")
+
+		// KongCertificate exists but Programmed not True.
+		cert := &configurationv1alpha1.KongCertificate{}
+		cert.SetName("cert1")
+		cert.SetNamespace(ns)
+
+		fakeConv := &fakeHTTPRouteConverter{desired: []unstructured.Unstructured{desired}}
+		cl := fake.NewClientBuilder().WithScheme(s).WithObjects(cert).Build()
+
+		applied, waiting, err := enforceState(ctx, cl, logger, fakeConv)
+		require.NoError(t, err)
+		assert.False(t, applied)
+		assert.True(t, waiting)
+	})
+
+	// Case 5: KongService proceeds when referenced KongCertificate is Programmed.
+	t.Run("service proceeds when certificate is programmed", func(t *testing.T) {
+		svcGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongService"}
+		desired := newUnstructured(ns, "svc-ready", svcGVK, nil)
+		_ = unstructured.SetNestedField(desired.Object, map[string]any{
+			"clientCertificateRef": map[string]any{"name": "cert-ready"},
+		}, "spec")
+
+		// KongCertificate with Programmed=True.
+		cert := &configurationv1alpha1.KongCertificate{}
+		cert.SetName("cert-ready")
+		cert.SetNamespace(ns)
+		cert.Status.Conditions = []metav1.Condition{
+			{
+				Type:               "Programmed",
+				Status:             metav1.ConditionTrue,
+				LastTransitionTime: metav1.Now(),
+				Reason:             "Programmed",
+			},
+		}
+
+		fakeConv := &fakeHTTPRouteConverter{desired: []unstructured.Unstructured{desired}}
+		cl := fake.NewClientBuilder().WithScheme(s).WithStatusSubresource(cert).WithObjects(cert).Build()
+
+		applied, _, err := enforceState(ctx, cl, logger, fakeConv)
+		require.NoError(t, err)
+		// The desired object was applied (created), so applied should be true.
+		assert.True(t, applied)
+	})
+
+	// Case 6: KongService without clientCertificateRef proceeds immediately.
+	t.Run("service without certificate ref proceeds immediately", func(t *testing.T) {
+		svcGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongService"}
+		desired := newUnstructured(ns, "svc-no-cert", svcGVK, nil)
+
+		fakeConv := &fakeHTTPRouteConverter{desired: []unstructured.Unstructured{desired}}
+		cl := fake.NewClientBuilder().WithScheme(s).Build()
+
+		applied, _, err := enforceState(ctx, cl, logger, fakeConv)
+		require.NoError(t, err)
+		assert.True(t, applied)
+	})
 }
 
 func TestCleanOrphanedResources(t *testing.T) {

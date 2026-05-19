@@ -80,6 +80,8 @@
   [#4104](https://github.com/Kong/kong-operator/pull/4104)
 - Hybridgateway: add support for `konghq.com/host-header` service annotation
   [#4108](https://github.com/Kong/kong-operator/pull/4108)
+- Hybridgateway: add support for `konghq.com/client-cert` service annotation.
+  [#4352](https://github.com/Kong/kong-operator/pull/4352)
 - Konnect: support `KongCertificate` and `KongCACertificate` refs in `KongService`
   [#4240](https://github.com/Kong/kong-operator/pull/4240)
 - Hybridgateway: add error logs when annotations are malformed

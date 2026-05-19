@@ -509,3 +509,35 @@ func TestKongServiceBuilder_MultipleErrors(t *testing.T) {
 	assert.Contains(t, err.Error(), "owner cannot be nil")
 	assert.Contains(t, err.Error(), assert.AnError.Error())
 }
+
+func TestKongServiceBuilder_WithClientCertificateRef(t *testing.T) {
+	tests := []struct {
+		name        string
+		input       string
+		expectedRef *commonv1alpha1.NamespacedRef
+	}{
+		{
+			name:        "empty name leaves field nil",
+			input:       "",
+			expectedRef: nil,
+		},
+		{
+			name:        "valid name sets NamespacedRef",
+			input:       "my-cert",
+			expectedRef: &commonv1alpha1.NamespacedRef{Name: "my-cert"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			service, err := NewKongService().WithClientCertificateRef(tt.input).Build()
+			require.NoError(t, err)
+			if tt.expectedRef == nil {
+				assert.Nil(t, service.Spec.ClientCertificateRef)
+			} else {
+				require.NotNil(t, service.Spec.ClientCertificateRef)
+				assert.Equal(t, tt.expectedRef.Name, service.Spec.ClientCertificateRef.Name)
+				assert.Nil(t, service.Spec.ClientCertificateRef.Namespace)
+			}
+		})
+	}
+}

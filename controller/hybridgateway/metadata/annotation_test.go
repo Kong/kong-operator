@@ -1449,3 +1449,49 @@ func TestParseAnnotationBool(t *testing.T) {
 		})
 	}
 }
+
+func TestExtractClientCertificate(t *testing.T) {
+	tests := []struct {
+		name        string
+		annotations map[string]string
+		want        string
+	}{
+		{
+			name:        "nil annotations",
+			annotations: nil,
+			want:        "",
+		},
+		{
+			name:        "empty annotations",
+			annotations: map[string]string{},
+			want:        "",
+		},
+		{
+			name:        "annotation missing",
+			annotations: map[string]string{"konghq.com/protocol": "https"},
+			want:        "",
+		},
+		{
+			name:        "annotation present with empty value",
+			annotations: map[string]string{"konghq.com/client-cert": ""},
+			want:        "",
+		},
+		{
+			name:        "annotation present with secret name",
+			annotations: map[string]string{"konghq.com/client-cert": "my-client-cert"},
+			want:        "my-client-cert",
+		},
+		{
+			name:        "annotation present with whitespace value - no trimming matches IC behavior",
+			annotations: map[string]string{"konghq.com/client-cert": "  secret-name  "},
+			want:        "  secret-name  ",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ExtractClientCertificate(tt.annotations)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}

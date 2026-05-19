@@ -29,6 +29,7 @@ const (
 	writeTimeoutKey   = "/write-timeout"
 	retriesKey        = "/retries"
 	hostHeaderKey     = "/host-header"
+	clientCertKey     = "/client-cert"
 	kindHTTPRoute     = "HTTPRoute"
 	kindTLSRoute      = "TLSRoute"
 )
@@ -149,6 +150,13 @@ func ExtractRetries(anns map[string]string) (*int64, error) {
 		return nil, err
 	}
 	return retries, nil
+}
+
+// ExtractClientCertificate extracts the client-cert annotation value.
+// Returns the secret name when the annotation is present and non-empty, or an empty string otherwise.
+// This mirrors ingress-controller/internal/annotations.ExtractClientCertificate.
+func ExtractClientCertificate(anns map[string]string) string {
+	return anns[annotationPrefix+clientCertKey]
 }
 
 // ExtractHostHeader extracts the host-header annotation value.

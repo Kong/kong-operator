@@ -39,4 +39,11 @@ const (
 	ConditionReasonKongPluginBindingProgrammed = "KongPluginBindingProgrammed"
 	// ConditionReasonKongPluginBindingNotProgrammed is used when the KongPluginBinding resource is not programmed.
 	ConditionReasonKongPluginBindingNotProgrammed = "KongPluginBindingNotProgrammed"
+
+	// ConditionTypeKongCertificateProgrammed is set on a Route to indicate whether its KongCertificate resource is programmed.
+	ConditionTypeKongCertificateProgrammed = "KongCertificateProgrammed"
+	// ConditionReasonKongCertificateProgrammed is used when the KongCertificate resource is successfully programmed.
+	ConditionReasonKongCertificateProgrammed = "KongCertificateProgrammed"
+	// ConditionReasonKongCertificateNotProgrammed is used when the KongCertificate resource is not programmed.
+	ConditionReasonKongCertificateNotProgrammed = "KongCertificateNotProgrammed"
 )

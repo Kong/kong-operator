@@ -34,7 +34,9 @@ type kongResource interface {
 		*configurationv1alpha1.KongService |
 		*configurationv1alpha1.KongRoute |
 		*configurationv1.KongPlugin |
-		*configurationv1alpha1.KongPluginBinding
+		*configurationv1alpha1.KongPluginBinding |
+		*configurationv1alpha1.KongCertificate |
+		*configurationv1alpha1.KongReferenceGrant
 }
 
 // MapRouteForKongResource returns a handler.MapFunc that, given a Kong resource object of type T,
