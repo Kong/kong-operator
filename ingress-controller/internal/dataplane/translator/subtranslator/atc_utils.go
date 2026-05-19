@@ -62,3 +62,25 @@ func hostMatcherFromHosts(hosts []string) atc.Matcher {
 	}
 	return atc.Or(matchers...)
 }
+
+// sniMatcherFromSNIs generates matchers to match TLS SNIs.
+// used in translating TLSRoute rules and `SNIs` annotations in ingresses.
+// the SNI format includes:
+// - wildcard SNIs, starting with exactly one *
+// - precise SNIs, otherwise.
+func sniMatcherFromSNIs(snis []string) atc.Matcher {
+	matchers := make([]atc.Matcher, 0, len(snis))
+	for _, sni := range snis {
+		if !validHosts.MatchString(sni) {
+			continue
+		}
+		if suffix, ok := strings.CutPrefix(sni, "*"); ok {
+			// wildcard match on SNIs (like *.foo.com), genreate a suffix match.
+			matchers = append(matchers, atc.NewPredicateTLSSNI(atc.OpSuffixMatch, suffix))
+		} else {
+			// exact match on SNIs, generate an exact match.
+			matchers = append(matchers, atc.NewPredicateTLSSNI(atc.OpEqual, sni))
+		}
+	}
+	return atc.Or(matchers...)
+}
