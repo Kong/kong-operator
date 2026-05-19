@@ -50,6 +50,8 @@
 
 ### Added
 
+- DataPlane: extend Kong image validation to support sha256 digest
+  [#4356](https://github.com/Kong/kong-operator/pull/4356)
 - Konnect: support `KongCertificate` ref in `KongUpstream`
   [#4305](https://github.com/Kong/kong-operator/pull/4305)
 - `KongTarget`: support cross-namespace `spec.upstreamRef` to reference a
