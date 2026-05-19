@@ -49,6 +49,7 @@ func newTLSRouteConverter(tlsRoute *gwtypes.TLSRoute, cl client.Client, fqdnMode
 			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongTarget"},
 			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongService"},
 			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongCertificate"},
+			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongReferenceGrant"},
 			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongUpstream"},
 		},
 		fqdnMode:      fqdnMode,
@@ -305,14 +306,19 @@ func (c *tlsRouteConverter) translate(ctx context.Context, logger logr.Logger) e
 			c.outputStore = append(c.outputStore, upstreamPtr)
 			log.Debug(logger, "Successfully translated KongUpstream resource", "upstream", upstreamName)
 
-			// Build the KongService resource (and optionally a KongCertificate for client-cert).
-			servicePtr, certPtr, err := service.ServiceForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp, upstreamName)
+			// Build the KongService resource (and optionally a KongCertificate + KongReferenceGrant for client-cert).
+			servicePtr, certPtr, grantPtr, err := service.ServiceForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp, upstreamName)
 			if err != nil {
 				log.Error(logger, err, "Failed to translate KongService resource, skipping rule",
 					"controlPlane", cp.KonnectNamespacedRef,
 					"upstream", upstreamName)
 				translationErrors = append(translationErrors, fmt.Errorf("failed to translate KongService for rule: %w", err))
 				continue
+			}
+			// Append KongReferenceGrant before KongCertificate so the grant exists when the cert is applied.
+			if grantPtr != nil {
+				c.outputStore = append(c.outputStore, grantPtr)
+				log.Debug(logger, "Successfully translated KongReferenceGrant resource", "grant", grantPtr.Name)
 			}
 			if certPtr != nil {
 				c.outputStore = append(c.outputStore, certPtr)
