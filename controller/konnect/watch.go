@@ -372,6 +372,7 @@ func enqueueObjectsForKongReferenceGrant[
 		var fromNamespaces []string
 		for _, from := range krg.Spec.From {
 			if string(from.Group) != configurationv1alpha1.GroupVersion.Group &&
+				string(from.Group) != konnectv1alpha1.GroupVersion.Group &&
 				string(from.Group) != konnectv1alpha2.GroupVersion.Group {
 				continue
 			}

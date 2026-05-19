@@ -700,3 +700,131 @@ func TestGetAPIAuthRefNN_EventGatewayVirtualCluster(t *testing.T) {
 		})
 	}
 }
+
+func TestGetAPIAuthRefNN_EventGatewayListenerPolicy(t *testing.T) {
+	const (
+		policyNamespace   = "policy-ns"
+		listenerNamespace = "listener-ns"
+		gatewayNamespace  = "gateway-ns"
+		listenerName      = "event-gateway-listener"
+		gatewayName       = "event-gateway"
+		authName          = "konnect-api-auth"
+	)
+
+	makeGateway := func() *konnectv1alpha1.KonnectEventGateway {
+		return &konnectv1alpha1.KonnectEventGateway{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: konnectv1alpha1.GroupVersion.String(),
+				Kind:       "KonnectEventGateway",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      gatewayName,
+				Namespace: gatewayNamespace,
+			},
+			Spec: konnectv1alpha1.KonnectEventGatewaySpec{
+				KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+					APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+						Name: authName,
+					},
+				},
+			},
+		}
+	}
+
+	makeListener := func(gatewayRefNamespace *string) *konnectv1alpha1.EventGatewayListener {
+		return &konnectv1alpha1.EventGatewayListener{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: konnectv1alpha1.GroupVersion.String(),
+				Kind:       "EventGatewayListener",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      listenerName,
+				Namespace: listenerNamespace,
+			},
+			Spec: konnectv1alpha1.EventGatewayListenerSpec{
+				GatewayRef: commonv1alpha1.ObjectRef{
+					Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+					NamespacedRef: &commonv1alpha1.NamespacedRef{
+						Name:      gatewayName,
+						Namespace: gatewayRefNamespace,
+					},
+				},
+			},
+		}
+	}
+
+	makePolicy := func(listenerRefNamespace *string) *konnectv1alpha1.EventGatewayListenerPolicy {
+		return &konnectv1alpha1.EventGatewayListenerPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "listener-policy",
+				Namespace: policyNamespace,
+			},
+			Spec: konnectv1alpha1.EventGatewayListenerPolicySpec{
+				EventGatewayListenerRef: commonv1alpha1.ObjectRef{
+					Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+					NamespacedRef: &commonv1alpha1.NamespacedRef{
+						Name:      listenerName,
+						Namespace: listenerRefNamespace,
+					},
+				},
+			},
+		}
+	}
+
+	testCases := []struct {
+		name              string
+		policy            *konnectv1alpha1.EventGatewayListenerPolicy
+		objects           []client.Object
+		wantNN            types.NamespacedName
+		wantErrorContains string
+	}{
+		{
+			name:   "cross-namespace listener and gateway refs resolve auth from gateway namespace",
+			policy: makePolicy(new(listenerNamespace)),
+			objects: []client.Object{
+				makeListener(new(gatewayNamespace)),
+				makeGateway(),
+			},
+			wantNN: types.NamespacedName{
+				Name:      authName,
+				Namespace: gatewayNamespace,
+			},
+		},
+		{
+			name:              "missing cross-namespace listener returns error",
+			policy:            makePolicy(new(listenerNamespace)),
+			wantErrorContains: "failed to get EventGatewayListener",
+		},
+		{
+			name:   "missing cross-namespace gateway returns error",
+			policy: makePolicy(new(listenerNamespace)),
+			objects: []client.Object{
+				makeListener(new(gatewayNamespace)),
+			},
+			wantErrorContains: "referenced object",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			s := scheme.Get()
+			cl := fake.NewClientBuilder().
+				WithScheme(s).
+				WithObjects(append(tc.objects, tc.policy)...).
+				WithInterceptorFuncs(populateGVKOnGet(s)).
+				Build()
+
+			nn, err := GetAPIAuthRefNN(t.Context(), cl, tc.policy)
+
+			if tc.wantErrorContains != "" {
+				require.Error(t, err)
+				require.ErrorContains(t, err, tc.wantErrorContains)
+				require.Equal(t, types.NamespacedName{}, nn)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tc.wantNN, nn)
+		})
+	}
+}

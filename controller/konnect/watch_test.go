@@ -33,6 +33,7 @@ func TestWatchOptions(t *testing.T) {
 	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.KongKeySet{})
 	testReconciliationWatchOptionsForEntity(t, &konnectv1alpha1.EventGatewayBackendCluster{})
 	testReconciliationWatchOptionsForEntity(t, &konnectv1alpha1.EventGatewayListener{})
+	testReconciliationWatchOptionsForEntity(t, &konnectv1alpha1.EventGatewayListenerPolicy{})
 	testReconciliationWatchOptionsForEntity(t, &konnectv1alpha1.EventGatewayVirtualCluster{})
 	testReconciliationWatchOptionsForEntity(t, &konnectv1alpha1.KonnectEventDataPlaneCertificate{})
 	testReconciliationWatchOptionsForEntity(t, &konnectv1alpha1.KonnectEventGateway{})
@@ -841,6 +842,60 @@ func TestEnqueueObjectForKongReferenceGrant(t *testing.T) {
 			{
 				NamespacedName: types.NamespacedName{
 					Name:      "page-1",
+					Namespace: "source-ns",
+				},
+			},
+		}, requests)
+	})
+
+	t.Run("EventGatewayListenerPolicy", func(t *testing.T) {
+		grant := &configurationv1alpha1.KongReferenceGrant{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "grant1",
+				Namespace: "target-ns",
+			},
+			Spec: configurationv1alpha1.KongReferenceGrantSpec{
+				From: []configurationv1alpha1.ReferenceGrantFrom{
+					{
+						Group:     configurationv1alpha1.Group(konnectv1alpha1.GroupVersion.Group),
+						Kind:      "EventGatewayListenerPolicy",
+						Namespace: "source-ns",
+					},
+				},
+				To: []configurationv1alpha1.ReferenceGrantTo{
+					{
+						Group: configurationv1alpha1.Group(konnectv1alpha1.GroupVersion.Group),
+						Kind:  "EventGatewayListener",
+					},
+				},
+			},
+		}
+
+		builder := fakectrlruntimeclient.NewClientBuilder().
+			WithScheme(scheme.Get()).
+			WithObjects(
+				grant,
+				&konnectv1alpha1.EventGatewayListenerPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "policy-1",
+						Namespace: "source-ns",
+					},
+				},
+				&konnectv1alpha1.EventGatewayListenerPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "policy-2",
+						Namespace: "other-ns",
+					},
+				},
+			)
+		cl := builder.Build()
+		require.NotNil(t, cl)
+
+		requests := enqueueObjectsForKongReferenceGrant[konnectv1alpha1.EventGatewayListenerPolicyList](cl)(t.Context(), grant)
+		require.Equal(t, []ctrl.Request{
+			{
+				NamespacedName: types.NamespacedName{
+					Name:      "policy-1",
 					Namespace: "source-ns",
 				},
 			},
