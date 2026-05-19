@@ -2500,7 +2500,7 @@ func emitInlineUnionWrapperMarshalJSON(structTypeName string, fields []unionFiel
 	}
 
 	var buf strings.Builder
-	buf.WriteString("// MarshalJSON implements [json.Marshaler].\n")
+	buf.WriteString("// MarshalJSON implements json.Marshaler.\n")
 	fmt.Fprintf(&buf, "func (s *%s) MarshalJSON() ([]byte, error) {\n", structTypeName)
 	buf.WriteString("\tif s == nil {\n")
 	buf.WriteString("\t\treturn []byte(\"null\"), nil\n")
@@ -2524,7 +2524,7 @@ func emitUnionWrapperUnmarshalJSON(structTypeName string, fields []unionFieldSpe
 	}
 
 	var buf strings.Builder
-	fmt.Fprintf(&buf, "// UnmarshalJSON implements [json.Unmarshaler].\n")
+	fmt.Fprintf(&buf, "// UnmarshalJSON implements json.Unmarshaler.\n")
 	fmt.Fprintf(&buf, "func (s *%s) UnmarshalJSON(data []byte) error {\n", structTypeName)
 	fmt.Fprintf(&buf, "\tif s == nil {\n")
 	fmt.Fprintf(&buf, "\t\treturn fmt.Errorf(\"unmarshaling %s: nil receiver\")\n", structTypeName)

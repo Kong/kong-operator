@@ -137,12 +137,12 @@ func TestCacheStores(t *testing.T) {
 		name          string
 		objectToStore client.Object
 	}{
-		{{ range . }}
+		{{- range . }}
 		{
 			name: "{{ .Type }}",
 			objectToStore: &{{ .Package }}.{{ .Type }}{},
 		},
-		{{ end }}
+		{{- end }}
 	}
 
 	for _, tc := range testCases {
