@@ -304,6 +304,7 @@ type WatchableEntityType interface {
 		konnectv1alpha1.Portal |
 		konnectv1alpha1.PortalPage |
 		konnectv1alpha1.PortalCustomDomain |
+		konnectv1alpha1.PortalCustomization |
 		konnectv1alpha1.PortalEmailConfig |
 		konnectv1alpha1.PortalIPAllowList |
 		konnectv1alpha1.PortalTeam |
@@ -313,6 +314,7 @@ type WatchableEntityType interface {
 		konnectv1alpha1.EventGatewayListener |
 		konnectv1alpha1.EventGatewayListenerPolicy |
 		konnectv1alpha1.EventGatewayVirtualCluster |
+		konnectv1alpha1.EventGatewayVirtualClusterConsumePolicy |
 		konnectv1alpha1.KonnectEventDataPlaneCertificate |
 		configurationv1alpha1.KongService |
 		configurationv1alpha1.KongRoute |

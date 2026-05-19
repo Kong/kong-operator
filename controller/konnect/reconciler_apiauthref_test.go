@@ -828,3 +828,156 @@ func TestGetAPIAuthRefNN_EventGatewayListenerPolicy(t *testing.T) {
 		})
 	}
 }
+
+func TestGetAPIAuthRefNN_EventGatewayVirtualClusterConsumePolicy(t *testing.T) {
+	const (
+		policyNamespace         = "policy-ns"
+		virtualClusterNamespace = "virtual-cluster-ns"
+		backendClusterNamespace = "backend-cluster-ns"
+		gatewayNamespace        = "gateway-ns"
+		virtualClusterName      = "event-gateway-virtual-cluster"
+		backendClusterName      = "event-gateway-backend-cluster"
+		gatewayName             = "event-gateway"
+		authName                = "konnect-api-auth"
+	)
+
+	makeGateway := func() *konnectv1alpha1.KonnectEventGateway {
+		return &konnectv1alpha1.KonnectEventGateway{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: konnectv1alpha1.GroupVersion.String(),
+				Kind:       "KonnectEventGateway",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      gatewayName,
+				Namespace: gatewayNamespace,
+			},
+			Spec: konnectv1alpha1.KonnectEventGatewaySpec{
+				KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+					APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+						Name: authName,
+					},
+				},
+			},
+		}
+	}
+
+	makeBackendCluster := func(gatewayRefNamespace *string) *konnectv1alpha1.EventGatewayBackendCluster {
+		return &konnectv1alpha1.EventGatewayBackendCluster{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: konnectv1alpha1.GroupVersion.String(),
+				Kind:       "EventGatewayBackendCluster",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      backendClusterName,
+				Namespace: backendClusterNamespace,
+			},
+			Spec: konnectv1alpha1.EventGatewayBackendClusterSpec{
+				GatewayRef: commonv1alpha1.ObjectRef{
+					Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+					NamespacedRef: &commonv1alpha1.NamespacedRef{
+						Name:      gatewayName,
+						Namespace: gatewayRefNamespace,
+					},
+				},
+			},
+		}
+	}
+
+	makeVirtualCluster := func(backendClusterRefNamespace *string) *konnectv1alpha1.EventGatewayVirtualCluster {
+		return &konnectv1alpha1.EventGatewayVirtualCluster{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: konnectv1alpha1.GroupVersion.String(),
+				Kind:       "EventGatewayVirtualCluster",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      virtualClusterName,
+				Namespace: virtualClusterNamespace,
+			},
+			Spec: konnectv1alpha1.EventGatewayVirtualClusterSpec{
+				EventGatewayBackendClusterRef: commonv1alpha1.ObjectRef{
+					Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+					NamespacedRef: &commonv1alpha1.NamespacedRef{
+						Name:      backendClusterName,
+						Namespace: backendClusterRefNamespace,
+					},
+				},
+			},
+		}
+	}
+
+	makePolicy := func(virtualClusterRefNamespace *string) *konnectv1alpha1.EventGatewayVirtualClusterConsumePolicy {
+		return &konnectv1alpha1.EventGatewayVirtualClusterConsumePolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "consume-policy",
+				Namespace: policyNamespace,
+			},
+			Spec: konnectv1alpha1.EventGatewayVirtualClusterConsumePolicySpec{
+				EventGatewayVirtualClusterRef: commonv1alpha1.ObjectRef{
+					Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+					NamespacedRef: &commonv1alpha1.NamespacedRef{
+						Name:      virtualClusterName,
+						Namespace: virtualClusterRefNamespace,
+					},
+				},
+			},
+		}
+	}
+
+	testCases := []struct {
+		name              string
+		policy            *konnectv1alpha1.EventGatewayVirtualClusterConsumePolicy
+		objects           []client.Object
+		wantNN            types.NamespacedName
+		wantErrorContains string
+	}{
+		{
+			name:   "cross-namespace virtual cluster, backend cluster, and gateway refs resolve auth from gateway namespace",
+			policy: makePolicy(new(virtualClusterNamespace)),
+			objects: []client.Object{
+				makeVirtualCluster(new(backendClusterNamespace)),
+				makeBackendCluster(new(gatewayNamespace)),
+				makeGateway(),
+			},
+			wantNN: types.NamespacedName{
+				Name:      authName,
+				Namespace: gatewayNamespace,
+			},
+		},
+		{
+			name:              "missing cross-namespace virtual cluster returns error",
+			policy:            makePolicy(new(virtualClusterNamespace)),
+			wantErrorContains: "failed to get EventGatewayVirtualCluster",
+		},
+		{
+			name:   "missing cross-namespace backend cluster returns error",
+			policy: makePolicy(new(virtualClusterNamespace)),
+			objects: []client.Object{
+				makeVirtualCluster(new(backendClusterNamespace)),
+			},
+			wantErrorContains: "failed to get EventGatewayBackendCluster",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			s := scheme.Get()
+			cl := fake.NewClientBuilder().
+				WithScheme(s).
+				WithObjects(append(tc.objects, tc.policy)...).
+				WithInterceptorFuncs(populateGVKOnGet(s)).
+				Build()
+
+			nn, err := GetAPIAuthRefNN(t.Context(), cl, tc.policy)
+
+			if tc.wantErrorContains != "" {
+				require.Error(t, err)
+				require.ErrorContains(t, err, tc.wantErrorContains)
+				require.Equal(t, types.NamespacedName{}, nn)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tc.wantNN, nn)
+		})
+	}
+}
