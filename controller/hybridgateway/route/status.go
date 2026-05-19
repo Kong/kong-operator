@@ -430,6 +430,9 @@ func BuildProgrammedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRo
 
 	// Skip setting programmed conditions for KongPlugins because they lack a status field.
 	expectedGVKs = FilterOutGVKByKind(expectedGVKs, "KongPlugin")
+	// Skip KongReferenceGrant: it is a passive local policy object (not synced to Konnect)
+	// and carries no Programmed condition. Its absence is surfaced indirectly via KongCertificate.ResolvedRefs=False.
+	expectedGVKs = FilterOutGVKByKind(expectedGVKs, "KongReferenceGrant")
 
 	// For each expected GVK, list resources owned by the route and gateway.
 	for _, gvk := range expectedGVKs {
