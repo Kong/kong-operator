@@ -195,7 +195,7 @@ func (u *EventGatewayListenerPolicyConfig) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// MarshalJSON implements [json.Marshaler].
+// MarshalJSON implements json.Marshaler.
 func (s *EventGatewayListenerPolicyAPISpec) MarshalJSON() ([]byte, error) {
 	if s == nil {
 		return []byte("null"), nil
@@ -211,7 +211,7 @@ func (s *EventGatewayListenerPolicyAPISpec) MarshalJSON() ([]byte, error) {
 }
 
 
-// UnmarshalJSON implements [json.Unmarshaler].
+// UnmarshalJSON implements json.Unmarshaler.
 func (s *EventGatewayListenerPolicyAPISpec) UnmarshalJSON(data []byte) error {
 	if s == nil {
 		return fmt.Errorf("unmarshaling EventGatewayListenerPolicyAPISpec: nil receiver")

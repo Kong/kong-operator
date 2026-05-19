@@ -241,7 +241,7 @@ func (u *EventGatewayVirtualClusterConsumePolicyConfig) UnmarshalJSON(data []byt
 	return nil
 }
 
-// MarshalJSON implements [json.Marshaler].
+// MarshalJSON implements json.Marshaler.
 func (s *EventGatewayVirtualClusterConsumePolicyAPISpec) MarshalJSON() ([]byte, error) {
 	if s == nil {
 		return []byte("null"), nil
@@ -257,7 +257,7 @@ func (s *EventGatewayVirtualClusterConsumePolicyAPISpec) MarshalJSON() ([]byte, 
 }
 
 
-// UnmarshalJSON implements [json.Unmarshaler].
+// UnmarshalJSON implements json.Unmarshaler.
 func (s *EventGatewayVirtualClusterConsumePolicyAPISpec) UnmarshalJSON(data []byte) error {
 	if s == nil {
 		return fmt.Errorf("unmarshaling EventGatewayVirtualClusterConsumePolicyAPISpec: nil receiver")

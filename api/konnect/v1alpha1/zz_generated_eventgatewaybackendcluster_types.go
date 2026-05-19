@@ -264,7 +264,7 @@ func (u *EventGatewayBackendClusterAuthentication) UnmarshalJSON(data []byte) er
 	return nil
 }
 
-// UnmarshalJSON implements [json.Unmarshaler].
+// UnmarshalJSON implements json.Unmarshaler.
 func (s *EventGatewayBackendClusterAPISpec) UnmarshalJSON(data []byte) error {
 	if s == nil {
 		return fmt.Errorf("unmarshaling EventGatewayBackendClusterAPISpec: nil receiver")

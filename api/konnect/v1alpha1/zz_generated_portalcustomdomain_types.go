@@ -202,7 +202,7 @@ func (u *PortalCustomDomainSSL) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// UnmarshalJSON implements [json.Unmarshaler].
+// UnmarshalJSON implements json.Unmarshaler.
 func (s *PortalCustomDomainAPISpec) UnmarshalJSON(data []byte) error {
 	if s == nil {
 		return fmt.Errorf("unmarshaling PortalCustomDomainAPISpec: nil receiver")

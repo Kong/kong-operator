@@ -210,7 +210,7 @@ func (u *IdentityProviderRequestConfig) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// UnmarshalJSON implements [json.Unmarshaler].
+// UnmarshalJSON implements json.Unmarshaler.
 func (s *IdentityProviderRequestAPISpec) UnmarshalJSON(data []byte) error {
 	if s == nil {
 		return fmt.Errorf("unmarshaling IdentityProviderRequestAPISpec: nil receiver")
