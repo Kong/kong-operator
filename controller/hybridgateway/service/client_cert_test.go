@@ -359,7 +359,7 @@ func TestServiceForRule_ClientCertAnnotation(t *testing.T) {
 
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
-			svc, cert, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, "test-upstream")
+			svc, cert, _, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, "test-upstream")
 			require.NoError(t, err)
 			require.NotNil(t, svc)
 
@@ -384,4 +384,167 @@ func TestServiceForRule_ClientCertAnnotation(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestBuildClientCertReferenceGrant verifies that buildClientCertReferenceGrant returns nil
+// for same-namespace references and a correctly populated KongReferenceGrant for cross-namespace ones.
+func TestBuildClientCertReferenceGrant(t *testing.T) {
+	ctx := context.Background()
+	logger := zap.New()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
+	route := &gwtypes.HTTPRoute{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "HTTPRoute",
+			APIVersion: "gateway.networking.k8s.io/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{Name: "test-route", Namespace: "route-ns"},
+	}
+
+	tests := []struct {
+		name            string
+		certNamespace   string
+		secretNamespace string
+		wantNil         bool
+		wantFromNS      string
+		wantSecretName  string
+	}{
+		{
+			name:            "same namespace — no grant needed",
+			certNamespace:   "gateway-ns",
+			secretNamespace: "gateway-ns",
+			wantNil:         true,
+		},
+		{
+			name:            "cross-namespace — grant required",
+			certNamespace:   "gateway-ns",
+			secretNamespace: "service-ns",
+			wantNil:         false,
+			wantFromNS:      "gateway-ns",
+			wantSecretName:  "my-cert",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cl := fake.NewClientBuilder().WithScheme(scheme).Build()
+
+			grant := buildClientCertReferenceGrant(
+				ctx, logger, cl, route, pRef,
+				"grant-name", tt.certNamespace, "my-cert", tt.secretNamespace,
+			)
+
+			if tt.wantNil {
+				assert.Nil(t, grant)
+				return
+			}
+
+			require.NotNil(t, grant)
+			assert.Equal(t, "grant-name", grant.Name)
+			assert.Equal(t, tt.secretNamespace, grant.Namespace)
+
+			require.Len(t, grant.Spec.From, 1)
+			assert.Equal(t, configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group), grant.Spec.From[0].Group)
+			assert.Equal(t, configurationv1alpha1.Kind("KongCertificate"), grant.Spec.From[0].Kind)
+			assert.Equal(t, configurationv1alpha1.Namespace(tt.wantFromNS), grant.Spec.From[0].Namespace)
+
+			require.Len(t, grant.Spec.To, 1)
+			assert.Equal(t, configurationv1alpha1.Group("core"), grant.Spec.To[0].Group)
+			assert.Equal(t, configurationv1alpha1.Kind("Secret"), grant.Spec.To[0].Kind)
+			require.NotNil(t, grant.Spec.To[0].Name)
+			assert.Equal(t, configurationv1alpha1.ObjectName(tt.wantSecretName), *grant.Spec.To[0].Name)
+
+			// Labels must be present so orphan cleanup can find the grant.
+			assert.NotEmpty(t, grant.Labels)
+		})
+	}
+}
+
+// TestServiceForRule_ClientCertAnnotation_CrossNamespace verifies that when the KongCertificate
+// and the Secret live in different namespaces, ServiceForRule also returns a KongReferenceGrant.
+func TestServiceForRule_ClientCertAnnotation_CrossNamespace(t *testing.T) {
+	ctx := context.Background()
+	logger := zap.New()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	cp := &commonv1alpha1.ControlPlaneRef{
+		Type:                 commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{Name: "test-cp"},
+	}
+
+	// Gateway lives in "gateway-ns", route in "route-ns".
+	gatewayNS := gatewayv1.Namespace("gateway-ns")
+	pRef := &gwtypes.ParentReference{
+		Name:      "test-gateway",
+		Namespace: &gatewayNS,
+	}
+	port443 := gatewayv1.PortNumber(443)
+
+	httpRoute := &gwtypes.HTTPRoute{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "HTTPRoute",
+			APIVersion: "gateway.networking.k8s.io/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{Name: "test-route", Namespace: "route-ns"},
+	}
+	rule := gwtypes.HTTPRouteRule{
+		BackendRefs: []gatewayv1.HTTPBackendRef{
+			{
+				BackendRef: gatewayv1.BackendRef{
+					BackendObjectReference: gatewayv1.BackendObjectReference{
+						Name: "my-svc",
+						Port: &port443,
+					},
+				},
+			},
+		},
+	}
+	serviceName := namegen.NewKongServiceNameForHTTPRouteRule(httpRoute, cp, rule)
+
+	backendSvc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "my-svc",
+			Namespace: "route-ns",
+			Annotations: map[string]string{
+				"konghq.com/client-cert": "my-client-cert",
+				"konghq.com/protocol":    "https",
+			},
+		},
+	}
+	certSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "my-client-cert", Namespace: "route-ns"},
+		Data:       map[string][]byte{"tls.crt": []byte("cert"), "tls.key": []byte("key")},
+	}
+
+	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(backendSvc, certSecret).Build()
+
+	svc, cert, grant, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, "test-upstream")
+	require.NoError(t, err)
+	require.NotNil(t, svc)
+
+	// KongCertificate must be in the Gateway namespace.
+	require.NotNil(t, cert)
+	assert.Equal(t, serviceName, cert.Name)
+	assert.Equal(t, "gateway-ns", cert.Namespace)
+
+	// KongReferenceGrant must be in the Secret's namespace (route-ns).
+	require.NotNil(t, grant, "expected KongReferenceGrant for cross-namespace reference")
+	assert.Equal(t, serviceName, grant.Name)
+	assert.Equal(t, "route-ns", grant.Namespace)
+
+	require.Len(t, grant.Spec.From, 1)
+	assert.Equal(t, configurationv1alpha1.Namespace("gateway-ns"), grant.Spec.From[0].Namespace)
+	assert.Equal(t, configurationv1alpha1.Kind("KongCertificate"), grant.Spec.From[0].Kind)
+
+	require.Len(t, grant.Spec.To, 1)
+	assert.Equal(t, configurationv1alpha1.Kind("Secret"), grant.Spec.To[0].Kind)
+	require.NotNil(t, grant.Spec.To[0].Name)
+	assert.Equal(t, configurationv1alpha1.ObjectName("my-client-cert"), *grant.Spec.To[0].Name)
 }
