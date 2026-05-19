@@ -107,16 +107,18 @@ func ServiceForRule[
 	logger = logger.WithValues("kongservice", serviceName)
 	log.Debug(logger, fmt.Sprintf("Generating KongService for %s rule", parentRoute.GetObjectKind().GroupVersionKind().Kind))
 
+	pRefNamespace := metadata.NamespaceFromParentRef(parentRoute, pRef)
+
 	// Resolve client certificate from the backend Service annotations (first-wins).
 	certSecretName, certOwnerSvc := resolveClientCertFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
 	kongCertificate = buildClientCertificate(
 		ctx, logger, cl, parentRoute, pRef, cp,
-		serviceName, namespace, certSecretName, certOwnerSvc, protocol,
+		serviceName, pRefNamespace, certSecretName, certOwnerSvc, protocol,
 	)
 
 	service, err := builder.NewKongService().
 		WithName(serviceName).
-		WithNamespace(metadata.NamespaceFromParentRef(parentRoute, pRef)).
+		WithNamespace(pRefNamespace).
 		WithLabels(parentRoute, pRef).
 		WithAnnotations(parentRoute, pRef).
 		WithSpecName(serviceName).
