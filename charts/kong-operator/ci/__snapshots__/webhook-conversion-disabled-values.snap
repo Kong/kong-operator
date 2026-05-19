@@ -12904,6 +12904,11 @@ spec:
                             required:
                             - type
                             type: object
+                            x-kubernetes-validations:
+                            - message: aws must be set only when type is aws
+                              rule: 'self.type == ''aws'' ? has(self.aws) : !has(self.aws)'
+                            - message: static must be set only when type is static
+                              rule: 'self.type == ''static'' ? has(self.static) : !has(self.static)'
                           failureMode:
                             description: |-
                               Describes how to handle failing encryption or decryption.

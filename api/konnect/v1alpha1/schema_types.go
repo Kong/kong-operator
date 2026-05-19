@@ -362,6 +362,8 @@ type EncryptionFailureMode string
 // EncryptionKey represents a union type for EncryptionKey.
 // Only one of the fields should be set based on the Type.
 //
+// +kubebuilder:validation:XValidation:rule="self.type == 'aws' ? has(self.aws) : !has(self.aws)",message="aws must be set only when type is aws"
+// +kubebuilder:validation:XValidation:rule="self.type == 'static' ? has(self.static) : !has(self.static)",message="static must be set only when type is static"
 type EncryptionKey struct {
 	// Type designates the type of configuration.
 	//
@@ -798,6 +800,8 @@ type EventGatewayEncryptConfig struct {
 // EventGatewayEncryptConfigEncryptionKey represents a union type for encryption_key.
 // Only one of the fields should be set based on the Type.
 //
+// +kubebuilder:validation:XValidation:rule="self.type == 'aws' ? has(self.aws) : !has(self.aws)",message="aws must be set only when type is aws"
+// +kubebuilder:validation:XValidation:rule="self.type == 'static' ? has(self.static) : !has(self.static)",message="static must be set only when type is static"
 type EventGatewayEncryptConfigEncryptionKey struct {
 	// Type designates the type of configuration.
 	//

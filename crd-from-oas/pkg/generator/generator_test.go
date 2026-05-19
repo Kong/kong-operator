@@ -1585,6 +1585,45 @@ func TestGenerateSchemaTypes_UsesActualDiscriminatorFieldName(t *testing.T) {
 	assert.Contains(t, content, "Op EventGatewayModifyHeaderActionType `json:\"op,omitempty\"`")
 	assert.Contains(t, content, "Op string `json:\"op\"`")
 	assert.NotContains(t, content, "Type EventGatewayModifyHeaderActionType `json:\"type,omitempty\"`")
+	assert.NotContains(t, content, `// +kubebuilder:validation:XValidation:rule="self.op == 'remove' ? has(self.remove) : !has(self.remove)",message="remove must be set only when op is remove"`)
+	assert.NotContains(t, content, `// +kubebuilder:validation:XValidation:rule="self.op == 'set' ? has(self.set) : !has(self.set)",message="set must be set only when op is set"`)
+}
+
+func TestGenerateSchemaTypes_EmitsTypeMatchCELForSelectedUnions(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	parsed := &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"EncryptionKey": {
+				Name:          "EncryptionKey",
+				Discriminator: "type",
+				OneOf: []*parser.Property{
+					{RefName: "EncryptionKeyAWS"},
+					{RefName: "EncryptionKeyStatic"},
+				},
+				DiscriminatorMapping: map[string]string{
+					"aws":    "EncryptionKeyAWS",
+					"static": "EncryptionKeyStatic",
+				},
+			},
+			"EncryptionKeyAWS": {
+				Name:       "EncryptionKeyAWS",
+				Properties: []*parser.Property{{Name: "arn", Type: "string"}},
+			},
+			"EncryptionKeyStatic": {
+				Name:       "EncryptionKeyStatic",
+				Properties: []*parser.Property{{Name: "key", Type: "string"}},
+			},
+		},
+	}
+
+	content := g.generateSchemaTypes(map[string]bool{
+		"EncryptionKey":       true,
+		"EncryptionKeyAWS":    true,
+		"EncryptionKeyStatic": true,
+	}, parsed, nil)
+
+	assert.Contains(t, content, `// +kubebuilder:validation:XValidation:rule="self.type == 'aws' ? has(self.aws) : !has(self.aws)",message="aws must be set only when type is aws"`)
+	assert.Contains(t, content, `// +kubebuilder:validation:XValidation:rule="self.type == 'static' ? has(self.static) : !has(self.static)",message="static must be set only when type is static"`)
 }
 
 func TestBuildSchemaCursors_NestedInlineObject(t *testing.T) {
