@@ -294,6 +294,12 @@ var supportedKonnectV1Alpha1TypesGeneratedFromOAS = []supportedTypesT{
 				Type: "EventGatewayBackendCluster",
 			},
 			{
+				Type: "EventGatewayListener",
+			},
+			{
+				Type: "EventGatewayListenerPolicy",
+			},
+			{
 				Type: "EventGatewayVirtualCluster",
 			},
 			{
@@ -301,6 +307,15 @@ var supportedKonnectV1Alpha1TypesGeneratedFromOAS = []supportedTypesT{
 			},
 			{
 				Type: "EventGatewayVirtualClusterProducePolicy",
+			},
+			{
+				Type: "IdentityProviderRequest",
+			},
+			{
+				Type: "KonnectEventDataPlaneCertificate",
+			},
+			{
+				Type: "KonnectEventGateway",
 			},
 			{
 				Type: "Portal",
@@ -315,7 +330,13 @@ var supportedKonnectV1Alpha1TypesGeneratedFromOAS = []supportedTypesT{
 				Type: "PortalEmailConfig",
 			},
 			{
+				Type: "PortalIPAllowList",
+			},
+			{
 				Type: "PortalPage",
+			},
+			{
+				Type: "PortalTeam",
 			},
 		},
 	},

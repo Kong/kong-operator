@@ -33,6 +33,7 @@ import (
 {{- else}}
 	{{.APIGroupPackageAlias}} "{{.APIGroupPackagePath}}"
 {{- end}}
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
@@ -53,6 +54,14 @@ func {{.EntityName}}ReconciliationWatchOptions(
 				),
 			)
 		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&configurationv1alpha1.KongReferenceGrant{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueObjectsForKongReferenceGrant[{{.APIGroupPackageAlias}}.{{.EntityName}}List](cl),
+				),
+			)
+		},
 	}
 }
 
@@ -65,13 +74,9 @@ func enqueue{{.EntityName}}ForKonnectAPIAuthConfiguration(
 			return nil
 		}
 		var l {{.APIGroupPackageAlias}}.{{.EntityName}}List
-		if err := cl.List(ctx, &l,
-			// TODO: change this when cross namespace refs are allowed.
-			client.InNamespace(auth.GetNamespace()),
-			client.MatchingFields{
-				index.IndexField{{.EntityName}}OnAPIAuthConfiguration: auth.Namespace + "/" + auth.Name,
-			},
-		); err != nil {
+		if err := cl.List(ctx, &l, client.MatchingFields{
+			index.IndexField{{.EntityName}}OnAPIAuthConfiguration: auth.Namespace + "/" + auth.Name,
+		}); err != nil {
 			return nil
 		}
 		return objectListToReconcileRequests(l.Items)
@@ -182,6 +187,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	{{.APIGroupPackageAlias}} "{{.APIGroupPackagePath}}"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
@@ -212,6 +218,14 @@ func {{.EntityName}}ReconciliationWatchOptions(
 			)
 		},
 		{{- end}}
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&configurationv1alpha1.KongReferenceGrant{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueObjectsForKongReferenceGrant[{{.APIGroupPackageAlias}}.{{.EntityName}}List](cl),
+				),
+			)
+		},
 	}
 }
 
@@ -224,13 +238,9 @@ func enqueue{{.EntityName}}For{{.ParentEntityName}}(
 			return nil
 		}
 		var l {{.APIGroupPackageAlias}}.{{.EntityName}}List
-		if err := cl.List(ctx, &l,
-			// TODO: change this when cross namespace refs are allowed.
-			client.InNamespace(parent.GetNamespace()),
-			client.MatchingFields{
-				index.IndexField{{.EntityName}}On{{.ParentEntityName}}Ref: parent.Name,
-			},
-		); err != nil {
+		if err := cl.List(ctx, &l, client.MatchingFields{
+			index.IndexField{{.EntityName}}On{{.ParentEntityName}}Ref: client.ObjectKeyFromObject(parent).String(),
+		}); err != nil {
 			return nil
 		}
 		return objectListToReconcileRequests(l.Items)
@@ -246,13 +256,9 @@ func enqueue{{$.EntityName}}For{{.RefKind}}(
 			return nil
 		}
 		var l {{$.APIGroupPackageAlias}}.{{$.EntityName}}List
-		if err := cl.List(ctx, &l,
-			// TODO: change this when cross namespace refs are allowed.
-			client.InNamespace(ref.GetNamespace()),
-			client.MatchingFields{
-				index.IndexField{{$.EntityName}}On{{.RefKind}}Ref: ref.Name,
-			},
-		); err != nil {
+		if err := cl.List(ctx, &l, client.MatchingFields{
+			index.IndexField{{$.EntityName}}On{{.RefKind}}Ref: client.ObjectKeyFromObject(ref).String(),
+		}); err != nil {
 			return nil
 		}
 		return objectListToReconcileRequests(l.Items)
@@ -306,7 +312,12 @@ func {{.EntityNameLowerCamel}}On{{.ParentEntityName}}Ref(object client.Object) [
 		return nil
 	}
 
-	return []string{ent.Spec.{{.ParentRefFieldName}}.NamespacedRef.Name}
+	refNamespace := ent.GetNamespace()
+	if ent.Spec.{{.ParentRefFieldName}}.NamespacedRef.Namespace != nil && *ent.Spec.{{.ParentRefFieldName}}.NamespacedRef.Namespace != "" {
+		refNamespace = *ent.Spec.{{.ParentRefFieldName}}.NamespacedRef.Namespace
+	}
+
+	return []string{refNamespace + "/" + ent.Spec.{{.ParentRefFieldName}}.NamespacedRef.Name}
 }
 {{range .CrossRefs}}
 func {{$.EntityNameLowerCamel}}On{{.RefKind}}Ref(object client.Object) []string {
@@ -317,7 +328,11 @@ func {{$.EntityNameLowerCamel}}On{{.RefKind}}Ref(object client.Object) []string 
 	if ent.{{.GoFieldPath}} == nil || ent.{{.GoFieldPath}}.NamespacedRef == nil {
 		return nil
 	}
-	return []string{ent.{{.GoFieldPath}}.NamespacedRef.Name}
+	refNamespace := ent.GetNamespace()
+	if ent.{{.GoFieldPath}}.NamespacedRef.Namespace != nil && *ent.{{.GoFieldPath}}.NamespacedRef.Namespace != "" {
+		refNamespace = *ent.{{.GoFieldPath}}.NamespacedRef.Namespace
+	}
+	return []string{refNamespace + "/" + ent.{{.GoFieldPath}}.NamespacedRef.Name}
 }
 {{end}}`
 

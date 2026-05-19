@@ -15,6 +15,7 @@ import (
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/internal/utils/crossnamespace"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
@@ -468,6 +469,229 @@ func TestGetAPIAuthRefNN_UpstreamRef(t *testing.T) {
 			if tc.wantErrorContains != "" {
 				require.Error(t, err)
 				require.ErrorContains(t, err, tc.wantErrorContains)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tc.wantNN, nn)
+		})
+	}
+}
+
+func TestGetAPIAuthRefNN_PortalPage(t *testing.T) {
+	const (
+		pageNamespace   = "page-ns"
+		portalNamespace = "portal-ns"
+		portalName      = "portal"
+		authName        = "konnect-api-auth"
+	)
+
+	makePortal := func() *konnectv1alpha1.Portal {
+		return &konnectv1alpha1.Portal{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: konnectv1alpha1.GroupVersion.String(),
+				Kind:       "Portal",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      portalName,
+				Namespace: portalNamespace,
+			},
+			Spec: konnectv1alpha1.PortalSpec{
+				KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+					APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+						Name: authName,
+					},
+				},
+			},
+		}
+	}
+
+	makePortalPage := func(portalRefNamespace *string) *konnectv1alpha1.PortalPage {
+		return &konnectv1alpha1.PortalPage{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "page",
+				Namespace: pageNamespace,
+			},
+			Spec: konnectv1alpha1.PortalPageSpec{
+				PortalRef: commonv1alpha1.ObjectRef{
+					Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+					NamespacedRef: &commonv1alpha1.NamespacedRef{
+						Name:      portalName,
+						Namespace: portalRefNamespace,
+					},
+				},
+			},
+		}
+	}
+
+	testCases := []struct {
+		name              string
+		page              *konnectv1alpha1.PortalPage
+		objects           []client.Object
+		wantNN            types.NamespacedName
+		wantErrorContains string
+	}{
+		{
+			name: "cross-namespace portal ref resolves auth from portal namespace",
+			page: makePortalPage(new(portalNamespace)),
+			objects: []client.Object{
+				makePortal(),
+			},
+			wantNN: types.NamespacedName{
+				Name:      authName,
+				Namespace: portalNamespace,
+			},
+		},
+		{
+			name:              "missing cross-namespace portal returns error",
+			page:              makePortalPage(new(portalNamespace)),
+			wantErrorContains: "referenced object",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			s := scheme.Get()
+			cl := fake.NewClientBuilder().
+				WithScheme(s).
+				WithObjects(append(tc.objects, tc.page)...).
+				WithInterceptorFuncs(populateGVKOnGet(s)).
+				Build()
+
+			nn, err := GetAPIAuthRefNN(t.Context(), cl, tc.page)
+
+			if tc.wantErrorContains != "" {
+				require.Error(t, err)
+				require.ErrorContains(t, err, tc.wantErrorContains)
+				require.Equal(t, types.NamespacedName{}, nn)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tc.wantNN, nn)
+		})
+	}
+}
+
+func TestGetAPIAuthRefNN_EventGatewayVirtualCluster(t *testing.T) {
+	const (
+		virtualClusterNamespace = "virtual-cluster-ns"
+		backendClusterNamespace = "backend-cluster-ns"
+		gatewayNamespace        = "gateway-ns"
+		backendClusterName      = "backend-cluster"
+		gatewayName             = "event-gateway"
+		authName                = "konnect-api-auth"
+	)
+
+	makeGateway := func() *konnectv1alpha1.KonnectEventGateway {
+		return &konnectv1alpha1.KonnectEventGateway{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: konnectv1alpha1.GroupVersion.String(),
+				Kind:       "KonnectEventGateway",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      gatewayName,
+				Namespace: gatewayNamespace,
+			},
+			Spec: konnectv1alpha1.KonnectEventGatewaySpec{
+				KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+					APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+						Name: authName,
+					},
+				},
+			},
+		}
+	}
+
+	makeBackendCluster := func(gatewayRefNamespace *string) *konnectv1alpha1.EventGatewayBackendCluster {
+		return &konnectv1alpha1.EventGatewayBackendCluster{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: konnectv1alpha1.GroupVersion.String(),
+				Kind:       "EventGatewayBackendCluster",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      backendClusterName,
+				Namespace: backendClusterNamespace,
+			},
+			Spec: konnectv1alpha1.EventGatewayBackendClusterSpec{
+				GatewayRef: commonv1alpha1.ObjectRef{
+					Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+					NamespacedRef: &commonv1alpha1.NamespacedRef{
+						Name:      gatewayName,
+						Namespace: gatewayRefNamespace,
+					},
+				},
+			},
+		}
+	}
+
+	makeVirtualCluster := func(backendClusterRefNamespace *string) *konnectv1alpha1.EventGatewayVirtualCluster {
+		return &konnectv1alpha1.EventGatewayVirtualCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "virtual-cluster",
+				Namespace: virtualClusterNamespace,
+			},
+			Spec: konnectv1alpha1.EventGatewayVirtualClusterSpec{
+				EventGatewayBackendClusterRef: commonv1alpha1.ObjectRef{
+					Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+					NamespacedRef: &commonv1alpha1.NamespacedRef{
+						Name:      backendClusterName,
+						Namespace: backendClusterRefNamespace,
+					},
+				},
+			},
+		}
+	}
+
+	testCases := []struct {
+		name              string
+		virtualCluster    *konnectv1alpha1.EventGatewayVirtualCluster
+		objects           []client.Object
+		wantNN            types.NamespacedName
+		wantErrorContains string
+	}{
+		{
+			name:           "cross-namespace backend cluster and gateway refs resolve auth from gateway namespace",
+			virtualCluster: makeVirtualCluster(new(backendClusterNamespace)),
+			objects: []client.Object{
+				makeBackendCluster(new(gatewayNamespace)),
+				makeGateway(),
+			},
+			wantNN: types.NamespacedName{
+				Name:      authName,
+				Namespace: gatewayNamespace,
+			},
+		},
+		{
+			name:              "missing cross-namespace backend cluster returns error",
+			virtualCluster:    makeVirtualCluster(new(backendClusterNamespace)),
+			wantErrorContains: "failed to get EventGatewayBackendCluster",
+		},
+		{
+			name:           "missing cross-namespace gateway returns error",
+			virtualCluster: makeVirtualCluster(new(backendClusterNamespace)),
+			objects: []client.Object{
+				makeBackendCluster(new(gatewayNamespace)),
+			},
+			wantErrorContains: "referenced object",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			s := scheme.Get()
+			cl := fake.NewClientBuilder().
+				WithScheme(s).
+				WithObjects(append(tc.objects, tc.virtualCluster)...).
+				WithInterceptorFuncs(populateGVKOnGet(s)).
+				Build()
+
+			nn, err := GetAPIAuthRefNN(t.Context(), cl, tc.virtualCluster)
+
+			if tc.wantErrorContains != "" {
+				require.Error(t, err)
+				require.ErrorContains(t, err, tc.wantErrorContains)
+				require.Equal(t, types.NamespacedName{}, nn)
 				return
 			}
 

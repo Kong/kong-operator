@@ -380,6 +380,49 @@ func TestEnqueueEventGatewayBackendClusterForKonnectEventGateway(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "cross-namespace matching backend cluster",
+			objects: []client.Object{
+				&konnectv1alpha1.EventGatewayBackendCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "backend-cluster-1",
+						Namespace: "other-ns",
+					},
+					Spec: konnectv1alpha1.EventGatewayBackendClusterSpec{
+						GatewayRef: commonv1alpha1.ObjectRef{
+							Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+							NamespacedRef: &commonv1alpha1.NamespacedRef{
+								Name:      parent.Name,
+								Namespace: new(parent.Namespace),
+							},
+						},
+					},
+				},
+				&konnectv1alpha1.EventGatewayBackendCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "backend-cluster-2",
+						Namespace: "other-ns",
+					},
+					Spec: konnectv1alpha1.EventGatewayBackendClusterSpec{
+						GatewayRef: commonv1alpha1.ObjectRef{
+							Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+							NamespacedRef: &commonv1alpha1.NamespacedRef{
+								Name:      parent.Name,
+								Namespace: new("different-ns"),
+							},
+						},
+					},
+				},
+			},
+			expected: []ctrl.Request{
+				{
+					NamespacedName: types.NamespacedName{
+						Name:      "backend-cluster-1",
+						Namespace: "other-ns",
+					},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -397,6 +440,70 @@ func TestEnqueueEventGatewayBackendClusterForKonnectEventGateway(t *testing.T) {
 			require.ElementsMatch(t, tt.expected, requests)
 		})
 	}
+}
+
+func TestEnqueuePortalPageForPortal(t *testing.T) {
+	portal := &konnectv1alpha1.Portal{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: konnectv1alpha1.GroupVersion.String(),
+			Kind:       "Portal",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "portal",
+			Namespace: "target-ns",
+		},
+	}
+
+	builder := fakectrlruntimeclient.NewClientBuilder().
+		WithScheme(scheme.Get()).
+		WithObjects(
+			portal,
+			&konnectv1alpha1.PortalPage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "matching-page",
+					Namespace: "source-ns",
+				},
+				Spec: konnectv1alpha1.PortalPageSpec{
+					PortalRef: commonv1alpha1.ObjectRef{
+						Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+						NamespacedRef: &commonv1alpha1.NamespacedRef{
+							Name:      portal.Name,
+							Namespace: new(portal.Namespace),
+						},
+					},
+				},
+			},
+			&konnectv1alpha1.PortalPage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "non-matching-page",
+					Namespace: "source-ns",
+				},
+				Spec: konnectv1alpha1.PortalPageSpec{
+					PortalRef: commonv1alpha1.ObjectRef{
+						Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+						NamespacedRef: &commonv1alpha1.NamespacedRef{
+							Name:      portal.Name,
+							Namespace: new("different-ns"),
+						},
+					},
+				},
+			},
+		)
+	for _, opt := range index.OptionsForPortalPage() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
+	cl := builder.Build()
+	require.NotNil(t, cl)
+
+	requests := enqueuePortalPageForPortal(cl)(t.Context(), portal)
+	require.Equal(t, []ctrl.Request{
+		{
+			NamespacedName: types.NamespacedName{
+				Name:      "matching-page",
+				Namespace: "source-ns",
+			},
+		},
+	}, requests)
 }
 
 func TestEnqueueObjectForKongReferenceGrant(t *testing.T) {
@@ -684,5 +791,59 @@ func TestEnqueueObjectForKongReferenceGrant(t *testing.T) {
 				require.ElementsMatch(t, tt.expected, requests)
 			})
 		}
+	})
+
+	t.Run("PortalPage", func(t *testing.T) {
+		grant := &configurationv1alpha1.KongReferenceGrant{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "grant1",
+				Namespace: "target-ns",
+			},
+			Spec: configurationv1alpha1.KongReferenceGrantSpec{
+				From: []configurationv1alpha1.ReferenceGrantFrom{
+					{
+						Group:     configurationv1alpha1.Group(konnectv1alpha1.GroupVersion.Group),
+						Kind:      "PortalPage",
+						Namespace: "source-ns",
+					},
+				},
+				To: []configurationv1alpha1.ReferenceGrantTo{
+					{
+						Group: configurationv1alpha1.Group(konnectv1alpha1.GroupVersion.Group),
+						Kind:  "Portal",
+					},
+				},
+			},
+		}
+
+		builder := fakectrlruntimeclient.NewClientBuilder().
+			WithScheme(scheme.Get()).
+			WithObjects(
+				grant,
+				&konnectv1alpha1.PortalPage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "page-1",
+						Namespace: "source-ns",
+					},
+				},
+				&konnectv1alpha1.PortalPage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "page-2",
+						Namespace: "other-ns",
+					},
+				},
+			)
+		cl := builder.Build()
+		require.NotNil(t, cl)
+
+		requests := enqueueObjectsForKongReferenceGrant[konnectv1alpha1.PortalPageList](cl)(t.Context(), grant)
+		require.Equal(t, []ctrl.Request{
+			{
+				NamespacedName: types.NamespacedName{
+					Name:      "page-1",
+					Namespace: "source-ns",
+				},
+			},
+		}, requests)
 	})
 }
