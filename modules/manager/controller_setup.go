@@ -690,11 +690,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 
 	// Konnect controllers
 	if c.KonnectControllersEnabled {
-		httpClient, err := httpClientForKonnect(c)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create HTTP client for Konnect: %w", err)
-		}
-		sdkFactory := sdkops.NewSDKFactory(sdkops.WithHTTPClient(httpClient))
+		sdkFactory := sdkops.NewSDKFactory(sdkops.WithHTTPClient(httpClientForKonnect(c)))
 		ctrlOpts := controllerOptions(ctrlOpts, withMaxConcurrentReconciles(int(c.MaxConcurrentReconcilesKonnect)))
 
 		controllerFactory := konnectControllerFactory{
