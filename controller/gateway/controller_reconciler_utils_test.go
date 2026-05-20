@@ -3951,3 +3951,251 @@ func TestGenerateDataPlaneNetworkPolicy(t *testing.T) {
 		})
 	}
 }
+
+// TestSetAcceptedAndAttachedRoutes verifies the per-listener Accepted condition
+// computed by setAcceptedAndAttachedRoutes, including the spec-mandated rule
+// that conflicting listeners must not be accepted (Gateway API v1.5,
+// "Handling indistinct Listeners").
+func TestSetAcceptedAndAttachedRoutes(t *testing.T) {
+	type expectedCond struct {
+		acceptedStatus   metav1.ConditionStatus
+		acceptedReason   gatewayv1.ListenerConditionReason
+		conflictedStatus metav1.ConditionStatus
+		conflictedReason gatewayv1.ListenerConditionReason
+	}
+
+	allowedRoutesFromSame := &gwtypes.AllowedRoutes{
+		Namespaces: &gwtypes.RouteNamespaces{
+			From: new(gwtypes.NamespacesFromSame),
+		},
+	}
+
+	testCases := []struct {
+		name      string
+		listeners []gwtypes.Listener
+		expected  []expectedCond
+	}{
+		{
+			name: "single listener with supported protocol is accepted",
+			listeners: []gwtypes.Listener{
+				{
+					Name:          "http",
+					Protocol:      gatewayv1.HTTPProtocolType,
+					Port:          80,
+					AllowedRoutes: allowedRoutesFromSame,
+				},
+			},
+			expected: []expectedCond{
+				{
+					acceptedStatus:   metav1.ConditionTrue,
+					acceptedReason:   gatewayv1.ListenerReasonAccepted,
+					conflictedStatus: metav1.ConditionFalse,
+					conflictedReason: gatewayv1.ListenerReasonNoConflicts,
+				},
+			},
+		},
+		{
+			name: "single listener with unsupported protocol is not accepted",
+			listeners: []gwtypes.Listener{
+				{
+					Name:          "tcp",
+					Protocol:      gatewayv1.TCPProtocolType,
+					Port:          80,
+					AllowedRoutes: allowedRoutesFromSame,
+				},
+			},
+			expected: []expectedCond{
+				{
+					acceptedStatus:   metav1.ConditionFalse,
+					acceptedReason:   gatewayv1.ListenerReasonUnsupportedProtocol,
+					conflictedStatus: metav1.ConditionFalse,
+					conflictedReason: gatewayv1.ListenerReasonNoConflicts,
+				},
+			},
+		},
+		{
+			name: "two listeners sharing a port with different protocols are conflicted and not accepted",
+			listeners: []gwtypes.Listener{
+				{
+					Name:          "http",
+					Protocol:      gatewayv1.HTTPProtocolType,
+					Port:          80,
+					AllowedRoutes: allowedRoutesFromSame,
+				},
+				{
+					Name:          "https",
+					Protocol:      gatewayv1.HTTPSProtocolType,
+					Port:          80,
+					AllowedRoutes: allowedRoutesFromSame,
+				},
+			},
+			expected: []expectedCond{
+				{
+					acceptedStatus:   metav1.ConditionFalse,
+					acceptedReason:   gatewayv1.ListenerReasonProtocolConflict,
+					conflictedStatus: metav1.ConditionTrue,
+					conflictedReason: gatewayv1.ListenerReasonProtocolConflict,
+				},
+				{
+					acceptedStatus:   metav1.ConditionFalse,
+					acceptedReason:   gatewayv1.ListenerReasonProtocolConflict,
+					conflictedStatus: metav1.ConditionTrue,
+					conflictedReason: gatewayv1.ListenerReasonProtocolConflict,
+				},
+			},
+		},
+		{
+			name: "two TLS listeners sharing a port are conflicted and not accepted",
+			listeners: []gwtypes.Listener{
+				{
+					Name:          "tls-a",
+					Protocol:      gatewayv1.TLSProtocolType,
+					Port:          443,
+					Hostname:      new(gatewayv1.Hostname("a.example.com")),
+					AllowedRoutes: allowedRoutesFromSame,
+				},
+				{
+					Name:          "tls-b",
+					Protocol:      gatewayv1.TLSProtocolType,
+					Port:          443,
+					Hostname:      new(gatewayv1.Hostname("b.example.com")),
+					AllowedRoutes: allowedRoutesFromSame,
+				},
+			},
+			expected: []expectedCond{
+				{
+					acceptedStatus:   metav1.ConditionFalse,
+					acceptedReason:   gatewayv1.ListenerReasonProtocolConflict,
+					conflictedStatus: metav1.ConditionTrue,
+					conflictedReason: gatewayv1.ListenerReasonProtocolConflict,
+				},
+				{
+					acceptedStatus:   metav1.ConditionFalse,
+					acceptedReason:   gatewayv1.ListenerReasonProtocolConflict,
+					conflictedStatus: metav1.ConditionTrue,
+					conflictedReason: gatewayv1.ListenerReasonProtocolConflict,
+				},
+			},
+		},
+		{
+			name: "two listeners sharing a hostname are conflicted and not accepted",
+			listeners: []gwtypes.Listener{
+				{
+					Name:          "http-a",
+					Protocol:      gatewayv1.HTTPProtocolType,
+					Port:          80,
+					Hostname:      new(gatewayv1.Hostname("example.com")),
+					AllowedRoutes: allowedRoutesFromSame,
+				},
+				{
+					Name:          "http-b",
+					Protocol:      gatewayv1.HTTPProtocolType,
+					Port:          81,
+					Hostname:      new(gatewayv1.Hostname("example.com")),
+					AllowedRoutes: allowedRoutesFromSame,
+				},
+			},
+			expected: []expectedCond{
+				{
+					acceptedStatus:   metav1.ConditionFalse,
+					acceptedReason:   gatewayv1.ListenerReasonHostnameConflict,
+					conflictedStatus: metav1.ConditionTrue,
+					conflictedReason: gatewayv1.ListenerReasonHostnameConflict,
+				},
+				{
+					acceptedStatus:   metav1.ConditionFalse,
+					acceptedReason:   gatewayv1.ListenerReasonHostnameConflict,
+					conflictedStatus: metav1.ConditionTrue,
+					conflictedReason: gatewayv1.ListenerReasonHostnameConflict,
+				},
+			},
+		},
+		{
+			name: "two distinct listeners are both accepted and not conflicted",
+			listeners: []gwtypes.Listener{
+				{
+					Name:          "http",
+					Protocol:      gatewayv1.HTTPProtocolType,
+					Port:          80,
+					Hostname:      new(gatewayv1.Hostname("a.example.com")),
+					AllowedRoutes: allowedRoutesFromSame,
+				},
+				{
+					Name:          "https",
+					Protocol:      gatewayv1.HTTPSProtocolType,
+					Port:          443,
+					Hostname:      new(gatewayv1.Hostname("b.example.com")),
+					AllowedRoutes: allowedRoutesFromSame,
+				},
+			},
+			expected: []expectedCond{
+				{
+					acceptedStatus:   metav1.ConditionTrue,
+					acceptedReason:   gatewayv1.ListenerReasonAccepted,
+					conflictedStatus: metav1.ConditionFalse,
+					conflictedReason: gatewayv1.ListenerReasonNoConflicts,
+				},
+				{
+					acceptedStatus:   metav1.ConditionTrue,
+					acceptedReason:   gatewayv1.ListenerReasonAccepted,
+					conflictedStatus: metav1.ConditionFalse,
+					conflictedReason: gatewayv1.ListenerReasonNoConflicts,
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			gw := &gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: gatewayv1.GroupVersion.String(),
+					Kind:       "Gateway",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "test-gw",
+					Namespace:  "test-namespace",
+					Generation: 1,
+				},
+				Spec: gwtypes.GatewaySpec{
+					Listeners: tc.listeners,
+				},
+			}
+			gwAware := gatewayConditionsAndListenersAware(gw)
+
+			cl := fakectrlruntimeclient.
+				NewClientBuilder().
+				WithScheme(scheme.Get()).
+				WithObjects(gw).
+				Build()
+
+			// Mirror the reconcile order in controller.go.
+			gwAware.initListenersStatus()
+			gwAware.setConflicted()
+			require.NoError(t, gwAware.setAcceptedAndAttachedRoutes(t.Context(), cl))
+
+			require.Len(t, gw.Status.Listeners, len(tc.expected))
+			for i, want := range tc.expected {
+				ls := listenerConditionsAware(&gw.Status.Listeners[i])
+
+				accepted, ok := k8sutils.GetCondition(
+					kcfgconsts.ConditionType(gatewayv1.ListenerConditionAccepted), ls,
+				)
+				require.True(t, ok, "listener %d: Accepted condition missing", i)
+				assert.Equal(t, want.acceptedStatus, accepted.Status,
+					"listener %d (%s): Accepted status", i, gw.Status.Listeners[i].Name)
+				assert.Equal(t, string(want.acceptedReason), accepted.Reason,
+					"listener %d (%s): Accepted reason", i, gw.Status.Listeners[i].Name)
+
+				conflicted, ok := k8sutils.GetCondition(
+					kcfgconsts.ConditionType(gatewayv1.ListenerConditionConflicted), ls,
+				)
+				require.True(t, ok, "listener %d: Conflicted condition missing", i)
+				assert.Equal(t, want.conflictedStatus, conflicted.Status,
+					"listener %d (%s): Conflicted status", i, gw.Status.Listeners[i].Name)
+				assert.Equal(t, string(want.conflictedReason), conflicted.Reason,
+					"listener %d (%s): Conflicted reason", i, gw.Status.Listeners[i].Name)
+			}
+		})
+	}
+}

@@ -238,6 +238,12 @@
 
 ### Fixes
 
+- `Gateway`: conflicting listeners (port/protocol or hostname conflict) now have
+  `Accepted=False` with the conflict reason, per Gateway API spec rule that
+  "ALL indistinct Listeners must not be accepted for processing".
+  Additionally, TLS listeners that share a port with another listener are now
+  marked `Conflicted=True/ProtocolConflict` (and therefore not accepted).
+  [#4309](https://github.com/Kong/kong-operator/pull/4309)
 - Add `ResolvedRefs` condition update for `TLSRoute`s and enable `ReferenceGrant`
   to control the cross-namespace reference from `TLSRoute`s to their backendRefs
   in on-prem `TLSRoute` controller.

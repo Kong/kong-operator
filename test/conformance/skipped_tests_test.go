@@ -23,7 +23,6 @@ var skippedTestsShared = []string{
 
 	// TLSRoute tests that cannot pass yet.
 	tests.TLSRouteHostnameIntersection.ShortName,
-	tests.TLSRouteListenerMixedTerminationNotSupported.ShortName,
 }
 
 var skippedTestsForExpressionsRouter = []string{}
