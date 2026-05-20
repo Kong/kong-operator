@@ -240,18 +240,10 @@
 
 - `Gateway`: conflicting listeners (port/protocol or hostname conflict) now have
   `Accepted=False` with the conflict reason, per Gateway API spec rule that
-  "ALL indistinct Listeners must not be accepted for processing". Previously
-  conflicting listeners stayed `Accepted=True`.
+  "ALL indistinct Listeners must not be accepted for processing".
   Additionally, TLS listeners that share a port with another listener are now
-  marked `Conflicted=True/ProtocolConflict` (and therefore not accepted), since
-  multiplexing multiple TLS listeners on a single port is not yet supported —
-  tracked in [#3511](https://github.com/Kong/kong-operator/issues/3511).
-- `Gateway`: listeners whose `Accepted` condition is `False` no longer report a
-  populated `supportedKinds` in their status. This satisfies the Gateway API
-  conformance helper's exact-empty comparison (e.g. used by
-  `TLSRouteListenerMixedTerminationNotSupported`); the Gateway API spec itself
-  does not explicitly define the expected `supportedKinds` value for unaccepted
-  listeners.
+  marked `Conflicted=True/ProtocolConflict` (and therefore not accepted).
+  [#4309](https://github.com/Kong/kong-operator/pull/4309)
 - Add `ResolvedRefs` condition update for `TLSRoute`s and enable `ReferenceGrant`
   to control the cross-namespace reference from `TLSRoute`s to their backendRefs
   in on-prem `TLSRoute` controller.
