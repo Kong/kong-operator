@@ -842,6 +842,26 @@ func TestExtractPathDependencies(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "event gateway nested virtual cluster dependency keeps event gateway accessor and ref field names",
+			path: "/v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/produce-policies",
+			expected: []*Dependency{
+				{
+					ParamName:          "gatewayId",
+					EntityName:         "Gateway",
+					AccessorEntityName: "EventGateway",
+					FieldName:          "GatewayRef",
+					JSONName:           "gatewayRef",
+				},
+				{
+					ParamName:          "virtualClusterId",
+					EntityName:         "VirtualCluster",
+					AccessorEntityName: "EventGatewayVirtualCluster",
+					FieldName:          "EventGatewayVirtualClusterRef",
+					JSONName:           "eventGatewayVirtualClusterRef",
+				},
+			},
+		},
 	}
 
 	for _, tc := range tests {

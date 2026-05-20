@@ -4954,6 +4954,7 @@ Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1al
 - [EventGatewayListenerPolicy](#konnect-konghq-com-v1alpha1-eventgatewaylistenerpolicy)
 - [EventGatewayVirtualCluster](#konnect-konghq-com-v1alpha1-eventgatewayvirtualcluster)
 - [EventGatewayVirtualClusterConsumePolicy](#konnect-konghq-com-v1alpha1-eventgatewayvirtualclusterconsumepolicy)
+- [EventGatewayVirtualClusterProducePolicy](#konnect-konghq-com-v1alpha1-eventgatewayvirtualclusterproducepolicy)
 - [IdentityProviderRequest](#konnect-konghq-com-v1alpha1-identityproviderrequest)
 - [KonnectAPIAuthConfiguration](#konnect-konghq-com-v1alpha1-konnectapiauthconfiguration)
 - [KonnectCloudGatewayDataPlaneGroupConfiguration](#konnect-konghq-com-v1alpha1-konnectcloudgatewaydataplanegroupconfiguration)
@@ -5045,6 +5046,21 @@ EventGatewayVirtualClusterConsumePolicy is the Schema for the eventgatewayvirtua
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[EventGatewayVirtualClusterConsumePolicySpec](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyspec)_ |  |
 | `status` _[EventGatewayVirtualClusterConsumePolicyStatus](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicystatus)_ |  |
+
+### EventGatewayVirtualClusterProducePolicy
+
+
+EventGatewayVirtualClusterProducePolicy is the Schema for the eventgatewayvirtualclusterproducepolicys API.
+
+<!-- event_gateway_virtual_cluster_produce_policy description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `EventGatewayVirtualClusterProducePolicy`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[EventGatewayVirtualClusterProducePolicySpec](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyspec)_ |  |
+| `status` _[EventGatewayVirtualClusterProducePolicyStatus](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicystatus)_ |  |
 
 ### IdentityProviderRequest
 
@@ -5788,6 +5804,95 @@ proxying the record.
 _Appears in:_
 
 - [EventGatewayDecryptPolicyConfig](#konnect-konghq-com-v1alpha1-types-eventgatewaydecryptpolicyconfig)
+- [EventGatewayEncryptConfig](#konnect-konghq-com-v1alpha1-types-eventgatewayencryptconfig)
+
+
+
+#### EncryptionKeyAWS
+
+
+EncryptionKeyAWS The AWS KMS key to use for encryption.
+
+
+
+| Field | Description |
+| --- | --- |
+| `arn` _string_ | The AWS KMS key ARN. |
+
+_Appears in:_
+
+- [EncryptionKey](#konnect-konghq-com-v1alpha1-types-encryptionkey)
+- [EventGatewayEncryptConfigEncryptionKey](#konnect-konghq-com-v1alpha1-types-eventgatewayencryptconfigencryptionkey)
+
+#### EncryptionKeyStatic
+
+
+EncryptionKeyStatic A static encryption key.
+
+
+
+| Field | Description |
+| --- | --- |
+| `key` _[EncryptionKeyStaticReference](#konnect-konghq-com-v1alpha1-types-encryptionkeystaticreference)_ | A static encryption key reference, either by ID or by value. |
+
+_Appears in:_
+
+- [EncryptionKey](#konnect-konghq-com-v1alpha1-types-encryptionkey)
+- [EventGatewayEncryptConfigEncryptionKey](#konnect-konghq-com-v1alpha1-types-eventgatewayencryptconfigencryptionkey)
+
+#### EncryptionKeyStaticReference
+
+
+EncryptionKeyStaticReference is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `id` _*string_ |  |
+| `name` _*string_ |  |
+
+_Appears in:_
+
+- [EncryptionKeyStatic](#konnect-konghq-com-v1alpha1-types-encryptionkeystatic)
+
+
+
+
+
+#### EncryptionKeyType
+
+_Underlying type:_ `string`
+
+EncryptionKeyType represents the type of EncryptionKey.
+
+
+
+
+_Appears in:_
+
+- [EncryptionKey](#konnect-konghq-com-v1alpha1-types-encryptionkey)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `aws` |  |
+| `static` |  |
+
+#### EncryptionRecordPart
+
+_Underlying type:_ `string`
+
+EncryptionRecordPart * key - encrypt the record key
+* value - encrypt the record value
+
+
+
+
+_Appears in:_
+
+- [EventGatewayEncryptConfig](#konnect-konghq-com-v1alpha1-types-eventgatewayencryptconfig)
 
 #### EventGatewayAWSKeySource
 
@@ -6019,6 +6124,82 @@ EventGatewayDecryptPolicyConfig The configuration of the decrypt policy.
 _Appears in:_
 
 - [EventGatewayDecryptPolicy](#konnect-konghq-com-v1alpha1-types-eventgatewaydecryptpolicy)
+
+#### EventGatewayEncryptConfig
+
+
+EventGatewayEncryptConfig The configuration of the encrypt policy.
+
+
+
+| Field | Description |
+| --- | --- |
+| `encryptionKey` _[EventGatewayEncryptConfigEncryptionKey](#konnect-konghq-com-v1alpha1-types-eventgatewayencryptconfigencryptionkey)_ | The key to use for encryption. |
+| `failureMode` _[EncryptionFailureMode](#konnect-konghq-com-v1alpha1-types-encryptionfailuremode)_ | Describes how to handle failing encryption or decryption. Use `error` if the record should be rejected if encryption or decryption fails. Use `passthrough` to ignore encryption or decryption failure and continue proxying the record. |
+| `partOfRecord` _[EncryptionRecordPart](#konnect-konghq-com-v1alpha1-types-encryptionrecordpart)_ | Describes the parts of a record to encrypt. |
+
+_Appears in:_
+
+- [EventGatewayEncryptPolicy](#konnect-konghq-com-v1alpha1-types-eventgatewayencryptpolicy)
+
+#### EventGatewayEncryptConfigEncryptionKey
+
+
+EventGatewayEncryptConfigEncryptionKey represents a union type for encryption_key.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[EventGatewayEncryptConfigEncryptionKeyType](#konnect-konghq-com-v1alpha1-types-eventgatewayencryptconfigencryptionkeytype)_ | Type designates the type of configuration. |
+| `aws` _[EncryptionKeyAWS](#konnect-konghq-com-v1alpha1-types-encryptionkeyaws)_ | AWS configuration. |
+| `static` _[EncryptionKeyStatic](#konnect-konghq-com-v1alpha1-types-encryptionkeystatic)_ | Static configuration. |
+
+_Appears in:_
+
+- [EventGatewayEncryptConfig](#konnect-konghq-com-v1alpha1-types-eventgatewayencryptconfig)
+
+#### EventGatewayEncryptConfigEncryptionKeyType
+
+_Underlying type:_ `string`
+
+EventGatewayEncryptConfigEncryptionKeyType represents the type of encryption_key.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayEncryptConfigEncryptionKey](#konnect-konghq-com-v1alpha1-types-eventgatewayencryptconfigencryptionkey)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `aws` |  |
+| `static` |  |
+
+#### EventGatewayEncryptPolicy
+
+
+EventGatewayEncryptPolicy Encrypts Kafka records or keys using AES_256_GCM.
+Keys are therefore 256 bits long.
+
+
+
+| Field | Description |
+| --- | --- |
+| `condition` _string_ | A string containing the boolean expression that determines whether the policy is applied. |
+| `config` _[EventGatewayEncryptConfig](#konnect-konghq-com-v1alpha1-types-eventgatewayencryptconfig)_ | The configuration of the policy. |
+| `description` _string_ | A human-readable description of the policy. |
+| `enabled` _string_ | Whether the policy is enabled. |
+| `labels` _[Labels](#konnect-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _string_ | A unique user-defined name of the policy. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterProducePolicyConfig](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyconfig)
 
 #### EventGatewayKeySource
 
@@ -6288,6 +6469,7 @@ requests.
 _Appears in:_
 
 - [EventGatewayVirtualClusterConsumePolicyConfig](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyconfig)
+- [EventGatewayVirtualClusterProducePolicyConfig](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyconfig)
 
 #### EventGatewayModifyHeadersPolicyCreateConfig
 
@@ -6304,6 +6486,178 @@ headers policy.
 _Appears in:_
 
 - [EventGatewayModifyHeadersPolicyCreate](#konnect-konghq-com-v1alpha1-types-eventgatewaymodifyheaderspolicycreate)
+
+#### EventGatewayProduceSchemaValidationPolicy
+
+
+EventGatewayProduceSchemaValidationPolicy A policy that validates produce
+messages against a schema registry.
+
+
+
+| Field | Description |
+| --- | --- |
+| `condition` _string_ | A string containing the boolean expression that determines whether the policy is applied. |
+| `config` _[EventGatewayProduceSchemaValidationPolicyConfig](#konnect-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyconfig)_ | The configuration of the policy. |
+| `description` _string_ | A human-readable description of the policy. |
+| `enabled` _string_ | Whether the policy is enabled. |
+| `labels` _[Labels](#konnect-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _string_ | A unique user-defined name of the policy. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterProducePolicyConfig](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyconfig)
+
+#### EventGatewayProduceSchemaValidationPolicyConfig
+
+
+EventGatewayProduceSchemaValidationPolicyConfig represents a union type for EventGatewayProduceSchemaValidationPolicyConfig.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[EventGatewayProduceSchemaValidationPolicyConfigType](#konnect-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyconfigtype)_ | Type designates the type of configuration. |
+| `confluentSchemaRegistry` _[EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig](#konnect-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfig)_ | SchemaRegistry configuration. |
+| `json` _[EventGatewayProduceSchemaValidationPolicyJSONConfig](#konnect-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfig)_ | JSON configuration. |
+
+_Appears in:_
+
+- [EventGatewayProduceSchemaValidationPolicy](#konnect-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicy)
+
+#### EventGatewayProduceSchemaValidationPolicyConfigType
+
+_Underlying type:_ `string`
+
+EventGatewayProduceSchemaValidationPolicyConfigType represents the type of EventGatewayProduceSchemaValidationPolicyConfig.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayProduceSchemaValidationPolicyConfig](#konnect-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyconfig)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `confluentSchemaRegistry` |  |
+| `json` |  |
+
+#### EventGatewayProduceSchemaValidationPolicyJSONConfig
+
+
+EventGatewayProduceSchemaValidationPolicyJSONConfig The configuration of the
+produce schema validation policy when using JSON parsing without schema.
+
+
+
+| Field | Description |
+| --- | --- |
+| `keyValidationAction` _[ProduceKeyValidationAction](#konnect-konghq-com-v1alpha1-types-producekeyvalidationaction)_ | Defines a behavior when record key is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema. |
+| `schemaRegistry` _[EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry](#konnect-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfigschemaregistry)_ | A reference to a schema Registry. |
+| `valueValidationAction` _[ProduceValueValidationAction](#konnect-konghq-com-v1alpha1-types-producevaluevalidationaction)_ | Defines a behavior when record value is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema. |
+
+_Appears in:_
+
+- [EventGatewayProduceSchemaValidationPolicyConfig](#konnect-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyconfig)
+
+#### EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry
+
+
+EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry represents a union type for schema_registry.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryType](#konnect-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfigschemaregistrytype)_ | Type designates the type of configuration. |
+| `id` _[SchemaRegistryReferenceByID](#konnect-konghq-com-v1alpha1-types-schemaregistryreferencebyid)_ | ID configuration. |
+| `name` _[SchemaRegistryReferenceByName](#konnect-konghq-com-v1alpha1-types-schemaregistryreferencebyname)_ | Name configuration. |
+
+_Appears in:_
+
+- [EventGatewayProduceSchemaValidationPolicyJSONConfig](#konnect-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfig)
+
+#### EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryType
+
+_Underlying type:_ `string`
+
+EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryType represents the type of schema_registry.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry](#konnect-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfigschemaregistry)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `id` |  |
+| `name` |  |
+
+#### EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig
+
+
+EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig The
+configuration of the produce schema validation policy when using a schema
+registry.
+
+
+
+| Field | Description |
+| --- | --- |
+| `keyValidationAction` _[ProduceKeyValidationAction](#konnect-konghq-com-v1alpha1-types-producekeyvalidationaction)_ | Defines a behavior when record key is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema. |
+| `schemaRegistry` _[EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry](#konnect-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfigschemaregistry)_ | A reference to a schema Registry. |
+| `valueValidationAction` _[ProduceValueValidationAction](#konnect-konghq-com-v1alpha1-types-producevaluevalidationaction)_ | Defines a behavior when record value is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema. |
+
+_Appears in:_
+
+- [EventGatewayProduceSchemaValidationPolicyConfig](#konnect-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyconfig)
+
+#### EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry
+
+
+EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry represents a union type for schema_registry.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType](#konnect-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfigschemaregistrytype)_ | Type designates the type of configuration. |
+| `id` _[SchemaRegistryReferenceByID](#konnect-konghq-com-v1alpha1-types-schemaregistryreferencebyid)_ | ID configuration. |
+| `name` _[SchemaRegistryReferenceByName](#konnect-konghq-com-v1alpha1-types-schemaregistryreferencebyname)_ | Name configuration. |
+
+_Appears in:_
+
+- [EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig](#konnect-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfig)
+
+#### EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType
+
+_Underlying type:_ `string`
+
+EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType represents the type of schema_registry.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry](#konnect-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfigschemaregistry)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `id` |  |
+| `name` |  |
 
 #### EventGatewaySkipRecordPolicyCreate
 
@@ -6510,6 +6864,92 @@ EventGatewayVirtualClusterConsumePolicyStatus defines the observed state of Even
 _Appears in:_
 
 - [EventGatewayVirtualClusterConsumePolicy](#konnect-konghq-com-v1alpha1-eventgatewayvirtualclusterconsumepolicy)
+
+#### EventGatewayVirtualClusterProducePolicyAPISpec
+
+
+EventGatewayVirtualClusterProducePolicyAPISpec defines the API spec fields for EventGatewayVirtualClusterProducePolicy.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterProducePolicySpec](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyspec)
+
+#### EventGatewayVirtualClusterProducePolicyConfig
+
+
+EventGatewayVirtualClusterProducePolicyConfig represents a union type for EventGatewayVirtualClusterProducePolicyConfig.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[EventGatewayVirtualClusterProducePolicyConfigType](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyconfigtype)_ | Type designates the type of configuration. |
+| `encrypt` _[EventGatewayEncryptPolicy](#konnect-konghq-com-v1alpha1-types-eventgatewayencryptpolicy)_ | EncryptPolicy configuration. |
+| `modifyHeaders` _[EventGatewayModifyHeadersPolicyCreate](#konnect-konghq-com-v1alpha1-types-eventgatewaymodifyheaderspolicycreate)_ | ModifyHeadersPolicyCreate configuration. |
+| `schemaValidation` _[EventGatewayProduceSchemaValidationPolicy](#konnect-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicy)_ | ProduceSchemaValidationPolicy configuration. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterProducePolicyAPISpec](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyapispec)
+
+#### EventGatewayVirtualClusterProducePolicyConfigType
+
+_Underlying type:_ `string`
+
+EventGatewayVirtualClusterProducePolicyConfigType represents the type of EventGatewayVirtualClusterProducePolicyConfig.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterProducePolicyConfig](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyconfig)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `encrypt` |  |
+| `modifyHeaders` |  |
+| `schemaValidation` |  |
+
+#### EventGatewayVirtualClusterProducePolicySpec
+
+
+EventGatewayVirtualClusterProducePolicySpec defines the desired state of EventGatewayVirtualClusterProducePolicy.
+
+
+
+| Field | Description |
+| --- | --- |
+| `eventGatewayVirtualClusterRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | EventGatewayVirtualClusterRef is the reference to the parent VirtualCluster object. |
+| `apiSpec` _[EventGatewayVirtualClusterProducePolicyAPISpec](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterProducePolicy](#konnect-konghq-com-v1alpha1-eventgatewayvirtualclusterproducepolicy)
+
+#### EventGatewayVirtualClusterProducePolicyStatus
+
+
+EventGatewayVirtualClusterProducePolicyStatus defines the observed state of EventGatewayVirtualClusterProducePolicy.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `virtualClusterID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | VirtualClusterID is the Konnect ID of the parent VirtualCluster. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterProducePolicy](#konnect-konghq-com-v1alpha1-eventgatewayvirtualclusterproducepolicy)
 
 #### EventGatewayVirtualClusterSpec
 
@@ -7137,6 +7577,7 @@ _Appears in:_
 - [EventGatewayListenerPolicyStatus](#konnect-konghq-com-v1alpha1-types-eventgatewaylistenerpolicystatus)
 - [EventGatewayListenerStatus](#konnect-konghq-com-v1alpha1-types-eventgatewaylistenerstatus)
 - [EventGatewayVirtualClusterConsumePolicyStatus](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicystatus)
+- [EventGatewayVirtualClusterProducePolicyStatus](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicystatus)
 - [EventGatewayVirtualClusterStatus](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterstatus)
 - [IdentityProviderRequestStatus](#konnect-konghq-com-v1alpha1-types-identityproviderrequeststatus)
 - [KonnectEventDataPlaneCertificateStatus](#konnect-konghq-com-v1alpha1-types-konnecteventdataplanecertificatestatus)
@@ -7466,8 +7907,10 @@ _Appears in:_
 - [EventGatewayBackendClusterAPISpec](#konnect-konghq-com-v1alpha1-types-eventgatewaybackendclusterapispec)
 - [EventGatewayConsumeSchemaValidationPolicy](#konnect-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicy)
 - [EventGatewayDecryptPolicy](#konnect-konghq-com-v1alpha1-types-eventgatewaydecryptpolicy)
+- [EventGatewayEncryptPolicy](#konnect-konghq-com-v1alpha1-types-eventgatewayencryptpolicy)
 - [EventGatewayListenerAPISpec](#konnect-konghq-com-v1alpha1-types-eventgatewaylistenerapispec)
 - [EventGatewayModifyHeadersPolicyCreate](#konnect-konghq-com-v1alpha1-types-eventgatewaymodifyheaderspolicycreate)
+- [EventGatewayProduceSchemaValidationPolicy](#konnect-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicy)
 - [EventGatewaySkipRecordPolicyCreate](#konnect-konghq-com-v1alpha1-types-eventgatewayskiprecordpolicycreate)
 - [EventGatewayTLSListenerPolicy](#konnect-konghq-com-v1alpha1-types-eventgatewaytlslistenerpolicy)
 - [EventGatewayVirtualClusterAPISpec](#konnect-konghq-com-v1alpha1-types-eventgatewayvirtualclusterapispec)
@@ -8197,6 +8640,39 @@ _Appears in:_
 
 - [PortalTeam](#konnect-konghq-com-v1alpha1-portalteam)
 
+#### ProduceKeyValidationAction
+
+_Underlying type:_ `string`
+
+ProduceKeyValidationAction Defines a behavior when record key is not valid.
+* reject - rejects a batch for topic partition. Only available for produce.
+* mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayProduceSchemaValidationPolicyJSONConfig](#konnect-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfig)
+- [EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig](#konnect-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfig)
+
+#### ProduceValueValidationAction
+
+_Underlying type:_ `string`
+
+ProduceValueValidationAction Defines a behavior when record value is not
+valid.
+* reject - rejects a batch for topic partition. Only available for produce.
+* mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayProduceSchemaValidationPolicyJSONConfig](#konnect-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfig)
+- [EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig](#konnect-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfig)
+
 #### ProvisioningMethod
 
 _Underlying type:_ `string`
@@ -8290,6 +8766,8 @@ SchemaRegistryReferenceByID is a type alias.
 _Appears in:_
 
 - [EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry](#konnect-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyconfigschemaregistry)
+- [EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry](#konnect-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfigschemaregistry)
+- [EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry](#konnect-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfigschemaregistry)
 
 #### SchemaRegistryReferenceByName
 
@@ -8305,6 +8783,8 @@ SchemaRegistryReferenceByName Reference a schema registry by its unique name.
 _Appears in:_
 
 - [EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry](#konnect-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyconfigschemaregistry)
+- [EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry](#konnect-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfigschemaregistry)
+- [EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry](#konnect-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfigschemaregistry)
 
 #### SchemaValidationType
 

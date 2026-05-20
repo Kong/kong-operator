@@ -1414,6 +1414,11 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 					if skipProperty(prop) || len(prop.OneOf) == 0 {
 						continue
 					}
+					unionTypeName := generatedUnionTypeName(prop, goName)
+					if emittedNested[unionTypeName] {
+						continue
+					}
+					emittedNested[unionTypeName] = true
 					buf.WriteString(g.generateUnionType(prop, goName))
 				}
 				if wrapper := emitUnionWrapperUnmarshalJSON(goName, buildUnionFieldSpecs(schema.Properties, goName)); wrapper != "" {
@@ -1588,6 +1593,11 @@ func (g *Generator) writeNestedInlineTypes(buf *strings.Builder, props []*parser
 				if skipProperty(nested) || len(nested.OneOf) == 0 {
 					continue
 				}
+				unionTypeName := generatedUnionTypeName(nested, typeName)
+				if emitted[unionTypeName] {
+					continue
+				}
+				emitted[unionTypeName] = true
 				buf.WriteString(g.generateUnionType(nested, typeName))
 			}
 			if wrapper := emitUnionWrapperUnmarshalJSON(typeName, buildUnionFieldSpecs(prop.Items.Properties, typeName)); wrapper != "" {
@@ -1626,6 +1636,11 @@ func (g *Generator) writeNestedInlineTypes(buf *strings.Builder, props []*parser
 			if skipProperty(nested) || len(nested.OneOf) == 0 {
 				continue
 			}
+			unionTypeName := generatedUnionTypeName(nested, typeName)
+			if emitted[unionTypeName] {
+				continue
+			}
+			emitted[unionTypeName] = true
 			buf.WriteString(g.generateUnionType(nested, typeName))
 		}
 		if wrapper := emitUnionWrapperUnmarshalJSON(typeName, buildUnionFieldSpecs(prop.Properties, typeName)); wrapper != "" {
@@ -2690,6 +2705,13 @@ func emitDiscriminatedUnionCode(typeName, propName, discriminatorJSONName string
 	fmt.Fprintf(&buf, "// %s represents a union type for %s.\n", typeName, propName)
 	fmt.Fprintf(&buf, "// Only one of the fields should be set based on the %s.\n", discriminatorFieldName)
 	buf.WriteString("//\n")
+	if shouldEmitTypeMatchCEL(typeName) {
+		for _, v := range variants {
+			camelDiscValue := jsonName(v.discValue)
+			fmt.Fprintf(&buf, "// +kubebuilder:validation:XValidation:rule=\"self.%s == '%s' ? has(self.%s) : !has(self.%s)\",message=\"%s must be set only when %s is %s\"\n",
+				discriminatorJSONName, camelDiscValue, camelDiscValue, camelDiscValue, camelDiscValue, discriminatorJSONName, camelDiscValue)
+		}
+	}
 	fmt.Fprintf(&buf, "type %s struct {\n", typeName)
 
 	fmt.Fprintf(&buf, "\t// %s designates the type of configuration.\n", discriminatorFieldName)
@@ -2783,6 +2805,15 @@ func emitDiscriminatedUnionCode(typeName, propName, discriminatorJSONName string
 	buf.WriteString("}\n")
 
 	return buf.String()
+}
+
+func shouldEmitTypeMatchCEL(typeName string) bool {
+	switch typeName {
+	case "EncryptionKey", "EventGatewayEncryptConfigEncryptionKey":
+		return true
+	default:
+		return false
+	}
 }
 
 // extractVariantNames extracts clean field names from a list of variant names

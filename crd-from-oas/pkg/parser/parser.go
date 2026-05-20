@@ -392,12 +392,17 @@ func (p *Parser) extractPathDependencies(path string) []*Dependency {
 	for _, match := range matches {
 		paramName := match[1] // e.g., "portalId"
 		entityName := getEntityNameFromParam(paramName)
+		accessorEntityName := getAccessorEntityNameFromPath(path, paramName)
+		fieldEntityName := entityName
+		if shouldUseAccessorEntityNameForRefField(entityName, accessorEntityName) {
+			fieldEntityName = accessorEntityName
+		}
 		dep := &Dependency{
 			ParamName:          paramName,
 			EntityName:         entityName,
-			AccessorEntityName: getAccessorEntityNameFromPath(path, paramName),
-			FieldName:          entityName + "Ref",
-			JSONName:           strings.ToLower(entityName[:1]) + entityName[1:] + "Ref",
+			AccessorEntityName: accessorEntityName,
+			FieldName:          fieldEntityName + "Ref",
+			JSONName:           strings.ToLower(fieldEntityName[:1]) + fieldEntityName[1:] + "Ref",
 		}
 		deps = append(deps, dep)
 	}
@@ -433,11 +438,26 @@ func getAccessorEntityNameFromPath(path, paramName string) string {
 			break
 		}
 		if name := getEntityNameFromResourceSegment(segments[i-1]); name != "" {
+			if name != "EventGateway" && hasPriorResourceSegment(segments[:i-1], "event-gateways") && !strings.HasPrefix(name, "EventGateway") {
+				return "EventGateway" + name
+			}
 			return name
 		}
 		break
 	}
 	return getEntityNameFromParam(paramName)
+}
+
+func hasPriorResourceSegment(segments []string, resource string) bool {
+	return slices.Contains(segments, resource)
+}
+
+func shouldUseAccessorEntityNameForRefField(entityName, accessorEntityName string) bool {
+	return entityName != "Gateway" &&
+		accessorEntityName != "" &&
+		accessorEntityName != entityName &&
+		strings.HasPrefix(accessorEntityName, "EventGateway") &&
+		strings.HasSuffix(accessorEntityName, entityName)
 }
 
 func getEntityNameFromResourceSegment(segment string) string {
