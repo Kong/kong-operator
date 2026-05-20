@@ -885,7 +885,8 @@ func supportedRoutesByProtocol() map[gatewayv1.ProtocolType]map[gatewayv1.Kind]s
 // It also sets the listeners Programmed condition by setting the underlying
 // Listener Programmed status to false.
 func (g *gatewayConditionsAndListenersAwareT) initProgrammedAndListenersStatus() {
-	if !k8sutils.HasCondition(kcfgconsts.ConditionType(gatewayv1.GatewayConditionProgrammed), g) {
+	programmedCond, ok := k8sutils.GetCondition(kcfgconsts.ConditionType(gatewayv1.GatewayConditionProgrammed), g)
+	if !ok || programmedCond.ObservedGeneration != g.Generation {
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
 				kcfgconsts.ConditionType(gatewayv1.GatewayConditionProgrammed),
