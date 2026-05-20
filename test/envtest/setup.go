@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -236,8 +235,8 @@ func deployGatewayUsingGatewayClass(ctx context.Context, t *testing.T, client cl
 			},
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      uuid.NewString(),
+			Namespace:    ns.Name,
+			GenerateName: "gw-",
 		},
 	}
 	require.NoError(t, client.Create(ctx, &gw))
@@ -252,7 +251,7 @@ func deployGateway(ctx context.Context, t *testing.T, client client.Client) (gat
 			ControllerName: gateway.GetControllerName(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
+			GenerateName: "gwc-",
 			Annotations: map[string]string{
 				"konghq.com/gatewayclass-unmanaged": "placeholder",
 			},

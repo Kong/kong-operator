@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
@@ -83,8 +82,8 @@ func TestDiscoverer_GetAdminAPIsForServiceReturnsAllAddressesCorrectlyPagingThro
 				for j := range tc.subnetD {
 					es := discoveryv1.EndpointSlice{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      uuid.NewString(),
-							Namespace: ns.Name,
+							GenerateName: "endpointslice-",
+							Namespace:    ns.Name,
 							Labels: map[string]string{
 								"kubernetes.io/service-name": serviceName,
 							},

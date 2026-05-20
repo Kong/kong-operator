@@ -390,7 +390,7 @@ func KonnectCloudGatewayDataPlaneGroupConfiguration(
 	t.Helper()
 	obj := konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "data-plane-group-configuration-" + randomSuffix(),
+			GenerateName: "data-plane-group-configuration-",
 		},
 		Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
 			Version:         consts.DefaultDataPlaneTag,
@@ -1571,10 +1571,9 @@ func KongReferenceGrant(
 ) *configurationv1alpha1.KongReferenceGrant {
 	t.Helper()
 
-	name := "kongreferencegrant-" + randomSuffix()
 	krg := configurationv1alpha1.KongReferenceGrant{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
+			GenerateName: "kongreferencegrant-",
 		},
 		Spec: configurationv1alpha1.KongReferenceGrantSpec{},
 	}

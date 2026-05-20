@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
@@ -204,7 +203,7 @@ func TestKongUpstreamPolicyWithHTTPRoute(t *testing.T) {
 			ControllerName: gateway.GetControllerName(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
+			GenerateName: "gwc-",
 			Annotations: map[string]string{
 				"konghq.com/gatewayclass-unmanaged": "placeholder",
 			},
@@ -230,8 +229,8 @@ func TestKongUpstreamPolicyWithHTTPRoute(t *testing.T) {
 			},
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      uuid.NewString(),
+			Namespace:    ns.Name,
+			GenerateName: "gw-",
 		},
 	}
 	require.NoError(t, ctrlClient.Create(ctx, &gw))
@@ -309,8 +308,8 @@ func TestKongUpstreamPolicyWithHTTPRoute(t *testing.T) {
 			APIVersion: "v1beta1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      uuid.NewString(),
+			Namespace:    ns.Name,
+			GenerateName: "httproute-",
 		},
 		Spec: gatewayapi.HTTPRouteSpec{
 			CommonRouteSpec: gatewayapi.CommonRouteSpec{
