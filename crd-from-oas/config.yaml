@@ -204,7 +204,8 @@ apiGroupVersions:
             fieldName: PortalAuthSettings
           # The SDK list endpoint uses positional args and response items lack
           # labels/tags, and there is no deterministic field-match strategy for
-          # the nested identity-provider config union yet.
+          # the nested identity-provider config union yet. See
+          # https://github.com/Kong/kong-operator/issues/3987.
           skipGetForUID: true
           create:
             path: github.com/Kong/sdk-konnect-go/models/components.CreateIdentityProvider
@@ -219,7 +220,8 @@ apiGroupVersions:
             # so recover conflicts by matching the stable spec fields that are
             # echoed back by the API. Only the immutable identifier (name) is
             # used here; user-mutable fields like description are left to the
-            # subsequent update reconciliation.
+            # subsequent update reconciliation. This mitigates
+            # https://github.com/Kong/kong-operator/issues/3987.
             matchFields:
               - objectField: Spec.APISpec.Name
                 responseField: GetName()
@@ -244,7 +246,8 @@ apiGroupVersions:
           getForUID:
             # Portal pages do not expose labels/tags in Konnect list responses;
             # match on the immutable slug (unique within a portal) so user
-            # edits to title/description don't break conflict recovery.
+            # edits to title/description don't break conflict recovery. This
+            # mitigates https://github.com/Kong/kong-operator/issues/3987.
             matchFields:
               - objectField: Spec.APISpec.Slug
                 responseField: GetSlug()
@@ -263,6 +266,7 @@ apiGroupVersions:
           # PortalEmailConfig is a singleton per portal; the generator emits a
           # singular GET that returns the only entry, so no matchFields config
           # is needed. Any spec drift is reconciled by the subsequent update.
+          # This mitigates https://github.com/Kong/kong-operator/issues/3987.
           sdk:
             interface: github.com/Kong/sdk-konnect-go.PortalEmailsSDK
             fieldName: PortalEmails
