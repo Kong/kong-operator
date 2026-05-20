@@ -2941,10 +2941,10 @@ func TestTargetsForBackendRefs(t *testing.T) {
 		{
 			name: "service-upstream annotation should create service DNS target for headless backend",
 			httpRoute: createTestHTTPRoute("test-route", "test-namespace", []gwtypes.HTTPBackendRef{
-				createTestHTTPBackendRef("annotated-headless", "", nil, ptr.To[int32](80)),
+				createTestHTTPBackendRef("annotated-headless", "", nil, new(int32(80))),
 			}),
 			backendRefs: []gwtypes.HTTPBackendRef{
-				createTestHTTPBackendRef("annotated-headless", "", nil, ptr.To[int32](80)),
+				createTestHTTPBackendRef("annotated-headless", "", nil, new(int32(80))),
 			},
 			pRef:         &gwtypes.ParentReference{Name: "test-gateway"},
 			upstreamName: "test-upstream",

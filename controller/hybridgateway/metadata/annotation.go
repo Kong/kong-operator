@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -15,23 +16,27 @@ import (
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
+// Annotation constants matching those in the ingress controller.
 const (
-	// Annotation constants matching those in the ingress controller.
-	annotationPrefix  = "konghq.com"
-	stripPathKey      = "/strip-path"
-	preserveHostKey   = "/preserve-host"
-	protocolKey       = "/protocol"
-	pathKey           = "/path"
-	tlsVerifyKey      = "/tls-verify"
-	tlsVerifyDepthKey = "/tls-verify-depth"
-	connectTimeoutKey = "/connect-timeout"
-	readTimeoutKey    = "/read-timeout"
-	writeTimeoutKey   = "/write-timeout"
-	retriesKey        = "/retries"
-	hostHeaderKey     = "/host-header"
-	clientCertKey     = "/client-cert"
-	kindHTTPRoute     = "HTTPRoute"
-	kindTLSRoute      = "TLSRoute"
+	annotationPrefix          = "konghq.com"
+	stripPathKey              = "/strip-path"
+	preserveHostKey           = "/preserve-host"
+	protocolKey               = "/protocol"
+	pathKey                   = "/path"
+	tlsVerifyKey              = "/tls-verify"
+	tlsVerifyDepthKey         = "/tls-verify-depth"
+	connectTimeoutKey         = "/connect-timeout"
+	readTimeoutKey            = "/read-timeout"
+	writeTimeoutKey           = "/write-timeout"
+	retriesKey                = "/retries"
+	hostHeaderKey             = "/host-header"
+	clientCertKey             = "/client-cert"
+	serviceUpstreamAnnotation = "ingress.kubernetes.io/service-upstream"
+)
+
+const (
+	kindHTTPRoute = "HTTPRoute"
+	kindTLSRoute  = "TLSRoute"
 )
 
 // Defaults for the annotations when not specified that match the behavior of on-prem.
@@ -562,4 +567,18 @@ func (am *AnnotationManager) RouteAnnotationKeyForKind(routeKind string) string 
 func RouteAnnotationMatch(routeAnnotation string, route client.Object) bool {
 	routeObjectKey := client.ObjectKeyFromObject(route)
 	return strings.TrimSpace(routeAnnotation) == routeObjectKey.String()
+}
+
+// IsServiceUpstream returns true if the annotation
+// ingress.kubernetes.io/service-upstream is set to "true" in anns.
+func IsServiceUpstream[
+	T interface {
+		*corev1.Service
+		metav1.Object
+	},
+](obj T) bool {
+	if obj == nil {
+		return false
+	}
+	return obj.GetAnnotations()[serviceUpstreamAnnotation] == "true"
 }

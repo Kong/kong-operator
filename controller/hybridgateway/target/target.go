@@ -19,7 +19,6 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/route"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/translator"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
-	"github.com/kong/kong-operator/v2/internal/annotations"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
@@ -186,7 +185,7 @@ func resolveServiceEndpoints(
 }
 
 func shouldUseServiceFQDNTarget(svc *corev1.Service, fqdn bool) bool {
-	if annotations.IsServiceUpstream(svc) {
+	if metadata.IsServiceUpstream(svc) {
 		return true
 	}
 
