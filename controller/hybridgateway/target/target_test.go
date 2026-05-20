@@ -701,6 +701,28 @@ func TestResolveTargetPort(t *testing.T) {
 			expectedPort: 8080,
 		},
 		{
+			name: "service-upstream annotation should use service port even for headless service",
+			service: &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"ingress.kubernetes.io/service-upstream": "true",
+					},
+				},
+				Spec: corev1.ServiceSpec{
+					ClusterIP: "None",
+				},
+			},
+			servicePort: &corev1.ServicePort{
+				Port: 80,
+				TargetPort: intstr.IntOrString{
+					Type:   intstr.Int,
+					IntVal: 8080,
+				},
+			},
+			fqdn:         false,
+			expectedPort: 80,
+		},
+		{
 			name: "ExternalName service should use service port",
 			service: &corev1.Service{
 				Spec: corev1.ServiceSpec{
@@ -1040,6 +1062,47 @@ func TestResolveServiceEndpoints(t *testing.T) {
 			expectedError:      false,
 		},
 		{
+			name: "service-upstream annotation should use service DNS",
+			service: &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "service-upstream",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"ingress.kubernetes.io/service-upstream": "true",
+					},
+				},
+				Spec: corev1.ServiceSpec{
+					ClusterIP: "10.0.0.1",
+				},
+			},
+			servicePort:        createTestServicePort(),
+			fqdn:               false,
+			expectedEndpoints:  []string{"service-upstream.default.svc"},
+			expectedShouldSkip: false,
+			expectedError:      false,
+		},
+		{
+			name: "service-upstream annotation should use configured cluster domain",
+			service: &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "service-upstream",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"ingress.kubernetes.io/service-upstream": "true",
+					},
+				},
+				Spec: corev1.ServiceSpec{
+					ClusterIP: "10.0.0.1",
+				},
+			},
+			servicePort:        createTestServicePort(),
+			fqdn:               false,
+			clusterDomain:      "acme.internal",
+			expectedEndpoints:  []string{"service-upstream.default.svc.acme.internal"},
+			expectedShouldSkip: false,
+			expectedError:      false,
+		},
+		{
 			name: "ExternalName service with empty external name should be skipped",
 			service: &corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
@@ -1055,6 +1118,27 @@ func TestResolveServiceEndpoints(t *testing.T) {
 			fqdn:               false,
 			expectedEndpoints:  nil,
 			expectedShouldSkip: true,
+			expectedError:      false,
+		},
+		{
+			name: "service-upstream annotation should override ExternalName service",
+			service: &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "external-db",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"ingress.kubernetes.io/service-upstream": "true",
+					},
+				},
+				Spec: corev1.ServiceSpec{
+					Type:         corev1.ServiceTypeExternalName,
+					ExternalName: "database.example.com",
+				},
+			},
+			servicePort:        createTestServicePort(),
+			fqdn:               false,
+			expectedEndpoints:  []string{"external-db.default.svc"},
+			expectedShouldSkip: false,
 			expectedError:      false,
 		},
 		{
@@ -1089,6 +1173,43 @@ func TestResolveServiceEndpoints(t *testing.T) {
 				},
 			},
 			expectedEndpoints:  []string{"10.1.0.1", "10.1.0.2"},
+			expectedShouldSkip: false,
+			expectedError:      false,
+		},
+		{
+			name: "service-upstream annotation should override headless endpoint discovery",
+			service: &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "headless-service",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"ingress.kubernetes.io/service-upstream": "true",
+					},
+				},
+				Spec: corev1.ServiceSpec{
+					ClusterIP: "None",
+				},
+			},
+			servicePort: createTestServicePort(),
+			fqdn:        false,
+			existingSlices: []discoveryv1.EndpointSlice{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "headless-slice",
+						Namespace: "default",
+						Labels: map[string]string{
+							discoveryv1.LabelServiceName: "headless-service",
+						},
+					},
+					Ports: []discoveryv1.EndpointPort{
+						createTestEndpointPort("http", 80, corev1.ProtocolTCP),
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						createTestEndpoint([]string{"10.2.0.1"}, true),
+					},
+				},
+			},
+			expectedEndpoints:  []string{"headless-service.default.svc"},
 			expectedShouldSkip: false,
 			expectedError:      false,
 		},
@@ -2815,6 +2936,56 @@ func TestTargetsForBackendRefs(t *testing.T) {
 				// The actual behavior might be using cluster DNS format instead of ExternalName.
 				assert.Contains(t, target.Spec.Target, "external-service")
 				assert.Contains(t, target.Spec.Target, ":80")
+			},
+		},
+		{
+			name: "service-upstream annotation should create service DNS target for headless backend",
+			httpRoute: createTestHTTPRoute("test-route", "test-namespace", []gwtypes.HTTPBackendRef{
+				createTestHTTPBackendRef("annotated-headless", "", nil, new(int32(80))),
+			}),
+			backendRefs: []gwtypes.HTTPBackendRef{
+				createTestHTTPBackendRef("annotated-headless", "", nil, new(int32(80))),
+			},
+			pRef:         &gwtypes.ParentReference{Name: "test-gateway"},
+			upstreamName: "test-upstream",
+			fqdn:         false,
+			services: []corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "annotated-headless",
+						Namespace: "test-namespace",
+						Annotations: map[string]string{
+							"ingress.kubernetes.io/service-upstream": "true",
+						},
+					},
+					Spec: corev1.ServiceSpec{
+						ClusterIP: "None",
+						Ports: []corev1.ServicePort{
+							{Name: "http", Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(8080)},
+						},
+						Type: corev1.ServiceTypeClusterIP,
+					},
+				},
+			},
+			endpointSlices: []discoveryv1.EndpointSlice{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "annotated-headless-slice",
+						Namespace: "test-namespace",
+						Labels: map[string]string{
+							"kubernetes.io/service-name": "annotated-headless",
+						},
+					},
+					Ports:     []discoveryv1.EndpointPort{createTestEndpointPort("http", 8080, corev1.ProtocolTCP)},
+					Endpoints: []discoveryv1.Endpoint{createTestEndpoint([]string{"10.0.4.1"}, true)},
+				},
+			},
+			referenceGrants: []gwtypes.ReferenceGrant{},
+			expectedTargets: 1,
+			expectedError:   false,
+			validateResult: func(t *testing.T, targets []configurationv1alpha1.KongTarget) {
+				require.Len(t, targets, 1)
+				assert.Equal(t, "annotated-headless.test-namespace.svc.cluster.local:80", targets[0].Spec.Target)
 			},
 		},
 	}
