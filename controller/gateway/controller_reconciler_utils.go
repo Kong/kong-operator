@@ -955,6 +955,16 @@ func (g *gatewayConditionsAndListenersAwareT) setAcceptedAndAttachedRoutes(ctx c
 			acceptedCondition.Reason = string(gatewayv1.ListenerReasonUnsupportedProtocol)
 		}
 		listenerConditionsAware := listenerConditionsAware(&g.Status.Listeners[i])
+		// Per Gateway API spec, conflicting listeners must not be accepted:
+		// "The implementation MUST NOT pick one conflicting Listener as the winner.
+		// ALL indistinct Listeners must not be accepted for processing."
+		// setConflicted() has already run, so the Conflicted condition is available here.
+		if conflicted, ok := k8sutils.GetCondition(
+			kcfgconsts.ConditionType(gatewayv1.ListenerConditionConflicted), listenerConditionsAware,
+		); ok && conflicted.Status == metav1.ConditionTrue {
+			acceptedCondition.Status = metav1.ConditionFalse
+			acceptedCondition.Reason = conflicted.Reason
+		}
 		listenerConditionsAware.SetConditions(append(listenerConditionsAware.Conditions, acceptedCondition))
 
 		// AttachedRoutes
