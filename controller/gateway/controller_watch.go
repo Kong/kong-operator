@@ -454,6 +454,21 @@ func (r *Reconciler) listGatewaysAttachedByTLSRoute(ctx context.Context, obj cli
 	return listGatewaysAttachedByRoute(ctx, logger, r.Client, tlsRoute)
 }
 
+func (r *Reconciler) listGatewaysAttachedByGRPCRoute(ctx context.Context, obj client.Object) []reconcile.Request {
+	logger := ctrllog.FromContext(ctx)
+
+	grpcRoute, ok := obj.(*gatewayv1.GRPCRoute)
+	if !ok {
+		logger.Error(
+			fmt.Errorf("unexpected object type"),
+			"GRPCRoute watch predicate received unexpected object type",
+			"expected", "*gatewayapi.GRPCRoute", "found", reflect.TypeOf(obj),
+		)
+		return nil
+	}
+	return listGatewaysAttachedByRoute(ctx, logger, r.Client, grpcRoute)
+}
+
 // -----------------------------------------------------------------------------
 // GatewayReconciler - Config Defaults
 // -----------------------------------------------------------------------------

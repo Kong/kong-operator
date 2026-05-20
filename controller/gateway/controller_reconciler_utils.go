@@ -871,8 +871,8 @@ func (l listenerConditionAwareT) SetConditions(conditions []metav1.Condition) {
 // as each protocolType can be compatible with many different route types.
 func supportedRoutesByProtocol() map[gatewayv1.ProtocolType]map[gatewayv1.Kind]struct{} {
 	return map[gatewayv1.ProtocolType]map[gatewayv1.Kind]struct{}{
-		gatewayv1.HTTPProtocolType:  {"HTTPRoute": {}},
-		gatewayv1.HTTPSProtocolType: {"HTTPRoute": {}},
+		gatewayv1.HTTPProtocolType:  {"HTTPRoute": {}, "GRPCRoute": {}},
+		gatewayv1.HTTPSProtocolType: {"HTTPRoute": {}, "GRPCRoute": {}},
 		gatewayv1.TLSProtocolType:   {"TLSRoute": {}},
 		// TCPRoutes ad UDPRoutes are not supported yet
 		// gatewayv1.TCPProtocolType:   {"TCPRoute": {}},
@@ -1104,6 +1104,15 @@ func countAttachedRoutesForGatewayListener(ctx context.Context, g *gwtypes.Gatew
 				)
 			}
 			count += countAttachedTLSRoutes(g, listener, tlsRoutes)
+		case "GRPCRoute":
+			grpcRoutes, err := gatewayutils.ListGRPCRoutesForGateway(ctx, cl, g, opts...)
+			if err != nil {
+				return 0, fmt.Errorf(
+					"failed to list GRPCRoutes for Gateway %s when counting AttachedRoutes: %w",
+					client.ObjectKeyFromObject(g), err,
+				)
+			}
+			count += countAttachedGRPCRoutes(g, listener, grpcRoutes)
 		// Unsupported route kinds. Should be unreachable.
 		default:
 			return 0, fmt.Errorf("unsupported route kind: %s", k)
@@ -1133,6 +1142,19 @@ func countAttachedHTTPRoutes(gateway *gwtypes.Gateway, listener gwtypes.Listener
 
 func countAttachedTLSRoutes(gateway *gwtypes.Gateway, listener gwtypes.Listener, tlsRoutes []gatewayv1.TLSRoute) int32 {
 	count := lo.CountBy(tlsRoutes, func(r gatewayv1.TLSRoute) bool {
+		return lo.ContainsBy(r.Spec.ParentRefs, func(parentRef gatewayv1.ParentReference) bool {
+			return string(parentRef.Name) == gateway.Name &&
+				(parentRef.SectionName == nil || *parentRef.SectionName == listener.Name) &&
+				listenerHostnameIntersectsRouteHostnames(listener.Hostname, r.Spec.Hostnames)
+		})
+	})
+	return int32(count)
+}
+
+// countAttachedGRPCRoutes counts the number of attached GRPCRoutes for a given listener,
+// taking into account the ParentRef's sectionName and hostname intersections between the listener and the route.
+func countAttachedGRPCRoutes(gateway *gwtypes.Gateway, listener gwtypes.Listener, grpcRoutes []gatewayv1.GRPCRoute) int32 {
+	count := lo.CountBy(grpcRoutes, func(r gatewayv1.GRPCRoute) bool {
 		return lo.ContainsBy(r.Spec.ParentRefs, func(parentRef gatewayv1.ParentReference) bool {
 			return string(parentRef.Name) == gateway.Name &&
 				(parentRef.SectionName == nil || *parentRef.SectionName == listener.Name) &&
@@ -1555,6 +1577,10 @@ func getSupportedKindsWithResolvedRefsCondition(ctx context.Context, c client.Cl
 		resolvedRefsCondition.Message = message
 	}
 
+	// sort supportedKinds to avoid unnecessary updates, since it'll be written into status.
+	sort.Slice(supportedKinds, func(i, j int) bool {
+		return supportedKinds[i].Kind < supportedKinds[j].Kind
+	})
 	return supportedKinds, resolvedRefsCondition, nil
 }
 

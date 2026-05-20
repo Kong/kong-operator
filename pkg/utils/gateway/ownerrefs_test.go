@@ -266,3 +266,258 @@ func TestListHTTPRoutesForGateway(t *testing.T) {
 		})
 	}
 }
+
+func TestListGRPCRoutesForGateway(t *testing.T) {
+	testCases := []struct {
+		name        string
+		grpcRoutes  []client.Object
+		gateway     *gwtypes.Gateway
+		expected    []gwtypes.GRPCRoute
+		expectedErr bool
+	}{
+		{
+			name: "returns GRPCRoute for a Gateway",
+			grpcRoutes: []client.Object{
+				&gwtypes.GRPCRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            "grpc-route-1",
+						Namespace:       "default",
+						ResourceVersion: "1",
+					},
+					Spec: gwtypes.GRPCRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Group: new(gwtypes.Group(gwtypes.GroupVersion.Group)),
+									Kind:  new(gwtypes.Kind("Gateway")),
+									Name:  gwtypes.ObjectName("gw-1"),
+								},
+							},
+						},
+					},
+				},
+			},
+			gateway: &gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Gateway",
+					APIVersion: gwtypes.GroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gw-1",
+					Namespace: "default",
+				},
+			},
+			expected: []gwtypes.GRPCRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            "grpc-route-1",
+						Namespace:       "default",
+						ResourceVersion: "1",
+					},
+					Spec: gwtypes.GRPCRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Group: new(gwtypes.Group(gwtypes.GroupVersion.Group)),
+									Kind:  new(gwtypes.Kind("Gateway")),
+									Name:  gwtypes.ObjectName("gw-1"),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "does not return GRPCRoute for a Gateway when it is not a parent",
+			grpcRoutes: []client.Object{
+				&gwtypes.GRPCRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            "grpc-route-1",
+						Namespace:       "default",
+						ResourceVersion: "1",
+					},
+					Spec: gwtypes.GRPCRouteSpec{},
+				},
+			},
+			gateway: &gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Gateway",
+					APIVersion: gwtypes.GroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gw-1",
+					Namespace: "default",
+				},
+			},
+			expected: nil,
+		},
+		{
+			name: "returns GRPCRoute when section name does match",
+			grpcRoutes: []client.Object{
+				&gwtypes.GRPCRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            "grpc-route-1",
+						Namespace:       "default",
+						ResourceVersion: "1",
+					},
+					Spec: gwtypes.GRPCRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Group:       new(gwtypes.Group(gwtypes.GroupVersion.Group)),
+									Kind:        new(gwtypes.Kind("Gateway")),
+									Name:        gwtypes.ObjectName("gw-1"),
+									SectionName: new(gwtypes.SectionName("grpc")),
+								},
+							},
+						},
+					},
+				},
+			},
+			gateway: &gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Gateway",
+					APIVersion: gwtypes.GroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gw-1",
+					Namespace: "default",
+				},
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
+						{
+							Name: "grpc",
+							Port: 80,
+						},
+					},
+				},
+			},
+			expected: []gwtypes.GRPCRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            "grpc-route-1",
+						Namespace:       "default",
+						ResourceVersion: "1",
+					},
+					Spec: gwtypes.GRPCRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Group:       new(gwtypes.Group(gwtypes.GroupVersion.Group)),
+									Kind:        new(gwtypes.Kind("Gateway")),
+									Name:        gwtypes.ObjectName("gw-1"),
+									SectionName: new(gwtypes.SectionName("grpc")),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "does not return GRPCRoute when section name does not match",
+			grpcRoutes: []client.Object{
+				&gwtypes.GRPCRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            "grpc-route-1",
+						Namespace:       "default",
+						ResourceVersion: "1",
+					},
+					Spec: gwtypes.GRPCRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Group:       new(gwtypes.Group(gwtypes.GroupVersion.Group)),
+									Kind:        new(gwtypes.Kind("Gateway")),
+									Name:        gwtypes.ObjectName("gw-1"),
+									SectionName: new(gwtypes.SectionName("grpc-1")),
+								},
+							},
+						},
+					},
+				},
+			},
+			gateway: &gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Gateway",
+					APIVersion: gwtypes.GroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gw-1",
+					Namespace: "default",
+				},
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
+						{
+							Name: "grpc",
+							Port: 80,
+						},
+					},
+				},
+			},
+			expected: nil,
+		},
+		{
+			name: "does not return GRPCRoute when port does not match",
+			grpcRoutes: []client.Object{
+				&gwtypes.GRPCRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            "grpc-route-1",
+						Namespace:       "default",
+						ResourceVersion: "1",
+					},
+					Spec: gwtypes.GRPCRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Group:       new(gwtypes.Group(gwtypes.GroupVersion.Group)),
+									Kind:        new(gwtypes.Kind("Gateway")),
+									Name:        gwtypes.ObjectName("gw-1"),
+									SectionName: new(gwtypes.SectionName("grpc")),
+									Port:        new(gwtypes.PortNumber(8080)),
+								},
+							},
+						},
+					},
+				},
+			},
+			gateway: &gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Gateway",
+					APIVersion: gwtypes.GroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gw-1",
+					Namespace: "default",
+				},
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
+						{
+							Name: "grpc",
+							Port: 80,
+						},
+					},
+				},
+			},
+			expected: nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			cl := fake.NewClientBuilder().
+				WithScheme(scheme.Get()).
+				WithObjects(tc.gateway).
+				WithObjects(tc.grpcRoutes...).
+				Build()
+			routes, err := ListGRPCRoutesForGateway(t.Context(), cl, tc.gateway)
+			if tc.expectedErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				require.ElementsMatch(t, tc.expected, routes)
+			}
+		})
+	}
+}

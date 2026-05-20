@@ -253,6 +253,34 @@ func ListTLSRoutesForGateway(
 	}), nil
 }
 
+// ListGRPCRoutesForGateway is a helper function which returns a list of GRPCRoutes
+// that have the provided Gateway set as parent in their status.
+func ListGRPCRoutesForGateway(
+	ctx context.Context,
+	c client.Client,
+	gateway *gwtypes.Gateway,
+	opts ...client.ListOption,
+) ([]gwtypes.GRPCRoute, error) {
+	if gateway.Namespace == "" {
+		return nil, fmt.Errorf("can't list GRPCRoutes for gateway: Gateway %s was missing namespace", gateway.Name)
+	}
+
+	var grpcRouteList gwtypes.GRPCRouteList
+	err := c.List(
+		ctx,
+		&grpcRouteList,
+		opts...,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("can't list GRPCRoutes for gateway: %w", err)
+	}
+	return lo.Filter(grpcRouteList.Items, func(r gwtypes.GRPCRoute, _ int) bool {
+		return lo.ContainsBy(r.Spec.ParentRefs, func(parentRef gwtypes.ParentReference) bool {
+			return parentRefMatchGateway(r.Namespace, parentRef, gateway)
+		})
+	}), nil
+}
+
 // GetDataPlaneServiceName is a helper function that retrieves the name of the service owned by provided dataplane.
 // It accepts a string as the last argument to specify which service to retrieve (proxy/admin).
 func GetDataPlaneServiceName(

@@ -4,7 +4,7 @@ import "sigs.k8s.io/controller-runtime/pkg/client"
 
 // SupportedRoute defines a supported route type.
 type SupportedRoute interface {
-	HTTPRoute | TLSRoute
+	HTTPRoute | TLSRoute | GRPCRoute
 }
 
 // SupportedRoutePtr defines a pointer of a supported route type.
