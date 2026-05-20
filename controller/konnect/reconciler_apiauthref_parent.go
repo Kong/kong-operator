@@ -21,9 +21,9 @@ func getAPIAuthConfigurationRefFromParent[
 ](
 	ctx context.Context,
 	cl client.Client,
-	obj objectWithParentRef,
+	obj client.Object,
+	parentRef commonv1alpha1.ObjectRef,
 ) (types.NamespacedName, error) {
-	parentRef := obj.GetParentRef()
 	if parentRef.Type != commonv1alpha1.ObjectRefTypeNamespacedRef ||
 		parentRef.NamespacedRef == nil {
 		return types.NamespacedName{},

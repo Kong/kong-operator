@@ -164,6 +164,21 @@ func encodeEventGatewayBackendClusterSDKOpsBase64Field(value any, path []string)
 		return nil, nil
 	}
 
+	if path[0] == "[]" {
+		items, ok := value.([]any)
+		if !ok {
+			return nil, fmt.Errorf("expected array, got %T", value)
+		}
+		for i, item := range items {
+			encoded, err := encodeEventGatewayBackendClusterSDKOpsBase64Field(item, path[1:])
+			if err != nil {
+				return nil, err
+			}
+			items[i] = encoded
+		}
+		return items, nil
+	}
+
 	object, ok := value.(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("expected object, got %T", value)

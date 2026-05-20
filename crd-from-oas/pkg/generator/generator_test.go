@@ -909,6 +909,43 @@ func TestGenerateCRDFuncs_GeneratesKonnectFuncs(t *testing.T) {
 		assert.NotContains(t, content, `func (obj *EventGatewayVirtualClusterConsumePolicy) SetEventGatewayVirtualClusterID(id string) {`)
 	})
 
+	t.Run("multi-parent child without parent ref still gets ancestor setter", func(t *testing.T) {
+		g := NewGenerator(Config{
+			APIGroup:   "konnect.konghq.com",
+			APIVersion: "v1alpha1",
+			CommonTypes: &config.CommonTypesConfig{
+				ObjectRef: &config.ObjectRefConfig{
+					Import: &config.ImportConfig{
+						Path:  "github.com/kong/kong-operator/v2/api/common/v1alpha1",
+						Alias: "commonv1alpha1",
+					},
+				},
+			},
+			ReconcilerConfig: map[string]*config.ReconcilerConfig{
+				"EventGatewayListenerPolicy": {
+					ParentEntityType:    "EventGatewayListener",
+					AncestorEntityTypes: []string{"KonnectEventGateway"},
+				},
+			},
+		})
+
+		schemaWithDependencies := &parser.Schema{
+			Name: "CreateEventGatewayListenerPolicy",
+			Dependencies: []*parser.Dependency{
+				{EntityName: "Gateway", AccessorEntityName: "EventGateway", FieldName: "GatewayRef", JSONName: "gateway_ref"},
+				{EntityName: "EventGatewayListener", AccessorEntityName: "EventGatewayListener", FieldName: "EventGatewayListenerRef", JSONName: "event_gateway_listener_ref"},
+			},
+		}
+
+		content, err := g.generateCRDFuncs("CreateEventGatewayListenerPolicy", schemaWithDependencies)
+		require.NoError(t, err)
+		assert.Contains(t, content, `func (obj *EventGatewayListenerPolicy) GetAncestorIDs() map[string]string {`)
+		assert.Contains(t, content, `m["KonnectEventGateway"] = obj.Status.GatewayID.ID`)
+		assert.Contains(t, content, `func (obj *EventGatewayListenerPolicy) SetAncestorID(kind, id string) {`)
+		assert.Contains(t, content, `case "KonnectEventGateway":`)
+		assert.Contains(t, content, `obj.SetGatewayID(id)`)
+	})
+
 	t.Run("root ref accessor uses last (immediate) dependency", func(t *testing.T) {
 		// For multi-parent entities, only the immediate (last) parent is exposed
 		// in Spec as a Ref field. Transitive parents (earlier in URL order) have

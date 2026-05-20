@@ -79,6 +79,7 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 							LastTransitionTime: metav1.Now(),
 						}},
 						KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{ID: "listener-konnect-id"},
+						GatewayID:           &konnectv1alpha1.KonnectEntityRef{ID: "gateway-konnect-id"},
 					},
 				}
 
@@ -103,6 +104,7 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 				updated := &konnectv1alpha1.EventGatewayListenerPolicy{}
 				require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(ent), updated))
 				assert.Equal(t, "listener-konnect-id", updated.GetEventGatewayListenerID())
+				assert.Equal(t, "gateway-konnect-id", updated.GetGatewayID())
 
 				cond, ok := k8sutils.GetCondition(
 					kcfgconsts.ConditionType(ent.GetStatusConditionTypeParentRefValid()),

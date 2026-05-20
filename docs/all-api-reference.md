@@ -6310,6 +6310,8 @@ Allowed values:
 
 
 
+
+
 #### EventGatewayListenerPolicySpec
 
 
@@ -7169,7 +7171,6 @@ _Appears in:_
 
 - [BackendClusterAuthenticationSaslPlain](#konnect-konghq-com-v1alpha1-types-backendclusterauthenticationsaslplain)
 - [BackendClusterAuthenticationSaslScram](#konnect-konghq-com-v1alpha1-types-backendclusterauthenticationsaslscram)
-- [TLSCertificate](#konnect-konghq-com-v1alpha1-types-tlscertificate)
 - [VirtualClusterAuthenticationPrincipal](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationprincipal)
 
 #### GatewaySecretReferenceOrLiteral
@@ -7189,7 +7190,6 @@ _Appears in:_
 - [BackendClusterAuthenticationSaslPlain](#konnect-konghq-com-v1alpha1-types-backendclusterauthenticationsaslplain)
 - [BackendClusterAuthenticationSaslScram](#konnect-konghq-com-v1alpha1-types-backendclusterauthenticationsaslscram)
 - [BackendClusterTLS](#konnect-konghq-com-v1alpha1-types-backendclustertls)
-- [TLSCertificate](#konnect-konghq-com-v1alpha1-types-tlscertificate)
 - [VirtualClusterAuthenticationPrincipal](#konnect-konghq-com-v1alpha1-types-virtualclusterauthenticationprincipal)
 
 #### IdentityProviderEnabled
@@ -8841,6 +8841,7 @@ _Appears in:_
 
 - [BackendClusterTLSClientIdentity](#konnect-konghq-com-v1alpha1-types-backendclustertlsclientidentity)
 - [KonnectEventDataPlaneCertificateAPISpec](#konnect-konghq-com-v1alpha1-types-konnecteventdataplanecertificateapispec)
+- [TLSCertificate](#konnect-konghq-com-v1alpha1-types-tlscertificate)
 
 #### SensitiveDataSourceType
 
@@ -8892,8 +8893,8 @@ TLSCertificate A TLS certificate and its associated private key.
 
 | Field | Description |
 | --- | --- |
-| `certificate` _[GatewaySecretReferenceOrLiteral](#konnect-konghq-com-v1alpha1-types-gatewaysecretreferenceorliteral)_ | A literal value or a reference to an existing secret as a template string expression. The value is stored and returned by the API as-is, not treated as sensitive information. |
-| `key` _[GatewaySecret](#konnect-konghq-com-v1alpha1-types-gatewaysecret)_ | A sensitive value containing the secret or a reference to a secret as a template string expression. If the value is provided as plain text, it is encrypted at rest and omitted from API responses. If provided as an expression, the expression itself is stored and returned by the API. |
+| `certificate` _[SensitiveDataSource](#konnect-konghq-com-v1alpha1-types-sensitivedatasource)_ | A literal value or a reference to an existing secret as a template string expression. The value is stored and returned by the API as-is, not treated as sensitive information. |
+| `key` _[SensitiveDataSource](#konnect-konghq-com-v1alpha1-types-sensitivedatasource)_ | A sensitive value containing the secret or a reference to a secret as a template string expression. If the value is provided as plain text, it is encrypted at rest and omitted from API responses. If provided as an expression, the expression itself is stored and returned by the API. |
 
 _Appears in:_
 

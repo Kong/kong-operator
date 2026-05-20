@@ -66,18 +66,16 @@ apiGroupVersions:
           parentEntityType: KonnectEventGateway
       - path: /v1/event-gateways/{gatewayId}/listeners/{eventGatewayListenerId}/policies
         name: EventGatewayListenerPolicy
-        cel:
-          spec:
-            apiSpec:
-              tlsServer:
-                config:
-                  certificates:
-                    certificate:
-                       _validations:
-                        - "+kubebuilder:validation:MaxLength=4096"
-                    key:
-                       _validations:
-                        - "+kubebuilder:validation:MaxLength=4096"
+        secretReferences:
+          - path: spec.apiSpec.tlsServer.config.certificates[].certificate
+            type: Secret
+            key: tls.crt
+          - path: spec.apiSpec.tlsServer.config.certificates[].key
+            type: Secret
+            key: tls.key
+            # TODO: Remove Base64 encoding when API starts accepting raw values.
+            # TODO: https://github.com/Kong/kong-operator/issues/4304
+            base64Encoding: true
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayListenerPoliciesSDK
@@ -106,6 +104,8 @@ apiGroupVersions:
           delete: {}
         reconciler:
           parentEntityType: EventGatewayListener
+          ancestorEntityTypes:
+            - KonnectEventGateway
           # Speakeasy SDK uses "ListenerID" (not "EventGatewayListenerID") for the
           # eventGatewayListenerId path param when it appears as a parent (not entity ID).
           parentSDKFields:

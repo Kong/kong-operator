@@ -36,7 +36,7 @@ func TestCreateEventGatewayListenerPolicy(t *testing.T) {
 		}, nil).
 		Once()
 
-	require.NoError(t, createEventGatewayListenerPolicy(ctx, sdk, policy))
+	require.NoError(t, createEventGatewayListenerPolicy(ctx, nil, sdk, policy))
 	assert.Equal(t, "listener-policy-1", policy.GetKonnectID())
 }
 
@@ -59,7 +59,7 @@ func TestUpdateEventGatewayListenerPolicy(t *testing.T) {
 		Return(&sdkkonnectops.UpdateEventGatewayListenerPolicyResponse{}, nil).
 		Once()
 
-	require.NoError(t, updateEventGatewayListenerPolicy(ctx, sdk, policy))
+	require.NoError(t, updateEventGatewayListenerPolicy(ctx, nil, sdk, policy))
 }
 
 func TestDeleteEventGatewayListenerPolicy(t *testing.T) {
@@ -143,8 +143,8 @@ func testEventGatewayListenerPolicy() *konnectv1alpha1.EventGatewayListenerPolic
 						Config: konnectv1alpha1.EventGatewayTLSListenerPolicyConfig{
 							Certificates: []konnectv1alpha1.TLSCertificate{
 								{
-									Certificate: "-----BEGIN CERTIFICATE-----test-----END CERTIFICATE-----",
-									Key:         "-----BEGIN PRIVATE KEY-----test-----END PRIVATE KEY-----",
+									Certificate: konnectv1alpha1.SensitiveDataSource{Type: konnectv1alpha1.SensitiveDataSourceTypeInline, Value: new("-----BEGIN CERTIFICATE-----test-----END CERTIFICATE-----")},
+									Key:         konnectv1alpha1.SensitiveDataSource{Type: konnectv1alpha1.SensitiveDataSourceTypeInline, Value: new("-----BEGIN PRIVATE KEY-----test-----END PRIVATE KEY-----")},
 								},
 							},
 							ClientAuthentication: konnectv1alpha1.EventGatewayTLSListenerPolicyConfigClientAuthentication{

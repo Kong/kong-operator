@@ -47,6 +47,43 @@ spec:
     namespacedRef:
       name: cp-event-1
 ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cp-event-1-listener-1-tls
+  namespace: default
+  labels:
+    konghq.com/secret: "true"
+type: kubernetes.io/tls
+stringData:
+  tls.crt: |
+    -----BEGIN CERTIFICATE-----
+    MIICZTCCAg+gAwIBAgIUAeycZN0KBPaV1T6vC6tvVwh23OswDQYJKoZIhvcNAQEL
+    BQAwgYYxCzAJBgNVBAYTAlhYMRIwEAYDVQQIDAlTdGF0ZU5hbWUxETAPBgNVBAcM
+    CENpdHlOYW1lMRQwEgYDVQQKDAtDb21wYW55TmFtZTEbMBkGA1UECwwSQ29tcGFu
+    eVNlY3Rpb25OYW1lMR0wGwYDVQQDDBRDb21tb25OYW1lT3JIb3N0bmFtZTAeFw0y
+    NjA1MjExMTA2MjZaFw0zNjA1MTgxMTA2MjZaMIGGMQswCQYDVQQGEwJYWDESMBAG
+    A1UECAwJU3RhdGVOYW1lMREwDwYDVQQHDAhDaXR5TmFtZTEUMBIGA1UECgwLQ29t
+    cGFueU5hbWUxGzAZBgNVBAsMEkNvbXBhbnlTZWN0aW9uTmFtZTEdMBsGA1UEAwwU
+    Q29tbW9uTmFtZU9ySG9zdG5hbWUwXDANBgkqhkiG9w0BAQEFAANLADBIAkEAyAlr
+    VwkAPON1Q65b3euskPQZ+CK1KmkttKnIkuuFEl4CW9alzgEcutdwlQagCS1vjhYD
+    l325eusQMaKvbJw1NwIDAQABo1MwUTAdBgNVHQ4EFgQU4mDM/L+zh8HTa6xX3fpD
+    Lkp/MiMwHwYDVR0jBBgwFoAU4mDM/L+zh8HTa6xX3fpDLkp/MiMwDwYDVR0TAQH/
+    BAUwAwEB/zANBgkqhkiG9w0BAQsFAANBADza7gIm0T6kPXgByadm4E2B3JtOpXLP
+    oxauUevvvMTAn/URIZ8kp4s1WC0Lq05kN2GYUTKD8wew6PsBdZ2/X6g=
+    -----END CERTIFICATE-----
+  tls.key: |
+    -----BEGIN PRIVATE KEY-----
+    MIIBVAIBADANBgkqhkiG9w0BAQEFAASCAT4wggE6AgEAAkEAyAlrVwkAPON1Q65b
+    3euskPQZ+CK1KmkttKnIkuuFEl4CW9alzgEcutdwlQagCS1vjhYDl325eusQMaKv
+    bJw1NwIDAQABAkAaV1MxNNg5LGKmtPEX+g7RT7OTv05H9W21Wp406pqtXkQoO0iG
+    LZ16fOZeQ1qjeKg2Rw9UdG1UOVOJimJSCaUhAiEA52R5gaynVLuL1rSx7vPTepCF
+    MQ8XY2mkV3Fy4oLpiSkCIQDdT03uRshRwO4xixW30oJ8w67pzcLk6OnwnKbQ/na3
+    XwIhALtvYRmQoM77SLA4GLYmHlV3Ad0Wi2yE45HNnTEsuD3ZAiBJ8zT8OOS5BLnT
+    DkGskggOPqkU8S99pCJ/xyiqz0zGCwIgB2EcOOUJqTjLmUvVueNn6uJwWhrZ5FOl
+    ekjT6oKUX80=
+    -----END PRIVATE KEY-----
+---
 kind: EventGatewayListenerPolicy
 apiVersion: konnect.konghq.com/v1alpha1
 metadata:
@@ -57,8 +94,8 @@ spec:
     type: tlsServer
     tlsServer:
       name: cp-event-1-listener-1-policy-1
-      description: Test Event Gateway Listener Policy
-      enabled: Disabled
+      description: Test Event Gateway Listener Policy from Kong Operator
+      enabled: Enabled
       labels:
         app: test1
         env: test
@@ -68,48 +105,15 @@ spec:
           min: TLSv1.2
           max: TLSv1.3
         certificates:
-          # TODO: this needs to be a secret reference or a literal with certificate data.
-          # https://github.com/Kong/kong-operator/issues/4063
-          - certificate: |
-              -----BEGIN CERTIFICATE-----
-              MIICxTCCAi6gAwIBAgIUaadvyb4GxCPmdtZeW0WcHnxZjbQwDQYJKoZIhvcNAQEL
-              BQAwajELMAkGA1UEBhMCWFgxEjAQBgNVBAgMCVN0YXRlTmFtZTERMA8GA1UEBwwI
-              Q2l0eU5hbWUxFDASBgNVBAoMC0NvbXBhbnlOYW1lMQswCQYDVQQLDAJDQTERMA8G
-              A1UEAwwITXlSb290Q0EwHhcNMjYwNDI5MTI0MDM4WhcNMjcwNDI5MTI0MDM4WjBg
-              MQswCQYDVQQGEwJYWDESMBAGA1UECAwJU3RhdGVOYW1lMREwDwYDVQQHDAhDaXR5
-              TmFtZTEUMBIGA1UECgwLQ29tcGFueU5hbWUxFDASBgNVBAMMC2V4YW1wbGUuY29t
-              MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCeTLe9Gqutr0gDfrE815NcBQJ4
-              qapE8vPPzjyX57ubB9U4kroCcY5qiFleS3YE9NzqB7KWdbK0a8/EVmMI4Ie0npbE
-              ttZBdBFdWITnFaYcK4TWmKLZmtTdVK1d1acwTm+RFG481AfRdSx4QN4FrgYLQ+8X
-              PDiXLH5zjLo7rnk/mwIDAQABo3IwcDAJBgNVHRMEAjAAMAsGA1UdDwQEAwIFoDAW
-              BgNVHREEDzANggtleGFtcGxlLmNvbTAdBgNVHQ4EFgQUrei4PTJFjCU5YCXIDMQe
-              v1ewTiowHwYDVR0jBBgwFoAUDLxc2ZS2Nvr6Xf51Dy1mX2VS4i8wDQYJKoZIhvcN
-              AQELBQADgYEACT3VPjnOohGpiLsNTxkiLfKmTl+RAzanZnr7g8d58H1yAYEet36E
-              FM7H5u3//BzA2BIiV2U5PvMNWwksWFMS1FegD5udBiYhreGZdPmcxlFj7jk087mQ
-              Mk+tdcQgo3LS74wO9G/upL+7UM414fCp8JqQ6IkG7wq920MmlfPNW4A=
-              -----END CERTIFICATE-----
-          # TODO: this needs to be a secret reference or a literal with certificate data.
-          # https://github.com/Kong/kong-operator/issues/4063
-            key: |
-              LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUNlQUlCQURBTkJna3Foa2lHOXcwQkFRRUZB
-              QVNDQW1Jd2dnSmVBZ0VBQW9HQkFKNU10NzBhcTYydlNBTisKc1R6WGsxd0ZBbmlwcWtUeTg4L09Q
-              SmZudTVzSDFUaVN1Z0p4am1xSVdWNUxkZ1QwM09vSHNwWjFzclJyejhSVwpZd2pnaDdTZWxzUzIx
-              a0YwRVYxWWhPY1ZwaHdyaE5hWW90bWExTjFVclYzVnB6Qk9iNUVVYmp6VUI5RjFMSGhBCjNnV3VC
-              Z3REN3hjOE9KY3Nmbk9NdWp1dWVUK2JBZ01CQUFFQ2dZRUFsdFlGTWdTcTEzbXdoZHYvcURqRjZp
-              Vy8KNEJmUzdaWU9xZEViUGFlS3hNTm04VndtTDlQaVh6S0M3VzI4RENjQ0pXR21VdVhkblRzcG95
-              eXBlemp2TkxUNgo4dDRFQ2daY1E0cUZIeDhNM05LTEcvK2tVTUtHK21heXdoMVNpbmtEVnFYL0Zw
-              RVR1U3BXUDg0Q0JjcEhKM0JSCjg5UWZlSklPaVlRSENIZUQ4emtDUVFEUjYxbXJYRVFBM2Z1Z1I5
-              ZjlYV0k1VENUU3FpZUs4OXpPT1lrbGFPMDYKdXREZjVDOFdqTFJlU1FJZzd6dFRhZmlxWGkrMHB0
-              b3ZDNW9DenJJUXZxS05Ba0VBd1F5TEp1NWNtT0xSdCtBQwpzWGdqSjBvYVNWRkJRTmNNZnp1TjBQ
-              M0I4Zjh3dzEvU21iWTRDUGNLT2JnY3lnRkU5czZZeVZrbmlJUEZJaUt1CmcyVjB4d0pCQUpFNVM1
-              aWtSUnVBZHVMa3NRVkVSSDYxTWNoWUZQRXBVam1OVGxjR0p4QjVTNldJdkJiU2tybWoKc29oTVdQ
-              T1ZIWVhua1FOZVp4VWk1cEpJb3FHNDhNVUNRRDVDWFY1ZzRWd3RTcFdTbVV2REF4Tll3c0dDZ3hq
-              MgpRZ0dHbzJZVGNNa3JFLzd1bUcwYVoxZjgxRDlwTVYrMHFSa3Y1L2FIMmtnY3R5Y2JLRTBZRzJF
-              Q1FRQ3krL3BLCjR0cmdpMm5NY3pIUEZ2b3MycS9XelJEeDE5akRrSldPT0NSOUlyUGFNU3JrNFFw
-              blJVbWpXdWcrUWhrVDR5MjEKZTJDcUNnSUNRTVhXUmpQdwotLS0tLUVORCBQUklWQVRFIEtFWS0t
-              LS0tCg==
+          - certificate:
+              type: secretRef
+              secretRef:
+                name: cp-event-1-listener-1-tls
+            key:
+              type: secretRef
+              secretRef:
+                name: cp-event-1-listener-1-tls
   eventGatewayListenerRef:
     type: namespacedRef
     namespacedRef:
-      name: cp-event-1
-
+      name: cp-event-1-listener-1

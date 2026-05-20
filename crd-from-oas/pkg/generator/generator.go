@@ -87,6 +87,9 @@ type Generator struct {
 	// (e.g. Spec.APISpec.TLS.ClientIdentity) → generated Go type name for the
 	// parent struct that contains the sensitive leaf.
 	sensitiveObjectFieldParents map[string]map[string]string
+	// sensitiveLeafSelectors maps entity name → config path → pre-computed
+	// SecretReferenceForTemplate data (including slice/union-aware Go selectors).
+	sensitiveLeafSelectors map[string]map[string]SecretReferenceForTemplate
 	// ambiguousInlineTypeNames holds inline object type base names that would
 	// collide with another generated package type and therefore need a parent
 	// prefix when emitted.
@@ -203,7 +206,7 @@ func (g *Generator) buildSensitiveLeaves(parsed *parser.ParsedSpec) error {
 			if entitySchema == nil {
 				return fmt.Errorf("entity %q: schema not found for secretReferences path %q", entityName, ref.Path)
 			}
-			if err := g.walkSensitiveLeafPath(entityName, entityName+"APISpec", "Spec.APISpec", entitySchema, segments, ref, parsed.Schemas); err != nil {
+			if err := g.walkSensitiveLeafPath(entityName, entityName+"APISpec", "Spec.APISpec", entitySchema, segments, ref, parsed.Schemas, selectorAccumulator{}); err != nil {
 				return fmt.Errorf("entity %q path %q: %w", entityName, ref.Path, err)
 			}
 		}
@@ -214,6 +217,7 @@ func (g *Generator) buildSensitiveLeaves(parsed *parser.ParsedSpec) error {
 // walkSensitiveLeafPath walks the OAS schema tree to find the schema type that
 // contains the leaf field, then records it in g.sensitiveSchemaLeaves.
 // schemaGoTypeName is the Go type name of the current schema level.
+// acc accumulates the Go selector parts encountered during descent.
 func (g *Generator) walkSensitiveLeafPath(
 	entityName string,
 	schemaGoTypeName string,
@@ -222,55 +226,144 @@ func (g *Generator) walkSensitiveLeafPath(
 	segments []string,
 	ref config.SecretReferenceConfig,
 	schemas map[string]*parser.Schema,
+	acc selectorAccumulator,
 ) error {
 	targetJSON := segments[0]
 
-	// Find the property matching the first segment
+	// Handle root-level oneOf: entity schema is a discriminated union with no direct
+	// properties — variants are listed in OneOf with a discriminator mapping.
+	if len(schema.Properties) == 0 && len(schema.OneOf) > 0 {
+		// Discriminator mapping keys are OAS snake_case; path segments are camelCase.
+		// Match by converting each key via jsonName().
+		variantRef := ""
+		for k, v := range schema.DiscriminatorMapping {
+			if jsonName(k) == targetJSON || k == targetJSON {
+				variantRef = v
+				break
+			}
+		}
+		if variantRef == "" {
+			return fmt.Errorf("variant %q not found in discriminator mapping of schema %q", targetJSON, schemaGoTypeName)
+		}
+		variantSchema := schemas[variantRef]
+		if variantSchema == nil {
+			return fmt.Errorf("schema %q not found for variant %q", variantRef, targetJSON)
+		}
+		rawRefNames := make([]string, 0, len(schema.OneOf))
+		for _, v := range schema.OneOf {
+			if v.RefName != "" {
+				rawRefNames = append(rawRefNames, v.RefName)
+			}
+		}
+		cleanFieldNames := extractVariantNames(rawRefNames)
+		variantGoField := ""
+		for i, refName := range rawRefNames {
+			if refName == variantRef {
+				variantGoField = fixInitialisms(cleanFieldNames[i])
+				break
+			}
+		}
+		if variantGoField == "" {
+			return fmt.Errorf("Go field name not found for variant %q in schema %q", targetJSON, schemaGoTypeName)
+		}
+		containerGoName := entityName + "Config"
+		nextObjectFieldPath := objectFieldPath + "." + containerGoName + "." + variantGoField
+		newAcc := acc.withUnionContainer(containerGoName).withUnionVariant(variantGoField)
+		return g.walkSensitiveLeafPath(entityName, fixInitialisms(variantRef), nextObjectFieldPath, variantSchema, segments[1:], ref, schemas, newAcc)
+	}
+
+	// Strip optional array marker from the segment name.
+	lookupJSON := targetJSON
+	isArraySegment := strings.HasSuffix(targetJSON, "[]")
+	if isArraySegment {
+		lookupJSON = targetJSON[:len(targetJSON)-2]
+	}
+
+	// Find the property matching the first segment.
 	var targetProp *parser.Property
 	for i, prop := range schema.Properties {
-		if jsonName(prop.Name) == targetJSON || prop.Name == targetJSON {
+		if jsonName(prop.Name) == lookupJSON || prop.Name == lookupJSON {
 			targetProp = schema.Properties[i]
 			break
 		}
 	}
 	if targetProp == nil {
-		return fmt.Errorf("field %q not found in schema %q", targetJSON, schemaGoTypeName)
+		return fmt.Errorf("field %q not found in schema %q", lookupJSON, schemaGoTypeName)
+	}
+
+	// Array descent: step into array items before the remaining path segments.
+	if isArraySegment {
+		if targetProp.Type != "array" || targetProp.Items == nil {
+			return fmt.Errorf("field %q in schema %q is not an array type", lookupJSON, schemaGoTypeName)
+		}
+		if len(segments) == 1 {
+			return fmt.Errorf("array field %q cannot be a secret reference leaf", lookupJSON)
+		}
+		nextObjectFieldPath := objectFieldPath + "." + goFieldName(targetProp.Name)
+		newAcc := acc.withSlice(goFieldName(targetProp.Name))
+		if targetProp.Items.RefName != "" {
+			itemSchema := schemas[targetProp.Items.RefName]
+			if itemSchema == nil {
+				return fmt.Errorf("schema %q not found for array items of %q", targetProp.Items.RefName, lookupJSON)
+			}
+			return g.walkSensitiveLeafPath(entityName, fixInitialisms(targetProp.Items.RefName), nextObjectFieldPath, itemSchema, segments[1:], ref, schemas, newAcc)
+		}
+		if len(targetProp.Items.Properties) > 0 {
+			inlineSchema := &parser.Schema{Properties: targetProp.Items.Properties}
+			inlineTypeName := g.inlineTypeName(entityName, schemaGoTypeName, targetProp.Name)
+			return g.walkSensitiveLeafPath(entityName, inlineTypeName, nextObjectFieldPath, inlineSchema, segments[1:], ref, schemas, newAcc)
+		}
+		return fmt.Errorf("cannot navigate through array items of %q in schema %q", lookupJSON, schemaGoTypeName)
 	}
 
 	if len(segments) == 1 {
-		// Leaf — record against the containing schema
+		// Leaf — record against the containing schema.
 		if g.sensitiveSchemaLeaves[schemaGoTypeName] == nil {
 			g.sensitiveSchemaLeaves[schemaGoTypeName] = make(map[string]config.SecretReferenceConfig)
 		}
-		g.sensitiveSchemaLeaves[schemaGoTypeName][targetJSON] = ref
+		g.sensitiveSchemaLeaves[schemaGoTypeName][lookupJSON] = ref
 		if objectFieldPath != "Spec.APISpec" {
 			if g.sensitiveObjectFieldParents[entityName] == nil {
 				g.sensitiveObjectFieldParents[entityName] = make(map[string]string)
 			}
 			g.sensitiveObjectFieldParents[entityName][objectFieldPath] = schemaGoTypeName
 		}
+		// Record the structured selector for template generation.
+		leafGoField := goFieldName(targetProp.Name)
+		g.recordSensitiveLeafSelector(entityName, ref.Path, acc, leafGoField, ref.Key)
 		return nil
 	}
 
 	nextObjectFieldPath := objectFieldPath + "." + goFieldName(targetProp.Name)
+	newAcc := acc.withField(goFieldName(targetProp.Name))
 
-	// Navigate deeper
+	// Navigate deeper.
 	if targetProp.RefName != "" && !targetProp.IsReference {
 		refSchema := schemas[targetProp.RefName]
 		if refSchema == nil {
 			return fmt.Errorf("schema %q not found", targetProp.RefName)
 		}
-		return g.walkSensitiveLeafPath(entityName, fixInitialisms(targetProp.RefName), nextObjectFieldPath, refSchema, segments[1:], ref, schemas)
+		return g.walkSensitiveLeafPath(entityName, fixInitialisms(targetProp.RefName), nextObjectFieldPath, refSchema, segments[1:], ref, schemas, newAcc)
 	}
 
 	if len(targetProp.Properties) > 0 {
 		// Inline object — type name follows the generated inline type naming rule.
 		inlineSchema := &parser.Schema{Properties: targetProp.Properties}
 		inlineTypeName := g.inlineTypeName(entityName, schemaGoTypeName, targetProp.Name)
-		return g.walkSensitiveLeafPath(entityName, inlineTypeName, nextObjectFieldPath, inlineSchema, segments[1:], ref, schemas)
+		return g.walkSensitiveLeafPath(entityName, inlineTypeName, nextObjectFieldPath, inlineSchema, segments[1:], ref, schemas, newAcc)
 	}
 
-	return fmt.Errorf("cannot navigate through non-ref, non-inline field %q", targetJSON)
+	return fmt.Errorf("cannot navigate through non-ref, non-inline field %q", lookupJSON)
+}
+
+func (g *Generator) recordSensitiveLeafSelector(entityName, path string, acc selectorAccumulator, leafGoField, secretKey string) {
+	if g.sensitiveLeafSelectors == nil {
+		g.sensitiveLeafSelectors = make(map[string]map[string]SecretReferenceForTemplate)
+	}
+	if g.sensitiveLeafSelectors[entityName] == nil {
+		g.sensitiveLeafSelectors[entityName] = make(map[string]SecretReferenceForTemplate)
+	}
+	g.sensitiveLeafSelectors[entityName][path] = acc.buildTemplate(path, secretKey, leafGoField)
 }
 
 // findEntitySchema finds the request body schema for the given entity name.
@@ -452,19 +545,124 @@ func pathToJSONSegments(path string) []string {
 	if remainder == "" {
 		return nil
 	}
-	return strings.Split(remainder, ".")
+	rawSegs := strings.Split(remainder, ".")
+	result := make([]string, 0, len(rawSegs)+1)
+	for _, seg := range rawSegs {
+		if strings.HasSuffix(seg, "[]") {
+			result = append(result, seg[:len(seg)-2], "[]")
+		} else {
+			result = append(result, seg)
+		}
+	}
+	return result
 }
 
 // SecretReferenceForTemplate holds per-path secret reference data rendered inside
 // the sdkOpsTemplate and sdkOpsRootUnionTemplate.
 type SecretReferenceForTemplate struct {
 	// GoFieldSelector is the Go selector string relative to obj.Spec.APISpec,
-	// e.g. "TLS.ClientIdentity.Certificate".
+	// e.g. "TLS.ClientIdentity.Certificate". Empty when IsSlice is true.
 	GoFieldSelector string
 	// SecretKey is the data key to read from the referenced Kubernetes Secret.
 	SecretKey string
 	// Path is the original dot-separated config path, e.g. "spec.apiSpec.tls.clientIdentity.certificate".
 	Path string
+	// IsSlice is true when the secret leaf lives inside a slice field and the
+	// generated code must use a for-range loop to resolve each element.
+	IsSlice bool
+	// PointerGuards is the list of Go selectors (relative to obj.Spec.APISpec)
+	// that must be nil-checked before accessing the slice. Used only when IsSlice is true.
+	PointerGuards []string
+	// SliceParentSelector is the Go selector of the slice field relative to obj.Spec.APISpec.
+	// Used only when IsSlice is true.
+	SliceParentSelector string
+	// SliceLeafField is the Go field name of the sensitive leaf inside each slice element.
+	// Used only when IsSlice is true.
+	SliceLeafField string
+}
+
+// selectorPart records one step in a Go field selector during sensitive-leaf path walking.
+type selectorPart struct {
+	goName           string
+	isUnionContainer bool // embedded union type pointer — needs nil guard
+	isUnionVariant   bool // union variant pointer field — needs nil guard
+	isSlice          bool // slice/array field — needs for-range loop
+}
+
+// selectorAccumulator accumulates selectorPart entries as walkSensitiveLeafPath descends.
+type selectorAccumulator struct {
+	parts []selectorPart
+}
+
+func (acc selectorAccumulator) with(p selectorPart) selectorAccumulator {
+	parts := make([]selectorPart, len(acc.parts)+1)
+	copy(parts, acc.parts)
+	parts[len(acc.parts)] = p
+	return selectorAccumulator{parts: parts}
+}
+
+func (acc selectorAccumulator) withField(goName string) selectorAccumulator {
+	return acc.with(selectorPart{goName: goName})
+}
+
+func (acc selectorAccumulator) withUnionContainer(goName string) selectorAccumulator {
+	return acc.with(selectorPart{goName: goName, isUnionContainer: true})
+}
+
+func (acc selectorAccumulator) withUnionVariant(goName string) selectorAccumulator {
+	return acc.with(selectorPart{goName: goName, isUnionVariant: true})
+}
+
+func (acc selectorAccumulator) withSlice(goName string) selectorAccumulator {
+	return acc.with(selectorPart{goName: goName, isSlice: true})
+}
+
+// buildTemplate constructs a SecretReferenceForTemplate from the accumulated path parts.
+func (acc selectorAccumulator) buildTemplate(path, secretKey, leafGoField string) SecretReferenceForTemplate {
+	sliceIdx := -1
+	for i, p := range acc.parts {
+		if p.isSlice {
+			sliceIdx = i
+			break
+		}
+	}
+
+	if sliceIdx < 0 {
+		names := make([]string, 0, len(acc.parts)+1)
+		for _, p := range acc.parts {
+			names = append(names, p.goName)
+		}
+		names = append(names, leafGoField)
+		return SecretReferenceForTemplate{
+			GoFieldSelector: strings.Join(names, "."),
+			SecretKey:       secretKey,
+			Path:            path,
+		}
+	}
+
+	var pointerGuards []string
+	var runningPath []string
+	for i := range sliceIdx {
+		p := acc.parts[i]
+		runningPath = append(runningPath, p.goName)
+		if p.isUnionContainer || p.isUnionVariant {
+			pointerGuards = append(pointerGuards, strings.Join(runningPath, "."))
+		}
+	}
+
+	parentParts := make([]string, sliceIdx+1)
+	for i := 0; i <= sliceIdx; i++ {
+		parentParts[i] = acc.parts[i].goName
+	}
+
+	return SecretReferenceForTemplate{
+		Path:                path,
+		SecretKey:           secretKey,
+		IsSlice:             true,
+		PointerGuards:       pointerGuards,
+		SliceParentSelector: strings.Join(parentParts, "."),
+		SliceLeafField:      leafGoField,
+	}
 }
 
 // templateSecretReferences returns the list of SecretReferenceForTemplate for the
@@ -473,6 +671,12 @@ func (g *Generator) templateSecretReferences(entityName string) []SecretReferenc
 	refs := g.config.SecretReferences[entityName]
 	result := make([]SecretReferenceForTemplate, 0, len(refs))
 	for _, ref := range refs {
+		if selectors, ok := g.sensitiveLeafSelectors[entityName]; ok {
+			if tmpl, ok := selectors[ref.Path]; ok {
+				result = append(result, tmpl)
+				continue
+			}
+		}
 		result = append(result, SecretReferenceForTemplate{
 			GoFieldSelector: pathToGoSelector(ref.Path),
 			SecretKey:       ref.Key,

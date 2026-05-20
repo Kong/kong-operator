@@ -31,7 +31,7 @@ func CreateGeneratedOps[
 	case *konnectv1alpha1.EventGatewayListener:
 		return createEventGatewayListener(ctx, sdk.GetEventGatewayListenersSDK(), ent)
 	case *konnectv1alpha1.EventGatewayListenerPolicy:
-		return createEventGatewayListenerPolicy(ctx, sdk.GetEventGatewayListenerPoliciesSDK(), ent)
+		return createEventGatewayListenerPolicy(ctx, cl, sdk.GetEventGatewayListenerPoliciesSDK(), ent)
 	case *konnectv1alpha1.EventGatewayVirtualCluster:
 		return createEventGatewayVirtualCluster(ctx, sdk.GetEventGatewayVirtualClustersSDK(), ent)
 	case *konnectv1alpha1.EventGatewayVirtualClusterConsumePolicy:
