@@ -43,6 +43,7 @@ var commonSupportedFeatures = sets.New(
 
 	// TLSRoute extended.
 	features.SupportTLSRouteModeTerminate,
+	features.SupportTLSRouteModeMixed,
 )
 
 // GetSupportedFeatures returns the supported features for the given router type.
