@@ -43,7 +43,7 @@ type EventGatewayVirtualClusterProducePolicyList struct {
 
 // EventGatewayVirtualClusterProducePolicySpec defines the desired state of EventGatewayVirtualClusterProducePolicy.
 type EventGatewayVirtualClusterProducePolicySpec struct {
-	// EventGatewayVirtualClusterRef is the reference to the parent VirtualCluster object.
+	// EventGatewayVirtualClusterRef is the reference to the parent EventGatewayVirtualCluster object.
 	//
 	// +required
 	EventGatewayVirtualClusterRef commonv1alpha1.ObjectRef `json:"eventGatewayVirtualClusterRef,omitzero"`

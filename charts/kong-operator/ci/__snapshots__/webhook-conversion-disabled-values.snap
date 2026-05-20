@@ -30347,7 +30347,7 @@ spec:
                 - type
                 type: object
               eventGatewayVirtualClusterRef:
-                description: EventGatewayVirtualClusterRef is the reference to the parent VirtualCluster object.
+                description: EventGatewayVirtualClusterRef is the reference to the parent EventGatewayVirtualCluster object.
                 properties:
                   konnectID:
                     description: |-
@@ -47123,6 +47123,7 @@ rules:
   - eventgatewaylistenerpolicies
   - eventgatewaylisteners
   - eventgatewayvirtualclusterconsumepolicies
+  - eventgatewayvirtualclusterproducepolicies
   - eventgatewayvirtualclusters
   - identityproviderrequests
   - konnectapiauthconfigurations
@@ -47154,6 +47155,8 @@ rules:
   - eventgatewaylisteners/status
   - eventgatewayvirtualclusterconsumepolicies/finalizers
   - eventgatewayvirtualclusterconsumepolicies/status
+  - eventgatewayvirtualclusterproducepolicies/finalizers
+  - eventgatewayvirtualclusterproducepolicies/status
   - eventgatewayvirtualclusters/finalizers
   - eventgatewayvirtualclusters/status
   - identityproviderrequests/finalizers
