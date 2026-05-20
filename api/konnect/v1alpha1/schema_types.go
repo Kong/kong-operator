@@ -397,10 +397,13 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EncryptionKey) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, _ := json.Marshal(string(u.Type))
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EncryptionKey type: %w", err)
+	}
 	m["type"] = typeBytes
 	switch u.Type {
-	case "aws":
+	case EncryptionKeyTypeAWS:
 		if u.AWS != nil {
 			raw, err := json.Marshal(u.AWS)
 			if err != nil {
@@ -408,7 +411,7 @@ func (u EncryptionKey) MarshalJSON() ([]byte, error) {
 			}
 			m["aws"] = raw
 		}
-	case "static":
+	case EncryptionKeyTypeStatic:
 		if u.Static != nil {
 			raw, err := json.Marshal(u.Static)
 			if err != nil {
@@ -838,10 +841,13 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayEncryptConfigEncryptionKey) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, _ := json.Marshal(string(u.Type))
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayEncryptConfigEncryptionKey type: %w", err)
+	}
 	m["type"] = typeBytes
 	switch u.Type {
-	case "aws":
+	case EventGatewayEncryptConfigEncryptionKeyTypeAWS:
 		if u.AWS != nil {
 			raw, err := json.Marshal(u.AWS)
 			if err != nil {
@@ -849,7 +855,7 @@ func (u EventGatewayEncryptConfigEncryptionKey) MarshalJSON() ([]byte, error) {
 			}
 			m["aws"] = raw
 		}
-	case "static":
+	case EventGatewayEncryptConfigEncryptionKeyTypeStatic:
 		if u.Static != nil {
 			raw, err := json.Marshal(u.Static)
 			if err != nil {
@@ -1337,10 +1343,13 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayProduceSchemaValidationPolicyConfig) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, _ := json.Marshal(string(u.Type))
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayProduceSchemaValidationPolicyConfig type: %w", err)
+	}
 	m["type"] = typeBytes
 	switch u.Type {
-	case "confluentSchemaRegistry":
+	case EventGatewayProduceSchemaValidationPolicyConfigTypeSchemaRegistry:
 		if u.SchemaRegistry != nil {
 			raw, err := json.Marshal(u.SchemaRegistry)
 			if err != nil {
@@ -1348,7 +1357,7 @@ func (u EventGatewayProduceSchemaValidationPolicyConfig) MarshalJSON() ([]byte, 
 			}
 			m["confluentSchemaRegistry"] = raw
 		}
-	case "json":
+	case EventGatewayProduceSchemaValidationPolicyConfigTypeJSON:
 		if u.JSON != nil {
 			raw, err := json.Marshal(u.JSON)
 			if err != nil {
@@ -1466,10 +1475,13 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, _ := json.Marshal(string(u.Type))
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry type: %w", err)
+	}
 	m["type"] = typeBytes
 	switch u.Type {
-	case "id":
+	case EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryTypeID:
 		if u.ID != nil {
 			raw, err := json.Marshal(u.ID)
 			if err != nil {
@@ -1477,7 +1489,7 @@ func (u EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry) Marsh
 			}
 			m["id"] = raw
 		}
-	case "name":
+	case EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryTypeName:
 		if u.Name != nil {
 			raw, err := json.Marshal(u.Name)
 			if err != nil {
@@ -1614,10 +1626,13 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, _ := json.Marshal(string(u.Type))
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry type: %w", err)
+	}
 	m["type"] = typeBytes
 	switch u.Type {
-	case "id":
+	case EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryTypeID:
 		if u.ID != nil {
 			raw, err := json.Marshal(u.ID)
 			if err != nil {
@@ -1625,7 +1640,7 @@ func (u EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegis
 			}
 			m["id"] = raw
 		}
-	case "name":
+	case EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryTypeName:
 		if u.Name != nil {
 			raw, err := json.Marshal(u.Name)
 			if err != nil {
