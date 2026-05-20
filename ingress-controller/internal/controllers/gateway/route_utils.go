@@ -66,26 +66,6 @@ func (g supportedGatewayWithCondition) GetSectionName() mo.Option[string] {
 // parentRefsForRoute provides a list of the parentRefs given a Gateway APIs route object
 // (e.g. HTTPRoute, TCPRoute, e.t.c.) which refer to the Gateway resource(s) which manage it.
 func parentRefsForRoute[T gatewayapi.RouteT](route T) ([]gatewayapi.ParentReference, error) {
-	// Note: Ideally we wouldn't have to do this but it's hard to juggle around types
-	// and support ParentReference and gatewayapi.ParentReference
-	// at the same time so we just copy v1alpha2 refs to a new v1beta1 slice.
-	convertV1Alpha2ToV1Beta1ParentReference := func(
-		refsAlpha []gatewayapi.ParentReference,
-	) []gatewayapi.ParentReference {
-		ret := make([]gatewayapi.ParentReference, len(refsAlpha))
-		for i, v := range refsAlpha {
-			ret[i] = gatewayapi.ParentReference{
-				Group:       v.Group,
-				Kind:        v.Kind,
-				Namespace:   v.Namespace,
-				Name:        v.Name,
-				SectionName: v.SectionName,
-				Port:        v.Port,
-			}
-		}
-		return ret
-	}
-
 	var refs []gatewayapi.ParentReference
 	switch r := (any)(route).(type) {
 	case *gatewayapi.HTTPRoute:
@@ -115,20 +95,7 @@ func parentRefsForRoute[T gatewayapi.RouteT](route T) ([]gatewayapi.ParentRefere
 		}
 	}
 
-	switch r := (any)(route).(type) {
-	case *gatewayapi.HTTPRoute:
-		return r.Spec.ParentRefs, nil
-	case *gatewayapi.UDPRoute:
-		return convertV1Alpha2ToV1Beta1ParentReference(r.Spec.ParentRefs), nil
-	case *gatewayapi.TCPRoute:
-		return convertV1Alpha2ToV1Beta1ParentReference(r.Spec.ParentRefs), nil
-	case *gatewayapi.TLSRoute:
-		return convertV1Alpha2ToV1Beta1ParentReference(r.Spec.ParentRefs), nil
-	case *gatewayapi.GRPCRoute:
-		return convertV1Alpha2ToV1Beta1ParentReference(r.Spec.ParentRefs), nil
-	default:
-		return nil, fmt.Errorf("can't determine parent Gateway for unsupported route type %s", reflect.TypeOf(route))
-	}
+	return refs, nil
 }
 
 // getSupportedGatewayForRoute will retrieve the Gateway and GatewayClass object for any
@@ -162,11 +129,7 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](
 		// If the flag `--gateway-to-reconcile` is set, KIC will only reconcile the specified gateway.
 		// https://github.com/Kong/kubernetes-ingress-controller/issues/5322
 		if gatewayToReconcile, ok := specifiedGW.Get(); ok {
-			parentNamespace := route.GetNamespace()
-			if parentRef.Namespace != nil {
-				parentNamespace = string(*parentRef.Namespace)
-			}
-			if parentNamespace != gatewayToReconcile.Namespace || string(parentRef.Name) != gatewayToReconcile.Name {
+			if namespace != gatewayToReconcile.Namespace || name != gatewayToReconcile.Name {
 				continue
 			}
 		}
