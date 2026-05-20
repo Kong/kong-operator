@@ -1172,6 +1172,14 @@ func (g *gatewayConditionsAndListenersAwareT) setConflicted() {
 				conflictedCondition.Reason = string(gatewayv1.ListenerReasonProtocolConflict)
 				break
 			}
+			// TODO: support multiple TLS listeners sharing the same port (e.g. via SNI).
+			// Tracked in https://github.com/Kong/kong-operator/issues/3511.
+			// Until then, a TLS listener that shares its port with any other listener is conflicted.
+			if l.Port == l2.Port && l.Protocol == gatewayv1.TLSProtocolType {
+				conflictedCondition.Status = metav1.ConditionTrue
+				conflictedCondition.Reason = string(gatewayv1.ListenerReasonProtocolConflict)
+				break
+			}
 			// If two listeners specify the same hostname, they have a hostname conflict, and
 			// the conflicted condition must be updated accordingly.
 			if l.Hostname != nil && l2.Hostname != nil && *l.Hostname == *l2.Hostname {

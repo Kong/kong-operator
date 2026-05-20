@@ -242,6 +242,10 @@
   `Accepted=False` with the conflict reason, per Gateway API spec rule that
   "ALL indistinct Listeners must not be accepted for processing". Previously
   conflicting listeners stayed `Accepted=True`.
+  Additionally, TLS listeners that share a port with another listener are now
+  marked `Conflicted=True/ProtocolConflict` (and therefore not accepted), since
+  multiplexing multiple TLS listeners on a single port is not yet supported —
+  tracked in [#3511](https://github.com/Kong/kong-operator/issues/3511).
 - Add `ResolvedRefs` condition update for `TLSRoute`s and enable `ReferenceGrant`
   to control the cross-namespace reference from `TLSRoute`s to their backendRefs
   in on-prem `TLSRoute` controller.

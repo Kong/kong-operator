@@ -4045,6 +4045,39 @@ func TestSetAcceptedAndAttachedRoutes(t *testing.T) {
 			},
 		},
 		{
+			name: "two TLS listeners sharing a port are conflicted and not accepted",
+			listeners: []gwtypes.Listener{
+				{
+					Name:          "tls-a",
+					Protocol:      gatewayv1.TLSProtocolType,
+					Port:          443,
+					Hostname:      new(gatewayv1.Hostname("a.example.com")),
+					AllowedRoutes: allowedRoutesFromSame,
+				},
+				{
+					Name:          "tls-b",
+					Protocol:      gatewayv1.TLSProtocolType,
+					Port:          443,
+					Hostname:      new(gatewayv1.Hostname("b.example.com")),
+					AllowedRoutes: allowedRoutesFromSame,
+				},
+			},
+			expected: []expectedCond{
+				{
+					acceptedStatus:   metav1.ConditionFalse,
+					acceptedReason:   gatewayv1.ListenerReasonProtocolConflict,
+					conflictedStatus: metav1.ConditionTrue,
+					conflictedReason: gatewayv1.ListenerReasonProtocolConflict,
+				},
+				{
+					acceptedStatus:   metav1.ConditionFalse,
+					acceptedReason:   gatewayv1.ListenerReasonProtocolConflict,
+					conflictedStatus: metav1.ConditionTrue,
+					conflictedReason: gatewayv1.ListenerReasonProtocolConflict,
+				},
+			},
+		},
+		{
 			name: "two listeners sharing a hostname are conflicted and not accepted",
 			listeners: []gwtypes.Listener{
 				{
