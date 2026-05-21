@@ -425,6 +425,7 @@ rules:
       - eventgatewaylistenerpolicies
       - eventgatewaylisteners
       - eventgatewayvirtualclusterconsumepolicies
+      - eventgatewayvirtualclusterproducepolicies
       - eventgatewayvirtualclusters
       - identityproviderrequests
       - konnectapiauthconfigurations
@@ -456,6 +457,8 @@ rules:
       - eventgatewaylisteners/status
       - eventgatewayvirtualclusterconsumepolicies/finalizers
       - eventgatewayvirtualclusterconsumepolicies/status
+      - eventgatewayvirtualclusterproducepolicies/finalizers
+      - eventgatewayvirtualclusterproducepolicies/status
       - eventgatewayvirtualclusters/finalizers
       - eventgatewayvirtualclusters/status
       - identityproviderrequests/finalizers

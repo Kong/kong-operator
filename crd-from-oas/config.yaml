@@ -178,6 +178,21 @@ apiGroupVersions:
             - KonnectEventGateway
       - path: /v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/produce-policies
         name: EventGatewayVirtualClusterProducePolicy
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.EventGatewayVirtualClusterProducePoliciesSDK
+            fieldName: EventGatewayVirtualClusterProducePolicies
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/operations.CreateEventGatewayVirtualClusterProducePolicyRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/operations.UpdateEventGatewayVirtualClusterProducePolicyRequest
+          delete: {}
+        reconciler:
+          parentEntityType: EventGatewayVirtualCluster
+          parentRef:
+            fieldName: eventGatewayVirtualClusterRef
+          ancestorEntityTypes:
+            - KonnectEventGateway
 
       # Portal APIs
       - path: /v3/portals

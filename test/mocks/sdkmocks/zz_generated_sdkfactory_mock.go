@@ -15,6 +15,7 @@ type generatedMockSDKWrapper struct {
 	EventGatewayListenerPoliciesSDK              *mocks.MockEventGatewayListenerPoliciesSDK
 	EventGatewayVirtualClustersSDK               *mocks.MockEventGatewayVirtualClustersSDK
 	EventGatewayVirtualClusterConsumePoliciesSDK *mocks.MockEventGatewayVirtualClusterConsumePoliciesSDK
+	EventGatewayVirtualClusterProducePoliciesSDK *mocks.MockEventGatewayVirtualClusterProducePoliciesSDK
 	PortalAuthSettingsSDK                        *mocks.MockPortalAuthSettingsSDK
 	EventGatewayDataPlaneCertificatesSDK         *mocks.MockEventGatewayDataPlaneCertificatesSDK
 	EventGatewaysSDK                             *mocks.MockEventGatewaysSDK
@@ -34,6 +35,7 @@ func newGeneratedMockSDKWrapper(t *testing.T) generatedMockSDKWrapper {
 		EventGatewayListenerPoliciesSDK:              mocks.NewMockEventGatewayListenerPoliciesSDK(t),
 		EventGatewayVirtualClustersSDK:               mocks.NewMockEventGatewayVirtualClustersSDK(t),
 		EventGatewayVirtualClusterConsumePoliciesSDK: mocks.NewMockEventGatewayVirtualClusterConsumePoliciesSDK(t),
+		EventGatewayVirtualClusterProducePoliciesSDK: mocks.NewMockEventGatewayVirtualClusterProducePoliciesSDK(t),
 		PortalAuthSettingsSDK:                        mocks.NewMockPortalAuthSettingsSDK(t),
 		EventGatewayDataPlaneCertificatesSDK:         mocks.NewMockEventGatewayDataPlaneCertificatesSDK(t),
 		EventGatewaysSDK:                             mocks.NewMockEventGatewaysSDK(t),
@@ -70,6 +72,11 @@ func (m generatedMockSDKWrapper) GetEventGatewayVirtualClustersSDK() sdkkonnectg
 // GetEventGatewayVirtualClusterConsumePoliciesSDK returns the SDK to operate EventGatewayVirtualClusterConsumePolicy.
 func (m generatedMockSDKWrapper) GetEventGatewayVirtualClusterConsumePoliciesSDK() sdkkonnectgo.EventGatewayVirtualClusterConsumePoliciesSDK {
 	return m.EventGatewayVirtualClusterConsumePoliciesSDK
+}
+
+// GetEventGatewayVirtualClusterProducePoliciesSDK returns the SDK to operate EventGatewayVirtualClusterProducePolicy.
+func (m generatedMockSDKWrapper) GetEventGatewayVirtualClusterProducePoliciesSDK() sdkkonnectgo.EventGatewayVirtualClusterProducePoliciesSDK {
+	return m.EventGatewayVirtualClusterProducePoliciesSDK
 }
 
 // GetPortalAuthSettingsSDK returns the SDK to operate IdentityProviderRequest.

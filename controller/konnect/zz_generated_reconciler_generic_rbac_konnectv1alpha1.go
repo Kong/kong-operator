@@ -17,6 +17,9 @@ package konnect
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=eventgatewayvirtualclusterconsumepolicies,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=eventgatewayvirtualclusterconsumepolicies/status,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=eventgatewayvirtualclusterconsumepolicies/finalizers,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=eventgatewayvirtualclusterproducepolicies,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=eventgatewayvirtualclusterproducepolicies/status,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=eventgatewayvirtualclusterproducepolicies/finalizers,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=identityproviderrequests,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=identityproviderrequests/status,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=identityproviderrequests/finalizers,verbs=update;patch

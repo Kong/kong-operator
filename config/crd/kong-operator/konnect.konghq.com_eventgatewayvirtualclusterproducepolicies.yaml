@@ -517,7 +517,7 @@ spec:
                 type: object
               eventGatewayVirtualClusterRef:
                 description: EventGatewayVirtualClusterRef is the reference to the
-                  parent VirtualCluster object.
+                  parent EventGatewayVirtualCluster object.
                 properties:
                   konnectID:
                     description: |-

@@ -14,6 +14,7 @@ type SupportedGeneratedKonnectEntityType interface {
 		konnectv1alpha1.EventGatewayListenerPolicy |
 		konnectv1alpha1.EventGatewayVirtualCluster |
 		konnectv1alpha1.EventGatewayVirtualClusterConsumePolicy |
+		konnectv1alpha1.EventGatewayVirtualClusterProducePolicy |
 		konnectv1alpha1.IdentityProviderRequest |
 		konnectv1alpha1.KonnectEventDataPlaneCertificate |
 		konnectv1alpha1.KonnectEventGateway |
