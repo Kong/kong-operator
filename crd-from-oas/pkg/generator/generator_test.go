@@ -3939,6 +3939,7 @@ func TestGenerateEntityOpsFile_UsesConfiguredSDKInterface(t *testing.T) {
 	res, err := g.generateEntityOpsFile("PortalPage", schema, opsConfig)
 	require.NoError(t, err)
 	require.NotNil(t, res.File)
+	require.NotNil(t, res.TestFile)
 	require.NotNil(t, res.CreateInfo)
 	require.NotNil(t, res.UpdateInfo)
 	require.NotNil(t, res.DeleteInfo)
@@ -3953,6 +3954,9 @@ func TestGenerateEntityOpsFile_UsesConfiguredSDKInterface(t *testing.T) {
 	assert.NotNil(t, res.SDKFactoryInfo)
 	assert.Equal(t, "PortalPagesSDK", res.SDKFactoryInfo.SDKInterfaceTypeName)
 	assert.Equal(t, "PortalPages", res.SDKFactoryInfo.SDKFieldName)
+	assert.Equal(t, "zz_generated_ops_portalpage_test.go", res.TestFile.Name)
+	assert.Contains(t, res.TestFile.Content, "mocks.NewMockPortalPagesSDK(t)")
+	assert.Contains(t, res.TestFile.Content, "obj.SetPortalID(parentID)")
 }
 
 func TestGenerateEntityOpsFile_GetForUIDUsesUIDTagFilter(t *testing.T) {
@@ -4273,11 +4277,14 @@ func TestGenerateEntityOpsFile_GetForUIDSingletonNoIDWithoutMatchStrategy(t *tes
 	res, err := g.generateEntityOpsFile("PortalCustomization", schema, opsConfig)
 	require.NoError(t, err)
 	require.NotNil(t, res.File)
+	require.NotNil(t, res.TestFile)
 	require.NotNil(t, res.GetForUIDInfo)
 
 	assert.Contains(t, res.File.Content, "singleton sub-resource without a persistent Konnect")
 	assert.Contains(t, res.File.Content, `return "", EntityWithMatchingUIDNotFoundError{Entity: obj}`)
 	assert.NotContains(t, res.File.Content, "sdk.GetPortalCustomization(ctx, parentID)")
+	assert.Contains(t, res.TestFile.Content, "expectedRequest := &sdkkonnectcomp.PortalCustomization{}")
+	assert.Contains(t, res.TestFile.Content, "DeletePortalCustomization")
 }
 
 // TestGenerateEntityOpsFile_ParentScopedSingleton verifies correct code

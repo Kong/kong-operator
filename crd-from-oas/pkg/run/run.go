@@ -186,7 +186,12 @@ func (r *Runner) Run(
 			if err := removeFileIfExists(staleOpsFile); err != nil {
 				return fmt.Errorf("failed to remove stale ops file %q: %w", staleOpsFile, err)
 			}
+			staleOpsTestFile := filepath.Join(opsDir, generatedOpsTestFileName(info.Entity))
+			if err := removeFileIfExists(staleOpsTestFile); err != nil {
+				return fmt.Errorf("failed to remove stale ops test file %q: %w", staleOpsTestFile, err)
+			}
 			if collidedEntities[info.Entity] {
+				skippedOpsFiles[generatedOpsTestFileName(info.Entity)] = true
 				continue
 			}
 			opsCreateInfosKept = append(opsCreateInfosKept, info)
@@ -467,6 +472,10 @@ func handWrittenGetForUIDHelperFileNames(entity string) []string {
 // e.g. "Portal" → "zz_generated_ops_portal.go".
 func generatedOpsFileName(entity string) string {
 	return "zz_generated_ops_" + generator.EntityFilePrefix(entity) + ".go"
+}
+
+func generatedOpsTestFileName(entity string) string {
+	return "zz_generated_ops_" + generator.EntityFilePrefix(entity) + "_test.go"
 }
 
 func cleanupLegacyGeneratedFiles(projectRoot, dir string, parsed *parser.ParsedSpec) error {

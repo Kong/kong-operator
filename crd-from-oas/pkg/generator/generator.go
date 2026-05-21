@@ -1161,12 +1161,15 @@ func (g *Generator) generateEntityFiles(name, entityName string, schema *parser.
 	}
 	files = append(files, sdkOpsFiles...)
 
-	opsFile, err := g.generateEntityOpsFileForEntity(entityName, schema)
+	opsFile, opsTestFile, err := g.generateEntityOpsFileForEntity(entityName, schema)
 	if err != nil {
 		return nil, err
 	}
 	if opsFile != nil {
 		files = append(files, *opsFile)
+	}
+	if opsTestFile != nil {
+		files = append(files, *opsTestFile)
 	}
 
 	return files, nil
@@ -1200,27 +1203,24 @@ func (g *Generator) generateEntitySDKOpsFiles(entityName string, schema *parser.
 	}, nil
 }
 
-// generateEntityOpsFile generates the per-entity Konnect ops file containing
-// create and/or update functions. The cross-group dispatchers are emitted
-// separately by the Runner after all group-versions finish.
-func (g *Generator) generateEntityOpsFileForEntity(entityName string, schema *parser.Schema) (*GeneratedFile, error) {
+// generateEntityOpsFile generates the per-entity Konnect ops file and matching
+// controller ops tests. The cross-group dispatchers are emitted separately by
+// the Runner after all group-versions finish.
+func (g *Generator) generateEntityOpsFileForEntity(entityName string, schema *parser.Schema) (*GeneratedFile, *GeneratedFile, error) {
 	if g.config.ReconcilerConfig == nil || g.config.OpsConfig == nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 	if _, hasReconciler := g.config.ReconcilerConfig[entityName]; !hasReconciler {
-		return nil, nil
+		return nil, nil, nil
 	}
 	opsConfig, ok := g.config.OpsConfig[entityName]
 	if !ok || opsConfig == nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	opsResult, err := g.generateEntityOpsFile(entityName, schema, opsConfig)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate ops file for %s: %w", entityName, err)
-	}
-	if opsResult.File == nil {
-		return nil, nil
+		return nil, nil, fmt.Errorf("failed to generate ops file for %s: %w", entityName, err)
 	}
 	if opsResult.CreateInfo != nil {
 		g.opsCreateInfos = append(g.opsCreateInfos, opsResult.CreateInfo)
@@ -1237,7 +1237,7 @@ func (g *Generator) generateEntityOpsFileForEntity(entityName string, schema *pa
 	if opsResult.SDKFactoryInfo != nil {
 		g.sdkFactoryInfos = append(g.sdkFactoryInfos, opsResult.SDKFactoryInfo)
 	}
-	return opsResult.File, nil
+	return opsResult.File, opsResult.TestFile, nil
 }
 
 // generateReconcilerEntityFiles generates reconciler wiring files for all
