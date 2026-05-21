@@ -6,8 +6,8 @@ import (
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/structured-merge-diff/v4/fieldpath"
-	"sigs.k8s.io/structured-merge-diff/v4/typed"
+	"sigs.k8s.io/structured-merge-diff/v6/fieldpath"
+	"sigs.k8s.io/structured-merge-diff/v6/typed"
 
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
