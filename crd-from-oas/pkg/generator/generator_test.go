@@ -3055,16 +3055,15 @@ func TestGenerateSDKOpsTest_AssertsNormalizedPayload(t *testing.T) {
 	assert.Contains(t, content, `require.Equal(t, "test-value", payload["name"])`)
 }
 
-func TestGenerateSDKOpsTest_Base64EncodesConfiguredSensitiveFields(t *testing.T) {
+func TestGenerateSDKOpsTest_UsesRawConfiguredSensitiveFields(t *testing.T) {
 	g := NewGenerator(Config{
 		APIVersion: "v1alpha1",
 		SecretReferences: map[string][]config.SecretReferenceConfig{
 			"EventGatewayBackendCluster": {
 				{
-					Path:           "spec.apiSpec.key",
-					Type:           "Secret",
-					Key:            "tls.key",
-					Base64Encoding: true,
+					Path: "spec.apiSpec.key",
+					Type: "Secret",
+					Key:  "tls.key",
 				},
 			},
 		},
@@ -3095,7 +3094,7 @@ func TestGenerateSDKOpsTest_Base64EncodesConfiguredSensitiveFields(t *testing.T)
 	content, err := g.generateSDKOpsTest("EventGatewayBackendCluster", schema, opsConfig)
 	require.NoError(t, err)
 	assert.Contains(t, content, `Key: SensitiveDataSource{Type: SensitiveDataSourceTypeInline, Value: new("test-value")}`)
-	assert.Contains(t, content, `require.Equal(t, "dGVzdC12YWx1ZQ==", payload["key"])`)
+	assert.Contains(t, content, `require.Equal(t, "test-value", payload["key"])`)
 }
 
 func TestGenerateSDKOpsTest_SupportsPointerAndNamedFields(t *testing.T) {
@@ -4633,7 +4632,7 @@ func TestGenerateSDKOps_ClientRequestMethodsResolveSecretRef(t *testing.T) {
 		SecretReferences: map[string][]config.SecretReferenceConfig{
 			"KonnectEventDataPlaneCertificate": {
 				{Path: "spec.apiSpec.certificate", Type: "Secret", Key: "tls.crt"},
-				{Path: "spec.apiSpec.key", Type: "Secret", Key: "tls.key", Base64Encoding: true},
+				{Path: "spec.apiSpec.key", Type: "Secret", Key: "tls.key"},
 			},
 		},
 	})
@@ -4656,12 +4655,10 @@ func TestGenerateSDKOps_ClientRequestMethodsResolveSecretRef(t *testing.T) {
 	content, err := g.generateSDKOps("KonnectEventDataPlaneCertificate", schema, opsConfig)
 	require.NoError(t, err)
 	assert.Contains(t, content, `"context"`)
-	assert.Contains(t, content, `"encoding/base64"`)
+	assert.NotContains(t, content, `"encoding/base64"`)
 	assert.Contains(t, content, `corev1 "k8s.io/api/core/v1"`)
 	assert.Contains(t, content, `"sigs.k8s.io/controller-runtime/pkg/client"`)
-	assert.Contains(t, content, "var KonnectEventDataPlaneCertificateSDKOpsBase64Fields = []KonnectEventDataPlaneCertificateSDKOpsBase64Field")
-	assert.Contains(t, content, `Label: "spec.apiSpec.key"`)
-	assert.Contains(t, content, `return base64.StdEncoding.WithPadding(base64.NoPadding).EncodeToString([]byte(typed)), nil`)
+	assert.NotContains(t, content, "SDKOpsBase64Field")
 	assert.Contains(t, content, "func (obj *KonnectEventDataPlaneCertificate) sdkOpsAPISpec(ctx context.Context, cl client.Client)")
 	assert.Contains(t, content, "src := apiSpec.Certificate")
 	assert.Contains(t, content, "src := apiSpec.Key")
@@ -4671,8 +4668,8 @@ func TestGenerateSDKOps_ClientRequestMethodsResolveSecretRef(t *testing.T) {
 	assert.Contains(t, content, "apiSpec.Certificate.Value = &resolved")
 	assert.Contains(t, content, "apiSpec.Key.Value = &resolved")
 	assert.Contains(t, content, "payload = flattenSensitiveData(payload)")
-	assert.Contains(t, content, "if err := encodeKonnectEventDataPlaneCertificateSDKOpsBase64Fields(pm); err != nil {")
-	assert.Contains(t, content, "failed to base64 encode KonnectEventDataPlaneCertificateAPISpec SDK payload")
+	assert.NotContains(t, content, "encodeKonnectEventDataPlaneCertificateSDKOpsBase64Fields")
+	assert.NotContains(t, content, "failed to base64 encode KonnectEventDataPlaneCertificateAPISpec SDK payload")
 	assert.Contains(t, content, "func (obj *KonnectEventDataPlaneCertificate) ToCreateEventGatewayDataPlaneCertificateRequest(ctx context.Context, cl client.Client)")
 	assert.Contains(t, content, "return spec.ToCreateEventGatewayDataPlaneCertificateRequest()")
 	assert.Contains(t, content, "func (obj *KonnectEventDataPlaneCertificate) ToUpdateEventGatewayDataPlaneCertificateRequest(ctx context.Context, cl client.Client)")

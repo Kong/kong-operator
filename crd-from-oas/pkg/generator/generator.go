@@ -1,7 +1,6 @@
 package generator
 
 import (
-	"encoding/base64"
 	"fmt"
 	"go/format"
 	"reflect"
@@ -390,8 +389,7 @@ func (g *Generator) isSchemaFieldSensitiveLeaf(schemaGoTypeName, jsonFieldName s
 // isEntityAPISpecFieldSensitiveLeaf returns true if the given JSON field name
 // is a direct apiSpec-level sensitive leaf for the given entity.
 func (g *Generator) isEntityAPISpecFieldSensitiveLeaf(entityName, jsonFieldName string) bool {
-	_, found := g.entityAPISpecSensitiveLeaf(entityName, jsonFieldName)
-	return found
+	return g.entityAPISpecSensitiveLeaf(entityName, jsonFieldName)
 }
 
 // isSensitiveMatchField returns true if the given getForUID objectField path
@@ -540,23 +538,6 @@ func pathToGoSelector(path string) string {
 	return strings.Join(segments, ".")
 }
 
-func pathToJSONSegments(path string) []string {
-	remainder := strings.TrimPrefix(path, "spec.apiSpec.")
-	if remainder == "" {
-		return nil
-	}
-	rawSegs := strings.Split(remainder, ".")
-	result := make([]string, 0, len(rawSegs)+1)
-	for _, seg := range rawSegs {
-		if strings.HasSuffix(seg, "[]") {
-			result = append(result, seg[:len(seg)-2], "[]")
-		} else {
-			result = append(result, seg)
-		}
-	}
-	return result
-}
-
 // SecretReferenceForTemplate holds per-path secret reference data rendered inside
 // the sdkOpsTemplate and sdkOpsRootUnionTemplate.
 type SecretReferenceForTemplate struct {
@@ -686,31 +667,13 @@ func (g *Generator) templateSecretReferences(entityName string) []SecretReferenc
 	return result
 }
 
-// buildSDKOpsBase64Fields returns the list of sdkOpsBase64Field for the given entity.
-// TODO: Remove Base64 encoding when API starts accepting raw values.
-// TODO: https://github.com/Kong/kong-operator/issues/4304
-func (g *Generator) buildSDKOpsBase64Fields(entityName string) []sdkOpsBase64Field {
-	refs := g.config.SecretReferences[entityName]
-	result := make([]sdkOpsBase64Field, 0, len(refs))
-	for _, ref := range refs {
-		if !ref.Base64Encoding {
-			continue
-		}
-		result = append(result, sdkOpsBase64Field{
-			Label: ref.Path,
-			Path:  pathToJSONSegments(ref.Path),
-		})
-	}
-	return result
-}
-
-func (g *Generator) entityAPISpecSensitiveLeaf(entityName, jsonFieldName string) (config.SecretReferenceConfig, bool) {
+func (g *Generator) entityAPISpecSensitiveLeaf(entityName, jsonFieldName string) bool {
 	leaves, ok := g.entityDirectSensitiveLeaves[entityName]
 	if !ok {
-		return config.SecretReferenceConfig{}, false
+		return false
 	}
-	ref, found := leaves[jsonFieldName]
-	return ref, found
+	_, found := leaves[jsonFieldName]
+	return found
 }
 
 // Generate generates Go CRD types from parsed schemas.
@@ -3514,16 +3477,6 @@ type sdkOpsBoolField struct {
 	Path  []string
 }
 
-// sdkOpsBase64Field represents a sensitive field path that must be base64
-// encoded before the SDK request is unmarshaled into its target type.
-//
-// TODO: Remove Base64 encoding when API starts accepting raw values.
-// TODO: https://github.com/Kong/kong-operator/issues/4304
-type sdkOpsBase64Field struct {
-	Label string
-	Path  []string
-}
-
 // sdkOpsTestField represents a field to populate in the generated test.
 type sdkOpsTestField struct {
 	FieldName     string
@@ -3600,7 +3553,6 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		EntityName              string
 		Imports                 []*sdkOpsImport
 		BoolFields              []sdkOpsBoolField
-		Base64Fields            []sdkOpsBase64Field
 		Methods                 []sdkOpsMethod
 		NeedsClient             bool
 		SecretReferences        []SecretReferenceForTemplate
@@ -3614,7 +3566,6 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		EntityName:              entityName,
 		Imports:                 imports,
 		BoolFields:              boolFields,
-		Base64Fields:            g.buildSDKOpsBase64Fields(entityName),
 		Methods:                 standardMethods,
 		NeedsClient:             opsConfig.RequireClient,
 		SecretReferences:        g.templateSecretReferences(entityName),
@@ -3823,7 +3774,6 @@ func (g *Generator) generateRootUnionSDKOps(
 		UnionTypeName    string
 		Imports          []*sdkOpsImport
 		BoolFields       []sdkOpsBoolField
-		Base64Fields     []sdkOpsBase64Field
 		Methods          []sdkOpsRootUnionMethod
 		Variants         []sdkOpsRootUnionVariant
 		NeedsClient      bool
@@ -3834,7 +3784,6 @@ func (g *Generator) generateRootUnionSDKOps(
 		UnionTypeName:    rootUnionTypeName,
 		Imports:          imports,
 		BoolFields:       boolFields,
-		Base64Fields:     g.buildSDKOpsBase64Fields(entityName),
 		Methods:          rootUnionMethods,
 		Variants:         variants,
 		NeedsClient:      opsConfig.RequireClient,
@@ -3897,18 +3846,14 @@ func (g *Generator) buildSDKOpsTestFields(entityName string, props []*parser.Pro
 		if skipProperty(prop) || prop.IsReference || shouldSkipSDKOpsTestField(prop, method) {
 			continue
 		}
-		if ref, ok := g.entityAPISpecSensitiveLeaf(entityName, jsonName(prop.Name)); ok {
-			expectedValue := "test-value"
-			if ref.Base64Encoding {
-				expectedValue = base64.StdEncoding.EncodeToString([]byte(expectedValue))
-			}
+		if ok := g.entityAPISpecSensitiveLeaf(entityName, jsonName(prop.Name)); ok {
 			// SensitiveDataSource field: emit an inline value; after flattenSensitiveData
 			// the JSON payload contains just the plain string.
 			testFields = append(testFields, sdkOpsTestField{
 				FieldName:     goFieldName(prop.Name),
 				JSONName:      jsonName(prop.Name),
 				TestValue:     `SensitiveDataSource{Type: SensitiveDataSourceTypeInline, Value: new("test-value")}`,
-				ExpectedValue: fmt.Sprintf("%q", expectedValue),
+				ExpectedValue: fmt.Sprintf("%q", "test-value"),
 			})
 			continue
 		}

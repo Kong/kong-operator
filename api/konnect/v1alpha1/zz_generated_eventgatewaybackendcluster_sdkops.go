@@ -4,7 +4,6 @@ package v1alpha1
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 
@@ -125,81 +124,6 @@ func normalizeEventGatewayBackendClusterSDKOpsBoolField(value any, path []string
 }
 
 
-// EventGatewayBackendClusterSDKOpsBase64Field describes a field that must be base64-encoded for SDK payloads.
-type EventGatewayBackendClusterSDKOpsBase64Field struct {
-	Label string
-	Path  []string
-}
-
-// EventGatewayBackendClusterSDKOpsBase64Fields lists all fields that must be base64-encoded for SDK payloads.
-var EventGatewayBackendClusterSDKOpsBase64Fields = []EventGatewayBackendClusterSDKOpsBase64Field{
-	{
-		Label: "spec.apiSpec.tls.clientIdentity.key",
-		Path: []string{
-			"tls",
-			"clientIdentity",
-			"key",
-		},
-	},
-}
-
-func encodeEventGatewayBackendClusterSDKOpsBase64Fields(payload map[string]any) error {
-	for _, field := range EventGatewayBackendClusterSDKOpsBase64Fields {
-		if _, err := encodeEventGatewayBackendClusterSDKOpsBase64Field(payload, field.Path); err != nil {
-			return fmt.Errorf("%s: %w", field.Label, err)
-		}
-	}
-	return nil
-}
-
-func encodeEventGatewayBackendClusterSDKOpsBase64Field(value any, path []string) (any, error) {
-	if len(path) == 0 {
-		switch typed := value.(type) {
-		case nil:
-			return nil, nil
-		case string:
-			return base64.StdEncoding.WithPadding(base64.NoPadding).EncodeToString([]byte(typed)), nil
-		default:
-			return nil, fmt.Errorf("expected string, got %T", value)
-		}
-	}
-
-	if value == nil {
-		return nil, nil
-	}
-
-	if path[0] == "[]" {
-		items, ok := value.([]any)
-		if !ok {
-			return nil, fmt.Errorf("expected array, got %T", value)
-		}
-		for i, item := range items {
-			encoded, err := encodeEventGatewayBackendClusterSDKOpsBase64Field(item, path[1:])
-			if err != nil {
-				return nil, err
-			}
-			items[i] = encoded
-		}
-		return items, nil
-	}
-
-	object, ok := value.(map[string]any)
-	if !ok {
-		return nil, fmt.Errorf("expected object, got %T", value)
-	}
-	child, ok := object[path[0]]
-	if !ok {
-		return value, nil
-	}
-	encoded, err := encodeEventGatewayBackendClusterSDKOpsBase64Field(child, path[1:])
-	if err != nil {
-		return nil, err
-	}
-	object[path[0]] = encoded
-	return object, nil
-}
-
-
 func (s *EventGatewayBackendClusterAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 	data, err := json.Marshal(s)
 	if err != nil {
@@ -211,11 +135,6 @@ func (s *EventGatewayBackendClusterAPISpec) marshalSDKOpsPayload() ([]byte, erro
 	}
 	payload = flattenSDKUnions(payload)
 	payload = flattenSensitiveData(payload)
-	if pm, ok := payload.(map[string]any); ok {
-		if err := encodeEventGatewayBackendClusterSDKOpsBase64Fields(pm); err != nil {
-			return nil, fmt.Errorf("failed to base64 encode EventGatewayBackendClusterAPISpec SDK payload: %w", err)
-		}
-	}
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
 	payload = renameKeysToSDK(payload)

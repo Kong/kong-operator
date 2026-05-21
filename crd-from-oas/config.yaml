@@ -73,9 +73,6 @@ apiGroupVersions:
           - path: spec.apiSpec.tlsServer.config.certificates[].key
             type: Secret
             key: tls.key
-            # TODO: Remove Base64 encoding when API starts accepting raw values.
-            # TODO: https://github.com/Kong/kong-operator/issues/4304
-            base64Encoding: true
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayListenerPoliciesSDK
@@ -138,9 +135,6 @@ apiGroupVersions:
           - path: spec.apiSpec.tls.clientIdentity.key
             type: Secret
             key: tls.key
-            # TODO: Remove Base64 encoding when API starts accepting raw values.
-            # TODO: https://github.com/Kong/kong-operator/issues/4304
-            base64Encoding: true
       - path: /v1/event-gateways/{gatewayId}/virtual-clusters
         name: EventGatewayVirtualCluster
         ops:
