@@ -238,6 +238,10 @@
 
 ### Fixes
 
+- Hybridgateway: fix `KongCertificate` name collisions when a `Gateway` has
+  multiple listeners using the same port by including listener identity in
+  generated certificate names.
+  [#4382](https://github.com/Kong/kong-operator/pull/4382)
 - `Gateway`: conflicting listeners (port/protocol or hostname conflict) now have
   `Accepted=False` with the conflict reason, per Gateway API spec rule that
   "ALL indistinct Listeners must not be accepted for processing".
