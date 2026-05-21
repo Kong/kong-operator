@@ -3,8 +3,10 @@ package translator
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/translator/subtranslator"
@@ -56,6 +58,13 @@ func (t *Translator) ingressRulesFromTLSRoute(result *ingressRules, tlsroute *ga
 	if len(spec.Hostnames) == 0 {
 		return fmt.Errorf("no hostnames provided")
 	}
+	if t.kongVersion.LT(TLSWildcardSNIMinimumKongVersion) &&
+		lo.ContainsBy(spec.Hostnames, func(hostname gatewayapi.Hostname) bool {
+			return strings.HasPrefix(string(hostname), "*.")
+		}) {
+		return fmt.Errorf("wildcard TLS SNIs are not supported in TLSRoute with Kong versions below %s", TLSWildcardSNIMinimumKongVersion)
+	}
+
 	if len(spec.Rules) == 0 {
 		return subtranslator.ErrRouteValidationNoRules
 	}
