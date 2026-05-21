@@ -154,7 +154,7 @@ func TestGetAPIAuthRef(t *testing.T) {
 					},
 				})
 			},
-			wantErrorContain: "invalid EventGatewayListener reference",
+			wantErrorContain: "unsupported ref type",
 		},
 		{
 			name: "root entity is unsupported",
@@ -276,7 +276,7 @@ func TestGetAPIAuthRefViaParent(t *testing.T) {
 					},
 				})
 			},
-			wantErrorContain: "must be a NamespacedRef with a non-nil NamespacedRef field",
+			wantErrorContain: "unsupported ref type",
 		},
 		{
 			name: "backend cluster parent returns get error when parent is missing",

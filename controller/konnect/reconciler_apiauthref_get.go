@@ -142,12 +142,7 @@ func getAPIAuthRefViaParent[
 	cl client.Client,
 	obj objectWithParentRef,
 ) (types.NamespacedName, error) {
-	var (
-		parent    ParentT
-		parentPtr ParentTPtr = &parent
-		parentRef            = obj.GetParentRef()
-	)
-
+	parentRef := obj.GetParentRef()
 	parentPtr, nn, err := getParentForRef[ParentT, ParentTPtr](ctx, cl, parentRef, obj.GetNamespace())
 	if err != nil {
 		return types.NamespacedName{}, fmt.Errorf("failed to get %s %s: %w", constraints.EntityTypeName[ParentT](), nn, err)

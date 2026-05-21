@@ -33,5 +33,10 @@ func eventGatewayVirtualClusterProducePolicyOnEventGatewayVirtualClusterRef(obje
 		return nil
 	}
 
-	return []string{ent.Spec.EventGatewayVirtualClusterRef.NamespacedRef.Name}
+	refNamespace := ent.GetNamespace()
+	if ent.Spec.EventGatewayVirtualClusterRef.NamespacedRef.Namespace != nil && *ent.Spec.EventGatewayVirtualClusterRef.NamespacedRef.Namespace != "" {
+		refNamespace = *ent.Spec.EventGatewayVirtualClusterRef.NamespacedRef.Namespace
+	}
+
+	return []string{refNamespace + "/" + ent.Spec.EventGatewayVirtualClusterRef.NamespacedRef.Name}
 }
