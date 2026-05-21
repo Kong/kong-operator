@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"go/format"
 	"os"
 	"text/template"
 
@@ -54,7 +55,11 @@ func renderTemplate(templateContent string, outputFile string) error {
 	if err := tpl.Execute(contents, supportedTypes); err != nil {
 		return fmt.Errorf("failed to execute template for %s: %w", outputFile, err)
 	}
-	if err := os.WriteFile(outputFile, contents.Bytes(), 0o600); err != nil {
+	formatted, err := format.Source(contents.Bytes())
+	if err != nil {
+		return fmt.Errorf("failed to format file %s: %w", outputFile, err)
+	}
+	if err := os.WriteFile(outputFile, formatted, 0o600); err != nil {
 		return fmt.Errorf("failed to write file %s: %w", outputFile, err)
 	}
 	return nil

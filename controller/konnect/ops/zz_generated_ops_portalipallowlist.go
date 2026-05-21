@@ -101,6 +101,10 @@ func getPortalIPAllowListForUID(
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
 	}
 
+	// TODO: only the first page of results is scanned. When the parent has more
+	// entries than the SDK's default page size, a matching entry on a later
+	// page is missed and getForUID returns NotFound. Tracked in
+	// https://github.com/Kong/kong-operator/issues/3987.
 	for _, entry := range resp.PortalSourceIPRestrictionPaginatedResponse.Data {
 		if !matchSliceField(obj.Spec.APISpec.AllowedIps, entry.AllowedIps) {
 			continue
@@ -114,6 +118,8 @@ func getPortalIPAllowListForUID(
 			if id != nil && *id != "" {
 				return *id, nil
 			}
+		default:
+			return "", fmt.Errorf("list %s: %w (got %T)", obj.GetTypeName(), ErrUnexpectedIDType, id)
 		}
 	}
 

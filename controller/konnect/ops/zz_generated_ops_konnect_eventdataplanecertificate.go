@@ -106,6 +106,10 @@ func getKonnectEventDataPlaneCertificateForUID(
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
 	}
 
+	// TODO: only the first page of results is scanned. When the parent has more
+	// entries than the SDK's default page size, a matching entry on a later
+	// page is missed and getForUID returns NotFound. Tracked in
+	// https://github.com/Kong/kong-operator/issues/3987.
 	for _, entry := range resp.ListEventGatewayDataPlaneCertificatesResponse.Data {
 		if !matchSensitiveDataSourceField(obj.Spec.APISpec.Certificate, entry.Certificate) {
 			continue
@@ -125,6 +129,8 @@ func getKonnectEventDataPlaneCertificateForUID(
 			if id != nil && *id != "" {
 				return *id, nil
 			}
+		default:
+			return "", fmt.Errorf("list %s: %w (got %T)", obj.GetTypeName(), ErrUnexpectedIDType, id)
 		}
 	}
 

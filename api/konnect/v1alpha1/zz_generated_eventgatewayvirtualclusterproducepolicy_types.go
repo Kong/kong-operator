@@ -133,10 +133,13 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayVirtualClusterProducePolicyConfig) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, _ := json.Marshal(string(u.Type))
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayVirtualClusterProducePolicyConfig type: %w", err)
+	}
 	m["type"] = typeBytes
 	switch u.Type {
-	case "encrypt":
+	case EventGatewayVirtualClusterProducePolicyConfigTypeEncryptPolicy:
 		if u.EncryptPolicy != nil {
 			raw, err := json.Marshal(u.EncryptPolicy)
 			if err != nil {
@@ -144,7 +147,7 @@ func (u EventGatewayVirtualClusterProducePolicyConfig) MarshalJSON() ([]byte, er
 			}
 			m["encrypt"] = raw
 		}
-	case "modifyHeaders":
+	case EventGatewayVirtualClusterProducePolicyConfigTypeModifyHeadersPolicyCreate:
 		if u.ModifyHeadersPolicyCreate != nil {
 			raw, err := json.Marshal(u.ModifyHeadersPolicyCreate)
 			if err != nil {
@@ -152,7 +155,7 @@ func (u EventGatewayVirtualClusterProducePolicyConfig) MarshalJSON() ([]byte, er
 			}
 			m["modifyHeaders"] = raw
 		}
-	case "schemaValidation":
+	case EventGatewayVirtualClusterProducePolicyConfigTypeProduceSchemaValidationPolicy:
 		if u.ProduceSchemaValidationPolicy != nil {
 			raw, err := json.Marshal(u.ProduceSchemaValidationPolicy)
 			if err != nil {

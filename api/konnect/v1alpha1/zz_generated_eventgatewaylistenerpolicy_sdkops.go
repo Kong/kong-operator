@@ -15,11 +15,13 @@ import (
 	sdkkonnectoper "github.com/Kong/sdk-konnect-go/models/operations"
 )
 
+// EventGatewayListenerPolicySDKOpsBoolField describes a boolean enum field that must be normalized for SDK payloads.
 type EventGatewayListenerPolicySDKOpsBoolField struct {
 	Label string
 	Path  []string
 }
 
+// EventGatewayListenerPolicySDKOpsBoolFields lists all boolean enum fields that must be normalized for SDK payloads.
 var EventGatewayListenerPolicySDKOpsBoolFields = []EventGatewayListenerPolicySDKOpsBoolField{
 	{
 		Label: "forward_to_virtual_cluster.enabled",

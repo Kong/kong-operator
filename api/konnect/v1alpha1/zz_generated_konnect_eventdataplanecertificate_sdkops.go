@@ -98,6 +98,7 @@ func (obj *KonnectEventDataPlaneCertificate) sdkOpsAPISpec(ctx context.Context, 
 	return &apiSpec, nil
 }
 
+// GetSensitiveDataSecretRefs returns all Secret references used to populate sensitive SDK payload fields.
 func (obj *KonnectEventDataPlaneCertificate) GetSensitiveDataSecretRefs() []SensitiveDataSecretRef {
 	if obj == nil {
 		return nil
@@ -112,6 +113,8 @@ func (obj *KonnectEventDataPlaneCertificate) GetSensitiveDataSecretRefs() []Sens
 	return refs
 }
 
+// ToCreateEventGatewayDataPlaneCertificateRequest converts the KonnectEventDataPlaneCertificate to the SDK type
+// sdkkonnectcomp.CreateEventGatewayDataPlaneCertificateRequest, resolving referenced Secrets via the provided client.
 func (obj *KonnectEventDataPlaneCertificate) ToCreateEventGatewayDataPlaneCertificateRequest(ctx context.Context, cl client.Client) (*sdkkonnectcomp.CreateEventGatewayDataPlaneCertificateRequest, error) {
 	spec, err := obj.sdkOpsAPISpec(ctx, cl)
 	if err != nil {
@@ -120,6 +123,8 @@ func (obj *KonnectEventDataPlaneCertificate) ToCreateEventGatewayDataPlaneCertif
 	return spec.ToCreateEventGatewayDataPlaneCertificateRequest()
 }
 
+// ToUpdateEventGatewayDataPlaneCertificateRequest converts the KonnectEventDataPlaneCertificate to the SDK type
+// sdkkonnectcomp.UpdateEventGatewayDataPlaneCertificateRequest, resolving referenced Secrets via the provided client.
 func (obj *KonnectEventDataPlaneCertificate) ToUpdateEventGatewayDataPlaneCertificateRequest(ctx context.Context, cl client.Client) (*sdkkonnectcomp.UpdateEventGatewayDataPlaneCertificateRequest, error) {
 	spec, err := obj.sdkOpsAPISpec(ctx, cl)
 	if err != nil {

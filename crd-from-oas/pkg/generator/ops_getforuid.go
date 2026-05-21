@@ -57,6 +57,9 @@ type opsGetForUIDFuncData struct {
 	// HasName indicates the entity's request schema declares a "name" field,
 	// used as a fallback UID-matching strategy when HasLabels is false.
 	HasName bool
+	// SingletonByParent is true when the entity is a singleton sub-resource whose
+	// GET/UPDATE/DELETE paths are keyed solely by the parent ID.
+	SingletonByParent bool
 	// SingletonNoID is true when the entity is a singleton sub-resource whose
 	// response has no "id" field. getForUID calls the singular GET (not a list)
 	// and matches via MatchFields.
@@ -214,6 +217,7 @@ func (g *Generator) generateOpsGetForUIDFuncBody(
 		MatchFields:           matchFields,
 		RootUnion:             rootUnion,
 		HasName:               hasName,
+		SingletonByParent:     isParentScopedSingleton(schema),
 		SingletonNoID:         isSingletonNoID(schema),
 	}, nil
 }

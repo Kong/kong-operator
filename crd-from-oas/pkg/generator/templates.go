@@ -452,11 +452,13 @@ import (
 {{range .Imports}}	{{.Alias}} "{{.Path}}"
 {{end}}){{if .BoolFields}}
 
+// {{$.EntityName}}SDKOpsBoolField describes a boolean enum field that must be normalized for SDK payloads.
 type {{$.EntityName}}SDKOpsBoolField struct {
 	Label string
 	Path  []string
 }
 
+// {{$.EntityName}}SDKOpsBoolFields lists all boolean enum fields that must be normalized for SDK payloads.
 var {{$.EntityName}}SDKOpsBoolFields = []{{$.EntityName}}SDKOpsBoolField{
 {{- range .BoolFields}}
 	{
@@ -551,11 +553,13 @@ func normalize{{$.EntityName}}SDKOpsBoolField(value any, path []string) (any, er
 }
 {{end}}{{if .Base64Fields}}
 
+// {{$.EntityName}}SDKOpsBase64Field describes a field that must be base64-encoded for SDK payloads.
 type {{$.EntityName}}SDKOpsBase64Field struct {
 	Label string
 	Path  []string
 }
 
+// {{$.EntityName}}SDKOpsBase64Fields lists all fields that must be base64-encoded for SDK payloads.
 var {{$.EntityName}}SDKOpsBase64Fields = []{{$.EntityName}}SDKOpsBase64Field{
 {{- range .Base64Fields}}
 	{
@@ -746,6 +750,7 @@ func (obj *{{$.EntityName}}) sdkOpsAPISpec(ctx context.Context, cl client.Client
 	return &apiSpec, nil
 }
 
+// GetSensitiveDataSecretRefs returns all Secret references used to populate sensitive SDK payload fields.
 func (obj *{{$.EntityName}}) GetSensitiveDataSecretRefs() []SensitiveDataSecretRef {
 	if obj == nil {
 		return nil
@@ -780,6 +785,8 @@ func (obj *{{$.EntityName}}) GetSensitiveDataSecretRefs() []SensitiveDataSecretR
 	return refs
 }
 {{range .Methods}}
+// {{.MethodName}} converts the {{$.EntityName}} to the SDK type
+// {{.ImportAlias}}.{{.TypeName}}, resolving referenced Secrets via the provided client.
 func (obj *{{$.EntityName}}) {{.MethodName}}(ctx context.Context, cl client.Client) (*{{.ImportAlias}}.{{.TypeName}}, error) {
 	spec, err := obj.sdkOpsAPISpec(ctx, cl)
 	if err != nil {
@@ -876,11 +883,13 @@ import (
 {{range .Imports}}	{{.Alias}} "{{.Path}}"
 {{end}}){{if .BoolFields}}
 
+// {{$.EntityName}}SDKOpsBoolField describes a boolean enum field that must be normalized for SDK payloads.
 type {{$.EntityName}}SDKOpsBoolField struct {
 	Label string
 	Path  []string
 }
 
+// {{$.EntityName}}SDKOpsBoolFields lists all boolean enum fields that must be normalized for SDK payloads.
 var {{$.EntityName}}SDKOpsBoolFields = []{{$.EntityName}}SDKOpsBoolField{
 {{- range .BoolFields}}
 	{
@@ -974,11 +983,13 @@ func normalize{{$.EntityName}}SDKOpsBoolField(value any, path []string) (any, er
 	}
 }
 {{end}}{{if .Base64Fields}}
+// {{$.EntityName}}SDKOpsBase64Field describes a field that must be base64-encoded for SDK payloads.
 type {{$.EntityName}}SDKOpsBase64Field struct {
 	Label string
 	Path  []string
 }
 
+// {{$.EntityName}}SDKOpsBase64Fields lists all fields that must be base64-encoded for SDK payloads.
 var {{$.EntityName}}SDKOpsBase64Fields = []{{$.EntityName}}SDKOpsBase64Field{
 {{- range .Base64Fields}}
 	{
@@ -1291,6 +1302,7 @@ func (obj *{{$.EntityName}}) sdkOpsAPISpec(ctx context.Context, cl client.Client
 	return &apiSpec, nil
 }
 
+// GetSensitiveDataSecretRefs returns all Secret references used to populate sensitive SDK payload fields.
 func (obj *{{$.EntityName}}) GetSensitiveDataSecretRefs() []SensitiveDataSecretRef {
 	if obj == nil {
 		return nil
@@ -1326,6 +1338,8 @@ func (obj *{{$.EntityName}}) GetSensitiveDataSecretRefs() []SensitiveDataSecretR
 }
 {{range .Methods}}
 
+// {{.MethodName}} converts the {{$.EntityName}} to the SDK type
+// {{.ImportAlias}}.{{.TypeName}}, resolving referenced Secrets via the provided client.
 func (obj *{{$.EntityName}}) {{.MethodName}}(ctx context.Context, cl client.Client) (*{{.ImportAlias}}.{{.TypeName}}, error) {
 	spec, err := obj.sdkOpsAPISpec(ctx, cl)
 	if err != nil {
@@ -1797,7 +1811,7 @@ func get{{.Entity}}ForUID(
 		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "{{.EntityName}}", Op: GetOp}
 	}
 {{- end}}
-{{- if and .SingletonNoID .MatchFields}}
+{{- if and .SingletonByParent (or (not .SingletonNoID) .MatchFields)}}
 
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, {{(index .Parents 0).VarName}})
 	if err != nil {
@@ -1808,11 +1822,35 @@ func get{{.Entity}}ForUID(
 	}
 	entry := resp.{{.ListResponseField}}
 {{- range .MatchFields}}
-	if !{{if .SensitiveMatch}}matchSensitiveDataSourceField{{else}}matchStringField{{end}}(obj.{{.ObjectField}}, entry.{{.ResponseField}}) {
+	if !{{if .SliceMatch}}matchSliceField{{else if .SensitiveMatch}}matchSensitiveDataSourceField{{else}}matchStringField{{end}}(obj.{{.ObjectField}}, entry.{{.ResponseField}}) {
 		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 	}
 {{- end}}
+{{- if .SingletonNoID}}
+{{- if .MatchFields}}
 	return entry.{{(index .MatchFields 0).ResponseField}}, nil
+{{- else}}
+
+	// TODO: {{.Entity}} is a singleton sub-resource without a persistent Konnect
+	// ID, but no getForUID match strategy is configured. This can be revisited
+	// once the API exposes a stable identity field for matching or a custom
+	// getForUID implementation is added.
+	return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+{{- end}}
+{{- else}}
+	switch id := any(entry.GetID()).(type) {
+	case string:
+		if id != "" {
+			return id, nil
+		}
+	case *string:
+		if id != nil && *id != "" {
+			return *id, nil
+		}
+	default:
+		return "", fmt.Errorf("get %s: %w (got %T)", obj.GetTypeName(), ErrUnexpectedIDType, id)
+	}
+{{- end}}
 {{- else if .SingletonNoID}}
 
 	// TODO: {{.Entity}} is a singleton sub-resource without a persistent Konnect
@@ -1856,6 +1894,8 @@ func get{{.Entity}}ForUID(
 			if id != nil && *id != "" {
 				return *id, nil
 			}
+		default:
+			return "", fmt.Errorf("list %s: %w (got %T)", obj.GetTypeName(), ErrUnexpectedIDType, id)
 		}
 	}
 {{- else if .MatchFields}}
@@ -1880,6 +1920,10 @@ func get{{.Entity}}ForUID(
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
 	}
 
+	// TODO: only the first page of results is scanned. When the parent has more
+	// entries than the SDK's default page size, a matching entry on a later
+	// page is missed and getForUID returns NotFound. Tracked in
+	// https://github.com/Kong/kong-operator/issues/3987.
 	for _, entry := range {{.ListResponseItemsExpr}} {
 		{{- range .MatchFields}}
 		if !{{if .SliceMatch}}matchSliceField{{else if .SensitiveMatch}}matchSensitiveDataSourceField{{else}}matchStringField{{end}}(obj.{{.ObjectField}}, entry.{{.ResponseField}}) {
@@ -1895,6 +1939,8 @@ func get{{.Entity}}ForUID(
 			if id != nil && *id != "" {
 				return *id, nil
 			}
+		default:
+			return "", fmt.Errorf("list %s: %w (got %T)", obj.GetTypeName(), ErrUnexpectedIDType, id)
 		}
 	}
 {{- else if .RootUnion}}
@@ -1953,6 +1999,8 @@ func get{{.Entity}}ForUID(
 				if id != nil && *id != "" {
 					return *id, nil
 				}
+			default:
+				return "", fmt.Errorf("list %s: %w (got %T)", obj.GetTypeName(), ErrUnexpectedIDType, id)
 			}
 		}
 	{{- end}}

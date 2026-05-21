@@ -26,6 +26,12 @@ import (
 // This can sometimes happen regardless of the err being nil.
 var ErrNilResponse = errors.New("nil response received")
 
+// ErrUnexpectedIDType is returned by generated getForUID code when an SDK list/get
+// response item exposes an ID via GetID() whose dynamic type is neither string
+// nor *string. Surfacing this explicitly avoids silently treating the entity as
+// "not found" and looping on create conflicts.
+var ErrUnexpectedIDType = errors.New("unexpected ID type from SDK response")
+
 type entity interface {
 	client.Object
 	GetTypeName() string

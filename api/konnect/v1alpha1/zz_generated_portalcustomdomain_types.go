@@ -135,10 +135,13 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u PortalCustomDomainSSL) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, _ := json.Marshal(string(u.Type))
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling PortalCustomDomainSSL type: %w", err)
+	}
 	m["type"] = typeBytes
 	switch u.Type {
-	case "withCustomCertificate":
+	case PortalCustomDomainSSLTypeWithCustomCertificate:
 		if u.WithCustomCertificate != nil {
 			raw, err := json.Marshal(u.WithCustomCertificate)
 			if err != nil {
@@ -146,7 +149,7 @@ func (u PortalCustomDomainSSL) MarshalJSON() ([]byte, error) {
 			}
 			m["withCustomCertificate"] = raw
 		}
-	case "standard":
+	case PortalCustomDomainSSLTypeStandard:
 		if u.Standard != nil {
 			raw, err := json.Marshal(u.Standard)
 			if err != nil {

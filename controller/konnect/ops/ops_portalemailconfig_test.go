@@ -68,15 +68,68 @@ func TestDeletePortalEmailConfig(t *testing.T) {
 }
 
 func TestGetPortalEmailConfigForUID(t *testing.T) {
-	ctx := t.Context()
-	sdk := sdkmocks.NewMockPortalEmailsSDK(t)
-	emailConfig := testPortalEmailConfig()
+	t.Run("returns singleton email config ID", func(t *testing.T) {
+		ctx := t.Context()
+		sdk := sdkmocks.NewMockPortalEmailsSDK(t)
+		emailConfig := testPortalEmailConfig()
 
-	id, err := getPortalEmailConfigForUID(ctx, sdk, emailConfig)
-	require.Empty(t, id)
+		sdk.EXPECT().
+			GetEmailConfig(mock.Anything, "portal-1").
+			Return(&sdkkonnectops.GetEmailConfigResponse{
+				PortalEmailConfig: &sdkkonnectcomp.PortalEmailConfig{
+					ID:           "portal-email-config-1",
+					DomainName:   new("example.com"),
+					FromEmail:    new("noreply@example.com"),
+					FromName:     new("Example Developer Portal"),
+					ReplyToEmail: new("support@example.com"),
+				},
+			}, nil).
+			Once()
 
-	var notFoundErr EntityWithMatchingUIDNotFoundError
-	require.ErrorAs(t, err, &notFoundErr)
+		id, err := getPortalEmailConfigForUID(ctx, sdk, emailConfig)
+		require.NoError(t, err)
+		require.Equal(t, "portal-email-config-1", id)
+	})
+
+	t.Run("returns singleton ID even when spec drifts", func(t *testing.T) {
+		ctx := t.Context()
+		sdk := sdkmocks.NewMockPortalEmailsSDK(t)
+		emailConfig := testPortalEmailConfig()
+
+		sdk.EXPECT().
+			GetEmailConfig(mock.Anything, "portal-1").
+			Return(&sdkkonnectops.GetEmailConfigResponse{
+				PortalEmailConfig: &sdkkonnectcomp.PortalEmailConfig{
+					ID:           "portal-email-config-1",
+					DomainName:   new("drifted.example.com"),
+					FromEmail:    new("drifted@example.com"),
+					FromName:     new("Drifted sender"),
+					ReplyToEmail: new("drifted@example.com"),
+				},
+			}, nil).
+			Once()
+
+		id, err := getPortalEmailConfigForUID(ctx, sdk, emailConfig)
+		require.NoError(t, err)
+		require.Equal(t, "portal-email-config-1", id)
+	})
+
+	t.Run("not found when SDK returns no email config", func(t *testing.T) {
+		ctx := t.Context()
+		sdk := sdkmocks.NewMockPortalEmailsSDK(t)
+		emailConfig := testPortalEmailConfig()
+
+		sdk.EXPECT().
+			GetEmailConfig(mock.Anything, "portal-1").
+			Return(&sdkkonnectops.GetEmailConfigResponse{}, nil).
+			Once()
+
+		id, err := getPortalEmailConfigForUID(ctx, sdk, emailConfig)
+		require.Empty(t, id)
+
+		var notFoundErr EntityWithMatchingUIDNotFoundError
+		require.ErrorAs(t, err, &notFoundErr)
+	})
 }
 
 func testPortalEmailConfig() *konnectv1alpha1.PortalEmailConfig {

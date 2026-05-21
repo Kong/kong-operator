@@ -4334,6 +4334,68 @@ func TestGenerateEntityOpsFile_ParentScopedSingleton(t *testing.T) {
 	assert.NotContains(t, content, "id := obj.GetKonnectStatus().GetKonnectID()")
 }
 
+func TestGenerateEntityOpsFile_ParentScopedSingletonWithIDGetForUID(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"PortalEmailConfig": {IsRoot: ptr(false)},
+		},
+	})
+
+	schema := &parser.Schema{
+		OperationID:        "create-portal-email-config",
+		Tags:               []string{"Portal Email Config"},
+		SuccessResponseRef: "PortalEmailConfig",
+		RespHasID:          true,
+		Dependencies: []*parser.Dependency{
+			{ParamName: "portalId", EntityName: "Portal"},
+		},
+		UpdateOperationID:      "update-portal-email-config",
+		UpdateTags:             []string{"Portal Email Config"},
+		UpdatePathParams:       []string{"portalId"},
+		DeleteOperationID:      "delete-portal-email-config",
+		DeleteTags:             []string{"Portal Email Config"},
+		DeletePathParams:       []string{"portalId"},
+		ListOperationID:        "get-email-config",
+		ListTags:               []string{"Portal Email Config"},
+		ListSuccessResponseRef: "PortalEmailConfig",
+	}
+	opsConfig := &config.EntityOpsConfig{
+		GetForUID: &config.GetForUIDConfig{
+			MatchFields: []config.GetForUIDMatchField{
+				{
+					ObjectField:   "Spec.APISpec.DomainName",
+					ResponseField: "GetDomainName()",
+				},
+				{
+					ObjectField:   "Spec.APISpec.FromEmail",
+					ResponseField: "GetFromEmail()",
+				},
+			},
+		},
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.PostPortalEmailConfig"},
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.PatchPortalEmailConfig"},
+			"delete": {},
+		},
+		SDK: &config.OpSDKConfig{
+			Interface: "github.com/Kong/sdk-konnect-go.PortalEmailsSDK",
+			FieldName: "PortalEmails",
+		},
+	}
+
+	res, err := g.generateEntityOpsFile("PortalEmailConfig", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, res.File)
+
+	content := res.File.Content
+	assert.Contains(t, content, "sdk.GetEmailConfig(ctx, parentID)")
+	assert.Contains(t, content, "entry := resp.PortalEmailConfig")
+	assert.Contains(t, content, "switch id := any(entry.GetID()).(type)")
+	assert.NotContains(t, content, "resp.PortalEmailConfig.Data")
+}
+
 // TestGenerateEntityOpsFile_SingletonNoID verifies correct code generation for
 // singleton sub-resources whose Konnect response has no "id" field (e.g.
 // PortalCustomDomain). Create must not call SetKonnectID. getForUID must call
