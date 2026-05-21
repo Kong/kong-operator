@@ -10,11 +10,13 @@ import (
 	sdkkonnectoper "github.com/Kong/sdk-konnect-go/models/operations"
 )
 
+// EventGatewayVirtualClusterProducePolicySDKOpsBoolField describes a boolean enum field that must be normalized for SDK payloads.
 type EventGatewayVirtualClusterProducePolicySDKOpsBoolField struct {
 	Label string
 	Path  []string
 }
 
+// EventGatewayVirtualClusterProducePolicySDKOpsBoolFields lists all boolean enum fields that must be normalized for SDK payloads.
 var EventGatewayVirtualClusterProducePolicySDKOpsBoolFields = []EventGatewayVirtualClusterProducePolicySDKOpsBoolField{
 	{
 		Label: "encrypt.enabled",
