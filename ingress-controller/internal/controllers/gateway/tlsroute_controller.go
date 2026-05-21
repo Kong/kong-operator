@@ -402,10 +402,15 @@ func (r *TLSRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 	}
 
-	if isRouteAccepted(gateways) {
+	// if there is no matched hosts in listeners for the tlsroute, the tlsroute should not be accepted
+	// and have an "Accepted" condition with status false.
+	// https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.TLSRoute
+	filteredTLSRoute, err := filterHostnames(gateways, tlsroute.DeepCopy())
+	// perform operations on the kong store only if the route is in accepted status and there is hostname matching
+	if isRouteAccepted(gateways) && err == nil {
 		// if the gateways are ready, and the TLSRoute is destined for them, ensure that
 		// the object is pushed to the dataplane.
-		if err := r.DataplaneClient.UpdateObject(tlsroute); err != nil {
+		if err := r.DataplaneClient.UpdateObject(filteredTLSRoute); err != nil {
 			debug(log, tlsroute, "Failed to update object in data-plane, requeueing")
 			return ctrl.Result{}, err
 		}
