@@ -233,7 +233,7 @@ func GetAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.
 	if err != nil {
 		return types.NamespacedName{}, fmt.Errorf(
 			"cannot get KonnectAPIAuthConfiguration for entity type %T %s",
-			client.ObjectKeyFromObject(ent), ent,
+			ent.GetTypeName(), client.ObjectKeyFromObject(ent),
 		)
 	}
 

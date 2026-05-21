@@ -3,8 +3,13 @@
 package v1alpha1
 
 import (
+	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectoper "github.com/Kong/sdk-konnect-go/models/operations"
@@ -120,6 +125,80 @@ func normalizeEventGatewayListenerPolicySDKOpsBoolField(value any, path []string
 	}
 }
 
+type EventGatewayListenerPolicySDKOpsBase64Field struct {
+	Label string
+	Path  []string
+}
+
+var EventGatewayListenerPolicySDKOpsBase64Fields = []EventGatewayListenerPolicySDKOpsBase64Field{
+	{
+		Label: "spec.apiSpec.tlsServer.config.certificates[].key",
+		Path: []string{
+			"tlsServer",
+			"config",
+			"certificates",
+			"[]",
+			"key",
+		},
+	},
+}
+
+func encodeEventGatewayListenerPolicySDKOpsBase64Fields(payload map[string]any) error {
+	for _, field := range EventGatewayListenerPolicySDKOpsBase64Fields {
+		if _, err := encodeEventGatewayListenerPolicySDKOpsBase64Field(payload, field.Path); err != nil {
+			return fmt.Errorf("%s: %w", field.Label, err)
+		}
+	}
+	return nil
+}
+
+func encodeEventGatewayListenerPolicySDKOpsBase64Field(value any, path []string) (any, error) {
+	if len(path) == 0 {
+		switch typed := value.(type) {
+		case nil:
+			return nil, nil
+		case string:
+			return base64.StdEncoding.WithPadding(base64.NoPadding).EncodeToString([]byte(typed)), nil
+		default:
+			return nil, fmt.Errorf("expected string, got %T", value)
+		}
+	}
+
+	if value == nil {
+		return nil, nil
+	}
+
+	if path[0] == "[]" {
+		items, ok := value.([]any)
+		if !ok {
+			return nil, fmt.Errorf("expected array, got %T", value)
+		}
+		for i, item := range items {
+			encoded, err := encodeEventGatewayListenerPolicySDKOpsBase64Field(item, path[1:])
+			if err != nil {
+				return nil, err
+			}
+			items[i] = encoded
+		}
+		return items, nil
+	}
+
+	object, ok := value.(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("expected object, got %T", value)
+	}
+	child, ok := object[path[0]]
+	if !ok {
+		return value, nil
+	}
+	encoded, err := encodeEventGatewayListenerPolicySDKOpsBase64Field(child, path[1:])
+	if err != nil {
+		return nil, err
+	}
+	object[path[0]] = encoded
+	return object, nil
+}
+
 
 func (s *EventGatewayListenerPolicyAPISpec) marshalSDKOpsPayload() (map[string]any, error) {
 	data, err := json.Marshal(s)
@@ -130,6 +209,12 @@ func (s *EventGatewayListenerPolicyAPISpec) marshalSDKOpsPayload() (map[string]a
 	var rawPayload any
 	if err := json.Unmarshal(data, &rawPayload); err != nil {
 		return nil, fmt.Errorf("failed to decode EventGatewayListenerPolicyAPISpec: %w", err)
+	}
+	rawPayload = flattenSensitiveData(rawPayload)
+	if pm, ok := rawPayload.(map[string]any); ok {
+		if err := encodeEventGatewayListenerPolicySDKOpsBase64Fields(pm); err != nil {
+			return nil, fmt.Errorf("failed to base64 encode EventGatewayListenerPolicyAPISpec SDK payload: %w", err)
+		}
 	}
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
@@ -246,4 +331,118 @@ func (s *EventGatewayListenerPolicyAPISpec) ToUpdateEventGatewayListenerPolicyRe
 	return &sdkkonnectoper.UpdateEventGatewayListenerPolicyRequest{
 		EventGatewayListenerPolicyUpdate: body,
 	}, nil
+}
+
+
+func (obj *EventGatewayListenerPolicy) sdkOpsAPISpec(ctx context.Context, cl client.Client) (*EventGatewayListenerPolicyAPISpec, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("EventGatewayListenerPolicy is nil")
+	}
+
+	apiSpec := obj.Spec.APISpec
+	// Resolve spec.apiSpec.tlsServer.config.certificates[].certificate
+	if apiSpec.EventGatewayListenerPolicyConfig != nil {
+	if apiSpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen != nil {
+	for i := range apiSpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Config.Certificates {
+		src := apiSpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Config.Certificates[i].Certificate
+		if src.Type == SensitiveDataSourceTypeSecretRef {
+			if src.SecretRef == nil {
+				return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.tlsServer.config.certificates[].certificate")
+			}
+			namespace := obj.GetNamespace()
+			if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+				namespace = *src.SecretRef.Namespace
+			}
+			var secret corev1.Secret
+			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+			}
+			secretBytes, ok := secret.Data["tls.crt"]
+			if !ok {
+				return nil, fmt.Errorf("secret %s/%s is missing key 'tls.crt'", namespace, src.SecretRef.Name)
+			}
+			resolved := string(secretBytes)
+			apiSpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Config.Certificates[i].Certificate.Value = &resolved
+		}
+	}
+	}
+	}
+	// Resolve spec.apiSpec.tlsServer.config.certificates[].key
+	if apiSpec.EventGatewayListenerPolicyConfig != nil {
+	if apiSpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen != nil {
+	for i := range apiSpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Config.Certificates {
+		src := apiSpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Config.Certificates[i].Key
+		if src.Type == SensitiveDataSourceTypeSecretRef {
+			if src.SecretRef == nil {
+				return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.tlsServer.config.certificates[].key")
+			}
+			namespace := obj.GetNamespace()
+			if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+				namespace = *src.SecretRef.Namespace
+			}
+			var secret corev1.Secret
+			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+			}
+			secretBytes, ok := secret.Data["tls.key"]
+			if !ok {
+				return nil, fmt.Errorf("secret %s/%s is missing key 'tls.key'", namespace, src.SecretRef.Name)
+			}
+			resolved := string(secretBytes)
+			apiSpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Config.Certificates[i].Key.Value = &resolved
+		}
+	}
+	}
+	}
+	return &apiSpec, nil
+}
+
+func (obj *EventGatewayListenerPolicy) GetSensitiveDataSecretRefs() []SensitiveDataSecretRef {
+	if obj == nil {
+		return nil
+	}
+	var refs []SensitiveDataSecretRef
+	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig != nil {
+	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen != nil {
+	for _, item := range obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Config.Certificates {
+		if item.Certificate.Type == SensitiveDataSourceTypeSecretRef && item.Certificate.SecretRef != nil {
+			refs = append(refs, SensitiveDataSecretRef{
+				Ref: *item.Certificate.SecretRef,
+				Key: "tls.crt",
+			})
+		}
+	}
+	}
+	}
+	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig != nil {
+	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen != nil {
+	for _, item := range obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Config.Certificates {
+		if item.Key.Type == SensitiveDataSourceTypeSecretRef && item.Key.SecretRef != nil {
+			refs = append(refs, SensitiveDataSecretRef{
+				Ref: *item.Key.SecretRef,
+				Key: "tls.key",
+			})
+		}
+	}
+	}
+	}
+	return refs
+}
+
+
+func (obj *EventGatewayListenerPolicy) ToCreateEventGatewayListenerPolicyRequest(ctx context.Context, cl client.Client) (*sdkkonnectoper.CreateEventGatewayListenerPolicyRequest, error) {
+	spec, err := obj.sdkOpsAPISpec(ctx, cl)
+	if err != nil {
+		return nil, err
+	}
+	return spec.ToCreateEventGatewayListenerPolicyRequest()
+}
+
+
+func (obj *EventGatewayListenerPolicy) ToUpdateEventGatewayListenerPolicyRequest(ctx context.Context, cl client.Client) (*sdkkonnectoper.UpdateEventGatewayListenerPolicyRequest, error) {
+	spec, err := obj.sdkOpsAPISpec(ctx, cl)
+	if err != nil {
+		return nil, err
+	}
+	return spec.ToUpdateEventGatewayListenerPolicyRequest()
 }

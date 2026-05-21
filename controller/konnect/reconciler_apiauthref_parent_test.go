@@ -188,7 +188,7 @@ func testGetAPIAuthConfigurationRefFromParent[
 
 			cl := builder.Build()
 
-			nn, err := getAPIAuthConfigurationRefFromParent[ParentT, ParentTPtr](t.Context(), cl, child)
+			nn, err := getAPIAuthConfigurationRefFromParent[ParentT, ParentTPtr](t.Context(), cl, child, tc.parentRef)
 			if tc.wantErrorContains != "" {
 				require.Error(t, err)
 				require.ErrorContains(t, err, tc.wantErrorContains)

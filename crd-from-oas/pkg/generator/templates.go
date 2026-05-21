@@ -416,7 +416,7 @@ func (obj *{{.EntityName}}) GetAncestorIDs() map[string]string {
 	return m
 }
 {{- end}}
-{{- if and .ParentRef .AncestorDependencies}}
+{{- if and .AncestorDependencies (or .ParentRef (gt (len .Dependencies) 1))}}
 
 // SetAncestorID sets the Konnect ID for the ancestor entity identified by kind.
 func (obj *{{.EntityName}}) SetAncestorID(kind, id string) {
@@ -594,6 +594,21 @@ func encode{{$.EntityName}}SDKOpsBase64Field(value any, path []string) (any, err
 		return nil, nil
 	}
 
+	if path[0] == "[]" {
+		items, ok := value.([]any)
+		if !ok {
+			return nil, fmt.Errorf("expected array, got %T", value)
+		}
+		for i, item := range items {
+			encoded, err := encode{{$.EntityName}}SDKOpsBase64Field(item, path[1:])
+			if err != nil {
+				return nil, err
+			}
+			items[i] = encoded
+		}
+		return items, nil
+	}
+
 	object, ok := value.(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("expected object, got %T", value)
@@ -672,7 +687,38 @@ func (obj *{{$.EntityName}}) sdkOpsAPISpec(ctx context.Context, cl client.Client
 
 	apiSpec := obj.Spec.APISpec
 {{- range .SecretReferences}}
+{{- $ref := .}}
 	// Resolve {{.Path}}
+{{- if .IsSlice}}
+{{- range .PointerGuards}}
+	if apiSpec.{{.}} != nil {
+{{- end}}
+	for i := range apiSpec.{{$ref.SliceParentSelector}} {
+		src := apiSpec.{{$ref.SliceParentSelector}}[i].{{$ref.SliceLeafField}}
+		if src.Type == SensitiveDataSourceTypeSecretRef {
+			if src.SecretRef == nil {
+				return nil, fmt.Errorf("secretRef is nil for {{$ref.Path}}")
+			}
+			namespace := obj.GetNamespace()
+			if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+				namespace = *src.SecretRef.Namespace
+			}
+			var secret corev1.Secret
+			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+			}
+			secretBytes, ok := secret.Data["{{$ref.SecretKey}}"]
+			if !ok {
+				return nil, fmt.Errorf("secret %s/%s is missing key '{{$ref.SecretKey}}'", namespace, src.SecretRef.Name)
+			}
+			resolved := string(secretBytes)
+			apiSpec.{{$ref.SliceParentSelector}}[i].{{$ref.SliceLeafField}}.Value = &resolved
+		}
+	}
+{{- range $ref.PointerGuards}}
+	}
+{{- end}}
+{{- else}}
 	{
 		src := apiSpec.{{.GoFieldSelector}}
 		if src.Type == SensitiveDataSourceTypeSecretRef {
@@ -696,6 +742,7 @@ func (obj *{{$.EntityName}}) sdkOpsAPISpec(ctx context.Context, cl client.Client
 		}
 	}
 {{- end}}
+{{- end}}
 	return &apiSpec, nil
 }
 
@@ -705,12 +752,30 @@ func (obj *{{$.EntityName}}) GetSensitiveDataSecretRefs() []SensitiveDataSecretR
 	}
 	var refs []SensitiveDataSecretRef
 {{- range .SecretReferences}}
+{{- $ref := .}}
+{{- if .IsSlice}}
+{{- range .PointerGuards}}
+	if obj.Spec.APISpec.{{.}} != nil {
+{{- end}}
+	for _, item := range obj.Spec.APISpec.{{$ref.SliceParentSelector}} {
+		if item.{{$ref.SliceLeafField}}.Type == SensitiveDataSourceTypeSecretRef && item.{{$ref.SliceLeafField}}.SecretRef != nil {
+			refs = append(refs, SensitiveDataSecretRef{
+				Ref: *item.{{$ref.SliceLeafField}}.SecretRef,
+				Key: "{{$ref.SecretKey}}",
+			})
+		}
+	}
+{{- range $ref.PointerGuards}}
+	}
+{{- end}}
+{{- else}}
 	if obj.Spec.APISpec.{{.GoFieldSelector}}.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.{{.GoFieldSelector}}.SecretRef != nil {
 		refs = append(refs, SensitiveDataSecretRef{
 			Ref: *obj.Spec.APISpec.{{.GoFieldSelector}}.SecretRef,
 			Key: "{{.SecretKey}}",
 		})
 	}
+{{- end}}
 {{- end}}
 	return refs
 }
@@ -952,6 +1017,21 @@ func encode{{$.EntityName}}SDKOpsBase64Field(value any, path []string) (any, err
 		return nil, nil
 	}
 
+	if path[0] == "[]" {
+		items, ok := value.([]any)
+		if !ok {
+			return nil, fmt.Errorf("expected array, got %T", value)
+		}
+		for i, item := range items {
+			encoded, err := encode{{$.EntityName}}SDKOpsBase64Field(item, path[1:])
+			if err != nil {
+				return nil, err
+			}
+			items[i] = encoded
+		}
+		return items, nil
+	}
+
 	object, ok := value.(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("expected object, got %T", value)
@@ -1152,7 +1232,38 @@ func (obj *{{$.EntityName}}) sdkOpsAPISpec(ctx context.Context, cl client.Client
 
 	apiSpec := obj.Spec.APISpec
 {{- range .SecretReferences}}
+{{- $ref := .}}
 	// Resolve {{.Path}}
+{{- if .IsSlice}}
+{{- range .PointerGuards}}
+	if apiSpec.{{.}} != nil {
+{{- end}}
+	for i := range apiSpec.{{$ref.SliceParentSelector}} {
+		src := apiSpec.{{$ref.SliceParentSelector}}[i].{{$ref.SliceLeafField}}
+		if src.Type == SensitiveDataSourceTypeSecretRef {
+			if src.SecretRef == nil {
+				return nil, fmt.Errorf("secretRef is nil for {{$ref.Path}}")
+			}
+			namespace := obj.GetNamespace()
+			if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+				namespace = *src.SecretRef.Namespace
+			}
+			var secret corev1.Secret
+			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+			}
+			secretBytes, ok := secret.Data["{{$ref.SecretKey}}"]
+			if !ok {
+				return nil, fmt.Errorf("secret %s/%s is missing key '{{$ref.SecretKey}}'", namespace, src.SecretRef.Name)
+			}
+			resolved := string(secretBytes)
+			apiSpec.{{$ref.SliceParentSelector}}[i].{{$ref.SliceLeafField}}.Value = &resolved
+		}
+	}
+{{- range $ref.PointerGuards}}
+	}
+{{- end}}
+{{- else}}
 	{
 		src := apiSpec.{{.GoFieldSelector}}
 		if src.Type == SensitiveDataSourceTypeSecretRef {
@@ -1176,6 +1287,7 @@ func (obj *{{$.EntityName}}) sdkOpsAPISpec(ctx context.Context, cl client.Client
 		}
 	}
 {{- end}}
+{{- end}}
 	return &apiSpec, nil
 }
 
@@ -1185,12 +1297,30 @@ func (obj *{{$.EntityName}}) GetSensitiveDataSecretRefs() []SensitiveDataSecretR
 	}
 	var refs []SensitiveDataSecretRef
 {{- range .SecretReferences}}
+{{- $ref := .}}
+{{- if .IsSlice}}
+{{- range .PointerGuards}}
+	if obj.Spec.APISpec.{{.}} != nil {
+{{- end}}
+	for _, item := range obj.Spec.APISpec.{{$ref.SliceParentSelector}} {
+		if item.{{$ref.SliceLeafField}}.Type == SensitiveDataSourceTypeSecretRef && item.{{$ref.SliceLeafField}}.SecretRef != nil {
+			refs = append(refs, SensitiveDataSecretRef{
+				Ref: *item.{{$ref.SliceLeafField}}.SecretRef,
+				Key: "{{$ref.SecretKey}}",
+			})
+		}
+	}
+{{- range $ref.PointerGuards}}
+	}
+{{- end}}
+{{- else}}
 	if obj.Spec.APISpec.{{.GoFieldSelector}}.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.{{.GoFieldSelector}}.SecretRef != nil {
 		refs = append(refs, SensitiveDataSecretRef{
 			Ref: *obj.Spec.APISpec.{{.GoFieldSelector}}.SecretRef,
 			Key: "{{.SecretKey}}",
 		})
 	}
+{{- end}}
 {{- end}}
 	return refs
 }
