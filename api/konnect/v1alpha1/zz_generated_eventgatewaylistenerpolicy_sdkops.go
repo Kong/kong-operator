@@ -127,11 +127,13 @@ func normalizeEventGatewayListenerPolicySDKOpsBoolField(value any, path []string
 	}
 }
 
+// EventGatewayListenerPolicySDKOpsBase64Field describes a field that must be base64-encoded for SDK payloads.
 type EventGatewayListenerPolicySDKOpsBase64Field struct {
 	Label string
 	Path  []string
 }
 
+// EventGatewayListenerPolicySDKOpsBase64Fields lists all fields that must be base64-encoded for SDK payloads.
 var EventGatewayListenerPolicySDKOpsBase64Fields = []EventGatewayListenerPolicySDKOpsBase64Field{
 	{
 		Label: "spec.apiSpec.tlsServer.config.certificates[].key",
@@ -399,6 +401,7 @@ func (obj *EventGatewayListenerPolicy) sdkOpsAPISpec(ctx context.Context, cl cli
 	return &apiSpec, nil
 }
 
+// GetSensitiveDataSecretRefs returns all Secret references used to populate sensitive SDK payload fields.
 func (obj *EventGatewayListenerPolicy) GetSensitiveDataSecretRefs() []SensitiveDataSecretRef {
 	if obj == nil {
 		return nil
@@ -432,6 +435,8 @@ func (obj *EventGatewayListenerPolicy) GetSensitiveDataSecretRefs() []SensitiveD
 }
 
 
+// ToCreateEventGatewayListenerPolicyRequest converts the EventGatewayListenerPolicy to the SDK type
+// sdkkonnectoper.CreateEventGatewayListenerPolicyRequest, resolving referenced Secrets via the provided client.
 func (obj *EventGatewayListenerPolicy) ToCreateEventGatewayListenerPolicyRequest(ctx context.Context, cl client.Client) (*sdkkonnectoper.CreateEventGatewayListenerPolicyRequest, error) {
 	spec, err := obj.sdkOpsAPISpec(ctx, cl)
 	if err != nil {
@@ -441,6 +446,8 @@ func (obj *EventGatewayListenerPolicy) ToCreateEventGatewayListenerPolicyRequest
 }
 
 
+// ToUpdateEventGatewayListenerPolicyRequest converts the EventGatewayListenerPolicy to the SDK type
+// sdkkonnectoper.UpdateEventGatewayListenerPolicyRequest, resolving referenced Secrets via the provided client.
 func (obj *EventGatewayListenerPolicy) ToUpdateEventGatewayListenerPolicyRequest(ctx context.Context, cl client.Client) (*sdkkonnectoper.UpdateEventGatewayListenerPolicyRequest, error) {
 	spec, err := obj.sdkOpsAPISpec(ctx, cl)
 	if err != nil {
