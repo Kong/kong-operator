@@ -6,7 +6,7 @@ github_attestations = false
 
 [tools."github:kubernetes-sigs/controller-tools"]
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-tools
-version = "0.20.1"
+version = "0.21.0"
 
 [tools."github:golangci/golangci-lint"]
 # renovate: datasource=github-releases depName=golangci/golangci-lint
