@@ -109,12 +109,12 @@ func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error
 
 	if r.KonnectEnabled {
 		// Watch for changes in KonnectExtension objects that are referenced by ControlPlane objects.
-		// They may trigger reconciliation of DataPlane resources.
+		// They may trigger reconciliation of ControlPlane resources.
 		builder.WatchesRawSource(
 			source.Kind(
 				mgr.GetCache(),
 				&konnectv1alpha2.KonnectExtension{},
-				handler.TypedEnqueueRequestsFromMapFunc(index.ListObjectsReferencingKonnectExtension(mgr.GetClient(), &operatorv1beta1.DataPlaneList{})),
+				handler.TypedEnqueueRequestsFromMapFunc(index.ListObjectsReferencingKonnectExtension(mgr.GetClient(), &gwtypes.ControlPlaneList{})),
 			),
 		)
 	}
