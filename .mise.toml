@@ -14,7 +14,7 @@ version = "2.12.2"
 
 [tools."github:kubernetes-sigs/controller-runtime"]
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-runtime
-version = "0.23.3"
+version = "0.24.1"
 [tools."github:kubernetes-sigs/controller-runtime".platforms]
 darwin-arm64 = { asset_pattern = "setup-envtest-darwin-arm64" }
 linux-arm64 = { asset_pattern = "setup-envtest-linux-arm64" }
