@@ -10,6 +10,8 @@ import (
 	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
@@ -31,7 +33,7 @@ func testGeneratedEventGatewayListenerPolicyForSDKOps() *konnectv1alpha1.EventGa
 			APISpec: konnectv1alpha1.EventGatewayListenerPolicyAPISpec{
 				EventGatewayListenerPolicyConfig: &konnectv1alpha1.EventGatewayListenerPolicyConfig{
 					Type: konnectv1alpha1.EventGatewayListenerPolicyConfigTypeEventGatewayTLSListen,
-					EventGatewayTLSListen: &konnectv1alpha1.EventGatewayTLSListenerPolicy{Config: konnectv1alpha1.EventGatewayTLSListenerPolicyConfig{Certificates: []konnectv1alpha1.TLSCertificate{{Certificate: konnectv1alpha1.GatewaySecretReferenceOrLiteral("certificate"), Key: konnectv1alpha1.GatewaySecret("key")}}}},
+					EventGatewayTLSListen: &konnectv1alpha1.EventGatewayTLSListenerPolicy{Config: konnectv1alpha1.EventGatewayTLSListenerPolicyConfig{Certificates: []konnectv1alpha1.TLSCertificate{{Certificate: konnectv1alpha1.SensitiveDataSource{Type: konnectv1alpha1.SensitiveDataSourceTypeInline, Value: new("certificate")}, Key: konnectv1alpha1.SensitiveDataSource{Type: konnectv1alpha1.SensitiveDataSourceTypeInline, Value: new("key")}}}}},
 				},
 			},
 		},
@@ -43,12 +45,13 @@ func TestCreateEventGatewayListenerPolicy_UsesSDKOpsConversion(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockEventGatewayListenerPoliciesSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 	obj := testGeneratedEventGatewayListenerPolicyForSDKOps()
 	gatewayID := "gatewayID-1"
 	obj.SetGatewayID(gatewayID)
 	eventGatewayListenerID := "eventGatewayListenerID-1"
 	obj.SetEventGatewayListenerID(eventGatewayListenerID)
-	expectedRequest, err := obj.Spec.APISpec.ToCreateEventGatewayListenerPolicyRequest()
+	expectedRequest, err := obj.ToCreateEventGatewayListenerPolicyRequest(ctx, cl)
 	require.NoError(t, err)
 	expectedRequest.GatewayID = gatewayID
 	expectedRequest.ListenerID = eventGatewayListenerID
@@ -66,7 +69,7 @@ func TestCreateEventGatewayListenerPolicy_UsesSDKOpsConversion(t *testing.T) {
 		}, nil).
 		Once()
 
-	require.NoError(t, createEventGatewayListenerPolicy(ctx, sdk, obj))
+	require.NoError(t, createEventGatewayListenerPolicy(ctx, cl, sdk, obj))
 	require.Equal(t, expectedID, obj.GetKonnectID())
 }
 
@@ -75,12 +78,13 @@ func TestCreateEventGatewayListenerPolicy_PropagatesSDKError(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockEventGatewayListenerPoliciesSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 	obj := testGeneratedEventGatewayListenerPolicyForSDKOps()
 	gatewayID := "gatewayID-1"
 	obj.SetGatewayID(gatewayID)
 	eventGatewayListenerID := "eventGatewayListenerID-1"
 	obj.SetEventGatewayListenerID(eventGatewayListenerID)
-	expectedRequest, err := obj.Spec.APISpec.ToCreateEventGatewayListenerPolicyRequest()
+	expectedRequest, err := obj.ToCreateEventGatewayListenerPolicyRequest(ctx, cl)
 	require.NoError(t, err)
 	expectedRequest.GatewayID = gatewayID
 	expectedRequest.ListenerID = eventGatewayListenerID
@@ -94,7 +98,7 @@ func TestCreateEventGatewayListenerPolicy_PropagatesSDKError(t *testing.T) {
 		Return(nil, sdkErr).
 		Once()
 
-	err = createEventGatewayListenerPolicy(ctx, sdk, obj)
+	err = createEventGatewayListenerPolicy(ctx, cl, sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
 }
 
@@ -103,13 +107,14 @@ func TestUpdateEventGatewayListenerPolicy_UsesSDKOpsConversion(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockEventGatewayListenerPoliciesSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 	obj := testGeneratedEventGatewayListenerPolicyForSDKOps()
 	gatewayID := "gatewayID-1"
 	obj.SetGatewayID(gatewayID)
 	eventGatewayListenerID := "eventGatewayListenerID-1"
 	obj.SetEventGatewayListenerID(eventGatewayListenerID)
 	obj.SetKonnectID("eventgatewaylistenerpolicy-id")
-	expectedRequest, err := obj.Spec.APISpec.ToUpdateEventGatewayListenerPolicyRequest()
+	expectedRequest, err := obj.ToUpdateEventGatewayListenerPolicyRequest(ctx, cl)
 	require.NoError(t, err)
 	expectedRequest.GatewayID = gatewayID
 	expectedRequest.ListenerID = eventGatewayListenerID
@@ -123,7 +128,7 @@ func TestUpdateEventGatewayListenerPolicy_UsesSDKOpsConversion(t *testing.T) {
 		Return(&sdkkonnectops.UpdateEventGatewayListenerPolicyResponse{}, nil).
 		Once()
 
-	require.NoError(t, updateEventGatewayListenerPolicy(ctx, sdk, obj))
+	require.NoError(t, updateEventGatewayListenerPolicy(ctx, cl, sdk, obj))
 }
 
 func TestUpdateEventGatewayListenerPolicy_PropagatesSDKError(t *testing.T) {
@@ -131,13 +136,14 @@ func TestUpdateEventGatewayListenerPolicy_PropagatesSDKError(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockEventGatewayListenerPoliciesSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 	obj := testGeneratedEventGatewayListenerPolicyForSDKOps()
 	gatewayID := "gatewayID-1"
 	obj.SetGatewayID(gatewayID)
 	eventGatewayListenerID := "eventGatewayListenerID-1"
 	obj.SetEventGatewayListenerID(eventGatewayListenerID)
 	obj.SetKonnectID("eventgatewaylistenerpolicy-id")
-	expectedRequest, err := obj.Spec.APISpec.ToUpdateEventGatewayListenerPolicyRequest()
+	expectedRequest, err := obj.ToUpdateEventGatewayListenerPolicyRequest(ctx, cl)
 	require.NoError(t, err)
 	expectedRequest.GatewayID = gatewayID
 	expectedRequest.ListenerID = eventGatewayListenerID
@@ -152,7 +158,7 @@ func TestUpdateEventGatewayListenerPolicy_PropagatesSDKError(t *testing.T) {
 		Return(nil, sdkErr).
 		Once()
 
-	err = updateEventGatewayListenerPolicy(ctx, sdk, obj)
+	err = updateEventGatewayListenerPolicy(ctx, cl, sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
 }
 

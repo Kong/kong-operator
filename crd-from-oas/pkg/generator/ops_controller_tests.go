@@ -175,7 +175,7 @@ func buildOpsControllerRootUnionFixture(entityName string, schema *parser.Schema
 			VariantField:    "EventGatewayTLSListen",
 			VariantTypeName: "EventGatewayTLSListenerPolicy",
 			VariantValue: fmt.Sprintf(
-				`&%[1]s.EventGatewayTLSListenerPolicy{Config: %[1]s.EventGatewayTLSListenerPolicyConfig{Certificates: []%[1]s.TLSCertificate{{Certificate: %[1]s.GatewaySecretReferenceOrLiteral("certificate"), Key: %[1]s.GatewaySecret("key")}}}}`,
+				`&%[1]s.EventGatewayTLSListenerPolicy{Config: %[1]s.EventGatewayTLSListenerPolicyConfig{Certificates: []%[1]s.TLSCertificate{{Certificate: %[1]s.SensitiveDataSource{Type: %[1]s.SensitiveDataSourceTypeInline, Value: new("certificate")}, Key: %[1]s.SensitiveDataSource{Type: %[1]s.SensitiveDataSourceTypeInline, Value: new("key")}}}}}`,
 				apiAlias,
 			),
 		}
