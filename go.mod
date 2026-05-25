@@ -362,7 +362,7 @@ replace (
 	k8s.io/kubelet => k8s.io/kubelet v0.35.2
 	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.30.3
 	k8s.io/metrics => k8s.io/metrics v0.35.2
-	k8s.io/mount-utils => k8s.io/mount-utils v0.35.4
+	k8s.io/mount-utils => k8s.io/mount-utils v0.35.5
 	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.35.2
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.35.2
 	k8s.io/sample-cli-plugin => k8s.io/sample-cli-plugin v0.35.2
