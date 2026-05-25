@@ -17,8 +17,8 @@ func generatedControllersForKonnectEntities(
 		newKonnectEntityController[konnectv1alpha1.EventGatewayVirtualClusterConsumePolicy](controllerFactory),
 		newKonnectEntityController[konnectv1alpha1.EventGatewayVirtualClusterProducePolicy](controllerFactory),
 		newKonnectEntityController[konnectv1alpha1.IdentityProviderRequest](controllerFactory),
-		newKonnectEntityController[konnectv1alpha1.KonnectEventDataPlaneCertificate](controllerFactory),
-		newKonnectEntityController[konnectv1alpha1.KonnectEventGateway](controllerFactory),
+		// PoC: KonnectEventDataPlaneCertificate and KonnectEventGateway are
+		// handled by stub reconcilers registered in SetupControllers.
 		newKonnectEntityController[konnectv1alpha1.Portal](controllerFactory),
 		newKonnectEntityController[konnectv1alpha1.PortalCustomDomain](controllerFactory),
 		newKonnectEntityController[konnectv1alpha1.PortalCustomization](controllerFactory),

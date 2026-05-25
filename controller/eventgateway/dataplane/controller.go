@@ -33,7 +33,6 @@ import (
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	log "github.com/kong/kong-operator/v2/controller/pkg/log"
-	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 )
 
@@ -101,34 +100,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.
 		return ctrl.Result{}, err
 	}
 
-	// Ensure mTLS client certificate secret and set certificate condition.
-	certResult, certSecret, err := r.ensureCertificateSecret(ctx, egdp)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	// Return early if the Secret was just created/updated so the Deployment
-	// picks up the correct Secret name on the next reconcile. No explicit
-	// requeue is needed, the watch on the owned Secret triggers it.
-	if certResult != op.Noop {
-		return ctrl.Result{}, nil
-	}
-
-	// Ensure the KonnectEventDataPlaneCertificate is registered with Konnect.
-	// Return early if not yet programmed; the Owns() watch retriggeres once
-	// the Konnect controller flips Programmed to True.
-	certProgrammed, err := r.ensureKonnectCertificate(ctx, logger, egdp, keg, certSecret)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	// If the certificate is not yet programmed on Konnect, return early.
-	// Without this, we would create a deployment that uses a cert secret not yet present in Konnect.
-	if !certProgrammed {
-		return ctrl.Result{}, nil
-	}
-
-	// Reconcile the full Keg Deployment spec.
-	if err := r.ensureDeployment(ctx, logger, egdp, keg, certSecret.Name); err != nil {
+	// PoC: skip mTLS Secret provisioning and KonnectEventDataPlaneCertificate
+	// registration. The deployment is built without a cert volume/mount.
+	if err := r.ensureDeployment(ctx, logger, egdp, keg, ""); err != nil {
 		return ctrl.Result{}, err
 	}
 

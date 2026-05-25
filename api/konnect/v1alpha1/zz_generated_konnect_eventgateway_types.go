@@ -3,8 +3,8 @@
 package v1alpha1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // KonnectEventGateway is the Schema for the konnecteventgateways API.
@@ -40,17 +40,37 @@ type KonnectEventGatewayList struct {
 }
 
 // KonnectEventGatewaySpec defines the desired state of KonnectEventGateway.
+//
+// +kubebuilder:validation:XValidation:rule="self.environment != 'on-premise' || !has(self.konnect)",message="konnect must not be set when environment is on-premise"
 type KonnectEventGatewaySpec struct {
+	// Environment specifies where the Event Gateway runs.
+	//
+	// +optional
+	// +kubebuilder:default=konnect
+	Environment EventGatewayEnvironment `json:"environment,omitempty"`
+
 	// KonnectConfiguration is the Konnect configuration for this entity.
 	//
-	// +required
-	KonnectConfiguration konnectv1alpha2.KonnectConfiguration `json:"konnect"`
+	// +optional
+	KonnectConfiguration konnectv1alpha2.KonnectConfiguration `json:"konnect,omitempty"`
 
 	// APISpec defines the desired state of the resource's API spec fields.
 	//
 	// +optional
 	APISpec KonnectEventGatewayAPISpec `json:"apiSpec,omitzero"`
 }
+
+// EventGatewayEnvironment specifies where the Event Gateway runs.
+//
+// +kubebuilder:validation:Enum=konnect;on-premise
+type EventGatewayEnvironment string
+
+const (
+	// EventGatewayEnvironmentKonnect indicates the Event Gateway is managed via Konnect.
+	EventGatewayEnvironmentKonnect EventGatewayEnvironment = "konnect"
+	// EventGatewayEnvironmentOnPremise indicates the Event Gateway runs on-premise.
+	EventGatewayEnvironmentOnPremise EventGatewayEnvironment = "on-premise"
+)
 
 // KonnectEventGatewayAPISpec defines the API spec fields for KonnectEventGateway.
 type KonnectEventGatewayAPISpec struct {

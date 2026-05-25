@@ -100,6 +100,13 @@ spec:
                 required:
                 - name
                 type: object
+              environment:
+                default: konnect
+                description: Environment specifies where the Event Gateway runs.
+                enum:
+                - konnect
+                - on-premise
+                type: string
               konnect:
                 description: KonnectConfiguration is the Konnect configuration for
                   this entity.
@@ -120,9 +127,10 @@ spec:
                 required:
                 - authRef
                 type: object
-            required:
-            - konnect
             type: object
+            x-kubernetes-validations:
+            - message: konnect must not be set when environment is on-premise
+              rule: self.environment != 'on-premise' || !has(self.konnect)
           status:
             description: KonnectEventGatewayStatus defines the observed state of KonnectEventGateway.
             properties:

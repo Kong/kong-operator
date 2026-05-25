@@ -6,10 +6,13 @@ import (
 	"context"
 
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
@@ -21,7 +24,11 @@ func EventGatewayListenerPolicyReconciliationWatchOptions(
 ) []func(*ctrl.Builder) *ctrl.Builder {
 	return []func(*ctrl.Builder) *ctrl.Builder{
 		func(b *ctrl.Builder) *ctrl.Builder {
-			return b.For(&konnectv1alpha1.EventGatewayListenerPolicy{})
+			return b.For(&konnectv1alpha1.EventGatewayListenerPolicy{},
+				builder.WithPredicates(
+					predicate.NewPredicateFuncs(eventGatewayChildBoundToKonnect(cl)),
+				),
+			)
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
@@ -41,6 +48,21 @@ func enqueueEventGatewayListenerPolicyForEventGatewayListener(
 		parent, ok := obj.(*konnectv1alpha1.EventGatewayListener)
 		if !ok {
 			return nil
+		}
+		// Skip listeners whose parent KonnectEventGateway is on-premise.
+		gwRef := parent.GetGatewayRef()
+		if gwRef.Type == commonv1alpha1.ObjectRefTypeNamespacedRef && gwRef.NamespacedRef != nil {
+			namespace := parent.GetNamespace()
+			if gwRef.NamespacedRef.Namespace != nil && *gwRef.NamespacedRef.Namespace != "" {
+				namespace = *gwRef.NamespacedRef.Namespace
+			}
+			var eg konnectv1alpha1.KonnectEventGateway
+			if err := cl.Get(ctx, client.ObjectKey{
+				Namespace: namespace,
+				Name:      gwRef.NamespacedRef.Name,
+			}, &eg); err == nil && eg.Spec.Environment == konnectv1alpha1.EventGatewayEnvironmentOnPremise {
+				return nil
+			}
 		}
 		var l konnectv1alpha1.EventGatewayListenerPolicyList
 		if err := cl.List(ctx, &l,

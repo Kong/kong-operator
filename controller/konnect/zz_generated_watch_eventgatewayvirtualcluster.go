@@ -6,8 +6,10 @@ import (
 	"context"
 
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
@@ -21,7 +23,11 @@ func EventGatewayVirtualClusterReconciliationWatchOptions(
 ) []func(*ctrl.Builder) *ctrl.Builder {
 	return []func(*ctrl.Builder) *ctrl.Builder{
 		func(b *ctrl.Builder) *ctrl.Builder {
-			return b.For(&konnectv1alpha1.EventGatewayVirtualCluster{})
+			return b.For(&konnectv1alpha1.EventGatewayVirtualCluster{},
+				builder.WithPredicates(
+					predicate.NewPredicateFuncs(eventGatewayChildBoundToKonnect(cl)),
+				),
+			)
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
@@ -40,6 +46,9 @@ func enqueueEventGatewayVirtualClusterForEventGatewayBackendCluster(
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
 		parent, ok := obj.(*konnectv1alpha1.EventGatewayBackendCluster)
 		if !ok {
+			return nil
+		}
+		if parent.Spec.Environment == konnectv1alpha1.EventGatewayEnvironmentOnPremise {
 			return nil
 		}
 		var l konnectv1alpha1.EventGatewayVirtualClusterList
