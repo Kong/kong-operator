@@ -130,13 +130,13 @@ func TestGatewayEssentials(t *testing.T) {
 	)
 
 	t.Log("verifying that the ControlPlane becomes provisioned again")
-	require.Eventually(t, testutils.GatewayControlPlaneIsProvisioned(t, ctx, gateway, clients), 45*time.Second, time.Second)
+	require.Eventually(t, testutils.GatewayControlPlaneIsProvisioned(t, ctx, gateway, clients), testutils.GatewayReadyTimeLimit, time.Second)
 	controlplanes = testutils.MustListControlPlanesForGateway(t, ctx, gateway, clients)
 	require.Len(t, controlplanes, 1)
 	controlplane = controlplanes[0]
 
 	t.Log("verifying that the DataPlane becomes provisioned again")
-	require.Eventually(t, testutils.GatewayDataPlaneIsReady(t, ctx, gateway, clients), 45*time.Second, time.Second)
+	require.Eventually(t, testutils.GatewayDataPlaneIsReady(t, ctx, gateway, clients), testutils.GatewayReadyTimeLimit, time.Second)
 	dataplanes = testutils.MustListDataPlanesForGateway(t, ctx, gateway, clients)
 	require.Len(t, dataplanes, 1)
 	dataplane = dataplanes[0]
