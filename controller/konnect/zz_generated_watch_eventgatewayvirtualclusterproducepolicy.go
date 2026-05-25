@@ -10,7 +10,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
@@ -22,11 +21,11 @@ func EventGatewayVirtualClusterProducePolicyReconciliationWatchOptions(
 ) []func(*ctrl.Builder) *ctrl.Builder {
 	return []func(*ctrl.Builder) *ctrl.Builder{
 		func(b *ctrl.Builder) *ctrl.Builder {
-			return b.For(&konnectv1alpha1.EventGatewayVirtualClusterProducePolicy{})
+			return b.For(&configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{})
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
-				&konnectv1alpha1.EventGatewayVirtualCluster{},
+				&configurationv1alpha1.EventGatewayVirtualCluster{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueEventGatewayVirtualClusterProducePolicyForEventGatewayVirtualCluster(cl),
 				),
@@ -36,7 +35,7 @@ func EventGatewayVirtualClusterProducePolicyReconciliationWatchOptions(
 			return b.Watches(
 				&configurationv1alpha1.KongReferenceGrant{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueObjectsForKongReferenceGrant[konnectv1alpha1.EventGatewayVirtualClusterProducePolicyList](cl),
+					enqueueObjectsForKongReferenceGrant[configurationv1alpha1.EventGatewayVirtualClusterProducePolicyList](cl),
 				),
 			)
 		},
@@ -47,11 +46,11 @@ func enqueueEventGatewayVirtualClusterProducePolicyForEventGatewayVirtualCluster
 	cl client.Client,
 ) func(ctx context.Context, obj client.Object) []reconcile.Request {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		parent, ok := obj.(*konnectv1alpha1.EventGatewayVirtualCluster)
+		parent, ok := obj.(*configurationv1alpha1.EventGatewayVirtualCluster)
 		if !ok {
 			return nil
 		}
-		var l konnectv1alpha1.EventGatewayVirtualClusterProducePolicyList
+		var l configurationv1alpha1.EventGatewayVirtualClusterProducePolicyList
 		if err := cl.List(ctx, &l, client.MatchingFields{
 			index.IndexFieldEventGatewayVirtualClusterProducePolicyOnEventGatewayVirtualClusterRef: client.ObjectKeyFromObject(parent).String(),
 		}); err != nil {

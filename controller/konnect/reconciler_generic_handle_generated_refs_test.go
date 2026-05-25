@@ -49,13 +49,13 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 		{
 			name: "continues when event gateway listener parent ref is resolved",
 			run: func(t *testing.T) {
-				ent := &konnectv1alpha1.EventGatewayListenerPolicy{
+				ent := &configurationv1alpha1.EventGatewayListenerPolicy{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "listener-policy",
 						Namespace:  "default",
 						Generation: 1,
 					},
-					Spec: konnectv1alpha1.EventGatewayListenerPolicySpec{
+					Spec: configurationv1alpha1.EventGatewayListenerPolicySpec{
 						EventGatewayListenerRef: commonv1alpha1.ObjectRef{
 							Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 							NamespacedRef: &commonv1alpha1.NamespacedRef{
@@ -65,12 +65,12 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 					},
 				}
 
-				parent := &konnectv1alpha1.EventGatewayListener{
+				parent := &configurationv1alpha1.EventGatewayListener{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "listener",
 						Namespace: "default",
 					},
-					Status: konnectv1alpha1.EventGatewayListenerStatus{
+					Status: configurationv1alpha1.EventGatewayListenerStatus{
 						Conditions: []metav1.Condition{{
 							Type:               string(konnectv1alpha1.KonnectEntityProgrammedConditionType),
 							Status:             metav1.ConditionTrue,
@@ -79,7 +79,7 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 							LastTransitionTime: metav1.Now(),
 						}},
 						KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{ID: "listener-konnect-id"},
-						GatewayID:           &konnectv1alpha1.KonnectEntityRef{ID: "gateway-konnect-id"},
+						GatewayID:           &configurationv1alpha1.KonnectEntityRef{ID: "gateway-konnect-id"},
 					},
 				}
 
@@ -90,7 +90,7 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 					Build()
 
 				r := &KonnectEntityReconciler[
-					konnectv1alpha1.EventGatewayListenerPolicy, *konnectv1alpha1.EventGatewayListenerPolicy,
+					configurationv1alpha1.EventGatewayListenerPolicy, *configurationv1alpha1.EventGatewayListenerPolicy,
 				]{
 					Client: cl,
 				}
@@ -101,7 +101,7 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 				assert.False(t, stop)
 				assert.True(t, res.IsZero())
 
-				updated := &konnectv1alpha1.EventGatewayListenerPolicy{}
+				updated := &configurationv1alpha1.EventGatewayListenerPolicy{}
 				require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(ent), updated))
 				assert.Equal(t, "listener-konnect-id", updated.GetEventGatewayListenerID())
 				assert.Equal(t, "gateway-konnect-id", updated.GetGatewayID())
@@ -112,19 +112,19 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 				)
 				require.True(t, ok)
 				assert.Equal(t, metav1.ConditionTrue, cond.Status)
-				assert.Equal(t, konnectv1alpha1.EventGatewayListenerRefReasonValid, cond.Reason)
+				assert.Equal(t, configurationv1alpha1.EventGatewayListenerRefReasonValid, cond.Reason)
 			},
 		},
 		{
 			name: "continues when event gateway parent ref is resolved",
 			run: func(t *testing.T) {
-				ent := &konnectv1alpha1.EventGatewayBackendCluster{
+				ent := &configurationv1alpha1.EventGatewayBackendCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "backend-cluster",
 						Namespace:  "default",
 						Generation: 1,
 					},
-					Spec: konnectv1alpha1.EventGatewayBackendClusterSpec{
+					Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{
 						GatewayRef: gatewayRef("event-gateway"),
 					},
 				}
@@ -153,7 +153,7 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 					Build()
 
 				r := &KonnectEntityReconciler[
-					konnectv1alpha1.EventGatewayBackendCluster, *konnectv1alpha1.EventGatewayBackendCluster,
+					configurationv1alpha1.EventGatewayBackendCluster, *configurationv1alpha1.EventGatewayBackendCluster,
 				]{Client: cl}
 
 				stop, res, err := r.handleGeneratedTypeParentReferences(t.Context(), ent)
@@ -162,7 +162,7 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 				assert.False(t, stop)
 				assert.True(t, res.IsZero())
 
-				updated := &konnectv1alpha1.EventGatewayBackendCluster{}
+				updated := &configurationv1alpha1.EventGatewayBackendCluster{}
 				require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(ent), updated))
 				assert.Equal(t, "gateway-konnect-id", updated.GetGatewayID())
 
@@ -178,13 +178,13 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 		{
 			name: "stops and requeues when event gateway parent is not programmed",
 			run: func(t *testing.T) {
-				ent := &konnectv1alpha1.EventGatewayBackendCluster{
+				ent := &configurationv1alpha1.EventGatewayBackendCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "backend-cluster",
 						Namespace:  "default",
 						Generation: 1,
 					},
-					Spec: konnectv1alpha1.EventGatewayBackendClusterSpec{
+					Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{
 						GatewayRef: gatewayRef("event-gateway"),
 					},
 				}
@@ -213,7 +213,7 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 					Build()
 
 				r := &KonnectEntityReconciler[
-					konnectv1alpha1.EventGatewayBackendCluster, *konnectv1alpha1.EventGatewayBackendCluster,
+					configurationv1alpha1.EventGatewayBackendCluster, *configurationv1alpha1.EventGatewayBackendCluster,
 				]{Client: cl}
 
 				stop, res, err := r.handleGeneratedTypeParentReferences(t.Context(), ent)
@@ -222,7 +222,7 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 				assert.True(t, stop)
 				assert.Greater(t, res.RequeueAfter, time.Duration(0))
 
-				updated := &konnectv1alpha1.EventGatewayBackendCluster{}
+				updated := &configurationv1alpha1.EventGatewayBackendCluster{}
 				require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(ent), updated))
 
 				cond, ok := k8sutils.GetCondition(

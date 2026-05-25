@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
@@ -68,12 +69,12 @@ func TestGetAPIAuthConfigurationRefFromParent_Portal(t *testing.T) {
 func TestGetAPIAuthConfigurationRefFromParent_EventGateway(t *testing.T) {
 	testGetAPIAuthConfigurationRefFromParent(t,
 		func(ref commonv1alpha1.ObjectRef) objectWithParentRef {
-			return &konnectv1alpha1.EventGatewayBackendCluster{
+			return &configurationv1alpha1.EventGatewayBackendCluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "backend-cluster",
 					Namespace: "default",
 				},
-				Spec: konnectv1alpha1.EventGatewayBackendClusterSpec{
+				Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{
 					GatewayRef: ref,
 				},
 			}

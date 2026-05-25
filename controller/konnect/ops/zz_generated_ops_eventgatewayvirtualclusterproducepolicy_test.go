@@ -12,13 +12,13 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 )
 
-func testGeneratedEventGatewayVirtualClusterProducePolicyForSDKOps() *konnectv1alpha1.EventGatewayVirtualClusterProducePolicy {
-	return &konnectv1alpha1.EventGatewayVirtualClusterProducePolicy{
+func testGeneratedEventGatewayVirtualClusterProducePolicyForSDKOps() *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy {
+	return &configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: konnectv1alpha1.GroupVersion.String(),
+			APIVersion: configurationv1alpha1.GroupVersion.String(),
 			Kind:       "EventGatewayVirtualClusterProducePolicy",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -27,11 +27,11 @@ func testGeneratedEventGatewayVirtualClusterProducePolicyForSDKOps() *konnectv1a
 			UID:        "eventgatewayvirtualclusterproducepolicy-uid",
 			Generation: 3,
 		},
-		Spec: konnectv1alpha1.EventGatewayVirtualClusterProducePolicySpec{
-			APISpec: konnectv1alpha1.EventGatewayVirtualClusterProducePolicyAPISpec{
-				EventGatewayVirtualClusterProducePolicyConfig: &konnectv1alpha1.EventGatewayVirtualClusterProducePolicyConfig{
-					Type: konnectv1alpha1.EventGatewayVirtualClusterProducePolicyConfigTypeModifyHeadersPolicyCreate,
-					ModifyHeadersPolicyCreate: &konnectv1alpha1.EventGatewayModifyHeadersPolicyCreate{Config: konnectv1alpha1.EventGatewayModifyHeadersPolicyCreateConfig{Actions: []konnectv1alpha1.EventGatewayModifyHeaderAction{{Op: konnectv1alpha1.EventGatewayModifyHeaderActionTypeSet, Set: &konnectv1alpha1.EventGatewayModifyHeaderSetAction{Key: "x-added-header", Value: "added-value"}}}}},
+		Spec: configurationv1alpha1.EventGatewayVirtualClusterProducePolicySpec{
+			APISpec: configurationv1alpha1.EventGatewayVirtualClusterProducePolicyAPISpec{
+				EventGatewayVirtualClusterProducePolicyConfig: &configurationv1alpha1.EventGatewayVirtualClusterProducePolicyConfig{
+					Type: configurationv1alpha1.EventGatewayVirtualClusterProducePolicyConfigTypeModifyHeadersPolicyCreate,
+					ModifyHeadersPolicyCreate: &configurationv1alpha1.EventGatewayModifyHeadersPolicyCreate{Config: configurationv1alpha1.EventGatewayModifyHeadersPolicyCreateConfig{Actions: []configurationv1alpha1.EventGatewayModifyHeaderAction{{Op: configurationv1alpha1.EventGatewayModifyHeaderActionTypeSet, Set: &configurationv1alpha1.EventGatewayModifyHeaderSetAction{Key: "x-added-header", Value: "added-value"}}}}},
 				},
 			},
 		},

@@ -2,6 +2,12 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
+  - configuration.konghq.com_eventgatewaybackendclusters.yaml
+  - configuration.konghq.com_eventgatewaylistenerpolicies.yaml
+  - configuration.konghq.com_eventgatewaylisteners.yaml
+  - configuration.konghq.com_eventgatewayvirtualclusterconsumepolicies.yaml
+  - configuration.konghq.com_eventgatewayvirtualclusterproducepolicies.yaml
+  - configuration.konghq.com_eventgatewayvirtualclusters.yaml
   - configuration.konghq.com_ingressclassparameterses.yaml
   - configuration.konghq.com_kongcacertificates.yaml
   - configuration.konghq.com_kongcertificates.yaml
@@ -36,12 +42,6 @@ resources:
   - gateway-operator.konghq.com_gatewayconfigurations.yaml
   - gateway-operator.konghq.com_kongplugininstallations.yaml
   - gateway-operator.konghq.com_watchnamespacegrants.yaml
-  - konnect.konghq.com_eventgatewaybackendclusters.yaml
-  - konnect.konghq.com_eventgatewaylistenerpolicies.yaml
-  - konnect.konghq.com_eventgatewaylisteners.yaml
-  - konnect.konghq.com_eventgatewayvirtualclusterconsumepolicies.yaml
-  - konnect.konghq.com_eventgatewayvirtualclusterproducepolicies.yaml
-  - konnect.konghq.com_eventgatewayvirtualclusters.yaml
   - konnect.konghq.com_identityproviderrequests.yaml
   - konnect.konghq.com_konnectapiauthconfigurations.yaml
   - konnect.konghq.com_konnectcloudgatewaydataplanegroupconfigurations.yaml

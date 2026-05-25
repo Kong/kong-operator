@@ -301,7 +301,11 @@ func (obj *{{.EntityName}}) SetParentID(id string) {
 
 // GetParentGVK returns the GroupVersionKind of the parent entity.
 func (obj *{{.EntityName}}) GetParentGVK() schema.GroupVersionKind {
-	return GroupVersion.WithKind("{{.ParentKind}}")
+	return schema.GroupVersionKind{
+		Group:   "{{.ParentGroup}}",
+		Version: GroupVersion.Version,
+		Kind:    "{{.ParentKind}}",
+	}
 }
 
 // GetStatusConditionTypeParentRefValid returns the status condition type

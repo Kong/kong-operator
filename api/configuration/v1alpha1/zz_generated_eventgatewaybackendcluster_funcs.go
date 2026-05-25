@@ -9,7 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 // GetKonnectLabels gets the Konnect labels from the object's API spec.
-func (obj *EventGatewayListener) GetKonnectLabels() map[string]string {
+func (obj *EventGatewayBackendCluster) GetKonnectLabels() map[string]string {
 	if obj.Spec.APISpec.Labels == nil {
 		return nil
 	}
@@ -23,7 +23,7 @@ func (obj *EventGatewayListener) GetKonnectLabels() map[string]string {
 }
 
 // SetKonnectLabels sets the Konnect labels in the object's API spec.
-func (obj *EventGatewayListener) SetKonnectLabels(labels map[string]string) {
+func (obj *EventGatewayBackendCluster) SetKonnectLabels(labels map[string]string) {
 	if labels == nil {
 		obj.Spec.APISpec.Labels = nil
 		return
@@ -37,43 +37,43 @@ func (obj *EventGatewayListener) SetKonnectLabels(labels map[string]string) {
 	obj.Spec.APISpec.Labels = converted
 }
 
-// GetKonnectStatus returns the Konnect status contained in the EventGatewayListener status.
-func (obj *EventGatewayListener) GetKonnectStatus() *konnectv1alpha2.KonnectEntityStatus {
+// GetKonnectStatus returns the Konnect status contained in the EventGatewayBackendCluster status.
+func (obj *EventGatewayBackendCluster) GetKonnectStatus() *konnectv1alpha2.KonnectEntityStatus {
 	return &obj.Status.KonnectEntityStatus
 }
 
-// SetKonnectID sets the Konnect ID in the EventGatewayListener status.
-func (obj *EventGatewayListener) SetKonnectID(id string) {
+// SetKonnectID sets the Konnect ID in the EventGatewayBackendCluster status.
+func (obj *EventGatewayBackendCluster) SetKonnectID(id string) {
 	obj.Status.ID = id
 }
 
-// GetKonnectID returns the Konnect ID in the EventGatewayListener status.
-func (obj *EventGatewayListener) GetKonnectID() string {
+// GetKonnectID returns the Konnect ID in the EventGatewayBackendCluster status.
+func (obj *EventGatewayBackendCluster) GetKonnectID() string {
 	return obj.Status.ID
 }
 
-// GetTypeName returns the EventGatewayListener Kind name.
-func (obj EventGatewayListener) GetTypeName() string {
-	return "EventGatewayListener"
+// GetTypeName returns the EventGatewayBackendCluster Kind name.
+func (obj EventGatewayBackendCluster) GetTypeName() string {
+	return "EventGatewayBackendCluster"
 }
 
-// HasParent returns true if the EventGatewayListener has a parent entity.
-func (obj EventGatewayListener) HasParent() bool {
+// HasParent returns true if the EventGatewayBackendCluster has a parent entity.
+func (obj EventGatewayBackendCluster) HasParent() bool {
 	return true
 }
 
 // GetConditions returns the Status Conditions.
-func (obj *EventGatewayListener) GetConditions() []metav1.Condition {
+func (obj *EventGatewayBackendCluster) GetConditions() []metav1.Condition {
 	return obj.Status.Conditions
 }
 
 // SetConditions sets the Status Conditions.
-func (obj *EventGatewayListener) SetConditions(conditions []metav1.Condition) {
+func (obj *EventGatewayBackendCluster) SetConditions(conditions []metav1.Condition) {
 	obj.Status.Conditions = conditions
 }
 
 // GetGatewayID returns the Konnect ID of the parent Gateway.
-func (obj *EventGatewayListener) GetGatewayID() string {
+func (obj *EventGatewayBackendCluster) GetGatewayID() string {
 	if obj.Status.GatewayID == nil {
 		return ""
 	}
@@ -81,7 +81,7 @@ func (obj *EventGatewayListener) GetGatewayID() string {
 }
 
 // SetGatewayID sets the Konnect ID of the parent Gateway.
-func (obj *EventGatewayListener) SetGatewayID(id string) {
+func (obj *EventGatewayBackendCluster) SetGatewayID(id string) {
 	if obj.Status.GatewayID == nil {
 		obj.Status.GatewayID = &KonnectEntityRef{}
 	}
@@ -89,57 +89,61 @@ func (obj *EventGatewayListener) SetGatewayID(id string) {
 }
 
 // GetGatewayRef returns the reference to the root Gateway.
-func (obj *EventGatewayListener) GetGatewayRef() commonv1alpha1.ObjectRef {
+func (obj *EventGatewayBackendCluster) GetGatewayRef() commonv1alpha1.ObjectRef {
 	return obj.Spec.GatewayRef
 }
 
 // GetEventGatewayRef returns the reference to the root EventGateway.
-func (obj *EventGatewayListener) GetEventGatewayRef() commonv1alpha1.ObjectRef {
+func (obj *EventGatewayBackendCluster) GetEventGatewayRef() commonv1alpha1.ObjectRef {
 	return obj.Spec.GatewayRef
 }
 
 // GetParentRef returns the reference to the parent entity.
-func (obj *EventGatewayListener) GetParentRef() commonv1alpha1.ObjectRef {
+func (obj *EventGatewayBackendCluster) GetParentRef() commonv1alpha1.ObjectRef {
 	return obj.GetEventGatewayRef()
 }
 
 // SetParentID sets the Konnect ID of the immediate parent entity.
-func (obj *EventGatewayListener) SetParentID(id string) {
+func (obj *EventGatewayBackendCluster) SetParentID(id string) {
 	obj.SetGatewayID(id)
 }
 
 // GetParentGVK returns the GroupVersionKind of the parent entity.
-func (obj *EventGatewayListener) GetParentGVK() schema.GroupVersionKind {
-	return GroupVersion.WithKind("KonnectEventGateway")
+func (obj *EventGatewayBackendCluster) GetParentGVK() schema.GroupVersionKind {
+	return schema.GroupVersionKind{
+		Group:   "konnect.konghq.com",
+		Version: GroupVersion.Version,
+		Kind:    "KonnectEventGateway",
+	}
 }
 
 // GetStatusConditionTypeParentRefValid returns the status condition type
 // indicating whether the parent reference is valid.
-func (obj *EventGatewayListener) GetStatusConditionTypeParentRefValid() string {
+func (obj *EventGatewayBackendCluster) GetStatusConditionTypeParentRefValid() string {
 	return EventGatewayRefValidConditionType
 }
 
 // GetStatusConditionReasonParentRefValid returns the status condition reason
 // indicating that the parent reference is valid.
-func (obj *EventGatewayListener) GetStatusConditionReasonParentRefValid() string {
+func (obj *EventGatewayBackendCluster) GetStatusConditionReasonParentRefValid() string {
 	return EventGatewayRefReasonValid
 }
 
 // GetStatusConditionReasonParentRefInvalid returns the status condition reason
 // indicating that the parent reference is invalid.
-func (obj *EventGatewayListener) GetStatusConditionReasonParentRefInvalid() string {
+func (obj *EventGatewayBackendCluster) GetStatusConditionReasonParentRefInvalid() string {
 	return EventGatewayRefReasonInvalid
 }
 
 // GetStatusConditionReasonParentRefNotProgrammed returns the status condition
 // reason indicating that the referenced parent exists but is not yet
 // programmed in Konnect.
-func (obj *EventGatewayListener) GetStatusConditionReasonParentRefNotProgrammed() string {
+func (obj *EventGatewayBackendCluster) GetStatusConditionReasonParentRefNotProgrammed() string {
 	return EventGatewayRefReasonNotProgrammed
 }
 
 // GetAncestorIDs returns the Konnect IDs of the ancestor entities keyed by their Kind.
-func (obj *EventGatewayListener) GetAncestorIDs() map[string]string {
+func (obj *EventGatewayBackendCluster) GetAncestorIDs() map[string]string {
 	m := make(map[string]string, 1)
 	if obj.Status.GatewayID != nil {
 		m["KonnectEventGateway"] = obj.Status.GatewayID.ID

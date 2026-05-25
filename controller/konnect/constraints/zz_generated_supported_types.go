@@ -3,18 +3,19 @@
 package constraints
 
 import (
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 )
 
 // SupportedGeneratedKonnectEntityType is the generated subset of
 // constraints.SupportedKonnectEntityType.
 type SupportedGeneratedKonnectEntityType interface {
-	konnectv1alpha1.EventGatewayBackendCluster |
-		konnectv1alpha1.EventGatewayListener |
-		konnectv1alpha1.EventGatewayListenerPolicy |
-		konnectv1alpha1.EventGatewayVirtualCluster |
-		konnectv1alpha1.EventGatewayVirtualClusterConsumePolicy |
-		konnectv1alpha1.EventGatewayVirtualClusterProducePolicy |
+	configurationv1alpha1.EventGatewayBackendCluster |
+		configurationv1alpha1.EventGatewayListener |
+		configurationv1alpha1.EventGatewayListenerPolicy |
+		configurationv1alpha1.EventGatewayVirtualCluster |
+		configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy |
+		configurationv1alpha1.EventGatewayVirtualClusterProducePolicy |
 		konnectv1alpha1.KonnectEventDataPlaneCertificate |
 		konnectv1alpha1.KonnectEventGateway |
 		konnectv1alpha1.Portal |

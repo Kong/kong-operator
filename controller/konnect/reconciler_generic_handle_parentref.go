@@ -56,8 +56,9 @@ func ensureKongReferenceGrantForParentRef[
 	cl client.Client,
 	ent T,
 	ref commonv1alpha1.ObjectRef,
-	parentTypeName string,
+	parentGVK schema.GroupVersionKind,
 ) (ctrl.Result, error) {
+	parentTypeName := parentGVK.Kind
 	if ref.Type != commonv1alpha1.ObjectRefTypeNamespacedRef ||
 		ref.NamespacedRef == nil ||
 		ref.NamespacedRef.Namespace == nil ||
@@ -79,7 +80,7 @@ func ensureKongReferenceGrantForParentRef[
 		targetNamespace,
 		ref.NamespacedRef.Name,
 		metav1.GroupVersionKind(ent.GetObjectKind().GroupVersionKind()),
-		metav1.GroupVersionKind(konnectv1alpha1.GroupVersion.WithKind(parentTypeName)),
+		metav1.GroupVersionKind(parentGVK),
 	)
 
 	if crossnamespace.IsReferenceNotGranted(err) {
@@ -141,7 +142,7 @@ func (prh parentRefHandler[p, pPTr]) handleParentRef(
 	parentType := constraints.EntityTypeName[p]()
 
 	parentRef := obj.GetParentRef()
-	if res, err := ensureKongReferenceGrantForParentRef(ctx, cl, obj, parentRef, parentType); err != nil || !res.IsZero() {
+	if res, err := ensureKongReferenceGrantForParentRef(ctx, cl, obj, parentRef, obj.GetParentGVK()); err != nil || !res.IsZero() {
 		return res, err
 	}
 

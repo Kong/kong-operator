@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
@@ -26,17 +27,17 @@ func UpdateGeneratedOps[
 	e TEnt,
 ) error {
 	switch ent := any(e).(type) {
-	case *konnectv1alpha1.EventGatewayBackendCluster:
+	case *configurationv1alpha1.EventGatewayBackendCluster:
 		return updateEventGatewayBackendCluster(ctx, cl, sdk.GetEventGatewayBackendClustersSDK(), ent)
-	case *konnectv1alpha1.EventGatewayListener:
+	case *configurationv1alpha1.EventGatewayListener:
 		return updateEventGatewayListener(ctx, sdk.GetEventGatewayListenersSDK(), ent)
-	case *konnectv1alpha1.EventGatewayListenerPolicy:
+	case *configurationv1alpha1.EventGatewayListenerPolicy:
 		return updateEventGatewayListenerPolicy(ctx, cl, sdk.GetEventGatewayListenerPoliciesSDK(), ent)
-	case *konnectv1alpha1.EventGatewayVirtualCluster:
+	case *configurationv1alpha1.EventGatewayVirtualCluster:
 		return updateEventGatewayVirtualCluster(ctx, sdk.GetEventGatewayVirtualClustersSDK(), ent)
-	case *konnectv1alpha1.EventGatewayVirtualClusterConsumePolicy:
+	case *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy:
 		return updateEventGatewayVirtualClusterConsumePolicy(ctx, sdk.GetEventGatewayVirtualClusterConsumePoliciesSDK(), ent)
-	case *konnectv1alpha1.EventGatewayVirtualClusterProducePolicy:
+	case *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy:
 		return updateEventGatewayVirtualClusterProducePolicy(ctx, sdk.GetEventGatewayVirtualClusterProducePoliciesSDK(), ent)
 	case *konnectv1alpha1.KonnectEventDataPlaneCertificate:
 		return updateKonnectEventDataPlaneCertificate(ctx, cl, sdk.GetEventGatewayDataPlaneCertificatesSDK(), ent)

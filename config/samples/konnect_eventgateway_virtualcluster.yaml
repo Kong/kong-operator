@@ -52,7 +52,7 @@ stringData:
     -----END CERTIFICATE-----
 ---
 kind: EventGatewayBackendCluster
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: configuration.konghq.com/v1alpha1
 metadata:
   name: cp-event-1-backend-cluster-2
   namespace: default
@@ -120,7 +120,7 @@ spec:
             name: my-backend-cluster-tls
 ---
 kind: EventGatewayVirtualCluster
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: configuration.konghq.com/v1alpha1
 metadata:
   name: cp-event-1-virtual-cluster-1
   namespace: default

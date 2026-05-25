@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 )
 
@@ -96,8 +97,8 @@ func TestGetEventGatewayVirtualClusterProducePolicyForUID(t *testing.T) {
 	require.ErrorAs(t, err, &notFoundErr)
 }
 
-func testEventGatewayVirtualClusterProducePolicy() *konnectv1alpha1.EventGatewayVirtualClusterProducePolicy {
-	return &konnectv1alpha1.EventGatewayVirtualClusterProducePolicy{
+func testEventGatewayVirtualClusterProducePolicy() *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy {
+	return &configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: konnectv1alpha1.GroupVersion.String(),
 			Kind:       "EventGatewayVirtualClusterProducePolicy",
@@ -108,27 +109,27 @@ func testEventGatewayVirtualClusterProducePolicy() *konnectv1alpha1.EventGateway
 			UID:        "produce-policy-uid",
 			Generation: 2,
 		},
-		Spec: konnectv1alpha1.EventGatewayVirtualClusterProducePolicySpec{
+		Spec: configurationv1alpha1.EventGatewayVirtualClusterProducePolicySpec{
 			EventGatewayVirtualClusterRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 				NamespacedRef: &commonv1alpha1.NamespacedRef{
 					Name: "event-virtual-cluster",
 				},
 			},
-			APISpec: konnectv1alpha1.EventGatewayVirtualClusterProducePolicyAPISpec{
-				EventGatewayVirtualClusterProducePolicyConfig: &konnectv1alpha1.EventGatewayVirtualClusterProducePolicyConfig{
-					Type: konnectv1alpha1.EventGatewayVirtualClusterProducePolicyConfigTypeModifyHeadersPolicyCreate,
-					ModifyHeadersPolicyCreate: &konnectv1alpha1.EventGatewayModifyHeadersPolicyCreate{
+			APISpec: configurationv1alpha1.EventGatewayVirtualClusterProducePolicyAPISpec{
+				EventGatewayVirtualClusterProducePolicyConfig: &configurationv1alpha1.EventGatewayVirtualClusterProducePolicyConfig{
+					Type: configurationv1alpha1.EventGatewayVirtualClusterProducePolicyConfigTypeModifyHeadersPolicyCreate,
+					ModifyHeadersPolicyCreate: &configurationv1alpha1.EventGatewayModifyHeadersPolicyCreate{
 						Name:        "add-header-1",
 						Description: "produce policy description",
-						Labels: konnectv1alpha1.Labels{
+						Labels: configurationv1alpha1.Labels{
 							"team": "platform",
 						},
-						Config: konnectv1alpha1.EventGatewayModifyHeadersPolicyCreateConfig{
-							Actions: []konnectv1alpha1.EventGatewayModifyHeaderAction{
+						Config: configurationv1alpha1.EventGatewayModifyHeadersPolicyCreateConfig{
+							Actions: []configurationv1alpha1.EventGatewayModifyHeaderAction{
 								{
-									Op: konnectv1alpha1.EventGatewayModifyHeaderActionTypeSet,
-									Set: &konnectv1alpha1.EventGatewayModifyHeaderSetAction{
+									Op: configurationv1alpha1.EventGatewayModifyHeaderActionTypeSet,
+									Set: &configurationv1alpha1.EventGatewayModifyHeaderSetAction{
 										Key:   "x-added-header",
 										Value: "added-value",
 									},
@@ -139,11 +140,11 @@ func testEventGatewayVirtualClusterProducePolicy() *konnectv1alpha1.EventGateway
 				},
 			},
 		},
-		Status: konnectv1alpha1.EventGatewayVirtualClusterProducePolicyStatus{
-			GatewayID: &konnectv1alpha1.KonnectEntityRef{
+		Status: configurationv1alpha1.EventGatewayVirtualClusterProducePolicyStatus{
+			GatewayID: &configurationv1alpha1.KonnectEntityRef{
 				ID: "gateway-1",
 			},
-			VirtualClusterID: &konnectv1alpha1.KonnectEntityRef{
+			VirtualClusterID: &configurationv1alpha1.KonnectEntityRef{
 				ID: "virtual-cluster-1",
 			},
 		},

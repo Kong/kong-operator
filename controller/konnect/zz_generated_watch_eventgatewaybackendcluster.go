@@ -10,8 +10,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
@@ -22,7 +22,7 @@ func EventGatewayBackendClusterReconciliationWatchOptions(
 ) []func(*ctrl.Builder) *ctrl.Builder {
 	return []func(*ctrl.Builder) *ctrl.Builder{
 		func(b *ctrl.Builder) *ctrl.Builder {
-			return b.For(&konnectv1alpha1.EventGatewayBackendCluster{})
+			return b.For(&configurationv1alpha1.EventGatewayBackendCluster{})
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
@@ -36,7 +36,7 @@ func EventGatewayBackendClusterReconciliationWatchOptions(
 			return b.Watches(
 				&configurationv1alpha1.KongReferenceGrant{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueObjectsForKongReferenceGrant[konnectv1alpha1.EventGatewayBackendClusterList](cl),
+					enqueueObjectsForKongReferenceGrant[configurationv1alpha1.EventGatewayBackendClusterList](cl),
 				),
 			)
 		},
@@ -51,7 +51,7 @@ func enqueueEventGatewayBackendClusterForKonnectEventGateway(
 		if !ok {
 			return nil
 		}
-		var l konnectv1alpha1.EventGatewayBackendClusterList
+		var l configurationv1alpha1.EventGatewayBackendClusterList
 		if err := cl.List(ctx, &l, client.MatchingFields{
 			index.IndexFieldEventGatewayBackendClusterOnKonnectEventGatewayRef: client.ObjectKeyFromObject(parent).String(),
 		}); err != nil {

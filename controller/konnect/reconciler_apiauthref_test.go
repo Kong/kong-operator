@@ -603,8 +603,8 @@ func TestGetAPIAuthRefNN_EventGatewayVirtualCluster(t *testing.T) {
 		}
 	}
 
-	makeBackendCluster := func(gatewayRefNamespace *string) *konnectv1alpha1.EventGatewayBackendCluster {
-		return &konnectv1alpha1.EventGatewayBackendCluster{
+	makeBackendCluster := func(gatewayRefNamespace *string) *configurationv1alpha1.EventGatewayBackendCluster {
+		return &configurationv1alpha1.EventGatewayBackendCluster{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: konnectv1alpha1.GroupVersion.String(),
 				Kind:       "EventGatewayBackendCluster",
@@ -613,7 +613,7 @@ func TestGetAPIAuthRefNN_EventGatewayVirtualCluster(t *testing.T) {
 				Name:      backendClusterName,
 				Namespace: backendClusterNamespace,
 			},
-			Spec: konnectv1alpha1.EventGatewayBackendClusterSpec{
+			Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{
 				GatewayRef: commonv1alpha1.ObjectRef{
 					Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 					NamespacedRef: &commonv1alpha1.NamespacedRef{
@@ -625,13 +625,13 @@ func TestGetAPIAuthRefNN_EventGatewayVirtualCluster(t *testing.T) {
 		}
 	}
 
-	makeVirtualCluster := func(backendClusterRefNamespace *string) *konnectv1alpha1.EventGatewayVirtualCluster {
-		return &konnectv1alpha1.EventGatewayVirtualCluster{
+	makeVirtualCluster := func(backendClusterRefNamespace *string) *configurationv1alpha1.EventGatewayVirtualCluster {
+		return &configurationv1alpha1.EventGatewayVirtualCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "virtual-cluster",
 				Namespace: virtualClusterNamespace,
 			},
-			Spec: konnectv1alpha1.EventGatewayVirtualClusterSpec{
+			Spec: configurationv1alpha1.EventGatewayVirtualClusterSpec{
 				EventGatewayBackendClusterRef: commonv1alpha1.ObjectRef{
 					Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 					NamespacedRef: &commonv1alpha1.NamespacedRef{
@@ -645,7 +645,7 @@ func TestGetAPIAuthRefNN_EventGatewayVirtualCluster(t *testing.T) {
 
 	testCases := []struct {
 		name              string
-		virtualCluster    *konnectv1alpha1.EventGatewayVirtualCluster
+		virtualCluster    *configurationv1alpha1.EventGatewayVirtualCluster
 		objects           []client.Object
 		wantNN            types.NamespacedName
 		wantErrorContains string
@@ -731,8 +731,8 @@ func TestGetAPIAuthRefNN_EventGatewayListenerPolicy(t *testing.T) {
 		}
 	}
 
-	makeListener := func(gatewayRefNamespace *string) *konnectv1alpha1.EventGatewayListener {
-		return &konnectv1alpha1.EventGatewayListener{
+	makeListener := func(gatewayRefNamespace *string) *configurationv1alpha1.EventGatewayListener {
+		return &configurationv1alpha1.EventGatewayListener{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: konnectv1alpha1.GroupVersion.String(),
 				Kind:       "EventGatewayListener",
@@ -741,7 +741,7 @@ func TestGetAPIAuthRefNN_EventGatewayListenerPolicy(t *testing.T) {
 				Name:      listenerName,
 				Namespace: listenerNamespace,
 			},
-			Spec: konnectv1alpha1.EventGatewayListenerSpec{
+			Spec: configurationv1alpha1.EventGatewayListenerSpec{
 				GatewayRef: commonv1alpha1.ObjectRef{
 					Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 					NamespacedRef: &commonv1alpha1.NamespacedRef{
@@ -753,13 +753,13 @@ func TestGetAPIAuthRefNN_EventGatewayListenerPolicy(t *testing.T) {
 		}
 	}
 
-	makePolicy := func(listenerRefNamespace *string) *konnectv1alpha1.EventGatewayListenerPolicy {
-		return &konnectv1alpha1.EventGatewayListenerPolicy{
+	makePolicy := func(listenerRefNamespace *string) *configurationv1alpha1.EventGatewayListenerPolicy {
+		return &configurationv1alpha1.EventGatewayListenerPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "listener-policy",
 				Namespace: policyNamespace,
 			},
-			Spec: konnectv1alpha1.EventGatewayListenerPolicySpec{
+			Spec: configurationv1alpha1.EventGatewayListenerPolicySpec{
 				EventGatewayListenerRef: commonv1alpha1.ObjectRef{
 					Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 					NamespacedRef: &commonv1alpha1.NamespacedRef{
@@ -773,7 +773,7 @@ func TestGetAPIAuthRefNN_EventGatewayListenerPolicy(t *testing.T) {
 
 	testCases := []struct {
 		name              string
-		policy            *konnectv1alpha1.EventGatewayListenerPolicy
+		policy            *configurationv1alpha1.EventGatewayListenerPolicy
 		objects           []client.Object
 		wantNN            types.NamespacedName
 		wantErrorContains string
@@ -861,8 +861,8 @@ func TestGetAPIAuthRefNN_EventGatewayVirtualClusterConsumePolicy(t *testing.T) {
 		}
 	}
 
-	makeBackendCluster := func(gatewayRefNamespace *string) *konnectv1alpha1.EventGatewayBackendCluster {
-		return &konnectv1alpha1.EventGatewayBackendCluster{
+	makeBackendCluster := func(gatewayRefNamespace *string) *configurationv1alpha1.EventGatewayBackendCluster {
+		return &configurationv1alpha1.EventGatewayBackendCluster{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: konnectv1alpha1.GroupVersion.String(),
 				Kind:       "EventGatewayBackendCluster",
@@ -871,7 +871,7 @@ func TestGetAPIAuthRefNN_EventGatewayVirtualClusterConsumePolicy(t *testing.T) {
 				Name:      backendClusterName,
 				Namespace: backendClusterNamespace,
 			},
-			Spec: konnectv1alpha1.EventGatewayBackendClusterSpec{
+			Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{
 				GatewayRef: commonv1alpha1.ObjectRef{
 					Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 					NamespacedRef: &commonv1alpha1.NamespacedRef{
@@ -883,8 +883,8 @@ func TestGetAPIAuthRefNN_EventGatewayVirtualClusterConsumePolicy(t *testing.T) {
 		}
 	}
 
-	makeVirtualCluster := func(backendClusterRefNamespace *string) *konnectv1alpha1.EventGatewayVirtualCluster {
-		return &konnectv1alpha1.EventGatewayVirtualCluster{
+	makeVirtualCluster := func(backendClusterRefNamespace *string) *configurationv1alpha1.EventGatewayVirtualCluster {
+		return &configurationv1alpha1.EventGatewayVirtualCluster{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: konnectv1alpha1.GroupVersion.String(),
 				Kind:       "EventGatewayVirtualCluster",
@@ -893,7 +893,7 @@ func TestGetAPIAuthRefNN_EventGatewayVirtualClusterConsumePolicy(t *testing.T) {
 				Name:      virtualClusterName,
 				Namespace: virtualClusterNamespace,
 			},
-			Spec: konnectv1alpha1.EventGatewayVirtualClusterSpec{
+			Spec: configurationv1alpha1.EventGatewayVirtualClusterSpec{
 				EventGatewayBackendClusterRef: commonv1alpha1.ObjectRef{
 					Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 					NamespacedRef: &commonv1alpha1.NamespacedRef{
@@ -905,13 +905,13 @@ func TestGetAPIAuthRefNN_EventGatewayVirtualClusterConsumePolicy(t *testing.T) {
 		}
 	}
 
-	makePolicy := func(virtualClusterRefNamespace *string) *konnectv1alpha1.EventGatewayVirtualClusterConsumePolicy {
-		return &konnectv1alpha1.EventGatewayVirtualClusterConsumePolicy{
+	makePolicy := func(virtualClusterRefNamespace *string) *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy {
+		return &configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "consume-policy",
 				Namespace: policyNamespace,
 			},
-			Spec: konnectv1alpha1.EventGatewayVirtualClusterConsumePolicySpec{
+			Spec: configurationv1alpha1.EventGatewayVirtualClusterConsumePolicySpec{
 				EventGatewayVirtualClusterRef: commonv1alpha1.ObjectRef{
 					Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 					NamespacedRef: &commonv1alpha1.NamespacedRef{
@@ -925,7 +925,7 @@ func TestGetAPIAuthRefNN_EventGatewayVirtualClusterConsumePolicy(t *testing.T) {
 
 	testCases := []struct {
 		name              string
-		policy            *konnectv1alpha1.EventGatewayVirtualClusterConsumePolicy
+		policy            *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy
 		objects           []client.Object
 		wantNN            types.NamespacedName
 		wantErrorContains string

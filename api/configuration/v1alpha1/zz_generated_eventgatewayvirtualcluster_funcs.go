@@ -105,7 +105,11 @@ func (obj *EventGatewayVirtualCluster) SetParentID(id string) {
 
 // GetParentGVK returns the GroupVersionKind of the parent entity.
 func (obj *EventGatewayVirtualCluster) GetParentGVK() schema.GroupVersionKind {
-	return GroupVersion.WithKind("EventGatewayBackendCluster")
+	return schema.GroupVersionKind{
+		Group:   "configuration.konghq.com",
+		Version: GroupVersion.Version,
+		Kind:    "EventGatewayBackendCluster",
+	}
 }
 
 // GetStatusConditionTypeParentRefValid returns the status condition type

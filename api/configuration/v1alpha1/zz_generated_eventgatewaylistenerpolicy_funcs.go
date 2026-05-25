@@ -93,7 +93,11 @@ func (obj *EventGatewayListenerPolicy) SetParentID(id string) {
 
 // GetParentGVK returns the GroupVersionKind of the parent entity.
 func (obj *EventGatewayListenerPolicy) GetParentGVK() schema.GroupVersionKind {
-	return GroupVersion.WithKind("EventGatewayListener")
+	return schema.GroupVersionKind{
+		Group:   "configuration.konghq.com",
+		Version: GroupVersion.Version,
+		Kind:    "EventGatewayListener",
+	}
 }
 
 // GetStatusConditionTypeParentRefValid returns the status condition type

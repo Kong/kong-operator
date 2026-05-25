@@ -10,14 +10,14 @@ import (
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 )
 
 func createEventGatewayListenerPolicy(
 	ctx context.Context,
 	cl client.Client,
 	sdk sdkkonnectgo.EventGatewayListenerPoliciesSDK,
-	obj *konnectv1alpha1.EventGatewayListenerPolicy,
+	obj *configurationv1alpha1.EventGatewayListenerPolicy,
 ) error {
 	gatewayID := obj.GetGatewayID()
 	if gatewayID == "" {
@@ -50,7 +50,7 @@ func updateEventGatewayListenerPolicy(
 	ctx context.Context,
 	cl client.Client,
 	sdk sdkkonnectgo.EventGatewayListenerPoliciesSDK,
-	obj *konnectv1alpha1.EventGatewayListenerPolicy,
+	obj *configurationv1alpha1.EventGatewayListenerPolicy,
 ) error {
 	gatewayID := obj.GetGatewayID()
 	if gatewayID == "" {
@@ -81,7 +81,7 @@ func updateEventGatewayListenerPolicy(
 func deleteEventGatewayListenerPolicy(
 	ctx context.Context,
 	sdk sdkkonnectgo.EventGatewayListenerPoliciesSDK,
-	obj *konnectv1alpha1.EventGatewayListenerPolicy,
+	obj *configurationv1alpha1.EventGatewayListenerPolicy,
 ) error {
 	gatewayID := obj.GetGatewayID()
 	if gatewayID == "" {
@@ -107,7 +107,7 @@ func deleteEventGatewayListenerPolicy(
 func getEventGatewayListenerPolicyForUID(
 	ctx context.Context,
 	sdk sdkkonnectgo.EventGatewayListenerPoliciesSDK,
-	obj *konnectv1alpha1.EventGatewayListenerPolicy,
+	obj *configurationv1alpha1.EventGatewayListenerPolicy,
 ) (string, error) {
 	gatewayID := obj.GetGatewayID()
 	if gatewayID == "" {

@@ -75,7 +75,7 @@ spec:
       namespace: konnect
 ---
 kind: EventGatewayListener
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: configuration.konghq.com/v1alpha1
 metadata:
   name: shared-event-gateway-listener
   namespace: event-listeners

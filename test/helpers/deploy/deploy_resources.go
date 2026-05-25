@@ -484,33 +484,33 @@ func EventGatewayVirtualCluster(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
-	backendCluster *konnectv1alpha1.EventGatewayBackendCluster,
+	backendCluster *configurationv1alpha1.EventGatewayBackendCluster,
 	opts ...ObjOption,
-) *konnectv1alpha1.EventGatewayVirtualCluster {
+) *configurationv1alpha1.EventGatewayVirtualCluster {
 	t.Helper()
 	name := "virtual-cluster-" + randomSuffix()
-	obj := konnectv1alpha1.EventGatewayVirtualCluster{
+	obj := configurationv1alpha1.EventGatewayVirtualCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Spec: konnectv1alpha1.EventGatewayVirtualClusterSpec{
+		Spec: configurationv1alpha1.EventGatewayVirtualClusterSpec{
 			EventGatewayBackendClusterRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 				NamespacedRef: &commonv1alpha1.NamespacedRef{
 					Name: backendCluster.Name,
 				},
 			},
-			APISpec: konnectv1alpha1.EventGatewayVirtualClusterAPISpec{
-				AclMode: konnectv1alpha1.VirtualClusterACLMode("enforce_on_gateway"),
-				Authentication: []konnectv1alpha1.VirtualClusterAuthenticationScheme{
+			APISpec: configurationv1alpha1.EventGatewayVirtualClusterAPISpec{
+				AclMode: configurationv1alpha1.VirtualClusterACLMode("enforce_on_gateway"),
+				Authentication: []configurationv1alpha1.VirtualClusterAuthenticationScheme{
 					{
-						Type:      konnectv1alpha1.VirtualClusterAuthenticationSchemeTypeAnonymous,
-						Anonymous: &konnectv1alpha1.VirtualClusterAuthenticationAnonymous{},
+						Type:      configurationv1alpha1.VirtualClusterAuthenticationSchemeTypeAnonymous,
+						Anonymous: &configurationv1alpha1.VirtualClusterAuthenticationAnonymous{},
 					},
 				},
-				DNSLabel: konnectv1alpha1.VirtualClusterDNSLabel("vc-" + randomSuffix()),
-				Name:     konnectv1alpha1.VirtualClusterName(name),
-				Namespace: konnectv1alpha1.VirtualClusterNamespace{
+				DNSLabel: configurationv1alpha1.VirtualClusterDNSLabel("vc-" + randomSuffix()),
+				Name:     configurationv1alpha1.VirtualClusterName(name),
+				Namespace: configurationv1alpha1.VirtualClusterNamespace{
 					Mode:   "hide_prefix",
 					Prefix: "tenant_",
 				},
@@ -534,36 +534,36 @@ func EventGatewayBackendCluster(
 	cl client.Client,
 	gateway *konnectv1alpha1.KonnectEventGateway,
 	opts ...ObjOption,
-) *konnectv1alpha1.EventGatewayBackendCluster {
+) *configurationv1alpha1.EventGatewayBackendCluster {
 	t.Helper()
 	name := "backend-cluster-" + randomSuffix()
-	obj := konnectv1alpha1.EventGatewayBackendCluster{
+	obj := configurationv1alpha1.EventGatewayBackendCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Spec: konnectv1alpha1.EventGatewayBackendClusterSpec{
+		Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{
 			GatewayRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 				NamespacedRef: &commonv1alpha1.NamespacedRef{
 					Name: gateway.Name,
 				},
 			},
-			APISpec: konnectv1alpha1.EventGatewayBackendClusterAPISpec{
-				Authentication: &konnectv1alpha1.EventGatewayBackendClusterAuthentication{
-					Type:      konnectv1alpha1.EventGatewayBackendClusterAuthenticationTypeAnonymous,
-					Anonymous: &konnectv1alpha1.BackendClusterAuthenticationAnonymous{},
+			APISpec: configurationv1alpha1.EventGatewayBackendClusterAPISpec{
+				Authentication: &configurationv1alpha1.EventGatewayBackendClusterAuthentication{
+					Type:      configurationv1alpha1.EventGatewayBackendClusterAuthenticationTypeAnonymous,
+					Anonymous: &configurationv1alpha1.BackendClusterAuthenticationAnonymous{},
 				},
 				BootstrapServers: []string{"broker.example.com:9092"},
-				Name:             konnectv1alpha1.BackendClusterName(name),
-				TLS: konnectv1alpha1.BackendClusterTLS{
+				Name:             configurationv1alpha1.BackendClusterName(name),
+				TLS: configurationv1alpha1.BackendClusterTLS{
 					Enabled: "Disabled",
-					ClientIdentity: konnectv1alpha1.BackendClusterTLSClientIdentity{
-						Certificate: konnectv1alpha1.SensitiveDataSource{
-							Type:  konnectv1alpha1.SensitiveDataSourceTypeInline,
+					ClientIdentity: configurationv1alpha1.BackendClusterTLSClientIdentity{
+						Certificate: configurationv1alpha1.SensitiveDataSource{
+							Type:  configurationv1alpha1.SensitiveDataSourceTypeInline,
 							Value: new("dummy-cert"),
 						},
-						Key: konnectv1alpha1.SensitiveDataSource{
-							Type:  konnectv1alpha1.SensitiveDataSourceTypeInline,
+						Key: configurationv1alpha1.SensitiveDataSource{
+							Type:  configurationv1alpha1.SensitiveDataSourceTypeInline,
 							Value: new("dummy-key"),
 						},
 					},

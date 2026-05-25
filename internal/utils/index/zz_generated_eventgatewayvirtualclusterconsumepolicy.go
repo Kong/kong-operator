@@ -5,7 +5,7 @@ package index
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 )
 
 const (
@@ -17,7 +17,7 @@ const (
 func OptionsForEventGatewayVirtualClusterConsumePolicy() []Option {
 	return []Option{
 		{
-			Object:         &konnectv1alpha1.EventGatewayVirtualClusterConsumePolicy{},
+			Object:         &configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy{},
 			Field:          IndexFieldEventGatewayVirtualClusterConsumePolicyOnEventGatewayVirtualClusterRef,
 			ExtractValueFn: eventGatewayVirtualClusterConsumePolicyOnEventGatewayVirtualClusterRef,
 		},
@@ -25,7 +25,7 @@ func OptionsForEventGatewayVirtualClusterConsumePolicy() []Option {
 }
 
 func eventGatewayVirtualClusterConsumePolicyOnEventGatewayVirtualClusterRef(object client.Object) []string {
-	ent, ok := object.(*konnectv1alpha1.EventGatewayVirtualClusterConsumePolicy)
+	ent, ok := object.(*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy)
 	if !ok {
 		return nil
 	}

@@ -1,32 +1,32 @@
-package crdsvalidation
+package configuration_test
 
 import (
 	"testing"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	common "github.com/kong/kong-operator/v2/test/crdsvalidation/common"
 	"github.com/kong/kong-operator/v2/test/envtest"
 )
 
-func validBackendCluster(ns string) *konnectv1alpha1.EventGatewayBackendCluster {
-	return &konnectv1alpha1.EventGatewayBackendCluster{
+func validBackendCluster(ns string) *configurationv1alpha1.EventGatewayBackendCluster {
+	return &configurationv1alpha1.EventGatewayBackendCluster{
 		ObjectMeta: common.CommonObjectMeta(ns),
-		Spec: konnectv1alpha1.EventGatewayBackendClusterSpec{
+		Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{
 			GatewayRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 				NamespacedRef: &commonv1alpha1.NamespacedRef{
 					Name: "my-event-gateway",
 				},
 			},
-			APISpec: konnectv1alpha1.EventGatewayBackendClusterAPISpec{
+			APISpec: configurationv1alpha1.EventGatewayBackendClusterAPISpec{
 				Name: "backend-cluster-1",
-				Authentication: &konnectv1alpha1.EventGatewayBackendClusterAuthentication{
-					Type: konnectv1alpha1.EventGatewayBackendClusterAuthenticationTypeAnonymous,
+				Authentication: &configurationv1alpha1.EventGatewayBackendClusterAuthentication{
+					Type: configurationv1alpha1.EventGatewayBackendClusterAuthenticationTypeAnonymous,
 				},
 				BootstrapServers: []string{"kafka:9092"},
-				TLS: konnectv1alpha1.BackendClusterTLS{
+				TLS: configurationv1alpha1.BackendClusterTLS{
 					Enabled: "Disabled",
 				},
 			},
@@ -34,16 +34,16 @@ func validBackendCluster(ns string) *konnectv1alpha1.EventGatewayBackendCluster 
 	}
 }
 
-func inlineSDS(value string) konnectv1alpha1.SensitiveDataSource {
-	return konnectv1alpha1.SensitiveDataSource{
-		Type:  konnectv1alpha1.SensitiveDataSourceTypeInline,
+func inlineSDS(value string) configurationv1alpha1.SensitiveDataSource {
+	return configurationv1alpha1.SensitiveDataSource{
+		Type:  configurationv1alpha1.SensitiveDataSourceTypeInline,
 		Value: new(value),
 	}
 }
 
-func secretRefSDS(name string) konnectv1alpha1.SensitiveDataSource {
-	return konnectv1alpha1.SensitiveDataSource{
-		Type: konnectv1alpha1.SensitiveDataSourceTypeSecretRef,
+func secretRefSDS(name string) configurationv1alpha1.SensitiveDataSource {
+	return configurationv1alpha1.SensitiveDataSource{
+		Type: configurationv1alpha1.SensitiveDataSourceTypeSecretRef,
 		SecretRef: &commonv1alpha1.NamespacedRef{
 			Name: name,
 		},
@@ -58,7 +58,7 @@ func TestEventGatewayBackendCluster(t *testing.T) {
 	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	t.Run("valid object", func(t *testing.T) {
-		common.TestCasesGroup[*konnectv1alpha1.EventGatewayBackendCluster]{
+		common.TestCasesGroup[*configurationv1alpha1.EventGatewayBackendCluster]{
 			{
 				Name:       "minimal valid object",
 				TestObject: validBackendCluster(ns.Name),
@@ -67,14 +67,14 @@ func TestEventGatewayBackendCluster(t *testing.T) {
 	})
 
 	t.Run("clientIdentity SensitiveDataSource validation", func(t *testing.T) {
-		common.TestCasesGroup[*konnectv1alpha1.EventGatewayBackendCluster]{
+		common.TestCasesGroup[*configurationv1alpha1.EventGatewayBackendCluster]{
 			{
 				Name: "inline type with value passes",
-				TestObject: func() *konnectv1alpha1.EventGatewayBackendCluster {
+				TestObject: func() *configurationv1alpha1.EventGatewayBackendCluster {
 					obj := validBackendCluster(ns.Name)
-					obj.Spec.APISpec.TLS = konnectv1alpha1.BackendClusterTLS{
+					obj.Spec.APISpec.TLS = configurationv1alpha1.BackendClusterTLS{
 						Enabled: "Enabled",
-						ClientIdentity: konnectv1alpha1.BackendClusterTLSClientIdentity{
+						ClientIdentity: configurationv1alpha1.BackendClusterTLSClientIdentity{
 							Certificate: inlineSDS("cert-pem-data"),
 							Key:         inlineSDS("key-pem-data"),
 						},
@@ -84,11 +84,11 @@ func TestEventGatewayBackendCluster(t *testing.T) {
 			},
 			{
 				Name: "secretRef type with secretRef passes",
-				TestObject: func() *konnectv1alpha1.EventGatewayBackendCluster {
+				TestObject: func() *configurationv1alpha1.EventGatewayBackendCluster {
 					obj := validBackendCluster(ns.Name)
-					obj.Spec.APISpec.TLS = konnectv1alpha1.BackendClusterTLS{
+					obj.Spec.APISpec.TLS = configurationv1alpha1.BackendClusterTLS{
 						Enabled: "Enabled",
-						ClientIdentity: konnectv1alpha1.BackendClusterTLSClientIdentity{
+						ClientIdentity: configurationv1alpha1.BackendClusterTLSClientIdentity{
 							Certificate: secretRefSDS("my-cert-secret"),
 							Key:         secretRefSDS("my-key-secret"),
 						},
@@ -98,11 +98,11 @@ func TestEventGatewayBackendCluster(t *testing.T) {
 			},
 			{
 				Name: "mixed inline cert and secretRef key passes",
-				TestObject: func() *konnectv1alpha1.EventGatewayBackendCluster {
+				TestObject: func() *configurationv1alpha1.EventGatewayBackendCluster {
 					obj := validBackendCluster(ns.Name)
-					obj.Spec.APISpec.TLS = konnectv1alpha1.BackendClusterTLS{
+					obj.Spec.APISpec.TLS = configurationv1alpha1.BackendClusterTLS{
 						Enabled: "Enabled",
-						ClientIdentity: konnectv1alpha1.BackendClusterTLSClientIdentity{
+						ClientIdentity: configurationv1alpha1.BackendClusterTLSClientIdentity{
 							Certificate: inlineSDS("cert-data"),
 							Key:         secretRefSDS("my-tls-secret"),
 						},
@@ -112,13 +112,13 @@ func TestEventGatewayBackendCluster(t *testing.T) {
 			},
 			{
 				Name: "inline type without value fails",
-				TestObject: func() *konnectv1alpha1.EventGatewayBackendCluster {
+				TestObject: func() *configurationv1alpha1.EventGatewayBackendCluster {
 					obj := validBackendCluster(ns.Name)
-					obj.Spec.APISpec.TLS = konnectv1alpha1.BackendClusterTLS{
+					obj.Spec.APISpec.TLS = configurationv1alpha1.BackendClusterTLS{
 						Enabled: "Enabled",
-						ClientIdentity: konnectv1alpha1.BackendClusterTLSClientIdentity{
-							Certificate: konnectv1alpha1.SensitiveDataSource{
-								Type: konnectv1alpha1.SensitiveDataSourceTypeInline,
+						ClientIdentity: configurationv1alpha1.BackendClusterTLSClientIdentity{
+							Certificate: configurationv1alpha1.SensitiveDataSource{
+								Type: configurationv1alpha1.SensitiveDataSourceTypeInline,
 							},
 							Key: inlineSDS("key-data"),
 						},
@@ -129,13 +129,13 @@ func TestEventGatewayBackendCluster(t *testing.T) {
 			},
 			{
 				Name: "secretRef type without secretRef fails",
-				TestObject: func() *konnectv1alpha1.EventGatewayBackendCluster {
+				TestObject: func() *configurationv1alpha1.EventGatewayBackendCluster {
 					obj := validBackendCluster(ns.Name)
-					obj.Spec.APISpec.TLS = konnectv1alpha1.BackendClusterTLS{
+					obj.Spec.APISpec.TLS = configurationv1alpha1.BackendClusterTLS{
 						Enabled: "Enabled",
-						ClientIdentity: konnectv1alpha1.BackendClusterTLSClientIdentity{
-							Certificate: konnectv1alpha1.SensitiveDataSource{
-								Type: konnectv1alpha1.SensitiveDataSourceTypeSecretRef,
+						ClientIdentity: configurationv1alpha1.BackendClusterTLSClientIdentity{
+							Certificate: configurationv1alpha1.SensitiveDataSource{
+								Type: configurationv1alpha1.SensitiveDataSourceTypeSecretRef,
 							},
 							Key: inlineSDS("key-data"),
 						},

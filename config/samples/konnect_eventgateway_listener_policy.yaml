@@ -26,7 +26,7 @@ spec:
       name: konnect-api-auth
 ---
 kind: EventGatewayListener
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: configuration.konghq.com/v1alpha1
 metadata:
   name: cp-event-1-listener-1
   namespace: default
@@ -85,7 +85,7 @@ stringData:
     -----END PRIVATE KEY-----
 ---
 kind: EventGatewayListenerPolicy
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: configuration.konghq.com/v1alpha1
 metadata:
   name: cp-event-1-listener-1
   namespace: default

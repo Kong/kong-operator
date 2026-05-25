@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/konnect"
 	"github.com/kong/kong-operator/v2/controller/konnect/ops"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
@@ -36,8 +36,8 @@ func TestEventGatewayBackendCluster(t *testing.T) {
 	sdk := factory.SDK
 	StartReconcilers(ctx, t, mgr, logs,
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
-			konnect.WithKonnectEntitySyncPeriod[konnectv1alpha1.EventGatewayBackendCluster](konnectInfiniteSyncTime),
-			konnect.WithMetricRecorder[konnectv1alpha1.EventGatewayBackendCluster](&metricsmocks.MockRecorder{}),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.EventGatewayBackendCluster](konnectInfiniteSyncTime),
+			konnect.WithMetricRecorder[configurationv1alpha1.EventGatewayBackendCluster](&metricsmocks.MockRecorder{}),
 		),
 	)
 
@@ -63,7 +63,7 @@ func TestEventGatewayBackendCluster(t *testing.T) {
 			updatedDescription = "Updated backend cluster description"
 		)
 
-		w := setupWatch[konnectv1alpha1.EventGatewayBackendClusterList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := setupWatch[configurationv1alpha1.EventGatewayBackendClusterList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations on EventGatewayBackendCluster creation")
 		sdk.EventGatewayBackendClustersSDK.EXPECT().
@@ -88,7 +88,7 @@ func TestEventGatewayBackendCluster(t *testing.T) {
 
 		t.Log("Creating EventGatewayBackendCluster")
 		backendCluster := deploy.EventGatewayBackendCluster(t, ctx, clientNamespaced, gateway, func(o client.Object) {
-			bc, ok := o.(*konnectv1alpha1.EventGatewayBackendCluster)
+			bc, ok := o.(*configurationv1alpha1.EventGatewayBackendCluster)
 			if !ok {
 				return
 			}
@@ -98,7 +98,7 @@ func TestEventGatewayBackendCluster(t *testing.T) {
 				"broker-1.example.com:9092",
 				"broker-2.example.com:9092",
 			}
-			bc.Spec.APISpec.Labels = konnectv1alpha1.Labels{
+			bc.Spec.APISpec.Labels = configurationv1alpha1.Labels{
 				"team": "platform",
 			}
 		})
@@ -107,9 +107,9 @@ func TestEventGatewayBackendCluster(t *testing.T) {
 		watchFor(t, ctx, w, apiwatch.Modified,
 			assertsAnd(
 				objectMatchesName(backendCluster),
-				objectMatchesKonnectID[*konnectv1alpha1.EventGatewayBackendCluster](backendClusterID),
-				objectHasConditionProgrammedSetToTrue[*konnectv1alpha1.EventGatewayBackendCluster](),
-				func(bc *konnectv1alpha1.EventGatewayBackendCluster) bool {
+				objectMatchesKonnectID[*configurationv1alpha1.EventGatewayBackendCluster](backendClusterID),
+				objectHasConditionProgrammedSetToTrue[*configurationv1alpha1.EventGatewayBackendCluster](),
+				func(bc *configurationv1alpha1.EventGatewayBackendCluster) bool {
 					return bc.GetGatewayID() == eventGatewayID &&
 						controllerutil.ContainsFinalizer(bc, konnect.KonnectCleanupFinalizer)
 				},
@@ -143,9 +143,9 @@ func TestEventGatewayBackendCluster(t *testing.T) {
 		watchFor(t, ctx, w, apiwatch.Modified,
 			assertsAnd(
 				objectMatchesName(backendCluster),
-				objectMatchesKonnectID[*konnectv1alpha1.EventGatewayBackendCluster](backendClusterID),
-				objectHasConditionProgrammedSetToTrue[*konnectv1alpha1.EventGatewayBackendCluster](),
-				func(bc *konnectv1alpha1.EventGatewayBackendCluster) bool {
+				objectMatchesKonnectID[*configurationv1alpha1.EventGatewayBackendCluster](backendClusterID),
+				objectHasConditionProgrammedSetToTrue[*configurationv1alpha1.EventGatewayBackendCluster](),
+				func(bc *configurationv1alpha1.EventGatewayBackendCluster) bool {
 					return bc.Spec.APISpec.Description == updatedDescription
 				},
 			),
@@ -168,9 +168,9 @@ func TestEventGatewayBackendCluster(t *testing.T) {
 	t.Run("should create EventGatewayBackendCluster successfully on conflict when backend cluster with matching uid label exists", func(t *testing.T) {
 		const backendClusterID = "backend-cluster-conflict-id"
 
-		w := setupWatch[konnectv1alpha1.EventGatewayBackendClusterList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := setupWatch[configurationv1alpha1.EventGatewayBackendClusterList](t, ctx, cl, client.InNamespace(ns.Name))
 
-		var backendCluster *konnectv1alpha1.EventGatewayBackendCluster
+		var backendCluster *configurationv1alpha1.EventGatewayBackendCluster
 
 		sdk.EventGatewayBackendClustersSDK.EXPECT().
 			CreateEventGatewayBackendCluster(mock.Anything, eventGatewayID, mock.Anything).
@@ -205,9 +205,9 @@ func TestEventGatewayBackendCluster(t *testing.T) {
 		watchFor(t, ctx, w, apiwatch.Modified,
 			assertsAnd(
 				objectMatchesName(backendCluster),
-				objectMatchesKonnectID[*konnectv1alpha1.EventGatewayBackendCluster](backendClusterID),
-				objectHasConditionProgrammedSetToTrue[*konnectv1alpha1.EventGatewayBackendCluster](),
-				func(bc *konnectv1alpha1.EventGatewayBackendCluster) bool {
+				objectMatchesKonnectID[*configurationv1alpha1.EventGatewayBackendCluster](backendClusterID),
+				objectHasConditionProgrammedSetToTrue[*configurationv1alpha1.EventGatewayBackendCluster](),
+				func(bc *configurationv1alpha1.EventGatewayBackendCluster) bool {
 					return bc.GetGatewayID() == eventGatewayID &&
 						controllerutil.ContainsFinalizer(bc, konnect.KonnectCleanupFinalizer)
 				},

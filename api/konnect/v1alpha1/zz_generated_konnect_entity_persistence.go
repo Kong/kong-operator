@@ -2,36 +2,6 @@
 
 package v1alpha1
 
-// PersistsKonnectID reports whether EventGatewayBackendCluster persists a Konnect ID in status.
-func (*EventGatewayBackendCluster) PersistsKonnectID() bool {
-	return true
-}
-
-// PersistsKonnectID reports whether EventGatewayListener persists a Konnect ID in status.
-func (*EventGatewayListener) PersistsKonnectID() bool {
-	return true
-}
-
-// PersistsKonnectID reports whether EventGatewayListenerPolicy persists a Konnect ID in status.
-func (*EventGatewayListenerPolicy) PersistsKonnectID() bool {
-	return true
-}
-
-// PersistsKonnectID reports whether EventGatewayVirtualCluster persists a Konnect ID in status.
-func (*EventGatewayVirtualCluster) PersistsKonnectID() bool {
-	return true
-}
-
-// PersistsKonnectID reports whether EventGatewayVirtualClusterConsumePolicy persists a Konnect ID in status.
-func (*EventGatewayVirtualClusterConsumePolicy) PersistsKonnectID() bool {
-	return true
-}
-
-// PersistsKonnectID reports whether EventGatewayVirtualClusterProducePolicy persists a Konnect ID in status.
-func (*EventGatewayVirtualClusterProducePolicy) PersistsKonnectID() bool {
-	return true
-}
-
 // PersistsKonnectID reports whether KonnectEventDataPlaneCertificate persists a Konnect ID in status.
 func (*KonnectEventDataPlaneCertificate) PersistsKonnectID() bool {
 	return true

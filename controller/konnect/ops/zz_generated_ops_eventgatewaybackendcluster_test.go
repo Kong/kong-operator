@@ -14,13 +14,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 )
 
-func testGeneratedEventGatewayBackendClusterForSDKOps() *konnectv1alpha1.EventGatewayBackendCluster {
-	return &konnectv1alpha1.EventGatewayBackendCluster{
+func testGeneratedEventGatewayBackendClusterForSDKOps() *configurationv1alpha1.EventGatewayBackendCluster {
+	return &configurationv1alpha1.EventGatewayBackendCluster{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: konnectv1alpha1.GroupVersion.String(),
+			APIVersion: configurationv1alpha1.GroupVersion.String(),
 			Kind:       "EventGatewayBackendCluster",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -29,12 +29,12 @@ func testGeneratedEventGatewayBackendClusterForSDKOps() *konnectv1alpha1.EventGa
 			UID:        "eventgatewaybackendcluster-uid",
 			Generation: 3,
 		},
-		Spec: konnectv1alpha1.EventGatewayBackendClusterSpec{
-			APISpec: konnectv1alpha1.EventGatewayBackendClusterAPISpec{
+		Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{
+			APISpec: configurationv1alpha1.EventGatewayBackendClusterAPISpec{
 				BootstrapServers: []string{"test-value"},
 				Description: "test-value",
 				InsecureAllowAnonymousVirtualClusterAuth: "Enabled",
-				Labels: konnectv1alpha1.Labels{"test-key": "test-value"},
+				Labels: configurationv1alpha1.Labels{"test-key": "test-value"},
 				Name: "test-value",
 			},
 		},
