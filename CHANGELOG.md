@@ -50,6 +50,9 @@
 
 ### Added
 
+- Add `--enable-controller-kegdataplane` flag (default `false`) to enable the
+  KEG (Kong Event Gateway) DataPlane controller.
+  [#4391](https://github.com/Kong/kong-operator/pull/4391)
 - DataPlane: extend Kong image validation to support sha256 digest
   [#4356](https://github.com/Kong/kong-operator/pull/4356)
 - Konnect: support `KongCertificate` ref in `KongUpstream`
