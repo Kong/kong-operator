@@ -138,7 +138,7 @@ func (g *Generator) buildOpsControllerTestFields(entityName string, props []*par
 		if skipProperty(prop) || prop.IsReference {
 			continue
 		}
-		if _, ok := g.entityAPISpecSensitiveLeaf(entityName, jsonName(prop.Name)); ok {
+		if ok := g.entityAPISpecSensitiveLeaf(entityName, jsonName(prop.Name)); ok {
 			testFields = append(testFields, opsControllerTestField{
 				FieldName: goFieldName(prop.Name),
 				TestValue: fmt.Sprintf(

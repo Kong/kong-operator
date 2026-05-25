@@ -19,7 +19,7 @@ func TestGetPortalIPAllowListForUID_MatchesAllowedIPs(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockPortalsIPAllowListSDK(t)
-	ipAllowList := testGeneratedPortalIPAllowListForGetForUID()
+	ipAllowList := testPortalIPAllowListForGetForUID()
 	ipAllowList.SetPortalID("portal-1")
 
 	sdk.EXPECT().
@@ -47,7 +47,7 @@ func TestGetPortalIPAllowListForUID_MatchesAllowedIPs(t *testing.T) {
 	assert.Equal(t, "allow-list-1", id)
 }
 
-func testGeneratedPortalIPAllowListForGetForUID() *konnectv1alpha1.PortalIPAllowList {
+func testPortalIPAllowListForGetForUID() *konnectv1alpha1.PortalIPAllowList {
 	return &konnectv1alpha1.PortalIPAllowList{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: konnectv1alpha1.GroupVersion.String(),
