@@ -131,7 +131,10 @@ func TestGenerateWatch_UsesStableAPIAuthImportAndNamespacedLookup(t *testing.T) 
 
 		assert.Contains(t, content, `konnectapiauthv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"`)
 		assert.Contains(t, content, `&konnectapiauthv1alpha1.KonnectAPIAuthConfiguration{}`)
+		assert.Contains(t, content, `&configurationv1alpha1.KongReferenceGrant{}`)
+		assert.Contains(t, content, `enqueueObjectsForKongReferenceGrant[xkonnectv1alpha1.PortalList](cl)`)
 		assert.Contains(t, content, `index.IndexFieldPortalOnAPIAuthConfiguration: auth.Namespace + "/" + auth.Name,`)
+		assert.NotContains(t, content, `client.InNamespace(auth.GetNamespace())`)
 	})
 }
 
@@ -177,7 +180,9 @@ func TestGenerateWatchAndIndex_ForChildEntity(t *testing.T) {
 
 		assert.Contains(t, content, `&konnectv1alpha1.KonnectEventGateway{}`)
 		assert.Contains(t, content, `enqueueKonnectEventDataPlaneCertificateForKonnectEventGateway(cl)`)
-		assert.Contains(t, content, `index.IndexFieldKonnectEventDataPlaneCertificateOnKonnectEventGatewayRef: parent.Name,`)
+		assert.Contains(t, content, `index.IndexFieldKonnectEventDataPlaneCertificateOnKonnectEventGatewayRef: client.ObjectKeyFromObject(parent).String(),`)
+		assert.Contains(t, content, `&configurationv1alpha1.KongReferenceGrant{}`)
+		assert.Contains(t, content, `enqueueObjectsForKongReferenceGrant[konnectv1alpha1.KonnectEventDataPlaneCertificateList](cl)`)
 	})
 
 	t.Run("indexes by dependency namespaced ref", func(t *testing.T) {
@@ -189,7 +194,9 @@ func TestGenerateWatchAndIndex_ForChildEntity(t *testing.T) {
 
 		assert.Contains(t, content, `IndexFieldKonnectEventDataPlaneCertificateOnKonnectEventGatewayRef`)
 		assert.Contains(t, content, `if ent.Spec.GatewayRef.NamespacedRef == nil {`)
-		assert.Contains(t, content, `return []string{ent.Spec.GatewayRef.NamespacedRef.Name}`)
+		assert.Contains(t, content, `refNamespace := ent.GetNamespace()`)
+		assert.Contains(t, content, `if ent.Spec.GatewayRef.NamespacedRef.Namespace != nil && *ent.Spec.GatewayRef.NamespacedRef.Namespace != "" {`)
+		assert.Contains(t, content, `return []string{refNamespace + "/" + ent.Spec.GatewayRef.NamespacedRef.Name}`)
 	})
 }
 

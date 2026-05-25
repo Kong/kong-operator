@@ -33,5 +33,10 @@ func portalCustomizationOnPortalRef(object client.Object) []string {
 		return nil
 	}
 
-	return []string{ent.Spec.PortalRef.NamespacedRef.Name}
+	refNamespace := ent.GetNamespace()
+	if ent.Spec.PortalRef.NamespacedRef.Namespace != nil && *ent.Spec.PortalRef.NamespacedRef.Namespace != "" {
+		refNamespace = *ent.Spec.PortalRef.NamespacedRef.Namespace
+	}
+
+	return []string{refNamespace + "/" + ent.Spec.PortalRef.NamespacedRef.Name}
 }

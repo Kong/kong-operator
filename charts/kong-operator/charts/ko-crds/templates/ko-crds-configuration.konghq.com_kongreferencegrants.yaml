@@ -159,10 +159,13 @@ spec:
                   x-kubernetes-validations:
                   - message: Only 'Secret' kind is supported for 'core' group
                     rule: .self.group != 'core' || .self.kind == 'Secret'
-                  - message: Only 'KonnectGatewayControlPlane' and 'KonnectAPIAuthConfiguration'
-                      kinds are supported for 'konnect.konghq.com' group
+                  - message: Only 'KonnectGatewayControlPlane', 'KonnectAPIAuthConfiguration',
+                      'Portal', 'KonnectEventGateway', 'EventGatewayBackendCluster',
+                      'EventGatewayListener' and 'EventGatewayVirtualCluster' kinds
+                      are supported for 'konnect.konghq.com' group
                     rule: .self.group != 'konnect.konghq.com' || .self.kind in ['KonnectGatewayControlPlane',
-                      'KonnectAPIAuthConfiguration']
+                      'KonnectAPIAuthConfiguration', 'Portal', 'KonnectEventGateway',
+                      'EventGatewayBackendCluster', 'EventGatewayListener', 'EventGatewayVirtualCluster']
                   - message: Only 'KongPlugin', 'KongService', 'KongCertificate',
                       'KongCACertificate' and 'KongUpstream' kinds are supported for
                       'configuration.konghq.com' group

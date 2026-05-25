@@ -301,6 +301,22 @@ type WatchableEntityType interface {
 		konnectv1alpha1.KonnectCloudGatewayNetwork |
 		konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration |
 		konnectv1alpha1.KonnectCloudGatewayTransitGateway |
+		konnectv1alpha1.Portal |
+		konnectv1alpha1.PortalPage |
+		konnectv1alpha1.PortalCustomDomain |
+		konnectv1alpha1.PortalCustomization |
+		konnectv1alpha1.PortalEmailConfig |
+		konnectv1alpha1.PortalIPAllowList |
+		konnectv1alpha1.PortalTeam |
+		konnectv1alpha1.IdentityProviderRequest |
+		konnectv1alpha1.KonnectEventGateway |
+		konnectv1alpha1.EventGatewayBackendCluster |
+		konnectv1alpha1.EventGatewayListener |
+		konnectv1alpha1.EventGatewayListenerPolicy |
+		konnectv1alpha1.EventGatewayVirtualCluster |
+		konnectv1alpha1.EventGatewayVirtualClusterConsumePolicy |
+		konnectv1alpha1.EventGatewayVirtualClusterProducePolicy |
+		konnectv1alpha1.KonnectEventDataPlaneCertificate |
 		configurationv1alpha1.KongService |
 		configurationv1alpha1.KongRoute |
 		configurationv1.KongConsumer |
@@ -359,6 +375,7 @@ func enqueueObjectsForKongReferenceGrant[
 		var fromNamespaces []string
 		for _, from := range krg.Spec.From {
 			if string(from.Group) != configurationv1alpha1.GroupVersion.Group &&
+				string(from.Group) != konnectv1alpha1.GroupVersion.Group &&
 				string(from.Group) != konnectv1alpha2.GroupVersion.Group {
 				continue
 			}

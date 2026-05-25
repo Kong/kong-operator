@@ -37,6 +37,16 @@ func (obj EventGatewayBackendClusterList) GetItems() []EventGatewayBackendCluste
 	return obj.Items
 }
 
+// GetItems returns the list of EventGatewayListener items.
+func (obj EventGatewayListenerList) GetItems() []EventGatewayListener {
+	return obj.Items
+}
+
+// GetItems returns the list of EventGatewayListenerPolicy items.
+func (obj EventGatewayListenerPolicyList) GetItems() []EventGatewayListenerPolicy {
+	return obj.Items
+}
+
 // GetItems returns the list of EventGatewayVirtualCluster items.
 func (obj EventGatewayVirtualClusterList) GetItems() []EventGatewayVirtualCluster {
 	return obj.Items
@@ -49,6 +59,21 @@ func (obj EventGatewayVirtualClusterConsumePolicyList) GetItems() []EventGateway
 
 // GetItems returns the list of EventGatewayVirtualClusterProducePolicy items.
 func (obj EventGatewayVirtualClusterProducePolicyList) GetItems() []EventGatewayVirtualClusterProducePolicy {
+	return obj.Items
+}
+
+// GetItems returns the list of IdentityProviderRequest items.
+func (obj IdentityProviderRequestList) GetItems() []IdentityProviderRequest {
+	return obj.Items
+}
+
+// GetItems returns the list of KonnectEventDataPlaneCertificate items.
+func (obj KonnectEventDataPlaneCertificateList) GetItems() []KonnectEventDataPlaneCertificate {
+	return obj.Items
+}
+
+// GetItems returns the list of KonnectEventGateway items.
+func (obj KonnectEventGatewayList) GetItems() []KonnectEventGateway {
 	return obj.Items
 }
 
@@ -72,7 +97,17 @@ func (obj PortalEmailConfigList) GetItems() []PortalEmailConfig {
 	return obj.Items
 }
 
+// GetItems returns the list of PortalIPAllowList items.
+func (obj PortalIPAllowListList) GetItems() []PortalIPAllowList {
+	return obj.Items
+}
+
 // GetItems returns the list of PortalPage items.
 func (obj PortalPageList) GetItems() []PortalPage {
+	return obj.Items
+}
+
+// GetItems returns the list of PortalTeam items.
+func (obj PortalTeamList) GetItems() []PortalTeam {
 	return obj.Items
 }

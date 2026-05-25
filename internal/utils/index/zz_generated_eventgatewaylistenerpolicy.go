@@ -33,5 +33,10 @@ func eventGatewayListenerPolicyOnEventGatewayListenerRef(object client.Object) [
 		return nil
 	}
 
-	return []string{ent.Spec.EventGatewayListenerRef.NamespacedRef.Name}
+	refNamespace := ent.GetNamespace()
+	if ent.Spec.EventGatewayListenerRef.NamespacedRef.Namespace != nil && *ent.Spec.EventGatewayListenerRef.NamespacedRef.Namespace != "" {
+		refNamespace = *ent.Spec.EventGatewayListenerRef.NamespacedRef.Namespace
+	}
+
+	return []string{refNamespace + "/" + ent.Spec.EventGatewayListenerRef.NamespacedRef.Name}
 }

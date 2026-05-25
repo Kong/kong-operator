@@ -33,5 +33,10 @@ func eventGatewayListenerOnKonnectEventGatewayRef(object client.Object) []string
 		return nil
 	}
 
-	return []string{ent.Spec.GatewayRef.NamespacedRef.Name}
+	refNamespace := ent.GetNamespace()
+	if ent.Spec.GatewayRef.NamespacedRef.Namespace != nil && *ent.Spec.GatewayRef.NamespacedRef.Namespace != "" {
+		refNamespace = *ent.Spec.GatewayRef.NamespacedRef.Namespace
+	}
+
+	return []string{refNamespace + "/" + ent.Spec.GatewayRef.NamespacedRef.Name}
 }
