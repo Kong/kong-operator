@@ -151,6 +151,8 @@ spec:
             - "/echo/"
         - name: strip_path
           value: false
+        - name: preserve_host
+          value: true
         - name: resource_type
           value: "kongservices.configuration.konghq.com"
     
@@ -296,6 +298,8 @@ spec:
             - "~/get$"
         - name: strip_path
           value: false
+        - name: preserve_host
+          value: true
         - name: resource_type
           value: "kongservices.configuration.konghq.com"
 
@@ -309,6 +313,8 @@ spec:
             - "~/post$"
         - name: strip_path
           value: false
+        - name: preserve_host
+          value: true
         - name: resource_type
           value: "kongservices.configuration.konghq.com"
 
@@ -322,6 +328,8 @@ spec:
             - "~/put$"
         - name: strip_path
           value: false
+        - name: preserve_host
+          value: true
         - name: resource_type
           value: "kongservices.configuration.konghq.com"
 
@@ -335,6 +343,8 @@ spec:
             - "~/patch$"
         - name: strip_path
           value: false
+        - name: preserve_host
+          value: true
         - name: resource_type
           value: "kongservices.configuration.konghq.com"
 
@@ -348,6 +358,8 @@ spec:
             - "~/delete$"
         - name: strip_path
           value: false
+        - name: preserve_host
+          value: true
         - name: resource_type
           value: "kongservices.configuration.konghq.com"
 
@@ -362,6 +374,8 @@ spec:
             - "/status/"
         - name: strip_path
           value: false
+        - name: preserve_host
+          value: true
         - name: resource_type
           value: "kongservices.configuration.konghq.com"
     - name: Assert-kong-upstream-httpbin

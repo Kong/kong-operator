@@ -35,6 +35,7 @@ spec:
           spec:
             paths: ($route_paths)
             strip_path: ($strip_path)
+            preserve_host: ($preserve_host)
             serviceRef:
               namespacedRef:
                 name: ($kong_service_name)
