@@ -87,12 +87,6 @@ type SecretReferenceConfig struct {
 	Type string `yaml:"type"`
 	// Key is the data key inside the referenced resource (e.g. "tls.crt").
 	Key string `yaml:"key"`
-	// Base64Encoding indicates that the resolved sensitive value must be base64
-	// encoded before being sent to Konnect.
-	//
-	// TODO: Remove Base64 encoding when API starts accepting raw values.
-	// TODO: https://github.com/Kong/kong-operator/issues/4304
-	Base64Encoding bool `yaml:"base64Encoding,omitempty"`
 }
 
 // TypeConfig holds configuration for a single CRD type (identified by its OpenAPI path).
