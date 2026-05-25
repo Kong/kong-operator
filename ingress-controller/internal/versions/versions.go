@@ -13,5 +13,8 @@ var KongRedirectPluginCutoff = semver.Version{Major: 3, Minor: 9, Patch: 0}
 // KongStickySessionsCutoff is the lowest version of Kong Gateway that supports `sticky_sessions` loadbalancing algorithm.
 var KongStickySessionsCutoff = semver.Version{Major: 3, Minor: 11, Patch: 0}
 
+// KongWildcardSNICutoff is the lowest version of Kong Gateway that supports wildcard SNIs in routes for matching TLS requests.
+var KongWildcardSNICutoff = semver.Version{Major: 3, Minor: 7, Patch: 0}
+
 // DeckFileFormatVersion is the version of the decK file format used by KIC everywhere.
 const DeckFileFormatVersion = "3.0"

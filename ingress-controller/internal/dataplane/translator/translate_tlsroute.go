@@ -12,6 +12,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/translator/subtranslator"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/versions"
 )
 
 // -----------------------------------------------------------------------------
@@ -58,11 +59,11 @@ func (t *Translator) ingressRulesFromTLSRoute(result *ingressRules, tlsroute *ga
 	if len(spec.Hostnames) == 0 {
 		return fmt.Errorf("no hostnames provided")
 	}
-	if t.kongVersion.LT(TLSWildcardSNIMinimumKongVersion) &&
+	if t.kongVersion.LT(versions.KongWildcardSNICutoff) &&
 		lo.ContainsBy(spec.Hostnames, func(hostname gatewayapi.Hostname) bool {
 			return strings.HasPrefix(string(hostname), "*.")
 		}) {
-		return fmt.Errorf("wildcard TLS SNIs are not supported in TLSRoute with Kong versions below %s", TLSWildcardSNIMinimumKongVersion)
+		return fmt.Errorf("wildcard TLS SNIs are not supported in TLSRoute with Kong versions below %s", versions.KongWildcardSNICutoff.String())
 	}
 
 	if len(spec.Rules) == 0 {

@@ -5,11 +5,13 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/versions"
 )
 
 // Route represents a Kong Route and holds a reference to the Ingress
@@ -202,7 +204,7 @@ func (r *Route) overrideMethods(logger logr.Logger, anns map[string]string) {
 	r.Methods = methods
 }
 
-func (r *Route) overrideSNIs(logger logr.Logger, anns map[string]string) {
+func (r *Route) overrideSNIs(logger logr.Logger, anns map[string]string, kongVersion semver.Version) {
 	var annSNIs []string
 	var exists bool
 	annSNIs, exists = annotations.ExtractSNIs(anns)
@@ -213,12 +215,23 @@ func (r *Route) overrideSNIs(logger logr.Logger, anns map[string]string) {
 	}
 	var snis []*string
 	for _, sni := range annSNIs {
-		if validSNIs.MatchString(sni) {
-			snis = append(snis, new(sni))
+		if kongVersion.LT(versions.KongWildcardSNICutoff) {
+			if validSNIs.MatchString(sni) {
+				snis = append(snis, new(sni))
+			} else {
+				// SNI is not a valid hostname
+				logger.Error(nil, "Invalid SNI", "route_name", r.Name, "sni", sni)
+				return
+			}
 		} else {
-			// SNI is not a valid hostname
-			logger.Error(nil, "Invalid SNI", "route_name", r.Name, "sni", sni)
-			return
+			// for Kong versions that support wildcard SNIs, we can validate against the more permissive validHosts regex
+			if validHosts.MatchString(sni) {
+				snis = append(snis, new(sni))
+			} else {
+				// SNI is not a valid hostname or wildcard hostname
+				logger.Error(nil, "Invalid SNI", "route_name", r.Name, "sni", sni)
+				return
+			}
 		}
 	}
 
@@ -226,7 +239,7 @@ func (r *Route) overrideSNIs(logger logr.Logger, anns map[string]string) {
 }
 
 // overrideByAnnotation sets Route protocols via annotation.
-func (r *Route) overrideByAnnotation(logger logr.Logger) {
+func (r *Route) overrideByAnnotation(logger logr.Logger, kongVersion semver.Version) {
 	r.overrideStripPath(r.Ingress.Annotations)
 	r.overrideHTTPSRedirectCode(r.Ingress.Annotations)
 	r.overridePreserveHost(r.Ingress.Annotations)
@@ -238,7 +251,7 @@ func (r *Route) overrideByAnnotation(logger logr.Logger) {
 	if !r.ExpressionRoutes {
 		r.overrideRegexPriority(r.Ingress.Annotations)
 		r.overrideMethods(logger, r.Ingress.Annotations)
-		r.overrideSNIs(logger, r.Ingress.Annotations)
+		r.overrideSNIs(logger, r.Ingress.Annotations, kongVersion)
 		r.overrideHosts(logger, r.Ingress.Annotations)
 		r.overrideHeaders(r.Ingress.Annotations)
 		r.overridePathHandling(logger, r.Ingress.Annotations)
@@ -246,12 +259,12 @@ func (r *Route) overrideByAnnotation(logger logr.Logger) {
 }
 
 // Override sets Route fields by annotation.
-func (r *Route) Override(logger logr.Logger) {
+func (r *Route) Override(logger logr.Logger, kongVersion semver.Version) {
 	if r == nil {
 		return
 	}
 
-	r.overrideByAnnotation(logger)
+	r.overrideByAnnotation(logger, kongVersion)
 	r.normalizeProtocols()
 }
 

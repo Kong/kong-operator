@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
@@ -118,6 +119,7 @@ type KongHTTPValidator struct {
 	Storer                   store.Storer
 	ManagerClient            client.Client
 	AdminAPIServicesProvider AdminAPIServicesProvider
+	KongVersion              semver.Version
 	TranslatorFeatures       translator.FeatureFlags
 	// ReferenceIndexers gets the resources (KongPlugin and KongClusterPlugin)
 	// referring the validated resource (Secret) to check the changes on
@@ -137,6 +139,7 @@ func NewKongHTTPValidator(
 	managerClient client.Client,
 	ingressClass string,
 	servicesProvider AdminAPIServicesProvider,
+	kongVersion semver.Version,
 	translatorFeatures translator.FeatureFlags,
 	storer store.Storer,
 	referenceIndexer ctrlref.CacheIndexers,
@@ -148,6 +151,7 @@ func NewKongHTTPValidator(
 		Storer:                   storer,
 		ManagerClient:            managerClient,
 		AdminAPIServicesProvider: servicesProvider,
+		KongVersion:              kongVersion,
 		TranslatorFeatures:       translatorFeatures,
 		ReferenceIndexers:        referenceIndexer,
 
@@ -466,7 +470,7 @@ func (validator KongHTTPValidator) ValidateHTTPRoute(
 		routeValidator = routesSvc
 	}
 	return gatewayvalidation.ValidateHTTPRoute(
-		ctx, routeValidator, validator.TranslatorFeatures, &httproute, validator.ManagerClient,
+		ctx, routeValidator, validator.KongVersion, validator.TranslatorFeatures, &httproute, validator.ManagerClient,
 	)
 }
 
@@ -477,7 +481,7 @@ func (validator KongHTTPValidator) ValidateIngress(
 	if routesSvc, ok := validator.AdminAPIServicesProvider.GetRoutesService(); ok {
 		routeValidator = routesSvc
 	}
-	return ingressvalidation.ValidateIngress(ctx, routeValidator, validator.TranslatorFeatures, &ingress, validator.Logger, validator.Storer)
+	return ingressvalidation.ValidateIngress(ctx, routeValidator, validator.KongVersion, validator.TranslatorFeatures, &ingress, validator.Logger, validator.Storer)
 }
 
 type routeValidator interface {

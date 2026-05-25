@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
@@ -34,6 +35,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				ControllerName: gatewaycontroller.GetControllerName(),
 			},
 		}
+		kongVersionSupportWildcardSNI = semver.MustParse("3.7.0")
 	)
 
 	for _, tt := range []struct {
@@ -1064,7 +1066,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 
 			// Passed routesValidator is irrelevant for the above test cases.
 			valid, validMsg, err := ValidateHTTPRoute(
-				t.Context(), mockRoutesValidator{}, translator.FeatureFlags{}, tt.route, fakeClient,
+				t.Context(), mockRoutesValidator{}, kongVersionSupportWildcardSNI, translator.FeatureFlags{}, tt.route, fakeClient,
 			)
 			assert.Equal(t, tt.valid, valid, tt.msg)
 			assert.Equal(t, tt.validationMsg, validMsg, tt.msg)
