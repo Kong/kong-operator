@@ -9,7 +9,6 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -26,8 +25,6 @@ import (
 // It expects that if an object has a ControlPlaneReference set, it should only be programmed if the reference
 // is set to 'kic'.
 func TestControlPlaneReferenceHandling(t *testing.T) {
-	testcontainers.SkipIfProviderIsNotHealthy(t)
-
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
