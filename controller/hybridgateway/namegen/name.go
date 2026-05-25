@@ -15,9 +15,6 @@ const (
 	// httpProcolPrefix is the prefix used for HTTP-related resources.
 	httpProcolPrefix = "http"
 
-	// tlsProtocolPrefix is the prefix for TLS-related resources.
-	tlsProtocolPrefix = "tls"
-
 	// defaultCPPrefix is the prefix used when including a control-plane identifier.
 	defaultCPPrefix = "cp"
 
