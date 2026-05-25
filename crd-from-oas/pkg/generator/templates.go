@@ -438,9 +438,6 @@ import (
 {{- if .NeedsClient}}
 	"context"
 {{- end}}
-	{{- if .Base64Fields}}
-	"encoding/base64"
-	{{- end}}
 	"encoding/json"
 	"fmt"
 {{- if .NeedsClient}}
@@ -551,83 +548,6 @@ func normalize{{$.EntityName}}SDKOpsBoolField(value any, path []string) (any, er
 		return object, nil
 	}
 }
-{{end}}{{if .Base64Fields}}
-
-// {{$.EntityName}}SDKOpsBase64Field describes a field that must be base64-encoded for SDK payloads.
-type {{$.EntityName}}SDKOpsBase64Field struct {
-	Label string
-	Path  []string
-}
-
-// {{$.EntityName}}SDKOpsBase64Fields lists all fields that must be base64-encoded for SDK payloads.
-var {{$.EntityName}}SDKOpsBase64Fields = []{{$.EntityName}}SDKOpsBase64Field{
-{{- range .Base64Fields}}
-	{
-		Label: "{{.Label}}",
-		Path: []string{
-{{- range .Path}}
-			"{{.}}",
-{{- end}}
-		},
-	},
-{{- end}}
-}
-
-func encode{{$.EntityName}}SDKOpsBase64Fields(payload map[string]any) error {
-	for _, field := range {{$.EntityName}}SDKOpsBase64Fields {
-		if _, err := encode{{$.EntityName}}SDKOpsBase64Field(payload, field.Path); err != nil {
-			return fmt.Errorf("%s: %w", field.Label, err)
-		}
-	}
-	return nil
-}
-
-func encode{{$.EntityName}}SDKOpsBase64Field(value any, path []string) (any, error) {
-	if len(path) == 0 {
-		switch typed := value.(type) {
-		case nil:
-			return nil, nil
-		case string:
-			return base64.StdEncoding.WithPadding(base64.NoPadding).EncodeToString([]byte(typed)), nil
-		default:
-			return nil, fmt.Errorf("expected string, got %T", value)
-		}
-	}
-
-	if value == nil {
-		return nil, nil
-	}
-
-	if path[0] == "[]" {
-		items, ok := value.([]any)
-		if !ok {
-			return nil, fmt.Errorf("expected array, got %T", value)
-		}
-		for i, item := range items {
-			encoded, err := encode{{$.EntityName}}SDKOpsBase64Field(item, path[1:])
-			if err != nil {
-				return nil, err
-			}
-			items[i] = encoded
-		}
-		return items, nil
-	}
-
-	object, ok := value.(map[string]any)
-	if !ok {
-		return nil, fmt.Errorf("expected object, got %T", value)
-	}
-	child, ok := object[path[0]]
-	if !ok {
-		return value, nil
-	}
-	encoded, err := encode{{$.EntityName}}SDKOpsBase64Field(child, path[1:])
-	if err != nil {
-		return nil, err
-	}
-	object[path[0]] = encoded
-	return object, nil
-}
 {{end}}
 
 func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() ([]byte, error) {
@@ -642,13 +562,6 @@ func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() ([]byte, error) {
 	payload = flattenSDKUnions(payload)
 	{{- if $.SecretReferences}}
 	payload = flattenSensitiveData(payload)
-	{{- end}}
-	{{- if $.Base64Fields}}
-	if pm, ok := payload.(map[string]any); ok {
-		if err := encode{{$.EntityName}}SDKOpsBase64Fields(pm); err != nil {
-			return nil, fmt.Errorf("failed to base64 encode {{$.EntityName}}APISpec SDK payload: %w", err)
-		}
-	}
 	{{- end}}
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
@@ -869,9 +782,6 @@ import (
 {{- if .NeedsClient}}
 	"context"
 {{- end}}
-	{{- if .Base64Fields}}
-	"encoding/base64"
-	{{- end}}
 	"encoding/json"
 	"fmt"
 {{- if .NeedsClient}}
@@ -982,82 +892,6 @@ func normalize{{$.EntityName}}SDKOpsBoolField(value any, path []string) (any, er
 		return object, nil
 	}
 }
-{{end}}{{if .Base64Fields}}
-// {{$.EntityName}}SDKOpsBase64Field describes a field that must be base64-encoded for SDK payloads.
-type {{$.EntityName}}SDKOpsBase64Field struct {
-	Label string
-	Path  []string
-}
-
-// {{$.EntityName}}SDKOpsBase64Fields lists all fields that must be base64-encoded for SDK payloads.
-var {{$.EntityName}}SDKOpsBase64Fields = []{{$.EntityName}}SDKOpsBase64Field{
-{{- range .Base64Fields}}
-	{
-		Label: "{{.Label}}",
-		Path: []string{
-{{- range .Path}}
-			"{{.}}",
-{{- end}}
-		},
-	},
-{{- end}}
-}
-
-func encode{{$.EntityName}}SDKOpsBase64Fields(payload map[string]any) error {
-	for _, field := range {{$.EntityName}}SDKOpsBase64Fields {
-		if _, err := encode{{$.EntityName}}SDKOpsBase64Field(payload, field.Path); err != nil {
-			return fmt.Errorf("%s: %w", field.Label, err)
-		}
-	}
-	return nil
-}
-
-func encode{{$.EntityName}}SDKOpsBase64Field(value any, path []string) (any, error) {
-	if len(path) == 0 {
-		switch typed := value.(type) {
-		case nil:
-			return nil, nil
-		case string:
-			return base64.StdEncoding.WithPadding(base64.NoPadding).EncodeToString([]byte(typed)), nil
-		default:
-			return nil, fmt.Errorf("expected string, got %T", value)
-		}
-	}
-
-	if value == nil {
-		return nil, nil
-	}
-
-	if path[0] == "[]" {
-		items, ok := value.([]any)
-		if !ok {
-			return nil, fmt.Errorf("expected array, got %T", value)
-		}
-		for i, item := range items {
-			encoded, err := encode{{$.EntityName}}SDKOpsBase64Field(item, path[1:])
-			if err != nil {
-				return nil, err
-			}
-			items[i] = encoded
-		}
-		return items, nil
-	}
-
-	object, ok := value.(map[string]any)
-	if !ok {
-		return nil, fmt.Errorf("expected object, got %T", value)
-	}
-	child, ok := object[path[0]]
-	if !ok {
-		return value, nil
-	}
-	encoded, err := encode{{$.EntityName}}SDKOpsBase64Field(child, path[1:])
-	if err != nil {
-		return nil, err
-	}
-	object[path[0]] = encoded
-	return object, nil
-}
 {{end}}
 
 func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() (map[string]any, error) {
@@ -1072,13 +906,6 @@ func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() (map[string]any, error)
 	}
 	{{- if $.SecretReferences}}
 	rawPayload = flattenSensitiveData(rawPayload)
-	{{- end}}
-	{{- if $.Base64Fields}}
-	if pm, ok := rawPayload.(map[string]any); ok {
-		if err := encode{{$.EntityName}}SDKOpsBase64Fields(pm); err != nil {
-			return nil, fmt.Errorf("failed to base64 encode {{$.EntityName}}APISpec SDK payload: %w", err)
-		}
-	}
 	{{- end}}
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.

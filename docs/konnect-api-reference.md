@@ -1034,8 +1034,6 @@ Allowed values:
 
 
 
-
-
 #### EventGatewayBackendClusterSpec
 
 
@@ -1367,8 +1365,6 @@ Allowed values:
 | --- | --- |
 | `forwardToVirtualCluster` |  |
 | `tlsServer` |  |
-
-
 
 
 
