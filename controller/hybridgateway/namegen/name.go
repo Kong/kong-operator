@@ -15,6 +15,9 @@ const (
 	// httpProcolPrefix is the prefix used for HTTP-related resources.
 	httpProcolPrefix = "http"
 
+	// tlsProtocolPrefix is the prefix for TLS-related resources.
+	tlsProtocolPrefix = "tls"
+
 	// defaultCPPrefix is the prefix used when including a control-plane identifier.
 	defaultCPPrefix = "cp"
 
@@ -162,11 +165,12 @@ func NewKongTargetName(upstreamID, endpointID string, port int, br *gwtypes.HTTP
 
 // NewKongCertificateName generates a KongCertificate name based on the Gateway name and listener port.
 // It uses the hybrid naming approach: readable names for short combinations, hashed names for long ones.
-func NewKongCertificateName(gatewayName, listenerPort string) string {
+func NewKongCertificateName(gatewayName, listenerPort, listenerName string) string {
 	return newName(
 		certPrefix,
 		gatewayName,
 		listenerPort,
+		listenerName,
 	)
 }
 

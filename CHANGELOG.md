@@ -9,6 +9,10 @@
 - [v2.1.2](#v212)
 - [v2.1.1](#v211)
 - [v2.1.0](#v210)
+- [v2.0.9](#v209)
+- [v2.0.8](#v208)
+- [v2.0.7](#v207)
+- [v2.0.6](#v206)
 - [v2.0.5](#v205)
 - [v2.0.4](#v204)
 - [v2.0.3](#v203)
@@ -41,6 +45,19 @@
 - [v0.2.0](#v020)
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
+
+## Unreleased
+
+> Release date: XXXX-XX-XX
+
+### Fixes
+
+- Hybridgateway: fix `KongCertificate` name collisions when a `Gateway` has
+  multiple listeners using the same port by including listener identity in
+  generated certificate names.
+  **Attention**: This will re-create CA certificates in Konnect,
+  as it changes the names of the generated `KongCertificate`s.
+  [#4382](https://github.com/Kong/kong-operator/pull/4382)
 
 ## [v2.1.6]
 
@@ -185,6 +202,8 @@
   [#3315](https://github.com/Kong/kong-operator/pull/3315) [#3369](https://github.com/Kong/kong-operator/pull/3369)
 
 ## [v2.1.0]
+
+> Release date: 2026-02-05
 
 ### Added
 
@@ -478,6 +497,68 @@
   `spec.listeners.tls.certificateRef`, ensuring Gateway status conditions
   are updated when referenced certificates change.
   [#2661](https://github.com/Kong/kong-operator/pull/2661)
+
+## [v2.0.9]
+
+> Release date: 2026-04-23
+
+### Fixed
+
+- Fix a hot loop in the `KonnectExtension` reconciler when two
+  `KonnectExtension`s share the same client-certificate `Secret`: the
+  `KongDataPlaneClientCertificate` CR is now named after the `KonnectExtension`
+  instead of the `Secret`, so each extension gets its own CR in its own Konnect
+  ControlPlane and the reconciler no longer retries `Create` on every loop or
+  falls back to Konnect's `dp-client-certificates` List API.
+  [#3961](https://github.com/Kong/kong-operator/pull/3961) [#3978](https://github.com/Kong/kong-operator/pull/3978)
+- Fix incorrect Konnect API used for target lookup
+  [#3910](https://github.com/Kong/kong-operator/pull/3910) [#3939](https://github.com/Kong/kong-operator/pull/3939)
+
+## [v2.0.8]
+
+> Release date: 2026-03-24
+
+### Fixed
+
+- Do not try to list `Gateway`s for namespaces that are not being watched by controller
+  [#3625](https://github.com/Kong/kong-operator/pull/3625)
+- Fix the on-prem translator to set `protocols` in translated Kong routes to
+  `http,https`.
+  [#3587](https://github.com/Kong/kong-operator/pull/3587)
+
+## [v2.0.7]
+
+> Release date: 2026-02-19
+
+### Fixed
+
+- Fixed an issue where users could set the secret of configmap label selectors
+  to empty when the other one was left non-empty.
+  [#2815](https://github.com/Kong/kong-operator/pull/2815)
+- Bump Go to 1.25.7 and fix v2 module
+  [#3355](https://github.com/Kong/kong-operator/pull/3355)
+
+## [v2.0.6]
+
+> Release date: 2025-12-01
+
+### Fixes
+
+- Translate `healtchchecks.thershold` in `KongUpstreamPolicy` to the
+  `healthchecks.thershold` field in Kong upstreams.
+  [#2662](https://github.com/Kong/kong-operator/pull/2662)
+- Fix random, unexpected and invalid validation error during validation of `HTTPRoute`s
+  for `Gateway`s configured in different namespaces with `GatewayConfiguration` that
+  has field `spec.controlPlaneOptions.watchNamespaces.type` set to `own`.
+  [#2717](https://github.com/Kong/kong-operator/pull/2717)
+- Reject CA Secrets with multiple PEM certs.
+  [#2671](https://github.com/Kong/kong-operator/pull/2671)
+- Gateway controllers now watch changes on Secrets referenced by
+  `spec.listeners.tls.certificateRef`, ensuring Gateway status conditions
+  are updated when referenced certificates change.
+  [#2661](https://github.com/Kong/kong-operator/pull/2661)
+- Trigger reconciliation events on `KongPlugin`s upon changes on `KongPluginBinding`.
+  [#2637](https://github.com/Kong/kong-operator/pull/2637)
 
 ## [v2.0.5]
 
@@ -853,7 +934,7 @@
   the [Kong documentation](https://developer.konghq.com/operator/konnect/reference/migrate-1.4-1.5/).
   [#1183](https://github.com/kong/kong-operator/pull/1183)
 - Migrate KGO CRDs conditions to the kubernetes-configuration repo.
-  With this migration process, we have moved all conditions from the KGO repo to [kubernetes-configuration](kubernetes-configuration).
+  With this migration process, we have moved all conditions from the KGO repo to [kubernetes-configuration][kubernetes-configuration].
   This is a breaking change which requires manual action for projects that use operator's Go conditions types.
   In order to migrate please use the import paths from the [kong/kubernetes-configuration][kubernetes-configuration] repo instead.
   [#1281](https://github.com/kong/kong-operator/pull/1281)
@@ -1841,6 +1922,10 @@ re-installing the operator through the bundle.
 [v2.1.2]: https://github.com/Kong/kong-operator/compare/v2.1.1..v2.1.2
 [v2.1.1]: https://github.com/Kong/kong-operator/compare/v2.1.0..v2.1.1
 [v2.1.0]: https://github.com/Kong/kong-operator/compare/v2.0.5..v2.1.0
+[v2.0.9]: https://github.com/Kong/kong-operator/compare/v2.0.8..v2.0.9
+[v2.0.8]: https://github.com/Kong/kong-operator/compare/v2.0.7..v2.0.8
+[v2.0.7]: https://github.com/Kong/kong-operator/compare/v2.0.6..v2.0.7
+[v2.0.6]: https://github.com/Kong/kong-operator/compare/v2.0.5..v2.0.6
 [v2.0.5]: https://github.com/Kong/kong-operator/compare/v2.0.4..v2.0.5
 [v2.0.4]: https://github.com/Kong/kong-operator/compare/v2.0.3..v2.0.4
 [v2.0.3]: https://github.com/Kong/kong-operator/compare/v2.0.2..v2.0.3
