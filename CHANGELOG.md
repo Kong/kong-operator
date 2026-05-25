@@ -57,7 +57,7 @@
   generated certificate names.
   **Attention**: This will re-create CA certificates in Konnect,
   as it changes the names of the generated `KongCertificate`s.
-  [#4382](https://github.com/Kong/kong-operator/pull/4382)
+  [#4382](https://github.com/Kong/kong-operator/pull/4382) [#4394](https://github.com/Kong/kong-operator/pull/4394)
 
 ## [v2.1.6]
 
