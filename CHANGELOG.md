@@ -235,6 +235,9 @@
   new CRDs before the upgrade, see [UPGRADE](charts/kong-operator/UPGRADE.md).
   [#3596](https://github.com/Kong/kong-operator/pull/3596)
   [#3599](https://github.com/Kong/kong-operator/pull/3599)
+- Bump Kong Gateway to 3.14 and double the default CPU (now `2000m`) and memory limits (now `2000Mi`)
+  for the `DataPlane` deployment.
+  [#3995](https://github.com/Kong/kong-operator/pull/3995)
 
 ### Fixes
 
