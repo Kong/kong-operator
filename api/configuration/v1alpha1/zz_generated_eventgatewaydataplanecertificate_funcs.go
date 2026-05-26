@@ -29,6 +29,11 @@ func (obj EventGatewayDataPlaneCertificate) GetTypeName() string {
 	return "EventGatewayDataPlaneCertificate"
 }
 
+// GetItems returns the list of EventGatewayDataPlaneCertificate items.
+func (obj EventGatewayDataPlaneCertificateList) GetItems() []EventGatewayDataPlaneCertificate {
+	return obj.Items
+}
+
 // HasParent returns true if the EventGatewayDataPlaneCertificate has a parent entity.
 func (obj EventGatewayDataPlaneCertificate) HasParent() bool {
 	return true

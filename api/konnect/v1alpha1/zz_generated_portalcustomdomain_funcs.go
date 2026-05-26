@@ -29,6 +29,11 @@ func (obj PortalCustomDomain) GetTypeName() string {
 	return "PortalCustomDomain"
 }
 
+// GetItems returns the list of PortalCustomDomain items.
+func (obj PortalCustomDomainList) GetItems() []PortalCustomDomain {
+	return obj.Items
+}
+
 // HasParent returns true if the PortalCustomDomain has a parent entity.
 func (obj PortalCustomDomain) HasParent() bool {
 	return true
