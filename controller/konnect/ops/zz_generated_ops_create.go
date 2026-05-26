@@ -38,8 +38,6 @@ func CreateGeneratedOps[
 		return createEventGatewayVirtualClusterConsumePolicy(ctx, sdk.GetEventGatewayVirtualClusterConsumePoliciesSDK(), ent)
 	case *konnectv1alpha1.EventGatewayVirtualClusterProducePolicy:
 		return createEventGatewayVirtualClusterProducePolicy(ctx, sdk.GetEventGatewayVirtualClusterProducePoliciesSDK(), ent)
-	case *konnectv1alpha1.IdentityProviderRequest:
-		return createIdentityProviderRequest(ctx, sdk.GetPortalAuthSettingsSDK(), ent)
 	case *konnectv1alpha1.KonnectEventDataPlaneCertificate:
 		return createKonnectEventDataPlaneCertificate(ctx, cl, sdk.GetEventGatewayDataPlaneCertificatesSDK(), ent)
 	case *konnectv1alpha1.KonnectEventGateway:
@@ -54,6 +52,8 @@ func CreateGeneratedOps[
 		return createPortalEmailConfig(ctx, sdk.GetPortalEmailsSDK(), ent)
 	case *konnectv1alpha1.PortalIPAllowList:
 		return createPortalIPAllowList(ctx, sdk.GetPortalsIPAllowListSDK(), ent)
+	case *konnectv1alpha1.PortalIdentityProviderRequest:
+		return createPortalIdentityProviderRequest(ctx, sdk.GetPortalAuthSettingsSDK(), ent)
 	case *konnectv1alpha1.PortalPage:
 		return createPortalPage(ctx, sdk.GetPortalPagesSDK(), ent)
 	case *konnectv1alpha1.PortalTeam:

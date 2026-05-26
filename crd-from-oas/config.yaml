@@ -217,9 +217,9 @@ apiGroupVersions:
           # https://github.com/Kong/kong-operator/issues/3987.
           skipGetForUID: true
           create:
-            path: github.com/Kong/sdk-konnect-go/models/components.CreateIdentityProvider
+            path: github.com/Kong/sdk-konnect-go/models/components.PortalCreateIdentityProvider
           update:
-            path: github.com/Kong/sdk-konnect-go/models/components.UpdateIdentityProvider
+            path: github.com/Kong/sdk-konnect-go/models/components.PortalUpdateIdentityProvider
           delete: {}
         reconciler: {}
       - path: /v3/portals/{portalId}/teams

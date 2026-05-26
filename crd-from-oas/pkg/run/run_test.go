@@ -39,6 +39,40 @@ func TestCleanupLegacyGeneratedFiles(t *testing.T) {
 	require.FileExists(t, keepFile)
 }
 
+func TestCleanupRenamedGeneratedFiles(t *testing.T) {
+	projectRoot := t.TempDir()
+	dir := filepath.Join(projectRoot, "api", "konnect", "v1alpha1")
+	require.NoError(t, os.MkdirAll(dir, 0o755))
+	require.NoError(t, os.MkdirAll(filepath.Join(projectRoot, "controller/konnect/ops"), 0o755))
+	require.NoError(t, os.MkdirAll(filepath.Join(projectRoot, "controller/konnect"), 0o755))
+	require.NoError(t, os.MkdirAll(filepath.Join(projectRoot, "internal/utils/index"), 0o755))
+
+	oldFiles := []string{
+		filepath.Join(dir, "zz_generated_identityproviderrequest_types.go"),
+		filepath.Join(dir, "zz_generated_identityproviderrequest_sdkops.go"),
+		filepath.Join(projectRoot, "controller/konnect/ops", "zz_generated_ops_identityproviderrequest.go"),
+		filepath.Join(projectRoot, "controller/konnect/ops", "zz_generated_ops_identityproviderrequest_test.go"),
+		filepath.Join(projectRoot, "controller/konnect", "zz_generated_watch_identityproviderrequest.go"),
+		filepath.Join(projectRoot, "internal/utils/index", "zz_generated_identityproviderrequest.go"),
+	}
+	for _, filePath := range oldFiles {
+		require.NoError(t, os.WriteFile(filePath, []byte("old"), 0o600))
+	}
+
+	newFile := filepath.Join(projectRoot, "controller/konnect/ops", "zz_generated_ops_portalidentityproviderrequest.go")
+	require.NoError(t, os.WriteFile(newFile, []byte("new"), 0o600))
+
+	require.NoError(t, cleanupRenamedGeneratedFiles(projectRoot, dir, []generatedEntityRename{{
+		OldEntity: "IdentityProviderRequest",
+		NewEntity: "PortalIdentityProviderRequest",
+	}}))
+
+	for _, filePath := range oldFiles {
+		require.NoFileExists(t, filePath)
+	}
+	require.FileExists(t, newFile)
+}
+
 func TestHandWrittenOpsFileNamesIncludesLegacyKonnectName(t *testing.T) {
 	require.Equal(
 		t,

@@ -15,7 +15,6 @@ type SupportedGeneratedKonnectEntityType interface {
 		konnectv1alpha1.EventGatewayVirtualCluster |
 		konnectv1alpha1.EventGatewayVirtualClusterConsumePolicy |
 		konnectv1alpha1.EventGatewayVirtualClusterProducePolicy |
-		konnectv1alpha1.IdentityProviderRequest |
 		konnectv1alpha1.KonnectEventDataPlaneCertificate |
 		konnectv1alpha1.KonnectEventGateway |
 		konnectv1alpha1.Portal |
@@ -23,6 +22,7 @@ type SupportedGeneratedKonnectEntityType interface {
 		konnectv1alpha1.PortalCustomization |
 		konnectv1alpha1.PortalEmailConfig |
 		konnectv1alpha1.PortalIPAllowList |
+		konnectv1alpha1.PortalIdentityProviderRequest |
 		konnectv1alpha1.PortalPage |
 		konnectv1alpha1.PortalTeam
 }

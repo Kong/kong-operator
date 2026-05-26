@@ -28,6 +28,7 @@ func TestEventGatewayVirtualClusterConsumePolicyConfigUnmarshalJSON_NilReceiver(
 		payload []byte
 	}{
 		{name: "decrypt", payload: []byte("{\"type\":\"decrypt\",\"decrypt\":{}}")},
+		{name: "decrypt_fields", payload: []byte("{\"type\":\"decryptFields\",\"decryptFields\":{}}")},
 		{name: "modify_headers", payload: []byte("{\"type\":\"modifyHeaders\",\"modifyHeaders\":{}}")},
 		{name: "schema_validation", payload: []byte("{\"type\":\"schemaValidation\",\"schemaValidation\":{}}")},
 		{name: "skip_record", payload: []byte("{\"type\":\"skipRecord\",\"skipRecord\":{}}")},
@@ -87,6 +88,22 @@ func TestEventGatewayVirtualClusterConsumePolicyAPISpecUnmarshalJSON_DecodesUnio
 				}
 				if target.EventGatewayVirtualClusterConsumePolicyConfig.DecryptPolicy == nil {
 					t.Fatalf("EventGatewayVirtualClusterConsumePolicyConfig.DecryptPolicy should be allocated")
+				}
+			},
+		},
+		{
+			name: "EventGatewayVirtualClusterConsumePolicyConfig/decrypt_fields",
+			payload: []byte("{\"type\":\"decryptFields\",\"decryptFields\":{}}"),
+			assert: func(t *testing.T, target EventGatewayVirtualClusterConsumePolicyAPISpec) {
+				t.Helper()
+				if target.EventGatewayVirtualClusterConsumePolicyConfig == nil {
+					t.Fatalf("EventGatewayVirtualClusterConsumePolicyConfig should be allocated")
+				}
+				if got, want := target.EventGatewayVirtualClusterConsumePolicyConfig.Type, EventGatewayVirtualClusterConsumePolicyConfigTypeParsedRecordDecryptFieldsPolicyCreate; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.EventGatewayVirtualClusterConsumePolicyConfig.ParsedRecordDecryptFieldsPolicyCreate == nil {
+					t.Fatalf("EventGatewayVirtualClusterConsumePolicyConfig.ParsedRecordDecryptFieldsPolicyCreate should be allocated")
 				}
 			},
 		},

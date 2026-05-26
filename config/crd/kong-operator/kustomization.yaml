@@ -55,6 +55,7 @@ resources:
   - konnect.konghq.com_portalcustomdomains.yaml
   - konnect.konghq.com_portalcustomizations.yaml
   - konnect.konghq.com_portalemailconfigs.yaml
+  - konnect.konghq.com_portalidentityproviderrequests.yaml
   - konnect.konghq.com_portalipallowlists.yaml
   - konnect.konghq.com_portalpages.yaml
   - konnect.konghq.com_portals.yaml

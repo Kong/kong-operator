@@ -103,13 +103,17 @@ type EventGatewayVirtualClusterProducePolicyConfig struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=encrypt;modifyHeaders;schemaValidation
+	// +kubebuilder:validation:Enum=encrypt;encryptFields;modifyHeaders;schemaValidation
 	Type EventGatewayVirtualClusterProducePolicyConfigType `json:"type,omitempty"`
 
 	// EncryptPolicy configuration.
 	//
 	// +optional
 	EncryptPolicy *EventGatewayEncryptPolicy `json:"encrypt,omitempty"`
+	// ParsedRecordEncryptFieldsPolicyCreate configuration.
+	//
+	// +optional
+	ParsedRecordEncryptFieldsPolicyCreate *EventGatewayParsedRecordEncryptFieldsPolicyCreate `json:"encryptFields,omitempty"`
 	// ModifyHeadersPolicyCreate configuration.
 	//
 	// +optional
@@ -126,6 +130,7 @@ type EventGatewayVirtualClusterProducePolicyConfigType string
 // EventGatewayVirtualClusterProducePolicyConfigType values.
 const (
 	EventGatewayVirtualClusterProducePolicyConfigTypeEncryptPolicy EventGatewayVirtualClusterProducePolicyConfigType = "encrypt"
+	EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordEncryptFieldsPolicyCreate EventGatewayVirtualClusterProducePolicyConfigType = "encryptFields"
 	EventGatewayVirtualClusterProducePolicyConfigTypeModifyHeadersPolicyCreate EventGatewayVirtualClusterProducePolicyConfigType = "modifyHeaders"
 	EventGatewayVirtualClusterProducePolicyConfigTypeProduceSchemaValidationPolicy EventGatewayVirtualClusterProducePolicyConfigType = "schemaValidation"
 )
@@ -146,6 +151,14 @@ func (u EventGatewayVirtualClusterProducePolicyConfig) MarshalJSON() ([]byte, er
 				return nil, fmt.Errorf("marshaling EventGatewayVirtualClusterProducePolicyConfig encrypt: %w", err)
 			}
 			m["encrypt"] = raw
+		}
+	case EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordEncryptFieldsPolicyCreate:
+		if u.ParsedRecordEncryptFieldsPolicyCreate != nil {
+			raw, err := json.Marshal(u.ParsedRecordEncryptFieldsPolicyCreate)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayVirtualClusterProducePolicyConfig encrypt_fields: %w", err)
+			}
+			m["encryptFields"] = raw
 		}
 	case EventGatewayVirtualClusterProducePolicyConfigTypeModifyHeadersPolicyCreate:
 		if u.ModifyHeadersPolicyCreate != nil {
@@ -194,6 +207,16 @@ func (u *EventGatewayVirtualClusterProducePolicyConfig) UnmarshalJSON(data []byt
 			return fmt.Errorf("unmarshaling EventGatewayVirtualClusterProducePolicyConfig encrypt: %w", err)
 		}
 		u.EncryptPolicy = &val
+	case "encryptFields":
+		payload, ok := raw["encryptFields"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordEncryptFieldsPolicyCreate
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayVirtualClusterProducePolicyConfig encrypt_fields: %w", err)
+		}
+		u.ParsedRecordEncryptFieldsPolicyCreate = &val
 	case "modifyHeaders":
 		payload, ok := raw["modifyHeaders"]
 		if !ok || len(payload) == 0 {
@@ -245,7 +268,7 @@ func (s *EventGatewayVirtualClusterProducePolicyAPISpec) UnmarshalJSON(data []by
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return fmt.Errorf("unmarshaling EventGatewayVirtualClusterProducePolicyAPISpec: %w", err)
 	}
-	if aux.EventGatewayVirtualClusterProducePolicyConfig != nil && aux.EventGatewayVirtualClusterProducePolicyConfig.Type == "" && aux.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy == nil && aux.EventGatewayVirtualClusterProducePolicyConfig.ModifyHeadersPolicyCreate == nil && aux.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy == nil {
+	if aux.EventGatewayVirtualClusterProducePolicyConfig != nil && aux.EventGatewayVirtualClusterProducePolicyConfig.Type == "" && aux.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy == nil && aux.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordEncryptFieldsPolicyCreate == nil && aux.EventGatewayVirtualClusterProducePolicyConfig.ModifyHeadersPolicyCreate == nil && aux.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy == nil {
 		aux.EventGatewayVirtualClusterProducePolicyConfig = nil
 	}
 	*s = EventGatewayVirtualClusterProducePolicyAPISpec(aux)

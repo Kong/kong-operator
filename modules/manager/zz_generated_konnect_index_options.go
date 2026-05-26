@@ -20,7 +20,6 @@ func generatedIndexOptionsForKonnectEntities(
 		index.OptionsForEventGatewayVirtualCluster(),
 		index.OptionsForEventGatewayVirtualClusterConsumePolicy(),
 		index.OptionsForEventGatewayVirtualClusterProducePolicy(),
-		index.OptionsForIdentityProviderRequest(),
 		index.OptionsForKonnectEventDataPlaneCertificate(),
 		index.OptionsForKonnectEventGateway(),
 		index.OptionsForPortal(),
@@ -28,6 +27,7 @@ func generatedIndexOptionsForKonnectEntities(
 		index.OptionsForPortalCustomization(),
 		index.OptionsForPortalEmailConfig(),
 		index.OptionsForPortalIPAllowList(),
+		index.OptionsForPortalIdentityProviderRequest(),
 		index.OptionsForPortalPage(),
 		index.OptionsForPortalTeam(),
 	)

@@ -36,8 +36,6 @@ func DeleteGeneratedOps[
 		return deleteEventGatewayVirtualClusterConsumePolicy(ctx, sdk.GetEventGatewayVirtualClusterConsumePoliciesSDK(), ent)
 	case *konnectv1alpha1.EventGatewayVirtualClusterProducePolicy:
 		return deleteEventGatewayVirtualClusterProducePolicy(ctx, sdk.GetEventGatewayVirtualClusterProducePoliciesSDK(), ent)
-	case *konnectv1alpha1.IdentityProviderRequest:
-		return deleteIdentityProviderRequest(ctx, sdk.GetPortalAuthSettingsSDK(), ent)
 	case *konnectv1alpha1.KonnectEventDataPlaneCertificate:
 		return deleteKonnectEventDataPlaneCertificate(ctx, sdk.GetEventGatewayDataPlaneCertificatesSDK(), ent)
 	case *konnectv1alpha1.KonnectEventGateway:
@@ -52,6 +50,8 @@ func DeleteGeneratedOps[
 		return deletePortalEmailConfig(ctx, sdk.GetPortalEmailsSDK(), ent)
 	case *konnectv1alpha1.PortalIPAllowList:
 		return deletePortalIPAllowList(ctx, sdk.GetPortalsIPAllowListSDK(), ent)
+	case *konnectv1alpha1.PortalIdentityProviderRequest:
+		return deletePortalIdentityProviderRequest(ctx, sdk.GetPortalAuthSettingsSDK(), ent)
 	case *konnectv1alpha1.PortalPage:
 		return deletePortalPage(ctx, sdk.GetPortalPagesSDK(), ent)
 	case *konnectv1alpha1.PortalTeam:

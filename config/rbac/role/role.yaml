@@ -427,7 +427,6 @@ rules:
   - eventgatewayvirtualclusterconsumepolicies
   - eventgatewayvirtualclusterproducepolicies
   - eventgatewayvirtualclusters
-  - identityproviderrequests
   - konnectapiauthconfigurations
   - konnectcloudgatewaydataplanegroupconfigurations
   - konnectcloudgatewaynetworks
@@ -436,6 +435,7 @@ rules:
   - portalcustomdomains
   - portalcustomizations
   - portalemailconfigs
+  - portalidentityproviderrequests
   - portalipallowlists
   - portalpages
   - portals
@@ -461,8 +461,6 @@ rules:
   - eventgatewayvirtualclusterproducepolicies/status
   - eventgatewayvirtualclusters/finalizers
   - eventgatewayvirtualclusters/status
-  - identityproviderrequests/finalizers
-  - identityproviderrequests/status
   - konnectapiauthconfigurations/finalizers
   - konnectapiauthconfigurations/status
   - konnectcloudgatewaydataplanegroupconfigurations/finalizers
@@ -486,6 +484,8 @@ rules:
   - portalcustomizations/status
   - portalemailconfigs/finalizers
   - portalemailconfigs/status
+  - portalidentityproviderrequests/finalizers
+  - portalidentityproviderrequests/status
   - portalipallowlists/finalizers
   - portalipallowlists/status
   - portalpages/finalizers

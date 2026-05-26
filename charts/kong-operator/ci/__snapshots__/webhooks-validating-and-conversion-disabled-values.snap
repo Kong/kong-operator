@@ -29373,6 +29373,191 @@ spec:
                     required:
                     - config
                     type: object
+                  decryptFields:
+                    description: ParsedRecordDecryptFieldsPolicyCreate configuration.
+                    properties:
+                      condition:
+                        description: |-
+                          A string containing the boolean expression that determines whether the
+                          policy is applied.
+
+                          When the policy is applied as a child policy of schema_validation, the
+                          expression can also reference
+                          `record.value` fields.
+                        maxLength: 1000
+                        type: string
+                      config:
+                        description: The configuration of the policy.
+                        properties:
+                          decryptFields:
+                            description: Selects which fields to decrypt.
+                            items:
+                              description: |-
+                                EventGatewayParsedRecordDecryptionSelector Selects fields of a parsed record
+                                for decryption.
+                              properties:
+                                paths:
+                                  description: |-
+                                    Selects which fields of the parsed record to decrypt.
+                                    A maximum of 50 path entries are allowed.
+                                  properties:
+                                    type:
+                                      description: Type designates the type of configuration.
+                                      enum:
+                                      - variant1
+                                      - variant2
+                                      minLength: 1
+                                      type: string
+                                    variant1:
+                                      description: Variant1 configuration.
+                                      items:
+                                        x-kubernetes-preserve-unknown-fields: true
+                                      type: array
+                                    variant2:
+                                      description: Variant2 configuration.
+                                      type: string
+                                  required:
+                                  - type
+                                  type: object
+                              required:
+                              - paths
+                              type: object
+                            type: array
+                          failureMode:
+                            description: |-
+                              Describes how to handle a failure in a policy applied to consumed records.
+                              * `error` - the batch is not delivered to the client.
+                              Use sparingly: erroring on a batch causes clients to get stuck on the
+                              problematic offset and requires manual intervention to skip it.
+                              * `skip` - the record is not delivered to the client.
+                              * `passthrough` - passes the record to the client even though policy
+                              execution failed.
+                              * `mark` - passes the record to the client but marks it with a
+                              `kong/policy-failure-<id>` header whose value is the reason for the policy
+                              failure (truncated to 512 characters).
+                            enum:
+                            - error
+                            - skip
+                            - passthrough
+                            - mark
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          keySources:
+                            description: Describes how to find a symmetric key for decryption.
+                            items:
+                              description: |-
+                                EventGatewayKeySource represents a union type for EventGatewayKeySource.
+                                Only one of the fields should be set based on the Type.
+                              properties:
+                                aws:
+                                  description: AWS configuration.
+                                  type: object
+                                static:
+                                  description: Static configuration.
+                                  type: object
+                                type:
+                                  description: Type designates the type of configuration.
+                                  enum:
+                                  - aws
+                                  - static
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - type
+                              type: object
+                            type: array
+                        required:
+                        - decryptFields
+                        - failureMode
+                        - keySources
+                        type: object
+                      description:
+                        description: A human-readable description of the policy.
+                        maxLength: 512
+                        type: string
+                      enabled:
+                        description: Whether the policy is enabled.
+                        enum:
+                        - Enabled
+                        - Disabled
+                        type: string
+                      labels:
+                        additionalProperties:
+                          description: LabelsValue is the value type for Labels.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        description: |-
+                          Labels store metadata of an entity that can be used for filtering an entity
+                          list or for searching across entity types.
+
+                          Keys must be of length 1-63 characters, and cannot start with "kong",
+                          "konnect", "mesh", "kic", or "_".
+                        type: object
+                      name:
+                        description: A unique user-defined name of the policy.
+                        maxLength: 255
+                        type: string
+                      parentPolicyID:
+                        description: The unique identifier of the parent schema validation policy.
+                        properties:
+                          konnectID:
+                            description: |-
+                              KonnectID is the schema for the KonnectID type.
+                              This field is required when the Type is konnectID.
+                            maxLength: 36
+                            type: string
+                          namespacedRef:
+                            description: |-
+                              NamespacedRef is a reference to a KeySet entity inside the cluster.
+                              This field is required when the Type is namespacedRef.
+                            properties:
+                              name:
+                                description: Name is the name of the referred resource.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              namespace:
+                                description: |-
+                                  Namespace is the namespace of the referred resource.
+
+                                  For namespace-scoped resources if no Namespace is provided then the
+                                  namespace of the parent object MUST be used.
+
+                                  This field MUST not be set when referring to cluster-scoped resources.
+                                maxLength: 253
+                                type: string
+                            required:
+                            - name
+                            type: object
+                          type:
+                            description: |-
+                              Type defines type of the object which is referenced. It can be one of:
+
+                              - konnectID
+                              - namespacedRef
+                            enum:
+                            - konnectID
+                            - namespacedRef
+                            type: string
+                        required:
+                        - type
+                        type: object
+                        x-kubernetes-validations:
+                        - message: when type is namespacedRef, namespacedRef must be set
+                          rule: 'self.type == ''namespacedRef'' ? has(self.namespacedRef) : true'
+                        - message: when type is namespacedRef, konnectID must not be set
+                          rule: 'self.type == ''namespacedRef'' ? !has(self.konnectID) : true'
+                        - message: when type is konnectID, konnectID must be set
+                          rule: 'self.type == ''konnectID'' ? has(self.konnectID) : true'
+                        - message: when type is konnectID, namespacedRef must not be set
+                          rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
+                    required:
+                    - config
+                    - parentPolicyID
+                    type: object
                   modifyHeaders:
                     description: ModifyHeadersPolicyCreate configuration.
                     properties:
@@ -29727,6 +29912,7 @@ spec:
                     description: Type designates the type of configuration.
                     enum:
                     - decrypt
+                    - decryptFields
                     - modifyHeaders
                     - schemaValidation
                     - skipRecord
@@ -30079,6 +30265,204 @@ spec:
                     required:
                     - config
                     type: object
+                  encryptFields:
+                    description: ParsedRecordEncryptFieldsPolicyCreate configuration.
+                    properties:
+                      condition:
+                        description: |-
+                          A string containing the boolean expression that determines whether the
+                          policy is applied.
+
+                          When the policy is applied as a child policy of schema_validation, the
+                          expression can also reference
+                          `record.value` fields.
+                        maxLength: 1000
+                        type: string
+                      config:
+                        description: The configuration of the policy.
+                        properties:
+                          encryptFields:
+                            description: Selects which fields to encrypt and with what keys.
+                            items:
+                              description: |-
+                                EventGatewayParsedRecordEncryptionSelector Selects fields of a parsed record
+                                for encryption and defines what key to encrypt them with.
+                              properties:
+                                encryptionKey:
+                                  description: The key to use for encryption.
+                                  properties:
+                                    aws:
+                                      description: AWS configuration.
+                                      properties:
+                                        arn:
+                                          description: The AWS KMS key ARN.
+                                          maxLength: 2048
+                                          minLength: 10
+                                          pattern: ^arn:aws:kms:.+
+                                          type: string
+                                      required:
+                                      - arn
+                                      type: object
+                                    static:
+                                      description: Static configuration.
+                                      properties:
+                                        key:
+                                          description: A static encryption key reference, either by ID or by value.
+                                          maxProperties: 1
+                                          minProperties: 1
+                                          properties:
+                                            id:
+                                              type: string
+                                            name:
+                                              type: string
+                                          type: object
+                                      required:
+                                      - key
+                                      type: object
+                                    type:
+                                      description: Type designates the type of configuration.
+                                      enum:
+                                      - aws
+                                      - static
+                                      minLength: 1
+                                      type: string
+                                  required:
+                                  - type
+                                  type: object
+                                paths:
+                                  description: |-
+                                    Selects which fields of the parsed record to encrypt.
+                                    A maximum of 50 path entries are allowed.
+                                  properties:
+                                    type:
+                                      description: Type designates the type of configuration.
+                                      enum:
+                                      - variant1
+                                      - variant2
+                                      minLength: 1
+                                      type: string
+                                    variant1:
+                                      description: Variant1 configuration.
+                                      items:
+                                        x-kubernetes-preserve-unknown-fields: true
+                                      type: array
+                                    variant2:
+                                      description: Variant2 configuration.
+                                      type: string
+                                  required:
+                                  - type
+                                  type: object
+                              required:
+                              - encryptionKey
+                              - paths
+                              type: object
+                            type: array
+                          failureMode:
+                            description: |-
+                              Describes how to handle a failure in a policy applied to produced records.
+                              * `reject` - rejects the record batch.
+                              * `passthrough` - passes the record silently to the backend cluster even
+                              though policy execution failed.
+                              * `mark` - passes the record to the backend cluster but marks it with a
+                              `kong/policy-failure-<id>` header whose value is the reason for the policy
+                              failure (truncated to 512 characters).
+                            enum:
+                            - reject
+                            - passthrough
+                            - mark
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                        required:
+                        - encryptFields
+                        - failureMode
+                        type: object
+                      description:
+                        description: A human-readable description of the policy.
+                        maxLength: 512
+                        type: string
+                      enabled:
+                        description: Whether the policy is enabled.
+                        enum:
+                        - Enabled
+                        - Disabled
+                        type: string
+                      labels:
+                        additionalProperties:
+                          description: LabelsValue is the value type for Labels.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        description: |-
+                          Labels store metadata of an entity that can be used for filtering an entity
+                          list or for searching across entity types.
+
+                          Keys must be of length 1-63 characters, and cannot start with "kong",
+                          "konnect", "mesh", "kic", or "_".
+                        type: object
+                      name:
+                        description: A unique user-defined name of the policy.
+                        maxLength: 255
+                        type: string
+                      parentPolicyID:
+                        description: The unique identifier of the parent schema validation policy.
+                        properties:
+                          konnectID:
+                            description: |-
+                              KonnectID is the schema for the KonnectID type.
+                              This field is required when the Type is konnectID.
+                            maxLength: 36
+                            type: string
+                          namespacedRef:
+                            description: |-
+                              NamespacedRef is a reference to a KeySet entity inside the cluster.
+                              This field is required when the Type is namespacedRef.
+                            properties:
+                              name:
+                                description: Name is the name of the referred resource.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              namespace:
+                                description: |-
+                                  Namespace is the namespace of the referred resource.
+
+                                  For namespace-scoped resources if no Namespace is provided then the
+                                  namespace of the parent object MUST be used.
+
+                                  This field MUST not be set when referring to cluster-scoped resources.
+                                maxLength: 253
+                                type: string
+                            required:
+                            - name
+                            type: object
+                          type:
+                            description: |-
+                              Type defines type of the object which is referenced. It can be one of:
+
+                              - konnectID
+                              - namespacedRef
+                            enum:
+                            - konnectID
+                            - namespacedRef
+                            type: string
+                        required:
+                        - type
+                        type: object
+                        x-kubernetes-validations:
+                        - message: when type is namespacedRef, namespacedRef must be set
+                          rule: 'self.type == ''namespacedRef'' ? has(self.namespacedRef) : true'
+                        - message: when type is namespacedRef, konnectID must not be set
+                          rule: 'self.type == ''namespacedRef'' ? !has(self.konnectID) : true'
+                        - message: when type is konnectID, konnectID must be set
+                          rule: 'self.type == ''konnectID'' ? has(self.konnectID) : true'
+                        - message: when type is konnectID, namespacedRef must not be set
+                          rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
+                    required:
+                    - config
+                    - parentPolicyID
+                    type: object
                   modifyHeaders:
                     description: ModifyHeadersPolicyCreate configuration.
                     properties:
@@ -30394,6 +30778,7 @@ spec:
                     description: Type designates the type of configuration.
                     enum:
                     - encrypt
+                    - encryptFields
                     - modifyHeaders
                     - schemaValidation
                     minLength: 1
@@ -34619,6 +35004,324 @@ spec:
             type: object
           status:
             description: PortalEmailConfigStatus defines the observed state of PortalEmailConfig.
+            properties:
+              conditions:
+                description: Conditions represent the current state of the resource.
+                items:
+                  description: Condition contains details for one aspect of the current state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                maxItems: 8
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              id:
+                description: |-
+                  ID is the unique identifier of the Konnect entity as assigned by Konnect API.
+                  If it's unset (empty string), it means the Konnect entity hasn't been created yet.
+                maxLength: 256
+                type: string
+              observedGeneration:
+                description: ObservedGeneration is the most recent generation observed
+                format: int64
+                type: integer
+              organizationID:
+                description: OrgID is ID of Konnect Org that this entity has been created in.
+                maxLength: 256
+                type: string
+              portalID:
+                description: PortalID is the Konnect ID of the parent Portal.
+                properties:
+                  id:
+                    description: ID is the unique identifier of the Konnect entity as assigned by Konnect API.
+                    maxLength: 256
+                    type: string
+                type: object
+              serverURL:
+                description: ServerURL is the URL of the Konnect server in which the entity exists.
+                maxLength: 512
+                type: string
+            type: object
+        required:
+        - metadata
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+# Source: kong-operator/charts/ko-crds/templates/ko-crds-konnect.konghq.com_portalidentityproviderrequests.yaml
+# This file is auto-generated by KO's hack/generators/conversion-webhook/main.go generator.
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+    kubernetes-configuration.konghq.com/channels: kong-operator
+    kubernetes-configuration.konghq.com/version: v2.1.0
+  name: portalidentityproviderrequests.konnect.konghq.com
+spec:
+  group: konnect.konghq.com
+  names:
+    categories:
+    - konnect
+    - kong
+    kind: PortalIdentityProviderRequest
+    listKind: PortalIdentityProviderRequestList
+    plural: portalidentityproviderrequests
+    singular: portalidentityproviderrequest
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: Konnect ID
+      jsonPath: .status.id
+      name: ID
+      type: string
+    - description: The Resource is Programmed on Konnect
+      jsonPath: .status.conditions[?(@.type=='Programmed')].status
+      name: Programmed
+      type: string
+    - description: Konnect Organization ID this resource belongs to.
+      jsonPath: .status.organizationID
+      name: OrgID
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: PortalIdentityProviderRequest is the Schema for the portalidentityproviderrequests API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: PortalIdentityProviderRequestSpec defines the desired state of PortalIdentityProviderRequest.
+            properties:
+              apiSpec:
+                description: APISpec defines the desired state of the resource's API spec fields.
+                properties:
+                  config:
+                    description: |-
+                      PortalIdentityProviderRequestConfig represents a union type for config.
+                      Only one of the fields should be set based on the Type.
+                    properties:
+                      oIDC:
+                        description: OIDC configuration.
+                        properties:
+                          claimMappings:
+                            description: |-
+                              Defines the mappings between OpenID Connect (OIDC) claims and local claims
+                              used by your application for
+                              authentication.
+                            properties:
+                              email:
+                                description: The claim mapping for the user's email address.
+                                maxLength: 253
+                                type: string
+                              groups:
+                                description: The claim mapping for the user's group membership information.
+                                maxLength: 253
+                                type: string
+                              name:
+                                description: The claim mapping for the user's name.
+                                maxLength: 253
+                                type: string
+                            type: object
+                          clientID:
+                            description: The client ID assigned to your application by the identity provider.
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          clientSecret:
+                            description: The Client Secret assigned to your application by the identity provider.
+                            maxLength: 253
+                            type: string
+                          issuerURL:
+                            description: |-
+                              The issuer URI of the identity provider.
+                              This is the URL where the provider's metadata can be obtained.
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          scopes:
+                            description: |-
+                              The scopes requested by your application when authenticating with the
+                              identity provider.
+                            items:
+                              type: string
+                            type: array
+                        required:
+                        - clientID
+                        - issuerURL
+                        type: object
+                      portalSAML:
+                        description: PortalSAML configuration.
+                        properties:
+                          idpMetadataURL:
+                            description: |-
+                              The identity provider's metadata URL where the identity provider's metadata
+                              can be obtained.
+                            maxLength: 253
+                            type: string
+                          idpMetadataXML:
+                            description: |-
+                              The identity provider's SAML metadata.
+                              If the identity provider supports a metadata URL, you can use the
+                              `idp_metadata_url` field instead.
+                            maxLength: 253
+                            type: string
+                        type: object
+                      type:
+                        description: Type designates the type of configuration.
+                        enum:
+                        - oIDC
+                        - portalSAML
+                        minLength: 1
+                        type: string
+                    required:
+                    - type
+                    type: object
+                  enabled:
+                    description: |-
+                      Indicates whether the identity provider is enabled.
+                      Only one identity provider can be active at a time, such as SAML or OIDC.
+                    enum:
+                    - Enabled
+                    - Disabled
+                    type: string
+                  type:
+                    description: Specifies the type of identity provider.
+                    enum:
+                    - oidc
+                    - saml
+                    maxLength: 253
+                    type: string
+                type: object
+              portalRef:
+                description: PortalRef is the reference to the parent Portal object.
+                properties:
+                  konnectID:
+                    description: |-
+                      KonnectID is the schema for the KonnectID type.
+                      This field is required when the Type is konnectID.
+                    maxLength: 36
+                    type: string
+                  namespacedRef:
+                    description: |-
+                      NamespacedRef is a reference to a KeySet entity inside the cluster.
+                      This field is required when the Type is namespacedRef.
+                    properties:
+                      name:
+                        description: Name is the name of the referred resource.
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                      namespace:
+                        description: |-
+                          Namespace is the namespace of the referred resource.
+
+                          For namespace-scoped resources if no Namespace is provided then the
+                          namespace of the parent object MUST be used.
+
+                          This field MUST not be set when referring to cluster-scoped resources.
+                        maxLength: 253
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  type:
+                    description: |-
+                      Type defines type of the object which is referenced. It can be one of:
+
+                      - konnectID
+                      - namespacedRef
+                    enum:
+                    - konnectID
+                    - namespacedRef
+                    type: string
+                required:
+                - type
+                type: object
+                x-kubernetes-validations:
+                - message: when type is namespacedRef, namespacedRef must be set
+                  rule: 'self.type == ''namespacedRef'' ? has(self.namespacedRef) : true'
+                - message: when type is namespacedRef, konnectID must not be set
+                  rule: 'self.type == ''namespacedRef'' ? !has(self.konnectID) : true'
+                - message: when type is konnectID, konnectID must be set
+                  rule: 'self.type == ''konnectID'' ? has(self.konnectID) : true'
+                - message: when type is konnectID, namespacedRef must not be set
+                  rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
+            required:
+            - portalRef
+            type: object
+          status:
+            description: PortalIdentityProviderRequestStatus defines the observed state of PortalIdentityProviderRequest.
             properties:
               conditions:
                 description: Conditions represent the current state of the resource.
@@ -47180,7 +47883,6 @@ rules:
   - eventgatewayvirtualclusterconsumepolicies
   - eventgatewayvirtualclusterproducepolicies
   - eventgatewayvirtualclusters
-  - identityproviderrequests
   - konnectapiauthconfigurations
   - konnectcloudgatewaydataplanegroupconfigurations
   - konnectcloudgatewaynetworks
@@ -47189,6 +47891,7 @@ rules:
   - portalcustomdomains
   - portalcustomizations
   - portalemailconfigs
+  - portalidentityproviderrequests
   - portalipallowlists
   - portalpages
   - portals
@@ -47214,8 +47917,6 @@ rules:
   - eventgatewayvirtualclusterproducepolicies/status
   - eventgatewayvirtualclusters/finalizers
   - eventgatewayvirtualclusters/status
-  - identityproviderrequests/finalizers
-  - identityproviderrequests/status
   - konnectapiauthconfigurations/finalizers
   - konnectapiauthconfigurations/status
   - konnectcloudgatewaydataplanegroupconfigurations/finalizers
@@ -47239,6 +47940,8 @@ rules:
   - portalcustomizations/status
   - portalemailconfigs/finalizers
   - portalemailconfigs/status
+  - portalidentityproviderrequests/finalizers
+  - portalidentityproviderrequests/status
   - portalipallowlists/finalizers
   - portalipallowlists/status
   - portalpages/finalizers

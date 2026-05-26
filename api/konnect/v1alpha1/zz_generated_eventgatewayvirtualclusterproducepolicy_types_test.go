@@ -28,6 +28,7 @@ func TestEventGatewayVirtualClusterProducePolicyConfigUnmarshalJSON_NilReceiver(
 		payload []byte
 	}{
 		{name: "encrypt", payload: []byte("{\"type\":\"encrypt\",\"encrypt\":{}}")},
+		{name: "encrypt_fields", payload: []byte("{\"type\":\"encryptFields\",\"encryptFields\":{}}")},
 		{name: "modify_headers", payload: []byte("{\"type\":\"modifyHeaders\",\"modifyHeaders\":{}}")},
 		{name: "schema_validation", payload: []byte("{\"type\":\"schemaValidation\",\"schemaValidation\":{}}")},
 	}
@@ -86,6 +87,22 @@ func TestEventGatewayVirtualClusterProducePolicyAPISpecUnmarshalJSON_DecodesUnio
 				}
 				if target.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy == nil {
 					t.Fatalf("EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy should be allocated")
+				}
+			},
+		},
+		{
+			name: "EventGatewayVirtualClusterProducePolicyConfig/encrypt_fields",
+			payload: []byte("{\"type\":\"encryptFields\",\"encryptFields\":{}}"),
+			assert: func(t *testing.T, target EventGatewayVirtualClusterProducePolicyAPISpec) {
+				t.Helper()
+				if target.EventGatewayVirtualClusterProducePolicyConfig == nil {
+					t.Fatalf("EventGatewayVirtualClusterProducePolicyConfig should be allocated")
+				}
+				if got, want := target.EventGatewayVirtualClusterProducePolicyConfig.Type, EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordEncryptFieldsPolicyCreate; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordEncryptFieldsPolicyCreate == nil {
+					t.Fatalf("EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordEncryptFieldsPolicyCreate should be allocated")
 				}
 			},
 		},

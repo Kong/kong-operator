@@ -29,12 +29,12 @@ func testGeneratedPortalPageForSDKOps() *konnectv1alpha1.PortalPage {
 		},
 		Spec: konnectv1alpha1.PortalPageSpec{
 			APISpec: konnectv1alpha1.PortalPageAPISpec{
-				Content: konnectv1alpha1.PageContent("test-value"),
-				Description: konnectv1alpha1.Description("test-value"),
-				Slug: konnectv1alpha1.PageSlug("test-value"),
-				Status: konnectv1alpha1.PublishedStatus("test-value"),
-				Title: konnectv1alpha1.PageTitle("test-value"),
-				Visibility: konnectv1alpha1.PageVisibilityStatus("test-value"),
+				Content: "test-value",
+				Description: "test-value",
+				Slug: "test-value",
+				Status: "test-value",
+				Title: "test-value",
+				Visibility: "test-value",
 			},
 		},
 	}

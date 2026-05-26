@@ -26,6 +26,13 @@ var EventGatewayVirtualClusterConsumePolicySDKOpsBoolFields = []EventGatewayVirt
 		},
 	},
 	{
+		Label: "decrypt_fields.enabled",
+		Path: []string{
+			"decrypt_fields",
+			"enabled",
+		},
+	},
+	{
 		Label: "modify_headers.enabled",
 		Path: []string{
 			"modify_headers",
@@ -172,6 +179,9 @@ func (s *EventGatewayVirtualClusterConsumePolicyAPISpec) selectedSDKOpsPayload(p
 	case EventGatewayVirtualClusterConsumePolicyConfigTypeDecryptPolicy:
 		selected = payload["decrypt"]
 		variant = "DecryptPolicy"
+	case EventGatewayVirtualClusterConsumePolicyConfigTypeParsedRecordDecryptFieldsPolicyCreate:
+		selected = payload["decrypt_fields"]
+		variant = "ParsedRecordDecryptFieldsPolicyCreate"
 	default:
 		return nil, "", fmt.Errorf("unsupported EventGatewayVirtualClusterConsumePolicy config type %q", s.EventGatewayVirtualClusterConsumePolicyConfig.Type)
 	}
@@ -248,6 +258,15 @@ func (s *EventGatewayVirtualClusterConsumePolicyAPISpec) ToCreateEventGatewayVir
 			return nil, fmt.Errorf("failed to unmarshal into EventGatewayDecryptPolicy: %w", err)
 		}
 		body := sdkkonnectcomp.CreateEventGatewayConsumePolicyCreateDecrypt(member)
+		return &sdkkonnectoper.CreateEventGatewayVirtualClusterConsumePolicyRequest{
+			EventGatewayConsumePolicyCreate: &body,
+		}, nil
+	case "ParsedRecordDecryptFieldsPolicyCreate":
+		var member sdkkonnectcomp.EventGatewayParsedRecordDecryptFieldsPolicyCreate
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into EventGatewayParsedRecordDecryptFieldsPolicyCreate: %w", err)
+		}
+		body := sdkkonnectcomp.CreateEventGatewayConsumePolicyCreateDecryptFields(member)
 		return &sdkkonnectoper.CreateEventGatewayVirtualClusterConsumePolicyRequest{
 			EventGatewayConsumePolicyCreate: &body,
 		}, nil
