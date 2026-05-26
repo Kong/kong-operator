@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -21,6 +22,7 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 	testCases := []struct {
 		name          string
 		grants        []configurationv1alpha1.KongReferenceGrant
+		namespaces    []corev1.Namespace
 		fromNamespace string
 		toNamespace   string
 		toName        string
@@ -192,6 +194,114 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 				Kind:    "KonnectGatewayControlPlane",
 			},
 			expected: true,
+		},
+		{
+			name: "grant allows reference from namespace selected by labels",
+			grants: []configurationv1alpha1.KongReferenceGrant{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "allow-selected-namespaces",
+						Namespace: "plugin-ns",
+					},
+					Spec: configurationv1alpha1.KongReferenceGrantSpec{
+						From: []configurationv1alpha1.ReferenceGrantFrom{
+							{
+								Group: "configuration.konghq.com",
+								Kind:  "KongPluginBinding",
+								NamespaceSelector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{
+										"konghq.com/cross-namespace-access": "true",
+									},
+								},
+							},
+						},
+						To: []configurationv1alpha1.ReferenceGrantTo{
+							{
+								Group: "configuration.konghq.com",
+								Kind:  "KongPlugin",
+							},
+						},
+					},
+				},
+			},
+			namespaces: []corev1.Namespace{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "tenant-ns",
+						Labels: map[string]string{
+							"konghq.com/cross-namespace-access": "true",
+						},
+					},
+				},
+			},
+			fromNamespace: "tenant-ns",
+			toNamespace:   "plugin-ns",
+			toName:        "rate-limiting",
+			fromGVK: metav1.GroupVersionKind{
+				Group:   "configuration.konghq.com",
+				Version: "v1alpha1",
+				Kind:    "KongPluginBinding",
+			},
+			toGVK: metav1.GroupVersionKind{
+				Group:   "configuration.konghq.com",
+				Version: "v1alpha1",
+				Kind:    "KongPlugin",
+			},
+			expected: true,
+		},
+		{
+			name: "grant denies reference from namespace not selected by labels",
+			grants: []configurationv1alpha1.KongReferenceGrant{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "allow-selected-namespaces",
+						Namespace: "plugin-ns",
+					},
+					Spec: configurationv1alpha1.KongReferenceGrantSpec{
+						From: []configurationv1alpha1.ReferenceGrantFrom{
+							{
+								Group: "configuration.konghq.com",
+								Kind:  "KongPluginBinding",
+								NamespaceSelector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{
+										"konghq.com/cross-namespace-access": "true",
+									},
+								},
+							},
+						},
+						To: []configurationv1alpha1.ReferenceGrantTo{
+							{
+								Group: "configuration.konghq.com",
+								Kind:  "KongPlugin",
+							},
+						},
+					},
+				},
+			},
+			namespaces: []corev1.Namespace{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "tenant-ns",
+						Labels: map[string]string{
+							"konghq.com/cross-namespace-access": "false",
+						},
+					},
+				},
+			},
+			fromNamespace: "tenant-ns",
+			toNamespace:   "plugin-ns",
+			toName:        "rate-limiting",
+			fromGVK: metav1.GroupVersionKind{
+				Group:   "configuration.konghq.com",
+				Version: "v1alpha1",
+				Kind:    "KongPluginBinding",
+			},
+			toGVK: metav1.GroupVersionKind{
+				Group:   "configuration.konghq.com",
+				Version: "v1alpha1",
+				Kind:    "KongPlugin",
+			},
+			expected: false,
 		},
 		{
 			name:          "no grant exists - denies reference",
@@ -740,6 +850,9 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 			var objs []client.Object
 			for i := range tc.grants {
 				objs = append(objs, &tc.grants[i])
+			}
+			for i := range tc.namespaces {
+				objs = append(objs, &tc.namespaces[i])
 			}
 
 			cl := fake.NewClientBuilder().

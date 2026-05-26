@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -125,7 +127,15 @@ func isReferenceGranted(cl client.Client, ctx context.Context, fromNamespace str
 	if err := cl.List(ctx, &refGrants, client.InNamespace(toNamespace)); err != nil {
 		return false, fmt.Errorf("failed to list KongReferenceGrants in namespace %q: %w", toNamespace, err)
 	}
-	return ReferenceGrantsAllow(refGrants.Items, fromNamespace, toName, fromGVK, toGVK), nil
+	if !referenceGrantsHaveNamespaceSelectors(refGrants.Items) {
+		return ReferenceGrantsAllow(refGrants.Items, fromNamespace, toName, fromGVK, toGVK), nil
+	}
+
+	var namespace corev1.Namespace
+	if err := cl.Get(ctx, client.ObjectKey{Name: fromNamespace}, &namespace); err != nil {
+		return false, fmt.Errorf("failed to get namespace %q: %w", fromNamespace, err)
+	}
+	return referenceGrantsAllow(refGrants.Items, fromNamespace, namespace.Labels, toName, fromGVK, toGVK), nil
 }
 
 // ReferenceGrantsAllow checks if any of the provided KongReferenceGrants allow a reference
@@ -145,15 +155,26 @@ func isReferenceGranted(cl client.Client, ctx context.Context, fromNamespace str
 //
 // Returns true if at least one grant allows the reference, false otherwise.
 func ReferenceGrantsAllow(grants []configurationv1alpha1.KongReferenceGrant, fromNamespace string, toName string, fromGVK, toGVK metav1.GroupVersionKind) bool {
+	return referenceGrantsAllow(grants, fromNamespace, nil, toName, fromGVK, toGVK)
+}
+
+func referenceGrantsAllow(
+	grants []configurationv1alpha1.KongReferenceGrant,
+	fromNamespace string,
+	fromNamespaceLabels map[string]string,
+	toName string,
+	fromGVK,
+	toGVK metav1.GroupVersionKind,
+) bool {
 	if toGVK.Group == "" {
 		toGVK.Group = "core"
 	}
 	for _, refGrant := range grants {
 		fromMatched := false
 		for _, from := range refGrant.Spec.From {
-			if from.Namespace == configurationv1alpha1.Namespace(fromNamespace) &&
-				from.Group == configurationv1alpha1.Group(fromGVK.Group) &&
-				from.Kind == configurationv1alpha1.Kind(fromGVK.Kind) {
+			if from.Group == configurationv1alpha1.Group(fromGVK.Group) &&
+				from.Kind == configurationv1alpha1.Kind(fromGVK.Kind) &&
+				referenceGrantFromNamespaceMatches(from, fromNamespace, fromNamespaceLabels) {
 				fromMatched = true
 				break
 			}
@@ -172,4 +193,31 @@ func ReferenceGrantsAllow(grants []configurationv1alpha1.KongReferenceGrant, fro
 	}
 
 	return false
+}
+
+func referenceGrantsHaveNamespaceSelectors(grants []configurationv1alpha1.KongReferenceGrant) bool {
+	for _, grant := range grants {
+		for _, from := range grant.Spec.From {
+			if from.NamespaceSelector != nil {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func referenceGrantFromNamespaceMatches(
+	from configurationv1alpha1.ReferenceGrantFrom,
+	fromNamespace string,
+	fromNamespaceLabels map[string]string,
+) bool {
+	if from.NamespaceSelector == nil {
+		return from.Namespace == configurationv1alpha1.Namespace(fromNamespace)
+	}
+
+	selector, err := metav1.LabelSelectorAsSelector(from.NamespaceSelector)
+	if err != nil {
+		return false
+	}
+	return selector.Matches(labels.Set(fromNamespaceLabels))
 }

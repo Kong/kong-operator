@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -515,6 +516,7 @@ func TestEnqueueObjectForKongReferenceGrant(t *testing.T) {
 		tests := []struct {
 			name     string
 			grant    *configurationv1alpha1.KongReferenceGrant
+			objs     []client.Object
 			services []client.Object
 			expected []ctrl.Request
 		}{
@@ -713,6 +715,74 @@ func TestEnqueueObjectForKongReferenceGrant(t *testing.T) {
 				},
 			},
 			{
+				name: "namespace selector",
+				grant: &configurationv1alpha1.KongReferenceGrant{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "grant1",
+						Namespace: "target-ns",
+					},
+					Spec: configurationv1alpha1.KongReferenceGrantSpec{
+						From: []configurationv1alpha1.ReferenceGrantFrom{
+							{
+								Group: configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+								Kind:  "KongService",
+								NamespaceSelector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{
+										"konghq.com/cross-namespace-access": "true",
+									},
+								},
+							},
+						},
+						To: []configurationv1alpha1.ReferenceGrantTo{
+							{
+								Group: "konnect.konghq.com",
+								Kind:  "KonnectGatewayControlPlane",
+							},
+						},
+					},
+				},
+				objs: []client.Object{
+					&corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "source-ns-1",
+							Labels: map[string]string{
+								"konghq.com/cross-namespace-access": "true",
+							},
+						},
+					},
+					&corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "source-ns-2",
+							Labels: map[string]string{
+								"konghq.com/cross-namespace-access": "false",
+							},
+						},
+					},
+				},
+				services: []client.Object{
+					&configurationv1alpha1.KongService{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "service1",
+							Namespace: "source-ns-1",
+						},
+					},
+					&configurationv1alpha1.KongService{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "service2",
+							Namespace: "source-ns-2",
+						},
+					},
+				},
+				expected: []ctrl.Request{
+					{
+						NamespacedName: types.NamespacedName{
+							Name:      "service1",
+							Namespace: "source-ns-1",
+						},
+					},
+				},
+			},
+			{
 				name: "from references different kind",
 				grant: &configurationv1alpha1.KongReferenceGrant{
 					ObjectMeta: metav1.ObjectMeta{
@@ -784,7 +854,7 @@ func TestEnqueueObjectForKongReferenceGrant(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				cl := fakectrlruntimeclient.NewClientBuilder().
 					WithScheme(scheme.Get()).
-					WithObjects(append(tt.services, tt.grant)...).
+					WithObjects(append(append(tt.services, tt.objs...), tt.grant)...).
 					Build()
 				require.NotNil(t, cl)
 
